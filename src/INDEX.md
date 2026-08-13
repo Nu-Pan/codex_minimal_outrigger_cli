@@ -52,20 +52,18 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex 連携、設定・状態・Git・パス・ログ・エラー・feedback・report など、複数の機能から再利用される共通実装と公開 API を扱う。各個別 helper の実装や責務を確認するための入口となる。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行ライフサイクル、Codex exec/TUI、設定・状態、Git・パス・ログ、feedback、refactor、エラー、結果型など、複数の runtime 機能から再利用される実装と公開 API への入口を提供する。
 
 ## Read this when
-- 複数の runtime 機能にまたがる共通 API、状態、パス、Git、ログ、Codex、feedback、run lifecycle の実装を調査・変更するとき
-- commons 配下の特定 helper を読む前に、対象の責務と関連する下位モジュールを絞り込むとき
-- INDEX.md の生成・更新 lifecycle、設定・状態の永続化、Codex 実行境界、feedback state、editing run の共通処理を確認するとき
+- 複数の runtime 機能にまたがる共通 API、実行境界、状態管理、Git・パス・ログ、feedback などの実装入口を確認するとき
+- commons 配下の個別 helper の責務や、Codex 実行・INDEX 更新・editing run の lifecycle など横断的な挙動を調査または変更するとき
 
 ## Do not read this when
-- 特定の runtime helper のアルゴリズムや個別サブコマンドの挙動だけを調査する場合は、対応する下位モジュールや呼び出し側へ直接進むとき
-- 利用者向けの正本仕様、Structured Output の項目、設定型や path model の定義だけを確認する場合は、対応する仕様・型定義を直接読むとき
-- commons と無関係な CLI 業務ロジックや外部機能の詳細を調査する場合
+- 特定の runtime helper のアルゴリズムや個別サブコマンドの業務ロジックだけを確認したいときは、該当する下位実装を直接読む
+- 利用者向けの正本仕様、Structured Output schema、設定型、feedback report 内容など、commons の公開・共通実装以外が正本となる内容を確認するとき
 
 ## hash
-- ec9336c3050b9e4518393173424ab768e45c78ca769a970e2786ab12b6449c6b
+- 3797614e4dd72e9f892a72a016734ca26bdd854e9dbe1ef86983ef7b304f72a3
 
 # `config`
 

@@ -793,15 +793,15 @@ def feedback_completion_counts(
     repo: Path,
 ) -> tuple[int | None, list[str]]:
     """通常サブコマンド完了時の pending observation 件数と warning を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
     try:
         pending = unprocessed_observation_paths(repo)
-    except Exception as exc:
+    except Exception:
         return (
             None,
             [
                 "repository-local feedback state を安全に検証できないため件数を計算できません。",
-                f"feedback state: {exc}",
             ],
         )
     warnings: list[str] = []

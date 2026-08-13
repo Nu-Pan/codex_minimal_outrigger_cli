@@ -1143,7 +1143,9 @@ def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(
     pending, warnings = feedback_completion_counts(root)
 
     assert pending is None
-    assert warnings
+    assert warnings == [
+        "repository-local feedback state を安全に検証できないため件数を計算できません。"
+    ]
 
 
 @pytest.mark.parametrize("invalid_parent", ["dangling_symlink", "file"])
