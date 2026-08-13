@@ -31,20 +31,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装を担うディレクトリ。observation の受理から report の生成・publication、incomplete 診断、状態遷移、永続化、復旧、cleanup までの処理を確認・変更する入口。
+- feedback サブコマンドの実装をまとめたディレクトリ。feedback サブコマンドの処理を確認・変更するときの入口で、個別の report 処理や state・agent 契約の詳細へ進むための起点となる。
 
 ## Read this when
-- feedback サブコマンドの処理順序、report cut、candidate 化、normalization、verification、publication の挙動を確認または変更するとき。
-- current pointer、generation artifact、raw observation、artifact hash、secret masking、writer lock、割り込み復旧、cleanup の整合性を追跡するとき。
+- feedback サブコマンドの挙動や実装を確認・変更するとき。
+- report の publication、diagnostic、checkpoint 再開、candidate 変換、verification、generation 切替を調査するとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- feedback observation の受理・保存形式や共通 state の定義だけを確認するとき。
-- normalization agent や verification agent の prompt・Structured Output schema だけを確認するとき。
-- 一般的な CLI runner、logging、report 表示規則、Markdown report の利用方法だけを調べるとき。
+- feedback state の正本データ構造や永続化契約だけを確認する場合。
+- normalization／verification agent の prompt、Structured Output schema、builder の契約だけを確認する場合。
+- report の表示形式だけを確認する場合。
 
 ## hash
-- 61b9df3f6c93dde0ef3b5a358647d072f45d303e85efcce3e850e3c034c77756
+- 86ae1386fe29176843ea39d38e0bdd81a436d24385d32e09b07a2147b7873163
 
 # `indexing.py`
 

@@ -1698,8 +1698,9 @@ def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
     assert aggregate is None
 
 
+@pytest.mark.parametrize("raw_content", ["not-json\n", '{"x": NaN}\n'])
 def test_invalid_raw_observation_blocks_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, raw_content: str
 ) -> None:
     """validation 不通過 raw を処理済みにせず、正常 report を publication しない。"""
     root = make_repo(tmp_path)
@@ -1707,12 +1708,13 @@ def test_invalid_raw_observation_blocks_publication(
     observation_id = "fbo_00000000-0000-7000-8000-000000000099"
     raw_path = observation_path(root, observation_id, "2030-01-02T00:00:00Z")
     raw_path.parent.mkdir(parents=True, exist_ok=True)
-    raw_path.write_text("not-json\n")
+    raw_path.write_text(raw_content)
 
     result = runner.invoke(app, ["feedback", "report"])
 
     assert result.exit_code == 1
-    assert raw_path.read_text() == "not-json\n"
+    assert raw_path.read_text() == raw_content
+    assert str(raw_path) in result.output
     assert not (feedback_root(root) / "active" / "current.json").exists()
     assert not list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
 

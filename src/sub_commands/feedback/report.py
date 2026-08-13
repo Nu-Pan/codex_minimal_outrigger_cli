@@ -343,7 +343,14 @@ def _pending_observations(
         except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
             validation_errors.append(f"{path}: {exc}")
             continue
-        if canonical_json_bytes(observation) != content:
+        try:
+            canonical_content = canonical_json_bytes(observation)
+        except (TypeError, UnicodeError, ValueError) as exc:
+            validation_errors.append(
+                f"{path}: canonical JSON object ではありません: {exc}"
+            )
+            continue
+        if canonical_content != content:
             validation_errors.append(f"{path}: canonical JSON object ではありません")
             continue
         observation_id_value = observation.get("observation_id")

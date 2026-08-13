@@ -15,22 +15,17 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の固定済み report cut を処理するサブコマンド実装。
-- pending observation、active state、repository reference を検証・固定し、deterministic normalization、machine 集約、全 candidate の verification、checkpoint 再利用を管理する。
-- 全 candidate が確定した場合は active generation と Markdown report を publication し、判定不能 candidate がある場合は current pointer を変更せず incomplete 診断 report を保存する。
-- writer lock、割り込み復旧、publication 前後の状態遷移、artifact hash、secret masking、cleanup、subcommand log 記録までを一つの transaction として扱う。
+- `cmoc feedback report` サブコマンドの publication／diagnostic pipeline を実装するモジュール。固定した report cut に対して raw observation の検証、candidate の deterministic 集約・normalization、全 candidate の verification、正常な active generation／Markdown report の publication、または incomplete 診断 report の保存までを一つの transaction として扱う。中断・失敗時の checkpoint 再開、current pointer の整合性確認、artifact の hash 検証、publication 後 cleanup、ログ記録も担う。feedback report の処理順序や checkpoint／publication の実装を確認する入口であり、feedback state のデータ契約そのものを確認する場合は対応する state 仕様、agent 入出力契約を確認する場合は normalize／verify builder と schema を読む。
 
 ## Read this when
-- `cmoc feedback report` の処理順序、publication、incomplete 診断、再開・割り込み時の挙動を確認するとき。
-- feedback observation の candidate 化、machine recurrence 集約、agent normalization、verification checkpoint の仕様または実装を調べるとき。
-- report cut、current pointer、generation artifact、raw observation の整合性検証や cleanup の責務を追跡するとき。
-- feedback report の状態遷移、永続化、artifact hash、current evidence の制約を実装から確認するとき。
+- `cmoc feedback report` の実行フロー、report cut、normalization、verification、publication、incomplete 診断の挙動を変更・調査するとき
+- feedback report の中断再開、checkpoint の再利用、current pointer の切替、artifact cleanup、hash 整合性を確認するとき
+- raw observation や active issue がどのように candidate・generation・Markdown report へ変換されるかを確認するとき
 
 ## Do not read this when
-- feedback observation の受理・保存形式や共通 state の定義だけを確認する場合は、対応する runtime store または feedback state の定義を直接読む。
-- normalization agent や verification agent の prompt・Structured Output schema の内容だけを確認する場合は、各 builder と schema を直接読む。
-- 一般的な CLI runner、logging、report 表示規則だけを確認する場合は、対応する共通 runtime・logging・仕様文書を直接読む。
-- feedback report 以外のサブコマンドの処理や、Markdown report の利用方法だけを調べる場合は、この実装を入口にしない。
+- feedback state の正本データ構造や永続化契約だけを確認する場合は、先に対応する feedback state 仕様を読む
+- normalization／verification agent の prompt、Structured Output schema、builder の契約だけを確認する場合は、それぞれの builder・schema を直接読む
+- report の表示形式だけを確認する場合は、render 関数または対応する仕様を直接読む
 
 ## hash
-- 7edae973eab26cd5bd841202d4b1a5d179a8a8d1b279feb110828faff49f2eca
+- 84be1c92fe983a23839f545240e0a21ce5ac19b443c79c59b8231780d088c260
