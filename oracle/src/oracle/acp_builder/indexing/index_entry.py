@@ -70,6 +70,7 @@ def build_indexing_index_entry_parameter(
             "target-path": resolve_real_path(target_path, path_context),
         },
         index_entry_standard=True,
+        routing_rule=False,
     )
     # パラメータを生成して返す
     # NOTE
