@@ -69,7 +69,8 @@ merge conflict が発生した場合は通常の conflict として扱う。
 
 ### oracle file 規則と conflict 解消の優先順位
 
-- conflict 対象 oracle file は、marker 解消に必要な範囲だけ例外的に編集してよい
+session join の conflict 解消は、両 branch の意味を保ったまま merge を完了するための作業であり、仕様変更または refactor を行う作業ではない。このため、conflict 対象 oracle file は marker 解消に必要な範囲だけ例外的に編集してよい。
+
 - conflict の両側と関連する oracle file を確認し、両 branch の両立する意図と挙動を解消結果に保持する
 - conflict 解消後も oracle file は realization file の正本であり、realization file の都合に合わせて oracle file の意味を変更してはいけない
 - conflict marker の解消に不要な仕様変更、実装改善、または別 file の変更を行ってはいけない

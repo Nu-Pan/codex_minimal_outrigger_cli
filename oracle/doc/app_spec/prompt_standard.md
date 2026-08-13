@@ -55,7 +55,7 @@
 - installed skill の有無によって、cmoc の各サブコマンドが agent に要求する意味または判定基準を変えてはいけない
 - cmoc 固有契約と installed skill が競合する場合は、cmoc 固有契約を優先する
 - 言語、framework、tool、および対象 repository 固有の開発手順を cmoc が網羅することは目的としない
-- 対象 repository 固有の手順は、repository が追跡する任意の文書、設定、script、または skill から取得してよい
+- このため、対象 repository 固有の手順は、repository が追跡する任意の文書、設定、script、または skill から取得してよい
 - 対象 repository 固有の手順の配置先を `{{work-root}}/.agents/skills` に限定してはいけない
 - Windows toast 通知と prompt または installed skill の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
 
