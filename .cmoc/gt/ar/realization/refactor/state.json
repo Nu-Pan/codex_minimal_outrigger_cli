@@ -666,10 +666,10 @@
     "last_investigated_at": "2026-08-04_02-04_44_971674000"
   },
   "src/acp/builder/oracle/review/validate_finding_challenger.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "b937c8eec287e4aeac088b29ae3f6cf090fa8829e45a257dfe46b37cdc3deb33",
-    "last_investigated_at": "2026-07-29_20-36_03_998523000"
+    "last_investigated_sha256": "d786c87e2d221b325dab298f376e2a25e92ac82dc194872d69e6a6df04d8f202",
+    "last_investigated_at": "2026-08-13_10-12_49_601162000"
   },
   "src/acp/builder/quota_probe.py": {
     "investigation_required": true,
