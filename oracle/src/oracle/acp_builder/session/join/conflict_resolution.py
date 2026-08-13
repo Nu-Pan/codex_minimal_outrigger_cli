@@ -68,6 +68,7 @@ def build_session_join_conflict_resolution_parameter(
         ],
         oracle_and_realization_basic=True,
         conflict_resolution_standard=True,
+        routing_rule=True,
     )
     # パラメータを生成して返す
     # NOTE

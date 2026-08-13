@@ -57,6 +57,7 @@ def build_tui_launch_tui_parameter(
         oracle_review_standard=True,
         apply_review_standard=True,
         realization_oracle_reference_rule=True,
+        routing_rule=True,
     )
     complete_prompt_path = (
         path_context.repo_root

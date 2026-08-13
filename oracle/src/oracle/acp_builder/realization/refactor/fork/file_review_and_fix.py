@@ -75,6 +75,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         realization_standard=True,
         apply_review_standard=True,
         realization_oracle_reference_rule=True,
+        routing_rule=True,
     )
 
     # 全 oracle file と realization file に適用するため、効率モデルの最大推論を使う。

@@ -55,7 +55,7 @@ def build_complete_prompt(
     conflict_resolution_standard: bool = False,
     realization_oracle_reference_rule: bool = False,
     index_entry_standard: bool = False,
-    routing_rule: bool = True,
+    routing_rule: bool = False,
 ) -> list[StructDoc | StructBlock]:
     """選択された agent 向け文面を完全 prompt として構築する。
 

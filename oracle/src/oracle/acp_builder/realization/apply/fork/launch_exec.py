@@ -73,6 +73,7 @@ def build_realization_apply_fork_launch_exec_parameter(
         realization_standard=True,
         apply_review_standard=True,
         realization_oracle_reference_rule=True,
+        routing_rule=True,
     )
 
     # リポジトリ全体の追従を 1 agent call へ委ねるため最高品質設定を使う。

@@ -63,6 +63,7 @@ def build_oracle_review_merge_finding_parameter(
         ],
         oracle_and_realization_basic=True,
         oracle_review_standard=True,
+        routing_rule=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

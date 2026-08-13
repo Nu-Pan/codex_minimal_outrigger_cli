@@ -56,6 +56,7 @@ def build_oracle_edit_launch_tui_parameter(
         ],
         oracle_and_realization_basic=True,
         oracle_standard=True,
+        routing_rule=True,
     )
 
     # cmoc が管理する TUI ログへ完全 prompt を保存する。
