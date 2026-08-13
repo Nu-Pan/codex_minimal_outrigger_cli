@@ -1230,10 +1230,10 @@
     "last_investigated_at": "2026-08-13_10-36_26_187711000"
   },
   "test/test_cli_command_tree.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "2e841a9654e47e3e6d1ac2ab9362f5bee308af437118450c82e4fb744c3eb4ff",
-    "last_investigated_at": "2026-08-11_21-53_06_230244000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "783df6423bc0c96b9a77d81e1fb9c5bb1117943ba64153810b73d5ea5701a3d6",
+    "last_investigated_at": "2026-08-13_19-09_21_756761000"
   },
   "test/test_cli_tui.py": {
     "investigation_required": true,
