@@ -167,9 +167,28 @@ def _ensure_agents_tracked(root: Path) -> bool:
     agents = root / ".agents"
     _validate_agents_paths(root)
     agents.mkdir(exist_ok=True)
-    if run_git(["ls-files", "--", ".agents"], root).stdout.strip():
-        return False
+    tracked = bool(run_git(["ls-files", "--", ".agents"], root).stdout.strip())
     gitkeep = agents / ".gitkeep"
+    if tracked:
+        # tracked な .gitkeep の unstaged deletion でも、.agents を空のまま残さない。
+        if not gitkeep.exists():
+            restored = run_git(
+                ["restore", "--worktree", "--", ".agents/.gitkeep"],
+                root,
+                check=False,
+            )
+            if restored.returncode != 0 and _head_entry(root, ".agents/.gitkeep"):
+                run_git(
+                    [
+                        "restore",
+                        "--source=HEAD",
+                        "--worktree",
+                        "--",
+                        ".agents/.gitkeep",
+                    ],
+                    root,
+                )
+        return False
     _validate_agents_paths(root)
     if not gitkeep.exists() and _head_entry(root, ".agents/.gitkeep"):
         run_git(

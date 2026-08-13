@@ -660,6 +660,20 @@ def test_doctor_preserves_existing_untracked_gitkeep_content(
     assert run_git(root, "status", "--short").stdout == ""
 
 
+def test_doctor_restores_missing_tracked_gitkeep(tmp_path: Path) -> None:
+    """tracked な `.agents/.gitkeep` の unstaged deletion を復元する。"""
+
+    root = make_repo(tmp_path)
+    doctor_module.run_doctor_preprocess(root)
+    gitkeep = root / ".agents" / ".gitkeep"
+    gitkeep.unlink()
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert gitkeep.read_text() == ""
+    assert run_git(root, "status", "--short").stdout == ""
+
+
 @pytest.mark.parametrize("symlinked_path", ["agents", "gitkeep"])
 def test_doctor_rejects_symlinked_agents_paths(
     tmp_path: Path,
