@@ -1,19 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- AI エージェント呼び出しの基礎モデル、用途別の prompt・起動パラメータ定義、および oracle・realization・session・tui・indexing・feedback・quota probe 向けの構築処理を扱う領域。共通の呼び出し契約を確認した後、目的に対応する下位定義へ進むための入口。
+- AI エージェント呼び出しの共通パラメータと、cmoc の各サブコマンド・処理領域に対応する prompt、Structured Output schema、モデル・権限・作業ディレクトリ・indexing preflight 設定の構築定義を集約する領域。feedback、indexing、TUI、oracle review、realization、session join、quota probe の個別設定へ進む入口。
 
 ## Read this when
-- AI エージェント呼び出しの共通パラメータ、または用途別の prompt・モデル・推論強度・アクセス権限・作業ディレクトリ・事前 indexing 設定を確認・変更するとき
-- indexing、feedback、quota probe、oracle、realization、session join、tui の agent call 構築定義を調査するとき
+- AgentCallParameter の共通契約やモデル区分、推論強度、ファイルアクセスモードを確認・変更するとき。
+- 特定の cmoc 処理が起動する AI エージェントの prompt、Structured Output schema、モデル、権限、作業ディレクトリ、indexing preflight の設定を調べるとき。
+- feedback issue、INDEX.md エントリー生成、TUI、oracle review、realization の apply/refactor、session join の conflict 解消、quota availability probe の呼び出し定義を調べるとき。
 
 ## Do not read this when
-- 通常のサブコマンド実行フロー、agent call の実行処理、または個別の oracle・realization ファイルの内容を確認するとき
-- Structured Output の項目・型・形式だけを確認するときは、対応する下位 schema を直接読む
-- 共通の ACP builder 実装や、バックエンド固有のモデル解決・ファイルアクセス規則だけを確認するときは、それぞれの直接の定義へ進む
+- 実際の agent call 実行処理や Codex CLI バックエンドへのモデル名解決を調べるとき。
+- 各処理の業務ロジック、状態保存、候補絞り込み、レビュー実行、realization の通常実装を調べるときは、対応する実行側・状態管理側・realization 実装へ直接進む。
+- 共通 prompt 構築規則、パス解決、Structured Output schema の一般的な制約だけを確認するときは、それぞれの共通定義または個別 schema へ直接進む。
 
 ## hash
-- a3de673dfc2a30e15090d4da8ddd32a123ce481aabc3d0d78bd8849003cbe51e
+- 2f4a76bba98733088f3f68a59a32e7ab20cbf93826da90f91342c120642ccfc7
 
 # `feedback`
 

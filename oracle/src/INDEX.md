@@ -1,20 +1,16 @@
 # `oracle`
 
 ## Summary
-- AIエージェント呼び出しの共通パラメータモデルと、用途別のプロンプト・モデル・推論強度・ファイルアクセス・作業ディレクトリ・事前 indexing 設定を構築する領域。
-- oracle、realization、session join、TUI、indexing、feedback、quota probe など、目的別の agent call 定義へ進むための上位入口。
-- 完全な構造化 prompt の組み立て、設定・パス・構造化文書の共通モデル、feedback 入力契約もこの領域から確認できる。
+- cmoc の oracle 実装パッケージ。agent call のパラメータ構築、prompt と Structured Output schema の定義、設定・パス・構造化文書モデル、feedback 入力契約を提供する。
+- agent call の用途別定義は acp_builder、共通 prompt の組み立ては prompt_builder、設定・パス・文書モデルは other、feedback reporter の入力契約は feedback へ進む入口になる。
 
 ## Read this when
-- AIエージェント呼び出しの共通契約や用途別の起動設定を確認・変更するとき。
-- oracle、realization、session join、TUI、indexing、feedback、quota probe の agent call 構築処理を調査するとき。
-- prompt の統合規則、パスコンテキスト、設定モデル、構造化文書モデル、feedback reporter の入力契約を確認するとき。
+- cmoc の oracle 層で、agent 呼び出し定義、prompt 構築、Structured Output schema、設定モデル、パスモデル、構造化文書、feedback 入力契約を調査・変更するとき。
+- 下位領域のどこから調査を始めるべきかを判断するとき。
 
 ## Do not read this when
-- 通常のサブコマンド実行フローや、構築済み agent call の実行処理を確認するとき。
-- 個別の oracle・realization ファイルや実装内容そのものを調査するときは、対象ファイルまたは対応する下位定義を直接読む。
-- Structured Output の項目・型・形式だけを確認するときは、対応する schema を直接読む。
-- バックエンド固有のモデル解決や一般的なファイルアクセス実装だけを確認するときは、それぞれの直接の定義へ進む。
+- 実際の agent call 実行、CLI バックエンド、業務ロジック、状態保存、realization 実装を直接調べるときは、対応する実行側・状態管理側・realization 側へ進む。
+- 個別の prompt、schema、設定型、パス型、構造化文書型だけを確認するときは、該当する下位領域へ直接進む。
 
 ## hash
-- 330d5c494cba12f1885fd7a08caa4b63b6d3826fa41095cef4929970f1a0ec1e
+- b02d95edeb7a1b6294433a524f7c332d056a84f5a8d95c0eba2e58ae309b59fc

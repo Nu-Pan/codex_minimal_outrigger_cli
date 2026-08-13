@@ -20,20 +20,23 @@
 # `src`
 
 ## Summary
-- AIエージェント呼び出しの共通パラメータ、モデル・推論強度・ファイルアクセス、および呼び出し単位のパスコンテキストを定義する実装領域。
-- 用途別の agent call 構築、完全な prompt の組み立て、oracle・realization・review・feedback・indexing・session・TUI・quota probe の起動定義を扱う。
-- 設定モデル、構造化文書、prompt 規範、パス placeholder、feedback 入力契約など、agent call 構築を支える共通部品への入口となる。
+- oracle/src は、cmoc の oracle 実装を構成する Python パッケージのルートである。agent call の論理パラメータ、prompt の組み立て、Structured Output schema、設定・パス・構造化文書のモデル、feedback 入力契約を扱う。
+- acp_builder は用途別の agent call パラメータを構築する。session、tui、feedback、indexing、oracle review、oracle edit/investigation、realization apply/refactor の各処理へ進む入口である。
+- prompt_builder は共通 prompt と構成部品を組み立てる。アクセス規則、oracle・realization 規則、routing、index entry、feedback、conflict resolution の標準文面を確認するときに進む。
+- other は agent call と prompt 構築で共有する設定、パス、構造化文書、標準規約のモデルを提供する。個別の共通型や変換処理を確認するときに進む。
+- feedback は feedback reporter の入力契約を定義する。feedback issue の正規化・検証用 agent call と、reporter input schema を確認するときに進む。
 
 ## Read this when
-- AIエージェント呼び出しの共通契約や、用途別の起動パラメータ・prompt 構築を調査または変更するとき。
-- oracle、realization、review、feedback、indexing、session、TUI、quota probe の agent call 定義へ進む必要があるとき。
-- prompt の共通規範、パスコンテキスト、設定、構造化文書、feedback reporter の入力契約を確認するとき。
+- oracle/src 配下の複数領域にまたがる agent call、prompt、schema、共有モデル、feedback 契約の関係を調査・変更するとき。
+- 対象領域が acp_builder、prompt_builder、other、feedback のどれに属するかを判断し、下位ディレクトリへの調査入口を選ぶとき。
+- oracle 実装パッケージ全体の責務分担や、用途別 agent call 定義と共通 prompt・共有モデルの接続を確認するとき。
 
 ## Do not read this when
-- 通常のサブコマンド実行処理や、構築済み agent call の実行実装だけを確認するとき。
-- 個別の agent call 定義や prompt 部品の具体的な挙動を調査するときは、対応する下位対象を直接読む。
-- Structured Output の項目・型・形式だけを確認するときは、対応する schema を直接読む。
-- バックエンド固有のモデル解決や一般的なファイルアクセス処理だけを確認するときは、それぞれの直接の実装へ進む。
+- 特定の agent call の prompt と起動パラメータだけを確認する場合は、該当する acp_builder 配下へ直接進む。
+- 共通 prompt の単一部品だけを確認する場合は、該当する prompt_builder 配下へ直接進む。
+- 設定・パス・構造化文書など単一の共有モデルだけを確認する場合は、other 配下へ直接進む。
+- feedback reporter の入力項目や feedback issue の個別処理だけを確認する場合は、feedback 配下へ直接進む。
+- agent call の実行、CLI バックエンド、状態保存、realization 実装を調べる場合は、oracle/src ではなく対応する実行側・状態管理側・realization 側を読む。
 
 ## hash
-- 73a45966355df1ce464780fa6087688f28c7f23a7afa332b5522393565a4b7d5
+- ba7cc3c09f9432b620a9b11fc5c53e6c175c832286072434b3d297087582c822

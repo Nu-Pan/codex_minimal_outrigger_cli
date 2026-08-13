@@ -36,19 +36,19 @@
 # `indexing`
 
 ## Summary
-- `cmoc indexing` の目次情報生成エージェント向け prompt と起動パラメータを組み立てる定義。対象本文、パスコンテキスト、Structured Output schema、読み取り専用設定、モデル・推論設定をまとめ、配下の schema と builder 実装を確認する入口となる。
+- `cmoc indexing` が INDEX.md エントリー生成用 agent call を起動するための定義を集約する。Structured Output schema と、対象本文を埋め込んだ prompt・起動パラメータの構築実装を扱う。
 
 ## Read this when
-- `cmoc indexing` の目次エントリー生成用 prompt や起動パラメータを確認・変更するとき
-- 対象パス、agent call の cwd、Structured Output schema、読み取り専用設定、モデル・推論設定の組み立て方を確認するとき
+- `cmoc indexing` の INDEX.md エントリー生成について、出力契約と agent call の prompt、モデル、推論設定、読み取り権限、cwd、preflight 設定を確認・変更するとき。
+- エントリー生成の下位ファイルへ進む前に、schema とパラメータ構築実装の責務を把握するとき。
 
 ## Do not read this when
-- 目次エントリーの出力形式だけを確認するときは、配下の Structured Output schema を直接読む
-- `cmoc indexing` の実行フローや生成後の INDEX.md 更新処理を確認するときは、サブコマンド実装を直接読む
-- 一般的な agent call パラメータやモデル設定の定義を確認するときは、共通の ACP builder 定義を直接読む
+- INDEX.md エントリーのルーティング内容や対象ファイル・ディレクトリの実際の責務を判断するときは、生成対象の本文を直接読む。
+- Structured Output schema の制約だけを確認するときは、schema 定義を直接読む。
+- `cmoc indexing` 以外の agent call パラメータや共通 prompt 生成規則を確認するときは、それぞれの担当実装や共通 prompt builder を直接読む。
 
 ## hash
-- 563e335760436662ae638b0e4eed3216409ca20e8ec198636bba1976473b6534
+- 59b72c73168652c15f8779d97428d9ab0a2f6c649e1ca87a27c0ea19bdab197d
 
 # `oracle`
 
