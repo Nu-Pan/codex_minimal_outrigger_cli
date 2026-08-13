@@ -146,20 +146,21 @@
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review ACP builder 群の parameter、schema、互換公開面、および動的 prompt の fence 保護を検証するテスト。各 review builder が canonical builder と同一の公開面・判定規範・model/reasoning/file access 設定・Structured Output schema を使うことを確認し、動的入力や placeholder を保持したまま nested code fence と section 境界を安全にレンダリングできることを網羅する。
+- oracle review ACP builder 群の parameter 選択、AgentCallParameter の公開面、Structured Output schema、canonical builder 互換性、および動的 prompt の code fence 境界保護を検証する回帰テスト。enumerate、judge、merge、validate advocate/challenger の各段階を横断する review builder 仕様の入口であり、関連する oracle builder 実装や schema の整合性を確認する際に読む。
 
 ## Read this when
-- oracle review builder の parameter 設定、Structured Output schema、canonical builder との互換性、公開 export を変更・調査するとき
-- review prompt に動的な所見・理由・既知 finding を埋め込む処理や、Markdown code fence／section 境界の保護を変更・検証するとき
-- review builder 全段階で共有される所見判定規範の注入や回帰を確認するとき
+- oracle review の builder を追加・変更・互換性確認するとき
+- review builder の model、reasoning、file access、preflight、agent_call_cwd、公開 export の契約を検証するとき
+- review builder が参照する Structured Output schema と oracle source の一致を確認するとき
+- 動的に埋め込む finding や理由文に含まれる Markdown 見出し・三連 backtick が prompt section の境界を壊さないことを確認するとき
 
 ## Do not read this when
-- review builder の実装詳細そのものを読む必要があり、対応する oracle review 正本や canonical builder を直接確認すべきとき
-- review review 以外の ACP builder、schema、prompt renderer の挙動だけを調査するとき
-- 単に通常の review テストを実行するだけで、parameter・schema・公開面・動的 prompt 境界の回帰を確認する必要がないとき
+- oracle review builder や schema の挙動を変更せず、別領域の ACP builder だけを調査・変更するとき
+- prompt の動的入力保護ではなく、個別 builder の詳細な実装ロジックを直接確認する必要があるときは、対応する canonical builder 実装へ進む
+- Structured Output の形式そのものだけを確認したいときは、対応する oracle review schema を直接読む
 
 ## hash
-- 4a75d078b60c7c3fd9b258b51f24439e4f9e5d8196ef917a2e8aa7addb39c74e
+- 682b5e2e0ba17ee71dfd7a9fb13db06f241da4479ed4c84921542ba62fb5f7c2
 
 # `test_acp_builder_session_join_parameters.py`
 

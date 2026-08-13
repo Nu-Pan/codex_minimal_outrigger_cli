@@ -1,6 +1,16 @@
 """oracle review ACP builder の parameter、schema、adapter 公開面を検証する。
 
-対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/
+対応する oracle file:
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.py`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.json`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/judge_finding.py`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/judge_finding.json`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.json`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.json`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_challenger.py`
+- `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_challenger.json`
 
 この file は 16,000 文字を超えるが、review builder 群の parameter、schema、公開面、
 および動的 prompt の fence 保護は同じ AgentCallParameter と canonical builder の
@@ -146,12 +156,17 @@ def test_oracle_review_judge_finding_uses_max_reasoning() -> None:
     ],
 )
 def test_oracle_review_builders_share_finding_judgement_standard(
+    tmp_path: Path,
     builder: Callable[..., AgentCallParameter],
     arguments: tuple[object, ...],
 ) -> None:
     """review の全段階で単一の所見判定規範を注入する。"""
-    prompt = builder(*arguments, agent_call_cwd=REPO_ROOT).prompt
+    (tmp_path / ".git").mkdir()
+    parameter = builder(*arguments, agent_call_cwd=tmp_path)
+    prompt = parameter.prompt
 
+    assert parameter.agent_call_cwd == tmp_path.resolve()
+    assert f"- {{{{work-root}}}} = {tmp_path.resolve()}" in prompt
     assert "# oracle review standard" in prompt
     assert "実装者の裁量で解消不能な問題だけを fatal 所見にする" in prompt
     assert "文意または検索性を損なう表記上の誤りだけを minor 所見にする" in prompt
