@@ -26,9 +26,11 @@ from pathlib import Path
 import pytest
 import typer
 from _cli_support import run_doctor, runner
+from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
 from _git_support import make_repo, run_git
 
 import commons.runtime_cli as runtime_cli
+import commons.runtime_codex_tui as runtime_codex_tui
 import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
@@ -39,6 +41,7 @@ from cmoc_runtime import (
     format_duration,
     render_error,
 )
+from config.cmoc_config import CmocConfig
 from main import app
 
 
@@ -343,6 +346,52 @@ def test_cli_tui_startup_keyboard_interrupt_emits_failure_notification(
     with pytest.raises(KeyboardInterrupt):
         runtime_cli.run_cli_subcommand(
             interrupt_before_launch,
+            command_name="tui",
+            command_argv=["cmoc", "tui"],
+            doctor_preprocess=False,
+            tui_process=True,
+        )
+
+    assert notifications == ["failed"]
+
+
+def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Codex subprocess の起動前中断を TUI 終了後の中断と混同しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    notifications: list[str] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda _command, _repository, state: notifications.append(state),
+    )
+
+    def interrupt_before_process_start(*_args: object, **_kwargs: object) -> object:
+        """Popen 前の Codex 起動失敗を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "run_codex_subprocess",
+        interrupt_before_process_start,
+    )
+
+    def invoke_tui() -> None:
+        """共通 runner から実際の TUI runtime 起動境界を通る。"""
+        runtime_codex_tui.run_codex_tui(
+            codex_parameter(agent_call_cwd=root),
+            root=root,
+            config=CmocConfig(),
+        )
+
+    with pytest.raises(KeyboardInterrupt):
+        runtime_cli.run_cli_subcommand(
+            invoke_tui,
             command_name="tui",
             command_argv=["cmoc", "tui"],
             doctor_preprocess=False,

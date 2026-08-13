@@ -18,7 +18,7 @@ import signal
 import subprocess
 import sys
 import time
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from types import FrameType
@@ -693,7 +693,10 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
 
 
 def run_codex_subprocess(
-    argv: list[str], **kwargs: Any
+    argv: list[str],
+    *,
+    process_started_callback: Callable[[], None] | None = None,
+    **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
     try:
@@ -702,7 +705,14 @@ def run_codex_subprocess(
         # call を stale または別 process の pid file へ向けてはならない。
         if _active_run_process_tracking_path is not None and argv[:1] == ["codex"]:
             return run_tracked_codex_subprocess(
-                argv, _active_run_process_tracking_path, **kwargs
+                argv,
+                _active_run_process_tracking_path,
+                process_started_callback=process_started_callback,
+                **kwargs,
+            )
+        if process_started_callback is not None:
+            return _run_subprocess_with_started_callback(
+                argv, process_started_callback, **kwargs
             )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
@@ -715,6 +725,50 @@ def run_codex_subprocess(
             ["Codex CLI をインストールし、PATH に codex を含めてください。"],
             f"argv: {argv}\nerror: {exc}",
         ) from exc
+
+
+def _run_subprocess_with_started_callback(
+    argv: list[str],
+    process_started_callback: Callable[[], None],
+    **kwargs: Any,
+) -> subprocess.CompletedProcess[Any]:
+    """Popen 後に TUI の process 起動境界を通知してから Codex を待つ。"""
+    input_data = kwargs.pop("input", None)
+    capture_output = kwargs.pop("capture_output", False)
+    check = kwargs.pop("check", False)
+    timeout = kwargs.pop("timeout", None)
+    if input_data is not None:
+        if kwargs.get("stdin") is not None:
+            raise ValueError("stdin and input arguments may not both be used.")
+        kwargs["stdin"] = subprocess.PIPE
+    if capture_output:
+        if kwargs.get("stdout") is not None or kwargs.get("stderr") is not None:
+            raise ValueError(
+                "stdout and stderr arguments may not be used with capture_output."
+            )
+        kwargs.setdefault("stdout", subprocess.PIPE)
+        kwargs.setdefault("stderr", subprocess.PIPE)
+
+    with subprocess.Popen(argv, **kwargs) as process:
+        try:
+            # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+            # Popen が成功した後だけ TUI process 起動済みとして扱い、起動前の
+            # KeyboardInterrupt を terminal failure notification の対象に残す。
+            process_started_callback()
+            stdout, stderr = process.communicate(input_data, timeout=timeout)
+        except BaseException:
+            process.kill()
+            raise
+
+        returncode = process.wait()
+        if check and returncode:
+            raise subprocess.CalledProcessError(
+                returncode,
+                argv,
+                output=stdout,
+                stderr=stderr,
+            )
+    return subprocess.CompletedProcess(argv, returncode, stdout, stderr)
 
 
 def _is_missing_codex_executable(
@@ -752,7 +806,11 @@ def run_process_tracking_active() -> bool:
 
 
 def run_tracked_codex_subprocess(
-    argv: list[str], tracking_path: Path, **kwargs: Any
+    argv: list[str],
+    tracking_path: Path,
+    *,
+    process_started_callback: Callable[[], None] | None = None,
+    **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """run abandon が止められるよう Codex subprocess group を記録する。"""
     input_data = kwargs.pop("input", None)
@@ -794,6 +852,11 @@ def run_tracked_codex_subprocess(
             with run_process_id_file_lock(tracking_path):
                 _validate_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+                if process_started_callback is not None:
+                    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+                    # Popen 成功直後に起動境界を通知し、tracking 更新中の中断も
+                    # すでに起動した TUI の終了として区別する。
+                    process_started_callback()
                 # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
                 # tracking 更新に失敗しても、後から PGID を再探索して別 group を停止しない
                 # よう、Popen 直後の identity snapshot を cleanup に引き継ぐ。

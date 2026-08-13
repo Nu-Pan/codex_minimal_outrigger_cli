@@ -363,36 +363,38 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- Codex subprocess と run process の追跡・停止・cleanup に関するテスト群。pidfd、process group、PID 再利用、signal 処理、tracking file の妥当性、不正状態や cleanup 失敗時の fail-closed 動作を検証する。関連する runtime 実装の挙動を確認するための realization test の入口。
+- Codex subprocess の起動・追跡・停止・cleanup に関するテスト。pidfd、process group、PID 再利用、tracking file の検証、signal 処理、異常時の child 回収など、安全なプロセス管理の挙動を検証する。runtime の process 管理実装や、そのテスト要件を確認する入口となる。
 
 ## Read this when
-- Codex subprocess の起動・追跡・signal 配信・process group cleanup を変更または調査するとき
-- run process identity、tracking file、pidfd、PID/PGID 再利用時の安全な停止処理を変更または検証するとき
-- editing run の cleanup 仕様に対する runtime 実装のテストカバレッジを確認するとき
+- Codex subprocess の tracking、専用 process group、pidfd、signal、停止処理、child の回収に関する挙動を変更・調査するとき。
+- run process tracking file の形式検証、破損・不正状態、PID や PGID の再利用に対する fail-closed 動作を確認するとき。
+- Codex 起動時の signal 保留・再配信、tracking 更新失敗、leader 終了後の descendant cleanup を検証するとき。
 
 ## Do not read this when
-- Codex subprocess や run process の停止・追跡処理に関係しないテストや実装を扱うとき
-- tracking file の通常の読み書き仕様だけを確認する場合は、まず runtime 実装または対応する oracle 仕様を直接読むとき
+- Codex subprocess や run process tracking に関係しない CLI 機能の実装・テストを扱うとき。
+- 実装の詳細や正本仕様を確認することが目的で、対応する runtime 実装または editing run の仕様を直接読むべきとき。
 
 ## hash
-- fd2e438163940497e1056974ac1091294881c638634f3c896954394262805014
+- 1ab49fa3b83816eb814cdefc751ca6c4eeca484157d5ab2bdc173116ac4358d2
 
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行ラッパーの受け入れテスト。完成済み prompt の読み込み、agent call の作業ディレクトリ・sandbox・引数制約、linked worktree でのアクセス境界、成功時の call log／サブコマンドイベント／コンソール要約、timestamp 衝突時のログ保持、CLI 不在・KeyboardInterrupt・非 0 終了時の失敗記録と例外を検証する。TUI 実装やログ仕様の挙動を変更・確認する際のテスト入口である。
+- Codex TUI の実行を検証するテスト群。完成済み prompt の読み込み、アクセスモードと CLI 引数、linked worktree での実行、成功時の call log・サブコマンドイベント・コンソール要約を扱う。
+- Codex CLI 不在、KeyboardInterrupt、非 0 終了、および timestamp 衝突時の失敗記録と call log 保持を確認する。TUI 実装の詳細や一般的な CLI 仕様の入口ではなく、これらの外部挙動をテストから確認するときに読む。
 
 ## Read this when
-- Codex TUI の呼び出し引数、prompt 読み込み、作業ディレクトリ、sandbox 設定の適合性を確認するとき。
-- Codex TUI の成功・失敗時に生成される call log、サブコマンドイベント、コンソール出力、例外の外部挙動を確認するとき。
-- timestamp 衝突、CLI 不在、割り込み、非 0 終了など TUI 呼び出しの境界条件を変更・検証するとき。
+- Codex TUI 呼び出しの prompt・アクセス境界・CLI 引数が期待どおりか確認するとき。
+- TUI の成功・CLI 不在・割り込み・非 0 終了における call log、サブコマンドイベント、コンソール出力の検証内容を確認するとき。
+- 同一 timestamp の呼び出しで call log が上書きされないことを確認するとき。
 
 ## Do not read this when
-- Codex TUI の内部実装の詳細を調べるだけで、外部挙動のテストケースを確認する必要がないとき。
-- Codex の通常実行や別サブコマンドの挙動を確認するときは、対応する実装・テスト対象へ直接進む。
+- Codex TUI の実装を変更または調査する場合は、まず実装側の対象を読む。
+- prompt 生成規則、Codex 実行規則、ログ仕様そのものを確認する場合は、各 oracle 文書を直接読む。
+- TUI と無関係な Codex 実行経路やテスト対象を確認する場合。
 
 ## hash
-- 8edd0b6b2d44391c8b00815dd19357ae4a4e080a6128a0005fb940cd7afa20b7
+- 9c9a1dbf05e2fa9409dee9cdbd2511b83ee39f453c19ac6aef801116f969e919
 
 # `test_doctor_cli.py`
 
@@ -715,23 +717,22 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error、log、preflight、completion 境界を検証する統合テスト。共通 runner と work root、subcommand event、終了処理を共有する外部契約を一箇所で扱い、CLI lifecycle 全体の回帰検証の入口になる。
-- duration 表示、サブコマンドログの衝突・並列記録、error report、KeyboardInterrupt、terminal notification、doctor preprocess、work root 制約、引数解析、shell completion probe、pre-log check を検証する。
+- CLI 共通 runner の error report、JSON Lines サブコマンドログ、doctor preprocess、completion probe、Windows toast 通知の境界を検証するテスト群。通常完了、非0終了、例外、KeyboardInterrupt、TUI 起動境界、通知失敗、および work root・worktree の扱いを横断的に確認する。CLI lifecycle の外部契約をまとめて検証する入口であり、個別の実装詳細や単一仕様の確認は対応する runtime 実装または oracle 仕様へ進む。
 
 ## Read this when
-- CLI lifecycle の共通 runner、終了コード、command event、サブコマンドログ、cleanup、terminal notification の挙動を変更・検証するとき
-- CLI error report の stdout 出力、Click 引数解析エラー、CmocError の Markdown 整形、KeyboardInterrupt の扱いを確認するとき
-- doctor preprocess、pre-log check、current work root 制約、shell completion probe の副作用境界を確認するとき
-- CLI の duration 表示や SubcommandLogger の timestamp 衝突・並列 worker 記録を変更・検証するとき
+- CLI の終了コード、stdout の Markdown error report、stderr 非出力、call stack、例外終了の挙動を確認したいとき
+- サブコマンドログの生成場所、イベント順序、flush、timestamp 衝突、並列 worker、pre-log check、doctor preprocess 失敗を確認したいとき
+- _CMOC_COMPLETE による completion probe が通常の前処理・副作用・通知を回避することを確認したいとき
+- 非対話 CLI と TUI の terminal result 通知、正常完了・失敗・ユーザー中断・起動前中断の境界を確認したいとき
 
 ## Do not read this when
-- 個別機能の実装詳細だけを確認する場合は、対応する runtime 実装を直接読むとき
-- error、log、preflight、completion の外部契約に関係しないサブコマンドやデータ処理を調査するとき
-- テスト仕様ではなく、CLI の正本仕様を確認する場合は参照されている oracle 文書を直接読むとき
-- completion の補完候補生成そのものだけを確認する場合は、completion 実装または正本仕様を直接読むとき
+- duration の表示形式や error report の仕様だけを確認する場合は、対応する oracle 仕様または runtime 実装を直接読むとき
+- completion の候補生成内容だけを確認する場合は、自動補完仕様を直接読むとき
+- doctor preprocess の個別修復手順だけを確認する場合は、doctor preprocess 仕様を直接読むとき
+- パス placeholder の導出規則だけを確認する場合は、path model を直接読むとき
 
 ## hash
-- d2f55368451952d71aeed1380c33c4ef95186bc72282df7c71c7ce5d85ff83c7
+- ff78c277ec2b110682e814641995a79017890ac1885a154b0f7992a1154d779e
 
 # `test_runtime_codex_conflicts.py`
 

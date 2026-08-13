@@ -153,38 +153,37 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実行環境構築と実行結果解釈を担う。sandbox、argv、CODEX_HOME、provider 設定、Feedback MCP、process tracking、schema 配置、JSONL 出力・エラー判定を扱い、呼び出し側が Codex の起動条件や失敗時の分類を確認するための入口となる。
+- Codex CLI subprocess 境界の実装を担い、起動前後の実行環境・argv・CODEX_HOME・schema 配置と、実行中 process の tracking/停止・identity 検証を扱う。Codex の JSONL 出力から session ID や error 種別を抽出し、capacity/quota retry 対象と予期しない失敗を判定する下位実装への入口でもある。
 
 ## Read this when
-- Codex CLI に渡す sandbox、model/provider、通知、Feedback MCP、環境変数、schema の設定を変更・確認するとき。
-- editing run における Codex subprocess の process group tracking、PID 再利用対策、停止・cleanup を調査するとき。
-- Codex の JSONL 出力から session ID、capacity/quota/unexpected error を判定する処理を確認するとき。
+- Codex CLI の sandbox、config override、model provider、通知、feedback MCP、環境変数、schema 配置を変更または調査するとき。
+- editing run における Codex subprocess の process group tracking、PID reuse 対策、停止・cleanup、signal 処理を確認するとき。
+- Codex subprocess の起動失敗、JSONL output、session resume、capacity/quota retry、unexpected error の判定を変更または調査するとき。
 
 ## Do not read this when
-- Codex 呼び出し側の prompt 生成や run 全体の業務フローだけを確認する場合。
-- Codex CLI と無関係な設定、エラー型、Feedback reporter 実装の詳細を直接調査する場合は、それぞれの担当対象へ進む。
+- Codex CLI 境界の具体的な実装や実行結果の判定を扱わず、呼び出し元の prompt 構築や上位の run 制御だけを確認する場合は、まずそれぞれの直接の実装対象を読む。
+- 一般的な runtime 設定値の検証や runtime path の仕様だけを確認する場合は、対応する設定・path 実装へ直接進む。
 
 ## hash
-- 54a3a9a36d244a6741c0893e94d1d66f6f6873337702b65c3412f399c939871e
+- 29fe3b161dca11ec0febe4e361857687b470c2423fb2c72ca40d1d4b5c6d872e
 
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI の起動処理を担う実装。エージェント呼び出しパラメーターから作業ディレクトリ、設定上書き argv、CODEX_HOME、通知 callback、call log、feedback 用環境を準備し、Codex サブプロセスを実行する。
-- Codex 呼び出しの成功・失敗をコンソールおよび logger に記録し、起動失敗は再送出し、サブプロセス失敗は call log の場所を含む CmocError に変換する。Codex TUI 呼び出し全体の実行経路を確認する入口として使用する。
+- Codex CLI/TUI プロセスを起動する共通ランタイム。作業コンテキストと設定から Codex Home、通知 callback、設定上書き argv、呼び出しログ、feedback 呼び出しを準備し、Codex subprocess を実行する。CLI 呼び出しの成否・所要時間・return code・関連識別子を console logger に記録し、起動失敗や subprocess 失敗を cmoc のエラーとして伝播する。Codex TUI 起動経路やそのログ・通知・feedback 連携を変更または調査するときの入口。
 
 ## Read this when
-- Codex TUI または Codex CLI サブプロセスの起動経路を追跡するとき。
-- Codex の設定上書き、作業ディレクトリ、CODEX_HOME、通知 callback、feedback 連携、call log の生成を変更・確認するとき。
-- Codex 呼び出しのログ記録、例外処理、終了コードの扱いを変更・確認するとき。
+- Codex TUI または CLI subprocess の起動処理を変更・調査するとき
+- Codex 呼び出しログ、実行環境、設定上書き、通知 callback、feedback 呼び出しの連携を確認するとき
+- Codex 呼び出しの失敗処理や console/file logger への event 記録を確認するとき
 
 ## Do not read this when
-- Codex サブプロセスを起動せず、設定上書き argv の組み立てだけを確認する場合は runtime_codex_profile 側を直接読む。
-- Codex 呼び出しの設定ファイル読込だけを確認する場合は runtime_config 側を直接読む。
-- ログ保存、feedback、Windows 通知の個別仕様や実装だけを確認する場合は、それぞれの専用モジュールまたは正本仕様を直接読む。
+- Codex のプロンプト生成や agent call parameter 自体の仕様だけを確認するとき
+- Codex subprocess 内部の実装や TUI の画面表示を直接調査するとき
+- ログ保存先や Codex Home 解決など個別機能の詳細だけを確認する場合は、対応する runtime モジュールを直接読む
 
 ## hash
-- ce6c1bbf3143cad0b3d566c85d9899ff5b122f3b56ce56d146b68afcb809e691
+- a368e25ec9ce49f67eb7d706f12a66c7b2bfd35bab33e39f51c3a6baf6f53af7
 
 # `runtime_config.py`
 

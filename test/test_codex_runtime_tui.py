@@ -245,15 +245,15 @@ def test_run_codex_tui_logs_missing_cli_failure(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    real_run: Callable[..., object] = subprocess.run
+    real_popen: Callable[..., object] = subprocess.Popen
 
-    def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
+    def fake_popen(args: list[str], *pos: object, **kwargs: object) -> object:
         """Codex の実行だけを CLI 不在に差し替え、他の subprocess は通す fake。"""
         if args[:1] == ["codex"]:
             raise FileNotFoundError("codex")
-        return real_run(args, *pos, **kwargs)
+        return real_popen(args, *pos, **kwargs)
 
-    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
+    monkeypatch.setattr(cmoc_runtime.subprocess, "Popen", fake_popen)
     logger = SubcommandLogger(root, "test")
     token = set_current_subcommand_logger(logger)
     try:
