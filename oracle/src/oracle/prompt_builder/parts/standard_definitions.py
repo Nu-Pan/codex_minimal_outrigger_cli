@@ -2,9 +2,15 @@
 
 from oracle.other.standard import Standard
 
+ORACLE_AUTHORITY_STANDARD = Standard(
+    standard_id="oracle_authority.10.authority",
+    title="oracle file を正本仕様断片として扱う",
+    required=("oracle file を人間が所有する正本仕様断片として扱う",),
+)
+
 ORACLE_AUTHORITY_NO_REVERSE_FLOW_STANDARD = Standard(
-    standard_id="oracle_authority.10.no_reverse_flow",
-    title="oracle file を正本として扱う",
+    standard_id="oracle_authority.20.no_reverse_flow",
+    title="realization file から oracle file へ意味を逆流させない",
     prohibited=(
         "realization file の都合または挙動を根拠に oracle file の意味を変更してはいけない",
     ),
@@ -12,13 +18,20 @@ ORACLE_AUTHORITY_NO_REVERSE_FLOW_STANDARD = Standard(
 
 ORACLE_AUTHORITATIVE_BASIS_STANDARD = Standard(
     standard_id="oracle.10.authoritative_basis",
-    title="oracle file を正本仕様断片として扱う",
+    title="判断根拠と installed skill の優先関係を守る",
     required=(
         "判断の根拠を関連する oracle file に置く",
         "cmoc 固有契約または oracle file と installed skill が競合する場合は前者を優先する",
     ),
     prohibited=(
         "installed skill の存在を oracle file の意味または作業完了条件の前提にしてはいけない",
+    ),
+)
+
+ORACLE_EDIT_AUTHORITATIVE_BASIS_STANDARD = Standard(
+    standard_id="oracle.15.edit_authoritative_basis",
+    title="一般論だけを根拠に oracle file の要求を変更しない",
+    prohibited=(
         "一般的なベストプラクティスだけを根拠に oracle file の要求を変更してはいけない",
     ),
 )
@@ -42,10 +55,26 @@ ORACLE_INTENT_AND_GAPS_STANDARD = Standard(
 ORACLE_NO_REVERSE_ENGINEERING_STANDARD = Standard(
     standard_id="oracle.30.no_reverse_engineering",
     title="実装から正本仕様を逆算しない",
-    prohibited=("oracle file を調査せず、実装だけから正本仕様を導いてはいけない",),
+    prohibited=(
+        "realization file または実装だけから正本仕様を逆算してはいけない",
+    ),
+)
+
+ORACLE_IMPLEMENTATION_CONSTRAINT_STANDARD = Standard(
+    standard_id="oracle.35.implementation_constraint",
+    title="実装上の制約は仕様の矛盾または実現不能の調査に限って使用する",
     permitted=(
         "正本仕様の矛盾または実現不能を調べる場合に限り、実装上の制約を修正提案の材料にしてよい",
     ),
+)
+
+ORACLE_DEFINED_AND_UNDEFINED_STANDARD = Standard(
+    standard_id="oracle_investigation.40.defined_and_undefined",
+    title="定義済みの事項と未定義の事項を区別する",
+    required=(
+        "oracle file で定義されている事項と未定義の事項を区別する",
+    ),
+    prohibited=("未定義の事項を正本仕様として断定してはいけない",),
 )
 
 ORACLE_CONSISTENCY_AND_SEARCHABILITY_STANDARD = Standard(

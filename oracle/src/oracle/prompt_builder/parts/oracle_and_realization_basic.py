@@ -17,18 +17,39 @@ def build_oracle_and_realization_basic(
         StructDoc(
             "oracle and realization basic",
             StructDoc(
+                "分類",
+                """
+                `{{work-root}}` 配下の regular file を、次の境界で oracle file と realization file に分類する。
+
+                **常時対象外 root**
+
+                次の exact path は、`{{work-root}}` 直下にある場合だけ、その path 自身と全 descendant を常時対象外にする。nested の同名 path は、名前だけで対象外にしない。
+
+                - `{{work-root}}/.git`
+                - `{{work-root}}/.agents`
+                - `{{work-root}}/.codex`
+                - `{{work-root}}/.cmoc`
+                - `{{work-root}}/memo`
+
+                **Git repository と ignore 判定**
+
+                - nested Git working tree の `.git` path は、実際の repository metadata であると確認できた場合だけ、その path 自身と全 descendant を対象外にする
+                - 候補 path を含む最内側の検証済み Git working tree を owning repository とする
+                - owning repository の root と nested の `.gitignore`、repository-local exclude、および global exclude を使用する、通常の index-aware な Git ignore 判定を適用する
+                - tracked な regular file は、ignore pattern に一致しても分類対象に含める
+                - Git ignore によって除外するのは、untracked かつ ignored な regular file だけとする
+                - untracked かつ unignored な regular file は分類対象に含める
+
+                **分類結果**
+
+                - `{{work-root}}/oracle` ツリー内にあり、ファイル名が `INDEX.md` と `AGENTS.md` のいずれでもない regular file を oracle file とする
+                - `{{work-root}}` ツリー内かつ `{{work-root}}/oracle` ツリー外にあり、ファイル名が `INDEX.md` と `AGENTS.md` のいずれでもない regular file を realization file とする
+                """,
+            ),
+            StructDoc(
                 "oracle",
                 StructDoc(
                     "oracle file",
-                    StructDoc(
-                        "定義",
-                        """
-                        以下の条件をすべて満たした regular file の事を指す
-                        - `{{work-root}}/oracle` ツリー内である
-                        - ファイル名が `INDEX.md`, `AGENTS.md` のいずれでもない
-                        - `git check-ignore` で git 追跡対象外ではないと判定された
-                        """,
-                    ),
                     StructDoc(
                         "役割",
                         """
@@ -55,21 +76,6 @@ def build_oracle_and_realization_basic(
             ),
             StructDoc(
                 "realization file",
-                StructDoc(
-                    "定義",
-                    """
-                    以下の条件をすべて満たした regular file の事を指す
-                    - `{{work-root}}` ツリー内である
-                    - `{{work-root}}/oracle` ツリー内ではない
-                    - `{{work-root}}/memo` ツリー内ではない
-                    - `{{work-root}}/.git` ツリー内ではない
-                    - `{{work-root}}/.agents` ツリー内ではない
-                    - `{{work-root}}/.codex` ツリー内ではない
-                    - `{{work-root}}/.cmoc` ツリー内ではない
-                    - ファイル名が `INDEX.md`, `AGENTS.md` のいずれでもない
-                    - `git check-ignore` で git 追跡対象外ではないと判定された
-                    """,
-                ),
                 StructDoc(
                     "役割",
                     """

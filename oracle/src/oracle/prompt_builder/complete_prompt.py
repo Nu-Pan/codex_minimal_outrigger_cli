@@ -20,7 +20,10 @@ from .parts.file_access_rule import build_file_access_rule
 from .parts.index_entry_standard import build_index_entry_standard
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
 from .parts.oracle_review_standard import build_oracle_review_standard
-from .parts.oracle_standard import build_oracle_standard
+from .parts.oracle_standard import (
+    build_oracle_investigation_standard,
+    build_oracle_standard,
+)
 from .parts.realization_oracle_reference_rule import (
     build_realization_oracle_reference_rule,
 )
@@ -54,6 +57,7 @@ def build_complete_prompt(
     aux_placeholder_def: PlaceholderMap = dict(),
     oracle_and_realization_basic: bool = False,
     oracle_standard: bool = False,
+    oracle_investigation_standard: bool = False,
     realization_standard: bool = False,
     oracle_review_standard: bool = False,
     apply_review_standard: bool = False,
@@ -67,6 +71,8 @@ def build_complete_prompt(
     Args:
         summary: agent の担当、主作業、対象、および作業範囲。
         goal: agent call の終了時に満たされるべき状態。
+        oracle_investigation_standard: oracle file の読み取り専用調査に必要な
+            Standard だけを含めるか。
         routing_rule: repository 内の参照先を選ぶ routing 文面を含めるか。
 
     Returns:
@@ -104,6 +110,7 @@ def build_complete_prompt(
     # 下位規則が参照する cmoc 固有概念も同時に注入する。
     if (
         oracle_standard
+        or oracle_investigation_standard
         or realization_standard
         or oracle_review_standard
         or apply_review_standard
@@ -122,6 +129,8 @@ def build_complete_prompt(
     # 各 builder は Standard を選択するだけとし、全用途分を合成後に一度だけ
     # StructDoc へ変換する。これにより横断的な共通 Standard も一度だけ出力する。
     standard_collections: list[StandardCollection] = []
+    if oracle_investigation_standard:
+        standard_collections.append(build_oracle_investigation_standard())
     if oracle_standard:
         standard_collections.append(build_oracle_standard())
     if realization_standard:

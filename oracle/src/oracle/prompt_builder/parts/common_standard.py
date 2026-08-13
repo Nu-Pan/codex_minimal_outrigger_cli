@@ -5,13 +5,24 @@ from oracle.other.standard import StandardGroup
 from .standard_definitions import (
     FINDING_BASIS_EVIDENCE_STANDARD,
     ORACLE_AUTHORITY_NO_REVERSE_FLOW_STANDARD,
+    ORACLE_AUTHORITY_STANDARD,
 )
 
-ORACLE_AUTHORITY_STANDARD_GROUP = StandardGroup(
+ORACLE_AUTHORITY_CORE_STANDARD_GROUP = StandardGroup(
     group_id="10.oracle_authority",
     title="oracle authority standard",
     scope="oracle・realization file を扱う時",
-    standards=(ORACLE_AUTHORITY_NO_REVERSE_FLOW_STANDARD,),
+    standards=(ORACLE_AUTHORITY_STANDARD,),
+)
+
+ORACLE_AUTHORITY_STANDARD_GROUP = StandardGroup(
+    group_id=ORACLE_AUTHORITY_CORE_STANDARD_GROUP.group_id,
+    title=ORACLE_AUTHORITY_CORE_STANDARD_GROUP.title,
+    scope=ORACLE_AUTHORITY_CORE_STANDARD_GROUP.scope,
+    standards=(
+        *ORACLE_AUTHORITY_CORE_STANDARD_GROUP.standards,
+        ORACLE_AUTHORITY_NO_REVERSE_FLOW_STANDARD,
+    ),
 )
 
 
