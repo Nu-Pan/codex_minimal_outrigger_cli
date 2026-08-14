@@ -422,8 +422,26 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
     else:
         current_start_time = process_start_time(process.process_id)
         if current_start_time is None:
-            return _stop_orphaned_child_process_group(
-                process, process_group_id, expected_members
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # pidfd が使えず proc stat も読めない場合は、leader の終了と観測欠落を
+            # 区別できない。kill(pid, 0) で終了を確認できた場合だけ orphan group の
+            # snapshot 検証へ進め、live process を停止済みとして cleanup しない。
+            try:
+                os.kill(process.process_id, 0)
+            except ProcessLookupError:
+                return _stop_orphaned_child_process_group(
+                    process, process_group_id, expected_members
+                )
+            except OSError as exc:
+                raise CmocError(
+                    "実行中 Codex subprocess の同一性を確認できません。",
+                    ["run process を確認し、停止後に再実行してください。"],
+                    f"pid: {process.process_id}\npgid: {process_group_id}\nerror: {exc}",
+                ) from exc
+            raise CmocError(
+                "実行中 Codex subprocess の同一性を確認できません。",
+                ["run process を確認し、停止後に再実行してください。"],
+                f"pid: {process.process_id}\npgid: {process_group_id}",
             )
         if process.start_time is None:
             raise CmocError(

@@ -521,15 +521,21 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(tmp_path: Path) ->
     assert "nested/outer-root.txt" in realization_files
 
 
+@pytest.mark.parametrize("duplicate_kind", ["exact", "lexical-alias"])
 def test_inventory_validates_duplicate_global_ignore_source_once(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, duplicate_kind: str
 ) -> None:
     """同一 global ignore source の検証を一度の列挙で重複させない。"""
     root = make_repo(tmp_path)
     global_ignore = tmp_path / "global-ignore"
     global_ignore.write_text("ignored.txt\n")
+    duplicate = global_ignore
+    if duplicate_kind == "lexical-alias":
+        alias_directory = global_ignore.parent / "alias-directory"
+        alias_directory.mkdir()
+        duplicate = alias_directory / ".." / global_ignore.name
     run_git(root, "config", "--local", "--add", "core.excludesFile", str(global_ignore))
-    run_git(root, "config", "--local", "--add", "core.excludesFile", str(global_ignore))
+    run_git(root, "config", "--local", "--add", "core.excludesFile", str(duplicate))
     (root / "ignored.txt").write_text("ignored\n")
 
     validated: list[Path] = []

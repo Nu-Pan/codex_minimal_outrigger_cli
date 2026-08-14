@@ -148,6 +148,42 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     assert any("linked.md" in call for call in calls)
 
 
+def test_oracle_review_does_not_dirty_linked_worktree_for_ignore_setup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """review が clean 判定後に linked worktree の .gitignore を作成しない。"""
+
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "gu" / "worktree" / "linked-review-clean"
+    run_git(
+        root, "worktree", "add", "-b", "linked-review-clean-home", str(linked), "HEAD"
+    )
+    monkeypatch.chdir(linked)
+    assert run_doctor(linked).exit_code == 0
+    assert not (linked / ".gitignore").exists()
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """review の列挙を空結果にして、worktree の最終状態を検証する。"""
+
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0, result.output
+    assert not (linked / ".gitignore").exists()
+    assert run_git(linked, "status", "--porcelain").stdout == ""
+
+
 def test_oracle_review_forks_from_snapshot_commit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

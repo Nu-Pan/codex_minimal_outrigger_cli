@@ -123,22 +123,20 @@
 # `realization`
 
 ## Summary
-- realization workload の builder adapter を提供するパッケージ。apply と refactor の realization builder adapter へ進む入口となる。
-- apply 系 realization builder adapter を収めるパッケージ。apply fork の launch_exec パラメータ builder adapter へ進む入口となる。
-- refactor 系 realization builder adapter を収めるパッケージ。refactor fork の change summary と file review and fix の builder adapter へ進む入口となる。
+- realization workload を builder に適応する adapter 群を収めるディレクトリ。apply と refactor の処理別 builder adapter へ進む入口であり、配下の個別 adapter の詳細確認にも利用する。
 
 ## Read this when
-- realization workload の builder adapter の構成や、apply・refactor 配下の builder adapter を確認・変更するとき。
-- realization apply fork の launch_exec パラメータ builder adapter を確認するとき。
-- realization refactor fork の change summary または file review and fix の builder adapter を確認するとき。
+- realization workload と builder の接続構成を確認・変更するとき
+- realization の apply または refactor に関する builder adapter の入口を探すとき
+- 配下の処理別 adapter や fork 用 adapter を辿るとき
 
 ## Do not read this when
-- realization workload 自体の処理や、builder adapter 以外の実装を確認するとき。
-- apply・refactor 以外の realization builder を確認するとき。
-- 各 builder が再公開する oracle 側の正本実装の詳細を直接確認するとき。
+- builder の共通処理や realization workload 自体を直接確認・変更するとき
+- apply または refactor 以外の処理を調査するとき
+- 個別 adapter の詳細実装を直接確認したいときは、対応する配下の対象へ進むとき
 
 ## hash
-- 44137963fa26bebf3953bbafcd763985a810da6cf860b3f73ff5ac7e11e7f137
+- b6b5442168a00f913a279c84098fbac73c406e61aa0172dcc352a7aa655ac1c2
 
 # `review`
 

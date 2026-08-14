@@ -19,7 +19,7 @@ from config.cmoc_config import (
 from .runtime_errors import CmocError
 from .runtime_paths import config_path
 
-ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
+_ConfigKey = TypeVar("_ConfigKey", ModelClass, ReasoningEffort)
 
 
 def _model_name(value: Any) -> str:
@@ -150,7 +150,12 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
                 active_containers.remove(identity)
         raise TypeError
 
-    return _validate(value, set())
+    try:
+        return _validate(value, set())
+    except RecursionError as exc:
+        # {{work-root}}/oracle/doc/app_spec/error_handling.md
+        # 深すぎる provider-local container も設定エラーとして上位へ返す。
+        raise TypeError("JSON/TOML value is too deeply nested") from exc
 
 
 def _model_provider_map_from_dict(data: Any) -> dict[str, CodexModelProviderConfig]:
@@ -176,10 +181,10 @@ def _model_provider_map_from_dict(data: Any) -> dict[str, CodexModelProviderConf
 
 
 def _enum_str_map_from_dict(
-    default: dict[ConfigKey, str],
+    default: dict[_ConfigKey, str],
     data: Any,
-    key_type: type[ConfigKey],
-) -> dict[ConfigKey, str]:
+    key_type: type[_ConfigKey],
+) -> dict[_ConfigKey, str]:
     """enum key の JSON 表現を、既定値補完済みの runtime map へ戻す。"""
     restored = dict(default)
     if not isinstance(data, dict):
@@ -237,6 +242,8 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     """永続化 JSON object から、不足項目を既定値で補った config を復元する。"""
     default = CmocConfig()
     try:
+        if not isinstance(data, dict):
+            raise TypeError("config top-level must be an object")
         codex_data = _section(data, "codex")
         model_providers = _model_provider_map_from_dict(
             codex_data.get("model_providers", {})
@@ -282,13 +289,13 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
                 ),
             ),
         )
-    except (TypeError, ValueError) as exc:
+    except (RecursionError, TypeError, ValueError) as exc:
         try:
             # {{work-root}}/oracle/doc/app_spec/error_handling.md
             # 不正 JSON には surrogate も含まれうるため、error report を UTF-8 で出力
             # できる ASCII escape へ変換する。
             detail = json.dumps(data, ensure_ascii=True, indent=2, default=repr)
-        except (TypeError, ValueError):
+        except (RecursionError, TypeError, ValueError):
             detail = repr(data).encode("utf-8", "backslashreplace").decode("utf-8")
         raise CmocError(
             "cmoc config が不正です。",
@@ -366,7 +373,7 @@ def load_config(root: Path) -> CmocConfig:
         )
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
         raise CmocError(
             "cmoc config JSON を読み込めません。",
             ["{{work-root}}/.cmoc/gt/ar/config.json の JSON 構文を確認してください。"],

@@ -17,16 +17,17 @@
 # `fork`
 
 ## Summary
-- `cmoc realization apply fork` における builder adapter の入口。fork 適用の launch_exec パラメータ生成へ到達するための互換接続点を扱い、配下の対象へ進むためのルーティング起点となる。
+- `cmoc realization apply fork` 用の builder adapter の入口。fork 適用処理の builder 接続点を確認するときに読む。
+- 既存の builder 参照を維持する互換入口であり、正本 builder の実装や realization 側の処理を調査するときは、再公開元の正本実装へ進む。
 
 ## Read this when
-- `cmoc realization apply fork` の builder adapter の責務や配置を確認するとき。
-- apply fork の launch_exec パラメータ生成、または互換入口から正本 builder への委譲関係を確認するとき。
+- `cmoc realization apply fork` の builder adapter の責務や入口を確認するとき
+- 既存の `acp.builder.realization.apply.fork.launch_exec` 参照がどの正本 builder へ接続されるかを確認するとき
 
 ## Do not read this when
-- fork 適用処理そのものの実装詳細を調査するとき。
-- 正本 builder の実装内容や挙動を確認したいとき。
-- apply fork 以外の realization apply や、launch_exec パラメータ生成と無関係な処理を扱うとき。
+- fork 適用処理そのものの実装詳細を調査するとき
+- 互換入口の存在確認だけで、再公開元の正本 builder を調べる必要がないとき
+- `cmoc realization apply fork` 以外の builder adapter を調査するとき
 
 ## hash
-- 969bb10283d32eac44ac3c9c0235f822b323bae8734c4143f05df0deaf4c707b
+- 50ede43ea9ebe4ad326e44a9439129cf912b4334bdaf9fd13113119c6b1840eb

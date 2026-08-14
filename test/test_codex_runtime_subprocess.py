@@ -979,17 +979,22 @@ def test_stop_child_process_group_keeps_leader_pidfd_until_group_stop(
     assert events == ["open", "stop:123", "close"]
 
 
-@pytest.mark.parametrize("process_fd", [None, 99])
+@pytest.mark.parametrize(
+    ("process_fd", "start_time"),
+    [(None, 456), (None, None), (99, 456), (99, None)],
+)
 def test_stop_child_process_group_fails_closed_when_live_leader_is_missing(
     monkeypatch: pytest.MonkeyPatch,
     process_fd: int | None,
+    start_time: int | None,
 ) -> None:
     """snapshot 欠落時に live leader を停止済みとして扱わない。"""
     child = runtime_run.ProcessIdentity(123, 456, 123)
     stopped: list[int] = []
     monkeypatch.setattr(runtime_run, "process_group_members", lambda _pgid: ())
     monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: process_fd)
-    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: 456)
+    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: start_time)
+    monkeypatch.setattr(runtime_run.os, "kill", lambda _pid, _signal: None)
     monkeypatch.setattr(
         runtime_run,
         "wait_process_fd_exit",

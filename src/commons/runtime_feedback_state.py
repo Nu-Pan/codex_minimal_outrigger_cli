@@ -40,7 +40,7 @@ from .runtime_feedback_store import (
     write_immutable_json,
 )
 
-JsonObject = dict[str, Any]
+_JsonObject = dict[str, Any]
 
 _MACHINE_RULE_CONTRACTS: dict[str, tuple[str, str, str]] = {
     "feedback.reporter_unavailable.v1": (
@@ -68,11 +68,11 @@ _MACHINE_REPORTER_FAILURE_CODES = {
 class ActiveState:
     """current pointer から検証済み active generation をまとめる。"""
 
-    current: JsonObject | None
-    generation_manifest: JsonObject | None
-    issues: dict[str, JsonObject]
-    machine_aggregates: dict[str, JsonObject]
-    cleanup_manifest: JsonObject | None
+    current: _JsonObject | None
+    generation_manifest: _JsonObject | None
+    issues: dict[str, _JsonObject]
+    machine_aggregates: dict[str, _JsonObject]
+    cleanup_manifest: _JsonObject | None
     cleanup_manifest_path: Path | None
 
 
@@ -166,7 +166,7 @@ def machine_aggregate_id(canonical_key: str) -> str:
     return f"fba_{digest}"
 
 
-def machine_canonical_key(observation: JsonObject) -> str:
+def machine_canonical_key(observation: _JsonObject) -> str:
     """allowlist machine observation から canonical issue key を返す。"""
     payload = observation.get("payload")
     if not isinstance(payload, dict):
@@ -210,7 +210,7 @@ def agent_canonical_key(observation_id: str) -> str:
 
 
 def validate_observation_envelope(
-    observation: JsonObject,
+    observation: _JsonObject,
     *,
     expected_repo_root: Path | None = None,
 ) -> list[str]:
@@ -337,7 +337,7 @@ def _is_version_one(value: object) -> bool:
     return type(value) is int and value == 1
 
 
-def _field_set(record: JsonObject, expected: set[str]) -> list[str]:
+def _field_set(record: _JsonObject, expected: set[str]) -> list[str]:
     """不足 field と追加 field を安定順で返す。"""
     errors = [f"{name}: missing" for name in sorted(expected - record.keys())]
     errors.extend(
@@ -356,7 +356,7 @@ def _is_string_list(value: object, *, non_empty: bool = False) -> bool:
     )
 
 
-def _validate_observation_context(context: JsonObject) -> list[str]:
+def _validate_observation_context(context: _JsonObject) -> list[str]:
     """collector が付与する version 1 context を検査する。"""
     errors = _field_set(
         context,
@@ -416,7 +416,7 @@ def _validate_observation_context(context: JsonObject) -> list[str]:
     return errors
 
 
-def _validate_observation_versions(versions: JsonObject, source: object) -> list[str]:
+def _validate_observation_versions(versions: _JsonObject, source: object) -> list[str]:
     """raw envelope の producer/schema version を検査する。"""
     errors = _field_set(
         versions,
@@ -477,7 +477,7 @@ def _validate_evidence_fingerprint(value: object, index: int) -> list[str]:
     return errors
 
 
-def _validate_machine_observation(observation: JsonObject) -> list[str]:
+def _validate_machine_observation(observation: _JsonObject) -> list[str]:
     """allowlist detector が作る payload と source event を検査する。"""
     errors: list[str] = []
     payload = observation.get("payload")
@@ -590,7 +590,7 @@ def _validate_machine_observation(observation: JsonObject) -> list[str]:
 
 
 def _validate_machine_rule_fields(
-    rule_id_value: str, payload: JsonObject, event_fields: JsonObject
+    rule_id_value: str, payload: _JsonObject, event_fields: _JsonObject
 ) -> list[str]:
     """初期 allowlist の rule 固有 field を検査する。"""
     errors: list[str] = []
@@ -675,7 +675,7 @@ def _has_symlink_component(path: Path) -> bool:
     return False
 
 
-def _read_canonical_object(path: Path, description: str) -> JsonObject:
+def _read_canonical_object(path: Path, description: str) -> _JsonObject:
     """通常 file の canonical JSON object を読む。"""
     if _has_symlink_component(path) or not path.is_file():
         raise _corruption(f"{description} が通常 file ではありません。", path)
@@ -693,7 +693,7 @@ def _read_canonical_object(path: Path, description: str) -> JsonObject:
     return value
 
 
-def _atomic_write_json(path: Path, value: JsonObject) -> str:
+def _atomic_write_json(path: Path, value: _JsonObject) -> str:
     """mutable pointer／manifest を sibling temporary から durable に置換する。"""
     content = canonical_json_bytes(value)
     if _has_symlink_component(path):
@@ -751,7 +751,7 @@ def _resolve_reference_path(
     return candidate
 
 
-def artifact_reference(repo: Path, path: Path) -> JsonObject:
+def artifact_reference(repo: Path, path: Path) -> _JsonObject:
     """存在する通常 file の path と SHA256 reference を返す。"""
     if _has_symlink_component(path) or not path.is_file():
         raise _corruption("feedback artifact が通常 file ではありません。", path)
@@ -786,7 +786,7 @@ def _validate_artifact_reference(
 
 def _require_exact_fields(
     value: object, fields: set[str], path: Path, description: str
-) -> JsonObject:
+) -> _JsonObject:
     """永続 object が exact field set を持つことを要求する。"""
     if not isinstance(value, dict) or set(value) != fields:
         raise _corruption(
@@ -814,7 +814,7 @@ def _require_nonnegative_integer(value: object, path: Path, description: str) ->
 
 
 def _validate_active_issue(
-    record: JsonObject,
+    record: _JsonObject,
     path: Path,
     *,
     expected_report_cut_id: str | None = None,
@@ -1036,7 +1036,7 @@ def _validate_active_issue(
         )
 
 
-def _validate_machine_aggregate(record: JsonObject, path: Path) -> None:
+def _validate_machine_aggregate(record: _JsonObject, path: Path) -> None:
     """threshold 未満 machine aggregate の compact schema を検査する。"""
     _require_exact_fields(
         record,
@@ -1280,7 +1280,7 @@ def _validate_machine_aggregate(record: JsonObject, path: Path) -> None:
             )
 
 
-def _machine_aggregate_reaches_threshold(record: JsonObject) -> bool:
+def _machine_aggregate_reaches_threshold(record: _JsonObject) -> bool:
     """allowlist rule の threshold を compact count から決定論的に判定する。"""
     counts = record.get("threshold_counts")
     if not isinstance(counts, dict):
@@ -1301,7 +1301,7 @@ def _machine_aggregate_reaches_threshold(record: JsonObject) -> bool:
 
 def _load_generation(
     repo: Path, manifest_path: Path, expected_generation_id: str | None = None
-) -> tuple[JsonObject, dict[str, JsonObject], dict[str, JsonObject]]:
+) -> tuple[_JsonObject, dict[str, _JsonObject], dict[str, _JsonObject]]:
     """generation manifest と列挙 record を hash 付きで読み込む。"""
     manifest = _read_canonical_object(manifest_path, "active generation manifest")
     _require_exact_fields(
@@ -1349,7 +1349,7 @@ def _load_generation(
         )
 
     # manifest の canonical order と各 record の identity/hash を検証する。
-    issues: dict[str, JsonObject] = {}
+    issues: dict[str, _JsonObject] = {}
     issue_keys: list[str] = []
     expected_issue_root = manifest_path.parent / "issue"
     for reference in issue_refs:
@@ -1385,7 +1385,7 @@ def _load_generation(
             "active issue references が issue ID 順ではありません。", manifest_path
         )
 
-    aggregates: dict[str, JsonObject] = {}
+    aggregates: dict[str, _JsonObject] = {}
     aggregate_keys: list[str] = []
     expected_aggregate_root = manifest_path.parent / "machine_aggregate"
     for reference in aggregate_refs:
@@ -1529,7 +1529,7 @@ def load_active_state(repo: Path) -> ActiveState:
 
     # cleanup manifest は切替後に残っている場合だけ hash 一致を要求する。
     cut_path = report_cut_manifest_path(repo, str(report_cut_id_value))
-    cleanup_manifest: JsonObject | None = None
+    cleanup_manifest: _JsonObject | None = None
     cleanup_path: Path | None = None
     if cut_path.exists() or cut_path.is_symlink():
         cleanup_manifest = _read_canonical_object(
@@ -1592,7 +1592,7 @@ def load_active_state(repo: Path) -> ActiveState:
 
 def _validate_report_cut_manifest(
     repo: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     path: Path,
     *,
     allow_missing_cleanup_targets: bool = False,
@@ -1862,7 +1862,7 @@ def _validate_diagnostic_section(
     value: object,
     path: Path,
     *,
-    processing: JsonObject,
+    processing: _JsonObject,
 ) -> None:
     """`incomplete` 診断 report と正式 checkpoint の対応を検証する。"""
     # {{work-root}}/oracle/doc/app_spec/feedback_state.md
@@ -2064,7 +2064,7 @@ def _validate_report_cut_current_input(
         ("issues", "issue_id", "issue"),
         ("machine_aggregates", "canonical_key", "machine_aggregate"),
     )
-    reference_groups: dict[str, list[JsonObject]] = {}
+    reference_groups: dict[str, list[_JsonObject]] = {}
     for name, identity_name, directory_name in contracts:
         references = current.get(name)
         if not isinstance(references, list):
@@ -2137,7 +2137,7 @@ def _validate_report_cut_current_input(
             )
 
 
-def _validate_report_cut_reference(reference: JsonObject, path: Path) -> None:
+def _validate_report_cut_reference(reference: _JsonObject, path: Path) -> None:
     """agent に渡す固定 reference の closed variant schema を検証する。"""
     reference_id = reference.get("reference_id")
     kind = reference.get("kind")
@@ -2211,7 +2211,7 @@ def _validate_report_cut_reference(reference: JsonObject, path: Path) -> None:
 
 
 def _validate_report_cut_checkpoint(
-    checkpoint: JsonObject,
+    checkpoint: _JsonObject,
     path: Path,
     *,
     expected_kind: str,
@@ -2254,7 +2254,7 @@ def _validate_report_cut_checkpoint(
 
 def _artifact_reference_shape(
     value: object, path: Path, description: str
-) -> JsonObject:
+) -> _JsonObject:
     """path/SHA256 の closed object を existence 検査前に返す。"""
     reference = _require_exact_fields(
         value, {"path", "sha256"}, path, f"{description} reference"
@@ -2268,7 +2268,7 @@ def _artifact_reference_shape(
 
 def _validate_report_cut_artifact_reference(
     repo: Path,
-    reference: JsonObject,
+    reference: _JsonObject,
     *,
     expected_root: Path,
     description: str,
@@ -2298,8 +2298,8 @@ def _validate_publication_section(
     value: object,
     path: Path,
     *,
-    inputs: JsonObject,
-    processing: JsonObject,
+    inputs: _JsonObject,
+    processing: _JsonObject,
 ) -> None:
     """staged publication と cleanup target の閉じた schema を検査する。"""
     publication = _require_exact_fields(
@@ -2447,7 +2447,7 @@ def _validate_publication_section(
         path,
         "publication cleanup",
     )
-    cleanup_lists: dict[str, list[JsonObject]] = {}
+    cleanup_lists: dict[str, list[_JsonObject]] = {}
     for name in ("observations", "old_generation", "work_artifacts"):
         entries = cleanup.get(name)
         if not isinstance(entries, list) or not all(
@@ -2481,7 +2481,7 @@ def _validate_publication_section(
         if isinstance(item, dict)
     ]
     current_input = inputs.get("current")
-    expected_old_generation: list[JsonObject] = []
+    expected_old_generation: list[_JsonObject] = []
     if isinstance(current_input, dict):
         for name in ("issues", "machine_aggregates"):
             references = current_input.get(name)
@@ -2498,7 +2498,7 @@ def _validate_publication_section(
                 {"path": generation.get("path"), "sha256": generation.get("sha256")}
             )
     expected_old_generation.sort(key=lambda item: str(item["path"]))
-    expected_work: list[JsonObject] = []
+    expected_work: list[_JsonObject] = []
     for name in ("normalization_checkpoints", "verification_checkpoints"):
         entries = processing.get(name)
         if not isinstance(entries, list):
@@ -2521,7 +2521,7 @@ def _validate_publication_section(
         )
 
 
-def load_report_cut(repo: Path) -> tuple[JsonObject, Path] | None:
+def load_report_cut(repo: Path) -> tuple[_JsonObject, Path] | None:
     """repository に高々一件ある進行中または terminal な cut を返す。"""
     root = report_work_root(repo)
     if not root.exists() and not root.is_symlink():
@@ -2557,7 +2557,7 @@ def load_report_cut(repo: Path) -> tuple[JsonObject, Path] | None:
 
 
 def _validate_report_cut_artifact_inventory(
-    repo: Path, manifest: JsonObject, manifest_path: Path
+    repo: Path, manifest: _JsonObject, manifest_path: Path
 ) -> None:
     """manifest が列挙しない work artifact を、checkpoint 回復前も検査する。"""
     processing = manifest.get("processing")
@@ -2645,7 +2645,7 @@ def _validate_report_cut_artifact_inventory(
 
 
 def _current_pointer_selects_cut(
-    repo: Path, manifest: JsonObject, manifest_path: Path
+    repo: Path, manifest: _JsonObject, manifest_path: Path
 ) -> bool:
     """manifest が current pointer 切替後の cleanup manifest かを byte hash で判定する。"""
     pointer_path = current_pointer_path(repo)
@@ -2659,7 +2659,7 @@ def _current_pointer_selects_cut(
     )
 
 
-def write_report_cut_manifest(repo: Path, manifest: JsonObject) -> tuple[Path, str]:
+def write_report_cut_manifest(repo: Path, manifest: _JsonObject) -> tuple[Path, str]:
     """固定入力を維持したまま report cut manifest を atomic update する。"""
     report_cut_id_value = manifest.get("report_cut_id")
     if not isinstance(report_cut_id_value, str):
@@ -2683,7 +2683,7 @@ def write_report_cut_manifest(repo: Path, manifest: JsonObject) -> tuple[Path, s
 
 
 def recover_report_cut_checkpoint_references(
-    repo: Path, manifest: JsonObject, manifest_path: Path
+    repo: Path, manifest: _JsonObject, manifest_path: Path
 ) -> bool:
     """formal checkpoint 保存後の停止で欠けた manifest reference を復元する。"""
     processing = manifest.get("processing")
@@ -2780,7 +2780,7 @@ def recover_report_cut_checkpoint_references(
     return changed
 
 
-def _validate_report_cut_manifest_for_write(manifest: JsonObject, path: Path) -> None:
+def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -> None:
     """未保存 artifact を含む manifest の構造だけを write 前に検査する。"""
     # path/hash の存在検査は staged artifact の write 前には成立しないため、
     # canonical JSON 化とトップレベルの閉じた schema をここで先に確認する。
@@ -2806,7 +2806,7 @@ def _validate_report_cut_manifest_for_write(manifest: JsonObject, path: Path) ->
         raise _corruption("report cut manifest identity が不正です。", path)
 
 
-def write_checkpoint(repo: Path, path: Path, checkpoint: JsonObject) -> JsonObject:
+def write_checkpoint(repo: Path, path: Path, checkpoint: _JsonObject) -> _JsonObject:
     """正式な call result checkpoint を immutable に保存して参照を返す。"""
     digest = write_immutable_json(path, checkpoint)
     return {"path": _relative_path(repo, path), "sha256": digest}
@@ -2814,7 +2814,7 @@ def write_checkpoint(repo: Path, path: Path, checkpoint: JsonObject) -> JsonObje
 
 def read_checkpoint(
     repo: Path, reference: object, expected_root: Path, description: str
-) -> JsonObject:
+) -> _JsonObject:
     """manifest が参照する正式な checkpoint を hash 検証して読む。"""
     path = _validate_artifact_reference(
         repo, reference, expected_root=expected_root, description=description
@@ -2845,7 +2845,7 @@ def validate_feedback_state(repo: Path) -> ActiveState:
 def _validate_active_artifact_inventory(
     repo: Path,
     state: ActiveState,
-    work: tuple[JsonObject, Path] | None,
+    work: tuple[_JsonObject, Path] | None,
 ) -> None:
     """current／staged／cleanup 対象以外の active artifact を拒否する。"""
     root = active_root(repo)
@@ -2940,9 +2940,9 @@ def generation_artifacts(
     generation_id: str,
     report_cut_id: str,
     created_at: str,
-    issues: dict[str, JsonObject],
-    machine_aggregates: dict[str, JsonObject],
-) -> tuple[JsonObject, tuple[tuple[Path, bytes], ...], JsonObject]:
+    issues: dict[str, _JsonObject],
+    machine_aggregates: dict[str, _JsonObject],
+) -> tuple[_JsonObject, tuple[tuple[Path, bytes], ...], _JsonObject]:
     """新 generation の全 immutable byte 列と manifest reference を構築する。"""
     directory = generation_directory(repo, generation_id)
     if not is_uuid7_prefixed(report_cut_id, "fbc_"):
@@ -2951,7 +2951,7 @@ def generation_artifacts(
 
     # record byte 列を先に確定し、manifest はその hash だけを列挙する。
     artifacts: list[tuple[Path, bytes]] = []
-    issue_references: list[JsonObject] = []
+    issue_references: list[_JsonObject] = []
     for current_issue_id, record in sorted(issues.items()):
         path = directory / "issue" / f"{current_issue_id}.json"
         _validate_active_issue(
@@ -2968,7 +2968,7 @@ def generation_artifacts(
                 "sha256": sha256_bytes(content),
             }
         )
-    aggregate_references: list[JsonObject] = []
+    aggregate_references: list[_JsonObject] = []
     for canonical_key, record in sorted(machine_aggregates.items()):
         aggregate_id_value = str(record.get("aggregate_id"))
         path = directory / "machine_aggregate" / f"{aggregate_id_value}.json"
@@ -3008,7 +3008,7 @@ def generation_artifacts(
 
 def publish_generation_artifacts(
     repo: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     artifacts: tuple[tuple[Path, bytes], ...],
 ) -> Path:
     """generation records を保存し、manifest を最後に publication する。"""
@@ -3036,12 +3036,12 @@ def publish_generation_artifacts(
     return manifest_path
 
 
-def current_generation_artifacts(repo: Path, state: ActiveState) -> list[JsonObject]:
+def current_generation_artifacts(repo: Path, state: ActiveState) -> list[_JsonObject]:
     """current generation を cleanup するための全 file reference を返す。"""
     if state.current is None or state.generation_manifest is None:
         return []
     manifest = state.generation_manifest
-    references: list[JsonObject] = []
+    references: list[_JsonObject] = []
     for group in (manifest.get("issues"), manifest.get("machine_aggregates")):
         if not isinstance(group, list):
             raise _corruption(
@@ -3067,13 +3067,13 @@ def publish_current_pointer(
     repo: Path,
     *,
     generation_id: str,
-    generation_manifest: JsonObject,
+    generation_manifest: _JsonObject,
     report_cut_id: str,
     report_cut_manifest_sha256: str,
-    report: JsonObject,
+    report: _JsonObject,
     published_at: str,
     result: str,
-) -> JsonObject:
+) -> _JsonObject:
     """generation と Markdown report の検証後に current pointer を切り替える。"""
     if result not in {"ok", "attention"}:
         raise ValueError(f"invalid normal feedback result: {result!r}")
@@ -3200,7 +3200,7 @@ def cleanup_published_report(repo: Path) -> bool:
     return True
 
 
-def _reference_list(container: JsonObject, name: str, path: Path) -> list[JsonObject]:
+def _reference_list(container: _JsonObject, name: str, path: Path) -> list[_JsonObject]:
     """cleanup section の artifact reference array を型付きで返す。"""
     value = container.get(name)
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
@@ -3212,7 +3212,7 @@ def _reference_list(container: JsonObject, name: str, path: Path) -> list[JsonOb
 
 def _unlink_artifact_reference(
     repo: Path,
-    reference: JsonObject,
+    reference: _JsonObject,
     *,
     expected_root: Path,
     description: str,
@@ -3271,7 +3271,7 @@ def _prune_empty_directories(start: Path, stop: Path) -> None:
             _flush_directory(directory.parent)
 
 
-def discard_report_cut(repo: Path, manifest: JsonObject, manifest_path: Path) -> None:
+def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -> None:
     """raw observation を残し、terminal／obsolete cut の work state を破棄する。"""
     # {{work-root}}/oracle/doc/app_spec/feedback_state.md
     state = load_active_state(repo)

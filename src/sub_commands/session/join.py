@@ -25,11 +25,11 @@ from cmoc_runtime import (
     write_state,
 )
 from commons.indexing import enable_indexing_preflight
-from commons.runtime_git import status_path_statuses
+from commons.runtime_git import literal_pathspec, status_path_statuses
 from commons.runtime_results import CodexExecCallable
 
-CodexExec = CodexExecCallable
-GitRun = Callable[..., CommandResult]
+_CodexExec = CodexExecCallable
+_GitRun = Callable[..., CommandResult]
 
 
 def cmoc_session_join_impl() -> None:
@@ -46,7 +46,7 @@ def cmoc_session_join_impl() -> None:
     )
 
 
-def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> None:
+def _cmoc_session_join_body(codex_exec: _CodexExec, git: _GitRun = run_git) -> None:
     """active session branch を session home branch へ merge する。"""
     root = repo_root()
     work = work_root()
@@ -124,8 +124,8 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
 
 def resolve_session_join_conflict(
     root: Path,
-    codex_exec: CodexExec,
-    git: GitRun = run_git,
+    codex_exec: _CodexExec,
+    git: _GitRun = run_git,
 ) -> None:
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""
     start_subcommand_step("3/4, 1/5", "conflict 対象を列挙", "enumerate conflicts")
@@ -164,7 +164,7 @@ def resolve_session_join_conflict(
         )
     start_subcommand_step("3/4, 4/5", "conflict 対象を stage", "stage conflicts")
     for path in conflicted_paths:
-        git(["add", "--", str(path.relative_to(root))], root)
+        git(["add", "--", literal_pathspec(str(path.relative_to(root)))], root)
     unmerged_paths = _unmerged_paths(root, git)
     start_subcommand_step(
         "3/4, 5/5", "unmerged path と merge 完了を確認", "finish conflict merge"
@@ -179,7 +179,7 @@ def resolve_session_join_conflict(
     git(["commit", "--no-edit"], root)
 
 
-def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
+def _unmerged_paths(root: Path, git: _GitRun) -> list[Path]:
     """Gitのunmerged pathをNUL framingで安全に読み取る。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
     # Git path には改行が含まれ得るため、conflict target は NUL framing を使う。
@@ -191,7 +191,7 @@ def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
 
 def _reject_non_conflict_changes(
     root: Path,
-    git: GitRun,
+    git: _GitRun,
     before_codex: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]],
     conflicted_paths: list[Path],
 ) -> None:
@@ -336,7 +336,7 @@ def _preserves_conflict_context(before: bytes, after: bytes) -> bool:
 
 def _changed_path_snapshot(
     root: Path,
-    git: GitRun,
+    git: _GitRun,
 ) -> dict[Path, tuple[str, tuple[str, int, int, str | None] | None]]:
     """Codex 呼び出し前後の比較用に Git の変更 path と内容を記録する。"""
     snapshot: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]] = {}

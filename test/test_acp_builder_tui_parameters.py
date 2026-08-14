@@ -7,6 +7,9 @@ from pathlib import Path
 
 import pytest
 from _git_support import make_repo
+from oracle.acp_builder.tui.launch_tui import (
+    build_tui_launch_tui_parameter as build_canonical_tui_launch_tui_parameter,
+)
 
 import acp.builder.tui.launch_tui as tui_launch_module
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
@@ -78,3 +81,4 @@ def test_tui_launch_module_exports_only_builder() -> None:
     assert {name for name in vars(tui_launch_module) if not name.startswith("_")} == {
         "build_tui_launch_tui_parameter"
     }
+    assert build_tui_launch_tui_parameter is build_canonical_tui_launch_tui_parameter

@@ -37,7 +37,7 @@ from config.cmoc_config import CmocConfig
 
 from .review_paths import finding_oracle_path, oracle_path_key
 
-StepCallback = Callable[[int | str, str, str | None], None]
+_StepCallback = Callable[[int | str, str, str | None], None]
 
 
 class OracleReviewInterrupted(KeyboardInterrupt):
@@ -63,7 +63,7 @@ class _ReviewProgress:
 
 
 def _report_step(
-    step_callback: StepCallback | None,
+    step_callback: _StepCallback | None,
     index: int | str,
     description: str,
     log_description: str,
@@ -82,7 +82,7 @@ def run_oracle_review_loop(
     oracle_files: list[Path],
     config: CmocConfig,
     codex_exec: CodexExecCallable,
-    step_callback: StepCallback | None = None,
+    step_callback: _StepCallback | None = None,
     evaluated_files: list[Path] | None = None,
 ) -> list[dict]:
     """oracle review の finding enumerate/merge/validate/judge loop を実行する。
@@ -118,7 +118,7 @@ def _run_oracle_review_loop(
     oracle_files: list[Path],
     config: CmocConfig,
     codex_exec: CodexExecCallable,
-    step_callback: StepCallback | None,
+    step_callback: _StepCallback | None,
     progress: _ReviewProgress,
 ) -> list[dict]:
     """進捗を外部保持しながら oracle review loop 本体を実行する。"""
@@ -220,7 +220,7 @@ def _validate_and_judge_findings(
     findings: list[dict],
     config: CmocConfig,
     codex_exec: CodexExecCallable,
-    step_callback: StepCallback | None = None,
+    step_callback: _StepCallback | None = None,
 ) -> list[dict]:
     """所見の妥当性を反復検証し、各所見の採否を判定する。
 

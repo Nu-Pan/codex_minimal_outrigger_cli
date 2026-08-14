@@ -2,10 +2,12 @@
 
 根拠:
 - {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+- {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 """
 
 import os
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -35,13 +37,23 @@ def test_config_defaults_match_logical_model_classes() -> None:
 
     assert config.num_parallel == 8
     assert config.codex.model_providers == {}
-    assert config.codex.model[ModelClass.MAINSTREAM] == CodexModelSpec(
-        None, "gpt-5.6-terra"
-    )
-    assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
-    assert config.codex.reasoning_effort[ReasoningEffort.XHIGH] == "xhigh"
-    assert config.codex.reasoning_effort[ReasoningEffort.MAX] == "max"
+    assert config.codex.model == {
+        ModelClass.MAINSTREAM: CodexModelSpec(None, "gpt-5.6-terra"),
+        ModelClass.FLAGSHIP: CodexModelSpec(None, "gpt-5.6-sol"),
+        ModelClass.EFFICIENCY: CodexModelSpec(None, "gpt-5.6-luna"),
+        ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.6-luna"),
+    }
+    assert config.codex.reasoning_effort == {
+        ReasoningEffort.LOW: "low",
+        ReasoningEffort.MEDIUM: "medium",
+        ReasoningEffort.HIGH: "high",
+        ReasoningEffort.XHIGH: "xhigh",
+        ReasoningEffort.MAX: "max",
+    }
     assert config.codex.num_try_falv_recovery == 1
+    assert config.oracle_review.num_enumerate_findings_loop == 2
+    assert config.oracle_review.num_merge_findings_loop == 2
+    assert config.oracle_review.num_validate_findings_loop == 2
 
 
 def test_config_json_preserves_oracle_member_order() -> None:
@@ -87,6 +99,39 @@ def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
     ]
 
 
+def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
+    """設定を config.json へ保存しても全 section の値を復元できる。"""
+    root = make_repo(tmp_path)
+    config = config_from_dict(
+        {
+            "num_parallel": 3,
+            "codex": {
+                "model_providers": {
+                    "provider": {"settings": {"endpoint": "http://127.0.0.1"}}
+                },
+                "model": {
+                    "minimum": {
+                        "model_provider": "provider",
+                        "model": "local-model",
+                    }
+                },
+                "reasoning_effort": {"low": "deliberate"},
+                "num_try_falv_recovery": 4,
+            },
+            "oracle_review": {
+                "num_enumerate_findings_loop": 3,
+                "num_merge_findings_loop": 4,
+                "num_validate_findings_loop": 5,
+            },
+        }
+    )
+
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    write_config(config_path, config)
+
+    assert config_to_dict(load_config(root)) == config_to_dict(config)
+
+
 @pytest.mark.parametrize("payload", [b"{", b"\xff"])
 def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
     """JSON 構文または UTF-8 が壊れた config を利用者向けエラーへ変換する。"""
@@ -94,6 +139,20 @@ def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> 
     config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
     config_path.parent.mkdir(parents=True)
     config_path.write_bytes(payload)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
+def test_load_config_rejects_excessively_nested_json(tmp_path: Path) -> None:
+    """JSON parser の recursion error を利用者向け設定エラーへ変換する。"""
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path.parent.mkdir(parents=True)
+    depth = sys.getrecursionlimit() * 20
+    config_path.write_text("[" * depth + "0" + "]" * depth)
 
     with pytest.raises(CmocError) as exc_info:
         load_config(root)
@@ -110,6 +169,15 @@ def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
         load_config(root)
 
     assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
+@pytest.mark.parametrize("data", [[], "invalid", set()])
+def test_config_rejects_non_object_top_level(data: object) -> None:
+    """直接呼び出しでも top-level の非 object を設定エラーへ変換する。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(cast(dict[str, object], data))
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
@@ -327,6 +395,24 @@ def test_config_rejects_values_without_unique_json_toml_encoding(
             {
                 "codex": {
                     "model_providers": {"provider": {"settings": {"setting": setting}}}
+                }
+            }
+        )
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+def test_config_rejects_excessively_nested_provider_setting() -> None:
+    """深すぎる provider-local 値を利用者向け設定エラーへ変換する。"""
+    nested: object = 0
+    for _ in range(sys.getrecursionlimit()):
+        nested = [nested]
+
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(
+            {
+                "codex": {
+                    "model_providers": {"provider": {"settings": {"nested": nested}}}
                 }
             }
         )

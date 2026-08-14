@@ -62,20 +62,22 @@
 # `review.py`
 
 ## Summary
-- oracle review の CLI 実行と isolated run のライフサイクルを統括する。active session branch の検証、レビュー対象の列挙と review loop の実行、INDEX 差分の commit・merge、割り込みや失敗時の report と作成済み resource の cleanup を扱う。oracle review の実行経路、隔離 worktree・branch の所有権、cleanup または中断時の挙動を確認する際の入口となる。
+- oracle review の CLI 実行と isolated run の lifecycle を統括する実装。active session branch 上で review 対象を準備し、隔離 worktree・run branch を作成して review loop を実行する。所見や INDEX 差分の確定・merge、割り込み時の部分結果保存、失敗時の report、作成資源の cleanup までを同じ resource ownership と例外処理の責務として扱う。oracle review の実行経路、隔離 run の状態遷移、cleanup、merge、report の連携を確認する際の入口であり、個別の対象列挙・review loop・report 描画の詳細は対応する下位モジュールを読む。
 
 ## Read this when
-- oracle review サブコマンドの実行開始から report 出力までの制御フローを変更・調査するとき
-- review run の worktree・branch 作成、merge、cleanup、lifecycle lock の扱いを確認するとき
-- KeyboardInterrupt、部分作成、失敗、cleanup failure 時の report と状態遷移を確認するとき
+- oracle review サブコマンドの CLI runtime や active session branch に対する実行条件を変更・確認するとき
+- review run の worktree・branch 作成、lifecycle lock、merge、cleanup、部分作成時の所有権を追跡するとき
+- KeyboardInterrupt、doctor preprocess 中断、review loop 中断、cleanup failure、失敗 report の挙動を確認するとき
+- review の全体的な step 制御、所見収集から INDEX merge と最終 report までの orchestration を確認するとき
 
 ## Do not read this when
-- レビュー対象の列挙規則だけを確認したい場合は、対象列挙を担う下位実装を直接読む
-- review loop 内の所見生成・評価処理だけを確認したい場合は、review loop の実装を直接読む
-- report の表示形式や INDEX merge の詳細だけを確認したい場合は、それぞれの専用実装を直接読む
+- review 対象ファイルの列挙条件だけを確認したい場合は review_targets の実装を直接読むとき
+- 個々の oracle file の review loop や finding merge 操作だけを確認したい場合は review_loop の実装を直接読むとき
+- INDEX 差分の commit・conflict resolution・branch merge の詳細だけを確認したい場合は review_index の実装を直接読むとき
+- review report の描画・保存形式だけを確認したい場合は review_report の実装を直接読むとき
 
 ## hash
-- 54c6c1a0de7e75cdee1703f509fd1f01203c0c9ddc305ed59e7a06c98ed1e8a4
+- 69bba24993c1ec5222a0c996dd7d7f0a1b5dff06b767e8ff905dd388d5721f25
 
 # `review_index.py`
 
@@ -96,23 +98,22 @@
 # `review_loop.py`
 
 ## Summary
-- oracle review の finding を対象に、列挙、同一対象に関する既存 finding の提示、merge operation の反復適用、challenger と advocate による妥当性検証、judge による採否判定を一つの review loop として実行する。
-- review の進捗として評価済みファイルと確定済み finding を保持し、KeyboardInterrupt 時には未完了 agent call の結果を捨てて、確定済み部分結果を OracleReviewInterrupted で呼び出し元へ渡す。
-- finding の対象 oracle path を review worktree と main repository の双方から正規化し、merge の Structured Output が既存 finding_id だけを参照することを検証してから編集操作を適用する。
+- oracle review の finding 列挙・マージ・妥当性検証・採否判定を一連の状態で実行するループの実装。対象ファイルごとの列挙結果、merge operation の適用、challenger/advocate による反復検証、judge 結果の付与を扱う。
+- レビュー処理の中断時には、完了済み agent call の結果と評価済みファイルを `OracleReviewInterrupted` として呼び出し元へ返し、部分的な進捗を保持する。finding の path 正規化や merge operation の target ID 検証もこの loop の補助責務に含まれる。
+- oracle review の実行制御や中断・再開、finding の統合・検証・判定ロジックを変更または追跡するときの入口。個別 agent call の prompt/Structured Output 定義そのものを確認する場合は、インポート先の builder file を直接読む。
 
 ## Read this when
-- oracle review の finding 列挙から merge、妥当性検証、採否判定までの制御フローを確認または変更するとき
-- review の反復回数、dirty file・dirty finding の進捗管理、同一 oracle path に関連する finding の選別を調べるとき
-- merge operation の適用規則や Structured Output の参照先検証を確認するとき
-- KeyboardInterrupt 時の部分結果保存と評価済みファイルの扱いを確認するとき
+- oracle review の finding 列挙、重複・関連 finding の merge、反証・擁護・judge の反復処理を調査または変更するとき
+- KeyboardInterrupt 発生時の部分結果保存、評価済みファイルの進捗、レビュー loop の再開挙動を確認するとき
+- finding merge operation の適用規則、finding ID の事後検証、oracle path の正規化を確認するとき
 
 ## Do not read this when
-- finding の列挙、challenger、advocate、judge、または merge agent の prompt parameter だけを確認するときは、それぞれの専用実装へ直接進む
-- oracle review loop を呼び出す上位サブコマンドの進行表示や全体 orchestration だけを調べるとき
-- oracle review と無関係なサブコマンドや、単純な finding データ構造の定義だけを確認するときは、該当する直接の対象へ進む
+- 個別の enumerate、validate、merge、judge agent の prompt や Structured Output schema だけを確認するときは、各 builder の実装を直接読む
+- oracle review 全体の利用者向け仕様やステップ順だけを確認する場合は、対応する正本仕様を直接読む
+- oracle review 以外のサブコマンドや、finding loop と無関係な共通 runtime 処理を調査するとき
 
 ## hash
-- 07707374a530fca2677035eb9e121c375e18d7ce041cfcd53347c9f72575d63d
+- 8d7df5287d338d32bb4664836c1c41450eba54c14b96c8608fc9abfe10f3cb47
 
 # `review_paths.py`
 

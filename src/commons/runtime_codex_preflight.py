@@ -16,14 +16,14 @@ from .runtime_codex import (
 )
 from .runtime_results import CodexExecCallable, CodexExecResult, CommandResult
 
-IndexingPreflight = Callable[[Path, CodexExecCallable], None]
+_IndexingPreflight = Callable[[Path, CodexExecCallable], None]
 
 _INDEXING_LOCK = threading.Lock()
 _INDEXING_ACTIVE: ContextVar[bool] = ContextVar("INDEXING_ACTIVE", default=False)
-_INDEXING_PREFLIGHT: IndexingPreflight | None = None
+_INDEXING_PREFLIGHT: _IndexingPreflight | None = None
 
 
-def configure_indexing_preflight(preflight: IndexingPreflight) -> None:
+def configure_indexing_preflight(preflight: _IndexingPreflight) -> None:
     """Codex 呼び出し前に実行する indexing preflight を登録する。"""
     global _INDEXING_PREFLIGHT
     _INDEXING_PREFLIGHT = preflight
