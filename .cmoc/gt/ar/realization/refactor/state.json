@@ -1044,10 +1044,10 @@
     "last_investigated_at": "2026-08-12_18-57_42_952753000"
   },
   "src/sub_commands/oracle/review_index.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "618b4693973fa588ab78370fe7ee69a72d774867cae6acccfcd06e563b434ab3",
-    "last_investigated_at": "2026-08-12_16-46_08_978467000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "25c107dfb7502bb0b2f7548d2b556eb277d4f90054e95533b71e75c139ac077a",
+    "last_investigated_at": "2026-08-14_16-22_59_761358000"
   },
   "src/sub_commands/oracle/review_loop.py": {
     "investigation_required": false,
