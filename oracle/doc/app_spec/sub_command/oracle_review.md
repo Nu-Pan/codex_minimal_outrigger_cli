@@ -266,4 +266,5 @@ frontmatter 以下の項目を書く（いずれも、不明な場合は null �
 ## レポートの提示方法
 
 - レビューレポートは `{{repo-root}}/.cmoc/gu/ar/report/oracle_review/{{time-stamp}}.md` にファイル保存する
-- レポートファイルのフルパスを stdout に流す
+- 保存したレビューレポートを primary report とする
+- terminal result にサブコマンド固有の `result` を含める

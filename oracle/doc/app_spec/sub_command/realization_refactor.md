@@ -170,10 +170,10 @@
 - `natural_completion` と `completed_with_unresolved` の変更要約は `build_realization_refactor_fork_change_summary_parameter` で生成する。
 - run branch の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。
 - ユーザー中断後またはエラー後は新しい agent call を行わず、確定済みの変更 path と所見情報から要約する。
-- `{{repo-root}}/.cmoc/gu/ar/report/realization/refactor/fork/{{time-stamp}}.md` に保存する。report 本文は stdout に流さず、保存先のフル path を表示する。
-- 終了 log には `completion_reason`、unresolved target の件数、および report のフル path を含める。
+- `{{repo-root}}/.cmoc/gu/ar/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。
+- サブコマンド終了イベントには `completion_reason`、unresolved target の件数、および report のフル path を含める。
 - `natural_completion`、`completed_with_unresolved`、および `user_interruption` は正常系の終了コードとし、`error` は非 0 とする。
-- report と終了 log の `completion_reason` から、完全な自然完了、unresolved 付き完了、ユーザー中断、およびエラーを判別可能にする。
+- report、terminal result、およびサブコマンド終了イベントの `completion_reason` から、完全な自然完了、unresolved 付き完了、ユーザー中断、およびエラーを判別可能にする。
 
 ## join 後 hook
 

@@ -187,4 +187,4 @@ raw observation は、新しい current pointer への正常 publication が完�
 
 publication 後は、同 report cut が処理した raw observation だけを idempotent に cleanup する。cut 固定後に追加された observation、別の未完了 cut が参照する observation、および validation を通過できなかった observation を削除してはならない。
 
-通常のサブコマンド完了サマリーには、pending observation 数だけを表示する。100 件以上ある場合、または最古の pending observation が 7 日以上前の場合は、`cmoc feedback report` の実行を促す warning を加える。件数計算や warning は、サブコマンドの成功判定を変更しない。
+通常の非対話サブコマンドの terminal result には、pending observation 数だけを表示する。100 件以上ある場合、または最古の pending observation が 7 日以上前の場合は、`cmoc feedback report` の実行を促す warning を加える。件数を算出できない場合も warning とする。件数、算出失敗、または warning によって、サブコマンド固有の `result`、終了コード、run state、retry、または成功判定を変更してはならない。

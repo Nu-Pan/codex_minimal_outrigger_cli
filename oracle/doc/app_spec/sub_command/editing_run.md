@@ -123,11 +123,13 @@ workload は、agent call の開始前に fork の共通開始処理を完了し
 - abandon は Codex CLI を呼び出さない機械的な cleanup とする。
 - 対象資源が既に存在しない場合は warning として続行してよいが、session state を `ready` に戻せない場合はエラー終了する。
 
-## report
+## report と terminal result
 
 - fork report の YAML Front Matter は、少なくとも `run_kind`, `session_branch`, `session_fork_commit`, `run_branch`, `run_fork_commit`, `run_worktree`, `state_before`, `state_after` を含む。
 - fork, join, abandon の report から、run kind、`{{cmoc-run-branch}}`、`{{cmoc-run-worktree}}`、`{{cmoc-run-fork-commit}}`、実行前後の state、warning を判別可能にする。
 - 同じ commit を workload 固有の別名でも重複掲載してはいけない。
 - fork report は変更 path と完了理由を含め、保存先と workload 固有項目は workload 固有仕様で定める。
-- join は `{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、および cleanup の結果を stdout から判別可能にする。
-- abandon は破棄対象と cleanup の結果を stdout から判別可能にする。
+- fork の terminal result では、次に実行可能な lifecycle 操作として `cmoc run join` と `cmoc run abandon` を示す。
+- join の terminal result では、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、および cleanup の結果をサブコマンド固有結果として判別可能にする。
+- abandon の terminal result では、破棄対象と cleanup の結果をサブコマンド固有結果として判別可能にする。
+- terminal result の出力先、共通 field、および表示順序は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。

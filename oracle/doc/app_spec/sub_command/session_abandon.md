@@ -52,7 +52,7 @@
     1. `git switch {{cmoc-session-home-branch}}` を実行する。
     2. `{{cmoc-session-state-file}}` の `session.state` を `abandoned` に更新する。
     3. `{{cmoc-session-branch}}` を強制削除する。
-4. 結果を stdout に表示する。
+4. 破棄と cleanup の結果を terminal result のサブコマンド固有結果として表示する。
 
 ## 状態遷移
 

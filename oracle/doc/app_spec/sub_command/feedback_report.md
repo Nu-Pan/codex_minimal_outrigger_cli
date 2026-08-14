@@ -68,7 +68,7 @@ validation、完全一致 deduplication、machine key 集約、recurrence window
 
 raw observation の schema、path、および canonical hash は、report cut manifest と一致しなければならない。同じ observation ID で hash が異なる場合は corruption とする。
 
-1 件でも validation を通過できない input がある場合は、正常 publication を行わない。invalid input を処理済みとして削除せず、問題の path と理由を console と subcommand log に示す。
+1 件でも validation を通過できない input がある場合は、正常 publication を行わない。invalid input を処理済みとして削除せず、問題の path と理由をエラー terminal result とサブコマンドログに示す。
 
 ### machine observation
 
@@ -169,7 +169,7 @@ validation failure、AI call failure、Structured Output の受理失敗、state
 
 正常 publication と `incomplete` のどちらも成立しない場合は、新しい正常 publication を行わない。直前の current pointer を維持し、未検証 candidate や前回の active issue を新しい report として提示しない。
 
-current pointer の切替後に cleanup だけが失敗した場合は、publication 済みの result を巻き戻さない。warning と cleanup manifest path を示し、終了コード 0 とする。次回 invocation で cleanup を再開する。
+current pointer の切替後に cleanup だけが失敗した場合は、publication 済みの result を巻き戻さない。terminal result の warning に cleanup manifest path を含め、次回 invocation で cleanup を再開することを次の操作として示す。終了コードは 0 とする。
 
 ## ユーザー中断と再開
 
@@ -202,6 +202,8 @@ terminal な `incomplete` cut は、中断または失敗した cut の再開対
 {{repo-root}}/.cmoc/gu/ar/report/feedback/{{time-stamp}}.md
 ```
 
+保存した正常 report を primary report とする。terminal result に `result: ok | attention` を含める。
+
 front matter には、次の情報だけを含める。
 
 - command、生成日時、repo root、および実行時の session branch
@@ -229,6 +231,8 @@ current evidence は、削除予定の cut 内 reference だけを指す link �
 {{repo-root}}/.cmoc/gu/ar/report/feedback/incomplete/{{time-stamp}}.md
 ```
 
+保存した `incomplete` 診断 report を primary report とする。terminal result に `result: incomplete` を含める。次の操作として、人間が `inconclusive` の原因を修正した後に `cmoc feedback report` を再実行することを示す。
+
 front matter には、次の情報だけを含める。
 
 - command、生成日時、repo root、および実行時の session branch
@@ -248,8 +252,6 @@ active generation ID は含めない。診断 report の先頭には、正常 pu
 `inconclusive` candidate も、安定した candidate ID 順で表示する。各 candidate には、candidate ID、summary、判定不能となった reason、および確認できた current evidence を示す。current evidence が空の場合は、確認できた evidence がないことを明示する。
 
 両セクションの current evidence は、削除され得る report cut reference だけを指す link にしない。人間が診断 report だけから確認できる path、subject、probe、location、fingerprint、または finding を materialize する。
-
-診断 report を durable に保存した後の完了表示には、`result: incomplete`、report path、verification candidate 数、`unresolved` 数、`inconclusive` 数、および正常 publication が成立しなかったことを示す。candidate の詳細は Markdown report に表示し、console へ重複して列挙しない。
 
 ## 終了コード
 

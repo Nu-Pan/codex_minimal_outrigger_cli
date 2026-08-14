@@ -24,9 +24,9 @@
 
 - ユーザー中断要求を受け付けた cmoc は、新しい処理単位の開始を止める。
 - 実行中だった処理単位を完了させるか rollback するかは個別仕様または実装裁量とする。ただし、破損した部分結果や未確定の部分結果を完了済みとして残してはいけない。
-- 確定済みの部分結果を保持したまま、個別仕様が定める state 更新と後処理を行い、終了 log を出力する。中断時に report を保存するかは個別仕様に従う。
+- 確定済みの部分結果を保持したまま、個別仕様が定める state 更新と後処理を行い、`user_interruption` の terminal result をサブコマンドログと console へ出力する。console 出力は `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。中断時に report を保存するかは個別仕様に従う。
 - ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。
-- 個別仕様が保存を認める report または再開 state と、終了 log から、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
+- 個別仕様が保存を認める report または再開 state と、terminal result を含むサブコマンド終了イベントから、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
 - ユーザー中断要求を受け付けた後は、そのサブコマンドのための新しい Codex CLI 呼び出し、retry、quota 回復待ち、および Codex CLI session の再開を行わない。この指示は `codex_exec_rule.md` の待機・再開規則より優先する。
 - 通常の完了処理自体に失敗した場合は、ユーザー中断要求による正常系ではなく、個別仕様と error handling 規則に従う。
 - ユーザー中断要求による terminal result の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。

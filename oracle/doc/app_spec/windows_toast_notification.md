@@ -22,13 +22,9 @@
 
 ### terminal result の分類
 
-terminal result の通知は、少なくとも次の状態を区別可能にする。
+terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。Windows toast は、同仕様が定める全共通分類を区別可能にする。
 
-- 自然完了
-- エラー終了
-- ユーザー中断要求による正常な中断完了
-
-ユーザー中断要求による正常な中断完了は、エラーとして通知してはならない。
+`user_interruption` は、エラーとして通知してはならない。
 
 ユーザー中断要求の成立条件と完了処理は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする。
 

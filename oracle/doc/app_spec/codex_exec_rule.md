@@ -308,10 +308,9 @@ call-scoped path context の適用範囲を次に示す。
         - `{"type":"error","message":"...You hit your spend cap..."}`
         - `{"type":"turn.failed","error":{"message":"...You hit your spend cap..."}}`
 - ユーザー向けメッセージについて
-    - quota 枯渇による待機を行う場合、進捗をユーザーに表示すること
-    - e.g. quota が枯渇して待機モードに入ったことを表示する
-    - e.g. 動作確認のための Codex CLI 実行を行ったことと、その結果を表示する
-    - e.g. quota が復活して処理を再開したことを表示する
+    - quota 枯渇による待機を行う場合、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` に従って、待機開始、継続中、および再開を簡潔な進行通知として表示する
+    - 動作確認用 Codex call ごとのログパス、経過時間、および戻り値を console へ列挙しない
+    - 動作確認用 Codex call とその結果は、サブコマンドログから追跡可能にする
 
 ### サーバーの一時的不調で失敗した場合
 

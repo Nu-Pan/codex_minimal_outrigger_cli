@@ -30,7 +30,7 @@
 4. 一意な `{{session-id}}` を生成する
 5. `{{cmoc-session-branch}}` を作成して checkout する
 6. `{{repo-root}}/.cmoc/gu/ar/session/{{session-id}}.json` に session 情報と初期状態 `run.state=ready` を保存する
-7. 作成した `{{cmoc-session-branch}}` 名と `{{cmoc-session-home-branch}}` 名を標準出力に表示する
+7. terminal result のサブコマンド固有結果に、作成した `{{cmoc-session-branch}}` 名と `{{cmoc-session-home-branch}}` 名を含める
 
 ## `{{cmoc-session-branch}}` の命名規則
 
