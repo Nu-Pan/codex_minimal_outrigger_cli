@@ -550,13 +550,16 @@ def _global_git_ignore_paths(root: Path) -> list[Path]:
     )
     if configured.returncode == 0:
         paths: list[Path] = []
+        seen: set[Path] = set()
         for line in configured.stdout.splitlines():
             if line:
                 path = Path(line)
                 resolved = path if path.is_absolute() else root / path
                 # {{work-root}}/oracle/doc/app_spec/misc_spec.md
                 # 同じ ignore source の検証結果を一度の列挙内で再利用する。
-                if resolved not in paths:
+                source_key = resolved.resolve()
+                if source_key not in seen:
+                    seen.add(source_key)
                     paths.append(resolved)
         return paths
     config_home = os.environ.get("XDG_CONFIG_HOME")

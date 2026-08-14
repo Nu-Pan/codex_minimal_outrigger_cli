@@ -52,21 +52,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper と公開 API をまとめる commons パッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定・状態・Git・パス・ログ・エラー・feedback・editing run・INDEX 更新など、複数のランタイム機能から再利用される実装および公開入口を扱う。
-- 特定の共通 runtime 機能の実装、公開 API、状態遷移、Codex 呼び出し境界、feedback 処理、Git/worktree 操作、設定永続化、または INDEX lifecycle を調査・変更するときの下位モジュールへの入口となる。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 共通ライフサイクル、Codex 実行、設定・状態、Git・パス・ログ・feedback・run lifecycle、INDEX 更新など、複数の runtime 機能から再利用される実装への入口となる。
+- 個別の共通 helper の責務と実装を確認する場合は、commons 配下の対応する runtime モジュールへ進む。パッケージ公開 API の構成を確認する場合は初期化・再公開モジュールを入口とする。
 
 ## Read this when
-- 複数の CLI・Codex・設定・状態・Git・ログなどにまたがる共通 runtime の責務や依存関係を調査するとき
-- 特定の共通 helper の実装対象が commons 配下にあるが、どの runtime module から確認を始めるべきか判断するとき
-- INDEX 更新、feedback、editing run、Codex exec/TUI などの横断的な実行基盤を変更・検証するとき
+- cmoc の複数の runtime 機能にまたがる共通 helper の配置や責務分担を調査するとき
+- CLI、Codex 実行、設定、状態、Git、ログ、feedback、run lifecycle、INDEX 更新の実装入口を探すとき
+- commons 配下の個別 runtime モジュールを読む前に、共通パッケージ全体の構成を把握するとき
 
 ## Do not read this when
-- 利用者向け CLI サブコマンド固有の業務ロジックや正本仕様だけを確認したいとき
-- 特定の runtime helper の詳細実装が明確な場合は、このディレクトリ全体ではなく対応する個別モジュールを直接読むとき
-- Structured Output schema、path model、feedback、Git、session state などの正本仕様だけを確認したいときは、対応する仕様文書を直接読むとき
+- 特定の runtime helper のアルゴリズムや入出力契約だけを確認したいときは、commons 配下の対応する個別モジュールを直接読む
+- 利用者向け CLI の個別サブコマンド仕様や正本仕様だけを確認したいときは、該当する CLI 実装または oracle 文書を直接読む
+- INDEX.md の文章規則や Structured Output schema だけを確認したいときは、indexing 用の prompt・schema 定義を直接読む
 
 ## hash
-- 5ecbaf05ecf2c7411cf8c54af6d1111493d2635332915a0ed8ce39146196a01b
+- 020dabc1869dc82d602e8b54246cc8b1e9e86632efce056d6e62a52c44588bdf
 
 # `config`
 
