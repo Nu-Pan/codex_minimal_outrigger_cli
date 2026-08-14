@@ -53,20 +53,21 @@
 # `oracle`
 
 ## Summary
-- oracle 関連の agent call 起動処理を種別ごとにまとめるディレクトリです。oracle file の編集・調査・review に関する TUI 起動条件、完全 prompt の生成・保存、Structured Output schema、所見処理の契約、モデルやアクセス範囲などの実行設定を確認・変更する際の入口になります。下位には、編集用の `edit`、調査用の `investigation`、review の所見処理用の `review` があります。
+- oracle 用 ACP agent call の起動定義をまとめる領域です。oracle file の調査・編集用 TUI 起動処理と、oracle review の所見列挙・理由検証・採否判定・統合に関する prompt、起動条件、Structured Output 契約への入口を提供します。各処理の具体的な実装や契約を確認する場合は、対応する下位ディレクトリへ進みます。
 
 ## Read this when
-- oracle file 向け agent call の起動パラメータ、prompt、Structured Output schema、実行条件を種別横断で確認するとき。
-- oracle の編集・調査・review のいずれかに関する下位実装へ進む前に、担当領域の入口を選ぶとき。
-- 下位ディレクトリの追加や用途変更により、oracle agent call の構成を確認する必要があるとき。
+- oracle file の調査または編集に使う agent call の起動処理を確認・変更するとき。
+- oracle review における所見の列挙、妥当性理由の検証、採否判定、重複・矛盾の統合に関する agent call 定義や出力契約を確認するとき。
+- oracle 用 agent call の prompt、ファイルアクセス範囲、作業ディレクトリ、モデル・推論設定、indexing preflight を下位領域へ振り分ける入口が必要なとき。
 
 ## Do not read this when
-- 特定の agent call 種別の実装が明確な場合は、対応する `edit`、`investigation`、または `review` の下位入口へ直接進むとき。
-- prompt builder の共通構築規則、acp builder の基本型、oracle 編集処理の実行本体、TUI UI 自体だけを確認したいときは、それぞれの直接の実装入口を読むとき。
-- oracle file の正本仕様やレビュー対象の実装そのものを確認するとき。
+- oracle investigation の起動処理だけを確認するときは、investigation の実装入口へ直接進む。
+- oracle edit の起動処理だけを確認するときは、edit の実装入口へ直接進む。
+- oracle review の特定の所見処理や Structured Output 契約だけを確認するときは、review 配下の対応する実装または契約へ直接進む。
+- prompt の共通構築規則、ACP 基本型、パス解決、oracle file の実行本体を確認するときは、それぞれの実装入口を直接読む。
 
 ## hash
-- 9196aea36f892c8cd108d2ac73e960143bd45c5e8cfceef129ade0ad69a2f17c
+- f4ea4450081c5a853de57de50b60b9388461b5f66a71efc47a74b5c7fec95b9f
 
 # `quota_probe.py`
 

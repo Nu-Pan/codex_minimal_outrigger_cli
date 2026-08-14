@@ -75,39 +75,41 @@
 # `oracle_edit.md`
 
 ## Summary
-- oracle file を編集する `cmoc oracle edit` サブコマンドの正本仕様。目的、ユーザー指示の入力経路、起動前条件、TUI 起動パラメータ、実行順序、編集境界、終了時の差分保持、中断・排他制御、ログ方針を定める。サブコマンドの実装や関連するプロンプト生成・doctor・indexing・Codex CLI 連携の入口となる。
+- oracle file をユーザー指示に基づいて直接編集する `cmoc oracle edit` サブコマンドの正本仕様。目的、入力プロンプト、doctor/indexing 前処理、TUI 起動条件・パラメータ、編集境界、終了時の差分保持、中断・排他制御、ログ方針を定める。
+- oracle edit の実行順序や TUI agent に許可・禁止される操作、main worktree・active session branch などの起動前提を確認する必要がある場合の入口。
 
 ## Read this when
-- `cmoc oracle edit` の挙動、引数、実行順序、終了条件を確認するとき
-- oracle file を編集する TUI の起動条件、起動パラメータ、編集権限を実装・変更するとき
-- TUI 終了後の未コミット差分、indexing、branch・worktree・session state の扱いを確認するとき
-- oracle edit 固有の中断、排他制御、ログ、feedback の責務を確認するとき
+- `cmoc oracle edit` の挙動、引数、ユーザー指示の受け渡し、TUI 起動条件または起動パラメータを変更・確認するとき
+- oracle file の編集権限、realization file・INDEX.md・AGENTS.md の扱い、git 操作の禁止範囲を確認するとき
+- TUI 終了後の差分保持、終了コード、中断、排他制御、ログの仕様を確認するとき
 
 ## Do not read this when
-- realization file の通常編集や `cmoc oracle investigation` の権限を確認するとき
-- プロンプト入力形式そのものの詳細を確認するときは、指定された prompt editor input の正本を直接読む
-- doctor preprocess、indexing、Windows toast、Codex CLI 実行規則など個別機能の詳細仕様を確認するときは、各機能の正本を直接読む
+- oracle file の編集対象判定基準やプロンプト入力形式の詳細を確認する場合は、本文が正本として参照する各 app_spec 文書を直接読むとき
+- 実際の TUI builder の実装や初期プロンプト生成ロジックを調査する場合は、本文が指定する realization file を直接読むとき
+- 他のサブコマンドの fork・join・abandon lifecycle や run section の仕様を確認する場合
 
 ## hash
-- 64ed9944a0db51b73cf6716d01dd3e193b2c90164720a96215c4c019855e98e2
+- 6962efaec053bf38be22a00c113ddfc9352df41b9e13069088db6c6d00efc1d2
 
 # `oracle_investigation.md`
 
 ## Summary
-- エディタから受け取った oracle file 調査指示を完全プロンプトへ組み込み、Codex CLI の TUI を起動するサブコマンドの仕様を扱う。oracle file の調査フロー、入力編集、起動パラメータ、調査結果と変更の扱いを確認するための入口である。
+- 対象は、oracle file を根拠にユーザーの調査指示へ回答する Codex CLI TUI のサブコマンド仕様である。doctor 前処理、調査指示のエディタ入力、完全プロンプトと起動パラメータの構築、TUI 起動までの責務と、oracle investigation から editor handoff への制約を扱う。oracle 調査サブコマンドの挙動、入力方式、起動条件、調査時のファイルアクセス境界を確認・変更するときの入口となる。
 
 ## Read this when
-- oracle file を根拠に調査するサブコマンドの挙動や実行手順を確認するとき
-- エディタ入力から調査用 TUI 起動までのプロンプト構築契約を確認するとき
-- oracle file と realization file の読み書き制約、調査結果の扱いを確認するとき
+- oracle file に関する調査指示を受け取り、Codex CLI TUI を起動するサブコマンドの実行手順を確認するとき
+- 調査指示のエディタ入力、完全プロンプトの skeleton、TUI 起動パラメータの構築責務を確認するとき
+- oracle investigation から editor handoff へ渡す際の read-only 制約や限定的な sandbox escalation の扱いを確認するとき
+- oracle investigation の実装や関連する app specification の整合性を調べる際に、意味上の調査境界と正本文書を確認するとき
 
 ## Do not read this when
-- oracle file の内容そのものを調査するとき
-- プロンプト編集機構や起動パラメータの実装詳細を直接確認するとき
-- oracle file の調査を伴わない別のサブコマンドの仕様を確認するとき
+- 一般的な Codex CLI の利用方法や TUI の詳細だけを確認したいときは、Codex CLI・TUI の直接の正本仕様を読む
+- oracle file の内容そのものや oracle file の選定基準を確認したいときは、対象文書が参照する oracle file の判定基準・各正本文書を直接読む
+- oracle investigation 以外のサブコマンドの引数・実行手順・責務を確認したいとき
+- 実装ファイルの具体的な関数定義やコード上の起動処理を確認したいときは、対応する realization file を直接読む
 
 ## hash
-- f4c19cf7e8fd5019ff0f12a59f12ad199d8a530c21c62b66bc7b933c17c7b257
+- d2b7cac3498b7dddd54678284f6536b3c75afde4934d451129ab3a040982faa3
 
 # `oracle_review.md`
 

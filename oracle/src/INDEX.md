@@ -1,16 +1,17 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle 実装を構成する下位領域への入口。AI agent 呼び出し構築、feedback 入力契約、共通モデル・設定、prompt 構築と標準定義を扱う。
-- agent call の用途別パラメータや起動定義を確認するときは acp_builder、feedback の入力形式・検証を確認するときは feedback、パス・設定・標準・構造化文書の共通モデルを確認するときは other、完全 prompt や規則部品を確認するときは prompt_builder へ進む。
+- AIエージェント呼び出しに使う prompt、Structured Output schema、モデル、推論強度、ファイルアクセスモード、cwd、preflight などの起動パラメータを、cmoc の処理単位ごとに定義する領域です。直下の共通データモデルから、indexing、feedback、oracle、realization、session、tui、quota probe など用途別の呼び出し定義へ進むための入口になります。
 
 ## Read this when
-- oracle 実装の担当領域を特定し、4 つの下位領域のどこから調査を始めるか判断するとき。
-- agent call、feedback、共通モデル、prompt 構築の複数領域にまたがる変更や調査で、下位入口を選ぶとき。
+- 特定の cmoc 機能が起動する AI エージェントについて、prompt と Structured Output schema の対応や起動パラメータを調べるとき。
+- 共通の AgentCallParameter と用途別の agent call builder の責務分担を確認してから、個別の処理定義へ進むとき。
+- oracle review、feedback issue 判定、realization の apply/refactor、session join、TUI、quota probe の呼び出し定義を探すとき。
 
 ## Do not read this when
-- 対象となる下位領域や個別ファイルが明確で、そこへ直接進めるとき。
-- oracle の正本仕様、realization の実装、または INDEX.md のルーティング規則そのものを確認するとき。
+- AIエージェント呼び出しの実行処理、共通 prompt 生成規則、パス解決、ACP 基本型の実装だけを調べるとき。
+- レビュー対象の oracle file、realization file、feedback issue の具体的内容を確認するとき。
+- Structured Output schema の一般仕様や、個別の所見・issue の原因と重要度だけを調べるとき。
 
 ## hash
-- dfddd52c9544c67675787ba434ea9dd8821bc80a0e1612658fb7a42e10923636
+- c3f8abbd4a7d21d9c1953c142dbf098c93f610785227ee0a86797bed3dfc1119

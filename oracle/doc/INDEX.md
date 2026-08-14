@@ -1,20 +1,24 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を横断的に参照するための正本仕様群。CLI 自動補完、Codex 実行、ログ・エラー処理、doctor、feedback、session/run lifecycle、サブコマンド、通知、workflow などの責務と相互参照を扱う。個別機能の挙動仕様を調査・実装・レビューする際の入口となる。
+- CLI 自動補完、Codex 実行、ログ、doctor 前処理、feedback、session/run、サブコマンドなど、cmoc のアプリケーション仕様を横断的に案内する正本仕様群のルーティング入口。各仕様の責務境界と、個別仕様へ進む判断基準を確認できる。
+- CLI の実行契約や補完境界、出力・エラー処理、状態管理、feedback、workflow など、cmoc の外部挙動・共通契約を変更または検証する際の起点となる。
+- 個別の機能仕様を直接読むべき場合と、共通仕様・サブコマンド仕様から参照先を選ぶ場合の境界を示す。
 
 ## Read this when
-- cmoc のアプリケーションレベルの正本仕様を探すとき
-- 複数のサブコマンド、共通処理、状態管理、Codex 呼び出し、feedback の仕様間の参照関係を確認するとき
-- 対象機能に対応する個別仕様書の入口を判断するとき
+- cmoc のアプリケーション仕様を横断して、CLI 実行、出力、エラー、状態管理、feedback、session/run、サブコマンドの正本仕様への入口を選ぶとき
+- 自動補完、Codex agent call、provider 設定、doctor preprocess、ログ、エラー処理、feedback、INDEX 生成、prompt、run isolation、session lifecycle などの共通契約を変更・実装・レビューするとき
+- cmoc の標準 workflow、oracle から realization への反映、session/run lifecycle を確認するとき
+- 個別サブコマンドの責務や、共通仕様と個別仕様の優先関係を判断するとき
 
 ## Do not read this when
-- 特定の仕様書の詳細だけを確認する場合は、該当する個別ファイルを直接読む
-- realization implementation や realization test の具体的な挙動だけを調査する場合は、対応する実装・テストまたは専用仕様へ進む
-- INDEX.md の生成規則そのものを確認する場合は、インデクシング仕様を直接読む
+- 特定の個別仕様、実装ファイル、テスト実行手順の具体的内容だけを確認する場合は、対応する正本仕様・実装・専用手順へ直接進む
+- Structured Output schema の作成・変更・検証だけを行う場合は、対象 schema または schema validator の仕様を直接読む
+- Windows toast 通知の具体的な実装方式や callback の設定・payload だけを確認する場合は、通知仕様の下位参照先または realization implementation を直接読む
+- feedback observation の raw 入力、detector、保存や report state の詳細だけを確認する場合は、feedback の各専門仕様を直接読む
 
 ## hash
-- edd0a266a678e668730a150a0f603019dc6901c9d947152f78a220844aed940e
+- 2feaa8549abc58802988fdb622eefdb2efad41f7e7945cdc32f81e4e5ff51930
 
 # `branch_model.md`
 

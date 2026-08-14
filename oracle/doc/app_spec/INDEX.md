@@ -18,20 +18,23 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が `codex exec` を呼び出す際の正本規約。agent call と Codex call の定義、call-scoped path context、環境変数、CLI 引数、sandbox、ファイルアクセス、モデル・provider、prompt の受け渡し、ログ、session、Structured Output、補正、並列実行、失敗時の扱いを定める。Codex CLI 呼び出しの構築・検証・障害対応の実装や仕様を確認する際の入口となる。
+- Codex CLI を用いた agent call の実行契約を定義する正本文書。`codex exec` の path context、環境変数、preflight、argv 上書き、sandbox、ファイルアクセス、model/provider、prompt 전달、feedback reporter、ログ、Structured Output、並列実行、失敗時の retry・quota 待機を扱う。Codex 呼び出しの構築・実行・検証・障害処理の実装や仕様を確認する際の入口となる。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し方法、argv 上書き、sandbox、provider/model/reasoning effort、prompt stdin、ログ保存を変更または確認するとき
-- Structured Output の schema 保存・検証・同一 session での補正、quota・一時障害・想定外エラーへの対応を変更または確認するとき
-- agent call ごとの path context、ファイルアクセス制限、feedback reporter、並列呼び出しの規約を確認するとき
+- cmoc が `codex exec` または `codex exec resume` を構築・起動する処理を変更またはレビューするとき
+- agent call の cwd、worktree、repo root、sandbox、承認、model/provider、reasoning effort、`CODEX_HOME` の扱いを確認するとき
+- prompt の stdin 渡し、ログ保存、session ID、Structured Output の schema・検証・補正、差分不変性を確認するとき
+- feedback reporter の call-scoped context や並列呼び出しの分離、Codex CLI の失敗・retry・quota 待機を実装または調査するとき
 
 ## Do not read this when
-- Codex CLI 呼び出し規約ではなく、個別 agent call の意味上の責務や判断基準を確認する場合は、対応する oracle doc を直接読む
-- Windows toast 通知、model provider の詳細仕様、feedback observation の詳細仕様、prompt standard など個別の正本が対象の場合は、それぞれの参照先を直接読む
-- INDEX.md のエントリー生成や一般的なリポジトリ開発手順だけを確認する場合
+- Codex CLI 呼び出しの規約ではなく、個別 agent call の意味上の責務や判断基準を確認する場合は、対応する oracle doc を直接読む
+- Codex CLI の Windows toast 通知の有効設定や callback 条件だけを確認する場合は、専用の Windows toast notification 仕様を直接読む
+- model provider の ID 解決や provider-local 設定の詳細だけを確認する場合は、codex model provider 仕様を直接読む
+- feedback observation の event や stable field の詳細だけを確認する場合は、feedback observation 仕様を直接読む
+- 一般的な Structured Output schema の作成・検証だけを行う場合は、本書ではなく schema validator の仕様または対象 schema を直接読む
 
 ## hash
-- e0cfdb5a44a946e0dfbe8931cb419fd2bfe4f084625fc3dad595fa6ffa5589bf
+- 8971e31374cfed1765c8c89fff2a9dbf426823b1f1736103c983217a15a76b7b
 
 # `codex_model_provider.md`
 
@@ -210,20 +213,20 @@
 # `prompt_editor_input.md`
 
 ## Summary
-- cmocがエディタ向け入力文面を生成し、ユーザーのオリジナルプロンプトを完全プロンプトへ組み込む仕様を定義する。初期コメントの責務、完全プロンプトのskeleton、エディタ起動、コメント除去、プレースホルダー置換、保存までを扱う。プロンプト編集入力や完全プロンプト確定処理の仕様を確認する際の入口となる。
+- この文書は、cmoc がエディタに提示するプロンプト入力用 skeleton の構造、初期コメントの責務、入力結果の保存領域、エディタ起動条件、コメント除去・placeholder 置換・検証・削除までの確定手順を定義する。プロンプトエディタ入力の仕様や、editor work file と保存記録の扱い、後続 Agent に渡す完全プロンプトの生成経路を確認・変更するときの入口となる。
 
 ## Read this when
-- エディタに提示する初期入力文面の構成や責務を確認するとき
-- skeletonへのオリジナルプロンプト挿入条件を確認するとき
-- エディタの選択、起動待機、入力読み出し、完全プロンプト保存の挙動を確認するとき
+- プロンプトエディタの初期入力文面、skeleton、{{original-prompt-here}} の置換条件を変更または確認するとき
+- editor work file の検証、保存コピー、完全プロンプト、コメント除去、失敗時の復旧動作を扱うとき
+- エディタの選択・起動方法や、後続 AI Agent が参照できる入力の境界を確認するとき
 
 ## Do not read this when
-- 正確な初期コメントの表示文面そのものを確認したいときは、指定された正本実装を直接読む
-- サブコマンド固有のプロンプト契約やパラメータ構築を確認したいときは、対応するbuild_*_parameterの仕様・実装を直接読む
-- 実行時生成物の内容や個別のログを確認したいとき
+- サブコマンド固有の完全プロンプト契約そのものを確認するときは、対応する build_*_parameter の仕様・実装を直接読む
+- 初期コメントの正確な表示文面を確認するときは、正本である editor_input.py を直接読む
+- 一般的なプロンプト設計や、エディタ入力と無関係な Agent 呼び出し仕様を扱うとき
 
 ## hash
-- 2c21fa7b9fffb3d90522994106ad255df4d918ec8bb68ec6fdbe7448427c1264
+- fc6fe80349e9eb7db5127a8b9398e421388d18fbb90e4cc74fbb180eb86d399d
 
 # `prompt_standard.md`
 
@@ -283,18 +286,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様を、個別の正本文書へ振り分けるルーティング入口。doctor、indexing、tui、oracle 操作、realization の apply/refactor、session の fork/join/abandon、編集 run lifecycle、feedback report の実行条件・状態遷移・責務境界を確認する文書群を扱う。
+- 対象ディレクトリ内の各サブコマンド仕様を、実装・仕様確認時の入口として案内するルーティング文書。doctor、indexing、tui、oracle 系、session 系、editing run、feedback report、realization apply/refactor を扱い、共通 lifecycle と個別責務の境界を示す。
 
 ## Read this when
-- cmoc サブコマンドの挙動仕様を調査・実装・レビューする際に、対象コマンドの正本仕様を特定したいとき。
-- session lifecycle と編集 run lifecycle、oracle 操作、realization 操作、feedback report のどの仕様を読むべきか判断するとき。
+- cmoc のサブコマンド仕様を横断して、対象コマンドの実行条件・責務・状態遷移・agent 呼び出し・reporting の入口を選ぶとき。
+- oracle 編集・調査・レビュー、realization apply/refactor、session fork/join/abandon、editing run、feedback report のいずれかの仕様を実装・変更・レビューするとき。
+- 共通 lifecycle を確認すべきか、個別サブコマンドや参照先の正本仕様へ直接進むべきかを判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細仕様、内部処理、状態 schema、agent prompt、Structured Output schema を直接確認したいときは、対応する個別の正本文書へ進む。
-- 一般的な git 操作、共通中断処理、indexing の意味論、feedback observation/state の詳細だけを確認したいときは、該当する参照先を直接読む。
+- 対象サブコマンドや lifecycle の具体的な事前条件・状態遷移・入出力を確認する場合は、対応する個別仕様を直接読む。
+- oracle file の内容判定、Codex CLI/TUI の一般仕様、feedback observation/state の永続化、run isolation、subcommand interruption など、本文が案内する別の正本だけを確認したいときは、その対象へ直接進む。
+- 実装ファイルの具体的な関数定義や、既存の INDEX エントリーの更新内容だけを調べるとき。
 
 ## hash
-- added83b6cf5fcade1cb761e9d29d9eb0c5ebf3b6733d1eb1c93c73dc37005a9
+- 7cbfc01155f62f227debeaa2f8ec74f9d349f0e38c25a9d1cafa139706d1076f
 
 # `subcommand_interruption.md`
 

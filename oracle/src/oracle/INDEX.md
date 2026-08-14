@@ -1,20 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- AI コーディングエージェント呼び出しの構築定義を集約する領域。共通の呼び出しパラメータ、quota probe、feedback 判定、INDEX エントリー生成、oracle 操作、realization 適用・レビュー、session conflict 解消、TUI 起動を扱う。用途別の prompt、Structured Output schema、モデル・推論強度、ファイルアクセスモード、作業ディレクトリ、indexing preflight の設定を確認するための上位入口で、具体的な挙動は各下位領域へ進む。
+- AI エージェント呼び出しの prompt、Structured Output schema、モデル・推論強度・ファイルアクセスモード・cwd・preflight などの起動パラメータを、cmoc の各処理単位ごとに定義する領域。
+- 共通の呼び出しデータモデルは直下の基礎定義、用途別の起動定義は indexing、feedback、oracle、realization、session、tui、quota probe の各配下へ進む。oracle review では所見列挙・理由検証・採否判定・統合の個別契約を確認できる。
 
 ## Read this when
-- 特定の agent call の用途が複数領域にまたがり、まず呼び出し構築定義の下位入口を選ぶとき
-- agent call の共通パラメータ契約と、用途別の起動設定の配置を把握するとき
-- oracle、realization、feedback、indexing、session、TUI の agent call 構築定義を横断して確認・変更するとき
+- 特定の cmoc 機能が起動する AI エージェント呼び出しについて、prompt と Structured Output schema の対応、またはモデル・推論強度・アクセスモード・作業ディレクトリ・indexing preflight を調べるとき
+- 共通の AgentCallParameter と、用途別の agent call builder の責務分担を把握してから下位の処理定義へ進むとき
+- oracle review の所見処理、feedback issue 判定、realization の apply/refactor、session join の conflict 解消、または TUI・quota probe の呼び出し定義を探すとき
 
 ## Do not read this when
-- 特定の agent call の実装や Structured Output schema が明確で、対応する下位ファイルを直接読めるとき
-- prompt の共通生成規則、agent call の実行処理、バックエンド固有のモデル解決、またはファイルアクセス規則の正本だけを確認するとき
-- 対象となる oracle file、realization file、feedback state、または INDEX.md の実際の内容を調査するとき
+- AI エージェント呼び出し自体の実行処理、共通 prompt 生成規則、パス解決、または ACP 基本型の実装だけを確認するときは、それぞれの実装入口を直接読む
+- レビュー対象の oracle file、realization file、feedback issue の具体的内容、または INDEX.md のルーティング内容を判断するときは、対象本文を直接読む
+- Structured Output schema の一般仕様や、個別の所見・issue の原因と重要度だけを調べるとき
 
 ## hash
-- 3f9984abfb6b79736583aa2275bd489db7d42a8444d51bd8b8ec0d89ecd7b703
+- 607fa760d48659d4aae0cd3b330c42c9db6bb1c5da9a34993456c5da7d7a72b8
 
 # `feedback`
 
@@ -55,24 +56,20 @@
 # `prompt_builder`
 
 ## Summary
-- プレースホルダ名と実パス・文字列の対応を表す型定義。プレースホルダ展開時の置換対象を統一して扱うための基礎要素。
-- cmoc の agent 向け完全プロンプトを構築する中心ビルダー。summary・goal、共通規則、oracle/realization、レビュー、ルーティング、補助プロンプトなどを決定的な順序で統合し、placeholder の依存関係や競合も処理する。
-- エディタ経由で後続 AI エージェントへ渡すユーザー入力ファイルの初期表示文面を構築する定義。入力方法、記入目安、完全プロンプトの差し込み位置、HTML コメントによる非転送部分を扱う。
-- oracle・realization、レビュー、conflict 解消、feedback、ファイルアクセス、INDEX.md ルーティングなど、agent prompt を構成する標準群と規則文面の生成部品をまとめる。用途別の標準コレクションや個別標準定義への入口となる。
+- cmoc の agent call 向けプロンプトを構成する部品群と、完全プロンプト・エディタ入力・プレースホルダ定義の入口を提供する。oracle／realization の標準、ファイルアクセス、routing、feedback、レビュー、handoff などを用途別に選択・統合する経路を確認したいときに読む。
 
 ## Read this when
-- プレースホルダ展開に使う型の意味や、文字列と Path を混在させる置換対象の表現を確認したいときは、プレースホルダ型定義を読む。
-- agent 向け完全プロンプトの構成、注入順序、placeholder 統合、または oracle/realization・レビュー・routing などの自動有効化条件を変更・調査するときは、完全プロンプトビルダーを読む。
-- エディタ経由のプロンプト入力ファイルに表示する初期文面、ユーザー入力と完全プロンプトの差し込み、HTML コメントによる非転送部分を確認・変更するときは、エディタ入力定義を読む。
-- cmoc の agent prompt に組み込む標準コレクション、アクセス・routing・feedback 規則、または用途別の標準群の選択関係を調査するときは、parts ディレクトリを読む。
+- agent call に渡す完全プロンプトの構成や、依頼概要・完了条件・補助プロンプト・プレースホルダの統合を調査・変更するとき。
+- oracle／realization の扱い、標準の依存関係と統合、レビュー・conflict 解消・editor handoff などの規範選択を確認するとき。
+- agent call のファイルアクセス制約、INDEX.md routing、feedback reporting、realization から oracle への参照規則を確認するとき。
+- エディタ経由の入力ファイル初期文面や、完全プロンプトへの入力埋め込みを確認するとき。
+- プレースホルダ名と文字列・Path の置換先を扱う共通型を確認するとき。
 
 ## Do not read this when
-- プロンプト本文の生成手順や置換ロジックの詳細だけを知りたい場合は、プレースホルダ型定義ではなく実装側を読む。
-- 個別の規則本文や Standard の内容だけを確認したい場合は、完全プロンプトビルダーではなく対応する parts builder または oracle 文書を直接読む。
-- Structured Output の契約や、prompt builder 外の agent call 実行処理だけを調査する場合は、完全プロンプトビルダーを読む必要はない。
-- エディタ経由の初期文面ではなく完全プロンプト全体の生成規則や、Markdown の一般的なレンダリング処理だけを確認したい場合は、エディタ入力定義を読まない。
-- 個別の oracle・realization の仕様・実装・テストや、具体的な標準文面の判定基準だけを確認したい場合は、parts ではなく該当する標準定義・対象ファイルへ直接進む。
-- INDEX.md の既存エントリーや Codex CLI の実行・sandbox 規則だけを確認したい場合は、parts を読む必要はない。
+- 個別の oracle file や realization file の本文・実装を調査するときは、対象の正本または実装を直接読む。
+- 特定の Standard の文面だけを確認したいときは、対応する standard definition を直接読む。
+- StructDoc、StandardCollection、FileAccessMode、AgentCallPathContext などのデータ構造や利用側の実際のファイル操作を調査するときは、それぞれの定義元・利用側を直接読む。
+- INDEX.md の内容自体や、routing 対象の本文を確認するときは、このプロンプト構築部品群ではなく該当する INDEX.md または本文を読む。
 
 ## hash
-- 3e06725d766ac5483219f1916deb90362344de391122aaa2893f969142124339
+- 8d257488b3d4217399d292f34109777dfa4b8c252391963d93d6548afc9b8e70

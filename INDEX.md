@@ -91,19 +91,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・開発ルール・検討記録を横断する oracle 文書群への入口。アプリケーション仕様、branch・commit・worktree モデル、不採用案の背景、実装・環境・テストの開発ルールを目的別に案内する。
-- 配下の doc は仕様・開発ルール・検討記録、src は oracle 実装の領域別入口として、acp_builder、feedback、other、prompt_builder へ振り分ける。
+- cmoc の正本仕様と開発ルールを領域別に案内する上位ドキュメント群。CLI のアプリケーション仕様、branch・commit・worktree のモデル、不採用案の検討記録、開発規則への入口を提供し、具体的な仕様・実装・テスト手順へ進むためのルーティング起点となる。
 
 ## Read this when
-- cmoc の仕様、branch・commit・worktree のモデル、開発ルール、検討記録、または oracle 実装の調査開始地点を判断するとき
-- 複数の oracle 文書領域や実装領域にまたがる参照先を探すとき
+- cmoc の正本仕様を横断して、CLI の外部挙動、状態・branch model、開発環境、実装配置、テスト要件や実行手順の参照先を選ぶとき
+- 複数の仕様領域にまたがる変更や調査で、アプリケーション仕様、branch model、開発ルールなどの下位文書へ進む入口を判断するとき
+- 採用されなかった realization refactor の方式や検査・状態管理案の背景を確認するとき
 
 ## Do not read this when
-- 特定の仕様書、開発ルール、テスト実行手順、実装、テスト、または prompt 構築の詳細が明確な場合は該当する個別ファイルや下位領域へ直接進む
-- INDEX.md の生成規則自体を確認する場合はインデクシング仕様へ直接進む
+- 特定のアプリケーション仕様、branch・worktree の用語、開発規則、テスト実行手順だけを確認する場合は、対応する下位文書へ直接進む
+- 実装ファイル、テストファイル、Structured Output schema、feedback の専門仕様など、oracle/doc 配下の案内だけでは足りない具体的内容を確認する場合
 
 ## hash
-- 6bf975c9a04eea4d85de3a4750e117452c94a64271377a8a194dd26f825f8dcb
+- 19ab4bf2d2b856752c44f2ceb91bbf0e5f5b00986162268ed0b2b1a313866b1e
 
 # `pyproject.toml`
 

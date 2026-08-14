@@ -48,6 +48,21 @@
 ## hash
 - f44a82a0edc28e5e359598a4145df3a6c58e68e68bf4e06435d05fdf83089da5
 
+# `editor_handoff_standard.py`
+
+## Summary
+- agent call から editor work file へ handoff する際に適用する規範の選択を構築する定義。handoff の標準コレクションを確認する必要がある場合の入口であり、具体的な標準内容は選択された標準定義を直接読む。
+
+## Read this when
+- agent call から editor work file へ handoff する規範の構成や選択を確認するとき
+
+## Do not read this when
+- handoff 以外の prompt builder の責務を調べるとき
+- handoff で選択される個別標準の具体的な要求を確認するとき
+
+## hash
+- 90063280371ad9e24d303cb75d6462c052cfeb0c7220b446e6646c33a309f392
+
 # `feedback_reporting_standard.py`
 
 ## Summary
@@ -67,21 +82,20 @@
 # `file_access_rule.py`
 
 ## Summary
-- agent のファイルアクセスモードに応じた読み書き制限文面を構築する。リポジトリ外、予約領域、oracle/realization file などの禁止規則を共通規則とモード別に組み立て、パス用プレースホルダー定義と構造化文書を返す。
-- アクセス規則の生成ロジックや FileAccessMode ごとの制限を確認・変更するときの実装入口であり、実際のファイルアクセス設定や各 oracle/realization file の内容を確認する対象ではない。
+- ファイルアクセスモードごとの読み書き禁止ルールを構築する関数を定義する。リポジトリ外、管理用ディレクトリ、AGENTS.md、INDEX.md、memo、oracle/realization file などの共通禁止事項に加え、READONLY・PURE_ORACLE_READ・REPO_WRITE・PURE_ORACLE_WRITE・REALIZATION_WRITE のモード別制約を扱う。アクセス規則のプロンプト生成や FileAccessMode ごとの制約を確認・変更するときの入口となる。
 
 ## Read this when
-- ファイルアクセスモードの追加・変更・検証が必要なとき
-- agent 向けの読み書き制限文面、パス境界、oracle/realization file の扱いを調査するとき
-- file access rule の戻り値やプレースホルダー定義の生成元を確認するとき
+- FileAccessMode に応じた agent 向けファイルアクセス制約の生成を変更するとき
+- oracle file と realization file の読み書き可否、または共通 deny ルールの挙動を確認するとき
+- アクセス規則プロンプトに渡す placeholder 定義や StructDoc の構築箇所を調べるとき
 
 ## Do not read this when
-- 特定の oracle file や realization file の本文・仕様・実装を調査するとき
-- Codex CLI の sandbox 実行規則そのものを確認するときは、対応する正本仕様を読むべきである
-- INDEX.md のルーティング情報だけを更新・確認するとき
+- 特定の oracle file や realization file の内容・実装そのものを確認する場合
+- CLI の実際のファイル操作や Codex sandbox 設定を変更・確認する場合
+- INDEX.md の更新処理など、生成されたアクセス規則を利用する側だけを調べる場合
 
 ## hash
-- 74be481ba7fd0c5e8a88245c84d926f1893af482cffed83164591005ff59be85
+- d8aef087b58116c9f987cc27418337ec8566a94759cb74359a2c8deb86fe70eb
 
 # `index_entry_standard.py`
 
@@ -209,17 +223,16 @@
 # `standard_definitions.py`
 
 ## Summary
-- 標準文面をコード上の定義として一元管理し、oracle の権威性・仕様調査、realization の適合、レビュー、conflict 解消、INDEX エントリー作成など、cmoc の判断規則を共有する入口。個別の標準内容を確認・変更する作業ではこの定義を読む。
+- 標準文面を一元管理する定義群で、oracle の権威性・仕様と実装の関係・調査とレビューの基準・conflict 解消・editor handoff・INDEX.md ルーティング規則など、cmoc の判断基準を担う。これらの標準を参照または変更する作業では、個別の oracle file や realization file より先に、全体の標準的な要求と禁止事項を確認する入口となる。
 
 ## Read this when
-- oracle file と realization file の優先関係、正本仕様からの逸脱防止、未定義事項の扱いを確認するとき
-- realization の実装・テスト・設定を現行仕様へ適合させる方針を確認するとき
-- oracle review、修正対象の選定、conflict marker 解消、INDEX.md エントリー生成の判定基準を確認するとき
+- oracle file と realization file の責務、優先関係、実装適合性、検証、レビュー基準を確認または変更するとき
+- oracle review、realization review、conflict marker 解消、editor handoff の判断基準を確認するとき
+- INDEX.md エントリーの作成・評価や、仕様の定義済み事項と未定義事項の扱いを確認するとき
 
 ## Do not read this when
-- 特定の oracle file の具体的な仕様だけを確認する場合
-- 対象の実装挙動やテスト手順を直接確認する場合
-- 標準定義や、それが定める判断・レビュー基準を変更しない通常の作業
+- 個別の oracle file や realization file の具体的な内容だけを調査し、ここで定義される共通標準自体が判断に関係しないとき
+- Structured Output の項目名・型・形式だけを確認するとき
 
 ## hash
-- 783ad1286864e56c69ef0557a9544f0acedadab8ff8cda12dabe779da6ab4197
+- fbbb9c3323fa60de9b2502feaa15beb476469aad1f82b6f1540d60375a319f80
