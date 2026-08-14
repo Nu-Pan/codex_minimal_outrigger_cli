@@ -232,21 +232,22 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理と、その外部挙動を検証するテスト群。
-- エディタ入力の正本初期値、timestamp 衝突時の保持、skeleton のプレースホルダー制約を扱う。
-- 編集済み prompt による Codex TUI の直接起動、linked worktree での prompt・agent call context・ログ配置、`.cmoc` ignore の保証を検証する。
+- TUI 起動直前の CLI 前処理を、実際の Codex TUI 起動まで含めて検証するテスト。
+- 編集済み prompt の生成、doctor preprocess の実行順序、起動パラメータ、prompt の保存内容、既存の Git 差分保持を確認する。
+- linked worktree では prompt と agent call context をメイン worktree 側へ保存し、repository と linked worktree の `.cmoc` ignore を保証する挙動も検証する。
 
 ## Read this when
-- TUI サブコマンドの起動前処理や、エディタ編集後の prompt からの直接起動を確認・変更するとき
-- prompt editor input の timestamp 衝突、skeleton 検証、編集前後の prompt 内容を検証するとき
-- linked worktree におけるログ配置、起動 context、repository と worktree の `.cmoc` ignore を確認するとき
+- `tui` サブコマンドの起動前処理、prompt editor の入出力、Codex TUI 起動パラメータを変更または検証するとき
+- linked worktree におけるログ・prompt 保存先や `.cmoc/gu` の ignore 挙動を変更または検証するとき
+- TUI 起動時に既存の staged・unstaged 差分を保持する契約を確認するとき
 
 ## Do not read this when
-- TUI 前処理ではなく prompt 編集や TUI 起動の実装詳細を調べるときは、対応する正本仕様または実装ファイルを直接読む
-- 他の CLI サブコマンド、一般的な git 操作、または TUI 起動後の Codex 実行を調べるとき
+- TUI 起動前処理の外部挙動ではなく、TUI 本体の対話処理や表示を直接確認するとき
+- prompt builder や CLI 実装の内部詳細だけを確認し、実行時の統合挙動を検証する必要がないとき
+- TUI と無関係なサブコマンドやログ処理を確認するとき
 
 ## hash
-- 5ee6c662797c5659acfb9fea23cc960cdd7eb2d826719780e23cc533a3f569b0
+- e80214f02e2708d1a7de8188de43657846e328becce326f2db2b48ca8bd33d7c
 
 # `test_codex_runtime_errors.py`
 
@@ -695,6 +696,26 @@
 
 ## hash
 - d2c43aea2340d16947623881cde5333ff689edf15a0b4257fffaef7afd884c10
+
+# `test_prompt_editor_input.py`
+
+## Summary
+- prompt editor input の realization 実装が、正本仕様に沿って動作することを検証するテスト。
+- 初期表示文面が canonical builder の出力を使うこと、同一 timestamp の入力を上書きせず保持することを確認する。
+- skeleton の placeholder がちょうど 1 箇所であることを検証し、不正時に editor を起動しないことを確認する。
+- エディタ選択の優先順（code、nano、vim、vi）と、code 使用時だけ --wait を付ける起動引数を確認する。
+
+## Read this when
+- prompt editor input の外部挙動や realization test の検証範囲を確認するとき
+- 初期入力文面、timestamp 衝突、placeholder 検証、エディタ選択の仕様適合性を調査するとき
+
+## Do not read this when
+- prompt editor input の正確な初期表示文面を確認したいときは canonical builder の実装を直接読む
+- prompt editor input の意味仕様を確認したいときは正本仕様を直接読む
+- エディタ入力以外の prompt 構築や AI Agent 呼び出しの挙動を調査するとき
+
+## hash
+- ce0bb9f0f7c73c54782ecabf1e6507c6db9b06ab658cf1ab48deff35f3733bf5
 
 # `test_prompt_parts.py`
 
