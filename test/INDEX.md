@@ -179,19 +179,18 @@
 # `test_acp_builder_tui_parameters.py`
 
 ## Summary
-- TUI 起動 builder の parameter 生成を検証するテストで、固定された agent call 種別・モデル・推論強度・ファイルアクセスモード・実行ディレクトリ・indexing preflight と、元の prompt を含む完了 prompt の規範および routing 条件を確認する。
-- 互換 module の公開面が現行の TUI 起動 builder 関数だけであることを検証する。
+- TUI 起動 builder のテスト。オリジナル prompt に依存しない固定の実行パラメータ、標準 prompt の生成内容、互換 module の公開 API と canonical builder への委譲を検証する。TUI 起動 builder の実装変更や、固定設定・prompt・公開面の適合性を確認するときの入口となる。
 
 ## Read this when
-- TUI 起動 builder の固定実行設定や prompt の生成内容を変更・検証するとき
-- TUI 起動 builder の互換 module における公開シンボルを変更・検証するとき
+- TUI 起動 builder の固定パラメータまたは prompt 生成を変更・検証するとき
+- TUI の互換 module が公開する builder と canonical builder の対応を確認するとき
 
 ## Do not read this when
-- TUI 起動 builder の実装仕様を確認する場合は、対応する正本 implementation を直接読むとき
-- TUI 以外の builder の parameter や公開面を確認するとき
+- TUI 以外の builder の挙動を確認するとき
+- builder 実装の責務や正本仕様を直接調査するときは、対応する実装または正本を先に読む
 
 ## hash
-- 86510f74d74f3edfe07400a313d87b630a2efbc47dbd6203fab027e940ab18d7
+- 555439df36013a251510bc1a5b0cd0d1bde2d6e4705077eab206dbd75968d0f8
 
 # `test_basic_runtime.py`
 
