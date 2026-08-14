@@ -5,14 +5,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
-import typer
-
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
 from cmoc_runtime import (
     CmocError,
     CommandResult,
+    TerminalResult,
     current_branch,
     load_state_for_branch,
     repo_root,
@@ -46,7 +45,9 @@ def cmoc_session_join_impl() -> None:
     )
 
 
-def _cmoc_session_join_body(codex_exec: _CodexExec, git: _GitRun = run_git) -> None:
+def _cmoc_session_join_body(
+    codex_exec: _CodexExec, git: _GitRun = run_git
+) -> TerminalResult:
     """active session branch を session home branch へ merge する。"""
     root = repo_root()
     work = work_root()
@@ -68,57 +69,41 @@ def _cmoc_session_join_body(codex_exec: _CodexExec, git: _GitRun = run_git) -> N
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
     start_subcommand_step(3, "session branch を merge", "merge session branch")
-    try:
-        # {{work-root}}/oracle/doc/app_spec/session_state.md:
-        # session_home_branch は local branch なので、同名 remote-tracking branch を
-        # Git に推測させて別の merge target を作らない。
-        run_git(["switch", "--no-guess", home], work)
-        merge = git(["merge", "--no-ff", branch], work, check=False)
-        if merge.returncode != 0:
-            resolve_session_join_conflict(work, codex_exec, git)
-        state.session.state = "joined"
-        start_subcommand_step(4, "後始末と結果を表示", "finish session join")
-        write_state(path, state)
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-        # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
-        # remote-tracking ref で安全性を証明してはならない。
-        reachable = (
-            git(
-                ["merge-base", "--is-ancestor", branch, "HEAD"],
-                work,
-                check=False,
-            ).returncode
-            == 0
-        )
-        if reachable:
-            delete_result = git(["branch", "-d", branch], work, check=False)
-        else:
-            delete_result = CommandResult(
-                1, "", f"session branch is not merged: {branch}"
-            )
-    except BaseException as exc:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-        # precondition 後の failure では手動の git resolution が必要になり得るため、
-        # error report は既定の stdout path ではなく stderr に出す。
-        setattr(exc, "cmoc_error_to_stderr", True)
-        raise
+    # {{work-root}}/oracle/doc/app_spec/session_state.md:
+    # session_home_branch は local branch なので、同名 remote-tracking branch を
+    # Git に推測させて別の merge target を作らない。
+    run_git(["switch", "--no-guess", home], work)
+    merge = git(["merge", "--no-ff", branch], work, check=False)
+    if merge.returncode != 0:
+        resolve_session_join_conflict(work, codex_exec, git)
+    state.session.state = "joined"
+    start_subcommand_step(4, "後始末と terminal result を確定", "finish session join")
+    write_state(path, state)
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
+    # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
+    # remote-tracking ref で安全性を証明してはならない。
+    reachable = (
+        git(
+            ["merge-base", "--is-ancestor", branch, "HEAD"],
+            work,
+            check=False,
+        ).returncode
+        == 0
+    )
+    if reachable:
+        delete_result = git(["branch", "-d", branch], work, check=False)
+    else:
+        delete_result = CommandResult(1, "", f"session branch is not merged: {branch}")
     warnings: list[str] = []
     if delete_result.returncode != 0:
         warnings.append(f"session branch was not deleted: {branch}")
-    warning_lines = (
-        [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
-    )
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc session join",
-                f"- session_id: `{session_id}`",
-                f"- joined_to: `{home}`",
-                f"- deleted_session_branch: `{delete_result.returncode == 0}`",
-                "- warnings:",
-                *warning_lines,
-            ]
-        )
+    return TerminalResult(
+        details=(
+            ("session_id", session_id),
+            ("joined_to", home),
+            ("deleted_session_branch", delete_result.returncode == 0),
+        ),
+        warnings=tuple(warnings),
     )
 
 

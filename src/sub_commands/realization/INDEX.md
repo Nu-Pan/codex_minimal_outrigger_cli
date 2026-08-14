@@ -15,40 +15,35 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する実装を扱うディレクトリ。apply workload の実装と、`realization apply fork` の CLI 実行フローを調査・変更する際の入口となる。
-- apply fork では editing run の開始、差分追従 agent の実行、想定外変更や agent commit などの検査、INDEX 生成を含む変更の commit、joinable/error 状態と report の保存を扱う。
+- `realization apply` に関する実装をまとめたディレクトリ。apply workload の実装入口と、fork 実行のライフサイクル管理を確認するための対象。
 
 ## Read this when
 - realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の実行フロー、editing run の状態遷移、差分の commit・rollback・report 保存を確認するとき。
-- apply agent の変更と cmoc が生成する INDEX 差分の境界、agent commit や遅延 child の扱いを確認するとき。
+- `cmoc realization apply fork` の実行フロー、run 状態遷移、差分検査、INDEX 生成、rollback、fork report の挙動を確認するとき。
 
 ## Do not read this when
-- apply workload 以外の realization 処理を扱うとき。
-- apply agent の起動パラメータだけを変更するときは、agent launch parameter の実装を直接読む。
-- editing run の共通ライフサイクル、git 操作、state 管理、index refresh の一般仕様だけを確認するときは、対応する共通実装または正本仕様を直接読む。
-- apply fork の利用者向け仕様や run isolation・indexing の正本仕様を確認するときは、参照されている app specification を読む。
+- apply workload 以外の処理を扱うとき。
+- apply agent のプロンプト生成や launch parameter だけを調査・変更するとき。
+- run の共通ライフサイクルや `cmoc run join`／`cmoc run abandon` の処理だけを確認するとき。
 
 ## hash
-- 1cac93e44cd9b42024897895b67141aebefc28ad7144e9c990518c4195d92219
+- 38ca6e669e7abf551589b9c2b78fa166d1661d83f710d46c90880c07181b0bfe
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージで、関連するリファクタリング処理への入口を提供する。
-- fork.py は realization refactor fork CLI の実行 lifecycle と一時状態共有型 workload を管理し、対象 realization file の選択、Codex による調査・修正、変更検証、所見管理、INDEX 同期、fork report 保存までを扱う。
+- realization のリファクタリング処理をまとめるパッケージです。`cmoc realization refactor fork` の実行入口を提供し、run の初期化から対象ファイルごとの調査・修正、状態同期、検証、未解決事項の追跡、完了判定、エラー時の後処理、fork report の保存までを扱います。
+- リファクタリング処理の全体フローや lifecycle を確認する際の入口であり、個別の agent prompt、共通 runtime、state、INDEX 更新仕様などの詳細は専用の下位対象へ進みます。
 
 ## Read this when
-- realization のリファクタリング処理の構成や実行入口を確認するとき
-- refactor fork CLI の実行順序、run state、対象 file の処理単位、完了条件、fork report を調査・変更するとき
-- 中断・例外時の停止、rollback、cleanup、error state の挙動を確認するとき
-- refactor state、INDEX 同期、changed_paths 検証、所見の unresolved 管理を確認するとき
+- realization のリファクタリング機能の構成や実行入口を確認するとき
+- `cmoc realization refactor fork` の実行フロー、run 状態、対象ファイル処理、完了・中断・エラー処理を調査するとき
+- リファクタリング結果の検証、未解決 finding の追跡、commit、report 保存の流れを確認するとき
 
 ## Do not read this when
-- realization refactor の一般仕様や CLI 契約だけを確認する場合
-- file 単位の agent prompt や finding schema の生成内容だけを確認する場合
-- run lifecycle、git 差分分類、process tracking など共通機構の詳細だけを確認する場合
-- INDEX 生成規則や INDEX 更新処理だけを確認する場合
+- 個別の realization file review や change summary 用 agent prompt の詳細だけを確認するとき
+- run 作成、commit、rollback、process tracking、report rendering など共通 lifecycle の実装だけを確認するとき
+- INDEX 更新の一般規則や realization refactor の永続 state 契約だけを確認するとき
 
 ## hash
-- a76634eebce7f45b64553259b6e504b87c28afbfe0acce184a4ef35ede1fcaba
+- cd5cf75e27fff6b667452ebaecfd0046ae8de238da33a775529a3a1a9eac9c27

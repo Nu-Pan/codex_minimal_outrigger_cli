@@ -127,7 +127,11 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                     click_exception.format_message(),
                 ) from exc
             except CmocError as report_error:
-                typer.echo(render_error(report_error))
+                typer.echo(
+                    f"{render_error(report_error)}\n"
+                    f"- 終了コード: `{click_exception.exit_code}`",
+                    err=True,
+                )
             if standalone_mode:
                 raise SystemExit(click_exception.exit_code) from exc
             raise

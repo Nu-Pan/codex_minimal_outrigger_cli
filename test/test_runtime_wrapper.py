@@ -21,27 +21,22 @@ def _clear_completion_probe_environment(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def _assert_error_report(result: subprocess.CompletedProcess[str]) -> None:
-    """wrapper の失敗が必要な report 項目を stdout に含むことを確認する。"""
+    """wrapper の失敗が簡潔な error terminal result を stderr に含むことを確認する。"""
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
-    report = result.stdout
+    report = result.stderr
     assert result.returncode == 1
-    assert result.stderr == ""
-    assert report.startswith("# ERROR\n")
-
-    header, report = report.split("## Summary\n", 1)
-    summary, report = report.split("## Next actions\n", 1)
-    next_actions, report = report.split("## Detail\n", 1)
-    detail, call_stack = report.split("## Call stack\n", 1)
-    assert header == "# ERROR\n"
-    assert summary.strip()
-    assert next_actions.strip()
-    assert sum(line.startswith("- ") for line in next_actions.splitlines()) >= 2
-    assert detail.strip()
-    assert call_stack.strip()
+    assert result.stdout == ""
+    assert report.startswith("# 失敗: cmoc\n")
+    assert "- 理由:" in report
+    assert "- 詳細:" in report
+    assert report.count("- 次の操作:") == 1
+    assert "- 終了コード: `1`" in report
+    assert "Call stack" not in report
+    assert "Traceback" not in report
 
 
-def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
-    """起動 wrapper の missing venv report は root token path で位置を出す。"""
+def test_bin_cmoc_missing_venv_reports_full_paths(tmp_path: Path) -> None:
+    """起動 wrapper の missing venv result は実際のフルパスを出す。"""
     fake_cmoc_root = tmp_path / "cmoc"
     fake_bin = fake_cmoc_root / "bin"
     fake_bin.mkdir(parents=True)
@@ -56,10 +51,8 @@ def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -
     )
 
     _assert_error_report(result)
-    assert "({{cmoc-root}}/bin/cmoc:" in result.stdout
-    assert "(./bin/cmoc:" not in result.stdout
-    assert "(bin/cmoc:" not in result.stdout
-    assert "./.venv/bin/python -m pip install -e '.[dev]'" in result.stdout
+    assert str(fake_cmoc_root) in result.stderr
+    assert str(fake_cmoc_root / ".venv" / "bin" / "python") in result.stderr
 
 
 def test_bin_cmoc_non_file_venv_path_uses_error_report(tmp_path: Path) -> None:

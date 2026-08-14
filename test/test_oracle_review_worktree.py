@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import make_repo, run_git
 
 import commons.indexing as indexing_module
@@ -125,9 +125,7 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     )
 
     assert result.exit_code == 0
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     assert report_path.is_relative_to(root / ".cmoc" / "gu" / "ar" / "report")
     assert not report_path.is_relative_to(linked)
     rendered = report_path.read_text()
@@ -386,9 +384,7 @@ def test_oracle_review_interrupt_during_run_creation_cleans_resources(
     assert not worktree.exists()
     assert not worktree.is_symlink()
     assert notifications == [("oracle review", "interrupted")]
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     assert "result: interrupted" in report_path.read_text()
 
 
@@ -417,9 +413,7 @@ def test_oracle_review_interrupt_during_preconditions_writes_report(
     )
 
     assert result.exit_code == 0, result.output
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     assert "result: interrupted" in report_path.read_text()
     assert run_git(root, "branch", "--list", "cmoc/run/*").stdout == ""
 
@@ -444,9 +438,7 @@ def test_oracle_review_interrupt_during_doctor_writes_report(
     )
 
     assert result.exit_code == 0, result.output
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     report = report_path.read_text()
     assert "result: interrupted" in report
     assert "oracle_count_total: 0" in report
@@ -495,9 +487,7 @@ def test_oracle_review_interrupt_after_branch_only_creation_cleans_branch(
     assert run_git(root, "branch", "--list", branch).stdout == ""
     assert not worktree.exists()
     assert not worktree.is_symlink()
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     assert "result: interrupted" in report_path.read_text()
 
 
@@ -539,9 +529,7 @@ def test_oracle_review_interrupt_during_resource_probe_cleans_resources(
     assert result.exit_code == 0, result.output
     assert created_branch
     assert run_git(root, "branch", "--list", created_branch[0]).stdout == ""
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     assert "result: interrupted" in report_path.read_text()
 
 
@@ -703,9 +691,7 @@ def test_oracle_review_unexpected_base_exception_during_run_creation_cleans_reso
     assert run_git(root, "branch", "--list", branch).stdout == ""
     assert not worktree.exists()
     assert not worktree.is_symlink()
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "unexpected create failure" in result.output
@@ -735,9 +721,7 @@ def test_oracle_review_reports_unknown_run_branch_as_null_before_target_creation
     )
 
     assert result.exit_code != 0
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "run_branch: null" in rendered
@@ -868,9 +852,7 @@ def test_oracle_review_merges_review_index_changes(
 
     assert result.exit_code == 0
     assert (root / "INDEX.md").read_text() == "# generated review index\n"
-    rendered = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    ).read_text()
+    rendered = terminal_primary_report(result).read_text()
     assert "run_join_commit: null" not in rendered
     assert review_worktrees
     for review_worktree in review_worktrees:
@@ -953,9 +935,7 @@ def test_oracle_review_preflight_uses_review_worktree_path_context(
         ).stdout.strip()
         == "cmoc indexing"
     )
-    rendered = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    ).read_text()
+    rendered = terminal_primary_report(result).read_text()
     assert "run_join_commit: null" not in rendered
 
 
@@ -1333,9 +1313,7 @@ def test_oracle_review_reports_cleanup_failure(
     result = runner.invoke(app, ["oracle", "review", "--scope", "full"])
 
     assert result.exit_code != 0
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "oracle review の隔離 run の cleanup に失敗しました。" in rendered
@@ -1386,9 +1364,7 @@ def test_oracle_review_reports_cleanup_failure_after_outer_interrupt(
     result = runner.invoke(app, ["oracle", "review", "--scope", "full"])
 
     assert result.exit_code != 0
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "cleanup failed" in rendered

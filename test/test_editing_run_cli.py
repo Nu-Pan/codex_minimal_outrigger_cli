@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from typing import NoReturn
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
@@ -802,15 +802,7 @@ def test_realization_apply_fork_and_run_join_use_common_state(
         "- post_join_hook: `session.last_joined_apply_fork_commit updated`"
         in joined.output
     )
-    report_path = Path(
-        next(
-            line
-            for line in joined.output.splitlines()
-            if line.startswith("- report: `")
-        )
-        .removeprefix("- report: `")
-        .removesuffix("`")
-    )
+    report_path = terminal_primary_report(joined)
     report_text = report_path.read_text()
     assert "session.last_joined_apply_fork_commit=" not in report_text
     assert current_branch(root) == session_branch
@@ -836,15 +828,7 @@ def test_run_join_reports_joinable_child_stop_warnings(
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    report_path = Path(
-        next(
-            line
-            for line in result.output.splitlines()
-            if line.startswith("- report: `")
-        )
-        .removeprefix("- report: `")
-        .removesuffix("`")
-    )
+    report_path = terminal_primary_report(result)
     assert "run child process already stopped: 789" in report_path.read_text()
 
 
@@ -2156,11 +2140,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit(
         "delayed agent commit"
         not in run_git(run_worktree, "log", "--format=%s").stdout.splitlines()
     )
-    report_path = next(
-        Path(line.removeprefix("- fork report: `").removesuffix("`"))
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
+    report_path = terminal_primary_report(result)
     assert "agent commit cleanup failed" in report_path.read_text()
 
 
@@ -2207,7 +2187,7 @@ def test_apply_start_failure_after_run_publish_is_reported(
         ).glob("*.md")
     )
     assert len(reports) == 1
-    assert f"- fork report: `{reports[0]}" in result.output
+    assert terminal_primary_report(result) == reports[0]
     assert 'state_before: "ready"' in reports[0].read_text()
 
 
@@ -2563,13 +2543,7 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     assert not (root / unexpected_path).exists()
     assert (
         "--force-resolve reverted unexpected run paths"
-        in Path(
-            [
-                line.removeprefix("- report: `").removesuffix("`")
-                for line in joined.output.splitlines()
-                if line.startswith("- report: `")
-            ][0]
-        ).read_text()
+        in terminal_primary_report(joined).read_text()
     )
 
 
@@ -3018,12 +2992,7 @@ def test_refactor_fork_completes_persistent_full_cycle(
     assert summary_calls == 1
     assert "- completion_reason: `natural_completion`" in result.output
     assert "- unresolved targets: `0`" in result.output
-    report_line = next(
-        line
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
-    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report = terminal_primary_report(result)
     assert "- `README.md`: 0 finding(s)" in report.read_text()
 
 
@@ -3056,12 +3025,7 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
 
     assert result.exit_code == 0
     assert _state(state_path)["run"]["state"] == "joinable"
-    report_line = next(
-        line
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
-    report = Path(report_line.removeprefix("- fork report: ").strip("`"))
+    report = terminal_primary_report(result)
     assert 'completion_reason: "user_interruption"' in report.read_text()
     assert notifications == [("realization refactor fork", "interrupted")]
 
@@ -3158,12 +3122,7 @@ def test_refactor_start_failure_after_run_publish_is_reported(
 
     assert result.exit_code == 1
     assert _state(state_path)["run"]["state"] == "error"
-    report_line = next(
-        line
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
-    report = Path(report_line.removeprefix("- fork report: ").strip("`"))
+    report = terminal_primary_report(result)
     assert 'completion_reason: "error"' in report.read_text()
     assert 'state_before: "ready"' in report.read_text()
 
@@ -3250,12 +3209,7 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
     assert summary_calls == 1
     assert "- completion_reason: `completed_with_unresolved`" in result.output
     assert "- unresolved targets: `1`" in result.output
-    report_line = next(
-        line
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
-    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report = terminal_primary_report(result)
     report_text = report.read_text()
     assert 'completion_reason: "completed_with_unresolved"' in report_text
     assert f"- processed targets: {len(refactor_state)}" in report_text
@@ -3468,12 +3422,7 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     parts = state["run"]["branch"].split("/")
     run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     assert (run_worktree / "README.md").read_text() == "# repo\n"
-    report_line = next(
-        line
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
-    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report = terminal_primary_report(result)
     assert 'completion_reason: "user_interruption"' in report.read_text()
     assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `0`" in result.output
@@ -3485,10 +3434,17 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
         )
         for line in path.read_text().splitlines()
     ]
-    completion = next(event for event in events if event["event"] == "fork_completed")
+    completion = next(
+        event
+        for event in events
+        if event["event"] == "command_finished"
+        and event["command"] == "realization refactor fork"
+    )
     assert completion["completion_reason"] == "user_interruption"
-    assert completion["unresolved_target_count"] == 0
-    assert completion["report_path"] == str(report.resolve())
+    assert completion["terminal_result"]["details"] == [
+        {"name": "unresolved targets", "value": 0}
+    ]
+    assert completion["primary_report_path"] == str(report.resolve())
 
 
 def test_refactor_interrupt_before_run_creation_is_normal_completion(
@@ -3520,7 +3476,7 @@ def test_refactor_interrupt_before_run_creation_is_normal_completion(
 
     assert result.exit_code == 0
     assert _state(state_path)["run"]["state"] == "ready"
-    assert "# ERROR" not in result.output
+    assert "# 失敗" not in result.output
     events = [
         json.loads(line)
         for path in (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob(
@@ -3580,12 +3536,7 @@ def test_refactor_interrupt_during_indexing_preflight_is_joinable(
         "cmoc indexing"
         not in run_git(run_worktree, "log", "--format=%s").stdout.splitlines()
     )
-    report_line = next(
-        line
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
-    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report = terminal_primary_report(result)
     assert 'completion_reason: "user_interruption"' in report.read_text()
 
 
@@ -3685,12 +3636,7 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
         ).stdout.strip()
         == "cmoc realization refactor README.md"
     )
-    report_line = next(
-        line
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
-    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report = terminal_primary_report(result)
     report_text = report.read_text()
     assert "- processed targets: 2" in report_text
     assert "- `README.md`: 1 finding(s)" in report_text
@@ -3761,12 +3707,7 @@ def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
 
     assert result.exit_code == 1
     assert _state(state_path)["run"]["state"] == "error"
-    report_line = next(
-        line
-        for line in result.output.splitlines()
-        if line.startswith("- fork report: `")
-    )
-    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report = terminal_primary_report(result)
     report_text = report.read_text()
     assert 'completion_reason: "error"' in report_text
     assert "rollback failed" in report_text

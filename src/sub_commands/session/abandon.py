@@ -1,8 +1,7 @@
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-import typer
-
 from cmoc_runtime import (
     CmocError,
+    TerminalResult,
     branch_exists,
     current_branch,
     delete_branch,
@@ -29,7 +28,7 @@ def cmoc_session_abandon_impl() -> None:
     )
 
 
-def _cmoc_session_abandon_body() -> None:
+def _cmoc_session_abandon_body() -> TerminalResult:
     """active session を home branch へ merge せず破棄する。"""
     repo = repo_root()
     work = work_root()
@@ -105,14 +104,12 @@ def _cmoc_session_abandon_body() -> None:
             ],
             "\n".join(details),
         ) from error
-    start_subcommand_step(4, "結果を表示", "show session result")
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc session abandon",
-                f"- abandoned_branch: `{branch}`",
-                f"- switched_to: `{home}`",
-                "- session_state: `abandoned`",
-            ]
+    start_subcommand_step(4, "terminal result を確定", "finalize terminal result")
+    return TerminalResult(
+        details=(
+            ("abandoned_branch", branch),
+            ("switched_to", home),
+            ("session_state", "abandoned"),
+            ("cleanup", "completed"),
         )
     )

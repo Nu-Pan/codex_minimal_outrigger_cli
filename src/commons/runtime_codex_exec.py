@@ -11,6 +11,7 @@ subcommand event、補正・retry counter を共有する 1 つの状態機械�
 
 import json
 import subprocess
+import sys
 import threading
 import time
 from datetime import datetime, timedelta
@@ -23,10 +24,7 @@ from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
-from .runtime_codex_logging import (
-    emit_codex_call_console,
-    format_codex_call_error,
-)
+from .runtime_codex_logging import format_codex_call_error
 from .runtime_codex_profile import (
     codex_error_text,
     codex_subprocess_env,
@@ -70,6 +68,17 @@ _QUOTA_PROBE_ERROR: BaseException | None = None
 _MAX_OUTPUT_CORRECTIONS = 2
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMPS: dict[Path, str] = {}
+
+
+def _emit_quota_progress(message: str) -> None:
+    """quota 回復待ちの状態遷移だけを簡潔に stderr へ通知する。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    print(
+        f"# {console_timestamp()} Codex CLI quota wait: {message}",
+        file=sys.stderr,
+        flush=True,
+    )
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -508,27 +517,10 @@ def run_codex_exec(
         returncode: int | None,
         status: str,
         error: str | None = None,
-        console_error: str | None = None,
         run_codex_home: Path = codex_home,
     ) -> None:
-        """console と subcommand log の両方へ Codex call 結果を記録する。"""
+        """Codex call の結果を subcommand log へ記録する。"""
         elapsed_sec = time.perf_counter() - started_at
-        if console_error is None:
-            # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-            # returncode 0 でも malformed JSONL や最終 schema failure は error である。
-            # stdout/stderr 本文を console へ漏らさず、固定メッセージだけ stderr へ出す。
-            console_error = {
-                "failed": "Codex CLI 呼び出しが失敗しました。",
-                "structured_output_validation_failed": (
-                    "Codex CLI の Structured Output 検証に失敗しました。"
-                ),
-                "output_correction_failed": (
-                    "Codex CLI の Structured Output 補正に失敗しました。"
-                ),
-            }.get(status)
-        emit_codex_call_console(
-            run_purpose, run_call_path, elapsed_sec, returncode, console_error
-        )
         if logger is None:
             return
         payload: dict[str, Any] = {
@@ -770,7 +762,6 @@ def run_codex_exec(
                 returncode=None,
                 status="failed",
                 error=startup_error,
-                console_error=startup_error,
             )
             raise
         finally:
@@ -835,12 +826,7 @@ def run_codex_exec(
                 with _QUOTA_CONDITION:
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
-                        print(
-                            "# "
-                            f"{console_timestamp()} "
-                            "Codex CLI quota wait: waiting for representative probe",
-                            flush=True,
-                        )
+                        _emit_quota_progress("waiting for representative probe")
                         _QUOTA_CONDITION.wait_for(lambda: not _QUOTA_POLLING)
                         waited_sec = time.perf_counter() - wait_started_at
                         quota_wait_sec += waited_sec
@@ -870,10 +856,7 @@ def run_codex_exec(
                     _QUOTA_PROBE_ERROR = None
                     _QUOTA_POLLING = True
                 try:
-                    print(
-                        f"# {console_timestamp()} Codex CLI quota wait: entering polling mode",
-                        flush=True,
-                    )
+                    _emit_quota_progress("entering polling mode")
                 except BaseException as exc:
                     with _QUOTA_CONDITION:
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -1007,7 +990,6 @@ def run_codex_exec(
                                 returncode=None,
                                 status="failed",
                                 error=startup_error,
-                                console_error=startup_error,
                                 run_codex_home=probe_codex_home,
                             )
                             raise
@@ -1049,6 +1031,7 @@ def run_codex_exec(
                             time.sleep(sleep_sec)
                             sleep_sec *= 2
                             capacity_retry_pending = True
+                            _emit_quota_progress("continuing")
                             continue
                         if not probe_available and (
                             probe_unexpected_error or not probe_quota_error
@@ -1073,15 +1056,9 @@ def run_codex_exec(
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
                                 [
-                                    "stderr/stdout log を確認して原因を解消してください。"
+                                    "診断用サブコマンドログを確認して原因を解消してください。"
                                 ],
-                                _codex_failure_detail(
-                                    classification="quota availability probe failed",
-                                    returncode=poll.returncode,
-                                    call_path=probe_call_path,
-                                    stdout_path=probe_stdout_path,
-                                    stderr_path=probe_stderr_path,
-                                ),
+                                "quota availability probe returned an unexpected failure",
                             )
                         _emit_codex_call_event(
                             run_purpose="quota availability probe",
@@ -1099,6 +1076,7 @@ def run_codex_exec(
                         )
                         if probe_available:
                             break
+                        _emit_quota_progress("continuing")
                 except BaseException as exc:
                     probe_error = exc
                     raise
@@ -1111,10 +1089,7 @@ def run_codex_exec(
                         _QUOTA_PROBE_ERROR = probe_error
                         _QUOTA_POLLING = False
                         _QUOTA_CONDITION.notify_all()
-                print(
-                    f"# {console_timestamp()} Codex CLI quota wait: resuming work",
-                    flush=True,
-                )
+                _emit_quota_progress("resuming work")
                 resume_session_id = correction_session_id or (
                     _extract_session_id_from_stdout_log(stdout_path)
                 )

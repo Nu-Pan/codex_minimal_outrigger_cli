@@ -12,7 +12,7 @@
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
 
 import sub_commands.oracle.review as review_module
@@ -138,9 +138,7 @@ def test_oracle_review_full_scope_keeps_tracked_ignored_oracle_files(
     )
 
     assert result.exit_code == 0
-    rendered = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    ).read_text()
+    rendered = terminal_primary_report(result).read_text()
     assert "oracle_count_total: 4" in rendered
     assert "oracle_count_evaluated: 4" in rendered
     assert "`oracle/asset.bin`" in rendered
@@ -181,9 +179,7 @@ def test_oracle_review_session_scope_reports_total_and_no_targets(
 
     assert result.exit_code == 0
     assert calls == []
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "scope: session" in rendered
     assert "oracle_count_total: 1" in rendered
@@ -231,9 +227,7 @@ def test_oracle_review_session_scope_keeps_changed_tracked_ignored_oracle_files(
         call for call in calls if call.startswith("oracle review enumerate findings")
     ]
     assert len(enumerate_calls) == 2
-    rendered = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    ).read_text()
+    rendered = terminal_primary_report(result).read_text()
     assert "oracle_count_total: 3" in rendered
     assert "oracle_count_evaluated: 2" in rendered
     assert "`oracle/ignored-second.md`" in rendered

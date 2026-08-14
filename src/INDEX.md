@@ -52,21 +52,18 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行ライフサイクル、Codex exec/TUI、設定、Git、パス、ログ、feedback、state、run lifecycle、INDEX 更新など、複数の runtime 機能から再利用される公開 API と個別実装への入口を提供する。
-- commons 配下には、共通 API の再公開、Codex subprocess・Structured Output・quota retry、設定 JSON 永続化、ファイル内容ハッシュ、Git/worktree 操作、feedback の収集・保存・状態管理、session/run state、report、Windows 通知などの実装が分割されている。各機能の具体的な仕様やアルゴリズムを調査・変更するときは、該当する個別 runtime モジュールへ進むための起点となる。
+- commons パッケージは、cmoc の複数の実行経路で共有される runtime helper を集約する実装層。設定、Git/worktree、パス、ログ、状態、プロセス、Codex 実行、feedback、INDEX 更新、結果・エラー処理などの共通機能を扱い、個別 helper の実装を確認・変更するときの入口になる。
 
 ## Read this when
-- commons 配下の共通 runtime 機能の責務分担や公開入口を確認するとき
-- CLI、Codex、設定、Git、ログ、feedback、state、run lifecycle、INDEX 更新など複数の runtime 機能にまたがる依存関係を調査するとき
-- 対象となる個別 runtime helper の実装へ進む前に、commons 配下の機能構成と適切な入口を確認するとき
+- 複数の CLI や実行経路にまたがる共通 runtime 機能の責務や実装箇所を確認するとき
+- commons 配下の個別 helper に進む前に、共有 runtime API と関連モジュールの構成を把握するとき
 
 ## Do not read this when
-- 特定の runtime helper のアルゴリズム、入出力形式、エラー条件を調査する場合は、対応する個別 runtime モジュールを直接読むとき
-- 利用者向け CLI の個別サブコマンド仕様や正本仕様だけを確認する場合は、対応する CLI 実装または oracle 文書を直接読むとき
-- INDEX.md の文章生成規則や Structured Output schema だけを確認する場合は、indexing 用の prompt・schema 定義を直接読むとき
+- 特定の runtime helper の内部挙動だけを確認したいときは、該当する個別実装を直接読む
+- 個別 CLI の業務ロジックや正本仕様だけを調査し、共通 runtime 実装に触れないとき
 
 ## hash
-- e0696f0d72510f6d48cc92c668ac6902ab43e5550ebb426423db113433d5bdea
+- 50d4438c156b76c67b22d7cd2c49642e302ecbf446a066c01af79707310352f7
 
 # `config`
 
@@ -87,19 +84,22 @@
 # `main.py`
 
 ## Summary
-- Typer と Click を用いた cmoc CLI の最上位入口。共通の CLI アプリケーション、サブコマンド階層、コマンド引数、補完処理、引数解析エラー変換を定義し、各サブコマンド実装へ処理を委譲する。
+- Typer を使った cmoc CLI のルート入口。トップレベルおよび session、oracle、realization、run、feedback 配下のサブコマンドを登録し、それぞれの実装関数へ処理を委譲する。
+- Click/Typer の互換処理と CLI 引数解析エラーの cmoc 形式への変換を担い、通常実行と `_CMOC_COMPLETE` による自動補完 probe を分離する。
+- CLI のコマンド構成、引数解析エラーの扱い、または console script からの起動経路を確認する際の入口であり、個別コマンドの挙動は各 `sub_commands` 実装を直接読む。
 
 ## Read this when
-- cmoc の CLI 全体のコマンド構成やトップレベル入口を確認・変更するとき
-- Typer/Click の引数解析、補完、CLI 例外の cmoc 形式への変換、または互換処理を確認・変更するとき
-- doctor、tui、indexing、session、oracle、realization、run、feedback の CLI コマンド登録を確認するとき
+- cmoc の利用可能なトップレベル・サブコマンド構成を確認するとき
+- Typer と Click の互換処理、CLI 引数解析エラーの表示・終了コード、または自動補完の起動経路を調査するとき
+- console script が cmoc CLI をどのように起動するかを確認するとき
 
 ## Do not read this when
-- 個別サブコマンドの処理内容や業務ロジックを確認したいときは、対応する sub_commands 配下の実装を直接読む
-- oracle やエラーハンドリングの仕様を確認したいときは、対応する正本仕様を直接読む
+- 特定サブコマンドの業務処理や worktree 操作の詳細を調査するときは、対応する `sub_commands` の実装を直接読む
+- oracle、realization、session などの仕様や外部挙動の正本を確認するときは、対応する oracle/specification を直接読む
+- CLI とは無関係な共通ランタイムや個別機能の実装を調査するとき
 
 ## hash
-- 266ba84d0a7501d380ff52d891fbb81985a6e3e0817f8677aabe88142f8dbef1
+- 8a443d75371da9adebc4b8b7dc79b17f5f85b50af38d34a7405727edb10de6e0
 
 # `oracle.py`
 
@@ -119,15 +119,16 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの各サブコマンド実装と、配下の詳細実装へ進むためのルーティング入口を提供する。
+- CLI サブコマンドの実装をまとめる上位ディレクトリです。doctor、indexing、tui の実装と、feedback・oracle・realization・run・session の各サブコマンドパッケージへの入口を提供します。
+- 特定のサブコマンドの処理を調査するときは、まずこのディレクトリで該当する実装またはパッケージを特定し、その下位対象へ進みます。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、複数サブコマンドにまたがる実行入口を確認するとき。
-- 特定のサブコマンド実装を探し、対応する下位ディレクトリまたは実装ファイルへ進むとき。
+- CLI サブコマンドの実装構成や、目的のサブコマンドの入口を特定するとき。
+- doctor、indexing、tui、feedback、oracle、realization、run、session のいずれかを扱うが、担当する下位実装がまだ特定されていないとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理、共通 helper の契約、または正本仕様だけを確認したいときは、対応する下位実装や仕様書を直接読む。
-- このディレクトリに含まれないサブコマンドや、CLI 共通処理のみを調査するとき。
+- 特定のサブコマンドの処理フローや仕様を確認する場合は、該当する下位実装または正本仕様を直接読むとき。
+- CLI ランタイム、共通 indexing、prompt editor など、サブコマンドから呼び出される共通実装だけを確認するとき。
 
 ## hash
-- f119344ab2ae868d55bf406c52fd13cb05179773ed267bfb10be1ab21d51b0b3
+- 482328901cffe9279c0e26b01db2240b2b26b101f5182e96441605cb78d4523a

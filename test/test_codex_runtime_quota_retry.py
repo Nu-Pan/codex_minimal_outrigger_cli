@@ -246,12 +246,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert codex_events[1]["stdout_log_path"] == probe_logs[0]["stdout_log_path"]
     assert codex_events[1]["prompt_log_path"] == probe_logs[0]["prompt_log_path"]
     assert codex_events[1]["output_path"] == probe_logs[0]["output_path"]
-    console = capsys.readouterr().out
-    assert "- Purpose: `codex exec`" in console
-    assert "- Purpose: `quota availability probe`" in console
-    assert f"- Call log: `{probe_call_path}`" in console
-    assert "- Elapsed time: `" in console
-    assert "- Exit code: `0`" in console
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert str(probe_call_path) not in captured.err
+    assert "entering polling mode" in captured.err
+    assert "resuming work" in captured.err
 
 
 def test_capacity_probe_retry_skips_quota_poll_interval(
@@ -372,9 +371,11 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
         )
 
     assert calls == ["prompt", probe_prompt]
-    console = capsys.readouterr().err
-    assert "- Purpose: `quota availability probe`" in console
-    assert "- Error: `KeyboardInterrupt()`" in console
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "entering polling mode" in captured.err
+    assert "quota availability probe" not in captured.err
+    assert "KeyboardInterrupt" not in captured.err
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
     assert [event["purpose"] for event in codex_events] == [

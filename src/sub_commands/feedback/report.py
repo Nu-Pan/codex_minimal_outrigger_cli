@@ -20,7 +20,6 @@ from inspect import getsourcefile
 from pathlib import Path
 from typing import Any
 
-import typer
 from jsonschema import validators
 from jsonschema.exceptions import SchemaError
 from oracle.other.struct_doc import render_as_markdown
@@ -31,6 +30,7 @@ from acp.builder.feedback.normalize_issue import (
 from acp.builder.feedback.verify_issue import build_feedback_verify_issue_parameter
 from cmoc_runtime import (
     CmocError,
+    TerminalResult,
     current_branch,
     load_state_for_branch,
     mark_current_subcommand_interrupted,
@@ -103,7 +103,7 @@ def cmoc_feedback_report_impl() -> None:
     )
 
 
-def _cmoc_feedback_report_body() -> int:
+def _cmoc_feedback_report_body() -> TerminalResult:
     """writer lock を確保して cleanup、cut、verification、publication を完了する。"""
     repository = repo_root()
     main_worktree = work_root()
@@ -117,8 +117,7 @@ def _cmoc_feedback_report_body() -> int:
     except KeyboardInterrupt:
         # 共通 runner は KeyboardInterrupt を失敗終了へ変換するため、report cut
         # 固定前の中断も feedback report 固有の正常な中断として記録する。
-        _record_feedback_interruption(None, None)
-        return 0
+        return _record_feedback_interruption(None, None)
 
     # report cut 固定前から失敗終了まで repository-level writer lock を保持する。
     try:
@@ -127,8 +126,7 @@ def _cmoc_feedback_report_body() -> int:
     except KeyboardInterrupt:
         # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
         # writer lock の取得中、cut を開始していない invocation の中断を正常終了する。
-        _record_feedback_interruption(None, None)
-        return 0
+        return _record_feedback_interruption(None, None)
     try:
         return _cmoc_feedback_report_locked_body(repository, main_worktree)
     finally:
@@ -137,7 +135,9 @@ def _cmoc_feedback_report_body() -> int:
         lock.__exit__(None, None, None)
 
 
-def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> int:
+def _cmoc_feedback_report_locked_body(
+    repository: Path, main_worktree: Path
+) -> TerminalResult:
     """保持中の writer lock 内で feedback report cut を処理する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
@@ -176,9 +176,6 @@ def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> 
                 4, "feedback report cut を固定", "freeze feedback report cut"
             )
             manifest, manifest_path = _create_report_cut(repository, state, versions)
-        else:
-            typer.echo(f"- feedback report cut を再開: `{manifest_path}`")
-
         # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
         return _process_report_cut(
             repository,
@@ -209,8 +206,7 @@ def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> 
                     "interrupted",
                     "user interruption",
                 )
-        _record_feedback_interruption(manifest, manifest_path)
-        return 0
+        return _record_feedback_interruption(manifest, manifest_path)
     except BaseException as exc:
         if (
             manifest is not None
@@ -298,7 +294,6 @@ def _create_report_cut(
             ["report cut work directory を確認して再実行してください。"],
             str(manifest_path),
         )
-    typer.echo(f"- feedback report cut: `{manifest_path}`")
     return manifest, manifest_path
 
 
@@ -668,7 +663,7 @@ def _process_report_cut(
     initial_state: ActiveState,
     manifest: _JsonObject,
     manifest_path: Path,
-) -> int:
+) -> TerminalResult:
     """固定済み cut を正常 publication または incomplete 診断まで進める。"""
     processing = manifest.get("processing")
     if not isinstance(processing, dict):
@@ -2136,7 +2131,7 @@ def _publish_report(
     machine_aggregates: dict[str, _JsonObject],
     verdicts: dict[str, _JsonObject],
     current_state: ActiveState,
-) -> int:
+) -> TerminalResult:
     """generation と report を準備し、manifest hash を固定して pointer を切り替える。"""
     unresolved_ids = sorted(
         candidate_id_value
@@ -2267,11 +2262,12 @@ def _publish_report(
         result,
         len(active_issues),
     )
-    _finish_published_cleanup(repo, manifest_path)
-    typer.echo(f"- feedback report: `{repo / str(report_reference['path'])}`")
-    typer.echo(f"- active generation: `{generation_id_value}`")
-    typer.echo(f"- result: `{result}`")
-    return 0
+    cleanup_manifest = _finish_published_cleanup(repo, manifest_path)
+    return _published_terminal_result(
+        repo / str(report_reference["path"]),
+        result,
+        cleanup_manifest,
+    )
 
 
 def _publish_incomplete_report(
@@ -2281,7 +2277,7 @@ def _publish_incomplete_report(
     manifest_path: Path,
     candidates: dict[str, _JsonObject],
     verdicts: dict[str, _JsonObject],
-) -> int:
+) -> TerminalResult:
     """全 verdict を materialize し、正常 publication と独立して保存する。"""
     # {{work-root}}/oracle/doc/app_spec/feedback_state.md
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
@@ -2361,13 +2357,14 @@ def _publish_incomplete_report(
         unresolved_count,
         inconclusive_count,
     )
-    typer.echo("- result: `incomplete`")
-    typer.echo(f"- incomplete report: `{report_path}`")
-    typer.echo(f"- verification candidates: `{len(verdicts)}`")
-    typer.echo(f"- unresolved candidates: `{unresolved_count}`")
-    typer.echo(f"- inconclusive candidates: `{inconclusive_count}`")
-    typer.echo("- normal publication: `not completed`")
-    return 0
+    return TerminalResult(
+        primary_report=report_path,
+        primary_report_role="incomplete feedback diagnostic report",
+        result="incomplete",
+        next_actions=(
+            "`inconclusive` の原因を修正した後に `cmoc feedback report` を再実行してください。",
+        ),
+    )
 
 
 def _next_machine_aggregates(
@@ -2395,7 +2392,9 @@ def _next_machine_aggregates(
     return result
 
 
-def _resume_publication(repo: Path, manifest: _JsonObject, manifest_path: Path) -> int:
+def _resume_publication(
+    repo: Path, manifest: _JsonObject, manifest_path: Path
+) -> TerminalResult:
     """成果物保存後・pointer 切替前に止まった publication を hash から再開する。"""
     publication = manifest.get("publication")
     if not isinstance(publication, dict):
@@ -2436,11 +2435,12 @@ def _resume_publication(repo: Path, manifest: _JsonObject, manifest_path: Path) 
         str(publication["result"]),
         None,
     )
-    _finish_published_cleanup(repo, manifest_path)
-    typer.echo(f"- feedback report: `{repo / str(publication['report']['path'])}`")
-    typer.echo(f"- active generation: `{publication['generation_id']}`")
-    typer.echo(f"- result: `{publication['result']}`")
-    return 0
+    cleanup_manifest = _finish_published_cleanup(repo, manifest_path)
+    return _published_terminal_result(
+        repo / str(publication["report"]["path"]),
+        str(publication["result"]),
+        cleanup_manifest,
+    )
 
 
 def _active_issue_record(
@@ -2924,7 +2924,7 @@ def _record_incomplete_event(
         )
 
 
-def _finish_published_cleanup(repo: Path, manifest_path: Path) -> None:
+def _finish_published_cleanup(repo: Path, manifest_path: Path) -> Path | None:
     """pointer 切替後の一時的な filesystem cleanup failure だけを warning にする。"""
     try:
         cleanup_published_report(repo)
@@ -2943,10 +2943,8 @@ def _finish_published_cleanup(repo: Path, manifest_path: Path) -> None:
                 )
             except Exception:
                 pass
-        typer.echo(
-            "- warning: feedback report は publication 済みですが cleanup は未完了です。"
-        )
-        typer.echo(f"- cleanup manifest: `{manifest_path}`")
+        return manifest_path
+    return None
 
 
 def _set_processing_state(
@@ -2974,8 +2972,8 @@ def _cut_is_current(repo: Path, manifest: _JsonObject) -> bool:
 
 def _record_feedback_interruption(
     manifest: _JsonObject | None, manifest_path: Path | None
-) -> None:
-    """中断を正常系として subcommand state、console、log へ記録する。"""
+) -> TerminalResult:
+    """中断を正常系として subcommand state と log へ記録する。"""
     mark_current_subcommand_interrupted()
     logger = current_subcommand_logger()
     if logger is not None:
@@ -2984,8 +2982,36 @@ def _record_feedback_interruption(
             report_cut_id=(manifest.get("report_cut_id") if manifest else None),
             report_cut_manifest_path=(str(manifest_path) if manifest_path else None),
         )
-    typer.echo("- feedback report はユーザー中断により終了しました。")
-    if manifest_path is None:
-        typer.echo("- 再開対象 report cut: なし")
-    else:
-        typer.echo(f"- 再開対象 report cut: `{manifest_path}`")
+    details: tuple[tuple[str, object], ...] = ()
+    next_actions: tuple[str, ...] = ()
+    if manifest_path is not None:
+        details = (("再開対象 report cut", manifest_path),)
+        next_actions = (
+            "`cmoc feedback report` を再実行して同じ report cut を再開してください。",
+        )
+    return TerminalResult(details=details, next_actions=next_actions)
+
+
+def _published_terminal_result(
+    report_path: Path,
+    result: str,
+    cleanup_manifest: Path | None,
+) -> TerminalResult:
+    """正常 publication の primary report と cleanup 状態を返す。"""
+    warnings: tuple[str, ...] = ()
+    next_actions: tuple[str, ...] = ()
+    if cleanup_manifest is not None:
+        warnings = (
+            "feedback report は publication 済みですが "
+            f"cleanup は未完了です: {cleanup_manifest.resolve(strict=False)}",
+        )
+        next_actions = (
+            "`cmoc feedback report` を再実行して cleanup を再開してください。",
+        )
+    return TerminalResult(
+        primary_report=report_path,
+        primary_report_role="feedback report",
+        result=result,
+        next_actions=next_actions,
+        warnings=warnings,
+    )

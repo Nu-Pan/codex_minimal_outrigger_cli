@@ -21,11 +21,10 @@
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 from pathlib import Path
 
-import typer
-
 from cmoc_runtime import (
     CmocError,
     SessionState,
+    TerminalResult,
     branch_exists,
     create_run_worktree,
     current_branch,
@@ -62,6 +61,7 @@ from .review_loop import (
     run_oracle_review_loop,
 )
 from .review_report import (
+    oracle_review_result,
     path_display,
     render_finding_section,
     render_oracle_review_report,
@@ -112,7 +112,7 @@ def cmoc_oracle_review_impl(scope: str) -> None:
 def _cmoc_oracle_review_body(
     scope: str,
     codex_exec: CodexExec,
-) -> None:
+) -> TerminalResult:
     """現在の session branch の oracle を isolated review worktree 上でレビューする。"""
     root = repo_root()
     current_root = work_root()
@@ -165,8 +165,7 @@ def _cmoc_oracle_review_body(
             None,
             interrupted=True,
         )
-        typer.echo(str(report_path.resolve()))
-        return
+        return _oracle_review_terminal_result(report_path, "interrupted")
 
     def _cleanup_created_resources() -> CmocError | None:
         """今回作成した review resource だけを cleanup して所有権を破棄する。
@@ -339,7 +338,9 @@ def _cmoc_oracle_review_body(
                 run_join_commit,
                 error_message=cleanup_error.detail,
             )
-            typer.echo(str(report_path.resolve()))
+            cleanup_error.terminal_result = _oracle_review_terminal_result(
+                report_path, "error"
+            )
             raise cleanup_error
         if not interrupted:
             interrupted = True
@@ -357,8 +358,7 @@ def _cmoc_oracle_review_body(
             run_join_commit,
             interrupted=True,
         )
-        typer.echo(str(report_path.resolve()))
-        return
+        return _oracle_review_terminal_result(report_path, "interrupted")
     except BaseException as exc:
         # {{work-root}}/oracle/doc/app_spec/run_isolation.md
         # create_run_worktree が部分作成後に失敗した場合も、隔離 run を残さない。
@@ -384,19 +384,26 @@ def _cmoc_oracle_review_body(
             run_join_commit,
             error_message=error_message,
         )
-        typer.echo(str(report_path.resolve()))
+        terminal_result = _oracle_review_terminal_result(report_path, "error")
+        if isinstance(exc, CmocError):
+            exc.terminal_result = terminal_result
+        else:
+            setattr(exc, "cmoc_terminal_result", terminal_result)
         raise
-    typer.echo(str(report_path.resolve()))
+    return _oracle_review_terminal_result(
+        report_path,
+        oracle_review_result(
+            evaluated_oracle_files,
+            findings,
+            interrupted=interrupted,
+        ),
+    )
 
 
 def _record_oracle_review_interruption() -> None:
-    """review 中断要求を console とサブコマンドログへ記録する。"""
+    """review 中断要求を subcommand log へ記録する。"""
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     mark_current_subcommand_interrupted()
-    typer.echo(
-        "# ユーザー中断要求を受け付けました\n"
-        "- 確定済みの部分結果で oracle review を完了します。"
-    )
     logger = current_subcommand_logger()
     if logger is not None:
         logger.event(
@@ -404,6 +411,15 @@ def _record_oracle_review_interruption() -> None:
             command="oracle review",
             result="interrupted",
         )
+
+
+def _oracle_review_terminal_result(report_path: Path, result: str) -> TerminalResult:
+    """保存済み review report を一意な primary report として返す。"""
+    return TerminalResult(
+        primary_report=report_path,
+        primary_report_role="oracle review report",
+        result=result,
+    )
 
 
 def _cleanup_review_run(

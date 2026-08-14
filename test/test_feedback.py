@@ -22,7 +22,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import current_branch, make_repo, run_git
 from jsonschema import ValidationError, validate
 from oracle.acp_builder.feedback.normalize_issue import (
@@ -1370,10 +1370,9 @@ def test_inconclusive_verdict_saves_incomplete_report_without_publication(
     assert Path(incomplete_event["report_path"]).is_absolute()
     assert incomplete_calls == sorted(reference_paths)
     assert "result: `incomplete`" in incomplete.output
-    assert "verification candidates: `2`" in incomplete.output
-    assert "unresolved candidates: `1`" in incomplete.output
-    assert "inconclusive candidates: `1`" in incomplete.output
-    assert "normal publication: `not completed`" in incomplete.output
+    assert "verification candidates" not in incomplete.output
+    assert "unresolved candidates" not in incomplete.output
+    assert "inconclusive candidates" not in incomplete.output
     assert pointer_path.read_bytes() == first_pointer
     assert pending_raw.exists()
     assert len(list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))) == 1
@@ -1389,6 +1388,7 @@ def test_inconclusive_verdict_saves_incomplete_report_without_publication(
     diagnostic = terminal_manifest["diagnostic"]
     assert isinstance(diagnostic, dict)
     diagnostic_report = root / str(diagnostic["report"]["path"])
+    assert terminal_primary_report(incomplete) == diagnostic_report
     text = diagnostic_report.read_text()
     assert 'result: "incomplete"' in text
     assert "active_generation_id" not in text
@@ -1836,7 +1836,7 @@ def test_interruption_during_preconditions_is_normal(
     interrupted = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert interrupted.exit_code == 0, interrupted.output
-    assert "ユーザー中断" in interrupted.output
+    assert "# 中断完了: cmoc feedback report" in interrupted.output
     assert load_report_cut(root) is None
     assert not (feedback_root(root) / "active" / "current.json").exists()
 
@@ -1858,7 +1858,7 @@ def test_interruption_during_writer_lock_acquisition_is_normal(
     interrupted = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert interrupted.exit_code == 0, interrupted.output
-    assert "ユーザー中断" in interrupted.output
+    assert "# 中断完了: cmoc feedback report" in interrupted.output
     assert load_report_cut(root) is None
     assert not (feedback_root(root) / "active" / "current.json").exists()
 
@@ -2105,7 +2105,7 @@ def test_cleanup_keyboard_interrupt_is_reported_as_user_interruption(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    assert "ユーザー中断" in result.output
+    assert "# 中断完了: cmoc feedback report" in result.output
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.cleanup_manifest is not None

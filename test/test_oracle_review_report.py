@@ -16,7 +16,7 @@ report schema と表示結果の対応を複数 file で追う必要があるた
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import make_repo, run_git
 
 import sub_commands.oracle.review as review_module
@@ -100,12 +100,10 @@ def test_oracle_review_interrupt_reports_only_completed_enumerations(
     )
 
     assert result.exit_code == 0
-    assert "# ERROR" not in result.output
-    assert "ユーザー中断要求" in result.output
+    assert "# 失敗" not in result.output
+    assert "# 中断完了: cmoc oracle review" in result.output
     assert len(calls) == 2
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "result: interrupted" in rendered
     assert "oracle_count_total: 2" in rendered
@@ -162,9 +160,7 @@ def test_oracle_review_writes_report(
     )
 
     assert result.exit_code == 0
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     assert report_path.is_file()
     rendered = report_path.read_text()
     required_sections = [
@@ -257,9 +253,7 @@ def test_oracle_review_report_outputs_accepted_and_rejected_findings(
     )
 
     assert result.exit_code == 0
-    rendered = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    ).read_text()
+    rendered = terminal_primary_report(result).read_text()
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
     assert h2_sections[:4] == [
         "## Verdict",
@@ -489,9 +483,7 @@ def test_oracle_review_accepts_short_scope_option(
     )
 
     assert result.exit_code == 0
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "scope: full" in rendered
 
@@ -547,9 +539,7 @@ def test_oracle_review_writes_error_report_on_processing_failure(
     result = runner.invoke(app, ["oracle", "review", "--scope", "full"])
 
     assert result.exit_code != 0
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "fatal_findings_rejected_count: 0" in rendered
@@ -557,8 +547,9 @@ def test_oracle_review_writes_error_report_on_processing_failure(
     assert "[unjudged] unjudged fatal" not in rendered
     assert "レビュー処理が途中で失敗しました。" in rendered
     assert "Error: `judge failed`" in rendered
-    assert "# ERROR" in result.stdout
-    assert "# ERROR" not in result.stderr
+    assert result.stdout == ""
+    assert "# 失敗: cmoc oracle review" in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_oracle_review_error_report_lists_only_completed_enumerations(
@@ -605,9 +596,7 @@ def test_oracle_review_error_report_lists_only_completed_enumerations(
     )
 
     assert result.exit_code != 0
-    report_path = Path(
-        [line for line in result.output.splitlines() if line.startswith("/")][-1]
-    )
+    report_path = terminal_primary_report(result)
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "oracle_count_total: 2" in rendered

@@ -15,18 +15,19 @@
 # `fork.py`
 
 ## Summary
-- `realization apply fork` の実行フローを担当する CLI 実装。editing run を開始し、差分追従 agent を実行した後、想定外変更・agent による commit・遅延 child の書き込みを検査し、INDEX 生成を含む差分を処理単位として commit して joinable run と fork report を公開する。失敗時は変更を rollback し、error state と report を保存する。
-- apply 差分の始点 commit、oracle diff、Codex 実行結果、cleanup 警告、accepted feedback の参照を report に反映するほか、agent の commit 検出、preflight commit の rollback、想定外差分の利用者向けエラー変換などの補助処理を含む。
+- `cmoc realization apply fork` の実行本体を担い、realization apply agent の起動、差分検査、INDEX 生成、処理単位の commit、joinable/error 状態への更新、fork report 保存までを一連の run として管理する。
+- agent による commit や想定外ファイル変更、遅延 Codex child、失敗時の rollback を検出・処理し、run の安全な後続操作（join または abandon）に必要な状態と報告を整える。
+- apply 固有の差分始点 commit と accepted feedback observation を report に記録する。補助的な差分検査・cleanup・例外変換の実装への入口でもある。
 
 ## Read this when
-- `cmoc realization apply fork` の CLI 実行、editing run の joinable/error 遷移、apply 差分の commit・rollback・report 保存の挙動を調査または変更するとき。
-- realization apply agent が作成した変更と cmoc が生成する INDEX 差分の境界、agent の commit や遅延 Codex child の扱いを確認するとき。
-- apply fork report の差分始点、Codex return code、accepted feedback、cleanup warning の記録内容を確認するとき。
+- `cmoc realization apply fork` の実行フロー、run state、joinable/error 遷移、または fork report の挙動を確認・変更するとき。
+- realization apply agent の変更許可範囲、agent commit 検出、INDEX 生成差分の扱い、遅延 Codex child の停止、rollback の境界を調査するとき。
+- apply 差分の始点 commit や accepted feedback observation が report にどう反映されるかを確認するとき。
 
 ## Do not read this when
-- realization apply の agent 起動パラメータ自体を変更する場合は、agent launch parameter の実装を直接読む。
-- editing run の共通ライフサイクル、git 操作、state 管理、index refresh の一般仕様を確認するだけの場合は、対応する `commons.runtime_run*` 実装または oracle/specification を直接読む。
-- apply fork の利用者向け仕様や run isolation・indexing の正本仕様を確認する場合は、この実装ではなく参照されている app specification を読む。
+- realization apply agent 自体のプロンプト生成や launch parameter の構築だけを変更・調査するときは、対応する launch parameter 実装を直接読む。
+- run の共通ライフサイクル、state 管理、差分分類、rollback、index refresh の一般仕様だけを確認するときは、対応する `commons.runtime_run*` 実装または正本仕様を直接読む。
+- `cmoc run join` や `cmoc run abandon` の取り込み・破棄処理だけを確認するときは、それぞれの sub-command 実装を直接読む。
 
 ## hash
-- 1d5e79c19264330cf256f3cc06e908f15632a7decd4cccc080038ff69a5b7900
+- eba08793f7cd8ac5ca53d33bf957bad90587f193325571c05adbfbd8ba1822e9

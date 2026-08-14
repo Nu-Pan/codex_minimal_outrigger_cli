@@ -1,11 +1,10 @@
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
 from pathlib import Path
 
-import typer
-
 from cmoc_runtime import (
     CmocError,
     SessionState,
+    TerminalResult,
     active_session_for_home,
     branch_exists,
     current_branch,
@@ -40,7 +39,7 @@ def cmoc_session_fork_impl() -> None:
     )
 
 
-def _cmoc_session_fork_body() -> None:
+def _cmoc_session_fork_body() -> TerminalResult:
     """現在の local branch から cmoc session branch を作成する。"""
     root = repo_root()
     work = work_root()
@@ -141,15 +140,11 @@ def _cmoc_session_fork_body() -> None:
             raise CmocError(
                 "session fork の作成に失敗しました。", guidance, "\n".join(details)
             ) from error
-        start_subcommand_step(7, "作成結果を表示", "show session result")
-        typer.echo(
-            "\n".join(
-                [
-                    "# cmoc session fork",
-                    f"- session_branch: `{session_branch}`",
-                    f"- session_home_branch: `{branch}`",
-                    f"- session_state_file: `{path}`",
-                ]
+        start_subcommand_step(7, "terminal result を確定", "finalize terminal result")
+        return TerminalResult(
+            details=(
+                ("session_branch", session_branch),
+                ("session_home_branch", branch),
             )
         )
 

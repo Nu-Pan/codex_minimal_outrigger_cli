@@ -12,12 +12,11 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
-import typer
-
 from cmoc_runtime import (
     CmocError,
     RunPart,
     SessionState,
+    TerminalResult,
     branch_exists,
     current_branch,
     delete_branch,
@@ -75,7 +74,7 @@ def cmoc_run_join_impl(force_resolve: bool = False) -> None:
     )
 
 
-def _cmoc_run_join_body(force_resolve: bool) -> None:
+def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
     """active run の差分を検査して merge、post-join 処理、cleanup を行う。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
     doctor_state_paths = _doctor_preprocess_for_join()
@@ -175,7 +174,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 session_head_before_join,
             )
         except BaseException as exc:
-            if getattr(exc, "cmoc_stdout", None) is not None:
+            if isinstance(getattr(exc, "terminal_result", None), TerminalResult):
                 raise
             report = _record_join_failure(
                 context,
@@ -188,24 +187,32 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 "run join の merge または post-join 処理に失敗しました。",
                 ["run join report を確認してから join または abandon してください。"],
                 f"report: {report}\nerror: {exc!r}",
+                terminal_result=TerminalResult(
+                    primary_report=report,
+                    primary_report_role="run join report",
+                    warnings=tuple(warnings),
+                ),
             )
-            setattr(error, "cmoc_stdout", f"- run join report: `{report}`")
             raise error from exc
-    start_subcommand_step(6, "join 結果を表示", "show join result")
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc run join",
-                f"- run_kind: `{context.kind}`",
-                f"- run_branch: `{context.run_branch}`",
-                f"- run_join_commit: `{run_join_commit}`",
-                f"- post_join_hook: `{hook_result}`",
-                f"- refactor_state_sync_commit: `{state_sync_commit}`",
-                f"- cleanup: `{cleanup}`",
-                f"- report: `{report}`",
-                *[f"- warning: {warning}" for warning in warnings],
-            ]
-        )
+    start_subcommand_step(6, "terminal result を確定", "finalize terminal result")
+    next_actions = (
+        ("`cmoc run abandon` で残った run 資源の cleanup を再試行してください。",)
+        if cleanup != "completed"
+        else ()
+    )
+    return TerminalResult(
+        primary_report=report,
+        primary_report_role="run join report",
+        details=(
+            ("run_kind", context.kind),
+            ("run_branch", context.run_branch),
+            ("run_join_commit", run_join_commit),
+            ("post_join_hook", hook_result),
+            ("refactor_state_sync_commit", state_sync_commit),
+            ("cleanup", cleanup),
+        ),
+        next_actions=next_actions,
+        warnings=tuple(warnings),
     )
 
 
@@ -522,8 +529,12 @@ def _resolve_index_only_conflict_or_fail(
         "INDEX.md 以外の merge conflict が発生しました。",
         ["run report を確認し、run を join または abandon してください。"],
         "\n".join(conflicts) or "merge failed without unmerged paths",
+        terminal_result=TerminalResult(
+            primary_report=report,
+            primary_report_role="run join report",
+            warnings=tuple(warnings),
+        ),
     )
-    setattr(error, "cmoc_stdout", f"- run join report: `{report}`")
     raise error
 
 
@@ -629,6 +640,10 @@ def _raise_unexpected(
             "session branch の成果物は手動で確認してください。",
         ],
         "\n".join(paths),
+        terminal_result=TerminalResult(
+            primary_report=report,
+            primary_report_role="run join report",
+            warnings=tuple(warnings),
+        ),
     )
-    setattr(error, "cmoc_stdout", f"- run join report: `{report}`")
     raise error

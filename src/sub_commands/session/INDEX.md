@@ -15,48 +15,51 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc session abandon` サブコマンドの実装。active session を検証し、home branch へ切り替えた後に session branch と state を abandoned としてクリーンアップする。失敗時は state・branch を可能な限りロールバックし、結果または cleanup error を表示する。
+- アクティブな session を home branch へ merge せず破棄する CLI サブコマンドの実装。session branch 上での事前条件確認、clean worktree の検証、home branch への切替、session state の abandoned 更新、session branch の削除と、失敗時の state・branch 復旧を扱う。session abandon の動作、cleanup、rollback、terminal result を確認・変更するときの入口となる。
 
 ## Read this when
-- `cmoc session abandon` の事前条件、branch 切り替え・削除、state 更新、cleanup 失敗時の復旧処理を変更・調査するとき。
+- `cmoc session abandon` の実行条件、branch 切替、session state 更新、session branch 削除の挙動を調べるとき。
+- cleanup 中のエラーや利用者中断時に、session を再実行可能な active state と元の branch に戻す処理を確認するとき。
 
 ## Do not read this when
-- session の開始・継続・完了など、abandon 処理以外の session サブコマンドを変更・調査するときは、各サブコマンドの実装を直接読む。
+- session の開始、継続、完了、再開など abandon 以外のライフサイクル処理を調べるとき。
+- CLI 共通ランナーや git・state 操作の一般仕様を確認したい場合は、まずそれぞれの共通実装・仕様を直接読むとき。
 
 ## hash
-- 4409f62cddd5b057e30bd1769b75c2bbddcfdcb40636b89b68e7075effa1c815
+- d36691fab8b6d83ed0172ad10897b0c62d3095bba5a98711497305f33f7f22e3
 
 # `fork.py`
 
 ## Summary
-- 現在の local branch から cmoc 管理対象の session branch と state file を作成する CLI 実装。active session の重複確認、clean worktree 検証、session-id 衝突回避、branch/state 作成、結果表示を担う。作成途中の失敗時には branch と state file をロールバックし、復旧情報を含むエラーを報告する。
+- 現在の local branch から cmoc 管理対象外の session branch を作成し、fork 時点の HEAD と home branch を session state に保存する CLI 実装。session fork の開始条件、排他制御、branch/state の作成、失敗時の rollback、一意な session-id 生成を扱う。session fork の挙動や作成失敗時の復旧を確認・変更するときの入口。
 
 ## Read this when
-- `cmoc session fork` の branch 作成、session state 保存、session-id 生成、競合制御、失敗時ロールバックの挙動を変更・調査するとき。
+- `cmoc session fork` の実装や、session branch・session state の作成手順を確認するとき
+- active session の重複防止、session-id の衝突回避、branch/state 作成時の排他制御を調査するとき
+- branch 作成または state 保存に失敗した場合の rollback とエラー情報を確認するとき
 
 ## Do not read this when
-- session の join・abandon など、fork 実行以外のライフサイクル処理を確認するとき。
-- session state のデータ構造や共通 runtime 関数の仕様を直接確認する必要があるとき。
+- session の join、abandon、state の一般的な形式だけを確認したいときは、それぞれの専用実装または session state の仕様を直接読む
+- CLI 共通の実行制御や個別の git/state helper の仕様だけを確認したいときは、対応する共通実装・仕様を直接読む
 
 ## hash
-- 9f402913f831a35fc4e90001691620f8eed657cda8878eeb7ae91320860736e7
+- 2b4e7f6483300610ad42bfaf23f30394ee6dd9feefcba3ad2c386905d8a9f662
 
 # `join.py`
 
 ## Summary
-- `cmoc session join` の実行本体と merge conflict 解消処理を担う。session branch の事前条件、clean worktree、home branch への `--no-ff` merge、到達可能性を確認した local branch 削除、状態更新、結果表示を扱う。
-- merge conflict 発生時は対象 path を NUL 区切りで取得し、Codex に解消を依頼する。conflict 対象外の変更、file type・mode の変更、marker 外の内容変更、未解決 marker、unmerged path を検査して拒否し、解決後に対象を stage して merge commit を作成する。
-- session join の CLI 実装や、conflict 解消の安全性・差分制限・branch cleanup の挙動を確認する際の入口となる。
+- `session join` サブコマンドの実行本体で、active な session branch を session home branch にマージし、状態を joined に更新して session branch の削除まで行う。事前条件検証、clean worktree 要求、Git merge、state 永続化、削除結果と警告の terminal result 化を担う。
+- マージ競合時は Codex CLI に競合解消を依頼し、競合対象外の変更や conflict marker 外の変更を拒否したうえで、対象を stage して merge commit を完了する。Git path の安全な列挙、通常ファイルの fingerprint、競合文脈の保持検査もこの処理の補助責務である。
+- session join の CLI 実装、session branch の join・競合解消・削除条件、または Codex に許可する競合解消範囲を確認・変更するときの入口。session の状態モデルや一般的な Codex 実行規則そのものを確認する場合は、それぞれの正本仕様へ直接進む。
 
 ## Read this when
-- `cmoc session join` の実行フロー、事前条件、merge 後の state 更新または branch 削除を調査・変更するとき。
-- session join の merge conflict 解消で、Codex 呼び出し後に許可される変更範囲、conflict marker 検査、stage、merge commit の挙動を確認するとき。
-- session join の Git path 取扱い、到達可能性確認、エラー出力先、完了結果の表示を調査するとき。
+- `cmoc session join` の動作、事前条件、merge target、state 更新、session branch 削除を調査・変更するとき
+- session join 中の merge conflict 解消、Codex 呼び出し後の差分制限、conflict marker 検査を調査・変更するとき
 
 ## Do not read this when
-- session state のデータ構造や session lifecycle の正本仕様だけを確認する場合。
-- conflict resolution parameter のプロンプト内容だけを確認する場合。
-- session join とは無関係な CLI subcommand、一般的な Git 実行、または共通 runtime の実装を直接調査する場合。
+- session の状態値やライフサイクルの定義だけを確認したいとき
+- Codex exec の共通規則や conflict resolution prompt の仕様だけを確認したいとき
+- session join 以外のサブコマンドの実装を調査するとき
 
 ## hash
-- ef11fba3d00358a86ef405a3a8b3f494d47f74048c356a844cad9c4fec3a7dbf
+- 2a668d45349607298708204de853611c64551a53cce9cb605ac705522ff40a8e

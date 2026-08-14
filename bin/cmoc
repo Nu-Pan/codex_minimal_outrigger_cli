@@ -4,8 +4,6 @@ set -eu
 
 cmoc_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 venv_python="$cmoc_root/.venv/bin/python"
-# User-facing path reports follow {{work-root}}/oracle/src/oracle/other/path_model.py.
-display_script_path="{{cmoc-root}}/bin/cmoc"
 
 # 通常ファイル・実行権限だけでは Python として起動できる保証がないため、
 # 最小の interpreter probe に失敗した場合も wrapper のエラー報告へ送る。
@@ -23,31 +21,15 @@ is_usable_venv_python() {
     [ "$probe_output" = "cmoc-python-probe" ]
 }
 
-line_number_of() {
-    pattern=$1
-    awk -v pattern="$pattern" '$0 ~ pattern { print NR; exit }' "$0"
-}
-
 print_missing_venv_error() {
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
     {
-        printf '%s\n' "# ERROR"
-        printf '%s\n' "## Summary"
-        printf '%s\n' "cmoc の仮想環境 Python が見つからないか、実行できません。"
-        printf '%s\n' "## Next actions"
-        printf '%s\n' "- 初回セットアップの場合は、仮想環境を作成して cmoc をインストールしてください。"
-        printf '%s\n' "- 既にセットアップ済みの場合は、.venv の削除や権限変更が起きていないか確認してください。"
-        printf '%s\n' "## Detail"
-        printf '%s\n' "必要な実行ファイル: $venv_python"
-        printf '%s\n' "セットアップ手順:"
-        printf '%s\n' "  cd \"$cmoc_root\""
-        printf '%s\n' "  /usr/bin/python3 -m venv .venv"
-        printf '%s\n' "  ./.venv/bin/python -m pip install -e '.[dev]'"
-        printf '%s\n' "## Call stack"
-        printf '%s\n' "  at print_missing_venv_error ($display_script_path:$(line_number_of "^print_missing_venv_error[(][)] [{]$"))"
-        printf '%s\n' "  at require_venv_python ($display_script_path:$(line_number_of "^    print_missing_venv_error$"))"
-        printf '%s\n' "  at main ($display_script_path:$(line_number_of "^require_venv_python$"))"
-    }
+        printf '%s\n' "# 失敗: cmoc"
+        printf '%s\n' "- 理由: cmoc の仮想環境 Python が見つからないか、実行できません。"
+        printf '%s\n' "- 詳細: 必要な実行ファイル \`$venv_python\`"
+        printf '%s\n' "- 次の操作: 初回セットアップの場合は、\`$cmoc_root\` で仮想環境を作成し、cmoc をインストールしてください。"
+        printf '%s\n' "- 終了コード: \`1\`"
+    } >&2
 }
 
 require_venv_python() {

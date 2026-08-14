@@ -1,12 +1,13 @@
+import traceback
 from collections.abc import Callable, Sequence
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import typer
 
 from .runtime_doctor import run_doctor_preprocess
-from .runtime_errors import CmocError, render_error
+from .runtime_errors import DEFAULT_NEXT_ACTION, CmocError, render_error
 from .runtime_feedback import start_feedback_invocation, stop_feedback_invocation
 from .runtime_feedback_store import feedback_completion_counts
 from .runtime_logging import (
@@ -15,13 +16,11 @@ from .runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
-from .runtime_paths import (
-    console_timestamp,
-    format_duration,
-    repo_root,
-    work_root,
-)
+from .runtime_paths import console_timestamp, format_duration, repo_root, work_root
+from .runtime_results import TerminalResult
 from .runtime_windows_toast import ToastState, notify_terminal_result
+
+TerminalClassification = Literal["natural_completion", "user_interruption", "error"]
 
 _CURRENT_STEP_TOTAL: ContextVar[int | None] = ContextVar(
     "CURRENT_STEP_TOTAL", default=None
@@ -40,7 +39,6 @@ def run_cli_subcommand(
     pre_log_check: Callable[[Path], None] | None = None,
     command_name: str | None = None,
     command_argv: Sequence[str] | None = None,
-    error_to_stderr: bool = False,
     use_work_root_runtime: bool = False,
     doctor_preprocess: bool = True,
     tui_process: bool = False,
@@ -48,133 +46,174 @@ def run_cli_subcommand(
     total_steps: int = 1,
     **kwargs: Any,
 ) -> None:
-    """CLI サブコマンドの共通実行ライフサイクルを管理する。
+    """最外側 CLI サブコマンドの実行、診断ログ、terminal result を管理する。
 
-    work root 検査後、doctor preprocess より前にサブコマンドログを作成し、
-    各サブコマンドの step 通知、完了表示、戻り値の終了コード化、例外のエラー表示を
-    一箇所で扱う。
-    runtime state は通常 repo root に置き、linked worktree 前処理では work root に置く。
-    doctor preprocess は current work root を起点に、current と main repo root の
-    両方を修復する。
-    サブコマンドログは常に repo root に置く。
+    根拠:
+    - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    - {{work-root}}/oracle/doc/app_spec/error_handling.md
     """
-    logger = None
+    logger: SubcommandLogger | None = None
     logger_token = None
     feedback_invocation = None
     feedback_token = None
     step_total_token = None
     tui_process_started_token = _CURRENT_TUI_PROCESS_STARTED.set(False)
     interruption_token = _CURRENT_USER_INTERRUPTION.set(False)
-    error_returncode: int | None = None
-    impl_started = False
     name = command_name or impl.__name__
     notification_root = Path.cwd()
     terminal_state: ToastState | None = None
+    impl_started = False
+    error_returncode: int | None = None
+
+    def stop_feedback() -> None:
+        """collector を一度だけ drain し、terminal result 後の出力を防ぐ。"""
+        nonlocal feedback_invocation, feedback_token
+        if feedback_token is None:
+            return
+        token = feedback_token
+        invocation = feedback_invocation
+        feedback_token = None
+        feedback_invocation = None
+        stop_feedback_invocation(invocation, token)
+
     try:
         current_root = work_root()
         notification_root = repo_root()
-        require_current_directory_is_work_root(current_root)
-        log_root = notification_root
-        runtime_root = current_root if use_work_root_runtime else log_root
-        logger = SubcommandLogger(log_root, name)
+        runtime_root = current_root if use_work_root_runtime else notification_root
+        logger = SubcommandLogger(notification_root, name)
         logger_token = set_current_subcommand_logger(logger)
         step_total_token = _CURRENT_STEP_TOTAL.set(total_steps)
-        # command_invoked は reporter の degraded event を含む全 invocation event より
-        # 先に置き、既存のサブコマンド log lifecycle を維持する。
         logger.event("command_invoked", argv=list(command_argv or [name]))
         feedback_invocation, feedback_token = start_feedback_invocation(
-            log_root,
+            notification_root,
             current_root,
             name,
             logger,
         )
-        typer.echo(f"# {console_timestamp()} 開始 {name}")
-        typer.echo(f"- サブコマンドログ: `{logger.path}`")
+        _emit_progress(f"cmoc {name} を開始")
+        require_current_directory_is_work_root(current_root)
         if doctor_preprocess:
-            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-            # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-            # 共通修復の失敗もサブコマンド単位の終了経路として記録する。
             start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
             run_doctor_preprocess(current_root)
         if pre_log_check is not None:
-            # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-            # 固有の事前条件で失敗しても、サブコマンドログは先に作成しておく。
             pre_log_check(runtime_root)
         impl_started = True
         impl_result = impl(*args, **kwargs)
-        returncode = impl_result if isinstance(impl_result, int) else 0
+        if isinstance(impl_result, int):
+            returncode = impl_result
+            specific_result = TerminalResult()
+        elif isinstance(impl_result, TerminalResult):
+            returncode = 0
+            specific_result = impl_result
+        elif impl_result is None:
+            returncode = 0
+            specific_result = TerminalResult()
+        else:
+            raise TypeError(
+                "subcommand implementation must return None, int, or TerminalResult"
+            )
         if returncode:
-            # {{work-root}}/oracle/doc/app_spec/error_handling.md
-            # callback の非 0 return を typer.Exit で終えると report を迂回するため、
-            # 共通の例外経路へ変換する。
             error_returncode = returncode
             raise CmocError(
                 "サブコマンドがエラー終了しました。",
-                [
-                    "サブコマンドログを確認してから同じコマンドを再実行してください。",
-                    "入力、設定、作業ツリーの状態を確認してから再実行してください。",
-                ],
+                ["診断用サブコマンドログを確認してから再実行してください。"],
                 f"returncode: {returncode}",
+                terminal_result=specific_result,
             )
-        logger.finish_current_step()
-        logger.event(
-            "command_finished",
-            returncode=returncode,
-            elapsed_sec=logger.elapsed(),
-            quota_wait_sec=logger.quota_wait_sec,
+
+        stop_feedback()
+        classification: TerminalClassification = (
+            "user_interruption"
+            if _CURRENT_USER_INTERRUPTION.get()
+            else "natural_completion"
         )
-        _emit_completion_summary(logger, name, returncode)
+        _finalize_subcommand(
+            logger,
+            name,
+            classification,
+            specific_result,
+            returncode=0,
+            emit_console=not tui_process,
+        )
         if not tui_process:
             terminal_state = (
-                "interrupted" if _CURRENT_USER_INTERRUPTION.get() else "completed"
+                "interrupted" if classification == "user_interruption" else "completed"
             )
     except KeyboardInterrupt as exc:
         if interruptible and not impl_started:
-            # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-            # interruptible workload の固有処理へ到達する前の common lifecycle
-            # (collector、doctor、pre-log check) だけを正常中断として確定する。
             mark_current_subcommand_interrupted()
+            stop_feedback()
             if logger is not None:
-                logger.finish_current_step()
-                logger.event(
+                logger.event("user_interruption", result="interrupted")
+                _finalize_subcommand(
+                    logger,
+                    name,
                     "user_interruption",
-                    result="interrupted",
-                )
-                logger.event(
-                    "command_finished",
+                    TerminalResult(),
                     returncode=0,
-                    elapsed_sec=logger.elapsed(),
-                    quota_wait_sec=logger.quota_wait_sec,
-                    result="interrupted",
+                    emit_console=not tui_process,
                 )
-                _emit_completion_summary(logger, name, 0)
-            terminal_state = "interrupted"
+            terminal_state = None if tui_process else "interrupted"
             return
-        # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-        # 非中断可能な TUI の Ctrl+C は Codex CLI に委ね、cmoc の error report に変換しない。
-        if logger:
-            _finish_failed_subcommand(logger, name, 130, exc)
-        # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-        # TUI のユーザー終了にはサブコマンドの terminal result 通知を追加しない。
-        if not tui_process or not _CURRENT_TUI_PROCESS_STARTED.get():
-            terminal_state = "failed"
+
+        stop_feedback()
+        if tui_process and _CURRENT_TUI_PROCESS_STARTED.get():
+            # TUI process に制御を渡した後の signal は TUI に委ね、追加表示しない。
+            if logger is not None:
+                _finalize_subcommand(
+                    logger,
+                    name,
+                    "error",
+                    TerminalResult(),
+                    returncode=130,
+                    error=exc,
+                    emit_console=False,
+                )
+            raise
+
+        if logger is not None:
+            _finalize_subcommand(
+                logger,
+                name,
+                "error",
+                TerminalResult(
+                    next_actions=("必要な状態を確認してから再実行してください。",)
+                ),
+                returncode=130,
+                error=exc,
+                # TUI 起動前の中断は起動エラーとして表示する。その他の
+                # KeyboardInterrupt は外側へ委ね、cmoc の表示を追加しない。
+                emit_console=tui_process,
+            )
+        elif tui_process:
+            typer.echo(render_error(exc), err=True)
+        terminal_state = "failed"
         raise
     except BaseException as exc:
         failed_returncode = error_returncode if error_returncode is not None else 1
-        if logger:
-            _finish_failed_subcommand(logger, name, failed_returncode, exc)
-        result_stdout = getattr(exc, "cmoc_stdout", None)
-        if result_stdout is not None:
-            typer.echo(str(result_stdout))
-        # {{work-root}}/oracle/doc/app_spec/error_handling.md は stdout を既定とし、
-        # サブコマンド固有の正本だけが stderr への変更を許可する。
-        typer.echo(
-            render_error(exc),
-            err=(error_to_stderr or bool(getattr(exc, "cmoc_error_to_stderr", False))),
-        )
+        stop_feedback()
+        if logger is not None:
+            supplied_result = getattr(exc, "terminal_result", None)
+            if not isinstance(supplied_result, TerminalResult):
+                supplied_result = getattr(exc, "cmoc_terminal_result", None)
+            if not isinstance(supplied_result, TerminalResult):
+                supplied_result = TerminalResult()
+            _finalize_subcommand(
+                logger,
+                name,
+                "error",
+                supplied_result,
+                returncode=failed_returncode,
+                error=exc,
+                emit_console=True,
+            )
+        else:
+            typer.echo(render_error(exc), err=True)
         terminal_state = "failed"
         raise typer.Exit(failed_returncode) from exc
     finally:
+        # terminal result へ到達する通常経路では既に drain 済みである。初期化途中の
+        # 想定外 failure だけをここで回収し、collector を残さない。
         if feedback_token is not None:
             stop_feedback_invocation(feedback_invocation, feedback_token)
         if step_total_token is not None:
@@ -190,7 +229,6 @@ def run_cli_subcommand(
 def mark_current_subcommand_interrupted() -> None:
     """現在の最外側サブコマンドを正常なユーザー中断完了として印付けする。"""
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    # runner 外の直接呼び出しでは次の invocation へ state を漏らさない。
     if _CURRENT_USER_INTERRUPTION.get() is not None:
         _CURRENT_USER_INTERRUPTION.set(True)
 
@@ -198,8 +236,6 @@ def mark_current_subcommand_interrupted() -> None:
 def mark_current_tui_process_started() -> None:
     """現在の TUI invocation が Codex process の起動境界へ到達したと印付けする。"""
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-    # TUI 起動前の KeyboardInterrupt だけを terminal failure notification の対象にし、
-    # 実際の TUI process から伝播したユーザー終了には追加通知を出さない。
     if _CURRENT_TUI_PROCESS_STARTED.get() is not None:
         _CURRENT_TUI_PROCESS_STARTED.set(True)
 
@@ -217,44 +253,13 @@ def _notify_terminal_result_safely(
         pass
 
 
-def _finish_failed_subcommand(
-    logger: SubcommandLogger,
-    command_name: str,
-    returncode: int,
-    error: BaseException,
-) -> None:
-    """失敗時の終了 event と summary を、元の例外を隠さず記録する。"""
-    # {{work-root}}/oracle/doc/app_spec/error_handling.md
-    # ログ終了処理自体が失敗しても、元の失敗を後続の error path へ届ける。
-    try:
-        logger.finish_current_step()
-    except BaseException:
-        pass
-    try:
-        logger.event(
-            "command_finished",
-            returncode=returncode,
-            elapsed_sec=logger.elapsed(),
-            quota_wait_sec=logger.quota_wait_sec,
-            error=str(error),
-        )
-    except BaseException:
-        pass
-    try:
-        _emit_completion_summary(logger, command_name, returncode)
-    except BaseException:
-        pass
-
-
 def start_subcommand_step(
     index: int | str,
     description: str,
     log_description: str | None = None,
 ) -> None:
-    """現在のサブコマンドの step 開始をログとコンソールへ通知する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    """
+    """全 step をログへ記録し、トップレベル step だけを stderr へ通知する。"""
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     logger = current_subcommand_logger()
     if logger is None:
         return
@@ -264,7 +269,8 @@ def start_subcommand_step(
     else:
         step_index = index
     logger.start_step(step_index, description, log_description)
-    typer.echo(f"# {console_timestamp()} ({step_index}) {description}")
+    if isinstance(index, int):
+        _emit_progress(f"cmoc {logger.command}: {description}")
 
 
 def require_current_directory_is_work_root(root: Path) -> None:
@@ -281,34 +287,261 @@ def require_current_directory_is_work_root(root: Path) -> None:
     )
 
 
-def _emit_completion_summary(
-    logger: SubcommandLogger, command_name: str, returncode: int
-) -> None:
-    """サブコマンド完了時に記録済み step の stdout サマリーを出力する。
+def _emit_progress(message: str) -> None:
+    """短い進行通知を stderr へ一行で表示する。"""
+    typer.echo(f"# {console_timestamp()} {message}", err=True)
 
-    根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    """
-    elapsed = logger.elapsed()
-    typer.echo(f"# {console_timestamp()} 完了 {command_name}")
-    typer.echo(f"- サブコマンドログ: `{logger.path}`")
-    for step in logger.step_timings:
-        step_elapsed = step.elapsed_sec
-        if step_elapsed is None:
-            step_elapsed = elapsed - (step.started_at - logger.started_at)
-        typer.echo(
-            f"- ステップ経過時間[{step.index} {step.description}]: `{format_duration(step_elapsed)}`"
-        )
-    typer.echo(f"- 経過時間: `{format_duration(elapsed)}`")
-    typer.echo(f"- quota 待機時間: `{format_duration(logger.quota_wait_sec)}`")
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+
+def _finalize_subcommand(
+    logger: SubcommandLogger,
+    command_name: str,
+    classification: TerminalClassification,
+    specific_result: TerminalResult,
+    *,
+    returncode: int,
+    error: BaseException | None = None,
+    emit_console: bool,
+) -> None:
+    """終了状態をログへ flush した後、terminal result を一度だけ表示する。"""
     try:
-        pending, warnings = feedback_completion_counts(logger.root)
-        pending_text = "unavailable" if pending is None else str(pending)
-        typer.echo(f"- pending feedback observation: `{pending_text}`")
-        for warning in warnings:
-            typer.echo(f"- warning: {warning}")
+        logger.finish_current_step()
     except BaseException:
-        # feedback の件数計算失敗は本命サブコマンドの結果を変更しない。
-        typer.echo("- warning: feedback observation 件数を計算できませんでした。")
-    typer.echo(f"- 終了コード: `{returncode}`")
+        pass
+
+    pending: int | None
+    feedback_warnings: list[str]
+    try:
+        pending, feedback_warnings = feedback_completion_counts(logger.root)
+    except BaseException:
+        pending = None
+        feedback_warnings = ["feedback observation 件数を計算できませんでした。"]
+
+    for warning in (*specific_result.warnings, *feedback_warnings):
+        try:
+            logger.record_warning(warning, emit=False)
+        except BaseException:
+            pass
+
+    terminal_result = _error_terminal_result(specific_result, error)
+    elapsed = logger.elapsed()
+    terminal_record = _terminal_result_record(
+        terminal_result,
+        classification,
+        command_name,
+        logger.warning_messages,
+        pending,
+        elapsed,
+        returncode,
+        logger.path,
+    )
+    event_payload: dict[str, Any] = {
+        "classification": classification,
+        "returncode": returncode,
+        "elapsed_sec": elapsed,
+        "quota_wait_sec": logger.quota_wait_sec,
+        "pending_feedback_observation_count": pending,
+        "warnings": list(logger.warning_messages),
+        "terminal_result": terminal_record,
+    }
+    if terminal_result.primary_report is not None:
+        event_payload["primary_report_path"] = str(
+            terminal_result.primary_report.resolve(strict=False)
+        )
+    if terminal_result.result is not None:
+        event_payload["result"] = terminal_result.result
+    if terminal_result.completion_reason is not None:
+        event_payload["completion_reason"] = terminal_result.completion_reason
+    if error is not None:
+        event_payload["failure"] = _failure_record(error)
+    try:
+        logger.event("command_finished", **event_payload)
+    except BaseException:
+        # 元の結果を隠さない。ログ flush failure 自体は terminal result の診断 path
+        # から確認できる既存の内部障害として扱う。
+        pass
+
+    if emit_console:
+        typer.echo(
+            _render_terminal_result(
+                terminal_result,
+                classification,
+                command_name,
+                logger.warning_messages,
+                pending,
+                elapsed,
+                returncode,
+                logger.path,
+            ),
+            err=classification == "error",
+        )
+
+
+def _error_terminal_result(
+    result: TerminalResult,
+    error: BaseException | None,
+) -> TerminalResult:
+    """error 分類に理由と実際の次の操作を補い、固有結果と統合する。"""
+    if error is None:
+        return result
+    if isinstance(error, CmocError):
+        reason = error.summary
+        detail = _without_primary_report_path(error.detail, result.primary_report)
+        actions = tuple(error.next_actions) or (DEFAULT_NEXT_ACTION,)
+    elif isinstance(error, KeyboardInterrupt):
+        reason = "サブコマンドが中断されました。"
+        detail = "KeyboardInterrupt"
+        actions = result.next_actions
+    else:
+        reason = str(error) or error.__class__.__name__
+        detail = repr(error)
+        actions = ("診断用サブコマンドログを確認してください。",)
+    error_details: tuple[tuple[str, object], ...] = (("理由", reason),)
+    if detail:
+        error_details += (("詳細", detail),)
+    return TerminalResult(
+        primary_report=result.primary_report,
+        primary_report_role=result.primary_report_role,
+        result=result.result,
+        completion_reason=result.completion_reason,
+        details=(*result.details, *error_details),
+        next_actions=_deduplicate((*result.next_actions, *actions)),
+        warnings=result.warnings,
+    )
+
+
+def _without_primary_report_path(detail: str, report_path: Path | None) -> str:
+    """primary report path を error detail に重複表示しない。"""
+    if report_path is None:
+        return detail
+    candidates = {
+        str(report_path),
+        str(report_path.resolve(strict=False)),
+    }
+    return "\n".join(
+        line
+        for line in detail.splitlines()
+        if not any(path in line for path in candidates)
+    )
+
+
+def _failure_record(error: BaseException) -> dict[str, object]:
+    """handled/internal の分類と診断詳細を subcommand log へ保存する。"""
+    if isinstance(error, CmocError):
+        return {
+            "classification": "handled_failure",
+            "type": error.__class__.__name__,
+            "summary": error.summary,
+            "detail": error.detail,
+            "next_actions": list(error.next_actions),
+        }
+    if isinstance(error, KeyboardInterrupt):
+        return {
+            "classification": "handled_failure",
+            "type": error.__class__.__name__,
+            "summary": "keyboard interruption",
+        }
+    return {
+        "classification": "internal_failure",
+        "type": error.__class__.__name__,
+        "message": str(error),
+        "traceback": "".join(traceback.format_exception(error)),
+    }
+
+
+def _terminal_result_record(
+    result: TerminalResult,
+    classification: TerminalClassification,
+    command_name: str,
+    warnings: list[str],
+    pending: int | None,
+    elapsed: float,
+    returncode: int,
+    log_path: Path,
+) -> dict[str, object]:
+    """console と同じ terminal result を JSON event 用 object にする。"""
+    return {
+        "classification": classification,
+        "command": command_name,
+        "primary_report_role": result.primary_report_role,
+        "primary_report_path": (
+            str(result.primary_report.resolve(strict=False))
+            if result.primary_report is not None
+            else None
+        ),
+        "result": result.result,
+        "completion_reason": result.completion_reason,
+        "details": [
+            {"name": name, "value": _record_value(value)}
+            for name, value in result.details
+        ],
+        "next_actions": list(result.next_actions),
+        "warnings": list(warnings),
+        "pending_feedback_observation_count": pending,
+        "elapsed_sec": elapsed,
+        "returncode": returncode,
+        "diagnostic_log_path": str(log_path.resolve(strict=False)),
+    }
+
+
+def _render_terminal_result(
+    result: TerminalResult,
+    classification: TerminalClassification,
+    command_name: str,
+    warnings: list[str],
+    pending: int | None,
+    elapsed: float,
+    returncode: int,
+    log_path: Path,
+) -> str:
+    """仕様の優先順序で、一つの Markdown terminal result を描画する。"""
+    heading = {
+        "natural_completion": "完了",
+        "user_interruption": "中断完了",
+        "error": "失敗",
+    }[classification]
+    lines = [f"# {heading}: cmoc {command_name}"]
+    if result.primary_report is not None:
+        lines.append(
+            f"- primary report ({result.primary_report_role}): "
+            f"`{result.primary_report.resolve(strict=False)}`"
+        )
+    if result.result is not None:
+        lines.append(f"- result: `{result.result}`")
+    if result.completion_reason is not None:
+        lines.append(f"- completion_reason: `{result.completion_reason}`")
+    lines.extend(
+        f"- {name}: `{_display_value(value)}`" for name, value in result.details
+    )
+    lines.extend(f"- 次の操作: {action}" for action in result.next_actions)
+    lines.extend(f"- warning: {warning}" for warning in warnings)
+    pending_text = "unavailable" if pending is None else str(pending)
+    lines.extend(
+        [
+            f"- pending feedback observation: `{pending_text}`",
+            f"- 経過時間: `{format_duration(elapsed)}`",
+            f"- 終了コード: `{returncode}`",
+            f"- 診断用サブコマンドログ: `{log_path.resolve(strict=False)}`",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _display_value(value: object) -> str:
+    """terminal result の scalar を一つの Markdown field に収める。"""
+    if isinstance(value, Path):
+        return str(value.resolve(strict=False))
+    return str(value).replace("`", "'").replace("\n", " | ")
+
+
+def _record_value(value: object) -> object:
+    """Path だけを JSON 化可能なフルパスへ変換する。"""
+    if isinstance(value, Path):
+        return str(value.resolve(strict=False))
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return str(value)
+
+
+def _deduplicate(values: Sequence[str]) -> tuple[str, ...]:
+    """表示順を保ったまま重複する案内を除く。"""
+    return tuple(dict.fromkeys(value for value in values if value))

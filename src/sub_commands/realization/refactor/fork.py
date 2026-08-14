@@ -8,8 +8,7 @@
 
 from collections.abc import Collection
 from pathlib import Path
-
-import typer
+from typing import NoReturn
 
 from acp.builder.realization.refactor.fork.change_summary import (
     build_realization_refactor_fork_change_summary_parameter,
@@ -19,6 +18,7 @@ from acp.builder.realization.refactor.fork.file_review_and_fix import (
 )
 from cmoc_runtime import (
     CmocError,
+    TerminalResult,
     current_subcommand_logger,
     file_sha256,
     load_config,
@@ -79,7 +79,7 @@ def cmoc_realization_refactor_fork_impl() -> None:
     )
 
 
-def _cmoc_realization_refactor_fork_body() -> None:
+def _cmoc_realization_refactor_fork_body() -> TerminalResult:
     """realization file を順に調査・修正し、結果を joinable run として公開する。"""
     context: EditingRunContext | None = None
     units: list[tuple[str, int]] = []
@@ -128,7 +128,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
             summary=summary,
             cleanup_errors=cleanup_warnings,
         )
-        typer.echo(_completion_log(reason, unresolved_findings, report))
+        return _completion_result(
+            reason,
+            unresolved_findings,
+            report,
+            cleanup_warnings,
+        )
     except KeyboardInterrupt as interruption:
         if context is None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -150,7 +155,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
                 logger = current_subcommand_logger()
                 if logger is not None:
                     logger.event("user_interruption", result="interrupted")
-                return
+                return TerminalResult(completion_reason="user_interruption")
         cleanup_errors: list[str] = []
         try:
             cleanup_warnings.extend(
@@ -202,8 +207,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
             )
         # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
         mark_current_subcommand_interrupted()
-        typer.echo(_completion_log("user_interruption", unresolved_findings, report))
-        return
+        return _completion_result(
+            "user_interruption",
+            unresolved_findings,
+            report,
+            cleanup_warnings,
+        )
     except BaseException as exc:
         if context is None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -254,7 +263,7 @@ def _raise_refactor_interruption_error(
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
     interruption: BaseException,
     cleanup_errors: list[str],
-) -> None:
+) -> NoReturn:
     """中断後の cleanup failure を error state/report へ変換する。"""
     try:
         set_run_state(context, "error")
@@ -275,7 +284,7 @@ def _raise_refactor_error(
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
     error: BaseException,
     cleanup_errors: list[str],
-) -> None:
+) -> NoReturn:
     """error state の refactor report と CLI error を一貫して生成する。"""
     report = _write_refactor_report(
         context,
@@ -294,11 +303,12 @@ def _raise_refactor_error(
             "run 全体を破棄する場合は `cmoc run abandon` を実行してください。",
         ],
         f"report: {report}\nerror: {error!r}",
-    )
-    setattr(
-        cmoc_error,
-        "cmoc_stdout",
-        _completion_log("error", unresolved_findings, report),
+        terminal_result=_completion_result(
+            "error",
+            unresolved_findings,
+            report,
+            cleanup_errors,
+        ),
     )
     raise cmoc_error from error
 
@@ -954,28 +964,23 @@ def _render_unresolved_findings(
     return lines or ["- none"]
 
 
-def _completion_log(
+def _completion_result(
     reason: str,
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
     report: Path,
-) -> str:
-    """fork 固有の完了理由、unresolved 件数、report path を出力する。"""
+    warnings: list[str],
+) -> TerminalResult:
+    """fork 固有の完了理由、report、次の lifecycle 操作を返す。"""
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    # 終了 console だけでなく JSON Lines の終了 event にも、後から run の完了理由と
-    # report を追跡できる値を残す。
-    logger = current_subcommand_logger()
-    if logger is not None:
-        logger.event(
-            "fork_completed",
-            completion_reason=reason,
-            unresolved_target_count=len(unresolved_findings),
-            report_path=str(report.resolve()),
-        )
-    return "\n".join(
-        [
-            f"- completion_reason: `{reason}`",
-            f"- unresolved targets: `{len(unresolved_findings)}`",
-            f"- fork report: `{report}`",
-        ]
+    return TerminalResult(
+        primary_report=report,
+        primary_report_role="realization refactor fork report",
+        completion_reason=reason,
+        details=(("unresolved targets", len(unresolved_findings)),),
+        next_actions=(
+            "`cmoc run join` で確定済み成果物を取り込んでください。",
+            "`cmoc run abandon` で run 全体を破棄できます。",
+        ),
+        warnings=tuple(warnings),
     )

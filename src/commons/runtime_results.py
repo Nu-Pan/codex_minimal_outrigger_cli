@@ -3,6 +3,29 @@ from pathlib import Path
 from typing import Any, Callable, Protocol, Sequence
 
 
+@dataclass(frozen=True)
+class TerminalResult:
+    """最外側サブコマンドの terminal result に渡す固有情報。"""
+
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    primary_report: Path | None = None
+    primary_report_role: str | None = None
+    result: str | None = None
+    completion_reason: str | None = None
+    details: tuple[tuple[str, object], ...] = ()
+    next_actions: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """競合するサブコマンド固有結果と不完全な report 指定を拒否する。"""
+        if self.result is not None and self.completion_reason is not None:
+            raise ValueError("result and completion_reason are mutually exclusive")
+        if (self.primary_report is None) != (self.primary_report_role is None):
+            raise ValueError(
+                "primary_report and primary_report_role must be specified together"
+            )
+
+
 class CodexExecOutput(Protocol):
     """Codex exec 利用側が structured output から参照する最小契約。"""
 
