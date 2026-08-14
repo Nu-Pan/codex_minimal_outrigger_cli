@@ -472,19 +472,8 @@ def _run_cmoc_tui(
     """指定した cmoc TUI 経路を PTY 上で応答完了まで実行する。"""
     # Codex TUI は terminal を必須とするため、24x100 の実 PTY を渡す。
     master_fd, slave_fd = pty.openpty()
-    fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 100, 0, 0))
-    os.set_blocking(master_fd, False)
-    process = subprocess.Popen(
-        [str(cmoc), *args],
-        cwd=root,
-        env=environment,
-        stdin=slave_fd,
-        stdout=slave_fd,
-        stderr=slave_fd,
-        close_fds=True,
-        start_new_session=True,
-    )
-    os.close(slave_fd)
+    process: subprocess.Popen[bytes] | None = None
+    slave_open = True
     transcript = bytearray()
     message: str | None = None
     probe_buffer = b""
@@ -492,6 +481,20 @@ def _run_cmoc_tui(
     trust_confirmed = False
     deadline = time.monotonic() + _PRODUCTION_COMMAND_TIMEOUT
     try:
+        fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 100, 0, 0))
+        os.set_blocking(master_fd, False)
+        process = subprocess.Popen(
+            [str(cmoc), *args],
+            cwd=root,
+            env=environment,
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            close_fds=True,
+            start_new_session=True,
+        )
+        os.close(slave_fd)
+        slave_open = False
         # TUI session の永続 event で、stream 表示ではなく応答完了を判定する。
         while time.monotonic() < deadline:
             received = _read_pty(master_fd, transcript)
@@ -521,7 +524,10 @@ def _run_cmoc_tui(
         _read_pty(master_fd, transcript)
         assert returncode == 0, transcript[-12000:].decode(errors="replace")
     finally:
-        _stop_tui_process_group(process)
+        if process is not None:
+            _stop_tui_process_group(process)
+        if slave_open:
+            os.close(slave_fd)
         os.close(master_fd)
     return message, transcript.decode(errors="replace")
 

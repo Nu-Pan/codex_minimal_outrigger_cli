@@ -680,22 +680,24 @@
 # `test_production_cli.py`
 
 ## Summary
-- 独立 process、実 Codex CLI、実推論、PTY を用いて、利用者向け CLI の全末端サブコマンドが本番経路で完了することを検証する受け入れ試験。
-- 終了 code、report・state・Git の状態、Codex call log、TUI の応答完了と終了操作を確認し、LLM の回答品質自体は判定しない。
-- 非対話サブコマンドと TUI サブコマンドの共通隔離環境、実行条件、外部状態検証を一続きの試験として扱う。
+- 対象を利用者向け entrypoint の全末端サブコマンドに対する受け入れ試験として位置づける。独立 process、実 Codex CLI・実推論、隔離環境を使い、非対話コマンドと PTY 上の TUI コマンドを本番経路で実行する。検証範囲は CLI の終了 code、report・state・Git の外部状態、Codex call log、応答完了後の終了操作であり、LLM の回答品質そのものは判定しない。
+- 非対話経路では、leaf command の登録集合と固定シナリオを一致させたうえで、doctor、indexing、session、oracle review、feedback report、realization の各 fork、run の join/abandon、session の join/abandon を検証する。indexing の結果は INDEX.md と commit、各 realization は joinable state と worktree、各後処理は state・branch・worktree・report の状態遷移として確認する。
+- TUI 経路では tui、oracle edit、oracle investigation を共通の実 PTY harness から実 Codex 応答完了まで実行し、TUI call log の内容、応答の存在、終了時の transcript、Git の不変性を確認する。
+- 全体として、公開末端コマンドの追加漏れを検出し、実 executable・隔離された Codex home・実 provider 設定・外部観測可能な永続結果を一続きの本番経路試験で追跡する入口である。
 
 ## Read this when
-- CLI の末端サブコマンドを追加・変更し、利用者向け本番経路での代表正常系を確認するとき。
-- 実 Codex CLI や実推論を含む production-path integration test の実行条件、隔離環境、call log 検証を確認するとき。
-- 非対話 command の終了状態・report・session/run state・Git 状態、または TUI の PTY 応答完了と終了処理を検証するとき。
+- 利用者向け CLI の末端サブコマンドを追加・変更し、登録された全 leaf が本番経路で検証されているか確認するとき
+- 実 Codex CLI と実推論を使う独立 process の受け入れ試験、または Codex call log・report・state・Git の外部結果を確認するとき
+- cmoc の TUI コマンドの PTY、端末 capability query、応答完了検知、終了操作を含む本番経路を調べるとき
+- realization/session/run の fork・join・abandon に伴う state、branch、managed worktree の遷移を受け入れ条件として確認するとき
 
 ## Do not read this when
-- LLM の回答内容や品質そのものを評価するとき。
-- 単一サブコマンド内部の実装詳細や、実推論を使わない単体テストの仕様を確認するときは、対象サブコマンドの実装・専用テストを直接読む。
-- Codex CLI を使わない通常の CLI 操作や、production path 全体を対象としない局所的な状態検証だけを行うとき。
+- LLM の回答内容や文章品質そのものを評価するとき
+- 単一の内部関数や mock ベースの制御ロジックだけをテストするとき
+- INDEX.md の生成規則や oracle の正本仕様を確認するときは、まず該当する仕様・実装・専用の単体テストを直接読む
 
 ## hash
-- d2c43aea2340d16947623881cde5333ff689edf15a0b4257fffaef7afd884c10
+- 28ecfecc65d7ac544292ea5bff58d241ab1f09c1c72d59683934f7c20638b257
 
 # `test_prompt_editor_input.py`
 
