@@ -1454,8 +1454,8 @@
   "test/test_runtime_git_ignore.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "c1a0f125ced06cab999fea8e72d2c2183a5f9e4899d43cc88c3569ba09904709",
-    "last_investigated_at": "2026-08-12_13-05_54_696469000"
+    "last_investigated_sha256": "d8841b7ae36f232f45c82847ea7fb9f8fda21bf534bbdba559959193d394a62d",
+    "last_investigated_at": "2026-08-14_13-33_42_639606000"
   },
   "test/test_runtime_refactor.py": {
     "investigation_required": true,

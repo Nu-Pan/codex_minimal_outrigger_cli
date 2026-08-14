@@ -147,17 +147,18 @@
 # `test`
 
 ## Summary
-- pytest による realization test 群を集約するディレクトリ。CLI、Codex runtime、session/run lifecycle、oracle review、indexing、設定・Git・state 永続化など、利用者向け外部挙動や主要な境界条件を検証するテストと、共通 fixture・test helper の入口を提供する。個別機能の回帰対象を探す際は、ここから機能別テストへ進む。
+- test 配下の realization test と共通 test helper を、cmoc の外部挙動・契約・回帰を検証する入口として整理している。
+- CLI、Codex runtime、ACP builder、indexing、oracle review、session/run lifecycle、Git/worktree、state、設定、通知などの機能別テストへ進むためのルーティング対象である。
 
 ## Read this when
-- 実装や仕様変更に対応する realization test、統合 test、回帰 test の対象ファイルを特定するとき
-- CLI、Codex 実行、worktree・Git lifecycle、oracle review、indexing、session、state、設定などの外部契約をテスト側から確認するとき
-- 複数テストで共有される Codex、Git、外部コマンド、toast、schema path などの test helper を確認するとき
+- 特定機能の外部挙動や回帰テストの対象範囲を確認するとき
+- CLI・Codex 実行・builder・indexing・oracle review・session/run・Git/worktree・state の検証入口を探すとき
+- 共通 fixture や test helper が各テストの実行環境をどう隔離・構成するか確認するとき
 
 ## Do not read this when
-- 正本仕様、schema、実装本体の責務や詳細を確認することが目的の場合は、対応する oracle または src の対象を直接読む
-- 単一機能の実装内部だけを調査し、テストケースの範囲や期待挙動を確認する必要がないとき
-- 実行方法だけを確認したいときは、repository local の test execution 指示を直接読む
+- 本番実装の責務や正本仕様の内容自体を確認するときは、対応する src または oracle の対象へ直接進む
+- テスト実行手順だけを確認するときは、repository local の test execution 指示を直接読む
+- 対象機能に対応する個別テストが明確な場合は、このディレクトリ全体を読む代わりにそのテストへ直接進む
 
 ## hash
-- 23a58c8f782bfaa1ba2a727c6f7edf20da1a47f9de5aa57433f036773c3afa6b
+- b77af65b43546a5ae0b80fff9d03f96ab8460c017f5f3455d95780c6c31d99d8

@@ -2,6 +2,7 @@
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+- {{work-root}}/oracle/doc/app_spec/misc_spec.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
 """
@@ -26,7 +27,7 @@ from commons.runtime_results import CommandResult
 
 
 def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
-    """cmoc/local が未 ignore の repo では literal ignore pattern を追加する。"""
+    """`.cmoc/gu` が未 ignore の repo では literal ignore pattern を追加する。"""
     root = make_repo(tmp_path)
 
     ensure_cmoc_ignored(root)
@@ -52,6 +53,24 @@ def test_ignore_checks_classify_literal_path_names(tmp_path: Path) -> None:
     assert is_untracked_git_ignored(root, path)
     assert is_git_ignored(root, magic_prefix_path)
     assert is_untracked_git_ignored(root, magic_prefix_path)
+
+
+def test_ignore_checks_respect_tracked_and_untracked_states(tmp_path: Path) -> None:
+    """tracked file は保持し、untracked file は ignore 状態に従って判定する。"""
+    root = make_repo(tmp_path)
+    ignored = root / "ignored.txt"
+    visible = root / "visible.txt"
+    ignored.write_text("ignored\n")
+    visible.write_text("visible\n")
+    (root / ".gitignore").write_text("ignored.txt\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "add", "-f", "ignored.txt")
+    run_git(root, "commit", "-m", "track ignored file")
+
+    assert is_git_ignored(root, ignored)
+    assert not is_untracked_git_ignored(root, ignored)
+    assert not is_git_ignored(root, visible)
+    assert not is_untracked_git_ignored(root, visible)
 
 
 @pytest.mark.parametrize(
@@ -236,10 +255,10 @@ def test_ensure_cmoc_ignored_in_exclude_rejects_symlinked_exclude(
     assert external.read_text() == "existing\n"
 
 
-def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_pattern(
+def test_ensure_cmoc_ignored_preserves_existing_pattern_and_runtime_state(
     tmp_path: Path,
 ) -> None:
-    """既存 pattern が有効でも root 固定 pattern を追記して表現を安定させる。"""
+    """既存 pattern を保ち、cmoc 管理 state の ignore 例外を維持する。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text(".cmoc/\n")
     run_git(root, "add", ".gitignore")
@@ -247,20 +266,17 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
 
     ensure_cmoc_ignored(root)
 
-    assert (root / ".gitignore").read_text() == (
-        ".cmoc/\n\n"
-        "!/.cmoc/\n"
-        "/.cmoc/*\n"
-        "!/.cmoc/gt/\n"
-        "/.cmoc/gt/*\n"
-        "!/.cmoc/gt/ar/\n"
-        "/.cmoc/gt/ar/*\n"
-        "!/.cmoc/gt/ar/config.json\n"
-        "!/.cmoc/gt/ar/realization/\n"
-        "/.cmoc/gt/ar/realization/*\n"
-        "!/.cmoc/gt/ar/realization/refactor/\n"
-        "/.cmoc/gt/ar/realization/refactor/*\n"
-        "!/.cmoc/gt/ar/realization/refactor/state.json\n"
-        "/.cmoc/gu/\n"
-    )
+    content = (root / ".gitignore").read_text()
+    assert ".cmoc/\n" in content
+    assert "/.cmoc/gu/\n" in content
+    for relative in (
+        ".cmoc/gt/ar/config.json",
+        ".cmoc/gt/ar/realization/refactor/state.json",
+    ):
+        not_ignored = subprocess.run(
+            ["git", "check-ignore", "--no-index", "-q", "--", relative],
+            cwd=root,
+            check=False,
+        )
+        assert not_ignored.returncode == 1
     assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"
