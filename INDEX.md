@@ -89,26 +89,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と、その仕様を具体化する oracle 実装定義・Structured Output schema を集約する領域。利用者向け挙動、session・run・branch のモデル、開発・設計・テスト規則、不採用案の記録、および agent call・feedback・prompt 構築に関する実装定義を扱う。
-- 利用者向け挙動、workflow、状態遷移、サブコマンド、ログ、feedback、prompt、Codex 呼び出しの正本を確認するときは doc/app_spec へ進む。
-- branch・commit・worktree と session/run の関係を確認するときは doc/branch_model.md へ進む。
-- Python 環境、CLI 設計、コーディング、テスト要件、テスト実行手順を確認するときは doc/dev_rule へ進む。
-- realization refactor などで採用しなかった作業方式や設計判断の理由を確認するときは doc/considered_alternative へ進む。
-- agent call の起動定義、feedback の検証・正規化、共通モデル、prompt 構築の実装定義や schema を確認するときは src/oracle 配下の acp_builder、feedback、other、prompt_builder へ進む。
+- cmoc の正本仕様・開発ルール・検討記録を横断する oracle 文書群への入口。アプリケーション仕様、branch・commit・worktree モデル、不採用案の背景、実装・環境・テストの開発ルールを目的別に案内する。
+- 配下の doc は仕様・開発ルール・検討記録、src は oracle 実装の領域別入口として、acp_builder、feedback、other、prompt_builder へ振り分ける。
 
 ## Read this when
-- cmoc の正本仕様を探し、アプリケーション仕様・開発ルール・設計ルール・テスト規則・検討記録の入口を選ぶとき
-- session、run、branch、commit、worktree の用語や lifecycle の関係を確認するとき
-- agent call、feedback、共通設定・構造化文書、または prompt 構築の oracle 実装定義を調査するとき
-- realization refactor の現行方針と、不採用となった代替案の理由を確認するとき
+- cmoc の仕様、branch・commit・worktree のモデル、開発ルール、検討記録、または oracle 実装の調査開始地点を判断するとき
+- 複数の oracle 文書領域や実装領域にまたがる参照先を探すとき
 
 ## Do not read this when
-- 確認対象の個別仕様、開発ルール、検討記録、または oracle 実装定義がすでに特定できており、その対象を直接読めるとき
-- realization の実装コード、realization test、実行ログ、実行成果物の詳細を調べるとき
-- INDEX.md の生成規則やルーティング情報だけを確認するとき
+- 特定の仕様書、開発ルール、テスト実行手順、実装、テスト、または prompt 構築の詳細が明確な場合は該当する個別ファイルや下位領域へ直接進む
+- INDEX.md の生成規則自体を確認する場合はインデクシング仕様へ直接進む
 
 ## hash
-- be1073a73f20d1b4df4709a80cbe1267e27352d71eaa392b976af05cd992d71c
+- 6bf975c9a04eea4d85de3a4750e117452c94a64271377a8a194dd26f825f8dcb
 
 # `pyproject.toml`
 

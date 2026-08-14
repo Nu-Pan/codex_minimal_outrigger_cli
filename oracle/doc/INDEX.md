@@ -1,20 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約する正本文書群。CLI 自動補完、Codex 実行、ログ、doctor preprocess、feedback、prompt、run/session lifecycle、各種サブコマンド、通知など、利用者向け挙動と機能間の責務境界を定義する。個別機能の実装・変更・レビュー時に、対象仕様へ進むための入口となる。
+- cmoc のアプリケーション仕様を横断的に参照するための正本仕様群。CLI 自動補完、Codex 実行、ログ・エラー処理、doctor、feedback、session/run lifecycle、サブコマンド、通知、workflow などの責務と相互参照を扱う。個別機能の挙動仕様を調査・実装・レビューする際の入口となる。
 
 ## Read this when
-- cmoc のアプリケーション挙動、サブコマンド、workflow、状態遷移、ログ、feedback、通知、prompt、Codex 呼び出しの正本仕様を探すとき
-- 変更対象の機能領域を特定し、対応する仕様本文へルーティングするとき
-- 複数の機能にまたがる責務境界や共通契約を確認するとき
+- cmoc のアプリケーションレベルの正本仕様を探すとき
+- 複数のサブコマンド、共通処理、状態管理、Codex 呼び出し、feedback の仕様間の参照関係を確認するとき
+- 対象機能に対応する個別仕様書の入口を判断するとき
 
 ## Do not read this when
-- 特定の仕様本文がすでに特定できており、その内容だけを確認すればよいとき
-- 実装コード、realization file、テスト、開発環境、テスト実行手順の詳細を直接調べるとき
-- INDEX.md の生成規則やルーティング情報だけを確認するとき
+- 特定の仕様書の詳細だけを確認する場合は、該当する個別ファイルを直接読む
+- realization implementation や realization test の具体的な挙動だけを調査する場合は、対応する実装・テストまたは専用仕様へ進む
+- INDEX.md の生成規則そのものを確認する場合は、インデクシング仕様を直接読む
 
 ## hash
-- 305df534f4f12521545109bbc93a1475a26bfe7e9912a730e7cd8aad07e924b1
+- edd0a266a678e668730a150a0f603019dc6901c9d947152f78a220844aed940e
 
 # `branch_model.md`
 

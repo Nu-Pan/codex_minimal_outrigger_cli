@@ -1,21 +1,21 @@
 # `doc`
 
 ## Summary
-- cmoc の正本文書を集約するドキュメント領域。アプリケーション仕様、branch・commit・worktree のモデル、採用しなかった設計案の検討記録、開発ルールへの入口を提供する。各領域の詳細確認が必要な場合は、対応する下位対象へ進む。
+- cmoc の正本仕様・開発ルール・検討記録を横断する oracle 文書群への入口。アプリケーション仕様、branch／commit／worktree モデル、不採用案の背景、実装・環境・テストの開発ルールへ、目的に応じて進むためのルーティング情報を提供する。
 
 ## Read this when
-- cmoc の利用者向け挙動や機能間の責務境界を確認するとき
-- session・run の分岐、commit、worktree の用語や関係を確認するとき
-- realization refactor で不採用となった作業方式や設計案の理由を確認するとき
-- Python 実装、CLI 設計、開発環境、テスト要件、テスト実行手順の正本文書を探すとき
+- cmoc のアプリケーションレベルの仕様や、複数サブコマンド・共通処理・状態管理の相互参照先を探すとき
+- session fork、run の隔離、branch・commit・worktree の責務やライフサイクルを確認するとき
+- realization refactor で採用しなかった作業方式や検査方式の理由を確認するとき
+- Python 実装、CLI の責務配置、開発環境、テスト要件、テスト実行手順の参照先を判断するとき
 
 ## Do not read this when
-- 確認対象の仕様本文、開発ルール、検討記録がすでに特定できており、その対象を直接読めばよいとき
-- 実装コード、realization file、テスト内容、ログ、実行成果物の詳細を調べるとき
-- INDEX.md の生成規則やルーティング情報だけを確認するとき
+- 特定の仕様書、開発ルール、テスト実行手順の詳細だけを確認する場合は、該当する個別ファイルまたは下位領域へ直接進む
+- realization implementation や realization test の具体的な挙動を調査する場合は、対応する実装・テストまたは専用仕様へ進む
+- INDEX.md の生成規則自体を確認する場合は、インデクシング仕様へ直接進む
 
 ## hash
-- db3b2317d3ce9c74020f6f1d2c764ffefc98c59bace4b5f94fef2a10cbc65c89
+- bed96d21f0d82569aef5547c801c33f358ebd6e17f1d2915713eea96bc3398fc
 
 # `src`
 
