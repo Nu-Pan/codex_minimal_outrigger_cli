@@ -67,18 +67,28 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package。編集、調査、レビューの各 CLI 入口と、レビュー対象列挙・ループ・レポート・INDEX 変更統合などの下位実装への入口を提供する。
+- oracle 系サブコマンドの実装を収める package。edit、investigation、review の CLI 入口と、review の対象列挙・所見処理・パス解決・レポート・INDEX 差分統合を扱う。各サブコマンドの実行フローを確認した後、詳細処理は対応する下位モジュールへ進む。
+- edit.py は `cmoc oracle edit` の入力予約、完全プロンプト確定、main worktree と active session branch の検証、Codex TUI 起動を統括する。
+- investigation.py は `cmoc oracle investigation` の調査指示入力、完全プロンプト確定、設定読込、Codex TUI 起動を統括する。
+- review.py は `cmoc oracle review` の isolated worktree lifecycle を統括し、review 対象作成、review loop、INDEX 差分の merge、中断・失敗時の cleanup と report 生成を扱う。
+- review_index.py は review worktree の変更を INDEX.md に限定して検査・commit し、review branch の merge、INDEX.md 競合解決、merge 失敗後の復旧を扱う。
+- review_loop.py は oracle review の finding 列挙、重複 finding の merge、challenger・advocate による反復検証、judge による採否判定、finding merge operation の適用を扱う。中断時の部分進捗も呼び出し元へ返す。
+- review_paths.py は finding の oracle_path を解決し、main repository と isolated worktree の境界を考慮した repository-relative key を生成する。symlink は追跡しない。
+- review_report.py は oracle review の Markdown report と YAML frontmatter を生成・保存し、verdict、評価対象、finding の分類・表示順を決める。
+- review_targets.py は review scope に応じて oracle review 対象を列挙する。full scope では全 oracle file、session scope では session fork commit から review fork commit までに変更された oracle file を返す。
 
 ## Read this when
-- oracle サブコマンドの実装構成や、編集・調査・レビュー処理の入口を確認するとき。
-- oracle review の対象選定、レビュー実行ループ、レポート生成、INDEX.md の統合処理へ進む前に担当モジュールを特定するとき。
+- oracle サブコマンドの CLI 入口、入力から TUI 起動までの実行経路を確認・変更するとき。
+- oracle review の isolated run、worktree・branch lifecycle、中断・失敗時の cleanup、report 生成を確認するとき。
+- oracle review の finding 列挙・統合・検証・判定、対象ファイル選定、パス正規化、report 出力、INDEX 差分 merge のいずれかを調査・変更するとき。
 
 ## Do not read this when
-- 特定の oracle サブコマンドやレビュー補助処理の詳細を確認する場合は、該当する下位ファイルを直接読む。
-- oracle サブコマンドの利用者向け契約やプロンプト内容を確認する場合は、対応する oracle 仕様を直接読む。
+- oracle サブコマンドの利用者向け契約や実行仕様そのものを確認するときは、対応する正本仕様を直接読む。
+- TUI の起動パラメータ、プロンプト入力管理、共通 runtime、個別 review agent の prompt や Structured Output schema の詳細だけを確認するときは、各 import 先の実装を直接読む。
+- oracle review と無関係な一般 CLI や別サブコマンドの処理を調査するとき。
 
 ## hash
-- f5ba10314a1b0e1934d5996cf93b195b626797029e4d562e00ad902fbd6564fa
+- 53ea6c375bf3bf031b94d62d7c7d48aca6adaeda60fd90a00a2d4f851a369798
 
 # `realization`
 
@@ -152,17 +162,17 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行入口。インデックス前処理とログ前チェックを行い、現在のリポジトリ状態から設定を読み込んで、プロンプト編集、完全プロンプト確定、Codex TUI 起動までの処理を束ねる。TUI 起動フロー全体の責務や、サブコマンド実行時の固定手順を確認するときの入口となる。
+- `cmoc tui` サブコマンドの CLI 実行入口と本体処理を定義する。インデックス前処理、プロンプト編集入力の予約・収集・確定、固定パラメータによる Codex TUI 起動を扱う。TUI サブコマンドの起動フローや、現在の repository/work context からの実行経路を確認するときの入口。
 
 ## Read this when
-- `cmoc tui` サブコマンドの実装や起動経路を調べるとき。
-- プロンプト編集後に Codex TUI を起動する処理の流れを確認するとき。
-- TUI 実行時のインデックス前処理、ログ前チェック、設定読み込みの接続点を確認するとき。
+- `cmoc tui` の CLI runtime、起動手順、ステップ数、ログ前処理を変更または確認するとき。
+- オリジナルプロンプトを編集して完全な起動プロンプトを確定し、Codex TUI を呼び出す処理を追跡するとき。
+- repository の現在コンテキストから設定を読み込み、TUI 実行へ渡す経路を確認するとき。
 
 ## Do not read this when
-- プロンプト入力の予約・収集・確定処理の詳細だけを調べるときは、対応するプロンプト編集ヘルパーを直接読む。
-- TUI 起動パラメータの構築仕様だけを調べるときは、TUI 起動パラメータの builder を直接読む。
-- 他の CLI サブコマンドの実装を調べるとき。
+- TUI 起動パラメータの具体的な構築規則だけを確認する場合は、TUI parameter builder を直接読む。
+- プロンプト編集入力の保存・入力検証・ルート除外の仕様だけを確認する場合は、prompt editor 関連モジュールまたは正本仕様を直接読む。
+- Codex TUI 自体の実行実装や共通 CLI サブコマンドの汎用制御だけを確認する場合は、呼び出される runtime モジュールを直接読む。
 
 ## hash
-- cacb2eae3a201d06057dd49a7879e0f55a6d8ec151e0568fda9487924961cb2d
+- 1dbb1c380550c5e0e896083956f1c7d480a83c3cc50b4d24946fab436b41aeac

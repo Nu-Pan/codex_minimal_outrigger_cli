@@ -7,7 +7,7 @@ from oracle.acp_builder.oracle.investigation.launch_tui import (
 
 from basic.path_model import RootPathPlaceHolder as _RootPathPlaceHolder
 from basic.path_model import resolve_real_path as _resolve_real_path
-from commons.runtime_paths import editor_input_dir as _editor_input_dir
+from commons.runtime_paths import editor_input_log_dir as _editor_input_log_dir
 
 
 def build_oracle_investigation_launch_tui_parameter(
@@ -19,7 +19,7 @@ def build_oracle_investigation_launch_tui_parameter(
     根拠: {{work-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py
     """
     repo = _resolve_real_path(_RootPathPlaceHolder.REPO)
-    _editor_input_dir(repo).mkdir(parents=True, exist_ok=True)
+    _editor_input_log_dir(repo).mkdir(parents=True, exist_ok=True)
     return _build_parameter(time_stamp, user_instruction)
 
 

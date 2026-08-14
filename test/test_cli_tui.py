@@ -150,6 +150,8 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert '<cmoc_block id="prompt template">' in editor_contents
     assert "# file read write rule - repo_write" in editor_contents
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
+    assert "remove me" in editor_contents
+    assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
     complete_files = list(
         (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
@@ -247,6 +249,8 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert "linked worktree task" in complete_prompt
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert str(complete_files[0]) in parameter.prompt
+    assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
+    assert not list((linked / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
 
 
 def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
@@ -307,5 +311,6 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     assert not list(
         (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
+    assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
     assert run_git(root, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""

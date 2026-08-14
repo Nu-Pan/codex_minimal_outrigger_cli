@@ -95,12 +95,16 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
     unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
     time_stamp = "2026-07-20_00-00-00_000000000"
-    editor_path = (
+    editor_work_path = (
+        root / ".cmoc" / "gu" / "aw" / "editor_input" / f"{time_stamp}_orig.md"
+    )
+    input_copy_path = (
         root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / f"{time_stamp}_orig.md"
     )
-    complete_prompt_path = editor_path.with_name(f"{time_stamp}_cmpl.md")
-    editor_path.parent.mkdir(parents=True, exist_ok=True)
-    editor_calls: list[tuple[Path, str]] = []
+    complete_prompt_path = input_copy_path.with_name(f"{time_stamp}_cmpl.md")
+    editor_work_path.parent.mkdir(parents=True, exist_ok=True)
+    input_copy_path.parent.mkdir(parents=True, exist_ok=True)
+    editor_calls: list[tuple[Path, Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
     events: list[str] = []
 
@@ -121,11 +125,11 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
 
     def fake_reserve_prompt_editor_input(
         target_root: Path,
-    ) -> tuple[str, Path, Path]:
+    ) -> tuple[str, Path, Path, Path]:
         """決定論的な timestamp の editor path を返す。"""
         assert target_root == root
-        editor_path.touch()
-        return time_stamp, editor_path, complete_prompt_path
+        editor_work_path.touch()
+        return time_stamp, editor_work_path, input_copy_path, complete_prompt_path
 
     real_build_parameter = oracle_edit_module.build_oracle_edit_launch_tui_parameter
 
@@ -142,18 +146,23 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         return parameter
 
     def fake_collect_prompt_editor_input(
-        original_prompt_path: Path,
+        target_root: Path,
+        work_path: Path,
+        saved_copy_path: Path,
         complete_prompt_skeleton: str,
     ) -> str:
         """エディタ入力時点の path と完全 prompt skeleton を記録する。"""
         events.append("editor")
+        assert target_root == root
         assert complete_prompt_path.read_text() == complete_prompt_skeleton
-        editor_calls.append((original_prompt_path, complete_prompt_skeleton))
+        saved_copy_path.write_text("oracle spec を更新する", encoding="utf-8")
+        editor_calls.append((work_path, saved_copy_path, complete_prompt_skeleton))
         return "oracle spec を更新する"
 
     real_finalize_complete_prompt = oracle_edit_module.finalize_complete_prompt
 
     def record_finalize_complete_prompt(
+        work_path: Path,
         target_path: Path,
         complete_prompt_skeleton: str,
         original_prompt: str,
@@ -161,6 +170,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         """TUI 起動前の完全 prompt 確定を記録して本来の処理へ委譲する。"""
         events.append("finalize")
         real_finalize_complete_prompt(
+            work_path,
             target_path,
             complete_prompt_skeleton,
             original_prompt,
@@ -242,8 +252,8 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
 
     assert result.exit_code == (1 if tui_fails else 0)
     assert len(built_parameters) == 1
-    assert editor_calls[0][0] == editor_path
-    complete_prompt_skeleton = editor_calls[0][1]
+    assert editor_calls[0][:2] == (editor_work_path, input_copy_path)
+    complete_prompt_skeleton = editor_calls[0][2]
     assert (
         complete_prompt_skeleton.count(oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER)
         == 1
@@ -286,6 +296,8 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     assert "realization file、`INDEX.md`、`AGENTS.md` を編集していない" in (
         complete_prompt
     )
+    assert input_copy_path.read_text(encoding="utf-8") == "oracle spec を更新する"
+    assert not editor_work_path.exists()
     assert (root / "oracle" / "spec.md").read_text() == "# edited spec\n"
     assert json.loads(session_state_path.read_text()) == state_before
     assert readme_path.read_text() == "# unstaged change\n"

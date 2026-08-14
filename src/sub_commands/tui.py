@@ -46,7 +46,9 @@ def _cmoc_tui_body(
     """依頼文を編集し、固定パラメータで Codex TUI を起動する。"""
     # オリジナル prompt だけ未確定の起動パラメータを先に固定する。
     start_subcommand_step(2, "TUI 起動パラメータを構築", "build TUI parameter")
-    time_stamp, original_path, complete_path = reserve_prompt_editor_input(root)
+    time_stamp, editor_work_path, input_copy_path, complete_path = (
+        reserve_prompt_editor_input(root)
+    )
     parameter = build_tui_launch_tui_parameter(
         time_stamp,
         ORIGINAL_PROMPT_PLACEHOLDER,
@@ -56,7 +58,9 @@ def _cmoc_tui_body(
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     start_subcommand_step(3, "オリジナルプロンプトを入力", "edit original prompt")
     original_prompt = collect_prompt_editor_input(
-        original_path,
+        root,
+        editor_work_path,
+        input_copy_path,
         complete_prompt_skeleton,
     )
 
@@ -64,6 +68,7 @@ def _cmoc_tui_body(
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(4, "完全プロンプトを確定", "finalize complete prompt")
     finalize_complete_prompt(
+        editor_work_path,
         complete_path,
         complete_prompt_skeleton,
         original_prompt,

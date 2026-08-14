@@ -84,25 +84,18 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization package。oracle command builder 関連の下位パッケージへ進むための入口。
-- `cmoc oracle edit` の builder adapter。TUI 起動パラメータ生成、リポジトリ実パス解決、editor input directory 準備、oracle 側 builder 呼び出しの確認対象。
-- `cmoc oracle investigation` の builder adapter。launch TUI 用パラメータ生成、完全な prompt の保存先準備、正本 builder への委譲経路を確認する入口。
-- `cmoc oracle review` の builder adapter 群。旧 import 経路から canonical 実装へ委譲される構成や、finding 処理関連の adapter 入口を確認する対象。
+- oracle command builder の realization adapter 群を収容するディレクトリ。oracle edit・investigation・review の builder adapter 入口と、正本 builder への接続、起動前の runtime directory 準備、互換 import 経路を確認するための上位入口。
 
 ## Read this when
-- oracle command builder の realization package の責務や下位構成を確認するとき。
-- `cmoc oracle edit` の builder adapter、TUI 起動パラメータ生成、editor input directory 準備、または oracle 側 builder 呼び出し経路を確認・変更するとき。
-- `cmoc oracle investigation` の launch TUI 用パラメータ生成、prompt 保存先準備、正本 builder への委譲経路を確認するとき。
-- `cmoc oracle review` の realization adapter、互換 import 経路、canonical 実装への委譲関係を確認するとき。
+- oracle command builder の realization adapter の全体構成や、edit・investigation・review 各 builder の下位入口を確認するとき
+- oracle builder adapter と正本 builder、TUI 起動、runtime directory 準備、canonical 実装への委譲関係を調べるとき
 
 ## Do not read this when
-- oracle command builder 以外の処理を確認するとき。
-- oracle edit の具体的な編集処理や CLI 全体の動作を確認するときは、対象の実装ファイルまたは上位の CLI 関連ファイルを直接読む。
-- oracle 側の TUI builder の prompt 内容・本体ロジック、または oracle investigation 以外の builder や ACP 実装を確認するとき。
-- oracle review の正本仕様、builder 以外の CLI 実装、finding 処理の具体的な入出力や処理内容を確認するときは、canonical 実装を直接読む。
+- oracle command builder 以外の処理を確認するとき
+- 各 builder の具体的な prompt 構築仕様、path/runtime 定義、finding 処理の詳細を確認するとき。対応する下位実装または正本実装を直接読む
 
 ## hash
-- b459b1c949fc66afcec3cf74bc8d91b3618de6a429d7d4cf2729fb48ebe66c37
+- ee43bb072019b3ae72aa1cf5b723cba53b3ad157b341b1bc56b986d81b5692e3
 
 # `quota_probe.py`
 

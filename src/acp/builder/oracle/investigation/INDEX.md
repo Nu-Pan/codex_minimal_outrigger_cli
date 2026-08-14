@@ -17,15 +17,15 @@
 # `launch_tui.py`
 
 ## Summary
-- 対象は、oracle investigation の正本 builder を呼び出す realization adapter です。エディタ入力用ディレクトリを準備したうえで、正本 builder に時刻情報とユーザー指示を渡し、AgentCallParameter を返します。エディタ入力ディレクトリの準備と正本 builder への委譲が、この対象へ進む理由です。
+- oracle investigation の launch TUI 用 agent-call parameter を生成する realization adapter。正本 builder を呼び出す前に、完全な prompt の保存先となる editor input log directory を repository 上に作成し、生成結果をそのまま返す。正本 builder の実装へ進む前段の入口として読む。
 
 ## Read this when
-- oracle investigation の launch TUI 用パラメータ生成の realization adapter を確認するとき
-- 完全な prompt の保存先ディレクトリ準備や、正本 builder への委譲経路を追うとき
+- oracle investigation の launch TUI 呼び出し用 parameter 生成処理を確認・変更するとき
+- 正本 builder の呼び出し前に必要な runtime directory 準備の責務を確認するとき
 
 ## Do not read this when
-- oracle 側の launch TUI builder の仕様や prompt 構築詳細を確認したいとき。対応する oracle ファイルを直接読む
-- launch TUI 以外の builder や、エディタ入力ディレクトリの一般的な実装だけを調べるとき
+- launch TUI 用 parameter の具体的な prompt 構築仕様を確認したいときは、直接正本 builder を読む
+- editor input log のパス解決や runtime path の詳細だけを確認したいときは、対応する path/runtime 定義を直接読む
 
 ## hash
-- 96b75359027bd8481745a87868524bee4e86525e77f0f65b4b519ff3c00a126a
+- 84f29eabc6b8a1cc25b3b31cba1fde159625cc294e42370a7ffd79129000e482

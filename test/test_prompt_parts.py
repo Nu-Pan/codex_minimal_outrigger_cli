@@ -11,6 +11,7 @@ StructDoc 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/apply_review_standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/common_standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/editor_handoff_standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py
@@ -27,6 +28,7 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
+from _git_support import make_repo, run_git
 from oracle.other.standard import (
     Standard,
     StandardCollection,
@@ -40,6 +42,9 @@ from oracle.prompt_builder.parts.apply_review_standard import (
 )
 from oracle.prompt_builder.parts.conflict_resolution_standard import (
     build_conflict_resolution_standard as _build_conflict_resolution_standard,
+)
+from oracle.prompt_builder.parts.editor_handoff_standard import (
+    build_editor_handoff_standard as _build_editor_handoff_standard,
 )
 from oracle.prompt_builder.parts.file_access_rule import (
     build_file_access_rule as _build_file_access_rule,
@@ -280,6 +285,29 @@ def test_conflict_resolution_standard_is_injected_without_editing_standards() ->
         assert heading not in rendered
 
 
+def test_editor_handoff_standard_preserves_call_responsibility() -> None:
+    """handoff の追加でも元の access mode と正式な結果を維持する。"""
+    collection = _build_editor_handoff_standard()
+    rendered_doc = _render_standard_collection(collection)
+    assert "editor handoff でも agent call の責務を維持する" in rendered_doc
+    assert "file access mode と Codex CLI sandbox を維持する" in rendered_doc
+    assert "正式な結果または成果物を満たす" in rendered_doc
+    assert "対象 path と理由を限定した sandbox escalation" in rendered_doc
+
+    prompt = build_complete_prompt(
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        path_context=_path_context(),
+        editor_handoff_standard=True,
+    )
+    rendered = render_as_markdown(prompt)
+    assert "# oracle and realization basic" in rendered
+    assert "editor handoff でも agent call の責務を維持する" in rendered
+    assert "# oracle standard" not in rendered
+    assert "# realization standard" not in rendered
+
+
 def test_realization_oracle_reference_rule_is_independently_selectable() -> None:
     """oracle path コメント規則を realization standard と分離して注入する。"""
     doc = _build_realization_oracle_reference_rule(_path_context())[1]
@@ -484,6 +512,34 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
             assert fragment in rendered
         for fragment in all_mode_specific_rules - mode_specific_rules[mode]:
             assert fragment not in rendered
+
+
+def test_file_access_rule_uses_root_specific_deny_lists(
+    tmp_path: Path,
+) -> None:
+    """main と linked worktree の各 path context に deny-list を構築する。"""
+    root = make_repo(tmp_path)
+    main_context = AgentCallPathContext(agent_call_cwd=root)
+    main_rule = render_as_markdown(
+        _build_file_access_rule(FileAccessMode.REPO_WRITE, main_context)[1]
+    )
+    assert "`{{repo-root}}` ツリー外は読み書き禁止" in main_rule
+    assert "`{{repo-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止" not in main_rule
+
+    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
+    run_git(root, "worktree", "add", "-b", "prompt-parts-linked", str(linked), "HEAD")
+    linked_context = AgentCallPathContext(agent_call_cwd=linked)
+    linked_rule = render_as_markdown(
+        _build_file_access_rule(FileAccessMode.REPO_WRITE, linked_context)[1]
+    )
+    assert (
+        "`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外は読み書き禁止"
+        in linked_rule
+    )
+    assert "`{{repo-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止" in linked_rule
+    assert "例外的に `{{repo-root}}/.cmoc/g*/ar` ツリー内は読み込み可能" not in (
+        linked_rule
+    )
 
 
 def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:

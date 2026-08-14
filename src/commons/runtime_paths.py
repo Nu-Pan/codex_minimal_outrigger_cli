@@ -153,8 +153,15 @@ def logs_dir(root: Path) -> Path:
     return generated_agent_read_dir(root) / "log" / "sub_command"
 
 
-def editor_input_dir(root: Path) -> Path:
-    """エディタ入力と、その完全 prompt の保存先 directory を返す。"""
+def editor_work_dir(root: Path) -> Path:
+    """未信頼かつ可変な editor work file の directory を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    return root / ".cmoc" / "gu" / "aw" / "editor_input"
+
+
+def editor_input_log_dir(root: Path) -> Path:
+    """入力結果の保存コピーと完全 prompt の directory を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     return generated_agent_read_dir(root) / "log" / "editor_input"
 
 

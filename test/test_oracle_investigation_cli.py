@@ -39,12 +39,16 @@ def test_oracle_investigation_has_no_session_precondition(
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     time_stamp = "2026-08-03_00-00-00_000000000"
-    editor_path = (
+    editor_work_path = (
+        root / ".cmoc" / "gu" / "aw" / "editor_input" / f"{time_stamp}_orig.md"
+    )
+    input_copy_path = (
         root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / f"{time_stamp}_orig.md"
     )
-    complete_prompt_path = editor_path.with_name(f"{time_stamp}_cmpl.md")
-    editor_path.parent.mkdir(parents=True, exist_ok=True)
-    editor_calls: list[tuple[Path, str]] = []
+    complete_prompt_path = input_copy_path.with_name(f"{time_stamp}_cmpl.md")
+    editor_work_path.parent.mkdir(parents=True, exist_ok=True)
+    input_copy_path.parent.mkdir(parents=True, exist_ok=True)
+    editor_calls: list[tuple[Path, Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
     events: list[str] = []
     preflight_enable_calls = 0
@@ -73,11 +77,11 @@ def test_oracle_investigation_has_no_session_precondition(
 
     def fake_reserve_prompt_editor_input(
         target_root: Path,
-    ) -> tuple[str, Path, Path]:
+    ) -> tuple[str, Path, Path, Path]:
         """決定論的な timestamp の editor path を返す。"""
         assert target_root == root
-        editor_path.touch()
-        return time_stamp, editor_path, complete_prompt_path
+        editor_work_path.touch()
+        return time_stamp, editor_work_path, input_copy_path, complete_prompt_path
 
     real_build_parameter = (
         investigation_module.build_oracle_investigation_launch_tui_parameter
@@ -96,18 +100,23 @@ def test_oracle_investigation_has_no_session_precondition(
         return parameter
 
     def fake_collect_prompt_editor_input(
-        original_prompt_path: Path,
+        target_root: Path,
+        work_path: Path,
+        saved_copy_path: Path,
         complete_prompt_skeleton: str,
     ) -> str:
         """エディタ入力時点の path と完全 prompt skeleton を記録する。"""
         events.append("editor")
+        assert target_root == root
         assert complete_prompt_path.read_text() == complete_prompt_skeleton
-        editor_calls.append((original_prompt_path, complete_prompt_skeleton))
+        saved_copy_path.write_text("oracle の根拠を調査する", encoding="utf-8")
+        editor_calls.append((work_path, saved_copy_path, complete_prompt_skeleton))
         return "oracle の根拠を調査する"
 
     real_finalize_complete_prompt = investigation_module.finalize_complete_prompt
 
     def record_finalize_complete_prompt(
+        work_path: Path,
         target_path: Path,
         complete_prompt_skeleton: str,
         original_prompt: str,
@@ -115,6 +124,7 @@ def test_oracle_investigation_has_no_session_precondition(
         """TUI 起動前の完全 prompt 確定を記録して本来の処理へ委譲する。"""
         events.append("finalize")
         real_finalize_complete_prompt(
+            work_path,
             target_path,
             complete_prompt_skeleton,
             original_prompt,
@@ -177,17 +187,21 @@ def test_oracle_investigation_has_no_session_precondition(
     assert events == ["doctor", "build", "editor", "finalize", "tui"]
     assert len(built_parameters) == 1
     assert len(editor_calls) == 1
-    assert editor_calls[0][0] == editor_path
-    complete_prompt_skeleton = editor_calls[0][1]
+    assert editor_calls[0][:2] == (editor_work_path, input_copy_path)
+    complete_prompt_skeleton = editor_calls[0][2]
     assert (
         complete_prompt_skeleton.count(investigation_module.ORIGINAL_PROMPT_PLACEHOLDER)
         == 1
     )
     assert "# file read write rule - pure_oracle_read" in complete_prompt_skeleton
     assert "oracle file の調査担当" in complete_prompt_skeleton
-    assert "関連する oracle file を根拠とする読み取り専用調査だけ" in (
+    assert "関連する oracle file を根拠とする読み取り専用調査を通常の作業範囲" in (
         complete_prompt_skeleton
     )
+    assert "editor handoff でも agent call の責務を維持する" in (
+        complete_prompt_skeleton
+    )
+    assert "対象 path と理由を限定した sandbox escalation" in (complete_prompt_skeleton)
     assert "未定義の事項を正本仕様として断定していない" in (complete_prompt_skeleton)
     assert len(calls) == 1
     parameter, kwargs = calls[0]
@@ -212,6 +226,8 @@ def test_oracle_investigation_has_no_session_precondition(
     assert "# oracle standard" not in complete_prompt
     assert "# routing rule" in complete_prompt
     assert "oracle の根拠を調査する" in complete_prompt
+    assert input_copy_path.read_text(encoding="utf-8") == "oracle の根拠を調査する"
+    assert not editor_work_path.exists()
 
 
 def test_oracle_investigation_builder_exports_only_the_builder() -> None:
