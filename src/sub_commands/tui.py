@@ -21,7 +21,7 @@ from commons.prompt_editor_input import (
 from commons.runtime_results import CommandResult
 from config.cmoc_config import CmocConfig
 
-CodexTui = Callable[..., CommandResult]
+_CodexTui = Callable[..., CommandResult]
 
 
 def cmoc_tui_impl() -> None:
@@ -38,7 +38,7 @@ def cmoc_tui_impl() -> None:
 
 
 def _cmoc_tui_body(
-    run_codex_tui: CodexTui,
+    run_codex_tui: _CodexTui,
     *,
     root: Path,
     config: CmocConfig,

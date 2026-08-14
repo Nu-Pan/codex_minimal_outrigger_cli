@@ -136,19 +136,20 @@
 # `runtime_codex_preflight.py`
 
 ## Summary
-- Codex 実行前の INDEX 更新 preflight を管理する共通ランタイム実装。preflight の登録・解除、exec/TUI 実行前の呼び出し、再入防止と直列化、work root の導出を扱い、実際の Codex 実行は既存 runtime 実装へ委譲する。
+- Codex exec/TUI 呼び出しに対して、実行前の INDEX 更新 preflight、呼び出し境界通知、再入抑止と直列化を提供するランタイム仲介層。preflight の登録・解除と、Codex 設定から作業 root を決める処理を含み、実際の Codex 実行は runtime_codex へ委譲する。Codex 呼び出し前処理や INDEX 更新 preflight の動作を変更・調査する際の実装入口。
 
 ## Read this when
-- Codex exec または TUI の起動前処理、INDEX 更新 preflight、preflight の登録・解除、再入防止や実行直前フックを変更・調査するとき
-- Codex 呼び出し時の work root 導出や、preflight が作成する commit と本命 agent 処理の境界を確認するとき
+- Codex exec または TUI の起動前に indexing preflight を実行する経路を変更するとき
+- indexing preflight の登録・解除、再入抑止、スレッド間の直列化を調査するとき
+- preflight 実行後に workload 本体へ境界を通知する呼び出し契約を確認するとき
 
 ## Do not read this when
-- INDEX 更新そのものの探索・生成ロジックを変更するときは、preflight 実装ではなく登録された preflight の実装を直接読む
-- Codex の実行本体や結果型を変更・調査するときは、委譲先の runtime_codex または runtime_results を直接読む
-- preflight を使わない通常の agent call パラメータや CLI 入力処理だけを変更するとき
+- Codex 実行本体の subprocess 処理や結果型の仕様を確認したいときは、委譲先の runtime_codex または runtime_results を直接読む
+- AgentCallParameter の定義や agent call のパスモデルを確認したいときは、それぞれの定義元を直接読む
+- INDEX 文書の生成規則や preflight の具体的な実装内容を確認したいだけのとき
 
 ## hash
-- ba58f854a5afc4c46c6fb221b18acbaa9f059d67ef91f749684051b15dd5bec9
+- 12d767988ff06e195adb190cfc1ca30c609459ff946465f94ba4704500e131a5
 
 # `runtime_codex_profile.py`
 
@@ -188,22 +189,19 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc 設定の JSON 永続化境界を担当するモジュール。設定オブジェクトと JSON/TOML 互換値の相互変換、型・値・循環参照の検証、既定値補完、不正設定の利用者向けエラー化を行う。
-- 設定ファイルの symlink・特殊ファイルを拒否し、安全に読み込み・書き込み・初期同期する。設定形式、Codex のモデル・provider・reasoning effort、oracle review の試行回数を変更・検証するときの実装入口。
+- cmoc の設定を JSON へ安定してシリアライズし、JSON から型検証済みの CmocConfig へ復元する実行時設定境界。Codex のモデル・provider・reasoning effort、並列数、oracle review のループ回数を扱い、JSON/TOML 互換値、整数、文字列、enum key、循環コンテナ、symlink や特殊ファイルを検証する。設定の生成・読み込み・同期時に利用者向け CmocError へ変換するための入口でもある。
 
 ## Read this when
-- 設定の JSON 保存形式や復元処理を変更するとき
-- Codex model/provider、reasoning effort、試行回数などの設定値検証を変更するとき
-- 設定ファイルの生成・読み込み・書き戻し、symlink や特殊ファイルへの対応を調査するとき
-- 不正な設定入力が CmocError として報告される境界を確認するとき
+- 設定 JSON の保存形式、既定値補完、Codex model/provider/reasoning effort の復元または検証挙動を変更・確認するとき
+- cmoc の config 読み込み・書き込み・同期、設定ファイルの symlink・特殊ファイル対策、または不正設定時のエラー境界を調べるとき
 
 ## Do not read this when
-- 設定型そのものの定義や既定値を確認したい場合は、参照先の設定型定義を直接読む
-- CLI コマンドの引数解析や実行処理だけを調べる場合
-- 設定とは無関係な runtime path や一般的なエラー処理を調べる場合
+- 設定の正本データ型や既定値そのものを確認したい場合は config.cmoc_config を直接読むとき
+- 設定ファイルのパス解決だけを確認する場合は runtime_paths の config_path を直接読むとき
+- Codex CLI のモデル指定仕様や TOML 形式の正本仕様を確認する場合は参照されている oracle の仕様文書・設定型を直接読むとき
 
 ## hash
-- b747b382b51d18e1111ca14c92645c9b8c1915179905a77ab2712deed7439000
+- c2f6c9558f2ca77c30ccee57f6b0a1bd2f530d8fc08dce82c85765d9e3d57f56
 
 # `runtime_content.py`
 
@@ -298,21 +296,20 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- フィードバックの repository-local state を扱う中核モジュール。観測の envelope 検証、report cut の作成・再開・checkpoint 回復・破棄、active generation と current pointer の検証・公開、incomplete 診断、publication 後の cleanup を一つの integrity boundary で管理する。
-- feedback state の永続 artifact、canonical JSON、SHA256、ID、path、時刻、schema、参照整合性を検証し、異常状態を利用者向けエラーへ変換する。feedback report の report cut や active state の遷移・復旧・cleanup の実装を確認する入口である。
+- feedback の repository-local state を一元管理する実装。report cut、active generation、current pointer、issue／machine aggregate、checkpoint、publication、incomplete 診断、cleanup、discard、排他 writer lock の整合性を検証し、atomic／immutable artifact の保存・切替・復旧を担う。feedback state transition や active state integrity の実装を追う際の中心的な入口。
 
 ## Read this when
-- feedback の active state、current pointer、generation、report cut、checkpoint、publication、incomplete 診断、または cleanup の挙動を変更・調査するとき
-- raw observation の envelope、machine rule、agent report、artifact reference、canonical JSON、hash、ID、path の整合性検証を確認するとき
-- feedback report 処理の中断復旧、publication 後の cleanup、不要または未定義 artifact の拒否を確認するとき
+- feedback report の report cut 作成・再開・publication・cleanup・discard の状態遷移を確認するとき
+- current pointer、generation manifest、active issue／machine aggregate、Markdown report、checkpoint の相互参照と SHA256 検証を調べるとき
+- observation envelope、machine rule の allowlist、canonical identity、incomplete 診断、異常終了後の checkpoint recovery を確認するとき
 
 ## Do not read this when
-- feedback の観測を MCP tool から登録する処理だけを確認するときは、観測受付側の実装を直接読む
-- feedback report の Markdown 内容や agent 向け入力の生成仕様だけを確認するときは、対応する report 仕様・生成実装を直接読む
-- 一般的な runtime error の定義や低レベルの JSON・時刻・ID utility だけを確認するときは、各 utility の実装を直接読む
+- observation の収集・保存処理や低レベルの JSON／ID ユーティリティだけを確認するとき
+- report の集約・正規化・検証ロジック、CLI の引数処理、Markdown report の内容生成が主題のとき
+- feedback の正本仕様や利用者向けコマンド契約そのものを確認するとき
 
 ## hash
-- b3d2322c62167f70037aadb2a617b9f0b72e9be6819abac9e4f26a4f07c9e7ee
+- 44a0d20282cf5752afb702a2fafb2cbb6d46d11a97ac91391ee397a2a5fe86fd
 
 # `runtime_feedback_store.py`
 
@@ -390,18 +387,22 @@
 # `runtime_refactor.py`
 
 ## Summary
-- refactor state を管理する共通ランタイム実装。state file の読み込み・保存時の安全性確認、entry schema 検証、oracle／realization file 集合との同期、調査対象の列挙・選択・再調査要求を担う。refactor state の処理経路を確認する際の入口となる。
+- oracle と realization file の調査履歴を管理する共通ランタイムで、state file の読み込み・厳密な schema 検証・安全な保存・対象 file 集合との同期を担う。
+- 未調査対象の生成、調査対象の優先選択、全対象の再調査要求化、work-root 相対 path の正規化検証、state path の symlink・非通常 file 拒否、履歴 entry の値検証を提供する。
+- refactor state を扱う subcommand や preprocess、oracle/realization file の列挙・調査サイクルを実装または変更する際の共通入口であり、個別の CLI 表示や調査ロジックそのものを扱う対象ではない。
 
 ## Read this when
-- refactor state の読み込み、保存、schema 検証、file 集合との同期、調査対象の選択を変更または調査するとき
-- oracle／realization file の変更検知や調査履歴の状態遷移を確認するとき
+- refactor state の読み書き、schema 検証、調査履歴の保持、または oracle/realization file 集合との同期挙動を変更・確認するとき。
+- 次に調査すべき対象の選択順、全対象を再調査対象に戻す処理、未調査 entry の初期値を確認するとき。
+- state file の path 安全性、相対 path の正規化、SHA256 や調査日時など entry 値の受入条件を確認するとき。
 
 ## Do not read this when
-- refactor state を扱わない runtime 共通処理を調査するとき
-- 個別の oracle／realization file の仕様や doctor preprocess の契約を確認することが目的で、対応する oracle file を直接読むべきとき
+- refactor state を利用する個別 subcommand の利用者向け仕様や CLI フローだけを確認する場合は、対応する app_spec または CLI realization を直接読む。
+- oracle/realization file の列挙規則、file hash 計算、state path の決定規則そのものだけを確認する場合は、それぞれの専用 runtime または正本仕様を直接読む。
+- 調査対象の内容をレビューする場合は、この state 管理実装ではなく対象となる oracle または realization file を読む。
 
 ## hash
-- 4048f5639be7781644c6692ffa62e9bffb1ac3d872066a1747d51f5722af2ef7
+- 7cb5fa2cd8fd6fe8e6a5487eb0059a2d28b1567ecea64ad3b46602d7ae7df062
 
 # `runtime_results.py`
 

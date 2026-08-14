@@ -31,20 +31,24 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装をまとめたディレクトリ。feedback サブコマンドの処理を確認・変更するときの入口で、個別の report 処理や state・agent 契約の詳細へ進むための起点となる。
+- feedback サブコマンドの実装をまとめたディレクトリ。report cut を起点に、raw observation の固定・検証、issue 正規化、machine observation 集約、candidate verification、正常 publication／incomplete 診断までの feedback report 処理を追跡・変更するときの入口。
+- publication pipeline の writer lock、checkpoint、current pointer、generation artifact、cleanup、中断・失敗状態を扱う実装と、その配下の report 処理へ進むための入口を提供する。
 
 ## Read this when
-- feedback サブコマンドの挙動や実装を確認・変更するとき。
-- report の publication、diagnostic、checkpoint 再開、candidate 変換、verification、generation 切替を調査するとき。
+- feedback サブコマンドの挙動、処理順序、再開可能な report cut、publication、incomplete 診断、cleanup を確認・変更するとき
+- feedback report の issue candidate 正規化、machine recurrence 集約、verification、active generation 更新を調査するとき
+- report cut manifest、checkpoint、current pointer、generation artifact の整合性や中断時の状態遷移を確認するとき
+- feedback サブコマンド配下の実装の責務分担や、report 処理の詳細入口を確認するとき
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき。
-- feedback state の正本データ構造や永続化契約だけを確認する場合。
-- normalization／verification agent の prompt、Structured Output schema、builder の契約だけを確認する場合。
-- report の表示形式だけを確認する場合。
+- feedback state の永続形式や report cut／generation の共通 helper 契約だけを確認したいときは、対応する共通 helper を直接読む
+- raw observation の保存、canonical JSON、secret masking、path 制約だけを確認したいときは、feedback store の実装を直接読む
+- normalization／verification agent の prompt builder や Structured Output schema だけを確認したいときは、対応する builder／schema を直接読む
+- feedback report の正本仕様や interruption 契約だけを確認したいときは、対応する仕様書を直接読む
+- feedback 以外のサブコマンドを扱うとき
 
 ## hash
-- 86ae1386fe29176843ea39d38e0bdd81a436d24385d32e09b07a2147b7873163
+- 02d17cd0bb5710dc0394527b1524d11102df0ccdadd5f27cdaab6acf367462de
 
 # `indexing.py`
 
@@ -64,19 +68,19 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめるディレクトリ。oracle の編集・調査・レビューに関する各サブコマンドと、その実行フローを支える補助実装への入口となる。
+- oracle 系サブコマンドの実装をまとめるパッケージです。oracle edit、investigation、review の CLI 実行入口と、review に伴う対象列挙・ループ・パス解決・レポート・INDEX 差分処理への入口を提供します。
 
 ## Read this when
-- oracle 系サブコマンドの構成や、編集・調査・レビューの実行経路を確認するとき
-- oracle review の対象列挙、レビュー loop、レポート生成、INDEX 差分の統合など、oracle review を支える実装の所在を確認するとき
+- oracle サブコマンドの構成、各サブコマンドの実行フロー、または oracle review のライフサイクルと関連処理の入口を確認するとき。
+- oracle review の対象列挙、finding 処理、パス解決、レポート生成、INDEX 差分の commit・merge を横断して調査するとき。
 
 ## Do not read this when
-- 特定の oracle サブコマンドの詳細な挙動を確認する場合は、該当する個別実装を直接読む
-- oracle の編集・調査・レビューに関する契約やプロンプト内容そのものを確認する場合は、対応する oracle 仕様を直接読む
-- 共通のプロンプト入力処理や Git・パス処理の詳細だけを確認する場合は、該当する専用実装を直接読む
+- 個別サブコマンドの詳細実装だけを確認したい場合は、該当する下位実装を直接読む。
+- oracle の調査・編集・レビュー契約やプロンプト内容そのものを確認したい場合は、対応する oracle 仕様を直接読む。
+- 共通 runtime や、oracle review の一機能だけを調査する場合は、担当する専用モジュールを直接読む。
 
 ## hash
-- 5a5520709dac251611061fcc643f35d78201fea6dc38ea173acca29d5e77377f
+- 07d62a6f524b1d93bf4a55647258c8a4ab20a429e2dcb0fd0593dc8a38c226ff
 
 # `realization`
 
@@ -133,33 +137,34 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認・変更する際の入口であり、開始・継続・完了・破棄に相当する個別処理へ進むためのルーティングを担う。
+- session サブコマンド群の実装をまとめたパッケージ。session の fork・join・abandon 各ライフサイクル処理を確認する際の入口となる。
+- fork は session branch と state の作成、join は home branch への merge と session branch の後処理、abandon は session の中止と状態・branch の cleanup を担当する。
 
 ## Read this when
-- session サブコマンドの実装構成や、fork・join・abandon の各処理の入口を確認するとき。
-- session の branch・state を扱うライフサイクル処理を確認・変更するとき。
+- session サブコマンドの実装構成や、fork・join・abandon のライフサイクル処理を確認・変更するとき。
+- session branch、state 更新、merge、cleanup の責務分担を把握する必要があるとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- 特定の session 処理の詳細を確認する場合は、該当する個別サブコマンド実装を直接読む。
-- session state の一般定義や共通 runtime の仕様だけを確認する場合は、それぞれの正本仕様・共通実装を直接読む。
+- session state のデータ構造や CLI 共通 runtime の仕様だけを確認するときは、それぞれの共通実装を直接読む。
 
 ## hash
-- eca8a6509002c96e29d6832c8753e099c704b3a21f6823212b83ce7d5dc542ad
+- 1b1611b1ea2d8279a73a3618517b9350f41d554703ee4341f2ef485077c7e30c
 
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行入口と本体処理を担う。プロンプト編集用入力を準備・収集・確定し、固定パラメータで Codex TUI を起動する。
+- `cmoc tui` サブコマンドの実行入口。インデックス前処理とログ前チェックを行い、現在のリポジトリ状態から設定を読み込んで、プロンプト編集、完全プロンプト確定、Codex TUI 起動までの処理を束ねる。TUI 起動フロー全体の責務や、サブコマンド実行時の固定手順を確認するときの入口となる。
 
 ## Read this when
-- `cmoc tui` の起動フロー、プロンプト編集、Codex TUI 起動処理を変更または調査するとき。
-- TUI 実行前の indexing preflight、ログ前チェック、サブコマンド進捗管理の連携を確認するとき。
+- `cmoc tui` サブコマンドの実装や起動経路を調べるとき。
+- プロンプト編集後に Codex TUI を起動する処理の流れを確認するとき。
+- TUI 実行時のインデックス前処理、ログ前チェック、設定読み込みの接続点を確認するとき。
 
 ## Do not read this when
-- TUI 起動パラメータの構築仕様だけを確認する場合は、パラメータ builder の実装を直接読む。
-- プロンプト入力・保存・確定の詳細仕様だけを確認する場合は、prompt editor input 関連の実装または参照された正本仕様を直接読む。
-- Codex TUI 自体の実行実装や共通 CLI ランタイムの挙動だけを確認する場合は、各ランタイム実装を直接読む。
+- プロンプト入力の予約・収集・確定処理の詳細だけを調べるときは、対応するプロンプト編集ヘルパーを直接読む。
+- TUI 起動パラメータの構築仕様だけを調べるときは、TUI 起動パラメータの builder を直接読む。
+- 他の CLI サブコマンドの実装を調べるとき。
 
 ## hash
-- c544eb81e5f42cc514f3b4ffc390709325ed6cdb0cdd79ec833f4beff51e1ffa
+- cacb2eae3a201d06057dd49a7879e0f55a6d8ec151e0568fda9487924961cb2d

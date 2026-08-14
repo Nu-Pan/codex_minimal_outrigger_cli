@@ -19,7 +19,7 @@ from config.cmoc_config import (
 from .runtime_errors import CmocError
 from .runtime_paths import config_path
 
-ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
+_ConfigKey = TypeVar("_ConfigKey", ModelClass, ReasoningEffort)
 
 
 def _model_name(value: Any) -> str:
@@ -176,10 +176,10 @@ def _model_provider_map_from_dict(data: Any) -> dict[str, CodexModelProviderConf
 
 
 def _enum_str_map_from_dict(
-    default: dict[ConfigKey, str],
+    default: dict[_ConfigKey, str],
     data: Any,
-    key_type: type[ConfigKey],
-) -> dict[ConfigKey, str]:
+    key_type: type[_ConfigKey],
+) -> dict[_ConfigKey, str]:
     """enum key の JSON 表現を、既定値補完済みの runtime map へ戻す。"""
     restored = dict(default)
     if not isinstance(data, dict):

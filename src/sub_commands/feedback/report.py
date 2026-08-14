@@ -85,7 +85,7 @@ from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_paths import reports_dir, timestamp
 from commons.runtime_results import StructuredOutputValidationIssue
 
-JsonObject = dict[str, Any]
+_JsonObject = dict[str, Any]
 _REFERENCE_CONTENT_LIMIT = 16 * 1024
 _MACHINE_WINDOW_DAYS = 30
 _MACHINE_DIGEST_LIMIT = 64
@@ -141,7 +141,7 @@ def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> 
     """保持中の writer lock 内で feedback report cut を処理する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    manifest: JsonObject | None = None
+    manifest: _JsonObject | None = None
     manifest_path: Path | None = None
     try:
         start_subcommand_step(
@@ -258,8 +258,8 @@ def _validate_preconditions(repo: Path, worktree: Path) -> None:
 
 
 def _create_report_cut(
-    repo: Path, state: ActiveState, versions: JsonObject
-) -> tuple[JsonObject, Path]:
+    repo: Path, state: ActiveState, versions: _JsonObject
+) -> tuple[_JsonObject, Path]:
     """pending raw、active state、および現在参照を一度だけ固定する。"""
     report_cut_id_value = new_report_cut_id()
     with observation_publication_lock(repo):
@@ -271,7 +271,7 @@ def _create_report_cut(
         state.issues,
     )
     _verify_captured_references(repo, references)
-    manifest: JsonObject = {
+    manifest: _JsonObject = {
         "schema_version": 1,
         "report_cut_id": report_cut_id_value,
         "cut_at": cut_at,
@@ -304,7 +304,7 @@ def _create_report_cut(
 
 def _pending_observations(
     repo: Path,
-) -> tuple[list[JsonObject], dict[str, JsonObject]]:
+) -> tuple[list[_JsonObject], dict[str, _JsonObject]]:
     """raw store の全 pending file を canonical validation して固定入力へ変換する。"""
     root = feedback_root(repo) / "observation" / "v1"
     # {{work-root}}/oracle/doc/app_spec/feedback_state.md
@@ -332,8 +332,8 @@ def _pending_observations(
                     str(path),
                 )
 
-    entries: list[JsonObject] = []
-    observations: dict[str, JsonObject] = {}
+    entries: list[_JsonObject] = []
+    observations: dict[str, _JsonObject] = {}
     hashes_by_id: dict[str, str] = {}
     validation_errors: list[str] = []
     for path in iter_observation_paths(repo):
@@ -397,7 +397,7 @@ def _pending_observations(
     return entries, observations
 
 
-def _active_state_input(repo: Path, state: ActiveState) -> JsonObject | None:
+def _active_state_input(repo: Path, state: ActiveState) -> _JsonObject | None:
     """cut 開始時の current generation を path/hash reference で固定する。"""
     if state.current is None or state.generation_manifest is None:
         return None
@@ -424,11 +424,11 @@ def _active_state_input(repo: Path, state: ActiveState) -> JsonObject | None:
 
 def _capture_report_cut_references(
     repo: Path,
-    observations: dict[str, JsonObject],
-    active_issues: dict[str, JsonObject],
-) -> list[JsonObject]:
+    observations: dict[str, _JsonObject],
+    active_issues: dict[str, _JsonObject],
+) -> list[_JsonObject]:
     """agent に許可する observation と current repository reference を固定する。"""
-    references: dict[str, JsonObject] = {}
+    references: dict[str, _JsonObject] = {}
     path_subjects: dict[Path, set[str]] = {}
 
     # raw observation 自体は current verdict の根拠ではない別種 reference とする。
@@ -482,7 +482,7 @@ def _capture_report_cut_references(
     return [references[key] for key in sorted(references)]
 
 
-def _observation_reference_paths(repo: Path, observation: JsonObject) -> list[Path]:
+def _observation_reference_paths(repo: Path, observation: _JsonObject) -> list[Path]:
     """raw observation が既に拘束した repository 内 current target を返す。"""
     paths: set[Path] = set()
     fingerprints = observation.get("evidence_fingerprints")
@@ -524,11 +524,11 @@ def _repository_path(repo: Path, value: str) -> Path | None:
 
 def _capture_repository_reference(
     repo: Path, path: Path, subjects: list[str]
-) -> JsonObject:
+) -> _JsonObject:
     """repository path の content または typed fingerprint を secret-safe に固定する。"""
     relative = path.relative_to(repo.resolve(strict=False)).as_posix()
     reference_id = f"ref:{hashlib.sha256(relative.encode('utf-8')).hexdigest()[:24]}"
-    base: JsonObject = {
+    base: _JsonObject = {
         "reference_id": reference_id,
         "subjects": subjects,
         "path": relative,
@@ -587,7 +587,7 @@ def _capture_repository_reference(
     }
 
 
-def _verify_captured_references(repo: Path, references: list[JsonObject]) -> None:
+def _verify_captured_references(repo: Path, references: list[_JsonObject]) -> None:
     """manifest 保存直前に current reference を同じ path から再取得して比較する。"""
     for reference in references:
         if reference.get("kind") == "observation":
@@ -607,7 +607,7 @@ def _verify_captured_references(repo: Path, references: list[JsonObject]) -> Non
             )
 
 
-def _processing_versions() -> JsonObject:
+def _processing_versions() -> _JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
     normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
     verify_builder = _builder_source_path(build_feedback_verify_issue_parameter)
@@ -666,7 +666,7 @@ def _process_report_cut(
     repo: Path,
     worktree: Path,
     initial_state: ActiveState,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     manifest_path: Path,
 ) -> int:
     """固定済み cut を正常 publication または incomplete 診断まで進める。"""
@@ -748,13 +748,13 @@ def _process_report_cut(
     )
 
 
-def _read_cut_observations(repo: Path, manifest: JsonObject) -> dict[str, JsonObject]:
+def _read_cut_observations(repo: Path, manifest: _JsonObject) -> dict[str, _JsonObject]:
     """cut manifest が固定した raw byte 列を再検証し、完全一致 duplicate を除く。"""
     inputs = manifest.get("inputs")
     entries = inputs.get("observations") if isinstance(inputs, dict) else None
     if not isinstance(entries, list):
         raise ValueError("report cut observations must be an array")
-    observations: dict[str, JsonObject] = {}
+    observations: dict[str, _JsonObject] = {}
     hashes: dict[str, str] = {}
     for entry in entries:
         if not isinstance(entry, dict):
@@ -808,10 +808,10 @@ def _read_cut_observations(repo: Path, manifest: JsonObject) -> dict[str, JsonOb
 def _build_candidates(
     repo: Path,
     worktree: Path,
-    manifest: JsonObject,
-    observations: dict[str, JsonObject],
+    manifest: _JsonObject,
+    observations: dict[str, _JsonObject],
     state: ActiveState,
-) -> tuple[dict[str, JsonObject], dict[str, JsonObject]]:
+) -> tuple[dict[str, _JsonObject], dict[str, _JsonObject]]:
     """deterministic processing と必要な同一性判断だけで candidate 集合を作る。"""
     candidates = {
         current_issue_id: _candidate_from_active(issue)
@@ -821,8 +821,8 @@ def _build_candidates(
     assert isinstance(inputs, dict)
 
     # machine observation は canonical key と recurrence rule だけで先に集約する。
-    machine_observations: dict[str, list[JsonObject]] = {}
-    agent_observations: list[JsonObject] = []
+    machine_observations: dict[str, list[_JsonObject]] = {}
+    agent_observations: list[_JsonObject] = []
     for observation in observations.values():
         if observation.get("source") == "machine_rule":
             machine_observations.setdefault(
@@ -853,7 +853,7 @@ def _build_candidates(
                 repo, manifest, observation
             ),
         )
-        selected: JsonObject | None = exact
+        selected: _JsonObject | None = exact
         if selected is None and comparison:
             selected_id = _normalize_issue_identity(
                 repo, worktree, manifest, observation, comparison
@@ -885,7 +885,7 @@ def _build_candidates(
     return candidates, machine_aggregates
 
 
-def _candidate_from_active(issue: JsonObject) -> JsonObject:
+def _candidate_from_active(issue: _JsonObject) -> _JsonObject:
     """active issue record を今回再検証する transient candidate へ変換する。"""
     return {
         "schema_version": 1,
@@ -910,7 +910,7 @@ def _candidate_from_active(issue: JsonObject) -> JsonObject:
     }
 
 
-def _new_candidate(observation: JsonObject, canonical_key: str) -> JsonObject:
+def _new_candidate(observation: _JsonObject, canonical_key: str) -> _JsonObject:
     """一 observation から未集約の transient candidate を作る。"""
     payload = observation["payload"]
     assert isinstance(payload, dict)
@@ -937,7 +937,9 @@ def _new_candidate(observation: JsonObject, canonical_key: str) -> JsonObject:
     }
 
 
-def _insert_candidate(candidates: dict[str, JsonObject], candidate: JsonObject) -> None:
+def _insert_candidate(
+    candidates: dict[str, _JsonObject], candidate: _JsonObject
+) -> None:
     """異なる canonical key の issue ID collision を publication 前に停止する。"""
     candidate_id_value = candidate.get("candidate_id")
     canonical_key = candidate.get("canonical_key")
@@ -958,7 +960,7 @@ def _insert_candidate(candidates: dict[str, JsonObject], candidate: JsonObject) 
 
 
 def _merge_observation(
-    repo: Path, candidate: JsonObject, observation: JsonObject
+    repo: Path, candidate: _JsonObject, observation: _JsonObject
 ) -> None:
     """一意な raw observation を compact candidate aggregate へ統合する。"""
     observation_id_value = str(observation["observation_id"])
@@ -1036,10 +1038,10 @@ def _merge_observation(
 
 
 def _observation_reference_targets(
-    repo: Path, observation: JsonObject
-) -> list[JsonObject]:
+    repo: Path, observation: _JsonObject
+) -> list[_JsonObject]:
     """次回 cut で再取得できる stable repository target を抽出する。"""
-    targets: list[JsonObject] = []
+    targets: list[_JsonObject] = []
     payload = observation.get("payload")
     if isinstance(payload, dict) and isinstance(payload.get("evidence"), list):
         for evidence in payload["evidence"]:
@@ -1070,18 +1072,18 @@ def _observation_reference_targets(
     return targets
 
 
-def _bounded_objects(values: list[JsonObject], limit: int) -> list[JsonObject]:
+def _bounded_objects(values: list[_JsonObject], limit: int) -> list[_JsonObject]:
     """object を canonical byte 列で deduplicate し固定上限へ収める。"""
     by_content = {canonical_json_bytes(value): value for value in values}
     return [by_content[key] for key in sorted(by_content)[:limit]]
 
 
 def _agent_comparison_candidates(
-    observation: JsonObject,
-    candidates: dict[str, JsonObject],
+    observation: _JsonObject,
+    candidates: dict[str, _JsonObject],
     *,
     current_cut_fingerprint_pairs: list[tuple[str, str, str | None]] | None = None,
-) -> tuple[JsonObject | None, list[JsonObject]]:
+) -> tuple[_JsonObject | None, list[_JsonObject]]:
     """category、evidence subject、fingerprint、hint で比較候補を機械的に絞る。"""
     payload = observation["payload"]
     assert isinstance(payload, dict)
@@ -1098,8 +1100,8 @@ def _agent_comparison_candidates(
         == current_fingerprints
     )
     current_subjects = _observation_evidence_subjects(observation)
-    exact: list[JsonObject] = []
-    comparison: list[JsonObject] = []
+    exact: list[_JsonObject] = []
+    comparison: list[_JsonObject] = []
     for candidate in candidates.values():
         if candidate.get("category") != category:
             continue
@@ -1124,7 +1126,7 @@ def _agent_comparison_candidates(
 
 
 def _report_cut_fingerprint_pairs(
-    repo: Path, manifest: JsonObject, observation: JsonObject
+    repo: Path, manifest: _JsonObject, observation: _JsonObject
 ) -> list[tuple[str, str, str | None]]:
     """observation subject に紐付く report cut current fingerprint を返す。"""
     inputs = manifest.get("inputs")
@@ -1182,7 +1184,7 @@ def _report_cut_fingerprint_pairs(
 
 
 def _observation_evidence_subjects(
-    observation: JsonObject,
+    observation: _JsonObject,
 ) -> set[tuple[str, str]]:
     """observation の path evidence を subject type と repository-relative path へ揃える。"""
     payload = observation.get("payload")
@@ -1224,7 +1226,7 @@ def _observation_evidence_subjects(
     return subjects
 
 
-def _candidate_evidence_subjects(candidate: JsonObject) -> set[tuple[str, str]]:
+def _candidate_evidence_subjects(candidate: _JsonObject) -> set[tuple[str, str]]:
     """candidate が保持する stable target から subject type と path を返す。"""
     targets = candidate.get("reference_targets")
     if not isinstance(targets, list):
@@ -1253,9 +1255,9 @@ def _fingerprint_pairs(value: object) -> list[tuple[str, str | None]]:
 def _normalize_issue_identity(
     repo: Path,
     worktree: Path,
-    manifest: JsonObject,
-    observation: JsonObject,
-    candidates: list[JsonObject],
+    manifest: _JsonObject,
+    observation: _JsonObject,
+    candidates: list[_JsonObject],
 ) -> str | None:
     """曖昧な agent observation の同一性だけを checkpoint 付きで判断する。"""
     candidate_payload = [
@@ -1364,13 +1366,13 @@ def _normalize_issue_identity(
 
 def _normalization_checkpoint(
     repo: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     observation_id_value: str,
     input_sha256: str,
     agent_call_kind: str,
     schema_path: Path,
     allowed: set[str],
-) -> JsonObject | None:
+) -> _JsonObject | None:
     """同じ cut/input の正式な normalization checkpoint だけを再利用する。"""
     reference = _find_checkpoint_reference(
         manifest, "normalization_checkpoints", "observation_id", observation_id_value
@@ -1438,11 +1440,11 @@ def _normalization_output_issues(
 
 def _record_checkpoint(
     repo: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     list_name: str,
     id_name: str,
     id_value: str,
-    reference: JsonObject,
+    reference: _JsonObject,
 ) -> None:
     """formal checkpoint reference を manifest へ canonical order で追加する。"""
     processing = manifest["processing"]
@@ -1459,8 +1461,8 @@ def _record_checkpoint(
 
 
 def _find_checkpoint_reference(
-    manifest: JsonObject, list_name: str, id_name: str, id_value: str
-) -> JsonObject | None:
+    manifest: _JsonObject, list_name: str, id_name: str, id_value: str
+) -> _JsonObject | None:
     """manifest の checkpoint reference を ID で一意に選ぶ。"""
     processing = manifest.get("processing")
     entries = processing.get(list_name) if isinstance(processing, dict) else None
@@ -1476,7 +1478,7 @@ def _find_checkpoint_reference(
     return matches[0] if matches else None
 
 
-def _structured_output_matches_schema(output: JsonObject, schema_path: Path) -> bool:
+def _structured_output_matches_schema(output: _JsonObject, schema_path: Path) -> bool:
     """checkpoint output を正本 Structured Output schema で再検証する。"""
     try:
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -1489,18 +1491,18 @@ def _structured_output_matches_schema(output: JsonObject, schema_path: Path) -> 
 
 def _process_machine_observations(
     repo: Path,
-    manifest: JsonObject,
-    candidates: dict[str, JsonObject],
-    previous_aggregates: dict[str, JsonObject],
-    observation_groups: dict[str, list[JsonObject]],
-) -> dict[str, JsonObject]:
+    manifest: _JsonObject,
+    candidates: dict[str, _JsonObject],
+    previous_aggregates: dict[str, _JsonObject],
+    observation_groups: dict[str, list[_JsonObject]],
+) -> dict[str, _JsonObject]:
     """recurrence window／threshold を適用し、candidate と bounded aggregate を分ける。"""
     active_by_key = {
         str(candidate["canonical_key"]): candidate
         for candidate in candidates.values()
         if candidate.get("origin") == "machine_rule"
     }
-    aggregates: dict[str, JsonObject] = {}
+    aggregates: dict[str, _JsonObject] = {}
     all_keys = sorted(
         set(previous_aggregates) | set(observation_groups) | set(active_by_key)
     )
@@ -1559,18 +1561,18 @@ def _process_machine_observations(
 
 def _merge_machine_aggregate(
     repo: Path,
-    previous: JsonObject | None,
-    observations: list[JsonObject],
+    previous: _JsonObject | None,
+    observations: list[_JsonObject],
     cut_at: str,
     canonical_key: str,
-) -> JsonObject | None:
+) -> _JsonObject | None:
     """30 日 window 内の machine recurrence を daily bounded buckets へ集約する。"""
     cut_time = parse_rfc3339(cut_at).astimezone(timezone.utc)
     cutoff = cut_time - timedelta(days=_MACHINE_WINDOW_DAYS)
-    buckets_by_day: dict[str, JsonObject] = {}
-    representative: list[JsonObject] = []
-    fingerprints: list[JsonObject] = []
-    metadata: JsonObject = {}
+    buckets_by_day: dict[str, _JsonObject] = {}
+    representative: list[_JsonObject] = []
+    fingerprints: list[_JsonObject] = []
+    metadata: _JsonObject = {}
     previous_buckets_truncated = False
     if previous is not None:
         metadata = dict(previous)
@@ -1725,7 +1727,7 @@ def _merge_machine_aggregate(
 
 
 def _update_dimension_digest(
-    digest: list[JsonObject], raw_value: str, observed_at: str
+    digest: list[_JsonObject], raw_value: str, observed_at: str
 ) -> bool:
     """threshold 判定に必要な distinct value と最終時刻だけを bounded 保存する。"""
     value = hashlib.sha256(raw_value.encode("utf-8")).hexdigest()
@@ -1745,9 +1747,9 @@ def _update_dimension_digest(
 
 def _merge_dimension_digests(
     groups: list[object], cutoff: datetime, previously_saturated: bool
-) -> tuple[list[JsonObject], bool]:
+) -> tuple[list[_JsonObject], bool]:
     """bucket の dimension digest を固定上限へ統合する。"""
-    unique: dict[str, JsonObject] = {}
+    unique: dict[str, _JsonObject] = {}
     for group in groups:
         if not isinstance(group, list):
             continue
@@ -1772,7 +1774,7 @@ def _merge_dimension_digests(
     )
 
 
-def _machine_threshold_met(aggregate: JsonObject) -> bool:
+def _machine_threshold_met(aggregate: _JsonObject) -> bool:
     """初期 allowlist rule の distinct recurrence threshold を判定する。"""
     counts = aggregate.get("threshold_counts")
     if not isinstance(counts, dict):
@@ -1792,7 +1794,7 @@ def _machine_threshold_met(aggregate: JsonObject) -> bool:
 
 
 def _apply_machine_aggregate_to_candidate(
-    candidate: JsonObject, aggregate: JsonObject
+    candidate: _JsonObject, aggregate: _JsonObject
 ) -> None:
     """window-scoped machine aggregate を active candidate の compact field へ反映する。"""
     candidate["origin"] = "machine_rule"
@@ -1815,9 +1817,9 @@ def _apply_machine_aggregate_to_candidate(
 def _verify_candidates(
     repo: Path,
     worktree: Path,
-    manifest: JsonObject,
-    candidates: dict[str, JsonObject],
-) -> dict[str, JsonObject]:
+    manifest: _JsonObject,
+    candidates: dict[str, _JsonObject],
+) -> dict[str, _JsonObject]:
     """全 candidate を一件ずつ固定参照だけで verification する。"""
     inputs = manifest["inputs"]
     assert isinstance(inputs, dict)
@@ -1830,7 +1832,7 @@ def _verify_candidates(
         if isinstance(reference, dict)
         and isinstance(reference.get("reference_id"), str)
     }
-    verdicts: dict[str, JsonObject] = {}
+    verdicts: dict[str, _JsonObject] = {}
     for candidate_id_value, candidate in sorted(candidates.items()):
         allowed_ids = candidate.get("reference_ids")
         if not isinstance(allowed_ids, list):
@@ -1917,7 +1919,7 @@ def _verify_candidates(
     return verdicts
 
 
-def _verification_candidate_payload(candidate: JsonObject) -> JsonObject:
+def _verification_candidate_payload(candidate: _JsonObject) -> _JsonObject:
     """verification agent に渡す機械集約済み candidate field だけを返す。"""
     names = (
         "schema_version",
@@ -1940,13 +1942,13 @@ def _verification_candidate_payload(candidate: JsonObject) -> JsonObject:
 
 def _verification_checkpoint(
     repo: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     candidate_id_value: str,
     input_sha256: str,
     schema_path: Path,
-    references_by_id: dict[str, JsonObject],
+    references_by_id: dict[str, _JsonObject],
     allowed_ids: set[str],
-) -> JsonObject | None:
+) -> _JsonObject | None:
     """同じ cut/input の正式な verification checkpoint だけを再利用する。"""
     reference = _find_checkpoint_reference(
         manifest, "verification_checkpoints", "candidate_id", candidate_id_value
@@ -2000,7 +2002,7 @@ def _verification_output_issues(
     output: object,
     candidate_id_value: str,
     allowed_ids: set[str],
-    references_by_id: dict[str, JsonObject],
+    references_by_id: dict[str, _JsonObject],
 ) -> tuple[StructuredOutputValidationIssue, ...]:
     """verification schema 外の deterministic postcondition 違反を返す。"""
     if not isinstance(output, dict) or not isinstance(output.get("result"), dict):
@@ -2128,11 +2130,11 @@ def _verification_output_issues(
 def _publish_report(
     repo: Path,
     worktree: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     manifest_path: Path,
-    candidates: dict[str, JsonObject],
-    machine_aggregates: dict[str, JsonObject],
-    verdicts: dict[str, JsonObject],
+    candidates: dict[str, _JsonObject],
+    machine_aggregates: dict[str, _JsonObject],
+    verdicts: dict[str, _JsonObject],
     current_state: ActiveState,
 ) -> int:
     """generation と report を準備し、manifest hash を固定して pointer を切り替える。"""
@@ -2214,7 +2216,7 @@ def _publish_report(
         "old_generation": current_generation_artifacts(repo, current_state),
         "work_artifacts": _checkpoint_cleanup_references(manifest),
     }
-    expected_publication: JsonObject = {
+    expected_publication: _JsonObject = {
         "generation_id": generation_id_value,
         "generation_manifest": generation_reference,
         "generation_artifacts": generation_references,
@@ -2275,10 +2277,10 @@ def _publish_report(
 def _publish_incomplete_report(
     repo: Path,
     worktree: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     manifest_path: Path,
-    candidates: dict[str, JsonObject],
-    verdicts: dict[str, JsonObject],
+    candidates: dict[str, _JsonObject],
+    verdicts: dict[str, _JsonObject],
 ) -> int:
     """全 verdict を materialize し、正常 publication と独立して保存する。"""
     # {{work-root}}/oracle/doc/app_spec/feedback_state.md
@@ -2319,7 +2321,7 @@ def _publish_incomplete_report(
         .as_posix(),
         "sha256": sha256_bytes(report_content),
     }
-    expected_diagnostic: JsonObject = {
+    expected_diagnostic: _JsonObject = {
         "report": report_reference,
         "generated_at": generated_at,
         "result": "incomplete",
@@ -2369,10 +2371,10 @@ def _publish_incomplete_report(
 
 
 def _next_machine_aggregates(
-    candidates: dict[str, JsonObject],
-    verdicts: dict[str, JsonObject],
-    aggregates: dict[str, JsonObject],
-) -> dict[str, JsonObject]:
+    candidates: dict[str, _JsonObject],
+    verdicts: dict[str, _JsonObject],
+    aggregates: dict[str, _JsonObject],
+) -> dict[str, _JsonObject]:
     """active から外れる machine issue の threshold 未満 state を引き継ぐ。"""
     result = dict(aggregates)
     for candidate_id_value, candidate in candidates.items():
@@ -2393,7 +2395,7 @@ def _next_machine_aggregates(
     return result
 
 
-def _resume_publication(repo: Path, manifest: JsonObject, manifest_path: Path) -> int:
+def _resume_publication(repo: Path, manifest: _JsonObject, manifest_path: Path) -> int:
     """成果物保存後・pointer 切替前に止まった publication を hash から再開する。"""
     publication = manifest.get("publication")
     if not isinstance(publication, dict):
@@ -2442,12 +2444,12 @@ def _resume_publication(repo: Path, manifest: JsonObject, manifest_path: Path) -
 
 
 def _active_issue_record(
-    manifest: JsonObject,
-    candidate: JsonObject,
-    verdict: JsonObject,
-    references_by_id: dict[str, JsonObject],
+    manifest: _JsonObject,
+    candidate: _JsonObject,
+    verdict: _JsonObject,
+    references_by_id: dict[str, _JsonObject],
     verified_at: str,
-) -> JsonObject:
+) -> _JsonObject:
     """unresolved candidate と最新 verification を compact active record にする。"""
     if verdict.get("verdict") != "unresolved":
         raise ValueError("only unresolved candidates can become active issues")
@@ -2513,14 +2515,14 @@ def _active_issue_record(
 
 
 def _materialize_current_evidence(
-    evidence: JsonObject, references_by_id: dict[str, JsonObject]
-) -> JsonObject:
+    evidence: _JsonObject, references_by_id: dict[str, _JsonObject]
+) -> _JsonObject:
     """cut-scoped ID を削除予定 artifact に依存しない compact evidence へ解決する。"""
     reference_id = evidence.get("reference_id")
     if not isinstance(reference_id, str) or reference_id not in references_by_id:
         raise ValueError("verification evidence uses an unknown reference ID")
     reference = references_by_id[reference_id]
-    materialized: JsonObject = {
+    materialized: _JsonObject = {
         "kind": reference.get("kind"),
         "location": mask_feedback_text(str(evidence.get("location", ""))),
         "finding": mask_feedback_text(str(evidence.get("finding", ""))),
@@ -2541,7 +2543,7 @@ def _materialize_current_evidence(
     return materialized
 
 
-def _report_cut_references_by_id(manifest: JsonObject) -> dict[str, JsonObject]:
+def _report_cut_references_by_id(manifest: _JsonObject) -> dict[str, _JsonObject]:
     """固定済み reference を ID で引く。"""
     inputs = manifest.get("inputs")
     references = inputs.get("references") if isinstance(inputs, dict) else None
@@ -2558,11 +2560,11 @@ def _report_cut_references_by_id(manifest: JsonObject) -> dict[str, JsonObject]:
 def _render_feedback_report(
     repo: Path,
     worktree: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     generation_id_value: str,
     generated_at: str,
     result: str,
-    issues: dict[str, JsonObject],
+    issues: dict[str, _JsonObject],
 ) -> str:
     """正常 publication 用の current unresolved issue 一覧だけを描画する。"""
     fields = (
@@ -2637,10 +2639,10 @@ def _render_feedback_report(
 def _render_incomplete_report(
     repo: Path,
     worktree: Path,
-    manifest: JsonObject,
+    manifest: _JsonObject,
     generated_at: str,
-    candidates: dict[str, JsonObject],
-    verdicts: dict[str, JsonObject],
+    candidates: dict[str, _JsonObject],
+    verdicts: dict[str, _JsonObject],
 ) -> str:
     """未 publication の確定 verdict と判定不能理由を単独で読める形にする。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
@@ -2733,7 +2735,7 @@ def _render_incomplete_report(
 def _append_diagnostic_current_evidence(
     lines: list[str],
     evidence: object,
-    references_by_id: dict[str, JsonObject],
+    references_by_id: dict[str, _JsonObject],
 ) -> None:
     """cut reference を診断 report 内の自己完結した current evidence にする。"""
     values = evidence if isinstance(evidence, list) else []
@@ -2759,7 +2761,7 @@ def _append_diagnostic_current_evidence(
         )
 
 
-def _verification_candidate_count(manifest: JsonObject) -> int:
+def _verification_candidate_count(manifest: _JsonObject) -> int:
     """正式 verification checkpoint 数を front matter の candidate 件数にする。"""
     processing = manifest.get("processing")
     checkpoints = (
@@ -2810,7 +2812,7 @@ def _masked_json_value(value: Any) -> Any:
     return value
 
 
-def _masked_json_object(value: object) -> JsonObject:
+def _masked_json_object(value: object) -> _JsonObject:
     """JSON object を deep copy しながら文字列を mask する。"""
     if not isinstance(value, dict):
         raise ValueError("expected JSON object")
@@ -2819,7 +2821,7 @@ def _masked_json_object(value: object) -> JsonObject:
     return masked
 
 
-def _masked_object_list(value: object, limit: int) -> list[JsonObject]:
+def _masked_object_list(value: object, limit: int) -> list[_JsonObject]:
     """bounded object array を deep copy しながら文字列を mask する。"""
     if not isinstance(value, list):
         raise ValueError("expected JSON object array")
@@ -2827,7 +2829,7 @@ def _masked_object_list(value: object, limit: int) -> list[JsonObject]:
     return result[:limit]
 
 
-def _observation_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
+def _observation_cleanup_references(manifest: _JsonObject) -> list[_JsonObject]:
     """cut に含まれる全 raw file を publication 後 cleanup target にする。"""
     inputs = manifest.get("inputs")
     entries = inputs.get("observations") if isinstance(inputs, dict) else None
@@ -2840,12 +2842,12 @@ def _observation_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
     ]
 
 
-def _checkpoint_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
+def _checkpoint_cleanup_references(manifest: _JsonObject) -> list[_JsonObject]:
     """正式 checkpoint file を manifest 自体より先に削除する一覧へまとめる。"""
     processing = manifest.get("processing")
     if not isinstance(processing, dict):
         raise ValueError("report cut processing must be an object")
-    references: list[JsonObject] = []
+    references: list[_JsonObject] = []
     for name in ("normalization_checkpoints", "verification_checkpoints"):
         values = processing.get(name)
         if not isinstance(values, list):
@@ -2858,7 +2860,7 @@ def _checkpoint_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
     return sorted(references, key=lambda item: str(item["path"]))
 
 
-def _artifact_object(value: object, description: str) -> JsonObject:
+def _artifact_object(value: object, description: str) -> _JsonObject:
     """publication section の path/hash object を型付きで返す。"""
     if not isinstance(value, dict) or set(value) != {"path", "sha256"}:
         raise ValueError(f"{description} reference is malformed")
@@ -2878,9 +2880,9 @@ def _full_log_path(repo: Path, value: object) -> str | None:
 
 def _record_publication_event(
     repo: Path,
-    manifest: JsonObject,
-    generation_reference: JsonObject,
-    report_reference: JsonObject,
+    manifest: _JsonObject,
+    generation_reference: _JsonObject,
+    report_reference: _JsonObject,
     result: str,
     unresolved_count: int | None,
 ) -> None:
@@ -2902,8 +2904,8 @@ def _record_publication_event(
 
 def _record_incomplete_event(
     repo: Path,
-    manifest: JsonObject,
-    report_reference: JsonObject,
+    manifest: _JsonObject,
+    report_reference: _JsonObject,
     unresolved_count: int,
     inconclusive_count: int,
 ) -> None:
@@ -2948,7 +2950,7 @@ def _finish_published_cleanup(repo: Path, manifest_path: Path) -> None:
 
 
 def _set_processing_state(
-    repo: Path, manifest: JsonObject, status: str, failure: str | None
+    repo: Path, manifest: _JsonObject, status: str, failure: str | None
 ) -> None:
     """固定入力を変えず processing status/failure だけを atomic update する。"""
     processing = manifest.get("processing")
@@ -2959,7 +2961,7 @@ def _set_processing_state(
     write_report_cut_manifest(repo, manifest)
 
 
-def _cut_is_current(repo: Path, manifest: JsonObject) -> bool:
+def _cut_is_current(repo: Path, manifest: _JsonObject) -> bool:
     """report cut が既に current pointer の publication point を越えたか返す。"""
     try:
         state = load_active_state(repo)
@@ -2971,7 +2973,7 @@ def _cut_is_current(repo: Path, manifest: JsonObject) -> bool:
 
 
 def _record_feedback_interruption(
-    manifest: JsonObject | None, manifest_path: Path | None
+    manifest: _JsonObject | None, manifest_path: Path | None
 ) -> None:
     """中断を正常系として subcommand state、console、log へ記録する。"""
     mark_current_subcommand_interrupted()

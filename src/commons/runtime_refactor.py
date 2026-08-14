@@ -10,14 +10,14 @@ from .runtime_errors import CmocError
 from .runtime_git import enumerate_oracle_and_realization_files
 from .runtime_paths import refactor_state_path
 
-InvestigationResult = Literal["not_investigated", "no_findings", "findings"]
+_InvestigationResult = Literal["not_investigated", "no_findings", "findings"]
 
 
 class RefactorEntry(TypedDict):
     """単一の oracle または realization file の調査履歴。"""
 
     investigation_required: bool
-    last_investigation_result: InvestigationResult
+    last_investigation_result: _InvestigationResult
     last_investigated_sha256: str | None
     last_investigated_at: str | None
 
@@ -221,7 +221,7 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
         }
     ):
         raise _invalid_refactor_state(path, f"entry value が不正です: {key}")
-    validated_result = cast(InvestigationResult, result)
+    validated_result = cast(_InvestigationResult, result)
     if digest is not None and (
         not isinstance(digest, str)
         or len(digest) != 64

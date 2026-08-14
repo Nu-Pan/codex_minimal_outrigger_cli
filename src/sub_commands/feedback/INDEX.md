@@ -15,17 +15,20 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` サブコマンドの publication／diagnostic pipeline を実装するモジュール。固定した report cut に対して raw observation の検証、candidate の deterministic 集約・normalization、全 candidate の verification、正常な active generation／Markdown report の publication、または incomplete 診断 report の保存までを一つの transaction として扱う。中断・失敗時の checkpoint 再開、current pointer の整合性確認、artifact の hash 検証、publication 後 cleanup、ログ記録も担う。feedback report の処理順序や checkpoint／publication の実装を確認する入口であり、feedback state のデータ契約そのものを確認する場合は対応する state 仕様、agent 入出力契約を確認する場合は normalize／verify builder と schema を読む。
+- `cmoc feedback report` サブコマンドの report cut を起点に、raw observation の固定・検証、active issue の正規化、machine observation の集約、全 candidate の verification、正常 publication または incomplete 診断を一つの transaction として実行する処理本体。
+- writer lock、checkpoint、current pointer、generation artifact、cleanup、interruption／failure state を含む publication pipeline の実装を確認するときの主要な入口である。
+- agent に渡す固定 reference、Structured Output checkpoint の再利用条件、verification 結果から active generation と Markdown report を生成する処理を追跡するときに読む。
 
 ## Read this when
-- `cmoc feedback report` の実行フロー、report cut、normalization、verification、publication、incomplete 診断の挙動を変更・調査するとき
-- feedback report の中断再開、checkpoint の再利用、current pointer の切替、artifact cleanup、hash 整合性を確認するとき
-- raw observation や active issue がどのように candidate・generation・Markdown report へ変換されるかを確認するとき
+- `cmoc feedback report` の処理順序、再開可能な report cut、publication、incomplete 診断、cleanup の責務を確認するとき
+- feedback report の issue candidate 正規化、machine recurrence 集約、verification、active generation 更新の実装を変更または調査するとき
+- report cut manifest、normalization／verification checkpoint、current pointer、generation artifact の整合性や中断時の状態遷移を確認するとき
 
 ## Do not read this when
-- feedback state の正本データ構造や永続化契約だけを確認する場合は、先に対応する feedback state 仕様を読む
-- normalization／verification agent の prompt、Structured Output schema、builder の契約だけを確認する場合は、それぞれの builder・schema を直接読む
-- report の表示形式だけを確認する場合は、render 関数または対応する仕様を直接読む
+- feedback state の永続形式や report cut／generation の共通 helper 契約だけを確認したいときは `commons.runtime_feedback_state` を直接読む
+- raw observation の保存・canonical JSON・secret masking・path 制約だけを確認したいときは `commons.runtime_feedback_store` を直接読む
+- normalization／verification agent の prompt builder や Structured Output schema の内容だけを確認したいときは対応する builder／schema を直接読む
+- feedback report の正本仕様や interruption 契約を確認したいときは、本文冒頭に示された `oracle/doc/app_spec` の仕様書を直接読む
 
 ## hash
-- 84be1c92fe983a23839f545240e0a21ce5ac19b443c79c59b8231780d088c260
+- cb802ce6f12944d4163205c9514be212b418b0b054e1d6e3d25ba0de278c689b

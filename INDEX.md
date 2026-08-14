@@ -129,27 +129,23 @@
 # `src`
 
 ## Summary
-- `src` は cmoc CLI の実装・公開入口をまとめる realization 側のソースルート。Typer/Click によるトップレベル CLI、サブコマンド実装、共通 runtime、互換 import shim、ACP builder adapter への入口を扱う。
-- `main.py` が doctor、tui、indexing、session、oracle、realization、run、feedback などの CLI 階層を登録し、各サブコマンドへ処理を委譲する。
-- `commons` は CLI lifecycle、Codex 実行、設定、Git、state、feedback、editing run、INDEX 更新などの共通 runtime 実装を提供する。
-- `sub_commands` は doctor、tui、indexing、session、oracle、realization、run、feedback などの個別 CLI 処理への入口を提供する。
-- `acp`、`basic`、`config`、`cmoc_runtime.py`、`oracle.py` は既存の公開 import path や正本側実装をつなぐ互換入口であり、具体的な正本仕様や内部ロジックは保持しない。
-- 配下には ACP builder の feedback、indexing、quota probe、session join、TUI、oracle、realization、review、apply などの adapter 群があり、CLI と正本実装の接続構成を確認するための下位入口となる。
+- cmoc の realization 側 CLI 実装ツリーの入口。Typer/Click による最上位 CLI、サブコマンド登録、引数解析エラー変換、Codex TUI・indexing・doctor・session・run・oracle・realization・feedback の実行入口を確認できる。
+- `oracle`、`acp`、`basic`、`config`、`cmoc_runtime` は正本実装や共通 runtime への互換 import 入口を提供する。個別サブコマンドと runtime helper は配下の対象へ分担されている。
 
 ## Read this when
-- cmoc CLI 全体の入口、コマンド階層、引数解析、補完、またはサブコマンドへの委譲を調査・変更するとき
-- CLI の共通 runtime、Codex 呼び出し、設定、Git、state、feedback、editing run、INDEX 更新の実装入口を切り分けるとき
-- 既存の acp.*、basic.*、config.*、cmoc_runtime、oracle.* import path の互換性や正本実装への移行経路を確認するとき
-- CLI と ACP builder adapter の接続構成や、対象サブコマンドの下位実装への進み方を確認するとき
+- cmoc CLI 全体の最上位入口、サブコマンド階層、公開コマンドの登録を確認・変更するとき
+- Typer/Click の引数解析、補完処理、CLI エラー変換、または CLI から各サブコマンドへ委譲する境界を調査するとき
+- realization 側で `oracle.*`、`acp.*`、`basic.*`、`config.*`、`cmoc_runtime` がどの互換入口から解決されるかを確認するとき
+- 複数のサブコマンドや互換入口を横断して、次に読むべき `sub_commands`、`commons`、`acp`、`basic`、`config` 配下の実装を特定するとき
 
 ## Do not read this when
-- oracle 側の正本仕様、正本実装の詳細、または個別 API の入出力を確認・変更するときは、対応する oracle 配下や実体 module を直接読む
-- 特定サブコマンドの具体的な処理ロジックだけを調査するときは、sub_commands 配下の対応実装へ直接進む
-- commons 配下の個別 runtime の内部アルゴリズムだけを確認するときは、該当する runtime module を直接読む
-- acp や互換入口と無関係な仕様、workload 本体、テストを調査するとき
+- 特定サブコマンドの処理フローや業務ロジックだけを確認したいときは、対応する `sub_commands` 配下を直接読む
+- 共通 runtime helper の具体的な実装や責務を確認したいときは、対応する `commons` 配下を直接読む
+- `oracle.*` の正本仕様・実装、または ACP の builder 内部挙動を確認したいときは、正本側や該当する `acp` 配下を直接読む
+- CLI や互換 import 入口と無関係な正本仕様、テスト、workload の内容を調査するとき
 
 ## hash
-- 888e0c795a7bca95477af3262576e3ee3c92d21e9ccdde8ce4da785dd0ebe645
+- 900d929de7847ff5bbf382802dcc7ddac3698bc47c8cd8034beb1dcf53b3283d
 
 # `test`
 

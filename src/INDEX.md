@@ -52,48 +52,21 @@
 # `commons`
 
 ## Summary
-- `commons` は cmoc の共通 runtime 実装を集約するパッケージで、CLI lifecycle、Codex 実行、設定、Git、状態、ログ、feedback、editing run、INDEX 更新などの下位機能へ進むための入口を提供する。
-- `cmoc_runtime.py` は複数の runtime module が公開する API・定数・型を再公開する集約入口。個別実装の詳細ではなく、共通公開面や横断依存を確認するときに読む。
-- `indexing.py` は INDEX.md の探索、entry の再利用・生成、hash 検証、書き込み、lock、Codex 呼び出し、Git commit までの indexing lifecycle を扱う。
-- `prompt_editor_input.py` はエディタ入力の予約・読込、prompt skeleton の placeholder 検証、コメント除去、完全 prompt の確定、`.cmoc` ignore 保証を扱う。
-- `runtime_cli.py` は CLI サブコマンド共通の work-root 検査、doctor・feedback・logger lifecycle、step 通知、割り込み・失敗・完了時の終了処理を扱う。
-- `runtime_codex.py` は Codex exec と TUI の公開実行 API を再公開する薄い入口。具体的な exec/TUI 挙動を調べる場合は下位 module を読む。
-- `runtime_codex_exec.py` は Codex exec の subprocess 実行、ログ、capacity/quota retry、session resume、Structured Output 検証・補正、成果物保護を一体で扱う。
-- `runtime_codex_logging.py` は Codex 呼び出しの console 通知と起動失敗エラーの共通整形を扱う。
-- `runtime_codex_preflight.py` は Codex exec/TUI 起動前の INDEX 更新 preflight の登録・解除、再入防止、直列化、work-root 導出を扱う。
-- `runtime_codex_profile.py` は Codex CLI subprocess 境界として argv・環境・sandbox・CODEX_HOME・schema、process tracking、停止、JSONL 結果と retry 対象の判定を扱う。
-- `runtime_codex_tui.py` は Codex TUI の起動、設定上書き、作業ディレクトリ・ログ・通知 callback の準備、call log と終了結果の連携を扱う。
-- `runtime_config.py` は cmoc 設定の JSON 永続化、型・値・循環参照の検証、既定値補完、安全な読み書きを扱う。
-- `runtime_content.py` はファイル・文字列の SHA-256、hash 付きファイル保存、NUL バイト等による粗い binary 判定を提供する共通処理。
-- `runtime_doctor.py` は doctor preprocess の排他、修復対象の同期、一時 Git index の退避・復元、修復差分のみの commit lifecycle を扱う。
-- `runtime_errors.py` は CmocError と通常例外を利用者向け Markdown エラーレポートへ変換し、Summary、Next actions、Detail、Call stack を組み立てる。
-- `runtime_feedback.py` は invocation 単位の feedback collector lifecycle、capability、IPC 受付・検証・保存、call 終了時 drain、degraded event を扱う。
-- `runtime_feedback_reporter.py` は Codex call-scoped stdio MCP reporter として collector との通信、capability payload、JSON-RPC、`submit_observation` を扱う。
-- `runtime_feedback_state.py` は feedback の active generation、current pointer、report cut、checkpoint、publication、incomplete 診断、cleanup と相互参照の integrity を扱う。
-- `runtime_feedback_store.py` は raw observation の schema 検査、secret masking、evidence path 正規化、fingerprint・hash、重複排除、atomic durable 保存を扱う。
-- `runtime_git.py` は Git command、branch/worktree、snapshot・復元、ignore、oracle/realization file 分類を担う共通 Git 境界。
-- `runtime_logging.py` はサブコマンド単位の JSON Lines event、step timing、Codex quota 待機時間、current logger、並行追記の直列化を扱う。
-- `runtime_paths.py` は repository/worktree/cmoc root の解決と、設定・状態・ログ・report・schema・worktree 等の runtime path 導出を扱う。
-- `runtime_refactor.py` は refactor state の読み書き・schema 検証、oracle/realization file 集合との同期、調査対象の列挙と選択を扱う。
-- `runtime_results.py` は Codex exec、Structured Output 検証、外部コマンド結果、呼び出しログを表す不変データ型と callable protocol を定義する。
-- `runtime_run.py` は editing run の worktree 解決、state lock、process tracking、親 run と Codex child process group の安全な停止・cleanup を扱う。
-- `runtime_run_lifecycle.py` は editing run の開始・状態遷移、branch/worktree、commit、差分分類、INDEX 更新、cleanup・recovery を一体で扱う。
-- `runtime_run_report.py` は editing run の fork/lifecycle report を Markdown + YAML Front Matter 形式で保存し、path・YAML・Markdown のエスケープを扱う。
-- `runtime_state.py` は session/run state の dataclass schema、状態遷移、永続化・復元・検証、branch 対応、lock、active session 検索を扱う。
-- `runtime_windows_toast.py` は Windows toast と Codex TUI callback の非致命的 transport 境界で、通知内容、有限時間送信、turn 重複排除、callback state cleanup を扱う。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行ライフサイクル、Codex exec/TUI、設定・状態、Git・worktree、パス、ログ、ハッシュ、feedback、run lifecycle など、複数機能から利用される公開 API と実装の入口を提供する。
+- 個別 runtime モジュールは各機能の実装責務を分担し、パッケージ初期化・共通 API 再公開・Codex 実行、設定、状態、Git、indexing、feedback、run 管理などの調査や変更を下位対象へルーティングする。
 
 ## Read this when
-- commons 配下の共通 runtime API や責務分担を確認するとき
-- CLI、Codex、設定、Git、state、feedback、editing run、INDEX 更新の実装入口を探すとき
-- 対象機能がどの runtime module に実装されているかを切り分けるとき
+- cmoc の複数機能にまたがる共通 runtime API、公開シンボル、実行境界を調査・変更するとき
+- CLI、Codex、設定、状態、Git、ログ、パス、feedback、editing run、INDEX 更新の実装入口を特定するとき
+- 特定機能の実装責務がどの runtime helper に分離されているかを確認するとき
 
 ## Do not read this when
-- 特定 module の内部アルゴリズムや正本仕様を直接確認したいとき
-- commons 配下の個別機能と無関係なアプリケーション固有処理だけを調査するとき
-- 単に INDEX.md の既存 entry や hash を確認したいとき
+- 単一のサブコマンドや個別 helper の具体的なアルゴリズム・利用者向け仕様だけを確認したいとき
+- 正本仕様、Structured Output schema、設定データ型、path model など、参照先として示された専用仕様や定義を直接確認すべきとき
+- commons 配下の特定モジュールが明らかな場合
 
 ## hash
-- 1bb88b2fa943b07b656267491b13a06439ee80afef421f57bd5d9f44f463fe43
+- f95ec1a0c88f311167c13b8dae562d9fd3de516a9fb2d26f51c319fab6e1af66
 
 # `config`
 
@@ -146,15 +119,16 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめるディレクトリ。各サブコマンドの実行入口や実装構成を確認する際の起点であり、対象のサブコマンドに対応する下位要素へ進むために読む。現在は apply と review の実装本文がなく、doctor、feedback、indexing、oracle、realization、run、session、tui などの実装入口が配置されている。
+- 各 CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの個別サブコマンド実装へ進むための入口で、サブコマンドの実行フローや責務分担を横断して確認するときに読む。apply と review は現在具体的な実装本文がなく、実装追加後の入口となる。
 
 ## Read this when
-- cmoc の特定サブコマンドの実装入口や実行フローを調査・変更するとき。
-- サブコマンドごとの処理領域を特定し、対応する下位実装へ進む起点を確認するとき。
+- CLI サブコマンドの実装構成や、特定サブコマンドの実行入口を調査・変更するとき。
+- 複数サブコマンドにまたがる実行フローや、配下の実装へ進む入口を確認するとき。
 
 ## Do not read this when
-- サブコマンドに共通する CLI ランタイム、Git・パス処理、state 管理などの詳細だけを確認するとき。
-- サブコマンドの正本仕様や、特定サブコマンド配下の具体的な処理を直接確認すべきとき。
+- サブコマンド共通ランタイムや正本仕様だけを確認したいときは、対応する共通実装または仕様書を直接読む。
+- 特定サブコマンドの詳細処理だけを確認したいときは、このディレクトリ全体ではなく該当する下位実装を直接読む。
+- サブコマンド実装を扱わない作業のとき。
 
 ## hash
-- 1c6d040a622b3d194446880ca56536a02e99a0bc3e4fed09898b13b7fe54fbba
+- 2dfe630006368a2bdf487fad120bffacdee7697ec0f349d2c30965ef858faa22
