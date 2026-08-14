@@ -392,8 +392,8 @@
   "oracle/src/oracle/acp_builder/oracle/review/validate_finding_challenger.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "a59cafd47341ea0ef6ccce47a7fa543b7a275e8a0e846a228e787a7e61aa2d5b",
-    "last_investigated_at": "2026-08-12_09-52_33_834215000"
+    "last_investigated_sha256": "a08720a68bd538897852fc821346b6cc2adcb0da07621f25f2667855cf9fb0a9",
+    "last_investigated_at": "2026-08-14_10-22_45_927865000"
   },
   "oracle/src/oracle/acp_builder/quota_probe.py": {
     "investigation_required": false,
