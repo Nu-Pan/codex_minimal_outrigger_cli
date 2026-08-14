@@ -1098,10 +1098,10 @@
     "last_investigated_at": "2026-07-25_11-11_03_467924000"
   },
   "src/sub_commands/realization/refactor/fork.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "0a3548b70ba94f748a122e1015af465927ffbe6c6afffb7c856356cef8ab62eb",
-    "last_investigated_at": "2026-08-12_15-55_56_413901000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "6ba39b1993f25a5d0414bf6899f21d7d3a70cae0410d5388058bca5beae3a83c",
+    "last_investigated_at": "2026-08-14_15-51_10_957549000"
   },
   "src/sub_commands/run/__init__.py": {
     "investigation_required": false,
