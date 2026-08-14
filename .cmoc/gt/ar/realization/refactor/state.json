@@ -684,10 +684,10 @@
     "last_investigated_at": "2026-08-13_10-12_49_601162000"
   },
   "src/acp/builder/quota_probe.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "621d28401b116690ded1c277f87c7f6e123798cd6d17286d1187c4d9d587e5be",
-    "last_investigated_at": "2026-08-12_10-28_39_333734000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "ef2ca178df616e11ad6d6428a93aec32c490ee1f992d5f23e4033f63ba34410f",
+    "last_investigated_at": "2026-08-14_10-43_47_057336000"
   },
   "src/acp/builder/realization/__init__.py": {
     "investigation_required": false,
