@@ -96,7 +96,7 @@
     "last_investigated_at": "2026-08-12_22-33_15_965311000"
   },
   "oracle/doc/app_spec/prompt_editor_input.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2c21fa7b9fffb3d90522994106ad255df4d918ec8bb68ec6fdbe7448427c1264",
     "last_investigated_at": "2026-08-12_08-20_10_913930000"
@@ -144,13 +144,13 @@
     "last_investigated_at": "2026-07-23_19-16_42_166350000"
   },
   "oracle/doc/app_spec/sub_command/oracle_edit.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "64ed9944a0db51b73cf6716d01dd3e193b2c90164720a96215c4c019855e98e2",
     "last_investigated_at": "2026-08-12_08-32_03_945725000"
   },
   "oracle/doc/app_spec/sub_command/oracle_investigation.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f4c19cf7e8fd5019ff0f12a59f12ad199d8a530c21c62b66bc7b933c17c7b257",
     "last_investigated_at": "2026-08-12_08-38_41_052697000"
@@ -480,13 +480,13 @@
     "last_investigated_at": "2026-07-24_12-30_03_425586000"
   },
   "oracle/src/oracle/prompt_builder/complete_prompt.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "d77d0f07473d299ddc1948b151ba1c0b79d502d4b6b18ecb748d7d0548bbcd25",
     "last_investigated_at": "2026-08-14_11-52_47_415149000"
   },
   "oracle/src/oracle/prompt_builder/editor_input.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "ab47b18db214c4c267917f67e838f69065647618f31a1ad2a28d24cbba352aa9",
     "last_investigated_at": "2026-08-12_07-46_23_031684000"
@@ -509,6 +509,12 @@
     "last_investigated_sha256": "f44a82a0edc28e5e359598a4145df3a6c58e68e68bf4e06435d05fdf83089da5",
     "last_investigated_at": "2026-08-14_20-07_40_431978000"
   },
+  "oracle/src/oracle/prompt_builder/parts/editor_handoff_standard.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py": {
     "investigation_required": false,
     "last_investigation_result": "no_findings",
@@ -516,7 +522,7 @@
     "last_investigated_at": "2026-08-14_09-18_24_801095000"
   },
   "oracle/src/oracle/prompt_builder/parts/file_access_rule.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "74be481ba7fd0c5e8a88245c84d926f1893af482cffed83164591005ff59be85",
     "last_investigated_at": "2026-08-11_12-48_17_880843000"
