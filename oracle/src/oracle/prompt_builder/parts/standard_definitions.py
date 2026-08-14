@@ -200,6 +200,18 @@ CONFLICT_RESOLUTION_PRESERVE_BOTH_BRANCHES_STANDARD = Standard(
     ),
 )
 
+EDITOR_HANDOFF_PRESERVE_RESULT_STANDARD = Standard(
+    standard_id="editor_handoff.10.preserve_result",
+    title="editor handoff でも agent call の責務を維持する",
+    required=(
+        "agent call に選択された file access mode と Codex CLI sandbox を維持する",
+        "handoff file への書き込みとは別に、その agent call が要求する正式な結果または成果物を満たす",
+    ),
+    permitted=(
+        "handoff file への書き込みに必要な command だけについて、対象 path と理由を限定した sandbox escalation を要求してよい",
+    ),
+)
+
 INDEX_ENTRY_ROUTING_STANDARD = Standard(
     standard_id="index_entry.10.routing",
     title="INDEX.md エントリーは読むべき対象へのルーティング情報である",

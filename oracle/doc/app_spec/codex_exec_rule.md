@@ -96,9 +96,10 @@ call-scoped path context の適用範囲を次に示す。
 
 ### 詳細なファイルアクセス制限
 
+- 詳細なファイルアクセス制限は deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する
 - 全 file access mode では、次の制限を共通で適用する
-    - `{{work-root}}` ツリー外の読み書きを禁止する。`{{work-root}}` と `{{repo-root}}` が異なる場合は、`{{repo-root}}/.cmoc/g*/ar` ツリー内の読み取りだけを例外とする
-    - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc/g*/ar` ツリー内の書き込みを禁止する
+    - `{{work-root}}` と `{{repo-root}}` が同一の場合は、`{{work-root}}` ツリー外の読み書きを禁止する。両者が異なる場合は、`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外の読み書きを禁止する
+    - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc/g*/ar` ツリー内の書き込みを禁止する。`{{work-root}}` と `{{repo-root}}` が異なる場合は、`{{repo-root}}/.cmoc/g*/ar` ツリー内の書き込みも禁止する
     - `AGENTS.md` と `INDEX.md` の書き込みを禁止する
     - `{{work-root}}/memo` の読み書きを禁止する
 - 各 mode は、共通制限に次の制限を追加する

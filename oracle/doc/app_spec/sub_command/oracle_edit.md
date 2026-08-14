@@ -18,7 +18,7 @@
 - 初期値へ渡す skeleton と、編集後に確定する完全プロンプトは、`build_oracle_edit_launch_tui_parameter` が構築した同じ完全プロンプトを使用する。
 - 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする。
 
-- cmoc は original prompt file の編集主体をこのサブコマンドに限定せず、排他的 writer を管理しない。他の TUI やエディタによる更新と、その並行操作から生じる競合や不整合は人間が管理する。
+- 本サブコマンドは、`prompt_editor_input.md` が定義する可変な editor work file を使用する。cmoc は editor work file の排他的 writer を管理しない。他の TUI やエディタによる更新と、その並行操作から生じる競合や不整合は人間が管理する。
 
 ## TUI 起動直前の事前条件
 
@@ -78,7 +78,7 @@
 
 - このサブコマンドは中断可能サブコマンドに含めない。
 - cmoc 独自の Ctrl+C 処理、checkpoint、部分結果確定、retry、quota 待機、Codex session resume は行わず、TUI 起動中の入力と signal 処理は Codex CLI に委ねる。
-- lock file、process 重複検出、他の cmoc TUI が起動中であることを理由とする拒否、active または running 状態の永続化、original prompt file の排他的 writer 管理を導入しない。
+- lock file、process 重複検出、他の cmoc TUI が起動中であることを理由とする拒否、active または running 状態の永続化、editor work file の排他的 writer 管理を導入しない。
 - 並行操作による競合や不整合は人間が管理する。
 
 ## ログ

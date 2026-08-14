@@ -15,6 +15,7 @@ from .basic import PlaceholderMap
 # local
 from .parts.apply_review_standard import build_apply_review_standard
 from .parts.conflict_resolution_standard import build_conflict_resolution_standard
+from .parts.editor_handoff_standard import build_editor_handoff_standard
 from .parts.feedback_reporting_standard import build_feedback_reporting_standard
 from .parts.file_access_rule import build_file_access_rule
 from .parts.index_entry_standard import build_index_entry_standard
@@ -62,6 +63,7 @@ def build_complete_prompt(
     oracle_review_standard: bool = False,
     apply_review_standard: bool = False,
     conflict_resolution_standard: bool = False,
+    editor_handoff_standard: bool = False,
     realization_oracle_reference_rule: bool = False,
     index_entry_standard: bool = False,
     routing_rule: bool = False,
@@ -73,6 +75,8 @@ def build_complete_prompt(
         goal: agent call の終了時に満たされるべき状態。
         oracle_investigation_standard: oracle file の読み取り専用調査に必要な
             Standard だけを含めるか。
+        editor_handoff_standard: editor work file への handoff に必要な
+            Standard を含めるか。
         routing_rule: repository 内の参照先を選ぶ routing 文面を含めるか。
 
     Returns:
@@ -115,6 +119,7 @@ def build_complete_prompt(
         or oracle_review_standard
         or apply_review_standard
         or conflict_resolution_standard
+        or editor_handoff_standard
         or realization_oracle_reference_rule
     ):
         oracle_and_realization_basic = True
@@ -141,6 +146,8 @@ def build_complete_prompt(
         standard_collections.append(build_oracle_review_standard())
     if conflict_resolution_standard:
         standard_collections.append(build_conflict_resolution_standard())
+    if editor_handoff_standard:
+        standard_collections.append(build_editor_handoff_standard())
     if index_entry_standard:
         standard_collections.append(build_index_entry_standard())
     combined_standards = combine_standard_collections(*standard_collections)

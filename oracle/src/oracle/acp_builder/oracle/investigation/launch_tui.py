@@ -36,7 +36,7 @@ def build_oracle_investigation_launch_tui_parameter(
         summary="""
         - あなたは oracle file の調査担当です
         - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する事項を調査対象とする
-        - `{{work-root}}/oracle` ツリー内の関連する oracle file を根拠とする読み取り専用調査だけを作業範囲とする
+        - `{{work-root}}/oracle` ツリー内の関連する oracle file を根拠とする読み取り専用調査を通常の作業範囲とする
         """,
         goal="""
         - ユーザー指示が要求する調査結果がユーザーへ回答されていること
@@ -56,6 +56,7 @@ def build_oracle_investigation_launch_tui_parameter(
         ],
         oracle_and_realization_basic=True,
         oracle_investigation_standard=True,
+        editor_handoff_standard=True,
         routing_rule=True,
     )
 

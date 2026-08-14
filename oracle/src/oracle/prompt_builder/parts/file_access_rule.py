@@ -18,7 +18,8 @@ def build_file_access_rule(
     #   ログ関係だけは例外的に `{{run-root}}` で作業していようと cmoc が `{{repo-root}}/.cmoc/gu/ar/log` に書きに行く。
     #   その関係で、agent が `{{run-root}}` での作業中に `{{repo-root}}/.cmoc/gu/ar/log` を読みに行きたくなる事がある。
     #   更に log から `{{repo-root}}/.cmoc` ツリー内を読みに行きたくなるはずである (report とか)。
-    #   よって、`{{repo-root}}/.cmoc/g*/ar` だけは例外的にアクセスを許可する。
+    #   work-root が異なる場合は、repo-root の `ar` を読み取り禁止の集合から外し、
+    #   書き込みだけを別規則で禁止する。
     repo_root = path_context.repo_root
     work_root = path_context.work_root
     if repo_root == work_root:
@@ -27,7 +28,8 @@ def build_file_access_rule(
         ]
     else:
         out_repo_deny_rule = [
-            "`{{work-root}}` ツリー外は読み書き禁止だが、例外的に `{{repo-root}}/.cmoc/g*/ar` ツリー内は読み込み可能",
+            "`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外は読み書き禁止",
+            "`{{repo-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止",
         ]
     # 基礎 deny ルール
     # NOTE
@@ -56,7 +58,8 @@ def build_file_access_rule(
     # NOTE
     #   許可系ルールを書こうとすると対象範囲・優先順位の明示に文字数が必要になって大変。
     #   そもそも「書いてない＝リポジトリ全体規則が適用される」なので、暗に分かるはず。
-    #   ということで、ルール文には「例外的に〇〇は許可」は書かず、補足コメントだけを書く。
+    #   ということで、禁止されていない操作は許可される deny-list とし、
+    #   ルール文には禁止規則だけを書く。
     # NOTE
     #   Codex CLI sandbox への対応は `oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
     #   この関数が生成する詳細な規則はプロンプトとしてのみ使用し、permission profile や

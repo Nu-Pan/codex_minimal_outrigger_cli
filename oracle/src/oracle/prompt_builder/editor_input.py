@@ -24,6 +24,8 @@ def build_prompt_editor_input_initial_text(
             - 後続の AI エージェント呼び出しに渡す指示を HTML コメントブロックの外に記入して下さい
             - このファイルに記入されたプロンプトは <cmoc_ref target="prompt template"/> の `{{original-prompt-here}}` に挿入され、その全文が後続の AI エージェント呼び出しに渡されます
             - HTML コメントブロックは入力の読み出し時に削除され、後続の AI エージェントには渡されません
+            - このファイルは未信頼かつ可変な作業ファイルであり、保存記録ではありません
+            - 後続の AI エージェントは、エディタ終了後に cmoc が確定した完全プロンプトを参照します
             """,
         ),
         StructDoc(
