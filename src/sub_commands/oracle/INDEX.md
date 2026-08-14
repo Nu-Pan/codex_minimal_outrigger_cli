@@ -62,22 +62,19 @@
 # `review.py`
 
 ## Summary
-- oracle review の CLI 実行と isolated run の lifecycle を統括する実装。active session branch 上で review 対象を準備し、隔離 worktree・run branch を作成して review loop を実行する。所見や INDEX 差分の確定・merge、割り込み時の部分結果保存、失敗時の report、作成資源の cleanup までを同じ resource ownership と例外処理の責務として扱う。oracle review の実行経路、隔離 run の状態遷移、cleanup、merge、report の連携を確認する際の入口であり、個別の対象列挙・review loop・report 描画の詳細は対応する下位モジュールを読む。
+- oracle review CLI の実行起点と isolated review run のライフサイクルを統括する実装。active session の検証、review target の列挙と review loop の実行、INDEX 差分の commit・session branch への merge、interruption・例外時の report 生成と worktree/branch cleanup を扱う。oracle review の実行経路、隔離 run の resource ownership、cleanup や中断時の挙動を確認・変更するときの入口。
 
 ## Read this when
-- oracle review サブコマンドの CLI runtime や active session branch に対する実行条件を変更・確認するとき
-- review run の worktree・branch 作成、lifecycle lock、merge、cleanup、部分作成時の所有権を追跡するとき
-- KeyboardInterrupt、doctor preprocess 中断、review loop 中断、cleanup failure、失敗 report の挙動を確認するとき
-- review の全体的な step 制御、所見収集から INDEX merge と最終 report までの orchestration を確認するとき
+- oracle review サブコマンドの実行フロー、隔離 worktree/branch の作成・merge・削除を調べるとき
+- oracle review の中断、失敗、部分作成、cleanup failure、および report 生成の挙動を確認するとき
+- review loop や review index の下位実装へ進む前に、CLI と lifecycle の統合責務を確認するとき
 
 ## Do not read this when
-- review 対象ファイルの列挙条件だけを確認したい場合は review_targets の実装を直接読むとき
-- 個々の oracle file の review loop や finding merge 操作だけを確認したい場合は review_loop の実装を直接読むとき
-- INDEX 差分の commit・conflict resolution・branch merge の詳細だけを確認したい場合は review_index の実装を直接読むとき
-- review report の描画・保存形式だけを確認したい場合は review_report の実装を直接読むとき
+- review の個別 target 列挙、所見判定、INDEX merge の詳細だけを調べる場合は、それぞれの専用実装を直接読むとき
+- oracle review 以外の CLI サブコマンドや一般的な run isolation の仕様だけを確認する場合
 
 ## hash
-- 69bba24993c1ec5222a0c996dd7d7f0a1b5dff06b767e8ff905dd388d5721f25
+- 0743b4a0ef392b60e876c44a45569470e4a0a5cfd260c042c7b317b2a4528c9a
 
 # `review_index.py`
 
@@ -134,18 +131,20 @@
 # `review_report.py`
 
 ## Summary
-- oracle review の実行結果を Markdown レポートとして生成・保存する実装。frontmatter、レビュー verdict、評価対象 oracle file、finding の分類・表示、YAML 値と Markdown パスの安全な描画を扱う。
+- oracle review サブコマンドのレビュー結果レポートを生成・整形する実装。レポートの保存、判定結果、YAML frontmatter、評価対象一覧、所見グループ、パス表示を扱う。レビュー結果の出力形式や表示順、判定ロジックを確認・変更するときの入口となる。
 
 ## Read this when
-- oracle review レポートの保存先、frontmatter、verdict 判定、finding の表示順や分類を変更するとき
-- レビュー結果の Markdown/YAML 出力形式やパス・文字列のエスケープ処理を確認するとき
+- oracle review の Markdown レポート保存や描画形式を変更するとき
+- レビュー結果の verdict（error、interrupted、no_targets、fatal、minor、ok）判定を確認するとき
+- frontmatter、評価対象テーブル、finding の表示順やエスケープ処理を確認するとき
 
 ## Do not read this when
-- oracle review の対象 oracle file の選定やレビュー実行制御を変更するとき
-- レビュー結果以外のレポート形式、CLI 引数、git ブランチ操作を調べるとき
+- oracle review の対象 oracle の選定・レビュー実行そのものを変更するとき
+- レビュー仕様の正本を確認するときは、参照コメントに示された oracle_review 仕様を直接読む場合
+- 一般的なレポート以外のサブコマンド出力や、所見データの生成処理を変更するとき
 
 ## hash
-- 32d7ee8529ceffacf71e9f434037b3f0122da45b27006de2292036c47036f791
+- f78dfc672cf520dde6f435fca6af84c71d2a1a0e3b025a03b5271a1fc282ab22
 
 # `review_targets.py`
 

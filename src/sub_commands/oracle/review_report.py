@@ -166,6 +166,26 @@ def render_oracle_review_report(
     )
 
 
+def oracle_review_result(
+    oracle_files: list[Path],
+    findings: list[dict],
+    *,
+    error_message: str | None = None,
+    interrupted: bool = False,
+) -> str:
+    """report と terminal result が共有するサブコマンド固有 result を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
+    result, _verdict = _review_report_verdict(
+        error_message,
+        interrupted,
+        oracle_files,
+        _findings_with(accepted, "fatal"),
+        _findings_with(accepted, "minor"),
+    )
+    return result
+
+
 def _findings_with(findings: list[dict], severity: str) -> list[dict]:
     """指定した severity の所見だけを report 用に抽出する。
 

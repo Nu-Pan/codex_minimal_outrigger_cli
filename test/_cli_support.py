@@ -18,3 +18,15 @@ def run_doctor(root: Path) -> Result:
         result = runner.invoke(app, ["doctor"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     return result
+
+
+def terminal_primary_report(result: Result) -> Path:
+    """terminal result の primary report フルパスを取り出す。"""
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    prefix = "- primary report ("
+    for line in result.output.splitlines():
+        if line.startswith(prefix) and "): `" in line and line.endswith("`"):
+            return Path(line.split("): `", 1)[1][:-1])
+    raise AssertionError(
+        f"primary report is missing from terminal result:\n{result.output}"
+    )

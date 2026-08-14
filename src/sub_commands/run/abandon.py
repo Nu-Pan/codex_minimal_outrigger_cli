@@ -3,11 +3,10 @@
 import os
 from pathlib import Path
 
-import typer
-
 from cmoc_runtime import (
     CmocError,
     RunPart,
+    TerminalResult,
     branch_exists,
     delete_branch,
     remove_worktree,
@@ -43,7 +42,7 @@ def cmoc_run_abandon_impl() -> None:
     )
 
 
-def _cmoc_run_abandon_body() -> None:
+def _cmoc_run_abandon_body() -> TerminalResult:
     """active run を停止し、worktree・branch・state を cleanup する。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -83,6 +82,7 @@ def _cmoc_run_abandon_body() -> None:
                 "active run の cleanup を完了できません。",
                 ["git worktree list と run branch を確認して再実行してください。"],
                 f"worktree_removed: {worktree_removed}\nbranch_removed: {branch_removed}",
+                terminal_result=TerminalResult(warnings=tuple(warnings)),
             )
         state.run = RunPart()
         write_state(context.state_path, state)
@@ -99,19 +99,18 @@ def _cmoc_run_abandon_body() -> None:
                 "cleanup": "completed",
             },
         )
-    start_subcommand_step(4, "abandon 結果を表示", "show abandon result")
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc run abandon",
-                f"- run_kind: `{context.kind}`",
-                f"- run_branch: `{context.run_branch}`",
-                f"- run_worktree: `{context.run_worktree}`",
-                f"- process_stop: `{stopped}`",
-                "- cleanup: `completed`",
-                f"- report: `{report}`",
-            ]
-        )
+    start_subcommand_step(4, "terminal result を確定", "finalize terminal result")
+    return TerminalResult(
+        primary_report=report,
+        primary_report_role="run abandon report",
+        details=(
+            ("run_kind", context.kind),
+            ("run_branch", context.run_branch),
+            ("run_worktree", context.run_worktree),
+            ("process_stop", stopped),
+            ("cleanup", "completed"),
+        ),
+        warnings=tuple(warnings),
     )
 
 

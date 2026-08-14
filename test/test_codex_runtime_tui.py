@@ -173,7 +173,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
 def test_run_codex_tui_logs_successful_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """正常終了時に TUI の call log、サブコマンドイベント、コンソール要約を残すことを確認する。"""
+    """正常終了時に call log とサブコマンドイベントだけを残す。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -191,9 +191,9 @@ def test_run_codex_tui_logs_successful_call(
         reset_current_subcommand_logger(token)
 
     assert result.returncode == 0
-    console = capsys.readouterr().out
-    assert "- Purpose: `codex tui`" in console
-    assert "- Exit code: `0`" in console
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
@@ -266,12 +266,11 @@ def test_run_codex_tui_logs_missing_cli_failure(
     finally:
         reset_current_subcommand_logger(token)
 
-    console = capsys.readouterr().err
+    captured = capsys.readouterr()
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
-    assert str(call_logs[0]) in console
-    assert "not started" in console
-    assert "Codex CLI が見つかりません" in console
+    assert captured.out == ""
+    assert captured.err == ""
 
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
@@ -307,8 +306,9 @@ def test_run_codex_tui_logs_keyboard_interrupt(
     finally:
         reset_current_subcommand_logger(token)
 
-    console = capsys.readouterr().err
-    assert "- Exit code: `not started`" in console
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
@@ -345,10 +345,8 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
         reset_current_subcommand_logger(token)
 
     captured = capsys.readouterr()
-    console = captured.err
     assert captured.out == ""
-    assert "- Purpose: `codex tui`" in console
-    assert "- Exit code: `7`" in console
+    assert captured.err == ""
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())

@@ -2,13 +2,12 @@
 
 from pathlib import Path
 
-import typer
-
 from acp.builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter,
 )
 from cmoc_runtime import (
     CmocError,
+    TerminalResult,
     head_commit,
     load_config,
     load_state_for_branch,
@@ -52,7 +51,7 @@ def cmoc_realization_apply_fork_impl() -> None:
     )
 
 
-def _cmoc_realization_apply_fork_body() -> None:
+def _cmoc_realization_apply_fork_body() -> TerminalResult:
     """realization apply agent を実行し、差分を joinable run として公開する。"""
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
@@ -255,10 +254,24 @@ def _cmoc_realization_apply_fork_body() -> None:
                 "run 全体を破棄する場合は `cmoc run abandon` を実行してください。",
             ],
             f"report: {report}\nerror: {exc!r}",
+            terminal_result=TerminalResult(
+                primary_report=report,
+                primary_report_role="realization apply fork report",
+                details=(("run_state", "error"),),
+                warnings=tuple(cleanup_warnings),
+            ),
         )
-        setattr(error, "cmoc_stdout", f"- fork report: `{report}`")
         raise error from exc
-    typer.echo(f"- fork report: `{report}`")
+    return TerminalResult(
+        primary_report=report,
+        primary_report_role="realization apply fork report",
+        details=(("run_state", "joinable"),),
+        next_actions=(
+            "`cmoc run join` で確定済み成果物を取り込んでください。",
+            "`cmoc run abandon` で run 全体を破棄できます。",
+        ),
+        warnings=tuple(cleanup_warnings),
+    )
 
 
 def _unexpected_change_error(paths: list[str]) -> CmocError:

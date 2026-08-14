@@ -784,6 +784,7 @@ def emit_reporter_unavailable(
 ) -> None:
     """reporter 利用不能を stable event と warning に留める。"""
     logger = logger or current_subcommand_logger()
+    warning = f"feedback {component} unavailable ({failure_code})"
     if logger is not None:
         try:
             logger.event(
@@ -798,10 +799,10 @@ def emit_reporter_unavailable(
             )
         except Exception:
             pass
+        logger.record_warning(warning)
+        return
     try:
-        typer.echo(
-            f"warning: feedback {component} unavailable ({failure_code})",
-        )
+        typer.echo(f"warning: {warning}", err=True)
     except Exception:
         pass
 

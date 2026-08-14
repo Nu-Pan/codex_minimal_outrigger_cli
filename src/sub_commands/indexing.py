@@ -1,8 +1,7 @@
 from pathlib import Path
 
-import typer
-
 from cmoc_runtime import (
+    TerminalResult,
     require_clean_worktree,
     require_cmoc_ignored,
     run_cli_subcommand,
@@ -37,7 +36,7 @@ def cmoc_indexing_impl() -> None:
 
 def _cmoc_indexing_body(
     codex_exec: CodexExec | None = None,
-) -> None:
+) -> TerminalResult:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
     with indexing_lock(root):
@@ -47,7 +46,7 @@ def _cmoc_indexing_body(
             3, "インデクシング差分を commit", "commit indexing changes"
         )
         commit_index_updates(root, updated)
-    typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
+    return TerminalResult(details=(("updated_index_count", len(updated)),))
 
 
 def require_indexing_cli_preconditions(root: Path) -> None:

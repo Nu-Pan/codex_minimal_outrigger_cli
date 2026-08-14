@@ -1,3 +1,5 @@
+# {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+
 import subprocess
 import time
 
@@ -92,7 +94,7 @@ from .runtime_paths import (
     work_root,
     worktrees_dir,
 )
-from .runtime_results import CodexExecResult, CommandResult
+from .runtime_results import CodexExecResult, CommandResult, TerminalResult
 from .runtime_state import (
     RUN_KINDS,
     RUN_STATES,
@@ -120,6 +122,7 @@ __all__ = (
     "SessionPart",
     "SessionState",
     "SubcommandLogger",
+    "TerminalResult",
     "active_session_for_home",
     "branch_exists",
     "branch_session_id",

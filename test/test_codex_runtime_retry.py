@@ -418,9 +418,9 @@ def test_run_codex_exec_logs_keyboard_interrupt(
             subcommand_logger=logger,
         )
 
-    console = capsys.readouterr().err
-    assert "- Exit code: `not started`" in console
-    assert "- Error: `KeyboardInterrupt()`" in console
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
     call_logs = list(
         (root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json")
     )

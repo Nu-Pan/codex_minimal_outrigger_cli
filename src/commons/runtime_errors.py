@@ -1,17 +1,22 @@
 # {{work-root}}/oracle/doc/app_spec/error_handling.md
-import traceback
 
-DEFAULT_NEXT_ACTIONS: list[str] = [
-    "入力、実行場所、設定、作業ツリー状態に問題がある場合は、該当箇所を修正してから再実行してください。",
-    "原因が実装不具合または仕様不足に見える場合は、Detail と Call stack を添えて調査してください。",
-]
+from .runtime_results import TerminalResult
+
+DEFAULT_NEXT_ACTION = (
+    "入力、実行場所、設定、作業ツリー状態を確認してから再実行してください。"
+)
 
 
 class CmocError(RuntimeError):
     """利用者向けエラーレポートに必要な情報を持つ cmoc の実行時例外。"""
 
     def __init__(
-        self: "CmocError", summary: str, next_actions: list[str], detail: str
+        self: "CmocError",
+        summary: str,
+        next_actions: list[str],
+        detail: str,
+        *,
+        terminal_result: TerminalResult | None = None,
     ) -> None:
         """エラー概要、復旧案、詳細を例外 object に保持する。
 
@@ -24,39 +29,24 @@ class CmocError(RuntimeError):
         self.summary = summary
         self.next_actions = next_actions
         self.detail = detail
-
-
-def _multiple_next_actions(actions: list[str]) -> list[str]:
-    """Next actions が最低 2 件になるよう既定案内を補う。"""
-    merged = list(actions) or list(DEFAULT_NEXT_ACTIONS)
-    for action in DEFAULT_NEXT_ACTIONS:
-        if len(merged) >= 2:
-            break
-        if action not in merged:
-            merged.append(action)
-    return merged
+        self.terminal_result = terminal_result
 
 
 def render_error(exc: BaseException) -> str:
-    """例外を cmoc 共通の Markdown エラーレポートへ変換する。"""
+    """ログを初期化できない境界向けの簡潔な handled failure を描画する。"""
     if isinstance(exc, CmocError):
         summary = exc.summary
-        actions = _multiple_next_actions(exc.next_actions)
+        actions = list(exc.next_actions) or [DEFAULT_NEXT_ACTION]
         detail = exc.detail
     else:
         summary = str(exc) or exc.__class__.__name__
-        actions = _multiple_next_actions(DEFAULT_NEXT_ACTIONS)
+        actions = [DEFAULT_NEXT_ACTION]
         detail = repr(exc)
     return "\n".join(
         [
-            "# ERROR",
-            "## Summary",
-            summary,
-            "## Next actions",
-            *[f"- {action}" for action in actions],
-            "## Detail",
-            detail,
-            "## Call stack",
-            "".join(traceback.format_exception(exc)),
+            "# 失敗: cmoc",
+            f"- 理由: {summary}",
+            *[f"- 次の操作: {action}" for action in actions],
+            f"- 詳細: {detail}",
         ]
     )

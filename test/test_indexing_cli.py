@@ -171,7 +171,8 @@ def test_indexing_rejects_dirty_current_linked_worktree(
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "git 未コミット差分が存在します。" in result.stdout
+    assert result.stdout == ""
+    assert "git 未コミット差分が存在します。" in result.stderr
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert run_git(linked, "rev-parse", "HEAD").stdout.strip() == head_before
     assert not (linked / "INDEX.md").exists()
@@ -352,8 +353,8 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "git 未コミット差分が存在します。" in result.stdout
-    assert "git 未コミット差分が存在します。" not in result.stderr
+    assert result.stdout == ""
+    assert "git 未コミット差分が存在します。" in result.stderr
     assert calls == []
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert not (root / "INDEX.md").exists()

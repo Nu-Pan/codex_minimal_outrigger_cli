@@ -38,6 +38,7 @@ class SubcommandLogger:
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
         self.step_timings: list[StepTiming] = []
+        self.warning_messages: list[str] = []
         # ContextVar の worker context から同じ logger object が共有されるため、並列 Codex
         # event の追記と quota 待機時間の集計を直列化する。
         # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
@@ -90,10 +91,25 @@ class SubcommandLogger:
                     log_file.flush()
         except Exception:
             pass
+        self.record_warning("feedback detector failed")
+
+    def record_warning(self, message: str, *, emit: bool = True) -> None:
+        """warning を terminal summary 用に保持し、必要なら stderr へ通知する。"""
+        with self._lock:
+            is_new = message not in self.warning_messages
+            if is_new:
+                self.warning_messages.append(message)
+        if is_new:
+            try:
+                self.event("warning", message=message)
+            except Exception:
+                pass
+        if not emit:
+            return
         try:
-            print("warning: feedback detector failed", file=sys.stderr, flush=True)
+            print(f"warning: {message}", file=sys.stderr, flush=True)
         except Exception:
-            # warning の出力失敗も detector failure と同じ非致命境界に留める。
+            # warning の console 出力失敗は本命結果を変更しない。
             pass
 
     def start_step(
@@ -118,6 +134,12 @@ class SubcommandLogger:
         if self.step_timings and self.step_timings[-1].elapsed_sec is None:
             step = self.step_timings[-1]
             step.elapsed_sec = time.perf_counter() - step.started_at
+            self.event(
+                "step_finished",
+                step=step.description,
+                step_index=step.index,
+                elapsed_sec=step.elapsed_sec,
+            )
 
     def elapsed(self) -> float:
         """サブコマンド開始からの経過秒を、完了表示と log 集計用に返す。"""

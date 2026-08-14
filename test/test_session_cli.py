@@ -186,9 +186,10 @@ def test_session_fork_rolls_back_when_state_save_fails(
         ).returncode
         != 0
     )
-    assert "session fork の作成に失敗しました。" in result.stdout
-    assert "session_branch_exists: False" in result.stdout
-    assert "session_state_file_exists: False" in result.stdout
+    assert result.stdout == ""
+    assert "session fork の作成に失敗しました。" in result.stderr
+    assert "session_branch_exists: False" in result.stderr
+    assert "session_state_file_exists: False" in result.stderr
 
 
 def test_session_fork_does_not_delete_branch_from_id_collision_race(
@@ -219,7 +220,7 @@ def test_session_fork_does_not_delete_branch_from_id_collision_race(
     assert result.exit_code != 0
     assert current_branch(root) == home_branch
     assert run_git(root, "rev-parse", session_branch).stdout.strip() == protected_commit
-    assert "session fork の作成に失敗しました。" in result.stdout
+    assert "session fork の作成に失敗しました。" in result.stderr
 
 
 def test_session_fork_does_not_overwrite_state_from_id_collision_race(
@@ -268,7 +269,7 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code != 0
-    assert "一意な session-id を生成できませんでした。" in result.stdout
+    assert "一意な session-id を生成できませんでした。" in result.stderr
     assert path.read_text() == original
     assert current_branch(root) == home_branch
     assert (
@@ -318,8 +319,8 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code != 0
-    assert "session state file が不正です。" in result.stdout
-    assert "active session が既に存在します。" not in result.stdout
+    assert "session state file が不正です。" in result.stderr
+    assert "active session が既に存在します。" not in result.stderr
     assert current_branch(root) == home_branch
 
 
@@ -477,7 +478,7 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
 
     assert result.exit_code != 0
     assert current_branch(linked) == session_branch
-    assert "session home branch が存在しません。" in result.stdout
+    assert "session home branch が存在しません。" in result.stderr
     assert "/.cmoc/gu/" not in gitignore.read_text().splitlines()
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
     assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == [
@@ -521,15 +522,15 @@ def test_session_abandon_requires_existing_home_branch(
     result = runner.invoke(app, ["session", "abandon"])
 
     assert result.exit_code != 0
-    assert "完了 session abandon" in result.output
-    assert "- サブコマンドログ: `" in result.output
-    assert "- ステップ経過時間[2/4 事前条件を確認]: `" in result.output
+    assert result.stdout == ""
+    assert "# 失敗: cmoc session abandon" in result.stderr
+    assert "- 診断用サブコマンドログ: `" in result.stderr
+    assert "ステップ経過時間" not in result.output
     assert "- 経過時間: `" in result.output
-    assert "- quota 待機時間: `" in result.output
+    assert "quota 待機時間" not in result.output
     assert "- 終了コード: `1`" in result.output
     assert current_branch(root) == session_branch
-    assert "session home branch が存在しません。" in result.stdout
-    assert "session home branch が存在しません。" not in result.stderr
+    assert "session home branch が存在しません。" in result.stderr
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", session_branch], cwd=root
@@ -585,9 +586,9 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     result = runner.invoke(app, ["session", "abandon"])
 
     assert result.exit_code != 0
-    assert "session abandon の cleanup に失敗しました。" in result.stdout
-    assert "`cmoc session abandon` を再実行してください。" in result.stdout
-    assert "session abandon の cleanup に失敗しました。" not in result.stderr
+    assert result.stdout == ""
+    assert "session abandon の cleanup に失敗しました。" in result.stderr
+    assert "`cmoc session abandon` を再実行してください。" in result.stderr
     assert current_branch(root) == session_branch
     assert (
         subprocess.run(
@@ -657,8 +658,8 @@ def test_session_completion_rejects_missing_state_fields(
     result = runner.invoke(app, ["session", command])
 
     assert result.exit_code != 0
-    assert "session state file が不正です。" in result.stdout
-    assert "必須 field" in result.stdout
+    assert "session state file が不正です。" in result.stderr
+    assert "必須 field" in result.stderr
     assert current_branch(root) == session_branch
 
 
@@ -1238,10 +1239,10 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == home_commit
 
 
-def test_session_join_error_report_is_written_to_stdout(
+def test_session_join_handled_failure_is_written_to_stderr(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """事前条件error reportをstdoutへ出力することを検証する。"""
+    """事前条件 error terminal result を stderr へ出力する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -1253,11 +1254,10 @@ def test_session_join_error_report_is_written_to_stdout(
     result = runner.invoke(app, ["session", "join"])
 
     assert result.exit_code != 0
-    assert "完了 session join" in result.stdout
-    assert "# ERROR" in result.stdout
-    assert "git 未コミット差分が存在します。" in result.stdout
-    assert "# ERROR" not in result.stderr
-    assert "git 未コミット差分が存在します。" not in result.stderr
+    assert result.stdout == ""
+    assert "# 失敗: cmoc session join" in result.stderr
+    assert "git 未コミット差分が存在します。" in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
@@ -1298,9 +1298,9 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
 
     assert result.exit_code != 0
     assert current_branch(root) == home_branch
-    assert "# ERROR" not in result.stdout
+    assert "# 失敗" not in result.stdout
     assert "conflict marker が残っています。" not in result.stdout
-    assert "# ERROR" in result.stderr
+    assert "# 失敗: cmoc session join" in result.stderr
     assert "conflict marker が残っています。" in result.stderr
 
 

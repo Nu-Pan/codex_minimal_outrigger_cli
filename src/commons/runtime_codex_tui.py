@@ -8,10 +8,7 @@ from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
 from .runtime_cli import mark_current_tui_process_started
-from .runtime_codex_logging import (
-    emit_codex_call_console,
-    format_codex_call_error,
-)
+from .runtime_codex_logging import format_codex_call_error
 from .runtime_codex_profile import (
     codex_subprocess_env,
     prepare_codex_override_args,
@@ -160,7 +157,6 @@ def _run_codex_tui_process(
     error: str | None = None
     if startup_failure is not None:
         error = format_codex_call_error(startup_failure)
-    emit_codex_call_console(purpose, call_path, elapsed_sec, returncode, error)
     logger = current_subcommand_logger()
     status = "succeeded" if returncode == 0 else "failed"
 
