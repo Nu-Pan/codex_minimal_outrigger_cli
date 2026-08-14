@@ -414,10 +414,10 @@
     "last_investigated_at": "2026-08-06_05-08_48_934742000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "cd77f8c64c6201ed4c3cee9eee1772ac87afb788b0d8120b7063dca25352fe16",
-    "last_investigated_at": "2026-08-12_11-54_26_364903000"
+    "last_investigated_sha256": "b17cc5297186030d4e3176bae423ea5a5f9ece171ef159aea14893ed32dd6c79",
+    "last_investigated_at": "2026-08-14_11-44_23_402845000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json": {
     "investigation_required": false,
