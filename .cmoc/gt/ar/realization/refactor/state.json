@@ -600,10 +600,10 @@
     "last_investigated_at": "2026-08-13_16-10_17_053938000"
   },
   "src/acp/builder/feedback/verify_issue.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "9dea2003b38f147230346e365b3dca841a88c884a47cd98355bda94be8b86db1",
-    "last_investigated_at": "2026-08-12_18-33_26_526183000"
+    "last_investigated_sha256": "9267c65850b6c1fe972e4a2e51019b4dc52c0677844e38bdfbf8740668bfc02a",
+    "last_investigated_at": "2026-08-14_18-50_28_440918000"
   },
   "src/acp/builder/indexing/__init__.py": {
     "investigation_required": false,
