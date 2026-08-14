@@ -950,6 +950,38 @@ def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
     assert error.value.detail == str(target)
 
 
+def test_session_join_stages_conflict_path_as_literal_pathspec(tmp_path: Path) -> None:
+    """特殊文字を含む conflict path を literal pathspec として stage する。"""
+    root = tmp_path
+    target = root / "src" / "[ab].txt"
+    target.parent.mkdir()
+    target.write_text("<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n")
+    unmerged_calls = 0
+    add_calls: list[list[str]] = []
+
+    def fake_git(args: list[str], git_cwd: Path) -> cmoc_runtime.CommandResult:
+        """conflict 解消で呼ばれる Git 操作を記録する。"""
+        nonlocal unmerged_calls
+        if args == ["diff", "--name-only", "-z", "--diff-filter=U"]:
+            unmerged_calls += 1
+            output = "src/[ab].txt\0" if unmerged_calls == 1 else ""
+            return cmoc_runtime.CommandResult(0, output, "")
+        if args == ["status", "--porcelain=v1", "-z", "-uall"]:
+            return cmoc_runtime.CommandResult(0, "", "")
+        if args[:2] == ["add", "--"]:
+            add_calls.append(args)
+        return cmoc_runtime.CommandResult(0, "", "")
+
+    def fake_codex_exec(_parameter: object, **_kwargs: object) -> object:
+        """conflict marker を対象 path 内だけで解消する。"""
+        target.write_text("resolved\n")
+        return object()
+
+    session_join_module.resolve_session_join_conflict(root, fake_codex_exec, fake_git)
+
+    assert add_calls == [["add", "--", ":(literal)src/[ab].txt"]]
+
+
 @pytest.mark.parametrize(
     ("text", "expected"),
     [

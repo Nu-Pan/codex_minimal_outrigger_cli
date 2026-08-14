@@ -25,7 +25,7 @@ from cmoc_runtime import (
     write_state,
 )
 from commons.indexing import enable_indexing_preflight
-from commons.runtime_git import status_path_statuses
+from commons.runtime_git import literal_pathspec, status_path_statuses
 from commons.runtime_results import CodexExecCallable
 
 _CodexExec = CodexExecCallable
@@ -164,7 +164,7 @@ def resolve_session_join_conflict(
         )
     start_subcommand_step("3/4, 4/5", "conflict 対象を stage", "stage conflicts")
     for path in conflicted_paths:
-        git(["add", "--", str(path.relative_to(root))], root)
+        git(["add", "--", literal_pathspec(str(path.relative_to(root)))], root)
     unmerged_paths = _unmerged_paths(root, git)
     start_subcommand_step(
         "3/4, 5/5", "unmerged path と merge 完了を確認", "finish conflict merge"

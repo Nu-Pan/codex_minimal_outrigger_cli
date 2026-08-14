@@ -1154,8 +1154,8 @@
   "src/sub_commands/session/join.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "f4ed6fa516be3047aec6c46fcc0d1b30fc5679ab80198c0927c2e49f89cb7975",
-    "last_investigated_at": "2026-08-12_20-36_25_824495000"
+    "last_investigated_sha256": "c6691311732efe029898e75aa980a938937c4c83e1753d9f828742056c2e70c8",
+    "last_investigated_at": "2026-08-14_20-47_10_261509000"
   },
   "src/sub_commands/tui.py": {
     "investigation_required": false,

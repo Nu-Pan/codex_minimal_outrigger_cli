@@ -929,25 +929,20 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork・join・abandon の CLI 外部挙動を、branch と永続 session state のライフサイクルとして一体的に検証する回帰テスト群。
-- session branch の作成・衝突・保存失敗時の rollback、home branch への復帰、state 更新・cleanup・復元を扱う。
-- linked worktree、dirty worktree、preprocess、home branch 不在、state 不正、conflict 解消、差分検査、エラー報告、session branch 削除警告など、session 操作の境界条件を検証する。
-- session コマンドの挙動、session state の遷移、branch/worktree 操作、join 時の conflict resolution を確認したい場合の回帰テスト入口。
+- session fork・join・abandon の CLI 外部挙動を、branch/state のライフサイクル回帰テストとして検証する。session branch と永続 state の作成・衝突・rollback・cleanup、linked worktree、dirty worktree、preprocess、join 時の conflict 解消と差分制約、標準出力・標準エラーの error report を横断的に扱う。session CLI の状態遷移や関連する回帰ケースを確認する際の入口であり、個別実装の詳細や一般的な CLI テストは直接担当しない。
 
 ## Read this when
-- session fork・join・abandon の仕様変更や不具合調査を行うとき。
-- session branch、session state、linked worktree のライフサイクルや rollback を変更するとき。
-- join の conflict resolution、変更範囲検査、Codex 呼び出し境界、エラー出力を確認するとき。
-- doctor preprocess と session 操作の前後関係、dirty worktree や home branch 不在時の挙動を検証するとき。
+- session fork・join・abandon の外部挙動、状態遷移、branch 操作、linked worktree 対応を変更・検証するとき
+- session state の保存・復元・cleanup、session-id 衝突、dirty worktree 拒否、doctor preprocess の順序を確認するとき
+- session join の conflict resolution、対象外差分の拒否、特殊な file path、出力先の回帰挙動を調査するとき
 
 ## Do not read this when
-- session CLI の実装詳細だけを確認したい場合は、対応する session サブコマンド実装を直接読む。
-- session state の正本形式や遷移規則だけを確認したい場合は、session state 仕様を直接読む。
-- conflict resolution のプロンプト生成規則だけを確認したい場合は、conflict resolution の実装・仕様を直接読む。
-- session と無関係な CLI、Git 操作、一般的なテスト支援機能を調べる場合。
+- session CLI 以外のサブコマンドや、単一関数の内部実装だけを確認する場合
+- session state の正本仕様を確認する場合は session_state の仕様、各コマンドの契約を確認する場合は対応する sub_command 仕様を直接読むとき
+- 共通のテスト実行方法や fixture 規約だけを確認する場合
 
 ## hash
-- 46f4688370451d46da3b01ab09b6e39e3fe7f0895ea8a39ff5bf72aa7e1246d7
+- 4f3e5ac299eeddff480fd9f310bc9760ceba0fbfd53ad2ac80f828dd4016f079
 
 # `test_skill_metadata.py`
 
