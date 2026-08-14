@@ -129,36 +129,37 @@
 # `src`
 
 ## Summary
-- cmoc の実装ツリーと CLI 公開層のルート。Typer/Click による最上位 CLI、互換 import shim、`acp`・`basic`・`commons`・`config`・`sub_commands` 配下の実装入口を含み、個別サブコマンドや共通 runtime の下位実装へ進むための起点となる。
+- cmoc CLI の最上位実装をまとめる realization 側の公開入口。Typer/Click によるコマンド階層、引数解析と補完、CLI エラー変換を定義し、doctor、tui、indexing、feedback、oracle、realization、run、session などのサブコマンドへ処理を委譲する。
+- `basic.*`、`config.*`、`cmoc_runtime`、`oracle.*` などの互換 import shim と、commons の共通 runtime helper も含む。個別処理を調査・変更する際は、対応するサブコマンド、runtime module、builder adapter、または oracle 側の正本実装へ進むための入口である。
 
 ## Read this when
-- cmoc の CLI 全体の入口、サブコマンド階層、引数解析・補完・CLI エラー変換を確認または変更するとき。
-- `acp`、`basic`、`commons`、`config`、`oracle` の互換公開経路を含む、src 配下のパッケージ構成を横断して確認するとき。
-- 個別サブコマンドや共通 runtime の実装へ進む前に、どの下位ディレクトリを読むべきか判断するとき。
+- cmoc CLI のトップレベル構成、公開 import 経路、サブコマンド登録を横断して確認するとき
+- Typer/Click の引数解析、補完、CLI エラー変換、互換 import shim の挙動を確認・変更するとき
+- CLI から commons runtime、ACP builder adapter、oracle、realization workload へ接続する経路を調査するとき
 
 ## Do not read this when
-- 特定サブコマンドの処理内容、正本 `oracle` 実装、または個別 runtime helper の詳細だけを確認したいときは、対応する下位実装を直接読む。
-- `acp`・互換 shim・共通 runtime と無関係な処理の内部挙動を調査するときは、対象モジュールへ直接進む。
-- INDEX.md の生成規則や正本仕様だけを確認したいときは、対応する仕様・prompt 定義を直接読む。
+- 特定サブコマンドの業務ロジックやライフサイクルを確認するときは、対応する `sub_commands` 配下を直接読む
+- 共通 runtime helper のアルゴリズムや状態管理を確認するときは、対応する `commons` の個別 module を直接読む
+- ACP 型、設定、path model、構造化文書、oracle 実装の正本仕様や詳細を確認するときは、各再公開元または oracle 側の正本を直接読む
+- INDEX.md の生成規則や indexing 処理の詳細だけを確認するときは、対応する prompt、仕様書、または indexing 実装を直接読む
 
 ## hash
-- 81320a0dd2589dbd56826c69550774c28b339df41bd969126493ab90f8afaed2
+- 79aff00bc9fe97c2d7396a35bcc130f5882adcad68673efd8e119302457d2be2
 
 # `test`
 
 ## Summary
-- pytest による realization test 群を集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、session/run、oracle review/edit、feedback、設定・Git・state・prompt・通知など、cmoc の外部挙動と境界条件を検証するテストへの入口となる。
-- 個別機能の実装変更や回帰調査で、単体テスト・統合テスト・packaged import・本番 CLI 受け入れ試験のどの検証群を読むべきかを判断するための上位ルーティング対象である。
+- cmoc の realization test 群を集約するディレクトリ。CLI、Codex runtime、ACP builder、prompt、indexing、oracle review、session/run lifecycle、state、Git/worktree、通知、packaging など、利用者向け外部挙動と主要な回帰契約を検証する。各テストファイルが機能領域ごとの具体的な検証入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test の領域を特定するとき
-- CLI、Codex runtime、worktree/state、indexing、session/run、oracle、feedback、prompt、設定など複数の検証領域を横断してテスト入口を探すとき
-- 外部挙動、異常系、境界条件、統合 lifecycle の回帰テストを調査するとき
+- 機能変更や不具合調査に対応する回帰テストの入口を特定するとき
+- CLI の外部挙動、Codex 実行、builder parameter、prompt、indexing、oracle/session/realization lifecycle、永続 state、Git/worktree 境界の検証範囲を確認するとき
+- 実装変更が既存の統合契約や安全性境界に与える影響を、対応するテスト群から確認するとき
 
 ## Do not read this when
-- 正本仕様や実装の責務・詳細を確認することが目的のときは、対応する oracle 文書または実装ファイルを直接読む
-- 単一テストの具体的な期待値だけを確認したいときは、該当する個別テストファイルへ直接進む
-- テスト実行手順や品質検査の選択だけを確認したいときは、repository local の test execution 指示を読む
+- 正本仕様、設計制約、Structured Output schema の内容そのものを確認するときは、対応する oracle 文書・schema を直接読む
+- 実装の内部責務やアルゴリズムを確認するときは、対応する `src` または realization 実装を直接読む
+- テスト実行方法だけを確認するときは、repository local の test execution 指示を直接読む
 
 ## hash
-- 0fa990b8d2919c8da0fea7b050cc941a760382840cded46e08996038aa774a18
+- 128e09cd35432efd3a422066cdf0857b381b64a464368f995add6ecf652b717d
