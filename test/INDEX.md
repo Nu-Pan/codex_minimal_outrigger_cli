@@ -813,23 +813,22 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値、JSON 化時のメンバー順、設定ファイルの読み書き、入力検証、エラー変換を検証するテスト群。
-- codex の model provider・model・reasoning effort・recovery 試行回数と oracle_review の設定 section を対象に、型、不正値、深い構造、永続化境界の挙動を確認する。
-- 設定実装の変更や、設定エラー処理・ファイル安全性・provider-local 値の互換性を確認する際のテスト入口となる。
+- CmocConfig と config_from_dict/load_config/write_config/config_to_dict の挙動を検証するテスト。既定値、JSON 永続化、設定ファイル不在・破損・非通常ファイルのエラー、入力型・値・深さの検証、provider-local 設定の保持、UTF-8 や symlink/named pipe 境界を扱う。設定処理やエラー処理の実装・仕様を確認する際のテスト入口であり、個別の CLI 機能や一般的なテスト実行方法を調べる対象ではない。
 
 ## Read this when
-- CmocConfig の既定値や設定 JSON の出力順を変更・確認するとき
-- config_from_dict、load_config、write_config、config_to_dict の入力検証・永続化・エラー処理を変更・確認するとき
-- 設定ファイルの symlink、named pipe、非ファイル、壊れた JSON、過剰なネストに対する安全性を確認するとき
-- Codex model provider 定義、model spec、reasoning effort、recovery 試行回数の受け入れ条件を確認するとき
+- CmocConfig の既定値、model class と reasoning effort の対応、codex recovery 回数、oracle review の loop 回数を確認するとき
+- config.json の読み込み・書き込み・JSON 化、設定不在や破損時の利用者向けエラーを確認するとき
+- model provider、model spec、reasoning effort、各 section、整数項目、provider-local 値の入力検証を変更または検証するとき
+- 設定パスの symlink、named pipe、ディレクトリなど非通常ファイルに対する安全な境界挙動を確認するとき
 
 ## Do not read this when
-- 設定の正本仕様やエラー方針を確認することが目的で、実装テストの具体例を確認する必要がないとき
-- CmocConfig や cmoc_runtime の設定処理に関係しない機能を調査・変更するとき
-- 設定実装の詳細を直接確認する必要があり、oracle の実装・仕様ファイルを読む方が適切なとき
+- 設定処理の実装詳細そのものを読む場合は、対応する oracle implementation を直接読むとき
+- 設定仕様全体やエラー分類の正本を確認する場合は、関連する app_spec 文書を直接読むとき
+- 設定処理と無関係な CLI 機能、実行フロー、または別のデータ構造のテストを調べるとき
+- テストスイート全体の実行手順や品質検査の選択だけを確認するとき
 
 ## hash
-- b10f09838f2c38f788e0b7de50efc3669590a89c9d4d26998ef37511b5e26734
+- 2242fc73c5ac4a3709474108baf14695766033cc75f47a8e1bed145a912c927c
 
 # `test_runtime_content.py`
 

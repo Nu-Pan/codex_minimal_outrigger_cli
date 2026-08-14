@@ -2,6 +2,7 @@
 
 根拠:
 - {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+- {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 """
 
@@ -36,13 +37,23 @@ def test_config_defaults_match_logical_model_classes() -> None:
 
     assert config.num_parallel == 8
     assert config.codex.model_providers == {}
-    assert config.codex.model[ModelClass.MAINSTREAM] == CodexModelSpec(
-        None, "gpt-5.6-terra"
-    )
-    assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
-    assert config.codex.reasoning_effort[ReasoningEffort.XHIGH] == "xhigh"
-    assert config.codex.reasoning_effort[ReasoningEffort.MAX] == "max"
+    assert config.codex.model == {
+        ModelClass.MAINSTREAM: CodexModelSpec(None, "gpt-5.6-terra"),
+        ModelClass.FLAGSHIP: CodexModelSpec(None, "gpt-5.6-sol"),
+        ModelClass.EFFICIENCY: CodexModelSpec(None, "gpt-5.6-luna"),
+        ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.6-luna"),
+    }
+    assert config.codex.reasoning_effort == {
+        ReasoningEffort.LOW: "low",
+        ReasoningEffort.MEDIUM: "medium",
+        ReasoningEffort.HIGH: "high",
+        ReasoningEffort.XHIGH: "xhigh",
+        ReasoningEffort.MAX: "max",
+    }
     assert config.codex.num_try_falv_recovery == 1
+    assert config.oracle_review.num_enumerate_findings_loop == 2
+    assert config.oracle_review.num_merge_findings_loop == 2
+    assert config.oracle_review.num_validate_findings_loop == 2
 
 
 def test_config_json_preserves_oracle_member_order() -> None:
@@ -86,6 +97,39 @@ def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
     assert exc_info.value.next_actions == [
         "cmoc doctor を実行して {{work-root}}/.cmoc/gt/ar/config.json を生成してください。"
     ]
+
+
+def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
+    """設定を config.json へ保存しても全 section の値を復元できる。"""
+    root = make_repo(tmp_path)
+    config = config_from_dict(
+        {
+            "num_parallel": 3,
+            "codex": {
+                "model_providers": {
+                    "provider": {"settings": {"endpoint": "http://127.0.0.1"}}
+                },
+                "model": {
+                    "minimum": {
+                        "model_provider": "provider",
+                        "model": "local-model",
+                    }
+                },
+                "reasoning_effort": {"low": "deliberate"},
+                "num_try_falv_recovery": 4,
+            },
+            "oracle_review": {
+                "num_enumerate_findings_loop": 3,
+                "num_merge_findings_loop": 4,
+                "num_validate_findings_loop": 5,
+            },
+        }
+    )
+
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    write_config(config_path, config)
+
+    assert config_to_dict(load_config(root)) == config_to_dict(config)
 
 
 @pytest.mark.parametrize("payload", [b"{", b"\xff"])
