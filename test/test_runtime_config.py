@@ -6,6 +6,7 @@
 """
 
 import os
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -101,6 +102,20 @@ def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> 
     assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
 
 
+def test_load_config_rejects_excessively_nested_json(tmp_path: Path) -> None:
+    """JSON parser の recursion error を利用者向け設定エラーへ変換する。"""
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path.parent.mkdir(parents=True)
+    depth = sys.getrecursionlimit() * 20
+    config_path.write_text("[" * depth + "0" + "]" * depth)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
 def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
     """config path が通常ファイルでない場合も読み込みエラーへ変換する。"""
     root = make_repo(tmp_path)
@@ -110,6 +125,15 @@ def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
         load_config(root)
 
     assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
+@pytest.mark.parametrize("data", [[], "invalid", set()])
+def test_config_rejects_non_object_top_level(data: object) -> None:
+    """直接呼び出しでも top-level の非 object を設定エラーへ変換する。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(cast(dict[str, object], data))
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
@@ -327,6 +351,24 @@ def test_config_rejects_values_without_unique_json_toml_encoding(
             {
                 "codex": {
                     "model_providers": {"provider": {"settings": {"setting": setting}}}
+                }
+            }
+        )
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+def test_config_rejects_excessively_nested_provider_setting() -> None:
+    """深すぎる provider-local 値を利用者向け設定エラーへ変換する。"""
+    nested: object = 0
+    for _ in range(sys.getrecursionlimit()):
+        nested = [nested]
+
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(
+            {
+                "codex": {
+                    "model_providers": {"provider": {"settings": {"nested": nested}}}
                 }
             }
         )

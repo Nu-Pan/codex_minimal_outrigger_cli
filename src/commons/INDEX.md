@@ -189,19 +189,21 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc の設定を JSON へ安定してシリアライズし、JSON から型検証済みの CmocConfig へ復元する実行時設定境界。Codex のモデル・provider・reasoning effort、並列数、oracle review のループ回数を扱い、JSON/TOML 互換値、整数、文字列、enum key、循環コンテナ、symlink や特殊ファイルを検証する。設定の生成・読み込み・同期時に利用者向け CmocError へ変換するための入口でもある。
+- cmoc 設定の JSON 永続化境界を担う。正本設定型と JSON object の相互変換、JSON/TOML 互換値の再帰的な型検証、既定値を補った設定復元、設定ファイルの安全な読み書き、設定同期を扱う。設定値の検証や config ファイル入出力を調べる際の入口であり、個別の設定型定義やパス計算・共通エラー定義そのものの入口ではない。
 
 ## Read this when
-- 設定 JSON の保存形式、既定値補完、Codex model/provider/reasoning effort の復元または検証挙動を変更・確認するとき
-- cmoc の config 読み込み・書き込み・同期、設定ファイルの symlink・特殊ファイル対策、または不正設定時のエラー境界を調べるとき
+- 設定 JSON の保存・読み込み・同期の挙動を変更または確認するとき
+- Codex の model、model provider、reasoning effort、Oracle Review の反復回数、並列数を JSON へ変換または復元するとき
+- JSON/TOML に保存できる値の型制約、循環コンテナ、深いネスト、Unicode surrogate、NaN・Infinity、64-bit 範囲外整数の扱いを確認するとき
+- 設定ファイルの symlink、非通常ファイル、欠落、JSON 構文エラーに対する拒否と利用者向けエラー境界を確認するとき
 
 ## Do not read this when
-- 設定の正本データ型や既定値そのものを確認したい場合は config.cmoc_config を直接読むとき
-- 設定ファイルのパス解決だけを確認する場合は runtime_paths の config_path を直接読むとき
-- Codex CLI のモデル指定仕様や TOML 形式の正本仕様を確認する場合は参照されている oracle の仕様文書・設定型を直接読むとき
+- 設定項目の正本型、既定値、enum の定義だけを確認したいとき
+- 設定ファイルのパス計算だけを確認したいときは runtime_paths を直接読むとき
+- 共通の実行時エラー表現だけを確認したいときは runtime_errors を直接読むとき
 
 ## hash
-- c2f6c9558f2ca77c30ccee57f6b0a1bd2f530d8fc08dce82c85765d9e3d57f56
+- 2303cfb43d52881e01e9a7573d905cf78aef084eb56b600ec84472aafa9c4612
 
 # `runtime_content.py`
 
