@@ -1040,8 +1040,8 @@
   "src/sub_commands/oracle/review.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "5b3efa63d2fb04804ac5cfb0da202990775cad00c5c0322f840438a1f7430d17",
-    "last_investigated_at": "2026-08-12_18-57_42_952753000"
+    "last_investigated_sha256": "54c6c1a0de7e75cdee1703f509fd1f01203c0c9ddc305ed59e7a06c98ed1e8a4",
+    "last_investigated_at": "2026-08-14_19-10_23_907607000"
   },
   "src/sub_commands/oracle/review_index.py": {
     "investigation_required": false,

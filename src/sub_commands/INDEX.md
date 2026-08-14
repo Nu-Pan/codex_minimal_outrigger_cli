@@ -68,19 +68,19 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめるパッケージです。oracle edit、investigation、review の CLI 実行入口と、review に伴う対象列挙・ループ・パス解決・レポート・INDEX 差分処理への入口を提供します。
+- oracle 系サブコマンドの実装をまとめる package。oracle の編集・調査・レビューに関する CLI 実行入口と、レビュー対象の列挙、実行 loop、パス解決、INDEX 差分処理、レポート生成の下位実装への入口を提供する。
 
 ## Read this when
-- oracle サブコマンドの構成、各サブコマンドの実行フロー、または oracle review のライフサイクルと関連処理の入口を確認するとき。
-- oracle review の対象列挙、finding 処理、パス解決、レポート生成、INDEX 差分の commit・merge を横断して調査するとき。
+- oracle サブコマンド群の構成や、各サブコマンド実装・レビュー関連モジュールへの入口を確認するとき。
+- oracle の編集、調査、レビューの CLI 実行フローを横断して調べるとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細実装だけを確認したい場合は、該当する下位実装を直接読む。
-- oracle の調査・編集・レビュー契約やプロンプト内容そのものを確認したい場合は、対応する oracle 仕様を直接読む。
-- 共通 runtime や、oracle review の一機能だけを調査する場合は、担当する専用モジュールを直接読む。
+- 特定の oracle サブコマンドの詳細な実行処理を確認する場合は、対応する個別実装を直接読む。
+- oracle の仕様やプロンプト契約そのものを確認する場合は、参照される oracle 仕様を直接読む。
+- 共通入力処理、TUI 起動パラメータ、レビュー loop、INDEX merge、レポート形式など単一の責務だけを調べる場合は、対応する下位モジュールを直接読む。
 
 ## hash
-- 07d62a6f524b1d93bf4a55647258c8a4ab20a429e2dcb0fd0593dc8a38c226ff
+- 591a4f6d4908c9ce98815bd2deee760a75273e200444f5ea066327dd965d35c1
 
 # `realization`
 

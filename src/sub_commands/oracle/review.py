@@ -31,7 +31,6 @@ from cmoc_runtime import (
     current_branch,
     current_subcommand_logger,
     delete_branch,
-    ensure_cmoc_ignored,
     head_commit,
     load_config,
     load_state_for_branch,
@@ -147,7 +146,6 @@ def _cmoc_oracle_review_body(
                 branch,
             )
         _require_clean_worktree(current_root)
-        ensure_cmoc_ignored(current_root)
         config = load_config(current_root)
         run_fork_commit = head_commit(current_root)
     except KeyboardInterrupt:
