@@ -170,20 +170,20 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex CLI/TUI プロセスを起動する共通ランタイム。作業コンテキストと設定から Codex Home、通知 callback、設定上書き argv、呼び出しログ、feedback 呼び出しを準備し、Codex subprocess を実行する。CLI 呼び出しの成否・所要時間・return code・関連識別子を console logger に記録し、起動失敗や subprocess 失敗を cmoc のエラーとして伝播する。Codex TUI 起動経路やそのログ・通知・feedback 連携を変更または調査するときの入口。
+- Codex TUI プロセスの起動を担当する実行入口。呼び出しパラメーターと設定から作業ディレクトリ、Codex ホーム、ログ保存先、Windows 通知 callback を準備し、設定上書き付きで Codex CLI/TUI を実行する。
+- Codex 呼び出しごとの call log、feedback call、実行時間、終了コード、エラー、subcommand logger へのイベント記録を扱う。Codex CLI/TUI の起動経路や呼び出し結果・ログ連携を変更または確認するときの入口であり、個別の設定解決やログ形式の詳細は参照コメントが示す下位モジュール・仕様文書へ進む。
 
 ## Read this when
-- Codex TUI または CLI subprocess の起動処理を変更・調査するとき
-- Codex 呼び出しログ、実行環境、設定上書き、通知 callback、feedback 呼び出しの連携を確認するとき
-- Codex 呼び出しの失敗処理や console/file logger への event 記録を確認するとき
+- Codex TUI の起動、argv・環境変数・作業ディレクトリの準備、設定上書きを調べるとき
+- Codex 呼び出しの call log、feedback lifecycle、通知 callback、終了結果や logger event の連携を調べるとき
 
 ## Do not read this when
-- Codex のプロンプト生成や agent call parameter 自体の仕様だけを確認するとき
-- Codex subprocess 内部の実装や TUI の画面表示を直接調査するとき
-- ログ保存先や Codex Home 解決など個別機能の詳細だけを確認する場合は、対応する runtime モジュールを直接読む
+- Codex ホームや Codex subprocess 環境の解決規則だけを確認するときは、runtime_codex_profile と関連仕様を直接読む
+- ログディレクトリや timestamped path の生成規則だけを確認するときは、runtime_paths とログ仕様を直接読む
+- Codex CLI/TUI 以外のサブコマンド実行や一般的なエラー型の仕様を確認するときは、対応する runtime モジュールを直接読む
 
 ## hash
-- a368e25ec9ce49f67eb7d706f12a66c7b2bfd35bab33e39f51c3a6baf6f53af7
+- 0d2b6611877622b0572e061b1d80775ae53c7b34760be2a94098459e9d47a4aa
 
 # `runtime_config.py`
 

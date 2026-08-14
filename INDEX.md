@@ -129,20 +129,22 @@
 # `src`
 
 ## Summary
-- `src` は cmoc CLI の realization 側実装ルートで、Typer/Click による最上位コマンド入口、サブコマンド実装、共通 runtime、互換 import 層をまとめる。CLI のコマンド構成から個別処理、共通 helper、ACP/basic の互換経路へ進むための起点である。
+- cmoc の realization 側 CLI ソースの入口。Typer/Click によるトップレベル CLI と、互換 import shim、共通 runtime、設定・基本型の再公開、サブコマンド実装をまとめる。
+- CLI 全体のコマンド登録や引数解析はトップレベル入口から確認し、共通処理や個別サブコマンドの詳細は対応する下位ディレクトリへ進むための起点となる。
 
 ## Read this when
-- cmoc の CLI 全体の入口、サブコマンド階層、または realization 側の実装配置を確認するとき
-- CLI の実行フローを追い、サブコマンド実装・共通 runtime・互換 import 層のどこへ進むか判断するとき
-- `acp.*`、`basic.*`、`commons.*` など realization 側の公開・共通経路を横断して調査するとき
+- cmoc の CLI 全体の入口、サブコマンド構成、引数解析、補完、エラー変換を確認・変更するとき
+- realization 側の `acp`、`basic`、`config`、`oracle`、`cmoc_runtime` 互換 import の配置と移行境界を確認するとき
+- 複数のサブコマンドに共通する runtime、設定、path、Git、feedback、Codex 実行基盤の入口を特定するとき
+- doctor、tui、indexing、session、run、oracle、realization などの CLI 実装へ進む起点を確認するとき
 
 ## Do not read this when
-- oracle 側の正本仕様、正本実装、Structured Output schema を確認・変更するとき
-- 特定サブコマンドの処理ロジック、共通 runtime helper、または互換 shim の詳細だけを調査するときは、対応する下位要素を直接読む
-- `src` 配下と無関係な仕様、テスト、CLI 外の実装を調査するとき
+- 正本側 `oracle.*` の仕様、型、入出力、処理ロジックを確認・変更するとき
+- 特定の runtime helper やサブコマンドの内部挙動だけを調査するときは、対応する下位モジュールを直接読む
+- CLI と無関係な正本仕様、設計ルール、テスト、workload 本体を調査するときは、それぞれの正本文書や対象実装を直接読む
 
 ## hash
-- be8dd80ce8af15418b99fef4797b053b8188611555e4675339efc72e4e37d153
+- 28dc9078bef0d781b3a2a6ea2402d2f9cb2303875343f83a6264965d553972af
 
 # `test`
 

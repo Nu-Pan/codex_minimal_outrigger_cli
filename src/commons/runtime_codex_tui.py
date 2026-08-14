@@ -126,7 +126,8 @@ def _run_codex_tui_process(
             ensure_ascii=False,
             indent=2,
         )
-        + "\n"
+        + "\n",
+        encoding="utf-8",
     )
     started_at = time.perf_counter()
     failure: subprocess.CalledProcessError | None = None
