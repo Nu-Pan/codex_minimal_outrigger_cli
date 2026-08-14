@@ -438,20 +438,20 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- 明示的な join を必要とする editing run のライフサイクル共通処理を担う。run の開始・active context 解決・state 遷移・work unit の commit/rollback、差分分類、INDEX 更新、cleanup 判定までを一つの context と lifecycle lock のもとで扱う。
+- editing run の開始から state 遷移、worktree・branch の管理、commit、差分分類、INDEX 更新、cleanup／recovery までを一貫して扱う共通 lifecycle 実装。EditingRunContext と lifecycle lock を共有し、run の不変条件と workload の差分許可範囲を検査する。
+- session の ready 確認、isolated run の作成・公開・回収、joinable/error 遷移、work unit の rollback／commit、INDEX の再生成、Git tree change の解析、oracle・realization・生成 INDEX・refactor state の許可判定を提供する。
 
 ## Read this when
-- editing run の開始、joinable/error への state 遷移、run branch/worktree の回収や検証を変更・調査するとき
-- work unit の commit/rollback、run・session・agent 差分の許可範囲、rename を含む差分分類を確認するとき
-- run worktree の INDEX 更新や、実行後の予期しない変更・cleanup 判定の責務を確認するとき
+- editing run の開始・再開・終了、session state と run state の遷移、run branch／worktree の recovery や cleanup を変更・調査するとき。
+- realization workload 後の差分許可範囲、unexpected path の検出、rename／copy を含む Git 差分分類、oracle diff の取得を確認するとき。
+- run worktree の commit、INDEX 更新、lifecycle lock、process tracking、refactor state の扱いを変更するとき。
 
 ## Do not read this when
-- 個別の runtime helper の実装だけを変更・調査し、editing run lifecycle の不変条件や差分許可範囲に関係しないとき
-- session や editing run の利用者向け仕様を確認することが目的で、ライフサイクル共通処理の実装詳細を読む必要がないとき
-- INDEX.md の経路情報だけを確認する場合や、対象の下位仕様・専用 runtime module を直接読む方が適切なとき
+- session や editing run の外側で完結する CLI 機能、個別の realization 実装、または INDEX 生成規則そのものを確認したいとき。
+- Git・state・worktree の共通低レベル API の仕様だけを確認する場合は、対応する runtime／state／indexing モジュールを直接読むとよい。
 
 ## hash
-- 073f721d8d73d136a33db1cb6043197e8f8b016855afcbf12c5410a06776c0ba
+- 94a3a00104b763e45f55c6696dbceba1644d80e46d189218813b8ab4679a96e3
 
 # `runtime_run_report.py`
 

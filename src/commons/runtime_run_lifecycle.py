@@ -338,7 +338,12 @@ def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
             or state.run.kind != context.kind
             or state.run.branch != context.run_branch
             or state.run.fork_commit != context.run_fork_commit
+            or state.run.state not in {"running", run_state}
         ):
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # terminal state の公開後に遅延した cleanup が別の terminal state を
+            # 上書きしないよう、running からの一方向遷移として検査する。同じ
+            # state の再適用だけは、state write 直後の中断からの recovery に許可する。
             raise CmocError(
                 "editing run の state が実行中に変更されました。",
                 ["session state と run branch を確認してください。"],
@@ -708,6 +713,8 @@ def is_generated_index_path(
         if ancestor.is_symlink():
             return False
     if candidate.is_symlink():
+        return False
+    if candidate.exists() and not candidate.is_file():
         return False
     parent = candidate.parent
     if parent.exists() and not parent.is_dir():

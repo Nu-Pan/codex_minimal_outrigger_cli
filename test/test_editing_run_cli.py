@@ -2391,6 +2391,9 @@ def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
     assert not lifecycle_module.is_generated_index_path(
         root, "symlink-parent/nested/INDEX.md"
     )
+    non_file_index = root / "non-file-index" / "INDEX.md"
+    non_file_index.mkdir(parents=True)
+    assert not lifecycle_module.is_generated_index_path(root, "non-file-index/INDEX.md")
     (root / "generated" / "INDEX.md").symlink_to(root / "index-target.md")
     assert not lifecycle_module.is_generated_index_path(root, "generated/INDEX.md")
 
@@ -2509,6 +2512,21 @@ def test_resolve_active_run_rejects_run_branch_from_another_session(
 
     with pytest.raises(CmocError, match="branch が session state と一致しません"):
         lifecycle_module.resolve_active_run({"running"})
+
+
+def test_set_run_state_rejects_overwriting_terminal_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """公開済み terminal state を遅延 cleanup が別 state へ変更しない。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+
+    with pytest.raises(CmocError, match="state が実行中に変更されました"):
+        set_run_state(context, "error")
+
+    assert _state(state_path)["run"]["state"] == "joinable"
 
 
 @pytest.mark.parametrize(

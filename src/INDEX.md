@@ -52,21 +52,48 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 実装を集約する commons パッケージ。CLI 実行 lifecycle、Codex exec/TUI 呼び出し、設定・状態・パス・Git・ログ・エラー、feedback、editing run、INDEX 更新など、複数のサブコマンドから共有される実行時境界を扱う。
-- 個別モジュールの実装へ進む前に、共通 API の公開入口と runtime 間の責務分担を確認するためのディレクトリ入口。
+- `commons` は cmoc の共通 runtime 実装を集約するパッケージで、CLI lifecycle、Codex 実行、設定、Git、状態、ログ、feedback、editing run、INDEX 更新などの下位機能へ進むための入口を提供する。
+- `cmoc_runtime.py` は複数の runtime module が公開する API・定数・型を再公開する集約入口。個別実装の詳細ではなく、共通公開面や横断依存を確認するときに読む。
+- `indexing.py` は INDEX.md の探索、entry の再利用・生成、hash 検証、書き込み、lock、Codex 呼び出し、Git commit までの indexing lifecycle を扱う。
+- `prompt_editor_input.py` はエディタ入力の予約・読込、prompt skeleton の placeholder 検証、コメント除去、完全 prompt の確定、`.cmoc` ignore 保証を扱う。
+- `runtime_cli.py` は CLI サブコマンド共通の work-root 検査、doctor・feedback・logger lifecycle、step 通知、割り込み・失敗・完了時の終了処理を扱う。
+- `runtime_codex.py` は Codex exec と TUI の公開実行 API を再公開する薄い入口。具体的な exec/TUI 挙動を調べる場合は下位 module を読む。
+- `runtime_codex_exec.py` は Codex exec の subprocess 実行、ログ、capacity/quota retry、session resume、Structured Output 検証・補正、成果物保護を一体で扱う。
+- `runtime_codex_logging.py` は Codex 呼び出しの console 通知と起動失敗エラーの共通整形を扱う。
+- `runtime_codex_preflight.py` は Codex exec/TUI 起動前の INDEX 更新 preflight の登録・解除、再入防止、直列化、work-root 導出を扱う。
+- `runtime_codex_profile.py` は Codex CLI subprocess 境界として argv・環境・sandbox・CODEX_HOME・schema、process tracking、停止、JSONL 結果と retry 対象の判定を扱う。
+- `runtime_codex_tui.py` は Codex TUI の起動、設定上書き、作業ディレクトリ・ログ・通知 callback の準備、call log と終了結果の連携を扱う。
+- `runtime_config.py` は cmoc 設定の JSON 永続化、型・値・循環参照の検証、既定値補完、安全な読み書きを扱う。
+- `runtime_content.py` はファイル・文字列の SHA-256、hash 付きファイル保存、NUL バイト等による粗い binary 判定を提供する共通処理。
+- `runtime_doctor.py` は doctor preprocess の排他、修復対象の同期、一時 Git index の退避・復元、修復差分のみの commit lifecycle を扱う。
+- `runtime_errors.py` は CmocError と通常例外を利用者向け Markdown エラーレポートへ変換し、Summary、Next actions、Detail、Call stack を組み立てる。
+- `runtime_feedback.py` は invocation 単位の feedback collector lifecycle、capability、IPC 受付・検証・保存、call 終了時 drain、degraded event を扱う。
+- `runtime_feedback_reporter.py` は Codex call-scoped stdio MCP reporter として collector との通信、capability payload、JSON-RPC、`submit_observation` を扱う。
+- `runtime_feedback_state.py` は feedback の active generation、current pointer、report cut、checkpoint、publication、incomplete 診断、cleanup と相互参照の integrity を扱う。
+- `runtime_feedback_store.py` は raw observation の schema 検査、secret masking、evidence path 正規化、fingerprint・hash、重複排除、atomic durable 保存を扱う。
+- `runtime_git.py` は Git command、branch/worktree、snapshot・復元、ignore、oracle/realization file 分類を担う共通 Git 境界。
+- `runtime_logging.py` はサブコマンド単位の JSON Lines event、step timing、Codex quota 待機時間、current logger、並行追記の直列化を扱う。
+- `runtime_paths.py` は repository/worktree/cmoc root の解決と、設定・状態・ログ・report・schema・worktree 等の runtime path 導出を扱う。
+- `runtime_refactor.py` は refactor state の読み書き・schema 検証、oracle/realization file 集合との同期、調査対象の列挙と選択を扱う。
+- `runtime_results.py` は Codex exec、Structured Output 検証、外部コマンド結果、呼び出しログを表す不変データ型と callable protocol を定義する。
+- `runtime_run.py` は editing run の worktree 解決、state lock、process tracking、親 run と Codex child process group の安全な停止・cleanup を扱う。
+- `runtime_run_lifecycle.py` は editing run の開始・状態遷移、branch/worktree、commit、差分分類、INDEX 更新、cleanup・recovery を一体で扱う。
+- `runtime_run_report.py` は editing run の fork/lifecycle report を Markdown + YAML Front Matter 形式で保存し、path・YAML・Markdown のエスケープを扱う。
+- `runtime_state.py` は session/run state の dataclass schema、状態遷移、永続化・復元・検証、branch 対応、lock、active session 検索を扱う。
+- `runtime_windows_toast.py` は Windows toast と Codex TUI callback の非致命的 transport 境界で、通知内容、有限時間送信、turn 重複排除、callback state cleanup を扱う。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる runtime helper や公開 API の配置を調査するとき
-- Codex 実行、feedback、Git/worktree、設定・状態永続化、ログ、INDEX lifecycle などの共通実行境界を変更・調査するとき
-- editing run や doctor、path 解決など、下位の専用 runtime module を選ぶ前に commons 全体の構成を把握するとき
+- commons 配下の共通 runtime API や責務分担を確認するとき
+- CLI、Codex、設定、Git、state、feedback、editing run、INDEX 更新の実装入口を探すとき
+- 対象機能がどの runtime module に実装されているかを切り分けるとき
 
 ## Do not read this when
-- 特定の helper やサブコマンドの具体的な挙動だけを調査する場合は、対応する個別 runtime module を直接読む
-- 利用者向けの正本仕様や設計ルールだけを確認する場合は、対応する oracle 文書を直接読む
-- commons と無関係な CLI 業務ロジックや下位パッケージの実装を調査する場合
+- 特定 module の内部アルゴリズムや正本仕様を直接確認したいとき
+- commons 配下の個別機能と無関係なアプリケーション固有処理だけを調査するとき
+- 単に INDEX.md の既存 entry や hash を確認したいとき
 
 ## hash
-- 34fa01cb068da31be70d170464f343f94fd070177acd0884ea48f7f8f27bc859
+- 1bb88b2fa943b07b656267491b13a06439ee80afef421f57bd5d9f44f463fe43
 
 # `config`
 
