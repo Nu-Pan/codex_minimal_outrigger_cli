@@ -504,10 +504,10 @@
     "last_investigated_at": "2026-08-14_08-53_24_739965000"
   },
   "oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "2053e0baa0a518f506d48450a8c6b0beafd477bc076577519abb05283d51fcc8",
-    "last_investigated_at": "2026-08-12_19-43_46_829864000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "f44a82a0edc28e5e359598a4145df3a6c58e68e68bf4e06435d05fdf83089da5",
+    "last_investigated_at": "2026-08-14_20-07_40_431978000"
   },
   "oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py": {
     "investigation_required": false,
