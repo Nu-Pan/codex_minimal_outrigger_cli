@@ -1,20 +1,20 @@
 # `acp`
 
 ## Summary
-- ACP互換の公開入口と、ACP builder群の互換・realization adapterを扱う領域。oracle側のcanonical実装を既存のacp参照経路から利用するための入口であり、builder配下にはfeedback、indexing、oracle command、realization、session、TUI、quota probe、共通builder関連の導線が集約されている。
+- `acp` 互換公開層の入口。公開名の存廃や `oracle` 側の正本実装への移行を判断する際に、配下の互換入口と builder adapter 群への導線を確認する。
 
 ## Read this when
-- acp互換公開名の存廃や、既存参照をoracle側の実体へ移行する導線を判断するとき。
-- ACP builder全体のadapter構成や、canonical oracle実装への委譲関係を確認するとき。
-- feedback issue、index entry、quota probe、session join、TUI起動、oracle command、realization apply/refactorに関するbuilder入口を特定するとき。
+- `acp` 公開名を維持・削除できるか判断するとき
+- 既存の `acp.*` 参照を `oracle.*` または実体モジュールへ移行する経路を調査するとき
+- 互換 builder adapter を通じた feedback、indexing、quota probe、session join、TUI、oracle command、realization workload の接続構成を確認するとき
 
 ## Do not read this when
-- 特定builderのprompt、入力検証、出力仕様、処理ロジックを確認したいだけなら、対応するcanonical実装または下位対象を直接読む。
-- acp配下の具体的な内部挙動を変更・調査したいだけなら、対象の実体モジュールを直接読む。
-- CLI commandの業務ロジックや利用者向け公開面、特定領域の詳細を調べる場合は、この領域を入口に総当たりせず、該当する参照元または下位対象へ進む。
+- `oracle` 側の正本実装の仕様、入出力、処理ロジックを確認・変更するとき
+- 互換入口の具体的な利用箇所や、個別実体モジュールの内部挙動だけを調査するとき
+- `acp` や builder adapter と無関係な CLI 処理、workload 本体、正本仕様、テストを調査するとき
 
 ## hash
-- eb375d96ed92dd7ecf4cfb6611e7f2b3cf0104bafae1c5736c2d5a7fe4b9c556
+- ee386a90d331d71cd78aba32d2f9329e1394f7d5dddc317ec50ada7eae6cf3b8
 
 # `basic`
 

@@ -129,20 +129,20 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側実装を束ねる入口。Typer/Click による CLI の最上位入口、サブコマンド実装、共通 runtime、ACP/basic/config/oracle の互換公開経路を扱い、各領域の具体的な処理や正本実装へ進むための起点となる。
+- `src` は cmoc CLI の realization 側実装ルートで、Typer/Click による最上位コマンド入口、サブコマンド実装、共通 runtime、互換 import 層をまとめる。CLI のコマンド構成から個別処理、共通 helper、ACP/basic の互換経路へ進むための起点である。
 
 ## Read this when
-- cmoc realization 側の CLI 入口、サブコマンド構成、共通 runtime、互換 import shim の全体像を確認するとき。
-- 特定の下位実装へ進む前に、src 内の公開入口と領域間の委譲関係を切り分けるとき。
-- CLI、runtime、ACP/basic/config/oracle の互換経路を横断して調査・変更するとき。
+- cmoc の CLI 全体の入口、サブコマンド階層、または realization 側の実装配置を確認するとき
+- CLI の実行フローを追い、サブコマンド実装・共通 runtime・互換 import 層のどこへ進むか判断するとき
+- `acp.*`、`basic.*`、`commons.*` など realization 側の公開・共通経路を横断して調査するとき
 
 ## Do not read this when
-- 特定サブコマンドの処理ロジック、個別 runtime helper、設定型、ACP 型、または正本 oracle 実装の詳細だけを確認したいときは、対応する下位実装や oracle 側を直接読む。
-- 利用者向け仕様や Structured Output の定義を確認するときは、src 全体ではなく該当する正本仕様を読む。
-- src と無関係な領域を調査・変更するとき。
+- oracle 側の正本仕様、正本実装、Structured Output schema を確認・変更するとき
+- 特定サブコマンドの処理ロジック、共通 runtime helper、または互換 shim の詳細だけを調査するときは、対応する下位要素を直接読む
+- `src` 配下と無関係な仕様、テスト、CLI 外の実装を調査するとき
 
 ## hash
-- 9920fb4101ea1ed1fa24e979f70956f01d6fc6a2510fdab3977cef99b1a9da18
+- be8dd80ce8af15418b99fef4797b053b8188611555e4675339efc72e4e37d153
 
 # `test`
 

@@ -403,9 +403,9 @@
   },
   "oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "ddc01c61d3643203ef6d40b83aba454a29a73df145fee5d4b849b065b3ea0790",
-    "last_investigated_at": "2026-08-12_11-42_50_534304000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "d2b2ab740f019007b81141f242423bac661d4a897d22af93d78eceecc8467e11",
+    "last_investigated_at": "2026-08-14_11-38_26_097865000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json": {
     "investigation_required": false,
@@ -708,7 +708,7 @@
     "last_investigated_at": "2026-07-24_20-24_27_077805000"
   },
   "src/acp/builder/realization/apply/fork/launch_exec.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "63d3b490194bc1558f63f4dddda55776611d4ee7a3cdcde632c9e57d9df7ca80",
     "last_investigated_at": "2026-08-13_10-04_05_217920000"

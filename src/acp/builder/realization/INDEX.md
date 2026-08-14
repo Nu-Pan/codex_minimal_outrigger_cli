@@ -15,19 +15,18 @@
 # `apply`
 
 ## Summary
-- realization apply 用の builder adapter を提供するモジュール。apply 系 builder 実装を確認する際の入口となる。
-- fork 適用向け builder adapter を配下に持つサブディレクトリ。`cmoc realization apply fork` の launch_exec パラメータ生成へ進むための入口となる。
+- realization apply 用の builder adapter をまとめたディレクトリ。apply 処理の builder 実装や、配下の fork adapter へ進む入口となる。
 
 ## Read this when
-- realization apply の builder adapter の責務や、apply 系 builder 実装の配置を確認するとき
-- `cmoc realization apply fork` の builder adapter や launch_exec パラメータ生成を確認するとき
+- realization apply に関する builder adapter の構成や入口を確認するとき
+- apply 処理の builder 実装を辿るとき
 
 ## Do not read this when
-- apply 以外の realization builder を確認するとき
-- fork の launch_exec パラメータ生成そのものの実装詳細を直接確認するとき
+- apply 処理以外の builder adapter を確認するとき
+- 個別 adapter の詳細実装を直接確認したいときは、配下の対象へ直接進める
 
 ## hash
-- 1aff7bd61edfd5529e41a280a5cd7b7d325315f8879f7b155e750a471a4618fe
+- 489bb960e219cb5547d82a3939183a15250f7f3053cb5244010addb81b6870c4
 
 # `refactor`
 

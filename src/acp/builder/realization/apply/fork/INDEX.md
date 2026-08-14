@@ -16,15 +16,15 @@
 # `launch_exec.py`
 
 ## Summary
-- realization apply fork の launch_exec に関する互換入口。正本 builder を再公開し、apply fork の launch_exec パラメータ生成へ到達するための対象。
+- 日本語の技術文書向け INDEX.md エントリー生成のため、対象ファイルの互換入口としての責務と、正本実装へ進む入口条件を整理します。
 
 ## Read this when
-- apply fork の launch_exec パラメータ生成を利用・確認するとき
-- 互換入口から正本 builder への委譲関係を確認するとき
+- 既存の acp.builder.realization.apply.fork.launch_exec 参照を維持する互換入口の役割を確認するとき
+- この入口が再公開する launch_exec パラメータ builder の正本実装を確認するとき
 
 ## Do not read this when
-- 正本 builder の実装内容や挙動を確認したいときは、対応する oracle file を直接読む
-- apply fork 以外の realization apply や、launch_exec パラメータ生成と無関係な処理を扱うとき
+- 互換参照の有無を確認するだけで、正本 builder の実装内容を調べる必要がないとき
+- realization 側の実装や利用者向け公開面から旧参照を削除する条件を検討するとき
 
 ## hash
-- 63d3b490194bc1558f63f4dddda55776611d4ee7a3cdcde632c9e57d9df7ca80
+- 383f0d2aed0b8d5c4573772e81b09790be3d587e72a832d0610df1d55c42340c
