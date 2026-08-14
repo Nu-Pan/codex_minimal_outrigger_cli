@@ -60,7 +60,7 @@
     "last_investigated_at": "2026-08-13_19-24_58_075735000"
   },
   "oracle/doc/app_spec/error_handling.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "bfaceea1701755cbe1f24db75ea9044ad4d4ed7dc98edef844bc94e39c3bbdf8",
     "last_investigated_at": "2026-07-28_16-11_41_686157000"
@@ -156,37 +156,37 @@
     "last_investigated_at": "2026-08-12_08-38_41_052697000"
   },
   "oracle/doc/app_spec/sub_command/oracle_review.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "3d3af739d12e1cce2c7ba68739dd4607588a081461f8a7db0052875c4b77951f",
     "last_investigated_at": "2026-08-14_11-18_00_532442000"
   },
   "oracle/doc/app_spec/sub_command/realization_apply.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "e5a17052c2aa0756da0cf25cd1ff6899a42d012d9c1ee2b1283632364d896e25",
     "last_investigated_at": "2026-08-13_01-12_07_818439000"
   },
   "oracle/doc/app_spec/sub_command/realization_refactor.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "7849e81efbc99e625fe43bbaaadc0816eb20bcd0e6ab9093405e74d437d6aee8",
     "last_investigated_at": "2026-08-13_00-57_17_416352000"
   },
   "oracle/doc/app_spec/sub_command/session_abandon.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2a06a246197e7eae75c325ccf2b7c6c10a5641b249900af9c7b143c770ea9e0d",
     "last_investigated_at": "2026-07-26_20-48_45_057798000"
   },
   "oracle/doc/app_spec/sub_command/session_fork.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "e914f7872441d53ee60a6b5dd13d02a515e9a1159130098b798a0160a2f46a69",
     "last_investigated_at": "2026-07-23_21-35_16_325695000"
   },
   "oracle/doc/app_spec/sub_command/session_join.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "890046a7082a55da8b4afa5a7bd132a63ddcb2afc6021743bd9603f3c6206021",
     "last_investigated_at": "2026-08-13_23-58_07_385304000"
@@ -210,7 +210,7 @@
     "last_investigated_at": "2026-08-12_23-15_26_031994000"
   },
   "oracle/doc/app_spec/windows_toast_notification.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "ae77b082d0e9fb697d97d557fa7f6c7ba6f6fa51afbe88b7b6e5a3ad805974f2",
     "last_investigated_at": "2026-08-12_00-01_27_449082000"
