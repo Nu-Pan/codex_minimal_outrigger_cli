@@ -5,14 +5,21 @@
 """
 
 import html
-import json
 from pathlib import Path
 
+from .runtime_logging import current_subcommand_logger
 from .runtime_paths import (
     _reserve_timestamped_path,
     reports_dir,
     timestamp,
 )
+from .runtime_primary_report import write_reserved_primary_report
+from .runtime_primary_report_render import (
+    execution_step_lines,
+    related_log_lines,
+    yaml_scalar,
+)
+from .runtime_primary_report_specs import TerminalClassification
 from .runtime_run_lifecycle import EditingRunContext
 
 
@@ -34,7 +41,20 @@ def write_fork_report(
     # report を書き始める前に path を予約し、同一 timestamp の run report を
     # 別 run が上書きしないようにする。
     generated_at, path = _reserve_timestamped_path(directory, ".md", timestamp)
+    terminal_classification: TerminalClassification = (
+        "error"
+        if completion_reason == "error"
+        else (
+            "user_interruption"
+            if completion_reason == "user_interruption"
+            else "natural_completion"
+        )
+    )
     fields: list[tuple[str, object]] = [
+        ("command", f"cmoc {command_path.replace('/', ' ')}"),
+        ("repo_root", context.repo.resolve()),
+        ("terminal_classification", terminal_classification),
+        ("exit_code", 1 if completion_reason == "error" else 0),
         ("run_kind", context.kind),
         ("session_branch", context.session_branch),
         ("session_fork_commit", context.session_fork_commit),
@@ -49,9 +69,18 @@ def write_fork_report(
     ]
     fields.extend((extra_fields or {}).items())
     changed = [_render_changed_path(item) for item in changed_paths] or ["- none"]
+    logger = current_subcommand_logger()
+    execution = (
+        execution_step_lines(logger, terminal_classification)
+        if logger is not None
+        else ["- unavailable"]
+    )
+    related_logs = (
+        related_log_lines(logger) if logger is not None else ["- unavailable"]
+    )
     content = [
         "---",
-        *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
+        *[f"{name}: {yaml_scalar(value)}" for name, value in fields],
         "---",
         f"# cmoc {context.kind.replace('_', ' ')} fork report",
         "## Completion",
@@ -59,9 +88,13 @@ def write_fork_report(
         "## Changed paths",
         *changed,
         *(body_lines or []),
+        "## Execution stages",
+        *execution,
+        "## Related logs",
+        *related_logs,
         "",
     ]
-    path.write_text("\n".join(content), encoding="utf-8")
+    write_reserved_primary_report(path, "\n".join(content))
     return path.resolve()
 
 
@@ -72,21 +105,21 @@ def write_lifecycle_report(
     state_after: str,
     warnings: list[str],
     details: dict[str, object],
-    report_path: Path | None = None,
+    terminal_classification: TerminalClassification = "natural_completion",
+    exit_code: int = 0,
 ) -> Path:
     """run join/abandon の共通情報と cleanup 結果を保存する。"""
-    if report_path is None:
-        directory = reports_dir(context.repo, f"run/{operation}")
-        directory.mkdir(parents=True, exist_ok=True)
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # report を書き始める前に path を予約し、同一 timestamp の run report を
-        # 別 run が上書きしないようにする。
-        generated_at, report_path = _reserve_timestamped_path(
-            directory, ".md", timestamp
-        )
-    else:
-        generated_at = timestamp()
+    directory = reports_dir(context.repo, f"run/{operation}")
+    directory.mkdir(parents=True, exist_ok=True)
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # report を書き始める前に path を予約し、同一 timestamp の run report を
+    # 別 run が上書きしないようにする。
+    generated_at, report_path = _reserve_timestamped_path(directory, ".md", timestamp)
     fields: list[tuple[str, object]] = [
+        ("command", f"cmoc run {operation}"),
+        ("repo_root", context.repo.resolve()),
+        ("terminal_classification", terminal_classification),
+        ("exit_code", exit_code),
         ("operation", operation),
         ("run_kind", context.kind),
         ("session_branch", context.session_branch),
@@ -99,36 +132,39 @@ def write_lifecycle_report(
         ("generated_at", generated_at),
         *details.items(),
     ]
-    report_path.write_text(
-        "\n".join(
-            [
-                "---",
-                *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
-                "---",
-                f"# cmoc run {operation} report",
-                "## Warnings",
-                *([f"- {warning}" for warning in warnings] or ["- none"]),
-                "",
-            ]
-        ),
-        encoding="utf-8",
+    logger = current_subcommand_logger()
+    execution = (
+        execution_step_lines(logger, terminal_classification)
+        if logger is not None
+        else ["- unavailable"]
     )
+    related_logs = (
+        related_log_lines(logger) if logger is not None else ["- unavailable"]
+    )
+    content = "\n".join(
+        [
+            "---",
+            *[f"{name}: {yaml_scalar(value)}" for name, value in fields],
+            "---",
+            f"# cmoc run {operation} report",
+            "## Outcome",
+            terminal_classification,
+            "## Details",
+            *(
+                [f"- {name}: {yaml_scalar(value)}" for name, value in details.items()]
+                or ["- none"]
+            ),
+            "## Warnings",
+            *([f"- {warning}" for warning in warnings] or ["- none"]),
+            "## Execution stages",
+            *execution,
+            "## Related logs",
+            *related_logs,
+            "",
+        ]
+    )
+    write_reserved_primary_report(report_path, content)
     return report_path.resolve()
-
-
-def _yaml_scalar(value: object) -> str:
-    """report の YAML scalar として安全に表現する。"""
-    if value is None:
-        return "null"
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        return str(value)
-    if isinstance(value, (list, dict)):
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-        # JSON flow style は YAML 1.2 と互換で、nested front matter を一行で保てる。
-        return json.dumps(value, ensure_ascii=False, sort_keys=True)
-    return json.dumps(str(value), ensure_ascii=False)
 
 
 def _render_changed_path(path: str, indent: str = "", label: str = "") -> str:

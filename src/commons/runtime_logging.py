@@ -39,6 +39,7 @@ class SubcommandLogger:
         self.quota_wait_sec = 0.0
         self.step_timings: list[StepTiming] = []
         self.warning_messages: list[str] = []
+        self._event_records: list[dict[str, Any]] = []
         # ContextVar の worker context から同じ logger object が共有されるため、並列 Codex
         # event の追記と quota 待機時間の集計を直列化する。
         # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
@@ -60,6 +61,7 @@ class SubcommandLogger:
             with self.path.open("a") as f:
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 f.flush()
+            self._event_records.append(record.copy())
         # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
         # detector は event が flush された後だけ評価し、失敗を本命 logger へ返さない。
         if {
@@ -149,6 +151,20 @@ class SubcommandLogger:
         """Codex quota 待機をサブコマンド全体の待機時間として合算する。"""
         with self._lock:
             self.quota_wait_sec += seconds
+
+    def event_records(self) -> tuple[dict[str, Any], ...]:
+        """primary report が参照する flush 済み event の snapshot を返す。"""
+        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        with self._lock:
+            return tuple(record.copy() for record in self._event_records)
+
+    def codex_call_records(self) -> tuple[dict[str, Any], ...]:
+        """実行済み Codex call event だけを保存順で返す。"""
+        return tuple(
+            record
+            for record in self.event_records()
+            if record.get("event") == "codex_call"
+        )
 
 
 def set_current_subcommand_logger(

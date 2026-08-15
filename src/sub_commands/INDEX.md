@@ -33,69 +33,71 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装を集約する入口。サブコマンドの起動定義と、観測の集約から検証、checkpoint 再開、generation／Markdown／current pointer の publication、incomplete 診断、cleanup までの report pipeline を扱う。feedback サブコマンドの処理全体を確認・変更するときに読む。
+- feedback サブコマンドの実装をまとめたディレクトリ。feedback 関連の処理を確認・変更するときの入口で、report cut の状態機械と publication・診断・再開処理を扱う下位実装へ進むために読む。
 
 ## Read this when
-- feedback サブコマンドの挙動や実装を確認・変更するとき
-- feedback observation から issue candidate や machine aggregate を構築し、verification と report publication までの処理を調査するとき
-- checkpoint 再開、中断時の状態更新、incomplete 診断、publication や cleanup の扱いを確認するとき
+- feedback サブコマンドの挙動や実装を確認・変更するとき。
+- `cmoc feedback report` の publication、incomplete 診断、中断・再開、checkpoint、cleanup、current pointer 切替を追跡するとき。
+- feedback observation の validation、issue 集約、verification、report 出力の連携を調査するとき。
 
 ## Do not read this when
-- feedback state の正本データ契約や状態遷移を確認するとき
-- feedback report の利用条件や外部仕様を確認するとき
-- normalization・verification の個別契約、共通 runtime state・store・logging・publication artifact の実装を直接確認するとき
+- feedback 以外のサブコマンドを扱うとき。
+- feedback observation の一般的な envelope・raw store 仕様だけを確認するとき。
+- 共通の feedback state、artifact 操作、lock、pointer 実装だけを確認するとき。
+- issue normalization・verification agent の prompt や Structured Output schemaだけを確認するとき。
+- 通常の Markdown report 描画だけを確認するとき。
 
 ## hash
-- a4855ff6a0d145df272c92a3ad332349adb3119c0a25dc07cf191c1b8caa2686
+- d7e59a4f0776547b55aff1fdec8a490a5b2fc6ea52d7e1509923aa49f32d771b
 
 # `indexing.py`
 
 ## Summary
-- `cmoc indexing` サブコマンドの実行入口と本体を定義する。CLI 実行前の worktree 条件を検査し、ロック下で INDEX.md の更新と差分 commit を行うため、インデクシング処理の開始条件・実行手順・commit 動作を確認するときの入口となる。
+- CLI の indexing サブコマンドを実行するランタイム入口。実行前に worktree の安全条件を検査し、排他制御下で INDEX.md の更新・差分 commit・実行結果の primary report 反映までを統括する。indexing CLI の実行フローや、更新・commit の責務を確認する際の入口となる。
 
 ## Read this when
-- `cmoc indexing` の CLI 実行フロー、前提条件、worktree ロック、INDEX.md 更新、または更新結果の commit を調べるとき。
+- indexing サブコマンドの実行手順、安全条件、排他制御、INDEX.md 更新または commit 処理を変更・調査するとき
+- indexing 実行結果として更新件数、commit ID、更新対象一覧がどのように報告されるか確認するとき
 
 ## Do not read this when
-- INDEX.md の具体的なルーティング内容や生成規則を調べるとき。
-- インデックス更新の内部処理を調べるときは `commons.indexing` を直接読む方が適切。
-- CLI 共通の実行制御や worktree 検査の実装を調べるときは `cmoc_runtime` を直接読む方が適切。
+- INDEX.md の生成規則や個別ファイルの内容を確認するだけで、indexing CLI の実行フローを扱わないとき
+- CLI 共通実行基盤や INDEX.md 更新処理そのものの詳細を直接確認する必要があり、それぞれの実装対象へ進めるとき
 
 ## hash
-- b6ca80b2815cc79bb34fdd9c72a3df659eaaea8b5bae9a5d3d1835a51d0aebd5
+- 5b254b536c60d465922e7592e423030a458acf28d2899bef100dd4163d6f7c26
 
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package。oracle edit、investigation、review と、それらの対象列挙・review loop・レポート・path 解決などの下位実装への入口を提供する。
+- oracle 系サブコマンドの CLI 実装をまとめるパッケージ境界。編集・調査・レビューの各サブコマンド入口と、レビュー対象列挙・ループ・パス解決・レポート・INDEX 統合の下位実装へ進むための起点となる。
 
 ## Read this when
-- oracle サブコマンド群の構成や、各サブコマンドの実行入口を確認するとき
-- oracle review の対象選定、実行 loop、レポート生成、INDEX 限定 merge など関連実装の所在を判断するとき
+- oracle サブコマンド群の構成、各 CLI 実行入口、または oracle review の下位処理への入口を確認するとき。
+- oracle edit、investigation、review の実行フローや、review の対象選定・ループ・パス処理・レポート・INDEX 統合を調査するとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細な実行制御を確認する場合は、該当する実装ファイルを直接読むとき
-- oracle 文書の仕様、共通 prompt editor、agent 起動パラメータなど、別の正本仕様・共通実装が主対象のとき
+- 個別サブコマンドの prompt 契約や共通機能など、対象パッケージ内の特定実装の詳細だけを確認したいときは、対応する個別ファイルを直接読む。
+- oracle と無関係な CLI サブコマンドや一般的な仕様を調査するとき。
 
 ## hash
-- 9baebefb222289ac9bc7816f2986faa60aac56d0f8a115cef4a37294b9e1c84c
+- 8ad754cb261b482eccb05df21ce244e8687e7186bc393c32accb389fe2dba25d
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口です。apply と refactor の各 workload 実装へ進むための上位ルーティング対象で、サブコマンド全体の構成や workload の選択を確認するときに読みます。
+- realization workload サブコマンドの実装をまとめるパッケージ階層。apply による成果物適用処理と、refactor によるリファクタリング処理への入口を提供する。
 
 ## Read this when
-- realization サブコマンドの実装構成や、apply・refactor workload の入口を確認するとき。
-- realization 配下で対象 workload が未特定のまま調査を開始するとき。
+- realization workload サブコマンド全体の構成や、apply・refactor のどちらへ進むべきかを確認するとき。
+- realization の workload 実装に関するサブコマンドの責務分担を調査するとき。
 
 ## Do not read this when
-- apply workload の実行フローや fork lifecycle の詳細を確認する場合は apply へ直接進むとき。
-- refactor workload の実行フローや対象ファイル処理の詳細を確認する場合は refactor へ直接進むとき。
-- realization workload に関係しない処理を確認するとき。
+- realization workload サブコマンドに関係しない処理を確認するとき。
+- apply の実行ライフサイクルや fork report 保存の詳細だけを確認するときは apply 配下を直接読む。
+- realization のリファクタリング処理の詳細だけを確認するときは refactor 配下を直接読む。
 
 ## hash
-- 59b55777e72514952e508c1806fd0f41a1b6a5c4e581adb2a54a4e262187b4e7
+- 526e7d8b4cb8e735ee28786b035ac0d2826943dfc6781fb4eb6f015d6e8336f5
 
 # `review`
 
@@ -114,40 +116,36 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージの入口。関連する run サブコマンドの共通処理を確認する際に読む。
-- abandon は active editing run の停止・破棄と、worktree・branch・state・process tracking の cleanup lifecycle を扱う。
-- join は active run の検証、branch merge、INDEX 再生成、state 同期、report、cleanup、および失敗時の rollback・再試行可能性を扱う。
-- lifecycle と report は、それぞれ commons 側の canonical 実装を旧 import path から再公開する互換 shim である。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。abandon・join の実装と、ライフサイクル処理・report writer の旧 import path 互換 shim を扱う。run サブコマンドの共通処理や配下の実装へ進む入口。
 
 ## Read this when
-- editing run サブコマンドの共通 lifecycle や、その配下の実装を調査・変更するとき。
-- cmoc run abandon の停止・破棄処理、cleanup 順序、worktree・branch の削除挙動を確認するとき。
-- cmoc run join の merge、post-join、state 同期、report、cleanup、失敗時 rollback を確認するとき。
-- 旧 import path による lifecycle 操作または run report writer の互換性を確認するとき。
+- editing run の abandon または join の lifecycle、cleanup、state・report 更新を調査・変更するとき。
+- editing run のライフサイクル処理や report writer の旧 import path 互換性を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- run の具体的な処理や workload 固有の処理を確認する場合は、この入口ではなく配下の該当実装を直接読むとき。
-- worktree・branch・process 操作や共通 lifecycle・report writer の canonical 実装詳細を確認する場合は、インポート先の commons 側を直接読むとき。
+- 特定の処理の実装詳細や canonical な共通 runtime・report writer を確認するときは、配下または commons 側の該当対象を直接読む。
 
 ## hash
-- 6a97207376f4a7fe194c37979921e51cf211a75ae66be26b6557889056d3a921
+- f3c4e0f237ee06d627edbec2df8bf878e0e99da234ae8f7152e72c973043a1be
 
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session のライフサイクル処理や構成を確認する際の入口で、個別の fork・join・abandon 実装へ進むためのルーティング対象。
+- session サブコマンドの実装パッケージ。session の fork・join・abandon に関する CLI 実行経路と、各ライフサイクル処理に伴う branch・state の更新や失敗時の扱いを確認する入口となる。
 
 ## Read this when
-- session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
-- session の fork、join、abandon など個別処理の実装を調査する前に、パッケージ全体の入口を把握するとき。
+- session サブコマンドの実装構成や、fork・join・abandon の実行経路を確認・変更するとき
+- session branch と session state の作成、更新、統合、破棄に関するサブコマンド挙動を調査するとき
+- session のライフサイクル処理における rollback、merge conflict 解消、branch 削除の実装を確認するとき
 
 ## Do not read this when
-- session 以外のサブコマンドを扱うとき。
-- CLI 共通ランナー、Git 操作、session state の一般仕様など、共通実装や正本仕様を直接確認することが目的のとき。
+- session 以外のサブコマンドを扱うとき
+- session state のデータ構造や共通 runtime API の仕様だけを確認するとき
+- CLI 共通処理や conflict 解消プロンプトなど、session サブコマンド個別の実装以外を直接調査するとき
 
 ## hash
-- 7f1cfedbc25bb55290f8b96f0d1468ffe3ee6f86d17b244fa883e0d1ccd9d943
+- 4e6660b971d477350ac3ec0de7e17e421b2e245cc3282834f507441178536573
 
 # `tui.py`
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from cmoc_runtime import SessionState, reports_dir, timestamp
 from commons.runtime_paths import _reserve_timestamped_path
+from commons.runtime_primary_report import write_reserved_primary_report
 
 from .review_paths import finding_oracle_path, oracle_path_key
 
@@ -51,7 +52,8 @@ def write_oracle_review_report(
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     # path を予約してから本文を書くことで、同一 timestamp の report を上書きしない。
     generated_at, report_path = _reserve_timestamped_path(report_dir, ".md", timestamp)
-    report_path.write_text(
+    write_reserved_primary_report(
+        report_path,
         render_oracle_review_report(
             root,
             scope,
@@ -67,7 +69,6 @@ def write_oracle_review_report(
             interrupted=interrupted,
             generated_at=generated_at,
         ),
-        encoding="utf-8",
     )
     return report_path
 

@@ -13,6 +13,7 @@ from cmoc_runtime import (
     CommandResult,
     TerminalResult,
     current_branch,
+    head_commit,
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
@@ -25,6 +26,7 @@ from cmoc_runtime import (
 )
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_git import literal_pathspec, status_path_statuses
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_results import CodexExecCallable
 
 _CodexExec = CodexExecCallable
@@ -52,6 +54,11 @@ def _cmoc_session_join_body(
     root = repo_root()
     work = work_root()
     branch = current_branch(work)
+    update_primary_report_fields(
+        session_branch=branch,
+        session_state_before=None,
+        session_state_after=None,
+    )
     start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
@@ -66,19 +73,35 @@ def _cmoc_session_join_body(
         )
     require_clean_worktree(work)
     home = state.session.session_home_branch
+    update_primary_report_fields(
+        home_branch=home,
+        session_state_before=state.session.state,
+    )
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
+    session_head_before_merge = head_commit(work)
+    update_primary_report_fields(
+        session_branch_head_before_merge=session_head_before_merge,
+    )
     start_subcommand_step(3, "session branch を merge", "merge session branch")
     # {{work-root}}/oracle/doc/app_spec/session_state.md:
     # session_home_branch は local branch なので、同名 remote-tracking branch を
     # Git に推測させて別の merge target を作らない。
     run_git(["switch", "--no-guess", home], work)
+    home_head_before_merge = head_commit(work)
+    update_primary_report_fields(home_branch_head_before_merge=home_head_before_merge)
     merge = git(["merge", "--no-ff", branch], work, check=False)
     if merge.returncode != 0:
         resolve_session_join_conflict(work, codex_exec, git)
+    head_after_merge = head_commit(work)
+    merge_commit = (
+        head_after_merge if head_after_merge != home_head_before_merge else None
+    )
+    update_primary_report_fields(merge_commit=merge_commit)
     state.session.state = "joined"
     start_subcommand_step(4, "後始末と terminal result を確定", "finish session join")
     write_state(path, state)
+    update_primary_report_fields(session_state_after="joined")
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
     # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
     # remote-tracking ref で安全性を証明してはならない。
@@ -115,6 +138,10 @@ def resolve_session_join_conflict(
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""
     start_subcommand_step("3/4, 1/5", "conflict 対象を列挙", "enumerate conflicts")
     conflicted_paths = _unmerged_paths(root, git)
+    update_primary_report_fields(
+        conflict_paths=[str(_absolute_path(path)) for path in conflicted_paths],
+        conflict_resolution_status="not_started",
+    )
     if not conflicted_paths:
         raise CmocError(
             "merge に失敗しましたが conflict 対象ファイルを特定できません。",
@@ -124,6 +151,7 @@ def resolve_session_join_conflict(
     before_codex = _changed_path_snapshot(root, git)
     before_conflict_contents = _conflict_file_contents(conflicted_paths)
     start_subcommand_step("3/4, 2/5", "conflict marker 解消を依頼", "resolve conflicts")
+    update_primary_report_fields(conflict_resolution_status="started")
     codex_exec(
         build_session_join_conflict_resolution_parameter(conflicted_paths),
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md:
@@ -131,6 +159,7 @@ def resolve_session_join_conflict(
         root=repo_root(root),
         purpose="session join conflict resolution",
     )
+    update_primary_report_fields(conflict_resolution_status="completed")
     _reject_non_conflict_changes(root, git, before_codex, conflicted_paths)
     _reject_conflict_context_changes(before_conflict_contents)
     start_subcommand_step(

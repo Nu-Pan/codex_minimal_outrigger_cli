@@ -18,6 +18,7 @@ from cmoc_runtime import (
 )
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_feedback import accepted_feedback_observations
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -66,6 +67,16 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
         start_was_ready = session_run_was_ready()
         start_attempted = True
         context = start_editing_run("realization_apply")
+        update_primary_report_fields(
+            run_kind=context.kind,
+            session_branch=context.session_branch,
+            session_fork_commit=context.session_fork_commit,
+            run_branch=context.run_branch,
+            run_fork_commit=context.run_fork_commit,
+            run_worktree=context.run_worktree,
+            state_before=context.state_before,
+            state_after="running",
+        )
         _, _, state = load_state_for_branch(context.repo, context.session_branch)
         diff_base_commit = (
             state.session.last_joined_apply_fork_commit
@@ -77,6 +88,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                 ["session state file を確認してください。"],
                 str(context.state_path),
             )
+        update_primary_report_fields(diff_base_commit=diff_base_commit)
         start_subcommand_step(3, "oracle raw diff を構築", "build oracle diff")
         oracle_diff = raw_oracle_diff(
             context.run_worktree,
@@ -123,6 +135,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             if agent_commit_check_active and agent_head is not None:
                 _ensure_agent_did_not_commit(run_worktree, agent_head)
             codex_returncode = result.returncode
+            update_primary_report_fields(codex_returncode=codex_returncode)
             if result.returncode != 0:
                 raise CmocError(
                     "realization apply agent が正常終了しませんでした。",
@@ -206,13 +219,18 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             changes = tree_changes(context.run_worktree, context.run_fork_commit)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
+        changed_paths = flattened_change_paths(changes)
+        update_primary_report_fields(
+            state_after="joinable",
+            changed_paths=changed_paths,
+        )
         start_subcommand_step(7, "fork report を保存", "write fork report")
         report = write_fork_report(
             context,
             "realization/apply/fork",
             state_after="joinable",
             completion_reason="completed",
-            changed_paths=flattened_change_paths(changes),
+            changed_paths=changed_paths,
             codex_returncode=codex_returncode,
             extra_fields=_apply_report_fields(diff_base_commit),
             body_lines=_cleanup_warning_lines(cleanup_warnings),
@@ -359,6 +377,7 @@ def _record_error(
         cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
     try:
         set_run_state(context, "error")
+        update_primary_report_fields(state_after="error")
     except BaseException as state_error:
         cleanup_errors.append(f"state update failed: {state_error!r}")
     # 最終 git inspection が失敗しても error report を保存できるようにする。
@@ -370,6 +389,11 @@ def _record_error(
     except BaseException as change_error:
         cleanup_errors.append(f"change inspection failed: {change_error!r}")
         changed_paths = []
+    update_primary_report_fields(
+        changed_paths=changed_paths,
+        codex_returncode=codex_returncode,
+        error=repr(exc),
+    )
     return write_fork_report(
         context,
         "realization/apply/fork",

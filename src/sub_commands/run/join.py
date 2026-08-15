@@ -34,6 +34,7 @@ from cmoc_runtime import (
     write_state,
 )
 from commons.runtime_git import literal_pathspec
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_refactor import sync_refactor_state
 from commons.runtime_run import (
     delete_run_process_id,
@@ -82,6 +83,15 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
     initial_context, _ = resolve_active_run({"joinable", "error"})
     with run_lifecycle_lock(initial_context.repo, initial_context.session_id):
         context, state = resolve_active_run({"joinable", "error"})
+        update_primary_report_fields(
+            run_kind=context.kind,
+            session_branch=context.session_branch,
+            run_branch=context.run_branch,
+            run_fork_commit=context.run_fork_commit,
+            run_worktree=context.run_worktree,
+            state_before=state.run.state,
+            state_after=state.run.state,
+        )
         warnings: list[str] = []
         current_worktree = work_root().resolve()
         session_doctor_state_paths = (
@@ -172,6 +182,13 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
                 state,
                 warnings,
                 session_head_before_join,
+            )
+            update_primary_report_fields(
+                run_join_commit=run_join_commit,
+                post_join_hook=hook_result,
+                refactor_state_sync_commit=state_sync_commit,
+                cleanup=cleanup,
+                state_after="ready" if cleanup == "completed" else "error",
             )
         except BaseException as exc:
             if isinstance(getattr(exc, "terminal_result", None), TerminalResult):
@@ -296,18 +313,6 @@ def _merge_and_finalize(
     write_state(context.state_path, state_after_join)
     delete_run_process_id(context.repo, context.session_id)
     start_subcommand_step(5, "結果を保存して run 資源を cleanup", "cleanup run")
-    report = write_lifecycle_report(
-        context,
-        "join",
-        state_after="ready",
-        warnings=[*warnings, "cleanup pending"],
-        details={
-            "run_join_commit": run_join_commit,
-            "post_join_hook": hook_result,
-            "refactor_state_sync_commit": state_sync_commit,
-            "cleanup": "pending",
-        },
-    )
     cleanup = _cleanup_joined_run(context, warnings)
     state_after_cleanup = "ready"
     if cleanup != "completed":
@@ -330,6 +335,13 @@ def _merge_and_finalize(
             ),
         )
         delete_run_process_id(context.repo, context.session_id)
+    update_primary_report_fields(
+        run_join_commit=run_join_commit,
+        post_join_hook=hook_result,
+        refactor_state_sync_commit=state_sync_commit,
+        cleanup=cleanup,
+        state_after=state_after_cleanup,
+    )
     try:
         report = write_lifecycle_report(
             context,
@@ -342,13 +354,25 @@ def _merge_and_finalize(
                 "refactor_state_sync_commit": state_sync_commit,
                 "cleanup": cleanup,
             },
-            report_path=report,
         )
     except BaseException as report_error:
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # merge、ready state、cleanup が完了した後の report 更新失敗で、確定済み
+        # merge、ready state、cleanup が完了した後の report 保存失敗で、確定済み
         # merge を rollback し、唯一の復旧可能な run commit を失わせてはいけない。
-        warnings.append(f"final join report update failed: {report_error!r}")
+        update_primary_report_fields(
+            run_join_commit=run_join_commit,
+            post_join_hook=hook_result,
+            refactor_state_sync_commit=state_sync_commit,
+            cleanup=cleanup,
+            state_after=state_after_cleanup,
+            report_update="failed",
+        )
+        raise CmocError(
+            "run join report の最終状態を保存できませんでした。",
+            ["診断用サブコマンドログを確認してください。"],
+            repr(report_error),
+            terminal_result=TerminalResult(),
+        ) from report_error
     return run_join_commit, hook_result, state_sync_commit, cleanup, report
 
 
@@ -391,6 +415,13 @@ def _record_join_failure(
         fork_commit=context.run_fork_commit,
     )
     write_state(context.state_path, state)
+    update_primary_report_fields(
+        state_after="error",
+        run_join_commit=None,
+        post_join_hook="error",
+        cleanup="not_run",
+        error=repr(exc),
+    )
     return write_lifecycle_report(
         context,
         "join",
@@ -403,6 +434,8 @@ def _record_join_failure(
             "cleanup": "not_run",
             "error": repr(exc),
         },
+        terminal_classification="error",
+        exit_code=1,
     )
 
 
@@ -524,6 +557,8 @@ def _resolve_index_only_conflict_or_fail(
             "cleanup": "not_run",
             "conflict_paths": ", ".join(conflicts),
         },
+        terminal_classification="error",
+        exit_code=1,
     )
     error = CmocError(
         "INDEX.md 以外の merge conflict が発生しました。",
@@ -620,6 +655,13 @@ def _raise_unexpected(
     warnings: list[str],
 ) -> None:
     """想定外差分を report に記録して join failure として送出する。"""
+    update_primary_report_fields(
+        state_after=context.state_before,
+        run_join_commit=None,
+        post_join_hook="not_run",
+        cleanup="not_run",
+        unexpected_paths=paths,
+    )
     report = write_lifecycle_report(
         context,
         "join",
@@ -632,6 +674,8 @@ def _raise_unexpected(
             "cleanup": "not_run",
             "unexpected_paths": ", ".join(paths),
         },
+        terminal_classification="error",
+        exit_code=1,
     )
     error = CmocError(
         summary,

@@ -31,6 +31,7 @@ from cmoc_runtime import (
     timestamp,
 )
 from commons.indexing import enable_indexing_preflight
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_refactor import (
     RefactorState,
     load_refactor_state,
@@ -92,6 +93,17 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
         start_was_ready = session_run_was_ready()
         start_attempted = True
         context = start_editing_run("realization_refactor")
+        update_primary_report_fields(
+            run_kind=context.kind,
+            session_branch=context.session_branch,
+            session_fork_commit=context.session_fork_commit,
+            run_branch=context.run_branch,
+            run_fork_commit=context.run_fork_commit,
+            run_worktree=context.run_worktree,
+            state_before=context.state_before,
+            state_after="running",
+            refactor_state_path=refactor_state_path(context.run_worktree),
+        )
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # 初期化時の INDEX 更新も Codex call を起こすため、fork 全体を同じ
         # process tracking scope に置き、interrupt/abandon から停止可能にする。
@@ -110,6 +122,7 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
                     cleanup_warnings,
                 )
             reason = _completion_reason(context.run_worktree, unresolved_findings)
+            update_primary_report_fields(completion_reason=reason)
             summary = _completion_change_summary(context)
             # {{work-root}}/oracle/doc/app_spec/run_isolation.md
             # joinable は run worktree を使う Codex descendant の停止後に公開する。
@@ -118,6 +131,7 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
             )
         start_subcommand_step(5, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
+        update_primary_report_fields(state_after="joinable")
         start_subcommand_step(6, "fork report を保存", "write fork report")
         report = _write_refactor_report(
             context,
@@ -177,6 +191,10 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
             )
         try:
             set_run_state(context, "joinable")
+            update_primary_report_fields(
+                state_after="joinable",
+                completion_reason="user_interruption",
+            )
         except BaseException as state_error:
             cleanup_errors.append(f"state update failed: {state_error!r}")
             _raise_refactor_interruption_error(
@@ -246,6 +264,10 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
             error_cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
         try:
             set_run_state(context, "error")
+            update_primary_report_fields(
+                state_after="error",
+                completion_reason="error",
+            )
         except BaseException as state_error:
             error_cleanup_errors.append(f"state update failed: {state_error!r}")
         _raise_refactor_error(
@@ -267,6 +289,10 @@ def _raise_refactor_interruption_error(
     """中断後の cleanup failure を error state/report へ変換する。"""
     try:
         set_run_state(context, "error")
+        update_primary_report_fields(
+            state_after="error",
+            completion_reason="error",
+        )
     except BaseException as state_error:
         cleanup_errors.append(f"error state update failed: {state_error!r}")
     _raise_refactor_error(
@@ -879,12 +905,18 @@ def _write_refactor_report(
             ),
         ]
     )
+    changed_paths = flattened_change_paths(changes)
+    update_primary_report_fields(
+        state_after=state_after,
+        completion_reason=reason,
+        changed_paths=changed_paths,
+    )
     return write_fork_report(
         context,
         "realization/refactor/fork",
         state_after=state_after,
         completion_reason=reason,
-        changed_paths=flattened_change_paths(changes),
+        changed_paths=changed_paths,
         extra_fields={
             "refactor_state_path": refactor_state_path(context.run_worktree).resolve()
         },

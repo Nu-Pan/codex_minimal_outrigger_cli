@@ -25,6 +25,7 @@ from commons.prompt_editor_input import (
     reserve_prompt_editor_input,
 )
 from commons.runtime_git import current_branch
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_state import load_session_part_for_branch
 
 
@@ -44,6 +45,7 @@ def _cmoc_oracle_edit_body() -> None:
     """入力された oracle 編集指示から 2 回の Codex exec を起動する。"""
     repository = repo_root()
     current_root = work_root()
+    main_started = False
 
     # oracle 編集契約を含む完全 prompt の skeleton を初期表示に使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
@@ -74,30 +76,45 @@ def _cmoc_oracle_edit_body() -> None:
 
     def _validate_and_start_main_step() -> None:
         """indexing 後に起動前提を検証し、本命 agent call を開始する。"""
+        nonlocal main_started
         start_subcommand_step(7, "本命起動の事前条件を確認", "validate main launch")
         _require_oracle_edit_launch_preconditions(repository, current_root)
         start_subcommand_step(8, "本命 agent call を実行", "run main agent call")
+        main_started = True
+        update_primary_report_fields(main_agent_call_status="started")
 
     # 本命 parameter の indexing flag により、callback は preflight 後かつ
     # subprocess 起動直前に呼ばれる。
     config = load_config(current_root)
-    run_codex_exec(
-        main_parameter,
-        root=repository,
-        config=config,
-        purpose="oracle edit main",
-        before_agent_call=_validate_and_start_main_step,
-    )
+    try:
+        run_codex_exec(
+            main_parameter,
+            root=repository,
+            config=config,
+            purpose="oracle edit main",
+            before_agent_call=_validate_and_start_main_step,
+        )
+    except BaseException:
+        if main_started:
+            update_primary_report_fields(main_agent_call_status="failed")
+        raise
+    update_primary_report_fields(main_agent_call_status="succeeded")
 
     # 本命の正常終了後だけ、独立した新規 exec session で仕様削減を行う。
     start_subcommand_step(9, "仕様削減 agent call を実行", "run reduction agent call")
     reduction_parameter = build_oracle_edit_reduction_launch_exec_parameter(instruction)
-    run_codex_exec(
-        reduction_parameter,
-        root=repository,
-        config=config,
-        purpose="oracle edit reduction",
-    )
+    update_primary_report_fields(reduction_agent_call_status="started")
+    try:
+        run_codex_exec(
+            reduction_parameter,
+            root=repository,
+            config=config,
+            purpose="oracle edit reduction",
+        )
+    except BaseException:
+        update_primary_report_fields(reduction_agent_call_status="failed")
+        raise
+    update_primary_report_fields(reduction_agent_call_status="succeeded")
     start_subcommand_step(10, "終了状態を確定", "finalize oracle edit")
 
 

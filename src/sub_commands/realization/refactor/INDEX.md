@@ -15,20 +15,19 @@
 # `fork.py`
 
 ## Summary
-- 対象は `cmoc realization refactor fork` の一連の実行ライフサイクルを管理する入口です。run の初期化、refactor state と INDEX の同期、realization file 単位の調査・修正、差分・commit・子 process の検証、unresolved finding の追跡、完了判定、interruption/error cleanup、joinable run の公開と fork report 保存を一つの進捗状態で扱います。realization refactor fork の挙動、処理単位の進行、完了条件、run isolation、report 内容を確認・変更するときの入口です。
-- 対象 file 内の個別 agent prompt、change summary、file review、共通 run lifecycle、refactor state、report の実装詳細だけを調べる場合は、それぞれの専用 builder・runtime helper・oracle/spec を直接参照してください。
+- `realization refactor fork` の full-cycle workload を実行する CLI runtime。refactor state と INDEX を初期化し、対象 realization file ごとに agent による調査・修正、差分検証、state 更新、処理単位の commit を行う。
+- current fork 内の unresolved finding、rename、agent commit、想定外差分、interrupt/error cleanup を管理し、investigation_required と unresolved target の一致を検査して完了理由を判定する。
+- 正常完了・中断・エラー時に fork report と primary report を保存し、join または abandon へ進めるための TerminalResult を返す。realization refactor fork の lifecycle 全体を扱う入口であり、個別の builder、state 管理、run lifecycle の詳細確認より先に読む対象。
 
 ## Read this when
-- `cmoc realization refactor fork` の CLI 実行フローや lifecycle を調査・変更するとき
-- refactor target の選択から file 単位の agent call、state 更新、commit、次 target への遷移を確認するとき
-- unresolved finding の current fork 内管理、rename 後の追跡、完了理由の判定を確認するとき
-- Ctrl+C、agent failure、cleanup failure、error/joinable state、fork report の生成を確認するとき
-- realization refactor fork における想定外差分、agent commit、INDEX refresh、run worktree isolation の検証を確認するとき
+- realization refactor fork の実行順序、run state、interrupt/error cleanup、joinable 公開条件を確認するとき。
+- 対象 realization file の agent call、変更 path 検証、git commit、unresolved finding の保持と rename reconciliation を確認するとき。
+- refactor state の完了不変条件、completion reason、fork report、change summary の生成条件を確認するとき。
 
 ## Do not read this when
-- 個別の realization file review 用 agent prompt や change summary 用 agent prompt の内容だけを確認するときは、対応する builder を直接読む
-- 共通の run 作成・commit・rollback・process tracking・report rendering の仕様や実装だけを確認するときは、対応する runtime helper または oracle/spec を直接読む
-- INDEX 更新の一般規則や realization refactor 全体の永続 state 契約だけを確認するときは、対応する indexing/refactor state の仕様を直接読む
+- 個別の agent prompt や change summary の出力契約だけを確認する場合は、対応する builder を直接読む。
+- refactor target の state 同期・選択・永続化の仕様だけを確認する場合は、refactor state 実装を直接読む。
+- editing run の一般的な開始・join・abandon・rollback lifecycle だけを確認する場合は、run lifecycle の実装または仕様を直接読む。
 
 ## hash
-- d7d4f2fbc55e7043aa6aa3dc2747dfe8b276a51ee30ebc4a526b922e4d7cda02
+- d4d51c0019f329a98249c8d9c64e7182e429b4b5bfae35112c730a2411cb9cd4

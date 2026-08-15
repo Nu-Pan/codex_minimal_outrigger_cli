@@ -17,6 +17,12 @@ from .runtime_logging import (
     set_current_subcommand_logger,
 )
 from .runtime_paths import console_timestamp, format_duration, repo_root, work_root
+from .runtime_primary_report import (
+    PrimaryReportSaveError,
+    ensure_primary_report,
+    reset_primary_report_context,
+    start_primary_report_context,
+)
 from .runtime_results import TerminalResult
 from .runtime_windows_toast import ToastState, notify_terminal_result
 
@@ -31,6 +37,15 @@ _CURRENT_USER_INTERRUPTION: ContextVar[bool | None] = ContextVar(
 _CURRENT_TUI_PROCESS_STARTED: ContextVar[bool | None] = ContextVar(
     "CURRENT_TUI_PROCESS_STARTED", default=None
 )
+
+
+class _FinalizedSubcommandExit(RuntimeError):
+    """terminal result 確定後に non-zero 終了だけを外側へ伝える。"""
+
+    def __init__(self, returncode: int) -> None:
+        """確定済みの終了コードを保持する。"""
+        super().__init__(f"finalized subcommand exit: {returncode}")
+        self.returncode = returncode
 
 
 def run_cli_subcommand(
@@ -64,6 +79,8 @@ def run_cli_subcommand(
     terminal_state: ToastState | None = None
     impl_started = False
     error_returncode: int | None = None
+    argv = tuple(command_argv or [name])
+    primary_report_token = start_primary_report_context(name)
 
     def stop_feedback() -> None:
         """collector を一度だけ drain し、terminal result 後の出力を防ぐ。"""
@@ -83,7 +100,7 @@ def run_cli_subcommand(
         logger = SubcommandLogger(notification_root, name)
         logger_token = set_current_subcommand_logger(logger)
         step_total_token = _CURRENT_STEP_TOTAL.set(total_steps)
-        logger.event("command_invoked", argv=list(command_argv or [name]))
+        logger.event("command_invoked", argv=list(argv))
         feedback_invocation, feedback_token = start_feedback_invocation(
             notification_root,
             current_root,
@@ -127,32 +144,42 @@ def run_cli_subcommand(
             if _CURRENT_USER_INTERRUPTION.get()
             else "natural_completion"
         )
-        _finalize_subcommand(
+        finalized_returncode = _finalize_subcommand(
             logger,
             name,
+            argv,
             classification,
             specific_result,
             returncode=0,
             emit_console=not tui_process,
         )
+        if finalized_returncode != 0:
+            raise _FinalizedSubcommandExit(finalized_returncode)
         if not tui_process:
             terminal_state = (
                 "interrupted" if classification == "user_interruption" else "completed"
             )
+    except _FinalizedSubcommandExit as exc:
+        terminal_state = "failed"
+        raise typer.Exit(exc.returncode) from exc
     except KeyboardInterrupt as exc:
         if interruptible and not impl_started:
             mark_current_subcommand_interrupted()
             stop_feedback()
             if logger is not None:
                 logger.event("user_interruption", result="interrupted")
-                _finalize_subcommand(
+                finalized_returncode = _finalize_subcommand(
                     logger,
                     name,
+                    argv,
                     "user_interruption",
                     TerminalResult(),
                     returncode=0,
                     emit_console=not tui_process,
                 )
+                if finalized_returncode != 0:
+                    terminal_state = "failed"
+                    raise typer.Exit(finalized_returncode) from exc
             terminal_state = None if tui_process else "interrupted"
             return
 
@@ -163,6 +190,7 @@ def run_cli_subcommand(
                 _finalize_subcommand(
                     logger,
                     name,
+                    argv,
                     "error",
                     TerminalResult(),
                     returncode=130,
@@ -172,9 +200,10 @@ def run_cli_subcommand(
             raise
 
         if logger is not None:
-            _finalize_subcommand(
+            finalized_returncode = _finalize_subcommand(
                 logger,
                 name,
+                argv,
                 "error",
                 TerminalResult(
                     next_actions=("必要な状態を確認してから再実行してください。",)
@@ -198,15 +227,17 @@ def run_cli_subcommand(
                 supplied_result = getattr(exc, "cmoc_terminal_result", None)
             if not isinstance(supplied_result, TerminalResult):
                 supplied_result = TerminalResult()
-            _finalize_subcommand(
+            finalized_returncode = _finalize_subcommand(
                 logger,
                 name,
+                argv,
                 "error",
                 supplied_result,
                 returncode=failed_returncode,
                 error=exc,
                 emit_console=True,
             )
+            failed_returncode = finalized_returncode
         else:
             typer.echo(render_error(exc), err=True)
         terminal_state = "failed"
@@ -222,6 +253,7 @@ def run_cli_subcommand(
             reset_current_subcommand_logger(logger_token)
         _CURRENT_TUI_PROCESS_STARTED.reset(tui_process_started_token)
         _CURRENT_USER_INTERRUPTION.reset(interruption_token)
+        reset_primary_report_context(primary_report_token)
         if terminal_state is not None:
             _notify_terminal_result_safely(name, notification_root, terminal_state)
 
@@ -295,13 +327,14 @@ def _emit_progress(message: str) -> None:
 def _finalize_subcommand(
     logger: SubcommandLogger,
     command_name: str,
+    command_argv: tuple[str, ...],
     classification: TerminalClassification,
     specific_result: TerminalResult,
     *,
     returncode: int,
     error: BaseException | None = None,
     emit_console: bool,
-) -> None:
+) -> int:
     """終了状態をログへ flush した後、terminal result を一度だけ表示する。"""
     try:
         logger.finish_current_step()
@@ -323,6 +356,24 @@ def _finalize_subcommand(
             pass
 
     terminal_result = _error_terminal_result(specific_result, error)
+    try:
+        terminal_result = ensure_primary_report(
+            logger.root,
+            command_name,
+            command_argv,
+            classification,
+            returncode,
+            terminal_result,
+            logger,
+        )
+    except PrimaryReportSaveError as report_error:
+        # {{work-root}}/oracle/doc/app_spec/error_handling.md
+        # report 保存失敗は元の終端結果に代わる internal failure とする。未保存の
+        # role/path を持たない新しい result を使い、console へ候補 path を出さない。
+        classification = "error"
+        returncode = 1
+        error = report_error
+        terminal_result = _error_terminal_result(TerminalResult(), report_error)
     elapsed = logger.elapsed()
     terminal_record = _terminal_result_record(
         terminal_result,
@@ -374,6 +425,7 @@ def _finalize_subcommand(
             ),
             err=classification == "error",
         )
+    return returncode
 
 
 def _error_terminal_result(

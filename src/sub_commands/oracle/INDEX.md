@@ -29,18 +29,21 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの実行制御を担う。入力された oracle 編集指示を準備・収集し、本命の oracle 編集 agent call と、正常終了後の仕様削減 agent call を CLI runtime 経由で順に起動する。main worktree、active な `cmoc/session/` branch など本命起動前提の検証もここで行うため、oracle edit の起動順序・入力処理・実行条件を確認または変更するときの入口になる。
+- `cmoc oracle edit` の CLI 実行フローを担当する main-worktree 側の実装。入力された oracle 編集指示をもとに、本命の oracle 編集 agent call と、正常終了後の仕様削減 agent call を順に起動する。
+- prompt editor の入力予約・編集・抽出・確定、indexing preflight、起動前提検証、実行状態の primary report 更新、CLI の進捗管理をまとめて扱う。oracle 編集サブコマンドの実行入口として、起動パラメータ構築や session 要件の検証へ進む際に読む対象。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 実行フロー、prompt 編集入力、2 回の agent call の順序を確認するとき
-- oracle edit の main agent call 起動前提や session branch 検証を変更するとき
+- `cmoc oracle edit` の CLI 実行順序、入力プロンプトの編集処理、agent call の起動条件や成功・失敗状態の更新を確認するとき。
+- oracle 編集を main worktree 上の active な `cmoc/session/` branch に限定する検証を変更・調査するとき。
+- 本命 oracle 編集 call と、正常終了後に実行する reduction call の連携を確認するとき。
 
 ## Do not read this when
-- oracle edit の oracle 文書仕様そのものを確認するとき
-- prompt 編集部品、agent 起動パラメータ生成、session 状態管理の個別実装を直接確認するとき
+- oracle 編集用の agent prompt の契約や起動パラメータの詳細を確認する場合は、直接 `launch_exec` 実装または oracle 編集仕様を読むとき。
+- prompt editor の入力予約・抽出・確定処理そのものを調査する場合は、`commons.prompt_editor_input` を直接読むとき。
+- session 状態、branch 判定、CLI 共通実行、report 更新など単一の共通機能だけを調査する場合は、それぞれの共通モジュールを直接読むとき。
 
 ## hash
-- 4df366aafaf201830028d587737ec948b535fc7efe5dc388b578891f1147835c
+- 880200249722b8c67b6a2453358834912f8b4b4e786dce6d7fe1ffce0ed1b0f0
 
 # `investigation.py`
 
@@ -132,20 +135,18 @@
 # `review_report.py`
 
 ## Summary
-- oracle review サブコマンドのレビュー結果レポートを生成・整形する実装。レポートの保存、判定結果、YAML frontmatter、評価対象一覧、所見グループ、パス表示を扱う。レビュー結果の出力形式や表示順、判定ロジックを確認・変更するときの入口となる。
+- 日本語の技術文書として、対象モジュールの責務と、oracle review のレポート生成・描画処理へ進むべき入口を簡潔に示します。
 
 ## Read this when
-- oracle review の Markdown レポート保存や描画形式を変更するとき
-- レビュー結果の verdict（error、interrupted、no_targets、fatal、minor、ok）判定を確認するとき
-- frontmatter、評価対象テーブル、finding の表示順やエスケープ処理を確認するとき
+- oracle review の実行結果を Markdown レポートとして保存・描画する処理を調べるとき
+- レポートの verdict、frontmatter、finding 表示、対象 oracle path 表示の挙動を確認するとき
 
 ## Do not read this when
-- oracle review の対象 oracle の選定・レビュー実行そのものを変更するとき
-- レビュー仕様の正本を確認するときは、参照コメントに示された oracle_review 仕様を直接読む場合
-- 一般的なレポート以外のサブコマンド出力や、所見データの生成処理を変更するとき
+- oracle review の対象選定、finding の判定、または review 自体の実行制御を調べるとき
+- レポート出力以外の sub-command の仕様や runtime path 処理を直接調べるとき
 
 ## hash
-- f78dfc672cf520dde6f435fca6af84c71d2a1a0e3b025a03b5271a1fc282ab22
+- 91278a4fd6e9eb55d21f879480b7ae0e2ac3a9edc34470443b5c1259fa4d1f30
 
 # `review_targets.py`
 

@@ -15,51 +15,55 @@
 # `abandon.py`
 
 ## Summary
-- アクティブな session を home branch へ merge せず破棄する CLI サブコマンドの実装。session branch 上での事前条件確認、clean worktree の検証、home branch への切替、session state の abandoned 更新、session branch の削除と、失敗時の state・branch 復旧を扱う。session abandon の動作、cleanup、rollback、terminal result を確認・変更するときの入口となる。
+- `session abandon` の CLI 実行経路を定義し、active session の事前条件確認、home branch への切り替え、session state の abandoned 化、session branch の削除を扱う。cleanup 中に失敗した場合は state と branch を復元して再実行可能にするため、session abandon の実装挙動や失敗時 rollback を確認する際の入口となる。
 
 ## Read this when
-- `cmoc session abandon` の実行条件、branch 切替、session state 更新、session branch 削除の挙動を調べるとき。
-- cleanup 中のエラーや利用者中断時に、session を再実行可能な active state と元の branch に戻す処理を確認するとき。
+- `cmoc session abandon` の実装や外部挙動を確認するとき
+- session branch の破棄、home branch への切り替え、session state の更新を調査するとき
+- cleanup 失敗時の state・branch rollback とエラー報告を確認するとき
 
 ## Do not read this when
-- session の開始、継続、完了、再開など abandon 以外のライフサイクル処理を調べるとき。
-- CLI 共通ランナーや git・state 操作の一般仕様を確認したい場合は、まずそれぞれの共通実装・仕様を直接読むとき。
+- session の開始や再開など、abandon 以外のライフサイクル処理を確認するとき
+- 一般的な Git branch 操作や、session に依存しない CLI 共通処理を確認するとき
+- abandon の具体的な実装ではなく、session state のデータ構造や共通 runtime API の仕様を確認するとき
 
 ## hash
-- d36691fab8b6d83ed0172ad10897b0c62d3095bba5a98711497305f33f7f22e3
+- cf1ab013e06c19645c074e980fc6fc318ff0dd6cf3c9ffa15fb50667ec104582
 
 # `fork.py`
 
 ## Summary
-- 現在の local branch から cmoc 管理対象外の session branch を作成し、fork 時点の HEAD と home branch を session state に保存する CLI 実装。session fork の開始条件、排他制御、branch/state の作成、失敗時の rollback、一意な session-id 生成を扱う。session fork の挙動や作成失敗時の復旧を確認・変更するときの入口。
+- 通常の local branch から cmoc の session branch を作成し、session state を保存する CLI 実装。active session の重複防止、clean worktree 要件、session-id 衝突回避、branch・state 作成失敗時の rollback とエラー報告を扱う。session fork の実行経路を確認する際の入口となる。
 
 ## Read this when
-- `cmoc session fork` の実装や、session branch・session state の作成手順を確認するとき
-- active session の重複防止、session-id の衝突回避、branch/state 作成時の排他制御を調査するとき
-- branch 作成または state 保存に失敗した場合の rollback とエラー情報を確認するとき
+- `cmoc session fork` の実行条件や、session branch・state の作成手順を確認するとき
+- session fork 失敗時に branch と state file をどのように rollback し、残存状態を報告するか調べるとき
+- active session の排他制御や session-id の衝突回避を確認するとき
 
 ## Do not read this when
-- session の join、abandon、state の一般的な形式だけを確認したいときは、それぞれの専用実装または session state の仕様を直接読む
-- CLI 共通の実行制御や個別の git/state helper の仕様だけを確認したいときは、対応する共通実装・仕様を直接読む
+- session の join・abandon の挙動を確認するとき
+- session state の項目定義や永続化形式そのものを確認するとき
+- CLI 共通のログ・step 実行機構だけを確認するとき
 
 ## hash
-- 2b4e7f6483300610ad42bfaf23f30394ee6dd9feefcba3ad2c386905d8a9f662
+- 279de439ccb1104dac34d164c3eae7fb868689475fcb3d31d1af61bdef87ab59
 
 # `join.py`
 
 ## Summary
-- `session join` サブコマンドの実行本体で、active な session branch を session home branch にマージし、状態を joined に更新して session branch の削除まで行う。事前条件検証、clean worktree 要求、Git merge、state 永続化、削除結果と警告の terminal result 化を担う。
-- マージ競合時は Codex CLI に競合解消を依頼し、競合対象外の変更や conflict marker 外の変更を拒否したうえで、対象を stage して merge commit を完了する。Git path の安全な列挙、通常ファイルの fingerprint、競合文脈の保持検査もこの処理の補助責務である。
-- session join の CLI 実装、session branch の join・競合解消・削除条件、または Codex に許可する競合解消範囲を確認・変更するときの入口。session の状態モデルや一般的な Codex 実行規則そのものを確認する場合は、それぞれの正本仕様へ直接進む。
+- `session join` サブコマンドの実行処理と、session branch の merge conflict 解消を担う。active な session branch の事前条件を検証し、session home branch へ安全に merge した後、状態を joined に更新し、merge 済みの場合だけ session branch を削除する。
+- merge conflict 発生時は conflict 対象の列挙、Codex による marker 解消、許可外の変更や marker 外の変更の検査、stage、merge commit 完了確認までを行う。Git path の NUL framing、file 種別・mode・内容の fingerprint、conflict marker 検査など、競合解消の安全性を担保する補助処理も含む。
+- session join の実装や挙動、merge・conflict 解消・branch 削除の安全性、またはこれらの内部検査を変更・調査するときの入口となる。通常の session 作成・状態管理や conflict 解消プロンプト自体を確認する場合は、それぞれの専用対象へ進む。
 
 ## Read this when
-- `cmoc session join` の動作、事前条件、merge target、state 更新、session branch 削除を調査・変更するとき
-- session join 中の merge conflict 解消、Codex 呼び出し後の差分制限、conflict marker 検査を調査・変更するとき
+- `cmoc session join` の事前条件、merge 対象、session state 更新、merge 後の branch 削除動作を確認するとき
+- session join 中の merge conflict 解消、Codex 呼び出し、許可外変更の拒否、conflict marker 検査を調査・変更するとき
+- session join の primary report 更新や terminal result、Git path の安全な取り扱いを確認するとき
 
 ## Do not read this when
-- session の状態値やライフサイクルの定義だけを確認したいとき
-- Codex exec の共通規則や conflict resolution prompt の仕様だけを確認したいとき
-- session join 以外のサブコマンドの実装を調査するとき
+- session の状態や session_home_branch の正本仕様を確認することが目的で、サブコマンド実装の挙動を調べる必要がないとき
+- conflict 解消時に Codex へ渡すプロンプト仕様そのものを確認するとき
+- session join 以外の session サブコマンドの実装を直接調査するとき
 
 ## hash
-- 2a668d45349607298708204de853611c64551a53cce9cb605ac705522ff40a8e
+- c96a47dc6a8c381176cb56d82ef7f0e8dae578fce8a7c0b565287f473abdd958

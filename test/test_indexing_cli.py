@@ -12,7 +12,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import make_repo, run_git
 from oracle.other.cmoc_config import CodexModelSpec
 
@@ -73,6 +73,15 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     assert "generated skip condition" in rendered
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
+    report = terminal_primary_report(result)
+    rendered_report = report.read_text(encoding="utf-8")
+    commit_id = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    assert report.parent == root / ".cmoc" / "gu" / "ar" / "report" / "indexing"
+    assert f'commit_id: "{commit_id}"' in rendered_report
+    assert "updated_indexes:" in rendered_report
+    assert '"INDEX.md"' in rendered_report
+    assert '"oracle/INDEX.md"' in rendered_report
+    assert 'indexing_status: "completed"' in rendered_report
 
 
 def test_indexing_uninitialized_clean_repo_runs_doctor_and_generates_config(

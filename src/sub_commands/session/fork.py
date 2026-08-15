@@ -23,6 +23,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_primary_report import update_primary_report_fields
 
 MAX_SESSION_ID_ATTEMPTS = 32
 
@@ -45,6 +46,11 @@ def _cmoc_session_fork_body() -> TerminalResult:
     work = work_root()
     start_subcommand_step(2, "現在の local branch を取得", "get current branch")
     branch = current_branch(work)
+    update_primary_report_fields(
+        home_branch=branch,
+        session_state_before=None,
+        session_state_after=None,
+    )
     if is_managed_branch(branch):
         raise CmocError(
             "cmoc managed branch 上では session fork できません。",
@@ -66,9 +72,14 @@ def _cmoc_session_fork_body() -> TerminalResult:
             )
         start_subcommand_step(3, "現在の HEAD commit を取得", "get HEAD commit")
         start_commit = head_commit(work)
+        update_primary_report_fields(session_fork_commit=start_commit)
         start_subcommand_step(4, "session-id を生成", "generate session id")
         session_id = _new_session_id(root)
         session_branch = f"cmoc/session/{session_id}"
+        update_primary_report_fields(
+            session_id=session_id,
+            session_branch=session_branch,
+        )
         path = state_path(root, session_id)
         state = SessionState()
         state.session.session_home_branch = branch
@@ -89,6 +100,7 @@ def _cmoc_session_fork_body() -> TerminalResult:
             path.touch(exist_ok=False)
             state_file_created = True
             write_state(path, state)
+            update_primary_report_fields(session_state_after="active")
         except BaseException as error:
             rollback_errors: list[str] = []
             # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
@@ -118,6 +130,10 @@ def _cmoc_session_fork_body() -> TerminalResult:
                     rollback_errors.append(
                         f"session state cleanup failed: {rollback_error!r}"
                     )
+            update_primary_report_fields(
+                session_state_after="active" if path.exists() else None,
+                rollback_status="failed" if rollback_errors else "completed",
+            )
             details = [
                 f"original error: {error!r}",
                 "rollback errors:",
