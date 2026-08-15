@@ -1,16 +1,15 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle 実装における共通モデル、設定・パス解決、agent 向け標準、構造化 Markdown 文書生成を扱う下位モジュールへの入口。prompt 構築や feedback など agent call 定義とは異なり、oracle 側の共通定義と文書表現を調査・変更するときに利用する。
+- cmoc の agent call 構築と oracle 共通機能を担う実装群。共通パラメータ、用途別 prompt、Structured Output、feedback 入力契約、oracle の設定・パス解決・文書生成に進むための入口。
 
 ## Read this when
-- cmoc の oracle 共通モデル、設定、パスコンテキスト、標準定義、または構造化文書生成の実装を調査・変更するとき
-- 複数の oracle 関連モジュールにまたがる責務の入口を確認し、該当する下位要素へ進むとき
+- agent call の構築定義や共通 prompt、Structured Output、実行条件を調査・変更するとき
+- feedback reporter の入力契約や、oracle 共通モデル・構造化文書生成の実装入口を探すとき
 
 ## Do not read this when
-- agent call の prompt、Structured Output、起動条件、実行権限の定義を調査するときは agent call 定義側を直接読む
-- 特定の CLI サブコマンド、feedback、realization、session、TUI の業務ロジックを調査するときは各機能の直接の実装を読む
-- 生成済み prompt の構成や prompt 部品の組み合わせを調査するときは prompt builder を直接読む
+- 実際の agent call 実行処理や個別 CLI 機能の業務ロジックを確認するとき
+- 特定の oracle file、realization file、collector の保存・集約処理を直接調査するとき
 
 ## hash
-- dd231d0be5a5fff968def169cd82066b1aa67bd81366c859ffd169908c2eca29
+- 88989b52d3edb20f0763dc0d81981d3d6885f665b645b7d2ddb1a4bcbdab4a15

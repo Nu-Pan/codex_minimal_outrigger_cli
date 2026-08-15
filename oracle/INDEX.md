@@ -1,36 +1,37 @@
 # `doc`
 
 ## Summary
-- app_spec は cmoc の CLI・workflow・agent call・feedback・出力・状態管理に関する正本仕様の入口で、複数仕様にまたがる責務境界や下位仕様の選択を確認する。branch_model.md は session fork、run 隔離、branch・commit・worktree の関係やライフサイクルを確認する正本仕様である。considered_alternative は realization refactor で不採用となった作業・検査・状態管理方式の理由を確認する記録であり、現行仕様や実装の直接の参照先ではない。dev_rule は Python 実装、CLI 配置、開発環境、テスト要件、テスト実行・品質検査の正本文書群への入口である。
+- cmoc の正本文書を領域別に案内するルート。アプリケーション挙動、branch・commit・worktree のモデル、不採用案の検討記録、開発ルールへの入口を提供する。
 
 ## Read this when
-- cmoc の CLI、workflow、agent call、feedback、ログ・report、エラー・中断、通知、run/session state の正本仕様や、複数仕様間の責務境界を確認するときは app_spec を読む。
-- session fork、run の隔離、branch・commit・worktree の用語・命名・ライフサイクル、run report や apply の基準 commit を確認するときは branch_model.md を読む。
-- realization refactor で採用しなかった作業フロー、調査・検査方式、状態管理、gitignore 連携、AI-generated memory の背景を確認するときは considered_alternative を読む。
-- Python 実装、CLI の責務配置、Python 環境や依存関係、realization test の要件、既存テスト・品質検査の実行手順を確認するときは dev_rule を読む。
+- cmoc の仕様・設計・開発ルールを横断して、読むべき下位文書の領域を選ぶとき
+- CLI 挙動、session/run の分岐、refactor 方針、Python 実装・環境・テスト手順のいずれかを確認するとき
 
 ## Do not read this when
-- 特定のアプリケーション仕様の本文が明確な場合は app_spec ではなく、その個別仕様を直接読む。
-- branch や worktree の用語・ライフサイクルが関係しない特定 CLI 実装の調査では branch_model.md を読まない。
-- 現行の realization refactor state、具体的な実装・テスト内容、INDEX、oracle、ログ、実行成果物の形式を確認する場合は considered_alternative を読まない。
-- テストの意味要件だけ、テスト実行手順だけ、または CLI の挙動・出力そのものだけを確認する場合は dev_rule ではなく、それぞれの直接の正本文書を読む。
+- 特定機能の実装詳細やテスト実行手順が明確な場合は、対応する下位の realization file、oracle src、または専用手順を直接読む
+- INDEX.md の生成・更新仕様を確認する場合は、インデクシング仕様を直接読む
 
 ## hash
-- ed3ca68f46d0fe38b3f312c5637cdc7eaf29ea7fc20e05eeec47ba06d32dbb52
+- e2e53ad1862929e3cd900085223f495084dfd85b21685085749abbfd80b7468b
 
 # `src`
 
 ## Summary
-- cmoc の oracle 実装における共通モデル、設定・パス解決、agent 向け標準定義、構造化 Markdown 文書生成を扱う下位要素への入口。oracle 側の共通定義や文書表現を調査・変更する際に、該当する下位要素へ進むために読む。
+- cmoc の agent call を構築する共通実装群。モデル、reasoning effort、ファイルアクセス、cwd などの呼び出しパラメータを定義し、用途別の agent call builder へつなぐ。
+- prompt_builder では共通 prompt、routing、ファイルアクセス規則、oracle・realization 規範、Structured Output 前提の文面を組み立てる。
+- other では agent call 用パス解決、構造化文書の Markdown 化、Standard の統合、cmoc 設定モデルを提供する。
+- 下位には、feedback、oracle review・edit・investigation、realization の apply・refactor、session join、indexing、TUI など用途別の構築定義がある。用途を特定できる場合は、対応する下位ディレクトリへ進む。
 
 ## Read this when
-- oracle 共通モデル、設定、パスコンテキスト、標準定義、または構造化文書生成の実装を調査・変更するとき
-- 複数の oracle 関連モジュールにまたがる責務の入口を確認し、該当する下位要素へ進むとき
+- agent call の共通パラメータ、用途別 builder、実行条件を調査または変更するとき
+- 共通 prompt、routing、ファイルアクセス規則、oracle・realization 規範、Structured Output 用文面を調査または変更するとき
+- agent call の cwd、oracle・repository・run path、構造化文書、Standard、cmoc 設定の共通実装を調査または変更するとき
+- 用途別の下位実装へ進む前に、共通の構築責務と依存関係を確認するとき
 
 ## Do not read this when
-- agent call の prompt、Structured Output、起動条件、実行権限の定義を調査するとき
-- 特定の CLI サブコマンド、feedback、realization、session、TUI の業務ロジックを調査するとき
-- 生成済み prompt の構成や prompt 部品の組み合わせを調査するとき
+- 実際の agent call 実行処理や、個別 CLI 機能の業務ロジックを調査するとき
+- 特定用途の prompt や Structured Output の詳細が明らかな場合は、対応する下位ディレクトリを直接読むとき
+- 特定の oracle file、realization file、feedback collector の保存・集約処理を直接調査するとき
 
 ## hash
-- c6e16de93db2b1703cdc0f6464adab7ddf2f3b7ac57489f1756a4b4c885e94d9
+- e39bcb54e21668a12d33bc41695756a0303f8a034cdd14f3ffe4c3a4d543dca4

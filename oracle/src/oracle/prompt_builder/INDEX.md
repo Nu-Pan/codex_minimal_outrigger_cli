@@ -17,18 +17,23 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent 向け完全プロンプトを構築する中心的な組み立て処理。依頼概要・完了条件・プレースホルダ定義を含むプロンプトを生成し、選択された oracle／realization／レビュー／ルーティング等の規則を依存関係に従って注入する。各規則の有効化条件や複数 Standard の統合、共通 feedback reporting の常時注入を確認したい場合の入口であり、個別規則の本文や各 builder の詳細を直接調べる前に読む対象。
+- cmoc agent 向けの完全な構造化プロンプトを組み立てる中核ユーティリティ。担当・完了条件・選択された Standard・静的規則・動的プロンプト・placeholder 定義を、依存関係に応じて合成して返す。
+- Standard の依存関係を決定的に有効化し、重複する Standard を統合して一度だけ出力するほか、placeholder の競合を検出する。プロンプト生成条件、Standard の注入、ファイルアクセスや routing などの静的規則、agent 固有の動的内容の接続を変更・調査するときの入口となる。
+- 個別の Standard 本文や各 builder の詳細を読む対象ではなく、完全 prompt 全体の構成、Standard 間の依存、静的・動的 prompt の配置、placeholder 統合の挙動を確認する場合に読む。
 
 ## Read this when
-- agent call に渡す完全プロンプトの構成、規則の注入順序、Standard の依存関係、プレースホルダ統合、または共通 feedback reporting の適用範囲を変更・調査するとき。
-- 複数の prompt builder の結果を統合して StructDoc 列へ変換する経路を確認するとき。
+- agent call に渡す完全 prompt の構成や、summary・goal・Standard・静的規則・動的 prompt の注入順を変更または確認するとき。
+- 特定の Standard を有効化した際に必要な上位概念や依存 Standard が自動的に含まれる仕組みを調査するとき。
+- 複数の Standard の統合、重複排除、placeholder 定義の競合検出に関する挙動を調査するとき。
+- prompt builder の各種 builder をどの条件で呼び出し、生成結果をどの構造に配置するかを確認するとき。
 
 ## Do not read this when
-- 特定の規則の文面や個別 builder の内容だけを確認したいときは、対応する parts 配下の対象を直接読む。
-- StructDoc や StandardCollection のデータ構造自体、FileAccessMode、AgentCallPathContext の仕様を確認したいときは、それぞれの定義元を直接読む。
+- 個別 Standard の本文、oracle/realization 規則、file access 規則、routing 規則の内容だけを確認したい場合は、それぞれの builder または正本規則を直接読む。
+- agent call の具体的な担当や完了条件だけを確認したい場合は、この共通構築器ではなく呼び出し側の動的 prompt 定義を読む。
+- prompt の出力 schema や機械的な placeholder 名・型だけを確認したい場合。
 
 ## hash
-- 63598436ba01aaecb0733adfda9fb8c2110e7d6d5c8e4e652cd62af6bcb1bda8
+- 5800dbe1fb3a4faf97ae37a1b531fb143c3fb11d27170355f14c1cc69118c0e7
 
 # `editor_input.py`
 

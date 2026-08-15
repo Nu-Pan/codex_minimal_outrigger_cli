@@ -234,21 +234,20 @@
 # `prompt_standard.md`
 
 ## Summary
-- cmoc の agent call 用 prompt に関する正本と実行時生成物の責務境界、prompt に含める情報、文面の所有・受け渡し、規範の決定論的注入、Structured Output 契約、summary/goal の役割分担、構築記法と言語原則を定める仕様書。prompt builder や acp builder の意味仕様、共通 prompt part、または prompt 生成規則を確認する際の入口となる。
+- cmoc が agent call に渡す prompt の責務、情報量、正本との境界、構築規則を定める文書。意味仕様・oracle src・実行時生成物の役割分担、共通規範や feedback instruction の注入、Structured Output の受理条件、summary/goal の使い分け、placeholder と cmoc_ref の記法、言語方針を扱う。prompt builder や acp builder の文面構築規則、および agent call 向け prompt の責務境界を確認するための入口となる。
 
 ## Read this when
-- agent call に渡す prompt の責務、情報量、参照 routing、作業範囲・完了条件の配置を確認するとき
-- oracle src と realization implementation の prompt 責務境界を確認するとき
-- Structured Output の schema と決定論的事後条件の役割分担、受理条件、補正規則を確認するとき
-- summary と goal の記述範囲、prompt placeholder や cmoc block/ref の構築規則を確認するとき
+- agent call に渡す prompt の内容や正本の所在、oracle doc と oracle src・realization implementation の責務境界を確認するとき
+- 共通 prompt part、human feedback instruction、routing rule、Structured Output の schema・事後条件の扱いを変更または検討するとき
+- summary と goal の記載責務、prompt の構築規則、placeholder や cmoc_block/cmoc_ref の参照関係を確認するとき
 
 ## Do not read this when
-- 個別の意味仕様やサブコマンド固有の判断基準だけを確認する場合は、対応する oracle doc を直接読む
-- prompt の正確な文面や builder の実装を変更・確認する場合は、対応する oracle src を直接読む
-- 実行時に生成された prompt、skeleton、editor input の内容だけを確認する場合
+- 個別の意味仕様そのものを確認する場合は、対応する oracle doc を直接読むとき
+- prompt の正確な文面や builder の実装を確認する場合は、指定された oracle src を直接読むとき
+- 実行時に生成された prompt や AgentCallParameter の保存・受け渡しだけを調べる場合は、realization file または実行時生成物を直接読むとき
 
 ## hash
-- c8eac0e1115bd730f57ad41d2f4243310514c7d51bdb5f659de106f2e4b33248
+- 59d771aa8d1c59430b7669969feb3611143142f70047d5c96bd190713dfd752c
 
 # `run_isolation.md`
 

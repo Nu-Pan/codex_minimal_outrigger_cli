@@ -91,21 +91,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様、開発規則、branch model、採用しなかった設計案をまとめた文書群と、oracle 実装の入口。CLI・workflow・agent call・状態管理などの仕様確認から、対応する実装・prompt 構築・共通モデルへ進むために読む。
-- oracle/src は、パス・設定・Structured Markdown・標準定義などの共通モデル、agent call の起動パラメータ、prompt 構築、INDEX エントリー生成、feedback・review・realization 関連の oracle 実装を扱う。oracle 側の仕様に対応する実装を調査・変更するときの入口となる。
+- cmoc の正本文書を領域別に案内するルート。アプリケーション挙動、branch・commit・worktree のモデル、不採用案の検討記録、開発ルールへの入口を提供する。
+- `doc` では仕様・設計・開発ルールを、`src` では agent call 構築の共通実装と用途別 builder を確認できる。
 
 ## Read this when
-- cmoc の正本仕様、開発環境・設計・テスト規則、branch・worktree のライフサイクル、または不採用案の背景を確認するとき。
-- oracle 実装の共通モデル、設定・パス解決、Structured Markdown、Standard、prompt 構築、agent call パラメータ、feedback・review・realization・indexing の処理を調査・変更するとき。
-- 仕様から対応する oracle 実装や prompt 部品へ進む入口を確認するとき。
+- cmoc の仕様・設計・開発ルールを横断して、読むべき文書領域を選ぶとき
+- CLI 挙動、session/run の分岐、refactor 方針、Python 実装・環境・テスト手順のいずれかを確認するとき
+- agent call の共通 prompt、routing、ファイルアクセス規則、Structured Output 前提、または用途別 builder の責務を調査するとき
 
 ## Do not read this when
-- 特定の仕様本文や特定の実装ファイルが明確で、その対象を直接読めるとき。
-- realization 側の具体的な実装・テストや、生成済み prompt・ログ・実行成果物だけを確認するとき。
-- oracle と無関係な CLI 業務ロジック、状態管理、TUI の詳細を調査するとき。
+- 特定機能の実装詳細やテスト実行手順が明確な場合は、対応する下位の realization file、oracle src、または専用手順を直接読む
+- INDEX.md の生成・更新仕様を確認する場合は、インデクシング仕様を直接読む
 
 ## hash
-- 7bab1c76acbbaca7225f9f7acc8055169ede75a5526a79a3734da10e9aba4e89
+- 626124ea86a15f5a2246f0dad8310c60eba2b9d4b6409ec80afd26ebe8de8aa2
 
 # `pyproject.toml`
 
