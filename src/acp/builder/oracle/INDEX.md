@@ -15,18 +15,20 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` の realization adapter package。正本の oracle edit TUI builder を呼び出す入口を提供し、起動前に完全 prompt の保存先となる editor input log directory を準備する。配下の launch TUI adapter の責務確認に進むためのディレクトリ単位の入口。
+- `cmoc oracle edit` builder の realization adapter package。対象パッケージの入口として、oracle edit 用 builder の adapter 実装と launch exec parameter 生成処理への導線を扱う。
 
 ## Read this when
 - `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき
-- oracle edit の TUI 起動前に必要な realization 側の directory 準備と正本 builder の接続を確認するとき
+- oracle edit の main または仕様削減用 launch exec parameter の呼び出し入口を確認するとき
+- 正本 builder 呼び出し前に必要な editor input log directory の準備責務を確認するとき
 
 ## Do not read this when
-- oracle edit の具体的な prompt 内容や正本 builder の動作を確認するとき
-- CLI 全体の動作や editor input log directory の管理だけを確認するとき
+- oracle edit の具体的な編集処理や CLI 全体の動作を確認したいとき。対象の実装ファイルや上位の CLI 関連ファイルを直接読む
+- 正本 builder が生成する完全 prompt や仕様削減 prompt の内容を確認したいとき
+- prompt 保存先のパス解決や editor input log directory 自体の仕様を確認したいとき。各正本実装を直接読む
 
 ## hash
-- 0c553033270441536df4aa0abdfb079f34b19c2586e7ac561d6a42953b1444b3
+- 1d40b6cc7eefafeb45f4d1dc608cd8bc0d247256678c8423711fde4e159e8fcb
 
 # `investigation`
 

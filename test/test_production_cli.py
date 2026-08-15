@@ -70,6 +70,7 @@ NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("doctor",),
     ("feedback", "report"),
     ("indexing",),
+    ("oracle", "edit"),
     ("oracle", "review"),
     ("realization", "apply", "fork"),
     ("realization", "refactor", "fork"),
@@ -82,7 +83,6 @@ NONINTERACTIVE_SCENARIO_COMMANDS = {
 
 TUI_SCENARIOS = (
     (("tui",), "tui codex"),
-    (("oracle", "edit"), "oracle edit"),
     (("oracle", "investigation"), "oracle investigation"),
 )
 
@@ -90,7 +90,7 @@ PRODUCTION_SCENARIO_COMMANDS = NONINTERACTIVE_SCENARIO_COMMANDS | {
     scenario[0] for scenario in TUI_SCENARIOS
 }
 
-TUI_PROMPT = """# 目的
+EDITOR_PROMPT = """# 目的
 
 短い応答を返す。
 
@@ -233,7 +233,7 @@ def _production_environment(
         editor_dir / "code",
         [
             "import pathlib, sys",
-            f"pathlib.Path(sys.argv[-1]).write_text({TUI_PROMPT!r})",
+            f"pathlib.Path(sys.argv[-1]).write_text({EDITOR_PROMPT!r})",
         ],
     )
     environment = {
@@ -590,6 +590,41 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     run_without_codex("session", "fork")
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
+
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    # oracle edit は本命と仕様削減を別の exec agent call として直列実行する。
+    _state_path, oracle_edit_state_before = _load_session_state(root, session_branch)
+    oracle_edit_calls_before = _codex_call_logs(root)
+    oracle_edit_result = run_production("oracle", "edit")
+    oracle_edit_calls = _codex_call_logs(root) - oracle_edit_calls_before
+    oracle_edit_payloads: dict[str, list[dict[str, object]]] = {}
+    for call_path in sorted(oracle_edit_calls):
+        payload = _assert_real_codex_call(call_path)
+        purpose = str(payload["purpose"])
+        oracle_edit_payloads.setdefault(purpose, []).append(payload)
+    assert "oracle edit main" in oracle_edit_payloads
+    assert "oracle edit reduction" in oracle_edit_payloads
+    main_payload = oracle_edit_payloads["oracle edit main"][0]
+    reduction_payload = oracle_edit_payloads["oracle edit reduction"][0]
+    assert main_payload["agent_call_id"] != reduction_payload["agent_call_id"]
+    assert "resume" not in main_payload["argv"]
+    assert "resume" not in reduction_payload["argv"]
+
+    # stdin の固定指示と参照先の完全 prompt、および直接渡す削減 prompt を追跡する。
+    main_prompt = Path(str(main_payload["prompt_log_path"])).read_text()
+    prompt_suffix = " を読んで、その指示に従って下さい"
+    assert main_prompt.endswith(prompt_suffix)
+    complete_prompt_path = Path(main_prompt.removesuffix(prompt_suffix))
+    assert EDITOR_PROMPT.strip() in complete_prompt_path.read_text()
+    reduction_prompt = Path(str(reduction_payload["prompt_log_path"])).read_text()
+    assert EDITOR_PROMPT.strip() in reduction_prompt
+    assert "仕様削減の判断と参照の境界" in reduction_prompt
+    _state_path, oracle_edit_state_after = _load_session_state(root, session_branch)
+    assert oracle_edit_state_after == oracle_edit_state_before
+    assert oracle_edit_result.stdout.count("# 完了: cmoc oracle edit") == 1
+    assert "- result:" not in oracle_edit_result.stdout
+    assert "- completion_reason:" not in oracle_edit_result.stdout
+
     review_dir = root / ".cmoc" / "gu" / "ar" / "report" / "oracle_review"
     review_reports = set(review_dir.glob("*.md"))
     run_without_codex("oracle", "review")
@@ -673,8 +708,6 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     cmoc, environment, codex_home = _production_environment(tmp_path)
     _run_without_codex_call(cmoc, root, environment, "doctor")
     _write_fresh_index_fixture(root)
-    # oracle edit も同じ TUI harness で検証できる active main-worktree session を作る。
-    _run_without_codex_call(cmoc, root, environment, "session", "fork")
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     status_before = run_git(root, "status", "--short").stdout
     calls_before = _codex_call_logs(root)

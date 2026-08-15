@@ -67,28 +67,20 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装を収める package。edit、investigation、review の CLI 入口と、review の対象列挙・所見処理・パス解決・レポート・INDEX 差分統合を扱う。各サブコマンドの実行フローを確認した後、詳細処理は対応する下位モジュールへ進む。
-- edit.py は `cmoc oracle edit` の入力予約、完全プロンプト確定、main worktree と active session branch の検証、Codex TUI 起動を統括する。
-- investigation.py は `cmoc oracle investigation` の調査指示入力、完全プロンプト確定、設定読込、Codex TUI 起動を統括する。
-- review.py は `cmoc oracle review` の isolated worktree lifecycle を統括し、review 対象作成、review loop、INDEX 差分の merge、中断・失敗時の cleanup と report 生成を扱う。
-- review_index.py は review worktree の変更を INDEX.md に限定して検査・commit し、review branch の merge、INDEX.md 競合解決、merge 失敗後の復旧を扱う。
-- review_loop.py は oracle review の finding 列挙、重複 finding の merge、challenger・advocate による反復検証、judge による採否判定、finding merge operation の適用を扱う。中断時の部分進捗も呼び出し元へ返す。
-- review_paths.py は finding の oracle_path を解決し、main repository と isolated worktree の境界を考慮した repository-relative key を生成する。symlink は追跡しない。
-- review_report.py は oracle review の Markdown report と YAML frontmatter を生成・保存し、verdict、評価対象、finding の分類・表示順を決める。
-- review_targets.py は review scope に応じて oracle review 対象を列挙する。full scope では全 oracle file、session scope では session fork commit から review fork commit までに変更された oracle file を返す。
+- oracle 系サブコマンドの実装をまとめる package。編集、調査、レビューの各 CLI エントリーと、レビュー対象列挙・ループ・パス解決・レポート生成・INDEX 差分統合を担う下位実装への入口を提供する。
 
 ## Read this when
-- oracle サブコマンドの CLI 入口、入力から TUI 起動までの実行経路を確認・変更するとき。
-- oracle review の isolated run、worktree・branch lifecycle、中断・失敗時の cleanup、report 生成を確認するとき。
-- oracle review の finding 列挙・統合・検証・判定、対象ファイル選定、パス正規化、report 出力、INDEX 差分 merge のいずれかを調査・変更するとき。
+- oracle サブコマンドの実装構成や、編集・調査・レビューの CLI 入口を確認するとき。
+- oracle review の対象列挙、レビュー実行ループ、パス解決、レポート生成、INDEX.md の統合処理を調査・変更するとき。
+- oracle 系サブコマンドの実行フローから、個別の下位実装へ進む入口を判断するとき。
 
 ## Do not read this when
-- oracle サブコマンドの利用者向け契約や実行仕様そのものを確認するときは、対応する正本仕様を直接読む。
-- TUI の起動パラメータ、プロンプト入力管理、共通 runtime、個別 review agent の prompt や Structured Output schema の詳細だけを確認するときは、各 import 先の実装を直接読む。
-- oracle review と無関係な一般 CLI や別サブコマンドの処理を調査するとき。
+- oracle 系サブコマンドに属さない CLI や共通 runtime の実装を調査するとき。
+- 利用者向けの oracle 編集・調査・レビュー契約を確認するときは、対応する正本仕様を直接読む。
+- 個別サブコマンドの prompt 構築や Structured Output 定義など、下位モジュール固有の詳細だけを確認するとき。
 
 ## hash
-- 53ea6c375bf3bf031b94d62d7c7d48aca6adaeda60fd90a00a2d4f851a369798
+- 3d8e0893b77dae26e27771ace41daa31bf402f72b7152a251aceb5064ec992e3
 
 # `realization`
 

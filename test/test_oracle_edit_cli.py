@@ -1,7 +1,10 @@
-"""`cmoc oracle edit` の main-worktree TUI 制御を検証する。
+"""`cmoc oracle edit` の main-worktree exec 制御を検証する。
 
 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-{{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py
+{{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
+
+成功時と各失敗時で同じ editor、Git 差分、session state、および通知境界を比較する。
+分割すると同じ invocation の前提と不変条件が重複するため、一つの制御テストに保つ。
 """
 
 import json
@@ -10,7 +13,7 @@ from pathlib import Path
 
 import pytest
 from _cli_support import run_doctor, runner
-from _codex_support import setup_codex_home
+from _codex_support import FakeCodexResult, setup_codex_home
 from _git_support import current_branch, make_repo, run_git
 
 import commons.indexing as indexing_module
@@ -18,7 +21,7 @@ import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.edit as oracle_edit_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError, CommandResult
+from cmoc_runtime import CmocError
 from commons.runtime_state import (
     RunPart,
     SessionPart,
@@ -72,13 +75,32 @@ def _prepared_repo(
     return root
 
 
-@pytest.mark.parametrize("tui_fails", [False, True], ids=["success", "failure"])
-def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
+def _assert_exec_parameter(
+    parameter: AgentCallParameter,
+    root: Path,
+    *,
+    runs_indexing: bool,
+) -> None:
+    """2 回の exec に共通する起動契約を検証する。"""
+    assert parameter.model_class == ModelClass.FLAGSHIP
+    assert parameter.reasoning_effort == ReasoningEffort.MAX
+    assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_WRITE
+    assert parameter.structured_output_schema_path is None
+    assert parameter.run_indexing_preflight is runs_indexing
+    assert parameter.agent_call_cwd == root.resolve()
+
+
+@pytest.mark.parametrize(
+    "failure_stage",
+    [None, "main", "reduction"],
+    ids=["success", "main-failure", "reduction-failure"],
+)
+def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    tui_fails: bool,
+    failure_stage: str | None,
 ) -> None:
-    """既存差分を保ったまま run lifecycle なしで oracle を編集する。"""
+    """既存差分を保ち、本命成功時だけ仕様削減を別 exec で実行する。"""
     root = _prepared_repo(tmp_path, monkeypatch)
     active_run = RunPart(
         "running",
@@ -105,8 +127,10 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     editor_work_path.parent.mkdir(parents=True, exist_ok=True)
     input_copy_path.parent.mkdir(parents=True, exist_ok=True)
     editor_calls: list[tuple[Path, Path, str]] = []
-    built_parameters: list[AgentCallParameter] = []
+    built_main_parameters: list[AgentCallParameter] = []
+    built_reduction_parameters: list[AgentCallParameter] = []
     events: list[str] = []
+    notifications: list[tuple[str, Path, str]] = []
 
     real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
 
@@ -131,18 +155,34 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         editor_work_path.touch()
         return time_stamp, editor_work_path, input_copy_path, complete_prompt_path
 
-    real_build_parameter = oracle_edit_module.build_oracle_edit_launch_tui_parameter
+    real_build_main_parameter = (
+        oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
+    )
 
-    def record_build_parameter(
+    def record_build_main_parameter(
         build_time_stamp: str,
         user_instruction: str,
     ) -> AgentCallParameter:
-        """エディタより前の builder 呼び出しと戻り値を記録する。"""
-        events.append("build")
+        """エディタより前に固定する本命 parameter を記録する。"""
+        events.append("build-main")
         assert build_time_stamp == time_stamp
         assert user_instruction == oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER
-        parameter = real_build_parameter(build_time_stamp, user_instruction)
-        built_parameters.append(parameter)
+        parameter = real_build_main_parameter(build_time_stamp, user_instruction)
+        built_main_parameters.append(parameter)
+        return parameter
+
+    real_build_reduction_parameter = (
+        oracle_edit_module.build_oracle_edit_reduction_launch_exec_parameter
+    )
+
+    def record_build_reduction_parameter(
+        user_instruction: str,
+    ) -> AgentCallParameter:
+        """本命成功後にだけ構築する仕様削減 parameter を記録する。"""
+        events.append("build-reduction")
+        assert user_instruction == "oracle spec を更新する"
+        parameter = real_build_reduction_parameter(user_instruction)
+        built_reduction_parameters.append(parameter)
         return parameter
 
     def fake_collect_prompt_editor_input(
@@ -167,7 +207,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         complete_prompt_skeleton: str,
         original_prompt: str,
     ) -> None:
-        """TUI 起動前の完全 prompt 確定を記録して本来の処理へ委譲する。"""
+        """agent call 前の完全 prompt 確定を記録して本来の処理へ委譲する。"""
         events.append("finalize")
         real_finalize_complete_prompt(
             work_path,
@@ -188,8 +228,13 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     )
     monkeypatch.setattr(
         oracle_edit_module,
-        "build_oracle_edit_launch_tui_parameter",
-        record_build_parameter,
+        "build_oracle_edit_main_launch_exec_parameter",
+        record_build_main_parameter,
+    )
+    monkeypatch.setattr(
+        oracle_edit_module,
+        "build_oracle_edit_reduction_launch_exec_parameter",
+        record_build_reduction_parameter,
     )
     monkeypatch.setattr(
         oracle_edit_module,
@@ -220,17 +265,24 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         events.append("check")
         real_require_launch_preconditions(repository, current_root)
 
-    def fake_runtime_tui(
+    def fake_runtime_exec(
         parameter: AgentCallParameter,
         **kwargs: object,
-    ) -> CommandResult:
-        """TUI の代わりに oracle 差分を書き込み、指定時は失敗させる。"""
-        events.append("tui")
+    ) -> FakeCodexResult:
+        """各 exec の差分と、失敗後も差分を残す挙動を再現する。"""
         calls.append((parameter, kwargs))
-        (root / "oracle" / "spec.md").write_text("# edited spec\n")
-        if tui_fails:
-            raise CmocError("TUI failed", [], "returncode: 7")
-        return CommandResult(0, "", "")
+        if parameter is built_main_parameters[0]:
+            events.append("main")
+            (root / "oracle" / "spec.md").write_text("# main edit\n")
+            if failure_stage == "main":
+                raise CmocError("main failed", [], "returncode: 7")
+        else:
+            assert parameter is built_reduction_parameters[0]
+            events.append("reduction")
+            (root / "oracle" / "spec.md").write_text("# reduced edit\n")
+            if failure_stage == "reduction":
+                raise CmocError("reduction failed", [], "returncode: 8")
+        return FakeCodexResult()
 
     monkeypatch.setattr(
         indexing_module,
@@ -244,14 +296,21 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     )
     monkeypatch.setattr(
         codex_preflight_module,
-        "runtime_run_codex_tui",
-        fake_runtime_tui,
+        "runtime_run_codex_exec",
+        fake_runtime_exec,
+    )
+    monkeypatch.setattr(
+        runtime_cli_module,
+        "notify_terminal_result",
+        lambda command, repository, state: notifications.append(
+            (command, repository, state)
+        ),
     )
 
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
-    assert result.exit_code == (1 if tui_fails else 0)
-    assert len(built_parameters) == 1
+    assert result.exit_code == (0 if failure_stage is None else 1)
+    assert len(built_main_parameters) == 1
     assert editor_calls[0][:2] == (editor_work_path, input_copy_path)
     complete_prompt_skeleton = editor_calls[0][2]
     assert (
@@ -260,30 +319,32 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     )
     assert "# file read write rule - pure_oracle_write" in complete_prompt_skeleton
     assert "oracle file だけを編集し" in complete_prompt_skeleton
-    assert events == [
+    expected_events = [
         "doctor",
-        "build",
+        "build-main",
         "editor",
         "finalize",
         "indexing",
         "check",
-        "tui",
+        "main",
     ]
-    assert len(calls) == 1
-    parameter, kwargs = calls[0]
-    assert parameter is built_parameters[0]
-    assert parameter.model_class == ModelClass.FLAGSHIP
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
-    assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_WRITE
-    assert parameter.structured_output_schema_path is None
-    assert parameter.run_indexing_preflight is True
-    assert parameter.agent_call_cwd == root.resolve()
-    assert "cwd" not in kwargs
-    assert kwargs["purpose"] == "oracle edit"
-    assert kwargs["notification_command_name"] == "oracle edit"
+    if failure_stage != "main":
+        expected_events.extend(["build-reduction", "reduction"])
+    assert events == expected_events
+    assert len(calls) == (1 if failure_stage == "main" else 2)
+
+    main_parameter, main_kwargs = calls[0]
+    assert main_parameter is built_main_parameters[0]
+    _assert_exec_parameter(main_parameter, root, runs_indexing=True)
+    assert "cwd" not in main_kwargs
+    assert "before_agent_call" not in main_kwargs
+    assert main_kwargs["root"] == root
+    assert main_kwargs["purpose"] == "oracle edit main"
     prompt_suffix = " を読んで、その指示に従って下さい"
-    assert parameter.prompt.endswith(prompt_suffix)
-    assert Path(parameter.prompt.removesuffix(prompt_suffix)) == complete_prompt_path
+    assert main_parameter.prompt.endswith(prompt_suffix)
+    assert (
+        Path(main_parameter.prompt.removesuffix(prompt_suffix)) == complete_prompt_path
+    )
     complete_prompt = complete_prompt_path.read_text()
     assert complete_prompt == complete_prompt_skeleton.replace(
         oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER,
@@ -296,9 +357,28 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     assert "realization file、`INDEX.md`、`AGENTS.md` を編集していない" in (
         complete_prompt
     )
+
+    if failure_stage == "main":
+        assert built_reduction_parameters == []
+    else:
+        assert len(built_reduction_parameters) == 1
+        reduction_parameter, reduction_kwargs = calls[1]
+        assert reduction_parameter is built_reduction_parameters[0]
+        assert reduction_parameter is not main_parameter
+        _assert_exec_parameter(reduction_parameter, root, runs_indexing=False)
+        assert reduction_kwargs["root"] == root
+        assert reduction_kwargs["config"] is main_kwargs["config"]
+        assert reduction_kwargs["purpose"] == "oracle edit reduction"
+        assert "oracle spec を更新する" in reduction_parameter.prompt
+        assert "仕様削減の判断と参照の境界" in reduction_parameter.prompt
+        assert "本命 agent call の prompt" in reduction_parameter.prompt
+        assert "# oracle standard" in reduction_parameter.prompt
+        assert "# routing rule" in reduction_parameter.prompt
+
     assert input_copy_path.read_text(encoding="utf-8") == "oracle spec を更新する"
     assert not editor_work_path.exists()
-    assert (root / "oracle" / "spec.md").read_text() == "# edited spec\n"
+    expected_spec = "# main edit\n" if failure_stage == "main" else "# reduced edit\n"
+    assert (root / "oracle" / "spec.md").read_text() == expected_spec
     assert json.loads(session_state_path.read_text()) == state_before
     assert readme_path.read_text() == "# unstaged change\n"
     assert (
@@ -310,6 +390,21 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     assert not (
         root / ".cmoc" / "gu" / "ar" / "report" / "oracle" / "edit" / "fork"
     ).exists()
+    terminal_output = result.stdout + result.stderr
+    if failure_stage is None:
+        assert "# 完了: cmoc oracle edit" in result.stdout
+        assert notifications == [("oracle edit", root, "completed")]
+    else:
+        assert "# 失敗: cmoc oracle edit" in result.stderr
+        assert notifications == [("oracle edit", root, "failed")]
+    assert (
+        terminal_output.count("# 完了: cmoc oracle edit")
+        + terminal_output.count("# 失敗: cmoc oracle edit")
+        == 1
+    )
+    assert "- result:" not in terminal_output
+    assert "- completion_reason:" not in terminal_output
+    assert "primary report" not in terminal_output
 
 
 @pytest.mark.parametrize(

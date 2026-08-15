@@ -26,17 +26,18 @@
 ## hash
 - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
-# `launch_tui.py`
+# `launch_exec.py`
 
 ## Summary
-- oracle edit の TUI 起動パラメータを生成する realization adapter。正本 builder の呼び出しに先立ち、完全 prompt の保存先となる editor input log directory を作成する。
+- oracle edit の正本 exec builder を呼び出す realization adapter。main 用では、正本 builder が完全 prompt の skeleton を保存する editor input log directory を準備してから launch parameter を返す。仕様削減用では、正本 builder が構築した固定 launch parameter をそのまま返す。oracle edit の launch exec parameter 生成処理へ進むための adapter 層。
 
 ## Read this when
-- oracle edit の TUI 起動処理で、realization 側の directory 準備と正本 builder の接続責務を確認するとき
+- oracle edit の main または仕様削減用 launch exec parameter の呼び出し入口を確認するとき
+- 正本 builder 呼び出し前に必要な editor input log directory の準備責務を確認するとき
 
 ## Do not read this when
-- 正本 builder の prompt 内容や TUI 起動パラメータ生成の詳細を確認するとき
-- editor input log directory の管理だけを確認するとき
+- 正本 builder が生成する完全 prompt や仕様削減 prompt の内容を確認するとき
+- prompt 保存先のパス解決や editor input log directory 自体の仕様を確認するときは、それぞれの正本実装を直接読む
 
 ## hash
-- 66998a41cec97f194635d83f36727e99cd286668e6c1190ffe51e99040f86a8c
+- 862ec2be7b0be49c3db10908ec9b291d4d742eb593b6e2543931e941e1ab0d62

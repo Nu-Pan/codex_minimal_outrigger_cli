@@ -84,18 +84,18 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization adapter 群を収容するディレクトリ。oracle edit・investigation・review の builder adapter 入口と、正本 builder への接続、起動前の runtime directory 準備、互換 import 経路を確認するための上位入口。
+- oracle command builder の realization package 群を収容するパッケージ入口。oracle edit・investigation・review の builder adapter と、各 adapter の下位実装へ進むためのルーティング起点を提供する。
 
 ## Read this when
-- oracle command builder の realization adapter の全体構成や、edit・investigation・review 各 builder の下位入口を確認するとき
-- oracle builder adapter と正本 builder、TUI 起動、runtime directory 準備、canonical 実装への委譲関係を調べるとき
+- oracle command builder realization の全体構成や、edit・investigation・review の adapter 入口を確認するとき
+- 各 oracle builder adapter の責務から具体的な下位実装へ進む対象を判断するとき
 
 ## Do not read this when
 - oracle command builder 以外の処理を確認するとき
-- 各 builder の具体的な prompt 構築仕様、path/runtime 定義、finding 処理の詳細を確認するとき。対応する下位実装または正本実装を直接読む
+- 各 builder の具体的な prompt 構築、パス解決、CLI 動作、finding 処理の詳細を確認するとき。該当する下位実装や正本実装を直接読む
 
 ## hash
-- ee43bb072019b3ae72aa1cf5b723cba53b3ad157b341b1bc56b986d81b5692e3
+- 868c7dbea38389f94a495f813489af133d55fd32fa808ebe447144753a9f1721
 
 # `quota_probe.py`
 

@@ -113,6 +113,7 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
     """oracle edit と editor 入力境界が packaged layout で正本を参照する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    {{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
     """
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
@@ -124,18 +125,20 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
         target,
         (
             "import commons.prompt_editor_input as editor_input; "
-            "import acp.builder.oracle.edit.launch_tui as edit_module; "
+            "import acp.builder.oracle.edit.launch_exec as edit_module; "
             "from pathlib import Path; "
             "from types import SimpleNamespace; "
-            "from acp.builder.oracle.edit.launch_tui import "
-            "build_oracle_edit_launch_tui_parameter as build; "
+            "from acp.builder.oracle.edit.launch_exec import "
+            "build_oracle_edit_main_launch_exec_parameter as build_main, "
+            "build_oracle_edit_reduction_launch_exec_parameter as build_reduction; "
             "assert edit_module.__all__ == "
-            "['build_oracle_edit_launch_tui_parameter']; "
+            "['build_oracle_edit_main_launch_exec_parameter', "
+            "'build_oracle_edit_reduction_launch_exec_parameter']; "
             "assert sorted(n for n in vars(edit_module) if not n.startswith('_')) "
-            "== ['build_oracle_edit_launch_tui_parameter']; "
+            "== sorted(edit_module.__all__); "
             "stamp, work, saved, log = "
             "editor_input.reserve_prompt_editor_input(Path.cwd()); "
-            "p = build(stamp, editor_input.ORIGINAL_PROMPT_PLACEHOLDER); "
+            "p = build_main(stamp, editor_input.ORIGINAL_PROMPT_PLACEHOLDER); "
             "skeleton = log.read_text(); "
             "editor_input._select_editor = lambda: ['fake-editor']; "
             "editor_input.subprocess.run = lambda argv: "
@@ -145,6 +148,7 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "Path.cwd(), work, saved, skeleton); "
             "editor_input.finalize_complete_prompt("
             "work, log, skeleton, original); "
+            "r = build_reduction(original); "
             "assert not work.exists(); "
             "assert saved.read_text() == 'oracle を編集する'; "
             "assert p.structured_output_schema_path is None; "
@@ -152,7 +156,12 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "assert p.run_indexing_preflight; "
             "assert p.prompt == f'{log} を読んで、その指示に従って下さい'; "
             "assert 'oracle を編集する' in log.read_text(); "
-            "assert p.agent_call_cwd == Path.cwd()"
+            "assert p.agent_call_cwd == Path.cwd(); "
+            "assert r.structured_output_schema_path is None; "
+            "assert r.file_access_mode.value == 'pure_oracle_write'; "
+            "assert not r.run_indexing_preflight; "
+            "assert 'oracle を編集する' in r.prompt; "
+            "assert r.agent_call_cwd == Path.cwd()"
         ),
         tmp_path,
     )

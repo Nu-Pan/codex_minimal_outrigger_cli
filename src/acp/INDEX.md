@@ -17,19 +17,18 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization adapter と互換 import 入口を収めるディレクトリ。oracle.acp_builder の canonical builder を acp.builder 配下から再公開し、既存 caller の import 経路を維持する。
-- feedback・indexing・oracle・quota probe・realization・session・TUI の用途別 builder 入口を含む。oracle edit／investigation の一部では、正本 builder の呼び出し前に runtime directory を準備する adapter も提供する。
-- 個別 builder の prompt 仕様や本体ロジックではなく、互換公開、canonical 実装への委譲、realization からの接続を確認するための上位入口。
+- acp.builder の互換 builder adapter 群を収めるパッケージ。oracle.acp_builder の canonical builder を既存の acp.builder.* import 経路から利用できるよう再公開し、oracle・realization・feedback・indexing・session・TUI・quota probe の各領域へ進む入口を提供する。
+- oracle edit／investigation では prompt 保存先の準備を行う realization adapter があり、その他の多くの builder は canonical 実装の関数を互換 import として再公開する。
 
 ## Read this when
-- acp.builder 配下の builder adapter 全体の構成、canonical な oracle.acp_builder への委譲関係、または既存 import 経路の維持・削除条件を確認するとき
-- feedback issue の normalization／verification、index entry、quota availability probe、session join conflict resolution、TUI 起動の builder 入口を探すとき
-- cmoc oracle edit／investigation／review または realization apply／refactor fork の builder adapter へ進む入口を確認するとき
+- 既存の acp.builder.* import 経路を維持・移行・削除する条件を調査するとき
+- oracle、realization、feedback、indexing、session、TUI、quota probe の builder adapter の構成と下位要素への入口を確認するとき
+- canonical 実装への委譲関係や、oracle edit／investigation adapter が実行前に行う prompt 保存先準備を確認するとき
 
 ## Do not read this when
-- canonical builder の prompt 構築、入力検証、出力仕様、または具体的な処理ロジックを調査・変更するときは、対応する oracle.acp_builder 側の対象を直接読む
-- acp.builder の builder を利用する CLI・realization・利用者向け公開面の挙動を調査するときは、各呼び出し元や利用側の対象を直接読む
-- builder 共通の処理や、個別の edit・investigation・review・apply・refactor・session の詳細実装だけを確認したいときは、該当する下位対象へ直接進む
+- oracle.acp_builder の canonical 実装そのものの仕様や詳細を調査・変更するときは、oracle 側の対象を直接読む
+- builder の利用箇所や利用者向け公開面を調査するときは、各参照元を直接読む
+- builder 共通の prompt 整形など、このディレクトリに含まれない共通処理を調査するときは、その実装対象を直接読む
 
 ## hash
-- db6081bf8fa7696d03ad0fe17c11fac169ef41814a13900670c7591aad25702b
+- 11896ceb6b8393a3f3591e6887a401486516ff1176e6d6f9569da9e456cee8c3
