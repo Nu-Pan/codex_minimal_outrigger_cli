@@ -15,10 +15,8 @@
 
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする。
 - エディタ編集対象 file の初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する。
-- `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ `{{original-prompt-here}}` を渡し、本命用の完全 prompt の skeleton と `AgentCallParameter` を構築する。
-- editor input の確定時は、skeleton の `{{original-prompt-here}}` だけをオリジナルのユーザー指示で置換する。
-- 本命用 `AgentCallParameter.prompt` は、確定済み完全 prompt file を読む固定指示とする。エディタ終了後も、事前に構築した同じ `AgentCallParameter` を使用する。
-- 仕様削減用の `build_oracle_edit_reduction_launch_exec_parameter` は、確定したオリジナルのユーザー指示を受け取り、完全 prompt 本文を `AgentCallParameter.prompt` として直接返す。仕様削減 agent call では editor input を使用しない。
+- `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ `{{original-prompt-here}}` を渡し、editor の初期表示用 skeleton を構築する。
+- editor 終了後に抽出した同じオリジナルのユーザー指示を、本命用と仕様削減用の builder に渡す。各 builder は、担当固有の完全 prompt 本文を `AgentCallParameter.prompt` に設定する。
 - prompt の意味、文面、および受け渡しの共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` と `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
 - editor work file の排他的 writer は管理しない。他の TUI やエディタとの並行操作から生じる競合や不整合は、人間が管理する。
 
@@ -54,20 +52,20 @@
 - 過剰な仕様文言を削除し、仕様を簡素化し、関連する仕様および規範への違反を修正させる。
 - オリジナルのユーザー指示が要求する人間意図、実装差を許容しない境界、および対象外の既存仕様の意味を維持させる。固定の削減率または文字数目標は設けない。
 - 適用できる installed skill は補助規範として使用してよい。installed skill がこの prompt、オリジナルのユーザー指示、cmoc 固有契約、または関連する oracle file と競合する場合は、installed skill 以外を優先する。installed skill の有無を完了条件にしてはならない。
-- 本命 agent call の prompt、stdout、stderr、最終回答、call metadata、session ID、およびその他の session log を、読ませたり判断根拠にさせたりしてはならない。
-- 本命 agent の回答、要約、session ID、または log 内容を、仕様削減 agent call の prompt や入力へ注入してはならない。
+- 仕様削減用 prompt を、本命用 prompt、本命 agent の stdout、stderr、最終回答、call metadata、session ID、またはその他の session log から派生させてはならない。これらを仕様削減 agent に読ませたり、判断根拠にさせたりしてはならない。
 
 ## 実行順序
 
 1. doctor preprocess を呼び出す。
-2. `build_oracle_edit_main_launch_exec_parameter` で、本命用の完全 prompt の skeleton と固定 `AgentCallParameter` を構築する。
+2. `build_oracle_edit_main_launch_exec_parameter` で、本命用の完全 prompt の skeleton を構築する。
 3. skeleton を初期値として、oracle file の最終状態に関するユーザー指示をエディタから受け取る。
-4. ユーザー指示を skeleton へ挿入し、agent-readable かつ agent-write-prohibited な領域に完全 prompt file を確定する。
-5. indexing preflight を 1 回実行する。
-6. agent call 前の条件を検査する。
-7. 本命 agent call を新しい `codex exec` session で実行する。
-8. 本命 agent call が成功した場合だけ、`build_oracle_edit_reduction_launch_exec_parameter` で仕様削減用 `AgentCallParameter` を構築し、新しい `codex exec` session で実行する。
-9. 最外側の `cmoc oracle edit` の終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
+4. editor work file の一回の最終読み取り結果を保存し、オリジナルのユーザー指示を抽出する。
+5. オリジナルのユーザー指示から、本命用 `AgentCallParameter` を構築する。
+6. indexing preflight を 1 回実行する。
+7. agent call 前の条件を検査する。
+8. 本命 agent call を新しい `codex exec` session で実行する。
+9. 本命 agent call が成功した場合だけ、同じオリジナルのユーザー指示から仕様削減用 `AgentCallParameter` を構築し、新しい `codex exec` session で実行する。
+10. 最外側の `cmoc oracle edit` の終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
 
 - 本命 agent call と仕様削減 agent call の間に、indexing agent call、自動 commit、または別の補完用 agent call を挟まない。
 - 本命 agent call が失敗した場合は、仕様削減 agent call を開始せずエラー終了する。
@@ -91,7 +89,7 @@
 
 - console、サブコマンドログ、および terminal result は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。
 - サブコマンドログは、2 回の agent call、対応する Codex call log、経過時間、戻り値、および最終的な terminal result を追跡可能にする。
-- 本命の stdin へ渡した固定指示と、その指示が参照する確定済み完全 prompt は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従って保存記録から追跡可能にする。
+- 各 agent call の完全 prompt 本文の保存と stdin 渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従う。
 - 内部の各 `codex exec` は、独立した terminal result または Windows toast を通知しない。
 - 最外側の `cmoc oracle edit` は、終了状態を確定した後に terminal result と Windows toast をそれぞれ 1 回だけ通知する。Windows toast の詳細は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
 - agent call 前後の Git 差分または変更 path を、この invocation 固有の成果物として断定してはならない。

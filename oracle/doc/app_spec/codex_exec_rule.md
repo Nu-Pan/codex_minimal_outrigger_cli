@@ -157,20 +157,13 @@ call-scoped path context の適用範囲を次に示す。
 
 - 初回 Codex call に渡す正確な prompt 文面は、人間が所有する oracle src の AgentCallParameter builder と prompt builder で管理する
 - builder が生成した `AgentCallParameter.prompt` は、初回 Codex call の stdin へ渡す入力とする。意味仕様または prompt 文面の正本ではない
-- `AgentCallParameter.prompt` には、完全 prompt 本文、または cmoc が管理する確定済み完全 prompt file を読むための固定指示を使用してよい
-- file を間接参照する場合は、次の条件を満たす
-    - 完全 prompt の skeleton は oracle src の builder が構築する
-    - skeleton の確定時に許容する意味変更は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` が定めるオリジナル指示の挿入だけとする
-    - 参照先は agent-readable かつ agent-write-prohibited な cmoc 管理領域に置く
-    - 参照先の内容は Codex call の開始前に確定し、call 中に変更しない
-    - stdin へ渡した `AgentCallParameter.prompt` と間接参照された完全 prompt の両方を、保存記録から追跡可能にする
-- realization implementation は、prompt 本文、固定指示、または参照先 path に、独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない
+- `AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する
+- realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない
 - cmoc は、確定した `AgentCallParameter.prompt` を変更せず、初回 Codex call に渡す
 - Structured Output の補正 prompt は、初回 prompt を加工したものではなく、本書の出力補正規則に従う次の turn の入力として構築する
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
 - `AgentCallParameter.prompt` は、`{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_prompt.md` に保存する
-- 間接参照では、固定指示を保存した `{{time-stamp}}_prompt.md` から参照先 path を追跡でき、参照先に確定済み完全 prompt が保存されている状態を維持する。追跡のために prompt を複製してはならない
 - `AgentCallParameter.prompt` は stdin 経由で渡す。コマンド末尾に `-` を付け、`{{time-stamp}}_prompt.md` をリダイレクト入力する
 - argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
 

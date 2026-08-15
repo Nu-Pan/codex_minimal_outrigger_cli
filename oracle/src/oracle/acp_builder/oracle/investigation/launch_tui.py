@@ -13,13 +13,11 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
 def build_oracle_investigation_launch_tui_parameter(
-    time_stamp: str,
     user_instruction: str,
 ) -> AgentCallParameter:
     """`cmoc oracle investigation` の TUI 起動パラメータを構築する。
 
     Args:
-        time_stamp: この `cmoc oracle investigation` 呼び出しのタイムスタンプ文字列。
         user_instruction: ユーザーがエディタ入力した、oracle file に関する調査指示。
             コメント除去と strip は呼び出し側で完了している想定。エディタへ提示する
             完全プロンプトの skeleton を構築する場合は、
@@ -60,26 +58,13 @@ def build_oracle_investigation_launch_tui_parameter(
         routing_rule=True,
     )
 
-    # cmoc が管理する TUI ログへ完全プロンプトを保存する
-    complete_prompt_path = (
-        path_context.repo_root
-        / ".cmoc"
-        / "gu"
-        / "ar"
-        / "log"
-        / "editor_input"
-        / f"{time_stamp}_cmpl.md"
-    )
-    with open(complete_prompt_path, "w", encoding="utf-8") as f:
-        f.write(render_as_markdown(complete_prompt))
-
     # TUI を起動する
     return AgentCallParameter(
         agent_call_kind=build_oracle_investigation_launch_tui_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
-        prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
+        prompt=render_as_markdown(complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,

@@ -18,22 +18,21 @@
 ## 実行手順
 
 1. doctor preprocess を呼び出す
-2. `build_tui_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、完全プロンプトの skeleton と固定起動パラメータを構築する
+2. `build_tui_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、初期表示用の完全プロンプトの skeleton を構築する
 3. skeleton を初期値として、オリジナルプロンプトをユーザーからエディタ入力する
-4. オリジナルプロンプトを skeleton へ挿入し、完全プロンプトを確定する
-5. 固定起動パラメータで AI Agent CLI/TUI を起動する
+4. 抽出したオリジナルプロンプトを `build_tui_launch_tui_parameter` へ渡し、完全プロンプト本文を含む起動パラメータを構築する
+5. 構築した起動パラメータで AI Agent CLI/TUI を起動する
 
 ## 「オリジナルプロンプトをユーザーからエディタ入力」の詳細
 
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする
 - エディタ編集対象ファイルの初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する
-- 初期値へ渡す skeleton と、編集後に確定する完全プロンプトは、`build_tui_launch_tui_parameter` が構築した同じ完全プロンプトを使用する
 
 ## 「AI Agent CLI/TUI を起動」の詳細
 
 ### 全バックエンド共通
 
-- ユーザーのプロンプト入力前に `build_tui_launch_tui_parameter` で構築した固定パラメータを、完全プロンプトの確定後に使用して TUI を直接起動する
+- ユーザーのプロンプト入力後に `build_tui_launch_tui_parameter` で構築したパラメータを変更せず、TUI を直接起動する
 - TUI の意味上の責務と起動条件は本書を正本とする。`build_tui_launch_tui_parameter` は、正確な prompt 文面と TUI 起動パラメータを構築する
 - builder は次の規範を、オリジナルプロンプトの内容によらず固定で注入する
     - `build_oracle_standard`

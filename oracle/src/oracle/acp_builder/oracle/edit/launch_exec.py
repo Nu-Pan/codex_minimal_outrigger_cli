@@ -24,13 +24,11 @@ def _build_original_user_instruction(user_instruction: str) -> StructBlock:
 
 
 def build_oracle_edit_main_launch_exec_parameter(
-    time_stamp: str,
     user_instruction: str,
 ) -> AgentCallParameter:
     """`cmoc oracle edit` の本命 agent call 用パラメータを構築する。
 
     Args:
-        time_stamp: この `cmoc oracle edit` 呼び出しのタイムスタンプ文字列。
         user_instruction: oracle file の最終状態に関するユーザー指示。
             エディタへ提示する完全 prompt の skeleton を構築する場合は、
             `{{original-prompt-here}}` を渡す。
@@ -60,24 +58,12 @@ def build_oracle_edit_main_launch_exec_parameter(
         routing_rule=True,
     )
 
-    complete_prompt_path = (
-        path_context.repo_root
-        / ".cmoc"
-        / "gu"
-        / "ar"
-        / "log"
-        / "editor_input"
-        / f"{time_stamp}_cmpl.md"
-    )
-    with open(complete_prompt_path, "w", encoding="utf-8") as file:
-        file.write(render_as_markdown(complete_prompt))
-
     return AgentCallParameter(
         agent_call_kind=build_oracle_edit_main_launch_exec_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
-        prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
+        prompt=render_as_markdown(complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,

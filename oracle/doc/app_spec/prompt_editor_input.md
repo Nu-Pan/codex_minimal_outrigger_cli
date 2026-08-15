@@ -2,9 +2,10 @@
 
 ## 概要
 
-- cmoc は、後続の AI Agent 呼び出しに渡す完全プロンプトの skeleton をエディタへ提示する。
+- cmoc は、オリジナルプロンプトの入力位置を示す完全プロンプトの skeleton をエディタへ提示する。
 - ユーザーは、HTML コメントブロックの外にオリジナルプロンプトを入力する。
-- cmoc は、入力されたオリジナルプロンプトを skeleton の `{{original-prompt-here}}` へ挿入し、後続の AI Agent が読む完全プロンプトを確定する。
+- cmoc は、検証済み editor work file の一回の最終読み取り結果を加工せず保存する。同じ結果から HTML コメントブロックを除去してオリジナルプロンプトを抽出する。
+- 呼び出し元は、抽出したオリジナルプロンプトから後続呼び出し用の完全プロンプトを確定する。
 
 ## 初期コメントの責務
 
@@ -15,14 +16,17 @@
 - 生成済み editor input は実行時生成物であり、表示文面または意味仕様の正本ではない。
 - 初期コメントはオリジナルプロンプトの読み出し時に削除し、後続の AI Agent へ渡してはならない。
 
-## 完全プロンプトの skeleton
+## 完全プロンプトの skeleton と確定
 
-- 呼び出し元は、対応する `build_*_parameter` 関数へオリジナルプロンプトの代わりに `{{original-prompt-here}}` を渡し、エディタ起動前に完全プロンプトの skeleton と起動パラメータを構築する。
-- skeleton は、`{{original-prompt-here}}` だけが未確定であり、後続の AI Agent が読む完全プロンプトと同じ構造および内容を持つ。
+- 呼び出し元は、対応する `build_*_parameter` 関数へオリジナルプロンプトの代わりに `{{original-prompt-here}}` を渡し、エディタ起動前に完全プロンプトの skeleton を構築する。
+- skeleton は、`{{original-prompt-here}}` だけが未確定であり、オリジナルプロンプトの入力位置と担当固有の prompt 構造を表示する。
 - skeleton 内の `{{original-prompt-here}}` は、ちょうど 1 箇所とする。
 - 編集対象の初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` に、Markdown へレンダリングした skeleton を渡して構築する。
 - `build_prompt_editor_input_initial_text` はサブコマンド固有の指示を組み立てない。サブコマンド固有の契約は、対応する `build_*_parameter` 関数が skeleton に含める。
-- `AgentCallParameter.prompt` には、確定済み完全プロンプト file を読む固定指示を使用してよい。この場合も、固定指示と skeleton は同じ `build_*_parameter` 関数が構築する。
+
+呼び出し元は、サブコマンド固有仕様に従って完全プロンプトを確定する。`AgentCallParameter.prompt` には、原則として完全プロンプト本文を直接設定する。
+
+- 後続の AI Agent に渡す完全プロンプトに、skeleton 由来の `{{original-prompt-here}}` を残してはならない。
 
 ## ファイルの役割
 
@@ -32,7 +36,6 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 | --- | --- | --- |
 | editor work file | `{{repo-root}}/.cmoc/gu/aw/editor_input/{{time-stamp}}_orig.md` | cmoc が生成および削除し、内容は人間または agent が編集する。 |
 | 入力結果の保存コピー | `{{repo-root}}/.cmoc/gu/ar/log/editor_input/{{time-stamp}}_orig.md` | cmoc だけが書き込む。 |
-| 確定した完全プロンプト | `{{repo-root}}/.cmoc/gu/ar/log/editor_input/{{time-stamp}}_cmpl.md` | cmoc だけが書き込む。 |
 
 - `ar` は agent-readable かつ agent-write-prohibited な保存領域とする。
 - `aw` は未信頼かつ可変な作業領域とする。cmoc と後続 agent は、`aw` の内容を保存記録として参照してはならない。
@@ -55,10 +58,8 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 4. 検証に成功した場合、cmoc は editor work file を一度だけ読み取る。この結果を最終読み取り結果とする。
 5. cmoc は、最終読み取り結果を加工せず、入力結果の保存コピーへ保存する。
 6. cmoc は、同じ最終読み取り結果からコメント `<!-- ... -->` を削除する。削除結果の前後の空白文字を `strip` で除去し、オリジナルプロンプトとする。
-7. cmoc は、オリジナルプロンプトで skeleton 内の 1 箇所の `{{original-prompt-here}}` を置換し、確定した完全プロンプトを保存する。置換対象が 1 箇所でない場合は、後続の AI Agent を起動せずエラー終了する。
-8. 後続の AI Agent は、確定した完全プロンプトを読み取る。`AgentCallParameter.prompt` が固定指示の場合は、その指示から参照する。editor work file を参照してはならない。
+7. 呼び出し元は、サブコマンド固有仕様に従ってオリジナルプロンプトを反映し、完全プロンプトを確定する。
+8. 後続の AI Agent は、editor work file を参照してはならない。
 9. cmoc は、この確定手順が成功した場合に editor work file を削除する。失敗した場合は復旧用に残す。
 
-- realization file 側で許容する完全プロンプトの加工は、手順 7 の置換だけとする。
-- 起動パラメータは再構築または変更せず、完全プロンプトを確定した後の AI Agent 呼び出しに使用する。
-- editor 終了後の parameter 再構築、skeleton 構築時の parameter との全 field 比較、および exec 専用の prompt 一致検査は行わない。
+- skeleton 構築時と実行時のパラメータに対する全 field 比較、および exec 専用の prompt 一致検査は行わない。
