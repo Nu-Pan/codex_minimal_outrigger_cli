@@ -54,22 +54,22 @@
 # `console_and_file_log.md`
 
 ## Summary
-- 非対話サブコマンドの console 出力、terminal result、サブコマンドログ、および TUI・自動補完との出力境界を定める共通契約の正本。時間・パス表示、stdout/stderr の責務、終端結果の確定順序と表示内容、JSON Lines ログの診断要件を確認する入口。
+- 非対話サブコマンドの console 出力、primary report、terminal result、サブコマンドログに関する共通契約の正本。時間・パス表示、stdout/stderr の責務、進行通知、primary report の保存、terminal result の分類・確定順序・表示内容、JSON Lines ログの記録要件を定める。
+- cmoc 内部呼び出しと最外側サブコマンドの出力・report 境界を定義し、TUI、自動補完プローブ、非対話サブコマンドの通知適用範囲を整理する。個別サブコマンド固有の result、completion_reason、report 形式、終了コードは各サブコマンド仕様への入口となる。
 
 ## Read this when
-- 非対話サブコマンドの進行通知、warning、エラー、terminal result、終了コード、primary report 表示を実装・変更するとき
-- サブコマンドログの保存場所、イベント記録、flush、Codex call や failure の診断情報を扱うとき
-- TUI 終了時、自動補完プローブ、または内部サブコマンド呼び出しの出力境界を確認するとき
-- console の時間表示やフルパス表示の形式を確認するとき
+- 非対話サブコマンドの標準出力、標準エラー、進行通知、terminal result の契約を確認するとき
+- primary report の保存条件、表示するパス、terminal result の確定順序を確認するとき
+- サブコマンドログの保存場所、JSON Lines 形式、即時 flush、診断イベントの記録要件を確認するとき
+- TUI や自動補完プローブが非対話サブコマンドの出力契約に該当するか確認するとき
 
 ## Do not read this when
-- 個別サブコマンド固有の result、completion_reason、primary report、次の操作、終了コードだけを確認する場合は、そのサブコマンド仕様を直接読む
-- Windows toast の対象・順序・内容を確認する場合は、専用の通知仕様を直接読む
-- feedback observation の通知境界や detector 用イベント契約を確認する場合は、feedback observation 仕様を直接読む
-- 自動補完プローブの判定・処理境界だけを確認する場合は、自動補完仕様を直接読む
+- 個別サブコマンドの result、completion_reason、primary report の具体的な内容や終了コードを確認するとき
+- Windows toast 通知、エラー処理、feedback observation、自動補完の詳細な判定規則を確認するとき
+- 本書が non-goal としている ANSI color、verbosity、debug option、機械可読 stdout schema の仕様を確認するとき
 
 ## hash
-- 04ee45199064908a67e0d72875b17027228c57b6dbbb5af19012a12161206087
+- f358aafbe45d1ff074bc4590edd59996c791e2baa17777b4c967ecbe8fa07df3
 
 # `doctor_preprocess.md`
 
@@ -93,20 +93,23 @@
 # `error_handling.md`
 
 ## Summary
-- エラー終了を handled failure と internal failure に分類し、各分類の判定基準と表示・ログ・スタックトレースの共通契約を定める正本仕様。エラー処理、終了結果、console 出力、サブコマンドログ、診断動作の実装やレビュー時に、分類と表示順序の判断を始める入口となる。正常系として扱う attention などの状態やユーザー中断、個別仕様が優先される範囲も確認できる。
+- エラー終了時の handled failure と internal failure の分類基準、および終了状態の確定手順を定義する共通仕様。primary report の保存、error terminal result、サブコマンド終了イベントの順序を扱う。
+- handled failure と internal failure それぞれの表示内容、スタックトレースの扱い、診断用ログへの保存規則を定める。
+- 正常な処理結果やユーザー中断要求をエラーと扱わない境界、および個別仕様が優先される事項を示すエラー処理の共通入口。
 
 ## Read this when
 - エラー終了を handled failure と internal failure のどちらに分類するか判断するとき
-- エラー terminal result の内容、stdout/stderr の出力、スタックトレース保存先や表示順序を変更・検証するとき
-- エラーとして扱わない正常結果や、個別仕様との優先関係を確認するとき
+- primary report、error terminal result、終了イベントの確定順序や保存失敗時の扱いを確認するとき
+- エラー時の console 表示、スタックトレース、診断用サブコマンドログの契約を確認するとき
+- 個別仕様に特別なエラー処理の記載がない場合の共通規則を確認するとき
 
 ## Do not read this when
-- console と terminal result の共通 field、出力先、全体の表示順序そのものを確認する場合は、参照先の console_and_file_log.md を直接読む
-- ユーザー中断要求の具体的な扱いだけを確認する場合は、参照先の subcommand_interruption.md を直接読む
-- 個別サブコマンド固有の state、rollback、report、次の操作、終了コードを確認する場合は、そのサブコマンドの仕様を直接読む
+- console と terminal result の出力先、表示順序、共通 field を確認したいとき
+- 中断可能サブコマンドのユーザー中断要求の扱いを確認したいとき
+- 個別仕様が state、rollback、report、次の操作、終了コードを明示している場合に、その具体的な処理を確認したいとき
 
 ## hash
-- eff35601e9b81a2defb45b4791e1025b9c0c11d3aa2a9cebddfba7cb72067e40
+- 09bad2d213a7377ebe276c8041544ce0bd466fd52b97b91cf5cc1a3b49c42c09
 
 # `feedback.md`
 
@@ -153,22 +156,23 @@
 # `feedback_state.md`
 
 ## Summary
-- feedback report が使用する repository-local state の正本。active generation、current pointer、report cut、reference、checkpoint、incomplete 診断 report の責務と保存範囲を定義し、atomic publication、排他制御、再開、cleanup、および corruption 防止の境界を示す。
+- feedback report が扱う repository-local active state の正本。pending observation、unresolved issue、threshold 未満 aggregate、report cut、reference、checkpoint、publication 済み report、current pointer の所有範囲・保存形式・整合性を定める。
+- report cut の固定から checkpoint の再利用、`incomplete` 診断 report、正常 report の atomic publication、current pointer 切替後の cleanup まで、feedback state の状態遷移と排他制御を確認するための入口。
+- feedback observation の raw schema や detector rule の詳細ではなく、state artifact のライフサイクル、検証、耐障害性、保持・削除条件を確認する対象。
 
 ## Read this when
-- feedback state の配置、保持対象、JSON canonical form、hash、排他制御を確認するとき
-- active issue や threshold 未満 machine aggregate の identity・保持・昇格条件を決めるとき
-- report cut の固定入力、checkpoint の再利用条件、inconclusive 時の扱いを実装または検証するとき
-- 正常な Markdown report の publication 順序、current pointer の切替、cleanup の条件を確認するとき
-- incomplete 診断 report の durable 保存と、直前の正常 publication を維持する動作を確認するとき
+- `cmoc feedback report` の active state を作成、再開、検証、publication、cleanup するとき。
+- active generation、current pointer、report cut、reference、checkpoint の整合性や durable 保存規則を確認するとき。
+- `inconclusive` 発生時の `incomplete` 診断 report と、正常 publication 失敗時の再開条件を実装・レビューするとき。
+- pending observation、active issue、threshold 未満 machine aggregate の保持範囲や compaction 条件を判断するとき。
 
 ## Do not read this when
-- raw observation の形式や detector rule 自体を確認したい場合は、feedback observation の正本を直接読むとき
-- feedback report の人間向け内容や表示形式だけを確認する場合
-- active state と report publication に関係しない機能の実装・調査を行う場合
+- raw observation の形式、detector rule、machine issue key の正本を確認したいときは `feedback_observation.md` を読む。
+- `cmoc feedback report` の invocation report の内容・生成条件を確認したいときは `feedback_report.md` を読む。
+- 一般的な report の表示内容だけを確認したいときは、state の atomic publication や cleanup を扱うこの文書ではなく、対応する report 仕様を直接読む。
 
 ## hash
-- e48bc94eb8576a2e559811a0097f633db9563055fe8dd42b07bf6122d0c3684d
+- 1300fb4185b52ab193cee4ede8580842a48a3d621fa31e17491c889d62e15ad4
 
 # `indexing.md`
 
@@ -283,39 +287,38 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドおよび session・editing run・feedback の正本仕様を集約するディレクトリ。各文書は、対応する CLI 挙動、実行条件、状態遷移、agent call、差分・merge・report・cleanup などの責務を定義し、実装・テスト・仕様適合性確認時の個別入口となる。
-- doctor、indexing、tui、oracle edit/investigation/review、realization apply/refactor、session fork/join/abandon、feedback report、編集 run lifecycle の仕様を、サブコマンドまたは共通 lifecycle 単位で確認したい場合に読む。
+- cmoc の主要サブコマンド仕様を集約する入口。doctor、indexing、oracle／realization の編集・調査・レビュー、session／run lifecycle、feedback report、tui など、各コマンドの正本仕様へ進むためのルーティング情報を提供する。
+- サブコマンドの引数・実行条件・処理手順・状態遷移・終了経路・primary report 要件を確認する際に、対象コマンドの仕様を選択して読む。共通の編集 run lifecycle は専用仕様へ、個別処理や保存形式は本文が指定する下位の正本へ進む。
 
 ## Read this when
-- cmoc のサブコマンド仕様や session・編集 run の lifecycle を調査し、対象機能に対応する正本仕様への入口を探すとき。
-- CLI の引数、事前条件、実行手順、agent call、状態遷移、差分検査、merge、cleanup、report、終了条件のいずれかを確認するとき。
-- feedback report の publication や、oracle・realization・session 間の責務境界を確認するとき。
+- cmoc の特定サブコマンドの正本仕様を探すとき
+- サブコマンドの実行条件、処理フロー、状態遷移、エラー・中断時の挙動、report 要件を確認するとき
+- oracle／realization の編集・調査・レビュー、session／run の fork・join・abandon、feedback report、tui の仕様を変更・実装・検証するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細を確認する段階では、このディレクトリ全体ではなく対応する個別仕様書を直接読むとき。
-- prompt 共通規則、doctor preprocess、indexing の内部定義、run isolation、subcommand interruption、feedback の raw observation/state、oracle と realization の適合性基準など、本文から委譲される別の正本仕様だけを確認したいとき。
-- 実装コードそのものや、通常の git 操作・一般的な session 管理を確認したいとき。
+- サブコマンドに共通する仕様だけを確認する場合は、本文から指定される共通正本を直接読むとき
+- 特定サブコマンドの内部処理、保存データ形式、agent prompt・schema、実装配置、テスト実行手順だけを確認する場合は、本文が指定する専用仕様や開発ルールを直接読むとき
+- 自動生成される INDEX.md の内容や、保存済み report の具体例だけを調査するとき
 
 ## hash
-- a33bac5a1bd74cc11862dd071903503ff1f9648322306dabd96eb1716d98f75d
+- 808d6d67743ad1bbc6bda6449d5c4d74e0b6ca4c939508d444f92a40999f4eb5
 
 # `subcommand_interruption.md`
 
 ## Summary
-- 中断可能な cmoc サブコマンドについて、Ctrl+C によるユーザー中断要求の定義、対象範囲、共通の正常系処理、ログ・state・report の扱い、中断後の再開可否を定める仕様書。サブコマンドの中断対応を実装・レビューする際の入口となる。
+- cmoc の中断可能サブコマンドに対するユーザー中断要求（Ctrl+C）の共通仕様を定める文書。中断対象の範囲、処理単位の停止、確定済み部分結果の保持、state 更新、primary report と terminal result の保存・出力、中断後の再開方針を確認するための入口となる。個別サブコマンドの詳細やログ・通知形式は、本文が参照する個別仕様および共通仕様へ進む。
 
 ## Read this when
-- 中断可能サブコマンドを追加・変更・実装・レビューするとき
-- Ctrl+C 受信後の処理単位、部分結果、terminal result、ログ出力、state 更新を確認するとき
-- 中断後の run の join、再開、新規 run、report publication の扱いを確認するとき
+- Ctrl+C によるユーザー中断を正常系として設計・実装・レビューするとき
+- 中断可能サブコマンドの対象範囲や、中断時の結果・state・report の扱いを確認するとき
+- 中断後に同じ run を再開できるか、新しい run や fork が必要かを判断するとき
 
 ## Do not read this when
-- 通常完了や一般的なエラー処理だけを確認する場合
-- 特定サブコマンド固有の中断時 report・state 仕様を確認する場合は、併記された個別仕様を直接読む方が適切
-- console の出力形式や Windows toast 通知の詳細だけを確認する場合は、それぞれの正本仕様を直接読む方が適切
+- 特定サブコマンド固有の中断時 state や report 保存形式だけを確認するとき
+- ログ形式、エラー処理、Windows toast 通知などの詳細だけを確認するとき
 
 ## hash
-- 302a9f80669cdd645a6eaeb4b29f03a5c02bbfadc379a54ca4dfc6d4b91795bb
+- 1695e21c641e63d7de727bfc19095fa695223e72e7b844f146664e76fd25bf5e
 
 # `usage.md`
 
@@ -339,18 +342,21 @@
 # `windows_toast_notification.md`
 
 ## Summary
-- Windows 11 上の WSL2 で、cmoc の最外側サブコマンド完了・入力待ち・異常終了を Windows toast で通知する仕様。非対話サブコマンド、TUI、通知内容、決定論的な発火境界、Codex CLI 設定、外部契約検証、通知 transport、自動補完プローブの制約を定める。Windows toast 通知の実装方針や lifecycle 境界を確認する入口であり、具体的な transport や未確定の Codex callback interface は realization の責務として残す。
+- Windows 11 上の WSL2 から Windows toast 通知を行う仕様。cmoc の非対話サブコマンドの terminal result と、TUI の agent turn 完了を通知対象とし、通知境界・状態分類・重複排除を定める。
+- 通知内容の必須情報、秘密情報やフルパスの除外、Codex CLI callback 設定の呼び出し単位管理、および未検証の外部契約を正本仕様に断定しない方針を定める。
+- 外部 module や新規 Python package に依存しない Windows toast transport の安全な受け渡し、有限時間、通知失敗時の本命処理への非干渉、自動補完プローブでの無効化条件を定める。
+- 具体的な callback interface と transport 方式は realization に委ねられるため、仕様の境界を確認したうえで実装・外部契約検証へ進むための入口となる。
 
 ## Read this when
-- Windows toast 通知の要否、発火タイミング、重複排除、通知内容、失敗時の扱いを実装・レビューするとき
-- cmoc の非対話サブコマンドまたは TUI に通知境界を追加・変更するとき
-- Codex CLI の callback 設定や、WSL2 から Windows へ安全に通知を transport する方式を検討するとき
-- 自動補完プローブで通知処理を抑止する挙動を確認するとき
+- Windows toast 通知機能を実装、変更、または仕様適合性レビューするとき。
+- cmoc tui、cmoc oracle investigation、その他の最外側末端サブコマンドに通知境界を適用するとき。
+- terminal result の分類、TUI turn の完了通知、callback の重複排除、または通知失敗時の非干渉を確認するとき。
+- WSL2 からの toast transport、自動補完プローブ、Codex CLI の通知 callback 外部契約を扱うとき。
 
 ## Do not read this when
-- 通知を伴わない通常のサブコマンド lifecycle や terminal result の分類だけを確認するときは、共通仕様を直接読む
-- Codex CLI の callback interface の現在の実装・利用可能性だけを調査するときは、利用中 CLI の外部契約を直接検証する
-- 具体的な transport 実装や callback realization の詳細だけを変更するときは、対応する realization の実装・テストを直接読む
+- terminal result の共通分類や primary report の確定条件だけを確認するときは、console_and_file_log.md を直接読む。
+- ユーザー中断要求の成立条件や完了処理だけを確認するときは、subcommand_interruption.md を直接読む。
+- 具体的な callback 設定 key、event、payload、発火保証の検証結果を確認するときは、検証済みの外部契約資料または対象実装を直接読む。
 
 ## hash
-- 9a36838b712bd62f7d7114646d11a3b50d1d078ab7fa436706f45fb1f0c229f1
+- 1160a9c967d32a54499d7c991062f44bc2e8973e2cf1a3cfe81b5fb495205456

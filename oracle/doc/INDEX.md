@@ -1,22 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc の CLI・Codex 呼び出し・prompt・logging・feedback・session/run・通知など、アプリケーション挙動に関する正本仕様を集約するディレクトリ。各機能の実装、変更、レビュー時に、共通契約または個別サブコマンド仕様へ進むための入口となる。
-- CLI の自動補完、通常実行の前処理と出力境界、エラー処理、doctor、indexing、run isolation、session lifecycle、feedback の観測・状態・report publication、Windows toast 通知など、複数の仕様領域を扱う。
-- Codex CLI の agent call、model/provider、prompt 構築、Structured Output、ログ、feedback reporter の責務や連携を確認するための仕様群を含む。
+- cmoc の CLI・workflow・agent call・feedback・出力・状態管理に関する正本仕様を集約するディレクトリ。各仕様の責務境界、実行条件、状態遷移、出力契約、エラー処理、通知、自動補完などを確認するための入口であり、個別仕様から実装・テスト・より詳細な正本へ進む起点となる。
 
 ## Read this when
-- cmoc のアプリケーション仕様全体から、対象機能に対応する正本仕様や下位仕様への入口を探すとき
-- CLI の実行境界、agent call、prompt、Structured Output、console/log、feedback、session/run、通知の挙動を実装・変更・レビューするとき
-- 複数の共通契約やサブコマンド仕様の責務分担を確認し、どの個別仕様を読むべきか判断するとき
+- cmoc の CLI サブコマンド、workflow、agent call、feedback、ログ・report、エラー・中断、通知、run/session state の正本仕様を探すとき
+- 複数のアプリケーション仕様にまたがる責務境界や、対象となる下位仕様を選択するとき
 
 ## Do not read this when
-- 特定の仕様書や実装ファイルが既に特定でき、その本文だけを確認すればよいとき
-- INDEX.md の生成規則、Python 開発環境、テスト実行手順など、このディレクトリが直接扱わない開発運用を確認するとき
-- 実装コードや realization test の具体的な挙動だけを調査するとき
+- 特定仕様の本文が明確で、その個別ファイルを直接読むべきとき
+- 実装コード、テスト、開発環境、または既存 INDEX.md の内容だけを調査するとき
 
 ## hash
-- 02c98c78978602cac0a0db7ffa0bceed577e9f97b98f113cef1e10d81285d8bf
+- 9e5fb152b87a841c5422c9640e2f6182029f808fa5417bb431de7e7415baed58
 
 # `branch_model.md`
 
