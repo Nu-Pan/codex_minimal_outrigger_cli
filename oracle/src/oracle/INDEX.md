@@ -1,20 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- cmoc の各 agent call 用パラメータ構築を集約する領域。共通の論理モデルから indexing、oracle、quota probe、realization、session、TUI など個別用途の起動定義へ進むための入口であり、prompt、Structured Output、モデル・推論設定、cwd、アクセス権限、preflight の確認範囲を横断して把握できる。
+- AI コーディングエージェント呼び出し用の prompt、Structured Output、モデル、推論強度、ファイルアクセス、作業ディレクトリなどを組み立てる定義を集約する。共通の AgentCallParameter と論理列挙に加え、feedback、indexing、oracle、realization、session、TUI、quota probe の呼び出し定義へ進む入口となる。
 
 ## Read this when
-- 複数の cmoc サブコマンドにまたがる agent call 起動パラメータの構成や責務分担を確認するとき。
-- 個別の agent call 定義へ進む前に、共通の論理モデルと用途別の下位領域の対応を把握するとき。
-- agent call の prompt、Structured Output、実行条件、アクセス権限、モデル・推論設定を用途別に調査するとき。
+- agent call の共通パラメータモデルや論理的なモデル種別、推論強度、ファイルアクセスモードを確認・変更するとき
+- 特定の cmoc サブコマンドに対応する prompt、Structured Output、起動条件、実行権限の定義を探すとき
+- feedback issue、INDEX.md エントリー生成、oracle 操作、realization、session join、TUI、quota availability probe の agent call 構築実装を調査するとき
 
 ## Do not read this when
-- 特定のサブコマンドの起動条件だけを確認すれば足りる場合は、対応する下位領域を直接読むとき。
-- agent call の共通型や完全 prompt 構築の実装だけを確認するときは、共通定義を直接読むとき。
-- oracle や realization の具体的な仕様、実装、テスト内容を確認するときは、それぞれの正本・実装・テスト対象を直接読むとき。
+- 実際の agent call 実行処理や Codex CLI sandbox の正本仕様を確認するとき
+- 個別のサブコマンドの業務ロジック、issue 状態、oracle file、realization file の具体的内容を確認するとき
+- 共通 prompt builder やパス解決、Structured Output の一般的な実装だけを確認するとき
 
 ## hash
-- 7a7965beca8c1704c27e83d4cadf36bfbbf03b3769a0f2841a6457a2d093c7d9
+- b93052f9b89abf53dbc983debe2ab2434c5bab7f878e01f05cca6471d1c4c702
 
 # `feedback`
 
@@ -52,32 +52,17 @@
 # `prompt_builder`
 
 ## Summary
-- プレースホルダ名と文字列または Path の置換先を対応付ける型を定義する。プロンプト内のパス・値置換の表現を確認するときの入口。
-- 依頼概要・完了条件・各種規則や Standard を統合して agent 向け完全プロンプトを構築する中心処理。プロンプトの構成、注入順序、依存関係、複数 builder の統合を調査するときに読む。
-- エディタ経由で後続 agent に渡す入力ファイルの初期表示文面を構築する。案内文、記入欄、完全プロンプトの配置を変更・確認するときに読む。
-- agent call 向けプロンプトを構成する個別部品群。oracle・realization、Standard、アクセス制約、routing、feedback などの特定の instruction 構築経路を調査するとき、該当部品への入口として読む。
-- realization のレビュー結果を適用する際に、oracle との不適合や致命的な実装問題を修正対象とし、調査開始時点で解消済みの問題を除外する Standard を構築する。
-- 複数用途で共有する oracle authority と finding basis の StandardGroup を定義する。oracle／realization の正本関係や所見根拠の共通構成を確認するときに読む。
-- session join の conflict marker 解消時に、両 branch と oracle の意味を保ち、推測による破棄や不要な変更を避ける Standard を構築する。
-- agent call から editor work file へ handoff する際に、file access・sandbox と正式成果物を維持する Standard を構築する。
-- 全 agent call に共通する human feedback reporting の文面を構築する。workload 外の人間対応が必要な問題だけを報告する規則と feedback tool の扱いを確認するときに読む。
-- FileAccessMode と call context に応じて、読み書き可能範囲、oracle／realization の編集可否、禁止対象を含む file access rule を生成する。
-- INDEX.md 用エントリー生成時に、routing 情報としての意味、本文根拠、必要最小限の意味情報を求める Standard を構築する。
-- oracle と realization の分類、責務、配置、正本関係を説明する共通基礎文面を構築する。両者の境界や扱いを前提として確認するときに読む。
-- oracle review で所見を成立させるため、fatal・minor の区別と oracle file だけで成立する判定条件を含む Standard を構築する。
-- oracle file の作成・変更・レビューに必要な正本性、意図と未定義部分、逆算禁止、実装制約、整合性・検索性の Standard を構築する。
-- realization code から対応する oracle file を参照するコメント規則を構築する。realization 実装の作成・変更時に oracle path の記載条件を確認するときに読む。
-- realization file の作成・変更・リファクタ・レビューに必要な oracle 適合、現行仕様への限定、repository 固有手順による検証の Standard を構築する。
-- INDEX.md を使って対象に近い文書へ絞り込み、本文へ進むための routing rule 文面を生成する。対象選定や INDEX.md の位置付けを確認するときに読む。
-- 全用途で利用する Standard 定義を集約する。各 Standard の識別子、適用条件、要求・禁止・許容事項の正本を確認するときに読む。
+- agent call 向け完全プロンプトを構成する実装群。プレースホルダ型、完全プロンプトの統合・規則注入、エディタ入力の初期文面、用途別 prompt 部品への入口を扱う。プロンプト構築の全体経路を調査・変更するときはここから該当ファイルや parts 配下へ進む。
 
 ## Read this when
-- agent call 向けプロンプトの構成や、特定の prompt builder 部品・規則・Standard の生成方法を調査または変更するとき
-- oracle／realization の扱い、file access、routing、feedback、review、handoff などの instruction がどこで構成されるかを確認するとき
+- agent call に渡す完全プロンプトの構成や規則注入を調査・変更するとき。
+- プレースホルダの型表現、エディタ入力の初期テンプレート、または prompt builder 部品の組み合わせを確認するとき。
+- oracle・realization、標準選択、ファイルアクセス制約、routing、feedback などの共通 instruction がどの部品で構成されるかを確認するとき。
 
 ## Do not read this when
-- 生成済みプロンプトの利用側や CLI の実際のファイル操作を調査するとき
-- 個別の oracle file・realization file の本文や、prompt builder が参照するデータ構造そのものを直接確認したいときは、対応する定義元へ進む
+- 個別の oracle file・realization file の本文や、特定の標準本文だけを調査するとき。
+- 生成された prompt の利用側や CLI の実際のファイル操作を調査するとき。
+- StructDoc などのデータ構造自体や、プロンプト本文を使わない別設定の表現だけを確認するとき。
 
 ## hash
-- 28bcc2bd76a5ca8bbe1a747efa49b9a33b6589dd0ac24dba6e446ef8e57c6492
+- 201d12e2ed21331ca8defdfa1693a7e1fbe4c49596f132348dfa02c0179d2cf5

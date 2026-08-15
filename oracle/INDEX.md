@@ -1,34 +1,35 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション挙動仕様を集約する正本文書群。CLI 自動補完、Codex 呼び出し、ログ・エラー処理、doctor preprocess、feedback、prompt、session/run、サブコマンド、通知などの個別仕様への入口として、対象機能に対応する下位仕様へ進むために読む。
+- cmoc の正本文書を、アプリケーション仕様と開発ルールの領域に分けて案内する文書群。CLI、Codex 呼び出し、prompt、logging、feedback、session/run、branch/worktree などの挙動仕様と、Python 実装・環境・テスト・品質検査の開発規則への入口を提供する。採用しなかった設計案の検討記録も含む。
 
 ## Read this when
-- cmoc の利用者向け挙動仕様、共通実行契約、サブコマンド lifecycle、feedback、prompt、session/run、通知の正本を探すとき
-- 複数のアプリケーション仕様にまたがる責務境界や、適切な下位仕様の入口を確認するとき
+- cmoc の正本仕様や開発ルールの入口を探すとき
+- CLI、Codex 呼び出し、prompt、Structured Output、logging、feedback、session/run、branch/worktree の挙動を確認・変更・レビューするとき
+- Python 実装、開発環境、テスト要件、テスト実行手順の根拠を確認するとき
+- 現行仕様ではなく、採用されなかった設計案の理由や検討背景を調べるとき
 
 ## Do not read this when
-- 特定機能の詳細仕様が明らかな場合は、このディレクトリ全体ではなく対応する個別仕様を直接読むとき
-- 実装コード、realization の具体的挙動、テスト実行手順、開発環境の規則だけを確認するとき
+- 対象となる個別の仕様書、実装、テスト、または開発手順が既に特定できているとき
+- 具体的な実装コードや realization test の挙動だけを調査するとき
+- INDEX.md の生成規則や、対象文書に直接記載された詳細手順だけを確認するとき
 
 ## hash
-- a27226caa4dcfe973a9e71577f14e02662f7f12767b62902c6d99ac13ba0a595
+- 592a46e3d8a72af33be72a583c2e9e6a4ec3bc1a6f2e9b2306e16533b34af4a8
 
 # `src`
 
 ## Summary
-- cmocのagent call起動定義とprompt構築実装の入口。共通のAgentCallParameterや実行設定、用途別の起動パラメータ、prompt部品、Structured Output schema、パス・標準文書などを扱う。
-- agent callの用途別実装はacp_builder、promptの組み立てと規範部品はprompt_builder、共通モデルや設定・構造化文書はotherへ進むための上位ルーティング対象。
+- cmoc の oracle 実装における共通モデル、設定・パス解決、agent 向け標準定義、構造化 Markdown 文書生成を扱う下位要素への入口。oracle 側の共通定義や文書表現を調査・変更する際に、該当する下位要素へ進むために読む。
 
 ## Read this when
-- oracle、realization、feedback、indexing、session join、TUIなど、複数用途にまたがるagent call構築の責務や配置を確認するとき。
-- 特定用途の起動定義、prompt構築、Structured Output schema、共通設定のいずれを読むべきか判断するとき。
+- oracle 共通モデル、設定、パスコンテキスト、標準定義、または構造化文書生成の実装を調査・変更するとき
+- 複数の oracle 関連モジュールにまたがる責務の入口を確認し、該当する下位要素へ進むとき
 
 ## Do not read this when
-- 特定用途のagent call起動処理を調査する場合はacp_builder配下を直接読むとき。
-- promptの共通部品や用途別Standardを調査する場合はprompt_builder配下を直接読むとき。
-- AgentCallParameter、モデル・推論設定、パス解決、構造化文書などの共通定義だけを確認する場合はother配下を直接読むとき。
-- oracleやrealizationの具体的な仕様・実装・テストを確認する場合は、それぞれの正本仕様または対象実装を直接読むとき。
+- agent call の prompt、Structured Output、起動条件、実行権限の定義を調査するとき
+- 特定の CLI サブコマンド、feedback、realization、session、TUI の業務ロジックを調査するとき
+- 生成済み prompt の構成や prompt 部品の組み合わせを調査するとき
 
 ## hash
-- cc0a27853fabbc27ab812a405c3c75c809bc95238b50394799b6dd25a5c3f247
+- c6e16de93db2b1703cdc0f6464adab7ddf2f3b7ac57489f1756a4b4c885e94d9

@@ -1,20 +1,20 @@
 # `acp`
 
 ## Summary
-- acp 互換の公開入口と builder adapter 群を扱うディレクトリ。既存の acp.* import 経路を oracle 側の canonical 実装へ移行・維持・削除する判断や、builder 配下の oracle／realization／feedback／indexing／session／TUI／quota probe への入口を確認する際の起点となる。
+- `acp` 互換公開入口と ACP builder 群をまとめるディレクトリ。`acp.*` 参照の互換性や builder の構成を確認し、詳細調査では下位要素へ進むための入口である。
 
 ## Read this when
-- 既存の acp.* または acp.builder.* import 経路の互換性、移行、削除条件を調査するとき
-- acp.builder 配下の adapter 構成と、canonical 実装への委譲関係を確認するとき
-- oracle edit／investigation の realization adapter や各領域の builder へ進む入口を探すとき
+- `acp` 公開入口の存廃と既存参照への影響を確認するとき
+- ACP builder の互換入口、共通処理、workload 別 adapter の配置を把握するとき
+- 対象ディレクトリ直下から、調査対象となる下位要素への入口を判断するとき
 
 ## Do not read this when
-- oracle 側の canonical 実装の仕様や詳細を調査・変更するときは、対応する oracle の実体を直接読む
-- acp 配下の具体的な内部挙動や共通処理の実装を調査・変更するときは、該当する実体モジュールを直接読む
-- builder の利用箇所や利用者向け公開面を調査するときは、各参照元を直接読む
+- 特定の builder の具体的な入出力や内部実装を調査するとき
+- `oracle` 側の実体モジュールや個別 adapter の詳細を直接確認したいとき
+- ACP builder と無関係な処理を調査するとき
 
 ## hash
-- 5c8ad5573a628c2248ae9b55dd4fc109c2009349bff27ba13d1db76cabef02b0
+- 68f89078a07fdab2bacbbc2570af487c3d91acbcae895c95dfd7df05112e985f
 
 # `basic`
 
@@ -52,20 +52,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex exec/TUI、設定・ログ・パス、Git/worktree、状態管理、feedback、INDEX 更新など、複数の実行経路で共有される機能の実装入口を提供する。
-- 共通 runtime API の公開入口から個別 lifecycle・設定・プロセス・状態・feedback・indexing 機能へ進むためのディレクトリであり、特定機能の内部挙動を調べる場合は対応する個別モジュールを直接読む。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex subprocess、設定・ログ・パス・Git worktree、状態管理、feedback、INDEX lifecycle、editing run など、複数の実行経路から共有される実装への入口となる。
+- 個別 runtime helper の責務や公開 API、Codex 実行制御、設定・状態・feedback・Git・path・run lifecycle などの共通機能を調査・変更するときは、まずこの配下の対象へ進む。
 
 ## Read this when
-- cmoc の複数の CLI・Codex 実行経路で共有される runtime 機能の配置や責務の全体像を確認するとき
-- 共通 runtime API、INDEX 更新 lifecycle、Codex 実行境界、設定・Git・状態・feedback・run lifecycle などの実装入口を選ぶとき
-- commons 配下の個別 helper を利用・変更する前に、関連する共通機能の構成を把握するとき
+- cmoc の複数機能で共有される runtime helper の実装箇所を探すとき
+- Codex 実行、CLI lifecycle、INDEX 更新、設定、ログ、Git/worktree、feedback、session/run state などの共通 runtime 挙動を変更・調査するとき
+- 特定の共通機能について、対応する runtime module の実装入口を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部実装や個別の公開シンボルだけを調べる場合は、対応する個別モジュールを直接読むとき
-- CLI サブコマンド固有の業務ロジック、Codex の正本仕様、feedback の保存仕様、INDEX entry の生成 prompt・schema だけを確認する場合は、それぞれの専用実装または仕様へ直接進むとき
+- 個別サブコマンドの業務ロジックや利用者向け仕様だけを確認したいとき
+- 共通 helper の内部実装ではなく、正本仕様・prompt・schema・テストを直接確認すべきとき
+- 対象となる特定の runtime module が明確で、そのファイルを直接読めるとき
 
 ## hash
-- 1814f6d78c46f81b14b87ca82b75f43a4fe4ac1e0636bd0ac4f76e138dbe438f
+- 30674b04249ed4a96009c00ae8d9ecb8378841a064ab88584aa61e04928e652d
 
 # `config`
 
@@ -120,17 +121,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約するディレクトリ。apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui など、各サブコマンドの入口または上位ルーティング対象を確認する際の起点となる。
-- サブコマンド全体の実行フローや構成を把握する場合はここから該当するサブコマンドへ進み、個別の正本仕様・共通 runtime・下位実装の詳細が目的なら、それぞれの直接の参照対象へ進む。
+- CLI サブコマンドの実装入口をまとめたディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などのサブコマンド構成と、各処理の下位実装への入口を確認するために読む。
+- 特定のサブコマンドの実行フローやライフサイクルを調査・変更する際は、該当する実装入口から下位要素へ進むためのルーティング対象である。apply と review は現時点で実装本文がなく、将来の実装配置先として示されている。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの入口を特定するとき
-- 複数のサブコマンドにまたがる実装配置や、該当する下位 package・module への進み方を確認するとき
+- CLI サブコマンドの実装構成や、対象サブコマンドの入口が分からない状態で調査を開始するとき
+- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかのサブコマンドに関する実装入口を確認するとき
+- realization 配下の apply・refactor・review など、workload の入口を特定するとき
 
 ## Do not read this when
-- 利用者向けサブコマンドの正本仕様や外部契約だけを確認するとき
-- 共通 CLI runtime、Git 操作、state、publication などの実装詳細を直接調べるとき
-- 対象サブコマンドが明確で、その配下の実装や仕様を直接読む方が適切なとき
+- 特定サブコマンドの詳細な処理、正本仕様、共通ランタイム、Git 操作、state 契約などを直接確認することが目的で、対象ファイルが既に特定できているとき
+- apply または review の具体的な実装内容を確認したいとき。ただし現時点では実装本文がないため、実装追加後に該当箇所を読む
 
 ## hash
-- 32f4929e7b54f4a13c471e2964cc97c37bf7f59158c9d43eab0bc81531a5a2aa
+- dfcbf1e32a4734f896e4a75daf57c6242f6cf7eb3e26a72dead5fb020a7821dd

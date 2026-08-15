@@ -15,39 +15,37 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` builder の realization adapter package。対象パッケージの入口として、oracle edit 用 builder の adapter 実装と launch exec parameter 生成処理への導線を扱う。
+- `cmoc oracle edit` builder 用の realization adapter package。oracle edit 向け builder 実装へ進むためのパッケージ入口。
 
 ## Read this when
-- `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき
-- oracle edit の main または仕様削減用 launch exec parameter の呼び出し入口を確認するとき
-- 正本 builder 呼び出し前に必要な editor input log directory の準備責務を確認するとき
+- `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき。
 
 ## Do not read this when
-- oracle edit の具体的な編集処理や CLI 全体の動作を確認したいとき。対象の実装ファイルや上位の CLI 関連ファイルを直接読む
-- 正本 builder が生成する完全 prompt や仕様削減 prompt の内容を確認したいとき
-- prompt 保存先のパス解決や editor input log directory 自体の仕様を確認したいとき。各正本実装を直接読む
+- oracle edit の具体的な編集処理や CLI 全体の挙動を確認するときは、実装ファイルまたは上位の CLI 関連ファイルを直接読む。
 
 ## hash
-- 1d40b6cc7eefafeb45f4d1dc608cd8bc0d247256678c8423711fde4e159e8fcb
+- b1383fbbd6c0d1e8620975620e380ef789da565e4710f09f8f46c23740359e26
 
 # `investigation`
 
 ## Summary
-- oracle investigation 用 builder adapter のパッケージ入口。該当 builder adapter の構成を把握し、下位実装へ進む前の責務確認に使う。
-- oracle investigation の launch TUI 呼び出し向け agent-call parameter を生成する realization adapter。正本 builder 呼び出し前の editor input log directory 作成と、builder 生成結果の受け渡しを扱う。
+- oracle investigation 用 builder adapter パッケージの入口。配下の builder adapter 構成と責務を確認し、下位実装へ進むための参照先。
+- oracle investigation の起動 TUI パラメータ builder を互換 import 経路として再公開するファイル。正本実装を確認せずに、既存経路で公開対象を参照したい場合の入口。
 
 ## Read this when
-- oracle investigation 用 builder adapter の入口や構成を確認するとき
-- oracle investigation の launch TUI 呼び出し用 parameter 生成処理を確認・変更するとき
-- 正本 builder 呼び出し前に必要な runtime directory 準備の責務を確認するとき
+- oracle investigation 用 builder adapter の構成や入口を確認するとき
+- 該当パッケージ内の下位実装へ進む前に責務を確認するとき
+- oracle investigation の起動 TUI パラメータ builder を既存の互換 import 経路から参照するとき
+- 互換経路が再公開する対象や範囲を確認するとき
 
 ## Do not read this when
-- builder adapter の具体的な prompt 構築仕様を確認したいときは、正本 builder を直接読む
-- editor input log のパス解決や runtime path の詳細だけを確認したいときは、対応する path/runtime 定義を直接読む
+- builder adapter の具体的な実装詳細を確認したいとき
 - oracle investigation 以外の builder や ACP 実装を調べるとき
+- builder の処理内容や investigation 起動パラメータの仕様を確認・変更するとき
+- 正本実装を確認する必要があるときは、oracle investigation 側の正本 builder を直接読む
 
 ## hash
-- ccc6abeb232b6f0b9fcba8f2c56075a4e91e60b964242e9d66f0e8a4184d43c0
+- 50f8760e1258bc55a46aeda2cd8f311f5334e0e84ce888ac6f9c5df7cb81dc55
 
 # `review`
 

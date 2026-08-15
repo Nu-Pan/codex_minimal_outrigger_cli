@@ -1,18 +1,16 @@
 # `oracle`
 
 ## Summary
-- cmoc の各 agent call に渡す AgentCallParameter と、用途別の prompt・Structured Output・モデル・推論設定・ファイルアクセス・cwd・indexing preflight を構築する領域。共通の論理モデル定義から、indexing、feedback、oracle、realization、session join、TUI、quota probe の起動定義へ進む入口となる。
+- cmoc の oracle 実装における共通モデル、設定・パス解決、agent 向け標準、構造化 Markdown 文書生成を扱う下位モジュールへの入口。prompt 構築や feedback など agent call 定義とは異なり、oracle 側の共通定義と文書表現を調査・変更するときに利用する。
 
 ## Read this when
-- 複数の cmoc サブコマンドにまたがる agent call 起動パラメータの構成や共通責務を確認するとき。
-- 特定用途の agent call builder を探し、用途別の下位領域へ進む前に全体の分類を把握するとき。
-- agent call の prompt 構築結果と、Structured Output、モデル・推論設定、ファイルアクセス、cwd、indexing preflight の組み合わせを確認するとき。
+- cmoc の oracle 共通モデル、設定、パスコンテキスト、標準定義、または構造化文書生成の実装を調査・変更するとき
+- 複数の oracle 関連モジュールにまたがる責務の入口を確認し、該当する下位要素へ進むとき
 
 ## Do not read this when
-- 共通の AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode の定義だけを確認したい場合は、共通定義を直接読むとき。
-- indexing、feedback、oracle、realization、session join、TUI の特定用途だけを調査する場合は、対応する下位領域を直接読むとき。
-- 完全 prompt の共通構築、Standard、file access rule、Structured Output schema の定義を確認する場合は、prompt_builder または各用途の schema を直接読むとき。
-- oracle や realization の具体的な仕様、実装、テスト内容を確認する場合は、それぞれの正本・実装・テスト対象を直接読むとき。
+- agent call の prompt、Structured Output、起動条件、実行権限の定義を調査するときは agent call 定義側を直接読む
+- 特定の CLI サブコマンド、feedback、realization、session、TUI の業務ロジックを調査するときは各機能の直接の実装を読む
+- 生成済み prompt の構成や prompt 部品の組み合わせを調査するときは prompt builder を直接読む
 
 ## hash
-- 8eb8dd3192e5af9f90953f41f58d7db691d3a0a2734ff5d3d72eceb2224227d9
+- dd231d0be5a5fff968def169cd82066b1aa67bd81366c859ffd169908c2eca29

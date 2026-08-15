@@ -610,12 +610,10 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert "resume" not in main_payload["argv"]
     assert "resume" not in reduction_payload["argv"]
 
-    # stdin の固定指示と参照先の完全 prompt、および直接渡す削減 prompt を追跡する。
+    # 各 agent call の stdin に直接渡した完全 prompt 本文を追跡する。
     main_prompt = Path(str(main_payload["prompt_log_path"])).read_text()
-    prompt_suffix = " を読んで、その指示に従って下さい"
-    assert main_prompt.endswith(prompt_suffix)
-    complete_prompt_path = Path(main_prompt.removesuffix(prompt_suffix))
-    assert EDITOR_PROMPT.strip() in complete_prompt_path.read_text()
+    assert EDITOR_PROMPT.strip() in main_prompt
+    assert "{{original-prompt-here}}" not in main_prompt
     reduction_prompt = Path(str(reduction_payload["prompt_log_path"])).read_text()
     assert EDITOR_PROMPT.strip() in reduction_prompt
     assert "仕様削減の判断と参照の境界" in reduction_prompt

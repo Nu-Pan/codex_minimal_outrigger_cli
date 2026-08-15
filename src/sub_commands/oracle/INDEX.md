@@ -29,41 +29,36 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの main-worktree 実行フローを担う実装。入力された oracle 編集指示を受け取り、本命の oracle edit agent call と、正常終了後に行う仕様削減 agent call を順序どおりに起動する。
-- oracle edit の起動前提、session branch と active session の検証、indexing preflight、prompt 編集入力の確定処理を確認したい場合の入口となる。詳細な prompt 編集処理や agent 起動パラメータの構築は、呼び出し先の専用モジュールを読む。
+- `cmoc oracle edit` サブコマンドの実行制御を担う。入力された oracle 編集指示を準備・収集し、本命の oracle 編集 agent call と、正常終了後の仕様削減 agent call を CLI runtime 経由で順に起動する。main worktree、active な `cmoc/session/` branch など本命起動前提の検証もここで行うため、oracle edit の起動順序・入力処理・実行条件を確認または変更するときの入口になる。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 実行順序、agent call の条件、または main worktree・session branch の前提を変更するとき
-- oracle edit の本命処理と仕様削減処理の責務分担や、正常終了後だけ後続処理を行う制御を確認するとき
-- oracle 編集指示の受付から indexing、起動前検証、agent call までの統合フローを調査するとき
+- `cmoc oracle edit` の CLI 実行フロー、prompt 編集入力、2 回の agent call の順序を確認するとき
+- oracle edit の main agent call 起動前提や session branch 検証を変更するとき
 
 ## Do not read this when
-- prompt 編集入力の予約・収集・確定処理そのものを調べるときは、prompt editor 用モジュールを直接読む
-- oracle edit agent call の launch parameter の内容や構築規則を調べるときは、oracle edit 用 launch builder を直接読む
-- 他の oracle サブコマンドの実行フローだけを調べるとき
+- oracle edit の oracle 文書仕様そのものを確認するとき
+- prompt 編集部品、agent 起動パラメータ生成、session 状態管理の個別実装を直接確認するとき
 
 ## hash
-- 8eeadcfd957ed5009efd94818f4f452d400c63efb81cade1903c6a377392e0a3
+- 4df366aafaf201830028d587737ec948b535fc7efe5dc388b578891f1147835c
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` の read-only TUI workload を実行する CLI エントリー。oracle 調査指示の入力を受け、完全プロンプトを確定して Codex TUI を起動するまでのオーケストレーションを担う。
-- インデックス前処理、プロンプト編集用入力の予約・収集・確定、TUI 起動パラメータ構築、設定読込、Codex TUI 起動をつなぐ入口であり、各処理の詳細は import 先の実装へ進む。
+- `cmoc oracle investigation` サブコマンドの read-only TUI 実行入口。oracle 調査指示の入力受付、完全な調査プロンプトの構築、設定済みの Codex TUI 起動までを CLI runtime 経由で調整する。oracle investigation の CLI フローやプロンプト編集・TUI 起動処理を確認するときの入口。
 
 ## Read this when
-- `cmoc oracle investigation` サブコマンドの実行経路を確認・変更するとき。
-- oracle 調査指示の入力から完全プロンプト確定、Codex TUI 起動までの責務分担を確認するとき。
-- このサブコマンドの CLI 実行時に行われる index preflight、進捗管理、設定読込、TUI プロセス起動の連携を確認するとき。
+- `cmoc oracle investigation` の CLI 実行フローを変更・調査するとき
+- oracle 調査指示の編集、プロンプト skeleton の生成、Codex TUI 起動の連携を確認するとき
+- このサブコマンドの preflight、進捗段階、実行時設定の扱いを確認するとき
 
 ## Do not read this when
-- oracle investigation の調査契約や利用者向け仕様を確認する場合は、まず対応する oracle 仕様文書を読む。
-- TUI 起動パラメータの内容や構築規則を確認する場合は、起動パラメータ構築モジュールを直接読む。
-- プロンプト入力の予約、収集、ignore 設定、完全プロンプト確定の挙動を確認する場合は、プロンプト編集ヘルパーを直接読む。
-- CLI 共通ランナー、設定、リポジトリルート、work root の実装詳細を確認する場合は、`cmoc_runtime` を直接読む。
+- oracle investigation の調査契約や prompt 内容そのものを確認したいとき
+- TUI 起動パラメータの詳細実装を確認したいとき
+- 共通の prompt editor 入出力処理だけを確認したいとき
 
 ## hash
-- a100063cca0a6645889c85187bb70833f7c84baac45be4cf55ebb87d1df17ab0
+- b3511825621dd0ec025ea9cd1f9a1cffc0cf67f11581636bb480c9d62cb3501a
 
 # `review.py`
 

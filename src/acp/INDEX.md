@@ -17,18 +17,15 @@
 # `builder`
 
 ## Summary
-- acp.builder の互換 builder adapter 群を収めるパッケージ。oracle.acp_builder の canonical builder を既存の acp.builder.* import 経路から利用できるよう再公開し、oracle・realization・feedback・indexing・session・TUI・quota probe の各領域へ進む入口を提供する。
-- oracle edit／investigation では prompt 保存先の準備を行う realization adapter があり、その他の多くの builder は canonical 実装の関数を互換 import として再公開する。
+- 対象ディレクトリには、ACP builder の互換入口、共通プロンプト整形、各 workload 別 adapter、canonical 実装への橋渡しを担う要素が配置されている。個別の責務や実装詳細を調査する際は、該当する下位要素へ進むためのルートである。
 
 ## Read this when
-- 既存の acp.builder.* import 経路を維持・移行・削除する条件を調査するとき
-- oracle、realization、feedback、indexing、session、TUI、quota probe の builder adapter の構成と下位要素への入口を確認するとき
-- canonical 実装への委譲関係や、oracle edit／investigation adapter が実行前に行う prompt 保存先準備を確認するとき
+- ACP builder realization の全体構成や、互換入口・共通処理・workload 別 adapter の配置を確認するとき
+- 対象ディレクトリ直下で、調査対象となる builder の種類や下位パッケージへの入口を判断するとき
 
 ## Do not read this when
-- oracle.acp_builder の canonical 実装そのものの仕様や詳細を調査・変更するときは、oracle 側の対象を直接読む
-- builder の利用箇所や利用者向け公開面を調査するときは、各参照元を直接読む
-- builder 共通の prompt 整形など、このディレクトリに含まれない共通処理を調査するときは、その実装対象を直接読む
+- 特定の builder の具体的な入出力、CLI 挙動、canonical 実装、または利用側の参照を調査するときは、該当する下位対象や参照元を直接読む
+- ACP builder と無関係な処理や、個別 adapter 内部の実装詳細だけを確認するとき
 
 ## hash
-- 11896ceb6b8393a3f3591e6887a401486516ff1176e6d6f9569da9e456cee8c3
+- 309313ae611238abfe470f492de7d2c0abed71d23cfc0b384e7a9a388d2a00ef

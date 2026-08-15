@@ -33,10 +33,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_standards(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
-    parameter = build_tui_launch_tui_parameter(
-        "2026-08-03_12-00_00_000000000",
-        original_prompt,
-    )
+    parameter = build_tui_launch_tui_parameter(original_prompt)
 
     assert parameter.agent_call_kind == "build_tui_launch_tui_parameter"
     assert parameter.model_class == ModelClass.FLAGSHIP
@@ -45,17 +42,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_standards(
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.run_indexing_preflight is True
-    complete_path = (
-        root
-        / ".cmoc"
-        / "gu"
-        / "ar"
-        / "log"
-        / "editor_input"
-        / "2026-08-03_12-00_00_000000000_cmpl.md"
-    )
-    assert parameter.prompt == f"{complete_path} を読んで、その指示に従って下さい"
-    complete_prompt = complete_path.read_text(encoding="utf-8")
+    complete_prompt = parameter.prompt
     for heading in (
         "# oracle and realization basic",
         "# oracle standard",
@@ -73,6 +60,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_standards(
     assert original_prompt in complete_prompt
     if original_prompt == "{{original-prompt-here}}":
         assert complete_prompt.count(original_prompt) == 1
+    assert not (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").exists()
 
 
 def test_tui_launch_module_exports_only_builder() -> None:

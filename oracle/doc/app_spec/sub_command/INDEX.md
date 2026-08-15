@@ -75,44 +75,38 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` のサブコマンド仕様。oracle file へのユーザー指示を受け取り、本命編集と仕様削減の2回の独立した `codex exec` を直列実行する流れ、起動前検査、編集境界、失敗時の扱い、ログ・通知、終了後の差分維持を定める。oracle 編集処理や、その実行順序・権限・結果を変更または調査する際の入口となる。
+- `cmoc oracle edit` の目的、引数、ユーザー指示からの prompt 構築、本命・仕様削減 agent call の実行順序と条件を定める仕様。oracle file の編集フロー、編集境界、失敗時の扱い、差分・ログ・通知・中断制御までを確認するための入口である。
 
 ## Read this when
-- `cmoc oracle edit` の実行フロー、editor 入力、prompt 構築、agent call の起動条件を変更・確認するとき
-- 本命 agent call と仕様削減 agent call の責務、独立性、失敗時の処理を確認するとき
-- oracle file の編集境界、差分の扱い、git 操作禁止、indexing preflight の位置づけを確認するとき
-- サブコマンドのログ、terminal result、Windows toast、Codex call log の記録規則を変更・確認するとき
-- 中断・排他制御や、終了後に自動 commit・rollback・indexing を行わない契約を確認するとき
+- `cmoc oracle edit` の挙動、実行順序、agent call の起動条件または権限を変更・確認するとき
+- 本命 agent call と仕様削減 agent call の責務分担、入力、成功・失敗時の扱いを確認するとき
+- oracle edit における oracle file の編集境界、未コミット差分、ログ、terminal result、Windows toast の扱いを確認するとき
 
 ## Do not read this when
-- oracle file の編集判断基準そのものを確認する場合は `misc_spec.md` を直接読む
-- editor 入力の初期値や確定手順を確認する場合は `prompt_editor_input.md` または対応する実装を直接読む
-- prompt の共通形式や `codex exec` の retry・保存規則を確認する場合は `prompt_standard.md` と `codex_exec_rule.md` を直接読む
-- doctor preprocess、indexing、test、toast など個別の共通規約だけを確認する場合は、それぞれの正本文書を直接読む
-- `cmoc oracle investigation` や realization の編集境界を確認する場合は、このサブコマンド仕様ではなく対象機能の仕様を読む
+- oracle file の具体的な編集基準そのものを確認する場合は、misc_spec.md などの参照先を直接読むとき
+- prompt editor の入力形式、prompt 共通規則、doctor preprocess、indexing、Codex exec の詳細を確認する場合は、本文が示す各正本仕様を直接読むとき
+- 実装ファイルの配置や realization test の規則だけを確認する場合
 
 ## hash
-- 6021d1c44497f5e1b57469fd7d0762846ae78c75a8d852ae4cd90a6e2d0ecb1c
+- 3c1d876132878c7ea977be827cb6e3cbc9ceb5fc21b2a64fba5527bfbe3a2e22
 
 # `oracle_investigation.md`
 
 ## Summary
-- 対象は、oracle file を根拠にユーザーの調査指示へ回答する Codex CLI TUI のサブコマンド仕様である。doctor 前処理、調査指示のエディタ入力、完全プロンプトと起動パラメータの構築、TUI 起動までの責務と、oracle investigation から editor handoff への制約を扱う。oracle 調査サブコマンドの挙動、入力方式、起動条件、調査時のファイルアクセス境界を確認・変更するときの入口となる。
+- oracle file に関する調査指示をエディタから受け取り、oracle file を根拠に調査する Codex CLI TUI サブコマンドの責務、入力、実行手順、プロンプト構築、起動条件、調査結果の扱いを定める。oracle investigation の TUI 起動仕様や、調査から editor handoff への境界を確認する入口である。
 
 ## Read this when
-- oracle file に関する調査指示を受け取り、Codex CLI TUI を起動するサブコマンドの実行手順を確認するとき
-- 調査指示のエディタ入力、完全プロンプトの skeleton、TUI 起動パラメータの構築責務を確認するとき
-- oracle investigation から editor handoff へ渡す際の read-only 制約や限定的な sandbox escalation の扱いを確認するとき
-- oracle investigation の実装や関連する app specification の整合性を調べる際に、意味上の調査境界と正本文書を確認するとき
+- oracle file の調査用 TUI サブコマンドの挙動、引数、実行手順を変更または確認するとき
+- oracle investigation 用の完全プロンプト、エディタ入力、Codex CLI 起動パラメータの責務境界を確認するとき
+- oracle investigation から edit への handoff、ファイルアクセス制約、調査結果や自動 commit の扱いを確認するとき
 
 ## Do not read this when
-- 一般的な Codex CLI の利用方法や TUI の詳細だけを確認したいときは、Codex CLI・TUI の直接の正本仕様を読む
-- oracle file の内容そのものや oracle file の選定基準を確認したいときは、対象文書が参照する oracle file の判定基準・各正本文書を直接読む
-- oracle investigation 以外のサブコマンドの引数・実行手順・責務を確認したいとき
-- 実装ファイルの具体的な関数定義やコード上の起動処理を確認したいときは、対応する realization file を直接読む
+- realization 側の具体的な実装配置や CLI 内部処理を直接確認する必要があるとき
+- エディタ入力形式だけを確認する場合は prompt_editor_input.md を読むとき
+- プロンプト標準や Codex CLI 起動規則など、本文が正本として指定する個別仕様を直接確認するとき
 
 ## hash
-- d2b7cac3498b7dddd54678284f6536b3c75afde4934d451129ab3a040982faa3
+- f01dffc2c9daa51ed0a841f00a8e78b0fbf6f2cb91b770bec083c6566f0a6c15
 
 # `oracle_review.md`
 
@@ -229,17 +223,18 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの正本仕様。ユーザープロンプトへの固定規範・契約の注入、エディタによる完全プロンプト確定、固定パラメータでの AI Agent CLI/TUI 起動手順を定義する。共通バックエンド規則と Codex CLI 固有の起動条件の入口となる。
+- `cmoc tui` サブコマンドの責務、引数・事前条件、プロンプト編集から AI Agent CLI/TUI 起動までの実行手順、共通注入規範、バックエンド共通契約、および Codex CLI 固有の起動条件を定める正本仕様。`cmoc tui` の挙動や起動条件を確認・変更するときの入口となる。
 
 ## Read this when
-- `cmoc tui` の引数、事前条件、実行手順、プロンプト編集フローを確認するとき
-- AI Agent CLI/TUI に注入される cmoc 固有規範、モデル設定、ファイルアクセス、Structured Output、indexing・feedback・通知の起動条件を確認するとき
-- Codex CLI バックエンドの起動コマンド、環境変数、preflight、引数による設定上書きを確認するとき
+- `cmoc tui` の実行フロー、プロンプト編集、完全プロンプト構築、TUI 起動パラメータを確認するとき
+- cmoc 固有規範の固定注入、適用条件、builder の設定、indexing preflight、feedback、通知の扱いを確認するとき
+- Codex CLI バックエンドの起動コマンド、環境変数、preflight validation、引数上書きを確認するとき
 
 ## Do not read this when
-- プロンプト編集の詳細仕様だけを確認したい場合は、本文から参照される prompt editor input の正本を直接読むとき
-- oracle file と realization file の一般的な責務や oracle review の成立条件だけを確認したい場合は、本文から参照される各正本仕様を直接読むとき
-- `cmoc tui` 以外のサブコマンドや、builder 内部の実装詳細だけを調べるとき
+- プロンプトエディタ入力の詳細仕様だけを確認する場合は、正本である `prompt_editor_input.md` を直接読む
+- oracle・realization の責務や適合性だけを確認する場合は、`misc_spec.md` を直接読む
+- oracle review の所見成立条件だけを確認する場合は、`oracle_review.md` を直接読む
+- indexing preflight、feedback observation、Windows toast 通知の詳細だけを確認する場合は、それぞれ指定された個別仕様を直接読む
 
 ## hash
-- 7b3ddf391d97c35b5ed27eccedce59e66d13e19dc5255a905172ae2bb898c6b3
+- 826c62049396df095b9c687eef45f94385f0087a3fc25a0a4fc60eaf70d0c786

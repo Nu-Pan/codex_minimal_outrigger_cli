@@ -67,20 +67,18 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package。編集、調査、レビューの各 CLI エントリーと、レビュー対象列挙・ループ・パス解決・レポート生成・INDEX 差分統合を担う下位実装への入口を提供する。
+- oracle 系サブコマンドの実装をまとめる package。oracle edit、investigation、review と、それらの対象列挙・review loop・レポート・path 解決などの下位実装への入口を提供する。
 
 ## Read this when
-- oracle サブコマンドの実装構成や、編集・調査・レビューの CLI 入口を確認するとき。
-- oracle review の対象列挙、レビュー実行ループ、パス解決、レポート生成、INDEX.md の統合処理を調査・変更するとき。
-- oracle 系サブコマンドの実行フローから、個別の下位実装へ進む入口を判断するとき。
+- oracle サブコマンド群の構成や、各サブコマンドの実行入口を確認するとき
+- oracle review の対象選定、実行 loop、レポート生成、INDEX 限定 merge など関連実装の所在を判断するとき
 
 ## Do not read this when
-- oracle 系サブコマンドに属さない CLI や共通 runtime の実装を調査するとき。
-- 利用者向けの oracle 編集・調査・レビュー契約を確認するときは、対応する正本仕様を直接読む。
-- 個別サブコマンドの prompt 構築や Structured Output 定義など、下位モジュール固有の詳細だけを確認するとき。
+- 個別サブコマンドの詳細な実行制御を確認する場合は、該当する実装ファイルを直接読むとき
+- oracle 文書の仕様、共通 prompt editor、agent 起動パラメータなど、別の正本仕様・共通実装が主対象のとき
 
 ## hash
-- 3d8e0893b77dae26e27771ace41daa31bf402f72b7152a251aceb5064ec992e3
+- 9baebefb222289ac9bc7816f2986faa60aac56d0f8a115cef4a37294b9e1c84c
 
 # `realization`
 
@@ -154,17 +152,17 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの CLI 実行入口と本体処理を定義する。インデックス前処理、プロンプト編集入力の予約・収集・確定、固定パラメータによる Codex TUI 起動を扱う。TUI サブコマンドの起動フローや、現在の repository/work context からの実行経路を確認するときの入口。
+- `cmoc tui` サブコマンドの実行入口。indexing preflight と入力編集前の検査を有効にし、現在のリポジトリ状態から TUI 起動処理へ接続する。
+- 完全プロンプトの skeleton を構築し、利用者が編集したオリジナルプロンプトを収集・確定して、TUI 起動パラメータと現在の設定を用いて Codex TUI を起動する。
 
 ## Read this when
-- `cmoc tui` の CLI runtime、起動手順、ステップ数、ログ前処理を変更または確認するとき。
-- オリジナルプロンプトを編集して完全な起動プロンプトを確定し、Codex TUI を呼び出す処理を追跡するとき。
-- repository の現在コンテキストから設定を読み込み、TUI 実行へ渡す経路を確認するとき。
+- `cmoc tui` の CLI 実行経路や、現在の repository/worktree context からの起動方法を確認するとき
+- プロンプト編集入力、完全プロンプトの構築、TUI 起動処理がどの順序で連携するかを確認するとき
 
 ## Do not read this when
-- TUI 起動パラメータの具体的な構築規則だけを確認する場合は、TUI parameter builder を直接読む。
-- プロンプト編集入力の保存・入力検証・ルート除外の仕様だけを確認する場合は、prompt editor 関連モジュールまたは正本仕様を直接読む。
-- Codex TUI 自体の実行実装や共通 CLI サブコマンドの汎用制御だけを確認する場合は、呼び出される runtime モジュールを直接読む。
+- TUI 起動パラメータの詳細な構築仕様を確認したいときは `build_tui_launch_tui_parameter` の実装または正本仕様を直接読むとき
+- プロンプト編集用の予約・収集・確定処理の詳細を確認したいときは `commons.prompt_editor_input` を直接読むとき
+- 一般的な CLI サブコマンドの実行制御や結果処理を確認したいときは `cmoc_runtime` を直接読むとき
 
 ## hash
-- 1dbb1c380550c5e0e896083956f1c7d480a83c3cc50b4d24946fab436b41aeac
+- f1bd5b17ca50cb086ffade1c5b37da290a1b11719bd28de5ce570d1dc2804701

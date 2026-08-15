@@ -1,19 +1,20 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェント呼び出しに渡すパラメータの論理モデルと、モデルクラス、推論強度、ファイルアクセスモードを定義する。完全な prompt、Structured Output schema、実行 cwd、indexing preflight の扱いを含む agent call 構築の入口であり、これらの呼び出し条件を変更・確認するときに読む。バックエンド固有のモデル名解決やアクセス制限文面の具体的な構築は realization 側・別の正本仕様へ進む。
+- AI コーディングエージェント呼び出し用の論理パラメータを定義するデータモデルと、モデル種別・推論強度・ファイルアクセスモードの列挙を扱う。ACP の呼び出し条件や prompt、Structured Output、作業ディレクトリ、indexing preflight の設定を確認・変更するときの入口となる。
 
 ## Read this when
-- cmoc の agent call パラメータ、モデル選択、reasoning effort、ファイルアクセスモード、prompt、Structured Output schema、実行 cwd、indexing preflight の仕様や型を変更・確認するとき。
-- builder が呼び出し単位の設定を組み立てる責務と、論理値を定義する列挙型を確認するとき。
+- Agent Call Parameter の構造や既定値を確認するとき
+- ModelClass、ReasoningEffort、FileAccessMode の論理的な選択肢や意味を変更するとき
+- AI エージェント呼び出しに渡す prompt、schema path、cwd、indexing preflight の保持方法を確認するとき
 
 ## Do not read this when
-- バックエンドが受理可能な具体的モデル名への解決方法を調べるとき。
-- ファイルアクセスモードごとの Codex CLI sandbox 制限文面や実装責務を調べるときは、指定された正本仕様または realization 側を直接読む。
-- agent call パラメータを扱わず、個別のモデル実装・CLI 実行・Structured Output schema の内容だけを確認するとき。
+- バックエンド固有のモデル名への解決や実際の呼び出し処理を確認・変更するとき
+- ファイルアクセス制限の正本仕様や Codex CLI sandbox への対応を確認するとき
+- builder 関数による具体的な prompt 構築ロジックだけを確認するとき
 
 ## hash
-- 0cadb3701b12e2d826b22976ee92f31098e71a4315020984e0fabb3bb40930a7
+- 03efbc4692262e7011a5ec10a73003a8097cfbadc32c2ec64668fd558d34460c
 
 # `feedback`
 
@@ -55,20 +56,20 @@
 # `oracle`
 
 ## Summary
-- `cmoc oracle` 系コマンドの agent call 起動パラメータ構築を扱う領域です。oracle 編集・調査・レビューについて、完全 prompt、読み書き範囲、作業ディレクトリ、モデル・推論設定、Structured Output、起動前処理を確認する入口になります。編集、調査、レビューの具体的な定義は各下位領域へ分かれています。
+- `cmoc oracle` 系サブコマンドの agent call 構築実装を扱うディレクトリです。編集、調査、レビューそれぞれの起動条件・prompt・Structured Output・実行範囲を確認する入口になります。
 
 ## Read this when
-- `cmoc oracle edit`、`cmoc oracle investigation`、または `cmoc oracle review` の agent call 起動条件や prompt 構築を調査・変更するとき
-- oracle 向け agent call の読み書きモード、作業ディレクトリ、モデル設定、推論設定、索引付け前処理、Structured Output の適用範囲を確認するとき
-- 各 oracle サブコマンドの起動定義を横断して比較するとき
+- `cmoc oracle edit`、`investigation`、`review` の agent call 起動設定や prompt 構築を変更・確認するとき
+- oracle 操作用 agent call の作業範囲、モデル設定、構造化出力、索引付け前処理をサブコマンド別に調査するとき
+- レビュー所見の生成・検証・統合に関する agent call 契約を確認するとき
 
 ## Do not read this when
-- oracle file 自体の編集規則、調査規範、レビュー規範を確認する場合
-- 共通の agent call 型、パス解決、完全 prompt 構築の実装だけを確認する場合
-- 特定の oracle サブコマンドの詳細だけを確認すれば足りる場合は、対応する下位領域へ直接進むとき
+- oracle file の正本仕様や編集ルールそのものを確認するとき
+- agent call の共通 prompt 構造・共通起動処理だけを確認するとき
+- oracle 以外のサブコマンドや、個別の prompt builder・Structured Output 定義だけを確認すれば足りるとき
 
 ## hash
-- 8d85f3aa4f02e6232c186d90b77db3727084dbf32a321e504bc7d03521b401f0
+- 66564315e2f9d46e72c663fa1758416b36a3e8bc34437c2ffb5dabcba287239c
 
 # `quota_probe.py`
 
@@ -125,15 +126,14 @@
 # `tui`
 
 ## Summary
-- `cmoc tui` の実行パラメータ解決と、後続の AI Agent CLI/TUI に渡す完全プロンプトの構築を担う。オリジナルプロンプトを埋め込んだ指示を生成し、標準設定の選択や実行場所・アクセス権限を含む起動条件を定義するため、TUI 実行フローの入口となる。
+- `cmoc tui` 起動時に渡す完全プロンプトと固定の AgentCallParameter を構築する定義を扱う。TUI の起動設定を確認・変更する際の入口となる。
 
 ## Read this when
-- `cmoc tui` が後続の AI Agent CLI/TUI に渡すプロンプト、標準設定の適用、または実行パラメータの解決を変更・確認するとき。
-- TUI 実行時の作業ディレクトリ、ファイルアクセスモード、モデル・推論設定、構造化出力スキーマの指定を変更・確認するとき。
+- `cmoc tui` の起動 prompt、オリジナルプロンプトの埋め込み、モデルや推論強度、ファイルアクセス、作業ディレクトリ、インデックス事前実行の設定を確認・変更するとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドの実行パラメータを扱うとき。
-- 共通の完全プロンプト生成処理や共通データ型の仕様だけを確認するときは、それらの共通実装を直接読む。
+- TUI 以外のサブコマンドの起動パラメータや共通プロンプト生成処理を確認・変更するとき。
+- AgentCallParameter、パス解決、構造化文書レンダリングの共通仕様だけを確認するとき。
 
 ## hash
-- 88b94f36c12a2f397da25059f98103c7825a0c66aa1031e00cda2f933ff06215
+- bebb717d8f30148f5c7a250a0aeedec99b972d7ee51b8d90bbef8408c1b0e016
