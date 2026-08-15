@@ -28,7 +28,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor
+from _cli_support import run_doctor, terminal_primary_report
 from _git_support import make_repo, run_git
 
 import commons.runtime_doctor as doctor_module
@@ -60,7 +60,15 @@ def test_doctor_preprocess_repairs_git_state(
     root = make_repo(tmp_path)
 
     monkeypatch.chdir(root)
-    run_doctor(root)
+    result = run_doctor(root)
+
+    report = terminal_primary_report(result)
+    assert report.parent == root / ".cmoc" / "gu" / "ar" / "report" / "doctor"
+    rendered_report = report.read_text(encoding="utf-8")
+    assert 'terminal_classification: "natural_completion"' in rendered_report
+    assert "exit_code: 0" in rendered_report
+    assert "doctor preprocess" in rendered_report
+    assert "診断用サブコマンドログ" in rendered_report
 
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [

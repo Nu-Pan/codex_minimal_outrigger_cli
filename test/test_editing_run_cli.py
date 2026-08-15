@@ -805,6 +805,12 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     report_path = terminal_primary_report(joined)
     report_text = report_path.read_text()
     assert "session.last_joined_apply_fork_commit=" not in report_text
+    assert 'command: "cmoc run join"' in report_text
+    assert 'terminal_classification: "natural_completion"' in report_text
+    assert "exit_code: 0" in report_text
+    assert "## Execution stages" in report_text
+    assert "## Related logs" in report_text
+    assert "診断用サブコマンドログ" in report_text
     assert current_branch(root) == session_branch
 
 
@@ -2837,7 +2843,7 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
     assert (root / "README.md").read_text() == "realized\n"
 
 
-def test_run_join_keeps_completed_merge_when_final_report_update_fails(
+def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2848,32 +2854,35 @@ def test_run_join_keeps_completed_merge_when_final_report_update_fails(
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
     monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
-    original_write_report = run_join_module.write_lifecycle_report
 
     def fail_final_report(
-        report_context: EditingRunContext,
-        operation: str,
-        **kwargs: object,
+        _report_context: EditingRunContext,
+        _operation: str,
+        **_kwargs: object,
     ) -> Path:
-        """final report rewrite だけの失敗を再現する。"""
-        if kwargs.get("report_path") is not None:
-            raise RuntimeError("final report update failed")
-        return original_write_report(report_context, operation, **kwargs)
+        """cleanup 後に行う唯一の primary report 保存失敗を再現する。"""
+        raise RuntimeError("final report save failed")
 
     monkeypatch.setattr(run_join_module, "write_lifecycle_report", fail_final_report)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output
     assert (root / "README.md").read_text() == "realized\n"
-    assert "final join report update failed" in result.output
+    assert "run join report の最終状態を保存できませんでした。" in result.output
     assert _state(state_path)["run"]["state"] == "ready"
     assert not context.run_worktree.exists()
     assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
-    report = next(
+    reports = list(
         root.joinpath(".cmoc", "gu", "ar", "report", "run", "join").glob("*.md")
     )
-    assert 'cleanup: "pending"' in report.read_text()
+    assert reports == [terminal_primary_report(result)]
+    rendered = reports[0].read_text()
+    assert 'terminal_classification: "error"' in rendered
+    assert 'state_after: "ready"' in rendered
+    assert 'cleanup: "completed"' in rendered
+    assert 'report_update: "failed"' in rendered
+    assert "final report save failed" in rendered
 
 
 def test_run_join_preserves_active_state_when_cleanup_fails(
@@ -2993,7 +3002,12 @@ def test_refactor_fork_completes_persistent_full_cycle(
     assert "- completion_reason: `natural_completion`" in result.output
     assert "- unresolved targets: `0`" in result.output
     report = terminal_primary_report(result)
-    assert "- `README.md`: 0 finding(s)" in report.read_text()
+    report_text = report.read_text()
+    assert "- `README.md`: 0 finding(s)" in report_text
+    assert 'command: "cmoc realization refactor fork"' in report_text
+    assert 'terminal_classification: "natural_completion"' in report_text
+    assert "exit_code: 0" in report_text
+    assert "## Related logs" in report_text
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(

@@ -15,6 +15,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_primary_report import update_primary_report_fields
 
 
 def cmoc_session_abandon_impl() -> None:
@@ -33,6 +34,11 @@ def _cmoc_session_abandon_body() -> TerminalResult:
     repo = repo_root()
     work = work_root()
     branch = current_branch(work)
+    update_primary_report_fields(
+        session_branch=branch,
+        session_state_before=None,
+        session_state_after=None,
+    )
     start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     _session_id, path, state = load_state_for_branch(repo, branch)
     if not branch.startswith("cmoc/session/"):
@@ -43,6 +49,10 @@ def _cmoc_session_abandon_body() -> TerminalResult:
         raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
     require_clean_worktree(work)
     home = state.session.session_home_branch
+    update_primary_report_fields(
+        home_branch=home,
+        session_state_before=state.session.state,
+    )
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
     if not branch_exists(repo, home):
@@ -52,11 +62,13 @@ def _cmoc_session_abandon_body() -> TerminalResult:
             f"session_home_branch: {home}",
         )
     session_commit = head_commit(work)
+    update_primary_report_fields(abandoned_branch_start_commit=session_commit)
     start_subcommand_step(3, "session をクリーンアップ", "cleanup session")
     try:
         run_git(["switch", home], work)
         state.session.state = "abandoned"
         write_state(path, state)
+        update_primary_report_fields(session_state_after="abandoned")
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
         # home branch を保持したまま session branch だけを削除する必要がある。
         delete_result = delete_branch(repo, branch, force=True)
@@ -73,8 +85,10 @@ def _cmoc_session_abandon_body() -> TerminalResult:
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)
         rollback_errors: list[str] = []
         state.session.state = "active"
+        state_rollback_completed = False
         try:
             write_state(path, state)
+            state_rollback_completed = True
         except BaseException as rollback_error:
             rollback_errors.append(f"state rollback failed: {rollback_error!r}")
         try:
@@ -96,6 +110,10 @@ def _cmoc_session_abandon_body() -> TerminalResult:
             f"session_home_branch: {home}",
             f"session_state_file: {path}",
         ]
+        update_primary_report_fields(
+            session_state_after="active" if state_rollback_completed else None,
+            rollback_status="failed" if rollback_errors else "completed",
+        )
         raise CmocError(
             "session abandon の cleanup に失敗しました。",
             [

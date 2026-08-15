@@ -1434,7 +1434,7 @@ def test_incomplete_report_write_failure_reuses_formal_checkpoints(
     write_error: BaseException,
     first_exit_code: int,
 ) -> None:
-    """診断未完了は staging cut を保持し、再実行で AI call を繰り返さない。"""
+    """診断保存失敗は invocation report と staging cut を残して再開する。"""
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
     _observation_id, raw_path, candidate_id = _store_agent_issue(root, session_id)
@@ -1491,6 +1491,13 @@ def test_incomplete_report_write_failure_reuses_formal_checkpoints(
     assert report_path.exists()
     assert raw_path.exists()
     assert not (feedback_root(root) / "active" / "current.json").exists()
+    invocation_report = terminal_primary_report(failed)
+    invocation_text = invocation_report.read_text()
+    assert invocation_report.parent.name == "invocation"
+    assert "verification_checkpoint_count: 1" in invocation_text
+    assert "確定済み部分結果:" in invocation_text
+    expected_classification = "error" if first_exit_code == 1 else "user_interruption"
+    assert f'terminal_classification: "{expected_classification}"' in invocation_text
 
 
 def test_machine_observation_stays_bounded_until_recurrence_threshold(
@@ -1725,6 +1732,9 @@ def test_invalid_raw_observation_blocks_publication(
     assert str(raw_path) in result.output
     assert not (feedback_root(root) / "active" / "current.json").exists()
     assert not list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
+    invocation_report = terminal_primary_report(result)
+    assert invocation_report.parent.name == "invocation"
+    assert 'terminal_classification: "error"' in invocation_report.read_text()
 
 
 def test_undefined_raw_json_artifact_blocks_publication(
@@ -1747,7 +1757,7 @@ def test_undefined_raw_json_artifact_blocks_publication(
 def test_interruption_reuses_formal_verification_checkpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """中断時は report を出さず、同じ cut の正式 checkpoint から publication を再開する。"""
+    """中断時は invocation report を残し、同じ cut の checkpoint から再開する。"""
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
     _observation_id, raw_path, candidate_id = _store_agent_issue(root, session_id)
@@ -1775,6 +1785,12 @@ def test_interruption_reuses_formal_verification_checkpoint(
     assert len(resumable[0]["processing"]["verification_checkpoints"]) == 1
     assert raw_path.exists()
     assert not (feedback_root(root) / "active" / "current.json").exists()
+    invocation_report = terminal_primary_report(interrupted)
+    invocation_text = invocation_report.read_text()
+    assert invocation_report.parent.name == "invocation"
+    assert f'report_cut_id: "{cut_id}"' in invocation_text
+    assert "verification_checkpoint_count: 1" in invocation_text
+    assert 'processing_status: "interrupted"' in invocation_text
 
     monkeypatch.setattr(
         feedback_report_module,
@@ -1797,7 +1813,7 @@ def test_interruption_reuses_formal_verification_checkpoint(
 def test_interruption_during_cut_creation_is_normal_and_resumable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """cut 固定中の Ctrl+C も report を publication せず再開 state を残す。"""
+    """cut 固定中の Ctrl+C は invocation report と再開 state を残す。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
     original_create = feedback_report_module._create_report_cut
@@ -1818,6 +1834,11 @@ def test_interruption_during_cut_creation_is_normal_and_resumable(
     assert resumable[0]["processing"]["status"] == "interrupted"
     assert not (feedback_root(root) / "active" / "current.json").exists()
     assert not list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
+    invocation_report = terminal_primary_report(interrupted)
+    invocation_text = invocation_report.read_text()
+    assert invocation_report.parent.name == "invocation"
+    assert "normalization_checkpoint_count: 0" in invocation_text
+    assert "verification_checkpoint_count: 0" in invocation_text
 
 
 def test_interruption_during_preconditions_is_normal(
@@ -1839,6 +1860,8 @@ def test_interruption_during_preconditions_is_normal(
     assert "# 中断完了: cmoc feedback report" in interrupted.output
     assert load_report_cut(root) is None
     assert not (feedback_root(root) / "active" / "current.json").exists()
+    invocation_report = terminal_primary_report(interrupted)
+    assert "report_cut_id: null" in invocation_report.read_text()
 
 
 def test_interruption_during_writer_lock_acquisition_is_normal(
@@ -1861,6 +1884,8 @@ def test_interruption_during_writer_lock_acquisition_is_normal(
     assert "# 中断完了: cmoc feedback report" in interrupted.output
     assert load_report_cut(root) is None
     assert not (feedback_root(root) / "active" / "current.json").exists()
+    invocation_report = terminal_primary_report(interrupted)
+    assert "report_cut_id: null" in invocation_report.read_text()
 
 
 def test_report_cut_rejects_observation_path_mismatch(
@@ -2106,6 +2131,11 @@ def test_cleanup_keyboard_interrupt_is_reported_as_user_interruption(
 
     assert result.exit_code == 0, result.output
     assert "# 中断完了: cmoc feedback report" in result.output
+    invocation_report = terminal_primary_report(result)
+    assert invocation_report.parent.name == "invocation"
+    assert 'terminal_classification: "user_interruption"' in (
+        invocation_report.read_text()
+    )
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.cleanup_manifest is not None

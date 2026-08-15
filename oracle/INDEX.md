@@ -1,21 +1,22 @@
 # `doc`
 
 ## Summary
-- cmoc の正本文書を、アプリケーション仕様と開発ルールの領域に分けて案内する文書群。CLI、Codex 呼び出し、prompt、logging、feedback、session/run、branch/worktree などの挙動仕様と、Python 実装・環境・テスト・品質検査の開発規則への入口を提供する。採用しなかった設計案の検討記録も含む。
+- app_spec は cmoc の CLI・workflow・agent call・feedback・出力・状態管理に関する正本仕様の入口で、複数仕様にまたがる責務境界や下位仕様の選択を確認する。branch_model.md は session fork、run 隔離、branch・commit・worktree の関係やライフサイクルを確認する正本仕様である。considered_alternative は realization refactor で不採用となった作業・検査・状態管理方式の理由を確認する記録であり、現行仕様や実装の直接の参照先ではない。dev_rule は Python 実装、CLI 配置、開発環境、テスト要件、テスト実行・品質検査の正本文書群への入口である。
 
 ## Read this when
-- cmoc の正本仕様や開発ルールの入口を探すとき
-- CLI、Codex 呼び出し、prompt、Structured Output、logging、feedback、session/run、branch/worktree の挙動を確認・変更・レビューするとき
-- Python 実装、開発環境、テスト要件、テスト実行手順の根拠を確認するとき
-- 現行仕様ではなく、採用されなかった設計案の理由や検討背景を調べるとき
+- cmoc の CLI、workflow、agent call、feedback、ログ・report、エラー・中断、通知、run/session state の正本仕様や、複数仕様間の責務境界を確認するときは app_spec を読む。
+- session fork、run の隔離、branch・commit・worktree の用語・命名・ライフサイクル、run report や apply の基準 commit を確認するときは branch_model.md を読む。
+- realization refactor で採用しなかった作業フロー、調査・検査方式、状態管理、gitignore 連携、AI-generated memory の背景を確認するときは considered_alternative を読む。
+- Python 実装、CLI の責務配置、Python 環境や依存関係、realization test の要件、既存テスト・品質検査の実行手順を確認するときは dev_rule を読む。
 
 ## Do not read this when
-- 対象となる個別の仕様書、実装、テスト、または開発手順が既に特定できているとき
-- 具体的な実装コードや realization test の挙動だけを調査するとき
-- INDEX.md の生成規則や、対象文書に直接記載された詳細手順だけを確認するとき
+- 特定のアプリケーション仕様の本文が明確な場合は app_spec ではなく、その個別仕様を直接読む。
+- branch や worktree の用語・ライフサイクルが関係しない特定 CLI 実装の調査では branch_model.md を読まない。
+- 現行の realization refactor state、具体的な実装・テスト内容、INDEX、oracle、ログ、実行成果物の形式を確認する場合は considered_alternative を読まない。
+- テストの意味要件だけ、テスト実行手順だけ、または CLI の挙動・出力そのものだけを確認する場合は dev_rule ではなく、それぞれの直接の正本文書を読む。
 
 ## hash
-- 592a46e3d8a72af33be72a583c2e9e6a4ec3bc1a6f2e9b2306e16533b34af4a8
+- ed3ca68f46d0fe38b3f312c5637cdc7eaf29ea7fc20e05eeec47ba06d32dbb52
 
 # `src`
 

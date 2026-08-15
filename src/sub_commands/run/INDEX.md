@@ -15,38 +15,40 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の workload 非依存 cleanup lifecycle を実装する。active editing run の状態を解決し、必要に応じて実行中プロセスや残存 Codex child を停止したうえで、run worktree・branch・state・process tracking を整理し、lifecycle report と terminal result を返す。
-- run の状態別に process 停止処理を分け、worktree の削除に失敗した場合は branch を保持して再試行可能にする。cleanup 完了後にのみ state を ready へ更新し、停止・削除結果と警告を報告する。
+- `cmoc run abandon` の実装本体。active editing run を特定し、running・error・joinable の状態に応じてプロセスや Codex child を停止する。
+- run worktree と run branch を削除し、cleanup 成否を primary report と lifecycle report に記録する。cleanup 完了時は state を ready に戻し、process tracking を削除して terminal result を返す。
+- worktree または branch の削除に失敗した場合は state を保持したままエラーを返し、再実行可能な警告と詳細を提示する。
 
 ## Read this when
-- `cmoc run abandon` の停止・破棄処理、active run の cleanup 順序、run worktree や branch の削除挙動を確認または変更するとき。
-- running・error・joinable の各 run state における process cleanup と、cleanup 失敗時の再実行可能性を確認するとき。
-- abandon 後の state、process tracking、lifecycle report、terminal result の確定条件を確認するとき。
+- `cmoc run abandon` の cleanup lifecycle、active run の停止処理、run worktree・branch の破棄動作を確認するとき。
+- running・error・joinable state ごとの process cleanup と、cleanup 成否に応じた state・report 更新を調べるとき。
+- abandon 後の terminal result、warning、primary report、lifecycle report の生成経路を確認するとき。
 
 ## Do not read this when
-- run の開始・join・通常の編集処理を確認する場合は、この cleanup 実装ではなく、それぞれの subcommand や lifecycle 仕様を直接読む。
-- worktree・branch・process 操作の共通実装そのものを変更または調査する場合は、この orchestration entry ではなく、インポート先の runtime 共通モジュールを直接読む。
+- run の通常作成・編集・join 処理を確認するときは、対応する run lifecycle や editing 実装を直接読む。
+- doctor preprocess の仕様や一般的な worktree 操作だけを確認するときは、参照されている oracle または runtime 共通実装を直接読む。
+- `cmoc run abandon` の挙動を変更しない利用者向けの一般的な CLI 案内を作成するとき。
 
 ## hash
-- 89457453bb7165d74ec629a58c86070010f6e03eda2da15b2534407432f00a4a
+- c3c9ab6f4f1059a44bc54a8e5846cfdce958985ab838f833950df9976b916509
 
 # `join.py`
 
 ## Summary
-- `cmoc run join` の workload 非依存な merge lifecycle を実装する入口。active run の検証、run branch の merge、INDEX 再生成、post-join の state 同期、lifecycle report、worktree・branch cleanup を一続きで扱う。merge conflict、想定外差分、post-join failure、cleanup pending/error state への rollback と再試行可能性もここで確認する。
+- `cmoc run join` の active editing run を session branch へ統合する一連の lifecycle 実装。merge 前の差分検査、`--force-resolve` による想定外 run 差分の復元、INDEX.md だけを許可する conflict 解決、post-join hook、refactor state 同期、report 保存、run resource cleanup を扱う。
+- merge または post-join 処理の失敗時に session worktree と run state を rollback し、error state と report を残して再試行可能にする責務も含む。run join の成功・失敗・cleanup pending の状態遷移や、run process tracking と cleanup の挙動を確認する際の実装入口である。
 
 ## Read this when
-- `cmoc run join` の実装を変更・レビューするとき
-- active editing run の merge、post-join hook、refactor state 同期、report、cleanup の挙動を確認するとき
-- run branch と session branch の差分検査、`--force-resolve`、INDEX.md conflict、失敗時 rollback、cleanup pending/error state を追跡するとき
+- `cmoc run join` の merge、差分検査、`--force-resolve`、INDEX.md conflict 処理を変更または調査するとき。
+- join 後の post-join hook、refactor state 同期、lifecycle report、run worktree・branch cleanup の挙動を確認するとき。
+- join 失敗時の rollback、error state、cleanup pending、run process tracking の不変条件を確認するとき。
 
 ## Do not read this when
-- run の開始・abandon など、join lifecycle 以外のサブコマンドだけを確認するとき
-- workload 固有の処理を確認するとき
-- join から呼び出される共通 runtime helper の仕様を直接確認するとき
+- `cmoc run join` 以外の subcommand の固有処理だけを変更または調査するとき。
+- INDEX.md の生成規則そのものや、join lifecycle を呼び出す共通 runtime API の仕様を直接確認するときは、それぞれの実装・仕様対象から読み始める場合。
 
 ## hash
-- 08f66cf28722fe9a1c3924f8407492114bab780c34c9ed8af8d2a1248e630b44
+- 441d2a3f856e726f89c6d9d326755fa2cd718e0f239d5911684e06d4012f3090
 
 # `lifecycle.py`
 

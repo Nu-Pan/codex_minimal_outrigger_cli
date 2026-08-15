@@ -15,22 +15,20 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の publication／diagnostic pipeline を実装する中核 module。固定済み report cut を作成し、raw observation と current state の参照を検証・固定する。
-- deterministic な candidate 集約、machine recurrence 集約、必要時の issue identity normalization、全 candidate の verification、checkpoint の保存・再利用を一つの transaction として扱う。
-- 全 verification が確定した場合は generation、Markdown report、current pointer を hash 付きで publication し、raw observation・checkpoint・旧 generation の cleanup まで進める。`inconclusive` がある場合は active generation を変更せず、incomplete 診断 report を保存する。
-- 中断・失敗・publication 再開・cleanup 未完了を report-cut state と subcommand log に反映する。report の正本仕様、状態契約、normalization／verification の詳細契約を確認する場合は、本文冒頭に示された対応 oracle file や各 builder／schema が直接の入口になる。
+- `cmoc feedback report` の report cut 処理を一つの transaction として実装するサブコマンド固有の状態機械。
+- pending observation と active state、repository reference を deterministic に固定し、normalization・全 candidate verification・正常 publication・incomplete 診断・中断再開を処理する。
+- feedback state、checkpoint、generation artifact、current pointer、Markdown report、cleanup、および subcommand log の整合性を hash と schema で検証する実行経路の入口。
 
 ## Read this when
-- `cmoc feedback report` の処理順序、report cut、checkpoint 再開、publication、incomplete 診断の責務を確認するとき
-- feedback observation から active issue candidate と machine aggregate を構築する処理を変更・調査するとき
-- verification 結果から generation、current pointer、Markdown report、cleanup を確定する経路を確認するとき
-- 中断時の状態更新、publication_ready の再開、cleanup failure の扱いを確認するとき
+- `cmoc feedback report` の publication、incomplete 診断、中断・再開、checkpoint 再利用、cleanup、current pointer 切替の挙動を確認または変更するとき。
+- feedback observation の validation、agent observation の issue 集約、machine rule の recurrence 集約、issue verification の参照制約を調査するとき。
+- feedback report の report cut manifest、generation artifact、active issue、Markdown 出力、primary report fields、publication log の連携を追跡するとき。
 
 ## Do not read this when
-- feedback state の正本データ契約や状態遷移そのものを確認したいときは、対応する feedback_state oracle file を直接読む
-- `cmoc feedback report` の利用条件や外部仕様を確認したいときは、sub_command/feedback_report oracle file を直接読む
-- normalization または verification の agent prompt、Structured Output schema、builder の入出力契約だけを確認したいときは、各 builder／schema を直接読む
-- 共通の runtime state、feedback store、logging、publication artifact の実装だけを確認したいときは、対応する `commons` module を直接読む
+- feedback observation の envelope や raw store の一般仕様だけを確認する場合は、対応する state/store の実装または oracle を直接読む。
+- issue normalization agent や verification agent の prompt・Structured Output schema だけを確認する場合は、対応する builder と schema を直接読む。
+- feedback state のデータ構造・artifact 操作・lock・pointer の共通実装だけを確認する場合は、`runtime_feedback_state` を直接読む。
+- 他のサブコマンドの実装や通常の Markdown report 描画だけを確認する場合は、この report pipeline ではなく対象モジュールを直接読む。
 
 ## hash
-- 3824efa12e50fa9697e81745e05673d268f57239ac9eee9edd9343783ca6b382
+- 349007565bcb66666699528be92a8a95b7674ed2b80c21403411db3852d8789f

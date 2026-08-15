@@ -83,6 +83,7 @@ from commons.runtime_feedback_store import (
 )
 from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_paths import reports_dir, timestamp
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_results import StructuredOutputValidationIssue
 
 _JsonObject = dict[str, Any]
@@ -176,6 +177,10 @@ def _cmoc_feedback_report_locked_body(
                 4, "feedback report cut を固定", "freeze feedback report cut"
             )
             manifest, manifest_path = _create_report_cut(repository, state, versions)
+        update_primary_report_fields(
+            report_cut_id=manifest.get("report_cut_id"),
+            report_cut_at=manifest.get("cut_at"),
+        )
         # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
         return _process_report_cut(
             repository,
@@ -206,6 +211,7 @@ def _cmoc_feedback_report_locked_body(
                     "interrupted",
                     "user interruption",
                 )
+        _update_feedback_progress_fields(manifest)
         return _record_feedback_interruption(manifest, manifest_path)
     except BaseException as exc:
         if (
@@ -226,6 +232,7 @@ def _cmoc_feedback_report_locked_body(
                     "failed" if status != "staging" else "staging",
                     repr(exc),
                 )
+        _update_feedback_progress_fields(manifest)
         raise
 
 
@@ -238,6 +245,7 @@ def _validate_preconditions(repo: Path, worktree: Path) -> None:
             f"repo_root: {repo}\nwork_root: {worktree}",
         )
     branch = current_branch(worktree)
+    update_primary_report_fields(session_branch=branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError(
             "feedback report は active session branch 上で実行してください。",
@@ -2974,6 +2982,7 @@ def _record_feedback_interruption(
     manifest: _JsonObject | None, manifest_path: Path | None
 ) -> TerminalResult:
     """中断を正常系として subcommand state と log へ記録する。"""
+    _update_feedback_progress_fields(manifest)
     mark_current_subcommand_interrupted()
     logger = current_subcommand_logger()
     if logger is not None:
@@ -2990,6 +2999,47 @@ def _record_feedback_interruption(
             "`cmoc feedback report` を再実行して同じ report cut を再開してください。",
         )
     return TerminalResult(details=details, next_actions=next_actions)
+
+
+def _update_feedback_progress_fields(manifest: _JsonObject | None) -> None:
+    """invocation summary 用に durable checkpoint の確定件数だけを保持する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    if manifest is None:
+        update_primary_report_fields(
+            normalization_checkpoint_count=None,
+            verification_checkpoint_count=None,
+            partial_result_count=None,
+            processing_status=None,
+        )
+        return
+    processing = manifest.get("processing")
+    normalization = (
+        processing.get("normalization_checkpoints")
+        if isinstance(processing, dict)
+        else None
+    )
+    verification = (
+        processing.get("verification_checkpoints")
+        if isinstance(processing, dict)
+        else None
+    )
+    normalization_count = (
+        len(normalization) if isinstance(normalization, list) else None
+    )
+    verification_count = len(verification) if isinstance(verification, list) else None
+    partial_result_count = (
+        normalization_count + verification_count
+        if normalization_count is not None and verification_count is not None
+        else None
+    )
+    update_primary_report_fields(
+        normalization_checkpoint_count=normalization_count,
+        verification_checkpoint_count=verification_count,
+        partial_result_count=partial_result_count,
+        processing_status=(
+            processing.get("status") if isinstance(processing, dict) else None
+        ),
+    )
 
 
 def _published_terminal_result(

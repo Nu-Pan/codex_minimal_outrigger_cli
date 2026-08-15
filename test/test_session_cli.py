@@ -22,7 +22,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import current_branch, make_repo, run_git
 
 import cmoc_runtime
@@ -151,6 +151,12 @@ def test_session_fork_creates_session_branch_and_state(
         "branch": None,
         "fork_commit": None,
     }
+    report = terminal_primary_report(result)
+    rendered_report = report.read_text(encoding="utf-8")
+    assert report.parent == root / ".cmoc" / "gu" / "ar" / "report" / "session" / "fork"
+    assert f'session_branch: "{branch}"' in rendered_report
+    assert f'home_branch: "{home_branch}"' in rendered_report
+    assert 'session_state_after: "active"' in rendered_report
 
 
 def test_session_fork_rolls_back_when_state_save_fails(
@@ -413,6 +419,11 @@ def test_session_abandon_switches_home_and_marks_state(
     assert state["session"]["state"] == "abandoned"
     assert f"- abandoned_branch: `{session_branch}`" in result.output
     assert "- session_state: `abandoned`" in result.output
+    report = terminal_primary_report(result)
+    rendered_report = report.read_text(encoding="utf-8")
+    assert f'session_branch: "{session_branch}"' in rendered_report
+    assert f'home_branch: "{home_branch}"' in rendered_report
+    assert 'session_state_after: "abandoned"' in rendered_report
 
 
 def test_session_abandon_uses_linked_worktree_branch(
@@ -1027,6 +1038,12 @@ def test_session_join_uses_linked_worktree_branch(
     assert (linked / "README.md").read_text() == "linked session change\n"
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["state"] == "joined"
+    report = terminal_primary_report(result)
+    rendered_report = report.read_text(encoding="utf-8")
+    assert f'session_branch: "{session_branch}"' in rendered_report
+    assert f'home_branch: "{home_branch}"' in rendered_report
+    assert 'session_state_after: "joined"' in rendered_report
+    assert "merge_commit:" in rendered_report
 
 
 def test_session_join_preprocesses_linked_worktree_before_preconditions(

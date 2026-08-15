@@ -17,6 +17,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import (
     delete_run_process_id,
     read_run_process_id,
@@ -58,6 +59,15 @@ def _cmoc_run_abandon_body() -> TerminalResult:
             {"running", "joinable", "error"},
             allow_missing_run_worktree=True,
         )
+        update_primary_report_fields(
+            run_kind=context.kind,
+            session_branch=context.session_branch,
+            run_branch=context.run_branch,
+            run_fork_commit=context.run_fork_commit,
+            run_worktree=context.run_worktree,
+            state_before=state.run.state,
+            state_after=state.run.state,
+        )
         require_clean_worktree(context.session_worktree)
         warnings: list[str] = []
         stopped = "not_running"
@@ -78,6 +88,12 @@ def _cmoc_run_abandon_body() -> TerminalResult:
             _remove_run_branch(context, warnings) if worktree_removed else False
         )
         if not worktree_removed or not branch_removed:
+            update_primary_report_fields(
+                process_stop=stopped,
+                worktree_removed=worktree_removed,
+                branch_removed=branch_removed,
+                cleanup="failed",
+            )
             raise CmocError(
                 "active run の cleanup を完了できません。",
                 ["git worktree list と run branch を確認して再実行してください。"],
@@ -87,6 +103,13 @@ def _cmoc_run_abandon_body() -> TerminalResult:
         state.run = RunPart()
         write_state(context.state_path, state)
         delete_run_process_id(context.repo, context.session_id)
+        update_primary_report_fields(
+            state_after="ready",
+            process_stop=stopped,
+            worktree_removed=worktree_removed,
+            branch_removed=branch_removed,
+            cleanup="completed",
+        )
         report = write_lifecycle_report(
             context,
             "abandon",

@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _codex_support import FakeCodexResult, setup_codex_home
 from _git_support import current_branch, make_repo, run_git
 
@@ -403,7 +403,22 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     )
     assert "- result:" not in terminal_output
     assert "- completion_reason:" not in terminal_output
-    assert "primary report" not in terminal_output
+    report_path = terminal_primary_report(result)
+    assert terminal_output.count(str(report_path)) == 1
+    report = report_path.read_text(encoding="utf-8")
+    expected_classification = "natural_completion" if failure_stage is None else "error"
+    expected_main_status = "failed" if failure_stage == "main" else "succeeded"
+    expected_reduction_status = {
+        None: "succeeded",
+        "main": "not_started",
+        "reduction": "failed",
+    }[failure_stage]
+    assert f'terminal_classification: "{expected_classification}"' in report
+    assert f"exit_code: {result.exit_code}" in report
+    assert f'main_agent_call_status: "{expected_main_status}"' in report
+    assert f'reduction_agent_call_status: "{expected_reduction_status}"' in report
+    assert "# cmoc oracle edit report" in report
+    assert "診断用サブコマンドログ" in report
 
 
 @pytest.mark.parametrize(

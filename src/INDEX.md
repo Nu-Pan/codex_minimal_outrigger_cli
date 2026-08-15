@@ -52,21 +52,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex subprocess、設定・ログ・パス・Git worktree、状態管理、feedback、INDEX lifecycle、editing run など、複数の実行経路から共有される実装への入口となる。
-- 個別 runtime helper の責務や公開 API、Codex 実行制御、設定・状態・feedback・Git・path・run lifecycle などの共通機能を調査・変更するときは、まずこの配下の対象へ進む。
+- cmoc の実行時共通機能を集約する commons パッケージ。CLI の実行境界、Codex subprocess、設定・ログ・Git worktree・パス・状態管理、feedback、report、run lifecycle など、複数の処理経路から利用される runtime API とその下位実装への入口を提供する。
+- INDEX.md の検査・生成 lifecycle、prompt editor、doctor、refactor state、実行結果・エラー・通知など、個別の共通 runtime 責務を確認・変更する際の入口となる。下位の機能別モジュールへ進むためのディレクトリ単位のルーティング対象。
 
 ## Read this when
-- cmoc の複数機能で共有される runtime helper の実装箇所を探すとき
-- Codex 実行、CLI lifecycle、INDEX 更新、設定、ログ、Git/worktree、feedback、session/run state などの共通 runtime 挙動を変更・調査するとき
-- 特定の共通機能について、対応する runtime module の実装入口を確認するとき
+- CLI や Codex の実行基盤、設定、ログ、Git worktree、パス、状態、feedback、report、run lifecycle など、複数機能で共有される runtime 処理の入口を探すとき
+- commons 配下の共通 API または個別 runtime helper の責務を確認・変更するとき
+- INDEX.md 更新、prompt editor、doctor、refactor state、実行結果・エラー・通知などの共通実装を調査するとき
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや利用者向け仕様だけを確認したいとき
-- 共通 helper の内部実装ではなく、正本仕様・prompt・schema・テストを直接確認すべきとき
-- 対象となる特定の runtime module が明確で、そのファイルを直接読めるとき
+- 特定のサブコマンド固有の業務処理や利用者向け仕様だけを調べるとき
+- 特定の runtime helper の内部実装、公開シンボル、状態遷移、保存形式を直接確認したいときは、commons 配下の対応する個別モジュールへ進む場合
+- 正本仕様や prompt の生成規則など、commons の実装責務ではなく対応する仕様・定義ファイルが直接の確認対象である場合
 
 ## hash
-- 30674b04249ed4a96009c00ae8d9ecb8378841a064ab88584aa61e04928e652d
+- b053631c0c6f101058e4e3449e9dc458952234d516fd9f342a96df0f1e454449
 
 # `config`
 
@@ -121,17 +121,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装入口をまとめたディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などのサブコマンド構成と、各処理の下位実装への入口を確認するために読む。
-- 特定のサブコマンドの実行フローやライフサイクルを調査・変更する際は、該当する実装入口から下位要素へ進むためのルーティング対象である。apply と review は現時点で実装本文がなく、将来の実装配置先として示されている。
+- cmoc のサブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui の CLI 入口やライフサイクル処理への入口を提供し、各サブコマンドの下位実装へ進む起点となる。apply と realization review は現在実装本文がない。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの入口が分からない状態で調査を開始するとき
-- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかのサブコマンドに関する実装入口を確認するとき
-- realization 配下の apply・refactor・review など、workload の入口を特定するとき
+- cmoc のサブコマンド構成や、対象サブコマンドの実装入口を確認するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui の実行フローや責務分担を調査・変更するとき。
+- サブコマンドの下位実装へ進む前に、どのパッケージ境界を読むべきか判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理、正本仕様、共通ランタイム、Git 操作、state 契約などを直接確認することが目的で、対象ファイルが既に特定できているとき
-- apply または review の具体的な実装内容を確認したいとき。ただし現時点では実装本文がないため、実装追加後に該当箇所を読む
+- 特定サブコマンドの詳細実装、共通 CLI ランタイム、正本仕様を直接確認する場合は、それぞれの対象を読むとき。
+- サブコマンドに関係しない処理を調査するとき。
+- apply または realization review の具体的な実装内容を確認するとき。
 
 ## hash
-- dfcbf1e32a4734f896e4a75daf57c6242f6cf7eb3e26a72dead5fb020a7821dd
+- 299455882f7842539dadff06c26478038903610c5f5afc8cde2b0b9dbaf7ea8b
