@@ -192,7 +192,7 @@
     "last_investigated_at": "2026-08-13_23-58_07_385304000"
   },
   "oracle/doc/app_spec/sub_command/tui.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "7b3ddf391d97c35b5ed27eccedce59e66d13e19dc5255a905172ae2bb898c6b3",
     "last_investigated_at": "2026-08-12_19-53_33_367009000"
@@ -438,7 +438,7 @@
     "last_investigated_at": "2026-08-14_10-34_59_047356000"
   },
   "oracle/src/oracle/acp_builder/tui/launch_tui.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "1f63b6bd304bbb96210ace631c032e61ac143eace8bdc429d6d836e4545f4bbb",
     "last_investigated_at": "2026-08-14_12-54_07_940103000"
