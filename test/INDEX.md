@@ -233,22 +233,19 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理を、実際の Codex TUI 起動まで含めて検証するテスト。
-- 編集済み prompt の生成、doctor preprocess の実行順序、起動パラメータ、prompt の保存内容、既存の Git 差分保持を確認する。
-- linked worktree では prompt と agent call context をメイン worktree 側へ保存し、repository と linked worktree の `.cmoc` ignore を保証する挙動も検証する。
+- `tui` サブコマンドが、エディタで編集したプロンプトを保存・補完し、Codex TUI を起動するまでの CLI 前処理を検証するテスト。通常のリポジトリと linked worktree の両方を対象に、doctor preprocess、起動パラメータ、プロンプトログの保存先、既存 Git 差分の保持、`.cmoc/gu/` の ignore を確認する。
 
 ## Read this when
-- `tui` サブコマンドの起動前処理、prompt editor の入出力、Codex TUI 起動パラメータを変更または検証するとき
-- linked worktree におけるログ・prompt 保存先や `.cmoc/gu` の ignore 挙動を変更または検証するとき
-- TUI 起動時に既存の staged・unstaged 差分を保持する契約を確認するとき
+- `tui` サブコマンドの起動前処理、プロンプトエディタ連携、または Codex TUI 起動の外部挙動を変更・検証するとき。
+- 通常リポジトリと linked worktree における editor input ログ、agent call context、`.gitignore` 更新、既存差分保持の挙動を確認するとき。
+- TUI 起動時のモデル、推論強度、ファイルアクセスモード、通知名などのパラメータ契約を確認するとき。
 
 ## Do not read this when
-- TUI 起動前処理の外部挙動ではなく、TUI 本体の対話処理や表示を直接確認するとき
-- prompt builder や CLI 実装の内部詳細だけを確認し、実行時の統合挙動を検証する必要がないとき
-- TUI と無関係なサブコマンドやログ処理を確認するとき
+- プロンプトビルダーや editor input の実装仕様そのものを調査・変更する場合は、対応する正本仕様または realization を直接読む。
+- 一般的な CLI サブコマンド一覧、doctor 単体、Git 操作、または TUI 本体の対話処理だけを調査する場合は、対象実装や専用テストへ進む。
 
 ## hash
-- e80214f02e2708d1a7de8188de43657846e328becce326f2db2b48ca8bd33d7c
+- e46e36f74922614b6183984ebeddf1b50a035c07649948029290985af39416d9
 
 # `test_codex_runtime_errors.py`
 
@@ -527,41 +524,40 @@
 # `test_oracle_edit_cli.py`
 
 ## Summary
-- `cmoc oracle edit` が main worktree 上で TUI を起動する際の CLI 制御を検証するテスト。doctor 前処理、prompt 編集、indexing preflight、起動前提検査、TUI 実行順序と引数、成功・失敗時の結果を扱う。
-- oracle edit が run lifecycle を変更せず、既存の staged/unstaged 差分と session state を保持したまま oracle の編集結果を反映することを検証する。
-- main worktree、session branch、active session などの起動前提違反を利用者向けエラーとして扱う挙動を検証する。
+- `cmoc oracle edit` の main worktree TUI 起動経路を検証するテスト。doctor 前処理、編集入力の保存・完全 prompt の確定、indexing preflight、起動前提検査、TUI 実行順序と引数を確認する。
+- 既存の staged／unstaged 差分、session state、oracle 編集結果を検証し、TUI 成功時と失敗時の挙動を扱う。
+- main worktree・active session・session branch など oracle edit の起動前提違反が利用者向けエラーになることを確認する。oracle edit の CLI 制御やその起動条件を変更・調査するときのテスト入口。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 制御や main-worktree TUI 起動順序を変更・レビューするとき。
-- oracle edit における prompt editor、indexing preflight、起動前提検査、TUI 呼び出し引数の挙動を確認するとき。
-- oracle edit が session state、Git の staged/unstaged 差分、run lifecycle に与える影響を検証するとき。
+- `oracle edit` の TUI 起動順序、prompt 編集、indexing preflight、実行パラメータを変更または検証するとき。
+- oracle edit 実行時の差分保持、session state 非変更、TUI 失敗時の扱いを確認するとき。
+- main worktree や active session に関する oracle edit の起動前提エラーを調査するとき。
 
 ## Do not read this when
-- oracle edit の仕様本文や実装責務そのものを確認する場合は、まず対象の仕様書または実装ファイルを読む。
-- oracle edit と無関係な CLI、TUI、session state、Git 差分保持の変更を扱う場合。
-- 一般的な oracle 編集処理の詳細を知りたいだけで、ここで検証される main-worktree CLI 制御や前提違反を調べる必要がない場合。
+- oracle edit 以外のサブコマンドの挙動だけを変更・調査するとき。
+- TUI 実装そのものや oracle edit の正本仕様を確認する必要があり、対応する実装・仕様を直接読むべきとき。
 
 ## hash
-- 8ff8a2e78b4262c889f8bbfd6f65fed72a199bfb8096068c875a71f2cc42724e
+- 9df2e0c68906c04340c005dd2b7e5c20eb364853607f4c2655a6c4f4ec01ac4c
 
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- 対象は oracle investigation CLI の起動条件と起動前後の処理順を検証する pytest で、session 前提なしの起動、doctor/build/editor/finalize/TUI の連携、生成される prompt と AgentCallParameter の契約を確認する。
-- investigation の realization adapter が公開する builder API を限定していることも検証するため、CLI 起動フローやそのテスト契約を変更・調査するときの入口になる。
+- `oracle investigation` CLI の起動契約を検証するテスト。セッションなしの main worktree での起動、doctor 前処理から builder・prompt editor・完全 prompt 確定・TUI 起動までの順序、indexing preflight の有効化、生成される agent call parameter と prompt 内容を確認する。
+- あわせて、oracle investigation の realization adapter が公開する builder 名を限定していることを検証する。CLI 起動条件や prompt handoff の挙動を変更・確認する際のテスト入口であり、builder の公開面だけを調べる場合にも対象となる。
 
 ## Read this when
-- `oracle investigation` サブコマンドの CLI 起動条件、main worktree での session 不要起動、または indexing preflight を含む起動順を確認するとき。
-- prompt editor 入力、完全 prompt の確定、TUI 起動に渡す AgentCallParameter の値や prompt 内容をテストで確認・変更するとき。
-- `acp.builder.oracle.investigation.launch_tui` の公開 API（builder のみ）に関する realization adapter のテスト契約を確認するとき。
+- `oracle investigation` サブコマンドの起動前提、処理順序、prompt editor handoff、TUI 起動パラメータを変更または検証するとき
+- indexing preflight、doctor preprocess、完全 prompt の生成内容、pure-oracle-read の agent call 設定に関する回帰を調査するとき
+- investigation realization adapter の `__all__` や公開シンボルの契約を確認するとき
 
 ## Do not read this when
-- oracle investigation の正本仕様そのものを確認する場合は、まず `oracle/doc/app_spec/sub_command/oracle_investigation.md` などの仕様書を読む。
-- CLI 共通の doctor、prompt editor、または indexing の一般仕様だけを調べる場合は、それぞれの専用仕様・実装・テストへ直接進む。
-- investigation builder の実装詳細だけを確認する場合は、`oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` を直接読む。
+- oracle investigation の正本仕様そのものを確認する場合は、まず参照元の app specification と prompt editor 仕様を読むとき
+- 他の oracle サブコマンドの起動契約や、共通 CLI・builder の一般仕様だけを確認する場合
+- CLI 実装の内部処理を変更せず、テスト実行方法や共通 fixture の仕組みだけを調べる場合
 
 ## hash
-- abbf273c94a5245700d671437e85fea1cacbd47b99873da23ab6e238a17dfff9
+- eb6986d137e81b02e65cda0281f16779d915b529ef6171937ee8237466f7adf5
 
 # `test_oracle_review_loop.py`
 
@@ -655,21 +651,21 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout にソースツリーを複製し、隔離環境で Python import を実行して、ACP builder、oracle edit、prompt editor 入力境界、設定再公開の検証を行うテスト。packaged 配布時の import 境界、正本定義の参照、公開 API の限定を確認する実行テストへの入口。
+- packaged layout へコピーした Python パッケージを隔離環境で import し、正本 builder、oracle edit、prompt editor 入力境界、ACP basic、cmoc config の公開面と設定を検証するテスト。
+- setuptools の package 配置、schema と完全 prompt の参照、editor 入出力の完了処理、canonical 定義の再公開、config 定義だけの公開を、実行可能な import 経路として確認する。
 
 ## Read this when
-- packaged layout での import、配布後の Python package 構成、または oracle と realization の import 境界を検証・変更するとき。
-- oracle review や quota probe の builder が schema と完全 prompt を参照することを確認するとき。
-- oracle edit、prompt editor 入力境界、ACP basic の正本型再公開、cmoc config の公開面を packaged 環境で確認するとき。
-- このテストの対象となる packaging 設定、canonical builder、prompt editor 入力処理、または設定再公開の実装を変更するとき。
+- packaged layout や配布後の import 境界が壊れていないか確認するとき。
+- oracle builder と realization 側 builder の正本参照、prompt editor の入力境界、または公開 import 面の変更を検証するとき。
+- setuptools の package 配置や隔離された Python 実行環境での import 挙動を調査するとき。
 
 ## Do not read this when
-- packaged layout や import 境界を扱わず、通常の builder ロジックや prompt 内容だけを検証するときは、該当する個別テストや正本実装を直接読む。
-- 配布構成ではなく、oracle の review schema や edit の仕様そのものを確認するときは、対象の schema または仕様書を直接読む。
-- 設定定義の値や enum の挙動だけを確認するときは、cmoc config の正本定義または専用テストを直接読む。
+- 通常の builder ロジック、schema の詳細、prompt 内容の仕様だけを確認したいとき。
+- packaged layout での import や公開面に関係せず、個別機能の内部実装を直接調査するとき。
+- 既存テストの実行手順やテスト規約を確認したいときは、テスト実行・規約の正本を直接読む。
 
 ## hash
-- 16ceb03627945fb0b23a57b255a8b1cadf694266ef02c424af0d83eb23d16312
+- 23991c8e831d33645380277227763be3cb300dd9c755564999280bcf8546f67c
 
 # `test_production_cli.py`
 
@@ -696,43 +692,38 @@
 # `test_prompt_editor_input.py`
 
 ## Summary
-- prompt editor input の realization 実装が、正本仕様に沿って動作することを検証するテスト。
-- 初期表示文面が canonical builder の出力を使うこと、同一 timestamp の入力を上書きせず保持することを確認する。
-- skeleton の placeholder がちょうど 1 箇所であることを検証し、不正時に editor を起動しないことを確認する。
-- エディタ選択の優先順（code、nano、vim、vi）と、code 使用時だけ --wait を付ける起動引数を確認する。
+- prompt editor input の外部挙動を検証するテスト。可変な editor work file と保存記録の分離、timestamp 衝突回避、初期表示文面、editor 選択、入力の保存・コメント除去・skeleton 置換、path／file 種別検証、失敗時の復旧用 file 保持を扱う。prompt editor input の挙動変更や realization test の要件確認時の入口となる。
 
 ## Read this when
-- prompt editor input の外部挙動や realization test の検証範囲を確認するとき
-- 初期入力文面、timestamp 衝突、placeholder 検証、エディタ選択の仕様適合性を調査するとき
+- prompt editor input の外部仕様に対するテスト網羅範囲を確認するとき。
+- editor work file、入力結果の保存コピー、確定した完全 prompt の生成手順を変更または検証するとき。
+- editor 選択の優先順位、skeleton の placeholder 検証、失敗時の復旧動作を確認するとき。
 
 ## Do not read this when
-- prompt editor input の正確な初期表示文面を確認したいときは canonical builder の実装を直接読む
-- prompt editor input の意味仕様を確認したいときは正本仕様を直接読む
-- エディタ入力以外の prompt 構築や AI Agent 呼び出しの挙動を調査するとき
+- prompt editor input の正本仕様を確認する場合は prompt_editor_input.md を直接読む。
+- 初期表示文面の構築や実装責務を確認する場合は editor_input.py を直接読む。
+- 対象のテスト挙動を変更しない一般的なテスト実行や、別の prompt builder 機能だけを扱う場合。
 
 ## hash
-- ce0bb9f0f7c73c54782ecabf1e6507c6db9b06ab658cf1ab48deff35f3733bf5
+- ca025c42ea5a84c1245473ae4d9e9278535414451a658f3ad3c8dc8fd641f3ae
 
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt parts と complete prompt の統合を検証する回帰テストです。
-- Standard の不変性・入力検証・重複排除・競合検出と、StructDoc への描画結果を確認します。
-- 各標準規則の個別生成、file access mode ごとの内容、complete prompt への条件付き注入、標準規則の既定値、placeholder 展開・保持・競合検出を一つの検証入口にまとめています。
+- prompt builder の標準規範、各 prompt part、complete prompt の構築をまとめて検証する回帰テスト。Standard の不変性・rendering・統合、oracle/realization/review などの標準選択、file access mode、routing、feedback、placeholder 展開と競合を扱う。
+- 単一の prompt part の実装詳細ではなく、複数の標準と complete prompt の組み合わせが正しいことを確認するための集約されたテスト入口。
 
 ## Read this when
-- prompt builder の標準規則、prompt parts、complete prompt の描画または注入挙動を変更・検証するとき
-- Standard、StandardCollection、StandardGroup の合成・描画・不変性・競合検出に関する回帰を確認するとき
-- file access mode、oracle investigation、review、conflict resolution、routing、INDEX entry などの標準規則が complete prompt に正しく含まれるか確認するとき
-- root placeholder の定義、literal token の保持、placeholder の重複・競合処理を検証するとき
+- prompt builder の standard または prompt part を追加・変更し、complete prompt への注入条件や rendering への影響を確認するとき
+- placeholder、root path、file access mode、routing rule、feedback instruction の prompt 出力を回帰確認するとき
+- oracle・realization・review・conflict resolution・editor handoff など複数の標準の統合境界を確認するとき
 
 ## Do not read this when
-- prompt builder の実装詳細や正本仕様の意味を直接確認することが目的の場合は、対応する oracle または realization の実装・仕様を先に読むとよい
-- prompt builder と無関係な機能のテストや、個別の標準規則本文だけを確認する場合
-- INDEX.md エントリーの出力形式そのものを確認する場合は、対象テストではなく index entry standard の正本を読むべきとき
+- 単一の標準または prompt part の本文・実装だけを直接調査すれば足りるとき
+- prompt builder と無関係な機能のテストや、CLI の実行経路そのものを確認するとき
 
 ## hash
-- 2557603427d299b2b9c3a015ce5ad74db6d57b6bd7b4bf315d5eca43e9530208
+- 2157b67dae0f2b35192bc5a33f744db81e2a9753c69cf99ccc07cd4512cce627
 
 # `test_runtime_cli.py`
 

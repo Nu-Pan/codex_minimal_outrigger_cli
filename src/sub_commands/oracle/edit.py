@@ -47,7 +47,9 @@ def _cmoc_oracle_edit_body() -> None:
     # oracle 編集契約を含む完全 prompt の skeleton とパラメータを先に固定する。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
     start_subcommand_step(2, "TUI 起動パラメータを構築", "build TUI parameter")
-    time_stamp, original_path, complete_path = reserve_prompt_editor_input(repository)
+    time_stamp, editor_work_path, input_copy_path, complete_path = (
+        reserve_prompt_editor_input(repository)
+    )
     parameter = build_oracle_edit_launch_tui_parameter(
         time_stamp,
         ORIGINAL_PROMPT_PLACEHOLDER,
@@ -56,12 +58,15 @@ def _cmoc_oracle_edit_body() -> None:
 
     start_subcommand_step(3, "oracle 最終状態の指示を入力", "edit instruction")
     instruction = collect_prompt_editor_input(
-        original_path,
+        repository,
+        editor_work_path,
+        input_copy_path,
         complete_prompt_skeleton,
     )
 
     start_subcommand_step(4, "完全プロンプトを確定", "finalize complete prompt")
     finalize_complete_prompt(
+        editor_work_path,
         complete_path,
         complete_prompt_skeleton,
         instruction,

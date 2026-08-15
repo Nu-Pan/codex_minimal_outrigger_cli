@@ -29,35 +29,39 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの実行入口と、oracle 編集指示から Codex TUI を起動する処理を担う。入力予約・収集・完全プロンプト確定、indexing 前処理、main worktree 上の active な session branch の検証を経て TUI を起動する。
+- `cmoc oracle edit` サブコマンドの実行入口と、oracle 編集指示から Codex TUI を起動する一連のワークフローを定義する。入力予約・完全プロンプト確定・indexing preflight・TUI 起動前提検証を確認したいときの入口であり、実際の TUI パラメータ構築は builder、入力管理は commons、session 状態判定は runtime_state 側を読む。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 実行フロー、TUI 起動条件、oracle 編集プロンプトの入力処理を確認または変更するとき。
+- `cmoc oracle edit` の CLI 実行フロー、起動手順、step 管理、または TUI 起動前の検証を変更・調査するとき。
+- oracle 編集指示の入力から完全プロンプト確定、main worktree・session branch・active session の検証までの責務境界を確認するとき。
 
 ## Do not read this when
-- oracle 編集プロンプトの内容や契約そのものを確認したいときは、参照コメントで示される oracle 仕様を直接読む。
-- 他のサブコマンドの実行フローや、共通のプロンプト入力・runtime state 実装だけを調べるとき。
+- oracle edit TUI の起動パラメータ仕様そのものを確認する場合は、直接 launch_tui builder を読む。
+- プロンプト入力の予約・編集・確定処理の詳細を確認する場合は、commons の prompt editor input 実装を読む。
+- branch や session 状態の取得・判定の詳細だけが必要な場合は、runtime_git または runtime_state の実装を直接読む。
 
 ## hash
-- 0b47a7f3dccecd7d83a526a3a7203e743a2912e63d47d3267d10cd68de6dbe67
+- b27e98ed1d49bf5dc9abeed805596e51241b6af6afd1efc7cc0628929e3425e7
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` サブコマンドの read-only TUI workload を実行する CLI ランタイム実装です。
-- 入力された oracle 調査指示を完全なプロンプトへ組み立て、設定を読み込んで Codex TUI を起動します。
+- `cmoc oracle investigation` の read-only TUI workload を実行する CLI エントリー。oracle 調査指示の入力を受け、完全プロンプトを確定して Codex TUI を起動するまでのオーケストレーションを担う。
+- インデックス前処理、プロンプト編集用入力の予約・収集・確定、TUI 起動パラメータ構築、設定読込、Codex TUI 起動をつなぐ入口であり、各処理の詳細は import 先の実装へ進む。
 
 ## Read this when
-- `cmoc oracle investigation` サブコマンドの起動処理、oracle 調査指示の入力、プロンプト確定、Codex TUI 起動の流れを確認するとき。
-- インデックス作成の preflight、プロンプト編集入力の予約・確定、サブコマンドの進捗表示や通知設定を調べるとき。
+- `cmoc oracle investigation` サブコマンドの実行経路を確認・変更するとき。
+- oracle 調査指示の入力から完全プロンプト確定、Codex TUI 起動までの責務分担を確認するとき。
+- このサブコマンドの CLI 実行時に行われる index preflight、進捗管理、設定読込、TUI プロセス起動の連携を確認するとき。
 
 ## Do not read this when
-- oracle investigation の調査契約やプロンプト内容そのものを確認する場合は、対応する oracle 仕様を直接読む。
-- TUI 起動パラメータの構築方法だけを確認する場合は、`build_oracle_investigation_launch_tui_parameter` の実装を直接読む。
-- 共通のプロンプト編集入力処理やリポジトリ設定の詳細だけを確認する場合は、対応する共通モジュールを直接読む。
+- oracle investigation の調査契約や利用者向け仕様を確認する場合は、まず対応する oracle 仕様文書を読む。
+- TUI 起動パラメータの内容や構築規則を確認する場合は、起動パラメータ構築モジュールを直接読む。
+- プロンプト入力の予約、収集、ignore 設定、完全プロンプト確定の挙動を確認する場合は、プロンプト編集ヘルパーを直接読む。
+- CLI 共通ランナー、設定、リポジトリルート、work root の実装詳細を確認する場合は、`cmoc_runtime` を直接読む。
 
 ## hash
-- d0a41777b0c16eed6008bafb57a56bff6a1694711b6b0ac0fad0d90eef3a122c
+- a100063cca0a6645889c85187bb70833f7c84baac45be4cf55ebb87d1df17ab0
 
 # `review.py`
 

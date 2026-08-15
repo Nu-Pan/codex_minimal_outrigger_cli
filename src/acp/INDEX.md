@@ -17,19 +17,19 @@
 # `builder`
 
 ## Summary
-- `oracle.acp_builder` の正本実装を `acp.builder` として公開する互換 builder adapter 群の入口。
-- feedback、indexing、quota probe、session join、TUI、oracle command、realization workload に関する旧 import 経路を維持し、必要な場合は正本 builder の呼び出しや実行前準備へ接続する。
-- 各 adapter の実装本体は oracle 側にあり、この対象は互換 API と realization 側の接続構成を確認するための入口である。
+- ACP builder の realization adapter と互換 import 入口を収めるディレクトリ。oracle.acp_builder の canonical builder を acp.builder 配下から再公開し、既存 caller の import 経路を維持する。
+- feedback・indexing・oracle・quota probe・realization・session・TUI の用途別 builder 入口を含む。oracle edit／investigation の一部では、正本 builder の呼び出し前に runtime directory を準備する adapter も提供する。
+- 個別 builder の prompt 仕様や本体ロジックではなく、互換公開、canonical 実装への委譲、realization からの接続を確認するための上位入口。
 
 ## Read this when
-- `acp.builder.*` から `oracle.acp_builder.*` への互換 import 経路や削除条件を調査するとき
-- feedback issue、index entry、quota availability probe、session join、TUI 起動、oracle edit・investigation・review、realization apply・refactor の builder adapter の構成や委譲経路を確認するとき
-- oracle 正本 builder を呼び出す前のリポジトリパス解決、editor input directory 準備、既存 API のパラメータ適合を調査するとき
+- acp.builder 配下の builder adapter 全体の構成、canonical な oracle.acp_builder への委譲関係、または既存 import 経路の維持・削除条件を確認するとき
+- feedback issue の normalization／verification、index entry、quota availability probe、session join conflict resolution、TUI 起動の builder 入口を探すとき
+- cmoc oracle edit／investigation／review または realization apply／refactor fork の builder adapter へ進む入口を確認するとき
 
 ## Do not read this when
-- oracle 側の canonical builder の prompt、仕様、入出力、処理ロジックそのものを確認・変更するときは、対応する oracle 実装を直接読む
-- `acp.builder.*` の利用箇所、利用者向け公開面、または互換 import の削除可否を確認するときは、各参照元を直接読む
-- builder と無関係な CLI 処理、workload の本体実装、正本仕様やテストを調査するとき
+- canonical builder の prompt 構築、入力検証、出力仕様、または具体的な処理ロジックを調査・変更するときは、対応する oracle.acp_builder 側の対象を直接読む
+- acp.builder の builder を利用する CLI・realization・利用者向け公開面の挙動を調査するときは、各呼び出し元や利用側の対象を直接読む
+- builder 共通の処理や、個別の edit・investigation・review・apply・refactor・session の詳細実装だけを確認したいときは、該当する下位対象へ直接進む
 
 ## hash
-- 22b620f26f2c9e38bb708b730acaadd5731e1b4eaafda05500ea6cc24dd58db0
+- db6081bf8fa7696d03ad0fe17c11fac169ef41814a13900670c7591aad25702b

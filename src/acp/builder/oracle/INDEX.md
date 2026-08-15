@@ -15,41 +15,37 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` builder の realization adapter パッケージ。oracle edit 用 builder 実装への入口と、TUI 起動パラメータ生成を扱う。
-- 空のディレクトリで、現時点では案内対象となる実装・テスト・補助ファイルを含まない。
-- oracle edit 用 TUI 起動パラメータを生成し、リポジトリ実パスの解決、editor input directory の準備、oracle 側 builder の呼び出しを担う。
+- `cmoc oracle edit` の realization adapter package。正本の oracle edit TUI builder を呼び出す入口を提供し、起動前に完全 prompt の保存先となる editor input log directory を準備する。配下の launch TUI adapter の責務確認に進むためのディレクトリ単位の入口。
 
 ## Read this when
-- `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき。
-- このディレクトリにファイルが追加されたか確認するとき。
-- oracle edit の TUI 起動パラメータ生成、editor input directory の準備、または realization 側から oracle 側 builder を呼び出す経路を確認・変更するとき。
+- `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき
+- oracle edit の TUI 起動前に必要な realization 側の directory 準備と正本 builder の接続を確認するとき
 
 ## Do not read this when
-- oracle edit の具体的な編集処理や CLI 全体の動作を確認したいとき。対象の実装ファイルや上位の CLI 関連ファイルを直接読む。
-- oracle 側の TUI builder の prompt 内容や本体ロジックを直接確認するとき。
-- oracle edit や TUI 起動パラメータと無関係な builder、パス解決、実行時処理を調べるとき。
+- oracle edit の具体的な prompt 内容や正本 builder の動作を確認するとき
+- CLI 全体の動作や editor input log directory の管理だけを確認するとき
 
 ## hash
-- 8f3a1408430c389329fe8f6468d5594d329af74b48c018f93d6368153e193bf1
+- 0c553033270441536df4aa0abdfb079f34b19c2586e7ac561d6a42953b1444b3
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` 用 builder adapter パッケージの入口。oracle investigation 向け builder 機能へ進む際の参照先。
-- oracle investigation の正本 builder を呼び出す realization adapter。エディタ入力用ディレクトリを準備し、時刻情報とユーザー指示を正本 builder に渡して AgentCallParameter を生成する。
+- oracle investigation 用 builder adapter のパッケージ入口。該当 builder adapter の構成を把握し、下位実装へ進む前の責務確認に使う。
+- oracle investigation の launch TUI 呼び出し向け agent-call parameter を生成する realization adapter。正本 builder 呼び出し前の editor input log directory 作成と、builder 生成結果の受け渡しを扱う。
 
 ## Read this when
-- oracle investigation 用 builder adapter の構成や入口を確認するとき
-- 該当パッケージ内の下位実装へ進む前に責務を確認するとき
-- oracle investigation の launch TUI 用パラメータ生成、完全な prompt の保存先準備、正本 builder への委譲経路を確認するとき
+- oracle investigation 用 builder adapter の入口や構成を確認するとき
+- oracle investigation の launch TUI 呼び出し用 parameter 生成処理を確認・変更するとき
+- 正本 builder 呼び出し前に必要な runtime directory 準備の責務を確認するとき
 
 ## Do not read this when
-- oracle 側の launch TUI builder の仕様や prompt 構築詳細を確認したいとき
-- launch TUI 以外の builder や、エディタ入力ディレクトリの一般的な実装だけを調べるとき
+- builder adapter の具体的な prompt 構築仕様を確認したいときは、正本 builder を直接読む
+- editor input log のパス解決や runtime path の詳細だけを確認したいときは、対応する path/runtime 定義を直接読む
 - oracle investigation 以外の builder や ACP 実装を調べるとき
 
 ## hash
-- 80cc28d0067aa6d4edfe448b81bdeec6cbd2b358695b1bf3958ae53924fc5e03
+- ccc6abeb232b6f0b9fcba8f2c56075a4e91e60b964242e9d66f0e8a4184d43c0
 
 # `review`
 

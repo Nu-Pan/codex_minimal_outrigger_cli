@@ -54,18 +54,20 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- エディタから受け取る利用者プロンプトを、予約した入力ファイルへ保存・読込し、完全な prompt skeleton のプレースホルダーを置換して確定する共通境界。エディタ選択、入力コメント除去、プレースホルダー検証、`.cmoc` ignore 保証も扱う。プロンプト編集フローや editor input の入出力処理を確認するときの入口。
+- エディタから AI Agent 用プロンプトを受け取り、作業用ファイルへの初期内容の書き込み、エディタ起動、最終入力の保存と抽出、完全プロンプトの確定、関連ディレクトリの ignore 保証を担う共通境界。プロンプト入力の予約・検証・保存・後処理に関する実装や不正な editor work file、エディタ選択、placeholder 検証の挙動を確認するときの入口となる。
 
 ## Read this when
-- 利用者プロンプトのエディタ入力、完全 prompt の確定、入力ファイルの予約、利用可能なエディタの選択を変更または調査するとき。
-- 入力から HTML コメントや前後空白を除去する処理、prompt skeleton のプレースホルダー検証、エディタ用 `.cmoc` ignore の保証を確認するとき。
+- エディタ経由のプロンプト入力フローを変更・調査するとき
+- 入力内容や完全プロンプトの保存、placeholder 置換、作業ファイル削除の扱いを確認するとき
+- editor work file のパス検証、エディタ選択、`.cmoc` ignore 保証の責務を確認するとき
 
 ## Do not read this when
-- prompt skeleton の内容やエディタ入力案内の正本仕様を確認する場合は、prompt builder または対応する oracle 文書を直接読む。
-- prompt editor input と無関係なランタイムエラー、Git 操作、パス生成、または一般的な CLI 処理を調査する場合。
+- prompt editor の正本仕様や初期表示文面そのものを確認する場合は、参照されている oracle の仕様・実装を直接読むとき
+- プロンプト構築全体や editor input の案内文だけを確認する場合は、prompt builder 側の対象を直接読むとき
+- エディタ入力とは無関係な runtime error、git、path ユーティリティの挙動だけを調査するとき
 
 ## hash
-- f3eac66d141d815806253a176c70dd6d9e83e8ecdea2d0ffcf68db71b2021567
+- 4a3dc370276414c5a9177e3cacfc4dc27a53a5306558fcbf51de82566bdcdc91
 
 # `runtime_cli.py`
 
@@ -385,20 +387,21 @@
 # `runtime_paths.py`
 
 ## Summary
-- リポジトリ、worktree、cmoc 自身の root 解決と、実行時の各種ディレクトリ・設定・状態ファイルのパス導出を担う共通 runtime path モジュール。timestamp 生成、duration 表示整形、timestamp 付きパス予約、root memo 判定、cwd の一時切替も提供する。
-- root 解決や runtime directory の保存先、ログ・report・schema・worktree などのパスを利用する下位実装へ進むための共通入口。
+- cmoc の実行時パスを解決・生成する共通機能を提供する。repository/worktree/cmoc の root 解決、session・report・log・schema などの保存先取得、editor/worktree の作業先取得を扱う。
+- cwd を一時変更する処理を process-wide に直列化し、timestamp・console timestamp・duration の表示形式を定義する。memo 配下判定や timestamp 付き path の排他的予約も含む。
+- runtime path や実行時表示、cwd 切替、session/report/log の保存先を変更・調査する際の共通実装入口である。
 
 ## Read this when
-- リポジトリ root、worktree root、cmoc root の解決挙動を変更・確認するとき
-- session、report、log、schema、worktree、設定、refactor state などの保存先を扱う処理を変更・確認するとき
-- timestamp、duration 表示、timestamp 付きファイル予約、cwd 切替、memo 配下判定の共通挙動を変更・確認するとき
+- cmoc の repository root、worktree root、cmoc 自身の root の解決動作を確認または変更するとき
+- session、report、log、schema、editor input、worktree などの runtime 保存先を確認または変更するとき
+- cwd の一時切替、timestamp 付き path の予約、duration の表示形式、memo 配下判定を確認または変更するとき
 
 ## Do not read this when
-- 特定のサブコマンド固有のログ・report 内容や保存処理を確認する場合は、そのサブコマンドの実装・仕様へ直接進むとき
-- root placeholder の定義や実パス解決そのものの仕様を確認する場合は、path model の実装・仕様へ直接進むとき
+- 個別のサブコマンド処理や report の内容だけを確認し、runtime path の解決・保存先・表示形式に関係しないとき
+- root placeholder や runtime directory の契約を変更せず、対象機能の上位仕様または呼び出し側だけを確認するとき
 
 ## hash
-- 4eae4e541f9b83357378196e3c7349a0369a99264dbb3a6aa3786bfd7db8fccc
+- 99b11da4723965e801b7f86bb2fac0414612cc394d291d0169d8006956c2b117
 
 # `runtime_refactor.py`
 
