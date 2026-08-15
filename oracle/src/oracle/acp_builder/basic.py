@@ -82,7 +82,8 @@ class AgentCallParameter:
     # ファイルアクセスモード
     file_access_mode: FileAccessMode
 
-    # プロンプト本文
+    # Codex CLI の初回入力。
+    # 完全 prompt 本文、または cmoc が管理する確定済み完全 prompt file を読む固定指示。
     prompt: str
 
     # Structured Output schema ファイルパス

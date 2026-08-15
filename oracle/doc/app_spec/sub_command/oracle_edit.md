@@ -2,88 +2,103 @@
 
 ## 目的
 
-- oracle file の最終状態に関するユーザー指示を受け取り、`{{repo-root}}` を agent call の cwd とする Codex CLI の TUI で oracle file を直接編集する。
-- TUI 起動時点の既存未コミット差分と TUI の変更は分離せず、TUI 終了時に filesystem 上に残る差分を維持する。人間が差分の確認、追加修正、commit、破棄に責任を持つ。
-- このサブコマンドは編集 run ではなく、fork, join, abandon lifecycle、run branch、linked worktree、session state の `run` section を使用しない。
+- oracle file の最終状態に関するユーザー指示を受け取り、本命と仕様削減の 2 回の `codex exec` agent call を直列に実行する。
+- 本命 agent call はユーザー指示を oracle file へ反映する。仕様削減 agent call は、本命成功後の現在状態から過剰な仕様を削減する。
+- 起動前から存在する未コミット差分と 2 回の agent call による変更は分離しない。人間が、最終的な差分の確認、追加修正、commit、および破棄に責任を持つ。
+- このサブコマンドは編集 run ではない。fork、join、abandon lifecycle、run branch、linked worktree、および session state の `run` section は使用しない。
 
 ## 引数
 
 - 引数なし。
 
-## ユーザー指示の入力
+## ユーザー指示と prompt の構築
 
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする。
 - エディタ編集対象 file の初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する。
-- `build_oracle_edit_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、realization file の読み書き禁止と oracle file の編集に必要な cmoc 固有契約を含む完全プロンプトの skeleton を構築する。
-- 初期値へ渡す skeleton と、編集後に確定する完全プロンプトは、`build_oracle_edit_launch_tui_parameter` が構築した同じ完全プロンプトを使用する。
-- 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする。
+- `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ `{{original-prompt-here}}` を渡し、本命用の完全 prompt の skeleton と `AgentCallParameter` を構築する。
+- editor input の確定時は、skeleton の `{{original-prompt-here}}` だけをオリジナルのユーザー指示で置換する。
+- 本命用 `AgentCallParameter.prompt` は、確定済み完全 prompt file を読む固定指示とする。エディタ終了後も、事前に構築した同じ `AgentCallParameter` を使用する。
+- 仕様削減用の `build_oracle_edit_reduction_launch_exec_parameter` は、確定したオリジナルのユーザー指示を受け取り、完全 prompt 本文を `AgentCallParameter.prompt` として直接返す。仕様削減 agent call では editor input を使用しない。
+- prompt の意味、文面、および受け渡しの共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` と `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
+- editor work file の排他的 writer は管理しない。他の TUI やエディタとの並行操作から生じる競合や不整合は、人間が管理する。
 
-- 本サブコマンドは、`prompt_editor_input.md` が定義する可変な editor work file を使用する。cmoc は editor work file の排他的 writer を管理しない。他の TUI やエディタによる更新と、その並行操作から生じる競合や不整合は人間が管理する。
+## agent call 前の条件
 
-## TUI 起動直前の事前条件
-
-- doctor preprocess と TUI 起動前の indexing preflight の後、TUI を起動する直前に以下を検査し、満たさない場合はエラー終了する。
+- doctor preprocess の後、本命 agent call の直前に indexing preflight を 1 回だけ実行する。
+- indexing preflight の後、本命 agent call を起動する直前に次の条件を検査する。条件を満たさない場合は、agent call を開始せずエラー終了する。
     - 呼び出し元の worktree が main worktree であり、`{{work-root}}` と `{{repo-root}}` が一致する。
     - 現在の branch が、対応する session state で `active` な `{{cmoc-session-branch}}` である。
-- git working tree または staging area に未コミット差分が存在しても、それを理由に TUI の起動を拒否しない。
-- cmoc は TUI を起動するために、既存差分を commit, stash, rollback, または退避して worktree を clean にしない。
+- git working tree または staging area に未コミット差分が存在しても、起動を拒否しない。
+- 起動前に、既存差分を commit、stash、rollback、または退避して worktree を clean にしない。
 - doctor preprocess と indexing preflight による変更と commit は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` と `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従う。indexing 開始時点の既存 `INDEX.md` 差分は、indexing の自動 commit に含まれてよい。
-- 起動可否の判定では session state の `run` section を読み書きせず、`run.state` を排他条件にしない。
+- 起動可否の判定では、session state の `run` section を読み書きしない。`run.state` を排他条件にしない。
 
-## TUI 起動パラメータ
+## agent call の構成
 
-- TUI の意味上の責務と編集境界は本書を正本とする。`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py` の `build_oracle_edit_launch_tui_parameter` は、TUI に渡す正確な prompt 文面と `AgentCallParameter` を構築する。
-- builder が返したパラメータを変更せずに TUI 起動へ渡し、実行パラメータ決定用の追加 agent call は行わない。
-- oracle file を扱う判断基準は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を正本とする。builder は同基準を agent へ伝える文面を固定で prompt へ注入する。
-- builder は少なくとも以下を固定する。
+- 本命と仕様削減は、それぞれ新しい `codex exec` session の初回 call とする。仕様削減を、本命 session に対する `codex exec resume` として起動してはならない。
+- 各 agent call 内の retry、quota 回復待ち後の resume、および失敗処理には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の共通規約を適用する。
+- 2 回の agent call は、次の起動パラメータを共通とする。
     - `AgentCallParameter.agent_call_cwd` は `{{repo-root}}`。
-    - model class は `FLAGSHIP`、reasoning effort は `MAX`。
+    - model class は `FLAGSHIP`。
+    - reasoning effort は `MAX`。
     - file access mode は `PURE_ORACLE_WRITE`。
     - Structured Output は要求しない。
-    - TUI 起動前の indexing preflight を行う。
-- 起動コマンドは `codex` とし、`codex exec` は使用しない。
-- 1 つの TUI process 内で複数 turn の対話を許容する。
-- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
-- Codex CLI の起動には `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から以下だけを持ち込む。
-    - 環境変数 `$CODEX_HOME`
-    - preflight validation
-    - Codex CLI 引数による設定上書き
-    - file access mode に対応する sandbox とネットワーク設定
+- 本命用 `AgentCallParameter.run_indexing_preflight` は `True`、仕様削減用は `False` とする。
+- builder が構築した `AgentCallParameter` は変更せず、既存の `codex exec` 入力経路へ渡す。実行パラメータを決めるための追加 agent call は行わない。
+- oracle file を扱う判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を正本とする。各 builder は、担当に必要な同基準の文面を固定で prompt へ注入する。
+
+## 仕様削減 agent call の判断材料
+
+- 直前の本命 agent call が oracle file を変更し、その変更が起動前の既存差分と分離されず、現在の Git 未コミット差分に含まれていることを伝える。
+- オリジナルのユーザー指示、現在の oracle file、および oracle file に関する現在の Git 未コミット差分だけを本命成果の判断材料とする。
+- 過剰な仕様文言を削除し、仕様を簡素化し、関連する仕様および規範への違反を修正させる。
+- オリジナルのユーザー指示が要求する人間意図、実装差を許容しない境界、および対象外の既存仕様の意味を維持させる。固定の削減率または文字数目標は設けない。
+- 適用できる installed skill は補助規範として使用してよい。installed skill がこの prompt、オリジナルのユーザー指示、cmoc 固有契約、または関連する oracle file と競合する場合は、installed skill 以外を優先する。installed skill の有無を完了条件にしてはならない。
+- 本命 agent call の prompt、stdout、stderr、最終回答、call metadata、session ID、およびその他の session log を、読ませたり判断根拠にさせたりしてはならない。
+- 本命 agent の回答、要約、session ID、または log 内容を、仕様削減 agent call の prompt や入力へ注入してはならない。
 
 ## 実行順序
 
 1. doctor preprocess を呼び出す。
-2. `build_oracle_edit_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、完全プロンプトの skeleton と TUI 起動パラメータを構築する。
+2. `build_oracle_edit_main_launch_exec_parameter` で、本命用の完全 prompt の skeleton と固定 `AgentCallParameter` を構築する。
 3. skeleton を初期値として、oracle file の最終状態に関するユーザー指示をエディタから受け取る。
-4. ユーザー指示を skeleton へ挿入し、完全プロンプトを確定する。
-5. 過去の変更に対する遅延 indexing として、TUI 起動前の indexing preflight を行う。
-6. TUI 起動直前の事前条件を検査する。
-7. 1 つの Codex CLI TUI process を起動し、その終了コードでサブコマンドを終了する。
+4. ユーザー指示を skeleton へ挿入し、agent-readable かつ agent-write-prohibited な領域に完全 prompt file を確定する。
+5. indexing preflight を 1 回実行する。
+6. agent call 前の条件を検査する。
+7. 本命 agent call を新しい `codex exec` session で実行する。
+8. 本命 agent call が成功した場合だけ、`build_oracle_edit_reduction_launch_exec_parameter` で仕様削減用 `AgentCallParameter` を構築し、新しい `codex exec` session で実行する。
+9. 最外側の `cmoc oracle edit` の終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
 
-## TUI agent の編集境界
+- 本命 agent call と仕様削減 agent call の間に、indexing agent call、自動 commit、または別の補完用 agent call を挟まない。
+- 本命 agent call が失敗した場合は、仕様削減 agent call を開始せずエラー終了する。
+- 仕様削減 agent call が失敗した場合も、エラー終了する。
 
-- agent には oracle file だけを編集し、realization file、`INDEX.md`、`AGENTS.md` を編集しないよう指示する。
-- agent には `git add`, `git commit`, `git stash`, branch 切替、worktree 操作を禁止する。
-- `PURE_ORACLE_WRITE` はこのサブコマンドだけの権限であり、`cmoc oracle investigation` の file access 権限は拡張しない。
+## agent の編集境界
+
+- agent には oracle file だけを編集させる。realization file、`INDEX.md`、および `AGENTS.md` を編集させてはならない。
+- agent には `git add`、`git commit`、`git stash`、branch 切替、および worktree 操作を禁止する。
+- `PURE_ORACLE_WRITE` はこのサブコマンドだけの権限とする。`cmoc oracle investigation` の file access 権限は拡張しない。
 
 ## 終了と差分
 
-- TUI が終了コード 0 を返した場合は正常終了し、非 0 を返した場合はエラー終了する。
-- 終了コードにかかわらず、TUI が filesystem 上に残した差分をそのまま維持する。
-- TUI 起動時点の既存未コミット差分と TUI による変更を、この invocation ごとの成果物として分離しない。
-- cmoc は TUI 終了後に自動 commit, rollback, stash, 差分修正、branch または worktree の作成、変更 path の成果物認定を行わない。
-- TUI 終了後の indexing は行わず、agent による `INDEX.md` 更新も禁止する。更新は、次に indexing preflight を伴う cmoc コマンドが呼ばれるまで遅延してよい。
+- 2 回の agent call が成功した場合だけ、`natural_completion` とする。本命または仕様削減が失敗した場合は `error` とする。
+- 終了状態にかかわらず、それまでに filesystem 上へ残った差分を維持する。
+- 起動前の既存未コミット差分と 2 回の agent call による変更を、invocation 固有の成果物として分離しない。
+- 終了後に自動 commit、rollback、stash、差分修正、branch または worktree の作成、変更 path の成果物認定、および indexing を行わない。
+- oracle edit 固有の `result`、`completion_reason`、または report を新設しない。
+
+## console、ログ、および Windows toast
+
+- console、サブコマンドログ、および terminal result は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。
+- サブコマンドログは、2 回の agent call、対応する Codex call log、経過時間、戻り値、および最終的な terminal result を追跡可能にする。
+- 本命の stdin へ渡した固定指示と、その指示が参照する確定済み完全 prompt は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従って保存記録から追跡可能にする。
+- 内部の各 `codex exec` は、独立した terminal result または Windows toast を通知しない。
+- 最外側の `cmoc oracle edit` は、終了状態を確定した後に terminal result と Windows toast をそれぞれ 1 回だけ通知する。Windows toast の詳細は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
+- agent call 前後の Git 差分または変更 path を、この invocation 固有の成果物として断定してはならない。
+- 共通 reporter が受理した feedback observation は oracle edit の差分または成果物ではない。`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` に従う独立した実行記録とする。
 
 ## 中断と排他制御
 
 - このサブコマンドは中断可能サブコマンドに含めない。
-- cmoc 独自の Ctrl+C 処理、checkpoint、部分結果確定、retry、quota 待機、Codex session resume は行わず、TUI 起動中の入力と signal 処理は Codex CLI に委ねる。
-- lock file、process 重複検出、他の cmoc TUI が起動中であることを理由とする拒否、active または running 状態の永続化、editor work file の排他的 writer 管理を導入しない。
-- 並行操作による競合や不整合は人間が管理する。
-
-## ログ
-
-- oracle edit 固有の fork report は作成しない。
-- 共通のサブコマンドログには prompt file、TUI の開始と終了、終了コードを記録してよい。
-- TUI 前後の git 差分または変更 path を、この invocation の成果物として断定してはならない。
-- 共通 reporter が受理した feedback observation は oracle edit の差分または成果物ではなく、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` に従う独立した実行記録とする。
+- lock file、process 重複検出、active または running 状態の永続化、および editor work file の排他的 writer 管理を導入しない。
+- 他の cmoc process またはエディタとの並行操作から生じる競合や不整合は、人間が管理する。

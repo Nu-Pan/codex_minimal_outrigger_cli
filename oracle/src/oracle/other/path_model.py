@@ -14,7 +14,7 @@
 ## パスの表記例
 
 - ユーザーは `{{repo-root}}` をカレントとして `{{cmoc-root}}/bin/cmoc` を呼び出す
-- `cmoc oracle edit` は main worktree から呼び出され、`{{repo-root}}` を agent call の cwd として Codex CLI の TUI を起動する
+- `cmoc oracle edit` は main worktree から呼び出され、`{{repo-root}}` を agent call の cwd とする 2 回の `codex exec` を直列に起動する
 - `cmoc realization apply fork`, `cmoc realization refactor fork` は `{{repo-root}}` を cmoc process の cwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
 - realization の各 fork が起動する編集用 `codex exec` は `{{run-root}}` を agent call の cwd とする
 - agent call の call-scoped path context は `AgentCallPathContext` を正本とする

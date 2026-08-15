@@ -108,7 +108,8 @@ feedback detector は、安定契約として定義されていない自由文 f
 
 ## TUI と自動補完の境界
 
-- `cmoc tui`、`cmoc oracle edit`、および `cmoc oracle investigation` の正常な TUI 終了後には、非対話サブコマンド用の terminal result を追加表示しない
+- `cmoc tui` および `cmoc oracle investigation` の正常な TUI 終了後には、非対話サブコマンド用の terminal result を追加表示しない
+- `cmoc oracle edit` は非対話サブコマンドとして本書を適用する。内部の各 `codex exec` は独立した terminal result を表示せず、最外側のサブコマンドが終了状態の確定後に 1 回だけ表示する
 - TUI の起動前エラーまたは異常終了には、本書と `{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` のエラー表示規則を適用する
 - TUI process へ制御を渡した後は、cmoc の進行通知を TUI の表示へ混入させない
 - 自動補完プローブでは、CLI ライブラリの補完処理が必要とする出力以外を stdout または stderr へ混ぜない

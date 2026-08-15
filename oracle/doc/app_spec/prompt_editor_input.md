@@ -4,7 +4,7 @@
 
 - cmoc は、後続の AI Agent 呼び出しに渡す完全プロンプトの skeleton をエディタへ提示する。
 - ユーザーは、HTML コメントブロックの外にオリジナルプロンプトを入力する。
-- cmoc は、入力されたオリジナルプロンプトを skeleton の `{{original-prompt-here}}` へ挿入し、後続の AI Agent 呼び出しに渡す完全プロンプトを確定する。
+- cmoc は、入力されたオリジナルプロンプトを skeleton の `{{original-prompt-here}}` へ挿入し、後続の AI Agent が読む完全プロンプトを確定する。
 
 ## 初期コメントの責務
 
@@ -18,10 +18,11 @@
 ## 完全プロンプトの skeleton
 
 - 呼び出し元は、対応する `build_*_parameter` 関数へオリジナルプロンプトの代わりに `{{original-prompt-here}}` を渡し、エディタ起動前に完全プロンプトの skeleton と起動パラメータを構築する。
-- skeleton は、`{{original-prompt-here}}` だけが未確定であり、後続の AI Agent 呼び出しに渡す完全プロンプトと同じ構造および内容を持つ。
+- skeleton は、`{{original-prompt-here}}` だけが未確定であり、後続の AI Agent が読む完全プロンプトと同じ構造および内容を持つ。
 - skeleton 内の `{{original-prompt-here}}` は、ちょうど 1 箇所とする。
 - 編集対象の初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` に、Markdown へレンダリングした skeleton を渡して構築する。
 - `build_prompt_editor_input_initial_text` はサブコマンド固有の指示を組み立てない。サブコマンド固有の契約は、対応する `build_*_parameter` 関数が skeleton に含める。
+- `AgentCallParameter.prompt` には、確定済み完全プロンプト file を読む固定指示を使用してよい。この場合も、固定指示と skeleton は同じ `build_*_parameter` 関数が構築する。
 
 ## ファイルの役割
 
@@ -55,8 +56,9 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 5. cmoc は、最終読み取り結果を加工せず、入力結果の保存コピーへ保存する。
 6. cmoc は、同じ最終読み取り結果からコメント `<!-- ... -->` を削除する。削除結果の前後の空白文字を `strip` で除去し、オリジナルプロンプトとする。
 7. cmoc は、オリジナルプロンプトで skeleton 内の 1 箇所の `{{original-prompt-here}}` を置換し、確定した完全プロンプトを保存する。置換対象が 1 箇所でない場合は、後続の AI Agent を起動せずエラー終了する。
-8. 後続の AI Agent は、確定した完全プロンプトを読み取る。editor work file を参照してはならない。
+8. 後続の AI Agent は、確定した完全プロンプトを読み取る。`AgentCallParameter.prompt` が固定指示の場合は、その指示から参照する。editor work file を参照してはならない。
 9. cmoc は、この確定手順が成功した場合に editor work file を削除する。失敗した場合は復旧用に残す。
 
 - realization file 側で許容する完全プロンプトの加工は、手順 7 の置換だけとする。
 - 起動パラメータは再構築または変更せず、完全プロンプトを確定した後の AI Agent 呼び出しに使用する。
+- editor 終了後の parameter 再構築、skeleton 構築時の parameter との全 field 比較、および exec 専用の prompt 一致検査は行わない。

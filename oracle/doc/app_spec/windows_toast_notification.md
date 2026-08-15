@@ -11,13 +11,13 @@
 現在、TUI の通知境界を適用するサブコマンドは次のとおりとする。
 
 - `cmoc tui`
-- `cmoc oracle edit`
 - `cmoc oracle investigation`
 
 ## 非対話サブコマンドの通知境界
 
 - TUI の通知境界を適用するサブコマンド以外の最外側の末端サブコマンドは、非対話サブコマンドとして扱う。
 - 非対話サブコマンドは、そのサブコマンドが要求する state、report、成果物、および終了 log を確定した後に、terminal result を 1 回だけ通知する。
+- `cmoc oracle edit` は非対話サブコマンドとして扱う。内部の 2 回の `codex exec` では通知せず、最外側のサブコマンドが終了状態を確定した後に 1 回だけ通知する。
 - 通知の成否を、terminal result の確定条件に含めてはならない。
 
 ### terminal result の分類

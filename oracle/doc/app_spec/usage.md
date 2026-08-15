@@ -16,8 +16,9 @@
     - cmoc は `{{cmoc-session-branch}}` を作成して checkout する。
 3. 短い仕様変更・実装変更 loop を繰り返す。
     1. 必要に応じて `cmoc oracle investigation` で read-only の調査を行う。
-    2. 人間が oracle file を直接編集するか、main worktree の active な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` の TUI を起動する。
-        - TUI 起動時点の既存未コミット差分と TUI の変更は分離されず、filesystem 上に残る。人間が差分を確認し、必要なら追加修正する。
+    2. 人間が oracle file を直接編集するか、main worktree の active な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` を呼び出す。
+        - `cmoc oracle edit` は、エディタで受け取った指示に従う本命 `codex exec` と、本命成功後に過剰な仕様を削減する別 session の `codex exec` を直列に実行する。
+        - 起動時点の既存未コミット差分と 2 回の agent call による変更は分離されず、filesystem 上に残る。人間が差分を確認し、必要なら追加修正する。
     3. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
     4. 人間が `cmoc oracle review` を呼び出す。
     5. review 結果から修正が必要と判断した場合は、次の手順を修正が不要と判断するまで繰り返す。
@@ -42,5 +43,5 @@
 
 - realization apply は、直近の oracle 変更を短い loop で素早く realization へ反映するときに使う。
 - realization refactor は、変更差分に引っ張られず、全 oracle file と realization file の調査要求を収束させるときに使う。
-- oracle edit は main worktree 上で oracle file を直接編集する対話型 TUI であり、run lifecycle を使わない。
+- oracle edit は main worktree 上で 2 回の非対話 `codex exec` により oracle file を直接編集し、run lifecycle を使わない。
 - realization apply と realization refactor の編集 run は共通の明示的 fork/join lifecycle を使う。

@@ -23,7 +23,7 @@
 
 ### 実行時生成物
 
-- `AgentCallParameter.prompt`、生成済み prompt、完全 prompt の skeleton、および editor input は実行時生成物であり、正本ではない。
+- `AgentCallParameter.prompt`、生成済み完全 prompt、その skeleton、および editor input は実行時生成物であり、正本ではない。
 - log に保存された生成済み prompt または editor input を、意味仕様または prompt 文面の編集元として扱ってはならない。
 
 ## prompt に含める情報
@@ -38,8 +38,9 @@
 ## prompt 文面の所有と受け渡し
 
 - prompt 文面の執筆と変更は oracle src で行い、realization implementation に独自の文面判断を委ねてはならない。
-- realization implementation は、oracle src が構築した prompt の保存、意味を変えない機械的変換、および受け渡しだけを担ってよい。
-- realization implementation は、prompt に指示を独自に追加、要約、補完、翻訳、または仕様化してはならない。
+- `AgentCallParameter.prompt` は、完全 prompt 本文、または cmoc が管理する確定済み完全 prompt file を読むための固定指示とする。選択条件と追跡可能性は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
+- realization implementation は、oracle src が構築した prompt 本文または固定指示の保存、意味を変えない機械的変換、および受け渡しだけを担ってよい。
+- realization implementation は、prompt 本文、固定指示、または参照先 path に、指示を独自に追加、要約、補完、翻訳、または仕様化してはならない。
 - 正本仕様の意味を agent へ伝える場合も、その agent call の遂行に必要な表現だけを oracle src の prompt 文面に置く。
 
 ## cmoc 固有契約と installed skill の責務境界
@@ -132,9 +133,10 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 
 ## agent call に渡す prompt を構築する
 
-- agent call の初回 prompt は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
-- 動的構築された初回 prompt は、意味内容を変更せず agent call 側に渡す。realization file 側で prompt を加工してはならない
-- エディタ入力を使用する agent call では、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` に従い、`build_*_parameter` 関数が構築した完全プロンプトの skeleton に対する `{{original-prompt-here}}` の 1 回の置換だけを例外として許容する
+- agent call の初回入力は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
+- 動的構築された `AgentCallParameter.prompt` は、意味内容を変更せず agent call 側に渡す。realization file 側で加工してはならない
+- エディタ入力を使用する agent call では、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` に従い、`build_*_parameter` 関数が構築した完全 prompt の skeleton に対する `{{original-prompt-here}}` の 1 回の置換だけを例外として許容する
+- 完全 prompt file を間接参照する場合も、固定指示と参照先の完全 prompt は、いずれも対応する builder の構築結果に由来させる
 - Structured Output の補正 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の出力補正規則を例外として適用する
 
 ## 記法
