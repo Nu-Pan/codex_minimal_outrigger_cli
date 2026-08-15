@@ -18,19 +18,19 @@
 # `path_model.py`
 
 ## Summary
-- cmoc のパス表記に用いる root placeholder と、agent call 単位の work root・repository root を表現するモデルを定義する。
-- placeholder を含むパスの実体解決と、Git worktree・repository root の探索および実パスから placeholder 表記への変換を担う。
+- cmoc におけるパス表記と、agent call の作業ルート・リポジトリルートを扱う正本モデル。root placeholder の定義、placeholder と実パスの相互変換、Git worktree からの各ルート解決を提供する。パスの解決規則や agent call のパスコンテキストを確認・変更する作業では、この対象を入口にする。
 
 ## Read this when
-- cmoc のパス placeholder、agent call の作業コンテキスト、worktree や repository root の解決規則を確認・変更するとき。
-- placeholder 付きパスと実パスの相互変換、または root 探索の挙動を調査するとき。
+- root placeholder の意味や `{{repo-root}}`・`{{work-root}}`・`{{run-root}}` の解決規則を確認するとき
+- agent call の cwd から worktree root や repository root を導出する処理を変更するとき
+- placeholder 表記と実際の絶対パスの変換処理を確認・変更するとき
 
 ## Do not read this when
-- パスモデルを利用する個別機能の処理だけを確認するとき。
-- cmoc の一般的な CLI 挙動や、パス解決とは無関係な oracle・realization の仕様を読むとき。
+- 特定の CLI 機能や realization の責務配置だけを確認する場合
+- パスモデルを利用する個別機能の挙動を確認する場合は、その機能の実装や仕様を直接読むべきとき
 
 ## hash
-- 83cea74218b4c0877790ce4230ac7e1e8d0485e3c6d81fb290596f5d6709c70e
+- 8fc522d7e3ef8f4b608c64102a5f4a6d7eb7cf64422cd3c3f7b239dab4255418
 
 # `standard.py`
 

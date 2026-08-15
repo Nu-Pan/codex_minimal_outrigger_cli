@@ -147,20 +147,19 @@
 # `runtime_codex_preflight.py`
 
 ## Summary
-- Codex exec/TUI 呼び出しに対して、実行前の INDEX 更新 preflight、呼び出し境界通知、再入抑止と直列化を提供するランタイム仲介層。preflight の登録・解除と、Codex 設定から作業 root を決める処理を含み、実際の Codex 実行は runtime_codex へ委譲する。Codex 呼び出し前処理や INDEX 更新 preflight の動作を変更・調査する際の実装入口。
+- Codex の exec/TUI 実行前に INDEX 更新用の preflight を挟むランタイム境界を提供する。preflight の登録・解除、再入抑止、直列実行、実行対象 root の決定を担い、実際の Codex 実行は runtime_codex へ委譲する。Codex 呼び出し前処理や INDEX 更新連携の実装を確認・変更するときの入口となる。
 
 ## Read this when
-- Codex exec または TUI の起動前に indexing preflight を実行する経路を変更するとき
-- indexing preflight の登録・解除、再入抑止、スレッド間の直列化を調査するとき
-- preflight 実行後に workload 本体へ境界を通知する呼び出し契約を確認するとき
+- Codex exec または TUI の起動前に indexing preflight がどのように適用されるか確認するとき
+- preflight の登録・解除、再入防止、ロックによる直列化、work root の決定を変更するとき
+- Codex 実行本体への委譲境界や before_agent_call の通知タイミングを確認するとき
 
 ## Do not read this when
-- Codex 実行本体の subprocess 処理や結果型の仕様を確認したいときは、委譲先の runtime_codex または runtime_results を直接読む
-- AgentCallParameter の定義や agent call のパスモデルを確認したいときは、それぞれの定義元を直接読む
-- INDEX 文書の生成規則や preflight の具体的な実装内容を確認したいだけのとき
+- Codex 実行本体のプロセス起動や結果処理だけを確認・変更するときは、委譲先の runtime_codex または runtime_results を直接読む
+- AgentCallParameter や agent call path の定義自体を確認するときは、それぞれの定義元を直接読む
 
 ## hash
-- 12d767988ff06e195adb190cfc1ca30c609459ff946465f94ba4704500e131a5
+- 465d27a42a602c0bc59a6bd01f94897f0f560ae35974e1b15d86a7a03afe81ff
 
 # `runtime_codex_profile.py`
 

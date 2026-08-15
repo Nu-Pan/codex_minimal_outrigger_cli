@@ -91,19 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と開発ルールを領域別に案内する上位ドキュメント群。CLI のアプリケーション仕様、branch・commit・worktree のモデル、不採用案の検討記録、開発規則への入口を提供し、具体的な仕様・実装・テスト手順へ進むためのルーティング起点となる。
+- cmoc の正本仕様を収める入口。利用者向け CLI・workflow・agent call・session/run lifecycle・prompt・feedback・ログ・通知などの共通契約を扱い、個別仕様や横断的な挙動の確認先を示す。
+- oracle 側の agent call・prompt 構築実装群への入口。用途別の呼び出し構築、モデル・推論・アクセス設定、quota probe、prompt 合成、共通 Standard、routing、Structured Markdown、パスモデル、feedback 入力契約を扱い、実装上の構築経路を調べる際の起点となる。
 
 ## Read this when
-- cmoc の正本仕様を横断して、CLI の外部挙動、状態・branch model、開発環境、実装配置、テスト要件や実行手順の参照先を選ぶとき
-- 複数の仕様領域にまたがる変更や調査で、アプリケーション仕様、branch model、開発ルールなどの下位文書へ進む入口を判断するとき
-- 採用されなかった realization refactor の方式や検査・状態管理案の背景を確認するとき
+- cmoc の利用者向け挙動や複数機能にまたがる正本仕様を確認するとき
+- CLI、workflow、agent call、session/run、prompt、feedback、ログ、通知などの個別仕様へ進む入口を探すとき
+- oracle 側の agent call 構築、prompt 合成、共通設定、ファイルアクセス規則、Structured Output、feedback 入力契約を調査・変更するとき
 
 ## Do not read this when
-- 特定のアプリケーション仕様、branch・worktree の用語、開発規則、テスト実行手順だけを確認する場合は、対応する下位文書へ直接進む
-- 実装ファイル、テストファイル、Structured Output schema、feedback の専門仕様など、oracle/doc 配下の案内だけでは足りない具体的内容を確認する場合
+- 対象となる個別仕様書が既に特定でき、その本文だけで確認できるとき
+- realization implementation や realization test の具体的な実装・テスト手順だけを調べるとき
+- 開発環境、テスト実行手順、INDEX.md 生成処理など専用の手順が直接の入口となるとき
 
 ## hash
-- 19ab4bf2d2b856752c44f2ceb91bbf0e5f5b00986162268ed0b2b1a313866b1e
+- c85f6052327292e3b1bed1a1d71d05ea5533aafc6915b0b9f39ab4787ceff5a2
 
 # `pyproject.toml`
 
@@ -124,35 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc realization 側の CLI と共通 runtime を集約する実装ディレクトリ。Typer のトップレベル入口、session・oracle・realization・run・feedback などのサブコマンド、互換 import 入口を提供し、個別処理や正本実装へ進むための上位ルーティング対象となる。
+- `src` は realization 側の実行コードと互換公開入口を束ねるディレクトリで、最上位 CLI、共通 runtime、設定・ACP 互換層、oracle package shim、各サブコマンドへ進むための全体入口である。`src` 配下の構成や、利用目的に応じた実装入口を確認するときに読む。
+- 最上位 CLI の登録・起動やサブコマンド横断の入口は `main.py` と `sub_commands` へ、共通 runtime は `commons` へ、互換 import 経路は `acp`・`basic`・`config`・`cmoc_runtime`・`oracle.py` へ進むためのルーティング対象である。
 
 ## Read this when
-- cmoc CLI の realization 側エントリーポイントとサブコマンド構成を確認するとき
-- 対象の CLI 処理、共通 runtime、互換 import shim が src 配下のどこにあるかを特定するとき
-- CLI 実装から個別サブコマンド、runtime module、または oracle 側の正本実装へ読み進む起点を判断するとき
+- cmoc の realization 側にある CLI、共通 runtime、互換公開層、サブコマンドの配置を把握し、次に読む対象を選ぶとき
+- 最上位 CLI から個別サブコマンド、共通 runtime、または互換 import 入口へ進む経路を確認するとき
+- `src` 配下の複数領域にまたがる実装変更や調査で、対象ディレクトリ・モジュールの入口を特定するとき
 
 ## Do not read this when
-- 特定サブコマンドの実行フローや個別 runtime helper の内部挙動を調査するときは、対応する下位モジュールを直接読む
-- ACP・basic・config などの互換入口の詳細や、oracle 側の仕様・実装を確認するときは、対応する対象を直接読む
-- CLI や src 配下の realization 実装と無関係な仕様を調査するとき
+- 特定のサブコマンド、runtime helper、canonical oracle 実装、または互換 shim の内部挙動が目的で、対応する下位対象を直接読めるとき
+- 利用者向けの正本仕様や個別 API の詳細だけを確認するとき
+- `src` 配下と無関係な oracle の仕様、テスト、または参照元だけを調査するとき
 
 ## hash
-- 9b5ded7a3e36703d0aad83a235b9900ef3d1bdac5828b5f8ca97541dd85e15d4
+- 6e22be0994cd7ecefacc87a2e53b6fc8548f0b25edf99b875b7b8e0a4fb9b858
 
 # `test`
 
 ## Summary
-- pytest による realization test 群と共通 test helper を集約するディレクトリ。CLI、Codex runtime、indexing、oracle review、session、state、設定、prompt、Git/worktree lifecycle など、cmoc の外部挙動・永続状態・安全境界を検証する。個別テストや helper へ進む前に、対象機能の回帰テスト入口を探すための階層。
+- pytest による realization test 群と、テスト実行を支える共通 fixture・helper を収録するディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session、prompt editor などの外部挙動・状態遷移・安全境界を検証する入口であり、個別機能の回帰範囲を確認するときに下位テストへ進む。
 
 ## Read this when
-- cmoc の機能変更や不具合調査で、対応する realization test、統合テスト、または共通 fixture/helper の所在を特定するとき。
-- CLI lifecycle、Codex 実行、indexing、oracle review、session/run、prompt、設定、Git/worktree、通知などの外部契約を回帰テストから確認するとき。
-- 既存のテスト群から、対象機能の検証範囲や安全性・失敗時挙動・永続状態の確認箇所を探すとき。
+- cmoc の外部挙動や回帰テストの対象範囲を機能別に把握するとき
+- 実装変更に対応する realization test、共通 fixture、またはテスト用 helper の入口を探すとき
 
 ## Do not read this when
-- 正本仕様や本番実装の責務・詳細を確認することが目的で、対応する oracle 文書または realization 実装を直接読むべきとき。
-- 単一の helper や個別テストの詳細が既に特定できており、このディレクトリ全体の入口を探す必要がないとき。
-- テスト実行手順や開発規約だけを確認したいときは、repository local の test execution 指示や開発規則を直接読むとき。
+- 正本仕様や本番実装の責務・詳細を確認することが目的のときは、対応する oracle 文書や実装へ直接進む
+- テスト実行手順だけを確認するときは、repository local の test execution 指示を読む
 
 ## hash
-- 5ca71e8c022a6ab06ea1e3f0135b219ef6abb98a112cac05c27f4bd138653a3e
+- dc7f97babe2d3f004e8be8b57cff3331e9186db0db058a69acd43963218ebb16

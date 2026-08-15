@@ -198,10 +198,6 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         events.append("codex")
         assert call_parameter == parameter
 
-    def pre_launch_check() -> None:
-        """TUI 起動前の pre-launch 検査を記録する。"""
-        events.append("check")
-
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
@@ -214,10 +210,9 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         parameter,
         root=root,
         purpose="tui codex",
-        pre_launch_check=pre_launch_check,
     )
 
-    assert events == ["indexing", "check", "codex"]
+    assert events == ["indexing", "codex"]
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "status", "--short").stdout.strip() == ""
 

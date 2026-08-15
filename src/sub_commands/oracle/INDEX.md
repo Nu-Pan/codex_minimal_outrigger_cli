@@ -29,19 +29,21 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの実行入口と、oracle 編集指示から Codex TUI を起動する一連のワークフローを定義する。入力予約・完全プロンプト確定・indexing preflight・TUI 起動前提検証を確認したいときの入口であり、実際の TUI パラメータ構築は builder、入力管理は commons、session 状態判定は runtime_state 側を読む。
+- `cmoc oracle edit` サブコマンドの main-worktree 実行フローを担う実装。入力された oracle 編集指示を受け取り、本命の oracle edit agent call と、正常終了後に行う仕様削減 agent call を順序どおりに起動する。
+- oracle edit の起動前提、session branch と active session の検証、indexing preflight、prompt 編集入力の確定処理を確認したい場合の入口となる。詳細な prompt 編集処理や agent 起動パラメータの構築は、呼び出し先の専用モジュールを読む。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 実行フロー、起動手順、step 管理、または TUI 起動前の検証を変更・調査するとき。
-- oracle 編集指示の入力から完全プロンプト確定、main worktree・session branch・active session の検証までの責務境界を確認するとき。
+- `cmoc oracle edit` の CLI 実行順序、agent call の条件、または main worktree・session branch の前提を変更するとき
+- oracle edit の本命処理と仕様削減処理の責務分担や、正常終了後だけ後続処理を行う制御を確認するとき
+- oracle 編集指示の受付から indexing、起動前検証、agent call までの統合フローを調査するとき
 
 ## Do not read this when
-- oracle edit TUI の起動パラメータ仕様そのものを確認する場合は、直接 launch_tui builder を読む。
-- プロンプト入力の予約・編集・確定処理の詳細を確認する場合は、commons の prompt editor input 実装を読む。
-- branch や session 状態の取得・判定の詳細だけが必要な場合は、runtime_git または runtime_state の実装を直接読む。
+- prompt 編集入力の予約・収集・確定処理そのものを調べるときは、prompt editor 用モジュールを直接読む
+- oracle edit agent call の launch parameter の内容や構築規則を調べるときは、oracle edit 用 launch builder を直接読む
+- 他の oracle サブコマンドの実行フローだけを調べるとき
 
 ## hash
-- b27e98ed1d49bf5dc9abeed805596e51241b6af6afd1efc7cc0628929e3425e7
+- 8eeadcfd957ed5009efd94818f4f452d400c63efb81cade1903c6a377392e0a3
 
 # `investigation.py`
 

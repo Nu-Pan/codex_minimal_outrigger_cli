@@ -202,7 +202,8 @@ def oracle_review(
 
 @oracle_app.command("edit")
 def oracle_edit() -> None:
-    """oracle file を main worktree の Codex TUI で編集する CLI 入口。"""
+    """oracle file を main worktree の 2 回の Codex exec で編集する CLI 入口。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
     cmoc_oracle_edit_impl()
 
 
