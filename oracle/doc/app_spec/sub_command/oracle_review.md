@@ -265,6 +265,8 @@ frontmatter 以下の項目を書く（いずれも、不明な場合は null �
 
 ## レポートの提示方法
 
+- `natural_completion`、`user_interruption`、および `error` のすべての終了経路でレビューレポートを保存する。事前条件違反など、run の隔離実行または通常のレポート生成手順より前に確定したエラーも対象とする。
 - レビューレポートは `{{repo-root}}/.cmoc/gu/ar/report/oracle_review/{{time-stamp}}.md` にファイル保存する
 - 保存したレビューレポートを primary report とする
+- 事前条件違反または早期エラーでは `result: error` とし、`Verdict` にエラー段階と理由を記録する。
 - terminal result にサブコマンド固有の `result` を含める

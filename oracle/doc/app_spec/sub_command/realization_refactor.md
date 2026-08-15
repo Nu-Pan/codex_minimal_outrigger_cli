@@ -156,6 +156,7 @@
 ## fork report、終了 log、および終了コード
 
 - report は Markdown + YAML Front Matter とする。
+- `natural_completion`、`completed_with_unresolved`、`user_interruption`、および `error` のすべての終了経路で report を保存する。共通 fork 事前条件違反など、run branch、run worktree、refactor state、または通常の report 生成処理より前に確定したエラーも対象とする。
 - 共通 run 項目に加え、refactor state のフル path と `completion_reason` を含める。
 - `completion_reason` は `natural_completion | completed_with_unresolved | user_interruption | error` とする。
 - 本文には以下を含める。
@@ -171,6 +172,7 @@
 - run branch の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。
 - ユーザー中断後またはエラー後は新しい agent call を行わず、確定済みの変更 path と所見情報から要約する。
 - `{{repo-root}}/.cmoc/gu/ar/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。
+- report 生成時点で確定していない項目は `null` または未実行とする。エラーになった処理段階、確定済みの部分作業、エラー、および関連ログは記録する。
 - サブコマンド終了イベントには `completion_reason`、unresolved target の件数、および report のフル path を含める。
 - `natural_completion`、`completed_with_unresolved`、および `user_interruption` は正常系の終了コードとし、`error` は非 0 とする。
 - report、terminal result、およびサブコマンド終了イベントの `completion_reason` から、完全な自然完了、unresolved 付き完了、ユーザー中断、およびエラーを判別可能にする。

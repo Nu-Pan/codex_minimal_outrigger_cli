@@ -175,7 +175,7 @@ current pointer の切替後に cleanup だけが失敗した場合は、publica
 
 本コマンドは中断可能サブコマンドとする。共通動作は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする。
 
-中断要求後は、新しい normalization、verification、correction、retry、または Codex call を開始しない。中断時は新しい active generation、Markdown report、または current pointer を publication しない。
+中断要求後は、新しい normalization、verification、correction、retry、または Codex call を開始しない。中断時は新しい active generation、正常 report、`incomplete` 診断 report、または current pointer を publication しない。
 
 再開に必要な report cut、reference、および正式な checkpoint だけを保持する。次回の `cmoc feedback report` は同じ cut を検証して再開する。cut 固定後の observation は次の cut へ残す。
 
@@ -252,6 +252,29 @@ active generation ID は含めない。診断 report の先頭には、正常 pu
 `inconclusive` candidate も、安定した candidate ID 順で表示する。各 candidate には、candidate ID、summary、判定不能となった reason、および確認できた current evidence を示す。current evidence が空の場合は、確認できた evidence がないことを明示する。
 
 両セクションの current evidence は、削除され得る report cut reference だけを指す link にしない。人間が診断 report だけから確認できる path、subject、probe、location、fingerprint、または finding を materialize する。
+
+### 中断・エラー時の invocation summary report
+
+`user_interruption` と `error` では、正常 report または `incomplete` 診断 report の代わりに、今回の invocation summary report を primary report として保存する。事前条件違反など、report cut の固定前に確定したエラーも対象とする。
+
+正常 report、`incomplete` 診断 report、または publication の失敗は、invocation summary report を伴う `error` とする。invocation summary report 自体を保存できない場合だけ、共通の report 保存基盤に関する internal failure とする。
+
+invocation summary report は Markdown と YAML Front Matter で構成し、次へ保存する。
+
+```text
+{{repo-root}}/.cmoc/gu/ar/report/feedback/invocation/{{time-stamp}}.md
+```
+
+front matter には、次の情報を含める。
+
+- command、生成日時、repo root、および確定できた場合の session branch
+- terminal result の共通分類と終了コード
+- report cut の ID と固定日時。cut を固定していない場合は `null`
+- 正常 publication、`incomplete` 診断、および current pointer 更新の実行状況
+
+本文には、今回の invocation で開始・完了した処理段階、確定済みの checkpoint と部分結果の件数、中断またはエラーの理由、維持した state、未実行の publication と cleanup、必要な次の操作、および関連する診断用サブコマンドログと Codex call log を要約する。
+
+invocation summary report は feedback publication または active state の一部ではなく、current pointer の参照先にしない。candidate を publication 済みの issue または active issue として扱ってはならない。中断時の保存は、正式な feedback Markdown report の publication には該当しない。
 
 ## 終了コード
 

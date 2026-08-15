@@ -20,13 +20,22 @@ internal failure は、仕様で想定済みの失敗へ変換されていない
 
 - 未捕捉例外
 - 実装上の invariant 違反
+- primary report を保存できず、最外側の非対話末端サブコマンドの完了契約を確定できない障害
 - handled failure に分類できない想定外の内部障害
 
 終了コードだけから handled failure と internal failure を分類してはならない。
 
+## エラー終了の確定
+
+- handled failure と internal failure は、個別仕様が定める state 確定、rollback、および後処理を行う。
+- 最外側の非対話末端サブコマンドは、エラーまでに確定した作業内容とエラー終端結果を、個別仕様が定める primary report に保存する。
+- primary report を保存した後に、`error` の terminal result とサブコマンド終了イベントを確定する。
+
+通常処理の失敗は、primary report を伴う handled failure または internal failure として確定する。primary report 自体を保存できない場合は、その結果に代えて report 保存基盤の internal failure を確定し、保存を確認できない report の役割または path を表示しない。
+
 ## handled failure の表示
 
-- その場で処理を中断し、個別仕様が定める state 確定、rollback、report、および後処理を行う
+- その場で処理を中断し、本書のエラー終了の確定処理を行う
 - エラー terminal result には、簡潔な理由、必要な詳細、関連する path、実際に取り得る次の操作、終了コード、および診断用サブコマンドログのフルパスを含める
 - 次の操作が 1 つしかない場合は、架空の選択肢を複数提示しない
 - stdout と stderr のどちらにも、スタックトレースまたはコールスタックを表示しない
@@ -34,6 +43,7 @@ internal failure は、仕様で想定済みの失敗へ変換されていない
 
 ## internal failure の表示
 
+- primary report 保存基盤以外の internal failure では、本書のエラー終了の確定処理を行う
 - internal failure のスタックトレースをサブコマンドログへ保存する
 - スタックトレースを console に表示する場合は stderr に表示し、簡潔なエラー terminal result より前に表示する
 - エラー terminal result を、そのサブコマンドの最後の console 出力にする

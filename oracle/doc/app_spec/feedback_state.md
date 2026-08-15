@@ -39,10 +39,13 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
 
 {{repo-root}}/.cmoc/gu/ar/report/feedback/
 ├── {{time-stamp}}.md
-└── incomplete/{{time-stamp}}.md
+├── incomplete/{{time-stamp}}.md
+└── invocation/{{time-stamp}}.md
 ```
 
 `{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session と run の join または abandon は、feedback state を取り込み、破棄、巻き戻し、または複製してはならない。
+
+`invocation/{{time-stamp}}.md` は `cmoc feedback report` の中断またはエラーを要約する primary report であり、feedback state または publication artifact ではない。current pointer の参照先にしない。内容と生成条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` を正本とする。
 
 state root または current pointer が存在しない状態は、有効な初期状態とする。空 directory や `.gitkeep` は作らない。
 

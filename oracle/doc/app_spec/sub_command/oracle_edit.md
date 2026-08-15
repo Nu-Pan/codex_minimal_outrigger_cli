@@ -65,7 +65,7 @@
 7. agent call 前の条件を検査する。
 8. 本命 agent call を新しい `codex exec` session で実行する。
 9. 本命 agent call が成功した場合だけ、同じオリジナルのユーザー指示から仕様削減用 `AgentCallParameter` を構築し、新しい `codex exec` session で実行する。
-10. 最外側の `cmoc oracle edit` の終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
+10. 最外側の `cmoc oracle edit` の primary report を保存して終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
 
 - 本命 agent call と仕様削減 agent call の間に、indexing agent call、自動 commit、または別の補完用 agent call を挟まない。
 - 本命 agent call が失敗した場合は、仕様削減 agent call を開始せずエラー終了する。
@@ -83,7 +83,15 @@
 - 終了状態にかかわらず、それまでに filesystem 上へ残った差分を維持する。
 - 起動前の既存未コミット差分と 2 回の agent call による変更を、invocation 固有の成果物として分離しない。
 - 終了後に自動 commit、rollback、stash、差分修正、branch または worktree の作成、変更 path の成果物認定、および indexing を行わない。
-- oracle edit 固有の `result`、`completion_reason`、または report を新設しない。
+- oracle edit 固有の `result` または `completion_reason` を新設しない。
+
+## primary report
+
+- `natural_completion` と `error` のすべての終了経路で、oracle edit 実行要約を primary report として保存する。doctor preprocess、エディタ入力、indexing preflight、または agent call 前の条件で終了した場合も対象とする。
+- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/ar/report/oracle_edit/{{time-stamp}}.md` に保存する。
+- front matter には、command、生成日時、repo root、terminal result の共通分類、終了コード、および本命・仕様削減 agent call の実行状況を含める。各実行状況から、未開始、開始済み、成功、および失敗を判別可能にする。
+- 本文には、各 agent call の実行状況と確定結果、terminal result の要約、warning またはエラー、必要な次の操作、診断用サブコマンドログ、および実行した agent call に対応する Codex call log を含める。
+- 起動前の既存未コミット差分と agent call による変更を分離しない。report では、変更 path または意味的な変更内容をこの invocation 固有の成果として断定しない。
 
 ## console、ログ、および Windows toast
 

@@ -46,3 +46,10 @@
 
 - 1 つの `{{cmoc-session-home-branch}}` に対して active な `{{cmoc-session-branch}}` は高々 1 つとする。
 - detached HEAD, `{{remote-tracking-branch}}`, commit hash, `{{cmoc-managed-branch}}` は `{{cmoc-session-home-branch}}` として扱わない。
+
+## primary report
+
+- `natural_completion` と `error` のすべての終了経路で、session fork 実行要約を primary report として保存する。doctor preprocess または事前条件で終了した場合も対象とする。
+- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/ar/report/session/fork/{{time-stamp}}.md` に保存する。
+- front matter には、command、生成日時、repo root、terminal result の共通分類、終了コード、session ID、home branch、session branch、session fork commit、および session state の実行前後の値を含める。確定できなかった値は `null` とする。
+- 本文には、branch の作成と checkout、session state file の作成と状態遷移、失敗時の rollback または残存資源、warning またはエラー、必要な次の操作、および関連する診断用サブコマンドログを要約する。
