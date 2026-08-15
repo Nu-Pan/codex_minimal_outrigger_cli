@@ -636,7 +636,7 @@
     "last_investigated_at": "2026-07-24_17-20_23_491473000"
   },
   "src/acp/builder/oracle/edit/launch_tui.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "7ae5d0a9e77b7cc62a050f8eb6bba220dcc501423e1bbf47bb6361478ecfe557",
     "last_investigated_at": "2026-08-03_16-01_04_994310000"
@@ -648,7 +648,7 @@
     "last_investigated_at": "2026-07-24_17-44_28_692016000"
   },
   "src/acp/builder/oracle/investigation/launch_tui.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "96b75359027bd8481745a87868524bee4e86525e77f0f65b4b519ff3c00a126a",
     "last_investigated_at": "2026-08-03_16-24_07_697647000"
@@ -822,7 +822,7 @@
     "last_investigated_at": "2026-08-13_02-48_49_448894000"
   },
   "src/commons/prompt_editor_input.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f3eac66d141d815806253a176c70dd6d9e83e8ecdea2d0ffcf68db71b2021567",
     "last_investigated_at": "2026-08-09_17-05_50_513931000"
@@ -930,7 +930,7 @@
     "last_investigated_at": "2026-08-12_00-44_32_436956000"
   },
   "src/commons/runtime_paths.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "4eae4e541f9b83357378196e3c7349a0369a99264dbb3a6aa3786bfd7db8fccc",
     "last_investigated_at": "2026-08-05_21-20_06_841380000"
@@ -1032,13 +1032,13 @@
     "last_investigated_at": "2026-07-25_07-48_18_213857000"
   },
   "src/sub_commands/oracle/edit.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "0b47a7f3dccecd7d83a526a3a7203e743a2912e63d47d3267d10cd68de6dbe67",
     "last_investigated_at": "2026-08-12_13-39_41_635526000"
   },
   "src/sub_commands/oracle/investigation.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "d0a41777b0c16eed6008bafb57a56bff6a1694711b6b0ac0fad0d90eef3a122c",
     "last_investigated_at": "2026-08-09_13-21_12_304085000"
@@ -1164,7 +1164,7 @@
     "last_investigated_at": "2026-08-14_20-47_10_261509000"
   },
   "src/sub_commands/tui.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "cacb2eae3a201d06057dd49a7879e0f55a6d8ec151e0568fda9487924961cb2d",
     "last_investigated_at": "2026-08-14_18-04_39_980287000"
