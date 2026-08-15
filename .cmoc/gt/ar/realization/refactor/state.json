@@ -204,7 +204,7 @@
     "last_investigated_at": "2026-08-13_20-37_49_935192000"
   },
   "oracle/doc/app_spec/usage.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "39da44eb91651a997184df522e971bdc5bad67987fc185cf451173fd7e95b4fb",
     "last_investigated_at": "2026-08-12_23-15_26_031994000"
@@ -282,7 +282,7 @@
     "last_investigated_at": "2026-08-12_13-31_35_278839000"
   },
   "oracle/src/oracle/acp_builder/basic.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "fea717dae8c45705bc5fb1af10be854cbfdbb80b1b58c8d24eb2713a1998da67",
     "last_investigated_at": "2026-08-12_20-00_41_508664000"
@@ -323,11 +323,11 @@
     "last_investigated_sha256": "c76b60d8d374bb449415c931bb74e62dda231a33d40313ec627b16e6c644fd78",
     "last_investigated_at": "2026-08-14_11-23_24_380179000"
   },
-  "oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py": {
+  "oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "0372a2c28b46dc307516e2815b601aef506801d9e38295629c9e630970a2bb00",
-    "last_investigated_at": "2026-08-12_23-24_32_327269000"
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py": {
     "investigation_required": true,
@@ -456,7 +456,7 @@
     "last_investigated_at": "2026-08-09_08-08_43_891057000"
   },
   "oracle/src/oracle/other/path_model.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "83cea74218b4c0877790ce4230ac7e1e8d0485e3c6d81fb290596f5d6709c70e",
     "last_investigated_at": "2026-08-13_10-21_15_700070000"
