@@ -91,19 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と開発ルールを領域別に案内する上位ドキュメント群。CLI のアプリケーション仕様、branch・commit・worktree のモデル、不採用案の検討記録、開発規則への入口を提供し、具体的な仕様・実装・テスト手順へ進むためのルーティング起点となる。
+- cmoc の正本仕様を収める入口。利用者向け CLI・workflow・agent call・session/run lifecycle・prompt・feedback・ログ・通知などの共通契約を扱い、個別仕様や横断的な挙動の確認先を示す。
+- oracle 側の agent call・prompt 構築実装群への入口。用途別の呼び出し構築、モデル・推論・アクセス設定、quota probe、prompt 合成、共通 Standard、routing、Structured Markdown、パスモデル、feedback 入力契約を扱い、実装上の構築経路を調べる際の起点となる。
 
 ## Read this when
-- cmoc の正本仕様を横断して、CLI の外部挙動、状態・branch model、開発環境、実装配置、テスト要件や実行手順の参照先を選ぶとき
-- 複数の仕様領域にまたがる変更や調査で、アプリケーション仕様、branch model、開発ルールなどの下位文書へ進む入口を判断するとき
-- 採用されなかった realization refactor の方式や検査・状態管理案の背景を確認するとき
+- cmoc の利用者向け挙動や複数機能にまたがる正本仕様を確認するとき
+- CLI、workflow、agent call、session/run、prompt、feedback、ログ、通知などの個別仕様へ進む入口を探すとき
+- oracle 側の agent call 構築、prompt 合成、共通設定、ファイルアクセス規則、Structured Output、feedback 入力契約を調査・変更するとき
 
 ## Do not read this when
-- 特定のアプリケーション仕様、branch・worktree の用語、開発規則、テスト実行手順だけを確認する場合は、対応する下位文書へ直接進む
-- 実装ファイル、テストファイル、Structured Output schema、feedback の専門仕様など、oracle/doc 配下の案内だけでは足りない具体的内容を確認する場合
+- 対象となる個別仕様書が既に特定でき、その本文だけで確認できるとき
+- realization implementation や realization test の具体的な実装・テスト手順だけを調べるとき
+- 開発環境、テスト実行手順、INDEX.md 生成処理など専用の手順が直接の入口となるとき
 
 ## hash
-- 19ab4bf2d2b856752c44f2ceb91bbf0e5f5b00986162268ed0b2b1a313866b1e
+- c85f6052327292e3b1bed1a1d71d05ea5533aafc6915b0b9f39ab4787ceff5a2
 
 # `pyproject.toml`
 

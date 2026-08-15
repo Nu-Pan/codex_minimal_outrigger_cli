@@ -75,21 +75,20 @@
 # `oracle_edit.md`
 
 ## Summary
-- oracle file をユーザー指示に基づいて直接編集する `cmoc oracle edit` サブコマンドの正本仕様。目的、入力プロンプト、doctor/indexing 前処理、TUI 起動条件・パラメータ、編集境界、終了時の差分保持、中断・排他制御、ログ方針を定める。
-- oracle edit の実行順序や TUI agent に許可・禁止される操作、main worktree・active session branch などの起動前提を確認する必要がある場合の入口。
+- `cmoc oracle edit` のサブコマンド仕様を定義する文書。oracle file へのユーザー指示の反映と仕様削減を行う2回の agent call、起動前検査、編集境界、実行順序、終了状態、差分・ログ・通知・中断制御の契約を扱う。oracle edit の挙動や責務を確認する際の入口であり、個別の prompt 構築規則、doctor、indexing、ログ、toast の詳細仕様へ進む前の全体仕様として読む。
 
 ## Read this when
-- `cmoc oracle edit` の挙動、引数、ユーザー指示の受け渡し、TUI 起動条件または起動パラメータを変更・確認するとき
-- oracle file の編集権限、realization file・INDEX.md・AGENTS.md の扱い、git 操作の禁止範囲を確認するとき
-- TUI 終了後の差分保持、終了コード、中断、排他制御、ログの仕様を確認するとき
+- `cmoc oracle edit` のサブコマンドの目的、実行順序、agent call の構成、成功・失敗条件を確認または変更するとき
+- oracle file の編集境界、worktree・branch 条件、既存差分の扱い、終了後の差分維持を確認するとき
+- oracle edit における console・ログ・terminal result・Windows toast、または中断・排他制御の責務を確認するとき
 
 ## Do not read this when
-- oracle file の編集対象判定基準やプロンプト入力形式の詳細を確認する場合は、本文が正本として参照する各 app_spec 文書を直接読むとき
-- 実際の TUI builder の実装や初期プロンプト生成ロジックを調査する場合は、本文が指定する realization file を直接読むとき
-- 他のサブコマンドの fork・join・abandon lifecycle や run section の仕様を確認する場合
+- prompt editor input や prompt の共通形式だけを確認したい場合は、直接その正本仕様を読む
+- doctor preprocess、indexing preflight、Codex exec の共通 retry 規約、ログ形式、Windows toast の詳細だけを確認したい場合は、それぞれの参照先を直接読む
+- oracle edit ではなく別のサブコマンドの仕様や、oracle file の個別内容を扱う場合
 
 ## hash
-- 6962efaec053bf38be22a00c113ddfc9352df41b9e13069088db6c6d00efc1d2
+- 2b60029583e8596a56533c23a70726e0974d62e11b5215680ea3c0684cae3a1c
 
 # `oracle_investigation.md`
 

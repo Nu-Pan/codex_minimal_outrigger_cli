@@ -1,21 +1,20 @@
 # `edit`
 
 ## Summary
-- oracle file 編集用の agent call 起動処理を配置するディレクトリです。対話型 TUI の起動パラメータや、編集用 prompt を構築・保存する実装への入口になります。現時点では空のサブディレクトリと、`cmoc oracle edit` の起動パラメータを構築する実装を含みます。
+- oracle 編集フローに関する起動定義を扱うディレクトリです。空の `fork` と、`cmoc oracle edit` の2段階 agent call の固定パラメータを構築する `launch_exec.py` を入口として、oracle 編集の起動条件や編集・仕様削減フローの設定を確認します。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動条件、起動パラメータ、oracle file 編集用 prompt の構築または保存方法を確認・変更するとき。
-- oracle 編集 agent call のモデル、推論強度、アクセスモード、作業ディレクトリ、indexing preflight の責務を確認するとき。
-- このディレクトリにファイルが追加され、その内容や用途を確認する必要があるとき。
+- `cmoc oracle edit` の本命編集呼び出しまたは成功後の仕様削減呼び出しの起動パラメータを変更・確認するとき。
+- ユーザー指示、oracle 専用ファイルアクセス、完全 prompt の保存、推論設定、インデックス事前処理の組み合わせを確認するとき。
+- このディレクトリに追加されたファイルの内容や用途を確認するとき。
 
 ## Do not read this when
-- oracle 編集用 prompt の共通構築規則だけを確認したいときは、prompt builder の実装を直接読む。
-- agent call の基本型やアクセスモードの定義だけを確認したいときは、acp builder の基本型定義を直接読む。
-- oracle 編集処理の実行本体や TUI UI 自体を調査するときは、それぞれの実装入口へ直接進む。
-- このディレクトリ配下の具体的なファイルを直接確認できるときは、ディレクトリ入口を読む必要はありません。
+- oracle file の具体的な編集規則や正本仕様そのものを確認したいときは、関連する oracle file を直接読む。
+- `codex exec` の一般的な実行機構や共通データ型を確認したいときは、共通実装や prompt builder を直接読む。
+- このディレクトリ配下の具体的なファイルを直接確認できるとき。
 
 ## hash
-- ee0fc09fe5574d1bfdb10201b5c6008822b9bdfe4ff76c2737ad9182b2c5277d
+- c90bd10a113230da106132b4a51fd62339b459c35acee3274633fb5d50ab30e2
 
 # `investigation`
 

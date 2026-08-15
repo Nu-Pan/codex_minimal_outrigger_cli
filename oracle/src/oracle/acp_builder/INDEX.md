@@ -1,17 +1,19 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェント呼び出しに必要な論理モデルクラス、推論強度、ファイルアクセスモード、および呼び出し設定を定義する基礎データモデル。バックエンド固有のモデル解決やアクセス規則の具体化ではなく、呼び出しパラメータの共通契約を確認するための入口。
+- AI コーディングエージェント呼び出しに渡すパラメータの論理モデルと、モデルクラス、推論強度、ファイルアクセスモードを定義する。完全な prompt、Structured Output schema、実行 cwd、indexing preflight の扱いを含む agent call 構築の入口であり、これらの呼び出し条件を変更・確認するときに読む。バックエンド固有のモデル名解決やアクセス制限文面の具体的な構築は realization 側・別の正本仕様へ進む。
 
 ## Read this when
-- Agent call のパラメータ構造、モデル選択区分、推論強度、ファイルアクセスモード、または indexing preflight の既定値を確認・変更するとき
+- cmoc の agent call パラメータ、モデル選択、reasoning effort、ファイルアクセスモード、prompt、Structured Output schema、実行 cwd、indexing preflight の仕様や型を変更・確認するとき。
+- builder が呼び出し単位の設定を組み立てる責務と、論理値を定義する列挙型を確認するとき。
 
 ## Do not read this when
-- バックエンドが受理可能なモデル名への解決やファイルアクセス規則の具体的な文面を確認するとき
-- Agent call の生成処理や個別 builder の挙動だけを調べるとき
+- バックエンドが受理可能な具体的モデル名への解決方法を調べるとき。
+- ファイルアクセスモードごとの Codex CLI sandbox 制限文面や実装責務を調べるときは、指定された正本仕様または realization 側を直接読む。
+- agent call パラメータを扱わず、個別のモデル実装・CLI 実行・Structured Output schema の内容だけを確認するとき。
 
 ## hash
-- fea717dae8c45705bc5fb1af10be854cbfdbb80b1b58c8d24eb2713a1998da67
+- 0cadb3701b12e2d826b22976ee92f31098e71a4315020984e0fabb3bb40930a7
 
 # `feedback`
 
@@ -53,21 +55,18 @@
 # `oracle`
 
 ## Summary
-- oracle 用 ACP agent call の起動定義をまとめる領域です。oracle file の調査・編集用 TUI 起動処理と、oracle review の所見列挙・理由検証・採否判定・統合に関する prompt、起動条件、Structured Output 契約への入口を提供します。各処理の具体的な実装や契約を確認する場合は、対応する下位ディレクトリへ進みます。
+- oracle に関する agent call の起動定義をまとめたディレクトリ。編集、調査、レビューの各フローへの入口を提供し、共通の prompt 構築や ACP 型定義ではなく、oracle 用の呼び出し条件を確認したい場合に読む。
 
 ## Read this when
-- oracle file の調査または編集に使う agent call の起動処理を確認・変更するとき。
-- oracle review における所見の列挙、妥当性理由の検証、採否判定、重複・矛盾の統合に関する agent call 定義や出力契約を確認するとき。
-- oracle 用 agent call の prompt、ファイルアクセス範囲、作業ディレクトリ、モデル・推論設定、indexing preflight を下位領域へ振り分ける入口が必要なとき。
+- oracle の編集・調査・レビューに関する agent call の起動条件や prompt の組み立てを確認・変更するとき。
+- 対象フローの下位ディレクトリを選ぶ前に、oracle 用 agent call 定義の全体構成を把握するとき。
 
 ## Do not read this when
-- oracle investigation の起動処理だけを確認するときは、investigation の実装入口へ直接進む。
-- oracle edit の起動処理だけを確認するときは、edit の実装入口へ直接進む。
-- oracle review の特定の所見処理や Structured Output 契約だけを確認するときは、review 配下の対応する実装または契約へ直接進む。
-- prompt の共通構築規則、ACP 基本型、パス解決、oracle file の実行本体を確認するときは、それぞれの実装入口を直接読む。
+- 共通 prompt 構築、パス解決、ACP パラメータ型など、oracle 固有でない仕組みだけを確認したいとき。
+- 実際の oracle file の仕様や、個別フローの具体的な schema・実装だけを確認したいときは、該当する下位対象を直接読む。
 
 ## hash
-- f4ea4450081c5a853de57de50b60b9388461b5f66a71efc47a74b5c7fec95b9f
+- 6589cc151648441475d687cda9a1d41f17d08535ee7e35a4646062cbb9f300c6
 
 # `quota_probe.py`
 

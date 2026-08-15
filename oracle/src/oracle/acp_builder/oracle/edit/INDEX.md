@@ -12,19 +12,20 @@
 ## hash
 - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
-# `launch_tui.py`
+# `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` の対話型 TUI 起動パラメータを構築する関数を定義する。oracle file 編集用の完全 prompt を生成・保存し、固定モデル・推論強度・ファイルアクセス権・作業ディレクトリ・indexing preflight を含む `AgentCallParameter` を返す。関連する prompt 構築、パス解決、構造化文書レンダリング、agent call 基本型の実装を確認する入口となる。
+- 対象は `cmoc oracle edit` 用に起動する2回の `codex exec` の固定パラメータを構築する実装です。初回の本命編集呼び出しでは、ユーザー指示を埋め込んだ完全 prompt を生成してログへ保存し、oracle 専用書き込み・最大推論・インデックス事前処理などの起動条件を設定します。成功後の仕様削減呼び出しでは、現在の oracle と未コミット差分を根拠に仕様削減を依頼する prompt と同じ oracle 専用の起動条件を構築します。oracle 編集起動の設定や、2段階の編集・削減フローのパラメータを変更・確認するときの入口です。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動条件、起動パラメータ、oracle file 編集用 prompt の構築または保存方法を変更・調査するとき。
-- oracle 編集 agent call のモデル、推論強度、アクセスモード、作業ディレクトリ、preflight 設定の責務を確認するとき。
+- `cmoc oracle edit` の本命 agent call または成功後の仕様削減 agent call の起動パラメータを変更・確認するとき。
+- ユーザー指示、oracle 専用ファイルアクセス、完全 prompt の保存、推論設定、インデックス事前処理の組み合わせを確認するとき。
+- oracle 編集処理の2段階フローにおける起動定義の責務を調査するとき。
 
 ## Do not read this when
-- oracle 編集用の完全 prompt の共通構築規則だけを確認したい場合は、prompt builder の実装を直接読む。
-- agent call の基本型やアクセスモードの定義だけを確認したい場合は、acp builder の基本型定義を直接読む。
-- oracle 編集処理の実行本体や TUI UI 自体を調査する場合は、それぞれの実装入口へ直接進む。
+- oracle file の具体的な編集規則や正本仕様そのものを確認したいときは、関連する oracle file を直接読む。
+- `codex exec` の一般的な実行機構や共通データ型を確認したいときは、この対象ではなく `AgentCallParameter`、prompt builder、または関連する共通実装を直接読む。
+- INDEX.md の生成・更新方法だけを確認したいとき。
 
 ## hash
-- a1a4b2a680aa8e647859b2c399f5fb6b437f7ce36b17d578ace963f846911714
+- a7a2f94a39c0d9bd8f4bcba298cdf21cf410bd275a658aa157a4902d3e145ce5
