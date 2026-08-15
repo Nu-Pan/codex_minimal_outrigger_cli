@@ -1,18 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- AI エージェント呼び出しの論理パラメータ定義と、用途別の agent call 構築定義をまとめる領域。共通の呼び出しモデルを確認する `basic.py`、feedback・indexing・quota probe・oracle・realization・session・tui などの用途別定義への入口を提供する。
+- cmoc の各 agent call 用パラメータ構築を集約する領域。共通の論理モデルから indexing、oracle、quota probe、realization、session、TUI など個別用途の起動定義へ進むための入口であり、prompt、Structured Output、モデル・推論設定、cwd、アクセス権限、preflight の確認範囲を横断して把握できる。
 
 ## Read this when
-- AI エージェント呼び出しの用途別設定や、各フローの prompt・モデル・推論強度・実行権限・cwd・Structured Output schema の対応を調査・変更するとき。
-- 用途に応じた agent call 定義の下位対象を選び、呼び出し条件の全体構成を把握するとき。
+- 複数の cmoc サブコマンドにまたがる agent call 起動パラメータの構成や責務分担を確認するとき。
+- 個別の agent call 定義へ進む前に、共通の論理モデルと用途別の下位領域の対応を把握するとき。
+- agent call の prompt、Structured Output、実行条件、アクセス権限、モデル・推論設定を用途別に調査するとき。
 
 ## Do not read this when
-- 個別の oracle file、realization implementation、realization test、CLI 実行処理など、agent call 構築以外の具体的な仕様や実装を確認するとき。
-- 共通 prompt 構築、ACP の型定義、パス解決など、用途別 agent call 定義に固有でない仕組みだけを調べるとき。
+- 特定のサブコマンドの起動条件だけを確認すれば足りる場合は、対応する下位領域を直接読むとき。
+- agent call の共通型や完全 prompt 構築の実装だけを確認するときは、共通定義を直接読むとき。
+- oracle や realization の具体的な仕様、実装、テスト内容を確認するときは、それぞれの正本・実装・テスト対象を直接読むとき。
 
 ## hash
-- 9a5fe7bfaac3187cbc4b0d3b707dc3d2de4e003b6afecbc13eec0f3014866856
+- 7a7965beca8c1704c27e83d4cadf36bfbbf03b3769a0f2841a6457a2d093c7d9
 
 # `feedback`
 

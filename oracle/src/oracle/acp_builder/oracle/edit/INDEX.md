@@ -15,17 +15,17 @@
 # `launch_exec.py`
 
 ## Summary
-- 対象は `cmoc oracle edit` 用に起動する2回の `codex exec` の固定パラメータを構築する実装です。初回の本命編集呼び出しでは、ユーザー指示を埋め込んだ完全 prompt を生成してログへ保存し、oracle 専用書き込み・最大推論・インデックス事前処理などの起動条件を設定します。成功後の仕様削減呼び出しでは、現在の oracle と未コミット差分を根拠に仕様削減を依頼する prompt と同じ oracle 専用の起動条件を構築します。oracle 編集起動の設定や、2段階の編集・削減フローのパラメータを変更・確認するときの入口です。
+- `cmoc oracle edit` が起動する本命 agent call と、成功後の仕様削減 agent call の `codex exec` パラメータ構築を担う。ユーザー指示を完全 prompt に組み込み、oracle-only の書き込み範囲、モデル・推論設定、作業ディレクトリ、Structured Output 設定、索引付け前処理の有無を定義する。oracle 編集起動条件や、仕様変更後の削減・整合性調整の起動条件を確認する際の入口となる。
 
 ## Read this when
-- `cmoc oracle edit` の本命 agent call または成功後の仕様削減 agent call の起動パラメータを変更・確認するとき。
-- ユーザー指示、oracle 専用ファイルアクセス、完全 prompt の保存、推論設定、インデックス事前処理の組み合わせを確認するとき。
-- oracle 編集処理の2段階フローにおける起動定義の責務を調査するとき。
+- `cmoc oracle edit` の本命または仕様削減 agent call の起動パラメータを変更・確認するとき
+- oracle 編集用 prompt の構成、ユーザー指示の埋め込み、ファイルアクセスモード、起動前索引付け設定を確認するとき
+- 本命成功後の仕様削減 call に渡す参照境界や、既存未コミット差分の扱いを確認するとき
 
 ## Do not read this when
-- oracle file の具体的な編集規則や正本仕様そのものを確認したいときは、関連する oracle file を直接読む。
-- `codex exec` の一般的な実行機構や共通データ型を確認したいときは、この対象ではなく `AgentCallParameter`、prompt builder、または関連する共通実装を直接読む。
-- INDEX.md の生成・更新方法だけを確認したいとき。
+- oracle file の編集ルールや仕様削減そのものの正本規範を確認する場合は、関連する oracle の規範文書を直接読む
+- 一般的な agent call パラメータや共通 prompt 構築の挙動だけを確認する場合は、対応する共通 builder を直接読む
+- `cmoc oracle edit` 以外のコマンドの起動パラメータを確認する場合
 
 ## hash
-- a7a2f94a39c0d9bd8f4bcba298cdf21cf410bd275a658aa157a4902d3e145ce5
+- 24b45a5f20509912affc623b82127fcd96be5aa14aa03b618f05005829a2bca5

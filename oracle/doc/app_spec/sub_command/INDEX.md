@@ -75,20 +75,24 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` のサブコマンド仕様を定義する文書。oracle file へのユーザー指示の反映と仕様削減を行う2回の agent call、起動前検査、編集境界、実行順序、終了状態、差分・ログ・通知・中断制御の契約を扱う。oracle edit の挙動や責務を確認する際の入口であり、個別の prompt 構築規則、doctor、indexing、ログ、toast の詳細仕様へ進む前の全体仕様として読む。
+- `cmoc oracle edit` のサブコマンド仕様。oracle file へのユーザー指示を受け取り、本命編集と仕様削減の2回の独立した `codex exec` を直列実行する流れ、起動前検査、編集境界、失敗時の扱い、ログ・通知、終了後の差分維持を定める。oracle 編集処理や、その実行順序・権限・結果を変更または調査する際の入口となる。
 
 ## Read this when
-- `cmoc oracle edit` のサブコマンドの目的、実行順序、agent call の構成、成功・失敗条件を確認または変更するとき
-- oracle file の編集境界、worktree・branch 条件、既存差分の扱い、終了後の差分維持を確認するとき
-- oracle edit における console・ログ・terminal result・Windows toast、または中断・排他制御の責務を確認するとき
+- `cmoc oracle edit` の実行フロー、editor 入力、prompt 構築、agent call の起動条件を変更・確認するとき
+- 本命 agent call と仕様削減 agent call の責務、独立性、失敗時の処理を確認するとき
+- oracle file の編集境界、差分の扱い、git 操作禁止、indexing preflight の位置づけを確認するとき
+- サブコマンドのログ、terminal result、Windows toast、Codex call log の記録規則を変更・確認するとき
+- 中断・排他制御や、終了後に自動 commit・rollback・indexing を行わない契約を確認するとき
 
 ## Do not read this when
-- prompt editor input や prompt の共通形式だけを確認したい場合は、直接その正本仕様を読む
-- doctor preprocess、indexing preflight、Codex exec の共通 retry 規約、ログ形式、Windows toast の詳細だけを確認したい場合は、それぞれの参照先を直接読む
-- oracle edit ではなく別のサブコマンドの仕様や、oracle file の個別内容を扱う場合
+- oracle file の編集判断基準そのものを確認する場合は `misc_spec.md` を直接読む
+- editor 入力の初期値や確定手順を確認する場合は `prompt_editor_input.md` または対応する実装を直接読む
+- prompt の共通形式や `codex exec` の retry・保存規則を確認する場合は `prompt_standard.md` と `codex_exec_rule.md` を直接読む
+- doctor preprocess、indexing、test、toast など個別の共通規約だけを確認する場合は、それぞれの正本文書を直接読む
+- `cmoc oracle investigation` や realization の編集境界を確認する場合は、このサブコマンド仕様ではなく対象機能の仕様を読む
 
 ## hash
-- 2b60029583e8596a56533c23a70726e0974d62e11b5215680ea3c0684cae3a1c
+- 6021d1c44497f5e1b57469fd7d0762846ae78c75a8d852ae4cd90a6e2d0ecb1c
 
 # `oracle_investigation.md`
 

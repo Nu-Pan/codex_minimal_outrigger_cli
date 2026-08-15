@@ -55,18 +55,20 @@
 # `oracle`
 
 ## Summary
-- oracle に関する agent call の起動定義をまとめたディレクトリ。編集、調査、レビューの各フローへの入口を提供し、共通の prompt 構築や ACP 型定義ではなく、oracle 用の呼び出し条件を確認したい場合に読む。
+- `cmoc oracle` 系コマンドの agent call 起動パラメータ構築を扱う領域です。oracle 編集・調査・レビューについて、完全 prompt、読み書き範囲、作業ディレクトリ、モデル・推論設定、Structured Output、起動前処理を確認する入口になります。編集、調査、レビューの具体的な定義は各下位領域へ分かれています。
 
 ## Read this when
-- oracle の編集・調査・レビューに関する agent call の起動条件や prompt の組み立てを確認・変更するとき。
-- 対象フローの下位ディレクトリを選ぶ前に、oracle 用 agent call 定義の全体構成を把握するとき。
+- `cmoc oracle edit`、`cmoc oracle investigation`、または `cmoc oracle review` の agent call 起動条件や prompt 構築を調査・変更するとき
+- oracle 向け agent call の読み書きモード、作業ディレクトリ、モデル設定、推論設定、索引付け前処理、Structured Output の適用範囲を確認するとき
+- 各 oracle サブコマンドの起動定義を横断して比較するとき
 
 ## Do not read this when
-- 共通 prompt 構築、パス解決、ACP パラメータ型など、oracle 固有でない仕組みだけを確認したいとき。
-- 実際の oracle file の仕様や、個別フローの具体的な schema・実装だけを確認したいときは、該当する下位対象を直接読む。
+- oracle file 自体の編集規則、調査規範、レビュー規範を確認する場合
+- 共通の agent call 型、パス解決、完全 prompt 構築の実装だけを確認する場合
+- 特定の oracle サブコマンドの詳細だけを確認すれば足りる場合は、対応する下位領域へ直接進むとき
 
 ## hash
-- 6589cc151648441475d687cda9a1d41f17d08535ee7e35a4646062cbb9f300c6
+- 8d85f3aa4f02e6232c186d90b77db3727084dbf32a321e504bc7d03521b401f0
 
 # `quota_probe.py`
 

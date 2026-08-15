@@ -1,20 +1,20 @@
 # `edit`
 
 ## Summary
-- oracle 編集フローに関する起動定義を扱うディレクトリです。空の `fork` と、`cmoc oracle edit` の2段階 agent call の固定パラメータを構築する `launch_exec.py` を入口として、oracle 編集の起動条件や編集・仕様削減フローの設定を確認します。
+- `cmoc oracle edit` における本命 agent call と、成功後の仕様削減 agent call の起動パラメータ構築を扱うディレクトリです。ユーザー指示の prompt 組み込み、oracle-only の書き込み範囲、モデル・推論設定、作業ディレクトリ、Structured Output、索引付け前処理など、oracle 編集起動の具体的な設定を確認する入口になります。配下には現時点で本文ファイルを含まない空の領域もあります。
 
 ## Read this when
-- `cmoc oracle edit` の本命編集呼び出しまたは成功後の仕様削減呼び出しの起動パラメータを変更・確認するとき。
-- ユーザー指示、oracle 専用ファイルアクセス、完全 prompt の保存、推論設定、インデックス事前処理の組み合わせを確認するとき。
-- このディレクトリに追加されたファイルの内容や用途を確認するとき。
+- `cmoc oracle edit` の本命または仕様削減 agent call の起動パラメータを変更・確認するとき
+- oracle 編集用 prompt の構成、ユーザー指示の埋め込み、ファイルアクセスモード、起動前索引付け設定を確認するとき
+- 本命成功後の仕様削減 call に渡す参照境界や、既存未コミット差分の扱いを確認するとき
 
 ## Do not read this when
-- oracle file の具体的な編集規則や正本仕様そのものを確認したいときは、関連する oracle file を直接読む。
-- `codex exec` の一般的な実行機構や共通データ型を確認したいときは、共通実装や prompt builder を直接読む。
-- このディレクトリ配下の具体的なファイルを直接確認できるとき。
+- oracle file の編集ルールや仕様削減そのものの正本規範を確認する場合
+- 一般的な agent call パラメータや共通 prompt 構築の挙動だけを確認する場合
+- `cmoc oracle edit` 以外のコマンドの起動パラメータを確認する場合
 
 ## hash
-- c90bd10a113230da106132b4a51fd62339b459c35acee3274633fb5d50ab30e2
+- d545d4ae86932f4ac05a41e1a58013be44e8fc203295e054dc7b66e027481ac6
 
 # `investigation`
 

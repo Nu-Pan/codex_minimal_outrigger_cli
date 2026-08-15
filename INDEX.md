@@ -91,21 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を収める入口。利用者向け CLI・workflow・agent call・session/run lifecycle・prompt・feedback・ログ・通知などの共通契約を扱い、個別仕様や横断的な挙動の確認先を示す。
-- oracle 側の agent call・prompt 構築実装群への入口。用途別の呼び出し構築、モデル・推論・アクセス設定、quota probe、prompt 合成、共通 Standard、routing、Structured Markdown、パスモデル、feedback 入力契約を扱い、実装上の構築経路を調べる際の起点となる。
+- cmoc の正本となる仕様・開発規則・設計規則・テスト規約と、それらを実現する oracle 用の prompt 構築・agent call 実装を集約する対象。アプリケーション挙動、開発・品質管理、oracle 関連の agent call と構造化出力定義を確認するための上位入口であり、具体的な仕様や実装を調べるときは対応する下位領域へ進む。
 
 ## Read this when
-- cmoc の利用者向け挙動や複数機能にまたがる正本仕様を確認するとき
-- CLI、workflow、agent call、session/run、prompt、feedback、ログ、通知などの個別仕様へ進む入口を探すとき
-- oracle 側の agent call 構築、prompt 合成、共通設定、ファイルアクセス規則、Structured Output、feedback 入力契約を調査・変更するとき
+- cmoc のアプリケーション仕様、開発規則、設計規則、テスト規約の入口を判断するとき
+- oracle に属する agent call、prompt 構築、Structured Output、feedback、indexing、session join などの責務配置を確認するとき
+- 仕様文書と oracle 用実装の対応範囲を横断して確認するとき
 
 ## Do not read this when
-- 対象となる個別仕様書が既に特定でき、その本文だけで確認できるとき
-- realization implementation や realization test の具体的な実装・テスト手順だけを調べるとき
-- 開発環境、テスト実行手順、INDEX.md 生成処理など専用の手順が直接の入口となるとき
+- 特定のアプリケーション仕様が明らかな場合は、対応する個別仕様を直接読むとき
+- 開発環境、設計、コーディング、テスト実行、テスト実装の規則だけを確認する場合は、対応する開発規則を直接読むとき
+- 特定の oracle 用 agent call、prompt 部品、Structured Output 定義の詳細を調査する場合は、対応する下位実装を直接読むとき
+- cmoc 本体の一般的な実装や、oracle・realization 以外の仕様を確認する場合は、この対象を入口にしないとき
 
 ## hash
-- c85f6052327292e3b1bed1a1d71d05ea5533aafc6915b0b9f39ab4787ceff5a2
+- b60996c06b05e9673bb82b17a05994f66467570c1a3c60ac1f78c3aeed5a8a2c
 
 # `pyproject.toml`
 

@@ -1,36 +1,34 @@
 # `doc`
 
 ## Summary
-- cmoc の利用者向け挙動と主要な共通契約を定義する正本仕様群。自動補完、Codex 実行、ログ、doctor 前処理、feedback、prompt、run/session lifecycle、サブコマンド、通知などの個別仕様へ進むための入口。
+- cmoc のアプリケーション挙動仕様を集約する正本文書群。CLI 自動補完、Codex 呼び出し、ログ・エラー処理、doctor preprocess、feedback、prompt、session/run、サブコマンド、通知などの個別仕様への入口として、対象機能に対応する下位仕様へ進むために読む。
 
 ## Read this when
-- cmoc の CLI、workflow、agent call、feedback、ログ、通知など、利用者向け挙動や複数機能にまたがる正本仕様を確認するとき
-- 個別仕様が未特定で、サブコマンド、session/run、prompt、feedback、Codex 呼び出し、実行前処理を横断して調べるとき
-- 個別機能の実装・変更・レビューに先立ち、対応する仕様書の責務境界と参照先を把握するとき
+- cmoc の利用者向け挙動仕様、共通実行契約、サブコマンド lifecycle、feedback、prompt、session/run、通知の正本を探すとき
+- 複数のアプリケーション仕様にまたがる責務境界や、適切な下位仕様の入口を確認するとき
 
 ## Do not read this when
-- 対象となる個別仕様書が既に特定でき、その本文だけで確認できるとき
-- realization implementation や realization test の具体的な実装・テスト手順だけを調べるとき
-- INDEX.md の生成処理、開発環境、テスト実行手順など、専用の仕様・手順が直接の入口となるとき
+- 特定機能の詳細仕様が明らかな場合は、このディレクトリ全体ではなく対応する個別仕様を直接読むとき
+- 実装コード、realization の具体的挙動、テスト実行手順、開発環境の規則だけを確認するとき
 
 ## hash
-- b8eaea2d519ab512af88b4f825c150318e8390f363bec1cc840e0273158ddd4e
+- a27226caa4dcfe973a9e71577f14e02662f7f12767b62902c6d99ac13ba0a595
 
 # `src`
 
 ## Summary
-- oracle 側の agent call 構築と prompt 構築を担う実装群への入口。論理的な agent call パラメータ、モデル・推論・ファイルアクセス設定、quota probe、indexing 用呼び出し定義を扱う。prompt の組み立て、共通 Standard、ファイルアクセス規則、routing 規則、Structured Markdown、パスモデル、feedback reporter 入力契約も含む。用途別の agent call を調べる場合は acp_builder、完全 prompt や instruction の合成を調べる場合は prompt_builder、共通設定・パス・Standard・文書レンダリングを調べる場合は other、feedback 入力契約を調べる場合は feedback へ進む。
+- cmocのagent call起動定義とprompt構築実装の入口。共通のAgentCallParameterや実行設定、用途別の起動パラメータ、prompt部品、Structured Output schema、パス・標準文書などを扱う。
+- agent callの用途別実装はacp_builder、promptの組み立てと規範部品はprompt_builder、共通モデルや設定・構造化文書はotherへ進むための上位ルーティング対象。
 
 ## Read this when
-- cmoc の oracle 側で agent call の論理パラメータ、モデルクラス、Reasoning effort、ファイルアクセスモード、cwd、Structured Output schema の設定を調査・変更するとき。
-- agent call の用途別 builder、indexing、quota availability probe、oracle・realization 間の呼び出し構築経路を調査するとき。
-- 完全 prompt の構成、placeholder の統合、共通 Standard の選択・合成、file access rule、routing rule、feedback reporting の注入を調査・変更するとき。
-- Structured Markdown の構造化・レンダリング、agent call のパスコンテキスト、cmoc 設定、feedback reporter の入力スキーマを調査するとき。
+- oracle、realization、feedback、indexing、session join、TUIなど、複数用途にまたがるagent call構築の責務や配置を確認するとき。
+- 特定用途の起動定義、prompt構築、Structured Output schema、共通設定のいずれを読むべきか判断するとき。
 
 ## Do not read this when
-- CLI の実行処理、realization implementation、realization test、個別 oracle file の正本仕様を直接確認したいとき。
-- agent call 構築、prompt 構築、oracle 共通モデル、構造化文書、feedback 入力契約と無関係な永続化処理や実行時制御だけを調査するとき。
-- 既存の INDEX.md によるルーティング情報だけを確認したいとき。
+- 特定用途のagent call起動処理を調査する場合はacp_builder配下を直接読むとき。
+- promptの共通部品や用途別Standardを調査する場合はprompt_builder配下を直接読むとき。
+- AgentCallParameter、モデル・推論設定、パス解決、構造化文書などの共通定義だけを確認する場合はother配下を直接読むとき。
+- oracleやrealizationの具体的な仕様・実装・テストを確認する場合は、それぞれの正本仕様または対象実装を直接読むとき。
 
 ## hash
-- cc3b335ec2283bf9773a7d833bdca34a2b7b8e556b6c0c9efaf4dbeb4a72ca10
+- cc0a27853fabbc27ab812a405c3c75c809bc95238b50394799b6dd25a5c3f247

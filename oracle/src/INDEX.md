@@ -1,17 +1,18 @@
 # `oracle`
 
 ## Summary
-- oracle の agent call 構築、prompt 構築、feedback 入力契約、設定・パスモデル・Standard・構造化 Markdown 生成を扱う実装群への入口。用途別の呼び出し定義を調べる場合は `acp_builder`、プロンプト構成や instruction を調べる場合は `prompt_builder`、feedback reporter の入力契約を調べる場合は `feedback`、共通モデルや文書生成を調べる場合は `other` へ進む。
+- cmoc の各 agent call に渡す AgentCallParameter と、用途別の prompt・Structured Output・モデル・推論設定・ファイルアクセス・cwd・indexing preflight を構築する領域。共通の論理モデル定義から、indexing、feedback、oracle、realization、session join、TUI、quota probe の起動定義へ進む入口となる。
 
 ## Read this when
-- cmoc の oracle 側で agent call の論理パラメータ、用途別呼び出し、Structured Output schema の対応を調査・変更するとき。
-- agent 向け完全 prompt、placeholder 置換、Standard、file access rule、routing rule、feedback reporting などの構築経路を調査・変更するとき。
-- cmoc の設定、agent call のパスコンテキスト、Standard の合成、構造化 Markdown のレンダリング、feedback reporter 入力の構造を調査するとき。
+- 複数の cmoc サブコマンドにまたがる agent call 起動パラメータの構成や共通責務を確認するとき。
+- 特定用途の agent call builder を探し、用途別の下位領域へ進む前に全体の分類を把握するとき。
+- agent call の prompt 構築結果と、Structured Output、モデル・推論設定、ファイルアクセス、cwd、indexing preflight の組み合わせを確認するとき。
 
 ## Do not read this when
-- CLI の実行処理、realization implementation、realization test、個別 oracle file の正本仕様を直接確認したいとき。
-- agent call 構築や oracle 共通モデルと無関係な永続化処理、実行時の制御ロジック、外部サービス連携だけを調査するとき。
-- 既存の INDEX.md のルーティング情報だけを確認するとき。
+- 共通の AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode の定義だけを確認したい場合は、共通定義を直接読むとき。
+- indexing、feedback、oracle、realization、session join、TUI の特定用途だけを調査する場合は、対応する下位領域を直接読むとき。
+- 完全 prompt の共通構築、Standard、file access rule、Structured Output schema の定義を確認する場合は、prompt_builder または各用途の schema を直接読むとき。
+- oracle や realization の具体的な仕様、実装、テスト内容を確認する場合は、それぞれの正本・実装・テスト対象を直接読むとき。
 
 ## hash
-- 62bd6282d97042e8f8fa8a8fdd3f4e296bba7485700d8f3f28b7f8a8b97289c6
+- 8eb8dd3192e5af9f90953f41f58d7db691d3a0a2734ff5d3d72eceb2224227d9

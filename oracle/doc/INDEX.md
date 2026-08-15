@@ -1,20 +1,18 @@
 # `app_spec`
 
 ## Summary
-- app_spec は、cmoc の利用者向け挙動と主要な共通契約を定義する正本仕様群の入口。自動補完、Codex 実行、ログ、doctor 前処理、feedback、prompt、run/session lifecycle、サブコマンド、通知など、各機能領域の仕様へ進むためのルーティング先として使う。
+- cmoc のアプリケーション挙動仕様を集約する正本文書群。CLI 自動補完、Codex 呼び出し、ログ・エラー処理、doctor preprocess、feedback、prompt、session/run、サブコマンド、通知などの個別仕様への入口を提供する。実装・テスト・仕様適合性確認では、対象機能に対応する下位仕様へ進むために読む。
 
 ## Read this when
-- cmoc の CLI・workflow・agent call・feedback・ログ・通知など、利用者向け挙動または複数機能にまたがる正本仕様の入口を選ぶとき
-- 特定の仕様書が未特定で、サブコマンド、session/run、prompt、feedback、Codex 呼び出し、実行前処理のいずれかを横断して確認するとき
-- 個別機能の実装・変更・レビューに先立ち、対応する oracle 文書の責務境界と参照先を把握するとき
+- cmoc の利用者向け挙動仕様、共通実行契約、サブコマンド lifecycle、feedback、prompt、session/run、通知の正本を探すとき
+- 複数のアプリケーション仕様にまたがる責務境界や、適切な下位仕様の入口を確認するとき
 
 ## Do not read this when
-- 対象となる個別仕様書が既に特定できており、その本文だけを確認すれば足りるとき
-- realization implementation や realization test の具体的な実装・テスト手順だけを調べるとき
-- INDEX.md の生成処理そのもの、開発環境、テスト実行手順など、専用の仕様・手順が直接の入口となるとき
+- 特定機能の詳細仕様が明らかな場合は、このディレクトリ全体ではなく対応する個別仕様を直接読む
+- 実装コード、realization の具体的挙動、テスト実行手順、開発環境の規則だけを確認するとき
 
 ## hash
-- 608f68cb371be7326f76de4a9806417acb781e64992054f324929be2b0deae4b
+- 29dedadc8cee1a001c2eeaae72c4bfad7199c630f26874948696ab93e661b3e3
 
 # `branch_model.md`
 

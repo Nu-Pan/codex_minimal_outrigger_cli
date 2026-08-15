@@ -209,39 +209,43 @@
 # `prompt_editor_input.md`
 
 ## Summary
-- cmoc がエディタ用の初期入力、完全プロンプト skeleton、編集結果の保存・コメント除去・プレースホルダー置換・後続 Agent 起動までを扱う仕様。エディタ入力処理の挙動や、可変な作業ファイルと保存記録の責務分離を確認する際の入口となる。
+- プロンプト編集入力の責務と、オリジナルプロンプトを完全プロンプトへ確定する契約を定義する仕様書。
+- 初期コメント、完全プロンプト skeleton、editor work file と保存コピーの役割、エディタ起動条件、検証・保存・コメント除去・placeholder 置換を含む確定手順を扱う。
+- editor input の表示文面そのものを確認するときは正本である prompt builder の実装へ進み、実行時の具体的な呼び出し責務を確認するときは対応する realization implementation を直接読む。
 
 ## Read this when
-- エディタ入力の初期表示、オリジナルプロンプトの取得、HTML コメントの扱い、完全プロンプト確定手順を変更または確認するとき。
-- editor work file、保存コピー、確定済み完全プロンプトの保存場所や書き込み主体を確認するとき。
-- エディタの選択・起動条件、対象ファイルの検証、処理成功時と失敗時の後始末を確認するとき。
+- prompt editor の入力位置、初期表示、skeleton の構造または placeholder の扱いを変更・確認するとき
+- editor work file の検証、最終読み取り、保存コピー、コメント除去、完全プロンプト確定の順序を実装・レビューするとき
+- 完全本文を直接渡す方式と file を間接参照する方式の契約や境界を確認するとき
 
 ## Do not read this when
-- サブコマンド固有の prompt skeleton や Agent 呼び出し契約そのものを確認するときは、対応する build_*_parameter の仕様・実装を直接読む。
-- 初期コメントの正確な表示文面を確認または変更するときは、editor_input.py を直接読む。
-- 一般的なエディタ操作や、保存記録領域の実装詳細だけを調べるときは、より直接的な実装・仕様対象へ進む。
+- 初期コメントの正確な表示文面を確認する場合は、この実行時生成物ではなく prompt builder の正本を読むとき
+- サブコマンド固有の parameter 構築や agent 起動の実装責務だけを確認する場合は、対応する builder または realization implementation を直接読むとき
+- editor input と無関係な prompt 設計、保存領域、または CLI 機能を調べるとき
 
 ## hash
-- 81a1f4cdfeb6ffe1de7a95da82803262dc6c470d376aaef687b63085da7a1391
+- 584a37c8d7c337f331741abca85cf7ab273c884487399c6e643ddb1ae1837c83
 
 # `prompt_standard.md`
 
 ## Summary
-- cmoc が agent call に渡す prompt の責務、正本仕様との境界、構築規則、および出力契約を定める文書。prompt builder・acp builder の文面管理、共通 instruction の注入、placeholder と参照関係、Structured Output の schema／事後条件の分担を確認する入口となる。
+- 日本語技術文書の作成・改訂に関する標準を定める。cmoc の意味仕様、oracle src による prompt 文面、realization による受け渡し、実行時生成物の責務境界を確認するための入口である。
+- agent call の prompt に含める情報、規範の決定論的注入、feedback instruction、Structured Output の schema・事後条件・補正の責務分担、summary と goal の使い分けを確認できる。
+- prompt の記法、placeholder と参照関係、言語方針を含むため、prompt builder や acp builder の文面・構築規則を変更またはレビューする際に参照する。
 
 ## Read this when
-- agent call の prompt、prompt builder、acp builder、prompt part、完全 prompt の受け渡しを変更またはレビューするとき
-- prompt に注入する cmoc 固有契約、INDEX.md routing、file access、feedback reporting の責務境界を確認するとき
-- Structured Output の schema、決定論的事後条件、validator、補正 prompt の責務分担を確認するとき
-- prompt の placeholder、cmoc_block／cmoc_ref、言語、summary と goal の構成規則を確認するとき
+- cmoc の prompt に追加する情報の必要性、責務境界、参照先 routing、完了条件を判断するとき。
+- oracle doc と oracle src、realization implementation、実行時に生成される prompt のどこを正本とするか確認するとき。
+- Structured Output の schema、決定論的事後条件、prompt の受理条件や補正規則の関係を変更またはレビューするとき。
+- prompt builder または acp builder の構築規則、placeholder、cmoc_block/cmoc_ref、agent call の言語方針を扱うとき。
 
 ## Do not read this when
-- cmoc の意味仕様そのものを変更または確認する場合は、対応する oracle doc を直接読むとき
-- prompt 文面や構築規則に関係しない realization implementation、テスト、または対象 repository 固有の手順だけを扱うとき
-- 生成済み prompt、AgentCallParameter.prompt、log、editor input の内容だけを確認するとき
+- 個別の意味仕様そのものを確認する作業では、対応する oracle doc を直接読む。
+- prompt の正確な文面や構築実装を確認するだけなら、対応する oracle src または realization file を直接読む。
+- INDEX.md の一般規則や feedback 報告基準だけを確認する場合は、それぞれの専用仕様を直接読む。
 
 ## hash
-- 98581dbe5e6e88d5acc674e71e1a27676f74718b482b21ba045ef6dc91325d06
+- ef3de26232d02388861ccdce5c46907546e641af16bd4625654a840cb60b9554
 
 # `run_isolation.md`
 
@@ -280,18 +284,18 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドおよび session・editing run・feedback に関する正本仕様を集約するディレクトリ。各文書は、対応する CLI の実行条件・責務・状態遷移・agent 呼び出し・成果物やエラー処理を確認するための入口となり、共通 lifecycle や個別の内部仕様へルーティングする。
+- cmoc の主要サブコマンドと、session・editing run・feedback report・oracle 操作・realization fork などの正本仕様を集約するルーティング対象。各文書は個別コマンドや共通 lifecycle の実行条件、状態遷移、agent call、差分・merge・cleanup、report の責務を定義し、実装・テスト・仕様適合性確認時に該当する仕様へ進む入口となる。
 
 ## Read this when
-- cmoc のサブコマンド仕様を横断的に確認したいとき。
-- 特定のサブコマンド、session、editing run、feedback の実装・テスト・仕様適合性を調査する際に、対象仕様の入口を選びたいとき。
+- cmoc のサブコマンド仕様を横断して、対象機能に対応する正本文書を選びたいとき。
+- session、editing run、feedback、oracle、realization の実装・テスト・仕様整合性を調査し、個別仕様の入口を確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細を既に特定できている場合は、対応する個別仕様を直接読む。
-- doctor preprocess、indexing の本体、共通 prompt editor、ログ、通知、run isolation など、本文から参照される下位仕様だけを確認したい場合は、その正本を直接読む。
+- 特定サブコマンドの詳細な挙動、内部処理、schema、agent prompt、または共通 lifecycle の規則を直接確認したいときは、該当する下位仕様を読む。
+- 一般的な git 操作、Codex CLI/TUI の詳細、実装コードそのものだけを確認したいとき。
 
 ## hash
-- aab978eada8e2f96272089bed34c65ffdfac00a2281b33b0787f19a9712b8529
+- 82b4d2088003746271e8ed9ab9b089b71bcfc45677a33bcbeb2bbb489c6e50fd
 
 # `subcommand_interruption.md`
 
