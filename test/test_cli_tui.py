@@ -74,28 +74,23 @@ def test_tui_runs_editor_and_launches_codex_directly(
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    builder_calls: list[tuple[str, str, AgentCallParameter, str]] = []
+    builder_calls: list[tuple[str, AgentCallParameter]] = []
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
     real_build_parameter = tui_module.build_tui_launch_tui_parameter
 
     def record_build_parameter(
-        time_stamp: str,
         original_prompt: str,
     ) -> AgentCallParameter:
-        """builder の引数、戻り値、および編集前の skeleton を記録する。"""
-        events.append("build")
-        parameter = real_build_parameter(time_stamp, original_prompt)
-        prompt_suffix = " を読んで、その指示に従って下さい"
-        complete_path = Path(parameter.prompt.removesuffix(prompt_suffix))
-        builder_calls.append(
-            (
-                time_stamp,
-                original_prompt,
-                parameter,
-                complete_path.read_text(encoding="utf-8"),
-            )
+        """skeleton 用と実行用の builder 呼び出しを記録する。"""
+        kind = (
+            "build-skeleton"
+            if original_prompt == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+            else "build-parameter"
         )
+        events.append(kind)
+        parameter = real_build_parameter(original_prompt)
+        builder_calls.append((original_prompt, parameter))
         return parameter
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
@@ -108,8 +103,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
-        assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
-        assert parameter is builder_calls[0][2]
+        assert parameter is builder_calls[1][1]
 
     monkeypatch.setattr(
         tui_module,
@@ -131,11 +125,18 @@ def test_tui_runs_editor_and_launches_codex_directly(
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert events == ["enable", "doctor", "build", "tui"]
-    assert len(builder_calls) == 1
-    assert builder_calls[0][1] == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+    assert events == [
+        "enable",
+        "doctor",
+        "build-skeleton",
+        "build-parameter",
+        "tui",
+    ]
+    assert len(builder_calls) == 2
+    assert builder_calls[0][0] == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+    complete_prompt_skeleton = builder_calls[0][1].prompt
     assert (
-        builder_calls[0][3].count(
+        complete_prompt_skeleton.count(
             prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
         )
         == 1
@@ -152,11 +153,10 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
     assert "remove me" in editor_contents
     assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
-    complete_files = list(
+    assert not list(
         (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
-    assert len(complete_files) == 1
-    complete_prompt = complete_files[0].read_text()
+    complete_prompt = tui_calls[0][0].prompt
     assert "# file read write rule - repo_write" in complete_prompt
     assert "# oracle and realization basic" in complete_prompt
     assert "# oracle standard" in complete_prompt
@@ -170,12 +170,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert "src を確認して必要なら直す" in complete_prompt
     assert "remove me" not in complete_prompt
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
-    assert complete_prompt == builder_calls[0][3].replace(
-        prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER,
-        "# 依頼\n\nsrc を確認して必要なら直す",
-        1,
-    )
-    assert str(complete_files[0]) in tui_calls[0][0].prompt
+    assert builder_calls[1][0] == "# 依頼\n\nsrc を確認して必要なら直す"
     assert readme_path.read_text() == "# unstaged change\n"
     assert (
         run_git(root, "diff", "--cached", "--", "README.md").stdout
@@ -187,11 +182,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
-def test_tui_saves_complete_prompt_in_linked_worktree(
+def test_tui_saves_editor_input_in_main_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """linked worktree 起動でも prompt と agent call context は main 側に置く。"""
+    """linked worktree 起動でも editor 記録と agent call context は main 側に置く。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -238,17 +233,15 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
         )
         == 1
     )
-    complete_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
-    )
     assert not list(
         (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
-    assert len(complete_files) == 1
-    complete_prompt = complete_files[0].read_text(encoding="utf-8")
+    assert not list(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
+    )
+    complete_prompt = parameter.prompt
     assert "linked worktree task" in complete_prompt
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
-    assert str(complete_files[0]) in parameter.prompt
     assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
     assert not list((linked / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
 
@@ -298,15 +291,8 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
         )
         == 1
     )
-    assert (
-        len(
-            list(
-                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
-                    "*_cmpl.md"
-                )
-            )
-        )
-        == 1
+    assert not list(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
     assert not list(
         (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")

@@ -41,17 +41,12 @@ def _tui_call_logs(root: Path) -> list[Path]:
 # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
-def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
+def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """PURE_ORACLE_READ で完成済み prompt を読み、CLI 引数を制約どおり渡すことを確認する。"""
+    """PURE_ORACLE_READ の完全 prompt 本文と CLI 引数を変更せず渡す。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    prompt_path = (
-        root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / "20260101_cmpl.md"
-    )
-    prompt_path.parent.mkdir(parents=True)
-    prompt_path.write_text("complete prompt\n")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -61,11 +56,10 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "prompt = args[-1]",
-            "prompt_path = pathlib.Path(prompt.split(' を読んで')[0])",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
-            "    'prompt_text': prompt_path.read_text(),",
+            "    'prompt_text': prompt,",
             "}))",
         ],
     )
@@ -80,7 +74,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
                 FileAccessMode.PURE_ORACLE_READ,
                 agent_call_cwd=root,
             ),
-            prompt=f"{prompt_path} を読んで、その指示に従って下さい",
+            prompt="complete prompt\n",
             structured_output_schema_path=schema_path,
         ),
         root=root,
@@ -111,20 +105,15 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     assert "--output-schema" not in record["args"]
 
 
-def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
+def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree の完成済み prompt と、そのファイルアクセス上書きを維持することを確認する。"""
+    """linked worktree の完全 prompt 本文とアクセス上書きを維持する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-tui-runtime", str(linked), "HEAD")
-    prompt_path = (
-        root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / "20260101_cmpl.md"
-    )
-    prompt_path.parent.mkdir(parents=True)
-    prompt_path.write_text("complete prompt\n")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -134,11 +123,10 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "prompt = args[-1]",
-            "prompt_path = pathlib.Path(prompt.split(' を読んで')[0])",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
-            "    'prompt_text': prompt_path.read_text(),",
+            "    'prompt_text': prompt,",
             "}))",
         ],
     )
@@ -147,7 +135,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     run_codex_tui(
         replace(
             codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=linked),
-            prompt=f"{prompt_path} を読んで、その指示に従って下さい",
+            prompt="complete prompt\n",
         ),
         root=root,
         config=CmocConfig(),

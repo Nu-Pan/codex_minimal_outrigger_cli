@@ -22,8 +22,8 @@ from .runtime_paths import (
 ORIGINAL_PROMPT_PLACEHOLDER = "{{original-prompt-here}}"
 
 
-def reserve_prompt_editor_input(root: Path) -> tuple[str, Path, Path, Path]:
-    """同じ timestamp を持つ作業 path と保存 path を準備する。"""
+def reserve_prompt_editor_input(root: Path) -> tuple[Path, Path]:
+    """同じ timestamp を持つ作業 path と入力結果の保存 path を準備する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     # 可変な作業 file と cmoc だけが書く保存記録を別 directory に置く。
     work_dir = editor_work_dir(root)
@@ -39,26 +39,18 @@ def reserve_prompt_editor_input(root: Path) -> tuple[str, Path, Path, Path]:
             timestamp,
         )
         input_copy_path = log_dir / f"{time_stamp}_orig.md"
-        complete_prompt_path = log_dir / f"{time_stamp}_cmpl.md"
-        output_paths = (input_copy_path, complete_prompt_path)
-        if not any(path.exists() or path.is_symlink() for path in output_paths):
-            return (
-                time_stamp,
-                editor_work_path,
-                input_copy_path,
-                complete_prompt_path,
-            )
+        if not (input_copy_path.exists() or input_copy_path.is_symlink()):
+            return editor_work_path, input_copy_path
         editor_work_path.unlink()
         time.sleep(0.000001)
 
 
-def collect_prompt_editor_input(
+def edit_prompt_editor_input(
     root: Path,
     editor_work_path: Path,
-    input_copy_path: Path,
     complete_prompt_skeleton: str,
-) -> str:
-    """作業 file を一度だけ最終読み取りし、入力を保存して返す。"""
+) -> None:
+    """完全 prompt の skeleton を初期値としてエディタを起動する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     _require_single_original_prompt_placeholder(complete_prompt_skeleton)
     _validate_editor_work_file(root, editor_work_path)
@@ -80,6 +72,14 @@ def collect_prompt_editor_input(
             f"command: {' '.join(argv)}\nreturncode: {result.returncode}",
         )
 
+
+def collect_prompt_editor_input(
+    root: Path,
+    editor_work_path: Path,
+    input_copy_path: Path,
+) -> str:
+    """作業 file を一度だけ最終読み取りし、入力を保存して返す。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     # 最終時点の通常 file を一度だけ読み、同じ結果を保存と入力抽出に使う。
     _validate_editor_work_file(root, editor_work_path)
     final_read_result = editor_work_path.read_bytes()
@@ -88,24 +88,9 @@ def collect_prompt_editor_input(
     return _extract_original_prompt(final_read_result.decode("utf-8"))
 
 
-def finalize_complete_prompt(
-    editor_work_path: Path,
-    complete_prompt_path: Path,
-    complete_prompt_skeleton: str,
-    original_prompt: str,
-) -> None:
-    """skeleton の唯一の入力位置を置換して完全 prompt を確定する。"""
+def finalize_prompt_editor_input(editor_work_path: Path) -> None:
+    """完全 prompt の構築成功後に editor work file を削除する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    _require_single_original_prompt_placeholder(complete_prompt_skeleton)
-    complete_prompt_path.write_text(
-        complete_prompt_skeleton.replace(
-            ORIGINAL_PROMPT_PLACEHOLDER,
-            original_prompt,
-            1,
-        ),
-        encoding="utf-8",
-    )
-    # 完全 prompt の保存まで成功した作業 file だけを削除する。
     editor_work_path.unlink()
 
 

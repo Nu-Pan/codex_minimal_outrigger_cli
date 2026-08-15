@@ -54,20 +54,20 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- エディタから AI Agent 用プロンプトを受け取り、作業用ファイルへの初期内容の書き込み、エディタ起動、最終入力の保存と抽出、完全プロンプトの確定、関連ディレクトリの ignore 保証を担う共通境界。プロンプト入力の予約・検証・保存・後処理に関する実装や不正な editor work file、エディタ選択、placeholder 検証の挙動を確認するときの入口となる。
+- エディタを使った AI Agent prompt 入力の共通境界を担う。作業用ファイルと入力保存先の予約、初期 prompt の書き込みとエディタ起動、編集後の安全な読み取り・保存・抽出、完了時の削除、関連 repository の ignore 保証を扱う。prompt editor の入出力挙動、エディタ選択、作業ファイル検証、入力保存の安全性を確認・変更するときの入口となる。
 
 ## Read this when
-- エディタ経由のプロンプト入力フローを変更・調査するとき
-- 入力内容や完全プロンプトの保存、placeholder 置換、作業ファイル削除の扱いを確認するとき
-- editor work file のパス検証、エディタ選択、`.cmoc` ignore 保証の責務を確認するとき
+- prompt editor の作業ファイル予約・編集・収集・確定処理を変更するとき
+- 利用可能なエディタの選択規則や editor work file の検証を確認するとき
+- HTML comment 除去を含む最終 prompt 入力の抽出・保存境界を確認するとき
 
 ## Do not read this when
-- prompt editor の正本仕様や初期表示文面そのものを確認する場合は、参照されている oracle の仕様・実装を直接読むとき
-- プロンプト構築全体や editor input の案内文だけを確認する場合は、prompt builder 側の対象を直接読むとき
-- エディタ入力とは無関係な runtime error、git、path ユーティリティの挙動だけを調査するとき
+- prompt の内容や skeleton の生成規則だけを確認する場合は prompt builder の正本を直接読む
+- 一般的な runtime error、git ignore、path 解決の仕様だけを確認する場合は、それぞれの専用実装・正本を直接読む
+- prompt editor を使わない Agent prompt の構築や入力処理を確認する場合
 
 ## hash
-- 4a3dc370276414c5a9177e3cacfc4dc27a53a5306558fcbf51de82566bdcdc91
+- 1d4a3162e3adb15aa78f7080838350612f461c281b606557b2732f786705354e
 
 # `runtime_cli.py`
 

@@ -123,7 +123,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     input_copy_path = (
         root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / f"{time_stamp}_orig.md"
     )
-    complete_prompt_path = input_copy_path.with_name(f"{time_stamp}_cmpl.md")
     editor_work_path.parent.mkdir(parents=True, exist_ok=True)
     input_copy_path.parent.mkdir(parents=True, exist_ok=True)
     editor_calls: list[tuple[Path, Path, str]] = []
@@ -149,25 +148,26 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     def fake_reserve_prompt_editor_input(
         target_root: Path,
-    ) -> tuple[str, Path, Path, Path]:
-        """決定論的な timestamp の editor path を返す。"""
+    ) -> tuple[Path, Path]:
+        """決定論的な editor path を返す。"""
         assert target_root == root
         editor_work_path.touch()
-        return time_stamp, editor_work_path, input_copy_path, complete_prompt_path
+        return editor_work_path, input_copy_path
 
     real_build_main_parameter = (
         oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
     )
 
     def record_build_main_parameter(
-        build_time_stamp: str,
         user_instruction: str,
     ) -> AgentCallParameter:
-        """エディタより前に固定する本命 parameter を記録する。"""
-        events.append("build-main")
-        assert build_time_stamp == time_stamp
-        assert user_instruction == oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER
-        parameter = real_build_main_parameter(build_time_stamp, user_instruction)
+        """skeleton 用と実行用の本命 builder 呼び出しを記録する。"""
+        events.append(
+            "build-main-skeleton"
+            if user_instruction == oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER
+            else "build-main"
+        )
+        parameter = real_build_main_parameter(user_instruction)
         built_main_parameters.append(parameter)
         return parameter
 
@@ -185,36 +185,36 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         built_reduction_parameters.append(parameter)
         return parameter
 
+    def fake_edit_prompt_editor_input(
+        target_root: Path,
+        work_path: Path,
+        complete_prompt_skeleton: str,
+    ) -> None:
+        """エディタへ渡す path と完全 prompt skeleton を記録する。"""
+        events.append("editor")
+        assert target_root == root
+        editor_calls.append((work_path, input_copy_path, complete_prompt_skeleton))
+
     def fake_collect_prompt_editor_input(
         target_root: Path,
         work_path: Path,
         saved_copy_path: Path,
-        complete_prompt_skeleton: str,
     ) -> str:
-        """エディタ入力時点の path と完全 prompt skeleton を記録する。"""
-        events.append("editor")
+        """一回の最終読み取りから抽出した入力を返す。"""
+        events.append("collect")
         assert target_root == root
-        assert complete_prompt_path.read_text() == complete_prompt_skeleton
+        assert work_path == editor_work_path
         saved_copy_path.write_text("oracle spec を更新する", encoding="utf-8")
-        editor_calls.append((work_path, saved_copy_path, complete_prompt_skeleton))
         return "oracle spec を更新する"
 
-    real_finalize_complete_prompt = oracle_edit_module.finalize_complete_prompt
+    real_finalize_prompt_editor_input = oracle_edit_module.finalize_prompt_editor_input
 
-    def record_finalize_complete_prompt(
+    def record_finalize_prompt_editor_input(
         work_path: Path,
-        target_path: Path,
-        complete_prompt_skeleton: str,
-        original_prompt: str,
     ) -> None:
-        """agent call 前の完全 prompt 確定を記録して本来の処理へ委譲する。"""
+        """agent call 前の editor work file cleanup を記録する。"""
         events.append("finalize")
-        real_finalize_complete_prompt(
-            work_path,
-            target_path,
-            complete_prompt_skeleton,
-            original_prompt,
-        )
+        real_finalize_prompt_editor_input(work_path)
 
     monkeypatch.setattr(
         oracle_edit_module,
@@ -238,13 +238,18 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     )
     monkeypatch.setattr(
         oracle_edit_module,
+        "edit_prompt_editor_input",
+        fake_edit_prompt_editor_input,
+    )
+    monkeypatch.setattr(
+        oracle_edit_module,
         "collect_prompt_editor_input",
         fake_collect_prompt_editor_input,
     )
     monkeypatch.setattr(
         oracle_edit_module,
-        "finalize_complete_prompt",
-        record_finalize_complete_prompt,
+        "finalize_prompt_editor_input",
+        record_finalize_prompt_editor_input,
     )
     calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
@@ -271,7 +276,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     ) -> FakeCodexResult:
         """各 exec の差分と、失敗後も差分を残す挙動を再現する。"""
         calls.append((parameter, kwargs))
-        if parameter is built_main_parameters[0]:
+        if parameter is built_main_parameters[1]:
             events.append("main")
             (root / "oracle" / "spec.md").write_text("# main edit\n")
             if failure_stage == "main":
@@ -310,7 +315,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == (0 if failure_stage is None else 1)
-    assert len(built_main_parameters) == 1
+    assert len(built_main_parameters) == 2
     assert editor_calls[0][:2] == (editor_work_path, input_copy_path)
     complete_prompt_skeleton = editor_calls[0][2]
     assert (
@@ -321,8 +326,10 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "oracle file だけを編集し" in complete_prompt_skeleton
     expected_events = [
         "doctor",
-        "build-main",
+        "build-main-skeleton",
         "editor",
+        "collect",
+        "build-main",
         "finalize",
         "indexing",
         "check",
@@ -334,24 +341,15 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert len(calls) == (1 if failure_stage == "main" else 2)
 
     main_parameter, main_kwargs = calls[0]
-    assert main_parameter is built_main_parameters[0]
+    assert main_parameter is built_main_parameters[1]
     _assert_exec_parameter(main_parameter, root, runs_indexing=True)
     assert "cwd" not in main_kwargs
     assert "before_agent_call" not in main_kwargs
     assert main_kwargs["root"] == root
     assert main_kwargs["purpose"] == "oracle edit main"
-    prompt_suffix = " を読んで、その指示に従って下さい"
-    assert main_parameter.prompt.endswith(prompt_suffix)
-    assert (
-        Path(main_parameter.prompt.removesuffix(prompt_suffix)) == complete_prompt_path
-    )
-    complete_prompt = complete_prompt_path.read_text()
-    assert complete_prompt == complete_prompt_skeleton.replace(
-        oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER,
-        "oracle spec を更新する",
-        1,
-    )
+    complete_prompt = main_parameter.prompt
     assert "oracle spec を更新する" in complete_prompt
+    assert oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert "# oracle standard" in complete_prompt
     assert "# routing rule" in complete_prompt
     assert "realization file、`INDEX.md`、`AGENTS.md` を編集していない" in (
@@ -377,6 +375,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     assert input_copy_path.read_text(encoding="utf-8") == "oracle spec を更新する"
     assert not editor_work_path.exists()
+    assert not list(input_copy_path.parent.glob("*_cmpl.md"))
     expected_spec = "# main edit\n" if failure_stage == "main" else "# reduced edit\n"
     assert (root / "oracle" / "spec.md").read_text() == expected_spec
     assert json.loads(session_state_path.read_text()) == state_before

@@ -19,8 +19,9 @@ from commons.indexing import enable_indexing_preflight
 from commons.prompt_editor_input import (
     ORIGINAL_PROMPT_PLACEHOLDER,
     collect_prompt_editor_input,
+    edit_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
-    finalize_complete_prompt,
+    finalize_prompt_editor_input,
     reserve_prompt_editor_input,
 )
 from commons.runtime_git import current_branch
@@ -35,7 +36,7 @@ def cmoc_oracle_edit_impl() -> None:
         pre_log_check=ensure_prompt_editor_roots_ignored,
         command_name="oracle edit",
         command_argv=["cmoc", "oracle", "edit"],
-        total_steps=9,
+        total_steps=10,
     )
 
 
@@ -44,40 +45,38 @@ def _cmoc_oracle_edit_body() -> None:
     repository = repo_root()
     current_root = work_root()
 
-    # oracle 編集契約を含む完全 prompt の skeleton とパラメータを先に固定する。
+    # oracle 編集契約を含む完全 prompt の skeleton を初期表示に使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-    start_subcommand_step(2, "本命起動パラメータを構築", "build main parameter")
-    time_stamp, editor_work_path, input_copy_path, complete_path = (
-        reserve_prompt_editor_input(repository)
-    )
-    main_parameter = build_oracle_edit_main_launch_exec_parameter(
-        time_stamp,
-        ORIGINAL_PROMPT_PLACEHOLDER,
-    )
-    complete_prompt_skeleton = complete_path.read_text(encoding="utf-8")
+    start_subcommand_step(2, "本命 prompt の skeleton を構築", "build main skeleton")
+    editor_work_path, input_copy_path = reserve_prompt_editor_input(repository)
+    complete_prompt_skeleton = build_oracle_edit_main_launch_exec_parameter(
+        ORIGINAL_PROMPT_PLACEHOLDER
+    ).prompt
 
     start_subcommand_step(3, "oracle 最終状態の指示を入力", "edit instruction")
+    edit_prompt_editor_input(
+        repository,
+        editor_work_path,
+        complete_prompt_skeleton,
+    )
+
+    start_subcommand_step(4, "入力結果を保存・抽出", "save and extract input")
     instruction = collect_prompt_editor_input(
         repository,
         editor_work_path,
         input_copy_path,
-        complete_prompt_skeleton,
     )
 
-    start_subcommand_step(4, "完全プロンプトを確定", "finalize complete prompt")
-    finalize_complete_prompt(
-        editor_work_path,
-        complete_path,
-        complete_prompt_skeleton,
-        instruction,
-    )
-    start_subcommand_step(5, "本命起動前 indexing", "indexing preflight")
+    start_subcommand_step(5, "本命起動パラメータを構築", "build main parameter")
+    main_parameter = build_oracle_edit_main_launch_exec_parameter(instruction)
+    finalize_prompt_editor_input(editor_work_path)
+    start_subcommand_step(6, "本命起動前 indexing", "indexing preflight")
 
     def _validate_and_start_main_step() -> None:
         """indexing 後に起動前提を検証し、本命 agent call を開始する。"""
-        start_subcommand_step(6, "本命起動の事前条件を確認", "validate main launch")
+        start_subcommand_step(7, "本命起動の事前条件を確認", "validate main launch")
         _require_oracle_edit_launch_preconditions(repository, current_root)
-        start_subcommand_step(7, "本命 agent call を実行", "run main agent call")
+        start_subcommand_step(8, "本命 agent call を実行", "run main agent call")
 
     # 本命 parameter の indexing flag により、callback は preflight 後かつ
     # subprocess 起動直前に呼ばれる。
@@ -91,7 +90,7 @@ def _cmoc_oracle_edit_body() -> None:
     )
 
     # 本命の正常終了後だけ、独立した新規 exec session で仕様削減を行う。
-    start_subcommand_step(8, "仕様削減 agent call を実行", "run reduction agent call")
+    start_subcommand_step(9, "仕様削減 agent call を実行", "run reduction agent call")
     reduction_parameter = build_oracle_edit_reduction_launch_exec_parameter(instruction)
     run_codex_exec(
         reduction_parameter,
@@ -99,7 +98,7 @@ def _cmoc_oracle_edit_body() -> None:
         config=config,
         purpose="oracle edit reduction",
     )
-    start_subcommand_step(9, "終了状態を確定", "finalize oracle edit")
+    start_subcommand_step(10, "終了状態を確定", "finalize oracle edit")
 
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
