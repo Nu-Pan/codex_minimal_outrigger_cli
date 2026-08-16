@@ -91,20 +91,21 @@
 # `oracle`
 
 ## Summary
-- `oracle` は、cmoc の正本仕様・設計判断・開発規約を確認するためのドキュメント領域であり、CLI、セッション、Git 操作、アクセス制御、開発環境、テストなどの下位文書への入口を提供する。
+- cmoc の正本文書と、それに対応する oracle 側の prompt・agent call 定義をまとめた開発基準領域。
+- CLI の挙動、session・run の branch／commit／worktree、prompt policy、feedback、INDEX.md、開発・テスト規約、および不採用案を扱う下位領域への入口を提供する。
+- 具体的な prompt 構築や agent call 定義を確認する場合は `src/oracle` 配下へ、仕様・設計・運用ルールを確認する場合は `doc` 配下へ進む。
 
 ## Read this when
-- cmoc の現行仕様、設計背景、開発規約の所在を探すとき
-- CLI や session/run、branch・commit・worktree、アクセス制御の仕様を確認するとき
-- Python 実装、環境構築、テスト要件、テスト実行手順などの開発ルールへ進む入口を選ぶとき
+- cmoc の正本文書の所在が不明で、アプリケーション仕様・branch model・開発規約・不採用案のいずれを読むべきか判断するとき
+- CLI の外部挙動、session／run の隔離、prompt・policy、feedback、INDEX.md の扱いを調査・変更・レビューするとき
+- oracle 側の agent call 定義や prompt 構築実装を、正本文書との対応関係を含めて確認するとき
 
 ## Do not read this when
-- 確認対象の具体的な下位仕様書、検討資料、または開発規約文書が明確なとき
-- 実装コードや realization file の具体的な挙動だけを調査するとき
-- 現行仕様ではなく、特定の不採用案の理由だけを調べるときは、該当する下位資料へ直接進む
+- 対象の仕様書、開発規約、prompt 定義、agent call 定義が明確で、その本文または実装だけを直接確認すれば足りるとき
+- 実際の CLI サブコマンド実装、個別テスト、または oracle 配下以外の realization の内容だけを調べるとき
 
 ## hash
-- c81ca1d41761a71add0cc8d281c9810d33a2accf6b18f31c19467f6d58d28168
+- 5ecacd8168a44b884779cd24036bb37ed0fb098a305fab7f7b9330b6b969c7ef
 
 # `pyproject.toml`
 

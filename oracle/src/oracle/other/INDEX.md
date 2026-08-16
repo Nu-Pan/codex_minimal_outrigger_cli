@@ -34,23 +34,6 @@
 ## hash
 - 8fc522d7e3ef8f4b608c64102a5f4a6d7eb7cf64422cd3c3f7b239dab4255418
 
-# `policy.py`
-
-## Summary
-- agent 向け instruction の規定を表す immutable な Policy、適用範囲ごとにまとめる PolicyGroup、合成単位の PolicyCollection を定義する。Policy の入力検証と immutable 化、ID 衝突・定義競合を検査した決定的な collection 合成、および合成済み規定を StructDoc の agent 向け文面へ変換する処理の入口となる。
-
-## Read this when
-- agent 向け instruction の規定値や規定グループのデータモデルを変更・利用するとき
-- 複数の policy collection を競合検査付きで合成する処理を確認するとき
-- policy を StructDoc の見出し・要求文へレンダリングする処理を確認するとき
-
-## Do not read this when
-- agent 向け instruction の規定モデルや合成・レンダリングに関係しない StructDoc の一般的な利用だけを確認するとき
-- 具体的な instruction の宣言内容や prompt 全体の組み立てを確認する場合（この対象ではなく、規定を定義・利用する上位の対象を読む）
-
-## hash
-- 354778fdd844f394f06749ab576373fb6ea2368b8b8a8d9d5cb85abfcb4fad71
-
 # `struct_doc.py`
 
 ## Summary

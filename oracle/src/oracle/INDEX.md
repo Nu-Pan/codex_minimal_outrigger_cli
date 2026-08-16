@@ -35,41 +35,36 @@
 # `other`
 
 ## Summary
-- cmoc の設定モデル、agent call のパス解決、instruction policy の合成、構造化 Markdown の生成を担う共通実装群。設定・パス表記・規定の統合・Markdown レンダリングに関する変更や挙動確認の入口となる。
+- cmoc の共通基盤モデルと文書生成ヘルパーをまとめた領域。設定モデル、agent call のパスコンテキストと root placeholder 解決、構造化 Markdown のレンダリングを扱い、それぞれの実装を確認する入口になる。
 
 ## Read this when
-- cmoc の設定項目や既定値、Codex CLI・oracle review の設定を確認または変更するとき
-- root placeholder、Git worktree、agent call の作業ルートやリポジトリルートの解決規則を確認または変更するとき
-- agent 向け policy の検証・合成・決定的な並び順・instruction 文面への変換を確認または変更するとき
-- StructDoc、cmoc_block、cmoc_ref、コードブロック、Markdown の見出しや空行のレンダリング規則を確認または変更するとき
+- cmoc のリポジトリ固有設定、パス表記・root 解決、または構造化 Markdown 文書生成の共通実装を調査・変更するとき
+- これらの共通モデルを利用する機能の前提規則を確認するとき
 
 ## Do not read this when
-- 個別の CLI サブコマンドや realization の業務処理そのものを確認するとき
-- 具体的な prompt の構成や policy の宣言内容を確認するときは、それを定義・利用する上位対象へ直接進むべきとき
-- 設定ファイルの実際の保存内容や人間による調整結果だけを確認するとき
+- 個別 CLI 機能の実装や oracle review の具体的な処理を調査するとき
+- 設定ファイルの実際の保存内容や、特定機能に固有のプロンプト・仕様だけを確認するとき
 
 ## hash
-- 2743f9ad44a4ed5a25be857eff2897e86bcdf85708f0b87599bf5ec859951864
+- be9a8350716a216f9b6e92ef5c313d0f4e7b4bf77608a7ad536dfbc1f1d3b09b
 
 # `prompt_builder`
 
 ## Summary
-- agent call に渡す完全 prompt の構築入口。担当概要・完了条件、共通 feedback 規定、oracle／realization 関連 policy、ファイルアクセス制約、routing 規定、補助 prompt、placeholder 定義を選択・統合し、構造化 prompt として返す。
-- placeholder 名と実値の対応を型で表す定義。文字列または Path を置換先として扱う共通表現を確認したい場合に参照する。
-- エディタ経由で後続 agent に渡すユーザー入力ファイルの初期文面を構築する定義。記入案内、制約、prompt template の配置、HTML コメント除去の扱いを確認できる。
-- oracle／realization の権威関係、実装適合、レビュー、conflict 解消、editor handoff、feedback 報告、ファイルアクセス、INDEX.md routing など、用途別 policy collection と policy group の構成を提供する。個別 policy の具体的な規則ではなく、prompt builder がどの規定群を選択するかを確認するための入口である。
+- cmoc の agent 向け完全プロンプトを構築する prompt_builder の主要要素をまとめたディレクトリ。プレースホルダ型、完全プロンプト生成、エディタ入力の初期内容、oracle／realization の基本説明、用途別 policy collection の定義を扱う。
+- 完全プロンプトの構成や policy の合成・依存関係・プレースホルダ統合を調べる場合は中核の prompt builder 実装へ進み、個別の規範や判定内容を調べる場合は対応する policy 定義へ進む入口となる。
 
 ## Read this when
-- agent call に渡される完全 prompt の構成、固定部分と動的部分、注入順序を調査・変更するとき
-- oracle／realization 関連 policy の依存関係、適用範囲、policy collection の統合を確認するとき
-- placeholder 定義の初期化・統合や、エディタ入力テンプレートの生成を調査するとき
-- feedback reporting、ファイルアクセス、INDEX.md routing などの共通規定が prompt に入る経路を確認するとき
+- agent 向け完全プロンプトの構築経路、構成要素、動的な policy 注入を調査・変更するとき
+- oracle と realization の分類・責務、仕様レビュー、conflict 解消、editor handoff、INDEX.md ルーティングなどの共通方針を確認するとき
+- エディタ経由のユーザー入力テンプレートや、プレースホルダ置換対象の共通表現を確認するとき
+- 用途別 policy collection の選択規則や、PolicyGroup の合成入口を特定するとき
 
 ## Do not read this when
-- 個別 policy の要求・禁止・許可事項そのものを確認したいときは、parts 配下の policy 定義を直接読む
-- oracle file や realization file の正本仕様、実装、テストの内容を確認したいときは、それぞれの対象を直接読む
-- 完全 prompt を利用する CLI や agent 実行側の挙動だけを調査するときは、呼び出し元または実行側を直接読む
-- StructDoc、PolicyCollection、FileAccessMode、path context など共通基盤の仕様だけを確認したいときは、それぞれの定義を直接読む
+- 個別の oracle／realization file の具体的な仕様や、単一のテスト・実装ケースだけを調べるとき
+- 個別 policy の具体的な判定規則だけを確認したいときは、対応する policy 定義へ直接進む
+- PolicyCollection や PolicyGroup のデータ構造・衝突検査・render 動作だけを確認したいときは、基本実装を直接読む
+- プロンプト生成、oracle／realization、policy と無関係な CLI 処理や設定値を調査するとき
 
 ## hash
-- 6a23f8afac5681315799ed966ba165276c5871a867043e176576a4ba8d1fdc60
+- cff12cf64ad97325a5998e13ef91aa9f75bb8f8d17cfe6b806aa72b91588f6c5

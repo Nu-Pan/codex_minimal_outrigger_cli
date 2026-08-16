@@ -119,22 +119,21 @@
 # `oracle_review.md`
 
 ## Summary
-- `cmoc oracle review` の仕様を定義する正本文書。oracle のレビュー範囲、所見の列挙・統合・検証・採否判定、隔離実行、レポート生成、責務境界を扱う。oracle レビューの挙動やレポート形式を変更・確認する際の入口となる。
+- `cmoc oracle review` サブコマンドの正本仕様。oracle ファイルのレビュー範囲、所見の列挙・統合・検証・採否判定、隔離実行、レポート生成、責務境界を定義する。oracle review の挙動やレポート形式を変更・確認するときの入口となる。
 
 ## Read this when
-- `cmoc oracle review` のサブコマンド仕様、オプション、事前条件、実行ループを変更または確認するとき
-- oracle review の finding 判定基準、agent call、隔離実行、割り込み処理を調査するとき
-- oracle review レポートの保存先、frontmatter、本文構成、verdict を変更または検証するとき
+- `cmoc oracle review` の引数、事前条件、実行手順、スコープ、割り込み処理を確認するとき
+- oracle file に対する所見の成立条件、重大度、検証、採否判定の仕様を確認するとき
+- oracle review レポートの保存先、frontmatter、本文構成、verdict を確認するとき
+- oracle review の責務境界や、実装・自動生成ファイルをレビュー対象外とする制約を確認するとき
 
 ## Do not read this when
-- oracle file 自体の一般的な判断基準を確認する場合は `misc_spec.md` を直接読む
-- run の隔離実行の共通仕様を確認する場合は `run_isolation.md` を直接読む
-- サブコマンド中断の共通動作を確認する場合は `subcommand_interruption.md` を直接読む
-- prompt の正確な文面や起動パラメータを確認する場合は対応する prompt builder を直接読む
-- 自動生成される `INDEX.md` のレビューや、実装ファイルを交えたレビューの仕様を確認する場合は対象外である
+- oracle review 以外のサブコマンドの仕様や、共通の隔離実行・中断・feedback の詳細だけを確認したいときは、それぞれの正本仕様を直接読む
+- Codex CLI の各 agent call の具体的な prompt 構築や policy 実装を確認したいときは、本文が参照する prompt builder または policy の仕様を直接読む
+- oracle file 自体の個別内容や変更履歴を確認したいときは、このサブコマンド仕様ではなく対象 oracle file や git の情報を読む
 
 ## hash
-- bbfbd6676439566df9aed56214e26049809f6f70221a4ef5fcb8aea6aeeabd31
+- 744c96e7edc152ab522c09b2046f8873c34c284428cb53a76a8061d6e8886d04
 
 # `realization_apply.md`
 
