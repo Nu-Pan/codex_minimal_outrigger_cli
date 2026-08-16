@@ -77,7 +77,7 @@ def build_feedback_verify_issue_parameter(
                 StructCodeBlock("json", report_cut_references_json),
             ),
         ],
-        routing_rule=False,
+        routing_policy=False,
     )
 
     # verification 専用の Structured Output と読み取り専用設定を返す。

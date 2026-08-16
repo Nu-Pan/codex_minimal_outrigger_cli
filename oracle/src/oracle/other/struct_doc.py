@@ -200,7 +200,7 @@ def _validate_references(roots: list[StructDoc | StructBlock]) -> None:
     """
     参照先ブロックの欠落と block id の重複をレンダリング直前に検査する。
 
-    根拠: <work-root>/oracle/doc/app_spec/prompt_standard.md
+    根拠: <work-root>/oracle/doc/app_spec/prompt_policy.md
     """
     blocks: dict[str, StructBlock] = {}
     refs: list[str] = []

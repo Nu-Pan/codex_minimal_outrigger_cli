@@ -18,7 +18,7 @@ reporter の利用不能または submission の拒否は、本命 workload の�
 
 ### prompt instruction
 
-全 agent call に注入する正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py` の `build_feedback_reporting_standard` を正本とする。報告基準の意味は、本書を正本とする。
+全 agent call に注入する正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_policy.py` の `build_feedback_reporting_policy` を正本とする。報告基準の意味は、本書を正本とする。
 
 `build_complete_prompt` は、同 instruction を全 agent call へ 1 回だけ注入する。個別 builder の option にしたり、入力 schema や内部 transport の説明を prompt へ複製したりしてはならない。
 

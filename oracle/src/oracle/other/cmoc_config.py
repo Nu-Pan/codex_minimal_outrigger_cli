@@ -92,7 +92,7 @@ class CmocConfigCodex:
         }
     )
 
-    # ファイルアクセス規則違反時のリカバリ試行回数
+    # ファイルアクセス規定違反時のリカバリ試行回数
     num_try_falv_recovery: int = field(default=1)
 
 

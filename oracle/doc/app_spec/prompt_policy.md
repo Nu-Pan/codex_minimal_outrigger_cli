@@ -1,9 +1,9 @@
 
-# prompt standard
+# prompt policy
 
 ## 概要
 
-- cmoc が agent call に渡す prompt の責務、情報量、文面管理、および構築規則を定める。
+- cmoc が agent call に渡す prompt の責務、情報量、文面管理、および構築規定を定める。
 - 本書は、cmoc の意味仕様と agent 向け prompt 文面を別の正本として管理する境界を定める。
 
 ## 正本と実行時生成物の責務境界
@@ -52,7 +52,7 @@
     - 出力契約
     - agent call 固有契約
     - cmoc の状態遷移または完了判定が解釈する判断基準
-- installed skill は任意の追加規範として利用してよい
+- installed skill は任意の追加規定として利用してよい
 - installed skill の有無によって、cmoc の各サブコマンドが agent に要求する意味または判定基準を変えてはいけない
 - cmoc 固有契約と installed skill が競合する場合は、cmoc 固有契約を優先する
 - 言語、framework、tool、および対象 repository 固有の開発手順を cmoc が網羅することは目的としない
@@ -60,14 +60,20 @@
 - 対象 repository 固有の手順の配置先を `{{work-root}}/.agents/skills` に限定してはいけない
 - Windows toast 通知と prompt または installed skill の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
 
-## 規範を決定論的に注入する
+## 規定を決定論的に注入する
+
+### prompt policy の定義
+
+prompt policy は、cmoc が agent の判断または操作を制約するために選択して注入する instruction の総称とする。構築方法や分類の違いによって別の概念名を設けてはならない。
+
+### policy の選択と注入
 
 - agent call ごとに必要な instruction は、対応する `build_*_parameter` 関数が `build_complete_prompt` の固定引数として選択する。
 - builder による選択は、対応する oracle doc の意味仕様を実現するものであり、選択した prompt part だけを判断基準の正本にしてはならない。
-- 規範の選択に installed skill、設定による任意切替、または追加の agent call を使用してはいけない
-- `cmoc tui` は、適用条件を明記した cmoc の基本規範を固定で注入する
-- `cmoc tui` のオリジナルプロンプトに応じて規範を選択する agent call を行ってはいけない
-- repository の参照が必要な agent call だけに routing rule を注入する。入力された情報だけを参照する agent call には注入しない。
+- 規定の選択に installed skill、設定による任意切替、または追加の agent call を使用してはいけない
+- `cmoc tui` は、適用条件を明記した cmoc の基本規定を固定で注入する
+- `cmoc tui` のオリジナルプロンプトに応じて規定を選択する agent call を行ってはいけない
+- repository の参照が必要な agent call だけに routing policy を注入する。入力された情報だけを参照する agent call には注入しない。
 - prompt part の有効化によって、その文面が参照しない cmoc 固有概念を一律に追加してはならない。
 - indexing agent call は、対応する index entry instruction を固定で注入する。
 
@@ -82,7 +88,7 @@
 
 ## 人間向け feedback instruction を共通注入する
 
-- 共通 instruction の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py` の構築定義で管理する。
+- 共通 instruction の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_policy.py` の構築定義で管理する。
 - `build_complete_prompt` は、同文面を全 agent call へ無条件に 1 回だけ注入する
 - 個別の `build_*_parameter` 関数、個別 prompt、または個別 Structured Output schema に同じ reporting instruction を追加してはならない
 - feedback field を持たない既存 Structured Output の意味と受理条件を変更してはならない
@@ -136,7 +142,7 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 - agent call の初回入力は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
 - 動的構築された `AgentCallParameter.prompt` は、意味内容を変更せず agent call 側に渡す。realization file 側で加工してはならない
 - エディタ入力を使用する agent call は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` とサブコマンド固有仕様に従い、抽出済みのオリジナルプロンプトから `AgentCallParameter.prompt` を構築する
-- Structured Output の補正 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の出力補正規則を例外として適用する
+- Structured Output の補正 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の出力補正规定を例外として適用する
 
 ## 記法
 

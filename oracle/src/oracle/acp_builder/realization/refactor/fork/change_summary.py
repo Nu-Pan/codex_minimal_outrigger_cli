@@ -45,7 +45,7 @@ def build_realization_refactor_fork_change_summary_parameter(
                 StructCodeBlock("diff", raw_git_diff),
             ),
         ],
-        routing_rule=False,
+        routing_policy=False,
     )
 
     # report 用の分類は品質より経済性を優先する。

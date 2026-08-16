@@ -23,7 +23,7 @@
 
 call-scoped path context の適用範囲を次に示す。
 
-- 同じ完全 prompt 内の file access rule、routing rule、oracle file と realization file の分類、および path placeholder は、同一の call-scoped path context を使用する
+- 同じ完全 prompt 内の file access policy、routing policy、oracle file と realization file の分類、および path placeholder は、同一の call-scoped path context を使用する
 - `AgentCallParameter.agent_call_cwd` と完全 prompt の path placeholder は、同じ call-scoped path context から取得する
 - `build_complete_prompt` と各 prompt part は、cmoc process の cwd を個別に参照して path を解決してはならない
 - cmoc process の cwd だけを根拠として、子 agent call の path context を決定してはならない
@@ -72,7 +72,7 @@ call-scoped path context の適用範囲を次に示す。
 - `--sandbox` の値は `read-only` または `workspace-write` のどちらかに限定する
 - `AgentCallParameter.file_access_mode` は次のように `--sandbox` へ対応付ける
     - `READONLY`, `PURE_ORACLE_READ`: `--sandbox read-only`
-    - `REPO_WRITE`, `PURE_ORACLE_WRITE`, `REALIZATION_WRITE`, `NO_RULE`: `--sandbox workspace-write`
+    - `REPO_WRITE`, `PURE_ORACLE_WRITE`, `REALIZATION_WRITE`, `NO_POLICY`: `--sandbox workspace-write`
 - `AgentCallParameter` を使用しない動作確認用の Codex CLI 呼び出しでは `--sandbox read-only` を使う
 - 上記にない file access mode を受け取った場合は、sandbox を推測せず Codex CLI 呼び出し前に失敗させる
 - `$CODEX_HOME/config.toml` や project config の sandbox 設定に依存してはならない
@@ -108,9 +108,9 @@ call-scoped path context の適用範囲を次に示す。
     - `REPO_WRITE`: 追加の制限を設けない
     - `PURE_ORACLE_WRITE`: realization file の読み書きを禁止する
     - `REALIZATION_WRITE`: oracle file の書き込みを禁止する
-    - `NO_RULE`: 詳細な file access instruction を prompt に追加しない特殊 mode とする
+    - `NO_POLICY`: 詳細な file access instruction を prompt に追加しない特殊 mode とする
 - 個別 agent call が選択する file access mode は、対応する oracle doc の作業範囲と一致させる。AgentCallParameter builder は、その正確な選択値を構築する
-- `build_file_access_rule` は、本節の制限を agent へ伝える正確な prompt 文面を構築する
+- `build_file_access_policy` は、本節の制限を agent へ伝える正確な prompt 文面を構築する
 - path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない
 - 詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する
 
@@ -218,7 +218,7 @@ call-scoped path context の適用範囲を次に示す。
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
 - スキーマは、一度 `{{repo-root}}/.cmoc/gu/ar/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
 - `{{hash}}` は schema 本文の SHA256 ハッシュとする
-- schema と決定論的事後条件の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする
+- schema と決定論的事後条件の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_policy.md` を正本とする
 
 ### 機械的検証と正式な結果
 

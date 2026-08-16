@@ -61,13 +61,13 @@ merge conflict が発生した場合は通常の conflict として扱う。
 
 ## conflict marker 解消用の agent call
 
-- conflict 解消の意味仕様は、本書の「oracle file 規則と conflict 解消の優先順位」を正本とする
+- conflict 解消の意味仕様は、本書の「oracle file 規定と conflict 解消の優先順位」を正本とする
 - `build_session_join_conflict_resolution_parameter` は、この agent call の正確な prompt 文面と起動パラメータを構築する
 - この agent call は `{{work-root}}` に対する編集操作を伴うため、必ず直列に実行すること
 - builder は、同節の判断基準を agent へ伝える文面だけを conflict 解消用 instruction として固定で prompt へ注入する
-- oracle edit、oracle review、または realization refactor のための規範を conflict 解消へ転用してはいけない
+- oracle edit、oracle review、または realization refactor のための規定を conflict 解消へ転用してはいけない
 
-### oracle file 規則と conflict 解消の優先順位
+### oracle file 規定と conflict 解消の優先順位
 
 session join の conflict 解消は、両 branch の意味を保ったまま merge を完了するための作業であり、仕様変更または refactor を行う作業ではない。このため、conflict 対象 oracle file は marker 解消に必要な範囲だけ例外的に編集してよい。
 

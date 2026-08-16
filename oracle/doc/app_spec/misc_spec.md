@@ -8,7 +8,7 @@ oracle file は、人間が所有して全責任を負う正本仕様断片と�
 oracle file の下位概念は、次の責務で区別する。
 
 - oracle doc は `{{work-root}}/oracle/doc` に置き、cmoc の要求、判断基準、および責務を自然言語で定義する意味仕様の正本とする。
-- oracle src は `{{work-root}}/oracle/src` に置き、人間が所有する正確な実装定義と schema をプログラミング言語または設定形式で管理する。agent 向け文面の責務は `{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` に従う。
+- oracle src は `{{work-root}}/oracle/src` に置き、人間が所有する正確な実装定義と schema をプログラミング言語または設定形式で管理する。agent 向け文面の責務は `{{cmoc-root}}/oracle/doc/app_spec/prompt_policy.md` に従う。
 - oracle test は `{{work-root}}/oracle/test` に置き、プログラミング言語で正本仕様を検査する。
 
 realization file は、oracle file に記述された人間意図を具体化する成果物とする。realization file は AI が編集し、正本仕様を述べる場所にしてはならない。

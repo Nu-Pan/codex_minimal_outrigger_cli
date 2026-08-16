@@ -61,7 +61,7 @@ def build_feedback_normalize_issue_parameter(
                 StructCodeBlock("json", candidate_issues_json),
             ),
         ],
-        routing_rule=False,
+        routing_policy=False,
     )
 
     # 同一性判断専用の Structured Output と読み取り専用設定を返す。

@@ -4,10 +4,10 @@ from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_feedback_reporting_standard(
+def build_feedback_reporting_policy(
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, StructDoc]:
-    """全 agent call に共通する人間向け feedback の報告規範を構築する。"""
+    """全 agent call に共通する人間向け feedback の報告規定を構築する。"""
     return (
         {},
         StructDoc(

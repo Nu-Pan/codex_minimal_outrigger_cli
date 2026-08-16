@@ -51,7 +51,7 @@ def build_indexing_index_entry_parameter(
         path_context=path_context,
         aux_dynamic_prompt=[
             StructDoc(
-                "エントリー生成規則",
+                "エントリー生成規定",
                 """
                 - 必ずオリジナルの本文のみを根拠にエントリーを生成すること
                 - 既存の `INDEX.md` を読むのは禁止
@@ -69,8 +69,8 @@ def build_indexing_index_entry_parameter(
         aux_placeholder_def={
             "target-path": resolve_real_path(target_path, path_context),
         },
-        index_entry_standard=True,
-        routing_rule=False,
+        index_entry_policy=True,
+        routing_policy=False,
     )
     # パラメータを生成して返す
     # NOTE

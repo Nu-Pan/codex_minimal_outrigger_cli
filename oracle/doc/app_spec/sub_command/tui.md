@@ -4,8 +4,8 @@
 ## 概要
 
 - ユーザーから与えられたプロンプトへ cmoc 固有の契約を注入し、AI Agent CLI/TUI を起動する
-- installed skill の有無にかかわらず解釈できる、適用条件付きの cmoc 基本規範を固定で注入する
-- 実行パラメータまたは注入規範を選定するための agent call は行わない
+- installed skill の有無にかかわらず解釈できる、適用条件付きの cmoc 基本規定を固定で注入する
+- 実行パラメータまたは注入規定を選定するための agent call は行わない
 
 ## 引数
 
@@ -34,15 +34,15 @@
 
 - ユーザーのプロンプト入力後に `build_tui_launch_tui_parameter` で構築したパラメータを変更せず、TUI を直接起動する
 - TUI の意味上の責務と起動条件は本書を正本とする。`build_tui_launch_tui_parameter` は、正確な prompt 文面と TUI 起動パラメータを構築する
-- builder は次の規範を、オリジナルプロンプトの内容によらず固定で注入する
-    - `build_oracle_standard`
-    - `build_realization_standard`
-    - `build_oracle_review_standard`
-    - `build_apply_review_standard`
-    - `build_realization_oracle_reference_rule`
-- 各規範は自身が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
+- builder は次の規定を、オリジナルプロンプトの内容によらず固定で注入する
+    - `build_oracle_policy`
+    - `build_realization_policy`
+    - `build_oracle_review_policy`
+    - `build_apply_review_policy`
+    - `build_realization_oracle_reference_policy`
+- 各規定は自身が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
 - oracle file と realization file の責務および適合性は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md`、oracle review の所見成立条件は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md` を意味仕様の正本とする
-- installed skill は任意の追加規範として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
+- installed skill は任意の追加規定として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
 - builder は model class を `FLAGSHIP`、reasoning effort を `MAX`、file access mode を `REPO_WRITE` とする
 - Structured Output は要求しない
 - TUI 起動前の indexing preflight は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従い、git working tree または staging area に既存差分があっても実行する

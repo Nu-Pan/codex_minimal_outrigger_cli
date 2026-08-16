@@ -4,18 +4,18 @@ from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_routing_rule(
+def build_routing_policy(
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, StructDoc]:
     """
-    INDEX.md を使って必要な文章へ進むための規則文章を構築する
+    INDEX.md を使って必要な文章へ進むための規定文面を構築する
     """
     # この part の文面が参照する root 定義を call-scoped context から取得する
     root_definitions = path_context.root_placeholder_definitions()
     return (
         {"work-root": root_definitions["work-root"]},
         StructDoc(
-            "routing rule",
+            "routing policy",
             """
             - `INDEX.md` は、同階層の対象へ進むための routing 情報であり、本文の代替ではない
             - 作業対象に近い階層の `INDEX.md` から読み始め、対象領域を推定できない場合は `{{work-root}}/INDEX.md` を起点にする

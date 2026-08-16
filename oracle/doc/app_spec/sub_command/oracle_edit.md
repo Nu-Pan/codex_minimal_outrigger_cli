@@ -17,7 +17,7 @@
 - エディタ編集対象 file の初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する。
 - `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ `{{original-prompt-here}}` を渡し、editor の初期表示用 skeleton を構築する。
 - editor 終了後に抽出した同じオリジナルのユーザー指示を、本命用と仕様削減用の builder に渡す。各 builder は、担当固有の完全 prompt 本文を `AgentCallParameter.prompt` に設定する。
-- prompt の意味、文面、および受け渡しの共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` と `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
+- prompt の意味、文面、および受け渡しの共通規定は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_policy.md` と `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
 - editor work file の排他的 writer は管理しない。他の TUI やエディタとの並行操作から生じる競合や不整合は、人間が管理する。
 
 ## agent call 前の条件
@@ -49,9 +49,9 @@
 
 - 直前の本命 agent call が oracle file を変更し、その変更が起動前の既存差分と分離されず、現在の Git 未コミット差分に含まれていることを伝える。
 - オリジナルのユーザー指示、現在の oracle file、および oracle file に関する現在の Git 未コミット差分だけを本命成果の判断材料とする。
-- 過剰な仕様文言を削除し、仕様を簡素化し、関連する仕様および規範への違反を修正させる。
+- 過剰な仕様文言を削除し、仕様を簡素化し、関連する仕様および規定への違反を修正させる。
 - オリジナルのユーザー指示が要求する人間意図、実装差を許容しない境界、および対象外の既存仕様の意味を維持させる。固定の削減率または文字数目標は設けない。
-- 適用できる installed skill は補助規範として使用してよい。installed skill がこの prompt、オリジナルのユーザー指示、cmoc 固有契約、または関連する oracle file と競合する場合は、installed skill 以外を優先する。installed skill の有無を完了条件にしてはならない。
+- 適用できる installed skill は補助規定として使用してよい。installed skill がこの prompt、オリジナルのユーザー指示、cmoc 固有契約、または関連する oracle file と競合する場合は、installed skill 以外を優先する。installed skill の有無を完了条件にしてはならない。
 - 仕様削減用 prompt を、本命用 prompt、本命 agent の stdout、stderr、最終回答、call metadata、session ID、またはその他の session log から派生させてはならない。これらを仕様削減 agent に読ませたり、判断根拠にさせたりしてはならない。
 
 ## 実行順序

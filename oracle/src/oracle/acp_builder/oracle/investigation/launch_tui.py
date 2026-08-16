@@ -53,9 +53,9 @@ def build_oracle_investigation_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
-        oracle_investigation_standard=True,
-        editor_handoff_standard=True,
-        routing_rule=True,
+        oracle_investigation_policy=True,
+        editor_handoff_policy=True,
+        routing_policy=True,
     )
 
     # TUI を起動する

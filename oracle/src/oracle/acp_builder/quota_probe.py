@@ -29,7 +29,7 @@ def build_quota_availability_probe_parameter(
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
-        routing_rule=False,
+        routing_policy=False,
     )
 
     # availability の判定は Codex CLI の終了結果だけを使用する。

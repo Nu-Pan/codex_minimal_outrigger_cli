@@ -25,7 +25,7 @@
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする
 - エディタ編集対象ファイルの初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する
 - `build_oracle_investigation_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、oracle file の読み取り専用、realization file の読み書き禁止、および oracle file の調査に必要な cmoc 固有契約を含む完全プロンプトの skeleton を構築する
-- 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする
+- 汎用規定と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_policy.md` を正本とする
 
 ## TUI 起動パラメータ
 
@@ -36,7 +36,7 @@
 
 ## investigation から edit への handoff
 
-oracle investigation で editor handoff を行う場合は、共通の editor handoff Standard を適用する。
+oracle investigation で editor handoff を行う場合は、共通の editor handoff policy を適用する。
 
 - handoff file への書き込みは、Codex CLI の TUI で調査結果を回答する責務を置き換えない。
 - file access mode は `PURE_ORACLE_READ`、Codex CLI sandbox は `read-only` のまま維持する。

@@ -70,10 +70,10 @@ def build_realization_apply_fork_launch_exec_parameter(
         path_context=path_context,
         aux_dynamic_prompt=[apply_change],
         oracle_and_realization_basic=True,
-        realization_standard=True,
-        apply_review_standard=True,
-        realization_oracle_reference_rule=True,
-        routing_rule=True,
+        realization_policy=True,
+        apply_review_policy=True,
+        realization_oracle_reference_policy=True,
+        routing_policy=True,
     )
 
     # リポジトリ全体の追従を 1 agent call へ委ねるため最高品質設定を使う。

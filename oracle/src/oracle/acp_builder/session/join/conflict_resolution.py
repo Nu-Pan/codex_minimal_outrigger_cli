@@ -60,15 +60,15 @@ def build_session_join_conflict_resolution_parameter(
                 ),
             ),
             StructDoc(
-                "additional file access rule",
+                "additional file access policy",
                 """
                 - conflict 対象 oracle file は、この conflict marker 解消に必要な範囲だけ編集して良い
                 """,
             ),
         ],
         oracle_and_realization_basic=True,
-        conflict_resolution_standard=True,
-        routing_rule=True,
+        conflict_resolution_policy=True,
+        routing_policy=True,
     )
     # パラメータを生成して返す
     # NOTE

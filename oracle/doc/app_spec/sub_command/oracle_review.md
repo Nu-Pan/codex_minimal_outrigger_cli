@@ -43,11 +43,11 @@
 7. run の隔離実行を終了する
 8. 所見リストをレポートとしてレンダリングする
 
-## agent call 規則
+## agent call 規定
 
 - 個別 agent call の意味上の責務と判断基準は本書で定義する。
 - 対応する `build_oracle_review_*_parameter()` は、各 agent call の正確な prompt 文面と起動パラメータを構築する。
-- `{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/oracle_review_standard.py` の `build_oracle_review_standard` は、本書の所見成立条件を agent へ伝える正確な文面を構築する。
+- `{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/oracle_review_policy.py` の `build_oracle_review_policy` は、本書の所見成立条件を agent へ伝える正確な文面を構築する。
 - 所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定の全 builder は、同じ所見成立条件の文面を prompt へ注入する
 - Structured Output schema は出力構造だけを定義し、所見の判定基準を定義しない
 

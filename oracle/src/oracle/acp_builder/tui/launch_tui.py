@@ -50,12 +50,12 @@ def build_tui_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
-        oracle_standard=True,
-        realization_standard=True,
-        oracle_review_standard=True,
-        apply_review_standard=True,
-        realization_oracle_reference_rule=True,
-        routing_rule=True,
+        oracle_policy=True,
+        realization_policy=True,
+        oracle_review_policy=True,
+        apply_review_policy=True,
+        realization_oracle_reference_policy=True,
+        routing_policy=True,
     )
     # パラメータを生成して返す
     # NOTE

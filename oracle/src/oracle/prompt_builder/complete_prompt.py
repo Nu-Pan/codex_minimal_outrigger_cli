@@ -3,33 +3,33 @@ from typing import Callable
 
 from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.standard import (
-    StandardCollection,
-    combine_standard_collections,
-    standard_collection_to_struct_docs,
+from oracle.other.policy import (
+    PolicyCollection,
+    combine_policy_collections,
+    policy_collection_to_struct_docs,
 )
 from oracle.other.struct_doc import StructBlock, StructDoc
 
 from .basic import PlaceholderMap
 
 # local
-from .parts.apply_review_standard import build_apply_review_standard
-from .parts.conflict_resolution_standard import build_conflict_resolution_standard
-from .parts.editor_handoff_standard import build_editor_handoff_standard
-from .parts.feedback_reporting_standard import build_feedback_reporting_standard
-from .parts.file_access_rule import build_file_access_rule
-from .parts.index_entry_standard import build_index_entry_standard
+from .parts.apply_review_policy import build_apply_review_policy
+from .parts.conflict_resolution_policy import build_conflict_resolution_policy
+from .parts.editor_handoff_policy import build_editor_handoff_policy
+from .parts.feedback_reporting_policy import build_feedback_reporting_policy
+from .parts.file_access_policy import build_file_access_policy
+from .parts.index_entry_policy import build_index_entry_policy
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
-from .parts.oracle_review_standard import build_oracle_review_standard
-from .parts.oracle_standard import (
-    build_oracle_investigation_standard,
-    build_oracle_standard,
+from .parts.oracle_policy import (
+    build_oracle_investigation_policy,
+    build_oracle_policy,
 )
-from .parts.realization_oracle_reference_rule import (
-    build_realization_oracle_reference_rule,
+from .parts.oracle_review_policy import build_oracle_review_policy
+from .parts.realization_oracle_reference_policy import (
+    build_realization_oracle_reference_policy,
 )
-from .parts.realization_standard import build_realization_standard
-from .parts.routing_rule import build_routing_rule
+from .parts.realization_policy import build_realization_policy
+from .parts.routing_policy import build_routing_policy
 
 
 def _merge_placeholder_definitions(
@@ -57,27 +57,27 @@ def build_complete_prompt(
     aux_dynamic_prompt: list[StructDoc | StructBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
     oracle_and_realization_basic: bool = False,
-    oracle_standard: bool = False,
-    oracle_investigation_standard: bool = False,
-    realization_standard: bool = False,
-    oracle_review_standard: bool = False,
-    apply_review_standard: bool = False,
-    conflict_resolution_standard: bool = False,
-    editor_handoff_standard: bool = False,
-    realization_oracle_reference_rule: bool = False,
-    index_entry_standard: bool = False,
-    routing_rule: bool = False,
+    oracle_policy: bool = False,
+    oracle_investigation_policy: bool = False,
+    realization_policy: bool = False,
+    oracle_review_policy: bool = False,
+    apply_review_policy: bool = False,
+    conflict_resolution_policy: bool = False,
+    editor_handoff_policy: bool = False,
+    realization_oracle_reference_policy: bool = False,
+    index_entry_policy: bool = False,
+    routing_policy: bool = False,
 ) -> list[StructDoc | StructBlock]:
     """選択された agent 向け文面を完全 prompt として構築する。
 
     Args:
         summary: agent の担当、主作業、対象、および作業範囲。
         goal: agent call の終了時に満たされるべき状態。
-        oracle_investigation_standard: oracle file の読み取り専用調査に必要な
-            Standard だけを含めるか。
-        editor_handoff_standard: editor work file への handoff に必要な
-            Standard を含めるか。
-        routing_rule: repository 内の参照先を選ぶ routing 文面を含めるか。
+        oracle_investigation_policy: oracle file の読み取り専用調査に必要な
+            Policy だけを含めるか。
+        editor_handoff_policy: editor work file への handoff に必要な
+            Policy を含めるか。
+        routing_policy: repository 内の参照先を選ぶ routing 文面を含めるか。
 
     Returns:
         agent call へ渡す構造化済み prompt。
@@ -105,63 +105,63 @@ def build_complete_prompt(
         _merge_placeholder_definitions(ph_map, temp_ph_map)
         prompt.append(temp_prompt)
 
-    # 適合性規範が依存する規範を決定論的に有効化する。
-    if apply_review_standard:
-        realization_standard = True
-    if realization_standard or oracle_review_standard:
-        oracle_standard = True
+    # 適合性規定が依存する規定を決定論的に有効化する。
+    if apply_review_policy:
+        realization_policy = True
+    if realization_policy or oracle_review_policy:
+        oracle_policy = True
 
-    # 下位規則が参照する cmoc 固有概念も同時に注入する。
+    # 下位規定が参照する cmoc 固有概念も同時に注入する。
     if (
-        oracle_standard
-        or oracle_investigation_standard
-        or realization_standard
-        or oracle_review_standard
-        or apply_review_standard
-        or conflict_resolution_standard
-        or editor_handoff_standard
-        or realization_oracle_reference_rule
+        oracle_policy
+        or oracle_investigation_policy
+        or realization_policy
+        or oracle_review_policy
+        or apply_review_policy
+        or conflict_resolution_policy
+        or editor_handoff_policy
+        or realization_oracle_reference_policy
     ):
         oracle_and_realization_basic = True
 
     # 静的プロンプトを構築
     # feedback reporting は個別 builder や Structured Output 契約へ重複させず、
     # 全 agent call に共通するこの経路で常に注入する。
-    _extend_static_prompt(build_feedback_reporting_standard, path_context)
+    _extend_static_prompt(build_feedback_reporting_policy, path_context)
     if oracle_and_realization_basic:
         _extend_static_prompt(build_oracle_and_realization_basic, path_context)
 
-    # 各 builder は Standard を選択するだけとし、全用途分を合成後に一度だけ
-    # StructDoc へ変換する。これにより横断的な共通 Standard も一度だけ出力する。
-    standard_collections: list[StandardCollection] = []
-    if oracle_investigation_standard:
-        standard_collections.append(build_oracle_investigation_standard())
-    if oracle_standard:
-        standard_collections.append(build_oracle_standard())
-    if realization_standard:
-        standard_collections.append(build_realization_standard())
-    if apply_review_standard:
-        standard_collections.append(build_apply_review_standard())
-    if oracle_review_standard:
-        standard_collections.append(build_oracle_review_standard())
-    if conflict_resolution_standard:
-        standard_collections.append(build_conflict_resolution_standard())
-    if editor_handoff_standard:
-        standard_collections.append(build_editor_handoff_standard())
-    if index_entry_standard:
-        standard_collections.append(build_index_entry_standard())
-    combined_standards = combine_standard_collections(*standard_collections)
-    prompt.extend(standard_collection_to_struct_docs(combined_standards))
+    # 分類付き要求を持つ各 builder は Policy を選択するだけとし、全用途分を
+    # 合成後に一度だけ StructDoc へ変換する。横断的な共通 Policy も一度だけ出力する。
+    policy_collections: list[PolicyCollection] = []
+    if oracle_investigation_policy:
+        policy_collections.append(build_oracle_investigation_policy())
+    if oracle_policy:
+        policy_collections.append(build_oracle_policy())
+    if realization_policy:
+        policy_collections.append(build_realization_policy())
+    if apply_review_policy:
+        policy_collections.append(build_apply_review_policy())
+    if oracle_review_policy:
+        policy_collections.append(build_oracle_review_policy())
+    if conflict_resolution_policy:
+        policy_collections.append(build_conflict_resolution_policy())
+    if editor_handoff_policy:
+        policy_collections.append(build_editor_handoff_policy())
+    if index_entry_policy:
+        policy_collections.append(build_index_entry_policy())
+    combined_policies = combine_policy_collections(*policy_collections)
+    prompt.extend(policy_collection_to_struct_docs(combined_policies))
 
-    # Standard ではない静的規則は従来の構築経路で注入する。
-    if realization_oracle_reference_rule:
-        _extend_static_prompt(build_realization_oracle_reference_rule, path_context)
+    # 個別の構築処理を持つ規定を注入する。
+    if realization_oracle_reference_policy:
+        _extend_static_prompt(build_realization_oracle_reference_policy, path_context)
     if aux_static_prompt:
         prompt.extend(aux_static_prompt)
-    if file_access_mode != FileAccessMode.NO_RULE:
-        _extend_static_prompt(build_file_access_rule, file_access_mode, path_context)
-    if routing_rule:
-        _extend_static_prompt(build_routing_rule, path_context)
+    if file_access_mode != FileAccessMode.NO_POLICY:
+        _extend_static_prompt(build_file_access_policy, file_access_mode, path_context)
+    if routing_policy:
+        _extend_static_prompt(build_routing_policy, path_context)
 
     # 動的プロンプトを構築
     prompt.extend((summary_block, goal_block))

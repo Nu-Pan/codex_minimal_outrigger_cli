@@ -54,8 +54,8 @@ def build_oracle_edit_main_launch_exec_parameter(
         path_context=path_context,
         aux_dynamic_prompt=[_build_original_user_instruction(user_instruction)],
         oracle_and_realization_basic=True,
-        oracle_standard=True,
-        routing_rule=True,
+        oracle_policy=True,
+        routing_policy=True,
     )
 
     return AgentCallParameter(
@@ -79,7 +79,7 @@ def build_oracle_edit_reduction_launch_exec_parameter(
     complete_prompt = build_complete_prompt(
         summary="""
         - あなたは oracle file の仕様削減担当です
-        - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/>、現在の oracle file、および oracle file に関する現在の Git 未コミット差分を根拠として、過剰な仕様文言の削除、仕様の簡素化、および関連する仕様・規範への違反の修正を行うこと
+        - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/>、現在の oracle file、および oracle file に関する現在の Git 未コミット差分を根拠として、過剰な仕様文言の削除、仕様の簡素化、および関連する仕様・規定への違反の修正を行うこと
         """,
         goal="""
         - オリジナルのユーザー指示が要求する人間意図と、実装差を許容しない境界が維持されていること
@@ -99,7 +99,7 @@ def build_oracle_edit_reduction_launch_exec_parameter(
                 - 本命 agent call が仕様変更を行ったという事実以外の作業経緯は、この agent call に渡されていません
                 - 本命成果の参照経路は、現在の oracle file と oracle file に関する現在の Git 未コミット差分だけにして下さい
                 - 固定の削減率または文字数目標を設けず、オリジナルのユーザー指示に必要な仕様を基準に判断して下さい
-                - 作業に適用できる installed skill は、補助規範として使用して構いません
+                - 作業に適用できる installed skill は、補助規定として使用して構いません
                 - installed skill がこの prompt、オリジナルのユーザー指示、cmoc 固有契約、または関連する oracle file と競合する場合は、installed skill 以外を優先して下さい
                 - installed skill の有無を作業完了条件にしてはいけません
                 - 本命 agent call の prompt、stdout、stderr、最終回答、call metadata、session ID、およびその他の session log を読んだり、判断根拠にしたりしてはいけません
@@ -108,8 +108,8 @@ def build_oracle_edit_reduction_launch_exec_parameter(
             ),
         ],
         oracle_and_realization_basic=True,
-        oracle_standard=True,
-        routing_rule=True,
+        oracle_policy=True,
+        routing_policy=True,
     )
 
     return AgentCallParameter(

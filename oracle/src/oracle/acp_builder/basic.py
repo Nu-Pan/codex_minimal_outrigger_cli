@@ -53,7 +53,7 @@ class FileAccessMode(StrEnum):
 
     各 mode の意味と Codex CLI sandbox への対応は
     `oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
-    `build_file_access_rule` は agent に渡す正確な制限文面を構築する。
+    `build_file_access_policy` は agent に渡す正確な制限文面を構築する。
     """
 
     READONLY = auto()
@@ -61,7 +61,7 @@ class FileAccessMode(StrEnum):
     REPO_WRITE = auto()
     PURE_ORACLE_WRITE = auto()
     REALIZATION_WRITE = auto()
-    NO_RULE = auto()
+    NO_POLICY = auto()
 
 
 @dataclass(frozen=True)
@@ -98,5 +98,5 @@ class AgentCallParameter:
     # Structured Output の補正用 Codex call では、この値によらず再実行しない
     # 本命 agent call 自身が indexing である場合は indexing preflight をスキップする、というのが主な使い方
     # 通常は True のままで良い
-    # file access rule violation recovery のような indexing preflight から連鎖的に発生する処理の場合もスキップの対象。
+    # file access policy violation recovery のような indexing preflight から連鎖的に発生する処理の場合もスキップの対象。
     run_indexing_preflight: bool = True
