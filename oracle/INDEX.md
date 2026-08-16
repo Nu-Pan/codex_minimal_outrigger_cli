@@ -1,36 +1,39 @@
 # `doc`
 
 ## Summary
-- cmoc の正本文書を領域別に案内する上位入口。アプリケーション挙動、branch・commit・worktree、採用しなかった代替案、開発ルールを扱う下位文書群へのルーティングを提供する。
+- oracle/doc 配下の正本仕様群と開発ルール群へ進むための入口。CLI・workflow・branch model・設計上の不採用案、および Python 実装、環境、テスト、品質検査に関する判断を、対象領域の下位文書へ振り分ける。
 
 ## Read this when
-- cmoc の仕様・設計・開発ルールに関する正本文書を探すとき
-- CLI の挙動、session・run の分岐、採用しなかった設計案、Python 開発やテスト手順のいずれかを調査・変更・レビューするとき
+- cmoc の CLI や workflow の正本仕様、session／run／branch の関係、設計上の代替案、または開発・環境・テスト規則の入口を選ぶとき
+- 複数の oracle 文書にまたがる責務や、仕様と開発ルールのどちらを確認すべきかを判断するとき
 
 ## Do not read this when
-- 対象となる下位文書が明確で、その本文だけを直接確認すれば足りるとき
-- 具体的な CLI 実装、個別のテスト、または個別の oracle・realization の内容だけを調べるとき
+- 対象機能やサブコマンドの詳細仕様が明確で、対応する下位の oracle 文書を直接読めるとき
+- 実装配置、テスト実行手順、または個別の仕様・realization file の内容だけを確認する場合
 
 ## hash
-- d047f74262b69e21b1e96d6268734595af827083fa1fab429e39a3e75b125a7d
+- d288960342eeda2675dd77edcd54063009eee570ebffaf31d9865493ab2718d3
 
 # `src`
 
 ## Summary
-- AI コーディングエージェント呼び出しの構築定義を集約する領域。共通の呼び出しパラメータ、モデル・推論設定、ファイルアクセス、パスコンテキスト、Structured Output を基盤として、prompt の構成規則と用途別の agent call 定義を提供する。
-- agent call の用途別定義は、セッション競合解消、TUI、oracle 調査・編集・レビュー、feedback 検証、realization の apply・refactor、indexing などに分かれる。対象の呼び出し条件や起動設定を調べる際の上位入口として機能する。
-- prompt_builder 配下では完全 prompt の組み立て、プレースホルダ展開、oracle・realization・アクセス権限・routing・feedback などのポリシーを扱い、other 配下では設定、パス解決、構造化 Markdown の共通基盤を扱う。feedback 配下には reporter 入力契約も含まれる。
+- AI コーディングエージェント呼び出しに渡すパラメータ、モデル・推論設定、ファイルアクセスモード、cwd、Structured Output、indexing preflight の共通モデルと構築処理をまとめる領域。
+- agent call 用の完全 prompt を、summary・goal、共通 policy、oracle／realization 向け policy、補助文面、placeholder、エディタ入力から構成する処理を扱う。
+- call-scoped な repo／work root の解決、root placeholder の実パス化、cmoc 設定モデル、構造化 Markdown の生成・参照検証など、agent call 構築を支える共通基盤を提供する。
+- 下位には、agent call パラメータ構築を扱う acp_builder、完全 prompt と policy を扱う prompt_builder、パス・設定・構造化文書を扱う other があり、個別処理の入口として機能する。
 
 ## Read this when
-- agent call の共通パラメータ契約、モデルクラス、推論強度、ファイルアクセスモード、作業ディレクトリ、Structured Output の構築方法を確認するとき
-- 特定用途の agent call 定義を探し、oracle、realization、feedback、session、TUI、indexing の下位領域へ進む入口を判断するとき
-- 完全 prompt の生成順序、プレースホルダ、ポリシー統合、oracle・realization の扱い、routing や feedback reporting の規則を調査するとき
-- cmoc の設定モデル、パス表現・root 解決、構造化 Markdown の共通実装を確認するとき
+- 特定の cmoc 処理が agent call に設定するモデル、推論 effort、ファイルアクセス、cwd、Structured Output、indexing preflight を調査・変更するときは acp_builder を読む。
+- 完全 prompt の組み立て順序、summary・goal の注入、policy の選択、placeholder の統合、エディタ入力の初期文面を調査・変更するときは prompt_builder を読む。
+- agent call の root path、placeholder、cmoc 設定、構造化 Markdown のデータモデルやレンダリング・参照検証を調査・変更するときは other を読む。
+- 下位の個別 agent call、policy、oracle／realization 処理の具体的な Structured Output や prompt 契約を確認するときは、対応する下位要素へ進む。
 
 ## Do not read this when
-- 実際の agent call の実行制御、CLI サブコマンドの業務フロー、Git 操作そのものを調査するとき
-- 個別の oracle file や realization file の正本仕様、実装内容、テスト内容を確認するときは、対応する対象を直接読む
-- agent call 構築と無関係な一般 CLI 機能や、collector 側の feedback 保存・集約処理だけを調査するとき
+- agent call の実行制御、終了結果の処理、CLI サブコマンド固有の挙動を確認するときは、この共通領域ではなく呼び出し側・実行処理を直接読む。
+- collector の保存・集約・重複判定や、feedback の検出・継続判断だけを確認するときは、agent call 構築領域ではなく該当する collector・判定処理を直接読む。
+- 個別 policy や個別 prompt 部品の本文だけを確認するときは prompt_builder 全体ではなく、対応する policy または parts 配下を直接読む。
+- StructDoc・StructBlock、FileAccessMode、AgentCallPathContext、利用側 CLI 実装の詳細を確認するときは、この入口ではなくそれぞれの定義元・利用側を直接読む。
+- INDEX.md 自体や、oracle/src 外の設定ファイル・仕様書の内容を確認するときは、この領域を読む必要はない。
 
 ## hash
-- b8e2e117062fddd45308530df0f7afed72740878e99e4b7ce9fc0ce12086cba9
+- 1c9876501c1310fd807e7354ba60786b8f317b064630b1d3eb7267008b3e82ba

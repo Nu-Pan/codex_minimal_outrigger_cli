@@ -38,17 +38,16 @@
 # `review`
 
 ## Summary
-- oracle review の所見列挙・妥当性検証・採否判定・統合に使う Structured Output schema と agent call パラメータ定義を集約するディレクトリ。各ファイルは、所見の出力形式または対応するレビュー担当の prompt・モデル設定・読み取り制約・Structured Output schema の関連付けを定義する。oracle review の特定処理の入出力契約や起動条件を確認・変更するときの入口であり、レビュー全体の処理ロジックや共通 prompt 生成を調べる場合は配下の対応実装または別の共通処理へ進む。
+- oracle review の所見処理に関する Structured Output schema と agent call builder をまとめた領域です。新規所見の列挙、所見の妥当性を支持・反証する理由の列挙、所見の採否判定、重複や矛盾の整理を扱います。
+- 所見の入出力契約だけでなく、レビュー対象 oracle file の読取範囲、既知情報の重複排除、隔離 review worktree、prompt、実行ポリシー、Structured Output schema を接続する agent call 構築の入口です。
 
 ## Read this when
-- oracle review で新規所見を列挙するとき
-- レビュー所見の妥当性を支持・反証する理由の出力形式や agent call 設定を確認・変更するとき
-- レビュー所見の採否判定や、重複・矛盾を含む所見リストの統合処理を確認・変更するとき
+- cmoc oracle review の所見列挙、妥当性検証、採否判定、または所見リスト統合の挙動を確認・変更するとき
+- oracle review 用 agent call の prompt、Structured Output schema、oracle file の読取条件、または起動パラメータの接続を調査するとき
 
 ## Do not read this when
-- oracle review の対象仕様・実装や個々の所見内容を調査するとき
-- oracle review 全体の判定・統合ロジックを確認するとき
-- 共通 prompt 生成規則やパス解決など、各処理に固有でない agent call 構築処理を調査するとき
+- oracle review の実行制御、所見の永続化、またはレビュー結果の後処理だけを調査するとき
+- 所見の根拠となる個別の oracle file や、共通の agent call・prompt builder の仕様だけを確認するとき
 
 ## hash
-- fdf23c1f03c875ca5aab02d0b7eaf78a63c54cac82bdfe0915a11189e4bc9d03
+- 64b1f4b6aabb33eb333325074ed958870157a64c9fb26794ef4d7601da941d0c

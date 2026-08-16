@@ -17,21 +17,22 @@
 # `complete_prompt.py`
 
 ## Summary
-- cmoc の agent 向け完全プロンプトを構築する中核モジュール。概要・完了条件・各種ポリシー・ファイルアクセス規則・ルーティング規則・プレースホルダ定義を、選択された構成に応じて決定論的に統合する。
-- ポリシー間の依存関係を自動的に有効化し、重複するポリシーやプレースホルダ定義を統合しながら、agent call に渡す構造化文書列を生成する。
-- agent prompt の構成、ポリシー注入、プレースホルダ統合、または特定の作業種別に必要な規定の有効化条件を変更・調査するときの入口。個別ポリシーの具体的内容は同階層の各 policy builder を直接確認する。
+- agent 向けの完全なプロンプトを組み立てる中心実装。summary・goal、各種 policy、補助 prompt、placeholder 定義を選択順に統合し、構造化された prompt 要素として返す。
+- 同名 placeholder の定義を統合する際は、文字列表現が異なる値の衝突を検出して拒否する。
+- oracle・realization、ファイルアクセス、routing、index entry、feedback reporting などの作業規則を、指定されたフラグと call context に応じて prompt へ注入する入口である。
 
 ## Read this when
-- agent 向け完全プロンプトの生成順序や構造を確認するとき
-- 各種ポリシーの依存関係、自動有効化、重複統合の挙動を変更・調査するとき
-- プレースホルダ定義の統合や動的・静的プロンプトの組み立てを変更するとき
+- agent call に渡す完全 prompt の構成、注入される policy の順序、summary・goal・補助 prompt の配置を変更または確認するとき。
+- 複数の prompt builder が提供する placeholder 定義の統合や、定義衝突時の挙動を変更または調査するとき。
+- 新しい policy または補助 prompt を完全 prompt へ組み込む設計を確認するとき。
 
 ## Do not read this when
-- 個別ポリシーの本文や規則だけを確認したいときは、対応する policy モジュールを直接読む
-- プロンプト生成とは無関係な CLI 実装や oracle・realization の個別仕様を調査するとき
+- 個別 policy の本文や規則だけを確認する場合は、対応する policy builder を直接読む。
+- prompt の構造化文書型、ファイルアクセスモード、agent call path context の定義だけを確認する場合は、それぞれの定義元を直接読む。
+- INDEX.md のルーティング文書そのものを作成・確認する場合は、この prompt 組み立て実装ではなく対象文書と index-entry 規則を読む。
 
 ## hash
-- 13790db92ca3b83f1368a45ae45af37eaf652006aa16bce87800ab5af5cfec97
+- f3e56c078cd0628f9739fe69dd93ec31e11f3caf288ddbe6f442c722dd7aab0f
 
 # `editor_input.py`
 
@@ -72,18 +73,16 @@
 # `policy`
 
 ## Summary
-- agent instruction policy builder 群をまとめるディレクトリ。oracle・realization file の権威関係、レビュー所見、conflict 解消、editor handoff、feedback reporting、file access、INDEX.md routing など、用途別のポリシー構成を扱う。共通ポリシー定義と基本型を土台に、各作業向けの適用ポリシー群へ進む入口となる。
+- agent call のプロンプト構築に用いる各種 policy 定義を扱うディレクトリ。oracle／realization の正本関係、レビュー・conflict 解消、file access、feedback reporting、routing、INDEX エントリー生成など、特定の開発判断や文書ルーティングに必要な共通方針への入口を提供する。
 
 ## Read this when
-- agent call に埋め込む instruction policy の構成や、用途別に選択されるポリシー群を確認するとき
-- oracle・realization file の作成、変更、レビュー、conflict 解消、editor handoff に適用される規定の組み合わせを確認するとき
-- feedback reporting、file access、INDEX.md routing など共通 instruction の生成方針を確認するとき
-- Policy の定義、衝突検査、決定的な合成、StructDoc への変換を含む共通基盤の責務を確認するとき
+- agent call の共通 policy、oracle／realization の扱い、レビュー基準、conflict 解消、アクセス制約、feedback 報告、routing、INDEX エントリー生成のいずれかを確認・変更するとき
+- 対象の作業内容に応じて、該当する policy 定義へ進む入口を特定するとき
 
 ## Do not read this when
-- 特定のポリシーの具体的な判定文だけを確認したいときは、個別ポリシー定義へ直接進む
-- Policy や PolicyGroup の基本データ構造・合成規則だけを確認したいときは、基本型の定義へ直接進む
-- 個別の oracle／realization file の内容、実行時 CLI 処理、またはポリシーを利用する realization 実装を調査するとき
+- 具体的な oracle file や realization file の仕様・実装挙動を直接確認することが目的のとき
+- policy を利用するだけで、その構築規則自体を確認・変更する必要がないとき
+- 通常の CLI 実装、テスト、文書作成など、ここにある共通 prompt policy を扱わないとき
 
 ## hash
-- 0243d6b0c121f46496019eaacecae3818ad9e026967233c0ddc539497648db73
+- 29c54977e8f1fef13959efd0d8a5e1498baeb07efcac1c00740db5ca18a69146

@@ -1,20 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- AI コーディングエージェント呼び出しの prompt、アクセス権限、モデル・推論設定、作業ディレクトリ、Structured Output を構築する定義群。共通パラメータ契約は直下で確認し、用途別の呼び出し設定は feedback、indexing、oracle、realization、session、tui の各下位対象へ進むための入口となる。
+- AI コーディングエージェント呼び出しの AgentCallParameter を構築する定義を集約する領域です。共通パラメータ契約に加え、indexing、feedback、realization、session、tui、oracle の各処理向けに、prompt、ファイルアクセスモード、モデル・推論設定、Structured Output、作業ディレクトリ、indexing preflight の構成を定義します。
+- 個別処理の agent call 設定を調査・変更するときの入口であり、共通のパラメータ型は直下の定義、処理別の prompt と schema は対応する下位ディレクトリへ進んで確認します。
 
 ## Read this when
-- agent call builder の共通パラメータ契約や論理モデル・推論強度・ファイルアクセスモードを確認するとき
-- 用途別 agent call の prompt、起動設定、Structured Output、indexing preflight の扱いを調査するとき
-- 複数の agent call 定義にまたがる構成を確認し、対象用途の下位ディレクトリへ進む入口を探すとき
+- 特定の cmoc 処理がどのような agent call パラメータと完全 prompt を構築するかを調査・変更するとき
+- agent call のモデルクラス、推論強度、ファイルアクセス制御、Structured Output、cwd、indexing preflight の設定箇所を特定するとき
+- 処理別の agent call builder を横断して、oracle・realization・feedback などの設定責務の分割を確認するとき
 
 ## Do not read this when
-- 実際の agent call の実行処理やサブコマンド全体の制御フローを確認するとき
-- 個別の oracle file、realization file、feedback state、session の Git 操作そのものを確認するとき
-- 共通 prompt の生成規則や Codex CLI sandbox の正本仕様を確認するときは、それぞれの定義元や指定された oracle 文書を直接読む
+- agent call の実行制御や終了結果の処理を調査するときは、呼び出し側または実行処理を直接読む
+- モデル名や Codex CLI sandbox の具体的な解決仕様を確認するときは、realization 実装または指定された oracle 文書を読む
+- 個別の Structured Output schema、prompt の詳細、または対象処理の通常フローだけを調査するときは、対応する下位要素を直接読む
 
 ## hash
-- 9b0497f362228612efc2908874f2167b4817e359d5c98a76deb92b5c75ca55ca
+- e6e88ad08d1c68b9f12d7ce007246a19da65ae8c10753ac1d6ccfa748b645c9a
 
 # `feedback`
 
@@ -51,17 +52,22 @@
 # `prompt_builder`
 
 ## Summary
-- cmoc の agent 向け完全プロンプトを構成する prompt_builder の入口。プレースホルダ型、完全プロンプト生成、エディタ入力初期文、oracle／realization の基本説明、用途別ポリシー群を扱い、プロンプト構築や注入規則を調査・変更するときに下位要素へ進むためのルーティング対象。
+- agent 向けの完全 prompt を構築する実装群。summary・goal、placeholder 定義、選択式の共通 policy、oracle／realization の基本説明、補助 prompt を所定の順序で統合し、構造化された prompt 要素として返す。
+- `parts` は oracle／realization の分類や基本概念など、複数の prompt builder で共有する文面部品への入口。
+- `policy` は file access、routing、INDEX エントリー生成、oracle／realization の扱い、レビュー、conflict 解消、editor handoff、feedback reporting など、特定の作業条件で注入する規則への入口。
+- エディタ経由のユーザー入力用初期テキストと、placeholder 名から文字列または `Path` への対応付けを扱う定義も含む。
 
 ## Read this when
-- agent 向け完全プロンプトの構造、生成順序、ポリシー統合、プレースホルダ展開を調査・変更するとき。
-- エディタ経由のユーザー入力初期文や、oracle／realization の基本説明文の生成経路を確認するとき。
-- instruction policy の用途別構成や、feedback reporting・file access・INDEX.md routing などの共通規則を確認するとき。
+- agent call に渡す完全 prompt の構成、policy の注入条件・順序、summary・goal の配置、または placeholder 定義の統合を変更・調査するとき。
+- oracle／realization の基本説明や分類文面を共通 prompt に組み込む経路を確認するとき。
+- 特定の作業向け policy、routing 規則、INDEX エントリー生成規則、feedback reporting 規則などを完全 prompt に追加・変更するときは、まずここから該当する下位要素へ進む。
+- エディタ入力ファイルの初期表示文面や、完全 prompt へのユーザー入力差し込み位置を確認するとき。
 
 ## Do not read this when
-- 個別ポリシーの具体的な本文や判定文だけを確認したいときは、対応する下位の policy 定義へ直接進む。
-- プロンプト構築と無関係な CLI 処理、oracle／realization 個別ファイルの仕様、分類アルゴリズムやテスト実装だけを調査するとき。
-- StructDoc・StructBlock・Markdown レンダリング自体、保存用プロンプト管理、またはプレースホルダを使わない設定値の表現だけを確認するとき。
+- 個別 policy の本文や規則だけを確認する場合は、`policy` 配下の該当対象を直接読む。
+- 共有文面部品の具体的な内容だけを確認する場合は、`parts` 配下の該当対象を直接読む。
+- StructDoc・StructBlock の仕様、FileAccessMode、または agent call の path context 自体を確認する場合は、それぞれの定義元を直接読む。
+- prompt builder を利用する CLI の実装挙動や、INDEX.md のルーティング文書そのものを確認する場合は、利用側の実装または対象文書を読む。
 
 ## hash
-- c3481c26bd07f1d504dfb573ce3c88776e32a636e744f59e0f538190371bb907
+- 7ef3a025c0ead283f9d75b641078a0d940c103aa87d5f364ee5c79e624928b32

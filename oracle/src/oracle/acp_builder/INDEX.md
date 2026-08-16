@@ -53,21 +53,23 @@
 # `oracle`
 
 ## Summary
-- oracle 関連の agent call 起動定義を扱うディレクトリ。oracle の edit・investigation・review 各フローについて、起動パラメータ、prompt、読み取り制約、モデル設定、Structured Output などの個別定義へ進むための入口。
+- `cmoc oracle` 配下の agent call 起動定義を扱う領域です。oracle file の編集・調査・レビューそれぞれについて、prompt、読み取り制約、モデルや推論設定、作業ディレクトリ、Structured Output、起動前処理などの実行パラメータを構築する入口です。
 
 ## Read this when
-- oracle edit・investigation・review の agent call 起動条件や固定パラメータを確認・変更するとき
-- oracle 用 prompt の構成、アクセス範囲、モデル・推論設定、作業ディレクトリ、Structured Output 設定を調査するとき
-- レビュー所見の出力契約、妥当性検証、採否判定、統合に関する個別定義を確認するとき
+- `cmoc oracle edit` の起動条件、prompt 構成、仕様削減時の参照境界、アクセス範囲、モデル設定、作業ディレクトリ、索引事前処理を確認・変更するとき
+- `cmoc oracle investigation` でユーザー指示を完全プロンプトへ組み込む方法や、oracle-only 読み取り制約、構造化出力、起動前処理を確認・変更するとき
+- `cmoc oracle review` の所見列挙・妥当性検証・採否判定・統合に関する Structured Output schema と agent call builder の接続を確認・変更するとき
 
 ## Do not read this when
-- oracle file の内容や正本仕様そのものを確認・変更するとき
 - realization 実装の責務や配置を確認するとき
-- 通常の agent call 起動処理、共通設定、共通 prompt 生成規則を確認するとき
-- 対象フローの具体的なファイルを直接確認できる場合
+- 個別の oracle file の内容や正本仕様そのものを確認・変更するとき
+- 一般的な agent call 起動処理、共通設定、agent call パラメータ型の定義だけを確認するとき
+- prompt の共通生成規則だけを確認するとき
+- oracle review の実行制御、所見の永続化、レビュー結果の後処理だけを調査するとき
+- 配下の具体的なファイルを直接確認でき、ディレクトリ全体の起動定義を読む必要がないとき
 
 ## hash
-- 5da42aa4c7d53ae949fd20c1189d4b325e13fee9991030fb711251bfb3db6530
+- b2a2991c70d7722f983ea45b4e4e1fd597749e55ecf673d712d5113bbaf99c15
 
 # `quota_probe.py`
 
@@ -88,25 +90,20 @@
 # `realization`
 
 ## Summary
-- realization apply fork と refactor fork の agent call 定義をまとめる入口です。apply fork は oracle file の変更を realization file 全体へ追従させる起動処理を扱い、refactor fork は変更差分の要約およびファイル単位のレビュー・修正を扱います。
-- apply fork の起動 prompt、commit 範囲と raw git diff の埋め込み、run worktree、アクセス権限、各種 policy、モデル・推論設定を確認するときの入口です。
-- refactor fork の変更要約では、差分分類の Structured Output schema と readonly の起動設定を扱います。ファイルレビュー・修正では、対象 path を起点とした調査、realization file の修正、検証、所見と変更 path の整合、および出力契約を扱います。
-- apply fork の具体的な起動実装を確認する場合は apply 配下へ、refactor fork の変更要約またはファイルレビュー・修正を確認する場合は refactor 配下へ進みます。共通 prompt builder、共通 AgentCallParameter、個別の oracle・realization 実装やテストを調べる場合は、それぞれの定義元または対象ファイルを直接読みます。
+- `apply` は realization apply fork の AgentCallParameter を構築し、oracle diff の追従条件、prompt、worktree・権限・モデル設定、indexing preflight を確認する入口です。
+- `refactor` は refactor fork の変更要約およびファイル単位レビュー・修正用の AgentCallParameter と Structured Output 契約を扱い、差分分類、対象範囲、参照・書込規則、検証条件を確認する入口です。
 
 ## Read this when
-- realization apply fork の追従 agent の prompt、作業範囲、完了条件、run worktree、起動パラメータを変更または確認するとき。
-- oracle file の変更を realization file 全体へ反映する apply agent call と、commit 範囲・raw git diff の prompt 埋め込みを調査するとき。
-- refactor fork の変更差分を構造化要約する agent call の prompt、実行設定、linked worktree、Structured Output schema を確認または変更するとき。
-- refactor fork のファイル単位レビュー・修正における対象 path、調査範囲、修正権限、oracle・realization 参照方針、検証条件、所見出力契約を確認または変更するとき。
+- realization apply fork の起動パラメータ、oracle diff の prompt 組み込み、実行環境や indexing preflight を確認・変更するとき。
+- refactor fork の変更要約・レビュー・修正 agent call の prompt、差分入力、モデル・権限・検証条件、Structured Output 契約を確認・変更するとき。
 
 ## Do not read this when
-- apply fork 以外の apply 処理や、refactor fork 以外の agent call builder を調査するとき。
-- 完全 prompt の共通生成規則を調査するときは、共通 prompt builder を直接読むとき。
-- AgentCallParameter の共通データ構造や列挙値だけを調査するときは、基礎定義を直接読むとき。
-- 実際の変更差分、個別の oracle file、realization implementation、realization test の仕様や挙動を確認するときは、該当する対象を直接読むとき。
+- apply または refactor の realization 実装・テスト・補助ファイル自体を調査するとき。
+- oracle の仕様や一般的な AgentCallParameter 定義を確認するとき。
+- Structured Output のフィールド定義だけを確認する場合や、実際の refactor 差分・レビュー対象を調査する場合。
 
 ## hash
-- 523e8efe8df254f06c95c2d2ea22ec711701c1b186e6eea3b094fa475c0beb32
+- d89c1deed2370a70e8d04b32040bf12f825a3fe36da973ee305418336dc5d30f
 
 # `session`
 

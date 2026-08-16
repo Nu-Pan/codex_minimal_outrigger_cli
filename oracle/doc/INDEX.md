@@ -1,18 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション挙動に関する正本仕様群。CLI 自動補完、Codex 呼び出し、出力・ログ、doctor 前処理、エラー処理、feedback、indexing、prompt、run・session lifecycle、サブコマンド、通知など、利用者向け機能と横断的な実行契約を扱う。個別機能の挙動や実装・レビュー時に、対象仕様へ進むための入口となる。
+- cmoc の CLI・workflow・共通実行契約に関する正本仕様群への入口。自動補完、Codex 呼び出し、出力・ログ、doctor 前処理、エラー処理、feedback、run/session、prompt、通知、サブコマンドなど、個別機能の挙動仕様を確認するための下位文書を案内する。
 
 ## Read this when
-- cmoc の CLI サブコマンド、Codex 呼び出し、prompt 生成、feedback、run・session、出力・ログ、通知、自動補完などの正本仕様を調査・変更・レビューするとき
-- 複数のアプリケーション仕様にまたがる実行順序、状態遷移、report、エラー処理、作業隔離の契約を確認するとき
+- cmoc の CLI 機能や workflow の正本仕様を調査・変更・レビューするとき
+- 対象機能に対応する個別の oracle 文書を選び、実行契約・状態管理・出力・通知・feedback などの責務境界を確認するとき
 
 ## Do not read this when
-- 対象となる個別仕様が明確で、その仕様本文だけを直接確認すれば足りるとき
-- Python 開発環境、設計責務、テスト規約・実行手順、または個別の oracle・realization ファイルの具体的内容だけを調べるとき
+- 特定の機能やサブコマンドの詳細仕様が明確な場合は、対応する個別文書を直接読むとき
+- 実装配置、テスト実行手順、または個別 oracle／realization file の内容だけを確認する場合
 
 ## hash
-- 40128bf7ce2367f1d909ad946140c8f1fe4b4ab9182061a72b46b0b6e77839ec
+- eb073d764ce7c8e5bd540b01770858ebd87fe89da89eb83f94edfb15af4c9072
 
 # `branch_model.md`
 
