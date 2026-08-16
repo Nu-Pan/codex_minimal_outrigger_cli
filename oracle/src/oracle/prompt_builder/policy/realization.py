@@ -2,14 +2,13 @@
 
 from functools import cache
 
-from oracle.other.policy import PolicyCollection, PolicyGroup
-
-from .common_policy import ORACLE_AUTHORITY_POLICY_GROUP
-from .policy_definitions import (
+from ..parts.policy_definitions import (
     REALIZATION_CURRENT_SPEC_ONLY_POLICY,
     REALIZATION_ORACLE_CONFORMANCE_POLICY,
     REALIZATION_REPOSITORY_VERIFICATION_POLICY,
 )
+from .basic import PolicyCollection, PolicyGroup
+from .common import ORACLE_AUTHORITY_POLICY_GROUP
 
 
 @cache

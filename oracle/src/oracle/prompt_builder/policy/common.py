@@ -1,12 +1,11 @@
 """複数用途で共有する PolicyGroup の構成定義。"""
 
-from oracle.other.policy import PolicyGroup
-
-from .policy_definitions import (
+from ..parts.policy_definitions import (
     FINDING_BASIS_EVIDENCE_POLICY,
     ORACLE_AUTHORITY_NO_REVERSE_FLOW_POLICY,
     ORACLE_AUTHORITY_POLICY,
 )
+from .basic import PolicyGroup
 
 ORACLE_AUTHORITY_CORE_POLICY_GROUP = PolicyGroup(
     group_id="10.oracle_authority",

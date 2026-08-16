@@ -3,33 +3,33 @@ from typing import Callable
 
 from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.policy import (
-    PolicyCollection,
-    combine_policy_collections,
-    policy_collection_to_struct_docs,
-)
 from oracle.other.struct_doc import StructBlock, StructDoc
 
 from .basic import PlaceholderMap
 
 # local
-from .parts.apply_review_policy import build_apply_review_policy
-from .parts.conflict_resolution_policy import build_conflict_resolution_policy
-from .parts.editor_handoff_policy import build_editor_handoff_policy
-from .parts.feedback_reporting_policy import build_feedback_reporting_policy
-from .parts.file_access_policy import build_file_access_policy
-from .parts.index_entry_policy import build_index_entry_policy
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
-from .parts.oracle_policy import (
+from .policy.apply_review import build_apply_review_policy
+from .policy.basic import (
+    PolicyCollection,
+    combine_policy_collections,
+    policy_collection_to_struct_docs,
+)
+from .policy.conflict_resolution import build_conflict_resolution_policy
+from .policy.editor_handoff import build_editor_handoff_policy
+from .policy.feedback_reporting import build_feedback_reporting_policy
+from .policy.file_access import build_file_access_policy
+from .policy.index_entry import build_index_entry_policy
+from .policy.oracle import (
     build_oracle_investigation_policy,
     build_oracle_policy,
 )
-from .parts.oracle_review_policy import build_oracle_review_policy
-from .parts.realization_oracle_reference_policy import (
+from .policy.oracle_review import build_oracle_review_policy
+from .policy.realization import build_realization_policy
+from .policy.realization_oracle_reference import (
     build_realization_oracle_reference_policy,
 )
-from .parts.realization_policy import build_realization_policy
-from .parts.routing_policy import build_routing_policy
+from .policy.routing import build_routing_policy
 
 
 def _merge_placeholder_definitions(

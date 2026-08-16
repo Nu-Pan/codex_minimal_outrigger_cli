@@ -88,7 +88,7 @@ prompt policy は、cmoc が agent の判断または操作を制約するため
 
 ## 人間向け feedback instruction を共通注入する
 
-- 共通 instruction の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_policy.py` の構築定義で管理する。
+- 共通 instruction の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/feedback_reporting.py` の構築定義で管理する。
 - `build_complete_prompt` は、同文面を全 agent call へ無条件に 1 回だけ注入する
 - 個別の `build_*_parameter` 関数、個別 prompt、または個別 Structured Output schema に同じ reporting instruction を追加してはならない
 - feedback field を持たない既存 Structured Output の意味と受理条件を変更してはならない

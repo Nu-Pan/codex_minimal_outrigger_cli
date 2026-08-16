@@ -2,13 +2,12 @@
 
 from functools import cache
 
-from oracle.other.policy import PolicyCollection, PolicyGroup
-
-from .policy_definitions import (
+from ..parts.policy_definitions import (
     INDEX_ENTRY_EVIDENCE_POLICY,
     INDEX_ENTRY_ROUTING_POLICY,
     INDEX_ENTRY_SEMANTIC_INFORMATION_POLICY,
 )
+from .basic import PolicyCollection, PolicyGroup
 
 
 @cache

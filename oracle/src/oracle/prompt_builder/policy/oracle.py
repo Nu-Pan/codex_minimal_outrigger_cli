@@ -2,13 +2,7 @@
 
 from functools import cache
 
-from oracle.other.policy import PolicyCollection, PolicyGroup
-
-from .common_policy import (
-    ORACLE_AUTHORITY_CORE_POLICY_GROUP,
-    ORACLE_AUTHORITY_POLICY_GROUP,
-)
-from .policy_definitions import (
+from ..parts.policy_definitions import (
     ORACLE_AUTHORITATIVE_BASIS_POLICY,
     ORACLE_CONSISTENCY_AND_SEARCHABILITY_POLICY,
     ORACLE_DEFINED_AND_UNDEFINED_POLICY,
@@ -16,6 +10,11 @@ from .policy_definitions import (
     ORACLE_IMPLEMENTATION_CONSTRAINT_POLICY,
     ORACLE_INTENT_AND_GAPS_POLICY,
     ORACLE_NO_REVERSE_ENGINEERING_POLICY,
+)
+from .basic import PolicyCollection, PolicyGroup
+from .common import (
+    ORACLE_AUTHORITY_CORE_POLICY_GROUP,
+    ORACLE_AUTHORITY_POLICY_GROUP,
 )
 
 

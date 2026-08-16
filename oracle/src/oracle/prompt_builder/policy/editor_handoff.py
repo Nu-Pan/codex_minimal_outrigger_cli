@@ -2,9 +2,8 @@
 
 from functools import cache
 
-from oracle.other.policy import PolicyCollection, PolicyGroup
-
-from .policy_definitions import EDITOR_HANDOFF_PRESERVE_RESULT_POLICY
+from ..parts.policy_definitions import EDITOR_HANDOFF_PRESERVE_RESULT_POLICY
+from .basic import PolicyCollection, PolicyGroup
 
 
 @cache

@@ -2,15 +2,14 @@
 
 from functools import cache
 
-from oracle.other.policy import PolicyCollection, PolicyGroup
-
-from .common_policy import (
-    FINDING_BASIS_POLICY_GROUP,
-    ORACLE_AUTHORITY_POLICY_GROUP,
-)
-from .policy_definitions import (
+from ..parts.policy_definitions import (
     APPLY_REVIEW_ALREADY_RESOLVED_POLICY,
     APPLY_REVIEW_FIX_TARGETS_POLICY,
+)
+from .basic import PolicyCollection, PolicyGroup
+from .common import (
+    FINDING_BASIS_POLICY_GROUP,
+    ORACLE_AUTHORITY_POLICY_GROUP,
 )
 
 
