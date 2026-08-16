@@ -31,14 +31,19 @@ class StructDoc:
         """
         コンストラクタ
         """
+        # タイトル
         self._title = title
+        # 子要素
         self._children: list[StructDoc | StructBlock | StructCodeBlock | str]
         if len(children) == 0:
             raise ValueError(f"children must not be empty (title={title})")
-        if len(children) == 1 and isinstance(
-            children[0], (StructDoc, StructBlock, StructCodeBlock, str)
-        ):
-            self._children = [children[0]]
+        elif len(children) == 1:
+            if isinstance(children[0], (StructDoc, StructBlock, StructCodeBlock, str)):
+                self._children = [children[0]]
+            else:
+                raise TypeError(
+                    f"children contains unexpected type element (title={title}, type={type(c)})"
+                )
         else:
             self._children = list()
             for c in children:
@@ -84,22 +89,32 @@ class StructBlock:
     def __init__(
         self,
         block_id: str,
-        childlen: "StructDoc | StructBlock | Sequence[StructDoc | StructBlock] | str",
+        *children: "StructDoc|StructBlock|StructCodeBlock|str",
     ):
         # ブロック ID
         if not isinstance(block_id, str):
             raise TypeError(f"block_id must be str (type={type(block_id)})")
         self._block_id = block_id
         # 子要素
-        if isinstance(childlen, Sequence) and not isinstance(childlen, str):
-            for child in childlen:
-                if not isinstance(child, (StructDoc, StructBlock)):
+        self._children: list[StructDoc | StructBlock | StructCodeBlock | str]
+        if len(children) == 0:
+            raise ValueError(f"children must not be empty (block_id={block_id})")
+        elif len(children) == 1:
+            if isinstance(children[0], (StructDoc, StructBlock, StructCodeBlock, str)):
+                self._children = [children[0]]
+            else:
+                raise TypeError(
+                    f"children contains unexpected type element (block_id={block_id}, type={type(c)})"
+                )
+        else:
+            self._children = list()
+            for c in children:
+                if isinstance(c, (StructDoc, StructBlock, StructCodeBlock, str)):
+                    self._children.append(c)
+                else:
                     raise TypeError(
-                        f"child must contains StructDoc or StructBlock (type={type(child)})"
+                        f"children contains unexpected type element (block_id={block_id}, type={type(c)})"
                     )
-        elif not isinstance(childlen, (StructDoc, StructBlock, str)):
-            raise TypeError(f"child has unexpected type (type={type(childlen)})")
-        self._child = childlen
 
     @property
     def block_id(self) -> str:
@@ -108,8 +123,8 @@ class StructBlock:
     @property
     def childlen(
         self,
-    ) -> "StructDoc | StructBlock | Sequence[StructDoc | StructBlock] | str":
-        return self._child
+    ) -> "list[StructDoc | StructBlock | StructCodeBlock | str]":
+        return self._children
 
 
 class StructCodeBlock:
@@ -240,15 +255,19 @@ def _render_as_markdown_struct_block(
     内部実装
     StructBlock 専用
     """
-    result = f"<cmoc_block id={quoteattr(struct_node.block_id)}>\n"
-    child = struct_node.childlen
-    if isinstance(child, str):
-        return result + child + "</cmoc_block>\n"
-    if isinstance(child, Sequence):
-        result += "\n".join(_render_as_markdown(element, depth) for element in child)
-    else:
+    # ブロック開始
+    result = "\n"
+    result += f"<cmoc_block id={quoteattr(struct_node.block_id)}>\n"
+    result += "\n"
+    # 中身
+    for child in struct_node.childlen:
+        result += "\n"
         result += _render_as_markdown(child, depth)
+        result += "\n"
+    # ブロック開始
+    result += "\n"
     result += "</cmoc_block>\n"
+    result += "\n"
     return result
 
 

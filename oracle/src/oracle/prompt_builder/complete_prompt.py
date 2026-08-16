@@ -134,7 +134,7 @@ def build_complete_prompt(
             fundamental_policy_prompt,
             build_oracle_and_realization_basic(path_context),
         )
-    full_prompt.append(StructBlock("fundamental_policy", fundamental_policy_prompt))
+    full_prompt.append(StructBlock("fundamental_policy", *fundamental_policy_prompt))
 
     # 規定プロンプト
     if oracle_policy:
@@ -190,7 +190,9 @@ def build_complete_prompt(
     # このセッションの目的
     full_prompt.append(
         StructBlock(
-            "objective", [StructDoc("summary", summary), StructDoc("goal", goal)]
+            "objective",
+            StructDoc("summary", summary),
+            StructDoc("goal", goal),
         )
     )
 
