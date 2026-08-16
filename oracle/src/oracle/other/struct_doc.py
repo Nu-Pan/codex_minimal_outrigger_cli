@@ -8,6 +8,7 @@
 # std
 import re
 import textwrap
+from collections.abc import Sequence
 from xml.sax.saxutils import quoteattr
 
 _CMOC_REF_PATTERN = re.compile(r'<cmoc_ref target="([^"]+)"/>')
@@ -67,19 +68,19 @@ class StructBlock:
     def __init__(
         self,
         block_id: str,
-        child: StructDoc | list[StructDoc] | str,
+        child: "StructDoc | StructBlock | Sequence[StructDoc | StructBlock] | str",
     ):
         if not isinstance(block_id, str):
             raise TypeError(f"block_id has unexpected type (type={type(block_id)})")
         if not block_id:
             raise ValueError("block_id must not be empty")
-        if isinstance(child, list):
+        if isinstance(child, Sequence) and not isinstance(child, str):
             for element in child:
-                if not isinstance(element, StructDoc):
+                if not isinstance(element, (StructDoc, StructBlock)):
                     raise TypeError(
                         f"child contains unexpected type element (type={type(element)})"
                     )
-        elif not isinstance(child, (StructDoc, str)):
+        elif not isinstance(child, (StructDoc, StructBlock, str)):
             raise TypeError(f"child has unexpected type (type={type(child)})")
         self._block_id = block_id
         self._child = child
@@ -89,7 +90,9 @@ class StructBlock:
         return self._block_id
 
     @property
-    def child(self) -> StructDoc | list[StructDoc] | str:
+    def child(
+        self,
+    ) -> "StructDoc | StructBlock | Sequence[StructDoc | StructBlock] | str":
         return self._child
 
 
@@ -165,7 +168,7 @@ def _render_as_markdown(
         child = struct_node.child
         if isinstance(child, str):
             return result + child + "</cmoc_block>\n"
-        if isinstance(child, list):
+        if isinstance(child, Sequence):
             result += "\n".join(
                 _render_as_markdown(element, depth) for element in child
             )
@@ -225,10 +228,10 @@ def _validate_references(roots: list[StructDoc | StructBlock]) -> None:
             if node.block_id in blocks:
                 raise ValueError(f"Duplicate cmoc_block id (id={node.block_id!r})")
             blocks[node.block_id] = node
-            if isinstance(node.child, list):
+            if isinstance(node.child, Sequence) and not isinstance(node.child, str):
                 for block_child in node.child:
                     _visit(block_child)
-            elif isinstance(node.child, StructDoc):
+            elif isinstance(node.child, (StructDoc, StructBlock)):
                 _visit(node.child)
             return
 
