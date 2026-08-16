@@ -461,12 +461,6 @@
     "last_investigated_sha256": "83cea74218b4c0877790ce4230ac7e1e8d0485e3c6d81fb290596f5d6709c70e",
     "last_investigated_at": "2026-08-13_10-21_15_700070000"
   },
-  "oracle/src/oracle/other/policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
   "oracle/src/oracle/other/struct_doc.py": {
     "investigation_required": true,
     "last_investigation_result": "no_findings",
@@ -491,65 +485,11 @@
     "last_investigated_sha256": "ab47b18db214c4c267917f67e838f69065647618f31a1ad2a28d24cbba352aa9",
     "last_investigated_at": "2026-08-12_07-46_23_031684000"
   },
-  "oracle/src/oracle/prompt_builder/parts/apply_review_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/parts/common_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/parts/conflict_resolution_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/parts/editor_handoff_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/parts/feedback_reporting_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/parts/file_access_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/parts/index_entry_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
   "oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py": {
     "investigation_required": false,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "7d70bb60c470aff3275d9de18ec27d6b68d9da9fab51e7cf7a7608aa58964008",
     "last_investigated_at": "2026-08-14_13-12_44_152454000"
-  },
-  "oracle/src/oracle/prompt_builder/parts/oracle_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/parts/oracle_review_policy.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
   },
   "oracle/src/oracle/prompt_builder/parts/policy_definitions.py": {
     "investigation_required": true,
@@ -557,19 +497,79 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/src/oracle/prompt_builder/parts/realization_oracle_reference_policy.py": {
+  "oracle/src/oracle/prompt_builder/policy/apply_review.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/src/oracle/prompt_builder/parts/realization_policy.py": {
+  "oracle/src/oracle/prompt_builder/policy/basic.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/src/oracle/prompt_builder/parts/routing_policy.py": {
+  "oracle/src/oracle/prompt_builder/policy/common.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/conflict_resolution.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/editor_handoff.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/feedback_reporting.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/file_access.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/index_entry.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/oracle.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/oracle_review.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/realization.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/realization_oracle_reference.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/prompt_builder/policy/routing.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
