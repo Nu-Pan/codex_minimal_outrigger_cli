@@ -5,7 +5,7 @@ oracle/realization file の分類は、同じ repository path・Git index・安�
 共有する一つの境界である。分割すると、path の正規化と Git 状態検証を各 module で
 重複して追う必要が生じるため、現状は Git 境界として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import os

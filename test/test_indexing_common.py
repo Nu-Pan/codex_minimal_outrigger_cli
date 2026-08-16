@@ -5,14 +5,14 @@ CLI lifecycle から分離して検証する。根拠は
 `{{work-root}}/oracle/doc/app_spec/indexing.md`、
 `{{work-root}}/oracle/doc/app_spec/sub_command/indexing.md`、
 `{{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json`、
-`{{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py`。
+`{{work-root}}/oracle/src/oracle/prompt_builder/policy/index_entry.py`。
 
 この file は 16,000 文字を超えるが、INDEX entry の parse、hash、traversal、生成、
 並列更新は同じ indexing contract を検証する一つの責務である。分割すると、entry の
 鮮度と directory 更新順の観測文脈が複数 file に分散するため、現状は indexing の
 共通 runtime 回帰として一箇所に保つ。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import hashlib

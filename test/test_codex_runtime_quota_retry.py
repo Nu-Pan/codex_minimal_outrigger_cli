@@ -6,7 +6,7 @@ subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であ�
 同じ fake Codex 呼び出し列を追う文脈が分散する。現状は quota retry 回帰として
 一箇所に保つ方が凝集性が高い。
 根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-および {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+および {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import json
@@ -410,7 +410,7 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> N
     assert probe.prompt
     assert "# human feedback reporting" in probe.prompt
     assert probe.prompt.count("# human feedback reporting") == 1
-    assert "# routing rule" not in probe.prompt
+    assert "# routing policy" not in probe.prompt
     assert "追加の調査や作業を行わず" in probe.prompt
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False

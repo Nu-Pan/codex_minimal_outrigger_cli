@@ -210,7 +210,7 @@ def _reject_non_conflict_changes(
     conflicted_paths: list[Path],
 ) -> None:
     """Codex 呼び出し後に許可範囲外の差分が変化していないか検査する。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py:
+    # {{work-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py:
     # conflict marker 解消に不要な別 file の変更を merge commit へ持ち込まない。
     allowed = {_absolute_path(path) for path in conflicted_paths}
     after_codex = _changed_path_snapshot(root, git)
@@ -256,7 +256,7 @@ def _conflict_file_contents(paths: list[Path]) -> dict[Path, bytes]:
 
 def _reject_conflict_context_changes(before_contents: dict[Path, bytes]) -> None:
     """conflict marker の外側へ agent が差分を加えた場合は merge を拒否する。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py:
+    # {{work-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py:
     # conflict marker の置換範囲外の仕様変更、実装改善、整形を merge commit に持ち込まない。
     changed: list[Path] = []
     for path, before in before_contents.items():

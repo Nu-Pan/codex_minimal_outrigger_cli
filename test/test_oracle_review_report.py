@@ -5,7 +5,7 @@
 - `{{work-root}}/oracle/doc/app_spec/codex_exec_rule.md`
 - `{{work-root}}/oracle/doc/dev_rule/test_rule.md`
 - `{{work-root}}/oracle/doc/dev_rule/coding_rule.md`
-- `{{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py`
+- `{{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py`
 
 この file は 16,000 文字を超えるが、report の構築、finding 表示、CLI 出力、error
 summary は同じ oracle review report contract を検証する一つの責務である。分割すると

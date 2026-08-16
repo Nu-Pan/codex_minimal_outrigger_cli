@@ -87,17 +87,17 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     assert "fork-commit" in parameter.prompt
     assert "diff --git a/oracle/a.md b/oracle/a.md" in parameter.prompt
     for heading in (
-        "# oracle standard",
-        "# realization standard",
-        "# apply review standard",
-        "# realization oracle reference rule",
+        "# oracle policy",
+        "# realization policy",
+        "# apply review policy",
+        "# realization oracle reference policy",
     ):
         assert heading in parameter.prompt
-    assert "# oracle review standard" not in parameter.prompt
+    assert "# oracle review policy" not in parameter.prompt
     assert "# 両 branch の意味を保って conflict marker だけを解消する" not in (
         parameter.prompt
     )
-    assert "# routing rule" in parameter.prompt
+    assert "# routing policy" in parameter.prompt
 
 
 def test_realization_apply_builder_keeps_nested_diff_fences(
@@ -153,8 +153,8 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
         "`evidences[].path` は変更 path の申告または照合に使用しない" in review.prompt
     )
     assert "対象 repository が要求する必要な検証" in review.prompt
-    assert "# realization oracle reference rule" in review.prompt
-    assert "# routing rule" in review.prompt
+    assert "# realization oracle reference policy" in review.prompt
+    assert "# routing policy" in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
     finding_schema = review_schema["properties"]["findings"]["items"]
     assert "changed_paths" in finding_schema["required"]
@@ -171,7 +171,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     )
     assert summary.run_indexing_preflight is True
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in summary.prompt
-    assert "# routing rule" not in summary.prompt
+    assert "# routing policy" not in summary.prompt
     summary_schema = json.loads(summary.structured_output_schema_path.read_text())
     assert summary_schema["properties"]["changes"]["minItems"] == 1
     start = summary.prompt.index("# run branch 上の refactor 差分")

@@ -5,7 +5,7 @@ hash 検証、書き込み、commit は同じ index plan・lock・Codex context 
 責務である。分割すると、深さ順更新と entry の鮮度不変条件を複数 file で追う必要が
 生じるため、現状は indexing lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import fcntl
@@ -423,7 +423,7 @@ def render_index_entry(
     digest: str | None = None,
 ) -> str:
     """schema 検証済み Structured Output から INDEX.md entry を生成する。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+    # {{work-root}}/oracle/doc/app_spec/prompt_policy.md
     # schema 外の意味的な品質を、render 時の追加受理条件として再検証しない。
     digest = digest or index_target_hash(root, path)
     summary = entry["summary"]

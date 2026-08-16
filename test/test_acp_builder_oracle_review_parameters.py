@@ -18,7 +18,7 @@
 の期待値と prompt 境界の検証文脈が複数 file に分散するため、現状は review builder
 回帰として一箇所に保つ。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import json
@@ -155,20 +155,20 @@ def test_oracle_review_judge_finding_uses_max_reasoning() -> None:
         ),
     ],
 )
-def test_oracle_review_builders_share_finding_judgement_standard(
+def test_oracle_review_builders_share_finding_judgement_policy(
     tmp_path: Path,
     builder: Callable[..., AgentCallParameter],
     arguments: tuple[object, ...],
 ) -> None:
-    """review の全段階で単一の所見判定規範を注入する。"""
+    """review の全段階で単一の所見判定規定を注入する。"""
     (tmp_path / ".git").mkdir()
     parameter = builder(*arguments, agent_call_cwd=tmp_path)
     prompt = parameter.prompt
 
     assert parameter.agent_call_cwd == tmp_path.resolve()
     assert f"- {{{{work-root}}}} = {tmp_path.resolve()}" in prompt
-    assert "# oracle review standard" in prompt
-    assert "# routing rule" in prompt
+    assert "# oracle review policy" in prompt
+    assert "# routing policy" in prompt
     assert "実装者の裁量で解消不能な問題だけを fatal 所見にする" in prompt
     assert "文意または検索性を損なう表記上の誤りだけを minor 所見にする" in prompt
     assert "所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in prompt

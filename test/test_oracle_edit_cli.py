@@ -322,7 +322,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         complete_prompt_skeleton.count(oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER)
         == 1
     )
-    assert "# file read write rule - pure_oracle_write" in complete_prompt_skeleton
+    assert "# file read write policy - pure_oracle_write" in complete_prompt_skeleton
     assert "oracle file だけを編集し" in complete_prompt_skeleton
     expected_events = [
         "doctor",
@@ -350,8 +350,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     complete_prompt = main_parameter.prompt
     assert "oracle spec を更新する" in complete_prompt
     assert oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
-    assert "# oracle standard" in complete_prompt
-    assert "# routing rule" in complete_prompt
+    assert "# oracle policy" in complete_prompt
+    assert "# routing policy" in complete_prompt
     assert "realization file、`INDEX.md`、`AGENTS.md` を編集していない" in (
         complete_prompt
     )
@@ -370,8 +370,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         assert "oracle spec を更新する" in reduction_parameter.prompt
         assert "仕様削減の判断と参照の境界" in reduction_parameter.prompt
         assert "本命 agent call の prompt" in reduction_parameter.prompt
-        assert "# oracle standard" in reduction_parameter.prompt
-        assert "# routing rule" in reduction_parameter.prompt
+        assert "# oracle policy" in reduction_parameter.prompt
+        assert "# routing policy" in reduction_parameter.prompt
 
     assert input_copy_path.read_text(encoding="utf-8") == "oracle spec を更新する"
     assert not editor_work_path.exists()

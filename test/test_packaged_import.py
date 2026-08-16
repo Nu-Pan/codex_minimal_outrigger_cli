@@ -1,6 +1,6 @@
 """packaged layout と import 境界を検証する。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import os
@@ -93,13 +93,13 @@ def test_canonical_agent_builders_import_from_packaged_layout(
             "assert p.structured_output_schema_path.name == 'enumerate_finding.json'; "
             "schema = json.loads(p.structured_output_schema_path.read_text()); "
             "assert schema['required'] == ['findings']; "
-            "assert '# oracle review standard' in p.prompt; "
+            "assert '# oracle review policy' in p.prompt; "
             "base = AgentCallParameter('base', ModelClass.MINIMUM, "
             "ReasoningEffort.LOW, FileAccessMode.READONLY, 'base', None, Path.cwd()); "
             "probe = build_probe(base); "
             "assert probe.prompt; "
             "assert '# human feedback reporting' in probe.prompt; "
-            "assert '# routing rule' not in probe.prompt"
+            "assert '# routing policy' not in probe.prompt"
         ),
         tmp_path,
     )

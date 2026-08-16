@@ -62,12 +62,12 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert "# 両 branch の意味を保って conflict marker だけを解消する" in (
         parameter.prompt
     )
-    assert "# routing rule" in parameter.prompt
+    assert "# routing policy" in parameter.prompt
     for heading in (
-        "# oracle standard",
-        "# realization standard",
-        "# oracle review standard",
-        "# apply review standard",
+        "# oracle policy",
+        "# realization policy",
+        "# oracle review policy",
+        "# apply review policy",
     ):
         assert heading not in parameter.prompt
 
@@ -82,7 +82,7 @@ def test_session_join_conflict_paths_protect_nested_code_fences(
     parameter = build_session_join_conflict_resolution_parameter([conflicted_path])
 
     start = parameter.prompt.index("# conflict 対象ファイル")
-    end = parameter.prompt.index("\n\n# additional file access rule", start)
+    end = parameter.prompt.index("\n\n# additional file access policy", start)
     section = parameter.prompt[start:end]
     assert section.startswith("# conflict 対象ファイル\n\n````text\n")
     assert str(resolved_path) in section

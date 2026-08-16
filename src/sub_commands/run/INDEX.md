@@ -35,47 +35,53 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の active editing run を session branch へ統合する一連の lifecycle 実装。merge 前の差分検査、`--force-resolve` による想定外 run 差分の復元、INDEX.md だけを許可する conflict 解決、post-join hook、refactor state 同期、report 保存、run resource cleanup を扱う。
-- merge または post-join 処理の失敗時に session worktree と run state を rollback し、error state と report を残して再試行可能にする責務も含む。run join の成功・失敗・cleanup pending の状態遷移や、run process tracking と cleanup の挙動を確認する際の実装入口である。
+- `cmoc run join` の active editing run を session branch に統合する一連の lifecycle を担う実装。join 前の doctor/refactor state 同期、run/session 差分と想定外変更の検査、force-resolve、merge conflict 処理、post-join の INDEX 再生成・state 同期・report 保存、失敗時 rollback/error 化、worktree と branch の cleanup を同じ不変条件のもとで扱う。この挙動や cleanup pending/error rollback を確認・変更するときの入口であり、個別の共通 Git 操作や report/state API の詳細だけを調べる場合はそれらの実装へ直接進む。
 
 ## Read this when
-- `cmoc run join` の merge、差分検査、`--force-resolve`、INDEX.md conflict 処理を変更または調査するとき。
-- join 後の post-join hook、refactor state 同期、lifecycle report、run worktree・branch cleanup の挙動を確認するとき。
-- join 失敗時の rollback、error state、cleanup pending、run process tracking の不変条件を確認するとき。
+- `cmoc run join` の成功・失敗・再実行・`--force-resolve` の挙動を調査または変更するとき
+- run branch の merge、INDEX.md conflict、post-join hook、refactor state 同期、lifecycle report、run resource cleanup の連鎖を確認するとき
+- merge 後の rollback、error state、cleanup pending、abandon への引き継ぎ条件を確認するとき
 
 ## Do not read this when
-- `cmoc run join` 以外の subcommand の固有処理だけを変更または調査するとき。
-- INDEX.md の生成規則そのものや、join lifecycle を呼び出す共通 runtime API の仕様を直接確認するときは、それぞれの実装・仕様対象から読み始める場合。
+- join lifecycle ではなく、run の開始・編集・abandon や active run 解決そのものを調べるとき
+- Git 操作、state 永続化、process tracking、report 生成などの共通部品の仕様や実装だけを調べるとき
+- INDEX.md の生成規則そのものや、join 以外の workload 固有 merge 処理を調べるとき
 
 ## hash
-- 441d2a3f856e726f89c6d9d326755fa2cd718e0f239d5911684e06d4012f3090
+- 7d5accc8d71b75a7087447e9ff66439faa2db0b6107ae0dbc91d7966072ebbf3
 
 # `lifecycle.py`
 
 ## Summary
-- editing run 共通 helper の旧 import path を維持する互換 shim。実体は commons.runtime_run_lifecycle にあり、関連する型・ライフサイクル操作を再公開する。
+- editing run のライフサイクル共通処理を `commons` の正規実装から再公開し、旧 import path との互換性を維持する薄い shim。旧 path の利用箇所から共通処理への移行を確認する入口であり、移行完了時には対応する INDEX entry とともに削除対象となる。
 
 ## Read this when
-- editing run のライフサイクル処理や旧 import path との互換性を確認・変更するとき。
+- 旧 import path を利用するコードや、そこから `commons` 側への移行状況を調査するとき
+- editing run のライフサイクル helper の公開名や互換性を確認するとき
+- 共通実装への移行完了に伴う shim の削除可否を判断するとき
 
 ## Do not read this when
-- 共通ライフサイクル処理そのものを実装・変更する場合は、commons 側の canonical 実装を直接読むとよい。
+- 正規のライフサイクル実装そのものを変更・調査するときは、`commons` 側の実装を直接読むべきとき
+- editing run のライフサイクル以外の CLI 挙動やコマンド実装を調査するとき
 
 ## hash
-- 3de456333531bc878de445ccbaf683410ad0990c75f16028b6bcab36ac7d5939
+- 849170ea1a8f96d590a6e1031c92c4dfc00ffec553e96c7d919efd07e0c0dd14
 
 # `report.py`
 
 ## Summary
-- editing run report writer の旧 import path を維持する薄い互換 shim。共通実装を再公開し、対応する INDEX entry は互換性が不要になった時点で削除対象となる。
+- `editing run report writer` の旧 import path を維持する互換 shim。
+- 実装本体は `commons` 側にあり、この対象は `write_fork_report` と `write_lifecycle_report` を再公開する入口として機能する。互換性が不要になった場合は、canonical 実装への移行完了を確認してからこの shim と対応する INDEX entry を削除する。
 
 ## Read this when
-- 旧 import path から run report writer を利用するコードの互換性や移行を確認するとき。
-- fork report または lifecycle report の writer の参照先を確認するとき。
+- 旧 import path から run report writer を利用するコードの互換性や移行状況を確認するとき
+- fork report または lifecycle report の writer の公開入口を確認するとき
+- commons 側への移行完了後に旧 shim の削除可否を判断するとき
 
 ## Do not read this when
-- canonical な report writer の実装詳細を確認したいときは、commons 側の実装を直接読む。
-- run サブコマンドの実行フローや report 生成仕様を調査するとき。
+- run report writer の処理内容や挙動を変更・確認するとき
+- 旧 import path と無関係な CLI サブコマンドを調べるとき
+- canonical 実装の詳細を直接確認するとき
 
 ## hash
-- 633bf26dd4d3ab3155dcddf2eb46c2b39b1617fa4914e30aeeca6e9cc0975d48
+- bf4c9d035df1891f3e41bc9589a9140a0e7711c31ea141e7229d0463574a8f56
