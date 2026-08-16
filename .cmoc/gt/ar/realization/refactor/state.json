@@ -497,25 +497,7 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/src/oracle/prompt_builder/policy/basic.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/policy/common.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
   "oracle/src/oracle/prompt_builder/policy/conflict_resolution.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/prompt_builder/policy/definitions.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
