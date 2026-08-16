@@ -239,22 +239,21 @@
 # `prompt_policy.md`
 
 ## Summary
-- cmoc が agent call 用 prompt を構築・管理する際の責務境界と規定を定める文書。意味仕様、oracle src の prompt 文面、実行時生成物の関係、policy block の決定論的注入、Structured Output の受理条件、summary/goal の使い分け、placeholder・参照記法・言語方針を扱う。prompt builder や acp builder の設計・実装、prompt policy の追加や変更、agent call の出力契約・routing・index entry 注入を確認する際の入口となる。
+- cmoc が agent call 用 prompt を構築・受け渡しする際の責務境界と規定を定める文書。意味仕様、oracle src、実行時生成物の所有関係、prompt に含める情報、policy block の決定論的注入、Structured Output の受理条件、summary/goal の使い分け、placeholder と参照記法、言語方針を扱う。prompt builder や acp builder の仕様、policy 選択、agent 向け prompt の責務境界を確認する際の入口となる。
 
 ## Read this when
-- agent call に渡す prompt の責務、情報量、正本の所在、または実行時生成物との境界を確認するとき
-- prompt policy block の選択・注入規則、policy flag との対応、routing policy や index entry instruction の適用条件を変更・レビューするとき
-- Structured Output の schema、決定論的事後条件、補正 prompt、および受理条件の責務分担を確認するとき
-- summary と goal の記載範囲、prompt の参照関係、placeholder の統合、または cmoc 固有契約と言語方針を確認するとき
+- agent call に渡す prompt の構築責務、正本の所在、または realization implementation の許容範囲を確認するとき
+- policy flag と prompt block の対応、routing policy や feedback instruction の注入条件を変更・調査するとき
+- Structured Output の schema・validator・prompt における受理条件の責務分担を確認するとき
+- summary と goal、placeholder、cmoc_block/cmoc_ref の構築規則を確認するとき
 
 ## Do not read this when
-- cmoc の意味仕様そのものを確認する場合は、対応する oracle doc を直接読むとき
-- 子 agent に実際に渡される正確な prompt 文面を確認・変更する場合は、oracle src の prompt_builder または acp_builder を直接読むとき
-- prompt の実装処理や受け渡しだけを確認する場合は、本文の規定ではなく対象 realization implementation を直接読むとき
-- INDEX.md の entry や routing の意味仕様だけを確認する場合は、indexing の oracle doc を直接読むとき
+- cmoc の意味仕様そのものを確認する場合は、ここではなく対応する oracle doc を直接読むとき
+- agent call 固有の正確な prompt 文面を確認する場合は、ここではなく oracle/src/oracle/prompt_builder または acp_builder を読むとき
+- 実行時に生成された prompt、skeleton、editor input の内容だけを確認したいとき
 
 ## hash
-- 0a8fb6e59f92be03682a59b0e808dc3c5da5e3b84900177b4bccd6c27102ee9f
+- 9ac7dd98f2338be028cf7ea815e2089f813afaa0e4af34afd73c669bad4cca98
 
 # `run_isolation.md`
 

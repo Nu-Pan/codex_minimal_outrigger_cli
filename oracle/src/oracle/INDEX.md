@@ -36,38 +36,33 @@
 # `other`
 
 ## Summary
-- cmoc の共通基盤モデルと文書生成ヘルパーをまとめた領域。設定モデル、agent call のパスコンテキストと root placeholder 解決、構造化 Markdown のレンダリングを扱い、それぞれの実装を確認する入口になる。
+- cmoc の共通モデルと文書生成ヘルパーをまとめるディレクトリ。設定モデル、agent call のルートパス・placeholder 解決、構造化文章の Markdown／cmoc_block／コードブロック変換を扱い、それぞれの実装を確認する入口となる。
 
 ## Read this when
-- cmoc のリポジトリ固有設定、パス表記・root 解決、または構造化 Markdown 文書生成の共通実装を調査・変更するとき
-- これらの共通モデルを利用する機能の前提規則を確認するとき
+- cmoc のリポジトリ固有設定や Codex CLI・oracle review の設定構造を変更するとき
+- agent call の work root・repository root・run root、または root placeholder の解決規則を確認・変更するとき
+- 構造化文書を Markdown に変換する処理、cmoc_ref の検証、cmoc_block やコードブロックの出力を確認・変更するとき
 
 ## Do not read this when
-- 個別 CLI 機能の実装や oracle review の具体的な処理を調査するとき
-- 設定ファイルの実際の保存内容や、特定機能に固有のプロンプト・仕様だけを確認するとき
+- 個別の CLI サブコマンドや oracle review の実処理そのものを確認したいとき
+- 設定ファイルに保存された実際の値や人間による調整結果だけを確認したいとき
+- このディレクトリのヘルパーを利用する個別機能の挙動を調べる場合に、その利用側の実装を直接確認すべきとき
 
 ## hash
-- be9a8350716a216f9b6e92ef5c313d0f4e7b4bf77608a7ad536dfbc1f1d3b09b
+- 5329eb514d8df585fe895d9179108f6b28a94bc10c6994d56d1ab5e3b462fcd0
 
 # `prompt_builder`
 
 ## Summary
-- agent 向けの完全 prompt を構築する実装群。summary・goal、placeholder 定義、選択式の共通 policy、oracle／realization の基本説明、補助 prompt を所定の順序で統合し、構造化された prompt 要素として返す。
-- `parts` は oracle／realization の分類や基本概念など、複数の prompt builder で共有する文面部品への入口。
-- `policy` は file access、routing、INDEX エントリー生成、oracle／realization の扱い、レビュー、conflict 解消、editor handoff、feedback reporting など、特定の作業条件で注入する規則への入口。
-- エディタ経由のユーザー入力用初期テキストと、placeholder 名から文字列または `Path` への対応付けを扱う定義も含む。
+- agent call 向けの完全な構造化プロンプトを組み立てる prompt_builder の構成要素を扱うディレクトリ。placeholder 型、完全 prompt の統合、エディタ入力、oracle／realization の説明文、共通 policy を確認するための入口であり、個別の実装や policy 本文へ進む前のルーティングに使う。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成、policy の注入条件・順序、summary・goal の配置、または placeholder 定義の統合を変更・調査するとき。
-- oracle／realization の基本説明や分類文面を共通 prompt に組み込む経路を確認するとき。
-- 特定の作業向け policy、routing 規則、INDEX エントリー生成規則、feedback reporting 規則などを完全 prompt に追加・変更するときは、まずここから該当する下位要素へ進む。
-- エディタ入力ファイルの初期表示文面や、完全 prompt へのユーザー入力差し込み位置を確認するとき。
+- agent call の prompt 構築全体、構成要素の統合順、placeholder、エディタ入力、oracle／realization の説明、共通 policy のいずれかを変更または確認するとき
+- prompt_builder 配下の特定要素を読むべき入口や、関連する policy・定義元を特定したいとき
 
 ## Do not read this when
-- 個別 policy の本文や規則だけを確認する場合は、`policy` 配下の該当対象を直接読む。
-- 共有文面部品の具体的な内容だけを確認する場合は、`parts` 配下の該当対象を直接読む。
-- StructDoc・StructBlock の仕様、FileAccessMode、または agent call の path context 自体を確認する場合は、それぞれの定義元を直接読む。
-- prompt builder を利用する CLI の実装挙動や、INDEX.md のルーティング文書そのものを確認する場合は、利用側の実装または対象文書を読む。
+- 特定の policy 本文、placeholder 型、StructDoc などの定義、具体的な prompt 生成ロジックだけを確認したいときは、該当する下位対象を直接読む
+- prompt_builder と無関係な CLI 実装、テスト、文書の仕様や挙動を調べるとき
 
 ## hash
-- 7ef3a025c0ead283f9d75b641078a0d940c103aa87d5f364ee5c79e624928b32
+- 6a30eee20dedb7dffae138f5722f1f8724611fda0eb24586d4b73ab6a6be820d

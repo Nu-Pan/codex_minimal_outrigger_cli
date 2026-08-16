@@ -17,22 +17,21 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent 向けの完全なプロンプトを組み立てる中心実装。summary・goal、各種 policy、補助 prompt、placeholder 定義を選択順に統合し、構造化された prompt 要素として返す。
-- 同名 placeholder の定義を統合する際は、文字列表現が異なる値の衝突を検出して拒否する。
-- oracle・realization、ファイルアクセス、routing、index entry、feedback reporting などの作業規則を、指定されたフラグと call context に応じて prompt へ注入する入口である。
+- agent call 向けの完全な構造化プロンプトを組み立てる中心的なビルダー。パス由来の placeholder 定義を初期化し、補助定義との衝突を検査しながら、選択された各種 policy、caller 追加文面、作業概要・完了条件、最終的な placeholder 定義を所定の順序で統合する。
+- プロンプト生成の構成、policy の有効化条件、placeholder 定義の統合や衝突時の扱いを変更・調査するときの入口であり、個別 policy の本文や placeholder の型定義そのものを確認する場合は、対応する import 先を直接読む。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成、注入される policy の順序、summary・goal・補助 prompt の配置を変更または確認するとき。
-- 複数の prompt builder が提供する placeholder 定義の統合や、定義衝突時の挙動を変更または調査するとき。
-- 新しい policy または補助 prompt を完全 prompt へ組み込む設計を確認するとき。
+- agent call に渡す完全 prompt の全体構成や、各 policy・追加文面の組み込み順を変更または確認するとき
+- placeholder 定義の初期化、重複統合、異値衝突エラーの挙動を変更または確認するとき
+- file access mode、path context、各 policy フラグが prompt 生成へ与える影響を追跡するとき
 
 ## Do not read this when
-- 個別 policy の本文や規則だけを確認する場合は、対応する policy builder を直接読む。
-- prompt の構造化文書型、ファイルアクセスモード、agent call path context の定義だけを確認する場合は、それぞれの定義元を直接読む。
-- INDEX.md のルーティング文書そのものを作成・確認する場合は、この prompt 組み立て実装ではなく対象文書と index-entry 規則を読む。
+- 特定の policy の文面や、その policy 固有の placeholder 定義だけを変更・確認するときは、対応する policy 実装を直接読む
+- StructDoc、StructBlock、FileAccessMode、AgentCallPathContext、PlaceholderMap の定義や仕様だけを確認するときは、それぞれの定義元を直接読む
+- 生成済み prompt の個別内容だけを確認し、prompt 全体の構成ロジックを調査しないとき
 
 ## hash
-- f3e56c078cd0628f9739fe69dd93ec31e11f3caf288ddbe6f442c722dd7aab0f
+- b7208f4b2f22f1ab03545bfad8801a78b3dabf8786905d8d7ae3b188f1aadb19
 
 # `editor_input.py`
 

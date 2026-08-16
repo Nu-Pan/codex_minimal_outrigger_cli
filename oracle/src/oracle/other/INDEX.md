@@ -37,15 +37,18 @@
 # `struct_doc.py`
 
 ## Summary
-- 階層化された自然言語文書を Markdown にレンダリングするためのデータクラスと補助関数を定義する。`StructDoc`、`StructBlock`、`StructCodeBlock` の構造表現、見出し深度・コードフェンス・空行の整形、`cmoc_ref` の検証、三重引用文字列のインデント正規化を扱う。Markdown の構造化文書生成、cmoc ブロック参照の検証、またはこれらのレンダリング規則を変更・確認するときの実装入口である。
+- 構造化された自然言語文章を Markdown にレンダリングするヘルパー群を扱う。StructDoc による階層的な見出し生成、StructBlock による cmoc_block の埋め込み、StructCodeBlock によるコードブロック出力を確認したいときの入口となる。
+- レンダリング前の cmoc_ref 検証、空行の整理、三重引用文字列のインデント正規化など、Markdown 生成時の内部処理を確認する作業にも適している。
 
 ## Read this when
-- 構造化された文書や cmoc ブロックを Markdown に変換する処理を変更・調査するとき
-- 見出し深度、コードフェンス、空行、`cmoc_ref` の妥当性検査、三重引用文字列の正規化の挙動を確認するとき
+- 構造化文書を Markdown 化する処理の仕様や実装を調べるとき
+- 見出し深度、コードフェンス、cmoc_block、cmoc_ref のレンダリング挙動を変更または検証するとき
+- StructDoc、StructBlock、StructCodeBlock の責務や利用方法を確認するとき
 
 ## Do not read this when
-- Markdown 以外の文書生成処理を調べるとき
-- cmoc のプロンプト構成やブロック参照ポリシーそのものを確認する場合で、レンダリング実装を確認する必要がないとき
+- Markdown の正本仕様やプロンプトポリシー自体を確認したいとき
+- 対象のヘルパーを使わない CLI 機能や別の文章生成処理を調べるとき
+- 既存の INDEX.md の内容やルーティング規則だけを確認したいとき
 
 ## hash
-- 398e1c8d1d609ff8ff2fd92a8addb6a064372bf66e00c8f79125a6640e5dad06
+- 4daec53bf18176b233ada6e88793c2629ff21b5cac2c3355c864760db6648a97
