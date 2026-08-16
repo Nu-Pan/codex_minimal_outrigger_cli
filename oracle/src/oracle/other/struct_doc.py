@@ -64,12 +64,22 @@ class StructBlock:
     プロンプト内でこのブロック参照するには `<cmoc_ref target="..."/>` の形式で記述する
     """
 
-    def __init__(self, block_id: str, child: StructDoc | str):
+    def __init__(
+        self,
+        block_id: str,
+        child: StructDoc | list[StructDoc] | str,
+    ):
         if not isinstance(block_id, str):
             raise TypeError(f"block_id has unexpected type (type={type(block_id)})")
         if not block_id:
             raise ValueError("block_id must not be empty")
-        if not isinstance(child, (StructDoc, str)):
+        if isinstance(child, list):
+            for element in child:
+                if not isinstance(element, StructDoc):
+                    raise TypeError(
+                        f"child contains unexpected type element (type={type(element)})"
+                    )
+        elif not isinstance(child, (StructDoc, str)):
             raise TypeError(f"child has unexpected type (type={type(child)})")
         self._block_id = block_id
         self._child = child
@@ -79,7 +89,7 @@ class StructBlock:
         return self._block_id
 
     @property
-    def child(self) -> StructDoc | str:
+    def child(self) -> StructDoc | list[StructDoc] | str:
         return self._child
 
 
@@ -155,7 +165,12 @@ def _render_as_markdown(
         child = struct_node.child
         if isinstance(child, str):
             return result + child + "</cmoc_block>\n"
-        result += _render_as_markdown(child, depth)
+        if isinstance(child, list):
+            result += "\n".join(
+                _render_as_markdown(element, depth) for element in child
+            )
+        else:
+            result += _render_as_markdown(child, depth)
         result += "</cmoc_block>\n"
         return _collapse_blank_lines(result)
 
@@ -210,7 +225,10 @@ def _validate_references(roots: list[StructDoc | StructBlock]) -> None:
             if node.block_id in blocks:
                 raise ValueError(f"Duplicate cmoc_block id (id={node.block_id!r})")
             blocks[node.block_id] = node
-            if isinstance(node.child, StructDoc):
+            if isinstance(node.child, list):
+                for block_child in node.child:
+                    _visit(block_child)
+            elif isinstance(node.child, StructDoc):
                 _visit(node.child)
             return
 

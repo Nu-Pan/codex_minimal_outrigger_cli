@@ -81,61 +81,74 @@ def build_complete_prompt(
     ph_map: PlaceholderMap = path_context.root_placeholder_definitions()
     _merge_placeholder_definitions(ph_map, aux_placeholder_def)
 
-    # 動的プロンプトの参照先
-    summary_block = StructBlock("summary", StructDoc("summary", summary))
-    goal_block = StructBlock("goal", StructDoc("goal", goal))
-
-    # 構築先プロンプト。先頭要素の文言と順序は入力に依存させない。
+    # 全体プロンプト構築先
     prompt: list[StructDoc | StructBlock] = [
         StructDoc(
             "プロンプト内地図",
-            StructDoc("担当と依頼の概要", '<cmoc_ref target="summary"/>'),
-            StructDoc("作業の完了条件", '<cmoc_ref target="goal"/>'),
+            """
+            - このセッションの規定: <cmoc_ref target="policy"/>
+            - このセッションの目的: <cmoc_ref target="objective"/>
+            """,
         )
     ]
 
-    # 構築ユーティリティ
-    def _extend_static_prompt(build_fn: Callable, *args, **kwargs):
+    # 規定プロンプト構築先
+    policy_prompt: list[StructDoc] = list()
+
+    # 規定プロンプト構築ユーティリティ
+    def _extend_policy_prompt(build_fn: Callable, *args, **kwargs):
         temp_ph_map, temp_prompt = build_fn(*args, **kwargs)
         _merge_placeholder_definitions(ph_map, temp_ph_map)
-        prompt.append(temp_prompt)
+        policy_prompt.append(temp_prompt)
 
-    # 静的プロンプトを構築
-    # feedback reporting は個別 builder や Structured Output 契約へ重複させず、
-    # 全 agent call に共通するこの経路で常に注入する。
-    _extend_static_prompt(build_feedback_reporting_policy, path_context)
+    # 規定プロンプト
+    # NOTE
+    #   feedback は cmoc の基本機能なので毎回必ず入れる
+    #   それ以外はフラグで切り替える
+    _extend_policy_prompt(build_feedback_reporting_policy, path_context)
     if oracle_and_realization_basic:
-        _extend_static_prompt(build_oracle_and_realization_basic, path_context)
+        _extend_policy_prompt(build_oracle_and_realization_basic, path_context)
     if oracle_policy:
-        _extend_static_prompt(build_oracle_policy)
+        _extend_policy_prompt(build_oracle_policy)
     if oracle_investigation_policy:
-        _extend_static_prompt(build_oracle_investigation_policy)
+        _extend_policy_prompt(build_oracle_investigation_policy)
     if realization_policy:
-        _extend_static_prompt(build_realization_policy)
+        _extend_policy_prompt(build_realization_policy)
     if oracle_review_policy:
-        _extend_static_prompt(build_oracle_review_policy)
+        _extend_policy_prompt(build_oracle_review_policy)
     if apply_review_policy:
-        _extend_static_prompt(build_apply_review_policy)
+        _extend_policy_prompt(build_apply_review_policy)
     if conflict_resolution_policy:
-        _extend_static_prompt(build_conflict_resolution_policy)
+        _extend_policy_prompt(build_conflict_resolution_policy)
     if editor_handoff_policy:
-        _extend_static_prompt(build_editor_handoff_policy)
+        _extend_policy_prompt(build_editor_handoff_policy)
     if realization_oracle_reference_policy:
-        _extend_static_prompt(build_realization_oracle_reference_policy, path_context)
+        _extend_policy_prompt(build_realization_oracle_reference_policy, path_context)
     if index_entry_policy:
-        _extend_static_prompt(build_index_entry_policy)
+        _extend_policy_prompt(build_index_entry_policy)
+    if file_access_mode != FileAccessMode.NO_POLICY:
+        _extend_policy_prompt(build_file_access_policy, file_access_mode, path_context)
+    if routing_policy:
+        _extend_policy_prompt(build_routing_policy, path_context)
+
+    # 全体プロンプトへ規定プロンプトを追加
+    prompt.append(StructBlock("policy", policy_prompt))
+
+    # caller による追加プロンプト (static)
     if aux_static_prompt:
         prompt.extend(aux_static_prompt)
-    if file_access_mode != FileAccessMode.NO_POLICY:
-        _extend_static_prompt(build_file_access_policy, file_access_mode, path_context)
-    if routing_policy:
-        _extend_static_prompt(build_routing_policy, path_context)
 
-    # 動的プロンプトを構築
-    prompt.extend((summary_block, goal_block))
+    # このセッションの目的
+    prompt.append(
+        StructBlock(
+            "objective", [StructDoc("summary", summary), StructDoc("goal", goal)]
+        )
+    )
+
+    # caller による追加プロンプト (dynamic)
     prompt.extend(aux_dynamic_prompt)
 
-    # プレースホルダマップを構築
+    # プレースホルダマップ
     prompt.append(
         StructDoc(
             "place holder definition",

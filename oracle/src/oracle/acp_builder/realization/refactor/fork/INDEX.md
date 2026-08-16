@@ -50,18 +50,16 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- ファイル単位の refactor fork レビュー・修正用 AgentCallParameter を構築する。対象 path と linked worktree を基に、完全な調査・修正・検証プロンプト、アクセス権限、各種ポリシー、Structured Output schema、実行モデルを設定する。
-- 対象ファイルを起点に、差分を前提とせず oracle file と realization file の調査から realization file の修正・検証までを行う agent call を定義したい場合の入口。プロンプト本文の構築は `build_complete_prompt`、パス解決は `AgentCallPathContext` と `resolve_real_path`、構造化文書化は `StructDoc` に委譲している。
+- 対象ファイル単位のレビュー兼修正用 AgentCallParameter を構築する定義。対象パスを起点に、完全な調査・修正プロンプト、作業範囲、参照ポリシー、検証条件、Structured Output スキーマを組み立てる。
+- refactor fork のファイル単位レビュー・修正フローで、対象ファイルを起点とした agent call の実行条件やプロンプト構成を確認・変更するときの入口となる。
 
 ## Read this when
-- refactor fork のファイル単位レビュー・修正 agent call のパラメータ生成を変更するとき
-- レビュー対象の linked worktree、realization write 権限、oracle/realization・routing・apply review 各ポリシーの適用方法を確認するとき
-- レビュー結果の Structured Output schema、決定論的な変更 path 申告、最大推論設定、indexing preflight の組み合わせを変更するとき
+- refactor fork のファイル単位レビュー・修正 agent call の prompt、権限、パスコンテキスト、モデル設定、出力スキーマ指定を変更するとき
+- 対象ファイルを起点に oracle・realization の調査から修正後検証までを要求する agent call の構築方法を確認するとき
 
 ## Do not read this when
-- refactor fork 以外の agent call builder を調べるとき
-- 共通プロンプト生成の仕様や `build_complete_prompt` 自体の実装を変更・確認するときは、まずその共通実装を直接読むとき
-- レビュー対象の realization 実装や oracle 文書の内容を調査するときは、対象ファイルを直接読むとき
+- レビュー・修正 prompt の実際の内容ではなく、Structured Output のフィールド定義だけを確認するときは、対応する JSON スキーマを直接読む
+- refactor fork 以外の agent call 構築や、実際のレビュー対象 realization の実装を調査するとき
 
 ## hash
-- dcb3db5fa137b8f9c95b2f03ce6c4fe20318e8c1d007125d9c970fac4e9d2786
+- ecd8d82c82127794fe7aec2667cf94c24a2fcdb152481ca7ce702bc0bc283afb

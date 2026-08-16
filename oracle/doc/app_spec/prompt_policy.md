@@ -204,7 +204,7 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 
 - `cmoc_block`、`id`、`cmoc_ref`、`target` は固定の名前とし、`target-1` は参照先を対応付ける可変値とする
 - 動的なプロンプト構築では、`cmoc_block` を `StructBlock` で表し、`cmoc_ref` は参照元のプロンプト文字列内に直接記述する
-- `StructBlock` の子には、参照対象の `StructDoc` または Markdown へレンダリング済みの文字列を使用できる
+- `StructBlock` の子には、参照対象の `StructDoc`、`list[StructDoc]`、または Markdown へレンダリング済みの文字列を使用できる
 - レンダリング済みの文字列を子にする場合、その文字列は事前のレンダリングで参照関係の検査を完了しているものとし、外側の構造では不透明な内容として再検査しない
 - Markdown へのレンダリング時に、各 `cmoc_ref` の参照対象が構築結果内に一つだけ存在することを検査し、参照対象の欠落、`cmoc_block` の `id` 重複、または不正な `cmoc_ref` 記法を検出した場合はプロンプト構築を失敗させる
 
