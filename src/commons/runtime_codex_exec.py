@@ -6,7 +6,7 @@ subcommand event、補正・retry counter を共有する 1 つの状態機械�
 別 module へ分け、exec の分岐だけをここに残すことで責務境界を exec 実行制御
 へ限定している。quota 処理だけをさらに分離すると、resume session ID と log/event
 の読み取り文脈が呼び出し元と分断されるため、現状は一体で読む方が凝集性が高い。
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import json

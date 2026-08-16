@@ -2,7 +2,7 @@
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 """
 
 import json
@@ -172,7 +172,7 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
 
     正本仕様:
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -290,7 +290,7 @@ def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(
     """linked worktree でも PURE_ORACLE_READ を専用 sandbox 引数へ変換する。
 
     正本仕様:
-        {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-exec-log"
@@ -341,7 +341,7 @@ def test_run_codex_exec_does_not_inject_agents_path_permissions(
     """`.agents` の実在 path を sandbox の個別設定へ変換しないことを検証する。
 
     正本仕様:
-        {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
     root = make_repo(tmp_path)
     agents_file = root / ".agents" / "nested" / "instructions.md"

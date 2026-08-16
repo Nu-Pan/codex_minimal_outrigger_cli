@@ -24,12 +24,12 @@ from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
         "{{original-prompt-here}}",
     ],
 )
-def test_tui_launch_builder_uses_fixed_parameter_and_standards(
+def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     original_prompt: str,
 ) -> None:
-    """オリジナル prompt によらず固定の規範と実行設定を使用する。"""
+    """オリジナル prompt によらず固定の規定と実行設定を使用する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
@@ -45,18 +45,18 @@ def test_tui_launch_builder_uses_fixed_parameter_and_standards(
     complete_prompt = parameter.prompt
     for heading in (
         "# oracle and realization basic",
-        "# oracle standard",
-        "# realization standard",
-        "# oracle review standard",
-        "# apply review standard",
-        "# realization oracle reference rule",
+        "# oracle policy",
+        "# realization policy",
+        "# oracle review policy",
+        "# apply review policy",
+        "# realization oracle reference policy",
     ):
         assert heading in complete_prompt
     assert "# 両 branch の意味を保って conflict marker だけを解消する" not in (
         complete_prompt
     )
-    assert "# index entry standard" not in complete_prompt
-    assert "# routing rule" in complete_prompt
+    assert "# index entry policy" not in complete_prompt
+    assert "# routing policy" in complete_prompt
     assert original_prompt in complete_prompt
     if original_prompt == "{{original-prompt-here}}":
         assert complete_prompt.count(original_prompt) == 1

@@ -51,19 +51,18 @@
 # `join.py`
 
 ## Summary
-- `session join` サブコマンドの実行処理と、session branch の merge conflict 解消を担う。active な session branch の事前条件を検証し、session home branch へ安全に merge した後、状態を joined に更新し、merge 済みの場合だけ session branch を削除する。
-- merge conflict 発生時は conflict 対象の列挙、Codex による marker 解消、許可外の変更や marker 外の変更の検査、stage、merge commit 完了確認までを行う。Git path の NUL framing、file 種別・mode・内容の fingerprint、conflict marker 検査など、競合解消の安全性を担保する補助処理も含む。
-- session join の実装や挙動、merge・conflict 解消・branch 削除の安全性、またはこれらの内部検査を変更・調査するときの入口となる。通常の session 作成・状態管理や conflict 解消プロンプト自体を確認する場合は、それぞれの専用対象へ進む。
+- `session join` サブコマンドの実行制御を担う実装です。active な session branch の事前条件を確認し、session home branch へ `--no-ff` merge した後、状態を `joined` に更新します。merge target HEAD から到達可能な場合だけ local session branch を削除し、削除できない場合は警告を返します。
+- merge conflict 発生時は Codex に解消を依頼し、conflict marker、unmerged path、conflict 対象外の変更、marker 外の内容変更を検査してから merge を完了します。session join の branch 操作、状態更新、conflict 解消の安全性、terminal result を確認・変更するときの入口です。
 
 ## Read this when
-- `cmoc session join` の事前条件、merge 対象、session state 更新、merge 後の branch 削除動作を確認するとき
-- session join 中の merge conflict 解消、Codex 呼び出し、許可外変更の拒否、conflict marker 検査を調査・変更するとき
-- session join の primary report 更新や terminal result、Git path の安全な取り扱いを確認するとき
+- session join の事前条件、session home branch への merge、session state の更新、local session branch の削除を確認・変更するとき
+- session join の merge conflict 解消、conflict marker 検査、Codex 呼び出し後の差分制限を確認・変更するとき
+- session join の terminal result、警告、primary report 更新を確認するとき
 
 ## Do not read this when
-- session の状態や session_home_branch の正本仕様を確認することが目的で、サブコマンド実装の挙動を調べる必要がないとき
-- conflict 解消時に Codex へ渡すプロンプト仕様そのものを確認するとき
-- session join 以外の session サブコマンドの実装を直接調査するとき
+- session の状態モデルや状態値の正本仕様だけを確認するとき
+- Codex 実行や prompt 生成の共通規則だけを確認するとき
+- session join 以外のサブコマンド固有の挙動を確認・変更するとき
 
 ## hash
-- c96a47dc6a8c381176cb56d82ef7f0e8dae578fce8a7c0b565287f473abdd958
+- 3c8e08d2248d8498b4486e71e86153d3aa236b05d3a01045af0e0631ec05eb6f

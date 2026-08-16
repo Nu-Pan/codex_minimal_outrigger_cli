@@ -17,17 +17,20 @@
 # `src`
 
 ## Summary
-- cmoc の agent 呼び出し定義を構成する Python パッケージのルート。共通モデル、パス・文書処理、完全 prompt と policy の構築、用途別の agent call パラメータ、feedback 入力契約を扱う。
-- 共通モデルや文書処理を確認する場合は `other`、完全 prompt や policy の構築を確認する場合は `prompt_builder`、用途別の agent call 設定を確認する場合は `acp_builder`、feedback の入力契約を確認する場合は `feedback` へ進む入口となる。
+- AI コーディングエージェント呼び出しの構築定義を集約する領域。共通の呼び出しパラメータ、モデル・推論設定、ファイルアクセス、パスコンテキスト、Structured Output を基盤として、prompt の構成規則と用途別の agent call 定義を提供する。
+- agent call の用途別定義は、セッション競合解消、TUI、oracle 調査・編集・レビュー、feedback 検証、realization の apply・refactor、indexing などに分かれる。対象の呼び出し条件や起動設定を調べる際の上位入口として機能する。
+- prompt_builder 配下では完全 prompt の組み立て、プレースホルダ展開、oracle・realization・アクセス権限・routing・feedback などのポリシーを扱い、other 配下では設定、パス解決、構造化 Markdown の共通基盤を扱う。feedback 配下には reporter 入力契約も含まれる。
 
 ## Read this when
-- cmoc の agent 呼び出しに関わる prompt、policy、ファイルアクセス制約、作業ディレクトリ、Structured Output の構成を調査・変更するとき
-- 複数の agent call 定義や prompt 構築部品にまたがる構成を確認し、対象領域の下位パッケージを選ぶとき
+- agent call の共通パラメータ契約、モデルクラス、推論強度、ファイルアクセスモード、作業ディレクトリ、Structured Output の構築方法を確認するとき
+- 特定用途の agent call 定義を探し、oracle、realization、feedback、session、TUI、indexing の下位領域へ進む入口を判断するとき
+- 完全 prompt の生成順序、プレースホルダ、ポリシー統合、oracle・realization の扱い、routing や feedback reporting の規則を調査するとき
+- cmoc の設定モデル、パス表現・root 解決、構造化 Markdown の共通実装を確認するとき
 
 ## Do not read this when
-- 実際の CLI サブコマンドの実行処理や、agent call 後の Git・worktree 制御だけを確認するとき
-- 特定の prompt、policy、agent call、feedback 契約の場所が明らかな場合は、このルートではなく対応する下位パッケージへ直接進むとき
-- oracle file や realization file の正本仕様そのものを確認するときは、対応する oracle または realization の文書を直接読むとき
+- 実際の agent call の実行制御、CLI サブコマンドの業務フロー、Git 操作そのものを調査するとき
+- 個別の oracle file や realization file の正本仕様、実装内容、テスト内容を確認するときは、対応する対象を直接読む
+- agent call 構築と無関係な一般 CLI 機能や、collector 側の feedback 保存・集約処理だけを調査するとき
 
 ## hash
-- fdf354ecc8b0c19738a593bc01a58269248358f7244f2bb336092e17849d0a82
+- b8e2e117062fddd45308530df0f7afed72740878e99e4b7ce9fc0ce12086cba9

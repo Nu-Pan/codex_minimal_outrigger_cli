@@ -2,7 +2,7 @@
 
 対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.py、
 {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json、
-{{work-root}}/oracle/doc/app_spec/prompt_standard.md
+{{work-root}}/oracle/doc/app_spec/prompt_policy.md
 """
 
 import json
@@ -40,9 +40,9 @@ def test_indexing_index_entry_uses_minimum_model_and_low_reasoning(
     assert parameter.file_access_mode == FileAccessMode.READONLY
     assert parameter.agent_call_cwd == indexing_target_path.parent.resolve()
     assert parameter.run_indexing_preflight is False
-    assert "# index entry standard" in parameter.prompt
+    assert "# index entry policy" in parameter.prompt
     assert "# oracle and realization basic" not in parameter.prompt
-    assert "# routing rule" not in parameter.prompt
+    assert "# routing policy" not in parameter.prompt
 
 
 def test_indexing_index_entry_schema_requires_non_empty_semantic_lists(

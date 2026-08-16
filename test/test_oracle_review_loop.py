@@ -6,7 +6,7 @@
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 
 この file は 16,000 文字を超えるが、finding の列挙、理由検証、merge、judgement、
 interrupt 復旧は同じ review round と fake Codex call 列を検証する一つの責務である。

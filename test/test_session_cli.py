@@ -6,7 +6,7 @@ dirty worktree 拒否は同じ session 状態遷移の観測点であり、分�
 fixture を追う文脈が分散する。現状は session CLI 回帰として一箇所に保つ方が凝集性が高い。
 
 根拠:
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
 - {{work-root}}/oracle/doc/app_spec/feedback_state.md
 - {{work-root}}/oracle/doc/app_spec/session_state.md
@@ -823,7 +823,7 @@ def test_session_join_rejects_extra_conflict_file_changes(
 ) -> None:
     """conflict marker 解消以外の conflict file 変更を merge しない。
 
-    根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py
+    根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py
     {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
     """
     root = make_repo(tmp_path)

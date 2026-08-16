@@ -34,22 +34,22 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の検査・生成・鮮度検証・書き込み・commit まで、リポジトリ内の indexing lifecycle を一貫して実行する共通実装。
-- directory traversal、既存 entry の再利用、Codex による不足 entry の生成、hash 検証、symlink・binary・除外対象の扱い、排他 lock と Git commit を扱う。
-- INDEX.md 更新処理の preflight や、index 対象の列挙・hash 計算・Structured Output の entry 描画へ進む入口となる。
+- INDEX.md の検査・生成・更新・commit を一貫して管理する indexing lifecycle の共通実装。
+- 対象ディレクトリを列挙し、既存 entry の hash 検証と再利用、不足 entry の Codex 生成、深さ順の INDEX.md 更新を行う。
+- repository 単位の lock、Git 差分確認、symlink・binary・ignore 対象の除外、ディレクトリ hash の計算など、INDEX.md の鮮度と安全な更新に必要な処理をまとめて扱う。
 
 ## Read this when
-- INDEX.md の自動更新、entry の再生成、鮮度判定、indexing 用 commit の挙動を変更・調査するとき。
-- index 対象の directory traversal、除外規則、symlink・binary の扱い、hash の算出方法を確認するとき。
-- Codex 呼び出しを伴う entry 生成、並列実行、排他 lock、Git worktree・ログ root の扱いを確認するとき。
+- INDEX.md の自動生成・再生成・鮮度判定・commit lifecycle を変更または調査するとき。
+- indexing preflight、repository lock、並列 entry 生成、Codex 実行 context の扱いを確認するとき。
+- INDEX.md entry の解析、hash 検証、描画、対象 path の列挙規則を確認するとき。
 
 ## Do not read this when
-- INDEX.md の entry の文章ルールや生成 prompt の仕様だけを確認したいときは、indexing 用の prompt・schema 定義を直接読む。
-- 通常の CLI 実行や INDEX.md 更新結果だけを確認し、indexing lifecycle の実装詳細を調べる必要がないとき。
-- 個別の runtime helper や Git path 操作の責務だけを確認するときは、対応する helper 実装を直接読む。
+- INDEX.md entry の文章内容やルーティング方針そのものを定義・変更するときは、entry 生成 parameter や正本仕様を直接読む。
+- Codex 実行一般の preflight や runtime profile の責務だけを調査するときは、対応する runtime 実装を直接読む。
+- Git の一般的な commit 操作や repository 構成を調査するだけの場合は、この indexing lifecycle 実装を読む必要はない。
 
 ## hash
-- cce67e25b81ad2f2321d59a3cfa50c5da7c1e76e756a1d174ae0f2753d9d2cab
+- d044de8aebf2c0767e2975712a77f1c7af98ff74045b9d02e0ad7192395083ed
 
 # `prompt_editor_input.py`
 
@@ -107,25 +107,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- 1 回の agent call に含まれる `codex exec` の実行ループを統括する状態機械。
-- Codex subprocess の起動と実行記録を基盤に、capacity retry、quota 待機と代表 probe、resume 継続を制御する。
-- Structured Output の schema・JSON parse・宣言済み事後条件を検証し、不合格時の同一 session による補正、作業成果物の不変性確認、失敗診断イベントを扱う。
-- Codex call、prompt、stdout、stderr、output の各ログと subcommand event に、agent call・session・retry・quota の状態を結び付ける。
-- TUI 起動や低水準の設定・エラー分類・ログ保存・worktree snapshot の個別責務を読む入口ではなく、これらを組み合わせた Codex exec 実行制御の挙動を確認するための入口である。
+- 1 回の Codex exec 呼び出しにおける実行制御の中心的な状態機械。Structured Output の schema 準備・JSON parse・JSON Schema・事後条件検証と、失敗時の同一 session による出力補正を扱う。
+- Codex subprocess の argv、cwd、環境、prompt stdin、session ID、agent/call ID を組み立て、prompt・stdout・stderr・output・call log と subcommand event を記録する。
+- capacity error の指数 backoff retry、quota error の代表 probe と待機・resume、Codex failure の分類、補正 turn による成果物変更の検出・復元を一体で制御する。TUI 起動、個別の設定・ログ・probe builder の実装詳細は下位 module が入口となる。
 
 ## Read this when
-- Codex exec の capacity error、quota error、予期しない失敗に対する retry・待機・probe・resume の流れを確認するとき
-- Structured Output の schema 検証、JSON parse failure、事後条件違反、補正 turn、補正回数上限、session ID 不在時の扱いを確認するとき
-- Codex 呼び出し中の作業成果物変更の検出・復元と、Structured Output 補正失敗の扱いを確認するとき
-- Codex call log、prompt log、stdout/stderr log、output、subcommand event の記録条件や相互の追跡関係を確認するとき
+- Codex exec の再試行、quota 待機・代表 probe・resume、または Structured Output 補正の挙動を変更・調査するとき
+- Structured Output の schema 読み込み、厳格な JSON parse、JSON Schema 検証、宣言済み事後条件、検証失敗時の diagnostic を確認するとき
+- Codex call の prompt、stdout、stderr、output、call log、subcommand event、session ID の記録や失敗分類を追跡するとき
+- 補正 turn が作業成果物を変更しないこと、変更時の復元と失敗通知を確認するとき
 
 ## Do not read this when
-- TUI の起動・対話処理を調べるときは、TUI 担当 module を直接読む
-- subprocess の実行、Codex home・設定上書き、エラー分類、JSON output 読み取り、ログ出力、worktree snapshot の単独仕様や実装を調べるときは、それぞれの専用 module または正本仕様を直接読む
-- INDEX.md の既存エントリーやファイル識別情報だけを確認したいとき
+- TUI の起動や画面処理そのものを調べるとき
+- Codex subprocess 内部の実装、設定ロード、ログ整形、quota probe parameter の生成だけを調べるとき
+- Structured Output を使わない別の実行経路の仕様だけを確認するとき
 
 ## hash
-- 107eecdb0e3e1c7eb73750a8633fda1d22f53f725cc8c161ff7515b87adb7ffb
+- 5a9ef3187eb5c646066a559333f0ce6ec2b601bc9f7728b26ac27f78f9b2b8f4
 
 # `runtime_codex_logging.py`
 
@@ -161,19 +159,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装を担い、起動前後の実行環境・argv・CODEX_HOME・schema 配置と、実行中 process の tracking/停止・identity 検証を扱う。Codex の JSONL 出力から session ID や error 種別を抽出し、capacity/quota retry 対象と予期しない失敗を判定する下位実装への入口でもある。
+- Codex CLI subprocess 境界を一元管理する実装で、起動前の sandbox・argv・CODEX_HOME・schema・環境変数の構成、実行中の child process tracking と安全な process group 停止、起動失敗の cmoc エラー化、終了後の JSON/JSONL・resume token・capacity/quota/unexpected error 判定を扱う。Codex の実行環境や機械的な実行結果の解釈を変更・調査する際の入口であり、呼び出し側の run 制御や利用者向けエラー文言そのものを扱う対象ではない。
 
 ## Read this when
-- Codex CLI の sandbox、config override、model provider、通知、feedback MCP、環境変数、schema 配置を変更または調査するとき。
-- editing run における Codex subprocess の process group tracking、PID reuse 対策、停止・cleanup、signal 処理を確認するとき。
-- Codex subprocess の起動失敗、JSONL output、session resume、capacity/quota retry、unexpected error の判定を変更または調査するとき。
+- Codex subprocess に渡す sandbox、model/provider、TOML config override、notification、feedback MCP、CODEX_HOME、環境変数を変更または確認するとき。
+- editing run の process tracking、PID reuse 対策、pidfd、process group の signal・cleanup・lock を変更または調査するとき。
+- Codex CLI の起動失敗、schema 配置、stdout JSON、JSONL error、resume token、capacity/quota の retry 判定を変更または調査するとき。
 
 ## Do not read this when
-- Codex CLI 境界の具体的な実装や実行結果の判定を扱わず、呼び出し元の prompt 構築や上位の run 制御だけを確認する場合は、まずそれぞれの直接の実装対象を読む。
-- 一般的な runtime 設定値の検証や runtime path の仕様だけを確認する場合は、対応する設定・path 実装へ直接進む。
+- Codex CLI 境界の実行結果ではなく、上位の editing run 制御、agent call の業務フロー、利用者向け仕様だけを確認したいときは、対応する上位実装や正本仕様を直接読む。
+- Codex CLI 以外の subprocess、一般的な設定検証、feedback の収集処理自体を変更するときは、それぞれの専用実装を直接読む。
 
 ## hash
-- 29fe3b161dca11ec0febe4e361857687b470c2423fb2c72ca40d1d4b5c6d872e
+- 462693a369d66b479d5d7f12d456f0b2cc29fbd8f338f4b20ee46d7edbffbe2f
 
 # `runtime_codex_tui.py`
 
@@ -231,21 +229,23 @@
 # `runtime_doctor.py`
 
 ## Summary
-- doctor preprocess の修復処理と commit lifecycle を担う実装。Git common directory 単位の排他、修復対象の同期、元の index の退避・復元、修復差分だけの commit、runtime state の追跡確認までを一つの lifecycle として扱う。
-- doctor の同時実行、修復による .gitignore・.agents・config・refactor state の更新、または staged 状態や unstaged hunk を保った index 復元を調査・変更するときの入口。
+- doctor preprocess の一連の lifecycle を実装する中心モジュール。Git common directory 単位の doctor lock を保持しながら、current/main worktree の修復、config と refactor state の同期、.gitignore と .agents の追跡保証、修復専用 commit、元の Git index の退避・合成・復元、修復後の追跡状態検証を扱う。
+- Git index と worktree の状態を保ったまま doctor 修復だけを commit する必要がある処理、doctor の並行実行制御、修復失敗時の index 復元、.agents や runtime state の安全な修復条件を確認する際の入口となる。関連する個別 runtime 処理の実装ではなく、これらを共有する doctor preprocess lifecycle 全体を追う場合に読む。
 
 ## Read this when
-- doctor preprocess の lock、修復対象、修復 commit、index の退避・合成・復元の挙動を確認するとき
-- doctor が .gitignore、.agents、config、refactor state を修復・同期する経路を調査するとき
-- 一時 Git index、HEAD 起点の repair commit、利用者の staged 状態の分離を変更・検証するとき
+- doctor preprocess の修復対象、修復 commit、Git index の退避・復元、または Git common directory の排他制御を変更・調査するとき。
+- config または refactor state の同期を doctor の commit 対象から分離する条件を確認するとき。
+- .gitignore、.agents/.gitkeep、.cmoc/gu の修復・除外と、current/main worktree 間の適用範囲を確認するとき。
+- doctor 実行前の staged/unstaged 状態を保持し、失敗時にも元の index を復元する挙動を確認するとき。
+- doctor 修復後に runtime state が Git index へ登録されていることを検証する経路を確認するとき。
 
 ## Do not read this when
-- doctor preprocess 以外の一般的な Git 操作や runtime 設定の内容だけを確認するときは、対応する runtime_git または runtime_config の実装を直接読む
-- doctor の利用者向け仕様や CLI からの呼び出し条件だけを確認するときは、対応する app specification や呼び出し側を先に読む
-- refactor state の同期規則そのものだけを確認するときは、runtime_refactor の実装を直接読む
+- doctor preprocess と無関係な通常の Git 操作や、個別の config・refactor state 同期処理だけを確認したいときは、それぞれの runtime モジュールを直接読む。
+- feedback reporter の可用性判定そのものや、ignore 規則の生成そのものを変更・調査するときは、対応する runtime モジュールを直接読む。
+- INDEX.md の既存エントリーや、対象ファイルの機械的な識別情報だけを確認したいとき。
 
 ## hash
-- f7f3dc1e4bd88e1c3f4fd108b53c430f1f6ce250e4722ceb63a3a431f3208826
+- 2bd5d7e71390af933dfd0092fb4e04a68ad8d52699de326f261c07d9f9996761
 
 # `runtime_errors.py`
 
@@ -344,23 +344,23 @@
 # `runtime_git.py`
 
 ## Summary
-- Git repository と worktree の安全な操作を一元化する共通境界。Git command の実行結果・branch・HEAD・status を扱い、managed worktree の作成・削除・branch 判定を担う。
-- worktree snapshot の取得・復元、symlink や特殊 file の検証、Git ignore の保証・判定を提供する。oracle/realization file の列挙と、repository path・Git 状態に基づく分類判定もここで行う。
-- path 正規化、nested repository、Git index、ignore source、linked worktree metadata の安全性を横断して確認する必要がある処理から読むべき共通実装入口。個別の CLI や prompt 構築の仕様を確認する場合は、それぞれの仕様・呼び出し元へ進む。
+- Git repository の状態・worktree・path 分類を担う共通ランタイム境界。Git command の実行とエラー変換、branch・commit・status の取得、managed branch/worktree の作成・検証・削除、snapshot の取得・復元を扱う。
+- Git ignore の安全な検証・更新と `.cmoc/gu` の ignore 保証、oracle/realization file の列挙・分類・判定を提供する。symlink、特殊 file、nested repository、Git index/tree fallback など、path の安全性と追跡状態に関する不変条件を一元化している。
+- Git 操作、linked worktree、ignore 設定、oracle/realization file 判定、またはそれらを利用する caller の実装を確認・変更するときの共通入口。個別の CLI や state 管理の仕様そのものを読む場合は、各 caller や oracle 仕様を直接確認する。
 
 ## Read this when
-- Git command の共通エラー処理、branch・HEAD・status の取得、managed branch の判定を変更または調査するとき
-- run worktree の作成・削除、worktree path の検証、linked worktree metadata や symlink 安全性を扱うとき
-- worktree snapshot の取得・復元や、Codex call 前後の作業成果物差分を扱うとき
-- `.cmoc/gu` の ignore 保証、Git ignore source の検証、oracle/realization file の列挙・分類判定を変更または調査するとき
+- Git command の共通実行境界、branch・commit・status の取得、未コミット差分の検査を変更または調査するとき
+- cmoc 管理下の branch/worktree の命名、作成、削除、登録検証、symlink 防止を扱うとき
+- Codex call 前後の作業成果物 snapshot、復元、filesystem object の安全な読み書きを扱うとき
+- `.gitignore`、Git info/exclude、global ignore の検証や `.cmoc/gu` ignore 保証を変更するとき
+- oracle file または realization file の列挙・分類・Git 追跡状態判定を変更するとき
 
 ## Do not read this when
-- Git 境界の内部実装を使うだけで、呼び出し側の CLI 挙動や仕様を確認することが目的の場合
-- prompt 構築、path model、branch model、doctor、session などの正本仕様そのものを確認する場合
-- Git や worktree と無関係な runtime helper、データ型、利用者向けエラーの実装だけを調べる場合
+- Git 境界や oracle/realization の分類に関係しない機能の実装だけを確認するとき
+- 個別 command の利用目的や session、branch、path 分類の正本仕様を確認する場合は、まず対応する oracle 文書や caller を直接読むとき
 
 ## hash
-- 356e6f3b03da25a353c2c89dc7e85a6def0fc85f05de83b77eb3e3f69daa67d3
+- 59e010da369c018012b289b2a0b8203c80f6f315e87eda68c94c93f97b74cf59
 
 # `runtime_logging.py`
 
@@ -512,20 +512,22 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始から state 遷移、worktree・branch の管理、commit、差分分類、INDEX 更新、cleanup／recovery までを一貫して扱う共通 lifecycle 実装。EditingRunContext と lifecycle lock を共有し、run の不変条件と workload の差分許可範囲を検査する。
-- session の ready 確認、isolated run の作成・公開・回収、joinable/error 遷移、work unit の rollback／commit、INDEX の再生成、Git tree change の解析、oracle・realization・生成 INDEX・refactor state の許可判定を提供する。
+- 明示的な join を必要とする editing run の lifecycle を一元管理する共通処理。session の準備状態確認から isolated run branch/worktree の作成・公開・復旧、active run の解決、joinable/error への state 遷移、work unit の rollback/commit、INDEX 更新までを扱う。
+- Git の変更を rename/copy を含めて分類し、agent・run・session に許可された差分と想定外 path を判定する。oracle file の raw diff、生成 INDEX.md、refactor state の扱いもここで定義する。
+- editing run の branch/worktree・state・lifecycle lock にまたがる不変条件を追跡する必要があるため、関連する lifecycle 処理の入口として読む。
 
 ## Read this when
-- editing run の開始・再開・終了、session state と run state の遷移、run branch／worktree の recovery や cleanup を変更・調査するとき。
-- realization workload 後の差分許可範囲、unexpected path の検出、rename／copy を含む Git 差分分類、oracle diff の取得を確認するとき。
-- run worktree の commit、INDEX 更新、lifecycle lock、process tracking、refactor state の扱いを変更するとき。
+- editing run の開始、active run の解決、context 公開後の復旧、state 遷移、worktree の commit/rollback を確認するとき
+- run branch と session branch の差分許可範囲、agent が変更可能な realization file、想定外 path の検出を確認するとき
+- run lifecycle 中の INDEX 更新、oracle diff、rename/copy を含む変更分類、cleanup 対象の判定を確認するとき
 
 ## Do not read this when
-- session や editing run の外側で完結する CLI 機能、個別の realization 実装、または INDEX 生成規則そのものを確認したいとき。
-- Git・state・worktree の共通低レベル API の仕様だけを確認する場合は、対応する runtime／state／indexing モジュールを直接読むとよい。
+- 個別の session state の表現や永続化だけを確認するときは runtime_state の実装を直接読む
+- Git branch・worktree・status 操作の低レベル仕様だけを確認するときは runtime_git の実装を直接読む
+- editing run の利用者向け外部仕様だけを確認するときは app_spec の editing run 文書を直接読む
 
 ## hash
-- 94a3a00104b763e45f55c6696dbceba1644d80e46d189218813b8ab4679a96e3
+- 67da812593827e07c7e43fa86a43fe1aad440fb85241bccf44b58a468d9aba68
 
 # `runtime_run_report.py`
 

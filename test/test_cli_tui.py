@@ -149,7 +149,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     editor_contents = orig_files[0].read_text()
     assert editor_contents.startswith("<!--\n# このファイルの使い方")
     assert '<cmoc_block id="prompt template">' in editor_contents
-    assert "# file read write rule - repo_write" in editor_contents
+    assert "# file read write policy - repo_write" in editor_contents
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
     assert "remove me" in editor_contents
     assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
@@ -157,14 +157,14 @@ def test_tui_runs_editor_and_launches_codex_directly(
         (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
     complete_prompt = tui_calls[0][0].prompt
-    assert "# file read write rule - repo_write" in complete_prompt
+    assert "# file read write policy - repo_write" in complete_prompt
     assert "# oracle and realization basic" in complete_prompt
-    assert "# oracle standard" in complete_prompt
-    assert "# realization standard" in complete_prompt
-    assert "# oracle review standard" in complete_prompt
-    assert "# apply review standard" in complete_prompt
-    assert "# realization oracle reference rule" in complete_prompt
-    assert "# index entry standard" not in complete_prompt
+    assert "# oracle policy" in complete_prompt
+    assert "# realization policy" in complete_prompt
+    assert "# oracle review policy" in complete_prompt
+    assert "# apply review policy" in complete_prompt
+    assert "# realization oracle reference policy" in complete_prompt
+    assert "# index entry policy" not in complete_prompt
     assert '<cmoc_ref target="original_prompt"/>' in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt

@@ -38,7 +38,7 @@ _SANDBOX_BY_MODE = {
     FileAccessMode.REPO_WRITE: "workspace-write",
     FileAccessMode.PURE_ORACLE_WRITE: "workspace-write",
     FileAccessMode.REALIZATION_WRITE: "workspace-write",
-    FileAccessMode.NO_RULE: "workspace-write",
+    FileAccessMode.NO_POLICY: "workspace-write",
 }
 
 

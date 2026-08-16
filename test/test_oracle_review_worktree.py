@@ -11,7 +11,7 @@
 すると、review branch と INDEX 差分の外部契約を複数 file で追う必要があるため、現状
 は review worktree 回帰として一箇所に保つ。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import subprocess

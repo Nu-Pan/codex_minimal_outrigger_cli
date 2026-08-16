@@ -36,7 +36,7 @@ def _tui_call_logs(root: Path) -> list[Path]:
 
 # 根拠: TUI の prompt、アクセス境界、Codex 呼び出し、ログ出力を検証する。
 # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
-# {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+# {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md

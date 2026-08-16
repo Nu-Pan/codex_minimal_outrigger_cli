@@ -12,7 +12,7 @@ subcommand event を同時に確認する一つの責務を持つ。出力契約
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 """
 
 import json

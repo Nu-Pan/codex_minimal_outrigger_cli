@@ -1,18 +1,18 @@
 # `apply_review.py`
 
 ## Summary
-- 対象は、oracle file と realization file の適合性を評価する agent 向けポリシー集合を構築する関数を定義する。共通の oracle 権威・所見根拠ポリシーに加え、realization の追従要否、既解決事項、修正対象の判断に関する専用ポリシーを束ねる入口である。
+- oracle file に対する realization file の追従要否・所見・修正を判断するためのポリシー集合を構築する。共通の権威・所見根拠ポリシーに加え、修正対象の判断と既解決事項の扱いに関する個別ポリシーをまとめる入口である。
 
 ## Read this when
-- oracle file に対する realization file の追従要否、所見、修正対象の判断ルールを確認するとき
-- apply review 用のポリシー集合がどの共通ポリシーと専用ポリシーから構成されるかを確認するとき
+- oracle file と realization file の適合性をレビューし、追従要否や所見、修正対象を判断するとき
+- apply review に使用するポリシー構成や、共通ポリシーと個別ポリシーの組み合わせを確認するとき
 
 ## Do not read this when
-- 個別ポリシーの具体的な判定内容だけを確認したいときは、各ポリシー定義を直接読む
-- apply review 以外の agent 文面構築規定を確認するときは、対象となる別の policy builder を読む
+- 個別ポリシーの具体的な判定条件だけを確認したいとき
+- oracle file の権威規則や所見の根拠規則だけを確認したいときは、それぞれの定義元を直接読む
 
 ## hash
-- 84938a66449ecd32dcca980f4da6b1d3c5e5dd9d5633142705c9ed2494f4aecd
+- 582e08e689f0db05b39b5f50ee038fd889d36f03f30ef8b56c5323344d272e3e
 
 # `basic.py`
 
@@ -35,53 +35,69 @@
 # `common.py`
 
 ## Summary
-- 複数用途で共有する PolicyGroup の構成定義を担う。oracle・realization file を扱うときに適用する oracle authority 系ポリシー群と、所見・修正対象を判断するときに適用する finding basis 系ポリシー群を組み立てる。各ポリシーの本文や PolicyGroup の実装を確認する場合は、それぞれの定義元または実装へ進む入口となる。
+- 複数用途で共有する PolicyGroup の構成定義をまとめる。oracle・realization file の扱いに関する oracle authority policy group と、所見・修正対象の判断に関する finding basis policy group を提供する。各ポリシーの具体的内容を確認する必要がある場合は、同じ定義元へ進む前段の構成入口となる。
 
 ## Read this when
 - oracle・realization file を扱う作業で、適用する oracle authority policy group の構成を確認するとき
 - 所見や修正対象の判断で、finding basis policy group の適用範囲を確認するとき
-- oracle authority policy に逆方向の流れを防ぐ規則を加えた共有グループの構成を確認するとき
+- 共有ポリシーグループの構成や、基本グループと追加制約を含むグループの関係を確認するとき
 
 ## Do not read this when
-- 個別ポリシーの具体的な規則を確認したいときは、各ポリシー定義を直接読む場合
-- PolicyGroup のデータ構造や動作を確認したいときは、PolicyGroup の実装を直接読む場合
-- 対象ファイルと無関係な作業や、既存の INDEX.md の内容を確認する場合
+- 個別ポリシーの本文や判定根拠を確認したい場合は、各ポリシー定義を直接読むとき
+- PolicyGroup の一般的なデータ構造や実装仕様だけを確認する場合
 
 ## hash
-- 0c1842670da7005c600d865872db0eb0a72ed6758bca43fe1fc8fbea11b01039
+- f4930ce3e972ef2675e299235f3c44771251d79bc4f9556e0f8dfd5831e9eeac
 
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` で発生した conflict marker の解消に使う policy collection を構築する。oracle と realization の意味を保つ共通 authority policy に加え、両ブランチを保持する conflict resolution policy を選択する処理を扱う。conflict 解消時の instruction 文面生成を確認・変更するときの入口。
+- `cmoc session join` で conflict marker を解消する際に適用する instruction 文面の構築定義。oracle / realization の権威関係を含む標準ポリシー群へ進む入口であり、conflict 解消方針の選択や変更を確認するときに読む。
 
 ## Read this when
-- `cmoc session join` の conflict 解消動作や、conflict 解消用 policy の選択・適用を確認するとき。
-- oracle / realization の意味を維持しつつ、両ブランチを残す conflict 解消規則を変更するとき。
+- `cmoc session join` の conflict 解消規定を調査・変更するとき
+- conflict 解消時に両ブランチを保持する方針、または oracle / realization の意味を保つ instruction 構成を確認するとき
 
 ## Do not read this when
-- session join の conflict 解消以外の policy 構築を調べるとき。
-- conflict resolution policy の個別定義そのものを確認する場合は、まず policy 定義側の対象を読むとき。
+- session join の conflict 解消以外の instruction 構築を調査するとき
+- 個別ポリシーの定義や共通のポリシー構造を直接確認したいときは、それぞれの定義元を読む場合
 
 ## hash
-- 49ff3b83ca17b01987ea79372cd2f9b848f1101363fccdfea36ba1ac8ac7ae15
+- bd99ef59375838b8e633fa322b2ae022cfe9b80a453d6fbd2e6340daea0f80c0
+
+# `definitions.py`
+
+## Summary
+- oracle file と realization file の関係、正本仕様の優先、仕様の未定義部分、実装適合性、レビュー、conflict 解消、editor handoff、および INDEX.md ルーティングに関する全用途の Policy 定義を一元管理する。各 Policy は識別子・題名と、必要に応じた required、prohibited、permitted の規則を持つ。Policy の定義や適用規則を変更・追加するときの入口であり、個別の Policy 実装や基本型の詳細を確認する場合は、より直接的な定義元を読む。
+
+## Read this when
+- oracle file を正本仕様として扱う規則、realization file の適合規則、仕様レビューや修正対象の判定規則を確認するとき
+- 仕様間の優先関係、未定義事項の扱い、実装から仕様を逆算しない制約を確認するとき
+- conflict 解消、editor handoff、INDEX.md エントリー生成に関する共通 Policy を確認するとき
+- 全用途で共有される Policy の追加・変更や、Policy 定義の責務分担を調査するとき
+
+## Do not read this when
+- 単一の Policy の具体的な実装や Policy 基本型の仕様だけを確認する場合
+- 対象の Policy 群に関係しない realization 実装、test、または個別 oracle file の内容を調査する場合
+
+## hash
+- 8e37a3b2131d3fe3ed676964bda2ff107fd0c0b92266d5950b3623fd683fc254
 
 # `editor_handoff.py`
 
 ## Summary
-- agent call の結果を editor work file へ handoff する際に適用する policy collection を構築する定義。handoff の対象範囲を示す policy group を、既存の preserve-result policy とともにまとめる。
-- prompt builder の policy 定義で、editor work file への handoff 規則を確認・変更するときの入口となる。
+- agent call から editor work file へ handoff する際の instruction policy を構築する定義。handoff 用の policy group を作成し、結果保持ポリシーを選択した PolicyCollection を返す。
 
 ## Read this when
-- agent call から editor work file へ結果を handoff する挙動や適用 policy を確認・変更するとき。
-- handoff 用 policy collection の group 構成や、結果保持 policy の組み込み方を確認するとき。
+- agent call から editor work file への handoff 規定を変更または確認するとき
+- editor handoff 用 policy group の適用範囲や選択ポリシーを確認するとき
 
 ## Do not read this when
-- editor work file への handoff 以外の policy group を確認・変更するとき。
-- handoff policy の個別内容そのものを確認する場合は、参照される policy 定義を直接読むとき。
+- editor work file 自体の内容や handoff 後の処理を確認するとき
+- editor handoff 以外の policy group の構築を確認するとき
 
 ## hash
-- d040f3242479acc63a63b1b745b863fc325c9b31958790cee7c7ca9ae7adc7e2
+- 9ad2ffbcdcfeaacc19f6d5b239be98d2fdb3a56b560b102c155f19c41280d42e
 
 # `feedback_reporting.py`
 
@@ -119,66 +135,66 @@
 # `index_entry.py`
 
 ## Summary
-- `INDEX.md` 用エントリー生成時に適用するポリシー群を構築する定義。エントリー生成規則の選択範囲を確認する入口であり、個別ポリシーの文面を確認するときは `policy_definitions.py` を直接読む。
+- `INDEX.md` 用エントリー生成時に適用する規定群を選択し、ルーティング、根拠、意味情報に関する方針をまとめて返す。個別の規定本文ではなく、エントリー生成へ適用する方針集合の構築入口である。
 
 ## Read this when
-- `INDEX.md` 用エントリー生成で、どのポリシー群を適用するかを変更・確認するとき
-- エントリー生成向けのポリシー構成や適用範囲を調査するとき
+- `INDEX.md` 用エントリー生成の適用規則や、生成時に組み合わせる方針群を確認するとき。
 
 ## Do not read this when
-- 個別ポリシーの具体的な要求・禁止事項を確認するとき
-- `PolicyCollection` や `PolicyGroup` のデータ構造・合成処理を確認するとき
+- 個々の方針の具体的な要求文を確認するときは、方針定義側を直接読む。エントリーの対象本文や既存の `INDEX.md` の内容を確認するときは、この方針構築定義を読む必要はない。
 
 ## hash
-- d6b09b0e2558bfbf4b9ad3d1777bb37cd9ec0e7d1ecbc47df62db0139f91c1f1
+- 9fe09b68fee30b5286ff7aa6c9b46823dc762f328f5eb3c26ed5105eff5df86b
 
 # `oracle.py`
 
 ## Summary
-- 対象は oracle file を扱う agent call 向けの policy collection 構築定義であり、oracle file の作成・変更・レビュー時に適用する規定群と、読み取り専用調査時に適用する限定的な規定群を選択する。oracle 関連の動的 prompt 方針や調査方針の入口として読む。
+- oracle file を扱う agent call 向けの規定セットを構築するポリシービルダー。作成・変更・レビュー向けと、読み取り専用調査向けで適用するポリシー群を分け、共通の権限ポリシー群と組み合わせて返す。
 
 ## Read this when
-- oracle file の作成、変更、レビューに伴って agent call の適用ポリシーを確認するとき
-- oracle file を読み取り専用で調査する際に、調査用に選択される規定の範囲を確認するとき
+- oracle file に関する agent call の指示へ、作成・変更・レビューまたは読み取り専用調査の規定を組み込む必要があるとき
+- oracle 用ポリシーの適用範囲や、用途別の規定選択を確認するとき
 
 ## Do not read this when
-- oracle file 以外の policy collection や一般的な prompt 構築の責務だけを確認するとき
-- oracle file の本文や個別の規定内容を直接確認することが目的のときは、対象の oracle file または各 policy 定義へ直接進む
+- 個別ポリシーの定義本文や共通ポリシー群の内容だけを確認したいとき
+- oracle file 以外の agent call 向けポリシー構成を調べるとき
 
 ## hash
-- 2f73a07bd4cba435413ae3c002f3df9350d7bc88f94854635e768b3e1d42bc1f
+- 8dcd1265c093ba94527d12284caf3735581d2c3d18a24d5da26232d2a63735c8
 
 # `oracle_review.py`
 
 ## Summary
-- oracle review の各段階で共有する所見判定ポリシー群を構築する関数を定義する。所見の根拠ポリシー群と、致命的・軽微・oracle file 限定の判定ポリシーをまとめた PolicyCollection を返す、prompt_builder のポリシー構成上の入口。
+- oracle review の全段階で共有する所見判定ポリシー集合を構築する関数。
+- 所見の成立根拠を定める共通ポリシー群に加え、重大所見・軽微所見・oracle file 限定所見の判定規定をまとめる。
+- oracle review の所見列挙・統合・検証・採否判定に関するポリシー選択の入口となる。
 
 ## Read this when
-- oracle review における所見の列挙・統合・検証・採否判定に適用する共有ポリシーを確認または変更するとき。
-- oracle review 用 PolicyCollection の構成や、所見判定ポリシーの選択を確認するとき。
+- oracle review の複数段階で共通する所見判定規定の選択箇所を確認するとき。
+- oracle review 用のポリシー集合に含める判定カテゴリや適用範囲を変更するとき。
 
 ## Do not read this when
-- oracle review 以外のプロンプト構築ポリシーを確認するとき。
-- 個別ポリシーの具体的な定義を確認する場合は、対応する policy_definitions の対象を直接読むとき。
+- 個々の所見判定規定の具体的な内容だけを確認したいとき。
+- oracle review 以外のポリシー集合や、共通ポリシー群の定義を直接確認するとき。
 
 ## hash
-- 8eb36dc0d73093ee1940406f47bd1013ce591385fb96e517570843a87be9086a
+- ce4f333e7a805b91b275d8e5b2f62b47a1eb0dc5cb78b9d0e07ad97678014ce8
 
 # `realization.py`
 
 ## Summary
-- realization file の作成・変更・リファクタ・レビューに必要な instruction policy を構築する入口。oracle authority policy group と realization 固有の policy group をまとめ、realization の現行仕様準拠、oracle 準拠、リポジトリ検証に関する規定へ接続する。
+- realization file の作成・変更・リファクタ・レビュー時に適用するポリシー群を構築する。oracle authority 共通規定に加え、oracle 準拠、現行仕様限定、リポジトリ検証の規定をまとめ、instruction 文面生成側の realization 向け入口となる。
 
 ## Read this when
-- realization file の作成・変更・リファクタ・レビューに必要な agent call 向け instruction の構成を確認するとき。
-- realization 固有の policy group と oracle authority policy group の適用範囲を確認するとき。
+- realization file に対する agent call の instruction 規定を追加・変更・レビューするとき
+- realization 作業へ適用するポリシーの選定や構成を確認するとき
 
 ## Do not read this when
-- realization 以外の対象に対する policy 構築定義を確認するとき。
-- 個別 policy の具体的な規定や、PolicyCollection・PolicyGroup の実装を直接確認したいとき。
+- oracle authority 共通規定そのものを確認するとき
+- 個別ポリシーの本文や、realization 以外の作業向けポリシー構成を直接確認するとき
 
 ## hash
-- 1823163573badda60bfca8e44c284ce6f4ad09f26ddc051180bcfb451201fbb2
+- af7fa05eb288adf86352cdf3f2afb85be8905d97cc2b578215ede6a1d586499c
 
 # `realization_oracle_reference.py`
 

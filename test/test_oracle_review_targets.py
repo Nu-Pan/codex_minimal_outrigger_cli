@@ -2,7 +2,7 @@
 
 根拠:
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 - {{work-root}}/oracle/doc/app_spec/misc_spec.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md

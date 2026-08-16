@@ -53,37 +53,37 @@
 # `parts`
 
 ## Summary
-- oracle と realization の基本的な分類境界・役割・下位概念を説明する prompt_builder の構成要素。call-scoped context の work-root を説明文へ反映する処理も含む。oracle/realization の基本説明文の生成経路を確認・変更するときの入口。
-- oracle と realization の扱い、仕様レビュー・検証、conflict 解消、editor handoff、INDEX.md ルーティングに関する共通ポリシー定義。これらの規範や判断境界を確認するときの入口。
+- oracle と realization の分類境界、Git ignore や常時対象外 root を含む分類規則、および両者の役割を説明する基本文を構築する。
+- oracle file と realization file の下位概念として、oracle doc/src/test、realization code/implementation/test/ancillary の定義と配置を整理する。
+- call-scoped context から work-root を取得し、説明文のプレースホルダーへ渡す生成経路を扱う。
 
 ## Read this when
-- oracle と realization の分類規則、責務、下位概念を確認するとき
-- oracle/realization の基本説明文の生成経路を調査・変更するとき
-- oracle の権威性や仕様解釈、realization の実装・テスト・検証方針を確認するとき
-- conflict marker の解消、editor handoff、INDEX.md エントリー作成の規範を確認するとき
+- oracle と realization の分類規則や責務を確認するとき。
+- oracle doc/src/test と realization implementation/test/ancillary の区分を確認するとき。
+- oracle と realization に関する基本説明文の生成経路を変更・調査するとき。
 
 ## Do not read this when
-- 個別の oracle file または realization file の具体的な要求・挙動だけを確認する場合
-- 具体的な分類アルゴリズムやテスト実装を確認する場合
-- 共通ポリシーや oracle/realization の基本概念を扱わず、通常の実装詳細や単一のテストケースだけを確認する場合
+- oracle と realization の分類や基本概念を扱わず、別の prompt_builder part を直接確認すべきとき。
+- 具体的な分類アルゴリズムやテスト実装を確認する場合に、対応する実装・テスト対象へ直接進めるとき。
 
 ## hash
-- 8728ceea1236d95e4bd71601ea783e8d101fa0ecdeb8f27489706b7125ef64e4
+- 20dd888fb1bacc5753ab0ab8ab2bdcda36f9edd817b4f69762216a9ef88654b9
 
 # `policy`
 
 ## Summary
-- agent 向け instruction policy の構築定義を集約するディレクトリ。共通の Policy／PolicyGroup 合成、oracle・realization の権威規則、review・conflict resolution・handoff・feedback reporting・file access・routing など、用途別の policy collection builder への入口を提供する。個別 policy の具体的な判定規則は各定義元へ、PolicyCollection の構造や合成動作は基本実装へ進むための上位ルーティング対象。
+- agent instruction policy builder 群をまとめるディレクトリ。oracle・realization file の権威関係、レビュー所見、conflict 解消、editor handoff、feedback reporting、file access、INDEX.md routing など、用途別のポリシー構成を扱う。共通ポリシー定義と基本型を土台に、各作業向けの適用ポリシー群へ進む入口となる。
 
 ## Read this when
-- oracle・realization file に関する agent call の instruction policy 構成を確認または変更するとき
-- review、conflict resolution、editor handoff、feedback reporting、file access、INDEX.md entry 生成など、用途別 policy collection の選択規則を調べるとき
-- PolicyGroup の共有構成や、policy の決定的な合成・instruction 文面化の入口を特定するとき
+- agent call に埋め込む instruction policy の構成や、用途別に選択されるポリシー群を確認するとき
+- oracle・realization file の作成、変更、レビュー、conflict 解消、editor handoff に適用される規定の組み合わせを確認するとき
+- feedback reporting、file access、INDEX.md routing など共通 instruction の生成方針を確認するとき
+- Policy の定義、衝突検査、決定的な合成、StructDoc への変換を含む共通基盤の責務を確認するとき
 
 ## Do not read this when
-- 個別 policy の具体的な判定内容だけを確認したいときは、対応する policy 定義へ直接進む
-- PolicyCollection・PolicyGroup のデータ構造や衝突検査・render 動作だけを確認したいときは、基本実装を直接読む
-- 実際の CLI 処理、oracle／realization file の本文、または prompt policy と無関係な仕様を調査するとき
+- 特定のポリシーの具体的な判定文だけを確認したいときは、個別ポリシー定義へ直接進む
+- Policy や PolicyGroup の基本データ構造・合成規則だけを確認したいときは、基本型の定義へ直接進む
+- 個別の oracle／realization file の内容、実行時 CLI 処理、またはポリシーを利用する realization 実装を調査するとき
 
 ## hash
-- 09a6d4255c491b59ed32e11a92223c2c24f05f4ab5a0eb446143bc7ef19995bf
+- 0243d6b0c121f46496019eaacecae3818ad9e026967233c0ddc539497648db73
