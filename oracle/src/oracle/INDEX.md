@@ -51,20 +51,17 @@
 # `prompt_builder`
 
 ## Summary
-- cmoc の agent 向け完全プロンプトを構築する prompt_builder の主要要素をまとめたディレクトリ。プレースホルダ型、完全プロンプト生成、エディタ入力の初期内容、oracle／realization の基本説明、用途別 policy collection の定義を扱う。
-- 完全プロンプトの構成や policy の合成・依存関係・プレースホルダ統合を調べる場合は中核の prompt builder 実装へ進み、個別の規範や判定内容を調べる場合は対応する policy 定義へ進む入口となる。
+- cmoc の agent 向け完全プロンプトを構成する prompt_builder の入口。プレースホルダ型、完全プロンプト生成、エディタ入力初期文、oracle／realization の基本説明、用途別ポリシー群を扱い、プロンプト構築や注入規則を調査・変更するときに下位要素へ進むためのルーティング対象。
 
 ## Read this when
-- agent 向け完全プロンプトの構築経路、構成要素、動的な policy 注入を調査・変更するとき
-- oracle と realization の分類・責務、仕様レビュー、conflict 解消、editor handoff、INDEX.md ルーティングなどの共通方針を確認するとき
-- エディタ経由のユーザー入力テンプレートや、プレースホルダ置換対象の共通表現を確認するとき
-- 用途別 policy collection の選択規則や、PolicyGroup の合成入口を特定するとき
+- agent 向け完全プロンプトの構造、生成順序、ポリシー統合、プレースホルダ展開を調査・変更するとき。
+- エディタ経由のユーザー入力初期文や、oracle／realization の基本説明文の生成経路を確認するとき。
+- instruction policy の用途別構成や、feedback reporting・file access・INDEX.md routing などの共通規則を確認するとき。
 
 ## Do not read this when
-- 個別の oracle／realization file の具体的な仕様や、単一のテスト・実装ケースだけを調べるとき
-- 個別 policy の具体的な判定規則だけを確認したいときは、対応する policy 定義へ直接進む
-- PolicyCollection や PolicyGroup のデータ構造・衝突検査・render 動作だけを確認したいときは、基本実装を直接読む
-- プロンプト生成、oracle／realization、policy と無関係な CLI 処理や設定値を調査するとき
+- 個別ポリシーの具体的な本文や判定文だけを確認したいときは、対応する下位の policy 定義へ直接進む。
+- プロンプト構築と無関係な CLI 処理、oracle／realization 個別ファイルの仕様、分類アルゴリズムやテスト実装だけを調査するとき。
+- StructDoc・StructBlock・Markdown レンダリング自体、保存用プロンプト管理、またはプレースホルダを使わない設定値の表現だけを確認するとき。
 
 ## hash
-- cff12cf64ad97325a5998e13ef91aa9f75bb8f8d17cfe6b806aa72b91588f6c5
+- c3481c26bd07f1d504dfb573ce3c88776e32a636e744f59e0f538190371bb907
