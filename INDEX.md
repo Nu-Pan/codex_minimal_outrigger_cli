@@ -88,6 +88,22 @@
 ## hash
 - 1938307f70f255710d75d39c07d860ecb381acbb031ca19b2f2b6e565ac41acb
 
+# `complete_prompt.md`
+
+## Summary
+- cmoc の作業依頼を動的に定義するプロンプト本文。担当範囲、完了条件、フィードバック報告、oracle／realization の分類と扱い、ファイルアクセス制約、実装・仕様・レビュー時の判断基準、ルーティング規則をまとめ、個別作業の前提契約として機能する。
+
+## Read this when
+- cmoc の作業依頼、完了条件、ファイル読み書き範囲、oracle と realization の扱いを確認するとき
+- 仕様・実装・テストの作成、変更、レビューにおける判断基準や、INDEX.md から本文へ進む条件を確認するとき
+
+## Do not read this when
+- 対象作業の具体的な仕様や実装内容だけを確認したいとき
+- 個別の oracle file、realization file、または対象ディレクトリのルーティング情報を直接確認できる場合
+
+## hash
+- ed50e4eda9cd126c9703cc0856aab2a9e2d449fc8d8e448e91448bedf937308f
+
 # `oracle`
 
 ## Summary
