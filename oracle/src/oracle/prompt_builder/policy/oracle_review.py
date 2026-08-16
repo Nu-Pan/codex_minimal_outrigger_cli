@@ -2,13 +2,13 @@
 
 from functools import cache
 
-from ..parts.policy_definitions import (
+from .basic import PolicyCollection, PolicyGroup
+from .common import FINDING_BASIS_POLICY_GROUP
+from .definitions import (
     ORACLE_REVIEW_FATAL_POLICY,
     ORACLE_REVIEW_MINOR_POLICY,
     ORACLE_REVIEW_ORACLE_ONLY_POLICY,
 )
-from .basic import PolicyCollection, PolicyGroup
-from .common import FINDING_BASIS_POLICY_GROUP
 
 
 @cache

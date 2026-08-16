@@ -2,8 +2,8 @@
 
 from functools import cache
 
-from ..parts.policy_definitions import EDITOR_HANDOFF_PRESERVE_RESULT_POLICY
 from .basic import PolicyCollection, PolicyGroup
+from .definitions import EDITOR_HANDOFF_PRESERVE_RESULT_POLICY
 
 
 @cache

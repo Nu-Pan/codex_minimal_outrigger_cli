@@ -2,12 +2,12 @@
 
 from functools import cache
 
-from ..parts.policy_definitions import (
+from .basic import PolicyCollection, PolicyGroup
+from .definitions import (
     INDEX_ENTRY_EVIDENCE_POLICY,
     INDEX_ENTRY_ROUTING_POLICY,
     INDEX_ENTRY_SEMANTIC_INFORMATION_POLICY,
 )
-from .basic import PolicyCollection, PolicyGroup
 
 
 @cache

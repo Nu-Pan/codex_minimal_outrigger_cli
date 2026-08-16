@@ -2,11 +2,11 @@
 
 from functools import cache
 
-from ..parts.policy_definitions import (
-    CONFLICT_RESOLUTION_PRESERVE_BOTH_BRANCHES_POLICY,
-)
 from .basic import PolicyCollection, PolicyGroup
 from .common import ORACLE_AUTHORITY_POLICY_GROUP
+from .definitions import (
+    CONFLICT_RESOLUTION_PRESERVE_BOTH_BRANCHES_POLICY,
+)
 
 
 @cache

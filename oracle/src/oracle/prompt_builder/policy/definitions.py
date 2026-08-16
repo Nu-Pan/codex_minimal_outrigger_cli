@@ -1,6 +1,6 @@
 """全用途の Policy 文面を一箇所で管理する定義。"""
 
-from ..policy.basic import Policy
+from .basic import Policy
 
 ORACLE_AUTHORITY_POLICY = Policy(
     policy_id="oracle_authority.10.authority",
