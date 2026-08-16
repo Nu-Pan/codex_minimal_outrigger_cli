@@ -75,6 +75,7 @@ def build_oracle_review_judge_finding_parameter(
             ),
         ],
         oracle_and_realization_basic=True,
+        oracle_policy=True,
         oracle_review_policy=True,
         routing_policy=True,
     )

@@ -1,18 +1,27 @@
 """editor work file への handoff 用 instruction 文面の構築定義。"""
 
-from functools import cache
-
-from .basic import PolicyCollection, PolicyGroup
-from .definitions import EDITOR_HANDOFF_PRESERVE_RESULT_POLICY
+from oracle.other.struct_doc import StructDoc
+from oracle.prompt_builder.basic import PlaceholderMap
 
 
-@cache
-def build_editor_handoff_policy() -> PolicyCollection:
-    """任意の agent call から editor work file へ handoff する規定を選択する。"""
-    editor_handoff_group = PolicyGroup(
-        group_id="90.editor_handoff",
-        title="editor handoff policy",
-        scope="agent call から editor work file へ handoff する時",
-        policies=(EDITOR_HANDOFF_PRESERVE_RESULT_POLICY,),
+def build_editor_handoff_policy() -> tuple[PlaceholderMap, StructDoc]:
+    """任意の agent call から editor work file へ handoff する規定を構築する。"""
+    return (
+        {},
+        StructDoc(
+            "editor handoff policy（agent call から editor work file へ handoff する時）",
+            StructDoc(
+                "editor handoff でも agent call の責務を維持する",
+                """
+                **必須**
+
+                - agent call に選択された file access mode と Codex CLI sandbox を維持する
+                - handoff file への書き込みとは別に、その agent call が要求する正式な結果または成果物を満たす
+
+                **許容**
+
+                - handoff file への書き込みに必要な command だけについて、対象 path と理由を限定した sandbox escalation を要求してよい
+                """,
+            ),
+        ),
     )
-    return PolicyCollection(groups=(editor_handoff_group,))

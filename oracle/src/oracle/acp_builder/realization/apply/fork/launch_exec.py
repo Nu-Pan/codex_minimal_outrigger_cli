@@ -70,6 +70,7 @@ def build_realization_apply_fork_launch_exec_parameter(
         path_context=path_context,
         aux_dynamic_prompt=[apply_change],
         oracle_and_realization_basic=True,
+        oracle_policy=True,
         realization_policy=True,
         apply_review_policy=True,
         realization_oracle_reference_policy=True,

@@ -66,10 +66,34 @@
 
 prompt policy は、cmoc が agent の判断または操作を制約するために選択して注入する instruction の総称とする。構築方法や分類の違いによって別の概念名を設けてはならない。
 
+### policy block と flag の一対一対応
+
+- `build_complete_prompt` の各 policy flag は、対応する 1 個のトップレベル `StructDoc` だけを制御する。
+- 対応する policy block は、flag が `True` なら 1 回追加し、`False` なら追加しない。
+- ある flag の値を根拠として、別の flag を有効化してはならない。
+
+各 flag が所有する policy block を次に示す。
+
+- `oracle_and_realization_basic`: oracle／realization の分類と基本概念
+- `oracle_policy`: oracle authority と oracle file の作成・変更・レビュー規定
+- `oracle_investigation_policy`: oracle authority と oracle file の読み取り専用調査規定
+- `realization_policy`: oracle authority と realization 規定
+- `oracle_review_policy`: finding basis と oracle review 規定
+- `apply_review_policy`: oracle authority、finding basis、apply review 規定
+- `conflict_resolution_policy`: oracle authority と conflict 解消規定
+- `editor_handoff_policy`: editor handoff 規定
+- `realization_oracle_reference_policy`: realization code から oracle file path を参照する規定
+- `index_entry_policy`: INDEX entry 規定
+- `routing_policy`: INDEX routing 規定
+
 ### policy の選択と注入
 
-- agent call ごとに必要な instruction は、対応する `build_*_parameter` 関数が `build_complete_prompt` の固定引数として選択する。
+- agent call ごとに必要な全 policy block は、対応する `build_*_parameter` 関数が `build_complete_prompt` の固定引数として明示的に選択する。
 - builder による選択は、対応する oracle doc の意味仕様を実現するものであり、選択した prompt part だけを判断基準の正本にしてはならない。
+- policy block の結合、重複除去、Policy ID または group ID による衝突検査、および ID による並べ替えを行ってはならない。
+- 複数の有効な policy block に同じ文面が含まれる場合は、その文面を各 block 内へ残したまま出力する。
+- 各 policy builder は、自身が出力する完全な本文を、その builder 内のリテラルとして直接記述する。
+- 共有文面を含む policy 文面を `policy/definitions.py` へ一元定義してはならない。
 - 規定の選択に installed skill、設定による任意切替、または追加の agent call を使用してはいけない
 - `cmoc tui` は、適用条件を明記した cmoc の基本規定を固定で注入する
 - `cmoc tui` のオリジナルプロンプトに応じて規定を選択する agent call を行ってはいけない

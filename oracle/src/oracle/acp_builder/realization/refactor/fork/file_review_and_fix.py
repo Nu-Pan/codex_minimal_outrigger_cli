@@ -72,6 +72,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
             "target-path": resolve_real_path(target_path, path_context),
         },
         oracle_and_realization_basic=True,
+        oracle_policy=True,
         realization_policy=True,
         apply_review_policy=True,
         realization_oracle_reference_policy=True,
