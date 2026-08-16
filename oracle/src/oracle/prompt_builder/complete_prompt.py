@@ -76,80 +76,130 @@ def build_complete_prompt(
 
     Returns:
         agent call へ渡す構造化済み prompt。
+
+    NOTE:
+        プロンプトは変動が少ないものを前に、変動が多いものを後に配置する。
+        これは、キャッシュヒット率を上げるための措置。
     """
-    # 完全 prompt 自身が参照できる root 定義を call-scoped context から初期化する
+    # place holder map 構築先
     ph_map: PlaceholderMap = path_context.root_placeholder_definitions()
     _merge_placeholder_definitions(ph_map, aux_placeholder_def)
 
-    # 全体プロンプト構築先
-    prompt: list[StructDoc | StructBlock] = [
+    # プロンプト構築先
+    full_prompt: list[StructDoc | StructBlock] = list()
+
+    # プロンプト構築ユーティリティ
+    def _append(
+        target_prompt: list[StructDoc | StructBlock],
+        builder_result: tuple[PlaceholderMap, StructDoc],
+    ) -> None:
+        temp_ph_map, temp_prompt = builder_result
+        _merge_placeholder_definitions(ph_map, temp_ph_map)
+        target_prompt.append(temp_prompt)
+
+    # プロンプト内地図
+    # NOTE
+    #   読み飛ばされると困る要素をプロンプト先頭で参照させる
+    full_prompt.append(
         StructDoc(
-            "プロンプト内地図",
+            "プロンプト内の重要な情報",
             """
-            - このセッションの規定: <cmoc_ref target="policy"/>
+            - このセッションにおける基礎的な作業規定: <cmoc_ref target="fundamental_policy"/>
             - このセッションの目的: <cmoc_ref target="objective"/>
             """,
         )
-    ]
+    )
 
-    # 規定プロンプト構築先
-    policy_prompt: list[StructDoc] = list()
-
-    # 規定プロンプト構築ユーティリティ
-    def _extend_policy_prompt(build_fn: Callable, *args, **kwargs):
-        temp_ph_map, temp_prompt = build_fn(*args, **kwargs)
-        _merge_placeholder_definitions(ph_map, temp_ph_map)
-        policy_prompt.append(temp_prompt)
+    # 基礎規定プロンプト
+    # NOTE
+    #   無視されると困るような、全ての作業の基礎となるような作業規定
+    #   重要な指示なので StructBlock で囲って「プロンプト内地図」から参照する
+    fundamental_policy_prompt: list[StructDoc | StructBlock] = list()
+    _append(
+        fundamental_policy_prompt,
+        build_feedback_reporting_policy(path_context),
+    )
+    if file_access_mode != FileAccessMode.NO_POLICY:
+        _append(
+            fundamental_policy_prompt,
+            build_file_access_policy(file_access_mode, path_context),
+        )
+    if routing_policy:
+        _append(
+            fundamental_policy_prompt,
+            build_routing_policy(path_context),
+        )
+    if oracle_and_realization_basic:
+        _append(
+            fundamental_policy_prompt,
+            build_oracle_and_realization_basic(path_context),
+        )
+    full_prompt.append(StructBlock("fundamental_policy", fundamental_policy_prompt))
 
     # 規定プロンプト
-    # NOTE
-    #   feedback は cmoc の基本機能なので毎回必ず入れる
-    #   それ以外はフラグで切り替える
-    _extend_policy_prompt(build_feedback_reporting_policy, path_context)
-    if oracle_and_realization_basic:
-        _extend_policy_prompt(build_oracle_and_realization_basic, path_context)
     if oracle_policy:
-        _extend_policy_prompt(build_oracle_policy)
+        _append(
+            full_prompt,
+            build_oracle_policy(),
+        )
     if oracle_investigation_policy:
-        _extend_policy_prompt(build_oracle_investigation_policy)
+        _append(
+            full_prompt,
+            build_oracle_investigation_policy(),
+        )
     if realization_policy:
-        _extend_policy_prompt(build_realization_policy)
+        _append(
+            full_prompt,
+            build_realization_policy(),
+        )
     if oracle_review_policy:
-        _extend_policy_prompt(build_oracle_review_policy)
+        _append(
+            full_prompt,
+            build_oracle_review_policy(),
+        )
     if apply_review_policy:
-        _extend_policy_prompt(build_apply_review_policy)
+        _append(
+            full_prompt,
+            build_apply_review_policy(),
+        )
     if conflict_resolution_policy:
-        _extend_policy_prompt(build_conflict_resolution_policy)
+        _append(
+            full_prompt,
+            build_conflict_resolution_policy(),
+        )
     if editor_handoff_policy:
-        _extend_policy_prompt(build_editor_handoff_policy)
+        _append(
+            full_prompt,
+            build_editor_handoff_policy(),
+        )
     if realization_oracle_reference_policy:
-        _extend_policy_prompt(build_realization_oracle_reference_policy, path_context)
+        _append(
+            full_prompt,
+            build_realization_oracle_reference_policy(path_context),
+        )
     if index_entry_policy:
-        _extend_policy_prompt(build_index_entry_policy)
-    if file_access_mode != FileAccessMode.NO_POLICY:
-        _extend_policy_prompt(build_file_access_policy, file_access_mode, path_context)
-    if routing_policy:
-        _extend_policy_prompt(build_routing_policy, path_context)
-
-    # 全体プロンプトへ規定プロンプトを追加
-    prompt.append(StructBlock("policy", policy_prompt))
+        _append(
+            full_prompt,
+            build_index_entry_policy(),
+        )
 
     # caller による追加プロンプト (static)
     if aux_static_prompt:
-        prompt.extend(aux_static_prompt)
+        full_prompt.extend(aux_static_prompt)
 
     # このセッションの目的
-    prompt.append(
+    full_prompt.append(
         StructBlock(
             "objective", [StructDoc("summary", summary), StructDoc("goal", goal)]
         )
     )
 
     # caller による追加プロンプト (dynamic)
-    prompt.extend(aux_dynamic_prompt)
+    if aux_dynamic_prompt:
+        full_prompt.extend(aux_dynamic_prompt)
 
     # プレースホルダマップ
-    prompt.append(
+    full_prompt.append(
         StructDoc(
             "place holder definition",
             "\n".join(f"- {{{{{k}}}}} = {v}" for k, v in ph_map.items()),
@@ -157,4 +207,4 @@ def build_complete_prompt(
     )
 
     # パターンプロンプトの注入
-    return prompt
+    return full_prompt
