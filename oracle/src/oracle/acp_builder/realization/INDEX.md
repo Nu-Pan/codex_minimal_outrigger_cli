@@ -1,32 +1,35 @@
 # `apply`
 
 ## Summary
-- realization apply の追従起動処理をまとめる領域。変更差分を含む完全 prompt と AgentCallParameter を構築し、下位の fork 実装へ進む入口となる。
+- `realization apply fork` の追従 agent 用 AgentCallParameter を構築する起動処理。commit 範囲と oracle file の raw git diff を完全 prompt に組み込み、run worktree、アクセス権、各種 policy、モデル・推論設定を指定する。
 
 ## Read this when
-- realization apply fork の agent call に渡す変更情報、prompt、実行権限、worktree、モデル・推論設定、実行前 indexing を確認・変更するとき。
+- `realization apply fork` の prompt、作業範囲、完了条件、run worktree、起動パラメータを変更または確認するとき。
+- oracle file の変更を realization file 全体へ反映する agent call と、commit 範囲・raw git diff の prompt 埋め込みを調査するとき。
 
 ## Do not read this when
-- oracle file の変更内容や realization implementation・test の具体的な実装を確認するとき。一般的な prompt 構築や別の実行系の起動設定を調べるとき。
+- `realization apply fork` 以外の apply 処理を調査するとき。
+- 完全 prompt の共通生成規則を調査するときは、共通 prompt builder を直接読むとき。
+- AgentCallParameter の共通データ構造や列挙値だけを調査するときは、基礎定義を直接読むとき。
+- 個別の oracle file、realization implementation、realization test の仕様や挙動を確認するときは、対象ファイルを直接読むとき。
 
 ## hash
-- aa0fd1c9af2f8eba0efc0afc6e21a02df0907fd17c4ed18e3e74bb47e0a9282c
+- 0547d2589048a2ea7c63b3d1920147e554738899a1bfd82d6fa0481fd20d132b
 
 # `refactor`
 
 ## Summary
-- refactor fork における変更要約とファイル単位のレビュー・修正を扱う定義群。差分の意味論的分類、レビュー・修正 agent call のプロンプト構築、oracle・realization 参照規則、検証条件、結果報告の契約を確認する入口。
+- refactor fork における変更差分の構造化要約と、ファイル単位のレビュー・修正を行う agent call の定義および出力契約をまとめた入口です。
+- 変更要約の prompt、起動パラメータ、差分分類用 Structured Output schema を扱います。
+- ファイルレビュー・修正の prompt、権限、対象 path 解決、検証方針、所見と変更 path の整合条件、および出力 schema を扱います。
 
 ## Read this when
-- refactor fork の変更差分を人間向けに分類・要約する agent call の契約や起動条件を確認するとき
-- refactor fork の特定ファイルを起点としたレビュー・修正の作業範囲、参照規則、修正条件、検証条件を確認するとき
-- レビュー・修正結果における所見、根拠、変更 path、対応状態の報告方法を確認するとき
+- refactor fork の変更差分を意味論的カテゴリへ整理する agent call の prompt、実行設定、linked worktree、または出力形式を確認・変更するとき。
+- ファイル単位のレビュー・修正 agent call の調査範囲、修正権限、oracle・realization 参照方針、検証条件、または所見出力契約を確認・変更するとき。
 
 ## Do not read this when
-- 変更要約の出力項目や形式だけを確認する場合は、変更要約用の Structured Output schema を直接読む
-- レビュー・修正結果の出力項目や形式だけを確認する場合は、ファイル単位レビュー・修正用の Structured Output schema を直接読む
-- レビュー対象の実装や個別仕様を調査する場合は、対象の oracle file または realization file を直接読む
-- refactor fork 以外の agent call 構築規則を確認する場合は、該当する定義を直接読む
+- 実際の refactor 差分、レビュー対象の実装、個別の oracle file や realization file の内容を調査するとき。
+- 共通 prompt 生成処理や refactor fork 以外の agent call builder を確認・変更するとき。
 
 ## hash
-- cc9bff6e33e725c9d30c7896cfce4e77de6f2c6a4fa8e64bc4aef418f107f365
+- 66aba6dd17746b7a435681b9b653636acae9d44c28d1b1ddde0dc51baa23dfc4

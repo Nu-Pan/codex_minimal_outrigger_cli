@@ -91,20 +91,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と oracle 共通実装をまとめた領域。アプリケーション仕様、branch model、不採用案、開発ルール、および設定・パス解決・prompt 構成・Structured Output・feedback 入力契約を扱う。具体的な仕様や共通実装を確認する際の上位入口となる。
+- `oracle` は、cmoc の正本仕様・設計判断・開発規約を確認するためのドキュメント領域であり、CLI、セッション、Git 操作、アクセス制御、開発環境、テストなどの下位文書への入口を提供する。
 
 ## Read this when
-- cmoc の正本文書を探しており、アプリケーション挙動、branch model、設計判断、Python 開発・CLI 設計・テスト・環境構築のいずれかを確認するとき
-- oracle 共通実装の設定、パスコンテキスト、agent call の prompt 構成、Structured Output、実行パラメータ、feedback reporter の入力契約を確認するとき
-- 複数の仕様領域または共通実装領域にまたがる責務境界を確認し、`doc` または `src` 以下の専用対象へ進むとき
+- cmoc の現行仕様、設計背景、開発規約の所在を探すとき
+- CLI や session/run、branch・commit・worktree、アクセス制御の仕様を確認するとき
+- Python 実装、環境構築、テスト要件、テスト実行手順などの開発ルールへ進む入口を選ぶとき
 
 ## Do not read this when
-- 特定の実装コード、テスト、realization file、oracle file の具体的な挙動だけを調査するとき
-- collector 側の feedback 保存・集約・重複判定や、特定サブコマンドの仕様だけを確認したいときは、対応する下位文書または実装を直接読む
-- INDEX.md の自動生成方法や、既存の INDEX.md のルーティング情報だけを確認するとき
+- 確認対象の具体的な下位仕様書、検討資料、または開発規約文書が明確なとき
+- 実装コードや realization file の具体的な挙動だけを調査するとき
+- 現行仕様ではなく、特定の不採用案の理由だけを調べるときは、該当する下位資料へ直接進む
 
 ## hash
-- 7bab1c76acbbaca7225f9f7acc8055169ede75a5526a79a3734da10e9aba4e89
+- c81ca1d41761a71add0cc8d281c9810d33a2accf6b18f31c19467f6d58d28168
 
 # `pyproject.toml`
 

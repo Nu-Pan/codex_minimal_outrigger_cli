@@ -1,55 +1,54 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` における本命 agent call と、成功後の仕様削減 agent call の起動パラメータ構築を扱うディレクトリです。ユーザー指示の prompt 組み込み、oracle-only の書き込み範囲、モデル・推論設定、作業ディレクトリ、Structured Output、索引付け前処理など、oracle 編集起動の具体的な設定を確認する入口になります。配下には現時点で本文ファイルを含まない空の領域もあります。
+- `cmoc oracle edit` の起動定義を扱うディレクトリで、空の `fork` サブディレクトリと、oracle file 編集向けの本命・仕様削減 agent call の起動パラメータを構築する定義を含みます。oracle edit の起動条件、prompt 構成、アクセス範囲、モデル設定、作業ディレクトリ、索引事前処理を確認する入口です。
 
 ## Read this when
-- `cmoc oracle edit` の本命または仕様削減 agent call の起動パラメータを変更・確認するとき
-- oracle 編集用 prompt の構成、ユーザー指示の埋め込み、ファイルアクセスモード、起動前索引付け設定を確認するとき
-- 本命成功後の仕様削減 call に渡す参照境界や、既存未コミット差分の扱いを確認するとき
+- `cmoc oracle edit` の agent call 起動パラメータを変更・レビューするとき
+- oracle file 編集用 prompt の構成や、仕様削減時の参照境界を確認するとき
+- このディレクトリにファイルが追加され、その内容や用途を確認する必要があるとき
 
 ## Do not read this when
-- oracle file の編集ルールや仕様削減そのものの正本規範を確認する場合
-- 一般的な agent call パラメータや共通 prompt 構築の挙動だけを確認する場合
-- `cmoc oracle edit` 以外のコマンドの起動パラメータを確認する場合
+- realization 実装の責務や配置を確認する場合
+- oracle file の内容や仕様自体を確認・変更する場合
+- 通常の agent call 起動処理や `codex exec` 共通設定だけを確認する場合
+- 配下の具体的なファイルを直接確認できる場合
 
 ## hash
-- d545d4ae86932f4ac05a41e1a58013be44e8fc203295e054dc7b66e027481ac6
+- cce89dd47310bfeac39c8acda72ae098907e8036d70b37d4b4486cc5d0f6fe4b
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動パラメータと、oracle file 調査用の完全プロンプトを構築する実装。
-- ユーザー指示を完全プロンプトへ組み込み、oracle 専用の読み取り専用アクセス、作業パス、モデル・推論設定、構造化出力設定、インデックス事前処理を起動パラメータとしてまとめる。
-- oracle investigation の起動設定と、調査用 prompt builder の結果を TUI 起動へ渡す処理の入口。
+- `cmoc oracle investigation` の TUI 起動パラメータを構築する実装。ユーザーの調査指示を完全プロンプトへ組み込み、oracle-only の読み取り制約、パスコンテキスト、モデル・推論設定、構造化出力設定、起動前処理を含む `AgentCallParameter` を定義する、oracle 調査起動フローの入口。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動時に使うモデル、推論強度、ファイルアクセスモード、作業ディレクトリを変更・確認するとき。
-- oracle file 調査向け完全プロンプトへのユーザー指示の組み込みと、oracle 調査用の固定プロンプト設定を変更・確認するとき。
-- 完全プロンプトの構築結果、構造化出力設定、インデックス事前処理を TUI 起動パラメータへ渡す処理を確認するとき。
+- `cmoc oracle investigation` の TUI 起動時に、完全プロンプトへのユーザー指示の組み込み方を確認・変更するとき
+- oracle 調査用 agent call のモデル、権限、作業ディレクトリ、構造化出力、起動前処理などの固定パラメータを確認・変更するとき
+- oracle 調査プロンプトの構築元や、調査・ルーティング・エディタ引き渡しポリシーの適用箇所を追うとき
 
 ## Do not read this when
-- oracle file の内容、正本仕様、または調査結果そのものを確認するときは、対象の oracle file を直接読む。
-- 完全プロンプトの共通構造やレンダリング処理だけを確認するときは、prompt builder や構造文書の実装を直接読む。
-- oracle investigation 以外の agent call や一般的な TUI 起動設定を確認するときは、それぞれの起動パラメータ実装を読む。
+- oracle file の調査内容そのものや正本仕様を確認したいときは、対象の oracle file を直接読む
+- 一般的な agent call パラメータの型・列挙値の定義を確認したいときは、`oracle.acp_builder.basic` の定義を読む
+- 完全プロンプトの共通生成規則だけを確認したいときは、`oracle.prompt_builder.complete_prompt` の実装を直接読む
 
 ## hash
-- 8083637f83fd63d289681271d31265f2300f2dd810fb6d22965833ce9d81721c
+- 6e0088b946d13c9e9e795047a4736a1d9371f641410df22e31e1c72510c55104
 
 # `review`
 
 ## Summary
-- このディレクトリは、oracle review における所見の列挙、妥当性理由・反証理由の検証、採否判定、所見の統合に使う Structured Output schema と agent call 定義をまとめた領域です。各ファイルは、所見処理の契約確認と、その契約に対応する prompt・実行条件の調査への入口になります。
+- oracle review の所見列挙・妥当性検証・採否判定・統合に使う Structured Output schema と agent call パラメータ定義を集約するディレクトリ。各ファイルは、所見の出力形式または対応するレビュー担当の prompt・モデル設定・読み取り制約・Structured Output schema の関連付けを定義する。oracle review の特定処理の入出力契約や起動条件を確認・変更するときの入口であり、レビュー全体の処理ロジックや共通 prompt 生成を調べる場合は配下の対応実装または別の共通処理へ進む。
 
 ## Read this when
-- oracle review の所見を生成・検証・判定・統合する処理の入出力契約を確認するとき
-- 所見処理用 agent call の prompt、読み取り範囲、worktree、モデル設定、実行条件を確認または変更するとき
-- 所見の妥当性を支持・反証する理由や、重複・矛盾を整理する処理の構造を調査するとき
+- oracle review で新規所見を列挙するとき
+- レビュー所見の妥当性を支持・反証する理由の出力形式や agent call 設定を確認・変更するとき
+- レビュー所見の採否判定や、重複・矛盾を含む所見リストの統合処理を確認・変更するとき
 
 ## Do not read this when
-- oracle review の所見処理以外の agent call やサブコマンドを調査するとき
-- レビュー対象の oracle file や実装そのものの仕様を確認するときは、対象の仕様・実装ファイルを直接読むとき
-- 個別の Structured Output schema や prompt 定義だけを確認すれば足りる場合は、対応するファイルへ直接進むとき
+- oracle review の対象仕様・実装や個々の所見内容を調査するとき
+- oracle review 全体の判定・統合ロジックを確認するとき
+- 共通 prompt 生成規則やパス解決など、各処理に固有でない agent call 構築処理を調査するとき
 
 ## hash
-- c12f226d38c2018bd916db5f72029ff4c27c95e5c4c5da145e936965cb0b3327
+- fdf23c1f03c875ca5aab02d0b7eaf78a63c54cac82bdfe0915a11189e4bc9d03

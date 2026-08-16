@@ -1,119 +1,121 @@
-# `apply_review_standard.py`
+# `apply_review_policy.py`
 
 ## Summary
-- oracle file に対する realization file の追従要否・所見・修正を判断するための規範コレクションを構築する。共通の oracle 権威・所見根拠に加え、apply review 固有の判断基準をまとめる入口である。
+- oracle file に対する realization file の追従要否、所見、修正を判断するためのポリシー群を構築する。oracle の権威、所見の根拠、修正対象、既に解消済みの扱いをまとめた判断の入口である。
 
 ## Read this when
-- oracle file と realization file の適合性をレビューするとき
-- realization の追従要否、既解決状態、修正対象を判断するための prompt 構築を確認するとき
+- oracle file と realization file の適合性を確認し、追従要否や修正対象を判断するとき
+- 適合性レビューで所見の根拠や、既に解消済みの問題の扱いを確認するとき
 
 ## Do not read this when
-- apply review 以外の規範選択や prompt 部分を確認するとき
-- 具体的な規範本文の定義だけを確認したいときは、個別の standard 定義へ直接進む
+- oracle file の内容そのものや realization の実装を直接確認するとき
+- 適合性レビュー以外のポリシー構築や一般的なプロンプト生成を調べるとき
 
 ## hash
-- 29e3fc51416862b8771eb3faf6c7138c181338e38bf612c72414a17f96819d2e
+- 76d59c19789a3f142a281c2ce5c51b525138b0270d45c540f931bf00a231ce93
 
-# `common_standard.py`
+# `common_policy.py`
 
 ## Summary
-- 複数用途で共有する StandardGroup の構成定義をまとめる。
-- oracle・realization file を扱う時の oracle authority 標準群と、所見・修正対象の判断時に用いる finding basis 標準群を構成するエントリーである。
+- 複数用途で共有する PolicyGroup の構成定義を担う。oracle・realization file の扱いに関する authority policy 群と、所見・修正対象の判断に関する finding basis policy 群を、共通利用可能なグループとして構成する。
 
 ## Read this when
-- oracle・realization file を扱う際に、適用する oracle authority 標準群の構成を確認したいとき。
-- 所見・修正対象の判断時に、適用する finding basis 標準群の構成を確認したいとき。
-- oracle authority 標準群について、基本標準のみの構成と、oracle authority no reverse flow 標準を追加した構成の違いを確認したいとき。
+- oracle・realization file を扱う作業で、oracle authority policy または reverse flow 禁止 policy をまとめて適用する入口を確認したいとき
+- 所見や修正対象の判断で、finding basis policy を適用する PolicyGroup の構成を確認したいとき
 
 ## Do not read this when
-- StandardGroup の個別標準の本文や詳細な判定基準を確認したいとき。
-- 標準そのものの定義を確認したいときは、参照されている standard_definitions の対象へ直接進む。
+- 個々の policy の具体的な規則や根拠を確認したいときは、参照されている policy 定義を直接読む
+- PolicyGroup の型や一般的な構造を確認したいときは、PolicyGroup の定義を直接読む
 
 ## hash
-- a65023fc8999435be18fdde6c8828d78e926bbb047de44a0cad74de7e7e78460
+- 750f753b1a644bdaa719660f3a83a2de532243bfed707f1a011260f6dfea5acd
 
-# `conflict_resolution_standard.py`
+# `conflict_resolution_policy.py`
 
 ## Summary
-- `cmoc session join` の conflict marker 解消時に適用する instruction 文面の構築定義。oracle と realization の意味を保つ conflict 解消規範を、標準グループとして選択・収集する入口。
+- `cmoc session join` で conflict marker を解消する際に適用する policy collection の構築定義。oracle / realization の意味を保つ共通権威ポリシーと、両ブランチを保持する conflict 解消ポリシーをまとめる。conflict 解消 instruction の選択・構成を確認する入口。
 
 ## Read this when
-- `cmoc session join` の conflict 解消用 instruction の構成や適用範囲を確認するとき。
-- conflict 解消時に oracle / realization の意味を保持する標準グループの選択を確認するとき。
+- `cmoc session join` の conflict 解消時に、適用される policy group や instruction の構成を確認・変更するとき。
+- conflict 解消で両ブランチを保持する規定がどのように選択されるかを確認するとき。
 
 ## Do not read this when
-- conflict 解消規範の具体的な内容や、両方の branch を保持する要件を確認するとき。これらは選択される conflict resolution standard の定義へ直接進む。
-- `cmoc session join` の conflict 解消以外の instruction 文面や標準構成を確認するとき。
+- session join の conflict 解消以外の policy 定義を調べるとき。
+- 個別の conflict 解消ポリシー本文を確認する場合は、直接そのポリシー定義を読むとき。
 
 ## hash
-- f44a82a0edc28e5e359598a4145df3a6c58e68e68bf4e06435d05fdf83089da5
+- dfb25321733ba824a259f636374abfcf9f3b154c66c579e65c139b0f2fde4ae5
 
-# `editor_handoff_standard.py`
+# `editor_handoff_policy.py`
 
 ## Summary
-- agent call から editor work file へ handoff する際に適用する規範の選択を構築する定義。handoff の標準コレクションを確認する必要がある場合の入口であり、具体的な標準内容は選択された標準定義を直接読む。
+- 日本語の技術文書として、対象が担う editor work file への handoff 規定の構築責務と、agent call から handoff する規定を確認・変更するときの入口を示す。
+- 対象は policy group を組み立ててポリシーコレクションを返す実装であり、個別ポリシー本文やポリシー定義そのものを読む作業の直接の入口ではない。
 
 ## Read this when
-- agent call から editor work file へ handoff する規範の構成や選択を確認するとき
+- agent call から editor work file への handoff 規定を選択・構成する処理を確認または変更するとき。
+- editor handoff 用の policy group の scope、識別子、含めるポリシーの組み立てを確認するとき。
 
 ## Do not read this when
-- handoff 以外の prompt builder の責務を調べるとき
-- handoff で選択される個別標準の具体的な要求を確認するとき
+- editor handoff の個別ポリシー内容だけを確認または変更するときは、対象の policy definition を直接読む。
+- 一般的な prompt builder の構成や、editor work file 以外の handoff 規定を確認するときは、該当する別の構成対象へ進む。
 
 ## hash
-- 90063280371ad9e24d303cb75d6462c052cfeb0c7220b446e6646c33a309f392
+- 70192e603c87c595aa2e011dd4d65defd6e14f0ec98e619541ea4396a7720ea7
 
-# `feedback_reporting_standard.py`
+# `feedback_reporting_policy.py`
 
 ## Summary
-- 全 agent call に共通する、人間向け feedback 報告の判定基準と報告手順を構築する。現在の作業外の人間対応で再発防止・反復的浪費の削減・人間意図の確定が可能な問題を MCP feedback tool へ報告するための共通入口である。
+- 全 agent call に共通する、人間向け feedback 報告規定の構築を担当する。作業外の人間対応が必要で、再発防止・反復的浪費の削減・外部挙動に関わる意図確定につながる問題だけを報告対象とし、通常 workload 内で解決した問題などは対象外とする。feedback は指定 MCP tool で報告し、報告後も本来の作業を継続するための共通プロンプト断片を提供する。
 
 ## Read this when
-- agent call 共通の human feedback 報告ルールを変更・確認するとき
-- feedback を報告すべき問題の範囲や、報告後の継続方針を確認するとき
+- agent call 共通の human feedback reporting 方針を確認・変更するとき
+- feedback 報告対象の範囲、報告手段、報告後の継続動作を確認するとき
+- prompt builder が共通の feedback reporting ポリシーを組み立てる責務を調査するとき
 
 ## Do not read this when
-- 個別の prompt builder 部品や、feedback 内容そのものの保存形式だけを調べるとき
-- 通常の workload 内で解決済みの問題や、根拠のない改善案を扱うとき
+- 特定 workload の個別仕様や実装上の問題だけを調査するとき
+- feedback 報告方針ではなく、プロンプトの別の構成要素を直接調査するとき
+- 通常の作業内で解決済みの問題や、根拠のない改善案を扱うとき
 
 ## hash
-- bd6497bee29a5aa1d0f35d0423869b24d79127d4e61d1ea8097504d0e1ffa08b
+- d310455d79a8cb591f50a86e582d583ed7ab886f7e88729221b1d28d388ec067
 
-# `file_access_rule.py`
+# `file_access_policy.py`
 
 ## Summary
-- ファイルアクセスモードごとの読み書き禁止ルールを構築する関数を定義する。リポジトリ外、管理用ディレクトリ、AGENTS.md、INDEX.md、memo、oracle/realization file などの共通禁止事項に加え、READONLY・PURE_ORACLE_READ・REPO_WRITE・PURE_ORACLE_WRITE・REALIZATION_WRITE のモード別制約を扱う。アクセス規則のプロンプト生成や FileAccessMode ごとの制約を確認・変更するときの入口となる。
+- cmoc の agent 向けファイル読み書きポリシー文面を、FileAccessMode とパスコンテキストに応じて生成する関数。リポジトリ外、管理対象ディレクトリ、oracle/realization file などのアクセス制限を deny-list として組み立て、プロンプト部品として返す。
+- ファイルアクセス権限の生成規則、mode ごとの oracle/realization file の扱い、特殊な NO_POLICY の挙動を確認するための実装入口。ファイルアクセス制約や prompt builder の構成を変更・調査する際に読む。
 
 ## Read this when
-- FileAccessMode に応じた agent 向けファイルアクセス制約の生成を変更するとき
-- oracle file と realization file の読み書き可否、または共通 deny ルールの挙動を確認するとき
-- アクセス規則プロンプトに渡す placeholder 定義や StructDoc の構築箇所を調べるとき
+- FileAccessMode ごとの読み書き制限や、agent prompt に埋め込むファイルアクセス規定を変更・検証するとき
+- repo-root と work-root が異なる場合を含む、パスプレースホルダーとアクセス拒否文面の生成を調査するとき
+- oracle file と realization file の編集可否を mode 別に確認するとき
+- NO_POLICY が使われる特殊な prompt 構築経路を調査するとき
 
 ## Do not read this when
-- 特定の oracle file や realization file の内容・実装そのものを確認する場合
-- CLI の実際のファイル操作や Codex sandbox 設定を変更・確認する場合
-- INDEX.md の更新処理など、生成されたアクセス規則を利用する側だけを調べる場合
+- INDEX.md のルーティングだけを確認したいとき
+- ファイルアクセス規定ではなく、実際の Codex CLI sandbox 設定や正本の実行規則を確認するときは、対応する oracle 仕様を直接読む
+- prompt builder の別部品や、oracle/realization file の具体的な内容だけを調査するとき
 
 ## hash
-- d8aef087b58116c9f987cc27418337ec8566a94759cb74359a2c8deb86fe70eb
+- 71e275db327577997bd71e5920ae3e8552d2b9c5ab094888c9ef78bcc5866f20
 
-# `index_entry_standard.py`
+# `index_entry_policy.py`
 
 ## Summary
-- INDEX.md 用エントリー生成時に適用する規範群を選択する標準コレクションを構築する。
-- エントリーのルーティング、本文に基づく根拠、意味情報の扱いに関する標準をまとめ、生成規則を確認する入口となる。
+- 対象は、INDEX.md 用エントリー生成エージェントに適用するポリシー群を組み立てる入口です。INDEX_ENTRY_ROUTING_POLICY、INDEX_ENTRY_EVIDENCE_POLICY、INDEX_ENTRY_SEMANTIC_INFORMATION_POLICYを、専用グループとしてまとめて返します。
 
 ## Read this when
-- INDEX.md 用エントリーの生成規則や適用標準を確認するとき。
-- エントリー標準の選択範囲を変更するとき。
+- INDEX.md 用エントリー生成時のポリシー構成や、どの規定群を適用するかを確認したいとき。
+- index_entry_policy のポリシー選択・グループ化の責務を確認したいとき。
 
 ## Do not read this when
-- 個別標準の詳細を確認するときは、各標準定義を直接読む。
-- INDEX.md の既存内容を確認するときは、対象の INDEX.md を直接読む。
-- エントリー標準の選択と無関係な prompt builder の処理を調べるとき。
+- INDEX.md エントリーの個別ルール本文を確認したいときは、各ポリシー定義を直接読む。
+- 一般的なプロンプト構築や、INDEX.md 以外のポリシー構成を確認したいとき。
 
 ## hash
-- d23d22e6166934c598bd5203e79e6975c05315d82c2dc118ffc93159f434c7e9
+- 91fb91d6830bfd5a6f37952c9b71223b5ee195d496965449736ba0b64063fe79
 
 # `oracle_and_realization_basic.py`
 
@@ -134,105 +136,104 @@
 ## hash
 - 7d70bb60c470aff3275d9de18ec27d6b68d9da9fab51e7cf7a7608aa58964008
 
-# `oracle_review_standard.py`
+# `oracle_policy.py`
 
 ## Summary
-- oracle review の全段階で共有する所見判定規範を構築する。所見の列挙・統合・検証・採否判定に関する標準群を選択し、所見成立の基礎規範と oracle review 固有の規範をまとめた標準コレクションを返す。
+- oracle file を扱う agent call に適用する PolicyCollection の構築定義。oracle file の作成・変更・レビュー向けと、読み取り専用調査向けに、適用する policy group を分けて提供する。
 
 ## Read this when
-- oracle review における所見判定規範の構成や、共有される標準群を確認・変更するとき。
+- oracle file の作成・変更・レビューを行う agent call に、適用する規定の集合を確認したいとき
+- oracle file の読み取り専用調査を行う agent call に、調査用の規定の集合を確認したいとき
+- prompt builder で oracle 向け policy collection の選択経路を確認したいとき
 
 ## Do not read this when
-- oracle review の個別標準の具体的な判定内容だけを確認したいときは、各標準定義を直接読む。
-- 所見成立の基礎規範だけを確認したいときは、共通標準群の定義を直接読む。
+- oracle policy の個別規定の本文を確認したいとき
+- oracle file 以外の作業に適用する policy collection を確認したいとき
+- prompt builder の policy 選択ではなく、共通 authority policy や個別 policy 定義だけを確認したいとき
 
 ## hash
-- 49ce591233470c0d04becdb629013b582be1c30f010782087d89bc9a02626259
+- 640e87ae96d06a65137ef8e0ebe21cf7a8ce301051c4f50d0fb1a2dcad0a0e65
 
-# `oracle_standard.py`
+# `oracle_review_policy.py`
 
 ## Summary
-- oracle file を扱う agent call 向けの instruction 文面を構築する標準コレクションを提供する。
-- 作成・変更・レビュー用には権威性、編集根拠、意図と空白、逆算推論禁止、実装制約、一貫性と検索可能性に関する規範を選択する。
-- 読み取り専用調査用には、権威性、逆算推論禁止、定義済み事項と未定義事項に関する規範だけを選択する。
-- 各標準コレクションはキャッシュされ、共通の authority standard group または authority core standard group と用途別グループを組み合わせて返される。
+- oracle review の所見判定規定を構築する部品。所見の根拠に関する共通ポリシーと、oracle review 固有の致命的所見・軽微な所見・oracle file 限定の規定をまとめ、review の全段階で共有する PolicyCollection を提供する。oracle review の判定ポリシーの入口として扱う。
 
 ## Read this when
-- oracle file の作成・変更・レビューに適用する標準コレクションの構成や選択範囲を確認するとき
-- oracle file の読み取り専用調査に適用する標準コレクションの構成や選択範囲を確認するとき
-- oracle file 向け agent call の instruction 文面で、作業用途に応じた標準グループの選択を追跡するとき
+- oracle review における所見の列挙、統合、検証、採否判定の規則を確認するとき
+- oracle review 用のポリシー集合を構築・変更するとき
+- 所見の根拠に関する共通規定と oracle review 固有規定の組み合わせを確認するとき
 
 ## Do not read this when
-- 個別の oracle 規範本文を確認したいときは、ここではなく各標準定義の対象を直接読むべきである
-- StandardCollection や StandardGroup の一般的な構造・実装を確認したいときは、ここではなくそれらの定義元を直接読むべきである
-- oracle file の具体的な作成・変更・レビュー手順そのものを確認したいときは、ここではなく該当する規範または手順の対象を読むべきである
+- oracle review 以外のプロンプト構築ポリシーを確認するとき
+- 個別ポリシーの具体的な判定内容を直接確認したいときは、各ポリシー定義を読む方が適切な場合
 
 ## hash
-- 68f044ddde2f93779e774f515c2348ef0b2e7018cde02032fe3ffec24e698b19
+- 279b6203d95f0370ace4c4321df41d8f5dd2e282d24e3129050e49faed2709a0
 
-# `realization_oracle_reference_rule.py`
+# `policy_definitions.py`
 
 ## Summary
-- realization code から参照すべき oracle file path をコメントへ記載する規則を、agent call のパス文脈から構築する関数。placeholder map と構造化文書を返し、realization 実装時の oracle 参照ルールをプロンプトへ組み込む。
+- 全用途で共有する Policy 定義を集約する入口。oracle と realization の扱い、仕様の優先関係・未定義領域、検証、レビュー、conflict 解消、editor handoff、INDEX.md ルーティングに関する方針を確認・変更するときに読む。個別の挙動仕様や実装そのものではなく、複数の作業領域に適用される共通ポリシーを扱う。
 
 ## Read this when
-- realization code の作成・変更時に、対応する oracle file path をコメントへ記載する規則を確認したいとき。
-- agent call の root placeholder 定義と、realization oracle reference rule の構造化文書生成方法を確認したいとき。
+- 複数の prompt builder 部品で共有される policy の追加・変更・参照条件を判断するとき
+- oracle と realization の責務境界、仕様適合、レビュー所見、conflict 解消、editor handoff の共通方針を確認するとき
+- INDEX.md エントリー生成に関する共通方針を確認するとき
 
 ## Do not read this when
-- realization code の具体的な実装内容やテスト方法を確認したいとき。
-- oracle file の仕様本文や、プロンプト構築の別ルールを直接確認したいとき。
+- 特定の oracle file や realization file の具体的な仕様・実装だけを確認する場合
+- 共有 policy の適用結果や個別作業の実行手順を確認する場合は、対応する個別仕様または repository 固有手順を直接読む
 
 ## hash
-- 79789b9f78302eb267516c71cb34589e6f94c8b1408c4e2b2d5a691b9dbe0124
+- 51d10f9224c9acfdd3125419497d13a5f75afc509cdadf328ef26986216bd443
 
-# `realization_standard.py`
+# `realization_oracle_reference_policy.py`
 
 ## Summary
-- realization file の作成・変更・リファクタ・レビュー時に適用する標準群を選択し、oracle authority standard group と realization standard group を含む StandardCollection を構築する。
-- realization standard group には、oracle 適合性、現行仕様限定、リポジトリ検証の三つの規範をまとめる。
+- realization code から oracle file path を参照する規定を構築する関数を定義する。realization code の作成・変更時に、対応する oracle file が存在すれば、コメントへ work-root 起点の oracle file path を記載するための構造化された参照ポリシーと placeholder map を返す。
 
 ## Read this when
-- realization file に関する agent call の instruction 文面や適用規範の構成を変更・レビューするとき
-- realization file 向けの標準コレクションを構築する責務を確認するとき
+- realization code を作成または変更し、対応する oracle file への参照規定を確認する必要があるとき。
 
 ## Do not read this when
-- 個別の realization standard の内容や適用条件を確認したいとき
-- oracle authority standard group の定義を直接確認したいとき
-- realization file 自体の実装やテストの内容を確認したいとき
+- realization code 自体の実装内容や配置規則を確認したいときは、対応する realization または設計規則を直接読む。
+- oracle file の具体的な内容や個別の仕様を確認したいとき。
 
 ## hash
-- 277f72a8edb9f33de8db05bb6bd6fc2f141abc77b016a5835742f214c5f85d76
+- a72583769048b759b2d53f7ca62ecd97cffc25515bb5b1f3f72c1afd4b2bf1c3
 
-# `routing_rule.py`
+# `realization_policy.py`
 
 ## Summary
-- INDEX.md を使った本文へのルーティング規則を構築するプロンプト部品。作業対象に近い INDEX.md から読み始め、Summary・Read this when・Do not read this when で候補を絞り、必要な本文へ進む手順を定義する。下位階層の INDEX.md の利用と、INDEX.md より本文を優先する判断も扱う。
+- realization file の作成・変更・リファクタ・レビュー時に適用する instruction policy 群を構築する定義。
+- 共通の oracle authority policy group と、realization 向けの oracle conformance・current spec only・repository verification の各 policy を一つの PolicyCollection にまとめる。
 
 ## Read this when
-- INDEX.md の読み進め方や、関連する本文を routing 情報で絞る仕組みを確認するとき。
-- プロンプトへ埋め込む routing rule の内容や、work-root の参照方法を変更するとき。
+- realization file を扱う agent call で、適用対象の policy group と個別 policy の構成を確認したいとき。
+- realization 向け instruction 文面の policy 選択ロジックを変更・レビューするとき。
 
 ## Do not read this when
-- 特定の INDEX.md の既存エントリーや本文を確認したいとき。
-- routing 以外のプロンプト部品の生成規則を確認したいとき。
+- realization file を扱わず、個別 policy の具体的な規定だけを確認したいとき。
+- 個別 policy の本文や oracle authority policy group の定義を確認する場合は、それぞれの定義元を直接読むべきとき。
 
 ## hash
-- 2ebd20e0c920860904622c216abda854150d36a13101df2052f3da03e5389295
+- a6b62a8f6e1658078e9536f7d7affc0bbe2056f1f4890085b6d50bf5cee26f86
 
-# `standard_definitions.py`
+# `routing_policy.py`
 
 ## Summary
-- 標準文面を一元管理する定義群で、oracle の権威性・仕様と実装の関係・調査とレビューの基準・conflict 解消・editor handoff・INDEX.md ルーティング規則など、cmoc の判断基準を担う。これらの標準を参照または変更する作業では、個別の oracle file や realization file より先に、全体の標準的な要求と禁止事項を確認する入口となる。
+- INDEX.md を用いた文書ルーティングの規定文面を構築する。作業対象に近い階層の INDEX.md から読み始め、候補を Summary・Read this when・Do not read this when で絞り、必要な本文や下位階層の INDEX.md へ進むための入口となる。INDEX.md は本文の代替ではなく、内容の意味は本文を根拠とする。
 
 ## Read this when
-- oracle file と realization file の責務、優先関係、実装適合性、検証、レビュー基準を確認または変更するとき
-- oracle review、realization review、conflict marker 解消、editor handoff の判断基準を確認するとき
-- INDEX.md エントリーの作成・評価や、仕様の定義済み事項と未定義事項の扱いを確認するとき
+- INDEX.md の役割、読み始める位置、候補の絞り込み方を確認するとき
+- 対象領域が不明で、リポジトリルートの INDEX.md を起点にしたルーティング規則を確認するとき
+- 下位ディレクトリの INDEX.md を使う条件や、本文と INDEX.md が異なる場合の優先順位を確認するとき
 
 ## Do not read this when
-- 個別の oracle file や realization file の具体的な内容だけを調査し、ここで定義される共通標準自体が判断に関係しないとき
-- Structured Output の項目名・型・形式だけを確認するとき
+- INDEX.md の具体的なエントリー内容や対象文書そのものを読む必要があるとき
+- 特定の対象本文の責務や仕様を直接確認できる場合
+- 候補の網羅的な探索ではなく、すでに対象本文が特定されている場合
 
 ## hash
-- fbbb9c3323fa60de9b2502feaa15beb476469aad1f82b6f1540d60375a319f80
+- 7f76ed23be7f3301d5ebe8a22987e9180e23c37e4a79bd47bb69b9ceff1509ee

@@ -17,17 +17,18 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の変更差分を人間向けに要約する agent call の prompt と起動パラメータを構築する定義。差分を動的 prompt に埋め込み、readonly の linked worktree 上で指定 schema の要約を生成する処理への入口。
+- refactor fork の変更差分を人間向けに要約する prompt と AgentCallParameter を構築する定義。差分を動的 prompt に埋め込み、readonly・効率性重視の実行条件、構造化出力 schema、linked worktree の作業ディレクトリを設定する。
 
 ## Read this when
-- refactor fork の作業差分を要約する agent call の構築方法、入力差分の渡し方、実行モデルや作業ディレクトリなどの起動条件を確認するとき。
+- refactor fork の report 用変更要約 prompt を変更・レビューするとき
+- 変更要約 agent のモデル種別、推論強度、ファイルアクセス、作業ディレクトリ、構造化出力 schema の起動設定を確認するとき
 
 ## Do not read this when
-- refactor fork の差分要約そのものや出力形式だけを確認したいときは、変更要約用の schema を直接読む。
-- refactor fork 以外の agent call 構築や、一般的な prompt の組み立て規則を確認するとき。
+- refactor fork の実際の変更内容や差分そのものを確認したいとき
+- 一般的な prompt 構築処理や他の realization の実装を確認するとき
 
 ## hash
-- b17cc5297186030d4e3176bae423ea5a5f9ece171ef159aea14893ed32dd6c79
+- 151120b4b451745fb409a615a098af28cb57d0bdcee8aad2ecfaff769d529304
 
 # `file_review_and_fix.json`
 
@@ -49,18 +50,18 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter を構築する。対象ファイルを起点に完全プロンプトを生成し、oracle・realization の参照、レビュー、修正、検証、Structured Output の報告条件を定義する。
-- パスコンテキスト、ファイルアクセス権限、モデル・推論設定、構造化出力スキーマ、実行時の作業ディレクトリをまとめ、ファイル単位の追従処理へ渡す入口となる。
+- ファイル単位の refactor fork レビュー・修正用 AgentCallParameter を構築する。対象 path と linked worktree を基に、完全な調査・修正・検証プロンプト、アクセス権限、各種ポリシー、Structured Output schema、実行モデルを設定する。
+- 対象ファイルを起点に、差分を前提とせず oracle file と realization file の調査から realization file の修正・検証までを行う agent call を定義したい場合の入口。プロンプト本文の構築は `build_complete_prompt`、パス解決は `AgentCallPathContext` と `resolve_real_path`、構造化文書化は `StructDoc` に委譲している。
 
 ## Read this when
-- refactor fork のファイル単位レビュー・修正処理を追加・変更するとき
-- 対象ファイルを起点とするレビュー用プロンプト、oracle・realization の参照規則、修正後検証の設定を確認するとき
-- AgentCallParameter のモデル、作業ディレクトリ、アクセスモード、Structured Output 設定を確認するとき
+- refactor fork のファイル単位レビュー・修正 agent call のパラメータ生成を変更するとき
+- レビュー対象の linked worktree、realization write 権限、oracle/realization・routing・apply review 各ポリシーの適用方法を確認するとき
+- レビュー結果の Structured Output schema、決定論的な変更 path 申告、最大推論設定、indexing preflight の組み合わせを変更するとき
 
 ## Do not read this when
-- レビュー対象ファイルの実装内容そのものを調査するときは、対象の oracle file または realization file を直接読む
-- レビュー結果の出力項目や JSON Schema の形式だけを確認するときは、関連する Structured Output schema を直接読む
-- refactor fork 以外の AgentCallParameter 構築や、一般的なプロンプト生成の仕様だけを確認するとき
+- refactor fork 以外の agent call builder を調べるとき
+- 共通プロンプト生成の仕様や `build_complete_prompt` 自体の実装を変更・確認するときは、まずその共通実装を直接読むとき
+- レビュー対象の realization 実装や oracle 文書の内容を調査するときは、対象ファイルを直接読むとき
 
 ## hash
-- 69bfa835a0e66f27e52a62ce2349dfc9c41db79f4a8256afee2271e6609ce1ab
+- dcb3db5fa137b8f9c95b2f03ce6c4fe20318e8c1d007125d9c970fac4e9d2786

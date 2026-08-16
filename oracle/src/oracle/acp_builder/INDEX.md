@@ -1,139 +1,140 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェント呼び出し用の論理パラメータを定義するデータモデルと、モデル種別・推論強度・ファイルアクセスモードの列挙を扱う。ACP の呼び出し条件や prompt、Structured Output、作業ディレクトリ、indexing preflight の設定を確認・変更するときの入口となる。
+- AIコーディングエージェント呼び出しに必要な論理モデルクラス、推論強度、ファイルアクセスモード、プロンプト、Structured Output schema、作業ディレクトリなどのパラメータ契約を定義する。`ModelClass`、`ReasoningEffort`、`FileAccessMode` の選択肢と、その意味・バックエンド解決責務を確認したい場合の入口となる。
 
 ## Read this when
-- Agent Call Parameter の構造や既定値を確認するとき
-- ModelClass、ReasoningEffort、FileAccessMode の論理的な選択肢や意味を変更するとき
-- AI エージェント呼び出しに渡す prompt、schema path、cwd、indexing preflight の保持方法を確認するとき
+- agent call builder の戻り値や呼び出しパラメータの契約を確認・変更するとき
+- モデル選択、reasoning effort、ファイルアクセス制御、prompt、Structured Output schema、agent call の cwd を扱う実装を調査するとき
+- indexing preflight の実行要否を含む agent call 設定を確認するとき
 
 ## Do not read this when
-- バックエンド固有のモデル名への解決や実際の呼び出し処理を確認・変更するとき
-- ファイルアクセス制限の正本仕様や Codex CLI sandbox への対応を確認するとき
-- builder 関数による具体的な prompt 構築ロジックだけを確認するとき
+- 実際のモデル名やバックエンド固有の解決処理を確認したいときは realization src を直接読む
+- Codex CLI sandbox における各ファイルアクセスモードの正本仕様を確認したいときは指定された oracle 文書を読む
+- 個別の builder 関数による prompt 構築や、呼び出し実行そのものだけを調べるとき
 
 ## hash
-- 03efbc4692262e7011a5ec10a73003a8097cfbadc32c2ec64668fd558d34460c
+- 16da7aac62b6eb20427359ba16f1b4d49c15b57ef69f966a83830852c2177673
 
 # `feedback`
 
 ## Summary
-- feedback issue の同一性判定と report cut 時点の検証に使う Structured Output schema と agent call 定義を収録する。
-- 同一性判定では observation と絞り込み済み候補を比較し、既存 issue への対応付けまたは新規 issue の判定を扱う。
-- 検証では固定済みの report cut reference だけを根拠に、issue の状態と人間対応の要否を判定する。配下の normalize_issue 系・verify_issue 系ファイルが、それぞれの出力契約と起動パラメータを確認する入口になる。
+- 日本語技術文書のルーティング情報として、フィードバック issue の正規化・検証に関する prompt、agent call parameter、Structured Output 契約への入口を示すディレクトリです。
+- 観測と既存 issue candidate の同一性判定、report cut 時点の evidence に基づく issue 状態検証を扱う対象へ進むための中間入口であり、個別の schema や実装の詳細は各対象を直接確認します。
 
 ## Read this when
-- feedback issue の同一性を判定する処理の出力契約、入力候補との照合境界、または読み取り専用の agent call 設定を確認するとき
-- issue candidate を report cut 時点の固定参照から検証し、未解決・解決済み・報告対象外・判定不能の扱いを確認するとき
-- feedback issue の判定用 schema と、それを使用する prompt・agent call parameter の対応を調べるとき
+- feedback issue の正規化または検証フローの prompt・agent call 設定・Structured Output 契約を確認するとき
+- 観測を既存 issue と新規 issue のどちらとして扱うか、または issue candidate の現在状態を判定する処理の入口を探すとき
 
 ## Do not read this when
-- feedback issue の報告、保存、候補の絞り込み、または feedback state の更新処理を調べるとき
-- issue の具体的な内容や現在の repository 状態を確認したいとき
-- 一般的な JSON Schema の仕様や、個別の issue の原因・重要度・関係を調べるとき
+- issue の発見・保存・送信や候補の絞り込みなど、正規化・検証以外の feedback 処理だけを確認するとき
+- 個別 schema のフィールド定義、個別 issue の内容、または一般的な JSON Schema の仕様を直接確認するとき
 
 ## hash
-- 8abb284879cab91ac4cba3a7527753d92cb311416e6f96b4afe079187bd2c16e
+- 2a1c1e0a32408b4c81297fe9a1ffca49fd81799d343a2c6ec9a07d5ae0fffd8e
 
 # `indexing`
 
 ## Summary
-- `cmoc indexing` が INDEX.md エントリー生成用 agent call を起動するための定義を集約する。Structured Output schema と、対象本文を埋め込んだ prompt・起動パラメータの構築実装を扱う。
+- `cmoc indexing` が対象本文から INDEX.md エントリーを生成するための agent call 構築と、その Structured Output schema を扱うディレクトリ。prompt、読み取り専用設定、モデル・推論設定、出力形式を確認する入口となる。
 
 ## Read this when
-- `cmoc indexing` の INDEX.md エントリー生成について、出力契約と agent call の prompt、モデル、推論設定、読み取り権限、cwd、preflight 設定を確認・変更するとき。
-- エントリー生成の下位ファイルへ進む前に、schema とパラメータ構築実装の責務を把握するとき。
+- `cmoc indexing` の index entry 生成処理について、prompt の構成、対象本文の埋め込み、path context、読み取り専用設定、モデル・推論設定を変更・確認するとき。
+- 生成される INDEX.md エントリーの JSON schema、必須項目、出力制約を確認するとき。
 
 ## Do not read this when
-- INDEX.md エントリーのルーティング内容や対象ファイル・ディレクトリの実際の責務を判断するときは、生成対象の本文を直接読む。
-- Structured Output schema の制約だけを確認するときは、schema 定義を直接読む。
-- `cmoc indexing` 以外の agent call パラメータや共通 prompt 生成規則を確認するときは、それぞれの担当実装や共通 prompt builder を直接読む。
+- indexing サブコマンド全体の実行フローや agent call の起動処理を確認するときは、呼び出し側または agent 実行処理を直接読む。
+- 目次対象となる個別ファイルやディレクトリの責務・ルーティング内容を判断するときは、対象本文とその対象側の INDEX.md を読む。
+- INDEX.md エントリー生成とは無関係な agent call や prompt 構築を確認するとき。
 
 ## hash
-- 59b72c73168652c15f8779d97428d9ab0a2f6c649e1ca87a27c0ea19bdab197d
+- 12a6b41b525d92f82af506b3953916dcba6df7a401c93a2cb0cafb30d337361c
 
 # `oracle`
 
 ## Summary
-- `cmoc oracle` 系サブコマンドの agent call 構築実装を扱うディレクトリです。編集、調査、レビューそれぞれの起動条件・prompt・Structured Output・実行範囲を確認する入口になります。
+- oracle 関連の agent call 起動定義を扱うディレクトリ。oracle の edit・investigation・review 各フローについて、起動パラメータ、prompt、読み取り制約、モデル設定、Structured Output などの個別定義へ進むための入口。
 
 ## Read this when
-- `cmoc oracle edit`、`investigation`、`review` の agent call 起動設定や prompt 構築を変更・確認するとき
-- oracle 操作用 agent call の作業範囲、モデル設定、構造化出力、索引付け前処理をサブコマンド別に調査するとき
-- レビュー所見の生成・検証・統合に関する agent call 契約を確認するとき
+- oracle edit・investigation・review の agent call 起動条件や固定パラメータを確認・変更するとき
+- oracle 用 prompt の構成、アクセス範囲、モデル・推論設定、作業ディレクトリ、Structured Output 設定を調査するとき
+- レビュー所見の出力契約、妥当性検証、採否判定、統合に関する個別定義を確認するとき
 
 ## Do not read this when
-- oracle file の正本仕様や編集ルールそのものを確認するとき
-- agent call の共通 prompt 構造・共通起動処理だけを確認するとき
-- oracle 以外のサブコマンドや、個別の prompt builder・Structured Output 定義だけを確認すれば足りるとき
+- oracle file の内容や正本仕様そのものを確認・変更するとき
+- realization 実装の責務や配置を確認するとき
+- 通常の agent call 起動処理、共通設定、共通 prompt 生成規則を確認するとき
+- 対象フローの具体的なファイルを直接確認できる場合
 
 ## hash
-- 66564315e2f9d46e72c663fa1758416b36a3e8bc34437c2ffb5dabcba287239c
+- 5da42aa4c7d53ae949fd20c1189d4b325e13fee9991030fb711251bfb3db6530
 
 # `quota_probe.py`
 
 ## Summary
-- Codex CLI の quota 回復確認用 agent call を構築する定義。probe 専用の短い prompt と、読み取り専用・最小モデル・低推論強度などの起動パラメータを組み立てる。quota availability probe の呼び出し条件や設定を確認するときの入口となる。
+- Codex CLI の quota 回復確認用 agent call を構築する定義。quota availability probe の prompt 文面、読み取り専用設定、モデル・推論 effort、agent call の作業ディレクトリ、構築時の実行オプションを確認する入口となる。
 
 ## Read this when
-- Codex CLI の利用可能性確認用 agent call の prompt または起動パラメータを変更・確認するとき。
-- quota probe の cwd、アクセスモード、モデル設定、終了判定に関する定義を調べるとき。
+- quota availability probe の agent call の prompt や起動パラメータを変更・確認するとき
+- quota 回復確認用 agent call がどのような実行設定で構築されるかを調べるとき
 
 ## Do not read this when
-- quota probe 以外の agent call 構築定義を調べるとき。
-- quota availability の判定結果や呼び出し実行処理そのものを確認するときは、実行側の対象を直接読む。
+- quota availability probe の実行結果だけを確認したいとき
+- 一般的な prompt 構築処理や他の agent call の設定を調べるときは、対応する構築定義を直接読む
 
 ## hash
-- 6672e90eae1840a676b53dd2b4435362b16946cd9045feb31bfcffae81ebfe4a
+- d51c05853344f75c4bd0785ecbf8cd6e568ab694affcdb993a99e6669ac21d41
 
 # `realization`
 
 ## Summary
-- realization の agent call 構築定義を扱う領域。apply による変更適用と refactor による変更レビュー・修正の各 fork へ進むための入口で、変更情報、prompt、実行条件、参照規則、検証・結果報告の契約を確認する。
+- realization apply fork と refactor fork の agent call 定義をまとめる入口です。apply fork は oracle file の変更を realization file 全体へ追従させる起動処理を扱い、refactor fork は変更差分の要約およびファイル単位のレビュー・修正を扱います。
+- apply fork の起動 prompt、commit 範囲と raw git diff の埋め込み、run worktree、アクセス権限、各種 policy、モデル・推論設定を確認するときの入口です。
+- refactor fork の変更要約では、差分分類の Structured Output schema と readonly の起動設定を扱います。ファイルレビュー・修正では、対象 path を起点とした調査、realization file の修正、検証、所見と変更 path の整合、および出力契約を扱います。
+- apply fork の具体的な起動実装を確認する場合は apply 配下へ、refactor fork の変更要約またはファイルレビュー・修正を確認する場合は refactor 配下へ進みます。共通 prompt builder、共通 AgentCallParameter、個別の oracle・realization 実装やテストを調べる場合は、それぞれの定義元または対象ファイルを直接読みます。
 
 ## Read this when
-- realization apply fork の起動 prompt、AgentCallParameter、変更情報、実行権限、worktree、モデル設定、実行前 indexing を確認・変更するとき
-- realization refactor fork の変更要約、ファイル単位レビュー・修正、参照規則、検証条件、結果報告の契約を確認・変更するとき
-- apply または refactor の agent call 構築規則を調査するとき
+- realization apply fork の追従 agent の prompt、作業範囲、完了条件、run worktree、起動パラメータを変更または確認するとき。
+- oracle file の変更を realization file 全体へ反映する apply agent call と、commit 範囲・raw git diff の prompt 埋め込みを調査するとき。
+- refactor fork の変更差分を構造化要約する agent call の prompt、実行設定、linked worktree、Structured Output schema を確認または変更するとき。
+- refactor fork のファイル単位レビュー・修正における対象 path、調査範囲、修正権限、oracle・realization 参照方針、検証条件、所見出力契約を確認または変更するとき。
 
 ## Do not read this when
-- apply または refactor の Structured Output schema の項目・形式だけを確認するとき
-- レビュー対象の oracle file、realization implementation、realization test の具体的内容を調査するとき
-- refactor fork 以外の実行系や一般的な prompt 構築規則を調査するとき
+- apply fork 以外の apply 処理や、refactor fork 以外の agent call builder を調査するとき。
+- 完全 prompt の共通生成規則を調査するときは、共通 prompt builder を直接読むとき。
+- AgentCallParameter の共通データ構造や列挙値だけを調査するときは、基礎定義を直接読むとき。
+- 実際の変更差分、個別の oracle file、realization implementation、realization test の仕様や挙動を確認するときは、該当する対象を直接読むとき。
 
 ## hash
-- 6c6a8d1375d98bbd604e57b14e54e6f980a22dbf1b0e80f9baecb0821fa59e2a
+- 523e8efe8df254f06c95c2d2ea22ec711701c1b186e6eea3b094fa475c0beb32
 
 # `session`
 
 ## Summary
-- `cmoc session join` の merge conflict 解消用エージェント呼び出し定義を収めるディレクトリ。conflict 対象パスの解決、解消用 prompt、リポジトリ書き込み権限、作業ディレクトリ、モデル・推論設定を扱い、conflict 解消呼び出しの実装確認・変更時の入口となる。
+- `cmoc session join` における Git merge conflict 解消用 agent call の構築定義を扱うディレクトリ。競合対象の実体パス、解消専用 prompt、ファイルアクセス方針、モデル・推論設定、実行コンテキストを確認する入口であり、具体的な prompt と起動パラメータは下位の conflict 解消定義から確認する。
 
 ## Read this when
-- `cmoc session join` の merge conflict marker 解消処理を変更するとき
-- conflict 対象ファイルの扱い、解消用 prompt、エージェントの起動権限・作業ディレクトリ・モデル設定を確認するとき
-- このディレクトリ内の conflict 解消用呼び出し定義へ進む必要があるとき
+- `cmoc session join` の merge conflict 解消処理で、agent call の prompt、対象パスの渡し方、アクセス制約、モデル・推論設定、作業ディレクトリまたは事前 indexing の設定を変更・確認するとき
 
 ## Do not read this when
-- 通常の session join のマージ処理や conflict 検出ロジックを確認するとき
-- 一般的なエージェント呼び出しパラメータや共通 prompt 構築を確認するとき
-- conflict 解消対象ファイルの内容や仕様を確認するとき
+- session join の通常の結合処理や conflict 解消以外の prompt 構築を調べるとき
+- 競合対象ファイルの内容、merge conflict の検出、Git 操作そのものを直接確認したいとき
 
 ## hash
-- 89258cb41851f41f7f4708488f1197c7d33f7e2db9ffab689f729ff8938b276e
+- ad0c630057477ef04b29b5fbccd219a7b1ba59c4888d826f884b5894c93f64f5
 
 # `tui`
 
 ## Summary
-- `cmoc tui` 起動時に渡す完全プロンプトと固定の AgentCallParameter を構築する定義を扱う。TUI の起動設定を確認・変更する際の入口となる。
+- `cmoc tui` サブコマンド用の AI Agent CLI/TUI 起動設定と完全プロンプト構築の入口。起動時の固定パラメータ、リポジトリ作業用のパス・権限、oracle/realization 方針、ルーティング情報を組み込む処理を確認するための対象。
 
 ## Read this when
-- `cmoc tui` の起動 prompt、オリジナルプロンプトの埋め込み、モデルや推論強度、ファイルアクセス、作業ディレクトリ、インデックス事前実行の設定を確認・変更するとき。
+- `cmoc tui` の起動パラメータ、モデル・推論設定、作業ディレクトリ、ファイルアクセス権限を変更または確認するとき。
+- TUI 起動時に渡す完全プロンプトへ、構造化された補助情報やリポジトリ固有の作業方針を組み込む経路を追跡するとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドの起動パラメータや共通プロンプト生成処理を確認・変更するとき。
-- AgentCallParameter、パス解決、構造化文書レンダリングの共通仕様だけを確認するとき。
+- 完全プロンプトの共通生成ロジック自体を変更または確認する場合は、その生成処理の定義を先に読むとき。
+- `cmoc tui` 以外のサブコマンドや、TUI 実行後の対話・エージェント処理を調べるとき。
 
 ## hash
-- bebb717d8f30148f5c7a250a0aeedec99b972d7ee51b8d90bbef8408c1b0e016
+- e7e8614b77341d81a60b8defc793c97d638f42e4130c62478ac28bee76bf078f

@@ -1,15 +1,18 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc realization apply fork` 実行時の AgentCallParameter を構築する定義。差分対象の commit 範囲と oracle file の raw git diff を prompt に組み込み、run worktree を作業ディレクトリとして realization file の追従作業を起動する。prompt の構成、アクセスモード、モデル・推論設定、実行前 indexing の指定をまとめた realization apply の起動入口。
+- `cmoc realization apply fork` 用の AgentCallParameter を構築する実装で、追従対象の commit 範囲と oracle file の raw git diff を prompt に埋め込み、run worktree を作業ディレクトリとして realization 追従 agent を起動する。
+- realization file の差分追従 prompt、ファイルアクセス権、モデル・推論設定、検証および routing policy の適用範囲を確認したい場合の入口となる。
 
 ## Read this when
-- `cmoc realization apply fork` の起動 prompt、対象差分の渡し方、run worktree、または AgentCallParameter の実行設定を変更・確認するとき。
-- realization file への oracle file 差分追従処理の agent call 構築箇所を特定するとき。
+- `realization apply fork` の起動 prompt や AgentCallParameter の構築仕様を変更・確認するとき
+- oracle file の変更を realization file 全体へ反映する agent call の作業範囲、完了条件、起動パラメータを調査するとき
+- run worktree、commit 差分、oracle/realization policy の prompt 連携を確認するとき
 
 ## Do not read this when
-- oracle file の差分追従ロジック自体、realization implementation の内容、または realization test の要件を確認したいとき。
-- 一般的な prompt 構築や他の cmoc 実行系の起動パラメータを調べるときは、それぞれの担当対象を直接読む。
+- `realization apply fork` 以外の apply 処理や、一般的な AgentCallParameter の基礎定義だけを調査するとき
+- prompt の共通生成処理そのものを変更・確認する場合は、まず `build_complete_prompt` の定義を読むとき
+- oracle file の個別仕様や realization 実装の具体的な挙動を確認する場合は、対象の oracle file または realization file を直接読むとき
 
 ## hash
-- d2b2ab740f019007b81141f242423bac661d4a897d22af93d78eceecc8467e11
+- 90a7e8737972af17ddbe94bf6da4108b1f45c08a3e4b9d2f352bca6477c438ba

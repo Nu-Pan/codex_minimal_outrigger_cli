@@ -16,24 +16,23 @@
 ## hash
 - 4ae063e03f4cee3284619dd468f190be9b8260cf5aaac9493faab0d08024688b
 
-# `file_access_rule_violation_post_validation.md`
+# `file_access_policy_violation_post_validation.md`
 
 ## Summary
-- `cmoc` の事後検査として、agent call が作った差分を file access rule 違反の観点で再確認する案と、その案を false-positive 多発で見送った経緯を扱う。
-- この文書は、採用しなかった代替案の記録として読むもので、現行の差分検査実装や file access rule 本体の仕様を探す入口ではない。
+- agent call 後の差分に対する file access policy 違反の事後検査と、違反時の別 agent call によるリカバリー案を記録した検討資料です。false-positive、並列 agent 間の差分誤判定、`.gitignore` 系の扱い、agent call 起因差分の特定困難性を理由に案を断念し、関連仕様を削除した経緯を確認するための入口です。
 
 ## Read this when
-- 事後検査方式の採否や、なぜその方式をやめたかの判断根拠を確認したいとき。
-- `cmoc` が別 agent call によるリカバリーを構想していた痕跡を追いたいとき。
-- 並列編集時の false-positive や、`gitignore` 系を検査対象から外す扱いのような、見送った論点を確認したいとき。
+- file access policy の事後検査や、違反検出後の自動リカバリー案を再検討するとき
+- この方式を断念した理由や、過去に削除された仕様の背景を確認するとき
+- 並列 agent による差分の誤検出、`.gitignore` の検査対象定義、agent call 起因差分の特定可能性を調査するとき
 
 ## Do not read this when
-- 現在の file access rule の実装や検査ロジックそのものを知りたいとき。
-- 現行の差分検査の仕様、保存先、CLI 挙動を確認したいときは、より直接にそれらを扱う本文を読むべきで、この文書は読まなくてよい。
-- `cmoc` の現行リカバリー経路や agent 呼び出しの通常フローを確認したいとき。
+- 現行の file access policy や実装上の責務を確認したいとき
+- 実際のアクセス制御・検査処理の仕様やコードを変更するとき
+- この検討案の断念経緯ではなく、現在採用されている仕様を確認したいとき
 
 ## hash
-- 6c1b9b5c04251202f8528be8834a5298c099c670559952955f3909d4125dd8dc
+- b03169145359e5a6b4136d7bd26d9335a9a7ee8f3d06fc03a56f478eebca8486
 
 # `gitignore_to_permission_profile.md`
 

@@ -15,17 +15,17 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` が起動する本命 agent call と、成功後の仕様削減 agent call の `codex exec` パラメータ構築を担う。ユーザー指示を完全 prompt に組み込み、oracle-only の書き込み範囲、モデル・推論設定、作業ディレクトリ、Structured Output 設定、索引付け前処理の有無を定義する。oracle 編集起動条件や、仕様変更後の削減・整合性調整の起動条件を確認する際の入口となる。
+- `cmoc oracle edit` における本命および仕様削減の2回の `codex exec` 起動パラメータを構築する定義。完全 prompt、ファイルアクセス範囲、モデル・推論設定、作業ディレクトリ、索引事前処理の有無をそれぞれ固定する。oracle edit の起動条件や prompt 構成、oracle file の編集権限・実行方針を確認する際の入口となる。
 
 ## Read this when
-- `cmoc oracle edit` の本命または仕様削減 agent call の起動パラメータを変更・確認するとき
-- oracle 編集用 prompt の構成、ユーザー指示の埋め込み、ファイルアクセスモード、起動前索引付け設定を確認するとき
-- 本命成功後の仕様削減 call に渡す参照境界や、既存未コミット差分の扱いを確認するとき
+- `cmoc oracle edit` の本命 agent call または本命成功後の仕様削減 agent call の起動パラメータを変更・レビューするとき
+- oracle file 編集用 prompt に、ユーザー指示・作業範囲・仕様削減時の参照境界を組み込む方法を確認するとき
+- 2回の agent call で異なる索引事前処理や仕様削減方針が必要な理由を確認するとき
 
 ## Do not read this when
-- oracle file の編集ルールや仕様削減そのものの正本規範を確認する場合は、関連する oracle の規範文書を直接読む
-- 一般的な agent call パラメータや共通 prompt 構築の挙動だけを確認する場合は、対応する共通 builder を直接読む
-- `cmoc oracle edit` 以外のコマンドの起動パラメータを確認する場合
+- realization 実装そのものの責務や配置を確認する場合は、realization 側の実装・設計資料を直接読むとき
+- oracle file の内容や仕様自体を変更・確認する場合は、対象となる oracle file と関連仕様を直接読むとき
+- 通常の agent call 起動処理や `codex exec` 共通設定だけを確認する場合は、共通の起動パラメータ定義を読むとき
 
 ## hash
-- 24b45a5f20509912affc623b82127fcd96be5aa14aa03b618f05005829a2bca5
+- 5e66923f8843e68d58698bd746bc9d7a785644deb137c82df25faf4a6a9372c5

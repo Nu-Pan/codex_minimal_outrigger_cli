@@ -1,20 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約する正本文書群。CLI の実行境界、Codex 呼び出し、出力・ログ、doctor、feedback、prompt、run/session lifecycle、通知など、アプリケーション全体の挙動契約を領域別に定義し、個別仕様の確認や実装・レビュー時の入口となる。
+- cmoc のアプリケーション仕様を集約するディレクトリ。CLI 自動補完、Codex 呼び出し、ログ・エラー処理、feedback、prompt、run/session、通知、サブコマンドなど、個別の挙動契約を定義する正本文書への入口となる。
+- 複数のアプリケーション仕様にまたがる実行条件、状態遷移、出力・report、外部連携、作業 workflow の所在を確認し、対象分野の下位仕様へ進むために利用する。
 
 ## Read this when
-- cmoc のアプリケーションレベルの挙動仕様、共通契約、サブコマンド仕様の参照先を探すとき
-- CLI 実行、Codex agent call、console/report/log、feedback、prompt、run/session、通知などの仕様を変更・実装・レビューするとき
-- 複数の機能領域にまたがる責務境界や、個別の正本仕様へ進むルーティングを確認するとき
+- cmoc のアプリケーション挙動仕様の所在を探すとき
+- CLI 実行、Codex 呼び出し、feedback、prompt、session/run、通知、ログ、エラー処理などの正本仕様を選択するとき
+- 複数のサブコマンドや共通仕様にまたがる契約・状態遷移・report 要件を調査するとき
 
 ## Do not read this when
-- 特定の実装コード、テスト、または realization file の具体的な挙動だけを調査するとき
-- INDEX.md の自動生成方法そのものを確認するときは、インデクシング仕様を直接読む
-- 個別文書が指定する下位仕様の内容だけを確認したいときは、該当する正本文書を直接読む
+- 特定の仕様書が明確で、その本文だけを確認すればよいときは、該当する下位仕様を直接読む
+- 実装コードや realization file の具体的な挙動だけを調査するとき
+- 開発環境、テスト実行、設計責務などの開発規約だけを確認するときは、対応する dev_rule または専用 skill を直接読む
 
 ## hash
-- 9e5fb152b87a841c5422c9640e2f6182029f808fa5417bb431de7e7415baed58
+- 47d44b586277a614b0f70dac108aa52173effc9633fd1df6497566ed04d555ad
 
 # `branch_model.md`
 
@@ -36,22 +37,20 @@
 # `considered_alternative`
 
 ## Summary
-- cmoc realization refactor で採用しなかった作業方式・検査方式・状態管理方式の検討記録をまとめたディレクトリ。事前計画、並列所見管理、事後差分検査、gitignore 連携、AI-generated memory などの不採用理由を確認する入口であり、採用済みの現行仕様や実装の直接の参照先ではない。
+- cmoc の設計・リファクタで採用しなかった作業方式や仕様案を記録する検討資料群。事前計画、並列所見管理、事後アクセス違反検査、`.gitignore` 連携、AI-generated memory などの不採用理由を確認するための入口であり、採用済みの現行仕様や具体的な実装手順の正本ではない。
 
 ## Read this when
-- cmoc realization refactor の作業フローや調査・修正単位の設計理由を確認するとき
-- 事前計画方式、並列所見調査、ダーティフラグ方式、事後検査方式の採否理由を調べるとき
-- AI-generated memory や継続的な自動注入を採用しない根拠を確認するとき
-- .gitignore と permission profile の連携案など、採用しなかった設計案の背景を追うとき
+- cmoc realization の作業フローや調査単位について、採用しなかった代替案とその理由を比較するとき
+- AI による作業計画・memory の自動継承や、アクセス制御の事後検査、`.gitignore` 連携案の採否背景を調査するとき
+- 現行設計が特定の代替方式を採用しなかった根拠を確認したいとき
 
 ## Do not read this when
-- 現在の realization refactor state、investigation_required、file access rule、差分検査、agent 呼び出し経路の現行仕様を確認・変更するとき
-- 具体的な realization file の修正方法や実装責務を調べるとき
-- 単に対象ファイルの実装内容・テスト内容・CLI 挙動を確認したいとき
-- INDEX、oracle、ログ、実行成果物の具体的な形式や生成手順を調べるとき
+- 現行のアクセス制御、refactor state、oracle、realization の仕様を確認・変更するとき
+- 具体的な realization file の実装方法、CLI の挙動、テスト手順を調べるとき
+- 採用済み workflow の操作方法や現在の実行結果だけを確認したいとき
 
 ## hash
-- e8ae09d4765b54ddbb1f85d76ac964f673594e7c13e23286b94d284255689829
+- 2306639b6cb9d46169d1e0614cafd6a1ff50856b67ccfe5f40849ae09d0cd405
 
 # `dev_rule`
 

@@ -16,18 +16,18 @@
 # `normalize_issue.py`
 
 ## Summary
-- 構造化された feedback observation と、事前に絞り込まれた既存 issue candidate を比較し、同一 issue か新規 issue かを判定するための agent call parameter を構築する。feedback issue の同一性判断に必要な prompt、読み取り専用の call context、Structured Output schema の指定を担う。
+- 構造化された observation と、絞り込み済みの既存 issue candidate を比較し、feedback issue が既存 issue と同一か新規かを判断するための prompt と agent call parameter を構築する定義。feedback issue の同一性判断処理へ進む際の入口であり、issue の内容生成や原因・重要度の確定を担うものではない。
 
 ## Read this when
-- feedback observation を既存 issue candidate と照合し、同一 issue の再報告か新規 issue かを判定する処理を変更・調査するとき
-- 同一性判断用 prompt の入力範囲、参照禁止条件、または agent call の読み取り専用設定を確認するとき
+- 構造化 observation と既存 issue candidate の同一性だけを判定する prompt や agent call parameter を変更・確認するとき
+- feedback issue の正規化処理で、入力制約、読み取り専用設定、または Structured Output の事後条件を確認するとき
 
 ## Do not read this when
-- issue の summary、impact、原因、重要度、現在性、actionability、human action、verification verdict、relation を生成・確定する処理を調べるとき
-- 候補 issue の絞り込みや feedback state の保存・更新処理を直接調べるとき
+- issue の summary、impact、原因、現在性、actionability、human action、verification verdict、relation を生成・判定する処理を確認するとき
+- 候補 issue の絞り込みや feedback state、raw log、過去 session の参照処理を確認するとき
 
 ## hash
-- 036ff1f061244c0860726b49546fb80933306c407207e135ecd6003c6b2eff48
+- 9ee306782ace8a783c5bcf93fc842645449ffd761ce345a8e5cd213eecee4313
 
 # `verify_issue.json`
 
@@ -51,17 +51,17 @@
 # `verify_issue.py`
 
 ## Summary
-- feedback issue candidate を、report cut 時点で固定された参照だけから検証する prompt と agent call 起動パラメータの構築定義。
-- 人間の対応が必要な未解決 issue の判定に加え、resolved・not_actionable・inconclusive の判定条件と Structured Output の事後条件を prompt に組み込む。
-- 読み取り専用の agent call として、指定モデル・推論設定・検証用 schema・agent call context を返す。
+- feedback issue candidate を、report cut 時点で固定された参照だけから検証するための prompt と agent call parameter を構築する。候補、参照、検証基準を prompt に組み込み、読み取り専用・最高推論 effort・専用 Structured Output schema の call 設定を返す。feedback issue の検証フローや、その起動パラメータと prompt 構成を確認する際の入口となる。
 
 ## Read this when
-- feedback issue candidate の検証 prompt または検証用 agent call の起動パラメータを変更・調査するとき
-- report cut reference 以外の live state や feedback state を読まない検証境界を確認するとき
+- report cut reference に限定した feedback issue candidate の検証 prompt を変更・確認するとき
+- 検証 call の読み取り専用設定、モデル・推論設定、Structured Output schema の割り当てを確認するとき
+- unresolved / resolved / not_actionable / inconclusive の判定条件や、current evidence・human action の prompt 事後条件を確認するとき
 
 ## Do not read this when
-- feedback issue の報告・保存・候補生成を変更・調査するとき
-- 一般的な agent call パラメータや検証結果 schema を直接確認すれば足りるとき
+- feedback issue の発見・保存・送信処理を調べるとき
+- 検証結果の Structured Output schema 自体や、候補・参照データの生成処理を直接確認するとき
+- 一般的な agent call parameter や prompt builder の共通仕様だけを調べるとき
 
 ## hash
-- 06e683b45d98d5e107abd1ec4bfe81ac61b67e21180475bfc787bfd4b603373b
+- faf23a30bab1768cd24bbb260e439c35fb2a012fd87ed36884487580cf2d53ce

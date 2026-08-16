@@ -17,22 +17,22 @@
 # `complete_prompt.py`
 
 ## Summary
-- cmoc agent向けの完全な構造化プロンプトを構築するモジュール。summary・goal、選択された oracle／realization／review／routing などの規則、ファイルアクセス規則、補助プロンプト、placeholder 定義を決定論的に統合し、agent call に渡す StructDoc／StructBlock の列を生成する。
-- 各種標準の依存関係を自動的に有効化し、StandardCollection を統合して重複なく出力する。placeholder は call-scoped context と補助定義をマージし、同名異値の衝突を拒否する。
+- cmoc の完全な agent prompt を組み立てる中核モジュール。概要・完了条件、共通規定、oracle/realization・レビュー・ファイルアクセスなどの選択的ポリシー、補助 prompt、placeholder 定義を決定論的な順序で統合し、agent call 用の構造化文書列として返す。
+- prompt builder の各種ポリシーがどの条件で自動的に有効化されるか、ポリシー統合と placeholder 衝突検出がどのように行われるかを確認するための入口であり、個別の規定本文を読む前に全体の注入経路を把握できる。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成要素や注入順序を変更・確認するとき
-- oracle／realization／review などの標準間の自動依存関係や、StandardCollection の統合経路を調べるとき
-- placeholder 定義の統合、衝突検出、path context からの root 定義初期化を変更・確認するとき
-- 新しい静的規則・動的 prompt・補助 placeholder を完全 prompt に組み込む経路を調べるとき
+- agent call に渡される完全 prompt の構成、注入順序、動的 prompt と静的 prompt の境界を調査・変更するとき
+- oracle/realization 関連ポリシーの依存関係や、apply review による自動有効化を確認するとき
+- placeholder 定義の統合、同名異値の拒否、path context 由来の定義を調査するとき
+- 複数の prompt builder を組み合わせた出力や、feedback reporting が全 agent call に注入される経路を確認するとき
 
 ## Do not read this when
-- INDEX.md のルーティング文面だけを更新・確認するとき
-- 個別の oracle／realization 規則本文や各 builder の内容だけを調べるときは、それぞれの builder・規則定義を直接読む
-- 生成済み prompt の具体的な agent 作業内容だけを確認するとき
+- 個別ポリシーの具体的な規則だけを調査・変更する場合は、対応する parts 配下の builder を直接読む
+- prompt の出力を利用する CLI や agent 実行側の挙動だけを調査する場合は、その呼び出し元または実行側を直接読む
+- INDEX.md の生成規則そのものだけを確認する場合は、index entry policy の定義を直接読む
 
 ## hash
-- 63598436ba01aaecb0733adfda9fb8c2110e7d6d5c8e4e652cd62af6bcb1bda8
+- 8b038b59b842695c9e68644d7f56a4acac509bd2f11c986560f056afbdfac039
 
 # `editor_input.py`
 
@@ -54,16 +54,16 @@
 # `parts`
 
 ## Summary
-- 対象ディレクトリは、cmoc の agent call 向けプロンプトを構成する部品群を収め、oracle・realization の扱い、標準選択、ファイルアクセス制約、routing、feedback などの個別規範を用途別に組み立てる入口である。各部品の具体的な構成や責務を確認するときに、まずこのディレクトリから該当する部品へ進む。
+- プロンプト生成で利用する各種 policy 定義・policy group 構成を集約するディレクトリ。oracle／realization の権威関係、レビュー・conflict 解消・editor handoff・feedback 報告、ファイルアクセス制約、INDEX.md ルーティングなど、agent call に適用する規定の構築入口を提供する。個別仕様や実装本体ではなく、prompt builder が用途別の policy collection を組み立てる際に参照する。
 
 ## Read this when
-- prompt builder の部品構成や、用途別にどの instruction・standard collection を組み合わせるかを調査・変更するとき
-- oracle・realization、INDEX.md routing、file access、feedback reporting など、agent call の共通 instruction を構築する経路を確認するとき
+- agent call に適用する policy collection や policy group の構成を確認・変更するとき
+- oracle／realization の扱い、レビュー、conflict 解消、editor handoff、feedback 報告、ファイルアクセス、INDEX.md ルーティングに関する prompt policy の構成を調査するとき
 
 ## Do not read this when
-- 個別の oracle file・realization file の本文や実装を調査するとき
-- 特定の標準本文そのものだけを確認したいときは、対応する standard definition へ直接進む
-- 生成された prompt の利用側や、CLI の実際のファイル操作を調査するときは、該当する利用側・操作実装へ直接進む
+- 個別 policy の具体的な判定規則だけを確認したいときは、対応する policy 定義を直接読む
+- oracle file、realization file、または prompt builder の一般構造そのものを確認するとき
+- 実際の agent call の実装や対象文書の仕様を直接確認するとき
 
 ## hash
-- 9506d16ac6b4bb4f91f00e047cfd94cce7909fe40abb0c6461f63977e7631ddd
+- c365bf357287bcfda18460b3e8e0c9fb4bcb52fd8d233b70bfac5f3d37b7e7d8

@@ -1,19 +1,21 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約するデータクラス群を定義する oracle src。JSON/TOML 共通値、Codex CLI の provider・モデル・推論 effort、oracle review のループ上限を扱う設定構造の入口。
+- cmoc のリポジトリ固有設定を表すデータモデル。Codex CLI のモデル・推論設定、AI 呼び出しの並列数、ファイルアクセス違反時のリカバリ回数、oracle review の各ループ上限を定義する。設定の JSON/TOML 表現や既定値の構成を確認する入口でもある。
 
 ## Read this when
-- cmoc の設定項目や既定値を変更・参照するとき。
-- Codex CLI のモデル provider、モデル指定、推論 effort、ファイルアクセス規則違反時のリカバリ回数を確認するとき。
-- `cmoc oracle review` の所見列挙・マージ・検証ループの設定を確認するとき。
+- cmoc の設定項目を追加・変更するとき
+- Codex CLI のモデル、provider-local 設定、推論 effort、リカバリ試行回数の扱いを確認するとき
+- `cmoc oracle review` の所見列挙・マージ・検証ループの設定を確認するとき
+- 設定のシリアライズ規則や既定の設定構造を確認するとき
 
 ## Do not read this when
-- 永続化された設定 JSON の生成・同期・人手調整の実態だけを確認するときは、指定された設定ファイルや doctor の実装を直接読む。
-- `ModelClass` や `ReasoningEffort` の列挙値の定義を確認するときは、参照元の型定義を直接読む。
+- Codex CLI の呼び出し処理そのものや CLI 実装の責務を確認したいとき
+- `cmoc oracle review` のレビュー処理の実装や所見生成ロジックを確認したいとき
+- 設定ファイルの実際の保存内容や人間による調整結果だけを確認したいとき
 
 ## hash
-- e90bca5f30bc59a885acd876512c52f6c26d38d3ebd0d5c68a92862d5300ca5d
+- 8b7d86400aa658565b80abc2ecd33aa4f7b0af8d9a43f907cd939972cc422efd
 
 # `path_model.py`
 
@@ -32,36 +34,35 @@
 ## hash
 - 8fc522d7e3ef8f4b608c64102a5f4a6d7eb7cf64422cd3c3f7b239dab4255418
 
-# `standard.py`
+# `policy.py`
 
 ## Summary
-- 標準（Standard）・標準グループ・標準コレクションの immutable な値オブジェクトと、標準コレクションの衝突検査付き合成および agent 向け StructDoc への変換を定義する。標準の検証規則、決定的なグループ／標準順序、instruction 文面の構築を確認するための入口。
+- agent 向け instruction の規定を表す immutable な Policy、適用範囲ごとにまとめる PolicyGroup、合成単位の PolicyCollection を定義する。Policy の入力検証と immutable 化、ID 衝突・定義競合を検査した決定的な collection 合成、および合成済み規定を StructDoc の agent 向け文面へ変換する処理の入口となる。
 
 ## Read this when
-- agent 向け instruction の標準定義、適用範囲、必須・禁止・推奨・許容事項を追加・変更するとき
-- 複数の標準コレクションを合成する際の ID 衝突検査や決定的な出力順を確認するとき
-- 合成済み標準を StructDoc の instruction 文面へ変換する処理を確認・変更するとき
+- agent 向け instruction の規定値や規定グループのデータモデルを変更・利用するとき
+- 複数の policy collection を競合検査付きで合成する処理を確認するとき
+- policy を StructDoc の見出し・要求文へレンダリングする処理を確認するとき
 
 ## Do not read this when
-- INDEX.md のルーティングだけを確認するとき
-- 標準値の具体的な利用箇所や個別の instruction 内容だけを確認したいときは、直接その利用元または標準定義へ進む
+- agent 向け instruction の規定モデルや合成・レンダリングに関係しない StructDoc の一般的な利用だけを確認するとき
+- 具体的な instruction の宣言内容や prompt 全体の組み立てを確認する場合（この対象ではなく、規定を定義・利用する上位の対象を読む）
 
 ## hash
-- 90d295e650bfb26425810fe363c87be76fa078cf104b11fc22f0b23f4744272b
+- 354778fdd844f394f06749ab576373fb6ea2368b8b8a8d9d5cb85abfcb4fad71
 
 # `struct_doc.py`
 
 ## Summary
-- 構造化された文書要素を見出し階層付き Markdown へ変換するヘルパーを提供する。StructDoc、StructBlock、StructCodeBlock で文書構造・参照可能なブロック・コードブロックを表現し、レンダリング時に参照先の欠落やブロック ID の重複を検証する。
+- 階層化された自然言語文書を Markdown にレンダリングするためのデータクラスと補助関数を定義する。`StructDoc`、`StructBlock`、`StructCodeBlock` の構造表現、見出し深度・コードフェンス・空行の整形、`cmoc_ref` の検証、三重引用文字列のインデント正規化を扱う。Markdown の構造化文書生成、cmoc ブロック参照の検証、またはこれらのレンダリング規則を変更・確認するときの実装入口である。
 
 ## Read this when
-- Markdown 文書をプログラムで組み立てる処理を変更または調査するとき。
-- StructDoc の階層見出し、cmoc_block、cmoc_ref、コードフェンスのレンダリング挙動を確認するとき。
-- 構造化文書内の参照検証やトリプルクォート文字列のインデント正規化を扱うとき。
+- 構造化された文書や cmoc ブロックを Markdown に変換する処理を変更・調査するとき
+- 見出し深度、コードフェンス、空行、`cmoc_ref` の妥当性検査、三重引用文字列の正規化の挙動を確認するとき
 
 ## Do not read this when
-- 通常の Markdown の記述方法や、構造化文書を利用しない別の文書生成処理を確認するとき。
-- cmoc プロンプト全体の仕様や参照ルーティングを確認することが目的で、レンダリング実装の挙動を調べる必要がないとき。
+- Markdown 以外の文書生成処理を調べるとき
+- cmoc のプロンプト構成やブロック参照ポリシーそのものを確認する場合で、レンダリング実装を確認する必要がないとき
 
 ## hash
-- d9c978e1dfb51d768350c6e4baf3159c9db4f8a400a3ca8a29b97e7e764833e9
+- 398e1c8d1d609ff8ff2fd92a8addb6a064372bf66e00c8f79125a6640e5dad06

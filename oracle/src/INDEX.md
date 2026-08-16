@@ -1,24 +1,25 @@
 # `oracle`
 
 ## Summary
-- oracle の設定、パス解決、標準定義、構造化文書生成を扱う共通実装への入口。複数の oracle 機能にまたがるモデルや文書生成の責務を確認し、該当する下位モジュールへ進むためのルーティング対象。
-- agent call の prompt 構成、Structured Output、モデルや推論強度、ファイルアクセス、作業ディレクトリなどの定義を集約する領域。共通パラメータや論理列挙、feedback・indexing・oracle・realization・session・TUI・quota probe の呼び出し構築へ進む入口。
-- feedback reporter から collector へ渡す入力契約を扱う領域。問題の分類・重要度・影響、人間対応の必要性、確信度、根拠、作業継続状態を構造化・検証する下位要素への入口。
-- agent call 向け prompt の構成要素と統合順序、placeholder、エディタ入力の初期化、用途別 instruction の構成を扱う領域。共通規則をどの部品から組み立てるか調査する際の入口。
+- cmoc の agent 呼び出し定義と、その prompt・設定・構造化出力・パス・ポリシーを構成する実装群のルート。agent call の共通パラメータは acp_builder、prompt の合成は prompt_builder、設定・パス・ポリシー・Markdown 構造は other、feedback 入力契約は feedback から確認する。
+- acp_builder ではモデルクラス、推論強度、ファイルアクセスモード、作業ディレクトリ、Structured Output、用途別の起動パラメータを扱う。
+- prompt_builder では担当概要・完了条件、共通ポリシー、ファイルアクセス規定、routing、placeholder、エディタ入力文面を統合して完全 prompt を構築する。
+- other では cmoc 設定、agent call の worktree・repository root 解決、ポリシー合成、構造化 Markdown レンダリングを扱う。
+- feedback では agent が人間対応を要する問題を報告するための入力スキーマを扱う。
 
 ## Read this when
-- cmoc の oracle 共通実装について、設定値、root placeholder、agent call のパスコンテキスト、agent 向け標準、または構造化 Markdown 文書生成の入口を確認・変更するとき。
-- agent call の共通パラメータ、論理的なモデル種別、推論強度、ファイルアクセスモード、作業ディレクトリ、Structured Output、起動条件、実行権限の定義を確認・変更するとき。
-- feedback reporter の入力形式や、検出した問題を人間向け feedback として構造化・検証する処理を調査・変更するとき。
-- agent call に渡す prompt の部品、統合順序、依存関係、placeholder、エディタ入力初期テキスト、oracle・realization・routing・file access・feedback の共通規則を調査・変更するとき。
+- agent call の共通パラメータ、モデル・推論設定、ファイルアクセス、作業ディレクトリ、Structured Output の構成を確認するとき
+- 用途別の agent call builder や acp_builder 配下の oracle・realization・session・tui・indexing の入口を探すとき
+- 完全 prompt の構成順序、注入される共通規定、placeholder、editor handoff、routing の扱いを確認するとき
+- cmoc 設定、root placeholder と worktree の解決、PolicyCollection の合成、Markdown レンダリングを確認するとき
+- feedback reporter の入力項目と問題報告契約を確認するとき
 
 ## Do not read this when
-- 特定の CLI 機能、realization、oracle file、realization file、issue 状態などの具体的な挙動を確認するときは、該当する直接の実装・仕様を読む。
-- 実際の agent call 実行処理や Codex CLI sandbox の正本仕様を確認するときは、実行処理・sandbox の定義を直接読む。
-- collector 側の feedback 保存・集約・重複判定や、feedback の検出方法・継続判断だけを確認するときは、該当する直接の定義元を読む。
-- 共通 prompt builder やパス解決の一般実装だけ、または個別 builder の実装だけを確認するときは、対応する下位モジュールを直接読む。
-- 永続化設定の同期、doctor、列挙型の定義、標準値の個別利用箇所だけを確認するときは、それぞれの直接の定義元・利用元を読む。
-- INDEX.md のルーティング情報だけを確認・変更するときは、この対象を読まない。
+- 実際の CLI サブコマンドの実行制御や agent call の実行処理だけを確認するとき
+- 個別の oracle file・realization file の正本仕様や、session の Git 操作だけを確認するとき
+- 特定の prompt policy の具体的な要求や禁止事項だけを確認するときは、prompt_builder/parts 配下の定義を直接読む
+- 保存済み feedback の収集・集約・重複判定だけを確認するとき
+- Codex CLI sandbox の正本仕様やその他の外部規定を確認するときは、指定された oracle 文書を直接読む
 
 ## hash
-- dd231d0be5a5fff968def169cd82066b1aa67bd81366c859ffd169908c2eca29
+- 0f2eea0a33165d7d43a10746f402a0f2b549ad421eab956319863e06004254ea
