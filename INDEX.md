@@ -91,20 +91,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書を領域別に案内するルート。アプリケーション挙動、branch・commit・worktree のモデル、不採用案の検討記録、開発ルールへの入口を提供する。
-- `doc` では仕様・設計・開発ルールを、`src` では agent call 構築の共通実装と用途別 builder を確認できる。
+- cmoc の正本文書と oracle 共通実装をまとめた領域。アプリケーション仕様、branch model、不採用案、開発ルール、および設定・パス解決・prompt 構成・Structured Output・feedback 入力契約を扱う。具体的な仕様や共通実装を確認する際の上位入口となる。
 
 ## Read this when
-- cmoc の仕様・設計・開発ルールを横断して、読むべき文書領域を選ぶとき
-- CLI 挙動、session/run の分岐、refactor 方針、Python 実装・環境・テスト手順のいずれかを確認するとき
-- agent call の共通 prompt、routing、ファイルアクセス規則、Structured Output 前提、または用途別 builder の責務を調査するとき
+- cmoc の正本文書を探しており、アプリケーション挙動、branch model、設計判断、Python 開発・CLI 設計・テスト・環境構築のいずれかを確認するとき
+- oracle 共通実装の設定、パスコンテキスト、agent call の prompt 構成、Structured Output、実行パラメータ、feedback reporter の入力契約を確認するとき
+- 複数の仕様領域または共通実装領域にまたがる責務境界を確認し、`doc` または `src` 以下の専用対象へ進むとき
 
 ## Do not read this when
-- 特定機能の実装詳細やテスト実行手順が明確な場合は、対応する下位の realization file、oracle src、または専用手順を直接読む
-- INDEX.md の生成・更新仕様を確認する場合は、インデクシング仕様を直接読む
+- 特定の実装コード、テスト、realization file、oracle file の具体的な挙動だけを調査するとき
+- collector 側の feedback 保存・集約・重複判定や、特定サブコマンドの仕様だけを確認したいときは、対応する下位文書または実装を直接読む
+- INDEX.md の自動生成方法や、既存の INDEX.md のルーティング情報だけを確認するとき
 
 ## hash
-- 626124ea86a15f5a2246f0dad8310c60eba2b9d4b6409ec80afd26ebe8de8aa2
+- 7bab1c76acbbaca7225f9f7acc8055169ede75a5526a79a3734da10e9aba4e89
 
 # `pyproject.toml`
 

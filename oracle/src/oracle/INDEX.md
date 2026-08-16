@@ -52,17 +52,17 @@
 # `prompt_builder`
 
 ## Summary
-- cmoc の agent call 向け完全プロンプトを構成する実装群。placeholder 型、完全 prompt の合成、エディタ入力の初期文面、用途別 instruction 部品を扱い、prompt builder の構成や注入規則を調査・変更する際の入口となる。
+- cmoc の agent call 向けプロンプトを構成するモジュールと部品群を収めるディレクトリ。placeholder 型、完全 prompt の統合、エディタ入力の初期化、用途別 instruction の構成を扱い、プロンプト生成経路を調査・変更する際の入口となる。
 
 ## Read this when
-- agent call に渡す prompt の構成、Standard・静的規則・動的内容の組み合わせを調査・変更するとき。
-- placeholder の型定義、完全 prompt の合成、エディタ入力テンプレート、用途別 prompt 部品の責務を確認するとき。
-- oracle・realization、file access、routing、feedback などの共通 instruction がどの部品から構成されるかを調査するとき。
+- agent call に渡す prompt の構成要素、統合順序、依存関係を調査・変更するとき
+- oracle・realization・routing・file access・feedback などの共通規則を、どの部品から構成するか確認するとき
+- エディタ入力の初期テキストや placeholder の扱いを prompt builder 側から調査するとき
 
 ## Do not read this when
-- 個別の oracle file や realization file の本文を確認したいとき。
-- 特定の Standard 本文だけを確認したいとき。
-- 生成された prompt の利用側や CLI の実際のファイル操作を調査するとき。
+- 個別の oracle／realization 規則本文や、特定 builder の実装だけを確認したいとき
+- 生成済み prompt の利用側や CLI のファイル操作を調査するとき
+- INDEX.md のルーティング文面だけを更新・確認するとき
 
 ## hash
-- e823001d82aea6a5b4a381afff55a8d6e70dbcd621809111379384002884f214
+- 201d12e2ed21331ca8defdfa1693a7e1fbe4c49596f132348dfa02c0179d2cf5

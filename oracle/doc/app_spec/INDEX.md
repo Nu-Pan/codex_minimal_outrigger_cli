@@ -234,20 +234,22 @@
 # `prompt_standard.md`
 
 ## Summary
-- cmoc が agent call に渡す prompt の責務、情報量、正本との境界、構築規則を定める文書。意味仕様・oracle src・実行時生成物の役割分担、共通規範や feedback instruction の注入、Structured Output の受理条件、summary/goal の使い分け、placeholder と cmoc_ref の記法、言語方針を扱う。prompt builder や acp builder の文面構築規則、および agent call 向け prompt の責務境界を確認するための入口となる。
+- cmoc が agent call 用 prompt を構築・管理する際の正本境界、注入情報、Structured Output 契約、動的な summary/goal の責務分担、および prompt 記法と言語方針を定める仕様書。意味仕様は oracle doc、正確な prompt 文面は oracle src、実行時生成物は受け渡し対象として分離する。prompt builder や acp builder の設計・変更時に参照する入口となる。
 
 ## Read this when
-- agent call に渡す prompt の内容や正本の所在、oracle doc と oracle src・realization implementation の責務境界を確認するとき
-- 共通 prompt part、human feedback instruction、routing rule、Structured Output の schema・事後条件の扱いを変更または検討するとき
-- summary と goal の記載責務、prompt の構築規則、placeholder や cmoc_block/cmoc_ref の参照関係を確認するとき
+- agent call に渡す prompt の責務、情報量、参照先、権限制約、作業範囲、完了条件を決めるとき
+- prompt builder または acp builder の prompt 構築、prompt part の注入、placeholder や cmoc_ref の扱いを変更するとき
+- Structured Output の schema と決定論的事後条件の責務境界を確認するとき
+- summary と goal の役割を分けて動的な作業記述を設計するとき
+- cmoc 固有契約と installed skill、oracle doc と oracle src、実行時生成物の責務境界を確認するとき
 
 ## Do not read this when
-- 個別の意味仕様そのものを確認する場合は、対応する oracle doc を直接読むとき
-- prompt の正確な文面や builder の実装を確認する場合は、指定された oracle src を直接読むとき
-- 実行時に生成された prompt や AgentCallParameter の保存・受け渡しだけを調べる場合は、realization file または実行時生成物を直接読むとき
+- prompt の意味仕様や各サブコマンド固有の判断基準だけを確認する場合は、対応する oracle doc を直接読むとよい
+- 正確な agent 向け prompt 文面や個別の構築実装だけを変更する場合は、対応する oracle src または acp builder を直接読むとよい
+- prompt と無関係な CLI 実装、テスト、リポジトリ固有の開発手順を扱う場合
 
 ## hash
-- 59d771aa8d1c59430b7669969feb3611143142f70047d5c96bd190713dfd752c
+- c8eac0e1115bd730f57ad41d2f4243310514c7d51bdb5f659de106f2e4b33248
 
 # `run_isolation.md`
 

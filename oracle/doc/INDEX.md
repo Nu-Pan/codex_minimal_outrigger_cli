@@ -1,18 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション挙動に関する正本仕様を集約するディレクトリ。CLI 自動補完、Codex 呼び出し、provider 設定、ログ・エラー処理、doctor、feedback、prompt、run/session lifecycle、サブコマンド、通知などの仕様入口を提供し、個別機能の実装・変更・レビュー時に下位文書へルーティングする。
+- cmoc のアプリケーション仕様を集約する正本文書群。CLI の実行境界、Codex 呼び出し、出力・ログ、doctor、feedback、prompt、run/session lifecycle、通知など、アプリケーション全体の挙動契約を領域別に定義し、個別仕様の確認や実装・レビュー時の入口となる。
 
 ## Read this when
-- cmoc のアプリケーション仕様から、対象機能に対応する正本文書を探すとき
-- CLI の実行境界、agent call、ログ・report、feedback、prompt、run/session、サブコマンドなど複数の仕様領域を横断して確認するとき
+- cmoc のアプリケーションレベルの挙動仕様、共通契約、サブコマンド仕様の参照先を探すとき
+- CLI 実行、Codex agent call、console/report/log、feedback、prompt、run/session、通知などの仕様を変更・実装・レビューするとき
+- 複数の機能領域にまたがる責務境界や、個別の正本仕様へ進むルーティングを確認するとき
 
 ## Do not read this when
-- 特定機能の実装詳細やテスト実行手順だけを確認する場合は、対応する realization file、oracle src、または専用の開発・テスト手順を直接読む
-- INDEX.md の生成・更新仕様だけを確認する場合は、インデクシング仕様を直接読む
+- 特定の実装コード、テスト、または realization file の具体的な挙動だけを調査するとき
+- INDEX.md の自動生成方法そのものを確認するときは、インデクシング仕様を直接読む
+- 個別文書が指定する下位仕様の内容だけを確認したいときは、該当する正本文書を直接読む
 
 ## hash
-- 2d824970a8cd0f7c4ad1e53ee6a6d68c892db60ef03c6bc9d363a59043bb54ac
+- 9e5fb152b87a841c5422c9640e2f6182029f808fa5417bb431de7e7415baed58
 
 # `branch_model.md`
 
