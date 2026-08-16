@@ -9,14 +9,18 @@
 import re
 import textwrap
 from collections.abc import Sequence
+from html import unescape
 from xml.sax.saxutils import quoteattr
 
+_CMOC_BLOCK_PATTERN = re.compile(r'<cmoc_block id="([^"]+)>')
 _CMOC_REF_PATTERN = re.compile(r'<cmoc_ref target="([^"]+)"/>')
 
 
 class StructDoc:
     """
     構造化文章クラス
+
+    Markdown 的に言うところの、見出しを先頭とするブロック１つを表す。
     """
 
     def __init__(
@@ -28,17 +32,21 @@ class StructDoc:
         コンストラクタ
         """
         self._title = title
-        self._children: list[StructDoc | StructBlock] | StructCodeBlock | str
-        if len(children) == 1 and isinstance(children[0], (StructCodeBlock, str)):
-            self._children = children[0]
+        self._children: list[StructDoc | StructBlock | StructCodeBlock | str]
+        if len(children) == 0:
+            raise ValueError(f"children must not be empty (title={title})")
+        if len(children) == 1 and isinstance(
+            children[0], (StructDoc, StructBlock, StructCodeBlock, str)
+        ):
+            self._children = [children[0]]
         else:
             self._children = list()
             for c in children:
-                if isinstance(c, (StructDoc, StructBlock)):
+                if isinstance(c, (StructDoc, StructBlock, StructCodeBlock, str)):
                     self._children.append(c)
                 else:
                     raise TypeError(
-                        f"children contains unexpected type element (type={type(c)})"
+                        f"children contains unexpected type element (title={title}, type={type(c)})"
                     )
 
     @property
@@ -51,7 +59,7 @@ class StructDoc:
     @property
     def children(
         self,
-    ) -> "list[StructDoc | StructBlock] | StructCodeBlock | str":
+    ) -> "list[StructDoc | StructBlock | StructCodeBlock | str]":
         """
         子要素を取得する
         """
@@ -60,37 +68,45 @@ class StructDoc:
 
 class StructBlock:
     """
-    `cmoc_block` としてレンダリングする親要素
+    参照可能な文章ブロックを表すクラス
 
-    プロンプト内でこのブロック参照するには `<cmoc_ref target="..."/>` の形式で記述する
+    このインスタンスの子要素 `{{child}}` は以下のようにレンダリングされる
+
+    ```markdown
+    <cmoc_block id="block_id">
+    {{child}}
+    </cmoc_block>
+    ```
+
+    このブロック参照するには `<cmoc_ref target="block_id"/>` の形式で記述する
     """
 
     def __init__(
         self,
         block_id: str,
-        child: "StructDoc | StructBlock | Sequence[StructDoc | StructBlock] | str",
+        childlen: "StructDoc | StructBlock | Sequence[StructDoc | StructBlock] | str",
     ):
+        # ブロック ID
         if not isinstance(block_id, str):
-            raise TypeError(f"block_id has unexpected type (type={type(block_id)})")
-        if not block_id:
-            raise ValueError("block_id must not be empty")
-        if isinstance(child, Sequence) and not isinstance(child, str):
-            for element in child:
-                if not isinstance(element, (StructDoc, StructBlock)):
-                    raise TypeError(
-                        f"child contains unexpected type element (type={type(element)})"
-                    )
-        elif not isinstance(child, (StructDoc, StructBlock, str)):
-            raise TypeError(f"child has unexpected type (type={type(child)})")
+            raise TypeError(f"block_id must be str (type={type(block_id)})")
         self._block_id = block_id
-        self._child = child
+        # 子要素
+        if isinstance(childlen, Sequence) and not isinstance(childlen, str):
+            for child in childlen:
+                if not isinstance(child, (StructDoc, StructBlock)):
+                    raise TypeError(
+                        f"child must contains StructDoc or StructBlock (type={type(child)})"
+                    )
+        elif not isinstance(childlen, (StructDoc, StructBlock, str)):
+            raise TypeError(f"child has unexpected type (type={type(childlen)})")
+        self._child = childlen
 
     @property
     def block_id(self) -> str:
         return self._block_id
 
     @property
-    def child(
+    def childlen(
         self,
     ) -> "StructDoc | StructBlock | Sequence[StructDoc | StructBlock] | str":
         return self._child
@@ -99,6 +115,13 @@ class StructBlock:
 class StructCodeBlock:
     """
     StructDoc 内に挿入可能なコードブロック
+
+    Markdown 的に言う所の、 back quart 3 つ以上のフェンスで囲われたブロック
+    ↓みたいなの
+
+    ```{{info-here}}
+    {{body-here}}
+    ```
     """
 
     def __init__(
@@ -135,121 +158,141 @@ class StructCodeBlock:
 
 
 def render_as_markdown(
-    struct_doc: StructDoc | StructBlock | list[StructDoc | StructBlock],
+    struct_node: StructDoc | StructBlock | list[StructDoc | StructBlock],
 ) -> str:
     """
-    struct_doc を markdown としてレンダリングする
+    struct_node を markdown としてレンダリングする
     """
-    if isinstance(struct_doc, (StructDoc, StructBlock)):
-        roots = [struct_doc]
-    elif isinstance(struct_doc, list):
-        roots = struct_doc
+    # 正規化と型チェック
+    if isinstance(struct_node, (StructDoc, StructBlock)):
+        roots = [struct_node]
+    elif isinstance(struct_node, list):
+        roots = struct_node
         for root in roots:
             if not isinstance(root, (StructDoc, StructBlock)):
                 raise TypeError(
                     f"struct_doc contains unexpected type element (type={type(root)})"
                 )
     else:
-        raise TypeError(f"Invalid type of struct_doc (type={type(struct_doc)})")
-    _validate_references(roots)
-    return "\n".join(_render_as_markdown(root) for root in roots)
+        raise TypeError(f"Invalid type of struct_doc (type={type(struct_node)})")
+    # 内部処理に委託
+    result = _collapse_blank_lines(
+        "\n".join(_render_as_markdown(root) for root in roots)
+    )
+    # 正常終了
+    return result
 
 
 def _render_as_markdown(
-    struct_node: StructDoc | StructBlock,
+    struct_node: StructDoc | StructBlock | StructCodeBlock | str,
     depth: int = 1,
 ) -> str:
     """
     struct_node を markdown としてレンダリングする
     内部実装
     """
-    if isinstance(struct_node, StructBlock):
-        result = f"<cmoc_block id={quoteattr(struct_node.block_id)}>\n"
-        child = struct_node.child
-        if isinstance(child, str):
-            return result + child + "</cmoc_block>\n"
-        if isinstance(child, Sequence):
-            result += "\n".join(
-                _render_as_markdown(element, depth) for element in child
-            )
-        else:
-            result += _render_as_markdown(child, depth)
-        result += "</cmoc_block>\n"
-        return _collapse_blank_lines(result)
-
-    struct_doc = struct_node
-    # 見出しを生成
-    result = ""
-    result += ("#" * depth) + " " + struct_doc.title + "\n"
-    # 子要素を追加
-    if isinstance(struct_doc.children, list):
-        for c in struct_doc.children:
-            result += "\n"
-            result += _render_as_markdown(c, depth + 1) + "\n"
-    elif isinstance(struct_doc.children, StructCodeBlock):
-        result += "\n"
-        # 動的本文中の backtick が外側の Markdown code block を閉じないよう、
-        # 本文の最長 backtick 列より 1 文字長く、かつ最低 3 文字の fence を使う。
-        body = ntqs(struct_doc.children.body)
-        longest_backtick_run = max(
-            (len(match.group()) for match in re.finditer(r"`+", body)),
-            default=0,
-        )
-        fence = "`" * max(3, longest_backtick_run + 1)
-        if struct_doc.children.info:
-            result += f"{fence}{struct_doc.children.info}\n"
-        else:
-            result += f"{fence}\n"
-        result += body + "\n"
-        result += f"{fence}\n"
-    elif isinstance(struct_doc.children, str):
-        result += "\n"
-        result += ntqs(struct_doc.children) + "\n"
+    if isinstance(struct_node, StructDoc):
+        return _render_as_markdown_struct_doc(struct_node, depth)
+    elif isinstance(struct_node, StructBlock):
+        return _render_as_markdown_struct_block(struct_node, depth)
+    elif isinstance(struct_node, StructCodeBlock):
+        return _render_as_markdown_struct_code_block(struct_node)
+    elif isinstance(struct_node, str):
+        return _render_as_markdown_str(struct_node)
     else:
         raise TypeError(
-            f"Invalid type of struct_doc.children (type={type(struct_doc.children)})"
+            f"struct_node must be `StructDoc | StructBlock | StructCodeBlock | str` (type={type(struct_node)})"
         )
-    result = _collapse_blank_lines(result)
+
+
+def _render_as_markdown_struct_doc(
+    struct_node: StructDoc,
+    depth: int = 1,
+) -> str:
+    """
+    struct_node を markdown としてレンダリングする
+    内部実装
+    StructDoc 専用
+    """
+    # 見出し
+    result = ""
+    result += ("#" * depth) + " " + struct_node.title + "\n"
+    # 子要素
+    if isinstance(struct_node.children, list):
+        for c in struct_node.children:
+            result += "\n"
+            result += _render_as_markdown(c, depth + 1)
+            result += "\n"
+    else:
+        raise TypeError(
+            f"struct_node.children must be list (type={type(struct_node.children)})"
+        )
     # 正常終了
     return result
 
 
-def _validate_references(roots: list[StructDoc | StructBlock]) -> None:
+def _render_as_markdown_struct_block(
+    struct_node: StructBlock,
+    depth: int = 1,
+) -> str:
     """
-    参照先ブロックの欠落と block id の重複をレンダリング直前に検査する。
-
-    根拠: <work-root>/oracle/doc/app_spec/prompt_policy.md
+    struct_node を markdown としてレンダリングする
+    内部実装
+    StructBlock 専用
     """
-    blocks: dict[str, StructBlock] = {}
-    refs: list[str] = []
+    result = f"<cmoc_block id={quoteattr(struct_node.block_id)}>\n"
+    child = struct_node.childlen
+    if isinstance(child, str):
+        return result + child + "</cmoc_block>\n"
+    if isinstance(child, Sequence):
+        result += "\n".join(_render_as_markdown(element, depth) for element in child)
+    else:
+        result += _render_as_markdown(child, depth)
+    result += "</cmoc_block>\n"
+    return result
 
-    def _visit(node: StructDoc | StructBlock) -> None:
-        if isinstance(node, StructBlock):
-            if node.block_id in blocks:
-                raise ValueError(f"Duplicate cmoc_block id (id={node.block_id!r})")
-            blocks[node.block_id] = node
-            if isinstance(node.child, Sequence) and not isinstance(node.child, str):
-                for block_child in node.child:
-                    _visit(block_child)
-            elif isinstance(node.child, (StructDoc, StructBlock)):
-                _visit(node.child)
-            return
 
-        if isinstance(node.children, list):
-            for child in node.children:
-                _visit(child)
-        elif isinstance(node.children, str):
-            matches = list(_CMOC_REF_PATTERN.finditer(node.children))
-            if node.children.count("<cmoc_ref") != len(matches):
-                raise ValueError("Invalid cmoc_ref syntax")
-            refs.extend(match.group(1) for match in matches)
+def _render_as_markdown_struct_code_block(
+    struct_node: StructCodeBlock,
+) -> str:
+    """
+    struct_node を markdown としてレンダリングする
+    内部実装
+    StructCodeBlock 専用
 
-    for root in roots:
-        _visit(root)
+    NOTE:
+        動的本文中の backtick が外側の Markdown code block を閉じないよう、
+        本文の最長 backtick 列より 1 文字長く、かつ最低 3 文字の fence を使う。
+    """
+    # 本文を取得
+    body = ntqs(struct_node.body)
+    # フェンス文字列を生成
+    longest_backtick_run_length = max(
+        (len(match.group()) for match in re.finditer(r"`+", body)),
+        default=0,
+    )
+    fence = "`" * max(3, longest_backtick_run_length + 1)
+    # レンダリング
+    result = ""
+    if struct_node.info:
+        result += f"{fence}{struct_node.info}\n"
+    else:
+        result += f"{fence}\n"
+    result += body + "\n"
+    result += f"{fence}\n"
+    # 正常終了
+    return result
 
-    for target in refs:
-        if target not in blocks:
-            raise ValueError(f"cmoc_ref target is not present (target={target!r})")
+
+def _render_as_markdown_str(
+    struct_node: str,
+) -> str:
+    """
+    struct_node を markdown としてレンダリングする
+    内部実装
+    str 専用
+    """
+    return ntqs(struct_node)
 
 
 def _collapse_blank_lines(text: str) -> str:
