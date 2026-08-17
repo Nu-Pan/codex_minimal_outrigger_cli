@@ -368,4 +368,5 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     finished = events[-1]
     assert finished["event"] == "command_finished"
     assert finished["failure"]["classification"] == "internal_failure"
+    assert finished["failure"]["target_path"] == str(unsaved_path.absolute())
     assert finished["terminal_result"]["primary_report_path"] is None

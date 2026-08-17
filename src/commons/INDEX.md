@@ -73,23 +73,19 @@
 # `runtime_cli.py`
 
 ## Summary
-- 最外側の CLI サブコマンド実行を統括するランタイム境界。work root 検査、doctor preprocess、進行 step、診断ログ、feedback 回収、primary report 保存、terminal result の生成・表示、終了コード、Windows 通知までを一連の終端処理として扱う。
-- サブコマンドの正常完了、ユーザー中断、handled failure、internal failure、TUI 起動前後の KeyboardInterrupt を分類し、エラー詳細・次の操作・警告・実行時間・診断ログをログとコンソールへ反映する。
-- 最外側サブコマンドのライフサイクル、terminal result の形式、失敗時の終了処理、進行 step や中断状態の共有コンテキストを変更・調査するときの入口であり、個別機能の実装や各種ログ・通知・report 保存の詳細は対応する下位モジュールを直接読む。
+- 最外側 CLI サブコマンドの共通実行境界を管理するランタイム実装。work root 検査、doctor preprocess、進捗・step 記録、feedback 回収、診断ログ、primary report、terminal result、終了コード、Windows 通知を一つの制御フローに統合する。
+- 正常終了、ユーザー中断、handled/internal failure を分類し、console と JSON event に同じ終端結果を反映する。各種サブコマンドが共通の開始・終了処理や例外処理を確認する際の入口となる。
 
 ## Read this when
-- CLI サブコマンドの起動から終了までの共通処理を確認するとき
-- terminal result、終了コード、primary report、診断ログ、feedback 件数、Windows 通知がどの経路で確定するかを調査するとき
-- 正常完了・ユーザー中断・エラー分類や KeyboardInterrupt、TUI プロセス境界の挙動を変更・レビューするとき
-- サブコマンド共通の進行 step、work root 制約、現在の logger や中断状態の管理を確認するとき
+- 最外側の CLI サブコマンドについて、実行開始から終了までの共通制御、診断ログ、feedback 回収、primary report 保存、terminal result 表示、終了コード、通知を確認するとき
+- CLI の中断・エラー分類、work root 検査、進捗表示、step 記録、結果の Markdown/JSON 化など、複数サブコマンドに共通する実行境界を調べるとき
 
 ## Do not read this when
-- 特定のサブコマンド固有の業務処理だけを調べるとき
-- ログ出力、feedback、primary report、エラー描画、通知の内部仕様だけを調べるときは、それぞれの専用モジュールや正本仕様を直接読む場合
-- terminal result のデータ型や個別コマンドの引数定義だけを確認したいとき
+- 個別サブコマンドの業務ロジックや、ここから委譲される診断・エラー・feedback・ログ・結果型それぞれの詳細仕様だけを確認したいとき
+- terminal result のデータ構造、ログ出力形式、通知処理、primary report 保存処理の単独仕様だけを確認し、CLI の最外周制御を追わないとき
 
 ## hash
-- 5d5bb786c861c2fae583bb445504686458d24d6cc8d749662c55f8535525fd95
+- a3d6498ebe27c3d1f5c4f262336a6294a4bbd33022f5462f3b2bccbeefbe15c0
 
 # `runtime_codex.py`
 

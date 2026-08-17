@@ -52,20 +52,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI、Codex、設定、ログ、Git、状態管理、feedback、report など複数の実行経路から利用される共通実装と公開入口を扱い、commons 配下の個別 runtime module へ進むための入口となる。
+- cmoc の複数実行経路で共有する runtime helper をまとめた commons パッケージ。設定、Git・パス、ログ、状態、Codex 実行、feedback、report、run lifecycle などの共通処理を扱う各モジュールへの入口となる。
+- commons 全体の runtime API や、特定の共通機能を横断して確認・変更する場合に下位モジュールへ進むためのディレクトリ。
 
 ## Read this when
-- cmoc の共通 runtime 機能の責務や公開入口を確認するとき
-- CLI、Codex 実行、設定、ログ、Git、状態、feedback、report などの共通処理の実装箇所を探すとき
-- commons 配下の個別 runtime module を利用・変更する前に、関連する共通実装の配置を確認するとき
+- cmoc の共通 runtime helper の配置や責務の全体像を確認するとき
+- CLI、Codex 実行、Git/worktree、設定、状態、feedback、report など複数の実行経路にまたがる共通処理を調査するとき
+- commons 配下の個別 runtime module を読む前に、対象機能の入口を特定するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動だけを調査する場合は、対応する commons 配下の個別実装を直接読むとき
-- 特定の CLI サブコマンドや Codex preflight など、共通 runtime 以外の具体的な処理だけを調べるときは、その担当実装を直接読むとき
-- runtime の正本仕様や Structured Output schema を確認する場合は、対応する仕様・schema の定義を直接読むとき
+- 特定の runtime helper の内部実装だけを確認したいときは、対応する commons 配下の個別モジュールを直接読む
+- 個別サブコマンドの業務ロジックや利用者向け仕様だけを確認したいときは、対応するサブコマンド実装または正本仕様を直接読む
+- INDEX.md の生成規則や Structured Output schema 自体を確認したいときは、indexing または schema の定義元を直接読む
 
 ## hash
-- 2c5d2b92a99de5e9ea7f2c57ff209a4d10f452f66d53d6fb90c62de2711fbfbc
+- d3d4d4b8ae54c64b3414fb32249cff70f5c267715dff96199fa206b8e82e49e0
 
 # `config`
 

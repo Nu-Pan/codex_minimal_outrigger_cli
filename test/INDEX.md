@@ -688,18 +688,19 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話末端サブコマンドの primary report 完了契約を検証するテスト。処理開始前のエラー、ユーザー中断、refactor fallback、primary report 未保存時の internal failure を対象とし、保存先、front matter、端末出力、診断ログ、コマンド固有の完了情報を確認する。
+- 非対話末端サブコマンドの primary report 完了契約を検証するテスト。doctor、indexing、session、oracle、realization、run、feedback report の早期エラーで、固有保存先・必須 front matter・診断内容・終了コードを確認する。
+- feedback report のユーザー中断、realization refactor の fallback 中断、保存未確認時の internal failure も検証し、report publication と invocation summary の境界および未保存パスの非表示を担保する。
 
 ## Read this when
-- 非対話末端サブコマンドの完了処理、エラー処理、中断処理、primary report 保存確認のテストを追加・変更・調査するとき。
-- doctor、indexing、session、oracle、realization、run、feedback の各サブコマンドで、処理開始前エラー時の primary report 契約を確認するとき。
+- 非対話サブコマンドの primary report 保存契約や terminal classification を変更・検証するとき
+- 早期エラー、中断、fallback、primary report 未保存時の共通終了処理を調査するとき
 
 ## Do not read this when
-- 個別サブコマンドの通常処理や引数仕様だけを確認する場合は、対応するサブコマンド仕様を直接読む。
-- primary report の一般的な形式やエラー分類の仕様だけを調べる場合は、console_and_file_log.md または error_handling.md を直接読む。
+- 各サブコマンドの通常成功時の処理や個別業務仕様だけを確認するとき
+- primary report の生成実装そのもの、または各サブコマンド固有の詳細仕様を直接確認すべきとき
 
 ## hash
-- 6feef722be26b641285fbed5b9a02668da485eb399adb02e315a08523cf858be
+- cf2bb62898357a0e6e155da27b15aa9678e42e3a7a2a15ae68a25c35dd0bdd9f
 
 # `test_production_cli.py`
 
