@@ -52,21 +52,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行境界、Codex exec/TUI、設定・ログ・パス・Git worktree、状態管理、feedback、report、INDEX 更新など、複数の実行経路から共有される機能の実装入口を提供する。
-- 共通 runtime API の公開入口を確認する場合は `cmoc_runtime.py`、Codex 実行や preflight は対応する `runtime_codex*`、設定・Git・状態・feedback などは各専用 `runtime_*.py` へ進む構成になっている。
+- `src/commons` は、cmoc の CLI・Codex 実行・設定・Git・状態・ログ・feedback・レポートなど複数の実行経路から共有される runtime helper 群を集約するパッケージである。共通 runtime API や個別 helper の責務を確認・変更するときの入口として、まずこのディレクトリから対象モジュールへ進む。
 
 ## Read this when
-- cmoc の複数機能で共有される runtime helper の配置や公開入口を確認するとき
-- CLI、Codex、設定、ログ、Git worktree、状態、feedback、report、INDEX 更新などの共通実行基盤を調査・変更するとき
-- 特定の共通機能の実装へ進む前に、commons 配下の担当モジュールを選ぶとき
+- 複数の CLI または Codex 実行経路にまたがる共通 runtime 処理の担当モジュールを探すとき
+- 設定、パス、Git、プロセス、状態、ログ、feedback、レポート、indexing などの共通 helper を確認・変更するとき
+- commons 配下の実装を利用・変更する前に、該当する個別 runtime module の入口を特定するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動だけを確認したいときは、対応する `runtime_*.py` を直接読む
-- 個別 CLI サブコマンド、Codex preflight、report、feedback などの固有仕様だけを調査するときは、その機能の専用実装または正本仕様を直接読む
-- commons と無関係なアプリケーション固有処理や利用者向け仕様だけを確認するとき
+- 特定の runtime helper の内部実装だけを確認する場合は、対応する commons 配下の個別モジュールを直接読む
+- CLI サブコマンド固有の業務ロジック、Codex の個別実行仕様、または oracle の正本仕様だけを確認する場合
+- commons 配下に対象となる共通 helper がない機能を調べる場合
 
 ## hash
-- 58c03d494243c8cec674c0f299eb26f09d3f10b30ea9a1056f37056fed762724
+- 6d98c069176743f3db2bb4515fe5eed5784f5cba5497d9934a0d5630f2422979
 
 # `config`
 

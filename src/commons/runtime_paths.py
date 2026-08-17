@@ -160,7 +160,7 @@ def editor_work_dir(root: Path) -> Path:
 
 
 def editor_input_log_dir(root: Path) -> Path:
-    """入力結果の保存コピーと完全 prompt の directory を返す。"""
+    """入力結果の保存コピーの directory を返す。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     return generated_agent_read_dir(root) / "log" / "editor_input"
 
