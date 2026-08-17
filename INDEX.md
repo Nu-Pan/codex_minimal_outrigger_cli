@@ -91,18 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と、その本文書を実行時の agent call・prompt・Structured Output へ落とし込む実装をまとめたルートです。仕様・開発規則・branch model・不採用案を調べるときは `doc` 配下へ、agent call builder や prompt policy、処理別 schema の実装を調べるときは `src` 配下へ進みます。
+- cmoc の正本文書と oracle 実装をまとめた中核領域。CLI・Codex 呼び出し・prompt・ログ・feedback・session／run の挙動仕様、Python 開発・設計・テスト・環境のルール、branch model、採用しなかった設計案を扱う。
+- 仕様や開発ルールを確認するときの入口であり、挙動仕様は `doc/app_spec`、開発関連は `doc/dev_rule`、branch／session／run の関係は `doc/branch_model.md`、代替案の背景は `doc/considered_alternative`、oracle の実装は `src` 配下へ進む。
 
 ## Read this when
-- cmoc のアプリケーション仕様、開発規則、branch／session／run のモデル、または採用しなかった設計案の入口を横断的に判断するとき
-- 正本文書と、それを agent call・prompt・Structured Output の実装へ反映する構造の対応関係を確認するとき
+- cmoc の CLI、workflow、Codex 呼び出し、prompt、ログ、feedback、状態管理の正本文書を横断して調査するとき
+- 実装やテストの変更に先立ち、アプリケーション仕様、開発ルール、branch model、採用しなかった設計案のどの領域を確認すべきか判断するとき
+- oracle の agent call builder、prompt builder、Structured Output、path model、設定などの実装配置を探すとき
 
 ## Do not read this when
-- 調査対象の個別仕様書、開発規則、代替案、agent call builder、prompt policy、または schema が既に特定できており、該当ファイルへ直接進む方が適切なとき
-- 実行処理や CLI の具体的な挙動だけを調べ、oracle の正本文書群と生成実装の横断的な案内が不要なとき
+- 対象の個別仕様書や開発ルール文書が既に特定できており、対応する下位対象へ直接進む方が適切なとき
+- 特定の prompt builder、agent call builder、設定モデル、スキーマ、または oracle 実装の具体的内容だけを調査するとき
+- realization の CLI 実行制御やテスト実装の具体的内容だけを調査するとき
 
 ## hash
-- e8fc80aea8e8fae7a304b9ea3e47d20e02775c6d2c4967603baef1a67bc079e7
+- 7afb540a24a07958f67a3d7a17b44467bafcce4dbe32b03e888a2bfec4ecd1e6
 
 # `pyproject.toml`
 

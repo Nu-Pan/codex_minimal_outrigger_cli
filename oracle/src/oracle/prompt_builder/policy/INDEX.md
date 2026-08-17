@@ -159,18 +159,19 @@
 # `realization_oracle_reference.py`
 
 ## Summary
-- realization code から、対応する oracle file の参照規則を構築するポリシー定義。realization code の作成・変更時に適用され、対応する oracle file が存在する場合のコメント記載ルールを確認する入口となる。
+- realization code から oracle file path を参照するための prompt policy を構築する関数。AgentCallPathContext の root placeholder 定義から work-root を抽出し、PlaceholderMap と、対応する oracle file path を realization code のコメントへ記載する規定を含む StructDoc を返す。realization code 作成・変更時の参照ポリシーを prompt に組み込む入口。
 
 ## Read this when
-- realization code の作成または変更にあたり、oracle file path をコメントへ記載する規則を確認するとき。
-- realization code と oracle file の対応付けに関する prompt policy を変更・調査するとき。
+- realization code の作成・変更時に oracle file path 参照規定を prompt へ追加する処理を確認するとき
+- prompt builder が work-root の placeholder と oracle 参照ポリシー文書をどのように構築するかを確認するとき
 
 ## Do not read this when
-- realization code 自体の実装責務や配置を確認したいとき。
-- oracle file の本文や、個別の realization code の動作仕様を直接確認するとき。
+- 個別の realization 実装そのものの配置や責務を確認するとき
+- oracle file の内容や realization code のコメント記載状況そのものを確認するとき
+- realization oracle reference policy を prompt に組み込む呼び出し側の全体フローだけを確認するとき
 
 ## hash
-- a72583769048b759b2d53f7ca62ecd97cffc25515bb5b1f3f72c1afd4b2bf1c3
+- 3038c85ce59585b85389e52ae27d76a07d3d3c58cae10b992dbcef50d209310e
 
 # `routing.py`
 

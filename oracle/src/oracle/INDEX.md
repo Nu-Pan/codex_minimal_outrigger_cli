@@ -54,19 +54,17 @@
 # `prompt_builder`
 
 ## Summary
-- agent 呼び出しへ渡すプロンプトを構築する領域。プレースホルダ型、完全プロンプトの統合順序、エディタ入力の初期文面、oracle/realization の基本説明、作業種別ごとの policy 文面を扱う。
-- 完全プロンプト全体の構成や複数 policy の組み込み条件を確認するときの入口であり、個別 policy や prompt builder 部品の詳細を調べる場合は対応する下位対象へ進む。
+- agent向け完全プロンプトの構築に関わる型定義、統合入口、エディタ入力、共通部品、各種ポリシーをまとめた領域。placeholder表現、プロンプトの組み立て順、入力テンプレート、oracle／realizationの説明、共通instruction policyを確認するための入口となる。
 
 ## Read this when
-- agent 呼び出しへ渡すプロンプトの構成要素、配置順、目的や追加文面の統合方法を変更・確認するとき
-- プレースホルダ定義の統合、同名定義の競合検査、path context 由来の値の扱いを調査するとき
-- エディタ経由の入力テンプレートや、oracle/realization の基本説明を変更・確認するとき
-- oracle、realization、file access、routing、feedback、review、INDEX.md 生成など、作業種別 policy の責務や適用条件を調査するとき
+- agent callへ渡す完全プロンプトの構成や統合規則を調査・変更するとき
+- placeholder定義、エディタ入力、prompt builder parts、共通policyの責務を横断して確認するとき
+- oracle／realizationやINDEX.mdエントリー生成など、prompt builder共通のagent instruction policyを確認するとき
 
 ## Do not read this when
-- 特定の policy の文面や単一 builder の実装詳細だけを確認したい場合は、該当する下位対象を直接読む
-- StructDoc など構造化文書の型・レンダリング仕様、path context の定義、または agent 呼び出し処理そのものを調べる場合
-- 生成済みプロンプトの個別出力だけを確認すれば足りる場合
+- 特定のpolicy、part、prompt builderの単一実装だけを確認すれば足りるときは、対応する下位モジュールを直接読む
+- StructDocや基本型、path contextの詳細だけを確認するときは、対応する下位モジュールを直接読む
+- prompt builderに関係しないCLI実装、仕様、保存記録、ユーザー入力経路の詳細を調べるときは、この領域を入口にしない
 
 ## hash
-- bd5ee5f8801782311f1cec036fe22005b04e7b0f89ac9d210deaeabc3a05ad45
+- 6ce89c0250a65cf87cce5868b8aa4c2d5b0108f0e2bd0179095b4f3e43e76946
