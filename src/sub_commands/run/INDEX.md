@@ -53,19 +53,17 @@
 # `lifecycle.py`
 
 ## Summary
-- editing run のライフサイクル共通処理を `commons` の正規実装から再公開し、旧 import path との互換性を維持する薄い shim。旧 path の利用箇所から共通処理への移行を確認する入口であり、移行完了時には対応する INDEX entry とともに削除対象となる。
+- editing run のライフサイクル共通 helper を旧 import path から利用するための互換 shim。canonical 実装を commons.runtime_run_lifecycle に委譲し、旧 API 名と unexpected_session_paths の base 省略呼び出しを維持する。
 
 ## Read this when
-- 旧 import path を利用するコードや、そこから `commons` 側への移行状況を調査するとき
-- editing run のライフサイクル helper の公開名や互換性を確認するとき
-- 共通実装への移行完了に伴う shim の削除可否を判断するとき
+- editing run のライフサイクル処理を旧 import path から参照するコード、または旧 API の互換性を確認・変更するとき。
 
 ## Do not read this when
-- 正規のライフサイクル実装そのものを変更・調査するときは、`commons` 側の実装を直接読むべきとき
-- editing run のライフサイクル以外の CLI 挙動やコマンド実装を調査するとき
+- canonical な共通ライフサイクル実装の仕様や挙動を確認したいときは、直接 commons.runtime_run_lifecycle を読む。
+- 旧 import path の互換 shim が不要かどうかに関係しない、他の CLI サブコマンドやプロンプト構築処理を扱うとき。
 
 ## hash
-- 849170ea1a8f96d590a6e1031c92c4dfc00ffec553e96c7d919efd07e0c0dd14
+- 954fbbb80608b1840a22577f281660a3fe0f0e491352e8ec5f3c1b363b67a6ad
 
 # `report.py`
 

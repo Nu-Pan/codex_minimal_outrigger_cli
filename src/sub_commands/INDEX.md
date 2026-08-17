@@ -118,21 +118,22 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージの入口。run の abandon・join と、旧 import path から再公開される lifecycle・report の移行状況を確認する際に読む。
-- run の通常作成・編集処理の入口ではなく、配下の各実装へ進む前に、editing run の cleanup、統合、互換 shim の構成を把握するためのルーティング対象。
+- editing run サブコマンドの共通 lifecycle と個別の abandon・join 実装、旧 import path 互換 shim をまとめる入口。run の停止・統合・cleanup・report/state 同期の実装へ進むためのディレクトリ。
 
 ## Read this when
-- editing run の lifecycle サブコマンド全体の構成や、abandon・join・互換 shim の担当範囲を確認するとき
-- run の cleanup、merge、rollback、state・report 更新を含む lifecycle 挙動の調査先を判断するとき
-- 旧 import path から commons 側の canonical 実装への移行状況や、互換 shim の削除可否を確認するとき
+- editing run の lifecycle や配下の実装を調査・変更するとき
+- `cmoc run abandon` の停止、worktree・branch cleanup、state・report 更新を確認するとき
+- `cmoc run join` の merge、conflict、rollback、post-join、cleanup の連鎖を確認するとき
+- 旧 import path の lifecycle または report writer の互換性・移行状況を確認するとき
 
 ## Do not read this when
-- run の具体的な作成・編集処理や、editing run 以外のサブコマンドを調べるとき
-- 特定の abandon・join 処理、共通 lifecycle 実装、report writer の詳細を確認するときは、配下または commons 側の該当実装を直接読む
-- 一般的な Git 操作、state・process tracking・report API、INDEX.md 生成規則そのものを調べるとき
+- run 以外のサブコマンドを扱うとき
+- run の具体的な処理や canonical な共通実装を確認する場合は、この入口ではなく配下の該当ファイルや参照先を直接読むとき
+- Git 操作、state 永続化、process tracking、report 生成など共通部品だけを調べるとき
+- 利用者向けの一般的な CLI 案内や、INDEX.md 生成規則そのものを扱うとき
 
 ## hash
-- 3dd64c8b8d1611f19b565e707bc75e5fa80d998008bdc017d821e3564989462a
+- c79df04044f28bb5e7c7f0e593f1c7aa0d3a9215710ef7321d786cf538d208d3
 
 # `session`
 

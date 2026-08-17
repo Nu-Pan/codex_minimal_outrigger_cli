@@ -1129,9 +1129,9 @@
   },
   "src/sub_commands/run/lifecycle.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "3de456333531bc878de445ccbaf683410ad0990c75f16028b6bcab36ac7d5939",
-    "last_investigated_at": "2026-07-28_12-07_44_331294000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "849170ea1a8f96d590a6e1031c92c4dfc00ffec553e96c7d919efd07e0c0dd14",
+    "last_investigated_at": "2026-08-18_00-31_59_625717000"
   },
   "src/sub_commands/run/report.py": {
     "investigation_required": false,

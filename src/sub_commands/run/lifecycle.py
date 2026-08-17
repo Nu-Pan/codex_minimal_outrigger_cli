@@ -1,5 +1,8 @@
 """editing run 共通 helper の旧 import path を保つ薄い shim。"""
 
+from collections.abc import Collection
+from pathlib import Path
+
 # canonical 実装は共通処理の配置規則に従い commons に置く。
 # {{work-root}}/oracle/doc/dev_rule/design_rule.md
 # 旧 import path を利用する利用者が commons 側へ移行し、互換性が不要になった時に
@@ -20,9 +23,28 @@ from commons.runtime_run_lifecycle import (
     tree_changes,
     unexpected_agent_paths,
     unexpected_run_paths,
-    unexpected_session_paths,
     worktree_change_paths,
 )
+from commons.runtime_run_lifecycle import (
+    unexpected_session_paths as _canonical_unexpected_session_paths,
+)
+
+
+def unexpected_session_paths(
+    session_worktree: Path,
+    changes: list[GitChange],
+    *,
+    base: str = "HEAD",
+    ignored_paths: Collection[str] = (),
+) -> list[str]:
+    """旧 import path の base 省略呼び出しを canonical helper へ委譲する。"""
+    return _canonical_unexpected_session_paths(
+        session_worktree,
+        changes,
+        base=base,
+        ignored_paths=ignored_paths,
+    )
+
 
 __all__ = [
     "EditingRunContext",

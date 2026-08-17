@@ -120,15 +120,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装群の入口。apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui の各サブコマンドへ進むための構成と、サブコマンド固有の実行フローを扱う。
+- CLI サブコマンド実装群のディレクトリ入口。doctor、feedback、indexing、oracle、realization、run、session、tui などの各サブコマンドと、未実装の apply を扱う下位実装へ進むためのルーティング対象。
+- サブコマンド固有の実行フロー、状態管理、レポート、commit・cleanup・rollback などを調査・変更するときに、該当するサブコマンド配下へ進む起点となる。
 
 ## Read this when
-- CLI サブコマンド全体の構成や、対象サブコマンドの実装入口を確認するとき。
-- 複数のサブコマンドにまたがる実装配置や、各サブコマンド配下の担当範囲を判断するとき。
+- CLI サブコマンドの実装構成や、対象サブコマンドの実装入口を確認するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui の実行フローや固有処理を調査・変更するとき。
+- apply サブコマンドの実装追加後に、その配置や内容を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理、共通ランタイム、prompt、仕様文書だけを確認したいときは、該当する下位実装または共通対象を直接読む。
-- INDEX.md の生成規則や個別ファイルの内容だけを確認するとき。
+- サブコマンド共通の実行基盤、prompt 編集、ACP builder、Git・state・process tracking などの共通部品だけを確認するとき。
+- 個別サブコマンドの仕様、prompt 契約、agent 起動パラメータなど、下位実装や正本仕様を直接読むべきとき。
+- 利用者向け CLI 案内や INDEX.md 生成規則そのものを扱うとき。
 
 ## hash
-- 91a6f3180776ed4276730de94206a82fcdee13b0d507ed7602c8be7b8b74213e
+- 7c653a53de99414c534250fae1c76721cb38e99313593a5bdb4743ca2a9a8649

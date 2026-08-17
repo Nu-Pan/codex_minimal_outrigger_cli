@@ -165,6 +165,18 @@ def test_legacy_lifecycle_shim_reexports_agent_path_validation() -> None:
     assert "unexpected_agent_paths" in legacy_lifecycle_module.__all__
 
 
+def test_legacy_lifecycle_shim_keeps_session_path_call_contract(
+    tmp_path: Path,
+) -> None:
+    """旧 run lifecycle import path が base 省略の呼び出しを受け付ける。"""
+    root = make_repo(tmp_path)
+
+    assert legacy_lifecycle_module.unexpected_session_paths(
+        root,
+        [GitChange("A", ("src/new.py",))],
+    ) == ["src/new.py"]
+
+
 def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:
     """fork reportの変更pathは削除とrename元を含めない。"""
     assert flattened_change_paths(

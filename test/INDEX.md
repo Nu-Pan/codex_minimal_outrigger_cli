@@ -419,22 +419,28 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、process tracking、Codex child cleanup、join/abandon の lifecycle 遷移を、apply/refactor の両経路で検証する。
-- oracle・INDEX・realization file の想定外変更、agent の直接 commit、遅延変更、rename/delete、rollback、merge conflict、cleanup failure、primary report 保存失敗など、run lifecycle の失敗時保全と再試行可能性を検証する。
-- refactor の調査 state、unresolved target、変更 path 報告、Structured Output 検証、永続 cycle、割り込み時の進捗保持を検証する。run lifecycle や apply/refactor の実装挙動を変更・レビューするときの統合テスト入口である。
+- editing run の統合 realization test。
+- apply/refactor の fork、共通 run state、run worktree、session branch、join/abandon の lifecycle を検証する。
+- agent が変更・commit した realization file と cmoc 管理対象（INDEX、refactor state、oracle）の境界、rollback、merge、cleanup、process tracking を検証する。
+- refactor の調査 cycle、findings、rename、unresolved target、change summary、永続 state 更新を検証する。
+- INDEX refresh、Codex child の追跡・停止、primary report、lifecycle report、terminal result、通知、feedback observation の保存を検証する。
+- 個別サブコマンドの実装詳細ではなく、fork から joinable/error、join/abandon 完了までの共有 lifecycle と異常系を横断確認する入口。
 
 ## Read this when
-- editing run の fork、join、abandon、error recovery、worktree/branch cleanup、process tracking、report 保存の挙動を確認するとき
-- realization apply fork または realization refactor fork の run isolation、INDEX 更新、agent 境界、commit/rollback、変更 path 検証を確認するとき
-- refactor state の cycle 完了、unresolved finding、rename、割り込み、Structured Output の検証挙動を確認するとき
+- editing run の apply/refactor fork の統合挙動を変更・確認するとき
+- run join または run abandon の state 遷移、merge、worktree/branch cleanup を変更・確認するとき
+- agent の予期しない file change、commit、遅延処理、process tracking、rollback の安全性を確認するとき
+- INDEX refresh や refactor state 同期が run lifecycle に与える影響を確認するとき
+- fork、join、abandon の report、primary report、通知、feedback metadata の検証箇所を探すとき
 
 ## Do not read this when
-- 単一関数の実装詳細や単独の CLI 引数仕様だけを確認する場合は、対応する realization/apply、realization/refactor、run lifecycle の実装または仕様を直接読む
-- oracle 文書の正本仕様や通知仕様そのものを確認する場合は、この統合 test ではなく参照されている oracle 文書を読む
-- INDEX 更新アルゴリズム自体や一般的な test 実行手順だけを確認する場合は、indexing 実装または test execution の文書を直接読む
+- INDEX エントリーの生成以外で、個別実装関数の詳細仕様だけを確認したいとき
+- run lifecycle と無関係な通常の unit test や CLI 出力を確認したいとき
+- 正本仕様の内容を確認したいときは、対象テストではなく参照される oracle 文書を直接読むとき
+- 対象ファイル内の一つの helper の実装を確認したいときは、対応する実装モジュールを直接読むとき
 
 ## hash
-- 78a78e49404235d7f902ebaca94ce1077eb47422db2611c2c0cda2d52ce7e9d7
+- 41527f94c3b7981c38bc1f7821d514fe363c91f464b4c29ee38d279efbf5264a
 
 # `test_feedback.py`
 
