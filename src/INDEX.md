@@ -120,18 +120,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装群のディレクトリ入口。doctor、feedback、indexing、oracle、realization、run、session、tui などの各サブコマンドと、未実装の apply を扱う下位実装へ進むためのルーティング対象。
-- サブコマンド固有の実行フロー、状態管理、レポート、commit・cleanup・rollback などを調査・変更するときに、該当するサブコマンド配下へ進む起点となる。
+- CLI サブコマンド実装群の上位ディレクトリ。apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui の各サブコマンド実装へのルーティング入口を提供する。
+- サブコマンド全体の構成や、特定サブコマンドの実行フロー・実装場所を確認するときに読む。個別処理の詳細は配下の該当実装や、参照先として示された共通ランタイム・仕様文書へ進む。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの実装入口を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui の実行フローや固有処理を調査・変更するとき。
-- apply サブコマンドの実装追加後に、その配置や内容を確認するとき。
+- CLI サブコマンドの実装構成や、対象サブコマンドの実装入口を特定するとき。
+- apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui のいずれかを調査・変更するとき。
 
 ## Do not read this when
-- サブコマンド共通の実行基盤、prompt 編集、ACP builder、Git・state・process tracking などの共通部品だけを確認するとき。
-- 個別サブコマンドの仕様、prompt 契約、agent 起動パラメータなど、下位実装や正本仕様を直接読むべきとき。
-- 利用者向け CLI 案内や INDEX.md 生成規則そのものを扱うとき。
+- サブコマンドに依存しない共通ランタイム、仕様、Git・state・report などの共通処理だけを確認するとき。
+- 個別サブコマンドの具体的な処理や契約を確認する場合は、配下の該当ファイルまたは参照先の仕様・共通実装を直接読むとき。
+- INDEX.md の生成規則や、利用者向けの一般的な CLI 案内だけを扱うとき。
 
 ## hash
-- 7c653a53de99414c534250fae1c76721cb38e99313593a5bdb4743ca2a9a8649
+- 3940143743d9ce87bf44b3818d3a44316e20c5d87e3f06ac0fee5f314ace0e40

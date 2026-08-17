@@ -32,21 +32,20 @@
 # `fork.py`
 
 ## Summary
-- 通常の local branch から cmoc の session branch を作成し、session state を保存する CLI 実装。既存の active session や dirty worktree、managed branch を拒否し、session-id と branch の衝突を避けながら fork 処理を進める。
-- branch 作成または state 保存に失敗した場合は、作成済み branch と state file を可能な範囲で rollback し、失敗状況を CmocError として報告する。session fork の実行手順、排他制御、primary report 更新、terminal result 確定までを一つの実行入口で扱う。
+- 現在の通常の local branch から cmoc session branch を作成し、fork 元の HEAD commit と home branch を session state に保存する CLI 実装。active session の重複、managed branch、dirty worktree、branch/state の競合を検査し、作成途中の失敗時は branch と state file を rollback する。session 操作の実装入口として、session fork の実行経路と一意な session-id 生成処理を確認する対象。
 
 ## Read this when
-- `cmoc session fork` の実行フロー、事前条件、session branch 作成、session state 保存の挙動を確認するとき
-- session-id の衝突回避や、fork 失敗時の rollback・エラー報告を変更または調査するとき
-- session fork と active session の競合防止、branch/state の整合性を確認するとき
+- `cmoc session fork` の CLI 実装や実行手順を確認するとき。
+- session branch の作成、fork 元 commit の固定、session state の保存、active session の重複防止を調べるとき。
+- session-id の衝突回避、排他制御、作成失敗時の rollback とエラー報告を調べるとき。
 
 ## Do not read this when
-- session state の項目や永続化形式そのものを確認したい場合は、session state の仕様・実装を直接読むとき
-- session join や abandon など、fork 後の session 操作だけを調査するとき
-- 一般的な Git branch 操作や CLI 共通実行基盤の仕様だけを確認するとき
+- session state の項目定義やライフサイクル仕様だけを確認する場合は、session state の仕様を直接読むとよい。
+- session fork 以外の session 操作の実装を確認する場合は、各操作に対応する実装を直接読むとよい。
+- 一般的な Git branch 操作や CLI 共通 runtime の仕様だけを確認する場合。
 
 ## hash
-- ea1db2907745121b66ea0bf80bc5e44e088acd60f87974654dba75f007ef2b7d
+- 0f70b5f0c7cc91b592360f84c5607e18ae2566ba58b0315093b14384c326a939
 
 # `join.py`
 

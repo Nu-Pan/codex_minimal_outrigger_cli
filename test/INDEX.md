@@ -949,21 +949,23 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork、join、abandon の CLI 外部挙動と session branch/state のライフサイクルを、通常経路・失敗時の rollback・競合・linked worktree・dirty worktree 拒否まで含めて検証する回帰テスト。
-- session CLI の状態遷移、永続 state cleanup、home branch との切替、conflict resolution の sandbox と対象差分制約を確認する必要がある場合の入口。
+- session fork・join・abandon の CLI 外部挙動をまとめて検証する回帰テスト。session branch と永続 state の作成、状態遷移、cleanup、rollback、linked worktree、dirty worktree や欠損 state の拒否を扱う。
+- session join における conflict 解消、Codex 呼び出し境界、対象外変更の拒否、特殊な conflict path、削除・mode 変更の扱い、merge 後の branch cleanup を検証する。
+- session サブコマンドの実装挙動や app specification とテスト要件の対応を確認したい場合の入口であり、個別の fork・join・abandon 実装詳細は対応する sub_commands モジュールを読む。
 
 ## Read this when
-- session fork、join、abandon の外部挙動を変更または調査するとき
-- session state の active・joined・abandoned 遷移や branch cleanup の回帰を確認するとき
-- linked worktree、dirty worktree、home branch 検証、session join の conflict resolution を扱うとき
+- session fork、join、abandon の外部挙動を変更・検証するとき
+- session state、session branch、linked worktree のライフサイクルを調査するとき
+- session join の conflict 解消や Codex 実行時のファイルアクセス境界を確認するとき
+- dirty worktree 拒否、preprocess、rollback、cleanup 失敗時の挙動を確認するとき
 
 ## Do not read this when
-- CLI 以外の session 内部実装だけを調べるとき
-- session state の正本仕様やサブコマンド単体の仕様を確認する場合は、先に対応する oracle 仕様を読むとき
-- 一般的な CLI テスト基盤や session と無関係なコマンドの挙動を調べるとき
+- session CLI の単一サブコマンド実装だけを確認する場合は、対応する sub_commands.session の実装を直接読む
+- doctor preprocess 単体の仕様や実装を確認する場合は、doctor preprocess の仕様・実装を直接読む
+- session state のデータ形式だけを確認する場合は、session_state の正本仕様を直接読む
 
 ## hash
-- 9b8d29d1442451d67c21b00b3354d089f6379ad38c85ac6dd0aa716f3fd6b6d1
+- dd07e9312ef147ae36ef1658f0295d3c935744ed0d61a8b2511c165835f7f8b7
 
 # `test_skill_metadata.py`
 

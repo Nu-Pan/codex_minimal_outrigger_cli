@@ -159,6 +159,45 @@ def test_session_fork_creates_session_branch_and_state(
     assert 'session_state_after: "active"' in rendered_report
 
 
+def test_session_fork_uses_captured_head_when_home_advances_before_branch_creation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """HEAD取得後にhome branchが進んでも、その時点のcommitからforkする。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    original_run_git = session_fork_module.run_git
+    captured_head = original_run_git(["rev-parse", "HEAD"], root).stdout.strip()
+    advanced = False
+
+    def advance_home_before_switch(
+        args: list[str], work: Path, check: bool = True
+    ) -> cmoc_runtime.CommandResult:
+        """session branch作成直前のhome branch更新を再現する。"""
+        nonlocal advanced
+        if not advanced and args[:2] == ["switch", "-c"]:
+            (work / "README.md").write_text("advanced home\n")
+            original_run_git(["add", "README.md"], work)
+            original_run_git(["commit", "-m", "advance home branch"], work)
+            advanced = True
+        return original_run_git(args, work, check)
+
+    monkeypatch.setattr(session_fork_module, "run_git", advance_home_before_switch)
+
+    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert advanced
+    session_branch = current_branch(root)
+    assert session_branch.startswith("cmoc/session/")
+    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert state["session"]["session_fork_commit"] == captured_head
+    assert run_git(root, "rev-parse", session_branch).stdout.strip() == captured_head
+
+
 def test_session_fork_rolls_back_when_state_save_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

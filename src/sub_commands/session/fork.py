@@ -91,7 +91,10 @@ def _cmoc_session_fork_body() -> TerminalResult:
         state_file_created = False
         state_written = False
         try:
-            run_git(["switch", "-c", session_branch], work)
+            # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+            # HEAD 取得後に home branch が進んでも、state に記録した fork commit
+            # と実際の session branch の分岐元を一致させる。
+            run_git(["switch", "-c", session_branch, start_commit], work)
             branch_created = True
             start_subcommand_step(6, "session state を保存", "write session state")
             # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md

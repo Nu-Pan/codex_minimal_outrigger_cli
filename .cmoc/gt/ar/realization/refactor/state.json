@@ -1153,9 +1153,9 @@
   },
   "src/sub_commands/session/fork.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "9f402913f831a35fc4e90001691620f8eed657cda8878eeb7ae91320860736e7",
-    "last_investigated_at": "2026-07-28_12-22_21_270897000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "ea1db2907745121b66ea0bf80bc5e44e088acd60f87974654dba75f007ef2b7d",
+    "last_investigated_at": "2026-08-18_00-47_36_769865000"
   },
   "src/sub_commands/session/join.py": {
     "investigation_required": true,
