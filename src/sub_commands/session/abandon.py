@@ -45,14 +45,16 @@ def _cmoc_session_abandon_body() -> TerminalResult:
         raise CmocError(
             "session abandon は session branch 上で実行してください。", [], branch
         )
-    if state.session.state != "active" or state.run.state != "ready":
-        raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
-    require_clean_worktree(work)
     home = state.session.session_home_branch
     update_primary_report_fields(
         home_branch=home,
         session_state_before=state.session.state,
     )
+    if state.session.state != "active" or state.run.state != "ready":
+        raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
+    session_commit = head_commit(work)
+    update_primary_report_fields(abandoned_branch_start_commit=session_commit)
+    require_clean_worktree(work)
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
     if not branch_exists(repo, home):
@@ -61,8 +63,6 @@ def _cmoc_session_abandon_body() -> TerminalResult:
             ["session state file と git branch の状態を確認してください。"],
             f"session_home_branch: {home}",
         )
-    session_commit = head_commit(work)
-    update_primary_report_fields(abandoned_branch_start_commit=session_commit)
     start_subcommand_step(3, "session をクリーンアップ", "cleanup session")
     try:
         # {{work-root}}/oracle/doc/branch_model.md

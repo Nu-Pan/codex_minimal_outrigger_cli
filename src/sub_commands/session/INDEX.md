@@ -15,20 +15,19 @@
 # `abandon.py`
 
 ## Summary
-- active な session を home branch へ merge せず破棄する CLI サブコマンドの実装。session branch 上での事前条件確認、clean worktree と home branch の検証、home branch への切替、session state の abandoned 化、session branch の削除、terminal result の確定を担う。cleanup 中に失敗した場合は state と branch を復元し、再実行可能性と rollback 結果をエラーとして報告する。session abandon の実行経路や cleanup・rollback 挙動を調べる際の入口。
+- `cmoc session abandon` の CLI 実装。active session を検証し、home branch へ切り替えた後に session state を abandoned として保存し、session branch を削除する。
+- cleanup 中に失敗・中断した場合は state と session branch を復元し、再実行可能な状態に戻せたかを含むエラー情報を返す。
 
 ## Read this when
-- session abandon サブコマンドの実装を変更・レビューするとき
-- active session の破棄、home branch への切替、session branch の削除の挙動を確認するとき
-- cleanup failure 時の session state と branch rollback を調査するとき
+- session abandon の事前条件、home branch への切替、session branch 削除、cleanup 失敗時の rollback 挙動を確認・変更するとき
+- session abandon の terminal result や primary report の更新内容を確認するとき
 
 ## Do not read this when
-- session の作成・再開・完了など、abandon 以外のサブコマンドの実装を調べるとき
-- session の一般的な状態定義や branch model の正本仕様だけを確認したいとき
-- CLI 共通実行基盤や primary report 更新の共通実装を直接確認したいとき
+- session の作成・実行・完了など、abandon 以外のライフサイクル処理を確認するとき
+- branch モデルや state ファイル形式そのものの正本仕様を確認するときは、対応する oracle 文書を直接読む
 
 ## hash
-- b3cdcb0356f351024191dba2d8fd41285dc05d6f9eb5256c95940d3d1fcac70f
+- 4ae2c8a1df21e91e62492ee37e9cebced2e19e6a0cbf6f26ad8f2ea3b82f4b2d
 
 # `fork.py`
 

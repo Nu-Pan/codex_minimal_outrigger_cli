@@ -946,27 +946,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork、join、abandon の CLI 外部挙動を、session branch と永続 session state のライフサイクルとして一体的に検証する回帰テスト群。
-- fork による branch・state 作成、session-id 衝突、rollback、linked worktree、doctor preprocess を扱う。
-- abandon による home branch 復帰、state 更新、branch cleanup、競合時の rollback、dirty worktree や欠落 branch の拒否を扱う。
-- join による通常 merge、conflict resolution、対象外変更の拒否、linked worktree、state・feedback state の保持、cleanup warning、エラー出力を扱う。
-- CLI の成功・失敗結果、stderr/stdout、report、Git branch・worktree・file state を観測するため、session サブコマンドの外部契約や回帰を確認する際の入口となる。
+- session fork、join、abandon の CLI 外部挙動と session branch/state のライフサイクルを、通常経路・失敗時の rollback・競合・linked worktree・dirty worktree 拒否まで含めて検証する回帰テスト。
+- session CLI の状態遷移、永続 state cleanup、home branch との切替、conflict resolution の sandbox と対象差分制約を確認する必要がある場合の入口。
 
 ## Read this when
-- session fork、join、abandon の外部挙動やライフサイクルを変更・検証するとき。
-- session branch、session state、linked worktree、state cleanup、dirty worktree 拒否の相互作用を調査するとき。
-- session join の conflict resolution、Codex の REPO_WRITE sandbox、対象外差分拒否、特殊な file path の扱いを確認するとき。
-- session CLI の stdout、stderr、終了コード、diagnostic report、Git branch の状態を含む回帰テストを確認するとき。
+- session fork、join、abandon の外部挙動を変更または調査するとき
+- session state の active・joined・abandoned 遷移や branch cleanup の回帰を確認するとき
+- linked worktree、dirty worktree、home branch 検証、session join の conflict resolution を扱うとき
 
 ## Do not read this when
-- session CLI 以外のサブコマンドだけを調査し、fork・join・abandon の状態遷移に関係しないとき。
-- session fork の実装詳細だけを確認する場合は、まず fork の実装または session fork 仕様を直接読むとき。
-- session abandon の実装詳細だけを確認する場合は、まず abandon の実装または session abandon 仕様を直接読むとき。
-- session join の conflict resolution 実装や prompt 仕様だけを確認する場合は、まず join 実装または conflict resolution の仕様を直接読むとき。
-- 単一の共通テスト fixture や CLI 実行ヘルパーだけを調査し、このテスト群が検証する session 状態遷移を扱わないとき.
+- CLI 以外の session 内部実装だけを調べるとき
+- session state の正本仕様やサブコマンド単体の仕様を確認する場合は、先に対応する oracle 仕様を読むとき
+- 一般的な CLI テスト基盤や session と無関係なコマンドの挙動を調べるとき
 
 ## hash
-- ac4c74d7159dcaf3dd28087b726a9d0ac3e8e4ea58540d46198128a8aebd3c91
+- 9b8d29d1442451d67c21b00b3354d089f6379ad38c85ac6dd0aa716f3fd6b6d1
 
 # `test_skill_metadata.py`
 

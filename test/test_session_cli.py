@@ -554,6 +554,31 @@ def test_session_abandon_requires_existing_home_branch(
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
 
 
+def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """dirty worktree拒否でも既知のsession report fieldを保持する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "README.md").write_text("dirty\n")
+
+    result = runner.invoke(app, ["session", "abandon"])
+
+    assert result.exit_code != 0
+    rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert f'home_branch: "{home_branch}"' in rendered_report
+    assert f'abandoned_branch_start_commit: "{session_commit}"' in rendered_report
+    assert 'session_state_before: "active"' in rendered_report
+    assert "session_state_after: null" in rendered_report
+
+
 def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

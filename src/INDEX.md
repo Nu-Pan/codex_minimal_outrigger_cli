@@ -120,17 +120,15 @@
 # `sub_commands`
 
 ## Summary
-- src/sub_commands は、cmoc のサブコマンド実装群への入口です。doctor、feedback、indexing、oracle、realization、run、session、tui などの個別実装と、未実装の apply や review の配置を確認できます。各サブコマンド固有の実行フロー、状態操作、レポート、下位処理を調査する際のルーティング起点です。
+- CLI サブコマンド実装群の入口。apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui の各サブコマンドへ進むための構成と、サブコマンド固有の実行フローを扱う。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成や、対象サブコマンドの実装入口を特定するとき。
-- 複数のサブコマンドにまたがる CLI 実装の配置や責務分担を確認するとき。
-- oracle、realization、run など、配下に複数の実装領域を持つサブコマンド群の構成を把握するとき。
+- CLI サブコマンド全体の構成や、対象サブコマンドの実装入口を確認するとき。
+- 複数のサブコマンドにまたがる実装配置や、各サブコマンド配下の担当範囲を判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理や仕様を確認したいときは、該当する下位実装または仕様文書を直接読む。
-- CLI 共通 runtime、prompt 編集、ACP builder、feedback の共通仕様など、サブコマンド外の共通実装を直接調査するとき。
-- INDEX.md の生成規則や、サブコマンド以外の実装を調査するとき。
+- 特定サブコマンドの詳細処理、共通ランタイム、prompt、仕様文書だけを確認したいときは、該当する下位実装または共通対象を直接読む。
+- INDEX.md の生成規則や個別ファイルの内容だけを確認するとき。
 
 ## hash
-- abf0c2e8449c69125d67bbf0fdb00377f6bc8105f158faac8c787bb407451259
+- 91a6f3180776ed4276730de94206a82fcdee13b0d507ed7602c8be7b8b74213e
