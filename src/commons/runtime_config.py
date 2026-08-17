@@ -92,8 +92,6 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "model_providers": model_providers,
             "model": model,
             "reasoning_effort": reasoning_effort,
-            # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
-            "num_try_falv_recovery": _config_int(config.codex.num_try_falv_recovery),
         },
         "oracle_review": {
             "num_enumerate_findings_loop": _config_int(
@@ -265,11 +263,6 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
                 model_providers=model_providers,
                 model=model,
                 reasoning_effort=reasoning_effort,
-                num_try_falv_recovery=_int_value(
-                    codex_data,
-                    "num_try_falv_recovery",
-                    default.codex.num_try_falv_recovery,
-                ),
             ),
             oracle_review=CmocConfigOracleReview(
                 num_enumerate_findings_loop=_int_value(

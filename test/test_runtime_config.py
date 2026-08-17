@@ -50,7 +50,6 @@ def test_config_defaults_match_logical_model_classes() -> None:
         ReasoningEffort.XHIGH: "xhigh",
         ReasoningEffort.MAX: "max",
     }
-    assert config.codex.num_try_falv_recovery == 1
     assert config.oracle_review.num_enumerate_findings_loop == 2
     assert config.oracle_review.num_merge_findings_loop == 2
     assert config.oracle_review.num_validate_findings_loop == 2
@@ -69,7 +68,6 @@ def test_config_json_preserves_oracle_member_order() -> None:
         "model_providers",
         "model",
         "reasoning_effort",
-        "num_try_falv_recovery",
     ]
     assert list(data["codex"]["model"]) == [
         "mainstream",
@@ -116,7 +114,6 @@ def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
                     }
                 },
                 "reasoning_effort": {"low": "deliberate"},
-                "num_try_falv_recovery": 4,
             },
             "oracle_review": {
                 "num_enumerate_findings_loop": 3,
@@ -325,8 +322,6 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
     [
         {"num_parallel": True},
         {"num_parallel": "3"},
-        {"codex": {"num_try_falv_recovery": True}},
-        {"codex": {"num_try_falv_recovery": "1"}},
         {"oracle_review": {"num_enumerate_findings_loop": False}},
         {"oracle_review": {"num_enumerate_findings_loop": "2"}},
         {"oracle_review": {"num_merge_findings_loop": True}},
@@ -441,9 +436,9 @@ def test_config_to_dict_rejects_unusable_in_memory_model_name(model: str) -> Non
         config_to_dict(config)
 
 
-def test_config_preserves_codex_falv_recovery_try_count() -> None:
-    """codex の recovery 試行回数を読み込みと JSON 化の両方で保持する。"""
-    config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
+@pytest.mark.parametrize("value", [4, True, "1", None])
+def test_config_drops_legacy_codex_falv_recovery_try_count(value: object) -> None:
+    """廃止済みの recovery 試行回数を config JSON の公開面から除外する。"""
+    config = config_from_dict({"codex": {"num_try_falv_recovery": value}})
 
-    assert config.codex.num_try_falv_recovery == 4
-    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 4
+    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]

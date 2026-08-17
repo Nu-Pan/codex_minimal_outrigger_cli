@@ -399,21 +399,23 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の統合テスト群。CLI と直接呼び出しの双方を通じて、repository/worktree の修復 lifecycle、修復順序、共有 lock、reporter の degraded/error handling、Git index・staged/unstaged 差分・rename・symlink の保持または拒否、config・refactor state・agents・ignore の同期と repair commit を検証する。doctor preprocess の外部契約を確認するための一つの入口であり、個別実装の詳細や一般的な CLI テストの入口ではない。
+- doctor preprocess の CLI 実行と直接呼び出しを通じて、`.cmoc/gu` の ignore・untrack、`.agents/.gitkeep`、runtime config、refactor state の修復 lifecycle を統合的に検証するテスト。
+- reporter の事前検証、degraded warning、予期しないエラーや中断、共有 repository lock の待機を扱う。
+- 修復 commit が既存の staged index、unstaged hunk、index flag、intent-to-add、rename、削除を保持し、利用者変更を取り込まないことを検証する。
+- linked worktree では repository root と current worktree の修復対象を分離し、生成物の追跡・ignore・ログ配置を確認する。doctor preprocess の外部契約をまとめて読むための統合テスト入口である。
 
 ## Read this when
-- doctor preprocess の外部挙動、修復対象（.cmoc/gu、.agents、config、refactor state、.gitignore）の lifecycle を変更または検証するとき
-- doctor preprocess が repository root と linked worktree をどう使い分けるか、共有 lock や reporter probe の失敗・中断をどう扱うか確認するとき
-- doctor の repair commit が既存の staged index、unstaged hunks、index flags、intent-to-add、rename、staged deletion を保持する契約を確認するとき
-- config 同期、refactor state 同期、agents の安全な修復、既存の .cmoc/gu の untrack に関する統合的な回帰を調査するとき
+- doctor preprocess の外部挙動、修復順序、CLI と直接呼び出しの lifecycle を確認するとき
+- Git index の保持、repair commit の対象、既存 staged/unstaged 変更の分離を調べるとき
+- `.cmoc/gu`、`.agents`、config、refactor state、linked worktree、reporter、共有 lock の連携を一度に検証するとき
 
 ## Do not read this when
-- doctor preprocess 以外のサブコマンドの挙動だけを調べるとき
-- 単一の実装関数の内部ロジックを直接確認する必要があり、その関数に対応する実装・正本仕様を直接読む方が適切なとき
-- 一般的な Git index 操作や fixture helper の実装だけを調べるとき
+- doctor 実装内部の個別関数の詳細や単体ロジックだけを調べるとき
+- reporter、Git helper、config、refactor state など単一要素の仕様や実装を直接確認するとき
+- doctor preprocess 以外の CLI サブコマンドの挙動を調べるとき
 
 ## hash
-- 4d32042e03a7f0f29bd003106ef38ebd7df14931cda5436900ee045dae84ad36
+- f7fc57ae363f853e3c0844054398b440a3997e51f945415cbc609301cdc46882
 
 # `test_editing_run_cli.py`
 
@@ -824,22 +826,21 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig と config_from_dict/load_config/write_config/config_to_dict の挙動を検証するテスト。既定値、JSON 永続化、設定ファイル不在・破損・非通常ファイルのエラー、入力型・値・深さの検証、provider-local 設定の保持、UTF-8 や symlink/named pipe 境界を扱う。設定処理やエラー処理の実装・仕様を確認する際のテスト入口であり、個別の CLI 機能や一般的なテスト実行方法を調べる対象ではない。
+- CmocConfig の既定値、JSON 永続化、読み込み・書き込み境界、入力検証を検証するテスト群。論理 model class と reasoning effort の既定値や定義順、設定ファイルの round-trip、欠落・破損・過度なネスト・不正なパスのエラー変換を扱う。
+- Codex の model provider、model spec、provider-local settings、oracle review の設定について、型・値・JSON/TOML 表現の妥当性、不正な値の拒否、互換性のための廃止項目の除外を確認する。
+- 設定ランタイム実装や設定仕様の変更時に、対応する外部挙動と安全なファイル境界を確認するための入口となる。
 
 ## Read this when
-- CmocConfig の既定値、model class と reasoning effort の対応、codex recovery 回数、oracle review の loop 回数を確認するとき
-- config.json の読み込み・書き込み・JSON 化、設定不在や破損時の利用者向けエラーを確認するとき
-- model provider、model spec、reasoning effort、各 section、整数項目、provider-local 値の入力検証を変更または検証するとき
-- 設定パスの symlink、named pipe、ディレクトリなど非通常ファイルに対する安全な境界挙動を確認するとき
+- CmocConfig の既定値、設定の JSON 化・復元、config.json の読み書き挙動を変更または調査するとき。
+- model provider、model 名、reasoning effort、oracle review 回数、provider-local settings の入力検証やエラー処理を変更するとき。
+- 設定パスの symlink・named pipe・非通常ファイル、破損 JSON、過度なネストなどの境界挙動を確認するとき。
 
 ## Do not read this when
-- 設定処理の実装詳細そのものを読む場合は、対応する oracle implementation を直接読むとき
-- 設定仕様全体やエラー分類の正本を確認する場合は、関連する app_spec 文書を直接読むとき
-- 設定処理と無関係な CLI 機能、実行フロー、または別のデータ構造のテストを調べるとき
-- テストスイート全体の実行手順や品質検査の選択だけを確認するとき
+- 設定の実装詳細や正本仕様そのものを確認する必要がある場合は、先に config 実装または設定仕様の対象を直接読む。
+- CmocConfig や設定ファイルの挙動に関係しない CLI 機能、他のデータ形式、一般的なテスト基盤だけを調査するとき。
 
 ## hash
-- 2242fc73c5ac4a3709474108baf14695766033cc75f47a8e1bed145a912c927c
+- 1cf5b26973c5cc169cbd899ae29c4fee3511a7aa2e0215dd7f48a8f07d822f0e
 
 # `test_runtime_content.py`
 
