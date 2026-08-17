@@ -1399,9 +1399,9 @@
   },
   "test/test_primary_report.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "857fe36a6a88fe237923be578e14373719d6c55667d2f6620d72bc48830eb9d9",
+    "last_investigated_at": "2026-08-17_21-40_24_552802000"
   },
   "test/test_production_cli.py": {
     "investigation_required": true,

@@ -682,24 +682,20 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話末端サブコマンドにおける primary report と terminal result の完了契約を検証するテスト。
-- 処理開始前のエラーについて、サブコマンド固有の保存先、必須 front matter、error 分類、診断内容、終了コードを複数のサブコマンド種別で確認する。
-- `feedback report` と `realization refactor fork` のユーザー中断について、user_interruption 分類、中断理由、部分結果、completion_reason、publication 状態を確認する。
-- primary report の保存未確認時に、report path を表示せず internal failure として終了し、サブコマンドログへ結果を記録することを確認する。
+- 非対話末端サブコマンド実行時に、primary report の保存完了契約を検証する pytest。doctor、indexing、session、oracle、realization、run、feedback report の早期エラーを対象に、固有の保存先、必須 front matter、terminal classification、exit code、診断ログを確認する。ユーザー中断時の invocation summary、refactor の中断理由、未保存 report に対する internal failure も検証する。
 
 ## Read this when
-- 非対話サブコマンドの早期エラー時に primary report を保存する処理を確認・変更するとき。
-- `feedback report` または `realization refactor fork` のユーザー中断時の report と terminal result の処理を確認・変更するとき。
-- primary report 保存失敗時の internal failure、path 非表示、サブコマンドログ記録を確認・変更するとき。
-- `run_cli_subcommand` の report 確定、terminal result 表示、または終了契約を変更するとき。
+- 非対話サブコマンドの事前条件エラー、中断、fallback report、primary report 保存確認を実装・変更・レビューするとき。
+- サブコマンド固有の primary report 保存先や必須 front matter の期待値を確認するとき。
+- doctor、indexing、session、oracle、realization、run、feedback report の完了契約を横断的に確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの正常完了時の report 本文や固有の業務結果だけを確認するときは、対応する `oracle/doc/app_spec/sub_command/` の仕様を直接読む。
-- console の時間表示、進行通知、一般的なサブコマンドログ形式だけを確認するときは、共通仕様を直接読む。
-- ユーザー中断の対象範囲や中断後の state・再開方法だけを確認するときは、`subcommand_interruption.md` と対象サブコマンド仕様を直接読む。
+- primary report の生成ロジック自体や、個別サブコマンドの通常成功処理だけを確認するとき。
+- 対象テストが扱う完了契約と無関係な CLI 機能、ドメイン処理、fixture を調べるとき。
+- Structured Output の出力形式や INDEX.md 自体を確認するとき。
 
 ## hash
-- 857fe36a6a88fe237923be578e14373719d6c55667d2f6620d72bc48830eb9d9
+- 499f5dc87bb5983f82e0100f4c7ef1d1e03675020a6bf38882787de81678bf92
 
 # `test_production_cli.py`
 

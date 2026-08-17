@@ -4,7 +4,17 @@
 - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 - {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/
+- {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/indexing.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
 """
 
 import json
@@ -201,15 +211,20 @@ def test_early_error_saves_command_specific_primary_report(
     monkeypatch.chdir(root)
     _disable_external_completion(monkeypatch)
 
-    def fail_before_command_body() -> None:
-        """doctor preprocess または共通事前条件での終了を再現する。"""
+    def fail_precondition(_runtime_root: Path) -> None:
+        """doctor preprocess 後の共通事前条件での終了を再現する。"""
         raise CmocError("early failure", ["retry command"], "early detail")
+
+    def command_body_must_not_start() -> None:
+        """事前条件の失敗後にサブコマンド本体を開始しないことを検証する。"""
+        pytest.fail("command body started after precondition failure")
 
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
-            fail_before_command_body,
+            command_body_must_not_start,
             command_name=command_name,
             command_argv=("cmoc", *command_name.split(), "--scope", "all"),
+            pre_log_check=fail_precondition,
             doctor_preprocess=False,
         )
 
