@@ -93,6 +93,7 @@ _EARLY_ERROR_REPORTS = [
             "run_worktree",
             "state_before",
             "state_after",
+            "completion_reason",
             "diff_base_commit",
             "codex_returncode",
             "changed_paths",
@@ -246,6 +247,7 @@ def test_early_error_saves_command_specific_primary_report(
     if command_name == "realization refactor fork":
         assert 'completion_reason: "error"' in front_matter
     if command_name == "realization apply fork":
+        assert 'completion_reason: "error"' in front_matter
         assert "feedback_observation_count: 0" in front_matter
         assert "feedback_observations: []" in front_matter
     if command_name == "feedback report":

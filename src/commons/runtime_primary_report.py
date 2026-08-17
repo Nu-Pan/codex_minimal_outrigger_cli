@@ -200,6 +200,11 @@ def _report_fields(
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
         # report fallback 自体が作られる終了経路でも、共通分類と reason を一致させる。
         known["completion_reason"] = classification
+    if command_name == "realization apply fork" and classification == "error":
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # apply の共通 fork report は error 終了理由を必須項目として持つ。
+        # run 開始前の fallback では個別 report が reason を渡せないため補う。
+        known["completion_reason"] = "error"
     if command_name == "oracle review":
         known.setdefault("scope", _option_value(command_argv, "--scope"))
         known["result"] = (
