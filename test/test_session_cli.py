@@ -554,6 +554,85 @@ def test_session_abandon_requires_existing_home_branch(
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
 
 
+def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """home branch の検証後に local ref が消えても remote branch へ切り替えない。
+
+    根拠:
+    - {{work-root}}/oracle/doc/branch_model.md
+    - {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    state_path = session_state_path(root, session_branch)
+    home_branch = session_home_branch(root, session_branch)
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
+
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "--bare", str(remote)],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    run_git(root, "remote", "add", "origin", str(remote))
+    run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
+    run_git(root, "config", "checkout.defaultRemote", "origin")
+
+    original_branch_exists = session_module.branch_exists
+    home_deleted = False
+
+    def delete_home_after_validation(repository: Path, branch: str) -> bool:
+        """home branch の存在確認直後に local ref が消える競合を再現する。"""
+        nonlocal home_deleted
+        exists = original_branch_exists(repository, branch)
+        if branch == home_branch and not home_deleted:
+            assert exists
+            run_git(repository, "branch", "-D", home_branch)
+            home_deleted = True
+        return exists
+
+    monkeypatch.setattr(session_module, "branch_exists", delete_home_after_validation)
+
+    result = runner.invoke(app, ["session", "abandon"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == session_branch
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == home_commit
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/heads/{home_branch}"],
+            root,
+            check=False,
+        ).returncode
+        != 0
+    )
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/remotes/origin/{home_branch}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/heads/{session_branch}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
+    assert json.loads(state_path.read_text())["session"]["state"] == "active"
+    assert "git switch --no-guess" in result.stderr
+
+
 @pytest.mark.parametrize(
     "cleanup_error",
     [

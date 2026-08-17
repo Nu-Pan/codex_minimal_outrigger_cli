@@ -137,19 +137,19 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の fork、join、abandon と、それらに共通する session 実装の構成を確認する際の入口となる。
+- session サブコマンド群の実装を扱うパッケージで、fork・join・abandon など session 操作の個別実装を確認する入口。各実装は branch 操作、session state 更新、事前条件、失敗時の rollback、terminal result などを担う。
 
 ## Read this when
-- session サブコマンドの実装構成や、fork・join・abandon のいずれかの処理を確認・変更するとき
-- session のライフサイクルに関する CLI 実行経路を調査するとき
+- session サブコマンドの実装や構成を確認・変更するとき
+- session の fork、join、abandon に固有の実行フローや branch・state 操作を調査するとき
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき
-- session state のデータ構造や共通 runtime API の仕様だけを確認するときは、それらを定義する対象を直接読むとき
-- 個別の session サブコマンドの挙動を確認する場合は、このディレクトリ全体ではなく該当する実装ファイルを直接読むとき
+- session state の正本仕様や一般的な branch model だけを確認したいとき
+- CLI 共通実行基盤、Codex 実行、prompt 生成などの共通実装を直接確認するとき
 
 ## hash
-- 92b1fee4ce021cc20f2a2f95cbf226c484da7af32ee90e20059d4437703d9342
+- 7075c6fcab59b4ff60e9e3957be48cf3ec8016f61f0909f93623d3a5cf7621c1
 
 # `tui.py`
 

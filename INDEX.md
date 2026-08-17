@@ -126,38 +126,36 @@
 # `src`
 
 ## Summary
-- `src` は cmoc CLI の実行側コードを集約するディレクトリです。Typer による最上位 CLI、互換 import 入口、共通 runtime helper、CLI サブコマンド実装、ACP builder 群を扱います。
-- `main.py` が CLI の最上位入口として各サブコマンドを登録し、`sub_commands` 配下の実装へ振り分けます。`commons` は共通 runtime、`acp` は ACP builder、`basic`・`config`・`cmoc_runtime.py`・`oracle.py` は互換 import または package shim の入口です。
-- 特定の処理を詳しく調査する場合は、CLI 登録と互換境界を確認する必要があるときだけ `main.py` や各 shim を入口として読み、実際の処理は `commons`、`acp`、`sub_commands` などの該当する下位要素へ進みます。
+- src は cmoc の realization 側 Python パッケージ群と CLI 最上位入口をまとめる領域です。互換公開入口、共通 runtime、設定・oracle shim、Typer CLI、サブコマンド実装を確認し、具体的な処理は直下の各要素へ進むための起点になります。
+- 直下には acp、basic、commons、config、sub_commands などの公開・共通・サブコマンド領域と、main.py、oracle.py、cmoc_runtime.py などの互換または起動入口があります。
 
 ## Read this when
-- cmoc CLI の最上位コマンド構成、起動入口、Typer/Click 互換処理を確認するとき
-- CLI サブコマンド実装、ACP builder、共通 runtime helper の配置と下位要素への進み先を判断するとき
-- `acp.*`、`basic.*`、`config.*`、`cmoc_runtime`、`oracle.*` の互換 import 経路や package shim の存続範囲を確認するとき
-- `src` 起動時の CLI 登録層と、実際のサブコマンド・runtime 実装の責務境界を調査するとき
+- cmoc の realization 側実装全体の構成と、調査対象を直下のどの領域へルーティングするか確認するとき
+- CLI の起動入口、互換 import、共通 runtime、設定公開、サブコマンド実装の配置を横断して把握するとき
+- src 配下で新しい実装や参照箇所を探し、個別の下位モジュールへ進む前の入口を判断するとき
 
 ## Do not read this when
-- 特定サブコマンドの業務ロジックや lifecycle を調査するときは、対応する `sub_commands` 配下を直接読む
-- 特定の runtime helper の内部挙動を調査するときは、対応する `commons` 配下の実装を直接読む
-- ACP builder の具体的な入出力や内部処理を調査するときは、対応する `acp/builder` 配下を直接読む
-- ACP 型、設定型、正本モジュール、正本仕様の詳細を確認するときは、各再公開元または `oracle` 側の対象を直接読む
-- `src` の CLI、互換入口、共通 runtime と無関係な処理を調査するとき
+- 特定サブコマンド、runtime helper、ACP builder、設定型、または互換 shim の具体的な挙動を調査するときは、対応する直下要素や下位実装を直接読む
+- 正本仕様や oracle 側の実体実装を確認するときは、src ではなく対応する oracle の仕様・実装を直接読む
+- src 配下と無関係な仕様、テスト、補助資料だけを調査するとき
 
 ## hash
-- 48b98c99a8a3a65e7523693eb652db31c9e6b56ab9c5a386e0ec9cd9bd548c94
+- 08d438d755a862fb51c897650fd5f0064bc19d3d399e35355f7af67acc8ffb48
 
 # `test`
 
 ## Summary
-- cmoc の realization test 一式を収録するディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、indexing、oracle review、session/run state、Git・path 境界、prompt、通知、report などの外部挙動と回帰条件を検証する。個別機能の実装変更時に、対応する test ファイルへ進むための入口。
+- `test` 配下の realization test、共通 fixture、テスト補助を集約し、cmoc の CLI・Codex runtime・indexing・session・oracle・realization・feedback・設定・Git/worktree などの外部挙動と回帰条件を検証する。個別機能の変更時に該当テストへ進むための入口である。
 
 ## Read this when
-- cmoc の実装・仕様変更に伴い、影響する外部挙動や回帰テストの所在を特定するとき
-- CLI、Codex 実行、indexing、oracle review、session、realization、runtime state などの検証対象を横断して探すとき
+- 実装変更や回帰調査で、対象機能の外部契約を検証する test file を特定するとき
+- pytest の共通 fixture、テスト用 repository、subprocess、Codex double、fake external command の利用方法を確認するとき
+- 複数のテスト領域にまたがる CLI lifecycle、状態遷移、ログ、report、worktree の検証範囲を把握するとき
 
 ## Do not read this when
-- 正本仕様や実装そのものを確認することが目的で、対応する oracle 文書・実装ファイルを直接読む方が適切なとき
-- テスト対象と無関係な機能や、一般的なテスト実行手順だけを確認するとき
+- 正本仕様、schema、prompt、設計意図、実装本体の詳細を確認することが目的のときは、対応する oracle 文書や実装ファイルを直接読む
+- 対象テストや共通 helper が明確なときは、このディレクトリ全体ではなく該当ファイルへ直接進む
+- 通常の pytest 実行手順だけを確認するときは、repository local の test execution 文書を直接読む
 
 ## hash
-- 1b69f2b29939eaeffbad37fc4b6dc7df1d8ae529ceced7620530462ff532961e
+- 9e6a7dea538ef743141cbdbb34880697f9d2e07bdc390b6e4a1e511da4253b2f

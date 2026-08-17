@@ -65,7 +65,10 @@ def _cmoc_session_abandon_body() -> TerminalResult:
     update_primary_report_fields(abandoned_branch_start_commit=session_commit)
     start_subcommand_step(3, "session をクリーンアップ", "cleanup session")
     try:
-        run_git(["switch", home], work)
+        # {{work-root}}/oracle/doc/branch_model.md
+        # session home branch は local branch なので、確認と切替の間に local ref が
+        # 消えても同名 remote-tracking branch を別の home branch として推測しない。
+        run_git(["switch", "--no-guess", home], work)
         state.session.state = "abandoned"
         write_state(path, state)
         update_primary_report_fields(session_state_after="abandoned")

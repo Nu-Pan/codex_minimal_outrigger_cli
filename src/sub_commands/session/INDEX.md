@@ -15,20 +15,20 @@
 # `abandon.py`
 
 ## Summary
-- `session abandon` の CLI 実行経路を定義し、active session の事前条件確認、home branch への切り替え、session state の abandoned 化、session branch の削除を扱う。cleanup 中に失敗した場合は state と branch を復元して再実行可能にするため、session abandon の実装挙動や失敗時 rollback を確認する際の入口となる。
+- active な session を home branch へ merge せず破棄する CLI サブコマンドの実装。session branch 上での事前条件確認、clean worktree と home branch の検証、home branch への切替、session state の abandoned 化、session branch の削除、terminal result の確定を担う。cleanup 中に失敗した場合は state と branch を復元し、再実行可能性と rollback 結果をエラーとして報告する。session abandon の実行経路や cleanup・rollback 挙動を調べる際の入口。
 
 ## Read this when
-- `cmoc session abandon` の実装や外部挙動を確認するとき
-- session branch の破棄、home branch への切り替え、session state の更新を調査するとき
-- cleanup 失敗時の state・branch rollback とエラー報告を確認するとき
+- session abandon サブコマンドの実装を変更・レビューするとき
+- active session の破棄、home branch への切替、session branch の削除の挙動を確認するとき
+- cleanup failure 時の session state と branch rollback を調査するとき
 
 ## Do not read this when
-- session の開始や再開など、abandon 以外のライフサイクル処理を確認するとき
-- 一般的な Git branch 操作や、session に依存しない CLI 共通処理を確認するとき
-- abandon の具体的な実装ではなく、session state のデータ構造や共通 runtime API の仕様を確認するとき
+- session の作成・再開・完了など、abandon 以外のサブコマンドの実装を調べるとき
+- session の一般的な状態定義や branch model の正本仕様だけを確認したいとき
+- CLI 共通実行基盤や primary report 更新の共通実装を直接確認したいとき
 
 ## hash
-- cf1ab013e06c19645c074e980fc6fc318ff0dd6cf3c9ffa15fb50667ec104582
+- b3cdcb0356f351024191dba2d8fd41285dc05d6f9eb5256c95940d3d1fcac70f
 
 # `fork.py`
 

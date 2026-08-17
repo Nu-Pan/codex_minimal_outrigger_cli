@@ -946,21 +946,27 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork、join、abandon の CLI 外部挙動を、session branch・session state のライフサイクルとして一体的に検証する回帰テスト。branch 作成・切替・削除、state の active／joined／abandoned 遷移、失敗時の rollback、session-id collision、linked worktree、dirty worktree 拒否を扱う。
-- session join では、conflict resolution の Codex 呼び出し境界、REPO_WRITE sandbox、conflict marker・特殊 path・削除・file mode・対象外 file の差分検証、merge 後の cleanup と診断出力を確認する。session CLI の実装挙動や app_spec の session lifecycle・subcommand 契約を変更または検証するときの入口であり、個別の Git helper や conflict resolver の単体挙動だけを調べる場合は、対応する実装・単体テストを直接読む。
+- session fork、join、abandon の CLI 外部挙動を、session branch と永続 session state のライフサイクルとして一体的に検証する回帰テスト群。
+- fork による branch・state 作成、session-id 衝突、rollback、linked worktree、doctor preprocess を扱う。
+- abandon による home branch 復帰、state 更新、branch cleanup、競合時の rollback、dirty worktree や欠落 branch の拒否を扱う。
+- join による通常 merge、conflict resolution、対象外変更の拒否、linked worktree、state・feedback state の保持、cleanup warning、エラー出力を扱う。
+- CLI の成功・失敗結果、stderr/stdout、report、Git branch・worktree・file state を観測するため、session サブコマンドの外部契約や回帰を確認する際の入口となる。
 
 ## Read this when
-- session fork・join・abandon の外部挙動、session state のライフサイクル、linked worktree 対応、branch／state cleanup の rollback を確認するとき
-- session join の conflict resolution、Codex 実行時の prompt・FileAccessMode・repo root 境界、conflict path の安全な stage、不要差分の拒否を検証するとき
-- dirty worktree、missing home branch、state corruption、session-id collision、cleanup failure など session CLI の失敗時挙動や stderr／report 出力を確認するとき
+- session fork、join、abandon の外部挙動やライフサイクルを変更・検証するとき。
+- session branch、session state、linked worktree、state cleanup、dirty worktree 拒否の相互作用を調査するとき。
+- session join の conflict resolution、Codex の REPO_WRITE sandbox、対象外差分拒否、特殊な file path の扱いを確認するとき。
+- session CLI の stdout、stderr、終了コード、diagnostic report、Git branch の状態を含む回帰テストを確認するとき。
 
 ## Do not read this when
-- session CLI 以外のコマンドや、session state の正本仕様そのものを確認する場合
-- Git 操作 helper、Codex preflight、conflict resolver など個別実装の内部ロジックだけを調査する場合
-- session fork・join・abandon の外部契約に関係しないテスト fixture や一般的な CLI テスト支援を調べる場合
+- session CLI 以外のサブコマンドだけを調査し、fork・join・abandon の状態遷移に関係しないとき。
+- session fork の実装詳細だけを確認する場合は、まず fork の実装または session fork 仕様を直接読むとき。
+- session abandon の実装詳細だけを確認する場合は、まず abandon の実装または session abandon 仕様を直接読むとき。
+- session join の conflict resolution 実装や prompt 仕様だけを確認する場合は、まず join 実装または conflict resolution の仕様を直接読むとき。
+- 単一の共通テスト fixture や CLI 実行ヘルパーだけを調査し、このテスト群が検証する session 状態遷移を扱わないとき.
 
 ## hash
-- 2e88db8d2690cd166b692c49153157e3de111ddf99794c0661ad07c052c60da1
+- ac4c74d7159dcaf3dd28087b726a9d0ac3e8e4ea58540d46198128a8aebd3c91
 
 # `test_skill_metadata.py`
 

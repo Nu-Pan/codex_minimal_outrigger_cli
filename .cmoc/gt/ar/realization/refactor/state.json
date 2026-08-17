@@ -1147,9 +1147,9 @@
   },
   "src/sub_commands/session/abandon.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "4409f62cddd5b057e30bd1769b75c2bbddcfdcb40636b89b68e7075effa1c815",
-    "last_investigated_at": "2026-07-25_13-33_37_831257000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "cf1ab013e06c19645c074e980fc6fc318ff0dd6cf3c9ffa15fb50667ec104582",
+    "last_investigated_at": "2026-08-17_23-17_47_841475000"
   },
   "src/sub_commands/session/fork.py": {
     "investigation_required": true,
