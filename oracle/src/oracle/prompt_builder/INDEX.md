@@ -17,21 +17,20 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call 向けの完全な構造化プロンプトを組み立てる中心的なビルダー。パス由来の placeholder 定義を初期化し、補助定義との衝突を検査しながら、選択された各種 policy、caller 追加文面、作業概要・完了条件、最終的な placeholder 定義を所定の順序で統合する。
-- プロンプト生成の構成、policy の有効化条件、placeholder 定義の統合や衝突時の扱いを変更・調査するときの入口であり、個別 policy の本文や placeholder の型定義そのものを確認する場合は、対応する import 先を直接読む。
+- agent 向け完全プロンプトを、基礎規定・選択規定・目的・追加文面・placeholder 定義から構築する中核関数を扱う。各種 policy builder の組み込み、placeholder の競合検出、プロンプト内参照用の構造化を確認する入口であり、agent prompt の構成や policy の選択条件を変更・調査するときに読む。
 
 ## Read this when
-- agent call に渡す完全 prompt の全体構成や、各 policy・追加文面の組み込み順を変更または確認するとき
-- placeholder 定義の初期化、重複統合、異値衝突エラーの挙動を変更または確認するとき
-- file access mode、path context、各 policy フラグが prompt 生成へ与える影響を追跡するとき
+- agent call に渡す完全 prompt の構成順序や、fundamental policy・objective・placeholder の配置を変更するとき
+- 各種 oracle、realization、routing、file access、index entry policy を prompt へ組み込む条件を調査するとき
+- placeholder 定義の統合や同名定義の競合処理を変更・検証するとき
 
 ## Do not read this when
-- 特定の policy の文面や、その policy 固有の placeholder 定義だけを変更・確認するときは、対応する policy 実装を直接読む
-- StructDoc、StructBlock、FileAccessMode、AgentCallPathContext、PlaceholderMap の定義や仕様だけを確認するときは、それぞれの定義元を直接読む
-- 生成済み prompt の個別内容だけを確認し、prompt 全体の構成ロジックを調査しないとき
+- 個別 policy の本文や文面だけを変更・調査する場合は、該当する policy module を直接読む
+- prompt builder の基本型や placeholder 型の定義だけを確認する場合は、該当する basic module を直接読む
+- agent prompt の利用側や個別 agent の作業内容だけを調査し、完全 prompt の構築ロジックに関係しない場合
 
 ## hash
-- b7208f4b2f22f1ab03545bfad8801a78b3dabf8786905d8d7ae3b188f1aadb19
+- 2c6cd7c9867cae5feb897fd57055b7cbe8b0e95c3191e687f46d35a747286e07
 
 # `editor_input.py`
 

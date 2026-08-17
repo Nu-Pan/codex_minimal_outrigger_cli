@@ -1,20 +1,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の agent call 構築、完全 prompt 生成、共通モデル、パス解決、構造化文書変換、feedback 入力契約を扱う定義群の入口です。
-- agent call の共通パラメータや処理別設定を調査するときは `acp_builder` へ進み、prompt の統合や policy を確認するときは `prompt_builder` へ進みます。
-- リポジトリ設定・root placeholder・構造化文書ヘルパーは `other`、feedback reporter の入力契約は `feedback` で確認します。
+- cmoc の oracle 実装を構成する領域です。agent call パラメータ、feedback 入力契約、設定・パス・構造化文書の共通モデル、完全 prompt の構築を扱います。各責務の調査・変更時に、対応する下位ディレクトリへ進むための入口です.
 
 ## Read this when
-- cmoc の agent call 構築責務、処理別の prompt・アクセス制御・モデル設定の分割を確認するとき
-- agent call 用の完全 prompt、共通 policy、Structured Document の組み立てや Markdown 変換を調査するとき
-- agent call の cwd、work root、repository root、placeholder 解決規則を確認するとき
-- feedback reporter が collector に渡す問題入力の契約を確認するとき
+- oracle 関連の agent call 構築、prompt 構成、Structured Output、ファイルアクセス制御、作業ディレクトリ、indexing preflight を調査・変更するとき
+- feedback reporter の入力契約や、問題の構造化・検証を調査・変更するとき
+- cmoc 設定、root placeholder とパス解決、agent call の path context、構造化 Markdown 文書を調査・変更するとき
+- 完全 prompt、editor 入力文面、oracle・realization・feedback・routing などの policy の構成を調査・変更するとき
 
 ## Do not read this when
-- agent call の実行制御、終了結果の処理、または個別 CLI サブコマンドの挙動だけを調査するとき
-- 特定の処理の prompt 詳細、Structured Output schema、または policy 本文を直接確認したいとき
-- 実際の設定値や人間による調整結果だけを確認したいとき
+- oracle の実行制御や CLI の通常フローを調査するときは、呼び出し側の実装を直接読む
+- 個別の oracle file の正本仕様や、realization の実装・仕様を確認するときは、対象の oracle または realization 要素を直接読む
+- feedback の collector 側の保存・集約・重複判定だけを確認するときは、collector の実装を直接読む
+- Codex CLI 共通の実行仕様やモデル解決仕様だけを確認するときは、対応する実装または oracle 文書を直接読む
 
 ## hash
-- d7747309899db4398390f59ebe789862e5970d8279a7db051fe68ffa6f831b60
+- 46d402b708a8be8227ee68bc0b6a2517a6eb34c49f77ca4e0fb29fdd4b3251a9

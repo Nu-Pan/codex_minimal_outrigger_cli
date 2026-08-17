@@ -36,33 +36,46 @@
 # `other`
 
 ## Summary
-- cmoc の共通モデルと文書生成ヘルパーをまとめるディレクトリ。設定モデル、agent call のルートパス・placeholder 解決、構造化文章の Markdown／cmoc_block／コードブロック変換を扱い、それぞれの実装を確認する入口となる。
+- `cmoc_config.py` は、リポジトリ単位で変化する cmoc 設定のデータモデルと既定値を定義する。Codex CLI のモデル・provider-local 設定・推論 effort、AI 呼び出しの最大並列数、ファイルアクセス違反時のリカバリ試行回数、`cmoc oracle review` の各ループ上限、JSON/TOML 相当の値構造と JSON 永続化方針を確認する入口である。
+- `path_model.py` は、cmoc のルートパス placeholder と agent call のパスコンテキストを定義し、placeholder と実パスの相互変換、Git worktree からの cmoc・repository・work・run root の解決を提供する。agent call の cwd から導出される root や、相対パス表記の解決規則を確認する入口である。
+- `struct_doc.py` は、構造化された文書ノードを Markdown にレンダリングするためのクラスと処理を提供する。見出し深度、参照可能な `<cmoc_block>`、`<cmoc_ref>` を含む文書構造、コードフェンス、空行、インデント、バッククォートを含む本文の扱いを確認する入口である。
 
 ## Read this when
-- cmoc のリポジトリ固有設定や Codex CLI・oracle review の設定構造を変更するとき
-- agent call の work root・repository root・run root、または root placeholder の解決規則を確認・変更するとき
-- 構造化文書を Markdown に変換する処理、cmoc_ref の検証、cmoc_block やコードブロックの出力を確認・変更するとき
+- cmoc の設定項目、Codex CLI のモデル指定・provider-local 設定・推論 effort、並列数、アクセス違反時のリカバリ回数を追加・変更・確認するとき
+- `cmoc oracle review` の所見列挙・マージ・検証ループの上限や設定構造を確認するとき
+- 設定値の JSON 永続化、Enum 値の保存、既定の設定構成を確認するとき
+- `{{cmoc-root}}`、`{{repo-root}}`、`{{work-root}}`、`{{run-root}}` の意味や解決規則を確認するとき
+- agent call の cwd から worktree root と repository root を導出する処理、または call-scoped path context を変更するとき
+- root placeholder を含むパスと絶対パスの相互変換、相対パスの入力制約を確認するとき
+- 構造化文書ノードの型や子要素、見出し深度、Markdown レンダリングの基本挙動を確認するとき
+- `<cmoc_block>` の生成、コードブロックの fence、空行の圧縮、インデント解除、バッククォートを含む本文のレンダリングを変更・確認するとき
 
 ## Do not read this when
-- 個別の CLI サブコマンドや oracle review の実処理そのものを確認したいとき
-- 設定ファイルに保存された実際の値や人間による調整結果だけを確認したいとき
-- このディレクトリのヘルパーを利用する個別機能の挙動を調べる場合に、その利用側の実装を直接確認すべきとき
+- Codex CLI の呼び出し処理や個別 CLI コマンドの責務を確認したいときは、呼び出し側の実装を直接読むべきである
+- `cmoc oracle review` のレビュー実行、所見生成、マージや検証のロジックを確認したいときは、その処理の実装を直接読むべきである
+- 設定ファイルの実際の保存内容や、人間が行った設定調整の結果だけを確認したいときは、生成された設定ファイルを読むべきである
+- 特定の CLI 機能が path model をどう利用するかを確認したいときは、その機能の実装や仕様を直接読むべきである
+- パス解決の正本モデルではなく、Markdown レンダリングを利用する上位機能の挙動だけを確認したいときは、その上位機能を直接読むべきである
+- cmoc ブロックの探索・展開やプロンプト生成など、Markdown レンダリング後の処理を確認したいときは、後段の実装を直接読むべきである
+- 正本仕様やテスト条件だけを確認したいときは、対応する仕様書またはテストを直接読むべきである
 
 ## hash
-- 5329eb514d8df585fe895d9179108f6b28a94bc10c6994d56d1ab5e3b462fcd0
+- 4e982a98c8dd00b036282bc7703ac8f729d415995cf1f053539584aed353a7ae
 
 # `prompt_builder`
 
 ## Summary
-- agent call 向けの完全な構造化プロンプトを組み立てる prompt_builder の構成要素を扱うディレクトリ。placeholder 型、完全 prompt の統合、エディタ入力、oracle／realization の説明文、共通 policy を確認するための入口であり、個別の実装や policy 本文へ進む前のルーティングに使う。
+- プロンプト構築関連の型定義、完全プロンプト生成、エディタ入力初期文面、oracle／realization 説明文、共通 policy 定義を扱うディレクトリ。agent call の prompt 構成や policy の組み込み、入力テンプレート、分類規則、文書ルーティング方針を調査・変更する際の入口になる。
 
 ## Read this when
-- agent call の prompt 構築全体、構成要素の統合順、placeholder、エディタ入力、oracle／realization の説明、共通 policy のいずれかを変更または確認するとき
-- prompt_builder 配下の特定要素を読むべき入口や、関連する policy・定義元を特定したいとき
+- agent call に渡す prompt の構成や policy の組み込みを調査・変更するとき
+- プレースホルダ表現、エディタ入力テンプレート、oracle／realization の分類説明、共通 policy のいずれかを扱うとき
+- prompt builder 配下で、対象の責務を担うモジュールや policy 定義への入口を特定したいとき
 
 ## Do not read this when
-- 特定の policy 本文、placeholder 型、StructDoc などの定義、具体的な prompt 生成ロジックだけを確認したいときは、該当する下位対象を直接読む
-- prompt_builder と無関係な CLI 実装、テスト、文書の仕様や挙動を調べるとき
+- 具体的な oracle file や realization file の仕様・実装挙動を直接確認することが目的のとき
+- 通常の CLI 実装、テスト、文書作成など、prompt builder の構築規則に関係しない作業のとき
+- 完全プロンプトの利用側や個別 agent の作業内容だけを調査するとき
 
 ## hash
-- 6a30eee20dedb7dffae138f5722f1f8724611fda0eb24586d4b73ab6a6be820d
+- 419427df979099bbddbcd4e7d915f5aa4dc1863d73a936997e237be040527381

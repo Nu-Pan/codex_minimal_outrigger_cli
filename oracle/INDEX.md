@@ -1,41 +1,37 @@
 # `doc`
 
 ## Summary
-- cmoc の正本文書群を分野別に案内する入口。アプリケーション挙動、branch・commit・worktree のモデル、採用しなかった代替案、開発ルールを扱い、個別の調査や変更では該当する下位文書へ進むために読む。
-- 現行仕様、設計・実装配置、開発環境、テスト要件・実行手順、または不採用案の背景を確認する際の領域横断的なルーティング起点。ただし各文書の詳細な契約や手順は下位文書に委譲する。
+- cmoc の正本文書を、CLI・workflow の挙動仕様、branch／commit／worktree のモデル、開発・テスト規則、採用しなかった設計案に分類して案内する最上位の入口。
+- アプリケーション仕様には共通契約と各サブコマンド仕様、開発ルールには実装・環境・テストの規則、branch model には session／run の分岐関係、検討資料群には不採用案の理由が収録されている。
 
 ## Read this when
-- cmoc の正本文書を調査・実装・レビューする際に、対象分野に対応する文書群の入口を選ぶとき
-- アプリケーション挙動、branch・commit・worktree、開発ルール、テスト、開発環境、または採用しなかった代替案の背景を確認するとき
-- 仕様、設計、実装、テスト、環境構築のどの正本文書へ進むべきか判断するとき
+- cmoc の正本文書を探しており、アプリケーション仕様、branch model、開発ルール、検討資料のどの領域から確認すべきか判断するとき
+- CLI や workflow の挙動、実装・環境・テストの開発規則、session／run の Git 構造、または不採用案の背景を調査するとき
 
 ## Do not read this when
-- 対象となる個別の仕様・設計規約・開発環境文書・テスト文書が既に特定できており、その本文を直接読む方が適切なとき
-- 具体的な CLI 挙動や実装配置、テスト実行手順など、下位文書が直接の確認先となるとき
-- INDEX.md の生成規約や、対象文書に含まれない一般的な開発情報だけを確認するとき
+- 確認対象の個別仕様、開発規則、branch model、または検討資料が明確で、その文書へ直接進めるとき
+- realization の具体的な実装・テストや、構築済み環境でのテスト実行手順だけを確認するとき
 
 ## hash
-- c86afb8faf011430f8c4943924ad416b3e469745de41b2289d99c6673877fe25
+- 3c27b89cc0385cee73e0673fe1904341e95ffa10b72a1929719b4d72cf5a3024
 
 # `src`
 
 ## Summary
-- cmoc の agent call 構築、完全 prompt の組み立て、共通モデル、パス解決、構造化 Markdown、設定、feedback 入力契約を扱う oracle 定義群の入口です。
-- agent call のパラメータ、処理別の起動定義、レビューや適用などの作業別構成を調べるときは acp_builder へ進みます。
-- prompt の統合、アクセス制御、各種 policy、エディタ入力を調べるときは prompt_builder へ進みます。
-- 設定値、root placeholder と worktree のパス解決、構造化文書の変換を調べるときは other へ進みます。
-- feedback reporter が受け取る問題入力の分類・根拠・継続状態の契約を調べるときは feedback へ進みます。
+- oracle の実装本体です。agent call の共通パラメータ、モデル・アクセスモード、設定、root placeholder を含むパス解決、Structured Markdown の構築、完全 prompt と各種 policy の組み立てを扱います。
+- `acp_builder` は feedback、indexing、oracle review、realization など用途別の agent call 起動パラメータを構築します。`prompt_builder` は共通 prompt と policy の構成要素を組み立てます。`other` は設定・パスモデル・構造化文書の共通基盤を提供します。
 
 ## Read this when
-- cmoc の agent call 構築責務と、モデル・推論強度・ファイルアクセス・cwd の共通定義を確認するとき
-- 完全 prompt の構成、policy の組み込み、placeholder の統合、Structured Document の Markdown 変換を確認するとき
-- repository root、work root、run root などの call-scoped なパス解決規則を確認するとき
-- feedback reporter へ渡す問題入力の形式と、人間対応が必要な問題の根拠項目を確認するとき
+- oracle の agent call パラメータや prompt の実装を調査・変更するとき
+- モデル、reasoning effort、ファイルアクセスモード、作業ディレクトリ、root placeholder の解決を調査・変更するとき
+- feedback 検証、index entry 生成、oracle review、realization fork など用途別 agent call の入力契約を調査・変更するとき
+- Structured Markdown、完全 prompt、oracle・realization・feedback・routing policy の組み立てを調査・変更するとき
 
 ## Do not read this when
-- agent call の実行制御、終了結果の処理、または個別 CLI サブコマンドの実装だけを調査するとき
-- 特定の作業に固有の prompt、policy、Structured Output schema を直接確認したいとき
-- 実際のリポジトリ設定値や、人間が行った設定調整の結果だけを確認したいとき
+- CLI の通常の実行制御やサブコマンドの呼び出し順だけを調査するときは、呼び出し側の実装を直接読む
+- 個別の oracle file や realization file の正本仕様を確認するときは、対応する oracle または realization 文書を直接読む
+- feedback の保存・集約・重複判定だけを確認するときは、collector 側の実装を直接読む
+- oracle 全体の責務や下位ディレクトリの選択だけを確認するときは、上位の案内を読む
 
 ## hash
-- 29777675f1eda92f9bc53995782f25af0680897d3e7bc139c3c50a3c1c713d41
+- 79a5a6ba0ca5912137d66ddf402fe250b1a724e293741f7a4423b262adeb225e

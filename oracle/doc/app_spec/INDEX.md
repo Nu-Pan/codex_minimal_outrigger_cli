@@ -239,21 +239,23 @@
 # `prompt_policy.md`
 
 ## Summary
-- cmoc が agent call 用 prompt を構築・受け渡しする際の責務境界と規定を定める文書。意味仕様、oracle src、実行時生成物の所有関係、prompt に含める情報、policy block の決定論的注入、Structured Output の受理条件、summary/goal の使い分け、placeholder と参照記法、言語方針を扱う。prompt builder や acp builder の仕様、policy 選択、agent 向け prompt の責務境界を確認する際の入口となる。
+- cmoc が agent call に渡す prompt の責務、情報量、文面管理、構築規定、および意味仕様・prompt 正本・実行時生成物の責務境界を定める。
+- prompt policy の各 block と flag の対応、必要な policy の決定論的注入、feedback instruction、Structured Output 契約、summary と goal の役割分担、prompt の記法・placeholder・参照関係・言語原則を扱う。
+- prompt builder と acp builder の oracle src を、agent に渡す正確な prompt 文面と起動パラメータの入口として位置づける。
 
 ## Read this when
-- agent call に渡す prompt の構築責務、正本の所在、または realization implementation の許容範囲を確認するとき
-- policy flag と prompt block の対応、routing policy や feedback instruction の注入条件を変更・調査するとき
-- Structured Output の schema・validator・prompt における受理条件の責務分担を確認するとき
-- summary と goal、placeholder、cmoc_block/cmoc_ref の構築規則を確認するとき
+- agent call の prompt に含める情報、参照先、権限制約、完了条件、出力契約を定める必要があるとき。
+- oracle doc・oracle src・realization implementation・実行時生成物の責務境界を確認するとき。
+- policy flag に対応する prompt block、routing policy、feedback reporting、Structured Output の schema と事後条件の境界を確認するとき。
+- summary と goal の記述責務、prompt 構築関数、placeholder、cmoc_block／cmoc_ref、GFM、日本語原則を確認するとき。
 
 ## Do not read this when
-- cmoc の意味仕様そのものを確認する場合は、ここではなく対応する oracle doc を直接読むとき
-- agent call 固有の正確な prompt 文面を確認する場合は、ここではなく oracle/src/oracle/prompt_builder または acp_builder を読むとき
-- 実行時に生成された prompt、skeleton、editor input の内容だけを確認したいとき
+- prompt policy の意味や prompt 構築規定を扱わず、個別の意味仕様、oracle file、または realization file の責務だけを確認するとき。
+- 実行時に生成された prompt、AgentCallParameter.prompt、skeleton、editor input、log を正本や編集元として扱う必要があるとき。
+- 単に agent call を実行するだけで、prompt の内容・policy 選択・Structured Output 契約を変更または検証しないとき。
 
 ## hash
-- 9ac7dd98f2338be028cf7ea815e2089f813afaa0e4af34afd73c669bad4cca98
+- dac07af71984638c734a46cba6a88fa153bbf8f0ed344bd82b5899cfdcff8f1c
 
 # `run_isolation.md`
 
