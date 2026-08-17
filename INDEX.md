@@ -126,21 +126,22 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 側実装をまとめる src ディレクトリ。最上位 CLI 入口、互換 import shim、共通 runtime、設定・ACP 公開入口、サブコマンド群へのルーティングを確認するための上位入口である。
-- CLI 起動とコマンド登録は main.py、共通実行基盤は commons、サブコマンド固有処理は sub_commands、互換公開入口は basic・config・acp・cmoc_runtime、正本パッケージ解決は oracle.py から下位要素へ進む構成になっている。
+- src は cmoc CLI の実装入口であり、最上位 CLI、互換 import shim、共通 runtime、ACP builder adapter、サブコマンド群を提供する。
+- CLI のコマンド登録と起動は main.py、共通実行基盤は commons、互換公開入口は acp・basic・config・cmoc_runtime.py・oracle.py、個別コマンドは sub_commands から確認できる。
+- sub_commands 配下には doctor、feedback、indexing、oracle、realization、run、session、tui の処理入口があり、コマンド固有の実装や下位処理へのルーティング起点になる。
 
 ## Read this when
-- cmoc の realization 側ソース全体の構成や、調査対象となる下位ディレクトリ・モジュールの入口を判断するとき
-- CLI の最上位入口、共通 runtime、互換 import、ACP builder、サブコマンド群の配置関係を確認するとき
-- 特定の実装へ進む前に、main.py・commons・sub_commands・各互換入口のどこを読むべきか切り分けるとき
+- cmoc CLI の最上位コマンド構成、起動入口、またはサブコマンド登録を確認したいとき。
+- ACP builder、互換 import、共通 runtime、またはサブコマンド群の担当領域を俯瞰し、下位対象への入口を選びたいとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかの処理入口を特定したいとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime helper、builder、互換 shim の具体的な実装や入出力を調査するときは、該当する下位要素を直接読む
-- oracle 側の正本仕様・実体実装や個別 adapter の詳細を確認するときは、対応する oracle 側の対象を直接読む
-- src 配下の構成把握を必要としない個別 API、参照削除、または無関係な処理を調査するときは、この上位入口を読む必要はない
+- 特定サブコマンドの業務ロジック、runtime helper、ACP adapter、または互換 shim の内部詳細を確認したいときは、対応する下位ファイルやディレクトリを直接読む。
+- canonical な oracle 実装、正本仕様、設定定義、または利用側ロジックを調査・変更するときは、src の入口ではなく対応する正本実装・仕様・参照元を直接読む。
+- src 配下の CLI、互換入口、共通 runtime、ACP builder、サブコマンドに該当しない処理を調査するとき。
 
 ## hash
-- dd9c41ad93cc24845fef6957541d5d464cc826a87d347007d353c0b9ac03ac5e
+- 2ee8decafd95384b03fd734d8282f1d1d5aa1d52bc9e83c493ef68eac58421ba
 
 # `test`
 

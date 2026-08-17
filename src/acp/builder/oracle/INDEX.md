@@ -29,23 +29,22 @@
 # `investigation`
 
 ## Summary
-- oracle investigation 用 builder adapter パッケージの入口。配下の builder adapter 構成と責務を確認し、下位実装へ進むための参照先。
-- oracle investigation の起動 TUI パラメータ builder を互換 import 経路として再公開するファイル。正本実装を確認せずに、既存経路で公開対象を参照したい場合の入口。
+- `cmoc oracle investigation` 用 builder adapter パッケージの入口であり、oracle investigation 向け builder 機能へ進む際の参照先です。
+- oracle investigation の正本 builder 関数を互換 import 経路として公開し、既存の `acp.builder.oracle.investigation.launch_tui` 利用箇所から正本実装へ接続します。oracle.* への移行完了後は削除対象です。
 
 ## Read this when
-- oracle investigation 用 builder adapter の構成や入口を確認するとき
-- 該当パッケージ内の下位実装へ進む前に責務を確認するとき
-- oracle investigation の起動 TUI パラメータ builder を既存の互換 import 経路から参照するとき
-- 互換経路が再公開する対象や範囲を確認するとき
+- oracle investigation 用 builder adapter の構成や入口を確認するとき。
+- 該当パッケージ内の下位実装へ進む前に責務を確認するとき。
+- 既存の `acp.builder.oracle.investigation.launch_tui` import 経路の互換性や、oracle investigation の `launch_tui` builder への移行状況を確認するとき。
 
 ## Do not read this when
-- builder adapter の具体的な実装詳細を確認したいとき
-- oracle investigation 以外の builder や ACP 実装を調べるとき
-- builder の処理内容や investigation 起動パラメータの仕様を確認・変更するとき
-- 正本実装を確認する必要があるときは、oracle investigation 側の正本 builder を直接読む
+- builder adapter の具体的な実装詳細を確認したいときは、下位実装を直接読む。
+- 正本の builder 実装や oracle investigation の仕様・挙動を確認したいときは、oracle 側の `launch_tui` 実装を直接読む。
+- oracle investigation 以外の builder や ACP 実装を調べるとき。
+- `acp.builder.oracle.investigation.launch_tui` の互換性を調べる必要がない一般的な oracle investigation の調査をするとき。
 
 ## hash
-- 50f8760e1258bc55a46aeda2cd8f311f5334e0e84ce888ac6f9c5df7cb81dc55
+- ee2b233b3a0171319a5425e67d6d5c88e7ef3c3f306281f8eba3a8a0996a918c
 
 # `review`
 
