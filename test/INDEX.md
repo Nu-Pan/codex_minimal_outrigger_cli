@@ -497,21 +497,22 @@
 # `test_indexing_common.py`
 
 ## Summary
-- `commons.indexing` の INDEX entry 生成と directory traversal を直接検証する回帰テスト群。入力検証、malformed entry の再生成、hash による entry 再利用、安定した描画順、空ディレクトリ、並列更新を扱う。
-- symlink cycle・symlink 化した INDEX.md・FIFO・非 UTF-8 ファイル名・literal `%`・linked worktree の lock path など、INDEX 更新が誤って辿る・書き込む・衝突する境界条件を検証する。
-- Codex worker の logger 伝播と、`pushd` 中に worker thread を作らない制約も確認する。CLI lifecycle ではなく `commons.indexing` の契約や traversal 実装を調べる際の直接テスト入口である。
+- `commons.indexing` の INDEX entry 生成・解析・hash 再利用と、directory traversal／INDEX 更新の直接テストをまとめたファイル。
+- malformed entry の再生成、部分書き込みの復元、空ディレクトリ・nested memo・symlink・特殊ファイルの扱い、安定順序、並列更新、logger 伝播、worktree 間 lock、非 UTF-8 ファイル名の hash を検証する indexing runtime 回帰の入口。
 
 ## Read this when
-- `commons.indexing` の INDEX entry の parse/render/update、hash 再利用、生成順序を変更または調査するとき
-- INDEX 更新の directory traversal、並列化、worker logger 伝播、cwd lock との相互作用を検証するとき
-- symlink、特殊ファイル、非 UTF-8 名、空ディレクトリ、linked worktree などの indexing 境界条件を確認するとき
+- `commons.indexing` の entry parse・render・hash・update_indexes の挙動を確認するとき
+- INDEX 更新における directory traversal、symlink／特殊ファイル除外、空ディレクトリ、nested memo の方針を確認するとき
+- INDEX entry 生成順序、部分更新失敗時の復元、並列実行、Codex event の logger 伝播、pushd 中の worker 制約を確認するとき
+- INDEX.md symlink の置換、非 UTF-8 filename の hash、linked worktree 間の indexing lock 共有を確認するとき
 
 ## Do not read this when
-- CLI の lifecycle や indexing サブコマンド全体の統合挙動だけを確認するとき
-- INDEX entry の正本仕様・Structured Output schema・生成 policy を確認するときは、対応する oracle 文書や policy 実装を直接読む
+- CLI lifecycle から見た indexing サブコマンド全体の統合挙動だけを確認するとき
+- INDEX entry の生成実装や traversal の正本仕様を確認するときは、対応する実装または oracle 文書を直接読むとき
+- indexing と無関係なテストや一般的な INDEX.md ルーティング規則を確認するとき
 
 ## hash
-- 2f5a9deccafdcf15bc22a2a9dae9447eec97d4f7a43f26102a02e8823dc3d6d1
+- 102cebfb2f9201db7108a7a2820a1053b2ade13caf5d88ebd8a2be3de27094ce
 
 # `test_indexing_preflight.py`
 
