@@ -1,52 +1,53 @@
 # `apply_review.py`
 
 ## Summary
-- oracle file と realization file の適合性を評価する agent 向け方針を定義する。oracle を正本仕様として扱い、realization の挙動から oracle の意味を変更しない原則、具体的根拠に基づく所見・修正判断、明確な不適合や致命的問題のみを修正対象とする基準をまとめる。oracle と realization の追従要否やレビュー所見を判断する際の入口となる。
+- oracle file と realization file の適合性を判定する agent 向け policy を構築する。oracle を正本仕様として扱い、明示要求と実装挙動の不整合、または realization 単独で説明できる実行不能・明白な致命的バグを修正対象とする判断の入口となる。
 
 ## Read this when
-- oracle file に対する realization file の適合性、追従要否、レビュー所見、修正対象を判断するとき
-- oracle と realization の権威関係や、所見の根拠・修正基準を確認するとき
+- oracle file に対する realization file の追従要否、所見、修正対象を判断するとき
+- oracle と realization の記述・挙動の不整合を、具体的な根拠に基づいて評価するとき
 
 ## Do not read this when
-- oracle または realization file の適合性判断を行わず、通常の実装・テスト・文書作成だけを行うとき
-- 具体的な挙動仕様そのものを確認する必要があり、対象の oracle file または realization file を直接読むべきとき
+- oracle file や realization file を扱わない prompt builder の実装を確認するとき
+- 仕様内容そのものを確認するときは、対象となる oracle file または realization file を直接読むとき
 
 ## hash
-- 719b5288852db477c8084e43ae647eab9feb3b3fb301ab91b673f49b97c5df55
+- b680af72b342011132bd2e281e87cf56a364fb956903067574c292924e69a704
 
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` の conflict marker 解消時に適用する conflict resolution policy の定義。oracle file を正本仕様断片として扱い、realization file から oracle file へ意味を逆流させない原則と、両 branch の意図・挙動を保って解消するための判断基準をまとめた入口。
+- `cmoc session join` で conflict marker を解消する際の、oracle と realization の意味を保つための指示文を構築する。conflict の両側と関連 oracle file の扱い、および意図を両立できない場合の未解消事項としての報告方針を確認する入口である。
 
 ## Read this when
-- `cmoc session join` で conflict marker を解消するとき
-- oracle file と realization file の関係を保ったまま conflict を解消するとき
-- 両 branch の意味を両立できず、人間による意図の選択が必要か判断するとき
+- `cmoc session join` の conflict marker 解消規定を確認・変更するとき。
+- oracle file と realization file の conflict を、正本仕様の意味を保ちながら解消するとき。
+- conflict の両側の意図を両立できず、人間による選択が必要な状態の扱いを確認するとき。
 
 ## Do not read this when
-- conflict marker の解消を伴わない通常の oracle／realization の編集や実装を行うとき
-- `cmoc session join` 以外の conflict 解消方針を確認するとき
-- oracle file の個別仕様や realization の実装挙動そのものを確認するとき
+- conflict marker の解消を扱わない prompt policy を確認するとき。
+- 通常の実装改善、仕様変更、整形、または別 file の変更方針を確認するとき。
 
 ## hash
-- e105db670ccdba7ced07a4c7e54bda543fccb86dba6d9f5c2b06a0ed67eb3a5a
+- 3544ddab9ff843f261bec0d73e1b47720cba5c34f244113cea1767190ee55401
 
 # `editor_handoff.py`
 
 ## Summary
-- agent call から editor work file へ handoff する際の instruction 文面を構築する定義。agent call の file access mode と Codex CLI sandbox を維持しつつ、正式な結果・成果物も満たすという handoff policy の入口。
+- agent call から editor work file へ handoff する際の instruction 文面を構築する policy。選択済みの file access mode と Codex CLI sandbox の維持、および正式な成果物の完遂を定める。editor handoff の許容範囲を確認するための入口。
 
 ## Read this when
-- agent call と editor work file 間の handoff 規定を確認・変更するとき
-- handoff 時の権限維持、成果物要件、sandbox escalation の許容範囲を確認するとき
+- agent call から editor work file への handoff 規定を確認・変更するとき
+- handoff 時の file access mode、Codex CLI sandbox、正式な成果物の扱いを確認するとき
+- handoff file への書き込みに必要な sandbox escalation の許容範囲を確認するとき
 
 ## Do not read this when
-- editor work file への handoff policy ではなく、一般的な prompt 構築や PlaceholderMap の仕様だけを確認するとき
-- agent call の正式な成果物そのものを実装・検証するとき
+- editor work file 自体の内容や編集処理だけを確認するとき
+- agent call と editor handoff の規定に関係しない prompt builder の policy を確認するとき
+- handoff を伴わない通常の agent call の挙動を確認するとき
 
 ## hash
-- 5a4459cb2bece8488288dc27153178b949e0acbe6a3c7cb3199573299ca6c098
+- 61ab3b9e671fc70075c103b67be68128de111b1a43997e876830afd31e4d93ec
 
 # `feedback_reporting.py`
 
@@ -87,71 +88,73 @@
 # `index_entry.py`
 
 ## Summary
-- INDEX.md 用エントリー生成 agent 向けの文面構築定義。対象の責務は、INDEX エントリー作成時に適用する必須事項・禁止事項を構造化された文書として提供すること。
-- 対象を読むべきなのは、INDEX.md のルーティング情報を生成・変更・レビューし、記載すべき判断条件や対象への導線を確認するとき。
-- 対象本文の詳細な実装内容や、INDEX.md 以外の通常のプロンプト構築規則を確認する目的では、より直接的な対応文書を読むべきで、この対象は入口にしない。
+- INDEX.md 用エントリーを生成する agent 向けのルーティング規定を定義する。
+- 対象を読むべき作業・質問・変更の条件、対象の責務、同階層の他対象ではなく対象へ進む理由を示す。
+- 対象本文に根拠のある責務・入口・適用条件だけを扱い、対象外の責務や過度な詳細説明を INDEX.md に持ち込まないための境界を定める。
 
 ## Read this when
-- INDEX.md 用エントリーの生成規定を確認するとき。
-- エントリーに含める責務・読む条件・境界・禁止事項の根拠を確認するとき。
-- エントリー生成 agent 向けの構造化された方針文面を変更するとき。
+- INDEX.md 用エントリーの生成規定を作成・変更するとき
+- INDEX.md エントリーに記載する責務、入口、適用条件、対象範囲の境界を判断するとき
 
 ## Do not read this when
-- INDEX.md 用エントリーではなく、対象機能そのものの実装や通常のプロンプト構築を調べるとき。
-- すでに別の正本文書から、機械的な識別情報や Structured Output の形式を確認できるとき。
+- INDEX.md エントリーではなく、通常のプロンプト構築処理を実装・変更するとき
+- Structured Output schema の出力項目や形式だけを確認するとき
+- 対象本文に基づくルーティング情報が不要な作業を行うとき
 
 ## hash
-- ea372cb54937e7ba38fc019ebd1feab047c3a2a11ec953271c98d29287377333
+- cc9b19f5748e52763c317399e54b2e1aa21733a102eb0f1ef102ffe407f1538e
 
 # `oracle.py`
 
 ## Summary
-- oracle file を扱う agent call の instruction 文面を構築する定義。oracle を正本仕様断片として扱う権限規則、判断根拠、実装からの意味逆流禁止、仕様の隙間の扱い、整合性・検索性の維持を定める。oracle file の作成・変更・レビュー時と、読み取り専用調査時の規定をそれぞれ構築するための下位要素への入口となる。
+- oracle file を作成・変更・レビューする agent call に適用する正本仕様の構築定義。oracle authority policy と、oracle file の読み取り専用調査 policy を提供し、判断根拠、優先関係、仕様上の境界、禁止事項、許容される補完範囲を定める。oracle 関連の動的 instruction 文面や、その調査規約を確認・変更する際の入口となる。
 
 ## Read this when
-- oracle file の作成・変更・レビューに必要な agent call 向け policy の構築規則を確認するとき
-- oracle file の読み取り専用調査に必要な policy の構築規則を確認するとき
-- oracle と realization の権限境界、正本仕様の扱い、未定義事項の扱いを instruction に反映するとき
+- oracle file または realization file を扱う agent call の instruction policy を確認・変更するとき。
+- oracle authority policy における正本仕様の扱い、判断根拠、goal/non-goal、既存仕様維持、仕様間の優先関係を確認するとき。
+- oracle file の読み取り専用調査で、定義済み事項と未定義事項の区別や、実装から仕様を逆算しない制約を確認するとき。
 
 ## Do not read this when
-- oracle file の具体的な仕様本文や realization の実装内容を確認することが目的のとき
-- prompt builder の一般的な placeholder 処理や StructDoc の実装を直接確認すべきとき
-- INDEX.md の更新手順やエントリー形式だけを確認するとき
+- oracle 関連 policy 自体ではなく、個別 oracle file の内容や realization 実装の配置・挙動だけを調べるときは、対象の oracle file または設計規約を直接読む。
+- 一般的な agent call の構築定義や oracle と無関係な policy を扱うとき。
 
 ## hash
-- 0a290a69ba9b649af4612085efc3e7d232b5cfa1008071c68c6582ba10ff8267
+- 90b706867f8a69321c8bfcf1c909e0195dce765c30e5759cd28b905fa1724084
 
 # `oracle_review.py`
 
 ## Summary
-- oracle review 全段階で共有する所見判定規定を構築する定義。所見・修正対象に具体的な oracle file または realization file の根拠を求め、実装者の裁量で解消できない矛盾や問題だけを fatal、文意または検索性を損なう表記上の誤りだけを minor として扱う。realization file や外部事情を追加しなければ成立しない事項を所見にしないための判断基準を提供する。
+- oracle review の全段階で共有する所見判定規定を構築する。所見・修正対象に必要な根拠、fatal と minor の成立条件、oracle file 単独で成立する所見の判定条件を定める。
+- oracle review の所見を列挙・統合・検証・採否判定するときに参照する共通ポリシーとして機能する。
 
 ## Read this when
-- oracle review の所見を列挙、統合、検証、擁護・反証、採否判定するとき。
-- oracle review の所見成立条件、fatal/minor の分類条件、根拠の要件を確認または変更するとき。
+- oracle review の所見または修正対象が成立する条件を確認するとき
+- fatal・minor の判定基準を確認するとき
+- oracle file だけを根拠にした所見の扱いを確認するとき
 
 ## Do not read this when
-- oracle review の所見判定規定を扱わず、別の prompt builder の構築定義だけを確認するとき。
-- realization file の実装挙動や外部事情を個別に調査するとき。
+- 個別の oracle file や realization file の内容自体を確認するとき
+- oracle review policy をプロンプトへ組み込む実装詳細だけを確認するとき
 
 ## hash
-- e3bb0ca58b9c3143b00d99af89da11d1cfbbb1da79378a09eda9f3fb54eb734f
+- 15b4226ea6b4947e0d7448afac0ee7e81aea17e42d5a03ba4a61b396df8f408d
 
 # `realization.py`
 
 ## Summary
-- 対象は、realization file を扱う agent call に与える instruction 文面を構築する定義である。oracle を正本仕様として扱い、realization を現行 oracle に適合させること、必要な実装だけを保つこと、リポジトリ固有手順で検証することを要求するポリシー断片を組み立てる。realization の作成・変更・リファクタ・レビュー時に、関連する規定の入口として読む。
+- realization file の作成・変更・リファクタ・レビュー時に適用する instruction 文面を構築する。oracle を人間所有の正本仕様として扱い、関連 oracle の確認、正本の一元化、必要最小限の実装・test・設定・ancillary、責務境界の整理、関連手順と検証環境の確認を要求する。禁止事項として、realization 都合による oracle 意味の変更、正本定義の複製、旧実装や不要物の温存、根拠のない拡張、必要な意味や検証の損失、手順配置先の限定を定める。
 
 ## Read this when
-- realization file の作成、変更、リファクタ、またはレビューを行うとき
-- oracle と realization の責務分離、仕様適合、実装の最小性、検証手順に関する agent call 向け policy を確認するとき
+- realization file を作成・変更・リファクタ・レビューするとき
+- oracle と realization の責務分担、正本の一元化、不要な実装や依存の追加禁止を確認するとき
+- realization の変更に必要な repository 固有手順や検証環境を判断するとき
 
 ## Do not read this when
-- oracle file 自体の意味や prompt 文面を変更する作業
-- realization file を扱わず、一般的な prompt builder の実装や別ポリシーだけを確認するとき
+- realization file の具体的な実装内容や prompt builder の API を確認したいときは、対象実装や関連する oracle file を直接読む
+- realization file 以外の agent call 向け policy を確認・変更するときは、対応する policy 定義へ進む
 
 ## hash
-- 927a7c1af72b03fc0618d9c34c90ecd21971bf039c583c9d59ca4645957daf0c
+- a66c22292aac02513a5eaf46359a6ea676df855fc533b98bdd9abe9e00178878
 
 # `realization_oracle_reference.py`
 

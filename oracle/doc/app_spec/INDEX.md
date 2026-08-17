@@ -239,24 +239,21 @@
 # `prompt_policy.md`
 
 ## Summary
-- 対象文書は、cmoc が agent call に渡す prompt の責務・情報量・正本境界・構築規定を定める app specification である。意味仕様を oracle doc、正確な prompt 文面を oracle src、生成物を実行時成果物として分離し、prompt に含める情報と agent call への受け渡し責務を規定する。
-- prompt policy の選択・注入、fundamental policy、policy flag と policy block の対応、prompt 構成順、共通で参照する oracle doc を定義する。併せて human feedback instruction、Structured Output の schema／決定論的事後条件の境界、summary と goal の責務分担、prompt の記法・placeholder・参照関係を扱う。
-- agent call の prompt 構築や policy 選択、prompt 文面の正本・責務境界を変更・レビューする際の入口であり、INDEX.md の一般的な routing 規定だけを確認したい場合や、個別 oracle doc の意味仕様だけを調査する場合は、より直接的な対象へ進む。
+- cmoc が agent call に渡す prompt の責務、情報量、正本との境界、policy block の選択・注入、Structured Output の受理条件、placeholder と参照記法、および言語規則を定める仕様書。prompt builder／acp builder の oracle src、意味仕様の oracle doc、実行時生成物、realization implementation の責務を区別する必要がある作業の入口となる。
 
 ## Read this when
-- agent call に渡す prompt の責務、正本境界、情報量、文面所有、実行時生成物の扱いを確認するとき
-- policy flag と policy block の対応、注入条件、prompt の構成順や routing policy の適用範囲を変更・レビューするとき
-- human feedback、Structured Output の schema と決定論的事後条件、summary／goal、placeholder、cmoc_block／cmoc_ref の規定を確認するとき
-- oracle src や prompt builder の実装が prompt policy の仕様に適合しているか調査するとき
+- agent call 用 prompt の正確な文面、policy block、prompt 構成、動的な summary／goal、placeholder、または prompt builder の責務を変更・レビューするとき
+- prompt が含めるべき情報量や、oracle doc・oracle src・生成済み prompt・realization implementation の責務境界を確認するとき
+- Structured Output の schema・validator・決定論的事後条件の責務境界や受理条件を確認するとき
+- cmoc の prompt injection、INDEX routing、human feedback instruction、言語・記法規則を確認するとき
 
 ## Do not read this when
-- 対象の自然言語 prompt 文面そのものを編集する作業で、正確な文面の正本である oracle/src/oracle/prompt_builder または oracle/src/oracle/acp_builder を直接確認すべきとき
-- oracle／realization の一般的な責務や file access の詳細だけを確認する場合は、本文が参照する対応する app specification を直接読むとき
-- INDEX.md の entry／routing の意味だけを作成・確認する場合で、prompt 構築や policy の仕様を扱わないとき
-- 個別のサブコマンドの意味仕様や完了判定だけを調査し、この文書の prompt 構築規定に触れないとき
+- 対象が prompt の責務や構築規則ではなく、cmoc の意味仕様そのものを定義・確認する作業であるときは、対応する oracle doc を直接読む
+- 実行時に生成された AgentCallParameter.prompt、完全 prompt、skeleton、editor input の内容だけを確認すればよいとき
+- prompt builder／acp builder の実装詳細や、個別 workload の意味仕様だけを確認する作業で、prompt policy の共通規則を変更しないとき
 
 ## hash
-- 48580542208e5ebd93f824317aebe58d6ee808a052228dbcd004d88072caa868
+- e7ea6540b531454a8a4c9d9c7af99decc3012103e93fd98d5cd8e6fb15d5f290
 
 # `run_isolation.md`
 

@@ -1,20 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約する正本文書群。CLI の実行境界、Codex 呼び出し、出力・エラー処理、feedback、session/run、prompt、通知、インデックス生成など、複数の実装領域にまたがる挙動契約と責務分担を確認するための入口である。各仕様は個別領域の詳細へ委譲するため、対象機能の意味仕様を選択して読み進める。
+- cmoc の CLI・workflow・feedback・Codex 呼び出し・ログ・通知・仕様管理に関する正本文書群をまとめたディレクトリ。各文書は、共通契約や個別機能の挙動を確認する際の入口となり、詳細責務は対象機能に対応する文書へ委譲する。
+- 自動補完、Codex CLI 実行、model provider、出力・ログ、doctor 前処理、エラー処理、feedback、INDEX 管理、prompt editor／policy、run／session lifecycle、サブコマンド、中断、利用手順、Windows toast 通知を扱う。
 
 ## Read this when
-- cmoc のアプリケーションレベルの挙動仕様や、複数機能に共通する責務境界を確認するとき
-- CLI 実行、Codex 呼び出し、prompt 構築、出力・エラー、feedback、session/run、通知、INDEX.md 生成の正本仕様を探すとき
-- 個別実装やテストに進む前に、対象機能の仕様文書と関連する共通契約を特定するとき
+- cmoc の CLI 機能や workflow の正本仕様を横断的に調査し、どの個別仕様を読むべきか判断するとき
+- 複数の共通契約（出力、エラー、feedback、run／session、Codex 呼び出し、通知）が関係する実装・レビューを開始するとき
+- 対象機能が自動補完、Codex 実行、feedback、INDEX、prompt、oracle／realization workflow、通知のいずれかに該当するとき
 
 ## Do not read this when
-- 対象の実装配置や責務だけを確認する場合は、対応する設計・realization 文書を直接読むとき
-- テストの追加・実行方法だけを確認する場合は、対応するテスト規約・実行手順を直接読むとき
-- 既に対象となる個別仕様が特定できており、この仕様群全体の入口を必要としないとき
+- 対象の個別仕様や実装責務が既に明確で、対応する下位文書を直接読む方が適切なとき
+- Python 開発環境、設計責務、テスト規約・実行手順など、専用の oracle または skill が正本となる作業だけを行うとき
+- 単一の実装ファイルや既存テストの具体的内容だけを調査するとき
 
 ## hash
-- a342d392b742d32da4441baabcbc0a021bb9df638ff8ce63d159cebdcd03fe28
+- a3696e3690b7d833bc9db20b506ce4ebe7159b39ed15696ee86015d31efe96c3
 
 # `branch_model.md`
 

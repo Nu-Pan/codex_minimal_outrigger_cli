@@ -91,18 +91,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と、agent call 実装の正本領域を案内する上位ルーティング入口。アプリケーション仕様・設計・開発規約を確認するときは `doc`、agent call の契約や prompt 構築・Structured Output・feedback・indexing などの実装を確認するときは `src` へ進む。
+- cmoc の正本文書と、その本文書を実行時の agent call・prompt・Structured Output へ落とし込む実装をまとめたルートです。仕様・開発規則・branch model・不採用案を調べるときは `doc` 配下へ、agent call builder や prompt policy、処理別 schema の実装を調べるときは `src` 配下へ進みます。
 
 ## Read this when
-- cmoc の仕様・設計・開発ルールと、agent call 実装のどちらを起点に読むべきか判断するとき
-- 個別の正本文書または agent call 関連実装へ進む前に、領域の入口を特定するとき
+- cmoc のアプリケーション仕様、開発規則、branch／session／run のモデル、または採用しなかった設計案の入口を横断的に判断するとき
+- 正本文書と、それを agent call・prompt・Structured Output の実装へ反映する構造の対応関係を確認するとき
 
 ## Do not read this when
-- 対象の個別仕様・設計・テスト文書が既に特定できているとき
-- 具体的な CLI 実行フローや agent call の終了処理など、対応する下位の呼び出し側を直接読むべきとき
+- 調査対象の個別仕様書、開発規則、代替案、agent call builder、prompt policy、または schema が既に特定できており、該当ファイルへ直接進む方が適切なとき
+- 実行処理や CLI の具体的な挙動だけを調べ、oracle の正本文書群と生成実装の横断的な案内が不要なとき
 
 ## hash
-- 95ce7f66d7c467c70e0da1e219d056260684758e1dd2182125651b2fccdc2b5b
+- e8fc80aea8e8fae7a304b9ea3e47d20e02775c6d2c4967603baef1a67bc079e7
 
 # `pyproject.toml`
 

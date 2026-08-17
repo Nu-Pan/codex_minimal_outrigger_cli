@@ -1,20 +1,18 @@
 # `oracle`
 
 ## Summary
-- `oracle` は cmoc の agent call、プロンプト、パス・設定モデル、Structured Markdown、feedback、indexing、oracle review、realization などの正本となる Python 定義と Structured Output schema をまとめる領域です。
-- agent call の共通契約は `acp_builder`、完全 prompt の構築規則は `prompt_builder`、設定・パス解決・文書レンダリングの共通モデルは `other`、feedback 入力契約は `feedback` から確認します。
+- AI コーディングエージェント呼び出しの AgentCallParameter と、その完全 prompt・アクセス制御・モデル設定・Structured Output・作業ディレクトリ・indexing preflight を構築する定義を集約する領域です。
+- 共通のパラメータ型と論理モデル設定を直下で扱い、indexing、feedback、oracle、realization、session、tui などの処理別 builder と schema へ進むための入口になります。
 
 ## Read this when
-- cmoc の agent call パラメータ、モデル・推論設定、ファイルアクセス、cwd、Structured Output の構築を調査・変更するとき
-- 完全 prompt の統合規則、prompt policy、placeholder、oracle・realization 関連の指示を確認するとき
-- work root・repository root・run root のパス解決、cmoc 設定、構造化 Markdown のモデルやレンダリングを確認するとき
-- feedback issue の入力契約、検証・同一性判断、または indexing のエントリー生成を確認するとき
-- oracle review や realization など、下位機能の agent call builder と schema の入口を探すとき
+- 特定の cmoc 処理がどの agent call パラメータ、prompt、Structured Output schema、ファイルアクセスモード、モデル・推論設定で起動されるかを調査・変更するとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode などの共通契約や、agent call の cwd と indexing preflight の設定責務を確認するとき。
+- indexing、feedback、oracle、realization、session、tui の agent call builder を横断して、処理別の起動設定の分担を確認するとき。
 
 ## Do not read this when
-- Codex CLI の実行制御、サブコマンドの通常フロー、または agent call の終了結果処理だけを調査するときは、対応する呼び出し側・実行処理を直接読む
-- 個別の prompt policy、Structured Output schema、feedback reporter の保存・集約処理だけを確認したいときは、対応する下位要素を直接読む
-- cmoc の正本仕様や開発・テスト手順だけを確認したいときは、対応する oracle 文書を直接読む
+- agent call の実行、Codex CLI への変換、終了結果の処理を調査するときは、対応する realization 実装や呼び出し側を直接読む。
+- モデル名や Codex CLI sandbox への具体的な解決規則を確認するときは、realization 実装または指定された oracle 文書を読む。
+- 特定処理の prompt 文面、Structured Output schema、通常フローだけを確認したいときは、対応する下位ディレクトリの builder や schema を直接読む。
 
 ## hash
-- 07834b7e08d1f253c3bac34277ea95804a14774ba3e23995c643d4b158f73b15
+- 0c28130aeef7aee4ee0e6b40d13c898e1dae364c4ff8a0cbb26bbbe6391acf66

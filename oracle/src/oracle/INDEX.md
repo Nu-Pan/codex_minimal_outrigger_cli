@@ -54,17 +54,19 @@
 # `prompt_builder`
 
 ## Summary
-- `prompt_builder` は、agent向け完全プロンプトの構築に関わる型定義、入力テンプレート、構成部品、共有ポリシーをまとめた領域です。完全プロンプトの統合入口、エディタ入力の初期文面、oracle／realization等の基本知識、各種instruction policyへ進むための入口になります。
+- agent 呼び出しへ渡すプロンプトを構築する領域。プレースホルダ型、完全プロンプトの統合順序、エディタ入力の初期文面、oracle/realization の基本説明、作業種別ごとの policy 文面を扱う。
+- 完全プロンプト全体の構成や複数 policy の組み込み条件を確認するときの入口であり、個別 policy や prompt builder 部品の詳細を調べる場合は対応する下位対象へ進む。
 
 ## Read this when
-- agent callへ渡す完全プロンプトの構築規則や構成要素を調査・変更するとき
-- プロンプト builder の共通policy、placeholder、エディタ入力、または構成partの責務を確認するとき
-- 完全プロンプトの統合入口から、個別policyや下位builder partへ調査を進める必要があるとき
+- agent 呼び出しへ渡すプロンプトの構成要素、配置順、目的や追加文面の統合方法を変更・確認するとき
+- プレースホルダ定義の統合、同名定義の競合検査、path context 由来の値の扱いを調査するとき
+- エディタ経由の入力テンプレートや、oracle/realization の基本説明を変更・確認するとき
+- oracle、realization、file access、routing、feedback、review、INDEX.md 生成など、作業種別 policy の責務や適用条件を調査するとき
 
 ## Do not read this when
-- 生成済みプロンプトの具体的な内容だけを確認すればよいとき
-- 特定のpolicy、型定義、入力テンプレート、またはbuilder partの詳細を直接確認できる場合
-- プロンプト構築に関係しないcmocの実装、仕様、テストを調査するとき
+- 特定の policy の文面や単一 builder の実装詳細だけを確認したい場合は、該当する下位対象を直接読む
+- StructDoc など構造化文書の型・レンダリング仕様、path context の定義、または agent 呼び出し処理そのものを調べる場合
+- 生成済みプロンプトの個別出力だけを確認すれば足りる場合
 
 ## hash
-- 78b914af6afe5e0fd7a870b74ca206dd67393ab9d69577fb2640e310d3bb5de0
+- bd5ee5f8801782311f1cec036fe22005b04e7b0f89ac9d210deaeabc3a05ad45
