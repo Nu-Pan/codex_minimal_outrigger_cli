@@ -208,14 +208,12 @@ def test_oracle_investigation_has_no_session_precondition(
         complete_prompt_skeleton.count(investigation_module.ORIGINAL_PROMPT_PLACEHOLDER)
         == 1
     )
-    assert "# file read write policy - pure_oracle_read" in complete_prompt_skeleton
+    assert "# file R/W policy (pure_oracle_read)" in complete_prompt_skeleton
     assert "oracle file の調査担当" in complete_prompt_skeleton
     assert "関連する oracle file を根拠とする読み取り専用調査を通常の作業範囲" in (
         complete_prompt_skeleton
     )
-    assert "editor handoff でも agent call の責務を維持する" in (
-        complete_prompt_skeleton
-    )
+    assert "editor handoff でも、agent call に選択された" in (complete_prompt_skeleton)
     assert "対象 path と理由を限定した sandbox escalation" in (complete_prompt_skeleton)
     assert "未定義の事項を正本仕様として断定していない" in (complete_prompt_skeleton)
     assert len(calls) == 1

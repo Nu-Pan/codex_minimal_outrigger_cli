@@ -149,7 +149,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     editor_contents = orig_files[0].read_text()
     assert editor_contents.startswith("<!--\n# このファイルの使い方")
     assert '<cmoc_block id="prompt template">' in editor_contents
-    assert "# file read write policy - repo_write" in editor_contents
+    assert "# file R/W policy (repo_write)" in editor_contents
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
     assert "remove me" in editor_contents
     assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
@@ -157,7 +157,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
     complete_prompt = tui_calls[0][0].prompt
-    assert "# file read write policy - repo_write" in complete_prompt
+    assert "# file R/W policy (repo_write)" in complete_prompt
     assert "# oracle and realization basic" in complete_prompt
     assert "# oracle policy" in complete_prompt
     assert "# realization policy" in complete_prompt

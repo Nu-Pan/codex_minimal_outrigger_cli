@@ -17,18 +17,17 @@
 # `src`
 
 ## Summary
-- `oracle/src` は、cmoc の agent call を構成する実装のルートです。共通の AgentCallParameter、モデル・推論・ファイルアクセスの論理設定、call-scoped path context を土台に、処理別の起動パラメータと完全 prompt を組み立てます。
-- 配下には、indexing・feedback・oracle・realization・session・tui の agent call builder、prompt の共通組み立てと policy 部品、パス・設定・構造化文書の補助実装があります。各処理の具体的な prompt や Structured Output schema を調べる際の入口になります。
+- cmoc の oracle 実装領域。Agent Call Parameter、モデル・推論・ファイルアクセス設定、パスモデル、設定、構造化 Markdown、完全 prompt の構築を定義する。
+- indexing、feedback、session join、oracle review、realization など、用途別 agent call の prompt と Structured Output の起動パラメータを扱う。
+- 下位の `oracle`、`acp_builder`、`prompt_builder` 配下へ進むための実装上の入口であり、個別機能の調査では対応する下位領域を直接読む。
 
 ## Read this when
-- agent call の共通パラメータ契約、論理モデルクラス、Reasoning effort、ファイルアクセスモード、cwd、indexing preflight の設定責務を調査・変更するとき。
-- 複数の cmoc 処理にまたがって、agent call builder と完全 prompt・policy 部品の分担を確認するとき。
-- 処理別 builder、prompt builder、Structured Output schema、パスモデルや設定モデルへ進むための実装上の入口を確認するとき。
+- oracle の実装責務と、agent call・prompt・設定・パス・構造化文書の共通基盤を横断して確認するとき
+- 用途別 agent call の構築定義や Structured Output 呼び出しの配置を探すとき
 
 ## Do not read this when
-- agent call の実行、Codex CLI への変換、sandbox の具体的な解決、または終了結果の処理を調べるときは、対応する realization 実装や呼び出し側を直接読む。
-- 特定処理の prompt 文面や Structured Output schema の詳細だけを確認したいときは、該当する `acp_builder` の下位実装や schema を直接読む。
-- oracle・realization の正本仕様、開発規則、または test 実行手順を確認したいときは、対応する oracle 文書や repository local の手順を直接読む。
+- 実際の CLI 実行制御や realization の実装本体だけを調査するとき
+- 特定の prompt builder、agent call builder、設定モデル、またはスキーマが判明しており、対応する下位対象を直接読めば足りるとき
 
 ## hash
-- 1f8b9a32d27dc0fa26f0d9009cbcfa3458df7928fb707c82233c05e99a585746
+- 5d290583e82d92e8a81210dfa76bfedd41916b014e8d102fb307ddd6b803a3b2

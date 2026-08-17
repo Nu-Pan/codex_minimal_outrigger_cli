@@ -70,15 +70,17 @@
 # `policy`
 
 ## Summary
-- agent call 向けの prompt builder policy 群を集約する領域。oracle・realization の扱い、conflict 解消、file access、feedback 報告、routing、INDEX.md エントリー生成など、作業種別ごとの指示文面を構築する責務を分担する。個別 policy の内容を確認する際の入口となる。
+- oracle と realization の扱い、agent 向け file access、feedback、routing、conflict 解消、editor handoff、INDEX.md エントリー生成など、prompt builder が共通 policy 文面を構築する領域。各 policy の責務を確認・変更する際の入口として機能する。
 
 ## Read this when
-- agent call に埋め込む共通または作業種別ごとの policy の責務・適用条件・禁止事項を確認または変更するとき
-- oracle と realization の扱い、file access、feedback 報告、routing、conflict 解消、INDEX.md エントリー生成の指示文面を調査するとき
+- oracle・realization 関連の agent instruction policy を確認または変更するとき
+- agent call に共通する file access、feedback reporting、routing、handoff、conflict resolution の規定を確認または変更するとき
+- INDEX.md 用エントリー生成規定や oracle review の判定基準を確認または変更するとき
 
 ## Do not read this when
-- 個別の oracle file や realization file の仕様・実装内容を確認するとき
-- prompt builder の policy 以外の実装、または Structured Output schema の形式だけを確認するとき
+- 個別の oracle file、realization file、または具体的な実装の内容だけを確認するとき
+- prompt builder の policy 以外の CLI 実装や仕様内容を直接確認するとき
+- Structured Output の出力項目や形式だけを確認するとき
 
 ## hash
-- 361cb90af951e8a1c6d16a42989b8f02fdd7fcc1d20c038bbf43c3a86e20587d
+- 0015aef87fa5823d6dc7481727138d715097f8ff3d96b8b3827dd1101da6e745

@@ -155,23 +155,25 @@ def test_oracle_review_judge_finding_uses_max_reasoning() -> None:
         ),
     ],
 )
-def test_oracle_review_builders_share_finding_judgement_policy(
+def test_oracle_review_builders_select_required_policy_blocks(
     tmp_path: Path,
     builder: Callable[..., AgentCallParameter],
     arguments: tuple[object, ...],
 ) -> None:
-    """review の全段階で単一の所見判定規定を注入する。"""
+    """review の全段階で oracle と所見判定の policy block を注入する。"""
     (tmp_path / ".git").mkdir()
     parameter = builder(*arguments, agent_call_cwd=tmp_path)
     prompt = parameter.prompt
 
     assert parameter.agent_call_cwd == tmp_path.resolve()
     assert f"- {{{{work-root}}}} = {tmp_path.resolve()}" in prompt
+    assert "# oracle policy" in prompt
     assert "# oracle review policy" in prompt
     assert "# routing policy" in prompt
-    assert "実装者の裁量で解消不能な問題だけを fatal 所見にする" in prompt
-    assert "文意または検索性を損なう表記上の誤りだけを minor 所見にする" in prompt
-    assert "所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in prompt
+    assert "判断の根拠を関連する oracle file に置く" in prompt
+    assert "仕様に従うと実装者の裁量では解消不能な問題が必ず発生" in prompt
+    assert "文意または検索性を損なう誤字、脱字" in prompt
+    assert "列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in prompt
 
 
 def test_oracle_review_enumerate_finding_schema_matches_oracle_source() -> None:

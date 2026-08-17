@@ -322,7 +322,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         complete_prompt_skeleton.count(oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER)
         == 1
     )
-    assert "# file read write policy - pure_oracle_write" in complete_prompt_skeleton
+    assert "# file R/W policy (pure_oracle_write)" in complete_prompt_skeleton
     assert "oracle file だけを編集し" in complete_prompt_skeleton
     expected_events = [
         "doctor",

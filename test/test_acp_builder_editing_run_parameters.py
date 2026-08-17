@@ -94,9 +94,7 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     ):
         assert heading in parameter.prompt
     assert "# oracle review policy" not in parameter.prompt
-    assert "# 両 branch の意味を保って conflict marker だけを解消する" not in (
-        parameter.prompt
-    )
+    assert "# conflict resolution policy" not in parameter.prompt
     assert "# routing policy" in parameter.prompt
 
 
