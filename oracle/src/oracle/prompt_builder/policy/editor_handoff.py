@@ -10,18 +10,15 @@ def build_editor_handoff_policy() -> tuple[PlaceholderMap, StructDoc]:
         {},
         StructDoc(
             "editor handoff policy（agent call から editor work file へ handoff する時）",
-            StructDoc(
-                "editor handoff でも agent call の責務を維持する",
-                """
-                **必須**
+            """
+            **必須**
 
-                - agent call に選択された file access mode と Codex CLI sandbox を維持する
-                - handoff file への書き込みとは別に、その agent call が要求する正式な結果または成果物を満たす
+            - editor handoff でも、agent call に選択された file access mode と Codex CLI sandbox を維持する
+            - handoff file への書き込みとは別に、その agent call が要求する正式な結果または成果物を満たす
 
-                **許容**
+            **許容**
 
-                - handoff file への書き込みに必要な command だけについて、対象 path と理由を限定した sandbox escalation を要求してよい
-                """,
-            ),
+            - agent call の責務を維持したまま、handoff file への書き込みに必要な command だけについて、対象 path と理由を限定した sandbox escalation を要求してよい
+            """,
         ),
     )
