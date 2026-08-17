@@ -149,17 +149,18 @@
 # `test`
 
 ## Summary
-- `test` は、cmoc の realization テストを集約する検証入口である。共通テストヘルパー、ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review/edit、session、feedback、設定・state・Git・通知などの外部契約と境界条件を扱う。個別機能の実装変更時に、対応する回帰テストを特定するために読む。
+- `test` ディレクトリは、cmoc の実装に対する realization テストと共通テストヘルパーを集約する。ACP builder、CLI、Codex runtime、indexing、oracle review/edit、session、state、Git、prompt、report、通知などの外部契約・境界条件を、個別テストまたは統合テストから検証する入口である。
+- 共通 helper は schema path 解決、CLI 実行、Codex double、fake command、Git repository、subprocess 起動環境、toast 隔離を提供し、各領域のテストは対応する機能の lifecycle、失敗処理、path・権限・永続化境界を確認する。
 
 ## Read this when
-- cmoc の CLI サブコマンドや runtime の外部挙動を変更・検証するとき
-- ACP builder、Codex 実行、indexing、oracle review/edit、session、feedback、refactor、state、Git、通知の契約や境界条件を確認するとき
-- 共通テストヘルパー、fixture、実経路統合テスト、packaged layout の検証方法を調べるとき
+- cmoc の外部挙動や回帰条件を、実装領域別の pytest から確認するとき
+- ACP builder、CLI lifecycle、Codex runtime、indexing、oracle、session、state、Git、prompt、report、通知の契約を検証・変更するとき
+- テスト用 repository、Codex 実行 double、CLI runner、schema 参照、subprocess、toast 隔離などの共通基盤を利用・調査するとき
 
 ## Do not read this when
-- 正本仕様や実装本体の詳細を確認することが目的で、対応する oracle 文書・実装を直接読む方が適切なとき
-- テスト対象と無関係な機能や、一般的なテスト実行手順だけを確認するとき
-- 単一の schema、prompt、設定形式、ログ形式の定義だけを確認したいとき
+- 正本仕様や実装本体の責務・設計を確認することが目的の場合は、対応する oracle 文書または実装ファイルを直接読むとき
+- 特定テストの対象外である機能や、テストと無関係な CLI・runtime の詳細を調査するとき
+- 単に INDEX.md の一般的な構造・ルーティング規則を確認するときは、indexing の正本仕様や直接の実装を読むとき
 
 ## hash
-- 251fcc89aae41e206b9cc6ef02ffe6cde7129cb3e07db9bfcb98e991cc1d0df5
+- dd1ee807eedf780dcbe16da23c4d6f67cbfca8d8ded09aa9249b0e413187f556
