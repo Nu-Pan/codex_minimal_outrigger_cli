@@ -16,20 +16,19 @@
 # `_cli_support.py`
 
 ## Summary
-- `doctor` CLI を対象 worktree で実行するテスト補助と、実行結果の terminal output から primary report のパスを抽出する補助を提供する。`doctor` の CLI テスト実装やレポート出力の検証を始める際の共通入口となる。
+- `test/_cli_support.py` は、Typer CLI の `doctor` サブコマンドをテストから実行するための共有ヘルパーを提供する。対象 worktree をカレントディレクトリとして実行し、終了成功を検証する `run_doctor` と、端末出力から primary report のパスを抽出する `terminal_primary_report` が入口になる。
 
 ## Read this when
-- `doctor` CLI をテストから実行する方法を確認するとき
-- 対象 worktree の cwd を切り替えて `doctor` の実行結果を検証するとき
-- terminal output に表示された primary report のパスをテストで取得するとき
+- `doctor` CLI のテストで、対象 worktree の cwd を保った実行や共有 runner の利用方法を確認するとき
+- doctor 実行結果またはキャプチャ済み端末出力から primary report のパスを取得する必要があるとき
 
 ## Do not read this when
-- `doctor` コマンド本体の仕様や実装を確認するとき
-- `doctor` 以外の CLI コマンドのテスト補助を探すとき
-- primary report の生成仕様やログ出力仕様そのものを確認するとき
+- doctor CLI 本体の仕様や前処理の詳細を確認したいときは、コメントに示された app_spec 文書を直接読む
+- ログ出力の一般仕様を確認したいだけのときは、console_and_file_log の仕様を直接読む
+- doctor 以外の CLI サブコマンドのテスト支援を調べるとき
 
 ## hash
-- 96f97d1ad9d97701f80a7262d126b0971410176370c1112e8efc26df78067813
+- 77fc1a0c23afa228b0235135b24525d1823f6332923c8ea7c430c89dc6871020
 
 # `_codex_support.py`
 
@@ -683,20 +682,18 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話末端サブコマンド実行時に、primary report の保存完了契約を検証する pytest。doctor、indexing、session、oracle、realization、run、feedback report の早期エラーを対象に、固有の保存先、必須 front matter、terminal classification、exit code、診断ログを確認する。ユーザー中断時の invocation summary、refactor の中断理由、未保存 report に対する internal failure も検証する。
+- 非対話末端サブコマンドの primary report 完了契約を検証するテスト。処理開始前のエラー、ユーザー中断、refactor fallback、primary report 未保存時の internal failure を対象とし、保存先、front matter、端末出力、診断ログ、コマンド固有の完了情報を確認する。
 
 ## Read this when
-- 非対話サブコマンドの事前条件エラー、中断、fallback report、primary report 保存確認を実装・変更・レビューするとき。
-- サブコマンド固有の primary report 保存先や必須 front matter の期待値を確認するとき。
-- doctor、indexing、session、oracle、realization、run、feedback report の完了契約を横断的に確認するとき。
+- 非対話末端サブコマンドの完了処理、エラー処理、中断処理、primary report 保存確認のテストを追加・変更・調査するとき。
+- doctor、indexing、session、oracle、realization、run、feedback の各サブコマンドで、処理開始前エラー時の primary report 契約を確認するとき。
 
 ## Do not read this when
-- primary report の生成ロジック自体や、個別サブコマンドの通常成功処理だけを確認するとき。
-- 対象テストが扱う完了契約と無関係な CLI 機能、ドメイン処理、fixture を調べるとき。
-- Structured Output の出力形式や INDEX.md 自体を確認するとき。
+- 個別サブコマンドの通常処理や引数仕様だけを確認する場合は、対応するサブコマンド仕様を直接読む。
+- primary report の一般的な形式やエラー分類の仕様だけを調べる場合は、console_and_file_log.md または error_handling.md を直接読む。
 
 ## hash
-- 499f5dc87bb5983f82e0100f4c7ef1d1e03675020a6bf38882787de81678bf92
+- 6feef722be26b641285fbed5b9a02668da485eb399adb02e315a08523cf858be
 
 # `test_production_cli.py`
 

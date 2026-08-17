@@ -146,17 +146,21 @@
 # `test`
 
 ## Summary
-- cmoc の実装・CLI・Codex runtime・indexing・session・oracle review・feedback・設定・永続 state などを、pytest の単体・統合・実経路テストで検証するディレクトリ。機能別テストと共通 fixture が、外部挙動や失敗時の保全、Git/worktree 境界、Codex 呼び出し・ログ・report 契約を確認する入口を提供する。
+- `test` ディレクトリは、cmoc の realization test と共通テスト支援を集約する検証入口。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session、state、config、prompt、Git/worktree、report、通知などの外部挙動・契約・失敗境界を対象とし、個別機能の変更時に対応するテストへルーティングする。
+- 共通 helper と fixture は、doctor 実行、Codex 呼び出し、fake 外部コマンド、Git repository、toast 隔離、schema path 解決、subprocess 環境など、複数テストで共有する検証基盤への入口を提供する。
 
 ## Read this when
-- 実装変更がどの realization test や統合テストへ影響するかを特定するとき
-- CLI lifecycle、Codex 実行、indexing、session/run、oracle edit/review、feedback、設定、Git/worktree、prompt、通知の外部契約を検証するとき
-- 回帰テストの対象範囲、共通 fixture、実経路 subprocess、失敗・中断・cleanup 境界を確認するとき
+- cmoc の実装・仕様変更が、列挙された CLI、runtime、builder、indexing、oracle、session、prompt、state、config、report、Git/worktree、通知の外部挙動や失敗処理へ影響する可能性があり、対応する回帰テストを特定するとき。
+- ACP builder の parameter、prompt、Structured Output schema、互換公開面を検証するとき。
+- Codex subprocess、retry、quota、TUI、sandbox、path、home、process cleanup、ログの挙動を検証するとき。
+- CLI lifecycle、doctor、indexing、oracle review/edit、session、editing run の統合挙動や worktree・Git 差分の保全を確認するとき。
+- 共通 fixture・helper の利用方法、テスト用 Git repository、fake command、schema path、toast 隔離、subprocess 設定を確認するとき。
 
 ## Do not read this when
-- 正本仕様、設計意図、Structured Output schema、または本番実装の詳細を確認したいときは、対応する oracle 文書や実装を直接読む
-- 対象機能が明確で、個別テストの回帰条件を読む必要がないときは、該当する実装・仕様ファイルへ直接進む
-- テスト共通 helper の単一責務だけを確認するときは、該当 helper ファイルを直接読む
+- 正本仕様、schema、prompt、実装内部、ログ契約そのものを確認することが目的で、対応する oracle 文書や実装ファイルを直接読む方が適切なとき。
+- 対象機能と無関係なテスト領域を調べるとき。
+- 一般的な pytest 実行手順だけを確認したいときは、repository local の test execution 文書を直接読むとき。
+- 個別の helper や fixture の責務に該当しないテスト支援を調べるとき。
 
 ## hash
-- 781978d645d89ee84bb4ce6684e192d5bdc6d2279d3aa8c7ee5ca5f8e647c629
+- 50302fbea1f1f5dadb4c17d12f35c2ece1980cf3909b83c4b9e0292e6be5c3ef

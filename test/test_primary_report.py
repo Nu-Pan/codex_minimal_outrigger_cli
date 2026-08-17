@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 import typer
 import yaml
+from _cli_support import terminal_primary_report
 from _git_support import make_repo
 
 import commons.runtime_cli as runtime_cli
@@ -185,15 +186,6 @@ def _disable_external_completion(
     )
 
 
-def _terminal_report_path(output: str) -> Path:
-    """capsys で得た terminal result から primary report path を読む。"""
-    prefix = "- primary report ("
-    for line in output.splitlines():
-        if line.startswith(prefix) and "): `" in line and line.endswith("`"):
-            return Path(line.split("): `", 1)[1][:-1])
-    raise AssertionError(f"primary report path not found:\n{output}")
-
-
 @pytest.mark.parametrize(
     ("command_name", "report_directory", "required_fields"),
     _EARLY_ERROR_REPORTS,
@@ -231,7 +223,7 @@ def test_early_error_saves_command_specific_primary_report(
     captured = capsys.readouterr()
     assert exc_info.value.exit_code == 1
     assert captured.out == ""
-    report_path = _terminal_report_path(captured.err)
+    report_path = terminal_primary_report(captured.err)
     assert report_path.parent == (
         root / ".cmoc" / "gu" / "ar" / "report" / report_directory
     )
@@ -295,7 +287,7 @@ def test_user_interruption_saves_feedback_invocation_summary(
     )
 
     captured = capsys.readouterr()
-    report_path = _terminal_report_path(captured.out)
+    report_path = terminal_primary_report(captured.out)
     rendered = report_path.read_text(encoding="utf-8")
     assert "# 中断完了: cmoc feedback report" in captured.out
     assert 'terminal_classification: "user_interruption"' in rendered
@@ -332,7 +324,7 @@ def test_refactor_fallback_records_user_interruption_reason(
     )
 
     captured = capsys.readouterr()
-    report_path = _terminal_report_path(captured.out)
+    report_path = terminal_primary_report(captured.out)
     front_matter = report_path.read_text(encoding="utf-8").split("---", 2)[1]
     assert 'terminal_classification: "user_interruption"' in front_matter
     assert 'completion_reason: "user_interruption"' in front_matter

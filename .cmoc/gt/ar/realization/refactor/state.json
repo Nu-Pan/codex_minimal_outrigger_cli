@@ -1177,9 +1177,9 @@
   },
   "test/_cli_support.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "04ee47c861ffe5b25223ffec1083362f42f865aca8b550498bd0a06378362cf0",
-    "last_investigated_at": "2026-07-27_16-39_55_386747000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "96f97d1ad9d97701f80a7262d126b0971410176370c1112e8efc26df78067813",
+    "last_investigated_at": "2026-08-18_00-00_11_008530000"
   },
   "test/_codex_support.py": {
     "investigation_required": true,
