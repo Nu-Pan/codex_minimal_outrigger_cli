@@ -137,18 +137,20 @@
 # `review_report.py`
 
 ## Summary
-- 日本語の技術文書として、対象モジュールの責務と、oracle review のレポート生成・描画処理へ進むべき入口を簡潔に示します。
+- oracle review のレポートを保存・描画する実装。レビュー結果の判定、YAML frontmatter、評価対象 oracle 一覧、所見の分類・表示、対象パスの Markdown 表示をまとめて担う。oracle review レポート形式や表示内容を変更するときの実装入口。
 
 ## Read this when
-- oracle review の実行結果を Markdown レポートとして保存・描画する処理を調べるとき
-- レポートの verdict、frontmatter、finding 表示、対象 oracle path 表示の挙動を確認するとき
+- oracle review レポートの保存、Markdown/YAML frontmatter の生成、verdict の決定を変更・調査するとき
+- fatal/minor および accepted/rejected の所見表示順や内容を変更するとき
+- 評価対象 oracle ファイルの相対パス表示や Markdown table のエスケープ処理を確認するとき
 
 ## Do not read this when
-- oracle review の対象選定、finding の判定、または review 自体の実行制御を調べるとき
-- レポート出力以外の sub-command の仕様や runtime path 処理を直接調べるとき
+- oracle review の対象 oracle 探索、パス解決、レビュー実行そのものを変更・調査するとき
+- レポート形式の正本仕様だけを確認する場合
+- 他のサブコマンドのレポート生成を扱う場合
 
 ## hash
-- 91278a4fd6e9eb55d21f879480b7ae0e2ac3a9edc34470443b5c1259fa4d1f30
+- b890e1c243a32d38ee834b75180b9d1e13f921a11cd908d14ed616e91416d917
 
 # `review_targets.py`
 

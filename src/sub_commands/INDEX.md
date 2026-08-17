@@ -68,19 +68,20 @@
 # `oracle`
 
 ## Summary
-- 対象ディレクトリは、oracle 系サブコマンドの CLI 実装群への入口です。編集、調査、レビューの各サブコマンドと、レビュー対象列挙・実行ループ・レポート・パス処理などの専用実装へ進むための構成を扱います。
+- oracle 系サブコマンドの実装をまとめるディレクトリ。edit・investigation・review と、review の実行管理、対象列挙、パス解決、レポート、INDEX 差分処理などの関連実装への入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの CLI 実行フローや package 構成の入口を確認するとき。
-- oracle edit、investigation、review のいずれかを調査・変更するとき。
-- oracle review の対象選定、実行ループ、パス解決、レポート、INDEX 差分処理の担当箇所を特定するとき。
+- oracle サブコマンドの実装構成や、各サブコマンド・review 関連モジュールの担当範囲を確認するとき
+- oracle edit、investigation、review の CLI 実行フローを調査・変更するとき
+- oracle review の対象列挙、実行ループ、パス解決、レポート生成、INDEX 差分の commit・merge 処理を調査・変更するとき
 
 ## Do not read this when
-- 個別サブコマンドの prompt 契約や agent 起動パラメータなど、下位実装の詳細だけを確認したいとき。
-- 共通 runtime、prompt editor、ACP builder など、oracle ディレクトリ外の共通実装を直接調査する場合。
+- 個別サブコマンドの prompt 契約や正本仕様だけを確認したいとき
+- 共通 runtime、prompt editor、agent 起動パラメータなど、本文中で専用実装が入口として示されている処理だけを調査するとき
+- oracle サブコマンドや review に関係しない CLI 実装を調査するとき
 
 ## hash
-- 1e3431e73d3697064b92ee41aaea48abeaa37f6510ba7b6a01200054e525e158
+- 96043c58050ed98b31b8f93a766d1d561fbc2f171d6be577f0c3887cbc74c9a8
 
 # `realization`
 
