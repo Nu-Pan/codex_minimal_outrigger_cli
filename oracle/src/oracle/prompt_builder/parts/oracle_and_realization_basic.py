@@ -105,7 +105,6 @@ def build_oracle_and_realization_basic(
                         """
                         以下のディレクトリツリー内のファイルはすべて uncategorised file とする。
 
-                        - `{{work-root}}/.git`
                         - `{{work-root}}/.agents`
                         - `{{work-root}}/.codex`
                         - `{{work-root}}/.cmoc`
@@ -120,12 +119,31 @@ def build_oracle_and_realization_basic(
                     StructDoc(
                         "git ignore による分類",
                         """
-                        - nested Git working tree の `.git` path は、実際の repository metadata であると確認できた場合だけ、その path 自身と全 descendant を対象外にする
-                        - 候補 path を含む最内側の検証済み Git working tree を owning repository とする
-                        - owning repository の root と nested の `.gitignore`、repository-local exclude、および global exclude を使用する、通常の index-aware な Git ignore 判定を適用する
-                        - tracked な regular file は、ignore pattern に一致しても分類対象に含める
-                        - Git ignore によって除外するのは、untracked かつ ignored な regular file だけとする
-                        - untracked かつ unignored な regular file は分類対象に含める
+                        以下の条件をすべて満たすものを uncategorised file とする。
+
+                        - regular file である
+                        - git 未追跡である
+                        - git ignore 判定で無視される
+
+                        ただし、
+
+                        - `{{work-root}}` 内にネストした git workint gree がある場合、最も内側の git repository を owning repository として git ignore 判定を行う
+                        - git ignore 判定は `git -C <owning-repository-root> check-ignore --quiet -- <repository-relative-path>` と意味的に等価であれば良い
+                        """,
+                    ),
+                    StructDoc(
+                        ".git による分類",
+                        """
+                        以下の条件、
+
+                        - regular file or regular directory である
+                        - 名前が `.git` である
+                        - 実際に git repository metadata である (たまたま名前が一致しただけではない)
+
+                        をすべて満たすものについて、
+                         
+                        - `.git` file なら、それを uncategorised file とする
+                        - `.git` directory なら、そのツリー内全体を uncategorised file とする
                         """,
                     ),
                 ),
