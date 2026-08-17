@@ -1134,10 +1134,10 @@
     "last_investigated_at": "2026-07-28_12-07_44_331294000"
   },
   "src/sub_commands/run/report.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "633bf26dd4d3ab3155dcddf2eb46c2b39b1617fa4914e30aeeca6e9cc0975d48",
-    "last_investigated_at": "2026-07-27_16-04_53_105588000"
+    "last_investigated_sha256": "bf4c9d035df1891f3e41bc9589a9140a0e7711c31ea141e7229d0463574a8f56",
+    "last_investigated_at": "2026-08-17_23-45_55_718717000"
   },
   "src/sub_commands/session/__init__.py": {
     "investigation_required": false,
