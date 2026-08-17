@@ -511,9 +511,9 @@
   },
   "oracle/src/oracle/prompt_builder/policy/feedback_reporting.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "d8ac149202fa51d69bb38b3904a7d0de20575263910f44e0decea344a8ef8aef",
+    "last_investigated_at": "2026-08-17_19-17_32_449197000"
   },
   "oracle/src/oracle/prompt_builder/policy/file_access.py": {
     "investigation_required": true,
