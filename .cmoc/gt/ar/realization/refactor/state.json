@@ -618,10 +618,10 @@
     "last_investigated_at": "2026-07-24_17-20_23_491473000"
   },
   "src/acp/builder/oracle/edit/launch_exec.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "92823c1681fff7cd05fd0241fc6feaa1950be8b3ca563e2ed2d327d95fb8504f",
+    "last_investigated_at": "2026-08-17_20-14_29_362983000"
   },
   "src/acp/builder/oracle/investigation/__init__.py": {
     "investigation_required": false,
