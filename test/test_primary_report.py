@@ -4,7 +4,17 @@
 - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 - {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/
+- {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/indexing.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
 """
 
 import json
@@ -13,6 +23,7 @@ from pathlib import Path
 import pytest
 import typer
 import yaml
+from _cli_support import terminal_primary_report
 from _git_support import make_repo
 
 import commons.runtime_cli as runtime_cli
@@ -93,9 +104,12 @@ _EARLY_ERROR_REPORTS = [
             "run_worktree",
             "state_before",
             "state_after",
+            "completion_reason",
             "diff_base_commit",
             "codex_returncode",
             "changed_paths",
+            "feedback_observation_count",
+            "feedback_observations",
         ),
     ),
     (
@@ -172,15 +186,6 @@ def _disable_external_completion(
     )
 
 
-def _terminal_report_path(output: str) -> Path:
-    """capsys で得た terminal result から primary report path を読む。"""
-    prefix = "- primary report ("
-    for line in output.splitlines():
-        if line.startswith(prefix) and "): `" in line and line.endswith("`"):
-            return Path(line.split("): `", 1)[1][:-1])
-    raise AssertionError(f"primary report path not found:\n{output}")
-
-
 @pytest.mark.parametrize(
     ("command_name", "report_directory", "required_fields"),
     _EARLY_ERROR_REPORTS,
@@ -198,22 +203,27 @@ def test_early_error_saves_command_specific_primary_report(
     monkeypatch.chdir(root)
     _disable_external_completion(monkeypatch)
 
-    def fail_before_command_body() -> None:
-        """doctor preprocess または共通事前条件での終了を再現する。"""
+    def fail_precondition(_runtime_root: Path) -> None:
+        """doctor preprocess 後の共通事前条件での終了を再現する。"""
         raise CmocError("early failure", ["retry command"], "early detail")
+
+    def command_body_must_not_start() -> None:
+        """事前条件の失敗後にサブコマンド本体を開始しないことを検証する。"""
+        pytest.fail("command body started after precondition failure")
 
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
-            fail_before_command_body,
+            command_body_must_not_start,
             command_name=command_name,
             command_argv=("cmoc", *command_name.split(), "--scope", "all"),
+            pre_log_check=fail_precondition,
             doctor_preprocess=False,
         )
 
     captured = capsys.readouterr()
     assert exc_info.value.exit_code == 1
     assert captured.out == ""
-    report_path = _terminal_report_path(captured.err)
+    report_path = terminal_primary_report(captured.err)
     assert report_path.parent == (
         root / ".cmoc" / "gu" / "ar" / "report" / report_directory
     )
@@ -243,6 +253,10 @@ def test_early_error_saves_command_specific_primary_report(
         assert "## Verdict" in rendered
     if command_name == "realization refactor fork":
         assert 'completion_reason: "error"' in front_matter
+    if command_name == "realization apply fork":
+        assert 'completion_reason: "error"' in front_matter
+        assert "feedback_observation_count: 0" in front_matter
+        assert "feedback_observations: []" in front_matter
     if command_name == "feedback report":
         assert "feedback publication または active state ではありません" in rendered
 
@@ -259,7 +273,10 @@ def test_user_interruption_saves_feedback_invocation_summary(
 
     def interrupt() -> TerminalResult:
         runtime_cli.mark_current_subcommand_interrupted()
-        return TerminalResult(next_actions=("同じ command を再実行してください。",))
+        return TerminalResult(
+            details=(("中断理由", "report cut を固定する前に停止しました。"),),
+            next_actions=("同じ command を再実行してください。",),
+        )
 
     runtime_cli.run_cli_subcommand(
         interrupt,
@@ -270,16 +287,47 @@ def test_user_interruption_saves_feedback_invocation_summary(
     )
 
     captured = capsys.readouterr()
-    report_path = _terminal_report_path(captured.out)
+    report_path = terminal_primary_report(captured.out)
     rendered = report_path.read_text(encoding="utf-8")
     assert "# 中断完了: cmoc feedback report" in captured.out
     assert 'terminal_classification: "user_interruption"' in rendered
     assert "feedback publication または active state ではありません" in rendered
+    assert "中断理由: `report cut を固定する前に停止しました。`" in rendered
     assert "## checkpoint と部分結果" in rendered
     assert "report cut: `not_fixed`" in rendered
     assert "確定済み部分結果: `not_fixed`" in rendered
     assert not list(report_path.parent.parent.glob("*.md"))
     assert not list(report_path.parent.parent.joinpath("incomplete").glob("*.md"))
+
+
+def test_refactor_fallback_records_user_interruption_reason(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """fallback report でも refactor の中断理由を確定する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+
+    def interrupt_without_report() -> TerminalResult:
+        """処理本体が中断だけを確定し、report 保存を共通 fallback に委ねる。"""
+        runtime_cli.mark_current_subcommand_interrupted()
+        return TerminalResult()
+
+    runtime_cli.run_cli_subcommand(
+        interrupt_without_report,
+        command_name="realization refactor fork",
+        command_argv=("cmoc", "realization", "refactor", "fork"),
+        doctor_preprocess=False,
+        interruptible=True,
+    )
+
+    captured = capsys.readouterr()
+    report_path = terminal_primary_report(captured.out)
+    front_matter = report_path.read_text(encoding="utf-8").split("---", 2)[1]
+    assert 'terminal_classification: "user_interruption"' in front_matter
+    assert 'completion_reason: "user_interruption"' in front_matter
 
 
 def test_unsaved_report_path_becomes_internal_failure_without_path_display(
@@ -320,4 +368,5 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     finished = events[-1]
     assert finished["event"] == "command_finished"
     assert finished["failure"]["classification"] == "internal_failure"
+    assert finished["failure"]["target_path"] == str(unsaved_path.absolute())
     assert finished["terminal_result"]["primary_report_path"] is None

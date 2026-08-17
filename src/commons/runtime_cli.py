@@ -486,6 +486,19 @@ def _failure_record(error: BaseException) -> dict[str, object]:
             "detail": error.detail,
             "next_actions": list(error.next_actions),
         }
+    if isinstance(error, PrimaryReportSaveError):
+        record: dict[str, object] = {
+            "classification": "internal_failure",
+            "type": error.__class__.__name__,
+            "message": str(error),
+            "traceback": "".join(traceback.format_exception(error)),
+        }
+        if error.target_path is not None:
+            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # 未保存 path は terminal result へ出さないが、失敗対象の特定に必要な
+            # 診断情報として subcommand log には絶対 path を残す。
+            record["target_path"] = str(error.target_path.absolute())
+        return record
     if isinstance(error, KeyboardInterrupt):
         return {
             "classification": "handled_failure",

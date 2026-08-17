@@ -10,12 +10,14 @@ hash 検証、書き込み、commit は同じ index plan・lock・Codex context 
 
 import fcntl
 import os
+import stat
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import copy_context
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -46,6 +48,18 @@ class _IndexDirectoryPlan:
     directory: Path
     entries: list[str | None]
     missing_children: list[tuple[int, Path, str]]
+
+
+_IndexFileKind = Literal["absent", "file", "symlink", "other"]
+
+
+@dataclass(frozen=True)
+class _IndexFileSnapshot:
+    """INDEX.md の更新前状態を復元するための最小 snapshot。"""
+
+    kind: _IndexFileKind
+    content: bytes | str | None = None
+    mode: int | None = None
 
 
 def enable_indexing_preflight() -> None:
@@ -111,9 +125,36 @@ def update_indexes(
     root: Path, codex_exec: CodexExecCallable | None = None
 ) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
-    config_root = root
     dirs = indexable_directories(root)
     dirs.append(root)
+    # {{work-root}}/oracle/doc/app_spec/indexing.md
+    # 深い directory の更新後に後続 entry が失敗しても、standalone indexing の
+    # clean worktree precondition を壊さず、同じ command を再実行できるようにする。
+    snapshots: dict[Path, _IndexFileSnapshot] = {}
+    try:
+        return _update_indexes(root, dirs, codex_exec, snapshots)
+    except BaseException as error:
+        try:
+            _restore_index_files(snapshots)
+        except Exception as restore_error:
+            raise CmocError(
+                "INDEX.md 更新失敗後の復元にも失敗しました。",
+                [
+                    "INDEX.md と Git の状態を確認し、復元できない path を手動で戻してから再実行してください。"
+                ],
+                f"original error: {error!r}\nrestore error: {restore_error!r}",
+            ) from error
+        raise
+
+
+def _update_indexes(
+    root: Path,
+    dirs: list[Path],
+    codex_exec: CodexExecCallable | None,
+    snapshots: dict[Path, _IndexFileSnapshot],
+) -> list[Path]:
+    """更新前 snapshot の下で INDEX.md を深さ順に再生成する。"""
+    config_root = root
     updated: list[Path] = []
     dirs_by_depth: dict[int, list[Path]] = {}
     for directory in dirs:
@@ -174,9 +215,50 @@ def update_indexes(
                 content += "\n"
             index_path = plan.directory / "INDEX.md"
             if _read_existing_index_content(index_path) != content:
+                snapshots.setdefault(index_path, _capture_index_file(index_path))
                 _write_index_file(index_path, content)
                 updated.append(index_path)
     return updated
+
+
+def _capture_index_file(index_path: Path) -> _IndexFileSnapshot:
+    """INDEX.md の file 種別、内容、mode を取得する。"""
+    try:
+        file_stat = index_path.lstat()
+    except FileNotFoundError:
+        return _IndexFileSnapshot("absent")
+    if stat.S_ISREG(file_stat.st_mode):
+        return _IndexFileSnapshot(
+            "file",
+            content=index_path.read_bytes(),
+            mode=stat.S_IMODE(file_stat.st_mode),
+        )
+    if stat.S_ISLNK(file_stat.st_mode):
+        return _IndexFileSnapshot("symlink", content=os.readlink(index_path))
+    return _IndexFileSnapshot("other")
+
+
+def _restore_index_files(
+    snapshots: dict[Path, _IndexFileSnapshot],
+) -> None:
+    """INDEX.md を更新開始時の file 状態へ戻す。"""
+    for index_path, snapshot in snapshots.items():
+        current = _capture_index_file(index_path)
+        if current == snapshot:
+            continue
+        if current.kind == "other" or snapshot.kind == "other":
+            raise OSError(f"cannot restore non-regular INDEX.md: {index_path}")
+        if current.kind != "absent":
+            index_path.unlink()
+        if snapshot.kind == "file":
+            if not isinstance(snapshot.content, bytes) or snapshot.mode is None:
+                raise OSError(f"invalid regular INDEX.md snapshot: {index_path}")
+            index_path.write_bytes(snapshot.content)
+            index_path.chmod(snapshot.mode)
+        elif snapshot.kind == "symlink":
+            if not isinstance(snapshot.content, str):
+                raise OSError(f"invalid symlink INDEX.md snapshot: {index_path}")
+            index_path.symlink_to(snapshot.content)
 
 
 def _plan_index_directory(root: Path, directory: Path) -> _IndexDirectoryPlan:

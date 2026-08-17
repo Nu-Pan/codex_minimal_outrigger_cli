@@ -35,8 +35,15 @@ import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
+from commons.runtime_logging import SubcommandLogger
 from commons.runtime_paths import timestamp
+from commons.runtime_primary_report import (
+    ensure_primary_report,
+    reset_primary_report_context,
+    start_primary_report_context,
+)
 from commons.runtime_refactor import load_refactor_state
+from commons.runtime_results import TerminalResult
 from commons.runtime_run import run_process_id_path
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -156,6 +163,18 @@ def test_legacy_lifecycle_shim_reexports_agent_path_validation() -> None:
         is lifecycle_module.unexpected_agent_paths
     )
     assert "unexpected_agent_paths" in legacy_lifecycle_module.__all__
+
+
+def test_legacy_lifecycle_shim_keeps_session_path_call_contract(
+    tmp_path: Path,
+) -> None:
+    """旧 run lifecycle import path が base 省略の呼び出しを受け付ける。"""
+    root = make_repo(tmp_path)
+
+    assert legacy_lifecycle_module.unexpected_session_paths(
+        root,
+        [GitChange("A", ("src/new.py",))],
+    ) == ["src/new.py"]
 
 
 def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:
@@ -991,6 +1010,33 @@ def test_run_abandon_accepts_already_removed_run_worktree(
     assert "run worktree was already absent" in reports[0].read_text()
 
 
+def test_run_abandon_prunes_missing_registered_run_worktree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """実体だけが欠損した run worktree の Git 登録も cleanup する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    moved_worktree = tmp_path / "moved-run-worktree"
+    context.run_worktree.rename(moved_worktree)
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert moved_worktree.exists()
+    assert _state(state_path)["run"] == {
+        "state": "ready",
+        "kind": None,
+        "branch": None,
+        "fork_commit": None,
+    }
+    assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
+
+
 def test_run_abandon_requires_process_stop_confirmation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1096,6 +1142,7 @@ def test_run_abandon_reports_stale_child_stop_warning(
 
 
 def test_apply_report_fields_include_accepted_feedback_paths(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply report が invocation 内で accepted になった raw 参照だけを含む。"""
@@ -1111,13 +1158,36 @@ def test_apply_report_fields_include_accepted_feedback_paths(
         lambda: observations,
     )
 
-    fields = apply_module._apply_report_fields("base-commit")
+    token = start_primary_report_context("realization apply fork")
+    try:
+        fields = apply_module._apply_report_fields("base-commit")
+
+        logger = SubcommandLogger(tmp_path, "realization apply fork")
+        result = ensure_primary_report(
+            tmp_path,
+            "realization apply fork",
+            ("cmoc", "realization", "apply", "fork"),
+            "error",
+            1,
+            TerminalResult(),
+            logger,
+        )
+    finally:
+        reset_primary_report_context(token)
 
     assert fields == {
         "diff_base_commit": "base-commit",
         "feedback_observation_count": 1,
         "feedback_observations": observations,
     }
+    assert result.primary_report is not None
+    front_matter = result.primary_report.read_text(encoding="utf-8").split("---", 2)[1]
+    assert "feedback_observation_count: 1" in front_matter
+    assert (
+        'feedback_observations: [{"observation_id": "fbo_feedback", '
+        '"path": "/repo/.cmoc/gu/ar/feedback/observation/fbo_feedback.json"}]'
+        in front_matter
+    )
 
 
 def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(

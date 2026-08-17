@@ -2133,9 +2133,9 @@ def test_cleanup_keyboard_interrupt_is_reported_as_user_interruption(
     assert "# 中断完了: cmoc feedback report" in result.output
     invocation_report = terminal_primary_report(result)
     assert invocation_report.parent.name == "invocation"
-    assert 'terminal_classification: "user_interruption"' in (
-        invocation_report.read_text()
-    )
+    invocation_text = invocation_report.read_text()
+    assert 'terminal_classification: "user_interruption"' in invocation_text
+    assert "cleanup: `not_completed`" in invocation_text
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.cleanup_manifest is not None

@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
 # {{work-root}}/oracle/doc/dev_rule/design_rule.md
 
 from cmoc_runtime import (

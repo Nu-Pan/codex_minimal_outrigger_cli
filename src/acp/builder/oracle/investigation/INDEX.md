@@ -17,15 +17,14 @@
 # `launch_tui.py`
 
 ## Summary
-- oracle investigation の正本 builder を互換 import 経路として公開するファイル。investigation 起動 TUI パラメータ builder への入口を提供し、正本実装を直接再定義せずに再公開する。
+- oracle investigation の正本 builder 関数を互換 import 経路として公開する。既存の acp.builder.oracle.investigation.launch_tui 利用箇所から正本実装へ接続するための入口で、oracle.* への移行完了後は削除対象となる。
 
 ## Read this when
-- oracle investigation の起動 TUI パラメータ builder を、既存の互換 import 経路から参照する必要があるとき
-- この互換経路の公開対象や import の再公開範囲を確認するとき
+- 既存の acp.builder.oracle.investigation.launch_tui import 経路の互換性や、oracle investigation の launch_tui builder への移行状況を確認するとき。
 
 ## Do not read this when
-- builder の処理内容や investigation 起動パラメータの仕様を確認・変更するとき
-- 正本実装を確認する必要があるときは、oracle investigation 側の正本 builder を直接読む
+- 正本の builder 実装や oracle investigation の仕様・挙動を確認したいときは、oracle 側の launch_tui 実装を直接読む。
+- acp.builder.oracle.investigation.launch_tui の互換性を調べる必要がない一般的な oracle investigation の調査では、このファイルを読む必要はない。
 
 ## hash
-- 2d3936ac0809fdf6e1636e9ec6c8bd7f16738e5ba0ae456a8c9e2a347a82ad94
+- c9ebfcd1e073b1bb8b9430c48b70b35c88846eb0e05f45525bfa9f90da992c7e

@@ -89,8 +89,12 @@ def _cmoc_session_fork_body() -> TerminalResult:
         )
         branch_created = False
         state_file_created = False
+        state_written = False
         try:
-            run_git(["switch", "-c", session_branch], work)
+            # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+            # HEAD 取得後に home branch が進んでも、state に記録した fork commit
+            # と実際の session branch の分岐元を一致させる。
+            run_git(["switch", "-c", session_branch, start_commit], work)
             branch_created = True
             start_subcommand_step(6, "session state を保存", "write session state")
             # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
@@ -100,6 +104,7 @@ def _cmoc_session_fork_body() -> TerminalResult:
             path.touch(exist_ok=False)
             state_file_created = True
             write_state(path, state)
+            state_written = True
             update_primary_report_fields(session_state_after="active")
         except BaseException as error:
             rollback_errors: list[str] = []
@@ -131,7 +136,13 @@ def _cmoc_session_fork_body() -> TerminalResult:
                         f"session state cleanup failed: {rollback_error!r}"
                     )
             update_primary_report_fields(
-                session_state_after="active" if path.exists() else None,
+                # 既存 state file の残存は今回の state 保存成功を意味しない。
+                # state path の競合時に既存 state を active と誤記しない。
+                session_state_after=(
+                    "active"
+                    if state_written and path.is_file() and not path.is_symlink()
+                    else None
+                ),
                 rollback_status="failed" if rollback_errors else "completed",
             )
             details = [

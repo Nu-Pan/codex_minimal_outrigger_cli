@@ -192,6 +192,45 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     assert "## Do not read this when" in rendered
 
 
+def test_update_indexes_restores_partial_writes_when_entry_generation_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """後続 entry の生成失敗時に、先行した INDEX.md 書き込みを戻す。"""
+    root = make_repo(tmp_path)
+    cmoc_runtime.sync_config(root)
+    nested = root / "docs" / "nested"
+    nested.mkdir(parents=True)
+    ready = nested / "ready.md"
+    ready.write_text("ready\n")
+    failed = root / "docs" / "failed.md"
+    failed.write_text("failed\n")
+    original_nested_index = "original index\n"
+    (nested / "INDEX.md").write_text(original_nested_index)
+    run_git(root, "add", "docs")
+    run_git(root, "commit", "-m", "add indexing fixtures")
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        """深い directory は成功させ、後続 directory で失敗させる fake。"""
+        if path == failed:
+            raise cmoc_runtime.CmocError("entry generation failed", [], str(path))
+        return _render_test_entry(update_root, path, digest=digest)
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    with pytest.raises(cmoc_runtime.CmocError, match="entry generation failed"):
+        indexing_common.update_indexes(root)
+
+    assert (nested / "INDEX.md").read_text() == original_nested_index
+    assert not (root / "docs" / "INDEX.md").exists()
+    assert not (root / "INDEX.md").exists()
+    assert run_git(root, "status", "--short", "--untracked-files=no").stdout == ""
+
+
 @pytest.mark.parametrize("value", ["", "   ", "line1\nline2", "line1\rline2"])
 def test_render_index_entry_does_not_add_semantic_acceptance_conditions(
     tmp_path: Path, value: str

@@ -2,6 +2,7 @@
 
 set -eu
 
+# {{work-root}}/oracle/src/oracle/other/path_model.py
 cmoc_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 venv_python="$cmoc_root/.venv/bin/python"
 
@@ -40,6 +41,7 @@ require_venv_python() {
     exit 1
 }
 
+# {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 is_completion_probe() {
     [ "${_CMOC_COMPLETE+x}" = x ]
 }

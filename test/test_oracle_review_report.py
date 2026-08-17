@@ -645,6 +645,35 @@ def test_oracle_review_reports_reserve_timestamped_paths(
     )
 
 
+def test_oracle_review_report_removes_reserved_path_when_render_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """report の描画失敗時に予約だけ済んだ空 file を残さない。"""
+
+    def fail_render(*_args: object, **_kwargs: object) -> str:
+        """予約済み path の後で描画が失敗する経路を再現する。"""
+        raise RuntimeError("render failed")
+
+    monkeypatch.setattr(report_module, "render_oracle_review_report", fail_render)
+
+    with pytest.raises(RuntimeError, match="render failed"):
+        report_module.write_oracle_review_report(
+            tmp_path,
+            "full",
+            "cmoc/session/session",
+            SessionState(),
+            0,
+            [],
+            [],
+            None,
+            None,
+            None,
+        )
+
+    report_dir = tmp_path / ".cmoc" / "gu" / "ar" / "report" / "oracle_review"
+    assert list(report_dir.glob("*.md")) == []
+
+
 def test_oracle_review_report_quotes_unsafe_yaml_frontmatter_values(
     tmp_path: Path,
 ) -> None:

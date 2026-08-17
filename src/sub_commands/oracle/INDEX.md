@@ -29,21 +29,21 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` の CLI 実行フローを担当する main-worktree 側の実装。入力された oracle 編集指示をもとに、本命の oracle 編集 agent call と、正常終了後の仕様削減 agent call を順に起動する。
-- prompt editor の入力予約・編集・抽出・確定、indexing preflight、起動前提検証、実行状態の primary report 更新、CLI の進捗管理をまとめて扱う。oracle 編集サブコマンドの実行入口として、起動パラメータ構築や session 要件の検証へ進む際に読む対象。
+- `cmoc oracle edit` サブコマンドの実行フローを担う実装。入力された oracle 編集指示を編集・抽出し、本命の oracle 編集 agent call と、成功後に続く仕様削減 agent call を順序どおり実行する。main worktree、active な cmoc session branch など本命起動前提の検証もここで行う。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 実行順序、入力プロンプトの編集処理、agent call の起動条件や成功・失敗状態の更新を確認するとき。
-- oracle 編集を main worktree 上の active な `cmoc/session/` branch に限定する検証を変更・調査するとき。
-- 本命 oracle 編集 call と、正常終了後に実行する reduction call の連携を確認するとき。
+- `cmoc oracle edit` の CLI 実行フロー、prompt 編集入力の収集、oracle 編集 agent call の起動条件や実行順序を確認するとき。
+- 本命 agent call と仕様削減 agent call の状態報告、失敗時の扱い、subcommand step の進行を変更・調査するとき。
+- oracle 編集処理が main worktree または active な cmoc session branch を要求する理由と検証箇所を確認するとき。
 
 ## Do not read this when
-- oracle 編集用の agent prompt の契約や起動パラメータの詳細を確認する場合は、直接 `launch_exec` 実装または oracle 編集仕様を読むとき。
-- prompt editor の入力予約・抽出・確定処理そのものを調査する場合は、`commons.prompt_editor_input` を直接読むとき。
-- session 状態、branch 判定、CLI 共通実行、report 更新など単一の共通機能だけを調査する場合は、それぞれの共通モジュールを直接読むとき。
+- oracle 編集 prompt の具体的な契約や最終状態の仕様を確認したいだけの場合は、参照コメントで示される oracle 編集仕様を直接読む。
+- prompt 編集入力の予約・編集・抽出・確定処理の詳細だけを確認したい場合は、`commons.prompt_editor_input` の実装を直接読む。
+- agent 起動パラメータの構築規則だけを確認したい場合は、`acp.builder.oracle.edit.launch_exec` の実装を直接読む。
+- CLI 共通の実行制御、設定読込、セッション状態管理、報告更新の詳細だけを確認したい場合は、それぞれの `cmoc_runtime` または `commons` の実装を直接読む。
 
 ## hash
-- 880200249722b8c67b6a2453358834912f8b4b4e786dce6d7fe1ffce0ed1b0f0
+- 3fea2c4033a83d2e9495d8289341e4208205a0549b40ec929d9f7814d63989fe
 
 # `investigation.py`
 
@@ -137,18 +137,20 @@
 # `review_report.py`
 
 ## Summary
-- 日本語の技術文書として、対象モジュールの責務と、oracle review のレポート生成・描画処理へ進むべき入口を簡潔に示します。
+- oracle review のレポートを保存・描画する実装。レビュー結果の判定、YAML frontmatter、評価対象 oracle 一覧、所見の分類・表示、対象パスの Markdown 表示をまとめて担う。oracle review レポート形式や表示内容を変更するときの実装入口。
 
 ## Read this when
-- oracle review の実行結果を Markdown レポートとして保存・描画する処理を調べるとき
-- レポートの verdict、frontmatter、finding 表示、対象 oracle path 表示の挙動を確認するとき
+- oracle review レポートの保存、Markdown/YAML frontmatter の生成、verdict の決定を変更・調査するとき
+- fatal/minor および accepted/rejected の所見表示順や内容を変更するとき
+- 評価対象 oracle ファイルの相対パス表示や Markdown table のエスケープ処理を確認するとき
 
 ## Do not read this when
-- oracle review の対象選定、finding の判定、または review 自体の実行制御を調べるとき
-- レポート出力以外の sub-command の仕様や runtime path 処理を直接調べるとき
+- oracle review の対象 oracle 探索、パス解決、レビュー実行そのものを変更・調査するとき
+- レポート形式の正本仕様だけを確認する場合
+- 他のサブコマンドのレポート生成を扱う場合
 
 ## hash
-- 91278a4fd6e9eb55d21f879480b7ae0e2ac3a9edc34470443b5c1259fa4d1f30
+- b890e1c243a32d38ee834b75180b9d1e13f921a11cd908d14ed616e91416d917
 
 # `review_targets.py`
 

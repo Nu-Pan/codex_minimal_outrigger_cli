@@ -15,19 +15,19 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理を実行する CLI 実装群。apply workload の入口であり、fork 実行のライフサイクル管理や成果物・失敗状態の処理を確認するためのディレクトリ。
+- realization の apply 処理に関する workload を扱うディレクトリで、apply workload の実装を確認する入口。配下には apply の共通入口と、`cmoc realization apply fork` の実行を統括する実装がある。
 
 ## Read this when
-- realization apply workload の実装を調査・変更するとき。
-- `cmoc realization apply fork` の実行、差分検査、rollback、state 更新、fork report 保存の挙動を確認するとき。
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の処理順序、成功・失敗時の run state、差分の許可範囲、commit/rollback、fork report、cleanup を確認または変更するとき。
 
 ## Do not read this when
-- apply agent の prompt や launch parameter だけを確認したいとき。
-- editing run の共通 lifecycle や join・abandon の一般仕様だけを確認したいとき。
-- INDEX.md の生成規則そのものを確認したいとき。
+- apply workload 以外の処理を扱うとき。
+- realization apply の仕様や共通 editing run の契約を確認する場合は、対応する oracle/specification または共通 runtime 実装を直接読む。
+- fork 以外の realization apply サブコマンドの固有処理だけを確認する場合は、各サブコマンドの実装を直接読む。
 
 ## hash
-- 656380685f3cfc655990d62480989ca03a00cb933c758f8a9edbca3f204a7556
+- 6cf3290d311d6d35194046bbeed7ea4ee6eaa5b1b8233f1c0893a54b7da0f0d9
 
 # `refactor`
 

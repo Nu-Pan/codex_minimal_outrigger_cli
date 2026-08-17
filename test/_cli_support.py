@@ -20,13 +20,12 @@ def run_doctor(root: Path) -> Result:
     return result
 
 
-def terminal_primary_report(result: Result) -> Path:
-    """terminal result の primary report フルパスを取り出す。"""
+def terminal_primary_report(result: Result | str) -> Path:
+    """terminal result または captured output の primary report path を取り出す。"""
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     prefix = "- primary report ("
-    for line in result.output.splitlines():
+    output = result if isinstance(result, str) else result.output
+    for line in output.splitlines():
         if line.startswith(prefix) and "): `" in line and line.endswith("`"):
             return Path(line.split("): `", 1)[1][:-1])
-    raise AssertionError(
-        f"primary report is missing from terminal result:\n{result.output}"
-    )
+    raise AssertionError(f"primary report is missing from terminal result:\n{output}")

@@ -56,18 +56,18 @@
 # `bin`
 
 ## Summary
-- プロジェクトルートと仮想環境の Python 実行可能性を確認し、Python CLI エントリーポイントへ引数を委譲する起動用シェルラッパー。通常起動時の環境不足エラーと補完プローブ時の簡略的な失敗経路を扱う。
+- cmoc の CLI 起動用シェルラッパー。仮想環境 Python の存在・実行可能性を確認し、通常起動では不足時の標準エラー報告後に `src/main.py` を実行する。補完プローブ時は Python が利用可能な場合のみ転送する。CLI の起動経路、Python 検証、起動失敗時のエラー形式、補完時の挙動を確認・変更するときの入口。
 
 ## Read this when
-- 起動前の環境検査、仮想環境 Python の利用可否、シェルから Python CLI への引数委譲を確認または変更するとき
-- 通常起動と補完プローブ起動で仮想環境が利用できない場合の扱いを確認するとき
+- cmoc コマンドの起動処理や、仮想環境 Python の検証・エラー報告を調査するとき
+- シェルラッパーから `src/main.py` への転送条件や、自動補完プローブ時の分岐を変更・確認するとき
 
 ## Do not read this when
-- CLI の実際のコマンド処理や業務ロジックを調べるとき
-- エラー文面の正本仕様や Python 実装の詳細を確認するとき
+- CLI の実際の引数処理やアプリケーション動作を調査するときは、直接 `src/main.py` または対応する仕様を読む
+- エラー内容の正本仕様や初回セットアップ手順を確認するときは、参照されているエラー処理・開発環境の文書を直接読む
 
 ## hash
-- f8265a802567113e11bc0dc3e9a36c679a1f9bc9dce4b43a798d178594f3150d
+- 70422bb34b7732bfa99d94d395b5c91f9aba3302293f0edba8366c10e7645dfe
 
 # `codex_minimal_outrigger_cli.code-workspace`
 
@@ -126,36 +126,41 @@
 # `src`
 
 ## Summary
-- `src` は realization 側の実行ソースと互換公開入口をまとめ、CLI 起動、サブコマンド、共通 runtime、設定・型の再公開を担う。直下の各要素から、CLI 登録層、サブコマンド実装、共通 helper、互換 shim の詳細へ進むための入口である。
+- `src` は cmoc の実行側コードを集約するルートである。Typer による CLI 最上位入口、CLI サブコマンド、共有 runtime helper、ACP・basic・config・oracle の互換入口を提供する。
+- `main.py` が doctor、tui、indexing、feedback、session、oracle、realization、run の CLI コマンドを登録し、各サブコマンド実装へ振り分ける。
+- `sub_commands` は CLI サブコマンド固有の処理、`commons` は複数経路から共有される runtime helper、`acp` は ACP 互換入口と builder adapter 群を担う。
+- `basic`、`config`、`cmoc_runtime.py`、`oracle.py` は既存 import path や正本側 package を成立させる互換入口であり、正本仕様や個別処理の実体は保持しない。
 
 ## Read this when
-- cmoc の realization 側 CLI 起動経路や直下パッケージの責務分担を確認するとき
-- CLI サブコマンド、共有 runtime、設定・型の互換 import 入口の配置を把握するとき
-- `src` 直下から、調査対象となる個別実装または公開 shim を選ぶとき
+- cmoc の実行側コード全体の構成、CLI の最上位入口、サブコマンド領域、共有 runtime、互換 import 入口を俯瞰したいとき。
+- 新しい CLI コマンドや既存コマンドの接続先を調査するときは、まず `main.py` から登録関係を確認したいとき。
+- CLI 処理、共有 runtime、ACP builder、または互換 import のいずれに進むべきかを判断し、対応する直下領域への入口を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理フローや内部ロジックを調査するときは、対応するサブコマンド実装へ直接進む
-- 共通 runtime helper の具体的な挙動を調査するときは、`commons` 配下の担当モジュールを直接読む
-- oracle 側の正本仕様・実装や、個別 adapter の詳細を確認するときは、対応する oracle 対象を直接読む
-- `src` の realization 実装や互換入口と無関係な処理を調査するとき
+- 特定サブコマンドの処理内容を調査・変更するときは、`sub_commands` 配下の対応実装を直接読む。
+- 共有 runtime helper の内部仕様を調査するときは、`commons` 配下の該当モジュールを直接読む。
+- ACP builder の具体的な処理や正本側実装を確認するときは、`acp` 配下または対応する canonical 実装を直接読む。
+- 設定、ACP 型、path model、構造化文書、oracle package の正本仕様や実装詳細を確認するときは、各互換入口ではなく対応する正本側を直接読む。
+- CLI や `src` 配下の実行コードと無関係な仕様・テスト・補助資料を調査するとき。
 
 ## hash
-- f3d7ec8b81013f6685899b16dea0efed406d025695a0e99934cd8446141bbf09
+- 776cc770bb3215bd2fc62fb72aeddeb69ba8c8fdaf072cc9501bc9d2cfde2b4a
 
 # `test`
 
 ## Summary
-- test ディレクトリは、cmoc の realization test と共通 pytest 補助を集約する検証入口である。CLI、Codex runtime、indexing、oracle review/edit、session、editing run、feedback、設定・状態・Git・通知など、外部挙動と境界条件を機能領域ごとのテストファイルで確認する。
+- `test` ディレクトリは、cmoc の実装に対する realization テストと共通テストヘルパーを集約する。ACP builder、CLI、Codex runtime、indexing、oracle review/edit、session、state、Git、prompt、report、通知などの外部契約・境界条件を、個別テストまたは統合テストから検証する入口である。
+- 共通 helper は schema path 解決、CLI 実行、Codex double、fake command、Git repository、subprocess 起動環境、toast 隔離を提供し、各領域のテストは対応する機能の lifecycle、失敗処理、path・権限・永続化境界を確認する。
 
 ## Read this when
-- cmoc の複数機能にまたがる realization test の所在や、変更対象に対応する機能別テストを探すとき。
-- CLI lifecycle、Codex 実行、worktree/state、indexing、oracle、session、editing run、feedback などの外部契約を回帰検証するとき。
-- 共通 pytest fixture、fake command、Git repository、Codex 呼び出し補助の入口を確認するとき。
+- cmoc の外部挙動や回帰条件を、実装領域別の pytest から確認するとき
+- ACP builder、CLI lifecycle、Codex runtime、indexing、oracle、session、state、Git、prompt、report、通知の契約を検証・変更するとき
+- テスト用 repository、Codex 実行 double、CLI runner、schema 参照、subprocess、toast 隔離などの共通基盤を利用・調査するとき
 
 ## Do not read this when
-- 正本仕様や本番実装の責務・詳細を確認することが目的の場合は、対応する oracle 文書または実装ファイルを直接読む。
-- 単一機能の具体的な期待挙動を調べる場合は、このディレクトリ全体ではなく、対象機能に対応する個別テストファイルへ進む。
-- テスト実行手順だけを確認する場合は、repository local の test_execution 手順を読む。
+- 正本仕様や実装本体の責務・設計を確認することが目的の場合は、対応する oracle 文書または実装ファイルを直接読むとき
+- 特定テストの対象外である機能や、テストと無関係な CLI・runtime の詳細を調査するとき
+- 単に INDEX.md の一般的な構造・ルーティング規則を確認するときは、indexing の正本仕様や直接の実装を読むとき
 
 ## hash
-- eed30e1310a88dac389e2bd2a741ad4871b839f6d27bf465b4d398e3a27d8025
+- dd1ee807eedf780dcbe16da23c4d6f67cbfca8d8ded09aa9249b0e413187f556

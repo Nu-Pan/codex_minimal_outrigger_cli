@@ -52,9 +52,8 @@ def write_oracle_review_report(
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     # path を予約してから本文を書くことで、同一 timestamp の report を上書きしない。
     generated_at, report_path = _reserve_timestamped_path(report_dir, ".md", timestamp)
-    write_reserved_primary_report(
-        report_path,
-        render_oracle_review_report(
+    try:
+        content = render_oracle_review_report(
             root,
             scope,
             session_branch,
@@ -68,8 +67,15 @@ def write_oracle_review_report(
             error_message=error_message,
             interrupted=interrupted,
             generated_at=generated_at,
-        ),
-    )
+        )
+        write_reserved_primary_report(report_path, content)
+    except BaseException:
+        # render 中断・失敗時も、予約した空の path を primary report として残さない。
+        try:
+            report_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
     return report_path
 
 

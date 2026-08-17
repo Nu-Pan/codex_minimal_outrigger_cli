@@ -15,38 +15,37 @@
 # `abandon.py`
 
 ## Summary
-- `session abandon` の CLI 実行経路を定義し、active session の事前条件確認、home branch への切り替え、session state の abandoned 化、session branch の削除を扱う。cleanup 中に失敗した場合は state と branch を復元して再実行可能にするため、session abandon の実装挙動や失敗時 rollback を確認する際の入口となる。
+- `cmoc session abandon` の CLI 実装。active session を検証し、home branch へ切り替えた後に session state を abandoned として保存し、session branch を削除する。
+- cleanup 中に失敗・中断した場合は state と session branch を復元し、再実行可能な状態に戻せたかを含むエラー情報を返す。
 
 ## Read this when
-- `cmoc session abandon` の実装や外部挙動を確認するとき
-- session branch の破棄、home branch への切り替え、session state の更新を調査するとき
-- cleanup 失敗時の state・branch rollback とエラー報告を確認するとき
+- session abandon の事前条件、home branch への切替、session branch 削除、cleanup 失敗時の rollback 挙動を確認・変更するとき
+- session abandon の terminal result や primary report の更新内容を確認するとき
 
 ## Do not read this when
-- session の開始や再開など、abandon 以外のライフサイクル処理を確認するとき
-- 一般的な Git branch 操作や、session に依存しない CLI 共通処理を確認するとき
-- abandon の具体的な実装ではなく、session state のデータ構造や共通 runtime API の仕様を確認するとき
+- session の作成・実行・完了など、abandon 以外のライフサイクル処理を確認するとき
+- branch モデルや state ファイル形式そのものの正本仕様を確認するときは、対応する oracle 文書を直接読む
 
 ## hash
-- cf1ab013e06c19645c074e980fc6fc318ff0dd6cf3c9ffa15fb50667ec104582
+- 4ae2c8a1df21e91e62492ee37e9cebced2e19e6a0cbf6f26ad8f2ea3b82f4b2d
 
 # `fork.py`
 
 ## Summary
-- 通常の local branch から cmoc の session branch を作成し、session state を保存する CLI 実装。active session の重複防止、clean worktree 要件、session-id 衝突回避、branch・state 作成失敗時の rollback とエラー報告を扱う。session fork の実行経路を確認する際の入口となる。
+- 現在の通常の local branch から cmoc session branch を作成し、fork 元の HEAD commit と home branch を session state に保存する CLI 実装。active session の重複、managed branch、dirty worktree、branch/state の競合を検査し、作成途中の失敗時は branch と state file を rollback する。session 操作の実装入口として、session fork の実行経路と一意な session-id 生成処理を確認する対象。
 
 ## Read this when
-- `cmoc session fork` の実行条件や、session branch・state の作成手順を確認するとき
-- session fork 失敗時に branch と state file をどのように rollback し、残存状態を報告するか調べるとき
-- active session の排他制御や session-id の衝突回避を確認するとき
+- `cmoc session fork` の CLI 実装や実行手順を確認するとき。
+- session branch の作成、fork 元 commit の固定、session state の保存、active session の重複防止を調べるとき。
+- session-id の衝突回避、排他制御、作成失敗時の rollback とエラー報告を調べるとき。
 
 ## Do not read this when
-- session の join・abandon の挙動を確認するとき
-- session state の項目定義や永続化形式そのものを確認するとき
-- CLI 共通のログ・step 実行機構だけを確認するとき
+- session state の項目定義やライフサイクル仕様だけを確認する場合は、session state の仕様を直接読むとよい。
+- session fork 以外の session 操作の実装を確認する場合は、各操作に対応する実装を直接読むとよい。
+- 一般的な Git branch 操作や CLI 共通 runtime の仕様だけを確認する場合。
 
 ## hash
-- 279de439ccb1104dac34d164c3eae7fb868689475fcb3d31d1af61bdef87ab59
+- 0f70b5f0c7cc91b592360f84c5607e18ae2566ba58b0315093b14384c326a939
 
 # `join.py`
 
