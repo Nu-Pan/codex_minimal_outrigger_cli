@@ -19,19 +19,19 @@
 # `src`
 
 ## Summary
-- AI コーディングエージェント呼び出しに渡す AgentCallParameter、完全 prompt、パスコンテキスト、cmoc 設定、構造化文書の基盤実装を集約する領域。
-- agent call の論理モデル・推論強度・ファイルアクセスモード・Structured Output・cwd・indexing preflight を定義し、prompt_builder で policy と作業目的を統合した prompt を構築する。
-- 処理別の呼び出しパラメータ生成を調査・変更する際は `acp_builder`、prompt の共通構成や規定を調査・変更する際は `prompt_builder`、パス解決・設定・構造化文書の共通モデルを確認する際は `other` が下位要素への入口となる。
+- cmoc の agent call に関する正本実装をまとめる領域。agent call パラメータ、モデル・推論・ファイルアクセス設定、prompt 構築、Structured Output schema、パス・設定・構造化 Markdown、feedback・indexing・oracle review・realization などの入口を扱う。
+- agent call の起動単位や用途別 prompt/schema を調査・変更するときは `acp_builder` 配下、完全 prompt と共通 policy を確認するときは `prompt_builder` 配下、設定・パス解決・Structured Markdown の共通モデルを確認するときは `other` 配下へ進む。feedback 入力契約そのものは `feedback` 配下を読む。
 
 ## Read this when
-- AgentCallParameter の共通契約、モデル・推論・アクセス制御、agent call cwd、Structured Output、indexing preflight の定義を調査・変更するとき
-- 複数の cmoc 処理で共有される完全 prompt の構築順序、placeholder 統合、policy の組み込みを確認するとき
-- 処理別の ACP builder と prompt builder、パスモデル、cmoc 設定、構造化文書モデルの責務分担を確認するとき
+- cmoc の agent call に渡すモデルクラス、推論強度、ファイルアクセス、cwd、Structured Output schema、indexing preflight の契約を調査・変更するとき
+- prompt の組み立て、共通 instruction、file access・routing・oracle・realization・feedback・index entry などの policy を調査・変更するとき
+- work root・repository root・run root のパス解決、cmoc 設定、構造化 Markdown のデータモデルやレンダリングを調査・変更するとき
+- feedback reporter の入力契約、index entry 生成、oracle review、realization 追従、session join などの agent call builder の入口を特定するとき
 
 ## Do not read this when
-- agent call の実行制御、終了結果の処理、または TUI の起動だけを調査するときは、対応する実行側・TUI 側の下位要素を直接読む
-- Codex CLI が受理する具体的なモデル名や sandbox 解決仕様だけを確認するときは、realization 実装または指定された oracle 文書を読む
-- 個別処理の prompt policy、Structured Output schema、または処理固有の通常フローだけを調査するときは、対応する下位要素を直接読む
+- Codex CLI の通常の実行制御、サブコマンドのフロー、または agent call 終了結果の処理だけを調査するときは、対応する呼び出し側・実行処理を直接読む
+- 特定の prompt policy、Structured Output schema、feedback reporter の保存・集約処理、または用途別 builder の詳細だけを確認するときは、この領域全体ではなく対応する下位要素を直接読む
+- cmoc の正本仕様、開発手順、テスト手順だけを確認するときは、対応する oracle 文書を直接読む
 
 ## hash
-- 09a58a58b3fed24ab0b9cdcee17d73d2b5a0eeef46ed2be349cfe8eba9839184
+- c18ff8a26b092f6031480c496fbefd8bc4204a3ce8b64bd60ce55d6677e2bdc9

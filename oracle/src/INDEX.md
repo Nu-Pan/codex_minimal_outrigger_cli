@@ -1,17 +1,20 @@
 # `oracle`
 
 ## Summary
-- AI コーディングエージェント呼び出し用の AgentCallParameter 定義を集約する領域。共通パラメータ契約に加え、indexing、feedback、realization、session、tui、oracle 向けの prompt、アクセス制御、モデル・推論設定、Structured Output、作業ディレクトリなどを扱う。処理別の設定を調査・変更する際は、共通定義または対応する下位要素へ進む入口となる。
+- `oracle` は cmoc の agent call、プロンプト、パス・設定モデル、Structured Markdown、feedback、indexing、oracle review、realization などの正本となる Python 定義と Structured Output schema をまとめる領域です。
+- agent call の共通契約は `acp_builder`、完全 prompt の構築規則は `prompt_builder`、設定・パス解決・文書レンダリングの共通モデルは `other`、feedback 入力契約は `feedback` から確認します。
 
 ## Read this when
-- 特定の cmoc 処理が構築する agent call パラメータや完全 prompt を調査・変更するとき
-- モデル・推論設定、ファイルアクセス制御、Structured Output、cwd、indexing preflight の設定箇所を特定するとき
-- oracle、realization、feedback など処理別の agent call builder における設定責務の分割を確認するとき
+- cmoc の agent call パラメータ、モデル・推論設定、ファイルアクセス、cwd、Structured Output の構築を調査・変更するとき
+- 完全 prompt の統合規則、prompt policy、placeholder、oracle・realization 関連の指示を確認するとき
+- work root・repository root・run root のパス解決、cmoc 設定、構造化 Markdown のモデルやレンダリングを確認するとき
+- feedback issue の入力契約、検証・同一性判断、または indexing のエントリー生成を確認するとき
+- oracle review や realization など、下位機能の agent call builder と schema の入口を探すとき
 
 ## Do not read this when
-- agent call の実行制御や終了結果の処理を調査するときは、呼び出し側または実行処理を直接読む
-- モデル名や Codex CLI sandbox の具体的な解決仕様を確認するときは、realization 実装または指定された oracle 文書を読む
-- 個別の Structured Output schema、prompt の詳細、または対象処理の通常フローだけを調査するときは、対応する下位要素を直接読む
+- Codex CLI の実行制御、サブコマンドの通常フロー、または agent call の終了結果処理だけを調査するときは、対応する呼び出し側・実行処理を直接読む
+- 個別の prompt policy、Structured Output schema、feedback reporter の保存・集約処理だけを確認したいときは、対応する下位要素を直接読む
+- cmoc の正本仕様や開発・テスト手順だけを確認したいときは、対応する oracle 文書を直接読む
 
 ## hash
-- 662a907794675947058c6985786eeb9373a340a0387f33201a84b1b11af35041
+- 07834b7e08d1f253c3bac34277ea95804a14774ba3e23995c643d4b158f73b15

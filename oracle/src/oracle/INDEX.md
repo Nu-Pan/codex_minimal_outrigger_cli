@@ -54,17 +54,17 @@
 # `prompt_builder`
 
 ## Summary
-- agent向け完全プロンプトを構築するための定義群。基礎型、完全プロンプトの統合入口、エディタ入力、oracle／realization分類、共有policyを扱い、prompt builderの構成や共通方針を確認する際の入口となる。
+- `prompt_builder` は、agent向け完全プロンプトの構築に関わる型定義、入力テンプレート、構成部品、共有ポリシーをまとめた領域です。完全プロンプトの統合入口、エディタ入力の初期文面、oracle／realization等の基本知識、各種instruction policyへ進むための入口になります。
 
 ## Read this when
-- agent callへ渡すプロンプトの構成、入力テンプレート、placeholder統合、policy組み込みを変更・確認するとき
-- oracle／realizationの分類規則や、複数agent callに共有されるinstruction policyを調査するとき
-- 個別のprompt builder部品へ進む前に、配下の責務分担と入口を把握したいとき
+- agent callへ渡す完全プロンプトの構築規則や構成要素を調査・変更するとき
+- プロンプト builder の共通policy、placeholder、エディタ入力、または構成partの責務を確認するとき
+- 完全プロンプトの統合入口から、個別policyや下位builder partへ調査を進める必要があるとき
 
 ## Do not read this when
-- 特定のpolicy、prompt builder part、型定義、エディタ入力の詳細だけを確認する場合は、該当する下位対象を直接読む
-- 個別のoracle／realization文書や通常の実装・テストの具体的な挙動を確認する場合
-- prompt builderを使わない処理や、構造化文書の基本型・Markdownレンダリングだけを調べる場合
+- 生成済みプロンプトの具体的な内容だけを確認すればよいとき
+- 特定のpolicy、型定義、入力テンプレート、またはbuilder partの詳細を直接確認できる場合
+- プロンプト構築に関係しないcmocの実装、仕様、テストを調査するとき
 
 ## hash
-- b806aab0064fad4fad43e9a8d1a780204bcdd55ed369994b33eabae5063e7e1c
+- 78b914af6afe5e0fd7a870b74ca206dd67393ab9d69577fb2640e310d3bb5de0

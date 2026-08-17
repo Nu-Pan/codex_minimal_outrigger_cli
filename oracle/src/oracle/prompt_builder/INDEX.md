@@ -52,19 +52,20 @@
 # `parts`
 
 ## Summary
-- oracle と realization の役割・下位分類・分類条件、および uncategorised file の扱いを、call-scoped な work-root に基づく説明文として構築する prompt builder part の入口。配下には、この基本概念を生成する定義がある。
+- oracle file・realization file・uncategorised file の役割、下位概念、分類条件を StructDoc として構築する prompt builder part。call-scoped context から work-root を取得し、oracle と realization の正本仕様・具体化の関係や配置境界を説明する基本知識への入口となる。
 
 ## Read this when
-- oracle file、realization file、uncategorised file の役割や分類規則を動的プロンプトへ反映する処理を変更・調査するとき
-- oracle と realization の配置先や、oracle を正本として realization を生成する関係の説明文を確認するとき
+- oracle file、realization file、uncategorised file の定義や分類条件を確認するとき
+- oracle file と realization file の責任範囲、正本仕様と具体化の関係、配置先を確認するとき
+- これらの基本知識を含む prompt builder part の文面構築処理を変更・調査するとき
 
 ## Do not read this when
-- 個別の oracle doc・oracle src・oracle test の内容や仕様を確認するとき
-- realization の実装・テストの具体的な挙動を確認するとき
-- 共通の prompt builder 定義や、oracle/realization の基本概念を扱わない別のプロンプト部品を調査するとき
+- oracle または realization の個別ファイルの内容や実装詳細だけを確認するとき
+- 分類条件ではなく、別の prompt builder part の文面や生成ロジックを確認するとき
+- 生成済み StructDoc の具体的な出力だけを確認すれば足りるとき
 
 ## hash
-- 9ebb611920d5f29b9ec0c8971c1e527f782c40448b314a32da771340d4c2824f
+- 754af53ac0f6a1fb99a71d8fe635f362fc1aeaa6b2c109eae4a4ea57fdf6b334
 
 # `policy`
 
