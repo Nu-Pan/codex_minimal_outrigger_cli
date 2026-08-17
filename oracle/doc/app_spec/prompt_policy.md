@@ -68,8 +68,7 @@ prompt policy は、cmoc が agent の判断または操作を制約するため
 
 ### policy block と flag の一対一対応
 
-- `build_complete_prompt` の各 policy flag は、対応する 1 個のトップレベル `StructDoc` だけを制御する。
-- 対応する policy block は、flag が `True` なら 1 回追加し、`False` なら追加しない。
+- `build_complete_prompt` の各 policy flag は、対応する 1 個の policy block の追加有無だけを制御し、`True` の場合に 1 回追加する。
 - ある flag の値を根拠として、別の flag を有効化してはならない。
 
 各 flag が所有する policy block を次に示す。
@@ -90,7 +89,8 @@ prompt policy は、cmoc が agent の判断または操作を制約するため
 
 - agent call ごとに必要な全 policy block は、対応する `build_*_parameter` 関数が `build_complete_prompt` の固定引数として明示的に選択する。
 - builder による選択は、対応する oracle doc の意味仕様を実現するものであり、選択した prompt part だけを判断基準の正本にしてはならない。
-- policy block の結合、重複除去、Policy ID または group ID による衝突検査、および ID による並べ替えを行ってはならない。
+- `fundamental_policy` block には、human feedback instruction と、選択条件を満たす file access policy、routing policy、および oracle／realization の分類と基本概念を置く。
+- `fundamental_policy` block への配置を除き、policy block の結合、重複除去、Policy ID または group ID による衝突検査、および ID による並べ替えを行ってはならない。
 - 複数の有効な policy block に同じ文面が含まれる場合は、その文面を各 block 内へ残したまま出力する。
 - 各 policy builder は、自身が出力する完全な本文を、その builder 内のリテラルとして直接記述する。
 - 共有文面を含む policy 文面を `policy/definitions.py` へ一元定義してはならない。
@@ -100,6 +100,16 @@ prompt policy は、cmoc が agent の判断または操作を制約するため
 - repository の参照が必要な agent call だけに routing policy を注入する。入力された情報だけを参照する agent call には注入しない。
 - prompt part の有効化によって、その文面が参照しない cmoc 固有概念を一律に追加してはならない。
 - indexing agent call は、対応する index entry instruction を固定で注入する。
+
+完全 prompt の構成要素は、変動が少ないものから次の順に配置する。
+
+1. `fundamental_policy` block と `objective` block を参照する案内
+2. `fundamental_policy` block
+3. その他の policy block
+4. caller 固有の static prompt
+5. `objective` block
+6. caller 固有の dynamic prompt
+7. placeholder 定義
 
 共通 prompt part が伝える意味仕様の参照先を次に示す。
 
@@ -149,7 +159,7 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 
 動的な作業記述の責務境界を次のとおり定める。
 
-- `build_complete_prompt` は、agent call 固有の動的な指示として `summary` と `goal` を受け取る。
+- `build_complete_prompt` は、agent call 固有の動的な指示として `summary` と `goal` を受け取り、両者を `objective` block 内へ置く。
 - `build_complete_prompt` は、独立した `role` を受け取らない。
 - `summary` は、agent の担当、主作業、対象、および作業範囲を定義する。
 - 担当を明示する必要がある場合は、`summary` の先頭に記載する。
@@ -204,8 +214,7 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 
 - `cmoc_block`、`id`、`cmoc_ref`、`target` は固定の名前とし、`target-1` は参照先を対応付ける可変値とする
 - 動的なプロンプト構築では、`cmoc_block` を `StructBlock` で表し、`cmoc_ref` は参照元のプロンプト文字列内に直接記述する
-- レンダリング済みの文字列を子にする場合、その文字列は事前のレンダリングで参照関係の検査を完了しているものとし、外側の構造では不透明な内容として再検査しない
-- Markdown へのレンダリング時に、各 `cmoc_ref` の参照対象が構築結果内に一つだけ存在することを検査し、参照対象の欠落、`cmoc_block` の `id` 重複、または不正な `cmoc_ref` 記法を検出した場合はプロンプト構築を失敗させる
+- Markdown へのレンダリングでは、`cmoc_ref` と `cmoc_block` の対応関係を検査しない
 
 ## 言語
 
