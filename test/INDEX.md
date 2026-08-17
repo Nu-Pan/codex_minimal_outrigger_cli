@@ -534,20 +534,21 @@
 # `test_oracle_edit_cli.py`
 
 ## Summary
-- `cmoc oracle edit` の main-worktree 実行制御を検証する統合テスト。成功時と main exec 失敗時・仕様削減 exec 失敗時について、同一 editor 入力、2 回の agent call、Git 差分、session state、生成物、終了報告、通知境界を比較する。
-- oracle edit の起動前提として、main worktree、session branch、active session state が必要であることを検証する。
+- 対象は `cmoc oracle edit` の main-worktree 実行制御を検証する pytest です。成功時と main agent call／仕様削減 agent call の各失敗時について、editor 入力、Git 差分、session state、実行順序、通知、診断レポートを比較します。
+- テスト用 repository・session state・Codex home を準備し、doctor、editor、indexing preflight、起動前提検査、agent exec、通知を差し替えて観測します。成功時のみ仕様削減用 exec が続き、失敗時も既存差分と editor 入力コピーを保持する契約を確認します。
+- builder 失敗時に editor work file を予約しないこと、linked worktree・session 外・inactive session で起動を拒否することも検証します。oracle edit の CLI 実行制御と失敗境界を調べる際のテスト入口です。
 
 ## Read this when
-- `cmoc oracle edit` の editor 入力から main agent call、成功時のみ行う reduction agent call、失敗時の処理継続境界を変更または検証するとき。
-- oracle edit 実行前後の既存 staged/unstaged 差分、session state、oracle spec の変更、editor 一時ファイル、terminal report、通知状態を確認するとき。
-- oracle edit が main worktree 上の active な session branch からのみ起動できることを変更または検証するとき。
+- `cmoc oracle edit` の agent exec 回数、実行順序、成功／失敗時の分岐を変更または検証するとき
+- oracle edit の editor 入力、Git 差分、session state、通知、診断レポートの保持境界を確認するとき
+- oracle edit の起動前提違反や builder 失敗時の後処理をテストするとき
 
 ## Do not read this when
-- oracle edit 以外のサブコマンドの実行制御や、共通の Git・session state・Codex 起動ヘルパー自体を直接変更または検証するときは、対応する実装や専用テストへ進む。
-- editor 入力や oracle edit の agent call 境界を扱わず、単一の前提検査関数だけを確認する場合は、対象の実装またはより狭い前提検査テストを直接読む。
+- oracle edit の builder や本体実装の詳細を直接調査する場合は、対応する実装・仕様ファイルを先に読むとよい
+- oracle edit と無関係な CLI サブコマンド、一般的な indexing、Git、session state の挙動を調べる場合
 
 ## hash
-- 45f6fa4ee17d8313001a42364fba62ba4e73b799b103cbc5d92888d3d4a24ff8
+- 2414dd4f42657a2b8aa399451d0014c78f9a02c857c003825596829da8a39dfc
 
 # `test_oracle_investigation_cli.py`
 

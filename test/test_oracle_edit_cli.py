@@ -421,6 +421,29 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "診断用サブコマンドログ" in report
 
 
+def test_oracle_edit_builder_failure_does_not_reserve_editor_work_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """skeleton 構築に失敗した場合は editor work file を残さない。"""
+    root = _prepared_repo(tmp_path, monkeypatch)
+
+    def fail_build_main_parameter(_user_instruction: str) -> AgentCallParameter:
+        """skeleton の構築失敗を再現する。"""
+        raise CmocError("builder failed", [], "test failure")
+
+    monkeypatch.setattr(
+        oracle_edit_module,
+        "build_oracle_edit_main_launch_exec_parameter",
+        fail_build_main_parameter,
+    )
+
+    result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
+
+
 @pytest.mark.parametrize(
     ("case", "message"),
     [

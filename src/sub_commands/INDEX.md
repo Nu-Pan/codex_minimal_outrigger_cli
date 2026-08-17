@@ -69,18 +69,19 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package。oracle の編集・調査・レビューに関する CLI 実行入口と、レビュー対象列挙、ループ、レポート、隔離実行の補助処理へのルーティング起点となる。
+- 対象ディレクトリは、oracle 系サブコマンドの CLI 実装群への入口です。編集、調査、レビューの各サブコマンドと、レビュー対象列挙・実行ループ・レポート・パス処理などの専用実装へ進むための構成を扱います。
 
 ## Read this when
-- oracle 系サブコマンドの構成、共通する実行入口、または編集・調査・レビュー機能の実装箇所を探すとき。
-- oracle review の対象選定、レビュー処理、レポート生成、隔離 worktree の lifecycle を追跡するとき。
+- oracle 系サブコマンドの CLI 実行フローや package 構成の入口を確認するとき。
+- oracle edit、investigation、review のいずれかを調査・変更するとき。
+- oracle review の対象選定、実行ループ、パス解決、レポート、INDEX 差分処理の担当箇所を特定するとき。
 
 ## Do not read this when
-- 個別サブコマンドの prompt 契約や共通 prompt editor など、下位の専用実装だけを確認したいときは、該当する実装ファイルへ直接進む。
-- oracle 系以外の CLI サブコマンドや、oracle の正本仕様そのものを調べるとき。
+- 個別サブコマンドの prompt 契約や agent 起動パラメータなど、下位実装の詳細だけを確認したいとき。
+- 共通 runtime、prompt editor、ACP builder など、oracle ディレクトリ外の共通実装を直接調査する場合。
 
 ## hash
-- 47adab309a412059b56d3747553c318f3db3fdb64eff74a147f131f01858c2e9
+- 1e3431e73d3697064b92ee41aaea48abeaa37f6510ba7b6a01200054e525e158
 
 # `realization`
 

@@ -50,10 +50,11 @@ def _cmoc_oracle_edit_body() -> None:
     # oracle 編集契約を含む完全 prompt の skeleton を初期表示に使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
     start_subcommand_step(2, "本命 prompt の skeleton を構築", "build main skeleton")
-    editor_work_path, input_copy_path = reserve_prompt_editor_input(repository)
     complete_prompt_skeleton = build_oracle_edit_main_launch_exec_parameter(
         ORIGINAL_PROMPT_PLACEHOLDER
     ).prompt
+    # skeleton の構築に成功した後でだけ editor work file を予約する。
+    editor_work_path, input_copy_path = reserve_prompt_editor_input(repository)
 
     start_subcommand_step(3, "oracle 最終状態の指示を入力", "edit instruction")
     edit_prompt_editor_input(

@@ -121,18 +121,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実行入口をまとめる階層。各サブコマンドの責務と、下位の専用実装へ進むためのルーティング起点を提供する。
-- doctor、feedback、indexing、oracle、realization、run、session、tui の実装を扱い、realization 配下では成果物適用とリファクタリング、run 配下では editing run のライフサイクルを扱う。apply と review には現在具体的な実装がない。
+- CLI サブコマンド実装群のディレクトリ入口。apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui の各サブコマンド実装へ進むための構成を扱う。
 
 ## Read this when
-- CLI サブコマンド全体の構成や、目的に応じた実装入口を判断するとき
-- 特定のサブコマンドの実行フローを調査し、該当する下位実装へ進む前に責務の境界を確認するとき
-- oracle、realization、run、session など複数層にまたがるサブコマンドの担当範囲を確認するとき
+- CLI サブコマンドの実装全体の構成や、対象サブコマンドの実装入口を特定するとき。
+- 複数サブコマンドにまたがる実行経路や、どの配下実装を確認すべきか判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理、状態機械、prompt 契約、共通ランタイムの詳細だけを確認する場合
-- サブコマンド以外の正本仕様や共通実装を直接調べる場合
-- apply または review の具体的な処理を確認する場合は、実装追加後に該当する下位対象を直接読むとき
+- 特定サブコマンドの詳細な処理、仕様、共通 runtime、prompt、Git 操作などを直接確認したいときは、該当する下位実装や共通実装を読む。
+- CLI サブコマンド以外の処理を調査・変更するとき。
 
 ## hash
-- b64d78f5fa05f372c4cb9da1e8b511195f1e22832eac47f41feb62617237173d
+- 04f905f5e2be483cf09311225cf3396489a67e73eee0ae65b1f0a4b5a83bab1d
