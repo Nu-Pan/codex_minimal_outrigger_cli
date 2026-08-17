@@ -19,9 +19,9 @@
   },
   "bin/cmoc": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "fa6f0ba6eea8264d142d2551000b48dcb9134171e452008017b37eeddf729714",
-    "last_investigated_at": "2026-08-03_21-09_38_698269000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "f3d1f5ef775127d10ed23f67a7102915c3b20adddc2ea9bf4f49beff75f22a04",
+    "last_investigated_at": "2026-08-18_02-46_23_724944000"
   },
   "codex_minimal_outrigger_cli.code-workspace": {
     "investigation_required": false,
