@@ -13,11 +13,12 @@ def build_feedback_reporting_policy(
         StructDoc(
             "human feedback reporting",
             """
-            - 現在の workload だけでは解消できず、現在の作業外にいる人間の対応によって、再発防止、反復的な浪費の削減、または外部挙動を左右する人間意図の確定が可能な問題だけを報告する
-            - 通常の workload 内で解決した問題、仕様どおりの制約、および具体的な根拠がない改善案は報告しない
-            - 報告対象を発見した時点で MCP tool `cmoc_feedback.submit_observation` を使用する。feedback 保存 file は直接編集しない
-            - 報告後も可能なら本命 workload を継続する。tool が利用不能な場合または報告が拒否された場合も、本命 workload を継続する
-            - 報告対象がない場合は、feedback 用の出力または tool call を行わない
+            - このセッションの規定内では解決できなかった問題を MCP tool `cmoc_feedback.submit_observation` を使用して報告すること
+            - 以下の情報は報告しなくて良い
+                - セッション内で解決した問題
+                - 仕様どおりの制約
+                - 具体的な根拠がない改善案
+            - 問題報告の成功・失敗を根拠にセッションを中断・続行を判断してはならない
             """,
         ),
     )

@@ -113,8 +113,9 @@ def build_file_access_policy(
                 # realization file は書き込み許可
             ]
         case FileAccessMode.NO_POLICY:
-            # `build_complete_prompt` によるアクセス規定文面が生成されない
-            # 特殊文面を個別に構築する用の特別モードで、よほどのことがない限り使ってはいけない
+            # NTOE
+            #   `build_complete_prompt` によるアクセス規定文面が生成されない
+            #   特殊文面を個別に構築する用の特別モードで、よほどのことがない限り使ってはいけない
             return ({}, StructDoc("", ""))
         case _:
             raise ValueError(f"Invalid mode (mode={mode})")
@@ -122,7 +123,8 @@ def build_file_access_policy(
     return (
         path_context.root_placeholder_definitions(),
         StructDoc(
-            f"file read write policy - {mode.value}",
+            f"file R/W policy ({mode.value})",
             "\n".join(f"- {denial}" for denial in denials),
+            "以上のルールで禁止されていない読み書きは暗黙に許可される。",
         ),
     )
