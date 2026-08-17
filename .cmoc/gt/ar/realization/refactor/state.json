@@ -1458,10 +1458,10 @@
     "last_investigated_at": "2026-07-26_14-43_06_496899000"
   },
   "test/test_runtime_file_access.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "4115b2fd0a1a6350e8acec4a57b5a039c8f768d3660b0b75a0579ed96addb571",
-    "last_investigated_at": "2026-07-27_22-36_52_843047000"
+    "last_investigated_sha256": "cbbb2e829ce17df28aa8f61a44c8978c34f2f90b4d0c24406732cbd6c2843f63",
+    "last_investigated_at": "2026-08-18_00-06_17_585543000"
   },
   "test/test_runtime_git_ignore.py": {
     "investigation_required": true,
