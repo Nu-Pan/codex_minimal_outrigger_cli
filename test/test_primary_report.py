@@ -96,6 +96,8 @@ _EARLY_ERROR_REPORTS = [
             "diff_base_commit",
             "codex_returncode",
             "changed_paths",
+            "feedback_observation_count",
+            "feedback_observations",
         ),
     ),
     (
@@ -243,6 +245,9 @@ def test_early_error_saves_command_specific_primary_report(
         assert "## Verdict" in rendered
     if command_name == "realization refactor fork":
         assert 'completion_reason: "error"' in front_matter
+    if command_name == "realization apply fork":
+        assert "feedback_observation_count: 0" in front_matter
+        assert "feedback_observations: []" in front_matter
     if command_name == "feedback report":
         assert "feedback publication または active state ではありません" in rendered
 
@@ -280,6 +285,36 @@ def test_user_interruption_saves_feedback_invocation_summary(
     assert "確定済み部分結果: `not_fixed`" in rendered
     assert not list(report_path.parent.parent.glob("*.md"))
     assert not list(report_path.parent.parent.joinpath("incomplete").glob("*.md"))
+
+
+def test_refactor_fallback_records_user_interruption_reason(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """fallback report でも refactor の中断理由を確定する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+
+    def interrupt_without_report() -> TerminalResult:
+        """処理本体が中断だけを確定し、report 保存を共通 fallback に委ねる。"""
+        runtime_cli.mark_current_subcommand_interrupted()
+        return TerminalResult()
+
+    runtime_cli.run_cli_subcommand(
+        interrupt_without_report,
+        command_name="realization refactor fork",
+        command_argv=("cmoc", "realization", "refactor", "fork"),
+        doctor_preprocess=False,
+        interruptible=True,
+    )
+
+    captured = capsys.readouterr()
+    report_path = _terminal_report_path(captured.out)
+    front_matter = report_path.read_text(encoding="utf-8").split("---", 2)[1]
+    assert 'terminal_classification: "user_interruption"' in front_matter
+    assert 'completion_reason: "user_interruption"' in front_matter
 
 
 def test_unsaved_report_path_becomes_internal_failure_without_path_display(

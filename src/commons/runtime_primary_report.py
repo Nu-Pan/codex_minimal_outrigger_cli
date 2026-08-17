@@ -70,6 +70,14 @@ def start_primary_report_context(
             "main_agent_call_status": "not_started",
             "reduction_agent_call_status": "not_started",
         }
+    elif command_name == "realization apply fork":
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # fallback は reporter の agent call より前にも発生するため、0 件の
+        # invocation では正本が要求する空の observation 集合を確定値にする。
+        fields = {
+            "feedback_observation_count": 0,
+            "feedback_observations": [],
+        }
     context = PrimaryReportContext(spec, fields) if spec is not None else None
     return _PRIMARY_REPORT_CONTEXT.set(context)
 
@@ -185,8 +193,13 @@ def _report_fields(
         known.setdefault("result", result.result)
     if result.completion_reason is not None:
         known.setdefault("completion_reason", result.completion_reason)
-    if command_name == "realization refactor fork" and classification == "error":
-        known.setdefault("completion_reason", "error")
+    if command_name == "realization refactor fork" and classification in {
+        "user_interruption",
+        "error",
+    }:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # report fallback 自体が作られる終了経路でも、共通分類と reason を一致させる。
+        known["completion_reason"] = classification
     if command_name == "oracle review":
         known.setdefault("scope", _option_value(command_argv, "--scope"))
         known["result"] = (

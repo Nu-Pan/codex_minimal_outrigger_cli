@@ -424,6 +424,13 @@ def _cleanup_warning_lines(warnings: list[str]) -> list[str]:
 def _apply_report_fields(diff_base_commit: str | None) -> dict[str, object]:
     """apply 固有の diff 始点と accepted feedback 参照を返す。"""
     observations = accepted_feedback_observations()
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    # 通常 report の保存失敗後に共通 fallback が再試行しても、同じ invocation
+    # で受理した observation を失わないよう先に report context へ反映する。
+    update_primary_report_fields(
+        feedback_observation_count=len(observations),
+        feedback_observations=observations,
+    )
     return {
         "diff_base_commit": diff_base_commit,
         "feedback_observation_count": len(observations),

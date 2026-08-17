@@ -420,25 +420,22 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、branch、process tracking、fork report、INDEX 更新、refactor state、join/abandon cleanup を同一 lifecycle fixture で検証する。
-- apply fork と refactor fork の正常完了、中断、失敗、rollback、agent commit、遅延 child、想定外 path、rename/delete、report 保存を扱う。run join の merge、force-resolve、conflict、post-join 同期、cleanup、state 遷移を扱う。
-- Codex child の追跡・停止、INDEX.md と oracle・管理対象 file の差分境界、refactor target と changed_paths の整合性など、複数の editing run 機能を横断する変更の統合テスト入口である。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、process tracking、Codex child cleanup、join/abandon の lifecycle 遷移を、apply/refactor の両経路で検証する。
+- oracle・INDEX・realization file の想定外変更、agent の直接 commit、遅延変更、rename/delete、rollback、merge conflict、cleanup failure、primary report 保存失敗など、run lifecycle の失敗時保全と再試行可能性を検証する。
+- refactor の調査 state、unresolved target、変更 path 報告、Structured Output 検証、永続 cycle、割り込み時の進捗保持を検証する。run lifecycle や apply/refactor の実装挙動を変更・レビューするときの統合テスト入口である。
 
 ## Read this when
-- editing run の lifecycle、session state、run worktree または run branch の作成・復旧・cleanup を変更または検証するとき。
-- realization apply/refactor fork、run join、run abandon の外部挙動や state 遷移を変更または検証するとき。
-- fork・join・abandon report、terminal report、cleanup warning、process tracking、Codex child 停止の挙動を変更または検証するとき。
-- run worktree と session worktree の merge、force-resolve、conflict rollback、rename/delete、INDEX 更新または oracle・管理対象 file の差分検査を変更するとき。
-- refactor cycle の target 選択、unresolved finding、changed_paths、refactor state 同期、処理単位 commit、中断時の進捗保持を変更するとき。
+- editing run の fork、join、abandon、error recovery、worktree/branch cleanup、process tracking、report 保存の挙動を確認するとき
+- realization apply fork または realization refactor fork の run isolation、INDEX 更新、agent 境界、commit/rollback、変更 path 検証を確認するとき
+- refactor state の cycle 完了、unresolved finding、rename、割り込み、Structured Output の検証挙動を確認するとき
 
 ## Do not read this when
-- editing run の lifecycle や fork・join・abandon に関係しない単独の unit test または実装を確認するとき。
-- report の Markdown 表示だけを変更する場合で、fork・join・abandon の lifecycle state、cleanup、process tracking との統合挙動を確認する必要がないとき。
-- INDEX.md の通常の生成ロジックだけを変更し、run worktree 内の refresh、差分境界、Codex child tracking との連携を変更しないとき。
-- refactor の個別解析ロジックだけを変更し、refactor cycle、state 同期、処理単位 commit、run lifecycle との連携を変更しないとき。
+- 単一関数の実装詳細や単独の CLI 引数仕様だけを確認する場合は、対応する realization/apply、realization/refactor、run lifecycle の実装または仕様を直接読む
+- oracle 文書の正本仕様や通知仕様そのものを確認する場合は、この統合 test ではなく参照されている oracle 文書を読む
+- INDEX 更新アルゴリズム自体や一般的な test 実行手順だけを確認する場合は、indexing 実装または test execution の文書を直接読む
 
 ## hash
-- b9962231fbc48d7f3f664d606e02ef10f18a48ea4a451b0c90bcee6722b8c73e
+- 78a78e49404235d7f902ebaca94ce1077eb47422db2611c2c0cda2d52ce7e9d7
 
 # `test_feedback.py`
 
@@ -682,23 +679,20 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話末端サブコマンドについて、処理開始前を含む error、正常完了、および対象コマンドで認められた user_interruption の各経路で、primary report が保存されてから terminal result と終了ログが確定する契約を検証するテスト。
-- doctor、indexing、session fork/join/abandon、oracle edit/review、realization apply/refactor fork、run join/abandon、feedback report について、コマンド固有の report 保存先と必須 Front Matter が保たれることを扱う。
-- feedback report の中断時 invocation summary、primary report を保存できない場合の internal failure、未保存 report の path を表示しないエラー処理も検証する。primary report の共通契約とコマンド別要件を横断して確認する入口であり、個別サブコマンドの処理ロジックそのものを読む入口ではない。
+- 対象は、非対話末端サブコマンドが処理開始前のエラーやユーザー中断を含む各終了経路で、command-specific な primary report を保存し、terminal result とエラー分類を正しく確定する契約を検証するテスト群である。doctor、indexing、session、oracle、realization、run、feedback の各サブコマンドについて、必須 front matter、保存先、診断内容、終了コード、ログ記録、未保存レポートの内部失敗化を確認する。非対話サブコマンドの primary report 保存契約や中断時の invocation summary を変更・調査するときの入口になる。
 
 ## Read this when
-- 非対話サブコマンドの早期エラー、primary report の保存・表示、terminal result の確定順序、またはサブコマンドログの終了イベントを変更・検証するとき。
-- feedback report の user_interruption が publication ではなく invocation summary として保存されることを確認するとき。
-- primary report の保存確認に失敗した場合を report 基盤の internal failure として扱い、未保存 path を console に出さない挙動を確認するとき。
-- 複数のサブコマンド仕様に定められた report の保存先、必須 Front Matter、終端分類を共通の実行経路から検証するとき。
+- 非対話サブコマンドの early error、user interruption、fallback report、primary report 保存確認を変更または検証するとき。
+- command-specific な report directory や front matter 必須項目、terminal classification、終了コードのテスト要件を確認するとき。
+- primary report が保存されない場合の internal failure、パス非表示、command_finished ログ記録の挙動を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの正常処理、state 遷移、agent call、差分処理などの固有ロジックだけを確認する場合は、対応するサブコマンド仕様または実装を直接読む。
-- primary report の共通出力順序や internal failure の分類だけを確認する場合は、console・ファイルログ仕様と error handling 仕様を直接読む。
-- feedback observation の検出・保存や publication の詳細だけを確認する場合は、feedback observation 仕様または feedback report 仕様を直接読む。
+- primary report の生成ロジックそのものを調査・変更する場合は、まず runtime CLI や report 実装を直接読むとき。
+- 個別サブコマンドの業務処理や oracle・realization の詳細仕様だけを確認する場合。
+- 通常のサブコマンド成功経路や、ここで列挙されていない report 種別の挙動だけを調べる場合。
 
 ## hash
-- d067e716de1befac7e29eb43c94899d7370c09760d04ee2a557135ad260f701d
+- 018d0484d3a1aa3b38cef675401ed6a2c984de9e4a34d0392095bf69b4a3c018
 
 # `test_production_cli.py`
 

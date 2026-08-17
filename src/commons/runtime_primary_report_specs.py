@@ -120,6 +120,8 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "diff_base_commit",
             "codex_returncode",
             "changed_paths",
+            "feedback_observation_count",
+            "feedback_observations",
         ),
     ),
     "realization refactor fork": PrimaryReportSpec(

@@ -35,8 +35,15 @@ import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
+from commons.runtime_logging import SubcommandLogger
 from commons.runtime_paths import timestamp
+from commons.runtime_primary_report import (
+    ensure_primary_report,
+    reset_primary_report_context,
+    start_primary_report_context,
+)
 from commons.runtime_refactor import load_refactor_state
+from commons.runtime_results import TerminalResult
 from commons.runtime_run import run_process_id_path
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -1096,6 +1103,7 @@ def test_run_abandon_reports_stale_child_stop_warning(
 
 
 def test_apply_report_fields_include_accepted_feedback_paths(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply report が invocation 内で accepted になった raw 参照だけを含む。"""
@@ -1111,13 +1119,36 @@ def test_apply_report_fields_include_accepted_feedback_paths(
         lambda: observations,
     )
 
-    fields = apply_module._apply_report_fields("base-commit")
+    token = start_primary_report_context("realization apply fork")
+    try:
+        fields = apply_module._apply_report_fields("base-commit")
+
+        logger = SubcommandLogger(tmp_path, "realization apply fork")
+        result = ensure_primary_report(
+            tmp_path,
+            "realization apply fork",
+            ("cmoc", "realization", "apply", "fork"),
+            "error",
+            1,
+            TerminalResult(),
+            logger,
+        )
+    finally:
+        reset_primary_report_context(token)
 
     assert fields == {
         "diff_base_commit": "base-commit",
         "feedback_observation_count": 1,
         "feedback_observations": observations,
     }
+    assert result.primary_report is not None
+    front_matter = result.primary_report.read_text(encoding="utf-8").split("---", 2)[1]
+    assert "feedback_observation_count: 1" in front_matter
+    assert (
+        'feedback_observations: [{"observation_id": "fbo_feedback", '
+        '"path": "/repo/.cmoc/gu/ar/feedback/observation/fbo_feedback.json"}]'
+        in front_matter
+    )
 
 
 def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(

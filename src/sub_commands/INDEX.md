@@ -86,19 +86,21 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドの実装をまとめるパッケージ階層。apply による成果物適用処理と、refactor によるリファクタリング処理への入口を提供する。
+- realization workload サブコマンドのパッケージ入口。
+- realization apply workload とリファクタリング処理の配下へ進むためのルーティング入口。
 
 ## Read this when
-- realization workload サブコマンド全体の構成や、apply・refactor のどちらへ進むべきかを確認するとき。
-- realization の workload 実装に関するサブコマンドの責務分担を調査するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization apply workload の実装、処理順序、run state、差分の許可範囲、commit/rollback、fork report、cleanup を確認または変更するとき。
+- realization のリファクタリング作業の内容や構成を確認するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply の実行ライフサイクルや fork report 保存の詳細だけを確認するときは apply 配下を直接読む。
-- realization のリファクタリング処理の詳細だけを確認するときは refactor 配下を直接読む。
+- realization apply の仕様や共通 editing run の契約を確認する場合は、対応する oracle/specification または共通 runtime 実装を直接読むとき。
+- fork 以外の realization apply サブコマンド固有処理だけを確認する場合は、各サブコマンドの実装を直接読むとき。
 
 ## hash
-- 526e7d8b4cb8e735ee28786b035ac0d2826943dfc6781fb4eb6f015d6e8336f5
+- ce16eb2471c31b79d1c772826d4fe92a6e2183cfadedb99fe8ff54ff97762178
 
 # `review`
 

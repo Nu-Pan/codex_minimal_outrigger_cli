@@ -15,19 +15,17 @@
 # `fork.py`
 
 ## Summary
-- `cmoc realization apply fork` の実行本体を担う。editing run の作成、apply agent の起動、差分検査、INDEX 生成物を含む処理単位の commit、joinable/error state への更新、fork report 保存までを一連の CLI runtime として管理する。
-- apply agent が作成した想定外差分や commit、遅延 Codex child の書き込み、preflight commit を検出・整理し、成功時は join 可能な成果物へ、失敗時は rollback 後の error run へ遷移させる。
-- apply 固有の diff base commit と accepted feedback observation を fork report の追加情報として記録する。内部の差分検査・cleanup・error report の詳細を確認する必要がある場合の実装入口でもある。
+- `cmoc realization apply fork` の実行を統括し、editing run の作成から realization apply agent の実行、差分検査、commit、joinable/error state 更新、fork report 保存までを担う。
+- agent の commit、想定外ファイル変更、遅延 Codex child の書き込みを検出・清掃し、成功時は joinable な成果物として公開し、失敗時は差分を rollback して error report を保存する。
+- realization apply fork の CLI runtime と、apply 固有の差分始点・accepted feedback observation・cleanup warning の report 反映を確認する入口である。
 
 ## Read this when
-- `cmoc realization apply fork` の CLI 動作、run lifecycle、apply agent の実行境界を調査または変更するとき。
-- apply agent の許可差分、INDEX.md 生成差分、agent commit 検出、遅延 child 停止、rollback と error state の扱いを確認するとき。
-- realization apply fork report の生成条件、成功・失敗時の state 更新、diff base commit や feedback observation の記録方法を確認するとき。
+- `cmoc realization apply fork` の処理順序、成功・失敗時の run state、差分の許可範囲、commit/rollback、fork report の内容を確認または変更するとき。
+- realization apply agent が作成した差分を joinable run として公開する経路や、agent commit・想定外変更・遅延 child を扱う cleanup を調査するとき。
 
 ## Do not read this when
-- realization apply の agent prompt や launch parameter の内容だけを確認したいときは、launch parameter builder の実装を直接読む。
-- editing run の共通ライフサイクル、join、abandon、state 管理の一般仕様だけを確認したいときは、共通 runtime lifecycle または該当する sub-command の実装を直接読む。
-- INDEX.md の生成規則そのものだけを確認したいときは、indexing の仕様・実装を直接読む。
+- realization apply の仕様や共通 editing run の契約を確認する場合は、対応する oracle/specification または共通 runtime 実装を直接読む。
+- fork 以外の realization apply サブコマンドの固有処理だけを確認する場合は、各サブコマンドの実装を直接読む。
 
 ## hash
-- f86ffe80c0ee70f5a6859f3126a8992c136648efc983d699cc729579e284f04d
+- cbb2acf1b2ac3b46a4b142ee18c71b0e4a5828e445e1ccb18e226b360061d868
