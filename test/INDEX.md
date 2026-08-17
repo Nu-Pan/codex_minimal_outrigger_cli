@@ -419,28 +419,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の統合 realization test。
-- apply/refactor の fork、共通 run state、run worktree、session branch、join/abandon の lifecycle を検証する。
-- agent が変更・commit した realization file と cmoc 管理対象（INDEX、refactor state、oracle）の境界、rollback、merge、cleanup、process tracking を検証する。
-- refactor の調査 cycle、findings、rename、unresolved target、change summary、永続 state 更新を検証する。
-- INDEX refresh、Codex child の追跡・停止、primary report、lifecycle report、terminal result、通知、feedback observation の保存を検証する。
-- 個別サブコマンドの実装詳細ではなく、fork から joinable/error、join/abandon 完了までの共有 lifecycle と異常系を横断確認する入口。
+- workload fork と共通 run join/abandon の統合 realization test。
+- realization apply/refactor の fork lifecycle、共通 session state・run worktree・branch・process tracking、agent 境界、INDEX 更新、commit/rollback、cleanup を検証する。
+- fork report と lifecycle report、primary report、通知、feedback observation、interruption、error recovery、force-resolve、merge conflict、rename/delete、異常な path や symlink の扱いまで一連の run lifecycle として確認する。
 
 ## Read this when
-- editing run の apply/refactor fork の統合挙動を変更・確認するとき
-- run join または run abandon の state 遷移、merge、worktree/branch cleanup を変更・確認するとき
-- agent の予期しない file change、commit、遅延処理、process tracking、rollback の安全性を確認するとき
-- INDEX refresh や refactor state 同期が run lifecycle に与える影響を確認するとき
-- fork、join、abandon の report、primary report、通知、feedback metadata の検証箇所を探すとき
+- realization apply/refactor fork の統合 lifecycle や共通 run state の挙動を変更・検証するとき
+- run join または run abandon の merge、cleanup、process 停止、branch/worktree 回収、失敗復旧を確認するとき
+- fork・join・abandon の report、通知、INDEX 更新、rollback、user interruption の連携を調査するとき
 
 ## Do not read this when
-- INDEX エントリーの生成以外で、個別実装関数の詳細仕様だけを確認したいとき
-- run lifecycle と無関係な通常の unit test や CLI 出力を確認したいとき
-- 正本仕様の内容を確認したいときは、対象テストではなく参照される oracle 文書を直接読むとき
-- 対象ファイル内の一つの helper の実装を確認したいときは、対応する実装モジュールを直接読むとき
+- 単一の realization apply/refactor 実装の詳細だけを確認する場合は、対象実装や専用テストを直接読む
+- INDEX.md 生成の一般規則だけを確認する場合は、この統合 lifecycle test を読む必要はない
 
 ## hash
-- 41527f94c3b7981c38bc1f7821d514fe363c91f464b4c29ee38d279efbf5264a
+- 769b646539819645ba85fe8cd9adf544b57c9fa33747a87b4cab01d366c96de4
 
 # `test_feedback.py`
 

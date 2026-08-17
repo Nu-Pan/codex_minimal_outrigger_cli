@@ -119,22 +119,18 @@
 # `run`
 
 ## Summary
-- editing run サブコマンドの共通 lifecycle と個別の abandon・join 実装、旧 import path 互換 shim をまとめる入口。run の停止・統合・cleanup・report/state 同期の実装へ進むためのディレクトリ。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージの入口。配下の abandon、join、互換 shim の責務を把握し、関連する run サブコマンドの共通処理を確認する際に読む。
 
 ## Read this when
-- editing run の lifecycle や配下の実装を調査・変更するとき
-- `cmoc run abandon` の停止、worktree・branch cleanup、state・report 更新を確認するとき
-- `cmoc run join` の merge、conflict、rollback、post-join、cleanup の連鎖を確認するとき
-- 旧 import path の lifecycle または report writer の互換性・移行状況を確認するとき
+- editing run サブコマンドの共通 lifecycle や、その配下の実装を調査・変更するとき。
+- run の abandon、join、旧 import path 互換 shim の責務と入口を把握するとき。
 
 ## Do not read this when
-- run 以外のサブコマンドを扱うとき
-- run の具体的な処理や canonical な共通実装を確認する場合は、この入口ではなく配下の該当ファイルや参照先を直接読むとき
-- Git 操作、state 永続化、process tracking、report 生成など共通部品だけを調べるとき
-- 利用者向けの一般的な CLI 案内や、INDEX.md 生成規則そのものを扱うとき
+- editing run 以外のサブコマンドを扱うとき。
+- 具体的な処理の実装、canonical な共通 lifecycle、report writer、Git 操作や state API の詳細を確認する場合は、配下または共通部品の該当ファイルを直接読むとき。
 
 ## hash
-- c79df04044f28bb5e7c7f0e593f1c7aa0d3a9215710ef7321d786cf538d208d3
+- 4eb6064c5671623f5297d3b3f2c98041d72151b1edf3ec6f1a3a50019f630b13
 
 # `session`
 

@@ -15,22 +15,21 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の実装本体。active editing run を特定し、running・error・joinable の状態に応じてプロセスや Codex child を停止する。
-- run worktree と run branch を削除し、cleanup 成否を primary report と lifecycle report に記録する。cleanup 完了時は state を ready に戻し、process tracking を削除して terminal result を返す。
-- worktree または branch の削除に失敗した場合は state を保持したままエラーを返し、再実行可能な警告と詳細を提示する。
+- `cmoc run abandon` の active editing run を停止し、run worktree・run branch・state・process tracking を cleanup して ready 状態へ戻す lifecycle 実装。running、error、joinable の各状態に応じた process 停止と、worktree・branch の削除結果を primary report および lifecycle report に反映する。
+- cleanup 対象が残った場合は branch を保持して再試行可能にし、失敗理由と警告を返す。run abandon の停止処理、cleanup、state 更新、最終 terminal result の流れを確認する入口。
 
 ## Read this when
-- `cmoc run abandon` の cleanup lifecycle、active run の停止処理、run worktree・branch の破棄動作を確認するとき。
-- running・error・joinable state ごとの process cleanup と、cleanup 成否に応じた state・report 更新を調べるとき。
-- abandon 後の terminal result、warning、primary report、lifecycle report の生成経路を確認するとき。
+- `cmoc run abandon` の実装経路、active run の停止方法、run 資源の cleanup 順序を調べるとき。
+- running・error・joinable 状態ごとの process cleanup や、worktree・branch 削除失敗時の挙動を確認するとき。
+- abandon 完了時の state、process tracking、primary report、lifecycle report の更新内容を確認するとき。
 
 ## Do not read this when
-- run の通常作成・編集・join 処理を確認するときは、対応する run lifecycle や editing 実装を直接読む。
-- doctor preprocess の仕様や一般的な worktree 操作だけを確認するときは、参照されている oracle または runtime 共通実装を直接読む。
-- `cmoc run abandon` の挙動を変更しない利用者向けの一般的な CLI 案内を作成するとき。
+- `run abandon` の正本仕様や利用者向け仕様を確認する場合は、対応する app_spec・lifecycle 仕様を直接読むとき。
+- run の作成、join、編集、merge など abandon 以外の lifecycle を調べる場合は、各サブコマンドの実装へ直接進むとき。
+- worktree・branch の一般的な git 操作だけを確認する場合は、共通 runtime helper を直接読むとき。
 
 ## hash
-- c3c9ab6f4f1059a44bc54a8e5846cfdce958985ab838f833950df9976b916509
+- 9924a70203bbb39f9d7ac008a2285a850c13c5824d8ddf7b23a4866124ae71f1
 
 # `join.py`
 

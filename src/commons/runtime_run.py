@@ -67,8 +67,13 @@ def worktree_for_branch(root: Path, branch: str) -> Path:
     )
 
 
-def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
-    """branch が checkout されている worktree を返し、無ければ None を返す。"""
+def worktree_for_branch_optional(
+    root: Path,
+    branch: str,
+    *,
+    allow_missing: bool = False,
+) -> Path | None:
+    """branch の安全な worktree を返し、無ければ None を返す。"""
     output = run_git(["worktree", "list", "--porcelain"], root).stdout
     registered_path: Path | None = None
     resolved_path: Path | None = None
@@ -84,7 +89,10 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
                 # run-root 外へ解決される登録を受け入れない。
                 if registered_path != expected or resolved_path != expected:
                     return None
-                if not registered_path.is_dir() or not _has_linked_worktree_metadata(
+                if not registered_path.exists():
+                    if not allow_missing:
+                        return None
+                elif not registered_path.is_dir() or not _has_linked_worktree_metadata(
                     root, registered_path
                 ):
                     return None

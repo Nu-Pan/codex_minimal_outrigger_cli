@@ -201,7 +201,14 @@ def _remove_run_worktree(
         warnings.append("run worktree was already absent")
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # Git の登録も消えている場合は、管理外 path として扱わず cleanup 済みとする。
-        if worktree_for_branch_optional(context.repo, context.run_branch) is None:
+        if (
+            worktree_for_branch_optional(
+                context.repo,
+                context.run_branch,
+                allow_missing=True,
+            )
+            is None
+        ):
             return True
     result = remove_worktree(context.repo, context.run_worktree)
     if result.returncode != 0 and (

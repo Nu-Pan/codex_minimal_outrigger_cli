@@ -1010,6 +1010,33 @@ def test_run_abandon_accepts_already_removed_run_worktree(
     assert "run worktree was already absent" in reports[0].read_text()
 
 
+def test_run_abandon_prunes_missing_registered_run_worktree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """実体だけが欠損した run worktree の Git 登録も cleanup する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    moved_worktree = tmp_path / "moved-run-worktree"
+    context.run_worktree.rename(moved_worktree)
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert moved_worktree.exists()
+    assert _state(state_path)["run"] == {
+        "state": "ready",
+        "kind": None,
+        "branch": None,
+        "fork_commit": None,
+    }
+    assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
+
+
 def test_run_abandon_requires_process_stop_confirmation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

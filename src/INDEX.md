@@ -52,21 +52,21 @@
 # `commons`
 
 ## Summary
-- cmoc の複数実行経路で共有する runtime helper をまとめた commons パッケージ。設定、Git・パス、ログ、状態、Codex 実行、feedback、report、run lifecycle などの共通処理を扱う各モジュールへの入口となる。
-- commons 全体の runtime API や、特定の共通機能を横断して確認・変更する場合に下位モジュールへ進むためのディレクトリ。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行境界、Codex exec/TUI、設定・ログ・パス・Git worktree、状態管理、feedback、report、INDEX 更新など、複数の実行経路から共有される機能の実装入口を提供する。
+- 共通 runtime API の公開入口を確認する場合は `cmoc_runtime.py`、Codex 実行や preflight は対応する `runtime_codex*`、設定・Git・状態・feedback などは各専用 `runtime_*.py` へ進む構成になっている。
 
 ## Read this when
-- cmoc の共通 runtime helper の配置や責務の全体像を確認するとき
-- CLI、Codex 実行、Git/worktree、設定、状態、feedback、report など複数の実行経路にまたがる共通処理を調査するとき
-- commons 配下の個別 runtime module を読む前に、対象機能の入口を特定するとき
+- cmoc の複数機能で共有される runtime helper の配置や公開入口を確認するとき
+- CLI、Codex、設定、ログ、Git worktree、状態、feedback、report、INDEX 更新などの共通実行基盤を調査・変更するとき
+- 特定の共通機能の実装へ進む前に、commons 配下の担当モジュールを選ぶとき
 
 ## Do not read this when
-- 特定の runtime helper の内部実装だけを確認したいときは、対応する commons 配下の個別モジュールを直接読む
-- 個別サブコマンドの業務ロジックや利用者向け仕様だけを確認したいときは、対応するサブコマンド実装または正本仕様を直接読む
-- INDEX.md の生成規則や Structured Output schema 自体を確認したいときは、indexing または schema の定義元を直接読む
+- 特定の runtime helper の内部挙動だけを確認したいときは、対応する `runtime_*.py` を直接読む
+- 個別 CLI サブコマンド、Codex preflight、report、feedback などの固有仕様だけを調査するときは、その機能の専用実装または正本仕様を直接読む
+- commons と無関係なアプリケーション固有処理や利用者向け仕様だけを確認するとき
 
 ## hash
-- d3d4d4b8ae54c64b3414fb32249cff70f5c267715dff96199fa206b8e82e49e0
+- 58c03d494243c8cec674c0f299eb26f09d3f10b30ea9a1056f37056fed762724
 
 # `config`
 
@@ -121,15 +121,16 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、review、run、session、tui などの個別サブコマンド実装へのルーティング入口を提供する。apply は現在実装がない。
+- 日本語のルーティング文書を生成するため、対象ディレクトリの各サブコマンド入口の責務と読む条件を、提示された本文だけを根拠に整理します。
 
 ## Read this when
-- CLI サブコマンド全体の実装構成や、各サブコマンドの入口を確認するとき。
-- doctor、feedback、indexing、oracle、realization、review、run、session、tui のいずれかの実行フローや実装を調査・変更するとき。
+- src/sub_commands 配下のサブコマンド実装の構成や入口を俯瞰したいとき。
+- apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui のいずれかについて、まず適切な上位入口へルーティングしたいとき。
+- サブコマンドの実行フロー、固有処理、または配下の実装・仕様への進み方を確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細仕様や処理内容だけを確認したいときは、このディレクトリではなく対応する下位実装・仕様文書を直接読む。
-- CLI 共通ランタイム、共通 state・Git・artifact 操作、prompt 契約など、サブコマンド固有ではない処理だけを調査するとき。
+- 特定サブコマンドの詳細実装、正本仕様、共通ランタイム、prompt 契約、Structured Output schema を直接確認するだけで、上位ディレクトリの構成把握が不要なとき。
+- サブコマンド以外の実装や、提示された配下エントリーの責務に該当しない処理を調査するとき。
 
 ## hash
-- f63a466f7c2696988bad21aff9c4ea213826a26058379afe33276c5e89f8ad6b
+- d9132e69da50fb09ec7498a2644d928365cd4f3774678abf20004235ac93321a
