@@ -264,7 +264,10 @@ def test_user_interruption_saves_feedback_invocation_summary(
 
     def interrupt() -> TerminalResult:
         runtime_cli.mark_current_subcommand_interrupted()
-        return TerminalResult(next_actions=("同じ command を再実行してください。",))
+        return TerminalResult(
+            details=(("中断理由", "report cut を固定する前に停止しました。"),),
+            next_actions=("同じ command を再実行してください。",),
+        )
 
     runtime_cli.run_cli_subcommand(
         interrupt,
@@ -280,6 +283,7 @@ def test_user_interruption_saves_feedback_invocation_summary(
     assert "# 中断完了: cmoc feedback report" in captured.out
     assert 'terminal_classification: "user_interruption"' in rendered
     assert "feedback publication または active state ではありません" in rendered
+    assert "中断理由: `report cut を固定する前に停止しました。`" in rendered
     assert "## checkpoint と部分結果" in rendered
     assert "report cut: `not_fixed`" in rendered
     assert "確定済み部分結果: `not_fixed`" in rendered

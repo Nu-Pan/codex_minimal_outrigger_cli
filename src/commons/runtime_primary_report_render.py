@@ -178,6 +178,7 @@ def _feedback_invocation_body(
         f"- 確定済み部分結果: `{_field_status(fields.get('partial_result_count'))}`",
         "## 維持した state と未実行処理",
         f"- processing status: `{_field_status(fields.get('processing_status'))}`",
+        f"- cleanup: `{_feedback_cleanup_status(logger, fields)}`",
         "- publication 完了 event がない処理は、完了済みとして扱っていません。",
         "- 再開可能な report cut と checkpoint の詳細は診断用ログを参照してください。",
         "## warning とエラー",
@@ -231,13 +232,38 @@ def _warning_error_lines(
     result: TerminalResult,
     logger: SubcommandLogger,
 ) -> list[str]:
-    """確定した warning と error detail を重複なく描画する。"""
+    """確定した warning と error/interruption detail を描画する。"""
     lines = [f"- warning: {_inline_text(value)}" for value in logger.warning_messages]
-    if classification == "error":
+    if classification in {"error", "user_interruption"}:
         lines.extend(
             f"- {name}: `{_inline_text(value)}`" for name, value in result.details
         )
     return lines or ["- なし"]
+
+
+def _feedback_cleanup_status(
+    logger: SubcommandLogger, fields: dict[str, object]
+) -> str:
+    """publication 後の cleanup が未完了かを invocation summary に示す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    """
+    events = logger.event_records()
+    published = any(
+        event.get("event") == "feedback_report_published" for event in events
+    )
+    if not published:
+        return "not_started"
+    if (
+        any(
+            event.get("event")
+            in {"feedback_report_cleanup_failed", "feedback_report_interrupted"}
+            for event in events
+        )
+        or fields.get("processing_status") == "publication_ready"
+    ):
+        return "not_completed"
+    return "completed"
 
 
 def _log_lines(logger: SubcommandLogger) -> list[str]:

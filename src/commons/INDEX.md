@@ -426,20 +426,21 @@
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済みの runtime 情報を、通常 summary・oracle review・feedback invocation の用途別 template に従って Markdown report へ描画する責務を持つ。
-- terminal classification、実行段階、warning/error、next actions、診断ログ、Codex call 状態、publication checkpoint などの確定値を組み立てるための共通 rendering helper 群を提供する。
+- 確定済み runtime 情報から、テンプレート別の fallback primary report を構築する描画入口。front matter、通常 summary、oracle review、feedback invocation の本文を選択し、実行段階・終端結果・warning/error・次の操作・関連ログを出力する。
+- Codex event、publication event、checkpoint、processing status から oracle edit の agent call 状態や feedback publication・cleanup 状態を判定し、report に表示する補助関数群を含む。
 
 ## Read this when
-- runtime 情報から primary report または invocation summary を生成する処理を変更・調査するとき。
-- oracle review と feedback invocation で report の必須構成や終端状態の扱いを確認するとき。
-- step timing、warning、Codex call event、publication event から実行状況を判定する処理を確認するとき。
+- primary report の描画形式やテンプレート分岐を変更・確認するとき
+- terminal classification、TerminalResult、logger の確定情報が report の各節へどう反映されるかを確認するとき
+- oracle review または feedback invocation の状態表示、agent call status、publication cleanup status を追跡するとき
 
 ## Do not read this when
-- 個別サブコマンドが runtime 情報を確定する処理や TerminalResult の生成方法だけを調査するときは、先にその実装を読む。
-- report の正本仕様や利用者向けの出力契約を確認する目的では、この描画 helper ではなく対応する app specification を直接読む。
+- runtime のログ記録方法や event の生成責務を確認したいとき
+- TerminalResult、PrimaryReportSpec、TerminalClassification の型・生成規則を確認したいとき
+- console/file log や各サブコマンドの report 内容の正本仕様を確認したいときは、対象の app_spec を直接読むとき
 
 ## hash
-- 9207d93d56ff3730bb8b8badc7e8a5f4d24ec0c7a8da4356fde96d0ba2728016
+- 77c22b878a93f2adbda20d2efcdbcfb9e4532e0ace9fd0045552b5d4b7f416ae
 
 # `runtime_primary_report_specs.py`
 

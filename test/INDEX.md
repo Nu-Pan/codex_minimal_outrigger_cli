@@ -440,20 +440,23 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の収集から report cut、Codex による issue 正規化・検証、active state の atomic publication、raw observation の cleanup までを repository fixture で検証する統合テスト群。feedback の保存境界、候補同一性、verification verdict、再開可能な checkpoint、破損検知、中断・部分 cleanup の外部挙動を確認する入口。
+- feedback の agent-facing reporter と collector の境界から、observation の保存・検証・重複排除・候補化・verification までを検証するテスト群。
+- report cut と checkpoint の再開、incomplete/interrupted 処理、active state の atomic publication、generation hash、current pointer、cleanup、raw artifact の破損検出を確認する統合 fixture の入口。
 
 ## Read this when
-- feedback reporter、collector、raw observation store、issue candidate 化、verification、active state、report publication、cleanup の挙動を変更・レビューするとき。
-- feedback report の再開、atomic publication、current pointer、generation artifact、corruption handling、user interruption を検証するとき。
-- feedback 関連の schema や正本仕様を実装が満たしているか、repository fixture を通した外部境界で確認するとき。
+- feedback reporter の公開ツール、collector 転送、rate limit、capability、protocol error、不正応答の扱いを確認するとき
+- agent または machine observation の schema 検証、path 境界、symlink 防止、secret masking、canonical JSON、idempotent な保存を確認するとき
+- observation から issue candidate への identity、deduplication、fingerprint、threshold、window expiry、verification verdict の処理を確認するとき
+- feedback report の report cut、checkpoint recovery、Codex 再呼出し抑止、incomplete/interrupted からの再開を確認するとき
+- active generation、current pointer、report artifact、publication cross-reference、hash、未列挙 artifact、部分 cleanup の整合性を確認するとき
 
 ## Do not read this when
-- feedback の単一関数の内部実装だけを確認し、保存・report・publication の統合挙動を扱わないとき。
-- feedback 以外の subcommand や一般的な CLI 動作のテストを探しているとき。
-- 正本仕様そのものを確認する必要があるときは、対応する oracle の app specification や builder schema を直接読む。
+- feedback の正本仕様や state 契約を確認する場合は、本文中に対応付けられた oracle 文書を直接読む
+- normalize または verify の prompt、FileAccessMode、Structured Output schema の定義だけを確認する場合は、対応する builder と schema を直接読む
+- feedback report の Markdown 表示仕様だけを確認する場合は、report rendering または subcommand の正本仕様を直接読む
 
 ## hash
-- 2611b0e618e36ce6ba98b221e902ecf3ce67a3ad804c1a5a2dd7c63f957485ac
+- 1a8238b45eb18ecbf14167d237cbcb5f0110207a4b567c40b51fbb524a2bdb36
 
 # `test_file_inventory.py`
 
@@ -679,20 +682,22 @@
 # `test_primary_report.py`
 
 ## Summary
-- 対象は、非対話末端サブコマンドが処理開始前のエラーやユーザー中断を含む各終了経路で、command-specific な primary report を保存し、terminal result とエラー分類を正しく確定する契約を検証するテスト群である。doctor、indexing、session、oracle、realization、run、feedback の各サブコマンドについて、必須 front matter、保存先、診断内容、終了コード、ログ記録、未保存レポートの内部失敗化を確認する。非対話サブコマンドの primary report 保存契約や中断時の invocation summary を変更・調査するときの入口になる。
+- 非対話末端サブコマンドの primary report 完了契約を検証するテスト。処理開始前のエラーでも、コマンド固有の保存先、front matter、診断内容、terminal result を維持することを確認する。
+- feedback report や realization refactor fork のユーザー中断時に、publication ではない invocation summary、中断理由、completion reason を保存する共通 fallback を検証する。
+- 保存未確認の primary report path を表示せず、report 基盤の internal failure として終了ログへ記録する異常系を検証する。
 
 ## Read this when
-- 非対話サブコマンドの early error、user interruption、fallback report、primary report 保存確認を変更または検証するとき。
-- command-specific な report directory や front matter 必須項目、terminal classification、終了コードのテスト要件を確認するとき。
-- primary report が保存されない場合の internal failure、パス非表示、command_finished ログ記録の挙動を確認するとき。
+- runtime_cli の非対話サブコマンドにおける primary report 保存、terminal result、front matter、早期エラー処理を変更・調査するとき。
+- feedback report または realization refactor fork の中断時レポートと共通 fallback の挙動を確認するとき。
+- primary report の保存確認失敗、パス非表示、internal failure の記録を変更・調査するとき。
 
 ## Do not read this when
-- primary report の生成ロジックそのものを調査・変更する場合は、まず runtime CLI や report 実装を直接読むとき。
-- 個別サブコマンドの業務処理や oracle・realization の詳細仕様だけを確認する場合。
-- 通常のサブコマンド成功経路や、ここで列挙されていない report 種別の挙動だけを調べる場合。
+- 通常のサブコマンド実装や個別 report 内容だけを確認する場合は、対象の実装・仕様ファイルを直接読む。
+- INDEX.md の構成やルーティング規則を確認する場合は、このテストではなく対象ディレクトリの INDEX.md を読む。
+- report 完了契約と無関係な CLI 機能、oracle・realization の処理本体、feedback publication の正常系だけを変更・調査するとき。
 
 ## hash
-- 018d0484d3a1aa3b38cef675401ed6a2c984de9e4a34d0392095bf69b4a3c018
+- 22231ec51691fdd5400568d9cdbb25448c48375a04d99dd615bdb44893035dc6
 
 # `test_production_cli.py`
 
