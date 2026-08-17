@@ -250,6 +250,8 @@ def test_session_fork_does_not_overwrite_state_from_id_collision_race(
 
     assert result.exit_code != 0
     assert path.read_text() == original
+    report = terminal_primary_report(result)
+    assert "session_state_after: null" in report.read_text(encoding="utf-8")
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", session_branch],

@@ -120,17 +120,19 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装群のディレクトリ入口。doctor、feedback、indexing、oracle、realization、run、session、tui などの各サブコマンド実装へ進むための構成を扱う。apply と realization/review には現時点で具体的な実装本文がない。
+- `src/sub_commands` は、cmoc の各サブコマンド実装への入口です。doctor、feedback、indexing、oracle、realization、run、session、tui など、サブコマンド単位の CLI 実行フローと下位実装へのルーティングを扱います。
+- サブコマンド固有の起動処理や lifecycle、publication、workload、レビュー、TUI 接続などを調査・変更するときに、該当するサブコマンドの実装へ進むために読みます。
+- apply は現在実装がなく、将来実装が追加された場合の入口です。realization 配下の review も現在は具体的な実装を持ちません。
 
 ## Read this when
-- CLI サブコマンドの実装場所や、対象サブコマンドに対応する下位実装の入口を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui の実行フローや構成を調査・変更するとき。
-- サブコマンド横断で、各実装ディレクトリの責務や詳細実装への進み先を判断するとき。
+- cmoc のサブコマンド実装の構成や、対象サブコマンドの CLI 実行経路を確認・変更するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかについて、該当する実装入口や下位要素への進み先を判断するとき。
+- feedback の report、indexing の更新・commit、oracle review の対象選定、realization workload、run・session の lifecycle、tui のプロンプト編集・起動連携を調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理、共通ランタイム、prompt、仕様書などを直接確認する場合は、対応する下位実装または共通実装を読む。
-- サブコマンド実装ではなく、INDEX.md の生成規則や一般的な CLI 基盤だけを調べるとき。
-- apply または realization/review の具体的な処理内容を確認したいとき。現時点ではこのディレクトリに実装本文がない。
+- apply 以外の特定サブコマンドの詳細を調べる場合は、該当するサブコマンド実装を直接読む。
+- CLI 共通 runtime、prompt editor、ACP builder、INDEX.md 生成規則など、`src/sub_commands` 外の共通実装や仕様を直接確認する場合。
+- サブコマンドの正本仕様、prompt 契約、Structured Output schema、preprocess の詳細など、各実装が参照する別対象の内容だけを確認したい場合。
 
 ## hash
-- db6917380b8fd1954d4c73d43febd5c170673368c7d16c185439f5dee4b65854
+- cd5d62c2ee94fd6f40dc27a362ca1597bbc3b83072a4aa7dc77d2c08a3e53095
