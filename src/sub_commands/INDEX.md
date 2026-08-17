@@ -15,20 +15,19 @@
 # `doctor.py`
 
 ## Summary
-- `doctor` サブコマンドの CLI 実行入口。doctor preprocess を明示的に実行し、実行ステップを表示したうえで repo_root を terminal result の詳細として返す。doctor コマンドの処理経路や preprocess 呼び出し、結果詳細の扱いを確認するときに読む。
+- `cmoc doctor` サブコマンドの実行入口。CLI ランタイム経由で doctor preprocess を明示的に実行し、処理結果に repo_root を含める。
+- doctor サブコマンドの実行手順や preprocess 呼び出し、TerminalResult の固有情報を確認・変更するときの入口。実行基盤そのものや preprocess の仕様・実装を確認する場合は、参照先のランタイムまたは preprocess 文書へ進む。
 
 ## Read this when
-- doctor サブコマンドの実行フローを変更・確認するとき
-- doctor preprocess の明示実行方法や CLI ランタイムへの委譲を確認するとき
-- doctor の terminal result に含まれる repo_root の由来を確認するとき
+- doctor サブコマンドの実行フロー、doctor preprocess の起動、または doctor 固有の TerminalResult を調べるとき。
+- `cmoc doctor` の CLI 接続や、doctor preprocess を明示的に実行する責務を変更するとき。
 
 ## Do not read this when
-- doctor preprocess 自体の仕様や実装を確認する場合は、参照コメントが示す preprocess の仕様対象を直接読むとき
-- doctor 以外のサブコマンドの処理を確認するとき
-- CLI ランタイム共通処理の仕様だけを確認する場合
+- doctor preprocess の詳細仕様や処理内容だけを確認したいとき。
+- CLI ランタイム共通の実行制御や、doctor 以外のサブコマンドの挙動を確認するとき。
 
 ## hash
-- 1891afa5229702961b641eebcc2aba8eacf0dd3a0e747225c5b766683628419f
+- f3c8753693352207cc3092f5d4ea63ab9c38554a03bfaa451bcce6c7a1ebb851
 
 # `feedback`
 

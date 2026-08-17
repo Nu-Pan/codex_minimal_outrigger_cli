@@ -126,20 +126,22 @@
 # `src`
 
 ## Summary
-- cmoc CLI の実装と互換公開入口をまとめるディレクトリ。最上位 CLI、サブコマンド、共通 runtime、設定・ACP・basic の互換層を確認し、詳細調査では担当する下位要素へ進むための入口である。
+- cmoc の realization 側ソースツリー。Typer による最上位 CLI 入口、共通 runtime、互換 import shim、ACP builder、設定入口、CLI サブコマンド実装をまとめ、各機能の詳細調査を下位パッケージへ振り分ける。
+- CLI の起動・コマンド登録・引数エラー変換は `main.py`、共通 runtime は `commons`、互換公開入口は `acp`・`basic`・`config`・`cmoc_runtime.py`・`oracle.py`、個別コマンド処理は `sub_commands`、builder 実装は `acp` 配下にある。
 
 ## Read this when
-- cmoc の CLI 起動入口、サブコマンド構成、共通 runtime の配置を確認するとき
-- ACP や basic、config、oracle などの realization 側互換 import 入口を調査するとき
-- CLI 処理の担当領域から、対応する下位ディレクトリまたはモジュールを特定するとき
+- cmoc の realization 側 CLI 全体の入口、パッケージ構成、機能別の下位要素への進み先を確認するとき
+- 最上位コマンドの登録や起動処理、Typer/Click 互換処理、CLI 引数エラーの変換を調査・変更するとき
+- 共通 runtime、互換 import、ACP builder、設定入口、個別サブコマンドの責務分担を確認するとき
 
 ## Do not read this when
-- 特定サブコマンド、runtime helper、ACP builder の具体的な入出力や内部実装を調査するとき
-- oracle 側の正本仕様・実装や個別 adapter の詳細を直接確認したいとき
-- CLI や cmoc の共通実装と無関係な処理を調査するとき
+- 特定サブコマンドの業務ロジックや runtime helper の内部実装を調査するときは、`sub_commands` または `commons` 配下の対象へ直接進む
+- ACP builder の具体的な prompt・parameter 構築を調査するときは、`acp` 配下の該当 builder へ直接進む
+- 正本仕様や oracle 側の実体実装、互換入口が再公開する API の詳細を確認するときは、対応する `oracle` 側または実体モジュールを直接読む
+- INDEX.md の生成処理そのものや、cmoc CLI と無関係な処理を調査するとき
 
 ## hash
-- b0d3a60488704e4eb3a780fa49dbedfe24aa697fd4b07194d410729ab27722ad
+- c05112fa995d7ce7e5ca62fc612e20cd82e7c84555e282bbcd672b35a33f50db
 
 # `test`
 
