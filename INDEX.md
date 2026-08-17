@@ -91,7 +91,7 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書を領域別に案内する入口。アプリケーション仕様、branch・commit・worktree のモデル、採用しなかった代替案、開発ルールを扱い、対象領域に応じて下位文書へ進むためのルーティングを提供する。
+- cmoc の正本文書群への入口。アプリケーション仕様、branch・commit・worktree のモデル、設計上の代替案、Python・CLI・環境・テストなどの開発規約を領域別に案内し、個別文書へ進むためのルーティングを提供する。
 
 ## Read this when
 - cmoc の正本仕様・設計資料・開発規約の入口を特定するとき
@@ -100,11 +100,11 @@
 
 ## Do not read this when
 - 対象の個別仕様や設計・テスト文書が既に特定できており、上位の文書群一覧を確認する必要がないとき
-- 具体的な実装配置やCLI実装の責務だけを確認するとき
+- 具体的な実装配置や CLI 実装の責務だけを確認するとき
 - テストの実行手順だけを確認するとき
 
 ## hash
-- af5cff3d284bd31767c8334165737771130f7ab197106baf25b2f3d458d7c990
+- 524a170ceb22695a0058a293eecafd48dff3cf922181feaa4abe69f8ebd48ba5
 
 # `pyproject.toml`
 
@@ -144,19 +144,17 @@
 # `test`
 
 ## Summary
-- cmoc の realization test を集約する検証ディレクトリ。CLI の lifecycle、Codex runtime、indexing、oracle review、session・editing run、config・state・Git 境界、builder 契約など、実装の外部挙動と回帰条件を機能領域別のテストから確認する入口となる。
-- 共通 fixture と helper は pytest 環境、fake external command、Git repository、Codex 実行、CLI 実行、schema path 解決を支援する。実経路統合テスト用の subprocess 起動フックも含む。
-- 配下の個別テストは、対象機能の統合 lifecycle を扱う CLI テスト、runtime・builder・prompt・state などの契約テスト、oracle review・indexing・feedback などの領域別テストに分かれている。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、doctor、indexing、oracle review、session、refactor、feedback など、実装の外部契約と境界条件を pytest で検証する。個別機能のテスト入口を探す際は、対象機能に対応するファイルへ進む。
 
 ## Read this when
-- cmoc の実装変更が、CLI の外部挙動、Codex 呼び出し、Git・worktree・永続 state、indexing、oracle review、session、editing run、feedback、builder 契約のいずれかへ影響する可能性があるとき。
-- 変更対象に対応する realization test の入口を特定し、回帰条件や境界ケースを確認するとき。
-- pytest の共通 fixture、テスト用 Git repository、fake command、Codex double、または実経路 subprocess 環境を確認するとき。
+- cmoc の実装変更がどの realization test に影響するかを特定するとき
+- CLI、Codex 実行、worktree・state・Git 操作、indexing、oracle review などの外部挙動を回帰検証するとき
+- 共通テスト fixture、builder 契約、runtime の安全境界を確認するとき
 
 ## Do not read this when
-- 本番実装の責務や正本仕様そのものを確認するときは、対応する実装ファイルまたは oracle 文書を直接読む。
-- INDEX.md の生成規則や routing 内容そのものを確認するときは、indexing の正本仕様または実装を直接読む。
-- 単一の低レベル helper や個別テストの詳細だけを確認する場合は、対応するファイルへ直接進む。
+- 正本仕様や実装本体の責務・詳細を確認することが目的のとき
+- 対象機能が明確で、対応する個別テストまたは oracle 文書へ直接進めるとき
+- テストと無関係な CLI 機能やリポジトリ文書だけを調べるとき
 
 ## hash
-- 2380c9f38fa6f7bdf757c4e5681996202ec47ff7104581c53f2abf309c33b236
+- 947d81c7797e1a3c5d036ddf73c1b3dc4c1f58835d8c14cc85253332ddff7568

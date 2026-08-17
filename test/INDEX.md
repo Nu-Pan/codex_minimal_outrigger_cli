@@ -733,23 +733,21 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 対象は prompt policy と complete prompt の組み立てを検証する回帰テストで、Policy の不変性・重複排除・render 順序・競合検出、各種 policy の選択注入、file access mode と root placeholder の境界、feedback・routing・INDEX entry 要件の保持を一つの prompt builder 検証入口に集約する。
-- prompt builder の実装、prompt policy の正本、complete prompt の構成、または各 policy の rendering・注入・placeholder 展開に関する変更や不具合を確認するときの入口となる。
+- prompt policy と complete prompt の構築結果を検証する回帰テスト群。各 policy の単独・組み合わせ注入、StructDoc の rendering、placeholder の保持・統合・競合検出、file access mode ごとの境界、および feedback・routing・index entry など共通規定の反映を確認する。prompt builder の仕様変更や、policy の選択・分離・表示順・内容境界を調査する際の入口となる。
 
 ## Read this when
-- prompt builder の policy 定義や complete prompt の組み立てを変更・レビューするとき
-- policy collection の immutable value、deduplication、順序、競合拒否、Markdown rendering の挙動を検証するとき
-- file access mode、root-specific deny list、placeholder の保持・統合・競合エラーを確認するとき
-- oracle、realization、review、apply review、conflict resolution、editor handoff、routing、INDEX entry などの policy 注入条件を変更するとき
-- complete prompt に共通 feedback instruction、summary/goal、各 policy の見出しや本文が正しく現れることを確認するとき
+- prompt builder の policy を追加・変更・分離する場合
+- complete prompt の policy 注入、表示順、重複排除、placeholder 展開を変更・調査する場合
+- file access mode、routing、feedback reporting、index entry 規定の prompt 反映を検証する場合
+- prompt builder の StructDoc rendering または root placeholder の競合処理に関する回帰を確認する場合
 
 ## Do not read this when
-- prompt builder や policy の挙動に関係せず、他の機能領域だけを変更・調査するとき
-- prompt の正本仕様そのものを確認する必要があり、実装回帰テストではなく対応する oracle 文書を直接読むべきとき
-- 単一の policy 実装詳細だけを調べる場合で、このテストが検証する complete prompt への注入・render 経路を確認する必要がないとき
+- prompt builder の実装詳細や正本仕様そのものを確認する場合は、対応する policy builder・complete prompt 実装または oracle 文書を直接読む
+- prompt builder と無関係な CLI、repository 操作、または個別 realization の挙動を調査する場合
+- 単にテスト実行方法や一般的な pytest の使い方を確認する場合
 
 ## hash
-- cbfb53c9373d27de7d26343ee6e2985d46c94215555c03f31bfa5f3e0fd18f60
+- 8e94d51cb500382bbf9fccd1b951415a431feb7fcd65524cbcbf6e2fca289184
 
 # `test_runtime_cli.py`
 
@@ -979,19 +977,18 @@
 # `test_struct_doc_rendering.py`
 
 ## Summary
-- StructDoc の Markdown renderer に対する単体テスト。通常本文と code block 内の連続 blank line の縮約、本文中の backtick 列より長い fence の選択、StructBlock の互換モジュールからの再公開と block 展開、描画済み Markdown child の不透明な埋め込みを検証する。
-- cmoc_ref の欠落・重複 block ID・不正な参照構文を ValueError として拒否する異常系もまとめて検証する。renderer の整形仕様や参照解決の挙動を変更・確認するときのテスト入口であり、実装本体や oracle の仕様を読む前提となる。
+- StructDoc の Markdown renderer の単体テスト。連続 blank line の縮約、code block の fence 長、StructBlock の再公開と opaque child、参照未検証、単一 child の型検査を検証する。renderer の整形挙動や互換性を確認する際のテスト入口である。
 
 ## Read this when
-- Markdown renderer の blank line 縮約、code block fence、StructBlock の公開・埋め込み挙動を検証または変更するとき
-- cmoc_ref の参照解決エラーや block ID 重複のテスト範囲を確認するとき
+- Markdown renderer の整形結果、code block の fence、StructBlock の互換性、参照検証の扱い、または構築時の child 型検査を変更・確認するとき。
+- StructDoc または StructBlock に関する realization test の期待挙動を確認するとき。
 
 ## Do not read this when
-- renderer や StructDoc の実装挙動そのものを調査する場合は、まず実装・oracle の対象を直接読むとき
-- テスト実行基盤や一般的なテスト規約だけを確認する場合
+- renderer の実装詳細を調べるときは、まず basic.struct_doc の実装を読む。
+- 正本仕様や oracle 側の挙動を確認するときは、テストではなく参照先の oracle 文書・実装を直接読む。
 
 ## hash
-- ab5db7705e35821e3efd0350e9852c90156890d16b167d563f74606b8cfbd03c
+- 48e185c85c704d518b145a959075fff2b27112e00efd7ea289daa07cf41e3f80
 
 # `test_windows_toast.py`
 

@@ -1,18 +1,16 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle と realization の分類境界、および両者の役割を定義する基本説明文を構築する。
-- oracle 側では oracle doc・oracle src・oracle test、realization 側では realization code・implementation・test・ancillary の下位概念を整理する。
-- call-scoped context から work-root の定義を取得し、説明文中のプレースホルダーへ渡す処理を含む。
+- oracle と realization の基本概念を説明する prompt builder の定義。両者の役割、下位分類、分類条件、および uncategorised file の扱いを、call-scoped な work-root に基づく説明文として構築する。oracle/realization の区別や分類規則を含む動的プロンプトの生成元を確認する際の入口。
 
 ## Read this when
-- oracle file と realization file の分類規則や責務を確認するとき。
-- oracle doc/src/test と realization implementation/test/ancillary の区分を確認するとき。
-- oracle と realization に関する基本説明文の生成経路を変更・調査するとき。
+- oracle file、realization file、uncategorised file の役割・分類条件を説明するプロンプト生成を変更または調査するとき
+- oracle と realization の配置先や正本仕様との関係を、call-scoped context から説明文へ反映する処理を確認するとき
 
 ## Do not read this when
-- oracle と realization の分類や基本概念を扱わず、別の prompt_builder part を直接確認すべきとき。
-- 具体的な分類アルゴリズムやテスト実装を確認する場合に、対応する実装・テスト対象へ直接進めるとき。
+- 個別の oracle doc・oracle src・oracle test の内容や仕様を確認するとき
+- realization の実装・テストの具体的な挙動を確認するとき
+- prompt builder の共通プレースホルダー定義だけを調査するとき
 
 ## hash
-- 7d70bb60c470aff3275d9de18ec27d6b68d9da9fab51e7cf7a7608aa58964008
+- 2484b310ef034cd6edba003ae57e1922b6bb1910300925d1afd090a50a54c2a2

@@ -17,20 +17,20 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent 向け完全プロンプトを、基礎規定・選択規定・目的・追加文面・placeholder 定義から構築する中核関数を扱う。各種 policy builder の組み込み、placeholder の競合検出、プロンプト内参照用の構造化を確認する入口であり、agent prompt の構成や policy の選択条件を変更・調査するときに読む。
+- agent向け完全プロンプトを構築する中心的な入口。基礎規定、選択式の各種ポリシー、caller追加文面、作業目的、placeholder定義を所定の順序で統合し、構造化されたプロンプトとして返す。
+- プロンプトの構成順、重要情報への参照、placeholder定義の競合検査、各ポリシーの組み込み条件を変更・確認するときに読むべき対象であり、個別ポリシーの本文だけを読む場合は直接その下位モジュールへ進む。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成順序や、fundamental policy・objective・placeholder の配置を変更するとき
-- 各種 oracle、realization、routing、file access、index entry policy を prompt へ組み込む条件を調査するとき
-- placeholder 定義の統合や同名定義の競合処理を変更・検証するとき
+- agent callへ渡す完全プロンプトの構成や順序を変更・確認するとき
+- 複数のポリシー、追加プロンプト、目的、placeholder定義がどのように統合されるかを調査するとき
+- 同名placeholderの異値上書きを拒否する統合処理を変更・確認するとき
 
 ## Do not read this when
-- 個別 policy の本文や文面だけを変更・調査する場合は、該当する policy module を直接読む
-- prompt builder の基本型や placeholder 型の定義だけを確認する場合は、該当する basic module を直接読む
-- agent prompt の利用側や個別 agent の作業内容だけを調査し、完全 prompt の構築ロジックに関係しない場合
+- 特定のポリシーの文面や単一のprompt builderの詳細だけを確認する場合は、対応するpolicyまたはparts配下のモジュールを直接読む
+- 構造化文書の基本型やpath contextのplaceholder定義自体を確認する場合は、対応するoracleモジュールを直接読む
 
 ## hash
-- 2c6cd7c9867cae5feb897fd57055b7cbe8b0e95c3191e687f46d35a747286e07
+- 529d1f6962680681dcd3aa5ae8ad0da75320b318a755b768ce8f4d4b9c4e5d45
 
 # `editor_input.py`
 
@@ -52,35 +52,34 @@
 # `parts`
 
 ## Summary
-- oracle と realization の分類境界、Git ignore や常時対象外 root を含む分類規則、および両者の役割を説明する基本文を構築する。
-- oracle file と realization file の下位概念として、oracle doc/src/test、realization code/implementation/test/ancillary の定義と配置を整理する。
-- call-scoped context から work-root を取得し、説明文のプレースホルダーへ渡す生成経路を扱う。
+- oracle と realization の役割・下位分類・分類条件、および uncategorised file の扱いを、call-scoped な work-root に基づく説明文として構築する prompt builder part の入口。配下には、この基本概念を生成する定義がある。
 
 ## Read this when
-- oracle と realization の分類規則や責務を確認するとき。
-- oracle doc/src/test と realization implementation/test/ancillary の区分を確認するとき。
-- oracle と realization に関する基本説明文の生成経路を変更・調査するとき。
+- oracle file、realization file、uncategorised file の役割や分類規則を動的プロンプトへ反映する処理を変更・調査するとき
+- oracle と realization の配置先や、oracle を正本として realization を生成する関係の説明文を確認するとき
 
 ## Do not read this when
-- oracle と realization の分類や基本概念を扱わず、別の prompt_builder part を直接確認すべきとき。
-- 具体的な分類アルゴリズムやテスト実装を確認する場合に、対応する実装・テスト対象へ直接進めるとき。
+- 個別の oracle doc・oracle src・oracle test の内容や仕様を確認するとき
+- realization の実装・テストの具体的な挙動を確認するとき
+- 共通の prompt builder 定義や、oracle/realization の基本概念を扱わない別のプロンプト部品を調査するとき
 
 ## hash
-- 20dd888fb1bacc5753ab0ab8ab2bdcda36f9edd817b4f69762216a9ef88654b9
+- 9ebb611920d5f29b9ec0c8971c1e527f782c40448b314a32da771340d4c2824f
 
 # `policy`
 
 ## Summary
-- agent call のプロンプト構築に用いる各種 policy 定義を扱うディレクトリ。oracle／realization の正本関係、レビュー・conflict 解消、file access、feedback reporting、routing、INDEX エントリー生成など、特定の開発判断や文書ルーティングに必要な共通方針への入口を提供する。
+- agent call の instruction 文面や routing、file access、oracle／realization、feedback、INDEX エントリーなど、cmoc の prompt builder policy を構成する方針定義をまとめた領域です。個別ポリシーの責務と適用条件を確認するための入口になります。
 
 ## Read this when
-- agent call の共通 policy、oracle／realization の扱い、レビュー基準、conflict 解消、アクセス制約、feedback 報告、routing、INDEX エントリー生成のいずれかを確認・変更するとき
-- 対象の作業内容に応じて、該当する policy 定義へ進む入口を特定するとき
+- prompt builder が生成する共通 policy の追加・変更・レビューを行うとき
+- oracle／realization の扱い、conflict resolution、handoff、feedback reporting、file access、routing、INDEX エントリー生成の規定を確認するとき
+- 複数の agent call に共有される instruction 方針の構成や責務分担を調査するとき
 
 ## Do not read this when
-- 具体的な oracle file や realization file の仕様・実装挙動を直接確認することが目的のとき
-- policy を利用するだけで、その構築規則自体を確認・変更する必要がないとき
-- 通常の CLI 実装、テスト、文書作成など、ここにある共通 prompt policy を扱わないとき
+- 個別の oracle file や realization file の具体的な仕様・実装挙動を確認するとき
+- prompt builder のデータ型、placeholder 処理、通常の文面生成ロジックを直接調べれば足りるとき
+- cmoc の通常の実装・テスト・文書作成で、agent 向け policy の構築規則を扱わないとき
 
 ## hash
-- 29c54977e8f1fef13959efd0d8a5e1498baeb07efcac1c00740db5ca18a69146
+- 60e632b2e618782282bf0e11e9c475ebd4c069ab7b6328128d8b14f8be15047c

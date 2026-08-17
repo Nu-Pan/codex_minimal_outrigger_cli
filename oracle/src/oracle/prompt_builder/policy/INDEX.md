@@ -51,35 +51,38 @@
 # `feedback_reporting.py`
 
 ## Summary
-- 全 agent call に共通する、人間向け feedback 報告規定のプロンプト構築を担う。現在の workload 外の人間対応が再発防止・反復的な浪費削減・外部挙動に関わる意図の確定に必要な問題だけを報告対象とし、報告時の MCP tool 利用、継続方針、報告対象外の境界を定義する。agent call の feedback 報告ルールやそのプロンプト生成処理を確認・変更するときの入口となる。
+- 対象は、全 agent call に共通する human feedback reporting 規定を構築する実装です。セッション内で解決できなかった問題を `cmoc_feedback.submit_observation` で報告する方針と、報告不要な問題の範囲を扱います。
+- 共通 feedback 報告ポリシーの構築・変更を行う際の入口です。個別の agent call の作業内容や feedback 保存処理を調べる場合は、より直接的な対象を参照してください。
 
 ## Read this when
-- agent call に共通する human feedback reporting policy の内容または生成処理を確認・変更するとき
-- feedback 報告対象の判定、MCP による報告、報告後の workload 継続方針を確認するとき
+- 全 agent call に共通する human feedback 報告規定の構築や変更を行うとき
+- セッション内で解決できなかった問題の MCP 報告方針を確認するとき
 
 ## Do not read this when
-- 個別 workload の実装や、feedback 規定を利用するだけで共通ポリシー自体を確認する必要がないとき
-- feedback 保存 file の内容や、別の prompt policy の責務を直接確認するとき
+- feedback 報告の対象となる個別問題を解決するとき
+- MCP tool `cmoc_feedback.submit_observation` の実装や保存処理を直接調べるとき
+- 共通ポリシーではなく、個別のプロンプト生成規定を確認するとき
 
 ## hash
-- d310455d79a8cb591f50a86e582d583ed7ab886f7e88729221b1d28d388ec067
+- d8ac149202fa51d69bb38b3904a7d0de20575263910f44e0decea344a8ef8aef
 
 # `file_access.py`
 
 ## Summary
-- file access mode に応じた agent 向けの読み書き禁止ポリシー文面を構築する。リポジトリ境界、予約ディレクトリ、oracle／realization file などのアクセス制約を mode 別に組み立て、prompt builder が利用するプレースホルダー定義と構造化文書を返す。
+- cmoc が agent 向けのファイル読み書き制限文面を生成する実装。FileAccessMode とパスコンテキストに応じて、リポジトリ外・保護対象・oracle/realization file などの禁止事項を組み立て、プレースホルダー定義とともに構造化文書として返す。
+- ファイルアクセスモードの制約、repo-root と work-root の関係、または agent prompt に埋め込む読み書きポリシーの生成・変更を扱う作業では、この実装を入口として確認する。
 
 ## Read this when
-- agent prompt に埋め込む file access policy の内容や、FileAccessMode ごとの禁止事項を変更・確認するとき
-- repo-root と work-root の関係に応じたアクセス制約の生成規則を変更・確認するとき
-- oracle／realization file の読み書き可否を mode 別に調整するとき
+- FileAccessMode ごとの読み書き禁止範囲を確認または変更するとき
+- agent 向け file R/W policy の文面生成や、repo-root/work-root の扱いを調査するとき
+- file access policy の戻り値に含まれるプレースホルダー定義や構造化文書の組み立てを確認するとき
 
 ## Do not read this when
-- Codex CLI の sandbox 設定や path 単位の権限を変更・確認するときは、該当する実行規則を直接読む
-- prompt 内のアクセス制約ではなく、実際の CLI 実装やファイル操作処理の責務を変更・確認するときは、その実装の入口を直接読む
+- 単に個別の oracle file や realization file の内容・配置を確認するだけで、agent 向けアクセス制限の生成規則を扱わないとき
+- 一般的な prompt 構築や FileAccessMode の定義自体を確認する場合は、まずそれぞれの直接の定義元を読むとき
 
 ## hash
-- 71e275db327577997bd71e5920ae3e8552d2b9c5ab094888c9ef78bcc5866f20
+- 120354ad99996e746db0409ad65f52717156649c2af950b60f1693ced47ae6c6
 
 # `index_entry.py`
 
@@ -169,17 +172,15 @@
 # `routing.py`
 
 ## Summary
-- INDEX.md を本文の代替ではなく、必要な文書へ絞り込む routing 情報として定義する。作業対象に近い INDEX.md、または対象領域を特定できない場合のリポジトリルートから読み始め、Summary・Read this when・Do not read this when で候補を絞る。下位階層では必要に応じて各階層の INDEX.md を使い、本文を意味の根拠とする。
+- 作業対象に応じた INDEX.md の起点と読み方を示す routing policy の文面を構築する。call-scoped context から work-root を取得し、対象に近い階層を優先しつつ領域不明時はリポジトリルートを入口とする。INDEX.md は対象特定の補助として使い、本文を最終的な根拠とする。
 
 ## Read this when
-- INDEX.md の読み始める位置や候補の絞り込み方を確認するとき
-- 関連文書を総当たりせず、対象に近い階層から必要な本文へ進むとき
-- INDEX.md と本文の内容が異なる場合の判断基準を確認するとき
+- INDEX.md を起点に、作業対象のファイルやディレクトリを特定する必要があるとき
+- INDEX.md と本文の記述が異なる場合の優先順位や、対象領域不明時の探索起点を確認するとき
 
 ## Do not read this when
-- 特定の実装や仕様の意味を直接確認したいとき
-- routing 以外の prompt builder の処理責務を調べるとき
-- 対象文書がすでに特定されており、INDEX.md による候補選択が不要なとき
+- 特定済みの対象本文だけを直接確認すれば足りるとき
+- routing policy ではなく、個別の prompt builder 実装やデータ型の仕様を確認するとき
 
 ## hash
-- 7f76ed23be7f3301d5ebe8a22987e9180e23c37e4a79bd47bb69b9ceff1509ee
+- b22fd2e2601d1df96a5b9a0cdc20723a1bb929d3a8b2a21bdd439c79dd004263
