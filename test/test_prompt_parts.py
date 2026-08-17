@@ -6,10 +6,10 @@ StructDoc 出力を共有する一つの責務であるため、prompt builder �
 対応する正本:
 - {{work-root}}/oracle/doc/app_spec/prompt_policy.md
 - {{work-root}}/oracle/doc/app_spec/feedback_observation.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/basic.py
+- {{work-root}}/oracle/src/oracle/other/struct_doc.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/basic.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/apply_review.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/common.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/editor_handoff.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/feedback_reporting.py
@@ -21,24 +21,16 @@ StructDoc 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization_oracle_reference.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/routing.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/definitions.py
 """
 
-from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
 from _git_support import make_repo, run_git
+from oracle.prompt_builder.basic import PlaceholderMap
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 from oracle.prompt_builder.policy.apply_review import (
     build_apply_review_policy as _build_apply_review_policy,
-)
-from oracle.prompt_builder.policy.basic import (
-    Policy,
-    PolicyCollection,
-    PolicyGroup,
-    combine_policy_collections,
-    policy_collection_to_struct_docs,
 )
 from oracle.prompt_builder.policy.conflict_resolution import (
     build_conflict_resolution_policy as _build_conflict_resolution_policy,
@@ -81,130 +73,38 @@ def _path_context() -> AgentCallPathContext:
     return AgentCallPathContext(agent_call_cwd=Path.cwd())
 
 
-def _render_policy_collection(collection: PolicyCollection) -> str:
-    """PolicyCollection を complete prompt と同じ経路で render する。"""
-    return render_as_markdown(policy_collection_to_struct_docs(collection))
+def _render_policy(builder_result: tuple[PlaceholderMap, StructDoc]) -> str:
+    """policy builder の StructDoc を complete prompt と同じ経路で render する。"""
+    return render_as_markdown(builder_result[1])
 
 
-def test_policy_values_are_immutable_and_require_meaningful_text() -> None:
-    """Policy は入れ子の文面も固定し、空の規定を拒否する。"""
-    policy = Policy(
-        policy_id="sample.policy",
-        title="sample",
-        required=["required"],
-        prohibited=["prohibited"],
+def test_selected_policy_blocks_remain_separate_without_deduplication() -> None:
+    """選択した policy block は共有文面を削らず、それぞれ一度だけ注入する。"""
+    prompt = build_complete_prompt(
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
+        realization_policy=True,
+        apply_review_policy=True,
     )
 
-    assert policy.required == ("required",)
-    assert policy.prohibited == ("prohibited",)
-    with pytest.raises(FrozenInstanceError):
-        setattr(policy, "title", "changed")
-    with pytest.raises(ValueError, match="at least one requirement"):
-        Policy(policy_id="empty.policy", title="empty")
-    with pytest.raises(ValueError, match="non-empty strings"):
-        Policy(
-            policy_id="invalid.policy",
-            title="invalid",
-            required=("",),
-        )
-
-
-def test_policy_collection_renders_labels_without_internal_ids() -> None:
-    """規定本文は label 順に render し、合成用 ID を prompt へ出さない。"""
-    policy = Policy(
-        policy_id="internal.policy-id",
-        title="規定タイトル",
-        required=("必須本文",),
-        prohibited=("禁止本文",),
-        recommended=("推奨本文",),
-        permitted=("許容本文",),
-        examples=("判断例本文",),
-    )
-    collection = PolicyCollection(
-        groups=(
-            PolicyGroup(
-                group_id="internal.group-id",
-                title="group title",
-                scope="適用範囲",
-                policies=(policy,),
-            ),
-        )
-    )
-
-    rendered = _render_policy_collection(collection)
-
-    assert "# 規定タイトル（適用範囲）" in rendered
-    labels = ("**必須**", "**禁止**", "**推奨**", "**許容**", "**判断例**")
-    assert [rendered.index(label) for label in labels] == sorted(
-        rendered.index(label) for label in labels
-    )
-    assert "internal.policy-id" not in rendered
-    assert "internal.group-id" not in rendered
-
-
-def test_combined_policy_collections_are_deduplicated_and_order_independent() -> None:
-    """共有 Policy を一度だけ残し、builder の選択順から出力順を切り離す。"""
-    realization = _build_realization_policy()
-    apply_review = _build_apply_review_policy()
-
-    forward = combine_policy_collections(realization, apply_review)
-    reverse = combine_policy_collections(apply_review, realization)
-
-    assert forward == reverse
-    rendered = _render_policy_collection(forward)
+    rendered = render_as_markdown(prompt)
     assert (
         rendered.count(
             "realization file の都合または挙動を根拠に oracle file の意味を変更"
         )
-        == 1
+        == 2
     )
-    assert rendered.index("oracle file を正本仕様断片として扱う") < rendered.index(
-        "realization policy"
+    assert rendered.index("# realization policy") < rendered.index(
+        "# apply review policy"
     )
-    assert rendered.index("realization policy") < rendered.index(
-        "所見・修正対象に具体的な根拠を求める"
-    )
-
-
-def test_combined_policy_collections_reject_conflicting_ids() -> None:
-    """同じ ID に異なる Policy または group 定義を割り当てない。"""
-    first_policy = Policy("shared.policy", "first", required=("body",))
-    conflicting_policy = Policy("shared.policy", "conflicting", required=("body",))
-    first = PolicyCollection(
-        (PolicyGroup("group.first", "first group", "scope", (first_policy,)),)
-    )
-    conflicting = PolicyCollection(
-        (
-            PolicyGroup(
-                "group.second",
-                "second group",
-                "scope",
-                (conflicting_policy,),
-            ),
-        )
-    )
-
-    with pytest.raises(ValueError, match="Conflicting Policy definition"):
-        combine_policy_collections(first, conflicting)
-
-    conflicting_group = PolicyCollection(
-        (
-            PolicyGroup(
-                "group.first",
-                "conflicting group",
-                "scope",
-                (Policy("other.policy", "other", required=("body",)),),
-            ),
-        )
-    )
-    with pytest.raises(ValueError, match="Conflicting PolicyGroup definition"):
-        combine_policy_collections(first, conflicting_group)
 
 
 def test_oracle_policies_separate_investigation_from_editing_policies() -> None:
     """読み取り専用調査には、編集判断にだけ必要な規定を含めない。"""
-    editing = _render_policy_collection(_build_oracle_policy())
-    investigation = _render_policy_collection(_build_oracle_investigation_policy())
+    editing = _render_policy(_build_oracle_policy())
+    investigation = _render_policy(_build_oracle_investigation_policy())
 
     for shared in (
         "oracle file を正本仕様断片として扱う",
@@ -226,7 +126,7 @@ def test_oracle_policies_separate_investigation_from_editing_policies() -> None:
 
 
 def test_complete_prompt_can_include_oracle_investigation_policy() -> None:
-    """調査用 Policy を基本定義とともに独立して注入する。"""
+    """調査用 policy block だけを独立して注入する。"""
     prompt = build_complete_prompt(
         summary="- summary",
         goal="- goal",
@@ -236,7 +136,7 @@ def test_complete_prompt_can_include_oracle_investigation_policy() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# oracle and realization basic" in rendered
+    assert "# oracle and realization basic" not in rendered
     assert "# oracle investigation policy" in rendered
     assert "# oracle policy" not in rendered
     assert "定義済みの事項と未定義の事項を区別する" in rendered
@@ -244,11 +144,11 @@ def test_complete_prompt_can_include_oracle_investigation_policy() -> None:
 
 def test_build_apply_review_policy_renders_core_review_aspects() -> None:
     """apply review policy の主要な所見境界が render される。"""
-    collection = _build_apply_review_policy()
+    builder_result = _build_apply_review_policy()
 
-    assert isinstance(collection, PolicyCollection)
+    assert isinstance(builder_result[1], StructDoc)
 
-    rendered = _render_policy_collection(collection)
+    rendered = _render_policy(builder_result)
     assert "apply review policy" in rendered
     assert "oracle file に対する realization file の追従要否" in rendered
     assert "明確な不適合または致命的な実装問題" in rendered
@@ -259,8 +159,8 @@ def test_build_apply_review_policy_renders_core_review_aspects() -> None:
 
 def test_conflict_resolution_policy_is_injected_without_editing_policies() -> None:
     """conflict 解消には専用規定だけを編集規定として注入する。"""
-    collection = _build_conflict_resolution_policy()
-    rendered_doc = _render_policy_collection(collection)
+    builder_result = _build_conflict_resolution_policy()
+    rendered_doc = _render_policy(builder_result)
     assert "`cmoc session join` の conflict marker 解消時だけ" in rendered_doc
     assert "conflict marker の解消に不要な仕様変更" in rendered_doc
 
@@ -272,7 +172,7 @@ def test_conflict_resolution_policy_is_injected_without_editing_policies() -> No
         conflict_resolution_policy=True,
     )
     rendered = render_as_markdown(prompt)
-    assert "# oracle and realization basic" in rendered
+    assert "# oracle and realization basic" not in rendered
     assert "# 両 branch の意味を保って conflict marker だけを解消する" in rendered
     for heading in (
         "# oracle policy",
@@ -285,8 +185,8 @@ def test_conflict_resolution_policy_is_injected_without_editing_policies() -> No
 
 def test_editor_handoff_policy_preserves_call_responsibility() -> None:
     """handoff の追加でも元の access mode と正式な結果を維持する。"""
-    collection = _build_editor_handoff_policy()
-    rendered_doc = _render_policy_collection(collection)
+    builder_result = _build_editor_handoff_policy()
+    rendered_doc = _render_policy(builder_result)
     assert "editor handoff でも agent call の責務を維持する" in rendered_doc
     assert "file access mode と Codex CLI sandbox を維持する" in rendered_doc
     assert "正式な結果または成果物を満たす" in rendered_doc
@@ -300,7 +200,7 @@ def test_editor_handoff_policy_preserves_call_responsibility() -> None:
         editor_handoff_policy=True,
     )
     rendered = render_as_markdown(prompt)
-    assert "# oracle and realization basic" in rendered
+    assert "# oracle and realization basic" not in rendered
     assert "editor handoff でも agent call の責務を維持する" in rendered
     assert "# oracle policy" not in rendered
     assert "# realization policy" not in rendered
@@ -322,7 +222,7 @@ def test_realization_oracle_reference_policy_is_independently_selectable() -> No
         realization_oracle_reference_policy=True,
     )
     rendered = render_as_markdown(prompt)
-    assert "# oracle and realization basic" in rendered
+    assert "# oracle and realization basic" not in rendered
     assert "# realization oracle reference policy" in rendered
     assert "# oracle policy" not in rendered
     assert "# realization policy" not in rendered
@@ -376,9 +276,13 @@ def test_complete_prompt_maps_responsibility_and_task_to_summary() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert '## 担当と依頼の概要\n\n<cmoc_ref target="summary"/>' in rendered
-    assert "あなたは prompt 検証担当です" in rendered
-    assert "対象 prompt を確認すること" in rendered
+    assert '<cmoc_ref target="objective"/>' in rendered
+    objective = rendered.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# summary\n\n- あなたは prompt 検証担当です" in objective
+    assert "- 対象 prompt を確認すること" in objective
+    assert "# goal\n\n- prompt の参照関係が妥当であること" in objective
     assert '<cmoc_ref target="role"/>' not in rendered
     assert '<cmoc_block id="role">' not in rendered
 
@@ -565,9 +469,9 @@ def test_complete_prompt_can_include_apply_review_policy() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# oracle and realization basic" in rendered
-    assert "# oracle policy" in rendered
-    assert "# realization policy" in rendered
+    assert "# oracle and realization basic" not in rendered
+    assert "# oracle policy" not in rendered
+    assert "# realization policy" not in rendered
     assert "# apply review policy" in rendered
 
 
@@ -579,6 +483,7 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         aux_dynamic_prompt=[],
+        oracle_and_realization_basic=True,
         oracle_policy=True,
         realization_policy=True,
         oracle_review_policy=True,
@@ -707,11 +612,11 @@ def test_complete_prompt_omits_apply_review_policy_by_default() -> None:
 
 def test_build_realization_policy_renders_core_conformance_requirements() -> None:
     """realization policy の適合性と検証境界が render される。"""
-    collection = _build_realization_policy()
+    builder_result = _build_realization_policy()
 
-    assert isinstance(collection, PolicyCollection)
+    assert isinstance(builder_result[1], StructDoc)
 
-    rendered = _render_policy_collection(collection)
+    rendered = _render_policy(builder_result)
     assert "realization policy" in rendered
     assert "realization file を現行の oracle file に適合させる" in rendered
     assert "現行仕様に必要な実装だけを保つ" in rendered
@@ -732,7 +637,7 @@ def test_complete_prompt_can_include_realization_policy() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# oracle policy" in rendered
+    assert "# oracle policy" not in rendered
     assert "# realization policy" in rendered
     assert "対象 repository 固有の手順で変更を検証する" in rendered
     assert "# realization oracle reference policy" not in rendered
@@ -740,11 +645,11 @@ def test_complete_prompt_can_include_realization_policy() -> None:
 
 def test_build_index_entry_policy_renders_core_output_requirements() -> None:
     """index entry policyの出力境界がrenderされることを検証する。"""
-    collection = _build_index_entry_policy()
+    builder_result = _build_index_entry_policy()
 
-    assert isinstance(collection, PolicyCollection)
+    assert isinstance(builder_result[1], StructDoc)
 
-    rendered = _render_policy_collection(collection)
+    rendered = _render_policy(builder_result)
     assert "index entry policy" in rendered
     assert "読むべき対象へのルーティング情報" in rendered
     assert "対象内容に根拠" in rendered
@@ -792,11 +697,11 @@ def test_complete_prompt_omits_index_entry_policy_by_default() -> None:
 
 def test_build_oracle_review_policy_renders_core_review_requirements() -> None:
     """oracle review policyのseverityと所見境界がrenderされることを検証する。"""
-    collection = _build_oracle_review_policy()
+    builder_result = _build_oracle_review_policy()
 
-    assert isinstance(collection, PolicyCollection)
+    assert isinstance(builder_result[1], StructDoc)
 
-    rendered = _render_policy_collection(collection)
+    rendered = _render_policy(builder_result)
     assert "oracle review policy" in rendered
     assert "fatal" in rendered
     assert "minor" in rendered
@@ -820,8 +725,8 @@ def test_complete_prompt_can_include_oracle_review_policy() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# oracle and realization basic" in rendered
-    assert "# oracle policy" in rendered
+    assert "# oracle and realization basic" not in rendered
+    assert "# oracle policy" not in rendered
     assert "# oracle review policy" in rendered
     assert "# realization policy" not in rendered
 

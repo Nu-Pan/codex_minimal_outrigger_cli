@@ -8,12 +8,7 @@
 # std
 import re
 import textwrap
-from collections.abc import Sequence
-from html import unescape
 from xml.sax.saxutils import quoteattr
-
-_CMOC_BLOCK_PATTERN = re.compile(r'<cmoc_block id="([^"]+)>')
-_CMOC_REF_PATTERN = re.compile(r'<cmoc_ref target="([^"]+)"/>')
 
 
 class StructDoc:
@@ -42,7 +37,8 @@ class StructDoc:
                 self._children = [children[0]]
             else:
                 raise TypeError(
-                    f"children contains unexpected type element (title={title}, type={type(c)})"
+                    "children contains unexpected type element "
+                    f"(title={title}, type={type(children[0])})"
                 )
         else:
             self._children = list()
@@ -104,7 +100,8 @@ class StructBlock:
                 self._children = [children[0]]
             else:
                 raise TypeError(
-                    f"children contains unexpected type element (block_id={block_id}, type={type(c)})"
+                    "children contains unexpected type element "
+                    f"(block_id={block_id}, type={type(children[0])})"
                 )
         else:
             self._children = list()

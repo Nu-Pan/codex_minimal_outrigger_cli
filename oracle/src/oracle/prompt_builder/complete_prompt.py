@@ -1,6 +1,3 @@
-# cmoc
-from typing import Callable
-
 from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import StructBlock, StructDoc

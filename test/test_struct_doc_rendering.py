@@ -5,6 +5,8 @@
 - {{work-root}}/oracle/doc/app_spec/prompt_policy.md
 """
 
+from collections.abc import Callable
+
 import pytest
 from oracle.other.struct_doc import StructBlock as OracleStructBlock
 
@@ -35,7 +37,7 @@ def test_render_as_markdown_collapses_code_block_blank_lines() -> None:
 
     rendered = render_as_markdown(doc)
 
-    assert rendered == "# root\n\n```text\nfirst\n\nsecond\n```\n"
+    assert rendered == "# root\n\n```text\nfirst\n\nsecond\n```\n\n"
 
 
 def test_render_as_markdown_uses_fence_longer_than_dynamic_body() -> None:
@@ -44,7 +46,7 @@ def test_render_as_markdown_uses_fence_longer_than_dynamic_body() -> None:
 
     rendered = render_as_markdown(StructDoc("root", StructCodeBlock("text", body)))
 
-    assert rendered == f"# root\n\n`````text\n{body}\n`````\n"
+    assert rendered == f"# root\n\n`````text\n{body}\n`````\n\n"
 
 
 def test_struct_block_is_reexported_from_realization_compatibility_module() -> None:
@@ -77,16 +79,16 @@ def test_struct_block_accepts_pre_rendered_markdown_as_opaque_child() -> None:
     )
 
     assert (
-        f'<cmoc_block id="outer-target">\n{pre_rendered}</cmoc_block>\n'
+        f'<cmoc_block id="outer-target">\n\n{pre_rendered}\n</cmoc_block>\n'
     ) in rendered
 
 
 @pytest.mark.parametrize(
-    ("roots", "error_message"),
+    ("roots", "expected_counts"),
     [
         pytest.param(
             [StructDoc("map", '<cmoc_ref target="missing"/>')],
-            "cmoc_ref target is not present",
+            {'<cmoc_ref target="missing"/>': 1},
             id="missing-target",
         ),
         pytest.param(
@@ -94,19 +96,44 @@ def test_struct_block_accepts_pre_rendered_markdown_as_opaque_child() -> None:
                 StructBlock("duplicate", StructDoc("first", "body")),
                 StructBlock("duplicate", StructDoc("second", "body")),
             ],
-            "Duplicate cmoc_block id",
+            {'<cmoc_block id="duplicate">': 2},
             id="duplicate-block-id",
         ),
         pytest.param(
             [StructDoc("map", '<cmoc_ref target="target" />')],
-            "Invalid cmoc_ref syntax",
+            {'<cmoc_ref target="target" />': 1},
             id="invalid-reference-syntax",
         ),
     ],
 )
-def test_render_as_markdown_rejects_invalid_references(
-    roots: list[StructDoc | StructBlock], error_message: str
+def test_render_as_markdown_does_not_validate_references(
+    roots: list[StructDoc | StructBlock], expected_counts: dict[str, int]
 ) -> None:
-    """参照先欠落、block id 重複、不正な参照記法を拒否する。"""
-    with pytest.raises(ValueError, match=error_message):
-        render_as_markdown(roots)
+    """参照先欠落、block id 重複、不正な参照記法をそのまま render する。"""
+    rendered = render_as_markdown(roots)
+
+    for fragment, count in expected_counts.items():
+        assert rendered.count(fragment) == count
+
+
+@pytest.mark.parametrize(
+    ("constructor", "context"),
+    [
+        pytest.param(
+            lambda: StructDoc("root", object()),
+            "title=root",
+            id="struct-doc",
+        ),
+        pytest.param(
+            lambda: StructBlock("root", object()),
+            "block_id=root",
+            id="struct-block",
+        ),
+    ],
+)
+def test_struct_nodes_reject_an_invalid_single_child(
+    constructor: Callable[[], object], context: str
+) -> None:
+    """単一の不正 child は構築対象を示す TypeError で拒否する。"""
+    with pytest.raises(TypeError, match=context):
+        constructor()
