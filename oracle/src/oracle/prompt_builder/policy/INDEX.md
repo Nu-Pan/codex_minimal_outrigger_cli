@@ -118,20 +118,20 @@
 # `oracle.py`
 
 ## Summary
-- このファイルは、oracle file を扱う agent call 向けの instruction を構築する定義を担う。oracle file の作成・変更・レビュー時に適用する優先順位、要件、禁止事項、許容事項、仕様断片としての扱いを `SDHeader` と `SDPolicy` にまとめ、読み取り専用調査向けの追加規定も別途定義する。
+- oracle file の作成・変更・レビュー時に適用する instruction 構築規定を定義する。oracle と realization の要件、指示の優先順位、仕様から読み取るべき実装差の境界や goal・non-goal、関連 oracle file への参照、既存意味の維持、用語統一、未定義事項の扱いを要求事項として整理し、realization からの仕様逆算や根拠のない修正、仕様矛盾・重複・誤りを禁止する。oracle file の問題調査に限り実装制約を判断材料として許容する。
 
 ## Read this when
-- oracle file の作成・変更・レビューに関する agent call の規定を確認するとき
-- oracle file の読み取り専用調査で、定義済み事項と未定義事項を区別する規定を確認するとき
-- oracle policy の instruction 文面がどこで構築されるかを調べるとき
+- oracle file の作成・変更・レビューで、適用すべき要求・禁止・許容事項を確認するとき
+- oracle file における実装差の許容範囲、goal・non-goal、未定義事項の扱いを確認するとき
+- oracle file 間の参照、用語、既存意味の維持に関する規定を確認するとき
 
 ## Do not read this when
-- oracle file 自体の具体的な仕様内容を確認したいときは、対象の oracle file を直接読む
-- agent call の基本的な prompt 構築や PlaceholderMap の一般的な扱いだけを確認したいときは、該当する prompt_builder の基本定義を直接読む
-- oracle file を扱わない作業では、この policy 定義を読む必要はない
+- realization file の実装配置や具体的な実装挙動を確認するとき
+- oracle file 以外の prompt builder policy の構築規定を確認するとき
+- oracle file の個別仕様そのものではなく、oracle と realization basic の詳細要件を確認するとき
 
 ## hash
-- 5f400d12244ec678477eeecc9232efbf3782fe683f65cc79fc3a2118d6d04296
+- db22873b969681521bffa92c8bb4c0790c5b3d18710723e5b57f79d8601a1b6f
 
 # `oracle_review.py`
 

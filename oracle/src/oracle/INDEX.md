@@ -1,20 +1,19 @@
 # `acp_builder`
 
 ## Summary
-- AIコーディングエージェント呼び出しの用途別定義をまとめるディレクトリ。基本パラメータ契約、feedback issue 判定、INDEX.md エントリー生成、oracle 操作、quota probe、realization、session conflict 解消、TUI の各 agent call の起動設定・prompt・Structured Output 契約を確認できる。
+- AIコーディングエージェント呼び出し用の論理モデル、推論強度、ファイルアクセス、プロンプト、Structured Output schema、作業ディレクトリなどの AgentCallParameter 定義を扱うディレクトリ。feedback、indexing、oracle、realization、session、tui など用途別の agent call 構築定義への入口を提供する。
 
 ## Read this when
-- 特定の cmoc 機能が構築する agent call の prompt、モデル、reasoning effort、ファイルアクセス、cwd、preflight、Structured Output 設定を調査・変更するとき
-- 用途別の agent call 定義の責務や入口を確認するとき
-- agent call の出力契約や JSON schema と、その起動定義の対応を確認するとき
+- agent call の共通パラメータ契約やモデル・推論・ファイルアクセス設定を確認するとき
+- feedback issue 判定、INDEX.md エントリー生成、oracle 操作、realization 反映・refactor、session conflict 解消、TUI、quota probe の起動設定や出力契約を調査・変更するとき
 
 ## Do not read this when
-- agent call の共通型、共通 prompt 生成、パス解決など、配下の用途別定義に固有でない処理を調査するとき
-- realization の具体的な実装・テストや oracle file 自体の仕様内容を確認するとき
-- 既存の INDEX.md のルーティング内容だけを確認するとき
+- 実際のモデル名やバックエンド固有の解決処理を確認するとき
+- oracle や realization の正本仕様・具体的な実装やテストを確認するとき
+- 共通 prompt 生成、CLI のサブコマンド解析、TUI の画面処理など、このディレクトリの用途別 agent call 定義に直接属さない処理を確認するとき
 
 ## hash
-- d424fce50a5610b399f5606c716a2457153b4180e2378e5c0abe4ed0a5ec275b
+- e83d8d3998bbc8c030f56d4faa50269583ee65f4dff52ea22c6dad15f891a9a7
 
 # `feedback`
 
@@ -59,17 +58,18 @@
 # `prompt_builder`
 
 ## Summary
-- agent call 向け完全プロンプトを構成する実装と、その構成部品・policy 定義をまとめたディレクトリ。完全 prompt の組み立て、placeholder の統合、エディタ入力初期文面、共通規範や用途別 policy の生成経路を調べる入口であり、個別 policy や構造化文書の詳細は配下の対応対象へ進む。
+- agent call 向けプロンプトを構築する実装群。共通のプレースホルダー型、完全プロンプト生成、エディタ入力、oracle・realization の基本説明、用途別 policy を扱う。
+- 完全プロンプトの構築順序や全体統合を確認する入口は complete_prompt.py。個別の制約や判断規範は policy 配下、共通概念は parts 配下へ進む。
 
 ## Read this when
-- agent call に渡す prompt の構成や挿入順序、placeholder の扱いを確認・変更するとき
-- prompt builder の共通部品、policy、oracle・realization の規範、routing などの組み込み経路を調査するとき
-- エディタ入力の初期文面や、prompt policy の適用条件を確認するとき
+- agent 向け完全プロンプトの生成経路や構成要素を確認・変更するとき。
+- file access、oracle・realization、routing、feedback、review、conflict 解消、editor handoff、INDEX.md エントリー生成などの policy の入口を特定するとき。
+- プレースホルダー定義、エディタ入力の初期文面、oracle と realization の基本概念を調べるとき。
 
 ## Do not read this when
-- 特定の policy の本文や規則だけを確認したいときは、配下の対応する policy 定義を直接読む
-- oracle・realization の正本仕様や実装、構造化文書要素の定義を確認したいときは、それぞれの担当ファイルを直接読む
-- 生成済み prompt の結果や CLI の実行処理だけを調査する場合
+- oracle または realization の正本仕様、実装、テスト本文を確認したいとき。
+- 特定の policy の具体的な挙動だけを調べる場合は、ディレクトリ全体ではなく対応する policy ファイルを直接読む。
+- 生成済みプロンプトの結果だけが必要で、prompt builder の構成元を確認する必要がないとき。
 
 ## hash
-- 6d587e938c82bbab5a6755af24c93ad0461eaa0001e7263fc798830e3a0033ee
+- 579012b1ee9380542a233fb726e4d188d982d50a93c304bc9fe0a5988c116574

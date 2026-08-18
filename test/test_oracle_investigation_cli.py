@@ -227,7 +227,7 @@ def test_oracle_investigation_has_no_session_precondition(
     assert parameter.run_indexing_preflight is True
     assert kwargs["notification_command_name"] == "oracle investigation"
     complete_prompt = parameter.prompt
-    assert "# oracle investigation policy" in complete_prompt
+    assert "# oracle investigation policy" not in complete_prompt
     assert "# oracle policy" not in complete_prompt
     assert "# routing policy" in complete_prompt
     assert "oracle の根拠を調査する" in complete_prompt
