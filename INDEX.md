@@ -91,18 +91,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と oracle 実装をまとめた領域。仕様・開発ルールなどの文書群と、agent call・prompt・共通基盤・feedback 入力を構築する実装群への入口です。
+- cmoc の正本仕様と、agent call・prompt・oracle などを含む実装群を案内するルート。仕様領域は doc、実装領域は src へ進む入口となる。
 
 ## Read this when
-- cmoc の正本文書群を横断して、仕様・開発ルール・branch／session／run・代替案の入口を判断するとき
-- agent call、prompt、Structured Output、routing、review、feedback、共通設定や構造化文書処理の実装を調査・変更するとき
+- cmoc の仕様文書と oracle 実装の所在を横断的に確認するとき
+- 仕様と実装のどちらを調査すべきか、または doc と src のどちらへ進むべきか判断するとき
 
 ## Do not read this when
-- 個別の仕様書や開発ルール文書が既に特定でき、直接その文書を読む方が適切なとき
-- 特定の CLI サブコマンド、realization、実装ファイル、既存テストの具体的な処理だけを調査するとき
+- 具体的な仕様が明確で doc 配下の個別文書へ直接進めるとき
+- 特定の実装領域が明確で src 配下の個別実装へ直接進めるとき
 
 ## hash
-- 51eba4465802964637a99f132a8504f75124a23d9342f31d33d550d8f2f27843
+- 32287d7dc55055e8858026f7639b7fa91a0487776b7de0b580f254738e221891
 
 # `pyproject.toml`
 

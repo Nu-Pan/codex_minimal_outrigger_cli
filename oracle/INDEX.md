@@ -1,38 +1,36 @@
 # `doc`
 
 ## Summary
-- cmoc の正本文書を領域別にまとめた入口。CLI・workflow の挙動仕様は app_spec、Python 開発・設計・テスト・環境は dev_rule、branch／session／run の関係は branch_model、採用しなかった設計案の背景は considered_alternative へ進む。
+- cmoc の正本文書を、アプリケーション仕様と開発ルールの領域に分けて案内する入口。CLI や session/run などの挙動仕様は app_spec、実装・環境・テストの規約は dev_rule へ進む。
 
 ## Read this when
-- cmoc の仕様、設計、開発環境、テスト、branch／session／run、または採用しなかった代替案を調査し、対応する正本文書群の入口を判断するとき
-- 実装やテストの変更に先立ち、アプリケーション仕様と開発ルールのどちらを確認すべきか整理するとき
+- cmoc の正本仕様、開発ルール、実装規約、テスト要件の所在を横断的に確認するとき
+- 対象文書が app_spec と dev_rule のどちらに属するか判断するとき
 
 ## Do not read this when
-- 対象の個別仕様書や開発ルール文書が既に特定できており、そこへ直接進む方が適切なとき
-- 実装ファイルや既存テストの具体的内容だけを調査し、正本文書群の横断的な案内が不要なとき
+- アプリケーション挙動の具体的な仕様が明確で、app_spec 配下の個別文書へ直接進めるとき
+- 実装配置、開発環境、テスト要件、テスト実行手順のいずれかが明確で、dev_rule 配下の個別文書へ直接進めるとき
+- considered_alternative、branch_model など特定領域の資料だけを調査するとき
 
 ## hash
-- 940b333372e1bb8d5db506d6d72de3447e9dc82f3175b2e4a537fdf82d814306
+- 6a3131cafc07825e70191d23065036a1e688919b452850fff55aa111ca8c0229
 
 # `src`
 
 ## Summary
-- oracle/src は、cmoc の agent call 構築、prompt 構築、共通設定・パス・構造化文書モデル、feedback 入力処理を担う oracle 実装領域です。
-- acp_builder は、モデル・reasoning effort・ファイルアクセスなどの agent call パラメータと、TUI、feedback、oracle review、realization など用途別の起動定義を扱います。
-- other は、cmoc 設定、agent call のパスコンテキスト、構造化文書ノードと Markdown 変換など、各 builder が共有する基盤を扱います。
-- prompt_builder は、完全 prompt、エディタ入力、oracle・realization の基本説明、ファイルアクセスや routing・review など作業目的別 policy の構築を扱います。
-- feedback 関連の実装は、構造化 observation や候補 issue の同一性判断・検証など、人間向け feedback issue の agent call 入力を構築します。
+- cmoc の oracle 実装をまとめるルート。agent call パラメータの構築、用途別の oracle・realization・session・feedback・TUI・indexing 定義、prompt の構築、パス・設定・構造化 Markdown の共通モデルを扱う。目的別の実装を探すときは、まずこの階層から `oracle/acp_builder`、`oracle/prompt_builder`、`oracle/other`、`oracle/feedback` へ進む。
 
 ## Read this when
-- agent call の共通パラメータ、用途別の起動定義、Structured Output、TUI・feedback・oracle review・realization 関連の builder を調査または変更するとき
-- cmoc 設定、agent call cwd に基づくパス解決、構造化文書の生成・Markdown 変換を調査または変更するとき
-- 完全 prompt の構成、placeholder、エディタ入力、oracle・realization や review・routing などの policy を調査または変更するとき
-- feedback observation や issue candidate の同一性判断・検証に渡す入力契約を調査または変更するとき
+- AI エージェント呼び出しのパラメータや用途別の起動定義を調査・変更するとき
+- 完全 prompt、prompt policy、placeholder、エディタ入力文面の構築を調査・変更するとき
+- agent call 間で共有する設定、パス解決、構造化 Markdown のモデルやレンダリングを調査・変更するとき
+- oracle・realization・session・feedback・TUI・indexing の実装入口を確認するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドの処理フローや realization の具体的な実装・テストだけを確認したいとき
-- 個別の oracle 文書や個別 builder の仕様本文そのものだけを確認したいとき
-- 既存の INDEX.md のルーティング内容だけを確認したいとき
+- 正本仕様や利用規約そのものを確認したいとき
+- 実際の CLI サブコマンドの処理フローや agent call の実行機構を確認したいとき
+- 特定の agent call、prompt policy、共通モデルの実装が特定できているとき
+- feedback の報告入力データだけを確認したいとき
 
 ## hash
-- 9c08f106d636dd94db4bc9270d2fe84aa934a7241ebd636caf1197bd731068d6
+- eb66bed724bc51cebf174087887abaf6b0cf95b77d42c0df5713d328473682c5

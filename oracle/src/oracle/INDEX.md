@@ -53,20 +53,19 @@
 # `prompt_builder`
 
 ## Summary
-- agent call 向けの完全プロンプトとエディタ入力用の初期文面を組み立てる実装領域。placeholder 定義、プロンプト構成、追加 prompt、用途別 policy の注入を扱い、共通部品や個別 policy への入口となる。
-- `parts` は oracle／realization の基本概念など、複数の prompt 経路で再利用する構成部品を扱う。
-- `policy` は file access、oracle／realization、review、conflict、handoff、feedback、routing、INDEX.md 生成など、作業目的別の instruction を扱う。
+- agent 向け完全プロンプトの構成部品を実装するディレクトリ。placeholder 型、完全 prompt の組み立て、エディタ入力の初期文面、共通 prompt parts、用途別 policy を扱い、prompt builder の仕様や変更箇所を確認する入口となる。配下には prompt 全体の構成、共通規範、個別 policy へ段階的に進める構造がある。
 
 ## Read this when
-- 完全プロンプトの構成順序、policy の選択、placeholder の統合・競合検出、追加 prompt の注入を確認・変更するとき。
-- エディタ入力ファイルの初期表示、記入案内、HTML コメント内の prompt template を確認・変更するとき。
-- placeholder 名と文字列または Path の対応を確認するとき。
-- 共通 prompt 部品や作業目的別 policy の内容・構築規則を調査するとき。
+- agent call に渡す完全 prompt の構成・挿入順序・policy 選択・placeholder 統合を確認または変更するとき
+- エディタ入力用の初期文面やテンプレート埋め込みを確認または変更するとき
+- oracle・realization の責務境界、ファイル分類、アクセス規則、handoff や conflict resolution などの prompt 部品を確認するとき
+- 特定の prompt policy の適用条件や instruction 文面の構成を確認するとき
 
 ## Do not read this when
-- 特定の policy や構成部品の本文だけが必要な場合は、対象の `policy` または `parts` 配下を直接読む。
-- oracle／realization の正本仕様・実装・テスト、CLI 本体、パス解決など、prompt builder の構成以外を調べる場合。
-- 生成済み prompt の結果だけを確認する場合や、placeholder を使わない処理・別設定値の表現を確認する場合。
+- oracle や realization の正本仕様・実装・テスト本文を直接確認したいとき
+- CLI のファイルアクセス処理や、生成済み prompt の利用側の挙動だけを確認したいとき
+- 特定 policy の本文だけを確認したい場合は、ディレクトリ全体ではなく対応する個別 policy へ直接進むとき
+- SDHeader・SDTagBlock など構造化文書の定義自体を確認したいとき
 
 ## hash
-- bb7817c33e796dc024bca787369b830509028d7c5c99fc898fb3571f5910b3f6
+- cb347dd251d03b9b61eda66115f98d433777503ca89d4f3f05005b76d9bed057

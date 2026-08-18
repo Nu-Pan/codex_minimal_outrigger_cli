@@ -71,18 +71,15 @@
 # `policy`
 
 ## Summary
-- prompt builder の policy 実装群を扱うディレクトリ。agent call に適用するアクセス制限、oracle／realization の扱い、feedback 報告、conflict 解消、handoff、routing、INDEX.md エントリー生成など、作業目的ごとの instruction 文面を構築する入口となる。
-- 個別の policy ファイルは、対応する作業規定や prompt 生成ロジックを確認・変更するときに参照する。oracle／realization の具体的な仕様や CLI 本体の実装を確認するための直接の入口ではない。
+- prompt_builder の各 policy 実装を、oracle・realization の扱い、ファイルアクセス、feedback、routing、handoff、conflict 解消、INDEX.md エントリー生成などの責務ごとに確認するための入口。各ファイルは対応する agent call の instruction 文面や判断規定を構築する。
 
 ## Read this when
-- agent call 用の共通または作業目的別 policy の構築規則を調査・変更するとき
-- FileAccessMode ごとの読み書き制限、oracle／realization の扱い、feedback 報告、handoff、conflict 解消の instruction を確認するとき
-- INDEX.md ルーティングや oracle／realization 適合性レビューに関する prompt policy を確認するとき
+- 特定の prompt policy の責務、適用条件、禁止事項、または生成する instruction 文面を確認・変更するとき
+- 複数の policy 間で、oracle・realization・INDEX.md・ファイルアクセスなどの扱いを比較するとき
 
 ## Do not read this when
-- oracle file や realization file の具体的な仕様・実装内容を確認するとき
-- CLI 本体、共通型、パス解決など、policy 文面の構築以外の実装責務を調査するとき
-- 対象となる個別 policy の利用箇所や生成済みプロンプト全体だけを確認したいとき
+- 具体的な oracle file、realization file、CLI の実アクセス処理、または生成済みプロンプトの利用側の挙動を直接確認する作業
+- prompt_builder policy の一般的なデータ構造や個別機能の実装詳細だけを確認する作業
 
 ## hash
-- f170449acd770270f646df173362be90f228106ce042ae784d7a4d65dea83897
+- bed7a40689d6416aa620df975c94632fd68deb42423362d3f55a6dc7d1aebe53
