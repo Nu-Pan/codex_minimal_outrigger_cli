@@ -29,7 +29,9 @@ def build_realization_policy() -> tuple[PlaceholderMap, SDHeader]:
                     "簡潔化のために意味、可読性、失敗時挙動、または必要な検証を損なってはいけない",
                     "work-root 固有手順の配置先を `.agents/skills` に限定してはいけない",
                 ),
-                allow=(),
+                allow=(
+                    "重要な人間意図へ絞りつつ、明示仕様の隙間は、現行の oracle file と、file access が許す場合の既存実装・既存 test から自然に導ける範囲で実装者が補ってよい",
+                ),
             ),
         ),
     )

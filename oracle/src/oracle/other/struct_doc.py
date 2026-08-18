@@ -7,7 +7,7 @@
 # std
 import re
 import textwrap
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from xml.sax.saxutils import quoteattr
 
 
@@ -160,16 +160,20 @@ class SDPolicy:
 
     # 「必須」カテゴリに属する規定のリスト
     # １項目＝１文で「～しなければならい」「～すること」が並ぶ
-    require: tuple[str, ...]
+    require: tuple[str, ...] = field(default_factory=lambda: tuple())
 
     # 「禁止」カテゴリに属する規定のリスト
     # １項目＝１文で「～してはいけない」「～は禁止」が並ぶ
-    prohibit: tuple[str, ...]
+    prohibit: tuple[str, ...] = field(default_factory=lambda: tuple())
 
     # 「許容」カテゴリに属する規定のリスト
     # １項目＝１文で「～してもよい」が並ぶ
     # 必須・禁止との違いは、する・しないの裁量がエージェントに委ねられている事
-    allow: tuple[str, ...]
+    allow: tuple[str, ...] = field(default_factory=lambda: tuple())
+
+    # 各規定が言っていることを理解するために必要な補足情報のリスト
+    # １項目＝１文で補足情報を並べる
+    supplemental: tuple[str, ...] = field(default_factory=lambda: tuple())
 
 
 # SD... 系クラスをまとめた型エイリアス
@@ -339,6 +343,16 @@ def _render_sd_policy_as_markdown(
             "",
         ]
         result += [f"- {a}" for a in sd_node.allow]
+        result += [
+            "",
+        ]
+    if sd_node.supplemental:
+        result += [
+            "",
+            "**補足情報**",
+            "",
+        ]
+        result += [f"- {s}" for s in sd_node.supplemental]
         result += [
             "",
         ]
