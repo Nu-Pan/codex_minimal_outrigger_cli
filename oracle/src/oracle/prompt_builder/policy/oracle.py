@@ -43,18 +43,3 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
             ),
         ),
     )
-
-
-def build_oracle_investigation_policy() -> tuple[PlaceholderMap, SDHeader]:
-    """oracle file の読み取り専用調査に必要な規定を構築する。"""
-    return (
-        {},
-        SDHeader(
-            "oracle investigation policy（oracle file の読み取り専用調査時）",
-            SDPolicy(
-                when_use_this="",
-                require=("oracle file で定義されている事項と未定義の事項を区別する",),
-                prohibit=("未定義の事項を正本仕様として断定してはいけない",),
-            ),
-        ),
-    )

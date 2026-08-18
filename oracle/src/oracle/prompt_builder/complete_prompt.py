@@ -12,10 +12,7 @@ from .policy.editor_handoff import build_editor_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
 from .policy.file_access import build_file_access_policy
 from .policy.index_entry import build_index_entry_policy
-from .policy.oracle import (
-    build_oracle_investigation_policy,
-    build_oracle_policy,
-)
+from .policy.oracle import build_oracle_policy
 from .policy.oracle_review import build_oracle_review_policy
 from .policy.realization import build_realization_policy
 from .policy.realization_oracle_reference import (
@@ -50,7 +47,6 @@ def build_complete_prompt(
     aux_placeholder_def: PlaceholderMap = dict(),
     oracle_and_realization_basic: bool = False,
     oracle_policy: bool = False,
-    oracle_investigation_policy: bool = False,
     realization_policy: bool = False,
     oracle_review_policy: bool = False,
     apply_review_policy: bool = False,
@@ -65,8 +61,6 @@ def build_complete_prompt(
     Args:
         summary: agent の担当、主作業、対象、および作業範囲。
         goal: agent call の終了時に満たされるべき状態。
-        oracle_investigation_policy: oracle file の読み取り専用調査に必要な
-            policy block を含めるか。
         editor_handoff_policy: editor work file への handoff に必要な
             policy block を含めるか。
         routing_policy: repository 内の参照先を選ぶ routing 文面を含めるか。
@@ -138,11 +132,6 @@ def build_complete_prompt(
         _append(
             full_prompt,
             build_oracle_policy(),
-        )
-    if oracle_investigation_policy:
-        _append(
-            full_prompt,
-            build_oracle_investigation_policy(),
         )
     if realization_policy:
         _append(
