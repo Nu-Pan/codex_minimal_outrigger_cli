@@ -15,17 +15,17 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` が起動する本命 agent と仕様削減 agent の `codex exec` パラメータを構築する。オリジナル指示を prompt に埋め込み、oracle file の編集権限、作業ルート、モデル、推論強度、初回 indexing 実行有無などを固定する。
-- oracle 編集処理の起動条件・prompt 構成・agent call パラメータを確認または変更するときの入口であり、実際の prompt 生成規則は `build_complete_prompt`、パス解決は `AgentCallPathContext` と `resolve_repo_root` を確認する。
+- `cmoc oracle edit` で使用する本命 agent call と仕様削減 agent call の起動パラメータ構築を定義する。ユーザー指示を完全 prompt に埋め込み、oracle-only のファイルアクセス、モデル・推論設定、作業ディレクトリ、indexing preflight などを固定する。
+- 本命 call はユーザー指示に基づく oracle file 編集用、仕様削減 call は現在の oracle file と未コミット差分に基づく過剰仕様の整理用であり、各 call の prompt 構成と `AgentCallParameter` 生成が責務である。
 
 ## Read this when
-- `cmoc oracle edit` の本命または仕様削減 agent call の起動パラメータを調査・変更するとき
-- oracle file 編集用 prompt に渡すユーザー指示、ファイルアクセスモード、作業ディレクトリ、実行前 indexing の設定を確認するとき
+- `cmoc oracle edit` の codex exec 起動パラメータや prompt 構成を変更・確認するとき
+- oracle 編集の本命 call と、その後の仕様削減 call の責務・アクセス制約・起動設定を確認するとき
 
 ## Do not read this when
-- oracle file 編集用 prompt の共通構造だけを確認したい場合は `complete_prompt` 側を直接読むとよい
-- agent call の基本的な型や enum の定義を確認したい場合は `oracle.acp_builder.basic` を直接読むとよい
-- oracle file の編集対象や仕様そのものを確認する場合は、この起動パラメータ定義ではなく対象の oracle file を読むべきである
+- oracle file 自体の仕様内容や編集方針を確認する場合
+- 一般的な agent call の基底型、パス解決、prompt builder、構造化文書レンダリングの実装を確認する場合は、それぞれの定義元を直接読むとき
+- realization 側の CLI 動作やテストの実装を確認する場合
 
 ## hash
-- 5dc5d5a714987cd5b72f164731d77aaf54f9c6f660c7cab2f1223a575765adf5
+- 567402b380a887291f2879c3f6e9e4f19f4b586fb6d94c71158f3f8703384c98

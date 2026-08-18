@@ -48,15 +48,16 @@
 # `struct_doc.py`
 
 ## Summary
-- 構造化文書 API の公開用再エクスポート入口。正本実装を複製せず、`oracle.other.struct_doc` の公開シンボルを利用する。
+- canonical な構造化文書実装を再公開する旧 API 互換モジュール。構造化文書型の旧名エイリアス、タグ生成、Markdown 描画を扱い、実装の入口として下位の canonical renderer 参照へつなぐ。
+- 単一 root または root list を受ける旧来の描画 API が必要な場合に読む対象であり、描画処理そのものの仕様や canonical な型定義を確認する場合は参照先の正本実装を直接読む。
 
 ## Read this when
-- 構造化文書 API の公開経路や `basic.struct_doc` の参照元を確認するとき。
-- 構造化文書の型・生成関数・Markdown レンダリング関数の公開経路を調べるとき。
+- 旧 API の構造化文書型名や Markdown 描画関数の互換インターフェースを確認するとき
+- 構造化文書の利用者向け公開面や realization 側に残る旧参照を調査するとき
 
 ## Do not read this when
-- 正本実装の詳細や挙動を確認したいときは、`oracle.other.struct_doc` を直接読む。
-- `basic.struct_doc` 参照の削除可否を確認するときは、参照箇所を直接調べる。
+- canonical な構造化文書の型定義、タグ生成、描画仕様を確認したいとき
+- 旧 API 互換層を経由せず canonical renderer の利用方法を確認できるとき
 
 ## hash
-- 0397791c0dc37c51edd489ea3dd01470322afc79499e4a5ddf069f9785bd13f9
+- a211733e9b2de8e38da96c29745f4bd4d5a209692d9dbd59734c1e92cd9a4687

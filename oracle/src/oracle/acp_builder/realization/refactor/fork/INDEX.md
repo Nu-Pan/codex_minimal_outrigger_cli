@@ -17,20 +17,19 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の変更差分を要約する prompt と AgentCallParameter を構築する定義。
-- run_worktree を agent_call_cwd として設定し、raw_git_diff を入力にした readonly の要約 agent call を起動する。
-- prompt には差分、作業範囲、Structured Output に従う要約目的を組み込み、効率重視のモデル・推論設定と専用 schema を指定する。
+- refactor fork の変更差分を要約する agent call 用パラメータを構築する実装。raw_git_diff と linked worktree を受け取り、worktree を実行コンテキストとして確定したうえで、差分要約用 prompt と READONLY のアクセス設定を組み立てる。
+- prompt は差分を動的入力として埋め込み、効率性重視のモデル分類・中程度の推論強度・指定された Structured Output schema・indexing preflight を含む AgentCallParameter を返す。
 
 ## Read this when
-- refactor fork の run branch 差分を人間向けに要約する agent call の prompt や起動パラメータを変更・確認するとき。
-- AgentCallPathContext、readonly のファイルアクセス、モデル・推論設定、Structured Output schema の組み合わせを確認するとき。
+- refactor fork の変更差分要約 agent call の prompt、実行コンテキスト、モデル分類、アクセスモード、Structured Output schema の起動パラメータを確認・変更するとき。
+- raw_git_diff の埋め込み方や run_worktree を agent_call_cwd に設定する処理を追跡するとき。
 
 ## Do not read this when
-- refactor fork の変更差分そのものを確認したいとき。
-- 変更要約以外の refactor 処理や、一般的な prompt 構築処理を直接調査するとき。
+- 変更差分の要約結果の形式や項目を確認したいだけの場合は、直接対応する Structured Output schema を読む。
+- refactor fork の差分取得・生成処理そのもの、または要約 agent の実行処理を調べる場合は、それぞれの担当実装を直接読む。
 
 ## hash
-- a1cc9dff42f3d854b7ab8eae99c48a5146fc5a27db30b927c985ae6e326268e4
+- 7cc5adc466a124afb610773b53715e19722096b14febcfa754286d5d17db9cd0
 
 # `file_review_and_fix.json`
 
@@ -52,18 +51,18 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- 指定された oracle/realization file を起点に、refactor fork におけるファイル単位レビュー・修正用 AgentCallParameter の構築を定義する。レビュー対象の linked worktree を agent_call_cwd に設定し、完全な調査・修正プロンプト、各種ポリシー、Structured Output schema、実行設定を組み立てる。
-- レビュー対象ファイルの調査から修正後検証までを agent call に要求するプロンプト構築の入口であり、refactor fork の同種のファイル単位レビュー・修正処理を確認するときに読む。
+- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter 構築定義。対象ファイルを起点に、調査から検証までを行う完全プロンプトを生成し、realization file のレビュー・修正を実行するための作業条件、参照方針、Structured Output の事後条件を設定する。
+- 対象 path と linked worktree をもとに agent_call_cwd を確定し、効率モデル・最大推論・realization write 権限・indexing preflight を含む実行パラメータを返す。Structured Output schema の実体は同名の JSON schema ファイルから参照する。
 
 ## Read this when
-- refactor fork でファイル単位のレビュー・修正用 AgentCallParameter がどのように構築されるか確認するとき
-- レビュー対象 path、run worktree、agent_call_cwd、完全プロンプト、適用する各種ポリシーの関係を調査するとき
-- レビュー結果の Structured Output schema と、実際の realization file 変更 path の一致条件がプロンプトへどう組み込まれるか確認するとき
+- refactor fork のファイル単位レビュー・修正用 AgentCallParameter の構築方法を変更するとき
+- 対象ファイルを起点とする完全プロンプトの内容、oracle/realization の参照方針、レビュー・修正・検証の作業条件を確認するとき
+- agent call のモデル、推論強度、ファイルアクセス権限、作業ディレクトリ、indexing preflight の設定を確認・変更するとき
 
 ## Do not read this when
-- レビュー・修正処理の具体的な実装対象や oracle の内容を確認する場合は、対象となる realization file または oracle file を直接読むとき
-- Structured Output の項目や型だけを確認する場合は、対応する schema file を直接読むとき
-- refactor fork 以外の prompt builder や AgentCallParameter の一般仕様だけを調査する場合は、対応する共通実装・仕様を直接読むとき
+- レビュー対象の実装内容そのものを調査・修正するときは、構築定義ではなく対象の realization file と必要な oracle file を直接読む
+- Structured Output の具体的な出力項目や形式だけを確認するときは、同名の JSON schema file を直接読む
+- refactor fork 以外の AgentCallParameter 構築定義を調査するとき
 
 ## hash
-- d56728669f9b000a17c06ecd0f823158065b3cba59d3f1fc8bb758f403f7fa81
+- 2fbddc011d930829854cccfbd97e160222915b0179367e29cb12fee378f0f4a4

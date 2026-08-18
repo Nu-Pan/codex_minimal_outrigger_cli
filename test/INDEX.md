@@ -438,23 +438,24 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の agent-facing reporter と collector の境界から、observation の保存・検証・重複排除・候補化・verification までを検証するテスト群。
-- report cut と checkpoint の再開、incomplete/interrupted 処理、active state の atomic publication、generation hash、current pointer、cleanup、raw artifact の破損検出を確認する統合 fixture の入口。
+- feedback の reporter、collector、raw observation store、report cut、verification、active state、atomic publication、cleanup を同一 repository fixture で検証するテスト群。
+- agent・machine observation の schema、context、rate limit、冪等性、secret masking、repository path 境界を検証し、正規化・verification agent の prompt、readonly、schema、checkpoint version も確認する。
+- feedback report の candidate 集約、fingerprint による同一性、verdict、threshold、incomplete/interruption 後の再開、diagnostic report、current pointer、active generation、raw cleanup の外部挙動を検証する。
+- feedback reporting の実装や仕様変更で、pending observation から publication 後の compact active state までの整合性を確認するときのテスト入口。
 
 ## Read this when
-- feedback reporter の公開ツール、collector 転送、rate limit、capability、protocol error、不正応答の扱いを確認するとき
-- agent または machine observation の schema 検証、path 境界、symlink 防止、secret masking、canonical JSON、idempotent な保存を確認するとき
-- observation から issue candidate への identity、deduplication、fingerprint、threshold、window expiry、verification verdict の処理を確認するとき
-- feedback report の report cut、checkpoint recovery、Codex 再呼出し抑止、incomplete/interrupted からの再開を確認するとき
-- active generation、current pointer、report artifact、publication cross-reference、hash、未列挙 artifact、部分 cleanup の整合性を確認するとき
+- feedback の reporter protocol、collector の durable observation、または observation envelope を変更・調査するとき。
+- feedback report の normalization、verification、candidate identity、machine recurrence threshold、checkpoint、再開処理を変更・調査するとき。
+- active state、current pointer、generation artifact、report cut、publication、cleanup の整合性や破損時の挙動を確認するとき。
+- feedback report の中断、診断保存失敗、部分 cleanup、再実行時の外部挙動を検証するとき。
 
 ## Do not read this when
-- feedback の正本仕様や state 契約を確認する場合は、本文中に対応付けられた oracle 文書を直接読む
-- normalize または verify の prompt、FileAccessMode、Structured Output schema の定義だけを確認する場合は、対応する builder と schema を直接読む
-- feedback report の Markdown 表示仕様だけを確認する場合は、report rendering または subcommand の正本仕様を直接読む
+- feedback 以外のサブコマンドや、reporting と無関係な共通 CLI 機能だけを変更・調査するとき。
+- 正規化・verification builder の本文仕様や schema の定義を確認することが目的で、テスト挙動を確認する必要がないときは、対応する oracle file または builder を直接読む。
+- feedback state や report cut の実装詳細を確認することが目的で、テストケースの期待挙動を確認する必要がないときは、対応する runtime 実装または oracle file を直接読む。
 
 ## hash
-- 1a8238b45eb18ecbf14167d237cbcb5f0110207a4b567c40b51fbb524a2bdb36
+- 61bf4815f83058bf88c09fef577f24ad3da1e4949719d07f9675872bab5524e4
 
 # `test_file_inventory.py`
 
@@ -980,18 +981,19 @@
 # `test_struct_doc_rendering.py`
 
 ## Summary
-- StructDoc の Markdown renderer の単体テスト。連続 blank line の縮約、code block の fence 長、StructBlock の再公開と opaque child、参照未検証、単一 child の型検査を検証する。renderer の整形挙動や互換性を確認する際のテスト入口である。
+- 対象ファイルは StructDoc の Markdown renderer の整形挙動を検証する単体テストで、連続空行の縮約、コードフェンスの安全な選択、StructBlock の互換 re-export、描画済み Markdown の不透明な埋め込み、参照検証を行わない挙動、不正な単一 child の拒否を扱う。
+- renderer や StructDoc/StructBlock の実装挙動を変更・確認する際のテスト側の入口であり、実装の正本や仕様そのものを読む代わりに使う対象ではない。
 
 ## Read this when
-- Markdown renderer の整形結果、code block の fence、StructBlock の互換性、参照検証の扱い、または構築時の child 型検査を変更・確認するとき。
-- StructDoc または StructBlock に関する realization test の期待挙動を確認するとき。
+- Markdown renderer の空行処理、コードブロックのフェンス、StructBlock の公開互換性、参照文字列の保持、不正 child の型エラーに関するテストを確認・変更するとき
+- basic.struct_doc の renderer 実装や oracle の StructDoc 関連仕様に対する回帰を確認するとき
 
 ## Do not read this when
-- renderer の実装詳細を調べるときは、まず basic.struct_doc の実装を読む。
-- 正本仕様や oracle 側の挙動を確認するときは、テストではなく参照先の oracle 文書・実装を直接読む。
+- StructDoc や StructBlock の実装責務・正本仕様を確認したいときは、対応する実装または oracle 文書を直接読む
+- このファイルが検証する個別の renderer 挙動と無関係なテストや機能を調べるとき
 
 ## hash
-- 48e185c85c704d518b145a959075fff2b27112e00efd7ea289daa07cf41e3f80
+- 7f9e6f029d7bc4c5941ab12b1800c8645a8e2e3e8a0addc72f2e36466b1a8727
 
 # `test_windows_toast.py`
 

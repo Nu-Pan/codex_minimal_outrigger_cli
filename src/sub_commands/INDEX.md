@@ -32,22 +32,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装をまとめたディレクトリ。feedback 関連の処理を確認・変更するときの入口で、report cut の状態機械と publication・診断・再開処理を扱う下位実装へ進むために読む。
+- feedback サブコマンドの実装入口。`__init__.py` にサブコマンド全体の入口を置き、`report.py` で report cut の固定、raw observation の検証、candidate の正規化・集約・verification、checkpoint 再利用、publication または incomplete 診断までの一連の transaction を扱う。writer lock、active state、current reference、cleanup、失敗・中断時の状態記録、Markdown report と generation artifact の生成もこの配下で担う。
 
 ## Read this when
 - feedback サブコマンドの挙動や実装を確認・変更するとき。
-- `cmoc feedback report` の publication、incomplete 診断、中断・再開、checkpoint、cleanup、current pointer 切替を追跡するとき。
-- feedback observation の validation、issue 集約、verification、report 出力の連携を調査するとき。
+- report cut の固定と再開、normalization／verification checkpoint、candidate 集約、publication／incomplete 診断の処理フローを追跡するとき。
+- feedback writer lock、current pointer、active generation、raw observation cleanup、割り込み・失敗処理の責務を確認するとき。
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき。
-- feedback observation の一般的な envelope・raw store 仕様だけを確認するとき。
-- 共通の feedback state、artifact 操作、lock、pointer 実装だけを確認するとき。
-- issue normalization・verification agent の prompt や Structured Output schemaだけを確認するとき。
-- 通常の Markdown report 描画だけを確認するとき。
+- feedback observation の envelope や保存形式だけを確認する場合。共通 feedback state／store の実装または対応する oracle file を直接読む。
+- normalization／verification agent の prompt と Structured Output schema だけを確認する場合。`acp.builder.feedback` の各 builder と schema を直接読む。
+- 一般的な CLI runner、logging、report rendering の共通仕様だけを確認する場合。対応する共通 runtime module を直接読む。
 
 ## hash
-- d7e59a4f0776547b55aff1fdec8a490a5b2fc6ea52d7e1509923aa49f32d771b
+- 07e271920d88e5d6e7d5f684452894ddab66363b7fa2cd406c2efdec6da9e057
 
 # `indexing.py`
 

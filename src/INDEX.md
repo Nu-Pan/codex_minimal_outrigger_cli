@@ -19,20 +19,20 @@
 # `basic`
 
 ## Summary
-- `basic.*` の互換 import を維持するための realization 側公開入口。ACP 型、path model、構造化文書 API を正本実装から再公開し、個別実装や正本仕様は保持しない。各モジュールの公開経路・互換参照を確認するための下位入口である。
+- `basic.*` の旧来の公開 import 経路を維持する互換層。ACP 型、path model、構造化文書 API を realization 側から再公開し、実装や正本仕様そのものは保持しない。各モジュールの互換インターフェース確認から、対応する正本実装・仕様へ進む入口となる。
 
 ## Read this when
-- `basic.*` の互換 import を維持・削除する判断をするとき。
-- realization 側から ACP 型、path model、構造化文書 API がどの経路で公開されるかを確認するとき。
-- 個別モジュールの再公開関係を調査するとき。
+- `basic.*` の互換 import を維持・削除・移行する条件を判断するとき
+- realization 側の ACP 型、path model、構造化文書 API の公開経路を確認するとき
+- 旧 API から canonical な実装・型・仕様への参照関係を調査するとき
 
 ## Do not read this when
-- ACP 型、path model、構造化文書 API の正本仕様や実装詳細を確認したいときは、各再公開元の oracle 側を直接読む。
-- 個別 API の詳細や参照削除の影響だけを調べるときは、対象モジュールまたは参照箇所へ直接進む。
-- `basic.*` と無関係な処理を調査・変更するとき。
+- ACP 型、path model、構造化文書の正本仕様や実装詳細を確認したいときは、対応する oracle 側または canonical 側を直接読む
+- `basic.acp`、`basic.path_model`、`basic.struct_doc` の個別 API や再公開内容だけを確認したいときは、該当モジュールを直接読む
+- `basic.*` の互換公開面や参照経路に関係しない処理を調査・変更するとき
 
 ## hash
-- 292bc262556c427d8a4a7636a2c7e14127adfdea1c7d57f167e9bfa04d4ce5ea
+- 64892c955750ada2d0b8daa7c36300b7de9145ab6117ea7e5befdbcd93ec574c
 
 # `cmoc_runtime.py`
 
@@ -120,16 +120,15 @@
 # `sub_commands`
 
 ## Summary
-- 日本語のルーティング文書を生成するため、対象ディレクトリの各サブコマンド入口の責務と読む条件を、提示された本文だけを根拠に整理します。
+- CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの個別サブコマンド入口と、その配下の処理へ進むための上位ルーティング対象。
 
 ## Read this when
-- src/sub_commands 配下のサブコマンド実装の構成や入口を俯瞰したいとき。
-- apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui のいずれかについて、まず適切な上位入口へルーティングしたいとき。
-- サブコマンドの実行フロー、固有処理、または配下の実装・仕様への進み方を確認したいとき。
+- CLI サブコマンド全体の実装構成や、特定サブコマンドの実装入口を確認するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかを調査・変更するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細実装、正本仕様、共通ランタイム、prompt 契約、Structured Output schema を直接確認するだけで、上位ディレクトリの構成把握が不要なとき。
-- サブコマンド以外の実装や、提示された配下エントリーの責務に該当しない処理を調査するとき。
+- CLI サブコマンドに関係しない処理を確認するとき。
+- 個別サブコマンドの詳細な処理、共通 runtime、正本仕様、prompt 契約を直接確認したいときは、対応する下位実装または仕様文書へ進む。
 
 ## hash
-- d9132e69da50fb09ec7498a2644d928365cd4f3774678abf20004235ac93321a
+- c172450b955a9cf087e89fdb20689d5f180bd071cec47aa04f870ceee3008867

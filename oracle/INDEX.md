@@ -17,21 +17,22 @@
 # `src`
 
 ## Summary
-- `oracle/src` は、cmoc の agent call に必要な oracle 実装をまとめたソースディレクトリです。agent call の基本パラメータ・パスモデル・設定・構造化文書処理、prompt の共通部品と目的別 policy、feedback・indexing・oracle review・realization 操作などの起動処理と Structured Output schema を扱います。
-- `oracle/src/oracle` が主要な実装入口で、`acp_builder` は用途別 agent call の prompt・起動パラメータ・schema、`prompt_builder` は共通 prompt と policy、`other` は設定・パス解決・構造化文書ヘルパーを担当します。
+- oracle/src は、cmoc の agent call 構築、prompt 構築、共通設定・パス・構造化文書モデル、feedback 入力処理を担う oracle 実装領域です。
+- acp_builder は、モデル・reasoning effort・ファイルアクセスなどの agent call パラメータと、TUI、feedback、oracle review、realization など用途別の起動定義を扱います。
+- other は、cmoc 設定、agent call のパスコンテキスト、構造化文書ノードと Markdown 変換など、各 builder が共有する基盤を扱います。
+- prompt_builder は、完全 prompt、エディタ入力、oracle・realization の基本説明、ファイルアクセスや routing・review など作業目的別 policy の構築を扱います。
+- feedback 関連の実装は、構造化 observation や候補 issue の同一性判断・検証など、人間向け feedback issue の agent call 入力を構築します。
 
 ## Read this when
-- agent call の起動パラメータ、モデル分類、Reasoning effort、ファイルアクセスモード、作業ディレクトリ、indexing preflight を確認するとき
-- agent call 用 prompt の共通構成、oracle・realization・feedback・routing・conflict resolution・review の policy を確認するとき
-- oracle review、feedback 処理、index entry 生成、realization の apply/refactor、session join など用途別の agent call 定義を確認するとき
-- cmoc 設定、root placeholder を含むパス解決、Git worktree のパスモデル、構造化文書の Markdown 化を確認するとき
-- agent call の Structured Output schema または schema と prompt の対応を調査するとき
+- agent call の共通パラメータ、用途別の起動定義、Structured Output、TUI・feedback・oracle review・realization 関連の builder を調査または変更するとき
+- cmoc 設定、agent call cwd に基づくパス解決、構造化文書の生成・Markdown 変換を調査または変更するとき
+- 完全 prompt の構成、placeholder、エディタ入力、oracle・realization や review・routing などの policy を調査または変更するとき
+- feedback observation や issue candidate の同一性判断・検証に渡す入力契約を調査または変更するとき
 
 ## Do not read this when
-- 特定の agent call の具体的な挙動だけを確認する場合は、`oracle/src/oracle/acp_builder` 配下の対応する実装と schema を直接読むとき
-- prompt の個別 policy や構成部品だけを確認する場合は、`oracle/src/oracle/prompt_builder` 配下を直接読むとき
-- 設定・パス解決・構造化文書処理の個別仕様だけを確認する場合は、`oracle/src/oracle/other` 配下を直接読むとき
-- oracle の正本仕様、realization の実装本体、または test の外部挙動を確認する場合は、この実装ディレクトリではなく対応する oracle・realization・test を読むとき
+- 特定の CLI サブコマンドの処理フローや realization の具体的な実装・テストだけを確認したいとき
+- 個別の oracle 文書や個別 builder の仕様本文そのものだけを確認したいとき
+- 既存の INDEX.md のルーティング内容だけを確認したいとき
 
 ## hash
-- 609ef03a109932a15b677a08c097294b3126c3a6b268886b5d44340adb4ef966
+- 9c08f106d636dd94db4bc9270d2fe84aa934a7241ebd636caf1197bd731068d6

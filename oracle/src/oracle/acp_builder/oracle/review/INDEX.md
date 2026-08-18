@@ -15,21 +15,19 @@
 # `enumerate_finding.py`
 
 ## Summary
-- oracle review で新規所見を列挙する agent call の prompt と起動パラメータを構築する。レビュー対象 oracle file、関連所見、隔離 worktree のパス文脈を受け取り、oracle review 用の完全な prompt と Structured Output schema、モデル・推論・ファイルアクセス設定をまとめた AgentCallParameter を返す。
-- レビュー対象ファイルの指定、既知の関連所見の重複除外、oracle review 用 agent call の起動条件や prompt 構成を確認・変更するときの入口である。
+- oracle review の新規所見列挙用 agent call の prompt と起動パラメータを構築する定義。レビュー対象 oracle file、関連所見、隔離 worktree の文脈を受け取り、完全な prompt と Structured Output schema を設定した AgentCallParameter を返す。
+- `build_complete_prompt` にレビューの目的、既知の関連所見、oracle の読み取り・レビュー・ルーティング規則を組み込み、対象パスと oracle ルートを動的に解決する。
 
 ## Read this when
-- oracle review の新規所見列挙処理の prompt 文面を確認または変更するとき
-- 関連所見を prompt に埋め込み、oracle file のパス文脈や review 用ポリシーを設定する処理を確認するとき
-- 新規所見列挙用 agent call のモデル、推論強度、Structured Output schema、実行 worktree 設定を確認するとき
+- `cmoc oracle review` の新規所見列挙フローで、agent call の prompt 内容や起動条件を確認・変更するとき。
+- レビュー対象パス、関連所見、agent call の作業ディレクトリを使った prompt 構築を調べるとき。
 
 ## Do not read this when
-- oracle review の既存所見の更新・保存処理だけを確認するとき
-- 新規所見の出力項目や JSON schema の定義自体を確認するときは、直接対応する schema ファイルを読むとき
-- 一般的な prompt 完成処理や agent call 共通型の仕様だけを確認するときは、それぞれの共通実装を直接読むとき
+- 新規所見の出力項目や JSON 形式そのものを確認するだけで、隣接する Structured Output schema を直接読む場合。
+- レビュー実行時の所見判定ロジックや oracle file の内容を調べる場合は、対象のレビュー処理・oracle 文書へ直接進む。
 
 ## hash
-- b487371154d9db12bcb98c9c4adcbea345ef3a8d10cdb302468c0fa7ab8a9b8f
+- 048d6d21c64a773ed94fb442fe74f0d8ee2dd37742dde08d0dd5ec1146ac5913
 
 # `judge_finding.json`
 
@@ -48,18 +46,20 @@
 # `judge_finding.py`
 
 ## Summary
-- oracle review の所見採否判定を行う AI エージェント呼び出し用の prompt と起動パラメータを構築する関数。所見、その妥当性を支持・反論する理由を prompt に埋め込み、レビュー判定用の Structured Output schema、効率重視モデル、最大推論、oracle 専用読み取り権限、隔離 worktree、事前索引付けを設定した AgentCallParameter を返す。
+- このファイルは、`oracle review` における所見採否判定エージェントの呼び出しパラメータを構築する。所見・賛成理由・反対理由をプロンプトへ埋め込み、隔離済み review worktree を起点とした oracle 専用の読み取り条件、モデル設定、推論強度、構造化出力スキーマ、インデックス事前処理を含む `AgentCallParameter` を生成する。
 
 ## Read this when
-- oracle review サブコマンドで、個別のレビュー所見を人間へ提示すべきか判定する prompt や agent call パラメータの構築を確認・変更するとき。
-- 所見本文と、妥当性を支持・反論する理由を動的 prompt に渡すレビュー判定呼び出しの入口を調べるとき。
+- `oracle review` の所見を人間へ提示すべきか判定する agent call のプロンプトや起動パラメータを変更・確認するとき
+- 所見本文と賛成・反対理由を判定用プロンプトへ渡す構築経路を確認するとき
+- oracle 専用読み取り、review policy、routing policy、構造化出力スキーマの設定を確認するとき
 
 ## Do not read this when
-- レビュー所見の採否判定ロジックや Structured Output の判定結果形式そのものを確認したいときは、直接その実装または同ファイルの schema を読む。
-- 一般的な prompt 完成処理、構造化文書の Markdown 化、パスコンテキスト、agent call 基本型の仕様を確認する場合は、それぞれの担当モジュールを直接読む。
+- oracle review の判定結果の出力項目や JSON schema 自体を確認したいときは、同名の構造化出力スキーマを直接読む
+- 所見のレビュー規則や仕様断片レビュー全般の判定基準を確認したいときは、この呼び出し構築ファイルではなく対応する oracle policy・review policy の正本を読む
+- `AgentCallParameter` やプロンプト共通生成処理の一般仕様だけを確認したいときは、各共通定義を直接読む
 
 ## hash
-- 103f299a89f661f80d80f89297b608161f3b00231eb23f89e6782c2f38910d91
+- 4c2440ddf8db99a1d5ab1d1f670592e0cb684c3470a80274b0ff37df57d3e9cf
 
 # `merge_finding.json`
 
@@ -80,19 +80,21 @@
 # `merge_finding.py`
 
 ## Summary
-- oracle review の所見リストを統合するための AI エージェント呼び出しパラメータを構築する。入力された findings を動的プロンプトへ埋め込み、oracle file 専用の読み取り権限、レビュー方針、ルーティング方針、Structured Output schema などを設定する。
-- 隔離済み review worktree のパスコンテキストを基に、所見の重複・矛盾を解消する編集操作の列挙を要求する prompt を生成し、効率重視・最大推論 effort の AgentCallParameter として返す。
+- oracle review の所見リストを統合する agent call 用の prompt と起動パラメータを構築する。
+- 所見本文を動的プロンプトへ埋め込み、重複・矛盾を解消する編集操作を Structured Output で列挙させる。十分に整合している場合は空配列を許容し、finding_id の入力集合に基づく事後条件も prompt に付加する。
+- 隔離済み review worktree のパスコンテキスト、PURE_ORACLE_READ、oracle/review/routing 関連ポリシー、効率重視モデル、最大推論、Structured Output schema、indexing preflight などの agent call 設定を一括して返す実装入口である。
 
 ## Read this when
-- oracle review の所見リスト統合に用いる prompt 文面、動的 findings の渡し方、または agent call 起動パラメータを確認・変更するとき
-- oracle/acp_builder 配下で oracle review 用の AgentCallParameter 構築処理の責務や設定を確認するとき
+- oracle review で複数の所見を統合する agent call の prompt 文面や起動パラメータを確認・変更するとき。
+- 所見リストの動的埋め込み、finding_id に関する事後条件、oracle-only のファイルアクセス設定、使用モデルや実行前 indexing の構成を確認するとき。
 
 ## Do not read this when
-- 所見統合の Structured Output の項目や検証規則そのものを確認したいときは、対応する JSON schema を直接読む
-- oracle review 全体の実行制御や所見の生成処理を確認したいときは、該当する review サブコマンドや個別の agent call 定義を直接読む
+- 所見統合の出力形式そのものを確認する場合は、対応する Structured Output schema を直接読む。
+- 一般的な prompt の共通構築規則や SD ノードのレンダリング仕様を確認する場合は、build_complete_prompt や struct_doc の実装・仕様を直接読む。
+- oracle review 以外の agent call パラメータや、実際の所見編集処理を調べる場合は、それぞれの対象実装へ直接進む。
 
 ## hash
-- a9d162afe88477a50026c91dcda3915256540f6dce3646637564a0bc7a92e459
+- 945e49e49716b24eb067e6c3a0be2e17c622de2bee69fbf4ddf42f3ac5ef5ae9
 
 # `validate_finding_advocate.json`
 
@@ -111,21 +113,18 @@
 # `validate_finding_advocate.py`
 
 ## Summary
-- oracle review で、指定された所見が妥当である理由を調査するための AI エージェント呼び出しパラメータを構築する。所見、既知の擁護理由、既知の反論理由をプロンプトへ埋め込み、既存理由と重複しない新規理由のみを Structured Output で返すよう指定する。
-- レビュー用の隔離 worktree を起点にパスコンテキストを構成し、oracle・レビュー・ルーティングの各ポリシーを有効化した完全なプロンプトを生成する。返却する AgentCallParameter には効率モデル、最大推論、oracle 読み取り専用アクセス、対応する JSON schema、事前インデックス実行を設定する。
+- 対象所見の妥当性を擁護するための oracle review 用エージェント呼び出しパラメータを構築する。finding、既知の擁護理由、既知の反証理由をプロンプトへ渡し、重複しない新規理由の列挙を依頼する。oracle review の prompt 生成、起動モデル・推論設定、Structured Output schema、隔離 worktree 起点のパスコンテキストを扱う実装への入口。
 
 ## Read this when
-- oracle review の所見について、妥当性を擁護する理由列挙用 agent call のプロンプトや起動パラメータを変更・確認するとき
-- finding と既知の擁護理由・反論理由をレビュー用プロンプトへ渡す構築経路を確認するとき
-- oracle review 用 AgentCallParameter のモデル、推論強度、ファイルアクセス、schema、worktree 起点の設定を確認するとき
+- oracle review で、特定の所見が妥当である理由を追加調査する prompt または agent call parameter の構築を確認・変更するとき
+- finding と既知の擁護理由・反証理由を入力として、既存理由と重複しない理由を返す呼び出し経路を追うとき
 
 ## Do not read this when
-- 所見の妥当性を否定する理由の列挙を扱うとき
-- oracle review の他の判定・検証処理や、実際のレビュー所見の内容を直接確認するとき
-- 共通のプロンプト生成処理や Structured Output schema の定義そのものを確認することが目的のときは、それぞれの実装・schema ファイルへ直接進む
+- oracle review の反対側の理由列挙や、所見の妥当性判定そのものを確認するとき
+- prompt 構築ではなく、共通の Structured Output schema や一般的な agent call 型定義を直接確認すべきとき
 
 ## hash
-- d8e8223896f98f28c91a884f4c205f64afc4350da6d2a69c68f8a2c2b77ecf07
+- 6e689110cb624f9411fa415ab7625c78999f0300eb8d648136cc062250970c6c
 
 # `validate_finding_challenger.json`
 
@@ -144,17 +143,18 @@
 # `validate_finding_challenger.py`
 
 ## Summary
-- oracle review で、所見が妥当ではない理由を列挙するエージェント呼び出しの prompt と起動パラメータを構築する。所見、既知の賛成理由、既知の反証理由を prompt に埋め込み、既存理由と重複しない新規の反証理由のみを返すよう指定する。
-- oracle および realization を読み取る隔離 review worktree 向けのアクセス方針・レビュー方針・ルーティング方針を含む AgentCallParameter を生成する実装への入口である。
+- oracle review で、対象所見が妥当ではない理由を列挙する agent call の prompt と起動パラメータを構築する。所見、既知の肯定理由、既知の反証理由を prompt に埋め込み、重複しない新規理由または空配列を返すレビュー処理へ接続する。
+- PURE_ORACLE_READ、最大推論、EFFICIENCY モデル、Structured Output schema、隔離 review worktree を指定した AgentCallParameter を生成する。oracle review 用の起動設定を確認・変更するときの入口である。
 
 ## Read this when
-- `cmoc oracle review` の所見反証処理で、反証理由列挙用エージェントの prompt 内容や起動パラメータを確認・変更するとき。
-- 所見、既知の妥当理由、既知の反証理由の受け渡し方法、または反証理由の重複排除方針を確認するとき。
+- oracle review の所見反証 agent call に渡す prompt 内容や入力項目を確認・変更するとき
+- この agent call のモデル、推論強度、ファイルアクセスモード、schema、起動前 indexing 設定を確認・変更するとき
+- finding と既知の advocate/challenger reasons がどのように review prompt に組み込まれるかを確認するとき
 
 ## Do not read this when
-- oracle review の所見判定全体の仕様やレビュー適合性を確認する場合は、まず該当する正本仕様・レビュー実装を読む。
-- Structured Output の出力形式だけを確認する場合は、対応する schema を直接読む。
-- 反証理由ではなく、別の oracle review エージェント呼び出しの prompt 構築を調べる場合は、その処理に対応する実装へ進む。
+- レビュー所見そのものの妥当性や反証理由の内容を評価するときは、生成された agent call の対象仕様・レビュー文書を直接読む
+- Structured Output の出力項目や JSON schema の定義だけを確認するときは、対応する schema ファイルを直接読む
+- oracle review サブコマンド全体のディスパッチや、別種の review finding 用 prompt を調べるときは、それぞれの実装入口を読む
 
 ## hash
-- bc07bf4e25570a7c76e83e881fb52ae8a32d47ff74ab5d1250fd0a47debfd896
+- 338f702a0ff11820a80d520179e3b57e405e43d4a6c40ed7d73e69296630bb1b

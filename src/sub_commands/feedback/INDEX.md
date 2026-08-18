@@ -15,20 +15,19 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の report cut 処理を一つの transaction として実装するサブコマンド固有の状態機械。
-- pending observation と active state、repository reference を deterministic に固定し、normalization・全 candidate verification・正常 publication・incomplete 診断・中断再開を処理する。
-- feedback state、checkpoint、generation artifact、current pointer、Markdown report、cleanup、および subcommand log の整合性を hash と schema で検証する実行経路の入口。
+- `cmoc feedback report` サブコマンドの実装本体。固定した report cut を起点に、raw observation の検証、agent／machine candidate の正規化・集約、checkpoint 再利用、全 candidate の verification、正常 publication または incomplete 診断までを一つの transaction として処理する。
+- writer lock、active state と current reference の検証、publication 後の cleanup、中断・失敗時の状態記録、Markdown report と generation artifact の生成を担う。feedback report の処理順序、再開条件、checkpoint、publication 境界を確認する実装上の入口である。
+- 正本仕様の詳細や state schema の意味を確認する場合は、対応する feedback state／feedback report の oracle file を先に読む。builder の prompt／Structured Output 契約や共通 feedback state・store の実装詳細は、それぞれの下位 module を直接読む。
 
 ## Read this when
-- `cmoc feedback report` の publication、incomplete 診断、中断・再開、checkpoint 再利用、cleanup、current pointer 切替の挙動を確認または変更するとき。
-- feedback observation の validation、agent observation の issue 集約、machine rule の recurrence 集約、issue verification の参照制約を調査するとき。
-- feedback report の report cut manifest、generation artifact、active issue、Markdown 出力、primary report fields、publication log の連携を追跡するとき。
+- `cmoc feedback report` の処理フロー、report cut の固定と再開、normalization／verification checkpoint、publication／incomplete 診断の挙動を調査・変更するとき。
+- feedback writer lock、current pointer、active generation、raw observation cleanup、割り込み・失敗処理の責務を確認するとき。
+- feedback report の candidate 集約、machine recurrence threshold、current reference の固定、検証結果の report 反映を追跡するとき。
 
 ## Do not read this when
-- feedback observation の envelope や raw store の一般仕様だけを確認する場合は、対応する state/store の実装または oracle を直接読む。
-- issue normalization agent や verification agent の prompt・Structured Output schema だけを確認する場合は、対応する builder と schema を直接読む。
-- feedback state のデータ構造・artifact 操作・lock・pointer の共通実装だけを確認する場合は、`runtime_feedback_state` を直接読む。
-- 他のサブコマンドの実装や通常の Markdown report 描画だけを確認する場合は、この report pipeline ではなく対象モジュールを直接読む。
+- feedback observation の envelope や保存形式だけを確認する場合は、共通 feedback state／store の実装または対応する oracle file を直接読む。
+- normalization／verification agent の prompt と Structured Output schema だけを確認する場合は、`acp.builder.feedback` の各 builder と schema を直接読む。
+- 一般的な CLI runner、logging、report rendering の共通仕様だけを確認する場合は、このサブコマンド実装ではなく対応する共通 runtime module を直接読む。
 
 ## hash
-- 349007565bcb66666699528be92a8a95b7674ed2b80c21403411db3852d8789f
+- ebb7617bb85609b56938fa542e20ebc5425fcd5641950749db1fa9fdb1bc1015

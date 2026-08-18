@@ -17,14 +17,18 @@
 # `index_entry.py`
 
 ## Summary
-- `cmoc indexing` 用の AI エージェント呼び出しパラメータを構築する関数を定義する。対象ファイルやディレクトリの内容を埋め込んだ完全なプロンプトを生成し、Structured Output schema、モデル設定、読み取り専用アクセス、実行 cwd などをまとめて `AgentCallParameter` として返す。
+- `cmoc indexing` が対象ファイルまたはディレクトリの INDEX.md エントリー生成を依頼する agent call のパラメータを構築する。
+- 完全 prompt に対象パス、読み取り専用アクセス、エントリー生成規定、対象本文を組み込み、Structured Output schema と agent call の cwd を設定する。
+- インデックス生成の大量呼び出しを前提に、最小モデル・低推論 effort・preflight 無効など経済性重視の起動設定を定義する。
 
 ## Read this when
-- `cmoc indexing` の目次エントリー生成 agent call のプロンプト、モデル・推論設定、ファイルアクセスモード、Structured Output schema、起動パラメータを変更または確認するとき。
+- `cmoc indexing` の INDEX.md エントリー生成 agent の prompt、モデル設定、アクセスモード、Structured Output 設定を変更・確認するとき。
+- indexing preflight の agent call パラメータや agent call cwd の構築経路を追うとき。
 
 ## Do not read this when
-- 目次エントリーの出力項目や JSON schema 自体を確認したいときは、同じディレクトリの schema ファイルを直接読む。
-- `cmoc indexing` の一般的な実行フローや、プロンプト生成処理そのものを変更したいときは、呼び出し側または `build_complete_prompt` の実装を直接読む。
+- INDEX.md の既存ルーティング内容だけを確認したいとき。
+- INDEX.md エントリー生成結果の JSON schema 自体を確認したいときは、同じ indexing 用 schema ファイルを直接読む。
+- prompt の一般的な組み立て規則を確認したいときは、`build_complete_prompt` などの prompt builder 実装を直接読む。
 
 ## hash
-- 510fa29ad324f26063d971bade4a3684e3ca9b8d9e4e46d95a54e1646115ea6c
+- 6a10dbc368f876913fa0b11970d24095d94e6346982b5814eb412dde50e0e1fc

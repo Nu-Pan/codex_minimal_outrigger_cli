@@ -1,19 +1,22 @@
 # `oracle`
 
 ## Summary
-- AI agent call の prompt・起動パラメータ・Structured Output schema を構築する oracle 定義をまとめたディレクトリです。agent call の共通契約は `acp_builder`、feedback 処理は `feedback`、設定・パス・構造化文書は `other`、prompt の組み立てと目的別 policy は `prompt_builder` へ進みます。
+- oracle/src/oracle は、cmoc の agent call 構築と設定・パス・文書変換の共通モデル、feedback 入力契約をまとめる oracle 実装領域です。
+- acp_builder は agent call の用途別パラメータや起動定義、feedback・oracle・realization・session・TUI 関連の構築入口を扱います。
+- other は cmoc 設定、agent call の call-scoped root path 解決、構造化文書の Markdown 変換といった共通基盤を扱います。
+- prompt_builder は完全 prompt、エディタ入力、共通 parts、作業目的別 policy の構築を扱います。
+- feedback は agent が検出した問題を collector へ渡す reporter input の構造化契約を扱います。
 
 ## Read this when
-- agent call の論理モデル、Reasoning effort、ファイルアクセスモード、作業ディレクトリ、indexing preflight の定義を確認するとき
-- feedback issue の入力・同一性判断・検証に関する oracle 定義を調査するとき
-- oracle・realization・INDEX.md 生成・conflict 解消などの prompt policy と構築経路を確認するとき
-- cmoc 固有設定、agent call のパス解決、構造化文書の Markdown 化を確認するとき
+- agent call の用途別起動パラメータや Structured Output 定義を調査・変更するときは acp_builder から確認するとき
+- cmoc の設定モデル、root placeholder と agent call cwd からのパス解決、構造化 Markdown 生成を調査・変更するときは other から確認するとき
+- 完全 prompt の構成、placeholder、共通部品、用途別 policy の選択や注入を調査・変更するときは prompt_builder から確認するとき
+- feedback reporter の入力契約や問題情報の構造化を調査・変更するときは feedback から確認するとき
 
 ## Do not read this when
-- 特定の agent call の具体的な prompt、起動処理、Structured Output schema だけを確認する場合は、対応する `acp_builder` 配下の実装や schema を直接読むとき
-- prompt の構成部品や目的別 policy だけを確認する場合は、`prompt_builder` 配下を直接読むとき
-- 設定・パスモデル・構造化文書ヘルパーの個別実装だけを確認する場合は、`other` 配下を直接読むとき
-- oracle や realization の正本仕様、実装本体、テストの挙動を確認する場合は、この oracle 定義ディレクトリではなく対応する正本仕様・realization・test を読むとき
+- 特定の CLI サブコマンドの処理フローや realization の具体的な実装・テストだけを確認したいとき
+- oracle file の個別仕様本文そのものを確認したいとき
+- 既存の INDEX.md のルーティング内容だけを確認したいとき
 
 ## hash
-- 5e532eb0d9068768715455b0f409089b5c73e0fcb04353352035a03710d4fc6b
+- 1749f3bafe7838e531422e7fe89c30ed330890c0620668cf9fd4be3d43497ce6
