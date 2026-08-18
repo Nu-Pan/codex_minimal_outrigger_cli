@@ -17,20 +17,22 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent 向け完全プロンプトを、基礎規定・各種ポリシー・目的・placeholder 定義から組み立てる関数と補助処理を定義する。prompt の構成順序、選択可能な policy block、placeholder の競合検出と統合、追加 prompt の注入を扱う。プロンプト生成仕様や各 policy の組み込み条件を確認・変更するときの入口であり、個別 policy の本文や構造化文書の実装詳細を直接扱う作業では下位の policy モジュールを読む。
+- 選択したポリシー、補助プロンプト、目的、プレースホルダー定義を統合し、agent call 用の完全な構造化プロンプトを構築するエントリーポイント。
+- プロンプトの基礎規定・規定ブロック・動的な目的情報を組み立てる流れや、placeholder 定義の衝突検査を確認したいときの入口。
+- 個別ポリシーの内容や各種 builder の実装を調べる場合は、このファイルではなく対応する policy または parts 配下の対象へ進む。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成、挿入順序、選択可能な policy、目的・placeholder の扱いを確認または変更するとき
-- placeholder 定義の競合検出や path context 由来の定義統合の挙動を調査するとき
-- prompt builder の呼び出し側が指定する policy フラグや追加 prompt の反映経路を確認するとき
+- agent 向け完全プロンプトの構築順序、含めるポリシーの選択、補助プロンプトの統合を変更・確認するとき。
+- placeholder 定義の統合規則や同名定義の衝突時の挙動を確認するとき。
+- プロンプト全体の構造化された出力を生成する入口を特定するとき。
 
 ## Do not read this when
-- 特定の policy block の文面や規則そのものを確認・変更する場合は、対応する oracle/policy モジュールを直接読む
-- SDHeader・SDTagBlock の構造化文書仕様を確認する場合は、struct_doc の定義を直接読む
-- agent call の path context や placeholder の根本定義を確認する場合は、AgentCallPathContext の実装を直接読む
+- 個別のファイルアクセス、routing、oracle、realization、review などのポリシー本文だけを確認したいとき。
+- 特定の policy builder や oracle/realization 部品の詳細実装を直接調べる場合。
+- Structured Output の項目形式だけを確認したい場合。
 
 ## hash
-- 61696021ff8a986f22b453be9bdcf6022ace9136c32d331a9caf0ea231977921
+- c4da43851f828229d2dc12dd0eec0d03d7964d4e206e06f46fc0106286fe0f0b
 
 # `editor_input.py`
 
@@ -71,15 +73,16 @@
 # `policy`
 
 ## Summary
-- cmoc の agent call 向け prompt policy 定義をまとめるディレクトリ。file access、oracle・realization の扱い、review、conflict resolution、feedback reporting、handoff、INDEX.md routing など、作業目的ごとの instruction 文面構築入口を提供する。個別 policy の責務や適用条件を確認する際は、この階層から該当する定義へ進む。
+- prompt_builder の各 policy 実装を対象とするルーティング入口。agent call の file access、oracle/realization の扱い、feedback、conflict 解消、handoff、レビュー、INDEX.md 生成など、個別の指示文面を構築する責務ごとに下位ファイルへ進む。
 
 ## Read this when
-- agent call に適用する prompt policy の定義、責務分担、適用条件を調査・変更するとき
-- oracle・realization、file access、review、feedback、handoff、routing など特定の policy の入口を確認するとき
+- prompt_builder policy の責務や構築規則を確認・変更するとき
+- 対象の責務に対応する個別 policy 実装の入口を特定するとき
 
 ## Do not read this when
-- 具体的な oracle file・realization file・実装ファイルの内容や挙動を直接確認するとき
-- prompt policy を利用して生成された prompt や CLI の実際の実行処理だけを調査するとき
+- 個別 policy の具体的な挙動だけを確認する場合は、該当する下位ファイルを直接読む
+- oracle・realization file の具体的な仕様や実装内容を確認する場合は、それらの対象を直接読む
+- INDEX.md の一般的な routing 規則だけを確認する場合は、routing.py を読む
 
 ## hash
-- aa2e4d0d384429a7a416689207aadaab49e025cfaccf888dd9ba542329c8bc38
+- 8b57b05ed4216dcb5fba622cbed153958b5610ab06c11bb3e7620032584bd1d7

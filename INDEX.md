@@ -91,20 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と oracle 実装を案内する上位入口。文書領域では app_spec と dev_rule の分類、実装領域では agent call 構成・feedback 契約・共有処理・prompt 構築の担当分担を示し、各下位領域への入口となる。
+- `oracle` 配下の正本仕様・設計・開発ルール・代替案などを領域別に参照するための入口。cmoc の挙動や共通契約、session・branch・commit・worktree、実装配置、開発環境、テスト要件と実行方法に関する下位文書へ案内する。
 
 ## Read this when
-- cmoc の正本仕様や開発ルールを横断して探すとき
-- agent call の構成、feedback 入力契約、共有設定・パス・構造化文書処理、完全 prompt の構築箇所を特定するとき
-- app_spec と dev_rule、または oracle/src 配下の担当領域を切り分けるとき
+- cmoc の正本仕様、共通契約、サブコマンドの挙動を確認するとき
+- session fork や run の隔離、branch・commit・worktree の関係を調査・変更するとき
+- 現行設計で不採用となった方式や仕様案と、その理由を確認するとき
+- Python 実装の配置、開発環境、テスト要件・実行手順などの開発ルールを確認するとき
 
 ## Do not read this when
-- 具体的なアプリケーション挙動の仕様が特定できており、app_spec 配下の個別文書へ直接進めるとき
-- 実装配置・開発環境・テスト要件・テスト実行手順が明確で、dev_rule 配下の個別文書へ直接進めるとき
-- 特定の agent call 実装、prompt の個別部品、realization の実装・テスト、oracle 文書自体の仕様、既存 INDEX.md のナビゲーションだけを調べるとき
+- 対象の個別仕様や専用ルールが既に特定でき、下位文書を直接読む方が適切なとき
+- 具体的な実装コードやテストコードの詳細だけを調査するとき
+- INDEX.md の自動生成処理そのものを調査するとき
 
 ## hash
-- 62f008ba690a2a2c65529a051b18fdb14f83e0661abf2391b46d493fd44770bb
+- 6580ab5662873f84cbafec2a7e52fe4dd312da87832b6af1d197028774fbd2cb
 
 # `pyproject.toml`
 

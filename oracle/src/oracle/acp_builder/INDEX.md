@@ -55,21 +55,19 @@
 # `oracle`
 
 ## Summary
-- oracle 操作用の agent call 定義をまとめるディレクトリ。`edit`、`investigation`、`review` の各入口から、oracle 編集・調査・レビューに関する起動設定、prompt 構成、出力契約を確認できる。
+- oracle の各サブディレクトリにおける agent call の起動構成と review・investigation・edit の責務分担を把握するための入口。edit は oracle 編集 call、investigation は oracle 調査用 TUI 起動設定、review は所見レビューの呼び出し・出力契約・統合処理を扱う。
 
 ## Read this when
-- oracle の編集、調査、レビューに関する agent call の起動条件や prompt 構成を確認・変更するとき
-- oracle 操作に関係する Structured Output schema や所見整理の入出力契約を確認するとき
-- このディレクトリ配下に追加された対象の用途や責務を確認するとき
+- cmoc oracle edit、investigation、review の agent call 起動条件、prompt 構成、アクセス制約、モデル・推論設定、Structured Output schema を確認または変更するとき
+- oracle 関連の agent call 定義や、所見レビューの入出力契約の担当箇所を特定するとき
 
 ## Do not read this when
-- oracle file 自体の仕様内容、編集方針、調査結果を確認するとき
-- agent call の共通生成規則、基底型、パス解決、prompt builder を確認するとき
-- realization 側の CLI 動作やテスト実装を確認するとき
-- 特定の操作の詳細を確認できる場合に、その操作の配下対象を直接読むとき
+- oracle file 自体の正本仕様、編集方針、調査対象の内容を確認するとき
+- agent call の共通型・パス解決・prompt builder・構造化文書レンダリングなど、oracle 配下の個別用途に依存しない基盤を確認するとき
+- realization 側の CLI 動作やテスト、または review の具体的な所見内容を直接確認するときは、該当する下位対象へ進むとき
 
 ## hash
-- bb8581f90aefeabfc16bd2ffbf9ff0e393d1761867de2f9d250cf09c64ddb4ed
+- 1e437bf59c4d8f96e329d6a17a4c35b383ee256bc1cab224d0f87ea117b69e7a
 
 # `quota_probe.py`
 

@@ -19,21 +19,19 @@
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動用パラメータを構築する関数を提供する。ユーザーの oracle file 調査指示を完全プロンプトへ組み込み、読み取り専用設定、モデル、推論強度、作業ディレクトリ、インデックス事前処理を含む `AgentCallParameter` を返す。
-- oracle 調査コマンドの起動条件と、調査プロンプトおよび TUI 起動パラメータの固定構成を確認するための入口である。
+- `cmoc oracle investigation` の TUI 起動パラメータ構築を担う実装への入口。ユーザー指示を完全プロンプトへ組み込み、oracle 調査向けの読み取り専用設定、パスコンテキスト、モデル・推論設定、インデックス事前処理を備えた `AgentCallParameter` を構築する。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動設定を変更・確認するとき
-- oracle file 調査用プロンプトの組み立て方や、ユーザー指示の埋め込み位置を確認するとき
-- oracle 調査用のファイルアクセスモード、作業ディレクトリ、モデル設定、インデックス事前処理の構成を確認するとき
+- `cmoc oracle investigation` の TUI 起動設定を変更・調査するとき
+- oracle 調査用プロンプトへのユーザー指示の組み込み方、起動時のアクセスモード、モデル、作業ディレクトリを確認するとき
 
 ## Do not read this when
-- oracle file 自体の内容や調査結果を確認したいとき
-- 完全プロンプトの共通生成規則だけを確認したいとき
-- `AgentCallParameter` など起動パラメータの型定義だけを確認したいとき
+- 完全プロンプトの共通構造だけを調べる場合
+- エージェント呼び出しパラメータの型や列挙値の一般仕様だけを調べる場合
+- oracle 調査の正本仕様や対象ファイルの内容を調べる場合
 
 ## hash
-- 686e766a472e0abd5164f6731d3af8049fdeb3616bd7c189dfd12d676e47c35d
+- e8bd6dd7a801e70d1153970beaae392ac5c90e4c5d827c5cc270ac99122ebb75
 
 # `review`
 
