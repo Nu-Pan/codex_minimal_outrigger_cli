@@ -91,21 +91,23 @@
 # `oracle`
 
 ## Summary
-- `oracle` 配下の正本仕様・設計・開発ルール・代替案などを領域別に参照するための入口。cmoc の挙動や共通契約、session・branch・commit・worktree、実装配置、開発環境、テスト要件と実行方法に関する下位文書へ案内する。
+- cmoc の正本仕様と、その仕様を参照・構築する oracle 実装のルートです。
+- `oracle/doc` ではアプリケーション挙動、branch model、採用しなかった代替案、開発ルールを扱い、`oracle/src/oracle` では設定・パス解決・構造化文書、prompt、agent call、feedback の構築を扱います。各領域の詳細は下位ディレクトリまたは個別文書から確認します。
 
 ## Read this when
-- cmoc の正本仕様、共通契約、サブコマンドの挙動を確認するとき
-- session fork や run の隔離、branch・commit・worktree の関係を調査・変更するとき
-- 現行設計で不採用となった方式や仕様案と、その理由を確認するとき
-- Python 実装の配置、開発環境、テスト要件・実行手順などの開発ルールを確認するとき
+- cmoc の挙動仕様、サブコマンド仕様、共通契約の正本を探すとき
+- session、run、branch、commit、worktree の分岐・隔離・結合モデルを確認するとき
+- 現行方式で採用しなかった代替案と、その判断理由を確認するとき
+- Python 実装の配置、開発環境、テスト要件、テスト実行手順を確認するとき
+- agent call の prompt、起動パラメータ、file access、Structured Output、feedback 入力の構築責務を調査するとき
 
 ## Do not read this when
-- 対象の個別仕様や専用ルールが既に特定でき、下位文書を直接読む方が適切なとき
-- 具体的な実装コードやテストコードの詳細だけを調査するとき
-- INDEX.md の自動生成処理そのものを調査するとき
+- 対象の個別仕様や専用ルールが既に特定できており、`oracle/doc` 配下の該当文書を直接読む方が適切なとき
+- 具体的な実装コードやテストコードの詳細だけを確認したいとき
+- CLI の実行制御、TUI の画面操作、feedback の保存・集約など、`oracle` 配下ではなく realization や別の実装領域が直接の対象であるとき
 
 ## hash
-- 6580ab5662873f84cbafec2a7e52fe4dd312da87832b6af1d197028774fbd2cb
+- 02240271f7ee6e5e8f6c0e7b288038152a7df6a8a4220aaf80909b90d525c4e5
 
 # `pyproject.toml`
 

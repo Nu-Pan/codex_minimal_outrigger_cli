@@ -136,37 +136,36 @@
 # `oracle_review.py`
 
 ## Summary
-- oracle review の全段階で共有する所見判定ポリシーを構築し、所見・修正対象には用途固有の policy が認める具体的な oracle file または realization file の根拠を要求する。
-- 明確な仕様矛盾や裁量で解消不能な問題を fatal、意味を変えない明確な表記上の誤りを minor とする。oracle file だけで成立する所見は、列挙から採否判定まで同じ成立条件で扱う。
+- oracle review の所見が fatal または minor として成立する条件を構築する定義。正本仕様間の明確な矛盾、実装で解消不能な問題、表記上の明確な誤りを区別し、それぞれに必要な根拠と説明を求める。oracle review の所見の列挙・統合・検証・採否判定における共通ポリシーへの入口となる。
 
 ## Read this when
-- oracle review で所見や修正対象を列挙・統合・検証・採否判定するとき
-- fatal または minor と判定する根拠と、oracle file だけで成立する所見の扱いを確認するとき
+- oracle file に対する所見の列挙、統合、検証、採否判定を行うとき
+- fatal と minor の所見成立条件や、所見に必要な根拠を確認するとき
 
 ## Do not read this when
-- oracle file や realization file による具体的な実装適合性を個別に確認するとき
-- oracle review policy 以外の prompt builder の構築定義を確認するとき
+- 所見を扱わず、oracle review policy の構築や判定条件を変更しない作業をするとき
+- 具体的な oracle file の内容や realization への適合性を直接確認する場合
 
 ## hash
-- 9de3303df2aa25d741c2b9061dd1608c256ff646af323e8973df1e5d624b701a
+- ebd4bcaece98af9856432caf672c962433f998142275a99f8a8c059639e04f95
 
 # `realization.py`
 
 ## Summary
-- realization file の作成・変更・リファクタ・レビュー時に agent call へ適用する実装方針を構築する。oracle を正本仕様として先に確認し、正本との重複を避けながら、現行仕様に必要な実装・テスト・設定・補助要素だけを保つための要求、禁止事項、実装者の裁量を定義する。realization の責務境界や関連手順を判断する際の入口となる。
+- 対象は realization file を扱う agent call 向け instruction 文面を構築する関数を定義する。パス由来の placeholder 定義と、realization の作成・変更・レビュー時に従うべき SDPolicy を組み合わせて返すため、realization policy の規定や prompt builder の挙動を確認したい作業の入口になる。
 
 ## Read this when
-- realization file の作成、変更、リファクタ、レビュー方針を確認するとき
-- oracle と realization の役割分担、正本の一箇所管理、実装・テスト・関連手順の維持条件を確認するとき
-- 不要な実装、旧仕様、未使用要素、過剰な抽象化や公開面を避ける規定を確認するとき
+- realization file の作成・変更・リファクタ・レビューに必要な instruction 文面の生成規則を確認するとき
+- AgentCallPathContext から placeholder 定義を取得し、SDHeader と SDPolicy で policy を組み立てる処理を変更・検証するとき
+- oracle file を正本仕様として扱うこと、既存実装の再利用、YAGNI、重複整理、検証・テスト要件を確認するとき
 
 ## Do not read this when
-- oracle file 自体の意味や正本仕様を確認することが目的のとき
-- 個別の realization 実装内容、テスト内容、配置場所を直接確認すべきとき
-- realization file に関係しない prompt builder の仕様や実装を調べるとき
+- realization file 本体の実装やテスト内容を直接確認したいときは、対象の realization file または対応する test を直接読む
+- prompt builder 全体の共通仕様や PlaceholderMap の詳細だけを確認したいときは、対応する共通定義を直接読む
+- INDEX.md の既存ルーティングや他対象の案内を確認したいときは、この対象ではなく許可された INDEX.md の情報源を読む
 
 ## hash
-- 0880387b3ad9b468ac42f689374a87e14bc9a33deb8a5436dc5b0288428665f5
+- 3bea8a3a959d7f60b0d8a79ba457f4fb67514cd86a54f7185ed612490a74050f
 
 # `realization_oracle_reference.py`
 

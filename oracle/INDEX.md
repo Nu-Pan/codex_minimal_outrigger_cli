@@ -20,17 +20,20 @@
 # `src`
 
 ## Summary
-- cmocのAIエージェント呼び出しを支える実装領域で、モデル・設定・パス解決・構造化文書・プロンプト構築・用途別の起動定義を扱う。共通呼び出し契約やquota probeはacp_builder、設定・パス・Markdown構造化ヘルパーはother、完全なpromptと各種policyはprompt_builder、およびoracle・realization・feedback・indexing・session・TUIなど用途別処理は下位ディレクトリへの入口となる。
+- cmoc の agent call 用パラメータと prompt を構築する実装群です。設定・パス解決・構造化文書レンダリングなどの共通基盤に加え、TUI、session join、oracle review、indexing、feedback、realization 操作など用途別の起動定義と Structured Output schema を扱います。
+- `oracle/other` が設定・パスモデル・構造化文書処理、`oracle/prompt_builder` が共通 prompt と policy 部品、`oracle/acp_builder` が用途別 agent call と schema、`oracle/feedback` が feedback 入力契約の入口です。
 
 ## Read this when
-- AIエージェント呼び出し全体の構成、共通パラメータ、プロンプト、設定、パスコンテキストの関係を確認するとき
-- 複数のoracle実装領域にまたがる呼び出し契約やprompt構築経路を調査・変更するとき
-- 用途別agent call定義や、acp_builder・other・prompt_builderの参照先を判断するとき
+- agent call の起動パラメータ、モデル・推論設定、cwd、ファイルアクセス権、Structured Output schema の対応を確認するとき
+- prompt の共通構成、oracle/realization や routing などの policy 統合、editor input の生成を調査・変更するとき
+- cmoc の設定値・placeholder 付きパス解決・構造化文書のレンダリング処理を確認するとき
+- indexing による INDEX.md エントリー生成、oracle review の所見処理、feedback の入力契約を確認するとき
 
 ## Do not read this when
-- 特定のagent callの詳細な起動パラメータや用途別処理だけを確認したいとき
-- Codex CLIバックエンド固有のモデル解決だけを確認したいとき
-- oracle・realizationの正本仕様や具体的な実装、個別policy、設定・パス・構造化文書ヘルパーの詳細を直接確認したいとき
+- CLI サブコマンドの解析や実行制御そのものだけを確認したいとき
+- 実際の agent backend・モデル名の解決や外部プロセス実行だけを確認したいとき
+- oracle または realization の正本仕様、具体的な realization 実装・テストを確認したいとき
+- TUI の画面表示・操作ロジック、または collector による feedback の保存・集約だけを確認したいとき
 
 ## hash
-- 5aca12ce788a76339c6a563a53a805226e1f9da09c28f6aa8d55ccfaedb57960
+- 147db26ce3ac4bd915a20d102c67d821fc0b52dcce284e81d079552506e1dc29
