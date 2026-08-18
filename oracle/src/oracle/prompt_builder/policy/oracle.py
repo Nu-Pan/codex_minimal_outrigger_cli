@@ -48,19 +48,20 @@ def build_oracle_investigation_policy() -> tuple[PlaceholderMap, SDHeader]:
         {},
         SDHeader(
             "oracle investigation policy（oracle file の読み取り専用調査時）",
-            """
-            **必須**
-
-            - oracle authority policy（oracle・realization file を扱う時）では、oracle file を人間が所有する正本仕様断片として扱う
-            - 判断の根拠を関連する oracle file に置く
-            - cmoc 固有契約または oracle file と installed skill が競合する場合は前者を優先する
-            - oracle file で定義されている事項と未定義の事項を区別する
-
-            **禁止**
-
-            - installed skill の存在を oracle file の意味または作業完了条件の前提にしてはいけない
-            - realization file または実装だけから正本仕様を逆算してはいけない
-            - 未定義の事項を正本仕様として断定してはいけない
-            """,
+            SDPolicy(
+                when_use_this="",
+                require=(
+                    "oracle authority policy（oracle・realization file を扱う時）では、oracle file を人間が所有する正本仕様断片として扱う",
+                    "判断の根拠を関連する oracle file に置く",
+                    "cmoc 固有契約または oracle file と installed skill が競合する場合は前者を優先する",
+                    "oracle file で定義されている事項と未定義の事項を区別する",
+                ),
+                prohibit=(
+                    "installed skill の存在を oracle file の意味または作業完了条件の前提にしてはいけない",
+                    "realization file または実装だけから正本仕様を逆算してはいけない",
+                    "未定義の事項を正本仕様として断定してはいけない",
+                ),
+                allow=(),
+            ),
         ),
     )

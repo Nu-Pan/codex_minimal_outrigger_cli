@@ -1,6 +1,6 @@
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.struct_doc import SDHeader
+from oracle.other.struct_doc import SDHeader, SDPolicy
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
@@ -13,10 +13,13 @@ def build_realization_oracle_reference_policy(
         {"work-root": root_definitions["work-root"]},
         SDHeader(
             "realization oracle reference policy（realization code の作成・変更時）",
-            """
-            **必須**
-
-            - 対応する oracle file が存在する場合、realization code のコメントに `{{work-root}}` 起点の oracle file path を書く
-            """,
+            SDPolicy(
+                when_use_this="",
+                require=(
+                    "対応する oracle file が存在する場合、realization code のコメントに `{{work-root}}` 起点の oracle file path を書く",
+                ),
+                prohibit=(),
+                allow=(),
+            ),
         ),
     )

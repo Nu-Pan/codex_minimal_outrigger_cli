@@ -87,25 +87,13 @@ prompt policy は、cmoc が agent の判断または操作を制約するため
 
 ### policy block の本文構造
 
-次の 8 個の flag に対応する policy block は、カテゴリを使用する。
+各 policy builder は、`SDHeader` 直下の単一の `SDPolicy` で policy block の本文を定義する。本文構造は次のとおりとする。
 
-- `oracle_policy`
-- `oracle_investigation_policy`
-- `realization_policy`
-- `oracle_review_policy`
-- `apply_review_policy`
-- `conflict_resolution_policy`
-- `editor_handoff_policy`
-- `index_entry_policy`
-
-これらの policy block の本文構造は、次のとおりとする。
-
-- 各対象 policy block は、policy 名を表す深さ 1 の見出し 1 個と、カテゴリ別の平坦な本文で構成する。本文に深さ 2 以降の見出しを置いてはならない。
+- 各 policy block は、policy 名を表す深さ 1 の見出し 1 個と、カテゴリ別の平坦な本文で構成する。本文に深さ 2 以降の見出しを置いてはならない。
 - 本文に存在するカテゴリだけを `**必須**`、`**禁止**`、`**許容**` の順で 1 回ずつ出力する。
 - 平坦化では、各規則の所属カテゴリと、同一カテゴリ内における平坦化前の下位見出しの出現順を維持する。
 - 平坦化前の下位見出しが表していた主語、適用範囲、目的、または判断対象は、対応するカテゴリの箇条書きへ組み込む。
 - `oracle authority policy` と `finding basis policy` の名称は、平坦化後の本文でも検索できる形で維持する。
-- `realization_oracle_reference_policy` に対応する policy block は、深さ 1 の見出しと平坦な本文で構成し、カテゴリを追加しない。
 
 ### policy の選択と注入
 
