@@ -118,21 +118,20 @@
 # `oracle.py`
 
 ## Summary
-- oracle file を扱う agent call 向けの instruction 文面構築定義。oracle の正本仕様としての扱い、判断根拠、優先関係、goal/non-goal、用語・文法・重複管理などの作成・変更・レビュー規定を構成する。
-- oracle file を読み取り専用で調査する場合の規定も構成し、定義済み事項と未定義事項の区別、oracle を根拠とすること、実装から仕様を逆算しないことを定める。
-- oracle policy と oracle investigation policy の各 SDHeader および SDPolicy を生成する関数が、PlaceholderMap とともに返す。
+- このファイルは、oracle file を扱う agent call 向けの instruction を構築する定義を担う。oracle file の作成・変更・レビュー時に適用する優先順位、要件、禁止事項、許容事項、仕様断片としての扱いを `SDHeader` と `SDPolicy` にまとめ、読み取り専用調査向けの追加規定も別途定義する。
 
 ## Read this when
-- oracle file の作成、変更、レビューに必要な agent call 向け instruction の構築規則を確認するとき。
-- oracle file を読み取り専用で調査する agent call の規定を確認するとき。
-- oracle・realization file 間の権限、根拠、優先関係や、正本仕様の整合性・検索性に関する policy 定義の入口を探すとき。
+- oracle file の作成・変更・レビューに関する agent call の規定を確認するとき
+- oracle file の読み取り専用調査で、定義済み事項と未定義事項を区別する規定を確認するとき
+- oracle policy の instruction 文面がどこで構築されるかを調べるとき
 
 ## Do not read this when
-- oracle file の具体的な仕様内容や個別 oracle の設計を確認する場合は、対象の oracle file を直接読む。
-- agent prompt の基本的な placeholder 処理や SDHeader・SDPolicy の一般的な構築方法だけを確認する場合は、それぞれ PlaceholderMap または struct_doc の定義を直接読む。
+- oracle file 自体の具体的な仕様内容を確認したいときは、対象の oracle file を直接読む
+- agent call の基本的な prompt 構築や PlaceholderMap の一般的な扱いだけを確認したいときは、該当する prompt_builder の基本定義を直接読む
+- oracle file を扱わない作業では、この policy 定義を読む必要はない
 
 ## hash
-- d546999d2e91a58c000ace454eed35f0554f398f3514fa82ddda46e986c00f27
+- 5f400d12244ec678477eeecc9232efbf3782fe683f65cc79fc3a2118d6d04296
 
 # `oracle_review.py`
 
@@ -154,21 +153,20 @@
 # `realization.py`
 
 ## Summary
-- realization file を扱う agent call 向けの realization policy 文面を構築する。oracle authority policy に従い、関連 oracle file の確認、正本の一箇所管理、必要最小限の implementation・test・設定・ancillary、追跡手順の特定と検証を要求し、realization を根拠とした oracle の意味変更や不要な実装・抽象化・公開面の追加を禁止する。
-- realization file の作成・変更・リファクタ・レビュー時に適用する規定の入口であり、prompt builder の他の policy 定義ではなく、realization 固有の責務境界や正本との関係を確認したい場合に読む。
+- realization file の作成・変更・リファクタ・レビュー時に agent call へ適用する実装方針を構築する。oracle を正本仕様として先に確認し、正本との重複を避けながら、現行仕様に必要な実装・テスト・設定・補助要素だけを保つための要求、禁止事項、実装者の裁量を定義する。realization の責務境界や関連手順を判断する際の入口となる。
 
 ## Read this when
-- realization file の作成、変更、リファクタ、レビューに関する agent call の instruction 文面を確認・変更するとき
-- oracle と realization の権限関係、正本情報の管理、実装・テスト・検証の最小要件を確認するとき
-- realization 固有の禁止事項や、必要な手順・実行環境がない場合の扱いを確認するとき
+- realization file の作成、変更、リファクタ、レビュー方針を確認するとき
+- oracle と realization の役割分担、正本の一箇所管理、実装・テスト・関連手順の維持条件を確認するとき
+- 不要な実装、旧仕様、未使用要素、過剰な抽象化や公開面を避ける規定を確認するとき
 
 ## Do not read this when
 - oracle file 自体の意味や正本仕様を確認することが目的のとき
-- realization policy 以外の prompt builder policy の規定を確認するとき
-- 対象 realization の具体的な実装内容やテスト内容を直接確認すべきとき
+- 個別の realization 実装内容、テスト内容、配置場所を直接確認すべきとき
+- realization file に関係しない prompt builder の仕様や実装を調べるとき
 
 ## hash
-- 7a4909f0bacc817e4a62719e8fcdfcfbe0f756833174ba536c5844ced9b5bc01
+- 0880387b3ad9b468ac42f689374a87e14bc9a33deb8a5436dc5b0288428665f5
 
 # `realization_oracle_reference.py`
 

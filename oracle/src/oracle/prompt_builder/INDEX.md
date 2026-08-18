@@ -71,15 +71,15 @@
 # `policy`
 
 ## Summary
-- prompt_builder の各 policy 実装を、oracle・realization の扱い、ファイルアクセス、feedback、routing、handoff、conflict 解消、INDEX.md エントリー生成などの責務ごとに確認するための入口。各ファイルは対応する agent call の instruction 文面や判断規定を構築する。
+- cmoc の agent call 向け prompt policy 定義をまとめるディレクトリ。file access、oracle・realization の扱い、review、conflict resolution、feedback reporting、handoff、INDEX.md routing など、作業目的ごとの instruction 文面構築入口を提供する。個別 policy の責務や適用条件を確認する際は、この階層から該当する定義へ進む。
 
 ## Read this when
-- 特定の prompt policy の責務、適用条件、禁止事項、または生成する instruction 文面を確認・変更するとき
-- 複数の policy 間で、oracle・realization・INDEX.md・ファイルアクセスなどの扱いを比較するとき
+- agent call に適用する prompt policy の定義、責務分担、適用条件を調査・変更するとき
+- oracle・realization、file access、review、feedback、handoff、routing など特定の policy の入口を確認するとき
 
 ## Do not read this when
-- 具体的な oracle file、realization file、CLI の実アクセス処理、または生成済みプロンプトの利用側の挙動を直接確認する作業
-- prompt_builder policy の一般的なデータ構造や個別機能の実装詳細だけを確認する作業
+- 具体的な oracle file・realization file・実装ファイルの内容や挙動を直接確認するとき
+- prompt policy を利用して生成された prompt や CLI の実際の実行処理だけを調査するとき
 
 ## hash
-- bed7a40689d6416aa620df975c94632fd68deb42423362d3f55a6dc7d1aebe53
+- aa2e4d0d384429a7a416689207aadaab49e025cfaccf888dd9ba542329c8bc38

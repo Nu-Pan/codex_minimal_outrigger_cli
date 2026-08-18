@@ -18,19 +18,18 @@
 # `src`
 
 ## Summary
-- cmoc の oracle 実装をまとめるルート。agent call パラメータの構築、用途別の oracle・realization・session・feedback・TUI・indexing 定義、prompt の構築、パス・設定・構造化 Markdown の共通モデルを扱う。目的別の実装を探すときは、まずこの階層から `oracle/acp_builder`、`oracle/prompt_builder`、`oracle/other`、`oracle/feedback` へ進む。
+- oracle/src は、cmoc の agent 呼び出しを構成する oracle 実装のルートである。agent call のパラメータ定義、feedback 入力契約、共有設定・パス・構造化文書処理、完全 prompt の構築を下位領域へ分担している。
 
 ## Read this when
-- AI エージェント呼び出しのパラメータや用途別の起動定義を調査・変更するとき
-- 完全 prompt、prompt policy、placeholder、エディタ入力文面の構築を調査・変更するとき
-- agent call 間で共有する設定、パス解決、構造化 Markdown のモデルやレンダリングを調査・変更するとき
-- oracle・realization・session・feedback・TUI・indexing の実装入口を確認するとき
+- agent call のモデル、reasoning effort、ファイルアクセスモード、cwd、Structured Output などの呼び出しパラメータを調査・変更するときは acp_builder から確認を始めるとよい。
+- feedback reporter が受け取る問題分類、重要度、影響、根拠、継続状態などの入力契約を確認するときは feedback から確認を始めるとよい。
+- 設定値、モデルプロバイダ設定、root placeholder を含むパス解決、構造化 Markdown の生成を確認するときは other から確認を始めるとよい。
+- agent call に渡す完全 prompt の構成、共通規範、各種 policy、placeholder、エディタ入力の組み込みを確認するときは prompt_builder から確認を始めるとよい。
 
 ## Do not read this when
-- 正本仕様や利用規約そのものを確認したいとき
-- 実際の CLI サブコマンドの処理フローや agent call の実行機構を確認したいとき
-- 特定の agent call、prompt policy、共通モデルの実装が特定できているとき
-- feedback の報告入力データだけを確認したいとき
+- 特定の agent call 種別の詳細実装だけを確認したい場合は、acp_builder 配下の該当実装を直接読む方が適切である。
+- prompt の個別 policy や prompt 部品だけを確認したい場合は、prompt_builder 配下の該当ファイルを直接読む方が適切である。
+- realization の実装・テスト、oracle 文書そのものの仕様、または既存の INDEX.md のナビゲーションだけを確認したい場合は、このディレクトリを入口にする必要はない。
 
 ## hash
-- eb66bed724bc51cebf174087887abaf6b0cf95b77d42c0df5713d328473682c5
+- 2d740efeff2629b76a0ce26abd663ada4e4cdb3cbdf0f9a3dbc08d466967022c

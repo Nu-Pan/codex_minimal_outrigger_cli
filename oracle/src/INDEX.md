@@ -1,19 +1,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle src 実装をまとめるディレクトリ。AI エージェント呼び出しのパラメータ契約、用途別の起動定義、prompt の構築、パスと設定の共通モデル、構造化 Markdown 生成を扱う。特定の agent call、prompt policy、oracle／realization 関連処理の入口として、まずこの階層から下位ディレクトリへ進む。
+- oracle/src/oracle は、agent call の用途別定義、feedback 入力契約、共有設定・パス・文書化ヘルパー、完全 prompt 構築処理をまとめる oracle 実装領域である。各下位ディレクトリは、agent 呼び出し設定、feedback 構造化、共有モデル、prompt 構成という異なる責務への入口になる。
 
 ## Read this when
-- AI エージェント呼び出しのモデル、reasoning effort、ファイルアクセス、cwd、Structured Output、preflight の定義を調査・変更するとき
-- 完全 prompt の構築、共通 policy、placeholder、エディタ入力文面を調査・変更するとき
-- agent call 間で共有するリポジトリ設定、パス解決、構造化 Markdown モデルを調査・変更するとき
-- 用途別の oracle、realization、feedback、session、TUI、indexing 定義の入口を確認するとき
+- agent call の用途別設定や出力契約を調査・変更するときは acp_builder から確認を始めるとよい。
+- feedback reporter の入力契約や問題情報の構造化を確認するときは feedback から確認を始めるとよい。
+- 共有設定、パス解決、構造化 Markdown 生成の責務を確認するときは other から確認を始めるとよい。
+- agent call に渡す完全 prompt の構成、placeholder、共通規範や policy の組み込み経路を確認するときは prompt_builder から確認を始めるとよい。
 
 ## Do not read this when
-- oracle の正本仕様や利用規約そのものを確認したいとき
-- 実際の CLI サブコマンドの処理フローや agent call 実行機構を確認したいとき
-- 特定の用途別定義、prompt policy、共通モデルの本文を直接確認できる場合
-- 既存 INDEX.md のルーティング情報だけを確認したいとき
+- agent call の共通型や共通 prompt 生成、パス解決など、oracle 配下の特定用途に固有でない処理だけを確認したい場合は、該当する共通実装を直接読む方が適切である。
+- realization の具体的な実装・テスト、oracle file 自体の仕様内容、collector 側の保存や集約だけを確認したい場合は、このディレクトリを入口にする必要はない。
+- 既存の INDEX.md のルーティング内容や文書全体のナビゲーションだけを確認したい場合は、このディレクトリを読む必要はない。
 
 ## hash
-- 8ea10dd9ea16c774d42861b5e02e82e65aae6f2ad7eb0e8bd4b9073d49a9ed44
+- 14e076dd0067685ad4fba2155ce7b7e94aa54e69bb6ae95c6722e9eda5b02a90

@@ -35,37 +35,41 @@
 # `other`
 
 ## Summary
-- cmoc の共通基盤となる補助モデル群を収録するディレクトリ。リポジトリ固有設定のデータモデル、root placeholder と agent call のパス解決、構造化文書の Markdown レンダリングを扱う。これらの共通モデルや変換規則を確認・変更する際の入口であり、個別 CLI 機能の実装や正本仕様の入口ではない。
+- oracle/src/oracle/other は、cmoc の複数機能が共有する補助モデルと文書化ヘルパーを扱うディレクトリである。
+- cmoc_config.py はリポジトリ固有設定、Codex CLI 設定、oracle review のループ上限とシリアライズ対象を確認する入口である。
+- path_model.py は root placeholder、Git worktree からの root 解決、agent call のパスコンテキストを確認する入口である。
+- struct_doc.py は構造化文書ノードを Markdown に変換し、見出し階層、cmoc_block/cmoc_ref、コードフェンス、規定文章を扱う処理の入口である。
 
 ## Read this when
-- cmoc の設定モデル、パス表記・root 解決、または構造化 Markdown 生成の共通処理を確認・変更するとき
-- agent call の作業コンテキスト、repository/worktree root、root placeholder の相互変換規則を調べるとき
-- 見出し、参照タグブロック、コードブロック、規定文を Markdown へ変換する処理を調べるとき
+- 複数の機能から共有される cmoc 設定モデル、パスモデル、または構造化 Markdown 生成ヘルパーの責務を確認するとき
+- 設定項目や既定値、JSON/TOML 化の対象を確認するときは cmoc_config.py を読むとき
+- root placeholder や worktree root、repository root、agent call のパスコンテキストの解決規則を確認するときは path_model.py を読むとき
+- 構造化文書のノード型や Markdown レンダリング規則を確認するときは struct_doc.py を読むとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドや realization の責務・処理フローだけを確認したいとき
+- 特定の CLI サブコマンドや realization の処理フローだけを確認したいとき
+- Codex CLI の呼び出し実装や oracle review の所見生成ロジックを確認したいとき
 - 設定ファイルの実際の保存内容や人間による調整結果だけを確認したいとき
-- 共通モデルを利用する個別機能の挙動を確認する場合で、その機能の実装や仕様を直接読むべきとき
+- 構造化文書ヘルパーの利用側が定める仕様や呼び出し元の責務だけを確認したいとき
+- INDEX.md のルーティング規則や文書全体のナビゲーションだけを確認したいとき
 
 ## hash
-- aa9999b696095a0c527081e3ef8637690ae32d429f61441abaa66730afff6a60
+- 2d59e9705d8be1d2d0f6cc2db9ef0a6098a3f509f1a086fa4122680ad8668565
 
 # `prompt_builder`
 
 ## Summary
-- agent 向け完全プロンプトの構成部品を実装するディレクトリ。placeholder 型、完全 prompt の組み立て、エディタ入力の初期文面、共通 prompt parts、用途別 policy を扱い、prompt builder の仕様や変更箇所を確認する入口となる。配下には prompt 全体の構成、共通規範、個別 policy へ段階的に進める構造がある。
+- agent call 向け完全プロンプトを構成する実装と、その構成部品・policy 定義をまとめたディレクトリ。完全 prompt の組み立て、placeholder の統合、エディタ入力初期文面、共通規範や用途別 policy の生成経路を調べる入口であり、個別 policy や構造化文書の詳細は配下の対応対象へ進む。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成・挿入順序・policy 選択・placeholder 統合を確認または変更するとき
-- エディタ入力用の初期文面やテンプレート埋め込みを確認または変更するとき
-- oracle・realization の責務境界、ファイル分類、アクセス規則、handoff や conflict resolution などの prompt 部品を確認するとき
-- 特定の prompt policy の適用条件や instruction 文面の構成を確認するとき
+- agent call に渡す prompt の構成や挿入順序、placeholder の扱いを確認・変更するとき
+- prompt builder の共通部品、policy、oracle・realization の規範、routing などの組み込み経路を調査するとき
+- エディタ入力の初期文面や、prompt policy の適用条件を確認するとき
 
 ## Do not read this when
-- oracle や realization の正本仕様・実装・テスト本文を直接確認したいとき
-- CLI のファイルアクセス処理や、生成済み prompt の利用側の挙動だけを確認したいとき
-- 特定 policy の本文だけを確認したい場合は、ディレクトリ全体ではなく対応する個別 policy へ直接進むとき
-- SDHeader・SDTagBlock など構造化文書の定義自体を確認したいとき
+- 特定の policy の本文や規則だけを確認したいときは、配下の対応する policy 定義を直接読む
+- oracle・realization の正本仕様や実装、構造化文書要素の定義を確認したいときは、それぞれの担当ファイルを直接読む
+- 生成済み prompt の結果や CLI の実行処理だけを調査する場合
 
 ## hash
-- cb347dd251d03b9b61eda66115f98d433777503ca89d4f3f05005b76d9bed057
+- 6d587e938c82bbab5a6755af24c93ad0461eaa0001e7263fc798830e3a0033ee
