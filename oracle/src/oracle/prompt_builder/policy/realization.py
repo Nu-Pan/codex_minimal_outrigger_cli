@@ -1,36 +1,41 @@
 """realization file を扱う agent call 向け instruction 文面の構築定義。"""
 
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDPolicy
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_realization_policy() -> tuple[PlaceholderMap, SDHeader]:
+def build_realization_policy(
+    path_context: AgentCallPathContext,
+) -> tuple[PlaceholderMap, SDHeader]:
     """realization file の作成・変更・レビューに必要な規定を構築する。"""
     return (
-        {},
+        path_context.root_placeholder_definitions(),
         SDHeader(
-            "realization policy（realization file の作成・変更・リファクタ・レビュー時）",
+            "realization policy",
             SDPolicy(
-                when_use_this="",
+                when_use_this="realization file の作成・変更・リファクタ・レビューをする時、以下の規定に従うこと",
                 require=(
-                    "oracle authority policy（oracle・realization file を扱う時）では、oracle file を人間が所有する正本仕様断片として扱う",
+                    "oracle file を **人間意図を具体化した正本仕様断片** として扱う",
                     "関連する oracle file を先に確認し、その明示要求と矛盾しない realization file にする",
-                    "正本と同じ情報が必要な場合は、参照、生成、または変換により正本を一箇所に保つ",
-                    "現行仕様を満たすために必要な implementation、test、設定、および ancillary だけを保つ",
-                    "新しい実装は実在する責務境界または重複に対応させ、既存の近い責務を同時に整理する",
-                    "対象 repository で追跡されている関連手順を配置場所にかかわらず特定し、変更に必要な検証を行う",
-                    "必要な手順または実行環境が利用できない場合は、検証済みと扱わず不足を報告する",
+                    "oracle fiel 側に実装が存在する場合、可能な限りをそれをそのまま使用する",
+                    "今現在の仕様を満たすために必要な realization file だけに保つ (YAGNI)",
+                    "新しい実装を追加する時、意味的に近い既存実装を同時に整理する",
+                    "責務が重複する実装・テストは、可能な限り直交させてシンプルに保つこと",
+                    "参照可能な文章上で指示されている手順に基づいて、作業後の状態を検証・テストする",
+                    "検証・テストを何らかの理由で実施できない場合は、検証済みと扱わず不足を報告する",
                 ),
                 prohibit=(
-                    "oracle authority policy（oracle・realization file を扱う時）では、realization file の都合または挙動を根拠に oracle file の意味を変更してはいけない",
-                    "oracle src の定義または prompt 文面を realization file へ正本のように複製してはいけない",
-                    "同じ責務の実装、旧仕様の分岐、未使用の識別子、または置換済みの test を残してはいけない",
-                    "将来使う可能性だけを根拠に抽象化、公開 interface、設定、永続状態、依存関係、または補助 file を追加してはいけない",
-                    "簡潔化のために意味、可読性、失敗時挙動、または必要な検証を損なってはいけない",
-                    "work-root 固有手順の配置先を `.agents/skills` に限定してはいけない",
+                    "realization file を根拠に oracle file に変更を加えてはいけない",
+                    "oracle file の正本仕様断片を realization file へ複製してはいけない",
+                    "不要になった実装・テスト (e.g. 旧仕様の分岐、未使用の識別子、置換済みコード) を残してはいけない",
+                    "将来必要になる可能性だけを根拠に realization file を複雑化させてはいけない",
+                    "シンプル化によって、正本仕様断片上必要とされる要素 (e.g. 意味、可読性、失敗時挙動、検証) を損なってはいけない",
+                    "`{{work-root}}` 固有の指示を根拠とせずに `{{work-root}}.agents/skills` だけを根拠に作業方法を断定してはいけない",
                 ),
                 allow=(
                     "重要な人間意図へ絞りつつ、明示仕様の隙間は、現行の oracle file と、file access が許す場合の既存実装・既存 test から自然に導ける範囲で実装者が補ってよい",
+                    "どうしても oracle file をそのまま使用出来ない場合のみ、同等の機能を realization file に最小限の範囲内で実装しても良い",
                 ),
             ),
         ),

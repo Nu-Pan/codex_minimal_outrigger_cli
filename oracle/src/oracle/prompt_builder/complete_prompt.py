@@ -136,7 +136,7 @@ def build_complete_prompt(
     if realization_policy:
         _append(
             full_prompt,
-            build_realization_policy(),
+            build_realization_policy(path_context),
         )
     if oracle_review_policy:
         _append(
