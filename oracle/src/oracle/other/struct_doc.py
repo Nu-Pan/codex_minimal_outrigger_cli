@@ -191,7 +191,7 @@ def render_sd_node_as_markdown(
 
 def _render_sd_node_as_markdown(
     *sd_nodes: SDNode,
-    depth: int = 1,
+    depth: int = 0,
 ) -> str:
     """sd_node を markdown としてレンダリングする
 
@@ -201,8 +201,9 @@ def _render_sd_node_as_markdown(
     individual: list[str] = list()
     for sd_node in sd_nodes:
         if isinstance(sd_node, SDHeader):
-            individual.append(_render_sd_header_as_markdown(sd_node, depth))
+            individual.append(_render_sd_header_as_markdown(sd_node, depth + 1))
         elif isinstance(sd_node, SDTagBlock):
+            # NOTE タグで囲っても見出しの深さは変わらないので depth はそのままで良い
             individual.append(_render_sd_tag_block_as_markdown(sd_node, depth))
         elif isinstance(sd_node, SDCodeBlock):
             individual.append(_render_sd_code_block_as_markdown(sd_node))
@@ -220,7 +221,7 @@ def _render_sd_node_as_markdown(
 
 def _render_sd_header_as_markdown(
     sd_node: SDHeader,
-    depth: int = 1,
+    depth: int,
 ) -> str:
     """sd_node を markdown としてレンダリングする
 
@@ -234,7 +235,7 @@ def _render_sd_header_as_markdown(
     if isinstance(sd_node.children, list):
         for c in sd_node.children:
             result += "\n"
-            result += _render_sd_node_as_markdown(c, depth=depth + 1)
+            result += _render_sd_node_as_markdown(c, depth=depth)
             result += "\n"
     else:
         raise TypeError(
@@ -246,7 +247,7 @@ def _render_sd_header_as_markdown(
 
 def _render_sd_tag_block_as_markdown(
     sd_node: SDTagBlock,
-    depth: int = 1,
+    depth: int,
 ) -> str:
     """sd_node を markdown としてレンダリングする
 
@@ -260,7 +261,7 @@ def _render_sd_tag_block_as_markdown(
     # 中身
     for child in sd_node.childlen:
         result += "\n"
-        result += _render_sd_node_as_markdown(child, depth=depth + 1)
+        result += _render_sd_node_as_markdown(child, depth=depth)
         result += "\n"
     # ブロック開始
     result += "\n"
