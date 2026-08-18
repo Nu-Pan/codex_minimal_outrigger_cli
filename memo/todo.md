@@ -5,7 +5,7 @@
 - 直す
     - policy にカテゴリ「補足情報」が必要
 - 各プロンプトブロックの中身を手作業でどうにかしないとマズい
-    - TODO realization policy までやった
+    - TODO oracle findings review policy までやった
 - oracle src, oracle doc の棲み分けを詰め直したい
     - コメント (docstring 含む) で正本仕様を書いて良い事にしたい
     - 逆に動的生成プロンプト本体にはいままで通り正本仕様を書いちゃダメ
