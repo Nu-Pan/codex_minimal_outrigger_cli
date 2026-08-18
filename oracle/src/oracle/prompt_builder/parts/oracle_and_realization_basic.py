@@ -127,7 +127,7 @@ def build_oracle_and_realization_basic(
 
                         ただし、
 
-                        - `{{work-root}}` 内にネストした git workint gree がある場合、最も内側の git repository を owning repository として git ignore 判定を行う
+                        - `{{work-root}}` 内にネストした git workint tree がある場合、最も内側の git repository を owning repository として git ignore 判定を行う
                         - git ignore 判定は `git -C <owning-repository-root> check-ignore --quiet -- <repository-relative-path>` と意味的に等価であれば良い
                         """,
                     ),
