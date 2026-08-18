@@ -11,7 +11,11 @@ from oracle.acp_builder.basic import (
     ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+from oracle.other.struct_doc import (
+    SDCodeBlock,
+    SDHeader,
+    render_sd_node_as_markdown,
+)
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -37,7 +41,7 @@ def build_feedback_verify_issue_parameter(
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         aux_static_prompt=[
-            StructDoc(
+            SDHeader(
                 "verdict",
                 """
                 - `unresolved`: report cut 時点でも問題が存在し、現在の作業外にいる人間の対応が必要である
@@ -46,7 +50,7 @@ def build_feedback_verify_issue_parameter(
                 - `inconclusive`: 許可された report cut reference だけでは判定できない
                 """,
             ),
-            StructDoc(
+            SDHeader(
                 "参照と変更の禁止",
                 """
                 - 入力された report cut reference 以外の file、live repository state、raw log、過去の Codex session、別 candidate、および feedback state を読んではならない
@@ -54,7 +58,7 @@ def build_feedback_verify_issue_parameter(
                 - repository file、config、feedback state、または問題の根拠を変更してはならない
                 """,
             ),
-            StructDoc(
+            SDHeader(
                 "Structured Output の決定論的事後条件",
                 """
                 - `result.candidate_id` は入力 candidate ID と完全一致させる
@@ -68,13 +72,13 @@ def build_feedback_verify_issue_parameter(
             ),
         ],
         aux_dynamic_prompt=[
-            StructDoc(
+            SDHeader(
                 "issue candidate",
-                StructCodeBlock("json", candidate_json),
+                SDCodeBlock("json", candidate_json),
             ),
-            StructDoc(
+            SDHeader(
                 "report cut references",
-                StructCodeBlock("json", report_cut_references_json),
+                SDCodeBlock("json", report_cut_references_json),
             ),
         ],
         routing_policy=False,
@@ -86,7 +90,7 @@ def build_feedback_verify_issue_parameter(
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.READONLY,
-        prompt=render_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,

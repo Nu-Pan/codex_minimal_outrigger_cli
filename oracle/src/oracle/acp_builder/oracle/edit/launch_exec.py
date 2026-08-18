@@ -8,15 +8,15 @@ from oracle.acp_builder.basic import (
     ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
-from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
+from oracle.other.struct_doc import SDTagBlock, SDHeader, render_sd_node_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def _build_original_user_instruction(user_instruction: str) -> StructBlock:
+def _build_original_user_instruction(user_instruction: str) -> SDTagBlock:
     """確定したオリジナルのユーザー指示を参照対象として構築する。"""
-    return StructBlock(
+    return SDTagBlock(
         "original_user_instruction",
-        StructDoc(
+        SDHeader(
             "ユーザー指示",
             user_instruction,
         ),
@@ -63,7 +63,7 @@ def build_oracle_edit_main_launch_exec_parameter(
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
-        prompt=render_as_markdown(complete_prompt),
+        prompt=render_sd_node_as_markdown(complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
@@ -92,7 +92,7 @@ def build_oracle_edit_reduction_launch_exec_parameter(
         path_context=path_context,
         aux_dynamic_prompt=[
             _build_original_user_instruction(user_instruction),
-            StructDoc(
+            SDHeader(
                 "仕様削減の判断と参照の境界",
                 """
                 - 直前の本命 agent call が仕様変更を行い、その編集結果は起動前の既存差分と分離されず、現在の Git 未コミット差分に含まれています
@@ -117,7 +117,7 @@ def build_oracle_edit_reduction_launch_exec_parameter(
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
-        prompt=render_as_markdown(complete_prompt),
+        prompt=render_sd_node_as_markdown(complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,

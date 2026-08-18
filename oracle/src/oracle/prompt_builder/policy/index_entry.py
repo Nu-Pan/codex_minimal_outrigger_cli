@@ -1,14 +1,14 @@
 """INDEX.md 用エントリーを生成する agent 向け文面の構築定義。"""
 
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_index_entry_policy() -> tuple[PlaceholderMap, StructDoc]:
+def build_index_entry_policy() -> tuple[PlaceholderMap, SDHeader]:
     """INDEX.md エントリーが従う規定を構築する。"""
     return (
         {},
-        StructDoc(
+        SDHeader(
             "index entry policy（`INDEX.md` 用エントリー生成時）",
             """
             **必須**

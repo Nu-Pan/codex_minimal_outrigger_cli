@@ -1,14 +1,14 @@
 # cmoc
 from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_file_access_policy(
     mode: FileAccessMode,
     path_context: AgentCallPathContext,
-) -> tuple[PlaceholderMap, StructDoc]:
+) -> tuple[PlaceholderMap, SDHeader]:
     """file access mode に対応する agent 向け制限文面を構築する。"""
     # リポジトリ外への禁止事項
     # NOTE
@@ -116,13 +116,13 @@ def build_file_access_policy(
             # NTOE
             #   `build_complete_prompt` によるアクセス規定文面が生成されない
             #   特殊文面を個別に構築する用の特別モードで、よほどのことがない限り使ってはいけない
-            return ({}, StructDoc("", ""))
+            return ({}, SDHeader("", ""))
         case _:
             raise ValueError(f"Invalid mode (mode={mode})")
     # 正常終了
     return (
         path_context.root_placeholder_definitions(),
-        StructDoc(
+        SDHeader(
             f"file R/W policy ({mode.value})",
             "\n".join(f"- {denial}" for denial in denials),
             "以上のルールで禁止されていない読み書きは暗黙に許可される。",

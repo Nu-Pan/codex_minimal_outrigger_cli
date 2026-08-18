@@ -1,14 +1,14 @@
 """oracle file への適合性を判断する agent 向け文面の構築定義。"""
 
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_apply_review_policy() -> tuple[PlaceholderMap, StructDoc]:
+def build_apply_review_policy() -> tuple[PlaceholderMap, SDHeader]:
     """realization の追従要否と所見を判断する規定を構築する。"""
     return (
         {},
-        StructDoc(
+        SDHeader(
             "apply review policy（oracle file に対する realization file の追従要否・所見・修正の判断時）",
             """
             **必須**

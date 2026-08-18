@@ -12,7 +12,11 @@ from oracle.acp_builder.basic import (
 from oracle.other.path_model import AgentCallPathContext, resolve_real_path
 
 # cmoc
-from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+from oracle.other.struct_doc import (
+    SDCodeBlock,
+    SDHeader,
+    render_sd_node_as_markdown,
+)
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -50,7 +54,7 @@ def build_indexing_index_entry_parameter(
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         aux_dynamic_prompt=[
-            StructDoc(
+            SDHeader(
                 "エントリー生成規定",
                 """
                 - 必ずオリジナルの本文のみを根拠にエントリーを生成すること
@@ -58,9 +62,9 @@ def build_indexing_index_entry_parameter(
                 - `{{target-path}}` 以外の文章も必要に応じて参照すること
                 """,
             ),
-            StructDoc(
+            SDHeader(
                 "`{{target-path}}` の内容",
-                StructCodeBlock(
+                SDCodeBlock(
                     None,
                     target_content,
                 ),
@@ -85,7 +89,7 @@ def build_indexing_index_entry_parameter(
         model_class=ModelClass.MINIMUM,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,
-        prompt=render_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,

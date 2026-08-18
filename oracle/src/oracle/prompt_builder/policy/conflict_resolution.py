@@ -1,14 +1,14 @@
 """session join の conflict 解消用 instruction 文面の構築定義。"""
 
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_conflict_resolution_policy() -> tuple[PlaceholderMap, StructDoc]:
+def build_conflict_resolution_policy() -> tuple[PlaceholderMap, SDHeader]:
     """oracle / realization の意味を保つ conflict 解消規定を構築する。"""
     return (
         {},
-        StructDoc(
+        SDHeader(
             "conflict resolution policy（`cmoc session join` の conflict marker 解消時だけ）",
             """
             **必須**

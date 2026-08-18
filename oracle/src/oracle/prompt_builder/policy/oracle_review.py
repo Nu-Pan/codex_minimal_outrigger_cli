@@ -1,14 +1,14 @@
 """oracle review の所見成立条件を伝える agent 向け文面の構築定義。"""
 
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_oracle_review_policy() -> tuple[PlaceholderMap, StructDoc]:
+def build_oracle_review_policy() -> tuple[PlaceholderMap, SDHeader]:
     """oracle review の全段階で共有する所見判定規定を構築する。"""
     return (
         {},
-        StructDoc(
+        SDHeader(
             "oracle review policy（oracle file の所見の列挙・統合・検証・採否判定時）",
             """
             **必須**

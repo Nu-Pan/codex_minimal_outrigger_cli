@@ -16,7 +16,11 @@ from oracle.other.path_model import (
 )
 
 # cmoc
-from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+from oracle.other.struct_doc import (
+    SDCodeBlock,
+    SDHeader,
+    render_sd_node_as_markdown,
+)
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -52,14 +56,14 @@ def build_session_join_conflict_resolution_parameter(
         file_access_mode=FileAccessMode.REPO_WRITE,
         path_context=path_context,
         aux_dynamic_prompt=[
-            StructDoc(
+            SDHeader(
                 "conflict 対象ファイル",
-                StructCodeBlock(
+                SDCodeBlock(
                     "text",
                     path_list,
                 ),
             ),
-            StructDoc(
+            SDHeader(
                 "additional file access policy",
                 """
                 - conflict 対象 oracle file は、この conflict marker 解消に必要な範囲だけ編集して良い
@@ -80,7 +84,7 @@ def build_session_join_conflict_resolution_parameter(
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REPO_WRITE,
-        prompt=render_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,

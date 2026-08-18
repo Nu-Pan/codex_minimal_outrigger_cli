@@ -11,7 +11,7 @@ from oracle.acp_builder.basic import (
     ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext, resolve_real_path
-from oracle.other.struct_doc import StructDoc, render_as_markdown
+from oracle.other.struct_doc import SDHeader, render_sd_node_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -46,7 +46,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
         aux_static_prompt=[
-            StructDoc(
+            SDHeader(
                 "Structured Output の決定論的事後条件",
                 """
                 - この agent call の開始時点を基準として、出力時点に残る realization file の net 差分の path 集合を、実際の変更 path 集合とする
@@ -56,7 +56,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
                 - `evidences[].path` は変更 path の申告または照合に使用しない
                 """,
             ),
-            StructDoc(
+            SDHeader(
                 "作業上の注意点",
                 """
                 - commit 差分、変更 commit の列、変更要約は入力として与えられていない。最近の差分を推測して作業範囲を狭めてはいけない
@@ -87,7 +87,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
-        prompt=render_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,

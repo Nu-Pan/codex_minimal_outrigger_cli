@@ -12,10 +12,10 @@ from oracle.acp_builder.basic import (
 )
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import (
-    StructBlock,
-    StructCodeBlock,
-    StructDoc,
-    render_as_markdown,
+    SDTagBlock,
+    SDCodeBlock,
+    SDHeader,
+    render_sd_node_as_markdown,
 )
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
@@ -38,17 +38,17 @@ def build_realization_apply_fork_launch_exec_parameter(
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
 
     # commit 範囲と差分を一意な参照対象にまとめる。
-    apply_change = StructBlock(
+    apply_change = SDTagBlock(
         "realization_apply_change",
-        StructDoc(
+        SDHeader(
             "追従対象変更",
-            StructDoc(
+            SDHeader(
                 "commit 範囲",
                 f"- 始点: `{diff_base_commit}`\n- 終点: `{run_fork_commit}`",
             ),
-            StructDoc(
+            SDHeader(
                 "oracle file の raw git diff",
-                StructCodeBlock("diff", raw_oracle_git_diff),
+                SDCodeBlock("diff", raw_oracle_git_diff),
             ),
         ),
     )
@@ -83,7 +83,7 @@ def build_realization_apply_fork_launch_exec_parameter(
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
-        prompt=render_as_markdown(complete_prompt),
+        prompt=render_sd_node_as_markdown(complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,

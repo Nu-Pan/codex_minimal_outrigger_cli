@@ -11,7 +11,11 @@ from oracle.acp_builder.basic import (
     ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+from oracle.other.struct_doc import (
+    SDCodeBlock,
+    SDHeader,
+    render_sd_node_as_markdown,
+)
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -37,13 +41,13 @@ def build_feedback_normalize_issue_parameter(
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         aux_static_prompt=[
-            StructDoc(
+            SDHeader(
                 "参照禁止",
                 """
                 - 入力以外の file、raw log、過去の Codex session、feedback state、および候補外 issue を読んではならない
                 """,
             ),
-            StructDoc(
+            SDHeader(
                 "Structured Output の決定論的事後条件",
                 """
                 - `result.decision=existing` の `result.existing_issue_id` は、入力された既存 issue candidate の issue ID と完全一致させる
@@ -52,13 +56,13 @@ def build_feedback_normalize_issue_parameter(
             ),
         ],
         aux_dynamic_prompt=[
-            StructDoc(
+            SDHeader(
                 "構造化済み observation",
-                StructCodeBlock("json", observation_json),
+                SDCodeBlock("json", observation_json),
             ),
-            StructDoc(
+            SDHeader(
                 "既存 issue candidate",
-                StructCodeBlock("json", candidate_issues_json),
+                SDCodeBlock("json", candidate_issues_json),
             ),
         ],
         routing_policy=False,
@@ -70,7 +74,7 @@ def build_feedback_normalize_issue_parameter(
         model_class=ModelClass.MAINSTREAM,
         reasoning_effort=ReasoningEffort.HIGH,
         file_access_mode=FileAccessMode.READONLY,
-        prompt=render_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,

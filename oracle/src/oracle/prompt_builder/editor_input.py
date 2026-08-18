@@ -1,6 +1,6 @@
 """ユーザー入力用 editor の初期表示文面の構築定義。"""
 
-from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
+from oracle.other.struct_doc import SDTagBlock, SDHeader, render_sd_node_as_markdown
 
 
 def build_prompt_editor_input_initial_text(
@@ -17,8 +17,8 @@ def build_prompt_editor_input_initial_text(
     return:
         入力先ファイルへ注入する初期テキスト
     """
-    initial_text: list[StructDoc | StructBlock] = [
-        StructDoc(
+    initial_text: list[SDHeader | SDTagBlock] = [
+        SDHeader(
             "このファイルの使い方",
             """
             - 後続の AI エージェント呼び出しに渡す指示を HTML コメントブロックの外に記入して下さい
@@ -28,7 +28,7 @@ def build_prompt_editor_input_initial_text(
             - 後続の AI エージェントは、完全プロンプト本文を初回入力として受け取ります
             """,
         ),
-        StructDoc(
+        SDHeader(
             "記入の目安",
             """
             - GitHub Flavored Markdown で、求める成果、作業範囲、および完了条件を具体的に書いて下さい
@@ -37,6 +37,6 @@ def build_prompt_editor_input_initial_text(
             - agent が参照できない用語、前提、または判断基準は、作業に必要な範囲で説明して下さい
             """,
         ),
-        StructBlock("prompt template", complete_prompt_skeleton),
+        SDTagBlock("prompt template", complete_prompt_skeleton),
     ]
-    return "<!--\n" + render_as_markdown(initial_text) + "\n-->\n"
+    return "<!--\n" + render_sd_node_as_markdown(initial_text) + "\n-->\n"

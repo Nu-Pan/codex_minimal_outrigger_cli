@@ -1,14 +1,14 @@
 """realization file を扱う agent call 向け instruction 文面の構築定義。"""
 
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_realization_policy() -> tuple[PlaceholderMap, StructDoc]:
+def build_realization_policy() -> tuple[PlaceholderMap, SDHeader]:
     """realization file の作成・変更・レビューに必要な規定を構築する。"""
     return (
         {},
-        StructDoc(
+        SDHeader(
             "realization policy（realization file の作成・変更・リファクタ・レビュー時）",
             """
             **必須**

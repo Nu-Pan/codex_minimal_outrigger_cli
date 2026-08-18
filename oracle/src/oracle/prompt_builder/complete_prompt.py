@@ -1,6 +1,6 @@
 from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.struct_doc import StructBlock, StructDoc
+from oracle.other.struct_doc import SDTagBlock, SDHeader
 
 from .basic import PlaceholderMap
 
@@ -45,8 +45,8 @@ def build_complete_prompt(
     goal: str,
     file_access_mode: FileAccessMode,
     path_context: AgentCallPathContext,
-    aux_static_prompt: list[StructDoc | StructBlock] = list(),
-    aux_dynamic_prompt: list[StructDoc | StructBlock] = list(),
+    aux_static_prompt: list[SDHeader | SDTagBlock] = list(),
+    aux_dynamic_prompt: list[SDHeader | SDTagBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
     oracle_and_realization_basic: bool = False,
     oracle_policy: bool = False,
@@ -59,7 +59,7 @@ def build_complete_prompt(
     realization_oracle_reference_policy: bool = False,
     index_entry_policy: bool = False,
     routing_policy: bool = False,
-) -> list[StructDoc | StructBlock]:
+) -> list[SDHeader | SDTagBlock]:
     """選択された agent 向け文面を完全 prompt として構築する。
 
     Args:
@@ -83,12 +83,12 @@ def build_complete_prompt(
     _merge_placeholder_definitions(ph_map, aux_placeholder_def)
 
     # プロンプト構築先
-    full_prompt: list[StructDoc | StructBlock] = list()
+    full_prompt: list[SDHeader | SDTagBlock] = list()
 
     # プロンプト構築ユーティリティ
     def _append(
-        target_prompt: list[StructDoc | StructBlock],
-        builder_result: tuple[PlaceholderMap, StructDoc],
+        target_prompt: list[SDHeader | SDTagBlock],
+        builder_result: tuple[PlaceholderMap, SDHeader],
     ) -> None:
         temp_ph_map, temp_prompt = builder_result
         _merge_placeholder_definitions(ph_map, temp_ph_map)
@@ -98,7 +98,7 @@ def build_complete_prompt(
     # NOTE
     #   読み飛ばされると困る要素をプロンプト先頭で参照させる
     full_prompt.append(
-        StructDoc(
+        SDHeader(
             "プロンプト内の重要な情報",
             """
             - このセッションにおける基礎的な作業規定: <cmoc_ref target="fundamental_policy"/>
@@ -111,7 +111,7 @@ def build_complete_prompt(
     # NOTE
     #   無視されると困るような、全ての作業の基礎となるような作業規定
     #   重要な指示なので StructBlock で囲って「プロンプト内地図」から参照する
-    fundamental_policy_prompt: list[StructDoc | StructBlock] = list()
+    fundamental_policy_prompt: list[SDHeader | SDTagBlock] = list()
     _append(
         fundamental_policy_prompt,
         build_feedback_reporting_policy(path_context),
@@ -131,7 +131,7 @@ def build_complete_prompt(
             fundamental_policy_prompt,
             build_oracle_and_realization_basic(path_context),
         )
-    full_prompt.append(StructBlock("fundamental_policy", *fundamental_policy_prompt))
+    full_prompt.append(SDTagBlock("fundamental_policy", *fundamental_policy_prompt))
 
     # 規定プロンプト
     if oracle_policy:
@@ -186,10 +186,10 @@ def build_complete_prompt(
 
     # このセッションの目的
     full_prompt.append(
-        StructBlock(
+        SDTagBlock(
             "objective",
-            StructDoc("summary", summary),
-            StructDoc("goal", goal),
+            SDHeader("summary", summary),
+            SDHeader("goal", goal),
         )
     )
 
@@ -199,7 +199,7 @@ def build_complete_prompt(
 
     # プレースホルダマップ
     full_prompt.append(
-        StructDoc(
+        SDHeader(
             "place holder definition",
             "\n".join(f"- {{{{{k}}}}} = {v}" for k, v in ph_map.items()),
         )

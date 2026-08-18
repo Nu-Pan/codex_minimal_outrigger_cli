@@ -12,7 +12,11 @@ from oracle.acp_builder.basic import (
 from oracle.other.path_model import AgentCallPathContext
 
 # cmoc
-from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+from oracle.other.struct_doc import (
+    SDCodeBlock,
+    SDHeader,
+    render_sd_node_as_markdown,
+)
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -48,7 +52,7 @@ def build_oracle_review_merge_finding_parameter(
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,
         aux_static_prompt=[
-            StructDoc(
+            SDHeader(
                 "Structured Output の決定論的事後条件",
                 """
                 - 各 `operations[].target_ids` の各値は、「現状の所見リスト」に入力された `finding_id` 集合の要素でなければならない
@@ -56,9 +60,9 @@ def build_oracle_review_merge_finding_parameter(
             ),
         ],
         aux_dynamic_prompt=[
-            StructDoc(
+            SDHeader(
                 "現状の所見リスト",
-                StructCodeBlock("text", findings),
+                SDCodeBlock("text", findings),
             ),
         ],
         oracle_and_realization_basic=True,
@@ -72,7 +76,7 @@ def build_oracle_review_merge_finding_parameter(
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
-        prompt=render_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,

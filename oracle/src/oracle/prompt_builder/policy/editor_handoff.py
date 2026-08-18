@@ -1,14 +1,14 @@
 """editor work file への handoff 用 instruction 文面の構築定義。"""
 
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_editor_handoff_policy() -> tuple[PlaceholderMap, StructDoc]:
+def build_editor_handoff_policy() -> tuple[PlaceholderMap, SDHeader]:
     """任意の agent call から editor work file へ handoff する規定を構築する。"""
     return (
         {},
-        StructDoc(
+        SDHeader(
             "editor handoff policy（agent call から editor work file へ handoff する時）",
             """
             **必須**

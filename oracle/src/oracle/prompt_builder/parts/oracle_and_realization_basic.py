@@ -1,12 +1,12 @@
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_oracle_and_realization_basic(
     path_context: AgentCallPathContext,
-) -> tuple[PlaceholderMap, StructDoc]:
+) -> tuple[PlaceholderMap, SDHeader]:
     """
     oracle, realization についての基本知識の説明文章を構築する
     """
@@ -14,11 +14,11 @@ def build_oracle_and_realization_basic(
     root_definitions = path_context.root_placeholder_definitions()
     return (
         {"work-root": root_definitions["work-root"]},
-        StructDoc(
+        SDHeader(
             "oracle and realization basic",
-            StructDoc(
+            SDHeader(
                 "oracle file",
-                StructDoc(
+                SDHeader(
                     "役割",
                     """
                     - oracle file は人間が所有し 100% の責任を負う正本仕様断片である
@@ -26,7 +26,7 @@ def build_oracle_and_realization_basic(
                     - oracle file を正本として realization file が生成されるものとし、その逆は禁止である
                     """,
                 ),
-                StructDoc(
+                SDHeader(
                     "下位概念",
                     """
                     - oracle doc
@@ -40,7 +40,7 @@ def build_oracle_and_realization_basic(
                         - `{{work-root}}/oracle/test` に配置されている
                     """,
                 ),
-                StructDoc(
+                SDHeader(
                     "分類方法",
                     """
                     以下の条件をすべて満たすものを oracle file とする
@@ -51,9 +51,9 @@ def build_oracle_and_realization_basic(
                     """,
                 ),
             ),
-            StructDoc(
+            SDHeader(
                 "realization file",
-                StructDoc(
+                SDHeader(
                     "役割",
                     """
                     - oracle file で述べられた人間意図を具体化したものである
@@ -61,7 +61,7 @@ def build_oracle_and_realization_basic(
                     - realization file は正本仕様を述べるものではない
                     """,
                 ),
-                StructDoc(
+                SDHeader(
                     "下位概念",
                     """
                     - realization code
@@ -78,7 +78,7 @@ def build_oracle_and_realization_basic(
                         - e.g. `{{work-root}}/.gitignore`, `{{work-root}}/bin/**/*`, ...
                     """,
                 ),
-                StructDoc(
+                SDHeader(
                     "分類方法",
                     """
                     以下の条件をすべて満たすものを realization file とする
@@ -90,17 +90,17 @@ def build_oracle_and_realization_basic(
                     """,
                 ),
             ),
-            StructDoc(
+            SDHeader(
                 "uncategorised file",
-                StructDoc(
+                SDHeader(
                     "説明",
                     """
                     oracle, realization どちらにも該当しない、分類対象外のファイルを指す
                     """,
                 ),
-                StructDoc(
+                SDHeader(
                     "分類方法",
-                    StructDoc(
+                    SDHeader(
                         "パスによる分類",
                         """
                         以下のディレクトリツリー内のファイルはすべて uncategorised file とする。
@@ -116,7 +116,7 @@ def build_oracle_and_realization_basic(
                         - `AGENTS.md`
                         """,
                     ),
-                    StructDoc(
+                    SDHeader(
                         "git ignore による分類",
                         """
                         以下の条件をすべて満たすものを uncategorised file とする。
@@ -131,7 +131,7 @@ def build_oracle_and_realization_basic(
                         - git ignore 判定は `git -C <owning-repository-root> check-ignore --quiet -- <repository-relative-path>` と意味的に等価であれば良い
                         """,
                     ),
-                    StructDoc(
+                    SDHeader(
                         ".git による分類",
                         """
                         以下の条件、

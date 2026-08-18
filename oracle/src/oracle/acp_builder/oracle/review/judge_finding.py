@@ -12,7 +12,11 @@ from oracle.acp_builder.basic import (
 from oracle.other.path_model import AgentCallPathContext
 
 # cmoc
-from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+from oracle.other.struct_doc import (
+    SDCodeBlock,
+    SDHeader,
+    render_sd_node_as_markdown,
+)
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -52,23 +56,23 @@ def build_oracle_review_judge_finding_parameter(
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,
         aux_dynamic_prompt=[
-            StructDoc(
+            SDHeader(
                 "所見の内容",
-                StructCodeBlock(
+                SDCodeBlock(
                     "text",
                     finding,
                 ),
             ),
-            StructDoc(
+            SDHeader(
                 "所見が妥当であるとする理由",
-                StructCodeBlock(
+                SDCodeBlock(
                     "text",
                     advocate_reasons,
                 ),
             ),
-            StructDoc(
+            SDHeader(
                 "所見が妥当ではないとする理由",
-                StructCodeBlock(
+                SDCodeBlock(
                     "text",
                     challenger_reasons,
                 ),
@@ -85,7 +89,7 @@ def build_oracle_review_judge_finding_parameter(
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
-        prompt=render_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,

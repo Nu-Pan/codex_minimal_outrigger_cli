@@ -1,12 +1,12 @@
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_routing_policy(
     path_context: AgentCallPathContext,
-) -> tuple[PlaceholderMap, StructDoc]:
+) -> tuple[PlaceholderMap, SDHeader]:
     """
     INDEX.md を使って必要な文章へ進むための規定文面を構築する
     """
@@ -14,7 +14,7 @@ def build_routing_policy(
     root_definitions = path_context.root_placeholder_definitions()
     return (
         {"work-root": root_definitions["work-root"]},
-        StructDoc(
+        SDHeader(
             "routing policy",
             """
             - `INDEX.md` は各階層に存在し、同階層のファイル・ディレクトリの説明が書かれている
