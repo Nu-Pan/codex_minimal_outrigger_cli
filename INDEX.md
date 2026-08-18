@@ -91,21 +91,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と oracle 実装をまとめた中核領域。CLI・Codex 呼び出し・prompt・ログ・feedback・session／run の挙動仕様、Python 開発・設計・テスト・環境のルール、branch model、採用しなかった設計案を扱う。
-- 仕様や開発ルールを確認するときの入口であり、挙動仕様は `doc/app_spec`、開発関連は `doc/dev_rule`、branch／session／run の関係は `doc/branch_model.md`、代替案の背景は `doc/considered_alternative`、oracle の実装は `src` 配下へ進む。
+- `oracle` は cmoc の正本文書と oracle 実装をまとめた領域です。`doc` は仕様・開発ルール・設計背景、`src` は agent call、prompt、policy、設定、構造化文書処理、feedback・indexing・review・realization 操作を扱う実装への入口です。
 
 ## Read this when
-- cmoc の CLI、workflow、Codex 呼び出し、prompt、ログ、feedback、状態管理の正本文書を横断して調査するとき
-- 実装やテストの変更に先立ち、アプリケーション仕様、開発ルール、branch model、採用しなかった設計案のどの領域を確認すべきか判断するとき
-- oracle の agent call builder、prompt builder、Structured Output、path model、設定などの実装配置を探すとき
+- cmoc の正本文書群を横断して、仕様・開発ルール・設計背景の入口を判断するとき
+- agent call、prompt、policy、Structured Output schema、設定、パス解決など oracle 側の実装を調査するとき
+- oracle review、feedback、index entry、realization 操作などの処理の配置先を確認するとき
 
 ## Do not read this when
-- 対象の個別仕様書や開発ルール文書が既に特定できており、対応する下位対象へ直接進む方が適切なとき
-- 特定の prompt builder、agent call builder、設定モデル、スキーマ、または oracle 実装の具体的内容だけを調査するとき
-- realization の CLI 実行制御やテスト実装の具体的内容だけを調査するとき
+- 対象の個別文書や実装が既に特定できており、`doc` または `src` 配下へ直接進む方が適切なとき
+- realization の実装本体やテストの具体的な外部挙動だけを調査するとき
 
 ## hash
-- 7afb540a24a07958f67a3d7a17b44467bafcce4dbe32b03e888a2bfec4ecd1e6
+- 069bb8cd81e658da89ef9cc924975a878903414434a6a7e30280877595dda72a
 
 # `pyproject.toml`
 

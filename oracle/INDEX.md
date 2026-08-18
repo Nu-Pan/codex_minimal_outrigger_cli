@@ -17,17 +17,21 @@
 # `src`
 
 ## Summary
-- cmoc の oracle 実装領域。Agent Call Parameter、モデル・推論・ファイルアクセス設定、パスモデル、設定、構造化 Markdown、完全 prompt の構築を定義する。
-- indexing、feedback、session join、oracle review、realization など、用途別 agent call の prompt と Structured Output の起動パラメータを扱う。
-- 下位の `oracle`、`acp_builder`、`prompt_builder` 配下へ進むための実装上の入口であり、個別機能の調査では対応する下位領域を直接読む。
+- `oracle/src` は、cmoc の agent call に必要な oracle 実装をまとめたソースディレクトリです。agent call の基本パラメータ・パスモデル・設定・構造化文書処理、prompt の共通部品と目的別 policy、feedback・indexing・oracle review・realization 操作などの起動処理と Structured Output schema を扱います。
+- `oracle/src/oracle` が主要な実装入口で、`acp_builder` は用途別 agent call の prompt・起動パラメータ・schema、`prompt_builder` は共通 prompt と policy、`other` は設定・パス解決・構造化文書ヘルパーを担当します。
 
 ## Read this when
-- oracle の実装責務と、agent call・prompt・設定・パス・構造化文書の共通基盤を横断して確認するとき
-- 用途別 agent call の構築定義や Structured Output 呼び出しの配置を探すとき
+- agent call の起動パラメータ、モデル分類、Reasoning effort、ファイルアクセスモード、作業ディレクトリ、indexing preflight を確認するとき
+- agent call 用 prompt の共通構成、oracle・realization・feedback・routing・conflict resolution・review の policy を確認するとき
+- oracle review、feedback 処理、index entry 生成、realization の apply/refactor、session join など用途別の agent call 定義を確認するとき
+- cmoc 設定、root placeholder を含むパス解決、Git worktree のパスモデル、構造化文書の Markdown 化を確認するとき
+- agent call の Structured Output schema または schema と prompt の対応を調査するとき
 
 ## Do not read this when
-- 実際の CLI 実行制御や realization の実装本体だけを調査するとき
-- 特定の prompt builder、agent call builder、設定モデル、またはスキーマが判明しており、対応する下位対象を直接読めば足りるとき
+- 特定の agent call の具体的な挙動だけを確認する場合は、`oracle/src/oracle/acp_builder` 配下の対応する実装と schema を直接読むとき
+- prompt の個別 policy や構成部品だけを確認する場合は、`oracle/src/oracle/prompt_builder` 配下を直接読むとき
+- 設定・パス解決・構造化文書処理の個別仕様だけを確認する場合は、`oracle/src/oracle/other` 配下を直接読むとき
+- oracle の正本仕様、realization の実装本体、または test の外部挙動を確認する場合は、この実装ディレクトリではなく対応する oracle・realization・test を読むとき
 
 ## hash
-- 5d290583e82d92e8a81210dfa76bfedd41916b014e8d102fb307ddd6b803a3b2
+- 609ef03a109932a15b677a08c097294b3126c3a6b268886b5d44340adb4ef966

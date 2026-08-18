@@ -1,17 +1,17 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle file と realization file、および uncategorised file の役割・下位概念・分類条件を説明する基本知識文書を、call-scoped context の work-root 定義を用いて構築する。oracle/realization の分類や責務の基本を確認する作業の入口となる。
+- oracle と realization の基本概念を説明する prompt builder の構成部品。両者の役割、下位分類、分類条件、および uncategorised file の定義を、call-scoped な work-root を埋め込んだ構造化文書ヘッダーとして生成する。oracle/realization の責務境界やファイル分類に関するプロンプト生成経路を確認するときの入口となる。
 
 ## Read this when
-- oracle file、realization file、uncategorised file の定義や分類条件を確認するとき
-- oracle と realization の責任範囲、配置先、正本仕様と具体化の関係を確認するとき
-- これらの基本知識を含む prompt 文面の生成処理を変更・調査するとき
+- oracle と realization の基本説明を含むプロンプト部分の生成・変更を調べるとき
+- oracle file、realization file、uncategorised file の分類規則や下位概念の説明元を確認するとき
+- path context から work-root を取得して構造化文書へ渡す処理を確認するとき
 
 ## Do not read this when
-- oracle または realization の個別ファイルの内容や実装詳細を確認するだけのとき
-- 分類条件ではなく、別の prompt builder part の文面や生成ロジックを確認するとき
-- 生成済み StructDoc の具体的な出力だけを確認すれば足りるとき
+- oracle または realization の具体的な仕様本文・実装・テストそのものを確認したいとき
+- prompt builder の別の説明部品や、基本知識以外のプロンプト構築処理を直接調べるとき
+- 既に生成済みのプロンプト文面だけを確認すれば足り、生成元の構造化ヘッダーを調べる必要がないとき
 
 ## hash
-- 4cb7e1832fe7c6857375260eee93497a115bbb135264253e945e2ed241d1567a
+- bac939e8e47bd31e60228450037f2f42375d84a52c0c674afe14c8d773a35594

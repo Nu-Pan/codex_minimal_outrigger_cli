@@ -1,31 +1,35 @@
 # `apply`
 
 ## Summary
-- realization apply fork の起動パラメータと完全 prompt を構築する実装。oracle file の commit 範囲・raw diff を追従対象として組み込み、linked worktree、realization write 権限、モデル・推論強度、各種ポリシー、indexing preflight を固定した AgentCallParameter を返す。差分追従処理の起動条件や prompt・実行設定を確認する入口。
+- `cmoc realization apply fork` の差分追従 Agent Call 構築群への入口。fork 配下で、oracle file の変更差分をリポジトリ全体の realization file へ反映するための prompt、起動設定、参照・routing 方針を扱う。具体的な起動パラメータ実装は `fork/launch_exec.py` から確認する。
 
 ## Read this when
-- realization apply fork の差分追従 AgentCallParameter、oracle diff の prompt への組み込み、worktree やアクセスモード、モデル・推論設定、indexing preflight を確認・変更するとき。
+- `cmoc realization apply fork` の差分追従処理における prompt、commit 範囲や oracle diff の渡し方、Agent Call のモデル・推論・ファイルアクセス設定を確認または変更するとき。
+- 差分追従の完了条件、oracle/realization の参照方針、リポジトリ全体を対象とする routing 設定の入口を探すとき。
 
 ## Do not read this when
-- realization file の具体的な実装・テスト・補助ファイルを確認するとき。oracle file の仕様や一般的な AgentCallParameter 定義を直接確認するとき。
+- 具体的な prompt 構築や AgentCallParameter の実装を確認するときは、`fork/launch_exec.py` を直接読む。
+- realization の個別実装・テスト・補助ファイル、または共通の prompt・AgentCall・パス・構造化文書の仕様を確認するときは、それぞれの対象を直接読む。
 
 ## hash
-- 64971e260467e6aaf07b094630c1c049b70bcbfa3c477b614b0dac6e86301801
+- b7b3913e390bd7a3532aa231059fdbe7b201288d8ca9613faf12ee686e4efa28
 
 # `refactor`
 
 ## Summary
-- refactor fork の変更要約と、ファイル単位のレビュー・修正を起動する AgentCallParameter、および各処理の Structured Output 契約を定義する。変更差分の意味論的な分類、レビュー所見と修正結果、対象範囲・権限・検証条件を確認する際の入口となる。
+- refactor fork の変更差分要約と、ファイル単位のレビュー・修正に関する prompt builder および Structured Output schema の入口。変更要約では差分を意味論的カテゴリに分類し、レビュー・修正では oracle/realization の要求に基づく所見、修正、検証、変更 path の対応を扱う。
+- 変更要約とファイル単位レビュー・修正の実行条件は対応する Python 定義で確認し、出力契約の項目・型・変更 path の扱いは対応する JSON schema で確認する。
 
 ## Read this when
-- refactor fork の変更差分を人間向けに分類・要約する agent call の prompt、モデル設定、入力差分、出力契約を確認または変更するとき
-- ファイル単位のレビュー・修正 agent call の対象範囲、oracle／realization の参照規則、書き込み権限、検証条件を確認または変更するとき
-- 変更要約またはレビュー・修正の Structured Output schema を確認・変更するとき
+- refactor fork の変更差分を人間向けに分類・要約する prompt と起動設定を調べるとき
+- ファイル単位レビュー・修正の対象 path、worktree、ファイルアクセス、oracle/realization policy、検証条件を調べるとき
+- 変更要約またはレビュー結果の Structured Output 契約と、変更 path・根拠・対応状態の関係を確認するとき
 
 ## Do not read this when
-- 実際の refactor 差分、レビュー対象ファイル、または realization 実装そのものを調査するとき
-- レビュー所見や変更要約のフィールド定義だけを確認する場合は、対応する JSON schema を直接読む
-- refactor fork 以外の agent call 構築、prompt builder、または realization 実装の責務を調査するとき
+- 具体的な変更要約の prompt 構築処理を調査するときは、変更要約用 Python ファイルを直接読む
+- ファイル単位レビュー・修正の prompt 構築処理を調査するときは、レビュー・修正用 Python ファイルを直接読む
+- Structured Output の項目・型・status の値だけを確認するときは、対応する JSON schema ファイルを直接読む
+- レビュー対象の実装内容、oracle/realization の個別要求、または実際の差分を調査するときは、対象ファイルや diff を直接読む
 
 ## hash
-- 2b5cce0711134ad15ddc2f60585063b4b1b6dc0b7f20ac1f155d713345a784e2
+- 60204a0d0a0ebfd4b16c98d8255daf5f67165b186c06f5f5bfe63016c797d2f7

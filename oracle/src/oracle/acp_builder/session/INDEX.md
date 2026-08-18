@@ -1,15 +1,15 @@
 # `join`
 
 ## Summary
-- `cmoc session join` の Git merge conflict 解消に使う agent call の構築定義。競合パスの実体解決、conflict marker のみを解消するための prompt、アクセス方針、モデル・推論設定、実行コンテキストを確認する入口。
+- `cmoc session join` の Git merge conflict 解消用 AgentCallParameter を構築する実装。conflict 対象パスを実体パスへ解決し、対象ファイルと編集方針を含む prompt、およびリポジトリ書き込み・最高品質モデル・最大推論・事前 indexing 無効の起動設定をまとめる。
 
 ## Read this when
-- `cmoc session join` の merge conflict 解消処理における agent call の prompt または起動パラメータを変更・確認するとき
-- 競合対象パスの prompt への組み込みや、conflict 解消時のモデル・実行設定を調査するとき
+- `cmoc session join` の merge conflict marker 解消処理を変更または調査するとき。
+- conflict 対象パスの解決、解消用 prompt、または AgentCallParameter のモデル・推論・アクセス設定を確認するとき。
 
 ## Do not read this when
-- session join の通常の結合処理や、conflict 解消以外の prompt 構築を調べるとき
-- 競合解消対象のファイル内容や Git 操作の実装を直接確認したいとき
+- 通常の `session join` 処理や、merge conflict 解消以外の prompt 構築を確認するとき。
+- AgentCallParameter の共通定義や prompt の一般的な組み立て規則を確認するときは、共通実装を直接読む。
 
 ## hash
-- 6e351b69d576e58dfc2be09ce1cc0b47209433e7adf82dc37dc71fd5f7387d2c
+- 56f23cc4685a1a253100696155f608756ab7835cf571e02d2255f1b6158f57c3

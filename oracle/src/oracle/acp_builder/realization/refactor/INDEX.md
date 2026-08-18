@@ -1,17 +1,17 @@
 # `fork`
 
 ## Summary
-- refactor fork の変更要約およびファイル単位レビュー・修正に関する構造化出力スキーマと AgentCallParameter 定義を扱うディレクトリ。変更差分の要約形式、レビュー結果の記録形式、各処理を起動する prompt・権限・検証条件の定義への入口となる。
+- refactor fork における変更差分の要約処理と、ファイル単位のレビュー・修正処理に関する schema および prompt builder の入口を案内するディレクトリ。変更要約、レビュー結果の出力契約、AgentCallParameter と実行設定の確認に利用する。
 
 ## Read this when
-- refactor fork の変更差分を要約する出力契約を確認・変更するとき
-- ファイル単位のレビュー・修正結果の出力契約を確認・変更するとき
-- 変更要約またはレビュー・修正 agent call の prompt、実行条件、Structured Output 設定を確認・変更するとき
+- refactor fork の変更差分を人間向けに要約する処理や、その Structured Output schema を確認するとき
+- refactor fork のファイル単位レビュー・修正処理における prompt、対象 path、worktree、実行設定、結果 schema の関係を調査するとき
+- レビュー結果の出力項目や、変更ファイル・対応状態の記録契約を確認するとき
 
 ## Do not read this when
-- 実際の変更差分やレビュー対象ファイルの実装内容を調査するとき
-- レビュー結果のフィールド定義だけを確認する場合は、対応する JSON スキーマを直接読む
-- refactor fork 以外の agent call 構築や realization 実装を調査するとき
+- 変更要約やレビュー・修正の具体的な生成ロジックを調査する場合は、対応する Python ファイルを直接読むとき
+- Structured Output の項目・型だけを確認する場合は、対応する JSON schema ファイルを直接読むとき
+- レビュー対象の実装内容、個別仕様、または変更差分そのものを調査する場合は、対象の realization/oracle file や diff を直接読むとき
 
 ## hash
-- cd5a3a5bc5b574a073b75e0069d3e2b8e62f6a6e5697adaf761fac8ce0159a28
+- a31f7c80e83ad9d46f509a037bfb70baa0a91b93fc0cbdb35353895ccb1d696c

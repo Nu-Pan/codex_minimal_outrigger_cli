@@ -1,190 +1,205 @@
 # `apply_review.py`
 
 ## Summary
-- oracle file と realization file の適合性を判定する agent 向け policy を構築する。oracle を正本仕様として扱い、明示要求と実装挙動の不整合、または realization 単独で説明できる実行不能・明白な致命的バグを修正対象とする判断の入口となる。
+- oracle file に対する realization file の適合性を判断する規定を定義する。oracle を正本仕様として扱い、明示要求と realization の挙動が不整合な場合や、realization 単独で実行不能・明白な致命的バグがある場合の修正対象を判断するための入口となる。
 
 ## Read this when
-- oracle file に対する realization file の追従要否、所見、修正対象を判断するとき
-- oracle と realization の記述・挙動の不整合を、具体的な根拠に基づいて評価するとき
+- oracle file と realization file の具体的な記述・挙動を比較して、追従要否、所見、修正対象を判断するとき
+- realization の修正後に、関連する oracle file の明示要求を満たしているか確認するとき
+- oracle を根拠にした適合性判断の扱いと、所見・修正対象の判断基準を確認するとき
 
 ## Do not read this when
-- oracle file や realization file を扱わない prompt builder の実装を確認するとき
-- 仕様内容そのものを確認するときは、対象となる oracle file または realization file を直接読むとき
+- oracle file の内容を変更する必要があるとき
+- oracle file や realization file の適合性、実行不能性、明白な致命的バグを判断しないとき
+- 一般的なコード品質、好み、仕様の隙間、複数の妥当解、推測だけに基づく改善を検討するとき
 
 ## hash
-- b680af72b342011132bd2e281e87cf56a364fb956903067574c292924e69a704
+- f39acb3c93fcef3a46c7c74c8fa0fb8f73fa8437bf6f8249b0fa842d058d9e97
+
+# `basic.py`
+
+## Summary
+- 現在のファイルは空で、定義・処理・設定を担っていません。内容を確認する必要がある場合の最小限の入口です。
+
+## Read this when
+- 対象ファイルが空であることや、内容が存在しないことを確認するとき
+
+## Do not read this when
+- prompt_builder のポリシー挙動を調査・変更するとき
+- 実装や仕様を確認するときは、内容を持つ該当ファイルを直接読む
+
+## hash
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` で conflict marker を解消する際の、oracle と realization の意味を保つための指示文を構築する。conflict の両側と関連 oracle file の扱い、および意図を両立できない場合の未解消事項としての報告方針を確認する入口である。
+- `cmoc session join` の conflict marker 解消時に使う instruction 文面を構築する policy 定義。oracle file を人間所有の正本仕様として扱い、conflict 両側と関連 oracle file を確認して意図・挙動を両立させるための入口。両立不能時の未解消報告や、realization 起因の oracle 意味変更禁止など、conflict 解消時の判断境界を扱う。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消規定を確認・変更するとき。
-- oracle file と realization file の conflict を、正本仕様の意味を保ちながら解消するとき。
-- conflict の両側の意図を両立できず、人間による選択が必要な状態の扱いを確認するとき。
+- `cmoc session join` の conflict marker 解消に関する prompt policy を確認・変更するとき
+- oracle file と realization file の conflict 解消規則、または conflict 解消時の変更範囲を確認するとき
 
 ## Do not read this when
-- conflict marker の解消を扱わない prompt policy を確認するとき。
-- 通常の実装改善、仕様変更、整形、または別 file の変更方針を確認するとき。
+- conflict marker の解消を扱わない prompt policy を確認するとき
+- `SDHeader` や `PlaceholderMap` の共通実装・型定義を確認するとき
+- oracle file や realization file 自体の仕様・実装内容を確認するとき
 
 ## hash
-- 3544ddab9ff843f261bec0d73e1b47720cba5c34f244113cea1767190ee55401
+- e649d68daa4eb44e5665399d742a8eb211324cfa7f8644a458c52d62a46fdd7d
 
 # `editor_handoff.py`
 
 ## Summary
-- agent call から editor work file へ handoff する際の instruction 文面を構築する policy。選択済みの file access mode と Codex CLI sandbox の維持、および正式な成果物の完遂を定める。editor handoff の許容範囲を確認するための入口。
+- agent call から editor work file へ handoff する際に、file access mode と Codex CLI sandbox を維持しつつ、正式な成果物も満たすための instruction 文面を構築する。handoff file への書き込みが必要な場合に限定的な sandbox escalation を許容するポリシーの入口。
 
 ## Read this when
-- agent call から editor work file への handoff 規定を確認・変更するとき
-- handoff 時の file access mode、Codex CLI sandbox、正式な成果物の扱いを確認するとき
-- handoff file への書き込みに必要な sandbox escalation の許容範囲を確認するとき
+- agent call から editor work file への handoff ルールを定義・変更するとき
+- handoff 時のアクセス権限、sandbox 維持、成果物要件、限定的な escalation の扱いを確認するとき
 
 ## Do not read this when
-- editor work file 自体の内容や編集処理だけを確認するとき
-- agent call と editor handoff の規定に関係しない prompt builder の policy を確認するとき
-- handoff を伴わない通常の agent call の挙動を確認するとき
+- editor work file 以外への handoff や、一般的な agent call の prompt 構築規則を確認するとき
+- handoff policy の利用条件が確定しており、対象の具体的な instruction 文面だけを確認すればよいとき
 
 ## hash
-- 61ab3b9e671fc70075c103b67be68128de111b1a43997e876830afd31e4d93ec
+- c759bb8a9338d833bdc82a965390d569292ba132a0966183732ce657602112ab
 
 # `feedback_reporting.py`
 
 ## Summary
-- 対象は、全 agent call に共通する human feedback reporting 規定を構築する実装です。セッション内で解決できなかった問題を `cmoc_feedback.submit_observation` で報告する方針と、報告不要な問題の範囲を扱います。
-- 共通 feedback 報告ポリシーの構築・変更を行う際の入口です。個別の agent call の作業内容や feedback 保存処理を調べる場合は、より直接的な対象を参照してください。
+- 全 agent call に共通する、人間向け feedback 報告ポリシーを構築する関数を定義する。
+- `AgentCallPathContext` を受け取り、追加の placeholder なしで、未解決問題の報告方法と報告不要な情報を記載した `SDHeader` を返す。
 
 ## Read this when
-- 全 agent call に共通する human feedback 報告規定の構築や変更を行うとき
-- セッション内で解決できなかった問題の MCP 報告方針を確認するとき
+- agent call 共通の feedback 報告規定を生成・変更するとき
+- prompt builder の policy 構築処理や `SDHeader` の内容を確認するとき
 
 ## Do not read this when
-- feedback 報告の対象となる個別問題を解決するとき
-- MCP tool `cmoc_feedback.submit_observation` の実装や保存処理を直接調べるとき
-- 共通ポリシーではなく、個別のプロンプト生成規定を確認するとき
+- feedback 報告ポリシーの利用箇所や、生成されたプロンプト全体を確認したいとき
+- prompt builder の他の policy や placeholder 定義だけを調べるとき
 
 ## hash
-- d8ac149202fa51d69bb38b3904a7d0de20575263910f44e0decea344a8ef8aef
+- 5b10c1121b37d308293b3c8bf95cec2858e5601aa01372d585b65ce19f26460a
 
 # `file_access.py`
 
 ## Summary
-- cmoc が agent 向けのファイル読み書き制限文面を生成する実装。FileAccessMode とパスコンテキストに応じて、リポジトリ外・保護対象・oracle/realization file などの禁止事項を組み立て、プレースホルダー定義とともに構造化文書として返す。
-- ファイルアクセスモードの制約、repo-root と work-root の関係、または agent prompt に埋め込む読み書きポリシーの生成・変更を扱う作業では、この実装を入口として確認する。
+- 各 FileAccessMode に応じた agent 向けファイル読み書き制限文面を構築する関数を定義する。リポジトリ境界、共通禁止領域、oracle/realization file のアクセス制限を組み合わせ、PlaceholderMap と SDHeader として返す。
+- ファイルアクセス方針のプロンプト生成ロジックを確認・変更するときの入口であり、実際の oracle/realization の内容や CLI 実装そのものを読むための対象ではない。NO_POLICY では空の方針を返し、不正な mode はエラーとする。
 
 ## Read this when
-- FileAccessMode ごとの読み書き禁止範囲を確認または変更するとき
-- agent 向け file R/W policy の文面生成や、repo-root/work-root の扱いを調査するとき
-- file access policy の戻り値に含まれるプレースホルダー定義や構造化文書の組み立てを確認するとき
+- FileAccessMode ごとの読み書き禁止規則を確認または変更するとき
+- agent 向けアクセス制限文面のプレースホルダー展開や SDHeader 生成を調査するとき
+- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE、NO_POLICY の挙動差を確認するとき
 
 ## Do not read this when
-- 単に個別の oracle file や realization file の内容・配置を確認するだけで、agent 向けアクセス制限の生成規則を扱わないとき
-- 一般的な prompt 構築や FileAccessMode の定義自体を確認する場合は、まずそれぞれの直接の定義元を読むとき
+- oracle file や realization file の具体的な仕様・実装内容を確認したいとき
+- Codex CLI の sandbox やパス単位のアクセス設定そのものを確認したいとき
+- prompt builder の別のプロンプト生成処理だけを調査する場合
 
 ## hash
-- 120354ad99996e746db0409ad65f52717156649c2af950b60f1693ced47ae6c6
+- b7597e2c137cbc131247d061f90f20eecbcffb99b77cacd32cfc86ef6010f917
 
 # `index_entry.py`
 
 ## Summary
-- INDEX.md 用エントリーを生成する agent 向けのルーティング規定を定義する。
-- 対象を読むべき作業・質問・変更の条件、対象の責務、同階層の他対象ではなく対象へ進む理由を示す。
-- 対象本文に根拠のある責務・入口・適用条件だけを扱い、対象外の責務や過度な詳細説明を INDEX.md に持ち込まないための境界を定める。
+- 対象ファイルは、INDEX.md 用エントリー生成エージェントに適用するルーティング記述の必須事項と禁止事項を構築する定義を担う。対象を読むべき条件は、INDEX.md エントリーの生成・検討時に、ルーティング情報の責務、入口、適用範囲、境界を確認する必要がある場合である。
+- 対象は、同階層の他ファイルではなく、INDEX.md エントリーの内容上の制約や、対象を読むべき・読まなくてよい条件を判断するための入口となる。
 
 ## Read this when
-- INDEX.md 用エントリーの生成規定を作成・変更するとき
-- INDEX.md エントリーに記載する責務、入口、適用条件、対象範囲の境界を判断するとき
+- INDEX.md 用エントリーの生成やレビューで、ルーティング情報に何を書くべきかを確認するとき
+- 対象の責務、読む条件、対象外の境界、禁止される記述を確認するとき
 
 ## Do not read this when
-- INDEX.md エントリーではなく、通常のプロンプト構築処理を実装・変更するとき
-- Structured Output schema の出力項目や形式だけを確認するとき
-- 対象本文に基づくルーティング情報が不要な作業を行うとき
+- INDEX.md 用エントリーではなく、通常のプロンプト構築や一般的な構造化文書の実装を確認するとき
+- エントリーの具体的な出力内容や対象ファイルの本文説明を直接確認すべきとき
 
 ## hash
-- cc9b19f5748e52763c317399e54b2e1aa21733a102eb0f1ef102ffe407f1538e
+- fe18d68673ec26573b9d4f319d06722beb70709ad4143a61349f66c56b537a58
 
 # `oracle.py`
 
 ## Summary
-- oracle file を作成・変更・レビューする agent call に適用する正本仕様の構築定義。oracle authority policy と、oracle file の読み取り専用調査 policy を提供し、判断根拠、優先関係、仕様上の境界、禁止事項、許容される補完範囲を定める。oracle 関連の動的 instruction 文面や、その調査規約を確認・変更する際の入口となる。
+- `build_oracle_policy` と `build_oracle_investigation_policy` を通じて、oracle file の作成・変更・レビューおよび読み取り専用調査に適用する instruction 文面を構築するモジュール。正本仕様としての oracle file の扱い、判断根拠、優先関係、goal/non-goal、整合性・検索性、未定義事項の扱いを定め、oracle authority policy と investigation policy の入口になる。
 
 ## Read this when
-- oracle file または realization file を扱う agent call の instruction policy を確認・変更するとき。
-- oracle authority policy における正本仕様の扱い、判断根拠、goal/non-goal、既存仕様維持、仕様間の優先関係を確認するとき。
-- oracle file の読み取り専用調査で、定義済み事項と未定義事項の区別や、実装から仕様を逆算しない制約を確認するとき。
+- oracle file の作成・変更・レビューに必要な共通規定や、oracle file を読み取り専用で調査する際の必須・禁止事項を確認するとき
+- prompt builder の policy 定義から oracle authority または investigation 向けの instruction を構築・変更するとき
 
 ## Do not read this when
-- oracle 関連 policy 自体ではなく、個別 oracle file の内容や realization 実装の配置・挙動だけを調べるときは、対象の oracle file または設計規約を直接読む。
-- 一般的な agent call の構築定義や oracle と無関係な policy を扱うとき。
+- realization の配置や CLI 実装の責務境界を確認するときは design_rule を読む
+- realization test の要件や実行方法を確認するときは test_rule または test_execution を直接読む
+- oracle file の具体的な仕様内容を確認するだけの場合は、対象の個別 oracle file を直接読む
 
 ## hash
-- 90b706867f8a69321c8bfcf1c909e0195dce765c30e5759cd28b905fa1724084
+- b9fa938745555aa7406fe05742e1581dbb548a89a558e8cc1516be7456fe592a
 
 # `oracle_review.py`
 
 ## Summary
-- oracle review の全段階で共有する所見判定規定を構築する。所見・修正対象に必要な根拠、fatal と minor の成立条件、oracle file 単独で成立する所見の判定条件を定める。
-- oracle review の所見を列挙・統合・検証・採否判定するときに参照する共通ポリシーとして機能する。
+- oracle review の全段階で共有する、所見の成立条件・重大度判定・採否判断の基準を構築する定義。finding basis policy に基づく根拠提示、明確な仕様矛盾や解消不能な問題の fatal 判定、表記上の問題の minor 判定、および oracle file のみで成立する所見の一貫した扱いを定める。oracle review の所見列挙・統合・擁護／反証・採否判定に関する方針を確認するときの入口となる。
 
 ## Read this when
-- oracle review の所見または修正対象が成立する条件を確認するとき
-- fatal・minor の判定基準を確認するとき
-- oracle file だけを根拠にした所見の扱いを確認するとき
+- oracle review の所見や修正対象が成立する条件、fatal／minor の判定基準を確認するとき
+- oracle file だけを根拠とする所見の列挙・統合・検証・採否判断の一貫性を確認するとき
+- 仕様の明確な矛盾や、実装者の裁量で解消できない問題を重大所見として扱うとき
 
 ## Do not read this when
-- 個別の oracle file や realization file の内容自体を確認するとき
-- oracle review policy をプロンプトへ組み込む実装詳細だけを確認するとき
+- 具体的な oracle file や realization file の内容自体を確認する必要があるとき
+- 所見判定ではなく、プロンプト構築の一般的なプレースホルダー定義や SDHeader の実装を調べるとき
 
 ## hash
-- 15b4226ea6b4947e0d7448afac0ee7e81aea17e42d5a03ba4a61b396df8f408d
+- 0f8335360a8e2270d28c679d1b4689ff8990a320f4257e111522fd6a1ada9e14
 
 # `realization.py`
 
 ## Summary
-- realization file の作成・変更・リファクタ・レビュー時に適用する instruction 文面を構築する。oracle を人間所有の正本仕様として扱い、関連 oracle の確認、正本の一元化、必要最小限の実装・test・設定・ancillary、責務境界の整理、関連手順と検証環境の確認を要求する。禁止事項として、realization 都合による oracle 意味の変更、正本定義の複製、旧実装や不要物の温存、根拠のない拡張、必要な意味や検証の損失、手順配置先の限定を定める。
+- realization file の作成・変更・リファクタ・レビュー時に agent call へ適用する規定文面を構築する。oracle を正本として扱い、関連仕様との整合、責務に必要な実装・test・設定・補助ファイルの限定、関連手順の特定と検証を要求する。realization 側の都合による oracle の意味変更や、正本情報・旧仕様・不要な抽象化や識別子の重複を防ぐための入口となる。
 
 ## Read this when
-- realization file を作成・変更・リファクタ・レビューするとき
-- oracle と realization の責務分担、正本の一元化、不要な実装や依存の追加禁止を確認するとき
-- realization の変更に必要な repository 固有手順や検証環境を判断するとき
+- realization file の作成、変更、リファクタ、レビューに関する作業規定を確認するとき
+- oracle と realization の責務分担、正本の一元化、実装・test・設定の最小範囲を確認するとき
+- realization の変更に伴う関連手順や検証要件を確認するとき
 
 ## Do not read this when
-- realization file の具体的な実装内容や prompt builder の API を確認したいときは、対象実装や関連する oracle file を直接読む
-- realization file 以外の agent call 向け policy を確認・変更するときは、対応する policy 定義へ進む
+- oracle file の意味や仕様そのものを確認することが目的のとき
+- realization file を扱わない一般的な prompt builder の実装や質問のとき
+- 具体的な realization file の内容や挙動を直接確認すべきとき
 
 ## hash
-- a66c22292aac02513a5eaf46359a6ea676df855fc533b98bdd9abe9e00178878
+- d27a59209587c3155665d3886050fbfe707597ae31ca42f7c9887577230da120
 
 # `realization_oracle_reference.py`
 
 ## Summary
-- realization code から oracle file path を参照するための prompt policy を構築する関数。AgentCallPathContext の root placeholder 定義から work-root を抽出し、PlaceholderMap と、対応する oracle file path を realization code のコメントへ記載する規定を含む StructDoc を返す。realization code 作成・変更時の参照ポリシーを prompt に組み込む入口。
+- realization code から対応する oracle file のパスを参照する規定を構築する関数を定義する。
+- AgentCallPathContext から root placeholder 定義を取得し、work-root を起点とする PlaceholderMap と、realization code のコメントに oracle file path を記載する SDHeader を返す。
 
 ## Read this when
-- realization code の作成・変更時に oracle file path 参照規定を prompt へ追加する処理を確認するとき
-- prompt builder が work-root の placeholder と oracle 参照ポリシー文書をどのように構築するかを確認するとき
+- realization code に対応する oracle file path の参照規定を確認・変更するとき
+- prompt builder の policy 用 SDHeader や placeholder map の生成経路を調査するとき
 
 ## Do not read this when
-- 個別の realization 実装そのものの配置や責務を確認するとき
-- oracle file の内容や realization code のコメント記載状況そのものを確認するとき
-- realization oracle reference policy を prompt に組み込む呼び出し側の全体フローだけを確認するとき
+- oracle file の具体的な内容や一般的な realization 配置規則だけを確認したいとき
+- 対象関数を直接利用する realization code の実装責務を確認したいときは、対応する realization file を先に読むべき場合
 
 ## hash
-- 3038c85ce59585b85389e52ae27d76a07d3d3c58cae10b992dbcef50d209310e
+- 1bcfef96f7254e58af1fdef46941debf8f6ed2964d5979b4453bbfbe5a3c113f
 
 # `routing.py`
 
 ## Summary
-- 作業対象に応じた INDEX.md の起点と読み方を示す routing policy の文面を構築する。call-scoped context から work-root を取得し、対象に近い階層を優先しつつ領域不明時はリポジトリルートを入口とする。INDEX.md は対象特定の補助として使い、本文を最終的な根拠とする。
+- INDEX.md で作業対象に対応する本文やディレクトリを特定するための routing policy 文面を構築する。
+- AgentCallPathContext から call-scoped な root placeholder 定義を取得し、`{{work-root}}` を含む規定文面へ渡す。
+- `INDEX.md` の位置づけ、起点の選択、本文優先、本文を根拠とする原則を定義する。
 
 ## Read this when
-- INDEX.md を起点に、作業対象のファイルやディレクトリを特定する必要があるとき
-- INDEX.md と本文の記述が異なる場合の優先順位や、対象領域不明時の探索起点を確認するとき
+- INDEX.md を使った対象ファイル・ディレクトリの特定規則を確認するとき
+- routing policy の文面や、そこへ渡す `{{work-root}}` の解決元を変更・調査するとき
 
 ## Do not read this when
-- 特定済みの対象本文だけを直接確認すれば足りるとき
-- routing policy ではなく、個別の prompt builder 実装やデータ型の仕様を確認するとき
+- INDEX.md の個別階層における具体的なエントリー内容を確認するとき
+- root placeholder の解決ロジック自体を変更・調査するときは、`AgentCallPathContext` やパス解決処理を直接読む場合
 
 ## hash
-- b22fd2e2601d1df96a5b9a0cdc20723a1bb929d3a8b2a21bdd439c79dd004263
+- 55cd76c0dc71c231c2c9f7fb217e2bc7680c3522d0ccb9871c6b464e71e24f47
