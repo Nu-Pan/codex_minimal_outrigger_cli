@@ -596,7 +596,7 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
         _build_canonical_verify_parameter
     )
     renderer_path = feedback_report_module._builder_source_path(
-        feedback_report_module.render_as_markdown
+        feedback_report_module.render_sd_node_as_markdown
     )
 
     assert (

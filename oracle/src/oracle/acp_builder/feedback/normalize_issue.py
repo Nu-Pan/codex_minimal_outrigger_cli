@@ -74,7 +74,7 @@ def build_feedback_normalize_issue_parameter(
         model_class=ModelClass.MAINSTREAM,
         reasoning_effort=ReasoningEffort.HIGH,
         file_access_mode=FileAccessMode.READONLY,
-        prompt=render_sd_node_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,

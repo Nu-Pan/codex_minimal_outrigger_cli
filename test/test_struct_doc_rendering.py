@@ -8,7 +8,7 @@
 from collections.abc import Callable
 
 import pytest
-from oracle.other.struct_doc import StructBlock as OracleStructBlock
+from oracle.other.struct_doc import SDTagBlock as OracleStructBlock
 
 from basic.struct_doc import (
     StructBlock,

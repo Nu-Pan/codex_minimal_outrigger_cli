@@ -38,7 +38,7 @@ def build_quota_availability_probe_parameter(
         model_class=ModelClass.MINIMUM,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,
-        prompt=render_sd_node_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,

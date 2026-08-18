@@ -7,11 +7,8 @@
 # std
 import re
 import textwrap
-from xml.sax.saxutils import quoteattr
 from dataclasses import dataclass
-
-# SD... 系クラスをまとめた型エイリアス
-type SDNode = "SDHeader|SDTagBlock|SDCodeBlock|SDPolicy|str"
+from xml.sax.saxutils import quoteattr
 
 
 class SDHeader:
@@ -23,7 +20,7 @@ class SDHeader:
     def __init__(
         self,
         title: str,
-        *children: SDNode,
+        *children: "SDNode",
     ):
         """
         コンストラクタ
@@ -31,7 +28,7 @@ class SDHeader:
         # タイトル
         self._title = title
         # 子要素
-        self._children: list[SDNode]
+        self._children: "list[SDNode]"
         if len(children) == 0:
             raise ValueError(f"children must not be empty (title={title})")
         elif len(children) == 1:
@@ -62,7 +59,7 @@ class SDHeader:
     @property
     def children(
         self,
-    ) -> list[SDNode]:
+    ) -> "list[SDNode]":
         """
         子要素を取得する
         """
@@ -87,14 +84,14 @@ class SDTagBlock:
     def __init__(
         self,
         block_id: str,
-        *children: SDNode,
+        *children: "SDNode",
     ):
         # ブロック ID
         if not isinstance(block_id, str):
             raise TypeError(f"block_id must be str (type={type(block_id)})")
         self._block_id = block_id
         # 子要素
-        self._children: list[SDNode]
+        self._children: "list[SDNode]"
         if len(children) == 0:
             raise ValueError(f"children must not be empty (block_id={block_id})")
         elif len(children) == 1:
@@ -122,7 +119,7 @@ class SDTagBlock:
     @property
     def childlen(
         self,
-    ) -> list[SDNode]:
+    ) -> "list[SDNode]":
         return self._children
 
     @property
@@ -175,6 +172,10 @@ class SDPolicy:
     allow: tuple[str, ...]
 
 
+# SD... 系クラスをまとめた型エイリアス
+type SDNode = SDHeader | SDTagBlock | SDCodeBlock | SDPolicy | str
+
+
 def render_sd_node_as_markdown(
     *sd_nodes: SDNode,
 ) -> str:
@@ -193,44 +194,24 @@ def _render_sd_node_as_markdown(
     内部実装の入口・再帰呼び出しの入口として使う
     """
     # 先頭から順番にレンダリングする
-    indivisual: list[str] = list()
+    individual: list[str] = list()
     for sd_node in sd_nodes:
         if isinstance(sd_node, SDHeader):
-            indivisual += [
-                "",
-                _render_sd_header_as_markdown(sd_node, depth),
-                "",
-            ]
+            individual.append(_render_sd_header_as_markdown(sd_node, depth))
         elif isinstance(sd_node, SDTagBlock):
-            indivisual += [
-                "",
-                _render_sd_tag_block_as_markdown(sd_node, depth),
-                "",
-            ]
+            individual.append(_render_sd_tag_block_as_markdown(sd_node, depth))
         elif isinstance(sd_node, SDCodeBlock):
-            indivisual += [
-                "",
-                _render_sd_code_block_as_markdown(sd_node),
-                "",
-            ]
+            individual.append(_render_sd_code_block_as_markdown(sd_node))
         elif isinstance(sd_node, SDPolicy):
-            indivisual += [
-                "",
-                _render_sd_policy_as_markdown(sd_node),
-                "",
-            ]
+            individual.append(_render_sd_policy_as_markdown(sd_node))
         elif isinstance(sd_node, str):
-            indivisual += [
-                "",
-                _render_str_as_markdown(sd_node),
-                "",
-            ]
+            individual.append(_render_str_as_markdown(sd_node))
         else:
             raise TypeError(
                 f"Invalid sd_node type` (expect={SDNode}, actual={type(sd_node)})"
             )
     # 正常終了
-    return "\n".join(indivisual)
+    return "\n".join(individual)
 
 
 def _render_sd_header_as_markdown(

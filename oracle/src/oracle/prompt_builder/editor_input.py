@@ -1,6 +1,6 @@
 """ユーザー入力用 editor の初期表示文面の構築定義。"""
 
-from oracle.other.struct_doc import SDTagBlock, SDHeader, render_sd_node_as_markdown
+from oracle.other.struct_doc import SDHeader, SDTagBlock, render_sd_node_as_markdown
 
 
 def build_prompt_editor_input_initial_text(
@@ -39,4 +39,4 @@ def build_prompt_editor_input_initial_text(
         ),
         SDTagBlock("prompt template", complete_prompt_skeleton),
     ]
-    return "<!--\n" + render_sd_node_as_markdown(initial_text) + "\n-->\n"
+    return "<!--\n" + render_sd_node_as_markdown(*initial_text) + "\n-->\n"

@@ -22,7 +22,7 @@ from typing import Any
 
 from jsonschema import validators
 from jsonschema.exceptions import SchemaError
-from oracle.other.struct_doc import render_as_markdown
+from oracle.other.struct_doc import render_sd_node_as_markdown
 
 from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
@@ -615,7 +615,7 @@ def _processing_versions() -> _JsonObject:
     normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
     verify_builder = _builder_source_path(build_feedback_verify_issue_parameter)
     # 動的 code fence を構築する canonical renderer も checkpoint version に含める。
-    prompt_renderer = _builder_source_path(render_as_markdown)
+    prompt_renderer = _builder_source_path(render_sd_node_as_markdown)
     normalize_schema = normalize_builder.with_suffix(".json")
     verify_schema = verify_builder.with_suffix(".json")
     module_path = Path(__file__)

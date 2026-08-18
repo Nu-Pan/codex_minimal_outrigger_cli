@@ -87,7 +87,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
-        prompt=render_sd_node_as_markdown(prompt),
+        prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
