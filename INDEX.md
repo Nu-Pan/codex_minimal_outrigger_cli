@@ -91,27 +91,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書を領域別に参照する入口。アプリケーション仕様、session fork・run の隔離、branch・commit・worktree、採用しなかった方式、Python 開発・CLI 配置・テスト規則を下位文書へ案内する。
-- oracle の実装定義を構成する領域。AI エージェント呼び出し、設定・パス・構造化文書モデル、Markdown レンダリング、完全 prompt と各種 policy の構築処理を扱う。用途別起動は acp_builder、共通モデル等は other、prompt・policy 組み立ては prompt_builder が入口となる。
+- `oracle` は cmoc の正本仕様・設計・開発ルールを機能別に収める参照先で、アプリケーション仕様、ブランチ運用、設計判断、Python 開発環境、実装・テスト規約などの根拠を下位文書へ案内する。
 
 ## Read this when
-- cmoc の挙動仕様、共通契約、サブコマンド仕様の入口を選ぶとき
-- session fork、run の隔離、branch・commit・worktree の関係を調査・変更するとき
-- 不採用となった方式や仕様案と、その理由を確認するとき
-- Python 実装、CLI 配置、開発環境、テスト要件・実行手順を確認するとき
-- AI エージェント呼び出しのパラメータや用途別起動処理を確認するとき
-- cmoc の設定モデル、root path 解決、構造化文書の Markdown レンダリングを確認するとき
-- 完全 prompt の生成や placeholder、oracle・realization・feedback・routing などの policy 構築を確認するとき
+- cmoc の正本仕様、設計方針、開発ルールの入口を探すとき
+- アプリケーションの挙動、session/run と branch の関係、採用しなかった設計案を確認するとき
+- Python の実装・環境・テスト・運用上の規約を確認するとき
+- 個別の仕様書や開発ルール文書へ進む先を判断するとき
 
 ## Do not read this when
-- 個別仕様や専用ルールが既に特定でき、下位文書を直接読む方が適切なとき
-- 具体的な実装コード・テストコードの詳細だけを調査するとき
-- 実際の CLI サブコマンド解析、TUI 実行、Codex CLI 呼び出しなど、oracle の定義を利用する側だけを確認したいとき
-- oracle や realization の正本仕様、個別機能の保存・適用処理だけを確認するとき
-- INDEX.md の自動生成処理そのものを調査するとき
+- 特定機能の詳細仕様や具体的な実装・テスト手順だけを確認する場合
+- 実装コードや生成された report など、oracle の正本文書以外を直接調査する場合
 
 ## hash
-- d018df77a5a1eb902b2949f56dd5028e77f9bdf7f08ba8dee9592f22b04c4e46
+- 78027a6db965b44ff95420aa9a0e69a94d2c8a68b2fbc9bf3352d8c794e5254a
 
 # `pyproject.toml`
 

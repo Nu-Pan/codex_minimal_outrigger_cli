@@ -120,21 +120,21 @@
 ## hash
 - 5800098e4d5d434167abff89929c70f2751bb450aa20ad8fe6ff801488d0fa65
 
-# `oracle_review.py`
+# `oracle_findings.py`
 
 ## Summary
-- oracle review の全段階で共有する所見判定規定を構築する関数を定義する。正本仕様の明確な矛盾や実装方針で解消不能な問題を fatal、意味を変えない明確な表記上の問題を minor とする判定条件、および所見の根拠・禁止事項を SDPolicy として提供する。
+- oracle review の全段階で共有する所見判定ポリシーを構築する関数を定義する。正本仕様間の明確な矛盾や実装者裁量で解決できない問題を fatal とし、誤字・脱字・用語不統一など意味を変えない表記上の問題を minor とする判定基準を、oracle file と realization file を根拠に適用するための入口である。
 
 ## Read this when
-- oracle file の所見判定条件や fatal/minor の成立基準を確認するとき
-- oracle review 用のプロンプトポリシー構築や、その共有規定の入口を確認するとき
+- oracle file または realization file のレビューで、所見を fatal／minor に分類する基準を確認するとき
+- oracle review の各段階に共有される所見判定規定の構築内容や禁止事項を変更・調査するとき
 
 ## Do not read this when
-- 具体的な oracle review の実行手順や各段階の処理を確認したいとき
-- 一般的なプロンプト構築や PlaceholderMap・SDHeader の仕様を直接確認したいとき
+- 個別の oracle file や realization file の具体的な仕様・挙動を確認することが目的のとき
+- 所見判定ポリシーを使わず、別の prompt builder や構造化文書の定義を直接確認すれば足りるとき
 
 ## hash
-- 73f8680c494456640533f6d8716f562904ebae4421c28c8c29e4fa6b2f64ef91
+- f61fa13989fef2784b43119f8af7fd3af7783accec9f16376d640dde5c7ecfb1
 
 # `realization.py`
 

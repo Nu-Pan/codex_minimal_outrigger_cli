@@ -1,19 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- AIコーディングエージェント呼び出し用の論理モデル、推論強度、ファイルアクセス、プロンプト、Structured Output schema、作業ディレクトリなどの AgentCallParameter 定義を扱うディレクトリ。feedback、indexing、oracle、realization、session、tui など用途別の agent call 構築定義への入口を提供する。
+- AIエージェント呼び出し用の AgentCallParameter 定義と、用途別の起動設定・プロンプト・Structured Output 契約をまとめるディレクトリ。共通パラメータ、feedback issue 判定、INDEX.md エントリー生成、oracle の edit/investigation/review、quota probe、realization、session conflict 解消、TUI 起動の各入口を扱う。
 
 ## Read this when
-- agent call の共通パラメータ契約やモデル・推論・ファイルアクセス設定を確認するとき
-- feedback issue 判定、INDEX.md エントリー生成、oracle 操作、realization 反映・refactor、session conflict 解消、TUI、quota probe の起動設定や出力契約を調査・変更するとき
+- AIエージェント呼び出しのモデル、推論強度、ファイルアクセス、cwd、prompt、preflight、Structured Output 設定を用途別に確認・変更するとき
+- oracle、realization、indexing、feedback、session、tui など特定の agent call 経路の起動条件や責務の入口を探すとき
+- 用途別の AgentCallParameter や出力契約のどの下位対象を読むべきか判断するとき
 
 ## Do not read this when
-- 実際のモデル名やバックエンド固有の解決処理を確認するとき
-- oracle や realization の正本仕様・具体的な実装やテストを確認するとき
-- 共通 prompt 生成、CLI のサブコマンド解析、TUI の画面処理など、このディレクトリの用途別 agent call 定義に直接属さない処理を確認するとき
+- 具体的な realization 実装・テスト、oracle file の正本仕様、既存 INDEX.md の内容、TUI の画面表示など、起動パラメータ以外の実体を確認するとき
+- 共通の prompt 構築、パス解決、AgentCallParameter 型、構造化文書レンダリングの実装を直接確認したいとき
+- 特定の下位処理の詳細な prompt、実装、出力 schema が既に分かっており、その対象を直接読む方が適切なとき
 
 ## hash
-- e83d8d3998bbc8c030f56d4faa50269583ee65f4dff52ea22c6dad15f891a9a7
+- bb6bc93774a13f548f61085450eaf0c36013f2fa89d2a717d745ee22efb7fdb8
 
 # `feedback`
 
@@ -53,20 +54,20 @@
 # `prompt_builder`
 
 ## Summary
-- agent 向けプロンプトを構築する実装群の入口。完全プロンプトの全体構成、エディタ入力用の初期文面、placeholder の共通表現、oracle・realization の説明部品、各種 prompt policy を扱う。個別の構築規則や policy 内容を確認するときは、該当する下位モジュールへ進む。
+- oracle と realization の基本概念・分類規則を説明する prompt-builder 部品、各種 prompt policy の構築定義、完全プロンプト生成、エディタ入力初期文面、プレースホルダ型定義を扱うディレクトリ。個別実装の責務を確認するための入口として、parts・policy と各 Python モジュールを参照する。
 
 ## Read this when
-- agent call 用プロンプトの構築順序や全体構成を調べるとき
-- エディタ入力の初期文面やテンプレート埋め込みを確認するとき
-- placeholder の値表現や統合規則を確認するとき
-- oracle・realization の説明文や分類規則を確認するとき
-- agent call に適用する各種 policy の内容・生成方法を確認するとき
+- oracle／realization の責務境界、分類条件、配置パス、work-root の扱いを確認するとき
+- agent prompt に組み込む policy の責務や生成内容、関連する横断的な規定の入口を探すとき
+- 完全プロンプトの構成順序、policy の統合条件、placeholder 定義の重複・競合処理を確認するとき
+- エディタ経由のユーザー入力ファイルの初期文面やテンプレート埋め込みを確認するとき
+- placeholder 名と文字列・Path の置換先を共通表現で扱う型を確認するとき
 
 ## Do not read this when
-- 個別の oracle 文書・実装・テストの具体的内容を確認したいとき
-- prompt builder を利用する側の呼び出し規則や引数決定方法を調べるとき
-- 構造化ドキュメント要素のデータ構造や Markdown レンダリング仕様だけを確認したいとき
-- プロンプト本文の生成や placeholder を使わない別処理を調べるとき
+- 個別の oracle／realization 文書・実装・テストの内容そのものを確認したいとき
+- 具体的な policy 本文だけ、または prompt 本文の生成手順・置換ロジックだけを確認したいときは、担当する下位モジュールを直接読む
+- 構造化ドキュメント要素の定義や Markdown レンダリング仕様だけを確認したいときは、担当する struct_doc 実装を直接読む
+- placeholder を使わない処理や、別の設定値の表現だけを確認したいとき
 
 ## hash
-- 93d9c2f8799d33b0d9690fcd6c5934e8e4fcdefe4b27c909d74d22b749e67c3f
+- ed572460c99cbdb992642de2a2f34027071e3418c44104928df9934146f660fb

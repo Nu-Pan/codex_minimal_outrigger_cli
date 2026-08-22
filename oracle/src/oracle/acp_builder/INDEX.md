@@ -55,19 +55,23 @@
 # `oracle`
 
 ## Summary
-- oracle の各サブディレクトリにおける agent call の起動構成と review・investigation・edit の責務分担を把握するための入口。edit は oracle 編集 call、investigation は oracle 調査用 TUI 起動設定、review は所見レビューの呼び出し・出力契約・統合処理を扱う。
+- oracle 用 agent call の起動パラメータ、完全 prompt、oracle 読み書き範囲、作業ディレクトリ、モデル・推論設定、インデックス事前処理を構築するディレクトリ。
+- edit は oracle file の編集と仕様削減、investigation は oracle file の読み取り専用調査、review は所見の列挙・擁護・反証・採否判定・統合を扱う下位入口である。review 配下には各処理の Structured Output schema も対応して置かれている。
 
 ## Read this when
-- cmoc oracle edit、investigation、review の agent call 起動条件、prompt 構成、アクセス制約、モデル・推論設定、Structured Output schema を確認または変更するとき
-- oracle 関連の agent call 定義や、所見レビューの入出力契約の担当箇所を特定するとき
+- oracle に対する edit・investigation・review の agent call の prompt、アクセス制約、起動設定、または Structured Output 契約を確認・変更するとき
+- 対象の処理が edit、investigation、review のどの下位ディレクトリに属するかを判断するとき
+- review の所見列挙、妥当性検証、採否判定、重複・矛盾の統合に関する agent call の入口を確認するとき
 
 ## Do not read this when
-- oracle file 自体の正本仕様、編集方針、調査対象の内容を確認するとき
-- agent call の共通型・パス解決・prompt builder・構造化文書レンダリングなど、oracle 配下の個別用途に依存しない基盤を確認するとき
-- realization 側の CLI 動作やテスト、または review の具体的な所見内容を直接確認するときは、該当する下位対象へ進むとき
+- oracle file 自体の正本仕様、調査対象の内容、編集方針を確認するとき
+- 共通の AgentCallParameter、パス解決、prompt builder、構造化文書レンダリングの実装を確認するとき
+- oracle review 全体の実行制御や、判定後の所見適用処理を確認するとき
+- 特定の処理の詳細な prompt、実装、出力 schema を確認できる場合に、ディレクトリ全体を読む必要があるとき
+- realization 側の CLI 動作やテストを確認するとき
 
 ## hash
-- 1e437bf59c4d8f96e329d6a17a4c35b383ee256bc1cab224d0f87ea117b69e7a
+- 4c10fbaa2a42f5a95f11de046d45c57b6dbc3f64574279b08b97cebe82cd371a
 
 # `quota_probe.py`
 
@@ -123,15 +127,15 @@
 # `tui`
 
 ## Summary
-- `cmoc tui` サブコマンド向けに、オリジナルプロンプトを埋め込んだ完全プロンプトと、TUI 実行用の固定 `AgentCallParameter` を構築する。TUI の作業ディレクトリ、リポジトリ書き込み権限、モデル・推論設定、各種ポリシー適用、インデックス事前処理を確認・変更する際の入口となる。
+- `cmoc tui` の TUI 起動パラメータを構築する対象。オリジナルプロンプトを完全プロンプトへ組み込み、作業ディレクトリ、モデル、推論強度、ファイルアクセスモード、インデックス事前処理などの起動コンテキストをまとめる。TUI 起動時の固定設定や prompt 文面の構築規則を確認・変更するときの入口となる。
 
 ## Read this when
-- `cmoc tui` の起動パラメータ、完全プロンプト、オリジナルプロンプトの埋め込み、または TUI 呼び出し時のモデル・推論強度・ファイルアクセス・作業ディレクトリ設定を変更・確認するとき。
+- `cmoc tui` サブコマンドの起動設定を確認または変更するとき。
+- TUI に渡す完全プロンプト、オリジナルプロンプトの埋め込み、作業ディレクトリ、モデル、推論設定を確認するとき。
 
 ## Do not read this when
-- TUI 以外の AgentCallParameter 構築を扱うとき。
-- 完全プロンプトの共通生成規則を確認するときは、`build_complete_prompt` の定義を直接読むべき場合。
-- CLI のサブコマンド解析や TUI の画面・対話処理を変更するとき。
+- TUI の画面表示や対話操作の実装を確認するとき。
+- 完全プロンプトの一般的な生成規則だけを確認するとき。
 
 ## hash
-- 269e7272d0ef5f8a3aaab19515e3aa6669a1831413e10288ecd9e15c11fa59dc
+- 8ce3f7319b34845f5e8218fe27426408bc256c3548f9b925372a046da2f4cd9e

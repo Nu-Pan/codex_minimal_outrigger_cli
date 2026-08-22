@@ -119,21 +119,20 @@
 # `oracle_review.md`
 
 ## Summary
-- `cmoc oracle review` サブコマンドの正本仕様。oracle ファイルのレビュー範囲、所見の列挙・統合・検証・採否判定、隔離実行、レポート生成、責務境界を定義する。oracle review の挙動やレポート形式を変更・確認するときの入口となる。
+- `cmoc oracle review` の責務、前提条件、レビュー手順、所見の列挙・統合・検証・採否判定、レポート生成を定義するサブコマンド仕様。oracle file のレビュー結果を人間向けレポートとして保存・提示するための実行仕様であり、レビュー対象の入口となる。
 
 ## Read this when
-- `cmoc oracle review` の引数、事前条件、実行手順、スコープ、割り込み処理を確認するとき
-- oracle file に対する所見の成立条件、重大度、検証、採否判定の仕様を確認するとき
-- oracle review レポートの保存先、frontmatter、本文構成、verdict を確認するとき
-- oracle review の責務境界や、実装・自動生成ファイルをレビュー対象外とする制約を確認するとき
+- oracle file の変更について、セッション差分または全体を対象に致命的・軽微な問題をレビューしたいとき
+- `cmoc oracle review` の引数、事前条件、レビュー処理、所見の成立条件、採否判定、またはレポート形式を確認するとき
+- レビューの中断時の確定済み結果、隔離実行、またはレポート保存・終了結果の扱いを確認するとき
 
 ## Do not read this when
-- oracle review 以外のサブコマンドの仕様や、共通の隔離実行・中断・feedback の詳細だけを確認したいときは、それぞれの正本仕様を直接読む
-- Codex CLI の各 agent call の具体的な prompt 構築や policy 実装を確認したいときは、本文が参照する prompt builder または policy の仕様を直接読む
-- oracle file 自体の個別内容や変更履歴を確認したいときは、このサブコマンド仕様ではなく対象 oracle file や git の情報を読む
+- oracle file の具体的な内容自体を確認したいときは、レビュー対象の oracle file を直接読む
+- 実装ファイルや自動生成された `INDEX.md` のレビュー方法を確認したいとき
+- レビュー結果をもとに次の修正方針を決めたいときは、人間向けに保存されたレビューレポートを読む
 
 ## hash
-- 744c96e7edc152ab522c09b2046f8873c34c284428cb53a76a8061d6e8886d04
+- 0a6463fab5f9d0dbf7bf42d18bd3cedccbbcfaa477acbd3f1af03830b74e9ba0
 
 # `realization_apply.md`
 
@@ -229,20 +228,18 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの責務と実行手順を定義する正本仕様。ユーザープロンプトへの cmoc 固有契約の注入、エディタ入力、起動パラメータの構築、AI Agent CLI/TUI の起動条件を扱う。
-- 全バックエンド共通の固定注入規定、モデル・推論・ファイルアクセス設定、indexing preflight、feedback、終了通知など、TUI 起動時に適用される共通契約の入口となる。
-- Codex CLI をバックエンドとして扱う場合の起動コマンド、環境変数、preflight validation、CLI 引数による設定上書きの参照入口を示す。
+- `cmoc tui` サブコマンドの意味仕様。ユーザープロンプトへの cmoc 固有契約の注入、エディタ入力、完全プロンプトと起動パラメータの構築、AI Agent CLI/TUI の起動手順を定義する。
+- 全バックエンド共通の固定注入規定、builder の起動設定、差分がある状態での実行、indexing preflight、feedback・collector・通知の参照先を扱う。Codex CLI 固有の起動コマンド、環境変数、preflight、引数上書きの入口も含む。
 
 ## Read this when
-- `cmoc tui` のサブコマンドの挙動、引数、事前条件、実行順序を確認・変更するとき。
-- ユーザープロンプトへの固定規定の注入や、完全プロンプトおよび TUI 起動パラメータの構築責務を確認するとき。
-- AI Agent CLI/TUI の共通起動条件、indexing preflight、feedback 観測、Windows toast 通知の適用範囲を確認するとき。
-- Codex CLI バックエンドの起動方法や、Codex 固有の環境変数・preflight・引数設定を確認するとき。
+- `cmoc tui` の実行フロー、引数、事前条件、プロンプト編集、builder、TUI 起動条件を確認するとき
+- cmoc 固有規定と installed skill の適用関係、固定注入される規定、builder のモデル・権限設定を確認するとき
+- Codex CLI を `cmoc tui` から起動する仕様や、indexing・feedback・終了通知との連携を確認するとき
 
 ## Do not read this when
-- プロンプトエディタ入力の具体的な仕組みを確認する場合は、プロンプトエディタ入力の正本仕様を直接読む。
-- oracle/realization の責務、oracle review の所見成立条件、indexing、feedback、Windows 通知の詳細を確認する場合は、それぞれの指定された正本仕様を直接読む。
-- TUI サブコマンドの責務や起動契約ではなく、個別の builder 実装やエディタ初期値生成実装だけを確認する場合は、対応する実装対象を直接読む。
+- TUI のエディタ入力方式そのものを確認する場合は、正本である `prompt_editor_input.md` と対応する実装を直接読む
+- oracle file・realization file の責務、oracle review の所見成立条件、indexing、feedback、Windows toast の詳細を確認する場合は、本書が示す各正本仕様を直接読む
+- 完全プロンプトの具体的な文面や起動パラメータの構築ロジックを確認する場合は、`build_tui_launch_tui_parameter` の仕様・実装を直接読む
 
 ## hash
-- 3c7cf802582647687f707f6b6f9fd52b5a20f95259a20fc9d775eb8b1e3765e5
+- 1ee18dafc5468ba54a07bdce7883062d4c8e0cdcea2df7889a44d02bef0bbff7

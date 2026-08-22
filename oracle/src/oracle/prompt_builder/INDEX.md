@@ -17,25 +17,22 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent 向け完全プロンプトを、基礎規定・個別ポリシー・追加文面・目的・placeholder 定義の順に構築する関数を扱う。
-- 選択されたポリシービルダーの文面と定義を統合し、同名 placeholder の異値上書きを拒否する。
-- プロンプト冒頭の参照地図、fundamental_policy と objective の構造化、変動の少ない要素を先に配置する構成を担う。
-- agent call 用プロンプトの全体構成や注入順序を確認・変更するときの入口であり、個別ポリシーの内容や placeholder の定義元を調べる場合は各下位モジュールへ進む。
+- 選択された各種ポリシー、補助プロンプト、プレースホルダ定義を統合し、agent call 用の完全な構造化プロンプトを構築する関数を提供する。
+- 基礎規定・個別規定・静的／動的追加プロンプト・目的・プレースホルダ定義を所定の順序で配置し、プロンプト内の参照地図も生成する。
+- プレースホルダ定義は重複時の値の不一致を検出し、競合があれば例外を発生させる。
 
 ## Read this when
-- agent 向け完全プロンプトの構築順序や全体構成を確認するとき
-- summary、goal、path_context、追加プロンプト、ポリシー選択の反映方法を変更するとき
-- 複数のポリシー文面と placeholder 定義の統合規則を確認するとき
-- プロンプトのキャッシュを意識した固定要素・可変要素の配置を確認するとき
+- agent call に渡す完全なプロンプトの構成順序や、各ポリシーブロックの включ却条件を変更・確認するとき
+- 複数の placeholder 定義を統合する挙動や、同名定義の競合処理を変更・確認するとき
+- 新しいポリシーや補助プロンプトを完全プロンプトへ組み込む入口を探すとき
 
 ## Do not read this when
-- 特定のポリシー本文の内容や生成規則だけを調べるとき
-- 個別の placeholder の値や定義元だけを調べるとき
-- SDHeader や SDTagBlock のデータ構造そのものを調べるとき
-- agent call の呼び出し側で summary、goal、各フラグを決める規則を調べるとき
+- 個別ポリシー本文の内容だけを確認・変更する場合は、対応する oracle/src/oracle/prompt_builder 配下の policy モジュールを直接読む
+- プレースホルダの具体的な値やパス文脈の生成だけを確認する場合は、AgentCallPathContext または関連する placeholder 定義の実装を直接読む
+- 構造化ドキュメントの基本的な表現や SDHeader／SDTagBlock 自体の仕様を確認する場合は、struct_doc の定義を直接読む
 
 ## hash
-- 73011939d0ed825b3ea37627375451a7ea0194542a3a9b13b724527cfade9118
+- 475e2124d320cc803d13e96b67a8c2be64cc6666e1c0f69dcbfa87447b9b2b6c
 
 # `editor_input.py`
 
@@ -77,18 +74,17 @@
 # `policy`
 
 ## Summary
-- エージェント呼び出し用の各種 prompt policy を構築するモジュール群。oracle・realization の扱い、レビュー、ファイルアクセス、routing、feedback 報告、conflict 解消、handoff、INDEX.md エントリー生成など、個別の作業規定を定義する。各モジュールは対応する policy の内容や構築方法を確認・変更する際の入口となる。
+- agent prompt に埋め込む各種 policy の構築定義をまとめたディレクトリ。oracle・realization の扱い、ファイルアクセス、レビュー所見、conflict 解消、feedback 報告、routing、INDEX.md エントリー生成など、個別の prompt policy の責務と生成入口を確認するための上位の参照先である。
 
 ## Read this when
-- agent call に適用する policy の内容や生成方法を確認・変更するとき
-- oracle・realization の作成、レビュー、適合性判定、参照規定を扱うとき
-- ファイルアクセス境界、routing、feedback 報告、conflict 解消、editor handoff の規定を扱うとき
-- INDEX.md エントリー生成用のルーティング記述規定を扱うとき
+- agent call の instruction に組み込む policy の責務や生成内容を調査・変更するとき
+- oracle／realization の作成・レビュー・適合性判定に関する共通規定を確認するとき
+- ファイルアクセス制約、INDEX.md routing、feedback 報告、conflict 解消など横断的な prompt policy の入口を探すとき
 
 ## Do not read this when
-- 個別の oracle file や realization file の具体的な仕様・実装内容を確認するとき
-- policy の利用箇所や生成された prompt 全体だけを確認したいとき
-- PlaceholderMap、SDHeader、SDPolicy など共通構造の定義だけを確認したいとき
+- 個別の oracle file、realization file、実装ファイル、テストの具体的な内容を確認したいときは、対象を直接読む
+- Structured Output の項目・型・形式だけを確認したいとき
+- policy を利用する agent call の prompt 全体や呼び出し経路だけを調べるときは、呼び出し元を直接読む
 
 ## hash
-- cf39c4d0904ec12cdcc1380c0c563856478962a1f5fb7d323cb55ba8c4535be1
+- 6607953a483aab846d7d44f3df4da1fd7668fff79a4a6f9f4280065ab5a0c7fc

@@ -1,36 +1,36 @@
 # `doc`
 
 ## Summary
-- cmoc の正本文書を領域別に参照するための入口。アプリケーション仕様、branch・commit・worktree、採用しなかった代替案、開発ルールを扱い、各領域の下位文書へ案内する。
+- `oracle/doc` は、cmoc の正本仕様・設計・開発ルールを機能別に参照するための上位入口。アプリケーション仕様、branch model、採用しなかった代替案、開発ルールへ進み、実装・テスト・環境・運用上の判断に必要な根拠を探すために使う。
 
 ## Read this when
-- cmoc の挙動仕様・共通契約・サブコマンド仕様の入口を選ぶとき
-- session fork、run の隔離、branch・commit・worktree の関係を調査・変更するとき
-- 現行設計で不採用となった方式や仕様案と、その理由を確認するとき
-- Python 実装、CLI 配置、開発環境、テスト要件・実行手順を確認するとき
+- cmoc の正本仕様や設計・開発ルールの入口を探すとき
+- アプリケーションの挙動、session/run と branch の関係、採用しなかった設計案、Python 実装・環境・テストの規約を確認するとき
+- 個別の仕様書や開発ルール文書へ進む先を判断するとき
 
 ## Do not read this when
-- 対象の個別仕様や専用ルールが既に特定できており、下位文書を直接読む方が適切なとき
-- 具体的な実装コード・テストコードの詳細だけを調査するとき
-- INDEX.md の自動生成処理そのものを調査するとき
+- 特定機能の詳細仕様や具体的な実装・テスト手順だけを確認する場合は、対応する下位文書を直接読む
+- 実行時に生成された report やその他の生成物の具体的内容だけを調査する場合は、該当する生成物を直接調べる
 
 ## hash
-- ec096959e4eb52e19ebc398225c3d1ecfe16a9729c5ca403ab4f1eb62b539d10
+- aa7e5f3d1f73847735d33a8a381558edd4b8a8d23395f5527b7cc6707d3f5d97
 
 # `src`
 
 ## Summary
-- oracle の実装定義を構成する領域。AI エージェント呼び出しの共通パラメータと用途別起動定義、設定・パス・構造化文書モデル、完全 prompt と各種 policy の構築処理を扱う。用途別の agent call は `acp_builder`、共通モデルや設定・レンダリングは `other`、prompt と policy の組み立ては `prompt_builder` へ進む。
+- oracle の Python 実装と Structured Output 定義を集約し、agent call の起動パラメータ、prompt、policy、共通モデルを提供する。
+- 下位の `acp_builder` は indexing・feedback・oracle・realization・session・TUI など用途別の agent call 構築、`prompt_builder` は共通 prompt と policy の構築、`other` はパス・設定・構造化文書の共通モデルを担う。
 
 ## Read this when
-- AI コーディングエージェント呼び出しのパラメータや、`cmoc` の用途別起動処理を確認するとき
-- cmoc の設定モデル、root path 解決、構造化文書の Markdown レンダリングを確認するとき
-- 完全 prompt の生成、placeholder の統合、oracle・realization・feedback・routing などの agent 向け policy を確認するとき
+- agent call の用途別起動パラメータや Structured Output 定義を調べ、該当する `acp_builder` 配下の入口を特定するとき
+- oracle／realization、ファイルアクセス、routing、feedback reporting などの共通 prompt policy を確認するとき
+- agent call 間で共有される root path、設定モデル、構造化 Markdown の挙動を確認するとき
 
 ## Do not read this when
-- 実際の CLI サブコマンド解析、TUI 実行、Codex CLI 呼び出しなど、oracle の定義を利用する側だけを確認したいとき
-- oracle や realization の正本仕様、または個別機能の保存・適用処理だけを確認したいとき
-- 共通の実装定義ではなく、下位領域の特定機能の具体的な挙動を直接確認できるとき
+- 個別の oracle file や realization file の正本仕様を確認したいときは、対象の oracle／realization 配下を直接読む
+- 特定の用途の prompt 部品や policy 本文だけを確認したいときは、`prompt_builder` 配下の担当対象を直接読む
+- パス解決・設定・構造化文書の個別実装詳細だけを確認したいときは、`other` 配下の担当対象を直接読む
+- 既存の INDEX.md の内容や TUI の画面表示そのものを確認したいとき
 
 ## hash
-- d1db54ec1c00479286986364824e21ca2e297ed931e6f141b460f46d53462a36
+- eff4d305ece788b743c4dd47807a178030e0a03ba97b0637c0e10e6882e34e29
