@@ -1,16 +1,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・共通モデル・agent call 構築定義を扱うソースディレクトリ。agent call パラメータ、quota probe、prompt 構築、パスと設定のモデル、構造化 Markdown 文書、feedback reporter 入力契約など、下位の用途別定義へ進むための入口を提供する。
-- `acp_builder`、`prompt_builder`、`other`、`feedback` に分かれ、agent 呼び出し契約、完全 prompt と policy の組み立て、root path・設定・文書ノードの共通モデル、問題報告入力スキーマをそれぞれ扱う。
+- AIコーディングエージェント呼び出しの共通パラメータ定義と、用途別の agent call 構築実装を扱うディレクトリ。indexing、oracle、quota probe、realization、session、TUI の prompt、起動条件、アクセスモード、作業ディレクトリ、Structured Output 契約へ進む入口となる。
 
 ## Read this when
-- agent call の共通パラメータ、quota availability probe、prompt の構造や policy 統合、path context・root placeholder、cmoc 設定、構造化 Markdown 文書、feedback reporter 入力契約を調査または変更するとき。
-- 用途別の正本モデルや prompt 構築定義の所在を特定し、`acp_builder`、`prompt_builder`、`other`、`feedback` の下位要素へ進む必要があるとき。
+- AgentCallParameter の共通契約、モデル、推論強度、ファイルアクセス、prompt、Structured Output schema、cwd、preflight 設定を確認するとき
+- INDEX.md エントリー生成、oracle の用途別 agent call、Codex CLI quota probe、realization の追従・refactor、session join の conflict 解消、cmoc tui の起動設定を調査・変更するとき
+- 用途別 agent call の prompt、起動条件、権限、出力契約の入口を特定するとき
 
 ## Do not read this when
-- 既存 INDEX.md のルーティング情報だけを確認したいとき。
-- Codex CLI のバックエンド固有実装、通常の realization・session・TUI 実行処理、collector の保存・集約処理、個別 issue やレビュー所見の内容を直接確認したいときは、対応する実装・仕様・データ定義を読む。
+- 既存 INDEX.md のルーティング内容だけを確認したいとき
+- モデル名やバックエンド固有の解決処理、共通 prompt 生成、path model、構造化文書などの共通仕様だけを確認したいときは、それぞれの定義元を直接読む
+- realization の通常の implementation・test・ancillary、session join の通常処理、TUI の画面表示や対話操作など、個別の実行処理を確認したいとき
+- 具体的な issue 内容、report cut reference、raw log、個別のレビュー対象や所見判定など、用途別定義の範囲外のデータや処理を調べるとき
 
 ## hash
-- cd97037170d661f94a1da579c4311ccdeda085686cc411f83eb4a163cb8c17ef
+- a0544ce5c363655c3a63456caacd1176875e6959e7617aa5324a35401af1d839

@@ -18,19 +18,23 @@
 # `src`
 
 ## Summary
-- cmoc の正本モデルと agent call 構築定義を扱うソース群への入口。agent call パラメータ、quota probe、prompt 構築、path context・root placeholder、設定、構造化 Markdown 文書、feedback reporter 入力スキーマを提供する。
-- 用途別に `acp_builder`、`prompt_builder`、`other`、`feedback` へ分かれ、呼び出し契約、完全 prompt と policy、共通モデル、問題報告入力契約の確認先となる。
+- AIコーディングエージェント呼び出しに必要なパラメータ、prompt、アクセス規定、パス文脈、構造化文書を構築する oracle 実装のルートディレクトリ。
+- `acp_builder` は用途別の agent call パラメータを扱い、indexing、oracle、realization、feedback、session、TUI、quota probe などの処理へ進む入口となる。
+- `prompt_builder` は共通 prompt、用途別 policy、入力文面、構造化 Markdown の構築を扱う。
+- `other` は設定、パスモデル、構造化文書など、agent call と prompt 構築を支える共通定義を扱う。
 
 ## Read this when
-- agent call のモデル・reasoning effort・ファイルアクセス・cwd などの共通パラメータや quota availability probe を調査または変更するとき。
-- 完全 prompt の構造、policy の組み込み、placeholder 定義、agent 向け入力文面を調査または変更するとき。
-- root path と worktree の解決、cmoc 設定、構造化 Markdown ノード、feedback reporter の入力契約を確認するとき。
-- 用途別の定義や構築処理の所在を特定し、`acp_builder`、`prompt_builder`、`other`、`feedback` の下位要素へ進む必要があるとき.
+- AgentCallParameter の共通契約やモデル・推論強度・ファイルアクセス・cwd・preflight の定義を確認するとき
+- 用途別 agent call の起動条件、prompt、Structured Output 契約、またはその builder の配置先を特定するとき
+- 共通 prompt の組み立て、アクセス policy、routing policy、oracle・realization policy、feedback policy を調査・変更するとき
+- quota probe、INDEX.md 生成、oracle review・edit・investigation、realization apply・refactor、session join、TUI 起動の agent call を調査するとき
+- agent call のパス表記、設定値、構造化文書の表現や Markdown レンダリングを確認するとき
 
 ## Do not read this when
-- 既存の INDEX.md のルーティング情報だけを確認したいとき。
-- Codex CLI のバックエンド固有実装、通常の realization・session・TUI 実行処理、collector の保存・集約処理を直接確認したいとき。
-- 個別の issue、レビュー所見、または realization の具体的な変更内容だけを調査したいときは、対応する下位定義や実装を直接読む。
+- 既存 INDEX.md のルーティング内容だけを確認したいとき
+- モデル名やバックエンド固有の解決処理だけを確認するときは、対応する realization の定義元を直接読む
+- 用途別 agent call の個別実行処理、通常の realization implementation・test・ancillary、session join の具体的な処理、TUI の画面表示や対話操作だけを確認するとき
+- 具体的な feedback issue、report cut reference、raw log、個別レビュー対象などのデータ内容を調べるときは、対応する入力定義や状態管理を直接読む
 
 ## hash
-- 55fbe5233c3f29be57323a6b1d2332b48a440e3b53bc2a98edae4dd517d352d0
+- 4488247dcbe9407ce23766a52999f1c13d89d39718e20716227cb3b4a381c6d6

@@ -55,19 +55,16 @@
 # `prompt_builder`
 
 ## Summary
-- プロンプト構築に関する共通部品と入口をまとめたディレクトリ。placeholder の型、完全 prompt の組み立て、エディタ入力文面、oracle・realization の説明部品、各種 policy prompt を扱う。個別実装や規定の詳細へ進むための入口となる。
+- agent 向け prompt-builder の構成要素をまとめたディレクトリ。完全 prompt やエディタ入力文面の組み立て、placeholder の型、oracle／realization の説明部品、各種 policy prompt builder を扱う。個別の prompt 構築責務や policy の生成方法を調べる際の入口となる。
 
 ## Read this when
-- 完全 prompt の構造や placeholder 統合規則を確認したいとき。
-- oracle・realization の分類や責務説明を prompt に組み込む処理を調査するとき。
-- agent call に適用する policy prompt の生成内容や責務分担を確認したいとき。
-- エディタ経由の入力文面や、構造化された prompt 部品の組み立てを変更するとき。
+- 完全 prompt、エディタ入力用初期文面、placeholder 定義、oracle／realization 説明、または agent call 向け policy prompt の構築を確認・変更するとき。
+- prompt-builder 内の構成要素の責務分担や、対象の実装・説明部品・policy のどこから読み始めるべきか判断するとき。
 
 ## Do not read this when
-- 個別 policy の具体的な規定だけを確認したいときは、対応する policy モジュールを直接読む。
-- prompt-builder の共通型や構造化ドキュメント要素の定義だけを確認したいときは、それぞれの定義元を直接読む。
-- 具体的な CLI や agent call の利用動作だけを調査したいときは、呼び出し側を直接読む。
-- 個別の oracle・realization ファイルの仕様や実装内容を確認したいときは、対象ファイルを直接読む。
+- 個別 policy の具体的な規定本文や生成処理だけを確認したいときは、対応する policy 配下の対象を直接読む。
+- 具体的な呼び出し側の CLI・agent call の挙動、placeholder のパス計算、構造化ドキュメント要素の定義を調べる場合は、それぞれの担当実装・定義元を直接読む。
+- INDEX.md や AGENTS.md の分類対象外規則だけを確認したいとき。
 
 ## hash
-- 4e6a03a5605200fa0e54f50bc0e96b04c6c11b001a2cd78edf1c77021429a139
+- 5ad326992c79a0918a0c33b499fde30d14e6a04b30ef588924a24e864beaed49

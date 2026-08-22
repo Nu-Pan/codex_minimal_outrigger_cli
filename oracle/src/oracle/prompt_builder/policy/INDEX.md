@@ -136,15 +136,15 @@
 # `routing.py`
 
 ## Summary
-- `build_routing_policy` は、エージェント呼び出しのパスコンテキストから root 定義を取得し、`work-root` をプレースホルダーとして routing policy 文面へ注入する構築処理。`SDHeader` と `SDPolicy` により、INDEX.md の利用目的、起点、本文優先、本文代替禁止などのルーティング規定を定義する。
+- このファイルは、`INDEX.md` を用いて読むべき本文ファイルを特定するための routing policy を構築する。作業対象に近い階層を起点とし、対象領域を推定できない場合はルートから探索する方針を提供する。
 
 ## Read this when
-- INDEX.md による文書・ファイルの探索規定を確認または変更するとき
-- `build_routing_policy` の生成する routing policy、root placeholder、`SDPolicy` 構成を調査するとき
+- `INDEX.md` を使ったファイル・ディレクトリの探索方針を確認するとき
+- 本文と `INDEX.md` の内容が食い違う場合の判断優先順位を確認するとき
 
 ## Do not read this when
-- 特定の実装ファイルやディレクトリの具体的な責務を確認したいだけで、INDEX.md の利用規定自体を扱わないとき
-- `AgentCallPathContext` の root 定義や `PlaceholderMap` の仕様を直接確認する必要があるときは、それぞれの定義元を読む
+- 個別ファイルの実装内容や仕様を直接確認したいとき
+- プレースホルダー定義、構造化文書の型、またはプロンプト生成処理自体を確認したいとき
 
 ## hash
-- 5900b089dc7c25a67250309c108a0d000e39d6f4fee42bc83e571bcb13b4379d
+- 7a8d6316d4942f050edcac5a562a8b70e0929143d29b95596b2b20074e5a9be1
