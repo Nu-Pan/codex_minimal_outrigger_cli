@@ -19,16 +19,19 @@
 # `src`
 
 ## Summary
-- cmoc の oracle source を構成する実装・設定・agent call 定義の領域。`acp_builder`、`feedback`、`other`、`prompt_builder` の各下位領域へ進むための入口であり、agent 呼び出しパラメータ、feedback 入力契約、設定・パス・構造化文書モデル、完全 prompt と各種 policy の実装を扱う。
+- `oracle/src` は、cmoc の agent call 構築と prompt 構築を実装する source 層の最上位入口。
+- agent call の論理パラメータ、モデル・推論強度・ファイルアクセス、quota probe などは `acp_builder` 配下で扱う。
+- feedback の入力契約は `feedback`、設定・モデル対応・パス解決・構造化文書は `other`、prompt の組み立てと各種ポリシー文面は `prompt_builder` 配下で扱う。
+- 具体的な処理やデータ構造を調べる場合は、責務を特定した下位領域または実装ファイルへ進むための入口として用いる。
 
 ## Read this when
-- cmoc の oracle source 内で調査・変更すべき責務が `acp_builder`、`feedback`、`other`、`prompt_builder` のどれに属するか判断するとき
-- agent call 構築、feedback reporter 入力契約、設定・パス・文書モデル、prompt policy の実装群を横断して確認するとき
+- cmoc の agent call 構築、prompt 構築、feedback 入力契約、設定・パス・構造化文書の実装領域を特定するとき
+- `oracle/src` 配下で、`acp_builder`、`feedback`、`other`、`prompt_builder` のどこを読むべきか判断するとき
+- source 実装の責務分担や、関連する下位対象への入口を確認するとき
 
 ## Do not read this when
-- 対象の下位ディレクトリが特定できており、その具体的な実装・スキーマ・prompt 定義を直接確認すればよいとき
-- oracle の正本仕様、realization 実装、通常の CLI 実行や TUI 表示の挙動を確認するとき
-- 下位要素の具体的な責務や Structured Output の詳細を確認したいときは、対応する `acp_builder`、`feedback`、`other`、`prompt_builder` の下位対象を直接読む
+- 具体的な処理やデータ構造が既に特定できており、対応する下位領域または実装ファイルを直接読めるとき
+- oracle の正本仕様・実装構築定義全体を調べる必要がなく、通常の CLI 実行制御や別のドキュメント領域を直接調べるとき
 
 ## hash
-- 3c98367bc4b6c3b8e635a5495ad2371534398c1af7ae4b830ff72eb40cad265c
+- afffa11cc3f1a1aa2190fc16d9040518f5684caeb5e2317353197e770fae4d2e

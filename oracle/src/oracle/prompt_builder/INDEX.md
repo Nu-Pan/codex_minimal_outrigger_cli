@@ -75,19 +75,17 @@
 # `policy`
 
 ## Summary
-- agent call 向けの各種 prompt policy builder をまとめるディレクトリ。
-- conflict 解消、editor handoff、human feedback reporting、file access、INDEX.md routing、oracle／realization の作成・レビュー、oracle 参照など、個別の運用規定を instruction 文面として構築する。
-- 共通 prompt policy の内容や生成方法を確認する入口であり、個別 policy の実装・挙動や対象となる oracle／realization file の内容は各ファイルへ進む。
+- agent call 向けの各種 prompt policy を構築するモジュール群。ファイルアクセス、oracle・realization、feedback、routing、conflict resolution、editor handoff、所見判定、INDEX.md エントリー生成など、個別の作業規定や文面の生成責務を扱う。特定の policy の内容・構造・変更範囲を確認するときの入口となる。
 
 ## Read this when
-- agent call に適用する prompt policy の内容または生成方法を確認・変更するとき
-- conflict 解消、editor handoff、feedback 報告、file access、INDEX.md routing の運用規定を確認するとき
-- oracle／realization file の作成・実装・レビューに関する policy や、realization code から oracle file を参照する規定を確認するとき
+- agent call に注入する policy の定義や構成を確認・変更するとき
+- oracle・realization・feedback・routing・handoff・conflict resolution など、共通または個別の作業規定の生成責務を調査するとき
+- INDEX.md エントリー生成や所見判定の規定を確認するとき
 
 ## Do not read this when
-- 個別の oracle／realization file、実装ファイル、テストの具体的な内容を確認するときは、その対象を直接読む
-- prompt policy の利用箇所や agent call 全体の構造だけを確認したいときは、呼び出し元または prompt 生成側を直接読む
-- Structured Output の項目・型・形式だけを確認したいときは、該当する schema を直接読む
+- 特定の oracle file、realization file、実装コード、テストの具体的な内容を直接確認したいとき
+- prompt policy を利用する agent call 全体の構築処理や PlaceholderMap の一般仕様を確認したいとき
+- policy とは無関係な CLI 機能やデータモデルを調べるとき
 
 ## hash
-- e7bfc1e4d4cd9b1df545ce540d7474d5bcd293b48ff151714f93e925e1d2324f
+- ddb6c206bd7d1310882906c201380100c60cef54d62f1175dbb133a0cd15bc48

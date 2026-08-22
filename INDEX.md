@@ -91,24 +91,23 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本仕様と開発規約を収録する oracle 領域。自然言語仕様、実装定義・schema、agent call／prompt 構築定義を扱い、realization の実装やテストとは責務を分ける。
-- `doc/app_spec` は共通契約、feedback、prompt、session・run state、logging、error handling、indexing、各サブコマンド仕様の入口。`doc/branch_model.md` は branch・commit・worktree の関係を扱い、`doc/considered_alternative` は不採用案の背景を扱う。`doc/dev_rule` は設計、coding、環境構築、テスト実装、テスト実行の規約を扱う。
-- `src/oracle` は oracle の正確な実装定義と schema を収録し、`acp_builder`、`feedback`、`prompt_builder`、`other` の下位実装へ進む入口となる。
+- cmoc の正本仕様と開発規約を収録するドキュメント領域。アプリケーション共通仕様、branch・commit・worktree のモデル、不採用案、Python・CLI・環境・テストに関する規約を扱う。
+- cmoc の agent call・prompt 構築、feedback 入力契約、設定・パス・構造化文書の実装を収録する source 領域。具体的な実装責務に応じて `acp_builder`、`feedback`、`other`、`prompt_builder` へ進むための入口となる。
 
 ## Read this when
-- cmoc の正本仕様と開発規約の対象領域を特定し、適切な下位文書・定義へ進むとき
-- 共通契約、session／run や branch model、feedback、prompt、indexing、または個別サブコマンドの仕様を調査・変更・レビューするとき
-- agent call の構築、Structured Output schema、feedback 入力契約、prompt policy など oracle source の責務を確認するとき
-- Python 開発環境、設計、coding、テスト実装、テスト実行の規約を確認するとき
+- cmoc の正本仕様または開発規約の対象領域を特定するとき
+- agent call、prompt、feedback、設定、パス解決、構造化文書の実装領域を特定するとき
+- branch・commit・worktree の関係、不採用案、Python・CLI・環境・テスト規約を調査・変更・レビューするとき
+- `oracle` 配下で、ドキュメント領域と source 領域のどちらを起点に読むべきか判断するとき
 
 ## Do not read this when
-- 対象の下位ディレクトリや個別仕様が明確で、対応する `doc/app_spec`、`doc/dev_rule`、`doc/branch_model.md`、`doc/considered_alternative`、または `src/oracle` の対象を直接読めるとき
-- realization の実装・設定、通常の CLI 実行や TUI 表示の具体的な挙動を確認するとき
-- 既存仕様の不採用理由だけを確認したい場合を除き、`considered_alternative` を現行仕様の正本として扱うとき
-- INDEX.md の生成・更新処理自体を調べるときは、`doc/app_spec/indexing.md` を直接読むとき
+- 特定のサブコマンドや個別仕様が明確で、対応する `oracle/doc` の下位文書を直接読めるとき
+- 具体的な実装ファイルや source 内の責務が既に特定できており、対応する下位領域または実装ファイルを直接確認できるとき
+- 実装コード、realization、テスト対象、開発環境、テスト実行手順など、専用の下位対象を直接確認するとき
+- INDEX.md の生成・更新処理自体を調査するときは、`oracle/doc/app_spec/indexing.md` を直接読むとき
 
 ## hash
-- 9b11b03efcb8283cd50a9d8a838e876b97557295b38921102a49cbecc5bd9295
+- b6b6a88838c055a8e3996e567cbd2eb83353f90211d2b471a653dc0b02bad05e
 
 # `pyproject.toml`
 

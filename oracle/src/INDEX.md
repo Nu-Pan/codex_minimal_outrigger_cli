@@ -1,16 +1,16 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle source を構成する実装・設定・agent call 定義の領域。`acp_builder`、`feedback`、`other`、`prompt_builder` の各下位領域へ進むための入口であり、agent 呼び出しパラメータ、feedback 入力契約、設定・パス・構造化文書モデル、完全 prompt と各種 policy の実装を扱う。
+- oracle 配下の正本仕様・実装構築定義を、agent call、prompt、設定・パス・構造化文書、feedback などの責務領域ごとに案内する最上位の入口。
+- acp_builder、feedback、other、prompt_builder の各下位領域へ進む判断基準を提供し、具体的な agent call 構築、feedback 入力契約、共通モデル、prompt 生成規定は対応する下位対象で確認する。
 
 ## Read this when
-- cmoc の oracle source 内で調査・変更すべき責務が `acp_builder`、`feedback`、`other`、`prompt_builder` のどれに属するか判断するとき
-- agent call 構築、feedback reporter 入力契約、設定・パス・文書モデル、prompt policy の実装群を横断して確認するとき
+- oracle 配下で調査・変更すべき責務領域を特定するとき
+- agent call 構築、prompt 生成、feedback 入力契約、設定・パス・構造化文書のどの下位領域を読むべきか判断するとき
 
 ## Do not read this when
-- 対象の下位ディレクトリが特定できており、その具体的な実装・スキーマ・prompt 定義を直接確認すればよいとき
-- oracle の正本仕様、realization 実装、通常の CLI 実行や TUI 表示の挙動を確認するとき
-- 下位要素の具体的な責務や Structured Output の詳細を確認したいときは、対応する `acp_builder`、`feedback`、`other`、`prompt_builder` の下位対象を直接読む
+- 対象の具体的な処理や仕様が既に特定できており、対応する下位ファイルを直接確認できるとき
+- 実行制御や通常の CLI 動作など、oracle 配下の構築定義以外を直接調べるとき
 
 ## hash
-- bb11747435a736e8240bc22385a414d3c1f10657d767f9781b1ee9ab5a7a271c
+- cf82a8f8767ac1f839d461b6aee15e794e5a740d6244a749bf12b5e5f18bcf8d

@@ -1,22 +1,20 @@
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` の conflict marker 解消時に適用する instruction 文面の構築定義。
-- oracle file を人間所有の正本仕様断片として扱い、conflict 両側と関連 oracle file の意図・挙動を保つ解消方針を示す。
-- 両立不能な場合の未解消事項報告と、realization を根拠にした oracle の変更禁止を定める。
+- 対象は、session join における merge conflict 解消結果の規定を構築する prompt-builder 定義である。両方のマージ元ブランチの oracle file の意図・挙動を保持する要件と、両立不能時に未解消事項として報告する扱い、realization file を根拠に oracle file の意味を変えない禁止事項をまとめる。conflict resolution の policy 文面や、その prompt 構造を変更・確認するときの入口になる。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消方針を確認・変更するとき
-- oracle と realization にまたがる conflict の解消手順や判断基準を確認するとき
-- conflict 解消時に仕様変更・実装都合の変更を避ける制約を確認するとき
+- session join の merge conflict 解消結果に求める規定を確認するとき
+- conflict resolution policy の prompt 構築内容を変更・レビューするとき
+- マージ元ブランチの oracle file の意図を保持できるか、両立不能時の報告方針を確認するとき
 
 ## Do not read this when
-- conflict marker 解消を伴わない通常の oracle・realization の仕様確認や実装変更を行うとき
-- 個別の conflict 対象ファイルの意味や変更内容を確認するときは、その対象ファイルを直接読む方が適切な場合
-- prompt builder の共通構造や構造化文書型の定義だけを確認したいとき
+- conflict 解消処理そのものの realization 実装を調べるとき
+- 一般的な prompt-builder の共通実装や PlaceholderMap の仕様を確認するとき
+- 対象以外の oracle file の意味や個別仕様を直接確認するとき
 
 ## hash
-- af4b2fb532f942e41d2828bb6868b2da5b6ecf41d7f126331931465bcd0e8a9d
+- 9331b8a2379ca9d95529a90ebf991053385f7477b683a828ed4e684823c487eb
 
 # `editor_handoff.py`
 

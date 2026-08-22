@@ -53,17 +53,22 @@
 # `prompt_builder`
 
 ## Summary
-- agent 呼び出し向けの完全プロンプトを組み立てる prompt-builder 配下の実装群を扱うディレクトリ。placeholder 型、完全プロンプト構築、エディタ入力文面、oracle／realization 説明部品、各種 prompt policy builder を下位要素への入口としてまとめる。
+- prompt-builder 配下の実装群を、agent 向けプロンプトの構造化・初期入力・共通説明部品・各種 policy の生成責務ごとに案内する入口。placeholder の型定義、完全プロンプトの集約、エディタ入力文面、oracle/realization 説明部品、policy 群を扱う。
+- `basic.py` は placeholder 名と実パス・文字列を対応付ける型定義、`complete_prompt.py` は基礎規定や条件付き policy、追加プロンプト、目的、placeholder 定義を最終プロンプトへ集約する実装を扱う。
+- `editor_input.py` はエディタ経由のユーザー入力ファイルの初期文面とテンプレート埋め込み、`parts` は oracle/realization の概念・分類説明、`policy` はファイルアクセスや routing、feedback、conflict resolution、handoff、INDEX.md エントリー生成などの規定生成を扱う。
 
 ## Read this when
-- agent 呼び出し用プロンプトの構成や、基礎規定・ポリシー・目的・placeholder の統合を確認したいとき
-- エディタ入力用の初期文面や、oracle／realization の説明文を確認・変更したいとき
-- file access、INDEX.md routing、feedback 報告、oracle／realization などの prompt policy の生成方法を確認したいとき
+- agent 呼び出し向けの完全プロンプトの構成順序、条件付き policy の組み込み、placeholder の統合や競合処理を確認したいときは `complete_prompt.py` から確認する。
+- エディタ入力ファイルの初期表示、記入案内、構造化見出し・タグブロック、完全プロンプトのテンプレート埋め込みを確認したいときは `editor_input.py` を読む。
+- oracle と realization の責務・分類、work-root を用いたパス説明、uncategorised file の分類規則を確認したいときは `parts` を読む。
+- agent call に注入される個別 policy の定義や、routing・feedback・handoff・conflict resolution・INDEX.md エントリー生成の規定を確認したいときは `policy` を読む。
+- placeholder の名前と置換先を共通の型で扱う意味だけを確認したいときは `basic.py` を読む。
 
 ## Do not read this when
-- 個別ポリシーの本文や生成文面の詳細だけを確認したいときは、対象の policy ファイルを直接読む
-- oracle／realization の個別文書・実装・テストの内容を確認したいときは、それぞれの対象を直接読む
-- 生成済みプロンプトの解釈・実行や agent 呼び出しの制御を確認したいときは、呼び出し側・実行側を直接読む
+- 特定の policy 本文の詳細、個別の oracle/realization ファイル、実装コードやテストの内容を確認したいだけのときは、対応する定義元を直接読む。
+- 構造化ドキュメント要素の定義や Markdown レンダリング仕様そのものを確認したいときは、`editor_input.py` ではなくインポート元の実装を読む。
+- 生成済みプロンプトの解釈・実行や agent 呼び出しの実行制御を確認したいときは、prompt-builder 配下ではなく呼び出し側・実行側の対象を読む。
+- prompt builder と無関係な CLI 機能やデータモデル、個別ファイルの具体的な仕様を調べるときは、このディレクトリを入口にしない。
 
 ## hash
-- 4aad91651aa316a59ca8a465d805b91fa9e2104696ede1c7beade198af50ecb5
+- fdab3bfcdff4f339ee01336815b1a54e11372dde4fd65b87cfe6013af5288493
