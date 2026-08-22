@@ -34,46 +34,39 @@
 # `other`
 
 ## Summary
-- oracle/src/oracle/other は、cmoc の共通データモデルと文書・パス処理の実装をまとめたディレクトリ。設定モデルは `cmoc_config.py`、agent call のルートパスと placeholder 解決は `path_model.py`、構造化ノードから Markdown を生成する処理は `struct_doc.py` が入口になる。
+- 対象ディレクトリは、cmoc の設定モデル、パスモデル、構造化 Markdown 文書ノードの実装を扱う。設定項目や既定値、root placeholder と worktree/repository root の解決、文書ノードの Markdown レンダリング規則を確認するための入口である。
 
 ## Read this when
-- cmoc の設定モデル、Codex CLI や oracle review の設定を確認・変更するとき
-- `{{repo-root}}`・`{{work-root}}`・`{{run-root}}`・`{{cmoc-root}}` の解決、agent call のパスコンテキスト、実パスとの相互変換を確認・変更するとき
-- 見出し、タグブロック、コードブロック、規定文などの構造化ノードを Markdown へレンダリングする処理を確認・変更するとき
-- 上記の共通モデルやヘルパーを横断して、複数の下位実装の関係を確認するとき
+- cmoc の設定項目・既定値・シリアライズ構造を変更または確認するとき
+- root placeholder、agent call の作業ルート、worktree/repository root の解決規則を確認するとき
+- 構造化文書ノードや参照タグを Markdown にレンダリングする挙動を変更または確認するとき
 
 ## Do not read this when
-- Codex CLI の呼び出し処理や個別 CLI 機能の責務だけを確認したいとき
-- oracle review の所見生成・マージ・検証ロジックそのものを確認したいとき
-- 構造化文書を利用する上位のプロンプト生成処理だけを確認したいとき
-- 設定ファイルの実際の保存内容や人間による調整結果だけを確認したいとき
+- Codex CLI の呼び出し処理や個別 CLI 機能の実装責務を確認したいとき
+- oracle review のレビュー処理や所見生成ロジックを確認したいとき
+- 設定ファイルの保存内容や人手による調整結果だけを確認したいとき
+- Markdown 以外の文書形式や、個別機能におけるパスモデルの利用挙動だけを確認したいとき
 
 ## hash
-- 65f0c439824955801a77b6e5742e2fcaf02fa3fc5721a195558e975306fc4462
+- b97eefaa4d29d7835c2033b91e430e3593bcd5c68643fbc6ef124e09507994df
 
 # `prompt_builder`
 
 ## Summary
-- prompt_builder は、agent 向け完全プロンプトとエディタ入力用初期文面を構築する実装群である。placeholder 定義、プロンプト部品、policy の統合を扱う。
-- basic.py は、placeholder 名と置換先の文字列または Path を対応付ける型定義を提供する。
-- complete_prompt.py は、基礎規定、選択された policy、追加文面、目的、placeholder 定義を順序付けて完全プロンプトへ統合する。policy や構造化文書要素の具体的内容は下位対象が担う。
-- editor_input.py は、エディタ経由で入力するプロンプトの初期表示文面を構築する。記入案内と、入力内容を注入する完全プロンプトのテンプレートを HTML コメント内へ配置する。
-- parts は、oracle と realization の役割・分類・配置規則を説明するプロンプト部品をまとめる。個別の基本説明を確認するときの入口である。
-- policy は、ファイルアクセス、oracle・realization の扱い、レビュー、routing、handoff など、agent call に条件付きで注入する規定文面をまとめる。特定の規定の内容や生成処理を確認するときの入口である。
+- agent 向けプロンプトを構築する実装群の入口。完全プロンプトの全体構成、エディタ入力用の初期文面、placeholder の共通表現、oracle・realization の説明部品、各種 prompt policy を扱う。個別の構築規則や policy 内容を確認するときは、該当する下位モジュールへ進む。
 
 ## Read this when
-- agent 向け完全プロンプトの構成順、policy の選択・統合、placeholder の競合処理を確認または変更するときは complete_prompt.py を読む。
-- placeholder の型や、文字列と Path を混在させる定義を確認するときは basic.py を読む。
-- エディタ入力ファイルの案内、HTML コメントの範囲、prompt template の注入方法を確認または変更するときは editor_input.py を読む。
-- oracle と realization の分類や基本説明を確認するときは parts を読む。
-- agent call に注入する特定の作業規定を確認するときは policy を読む。
+- agent call 用プロンプトの構築順序や全体構成を調べるとき
+- エディタ入力の初期文面やテンプレート埋め込みを確認するとき
+- placeholder の値表現や統合規則を確認するとき
+- oracle・realization の説明文や分類規則を確認するとき
+- agent call に適用する各種 policy の内容・生成方法を確認するとき
 
 ## Do not read this when
-- 特定の policy の詳細だけを調べる場合は complete_prompt.py ではなく policy 配下の該当実装を直接読む。
-- oracle・realization の具体的な分類説明だけを調べる場合は complete_prompt.py ではなく parts 配下の実装を直接読む。
-- 構造化文書要素そのもののデータ構造やレンダリング規則を調べる場合は、このディレクトリではなくインポート元の実装を読む。
-- agent call 側で summary、goal、file access mode、各 policy フラグを決める規則を調べる場合は、呼び出し側の実装を読む。
-- placeholder を使わない処理や、prompt builder 外の設定値の表現だけを確認する場合は basic.py を読む必要はない。
+- 個別の oracle 文書・実装・テストの具体的内容を確認したいとき
+- prompt builder を利用する側の呼び出し規則や引数決定方法を調べるとき
+- 構造化ドキュメント要素のデータ構造や Markdown レンダリング仕様だけを確認したいとき
+- プロンプト本文の生成や placeholder を使わない別処理を調べるとき
 
 ## hash
-- f08a78d04bb5e83002ca43f4474fb6b412f97d2914342a424c52d3f93f5af794
+- 93d9c2f8799d33b0d9690fcd6c5934e8e4fcdefe4b27c909d74d22b749e67c3f

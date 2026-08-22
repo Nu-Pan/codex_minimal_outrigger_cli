@@ -77,21 +77,18 @@
 # `policy`
 
 ## Summary
-- oracle file に対する realization file の追従要否、所見、修正対象を判断する policy の構築入口。oracle を人間が所有する正本仕様断片として扱い、oracle の具体的要求と realization の具体的挙動の明確な不整合、または realization 単独で説明できる実行不能・明白な致命的バグを修正対象とする規定を定義する。
-- 所見や修正対象には、用途固有の policy が認める具体的な oracle file または realization file の記述・挙動を示すことを求める。oracle の意味を realization の都合で変更せず、仕様の隙間、複数の妥当解、好み、推測、一般的なベストプラクティスだけを根拠に問題を作らない制約も定める。
-- 修正後の realization file が関連する oracle file の明示要求を満たすこと、および調査開始時点で解消済みの問題を所見にしないことを確認するための入口となる。
+- エージェント呼び出し用の各種 prompt policy を構築するモジュール群。oracle・realization の扱い、レビュー、ファイルアクセス、routing、feedback 報告、conflict 解消、handoff、INDEX.md エントリー生成など、個別の作業規定を定義する。各モジュールは対応する policy の内容や構築方法を確認・変更する際の入口となる。
 
 ## Read this when
-- oracle file と realization file の適合性を判断するとき
-- realization file の追従要否、所見の成立、修正対象を判断するとき
-- oracle の明示要求と realization の具体的挙動の不整合を根拠付きで評価するとき
-- realization 単独で説明できる実行不能または明白な致命的バグを修正対象とするか判断するとき
+- agent call に適用する policy の内容や生成方法を確認・変更するとき
+- oracle・realization の作成、レビュー、適合性判定、参照規定を扱うとき
+- ファイルアクセス境界、routing、feedback 報告、conflict 解消、editor handoff の規定を扱うとき
+- INDEX.md エントリー生成用のルーティング記述規定を扱うとき
 
 ## Do not read this when
-- oracle・realization file の適合性や修正対象の判断を行わないとき
-- 仕様の隙間、好み、推測、一般的なベストプラクティスに基づくコード品質改善を検討するとき
-- 具体的な oracle file または realization file の内容・挙動そのものを確認する必要があるとき
-- prompt builder の別の policy の構築規定だけを確認するとき
+- 個別の oracle file や realization file の具体的な仕様・実装内容を確認するとき
+- policy の利用箇所や生成された prompt 全体だけを確認したいとき
+- PlaceholderMap、SDHeader、SDPolicy など共通構造の定義だけを確認したいとき
 
 ## hash
-- 4d351d81b1e1c1b6ef71e5c678cc488f603074910ac3a464fc825b3dc56cc835
+- cf39c4d0904ec12cdcc1380c0c563856478962a1f5fb7d323cb55ba8c4535be1

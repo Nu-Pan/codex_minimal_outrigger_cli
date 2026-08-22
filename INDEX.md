@@ -91,23 +91,27 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と、その仕様を参照・構築する oracle 実装のルートです。
-- `oracle/doc` ではアプリケーション挙動、branch model、採用しなかった代替案、開発ルールを扱い、`oracle/src/oracle` では設定・パス解決・構造化文書、prompt、agent call、feedback の構築を扱います。各領域の詳細は下位ディレクトリまたは個別文書から確認します。
+- cmoc の正本文書を領域別に参照する入口。アプリケーション仕様、session fork・run の隔離、branch・commit・worktree、採用しなかった方式、Python 開発・CLI 配置・テスト規則を下位文書へ案内する。
+- oracle の実装定義を構成する領域。AI エージェント呼び出し、設定・パス・構造化文書モデル、Markdown レンダリング、完全 prompt と各種 policy の構築処理を扱う。用途別起動は acp_builder、共通モデル等は other、prompt・policy 組み立ては prompt_builder が入口となる。
 
 ## Read this when
-- cmoc の挙動仕様、サブコマンド仕様、共通契約の正本を探すとき
-- session、run、branch、commit、worktree の分岐・隔離・結合モデルを確認するとき
-- 現行方式で採用しなかった代替案と、その判断理由を確認するとき
-- Python 実装の配置、開発環境、テスト要件、テスト実行手順を確認するとき
-- agent call の prompt、起動パラメータ、file access、Structured Output、feedback 入力の構築責務を調査するとき
+- cmoc の挙動仕様、共通契約、サブコマンド仕様の入口を選ぶとき
+- session fork、run の隔離、branch・commit・worktree の関係を調査・変更するとき
+- 不採用となった方式や仕様案と、その理由を確認するとき
+- Python 実装、CLI 配置、開発環境、テスト要件・実行手順を確認するとき
+- AI エージェント呼び出しのパラメータや用途別起動処理を確認するとき
+- cmoc の設定モデル、root path 解決、構造化文書の Markdown レンダリングを確認するとき
+- 完全 prompt の生成や placeholder、oracle・realization・feedback・routing などの policy 構築を確認するとき
 
 ## Do not read this when
-- 対象の個別仕様や専用ルールが既に特定できており、`oracle/doc` 配下の該当文書を直接読む方が適切なとき
-- 具体的な実装コードやテストコードの詳細だけを確認したいとき
-- CLI の実行制御、TUI の画面操作、feedback の保存・集約など、`oracle` 配下ではなく realization や別の実装領域が直接の対象であるとき
+- 個別仕様や専用ルールが既に特定でき、下位文書を直接読む方が適切なとき
+- 具体的な実装コード・テストコードの詳細だけを調査するとき
+- 実際の CLI サブコマンド解析、TUI 実行、Codex CLI 呼び出しなど、oracle の定義を利用する側だけを確認したいとき
+- oracle や realization の正本仕様、個別機能の保存・適用処理だけを確認するとき
+- INDEX.md の自動生成処理そのものを調査するとき
 
 ## hash
-- 02240271f7ee6e5e8f6c0e7b288038152a7df6a8a4220aaf80909b90d525c4e5
+- d018df77a5a1eb902b2949f56dd5028e77f9bdf7f08ba8dee9592f22b04c4e46
 
 # `pyproject.toml`
 

@@ -1,19 +1,17 @@
 # `oracle`
 
 ## Summary
-- oracle/src/oracle は、cmoc の設定・パスモデル・構造化文書処理と、agent call 用のパラメータ、feedback、prompt 構築などの共通実装をまとめる中核ディレクトリです。用途別の agent call 定義や prompt 部品、共通データモデルへの入口を提供します。
+- oracle の実装定義を構成する最上位領域。AI コーディングエージェント呼び出しの論理パラメータと用途別起動定義、cmoc の設定・パス・構造化文書モデル、agent 向け完全 prompt と各種 policy を扱う。具体的な呼び出し用途は `acp_builder`、共通モデルや設定は `other`、prompt の構築規則は `prompt_builder` へ進む。
 
 ## Read this when
-- agent call の共通設定、パラメータ契約、用途別構築定義の関係を確認するとき
-- cmoc の設定、パス placeholder 解決、構造化文書の生成処理を確認するとき
-- agent 向け prompt の構成、policy の統合、editor input の生成を調査・変更するとき
-- feedback 入力契約や、その下位スキーマへの入口を確認するとき
+- AI コーディングエージェント呼び出しのパラメータ契約や用途別の起動定義を調べるとき
+- cmoc の設定モデル、root path 解決、構造化文書の表現・Markdown レンダリングを調べるとき
+- agent 向け完全 prompt の構成、placeholder 統合、oracle・realization・feedback・routing などの policy を調べるとき
 
 ## Do not read this when
-- 実際のモデル名やバックエンド固有の解決処理だけを確認したいとき
-- oracle や realization の正本仕様、具体的な実装・テストだけを確認したいとき
-- CLI サブコマンド解析、共通 prompt 生成以外の処理、TUI の画面処理だけを確認したいとき
-- collector による feedback の保存・集約や、問題検出後の継続判断だけを確認したいとき
+- 実際の Codex CLI 呼び出し、サブコマンド解析、TUI の実行処理など、agent call の定義を利用する側の実装だけを調べるとき
+- oracle や realization の正本仕様、または個別機能の保存・適用処理だけを確認したいとき
+- この領域で定義された共通モデルや prompt 構築規則ではなく、個別の下位機能の具体的な挙動だけを確認したいとき
 
 ## hash
-- 518f82f5a2bd2e91758cee7937318e9abf555cd6c8c9945532b979129caa3c7d
+- de39aa07f0a35bd1a39098f2bad239681ed7619326a33a81d1c578acd73e874e

@@ -20,20 +20,17 @@
 # `src`
 
 ## Summary
-- cmoc の agent call 用パラメータと prompt を構築する実装群です。設定・パス解決・構造化文書レンダリングなどの共通基盤に加え、TUI、session join、oracle review、indexing、feedback、realization 操作など用途別の起動定義と Structured Output schema を扱います。
-- `oracle/other` が設定・パスモデル・構造化文書処理、`oracle/prompt_builder` が共通 prompt と policy 部品、`oracle/acp_builder` が用途別 agent call と schema、`oracle/feedback` が feedback 入力契約の入口です。
+- oracle の実装定義を構成する領域。AI エージェント呼び出しの共通パラメータと用途別起動定義、設定・パス・構造化文書モデル、完全 prompt と各種 policy の構築処理を扱う。用途別の agent call は `acp_builder`、共通モデルや設定・レンダリングは `other`、prompt と policy の組み立ては `prompt_builder` へ進む。
 
 ## Read this when
-- agent call の起動パラメータ、モデル・推論設定、cwd、ファイルアクセス権、Structured Output schema の対応を確認するとき
-- prompt の共通構成、oracle/realization や routing などの policy 統合、editor input の生成を調査・変更するとき
-- cmoc の設定値・placeholder 付きパス解決・構造化文書のレンダリング処理を確認するとき
-- indexing による INDEX.md エントリー生成、oracle review の所見処理、feedback の入力契約を確認するとき
+- AI コーディングエージェント呼び出しのパラメータや、`cmoc` の用途別起動処理を確認するとき
+- cmoc の設定モデル、root path 解決、構造化文書の Markdown レンダリングを確認するとき
+- 完全 prompt の生成、placeholder の統合、oracle・realization・feedback・routing などの agent 向け policy を確認するとき
 
 ## Do not read this when
-- CLI サブコマンドの解析や実行制御そのものだけを確認したいとき
-- 実際の agent backend・モデル名の解決や外部プロセス実行だけを確認したいとき
-- oracle または realization の正本仕様、具体的な realization 実装・テストを確認したいとき
-- TUI の画面表示・操作ロジック、または collector による feedback の保存・集約だけを確認したいとき
+- 実際の CLI サブコマンド解析、TUI 実行、Codex CLI 呼び出しなど、oracle の定義を利用する側だけを確認したいとき
+- oracle や realization の正本仕様、または個別機能の保存・適用処理だけを確認したいとき
+- 共通の実装定義ではなく、下位領域の特定機能の具体的な挙動を直接確認できるとき
 
 ## hash
-- 147db26ce3ac4bd915a20d102c67d821fc0b52dcce284e81d079552506e1dc29
+- d1db54ec1c00479286986364824e21ca2e297ed931e6f141b460f46d53462a36
