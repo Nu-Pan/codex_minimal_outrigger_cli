@@ -1,22 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- AI コーディングエージェント呼び出しの共通パラメータ定義と、oracle・realization・feedback・indexing・session・tui・quota probe 用途別 builder の入口をまとめるディレクトリ。
-- basic.py はモデルクラス、推論強度、ファイルアクセスモード、prompt、Structured Output schema、cwd、indexing preflight を含む AgentCallParameter 契約を定義する。
-- 下位ディレクトリでは、用途ごとの prompt・アクセス制約・モデル設定・出力 schema を構築する。oracle review、realization の apply/refactor、feedback issue 判定、INDEX.md エントリー生成、session join の conflict 解消、TUI 起動を扱う。
+- AIコーディングエージェント呼び出しの共通パラメータ定義と、用途別の agent call 構築実装を扱うディレクトリ。indexing、oracle、quota probe、realization、session、TUI の prompt、起動条件、アクセスモード、作業ディレクトリ、Structured Output 契約へ進む入口となる。
 
 ## Read this when
-- AgentCallParameter の共通契約や論理的なモデル・推論・ファイルアクセス設定を確認するとき
-- 特定の cmoc 機能に対応する agent call builder の所在と、下位の用途別定義へ進む入口を判断するとき
-- oracle、realization、feedback、indexing、session join、tui の agent call の prompt・起動設定・Structured Output 契約を横断して調査するとき
+- AgentCallParameter の共通契約、モデル、推論強度、ファイルアクセス、prompt、Structured Output schema、cwd、preflight 設定を確認するとき
+- INDEX.md エントリー生成、oracle の用途別 agent call、Codex CLI quota probe、realization の追従・refactor、session join の conflict 解消、cmoc tui の起動設定を調査・変更するとき
+- 用途別 agent call の prompt、起動条件、権限、出力契約の入口を特定するとき
 
 ## Do not read this when
-- 特定用途の prompt 構築や実行制御だけを確認したいときは、対応する下位ディレクトリまたは builder を直接読むとき
-- 実際のモデル名やバックエンド固有の解決処理を確認したいときは realization 側の実装を読むとき
-- Codex CLI の sandbox や oracle・realization の正本仕様を確認したいときは、対応する oracle 文書を読むとき
+- 既存 INDEX.md のルーティング内容だけを確認したいとき
+- モデル名やバックエンド固有の解決処理、共通 prompt 生成、path model、構造化文書などの共通仕様だけを確認したいときは、それぞれの定義元を直接読む
+- realization の通常の implementation・test・ancillary、session join の通常処理、TUI の画面表示や対話操作など、個別の実行処理を確認したいとき
+- 具体的な issue 内容、report cut reference、raw log、個別のレビュー対象や所見判定など、用途別定義の範囲外のデータや処理を調べるとき
 
 ## hash
-- e7dd952adee515b5bed502af055695f4d777bd687a79431fed01d6cad5d814b4
+- be850c993e27a952760282e707918a5ae57d677bcd25dd0a0139f3d21cae5ff5
 
 # `feedback`
 
@@ -56,16 +55,19 @@
 # `prompt_builder`
 
 ## Summary
-- agent 向けの完全な prompt を組み立てる prompt-builder の実装群。placeholder 定義、prompt 統合、エディタ入力初期文面、oracle/realization の説明部品、各種 policy 定義を扱い、prompt 生成の共通基盤と個別構成要素への入口となる。
+- プロンプト構築に関する共通部品と入口をまとめたディレクトリ。placeholder の型、完全 prompt の組み立て、エディタ入力文面、oracle・realization の説明部品、各種 policy prompt を扱う。個別実装や規定の詳細へ進むための入口となる。
 
 ## Read this when
-- agent call 用 prompt の構成・統合順序・placeholder 処理を調査または変更するとき
-- oracle・realization・routing・file access・feedback reporting など、prompt に注入する policy の構築方法を確認するとき
-- エディタ入力用の初期文面や、oracle/realization の説明部品を確認するとき
+- 完全 prompt の構造や placeholder 統合規則を確認したいとき。
+- oracle・realization の分類や責務説明を prompt に組み込む処理を調査するとき。
+- agent call に適用する policy prompt の生成内容や責務分担を確認したいとき。
+- エディタ経由の入力文面や、構造化された prompt 部品の組み立てを変更するとき。
 
 ## Do not read this when
-- 生成済み prompt の利用箇所や、oracle・realization 自体の仕様・実装を直接調査するとき
-- 個別 policy の本文だけ、または prompt-builder 共通基盤だけを確認したいときは、該当する下位ファイルを直接読む
+- 個別 policy の具体的な規定だけを確認したいときは、対応する policy モジュールを直接読む。
+- prompt-builder の共通型や構造化ドキュメント要素の定義だけを確認したいときは、それぞれの定義元を直接読む。
+- 具体的な CLI や agent call の利用動作だけを調査したいときは、呼び出し側を直接読む。
+- 個別の oracle・realization ファイルの仕様や実装内容を確認したいときは、対象ファイルを直接読む。
 
 ## hash
-- 90684c299a1b98c8a82b7db154a4e7e8285127293212f960dba763f6f10ea2bf
+- 4e6a03a5605200fa0e54f50bc0e96b04c6c11b001a2cd78edf1c77021429a139

@@ -1,34 +1,33 @@
 # `apply`
 
 ## Summary
-- `cmoc realization apply fork` における差分追従 agent call の起動パラメータ構築を扱う。
-- commit 範囲、oracle file の raw git diff、prompt、ファイルアクセスモード、作業ディレクトリ、モデル・推論設定、indexing preflight を定義する `fork` への入口である。
+- `cmoc realization apply fork` 用の AgentCallParameter を構築する定義で、追従対象の commit 範囲や oracle file の raw git diff を prompt に組み込み、run worktree を起動コンテキストとして設定する。差分追従 Agent のモデル、権限、調査・検証・routing 方針などの起動条件を扱う。
 
 ## Read this when
-- `cmoc realization apply fork` の差分追従 agent call の起動条件や prompt を確認・変更するとき
-- oracle file の変更をリポジトリ全体の realization file へ反映する agent call の完了条件を確認するとき
+- realization apply fork の Agent 起動パラメータ、prompt 構築、commit 差分の埋め込み、run worktree 設定を確認・変更するとき。
+- oracle file の変更を realization file 全体へ追従させる Agent call のモデル設定、権限設定、実行前 indexing 設定を確認するとき。
 
 ## Do not read this when
-- 差分追従 agent call が実施する realization 実装、テスト、補助成果物の内容を調査するとき
-- `cmoc realization apply fork` 以外の agent call 構築や、通常の realization 実装を確認するとき
+- 通常の realization implementation、test、ancillary の具体的な実装内容を確認する場合。
+- Agent call の共通パラメータ型や prompt の共通生成規則を確認する場合。これらは各定義元を直接読む。
 
 ## hash
-- 1a96bca774699248cc2a8049204c34fcf0d018c3868609be69dc6ac59a1ea74d
+- 5c1ddc42291f0e1accc1b99ce0370d596a38dc64ab6747635e214e8ff3596e72
 
 # `refactor`
 
 ## Summary
-- refactor fork における変更差分の要約 agent call と、ファイル単位のレビュー・修正 agent call を定義するディレクトリ。変更要約では差分入力から分類済み要約を生成し、レビュー・修正では対象ファイルを起点に調査・修正・検証を行う。各 agent call の prompt 構築、起動パラメータ、Structured Output schema が下位ファイルに分かれているため、それらの契約や関係を確認する入口となる。
+- refactor fork における agent call の出力契約と起動パラメータ構築を扱うディレクトリ。変更差分要約とファイル単位のレビュー・修正について、prompt、実行コンテキスト、アクセスモード、モデル、Structured Output schema、調査・修正・検証要件を確認する入口となる。
 
 ## Read this when
-- refactor fork の変更差分要約 agent call の責務、入力となる差分、読み取り専用の実行条件を確認するとき
-- ファイル単位のレビュー・修正 agent call の対象範囲、oracle・realization の参照方針、修正と検証の条件を確認するとき
-- 変更要約またはレビュー・修正の prompt 構築実装と、それに対応する Structured Output schema の関係を調査するとき
+- refactor fork の変更差分要約 agent call の出力形式、prompt、実行コンテキスト、アクセスモード、モデル設定、Structured Output schema を確認・変更するとき
+- refactor fork のファイル単位レビュー・修正 agent call の出力契約、調査範囲、修正権限、検証要件、prompt、AgentCallParameter の構築方法を確認・変更するとき
 
 ## Do not read this when
-- 変更差分の要約処理やレビュー・修正処理の具体的な実装を調べる場合は、対応する Python 実装を直接読むとき
-- Structured Output の項目、型、必須条件だけを確認したい場合は、対応する JSON schema を直接読むとき
-- レビュー対象の実装や oracle の正本仕様を調査する場合は、対象の realization file または oracle file を直接読むとき
+- 変更差分の取得・要約生成ロジック自体を調べるとき
+- レビュー対象の実装、個別仕様、所見判定、レビュー・修正 agent の実行処理を調べるとき
+- 構造化出力の項目・型・形式だけを確認するとき
+- 一般的な prompt builder、path model、struct document の仕様を確認するとき
 
 ## hash
-- dfb34395a4d45dc1287949930f93f7db01129cf6fd5b5b1aa9337b5281aef83e
+- bee16cc11ecff3d4fd783dbd56a8b2ec2404522d1eecda259e494ac131ef3838
