@@ -6,7 +6,6 @@ from .basic import PlaceholderMap
 
 # local
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
-from .policy.apply_review import build_apply_review_policy
 from .policy.conflict_resolution import build_conflict_resolution_policy
 from .policy.editor_handoff import build_editor_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
@@ -15,6 +14,7 @@ from .policy.index_entry import build_index_entry_policy
 from .policy.oracle import build_oracle_policy
 from .policy.oracle_findings import build_oracle_findings_policy
 from .policy.realization import build_realization_policy
+from .policy.realization_findings import build_realization_findings_policy
 from .policy.realization_oracle_reference import (
     build_realization_oracle_reference_policy,
 )
@@ -49,7 +49,7 @@ def build_complete_prompt(
     oracle_policy: bool = False,
     realization_policy: bool = False,
     oracle_findings_policy: bool = False,
-    apply_review_policy: bool = False,
+    realization_findings_policy: bool = False,
     conflict_resolution_policy: bool = False,
     editor_handoff_policy: bool = False,
     realization_oracle_reference_policy: bool = False,
@@ -143,10 +143,10 @@ def build_complete_prompt(
             full_prompt,
             build_oracle_findings_policy(),
         )
-    if apply_review_policy:
+    if realization_findings_policy:
         _append(
             full_prompt,
-            build_apply_review_policy(),
+            build_realization_findings_policy(),
         )
     if conflict_resolution_policy:
         _append(

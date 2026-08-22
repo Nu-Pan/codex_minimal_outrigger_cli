@@ -72,7 +72,7 @@ def build_realization_apply_fork_launch_exec_parameter(
         oracle_and_realization_basic=True,
         oracle_policy=True,
         realization_policy=True,
-        apply_review_policy=True,
+        realization_findings_policy=True,
         realization_oracle_reference_policy=True,
         routing_policy=True,
     )

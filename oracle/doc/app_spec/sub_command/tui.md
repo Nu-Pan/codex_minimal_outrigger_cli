@@ -38,7 +38,7 @@
     - `build_oracle_policy`
     - `build_realization_policy`
     - `build_oracle_findings_policy`
-    - `build_apply_review_policy`
+    - `build_realization_findings_policy`
     - `build_realization_oracle_reference_policy`
 - 各規定は自身が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
 - oracle file と realization file の責務および適合性は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md`、oracle review の所見成立条件は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md` を意味仕様の正本とする

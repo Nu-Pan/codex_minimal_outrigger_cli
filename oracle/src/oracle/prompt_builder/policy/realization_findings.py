@@ -4,7 +4,7 @@ from oracle.other.struct_doc import SDHeader, SDPolicy
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_apply_review_policy() -> tuple[PlaceholderMap, SDHeader]:
+def build_realization_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
     """realization file に対する所見が満たすべき規定"""
     return (
         {},

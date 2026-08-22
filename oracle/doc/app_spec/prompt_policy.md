@@ -77,7 +77,7 @@ prompt policy は、cmoc が agent の判断または操作を制約するため
 - `oracle_policy`: oracle authority と oracle file の作成・変更・レビュー規定
 - `realization_policy`: oracle authority と realization 規定
 - `oracle_findings_policy`: finding basis と oracle review 規定
-- `apply_review_policy`: oracle authority、finding basis、apply review 規定
+- `realization_findings_policy`: oracle authority、finding basis、realization findings 規定
 - `conflict_resolution_policy`: oracle authority と conflict 解消規定
 - `editor_handoff_policy`: editor handoff 規定
 - `realization_oracle_reference_policy`: realization code から oracle file path を参照する規定

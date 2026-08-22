@@ -36,7 +36,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         """,
         goal="""
         - `{{target-path}}` 以外の必要な oracle file, realization file も読んでいること
-        - 列挙した所見が apply review policy を満たしていること
+        - 列挙した所見が realization findings policy を満たしていること
         - 発見した所見に対応する修正をベストエフォートで実施したこと
         - 修正した file を再調査し、この agent call 内で対応可能な所見を残していないこと
         - realization file が realization policy に従っていること
@@ -74,7 +74,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         oracle_and_realization_basic=True,
         oracle_policy=True,
         realization_policy=True,
-        apply_review_policy=True,
+        realization_findings_policy=True,
         realization_oracle_reference_policy=True,
         routing_policy=True,
     )
