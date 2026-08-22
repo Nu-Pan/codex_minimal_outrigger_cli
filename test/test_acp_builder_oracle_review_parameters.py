@@ -168,12 +168,12 @@ def test_oracle_review_builders_select_required_policy_blocks(
     assert parameter.agent_call_cwd == tmp_path.resolve()
     assert f"- {{{{work-root}}}} = {tmp_path.resolve()}" in prompt
     assert "# oracle policy" in prompt
-    assert "# oracle review policy" in prompt
+    assert "# oracle findings policy" in prompt
     assert "# routing policy" in prompt
     assert "プロンプト > oracle file > installed skill の優先順位" in prompt
-    assert "仕様に従うと実装者の裁量では解消不能な問題が必ず発生" in prompt
-    assert "文意または検索性を損なう誤字、脱字" in prompt
-    assert "列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in prompt
+    assert "実装者裁量の範囲内で解決出来ない問題" in prompt
+    assert "初歩的な言葉の問題" in prompt
+    assert "所見に対して適用する基準は常に一貫していること" in prompt
 
 
 def test_oracle_review_enumerate_finding_schema_matches_oracle_source() -> None:

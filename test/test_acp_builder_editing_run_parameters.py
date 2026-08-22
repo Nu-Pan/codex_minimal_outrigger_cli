@@ -89,11 +89,11 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     for heading in (
         "# oracle policy",
         "# realization policy",
-        "# apply review policy",
+        "# realization findings policy",
         "# realization oracle reference policy",
     ):
         assert heading in parameter.prompt
-    assert "# oracle review policy" not in parameter.prompt
+    assert "# oracle findings policy" not in parameter.prompt
     assert "# conflict resolution policy" not in parameter.prompt
     assert "# routing policy" in parameter.prompt
 

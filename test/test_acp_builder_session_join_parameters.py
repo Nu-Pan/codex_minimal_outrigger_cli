@@ -64,8 +64,8 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     for heading in (
         "# oracle policy",
         "# realization policy",
-        "# oracle review policy",
-        "# apply review policy",
+        "# oracle findings policy",
+        "# realization findings policy",
     ):
         assert heading not in parameter.prompt
 
