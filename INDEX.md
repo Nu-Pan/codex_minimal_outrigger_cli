@@ -91,20 +91,24 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・設計・開発ルールと、それらを実現する oracle 層の実装を参照するための上位入口。仕様・設計・代替案・開発ルールは `doc`、agent call・プロンプト構築・設定・feedback 入力などの実装は `src` へ進む。
+- cmoc の人間所有の正本仕様と開発規約を収録する oracle 領域。自然言語仕様、実装定義・schema、agent call／prompt 構築定義を扱い、realization の実装やテストとは責務を分ける。
+- `doc/app_spec` は共通契約、feedback、prompt、session・run state、logging、error handling、indexing、各サブコマンド仕様の入口。`doc/branch_model.md` は branch・commit・worktree の関係を扱い、`doc/considered_alternative` は不採用案の背景を扱う。`doc/dev_rule` は設計、coding、環境構築、テスト実装、テスト実行の規約を扱う。
+- `src/oracle` は oracle の正確な実装定義と schema を収録し、`acp_builder`、`feedback`、`prompt_builder`、`other` の下位実装へ進む入口となる。
 
 ## Read this when
-- cmoc の仕様、設計、branch model、検討済み代替案、開発ルールの入口を探すとき
-- agent call、プロンプト構築、設定・パス・構造化文書モデル、feedback 入力検証の実装を確認するとき
-- `doc` と `src` のどちらを起点に読むべきか判断するとき
+- cmoc の正本仕様と開発規約の対象領域を特定し、適切な下位文書・定義へ進むとき
+- 共通契約、session／run や branch model、feedback、prompt、indexing、または個別サブコマンドの仕様を調査・変更・レビューするとき
+- agent call の構築、Structured Output schema、feedback 入力契約、prompt policy など oracle source の責務を確認するとき
+- Python 開発環境、設計、coding、テスト実装、テスト実行の規約を確認するとき
 
 ## Do not read this when
-- 特定の仕様書、設計書、代替案、開発ルールの内容だけを確認する場合は `doc` 配下の該当文書を直接読む
-- 特定の実装やテストの挙動だけを確認する場合は `src` 配下の該当対象を直接読む
-- 実行時に生成された report やその他の生成物の具体的内容だけを調査する場合は、該当する生成物を直接調べる
+- 対象の下位ディレクトリや個別仕様が明確で、対応する `doc/app_spec`、`doc/dev_rule`、`doc/branch_model.md`、`doc/considered_alternative`、または `src/oracle` の対象を直接読めるとき
+- realization の実装・設定、通常の CLI 実行や TUI 表示の具体的な挙動を確認するとき
+- 既存仕様の不採用理由だけを確認したい場合を除き、`considered_alternative` を現行仕様の正本として扱うとき
+- INDEX.md の生成・更新処理自体を調べるときは、`doc/app_spec/indexing.md` を直接読むとき
 
 ## hash
-- d09c84f46d1dc67ab24add49f94c06cc70519b8a682eb4c867f6ce089d62e5c4
+- 9b11b03efcb8283cd50a9d8a838e876b97557295b38921102a49cbecc5bd9295
 
 # `pyproject.toml`
 
@@ -142,17 +146,17 @@
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の realization test と共有テスト支援を集約する検証入口。ACP builder、Codex runtime、CLI lifecycle、indexing、session、oracle review、realization、feedback、設定・state・Git・通知など、実装の外部契約と境界条件を横断的に検証する。各機能の詳細な回帰条件は配下の個別テストファイルへ進む。
+- `test/` は、cmoc の realization test を集約するディレクトリです。CLI、runtime、Codex 実行、indexing、session、oracle review、feedback、設定、通知などの外部契約・回帰挙動を検証する各テストへの入口になります。対象機能の実装変更時に、該当する統合テストまたは専用テストを選ぶために進みます。
 
 ## Read this when
-- cmoc の既存挙動をテストから確認したいとき
-- 特定機能の外部契約、失敗境界、Git・worktree・state・report・Codex 実行の回帰条件を調査するとき
-- 共有 fixture やテスト用 helper、実経路統合テストの subprocess 設定を確認するとき
+- cmoc の外部挙動や回帰条件を、実装ではなくテスト観点から確認したいとき
+- CLI、Codex runtime、indexing、session、oracle、realization、feedback、設定、共通 runtime の変更に対応する検証テストを探すとき
+- 複数コンポーネントにまたがる lifecycle、worktree、Git、report、process 管理の契約を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装本体の責務・詳細を確認することが目的のときは、対応する oracle 文書または実装ファイルを直接読む
+- 正本仕様や実装の詳細を確認することが目的の場合は、各テストが参照する oracle 文書または実装ファイルを直接読む
 - 対象機能が明確な場合は、このディレクトリ全体ではなく対応する個別テストファイルへ直接進む
-- テスト実行手順だけを確認したいときは、repository local のテスト実行手順を直接読む
+- テスト実行方法だけを確認したい場合は、テスト実行規約またはプロジェクト設定を読む
 
 ## hash
-- 04a318fa857c91e34ec932232ec6a726f142543dd224819ddaad21a5fa9cb76e
+- e3da8cbaa3f04a2f8d0615837e46632e8a7121cdfbd3ff72138b49bf16035d67

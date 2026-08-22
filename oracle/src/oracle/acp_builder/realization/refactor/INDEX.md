@@ -1,18 +1,17 @@
 # `fork`
 
 ## Summary
-- refactor fork の変更差分要約に関する構造化出力スキーマ、差分要約用 AgentCallParameter の構築実装、ファイル単位レビュー・修正結果のスキーマ、およびレビュー・修正用 AgentCallParameter の構築定義を扱うディレクトリ。各ファイルの役割と参照条件を確認する入口となる。
+- refactor fork における変更要約とファイル単位レビュー・修正の agent call 定義、およびそれぞれの Structured Output schema を扱うディレクトリ。変更差分の要約形式・起動パラメータ・レビュー修正処理の呼び出し条件を確認する入口である。
 
 ## Read this when
-- refactor fork の変更差分要約 agent call の出力契約や起動パラメータを確認・変更するとき
-- ファイル単位のレビュー・修正 agent call の構築定義、作業条件、検証条件を確認・変更するとき
-- 差分要約またはレビュー・修正に関する JSON schema と Python 実装の対応を調査するとき
+- refactor fork の変更差分要約 agent call の出力契約や起動パラメータを確認するとき
+- ファイル単位のレビュー・修正処理における AgentCallParameter、作業条件、検証結果の構造を確認するとき
+- 対応する JSON schema と prompt 構築実装の関係を調査するとき
 
 ## Do not read this when
-- 変更要約の生成ロジック自体を調査するときは、差分取得・生成を担う実装へ直接進む
-- レビュー対象の実装内容や個別仕様を調査・修正するときは、対象の realization file と必要な oracle file を直接読む
-- Structured Output の具体的な項目や形式だけを確認するときは、対応する JSON schema ファイルを直接読む
-- refactor fork 以外の AgentCallParameter 構築定義を調査するときは、該当する別ディレクトリへ進む
+- 変更差分の要約ロジックやレビュー・修正の具体的な実装を調べる場合は、各担当の Python 実装を直接読むとき
+- 出力項目や型だけを確認したい場合は、対応する JSON schema を直接読むとき
+- レビュー対象の実装内容や正本仕様そのものを調査する場合は、対象の realization または oracle file を直接読むとき
 
 ## hash
-- 6ffb49fc8021beb7dcba645d2627a9f54aa8177f81bd5ad5ef5d4d451a16f34d
+- a1d7eecc8707ca19af34e0af4b45c96c492fb2af2b97a40d30606c804f3569da

@@ -239,21 +239,19 @@
 # `prompt_policy.md`
 
 ## Summary
-- cmoc が agent call に渡す prompt の責務、正本仕様・prompt builder・実行時生成物の境界、注入する policy block、Structured Output の受理条件、summary/goal の役割分担、および prompt 構築規定を定める文書。prompt の文面管理や policy 選択、placeholder、言語・記法、出力契約を扱う際の入口となる。
+- `prompt_policy.md` は、cmoc の agent call prompt に含める責務・情報量・正本の境界・policy block の注入規則・Structured Output 契約・placeholder と記法を定める仕様書である。prompt builder／acp builder の oracle src、oracle doc、realization implementation の責務分担を整理し、下位の prompt 構築仕様や policy 定義を読むための入口となる。
 
 ## Read this when
-- agent call 用 prompt の責務や情報量、正本と実行時生成物の境界を確認するとき
-- policy block の選択・注入、fundamental_policy、routing policy、feedback instruction の扱いを変更またはレビューするとき
-- Structured Output の schema・決定論的事後条件・補正 prompt の責務境界を確認するとき
-- summary と goal の分類、placeholder の統合、prompt の構成順序や記法を確認するとき
+- agent call に渡す prompt の構成、責務、情報量、正本管理、policy block の選択・注入、または prompt 文面の受け渡しを確認するとき
+- Structured Output の schema と決定論的事後条件の責務境界、受理条件、補正 prompt の扱いを確認するとき
+- summary／goal、placeholder、cmoc_block／cmoc_ref、GFM、日本語原則など prompt 構築上の共通規定を確認するとき
 
 ## Do not read this when
-- cmoc の意味仕様そのもの、oracle／realization の一般的な分類、file access の詳細、INDEX.md の一般的な仕様、oracle review や session join の個別判定条件を直接確認したいとき
-- 実行時に生成された prompt や log の内容だけを調査するとき
-- 特定の agent call の正確な prompt 文面を変更するとき（対応する oracle src の prompt builder または acp builder を直接確認する）
+- 特定の oracle doc の意味仕様、特定の oracle src の正確な prompt 文面、または realization implementation の具体的な処理だけを直接確認すれば足りるとき
+- prompt や agent call と無関係な cmoc の機能・実装・テストを調査するとき
 
 ## hash
-- aa660995f281a3d12c6fdd65d2e98f219c9bf95060e55b8537de5d06aabbc89b
+- 925d52092bb5f3234091c5f7eb261d9839c7e4ebb2547f4cf8981003d45ab902
 
 # `run_isolation.md`
 
@@ -292,20 +290,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様を収録するディレクトリ。doctor、indexing、feedback report、oracle 操作、realization apply／refactor、session／run lifecycle、tui などの個別コマンドの実行条件・処理手順・状態遷移・報告要件を確認する入口であり、共通 lifecycle や個別 workload の仕様へ進むためのルーティング先でもある。
+- cmoc の主要サブコマンド仕様を収録するディレクトリ。doctor、indexing、oracle の調査・レビュー・編集、realization の apply・refactor、session の fork・join・abandon、編集 run の共通 lifecycle、feedback report、tui の正本仕様への入口を提供する。各ファイルは対応するコマンドの引数、前提条件、処理手順、状態遷移、エラー処理、report 要件を扱う。
 
 ## Read this when
-- cmoc サブコマンドの仕様、引数、事前条件、実行手順、終了経路を確認するとき
-- サブコマンドの primary report、診断ログ、状態保存、エラー処理、cleanup の要件を実装・変更・検証するとき
-- session／run の fork・join・abandon、realization apply／refactor、oracle 操作、feedback report、tui の仕様入口を探すとき
+- cmoc のサブコマンド仕様を横断的に確認するとき
+- doctor、indexing、oracle、realization、session、run、feedback、tui のいずれかのコマンド挙動を変更・実装・レビューするとき
+- コマンド固有仕様の入口を特定し、対象サブコマンドの正本へ進む必要があるとき
 
 ## Do not read this when
-- サブコマンドではなく、参照先として指定された共通 lifecycle、feedback state、prompt、indexing 処理、適合性判定などの詳細仕様だけを確認したいときは、その正本を直接読む
-- 実装責務やテスト実行手順だけを確認したいときは、対応する設計・テストの正本資料を読む
-- 保存済み report の具体例や生成物だけを調査するときは、該当する生成物を直接調べる
+- 特定サブコマンドの詳細仕様が明らかな場合は、対応する個別仕様ファイルを直接読むとき
+- doctor preprocess、indexing 処理、feedback state・observation、prompt、通知、適合性判定など、本文が指定する別の正本だけを確認するとき
+- 一般的な実装責務、テスト実行手順、保存済み report の具体例だけを調査するとき
 
 ## hash
-- c9aebfad6549acc2616738eba8fdd9bd58bec903305c2d7a503c45be58531507
+- 321112f78e317c74f8b6b929a4ac24a8dcbab804edfff51f431c2e60793fe1c1
 
 # `subcommand_interruption.md`
 

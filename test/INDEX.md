@@ -110,19 +110,18 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- test_acp_builder_editing_run_parameters.py は、editing run の canonical builder adapter を対象にした実装テストで、互換 import の再公開、apply/refactor 用 prompt の内容、実行設定、canonical Structured Output schema の参照、raw diff 内の境界風文字列の保持を検証する。builder の adapter 互換性や editing run 向け parameter の変更・調査時に、期待される外部挙動の確認入口として読む。
+- このテストファイルは、editing run workload 向けの ACP builder adapter が canonical builder を互換 import 経路から正しく再公開し、apply/refactor 用の prompt・実行設定・Structured Output schema・raw diff 境界を維持することを検証する。builder の実装や canonical oracle の詳細を調べる前に、これらの adapter 契約をテスト観点から確認したい場合の入口になる。
 
 ## Read this when
-- editing run の apply または refactor builder の parameter 構築を変更・レビューするとき
-- canonical builder の互換 import 経路、prompt に埋め込む commit 範囲・diff・policy、実行設定、Structured Output schema の接続を検証するとき
-- raw diff に三連 backtick や prompt 境界風の見出しが含まれる場合の prompt 境界処理を確認するとき
+- editing run 用 builder の互換 re-export、apply builder の commit 範囲・raw diff 埋め込み、または refactor builder の実行設定と canonical schema の適合性を確認・変更するとき
+- prompt 内に三連バッククォートや境界風見出しを含む raw diff の扱い、および linked worktree 上での builder パラメータ検証を調べるとき
 
 ## Do not read this when
-- canonical builder 自体の実装仕様や oracle の正本内容を確認することが目的の場合
-- editing run と無関係な builder、または一般的な test 実行手順だけを確認する場合
+- canonical builder の具体的な prompt 生成責務や oracle 仕様そのものを確認したいときは、対応する realization 実装・oracle file を直接読む
+- editing run builder 以外の ACP builder、または一般的な git/worktree helper の挙動だけを調べるとき
 
 ## hash
-- 8c643993929ff99ef28bfdd53be5a76438e2090cbf209269df796af723adc326
+- dc9e53609d92060e614b1afea44b8605156863297b82bc16ea7e119bc9d905ef
 
 # `test_acp_builder_indexing_parameters.py`
 
@@ -146,57 +145,54 @@
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review ACP builder 群の回帰テスト。enumerate、judge、merge、validate の各 builder について、互換 module の公開面、AgentCallParameter の model・reasoning・file access、必須 policy block、canonical builder との一致、Structured Output schema、動的入力の保持を検証する。さらに、動的 prompt 内の code fence や section 見出し・placeholder 風文字列が prompt 境界として誤認されず、安全に保護されることを確認する。review builder 実装や対応する oracle schema、prompt rendering・fence 保護の変更時に参照する回帰テスト入口である。
+- 対象は oracle review ACP builder 群の回帰テストで、enumerate・judge・merge・advocate/challenger validation の canonical builder 互換性、公開 API、モデル・reasoning・file access 設定、schema、policy 注入、placeholder 処理、動的 prompt の code fence 境界保護を検証する。review builder の parameter/schema/adapter 契約を横断して確認したいときの入口。
 
 ## Read this when
-- oracle review builder の parameter 設定、公開名、canonical builder 互換性を変更・確認するとき
-- review builder の Structured Output schema、policy block、動的入力の prompt 注入を変更・確認するとき
-- 動的本文に code fence、section 見出し、placeholder 風文字列を含む prompt 境界保護を調査するとき
+- oracle review 用 ACP builder の builder 実装や互換 module の公開面を変更・レビューするとき
+- review builder の Structured Output schema、policy block 注入、動的入力の placeholder 保持、nested code fence 保護の回帰を確認するとき
+- enumerate、judge、merge、finding validation の各段階に共通する AgentCallParameter 契約を調べるとき
 
 ## Do not read this when
-- review builder 以外の ACP builder の挙動を確認するとき
-- oracle review の実装詳細や正本 schema 自体を変更・確認する場合は、対応する builder 実装または oracle file を直接読むとき
-- テスト実行方法や共通の ACP builder 支援処理だけを確認するときは、それぞれの実行手順・共通 support file を直接読むとき
+- oracle review builder 以外の ACP builder の挙動だけを調べるとき
+- canonical builder の実装詳細や正本 schema 自体を確認する必要があるときは、対応する oracle source・JSON schema を直接読む
+- 一般的な review ロジック、所見判定基準、prompt policy の定義だけを確認したいときは、それぞれの正本 policy または builder 実装を直接読む
 
 ## hash
-- e73ab04612819a3aba2cb03f6825feadc076d41a5a74e596b55c82a1d2e29e1e
+- 2337544b220a03f783de310ca1a1347a6c0daaa73d71bb075e13de8f4265d9e8
 
 # `test_acp_builder_session_join_parameters.py`
 
 ## Summary
-- 対象は session join の conflict resolution builder の契約テストで、互換モジュールの公開 API が builder のみであること、canonical builder との同一性、repo write 権限・モデル設定・最大推論・実行 cwd・prompt 内容・preflight 無効化を検証する。競合対象パスの prompt 埋め込みでは、三連バッククォートを含むパスがコードフェンス境界を壊さないことも確認する。
-- session join の conflict resolution parameter builder の公開面、生成パラメータ、prompt のポリシー構成、競合パスのコードフェンス保護を変更・レビューするときの入口。canonical 実装との互換性と、対象 builder 固有の契約をテストから確認できる。
+- session join の conflict resolution builder に対する契約テスト。互換モジュールの公開 export、repo write 権限を使うパラメータ、prompt の必須ポリシーと preflight 無効化、競合パス内の三連 backtick を保護する code fence を検証する。
 
 ## Read this when
-- session join の conflict resolution 用 parameter builder や、その互換モジュールの export 契約を変更・レビューするとき
-- conflict resolution builder が使用するモデル、推論強度、repo write 権限、cwd、preflight 設定、prompt の必須内容を確認するとき
-- 競合対象ファイルのパスを prompt 内のコードブロックへ埋め込む処理で、バッククォートを含むパスの安全性を確認するとき
+- session join の conflict resolution builder の公開 API や生成パラメータの契約を確認・変更するとき
+- conflict resolution prompt の構成、ファイルアクセス権限、agent call 設定、または競合パスの code fence エスケープを確認・変更するとき
 
 ## Do not read this when
-- session join 以外の builder の契約だけを確認する場合
-- conflict resolution builder の実装や正本仕様そのものを直接確認する場合
-- 単に一般的な test 実行手順や repository fixture の共通実装を調べる場合
+- conflict resolution builder の実装詳細を確認する場合は、対応する正本実装を直接読む
+- session join の conflict resolution と無関係な builder や一般的な ACP builder テストを扱う場合
 
 ## hash
-- 604fcb7843857472d716ad8dee68840128fb2fdbc00d99087865cb29d946e6ba
+- 57069e0dc76e95d16e5ef1022b283fee3f033b76eca375acc436b7a22400e674
 
 # `test_acp_builder_tui_parameters.py`
 
 ## Summary
-- TUI 起動 builder が入力 prompt に依存せず、固定された agent call parameter、実行設定、prompt policy を使用することを検証するテスト。
-- TUI 起動用の互換 module が canonical builder のみを公開し、その builder を正しく再エクスポートしていることを検証する。
+- TUI 起動 builder のテスト。固定された agent parameter・prompt policy・実行設定と、互換 module の公開 API が正本 builder と一致することを検証する。
+- TUI 起動 builder の挙動や設定、prompt の policy 構成、または互換 module の公開面を変更・確認するときのテスト入口。
 
 ## Read this when
-- TUI 起動 builder の parameter 固定値、prompt に含める policy、元 prompt の保持、indexing preflight の設定を確認するとき
-- TUI 起動 builder の互換 module における公開 API と canonical builder との同一性を確認するとき
+- TUI 起動 builder が original prompt に依存せず固定 parameter と所定の policy を使うことを確認したいとき
+- TUI 起動 builder の model、reasoning、file access、cwd、indexing preflight などの実行設定を確認したいとき
+- 互換 module が現行 builder だけを公開し、canonical builder を再利用していることを確認したいとき
 
 ## Do not read this when
-- TUI 起動 builder の実装や正本仕様の詳細を確認するとき
-- TUI 以外の builder の parameter や module 公開面を確認するとき
-- 実際の TUI 起動処理や editor input の生成動作を調査するとき
+- TUI 起動 builder 以外の builder や、正本 implementation 自体の詳細を調査・変更するとき
+- TUI builder の一般的な CLI 起動手順や、テスト対象外の実行結果を確認したいとき
 
 ## hash
-- 09b36f7fd2fda6cd51f85d3f3c963de52a096e36575149b8fcb118aef9ea6877
+- a4ede7aa8704e1714cf0f16a8fdef8c4d8f14c27c81b377d7526b2b34a4322a3
 
 # `test_basic_runtime.py`
 
@@ -237,20 +233,20 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動前処理の外部挙動を検証するテスト。doctor preprocess、エディタ入力、完全プロンプト確定、Codex TUI 直接起動、差分保持、linked worktree と `.cmoc` ignore の扱いを対象とする。TUI サブコマンドの実装変更や挙動確認を始める際の検証入口。
+- TUI 起動直前の CLI 前処理に関する外部挙動テスト。編集済みプロンプトからの Codex TUI 起動、doctor 前処理・indexing preflight・プロンプトビルダーの呼び出し順、生成パラメータ、エディタ入力ログ、既存の git 差分保持を検証する。
+- linked worktree を含む実行時に、agent call context と editor 記録を main worktree 側へ配置し、リポジトリおよび worktree の `.cmoc` ログを git ignore 対象として維持する挙動を検証する。
 
 ## Read this when
-- `tui` サブコマンドの実行順序、エディタ入力の保存・抽出、完全プロンプト生成、起動パラメータ、既存 Git 差分の保持を確認するとき。
-- linked worktree 起動時の agent call context、ログ配置、`.gitignore` 更新を検証するとき。
-- TUI 起動前の indexing preflight や、editor work file と保存記録の分離に関する外部挙動を確認するとき。
+- TUI サブコマンドの起動前処理や Codex TUI 呼び出しの外部契約を確認するとき
+- エディタで編集した prompt の保存・変換・実行パラメータ生成を確認するとき
+- linked worktree におけるログ配置、agent call の作業ルート、git ignore の挙動を確認するとき
 
 ## Do not read this when
-- TUI 以外のサブコマンドの挙動だけを調査・変更するとき。
-- プロンプト編集の正本仕様や editor input 構築ロジックそのものを確認するときは、先に対応する oracle 文書・oracle 実装を読む。
-- TUI 起動パラメータの生成実装そのものを変更するときは、対応する builder 実装と正本仕様を直接読む。
+- TUI の実装詳細や正本仕様を確認するときは、`sub_commands/tui.py` またはテスト冒頭に示された正本仕様を直接読む
+- CLI 共通ヘルパー、git 操作ヘルパー、プロンプトビルダー単体の挙動だけを確認するとき
 
 ## hash
-- 7b8f8f8db6af7b836c1d7c5f6907fbb86f3a7cded31a30e5c98a1a5a2c00873e
+- 32be4cb59364d5381bcb0f9a9ae4191b3c61c382ca461afe1ffe873f0be1535d
 
 # `test_codex_runtime_errors.py`
 
@@ -664,21 +660,20 @@
 # `test_packaged_import.py`
 
 ## Summary
-- 隔離した packaged layout にソースツリーをコピーして実行し、Python パッケージの import 境界と公開面を検証するテスト。
-- canonical agent builder が schema・完全 prompt・期待する parameter を参照できること、oracle edit と prompt editor の入力境界が正本を利用することを確認する。
-- ACP basic と cmoc config が canonical 定義または設定定義だけを再公開し、意図しない名前を公開しないことを確認する。
+- packaged layout にソースツリーをコピーし、隔離環境での import と実行を検証するテスト。
+- oracle review・quota probe・oracle edit・prompt editor・ACP basic・cmoc config のパッケージ配置、正本参照、公開 import 境界、prompt/schema 生成、公開定義を確認する。
 
 ## Read this when
-- packaged layout での import 失敗や、パッケージ配置・setuptools 設定の変更を調査するとき
-- oracle review、quota probe、oracle edit、prompt editor の builder が正本の schema・prompt・入力を参照することを検証するとき
-- acp.builder.basic または config.cmoc_config の再公開 API と module namespace の境界を変更・確認するとき
+- packaged layout での import、setuptools の package 配置、正本 oracle と realization 側の再公開境界を調査するとき
+- oracle review/edit の builder や prompt editor 入力境界が隔離環境で正本の schema・prompt・設定を参照することを確認するとき
+- ACP basic または cmoc config の公開面と再公開定義を検証・変更するとき
 
 ## Do not read this when
-- packaged layout、Python import 境界、builder の正本参照、または再公開 API に関係しない機能のテストを読むとき
-- 通常の単体ロジックだけを検証し、隔離環境でのパッケージ配置や公開面を扱わないとき
+- 個別 builder の prompt 内容や schema 定義そのものを変更・確認する場合は、対象の builder 実装または schema ファイルを直接読むとき
+- packaged layout や import 境界に関係しない単体ロジック、CLI 挙動、一般的なテスト実行を調べるとき
 
 ## hash
-- b715c6d5a9ab0a6383d8048fe018444dc4576cb41082cd5813bd44da8759a2c8
+- 9e8e919a4a508ba8b0915cfaea72beaed63dbfba4e3a6cc2b37517ea3d086f78
 
 # `test_primary_report.py`
 
@@ -735,24 +730,23 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 対象は、prompt policy 各 builder の rendering と complete prompt の組み立て・placeholder 展開を検証する pytest 回帰テスト群。
-- policy のカテゴリ構造・順序、個別 flag の注入、policy 間の分離、主要な適合性・レビュー境界、file access mode ごとの制約を確認する。
-- complete prompt の section 順序、共通 feedback 指示、root 定義の統合・競合、literal token 保持、各 policy の主要語保持を検証する。
-- prompt builder の挙動を変更・調査する際の回帰確認の入口であり、関連する policy builder、complete_prompt、struct_doc の実装や正本仕様を読む前提となる。
+- prompt policy 各 builder の SDHeader rendering と category order、policy flag の選択注入を検証する回帰テスト。
+- build_complete_prompt による static/dynamic section の順序、feedback instruction、placeholder 定義・競合、root token 保持を検証する。
+- file access mode ごとの deny-list と、main repository・linked worktree に応じた path boundary を検証する。
+- oracle、realization、findings、conflict resolution、editor handoff、routing、INDEX entry 各 policy の主要な要求文面と適合境界を検証する。
 
 ## Read this when
-- prompt policy builder の出力構造、カテゴリ順序、flag ごとの注入、または重複注入の挙動を確認・変更するとき
-- complete prompt の section 順序、共通 feedback 指示、placeholder/root token 展開や競合処理を確認するとき
-- FileAccessMode、path context、oracle/realization policy の rendering 回帰を検証するとき
-- prompt builder や対応する正本仕様を変更した後、主要な外部挙動の回帰を確認するとき
+- prompt builder の policy block、complete prompt の構成順序、placeholder 展開、root 定義統合または競合処理を変更・調査するとき。
+- agent call に共通注入される feedback reporting、file access policy、oracle/realization policy の rendering を変更・検証するとき。
+- linked worktree を含む path context と file access deny-list の挙動を確認するとき。
+- prompt builder の回帰テスト全体と、各 policy builder の出力契約を確認するとき。
 
 ## Do not read this when
-- INDEX.md のルーティング情報だけを更新・確認する場合
-- prompt builder の実装詳細を直接調査する必要があり、まず対応する実装ファイルや正本仕様を読む方が適切な場合
-- prompt builder と無関係な機能、テスト、またはドキュメントを扱う場合
+- 個別 policy の本文そのものを変更・調査するだけで、complete prompt への注入やこのテストの検証対象に関係しないとき。
+- prompt builder や SDHeader rendering を経由しない、別の CLI 機能・テスト・ファイルアクセス処理を直接確認するとき。
 
 ## hash
-- 19c0ed455305ee4355e25cf6d5d763e59fee37fc4f5e28931bb0ffc9e64d7879
+- 40b2b26fbd7fb1aab5f67652c895c2bbb20a0ea4600de359d99b7a7288ade131
 
 # `test_runtime_cli.py`
 
@@ -986,20 +980,22 @@
 # `test_struct_doc_rendering.py`
 
 ## Summary
-- 対象は構造化文書 Markdown renderer の単体テストで、空行の縮約、コードブロックの fence、可変長 root と参照 block、描画済み Markdown の扱い、参照未検証、ポリシーカテゴリの順序、旧互換 API の再公開、不正 child の TypeError を検証する。canonical な struct_doc 実装の描画挙動や互換モジュールの再 export を確認したい場合のテスト入口である。
+- 構造化文書ノードを Markdown へ描画する renderer の単体テスト。
+- 見出し深度、連続空行の縮約、code block の fence 長、可変長参照 block、opaque な事前描画文字列、参照未検証、SDPolicy のカテゴリ順、旧 API の再公開、不正 child の型検査を扱う。
+- canonical な oracle.other.struct_doc API と realization 側の basic.struct_doc 互換 API の対応を確認するテスト群への入口。
 
 ## Read this when
-- Markdown renderer の空行・コードブロック・参照 block・ポリシー描画の挙動を変更または確認するとき
-- oracle.other.struct_doc の canonical node、renderer、SDPolicy の実装に対する回帰テストを確認するとき
-- basic.struct_doc の互換 API が canonical 型と renderer を再公開する契約を確認するとき
-- 構造化文書ノードの child 型検証や TypeError の契約を確認するとき
+- struct_doc の Markdown 描画挙動や構造化ノードの構築制約を変更・検証するとき
+- SDHeader、SDTagBlock、SDCodeBlock、SDPolicy、または render_sd_node_as_markdown の回帰を調べるとき
+- basic.struct_doc の互換再公開が canonical API と一致するか確認するとき
 
 ## Do not read this when
-- 構造化文書 renderer の実装そのものや正本仕様を確認する場合は、対応する実装・oracle 文書を直接読むとき
-- Markdown renderer と無関係なテストや、別の構造化文書機能の挙動だけを調べるとき
+- renderer の意味仕様や prompt policy の正本を確認する場合は、oracle/src/oracle/other/struct_doc.py と oracle/doc/app_spec/prompt_policy.md を直接読む
+- struct_doc の実装変更を行う場合は、このテストだけでなく対象実装を直接確認する
+- struct_doc と無関係なテストや CLI 挙動を調べる場合
 
 ## hash
-- 1f01de3b77245e4fc21b5dbb26d4755a4b7563ff3fb987c001f9f2a1033a017b
+- c4bf6251fe36fce5b8a68838d8fd499086279f066bb33f1f7a0c2067e137044e
 
 # `test_windows_toast.py`
 

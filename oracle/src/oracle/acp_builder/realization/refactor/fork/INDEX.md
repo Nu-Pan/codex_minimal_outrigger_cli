@@ -51,18 +51,18 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter 構築定義。対象ファイルを起点に、調査から検証までを行う完全プロンプトを生成し、realization file のレビュー・修正を実行するための作業条件、参照方針、Structured Output の事後条件を設定する。
-- 対象 path と linked worktree をもとに agent_call_cwd を確定し、効率モデル・最大推論・realization write 権限・indexing preflight を含む実行パラメータを返す。Structured Output schema の実体は同名の JSON schema ファイルから参照する。
+- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter を構築する定義。対象ファイルを起点に、必要な oracle・realization file の調査、対応する realization file の修正、検証、Structured Output 返却までを担う。
+- AgentCall の作業ディレクトリ、アクセス権限、モデル・推論設定、完全プロンプト、構造化出力スキーマを組み立てる実装の入口であり、ファイル単位レビュー・修正の呼び出し仕様を変更・確認するときに読む。
 
 ## Read this when
-- refactor fork のファイル単位レビュー・修正用 AgentCallParameter の構築方法を変更するとき
-- 対象ファイルを起点とする完全プロンプトの内容、oracle/realization の参照方針、レビュー・修正・検証の作業条件を確認するとき
-- agent call のモデル、推論強度、ファイルアクセス権限、作業ディレクトリ、indexing preflight の設定を確認・変更するとき
+- refactor fork のファイル単位レビュー・修正処理で AgentCallParameter の構築内容を確認または変更するとき
+- 対象 path の解決、プロンプト生成、oracle・realization policy、Structured Output schema の指定を確認するとき
+- レビュー対象ファイルを起点とした調査・修正・検証の作業条件を確認するとき
 
 ## Do not read this when
-- レビュー対象の実装内容そのものを調査・修正するときは、構築定義ではなく対象の realization file と必要な oracle file を直接読む
-- Structured Output の具体的な出力項目や形式だけを確認するときは、同名の JSON schema file を直接読む
-- refactor fork 以外の AgentCallParameter 構築定義を調査するとき
+- レビュー・修正処理の具体的な realization 実装を直接確認したい場合は、対象となる realization file を読むとき
+- Structured Output の項目や型だけを確認したい場合は、対応する JSON schema を直接読むとき
+- 一般的なプロンプト生成や AgentCallParameter の共通仕様だけを確認したい場合は、参照される共通実装を直接読むとき
 
 ## hash
-- 2fbddc011d930829854cccfbd97e160222915b0179367e29cb12fee378f0f4a4
+- b1734c37a4bcc68d2ce49b953f8b0ebfb8b0167c9fc706df960862bd3ac8237c

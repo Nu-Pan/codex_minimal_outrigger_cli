@@ -228,18 +228,17 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの意味仕様。ユーザープロンプトへの cmoc 固有契約の注入、エディタ入力、完全プロンプトと起動パラメータの構築、AI Agent CLI/TUI の起動手順を定義する。
-- 全バックエンド共通の固定注入規定、builder の起動設定、差分がある状態での実行、indexing preflight、feedback・collector・通知の参照先を扱う。Codex CLI 固有の起動コマンド、環境変数、preflight、引数上書きの入口も含む。
+- `cmoc tui` サブコマンドの責務と実行フローを定義する入口。プロンプト編集から AI Agent CLI/TUI 起動までの全体契約を確認するときに読む。
+- バックエンド共通の固定注入規定、起動条件、indexing・feedback・通知仕様への参照、および Codex CLI 固有の起動条件を扱う。
 
 ## Read this when
-- `cmoc tui` の実行フロー、引数、事前条件、プロンプト編集、builder、TUI 起動条件を確認するとき
-- cmoc 固有規定と installed skill の適用関係、固定注入される規定、builder のモデル・権限設定を確認するとき
-- Codex CLI を `cmoc tui` から起動する仕様や、indexing・feedback・終了通知との連携を確認するとき
+- `cmoc tui` の実行手順、事前条件、ユーザー入力、TUI 起動契約を確認・変更するとき
+- TUI 起動時に固定注入される cmoc 基本規定や、バックエンド共通のモデル・権限・Structured Output・indexing 条件を確認するとき
+- Codex CLI を `cmoc tui` から起動する際のコマンド、環境変数、preflight validation、引数上書き条件を確認するとき
 
 ## Do not read this when
-- TUI のエディタ入力方式そのものを確認する場合は、正本である `prompt_editor_input.md` と対応する実装を直接読む
-- oracle file・realization file の責務、oracle review の所見成立条件、indexing、feedback、Windows toast の詳細を確認する場合は、本書が示す各正本仕様を直接読む
-- 完全プロンプトの具体的な文面や起動パラメータの構築ロジックを確認する場合は、`build_tui_launch_tui_parameter` の仕様・実装を直接読む
+- プロンプト編集の正本仕様、indexing、feedback observation、Windows toast 通知など、個別に参照先が明示された仕様だけを確認する場合
+- 完全プロンプトの文面や起動パラメータの構築ロジックだけを確認する場合は、`build_tui_launch_tui_parameter` の仕様・実装を直接読む
 
 ## hash
-- 1ee18dafc5468ba54a07bdce7883062d4c8e0cdcea2df7889a44d02bef0bbff7
+- 3dcf05fcc56fb61f030c2f2bbe219b74b1c99914750b52d3e7b722cd5edfcd17

@@ -72,7 +72,8 @@ def test_sd_tag_block_renders_variadic_roots_and_generates_its_reference() -> No
 
     assert block.ref_tag == '<cmoc_ref target="target"/>'
     assert '<cmoc_block id="target">' in rendered
-    assert "## body" in rendered
+    assert "# body" in rendered.splitlines()
+    assert "## body" not in rendered.splitlines()
 
 
 def test_sd_tag_block_accepts_pre_rendered_markdown_as_opaque_child() -> None:
@@ -126,12 +127,12 @@ def test_render_sd_node_as_markdown_does_not_validate_references(
 
 
 def test_sd_policy_renders_only_non_empty_categories_in_fixed_order() -> None:
-    """SDPolicy は適用条件と存在するカテゴリだけを所定順で描画する。"""
+    """SDPolicy は説明と存在するカテゴリだけを所定順で描画する。"""
     rendered = render_sd_node_as_markdown(
         SDHeader(
             "policy",
             SDPolicy(
-                when_use_this="適用条件",
+                what_is_this="規定の説明",
                 require=("必須事項",),
                 prohibit=("禁止事項",),
                 supplemental=("補足事項",),
@@ -144,7 +145,7 @@ def test_sd_policy_renders_only_non_empty_categories_in_fixed_order() -> None:
         for line in rendered.splitlines()
         if line in {"**必須**", "**禁止**", "**許容**", "**補足情報**"}
     ] == ["**必須**", "**禁止**", "**補足情報**"]
-    assert "適用条件" in rendered
+    assert "規定の説明" in rendered
     assert "- 必須事項" in rendered
     assert "- 禁止事項" in rendered
     assert "- 補足事項" in rendered

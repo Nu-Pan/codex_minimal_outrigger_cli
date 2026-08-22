@@ -17,22 +17,23 @@
 # `complete_prompt.py`
 
 ## Summary
-- 選択された各種ポリシー、補助プロンプト、プレースホルダ定義を統合し、agent call 用の完全な構造化プロンプトを構築する関数を提供する。
-- 基礎規定・個別規定・静的／動的追加プロンプト・目的・プレースホルダ定義を所定の順序で配置し、プロンプト内の参照地図も生成する。
-- プレースホルダ定義は重複時の値の不一致を検出し、競合があれば例外を発生させる。
+- agent 向けの完全な構造化プロンプトを、基礎規定、選択式ポリシー、追加プロンプト、目的、placeholder 定義の順に構築する。
+- パスコンテキスト由来と追加指定の placeholder 定義を統合し、同名で異なる値がある場合はエラーにする。
+- 基礎規定と各ポリシーは対応する builder で生成し、指定された場合だけ完全プロンプトへ追加する。
+- このファイルは prompt builder 配下で、複数のポリシーや補助要素を agent 呼び出し用の最終構造へ集約する入口である。
 
 ## Read this when
-- agent call に渡す完全なプロンプトの構成順序や、各ポリシーブロックの включ却条件を変更・確認するとき
-- 複数の placeholder 定義を統合する挙動や、同名定義の競合処理を変更・確認するとき
-- 新しいポリシーや補助プロンプトを完全プロンプトへ組み込む入口を探すとき
+- agent 呼び出しへ渡す完全プロンプトの構成順序や、どのポリシーを条件付きで含めるかを確認したいとき
+- summary・goal、静的／動的追加プロンプト、placeholder 定義が最終プロンプトへ入る位置を確認したいとき
+- placeholder 定義の競合時の扱いや、path_context と追加定義の統合処理を確認したいとき
 
 ## Do not read this when
-- 個別ポリシー本文の内容だけを確認・変更する場合は、対応する oracle/src/oracle/prompt_builder 配下の policy モジュールを直接読む
-- プレースホルダの具体的な値やパス文脈の生成だけを確認する場合は、AgentCallPathContext または関連する placeholder 定義の実装を直接読む
-- 構造化ドキュメントの基本的な表現や SDHeader／SDTagBlock 自体の仕様を確認する場合は、struct_doc の定義を直接読む
+- 特定のポリシー本文や、そのポリシーが生成する文面の詳細を確認したいときは、対応する policy ファイルを直接読む
+- SDHeader・SDTagBlock のデータ構造や、FileAccessMode・AgentCallPathContext の定義を確認したいときは、それぞれの定義元を直接読む
+- 生成済みプロンプトの解釈・実行や、agent 呼び出しの実行制御を確認したいときは、呼び出し側または実行側の対象を読む
 
 ## hash
-- 475e2124d320cc803d13e96b67a8c2be64cc6666e1c0f69dcbfa87447b9b2b6c
+- b511950f40d2eb2518ddc8d32199ff71bedfeb8caaaa91a3bd10035067bffc27
 
 # `editor_input.py`
 
@@ -74,17 +75,19 @@
 # `policy`
 
 ## Summary
-- agent call 向けの各種 prompt policy builder を集約するディレクトリ。oracle・realization の扱い、所見判定、conflict 解消、file access、feedback 報告、INDEX.md ルーティング、oracle 参照など、個別の作業規定を構築するモジュールへの入口である。
+- agent call 向けの各種 prompt policy builder をまとめるディレクトリ。
+- conflict 解消、editor handoff、human feedback reporting、file access、INDEX.md routing、oracle／realization の作成・レビュー、oracle 参照など、個別の運用規定を instruction 文面として構築する。
+- 共通 prompt policy の内容や生成方法を確認する入口であり、個別 policy の実装・挙動や対象となる oracle／realization file の内容は各ファイルへ進む。
 
 ## Read this when
-- agent call に適用される prompt policy の種類や構築経路を調査するとき
-- oracle・realization の作成、レビュー、実装、conflict 解消に関する規定の生成方法を確認または変更するとき
-- INDEX.md ルーティング、file access、feedback reporting など共通ポリシーの責務分担を確認するとき
+- agent call に適用する prompt policy の内容または生成方法を確認・変更するとき
+- conflict 解消、editor handoff、feedback 報告、file access、INDEX.md routing の運用規定を確認するとき
+- oracle／realization file の作成・実装・レビューに関する policy や、realization code から oracle file を参照する規定を確認するとき
 
 ## Do not read this when
-- 個別の oracle file、realization file、実装、テストの内容を直接確認したいとき
-- Structured Document の項目・型・形式だけを確認したいとき
-- prompt policy の利用箇所や生成された prompt 全体を確認する場合で、呼び出し元を直接読む方が適切なとき
+- 個別の oracle／realization file、実装ファイル、テストの具体的な内容を確認するときは、その対象を直接読む
+- prompt policy の利用箇所や agent call 全体の構造だけを確認したいときは、呼び出し元または prompt 生成側を直接読む
+- Structured Output の項目・型・形式だけを確認したいときは、該当する schema を直接読む
 
 ## hash
-- 1945e3534f1f0bf3ff7377e22b7c8f249b6e32059d7fea5aaae0f44dd4af8940
+- e7bfc1e4d4cd9b1df545ce540d7474d5bcd293b48ff151714f93e925e1d2324f
