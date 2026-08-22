@@ -497,12 +497,6 @@
     "last_investigated_sha256": "3544ddab9ff843f261bec0d73e1b47720cba5c34f244113cea1767190ee55401",
     "last_investigated_at": "2026-08-17_19-00_19_908880000"
   },
-  "oracle/src/oracle/prompt_builder/policy/editor_handoff.py": {
-    "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "61ab3b9e671fc70075c103b67be68128de111b1a43997e876830afd31e4d93ec",
-    "last_investigated_at": "2026-08-17_19-12_22_936779000"
-  },
   "oracle/src/oracle/prompt_builder/policy/feedback_reporting.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
