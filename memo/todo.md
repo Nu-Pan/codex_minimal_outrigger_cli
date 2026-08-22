@@ -3,7 +3,7 @@
 ## プロンプトの手直しが必要
 
 - 各プロンプトブロックの中身を手作業でどうにかしないとマズい
-    - TODO oracle findings policy までやった
+    - realization findings policy までやった
     - 作業に対する指示になっちゃってるので、それをリポジトリの状態に対する不変条件に変える
     - プロンプトパーツ構築関数の docstring を追従させる
 - 普通に考えて、oracle findings review policy は Structured Output schema に書けば良い話では
