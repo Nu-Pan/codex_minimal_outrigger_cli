@@ -91,24 +91,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と開発ルールを集約する oracle 文書群への入口。CLI・workflow・branch／worktree・feedback・ログ・状態管理などの app_spec、Python 実装・設計・開発環境・テスト要件・実行手順などの dev_rule、採用しなかった設計や作業方式を扱う considered_alternative を、作業内容に応じて選択するための上位ルーティング対象。
-- src には agent call パラメータ、feedback 入力、設定・パス・構造化 Markdown、prompt と各種ポリシーを構築する実装群があり、用途別の agent 起動設定、feedback、oracle・realization 操作、review、session、TUI、共通 prompt policy の実装を確認する入口となる。
+- cmoc の正本仕様・開発ルールと、agent call／prompt 生成を支える oracle 実装・schema を集約する領域。`doc` は CLI、workflow、state、feedback、branch／worktree、設計・開発環境・テストの意味仕様を扱い、`src` はその仕様に基づく builder、prompt、policy、設定・パスモデル、構造化文書、feedback 入力の正確な実装定義を扱う。仕様の調査は `doc`、agent call や prompt の実装・schema の確認は `src` から始める。
 
 ## Read this when
-- cmoc の CLI や workflow の正本仕様を調査し、関連する app_spec 文書の入口を選ぶとき
-- session fork、run の隔離、branch・commit・worktree の用語や責務を確認するとき
-- 現行設計で採用しなかった作業方式や仕様案の理由を比較するとき
-- Python 実装の規約、CLI の配置、開発環境、テスト要件、テスト実行手順を確認するとき
-- agent call 構築や prompt 生成の実装構成を横断して確認するとき
+- cmoc の CLI、workflow、session、run isolation、branch／worktree、feedback、ログ、state、indexing の正本仕様を調査するとき
+- Python 実装の設計、開発環境、テスト要件、テスト実行手順を確認するとき
+- agent call の用途別パラメータ、prompt の組み立て、policy、placeholder、アクセス制約、oracle／realization の扱いを実装から確認するとき
+- 設定モデル、パスモデル、構造化 Markdown、feedback reporter 入力、Structured Output schema の定義を確認するとき
+- 採用しなかった設計・作業方式の理由を調査するとき
 
 ## Do not read this when
-- 特定の app_spec、dev_rule、considered_alternative の詳細だけを確認する場合は、対象文書を直接読む
-- 特定の agent call builder、policy、feedback 入力、または prompt builder の詳細だけを確認する場合は、対応する src 配下の対象を直接読む
-- 実装コード、realization、テストコードの具体的な内容だけを調べる場合
+- 特定の仕様文書や実装モジュールが明らかな場合は、`oracle/doc` または `oracle/src` の対象を直接読む
+- realization の実装・テストや通常の product 挙動だけを調べる場合
 - 既存 INDEX.md の内容やインデックス生成処理だけを確認する場合
 
 ## hash
-- 5dfce9830557ac353676f7403e6c5b3e75bed5ec01903a254dd0be91662bf65b
+- a2ea7f67ac7c144ac6a13cfd3dbdf821bced144eb84e29eaa6b472d890f6c140
 
 # `pyproject.toml`
 

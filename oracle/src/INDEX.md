@@ -1,17 +1,17 @@
 # `oracle`
 
 ## Summary
-- cmoc の agent 呼び出し構築、feedback 入力契約、設定・パス・Markdown ノード、prompt 構築を扱う実装群へのルーティング入口。共通の AgentCallParameter 契約や用途別 builder、feedback の構造化、設定・root 解決、完全な agent prompt の生成を横断して確認できる。
-- 下位の acp_builder、feedback、other、prompt_builder が、それぞれ agent call 設定、feedback 入力契約、設定・パス・文書ノード、prompt 構築の詳細実装への入口となる。
+- cmoc の agent 呼び出しと prompt 生成を支える実装群をまとめたソースディレクトリ。AgentCallParameter、論理モデル・推論強度・ファイルアクセスモード、パスと設定のモデル、構造化 Markdown、feedback 入力、用途別 builder、prompt policy を扱う下位要素への入口である。
 
 ## Read this when
-- cmoc の agent call 構築と prompt 構築を横断して調査するとき
-- feedback 入力契約、設定・パスモデル、Markdown 文書ノードの実装の所在を確認するとき
-- 用途別の下位実装へ進む前に、関連する oracle 実装群の構成を把握するとき
+- AI コーディングエージェント呼び出しの共通パラメータ契約や、用途別 builder の責務分担を確認するとき。
+- prompt の組み立て、placeholder、アクセス制約、routing、feedback、oracle・realization 関連 policy の構築方法を横断して調査するとき。
+- cmoc の設定・パス解決・構造化 Markdown ノードや、feedback issue 入力契約の実装入口を判断するとき。
 
 ## Do not read this when
-- 特定用途の prompt、builder、feedback 検証、設定モデルの詳細だけを確認したいときは、対応する下位対象を直接読む
-- Codex CLI の実行処理や oracle の正本仕様を確認したいときは、実行側実装または oracle 文書を読む
+- 特定用途の agent call prompt や Structured Output の詳細だけを確認したいときは、対応する acp_builder の下位ディレクトリを直接読むとき。
+- Codex CLI の実行、モデル名の解決、oracle・realization の正本仕様を確認したいときは、対応する realization 実装または oracle 文書を直接読むとき。
+- prompt を生成した後の agent call の実行制御や、feedback の保存・集約を確認したいときは、対応する実行側・collector 側の対象を読むとき。
 
 ## hash
-- b2715544e3f87a7190e4cc4701f407d102318ca54c70bd46f9923054014081f6
+- 50f96ed9c8428918201e1d8f121673f06fffbbb42c445ebc3e89ff1139d192b7

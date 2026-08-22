@@ -75,19 +75,17 @@
 # `policy`
 
 ## Summary
-- prompt_builder/policy 配下の各 policy 定義ファイルについて、担う規定の種類、確認・変更時の入口、関連対象との責務境界を示す INDEX.md 用ルーティング情報。
-- conflict_resolution.py は session join の merge conflict 解消方針、feedback_reporting.py は全 agent call 共通の人間向け feedback 報告方針、file_access.py はファイルアクセス制限、index_entry.py は INDEX.md エントリー生成規定を扱う。
-- oracle.py・realization.py および各 findings 系は、それぞれ oracle／realization の扱いと適合性所見の判定基準を扱う。realization_oracle_reference.py は realization code から oracle file を参照する規定、routing.py は INDEX.md による探索規定を扱う。
+- prompt-builder の policy 定義群を扱うディレクトリ。agent call に注入する conflict resolution、feedback reporting、file access、oracle、realization、routing などの個別ポリシー構築が責務であり、各ファイルの役割に応じた調査・変更の入口となる。
 
 ## Read this when
-- agent call に適用される policy の内容や生成方法を確認・変更するとき
-- oracle file、realization file、INDEX.md、ファイルアクセス、feedback 報告、conflict resolution に関する共通規定の入口を探すとき
-- 個別 policy の要求・禁止・許可事項や、関連する prompt builder との責務境界を調査するとき
+- agent call 向け policy prompt の内容や構築方法を確認・変更するとき
+- 特定の policy 定義について、適用条件、禁止事項、プレースホルダー、SDHeader/SDPolicy の構成を調査するとき
+- oracle file、realization file、INDEX.md、feedback reporting、file access などの個別ポリシーの責務境界を確認するとき
 
 ## Do not read this when
-- 個別の oracle file、realization file、実装ファイル、テストの具体的な内容を確認したいとき
-- policy の利用箇所や生成された prompt 全体を確認したいときは、呼び出し元または prompt 生成側を直接読むとき
-- Structured Output の項目・型・形式だけを確認したいとき
+- 個別の oracle file や realization file の正本仕様・実装内容を直接確認したいとき
+- prompt-builder の共通実装、PlaceholderMap、AgentCallPathContext などの基盤仕様を確認したいとき
+- 生成された agent prompt 全体の構成や利用箇所だけを調査したいとき
 
 ## hash
-- 70d8707891b1e6066df967fa1d150f7c7f36ce08a4d9737463404bb5fd25e922
+- f55bb7d40660b0bf50af6c299bcab1321d5049cdc5cbcd92ea9a4533e02b35fe

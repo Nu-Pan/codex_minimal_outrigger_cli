@@ -56,27 +56,16 @@
 # `prompt_builder`
 
 ## Summary
-- prompt-builder 配下の prompt 構築関連ファイルを、役割と探索条件付きで案内するルーティング入口。
-- basic.py はプレースホルダ名と文字列・実パスの置換先を表す型定義を扱う。
-- complete_prompt.py は policy、prompt、placeholder 定義を統合して完全な agent prompt を構築する中心実装を扱う。
-- editor_input.py はエディタ経由で入力するユーザー向け初期文面とテンプレート埋め込みを扱う。
-- parts は oracle／realization の分類概念と uncategorised file の判定規則を説明する prompt-builder 部品を扱う。
-- policy は agent call 共通の各種 policy 定義と、その責務・確認入口を扱う。
+- agent 向けの完全な prompt を組み立てる prompt-builder の実装群。placeholder 定義、prompt 統合、エディタ入力初期文面、oracle/realization の説明部品、各種 policy 定義を扱い、prompt 生成の共通基盤と個別構成要素への入口となる。
 
 ## Read this when
-- プレースホルダの型や置換先の表現を確認したいときは basic.py。
-- 完全な agent prompt の構築順序、構成要素、policy の追加条件、placeholder の競合処理を確認したいときは complete_prompt.py。
-- エディタ入力ファイルの初期文面、記入案内、テンプレートや HTML コメントの構成を確認したいときは editor_input.py。
-- oracle／realization の概念、分類、work-root の埋め込み、uncategorised file の判定規則を確認したいときは parts。
-- agent call の共通 policy、ファイルアクセス、feedback 報告、INDEX.md、oracle／realization の扱いを確認したいときは policy。
+- agent call 用 prompt の構成・統合順序・placeholder 処理を調査または変更するとき
+- oracle・realization・routing・file access・feedback reporting など、prompt に注入する policy の構築方法を確認するとき
+- エディタ入力用の初期文面や、oracle/realization の説明部品を確認するとき
 
 ## Do not read this when
-- 個別 policy の本文や生成ロジックだけを確認したい場合は policy 配下の該当ファイルを直接読む。
-- prompt 本文の生成手順や置換ロジックの詳細だけを確認したい場合は complete_prompt.py。
-- placeholder の型だけを確認したい場合は basic.py、実際の値や path context の定義だけを確認したい場合は別の担当実装を読む。
-- エディタ入力の初期文面ではなく、完全 prompt 全体や別経路の入力処理を調査する場合は editor_input.py ではなく担当実装を読む。
-- oracle／realization の具体的な仕様、実装、テスト内容を確認する場合は parts ではなく該当する oracle／realization ファイルを直接読む。
-- prompt-builder の policy 以外の実装やテストの具体的内容を確認する場合は policy ではなく該当対象へ直接進む。
+- 生成済み prompt の利用箇所や、oracle・realization 自体の仕様・実装を直接調査するとき
+- 個別 policy の本文だけ、または prompt-builder 共通基盤だけを確認したいときは、該当する下位ファイルを直接読む
 
 ## hash
-- 89a1135b95eda3e9a3f7f8578bd8d70535b32fc2fb8e3e00f09e2567d21227fa
+- 90684c299a1b98c8a82b7db154a4e7e8285127293212f960dba763f6f10ea2bf

@@ -70,20 +70,18 @@
 # `oracle.py`
 
 ## Summary
-- oracle file を扱う agent call 向けの instruction 文面を構築する定義。oracle file の要件・禁止事項・許容事項を SDPolicy としてまとめ、oracle policy 用の SDHeader と PlaceholderMap を返す。oracle policy の構造や規定を変更・調査するときの入口となる。
+- 対象ファイルは、oracle file を扱う agent call 向け instruction の構築定義を担う。oracle file の要件・優先順位・goal/non-goal・参照関係・仕様と未定義事項の境界など、oracle policy を組み立てる処理を確認したいときの入口である。
 
 ## Read this when
-- oracle file の作成・変更・レビューで、oracle file に適用する基本規定を確認するとき
-- agent call 向けに oracle policy の instruction 文面を構築するとき
-- oracle file と realization file の責務境界、goal・non-goal、未定義事項の扱いを確認するとき
+- oracle file の規定や、oracle policy を agent call 向け文面へ組み立てる定義を変更・確認するとき。
+- oracle file と realization file、installed skill の指示優先順位や、実装差を許容する境界を扱うとき。
 
 ## Do not read this when
-- 個別の oracle file の内容や仕様断片を確認したいとき
-- プロンプト構築全体や PlaceholderMap の一般的な扱いを確認したいとき
-- realization file の実装責務だけを調査するとき
+- 個別の oracle file の具体的な仕様本文を確認したいときは、対象の oracle file を直接読む。
+- agent call の一般的な prompt 構築や PlaceholderMap の仕様だけを確認したいときは、該当する prompt builder の定義を直接読む。
 
 ## hash
-- 067b8c499d5b1986fe6da154a2bb0ce7df6b9d5bf82fdbf8422d0a23ac25b820
+- 9e583e83f2f16832479159e4f03ce61e15d68e03ad394b6b31ae802d32de5650
 
 # `oracle_findings.py`
 
@@ -104,19 +102,21 @@
 # `realization.py`
 
 ## Summary
-- 対象は、realization file を扱う agent call 向けの instruction 文面を構築する関数を定義する。パス文脈から placeholder 定義を取得し、realization policy という見出しと、oracle file を正本仕様断片として扱う規定・実装上の裁量・YAGNI・重複整理・検証義務などの要求／禁止／許可事項をまとめた SDHeader を返す。
+- このファイルは、realization file を扱う agent call に注入する realization policy の構築定義を担う。パス文脈からプレースホルダー定義を取得し、realization の扱いに関する要求・禁止・許可事項を SDHeader/SDPolicy として組み立てる、policy prompt の具体的な入口である。
+- realization file の実装方針、oracle file との関係、YAGNI・重複整理・検証、実装コメントでの根拠参照などを agent call に伝える必要がある場合に読む。
 
 ## Read this when
-- realization file に関する agent call の instruction 文面、特に oracle と realization の責務境界や実装・テスト・検証の規定を確認または変更するとき。
-- realization policy の要求・禁止・許可事項、または path placeholder の注入元を追跡するとき。
+- realization file 向け agent call の instruction や policy prompt の生成規則を確認するとき
+- realization policy の要求・禁止・許可事項、またはそのプレースホルダー定義の出所を確認するとき
+- AgentCallPathContext と SDHeader/SDPolicy を用いた realization policy の構築経路を追うとき
 
 ## Do not read this when
-- realization file 自体の具体的な実装内容やテストを確認したいときは、該当する realization file や test を直接読む。
-- oracle file の正本仕様そのものを確認したいときは、対応する oracle file を直接読む。
-- agent call の一般的な prompt 構築や別種の policy を確認したいときは、該当する prompt builder／policy 対象へ直接進む。
+- realization file 自体の実装内容やテストを直接確認したい場合は、対象の realization 実装・テストを読む
+- oracle file の正本仕様や開発手順を確認したい場合は、該当する oracle 文書を直接読む
+- realization 以外の agent call policy を調べる場合は、対象となる policy 定義へ直接進む
 
 ## hash
-- af7f068631559b63749e87c61c2bf35f09d18d986f357c5962c414a6a6b1ed2d
+- a308162ff7513ffaad255d05bf7016b607392339474396f00b114f2735e2c5db
 
 # `realization_findings.py`
 
