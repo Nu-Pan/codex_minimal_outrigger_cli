@@ -9,7 +9,7 @@ def build_file_access_policy(
     mode: FileAccessMode,
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, SDHeader]:
-    """file access mode に対応する agent 向け制限文面を構築する。"""
+    """エージェントに伝えるファイルアクセス制限規定の文面を構築する。"""
     # リポジトリ外への禁止事項
     # NOTE
     #   work-root 外の書き込み禁止は、言わなくてもわかりそう。

@@ -5,7 +5,7 @@ from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_oracle_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
-    """oracle file に対する所見が満たすべき規定"""
+    """oracle file に対する所見が満たすべき規定を構築する。"""
     return (
         {},
         SDHeader(
@@ -18,9 +18,12 @@ def build_oracle_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
                     "実装者裁量の範囲内で解決出来ない問題は fatal 所見とする",
                     "正本仕様の意味を変更しない表記上の問題を minor 所見とする",
                     "初歩的な言葉の問題 (e.g. 誤字、脱字、明確な文法誤り、用語不統一、表記揺れ） は minor 所見とする",
-                    "所見に対して適用する基準が常に一貫していること",
+                    "所見に対して適用する基準は常に一貫していること",
                 ),
-                prohibit=("規定上必須とされていない事を所見の根拠にしてはいけない",),
+                prohibit=(
+                    "規定上必須とされていない事を所見の根拠にしてはいけない",
+                    "調査開始時点ですでに解消されている問題を新しい所見として重複させてはいけない",
+                ),
             ),
         ),
     )
