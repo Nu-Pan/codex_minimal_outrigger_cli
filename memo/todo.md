@@ -7,6 +7,8 @@
     - 作業に対する指示になっちゃってるので、それをリポジトリの状態に対する不変条件に変える
     - プロンプトパーツ構築関数の docstring を追従させる
 - 普通に考えて、oracle findings review policy は Structured Output schema に書けば良い話では
+    - Structured Output schema についての指示は、可能な限り Structured Output schema に書くべき
+    - どうしても　Structured Output schema　に書けないものはプロンプトビルダーごとに個別の追加規定ってことにした方が良い
 - oracle src, oracle doc の棲み分けを詰め直したい
     - コメント (docstring 含む) で正本仕様を書いて良い事にしたい
     - 逆に動的生成プロンプト本体にはいままで通り正本仕様を書いちゃダメ

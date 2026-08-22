@@ -75,7 +75,6 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         oracle_policy=True,
         realization_policy=True,
         realization_findings_policy=True,
-        realization_oracle_reference_policy=True,
         routing_policy=True,
     )
 

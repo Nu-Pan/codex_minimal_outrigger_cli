@@ -54,7 +54,6 @@ def build_tui_launch_tui_parameter(
         realization_policy=True,
         oracle_findings_policy=True,
         realization_findings_policy=True,
-        realization_oracle_reference_policy=True,
         routing_policy=True,
     )
     # パラメータを生成して返す

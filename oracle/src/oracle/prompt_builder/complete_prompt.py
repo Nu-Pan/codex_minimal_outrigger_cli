@@ -14,9 +14,6 @@ from .policy.oracle import build_oracle_policy
 from .policy.oracle_findings import build_oracle_findings_policy
 from .policy.realization import build_realization_policy
 from .policy.realization_findings import build_realization_findings_policy
-from .policy.realization_oracle_reference import (
-    build_realization_oracle_reference_policy,
-)
 from .policy.routing import build_routing_policy
 
 
@@ -50,7 +47,6 @@ def build_complete_prompt(
     oracle_findings_policy: bool = False,
     realization_findings_policy: bool = False,
     conflict_resolution_policy: bool = False,
-    realization_oracle_reference_policy: bool = False,
     index_entry_policy: bool = False,
     routing_policy: bool = False,
 ) -> list[SDHeader | SDTagBlock]:
@@ -148,11 +144,6 @@ def build_complete_prompt(
         _append(
             full_prompt,
             build_conflict_resolution_policy(),
-        )
-    if realization_oracle_reference_policy:
-        _append(
-            full_prompt,
-            build_realization_oracle_reference_policy(path_context),
         )
     if index_entry_policy:
         _append(
