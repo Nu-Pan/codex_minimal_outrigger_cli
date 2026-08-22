@@ -1,16 +1,17 @@
 # `oracle`
 
 ## Summary
-- oracle 配下の正本仕様・実装構築定義を、agent call、prompt、設定・パス・構造化文書、feedback などの責務領域ごとに案内する最上位の入口。
-- acp_builder、feedback、other、prompt_builder の各下位領域へ進む判断基準を提供し、具体的な agent call 構築、feedback 入力契約、共通モデル、prompt 生成規定は対応する下位対象で確認する。
+- cmoc の agent 呼び出し構築、feedback 入力契約、設定・パス・Markdown ノード、prompt 構築を扱う実装群へのルーティング入口。共通の AgentCallParameter 契約や用途別 builder、feedback の構造化、設定・root 解決、完全な agent prompt の生成を横断して確認できる。
+- 下位の acp_builder、feedback、other、prompt_builder が、それぞれ agent call 設定、feedback 入力契約、設定・パス・文書ノード、prompt 構築の詳細実装への入口となる。
 
 ## Read this when
-- oracle 配下で調査・変更すべき責務領域を特定するとき
-- agent call 構築、prompt 生成、feedback 入力契約、設定・パス・構造化文書のどの下位領域を読むべきか判断するとき
+- cmoc の agent call 構築と prompt 構築を横断して調査するとき
+- feedback 入力契約、設定・パスモデル、Markdown 文書ノードの実装の所在を確認するとき
+- 用途別の下位実装へ進む前に、関連する oracle 実装群の構成を把握するとき
 
 ## Do not read this when
-- 対象の具体的な処理や仕様が既に特定できており、対応する下位ファイルを直接確認できるとき
-- 実行制御や通常の CLI 動作など、oracle 配下の構築定義以外を直接調べるとき
+- 特定用途の prompt、builder、feedback 検証、設定モデルの詳細だけを確認したいときは、対応する下位対象を直接読む
+- Codex CLI の実行処理や oracle の正本仕様を確認したいときは、実行側実装または oracle 文書を読む
 
 ## hash
-- cf82a8f8767ac1f839d461b6aee15e794e5a740d6244a749bf12b5e5f18bcf8d
+- b2715544e3f87a7190e4cc4701f407d102318ca54c70bd46f9923054014081f6

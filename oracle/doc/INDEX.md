@@ -1,22 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション正本仕様を収録するディレクトリ。共通契約、Codex 呼び出し、ログ・エラー、feedback、session/run、prompt、通知、補完、indexing などの横断仕様を扱う。
-- サブコマンド固有の引数、前提条件、処理手順、状態遷移、report、終了契約は `sub_command` 配下の各仕様へ進むための入口を提供する。
-- 実装・変更・レビューで正本仕様の責務境界や共通規則を確認する場合は本ディレクトリから該当する共通仕様またはサブコマンド仕様を選ぶ。
+- cmoc の CLI・workflow・feedback・ログ・通知・状態管理などの正本仕様を集約する app_spec 文書群。各仕様の責務、適用条件、関連仕様への入口を示し、個別機能の実装・変更・レビュー時に参照先を選ぶための上位ルーティング対象である。
+- 自動補完、Codex 呼び出し、model provider、出力・ログ、doctor、エラー処理、feedback、prompt、run/session、サブコマンド、通知など、横断的な CLI 挙動を扱う。
 
 ## Read this when
-- cmoc の共通アプリケーション仕様、正本文書間の責務分担、または複数サブコマンドにまたがる契約を確認するとき
-- Codex CLI 呼び出し、prompt 構築、console・ログ・report、エラー処理、feedback、session/run、通知、自動補完、indexing の仕様を実装・変更・レビューするとき
-- 特定の cmoc サブコマンドの引数、前提条件、処理手順、状態遷移、report、終了結果を確認するとき
+- cmoc の CLI 機能や workflow の正本仕様の所在を調べるとき
+- 複数の app_spec 間で責務境界や参照先を特定するとき
+- 自動補完、Codex 実行、feedback、状態管理、ログ、通知などの仕様確認を開始するとき
 
 ## Do not read this when
-- 個別サブコマンドの仕様が特定できている場合は、`sub_command` 配下の対応する仕様を直接読む
-- 実装コード、realization file、テスト規約、開発環境、テスト実行手順だけを確認する場合は、それぞれの専用文書や実装・テスト対象を直接読む
-- INDEX.md の生成・更新処理そのものだけを確認する場合は、indexing の正本仕様を直接読む
+- 特定仕様の詳細な挙動だけを確認する場合は、該当する app_spec 文書を直接読む
+- 実装コード、realization、テスト手順、開発環境の具体的な責務だけを調べる場合
+- 既存 INDEX.md の内容やインデックス生成処理そのものだけを確認する場合
 
 ## hash
-- eac50434d393eb175a358588faa8546cd8f3a677354102007a36b6a735f1ed82
+- 1bf597809099dfc42b57a1169af0e0c822b9129395e97b0ac35ca4fef4b56011
 
 # `branch_model.md`
 

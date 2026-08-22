@@ -1,19 +1,22 @@
 # `acp_builder`
 
 ## Summary
-- AIコーディングエージェント呼び出しのパラメータ契約と、indexing・oracle・realization・session・tui など各用途別の AgentCallParameter 構築定義を扱うディレクトリ。モデル、推論強度、ファイルアクセス、prompt、Structured Output schema、cwd、preflight などの用途別設定を確認する入口であり、具体的な処理は対応する下位定義へ進む。
+- AI コーディングエージェント呼び出しの共通パラメータ定義と、oracle・realization・feedback・indexing・session・tui・quota probe 用途別 builder の入口をまとめるディレクトリ。
+- basic.py はモデルクラス、推論強度、ファイルアクセスモード、prompt、Structured Output schema、cwd、indexing preflight を含む AgentCallParameter 契約を定義する。
+- 下位ディレクトリでは、用途ごとの prompt・アクセス制約・モデル設定・出力 schema を構築する。oracle review、realization の apply/refactor、feedback issue 判定、INDEX.md エントリー生成、session join の conflict 解消、TUI 起動を扱う。
 
 ## Read this when
-- 特定用途の agent call の起動パラメータ、prompt、アクセス範囲、cwd、モデル設定、Structured Output 契約の所在を判断するとき
-- indexing、oracle、realization、session、tui などの agent call 構築定義を横断して調査・変更するとき
+- AgentCallParameter の共通契約や論理的なモデル・推論・ファイルアクセス設定を確認するとき
+- 特定の cmoc 機能に対応する agent call builder の所在と、下位の用途別定義へ進む入口を判断するとき
+- oracle、realization、feedback、indexing、session join、tui の agent call の prompt・起動設定・Structured Output 契約を横断して調査するとき
 
 ## Do not read this when
-- AgentCallParameter や prompt rendering などの共通仕様を確認したいとき
-- oracle や realization の正本ファイル、通常の CLI 動作、TUI の画面表示、具体的な処理実装を調べるとき
-- 対象用途の具体的な prompt・実装・出力 schema が特定できている場合は、対応する下位ファイルを直接読むとき
+- 特定用途の prompt 構築や実行制御だけを確認したいときは、対応する下位ディレクトリまたは builder を直接読むとき
+- 実際のモデル名やバックエンド固有の解決処理を確認したいときは realization 側の実装を読むとき
+- Codex CLI の sandbox や oracle・realization の正本仕様を確認したいときは、対応する oracle 文書を読むとき
 
 ## hash
-- 49461539615e06edb22f938557755d61e38e7b236814c6243cad6bdb34960d30
+- e7dd952adee515b5bed502af055695f4d777bd687a79431fed01d6cad5d814b4
 
 # `feedback`
 
@@ -53,22 +56,27 @@
 # `prompt_builder`
 
 ## Summary
-- prompt-builder 配下の実装群を、agent 向けプロンプトの構造化・初期入力・共通説明部品・各種 policy の生成責務ごとに案内する入口。placeholder の型定義、完全プロンプトの集約、エディタ入力文面、oracle/realization 説明部品、policy 群を扱う。
-- `basic.py` は placeholder 名と実パス・文字列を対応付ける型定義、`complete_prompt.py` は基礎規定や条件付き policy、追加プロンプト、目的、placeholder 定義を最終プロンプトへ集約する実装を扱う。
-- `editor_input.py` はエディタ経由のユーザー入力ファイルの初期文面とテンプレート埋め込み、`parts` は oracle/realization の概念・分類説明、`policy` はファイルアクセスや routing、feedback、conflict resolution、handoff、INDEX.md エントリー生成などの規定生成を扱う。
+- prompt-builder 配下の prompt 構築関連ファイルを、役割と探索条件付きで案内するルーティング入口。
+- basic.py はプレースホルダ名と文字列・実パスの置換先を表す型定義を扱う。
+- complete_prompt.py は policy、prompt、placeholder 定義を統合して完全な agent prompt を構築する中心実装を扱う。
+- editor_input.py はエディタ経由で入力するユーザー向け初期文面とテンプレート埋め込みを扱う。
+- parts は oracle／realization の分類概念と uncategorised file の判定規則を説明する prompt-builder 部品を扱う。
+- policy は agent call 共通の各種 policy 定義と、その責務・確認入口を扱う。
 
 ## Read this when
-- agent 呼び出し向けの完全プロンプトの構成順序、条件付き policy の組み込み、placeholder の統合や競合処理を確認したいときは `complete_prompt.py` から確認する。
-- エディタ入力ファイルの初期表示、記入案内、構造化見出し・タグブロック、完全プロンプトのテンプレート埋め込みを確認したいときは `editor_input.py` を読む。
-- oracle と realization の責務・分類、work-root を用いたパス説明、uncategorised file の分類規則を確認したいときは `parts` を読む。
-- agent call に注入される個別 policy の定義や、routing・feedback・handoff・conflict resolution・INDEX.md エントリー生成の規定を確認したいときは `policy` を読む。
-- placeholder の名前と置換先を共通の型で扱う意味だけを確認したいときは `basic.py` を読む。
+- プレースホルダの型や置換先の表現を確認したいときは basic.py。
+- 完全な agent prompt の構築順序、構成要素、policy の追加条件、placeholder の競合処理を確認したいときは complete_prompt.py。
+- エディタ入力ファイルの初期文面、記入案内、テンプレートや HTML コメントの構成を確認したいときは editor_input.py。
+- oracle／realization の概念、分類、work-root の埋め込み、uncategorised file の判定規則を確認したいときは parts。
+- agent call の共通 policy、ファイルアクセス、feedback 報告、INDEX.md、oracle／realization の扱いを確認したいときは policy。
 
 ## Do not read this when
-- 特定の policy 本文の詳細、個別の oracle/realization ファイル、実装コードやテストの内容を確認したいだけのときは、対応する定義元を直接読む。
-- 構造化ドキュメント要素の定義や Markdown レンダリング仕様そのものを確認したいときは、`editor_input.py` ではなくインポート元の実装を読む。
-- 生成済みプロンプトの解釈・実行や agent 呼び出しの実行制御を確認したいときは、prompt-builder 配下ではなく呼び出し側・実行側の対象を読む。
-- prompt builder と無関係な CLI 機能やデータモデル、個別ファイルの具体的な仕様を調べるときは、このディレクトリを入口にしない。
+- 個別 policy の本文や生成ロジックだけを確認したい場合は policy 配下の該当ファイルを直接読む。
+- prompt 本文の生成手順や置換ロジックの詳細だけを確認したい場合は complete_prompt.py。
+- placeholder の型だけを確認したい場合は basic.py、実際の値や path context の定義だけを確認したい場合は別の担当実装を読む。
+- エディタ入力の初期文面ではなく、完全 prompt 全体や別経路の入力処理を調査する場合は editor_input.py ではなく担当実装を読む。
+- oracle／realization の具体的な仕様、実装、テスト内容を確認する場合は parts ではなく該当する oracle／realization ファイルを直接読む。
+- prompt-builder の policy 以外の実装やテストの具体的内容を確認する場合は policy ではなく該当対象へ直接進む。
 
 ## hash
-- fdab3bfcdff4f339ee01336815b1a54e11372dde4fd65b87cfe6013af5288493
+- 89a1135b95eda3e9a3f7f8578bd8d70535b32fc2fb8e3e00f09e2567d21227fa
