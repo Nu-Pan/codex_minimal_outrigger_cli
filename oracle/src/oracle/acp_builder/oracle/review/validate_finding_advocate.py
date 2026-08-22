@@ -82,7 +82,7 @@ def build_oracle_review_validate_finding_advocate_parameter(
         ],
         oracle_and_realization_basic=True,
         oracle_policy=True,
-        oracle_review_policy=True,
+        oracle_findings_policy=True,
         routing_policy=True,
     )
     # パラメータを生成して返す

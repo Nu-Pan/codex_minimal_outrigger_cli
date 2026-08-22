@@ -37,7 +37,7 @@
 - builder は次の規定を、オリジナルプロンプトの内容によらず固定で注入する
     - `build_oracle_policy`
     - `build_realization_policy`
-    - `build_oracle_review_policy`
+    - `build_oracle_findings_policy`
     - `build_apply_review_policy`
     - `build_realization_oracle_reference_policy`
 - 各規定は自身が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する

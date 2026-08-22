@@ -1,15 +1,15 @@
-"""oracle review の所見成立条件を伝える agent 向け文面の構築定義。"""
+"""oracle findings policy の構築定義。"""
 
 from oracle.other.struct_doc import SDHeader, SDPolicy
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_oracle_review_policy() -> tuple[PlaceholderMap, SDHeader]:
+def build_oracle_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
     """oracle review の全段階で共有する所見判定規定を構築する。"""
     return (
         {},
         SDHeader(
-            "oracle findings review policy",
+            "oracle findings policy",
             SDPolicy(
                 what_is_this="oracle file に対する所見が満たすべき規定を以下に示す",
                 require=(
