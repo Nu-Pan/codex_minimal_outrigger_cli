@@ -1,22 +1,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle 資産を集約するディレクトリ。feedback の入力契約、agent call の起動パラメータと用途別 Structured Output schema、oracle／realization 用 prompt policy、パス・設定・構造化 Markdown の共通実装を扱う。
-- 下位の `acp_builder` は用途別 agent call の具体的な起動入口、`prompt_builder` は共通 prompt と policy の構築、`other` は設定・パス解決・構造化文書モデル、`feedback` は feedback reporter 入力契約の入口として利用する。
+- cmoc の agent call に関する正本実装をまとめるディレクトリ。用途別の AgentCallParameter、プロンプト構築、設定・パスモデル、feedback 入力契約を下位要素への入口として提供する。
+- agent call の起動設定や Structured Output 契約は `acp_builder`、プロンプト統合と policy 生成は `prompt_builder`、設定・パス・構造化文書モデルは `other`、feedback reporter の入力契約は `feedback` を読む。
 
 ## Read this when
-- oracle／realization、feedback、indexing、session、TUI などの agent call 経路を横断して、どの下位ディレクトリの起動定義・prompt・出力契約を読むべきか判断するとき
-- agent call の prompt に共通で適用される oracle／realization／file access／routing などの policy 構成を確認するとき
-- root placeholder を含むパス解決、agent call の work root・repository root、cmoc 設定モデル、構造化 Markdown ノードの共通挙動を確認するとき
-- feedback reporter が collector に渡す問題分類・重要度・影響・原因・根拠・継続状態の入力形式を確認するとき
+- cmoc の agent call 起動パラメータ、モデル・推論強度・ファイルアクセス・cwd・preflight・Structured Output を確認または変更するとき
+- agent call に渡す完全プロンプト、placeholder、用途別 policy、oracle／realization／routing 規定の組み立てを確認または変更するとき
+- cmoc の設定モデル、Codex provider 設定、root placeholder と worktree/repository root の解決、構造化文書モデルを確認または変更するとき
+- feedback reporter が collector に渡す入力形式や検証契約を確認または変更するとき
+- 上記の責務を担う下位ディレクトリのどれを読むべきか判断するとき
 
 ## Do not read this when
-- 具体的な oracle file や realization 実装・テストの正本仕様だけを確認したいときは、該当する oracle／realization 対象を直接読む
-- 個別 agent call の詳細な起動パラメータ、prompt、Structured Output schema を確認したいときは、`acp_builder` 配下の担当対象を直接読む
-- 共通 prompt の部品・policy の本文や prompt 生成・placeholder 統合ロジックだけを確認したいときは、`prompt_builder` 配下を直接読む
-- 設定値・パス解決・構造化 Markdown の実装詳細だけを確認したいときは、`other` 配下を直接読む
-- feedback の保存・集約・重複判定や、問題検出後の継続判断だけを確認したいときは、このディレクトリの入力契約ではなく担当処理を読む
-- 既存 INDEX.md の内容や、TUI の画面表示そのものを確認したいとき
+- 具体的な realization・oracle・TUI の実装やテストを確認したいときは、該当する下位対象を直接読む
+- 個別の正本仕様や既存 INDEX.md の内容を確認したいときは、その対象を直接読む
+- prompt_builder が生成した最終プロンプトの利用箇所だけを確認したいときは、呼び出し元または生成対象を読む
+- collector 側の feedback 保存・集約・重複判定や、問題検出後の継続判断だけを確認したいとき
+- 設定ファイルの実際の保存内容や、TUI の画面表示だけを確認したいとき
 
 ## hash
-- c0aebf2a1271834717b651222aa3afa45a51ba6c3eb044735ba61010b6de2a31
+- 4a33eb865da3ecbafbb3bd06df9904058f82cc872eb6304663779d0aafac4b29

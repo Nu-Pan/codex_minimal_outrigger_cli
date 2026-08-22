@@ -74,17 +74,17 @@
 # `policy`
 
 ## Summary
-- agent prompt に埋め込む各種 policy の構築定義をまとめたディレクトリ。oracle・realization の扱い、ファイルアクセス、レビュー所見、conflict 解消、feedback 報告、routing、INDEX.md エントリー生成など、個別の prompt policy の責務と生成入口を確認するための上位の参照先である。
+- agent call 向けの各種 prompt policy builder を集約するディレクトリ。oracle・realization の扱い、所見判定、conflict 解消、file access、feedback 報告、INDEX.md ルーティング、oracle 参照など、個別の作業規定を構築するモジュールへの入口である。
 
 ## Read this when
-- agent call の instruction に組み込む policy の責務や生成内容を調査・変更するとき
-- oracle／realization の作成・レビュー・適合性判定に関する共通規定を確認するとき
-- ファイルアクセス制約、INDEX.md routing、feedback 報告、conflict 解消など横断的な prompt policy の入口を探すとき
+- agent call に適用される prompt policy の種類や構築経路を調査するとき
+- oracle・realization の作成、レビュー、実装、conflict 解消に関する規定の生成方法を確認または変更するとき
+- INDEX.md ルーティング、file access、feedback reporting など共通ポリシーの責務分担を確認するとき
 
 ## Do not read this when
-- 個別の oracle file、realization file、実装ファイル、テストの具体的な内容を確認したいときは、対象を直接読む
-- Structured Output の項目・型・形式だけを確認したいとき
-- policy を利用する agent call の prompt 全体や呼び出し経路だけを調べるときは、呼び出し元を直接読む
+- 個別の oracle file、realization file、実装、テストの内容を直接確認したいとき
+- Structured Document の項目・型・形式だけを確認したいとき
+- prompt policy の利用箇所や生成された prompt 全体を確認する場合で、呼び出し元を直接読む方が適切なとき
 
 ## hash
-- 6607953a483aab846d7d44f3df4da1fd7668fff79a4a6f9f4280065ab5a0c7fc
+- 1945e3534f1f0bf3ff7377e22b7c8f249b6e32059d7fea5aaae0f44dd4af8940
