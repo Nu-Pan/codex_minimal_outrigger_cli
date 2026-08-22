@@ -16,23 +16,6 @@
 ## hash
 - 9331b8a2379ca9d95529a90ebf991053385f7477b683a828ed4e684823c487eb
 
-# `editor_handoff.py`
-
-## Summary
-- 日本語の editor work file handoff 用 instruction 文面を構築する関数を定義する。agent call の file access mode と Codex CLI sandbox を維持しつつ、正式な成果物も満たす handoff ポリシーを返す。
-- handoff file への書き込みについては、対象パスと理由を限定した sandbox escalation の許可を定義する。
-
-## Read this when
-- agent call から editor work file へ handoff する際のポリシーや instruction 文面を確認・変更するとき。
-- handoff 時のアクセスモード、sandbox 維持、正式成果物の扱い、書き込みに伴う escalation の境界を確認するとき。
-
-## Do not read this when
-- editor handoff 以外の prompt policy を確認・変更するとき。
-- handoff ポリシーの定義ではなく、実際の editor work file の内容や別の prompt builder の基本構造を直接確認すべきとき。
-
-## hash
-- 8d2cadc492c24b25da7b026158934bd6167cb3685e35c5e0676ed49f16535eba
-
 # `feedback_reporting.py`
 
 ## Summary

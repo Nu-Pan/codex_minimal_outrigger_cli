@@ -100,21 +100,20 @@
 # `oracle_investigation.md`
 
 ## Summary
-- oracle file に関する調査指示をエディタから受け取り、完全な調査プロンプトを構築して Codex CLI の TUI を起動するサブコマンドの仕様。doctor preprocess、プロンプト編集、TUI 起動、調査結果の扱いと編集 handoff の境界を定める。oracle investigation の起動手順や、oracle/realization file のアクセス制約、Codex CLI 起動規則を確認する際の入口となる。
+- oracle file に関するユーザーの調査指示を受け取り、oracle file を根拠とする調査結果を回答する Codex CLI の TUI 起動サブコマンド。入力受付、完全プロンプト構築、TUI 起動、調査結果の提示までを扱う。
 
 ## Read this when
-- oracle file に関するユーザー調査を受け付けるサブコマンドの挙動を変更・検証するとき
-- 調査プロンプトの構築、エディタ入力、TUI 起動パラメータ、調査から編集への handoff を確認するとき
-- oracle file を読み取り専用、realization file を読み書き禁止とする調査境界や、Codex CLI の起動規則を確認するとき
+- oracle file の仕様・設計・契約を調査するための TUI の責務や実行手順を確認したいとき
+- oracle file 調査指示のエディタ入力、プロンプト構築、Codex CLI 起動パラメータの扱いを確認したいとき
+- 調査中の oracle file と realization file の読み書き境界を確認したいとき
 
 ## Do not read this when
-- oracle file の一般的な調査指針や対象判定を確認するだけの場合は misc_spec.md を読む
-- エディタ入力の正本仕様を確認する場合は prompt_editor_input.md を直接読む
-- プロンプトの汎用規定と動的プロンプトの責務境界を確認する場合は prompt_policy.md を直接読む
-- Codex CLI の共通起動規則や Windows toast 通知の詳細を確認する場合は、それぞれの正本仕様を直接読む
+- oracle file の個別内容を直接確認したいとき
+- oracle_investigation 以外のサブコマンドの責務や起動手順を確認したいとき
+- Codex CLI の一般的な利用方法や、調査結果以外の出力仕様だけを確認したいとき
 
 ## hash
-- 66818113dee555de0bef6269b7fce19c6340e04b45f25a5f1bd1f697e78d1160
+- 9901ffefb1de0e624f868518d71f7d01d4dc8e421e96ca9a62634aafc9d905e8
 
 # `oracle_review.md`
 

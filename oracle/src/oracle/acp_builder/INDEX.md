@@ -55,23 +55,20 @@
 # `oracle`
 
 ## Summary
-- oracle 用 agent call の起動パラメータ、完全 prompt、oracle 読み書き範囲、作業ディレクトリ、モデル・推論設定、インデックス事前処理を構築するディレクトリ。
-- edit は oracle file の編集と仕様削減、investigation は oracle file の読み取り専用調査、review は所見の列挙・擁護・反証・採否判定・統合を扱う下位入口である。review 配下には各処理の Structured Output schema も対応して置かれている。
+- oracle 向け agent call の用途別実装をまとめるディレクトリ。編集、調査、レビューの各サブディレクトリが、専用の prompt 構成・起動パラメータ・出力契約を確認する入口となる。
 
 ## Read this when
-- oracle に対する edit・investigation・review の agent call の prompt、アクセス制約、起動設定、または Structured Output 契約を確認・変更するとき
-- 対象の処理が edit、investigation、review のどの下位ディレクトリに属するかを判断するとき
-- review の所見列挙、妥当性検証、採否判定、重複・矛盾の統合に関する agent call の入口を確認するとき
+- oracle edit、investigation、review のいずれかに関する agent call の prompt、起動条件、アクセス制約、出力契約を確認・変更するとき
+- oracle 向けの用途別実装の入口を特定し、対応するサブディレクトリへ進むとき
 
 ## Do not read this when
-- oracle file 自体の正本仕様、調査対象の内容、編集方針を確認するとき
-- 共通の AgentCallParameter、パス解決、prompt builder、構造化文書レンダリングの実装を確認するとき
-- oracle review 全体の実行制御や、判定後の所見適用処理を確認するとき
-- 特定の処理の詳細な prompt、実装、出力 schema を確認できる場合に、ディレクトリ全体を読む必要があるとき
-- realization 側の CLI 動作やテストを確認するとき
+- oracle file 自体の正本仕様や編集方針を確認するとき
+- 一般的な agent call の基底型、パス解決、prompt builder、構造化文書レンダリングを確認するとき
+- realization 側の CLI 動作やテスト、または oracle review 全体の実行制御を確認するとき
+- 特定の出力形式や個別の agent call 実装を直接確認できる場合
 
 ## hash
-- 4c10fbaa2a42f5a95f11de046d45c57b6dbc3f64574279b08b97cebe82cd371a
+- 84c71a6d28a4352f3d2d7a7db92917ad60e90a7b04f29f11c74259f25db41094
 
 # `quota_probe.py`
 

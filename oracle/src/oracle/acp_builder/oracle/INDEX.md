@@ -19,19 +19,21 @@
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動パラメータ構築を担う実装への入口。ユーザー指示を完全プロンプトへ組み込み、oracle 調査向けの読み取り専用設定、パスコンテキスト、モデル・推論設定、インデックス事前処理を備えた `AgentCallParameter` を構築する。
+- `cmoc oracle investigation` 向けに、ユーザー指示を埋め込んだ完全プロンプトと Codex CLI TUI 起動パラメータを構築する実装。調査対象、達成条件、oracle file の根拠提示、未定義事項の扱い、読み取り専用のファイルアクセス範囲を定義する。
+- TUI 起動時のモデル、最大推論強度、oracle 専用読み取りモード、リポジトリルートの作業ディレクトリ、indexing preflight を固定する。oracle investigation の prompt 構成と起動条件を確認するための入口。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動設定を変更・調査するとき
-- oracle 調査用プロンプトへのユーザー指示の組み込み方、起動時のアクセスモード、モデル、作業ディレクトリを確認するとき
+- `cmoc oracle investigation` の完全プロンプトの構成や、ユーザー指示の埋め込み方法を確認するとき
+- oracle investigation の読み取り専用調査範囲、調査結果の達成条件、oracle file の根拠提示や未定義事項の扱いを確認するとき
+- oracle investigation の TUI 起動に使うモデル、推論強度、作業ディレクトリ、ファイルアクセスモード、indexing preflight を変更または確認するとき
 
 ## Do not read this when
-- 完全プロンプトの共通構造だけを調べる場合
-- エージェント呼び出しパラメータの型や列挙値の一般仕様だけを調べる場合
-- oracle 調査の正本仕様や対象ファイルの内容を調べる場合
+- oracle file 自体の正本仕様や調査内容を確認するときは、対象の oracle file を直接読む
+- 一般的な TUI 起動処理や `AgentCallParameter` の共通仕様を確認するときは、共通実装を直接読む
+- `cmoc oracle investigation` 以外のコマンドの prompt や TUI 起動パラメータを確認するときは、該当する実装を直接読む
 
 ## hash
-- e8bd6dd7a801e70d1153970beaae392ac5c90e4c5d827c5cc270ac99122ebb75
+- b4def0a02e5b634b8e7a614c92927ecee3b72253b09c42ade1bcb502ee9094f4
 
 # `review`
 
