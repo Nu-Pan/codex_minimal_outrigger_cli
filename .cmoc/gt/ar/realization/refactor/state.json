@@ -539,12 +539,6 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/src/oracle/prompt_builder/policy/realization_oracle_reference.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "3038c85ce59585b85389e52ae27d76a07d3d3c58cae10b992dbcef50d209310e",
-    "last_investigated_at": "2026-08-17_20-05_20_785879000"
-  },
   "oracle/src/oracle/prompt_builder/policy/routing.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
