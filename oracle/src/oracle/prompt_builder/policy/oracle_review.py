@@ -11,7 +11,7 @@ def build_oracle_review_policy() -> tuple[PlaceholderMap, SDHeader]:
         SDHeader(
             "oracle findings review policy",
             SDPolicy(
-                when_use_this="oracle file に対する所見に対する作業 (e.g. 列挙・統合・検証・採否判定) をするとき、以下の規定に従うこと",
+                what_is_this="oracle file に対する所見が満たすべき規定を以下に示す",
                 require=(
                     "正本仕様断片同士に解釈の余地がない明確な矛盾がある場合は fatal 所見とする",
                     "仕様に従うと実装者の裁量では解消不能な問題が必ず発生する場合は fatal 所見とする",

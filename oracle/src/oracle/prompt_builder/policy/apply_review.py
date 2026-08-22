@@ -11,7 +11,7 @@ def build_apply_review_policy() -> tuple[PlaceholderMap, SDHeader]:
         SDHeader(
             "apply review policy（oracle file に対する realization file の追従要否・所見・修正の判断時）",
             SDPolicy(
-                when_use_this="",
+                what_is_this="",
                 require=(
                     "oracle authority policy（oracle・realization file を扱う時）では、oracle file を人間が所有する正本仕様断片として扱う",
                     "finding basis policy（所見・修正対象の判断時）に従い、所見または修正対象には、用途固有の policy が認める具体的な oracle file または realization file の記述・挙動を示す",

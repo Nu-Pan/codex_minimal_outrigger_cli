@@ -11,7 +11,7 @@ def build_conflict_resolution_policy() -> tuple[PlaceholderMap, SDHeader]:
         SDHeader(
             "conflict resolution policy（`cmoc session join` の conflict marker 解消時だけ）",
             SDPolicy(
-                when_use_this="",
+                what_is_this="",
                 require=(
                     "oracle authority policy（oracle・realization file を扱う時）では、oracle file を人間が所有する正本仕様断片として扱う",
                     "conflict 対象の両側と関連する oracle file を読み、両立する意図と挙動を失わない解消結果にする",

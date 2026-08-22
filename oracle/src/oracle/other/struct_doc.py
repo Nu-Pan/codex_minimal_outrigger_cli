@@ -155,8 +155,8 @@ class SDPolicy:
     SDHeader 直下の単一要素として保持される事を想定している
     """
 
-    # どのような場合にこの規定を適用するべきかを説明する文章
-    when_use_this: str
+    # この規定が一体何者であるかを述べる
+    what_is_this: str
 
     # 「必須」カテゴリに属する規定のリスト
     # １項目＝１文で「～しなければならい」「～すること」が並ぶ
@@ -311,10 +311,10 @@ def _render_sd_policy_as_markdown(
     str 専用
     """
     result: list[str] = list()
-    if sd_node.when_use_this:
+    if sd_node.what_is_this:
         result += [
             "",
-            sd_node.when_use_this,
+            sd_node.what_is_this,
             "",
         ]
     if sd_node.require:

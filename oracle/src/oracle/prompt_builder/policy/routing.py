@@ -17,7 +17,7 @@ def build_routing_policy(
         SDHeader(
             "routing policy",
             SDPolicy(
-                when_use_this="",
+                what_is_this="",
                 require=(
                     "`INDEX.md` は各階層に存在し、同階層のファイル・ディレクトリの説明が書かれている",
                     "`INDEX.md` はどのファイル・ディレクトリを読むべきか判断・特定するための routing 情報として用いること",

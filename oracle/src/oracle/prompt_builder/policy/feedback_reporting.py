@@ -13,17 +13,15 @@ def build_feedback_reporting_policy(
         SDHeader(
             "human feedback reporting",
             SDPolicy(
-                when_use_this="",
+                what_is_this="このセッション内でエージェントに課された規定の範囲内では解決できない問題を人間に報告する方法を以下に示す",
                 require=(
-                    "このセッションの規定内では解決できなかった問題を MCP tool `cmoc_feedback.submit_observation` を使用して報告すること",
+                    "MCP tool `cmoc_feedback.submit_observation` を使用して問題を報告すること",
                 ),
                 prohibit=(
                     "問題報告の成功・失敗を根拠にセッションを中断・続行を判断してはならない",
-                ),
-                allow=(
-                    "セッション内で解決した問題は報告しなくて良い",
-                    "仕様どおりの制約は報告しなくて良い",
-                    "具体的な根拠がない改善案は報告しなくて良い",
+                    "セッション内で解決した問題は報告してはならない",
+                    "仕様どおりの制約は報告してはいけない",
+                    "具体的な根拠がない改善案は報告してはいけない",
                 ),
             ),
         ),

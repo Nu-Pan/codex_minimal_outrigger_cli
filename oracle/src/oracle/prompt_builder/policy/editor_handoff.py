@@ -11,7 +11,7 @@ def build_editor_handoff_policy() -> tuple[PlaceholderMap, SDHeader]:
         SDHeader(
             "editor handoff policy（agent call から editor work file へ handoff する時）",
             SDPolicy(
-                when_use_this="",
+                what_is_this="",
                 require=(
                     "editor handoff でも、agent call に選択された file access mode と Codex CLI sandbox を維持する",
                     "handoff file への書き込みとは別に、その agent call が要求する正式な結果または成果物を満たす",

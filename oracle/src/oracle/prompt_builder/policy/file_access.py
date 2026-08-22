@@ -121,7 +121,7 @@ def build_file_access_policy(
                 SDHeader(
                     "",
                     SDPolicy(
-                        when_use_this="",
+                        what_is_this="",
                         require=(),
                         prohibit=(),
                         allow=(),
@@ -136,7 +136,7 @@ def build_file_access_policy(
         SDHeader(
             f"file R/W policy ({mode.value})",
             SDPolicy(
-                when_use_this="",
+                what_is_this="エージェントによるアクセスが満たすべき規定を以下に示す",
                 require=(),
                 prohibit=tuple(denials),
                 allow=("以上のルールで禁止されていない読み書きは暗黙に許可される。",),

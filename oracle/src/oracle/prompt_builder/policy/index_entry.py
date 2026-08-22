@@ -11,7 +11,7 @@ def build_index_entry_policy() -> tuple[PlaceholderMap, SDHeader]:
         SDHeader(
             "index entry policy（`INDEX.md` 用エントリー生成時）",
             SDPolicy(
-                when_use_this="",
+                what_is_this="",
                 require=(
                     "INDEX.md エントリーのルーティング情報には、対象を読むべき作業・質問・変更の条件を判断できる意味情報を書く",
                     "対象が担う責務と、同階層の他対象ではなくその対象へ進む理由を書く",

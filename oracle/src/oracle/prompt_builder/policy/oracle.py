@@ -11,7 +11,7 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
         SDHeader(
             "oracle policy",
             SDPolicy(
-                when_use_this="oracle file の作成・変更・レビューをする時、以下の規定に従うこと",
+                what_is_this="oracle file が満たすべき規定を以下に示す",
                 require=(
                     "oracle and realization basic の要件に従うこと",
                     "プロンプト > oracle file > installed skill の優先順位で指示に従う事",

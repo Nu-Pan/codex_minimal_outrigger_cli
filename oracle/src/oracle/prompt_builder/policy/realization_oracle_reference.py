@@ -14,7 +14,7 @@ def build_realization_oracle_reference_policy(
         SDHeader(
             "realization oracle reference policy（realization code の作成・変更時）",
             SDPolicy(
-                when_use_this="",
+                what_is_this="",
                 require=(
                     "対応する oracle file が存在する場合、realization code のコメントに `{{work-root}}` 起点の oracle file path を書く",
                 ),
