@@ -10,7 +10,6 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/src/oracle/prompt_builder/basic.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/editor_handoff.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/feedback_reporting.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/index_entry.py
@@ -38,9 +37,6 @@ from oracle.prompt_builder.basic import PlaceholderMap
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 from oracle.prompt_builder.policy.conflict_resolution import (
     build_conflict_resolution_policy as _build_conflict_resolution_policy,
-)
-from oracle.prompt_builder.policy.editor_handoff import (
-    build_editor_handoff_policy as _build_editor_handoff_policy,
 )
 from oracle.prompt_builder.policy.feedback_reporting import (
     build_feedback_reporting_policy as _build_feedback_reporting_policy,
@@ -113,11 +109,6 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
             id="conflict-resolution",
         ),
         pytest.param(
-            _build_editor_handoff_policy,
-            ("**必須**", "**許容**"),
-            id="editor-handoff",
-        ),
-        pytest.param(
             lambda: _build_feedback_reporting_policy(_path_context()),
             ("**必須**", "**禁止**"),
             id="feedback-reporting",
@@ -173,7 +164,6 @@ _POLICY_FLAG_HEADINGS = (
     ("oracle_findings_policy", "# oracle findings policy"),
     ("realization_findings_policy", "# realization findings policy"),
     ("conflict_resolution_policy", "# conflict resolution policy"),
-    ("editor_handoff_policy", "# editor handoff policy"),
     (
         "realization_oracle_reference_policy",
         "# realization oracle reference policy",
@@ -249,23 +239,15 @@ def test_build_realization_findings_policy_renders_core_review_aspects() -> None
     assert "調査開始時点ですでに解消されている問題" in rendered
 
 
-def test_conflict_resolution_policy_preserves_both_sides() -> None:
-    """conflict 解消 policy が両側の意味を保つ境界を伝える。"""
+def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
+    """conflict 解消結果の保持・報告・変更境界を伝える。"""
     builder_result = _build_conflict_resolution_policy()
     rendered_doc = _render_policy(builder_result)
-    assert "`cmoc session join` の conflict marker 解消時だけ" in rendered_doc
-    assert "conflict 対象の両側と関連する oracle file を読み" in rendered_doc
-    assert "conflict marker の解消に不要な仕様変更" in rendered_doc
-
-
-def test_editor_handoff_policy_preserves_call_responsibility() -> None:
-    """handoff の追加でも元の access mode と正式な結果を維持する。"""
-    builder_result = _build_editor_handoff_policy()
-    rendered_doc = _render_policy(builder_result)
-    assert "editor handoff でも、agent call に選択された" in rendered_doc
-    assert "file access mode と Codex CLI sandbox を維持する" in rendered_doc
-    assert "正式な結果または成果物を満たす" in rendered_doc
-    assert "対象 path と理由を限定した sandbox escalation" in rendered_doc
+    assert "merge conflict を解決した結果が満たすべき規定" in rendered_doc
+    assert "両方のマージ元ブランチの oracle file" in rendered_doc
+    assert "意味を両立できる解決方法が無い場合" in rendered_doc
+    assert "realization file の都合または挙動を根拠に" in rendered_doc
+    assert "conflict marker の解消に対して不必要な変更" in rendered_doc
 
 
 def test_realization_oracle_reference_policy_is_independently_selectable() -> None:
@@ -533,7 +515,7 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
     assert "プロンプト > oracle file > installed skill の優先順位" in rendered
     assert "今現在の仕様を満たすために必要な realization file" in rendered
     assert rendered.count("所見に対して適用する基準は常に一貫していること") == 2
-    assert "conflict 対象の両側と関連する oracle file を読み" in rendered
+    assert "両方のマージ元ブランチの oracle file" in rendered
     assert "### 背景" not in rendered
     for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered

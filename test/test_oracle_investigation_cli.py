@@ -213,8 +213,6 @@ def test_oracle_investigation_has_no_session_precondition(
     assert "関連する oracle file を根拠とする読み取り専用調査を通常の作業範囲" in (
         complete_prompt_skeleton
     )
-    assert "editor handoff でも、agent call に選択された" in (complete_prompt_skeleton)
-    assert "対象 path と理由を限定した sandbox escalation" in (complete_prompt_skeleton)
     assert "未定義の事項を正本仕様として断定していない" in (complete_prompt_skeleton)
     assert len(calls) == 1
     parameter, kwargs = calls[0]

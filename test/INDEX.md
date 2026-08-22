@@ -548,22 +548,20 @@
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- `oracle investigation` CLI がセッションなしの main worktree から起動できることを、doctor 前処理、prompt editor 入力、launch parameter 構築、TUI 起動の順序と引き渡し内容をモックで検証するテスト。
-- 起動時の preflight 有効化、oracle 調査用 prompt とファイルアクセスモード、モデル・推論設定、入力ファイルの保存・後処理まで確認する。
-- `oracle.investigation.launch_tui` realization adapter が指定された builder だけを公開することを検証する。oracle investigation CLI の起動フローまたはその launch builder の公開面を変更・調査する際のテスト入口。
+- `oracle investigation` CLI の起動条件と実行前後の処理順序を検証するテスト。session のない main worktree でも doctor、prompt skeleton 生成、エディタ入力、最終 parameter 構築、cleanup、TUI 起動までが所定の順序で実行され、oracle 調査用の prompt・権限・実行設定・入力保存が正しいことを確認する。
+- oracle investigation の realization adapter が指定された builder だけを公開し、補助名を公開しないことを検証する。関連する CLI 起動処理や builder の公開 API を変更・調査するときのテスト入口となる。
 
 ## Read this when
-- `oracle investigation` サブコマンドの起動条件、prompt editor から TUI へ至る処理順序、または indexing preflight の連携を確認するとき。
-- `build_oracle_investigation_launch_tui_parameter` の生成結果、調査用 prompt、ファイルアクセス権限、モデル設定を変更するとき。
-- `acp.builder.oracle.investigation.launch_tui` の公開シンボルを変更するとき。
+- `oracle investigation` サブコマンドの起動前処理、エディタ入力フロー、TUI 起動設定、indexing preflight、入力ファイル cleanup の挙動を変更または確認するとき。
+- oracle investigation の launch TUI builder の公開シンボルや realization adapter の export 範囲を変更または確認するとき。
+- session 前提なしの main worktree での CLI 起動可否や、関連する実行順序・parameter 契約を検証するとき。
 
 ## Do not read this when
-- oracle investigation 以外のサブコマンドの起動フローや builder を調べるとき。
-- prompt editor の一般仕様、oracle investigation の正本仕様、indexing の設計そのものを確認するときは、対応する oracle 文書を直接読む。
-- CLI 起動や launch parameter に関係しない oracle 調査ロジック、通常の TUI 実装、または無関係なテストを変更するとき。
+- oracle investigation 以外のサブコマンドの起動条件や、個別の oracle 文書の内容だけを調査するとき。
+- 実装の公開 API や CLI フローを変更せず、別の機能のテスト・fixture・一般的な品質検査だけを扱うとき。
 
 ## hash
-- 12e42aab7dd2a38c824cdb1ef8ec79101fc3d6e4bf5a7137a940ac1fb20cd81c
+- e69b1e0460cc73380e8cdd1c94a0c341a34a50db2756459c68a1368b82bb8c8e
 
 # `test_oracle_review_loop.py`
 
@@ -730,23 +728,20 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt policy 各 builder の SDHeader rendering と category order、policy flag の選択注入を検証する回帰テスト。
-- build_complete_prompt による static/dynamic section の順序、feedback instruction、placeholder 定義・競合、root token 保持を検証する。
-- file access mode ごとの deny-list と、main repository・linked worktree に応じた path boundary を検証する。
-- oracle、realization、findings、conflict resolution、editor handoff、routing、INDEX entry 各 policy の主要な要求文面と適合境界を検証する。
+- prompt policy 各部品の rendering と complete prompt 組み立て結果を検証する回帰テスト。SDHeader の構造、policy block の順序・独立注入、共通 feedback 指示、placeholder 展開、root 定義の統合・競合検出を扱う。
+- oracle／realization、所見、conflict、feedback、file access、INDEX routing など各 policy builder の出力内容と、file access mode・path context に応じた境界を検証する。prompt_builder 配下の policy や complete_prompt の変更が、統合 prompt の構造・文言・参照関係に与える影響を確認する入口である。
 
 ## Read this when
-- prompt builder の policy block、complete prompt の構成順序、placeholder 展開、root 定義統合または競合処理を変更・調査するとき。
-- agent call に共通注入される feedback reporting、file access policy、oracle/realization policy の rendering を変更・検証するとき。
-- linked worktree を含む path context と file access deny-list の挙動を確認するとき。
-- prompt builder の回帰テスト全体と、各 policy builder の出力契約を確認するとき。
+- prompt policy builder、complete prompt、SDHeader の rendering、placeholder 展開または policy 注入順序を変更・調査するとき
+- feedback reporting、file access、routing、oracle／realization policy の統合挙動や root-specific な制約を検証するとき
+- prompt の回帰テスト失敗について、期待される見出し・文言・block の重複や順序を特定するとき
 
 ## Do not read this when
-- 個別 policy の本文そのものを変更・調査するだけで、complete prompt への注入やこのテストの検証対象に関係しないとき。
-- prompt builder や SDHeader rendering を経由しない、別の CLI 機能・テスト・ファイルアクセス処理を直接確認するとき。
+- 個別 policy の正本仕様や実装内容そのものを確認することが目的で、prompt 全体への統合回帰を扱わないときは、対応する oracle 文書または prompt_builder 実装を直接読む
+- prompt builder と無関係なテスト、実装、仕様の変更を調査するとき
 
 ## hash
-- 40b2b26fbd7fb1aab5f67652c895c2bbb20a0ea4600de359d99b7a7288ade131
+- d8eecc8f5d6384ef9743f43fcb5f4c08f2e6720790fbd753c65ae4ea9a6e88f5
 
 # `test_runtime_cli.py`
 

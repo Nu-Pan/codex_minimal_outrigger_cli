@@ -146,17 +146,19 @@
 # `test`
 
 ## Summary
-- `test/` は、cmoc の realization test を集約するディレクトリです。CLI、runtime、Codex 実行、indexing、session、oracle review、feedback、設定、通知などの外部契約・回帰挙動を検証する各テストへの入口になります。対象機能の実装変更時に、該当する統合テストまたは専用テストを選ぶために進みます。
+- test ディレクトリは、cmoc の realization テスト群と共有テスト補助を集約する検証入口です。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review/edit、session/run、feedback、設定・状態・Git・通知など、実装や外部契約の回帰テストを領域別に確認できます。
+- 個別機能のテストへ進む前に、対象領域の外部挙動・境界条件・統合 lifecycle を把握するための階層入口です。共有 helper や conftest はテスト環境の共通前提を確認する場合に参照します。
 
 ## Read this when
-- cmoc の外部挙動や回帰条件を、実装ではなくテスト観点から確認したいとき
-- CLI、Codex runtime、indexing、session、oracle、realization、feedback、設定、共通 runtime の変更に対応する検証テストを探すとき
-- 複数コンポーネントにまたがる lifecycle、worktree、Git、report、process 管理の契約を確認するとき
+- cmoc の実装変更や仕様確認に対して、対応する realization test、回帰条件、外部契約の検証箇所を特定するとき。
+- Codex 実行、CLI、indexing、oracle review/edit、session/run、feedback、設定・状態・Git・通知などの挙動をテスト観点から確認するとき。
+- 複数コンポーネントをまたぐ lifecycle、失敗復旧、ログ・report・Git 差分・worktree 境界を一体として検証するテスト入口を探すとき。
+- テスト全体に共通する fixture、テスト用 Git repository、fake command、Codex double、toast 隔離などの前提を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装の詳細を確認することが目的の場合は、各テストが参照する oracle 文書または実装ファイルを直接読む
-- 対象機能が明確な場合は、このディレクトリ全体ではなく対応する個別テストファイルへ直接進む
-- テスト実行方法だけを確認したい場合は、テスト実行規約またはプロジェクト設定を読む
+- 正本仕様、実装本体、Structured Output schema、prompt policy の定義そのものを確認することが目的のときは、各テストが示す oracle・実装・schema を直接読む。
+- 特定の単一実装関数の詳細だけを調べる場合や、test ディレクトリの検証対象に関係しない機能を扱う場合。
+- テスト実行手順そのものだけを確認したい場合は、repository local のテスト実行手順やプロジェクト設定を直接読む。
 
 ## hash
-- e3da8cbaa3f04a2f8d0615837e46632e8a7121cdfbd3ff72138b49bf16035d67
+- dfbe8ac07058d4d19ffc12c20daee5ef1d275b2a5d05f9f6daaafd8d5f3b2d84
