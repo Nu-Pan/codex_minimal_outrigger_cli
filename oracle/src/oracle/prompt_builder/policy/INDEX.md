@@ -1,20 +1,3 @@
-# `apply_review.py`
-
-## Summary
-- oracle file と realization file の不整合・致命的問題を判定する agent 向けの所見規定を構築する。
-- realization findings policy の要求事項と禁止事項を SDPolicy として定義し、PlaceholderMap と SDHeader の組を返す。
-
-## Read this when
-- realization file に対する所見の判定基準や禁止事項を確認・変更するとき
-- oracle file への適合性レビュー用プロンプトの構築経路を調査するとき
-
-## Do not read this when
-- realization file 自体の実装内容や挙動を直接確認するとき
-- 他の prompt builder のポリシーや、所見以外の Structured Document 定義を確認するとき
-
-## hash
-- 776955f90ebdf7e475dd42f6b8aa8f4cad6595a1e58cf8117d223c8b706a18b7
-
 # `conflict_resolution.py`
 
 ## Summary
@@ -153,6 +136,24 @@
 
 ## hash
 - af7f068631559b63749e87c61c2bf35f09d18d986f357c5962c414a6a6b1ed2d
+
+# `realization_findings.py`
+
+## Summary
+- oracle file と realization file の記述・挙動の適合性を判断するための所見ポリシーを構築する関数。所見の根拠、修正対象となる不整合・致命的問題、適用基準の一貫性を定義する。realization file に対するレビュー方針を組み立てる入口となる。
+
+## Read this when
+- oracle file の具体的な要求と realization file の具体的な挙動が不整合しているか確認するとき
+- realization file 上に明確な致命的問題があるか判定するとき
+- realization file に対する所見の根拠と適用基準を確認するとき
+
+## Do not read this when
+- oracle file 自体の定義不足や問題を検討するとき
+- 規定上必須でない事項の改善点や一般的なコード品質を検討するとき
+- realization file の実装内容を直接確認するときは、対象の realization file を先に読むべき場合
+
+## hash
+- 416190c9767555b83c10a4cb267bd07d1d4ceede09f2e680e425db2c7a359b3c
 
 # `realization_oracle_reference.py`
 

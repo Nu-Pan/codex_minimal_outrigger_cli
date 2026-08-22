@@ -93,19 +93,22 @@
 # `realization`
 
 ## Summary
-- oracle 差分の realization 反映、refactor fork の差分要約・レビュー・修正に使う AgentCallParameter 構築定義の入口。apply と refactor の起動条件、作業範囲、完了条件、出力契約を扱う。
+- realization file を oracle file の変更へ追従させる agent call 群の定義をまとめたディレクトリ。
+- apply は oracle file の差分を realization file へ反映する追従処理、refactor は変更要約とファイル単位のレビュー・修正処理への入口である。
+- 各処理の具体的な prompt 構築、起動パラメータ、作業モード、検証条件を確認する際に、下位の apply または refactor へ進む。
 
 ## Read this when
-- `cmoc realization apply fork` の prompt、起動設定、作業範囲、権限、完了条件を確認・変更するとき。
-- refactor fork の差分要約またはファイル単位レビュー・修正に関する prompt、起動パラメータ、出力契約、JSON schema と実装の対応を調査・変更するとき。
+- oracle file の変更を realization file へ反映する apply 処理の起動条件や作業範囲を確認するとき
+- refactor fork の変更要約、レビュー、修正の agent call 群を横断して責務や入口を確認するとき
+- realization file の差分追従、レビュー、修正に関する下位定義の所在を判断するとき
 
 ## Do not read this when
-- realization の具体的な実装・テスト・補助ファイルを確認・変更するときは、対象の realization file を直接読む。
-- 一般的な prompt 構築や apply/refactor 以外の realization 起動経路を調査するときは、対応する別の builder 定義を直接読む。
-- 変更差分の取得・要約処理や、Structured Output の具体的な項目・形式だけを確認するときは、それぞれの対応実装・JSON schema を直接読む。
+- apply の差分追従処理の具体的な prompt や実装だけを確認したい場合は apply 配下を直接読むとき
+- refactor の変更要約またはファイル単位レビュー・修正の具体的な契約を確認したい場合は refactor 配下を直接読むとき
+- 通常の realization 実装、テスト、補助成果物の内容を調査するときは、それぞれの realization file を直接読むとき
 
 ## hash
-- a7ab5166ebc156ccb9f02cec6618b0db5c01026e31428d7efdb36164c761751e
+- cd380d62730fac413c9130ae3800ec3ed16d4b4c063c26e287012515944c1a0e
 
 # `session`
 
@@ -127,15 +130,15 @@
 # `tui`
 
 ## Summary
-- `cmoc tui` の TUI 起動パラメータを構築する対象。オリジナルプロンプトを完全プロンプトへ組み込み、作業ディレクトリ、モデル、推論強度、ファイルアクセスモード、インデックス事前処理などの起動コンテキストをまとめる。TUI 起動時の固定設定や prompt 文面の構築規則を確認・変更するときの入口となる。
+- `cmoc tui` の起動に必要なプロンプトと AgentCallParameter を構築する入口。作業パス、モデル・推論設定、ファイルアクセスモード、インデックス事前実行などの固定パラメータを扱う。
 
 ## Read this when
-- `cmoc tui` サブコマンドの起動設定を確認または変更するとき。
-- TUI に渡す完全プロンプト、オリジナルプロンプトの埋め込み、作業ディレクトリ、モデル、推論設定を確認するとき。
+- `cmoc tui` の起動パラメータや完全プロンプトの構築を確認・変更するとき
+- TUI 起動時のモデル、推論、ファイルアクセス設定を確認・変更するとき
 
 ## Do not read this when
-- TUI の画面表示や対話操作の実装を確認するとき。
-- 完全プロンプトの一般的な生成規則だけを確認するとき。
+- TUI の画面表示や対話ループそのものを調べるとき
+- プロンプト生成の詳細や構造化文書の定義を直接確認したいとき
 
 ## hash
-- 8ce3f7319b34845f5e8218fe27426408bc256c3548f9b925372a046da2f4cd9e
+- cb678f004fe8cb4c3438e11aace22439c05a14d71dba1c4a4a85d0458f5157a7

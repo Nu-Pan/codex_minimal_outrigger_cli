@@ -1,15 +1,15 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc realization apply fork` が oracle file の差分を realization file へ追従適用する AgentCallParameter を構築する定義。commit 範囲と raw git diff を構造化して完全 prompt に埋め込み、run worktree、realization 書き込み権限、最高品質のモデル設定、全体調査・検証方針を起動パラメータへ固定する。
+- `cmoc realization apply fork` の差分追従処理を起動する AgentCallParameter の構築定義。commit 範囲と oracle file の raw diff を prompt に組み込み、リポジトリ全体の realization file への反映、整合性確認、実装・テスト・補助成果物の検証を委譲する。realization の起動 prompt や実行パラメータを確認・変更するときの入口であり、同処理の具体的な実装やテストを直接確認する対象ではない。
 
 ## Read this when
-- `cmoc realization apply fork` の prompt 内容、差分追従の完了条件、または AgentCallParameter の起動設定を確認・変更するとき。
-- oracle file の変更を realization 全体へ反映する agent call の作業範囲、権限、パスコンテキストを調査するとき。
+- `cmoc realization apply fork` の差分追従 agent call がどのような prompt と起動設定で構築されるか確認するとき
+- oracle file の変更を realization file 全体へ反映する追従フローの委譲範囲、作業ディレクトリ、アクセスモード、品質設定を確認するとき
 
 ## Do not read this when
-- realization の具体的な実装・テスト・補助ファイルを直接確認または変更する場合は、生成された prompt の定義ではなく対象の realization file を直接読む。
-- 一般的な prompt 構築や他の realization 起動経路を調査する場合は、それぞれの builder 定義を直接読む。
+- 差分追従 agent call の具体的な実装、テスト、補助成果物を調査するとき
+- `cmoc realization apply fork` 以外の agent call 構築や、通常の realization 実装そのものを確認するとき
 
 ## hash
-- a94dca14044b22a403f70cdb124d19177755e285ad3705b2b10b4e3c8bbafdba
+- baba1f74162e053746b72a01eea6bff32bb2ced618a98342e5a69ede86a5a866
