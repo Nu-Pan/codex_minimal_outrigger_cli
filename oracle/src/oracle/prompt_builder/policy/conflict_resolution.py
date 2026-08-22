@@ -5,23 +5,21 @@ from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_conflict_resolution_policy() -> tuple[PlaceholderMap, SDHeader]:
-    """oracle / realization の意味を保つ conflict 解消規定を構築する。"""
+    """merge conflict 解決処理結果が満たすべき規定を構築する。"""
     return (
         {},
         SDHeader(
-            "conflict resolution policy（`cmoc session join` の conflict marker 解消時だけ）",
+            "conflict resolution policy",
             SDPolicy(
-                what_is_this="",
+                what_is_this="merge conflict を解決した結果が満たすべき規定を以下に示す",
                 require=(
-                    "oracle authority policy（oracle・realization file を扱う時）では、oracle file を人間が所有する正本仕様断片として扱う",
-                    "conflict 対象の両側と関連する oracle file を読み、両立する意図と挙動を失わない解消結果にする",
-                    "両側の意味を両立できず人間意図の選択が必要な場合は、推測で一方を破棄せず未解消事項として報告する",
+                    "両方のマージ元ブランチの oracle file で両立する意図と挙動を失っていない",
+                    "意味を両立できる解決方法が無い場合は、一方を破棄せず未解消事項として報告する",
                 ),
                 prohibit=(
-                    "oracle authority policy（oracle・realization file を扱う時）では、realization file の都合または挙動を根拠に oracle file の意味を変更してはいけない",
-                    "conflict marker の解消に不要な仕様変更、実装改善、整形、または別 file の変更を行ってはいけない",
+                    "realization file の都合または挙動を根拠に oracle file の意味を変更してはいけない",
+                    "conflict marker の解消に対して不必要な変更を行ってはいけない",
                 ),
-                allow=(),
             ),
         ),
     )
