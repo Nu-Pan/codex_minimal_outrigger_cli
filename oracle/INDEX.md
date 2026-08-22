@@ -1,37 +1,36 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様と開発ルールを集約する oracle 文書群への入口。CLI・workflow・branch／worktree・feedback・ログ・状態管理などの app_spec と、Python 実装、設計、開発環境、テスト要件・実行手順に関する dev_rule を、作業内容に応じて選択するための上位ルーティング対象。considered_alternative では採用しなかった設計・作業方式の理由を確認できる。
+- cmoc の正本文書を、アプリケーション仕様（app_spec）、開発ルール（dev_rule）、branch・commit・worktree のモデル、採用しなかった代替案の検討資料（considered_alternative）に分類して案内するディレクトリ。CLI の挙動・ライフサイクル、実装・テスト・環境の規約、設計判断の背景を確認する際の入口となる。
 
 ## Read this when
-- cmoc の CLI や workflow の正本仕様を調査し、関連する app_spec 文書の入口を選ぶとき
-- session fork、run の隔離、branch・commit・worktree の用語や責務を確認するとき
-- 現行設計で採用しなかった作業方式や仕様案の理由を比較するとき
-- Python 実装の規約、CLI の配置、開発環境、テスト要件、テスト実行手順を確認するとき
+- cmoc の正本仕様・開発規約・設計背景を横断して探すとき
+- CLI の挙動、branch／worktree のモデル、Python 開発環境、テスト要件や実行手順の参照先を選ぶとき
+- 現行設計の背景や不採用となった代替案を調査するとき
 
 ## Do not read this when
-- 特定の app_spec や dev_rule の詳細だけを確認する場合は、対象文書を直接読む
-- 実装コード、realization、テストコードの具体的な内容だけを調べる場合
-- 既存 INDEX.md の内容やインデックス生成処理だけを確認する場合
+- 確認対象の仕様・開発ルール・検討資料が既に特定できており、該当する下位ディレクトリや文書を直接読めるとき
+- 個別の実装ファイル、具体的なテスト結果、既存 report や生成物だけを調査するとき
 
 ## hash
-- ab8242c8ccd61aef50a181ef0823429af722e2abbdb464e8a02a5a7e69c2ca3a
+- f407bd0f93ae6eb2c1029707de3b6b3ca415108975e58ecdf1eea860451d8a58
 
 # `src`
 
 ## Summary
-- cmoc の agent call パラメータと prompt 生成を支える実装群をまとめたソースディレクトリ。共通のモデル・推論強度・ファイルアクセス契約、パス・設定モデル、構造化 Markdown、prompt の完成処理と policy、用途別 builder、feedback 入力を扱う下位要素への入口である。
-- `acp_builder` は用途別 agent call parameter、`prompt_builder` は placeholder・policy・prompt 本文、`other` は設定・パス・構造化文書、`feedback` は feedback 入力形式を担う。各領域の実装や Structured Output の詳細を調べる際は、対応する下位ディレクトリから読み始める。
+- cmoc の正本モデルと agent call 構築定義を扱うソース群への入口。agent call パラメータ、quota probe、prompt 構築、path context・root placeholder、設定、構造化 Markdown 文書、feedback reporter 入力スキーマを提供する。
+- 用途別に `acp_builder`、`prompt_builder`、`other`、`feedback` へ分かれ、呼び出し契約、完全 prompt と policy、共通モデル、問題報告入力契約の確認先となる。
 
 ## Read this when
-- agent call の共通パラメータ契約や、用途別 builder の責務分担を確認するとき。
-- prompt の組み立て、placeholder、アクセス制約、routing、oracle・realization policy、feedback policy の実装入口を横断して調べるとき。
-- cmoc の設定・パス解決・構造化 Markdown ノードの実装配置を確認するとき。
+- agent call のモデル・reasoning effort・ファイルアクセス・cwd などの共通パラメータや quota availability probe を調査または変更するとき。
+- 完全 prompt の構造、policy の組み込み、placeholder 定義、agent 向け入力文面を調査または変更するとき。
+- root path と worktree の解決、cmoc 設定、構造化 Markdown ノード、feedback reporter の入力契約を確認するとき。
+- 用途別の定義や構築処理の所在を特定し、`acp_builder`、`prompt_builder`、`other`、`feedback` の下位要素へ進む必要があるとき.
 
 ## Do not read this when
-- 特定用途の agent call parameter や Structured Output の詳細だけを確認したいときは、対応する `acp_builder` の下位ディレクトリを直接読む。
-- prompt policy や prompt 部品の個別実装だけを確認したいときは、対応する `prompt_builder` の下位ディレクトリを直接読む。
-- Codex CLI の実行制御や、生成後の feedback の保存・集約を確認したいときは、対応する実行側・collector 側の対象を直接読む。
+- 既存の INDEX.md のルーティング情報だけを確認したいとき。
+- Codex CLI のバックエンド固有実装、通常の realization・session・TUI 実行処理、collector の保存・集約処理を直接確認したいとき。
+- 個別の issue、レビュー所見、または realization の具体的な変更内容だけを調査したいときは、対応する下位定義や実装を直接読む。
 
 ## hash
-- 91c1e10c0778e56cb8ec5173c2a6ef40e595db352a392179b9c7a5de613c0337
+- 55fbe5233c3f29be57323a6b1d2332b48a440e3b53bc2a98edae4dd517d352d0

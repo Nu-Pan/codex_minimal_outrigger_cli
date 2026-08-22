@@ -90,22 +90,23 @@
 # `realization`
 
 ## Summary
-- realization file を oracle file の変更へ追従させる agent call 群の定義をまとめたディレクトリ。
-- apply は oracle file の差分を realization file へ反映する追従処理、refactor は変更要約とファイル単位のレビュー・修正処理への入口である。
-- 各処理の具体的な prompt 構築、起動パラメータ、作業モード、検証条件を確認する際に、下位の apply または refactor へ進む。
+- realization apply fork 用の AgentCallParameter 定義。追従対象 commit 範囲や oracle file の raw git diff を prompt に組み込み、run worktree、モデル、権限、調査・検証・routing 方針などの起動条件を構築する。oracle file の変更を realization file 全体へ追従させる Agent call を確認・変更するときの入口。
+- refactor fork の agent call 定義。変更差分要約およびファイル単位のレビュー・修正について、出力契約、prompt、実行コンテキスト、アクセスモード、モデル、Structured Output schema、調査・修正・検証要件、AgentCallParameter 構築を扱う。これらの起動設定や契約を確認・変更するときの入口。
 
 ## Read this when
-- oracle file の変更を realization file へ反映する apply 処理の起動条件や作業範囲を確認するとき
-- refactor fork の変更要約、レビュー、修正の agent call 群を横断して責務や入口を確認するとき
-- realization file の差分追従、レビュー、修正に関する下位定義の所在を判断するとき
+- realization apply fork の Agent 起動パラメータ、prompt 構築、commit 差分の埋め込み、run worktree 設定を確認・変更するとき
+- oracle file の変更を realization file 全体へ追従させる Agent call のモデル設定、権限設定、実行前 indexing 設定を確認するとき
+- refactor fork の変更差分要約 agent call の出力形式、prompt、実行コンテキスト、アクセスモード、モデル、Structured Output schema を確認・変更するとき
+- refactor fork のファイル単位レビュー・修正 agent call の出力契約、調査範囲、修正権限、検証要件、prompt、AgentCallParameter の構築方法を確認・変更するとき
 
 ## Do not read this when
-- apply の差分追従処理の具体的な prompt や実装だけを確認したい場合は apply 配下を直接読むとき
-- refactor の変更要約またはファイル単位レビュー・修正の具体的な契約を確認したい場合は refactor 配下を直接読むとき
-- 通常の realization 実装、テスト、補助成果物の内容を調査するときは、それぞれの realization file を直接読むとき
+- 通常の realization implementation、test、ancillary の具体的な実装内容を確認する場合
+- Agent call の共通パラメータ型や prompt の共通生成規則を確認する場合は、各定義元を直接読む
+- 変更差分の取得・要約生成ロジック自体、レビュー対象の実装や個別仕様、所見判定、レビュー・修正 agent の実行処理を調べる場合
+- 構造化出力の項目・型・形式だけ、または一般的な prompt builder、path model、struct document の仕様だけを確認する場合は、それぞれの定義元を直接読む
 
 ## hash
-- cd380d62730fac413c9130ae3800ec3ed16d4b4c063c26e287012515944c1a0e
+- 10e38f667aa25e5fa57669551e8f91e676357826cf59792094a4c437c8479925
 
 # `session`
 
@@ -127,15 +128,17 @@
 # `tui`
 
 ## Summary
-- `cmoc tui` の起動に必要なプロンプトと AgentCallParameter を構築する入口。作業パス、モデル・推論設定、ファイルアクセスモード、インデックス事前実行などの固定パラメータを扱う。
+- `cmoc tui` の完全プロンプトと Codex CLI TUI 起動用 `AgentCallParameter` を構築する実装入口。オリジナルプロンプトを埋め込み、リポジトリルートを作業ディレクトリとして、モデル、推論強度、ファイルアクセス、起動前インデックス処理を固定する。
 
 ## Read this when
-- `cmoc tui` の起動パラメータや完全プロンプトの構築を確認・変更するとき
-- TUI 起動時のモデル、推論、ファイルアクセス設定を確認・変更するとき
+- `cmoc tui` の TUI 起動パラメータや固定設定を確認・変更するとき。
+- オリジナルプロンプトの完全プロンプトへの埋め込み方と、その構築呼び出しを調査するとき。
+- TUI 起動時の作業ディレクトリ、モデル、推論強度、ファイルアクセスモード、インデックス処理の設定根拠を確認するとき。
 
 ## Do not read this when
-- TUI の画面表示や対話ループそのものを調べるとき
-- プロンプト生成の詳細や構造化文書の定義を直接確認したいとき
+- 完全プロンプトの共通生成規則を確認したいときは、`build_complete_prompt` の定義を直接読む。
+- TUI の画面表示や対話操作を確認したいときは、該当する TUI 実装を直接読む。
+- `AgentCallParameter`、モデル、推論強度、ファイルアクセスモードの一般仕様を確認したいときは、各型の定義を直接読む。
 
 ## hash
-- cb678f004fe8cb4c3438e11aace22439c05a14d71dba1c4a4a85d0458f5157a7
+- ea497a5a3579639bfc48b68831772a92cfcc173d73d196a7a9fd45371e72dc7b

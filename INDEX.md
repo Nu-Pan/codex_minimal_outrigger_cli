@@ -91,22 +91,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・開発ルールと、agent call／prompt 生成を支える oracle 実装・schema を集約する領域。`doc` は CLI、workflow、state、feedback、branch／worktree、設計・開発環境・テストの意味仕様を扱い、`src` はその仕様に基づく builder、prompt、policy、設定・パスモデル、構造化文書、feedback 入力の正確な実装定義を扱う。仕様の調査は `doc`、agent call や prompt の実装・schema の確認は `src` から始める。
+- cmoc の正本文書と、その本文書を構成する prompt・agent call・feedback 関連の定義を案内するディレクトリ。CLI のアプリケーション仕様、開発ルール、branch／worktree モデル、採用しなかった代替案、agent call 構築や prompt 構築の実装契約を確認するための入口となる。
+- 文書は app_spec、dev_rule、considered_alternative、branch・worktree 関連のモデルに分かれ、ソース定義は acp_builder、prompt_builder、other、feedback などの用途別に整理されている。
 
 ## Read this when
-- cmoc の CLI、workflow、session、run isolation、branch／worktree、feedback、ログ、state、indexing の正本仕様を調査するとき
-- Python 実装の設計、開発環境、テスト要件、テスト実行手順を確認するとき
-- agent call の用途別パラメータ、prompt の組み立て、policy、placeholder、アクセス制約、oracle／realization の扱いを実装から確認するとき
-- 設定モデル、パスモデル、構造化 Markdown、feedback reporter 入力、Structured Output schema の定義を確認するとき
-- 採用しなかった設計・作業方式の理由を調査するとき
+- cmoc の正本仕様、開発ルール、設計判断の背景を横断して探すとき
+- CLI の挙動やライフサイクル、branch／worktree のモデル、Python 開発環境、テスト要件・実行手順の参照先を選ぶとき
+- agent call の共通パラメータ、quota probe、完全 prompt、policy、placeholder、構造化 Markdown、feedback reporter の入力契約を調査するとき
+- 個別の仕様書・開発ルール・検討資料・構築定義の所在を特定し、下位ディレクトリへ進むとき
 
 ## Do not read this when
-- 特定の仕様文書や実装モジュールが明らかな場合は、`oracle/doc` または `oracle/src` の対象を直接読む
-- realization の実装・テストや通常の product 挙動だけを調べる場合
-- 既存 INDEX.md の内容やインデックス生成処理だけを確認する場合
+- 確認対象の仕様書、開発ルール、検討資料、実装定義が既に特定できており、該当する下位項目を直接読めるとき
+- 通常の realization・session・TUI 実行処理、Codex CLI のバックエンド固有実装、collector の保存・集約処理を直接確認するとき
+- 個別の issue、レビュー所見、具体的なテスト結果、既存 report や生成物だけを調査するとき
 
 ## hash
-- a2ea7f67ac7c144ac6a13cfd3dbdf821bced144eb84e29eaa6b472d890f6c140
+- baab1a0a9bdaccda986b5954a61d0fd575543d0d40b38fef3baa2c8030b38c2c
 
 # `pyproject.toml`
 
@@ -144,19 +144,18 @@
 # `test`
 
 ## Summary
-- test ディレクトリは、cmoc の realization テスト群と共有テスト補助を集約する検証入口です。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review/edit、session/run、feedback、設定・状態・Git・通知など、実装や外部契約の回帰テストを領域別に確認できます。
-- 個別機能のテストへ進む前に、対象領域の外部挙動・境界条件・統合 lifecycle を把握するための階層入口です。共有 helper や conftest はテスト環境の共通前提を確認する場合に参照します。
+- `test` ディレクトリは、cmoc の realization test と共有 test helper を集約する検証入口である。ACP builder、Codex runtime、CLI lifecycle、indexing、session/run、oracle review、feedback、設定・状態永続化などの外部契約と境界条件を扱う。
+- 個別テストは対応する実装や oracle 仕様へ進む前に、変更対象の回帰挙動、統合 lifecycle、エラー処理、Git・worktree・process・report の境界を確認するために読む。
 
 ## Read this when
-- cmoc の実装変更や仕様確認に対して、対応する realization test、回帰条件、外部契約の検証箇所を特定するとき。
-- Codex 実行、CLI、indexing、oracle review/edit、session/run、feedback、設定・状態・Git・通知などの挙動をテスト観点から確認するとき。
-- 複数コンポーネントをまたぐ lifecycle、失敗復旧、ログ・report・Git 差分・worktree 境界を一体として検証するテスト入口を探すとき。
-- テスト全体に共通する fixture、テスト用 Git repository、fake command、Codex double、toast 隔離などの前提を確認するとき。
+- cmoc の CLI、runtime、Codex 呼び出し、ACP builder、indexing、session/run、oracle review、feedback、設定、永続 state の外部挙動を変更・検証するとき。
+- 複数コンポーネントにまたがる lifecycle、worktree 隔離、Git 差分、report、ログ、通知、cleanup、失敗復旧の回帰条件を確認するとき。
+- 変更対象に対応する realization test や共有 fixture の入口を特定するとき。
 
 ## Do not read this when
-- 正本仕様、実装本体、Structured Output schema、prompt policy の定義そのものを確認することが目的のときは、各テストが示す oracle・実装・schema を直接読む。
-- 特定の単一実装関数の詳細だけを調べる場合や、test ディレクトリの検証対象に関係しない機能を扱う場合。
-- テスト実行手順そのものだけを確認したい場合は、repository local のテスト実行手順やプロジェクト設定を直接読む。
+- 正本仕様、prompt policy、Structured Output schema、builder 実装、runtime 実装の詳細だけを確認する場合は、対応する oracle 文書・schema・実装ファイルを直接読むとき。
+- 単一の補助関数や個別実装の内部ロジックだけを調べる場合は、該当するテストまたは実装へ直接進むとき。
+- test と無関係な機能、または一般的なテスト実行手順・品質規約だけを確認するとき。
 
 ## hash
-- dfbe8ac07058d4d19ffc12c20daee5ef1d275b2a5d05f9f6daaafd8d5f3b2d84
+- 7121b1484172dae6b7bbd3d2dc788499c3269de57f7f15947571a265b3839682

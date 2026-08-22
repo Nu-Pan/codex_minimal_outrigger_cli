@@ -1,21 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc の CLI・workflow・feedback・ログ・通知・状態管理などの正本仕様を集約する app_spec 文書群。各仕様の責務、適用条件、関連仕様への入口を示し、個別機能の実装・変更・レビュー時に参照先を選ぶための上位ルーティング対象である。
-- 自動補完、Codex 呼び出し、model provider、出力・ログ、doctor、エラー処理、feedback、prompt、run/session、サブコマンド、通知など、横断的な CLI 挙動を扱う。
+- cmoc の主要サブコマンドと session・run lifecycle に関する正本仕様を集約するディレクトリ。doctor、indexing、feedback、oracle・realization 操作、session、run、TUI などの実行契約、状態遷移、report 要件を確認するための入口であり、各仕様ファイルへ進む起点となる。
 
 ## Read this when
-- cmoc の CLI 機能や workflow の正本仕様の所在を調べるとき
-- 複数の app_spec 間で責務境界や参照先を特定するとき
-- 自動補完、Codex 実行、feedback、状態管理、ログ、通知などの仕様確認を開始するとき
+- cmoc のサブコマンド仕様を横断して探すとき
+- 対象サブコマンドの実行条件、処理手順、終了経路、primary report、state 遷移の正本を確認するとき
+- realization の fork・run lifecycle、session の fork・join・abandon、または oracle 操作の仕様入口を選ぶとき
 
 ## Do not read this when
-- 特定仕様の詳細な挙動だけを確認する場合は、該当する app_spec 文書を直接読む
-- 実装コード、realization、テスト手順、開発環境の具体的な責務だけを調べる場合
-- 既存 INDEX.md の内容やインデックス生成処理そのものだけを確認する場合
+- 特定サブコマンドの詳細仕様が既に分かっており、該当する仕様ファイルを直接読めるとき
+- 内部実装の配置、テスト実行手順、または個別 oracle・realization file の内容だけを確認するとき
+- 既存 report の具体例や生成物だけを調査するとき
 
 ## hash
-- 1bf597809099dfc42b57a1169af0e0c822b9129395e97b0ac35ca4fef4b56011
+- 52780ffe419f1be924586512fbca3cd1d29f0619db8a13a3d4f0c3c62793285c
 
 # `branch_model.md`
 
@@ -55,19 +54,20 @@
 # `dev_rule`
 
 ## Summary
-- cmoc の開発ルールに関する正本文書群への入口。Python コーディング規約、CLI の設計・実装配置、開発環境、テスト要件、テスト実行・品質検査の手順を扱い、実装・環境構築・テスト関連の判断に応じて各文書へ進むための領域。
+- Python 開発規約、cmoc の CLI 設計・実装配置、開発環境、テスト要件、テスト実行と品質検査の手順を扱う開発ルール文書群。Python 実装や CLI 配置、環境構築、テスト設計・実行に応じて各正本文書へ進む入口。
 
 ## Read this when
-- cmoc の Python 実装を作成・変更・レビューし、コーディング規約や型・命名・入出力方針を確認するとき
-- CLI のエントリーポイント、サブコマンド、共有処理の責務や配置を判断するとき
-- Python 環境の構築、依存関係の追加、pip 操作、実行環境の前提を確認するとき
-- realization test の意味要件、隔離、実経路統合テスト、Fake Codex CLI の適用条件を確認するとき
-- 既存環境で focused/full test、品質検査、実経路統合テストの実行・判定・報告手順を確認するとき
+- Python コードの書き方、命名、型ヒント、import、コメント、docstring、ログ、最小限の実装方針を確認するときは coding_rule.md
+- CLI のエントリーポイント、サブコマンド、共有処理の配置や責務分担を確認するときは design_rule.md
+- Python 仮想環境の作成、依存関係追加、pip 操作、実行環境の前提を確認するときは development_environment.md
+- realization test の意味要件、隔離、実経路統合テスト、Fake Codex CLI の適用条件を確認するときは test_rule.md
+- 既存環境での test・Ruff・mypy などの選択、実行、完了判定、結果報告を行うときは test_execution.md
 
 ## Do not read this when
-- テストの意味上の要件だけを確認する場合は、テスト要件を定める文書へ直接進む
-- テストや品質検査の実行手順だけを確認する場合は、テスト実行手順を定める文書へ直接進む
-- CLI の挙動や出力内容そのものを確認する場合は、アプリケーション仕様の文書へ直接進む
+- CLI の挙動や出力内容そのものの正本仕様を確認したいときは app_spec 配下を直接読む
+- テストの意味要件を確認したいときは test_execution.md ではなく test_rule.md を直接読む
+- 環境構築、依存関係追加、pip 操作を行いたいときは test_execution.md ではなく development_environment.md を直接読む
+- 実装の設計責務や CLI 配置を確認したいときは test_rule.md ではなく design_rule.md など実装側の正本を直接読む
 
 ## hash
-- 56b4ef90349ea3545524ad8783ffba1ae66060c50c4d829d418330365923484d
+- e56b2fe9c76c29fabba93b9c167539407454585fd9045d783db221f7bf21f2e8

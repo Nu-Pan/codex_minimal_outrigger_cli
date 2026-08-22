@@ -227,17 +227,18 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの責務と実行フローを定義する入口。プロンプト編集から AI Agent CLI/TUI 起動までの全体契約を確認するときに読む。
-- バックエンド共通の固定注入規定、起動条件、indexing・feedback・通知仕様への参照、および Codex CLI 固有の起動条件を扱う。
+- `cmoc tui` サブコマンドの意味上の責務と実行契約を定義する正本。プロンプトへの cmoc 固有規定の注入、エディタ入力、起動パラメータ構築、AI Agent CLI/TUI の起動手順を確認する入口である。
+- 全バックエンド共通の TUI 起動条件と固定注入規定に加え、Codex CLI を起動する場合のコマンド、環境変数、preflight validation、引数による設定上書きを扱う。
 
 ## Read this when
-- `cmoc tui` の実行手順、事前条件、ユーザー入力、TUI 起動契約を確認・変更するとき
-- TUI 起動時に固定注入される cmoc 基本規定や、バックエンド共通のモデル・権限・Structured Output・indexing 条件を確認するとき
-- Codex CLI を `cmoc tui` から起動する際のコマンド、環境変数、preflight validation、引数上書き条件を確認するとき
+- `cmoc tui` の動作、引数、事前条件、実行手順を実装・変更・レビューするとき
+- ユーザー入力から完全プロンプトを構築して AI Agent CLI/TUI を起動する責務や処理順序を確認するとき
+- 未コミット差分がある working tree での実行、固定注入規定、TUI 起動パラメータ、Codex CLI 固有の起動条件を確認するとき
 
 ## Do not read this when
-- プロンプト編集の正本仕様、indexing、feedback observation、Windows toast 通知など、個別に参照先が明示された仕様だけを確認する場合
-- 完全プロンプトの文面や起動パラメータの構築ロジックだけを確認する場合は、`build_tui_launch_tui_parameter` の仕様・実装を直接読む
+- エディタ入力の詳細な仕様だけを確認したいときは `prompt_editor_input.md` を直接読む
+- 初期入力文や起動パラメータの構築実装だけを確認したいときは `editor_input.py` または `build_tui_launch_tui_parameter` の定義を直接読む
+- oracle・realization の責務、indexing、feedback、Windows toast 通知など個別契約の詳細だけを確認したいときは、本書が参照する各正本仕様を直接読む
 
 ## hash
-- 3dcf05fcc56fb61f030c2f2bbe219b74b1c99914750b52d3e7b722cd5edfcd17
+- fb9521e872a703419dfe4711d10173537391b350fb5bc48702ef9606e6bf1ae0

@@ -102,21 +102,18 @@
 # `realization.py`
 
 ## Summary
-- このファイルは、realization file を扱う agent call に注入する realization policy の構築定義を担う。パス文脈からプレースホルダー定義を取得し、realization の扱いに関する要求・禁止・許可事項を SDHeader/SDPolicy として組み立てる、policy prompt の具体的な入口である。
-- realization file の実装方針、oracle file との関係、YAGNI・重複整理・検証、実装コメントでの根拠参照などを agent call に伝える必要がある場合に読む。
+- `realization file` が満たすべき実装方針を構築する関数。agent call 向け instruction の placeholder 定義と、oracle file を正本仕様として扱うための要求・禁止・許可事項を組み立て、realization 実装作業の指針への入口となる。
 
 ## Read this when
-- realization file 向け agent call の instruction や policy prompt の生成規則を確認するとき
-- realization policy の要求・禁止・許可事項、またはそのプレースホルダー定義の出所を確認するとき
-- AgentCallPathContext と SDHeader/SDPolicy を用いた realization policy の構築経路を追うとき
+- realization file 向けの agent call instruction、実装規定、oracle file と realization file の責務境界を確認するとき。
+- realization 実装に対する要求・禁止・許可事項を変更または参照するとき.
 
 ## Do not read this when
-- realization file 自体の実装内容やテストを直接確認したい場合は、対象の realization 実装・テストを読む
-- oracle file の正本仕様や開発手順を確認したい場合は、該当する oracle 文書を直接読む
-- realization 以外の agent call policy を調べる場合は、対象となる policy 定義へ直接進む
+- realization file 自体の具体的な実装内容やテスト方法だけを確認したいとき。
+- oracle file の正本仕様そのものを確認したいときは、対象の oracle file を直接読む。
 
 ## hash
-- a308162ff7513ffaad255d05bf7016b607392339474396f00b114f2735e2c5db
+- 9aee31972701eb0788c33d6cc8e365896953db9a9ad6719042b65fa984ce5236
 
 # `realization_findings.py`
 
@@ -135,22 +132,6 @@
 
 ## hash
 - 416190c9767555b83c10a4cb267bd07d1d4ceede09f2e680e425db2c7a359b3c
-
-# `realization_oracle_reference.py`
-
-## Summary
-- realization code から oracle file path を参照する規定を構築する関数を定義する。realization code の作成・変更時に、対応する oracle file が存在する場合は、コメントへ work-root 起点の oracle file path を記載するためのポリシーと、work-root のプレースホルダー定義を返す。
-
-## Read this when
-- realization code に対応する oracle file 参照コメントの記載ルールを確認するとき
-- realization code 用の oracle reference policy やプレースホルダー設定を変更・利用するとき
-
-## Do not read this when
-- realization code 自体の実装責務や配置規則を確認したいとき
-- oracle file の内容や一般的な構造化文書ポリシーを直接確認したいとき
-
-## hash
-- 3b5639efb1bd3149ce3b41ca4c00861887207a698f60482363d7db691601645c
 
 # `routing.py`
 

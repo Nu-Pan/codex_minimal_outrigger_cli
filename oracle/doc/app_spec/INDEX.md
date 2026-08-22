@@ -239,22 +239,25 @@
 # `prompt_policy.md`
 
 ## Summary
-- cmoc が agent call 用 prompt を構築・注入する際の責務境界と規定を定める仕様書。意味仕様、oracle src の正本文面、realization の受け渡し責務を区別し、policy block の選択・配置、Structured Output の受理条件、summary と goal、placeholder、記法、言語の扱いを規定する。prompt builder や acp builder の設計・レビューへ進むための入口となる。
+- cmoc の agent call に渡す prompt の責務、正本と実行時生成物の境界、policy block の構築・注入規則を定める文書。
+- prompt に含める情報、prompt 文面の所有、cmoc 固有契約と installed skill の境界、Structured Output の schema・事後条件・受理条件の責務分担を扱う。
+- summary と goal の役割分担、prompt の構成順、placeholder と cmoc_block/cmoc_ref の記法、言語方針を定義する。
+- 個別の prompt builder や policy builder の実装を理解するための上位方針として、対応する oracle doc と oracle src への入口を提供する。
 
 ## Read this when
-- agent call に注入する prompt policy の種類、選択条件、配置順、重複扱いを確認するとき
-- prompt builder または acp builder が prompt 本文をどこで所有し、realization が何をしてよいかを確認するとき
-- Structured Output の schema、決定論的事後条件、validator、補正 prompt の責務境界を確認するとき
-- summary と goal の使い分け、placeholder の統合、prompt の記法や言語方針を確認するとき
+- prompt の責務や情報量、正本仕様との境界、実行時生成物の扱いを確認するとき。
+- policy flag と policy block の対応、注入順序、routing policy の適用条件を確認するとき。
+- Structured Output の schema、決定論的事後条件、validator、補正 prompt の責務境界を確認するとき。
+- summary と goal に何を記載するか、prompt の構成順や placeholder の統合規則を確認するとき。
+- prompt builder または acp builder の変更方針を判断するとき。
 
 ## Do not read this when
-- cmoc の意味仕様そのものや各サブコマンド固有の判断基準を確認する場合は、本文が指定する oracle doc を直接読むとき
-- 子 agent に渡す正確な prompt 文面を確認・変更する場合は、oracle src の prompt_builder または acp_builder を直接読むとき
-- prompt 本文を実行時に保存・受け渡しする realization implementation の具体的な実装を確認する場合は、該当 realization file を直接読むとき
-- INDEX.md の一般的な entry・routing 規則だけを確認する場合は、indexing の仕様書を読むとき
+- cmoc の意味仕様そのものを確認したい場合は、本文で示されている対応する oracle doc を直接読むとき。
+- 子 agent に渡る正確な prompt 文面や policy block の実装詳細だけを確認したい場合は、対応する oracle src を直接読むとき。
+- 個別の realization 実装の配置や CLI 責務を判断する場合は、対象の設計規則や realization file を直接読むとき。
 
 ## hash
-- a8c8f186e9aa5b343b6812ceb56f83cfa3c93d8d8d4c08bfce9785ee60f208f4
+- a0e6dec143e3722067155744dff8c8e5b7cc5662631fac35bc9ba30713f09035
 
 # `run_isolation.md`
 
@@ -293,20 +296,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様を集約した索引。doctor、indexing、feedback report、oracle 操作、realization、session、run、tui の各正本仕様への入口を提供し、引数、前提条件、実行手順、状態遷移、エラー処理、primary report などの確認先を示す。共通 lifecycle や個別 workload の詳細は対応する仕様へ振り分ける。
+- `oracle/doc/app_spec/sub_command` は、cmoc の主要サブコマンドおよび run・session lifecycle の正本仕様を集約するディレクトリです。doctor、indexing、feedback、oracle 操作、realization、session、run、TUI の実行契約・状態遷移・報告要件への入口を提供します。
 
 ## Read this when
-- cmoc サブコマンドの仕様を調査・実装・変更・レビューするとき
-- doctor、indexing、feedback report、oracle、realization、session、run、tui の挙動や報告要件を確認するとき
-- 個別コマンド仕様の入口を特定し、共通仕様または workload 固有仕様へ進むとき
+- cmoc のサブコマンド仕様を横断的に確認するとき
+- 対象サブコマンドの実行条件、処理手順、終了経路、primary report、state 遷移の正本を探すとき
+- realization の fork と run lifecycle、session の fork・join・abandon、または oracle 操作の仕様入口を選ぶとき
 
 ## Do not read this when
-- 個別仕様本文が指定する別の正本だけを直接確認したいとき
-- 一般的な Git 操作、テスト実行手順、保存済み report の具体例、feedback の raw observation・state・publication の詳細だけを調査するとき
-- 特定のサブコマンドに関係しない一般的な CLI 利用方法を確認するとき
+- 特定サブコマンドの詳細仕様が既に分かっている場合は、このディレクトリ全体ではなく該当する仕様ファイルを直接読むとき
+- サブコマンド内部の実装配置、テスト実行手順、または個別 oracle・realization file の内容だけを確認するとき
+- 既存 report の具体例や生成物だけを調査するとき
 
 ## hash
-- b68f8aebd6de24bd50ccf5515da0116f7b40ac9fa9d3c57ab795d4db70103ca7
+- ab71140641a7d35a91f7039fc499f950221d7e36feff34bca1d81462027d8105
 
 # `subcommand_interruption.md`
 
