@@ -7,7 +7,6 @@ from .basic import PlaceholderMap
 # local
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
 from .policy.conflict_resolution import build_conflict_resolution_policy
-from .policy.editor_handoff import build_editor_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
 from .policy.file_access import build_file_access_policy
 from .policy.index_entry import build_index_entry_policy
@@ -51,7 +50,6 @@ def build_complete_prompt(
     oracle_findings_policy: bool = False,
     realization_findings_policy: bool = False,
     conflict_resolution_policy: bool = False,
-    editor_handoff_policy: bool = False,
     realization_oracle_reference_policy: bool = False,
     index_entry_policy: bool = False,
     routing_policy: bool = False,
@@ -61,8 +59,6 @@ def build_complete_prompt(
     Args:
         summary: agent の担当、主作業、対象、および作業範囲。
         goal: agent call の終了時に満たされるべき状態。
-        editor_handoff_policy: editor work file への handoff に必要な
-            policy block を含めるか。
         routing_policy: repository 内の参照先を選ぶ routing 文面を含めるか。
 
     Returns:
@@ -152,11 +148,6 @@ def build_complete_prompt(
         _append(
             full_prompt,
             build_conflict_resolution_policy(),
-        )
-    if editor_handoff_policy:
-        _append(
-            full_prompt,
-            build_editor_handoff_policy(),
         )
     if realization_oracle_reference_policy:
         _append(

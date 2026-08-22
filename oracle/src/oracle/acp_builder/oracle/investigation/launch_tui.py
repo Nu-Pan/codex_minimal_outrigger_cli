@@ -53,7 +53,6 @@ def build_oracle_investigation_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
-        editor_handoff_policy=True,
         routing_policy=True,
     )
 

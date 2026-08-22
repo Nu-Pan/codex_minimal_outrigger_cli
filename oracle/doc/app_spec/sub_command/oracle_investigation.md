@@ -34,14 +34,6 @@
 - oracle file を扱う判断基準は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を正本とする。builder は同基準を agent へ伝える文面を固定で prompt へ注入する
 - `cmoc tui` のような実行パラメータ決定用 agent call は行わない
 
-## investigation から edit への handoff
-
-oracle investigation で editor handoff を行う場合は、共通の editor handoff policy を適用する。
-
-- handoff file への書き込みは、Codex CLI の TUI で調査結果を回答する責務を置き換えない。
-- file access mode は `PURE_ORACLE_READ`、Codex CLI sandbox は `read-only` のまま維持する。
-- agent は、handoff file への書き込みに必要な command だけについて、対象 path と理由を限定した command 単位の sandbox escalation を要求してよい。
-
 ## Codex CLI の起動
 
 - 起動コマンドは `codex` とする
