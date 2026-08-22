@@ -90,11 +90,11 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
         "# oracle policy",
         "# realization policy",
         "# realization findings policy",
-        "# realization oracle reference policy",
     ):
         assert heading in parameter.prompt
     assert "# oracle findings policy" not in parameter.prompt
     assert "# conflict resolution policy" not in parameter.prompt
+    assert "# realization oracle reference policy" not in parameter.prompt
     assert "# routing policy" in parameter.prompt
 
 
@@ -151,7 +151,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
         "`evidences[].path` は変更 path の申告または照合に使用しない" in review.prompt
     )
     assert "対象 repository が要求する必要な検証" in review.prompt
-    assert "# realization oracle reference policy" in review.prompt
+    assert "# realization oracle reference policy" not in review.prompt
     assert "# routing policy" in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
     finding_schema = review_schema["properties"]["findings"]["items"]

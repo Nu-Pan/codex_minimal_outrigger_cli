@@ -163,7 +163,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert "# realization policy" in complete_prompt
     assert "# oracle findings policy" in complete_prompt
     assert "# realization findings policy" in complete_prompt
-    assert "# realization oracle reference policy" in complete_prompt
+    assert "# realization oracle reference policy" not in complete_prompt
     assert "# index entry policy" not in complete_prompt
     assert '<cmoc_ref target="original_prompt"/>' in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt

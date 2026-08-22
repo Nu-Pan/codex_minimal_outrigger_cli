@@ -17,7 +17,6 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/oracle_findings.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization_oracle_reference.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/routing.py
 """
@@ -58,9 +57,6 @@ from oracle.prompt_builder.policy.realization import (
 )
 from oracle.prompt_builder.policy.realization_findings import (
     build_realization_findings_policy as _build_realization_findings_policy,
-)
-from oracle.prompt_builder.policy.realization_oracle_reference import (
-    build_realization_oracle_reference_policy as _build_realization_oracle_reference_policy,
 )
 from oracle.prompt_builder.policy.routing import (
     build_routing_policy as _build_routing_policy,
@@ -124,11 +120,6 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
             id="index-entry",
         ),
         pytest.param(
-            lambda: _build_realization_oracle_reference_policy(_path_context()),
-            ("**必須**",),
-            id="realization-oracle-reference",
-        ),
-        pytest.param(
             lambda: _build_routing_policy(_path_context()),
             ("**必須**",),
             id="routing",
@@ -164,10 +155,6 @@ _POLICY_FLAG_HEADINGS = (
     ("oracle_findings_policy", "# oracle findings policy"),
     ("realization_findings_policy", "# realization findings policy"),
     ("conflict_resolution_policy", "# conflict resolution policy"),
-    (
-        "realization_oracle_reference_policy",
-        "# realization oracle reference policy",
-    ),
     ("index_entry_policy", "# index entry policy"),
     ("routing_policy", "# routing policy"),
 )
@@ -219,6 +206,7 @@ def test_oracle_policy_keeps_defined_and_undefined_boundary() -> None:
     """統合後の oracle policy が定義済み事項と未定義事項を区別する。"""
     rendered = _render_policy(_build_oracle_policy())
 
+    assert "それへの参照 (パス・行・簡潔な内容) を示すこと" in rendered
     assert "仕様断片上定義されている事項と、未定義の事項とを区別する" in rendered
     assert "正本仕様断片の隙間の未定義事項を正本仕様として断定" in rendered
     assert "oracle investigation policy" not in rendered
@@ -248,17 +236,6 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     assert "意味を両立できる解決方法が無い場合" in rendered_doc
     assert "realization file の都合または挙動を根拠に" in rendered_doc
     assert "conflict marker の解消に対して不必要な変更" in rendered_doc
-
-
-def test_realization_oracle_reference_policy_is_independently_selectable() -> None:
-    """oracle path コメント用 policy を realization policy と分離して注入する。"""
-    doc = _build_realization_oracle_reference_policy(_path_context())[1]
-    rendered_doc = render_sd_node_as_markdown(doc)
-    assert doc.title == (
-        "realization oracle reference policy（realization code の作成・変更時）"
-    )
-    assert "対応する oracle file が存在する場合" in rendered_doc
-    assert "`{{work-root}}` 起点の oracle file path" in rendered_doc
 
 
 def test_build_routing_policy_renders_core_reading_requirements() -> None:
@@ -507,7 +484,6 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
         oracle_findings_policy=True,
         realization_findings_policy=True,
         conflict_resolution_policy=True,
-        realization_oracle_reference_policy=True,
         index_entry_policy=True,
     )
 
@@ -520,10 +496,6 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
     for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered
     assert "{{repo-root}}" in rendered
-    assert (
-        "realization code のコメントに `{{work-root}}` 起点の oracle file path を書く"
-        in rendered
-    )
     for expected in [
         "oracle and realization basic",
         "oracle policy",
@@ -531,7 +503,6 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
         "oracle findings policy",
         "realization findings policy",
         "conflict resolution policy",
-        "realization oracle reference policy",
         "index entry policy",
         "oracle file",
         "realization file",
@@ -585,35 +556,6 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     assert f"- {{{{work-root}}}} = {repo_root}" in rendered
 
 
-def test_complete_prompt_keeps_literal_root_token_comment_requirement(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """literal work-root token と oracle 参照コメント要求を prompt に残す。"""
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    monkeypatch.chdir(repo_root)
-
-    prompt = build_complete_prompt(
-        summary="- {{work-root}}/src/app.py を確認すること",
-        goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
-        aux_dynamic_prompt=[],
-        realization_policy=True,
-        realization_oracle_reference_policy=True,
-    )
-
-    rendered = render_sd_node_as_markdown(*prompt)
-
-    assert "- {{work-root}}/src/app.py を確認すること" in rendered
-    assert (
-        "realization code のコメントに `{{work-root}}` 起点の oracle file path を書く"
-        in rendered
-    )
-    assert f"- {{{{work-root}}}} = {repo_root}" in rendered
-
-
 def test_build_realization_policy_renders_core_conformance_requirements() -> None:
     """realization policy の適合性と検証境界が render される。"""
     path_context = _path_context()
@@ -625,8 +567,13 @@ def test_build_realization_policy_renders_core_conformance_requirements() -> Non
     rendered = _render_policy(builder_result)
     assert "realization policy" in rendered
     assert "関連する oracle file を先に確認し、その明示要求と矛盾しない" in rendered
+    assert (
+        "oracle file 側に実装が存在する場合、可能な限りそれをそのまま使用する"
+        in rendered
+    )
     assert "今現在の仕様を満たすために必要な realization file" in rendered
-    assert "参照可能な文章上で指示されている手順" in rendered
+    assert "エージェントから参照可能な文章上で指示されている手順" in rendered
+    assert "作業後の状態が検証・テストに合格する状態であること" in rendered
     assert "`{{work-root}}` 固有の指示を根拠に含めず" in rendered
 
 

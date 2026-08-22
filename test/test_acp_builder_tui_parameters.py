@@ -49,11 +49,11 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
         "# realization policy",
         "# oracle findings policy",
         "# realization findings policy",
-        "# realization oracle reference policy",
     ):
         assert heading in complete_prompt
     assert "# conflict resolution policy" not in complete_prompt
     assert "# index entry policy" not in complete_prompt
+    assert "# realization oracle reference policy" not in complete_prompt
     assert "# routing policy" in complete_prompt
     assert original_prompt in complete_prompt
     if original_prompt == "{{original-prompt-here}}":

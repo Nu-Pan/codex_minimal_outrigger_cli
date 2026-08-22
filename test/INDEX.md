@@ -110,18 +110,19 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- このテストファイルは、editing run workload 向けの ACP builder adapter が canonical builder を互換 import 経路から正しく再公開し、apply/refactor 用の prompt・実行設定・Structured Output schema・raw diff 境界を維持することを検証する。builder の実装や canonical oracle の詳細を調べる前に、これらの adapter 契約をテスト観点から確認したい場合の入口になる。
+- 編集 run workload 用の ACP builder adapter を検証するテスト。apply の launch-exec builder と refactor の change-summary／file-review-and-fix builder について、正本 builder の再公開、prompt への commit・diff・policy の埋め込み、raw diff 内の境界風マーカー保持、実行設定、canonical Structured Output schema、変更所見の事後条件を確認する。対象 builder の実装や対応する oracle schema／builder との適合性を調べる必要がある場合のテスト入口。
 
 ## Read this when
-- editing run 用 builder の互換 re-export、apply builder の commit 範囲・raw diff 埋め込み、または refactor builder の実行設定と canonical schema の適合性を確認・変更するとき
-- prompt 内に三連バッククォートや境界風見出しを含む raw diff の扱い、および linked worktree 上での builder パラメータ検証を調べるとき
+- editing run の apply または refactor fork 用 parameter builder の挙動、互換 import 経路、prompt 構成、raw diff の埋め込みを確認・変更するとき
+- file_review_and_fix や change_summary の canonical Structured Output schema、実行設定、変更 path／finding の契約に関するテストを確認するとき
+- builder の prompt 境界が raw diff 内の三連 backtick や見出し風文字列で壊れないことを検証するとき
 
 ## Do not read this when
-- canonical builder の具体的な prompt 生成責務や oracle 仕様そのものを確認したいときは、対応する realization 実装・oracle file を直接読む
-- editing run builder 以外の ACP builder、または一般的な git/worktree helper の挙動だけを調べるとき
+- builder 実装そのものの責務や prompt の正本仕様を確認する場合は、まず対応する oracle builder／oracle schema を直接読むとき
+- editing run と無関係な ACP builder、またはこのテストが扱わない一般的な git fixture・テスト実行手順だけを調べるとき
 
 ## hash
-- dc9e53609d92060e614b1afea44b8605156863297b82bc16ea7e119bc9d905ef
+- 44b0a8aebfdc2386278cf21b7cfbeb24c4359787519eac6ce81e6258d384beb3
 
 # `test_acp_builder_indexing_parameters.py`
 
@@ -179,20 +180,20 @@
 # `test_acp_builder_tui_parameters.py`
 
 ## Summary
-- TUI 起動 builder のテスト。固定された agent parameter・prompt policy・実行設定と、互換 module の公開 API が正本 builder と一致することを検証する。
-- TUI 起動 builder の挙動や設定、prompt の policy 構成、または互換 module の公開面を変更・確認するときのテスト入口。
+- TUI 起動 builder の固定パラメータ、実行ポリシー、prompt 構成を検証するテスト。
+- 互換モジュールが canonical builder のみを公開し、公開 API を現行 builder に限定していることも確認する。
 
 ## Read this when
-- TUI 起動 builder が original prompt に依存せず固定 parameter と所定の policy を使うことを確認したいとき
-- TUI 起動 builder の model、reasoning、file access、cwd、indexing preflight などの実行設定を確認したいとき
-- 互換 module が現行 builder だけを公開し、canonical builder を再利用していることを確認したいとき
+- TUI 起動 builder が固定の model、reasoning、file access、作業ディレクトリ、indexing 設定を返すことを確認したいとき。
+- builder の prompt に所定の oracle・realization・routing policy と元の依頼文が組み込まれることを確認したいとき。
+- acp.builder.tui.launch_tui の公開面と canonical builder との同一性を検証したいとき。
 
 ## Do not read this when
-- TUI 起動 builder 以外の builder や、正本 implementation 自体の詳細を調査・変更するとき
-- TUI builder の一般的な CLI 起動手順や、テスト対象外の実行結果を確認したいとき
+- TUI 起動 builder の実装仕様や prompt の生成ロジックを調査・変更する場合は、対応する oracle の launch_tui.py を直接読む。
+- TUI 起動以外の builder、または builder 以外の CLI 機能を確認する場合は、このテストではなく該当するテストや実装を読む。
 
 ## hash
-- a4ede7aa8704e1714cf0f16a8fdef8c4d8f14c27c81b377d7526b2b34a4322a3
+- e66bffd6b917d1beb01beb388b68bff1079e8f8daa0a6706ea1392e2013b629f
 
 # `test_basic_runtime.py`
 
@@ -233,20 +234,24 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理に関する外部挙動テスト。編集済みプロンプトからの Codex TUI 起動、doctor 前処理・indexing preflight・プロンプトビルダーの呼び出し順、生成パラメータ、エディタ入力ログ、既存の git 差分保持を検証する。
-- linked worktree を含む実行時に、agent call context と editor 記録を main worktree 側へ配置し、リポジトリおよび worktree の `.cmoc` ログを git ignore 対象として維持する挙動を検証する。
+- TUI 起動直前の CLI 前処理に関する外部挙動を検証するテスト。
+- 編集用 prompt の生成、外部エディタ実行後の prompt 再構築、既存の staged／unstaged 差分の保持、Codex TUI 起動パラメータを確認する。
+- linked worktree から起動した場合に、main worktree を agent call の作業根とし、editor 入力記録やログを main 側へ保存する挙動を確認する。
+- TUI 実行時の `.cmoc` ignore 設定、sub_command ログ、editor 入力ログの配置と未生成条件を確認する。
+- TUI サブコマンドの前処理・エディタ連携・起動処理の回帰検証への入口であり、実装詳細や正本仕様を直接確認する場合は対象モジュールまたは oracle 文書を読む。
 
 ## Read this when
-- TUI サブコマンドの起動前処理や Codex TUI 呼び出しの外部契約を確認するとき
-- エディタで編集した prompt の保存・変換・実行パラメータ生成を確認するとき
-- linked worktree におけるログ配置、agent call の作業ルート、git ignore の挙動を確認するとき
+- TUI サブコマンドの起動前処理、prompt editor 連携、Codex TUI 起動パラメータの外部挙動を確認または変更するとき。
+- linked worktree 実行時の main worktree への記録・agent call context 配置を検証するとき。
+- TUI 実行前後の `.cmoc` ignore 設定やログ配置をテストで確認するとき。
 
 ## Do not read this when
-- TUI の実装詳細や正本仕様を確認するときは、`sub_commands/tui.py` またはテスト冒頭に示された正本仕様を直接読む
-- CLI 共通ヘルパー、git 操作ヘルパー、プロンプトビルダー単体の挙動だけを確認するとき
+- TUI の実装詳細を確認する場合は、対象テストではなく `sub_commands/tui.py` などの実装を直接読む。
+- prompt editor input の正本仕様や prompt builder の実装を確認する場合は、テストではなく参照先の oracle 文書・実装を直接読む。
+- TUI 以外の CLI サブコマンドや共通ユーティリティ単体の挙動だけを調べる場合。
 
 ## hash
-- 32be4cb59364d5381bcb0f9a9ae4191b3c61c382ca461afe1ffe873f0be1535d
+- fefc14cd53578ae0f8fd40777f05c9eac433071225178bfcf613e534f2843dbc
 
 # `test_codex_runtime_errors.py`
 
@@ -728,20 +733,19 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt policy 各部品の rendering と complete prompt 組み立て結果を検証する回帰テスト。SDHeader の構造、policy block の順序・独立注入、共通 feedback 指示、placeholder 展開、root 定義の統合・競合検出を扱う。
-- oracle／realization、所見、conflict、feedback、file access、INDEX routing など各 policy builder の出力内容と、file access mode・path context に応じた境界を検証する。prompt_builder 配下の policy や complete_prompt の変更が、統合 prompt の構造・文言・参照関係に与える影響を確認する入口である。
+- 対象ファイルは、prompt policy 各部品の構造・カテゴリ順序・重複注入、complete prompt のセクション順序・共通 feedback 指示、placeholder 展開、ファイルアクセスモード、各 policy の主要要求を検証する回帰テストの入口である。prompt builder の rendering や統合結果を確認・変更するときは、個別 policy 実装だけでなく、このファイルで全体契約を確認する。
 
 ## Read this when
-- prompt policy builder、complete prompt、SDHeader の rendering、placeholder 展開または policy 注入順序を変更・調査するとき
-- feedback reporting、file access、routing、oracle／realization policy の統合挙動や root-specific な制約を検証するとき
-- prompt の回帰テスト失敗について、期待される見出し・文言・block の重複や順序を特定するとき
+- prompt policy または complete prompt の rendering、セクション構成、placeholder 定義・展開、policy flag の注入挙動を変更・調査するとき。
+- prompt builder の回帰テスト、各 policy のカテゴリ境界、feedback 指示の一意性、file access mode 別の deny-list を確認するとき。
+- SDHeader/SDPolicy の markdown 出力や prompt 部品間の順序・重複保持に関する不具合を調査するとき。
 
 ## Do not read this when
-- 個別 policy の正本仕様や実装内容そのものを確認することが目的で、prompt 全体への統合回帰を扱わないときは、対応する oracle 文書または prompt_builder 実装を直接読む
-- prompt builder と無関係なテスト、実装、仕様の変更を調査するとき
+- 特定の policy 文面や prompt 構築ロジックの実装詳細だけを確認する場合は、対応する oracle/src/oracle/prompt_builder 配下の実装を直接読む。
+- prompt builder と無関係な CLI 機能、一般的なテスト規約、または個別の git helper の挙動を調べる場合。
 
 ## hash
-- d8eecc8f5d6384ef9743f43fcb5f4c08f2e6720790fbd753c65ae4ea9a6e88f5
+- 30c424ad623454cebde5f7907e266557406af2bff3261d114c0d7d4b5a342251
 
 # `test_runtime_cli.py`
 

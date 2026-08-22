@@ -144,19 +144,18 @@
 # `test`
 
 ## Summary
-- test ディレクトリは、cmoc の realization テスト群と共有テスト補助を集約する検証入口です。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review/edit、session/run、feedback、設定・状態・Git・通知など、実装や外部契約の回帰テストを領域別に確認できます。
-- 個別機能のテストへ進む前に、対象領域の外部挙動・境界条件・統合 lifecycle を把握するための階層入口です。共有 helper や conftest はテスト環境の共通前提を確認する場合に参照します。
+- `test` ディレクトリは、cmoc の realization test と共有 test helper を集約する検証入口である。ACP builder、Codex runtime、CLI lifecycle、indexing、session/run、oracle review、feedback、設定・状態永続化などの外部契約と境界条件を扱う。
+- 個別テストは対応する実装や oracle 仕様へ進む前に、変更対象の回帰挙動、統合 lifecycle、エラー処理、Git・worktree・process・report の境界を確認するために読む。
 
 ## Read this when
-- cmoc の実装変更や仕様確認に対して、対応する realization test、回帰条件、外部契約の検証箇所を特定するとき。
-- Codex 実行、CLI、indexing、oracle review/edit、session/run、feedback、設定・状態・Git・通知などの挙動をテスト観点から確認するとき。
-- 複数コンポーネントをまたぐ lifecycle、失敗復旧、ログ・report・Git 差分・worktree 境界を一体として検証するテスト入口を探すとき。
-- テスト全体に共通する fixture、テスト用 Git repository、fake command、Codex double、toast 隔離などの前提を確認するとき。
+- cmoc の CLI、runtime、Codex 呼び出し、ACP builder、indexing、session/run、oracle review、feedback、設定、永続 state の外部挙動を変更・検証するとき。
+- 複数コンポーネントにまたがる lifecycle、worktree 隔離、Git 差分、report、ログ、通知、cleanup、失敗復旧の回帰条件を確認するとき。
+- 変更対象に対応する realization test や共有 fixture の入口を特定するとき。
 
 ## Do not read this when
-- 正本仕様、実装本体、Structured Output schema、prompt policy の定義そのものを確認することが目的のときは、各テストが示す oracle・実装・schema を直接読む。
-- 特定の単一実装関数の詳細だけを調べる場合や、test ディレクトリの検証対象に関係しない機能を扱う場合。
-- テスト実行手順そのものだけを確認したい場合は、repository local のテスト実行手順やプロジェクト設定を直接読む。
+- 正本仕様、prompt policy、Structured Output schema、builder 実装、runtime 実装の詳細だけを確認する場合は、対応する oracle 文書・schema・実装ファイルを直接読むとき。
+- 単一の補助関数や個別実装の内部ロジックだけを調べる場合は、該当するテストまたは実装へ直接進むとき。
+- test と無関係な機能、または一般的なテスト実行手順・品質規約だけを確認するとき。
 
 ## hash
-- dfbe8ac07058d4d19ffc12c20daee5ef1d275b2a5d05f9f6daaafd8d5f3b2d84
+- 7121b1484172dae6b7bbd3d2dc788499c3269de57f7f15947571a265b3839682
