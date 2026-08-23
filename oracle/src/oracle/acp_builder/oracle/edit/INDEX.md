@@ -15,20 +15,19 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` が起動する2回の `codex exec` に渡す固定パラメータを構築する実装。
-- 本命編集 call では、ユーザー指示を含む完全 prompt、oracle file のみを書き込む境界、最高品質のモデル設定、起動前 indexing を指定する。
-- 本命成功後の仕様削減 call では、現在の oracle file と未コミット差分を根拠に仕様を簡素化・整合させる prompt と、同じ編集境界・品質設定・indexing 無効化を指定する。
-- 両経路でリポジトリルートを作業ディレクトリとし、oracle 編集用の `AgentCallParameter` を返す。
+- `cmoc oracle edit` における本命・仕様削減の 2 回の `codex exec` 起動パラメータを構築する。
+- ユーザー指示を共通の参照情報として完全 prompt に組み込み、oracle file 専用の編集境界、モデル、推論強度、作業ディレクトリ、indexing preflight を固定する。
+- 本命用は初回 indexing preflight を実行し、仕様削減用は現在の oracle file と Git 未コミット差分だけを根拠にして preflight を再実行しない。
 
 ## Read this when
-- `cmoc oracle edit` の本命または仕様削減 agent call の起動パラメータ、prompt、モデル品質設定、ファイルアクセス境界を変更・確認するとき。
-- oracle 編集処理で、ユーザー指示を prompt にどう埋め込み、2回の call 間でどの情報を共有するかを確認するとき。
-- oracle 編集用 call の作業ディレクトリ、indexing preflight、未コミット差分の扱いを確認するとき。
+- `cmoc oracle edit` の agent call 起動パラメータを変更または確認するとき。
+- 本命 agent call と、その成功後に行う仕様削減 agent call の prompt 構築・編集境界・実行条件を確認するとき。
+- oracle file の編集専用パラメータ、リポジトリルートの確定、または indexing preflight の設定を確認するとき。
 
 ## Do not read this when
-- `cmoc oracle edit` の実際の編集処理や call 実行制御を変更・確認する場合は、対応する実行側実装を直接読む。
-- 一般的な prompt の構築規則や SD ノードの Markdown 化だけを確認する場合は、`complete_prompt` や `struct_doc` の定義を直接読む。
-- oracle file 自体の編集規約・設計・テスト要件を確認する場合は、関連する oracle の規定ファイルを直接読む。
+- 一般的な ACP のパラメータ型や列挙値だけを確認するときは、`oracle.acp_builder.basic` を直接読む。
+- prompt の共通構築規則だけを確認するときは、`oracle.prompt_builder.complete_prompt` を直接読む。
+- oracle file の編集内容や仕様そのものを確認するときは、この起動パラメータ定義ではなく対象の oracle file を直接読む。
 
 ## hash
-- 3c2e46d734d8655e19f6318b59bfd7a2342300a64a289fdd45b27acbcd01bb0e
+- f12a30d1652e661701f213bacddf4795df591aa840030f708df4dbcb09748c22

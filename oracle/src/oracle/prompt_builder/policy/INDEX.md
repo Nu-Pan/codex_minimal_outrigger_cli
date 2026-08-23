@@ -19,37 +19,37 @@
 # `feedback_reporting.py`
 
 ## Summary
-- 対象は、全 agent call に共通する人間向け feedback 報告規定を、固定の SDHeader/SDPolicy として構築する関数を定義するポリシー実装です。問題を人間へ報告する際の必須手段と、報告してはならない条件を prompt に組み込む責務を担います。
-- 全 call 共通の feedback reporting policy の生成・配置を変更または確認するときに、この対象を入口として読みます。
+- 全 agent call に共通する、人間向け feedback 報告規定を構築する関数を定義する。エージェントの権限内で解決できない問題を MCP tool で報告するための policy と、その policy を表す構造化ヘッダーを返す。
+- prompt builder の共通 policy として、報告の必須条件と禁止事項を agent call の prompt に組み込む入口である。feedback 報告規定の生成や変更、全 call 共通の prompt policy を確認するときに読む。
 
 ## Read this when
-- 全 agent call に共通する人間向け問題報告ポリシーの構築、文言、必須事項、禁止事項を変更・確認するとき。
-- complete prompt に feedback 報告規定を組み込む経路を調査し、固定のポリシー構造を確認するとき。
+- 全 agent call に適用される human feedback reporting policy の生成方法を確認・変更するとき
+- prompt builder に共通 policy を追加・修正し、SDHeader または SDPolicy との接続を確認するとき
 
 ## Do not read this when
-- feedback 観測の報告基準そのものの正本仕様を確認する場合は、対象本文ではなく oracle/doc/app_spec/feedback_observation.md を直接読みます。
-- prompt 全体の生成処理や、AgentCallPathContext・PlaceholderMap などの型定義だけを確認する場合。
+- feedback 報告規定そのものの正本仕様や報告内容の基準を確認するときは、oracle/doc/app_spec/feedback_observation.md を直接読む
+- agent call の prompt 構成全体や別の policy の責務だけを調べるとき
+- 個別の MCP tool 実装や feedback の保存処理を調べるとき
 
 ## hash
-- bc6ec2cb81ddce92a750ff11eb9ddda019ad91d05fc40b64ff1ecf0b23d3a60b
+- 48f253c510949b4f7146f0be6af62989cb15a0d854468b844a3c57eb56b1c82a
 
 # `file_access.py`
 
 ## Summary
-- ファイルアクセスモードと呼び出し対象パスの文脈から、エージェント向けのファイル読み書き禁止規定とプレースホルダー定義を構築する。READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE、NO_POLICY の各モードに応じた制約文面の入口。
+- ファイルアクセス mode と call-scoped path context から、エージェント向けの deny-list と placeholder 定義を構築する関数。mode に応じて oracle file と realization file の読み書き制限を切り替え、NO_POLICY では空の規定を返す。
 
 ## Read this when
-- エージェント呼び出し用のファイルアクセス規定を生成・変更・確認するとき
-- ファイルアクセスモードごとの oracle file・realization file の読み書き制約を確認するとき
-- repo-root と work-root の関係に応じた禁止パスやプレースホルダー定義の生成を確認するとき
+- ファイルアクセス制約のプロンプト文面を確認・変更するとき
+- FileAccessMode ごとの oracle file・realization file のアクセス可否を確認するとき
+- repo-root・work-root の placeholder と、予約ディレクトリの deny-list 生成を確認するとき
 
 ## Do not read this when
-- アクセス規定の正本である Codex 実行ルールや、実際の sandbox 設定を確認したいとき
-- 個別の oracle file・realization file の内容や配置責務を確認したいとき
-- 生成済みプロンプト全体の構成を確認したいときは、プロンプト構築側の対象を直接読む
+- mode の意味や sandbox 契約そのものを確認したいとき
+- 個別の oracle file または realization file の実装責務を確認したいとき
 
 ## hash
-- b546bfb326e651e4241d6e89a658e539cba8947a6a4ffb368b4de57d5bb04dce
+- 3ae2a64cc6659b448e528293efdb2c4765e591293186a8347891355a06395649
 
 # `index_entry.py`
 
@@ -144,17 +144,15 @@
 # `routing.py`
 
 ## Summary
-- 作業対象に近い階層の INDEX.md を起点に、{{work-root}} ツリー内で読むべきファイルやディレクトリを特定するための routing policy を構築する。対象領域を推定できない場合の root 起点、INDEX.md と本文が異なる場合の本文優先、INDEX.md を本文の代替にしない原則を、PlaceholderMap と SDHeader/SDPolicy の形で提供する。
+- `routing policy` 用のプレースホルダーと構造化ヘッダーを構築する関数を定義する。call-scoped context から work-root の定義を取得し、INDEX.md を起点に本文を読むための規定を SDHeader/SDPolicy として返す。
 
 ## Read this when
-- リポジトリ内で次に読むべきファイルやディレクトリを INDEX.md に基づいて判断する必要があるとき
-- 作業対象に近い階層を起点とする routing policy の文面や構造を変更・確認するとき
-- work-root の定義を call-scoped context から取得して routing 用 placeholder に渡す処理を確認するとき
+- 作業対象に近い INDEX.md を起点に、リポジトリ内で読むべきファイルを特定する必要があるとき。
+- INDEX.md の利用規定を call-scoped な routing policy としてプロンプトへ組み込む処理を変更・調査するとき。
 
 ## Do not read this when
-- INDEX.md の具体的な意味要件やエントリー形式を確認したいときは、正本である oracle/doc/app_spec/indexing.md を直接読む
-- 個別のファイルやディレクトリの責務・内容を確認したいときは、対応する本文または近い階層の INDEX.md を直接読む
-- routing policy を使わない prompt builder の別のポリシーや、SDHeader・SDPolicy 自体の仕様を確認するとき
+- INDEX.md の内容ではなく、別のプロンプト構築規定や構造化文書型そのものを直接調べるとき。
+- routing policy の生成処理に関係しない prompt builder の機能を調査するとき。
 
 ## hash
-- a24ac521eab9fed233e643c8ab79085fc194429e7209bc09981368d73e982a35
+- cb5352e0f645a8324f18fed301ad328f1d244aed90fa735519b9de209bfc703f

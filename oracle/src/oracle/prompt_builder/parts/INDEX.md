@@ -1,19 +1,17 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle file と realization file の基本的な役割、分類方法、下位概念を定義する説明部品。oracle doc・oracle src・oracle test、realization code・implementation・test・ancillary への入口として機能する。
-- oracle を正本として realization が生成される関係と、uncategorised file の分類対象外条件を確認するための基礎的なルーティング先。
+- oracle と realization の基本概念を説明する prompt builder の part。oracle file・realization file・uncategorised file の役割、下位分類、分類条件を、root 定義に基づくパス付き説明として構築する。oracle/realization の区別や、対象ファイルの分類規則を含むプロンプトを作成・変更・確認するときの入口であり、分類文面の正本である misc_spec 自体や、具体的な oracle/realization ファイルの実装責務を確認する場合は、それぞれの直接の対象へ進む。
 
 ## Read this when
-- oracle file と realization file の責務や正本関係を確認するとき
-- oracle doc・oracle src・oracle test の区分を判断するとき
-- realization implementation・realization test・realization ancillary の範囲を判断するとき
-- uncategorised file に該当するパス、ファイル名、git ignore、.git の分類条件を確認するとき
+- oracle と realization の基本的な役割・下位概念・分類条件を prompt に組み込む処理を調べるとき
+- oracle file、realization file、uncategorised file の分類説明を生成する part の責務を確認するとき
+- root の work-root 定義を call-scoped context から取得して説明文中の placeholder に渡す処理を確認するとき
 
 ## Do not read this when
-- 個別の oracle 文書・oracle 実装・oracle テストの内容を確認したいとき
-- 個別の realization 実装・テスト・補助ファイルの具体的な挙動を確認したいとき
-- prompt builder の他の部品の責務や、関数の呼び出し手順だけを確認したいとき
+- oracle/realization の分類文面そのものの正本仕様を確認・変更するとき
+- 個別の oracle doc、oracle src、oracle test、realization implementation、realization test の具体的な責務や実装を調べるとき
+- prompt builder の共通構造や PlaceholderMap、SDHeader の一般的な仕様だけを確認するときは、該当する定義へ直接進む
 
 ## hash
-- d7a599e17eb8ec45d03ca644f887031ebca7488d5eca54e06433b4ed3600ee53
+- f4153ed94db3fe3edad69a8637668c5779ed5148f0eca0137903b133f72b5f8b

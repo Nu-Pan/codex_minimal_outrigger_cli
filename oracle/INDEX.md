@@ -19,25 +19,17 @@
 # `src`
 
 ## Summary
-- oracle 関連の agent call 構築機能を、目的別 builder、feedback 契約、共通モデル、prompt 構築部品に分けて案内する上位ルーティング対象。agent call の起動条件、アクセス制約、パス解決、prompt 構成を調べる際の入口となる。
-- acp_builder は、モデル種別・推論強度・ファイルアクセスモード・cwd などの AgentCallParameter を基盤に、feedback、indexing、oracle、quota probe、realization、session、TUI の目的別 agent call を構築する下位モジュール群への入口。
-- feedback は、agent の observation を人間向け feedback issue として扱うための入力契約と、issue の同一性判断・現在状態の検証に関する定義への入口。
-- other は、cmoc 設定、agent call 単位の root placeholder とパス解決、構造化文書ノードおよび GFM レンダリングを扱う共通モデルへの入口。
-- prompt_builder は、完全 prompt、editor 初期入力、prompt 部品、file access・routing・oracle・realization・feedback などの policy を構築し、objective、placeholder、static／dynamic part を統合する機能への入口。
+- `oracle/src` は、cmoc の agent call と prompt 構築を支える実装の上位入口です。agent call の用途別起動定義、prompt の共通構築、ファイルアクセス・oracle・realization・feedback・routing などの規定、パス・設定・構造化文書の共通モデルを横断して確認できます。配下には、起動定義を扱う `acp_builder`、prompt と policy を扱う `prompt_builder`、共通モデルを扱う `other`、feedback 入力契約を扱う領域があります。
 
 ## Read this when
-- oracle 配下の agent call 構築機能の全体配置や、目的別 builder への進み方を確認するとき
-- AgentCallParameter の共通項目、モデルやアクセスモード、agent call cwd の扱いを調べるとき
-- cmoc 設定、root placeholder、パス解決、構造化 Markdown 文書の共通実装を確認するとき
-- agent call 用 prompt の構成、policy の選択、editor 初期入力、placeholder 統合を調べるとき
-- feedback observation と issue の同一性・現在性検証に関する入力契約の入口を探すとき
+- agent call の用途別起動定義、prompt 構築、共通 policy、feedback、パスや設定モデルの責務を横断して調査・変更するとき
+- 対象となる下位領域がまだ特定できず、oracle 側の agent call または prompt 関連実装への入口を選ぶとき
+- oracle review、oracle edit、realization apply/refactor、feedback、indexing、session join、TUI など複数の処理系にまたがる構築規則を確認するとき
 
 ## Do not read this when
-- 特定の agent call の prompt 文面、起動パラメータ、Structured Output schema の具体的な定義だけを確認したいときは、該当する acp_builder 下位対象を直接読む
-- 共通設定、パス解決、構造化文書の具体的な型や関数だけを確認したいときは、other の定義元を直接読む
-- 特定 policy の文面や適用条件だけを確認したいときは、prompt_builder/policy の該当対象を直接読む
-- feedback の保存・集約・重複判定の実行処理や、agent call の実行制御を確認したいときは、対応する利用側実装を直接読む
-- oracle file や realization file 自体の仕様・実装を確認したいときは、それぞれの正本対象を直接読む
+- 特定の agent call の起動パラメータ、個別の prompt policy、構造化文書モデル、パスモデル、設定モデルを直接調査するときは、対応する下位対象へ進むとき
+- CLI サブコマンドの実行処理、TUI の表示処理、正本仕様や realization file の内容だけを確認するとき
+- Structured Output の個別スキーマだけを確認するときは、対応するスキーマを直接読むとき
 
 ## hash
-- 355e8b768bde8e52183463c20358c52dc60d2e2b92d67db80e9d35a481b41127
+- 965a5ef4ec8ef6c695138a88bc6855fd5e34e6eae0af391699bb56914ec871a1

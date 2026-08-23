@@ -1,18 +1,16 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc oracle investigation` 用に、ユーザーの調査指示を埋め込んだ完全 prompt と Codex CLI TUI 起動パラメータを構築する関数。
-- oracle 限定の読み取り専用アクセス、固定モデル・推論設定、リポジトリルートの作業ディレクトリ、indexing preflight の実行を含む起動条件を確認する入口。
+- `cmoc oracle investigation` 用の TUI 起動パラメータを構築する関数。ユーザーの調査指示を埋め込んだ完全プロンプトを、oracle 限定・読み取り専用の作業範囲で生成する。
+- oracle 調査のパス、分類、アクセスモード、モデル品質設定、indexing preflight を固定した `AgentCallParameter` を返す。oracle 調査起動の構成と、エディタに提示する prompt skeleton の構築経路を確認する入口になる。
 
 ## Read this when
-- oracle investigation の TUI 起動条件を変更・確認するとき。
-- oracle file 調査用 prompt の分類、routing、アクセスモード、ユーザー指示の埋め込み方を確認するとき。
-- 調査用起動で使用するモデル、推論 effort、作業ディレクトリ、indexing preflight の設定を確認するとき。
+- `cmoc oracle investigation` の TUI 起動パラメータ、完全プロンプト、oracle 限定のファイルアクセス範囲を変更または調査するとき。
+- oracle 調査起動時のモデル、推論設定、indexing preflight、agent call の作業ディレクトリを確認するとき。
 
 ## Do not read this when
-- 共通の完全 prompt 構築規則を確認したいときは `build_complete_prompt` の定義を直接読む。
-- 起動パラメータの型や列挙値の意味を確認したいときは `oracle.acp_builder.basic` の定義を直接読む。
-- パスコンテキストの解決規則を確認したいときは `oracle.other.path_model` の定義を直接読む。
+- 通常の prompt 生成規則や共通の構造化文書レンダリングを確認したい場合は、`build_complete_prompt` や構造化文書関連の定義を直接読む。
+- oracle 調査以外の agent call や TUI 起動パラメータを変更する場合は、その用途に対応する起動パラメータ定義を直接読む。
 
 ## hash
-- d595e83e4bc8d56918cc6d66536a39dea8d5da44e38904dde36eef48e8310ea0
+- cb40d24c51a6089fc40aed909bc58f1f0c2ddc6626ce47044321a22c640ab0d3

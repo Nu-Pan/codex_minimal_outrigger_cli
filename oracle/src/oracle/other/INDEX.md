@@ -20,35 +20,36 @@
 # `path_model.py`
 
 ## Summary
-- パス表記とルートプレースホルダの解決モデルを定義するモジュール。`RootPathPlaceHolder`、agent call 単位の `AgentCallPathContext`、実パスとプレースホルダ表記の相互変換、Git worktree・repository・cmoc root の探索を扱う。パス解決や agent call の作業ルート境界を確認する際の入口となる。
+- cmoc 内で扱うルートパス表記と実パス解決のモデルを定義する。プレースホルダの種類、agent call 単位のパスコンテキスト、各ルートの導出・変換関数を提供し、prompt builder などが一貫したパス解決を行うための入口となる。
 
 ## Read this when
-- `{{repo-root}}`、`{{work-root}}`、`{{run-root}}`、`{{cmoc-root}}` の意味や解決方法を確認するとき
-- agent call の cwd から work root と repository root を導出する不変コンテキストを調査するとき
-- プレースホルダ付きパスと実際の絶対パスの変換、Git worktree の root 探索を変更・検証するとき
+- cmoc のファイルパスをプレースホルダ表記と実際の絶対パスの間で変換・解決するとき
+- agent call の cwd から work root や repository root を導出する処理を確認するとき
+- ルートプレースホルダの定義、Git worktree の探索、パス表記変換の責務を確認するとき
 
 ## Do not read this when
-- 特定の CLI や prompt builder の責務だけを調べ、パスモデル自体を確認する必要がないとき
-- 対象の下位実装や利用箇所を直接確認すれば、パス解決規則の理解を要しないとき
+- 特定の CLI 機能や prompt の内容だけを確認し、パスの解決・表記変換に関係しないとき
+- Git worktree の一般的な操作や repository 固有の開発規則を確認するときは、対応する開発規則・実装対象を直接読む
 
 ## hash
-- 73e0f9e448de9b1cb5eb85d4e03e808c74dbe931b0b55fcdef0c172f02497f26
+- 4af5fea100ef4985e4eca9c556c53b91187a151fc0919b394e12f5d7585faf33
 
 # `struct_doc.py`
 
 ## Summary
-- `SDHeader`、`SDTagBlock`、`SDCodeBlock`、`SDPolicy` などの構造化文書ノードを保持し、Markdown としてレンダリングするヘルパーを定義する。
-- 見出し深度の自動計算、cmoc_block／cmoc_ref タグ、コードフェンス、規定文書のカテゴリ別出力、空行・インデントの正規化を扱う。
-- 構造化文書のモデルと GFM レンダリング処理の入口であり、参照検査やポリシー統合、プロンプト部品の選択を確認する場合は対象外の実装へ進む。
+- 構造化された文章ノードを Markdown にレンダリングするヘルパークラスと関数を提供する。見出し、参照可能な cmoc ブロック、コードブロック、構造化ポリシー、文字列を扱い、見出し深度やコードフェンスを自動調整する。
+- SDTagBlock は cmoc_block の生成と参照タグの提供を担い、SDPolicy は必須・禁止・許容・補足情報の規定を表現する。cmoc_block／cmoc_ref、SDPolicy、GFM rendering の実装責務を持つが、参照検査、ポリシー統合、prompt part 選択は担当しない。
+- Markdown 出力の整形では、三重引用文字列のインデント除去、連続空行の圧縮、本文中のバッククォートに応じたコードフェンス長の調整を行う。
 
 ## Read this when
-- 構造化文書ノードの型・保持方法・子要素検証を変更または確認するとき
-- SDHeader の見出し深度、SDTagBlock の参照タグ、SDCodeBlock のフェンス、SDPolicy のカテゴリ出力を変更または確認するとき
-- Markdown レンダリングや文字列の空行・インデント正規化の挙動を調査するとき
+- 構造化された文章や規定を Markdown にレンダリングする処理を変更・調査するとき
+- SDHeader、SDTagBlock、SDCodeBlock、SDPolicy、または ntqs の挙動を確認するとき
+- cmoc_block／cmoc_ref の出力形式やコードブロックのフェンス生成を確認するとき
 
 ## Do not read this when
-- 参照の対応検査、ポリシーの意味的統合、prompt part の選択を調査するとき
-- このモジュール以外の CLI 責務や、構造化文書を利用する側の処理を直接確認するとき
+- 参照タグの対応関係の検査、ポリシーの意味的統合、prompt part の選択を調査・変更するとき
+- Markdown 以外のレンダリング機能を直接扱うとき
+- このモジュールが提供するノードやレンダリング結果を利用するだけで、実装詳細を確認する必要がないとき
 
 ## hash
-- 14362b77a471f4edf930e8874b1bacea1e3db43e1407714aa8bdfe3aeaf7fa86
+- 43ad89185abadeec6997caaec0cef99916ac9f0adce5ada31b2b1ef15cee18f7

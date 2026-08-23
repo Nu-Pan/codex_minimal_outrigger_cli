@@ -1,22 +1,19 @@
 # `acp_builder`
 
 ## Summary
-- `oracle/src/oracle/acp_builder` は、oracle 関連の agent call を構築する下位モジュール群への入口。共通の AgentCallParameter 定義を基盤に、feedback、indexing、oracle、quota probe、realization、session、TUI など目的別の prompt・Structured Output・起動条件を分担する。
-- agent call の目的別設定、prompt、モデル・推論強度、ファイルアクセス権、作業ディレクトリ、preflight、出力 schema の入口を探すときに読む。
+- `oracle/src/oracle/acp_builder` は、用途別の AgentCallParameter 構築定義をまとめた領域で、モデル・推論・アクセス権限・prompt・Structured Output・作業ディレクトリ・preflight などの起動条件を確認する入口である。配下には共通の型定義、feedback、indexing、oracle、quota probe、realization、session、tui の用途別定義がある。
 
 ## Read this when
-- oracle 用 agent call の構築責務を確認・変更するとき
-- feedback、indexing、quota probe、realization、session、TUI など、目的別 agent call の prompt や起動条件の確認先を探すとき
-- AgentCallParameter と各用途の Structured Output schema の関係を調べるとき
+- Agent call の用途別起動パラメータ、prompt、アクセス範囲、モデル・推論設定、作業ディレクトリ、indexing preflight を変更・調査するとき
+- 特定用途の AgentCallParameter 構築定義へ進む入口を選ぶとき
+- oracle、realization、feedback、indexing、session、tui、quota probe の agent call 定義を確認するとき
 
 ## Do not read this when
-- 共通の AgentCallParameter 型そのものだけを確認したいときは、`basic.py` を直接読む
-- 個別 builder の具体的な prompt 内容や field 値の決定規則を確認したいときは、該当する下位対象を直接読む
-- agent call の実行制御、oracle file の編集・調査・レビュー処理、realization の実装処理そのものを確認したいときは、対応する実装を直接読む
-- Structured Output の具体的な項目や形式だけを確認したいときは、対応する schema file を直接読む
+- Agent call の実行処理そのもの、CLI サブコマンドの処理、TUI の画面表示、個別の oracle・realization file の内容を直接調査するとき
+- 共通 prompt 生成規則や ACP パラメータの型定義だけを確認したいときは、それぞれの下位対象を直接読むとき
 
 ## hash
-- 13acc4fa4882260c5f9834607316d5b64371e2da4994d4c71dc823982e262642
+- 718bce87c25820cf87f6408c3ecc1933d3e4a7ed472a02e574ccbe997dbc7664
 
 # `feedback`
 
@@ -37,41 +34,37 @@
 # `other`
 
 ## Summary
-- cmoc の共通モデルと Markdown 文書生成ヘルパーをまとめたモジュール群。
-- Codex CLI・oracle review・並列実行などのリポジトリ設定、root placeholder と agent call 単位のパス解決、構造化文書ノードの保持と GFM レンダリングを扱う。
-- 設定モデル、パス境界、構造化 prompt 文書の表現や出力処理を確認する際の入口となる。
+- cmoc の共通基盤となる補助モデルと Markdown レンダリングを扱うディレクトリ。設定モデル、agent call 単位のルートパス解決、構造化文書・cmoc ブロック・ポリシー・コードブロックの GFM レンダリングが主な対象で、各機能の実装モジュールへ進む入口となる。
 
 ## Read this when
-- cmoc の設定モデルや既定値、Codex CLI・oracle review の設定項目を確認するとき
-- {{repo-root}}、{{work-root}}、{{run-root}}、{{cmoc-root}} の解決や agent call の作業ルート境界を確認するとき
-- SDHeader、SDTagBlock、SDCodeBlock、SDPolicy の構造化文書モデルや Markdown レンダリングを確認するとき
+- cmoc のリポジトリ固有設定、Codex CLI 設定、設定の JSON/TOML 表現を確認するとき
+- プレースホルダ付きパスと実パスの変換、Git worktree からの root 導出、agent call のパスコンテキストを確認するとき
+- 構造化された文章、cmoc_block／cmoc_ref、SDPolicy、コードフェンス、Markdown の整形処理を確認するとき
+- 設定・パスモデル・文章レンダリングの複数領域にまたがる共通処理の入口を探すとき
 
 ## Do not read this when
-- Codex CLI の呼び出し処理、prompt builder、oracle review の所見生成など、これらのモデルを利用する側の責務だけを確認したいとき
-- 設定ファイルの実際の保存内容や人間による調整結果だけを確認したいとき
-- 参照の対応検査、ポリシーの意味的統合、prompt part の選択を確認したいとき
+- Codex CLI の呼び出し処理や特定の CLI サブコマンドの責務を確認するとき
+- oracle review の所見生成・マージ・検証ロジックを確認するとき
+- 参照タグの対応検査、ポリシーの意味的統合、prompt part の選択処理を確認するとき
+- 設定ファイルの実際の保存内容や人間による調整結果だけを確認するとき
+- Git worktree の一般的な操作や個別の開発規則を確認するとき
 
 ## hash
-- a50c040f76062b8858f56e510a96342ae8409c92debd928ce6af41a1bc14e7fe
+- 7df47add24b2b93f76555233189463416905cf7f79fa3dc229e99eb0854ede58
 
 # `prompt_builder`
 
 ## Summary
-- prompt builder の基本型、完全 prompt 構築、エディタ入力、prompt 部品、policy 実装を扱うディレクトリ。agent call 用 prompt の構成や、各 policy・placeholder・入力初期文面の生成処理へ進むための入口。
-- `basic.py` は構築時 placeholder map の型定義、`complete_prompt.py` は policy・補助文面・objective・placeholder を統合した完全 prompt の構築、`editor_input.py` はエディタ用初期入力の生成を担当する。
-- `parts` は oracle／realization の分類説明部品、`policy` は file access・routing・feedback・findings・conflict resolution など各 policy の構築を担当する。
+- prompt builder の構築時型定義、完全 prompt の統合構築、エディタ入力用初期文面、oracle／realization 分類説明、policy 定義群を扱うディレクトリ。agent call に渡す prompt の構成要素と、その用途別の下位実装へ進むための入口を提供する。
 
 ## Read this when
-- agent call 用 prompt の全体構成や、policy・static/dynamic part・objective・placeholder の統合順序を確認または変更するとき。
-- prompt 構築時の placeholder map の型、値の許容範囲、同名定義の衝突処理を確認するとき。
-- エディタ入力の初期表示文面や、完全 prompt skeleton の Markdown 化・埋め込み処理を確認するとき。
-- oracle／realization の分類説明や、各種 agent call policy の構築責務へ進む入口を判断するとき。
+- prompt builder における placeholder map、完全 prompt の構成順、policy block の組み込み、エディタ入力文面、oracle／realization 分類説明の生成を確認・変更するとき
+- 共通 policy や用途別 instruction、アクセス制約、feedback 報告、INDEX.md エントリー生成規定の構築元を調べるとき
 
 ## Do not read this when
-- 個別 policy の正本文面や適用条件だけを確認したいときは、対応する oracle または app_spec を直接読む。
-- 個別ファイルや下位 policy の具体的な挙動を確認したいときは、該当する下位ファイルを直接読む。
-- SDHeader・SDTagBlock・FileAccessMode・AgentCallPathContext などの共通型仕様だけを確認したいときは、それぞれの定義元を直接読む。
-- INDEX.md のルーティング規則や entry の内容だけを作成・確認したいときは、prompt 構築実装ではなく対象の INDEX.md と routing 規定を読む。
+- 個別 policy の文面や、それが参照する正本規定だけを確認したいときは対応する policy builder を直接読む
+- prompt の構造化データ型や header/tag block の汎用仕様、path context・file access mode の定義、個別 oracle・realization ファイルの責務を確認したいときは、それぞれの正本または定義対象を直接読む
+- 生成済み INDEX.md エントリーや INDEX.md 全体の処理だけを確認したいとき
 
 ## hash
-- a537596f92808d37f7f9fc782dbc052f5b2e4ed74b021c17693b096d5a7bcd62
+- dcdc79ecabe6050ba092dff63e1eae675ecfb2db0f11c39fa9af3a6af8ff2f85
