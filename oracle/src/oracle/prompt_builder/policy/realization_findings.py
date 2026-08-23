@@ -5,7 +5,11 @@ from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_realization_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
-    """realization file に対する所見が満たすべき規定"""
+    """realization file に対する所見が満たすべき規定。
+
+    NOTE
+        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を参照。
+    """
     return (
         {},
         SDHeader(

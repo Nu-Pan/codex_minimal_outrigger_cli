@@ -33,16 +33,16 @@ def build_session_join_conflict_resolution_parameter(
 
     conflicted_paths: list[Path]
         conflict marker 解消対象ファイルのパス。
-    """
-    # session join は main worktree を agent_call_cwd として先に確定する
-    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
 
-    # エイリアス
+    NOTE
+        marker 解消に必要な専用 policy だけを選び、edit や refactor の広い policy は使わない。
+        余計な変更を避けるため preflight を行わず、merge 結果を守るため最高品質設定を使う。
+    """
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
     resolved_paths = [
         resolve_real_path(path, path_context) for path in conflicted_paths
     ]
     path_list = "\n".join(str(path) for path in resolved_paths)
-    # プロンプト
     prompt = build_complete_prompt(
         summary="""
         - あなたは git merge conflict の解消担当です
@@ -71,14 +71,11 @@ def build_session_join_conflict_resolution_parameter(
             ),
         ],
         oracle_and_realization_basic=True,
+        oracle_policy=True,
+        realization_policy=True,
         conflict_resolution_policy=True,
         routing_policy=True,
     )
-    # パラメータを生成して返す
-    # NOTE
-    #   conflict 解消時に余計な事をしてほしくないので run_indexing_preflight=False
-    # NOTE
-    #   ここでやらかすと、ここまでに投下したコストが全てパーになるので、最高品質設定で呼び出す
     return AgentCallParameter(
         agent_call_kind=build_session_join_conflict_resolution_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,

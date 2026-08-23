@@ -69,6 +69,7 @@
 
 `Summary`、`Read this when`、および `Do not read this when` は、次の要件を満たす。
 
+- 人間が読む自然言語部分は原則として日本語とする。識別子、path、command、hash、および引用は元の表記を維持してよい。
 - 目次情報は対象の現在内容だけを根拠とする。対象外の責務を記載すると AI agent が不要な対象を読む原因になるため、対象外の責務または将来の用途を推測で追加しない。
 - 対象が担う責務と、同階層の別対象ではなくその対象へ進む条件を示す。
 - 関連しそうという理由だけで対象へ進ませる広すぎる条件を避ける。
@@ -107,7 +108,7 @@
 ### 目次情報の生成方法
 
 - 目次情報の生成対象 1 件ごとに、独立した agent call を行う
-- agent call は本書の「目次情報の意味要件」に従う。正確な prompt 文面と起動パラメータは `build_indexing_index_entry_parameter` で構築する
+- agent call は本書の「目次情報の意味要件」に従う。正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.py` の `build_indexing_index_entry_parameter` を参照する
 - 「ファイル・ディレクトリ名」「ハッシュ値」などの機械的に処理可能な部分は cmoc が責任を持つ
 
 ## 目次情報生成の並列実行

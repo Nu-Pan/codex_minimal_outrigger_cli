@@ -5,7 +5,11 @@ from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
-    """oracle file が満たすべき規定を構築する。"""
+    """oracle file が満たすべき規定を構築する。
+
+    NOTE
+        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を参照。
+    """
     return (
         {},
         SDHeader(

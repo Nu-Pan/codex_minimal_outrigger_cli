@@ -4,6 +4,11 @@
 
 ## 共通規則
 
+### 人間向け自然言語
+
+- console、primary report、review report、およびエラー説明の自然言語部分は、個別仕様に指定がない限り日本語とする。
+- 識別子、path、command、JSON key、log 原文、および引用は元の表記を維持してよい。
+
 ### 時間表示のフォーマット
 
 - console に流す時間表示は、`{{month}} Mo {{day}} Day {{hour}} Hr {{minute}} Min {{sec}}.{{msec}} Sec` を最大構成とする

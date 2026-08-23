@@ -46,9 +46,8 @@
 ## agent call 規定
 
 - 個別 agent call の意味上の責務と判断基準は本書で定義する。
-- 対応する `build_oracle_review_*_parameter()` は、各 agent call の正確な prompt 文面と起動パラメータを構築する。
-- `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle_findings.py` の `build_oracle_findings_policy` は、本書の所見成立条件を agent へ伝える正確な文面を構築する。
-- 所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定の全 builder は、同じ所見成立条件の文面を prompt へ注入する
+- 各段階の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review` の各 `build_*_parameter` を参照する。
+- 所見成立条件の正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle_findings.py` を参照する。
 - Structured Output schema は出力構造だけを定義し、所見の判定基準を定義しない
 
 ## 「run の隔離実行」とは
@@ -125,7 +124,6 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 - ダーティフラグが true の oracle file 1 件ごとに、独立した agent call を行う
 - このファイルごとの agent call は配列実行して良い
-- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_enumerate_finding_parameter` で構築する
 
 ## 「所見リストマージループ」の詳細
 
@@ -136,7 +134,6 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 - 所見リストマージループの各周回で、所見リスト全体に対する agent call を行う
 - cmoc は返却された編集操作を所見リストへ適用する
-- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_merge_finding_parameter` で構築する
 - Structured Output の各編集操作が参照する `target_ids` は、入力した所見リストの `finding_id` 集合に含まれなければならない
 
 ## 「所見リスト検証ループ」の詳細
@@ -152,25 +149,24 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 - ダーティフラグが true の所見 1 件ごとに agent call を行う
 - この所見ごとの agent call は並列実行してよい
-- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_validate_finding_challenger_parameter` で構築する
 
 ## 「その所見が妥当である理由の記述」の詳細
 
 - ダーティフラグが true の所見 1 件ごとに agent call を行う
 - この所見ごとの agent call は並列実行してよい
-- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_validate_finding_advocate_parameter` で構築する
 
 ## 「その所見の採用・不採用の判定」の詳細
 
 - 所見 1 件ごとに、採用・不採用判定の agent call を行う
 - この所見ごとの agent call は並列実行してよい
-- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_judge_finding_parameter` で構築する
 
 ## レポート
 
 ### レポートの体裁
 
 レビューレポートは Markdown ファイルとし、yaml frontmatter と本文で構成する。
+
+agent call の Structured Output の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい。
 
 ### 所見単位の集約
 

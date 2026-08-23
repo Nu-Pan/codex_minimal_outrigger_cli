@@ -1,3 +1,5 @@
+"""完全 prompt の構築定義。"""
+
 from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDTagBlock
@@ -21,8 +23,12 @@ def _merge_placeholder_definitions(
     destination: PlaceholderMap,
     source: PlaceholderMap,
 ) -> None:
-    """同名 placeholder の異値上書きを拒否しながら定義を統合する。"""
-    # 既存値と文字列表現が一致する定義だけを重複として許容する
+    """同名 placeholder の異値上書きを拒否しながら定義を統合する。
+
+    NOTE
+        各 part は参照する placeholder だけを申告し、同じ文字列表現の重複は統合する。
+        同名異値を後勝ちにすると call 内で path context が分裂するため拒否する。
+    """
     for name, value in source.items():
         if name in destination and str(destination[name]) != str(value):
             raise ValueError(
@@ -60,16 +66,16 @@ def build_complete_prompt(
     Returns:
         agent call へ渡す構造化済み prompt。
 
-    NOTE:
+    NOTE
         プロンプトは変動が少ないものを前に、変動が多いものを後に配置する。
-        これは、キャッシュヒット率を上げるための措置。
+        これはキャッシュヒット率を上げるための措置。
+    NOTE
+        policy 系の有効・無効化フラグの効果は相互に独立。
+        勝手に前提規定を有効化したりはしない。
     """
     # place holder map 構築先
     ph_map: PlaceholderMap = path_context.root_placeholder_definitions()
     _merge_placeholder_definitions(ph_map, aux_placeholder_def)
-
-    # プロンプト構築先
-    full_prompt: list[SDHeader | SDTagBlock] = list()
 
     # プロンプト構築ユーティリティ
     def _append(
@@ -80,9 +86,10 @@ def build_complete_prompt(
         _merge_placeholder_definitions(ph_map, temp_ph_map)
         target_prompt.append(temp_prompt)
 
-    # プロンプト内地図
+    # 最終的なフルプロンプト構築先
     # NOTE
-    #   読み飛ばされると困る要素をプロンプト先頭で参照させる
+    #   読み飛ばされると困る内容は prompt 先頭で参照を明示する。
+    full_prompt: list[SDHeader | SDTagBlock] = list()
     full_prompt.append(
         SDHeader(
             "プロンプト内の重要な情報",
@@ -119,7 +126,12 @@ def build_complete_prompt(
         )
     full_prompt.append(SDTagBlock("fundamental_policy", *fundamental_policy_prompt))
 
-    # 規定プロンプト
+    # 基礎的ではない規定プロンプト
+    # NOTE
+    #   基礎とか根幹ってほどじゃないけど、でも大事な規定。
+    # NOTE
+    #   指定された通りに規定の有効・無効を反映する。
+    #   依存先規定の自動注入みたいな余計なことはしない
     if oracle_policy:
         _append(
             full_prompt,
@@ -151,11 +163,11 @@ def build_complete_prompt(
             build_index_entry_policy(),
         )
 
-    # caller による追加プロンプト (static)
+    # caller 指定の追加プロンプト (static)
     if aux_static_prompt:
         full_prompt.extend(aux_static_prompt)
 
-    # このセッションの目的
+    # caller 指定の目的
     full_prompt.append(
         SDTagBlock(
             "objective",
@@ -164,11 +176,13 @@ def build_complete_prompt(
         )
     )
 
-    # caller による追加プロンプト (dynamic)
+    # caller 指定の追加プロンプト (dynamic)
     if aux_dynamic_prompt:
         full_prompt.extend(aux_dynamic_prompt)
 
-    # プレースホルダマップ
+    # placeholder 定義
+    # NOTE
+    #   特にパスはものすごく変動するので、絶対にプロンプト末尾に置く。
     full_prompt.append(
         SDHeader(
             "place holder definition",
@@ -176,5 +190,4 @@ def build_complete_prompt(
         )
     )
 
-    # パターンプロンプトの注入
     return full_prompt

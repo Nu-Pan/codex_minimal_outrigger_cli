@@ -9,8 +9,10 @@ def build_routing_policy(
 ) -> tuple[PlaceholderMap, SDHeader]:
     """
     INDEX.md を使って必要な文章へ進むための規定文面を構築する
+
+    NOTE
+        関連仕様は `{{cmot-root}}/oracle/doc/app_spec/indexing.md` を参照。
     """
-    # この part の文面が参照する root 定義を call-scoped context から取得する
     root_definitions = path_context.root_placeholder_definitions()
     return (
         {"work-root": root_definitions["work-root"]},

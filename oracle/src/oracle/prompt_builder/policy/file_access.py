@@ -9,7 +9,12 @@ def build_file_access_policy(
     mode: FileAccessMode,
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, SDHeader]:
-    """エージェントに伝えるファイルアクセス制限規定の文面を構築する。"""
+    """エージェントに伝えるファイルアクセス制限規定の文面を構築する。
+
+    NOTE
+        いろいろあって、細かいアクセス制御はプロンプトによる指示とした。
+        sandbox の設定は non-goal である。
+    """
     # リポジトリ外への禁止事項
     # NOTE
     #   work-root 外の書き込み禁止は、言わなくてもわかりそう。
@@ -113,7 +118,7 @@ def build_file_access_policy(
                 # realization file は書き込み許可
             ]
         case FileAccessMode.NO_POLICY:
-            # NTOE
+            # NOTE
             #   `build_complete_prompt` によるアクセス規定文面が生成されない
             #   特殊文面を個別に構築する用の特別モードで、よほどのことがない限り使ってはいけない
             return (
@@ -130,7 +135,6 @@ def build_file_access_policy(
             )
         case _:
             raise ValueError(f"Invalid mode (mode={mode})")
-    # 正常終了
     return (
         path_context.root_placeholder_definitions(),
         SDHeader(

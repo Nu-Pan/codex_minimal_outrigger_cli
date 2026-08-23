@@ -41,10 +41,7 @@ def build_oracle_review_validate_finding_advocate_parameter(
     agent_call_cwd: Path
         oracle review agent call を実行する worktree
     """
-    # 隔離済み review worktree を起点に prompt と起動パラメータを構築する
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
-
-    # プロンプト
     prompt = build_complete_prompt(
         summary="""
         - あなたはソフトウェア仕様断片レビュー所見の擁護担当です
@@ -85,7 +82,6 @@ def build_oracle_review_validate_finding_advocate_parameter(
         oracle_findings_policy=True,
         routing_policy=True,
     )
-    # パラメータを生成して返す
     return AgentCallParameter(
         agent_call_kind=(
             build_oracle_review_validate_finding_advocate_parameter.__name__

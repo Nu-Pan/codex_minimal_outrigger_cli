@@ -159,20 +159,20 @@ class SDPolicy:
     what_is_this: str
 
     # 「必須」カテゴリに属する規定のリスト
-    # １項目＝１文で「～しなければならい」「～すること」が並ぶ
+    # 1 項目 1 文で「～しなければならない」「～すること」が並ぶ
     require: tuple[str, ...] = field(default_factory=lambda: tuple())
 
     # 「禁止」カテゴリに属する規定のリスト
-    # １項目＝１文で「～してはいけない」「～は禁止」が並ぶ
+    # 1 項目 1 文で「～してはいけない」「～は禁止」が並ぶ
     prohibit: tuple[str, ...] = field(default_factory=lambda: tuple())
 
     # 「許容」カテゴリに属する規定のリスト
-    # １項目＝１文で「～してもよい」が並ぶ
+    # 1 項目 1 文で「～してもよい」が並ぶ
     # 必須・禁止との違いは、する・しないの裁量がエージェントに委ねられている事
     allow: tuple[str, ...] = field(default_factory=lambda: tuple())
 
     # 各規定が言っていることを理解するために必要な補足情報のリスト
-    # １項目＝１文で補足情報を並べる
+    # 1 項目 1 文で補足情報を並べる
     supplemental: tuple[str, ...] = field(default_factory=lambda: tuple())
 
 
@@ -215,7 +215,6 @@ def _render_sd_node_as_markdown(
             raise TypeError(
                 f"Invalid sd_node type` (expect={SDNode}, actual={type(sd_node)})"
             )
-    # 正常終了
     return "\n".join(individual)
 
 
@@ -241,7 +240,6 @@ def _render_sd_header_as_markdown(
         raise TypeError(
             f"sd_node.children must be list (type={type(sd_node.children)})"
         )
-    # 正常終了
     return result
 
 
@@ -263,7 +261,7 @@ def _render_sd_tag_block_as_markdown(
         result += "\n"
         result += _render_sd_node_as_markdown(child, depth=depth)
         result += "\n"
-    # ブロック開始
+    # ブロック終了
     result += "\n"
     result += "</cmoc_block>\n"
     result += "\n"
@@ -278,7 +276,7 @@ def _render_sd_code_block_as_markdown(
     内部実装
     SDCodeBlock 専用
 
-    NOTE:
+    NOTE
         動的本文中の backtick が外側の Markdown code block を閉じないよう、
         本文の最長 backtick 列より 1 文字長く、かつ最低 3 文字の fence を使う。
     """
@@ -298,7 +296,6 @@ def _render_sd_code_block_as_markdown(
         result += f"{fence}\n"
     result += body + "\n"
     result += f"{fence}\n"
-    # 正常終了
     return result
 
 

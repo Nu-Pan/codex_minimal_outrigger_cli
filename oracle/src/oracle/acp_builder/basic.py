@@ -70,33 +70,37 @@ class AgentCallParameter:
     AI コーディングエージェント (e.g. Codex CLI) の呼び出しパラメータをまとめたクラス
     """
 
-    # 対応する builder 関数名を使う、安定した低カーディナリティ識別子
+    # エージェント呼び出しの種類を表すタグ文字列
+    # 安定した低カーディナリティ識別子であれば良い
+    # 典型的には対応する builder 関数名を使う
+    # このタグは cmoc feedback 用の問題の分類に活用される
     agent_call_kind: str
 
     # モデルクラス
+    # GPT-5.6 でいう Luna, Terra, Sol みたいなもの
+    # ここで指定するのは抽象化したクラスで、実際のモデル名への変換テーブルは `CmocConfig` で定義される
     model_class: ModelClass
 
     # Reasoning Effort
+    # ここで指定するのは抽象化した R.E. で、実際の R.E. への変換テーブルは `CmocConfig` で定義される
     reasoning_effort: ReasoningEffort
 
     # ファイルアクセスモード
     file_access_mode: FileAccessMode
 
-    # Codex CLI の初回入力となる完全 prompt 本文。
+    # Codex CLI の初回入力となる完全な prompt 本文
     prompt: str
 
     # Structured Output schema ファイルパス
     # Structured Output を要求しない呼び出しでは None。
+    # schema の機械的受理条件を prompt comment や realization 側へ複製しない。
     structured_output_schema_path: Path | None
 
     # agent call に設定する cwd
-    # builder は prompt 構築前に agent_call_cwd を決定し、同じ値から call-scoped path context を構築する
     agent_call_cwd: Path
 
     # True なら論理 agent call の初回 Codex call 前に indexing preflight を実行する
     # False なら indexing preflight を実行しない
-    # Structured Output の補正用 Codex call では、この値によらず再実行しない
-    # 本命 agent call 自身が indexing である場合は indexing preflight をスキップする、というのが主な使い方
     # 通常は True のままで良い
-    # file access policy violation recovery のような indexing preflight から連鎖的に発生する処理の場合もスキップの対象。
+    # 本命 agent call 自身が indexing である場合は indexing preflight をスキップする、というのが主な使い方
     run_indexing_preflight: bool = True

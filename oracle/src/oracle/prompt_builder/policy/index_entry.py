@@ -5,7 +5,11 @@ from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_index_entry_policy() -> tuple[PlaceholderMap, SDHeader]:
-    """INDEX.md エントリーが従う規定を構築する。"""
+    """INDEX.md エントリーが従う規定を構築する。
+
+    NOTE
+        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` を参照。
+    """
     return (
         {},
         SDHeader(

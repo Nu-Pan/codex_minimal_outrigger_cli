@@ -34,9 +34,6 @@ def build_realization_apply_fork_launch_exec_parameter(
         raw_oracle_git_diff: 始点と終点の間にある oracle file の raw git diff。
         run_worktree: AgentCallParameter.agent_call_cwd とする linked worktree。
     """
-    # run worktree を agent_call_cwd として先に確定する
-    path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
-
     # commit 範囲と差分を一意な参照対象にまとめる。
     apply_change = SDTagBlock(
         "realization_apply_change",
@@ -52,8 +49,8 @@ def build_realization_apply_fork_launch_exec_parameter(
             ),
         ),
     )
-
-    # 追従対象と完了条件を固定した完全 prompt を構築する。
+    # パラメータを生成
+    path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
     complete_prompt = build_complete_prompt(
         summary="""
         - あなたは realization file の差分追従担当です
@@ -75,8 +72,6 @@ def build_realization_apply_fork_launch_exec_parameter(
         realization_findings_policy=True,
         routing_policy=True,
     )
-
-    # リポジトリ全体の追従を 1 agent call へ委ねるため最高品質設定を使う。
     return AgentCallParameter(
         agent_call_kind=build_realization_apply_fork_launch_exec_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,

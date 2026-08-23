@@ -42,10 +42,7 @@ def build_oracle_review_enumerate_finding_parameter(
     agent_call_cwd: Path
         oracle review agent call を実行する worktree
     """
-    # 隔離済み review worktree を起点に prompt と起動パラメータを構築する
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
-
-    # プロンプト
     prompt = build_complete_prompt(
         summary="""
         - あなたはソフトウェア仕様断片のレビュー担当です
@@ -79,7 +76,6 @@ def build_oracle_review_enumerate_finding_parameter(
         oracle_findings_policy=True,
         routing_policy=True,
     )
-    # パラメータを生成して返す
     return AgentCallParameter(
         agent_call_kind=build_oracle_review_enumerate_finding_parameter.__name__,
         model_class=ModelClass.EFFICIENCY,

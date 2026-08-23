@@ -5,7 +5,12 @@ from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_oracle_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
-    """oracle file に対する所見が満たすべき規定を構築する。"""
+    """oracle file に対する所見が満たすべき規定を構築する。
+
+    NOTE
+        関係仕様は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md` を参照。
+        review の各ステップで用いる規定を共通化するために、わざわざ独立した関数として定義している。
+    """
     return (
         {},
         SDHeader(

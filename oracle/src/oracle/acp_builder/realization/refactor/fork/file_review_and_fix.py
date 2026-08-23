@@ -25,10 +25,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         target_path: run worktree 上のレビュー対象 path。
         run_worktree: AgentCallParameter.agent_call_cwd とする linked worktree。
     """
-    # run worktree を agent_call_cwd として先に確定する
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
-
-    # 対象 file を起点に、調査から検証までを行う完全プロンプトを構築する。
     prompt = build_complete_prompt(
         summary="""
         - あなたはソフトウェア実装のファイル単位レビュー兼修正担当です
@@ -72,13 +69,10 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
             "target-path": resolve_real_path(target_path, path_context),
         },
         oracle_and_realization_basic=True,
-        oracle_policy=True,
         realization_policy=True,
         realization_findings_policy=True,
         routing_policy=True,
     )
-
-    # 全 oracle file と realization file に適用するため、効率モデルの最大推論を使う。
     return AgentCallParameter(
         agent_call_kind=(
             build_realization_refactor_fork_file_review_and_fix_parameter.__name__

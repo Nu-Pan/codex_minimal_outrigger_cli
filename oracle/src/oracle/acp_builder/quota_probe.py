@@ -17,7 +17,6 @@ def build_quota_availability_probe_parameter(
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """Codex CLI の quota 回復確認用 agent call を構築する。"""
-    # quota probe 自身の cwd から完全 prompt と起動パラメータを構築する。
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
         summary="""
@@ -29,10 +28,8 @@ def build_quota_availability_probe_parameter(
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
-        routing_policy=False,
+        # NOTE 利用可否の観測だけが目的なので policy は一切不要
     )
-
-    # availability の判定は Codex CLI の終了結果だけを使用する。
     return AgentCallParameter(
         agent_call_kind=build_quota_availability_probe_parameter.__name__,
         model_class=ModelClass.MINIMUM,
@@ -41,5 +38,6 @@ def build_quota_availability_probe_parameter(
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
+        # NOTE 終了結果だけを使う probe なので最小コスト設定とし、preflight の再帰を避ける。
         run_indexing_preflight=False,
     )

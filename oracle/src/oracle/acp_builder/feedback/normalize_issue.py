@@ -25,7 +25,6 @@ def build_feedback_normalize_issue_parameter(
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """構造化 observation と絞り込み済み候補から issue の同一性だけを判断する。"""
-    # report cut 外の状態を参照しない prompt と call context を構築する。
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
         summary="""
@@ -65,10 +64,9 @@ def build_feedback_normalize_issue_parameter(
                 SDCodeBlock("json", candidate_issues_json),
             ),
         ],
-        routing_policy=False,
+        oracle_and_realization_basic=True,
+        routing_policy=True,
     )
-
-    # 同一性判断専用の Structured Output と読み取り専用設定を返す。
     return AgentCallParameter(
         agent_call_kind=build_feedback_normalize_issue_parameter.__name__,
         model_class=ModelClass.MAINSTREAM,
@@ -77,5 +75,5 @@ def build_feedback_normalize_issue_parameter(
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
-        run_indexing_preflight=False,
+        run_indexing_preflight=True,
     )

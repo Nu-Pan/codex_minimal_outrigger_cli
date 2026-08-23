@@ -16,16 +16,12 @@
 - `agent_call_cwd` は、子 agent call に設定する cwd とする
 - `work_root` は、`agent_call_cwd` を含む最寄りの Git worktree root とする
 - `repo_root` は、`work_root` が属する Git repository の main worktree root とする
-- call-scoped path context の正確なデータモデルと導出処理は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` で管理する
-- AgentCallParameter builder は、完全 prompt を構築する前に `AgentCallParameter.agent_call_cwd` を決定する
 - `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
-- builder は、決定済みの `AgentCallParameter.agent_call_cwd` だけを `agent_call_cwd` keyword argument に渡して `AgentCallPathContext` を構築する
+- call-scoped path context、root placeholder、および導出処理の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` を参照する。prompt part との受け渡しは `{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py`、完全 prompt への統合は `{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` を参照する
 
 call-scoped path context の適用範囲を次に示す。
 
-- 同じ完全 prompt 内の file access policy、routing policy、oracle file と realization file の分類、および path placeholder は、同一の call-scoped path context を使用する
-- `AgentCallParameter.agent_call_cwd` と完全 prompt の path placeholder は、同じ call-scoped path context から取得する
-- `build_complete_prompt` と各 prompt part は、cmoc process の cwd を個別に参照して path を解決してはならない
+- 同じ agent call の cwd、file access、routing、file 分類、および path placeholder は、同一の call-scoped path context と整合させる
 - cmoc process の cwd だけを根拠として、子 agent call の path context を決定してはならない
 - call-scoped path context の構築に process-global な `chdir` を使用してはならない
 - 並列 agent call は call-scoped path context を共有または変更してはならない
@@ -110,7 +106,7 @@ call-scoped path context の適用範囲を次に示す。
     - `REALIZATION_WRITE`: oracle file の書き込みを禁止する
     - `NO_POLICY`: 詳細な file access instruction を prompt に追加しない特殊 mode とする
 - 個別 agent call が選択する file access mode は、対応する oracle doc の作業範囲と一致させる。AgentCallParameter builder は、その正確な選択値を構築する
-- `build_file_access_policy` は、本節の制限を agent へ伝える正確な prompt 文面を構築する
+- 本節の制限を agent へ伝える正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` を参照する
 - path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない
 - 詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する
 
@@ -147,7 +143,7 @@ call-scoped path context の適用範囲を次に示す。
 - model provider ID、provider-local key、および provider-local setting は、意味を変えず Codex CLI が解釈できる TOML key/value として符号化する
 - 選択していない provider の設定を argv に渡してはならない
 - model provider の選択と provider-local 設定に `--profile`、`$CODEX_HOME/config.toml`、または project config を使用してはならない
-- 実経路統合テスト以外の通常実行では、対応する oracle doc が model class と reasoning effort の意味上の選択を定め、AgentCallParameter builder が正確な選択値を構築する
+- 実経路統合テスト以外の通常実行では、各 AgentCallParameter builder の実行可能部分と docstring が、model class と reasoning effort の正確な選択と選択理由を所有する
 - 実際の model provider、model、および reasoning effort の値は `CmocConfigCodex` から解決する
 - 実経路統合テストだけに適用する model class と reasoning effort の例外は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする
 - この例外によって、通常実行の AgentCallParameter builder の責務を変更してはならない
@@ -155,7 +151,7 @@ call-scoped path context の適用範囲を次に示す。
 
 ## プロンプトの渡し方
 
-- 初回 Codex call に渡す正確な prompt 文面は、人間が所有する oracle src の AgentCallParameter builder と prompt builder で管理する
+- 初回 Codex call に渡す正確な prompt 文面と構築方法は、`{{cmoc-root}}/oracle/src/oracle/acp_builder` と `{{cmoc-root}}/oracle/src/oracle/prompt_builder` を参照する
 - builder が生成した `AgentCallParameter.prompt` は、初回 Codex call の stdin へ渡す入力とする。意味仕様または prompt 文面の正本ではない
 - `AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する
 - realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない
@@ -169,7 +165,7 @@ call-scoped path context の適用範囲を次に示す。
 
 ## feedback reporter と collector context
 
-- 全 agent call の完全 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従って共通 reporting instruction を 1 回だけ含める
+- reporting の意味は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
 - cmoc は initial call、Structured Output の correction call、および TUI call の開始前に、invocation-scoped collector へその Codex call の context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする
 - cmoc は call-scoped な Codex CLI `--config` override により、MCP server namespace `cmoc_feedback`、公開 tool `submit_observation`、同 tool の approval behavior、および MCP process に必要な起動情報を設定する
 - cmoc は `cmoc_feedback` の effective configuration 全体を呼び出し単位で支配する。user config、`$CODEX_HOME/config.toml`、または project config の server 定義、tool 設定、approval behavior、および起動情報に依存してはならず、それらによって別 tool の公開または reporter の置換を許してはならない
@@ -218,7 +214,9 @@ call-scoped path context の適用範囲を次に示す。
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
 - スキーマは、一度 `{{repo-root}}/.cmoc/gu/ar/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
 - `{{hash}}` は schema 本文の SHA256 ハッシュとする
-- schema と決定論的事後条件の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_policy.md` を正本とする
+- JSON Schema で表現できる field、型、必須性、列挙値、配列要素数、入れ子、および field 間の構造的な組み合わせは schema を正本とする
+- 実行時状態との照合が必要で schema に置けない決定論的事後条件は、workload 固有の oracle doc を正本とする。対応する AgentCallParameter builder は、その正確な agent 向け文面を所有する
+- schema または宣言済みの決定論的事後条件に含まれない意味的品質を、機械的な受理条件にしてはならない
 
 ### 機械的検証と正式な結果
 

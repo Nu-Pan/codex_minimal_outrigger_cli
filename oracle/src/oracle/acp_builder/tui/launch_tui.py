@@ -26,10 +26,7 @@ def build_tui_launch_tui_parameter(
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
-    # main worktree を agent_call_cwd として先に確定する
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
-
-    # 完全なプロンプトを構築する
     original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
     complete_prompt = build_complete_prompt(
         summary=f"""
@@ -50,20 +47,11 @@ def build_tui_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
-        oracle_policy=True,
-        realization_policy=True,
-        oracle_findings_policy=True,
-        realization_findings_policy=True,
         routing_policy=True,
     )
-    # パラメータを生成して返す
-    # NOTE
-    #   TUI による対話的作業では人間の認知コスト的な負荷が大きいので、最大限 AI に頑張ってもらいたい
-    #   入力タスクの難易度を正確に測るには最高性能モデルを使わざるを得ないし、だったら最初から最高性能モデルで作業させたほうが安い
-    #   過剰になりうることは割り切って、最高品質設定にする
     return AgentCallParameter(
         agent_call_kind=build_tui_launch_tui_parameter.__name__,
-        model_class=ModelClass.FLAGSHIP,
+        model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt=render_sd_node_as_markdown(*complete_prompt),

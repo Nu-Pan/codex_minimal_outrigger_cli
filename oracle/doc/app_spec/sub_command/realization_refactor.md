@@ -5,10 +5,11 @@
 - realization refactor は、oracle file と realization file を起点とするファイル単位の追従調査を、current fork で保留した unresolved target 以外の調査要求がなくなるまで繰り返す workload である。
 - 所見調査・修正を行う agent call には commit 差分や変更要約を渡さず、oracle file と realization file を調査対象として渡す。
 - 所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` の「oracle file に対する realization file の適合性」を正本とする。
-- 所見調査・修正用 builder は、oracle file と realization file の責務および適合性を agent へ伝える正確な文面を固定で prompt へ注入する。
+- 所見調査・修正 call の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` を参照する。
 - installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - 短い変更ループを担う realization apply とは workload を分ける。
 - fork, join, abandon の共通 lifecycle は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` を正本とする。
+- agent call の Structured Output の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい。
 
 ## refactor state
 
@@ -93,7 +94,6 @@
     - 実際の変更 path 集合は、agent call の開始時点を基準として出力時点に残る realization file の net 差分を、schema の `changed_paths` と同じ path 表現へ正規化した集合とする。
     - 申告された変更 path 集合は、全所見の `changed_paths` の和集合とする。同じ path を複数の所見が申告してよいが、`evidences[].path` はこの集合に含めない。
     - Structured Output は、申告された変更 path 集合と実際の変更 path 集合が一致する場合だけ受理する。
-    - `build_realization_refactor_fork_file_review_and_fix_parameter` は、この決定論的事後条件の正確な agent 向け文面を初回 prompt に 1 回だけ置く。
     - cmoc は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従って同事後条件を検証する。
     - 以下で実際の変更 path 集合という場合は、同事後条件の検証で算出した集合を指す。
     - `findings` が空の場合は、所見なしとする。
@@ -168,7 +168,7 @@
     - entry 総数、調査要求あり件数、および各 `last_investigation_result` の件数。
     - run branch 上の変更内容の要約。
 - `completed_with_unresolved` の report では、未調査 target の件数を 0 とする。調査要求あり件数は unresolved target の件数と一致しなければならない。
-- `natural_completion` と `completed_with_unresolved` の変更要約は `build_realization_refactor_fork_change_summary_parameter` で生成する。
+- `natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt part、文面、起動パラメータ、および選択理由は同 builder を参照する。
 - run branch の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。
 - ユーザー中断後またはエラー後は新しい agent call を行わず、確定済みの変更 path と所見情報から要約する。
 - `{{repo-root}}/.cmoc/gu/ar/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。

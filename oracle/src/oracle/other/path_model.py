@@ -18,6 +18,9 @@
 - `cmoc realization apply fork`, `cmoc realization refactor fork` は `{{repo-root}}` を cmoc process の cwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
 - realization の各 fork が起動する編集用 `codex exec` は `{{run-root}}` を agent call の cwd とする
 - agent call の call-scoped path context は `AgentCallPathContext` を正本とする
+
+NOTE
+    root placeholder の名前と解決はこの module が所有し、prompt builder はこの model を使う。
 """
 
 # std
@@ -55,6 +58,9 @@ class AgentCallPathContext:
     constructor は決定済みの AgentCallParameter.agent_call_cwd だけを受け取る。
     work_root と repo_root は agent_call_cwd から導出し、呼び出し側から指定させない。
     構築後の値は変更できず、同じ agent call の prompt 全体で共有する。
+
+    NOTE
+        builder は cwd の確定後に context を構築し、並列 call 間では共有しない。
     """
 
     # prompt 構築前に builder が決定する agent call の cwd
@@ -87,8 +93,11 @@ class AgentCallPathContext:
         object.__setattr__(self, "repo_root", repo_root)
 
     def root_placeholder_definitions(self) -> dict[str, str | Path]:
-        """call-scoped root placeholder の全定義を返す。"""
-        # root placeholder の名前と値は、この関数を唯一の値取得元とする
+        """call-scoped root placeholder の全定義を返す。
+
+        NOTE
+            call-scoped root の名前と値は、この関数を唯一の取得元とする。
+        """
         return {
             "repo-root": self.repo_root,
             "work-root": self.work_root,
@@ -105,7 +114,7 @@ def resolve_real_path(
     path_context が指定された場合、agent call に依存する root は同じ context から解決する。
     """
     if isinstance(source, RootPathPlaceHolder):
-        # 引数がルートパスプレースホルダの場合は call-scoped context を優先する
+        # agent call に依存する root は、指定済み context を process cwd より優先する。
         match source:
             case RootPathPlaceHolder.CMOC:
                 return resolve_cmoc_root()
@@ -124,17 +133,14 @@ def resolve_real_path(
             case _:
                 raise ValueError(f"{source} is invalid RootPathPlaceHolder.")
     elif isinstance(source, str):
-        # 引数が str の場合は Path に処理を回す
         return resolve_real_path(Path(source), path_context)
     elif isinstance(source, Path):
-        # Path の場合は先頭のトークンを置換
-        # 絶対パスならそのまま返す（symlink とかの可能性があるので resolve はする）
+        # 絶対 path は placeholder 解決の対象外だが、symlink を含むため正規化する。
         if source.is_absolute():
             return source.resolve()
-        # 空パスは禁止
         if not source.parts:
             raise ValueError(f"source is empty like path (source={source})")
-        # パス先頭パーツのみ置換
+        # root placeholder は相対 path の先頭 token にだけ許可する。
         head_part = source.parts[0]
         for root_path_ph in RootPathPlaceHolder:
             if head_part == root_path_ph.value:

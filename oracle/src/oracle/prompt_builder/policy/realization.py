@@ -8,7 +8,11 @@ from oracle.prompt_builder.basic import PlaceholderMap
 def build_realization_policy(
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, SDHeader]:
-    """realization file が満たすべき規定を構築する。"""
+    """realization file が満たすべき規定を構築する。
+
+    NOTE
+        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を参照。
+    """
     return (
         path_context.root_placeholder_definitions(),
         SDHeader(

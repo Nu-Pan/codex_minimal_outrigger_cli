@@ -7,10 +7,7 @@ from oracle.prompt_builder.basic import PlaceholderMap
 def build_oracle_and_realization_basic(
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, SDHeader]:
-    """
-    oracle, realization についての基本知識の説明文章を構築する
-    """
-    # この part の文面が参照する root 定義を call-scoped context から取得する
+    """oracle, realization についての基本知識の説明文章を構築する"""
     root_definitions = path_context.root_placeholder_definitions()
     return (
         {"work-root": root_definitions["work-root"]},

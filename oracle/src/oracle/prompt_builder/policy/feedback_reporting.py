@@ -7,7 +7,11 @@ from oracle.prompt_builder.basic import PlaceholderMap
 def build_feedback_reporting_policy(
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, SDHeader]:
-    """全 agent call に共通する人間向け feedback の報告規定を構築する。"""
+    """全 agent call に共通する人間向け feedback の報告規定を構築する。
+
+    NOTE
+        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` にある。
+    """
     return (
         {},
         SDHeader(

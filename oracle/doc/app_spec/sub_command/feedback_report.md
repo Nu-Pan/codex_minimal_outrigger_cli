@@ -86,7 +86,7 @@ agent が入力した deduplication hint は、候補検索にだけ使用する
 
 normalization agent は、入力した observation が既存 candidate と同じ issue か、新しい issue かだけを返す。
 
-正確な prompt と起動パラメータは、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py` を正本とする。Structured Output schema は、同 directory の `normalize_issue.json` を正本とする。
+正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py` を正本とする。Structured Output schema は、同 directory の `normalize_issue.json` を正本とする。
 
 normalization agent へ渡す情報を次に限定する。
 
@@ -122,9 +122,11 @@ verification agent は、1 candidate と、その candidate に許可した repo
 | `not_actionable` | 状態は存在しても、人間向け報告基準を満たさない。 |
 | `inconclusive` | 許可された reference だけでは判定できない。 |
 
-正確な prompt と起動パラメータは、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py` を正本とする。Structured Output schema は、同 directory の `verify_issue.json` を正本とする。
+正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py` を正本とする。Structured Output schema は、同 directory の `verify_issue.json` を正本とする。
 
 verification agent は候補外の問題を探索せず、repository、config、feedback state、または問題の根拠を変更しない。
+
+verification agent の Structured Output の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい。
 
 ### output の受理条件
 

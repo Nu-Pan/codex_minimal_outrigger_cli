@@ -12,17 +12,6 @@ from oracle.other.struct_doc import SDHeader, SDTagBlock, render_sd_node_as_mark
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def _build_original_user_instruction(user_instruction: str) -> SDTagBlock:
-    """確定したオリジナルのユーザー指示を参照対象として構築する。"""
-    return SDTagBlock(
-        "original_user_instruction",
-        SDHeader(
-            "ユーザー指示",
-            user_instruction,
-        ),
-    )
-
-
 def build_oracle_edit_main_launch_exec_parameter(
     user_instruction: str,
 ) -> AgentCallParameter:
@@ -37,7 +26,6 @@ def build_oracle_edit_main_launch_exec_parameter(
         新しい `codex exec` session の初回 call に使う固定パラメータ。
     """
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
-
     complete_prompt = build_complete_prompt(
         summary="""
         - あなたは oracle file の編集担当です
@@ -52,12 +40,19 @@ def build_oracle_edit_main_launch_exec_parameter(
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         path_context=path_context,
-        aux_dynamic_prompt=[_build_original_user_instruction(user_instruction)],
+        aux_dynamic_prompt=[
+            SDTagBlock(
+                "original_user_instruction",
+                SDHeader(
+                    "ユーザー指示",
+                    user_instruction,
+                ),
+            )
+        ],
         oracle_and_realization_basic=True,
         oracle_policy=True,
         routing_policy=True,
     )
-
     return AgentCallParameter(
         agent_call_kind=build_oracle_edit_main_launch_exec_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
@@ -75,7 +70,6 @@ def build_oracle_edit_reduction_launch_exec_parameter(
 ) -> AgentCallParameter:
     """本命成功後に実行する仕様削減 agent call 用パラメータを構築する。"""
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
-
     complete_prompt = build_complete_prompt(
         summary="""
         - あなたは oracle file の仕様削減担当です
@@ -91,7 +85,13 @@ def build_oracle_edit_reduction_launch_exec_parameter(
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         path_context=path_context,
         aux_dynamic_prompt=[
-            _build_original_user_instruction(user_instruction),
+            SDTagBlock(
+                "original_user_instruction",
+                SDHeader(
+                    "ユーザー指示",
+                    user_instruction,
+                ),
+            ),
             SDHeader(
                 "仕様削減の判断と参照の境界",
                 """
@@ -111,7 +111,6 @@ def build_oracle_edit_reduction_launch_exec_parameter(
         oracle_policy=True,
         routing_policy=True,
     )
-
     return AgentCallParameter(
         agent_call_kind=build_oracle_edit_reduction_launch_exec_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
@@ -120,5 +119,6 @@ def build_oracle_edit_reduction_launch_exec_parameter(
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
+        # NOTE 本命実行と条件を揃えたいので indexing は無し
         run_indexing_preflight=False,
     )

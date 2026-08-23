@@ -2,31 +2,15 @@
 
 ## 概要
 
-- cmoc は、オリジナルプロンプトの入力位置を示す完全プロンプトの skeleton をエディタへ提示する。
+- 本書は、オリジナルプロンプトを受け取る editor work file の lifecycle を定める。
 - ユーザーは、HTML コメントブロックの外にオリジナルプロンプトを入力する。
-- cmoc は、検証済み editor work file の一回の最終読み取り結果を加工せず保存する。同じ結果から HTML コメントブロックを除去してオリジナルプロンプトを抽出する。
-- 呼び出し元は、抽出したオリジナルプロンプトから後続呼び出し用の完全プロンプトを確定する。
+- cmoc は、検証済み editor work file の一回の最終読み取り結果を加工せず保存する。同じ結果から HTML コメントブロックを除去し、呼び出し元へ渡す。
 
-## 初期コメントの責務
+## 構築定義の参照
 
-- 初期コメントは、editor 利用者へ入力方法を伝える補助文面とする。
-- 初期コメントには、入力に必要な操作説明と有用な記入上の助言だけを含める。
-- 初期コメントを、cmoc 開発者向けの prompt 設計仕様または正本仕様の代替にしてはならない。
-- 初期コメントの正確な表示文面は、人間が所有してレビューする `{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` で管理する。
-- 生成済み editor input は実行時生成物であり、表示文面または意味仕様の正本ではない。
-- 初期コメントはオリジナルプロンプトの読み出し時に削除し、後続の AI Agent へ渡してはならない。
-
-## 完全プロンプトの skeleton と確定
-
-- 呼び出し元は、対応する `build_*_parameter` 関数へオリジナルプロンプトの代わりに `{{original-prompt-here}}` を渡し、エディタ起動前に完全プロンプトの skeleton を構築する。
-- skeleton は、`{{original-prompt-here}}` だけが未確定であり、オリジナルプロンプトの入力位置と担当固有の prompt 構造を表示する。
-- skeleton 内の `{{original-prompt-here}}` は、ちょうど 1 箇所とする。
-- 編集対象の初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` に、Markdown へレンダリングした skeleton を渡して構築する。
-- `build_prompt_editor_input_initial_text` はサブコマンド固有の指示を組み立てない。サブコマンド固有の契約は、対応する `build_*_parameter` 関数が skeleton に含める。
-
-呼び出し元は、サブコマンド固有仕様に従って完全プロンプトを確定する。`AgentCallParameter.prompt` には、原則として完全プロンプト本文を直接設定する。
-
-- 後続の AI Agent に渡す完全プロンプトに、skeleton 由来の `{{original-prompt-here}}` を残してはならない。
+- editor の初期コメントと template の正確な構築は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` を参照する。
+- 完全 prompt skeleton と抽出後の完全 prompt の正確な構築は、editor 入力を利用する `{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py`、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py`、および `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の各 `build_*_parameter` を参照する。
+- 生成済み editor input と skeleton は実行時生成物であり、editor lifecycle または prompt 文面の正本ではない。
 
 ## ファイルの役割
 

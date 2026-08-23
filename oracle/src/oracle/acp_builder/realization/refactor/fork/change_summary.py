@@ -29,10 +29,7 @@ def build_realization_refactor_fork_change_summary_parameter(
         raw_git_diff: run branch 上の refactor 作業差分。
         run_worktree: AgentCallParameter.agent_call_cwd とする linked worktree。
     """
-    # run worktree を agent_call_cwd として先に確定する
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
-
-    # 確定済み差分だけを入力とする変更要約 prompt を構築する。
     prompt = build_complete_prompt(
         summary="""
         - あなたはソフトウェア変更内容の要約担当です
@@ -49,10 +46,10 @@ def build_realization_refactor_fork_change_summary_parameter(
                 SDCodeBlock("diff", raw_git_diff),
             ),
         ],
-        routing_policy=False,
+        oracle_and_realization_basic=True,
+        routing_policy=True,
     )
 
-    # report 用の分類は品質より経済性を優先する。
     return AgentCallParameter(
         agent_call_kind=(
             build_realization_refactor_fork_change_summary_parameter.__name__
