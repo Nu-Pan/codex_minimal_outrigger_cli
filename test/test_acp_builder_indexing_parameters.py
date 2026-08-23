@@ -2,7 +2,7 @@
 
 対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.py、
 {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json、
-{{work-root}}/oracle/doc/app_spec/prompt_policy.md
+{{work-root}}/oracle/doc/app_spec/indexing.md
 """
 
 import json

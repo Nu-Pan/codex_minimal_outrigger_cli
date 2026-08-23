@@ -505,7 +505,7 @@ def render_index_entry(
     digest: str | None = None,
 ) -> str:
     """schema 検証済み Structured Output から INDEX.md entry を生成する。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_policy.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # schema 外の意味的な品質を、render 時の追加受理条件として再検証しない。
     digest = digest or index_target_hash(root, path)
     summary = entry["summary"]

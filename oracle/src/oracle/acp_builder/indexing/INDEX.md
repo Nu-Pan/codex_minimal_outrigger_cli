@@ -17,19 +17,17 @@
 # `index_entry.py`
 
 ## Summary
-- `cmoc indexing` が目次エントリー生成用の agent call を起動する際に使う、prompt・パスコンテキスト・実行パラメータの構築定義。
-- 対象本文を埋め込んだ完全 prompt を生成し、読み取り専用・最小モデル・低推論コスト・indexing preflight 無効などの設定を返す。
-- 同階層の個別構築定義ではなく、`cmoc indexing` のエントリー生成呼び出しの設定や prompt 構成を変更・確認するときの入口。
+- `cmoc indexing` が INDEX.md エントリー生成を依頼する agent call のパラメータを構築する。対象本文を埋め込んだ prompt、パス文脈、読み取り専用設定、モデル・推論設定、Structured Output schema、実行オプションを定義する。
 
 ## Read this when
-- `cmoc indexing` の agent 向け prompt 文面を変更するとき
-- index entry 生成用 agent call のモデル、推論コスト、アクセスモード、cwd、preflight 設定を確認・変更するとき
-- 対象本文やパスコンテキストをどのように完全 prompt に組み込むか調べるとき
+- `cmoc indexing` の INDEX.md エントリー生成用 agent call の prompt や起動パラメータを確認・変更するとき
+- 目次エントリー生成で使用するモデル、推論強度、ファイルアクセスモード、作業ディレクトリ、preflight 設定を確認するとき
+- 対象パスの解決や prompt の Markdown 化を含む agent call 構築処理を確認するとき
 
 ## Do not read this when
-- `cmoc indexing` の一般的なサブコマンド処理や CLI 引数解析を調べるとき
-- Structured Output のスキーマ項目や JSON 形式だけを確認するとき
-- indexing 以外の agent call パラメータ構築を直接調べるとき
+- INDEX.md の既存ルーティング内容を確認したいとき
+- 生成結果の出力項目や型を確認したいときは、対応する Structured Output schema を直接読む
+- 完全な prompt の共通構築規則を確認したいときは、`complete_prompt` の定義を直接読む
 
 ## hash
-- 8890f2a7535b397ef759dd3aa88769713b4c7642b22017379219b657596cf4f2
+- 6a10dbc368f876913fa0b11970d24095d94e6346982b5814eb412dde50e0e1fc

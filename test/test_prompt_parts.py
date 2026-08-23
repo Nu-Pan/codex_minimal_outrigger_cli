@@ -1,10 +1,9 @@
-"""prompt policy と complete prompt の組み立て結果を検証する。
+"""prompt part と complete prompt の組み立て結果を検証する。
 
 各 prompt part の rendering と complete prompt の有効化・placeholder 展開は同じ
 SDHeader 出力を共有する一つの責務であるため、prompt builder 回帰として一箇所に保つ。
 
 対応する正本:
-- {{work-root}}/oracle/doc/app_spec/prompt_policy.md
 - {{work-root}}/oracle/doc/app_spec/feedback_observation.md
 - {{work-root}}/oracle/src/oracle/other/struct_doc.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/basic.py
@@ -121,7 +120,7 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
         ),
         pytest.param(
             lambda: _build_routing_policy(_path_context()),
-            ("**必須**",),
+            ("**必須**", "**補足情報**"),
             id="routing",
         ),
     ],

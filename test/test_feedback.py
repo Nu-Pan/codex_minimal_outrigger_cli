@@ -422,10 +422,13 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
     assert verifier.file_access_mode is FileAccessMode.READONLY
     assert normalizer.structured_output_schema_path is not None
     assert verifier.structured_output_schema_path is not None
+    assert normalizer.run_indexing_preflight is True
+    assert verifier.run_indexing_preflight is True
     assert "同一性" in normalizer.prompt
     assert "unresolved | resolved | not_actionable | inconclusive" in verifier.prompt
-    assert "# routing policy" not in normalizer.prompt
-    assert "# routing policy" not in verifier.prompt
+    for parameter in (normalizer, verifier):
+        assert "# oracle and realization basic" in parameter.prompt
+        assert "# routing policy" in parameter.prompt
     normalize_schema = json.loads(normalizer.structured_output_schema_path.read_text())
     verify_schema = json.loads(verifier.structured_output_schema_path.read_text())
     validate(

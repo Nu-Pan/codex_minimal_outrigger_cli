@@ -52,20 +52,20 @@
 # `commons`
 
 ## Summary
-- `src/commons` は、cmoc の CLI・Codex 実行・設定・Git・状態・ログ・feedback・レポートなど複数の実行経路から共有される runtime helper 群を集約するパッケージである。共通 runtime API や個別 helper の責務を確認・変更するときの入口として、まずこのディレクトリから対象モジュールへ進む。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI、Codex 実行、設定・ログ・Git、状態管理、feedback、report など複数の実行経路から共有される実装への入口であり、配下の個別 runtime module を目的別に辿る起点となる。
 
 ## Read this when
-- 複数の CLI または Codex 実行経路にまたがる共通 runtime 処理の担当モジュールを探すとき
-- 設定、パス、Git、プロセス、状態、ログ、feedback、レポート、indexing などの共通 helper を確認・変更するとき
-- commons 配下の実装を利用・変更する前に、該当する個別 runtime module の入口を特定するとき
+- 複数の cmoc 機能にまたがる共通 runtime 処理の配置や責務分担を確認するとき
+- CLI・Codex・Git・設定・状態・feedback・report などの共通実装から対象モジュールを探すとき
+- commons 配下の runtime helper を追加・変更し、適切な配置先を判断するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部実装だけを確認する場合は、対応する commons 配下の個別モジュールを直接読む
-- CLI サブコマンド固有の業務ロジック、Codex の個別実行仕様、または oracle の正本仕様だけを確認する場合
-- commons 配下に対象となる共通 helper がない機能を調べる場合
+- 特定の runtime helper の内部挙動や公開シンボルだけを確認したいときは、commons 配下の該当モジュールを直接読む
+- CLI の個別サブコマンドや Codex 実行経路の固有仕様だけを確認したいときは、対応する実装または正本仕様を直接読む
+- runtime 共通処理を利用する上位の業務フローだけを調査するとき
 
 ## hash
-- 6d98c069176743f3db2bb4515fe5eed5784f5cba5497d9934a0d5630f2422979
+- 4296589fa10c73d49dda6717765d6087e5f4bf87e1b1f1ccbbdfdfe015d7ecac
 
 # `config`
 
