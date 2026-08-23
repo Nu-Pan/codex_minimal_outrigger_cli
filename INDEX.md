@@ -91,18 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と agent call／prompt 構築実装を案内する、oracle 配下の最上位入口です。仕様・設計・開発規約を探す場合は `doc`、agent call や prompt、共通モデルの実装を調べる場合は `src` へ進みます。
+- cmoc のアプリケーション仕様、branch・commit・worktree モデル、開発・テスト規約、採用しなかった設計案を集約する正本文書群への入口。機能仕様は app_spec、開発・テスト関連は dev_rule、branch 関係は branch_model.md、代替案の背景は considered_alternative 配下へ進む。
+- src は oracle ソース全体の責務と、agent call 構築、prompt・policy、feedback 入力契約、設定・パス解決、構造化文書モデルに関する下位対象への入口。
 
 ## Read this when
-- cmoc の正本仕様・設計資料・開発ルールと、agent call／prompt 関連実装の入口を横断して判断するとき
-- 対象が `doc` と `src` のどちらに属するか、または下位領域がまだ特定できないとき
+- cmoc の正本文書を横断的に探し、仕様、branch モデル、開発規約、テスト規約、設計代替案の領域を判断するとき
+- 複数の機能領域にまたがる調査・変更で、適切な下位文書群への入口を特定するとき
+- agent call 構築、prompt 統合、policy、feedback 入力契約、設定・パス解決、構造化文書モデルを調査するとき
 
 ## Do not read this when
-- 個別の仕様書、開発ルール、agent call 定義、prompt policy、構造化文書モデル、パス・設定モデルなど、読むべき下位対象が明らかなとき
-- CLI・TUI の個別処理、realization、実装ファイル、既存の INDEX.md、個別 Structured Output schema だけを確認するとき
+- 個別仕様、branch・worktree 用語、開発環境、実装配置、テスト要件、テスト実行手順が明らかで、該当する下位文書を直接読めるとき
+- 実装コード、既存の INDEX.md、Structured Output schema、外部契約の検証結果だけを確認したいとき
+- 実際の Codex CLI 呼び出しや実行基盤、個別の oracle 文書、realization 実装・テスト、feedback state、CLI サブコマンドの具体的挙動だけを確認したいとき
 
 ## hash
-- 266c2ffe474428003ff6124806e99de5ec98457f715350ffac41b8b6b45673eb
+- a98709111b4efdc4a40777ca37431822628dab691c0e3f37936b646d9384bb67
 
 # `pyproject.toml`
 

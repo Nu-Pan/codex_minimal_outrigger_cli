@@ -1,19 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- `oracle/src/oracle/acp_builder` は、用途別の AgentCallParameter 構築定義をまとめた領域で、モデル・推論・アクセス権限・prompt・Structured Output・作業ディレクトリ・preflight などの起動条件を確認する入口である。配下には共通の型定義、feedback、indexing、oracle、quota probe、realization、session、tui の用途別定義がある。
+- cmoc の Agent Call Parameter 構築定義をまとめるディレクトリ。共通の呼び出しパラメータ型・論理モデル・推論強度・ファイルアクセスモードを基盤として、feedback、indexing、oracle、realization、session、tui、quota probe 各機能の prompt、Structured Output schema、作業範囲、モデル設定、preflight 設定を定義する。各サブディレクトリは対応するサブコマンドまたは処理系の agent call 構築への入口となる。
 
 ## Read this when
-- Agent call の用途別起動パラメータ、prompt、アクセス範囲、モデル・推論設定、作業ディレクトリ、indexing preflight を変更・調査するとき
-- 特定用途の AgentCallParameter 構築定義へ進む入口を選ぶとき
-- oracle、realization、feedback、indexing、session、tui、quota probe の agent call 定義を確認するとき
+- Agent Call Parameter の共通データモデル、論理モデル種別、推論強度、ファイルアクセスモード、prompt、schema パス、cwd、indexing preflight の契約を確認・変更するとき。
+- feedback の issue 同一性判定・検証、INDEX.md エントリー生成、oracle の edit・investigation・review、realization の apply・refactor、session join の conflict 解消、TUI 起動、quota probe の agent call 構築を調査するとき。
+- 各処理が選択するファイルアクセス policy、モデルクラス、推論強度、Structured Output の有無、起動前 indexing の扱いを確認するとき。
 
 ## Do not read this when
-- Agent call の実行処理そのもの、CLI サブコマンドの処理、TUI の画面表示、個別の oracle・realization file の内容を直接調査するとき
-- 共通 prompt 生成規則や ACP パラメータの型定義だけを確認したいときは、それぞれの下位対象を直接読むとき
+- 実際の Codex CLI モデル名や論理推論強度からの変換規則を確認したいとき。
+- Codex CLI の具体的な sandbox 制約、共通 prompt のレンダリング規則、agent call の実行基盤、パス解決の共通仕様を確認したいときは、それぞれの共通定義を直接読む。
+- 個別の oracle・realization 本文、feedback state、実装・テストの挙動、または各 Structured Output schema の項目・型・形式だけを確認したいとき。
+- 既存の INDEX.md に記載されたルーティング内容だけを確認したいとき。
 
 ## hash
-- 718bce87c25820cf87f6408c3ecc1933d3e4a7ed472a02e574ccbe997dbc7664
+- ae3877bd8bdc93b202e84edccf0b73f45674a1b35fddaa126fcee2e80300063f
 
 # `feedback`
 
@@ -34,37 +36,39 @@
 # `other`
 
 ## Summary
-- cmoc の共通基盤となる補助モデルと Markdown レンダリングを扱うディレクトリ。設定モデル、agent call 単位のルートパス解決、構造化文書・cmoc ブロック・ポリシー・コードブロックの GFM レンダリングが主な対象で、各機能の実装モジュールへ進む入口となる。
+- cmoc の設定モデル、パス表記・ルート解決、構造化文書の Markdown レンダリングを扱う補助モジュール群。設定値や既定値、agent call のパス境界、文書要素の整形規則を確認する際の入口となる。
 
 ## Read this when
-- cmoc のリポジトリ固有設定、Codex CLI 設定、設定の JSON/TOML 表現を確認するとき
-- プレースホルダ付きパスと実パスの変換、Git worktree からの root 導出、agent call のパスコンテキストを確認するとき
-- 構造化された文章、cmoc_block／cmoc_ref、SDPolicy、コードフェンス、Markdown の整形処理を確認するとき
-- 設定・パスモデル・文章レンダリングの複数領域にまたがる共通処理の入口を探すとき
+- cmoc の設定項目、Codex CLI 設定、oracle review のループ上限、設定値の JSON/TOML 表現を確認するとき
+- agent call の cwd から work root・repository root を導出する規則や、ルートプレースホルダー付きパスの解決・変換を確認するとき
+- 構造化された見出し、参照可能な cmoc ブロック、コードブロック、規定文を Markdown へレンダリングする挙動を確認するとき
 
 ## Do not read this when
-- Codex CLI の呼び出し処理や特定の CLI サブコマンドの責務を確認するとき
-- oracle review の所見生成・マージ・検証ロジックを確認するとき
-- 参照タグの対応検査、ポリシーの意味的統合、prompt part の選択処理を確認するとき
-- 設定ファイルの実際の保存内容や人間による調整結果だけを確認するとき
-- Git worktree の一般的な操作や個別の開発規則を確認するとき
+- Codex CLI の実際の呼び出し処理や CLI 実装の責務を確認するとき
+- oracle review のレビュー処理や所見生成ロジックそのものを確認するとき
+- 設定ファイルの保存内容・人手による調整結果だけを確認するとき
+- 具体的な正本仕様や生成文書の内容を確認する必要があり、別の仕様・呼び出し元を直接読むべきとき
 
 ## hash
-- 7df47add24b2b93f76555233189463416905cf7f79fa3dc229e99eb0854ede58
+- 6125a10678c23ca628f6b05330ed05e7e19dcdfdc72e272f7ec6c54533ce00a1
 
 # `prompt_builder`
 
 ## Summary
-- prompt builder の構築時型定義、完全 prompt の統合構築、エディタ入力用初期文面、oracle／realization 分類説明、policy 定義群を扱うディレクトリ。agent call に渡す prompt の構成要素と、その用途別の下位実装へ進むための入口を提供する。
+- プロンプト生成に必要な共通型、完全 prompt 構築、エディタ初期入力、oracle／realization 概念部品、各種 policy 定義をまとめたディレクトリ。prompt_builder の構成要素と、目的別に読むべき下位対象への入口を提供する。
 
 ## Read this when
-- prompt builder における placeholder map、完全 prompt の構成順、policy block の組み込み、エディタ入力文面、oracle／realization 分類説明の生成を確認・変更するとき
-- 共通 policy や用途別 instruction、アクセス制約、feedback 報告、INDEX.md エントリー生成規定の構築元を調べるとき
+- agent call 用 prompt の構築順序、policy・追加 prompt・目的・placeholder の統合方法を確認したいとき。
+- エディタへ注入する初期入力や、完全 prompt のテンプレート埋め込み形式を確認したいとき。
+- oracle と realization の基本概念、分類、配置、関連する prompt 部品を確認したいとき。
+- prompt_builder 配下の policy の責務や、目的に応じた個別 policy への到達先を判断したいとき。
+- placeholder 対応表の共通型定義を確認したいとき。
 
 ## Do not read this when
-- 個別 policy の文面や、それが参照する正本規定だけを確認したいときは対応する policy builder を直接読む
-- prompt の構造化データ型や header/tag block の汎用仕様、path context・file access mode の定義、個別 oracle・realization ファイルの責務を確認したいときは、それぞれの正本または定義対象を直接読む
-- 生成済み INDEX.md エントリーや INDEX.md 全体の処理だけを確認したいとき
+- 特定の policy 本文や prompt part の詳細を確認したい場合は、該当する下位ファイルを直接読む。
+- 具体的な oracle 文書・realization 実装・テストの内容や配置を確認したい場合は、対象ファイルを直接読む。
+- agent call の呼び出し側、path context、placeholder の具体的な生成規則を確認したい場合は、担当モジュールを直接読む。
+- プロンプト生成と無関係な構造化文書や CLI 挙動の仕様を確認したい場合。
 
 ## hash
-- dcdc79ecabe6050ba092dff63e1eae675ecfb2db0f11c39fa9af3a6af8ff2f85
+- a93fc8f4f30fd2118222301e85d81817a7c117be0680504282cb6289b69ff4c1

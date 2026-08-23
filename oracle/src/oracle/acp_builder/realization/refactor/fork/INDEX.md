@@ -17,20 +17,17 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の変更差分を要約する agent call の prompt と起動パラメータを構築する。
-- 入力差分を動的 prompt に埋め込み、読み取り専用かつ指定 worktree 上で実行する AgentCallParameter を返す。
-- モデル効率設定、Structured Output schema、indexing preflight など、変更判断を伴わない要約実行条件を定義する。
+- refactor fork の変更差分を人間向けに要約する agent call の prompt と起動パラメータを構築する定義。差分を補助入力として完全 prompt に埋め込み、readonly・効率重視の実行条件と Structured Output schema を指定する。
 
 ## Read this when
-- refactor fork の差分要約用 agent call の prompt や起動パラメータを変更・確認するとき
-- 差分入力、agent call の作業ディレクトリ、読み取り専用アクセス、モデル設定、Structured Output schema、preflight 条件の関係を確認するとき
+- refactor fork の変更差分要約 agent call の prompt 内容、入力差分の渡し方、実行モデルや推論設定、作業ディレクトリ、読み取り専用条件を確認・変更するとき。
 
 ## Do not read this when
-- refactor fork の実際の変更差分や変更内容を確認したいとき
-- 一般的な prompt 構築処理や他の realization の agent call パラメータを確認したいとき
+- 変更要約の出力形式そのものを確認するときは、対応する Structured Output schema を直接読む。
+- refactor fork の実際の変更内容を確認するときは、この起動定義ではなく生成された raw git diff や対象の実装差分を直接読む。
 
 ## hash
-- aeda70f400eee69f017e15d5fd42257dc468c96ed1d6dfc64ebea66aa03d110b
+- bc780d3ef3c3f1e9bee23801596aa74afa59f4c45e19bdc0ab6629272d98eec2
 
 # `file_review_and_fix.json`
 
@@ -52,14 +49,18 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- 対象ファイルは、refactor fork のファイル単位レビュー・修正用 AgentCallParameter を構築する定義です。対象を起点に必要な oracle／realization file を調査し、修正・検証・所見の Structured Output 返却までを要求する prompt と実行設定を組み立てます。
+- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter を構築する実装。対象 path と run worktree から prompt のパス文脈を作り、レビュー・修正担当向けの完全な prompt、oracle/realization・所見・routing 各ポリシー、Structured Output の事後条件を組み立てる。
+- レビュー対象のファイル変更を許可する効率重視・最大推論設定の agent call として、実行 cwd、構造化出力 schema、indexing preflight を含むパラメータを返す。関連する prompt 構築、パス解決、構造化文書レンダリング、モデル・アクセスモード設定の入口となる。
 
 ## Read this when
-- refactor fork のファイル単位レビュー・修正 agent call の prompt、アクセス範囲、モデル・推論設定、事前インデックス確認、変更 path の事後条件を確認・変更するとき。
+- refactor fork のファイル単位レビュー・修正 agent call の prompt や実行パラメータの構築を変更・確認するとき
+- 対象 path、run worktree、realization write 権限、Structured Output schema、indexing preflight の連携を調査するとき
+- レビュー所見・修正結果・routing policy を含む完全 prompt の構成を確認するとき
 
 ## Do not read this when
-- レビュー対象 realization file の実装内容や、レビュー結果 schema のみを確認したいとき。
-- refactor fork 以外の agent call 構築定義を直接調査するとき。
+- レビュー対象ファイルそのものの実装内容や個別の所見を調査する場合は、生成された agent call の対象 realization file を直接読む
+- 一般的な prompt 構築や構造化文書のレンダリングだけを調査する場合は、対応する prompt builder または struct document 実装を直接読む
+- Structured Output の項目定義を確認する場合は、この実装ではなく同名の schema file を読む
 
 ## hash
-- fba06e19a6414a09227038cb5f571eae63614317579c1400e7fd7dbe1337c50e
+- f40543dd3708c7e2844c88e96ba43813a1a85efff0857ea60c9990ce990ecd87

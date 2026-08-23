@@ -1,14 +1,16 @@
 # `join`
 
 ## Summary
-- `cmoc session join` の git merge conflict marker 解消エージェント向け起動パラメータを構築する。対象ファイルの実パス解決、専用 prompt、リポジトリ書き込み権限、作業ディレクトリ、モデル・推論設定をまとめる入口。
+- 対象ディレクトリは、`cmoc session join` の merge conflict marker 解消専用 agent call を組み立てる定義への入口である。conflicted paths の実パス解決、対象ファイル一覧、conflict 解消専用 policy、REPO_WRITE 権限、最高品質の model・reasoning 設定、prompt と AgentCallParameter の生成を扱う。
+- 実ファイルの conflict 解消や通常の prompt/session join 処理そのものではなく、conflict 解消 agent call のパラメータ境界を確認するために読む。
 
 ## Read this when
-- `session join` の conflict marker 解消用 prompt、対象ファイルの prompt への埋め込み、アクセス権限、作業ディレクトリ、モデル・推論設定を確認・変更するとき。
+- `cmoc session join` で conflict marker を解消する agent call の prompt、完了条件、対象ファイルの渡し方を確認するとき
+- conflict 解消 agent call の path context、file access mode、policy、model class、reasoning effort、preflight 設定を変更・調査するとき
 
 ## Do not read this when
-- merge conflict marker の解消処理そのものや git 操作を確認するとき。
-- 一般的な prompt 構築や通常の agent call パラメータを確認するときは、対応する専用 builder・parameter 定義を直接読む。
+- conflict marker を含む対象ファイルを直接確認・編集するとき
+- 通常の prompt 生成処理や session join の別処理を調べるときは、該当する prompt builder または session join 実装を直接読む。
 
 ## hash
-- ca4d883a6afeb7b7a9b22a42963ef8a1093f11fdfdd021a7e794afbd73c10c5a
+- 4dc26e6d1b1fbe7208e65bf19c5b9133161969aa651c7a578155da80c10528e6

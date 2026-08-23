@@ -1,88 +1,91 @@
 # `basic.py`
 
 ## Summary
-- prompt part を完全な prompt へ組み立てる際の構築時専用 placeholder map の型を定義する。root path は AgentCallPathContext から取得し、placeholder key は二重波括弧を含めない形式に限定する。
+- プロンプト生成で共通利用するプレースホルダ対応表の型 `PlaceholderMap` を定義する標準モジュール。プレースホルダ名から置換先の文字列またはパスを対応付けるための入口であり、具体的なプロンプト構築処理を確認する対象ではない。
 
 ## Read this when
-- prompt builder の構築時専用 placeholder map の型定義や、placeholder key・root path の扱いを確認するとき
-- AgentCallPathContext から取得した root path を含む prompt 構築用マップのインターフェースを確認するとき
+- プレースホルダの対応関係を表すデータ構造の型定義や、文字列・`Path` を含む置換値の仕様を確認したいとき。
+- プロンプト関連コードで共通の型エイリアスの定義元を特定したいとき。
 
 ## Do not read this when
-- prompt part の完全 prompt への組み立て処理そのものを確認するとき
-- 実行時の placeholder 展開や、prompt builder の他の責務を確認するとき
+- プロンプトの生成手順、テンプレート展開、置換処理の実装を調べるときは、実際のプロンプト構築モジュールを直接読む。
+- プレースホルダ対応表の型定義に関係しないプロンプト仕様やCLI挙動を確認するとき。
 
 ## hash
-- 563a0b94655174bae2949ce3035ae21cbc92afbbc44a8699713b9ca3909647d2
+- 526fb2d3d3f5fd312f3f1cc48c630d59e91568f38d6ac0d09bc5241792eb1e18
 
 # `complete_prompt.py`
 
 ## Summary
-- 選択された各種ポリシー、補助プロンプト、動的な対象情報、placeholder 定義を所定の順序で統合し、agent call 用の完全な構造化 prompt を構築するモジュール。prompt の構成順、各 flag と policy block の対応、placeholder 定義の衝突検査・統合を担う。
+- 選択した規定・追加プロンプト・目的・placeholder 定義を統合し、agent call 用の完全な構造化 prompt を構築する関数を定義する。
+- file access、routing、oracle/realization、各種 policy の有効化を個別に反映し、placeholder の競合を拒否する。
+- prompt の固定部分を前方、変動しやすい placeholder 定義を末尾に配置する構成も担う。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成順や、summary・goal・static/dynamic prompt の配置を変更・確認するとき
-- oracle／realization、routing、index entry、feedback、file access などの policy block をどの条件で含めるか確認するとき
-- path context 由来および補助 prompt 由来の placeholder 定義を統合する処理を変更・確認するとき
+- agent call に渡す完全 prompt の構築順序や構成を変更・確認するとき
+- 複数の policy builder と追加 prompt、目的、placeholder をどのように統合するか調べるとき
+- placeholder 定義の重複・異値競合時の扱いを確認するとき
 
 ## Do not read this when
-- 個別 policy の文面や、その policy が参照する規定だけを確認したいときは、対応する policy builder を直接読む
-- prompt の構造化データ型や header/tag block の仕様だけを確認したいときは、oracle.other.struct_doc を直接読む
-- agent call の path context や file access mode の定義自体を確認したいときは、対応する oracle.other または oracle.acp_builder の定義を直接読む
+- 個別の policy や prompt parts の本文だけを変更・確認する場合
+- agent call の path context や placeholder の具体的な生成規則を直接確認したい場合
+- prompt 構築結果を利用する呼び出し側の責務を調べる場合
 
 ## hash
-- 3dc55fd487fec0bcbeee6fa4876db64ce73fe7090c68a02bb53d2d7b42a6742a
+- c9791cc943c8eb9b7f6a711c477311d280bed62a08bdc4c9794edafa3edc1d35
 
 # `editor_input.py`
 
 ## Summary
-- エディタ経由のユーザー入力ファイルに注入する初期テキストを構築する関数を定義する。使い方・記入の目安・完全プロンプトの差し込み位置を HTML コメントブロックとして生成する。
-- 完全な prompt skeleton は引数で受け取り、SDHeader、SDTagBlock、render_sd_node_as_markdown を用いて初期表示文面へ整形する。
+- ユーザー入力用エディタに注入する初期テキストを構築する関数を定義する。使い方・記入の目安と、完全プロンプトのテンプレートをHTMLコメントブロック内にMarkdownとして埋め込み、後続エージェントへ渡す入力ファイルの初期状態を生成する。
 
 ## Read this when
-- エディタ経由で受け取るユーザープロンプトの初期表示文面や、その HTML コメント形式の案内を変更・調査するとき。
-- prompt template の `{{original-prompt-here}}` 位置へ入力内容を配置する前段の初期テキスト生成を確認するとき。
-- SD ノードから Markdown を構築し、完全 prompt skeleton を初期テキストへ埋め込む処理の入口を確認するとき。
+- エディタ経由で後続AIエージェントへ渡すプロンプト入力ファイルの初期文面や、完全プロンプトの埋め込み形式を確認・変更するとき。
+- 初期テキストの説明見出し、記入指針、HTMLコメントによる非表示化の構築処理を調べるとき。
 
 ## Do not read this when
-- 完全 prompt skeleton の内容や、各 build_*_parameter が所有するプロンプト構築責務を確認するときは、対象の利用側実装を直接読む。
-- 入力ファイルの lifecycle、保存記録としての扱い、original prompt の確定処理を確認するときは、これらを担当する実装や仕様を直接読む。
-- 後続 AI エージェントへ渡される最終プロンプト全体の仕様や編集後入力の読み出し処理だけを確認したいとき。
+- プロンプト全体のテンプレート内容や置換規則そのものを確認したい場合は、完全プロンプトのテンプレート定義を直接読む。
+- 構造化文書ノードの定義やMarkdownレンダリング仕様を確認したい場合は、struct_docの実装を直接読む。
 
 ## hash
-- c8c082720f8435ba6ee9983056596264a1030e9e0a0e4f07aa978f8c6ecdff1c
+- 801c5e31f4bbfc2b036f94ce9ef77536f12136fe02cba369a4f477b5b6150d35
 
 # `parts`
 
 ## Summary
-- 対象ファイルは、oracle・realization・uncategorised file の基本概念と分類条件を root 定義に基づくパス付き説明として prompt に組み込む prompt builder part。分類説明を生成・変更・確認する際の入口であり、個別ファイルの責務や分類文面の正本仕様そのものを扱う対象ではない。
+- oracle と realization の基本概念を説明するプロンプト部品を収録するディレクトリ。両者の役割、下位分類、配置、分類条件と、uncategorised file の定義・分類規則を扱う。
+- oracle／realization の区別や関連する基本説明の構成を確認する際の入口となる。
 
 ## Read this when
-- oracle と realization の基本的な役割、下位分類、分類条件を prompt に組み込む処理を調べるとき
-- oracle file・realization file・uncategorised file の分類説明を生成する part の責務を確認するとき
-- root の work-root 定義を call-scoped context から取得し、説明文中のパス表現へ反映する処理を確認するとき
+- oracle file、realization file、uncategorised file の意味や分類条件を確認したいとき
+- oracle と realization の役割、編集責任、下位分類、配置先を確認したいとき
+- oracle／realization の基本説明をプロンプトへ組み込む処理を調査・変更するとき
 
 ## Do not read this when
-- oracle・realization の分類文面そのものの正本仕様を確認または変更するとき
-- 個別の oracle doc・oracle src・oracle test・realization implementation・realization test の具体的な責務や実装を調べるとき
-- prompt builder の共通構造、PlaceholderMap、SDHeader などの一般仕様だけを確認するとき
+- 特定の oracle 文書・実装・テストの内容や配置規則を確認したいとき
+- プロンプト全体の組み立て方や別の説明部品の責務を確認したいとき
+- 実際の oracle／realization ファイルを編集・実装するとき
 
 ## hash
-- 265574b53cae1118dde88cb5f52298013c52b134bafcd4053f4a2c6500d02c13
+- bfc0fd68622b89312d2e1a647dac27581c429a5a06fb523c78de7b35e0d31f15
 
 # `policy`
 
 ## Summary
-- prompt builder の policy 定義群を扱うディレクトリ。agent call に渡す共通・用途別の instruction、アクセス制約、所見基準、INDEX.md エントリー生成規定などの構築元を確認する入口であり、個別 policy の責務に応じて下位ファイルへ進む。
+- prompt_builder/policy 配下の各ポリシー定義を、INDEX.md から目的別に案内するための対象です。conflict 解消、feedback 報告、ファイルアクセス、INDEX エントリー生成、oracle／realization の agent call 規定、所見判定、routing policy の構築に関する責務を分担します。
+- 個別のポリシー実装や関連する prompt 構築処理の入口として機能し、対象ごとに仕様確認・変更の起点を判断できます。
 
 ## Read this when
-- agent call の prompt に組み込む policy の生成・変更経路を調べるとき
-- 特定用途の instruction、ファイルアクセス制約、feedback 報告、所見判定、INDEX.md エントリー生成の責務を確認するとき
-- 複数の policy 間の構造化ヘッダーや共通規定の接続を調べるとき
+- session join の conflict 解消方針を確認・変更するとき
+- agent call 共通の human feedback reporting、ファイルアクセス制約、INDEX.md エントリー生成方針を確認・変更するとき
+- oracle file または realization file 向け agent call の instruction、両者の責務境界、所見判定基準を確認・変更するとき
+- INDEX.md routing policy の文面や、作業対象に近い文書への到達方針を確認・変更するとき
 
 ## Do not read this when
-- ドメイン固有の正本仕様や個別 realization の具体的な実装を確認する場合
-- SDHeader、SDPolicy、PlaceholderMap 自体の汎用仕様を確認する場合
-- 生成済みの INDEX.md エントリーや INDEX.md の処理全体だけを確認する場合は、該当する正本または処理実装を直接読む
+- session join 全体の実行手順や merge 対象仕様を確認する場合
+- conflict 解消用 agent call の prompt part 選択や起動パラメータを確認する場合
+- feedback 報告や oracle／realization の個別仕様本文、具体的な実装・テスト内容を確認する場合
+- PlaceholderMap、SDHeader、SDPolicy、AgentCallPathContext 自体の定義や、一般的な prompt builder 処理を確認する場合
 
 ## hash
-- f11c5e2100b41c0cc0e1c1aca09109e982439d9781d88c8d3250b04e3713c5b7
+- 7ea13cf631ef967ba3fb14d69fa8f75649bcb92c6cb4c677f56bfaa9741d6720

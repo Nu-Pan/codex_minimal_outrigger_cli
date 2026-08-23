@@ -20,36 +20,35 @@
 # `path_model.py`
 
 ## Summary
-- cmoc 内で扱うルートパス表記と実パス解決のモデルを定義する。プレースホルダの種類、agent call 単位のパスコンテキスト、各ルートの導出・変換関数を提供し、prompt builder などが一貫したパス解決を行うための入口となる。
+- cmoc におけるパス表記、ルートプレースホルダー、agent call 単位のパスコンテキストを定義するモジュール。
+- `AgentCallPathContext` により agent call の cwd から work root と repository root を導出し、プレースホルダーと実パスの相互変換を提供する。
+- ルート解決、実パス解決、プレースホルダー変換の挙動や、Git worktree を基準にしたパス境界を確認するための入口となる。
 
 ## Read this when
-- cmoc のファイルパスをプレースホルダ表記と実際の絶対パスの間で変換・解決するとき
-- agent call の cwd から work root や repository root を導出する処理を確認するとき
-- ルートプレースホルダの定義、Git worktree の探索、パス表記変換の責務を確認するとき
+- パスを `{{repo-root}}`、`{{work-root}}`、`{{run-root}}`、`{{cmoc-root}}` 形式で扱う実装や仕様を変更・調査するとき。
+- agent call の cwd、worktree、main repository の対応関係や、パスコンテキストの導出規則を確認するとき。
+- プレースホルダー付きパスと絶対パスの解決・変換処理を確認するとき。
 
 ## Do not read this when
-- 特定の CLI 機能や prompt の内容だけを確認し、パスの解決・表記変換に関係しないとき
-- Git worktree の一般的な操作や repository 固有の開発規則を確認するときは、対応する開発規則・実装対象を直接読む
+- 特定の CLI 機能や oracle 文書の内容だけを調べ、パス解決・worktree 境界・プレースホルダー変換に関係しないとき。
+- 実装ではなく、既存の INDEX.md のルーティング情報だけを確認するとき。
 
 ## hash
-- 4af5fea100ef4985e4eca9c556c53b91187a151fc0919b394e12f5d7585faf33
+- 1a839609f52bd2ae5d493f18d80e141471f0b0ca4961f329baac2c4849fc85d0
 
 # `struct_doc.py`
 
 ## Summary
-- 構造化された文章ノードを Markdown にレンダリングするヘルパークラスと関数を提供する。見出し、参照可能な cmoc ブロック、コードブロック、構造化ポリシー、文字列を扱い、見出し深度やコードフェンスを自動調整する。
-- SDTagBlock は cmoc_block の生成と参照タグの提供を担い、SDPolicy は必須・禁止・許容・補足情報の規定を表現する。cmoc_block／cmoc_ref、SDPolicy、GFM rendering の実装責務を持つが、参照検査、ポリシー統合、prompt part 選択は担当しない。
-- Markdown 出力の整形では、三重引用文字列のインデント除去、連続空行の圧縮、本文中のバッククォートに応じたコードフェンス長の調整を行う。
+- 構造化された文書要素を保持し、Markdownへレンダリングするヘルパークラスと関数を定義する。見出し、参照可能なタグブロック、コードブロック、規定文を扱い、見出し深度・コードフェンス・空行・三重引用文字列を自動整形する。文書生成やMarkdownレンダリングの挙動を確認・変更する際の入口となる。
 
 ## Read this when
-- 構造化された文章や規定を Markdown にレンダリングする処理を変更・調査するとき
-- SDHeader、SDTagBlock、SDCodeBlock、SDPolicy、または ntqs の挙動を確認するとき
-- cmoc_block／cmoc_ref の出力形式やコードブロックのフェンス生成を確認するとき
+- 構造化文書をMarkdownへ変換する処理を調査・変更するとき
+- 見出し深度、cmocブロック参照、コードフェンス、規定文のレンダリング仕様を確認するとき
+- ntqsや空行圧縮など、レンダリング前後の文字列整形を扱うとき
 
 ## Do not read this when
-- 参照タグの対応関係の検査、ポリシーの意味的統合、prompt part の選択を調査・変更するとき
-- Markdown 以外のレンダリング機能を直接扱うとき
-- このモジュールが提供するノードやレンダリング結果を利用するだけで、実装詳細を確認する必要がないとき
+- Markdown以外の出力形式や、構造化文書の利用側の処理だけを調べるとき
+- 文書要素の具体的な内容や正本仕様を確認する必要があり、別の仕様・呼び出し元を直接読むべきとき
 
 ## hash
-- 43ad89185abadeec6997caaec0cef99916ac9f0adce5ada31b2b1ef15cee18f7
+- 1dba895a9a9af7a3d54a386f00858ff02ff58ef1cd79646d7c14f952b89c80ff

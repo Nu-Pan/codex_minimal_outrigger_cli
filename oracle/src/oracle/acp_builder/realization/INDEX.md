@@ -1,34 +1,32 @@
 # `apply`
 
 ## Summary
-- `cmoc realization apply fork` が使用する realization 追従 AgentCallParameter の定義。追従対象の commit 範囲や oracle file の raw git diff、prompt、worktree・権限・モデル・preflight などの起動条件を扱う、apply fork 関連設定の入口。
+- oracle の変更を realization へ反映する差分追従 Agent の起動定義を扱うディレクトリ。始点・終点 commit 間の oracle file の raw git diff を Agent prompt に渡し、対象 worktree、realization 書き込み権限、モデル・推論設定、起動時 indexing を指定する。配下の `fork` から起動定義の実装へ進む。
 
 ## Read this when
-- `cmoc realization apply fork` の agent call における prompt 構成や起動パラメータを変更・確認するとき
-- oracle file の差分を realization file に追従させる agent call の作業範囲、権限、worktree、モデル、preflight 設定を調査するとき
+- oracle file の変更を realization file へ反映する Agent の prompt や起動パラメータを調査・変更するとき
+- realization_apply_change の commit 範囲や oracle file の差分を Agent prompt に渡す処理を確認するとき
 
 ## Do not read this when
-- realization file 個別の実装やテストの挙動を変更するとき
-- apply fork の実行処理そのもの、または別種の agent call の prompt・起動条件を調査するとき
+- 個別の oracle file または realization file の実装内容を直接調査するとき
+- AgentCallParameter の共通仕様や prompt の共通生成処理だけを確認するときは、それぞれの定義元を直接読む
 
 ## hash
-- ea4327451fe0dd6ad5fe3e8e4e14cc07faee090c9fdce21ff8ed3399c5432fd9
+- a7d463e4657e3337b806e8957bd55a3ea4f637796a33243bdac78310fe1a96fc
 
 # `refactor`
 
 ## Summary
-- refactor fork 向けの変更要約と、ファイル単位のレビュー・修正を行う agent call の構築定義をまとめたディレクトリ。
-- 各処理の prompt、対象ファイルへのアクセス方針、実行設定、結果契約を確認する入口となる。
+- refactor fork 配下で、変更差分の意味論的な要約処理と、指定ファイルを起点にしたファイル単位のレビュー・修正処理を定義するディレクトリ。各処理の prompt 構築、実行パラメータ、Structured Output 契約を確認する入口となる。
 
 ## Read this when
-- refactor fork の変更差分を要約する agent call の責務や実行条件を確認・変更するとき
-- refactor fork の oracle／realization file をレビュー・修正する agent call の調査範囲、修正条件、検証条件を確認・変更するとき
-- 変更要約またはレビュー結果の Structured Output schema と、それに対応する prompt 構築定義を確認・変更するとき
+- refactor fork の変更差分要約やファイル単位レビュー・修正の起動条件、prompt、アクセス権限、モデル設定、検証方針を調査または変更するとき。
+- これらの agent call が返す構造化結果の契約を確認するとき。
 
 ## Do not read this when
-- 実際の refactor 差分、oracle file、realization file の実装内容を調査するとき
-- 変更要約やファイルレビュー・修正の処理本体ではなく、別の realization 領域の agent call 構築定義を直接調査するとき
-- refactor fork の agent call を使った後の個別の変更内容やレビュー所見だけを確認したいとき
+- 変更要約またはレビュー・修正結果の具体的な出力契約だけを確認したい場合は、対応する schema を直接読む。
+- レビュー対象の実装、oracle の要求、個別仕様、実際の変更差分を調査する場合は、対象の oracle file、realization file、または raw git diff を直接読む。
+- 共通の prompt 構築、パス解決、構造化文書レンダリング、agent call 基盤の仕様だけを調査する場合は、対応する共通実装を直接読む。
 
 ## hash
-- e1d4c2f211e10bd95e41ebfb6671714f58b6091f112001362f9d907b12983c30
+- 5bd08ca5521212f335a18cd5c0323b291cd51dbd8f89dea7fe63ff8428542d42
