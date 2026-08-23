@@ -34,23 +34,22 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の検査・再生成・ハッシュ検証・書き込み・commit を一つの lifecycle として扱う共通実装。
-- directory traversal、既存 entry の再利用、不足 entry の Codex 生成、深さ順の更新、失敗時の復元、indexing lock による直列化を担う。
-- 下位 directory の INDEX.md 更新から repository root の INDEX.md 更新まで、indexing preflight の入口として利用される。
+- INDEX.md の検査から生成、更新、失敗時復元、Git commit までを一貫して扱う indexing lifecycle の共通実装。
+- 対象の列挙、既存 entry の hash 検証と再利用、不足 entry の Codex 生成、通常ファイルへの書き込みを提供する。
+- repository 単位の排他 lock、深さ順更新、symlink・binary・git ignore・特殊 file の除外を管理する。
 
 ## Read this when
-- INDEX.md の自動生成や preflight の動作を変更・調査するとき。
-- 既存 entry の再利用条件、対象 hash の計算、entry の schema 形式検証を確認するとき。
-- indexing の並列実行、Git commit、lock、失敗時の snapshot 復元を確認するとき。
-- symlink、binary file、git ignore、特殊 file、root memo の indexing 対象外条件を確認するとき。
+- INDEX.md の自動更新処理全体の流れや責務分担を確認するとき
+- entry の鮮度判定、再生成条件、directory traversal、深さ順処理を調べるとき
+- indexing の並列生成、排他 lock、書き込み失敗時の復元、更新差分の commit を追うとき
 
 ## Do not read this when
-- INDEX.md entry の出力項目や Structured Output schema 自体を確認したいときは、index entry parameter または schema の定義を直接読む。
-- Codex 呼び出し前後の一般的な preflight 登録や process tracking の実装だけを調べるときは、対応する runtime module を直接読む。
-- indexing 以外の Git 操作、path 解決、hash primitive の一般仕様だけを調べるときは、それぞれの runtime または cmoc_runtime の定義を直接読む。
+- INDEX.md entry の出力項目や Structured Output の形式だけを確認したいときは、entry builder または schema 定義を直接読む
+- Codex 実行前 preflight や process tracking の専用挙動だけを確認したいときは、対応する runtime module を直接読む
+- Git、hash、path 処理の個別仕様だけを確認したいときは、各 runtime helper を直接読む
 
 ## hash
-- b2bc2dc4201e5c78cf2b460d664e329c65df4ad2f56d993b303a9d1bfba13f4c
+- c3ca62d89ef5d1f6c5d7d2daf7254e3756e9e608bb5c12e120768efd0fc72d63
 
 # `prompt_editor_input.py`
 

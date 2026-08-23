@@ -99,7 +99,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
         assert kwargs["notification_command_name"] == "tui"
-        assert parameter.model_class == ModelClass.FLAGSHIP
+        assert parameter.model_class == ModelClass.EFFICIENCY
         assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
@@ -159,12 +159,16 @@ def test_tui_runs_editor_and_launches_codex_directly(
     complete_prompt = tui_calls[0][0].prompt
     assert "# file R/W policy (repo_write)" in complete_prompt
     assert "# oracle and realization basic" in complete_prompt
-    assert "# oracle policy" in complete_prompt
-    assert "# realization policy" in complete_prompt
-    assert "# oracle findings policy" in complete_prompt
-    assert "# realization findings policy" in complete_prompt
-    assert "# realization oracle reference policy" not in complete_prompt
-    assert "# index entry policy" not in complete_prompt
+    assert "# routing policy" in complete_prompt
+    for heading in (
+        "# oracle policy",
+        "# realization policy",
+        "# oracle findings policy",
+        "# realization findings policy",
+        "# realization oracle reference policy",
+        "# index entry policy",
+    ):
+        assert heading not in complete_prompt
     assert '<cmoc_ref target="original_prompt"/>' in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt

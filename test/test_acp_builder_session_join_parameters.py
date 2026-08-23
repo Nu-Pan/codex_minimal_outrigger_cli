@@ -61,9 +61,9 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert parameter.run_indexing_preflight is False
     assert "# conflict resolution policy" in parameter.prompt
     assert "# routing policy" in parameter.prompt
+    for heading in ("# oracle policy", "# realization policy"):
+        assert heading in parameter.prompt
     for heading in (
-        "# oracle policy",
-        "# realization policy",
         "# oracle findings policy",
         "# realization findings policy",
     ):

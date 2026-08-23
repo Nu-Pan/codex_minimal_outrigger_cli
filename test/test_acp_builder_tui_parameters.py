@@ -36,25 +36,25 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     parameter = build_tui_launch_tui_parameter(original_prompt)
 
     assert parameter.agent_call_kind == "build_tui_launch_tui_parameter"
-    assert parameter.model_class == ModelClass.FLAGSHIP
+    assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.run_indexing_preflight is True
     complete_prompt = parameter.prompt
+    assert "# oracle and realization basic" in complete_prompt
+    assert "# routing policy" in complete_prompt
     for heading in (
-        "# oracle and realization basic",
         "# oracle policy",
         "# realization policy",
         "# oracle findings policy",
         "# realization findings policy",
+        "# conflict resolution policy",
+        "# index entry policy",
+        "# realization oracle reference policy",
     ):
-        assert heading in complete_prompt
-    assert "# conflict resolution policy" not in complete_prompt
-    assert "# index entry policy" not in complete_prompt
-    assert "# realization oracle reference policy" not in complete_prompt
-    assert "# routing policy" in complete_prompt
+        assert heading not in complete_prompt
     assert original_prompt in complete_prompt
     if original_prompt == "{{original-prompt-here}}":
         assert complete_prompt.count(original_prompt) == 1

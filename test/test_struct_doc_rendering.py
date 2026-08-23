@@ -2,7 +2,6 @@
 
 根拠:
 - {{work-root}}/oracle/src/oracle/other/struct_doc.py
-- {{work-root}}/oracle/doc/app_spec/prompt_policy.md
 """
 
 from collections.abc import Callable
