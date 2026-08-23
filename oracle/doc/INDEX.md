@@ -1,20 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc の主要サブコマンドと session・run lifecycle に関する正本仕様を集約するディレクトリ。doctor、indexing、feedback、oracle・realization 操作、session、run、TUI などの実行契約、状態遷移、report 要件を確認するための入口であり、各仕様ファイルへ進む起点となる。
+- cmoc のアプリケーション共通仕様を集約するディレクトリです。CLI 自動補完、Codex 呼び出し、ログ・エラー処理、doctor 前処理、feedback、run/session lifecycle、Windows toast 通知など、個別機能の正本仕様へ進むための入口になります。
+- 共通仕様と個別仕様の責務境界を確認し、対象機能に対応する文書を選択するために利用します。自動補完や Codex 実行、feedback、状態管理、サブコマンド lifecycle などの詳細は、各個別文書へ進んで確認します。
 
 ## Read this when
-- cmoc のサブコマンド仕様を横断して探すとき
-- 対象サブコマンドの実行条件、処理手順、終了経路、primary report、state 遷移の正本を確認するとき
-- realization の fork・run lifecycle、session の fork・join・abandon、または oracle 操作の仕様入口を選ぶとき
+- cmoc のアプリケーション共通仕様を横断的に探すとき
+- CLI 自動補完、Codex 呼び出し、ログ・エラー処理、doctor 前処理、feedback、run/session、Windows toast 通知の正本仕様の参照先を判断するとき
+- 共通仕様と個別サブコマンド・実装・テスト仕様の責務境界を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細仕様が既に分かっており、該当する仕様ファイルを直接読めるとき
-- 内部実装の配置、テスト実行手順、または個別 oracle・realization file の内容だけを確認するとき
-- 既存 report の具体例や生成物だけを調査するとき
+- 対象となる個別仕様書が明らかな場合は、その文書を直接読むとき
+- 特定機能の実装配置、prompt、Structured Output schema、テスト実行手順など、本文が案内する下位対象だけを確認したいとき
+- 既存の INDEX.md の現在のエントリー内容や、アプリケーション仕様と無関係な資料を確認するとき
 
 ## hash
-- 52780ffe419f1be924586512fbca3cd1d29f0619db8a13a3d4f0c3c62793285c
+- d17c4bd0b51d8cd3ffa758fe22754c8c3afd4fe9c42cece915cd6a92bb46f1cc
 
 # `branch_model.md`
 

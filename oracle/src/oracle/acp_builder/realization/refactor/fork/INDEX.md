@@ -17,19 +17,19 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の変更差分を要約する agent call 用パラメータを構築する実装。raw_git_diff と linked worktree を受け取り、worktree を実行コンテキストとして確定したうえで、差分要約用 prompt と READONLY のアクセス設定を組み立てる。
-- prompt は差分を動的入力として埋め込み、効率性重視のモデル分類・中程度の推論強度・指定された Structured Output schema・indexing preflight を含む AgentCallParameter を返す。
+- refactor fork の作業差分を人間向けに要約するための prompt と AgentCallParameter を構築する定義。差分本文を動的 prompt に埋め込み、変更判断ではなく確定済み差分の要約に限定する。
+- 読み取り専用・効率重視の agent call として、構造化出力 schema、実行ディレクトリ、preflight 実行有無、推論設定などの起動パラメータを組み立てる。
 
 ## Read this when
-- refactor fork の変更差分要約 agent call の prompt、実行コンテキスト、モデル分類、アクセスモード、Structured Output schema の起動パラメータを確認・変更するとき。
-- raw_git_diff の埋め込み方や run_worktree を agent_call_cwd に設定する処理を追跡するとき。
+- refactor fork の差分要約用 agent call の prompt 構成や起動パラメータを変更・確認するとき
+- raw git diff をどのように要約 agent へ渡すか、またその agent call の読み取り専用性や実行コンテキストを確認するとき
 
 ## Do not read this when
-- 変更差分の要約結果の形式や項目を確認したいだけの場合は、直接対応する Structured Output schema を読む。
-- refactor fork の差分取得・生成処理そのもの、または要約 agent の実行処理を調べる場合は、それぞれの担当実装を直接読む。
+- refactor fork の実際の変更内容や要約結果を確認したいときは、生成済みの差分または要約出力を直接読む
+- refactor fork 以外の agent call 構築や prompt の共通仕様を確認したいときは、対象の共通 builder・仕様ファイルを直接読む
 
 ## hash
-- 7cc5adc466a124afb610773b53715e19722096b14febcfa754286d5d17db9cd0
+- 5dc68b6040ff44076c3a4dd8584d841526c1fc8f96033fa34618b4978468cf07
 
 # `file_review_and_fix.json`
 
@@ -51,18 +51,19 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter 構築定義。対象ファイルを起点に、必要な oracle／realization file を含む完全な調査・修正・検証 prompt を組み立て、指定 schema に従う agent call を返す。
-- 対象 path と linked worktree を AgentCallPathContext に設定し、対象 file の解決済みパス、アクセスモード、oracle／realization／routing／findings policy、構造化 prompt、schema path、最大推論設定などをまとめる実装。
+- refactor fork のファイル単位レビュー・修正を行う agent call のパラメータ構築定義。対象 file を起点に oracle／realization の調査範囲、修正方針、検証要件、Structured Output の事後条件を含む prompt を組み立て、実装用 AgentCallParameter と schema path を返す。
+- レビュー対象 file の path context を構築し、完全な prompt を生成する責務を担う。同階層の他定義ではなく、ファイル単位の realization review・fix 用 call を変更・調査するときの入口となる。
+- model class、reasoning effort、realization write 権限、agent call の作業ディレクトリ、indexing preflight の設定もここで固定する。
 
 ## Read this when
-- refactor fork のファイル単位レビュー・修正 agent call の prompt 構築方法を確認するとき
-- 対象 file を起点とする調査範囲、realization write 権限、検証要件、構造化出力の事後条件を変更するとき
-- AgentCallParameter のモデル、reasoning effort、作業ディレクトリ、schema の指定方法を追跡するとき
+- refactor fork のファイル単位レビュー・修正 prompt の内容や調査・修正方針を変更するとき
+- 対象 path、run worktree、file access mode、モデル設定、reasoning effort、preflight 設定の構築方法を確認するとき
+- Structured Output の変更 path 照合や、oracle／realization／findings／routing policy を prompt に組み込む方法を確認するとき
 
 ## Do not read this when
-- レビュー・修正 agent の実際の処理ロジックや所見判定を確認したい場合は、構築された prompt の実行側または対応する oracle／realization file を直接読むとき
-- 構造化出力の項目や型だけを確認したい場合は、参照される schema file を直接読むとき
-- 一般的な prompt builder、path model、struct document の仕様だけを調べる場合は、それぞれの実装・仕様 file を直接読むとき
+- レビュー・修正処理そのものの実装や、対象 realization file の内容を確認することが目的のときは、対応する realization file を直接読む
+- Structured Output の項目や JSON schema の形式だけを確認したいときは、対応する schema file を直接読む
+- refactor fork 以外の agent call の prompt 構築や、一般的な prompt builder の仕様だけを調べるとき
 
 ## hash
-- 2acc323186b24e07521f6bb4b1702b1f0a0fd209f6ab2b4b0b8c16160ef60670
+- e34ed8fde2ed9fd764e4742874d61efa9037ba953f63686ef84e511838799175

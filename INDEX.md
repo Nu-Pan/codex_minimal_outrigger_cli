@@ -91,22 +91,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様、開発規約、設計判断資料、および agent call と prompt 構築を担う oracle 実装をまとめたルート。CLI の仕様・ライフサイクル、branch／worktree モデル、開発環境・テスト規約、agent call のパラメータや用途別 builder を調査する際の入口となる。
-- `doc` は app_spec、dev_rule、branch・commit・worktree のモデル、considered_alternative を扱い、`src` は acp_builder、prompt_builder、共通定義を扱う。各領域の内容が特定できている場合は、対応する下位ディレクトリや文書を直接参照する。
+- cmoc の正本仕様・設計資料・開発ルールと、oracle 関連の agent call 構築機能を案内する最上位の文書群。共通仕様や開発規約は doc、agent call の構築・prompt・feedback・共通モデルは src から下位対象へ進む。
 
 ## Read this when
-- cmoc の正本仕様、開発ルール、設計判断の背景を横断して探すとき
-- CLI の挙動やライフサイクル、branch／worktree のモデル、Python 開発環境、テスト要件を確認するとき
-- AgentCallParameter、用途別 agent call、Structured Output、prompt policy、ファイルアクセス規定、routing 規定を調査・変更するとき
-- indexing、oracle、realization、feedback、session、TUI、quota probe に関する builder や契約の配置先を特定するとき
+- cmoc の正本文書、設計・開発ルール、または oracle 関連 agent call 構築機能の適切な参照先を判断するとき
+- 仕様・開発規約と実装上の agent call 構築機能を横断して調べる必要があるとき
 
 ## Do not read this when
-- 確認対象の仕様書、開発ルール、検討資料、実装、入力定義が既に特定できており、該当する下位対象を直接読めるとき
-- 既存 INDEX.md のルーティング内容だけを確認したいとき
-- 具体的な feedback issue、raw log、個別レビュー対象、生成物、テスト結果だけを調べるとき
+- 個別の仕様書、開発ルール、prompt、Structured Output schema、実装関数など、直接読むべき下位対象が明らかなとき
+- realization、実装ファイル、既存の INDEX.md の内容だけを確認したいとき
 
 ## hash
-- 28941ccfadb88b03858785b0056186e9861325fd3d1386dad62609005d410637
+- e6a46c3bb82e7da9360cbcdea5b8c6230108094a60ee9d69bdf33480a17ed108
 
 # `pyproject.toml`
 

@@ -20,36 +20,35 @@
 # `path_model.py`
 
 ## Summary
-- cmoc におけるパス表記と、agent call の作業ルート・リポジトリルートを扱う正本モデル。root placeholder の定義、placeholder と実パスの相互変換、Git worktree からの各ルート解決を提供する。パスの解決規則や agent call のパスコンテキストを確認・変更する作業では、この対象を入口にする。
+- パス表記とルートプレースホルダの解決モデルを定義するモジュール。`RootPathPlaceHolder`、agent call 単位の `AgentCallPathContext`、実パスとプレースホルダ表記の相互変換、Git worktree・repository・cmoc root の探索を扱う。パス解決や agent call の作業ルート境界を確認する際の入口となる。
 
 ## Read this when
-- root placeholder の意味や `{{repo-root}}`・`{{work-root}}`・`{{run-root}}` の解決規則を確認するとき
-- agent call の cwd から worktree root や repository root を導出する処理を変更するとき
-- placeholder 表記と実際の絶対パスの変換処理を確認・変更するとき
+- `{{repo-root}}`、`{{work-root}}`、`{{run-root}}`、`{{cmoc-root}}` の意味や解決方法を確認するとき
+- agent call の cwd から work root と repository root を導出する不変コンテキストを調査するとき
+- プレースホルダ付きパスと実際の絶対パスの変換、Git worktree の root 探索を変更・検証するとき
 
 ## Do not read this when
-- 特定の CLI 機能や realization の責務配置だけを確認する場合
-- パスモデルを利用する個別機能の挙動を確認する場合は、その機能の実装や仕様を直接読むべきとき
+- 特定の CLI や prompt builder の責務だけを調べ、パスモデル自体を確認する必要がないとき
+- 対象の下位実装や利用箇所を直接確認すれば、パス解決規則の理解を要しないとき
 
 ## hash
-- 8fc522d7e3ef8f4b608c64102a5f4a6d7eb7cf64422cd3c3f7b239dab4255418
+- 73e0f9e448de9b1cb5eb85d4e03e808c74dbe931b0b55fcdef0c172f02497f26
 
 # `struct_doc.py`
 
 ## Summary
-- 構造化文書ノード（見出し、参照可能なタグブロック、コードブロック、規定文）を保持し、Markdownへレンダリングするヘルパーを提供する。
-- 見出し階層の深さを再帰的に計算し、コードブロックの内容に応じた安全なフェンス長や、三重引用符文字列のインデント除去、連続空行の整理を行う。
-- Markdown以外の出力形式は扱わず、文書ノードの型検証や子要素の妥当性検査もこのファイルで担う。
+- `SDHeader`、`SDTagBlock`、`SDCodeBlock`、`SDPolicy` などの構造化文書ノードを保持し、Markdown としてレンダリングするヘルパーを定義する。
+- 見出し深度の自動計算、cmoc_block／cmoc_ref タグ、コードフェンス、規定文書のカテゴリ別出力、空行・インデントの正規化を扱う。
+- 構造化文書のモデルと GFM レンダリング処理の入口であり、参照検査やポリシー統合、プロンプト部品の選択を確認する場合は対象外の実装へ進む。
 
 ## Read this when
-- 構造化された文書をMarkdownへ変換する処理を変更・利用するとき
-- SDHeader、SDTagBlock、SDCodeBlock、SDPolicyなどの文書ノードの構造や参照タグの生成方法を確認するとき
-- 見出し深度、コードフェンス、空行、インデント正規化のレンダリング挙動を確認するとき
+- 構造化文書ノードの型・保持方法・子要素検証を変更または確認するとき
+- SDHeader の見出し深度、SDTagBlock の参照タグ、SDCodeBlock のフェンス、SDPolicy のカテゴリ出力を変更または確認するとき
+- Markdown レンダリングや文字列の空行・インデント正規化の挙動を調査するとき
 
 ## Do not read this when
-- Markdown文書のルーティング情報やINDEX.mdの生成規則だけを確認したいとき
-- 実際のCLI処理やoracle/realization間の責務分担を確認したいときは、該当するCLI実装・設計仕様を直接読むべきである
-- Markdown以外の文書形式の処理を確認したいとき
+- 参照の対応検査、ポリシーの意味的統合、prompt part の選択を調査するとき
+- このモジュール以外の CLI 責務や、構造化文書を利用する側の処理を直接確認するとき
 
 ## hash
-- 91ae4cd953a04521ecb66b528ea434d8a8012bc75d3cdda3dca90e3d9302889f
+- 14362b77a471f4edf930e8874b1bacea1e3db43e1407714aa8bdfe3aeaf7fa86

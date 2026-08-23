@@ -16,20 +16,18 @@
 # `normalize_issue.py`
 
 ## Summary
-- feedback issue の同一性判断用 agent call parameter を構築する定義。構造化 observation と絞り込み済み既存 issue candidate だけを入力として、既存 issue と同一か新規 issue かの判断を依頼する prompt、読み取り専用の call context、モデル設定、Structured Output schema の参照を組み立てる。feedback normalize issue の agent 起動設定を確認する入口。
+- 構造化された feedback observation と絞り込み済みの既存 issue candidate を比較し、同一 issue か新規 issue かだけを判定する agent call の prompt と起動パラメータを構築する。入力外の情報や候補外 issue を参照せず、判定結果の issue ID 整合性も指定する feedback 同一性判断の実装入口。
 
 ## Read this when
-- 構造化 observation と既存 issue candidate の同一性判定フローを変更・レビューするとき
-- feedback normalize issue 用 prompt の入力制限、判定後条件、モデル・権限・実行設定を確認するとき
-- この agent call が返す Structured Output schema の指定元を確認するとき
+- feedback observation と既存 issue candidate の重複・同一性判定用 agent call を追加、変更、レビューするとき
+- 同一性判定 prompt の入力範囲、出力後条件、model・reasoning・file access・preflight 設定を確認するとき
 
 ## Do not read this when
-- issue の summary、impact、原因、現在性、actionability、human action、verification verdict、relation の生成仕様を確認したいとき
-- agent call の共通 prompt 生成処理そのものを調べるときは、直接 build_complete_prompt の定義を読む方が適切
-- 同一性判断結果の項目・型・形式だけを確認したいときは、指定された Structured Output schema を直接読む方が適切
+- feedback issue の summary、impact、原因、現在性、actionability、human action、verification verdict、relation を生成・評価する処理を調べるとき
+- candidate の絞り込み、feedback state の読み取り、raw log や過去 session の参照を調べるときは、該当する入力生成・候補管理の対象を直接読む
 
 ## hash
-- d85b268c2b97fcc51fc2edf86777b9b63677a212dd3667c323b8b8a2d14161be
+- 6cd458da7a9bfd26658bdb9210b7cee1828a84c50e7e7130d66ed19550d4e89b
 
 # `verify_issue.json`
 
@@ -53,19 +51,18 @@
 # `verify_issue.py`
 
 ## Summary
-- feedback issue candidate 1件を、report cut時点で固定された参照だけから検証する prompt と AgentCallParameter を構築する。
-- 検証結果は unresolved / resolved / not_actionable / inconclusive のいずれかを返す前提で、candidate ID、current evidence、human action などの事後条件を prompt に組み込む。
-- READONLY の flagship・最大推論設定で実行し、live repository state、raw log、別 candidate、feedback state などを参照しない verification 専用の呼び出し設定を返す。
+- feedback issue candidate 1件の検証用 AgentCallParameter を構築する定義。report cut 時点で固定された参照だけを入力として prompt、読み取り専用実行条件、最高品質のモデル設定、Structured Output schema、preflight 無効化をまとめる。
+- issue candidate と report cut references を動的 prompt に埋め込み、verdict の意味、参照制約、変更禁止、Structured Output の事後条件を静的 prompt として指定する。feedback 検証の prompt 文面や起動パラメータを変更するときの入口。
 
 ## Read this when
-- feedback issue candidate の検証 prompt や起動パラメータの構築方法を確認・変更するとき。
-- report cut reference の利用範囲、検証結果の判定基準、Structured Output の事後条件を確認するとき。
-- feedback verification call の読み取り専用設定、モデル・推論設定、prompt schema path、indexing preflight 無効化の責務を確認するとき。
+- feedback issue candidate の unresolved / resolved / not_actionable / inconclusive 判定 prompt を変更するとき
+- report cut reference の受け渡し、読み取り範囲、変更禁止、verdict の事後条件を確認するとき
+- feedback 検証 agent のモデル、推論強度、実行ディレクトリ、preflight、structured output schema の起動設定を変更するとき
 
 ## Do not read this when
-- feedback issue の生成・報告・状態管理そのものを確認する場合。
-- 検証結果の Structured Output schema の項目や型を直接確認する場合は、対応する schema ファイルを読むべきである。
-- 一般的な AgentCallParameter や prompt rendering の共通仕様を確認する場合は、各共通実装を直接読むべきである。
+- feedback issue の検証結果 schema の項目や型だけを確認したいときは、対応する JSON schema を直接読む
+- feedback issue の報告・保存・report cut 処理や候補生成の挙動を変更するときは、それぞれの実装定義を直接読む
+- 一般的な prompt 構築規則や AgentCallParameter の共通仕様だけを確認するときは、共通の prompt builder / ACP 定義を直接読む
 
 ## hash
-- 0f06a72659b2a72bc8e9d6b17dcd6b59df5690318ff4bffe480a5ed4d831e493
+- 2ee4f76b63e38f555cb47acd58fdc1391aba31a87cb827bf9a569e00488018f3

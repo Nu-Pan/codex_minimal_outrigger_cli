@@ -15,17 +15,20 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` で使用する本命 agent call と仕様削減 agent call の起動パラメータ構築を定義する。ユーザー指示を完全 prompt に埋め込み、oracle-only のファイルアクセス、モデル・推論設定、作業ディレクトリ、indexing preflight などを固定する。
-- 本命 call はユーザー指示に基づく oracle file 編集用、仕様削減 call は現在の oracle file と未コミット差分に基づく過剰仕様の整理用であり、各 call の prompt 構成と `AgentCallParameter` 生成が責務である。
+- `cmoc oracle edit` が起動する2回の `codex exec` に渡す固定パラメータを構築する実装。
+- 本命編集 call では、ユーザー指示を含む完全 prompt、oracle file のみを書き込む境界、最高品質のモデル設定、起動前 indexing を指定する。
+- 本命成功後の仕様削減 call では、現在の oracle file と未コミット差分を根拠に仕様を簡素化・整合させる prompt と、同じ編集境界・品質設定・indexing 無効化を指定する。
+- 両経路でリポジトリルートを作業ディレクトリとし、oracle 編集用の `AgentCallParameter` を返す。
 
 ## Read this when
-- `cmoc oracle edit` の codex exec 起動パラメータや prompt 構成を変更・確認するとき
-- oracle 編集の本命 call と、その後の仕様削減 call の責務・アクセス制約・起動設定を確認するとき
+- `cmoc oracle edit` の本命または仕様削減 agent call の起動パラメータ、prompt、モデル品質設定、ファイルアクセス境界を変更・確認するとき。
+- oracle 編集処理で、ユーザー指示を prompt にどう埋め込み、2回の call 間でどの情報を共有するかを確認するとき。
+- oracle 編集用 call の作業ディレクトリ、indexing preflight、未コミット差分の扱いを確認するとき。
 
 ## Do not read this when
-- oracle file 自体の仕様内容や編集方針を確認する場合
-- 一般的な agent call の基底型、パス解決、prompt builder、構造化文書レンダリングの実装を確認する場合は、それぞれの定義元を直接読むとき
-- realization 側の CLI 動作やテストの実装を確認する場合
+- `cmoc oracle edit` の実際の編集処理や call 実行制御を変更・確認する場合は、対応する実行側実装を直接読む。
+- 一般的な prompt の構築規則や SD ノードの Markdown 化だけを確認する場合は、`complete_prompt` や `struct_doc` の定義を直接読む。
+- oracle file 自体の編集規約・設計・テスト要件を確認する場合は、関連する oracle の規定ファイルを直接読む。
 
 ## hash
-- 567402b380a887291f2879c3f6e9e4f19f4b586fb6d94c71158f3f8703384c98
+- 3c2e46d734d8655e19f6318b59bfd7a2342300a64a289fdd45b27acbcd01bb0e
