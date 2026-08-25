@@ -17,16 +17,18 @@
 # `refactor`
 
 ## Summary
-- refactor fork 配下で、変更差分の意味論的な要約処理と、指定ファイルを起点にしたファイル単位のレビュー・修正処理を定義するディレクトリ。各処理の prompt 構築、実行パラメータ、Structured Output 契約を確認する入口となる。
+- `fork` は、realization refactor 用の変更要約とファイル単位レビュー・修正に関する agent call builder および Structured Output schema を定義するディレクトリです。変更差分を意味論的カテゴリ別に要約する処理と、指定した oracle file または realization file を起点に所見調査、realization file の修正、検証まで行う処理を扱います。各 agent call の prompt、ファイルアクセス権、実行パラメータ、作業ディレクトリ、indexing preflight、出力契約を確認する入口です。
 
 ## Read this when
-- refactor fork の変更差分要約やファイル単位レビュー・修正の起動条件、prompt、アクセス権限、モデル設定、検証方針を調査または変更するとき。
-- これらの agent call が返す構造化結果の契約を確認するとき。
+- realization refactor の変更差分をカテゴリ別に要約する agent call の出力契約や prompt、入力差分、実行条件を確認・変更するとき
+- realization refactor のファイル単位レビュー・修正 agent call の findings、根拠、変更 path、oracle 要求、修正結果、検証の出力契約を確認・変更するとき
+- これら二つの agent call の Structured Output schema と builder の設定の整合性を確認するとき
 
 ## Do not read this when
-- 変更要約またはレビュー・修正結果の具体的な出力契約だけを確認したい場合は、対応する schema を直接読む。
-- レビュー対象の実装、oracle の要求、個別仕様、実際の変更差分を調査する場合は、対象の oracle file、realization file、または raw git diff を直接読む。
-- 共通の prompt 構築、パス解決、構造化文書レンダリング、agent call 基盤の仕様だけを調査する場合は、対応する共通実装を直接読む。
+- 変更差分の実装内容や要約結果そのものを確認したいとき
+- レビュー対象の oracle file や realization file の要求・実装を直接確認したいとき
+- 共通 prompt 生成、構造化文書の Markdown rendering、path 解決の一般仕様を確認したいとき
+- realization refactor の fork 以外の agent call、別の出力 schema、または git 差分生成そのものを調査するとき
 
 ## hash
-- 5bd08ca5521212f335a18cd5c0323b291cd51dbd8f89dea7fe63ff8428542d42
+- 2276d634baf5643d5c9ca83b08bf5512cdad9435104f536a1d4666e2639b9dfc

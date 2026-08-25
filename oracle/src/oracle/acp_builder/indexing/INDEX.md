@@ -1,18 +1,19 @@
 # `index_entry.json`
 
 ## Summary
-- INDEX.md エントリーの出力形式を定義する JSON Schema。要約、読む条件、読まなくてよい条件を必須の配列として指定する。
+- INDEX.md エントリー生成 agent call の出力形式を定義する JSON Schema。
+- 要約、読む条件、読まなくてよい条件を、それぞれ必須の文字列配列として指定する。
 
 ## Read this when
-- INDEX.md エントリーの構造や必須項目を確認するとき
-- エントリー生成結果の JSON 形式を検証するとき
+- INDEX.md エントリー生成結果の JSON 構造や必須項目を確認するとき。
+- 生成結果が指定された出力形式を満たすか確認するとき。
 
 ## Do not read this when
-- 対象ファイルやディレクトリの実際の責務を調べるとき
-- INDEX.md のルーティング内容そのものを判断するとき
+- 対象ファイルやディレクトリの実際の責務を調べるとき。
+- INDEX.md のルーティング内容やエントリー生成用 prompt の規則を確認するとき。
 
 ## hash
-- c3c1774e0701b503e36d145179eae32bee846e2ba685e8052d82c1fa177bfaff
+- 03e00cc984eeca5067e5dbe49c481a91c135c6aa06a633d90cc5a69c3ad05735
 
 # `index_entry.py`
 

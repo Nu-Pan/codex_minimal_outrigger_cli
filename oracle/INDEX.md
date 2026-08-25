@@ -1,39 +1,37 @@
 # `doc`
 
 ## Summary
-- `oracle/doc` は、cmoc のアプリケーション仕様、branch・commit・worktree モデル、開発規約、テスト規約・実行手順、採用しなかった設計案を集約する正本文書群への入口です。
-- CLI の挙動、session/run lifecycle、Codex 呼び出し、ログ・エラー・feedback、doctor、通知などは `app_spec` 配下へ、実装・環境・テストの規約は `dev_rule` 配下へ、branch 関係は `branch_model.md` へ、代替案の採否背景は `considered_alternative` 配下へ進みます。
+- cmoc の正本文書を、アプリケーション仕様と開発規約に分けて案内するディレクトリ。`app_spec` では実行契約、状態管理、サブコマンド、workflow、prompt、feedback、通知などの利用・挙動仕様へ進み、`dev_rule` では Python 実装、CLI 配置、環境、テスト要件、品質検査の規約へ進む。`branch_model` や `considered_alternative` ではブランチ設計や不採用案の背景を確認できる。
 
 ## Read this when
-- cmoc の正本文書を横断的に探し、対象がアプリケーション仕様、branch モデル、開発規約、テスト規約、または設計上の代替案のどの領域に属するか判断するとき
-- 複数の機能領域にまたがる変更・調査で、適切な下位文書群への入口を特定するとき
+- cmoc の正本文書群から、アプリケーションの挙動仕様と開発規約のどちらを確認すべきか判断するとき
+- 実行・状態管理・サブコマンドなどの利用契約、または Python 実装・CLI 配置・環境・テストの規約を対応する下位文書へ振り分けるとき
+- branch、commit、worktree の関係や、採用しなかった設計案の背景を確認するとき
 
 ## Do not read this when
-- 確認対象の個別仕様、branch・worktree の用語、開発環境、実装配置、テスト要件、テスト実行手順が明らかな場合は、該当する下位文書を直接読むとき
-- 実装コード、既存の INDEX.md、Structured Output schema、外部契約の検証結果だけを確認したいとき
-- 現行仕様や具体的な実装手順を確認する目的で、採用されなかった代替案の背景資料だけを扱うとき
+- 特定のアプリケーション機能、開発規約、branch model、不採用案の詳細を確認する場合は、対応する下位文書を直接読むとき
+- 具体的な実装ファイル、テスト実行結果、既存 INDEX.md の内容を調べるとき
 
 ## hash
-- 68d140042d55e3b29cd69a9023151dfcb8820892b79119b06e2ebcfbcb593cae
+- 14a6716425bc4ff6d8f3c784e1edc417152871205534d8137df7e11ce405efef
 
 # `src`
 
 ## Summary
-- oracle ソース全体の責務と、共通の agent call 構築から個別領域へ進むための入口を定義するディレクトリです。
-- agent call 構築、prompt の合成と policy、feedback 入力契約、設定・パス解決・構造化文書モデルを扱う下位対象へのルーティングを提供します。
+- oracle 配下の agent call 構築、prompt・policy の生成、feedback 入力契約、設定・パス解決・構造化文書の補助モデルを実装する領域です。
+- agent call の共通パラメータや目的別起動処理を調べる場合は `acp_builder`、prompt の統合や oracle／realization・routing・feedback の規定を調べる場合は `prompt_builder`、設定・パス解決・構造化文書のモデルとレンダリングを調べる場合は `other`、feedback reporter の入力契約を調べる場合は `feedback` へ進みます。
 
 ## Read this when
-- cmoc の agent call 構築全体の責務や、共通パラメータから個別処理へ進む入口を確認するとき
-- feedback、indexing、oracle、realization、session、TUI、quota probe の agent call 構築を調査・変更するとき
-- prompt の統合順序、policy、placeholder、oracle／realization の共通概念を確認するとき
-- feedback reporter の入力項目と検証契約を確認するとき
-- 設定値、モデル変換、agent call のパスコンテキスト、構造化文書の Markdown 化を確認するとき
+- agent call のモデル、reasoning effort、ファイルアクセス、作業ディレクトリ、Structured Output schema、indexing preflight の構築を確認または変更するとき
+- prompt の統合、placeholder、oracle／realization の基本定義、ファイルアクセス、routing、feedback、review、conflict resolution の policy を確認または変更するとき
+- agent call に使う root path の解決、パス境界、設定モデル、Structured Document の Markdown レンダリングを確認するとき
+- feedback observation の入力項目・分類・重要度・根拠・継続状態の契約を確認するとき
 
 ## Do not read this when
-- 実際の Codex CLI 呼び出し、sandbox 制約、共通 prompt の実行基盤、またはパス解決の利用側の挙動だけを確認したいとき
-- 個別の Structured Output schema の項目・型・形式だけを確認したいとき
-- 個別の oracle 文書、realization 実装・テスト、feedback state の保存・集約、または CLI サブコマンドの実装挙動だけを確認したいとき
-- 既存の INDEX.md のルーティング内容だけを確認したいとき
+- Codex CLI の実際の実行、backend へのモデル名変換、または外部プロセス起動の実装だけを確認したいとき
+- oracle／realization の正本仕様本文や、realization 側の実装・テストを直接確認したいとき
+- INDEX.md の既存ルーティング内容を確認したいとき
+- agent call、prompt、feedback、設定、パス解決、構造化文書に関係しない CLI 挙動や別領域の仕様・テストだけを調査するとき
 
 ## hash
-- b495881f82709175d85f4af88454e73c675fd91effc47e6eb46ae06a6b70ad4e
+- c3273e05e2785c83946120d4cb928499a9a956fb6a749f806fbe103a4e762849

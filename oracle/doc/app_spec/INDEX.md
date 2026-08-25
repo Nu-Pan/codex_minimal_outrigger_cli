@@ -269,21 +269,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc の各サブコマンドに関する正本仕様書を集約するディレクトリです。コマンド固有の実行条件、処理手順、状態遷移、終了経路、report、ライフサイクルを確認するための入口になります。
-- doctor、indexing、tui、session、run、realization、oracle、feedback など、対象機能の仕様に応じた個別文書へ進むためのルーティング起点です。共通 lifecycle と workload 固有仕様が分かれる場合は、共通境界を確認してから対象の個別仕様へ進みます。
+- `oracle/doc/app_spec/sub_command` 配下のサブコマンド正本仕様を案内するディレクトリ。doctor、indexing、oracle 操作、realization、session、run lifecycle、feedback report、TUI などの実行契約、状態遷移、報告要件を扱い、個別仕様へ進む入口となる。
 
 ## Read this when
-- cmoc のサブコマンド仕様を横断的に探すとき
-- サブコマンドの引数、事前条件、実行手順、状態遷移、report、終了コードの正本を特定するとき
-- session・run・realization の fork、join、abandon など、複数文書にまたがる lifecycle の参照先を判断するとき
+- cmoc のサブコマンド仕様を横断的に調べ、読むべき正本仕様を選ぶとき
+- CLI の実行条件、fork・join・abandon、診断、indexing、feedback report、TUI、終了報告の仕様を確認するとき
+- サブコマンド固有仕様と共通 run lifecycle のどちらを読むべきか判断するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細仕様が明らかな場合は、対応する個別仕様書を直接読むとき
-- サブコマンド内部の正確な prompt、Structured Output schema、実装配置、テスト実行手順だけを確認したいとき
-- raw feedback、共通中断動作、state・publication の詳細など、本文が案内する専用仕様を直接読む方が適切なとき
+- 特定サブコマンドの詳細だけを確認する場合は、該当する個別仕様ファイルを直接読むとき
+- fork・join・abandon に共通する lifecycle だけを確認する場合は、`editing_run.md` を直接読むとき
+- raw observation、feedback state、prompt、起動パラメータ、エラー処理などの専用仕様や詳細実装だけを調査する場合は、各文書が案内する対象へ直接進むとき
 
 ## hash
-- 589caa16b6057a529fef574fcd7f9d9bc7bb06b7f972d0f346e744b07d0ce335
+- 07fb67af1fb3d09f4b92251af378c69280f1df8ad76bd7ad8c7409d464315be6
 
 # `subcommand_interruption.md`
 

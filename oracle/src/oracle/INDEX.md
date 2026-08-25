@@ -1,21 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- cmoc の Agent Call Parameter 構築定義をまとめるディレクトリ。共通の呼び出しパラメータ型・論理モデル・推論強度・ファイルアクセスモードを基盤として、feedback、indexing、oracle、realization、session、tui、quota probe 各機能の prompt、Structured Output schema、作業範囲、モデル設定、preflight 設定を定義する。各サブディレクトリは対応するサブコマンドまたは処理系の agent call 構築への入口となる。
+- ACP builder の共通パラメータ定義、quota probe、feedback issue の正規化・検証、INDEX.md エントリー生成、TUI 起動など、各種 agent call の prompt と起動設定を構築する領域です。
+- 共通の `AgentCallParameter` と列挙型を確認する場合は `basic.py`、機能別の agent call や Structured Output 契約を調査する場合は対応する下位ディレクトリ・ファイルへ進みます。
 
 ## Read this when
-- Agent Call Parameter の共通データモデル、論理モデル種別、推論強度、ファイルアクセスモード、prompt、schema パス、cwd、indexing preflight の契約を確認・変更するとき。
-- feedback の issue 同一性判定・検証、INDEX.md エントリー生成、oracle の edit・investigation・review、realization の apply・refactor、session join の conflict 解消、TUI 起動、quota probe の agent call 構築を調査するとき。
-- 各処理が選択するファイルアクセス policy、モデルクラス、推論強度、Structured Output の有無、起動前 indexing の扱いを確認するとき。
+- agent call の prompt、モデル・推論強度、ファイルアクセスモード、cwd、Structured Output schema、indexing preflight の設定を確認または変更するとき
+- feedback、indexing、oracle、realization、session、quota probe、TUI の agent call 構築処理の入口を探すとき
+- agent call の共通データモデルや論理モデル種別を確認するとき
 
 ## Do not read this when
-- 実際の Codex CLI モデル名や論理推論強度からの変換規則を確認したいとき。
-- Codex CLI の具体的な sandbox 制約、共通 prompt のレンダリング規則、agent call の実行基盤、パス解決の共通仕様を確認したいときは、それぞれの共通定義を直接読む。
-- 個別の oracle・realization 本文、feedback state、実装・テストの挙動、または各 Structured Output schema の項目・型・形式だけを確認したいとき。
-- 既存の INDEX.md に記載されたルーティング内容だけを確認したいとき。
+- Codex CLI の具体的な実行処理や backend モデル名への変換規則を調べるとき
+- 共通 prompt のレンダリング規則、パス解決、oracle・realization の正本仕様など、別の直接的な実装・仕様対象を確認するとき
+- 個別の oracle・realization file、feedback state、INDEX.md の既存ルーティング内容そのものを調べるとき
 
 ## hash
-- ae3877bd8bdc93b202e84edccf0b73f45674a1b35fddaa126fcee2e80300063f
+- d129b5e484e9d3f024688b993953b90b67f1362e2cbd38bff9838e48c26c7556
 
 # `feedback`
 

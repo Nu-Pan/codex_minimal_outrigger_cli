@@ -40,24 +40,20 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の責務と処理全体を定義するサブコマンド仕様。pending observation と直前の active state を report cut に固定し、検証・重複排除・集約・候補化・normalization・verification を経て、正常な active generation と Markdown report、または `incomplete` 診断 report を publication する。
-- CLI の引数、事前条件、state の整合性検証、排他、再開、cleanup、ユーザー中断、エラー時の扱いを確認する必要がある。
-- feedback report の実装や挙動仕様を確認するときの入口であり、raw observation の正本、state/checkpoint/publication/cleanup の正本、normalization/verification agent の prompt・schema の正本へ分岐する。
+- `cmoc feedback report` の CLI 契約、事前条件、report cut の固定、観測の検証・集約・候補化、normalization/verification、正常 publication と incomplete 診断、再開・中断・cleanup、report 保存形式、終了コードを定義する正本仕様。feedback report の実装方針や挙動条件を確認する入口であり、raw observation の形式や state の詳細は指定された別の正本仕様へ委譲する。
 
 ## Read this when
-- `cmoc feedback report` の実装、CLI 契約、事前条件、report cut、処理順序、候補の検証、publication、再開・中断、report 保存、終了コードを確認するとき。
-- 正常な `ok`/`attention` result と `incomplete` result の違い、active generation や current pointer の更新条件を確認するとき。
-- feedback report のテストで、validation、deduplication、threshold、verification、cleanup、終了コードの挙動を確認するとき。
+- `cmoc feedback report` の入力制約、前提状態、処理順序、候補判定、publication、再実行、中断、エラー処理を確認・変更するとき。
+- 正常 report と `incomplete` 診断 report の内容、保存先、current pointer、終了コードの契約を確認するとき。
 
 ## Do not read this when
-- raw observation の schema、保存、受理規則を確認したいときは `oracle/doc/app_spec/feedback_observation.md` を直接読む。
-- state root、checkpoint、publication、current pointer、cleanup の正本仕様を確認したいときは `oracle/doc/app_spec/feedback_state.md` を直接読む。
-- 中断共通動作を確認したいときは `oracle/doc/app_spec/subcommand_interruption.md` を直接読む。
-- normalization agent の正確な prompt、起動パラメータ、選択理由、Structured Output schema を確認したいときは `oracle/src/oracle/acp_builder/feedback/normalize_issue.py` と `normalize_issue.json` を直接読む。
-- verification agent の正確な prompt、起動パラメータ、選択理由、Structured Output schema を確認したいときは `oracle/src/oracle/acp_builder/feedback/verify_issue.py` と `verify_issue.json` を直接読む。
+- raw observation の schema や記録規則だけを確認したい場合は `feedback_observation.md` を直接読む。
+- state、checkpoint、publication、cleanup の永続化規則だけを確認したい場合は `feedback_state.md` を直接読む。
+- normalization または verification agent の正確な prompt、起動条件、Structured Output schema を確認したい場合は、対応する oracle 実装・schema を直接読む。
+- サブコマンド共通の中断動作だけを確認したい場合は `subcommand_interruption.md` を直接読む。
 
 ## hash
-- 6a098ea8551e07e9fd087a04d87f475b2498ce6107925be2c16d2b464029d259
+- cf3822c662469562b104660c8578545ef85cc3d11304800c19dc2f40bf81d5b8
 
 # `indexing.md`
 

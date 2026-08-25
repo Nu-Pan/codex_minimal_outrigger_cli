@@ -1,21 +1,19 @@
 # `oracle`
 
 ## Summary
-- `oracle/src/oracle` は cmoc の agent call 構築と、その prompt・Structured Output・設定モデルを定義する oracle ソースの入口です。共通の AgentCallParameter、論理モデル、推論強度、ファイルアクセスモード、cwd、indexing preflight を基盤に、個別の agent call 構築へ進みます。
-- agent call の具体的な prompt と schema は `acp_builder`、prompt の合成と policy は `prompt_builder`、feedback 入力契約は `feedback`、設定・パス解決・構造化文書モデルは `other` が担当します。
+- oracle 関連の agent call 構築、feedback 入力契約、設定・パス・構造化文書の補助モデル、prompt と policy の生成定義をまとめた領域です。
+- agent call の共通パラメータや目的別の起動設定を確認する場合は `acp_builder`、feedback issue の入力・検証契約を確認する場合は `feedback`、設定・パス解決・Markdown レンダリングを確認する場合は `other`、prompt の統合や oracle／realization・routing policy を確認する場合は `prompt_builder` へ進みます。
 
 ## Read this when
-- cmoc の agent call 構築全体の責務や、共通パラメータから個別処理への入口を確認するとき
-- feedback、indexing、oracle、realization、session、TUI、quota probe の agent call 構築を調査・変更するときは `acp_builder` から対応する下位対象へ進む
-- prompt の統合順序、policy、placeholder、oracle／realization の共通概念を確認するときは `prompt_builder` から対応する下位対象へ進む
-- feedback reporter の入力項目と検証契約を確認するときは `feedback` を読む
-- 設定値、モデル変換に使う設定モデル、agent call のパスコンテキスト、構造化文書の Markdown 化を確認するときは `other` を読む
+- oracle や realization を扱う agent call の構築責務と、目的別の prompt・Structured Output schema の入口を探すとき
+- feedback、indexing、oracle review、realization、session、quota probe、TUI に関する agent call 設定を調査するとき
+- prompt の組み立て、アクセス規定、routing、oracle／realization の policy を確認または変更するとき
+- cmoc の設定モデル、agent call のパス境界、構造化文書の Markdown 化を確認するとき
 
 ## Do not read this when
-- 実際の Codex CLI 呼び出し、sandbox 制約、共通 prompt の実行基盤、またはパス解決の利用側の挙動だけを確認したいときは、担当する realization 実装や共通仕様を直接読む
-- 個別の Structured Output schema の項目・型・形式だけを確認したいときは、`acp_builder` 配下の該当 schema を直接読む
-- 個別の oracle 文書、realization 実装・テスト、feedback state の保存・集約、または CLI サブコマンドの実装挙動だけを確認したいときは、それぞれの担当対象を直接読む
-- 既存の INDEX.md のルーティング内容だけを確認したいとき
+- Codex CLI の実際の起動処理や backend モデル名への変換を確認したいとき
+- oracle や realization の正本仕様本文、実装本文、feedback state、INDEX.md の内容を直接確認したいとき
+- agent call と無関係な CLI 挙動や、別領域の仕様・テストだけを調査するとき
 
 ## hash
-- 60bdd76541d024a5fdfd9c522a1f943ceaeca99f0519631c18584f9b8b0d945d
+- ab0d3833563fdf0ecba76b4e1c4ac19273d5e8504ff36b95ca5738caaf7ef8c2

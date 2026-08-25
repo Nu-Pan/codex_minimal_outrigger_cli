@@ -1,20 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約するディレクトリ。CLI 自動補完、Codex 呼び出し、ログ・エラー処理、doctor 前処理、feedback、run/session lifecycle、通知など、アプリケーション全体の挙動契約を確認するための入口であり、個別仕様書へルーティングする。
+- cmoc のアプリケーション仕様を構成する正本文書群。共通の実行・出力・エラー・隔離・状態管理から、Codex 呼び出し、feedback、補完、通知、各サブコマンドの仕様までを扱い、個別の挙動仕様へ進むための入口となる。
+- サブコマンド仕様、workflow、prompt、feedback、run/session lifecycle など、cmoc の利用契約や状態遷移を確認する際に参照する。共通仕様と個別仕様の境界を判断し、必要な下位文書へルーティングするためのディレクトリ。
 
 ## Read this when
-- cmoc のアプリケーションレベルの正本仕様を横断的に探すとき
-- CLI 共通出力、Codex 実行、feedback、状態管理、run/session、通知など複数の機能領域にまたがる仕様の参照先を判断するとき
-- 対象機能の個別仕様書が app_spec 配下のどれに該当するか確認するとき
+- cmoc のアプリケーション仕様全体から、実行契約・状態管理・出力・エラー・隔離・feedback・通知・補完などの関連する正本文書を選ぶとき
+- 特定のサブコマンド、session/run lifecycle、Codex CLI 呼び出し、feedback report、prompt 入力、Windows toast 通知の仕様入口を確認するとき
+- 共通仕様と個別サブコマンド仕様のどちらを読むべきか判断するとき
 
 ## Do not read this when
-- 特定の機能やサブコマンドの仕様書が明らかな場合は、該当する個別文書を直接読むとき
-- 実装配置、テスト実行手順、Structured Output schema、外部契約の検証結果など、本文が案内する別の正本を確認したいとき
-- 既存の INDEX.md の現在のエントリー内容だけを確認したいとき
+- 特定の機能の詳細仕様を確認する場合は、このディレクトリの案内ではなく対応する個別の正本文書を直接読むとき
+- 具体的な実装責務、テスト手順、oracle・realization の分類、既存 INDEX.md の内容だけを調べるとき
 
 ## hash
-- 6acb06fc8edf714e5363597a0398e231c5808be3a9bfc2fc1bfd24cd354e0194
+- e52e7b0f1537334c3a2d7ab368be7d6cf10d1f0045492ea00409bd3eeb38b2c4
 
 # `branch_model.md`
 
