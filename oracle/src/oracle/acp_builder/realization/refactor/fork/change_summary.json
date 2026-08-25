@@ -1,5 +1,6 @@
 {
   "type": "object",
+  "description": "realization refactor の変更要約 agent call の出力。",
   "additionalProperties": false,
   "required": [
     "changes"
@@ -7,10 +8,11 @@
   "properties": {
     "changes": {
       "type": "array",
-      "description": "差分を、変更内容の意味論に基づいて分類した 1 件以上の要約。",
+      "description": "差分を変更内容の意味論に基づいて分類した要約のリスト。",
       "minItems": 1,
       "items": {
         "type": "object",
+        "description": "同じ意味論的カテゴリに属する変更 1 件の要約。",
         "additionalProperties": false,
         "required": [
           "category",
@@ -28,9 +30,10 @@
           },
           "changed_paths": {
             "type": "array",
-            "description": "要約の根拠となる主な変更 file の repository 相対 path。",
+            "description": "要約の根拠となる主な変更 file の一覧。該当する file がない場合は空配列。",
             "items": {
-              "type": "string"
+              "type": "string",
+              "description": "変更 file の repository 相対 path。"
             }
           }
         }

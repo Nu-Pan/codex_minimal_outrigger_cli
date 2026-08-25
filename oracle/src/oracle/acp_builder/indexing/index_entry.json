@@ -1,5 +1,6 @@
 {
   "type": "object",
+  "description": "INDEX.md エントリー生成 agent call の出力。",
   "additionalProperties": false,
   "required": [
     "summary",
@@ -9,26 +10,29 @@
   "properties": {
     "summary": {
       "type": "array",
-      "description": "対象ファイルまたはディレクトリの INDEX.md エントリーに載せる、人間向けの簡潔な要約。役割、扱う内容、下位要素への入口としての位置づけを書く。",
+      "description": "INDEX.md エントリーの Summary に並べる文の配列。",
       "minItems": 1,
       "items": {
-        "type": "string"
+        "type": "string",
+        "description": "対象の役割、扱う内容、または下位要素への入口としての位置づけを簡潔に説明する人間向け文面。"
       }
     },
     "read_this_when": {
       "type": "array",
-      "description": "読者がこの対象を読むべき状況や、この対象から確認を始めるとよい条件を列挙する。",
+      "description": "INDEX.md エントリーの Read this when に並べる条件の配列。",
       "minItems": 1,
       "items": {
-        "type": "string"
+        "type": "string",
+        "description": "読者がこの対象を読むべき状況、またはこの対象から確認を始めるとよい条件。"
       }
     },
     "do_not_read_this_when": {
       "type": "array",
-      "description": "読者がこの対象を読まなくてよい状況、または別のファイルや下位項目へ直接進む方が適切な条件を列挙する。",
+      "description": "INDEX.md エントリーの Do not read this when に並べる条件の配列。",
       "minItems": 1,
       "items": {
-        "type": "string"
+        "type": "string",
+        "description": "読者がこの対象を読まなくてよい状況、または別のファイルや下位項目へ直接進む方が適切な条件。"
       }
     }
   }

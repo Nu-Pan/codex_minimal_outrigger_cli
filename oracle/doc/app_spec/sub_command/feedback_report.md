@@ -95,7 +95,7 @@ normalization agent へ渡す情報を次に限定する。
 
 normalization agent は、summary、impact、原因、現在性、actionability、human action、verification verdict、または relation を生成しない。候補外の issue を探索せず、repository と feedback state を変更しない。
 
-既存 issue を選ぶ output は、入力候補の issue ID を返さなければならない。新しい issue を選ぶ output は、既存 issue ID を持たない。schema と決定論的事後条件に適合する output を受理できなければ、report 全体を失敗させる。
+既存 issue を選ぶ output の issue ID は、入力候補の issue ID と一致しなければならない。schema と決定論的事後条件に適合する output を受理できなければ、report 全体を失敗させる。
 
 ## verification
 
@@ -134,12 +134,9 @@ schema に加え、次の条件をすべて満たす output だけを受理す�
 
 - candidate ID が入力と一致する。
 - current evidence は、その candidate に許可した reference ID だけを使用する。
-- `unresolved | resolved | not_actionable` は、1 件以上の concrete current evidence を持つ。
 - 同 3 verdict は、少なくとも 1 件の repository content、current fingerprint、または probe result を根拠にする。
 - 過去の observation だけを current evidence にしない。
-- `unresolved` は、空でない具体的な human action を持つ。
 - fingerprint だけでは存在を意味的に確認できない場合は、`unresolved` としない。
-- `resolved | not_actionable | inconclusive` の human action は `null` とする。
 
 schema または決定論的事後条件に適合する output を補正後も受理できなければ、AI call failure とする。
 

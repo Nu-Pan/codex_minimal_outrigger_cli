@@ -48,9 +48,7 @@ def build_oracle_review_validate_finding_advocate_parameter(
         - 対象所見が妥当である理由を調査すること
         """,
         goal="""
-        - 指定の Structured Output schema に従って、対象所見が妥当である理由を返していること
-        - 既存の理由と重複しないよう、新規理由だけが列挙されていること
-        - 新規理由が無い場合、空配列を返していること
+        - 指定の Structured Output schema に従うこと
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,

@@ -50,7 +50,6 @@ def build_feedback_normalize_issue_parameter(
                 "Structured Output の決定論的事後条件",
                 """
                 - `result.decision=existing` の `result.existing_issue_id` は、入力された既存 issue candidate の issue ID と完全一致させる
-                - `result.decision=new` の `result.existing_issue_id` は `null` とする
                 """,
             ),
         ],

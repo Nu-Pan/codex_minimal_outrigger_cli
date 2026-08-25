@@ -38,7 +38,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         - 修正した file を再調査し、この agent call 内で対応可能な所見を残していないこと
         - realization file が realization policy に従っていること
         - 対象 repository が要求する必要な検証を完了していること
-        - 指定された Structured Output schema に従い、この agent call で発見した所見と対応結果を返すこと
+        - 指定された Structured Output schema に従うこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
@@ -57,7 +57,6 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
                 "作業上の注意点",
                 """
                 - commit 差分、変更 commit の列、変更要約は入力として与えられていない。最近の差分を推測して作業範囲を狭めてはいけない
-                - 調査開始時点の既存実装ですでに解消されている問題を所見に含めてはいけない
                 - 所見の調査、修正、修正後の検証を同一の agent call 内で行う
                 - `resolution.status=fixed` は、この agent call 内で所見に対応する realization file を実際に変更し、修正後の検証まで行った場合だけ使用する
                 - この agent call で realization file を変更して解消した所見も、この agent call で発見した所見として `findings` に含める

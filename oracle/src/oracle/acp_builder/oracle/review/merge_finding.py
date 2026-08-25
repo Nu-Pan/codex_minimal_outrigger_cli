@@ -44,7 +44,6 @@ def build_oracle_review_merge_finding_parameter(
         goal="""
         - 指定の Structured Output schema に従って編集操作を列挙すること
         - 編集操作実行後、所見同士の内容的な重複や相互矛盾が解消されていること
-        - 十分コンパクトで整合的なら空配列を返すこと
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,

@@ -1,5 +1,6 @@
 {
-    "type": "object",
+  "type": "object",
+  "description": "oracle review の擁護理由追加調査 agent call の出力。",
   "additionalProperties": false,
   "required": [
     "reasons"
@@ -7,7 +8,7 @@
   "properties": {
     "reasons": {
       "type": "array",
-      "description": "対象所見が妥当である新規理由のリスト。既知理由と重複する理由が無い場合は空配列を返す。",
+      "description": "既知理由と重複しない、対象所見が妥当である理由のリスト。該当する理由が無い場合は空配列を返す。",
       "items": {
         "type": "string",
         "description": "対象所見が妥当である理由。"

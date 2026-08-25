@@ -30,25 +30,13 @@ def build_feedback_verify_issue_parameter(
         summary="""
         - あなたは人間向け feedback issue の検証担当です
         - 1 件の issue candidate を report cut 時点の固定済み参照だけから検証すること
-        - 現在も未解決であり、作業外にいる人間の対応が必要な issue だけを `unresolved` とすること
         """,
         goal="""
-        - 指定された Structured Output schema に従い、`unresolved | resolved | not_actionable | inconclusive` のいずれかを返すこと
-        - `unresolved` には具体的な current evidence と必要な human action があること
-        - 候補外の問題を探索せず、feedback state または問題の根拠を編集していないこと
+        - 指定された Structured Output schema に従って検証結果を返すこと
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         aux_static_prompt=[
-            SDHeader(
-                "verdict",
-                """
-                - `unresolved`: report cut 時点でも問題が存在し、現在の作業外にいる人間の対応が必要である
-                - `resolved`: 問題が report cut 時点では存在しない
-                - `not_actionable`: 状態は存在しても feedback の人間向け報告基準を満たさない
-                - `inconclusive`: 許可された report cut reference だけでは判定できない
-                """,
-            ),
             SDHeader(
                 "参照と変更の禁止",
                 """
@@ -62,11 +50,8 @@ def build_feedback_verify_issue_parameter(
                 """
                 - `result.candidate_id` は入力 candidate ID と完全一致させる
                 - current evidence の `reference_id` は入力された report cut reference ID だけから選ぶ
-                - `unresolved | resolved | not_actionable` は 1 件以上の concrete current evidence を持つ
                 - `unresolved | resolved | not_actionable` は少なくとも 1 件の `repository_content | current_fingerprint | probe_result` reference を根拠にし、過去の observation だけを根拠にしてはならない
-                - `unresolved` は空でない human action を持つ
                 - fingerprint だけでは問題の存在を意味的に確認できない場合は `inconclusive` とする
-                - `resolved | not_actionable | inconclusive` の human action は `null` とする
                 """,
             ),
         ],

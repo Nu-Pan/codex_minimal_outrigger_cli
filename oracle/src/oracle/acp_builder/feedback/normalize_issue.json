@@ -1,12 +1,13 @@
 {
   "type": "object",
+  "description": "feedback issue の同一性判断 agent call の出力。",
   "additionalProperties": false,
   "required": [
     "result"
   ],
   "properties": {
     "result": {
-      "description": "observation が入力候補と同じ issue か、新しい issue かだけを表す同一性判断。",
+      "description": "同一性判断の結果。decision に対応する result object を返す。",
       "anyOf": [
         {
           "$ref": "#/$defs/existing_result"
@@ -20,6 +21,7 @@
   "$defs": {
     "existing_result": {
       "type": "object",
+      "description": "入力候補と同じ issue と判断した場合の結果。",
       "additionalProperties": false,
       "required": [
         "decision",
@@ -42,6 +44,7 @@
     },
     "new_result": {
       "type": "object",
+      "description": "入力候補のいずれとも同じでないと判断した場合の結果。",
       "additionalProperties": false,
       "required": [
         "decision",

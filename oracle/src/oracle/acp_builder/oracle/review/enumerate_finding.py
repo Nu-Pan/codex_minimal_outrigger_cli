@@ -51,8 +51,6 @@ def build_oracle_review_enumerate_finding_parameter(
         """,
         goal="""
         - 指定の Structured Output schema に従って所見が列挙されていること
-        - 既知の関連所見と重複しない新規所見だけが列挙されていること
-        - 新規所見が無い場合は空配列を返していること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,

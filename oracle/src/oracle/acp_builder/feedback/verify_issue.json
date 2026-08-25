@@ -1,12 +1,13 @@
 {
   "type": "object",
+  "description": "feedback issue の verification agent call の出力。",
   "additionalProperties": false,
   "required": [
     "result"
   ],
   "properties": {
     "result": {
-      "description": "report cut 時点の issue candidate に対する verification verdict。",
+      "description": "verification verdict に対応する検証結果 object。",
       "anyOf": [
         {
           "$ref": "#/$defs/unresolved_result"
@@ -26,6 +27,7 @@
   "$defs": {
     "current_evidence": {
       "type": "object",
+      "description": "report cut reference 内で確認した candidate の現在状態を示す evidence 1 件。",
       "additionalProperties": false,
       "required": [
         "reference_id",
@@ -52,6 +54,7 @@
     },
     "unresolved_result": {
       "type": "object",
+      "description": "unresolved verdict の検証結果。",
       "additionalProperties": false,
       "required": [
         "candidate_id",
@@ -96,6 +99,7 @@
     },
     "resolved_result": {
       "type": "object",
+      "description": "resolved verdict の検証結果。",
       "additionalProperties": false,
       "required": [
         "candidate_id",
@@ -139,6 +143,7 @@
     },
     "not_actionable_result": {
       "type": "object",
+      "description": "not_actionable verdict の検証結果。",
       "additionalProperties": false,
       "required": [
         "candidate_id",
@@ -182,6 +187,7 @@
     },
     "inconclusive_result": {
       "type": "object",
+      "description": "inconclusive verdict の検証結果。",
       "additionalProperties": false,
       "required": [
         "candidate_id",

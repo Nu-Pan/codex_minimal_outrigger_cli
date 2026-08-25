@@ -1,5 +1,6 @@
 {
-    "type": "object",
+  "type": "object",
+  "description": "oracle review の所見列挙 agent call の出力。",
   "additionalProperties": false,
   "required": [
     "findings"
@@ -10,6 +11,7 @@
       "description": "レビュー対象 oracle file と関連 oracle file から見つけた、既知の関連所見と重複しない新規所見のリスト。新規所見が無い場合は空配列を返す。",
       "items": {
         "type": "object",
+        "description": "レビューで見つけた新規所見 1 件。",
         "additionalProperties": false,
         "required": [
           "severity",
@@ -20,7 +22,7 @@
         "properties": {
           "severity": {
             "type": "string",
-            "description": "所見の重大度。",
+            "description": "所見の重大度。fatal は致命的所見、minor は軽微な所見を表す。",
             "enum": [
               "fatal",
               "minor"
