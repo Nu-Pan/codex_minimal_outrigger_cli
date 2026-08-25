@@ -4,7 +4,7 @@
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
 - 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする
-- `{{cmoc-root}}/oracle/src/oracle/acp_builder` ツリー内の AgentCallParameter builder は、個別 agent call の正確な prompt 文面と起動パラメータを構築する
+- 個別 agent call の AgentCallParameter builder は、対応する oracle doc が明示的に委譲した範囲で、正確な prompt 文面と起動パラメータを構築する
 - 本書で agent call とは、1 個の `AgentCallParameter` に対する論理的な呼び出し単位を指す
 - Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
 - 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
@@ -151,7 +151,34 @@ call-scoped path context の適用範囲を次に示す。
 
 ## プロンプトの渡し方
 
-- 初回 Codex call に渡す正確な prompt 文面と構築方法は、`{{cmoc-root}}/oracle/src/oracle/acp_builder` と `{{cmoc-root}}/oracle/src/oracle/prompt_builder` を参照する
+prompt の一般規則は、`oracle/doc/app_spec/misc_spec.md:8` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までを正本とする。本節は prompt 固有の規則だけを定義する。
+
+### prompt literal の役割と制限
+
+prompt literal は、受信 agent がその agent call を実行するために必要な情報を伝える agent-facing な表現とする。含めてよい内容は、次の範囲に限定する。
+
+- call 固有の目的、作業範囲、および入力
+- runtime の path および対象
+- 受信 agent が実行時に知る必要がある制約
+- oracle doc が所有する規則の必要最小限の agent-facing な表現
+
+prompt literal に、次の内容を正本として置いてはならない。
+
+- 受信 agent の判断に不要な cmoc の内部仕様、内部 algorithm、状態遷移、または設計理由
+- oracle doc に存在しない新しい要求、禁止、判断基準、goal、non-goal、または意味上の優先関係
+- 正本を prompt literal 側へ移すことを目的とする詳細説明
+- oracle doc との競合時に prompt literal を優先させる規定
+
+### call 固有の実行時指示の優先関係
+
+`prompt > oracle file > installed skill` と表現される優先関係は、cmoc の恒常的な意味仕様ではなく、call 固有の目的、作業範囲、入力、および権限に適用する。この正確な agent-facing literal は、`oracle/src/oracle/prompt_builder/policy/oracle.py:21` の `build_oracle_policy` が所有する。
+
+call 固有の実行時指示の優先関係は、prompt literal に cmoc の新しい意味仕様を作る権限を与えない。prompt literal と oracle doc が所有する意味仕様が食い違う場合は、prompt literal による仕様変更とは扱わず、oracle file 間の不整合として扱う。
+
+### prompt の構築と受け渡し
+
+- 完全 prompt の共通構築順序は、`oracle/src/oracle/prompt_builder/complete_prompt.py:41` の `build_complete_prompt` へ委譲する。同関数が、prompt part、目的、および placeholder 定義を統合する正確な順序を所有する
+- prompt の共通 rendering は、`oracle/src/oracle/other/struct_doc.py:183` の `render_sd_node_as_markdown` へ委譲する。同関数が、構造化された prompt を Markdown 文字列へ変換する正確な rendering を所有する
 - builder が生成した `AgentCallParameter.prompt` は、初回 Codex call の stdin へ渡す入力とする。意味仕様または prompt 文面の正本ではない
 - `AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する
 - realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない

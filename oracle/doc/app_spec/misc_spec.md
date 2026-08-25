@@ -5,11 +5,47 @@
 
 oracle file は、人間が所有して全責任を負う正本仕様断片とする。agent は oracle file の作成、変更、調査、およびレビューを補助してよいが、realization file から正本仕様を逆算してはならない。
 
-oracle file の下位概念は、次の責務で区別する。
+### oracle doc と oracle src の正本責務
 
-- oracle doc は `{{work-root}}/oracle/doc` に置き、cmoc の要求、判断基準、および責務を自然言語で定義する意味仕様の正本とする。
-- oracle src は `{{work-root}}/oracle/src` に置き、人間が所有する正確な実装定義と schema を管理する。`prompt_builder` と `acp_builder` は prompt の実行可能な構築定義、literal、rendering、docstring、およびコードブロックに隣接するコメントを所有し、oracle doc は同じ文面や構築詳細を複製しない。
+oracle file の下位概念は、正本として所有する事項で区別する。
+
+- oracle doc は `{{work-root}}/oracle/doc` に置く。cmoc の要求、責務、判断基準、goal、non-goal、および意味上の優先関係を定義する意味仕様を所有する。
+- oracle src は `{{work-root}}/oracle/src` に置く。oracle doc から明示的に委譲された正確な algorithm、builder の選択値、prompt の構築順序・文面・rendering、および schema を所有する。
 - oracle test は `{{work-root}}/oracle/test` に置き、プログラミング言語で正本仕様を検査する。
+
+明示的に委譲された prompt literal の正確な文面は oracle src が所有し、その文面が表す意味仕様は oracle doc が所有する。builder が生成した prompt（generated prompt）は実行時生成物であり、意味仕様または prompt 文面の正本ではない。
+
+prompt literal に固有の役割、制限、および call 固有の実行時指示の優先関係は、`oracle/doc/app_spec/codex_exec_rule.md:156` の「prompt literal の役割と制限」以降を参照する。
+
+### 正本責務の重複禁止
+
+同じ仕様事項の正本所有者は一つだけとする。この重複禁止は正本責務を対象とし、同じ文字列が複数箇所に現れること自体を禁止しない。
+
+- oracle doc は、oracle src が所有する exact literal、schema、構築方法、または選択値を言い換えて再定義しない。
+- oracle src は、oracle doc が所有する意味仕様を独立した正本として補完、変更、または拡張しない。
+- prompt literal は、oracle doc が所有する規則を受信 agent 向けに必要最小限で再表現してよい。この再表現は第二の正本とせず、その変更で意味仕様が変わる場合は対応する oracle doc も変更する。
+
+### oracle doc から oracle src への委譲
+
+oracle doc は、正確な詳細の正本責務を oracle src へ明示的に委譲してよい。委譲する oracle doc は、参照先が所有する範囲を限定し、次の参照情報を示す。
+
+- repository-relative path
+- 現在の行番号
+- 関数、class、定数、または JSON Pointer などの安定した locator
+- 参照先が正本として所有する内容の短い説明
+
+行番号は移動の補助情報とし、参照対象は安定した locator でも特定できるようにする。委譲する oracle doc は、参照先が所有する詳細を本文へ複製しない。
+
+正本関係を相互に追跡する必要がある場合は、Codex へ注入されない oracle src の docstring、comment、または参照 metadata に、意味仕様を所有する oracle doc の repository-relative path と見出しを記載してよい。この記載によって、注入される literal または rendering 結果を変更してはならない。
+
+### 正本責務に基づく優先関係
+
+oracle doc と oracle src の優先関係は、ファイル種別の一律な上下関係ではなく、対象事項の正本責務に基づいて判断する。
+
+- 意味仕様については、その事項を所有する oracle doc を優先する。oracle src の記述が詳細、実行可能、または Codex へ注入されることだけでは、この正本責務と優先関係は変わらない。
+- oracle doc が明示的に委譲した正確な表現、構築、選択値、および schema については、参照先の oracle src を優先する。
+- 同じ意味仕様について oracle doc と oracle src が食い違う場合は、詳細な記述を選んで解決してはならない。oracle file 間の不整合として扱う。
+- generated prompt は、oracle doc または oracle src の正本を上書きしない。
 
 realization file は、oracle file に記述された人間意図を具体化する成果物とする。realization file は AI が編集し、正本仕様を述べる場所にしてはならない。
 
