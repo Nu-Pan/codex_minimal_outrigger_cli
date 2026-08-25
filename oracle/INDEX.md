@@ -1,19 +1,20 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様・開発規約を集約する文書群への入口。app_spec で CLI、session/run lifecycle、共通実行契約などを確認し、branch_model で branch・commit・worktree の関係を確認する。dev_rule では Python 実装、CLI 配置、環境、テスト、品質検査の規則へ進む。considered_alternative は不採用案と採否理由の確認に使う。
+- cmoc の正本ドキュメント群を集約するディレクトリ。アプリケーション仕様、branch・commit・worktree モデル、採用しなかった設計案、Python 開発規約・実装配置・環境・テスト規則を扱い、目的に応じた下位文書への入口となる。
 
 ## Read this when
-- cmoc の現行仕様、設計上の用語、CLI の挙動、session/run や branch/worktree の lifecycle を調査・変更するとき
-- Python 実装規約、CLI の責務配置、開発環境、テスト要件、品質検査手順を確認するとき
-- 採用されなかった設計・作業方式と、その理由を調査するとき
+- cmoc のアプリケーション挙動、session/run lifecycle、branch・worktree の関係、または開発・実装・テスト規約を確認するとき
+- 複数の正本文書にまたがる仕様・設計・開発手順の確認先を判断するとき
+- 採用されなかった設計案とその理由を調査するとき
 
 ## Do not read this when
-- 特定機能の実装詳細、正確な prompt や Structured Output schema、具体的な保存済み report だけを調べるとき
-- 個別仕様の詳細やテスト実行手順など、下位文書が直接の入口になるとき
+- 特定機能の詳細仕様、具体的な実装責務、テスト実行手順、Python 環境操作など、対応する下位文書を直接読めば足りるとき
+- raw observation、feedback state、Structured Output schema、prompt 構築など個別資料の具体的内容だけを確認するとき
+- realization file の実装詳細や、本文書群に含まれない将来用途・一般的なコード品質を調べるとき
 
 ## hash
-- 57185820274aa5c194dab2d107498caafcc9f7f9b910914d23d6dc9f9e4eabe6
+- 6646a0efecbccd4b98dec878a6288675e672c46861044c7d2a15a6f66d4a981b
 
 # `src`
 

@@ -18,24 +18,20 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- Codex CLI を用いた cmoc の agent call 実行規約を定義する仕様書。agent call の path context、Codex CLI の設定上書き、sandbox とファイルアクセス制限、model/provider 選択、prompt・ログ・Structured Output の扱い、並列実行、失敗時の再試行と quota 待機を扱う。Codex CLI 呼び出し処理の全体規約を確認する入口であり、個別 agent call の意味上の責務や判断基準は対応する oracle doc を読む。
+- cmoc が `codex exec` を呼び出す際の正本規約。agent call ごとの path context、環境変数、CLI 引数上書き、sandbox と詳細なファイルアクセス制限、model/provider、prompt の受け渡し、feedback reporter、ログ保存、Structured Output 検証・補正、並列実行、失敗時の retry・quota 待機を定める。Codex CLI 呼び出しの実装、AgentCallParameter builder、実行ログ、出力補正、障害時の挙動を確認・変更するときの入口となる。
 
 ## Read this when
-- cmoc が Codex CLI を起動する処理の規約を確認するとき。
-- agent call ごとの cwd、work root、repo root、path placeholder、並列実行の扱いを確認するとき。
-- Codex CLI の sandbox、承認設定、model/provider、reasoning effort、設定上書き、環境変数の適用を確認するとき。
-- prompt の stdin 渡し、Structured Output schema、出力検証、同一 session による補正 turn、ログ保存を確認するとき。
-- Codex CLI の quota 枯渇、サーバー一時不調、想定外エラーに対する処理を確認するとき。
+- cmoc の `codex exec` または `codex exec resume` 呼び出しの argv、環境、sandbox、provider、model、reasoning effort を確認・変更するとき
+- agent call の path context、ファイルアクセス制限、prompt 生成・stdin 渡し、Codex call のログ保存を実装・検証するとき
+- Structured Output の schema 保存、検証、同一 session での補正、差分不変性、失敗時処理を確認するとき
+- feedback reporter の call-scoped context や Codex CLI の quota・一時障害・並列呼び出しへの対応を確認するとき
 
 ## Do not read this when
-- 個別 agent call の意味上の責務や判断基準を確認する場合は、対応する oracle doc を直接読む。
-- path context の正確な導出を確認する場合は、本文が参照する path model と prompt builder の oracle source を直接読む。
-- Windows toast notification の effective configuration や callback 条件を確認する場合は、指定された Windows toast notification の正本仕様を直接読む。
-- feedback reporter の意味、event、安定 field、完全 prompt への配置を確認する場合は、指定された feedback observation の正本仕様と参照先を直接読む。
-- cmoc 自己開発における環境構築、設計、test rule、test execution の判断を確認する場合は、対応する dev_rule の oracle または skill を直接読む。
+- 個別の agent call の意味上の責務や判断基準を確認する場合は、先に対応する oracle doc を読む
+- Codex CLI 呼び出し以外の実装責務、一般的な開発環境、テスト実行規約を確認する場合は、対応する別の oracle 文書へ直接進む
 
 ## hash
-- 1c8b650fe9ce70f23c36c99bf6d408bd9778fc0f0efb0aec424d8af5c46d0fa2
+- 1bd2c78042f2799bcd68e8a3725cf2f9414f1cd2c2b26d577fe3ea3117cc2e34
 
 # `codex_model_provider.md`
 
@@ -202,20 +198,22 @@
 # `misc_spec.md`
 
 ## Summary
-- cmoc の雑多な仕様を定義する文書。oracle file と realization file の責務、両者を扱う判断基準、列挙・Git ignore・traversal の契約、回帰検証、work-root や実行時パス、タイムスタンプ、管理ブランチの意味を扱う。これらの横断的なファイル分類・仕様適合性・実行コンテキストの判断で、個別の oracle doc や実装定義へ進む前の入口となる。
+- oracle file と realization file の正本責務、配置、委譲、優先関係、および相互の適合性判断を定義する雑多な仕様の入口。oracle file の扱い、realization file の実装・テスト方針、仕様から導ける修正対象を確認するときに読む。
+- oracle file と realization file の分類規則、対象外 subtree、Git ignore、symlink・非通常ファイル、nested repository、列挙性能不変条件、回帰検証を扱うファイル列挙仕様の入口。doctor preprocess や realization refactor state の対象集合・列挙結果を調べるときに読む。
+- work-root、cmoc 実行時の cwd、タイムスタンプ、cmoc-managed-branch など、cmoc の実行環境と変更範囲を解釈する補助仕様をまとめている。これらのプレースホルダーや履歴上の変更範囲の意味を確認するときに読む。
 
 ## Read this when
-- oracle と realization の責務境界や、正本仕様から実装を導く際の判断基準を確認するとき
-- oracle file / realization file の列挙、Git ignore、traversal、symlink、性能不変条件、回帰検証の契約を調べるとき
-- work-root、cmoc 実行時の cwd、タイムスタンプ、cmoc-managed-branch の定義を確認するとき
+- oracle doc・oracle src・oracle test・realization implementation・realization test・realization ancillary の責務境界を判断するとき
+- oracle file の分類、Git ignore を含む列挙、symlink や nested repository の扱い、列挙性能または回帰検証を扱うとき
+- work-root、agent call の cwd、タイムスタンプ、cmoc-managed-branch の定義を確認するとき
 
 ## Do not read this when
-- 個別の実装定義、prompt 構築、CLI の具体的な責務を確認する場合は oracle/src 配下の該当文書へ直接進むとき
-- テスト固有の正本仕様や実行手順だけを確認する場合は oracle/test または対応する test execution 文書へ直接進むとき
-- 対象ファイルの具体的な実装挙動だけを調べる場合は src や test の該当ファイルへ直接進むとき
+- 個別の oracle doc、oracle src、oracle test の具体的な仕様や exact literal・schema・algorithm を直接確認する場合
+- realization の具体的な実装責務やテスト手順だけを確認する場合は、それぞれ対象の src・test または専用の開発手順へ直接進む
+- INDEX.md の既存エントリーや、本文に記載されていない将来用途・実装詳細を調べる場合
 
 ## hash
-- 639838ddf49d18095a365f502525c71329cfd5cfbcab89d8f4651035e62e4b22
+- 972bc96839e81baf79b1d1b4dfc9ab422660920e3db4e3bfd1e48d585ebe68b6
 
 # `prompt_editor_input.md`
 

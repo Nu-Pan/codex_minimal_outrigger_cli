@@ -91,26 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・設計・開発規約を集約する文書群です。CLI、session/run lifecycle、branch・commit・worktree、feedback、INDEX.md、Codex 実行契約、テスト・品質検査、採用しなかった方式の理由を確認する入口になります。
-- agent call の構築、prompt と policy の生成、oracle／realization の扱い、routing・feedback、設定・パス解決、構造化文書のモデルを実装する領域です。目的別の agent call 構築は acp_builder、prompt と規定の合成は prompt_builder、設定・パス・構造化文書は other、feedback 入力契約は feedback へ進みます。
+- cmoc の正本資料を集約するルート。アプリケーション仕様、branch・run・worktree モデル、採用しなかった設計案、開発規約を確認するための入口であり、実装構築に関する oracle source も配下に含む。
+- 仕様・設計・開発手順などの文書を調べる場合は `doc`、agent call 構築や prompt・feedback 関連の実装契約を調べる場合は `src` へ進む。
 
 ## Read this when
-- cmoc の現行仕様、CLI の挙動、session/run や branch/worktree の lifecycle、共通実行契約を調査または変更するとき
-- Python 実装、CLI 配置、開発環境、テスト要件、品質検査の規約を確認するとき
-- agent call の prompt、モデル、reasoning effort、ファイルアクセス、Structured Output、indexing preflight の構築を確認または変更するとき
-- prompt の統合、oracle／realization、routing、feedback、review、conflict resolution の policy を確認または変更するとき
-- 設定、root path の解決、Structured Document のモデル・Markdown レンダリング、feedback observation の入力契約を確認するとき
-- 採用されなかった設計・作業方式と、その理由を調査するとき
+- cmoc の全体仕様、正本資料の構成、アプリケーション挙動、branch・run・worktree のモデルを確認するとき
+- 開発規約や採用しなかった設計案を含め、複数の仕様領域にまたがる確認先を判断するとき
+- oracle source に定義された agent call、prompt、feedback、設定、パス解決の実装契約へ進む入口を判断するとき
 
 ## Do not read this when
-- 特定機能の実装詳細や Codex CLI の実際の外部プロセス起動だけを確認したいとき
-- oracle／realization の正本仕様本文や realization 側の実装・テストを直接確認したいとき
-- 具体的な保存済み report や個別の Structured Output schema だけを調べるとき
-- INDEX.md の既存ルーティング内容を確認したいとき
-- agent call、prompt、feedback、設定、パス解決、構造化文書に関係しない別領域の実装やテストだけを調査するとき
+- 特定のアプリケーション仕様、branch model、開発規約、採用しなかった設計案の詳細だけを確認すれば足りるときは、`doc` 配下の該当文書を直接読む
+- agent call 構築、prompt builder、feedback reporter、設定モデルなどの具体的な実装契約だけを確認したいときは、`src` 配下の該当対象を直接読む
+- realization 側の実装詳細、テスト実行の具体的手順、既存の INDEX.md の内容、oracle に含まれない将来用途や一般的なコード品質を調べるとき
 
 ## hash
-- ded847189768744e05ee1f1c56e691e98ffbb3c2116365005fc11f708ecd161c
+- f6aa621c86ee0849d3a241181c4d9718374986987560e4e5332c9d11ef2004c2
 
 # `pyproject.toml`
 
