@@ -18,22 +18,24 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc から Codex CLI を呼び出す際の標準規約を定める正本文書。agent call と Codex call の単位、call-scoped path context、環境変数、preflight、argv による設定上書き、sandbox と詳細なファイルアクセス制限を扱う。
-- model provider・model・reasoning effort の解決と明示、prompt の stdin 渡し、呼び出しログ、stdout/stderr、session ID、--output-last-message の保存規則を定める。
-- Structured Output の schema 保存、検証、同一 session での補正、差分不変性、補正不能時のエラー処理を定める。並列呼び出し、quota 枯渇時の待機・再開、サーバー一時障害時のリトライ、想定外エラー時の扱いも含む。
-- feedback reporter の call-scoped context、受付・drain・無効化、利用不能時の扱い、および Codex CLI 呼び出しの実行・記録に関する実装契約を確認する入口である。
+- Codex CLI を用いた cmoc の agent call 実行規約を定義する仕様書。agent call の path context、Codex CLI の設定上書き、sandbox とファイルアクセス制限、model/provider 選択、prompt・ログ・Structured Output の扱い、並列実行、失敗時の再試行と quota 待機を扱う。Codex CLI 呼び出し処理の全体規約を確認する入口であり、個別 agent call の意味上の責務や判断基準は対応する oracle doc を読む。
 
 ## Read this when
-- cmoc の codex exec 呼び出し、agent call の起動パラメータ、sandbox、ファイルアクセス制限、prompt 渡し、ログ保存を実装・変更・レビューするとき。
-- Structured Output の schema 検証・補正・session resume・差分不変性を実装・変更・レビューするとき。
-- model/provider 設定の argv 上書き、feedback reporter、並列実行、quota 待機、障害リトライの挙動を確認するとき。
+- cmoc が Codex CLI を起動する処理の規約を確認するとき。
+- agent call ごとの cwd、work root、repo root、path placeholder、並列実行の扱いを確認するとき。
+- Codex CLI の sandbox、承認設定、model/provider、reasoning effort、設定上書き、環境変数の適用を確認するとき。
+- prompt の stdin 渡し、Structured Output schema、出力検証、同一 session による補正 turn、ログ保存を確認するとき。
+- Codex CLI の quota 枯渇、サーバー一時不調、想定外エラーに対する処理を確認するとき。
 
 ## Do not read this when
-- codex exec 呼び出し規約ではなく、個別 agent call の意味上の責務や判断基準を確認したいときは、対応する oracle doc を直接読む。
-- path placeholder の正確な導出、prompt の構築、file-access policy の正確な文面、Windows toast や feedback observation の正本仕様を確認したいときは、本文が参照する各 oracle source・oracle doc を直接読む。
+- 個別 agent call の意味上の責務や判断基準を確認する場合は、対応する oracle doc を直接読む。
+- path context の正確な導出を確認する場合は、本文が参照する path model と prompt builder の oracle source を直接読む。
+- Windows toast notification の effective configuration や callback 条件を確認する場合は、指定された Windows toast notification の正本仕様を直接読む。
+- feedback reporter の意味、event、安定 field、完全 prompt への配置を確認する場合は、指定された feedback observation の正本仕様と参照先を直接読む。
+- cmoc 自己開発における環境構築、設計、test rule、test execution の判断を確認する場合は、対応する dev_rule の oracle または skill を直接読む。
 
 ## hash
-- cb38183096078e9d35768c1168d362a97601ddf4e11f81a22dc8f8427d009736
+- 1c8b650fe9ce70f23c36c99bf6d408bd9778fc0f0efb0aec424d8af5c46d0fa2
 
 # `codex_model_provider.md`
 
@@ -269,20 +271,22 @@
 # `sub_command`
 
 ## Summary
-- `oracle/doc/app_spec/sub_command` 配下のサブコマンド正本仕様を案内するディレクトリ。doctor、indexing、oracle 操作、realization、session、run lifecycle、feedback report、TUI などの実行契約、状態遷移、報告要件を扱い、個別仕様へ進む入口となる。
+- `oracle/doc/app_spec/sub_command` は、cmoc の各サブコマンドおよび主要な session・run lifecycle の正本仕様を集約する入口です。doctor、indexing、tui、oracle 操作、realization apply/refactor、feedback report、session fork/join/abandon などの実行条件、処理手順、状態遷移、report・終了経路を扱い、共通 lifecycle や個別仕様へ進むためのルーティング起点になります。
 
 ## Read this when
-- cmoc のサブコマンド仕様を横断的に調べ、読むべき正本仕様を選ぶとき
-- CLI の実行条件、fork・join・abandon、診断、indexing、feedback report、TUI、終了報告の仕様を確認するとき
-- サブコマンド固有仕様と共通 run lifecycle のどちらを読むべきか判断するとき
+- cmoc のサブコマンドの仕様、引数、事前条件、実行手順、終了コードを確認・変更するとき
+- primary report、診断結果、ログ、feedback、cleanup、エラー経路など、サブコマンド横断の完了契約を確認するとき
+- session fork/join/abandon や realization fork、run join/abandon の lifecycle と状態遷移を確認するとき
+- 対象サブコマンドの個別仕様から、参照される共通 lifecycle・feedback・prompt・起動規則へ進む必要があるとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細だけを確認する場合は、該当する個別仕様ファイルを直接読むとき
-- fork・join・abandon に共通する lifecycle だけを確認する場合は、`editing_run.md` を直接読むとき
-- raw observation、feedback state、prompt、起動パラメータ、エラー処理などの専用仕様や詳細実装だけを調査する場合は、各文書が案内する対象へ直接進むとき
+- 特定サブコマンドの内部実装、prompt の正確な文面、Structured Output schema、起動パラメータの詳細だけを確認したいとき
+- raw observation、feedback state、normalization/verification、indexing 処理、merge conflict 解消など、本文から委譲される専用仕様を直接確認できるとき
+- 実装責務、テスト規則、実行手順、oracle file や realization file の一般的な編集規則だけを確認したいとき
+- 保存済み report の具体的な実例や生成物だけを調査するとき
 
 ## hash
-- 07fb67af1fb3d09f4b92251af378c69280f1df8ad76bd7ad8c7409d464315be6
+- 1bb7dc7867bfdb96491eea03593c5b94df519577d03b33d68be96ce67ab3fe45
 
 # `subcommand_interruption.md`
 

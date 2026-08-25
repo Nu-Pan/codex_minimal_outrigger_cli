@@ -120,20 +120,23 @@
 # `oracle_review.md`
 
 ## Summary
-- この oracle file は、現在の oracle 全体またはセッション差分に対して、隔離実行内で Codex CLI による所見の列挙・統合・検証・採否判定を反復し、最終的なレビュー結果を Markdown レポートとして保存・提示する `cmoc oracle review` の仕様を定義する。レビュー対象の選定、前提条件、割り込み時の扱い、finding の成立条件と重大度、レポートの構造および責務境界を確認するための入口である。
+- `cmoc oracle review` サブコマンドの正本仕様。oracle file を対象に、セッションまたは全体スコープで所見を列挙・統合・検証・採否判定し、Markdown レポートとして保存・提示する一連の処理を定義する。
+- 実行前提、隔離 run、ユーザー中断時の扱い、所見の成立条件と重大度、agent call の各段階、所見 ID・ダーティフラグ・ループ上限、レポート形式と終了結果を定める。oracle review の挙動やレビュー責務を確認・変更する際の入口となる。
 
 ## Read this when
-- oracle file の致命的問題をレビューするサブコマンドの挙動、対象スコープ、反復する agent call、finding の採否基準を確認するとき
-- oracle review レポートの保存先、frontmatter、本文セクション、verdict の意味を確認するとき
-- レビューの事前条件、隔離実行、ユーザー中断、finding ID 管理、責務境界を調べるとき
+- `cmoc oracle review` の引数、事前条件、実行手順、終了経路を確認するとき
+- oracle file のレビュー、所見の列挙・統合・検証・採否判定の挙動を変更または調査するとき
+- レビュー結果の保存先、frontmatter、本文セクション、verdict の要件を確認するとき
+- レビュー対象範囲、隔離実行、ユーザー中断時の部分結果の扱いを確認するとき
 
 ## Do not read this when
-- oracle review の agent call 用 prompt の正確な構築方法を確認したいときは、本文が案内する acp_builder の review 実装を直接読む
-- 所見成立条件そのものの共通定義を確認したいときは、本文が案内する oracle_findings.py と misc_spec.md を直接読む
-- run の隔離実行の共通仕様や中断の共通動作だけを確認したいときは、本文が案内する各 app_spec を直接読む
+- oracle review 以外のサブコマンドの仕様だけを確認するとき
+- agent call の具体的な prompt 構築規則を確認する場合は、指定された review builder や findings policy を直接読むとき
+- 隔離実行の共通仕様だけを確認する場合は、run isolation の正本仕様を直接読むとき
+- 所見の自動 feedback 変換や共通 reporter の仕様だけを確認するとき
 
 ## hash
-- b7cdbbd89bff8bf86541f1fbcf23c0cd48bc91a0e217f63fb015e878486c53c6
+- 7a2ee64dba772bfad5bfac3abc033398b4351e1df75ae52c5790e66b7d0cfd0b
 
 # `realization_apply.md`
 
