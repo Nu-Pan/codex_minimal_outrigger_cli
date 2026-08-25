@@ -214,7 +214,8 @@ call-scoped path context の適用範囲を次に示す。
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
 - スキーマは、一度 `{{repo-root}}/.cmoc/gu/ar/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
 - `{{hash}}` は schema 本文の SHA256 ハッシュとする
-- JSON Schema で表現できる field、型、必須性、列挙値、配列要素数、入れ子、および field 間の構造的な組み合わせは schema を正本とする
+- Structured Output の field の意味、型、必須性、列挙値、配列要素数、入れ子、および field 間の構造的な組み合わせは、JSON Schema で説明できる限り schema だけで説明し、schema を正本とする
+- 出力要件を schema と prompt の両方で説明してはならない。prompt には schema で説明できない要件だけを記載する
 - 実行時状態との照合が必要で schema に置けない決定論的事後条件は、workload 固有の oracle doc を正本とする。対応する AgentCallParameter builder は、その正確な agent 向け文面を所有する
 - schema または宣言済みの決定論的事後条件に含まれない意味的品質を、機械的な受理条件にしてはならない
 

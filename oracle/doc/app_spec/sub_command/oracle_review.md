@@ -48,7 +48,7 @@
 - 個別 agent call の意味上の責務と判断基準は本書で定義する。
 - 各段階の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review` の各 `build_*_parameter` を参照する。
 - 所見成立条件の正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle_findings.py` を参照する。
-- Structured Output schema は出力構造だけを定義し、所見の判定基準を定義しない
+- Structured Output schema は出力構造と各 field の意味を定義し、所見の判定基準を定義しない
 
 ## 「run の隔離実行」とは
 
