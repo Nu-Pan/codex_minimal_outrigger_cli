@@ -69,22 +69,21 @@
 # `oracle.py`
 
 ## Summary
-- oracle file を扱う agent call 向けの instruction 文面を構築する定義。
-- oracle file と realization file の役割境界、仕様断片の goal・non-goal、実装差の許容範囲、関連 oracle file の参照要件などを SDPolicy としてまとめる。
-- oracle policy の構築入口であり、oracle file の規定を変更・確認する作業ではこの定義から確認する。
+- oracle file を扱う agent call 向けの instruction 文面を構築する定義。`build_oracle_policy` は、oracle file の要件・禁止事項・許容事項・補足方針を `SDHeader` と `SDPolicy` としてまとめ、プレースホルダー map とともに返す。
+- oracle と realization の基本要件、指示の優先順位、実装差の許容境界、goal・non-goal の可読性、関連 oracle file の参照、既存意味の維持、用語統一、定義済み事項と未定義事項の区別を oracle file の必須条件として扱う。
+- realization file による仕様の逆算、一般論による仕様修正、未定義事項の断定、仕様矛盾や重複、誤記を禁じ、oracle file の問題調査時に限り実装上の制約を判断材料として許容する。oracle file は認知負荷を抑えた疎な仕様断片であるべきだと補足する。
 
 ## Read this when
-- oracle file の規定を構築または変更するとき。
-- oracle と realization の要件、指示の優先順位、実装差の許容境界、goal・non-goal の記述方針を確認するとき。
-- oracle file 間の参照、仕様断片の疎性、定義済み事項と未定義事項の区別を確認するとき。
+- oracle file を扱う agent call 向けの policy 文面や構造を確認・変更するとき
+- `build_oracle_policy` が生成する oracle file の必須条件、禁止事項、許容事項を確認するとき
+- oracle と realization の関係、仕様断片の未定義範囲、実装差の許容境界をプロンプトへ反映するとき
 
 ## Do not read this when
-- oracle file の個別仕様本文を確認したいときは、直接対象の oracle file を読む。
-- realization の実装配置や具体的な実行時挙動を確認したいとき。
-- oracle policy と無関係な prompt builder の機能を確認したいとき。
+- oracle file の具体的な仕様内容や個別の開発ルールを確認する場合は、対象となる oracle file を直接読むとよい
+- prompt builder の一般的なプレースホルダー処理や `SDHeader`・`SDPolicy` の実装を確認するだけの場合は、対応する定義ファイルを直接読むとよい
 
 ## hash
-- ea7cfac6f60ac401fa398b8bbbc0912c123cd42cb31225044a8809309b2de5c4
+- 42688aed3b7d0513ce6e25e9d2028ef5111b209e4b42d9f9fba8bbbd6a3762dc
 
 # `oracle_findings.py`
 
@@ -105,42 +104,38 @@
 # `realization.py`
 
 ## Summary
-- realization file を扱う agent call 向けの instruction 文面を構築する。パス由来の placeholder 定義と、realization file の実装方針を示す SDHeader を返す。
-- oracle file を正本仕様断片として扱うこと、仕様の補完範囲、関連 oracle file の確認、既存実装の優先、YAGNI、重複整理、検証要件などの realization policy を定義する。
-- realization file 側で禁止される仕様複製・oracle file の変更・不要実装の残存・根拠のない複雑化などを明示し、必要な場合に限り最小限の同等実装を許可する。
-- realization policy の関連仕様として misc_spec を参照するため、realization file 向け agent call の規定や prompt policy を確認・変更するときの入口となる。
+- realization file を扱う agent call 向けの instruction 文面を構築する。パス文脈からプレースホルダー定義を取得し、realization file の責務・要求・禁止事項・許容事項を構造化した policy header として返す。
+- realization file に関する作業方針や agent call のプロンプト生成規則を確認したい場合の入口であり、具体的な oracle と realization の判断基準そのものは参照先の仕様を確認する。
 
 ## Read this when
-- realization file を対象とする agent call の instruction policy を確認・変更するとき。
-- oracle file と realization file の責務境界、実装方針、禁止事項、検証要件を prompt に反映するとき。
-- realization policy の placeholder 定義や構造化された prompt header の構築方法を調べるとき。
+- realization file を対象とする agent call の instruction 内容を変更・検討するとき
+- realization file に適用する要求、禁止事項、許容される実装範囲を prompt policy として構築するとき
+- パス文脈由来のプレースホルダー定義と、構造化文書の policy header を組み合わせる処理を確認するとき
 
 ## Do not read this when
-- realization file 自体の具体的な実装内容やテストを確認する場合は、対象の realization file または対応する test を直接読む。
-- realization に関する正本仕様の内容を確認する場合は、本文が参照する misc_spec などの oracle file を直接読む。
-- agent call の一般的な prompt 構築や realization 以外の policy を扱う場合は、対応する prompt_builder の対象ファイルを読む。
+- realization file の具体的な実装やテスト内容を確認したいとき
+- oracle と realization の判断基準そのものを確認したいときは、本文中で指定された関連仕様を直接読む
+- realization file 以外の agent call 向け instruction を構築する場合
 
 ## hash
-- f201c872904970a3af61a8aaeabb6ccb29585aa7655c3948efa80834297268d4
+- c32816ad468392a8d41ad064ec9dc797dbae4ca74284c6576bfa289e96cbeb57
 
 # `realization_findings.py`
 
 ## Summary
-- realization file に対する所見の判定基準を構築する関数を定義する。所見は oracle file と realization file の具体的な記述・挙動を根拠とし、明確な仕様不整合または realization file 上の致命的問題を修正対象とする一方、oracle file 自体の問題や必須でない事項は対象外とする。
-- 返却内容は、所見方針を表す空のプレースホルダーマップと、要求事項・禁止事項を含む構造化されたポリシーヘッダーである。関連する仕様確認や所見判定の入口として利用する。
+- realization file に対する所見が満たすべき規定を定義するポリシー構築関数。所見の根拠、修正対象となる不整合・致命的問題、一貫した適用基準を示し、oracle file 自体の問題や必須でない事項、既に解消済みの問題を対象外とする。
 
 ## Read this when
-- oracle file と realization file の適合性を判定する際の所見基準を確認したいとき
-- 明確な仕様不整合や realization file の致命的問題を修正対象とするか判断するとき
-- 所見に適用する要求事項・禁止事項を構築または変更するとき
+- realization file の oracle file への適合性を調査・レビューするとき
+- realization file に対する所見の作成規定や、修正対象・対象外の判断基準を確認するとき
 
 ## Do not read this when
-- realization file の実装内容そのものを調査するときは、対象の realization file を直接読む
-- oracle file の仕様定義や関連仕様の内容を確認するときは、該当する oracle file を直接読む
-- 所見判定やポリシー構築と無関係な prompt builder の処理を調査するとき
+- oracle file の仕様そのものを定義・レビューするとき
+- realization file の実装内容を直接確認するとき
+- 所見ポリシー以外のプロンプト構築規定を確認するとき
 
 ## hash
-- 11923872158d5007ae726acea0ff9ebd0449c723eb5a6f7dc67cb3e67207393b
+- 053b9a74fc9b62a0ead9ba0b3a8a8a4347ff72a1da1f0eb36400943105ae4847
 
 # `routing.py`
 

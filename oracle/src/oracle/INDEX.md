@@ -55,20 +55,23 @@
 # `prompt_builder`
 
 ## Summary
-- プロンプト生成に必要な共通型、完全 prompt 構築、エディタ初期入力、oracle／realization 概念部品、各種 policy 定義をまとめたディレクトリ。prompt_builder の構成要素と、目的別に読むべき下位対象への入口を提供する。
+- agent call 用の完全 prompt を構築するモジュール群。共通 placeholder 型、選択式の policy・説明部品・追加 prompt・目的を統合し、構造化 prompt として返す。
+- prompt の構築順序、policy の有効化、placeholder 定義の競合拒否、変動の大きい定義を末尾へ置く構成を扱う。
+- エディタ入力の初期文面を生成する処理を含む。記入指針と完全 prompt のテンプレートを HTML コメント内に埋め込む。
+- oracle と realization の基本説明、および feedback、file access、routing、INDEX.md 用エントリー、oracle／realization の扱い・所見、conflict resolution などの policy 部品を下位要素として提供する。
 
 ## Read this when
-- agent call 用 prompt の構築順序、policy・追加 prompt・目的・placeholder の統合方法を確認したいとき。
-- エディタへ注入する初期入力や、完全 prompt のテンプレート埋め込み形式を確認したいとき。
-- oracle と realization の基本概念、分類、配置、関連する prompt 部品を確認したいとき。
-- prompt_builder 配下の policy の責務や、目的に応じた個別 policy への到達先を判断したいとき。
-- placeholder 対応表の共通型定義を確認したいとき。
+- agent call に渡す完全 prompt の構成順序や、複数の policy・追加 prompt・目的の統合方法を確認・変更するとき。
+- placeholder 定義の統合規則や、同名異値の競合処理を確認するとき。
+- エディタ経由のプロンプト入力に使う初期文面、記入指針、完全 prompt テンプレートの埋め込み形式を確認・変更するとき。
+- oracle と realization の基本概念を prompt に組み込む説明部品を確認するとき。
+- prompt に組み込む共通 policy の責務や、feedback、file access、routing、INDEX.md、oracle／realization、所見、conflict resolution の各規定の入口を確認するとき.
 
 ## Do not read this when
-- 特定の policy 本文や prompt part の詳細を確認したい場合は、該当する下位ファイルを直接読む。
-- 具体的な oracle 文書・realization 実装・テストの内容や配置を確認したい場合は、対象ファイルを直接読む。
-- agent call の呼び出し側、path context、placeholder の具体的な生成規則を確認したい場合は、担当モジュールを直接読む。
-- プロンプト生成と無関係な構造化文書や CLI 挙動の仕様を確認したい場合。
+- 特定の oracle 文書、realization 実装、テストの内容や配置を確認するとき。
+- agent call の呼び出し側、path context の生成規則、placeholder の具体的な値の決定処理を確認するとき。
+- 個別 policy の本文だけを確認する場合は、該当する下位 policy 部品を直接読む。
+- 既存の INDEX.md の案内内容を確認するとき。
 
 ## hash
-- a93fc8f4f30fd2118222301e85d81817a7c117be0680504282cb6289b69ff4c1
+- d6d9e39df6753998c45206855af2b1faf617b5b429af9da642cfac2aa7c539d7

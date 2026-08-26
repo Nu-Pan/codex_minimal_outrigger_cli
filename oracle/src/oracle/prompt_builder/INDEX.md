@@ -72,20 +72,18 @@
 # `policy`
 
 ## Summary
-- prompt_builder/policy 配下の各ポリシー定義を、INDEX.md から目的別に案内するための対象です。conflict 解消、feedback 報告、ファイルアクセス、INDEX エントリー生成、oracle／realization の agent call 規定、所見判定、routing policy の構築に関する責務を分担します。
-- 個別のポリシー実装や関連する prompt 構築処理の入口として機能し、対象ごとに仕様確認・変更の起点を判断できます。
+- agent call 向けの prompt policy 定義を集約するディレクトリ。conflict 解消、feedback 報告、ファイルアクセス、INDEX.md エントリー、oracle／realization の扱い、所見、routing などの方針構築処理を収録し、各 policy の責務と参照条件を確認する入口となる。
 
 ## Read this when
-- session join の conflict 解消方針を確認・変更するとき
-- agent call 共通の human feedback reporting、ファイルアクセス制約、INDEX.md エントリー生成方針を確認・変更するとき
-- oracle file または realization file 向け agent call の instruction、両者の責務境界、所見判定基準を確認・変更するとき
-- INDEX.md routing policy の文面や、作業対象に近い文書への到達方針を確認・変更するとき
+- agent call の prompt policy を構築・変更するとき
+- oracle／realization、feedback 報告、ファイルアクセス、INDEX.md routing、所見判定などの共通方針の入口を探すとき
+- session join の conflict 解消や INDEX.md エントリー生成など、個別の policy 定義を確認するとき
 
 ## Do not read this when
-- session join 全体の実行手順や merge 対象仕様を確認する場合
-- conflict 解消用 agent call の prompt part 選択や起動パラメータを確認する場合
-- feedback 報告や oracle／realization の個別仕様本文、具体的な実装・テスト内容を確認する場合
-- PlaceholderMap、SDHeader、SDPolicy、AgentCallPathContext 自体の定義や、一般的な prompt builder 処理を確認する場合
+- 具体的な oracle file または realization file の仕様・実装を確認したいとき
+- session join 全体の実行手順や conflict resolution parameter の定義を確認したいとき
+- PlaceholderMap、SDHeader、SDPolicy、AgentCallPathContext など共通構造の定義だけを確認したいとき
+- 既存 INDEX.md の案内内容や個別対象の実装・テストを直接確認したいとき
 
 ## hash
-- 7ea13cf631ef967ba3fb14d69fa8f75649bcb92c6cb4c677f56bfaa9741d6720
+- accf02b3085263b3cd88038460eea306af23d2deed3c1b24c04226b02b34604c

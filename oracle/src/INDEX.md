@@ -1,19 +1,18 @@
 # `oracle`
 
 ## Summary
-- oracle 関連の agent call 構築、feedback 入力契約、設定・パス・構造化文書の補助モデル、prompt と policy の生成定義をまとめた領域です。
-- agent call の共通パラメータや目的別の起動設定を確認する場合は `acp_builder`、feedback issue の入力・検証契約を確認する場合は `feedback`、設定・パス解決・Markdown レンダリングを確認する場合は `other`、prompt の統合や oracle／realization・routing policy を確認する場合は `prompt_builder` へ進みます。
+- cmoc の oracle・realization 関連機能と、それらを動かす agent call の prompt・起動パラメータをまとめる中核領域です。共通の agent call データモデル、prompt 構築、設定・パス・構造化文書の補助機能を提供し、feedback、indexing、oracle、realization、session、TUI の各下位領域へ進む入口になります。
+- agent call の共通パラメータや論理モデル・推論強度・ファイルアクセスモードを確認する場合は `acp_builder`、完全 prompt の構成や policy 部品を確認する場合は `prompt_builder`、設定・パス解決・Markdown 構造化を確認する場合は `other` へ進みます。
 
 ## Read this when
-- oracle や realization を扱う agent call の構築責務と、目的別の prompt・Structured Output schema の入口を探すとき
-- feedback、indexing、oracle review、realization、session、quota probe、TUI に関する agent call 設定を調査するとき
-- prompt の組み立て、アクセス規定、routing、oracle／realization の policy を確認または変更するとき
-- cmoc の設定モデル、agent call のパス境界、構造化文書の Markdown 化を確認するとき
+- oracle または realization に関する agent call の構築箇所や、prompt・Structured Output・起動設定の入口を探すとき。
+- feedback、indexing、oracle review、realization 実行、session、quota probe、TUI の下位機能の配置を判断するとき。
+- agent call の共通データモデル、設定、パス境界、構造化文書の扱いを確認するとき。
 
 ## Do not read this when
-- Codex CLI の実際の起動処理や backend モデル名への変換を確認したいとき
-- oracle や realization の正本仕様本文、実装本文、feedback state、INDEX.md の内容を直接確認したいとき
-- agent call と無関係な CLI 挙動や、別領域の仕様・テストだけを調査するとき
+- 特定の feedback、indexing、oracle、realization、session、TUI 機能の詳細だけを調べるときは、対応する下位ディレクトリへ直接進む。
+- Codex CLI の実際の実行処理や backend のモデル名変換規則を調べるとき。
+- 個別の正本仕様、realization 実装、feedback state、既存の INDEX.md の内容そのものを確認するとき。
 
 ## hash
-- ab0d3833563fdf0ecba76b4e1c4ac19273d5e8504ff36b95ca5738caaf7ef8c2
+- 8f219b0f481d2d36f48d431b979cbc61f6e794432621e861cb50c59b6786c24d

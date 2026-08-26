@@ -1,37 +1,38 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約する正本文書ディレクトリ。CLI の共通出力・エラー・中断・自動補完、Codex 呼び出し、provider、doctor、run/session lifecycle、feedback、indexing、prompt editor、Windows 通知などの挙動仕様を扱う。個別機能の仕様確認や変更時に、関連する下位仕様へ進むための入口となる。
+- cmoc のアプリケーション仕様文書群。CLI 実行、session/run lifecycle、feedback、ログ、エラー処理、prompt、状態管理、通知、indexing などの正本仕様を収録し、個別機能の挙動確認や実装・レビュー時に下位文書へ進むための入口となる。
 
 ## Read this when
-- cmoc の CLI サブコマンド、session/run lifecycle、共通出力、エラー、中断、feedback、Codex 呼び出し、indexing などの正本仕様を確認するとき
-- 複数のアプリケーション仕様にまたがる処理順序、状態遷移、report・ログ・通知の完了契約を調べるとき
-- 対象機能に対応する個別仕様や共通仕様へのルーティング起点が必要なとき
+- cmoc のアプリケーション挙動、CLI サブコマンド、session/run、feedback、ログ、エラー処理、通知、prompt、状態管理の正本仕様を確認するとき
+- 実装・変更・仕様適合性レビューの前に、対象機能を担う仕様文書と共通契約を特定するとき
+- 複数の仕様領域にまたがる lifecycle、出力、state、publication、実行境界を確認するとき
 
 ## Do not read this when
-- 特定機能の実装責務、テスト規則、開発環境、または realization file の具体的な挙動だけを調べるとき
-- 個別仕様から直接参照できる raw observation、feedback state、Structured Output schema、prompt 構築、実装詳細を確認するとき
-- 既存の INDEX.md エントリーや、本文書群に含まれない将来用途・一般的なコード品質を確認するとき
+- 具体的な実装責務、テスト手順、prompt literal、Structured Output schema など、本文が委譲する下位資料だけを確認すれば足りるとき
+- INDEX.md の現在の構成やルーティング情報だけを確認するとき
+- アプリケーション仕様に関係しない一般的な開発環境・実装・テスト作業を扱うとき
 
 ## hash
-- 7a51235b28aee8bc1889e95c50ca3859a7e26507a9f4d3be17fe7103c085dfa6
+- 6a2225200e7d8e9a686369a86c8363287aae8c27fb8a034f3e34f2d8866e8dcd
 
 # `branch_model.md`
 
 ## Summary
-- cmoc の branch・commit・worktree に関する用語と関係を定義する正本仕様。session と run の分岐、各 branch の役割、分岐・merge commit、run 用 linked worktree の位置づけを確認する入口。
+- cmoc における branch・commit・worktree のモデルを定義する正本文書。session と run の分岐、命名、分岐元・統合先 commit、run 用 linked worktree の役割と境界を整理し、branch 名ではなく run state と report で workload を表す方針を示す。
+- session branch はユーザーが oracle の変更確認やサブコマンド実行に使い、run branch と run worktree は各 run を隔離して差分を commit として積み上げるための実行経路である。
 
 ## Read this when
-- cmoc の session fork、run の隔離、branch／commit／worktree の命名や責務を変更・調査するとき
-- run report、差分検査、apply、session join などで基準 commit や merge 先を確認するとき
-- workload の種類を branch 名や commit の別名で表す設計を検討するとき
+- cmoc の session fork、run 隔離、run join、差分検査、report がどの branch・commit・worktree を基準に動くか確認するとき
+- cmoc 管理 branch と通常の local branch・remote-tracking branch・既定 branch の責務や関係を確認するとき
+- branch・commit・worktree に workload 別の別名を付けてよいか、または共通概念を使うべきか判断するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドの実装詳細だけを調査しており、branch model の用語やライフサイクルを確認する必要がないとき
-- oracle の一般原則や開発環境・テスト手順を確認したいときは、対応する oracle 文書を直接読む
+- 特定の CLI サブコマンドの詳細な実装手順や report の個別フォーマットだけを確認したいとき
+- oracle の変更内容そのものや、branch model 以外の開発環境・テスト規約を確認したいとき
 
 ## hash
-- 60e0fa11a169c939bcecc5b8527c50f43bb563b7365db6f9e3e9d29e0baaba7d
+- e1e018f45407868dbe8998337a79a15e90cdf11c82febf6207a1758408e0767d
 
 # `considered_alternative`
 
