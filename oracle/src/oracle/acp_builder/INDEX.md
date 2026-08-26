@@ -111,18 +111,20 @@
 # `session`
 
 ## Summary
-- `session join` の merge conflict marker 解消用エージェント呼び出しパラメータを構築する実装を扱う。対象パスの実パス解決、conflict 解消専用 prompt、リポジトリ書き込み権限、最高品質のモデル・推論設定、preflight 無効化を確認するための入口である。
+- session join の merge conflict 解消に使うエージェント呼び出し設定と専用 prompt を定義する入口。競合対象パスの解決、conflict marker の解消方針、モデル・推論設定、リポジトリ書き込み権限を扱う。
 
 ## Read this when
-- `session join` の conflict 解消処理で、対象ファイルの解決やエージェント呼び出しパラメータを確認・変更するとき。
-- conflict 解消用 prompt の目的・制約、oracle file の編集範囲、モデル・推論設定、アクセスモード、preflight 設定を調べるとき。
+- session join の merge conflict 解消処理を実装・変更・レビューするとき
+- conflict 解消用エージェントの prompt、対象パス解決、モデル設定、ファイル権限を確認するとき
+- conflict 解消時に余計な差分や仕様変更を避ける呼び出し条件を確認するとき
 
 ## Do not read this when
-- `session join` のコマンド制御や conflict 解消処理の実装本体を確認したいときは、対応する上位の実装対象を直接読む。
-- 一般的な prompt 構築、パス解決、エージェント呼び出し型、構造化文書の仕様だけを確認したいときは、各共通モジュールを直接読む。
+- 通常の session join の結合処理や conflict 以外のサブコマンドを確認するとき
+- 一般的な prompt 生成や共通のエージェント呼び出し型を確認するとき
+- 競合解消対象以外のファイル編集・リファクタリング方針を確認するとき
 
 ## hash
-- d14fd38c4224b36df9c6db94cfb36422815c514fd373c9cd4ec381281efbea23
+- 5a792915b867b8c81bc898d563685fc4fff89d1393a1bc8d55bcb8a466fb5e0c
 
 # `tui`
 

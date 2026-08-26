@@ -91,22 +91,20 @@
 # `oracle`
 
 ## Summary
-- `oracle` は cmoc の agent call に関する正本ドキュメントとソース実装をまとめる最上位ディレクトリです。
-- `doc` にはアプリケーション仕様、開発規約、設計上の不採用案、branch・commit・worktree モデルを収録し、挙動や運用規則の確認先を提供します。
-- `src/oracle` には agent call の prompt 構築、パス・設定モデル、ACP builder、feedback、indexing、oracle review・realization 関連の実装と構造化入力を収録します。具体的な処理やモデルの詳細は `src/oracle` 以下の該当領域へ進みます。
+- cmoc の正本ドキュメントと oracle 側の Python 実装をまとめた領域です。仕様・開発規約・branch model・代替案の背景は `doc`、agent call 構築・feedback・prompt 構築・設定やパス解決などの実装と Structured Output 定義は `src` が入口になります。
 
 ## Read this when
-- cmoc の正本仕様と agent call 用ソース実装の全体構成を把握したいとき
-- CLI の挙動、開発規約、prompt 構築、agent call のパスコンテキスト、feedback、indexing など複数領域にまたがる参照先を選ぶとき
-- 仕様と実装の対応関係を確認するため、`doc` と `src/oracle` のどちらから調査を始めるべきか判断するとき
+- cmoc の仕様または開発規約と、それを扱う oracle 側実装の対応関係を調査するとき
+- 対象が `doc` と `src` のどちらにあるか未確定で、適切な下位ディレクトリへの入口を探すとき
+- oracle の agent call、feedback、prompt、設定、構造化文書に関する領域全体を確認するとき
 
 ## Do not read this when
-- 確認対象が `oracle/doc` 配下の特定仕様書や `oracle/src/oracle` 配下の特定実装に明確に限定されているとき
-- 通常の CLI 実行処理や、oracle 配下にない実装・テスト・保存済み成果物を確認するとき
-- 具体的な prompt builder、policy、path model、ACP builder、feedback、indexing の詳細を直接確認できる下位対象が明確なとき
+- 確認対象が個別の仕様書や開発規約として明確なときは `doc` 以下の該当文書を直接読む
+- 確認対象が特定の oracle 実装や Structured Output 定義として明確なときは `src/oracle` 以下の該当責務を直接読む
+- cmoc の realization 実装やテストの具体的な挙動だけを確認するときは、対応する realization または test の対象を直接読む
 
 ## hash
-- fe091b6617d4ae4005402a1904fe47ba304e1811a1eb4c44e0784aaf58db620d
+- e4012368b4c75ed22157c361d6814d911f951fb08e84c352e8cb17d84dda77ce
 
 # `pyproject.toml`
 

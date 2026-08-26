@@ -116,24 +116,23 @@
 # `feedback.md`
 
 ## Summary
-- cmoc の feedback subsystem 全体の目的、処理モデル、正本仕様の分担、共通原則、既存 workload との境界、non-goal を定義する概要仕様。
-- 観測を pending observation として収集し、report cut 後に issue candidate の同一性・現在性・actionability を検証する流れと、normal publication／incomplete 診断 report の分岐を示す。
-- 詳細な observation 収集、repository-local state、feedback report サブコマンドの仕様へ進むための入口となる上位文書。
+- feedback subsystem の目的、観測から report cut・同一性判断・現在性検証・publication までの処理モデルを定義する正本仕様。
+- observation、issue candidate、active issue、normal publication、incomplete 診断 report の関係と、feedback と既存 workload の境界を確認する入口。
+- 観測基準・raw 保存は feedback_observation.md、repository-local state と atomic publication は feedback_state.md、CLI サブコマンドの処理順序と終了結果は feedback_report.md が担当するため、詳細実装や個別判断はそれらを直接読む。
 
 ## Read this when
-- feedback subsystem の目的や全体処理モデルを把握したいとき
-- observation、issue candidate、active issue、report cut、normal publication、incomplete 診断 report の関係を確認したいとき
-- feedback 関連の正本仕様の責務分担や、既存 workload との境界を判断するとき
-- feedback report の挙動が本命 workload の成功判定、state、retry、recovery に与える影響を確認したいとき
+- feedback subsystem 全体の目的、処理モデル、正本仕様の責務分担を確認するとき
+- observation・active issue・正常 report・incomplete 診断 report の関係や publication 条件を確認するとき
+- 既存 workload の成果物を feedback へ自動変換する範囲や、feedback の non-goal を確認するとき
 
 ## Do not read this when
-- observation の報告基準、収集経路、受け入れ検査、machine detector、raw 保存の詳細を確認したいときは feedback_observation.md を直接読む
-- repository-local state、report cut、checkpoint、atomic publication、cleanup の詳細を確認したいときは feedback_state.md を直接読む
-- cmoc feedback report の事前条件、処理順序、normalization、verification、表示、終了結果の詳細を確認したいときは sub_command/feedback_report.md を直接読む
-- 実装詳細、テスト方法、または個別 issue の検証を確認したいとき
+- observation の報告基準、収集経路、受け入れ検査、raw 保存の詳細だけを確認したいときは feedback_observation.md を直接読む
+- state、report cut、checkpoint、atomic publication、cleanup の詳細だけを確認したいときは feedback_state.md を直接読む
+- cmoc feedback report の事前条件、agent 処理、表示、終了結果の詳細だけを確認したいときは feedback_report.md を直接読む
+- 具体的な realization 実装、テスト手順、または既存 workload の仕様だけを確認したいとき
 
 ## hash
-- 1e40358c79852dccc449786aa3ee9ec8f71ec88918e0980eabd285a2e193a2b8
+- 5b8ffac12ebc86723652bb880e0912017acfd7886d80889cb0a02938dabf276f
 
 # `feedback_observation.md`
 
@@ -197,21 +196,21 @@
 # `oracle_and_realization.md`
 
 ## Summary
-- oracle file と realization file の責務・分類・配置先を定義し、oracle doc/src/test と realization implementation/test/ancillary の役割を整理する正本仕様。
-- 正本責務の重複禁止、oracle doc から oracle src への委譲、責務に基づく優先関係、oracle・realization の判断基準、realization の適合性判定を定める。関連する分類仕様、prompt 構築規則、実装・テスト作業の入口となる。
+- oracle file と realization file の責務、配置、正本責務、相互の適合性判断を定義する基本方針文書。oracle doc・oracle src・oracle test と realization implementation・realization test・realization ancillary の区分、および仕様の委譲・優先関係を扱う。関連する oracle／realization の判断基準を確認する際の上位入口となる。
 
 ## Read this when
-- oracle file と realization file の責務、分類、配置先を確認するとき
-- oracle doc と oracle src の正本責務、委譲範囲、優先関係、重複禁止を確認するとき
-- oracle file を扱う判断基準、realization file の作成・変更基準、または oracle file への適合性を判断するとき
+- oracle file と realization file の役割や分類を判断するとき
+- oracle doc と oracle src の正本責務、詳細仕様の委譲、両者の優先関係を確認するとき
+- realization implementation・test・ancillary の責務境界を確認するとき
+- oracle file に対する realization file の適合性や修正対象を判断するとき
 
 ## Do not read this when
-- 個別の prompt literal、schema、builder の構築順序や選択値だけを確認したいときは、委譲先の oracle src を直接読む
-- prompt literal の役割・制限や cmoc の実行規則だけを確認したいときは、該当する codex 実行規則を直接読む
-- oracle と realization の分類・責務・適合性に関係しない個別仕様を確認するとき
+- 特定の oracle file が所有する個別の要求・挙動仕様だけを確認する場合
+- 正確な prompt literal、builder の構築方法、選択値、schema を確認する場合は、委譲先の oracle src を直接読むとき
+- realization code の具体的な実装方法や test 手順だけを確認する場合は、対象の realization file または対応する開発規則を直接読むとき
 
 ## hash
-- 9faf4b339fe03a40577ff8a0a575f2fa97eb1aae1544dbbb1ac4e05c7ca630f7
+- 1e920f9b1f9f5a4a47efcfe10b1fc449344808b53be9390fbe3918943a777082
 
 # `oracle_and_realization_file_enumeration.md`
 

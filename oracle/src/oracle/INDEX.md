@@ -1,20 +1,22 @@
 # `acp_builder`
 
 ## Summary
-- 対象ディレクトリは、oracle 操作向け agent call の起動定義をまとめる領域です。oracle の編集・調査・レビューで使う prompt、モデルや権限などの実行パラメータ、Structured Output schema を確認するための入口になります。
-- 下位には、oracle file の編集用、調査用、レビュー用の起動定義や出力契約があり、oracle 操作の種類に応じて対応する定義へ進みます。
+- ACP builder の共通データモデルと、各 cmoc 機能で使用する Codex CLI agent call の prompt・起動パラメータ構築をまとめた領域です。
+- feedback、indexing、oracle、realization、session、tui、quota probe の agent call 定義と、Structured Output を使う処理の出力契約を扱います。
+- 共通の呼び出しパラメータや列挙型を確認する場合は `basic.py`、機能別の起動定義を確認する場合は各下位ディレクトリへ進みます。
 
 ## Read this when
-- oracle file の編集・調査・レビューに使う agent call の prompt、実行パラメータ、作業範囲を確認または変更するとき
-- oracle 操作用 agent call の Structured Output による出力契約や、builder と schema の対応を確認するとき
+- agent call のモデルクラス、推論強度、ファイルアクセスモード、prompt、cwd、Structured Output schema、indexing preflight の共通契約を確認・変更するとき
+- cmoc の feedback、indexing、oracle、realization、session join、tui、quota probe が構築する agent call の prompt や起動条件を調査するとき
+- 特定機能の agent call 定義を探すときに、feedback、indexing、oracle、realization、session、tui の下位ディレクトリを入口として参照するとき
 
 ## Do not read this when
-- oracle file の内容、編集対象の仕様、またはレビュー・調査結果そのものを確認したいとき
-- agent call の共通データモデルや一般的な起動処理だけを確認したいとき
-- oracle 操作以外の agent call 定義や実装を確認したいとき
+- Codex CLI の実際の実行処理やバックエンドモデル名への変換規則を確認したいとき
+- agent call が利用する oracle file、realization file、feedback state、既存 INDEX.md の内容を確認したいとき
+- prompt 生成や構造化文書の共通実装、パス解決、ファイルアクセス policy の正本を直接確認すれば足りるとき
 
 ## hash
-- f2455bab083a3fcd15bc3b362b0317907bc4a9b5f531a2df391ac57515f53d54
+- 485c046c046220f2f516614fdcd565ed4c259683cea1d2e1abd30154c9453185
 
 # `feedback`
 
@@ -54,16 +56,19 @@
 # `prompt_builder`
 
 ## Summary
-- agent call 用の完全な prompt を組み立てる prompt builder 群。placeholder 共通型、完全 prompt 統合、エディタ初期入力、oracle／realization 説明、各種 policy 構築を扱い、prompt 生成仕様を実装から確認するための入口となる。
+- agent call に渡す構造化済みの完全 prompt と、エディタ入力用の初期文面を構築する実装群。
+- prompt の共通部品として oracle／realization の基本説明を提供し、policy 配下でファイルアクセス、routing、oracle／realization、所見、conflict 解消、INDEX.md 作成などの個別規定を構築する。
+- 完全 prompt 構築では、path context 由来の placeholder と追加定義を統合し、同名異値の競合を拒否しつつ、固定的な規定から動的な placeholder 定義までを所定の順序で配置する。
 
 ## Read this when
-- agent call に渡す prompt の構成、統合順序、placeholder、エディタ初期入力、oracle／realization 説明、または適用 policy の実装を確認・変更するとき。
-- 特定の prompt builder 部品の責務や、prompt builder 内で共通利用される型定義を追跡するとき。
+- agent call 用 prompt の全体構成、policy の有効化、追加 prompt や目的の統合、placeholder 定義の競合処理を確認・変更するとき。
+- エディタ経由で入力する prompt の初期文面や、完全 prompt テンプレートの埋め込み形式を確認するとき。
+- oracle／realization の基本説明を prompt に組み込む入口や、個別 policy・prompt 部品へ進む入口を判断するとき。
 
 ## Do not read this when
-- 正本仕様としての oracle 文書や realization 文書を確認する場合は、参照先の oracle file を直接読む。
-- CLI の呼び出し側、通常の agent 実行処理、または prompt policy と無関係な実装を調べる場合は、該当する実装を直接読む。
-- 特定の下位 policy や個別 builder の内容だけを確認する場合は、対象の下位ファイルを直接読む。
+- 特定の policy の規定本文を確認したい場合は、policy 配下の該当ファイルを直接読む。
+- oracle／realization の意味仕様やファイル分類の正本を確認したい場合は、参照先の oracle 文書を直接読む。
+- prompt_builder を利用する呼び出し側の agent call 制御や、構造化文書ノード自体の仕様を確認したい場合は、それぞれの実装・仕様を直接読む。
 
 ## hash
-- 798fc10e4543bc4033abee8fb99ae658c5ef7c2943f1282f9f0f4682a4091576
+- 1b944509962d8a180af5d5510870e0126c341558bc2eef17b81de1cf620aa9ea
