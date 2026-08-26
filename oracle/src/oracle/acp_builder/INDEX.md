@@ -86,34 +86,43 @@
 # `realization`
 
 ## Summary
-- oracle の変更を realization へ反映する差分追従 Agent と、realization refactor の変更要約・ファイル単位レビュー／修正 Agent の起動定義を扱うディレクトリ。配下の `apply` と `refactor` が、それぞれの agent call builder、prompt、実行条件、Structured Output schema を確認する入口となる。
+- `apply` は、`cmoc realization apply fork` における AgentCallParameter 構築の入口です。追従対象の commit 範囲と oracle file の raw git diff を prompt に組み込み、realization file 全体への反映と整合性検証を行う agent call の起動契約を扱います。具体的な `fork` 起動定義を確認する前のルーティング対象です。
+- `refactor` は、realization refactor の agent call builder と Structured Output schema を扱います。変更差分の意味論的カテゴリ別要約、および oracle file・realization file 単位の所見調査、修正、検証に関する prompt、権限、実行条件、作業ディレクトリ、indexing preflight、出力契約を確認する入口です。
 
 ## Read this when
-- oracle file の変更を realization file へ反映する Agent の起動定義を調査・変更するとき
-- realization refactor の差分要約、ファイル単位レビュー・修正に関する Agent call の prompt、実行条件、出力契約を調査・変更するとき
-- `apply` と `refactor` の起動設定や Structured Output schema の整合性を確認するとき
+- `cmoc realization apply fork` の prompt、作業範囲、realization write 権限、モデル、推論 effort、linked worktree、ルーティング事前処理を確認・変更するとき。
+- oracle file の変更を realization file 全体へ反映する agent call の起動契約を確認するとき。
+- realization refactor の変更差分要約 agent call の出力契約、prompt、入力差分、実行条件を確認・変更するとき。
+- realization refactor のファイル単位レビュー・修正 agent call の findings、根拠、変更、oracle 要求、修正結果、検証に関する出力契約を確認・変更するとき。
+- realization refactor の二つの agent call の Structured Output schema と builder 設定の整合性を確認するとき。
 
 ## Do not read this when
-- 個別の oracle file または realization file の要求・実装内容を直接調査するとき
-- 共通 prompt 生成、AgentCallParameter の共通仕様、Markdown rendering、path 解決、git 差分生成など、配下の個別 fork に固有でない処理だけを確認するとき
+- 通常の realization implementation、realization test、realization ancillary の具体的な実装を変更するとき。
+- `fork` 用起動定義の本文を直接確認すれば足りるとき。
+- `cmoc realization apply fork` 以外の起動パラメータを確認するとき。
+- 変更差分の実装内容や要約結果そのものを確認したいとき。
+- レビュー対象の oracle file や realization file の要求・実装を直接確認したいとき。
+- 共通 prompt 生成、構造化文書の Markdown rendering、path 解決の一般仕様を確認するとき。
+- realization refactor の fork 以外の agent call、別の出力 schema、または git 差分生成そのものを調査するとき。
 
 ## hash
-- c44ffab7712c4feca280196e4ba87bc2fc4873b69ead3d695a415f32b155af49
+- f58663721f3bccc66a153bb1c26f4b4a400985c2b75ec2b26257337d2399111c
 
 # `session`
 
 ## Summary
-- `session/join` は、`cmoc session join` における merge conflict marker 解消用 agent call の構築定義への入口。conflicted paths の実パス解決、対象ファイルの prompt への埋め込み、conflict 解消専用 policy、REPO_WRITE 権限、最高品質の model・reasoning 設定、preflight 無効化を扱う。
+- `session join` の merge conflict marker 解消用エージェント呼び出しパラメータを構築する実装を扱う。対象パスの実パス解決、conflict 解消専用 prompt、リポジトリ書き込み権限、最高品質のモデル・推論設定、preflight 無効化を確認するための入口である。
 
 ## Read this when
-- `cmoc session join` の conflict 解消 agent call に渡す対象ファイル、prompt、アクセス権限、適用 policy、model・reasoning、preflight 設定を確認・変更するとき
+- `session join` の conflict 解消処理で、対象ファイルの解決やエージェント呼び出しパラメータを確認・変更するとき。
+- conflict 解消用 prompt の目的・制約、oracle file の編集範囲、モデル・推論設定、アクセスモード、preflight 設定を調べるとき。
 
 ## Do not read this when
-- merge conflict marker を含む対象ファイルを直接確認・編集するとき
-- 通常の prompt 生成や session join の別処理を調べるとき。該当する prompt builder または session join 実装を直接読む。
+- `session join` のコマンド制御や conflict 解消処理の実装本体を確認したいときは、対応する上位の実装対象を直接読む。
+- 一般的な prompt 構築、パス解決、エージェント呼び出し型、構造化文書の仕様だけを確認したいときは、各共通モジュールを直接読む。
 
 ## hash
-- 373ae33e1a529b56c51bf23e18583cac2b27ffa5e0bf734f9997254aa7e55799
+- d14fd38c4224b36df9c6db94cfb36422815c514fd373c9cd4ec381281efbea23
 
 # `tui`
 

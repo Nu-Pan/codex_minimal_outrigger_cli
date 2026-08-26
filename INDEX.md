@@ -91,20 +91,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本資料と共通実装を案内する oracle ディレクトリ。正本文書はアプリケーション仕様、branch・commit・worktree モデル、不採用案、Python 開発規約に分類され、実装側は agent call のモデル、prompt 構築、設定・パス、構造化文書、feedback などを扱う。下位文書群と src 配下への意味上の入口を提供する。
+- `oracle` は cmoc の agent call に関する正本ドキュメントとソース実装をまとめる最上位ディレクトリです。
+- `doc` にはアプリケーション仕様、開発規約、設計上の不採用案、branch・commit・worktree モデルを収録し、挙動や運用規則の確認先を提供します。
+- `src/oracle` には agent call の prompt 構築、パス・設定モデル、ACP builder、feedback、indexing、oracle review・realization 関連の実装と構造化入力を収録します。具体的な処理やモデルの詳細は `src/oracle` 以下の該当領域へ進みます。
 
 ## Read this when
-- cmoc の正本仕様・設計資料・開発規約と、その実装領域の配置を横断的に把握したいとき
-- 特定の仕様文書または agent call 共通処理の下位領域へ進む前に、oracle 配下の分類と入口を確認したいとき
+- cmoc の正本仕様と agent call 用ソース実装の全体構成を把握したいとき
+- CLI の挙動、開発規約、prompt 構築、agent call のパスコンテキスト、feedback、indexing など複数領域にまたがる参照先を選ぶとき
+- 仕様と実装の対応関係を確認するため、`doc` と `src/oracle` のどちらから調査を始めるべきか判断するとき
 
 ## Do not read this when
-- 確認したい特定の仕様・設計・開発環境・テスト手順の下位文書が明確なとき
-- agent call、prompt、設定、パス、構造化文書などの実装詳細を直接確認したいときは src 配下の対応領域へ進む
-- 実装ファイル、テストファイル、prompt literal、Structured Output schema の内容だけを確認したいとき
-- INDEX.md の構成や、cmoc の正本資料・共通実装と無関係な一般作業だけを扱うとき
+- 確認対象が `oracle/doc` 配下の特定仕様書や `oracle/src/oracle` 配下の特定実装に明確に限定されているとき
+- 通常の CLI 実行処理や、oracle 配下にない実装・テスト・保存済み成果物を確認するとき
+- 具体的な prompt builder、policy、path model、ACP builder、feedback、indexing の詳細を直接確認できる下位対象が明確なとき
 
 ## hash
-- f038038ae67062484ff0f9a4fa5551a0ecb44970762efa18d0eb323f59e3fe7f
+- fe091b6617d4ae4005402a1904fe47ba304e1811a1eb4c44e0784aaf58db620d
 
 # `pyproject.toml`
 

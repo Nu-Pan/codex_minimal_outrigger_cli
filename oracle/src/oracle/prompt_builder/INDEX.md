@@ -53,37 +53,35 @@
 # `parts`
 
 ## Summary
-- oracle と realization の基本概念を説明するプロンプト部品を収録するディレクトリ。両者の役割、下位分類、配置、分類条件と、uncategorised file の定義・分類規則を扱う。
-- oracle／realization の区別や関連する基本説明の構成を確認する際の入口となる。
+- oracle と realization の基本概念・役割・分類条件を説明するプロンプト断片を構築する関数。oracle file、realization file、uncategorised file、および各下位分類の説明を組み立てる際の入口となる。
 
 ## Read this when
-- oracle file、realization file、uncategorised file の意味や分類条件を確認したいとき
-- oracle と realization の役割、編集責任、下位分類、配置先を確認したいとき
-- oracle／realization の基本説明をプロンプトへ組み込む処理を調査・変更するとき
+- oracle と realization の役割や分類方法を説明するプロンプトを変更・確認するとき
+- oracle doc・oracle src・oracle test、realization implementation・realization test・realization ancillary の定義を確認するとき
+- oracle file、realization file、uncategorised file の分類条件を扱うとき
 
 ## Do not read this when
-- 特定の oracle 文書・実装・テストの内容や配置規則を確認したいとき
-- プロンプト全体の組み立て方や別の説明部品の責務を確認したいとき
-- 実際の oracle／realization ファイルを編集・実装するとき
+- oracle と realization の正本仕様そのものを確認するときは、参照先として示された oracle 文書を直接読む場合
+- 個別の prompt builder 部品や PlaceholderMap・SDHeader の実装を確認するときは、それぞれの対象を直接読む場合
+- INDEX.md や AGENTS.md など分類対象外ファイルの扱いだけを確認するとき
 
 ## hash
-- bfc0fd68622b89312d2e1a647dac27581c429a5a06fb523c78de7b35e0d31f15
+- c1f2a677da54e277eb63b538bc1e82a59c4094ff7a0167a4d05216dabf9ae3ad
 
 # `policy`
 
 ## Summary
-- agent call 向けの prompt policy 定義を集約するディレクトリ。conflict 解消、feedback 報告、ファイルアクセス、INDEX.md エントリー、oracle／realization の扱い、所見、routing などの方針構築処理を収録し、各 policy の責務と参照条件を確認する入口となる。
+- agent call 向けの各種 prompt policy 構築定義をまとめるディレクトリ。conflict 解消、feedback 報告、ファイルアクセス、INDEX routing、oracle／realization の指示、findings 判定などを扱い、それぞれの policy 実装へ進む入口となる。
 
 ## Read this when
-- agent call の prompt policy を構築・変更するとき
-- oracle／realization、feedback 報告、ファイルアクセス、INDEX.md routing、所見判定などの共通方針の入口を探すとき
-- session join の conflict 解消や INDEX.md エントリー生成など、個別の policy 定義を確認するとき
+- prompt builder の policy 構築処理を調査・変更するとき
+- agent call に適用されるアクセス制限、routing、oracle／realization、レビュー所見、feedback 報告、conflict 解消の規定を確認するとき
+- 特定の policy 定義の責務や構成を追跡するとき
 
 ## Do not read this when
-- 具体的な oracle file または realization file の仕様・実装を確認したいとき
-- session join 全体の実行手順や conflict resolution parameter の定義を確認したいとき
-- PlaceholderMap、SDHeader、SDPolicy、AgentCallPathContext など共通構造の定義だけを確認したいとき
-- 既存 INDEX.md の案内内容や個別対象の実装・テストを直接確認したいとき
+- 個別の oracle file、realization file、意味仕様、既存 INDEX.md の内容を直接確認することが目的のとき
+- prompt policy と無関係な CLI 実装や通常のプロンプト生成処理だけを調査するとき
+- 特定の下位 policy の内容だけを確認したい場合は、該当する下位ファイルを直接読むとき
 
 ## hash
-- accf02b3085263b3cd88038460eea306af23d2deed3c1b24c04226b02b34604c
+- 66526cacd25ec587b54b019c8335520d9ccb56a736d0d94730793b7b165fe8c4

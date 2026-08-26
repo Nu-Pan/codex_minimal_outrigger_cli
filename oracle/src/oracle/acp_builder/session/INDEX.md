@@ -1,16 +1,16 @@
 # `join`
 
 ## Summary
-- 対象ディレクトリは、`cmoc session join` の merge conflict marker 解消専用 agent call を組み立てる定義への入口である。conflicted paths の実パス解決、対象ファイル一覧、conflict 解消専用 policy、REPO_WRITE 権限、最高品質の model・reasoning 設定、prompt と AgentCallParameter の生成を扱う。
-- 実ファイルの conflict 解消や通常の prompt/session join 処理そのものではなく、conflict 解消 agent call のパラメータ境界を確認するために読む。
+- `cmoc session join` の merge conflict marker 解消用エージェント呼び出しパラメータを構築する。
+- 対象ファイルを実パスへ解決し、conflict 解消に限定した prompt、リポジトリ書き込み権限、最高品質のモデル・推論設定、preflight 無効化をまとめて返す。
 
 ## Read this when
-- `cmoc session join` で conflict marker を解消する agent call の prompt、完了条件、対象ファイルの渡し方を確認するとき
-- conflict 解消 agent call の path context、file access mode、policy、model class、reasoning effort、preflight 設定を変更・調査するとき
+- `session join` の conflict 解消処理で、対象ファイルのパス解決、prompt、アクセス制御、モデル・推論設定、実行パラメータを確認・変更するとき。
+- merge conflict marker 解消用エージェントに渡す専用 policy、最高品質設定、preflight 無効化を調べるとき。
 
 ## Do not read this when
-- conflict marker を含む対象ファイルを直接確認・編集するとき
-- 通常の prompt 生成処理や session join の別処理を調べるときは、該当する prompt builder または session join 実装を直接読む。
+- conflict 解消処理の実装本体や `session join` コマンドの制御を直接確認したいときは、それぞれの実装対象を読む。
+- 一般的な prompt 生成、パス解決、エージェント呼び出し型、構造化文書の仕様だけを調べるときは、対応する共通モジュールを直接読む。
 
 ## hash
-- 4dc26e6d1b1fbe7208e65bf19c5b9133161969aa651c7a578155da80c10528e6
+- 5f67da64986bb7408848d46dc9465414233a535e7530ac0488562954ee51cae6

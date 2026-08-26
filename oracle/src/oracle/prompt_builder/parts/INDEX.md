@@ -1,17 +1,17 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle と realization の基本概念を説明するプロンプト部品。両者の役割、下位分類、配置、分類条件に加え、uncategorised file の定義と分類規則を扱う。oracle／realization の区別や、プロンプトでその基本説明を構成する箇所を確認するときの入口。
+- oracle と realization の基本概念を説明するプロンプト断片を構築する関数。oracle file を人間所有の正本仕様、realization file をその具体化、uncategorised file を分類対象外として整理し、それぞれの役割・下位概念・分類条件を定義する。oracle と realization の説明文を組み立てる必要がある場合の入口となる。
 
 ## Read this when
-- oracle file、realization file、uncategorised file の意味や分類条件を確認したいとき
-- oracle と realization の役割・編集責任・配置先の基本説明を確認したいとき
-- oracle／realization に関する基本説明をプロンプトへ組み込む処理を調査・変更するとき
+- oracle と realization の役割や分類方法を説明するプロンプトを変更・確認するとき
+- oracle doc・oracle src・oracle test、realization implementation・realization test・realization ancillary の定義を確認するとき
+- oracle file、realization file、uncategorised file の分類条件を扱うとき
 
 ## Do not read this when
-- 特定の oracle 文書・実装・テストの内容や配置規則を確認したいとき
-- プロンプト全体の組み立て方や別の説明部品の責務を確認したいとき
-- 実際の oracle／realization ファイルを編集・実装するとき
+- oracle と realization の正本仕様そのものを確認する必要があるときは、参照先として示された oracle 文書を直接読む場合
+- この関数が組み立てる説明内容ではなく、個別の prompt builder 部品や PlaceholderMap・SDHeader の実装を確認するときは、それぞれの対象を直接読む場合
+- INDEX.md や AGENTS.md など分類対象外ファイルの扱いだけを確認するとき
 
 ## hash
-- a2aa0bed7322d48f5eeb5661e134543a2daa89dc3b37adfdc58d824f961ffe7c
+- b9de13219cbc0a8734a98b60d82e1841da9c0d602bf9c108f8a8e800d003f7e6
