@@ -89,7 +89,7 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 ## 「所見」の定義
 
-`cmoc oracle review` は、`{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` の「oracle file を扱う判断基準」を所見条件の前提とする。
+`cmoc oracle review` は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:55` の「oracle file を扱う判断基準」を所見条件の前提とする。
 
 同節が意図して残す明示仕様の隙間だけでは、oracle file の具体的な記述から問題が成立しない。このため、所見は oracle file の具体的な記述だけから問題が成立する場合に限る。realization file、外部事情、または未確認の可能性を追加しなければ成立しない事項は所見にしない。
 

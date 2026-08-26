@@ -27,6 +27,15 @@
 
 - cmoc が管理する branch の総称である。
 
+#### 「`{{cmoc-managed-branch}}` 上で～」の定義
+
+「`{{cmoc-managed-branch}}` 上で～」という表現は、次の集合の和を指す。
+
+- `{{cmoc-managed-branch}}` の作成元 commit から `HEAD` までの commit 上で起きたこと
+- working tree または staging area で起きていること
+
+削除済み file は対象から除外する。rename は rename 後の path を対象とする。
+
 ### `{{cmoc-session-branch}}`
 
 - `cmoc session fork` が作成する `{{cmoc-managed-branch}}` である。

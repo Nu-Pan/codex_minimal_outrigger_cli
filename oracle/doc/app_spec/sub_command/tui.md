@@ -34,7 +34,10 @@
 - ユーザーのプロンプト入力後に `build_tui_launch_tui_parameter` で構築したパラメータを変更せず、TUI を直接起動する
 - TUI の意味上の責務と起動条件は本書を正本とする。正確な prompt part の選択、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter` を参照する
 - cmoc の基本規定は、各規定が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
-- oracle file と realization file の責務および適合性は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md`、oracle review の所見成立条件は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md` を意味仕様の正本とする
+- TUI へ注入する基本規定の意味仕様は、次の文書を正本とする
+    - oracle file と realization file の責務: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:1` の「oracle file と realization file の責務」
+    - oracle file に対する realization file の適合性: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:73` の「oracle file に対する realization file の適合性」
+    - oracle review の所見成立条件: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md:90` の「所見」の定義
 - installed skill は任意の追加規定として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
 - TUI 起動前の indexing preflight は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従い、git working tree または staging area に既存差分があっても実行する
 - 共通 feedback instruction、TUI process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従う

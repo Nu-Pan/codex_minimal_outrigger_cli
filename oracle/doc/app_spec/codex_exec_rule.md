@@ -19,6 +19,22 @@
 - `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
 - call-scoped path context、root placeholder、および導出処理の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` を参照する。prompt part との受け渡しは `{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py`、完全 prompt への統合は `{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` を参照する
 
+### `{{work-root}}` に対する仮定
+
+cmoc による操作対象 worktree である `{{work-root}}` は、次の要件を満たすものと仮定する。
+
+- git で管理されている
+- `{{work-root}}/oracle` 配下に断片的な正本情報が記載されている（`{{cmoc-root}}` 配下がそうであるように）
+- `{{work-root}}` に固有の作業のノウハウは、Codex CLI が参照可能な追跡対象の文書、設定、script、または skill としてリポジトリ上に用意されている
+- `{{work-root}}/oracle` 配下の file 別に `codex exec` session を起動する責任は cmoc が負う
+- 言語、framework、tool 固有の手順を用意する責任は `{{work-root}}` が負い、その配置先を `.agents/skills` に限定しない
+
+### cmoc process の cwd との関係
+
+- cmoc process は、対象 Git repository のいずれかの worktree root をカレントディレクトリとして実行する
+- cmoc process の cwd と `AgentCallParameter.agent_call_cwd` は、異なる値を許容する
+- cmoc process の cwd が `{{repo-root}}` であっても、run 用 `AgentCallParameter.agent_call_cwd` は `{{run-root}}` とする
+
 call-scoped path context の適用範囲を次に示す。
 
 - 同じ agent call の cwd、file access、routing、file 分類、および path placeholder は、同一の call-scoped path context と整合させる
@@ -151,7 +167,7 @@ call-scoped path context の適用範囲を次に示す。
 
 ## プロンプトの渡し方
 
-prompt の一般規則は、`oracle/doc/app_spec/misc_spec.md:8` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までを正本とする。本節は prompt 固有の規則だけを定義する。
+prompt の一般規則は、`oracle/doc/app_spec/oracle_and_realization.md:5` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までを正本とする。本節は prompt 固有の規則だけを定義する。
 
 ### prompt literal の役割と制限
 

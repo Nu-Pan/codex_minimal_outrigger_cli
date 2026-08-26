@@ -35,7 +35,7 @@
 - 本命と仕様削減は、それぞれ新しい `codex exec` session の初回 call とする。仕様削減を、本命 session に対する `codex exec resume` として起動してはならない。
 - 各 agent call 内の retry、quota 回復待ち後の resume、および失敗処理には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の共通規約を適用する。
 - builder が構築した `AgentCallParameter` は変更せず、既存の `codex exec` 入力経路へ渡す。実行パラメータを決めるための追加 agent call は行わない。
-- oracle file を扱う判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を正本とする。
+- oracle file を扱う判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:55` の「oracle file を扱う判断基準」を正本とする。
 
 ## 仕様削減 agent call の判断材料
 

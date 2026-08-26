@@ -8,7 +8,7 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
     """oracle file が満たすべき規定を構築する。
 
     NOTE
-        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を参照。
+        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:55` の「oracle file を扱う判断基準」を参照。
     """
     return (
         {},

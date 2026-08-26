@@ -8,7 +8,7 @@ def build_realization_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
     """realization file に対する所見が満たすべき規定。
 
     NOTE
-        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を参照。
+        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:73` の「oracle file に対する realization file の適合性」を参照。
     """
     return (
         {},

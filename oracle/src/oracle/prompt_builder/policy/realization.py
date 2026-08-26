@@ -11,7 +11,7 @@ def build_realization_policy(
     """realization file が満たすべき規定を構築する。
 
     NOTE
-        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` を参照。
+        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:65` の「realization file を扱う判断基準」を参照。
     """
     return (
         path_context.root_placeholder_definitions(),

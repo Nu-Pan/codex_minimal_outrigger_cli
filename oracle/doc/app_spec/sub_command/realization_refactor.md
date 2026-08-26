@@ -4,7 +4,7 @@
 
 - realization refactor は、oracle file と realization file を起点とするファイル単位の追従調査を、current fork で保留した unresolved target 以外の調査要求がなくなるまで繰り返す workload である。
 - 所見調査・修正を行う agent call には commit 差分や変更要約を渡さず、oracle file と realization file を調査対象として渡す。
-- 所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` の「oracle file に対する realization file の適合性」を正本とする。
+- 所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:73` の「oracle file に対する realization file の適合性」を正本とする。
 - 所見調査・修正 call の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` を参照する。
 - installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - 短い変更ループを担う realization apply とは workload を分ける。
@@ -40,7 +40,7 @@
 
 ### entry 集合の同期
 
-- entry の対象は、同期時点で存在する全 oracle file と全 realization file の和集合とする。
+- entry の対象は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md:3` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
 - state 同期の完了時には、対象 file と entry に過不足があってはいけない。
 - 人間の編集直後まで常時一致することは要求せず、doctor preprocess、refactor の各処理単位、および run join 後など、cmoc が同期を完了した時点の不変条件とする。
 - 新規 file には次の entry を作成する。
