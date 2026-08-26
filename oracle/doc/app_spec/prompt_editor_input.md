@@ -8,8 +8,8 @@
 
 ## 構築定義の参照
 
-- editor の初期コメントと template の正確な構築は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` を参照する。
-- 完全 prompt skeleton と抽出後の完全 prompt の正確な構築は、editor 入力を利用する `{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py`、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py`、および `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の各 `build_*_parameter` を参照する。
+- editor の初期コメントと template の正確な構築は、`oracle/src/oracle/prompt_builder/editor_input.py:6` の `build_prompt_editor_input_initial_text` へ委譲する。
+- 完全 prompt skeleton と抽出後の完全 prompt は、各 agent call の正確な構築を所有する builder で構築する。oracle src への委譲は、`oracle/doc/app_spec/sub_command/tui.md:32` の「全バックエンド共通」、`oracle/doc/app_spec/sub_command/oracle_investigation.md:27` の「TUI 起動パラメータ」、および `oracle/doc/app_spec/sub_command/oracle_edit.md:14` の「ユーザー指示と prompt の構築」を正本とする。
 - 生成済み editor input と skeleton は実行時生成物であり、editor lifecycle または prompt 文面の正本ではない。
 
 ## ファイルの役割

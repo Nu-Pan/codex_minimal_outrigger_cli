@@ -71,6 +71,10 @@ def build_session_join_conflict_resolution_parameter(
             ),
         ],
         oracle_and_realization_basic=True,
+        # NOTE
+        #   解決後の状態も規定を遵守していなければならない
+        #   その規定をエージェントに知らせる必要がある
+        #   よって oracle_policy, realization_policy は True
         oracle_policy=True,
         realization_policy=True,
         conflict_resolution_policy=True,

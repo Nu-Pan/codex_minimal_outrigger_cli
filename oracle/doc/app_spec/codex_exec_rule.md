@@ -17,7 +17,7 @@
 - `work_root` は、`agent_call_cwd` を含む最寄りの Git worktree root とする
 - `repo_root` は、`work_root` が属する Git repository の main worktree root とする
 - `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
-- call-scoped path context、root placeholder、および導出処理の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` を参照する。prompt part との受け渡しは `{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py`、完全 prompt への統合は `{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` を参照する
+- call-scoped path context、root placeholder、および導出処理の正確な定義は、`oracle/src/oracle/other/path_model.py:34` の `RootPathPlaceHolder` と同ファイル 55 行目の `AgentCallPathContext` へ委譲する。prompt part との受け渡しは `oracle/src/oracle/prompt_builder/basic.py:14` の `PlaceholderMap`、完全 prompt への統合は `oracle/src/oracle/prompt_builder/complete_prompt.py:41` の `build_complete_prompt` へ委譲する
 
 ### `{{work-root}}` に対する仮定
 
@@ -122,7 +122,7 @@ call-scoped path context の適用範囲を次に示す。
     - `REALIZATION_WRITE`: oracle file の書き込みを禁止する
     - `NO_POLICY`: 詳細な file access instruction を prompt に追加しない特殊 mode とする
 - 個別 agent call が選択する file access mode は、対応する oracle doc の作業範囲と一致させる。AgentCallParameter builder は、その正確な選択値を構築する
-- 本節の制限を agent へ伝える正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` を参照する
+- 本節の制限を agent へ伝える正確な prompt 文面と mode ごとの文面は、`oracle/src/oracle/prompt_builder/policy/file_access.py:8` の `build_file_access_policy` へ委譲する
 - path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない
 - 詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する
 
@@ -132,7 +132,7 @@ call-scoped path context の適用範囲を次に示す。
 - この禁止は動的生成の入力の種類を問わず、`AgentCallParameter`、file access mode、プロンプト、oracle file、設定、実在 path、ファイル一覧、`.gitignore` の規則、`git check-ignore` の判定結果、およびそれらの組み合わせを入力とする場合を含む
 - permission profile を一時ファイル、設定ファイル、argv、環境変数、`--config` など、いかなる経路でも Codex CLI に注入してはならない
 - oracle file が特定の path に対するアクセス制限を要求する場合も、その制限はプロンプトへ反映し、permission profile や path 単位の sandbox 設定へ変換してはならない
-- `{{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` にある `git check-ignore` の条件は、oracle file と realization file を分類する境界条件を述べるためだけのものとする
+- agent-facing な分類文面で伝える Git ignore 判定は、`oracle/doc/app_spec/oracle_and_realization_file_enumeration.md:22` の分類境界だけを表す
 - `git check-ignore` の判定結果をファイル分類や対象ファイルの選別に使用してよいが、Codex CLI の sandbox または permission profile を組み立てる入力にしてはならない
 
 ## ファイルアクセス制限違反の事後検証とリカバリ
@@ -187,7 +187,7 @@ prompt literal に、次の内容を正本として置いてはならない。
 
 ### call 固有の実行時指示の優先関係
 
-`prompt > oracle file > installed skill` と表現される優先関係は、cmoc の恒常的な意味仕様ではなく、call 固有の目的、作業範囲、入力、および権限に適用する。この正確な agent-facing literal は、`oracle/src/oracle/prompt_builder/policy/oracle.py:21` の `build_oracle_policy` が所有する。
+`prompt > oracle file > installed skill` と表現される優先関係は、cmoc の恒常的な意味仕様ではなく、call 固有の目的、作業範囲、入力、および権限に適用する。この正確な agent-facing literal は、`oracle/src/oracle/prompt_builder/policy/oracle.py:7` の `build_oracle_policy` へ委譲する。
 
 call 固有の実行時指示の優先関係は、prompt literal に cmoc の新しい意味仕様を作る権限を与えない。prompt literal と oracle doc が所有する意味仕様が食い違う場合は、prompt literal による仕様変更とは扱わず、oracle file 間の不整合として扱う。
 

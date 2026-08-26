@@ -54,8 +54,6 @@ feedback の仕様は、責務ごとに次の文書へ分ける。同じ schema�
 | `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` | repository-local state、report cut、checkpoint、atomic publication、および cleanup |
 | `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` | `cmoc feedback report` の事前条件、処理順序、normalization、verification、表示、および終了結果 |
 
-agent submission の入力 schema は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json` を唯一の正本とする。normalization と verification の正確な prompt および Structured Output schema は、各 agent call の oracle source を正本とする。
-
 ## 共通原則
 
 feedback 全体で、次の原則を維持する。

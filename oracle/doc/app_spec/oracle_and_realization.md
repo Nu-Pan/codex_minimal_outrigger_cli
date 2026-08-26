@@ -12,6 +12,15 @@ oracle file の下位概念は、正本として所有する事項で区別す�
 
 明示的に委譲された prompt literal の正確な文面は oracle src が所有し、その文面が表す意味仕様は oracle doc が所有する。builder が生成した prompt（generated prompt）は実行時生成物であり、意味仕様または prompt 文面の正本ではない。
 
+本書と関連する分類仕様を agent 向けに表現する文面と構造は、次の oracle src へ委譲する。
+
+| 意味仕様 | 委譲先 |
+|---|---|
+| oracle file、realization file、および uncategorised file の役割と分類。本書と `oracle/doc/app_spec/oracle_and_realization_file_enumeration.md:3` の「分類結果」を正本とする | `oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py:7` の `build_oracle_and_realization_basic` |
+| oracle file を扱う判断基準 | `oracle/src/oracle/prompt_builder/policy/oracle.py:7` の `build_oracle_policy` |
+| realization file を扱う判断基準 | `oracle/src/oracle/prompt_builder/policy/realization.py:8` の `build_realization_policy` |
+| oracle file に対する realization file の適合性 | `oracle/src/oracle/prompt_builder/policy/realization_findings.py:7` の `build_realization_findings_policy` |
+
 prompt literal に固有の役割、制限、および call 固有の実行時指示の優先関係は、`oracle/doc/app_spec/codex_exec_rule.md:172` の「prompt literal の役割と制限」以降を参照する。
 
 ## 正本責務の重複禁止
@@ -55,6 +64,7 @@ realization file の下位概念は、次の責務で区別する。
 ## oracle file を扱う判断基準
 
 - 判断の根拠は、関連する oracle file に置く。cmoc 固有契約または oracle file と installed skill が競合する場合は、前者を優先する。
+- 合わせて読む必要がある oracle file は、path、現在の行番号、および参照先の簡潔な内容で特定する。
 - installed skill の存在または一般的なベストプラクティスだけを、oracle file の意味または作業完了条件の根拠にしてはならない。
 - 実装差を許容しない事項と、人間が判断すべき境界を明示する。仕様の隙間を網羅的に埋めるためだけの分類、列挙、または新規 oracle file を追加してはならない。
 - 正本仕様断片には未定義部分を残してよい。明示仕様の隙間は、関連する oracle file と、アクセス可能な場合の既存実装および test から自然に導ける小さな範囲で実装者が補ってよい。過剰な実装を誘発し得る境界では、goal と non-goal を読み取れるようにする。

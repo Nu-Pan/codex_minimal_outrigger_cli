@@ -15,7 +15,7 @@
 
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする。
 - 初期表示文面と完全 prompt skeleton の正確な構築は、同文書が参照する oracle src を参照する。
-- editor 終了後に抽出した同じオリジナルのユーザー指示を、本命用と仕様削減用の builder に渡す。正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の各 `build_*_parameter` を参照する。
+- editor 終了後に抽出した同じオリジナルのユーザー指示を、本命用と仕様削減用の builder に渡す。正確な prompt part、文面、起動パラメータ、および選択理由は、`oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py:15` の `build_oracle_edit_main_launch_exec_parameter` と同ファイル 68 行目の `build_oracle_edit_reduction_launch_exec_parameter` へ委譲する。
 - 構築済み prompt の受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
 - editor work file の排他的 writer は管理しない。他の TUI やエディタとの並行操作から生じる競合や不整合は、人間が管理する。
 
@@ -35,7 +35,7 @@
 - 本命と仕様削減は、それぞれ新しい `codex exec` session の初回 call とする。仕様削減を、本命 session に対する `codex exec resume` として起動してはならない。
 - 各 agent call 内の retry、quota 回復待ち後の resume、および失敗処理には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の共通規約を適用する。
 - builder が構築した `AgentCallParameter` は変更せず、既存の `codex exec` 入力経路へ渡す。実行パラメータを決めるための追加 agent call は行わない。
-- oracle file を扱う判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:55` の「oracle file を扱う判断基準」を正本とする。
+- oracle file を扱う判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:64` の「oracle file を扱う判断基準」を正本とする。
 
 ## 仕様削減 agent call の判断材料
 

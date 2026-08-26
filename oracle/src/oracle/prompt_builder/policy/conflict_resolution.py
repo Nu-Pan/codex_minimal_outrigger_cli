@@ -5,10 +5,11 @@ from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_conflict_resolution_policy() -> tuple[PlaceholderMap, SDHeader]:
-    """merge conflict 解決処理結果が満たすべき規定を構築する。
+    """merge conflict 解消結果が満たすべき規定を構築する。
 
     NOTE
-        コンフリクトって何という話は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/session_join.md` を参照。
+        意味仕様は `oracle/doc/app_spec/sub_command/session_join.md:69` の
+        「oracle file 規定と conflict 解消の優先順位」を参照。
     """
     return (
         {},

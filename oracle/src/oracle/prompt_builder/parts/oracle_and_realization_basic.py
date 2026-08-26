@@ -7,7 +7,12 @@ from oracle.prompt_builder.basic import PlaceholderMap
 def build_oracle_and_realization_basic(
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, SDHeader]:
-    """oracle, realization についての基本知識の説明文章を構築する"""
+    """oracle, realization についての基本知識の説明文章を構築する。
+
+    NOTE
+        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md:1` と
+        `oracle/doc/app_spec/oracle_and_realization_file_enumeration.md:3` を参照。
+    """
     root_definitions = path_context.root_placeholder_definitions()
     return (
         {"work-root": root_definitions["work-root"]},

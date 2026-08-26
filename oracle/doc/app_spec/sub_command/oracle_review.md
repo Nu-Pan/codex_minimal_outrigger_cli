@@ -46,8 +46,13 @@
 ## agent call 規定
 
 - 個別 agent call の意味上の責務と判断基準は本書で定義する。
-- 各段階の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review` の各 `build_*_parameter` を参照する。
-- 所見成立条件の正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle_findings.py` を参照する。
+- 各段階の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、次の builder へ委譲する。
+    - 新規所見の列挙: `oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.py:26` の `build_oracle_review_enumerate_finding_parameter`
+    - 所見のマージ: `oracle/src/oracle/acp_builder/oracle/review/merge_finding.py:23` の `build_oracle_review_merge_finding_parameter`
+    - 所見が妥当である理由の記述: `oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py:23` の `build_oracle_review_validate_finding_advocate_parameter`
+    - 所見が妥当ではない理由の記述: `oracle/src/oracle/acp_builder/oracle/review/validate_finding_challenger.py:23` の `build_oracle_review_validate_finding_challenger_parameter`
+    - 所見の採否判定: `oracle/src/oracle/acp_builder/oracle/review/judge_finding.py:23` の `build_oracle_review_judge_finding_parameter`
+- 所見成立条件を agent に伝える正確な文面と構造は、`oracle/src/oracle/prompt_builder/policy/oracle_findings.py:7` の `build_oracle_findings_policy` へ委譲する。
 - Structured Output schema は出力構造と各 field の意味を定義し、所見の判定基準を定義しない
 
 ## 「run の隔離実行」とは
@@ -89,7 +94,7 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 ## 「所見」の定義
 
-`cmoc oracle review` は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:55` の「oracle file を扱う判断基準」を所見条件の前提とする。
+`cmoc oracle review` は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:64` の「oracle file を扱う判断基準」を所見条件の前提とする。
 
 同節が意図して残す明示仕様の隙間だけでは、oracle file の具体的な記述から問題が成立しない。このため、所見は oracle file の具体的な記述だけから問題が成立する場合に限る。realization file、外部事情、または未確認の可能性を追加しなければ成立しない事項は所見にしない。
 
