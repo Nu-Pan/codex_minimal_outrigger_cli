@@ -2,7 +2,7 @@
 
 `cmoc feedback report` は、pending observation と直前の active state を report cut に固定し、現在も人間対応が必要な issue だけを新しい active state と Markdown report へ publication する。1 件以上の candidate が `inconclusive` になった場合は正常 publication を行わず、確定済みの判定と blocker を `incomplete` 診断 report へ保存する。
 
-raw observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする。state、checkpoint、publication、および cleanup は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。
+raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md:1` の「feedback observation の収集」を正本とする。feedback state の lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:1` の「feedback の repository-local state」を正本とする。
 
 ## CLI 契約
 
@@ -17,8 +17,8 @@ raw observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` 
 処理は、次の順序で開始する。
 
 1. doctor preprocess を実行する。
-2. main worktree で active な `{{cmoc-session-branch}}` が checkout されていることを確認する。
-3. 対応する `session.state=active` と `run.state=ready` を確認する。
+2. main worktree で、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context」の条件を確認する。
+3. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md:75` の `run.state` が `ready` であることを確認する。
 4. repository-level feedback writer 排他を取得する。
 5. current pointer と既存 state の schema、path、hash、および参照整合性を検証する。
 6. publication 後の cleanup が残っていれば、先に再開する。
@@ -29,12 +29,7 @@ state root または current pointer が存在しない状態は、有効な初�
 
 ## report cut
 
-新しい report cut には、次の入力を固定する。
-
-- 今回処理する全 pending observation
-- current pointer が指す active issue と threshold 未満 machine aggregate
-- candidate の現在状態を確認する repository content、fingerprint、または probe result
-- normalization、verification、schema、および決定論的処理規則の version
+report cut が固定する入力と更新可能な処理状態は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:120` の「report cut」を正本とする。
 
 cut 固定後に追加された observation は、次回の report で処理する。report-time agent が reporter へ送った observation も、実行中の cut には加えない。
 
@@ -126,8 +121,6 @@ verification agent は、1 candidate と、その candidate に許可した repo
 
 verification agent は候補外の問題を探索せず、repository、config、feedback state、または問題の根拠を変更しない。
 
-verification agent の Structured Output の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい。
-
 ### output の受理条件
 
 schema に加え、次の条件をすべて満たす output だけを受理する。
@@ -146,10 +139,7 @@ schema または決定論的事後条件に適合する output を補正後も�
 
 全 candidate が `unresolved | resolved | not_actionable` のいずれかへ確定した場合だけ、正常 publication を行う。
 
-新しい active generation には、次の record だけを含める。
-
-- `unresolved` candidate の compact active issue record
-- recurrence threshold 未満の bounded machine aggregate
+新しい active generation の record 構成は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:77` の「active generation」を正本とする。
 
 正常 result は、次の 2 種類とする。
 
@@ -160,9 +150,7 @@ schema または決定論的事後条件に適合する output を補正後も�
 
 全 candidate の verification output を受理でき、1 件以上が `inconclusive` であり、診断 report を durable に保存して report cut を terminal な `incomplete` として確定できた場合は `result: incomplete` とする。`inconclusive` は、正常 publication を完了できなかった report processing blocker であり、`unresolved` または active issue ではない。
 
-`incomplete` では、state 仕様に従って診断 report だけを durable に保存する。確定した `unresolved | resolved | not_actionable` の正式な checkpoint は、同じ cut の確定済み結果として扱う。ただし、その結果を新しい active generation へ部分 publication してはならない。
-
-`incomplete` では、直前の current pointer と正常 publication を維持する。report cut が処理した raw observation を cleanup しない。
+`incomplete` の durable 保存、state transition、および cleanup の禁止は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:148` の「incomplete 診断 report」を正本とする。確定済み checkpoint を新しい active generation へ部分 publication してはならない。
 
 validation failure、AI call failure、Structured Output の受理失敗、state corruption、または durable publication failure を `incomplete` として扱ってはならない。`inconclusive` の checkpoint があっても、全 candidate の verification output を受理できなければ `incomplete` 診断 report を作らない。
 
@@ -184,14 +172,16 @@ terminal な `incomplete` cut は、中断または失敗した cut の再開対
 
 人間が `inconclusive` の原因を修正した後は、次の明示的な `cmoc feedback report` で candidate を再検証する。この invocation は、直前の `incomplete` cut と checkpoint を再利用せず、新しい report cut と reference を固定する。raw observation と直前の正常 active state は、新しい cut の入力として維持する。
 
-再検証後の処理は、verdict に応じて次のとおりとする。
-
-- 全 candidate が確定した場合は、既存の正常 publication 手順へ進む。
-- `unresolved` は、新しい active generation の active issue として publication する。
-- `resolved | not_actionable` は、新しい active generation に含めない。
-- 1 件以上が再び `inconclusive` になった場合は、新しい `incomplete` 診断 report を保存する。
+再検証後は、本書の「結果と正常 publication」に従って verdict を処理する。
 
 ## report の保存と表示
+
+正常 report と `incomplete` 診断 report の front matter に共通する項目を次に示す。
+
+- command
+- 生成日時
+- repo root
+- 実行時の session branch
 
 ### 正常 report
 
@@ -203,9 +193,8 @@ terminal な `incomplete` cut は、中断または失敗した cut の再開対
 
 保存した正常 report を primary report とする。terminal result に `result: ok | attention` を含める。
 
-front matter には、次の情報だけを含める。
+front matter には、共通項目に加えて次の情報だけを含める。
 
-- command、生成日時、repo root、および実行時の session branch
 - report cut の ID と固定日時
 - active generation ID
 - verification candidate 数と unresolved issue 数
@@ -224,17 +213,12 @@ current evidence は、削除予定の cut 内 reference だけを指す link �
 
 ### `incomplete` 診断 report
 
-`incomplete` 診断 report は正常 report と別の Markdown file とし、次へ durable に保存する。
-
-```text
-{{repo-root}}/.cmoc/gu/ar/report/feedback/incomplete/{{time-stamp}}.md
-```
+`incomplete` 診断 report は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:148` の「incomplete 診断 report」が定める path へ、正常 report と別の Markdown file として durable に保存する。
 
 保存した `incomplete` 診断 report を primary report とする。terminal result に `result: incomplete` を含める。次の操作として、人間が `inconclusive` の原因を修正した後に `cmoc feedback report` を再実行することを示す。
 
-front matter には、次の情報だけを含める。
+`incomplete` 固有の front matter には、共通項目に加えて次の情報だけを含める。
 
-- command、生成日時、repo root、および実行時の session branch
 - report cut の ID と固定日時
 - verification candidate 数、`unresolved` 数、および `inconclusive` 数
 - `result: incomplete`

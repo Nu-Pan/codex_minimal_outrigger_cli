@@ -70,12 +70,10 @@
 - `{{cmoc-run-branch}}` の分岐元 commit である。
 - run 開始時点の `{{cmoc-session-branch}}` HEAD である。
 - apply が注入する差分の終点、run join 時の差分検査、および run report は、この名前を一貫して使用する。
-- 同じ commit に workload ごとの別名を割り当ててはいけない。
 
 ### `{{cmoc-run-join-commit}}`
 
 - `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ merge した commit である。
-- workload ごとの別名を割り当ててはいけない。
 
 ## git worktree
 
@@ -84,4 +82,3 @@
 - run を `{{repo-root}}` から隔離するための git linked worktree である。
 - `{{run-root}}` は `{{repo-root}}/.cmoc/gu/worktree/{{session-id}}/{{run-id}}` とする。
 - `{{cmoc-run-branch}}` を checkout し、run の workload を実行する。
-- workload ごとの別名を割り当ててはいけない。

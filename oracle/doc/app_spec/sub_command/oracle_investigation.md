@@ -21,8 +21,7 @@
 
 ## ユーザー指示の入力
 
-- エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする
-- 初期表示文面と完全 prompt skeleton の正確な構築は、同文書が参照する oracle src を参照する
+- エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md:1` の「プロンプトのエディタ入力」を正本とする
 
 ## TUI 起動パラメータ
 
@@ -35,11 +34,8 @@
 
 - 起動コマンドは `codex` とする
 - `codex exec` は使用しない
-- `cmoc tui` の「Codex CLI の場合」と同じく、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から以下の要素を持ち込む
-    - 環境変数 `$CODEX_HOME`
-    - preflight validation
-    - Codex CLI 引数による設定上書き
-- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
+- `$CODEX_HOME`、preflight validation、および Codex CLI 引数による設定上書きの適用範囲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/tui.md:45` の「Codex CLI の場合」を正本とする
+- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md:1` の「Windows toast 通知」を正本とする
 
 ## 調査結果と変更の扱い
 

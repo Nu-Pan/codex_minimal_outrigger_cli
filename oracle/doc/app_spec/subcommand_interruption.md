@@ -34,8 +34,7 @@
 
 ## 中断後の扱い
 
-- `cmoc realization refactor fork` は active run を `joinable` にし、同じ run を再開しない。
-- refactor の確定済み部分結果から続きを行う場合は、`cmoc run join` の後に新しい fork を開始する。
-- `cmoc oracle review` は途中位置から再開せず、同じサブコマンドを後から呼び出した場合は新しい run として扱う。
-- `cmoc feedback report` の中断時に保存する state と再開方法は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` を正本とする。中断時は新しい active state と正式な feedback Markdown report を publication しない。
+- 中断後の refactor run の state と次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md:134` の「ユーザー中断」を正本とする。
+- oracle review の部分結果と再開境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md:81` の「ユーザー中断」を正本とする。
+- feedback report の保存 state と再開方法は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md:161` の「ユーザー中断と再開」を正本とする。
 - 編集 run または oracle review の中断位置を再開する checkpoint を保存してはいけない。feedback report が保存する正式な agent call result は処理位置ではなく固定入力に対する確定結果であるため、この禁止の対象外とする。

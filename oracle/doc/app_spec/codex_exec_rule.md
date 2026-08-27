@@ -209,18 +209,11 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 ## feedback reporter と collector context
 
 - reporting の意味は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
-- cmoc は initial call、Structured Output の correction call、および TUI call の開始前に、invocation-scoped collector へその Codex call の context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする
+- cmoc は Codex call の開始前に、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md:74` の「collector と transport」が定める call context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする
 - cmoc は call-scoped な Codex CLI `--config` override により、MCP server namespace `cmoc_feedback`、公開 tool `submit_observation`、同 tool の approval behavior、および MCP process に必要な起動情報を設定する
 - cmoc は `cmoc_feedback` の effective configuration 全体を呼び出し単位で支配する。user config、`$CODEX_HOME/config.toml`、または project config の server 定義、tool 設定、approval behavior、および起動情報に依存してはならず、それらによって別 tool の公開または reporter の置換を許してはならない
 - 通常の `cmoc_feedback.submit_observation` は、human approval、auto-review、または command sandbox escalation を要求せずに実行できるよう設定する
-- reporter の起動失敗または reporter・collector の利用不能が、Codex call の開始または本命 workload の成功を妨げないようにする
-- capability value を prompt、Codex argv、Codex call log、または submit payload に含めてはならない。MCP process へ capability を安全に渡す具体方式と環境変数名は、この非露出要件を満たす限り実装裁量とする
-- Structured Output の correction call は元の agent call ID を共有し、新しい Codex call ID、capability、および MCP context を使用する。初回 prompt で注入済みの reporting instruction を correction schema または correction prompt へ重複させない
-- parallel call ごとに capability と MCP context を分離する。一つの call の停止、drain、または capability 無効化によって別 call の受付を変更してはならない
-- 一つの TUI process では、全 turn にわたって同じ Codex call ID、capability、および MCP reporter context を維持する
-- reporter submission は agent call の正式な Structured Output、作業成果物の差分、および Codex CLI の戻り値とは独立して受理する
-- reporter または collector の利用不能は `feedback.reporter_unavailable` event と warning を記録するが、本命 Codex call の開始、終了、Structured Output 検証、retry、および戻り値を変更しない
-- Codex call 終了時は、その capability の新規受付を止め、受付済み request を drain し、accepted とする observation の永続化を完了してから、その capability と MCP context を無効化する
+- reporter と collector の残りの lifecycle は、同仕様の「collector と transport」を正本とする。初回 prompt で注入済みの reporting instruction は、correction schema または correction prompt へ重複させない
 
 ## Codex CLI 呼び出し情報の保存
 
@@ -261,6 +254,11 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 - 出力要件を schema と prompt の両方で説明してはならない。prompt には schema で説明できない要件だけを記載する
 - 実行時状態との照合が必要で schema に置けない決定論的事後条件は、workload 固有の oracle doc を正本とする。対応する AgentCallParameter builder は、その正確な agent 向け文面を所有する
 - schema または宣言済みの決定論的事後条件に含まれない意味的品質を、機械的な受理条件にしてはならない
+- 次の agent call では、Structured Output の自然言語部分を原則として日本語とする
+    - realization refactor
+    - oracle review
+    - feedback verification
+- 対象の Structured Output でも、識別子、path、command、log 原文、および引用は元の表記を維持してよい
 
 ### 機械的検証と正式な結果
 

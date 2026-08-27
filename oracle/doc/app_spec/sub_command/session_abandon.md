@@ -13,17 +13,13 @@
 
 ## 事前条件
 
-`cmoc session abandon` は `{{cmoc-session-branch}}` 上でのみ実行できる。
+`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context と編集 run fork・session 終了の共通事前条件」を満たす。
 
 以下の場合はエラー終了する。
 
-- 現在のブランチが `{{cmoc-session-branch}}` ではない
-- 対応する `{{cmoc-session-state-file}}` が存在しない
-- 対応する `{{cmoc-session-state-file}}` の `session.state` が `active` ではない
-- 対応する `{{cmoc-session-state-file}}` の `run.state` が `ready` ではない
-    - 未 join の編集 run が残っている場合は、先に `cmoc run abandon` で破棄する
 - `{{cmoc-session-home-branch}}` が存在しない
-- `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分が存在する
+
+未 join の編集 run が残っている場合は、先に `cmoc run abandon` で破棄する。
 
 ## 破棄対象
 

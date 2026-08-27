@@ -5,7 +5,7 @@
 - `cmoc session join` は、session を完了して `{{cmoc-session-home-branch}}` へ戻すためのコマンドである。
 - i.e. `cmoc session join` は、現在 checkout している `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
 - 通常の git branch 同士の汎用 merge wrapper ではない。
-- `{{repository-default-branch}}` は特別扱いしない。
+- merge source、merge target、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/oracle/doc/branch_model.md:3` の「概要」を正本とする。
 
 ## 引数
 
@@ -14,14 +14,11 @@
 
 ## 事前条件
 
+`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context と編集 run fork・session 終了の共通事前条件」を満たす。
+
 以下の場合はエラー終了する。
 
-- 現在のブランチが `{{cmoc-session-branch}}` ではない
-- 対応する `{{cmoc-session-state-file}}` が存在しない
-- 対応する `{{cmoc-session-state-file}}` の `session.state` が `active` ではない
-- 対応する `{{cmoc-session-state-file}}` の `run.state` が `ready` ではない
 - 対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定出来ない
-- `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分が存在する
 
 ## 実行手順
 
@@ -45,8 +42,7 @@ merge conflict が発生した場合は通常の conflict として扱う。
 
 ## feedback state との境界
 
-- repository-local feedback state は merge source と merge target のどちらにも属さず、session join の merge 対象ではない。
-- session join は、pending observation、active issue、machine aggregate、active generation、current pointer、report cut、checkpoint、および Markdown report を取り込み、競合解消、または巻き戻しの対象にしてはならない。
+session join と repository-local feedback state の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:21` の「所有範囲と配置」を正本とする。
 
 ## `git merge` がコンフリクトした場合
 

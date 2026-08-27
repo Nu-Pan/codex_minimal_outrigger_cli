@@ -13,11 +13,10 @@
 
 ## 事前条件
 
+`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context」の条件を満たす。
+
 以下の場合はエラー終了する
 
-- 現在のブランチが `{{cmoc-session-branch}}` ではない
-- 対応する `{{cmoc-session-state-file}}` が存在しない
-- 対応する `{{cmoc-session-state-file}}` の `session.state` が `active` ではない
 - git 未コミット差分が存在する
 
 ## 実行手順
@@ -57,12 +56,9 @@
 
 ## 「run の隔離実行」とは
 
-- その範囲内で、実際の作業を `{{cmoc-run-worktree}}` 上で隔離実行することを指す
-- 隔離実行については `{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md` を参照すること
-- 隔離実行の終了時、`{{cmoc-session-branch}}` へのマージを自動で行う
-    - `{{cmoc-run-branch}}` 上で更新される可能性があるのは `INDEX.md` のみである
-    - `INDEX.md` は自動生成 file であるため `{{cmoc-run-branch}}` 側の変更が失われても問題ない
-    - よって `INDEX.md` のコンフリクトは `{{cmoc-session-branch}}` 側を採用することで機械的に解決する
+- 隔離資源と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md:1` の「run 作業隔離規則」を正本とする。
+- この read-only run は終了時に `{{cmoc-session-branch}}` へ自動的に merge する。
+- `{{cmoc-run-branch}}` 上で更新され得るのは `INDEX.md` だけとする。conflict した場合は、自動生成 file であるため `{{cmoc-session-branch}}` 側を採用して機械的に解消する。
 
 ## `cmoc oracle review` の責務境界
 
@@ -80,7 +76,7 @@
     - 「oracle file もっと良くするには」の人間への提案は目的ではない
     - 過去 oracle file に何があったか (i.e. 編集・追加・削除) はレビュー対象ではない
 
-oracle review の finding、採否判定、および verdict を feedback observation または active issue として自動変換しない。agent が共通 reporter で明示的に申告した observation と allowlist 済み log detector の observation は、review 成果物と分離して `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` に従う。
+oracle review 成果物と feedback の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md:63` の「既存 workload との境界」を正本とする。
 
 ## ユーザー中断
 
@@ -150,28 +146,21 @@ oracle review の finding、採否判定、および verdict を feedback observ
 - ダーティフラグは、その周回で「その所見が妥当ではない理由」「その所見が妥当である理由」が 1 つも出なかった場合に false にする
 - ループ回数の上限は `CmocConfigOracleReview.num_validate_findings_loop` で指定される
 
-## 「その所見が妥当ではない理由の記述」の詳細
+## 「その所見が妥当である理由・妥当ではない理由の記述」の詳細
 
-- ダーティフラグが true の所見 1 件ごとに agent call を行う
-- この所見ごとの agent call は並列実行してよい
-
-## 「その所見が妥当である理由の記述」の詳細
-
-- ダーティフラグが true の所見 1 件ごとに agent call を行う
+- ダーティフラグが true の所見 1 件ごとに、妥当である理由と妥当ではない理由の agent call をそれぞれ行う
 - この所見ごとの agent call は並列実行してよい
 
 ## 「その所見の採用・不採用の判定」の詳細
 
 - 所見 1 件ごとに、採用・不採用判定の agent call を行う
-- この所見ごとの agent call は並列実行してよい
+- 採否判定の agent call は所見間で並列実行してよい
 
 ## レポート
 
 ### レポートの体裁
 
 レビューレポートは Markdown ファイルとし、yaml frontmatter と本文で構成する。
-
-agent call の Structured Output の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい。
 
 ### 所見単位の集約
 

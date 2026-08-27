@@ -46,10 +46,8 @@
 
 ### 検証
 
-- 必要な操作
-    - `{{work-root}}/.agents` が存在しなければ作成する
-    - `{{work-root}}/.agents` が空ディレクトリならば `{{work-root}}/.agents/.gitkeep` を作成する
-    - `{{work-root}}/.agents` ツリー内 git 追跡対象外ならば `{{work-root}}/.agents/.gitkeep` を git 追跡対象に追加する
+- `{{work-root}}/.agents` が存在すること
+- `{{work-root}}/.agents` ツリー内に git 追跡対象 file が 1 件以上あること
 - 必要な理由
     - `{{work-root}}/.agents` は agent 操作禁止領域なので、差分が出る余地をなくしたい
     - なので、最初から作っておく

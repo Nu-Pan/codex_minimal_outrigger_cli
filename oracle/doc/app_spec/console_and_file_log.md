@@ -131,10 +131,7 @@ TUI の通知境界を適用するサブコマンドと非対話サブコマン�
 - `cmoc oracle edit` は非対話サブコマンドとして本書を適用する。内部の各 `codex exec` は独立した terminal result を表示せず、最外側のサブコマンドが終了状態の確定後に 1 回だけ表示する
 - TUI の起動前エラーまたは異常終了には、本書と `{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` のエラー表示規則を適用する。非対話サブコマンド用の primary report は要求しない
 - TUI process へ制御を渡した後は、cmoc の進行通知を TUI の表示へ混入させない
-- 自動補完プローブでは、CLI ライブラリの補完処理が必要とする出力以外を stdout または stderr へ混ぜない
-- 自動補完プローブでは、通常のサブコマンドログ初期化、terminal result、および cmoc 形式のエラー表示を行わない
-
-自動補完プローブの判定と処理境界は、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md` を正本とする。
+- 自動補完プローブの判定、console 出力、および通常処理の抑止は、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md:1` の「CLI 自動補完規則」を正本とする
 
 ## non-goal
 

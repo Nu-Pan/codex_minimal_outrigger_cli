@@ -3,8 +3,7 @@
 
 ## 概要
 
-- `{{repo-root}}` が cmoc を正常に実行可能な状態か検証し、可能な限り修復を試みる
-- 実質的には doctor preprocess を明示的に呼び出すためだけのコマンド
+- doctor preprocess を明示的に呼び出すコマンドである。検証・修復の内容は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md:2` の「Doctor Preprocess」を正本とする
 
 ## 引数
 

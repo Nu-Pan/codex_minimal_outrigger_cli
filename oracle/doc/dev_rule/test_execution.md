@@ -131,14 +131,12 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 
 ## 実経路統合テストを実行する
 
-- 実経路統合テストの意味上の要件、モデル設定、quota、および model provider の扱いは、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする。
+- 実経路統合テストの成立条件、専用のモデル設定、quota、および model provider の扱いは、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md:28` の「実経路統合テスト」を正本とする。
 - pytest command から具体的な model provider またはモデル名を上書きしてはならない。
-- quota 枯渇時の待機と再開を含む Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従う。
-- 実経路統合テストを Fake、mock、stub、記録済み response、または起動確認へ置き換えて test 実行を完了扱いにしてはならない。
 
 ## 完了を判定する
 
-Python code 変更の完了には、fresh な完了ゲートの全 command が成功し、必要な外部経路が実際に検証されていることを要求する。
+Python code 変更の完了には、fresh な完了ゲートの全 command が成功し、test rule が定める外部経路の検証要件を満たすことを要求する。
 
 - 実経路統合テストの未実行、失敗、または環境不足による skip がある場合は、full test 未完了とする。
 - その他の skip は reason と対象を確認し、今回必要な検証を欠く場合は未完了とする。

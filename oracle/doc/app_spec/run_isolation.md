@@ -5,6 +5,8 @@
 - run は、workload 固有の fork で開始し、join または abandon で終了する隔離作業の 1 instance である。
 - workload は、run が行う作業の種類である。
 - fork, join, abandon は run の lifecycle 操作を表す。公開 CLI のサブコマンド名と一致する場合に限らない。
+- run が使用する branch、commit、および worktree の定義と命名は、`{{cmoc-root}}/oracle/doc/branch_model.md:50` の `{{cmoc-run-branch}}` 以降を正本とする。
+- 永続化する run state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:71` の「run field」を正本とする。
 
 ## lifecycle
 
@@ -15,15 +17,14 @@
 
 ## git branch
 
-- fork は開始時点の `{{cmoc-session-branch}}` HEAD を `{{cmoc-run-fork-commit}}` とし、そこから `{{cmoc-run-branch}}` を作成する。
+- fork は、branch model が定める分岐元 commit から `{{cmoc-run-branch}}` を作成する。
 - run の成果物は `{{cmoc-run-branch}}` 上の commit として記録する。
-- workload の種類は branch 用の別概念を作らず、run state と report で判別する。
 - join は workload の規則に従って `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ merge する。
 - abandon は `{{cmoc-session-branch}}` へ merge せず、run の隔離資源を破棄する。
 
 ## git worktree
 
-- run の作業は、`{{cmoc-run-branch}}` を checkout した git linked worktree である `{{cmoc-run-worktree}}` 上で行う。
+- run の作業は、branch model が定める `{{cmoc-run-worktree}}` 上で行う。
 - agent call の cwd は、個別仕様に別の定めがない限り `{{cmoc-run-worktree}}` とする。
 - run 上の agent call の root path は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md:14` の「agent call の path context」に従う。同節が正確な導出先の oracle src を定める。
 - cmoc process の cwd が `{{repo-root}}` であっても、run 上の agent call の path context は `{{cmoc-run-worktree}}` から解決する。
@@ -33,7 +34,6 @@
 
 - 原則として、run の作業は `{{run-root}}` ツリー内だけを読み書きする。
 - 個別仕様が明示する cmoc 管理データは、例外として `{{repo-root}}` 側へ書き込んでよい。
-    - e.g. 実行ログと session state は `{{run-root}}/.cmoc/gu` ではなく `{{repo-root}}/.cmoc/gu` に保存する。
-    - accepted feedback observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従って `{{repo-root}}/.cmoc/gu/ar/feedback` に保存する。
-    - feedback の active generation、current pointer、report cut、一時 checkpoint、および Markdown report は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` に従って同じ repository-local root に保存する。
-- run の join または abandon は、`{{repo-root}}` 側で確定済みの feedback state を取り込み、破棄、または巻き戻さない。
+- 実行ログの保存先は `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md:99` の「サブコマンドログファイル」、session state の保存先は `{{cmoc-root}}/oracle/doc/app_spec/session_state.md:3` の「概要」を正本とする。
+- feedback observation と feedback state の保存先および lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md:158` の「raw observation の保存」と `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:1` の「feedback の repository-local state」を正本とする。
+- run の join または abandon と feedback state の境界は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:8` の「スキーマ設計の基本原則」に従う。

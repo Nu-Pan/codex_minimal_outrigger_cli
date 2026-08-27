@@ -50,23 +50,13 @@ feedback の仕様は、責務ごとに次の文書へ分ける。同じ schema�
 
 | 正本仕様 | 決めること |
 |---|---|
-| `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` | observation の報告基準、収集経路、受け入れ検査、機械 detector、および raw 保存 |
-| `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` | repository-local state、report cut、checkpoint、atomic publication、および cleanup |
-| `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` | `cmoc feedback report` の事前条件、処理順序、normalization、verification、表示、および終了結果 |
+| `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md:1` の「feedback observation の収集」 | observation の報告基準、収集経路、受け入れ検査、機械 detector、および raw 保存 |
+| `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:1` の「feedback の repository-local state」 | repository-local state、report cut、checkpoint、atomic publication、および cleanup |
+| `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md:1` の `cmoc feedback report` | `cmoc feedback report` の事前条件、処理順序、normalization、verification、表示、および終了結果 |
 
 ## 共通原則
 
-feedback 全体で、次の原則を維持する。
-
-- raw observation、active state、および report の一時 state は `{{repo-root}}/.cmoc/gu` に属する repository-local data とする。
-- feedback data は branch、session、または run の成果物ではない。join と abandon によって取り込み、破棄、または巻き戻さない。
-- report cut の固定後に追加された observation は、次回の report で処理する。
-- 全 candidate が `unresolved | resolved | not_actionable` のいずれかに確定した場合だけ、新しい active state と正常 Markdown report を一組として publication する。
-- 全 candidate の verification output を受理でき、1 件以上が `inconclusive` だった場合は、`incomplete` 診断 report だけを durable に保存する。
-- `incomplete` 診断 report の保存は正常 publication ではない。新しい active state を作らず、直前の current pointer と pending observation を維持する。
-- 正常 publication が完了しなかった場合は、直前の正常 publication を current のまま維持する。
-- report-time agent は、候補外の問題を探索せず、repository または feedback state を変更しない。
-- feedback report、`incomplete` 診断 report、active issue、および AI-generated kaizen を、後続の Codex call へ自動注入しない。
+feedback report、`incomplete` 診断 report、active issue、および AI-generated kaizen を、後続の Codex call へ自動注入しない。
 
 別 clone、別 machine、または Git remote への feedback data の複製は保証しない。
 

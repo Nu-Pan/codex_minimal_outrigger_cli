@@ -3,8 +3,7 @@
 ## 概要
 
 - `cmoc session fork` は、現在 checkout している `{{local-branch}}` を `{{cmoc-session-home-branch}}` とし、その HEAD から `{{cmoc-session-branch}}` を作成する。
-- `{{cmoc-session-home-branch}}` は、その session の分岐元であり、最終的な merge 先でもある。
-- `{{repository-default-branch}}` は特別扱いしない。
+- branch の役割、分岐関係、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/oracle/doc/branch_model.md:3` の「概要」を正本とする。
 
 ## 引数
 
@@ -29,23 +28,18 @@
 3. 現在の HEAD commit を `{{cmoc-session-fork-commit}}` として取得する
 4. 一意な `{{session-id}}` を生成する
 5. `{{cmoc-session-branch}}` を作成して checkout する
-6. `{{repo-root}}/.cmoc/gu/ar/session/{{session-id}}.json` に session 情報と初期状態 `run.state=ready` を保存する
+6. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md:3` の「概要」と同文書の schema に従って、session 情報と初期状態を保存する
 7. terminal result のサブコマンド固有結果に、作成した `{{cmoc-session-branch}}` 名と `{{cmoc-session-home-branch}}` 名を含める
 
 ## `{{cmoc-session-branch}}` の命名規則
 
-- `{{cmoc-session-branch}}` の実際の branch 名は `cmoc/session/{{session-id}}` とする。
-- `{{session-id}}` は `{{time-stamp}}` とする。
+- branch 名は、`{{cmoc-root}}/oracle/doc/branch_model.md:39` の `{{cmoc-session-branch}}` を正本とする。
+- `{{session-id}}` には、`{{cmoc-root}}/oracle/doc/app_spec/timestamp.md:1` が定める `{{time-stamp}}` を使用する。
 
 ## 任意 start point の扱い
 
 - `cmoc session fork` は任意の start point を受け取らない
 - 分岐元を変えたい場合は、ユーザーが事前に目的の `{{local-branch}}` へ移動してから `cmoc session fork` を実行する
-
-## session の原則
-
-- 1 つの `{{cmoc-session-home-branch}}` に対して active な `{{cmoc-session-branch}}` は高々 1 つとする。
-- detached HEAD, `{{remote-tracking-branch}}`, commit hash, `{{cmoc-managed-branch}}` は `{{cmoc-session-home-branch}}` として扱わない。
 
 ## primary report
 

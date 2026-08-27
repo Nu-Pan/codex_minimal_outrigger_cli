@@ -17,8 +17,6 @@
 3. 短い仕様変更・実装変更 loop を繰り返す。
     1. 必要に応じて `cmoc oracle investigation` で read-only の調査を行う。
     2. 人間が oracle file を直接編集するか、main worktree の active な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` を呼び出す。
-        - `cmoc oracle edit` は、エディタで受け取った指示に従う本命 `codex exec` と、本命成功後に過剰な仕様を削減する別 session の `codex exec` を直列に実行する。
-        - 起動時点の既存未コミット差分と 2 回の agent call による変更は分離されず、filesystem 上に残る。人間が差分を確認し、必要なら追加修正する。
     3. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
     4. 人間が `cmoc oracle review` を呼び出す。
     5. review 結果から修正が必要と判断した場合は、次の手順を修正が不要と判断するまで繰り返す。
@@ -26,14 +24,10 @@
         2. oracle file の変更を commit する。
         3. `cmoc oracle review` を再実行する。
     6. 人間が `cmoc realization apply fork` を呼び出す。
-        - cmoc は前回 join 済み apply から現在までの oracle commit 差分を注入し、run worktree 上の `codex exec` 1 回でリポジトリ全体の realization を追従させる。
     7. 人間が `cmoc run join` で apply run を取り込むか、`cmoc run abandon` で破棄する。
     8. 人間が現状の実装で問題ないと判断するまで繰り返す。
 4. 必要に応じて、ファイル単位の網羅的な追従を行う。
     1. 人間が `cmoc realization refactor fork` を呼び出す。
-        - cmoc は refactor state の調査要求に従い、差分情報を渡さずに 1 file ずつ調査する。
-        - unresolved target は current fork 内で保留し、それ以外の調査要求がなくなるまで処理する。
-        - `natural_completion` による完全な自然完了、`completed_with_unresolved` による unresolved 付き完了、または `Ctrl+C` による整合した中断まで処理する。
     2. 人間が `cmoc run join` で確定済み成果物を取り込むか、`cmoc run abandon` で破棄する。
     3. 調査要求が残っている場合は、join 後に新しい `cmoc realization refactor fork` を開始する。
 5. 人間が `{{cmoc-session-branch}}` 上で `cmoc session join` を呼び出す。
@@ -41,7 +35,10 @@
 
 ## workload の使い分け
 
-- realization apply は、直近の oracle 変更を短い loop で素早く realization へ反映するときに使う。
-- realization refactor は、変更差分に引っ張られず、全 oracle file と realization file の調査要求を収束させるときに使う。
-- oracle edit は main worktree 上で 2 回の非対話 `codex exec` により oracle file を直接編集し、run lifecycle を使わない。
-- realization apply と realization refactor の編集 run は共通の明示的 fork/join lifecycle を使う。
+各 workload の目的と境界は、次の仕様を正本とする。
+
+- realization apply: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md:3` の「目的」
+- realization refactor: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md:3` の「目的」
+- oracle edit: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md:3` の「目的」
+
+realization の編集 run に共通する lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md:1` を参照する。

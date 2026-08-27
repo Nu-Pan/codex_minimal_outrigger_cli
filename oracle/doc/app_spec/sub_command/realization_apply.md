@@ -5,7 +5,7 @@
 - realization apply は、直近の git commit 群から読み取れる oracle file の変更を realization file へ素早く反映する workload である。
 - fork の正常終了時には、少なくとも注入した commit 差分から読み取れる変更について、oracle file と realization file の間に齟齬がない状態にする。
 - ファイル単位の網羅的な追従は non-goal とし、realization refactor が担う。
-- fork, join, abandon の共通 lifecycle は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` を正本とする。
+- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md:1` の「明示的な join を必要とする編集 run の共通仕様」を正本とする。
 
 ## 引数
 
@@ -55,7 +55,6 @@
 
 ## fork report と終了コード
 
-- report は Markdown + YAML Front Matter とする。
 - `natural_completion` と `error` のすべての終了経路で report を保存する。共通 fork 事前条件違反など、run branch、run worktree、または本命 agent call の開始前に確定したエラーも対象とする。
 - 共通 run 項目に加え、terminal result の共通分類、差分の始点 commit、Codex CLI の終了結果、変更 path、エラー、および関連ログを含める。
 - YAML Front Matter には、この invocation で reporter が受理した feedback の `feedback_observation_count` と `feedback_observations` を含める。`feedback_observations` は `observation_id` と raw observation file の full `path` を持つ object の配列とする。0 件の場合も count は 0、配列は空とする。

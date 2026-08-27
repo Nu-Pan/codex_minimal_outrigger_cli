@@ -8,8 +8,7 @@
 - 所見調査・修正 call の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py:18` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。
 - installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - 短い変更ループを担う realization apply とは workload を分ける。
-- fork, join, abandon の共通 lifecycle は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` を正本とする。
-- agent call の Structured Output の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい。
+- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md:1` の「明示的な join を必要とする編集 run の共通仕様」を正本とする。
 
 ## refactor state
 
@@ -149,13 +148,10 @@
 
 ## feedback との境界
 
-- findings、`resolution.status`、current fork の unresolved target、および refactor state を feedback observation または active issue として自動変換しない。
-- agent が共通 reporter で明示的に申告した observation と、allowlist 済み log detector の observation だけを `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` に従って別途保存する。
-- feedback の有無または内容は、refactor loop、`investigation_required`、`completion_reason`、run state、および終了コードへ影響させない。
+realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md:63` の「既存 workload との境界」を正本とする。
 
 ## fork report、終了 log、および終了コード
 
-- report は Markdown + YAML Front Matter とする。
 - `natural_completion`、`completed_with_unresolved`、`user_interruption`、および `error` のすべての終了経路で report を保存する。共通 fork 事前条件違反など、run branch、run worktree、refactor state、または通常の report 生成処理より前に確定したエラーも対象とする。
 - 共通 run 項目に加え、refactor state のフル path と `completion_reason` を含める。
 - `completion_reason` は `natural_completion | completed_with_unresolved | user_interruption | error` とする。

@@ -3,8 +3,7 @@
 
 ## 概要
 
-- `cmoc indexing` は現在の `{{work-root}}` に対してインデクシングを実行する
-- インデクシングの結果は自動的に git にコミットされる
+- `cmoc indexing` は、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md:2` の仕様に従って、現在の `{{work-root}}` を明示的にインデクシングする
 
 ## 引数
 
@@ -19,8 +18,7 @@
 ## 実行手順
 
 1. doctor preprocess を呼び出す
-2. インデクシングを明示的に実行
-3. インデクシングによって発生した差分を git commit
+2. インデクシングを明示的に実行する
 
 ## primary report
 
@@ -28,7 +26,3 @@
 - report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/ar/report/indexing/{{time-stamp}}.md` に保存する。
 - front matter には、command、生成日時、repo root、terminal result の共通分類、終了コード、および作成した commit ID を含める。commit を作成していない場合は commit ID を `null` とする。
 - 本文には、インデクシングの実行有無、処理結果、作成または更新した `INDEX.md`、commit の作成結果、warning またはエラー、必要な次の操作、および関連する診断用サブコマンドログを要約する。
-
-## インデクシングとは
-
-- `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` を参照

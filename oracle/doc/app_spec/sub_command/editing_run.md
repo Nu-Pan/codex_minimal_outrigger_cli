@@ -9,30 +9,24 @@
 - 汎用の `cmoc run fork` は提供しない。
 - `cmoc session join` と `cmoc session abandon` は外側の session lifecycle であり、この仕様の対象ではない。
 - `cmoc oracle edit`、read-only の investigation/review、cmoc 自身による機械的更新、および session join の conflict 解消は、この編集 run lifecycle の対象ではない。
+- run の隔離資源と一般 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md:1` の「run 作業隔離規則」を正本とする。
+- session と run の永続 state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:1` の `{{cmoc-session-state-file}}` を正本とする。
 
 ## 同時実行の境界
 
-- 1 session が保持できる未 join の編集 run は高々 1 つとする。
-- `{{cmoc-session-state-file}}` の `run` section で、active run の kind と状態を共有管理する。
-- workload の異なる編集 run を同時に active にしてはいけない。
+未 join の編集 run 数は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:8` の「スキーマ設計の基本原則」を正本とする。active run の state field は、同文書 71 行目の「run field」を正本とする。
+
 - `run.state` が `joinable` または `error` の間は、その run に対する `cmoc run join` と `cmoc run abandon` 以外の lifecycle 操作を受け付けない。
 
 ## fork の共通事前条件
 
-workload 固有の fork は doctor preprocess の後に以下を検査し、満たさない場合はエラー終了する。
-
-- 現在の branch が `{{cmoc-session-branch}}` である。
-- 対応する `{{cmoc-session-state-file}}` が存在する。
-- `session.state` が `active` である。
-- `run.state` が `ready` である。
-- `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分がない。
+workload 固有の fork は doctor preprocess の後に、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context と編集 run fork・session 終了の共通事前条件」を検査する。満たさない場合はエラー終了する。
 
 ## fork の共通開始処理
 
-1. run 開始時点の `{{cmoc-session-branch}}` HEAD を `{{cmoc-run-fork-commit}}` とする。
-2. workload に依存しない命名規則で `{{cmoc-run-branch}}` と `{{cmoc-run-worktree}}` を作成する。
-3. session state の `run.state` を `running` にし、`kind`, `branch`, `fork_commit` を保存する。
-4. workload の編集作業を `{{cmoc-run-worktree}}` 上で行う。
+1. run isolation 仕様に従って、`{{cmoc-run-fork-commit}}`、`{{cmoc-run-branch}}`、および `{{cmoc-run-worktree}}` を確定する。
+2. session state の `run.state` を `running` にし、`kind`, `branch`, `fork_commit` を保存する。
+3. workload の編集作業を `{{cmoc-run-worktree}}` 上で行う。
 
 workload は、agent call の開始前に fork の共通開始処理を完了しなければならない。
 
@@ -43,8 +37,14 @@ workload は、agent call の開始前に fork の共通開始処理を完了し
 - workload が正常終了した場合は `run.state` を `joinable` にする。
 - ユーザー中断を正常系として扱う workload は、実行中の処理単位を commit まで完了するか rollback してから `run.state` を `joinable` にする。
 - 続行不能な失敗では、未確定の処理単位を commit または rollback により整合させ、`run.state` を `error` にする。
-- raw observation、active generation、current pointer、report cut、一時 checkpoint、および Markdown report を含む feedback data は、`{{repo-root}}/.cmoc/gu` に保存する cmoc 管理データである。run branch の差分または workload 成果物として扱わない。
-- `cmoc feedback report` は `run.state=ready` を要求するため、active な編集 run の途中で active feedback state を publication しない。run の join または abandon は、repository-local feedback state を取り込み、破棄、または巻き戻さない。
+- 編集 run と feedback data の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md:63` の「既存 workload との境界」と `{{cmoc-root}}/oracle/doc/app_spec/session_state.md:8` の「スキーマ設計の基本原則」を正本とする。
+
+## join と abandon の共通事前条件
+
+`cmoc run join` と `cmoc run abandon` は、次の条件を共通して検査する。
+
+- 現在の branch が `{{cmoc-session-branch}}` または active な `{{cmoc-run-branch}}` のいずれかである。
+- 対応する `session.state` は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:50` の定義における `active` である。
 
 ## `cmoc run join`
 
@@ -58,8 +58,6 @@ workload は、agent call の開始前に fork の共通開始処理を完了し
 
 以下の場合はエラー終了する。
 
-- 現在の branch が `{{cmoc-session-branch}}` または active な `{{cmoc-run-branch}}` のいずれでもない。
-- `session.state` が `active` ではない。
 - `run.state` が `joinable` または `error` ではない。
 - `run.kind`, `run.branch`, `run.fork_commit` のいずれかを state から特定できない。
 - session worktree または run worktree に git 未コミット差分がある。
@@ -106,8 +104,6 @@ workload は、agent call の開始前に fork の共通開始処理を完了し
 
 以下の場合はエラー終了する。
 
-- 現在の branch が `{{cmoc-session-branch}}` または active な `{{cmoc-run-branch}}` のいずれでもない。
-- `session.state` が `active` ではない。
 - `run.state` が `ready` である。
 - active run の kind、branch、または branch に対応する worktree を特定できない。
 - `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分がある。
@@ -125,7 +121,7 @@ workload は、agent call の開始前に fork の共通開始処理を完了し
 
 ## report と terminal result
 
-- join と abandon の report は Markdown と YAML Front Matter で構成する。
+- fork、join、および abandon の report は Markdown と YAML Front Matter で構成する。
 - join と abandon は、共通事前条件違反を含む `natural_completion` と `error` のすべての終了経路で report を保存する。
 - fork report の YAML Front Matter は、少なくとも `run_kind`, `session_branch`, `session_fork_commit`, `run_branch`, `run_fork_commit`, `run_worktree`, `state_before`, `state_after` を含む。確定できない項目は `null` とし、存在しない branch、commit、worktree、または state を作ってはならない。
 - join report と abandon report の YAML Front Matter は、少なくとも command、生成日時、repo root、terminal result の共通分類、終了コード、`run_kind`, `session_branch`, `run_branch`, `run_fork_commit`, `run_worktree`, `state_before`, `state_after` を含む。join report は、作成した `{{cmoc-run-join-commit}}` も含む。確定できない項目は `null` とする。

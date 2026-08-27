@@ -10,8 +10,21 @@
 - 永続化する情報は必要最小限に留める。
 - その場で確実に解決できる情報は state に持たせない。
 - 1 session に未 join の編集 run は高々 1 つとする。
-- feedback の pending observation、active issue、machine aggregate、active generation、current pointer、report cut、checkpoint、および Markdown report は session/run lifecycle state ではなく、この file に保存しない。repository-local state は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。
-- session または run の状態遷移は repository-local feedback state を取り込み、破棄、または巻き戻さない。
+- feedback の repository-local state はこの file に保存しない。保存対象と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:1` の「feedback の repository-local state」を正本とする。
+- session または run の状態遷移は、同仕様が所有する feedback state を変更しない。
+
+## active session context と編集 run fork・session 終了の共通事前条件
+
+active session context を必要とするサブコマンドは、次の条件をすべて検証する。
+
+- 現在の branch が `{{cmoc-session-branch}}` である。
+- 対応する `{{cmoc-session-state-file}}` が存在する。
+- `session.state` が `active` である。
+
+編集 run の workload 固有 fork、`cmoc session join`、および `cmoc session abandon` は、さらに次の共通事前条件を満たす。
+
+- `run.state` が `ready` である。
+- `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分がない。
 
 ## スキーマ定義
 
@@ -57,6 +70,8 @@
 
 ## run field
 
+`run.state` が `ready` の場合は、`run.kind`、`run.branch`、および `run.fork_commit` を `null` とする。
+
 ### `run.state`
 
 - `ready` は未 join の編集 run がない状態である。
@@ -68,20 +83,17 @@
 ### `run.kind`
 
 - active な realization 編集 run の workload を表す。
-- `run.state` が `ready` の場合は `null` とする。
 - join と abandon はこの値から workload を解決する。
 - `cmoc oracle edit` は run ではなく、この field の値にならない。
 
 ### `run.branch`
 
 - active run の `{{cmoc-run-branch}}` 名である。
-- `run.state` が `ready` の場合は `null` とする。
 
 ### `run.fork_commit`
 
 - active run の `{{cmoc-run-fork-commit}}` である。
 - apply の差分終点と run join の差分検査にも使用する。
-- `run.state` が `ready` の場合は `null` とする。
 
 ## 状態遷移
 
