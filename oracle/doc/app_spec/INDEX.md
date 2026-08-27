@@ -200,24 +200,21 @@
 # `oracle_and_realization.md`
 
 ## Summary
-- oracle file と realization file の責務を分類し、正本仕様・実装・テスト・補助ファイルの配置と所有範囲を判断するための責務境界を定義する。
-- oracle doc と oracle src の正本責務、詳細仕様の委譲、相互の優先関係、および prompt literal・generated prompt の位置づけを確認する入口である。
-- oracle file と realization file を扱う判断基準、関連仕様の参照方法、未定義部分の扱い、realization file の oracle file への適合性と修正対象を確認する。
+- oracle file と realization file の分類、正本責務、相互の優先関係、および適合性判断の共通契約を定義する文書。oracle doc・oracle src・oracle test、realization implementation・test・ancillary の役割を区別し、仕様の委譲、重複禁止、実装追従時の判断基準を示す。oracle と realization の責務境界や、関連する prompt builder・policy の詳細へ進むための入口となる。
 
 ## Read this when
-- oracle file、realization file、uncategorised file の分類や、それぞれの配置・責務を判断するとき。
-- oracle doc と oracle src のどちらが意味仕様、exact literal、schema、構築方法、選択値を所有するかを確認するとき。
-- oracle file の調査・作成・変更・レビュー、または realization file の実装・テスト・適合性を扱うとき。
-- realization apply や realization refactor で、明示仕様との不整合や実行不能・致命的バグが修正対象となるか判断するとき。
+- oracle file と realization file の役割や分類を判断するとき
+- oracle doc と oracle src の正本責務、委譲、優先関係を確認するとき
+- realization implementation・test・ancillary の配置と責務を確認するとき
+- realization の仕様適合性や修正対象の判断基準を確認するとき
 
 ## Do not read this when
-- 特定の prompt literal、schema、builder の構築順序・選択値を確認する場合は、委譲先として指定された oracle src を直接読む。
-- 実装の具体的な責務や挙動を確認する場合は、対象の realization implementation を直接読む。
-- テストの具体的な検査内容や実行方法を確認する場合は、対象の realization test または repository のテスト実行手順を直接読む。
-- 既存 INDEX.md の内容を確認・更新する作業では、この対象をルーティング情報の代わりに読まない。
+- 対象となる個別 oracle doc、oracle src、oracle test、realization file の具体的内容を直接確認すれば足りるとき
+- prompt の正確な文面・構築方法・選択値を確認するときは、指定された oracle src を直接読むとき
+- cmoc 固有の開発環境、設計、テスト実行手順だけを確認するときは、対応する dev_rule 文書を直接読むとき
 
 ## hash
-- 259e160b92793af0da335a17093c70cd22908522d827fc09943dcb5e5bbda94e
+- 8ab0718841213c60c572383f63c048c374d30c71f2460c5aa416197b43ffb862
 
 # `oracle_and_realization_file_enumeration.md`
 
@@ -298,19 +295,20 @@
 # `sub_command`
 
 ## Summary
-- サブコマンド仕様を、doctor、indexing、oracle 操作、realization 操作、session 操作、feedback、TUI の目的別に案内するディレクトリ。各仕様のCLI契約、前提条件、処理手順、状態遷移、report、終了経路を確認するための入口であり、共通正本仕様や実装詳細は個別の参照先へ委譲する。
+- cmoc の主要サブコマンドおよび編集・session lifecycle、feedback report、indexing、TUI の正本仕様へのルーティング入口。各文書は、対応するコマンドや共通処理の引数・事前条件・実行手順・状態遷移・report・エラー処理と、より詳細な正本仕様への境界を定義する。
 
 ## Read this when
-- cmoc のサブコマンドの実行条件、処理手順、状態管理、report、終了コードを確認するとき
-- doctor、indexing、oracle edit/review/investigation、realization apply/refactor、session fork/join/abandon、feedback report、tui の仕様入口を選ぶとき
+- cmoc のサブコマンド、session や編集 run の lifecycle、feedback report、indexing、TUI の挙動を確認・実装・変更するとき
+- コマンド実行条件、agent call、branch/worktree、state、report、終了経路、cleanup の仕様について、対象サブコマンドの入口を探すとき
+- 複数のサブコマンドに共通する編集 run の join・abandon、または session の fork・join・abandon の仕様を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドが明確な場合は、一覧としてのこのディレクトリではなく該当仕様ファイルを直接読むとき
-- サブコマンド共通の lifecycle、session state、branch model、feedback state、error handling、agent call、JSON schema、実装詳細を確認するとき
-- INDEX.md の既存ルーティングや、対象本文に記載されていない仕様を確認するとき
+- 特定サブコマンドの詳細仕様、agent prompt や Structured Output schema、state schema、branch model、共通エラー・中断規則など、本文が示す下位の正本を直接確認すべきとき
+- INDEX.md の生成規則や realization file の具体的な実装内容だけを確認するとき
+- 対象サブコマンド以外の一般的な git 操作や、session・run・feedback の正本定義そのものだけを確認するとき
 
 ## hash
-- c0151a81bb732a18c79a6a19308b93f9ef0487dcfed276dde2e2d867e21abb76
+- 03e5fd2749b406bf468957ed1d59a41d0bbd75ae340de90ada913dc8a4073ccc
 
 # `subcommand_interruption.md`
 

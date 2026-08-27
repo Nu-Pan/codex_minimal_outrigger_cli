@@ -1,36 +1,40 @@
 # `doc`
 
 ## Summary
-- `oracle/doc` は、cmoc のアプリケーション仕様と開発規則を集約し、CLI・状態管理・agent call・feedback・通知・branch/worktree 運用、Python 実装・環境・テストの正本文書へ進むための上位入口を提供する。採用しなかった設計案は `considered_alternative` から参照できる。
-- アプリケーション挙動や共通契約は `app_spec`、branch・commit・worktree の隔離モデルは `app_spec/branch_model.md`、開発・環境・実装配置・テスト規則は `app_spec/dev_rule` へ進む。
+- cmoc の正本ドキュメント群を集約するディレクトリ。アプリケーション仕様、session/run の branch model、採用しなかった代替案、開発規則を扱い、実装・変更・調査の開始時に該当する下位文書へ進むための入口となる。
+- app_spec は CLI・agent call・lifecycle・feedback・ログ・通知などのアプリケーション挙動仕様、branch_model.md は session/run の git 隔離モデル、considered_alternative は不採用案の背景、dev_rule は実装・環境・テスト・品質検査の開発規則を案内する。
 
 ## Read this when
-- cmoc のアプリケーション仕様、開発規則、branch/worktree 運用、または採用しなかった設計案の参照先を選ぶとき
-- CLI、状態管理、agent call、feedback、通知、Python 実装、開発環境、テストなど、下位の正本文書へルーティングするとき
-- 複数の仕様領域にまたがる責務境界を確認し、個別仕様へ進む前の上位構造を把握するとき
+- cmoc の正本仕様、git による session/run 隔離モデル、不採用となった設計案、または開発規則の入口を確認するとき
+- アプリケーション挙動、branch・worktree、実装配置、開発環境、テスト要件、品質検査に関する作業へ着手するとき
+- 下位の個別仕様書や開発規則へ進む前に、対象文書の責務と参照境界を確認するとき
 
 ## Do not read this when
-- 特定の機能・サブコマンド・実装・テスト・環境手順が明確で、対応する下位文書を直接確認できるとき
-- 採用しなかった代替案の詳細だけを調べる場合に、該当する `considered_alternative` の資料へ直接進めるとき
-- `oracle/doc` 配下の仕様・開発規則と無関係なコードや文書を扱うとき
+- 単一の仕様書や開発規則だけで確認事項が完結し、ディレクトリ全体の案内が不要なとき
+- 具体的な CLI 契約、個別機能の詳細挙動、実装コード、テスト、schema、prompt builder など、下位対象を直接読むべきとき
+- 採用済み仕様の操作方法や現在の実行結果だけを確認する場合で、検討資料群を読む必要がないとき
 
 ## hash
-- 948ace7319b4de94ca69186997add50fcffea5b2b028a55ab4e7df77ef5f9014
+- 8432d98a6e0f1820a1f31c6139f95bff617371671424dd7c3840c84ef71d264e
 
 # `src`
 
 ## Summary
-- `oracle/src/oracle` は、cmoc が利用する oracle 側の Python 実装と Structured Output 定義の中核領域です。agent call パラメータ、feedback 入力、設定・パス・構造化文書、prompt 構築を扱い、詳細な責務ごとに `acp_builder`、`feedback`、`other`、`prompt_builder` へ分かれています。
+- cmoc の agent call 構築と prompt 生成を担う Python ソースおよび Structured Output schema の領域です。
+- 共通データモデルは `oracle/acp_builder`、prompt の組み立てと policy は `oracle/prompt_builder`、パス・構造化文書・設定などの共通処理は `oracle/other` から確認できます。
+- feedback、indexing、oracle、realization、session、tui、quota probe など、各機能の agent call 定義と出力契約への入口を提供します。
 
 ## Read this when
-- oracle 側の実装コードや Structured Output 定義の全体像を調査・変更するとき
-- agent call の構築、feedback 入力、cmoc 設定・パス解決・構造化文書、prompt 構築の入口を探すとき
-- 下位責務がまだ特定できず、適切な下位ディレクトリへのルーティングが必要なとき
+- agent call のモデル、推論強度、ファイルアクセスモード、cwd、prompt、Structured Output schema、indexing preflight の構築定義を調査・変更するとき
+- 特定機能の agent call が使用する prompt、起動パラメータ、または Structured Output 契約を確認するとき
+- agent call 共通のデータモデル、パス解決、構造化文書レンダリング、prompt policy、placeholder の連携を確認するとき
+- feedback、indexing、oracle、realization、session join、tui、quota probe の実装上の呼び出し定義へ進む必要があるとき
 
 ## Do not read this when
-- 人間が所有する oracle の意味仕様そのものを確認するとき
-- cmoc の realization 実装、CLI 実行処理、テストの具体的な挙動を直接確認すれば足りるとき
-- 特定の責務が明らかな場合は、この階層ではなく `acp_builder`、`feedback`、`other`、`prompt_builder` の該当ディレクトリを直接読むとき
+- Codex CLI の実際の実行処理、agent call の実行結果、またはバックエンドモデル名への変換規則を確認したいとき
+- agent call が参照する oracle file、realization file、feedback state、既存の INDEX.md の本文を確認したいとき
+- cmoc の意味仕様や開発規定そのものを確認したいときは、対応する `oracle/doc` 配下を直接読む方が適切なとき
+- 実行時の CLI サブコマンド処理や realization 側の実装・テストを直接確認すれば足りるとき
 
 ## hash
-- c3539dffe2759740eaf86ab7d54eb9e9666e534fa07f51d4e354463bac04c80a
+- d44dd41f4575d50f27295a5c90ffa2324c4e220f1061e79339a99cf370ede101

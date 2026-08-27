@@ -69,18 +69,22 @@
 # `oracle.py`
 
 ## Summary
-- oracle file を扱う agent call 向け instruction 文面の構築定義。oracle file に適用する必須事項、禁止事項、許容事項、補足方針を `SDHeader` と `SDPolicy` として組み立てる。oracle と realization の基本要件、指示の優先順位、goal/non-goal、実装差の扱い、関連 oracle file の参照、未定義事項の扱いを含むポリシー生成の入口である。
+- oracle file を扱う agent call 向け instruction 文面の構築定義。oracle file に求める規定を、SDHeader と SDPolicy を用いて返す。
+- oracle と realization の基本要件、指示の優先順位、goal・non-goal、実装差の許容境界、関連 oracle file の参照、仕様上の定義事項と未定義事項の区別を扱う。
+- oracle file の問題を調査する場合に限り実装上の制約を判断材料にできる一方、realization から仕様を逆算することや、未定義事項・一般論を正本仕様として補うことを制限する。
 
 ## Read this when
-- oracle file を扱う agent call の instruction 文面や、その適用ポリシーを変更・確認するとき。
-- oracle file と realization file の優先関係、仕様断片の記述規則、実装差を許容する境界を確認するとき。
+- oracle file に関する agent call 向け instruction の構築規定を確認するとき
+- oracle file と realization file の責務境界、指示の優先順位、仕様断片の記述方針を確認するとき
+- oracle policy の必須・禁止・許容事項を変更または参照するとき
 
 ## Do not read this when
-- realization の具体的な実装配置や CLI の責務境界を確認したいとき。
-- oracle file の個別仕様本文や、agent call 全体の実行規則を直接確認したいとき。
+- oracle file の具体的な仕様内容そのものを確認したいときは、対象となる oracle file を直接読む
+- プロンプト構築の基本的な placeholder 処理だけを確認したいときは、PlaceholderMap や oracle.prompt_builder.basic の定義を直接読む
+- oracle と realization の意味仕様を確認したいときは、doc/app_spec/oracle_and_realization.md など参照先の正本仕様を直接読む
 
 ## hash
-- 7c441dbc1e70d3cbac87be64a366cbe3a3d33576f396f1842ba2e3a00c68cc1f
+- 0bf5df893085c20d1d9e462c4a96c6075b27083fe7d1842ea6eb97e7059a3254
 
 # `oracle_findings.py`
 
@@ -101,37 +105,36 @@
 # `realization.py`
 
 ## Summary
-- realization file を扱う agent call 向けの instruction 文面を構築する関数を定義する。パス文脈からプレースホルダー定義を取得し、realization file の規定を表す構造化ポリシー見出しと組み合わせて、プロンプト生成に利用する。
-- realization policy の内容は、関連する oracle file の確認、明示仕様との整合、必要最小限の実装、既存実装の活用、検証・テスト、実装やテストの整理など、realization file の扱いに関する要求・禁止・許可事項を担う。意味仕様そのものではなく、agent call に渡す規定の構築が責務である。
+- realization file を扱う agent call 向けに、realization file の実装・テストが従うべき規定を、パス文脈のプレースホルダー定義と構造化ポリシーとして構築する関数。oracle file を正本仕様として扱うこと、明示要求を満たす範囲での補完、既存実装の優先利用、YAGNI、重複実装の整理、検証要件、禁止事項および限定的な代替実装許可を instruction 文面に反映する。realization policy の生成ロジックや、その policy が agent call に渡す規定を変更・確認するときの入口となる。
 
 ## Read this when
-- realization file を対象とする agent call の instruction 文面やポリシー生成の仕組みを確認・変更するとき。
-- realization file に対して適用する SDHeader、SDPolicy、プレースホルダー定義の組み立て方を確認するとき。
-- realization file の扱いに関する要求・禁止・許可事項を、プロンプトへどのように埋め込むか確認するとき。
+- realization file を扱う agent call の instruction 文面や policy 構築を変更・確認するとき
+- realization file と oracle file の関係、実装者裁量、YAGNI、検証・テスト要件を agent 向け規定に反映するとき
+- realization policy の構造化ヘッダーや path context 由来の placeholder 定義を調査するとき
 
 ## Do not read this when
-- oracle file の正本仕様や realization file の具体的な実装内容を確認することが目的のときは、それぞれの対象を直接読む。
-- realization file を対象としない agent call のポリシー構築や、一般的なプロンプトビルダーの挙動だけを調べるとき。
-- 既存の INDEX.md の内容やルーティング構造を確認することが目的のとき。
+- realization file 自体の実装内容や個別仕様を確認する場合は、対象の realization file または関連する oracle file を直接読むとき
+- 一般的な prompt builder の共通処理を確認する場合は、共通の prompt builder 実装へ直接進むとき
+- oracle と realization の意味仕様そのものを確認する場合は、doc/app_spec/oracle_and_realization.md を直接読むとき
 
 ## hash
-- 3d47281983bc0f5363d8b4c6fcbaaa20d83d67814b4e3aae5759bdfc3a1236ce
+- 2faaaf10cbb978a7f996620811948214e7c70590798671ad80ddc760bf236c2d
 
 # `realization_findings.py`
 
 ## Summary
-- oracle file と realization file の適合性を判定する agent 向けの所見ポリシーを定義する。所見の根拠、修正対象となる不整合・致命的問題、一貫した判定基準、対象外とする oracle file 自体の問題や必須でない事項を SDHeader/SDPolicy として構築する。
+- このモジュールは、oracle file と realization file の適合性を判定する agent 向けの「realization findings policy」を構築する。所見の根拠、修正対象となる不整合・致命的問題、一貫した判定基準、および禁止事項を定義するポリシー生成の入口である。
 
 ## Read this when
-- oracle file に対する realization file の適合性を調査・判定する prompt policy を変更するとき
-- realization file の所見について、修正対象・根拠・禁止事項の定義を確認するとき
+- oracle file に対する realization file の適合性レビューや、その所見に適用する必須・禁止事項を確認するとき
+- realization findings policy をプロンプトへ組み込む処理を調査・変更するとき
 
 ## Do not read this when
-- oracle file や realization file の具体的な内容そのものを調査するとき
-- prompt builder の別ポリシーや PlaceholderMap の一般的な実装だけを確認するとき
+- プロンプトポリシーの共通データ構造そのものを確認する場合は、SDHeader・SDPolicy の定義を直接読むとよい
+- realization file の具体的な実装挙動や oracle file の適合性仕様を確認する場合は、各 realization file または参照先の oracle 仕様を直接読むとよい
 
 ## hash
-- 6e786c299494a1866243ae83d8b066e0c83e5b2405fd69a67c00eb62bc903e22
+- c3df89df2279c1ad05bba92e0a644d4589f9e7c789892fca8025f5df5a565055
 
 # `routing.py`
 

@@ -91,19 +91,19 @@
 # `oracle`
 
 ## Summary
-- `oracle` は、cmoc の仕様・開発規則と、oracle 側 Python 実装および Structured Output 定義へ進むための上位ルーティング領域です。仕様・開発規則は `doc`、oracle 側の実装と構造化出力は `src` から確認します。
+- cmoc の正本ドキュメントと、agent call 構築・Structured Output schema を担う Python ソースの領域です。
+- アプリケーション仕様、session/run の branch model、不採用案、開発規則、および prompt・policy・共通データモデル・各機能の agent call 定義への入口を提供します。
 
 ## Read this when
-- cmoc の仕様・開発規則と oracle 側実装のどちらを参照すべきか判断するとき
-- CLI、状態管理、agent call、feedback、通知、Python 実装、開発環境、テスト、prompt 構築などの下位領域への入口を探すとき
+- cmoc の仕様、開発規則、agent call、prompt、Structured Output schema、session/run の隔離モデルを調査・変更するとき
+- 下位の正本文書や機能別実装へ進む前に、対象領域の責務と参照先を確認するとき
 
 ## Do not read this when
-- 具体的な仕様や開発規則が明確で、`doc` 配下の該当文書を直接確認できるとき
-- oracle 側の具体的な実装責務が明確で、`src` 配下の該当ディレクトリを直接確認できるとき
-- realization 実装、CLI 実行処理、または対象が `oracle` 配下にないコードや文書を扱うとき
+- 単一の仕様書、開発規則、実装、テスト、schema、prompt builder を直接確認すれば目的を満たせるとき
+- Codex CLI の実行処理や現在の実行結果だけを確認したいとき
 
 ## hash
-- 8374de4c3bd6c4307194f296cf9b58d679eacbc9e4612f36465efa33e09d8e1a
+- c5a01868ba448740283128025a4ba847470baccc57259ad2d4e4957f44478707
 
 # `pyproject.toml`
 

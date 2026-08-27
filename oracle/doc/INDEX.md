@@ -1,19 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約するディレクトリ。CLI 自動補完、Codex 呼び出し、ログ・エラー処理、feedback、状態管理、run/session、通知、サブコマンドなどの正本仕様への入口を提供する。各機能の実装・変更・レビュー時に、該当する下位仕様へ進むために読む。
+- cmoc のアプリケーション仕様を集約するディレクトリ。CLI 自動補完、Codex agent call、model provider、ログ・エラー処理、doctor preprocess、feedback、INDEX.md、prompt editor、run/session lifecycle、サブコマンド中断、時刻形式、利用手順、Windows toast 通知などの正本仕様を扱う。各仕様の概要と参照境界を確認し、実装・変更・レビュー時に該当する下位仕様へ進むための入口となる。
 
 ## Read this when
-- cmoc のアプリケーションレベルの挙動仕様、共通契約、サブコマンド仕様、状態管理、agent call、feedback、通知、INDEX.md 運用の参照先を選ぶとき
-- 複数のアプリケーション仕様にまたがる責務境界や、目的に応じた個別仕様への導線を確認するとき
+- cmoc のアプリケーション挙動や共通契約の正本仕様を探すとき
+- CLI、agent call、state・run lifecycle、feedback、ログ・エラー処理、通知、INDEX.md 生成などの仕様を実装・変更・レビューするとき
+- 対象機能の詳細仕様や、より下位の実装・schema・開発規則へ進む前に、関連する仕様書の責務と参照先を確認するとき
 
 ## Do not read this when
-- 特定の機能やサブコマンドが明確で、その個別仕様を直接確認できるとき
-- 実装コード、テスト、prompt builder、JSON schema、外部契約など、下位の指定対象が直接の確認先となるとき
-- INDEX.md の既存内容や、アプリケーション仕様と無関係な機能を扱うとき
+- 単一仕様書の具体的な挙動だけを確認でき、ディレクトリ全体の案内が不要なとき
+- 実装コード、テスト、schema、prompt builder、開発環境規則など、各仕様書が直接案内する下位対象を読むべきとき
+- cmoc のアプリケーション仕様と無関係な一般的な調査や作業を行うとき
 
 ## hash
-- af2ef4e8ea6bf859481597da3638a05cd41188791afa17cec08c2ec6de39351c
+- 444a612cc9d12c6bd8156da743654deecefab2339070422a098d591dd8f31be3
 
 # `branch_model.md`
 
