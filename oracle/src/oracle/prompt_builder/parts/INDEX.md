@@ -1,23 +1,18 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle file、realization file、uncategorised file の基本概念と分類規則を説明する prompt 構造を構築する関数。
-- oracle doc・oracle src・oracle test と realization implementation・realization test・realization ancillary の役割、配置、正本責務、委譲、優先関係を下位要素としてまとめる。
-- path_context から work-root を取得し、説明文中のプレースホルダーを埋めるための PlaceholderMap と、階層化された SDHeader を返す。
-- 個別の仕様本文ではなく、oracle と realization の一般的な関係およびファイル分類を参照する入口にあたる。
+- oracle と realization の基本知識を説明する prompt builder。oracle file・realization file・uncategorised file の役割、下位概念、分類方法を、パス用プレースホルダーを展開可能な構造化文書ヘッダーとして構築する。
+- oracle file は人間所有の正本仕様で realization file の生成元、realization file は oracle file の意図を具体化した AI 編集対象、uncategorised file は分類対象外として整理される。
 
 ## Read this when
-- oracle と realization の基本的な役割や正本関係を確認したいとき
-- oracle doc・oracle src・oracle test、realization implementation・realization test・realization ancillary の分類や配置を確認したいとき
-- oracle file から realization file が生成される関係、委譲された詳細の優先関係を確認したいとき
-- uncategorised file の分類条件を確認したいとき
-- oracle と realization の基本説明を prompt builder で構築する処理を変更・調査するとき
+- oracle と realization の責務や分類を説明するプロンプト部分を変更・調査するとき
+- oracle file、realization file、uncategorised file の下位概念や配置先を確認するとき
+- この基本説明を構造化文書ヘッダーとして組み立てる処理を追跡するとき
 
 ## Do not read this when
-- 個別の意味仕様を確認したいときは、対応する oracle doc を直接読む
-- oracle src に委譲された正確な実装・定義を確認したいときは、その oracle src を直接読む
-- PlaceholderMap や SDHeader の共通仕様・実装だけを確認したいときは、対応する共通部品を直接読む
-- prompt 全体の組み立て順序や、この関数以外の prompt 部品を確認したいときは、該当する prompt builder の対象を直接読む
+- oracle と realization の正本仕様そのものを確認したいときは、参照先として明記された oracle doc を直接読む場合
+- プロンプト全体の組み立てや PlaceholderMap、SDHeader の一般仕様だけを確認したいとき
+- 実装ファイルやテストファイルの具体的な配置・挙動だけを調べるとき
 
 ## hash
-- a8f01202b02f0358bc605299721a4f5d3ef0dc40bcdd6492a3fe50932ca828bb
+- a5c6186a3d26152f99210094e1ba6f507852b6faba924c1086e695acd60ac2da

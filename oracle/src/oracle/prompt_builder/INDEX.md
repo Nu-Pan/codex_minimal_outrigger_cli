@@ -53,36 +53,38 @@
 # `parts`
 
 ## Summary
-- oracle file、realization file、uncategorised fileの基本概念と分類規則を説明するプロンプト部品を構築する関数。oracle doc・oracle src・oracle testとrealization各分類の役割、配置、正本責務、委譲、優先関係をまとめ、path_contextに基づくプレースホルダー展開情報と階層化ヘッダーを返す。個別仕様ではなく、oracleとrealizationの一般関係・分類を確認する入口。
+- oracle と realization の基本概念を説明するプロンプト断片を構築する。
+- oracle file、realization file、uncategorised file の役割、下位概念、パス・git ignore・.git に基づく分類方法を扱う。
+- パス用プレースホルダーを展開可能な構造化文書ヘッダーとして組み立てる処理への入口である。
 
 ## Read this when
-- oracleとrealizationの基本的な役割、正本関係、生成・委譲関係を確認するとき
-- oracle doc・oracle src・oracle test、realization implementation・realization test・realization ancillary、uncategorised fileの分類や配置を確認するとき
-- oracleとrealizationの基本説明を構築するプロンプト処理を変更・調査するとき
+- oracle file と realization file の責務や生成関係を確認・変更するとき
+- oracle doc、oracle src、oracle test、realization implementation、realization test、realization ancillary の分類を確認するとき
+- uncategorised file のパス、git ignore、.git による分類条件を確認するとき
+- この説明を PlaceholderMap と SDHeader を用いて構築する処理を追跡するとき
 
 ## Do not read this when
-- 個別の意味仕様を確認するときは、対応するoracle docを直接読む
-- 委譲された正確な実装・定義を確認するときは、対象のoracle srcを直接読む
-- PlaceholderMapやSDHeaderの共通仕様・実装だけを確認するときは、対応する共通部品を直接読む
-- プロンプト全体の組み立て順序や他のプロンプト部品を確認するときは、該当するprompt builderを直接読む
+- oracle と realization の意味仕様そのものを確認するとき
+- プロンプト全体の組み立てや PlaceholderMap、SDHeader の一般仕様だけを確認するとき
+- 実装・テストの具体的な配置や挙動を調査するとき
 
 ## hash
-- 8476db3067fdfaf3da968c6a510edf9296c20bb95a42d5b66d5e32de9b0b13d2
+- 83945362a1d47872fc2949b0af2fcdc1c3b5ddcc317626d697ee3d9c0ce2f929
 
 # `policy`
 
 ## Summary
-- プロンプト生成に用いる policy 定義群をまとめたディレクトリ。conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing、oracle／realization の扱いと所見判定など、各 agent call の指示文面を構築する入口を提供する。個別 policy の責務を確認・変更する際は該当モジュールへ進む。
+- prompt builder が agent call 向けの各種 policy を構築する実装群を収めるディレクトリ。conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing、oracle／realization の instruction、所見判定など、個別の prompt policy の生成入口を扱う。各ファイルの責務や生成規定を確認・変更するときの入口として利用する。
 
 ## Read this when
-- agent call に共通または特定の規定をプロンプトへ組み込む処理を調査・変更するとき
-- ファイルアクセス、INDEX.md routing、oracle／realization、conflict 解消、feedback 報告のいずれかの policy 構築経路を確認するとき
-- 複数の policy 定義の役割分担や、該当する個別モジュールへの入口を確認するとき
+- agent call に注入する prompt policy の構築処理を調査・変更するとき
+- conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing、oracle／realization、所見判定のいずれかの policy 生成責務を確認するとき
+- 個別 policy の責務に応じて、このディレクトリ内の該当ファイルへ進む必要があるとき
 
 ## Do not read this when
-- 個別の oracle file、realization file、INDEX.md、または意味仕様そのものを確認することが目的のとき
-- SDHeader・SDPolicy など共通データ構造だけを調査するとき
-- プロンプト policy と無関係な CLI 実装や一般的な agent call 処理を調べるとき
+- policy の根拠となる意味仕様や oracle file の本文を確認したいとき
+- 生成済み prompt の実行処理や、PlaceholderMap・SDHeader・SDPolicy など共通型の実装詳細だけを調べるとき
+- realization／oracle file の実装・挙動そのものや、INDEX.md の既存エントリーを確認するとき
 
 ## hash
-- 29eb50c0417697675226b2e886b9d7f5a3c5f8d8fe5c80f6e0febe6eef1f3d76
+- d7def112d2bcbc71be43a534b3e276b3d207c694264313decc919f5c79374013

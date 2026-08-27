@@ -55,21 +55,25 @@
 # `test_execution.md`
 
 ## Summary
-- 構築済みの cmoc 開発環境を対象に、Python interpreter の選定と preflight、focused／full pytest、real_path_integration の分離実行、Ruff・mypy の検査、完了判定、結果報告までを定める実行手順。test と品質検査を実際に選択・実行・報告する必要がある場合の入口となる。
-- realization test の意味上の要件、Python 環境構築や依存関係管理とは責務を分離し、それぞれの正本文書へ案内する。
+- `test_execution.md` は、構築済みの cmoc 開発環境で test と品質検査を選択・実行し、結果から完了可否を判定して報告する手順を定める。
+- 現在の worktree と使用可能な `.venv` を確定し、preflight、focused test、Ruff、mypy、通常の full pytest、実経路統合テストを実行する際の条件と境界を扱う。
+- test の意味上の要件は `oracle/doc/dev_rule/test_rule.md`、環境構築や依存関係・pip 操作は `oracle/doc/dev_rule/development_environment.md` に委ねるため、それらを確認する際の実行手順上の入口となる。
+- 実行結果では interpreter、command、test 数、skip reason、失敗原因、実在の Codex CLI や実推論の実行状況、fresh な full test 完了可否を区別して報告する。
 
 ## Read this when
-- 構築済み環境で test や品質検査を実行する前に、対象 worktree と Python interpreter、必要な preflight を確認するとき。
-- 変更に対する focused test、Ruff、mypy、full pytest、real_path_integration の選択基準を確認するとき。
-- 検査結果、skip、外部実行条件、未完了理由を含む完了判定と報告方法を確認するとき。
+- cmoc の Python code、test、または first-party path の変更後に、実行すべき focused test と品質検査を決めるとき
+- 現在の worktree、利用する `.venv`、Python version、pytest・Ruff・mypy の preflight を確認するとき
+- 通常の pytest と `real_path_integration` を分けて実行し、fresh な完了ゲートを判定するとき
+- test や品質検査の終了状態、skip、環境不足、model provider、quota、timeout などを分類して報告するとき
 
 ## Do not read this when
-- realization test が満たす意味上の要件や実経路統合テストの成立条件そのものを確認したいときは、oracle/doc/dev_rule/test_rule.md を直接読む。
-- Python 環境の新規構築、依存関係の追加、pip 操作の手順を確認したいときは、oracle/doc/dev_rule/development_environment.md を直接読む。
-- agent call の file access mode、作業範囲、sandbox の書き込み先を判断するときは、この手順を根拠にせず、動的生成プロンプトの指定を確認する。
+- test が満たすべき意味上の要件や実経路統合テストの成立条件を確認するときは、`oracle/doc/dev_rule/test_rule.md` を直接読む
+- Python 環境の新規構築、依存関係の追加、または pip 操作を行うときは、`oracle/doc/dev_rule/development_environment.md` を直接読む
+- 実装や test の責務・配置を判断するときは、この実行手順ではなく対応する設計・test の正本を直接読む
+- 対象文書の内容を変更せず、単に実装上の問題や期待値の意味を調査するときは、この手順書を入口にする必要はない
 
 ## hash
-- 70421a592225a6ac1179441ed8f388d4a1cff30ffd24fa0e7ffee8e18a292521
+- d60907479d0a19ec18d3a86b096906eb9149e24975c77601b98cb495bacb0cd2
 
 # `test_rule.md`
 
