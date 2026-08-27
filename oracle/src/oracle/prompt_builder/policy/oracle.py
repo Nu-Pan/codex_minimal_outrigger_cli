@@ -18,18 +18,6 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
         {},
         SDHeader(
             "oracle policy",
-            SDHeader(
-                "正本責務、委譲、および優先関係",
-                """
-                - oracle doc は意味仕様を所有し、oracle src は oracle doc から明示的に委譲された正確な詳細を所有する
-                - oracle doc から oracle src への委譲は、root path placeholder を起点とする path、安定した locator、および委譲内容の短い説明で委譲先を特定する
-                - 同じ仕様事項の正本所有者は一つだけとする
-                - oracle doc は oracle src が所有する正確な詳細を再定義せず、oracle src は oracle doc が所有する意味仕様を補完、変更、または拡張しない
-                - 意味仕様では oracle doc を優先し、明示的に委譲された正確な詳細では委譲先の oracle src を優先する
-                - 同じ意味仕様について両者が食い違う場合は、詳細な方を採用せず、oracle file 間の不整合として扱う
-                - generated prompt は、oracle doc または oracle src の正本を上書きしない
-                """,
-            ),
             SDPolicy(
                 what_is_this="oracle file が満たすべき規定を以下に示す",
                 require=(
@@ -60,6 +48,23 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
                 ),
                 supplemental=(
                     "oracle file は仕様 **断片** であり、それを判断する人間の認知負荷の観点から、可能な限り疎であることが求められる",
+                ),
+            ),
+            SDPolicy(
+                what_is_this=(
+                    "oracle doc と oracle src の正本責務、委譲、および優先関係を以下に示す"
+                ),
+                require=(
+                    "oracle doc は意味仕様を所有し、oracle src は oracle doc から明示的に委譲された正確な詳細を所有する",
+                    "oracle doc から oracle src への委譲は、root path placeholder を起点とする path、安定した locator、および委譲内容の短い説明で委譲先を特定する",
+                    "同じ仕様事項の正本所有者は一つだけとする",
+                    "意味仕様では oracle doc を優先し、明示的に委譲された正確な詳細では委譲先の oracle src を優先する",
+                    "同じ意味仕様について両者が食い違う場合は、詳細な方を採用せず、oracle file 間の不整合として扱う",
+                ),
+                prohibit=(
+                    "oracle doc は oracle src が所有する正確な詳細を再定義してはいけない",
+                    "oracle src は oracle doc が所有する意味仕様を補完、変更、または拡張してはいけない",
+                    "generated prompt は、oracle doc または oracle src の正本を上書きしてはいけない",
                 ),
             ),
         ),
