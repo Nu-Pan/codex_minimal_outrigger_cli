@@ -74,17 +74,24 @@
 # `policy`
 
 ## Summary
-- prompt builder が agent call 向けの各種 policy を構築する実装群を収めるディレクトリ。conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing、oracle／realization の instruction、所見判定など、個別の prompt policy の生成入口を扱う。各ファイルの責務や生成規定を確認・変更するときの入口として利用する。
+- prompt builder の policy 実装群。agent call 向けに、conflict resolution、feedback reporting、file access、oracle／realization、INDEX.md routing、所見判定などの規定文面とプレースホルダーを構築する。各ファイルは個別 policy の生成入口であり、意味仕様そのものは対応する oracle doc や app specification へ委ねる。
 
 ## Read this when
-- agent call に注入する prompt policy の構築処理を調査・変更するとき
-- conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing、oracle／realization、所見判定のいずれかの policy 生成責務を確認するとき
-- 個別 policy の責務に応じて、このディレクトリ内の該当ファイルへ進む必要があるとき
+- session join の conflict 解消方針や oracle file の意図保持規定を確認するときは conflict_resolution.py を読む
+- 全 agent call 共通の human feedback 報告規定を確認するときは feedback_reporting.py を読む
+- ファイルアクセスモード、リポジトリ境界、oracle／realization file の読み書き制限を確認するときは file_access.py を読む
+- INDEX.md エントリー生成方針を確認するときは index_entry.py を読む
+- oracle file の責務分担、委譲、優先関係を agent call 向け policy として確認するときは oracle.py を読む
+- oracle または realization に対する所見の根拠・分類・適用基準を確認するときは oracle_findings.py または realization_findings.py を読む
+- realization file 向け instruction の構築内容を確認するときは realization.py を読む
+- INDEX.md routing policy の prompt 構築や path context の placeholder 連携を確認するときは routing.py を読む
 
 ## Do not read this when
-- policy の根拠となる意味仕様や oracle file の本文を確認したいとき
-- 生成済み prompt の実行処理や、PlaceholderMap・SDHeader・SDPolicy など共通型の実装詳細だけを調べるとき
-- realization／oracle file の実装・挙動そのものや、INDEX.md の既存エントリーを確認するとき
+- 個別の oracle file や realization file の意味仕様・具体的な実装を確認したいとき
+- INDEX.md の routing 意味仕様や feedback 報告の意味仕様など、policy の根拠となる正本仕様を確認したいとき
+- 生成済み prompt 全体の構成、agent call の実行処理、PlaceholderMap・SDHeader・SDPolicy の一般実装だけを確認したいとき
+- 実際のサンドボックス設定や Codex CLI の実行規則そのものを確認したいとき
+- oracle review の個別処理や realization file の実装挙動そのものを確認したいとき
 
 ## hash
-- d7def112d2bcbc71be43a534b3e276b3d207c694264313decc919f5c79374013
+- 4cdf674ceaea849791616b50baa4bec8a693b9c34ce6f9949bea7b574906a3ff

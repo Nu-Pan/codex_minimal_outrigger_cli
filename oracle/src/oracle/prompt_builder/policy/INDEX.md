@@ -69,18 +69,22 @@
 # `oracle.py`
 
 ## Summary
-- oracle file を扱う agent call 向けの instruction 文面を構築する関数を定義する。oracle doc と oracle src の正本責務・委譲・優先関係、および oracle file 作成時の必須事項、禁止事項、許容事項、goal/non-goal と未定義事項の扱いを prompt policy としてまとめる。
+- oracle file が満たすべき基本規定と、oracle doc・oracle src の正本責務、委譲、優先関係を agent call 向け指示として構築する関数。
+- `SDHeader`、`SDPolicy`、`PlaceholderMap` を用い、oracle policy として要求事項・禁止事項・許可事項・補足事項を返す。
+- oracle doc の意味仕様と oracle src の明示委譲された正確な詳細を区別し、仕様断片の未定義部分や実装差を扱う際の境界を示す。
 
 ## Read this when
-- oracle file の新規作成・変更・レビューに向けた agent call の instruction 構築規則を確認するとき
-- oracle doc と oracle src の責務分担、委譲、優先関係を prompt に反映する箇所を調べるとき
+- oracle file の作成・変更・レビューで、oracle doc と oracle src の責務分担、優先関係、委譲先の特定方法を確認する場合。
+- agent call 向けに oracle policy、実装差の許容範囲、goal・non-goal、仕様断片の未定義事項を確認する場合。
+- oracle file 間の矛盾、誤記、重複、実現不能な仕様を調査する場合。
 
 ## Do not read this when
-- oracle file の意味仕様そのものを確認するときは、正本である oracle doc を直接読むとき
-- realization の配置・実装責務や通常の prompt 構築規則だけを確認するとき
+- oracle policy の内容に関係しない prompt builder の実装詳細や、他の agent call 向け policy だけを確認する場合。
+- realization file の具体的な実装配置や CLI の責務境界を確認する場合は、design_rule など該当する oracle file を直接読む。
+- oracle file のテスト実行方法や品質検査だけを確認する場合は、test_execution の指示を直接読む。
 
 ## hash
-- 53bc3ca59b3f45da1ba160a0eadbd82d090b986b0fe22b58cc82dc94fa6b6d81
+- b6d9fbf08611868a289a1eacd3ce0c71e5de186b37c9a2b69c9fc5dad045c686
 
 # `oracle_findings.py`
 

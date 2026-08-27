@@ -20,18 +20,20 @@
 # `src`
 
 ## Summary
-- cmoc の oracle 関連実装を集約するソースルート。agent call のパラメータ構築、prompt と各種 policy、oracle／realization／feedback／indexing／session／TUI 向けの起動定義、共通設定・パス解決・構造化文書レンダリングを扱う。
-- 配下の `oracle` パッケージが、これらの機能別実装と Structured Output schema への入口になる。
+- cmoc の agent call 構築・prompt 構築・補助モデルを実装する Python ソースのルート。AgentCallParameter、モデル種別、推論強度、ファイルアクセスモード、パスコンテキスト、構造化文書レンダリングなどの共通定義を含む。
+- 機能別の agent call builder は `oracle` 配下に分かれており、`acp_builder` は agent call の起動パラメータ、`prompt_builder` は完全 prompt と各種 policy、`other` はパス・設定・構造化文書の補助定義を扱う。feedback 用の入力定義も `oracle` 配下にある。
 
 ## Read this when
-- oracle 関連 agent call の prompt、モデル・推論設定、ファイルアクセス、cwd、indexing preflight、Structured Output schema の定義を調査または変更するとき。
-- oracle、realization、feedback、indexing、session、TUI、quota probe の起動パラメータ構築を確認するとき。
-- 共通 prompt の組み立て、oracle／realization policy、placeholder、設定値、パス解決、構造化 Markdown レンダリングの実装箇所を確認するとき。
+- agent call の共通パラメータ、論理モデル種別、推論強度、ファイルアクセスモード、agent call の cwd や root path の扱いを確認するとき。
+- oracle、realization、feedback、indexing、session、TUI などの機能別 agent call builder を調査・変更するときは `oracle/acp_builder` へ進むとき。
+- 完全 prompt の組み立て、placeholder の統合、oracle・realization・feedback・routing・file access などの policy を確認するときは `oracle/prompt_builder` へ進むとき。
+- AgentCallPathContext、root path の解決、設定、構造化文書の生成・Markdown レンダリングを確認するときは `oracle/other` へ進むとき。
+- feedback reporter の入力形式を確認するときは `oracle/feedback` へ進むとき。
 
 ## Do not read this when
-- Codex CLI の実行処理やサブコマンドの外部インターフェースそのものを確認したいとき。
-- oracle 文書や realization 文書の正本仕様、または個別の oracle／realization ファイルの内容を確認したいとき。
-- feedback issue の検出・保存・集約や、既存 INDEX.md のルーティング内容だけを確認したいとき。
+- Codex CLI などの実際の agent call 実行処理や、抽象的なモデル・推論設定を具体的な CLI 引数へ変換する処理を確認したいとき。
+- oracle や realization の意味仕様、正本文書、または実装・テストそのものを確認したいときは、対応する `oracle/doc`、`src`、`test` の対象へ直接進むとき。
+- 既存の INDEX.md のルーティング内容だけを確認したいとき。
 
 ## hash
-- 4f08936a9e83290b0b20960b8f32b944dcfe9b9d086b473ee8de47481f5adfb2
+- 6e4bed8d8216f30c5d59a99ed73581d248342ba4b3e0fe7457fb4bc97c3049a7
