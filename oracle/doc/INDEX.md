@@ -1,38 +1,35 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約するディレクトリ。CLI 実行、Codex 呼び出し、ログ・エラー処理、feedback、session/run、補完、通知、INDEX.md 更新など、主要機能の正本仕様への入口を提供する。各文書は個別機能の責務、挙動、状態管理、入出力、実装・テスト時の確認条件を定義する。
+- cmoc のアプリケーション仕様を集約するディレクトリ。CLI 自動補完、Codex 呼び出し、ログ・エラー処理、feedback、状態管理、run/session、通知、サブコマンドなどの正本仕様への入口を提供する。各機能の実装・変更・レビュー時に、該当する下位仕様へ進むために読む。
 
 ## Read this when
-- cmoc のアプリケーション仕様を横断的に探すとき
-- CLI サブコマンド、Codex 実行、feedback、session/run、ログ、エラー処理、補完、通知、INDEX.md 更新の仕様を確認するとき
-- 個別機能の正本仕様や、実装・レビュー時に参照すべき仕様の入口を判断するとき
+- cmoc のアプリケーションレベルの挙動仕様、共通契約、サブコマンド仕様、状態管理、agent call、feedback、通知、INDEX.md 運用の参照先を選ぶとき
+- 複数のアプリケーション仕様にまたがる責務境界や、目的に応じた個別仕様への導線を確認するとき
 
 ## Do not read this when
-- 特定機能の詳細仕様を確認したい場合は、該当する個別仕様書へ直接進むとき
-- 具体的な実装配置、テスト実行手順、または realization file の責務だけを確認するとき
-- 既存の INDEX.md エントリー内容そのものを確認・更新するとき
+- 特定の機能やサブコマンドが明確で、その個別仕様を直接確認できるとき
+- 実装コード、テスト、prompt builder、JSON schema、外部契約など、下位の指定対象が直接の確認先となるとき
+- INDEX.md の既存内容や、アプリケーション仕様と無関係な機能を扱うとき
 
 ## hash
-- 5db7a00276fb18d3d8711efc357536f0562a9bd52c5f16f7b49d8a7c856ce74a
+- af2ef4e8ea6bf859481597da3638a05cd41188791afa17cec08c2ec6de39351c
 
 # `branch_model.md`
 
 ## Summary
-- cmoc における branch・commit・worktree のモデルを定義する正本文書。session と run の分岐、命名、分岐元・統合先 commit、run 用 linked worktree の役割と境界を整理し、branch 名ではなく run state と report で workload を表す方針を示す。
-- session branch はユーザーが oracle の変更確認やサブコマンド実行に使い、run branch と run worktree は各 run を隔離して差分を commit として積み上げるための実行経路である。
+- cmoc が session と run を git branch・commit・worktree で隔離するモデルを定義する正本文書。各管理対象の命名、分岐元・統合先、run の差分検査に用いる commit、run 用 worktree の関係を確認する入口。
 
 ## Read this when
-- cmoc の session fork、run 隔離、run join、差分検査、report がどの branch・commit・worktree を基準に動くか確認するとき
-- cmoc 管理 branch と通常の local branch・remote-tracking branch・既定 branch の責務や関係を確認するとき
-- branch・commit・worktree に workload 別の別名を付けてよいか、または共通概念を使うべきか判断するとき
+- session fork や run の branch 分岐・統合、run worktree の作成、または関連する commit 名・役割を実装・変更・調査するとき。
+- cmoc 管理 branch と通常の local branch・remote-tracking branch の境界を確認するとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンドの詳細な実装手順や report の個別フォーマットだけを確認したいとき
-- oracle の変更内容そのものや、branch model 以外の開発環境・テスト規約を確認したいとき
+- branch model の具体的な CLI 入出力契約だけを確認する場合は、該当する CLI 仕様を直接読む。
+- git 操作を伴わない workload の実行内容や report の詳細仕様だけを確認する場合は、各機能の仕様・実装文書を直接読む。
 
 ## hash
-- e1e018f45407868dbe8998337a79a15e90cdf11c82febf6207a1758408e0767d
+- c40f58b39046604d613c84f9bd18f7a9688be81e5c3b97293298f685511debdd
 
 # `considered_alternative`
 
@@ -55,20 +52,18 @@
 # `dev_rule`
 
 ## Summary
-- `oracle/doc/dev_rule` は、cmoc の Python 開発における実装規約・CLI 配置方針・開発環境・テスト要件・テスト実行手順をまとめた正本文書群への入口です。コードの書き方、実装の責務配置、環境操作、テストの意味要件、品質検査の実行方法を、目的に応じて下位文書へ振り分けます。
+- cmoc の開発規則をまとめたディレクトリ。Python のコーディング方針、CLI の実装配置、開発環境・依存関係、テスト要件、テスト実行と品質検査の入口を提供する。各文書は責務ごとに分かれており、該当する作業の正本文書へ進むために読む。
 
 ## Read this when
-- Python 実装の命名、型ヒント、import、docstring、コメント、ログなどのコーディング規約を確認するとき
-- cmoc CLI のエントリーポイント、サブコマンド、共通処理の配置や責務分担を判断するとき
-- Python 環境の構築、依存関係追加、pip 操作の規則を確認するとき
-- テストの意味上の要件、隔離、実経路統合テスト、Fake Codex CLI の適用条件を確認するとき
-- 既存環境で focused/full test、Ruff、mypy などの品質検査を選択・実行・判定するとき
+- cmoc の Python 実装方針、CLI の責務分担、開発環境、テスト要件、またはテスト・品質検査の実行手順を確認するとき
+- 新規実装、実装配置の判断、環境構築、テストの追加・変更・レビュー、既存テストや静的検査の実行に着手するとき
 
 ## Do not read this when
-- cmoc の CLI 挙動や出力内容そのものの正本仕様を確認するときは app_spec 配下を直接読む
-- 特定機能の仕様や設計上の責務を確認するときは、該当する正本仕様や design_rule.md を直接読む
-- テストの意味要件を確認するときは test_rule.md を、テストの実行手順だけを確認するときは test_execution.md を直接読む
-- Python 環境の新規構築、依存関係追加、pip 操作を行うときは development_environment.md を直接読む
+- 特定機能の CLI 挙動や出力内容そのものを確認するときは、app_spec 配下の正本仕様を直接読む
+- 構築済み環境でのテスト実行手順だけを確認するときは test_execution.md を直接読む
+- realization test の意味上の要件だけを確認するときは test_rule.md を直接読む
+- Python 環境の新規構築や依存関係・pip 操作だけを確認するときは development_environment.md を直接読む
+- Python の文法、型ヒント、docstring、コメントの書き方だけを確認するときは coding_rule.md を直接読む
 
 ## hash
-- 0b52a720361759ae57f0cb498da300a523b3ab67c0ec3586c57522da36ba1d3b
+- c67db3ef9416fabd5ce8a2540116b72505309c043d99984b2e8d2e20f4e087eb

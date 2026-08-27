@@ -1,20 +1,21 @@
 # `doc`
 
 ## Summary
-- cmoc の正本ドキュメントを集約するディレクトリ。アプリケーション仕様、branch・commit・worktree モデル、不採用案、Python 開発規約など、実装や運用の判断根拠となる上位文書への入口を提供する。各領域の詳細は配下の文書・ディレクトリで確認する。
+- `oracle/doc` は、cmoc のアプリケーション仕様と開発規則を集約し、CLI・状態管理・agent call・feedback・通知・branch/worktree 運用、Python 実装・環境・テストの正本文書へ進むための上位入口を提供する。採用しなかった設計案は `considered_alternative` から参照できる。
+- アプリケーション挙動や共通契約は `app_spec`、branch・commit・worktree の隔離モデルは `app_spec/branch_model.md`、開発・環境・実装配置・テスト規則は `app_spec/dev_rule` へ進む。
 
 ## Read this when
-- cmoc の正本仕様や開発規約を横断的に探すとき
-- アプリケーション挙動、branch・worktree、設計上の不採用案、Python 開発・テスト規約の参照先を判断するとき
-- 具体的な機能仕様や開発ルールの下位文書へ進む入口を確認するとき
+- cmoc のアプリケーション仕様、開発規則、branch/worktree 運用、または採用しなかった設計案の参照先を選ぶとき
+- CLI、状態管理、agent call、feedback、通知、Python 実装、開発環境、テストなど、下位の正本文書へルーティングするとき
+- 複数の仕様領域にまたがる責務境界を確認し、個別仕様へ進む前の上位構造を把握するとき
 
 ## Do not read this when
-- 特定機能の挙動や特定の開発規約を確認したい場合は、該当する配下の文書へ直接進むとき
-- realization file の具体的な実装責務や現在の実装内容だけを確認するとき
-- 既存の INDEX.md エントリー内容そのものを確認・更新するとき
+- 特定の機能・サブコマンド・実装・テスト・環境手順が明確で、対応する下位文書を直接確認できるとき
+- 採用しなかった代替案の詳細だけを調べる場合に、該当する `considered_alternative` の資料へ直接進めるとき
+- `oracle/doc` 配下の仕様・開発規則と無関係なコードや文書を扱うとき
 
 ## hash
-- a3af185f146f9207b098f48f165ae97d8691d7b666d9ffffb37ee11c6e42a1af
+- 948ace7319b4de94ca69186997add50fcffea5b2b028a55ab4e7df77ef5f9014
 
 # `src`
 
