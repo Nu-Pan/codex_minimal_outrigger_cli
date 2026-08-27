@@ -5,7 +5,8 @@ interrupt 時の部分保存は同じ review loop 状態を共有する一つの
 分割すると、judgement と merge operation の再開・失敗条件を複数 file で追う必要が
 生じるため、現状は oracle review loop として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md

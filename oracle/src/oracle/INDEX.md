@@ -56,17 +56,18 @@
 # `prompt_builder`
 
 ## Summary
-- agent call 向けの完全な prompt を構築するための共通実装を収めるディレクトリ。placeholder 型、prompt の統合、エディタ初期入力、oracle／realization 概念の説明、policy 生成群を扱い、個別モジュールの責務を確認する入口となる。
+- プロンプト生成を担う `prompt_builder` の実装群。共通プレースホルダ型、完全 prompt の統合、エディタ初期入力、oracle／realization 概念の説明、各種 agent call policy の構築を扱う。個別ファイルの役割や、prompt の構成・policy・routing・分類規則を確認するための入口である。
 
 ## Read this when
-- agent call に渡す prompt の構築やエディタ入力生成の責務を調査・変更するとき。
-- placeholder、oracle／realization の説明、または各種 prompt policy の実装箇所を特定するとき。
-- prompt builder 配下の複数モジュールを横断して、共通構成と個別責務の関係を確認するとき。
+- agent call 用 prompt の統合順序、placeholder 競合、固定部分と変動部分の配置を確認・変更するとき。
+- prompt builder の個別 policy、oracle／realization の分類説明、INDEX.md routing 規定、feedback reporting、file access 規定を調べるとき。
+- エディタへ注入する初期入力や、完全 prompt・oracle／realization 説明の埋め込み構造を確認するとき。
+- placeholder 対応表や prompt 構築に関わる共通型・構造化文書ヘッダーの利用箇所を追うとき。
 
 ## Do not read this when
-- prompt builder の個別機能だけを確認する場合は、該当するモジュールや policy ファイルを直接読む。
-- prompt の根拠となる意味仕様、oracle／realization の実装・テスト、既存の INDEX.md エントリーを調査する場合。
-- 生成済み prompt を利用する agent call 側の責務や CLI 挙動だけを確認する場合。
+- oracle や realization の意味仕様、INDEX.md routing の正本仕様、feedback 報告の意味仕様を確認する場合は、それぞれの対応する oracle doc や app specification を直接読む。
+- 実際の agent call 実行処理、path context や placeholder の具体的生成規則、struct_doc の一般仕様を調べる場合は、該当する呼び出し側・生成処理・struct_doc 実装を直接読む。
+- 実装・テストの具体的な配置や挙動、個別 policy の根拠となる仕様だけを確認する場合は、このディレクトリ全体ではなく対応する対象を直接読む。
 
 ## hash
-- 5b904fd0a2b3b5053859b0fb285cec55747a23baadca9ebb6317ec824189e6b4
+- ec13f0af44d3903c1576d695397b33cf8d29c2bcee9bfe6392a8d5e00e15975b

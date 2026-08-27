@@ -5,7 +5,8 @@ hash 検証、書き込み、commit は同じ index plan・lock・Codex context 
 責務である。分割すると、深さ順更新と entry の鮮度不変条件を複数 file で追う必要が
 生じるため、現状は indexing lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import fcntl

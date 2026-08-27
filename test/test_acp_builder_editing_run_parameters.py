@@ -86,12 +86,9 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     assert "base-commit" in parameter.prompt
     assert "fork-commit" in parameter.prompt
     assert "diff --git a/oracle/a.md b/oracle/a.md" in parameter.prompt
-    for heading in (
-        "# oracle policy",
-        "# realization policy",
-        "# realization findings policy",
-    ):
+    for heading in ("# realization policy", "# realization findings policy"):
         assert heading in parameter.prompt
+    assert "# oracle policy" not in parameter.prompt
     assert "# oracle findings policy" not in parameter.prompt
     assert "# conflict resolution policy" not in parameter.prompt
     assert "# realization oracle reference policy" not in parameter.prompt
@@ -143,7 +140,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert review.run_indexing_preflight is True
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in review.prompt
     assert str(target_path.resolve()) in review.prompt
-    assert "調査開始時点の既存実装ですでに解消されている問題" in review.prompt
+    assert "調査開始時点ですでに解消されている問題" in review.prompt
     assert "`resolution.status=fixed` は、この agent call 内で" in review.prompt
     assert "# Structured Output の決定論的事後条件" in review.prompt
     assert "全所見の `changed_paths` の和集合" in review.prompt

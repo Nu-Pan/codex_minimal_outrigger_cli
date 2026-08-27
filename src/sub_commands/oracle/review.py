@@ -15,7 +15,8 @@
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/app_spec/run_isolation.md
 - {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+- {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+  「realization file を扱う判断基準」
 """
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md

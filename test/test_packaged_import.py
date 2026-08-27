@@ -1,6 +1,7 @@
 """packaged layout と import 境界を検証する。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+分割根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import os

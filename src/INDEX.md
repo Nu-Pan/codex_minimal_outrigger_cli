@@ -52,20 +52,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI、Codex 実行、設定・ログ・Git、状態管理、feedback、report など複数の実行経路から共有される実装への入口であり、配下の個別 runtime module を目的別に辿る起点となる。
+- commons は cmoc 全体で共有する runtime 実装を集約するパッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定・パス・Git・状態管理、ログ・エラー・レポート、feedback、run lifecycle、INDEX 更新、prompt editor などの共通処理を扱い、個別サブコマンドや下位 helper の実装へ進むための入口となる。
 
 ## Read this when
-- 複数の cmoc 機能にまたがる共通 runtime 処理の配置や責務分担を確認するとき
-- CLI・Codex・Git・設定・状態・feedback・report などの共通実装から対象モジュールを探すとき
-- commons 配下の runtime helper を追加・変更し、適切な配置先を判断するとき
+- 複数の CLI サブコマンドや Codex 実行経路で共有される runtime 機能の配置を確認するとき
+- 設定、Git/worktree、状態、ログ、feedback、レポート、run lifecycle、INDEX 更新などの共通処理を調査・変更するとき
+- 目的の共通機能を担当する個別 runtime モジュールへ進む前に、commons 全体の責務範囲を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動や公開シンボルだけを確認したいときは、commons 配下の該当モジュールを直接読む
-- CLI の個別サブコマンドや Codex 実行経路の固有仕様だけを確認したいときは、対応する実装または正本仕様を直接読む
-- runtime 共通処理を利用する上位の業務フローだけを調査するとき
+- 特定の runtime helper の内部挙動を確認したい場合は、対応する個別モジュールを直接読むとき
+- 個別サブコマンドの業務処理や引数仕様だけを確認したい場合は、該当するサブコマンド実装を直接読むとき
+- 正本仕様、出力 schema、または特定機能の詳細なデータ契約だけを確認したい場合は、対応する仕様・定義ファイルを直接読むとき
 
 ## hash
-- 4296589fa10c73d49dda6717765d6087e5f4bf87e1b1f1ccbbdfdfe015d7ecac
+- 05c4c30d097a8a44e51364af74653d92dd9005e13f7dbcd9f06a22f064610325
 
 # `config`
 
@@ -120,15 +120,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの個別サブコマンド入口と、その配下の処理へ進むための上位ルーティング対象。
+- CLI サブコマンド実装の上位ディレクトリ。doctor、feedback、indexing、oracle、realization、review、run、session、tui などのサブコマンド入口と、その下位実装へのルーティングを担う。
+- サブコマンド単位の実行フローや固有責務を調べる場合は該当するファイルまたはディレクトリへ進む。apply は現時点で実装がなく、将来の実装配置先として示されている。
 
 ## Read this when
-- CLI サブコマンド全体の実装構成や、特定サブコマンドの実装入口を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかを調査・変更するとき。
+- CLI サブコマンドの実装構成や、対象サブコマンドの入口を特定するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui などのサブコマンド固有の実行フロー、状態遷移、publication、commit、fork、join、入力編集を調べるとき。
+- サブコマンドの共通処理と固有処理の境界を確認し、該当する下位実装へ進む必要があるとき。
 
 ## Do not read this when
-- CLI サブコマンドに関係しない処理を確認するとき。
-- 個別サブコマンドの詳細な処理、共通 runtime、正本仕様、prompt 契約を直接確認したいときは、対応する下位実装または仕様文書へ進む。
+- apply 以外の特定サブコマンドの詳細だけを確認したい場合は、該当する下位ファイルまたはディレクトリを直接読むとき。
+- CLI 共通ランタイム、正本仕様、prompt・Structured Output schema、state 永続化契約など、サブコマンド実装より直接の参照先がある内容だけを調べるとき。
+- apply サブコマンドの具体的な処理を確認したい場合は、実装が追加されるまでこのディレクトリ内に読むべき実装本文がないとき。
 
 ## hash
-- c172450b955a9cf087e89fdb20689d5f180bd071cec47aa04f870ceee3008867
+- 6a9a3999323a338c86d5103fe10f53b6cc8682756035eb288e6212bd5c583f28

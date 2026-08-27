@@ -1,9 +1,8 @@
 """oracle review の finding path と対象列挙を検証する。
 
 根拠:
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
-- {{work-root}}/oracle/doc/app_spec/misc_spec.md
+- {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md
+- {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md

@@ -5,7 +5,8 @@ oracle/realization file の分類は、同じ repository path・Git index・安�
 共有する一つの境界である。分割すると、path の正規化と Git 状態検証を各 module で
 重複して追う必要が生じるため、現状は Git 境界として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import os
@@ -555,7 +556,9 @@ def _global_git_ignore_paths(root: Path) -> list[Path]:
             if line:
                 path = Path(line)
                 resolved = path if path.is_absolute() else root / path
-                # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+                # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+                # の
+                # 「Git ignore 判定の性能不変条件」
                 # 同じ ignore source の検証結果を一度の列挙内で再利用する。
                 source_key = resolved.resolve()
                 if source_key not in seen:
@@ -605,7 +608,8 @@ def _validate_global_git_ignore_path(path: Path) -> None:
 
 def _git_ignore_error(command: list[str], result: CommandResult) -> CmocError:
     """check-ignore の判定不能を分類エラーへ変換する。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # の「分類結果」
     # file の分類条件を満たすか不明なまま、ignore されていない扱いにしてはならない。
     return CmocError(
         "Git ignore 判定に失敗しました。",
@@ -766,7 +770,8 @@ def is_git_ignored(root: Path, path: Path) -> bool:
 
 def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     """未追跡 path が owning repository の通常 ignore 判定に一致するか返す。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # の「分類結果」
     # oracle/realization file の定義は通常の git check-ignore 挙動を使う。
     # ignore pattern に一致しても、追跡済み file は対象に残す。
     candidate = path if path.is_absolute() else root / path
@@ -788,7 +793,8 @@ def enumerate_oracle_and_realization_files(
 ) -> tuple[list[Path], list[Path]]:
     """work root の oracle file と realization file を一括列挙する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    の「分類結果」
     """
     # 常時対象外 root と検証済み Git metadata だけを事前 pruning し、ignored
     # directory も含む残りの tree から regular file と symlink を収集する。
@@ -923,7 +929,8 @@ def _repository_context_for_path(root: Path, candidate: Path) -> Path | None:
     if ".." in relative_candidate.parts:
         return None
 
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # の「traversal と事前 pruning」
     # symlink の親を通る path は参照先を repository context や分類へ混入させるため、
     # 最終 component の symlink path だけを扱う ignore 判定と区別して拒否する。
     parent = work_root
@@ -1064,8 +1071,8 @@ def is_realization_file_path(
     """repository path と Git 状態から realization file か判定する。
 
     apply worktree が無い復旧経路では branch の tree を追跡状態の正本にする。
-    根拠:
-    {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    の「分類結果」
     """
     candidate = path if path.is_absolute() else root / path
     if _file_classification(root, candidate) != "realization":
@@ -1077,7 +1084,8 @@ def is_realization_file_path(
     if branch and not _path_exists_without_following_symlinks(candidate):
         # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
         # 含めず regular blob entry だけを branch の fallback として採用する。
-        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+        # の「分類結果」
         # branch の blob は削除された path の追跡状態を補うが、現在の directory や
         # FIFO などの特殊 file を file として扱う根拠にはならない。
         branch_entries = run_git(
@@ -1109,10 +1117,10 @@ def is_realization_file_path(
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:
     """repository pathと追跡状態からoracle fileに該当するか判定する。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # の「分類結果」
     # oracle file の定義は Codex access check と apply/session の差分分類の両方から
     # 使うため、一つの runtime helper に集約する。
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
     # 列挙対象と同じく、symlink を追跡せず regular file だけを分類する。
     candidate = path if path.is_absolute() else root / path
     if _file_classification(root, candidate) != "oracle" or not _is_regular_file(

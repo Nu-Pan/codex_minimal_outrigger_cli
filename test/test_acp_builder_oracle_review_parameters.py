@@ -18,7 +18,8 @@
 の期待値と prompt 境界の検証文脈が複数 file に分散するため、現状は review builder
 回帰として一箇所に保つ。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+分割根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import json

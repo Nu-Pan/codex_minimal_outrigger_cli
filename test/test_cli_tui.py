@@ -158,11 +158,14 @@ def test_tui_runs_editor_and_launches_codex_directly(
     )
     complete_prompt = tui_calls[0][0].prompt
     assert "# file R/W policy (repo_write)" in complete_prompt
-    assert "# oracle and realization basic" in complete_prompt
-    assert "# routing policy" in complete_prompt
     for heading in (
+        "# oracle and realization basic",
         "# oracle policy",
         "# realization policy",
+        "# routing policy",
+    ):
+        assert heading in complete_prompt
+    for heading in (
         "# oracle findings policy",
         "# realization findings policy",
         "# realization oracle reference policy",

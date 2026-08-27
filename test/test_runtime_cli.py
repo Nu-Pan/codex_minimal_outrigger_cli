@@ -5,7 +5,8 @@
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 - {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-- {{work-root}}/oracle/doc/app_spec/misc_spec.md
+- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+- {{work-root}}/oracle/doc/app_spec/timestamp.md
 - {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 - {{work-root}}/oracle/src/oracle/other/path_model.py
 

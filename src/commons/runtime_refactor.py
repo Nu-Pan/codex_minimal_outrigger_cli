@@ -50,7 +50,8 @@ def write_refactor_state(root: Path, state: RefactorState) -> None:
     validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+        # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+        # の「回帰検証」
         # JSON の ASCII escape で surrogateescape された filesystem path も UTF-8
         # の state file へ保存し、列挙結果の entry を失わないようにする。
         json.dumps(dict(sorted(validated.items())), ensure_ascii=True, indent=2) + "\n",
@@ -88,7 +89,8 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
 
 def enumerate_refactor_targets(root: Path) -> list[str]:
     """現在存在する全 oracle file と realization file を列挙する。"""
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # の「分類結果」
     # doctor preprocess と refactor workload は、共通の full-tree 分類結果で
     # state entry を同期する。
     oracle_files, realization_files = enumerate_oracle_and_realization_files(root)
@@ -228,7 +230,7 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
         or any(character not in string.hexdigits for character in digest)
     ):
         raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/app_spec/timestamp.md
     # state の履歴時刻は、file name と同じ固定幅の {{time-stamp}} にそろえる。
     if investigated_at is not None and (
         not isinstance(investigated_at, str)

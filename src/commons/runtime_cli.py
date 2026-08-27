@@ -308,7 +308,8 @@ def start_subcommand_step(
 def require_current_directory_is_work_root(root: Path) -> None:
     """cmoc が work root で実行されている前提を検査する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の
+    「cmoc process の cwd との関係」
     """
     if Path.cwd().resolve() == root.resolve():
         return

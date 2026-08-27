@@ -425,12 +425,30 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
     assert normalizer.run_indexing_preflight is True
     assert verifier.run_indexing_preflight is True
     assert "同一性" in normalizer.prompt
-    assert "unresolved | resolved | not_actionable | inconclusive" in verifier.prompt
+    assert "`result.decision=new`" not in normalizer.prompt
+    assert "unresolved | resolved | not_actionable | inconclusive" not in (
+        verifier.prompt
+    )
     for parameter in (normalizer, verifier):
         assert "# oracle and realization basic" in parameter.prompt
         assert "# routing policy" in parameter.prompt
     normalize_schema = json.loads(normalizer.structured_output_schema_path.read_text())
     verify_schema = json.loads(verifier.structured_output_schema_path.read_text())
+    assert (
+        normalize_schema["description"]
+        == "feedback issue の同一性判断 agent call の出力。"
+    )
+    assert (
+        verify_schema["description"]
+        == "feedback issue の verification agent call の出力。"
+    )
+    assert all(
+        definition.get("description")
+        for definition in normalize_schema["$defs"].values()
+    )
+    assert all(
+        definition.get("description") for definition in verify_schema["$defs"].values()
+    )
     validate(
         {
             "result": {

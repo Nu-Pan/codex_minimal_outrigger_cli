@@ -34,51 +34,57 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の active editing run を session branch に統合する一連の lifecycle を担う実装。join 前の doctor/refactor state 同期、run/session 差分と想定外変更の検査、force-resolve、merge conflict 処理、post-join の INDEX 再生成・state 同期・report 保存、失敗時 rollback/error 化、worktree と branch の cleanup を同じ不変条件のもとで扱う。この挙動や cleanup pending/error rollback を確認・変更するときの入口であり、個別の共通 Git 操作や report/state API の詳細だけを調べる場合はそれらの実装へ直接進む。
+- `cmoc run join` の workload 非依存な merge lifecycle を一括して担う realization file。active run の検証、差分検査、merge、INDEX 再生成、post-join state 同期、report 保存、失敗時 rollback、worktree・branch cleanup までを扱う。
+- joinable または error 状態の active run を session branch に統合し、想定外差分や merge conflict を検出する。`--force-resolve` による run branch 側の想定外差分の復元、および INDEX.md だけの conflict の再生成もここで処理する。
+- merge 後の refactor state 同期、primary report と lifecycle report の更新、cleanup 失敗時の error state 保持を含み、run join の成功・失敗・cleanup pending に関する状態遷移を確認する入口である。
 
 ## Read this when
-- `cmoc run join` の成功・失敗・再実行・`--force-resolve` の挙動を調査または変更するとき
-- run branch の merge、INDEX.md conflict、post-join hook、refactor state 同期、lifecycle report、run resource cleanup の連鎖を確認するとき
-- merge 後の rollback、error state、cleanup pending、abandon への引き継ぎ条件を確認するとき
+- `cmoc run join` の実装、merge 前後の差分検査、`--force-resolve` の挙動を確認するとき
+- run join 後の INDEX 再生成、post-join hook、refactor state 同期、report 保存を調査するとき
+- merge conflict、post-join failure、rollback、error state、worktree・branch cleanup の不変条件を確認するとき
 
 ## Do not read this when
-- join lifecycle ではなく、run の開始・編集・abandon や active run 解決そのものを調べるとき
-- Git 操作、state 永続化、process tracking、report 生成などの共通部品の仕様や実装だけを調べるとき
-- INDEX.md の生成規則そのものや、join 以外の workload 固有 merge 処理を調べるとき
+- workload 固有の編集・apply・refactor 処理そのものを確認するときは、対応する workload 固有の realization file を直接読む
+- run join の正本仕様や状態遷移の定義を確認するときは、対応する oracle の仕様書を先に読む
+- 一般的な Git 操作や共通 runtime helper の実装だけを確認するときは、import 先の共通 runtime file を直接読む
 
 ## hash
-- 7d5accc8d71b75a7087447e9ff66439faa2db0b6107ae0dbc91d7966072ebbf3
+- 23788546f2780854b953b77a98c9a713e695c501a3cd77c9e5a6f3b4bd10dd93
 
 # `lifecycle.py`
 
 ## Summary
-- editing run のライフサイクル共通 helper を旧 import path から利用するための互換 shim。canonical 実装を commons.runtime_run_lifecycle に委譲し、旧 API 名と unexpected_session_paths の base 省略呼び出しを維持する。
+- editing run のライフサイクル処理について、旧 `src.sub_commands.run.lifecycle` import path との互換性を保つための薄い委譲層。実体は `commons.runtime_run_lifecycle` にあり、このファイルは公開されていた helper と `unexpected_session_paths` の旧呼び出し形を再公開する。
+- 旧 import path の互換性、既存利用者の移行、または shim の削除可否を確認するときの入口であり、ライフサイクル処理そのものを変更・理解する場合は canonical 実装へ進む。
 
 ## Read this when
-- editing run のライフサイクル処理を旧 import path から参照するコード、または旧 API の互換性を確認・変更するとき。
+- 旧 `src.sub_commands.run.lifecycle` を参照するコードの互換性を確認するとき
+- 旧 import path から commons 側への移行や、この shim の削除条件を検討するとき
 
 ## Do not read this when
-- canonical な共通ライフサイクル実装の仕様や挙動を確認したいときは、直接 commons.runtime_run_lifecycle を読む。
-- 旧 import path の互換 shim が不要かどうかに関係しない、他の CLI サブコマンドやプロンプト構築処理を扱うとき。
+- editing run ライフサイクル処理の本体や挙動を調査・変更するとき
+- canonical helper の実装を直接確認できる場合
+- 旧 import path との互換性が関係しない作業
 
 ## hash
-- 954fbbb80608b1840a22577f281660a3fe0f0e491352e8ec5f3c1b363b67a6ad
+- afea30cef15ff82115474870214a86f23715b484f0a0978114eab5bd12af41c6
 
 # `report.py`
 
 ## Summary
-- `editing run report writer` の旧 import path を維持する互換 shim。
-- 実装本体は `commons` 側にあり、この対象は `write_fork_report` と `write_lifecycle_report` を再公開する入口として機能する。互換性が不要になった場合は、canonical 実装への移行完了を確認してからこの shim と対応する INDEX entry を削除する。
+- 旧 import path から利用される editing run report writer の互換 shim。
+- 共通処理の canonical 実装を再公開し、旧利用者が commons 側へ移行するまで互換性を保つ。
+- 旧 import path の互換性や shim の削除条件を確認する際の入口であり、実装本体は commons 側にある。
 
 ## Read this when
-- 旧 import path から run report writer を利用するコードの互換性や移行状況を確認するとき
-- fork report または lifecycle report の writer の公開入口を確認するとき
-- commons 側への移行完了後に旧 shim の削除可否を判断するとき
+- 旧 import path から run report writer を利用するコードの互換性を確認するとき。
+- fork report または lifecycle report の writer の公開元を追跡するとき。
+- commons 側への移行完了後に、この shim と対応する INDEX entry の削除可否を判断するとき。
 
 ## Do not read this when
-- run report writer の処理内容や挙動を変更・確認するとき
-- 旧 import path と無関係な CLI サブコマンドを調べるとき
-- canonical 実装の詳細を直接確認するとき
+- fork report または lifecycle report の具体的な実装内容を確認したいとき。
+- 共通処理の挙動を調査・変更するとき。
+- 旧 import path の互換性に関係しない run サブコマンドの処理を確認するとき。
 
 ## hash
-- bf4c9d035df1891f3e41bc9589a9140a0e7711c31ea141e7229d0463574a8f56
+- 79d887b69a865829ca361e6b448106bb8eb6e3635afa5c7300dc31a99beb8385

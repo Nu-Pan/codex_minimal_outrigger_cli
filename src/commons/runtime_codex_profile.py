@@ -5,7 +5,8 @@
 CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
 subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
 失敗時文脈が増える。現状は Codex subprocess 境界として一箇所に保つ方が凝集性が高い。
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import errno
