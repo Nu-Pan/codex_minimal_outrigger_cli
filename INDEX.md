@@ -91,20 +91,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本ドキュメントと oracle 側の Python 実装をまとめた領域です。仕様・開発規約・branch model・代替案の背景は `doc`、agent call 構築・feedback・prompt 構築・設定やパス解決などの実装と Structured Output 定義は `src` が入口になります。
+- cmoc の正本ドキュメントと oracle 側の Python 実装・Structured Output 定義を集約する領域です。
+- アプリケーション仕様、branch・worktree モデル、不採用案、Python 開発規約、および agent call、feedback、設定・パス解決、構造化文書、prompt 構築を扱います。
+- 詳細な責務や個別仕様を確認する際は、`doc` または `src` 配下の該当領域へ進む入口です。
 
 ## Read this when
-- cmoc の仕様または開発規約と、それを扱う oracle 側実装の対応関係を調査するとき
-- 対象が `doc` と `src` のどちらにあるか未確定で、適切な下位ディレクトリへの入口を探すとき
-- oracle の agent call、feedback、prompt、設定、構造化文書に関する領域全体を確認するとき
+- cmoc の正本仕様・開発規約・設計上の判断根拠を横断的に探すとき
+- oracle 側の実装コードや Structured Output 定義の全体像を調査・変更するとき
+- agent call、feedback、設定・パス解決、構造化文書、prompt 構築の入口を判断するとき
 
 ## Do not read this when
-- 確認対象が個別の仕様書や開発規約として明確なときは `doc` 以下の該当文書を直接読む
-- 確認対象が特定の oracle 実装や Structured Output 定義として明確なときは `src/oracle` 以下の該当責務を直接読む
-- cmoc の realization 実装やテストの具体的な挙動だけを確認するときは、対応する realization または test の対象を直接読む
+- 特定の機能仕様や開発規約を確認したい場合は、`doc` 配下の該当文書へ直接進むとき
+- 特定の実装責務が明らかな場合は、`src` 配下の該当ディレクトリへ直接進むとき
+- realization 実装、CLI 実行処理、テストの具体的な挙動だけを確認したいとき
 
 ## hash
-- e4012368b4c75ed22157c361d6814d911f951fb08e84c352e8cb17d84dda77ce
+- 9a902015aa5c21fb68572a2f58a15ce104b2e8004a8d46150886dd1bb1478997
 
 # `pyproject.toml`
 

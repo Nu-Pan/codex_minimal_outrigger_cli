@@ -40,22 +40,20 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の report processing と publication 全体の正本仕様。pending observation と active state の report cut 固定から、validation、機械的な deduplication・集約、candidate 形成、normalization/verification、正常 publication または `incomplete` 診断、再開・中断、report 保存、終了コードまでを定義する。feedback report の実装や挙動仕様を確認する際の入口となる。
+- `cmoc feedback report` の実装仕様を定める正本文書。feedback observation と feedback state を前提に、CLI 契約、report cut の固定、validation・deduplication・集約、normalization/verification agent の境界、正常 publication、`incomplete` 診断、中断・エラー処理、cleanup、終了コードを規定する。
+- feedback report 処理の全体フローと、正常時の active generation 更新および異常時の current state 維持を確認するための入口となる。
 
 ## Read this when
-- `cmoc feedback report` の CLI 契約、事前条件、report cut、処理順序、validation、machine/agent observation の扱いを確認するとき。
-- normalization または verification の agent 呼び出し条件、許可する入力、Structured Output の受理条件を確認するとき。
-- 正常 report、`incomplete` 診断 report、invocation summary report の publication 条件、state 維持、cleanup、再開、および終了コードを確認するとき。
+- `cmoc feedback report` の挙動、事前条件、処理順序、report cut、候補検証、publication、再開、中断、終了コードを実装・レビュー・変更するとき。
+- feedback observation と feedback state の関係、および正常 report・`incomplete` 診断 report・invocation summary report の保存仕様を確認するとき。
 
 ## Do not read this when
-- raw observation の schema、canonical hash、detector rule、recurrence window、threshold の正本を確認する場合は `feedback_observation.md` を直接読む。
-- current pointer、active generation、checkpoint、publication、cleanup の state 遷移を確認する場合は `feedback_state.md` を直接読む。
-- normalization agent の具体的な prompt、起動パラメータ、選択理由、schema を確認する場合は `normalize_issue.py` と `normalize_issue.json` を直接読む。
-- verification agent の具体的な prompt、起動パラメータ、選択理由、schema を確認する場合は `verify_issue.py` と `verify_issue.json` を直接読む。
-- 中断要求後の共通処理だけを確認する場合は `subcommand_interruption.md` を直接読む。
+- raw observation の schema や観測記録そのものだけを確認する場合は、`feedback_observation.md` を直接読む。
+- state、checkpoint、publication、cleanup の永続化契約だけを確認する場合は、`feedback_state.md` を直接読む。
+- normalization または verification agent の prompt、schema、起動条件だけを確認する場合は、本文中で指定された各正本ファイルを直接読む。
 
 ## hash
-- e6631c1ac19d09a60dd100d200639e235a13e8513b64dbf05a674c93399be47a
+- 46550b2ba44151982f293cc18532e824a7f6bcf23e66c4ae5ba4f60797ac372d
 
 # `indexing.md`
 
@@ -79,101 +77,107 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの挙動仕様を定義する正本文書。oracle file 編集指示の受付から、doctor preprocess、indexing preflight、起動条件検査、本命・仕様削減の2回の独立した agent call、終了状態、primary report、ログ、通知、差分保持、中断・排他制御までを扱う。oracle edit の実装仕様や関連する app_spec との整合性を確認・変更するときの入口となる。
+- `cmoc oracle edit` の目的、引数なしの実行契約、ユーザー指示からの prompt 構築、本命・仕様削減 agent call の順序と失敗条件を定義する。
+- doctor preprocess、indexing preflight、main worktree と session branch の起動前検査、oracle file の編集境界、差分保持、primary report・ログ・通知の終了処理を確認するための上位仕様入口である。
+- oracle edit の実行フローや agent call の起動条件・完了状態・報告形式を変更または調査するときに読む。
 
 ## Read this when
-- `cmoc oracle edit` の実行順序、起動可否、agent call の構成または編集境界を確認するとき。
-- 本命 agent call 後の仕様削減 agent call の判断材料や失敗時の扱いを確認するとき。
-- oracle edit の終了状態、primary report、console・ログ・Windows toast、未コミット差分の扱いを確認するとき。
-- oracle file 編集に関する実装や関連仕様が、このサブコマンドの契約に適合しているか確認するとき。
+- `cmoc oracle edit` のサブコマンド実装、実行順序、起動可否、agent call の成否処理を確認するとき。
+- oracle file の編集権限、既存差分の扱い、終了後の成果物・report・ログ・通知の契約を確認するとき。
+- 関連する prompt editor、codex exec、doctor preprocess、indexing、console/log、toast の正本仕様との接続点を特定するとき。
 
 ## Do not read this when
-- oracle edit 以外のサブコマンドの仕様だけを確認する場合。
-- prompt editor input や codex exec の受け渡し規則など、本文書が正本として委譲している個別仕様を直接確認する場合。
-- doctor preprocess、indexing、oracle と realization の一般規則そのものを確認する場合は、本文書ではなく対応する app_spec または oracle file を直接読む場合。
+- prompt editor の入力形式だけを確認したい場合は `prompt_editor_input.md` を直接読む。
+- agent call の共通 retry、prompt 受け渡し、ログ保存規則だけを確認したい場合は `codex_exec_rule.md` を直接読む。
+- oracle file の判断基準だけを確認したい場合は `oracle_and_realization.md` の該当節を直接読む。
+- doctor preprocess、indexing、feedback、Windows toast の個別契約だけを確認したい場合は、それぞれの正本仕様を直接読む。
 
 ## hash
-- 7dbd210ffed031641017291d6f4b428c54a84cb787926385240942f83568984e
+- ffb30e5c39db3456be71a0b56dfe595bd43d001867de6b48cd93cbb979732572
 
 # `oracle_investigation.md`
 
 ## Summary
-- oracle file に関するユーザーの調査指示を受け取り、正本 oracle file を根拠に調査結果を回答する Codex CLI の TUI を起動するサブコマンド仕様。入力 lifecycle、起動パラメータ構築、Codex CLI 起動、調査境界、結果提示と変更禁止事項を定める。oracle investigation の起動手順や責務境界を確認する入口。
+- 対象は、oracle file に関するユーザーの調査指示を受け取り、doctor 前処理と prompt editor の lifecycle を経て、指定 builder が構築したパラメータで Codex CLI の TUI を起動するサブコマンド仕様である。oracle file を根拠に調査し、結果を TUI で日本語中心に回答する際の意味上の責務と調査境界を確認する入口となる。
 
 ## Read this when
-- oracle file に関する調査指示を受け付けるサブコマンドの挙動を確認するとき
-- oracle file を根拠とする調査用 TUI の起動手順、入力 lifecycle、起動パラメータ、調査結果の扱いを確認するとき
-- oracle investigation と通常の TUI 起動や agent call の責務境界を確認するとき
+- oracle file の内容や判断基準についてユーザーから調査指示を受け付ける TUI 起動フローを確認するとき
+- oracle investigation の実行手順、prompt editor input、TUI 起動パラメータの責務境界を確認するとき
+- 調査結果の言語方針や oracle file・realization file の変更禁止を確認するとき
 
 ## Do not read this when
-- oracle file の具体的な内容や判断基準そのものを調査するとき
-- エディタ入力の正確な文面や lifecycle の詳細を確認するときは、参照先の prompt editor input 正本を直接読む場合
-- TUI 起動パラメータの正確な prompt、prompt part、AgentCallParameter、選択理由を確認するときは、指定された builder 実装を直接読む場合
-- Codex CLI の共通実行設定や Windows toast 通知の仕様だけを確認するときは、指定された正本文書を直接読む場合
+- 正確な prompt 文面、prompt part の選択、AgentCallParameter、または選択理由だけを確認したいときは、指定された launch TUI parameter builder を直接読む
+- prompt editor input の正本仕様だけを確認したいときは、指定された prompt_editor_input.md を直接読む
+- oracle file の変更判断基準だけを確認したいときは、指定された oracle_and_realization.md の該当節を直接読む
+- Codex CLI の環境変数、preflight validation、引数上書き、または Windows toast 通知の詳細だけを確認したいときは、指定された各 app_spec 文書を直接読む
 
 ## hash
-- a9ecac9d87203a541c19e0472677b6d18438eed2a71cdd234976f0adeb872181
+- 764b8c984e61315e8e752895fa5b4584b1e2ebca7f85aab655101de5f07997c1
 
 # `oracle_review.md`
 
 ## Summary
-- `cmoc oracle review` のサブコマンド仕様。oracle file を対象に、指定スコープで所見を列挙・統合・検証・判定し、レビュー結果を Markdown レポートとして保存・提示する一連の処理を定義する。
-- レビューの事前条件、隔離実行、ユーザー中断時の扱い、所見の成立条件と重大度、agent call の責務分担、レポートの構造・判定値・保存先を扱う。oracle レビューの挙動やレポート仕様を確認する際の入口であり、詳細な隔離実行や中断の規則は参照先の仕様へ進む。
+- `cmoc oracle review` サブコマンドの正本仕様。oracle file を session または full スコープでレビューし、所見の列挙・統合・検証・採否判定を経て、人間向け Markdown レポートを保存・提示する。
+- レビュー対象の選定、隔離 run、agent call の責務委譲、所見の成立条件と重大度、ユーザー中断時の確定結果の扱い、レポートの frontmatter・本文構成・終了結果を定義する。oracle レビューの実行フローや所見判定、レポート形式を確認する入口となる。
 
 ## Read this when
-- `cmoc oracle review` の引数、事前条件、実行手順、スコープ、ループ上限を確認するとき
-- oracle file の所見成立条件、重大度、採否判定、検証およびマージの扱いを確認するとき
-- レビューの中断時の確定結果や、レポートの保存先・frontmatter・本文構成を確認するとき
-- oracle review 用 agent call の責務や、関連する builder・policy 仕様への入口を確認するとき
+- `cmoc oracle review` の引数、事前条件、実行手順、終了経路を確認・変更するとき
+- oracle file のレビュー対象範囲、所見の成立条件・重大度・採否判定を確認するとき
+- 所見列挙・マージ・検証の agent call やループ上限の責務境界を確認するとき
+- レビュー結果の保存先、frontmatter、本文セクション、Verdict の意味を確認するとき
+- ユーザー中断時の部分結果や隔離実行の扱いを確認するとき
 
 ## Do not read this when
-- 隔離実行の共通動作だけを確認する場合は `oracle/doc/app_spec/run_isolation.md` を直接読むとよい
-- サブコマンド共通の中断規則だけを確認する場合は `oracle/doc/app_spec/subcommand_interruption.md` を直接読むとよい
-- oracle と realization の一般的な判断基準だけを確認する場合は `oracle/doc/app_spec/oracle_and_realization.md` を直接読むとよい
-- 実装上の agent prompt、prompt part、起動パラメータの詳細だけを確認する場合は本文が指定する各 builder と `oracle_findings.py` を直接読むとよい
+- レビュー対象の個別 oracle file の内容や、oracle と realization の一般的な関係だけを確認したいときは、それぞれの対象文書を直接読む
+- agent call の具体的な prompt、prompt part、起動パラメータを確認したいときは、本文で委譲先として示された各 builder を直接読む
+- run 隔離の共通仕様やサブコマンド中断の共通仕様を確認したいときは、本文で参照される `run_isolation.md` または `subcommand_interruption.md` を直接読む
+- レポートを feedback observation または active issue へ変換する規則を確認したいときは、`feedback.md` を直接読む
 
 ## hash
-- 6716f9bf92f6584dbe593719c1d4eaf8f845c5f2357ee53cdbe604a3d9fc5ac4
+- f00bee82741a154aaf44f5cc3de75b74cd5d14a665c251e10cef08beb1956122
 
 # `realization_apply.md`
 
 ## Summary
-- realization apply fork の正本仕様。直近の git commit 差分から oracle file の変更を特定し、単一の Codex agent call で realization file へ追従させる fork の目的、対象範囲、実行手順、エラー処理、report、join 後 hook を定義する。fork の共通 lifecycle は別の editing run 仕様を入口とする。
+- `realization apply fork` の目的、追従対象となる oracle file 差分、agent call の実行条件、想定内差分、エラー処理、report、join 後 hook を定める仕様。realization apply の fork 実行や結果確認における入口となる。
+- 直近の git commit 群から始点・終点を決めて raw diff を構築し、単一の Codex agent call で realization file へ反映する一連の lifecycle を扱う。fork, join, abandon の共通 lifecycle は別の編集 run 仕様を参照する。
 
 ## Read this when
-- realization apply fork の追従要否、差分の始点・終点、agent call の制約、変更可能なファイル範囲を確認するとき
-- fork の実行手順、終了状態、report 保存内容、終了コード、feedback 収集、join 後の session 更新を実装・検証するとき
+- realization apply の fork を実行、実装、検証、またはエラー処理する場合
+- oracle file の commit 差分を realization file に反映する範囲や、agent call の回数・cwd・変更許可範囲を確認する場合
+- fork report、終了コード、run state、feedback 記録、join 後の commit 更新を確認する場合
 
 ## Do not read this when
-- fork, join, abandon に共通する lifecycle の一般仕様だけを確認したいときは editing run の正本を直接読む
-- oracle file と realization file の適合性基準だけを確認したいときは oracle_and_realization.md を直接読む
-- agent call parameter の構築方法や prompt 選択を確認したいときは launch_exec.py を直接読む
+- fork, join, abandon に共通する lifecycle のみを確認したい場合は、共通仕様である editing_run.md を直接読む
+- realization apply のファイル単位の網羅的な追従や refactor の仕様を確認したい場合
+- oracle file と realization file の一般的な適合性基準を確認したい場合は、oracle_and_realization.md を直接読む
+- 実行パラメータの正確な prompt、prompt part、起動パラメータの構築方法を確認したい場合は、launch_exec.py を直接読む
+- feedback 収集の共通仕様を確認したい場合は、feedback.md を直接読む
 
 ## hash
-- 02f3244746af33b6fbcacb9859d6210a022193c83a54bc0af08d9d1621ad160a
+- 3e0a3986d3b77710a528643f410c60b31da45381acec94633efc6a13d520aed2
 
 # `realization_refactor.md`
 
 ## Summary
-- oracle file と realization file の適合性調査・修正を、current fork の unresolved target を除き、未調査要求がなくなるまで繰り返す realization refactor fork の正本仕様。
-- refactor state の同期、調査対象の選択、1 処理単位の変更検証・状態更新・commit、fork 完了条件を定める。
-- unresolved 所見を含む正常完了、自然完了、ユーザー中断、その他のエラーにおける run state、report、終了コード、および join 後の扱いを定める。
-- 短い変更ループを担う realization apply とは異なり、ファイル単位の追従調査全体を扱う workload の入口である。
+- realization refactor サブコマンドの正本仕様。oracle file と realization file を対象に、state 同期、調査・修正ループ、所見処理、commit、完了判定、report、interruption、error を定義する。
+- 短い変更ループを担う realization apply とは別の workload であり、fork・join・abandon の共通 lifecycle や中断規則は指定された共通正本仕様へ委譲する。
+- 調査対象の選択、current fork の unresolved target、refactor state の保存・同期、natural_completion と completed_with_unresolved の判定を確認する必要がある場合の入口となる。
 
 ## Read this when
-- realization file の適合性を oracle file と対比して調査・修正するとき。
-- realization refactor fork の対象選択、調査履歴、unresolved target、cycle、loop、完了条件を確認するとき。
-- agent call の変更 path 検証、処理単位の commit、refactor state 同期、生成 report の要件を確認するとき。
-- この fork の中断、続行不能エラー、completed_with_unresolved、joinable 状態の扱いを確認するとき。
+- realization refactor fork の実行フロー、調査対象選択、state 更新、所見の正規化、変更確定を確認するとき
+- realization refactor の完了条件、unresolved target の扱い、report 内容、終了コードや終了イベントを確認するとき
+- realization file の追従調査・修正と、oracle file に対する適合性判断の責務境界を確認するとき
 
 ## Do not read this when
-- 短い変更ループの realization apply の動作だけを確認するとき。
-- fork・join・abandon の共通 lifecycle だけを確認するときは、共通の編集 run 仕様を直接読む。
-- oracle file に対する realization file の適合性基準そのものを確認するときは、正本の oracle_and_realization 仕様を直接読む。
-- refactor state の JSON schema や oracle file・realization file の列挙規則だけを確認するときは、それぞれの正本仕様を直接読む。
+- 短い変更ループとしての realization apply の仕様だけを確認するとき
+- fork・join・abandon の一般 lifecycle を確認するときは editing_run の正本仕様を直接読むとき
+- ユーザー中断の共通動作だけを確認するときは subcommand_interruption の正本仕様を直接読むとき
+- oracle file と realization file の適合性基準だけを確認するときは oracle_and_realization の該当節を直接読むとき
+- Codex CLI の事後条件や変更 path 検証だけを確認するときは codex_exec_rule の正本仕様を直接読むとき
 
 ## hash
-- 845de570bd171356d6e548dd563f27bafdc6d284471931521d727d25a8c43a41
+- cf90aa4585a4404040ad20973dc4f798995a445dfda41ba34bc52f56bbe985cb
 
 # `session_abandon.md`
 
@@ -214,39 +218,41 @@
 # `session_join.md`
 
 ## Summary
-- `cmoc session join` のセッション完了処理を定義する仕様書。現在のセッションブランチを対応するホームブランチへマージし、事前検証、conflict 解消、session state 更新、条件付き cleanup、primary report 保存までの終了経路を扱う。セッション join の実装・挙動・エラー処理・conflict 解消・report 要件を確認する際の入口となる。
+- `cmoc session join` の正本仕様。アクティブな session branch を対応する home branch へマージし、session state を joined に更新して安全な場合のみ session branch を削除する完了処理を定義する。通常の汎用 git merge wrapper ではない。
+- 引数、事前条件、doctor preprocess、branch 切替、no-ff merge、conflict 解消用 agent call、state 遷移、cleanup、primary report、エラー時の扱いを扱う。
+- session join の merge 対象は session branch の実装成果に限られ、repository-local feedback state は対象外である。
 
 ## Read this when
-- `cmoc session join` の引数、事前条件、実行手順、merge 対象を確認するとき
-- session branch と home branch の merge、home branch が進んでいる場合の扱い、または conflict 解消手順を実装・検証するとき
-- session state の遷移、session branch cleanup、primary report の項目や保存条件を確認するとき
-- repository-local feedback state を session join の merge 対象外として扱う必要があるとき
+- `cmoc session join` の引数、実行条件、merge 先・merge 元、または session 完了処理を確認するとき。
+- merge conflict 発生時の conflict marker 解消手順、oracle file の扱い、agent call の委譲先を確認するとき。
+- session state の更新、session branch cleanup、primary report の生成内容、エラー終了時の扱いを実装またはレビューするとき。
 
 ## Do not read this when
-- 通常の git branch 間 merge wrapper の仕様を確認したいとき
-- session 作成・実行・離脱など、session join 以外の subcommand の挙動を確認するとき
-- repository-local feedback state 自体の管理仕様や Markdown report の一般仕様を確認するときは、それぞれの専用仕様書を直接読むとき
+- session の作成、実行、再開、状態確認など、join 以外の session サブコマンドの仕様だけを確認するとき。
+- repository-local feedback state の保存・集約・report cut・checkpoint の仕様を確認するときは、feedback 関連の正本仕様を直接読む。
+- 通常の git merge の一般仕様や、session join と無関係な branch 操作の仕様を確認するとき。
 
 ## hash
-- b8ac3e16a06b2e3bbfb99b931d74916739ab12c21a7a4da353344a340d8d9800
+- 20a98ef4853f417d06037b7d54e583513ff8acfcdd696a8d1faa16644c3bfe27
 
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの意味上の責務、実行手順、プロンプトエディタ入力、AI Agent CLI/TUI 起動時の共通契約と Codex CLI 固有条件を定義する。
-- TUI の正確な prompt part、起動パラメータ、選択理由は oracle の `build_tui_launch_tui_parameter` に委譲され、関連する正本仕様への入口を提供する。
+- `cmoc tui` サブコマンドの責務、実行手順、プロンプト入力、AI Agent CLI/TUI 起動契約を確認するための入口。
+- cmoc 固有規定の注入条件、indexing preflight、feedback observation、Windows toast 通知など、TUI 起動時に共通して適用される契約を確認するための入口。
+- Codex CLI をバックエンドとして起動する場合の `codex` コマンド、`$CODEX_HOME`、preflight validation、引数による設定上書きの適用範囲を確認するための入口。
 
 ## Read this when
-- `cmoc tui` の起動条件、引数、事前条件、実行フローを確認するとき
-- プロンプトエディタ入力から AI Agent CLI/TUI 起動までの契約を確認するとき
-- cmoc 基本規定、installed skill、indexing preflight、feedback observation、Windows toast 通知の TUI 適用条件を確認するとき
-- Codex CLI バックエンドでの起動コマンド、環境変数、preflight validation、引数上書きの扱いを確認するとき
+- `cmoc tui` の実行責務や実行手順を確認・変更するとき。
+- TUI に渡すオリジナルプロンプトの受け取り方や、起動パラメータ構築後の起動契約を確認するとき。
+- cmoc 固有規定、indexing preflight、feedback observation、Windows toast 通知の TUI 適用条件を確認するとき。
+- Codex CLI 用の起動条件を確認するとき。
 
 ## Do not read this when
-- プロンプトエディタ入力の正確な lifecycle や prompt skeleton の構築方法だけを確認したいときは、直接 `prompt_editor_input.md` と参照先の oracle src を読む
-- 起動パラメータの具体的な内容や選択理由だけを確認したいときは、直接 `launch_tui.py` の `build_tui_launch_tui_parameter` を読む
-- oracle file と realization file の責務・適合性、oracle review の所見成立条件だけを確認したいときは、直接 `oracle_and_realization.md` または `oracle_review.md` を読む
-- indexing、feedback observation、Windows toast 通知の詳細仕様だけを確認したいときは、それぞれの正本仕様を直接読む
+- プロンプトエディタ入力の正確な lifecycle、初期表示文面、完全 prompt skeleton を確認したいときは、正本として指定された `prompt_editor_input.md` とその参照先を直接読む。
+- 正確な prompt part の選択、文面、起動パラメータ、選択理由を確認したいときは、`build_tui_launch_tui_parameter` の oracle src を直接読む。
+- Codex CLI の環境変数、preflight validation、引数による設定上書きの詳細を確認したいときは、`codex_exec_rule.md` を直接読む。
+- oracle と realization の責務・適合性、oracle review の所見、indexing、feedback observation、Windows toast 通知の詳細を確認したいときは、本文が指定する各正本文書を直接読む。
 
 ## hash
-- 10c7afb3581d1a936342b6939c9301e54e5d0f997bfa25e0fc04b26205612d97
+- c278a255224158dd0ea242117a5f3e9fa67eb7494abbb3966c70d1fe87c0a2f0
