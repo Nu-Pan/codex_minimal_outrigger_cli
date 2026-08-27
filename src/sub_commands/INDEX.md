@@ -32,20 +32,22 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装入口。`__init__.py` にサブコマンド全体の入口を置き、`report.py` で report cut の固定、raw observation の検証、candidate の正規化・集約・verification、checkpoint 再利用、publication または incomplete 診断までの一連の transaction を扱う。writer lock、active state、current reference、cleanup、失敗・中断時の状態記録、Markdown report と generation artifact の生成もこの配下で担う。
+- feedback サブコマンドの実装をまとめるディレクトリ。サブコマンドの入口と、report の publication／diagnostic pipeline を確認・変更する際の下位入口となる。
+- `__init__.py` は feedback サブコマンド全体の入口であり、feedback の挙動や実装を確認するときに進む。
+- `report.py` は固定済み report cut を起点に raw observation の検証、candidate 集約、normalization・verification、generation/report publication、incomplete 診断、状態遷移と cleanup を一つの transaction として扱う。`cmoc feedback report` の処理順序や再開可能な checkpoint、publication 前後の状態を調べる際の直接の入口となる。
 
 ## Read this when
 - feedback サブコマンドの挙動や実装を確認・変更するとき。
-- report cut の固定と再開、normalization／verification checkpoint、candidate 集約、publication／incomplete 診断の処理フローを追跡するとき。
-- feedback writer lock、current pointer、active generation、raw observation cleanup、割り込み・失敗処理の責務を確認するとき。
+- `cmoc feedback report` の report cut、checkpoint、candidate 集約、verification、publication、診断、cleanup、失敗・割り込み時の状態遷移を確認するとき。
 
 ## Do not read this when
-- feedback observation の envelope や保存形式だけを確認する場合。共通 feedback state／store の実装または対応する oracle file を直接読む。
-- normalization／verification agent の prompt と Structured Output schema だけを確認する場合。`acp.builder.feedback` の各 builder と schema を直接読む。
-- 一般的な CLI runner、logging、report rendering の共通仕様だけを確認する場合。対応する共通 runtime module を直接読む。
+- feedback 以外のサブコマンドを扱うとき。
+- feedback state の schema、generation・pointer・checkpoint の永続化契約そのものを確認するとき。
+- normalization または verification の prompt、builder、Structured Output schema の詳細を確認するとき。
+- CLI 共通 runner、subcommand logger、primary report fields など、feedback に固有でない共通動作だけを確認するとき。
 
 ## hash
-- 07e271920d88e5d6e7d5f684452894ddab66363b7fa2cd406c2efdec6da9e057
+- 1ced03effacb2252e6c608f03a14354c4661218c5f8f15842e7543ea1edc12d2
 
 # `indexing.py`
 
@@ -66,39 +68,38 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめるディレクトリ。edit・investigation・review と、review の実行管理、対象列挙、パス解決、レポート、INDEX 差分処理などの関連実装への入口を提供する。
+- oracle 系サブコマンドの実装をまとめる package。oracle の edit、investigation、review と、それらを構成する review 関連処理への入口として機能する。
 
 ## Read this when
-- oracle サブコマンドの実装構成や、各サブコマンド・review 関連モジュールの担当範囲を確認するとき
-- oracle edit、investigation、review の CLI 実行フローを調査・変更するとき
-- oracle review の対象列挙、実行ループ、パス解決、レポート生成、INDEX 差分の commit・merge 処理を調査・変更するとき
+- oracle 系サブコマンドの package 構成や、edit・investigation・review の CLI 実行フローを確認するとき。
+- oracle review の対象列挙、実行ループ、パス解決、レポート、INDEX 差分処理の関係を調べるとき。
 
 ## Do not read this when
-- 個別サブコマンドの prompt 契約や正本仕様だけを確認したいとき
-- 共通 runtime、prompt editor、agent 起動パラメータなど、本文中で専用実装が入口として示されている処理だけを調査するとき
-- oracle サブコマンドや review に関係しない CLI 実装を調査するとき
+- 個別サブコマンドの詳細実装だけを確認したい場合は、edit.py、investigation.py、review.py など該当する下位ファイルを直接読む。
+- oracle 編集仕様、調査契約、review の正本仕様や prompt 内容だけを確認したい場合は、参照先の仕様文書を直接読む。
 
 ## hash
-- 96043c58050ed98b31b8f93a766d1d561fbc2f171d6be577f0c3887cbc74c9a8
+- f8ace4bb584dd384cdce6fa20923cf1810c64cd69dee3cc04ecf0af112384a0d
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。
-- realization apply workload とリファクタリング処理の配下へ進むためのルーティング入口。
+- realization workload サブコマンドのパッケージ入口であり、配下の apply workload と refactor 処理へ進むためのディレクトリ。
+- apply 配下では realization apply の workload、特に fork 実行のライフサイクルや run state、差分検証、commit/rollback、report、cleanup を扱う。
+- refactor 配下では realization file の refactor fork における対象選択、state・INDEX 初期化、agent 委譲、変更検証、commit/rollback、完了判定、report 保存を扱う。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization apply workload の実装、処理順序、run state、差分の許可範囲、commit/rollback、fork report、cleanup を確認または変更するとき。
-- realization のリファクタリング作業の内容や構成を確認するとき。
+- realization workload サブコマンドの実装構成や入口を確認するとき。
+- realization apply workload、特に cmoc realization apply fork の処理順序や成功・失敗時の動作を確認・変更するとき。
+- realization refactor、特に cmoc realization refactor fork の lifecycle、対象選択、state 管理、変更検証、完了判定を確認・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- realization apply の仕様や共通 editing run の契約を確認する場合は、対応する oracle/specification または共通 runtime 実装を直接読むとき。
-- fork 以外の realization apply サブコマンド固有処理だけを確認する場合は、各サブコマンドの実装を直接読むとき。
+- realization apply や refactor の仕様、共通 runtime、共通 editing run、一般的な run join・abandon の契約を確認するとき。
+- fork 以外の realization apply サブコマンド固有処理、個別 realization file の agent prompt、変更概要生成の Structured Output や prompt、INDEX 更新の一般仕様だけを確認するとき。
 
 ## hash
-- ce16eb2471c31b79d1c772826d4fe92a6e2183cfadedb99fe8ff54ff97762178
+- 16f438305634d5f5e7f1d84e4467b142603b3f7b61da6250278c7a6daaad750f
 
 # `review`
 
@@ -117,34 +118,39 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージの入口。配下の abandon、join、互換 shim の責務を把握し、関連する run サブコマンドの共通処理を確認する際に読む。
+- editing run サブコマンドの共通 lifecycle 実装と、関連する abandon・join・旧 import path 互換 shim の入口。active run の停止、merge、cleanup、state・report 更新などの実装経路を確認する際に、配下の該当ファイルへ進むために読む。
 
 ## Read this when
-- editing run サブコマンドの共通 lifecycle や、その配下の実装を調査・変更するとき。
-- run の abandon、join、旧 import path 互換 shim の責務と入口を把握するとき。
+- editing run サブコマンドの共通 lifecycle や配下の実装を横断して確認するとき。
+- run abandon の停止、cleanup、state 更新、失敗時の再試行可能状態を調べるとき。
+- run join の merge 前後処理、INDEX 再生成、rollback、report 保存、cleanup を調べるとき。
+- 旧 import path の互換 shim と canonical 実装への委譲関係を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- 具体的な処理の実装、canonical な共通 lifecycle、report writer、Git 操作や state API の詳細を確認する場合は、配下または共通部品の該当ファイルを直接読むとき。
+- run の正本仕様や状態遷移を確認するときは、対応する app_spec・lifecycle 仕様を直接読む。
+- workload 固有の編集・apply・refactor 処理を確認するときは、対応する workload 固有の実装を直接読む。
+- 共通 runtime helper や report writer の具体的な挙動を確認するときは、canonical 実装を直接読む。
+- 旧 import path との互換性が関係しない場合は、lifecycle.py や report.py の shim を読む必要はない。
 
 ## hash
-- 4eb6064c5671623f5297d3b3f2c98041d72151b1edf3ec6f1a3a50019f630b13
+- bf31b65cdb0353a73a14c0edd0e7dd69845bdd50bbe2cdc0aa876f71b4105f2b
 
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session に関する各操作の実装を確認する際の入口で、fork・join・abandon の個別実装へ進むための上位ルーティング対象。
+- session サブコマンドの実装パッケージで、session の各ライフサイクル操作を確認する際の入口。`abandon`、`fork`、`join` の CLI 実装を扱い、branch 操作、session state 更新、失敗時の復旧、merge conflict 解消などの個別処理へ進める。
 
 ## Read this when
-- session サブコマンド全体の実装構成や入口を確認するとき。
-- session fork、join、abandon のいずれかの実装を確認・変更するとき。
+- session サブコマンドの実装や構成を確認・変更するとき
+- session の abandon、fork、join における branch 操作、state 更新、rollback、merge conflict 処理を調べるとき
 
 ## Do not read this when
-- session 以外のサブコマンドを扱うとき。
-- session state の正本仕様や一般的な Git・CLI 共通処理だけを確認するときは、対応する仕様・共通実装を直接読む。
+- session 以外のサブコマンドを扱うとき
+- session state の正本仕様、一般的な Git branch 操作、CLI 共通処理、state 永続化など、配下の個別実装より対応する仕様書や共通機能の対象を直接読むべきとき
 
 ## hash
-- ebd1bd5f3a320b02d7157d2f864bf85b566f6dc3d050af4e1961cada44f40b60
+- 028294677a2cec33fe38538e3f03d84e144e7676317ae304fe2cd37957e58026
 
 # `tui.py`
 

@@ -50,18 +50,17 @@
 # `join.py`
 
 ## Summary
-- `session join` サブコマンドの実行制御を担う実装です。active な session branch の事前条件を確認し、session home branch へ `--no-ff` merge した後、状態を `joined` に更新します。merge target HEAD から到達可能な場合だけ local session branch を削除し、削除できない場合は警告を返します。
-- merge conflict 発生時は Codex に解消を依頼し、conflict marker、unmerged path、conflict 対象外の変更、marker 外の内容変更を検査してから merge を完了します。session join の branch 操作、状態更新、conflict 解消の安全性、terminal result を確認・変更するときの入口です。
+- session join サブコマンドの実行本体を担い、active な session branch を session home branch へ merge し、状態更新と local session branch の安全な削除まで処理する。
+- merge conflict 発生時は、conflict 対象の列挙、Codex による解消依頼、許可外変更と conflict marker の検査、stage、merge commit を一連で処理する。
 
 ## Read this when
-- session join の事前条件、session home branch への merge、session state の更新、local session branch の削除を確認・変更するとき
-- session join の merge conflict 解消、conflict marker 検査、Codex 呼び出し後の差分制限を確認・変更するとき
-- session join の terminal result、警告、primary report 更新を確認するとき
+- session join の実行条件、branch 切り替え、merge、session state 更新、session branch 削除の挙動を確認・変更するとき
+- session join の merge conflict 解消における対象 path の取得、変更範囲制限、marker 検査、stage、commit の挙動を確認・変更するとき
 
 ## Do not read this when
-- session の状態モデルや状態値の正本仕様だけを確認するとき
-- Codex 実行や prompt 生成の共通規則だけを確認するとき
-- session join 以外のサブコマンド固有の挙動を確認・変更するとき
+- session の状態遷移や session home branch の意味だけを確認したいとき
+- conflict resolution parameter の生成内容だけを確認したいとき
+- Git 実行、CLI 共通処理、state 永続化、primary report 更新などの共通機能だけを確認したいとき
 
 ## hash
-- 3c8e08d2248d8498b4486e71e86153d3aa236b05d3a01045af0e0631ec05eb6f
+- 8d9957a1dd49e686536589b29c106f47595c0eba4129b413ba63a1ac4c3f1e14

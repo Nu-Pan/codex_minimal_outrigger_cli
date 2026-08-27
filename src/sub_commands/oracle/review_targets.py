@@ -33,7 +33,8 @@ def enumerate_oracle_review_targets(
 
 def enumerate_review_all_oracle_files(root: Path) -> list[Path]:
     """review 対象候補となる oracle file 全件を列挙する。"""
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # の「分類結果」
     # full scope と state 同期で同じ full-tree 分類結果を使用する。
     oracle_files, _ = enumerate_oracle_and_realization_files(root)
     return oracle_files

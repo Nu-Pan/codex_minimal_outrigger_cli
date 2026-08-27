@@ -957,7 +957,8 @@ def _render_summary(
 ) -> list[str]:
     """change summary を report 用 Markdown 行へ変換する。"""
     if summary is not None:
-        # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+        # {{work-root}}/oracle/doc/branch_model.md の
+        # 「`{{cmoc-managed-branch}}` 上で～」の定義
         # Structured Output の path は、実際の managed branch 差分の変更対象に限定する。
         changed_path_set = set(changed_paths)
         lines = []

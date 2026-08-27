@@ -13,7 +13,7 @@ lock・CLI/config・Git index はテスト観点としては分かれるが、�
 
 正本仕様:
 - `{{work-root}}/oracle/doc/app_spec/doctor_preprocess.md`
-- `{{work-root}}/oracle/doc/app_spec/misc_spec.md`
+- `{{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md`
 - `{{work-root}}/oracle/doc/app_spec/sub_command/doctor.md`
 - `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`
 - `{{work-root}}/oracle/src/oracle/other/cmoc_config.py`

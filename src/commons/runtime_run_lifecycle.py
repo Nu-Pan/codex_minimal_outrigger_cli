@@ -8,7 +8,8 @@ INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を�
 責務である。分割すると、run branch の不変条件と差分許可範囲を複数 file で追う必要が
 生じるため、現状は editing run lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import os
@@ -403,7 +404,8 @@ def worktree_change_paths(
     include_rename_sources: bool = False,
 ) -> list[str]:
     """未 commit 差分の変更対象を repository 相対 path で返す。"""
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/branch_model.md の
+    # 「`{{cmoc-managed-branch}}` 上で～」の定義
     # report 用の既定値は rename 後の path だけを返し、差分の有無を判定する
     # 呼び出し側だけが rename 元も明示的に含める。
     paths = status_path_statuses(
@@ -475,7 +477,8 @@ def tree_changes(worktree: Path, base: str, end: str = "HEAD") -> list[GitChange
 
 def flattened_change_paths(changes: list[GitChange]) -> list[str]:
     """managed branch の変更 file path を重複なしで返す。"""
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/branch_model.md の
+    # 「`{{cmoc-managed-branch}}` 上で～」の定義
     # 削除 path と rename 元 path は変更対象の集合に含めず、rename 後だけを残す。
     paths: set[str] = set()
     for change in changes:

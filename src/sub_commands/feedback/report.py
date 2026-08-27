@@ -2072,9 +2072,9 @@ def _verification_output_issues(
                     repr(sorted(current_kinds, key=str)),
                 )
             )
-    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json
-    # の text pattern は構造を検証するが、末尾改行を含む上限超過や空白だけの
-    # 内容を弾き切れないため、prompt で宣言した concrete text 条件をここで固定する。
+    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json が
+    # 所有する concrete text と文字数上限の意味を、末尾改行や空白だけの値でも
+    # 一貫して検証する。
     text_values: list[tuple[str, object, int]] = [
         ("reason", result.get("reason"), 1200),
     ]

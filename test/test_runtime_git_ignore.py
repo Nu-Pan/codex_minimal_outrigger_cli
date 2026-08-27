@@ -2,9 +2,8 @@
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-- {{work-root}}/oracle/doc/app_spec/misc_spec.md
+- {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
 """
 
 import os

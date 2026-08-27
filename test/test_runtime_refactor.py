@@ -1,7 +1,9 @@
 """realization refactor 永続 state の同期・選択規則を検証する。
 
-正本仕様: `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`,
-`{{work-root}}/oracle/doc/app_spec/misc_spec.md`。
+正本仕様:
+- `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`
+- `{{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md`
+- `{{work-root}}/oracle/doc/app_spec/timestamp.md`
 """
 
 import json
@@ -74,7 +76,8 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
     tmp_path: Path, relative: str
 ) -> None:
     """oracle/realization file classifier が work-root 外の path を拒否する。"""
-    # 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # 根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # の「分類結果」
     root = make_repo(tmp_path)
     (tmp_path / "outside.md").write_text("outside\n")
 

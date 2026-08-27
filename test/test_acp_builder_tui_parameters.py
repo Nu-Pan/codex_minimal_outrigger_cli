@@ -43,11 +43,14 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.run_indexing_preflight is True
     complete_prompt = parameter.prompt
-    assert "# oracle and realization basic" in complete_prompt
-    assert "# routing policy" in complete_prompt
     for heading in (
+        "# oracle and realization basic",
         "# oracle policy",
         "# realization policy",
+        "# routing policy",
+    ):
+        assert heading in complete_prompt
+    for heading in (
         "# oracle findings policy",
         "# realization findings policy",
         "# conflict resolution policy",

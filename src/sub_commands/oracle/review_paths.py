@@ -14,7 +14,8 @@ def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
 
     根拠:
     - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-    - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    - {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+      「oracle file と realization file の責務」
     """
     raw_path = finding.get("oracle_path")
     if not isinstance(raw_path, str) or not raw_path:
@@ -46,7 +47,8 @@ def oracle_path_key(root: Path, path: Path) -> str | None:
 
     根拠:
     - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-    - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    - {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+      「oracle file と realization file の責務」
     """
 
     root = _absolute_without_symlink(root)

@@ -76,51 +76,67 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
 
 
 @pytest.mark.parametrize(
-    ("builder", "categories"),
+    ("builder", "categories", "policy_count"),
     [
         pytest.param(
             _build_oracle_policy,
-            ("**必須**", "**禁止**", "**許容**", "**補足情報**"),
+            (
+                "**必須**",
+                "**禁止**",
+                "**許容**",
+                "**補足情報**",
+                "**必須**",
+                "**禁止**",
+            ),
+            2,
             id="oracle",
         ),
         pytest.param(
             lambda: _build_realization_policy(_path_context()),
             ("**必須**", "**禁止**", "**許容**"),
+            1,
             id="realization",
         ),
         pytest.param(
             _build_oracle_findings_policy,
             ("**必須**", "**禁止**"),
+            1,
             id="oracle-findings",
         ),
         pytest.param(
             _build_realization_findings_policy,
             ("**必須**", "**禁止**"),
+            1,
             id="realization-findings",
         ),
         pytest.param(
             _build_conflict_resolution_policy,
             ("**必須**", "**禁止**"),
+            1,
             id="conflict-resolution",
         ),
         pytest.param(
             lambda: _build_feedback_reporting_policy(_path_context()),
             ("**必須**", "**禁止**"),
+            1,
             id="feedback-reporting",
         ),
         pytest.param(
             lambda: _build_file_access_policy(FileAccessMode.READONLY, _path_context()),
             ("**禁止**", "**許容**"),
+            1,
             id="file-access",
         ),
         pytest.param(
             _build_index_entry_policy,
             ("**必須**", "**禁止**"),
+            1,
             id="index-entry",
         ),
         pytest.param(
             lambda: _build_routing_policy(_path_context()),
             ("**必須**", "**補足情報**"),
+            1,
             id="routing",
         ),
     ],
@@ -128,12 +144,13 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
 def test_category_policy_blocks_are_flat_and_keep_category_order(
     builder: Callable[[], tuple[PlaceholderMap, SDHeader]],
     categories: tuple[str, ...],
+    policy_count: int,
 ) -> None:
-    """全 policy builder が単一 SDPolicy と順序付きカテゴリだけを持つ。"""
+    """全 policy builder が flat な SDPolicy と順序付きカテゴリだけを持つ。"""
     builder_result = builder()
     policy_header = builder_result[1]
-    assert len(policy_header.children) == 1
-    assert isinstance(policy_header.children[0], SDPolicy)
+    assert len(policy_header.children) == policy_count
+    assert all(isinstance(child, SDPolicy) for child in policy_header.children)
 
     rendered = _render_policy(builder_result)
     lines = rendered.splitlines()
@@ -201,11 +218,19 @@ def test_selected_policy_blocks_remain_separate_without_deduplication() -> None:
     )
 
 
-def test_oracle_policy_keeps_defined_and_undefined_boundary() -> None:
-    """統合後の oracle policy が定義済み事項と未定義事項を区別する。"""
+def test_oracle_policy_keeps_reference_and_authority_boundaries() -> None:
+    """oracle policy が参照形式、正本責務、未定義事項を区別する。"""
     rendered = _render_policy(_build_oracle_policy())
 
-    assert "それへの参照 (パス・行・簡潔な内容) を示すこと" in rendered
+    assert "root path placeholder を起点とする path、安定した locator" in rendered
+    assert "合わせて読む必要がある oracle file への参照に行番号を含めてはいけない" in (
+        rendered
+    )
+    assert (
+        "oracle doc は意味仕様を所有し、oracle src は oracle doc から明示的に委譲"
+        in (rendered)
+    )
+    assert "同じ仕様事項の正本所有者は一つだけ" in rendered
     assert "仕様断片上定義されている事項と、未定義の事項とを区別する" in rendered
     assert "正本仕様断片の隙間の未定義事項を正本仕様として断定" in rendered
     assert "oracle investigation policy" not in rendered

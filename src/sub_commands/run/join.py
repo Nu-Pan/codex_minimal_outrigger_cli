@@ -5,7 +5,8 @@ cleanup は同じ active run の状態と failure rollback を共有する一つ
 分割すると、join の成功・失敗・cleanup pending の不変条件を複数 file で追う必要が
 生じるため、現状は run join lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import os

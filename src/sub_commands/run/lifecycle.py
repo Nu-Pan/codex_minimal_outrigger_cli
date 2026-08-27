@@ -7,7 +7,8 @@ from pathlib import Path
 # {{work-root}}/oracle/doc/dev_rule/design_rule.md
 # 旧 import path を利用する利用者が commons 側へ移行し、互換性が不要になった時に
 # この shim と対応する INDEX entry を削除する。
-# {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+# {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+# 「realization file を扱う判断基準」
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,

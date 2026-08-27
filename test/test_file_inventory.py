@@ -1,7 +1,8 @@
 """oracle/realization file の full-tree 列挙契約を検証する。
 
-正本仕様: `{{work-root}}/oracle/doc/app_spec/misc_spec.md`,
-`{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`。
+正本仕様:
+- `{{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`
 """
 
 import os

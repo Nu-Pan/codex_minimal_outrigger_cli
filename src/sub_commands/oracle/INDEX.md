@@ -66,22 +66,23 @@
 # `review.py`
 
 ## Summary
-- oracle review の CLI 実行と isolated run lifecycle を統括する実装。active session の検証、clean worktree 確認、review target の隔離 worktree・branch 作成、review loop 呼び出し、INDEX 差分の commit・merge、review report の保存を一連の処理として扱う。
-- 割り込み、部分作成、例外、cleanup failure を含む終了経路と resource ownership を管理する。oracle review の実行経路全体、隔離 run の作成・merge・cleanup、または失敗時の report と terminal result を調査・変更するときの入口であり、個別の target 列挙・review loop・report 表示の詳細だけを扱う場合はそれぞれの専用実装を直接読む。
+- oracle review CLI の実行入口と、active session branch 上での isolated review run のライフサイクルを統括する実装。
+- review 対象の列挙、review loop、INDEX 差分の commit・merge、interruption/error report、worktree・run branch の cleanup までを一貫して扱う。
+- oracle review の実行フロー、隔離 run の resource ownership、中断時の状態遷移、cleanup failure の処理を確認するための主要な入口。
 
 ## Read this when
-- oracle review CLI の起動条件、session branch・worktree の検証、review run の隔離 target 作成を確認するとき
-- review loop の呼び出しから INDEX 差分の commit・merge、run resource の cleanup までの lifecycle を追うとき
-- KeyboardInterrupt、部分作成、例外、cleanup failure、interrupted report の挙動を調査または変更するとき
+- oracle review サブコマンドの CLI 実装や実行順序を調べるとき
+- review run の worktree・branch 作成、session branch への INDEX 差分 merge、cleanup を変更または確認するとき
+- KeyboardInterrupt、部分作成、例外、cleanup failure 時の report と terminal result の挙動を調べるとき
 
 ## Do not read this when
-- レビュー対象ファイルの列挙条件だけを調べるとき
-- oracle review loop の所見生成や個別 oracle の評価処理だけを調べるとき
-- review report の描画・保存形式だけを調べるとき
-- INDEX 差分の merge 実装だけを直接調べるとき
+- review 対象の列挙規則だけを確認したい場合は review_targets の実装を読むとき
+- 所見の評価ループだけを確認したい場合は review_loop の実装を読むとき
+- INDEX 差分の commit・merge・conflict 解決だけを確認したい場合は review_index の実装を読むとき
+- review report の形式や所見表示だけを確認したい場合は review_report の実装を読むとき
 
 ## hash
-- 183c901c1f37737fa771f2ca4f10abda96cae50a76a8155b76577c537c43f583
+- 4f3dc7c7ca19cc85da415b15a18011601fb88001c09be08daa928299879019d1
 
 # `review_index.py`
 
@@ -102,37 +103,35 @@
 # `review_loop.py`
 
 ## Summary
-- 対象は oracle review の一連の状態を保持して実行する中核ループです。finding の列挙、同一対象の finding のマージ、反証・擁護による妥当性検証、採否判定、KeyboardInterrupt 時の確定済み部分結果の引き渡しをまとめて扱います。
-- oracle review の進捗通知、評価済みファイルの追跡、finding の ID 付与・関連付け・正規化、merge operation の適用と入力 ID 検証まで含むため、review loop の挙動や中断時保存、finding 編集を確認・変更する際の入口になります。
+- oracle review の finding 列挙から merge、擁護・反証による妥当性検証、採否判定までのループを実装する。中断時には完了済みの finding と評価済みファイルを部分結果として保持し、同一 review 状態を再開可能にする。
 
 ## Read this when
-- oracle review の finding 列挙、merge、validate、judge の反復処理を確認・変更するとき
-- レビュー中断時に、どの finding や評価済みファイルが確定済み結果として残るかを確認するとき
-- finding の対象 oracle path への関連付け、ID 採番、merge operation 適用、step callback 通知の挙動を確認するとき
+- oracle review の finding 列挙、merge 操作、妥当性検証、judge 判定、または中断時の部分保存の挙動を変更・調査するとき
+- review loop の進捗通知、対象 oracle path の関連 finding 判定、merge operation の適用規則を確認するとき
 
 ## Do not read this when
-- 個別の enumerate、validate challenger/advocate、judge、merge の prompt parameter 構築だけを確認したいときは、それぞれの builder を直接読む
-- oracle review 全体の利用条件や外部向け仕様だけを確認したいときは、sub-command の正本仕様を直接読む
-- review loop を呼び出す側の CLI 制御やログ保存だけを確認したいときは、その呼び出し元を直接読む
+- 個別 agent call の Structured Output パラメータ生成だけを変更・調査するときは、対応する review builder を直接読む
+- oracle review の CLI 入出力やパス解決だけを確認するときは、対応する sub-command または review_paths の実装を直接読む
 
 ## hash
-- f7957f7dba6ea569f664b54b59b3268cd35a342d7915305d27061c731ad7a534
+- 30978e168999dcc5c19decf8d25b9851aaaa4fedc5c1a9c35186c208a4761cc5
 
 # `review_paths.py`
 
 ## Summary
-- oracle_path の値を解決して絶対パスへ変換し、oracle file の repository-relative key を生成する補助処理。worktree 所属判定と symlink 非追跡のパス正規化を担当する。
+- oracle_path を finding の値から絶対パスへ解決し、oracle root 略記や既知の root placeholder を扱うレビュー用パス変換の入口。
+- oracle_path_key は oracle 配下または cmoc 管理下の isolated worktree にある oracle file だけを repository-relative key へ変換し、対象外のパスを除外する。symlink を追跡しない正規化処理もこのファイルが担う。
 
 ## Read this when
-- oracle_path の入力形式、{{oracle-root}} や root placeholder の解決、または oracle file の相対キー生成を変更・調査するとき。
-- main worktree と cmoc 管理下の isolated worktree のパス境界や、symlink を追跡しない正規化処理を確認するとき。
+- finding の oracle_path 解決、oracle root alias・root placeholder の扱い、またはレビュー対象パスの相対キー化を変更・確認するとき。
+- main worktree と cmoc 管理下 isolated worktree の所属境界、symlink 非追跡の絶対パス変換を調査するとき。
 
 ## Do not read this when
-- oracle review の全体仕様や finding の生成・評価ロジックを確認したいときは、まず対応する oracle review 文書や呼び出し元を読む。
-- oracle_path の解決や oracle-relative key 生成に関係しないサブコマンド処理を調査するとき。
+- oracle file と realization file の責務やレビュー仕様そのものを確認したいときは、参照されている oracle 文書を直接読む。
+- レビュー用パス変換を利用する各サブコマンドの振る舞いだけを確認する場合は、その利用側実装を直接読む。
 
 ## hash
-- 89eb16dfdab2aef4017794b8fb1e637fe91a6861d254dff3c5eb988a922b7b6c
+- 8bf8d3fe5cce6fd0daee1afeb00d3343ac64674617714ab2c5a5f92071832178
 
 # `review_report.py`
 
@@ -155,14 +154,16 @@
 # `review_targets.py`
 
 ## Summary
-- oracle review の scope に応じてレビュー対象となる oracle ファイルを列挙する補助モジュールです。full scope では全 oracle ファイルを返し、session scope ではセッション開始コミットから review fork commit までの oracle 配下の変更だけに絞ります。
-- レビュー対象の全件列挙は oracle と realization の分類結果を共有し、差分パスは NUL 区切りで扱ってパス名の改行を保ちます。
+- oracle review の scope に応じて、レビュー対象となる oracle file のパスを列挙する関数を定義する。full scope では全候補を返し、session scope ではセッション開始時点から review fork commit までの oracle 差分に限定する。
+- 全候補の分類には oracle と realization の列挙処理を使用し、session scope の差分判定では Git の NUL 区切り出力でパスを扱う。
 
 ## Read this when
-- oracle review の対象範囲の決定方法、full/session scope の挙動、またはレビュー対象ファイル列挙の実装を確認・変更するとき。
+- oracle review の対象ファイル範囲、full scope と session scope の切り替え、または review fork commit を基準とする差分抽出を確認するとき。
+- oracle review 対象候補の列挙元と、セッション状態の session_fork_commit が対象選択にどう使われるかを確認するとき。
 
 ## Do not read this when
-- oracle review 以外のサブコマンドや、レビュー対象ファイルの内容そのものを確認したいとき。
+- oracle review の実際のレビュー内容や oracle file の仕様本文を確認したいとき。
+- レビュー対象ではなく、oracle と realization の全ファイル分類規則を直接確認したいとき。
 
 ## hash
-- a7f12edcc489d57425843130c363e049cf06fcde33daceaa0f3030b242a24b25
+- d45e4990e19cc96e4178f7104dbc58130d3261a93f4a683e988c35785fe232dc

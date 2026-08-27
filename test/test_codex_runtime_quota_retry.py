@@ -6,7 +6,8 @@ subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であ�
 同じ fake Codex 呼び出し列を追う文脈が分散する。現状は quota retry 回帰として
 一箇所に保つ方が凝集性が高い。
 根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-および {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
+および {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import json
