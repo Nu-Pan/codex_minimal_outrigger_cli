@@ -25,7 +25,7 @@
 ## agent call と file access
 
 - 追従要否と適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:83` の「oracle file に対する realization file の適合性」を正本とする。
-- 正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py:23` の `build_realization_apply_fork_launch_exec_parameter` へ委譲する。
+- 正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py:23` の `build_realization_apply_fork_launch_exec_parameter` へ委譲する。
 - `{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` を 1 回だけ本命 agent call として実行する。Codex CLI の TUI は起動しない。
 - 本命の追従作業を複数の agent call に分割してはいけない。
 - 収束判定のために同じ作業を反復してはいけない。

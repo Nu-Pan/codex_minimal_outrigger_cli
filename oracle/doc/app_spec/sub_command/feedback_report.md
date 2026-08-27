@@ -86,7 +86,7 @@ agent が入力した deduplication hint は、候補検索にだけ使用する
 
 normalization agent は、入力した observation が既存 candidate と同じ issue か、新しい issue かだけを返す。
 
-正確な prompt part、文面、起動パラメータ、および選択理由は、`oracle/src/oracle/acp_builder/feedback/normalize_issue.py:22` の `build_feedback_normalize_issue_parameter` へ委譲する。Structured Output schema は、`oracle/src/oracle/acp_builder/feedback/normalize_issue.json:1` の root schema（JSON Pointer `#`）へ委譲する。
+正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py:22` の `build_feedback_normalize_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json:1` の root schema（JSON Pointer `#`）へ委譲する。
 
 normalization agent へ渡す情報を次に限定する。
 
@@ -122,7 +122,7 @@ verification agent は、1 candidate と、その candidate に許可した repo
 | `not_actionable` | 状態は存在しても、人間向け報告基準を満たさない。 |
 | `inconclusive` | 許可された reference だけでは判定できない。 |
 
-正確な prompt part、文面、起動パラメータ、および選択理由は、`oracle/src/oracle/acp_builder/feedback/verify_issue.py:22` の `build_feedback_verify_issue_parameter` へ委譲する。Structured Output schema は、`oracle/src/oracle/acp_builder/feedback/verify_issue.json:1` の root schema（JSON Pointer `#`）へ委譲する。
+正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py:22` の `build_feedback_verify_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json:1` の root schema（JSON Pointer `#`）へ委譲する。
 
 verification agent は候補外の問題を探索せず、repository、config、feedback state、または問題の根拠を変更しない。
 
@@ -136,7 +136,7 @@ schema に加え、次の条件をすべて満たす output だけを受理す�
 - current evidence は、その candidate に許可した reference ID だけを使用する。
 - 同 3 verdict は、少なくとも 1 件の repository content、current fingerprint、または probe result を根拠にする。
 - 過去の observation だけを current evidence にしない。
-- fingerprint だけでは存在を意味的に確認できない場合は、`unresolved` としない。
+- fingerprint だけでは問題の存在を意味的に確認できない場合は、`inconclusive` とする。
 
 schema または決定論的事後条件に適合する output を補正後も受理できなければ、AI call failure とする。
 
