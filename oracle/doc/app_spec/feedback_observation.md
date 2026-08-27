@@ -18,13 +18,13 @@ reporter の利用不能または submission の拒否は、本命 workload の�
 
 ### prompt instruction
 
-報告基準の意味は本書を正本とする。正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/feedback_reporting.py:7` の `build_feedback_reporting_policy` へ委譲する。完全 prompt への配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py:41` の `build_complete_prompt` へ委譲する。
+報告基準の意味は本書を正本とする。正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/feedback_reporting.py` の `build_feedback_reporting_policy` へ委譲する。完全 prompt への配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
 
 ### MCP interface
 
 agent-facing interface は、Codex call ごとに起動する local stdio MCP reporter/client とする。MCP namespace は `cmoc_feedback` とし、`submit_observation` だけを公開する。MCP resource、prompt、任意の file access、command execution、または collector 管理機能を公開してはならない。
 
-input は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json:1` の root schema（JSON Pointer `#`）に適合する JSON object とする。同 schema を tool discovery と受け入れ検査の両方に使用する。repository、call ID、保存先、または capability を agent input に追加してはならない。
+input は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json` の root schema（JSON Pointer `#`）に適合する JSON object とする。同 schema を tool discovery と受け入れ検査の両方に使用する。repository、call ID、保存先、または capability を agent input に追加してはならない。
 
 tool result は、次のいずれかとする。
 

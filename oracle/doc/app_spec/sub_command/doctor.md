@@ -3,7 +3,7 @@
 
 ## 概要
 
-- doctor preprocess を明示的に呼び出すコマンドである。検証・修復の内容は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md:2` の「Doctor Preprocess」を正本とする
+- doctor preprocess を明示的に呼び出すコマンドである。検証・修復の内容は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「Doctor Preprocess」を正本とする
 
 ## 引数
 

@@ -13,7 +13,7 @@
 
 ## 事前条件
 
-`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context」の条件を満たす。
+`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を満たす。
 
 以下の場合はエラー終了する
 
@@ -46,17 +46,17 @@
 
 - 個別 agent call の意味上の責務と判断基準は本書で定義する。
 - 各段階の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、次の builder へ委譲する。
-    - 新規所見の列挙: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.py:26` の `build_oracle_review_enumerate_finding_parameter`
-    - 所見のマージ: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py:23` の `build_oracle_review_merge_finding_parameter`
-    - 所見が妥当である理由の記述: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py:23` の `build_oracle_review_validate_finding_advocate_parameter`
-    - 所見が妥当ではない理由の記述: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_challenger.py:23` の `build_oracle_review_validate_finding_challenger_parameter`
-    - 所見の採否判定: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/judge_finding.py:23` の `build_oracle_review_judge_finding_parameter`
-- 所見成立条件を agent に伝える正確な文面と構造は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle_findings.py:7` の `build_oracle_findings_policy` へ委譲する。
+    - 新規所見の列挙: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.py` の `build_oracle_review_enumerate_finding_parameter`
+    - 所見のマージ: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py` の `build_oracle_review_merge_finding_parameter`
+    - 所見が妥当である理由の記述: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py` の `build_oracle_review_validate_finding_advocate_parameter`
+    - 所見が妥当ではない理由の記述: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_challenger.py` の `build_oracle_review_validate_finding_challenger_parameter`
+    - 所見の採否判定: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/judge_finding.py` の `build_oracle_review_judge_finding_parameter`
+- 所見成立条件を agent に伝える正確な文面と構造は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle_findings.py` の `build_oracle_findings_policy` へ委譲する。
 - Structured Output schema は出力構造と各 field の意味を定義し、所見の判定基準を定義しない
 
 ## 「run の隔離実行」とは
 
-- 隔離資源と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md:1` の「run 作業隔離規則」を正本とする。
+- 隔離資源と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md` の「run 作業隔離規則」を正本とする。
 - この read-only run は終了時に `{{cmoc-session-branch}}` へ自動的に merge する。
 - `{{cmoc-run-branch}}` 上で更新され得るのは `INDEX.md` だけとする。conflict した場合は、自動生成 file であるため `{{cmoc-session-branch}}` 側を採用して機械的に解消する。
 
@@ -76,7 +76,7 @@
     - 「oracle file もっと良くするには」の人間への提案は目的ではない
     - 過去 oracle file に何があったか (i.e. 編集・追加・削除) はレビュー対象ではない
 
-oracle review 成果物と feedback の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md:63` の「既存 workload との境界」を正本とする。
+oracle review 成果物と feedback の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」を正本とする。
 
 ## ユーザー中断
 
@@ -90,7 +90,7 @@ oracle review 成果物と feedback の境界は、`{{cmoc-root}}/oracle/doc/app
 
 ## 「所見」の定義
 
-`cmoc oracle review` は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:64` の「oracle file を扱う判断基準」を所見条件の前提とする。
+`cmoc oracle review` は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」を所見条件の前提とする。
 
 同節が意図して残す明示仕様の隙間だけでは、oracle file の具体的な記述から問題が成立しない。このため、所見は oracle file の具体的な記述だけから問題が成立する場合に限る。realization file、外部事情、または未確認の可能性を追加しなければ成立しない事項は所見にしない。
 

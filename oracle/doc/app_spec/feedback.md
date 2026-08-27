@@ -50,9 +50,9 @@ feedback の仕様は、責務ごとに次の文書へ分ける。同じ schema�
 
 | 正本仕様 | 決めること |
 |---|---|
-| `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md:1` の「feedback observation の収集」 | observation の報告基準、収集経路、受け入れ検査、機械 detector、および raw 保存 |
-| `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:1` の「feedback の repository-local state」 | repository-local state、report cut、checkpoint、atomic publication、および cleanup |
-| `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md:1` の `cmoc feedback report` | `cmoc feedback report` の事前条件、処理順序、normalization、verification、表示、および終了結果 |
+| `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「feedback observation の収集」 | observation の報告基準、収集経路、受け入れ検査、機械 detector、および raw 保存 |
+| `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」 | repository-local state、report cut、checkpoint、atomic publication、および cleanup |
+| `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の `cmoc feedback report` | `cmoc feedback report` の事前条件、処理順序、normalization、verification、表示、および終了結果 |
 
 ## 共通原則
 

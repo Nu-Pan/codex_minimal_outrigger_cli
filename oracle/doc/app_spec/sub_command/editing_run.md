@@ -9,18 +9,18 @@
 - 汎用の `cmoc run fork` は提供しない。
 - `cmoc session join` と `cmoc session abandon` は外側の session lifecycle であり、この仕様の対象ではない。
 - `cmoc oracle edit`、read-only の investigation/review、cmoc 自身による機械的更新、および session join の conflict 解消は、この編集 run lifecycle の対象ではない。
-- run の隔離資源と一般 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md:1` の「run 作業隔離規則」を正本とする。
-- session と run の永続 state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:1` の `{{cmoc-session-state-file}}` を正本とする。
+- run の隔離資源と一般 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md` の「run 作業隔離規則」を正本とする。
+- session と run の永続 state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の `{{cmoc-session-state-file}}` を正本とする。
 
 ## 同時実行の境界
 
-未 join の編集 run 数は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:8` の「スキーマ設計の基本原則」を正本とする。active run の state field は、同文書 71 行目の「run field」を正本とする。
+未 join の編集 run 数は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「スキーマ設計の基本原則」を正本とする。active run の state field は、同文書の「run field」を正本とする。
 
 - `run.state` が `joinable` または `error` の間は、その run に対する `cmoc run join` と `cmoc run abandon` 以外の lifecycle 操作を受け付けない。
 
 ## fork の共通事前条件
 
-workload 固有の fork は doctor preprocess の後に、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context と編集 run fork・session 終了の共通事前条件」を検査する。満たさない場合はエラー終了する。
+workload 固有の fork は doctor preprocess の後に、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context と編集 run fork・session 終了の共通事前条件」を検査する。満たさない場合はエラー終了する。
 
 ## fork の共通開始処理
 
@@ -37,14 +37,14 @@ workload は、agent call の開始前に fork の共通開始処理を完了し
 - workload が正常終了した場合は `run.state` を `joinable` にする。
 - ユーザー中断を正常系として扱う workload は、実行中の処理単位を commit まで完了するか rollback してから `run.state` を `joinable` にする。
 - 続行不能な失敗では、未確定の処理単位を commit または rollback により整合させ、`run.state` を `error` にする。
-- 編集 run と feedback data の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md:63` の「既存 workload との境界」と `{{cmoc-root}}/oracle/doc/app_spec/session_state.md:8` の「スキーマ設計の基本原則」を正本とする。
+- 編集 run と feedback data の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」と `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「スキーマ設計の基本原則」を正本とする。
 
 ## join と abandon の共通事前条件
 
 `cmoc run join` と `cmoc run abandon` は、次の条件を共通して検査する。
 
 - 現在の branch が `{{cmoc-session-branch}}` または active な `{{cmoc-run-branch}}` のいずれかである。
-- 対応する `session.state` は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:50` の定義における `active` である。
+- 対応する `session.state` は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の定義における `active` である。
 
 ## `cmoc run join`
 

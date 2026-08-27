@@ -5,8 +5,8 @@
 - run は、workload 固有の fork で開始し、join または abandon で終了する隔離作業の 1 instance である。
 - workload は、run が行う作業の種類である。
 - fork, join, abandon は run の lifecycle 操作を表す。公開 CLI のサブコマンド名と一致する場合に限らない。
-- run が使用する branch、commit、および worktree の定義と命名は、`{{cmoc-root}}/oracle/doc/branch_model.md:50` の `{{cmoc-run-branch}}` 以降を正本とする。
-- 永続化する run state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:71` の「run field」を正本とする。
+- run が使用する branch、commit、および worktree の定義と命名は、`{{cmoc-root}}/oracle/doc/branch_model.md` の `{{cmoc-run-branch}}` 以降を正本とする。
+- 永続化する run state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「run field」を正本とする。
 
 ## lifecycle
 
@@ -26,7 +26,7 @@
 
 - run の作業は、branch model が定める `{{cmoc-run-worktree}}` 上で行う。
 - agent call の cwd は、個別仕様に別の定めがない限り `{{cmoc-run-worktree}}` とする。
-- run 上の agent call の root path は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md:14` の「agent call の path context」に従う。同節が正確な導出先の oracle src を定める。
+- run 上の agent call の root path は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」に従う。同節が正確な導出先の oracle src を定める。
 - cmoc process の cwd が `{{repo-root}}` であっても、run 上の agent call の path context は `{{cmoc-run-worktree}}` から解決する。
 - 人間が `{{cmoc-run-worktree}}` を直接編集することは想定しない。
 
@@ -34,6 +34,6 @@
 
 - 原則として、run の作業は `{{run-root}}` ツリー内だけを読み書きする。
 - 個別仕様が明示する cmoc 管理データは、例外として `{{repo-root}}` 側へ書き込んでよい。
-- 実行ログの保存先は `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md:99` の「サブコマンドログファイル」、session state の保存先は `{{cmoc-root}}/oracle/doc/app_spec/session_state.md:3` の「概要」を正本とする。
-- feedback observation と feedback state の保存先および lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md:158` の「raw observation の保存」と `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:1` の「feedback の repository-local state」を正本とする。
-- run の join または abandon と feedback state の境界は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:8` の「スキーマ設計の基本原則」に従う。
+- 実行ログの保存先は `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「サブコマンドログファイル」、session state の保存先は `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「概要」を正本とする。
+- feedback observation と feedback state の保存先および lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「raw observation の保存」と `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
+- run の join または abandon と feedback state の境界は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「スキーマ設計の基本原則」に従う。

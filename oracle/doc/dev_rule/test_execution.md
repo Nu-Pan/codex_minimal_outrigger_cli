@@ -131,7 +131,7 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 
 ## 実経路統合テストを実行する
 
-- 実経路統合テストの成立条件、専用のモデル設定、quota、および model provider の扱いは、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md:28` の「実経路統合テスト」を正本とする。
+- 実経路統合テストの成立条件、専用のモデル設定、quota、および model provider の扱いは、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「実経路統合テスト」を正本とする。
 - pytest command から具体的な model provider またはモデル名を上書きしてはならない。
 
 ## 完了を判定する

@@ -37,8 +37,8 @@
 
 各 workload の目的と境界は、次の仕様を正本とする。
 
-- realization apply: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md:3` の「目的」
-- realization refactor: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md:3` の「目的」
-- oracle edit: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md:3` の「目的」
+- realization apply: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「目的」
+- realization refactor: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「目的」
+- oracle edit: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「目的」
 
-realization の編集 run に共通する lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md:1` を参照する。
+realization の編集 run に共通する lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「明示的な join を必要とする編集 run の共通仕様」を参照する。

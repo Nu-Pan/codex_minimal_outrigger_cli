@@ -5,7 +5,7 @@
 - `cmoc session join` は、session を完了して `{{cmoc-session-home-branch}}` へ戻すためのコマンドである。
 - i.e. `cmoc session join` は、現在 checkout している `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
 - 通常の git branch 同士の汎用 merge wrapper ではない。
-- merge source、merge target、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/oracle/doc/branch_model.md:3` の「概要」を正本とする。
+- merge source、merge target、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/oracle/doc/branch_model.md` の「概要」を正本とする。
 
 ## 引数
 
@@ -14,7 +14,7 @@
 
 ## 事前条件
 
-`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context と編集 run fork・session 終了の共通事前条件」を満たす。
+`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context と編集 run fork・session 終了の共通事前条件」を満たす。
 
 以下の場合はエラー終了する。
 
@@ -42,7 +42,7 @@ merge conflict が発生した場合は通常の conflict として扱う。
 
 ## feedback state との境界
 
-session join と repository-local feedback state の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:21` の「所有範囲と配置」を正本とする。
+session join と repository-local feedback state の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「所有範囲と配置」を正本とする。
 
 ## `git merge` がコンフリクトした場合
 
@@ -58,7 +58,7 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/o
 ## conflict marker 解消用の agent call
 
 - conflict 解消の意味仕様は、本書の「oracle file 規定と conflict 解消の優先順位」を正本とする
-- 正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py:27` の `build_session_join_conflict_resolution_parameter` へ委譲する
+- 正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_parameter` へ委譲する
 - この agent call は `{{work-root}}` に対する編集操作を伴うため、必ず直列に実行すること
 - oracle edit、oracle review、または realization refactor のための規定を conflict 解消へ転用してはいけない
 

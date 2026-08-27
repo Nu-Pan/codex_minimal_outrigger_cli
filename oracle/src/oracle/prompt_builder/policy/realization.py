@@ -11,7 +11,7 @@ def build_realization_policy(
     """realization file が満たすべき規定を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md:75` の
+        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md` の
         「realization file を扱う判断基準」を参照。
     """
     return (

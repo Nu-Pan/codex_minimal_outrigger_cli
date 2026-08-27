@@ -13,8 +13,8 @@
 
 ## ユーザー指示と prompt の構築
 
-- エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md:1` の「プロンプトのエディタ入力」を正本とする。
-- editor 終了後に抽出した同じオリジナルのユーザー指示を、本命用と仕様削減用の builder に渡す。正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py:15` の `build_oracle_edit_main_launch_exec_parameter` と同ファイル 68 行目の `build_oracle_edit_reduction_launch_exec_parameter` へ委譲する。
+- エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」を正本とする。
+- editor 終了後に抽出した同じオリジナルのユーザー指示を、本命用と仕様削減用の builder に渡す。正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` と `build_oracle_edit_reduction_launch_exec_parameter` へ委譲する。
 - 構築済み prompt の受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
 - editor work file の排他的 writer は管理しない。他の TUI やエディタとの並行操作から生じる競合や不整合は、人間が管理する。
 
@@ -23,7 +23,7 @@
 - doctor preprocess の後、本命 agent call の直前に indexing preflight を 1 回だけ実行する。
 - indexing preflight の後、本命 agent call を起動する直前に次の条件を検査する。条件を満たさない場合は、agent call を開始せずエラー終了する。
     - 呼び出し元の worktree が main worktree であり、`{{work-root}}` と `{{repo-root}}` が一致する。
-    - `{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context」の条件を満たす。
+    - `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を満たす。
 - git working tree または staging area に未コミット差分が存在しても、起動を拒否しない。
 - 起動前に、既存差分を commit、stash、rollback、または退避して worktree を clean にしない。
 - doctor preprocess と indexing preflight による変更と commit は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` と `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従う。indexing 開始時点の既存 `INDEX.md` 差分は、indexing の自動 commit に含まれてよい。
@@ -34,7 +34,7 @@
 - 本命と仕様削減は、それぞれ新しい `codex exec` session の初回 call とする。仕様削減を、本命 session に対する `codex exec resume` として起動してはならない。
 - 各 agent call 内の retry、quota 回復待ち後の resume、および失敗処理には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の共通規約を適用する。
 - builder が構築した `AgentCallParameter` は変更せず、既存の `codex exec` 入力経路へ渡す。実行パラメータを決めるための追加 agent call は行わない。
-- oracle file を扱う判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:64` の「oracle file を扱う判断基準」を正本とする。
+- oracle file を扱う判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」を正本とする。
 
 ## 仕様削減 agent call の判断材料
 

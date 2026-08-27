@@ -10,8 +10,10 @@ def build_oracle_and_realization_basic(
     """oracle, realization についての基本知識の説明文章を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md:1` と
-        `oracle/doc/app_spec/oracle_and_realization_file_enumeration.md:3` を参照。
+        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md` の
+        「oracle file と realization file の責務」と
+        `oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の
+        「分類結果」を参照。
     """
     root_definitions = path_context.root_placeholder_definitions()
     return (
@@ -129,7 +131,7 @@ def build_oracle_and_realization_basic(
 
                         ただし、
 
-                        - `{{work-root}}` 内にネストした git workint tree がある場合、最も内側の git repository を owning repository として git ignore 判定を行う
+                        - `{{work-root}}` 内にネストした git working tree がある場合、最も内側の git repository を owning repository として git ignore 判定を行う
                         - git ignore 判定は `git -C <owning-repository-root> check-ignore --quiet -- <repository-relative-path>` と意味的に等価であれば良い
                         """,
                     ),

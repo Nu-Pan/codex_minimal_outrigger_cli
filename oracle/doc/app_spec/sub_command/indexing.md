@@ -3,7 +3,7 @@
 
 ## 概要
 
-- `cmoc indexing` は、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md:2` の仕様に従って、現在の `{{work-root}}` を明示的にインデクシングする
+- `cmoc indexing` は、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「インデクシングの仕様」に従って、現在の `{{work-root}}` を明示的にインデクシングする
 
 ## 引数
 

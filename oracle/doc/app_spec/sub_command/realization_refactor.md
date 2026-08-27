@@ -4,11 +4,11 @@
 
 - realization refactor は、oracle file と realization file を起点とするファイル単位の追従調査を、current fork で保留した unresolved target 以外の調査要求がなくなるまで繰り返す workload である。
 - 所見調査・修正を行う agent call には commit 差分や変更要約を渡さず、oracle file と realization file を調査対象として渡す。
-- 所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:83` の「oracle file に対する realization file の適合性」を正本とする。
-- 所見調査・修正 call の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py:18` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。
+- 所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」を正本とする。
+- 所見調査・修正 call の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。
 - installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - 短い変更ループを担う realization apply とは workload を分ける。
-- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md:1` の「明示的な join を必要とする編集 run の共通仕様」を正本とする。
+- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「明示的な join を必要とする編集 run の共通仕様」を正本とする。
 
 ## refactor state
 
@@ -39,7 +39,7 @@
 
 ### entry 集合の同期
 
-- entry の対象は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md:3` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
+- entry の対象は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
 - state 同期の完了時には、対象 file と entry に過不足があってはいけない。
 - 人間の編集直後まで常時一致することは要求せず、doctor preprocess、refactor の各処理単位、および run join 後など、cmoc が同期を完了した時点の不変条件とする。
 - 新規 file には次の entry を作成する。
@@ -148,7 +148,7 @@
 
 ## feedback との境界
 
-realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md:63` の「既存 workload との境界」を正本とする。
+realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」を正本とする。
 
 ## fork report、終了 log、および終了コード
 
@@ -164,7 +164,7 @@ realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/orac
     - entry 総数、調査要求あり件数、および各 `last_investigation_result` の件数。
     - run branch 上の変更内容の要約。
 - `completed_with_unresolved` の report では、未調査 target の件数を 0 とする。調査要求あり件数は unresolved target の件数と一致しなければならない。
-- `natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py:22` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt part、文面、起動パラメータ、および選択理由は同 builder へ委譲する。
+- `natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt part、文面、起動パラメータ、および選択理由は同 builder へ委譲する。
 - run branch の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。
 - ユーザー中断後またはエラー後は新しい agent call を行わず、確定済みの変更 path と所見情報から要約する。
 - `{{repo-root}}/.cmoc/gu/ar/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。

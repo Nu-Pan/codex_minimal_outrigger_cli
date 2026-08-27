@@ -5,7 +5,7 @@
 - realization apply は、直近の git commit 群から読み取れる oracle file の変更を realization file へ素早く反映する workload である。
 - fork の正常終了時には、少なくとも注入した commit 差分から読み取れる変更について、oracle file と realization file の間に齟齬がない状態にする。
 - ファイル単位の網羅的な追従は non-goal とし、realization refactor が担う。
-- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md:1` の「明示的な join を必要とする編集 run の共通仕様」を正本とする。
+- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「明示的な join を必要とする編集 run の共通仕様」を正本とする。
 
 ## 引数
 
@@ -24,8 +24,8 @@
 
 ## agent call と file access
 
-- 追従要否と適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:83` の「oracle file に対する realization file の適合性」を正本とする。
-- 正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py:23` の `build_realization_apply_fork_launch_exec_parameter` へ委譲する。
+- 追従要否と適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」を正本とする。
+- 正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py` の `build_realization_apply_fork_launch_exec_parameter` へ委譲する。
 - `{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` を 1 回だけ本命 agent call として実行する。Codex CLI の TUI は起動しない。
 - 本命の追従作業を複数の agent call に分割してはいけない。
 - 収束判定のために同じ作業を反復してはいけない。

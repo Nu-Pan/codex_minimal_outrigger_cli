@@ -21,21 +21,21 @@
 
 ## ユーザー指示の入力
 
-- エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md:1` の「プロンプトのエディタ入力」を正本とする
+- エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」を正本とする
 
 ## TUI 起動パラメータ
 
-- TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、`AgentCallParameter`、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py:15` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
+- TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、`AgentCallParameter`、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
 - `build_oracle_investigation_launch_tui_parameter` が返したパラメータを変更せずに TUI 起動へ渡す
-- oracle file を扱う判断基準は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md:64` の「oracle file を扱う判断基準」を正本とする。正確な agent 向け文面は前述の builder を参照する
+- oracle file を扱う判断基準は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」を正本とする。正確な agent 向け文面は前述の builder を参照する
 - `cmoc tui` のような実行パラメータ決定用 agent call は行わない
 
 ## Codex CLI の起動
 
 - 起動コマンドは `codex` とする
 - `codex exec` は使用しない
-- `$CODEX_HOME`、preflight validation、および Codex CLI 引数による設定上書きの適用範囲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/tui.md:45` の「Codex CLI の場合」を正本とする
-- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md:1` の「Windows toast 通知」を正本とする
+- `$CODEX_HOME`、preflight validation、および Codex CLI 引数による設定上書きの適用範囲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/tui.md` の「Codex CLI の場合」を正本とする
+- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする
 
 ## 調査結果と変更の扱い
 

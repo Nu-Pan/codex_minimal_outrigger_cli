@@ -47,6 +47,8 @@ def build_tui_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
+        oracle_policy=True,
+        realization_policy=True,
         routing_policy=True,
     )
     return AgentCallParameter(

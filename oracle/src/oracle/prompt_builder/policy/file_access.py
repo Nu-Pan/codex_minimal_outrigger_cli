@@ -12,7 +12,7 @@ def build_file_access_policy(
     """エージェントに伝えるファイルアクセス制限規定の文面を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/codex_exec_rule.md:79` の
+        意味仕様は `oracle/doc/app_spec/codex_exec_rule.md` の
         「ファイルアクセス制限」を参照。
         いろいろあって、細かいアクセス制御はプロンプトによる指示とした。
         sandbox の設定は non-goal である。

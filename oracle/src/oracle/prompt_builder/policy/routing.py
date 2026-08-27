@@ -11,7 +11,7 @@ def build_routing_policy(
     INDEX.md を使って必要な文章へ進むための規定文面を構築する
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/indexing.md:79` の
+        意味仕様は `oracle/doc/app_spec/indexing.md` の
         「`INDEX.md` による routing」を参照。
     """
     root_definitions = path_context.root_placeholder_definitions()

@@ -78,7 +78,7 @@
 - `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が存在していること
 - 同 file が git 追跡対象であること
 - JSON のトップレベルが object であり、各 key と value が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の refactor state 仕様を満たすこと
-- 同期完了時点で、entry が `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md:3` の「分類結果」による全 oracle file と全 realization file の和集合に過不足なく対応すること
+- 同期完了時点で、entry が `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」による全 oracle file と全 realization file の和集合に過不足なく対応すること
 - 現在の file の SHA256 が最後に調査した hash と異なる entry で `investigation_required=true` であること
 
 ### 修復

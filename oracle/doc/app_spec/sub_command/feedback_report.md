@@ -2,7 +2,7 @@
 
 `cmoc feedback report` は、pending observation と直前の active state を report cut に固定し、現在も人間対応が必要な issue だけを新しい active state と Markdown report へ publication する。1 件以上の candidate が `inconclusive` になった場合は正常 publication を行わず、確定済みの判定と blocker を `incomplete` 診断 report へ保存する。
 
-raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md:1` の「feedback observation の収集」を正本とする。feedback state の lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:1` の「feedback の repository-local state」を正本とする。
+raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「feedback observation の収集」を正本とする。feedback state の lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
 
 ## CLI 契約
 
@@ -17,8 +17,8 @@ raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md
 処理は、次の順序で開始する。
 
 1. doctor preprocess を実行する。
-2. main worktree で、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md:16` の「active session context」の条件を確認する。
-3. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md:75` の `run.state` が `ready` であることを確認する。
+2. main worktree で、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を確認する。
+3. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の `run.state` が `ready` であることを確認する。
 4. repository-level feedback writer 排他を取得する。
 5. current pointer と既存 state の schema、path、hash、および参照整合性を検証する。
 6. publication 後の cleanup が残っていれば、先に再開する。
@@ -29,7 +29,7 @@ state root または current pointer が存在しない状態は、有効な初�
 
 ## report cut
 
-report cut が固定する入力と更新可能な処理状態は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:120` の「report cut」を正本とする。
+report cut が固定する入力と更新可能な処理状態は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」を正本とする。
 
 cut 固定後に追加された observation は、次回の report で処理する。report-time agent が reporter へ送った observation も、実行中の cut には加えない。
 
@@ -81,7 +81,7 @@ agent が入力した deduplication hint は、候補検索にだけ使用する
 
 normalization agent は、入力した observation が既存 candidate と同じ issue か、新しい issue かだけを返す。
 
-正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py:22` の `build_feedback_normalize_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json:1` の root schema（JSON Pointer `#`）へ委譲する。
+正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py` の `build_feedback_normalize_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
 normalization agent へ渡す情報を次に限定する。
 
@@ -117,7 +117,7 @@ verification agent は、1 candidate と、その candidate に許可した repo
 | `not_actionable` | 状態は存在しても、人間向け報告基準を満たさない。 |
 | `inconclusive` | 許可された reference だけでは判定できない。 |
 
-正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py:22` の `build_feedback_verify_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json:1` の root schema（JSON Pointer `#`）へ委譲する。
+正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py` の `build_feedback_verify_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
 verification agent は候補外の問題を探索せず、repository、config、feedback state、または問題の根拠を変更しない。
 
@@ -139,7 +139,7 @@ schema または決定論的事後条件に適合する output を補正後も�
 
 全 candidate が `unresolved | resolved | not_actionable` のいずれかへ確定した場合だけ、正常 publication を行う。
 
-新しい active generation の record 構成は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:77` の「active generation」を正本とする。
+新しい active generation の record 構成は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「active generation」を正本とする。
 
 正常 result は、次の 2 種類とする。
 
@@ -150,7 +150,7 @@ schema または決定論的事後条件に適合する output を補正後も�
 
 全 candidate の verification output を受理でき、1 件以上が `inconclusive` であり、診断 report を durable に保存して report cut を terminal な `incomplete` として確定できた場合は `result: incomplete` とする。`inconclusive` は、正常 publication を完了できなかった report processing blocker であり、`unresolved` または active issue ではない。
 
-`incomplete` の durable 保存、state transition、および cleanup の禁止は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:148` の「incomplete 診断 report」を正本とする。確定済み checkpoint を新しい active generation へ部分 publication してはならない。
+`incomplete` の durable 保存、state transition、および cleanup の禁止は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「incomplete 診断 report」を正本とする。確定済み checkpoint を新しい active generation へ部分 publication してはならない。
 
 validation failure、AI call failure、Structured Output の受理失敗、state corruption、または durable publication failure を `incomplete` として扱ってはならない。`inconclusive` の checkpoint があっても、全 candidate の verification output を受理できなければ `incomplete` 診断 report を作らない。
 
@@ -213,7 +213,7 @@ current evidence は、削除予定の cut 内 reference だけを指す link �
 
 ### `incomplete` 診断 report
 
-`incomplete` 診断 report は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:148` の「incomplete 診断 report」が定める path へ、正常 report と別の Markdown file として durable に保存する。
+`incomplete` 診断 report は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「incomplete 診断 report」が定める path へ、正常 report と別の Markdown file として durable に保存する。
 
 保存した `incomplete` 診断 report を primary report とする。terminal result に `result: incomplete` を含める。次の操作として、人間が `inconclusive` の原因を修正した後に `cmoc feedback report` を再実行することを示す。
 

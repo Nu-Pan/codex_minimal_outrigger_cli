@@ -10,7 +10,7 @@ def build_feedback_reporting_policy(
     """全 agent call に共通する人間向け feedback の報告規定を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/feedback_observation.md:7` の
+        意味仕様は `oracle/doc/app_spec/feedback_observation.md` の
         「報告基準」を参照。
     """
     return (

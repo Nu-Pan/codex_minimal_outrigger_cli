@@ -10,7 +10,7 @@
 - 永続化する情報は必要最小限に留める。
 - その場で確実に解決できる情報は state に持たせない。
 - 1 session に未 join の編集 run は高々 1 つとする。
-- feedback の repository-local state はこの file に保存しない。保存対象と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md:1` の「feedback の repository-local state」を正本とする。
+- feedback の repository-local state はこの file に保存しない。保存対象と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
 - session または run の状態遷移は、同仕様が所有する feedback state を変更しない。
 
 ## active session context と編集 run fork・session 終了の共通事前条件

@@ -4,9 +4,13 @@ oracle file は、人間が所有して全責任を負う正本仕様断片と�
 
 ## oracle doc と oracle src の正本責務
 
+本節から「正本責務に基づく優先関係」までは、`{{work-root}}` の対象リポジトリに適用する cmoc の共通契約とする。
+
+この共通契約は、cmoc 固有のアプリケーション仕様を他の対象リポジトリへ適用するものではない。
+
 oracle file の下位概念は、正本として所有する事項で区別する。
 
-- oracle doc は `{{work-root}}/oracle/doc` に置く。cmoc の要求、責務、判断基準、goal、non-goal、および意味上の優先関係を定義する意味仕様を所有する。
+- oracle doc は `{{work-root}}/oracle/doc` に置く。対象リポジトリ固有の要求、責務、判断基準、goal、non-goal、および意味上の優先関係を定義する意味仕様を所有する。
 - oracle src は `{{work-root}}/oracle/src` に置く。oracle doc から明示的に委譲された正確な algorithm、builder の選択値、prompt の構築順序・文面・rendering、および schema を所有する。
 - oracle test は `{{work-root}}/oracle/test` に置き、プログラミング言語で正本仕様を検査する。
 
@@ -16,12 +20,12 @@ oracle file の下位概念は、正本として所有する事項で区別す�
 
 | 意味仕様 | 委譲先 |
 |---|---|
-| oracle file、realization file、および uncategorised file の役割と分類。本書と `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md:3` の「分類結果」を正本とする | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py:7` の `build_oracle_and_realization_basic` |
-| oracle file を扱う判断基準 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py:7` の `build_oracle_policy` |
-| realization file を扱う判断基準 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization.py:8` の `build_realization_policy` |
-| oracle file に対する realization file の適合性 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py:7` の `build_realization_findings_policy` |
+| oracle file、realization file、および uncategorised file の役割・分類。本書と `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」を意味仕様の正本とする | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` の `build_oracle_and_realization_basic` |
+| 本書の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までと「oracle file を扱う判断基準」 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py` の `build_oracle_policy` |
+| realization file を扱う判断基準 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization.py` の `build_realization_policy` |
+| oracle file に対する realization file の適合性 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py` の `build_realization_findings_policy` |
 
-prompt literal に固有の役割、制限、および call 固有の実行時指示の優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md:172` の「prompt literal の役割と制限」以降を参照する。
+prompt literal に固有の役割、制限、および call 固有の実行時指示の優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt literal の役割と制限」以降を参照する。
 
 ## 正本責務の重複禁止
 
@@ -33,14 +37,9 @@ prompt literal に固有の役割、制限、および call 固有の実行時�
 
 ## oracle doc から oracle src への委譲
 
-oracle doc は、正確な詳細の正本責務を oracle src へ明示的に委譲してよい。委譲する oracle doc は、参照先が所有する範囲を限定し、次の参照情報を示す。
+oracle doc は、正確な詳細の正本責務を oracle src へ明示的に委譲してよい。委譲先の特定は「oracle file を扱う判断基準」の参照形式に従い、参照先が所有する範囲を明示する。
 
-- root path placeholder で起点を明示した path
-- 現在の行番号
-- 関数、class、定数、または JSON Pointer などの安定した locator
-- 参照先が正本として所有する内容の短い説明
-
-行番号は移動の補助情報とし、参照対象は安定した locator でも特定できるようにする。委譲する oracle doc は、参照先が所有する詳細を本文へ複製しない。
+委譲する oracle doc は、参照先が所有する詳細を本文へ複製しない。
 
 正本関係を相互に追跡する必要がある場合は、Codex へ注入されない oracle src の docstring、comment、または参照 metadata に、意味仕様を所有する oracle doc の repository-relative path と見出しを記載してよい。この記載によって、注入される literal または rendering 結果を変更してはならない。
 
@@ -64,7 +63,7 @@ realization file の下位概念は、次の責務で区別する。
 ## oracle file を扱う判断基準
 
 - 判断の根拠は、関連する oracle file に置く。cmoc 固有契約または oracle file と installed skill が競合する場合は、前者を優先する。
-- 合わせて読む必要がある oracle file は、path、現在の行番号、および参照先の簡潔な内容で特定する。
+- 合わせて読む必要がある oracle file は、root path placeholder で起点を明示した path、安定した locator、および参照先の簡潔な内容で特定し、参照に行番号を含めてはならない。
 - installed skill の存在または一般的なベストプラクティスだけを、oracle file の意味または作業完了条件の根拠にしてはならない。
 - 実装差を許容しない事項と、人間が判断すべき境界を明示する。仕様の隙間を網羅的に埋めるためだけの分類、列挙、または新規 oracle file を追加してはならない。
 - 正本仕様断片には未定義部分を残してよい。明示仕様の隙間は、関連する oracle file と、アクセス可能な場合の既存実装および test から自然に導ける小さな範囲で実装者が補ってよい。過剰な実装を誘発し得る境界では、goal と non-goal を読み取れるようにする。
