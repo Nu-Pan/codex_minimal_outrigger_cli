@@ -1,5 +1,9 @@
 """CmocConfig の既定値・永続化・入力検証を検証する。
 
+この file は 16,000 文字を超えるが、既定値、JSON 変換、merge、および入力拒否は
+同じ config schema と round-trip 契約を共有する。分割すると、設定 field ごとの
+受理条件と永続化結果が複数 file に分散するため、一つの config 回帰として保つ。
+
 根拠:
 - {{work-root}}/oracle/src/oracle/other/cmoc_config.py
 - {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
@@ -42,6 +46,24 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
         assert call_config.model_provider in config.codex.model_providers
         assert call_config.model
         assert call_config.reasoning_effort
+    assert {
+        agent_call_kind: config.codex.agent_calls[agent_call_kind]
+        for agent_call_kind in (
+            "build_feedback_normalize_issue_parameter",
+            "build_oracle_investigation_launch_tui_parameter",
+            "build_tui_launch_tui_parameter",
+        )
+    } == {
+        "build_feedback_normalize_issue_parameter": CodexCallConfig(
+            "openai", "gpt-5.6-sol", "max"
+        ),
+        "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
+            "openai", "gpt-5.6-sol", "ultra"
+        ),
+        "build_tui_launch_tui_parameter": CodexCallConfig(
+            "openai", "gpt-5.6-sol", "ultra"
+        ),
+    }
     assert config.oracle_review.num_enumerate_findings_loop == 2
     assert config.oracle_review.num_merge_findings_loop == 2
     assert config.oracle_review.num_validate_findings_loop == 2

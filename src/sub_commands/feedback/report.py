@@ -40,6 +40,7 @@ from cmoc_runtime import (
     start_subcommand_step,
     work_root,
 )
+from commons.indexing import enable_indexing_preflight
 from commons.runtime_feedback_state import (
     ActiveState,
     agent_canonical_key,
@@ -94,6 +95,7 @@ _MACHINE_DIGEST_LIMIT = 64
 
 def cmoc_feedback_report_impl() -> None:
     """CLI runtime を通して current feedback report を publication する。"""
+    enable_indexing_preflight()
     run_cli_subcommand(
         _cmoc_feedback_report_body,
         command_name="feedback report",

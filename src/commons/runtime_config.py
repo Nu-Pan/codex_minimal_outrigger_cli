@@ -83,9 +83,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         agent_calls[normalized_kind] = {
             "model_provider": _model_provider_id(call_config.model_provider),
             "model": _model_name(call_config.model),
-            "reasoning_effort": _reasoning_effort_name(
-                call_config.reasoning_effort
-            ),
+            "reasoning_effort": _reasoning_effort_name(call_config.reasoning_effort),
         }
 
     return {
@@ -178,9 +176,7 @@ def _model_provider_map_from_dict(
                 raise TypeError
             validate_json_toml_value(key)
             restored_settings[key] = validate_json_toml_value(setting)
-        restored[normalized_provider_id] = CodexModelProviderConfig(
-            restored_settings
-        )
+        restored[normalized_provider_id] = CodexModelProviderConfig(restored_settings)
     return restored
 
 
@@ -199,9 +195,7 @@ def _agent_call_map_from_dict(
         restored[normalized_kind] = CodexCallConfig(
             model_provider=_model_provider_id(value.get("model_provider")),
             model=_model_name(value.get("model")),
-            reasoning_effort=_reasoning_effort_name(
-                value.get("reasoning_effort")
-            ),
+            reasoning_effort=_reasoning_effort_name(value.get("reasoning_effort")),
         )
     return restored
 

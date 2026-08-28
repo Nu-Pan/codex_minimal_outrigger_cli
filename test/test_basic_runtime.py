@@ -1,5 +1,9 @@
 """Root/worktree と path model の runtime 契約を検証する。
 
+この file は 16,000 文字を超えるが、root placeholder の解決と managed worktree の
+操作は同じ Git repository／worktree 境界を共有する。分割すると、Git fixture と
+root 不変条件の検証文脈が複数 file に分散するため、一つの runtime 回帰として保つ。
+
 根拠:
 - {{work-root}}/oracle/src/oracle/other/path_model.py
 - {{work-root}}/oracle/doc/branch_model.md
@@ -82,6 +86,95 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     assert repo_root(linked) == root.resolve()
     assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
+
+
+@pytest.mark.parametrize("marker_kind", ["file", "directory"])
+def test_root_resolution_ignores_dot_git_names_without_repository_metadata(
+    tmp_path: Path,
+    marker_kind: str,
+) -> None:
+    """通常の `.git` 名を内側の worktree metadata として扱わない。"""
+    root = make_repo(tmp_path)
+    nested = root / "nested"
+    nested.mkdir()
+    marker = nested / ".git"
+    if marker_kind == "file":
+        marker.write_text("not git metadata\n")
+    else:
+        marker.mkdir()
+
+    context = AgentCallPathContext(nested)
+
+    assert context.work_root == root.resolve()
+    assert context.repo_root == root.resolve()
+
+
+def test_agent_call_path_context_resolves_submodule_repository(
+    tmp_path: Path,
+) -> None:
+    """submodule の Git metadata から submodule 自身の両 root を解決する。"""
+    source_parent = tmp_path / "source"
+    parent_parent = tmp_path / "parent"
+    source_parent.mkdir()
+    parent_parent.mkdir()
+    source = make_repo(source_parent)
+    parent = make_repo(parent_parent)
+    submodule = parent / "nested"
+    run_git(
+        parent,
+        "-c",
+        "protocol.file.allow=always",
+        "submodule",
+        "add",
+        str(source),
+        submodule.name,
+    )
+
+    context = AgentCallPathContext(submodule)
+
+    assert context.work_root == submodule.resolve()
+    assert context.repo_root == submodule.resolve()
+
+
+def test_agent_call_path_context_resolves_separate_git_directory(
+    tmp_path: Path,
+) -> None:
+    """separate git directory でも worktree path を両 root として解決する。"""
+    worktree = tmp_path / "separate-worktree"
+    git_directory = tmp_path / "separate-metadata"
+    worktree.mkdir()
+    run_git(
+        worktree,
+        "init",
+        "--template=/dev/null",
+        f"--separate-git-dir={git_directory}",
+    )
+
+    context = AgentCallPathContext(worktree)
+
+    assert context.work_root == worktree.resolve()
+    assert context.repo_root == worktree.resolve()
+
+
+def test_agent_call_path_context_ignores_repository_selection_environment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Git の repository 選択環境変数で agent call の cwd 起点を上書きしない。"""
+    target_parent = tmp_path / "target"
+    override_parent = tmp_path / "override"
+    target_parent.mkdir()
+    override_parent.mkdir()
+    target = make_repo(target_parent)
+    override = make_repo(override_parent)
+    monkeypatch.setenv("GIT_DIR", str(override / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(override))
+    monkeypatch.setenv("GIT_COMMON_DIR", str(override / ".git"))
+
+    context = AgentCallPathContext(target)
+
+    assert context.work_root == target.resolve()
+    assert context.repo_root == target.resolve()
 
 
 def test_agent_call_path_contexts_are_parallel_and_call_scoped(

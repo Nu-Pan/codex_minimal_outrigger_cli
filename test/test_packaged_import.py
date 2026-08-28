@@ -11,6 +11,8 @@ import sys
 import tomllib
 from pathlib import Path
 
+from _git_support import make_repo
+
 
 def _run_from_packaged_layout(
     target: Path, code: str, tmp_path: Path
@@ -18,15 +20,13 @@ def _run_from_packaged_layout(
     """隔離した packaged layout で Python コードを実行する。
 
     `-S` と `PYTHONNOUSERSITE` で外部 site-packages の影響を除き、
-    `PYTHONPATH` でコピーした tree だけを import 対象にする。空の `.git` は
-    作業ルート探索が一時ディレクトリ外へ逃げないように置く。HOME も一時
+    `PYTHONPATH` でコピーした tree だけを import 対象にする。実在する Git
+    repository を作業ルートにする。HOME も一時
     ディレクトリ内へ向け、実行者の設定や認証情報を持ち込まない。
     根拠: {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
-    work = tmp_path / "work"
-    work.mkdir(exist_ok=True)
-    (work / ".git").mkdir()
+    work = make_repo(tmp_path)
     home = tmp_path / "home"
     home.mkdir()
     return subprocess.run(
@@ -141,11 +141,13 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "skeleton = build_main("
             "editor_input.ORIGINAL_PROMPT_PLACEHOLDER).prompt; "
             "editor_input._select_editor = lambda: ['fake-editor']; "
+            "real_subprocess_run = editor_input.subprocess.run; "
             "editor_input.subprocess.run = lambda argv: "
             "(Path(argv[-1]).write_text('oracle を編集する'), "
             "SimpleNamespace(returncode=0))[1]; "
             "editor_input.edit_prompt_editor_input("
             "Path.cwd(), work, skeleton); "
+            "editor_input.subprocess.run = real_subprocess_run; "
             "original = editor_input.collect_prompt_editor_input("
             "Path.cwd(), work, saved); "
             "p = build_main(original); "

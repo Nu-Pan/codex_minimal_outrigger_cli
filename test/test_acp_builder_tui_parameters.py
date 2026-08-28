@@ -45,12 +45,12 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
         "# oracle and realization basic",
         "# oracle policy",
         "# realization policy",
+        "# oracle findings policy",
+        "# realization findings policy",
         "# routing policy",
     ):
         assert heading in complete_prompt
     for heading in (
-        "# oracle findings policy",
-        "# realization findings policy",
         "# conflict resolution policy",
         "# index entry policy",
         "# realization oracle reference policy",

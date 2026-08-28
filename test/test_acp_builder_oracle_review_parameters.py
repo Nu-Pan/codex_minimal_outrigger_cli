@@ -29,6 +29,7 @@ from typing import Callable
 
 import pytest
 from _acp_builder_support import oracle_schema_path
+from _git_support import make_repo
 from jsonschema import ValidationError, validate
 from oracle.acp_builder.oracle.review.enumerate_finding import (
     build_oracle_review_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
@@ -158,12 +159,12 @@ def test_oracle_review_builders_select_required_policy_blocks(
     arguments: tuple[object, ...],
 ) -> None:
     """review の全段階で oracle と所見判定の policy block を注入する。"""
-    (tmp_path / ".git").mkdir()
-    parameter = builder(*arguments, agent_call_cwd=tmp_path)
+    root = make_repo(tmp_path)
+    parameter = builder(*arguments, agent_call_cwd=root)
     prompt = parameter.prompt
 
-    assert parameter.agent_call_cwd == tmp_path.resolve()
-    assert f"- {{{{work-root}}}} = {tmp_path.resolve()}" in prompt
+    assert parameter.agent_call_cwd == root.resolve()
+    assert f"- {{{{work-root}}}} = {root.resolve()}" in prompt
     assert "# oracle policy" in prompt
     assert "# oracle findings policy" in prompt
     assert "# routing policy" in prompt

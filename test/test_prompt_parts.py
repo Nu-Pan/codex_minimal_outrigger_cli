@@ -207,11 +207,12 @@ def test_selected_policy_blocks_remain_separate_without_deduplication() -> None:
     )
 
     rendered = render_sd_node_as_markdown(*prompt)
+    assert rendered.count("oracle file の具体的な記述だけから成立する問題") == 1
     assert (
         rendered.count(
             "所見は oracle file, realization file の記述・挙動を根拠として持つ"
         )
-        == 2
+        == 1
     )
     assert rendered.index("# oracle findings policy") < rendered.index(
         "# realization findings policy"
@@ -359,8 +360,12 @@ def test_complete_prompt_renders_file_classification_boundaries() -> None:
         "最も内側の git repository を owning repository",
         "git -C <owning-repository-root> check-ignore --quiet",
         "実際に git repository metadata である",
+        "`{{work-root}}/src` に配置されている",
+        "`{{work-root}}/test` に配置されている",
     ):
         assert expected in rendered
+    assert "通常は `{{work-root}}/src` に配置されている" not in rendered
+    assert "通常は `{{work-root}}/test` に配置されている" not in rendered
 
 
 def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
@@ -538,9 +543,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """complete promptが入力root tokenを保持し、実pathの定義行を追加することを検証する。"""
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
+    repo_root = make_repo(tmp_path)
     monkeypatch.chdir(repo_root)
 
     prompt = build_complete_prompt(
@@ -629,6 +632,7 @@ def test_build_oracle_findings_policy_renders_core_review_requirements() -> None
 
     rendered = _render_policy(builder_result)
     assert "oracle findings policy" in rendered
+    assert "oracle file の具体的な記述だけから成立する問題" in rendered
     assert "fatal" in rendered
     assert "minor" in rendered
     assert "正本仕様断片同士の解釈の余地がない明確な矛盾" in rendered

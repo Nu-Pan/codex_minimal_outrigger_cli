@@ -15,19 +15,18 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の publication／diagnostic pipeline を担う実装。固定済み report cut を起点に、raw observation の検証、agent・machine candidate の deterministic 集約、normalization と verification checkpoint の再利用、正常な generation/report publication、または incomplete 診断 report の保存までを一つの transaction として処理する。
-- report cut では active state、current pointer、repository reference、raw observation の hash を固定し、処理再開時に入力と checkpoint の整合性を再検証する。publication 前後の current pointer 切替、generation artifact 保存、raw・checkpoint cleanup、割り込み・失敗・cleanup 未完了の状態記録もこの module が扱う。
-- feedback report サブコマンドの実行入口は `cmoc_feedback_report_impl` で、共通 CLI runner と writer lock を介して事前条件確認から最終 `TerminalResult` までを制御する。candidate の issue identity 判定や verification の詳細は専用 builder・schema、永続 state と artifact 操作の契約は `commons` の runtime module が下位入口となる。
+- `cmoc feedback report` の固定済み report cut を処理するサブコマンド実装。raw observation と active state・repository reference を検証して cut を固定し、machine recurrence 集約、agent issue identity normalization、全 candidate の verification、正常な generation/report publication、または incomplete 診断 report の保存までを checkpoint・writer lock・current pointer と一体で管理する。
+- feedback report の中断・失敗・publication 再開・cleanup 再試行を含む transaction 状態機械を担い、canonical JSON、hash、Structured Output schema、reference 制約、secret masking、bounded evidence を検証・永続化する。
 
 ## Read this when
-- `cmoc feedback report` の全体処理順序、report cut の固定、再開可能な checkpoint 処理を確認するとき。
-- raw observation から issue candidate を作成・集約し、machine recurrence threshold や agent observation の同一性判定を確認するとき。
-- verification 結果に基づく正常 publication、incomplete 診断、current pointer 切替、cleanup、割り込み・失敗時の状態遷移を確認するとき。
+- `cmoc feedback report` の実行経路、report cut の作成・再開・破棄、normalization／verification checkpoint、candidate 集約、または publication の挙動を調査・変更するとき。
+- feedback report の正常 publication と incomplete 診断、current pointer の切替、active issue／machine aggregate の生成、raw observation cleanup の責務を確認するとき。
+- feedback state や feedback report の app specification と実装の対応を確認するとき。
 
 ## Do not read this when
-- feedback state の schema、generation・pointer・checkpoint の永続化契約そのものを確認したいときは、対応する `commons.runtime_feedback_state` と oracle 仕様を直接読む。
-- normalization または verification agent の prompt、builder、Structured Output schema の詳細を確認したいときは、各 feedback builder と schema を直接読む。
-- CLI 共通 runner、subcommand logger、primary report fields などの共通動作だけを確認したいときは、対応する runtime module を直接読む。
+- feedback observation の入力形式や保存処理だけを調べる場合は、観測 envelope・raw store を直接定義する対象を先に読む。
+- feedback issue の normalization／verification agent prompt や Structured Output schema の内容だけを調べる場合は、それぞれの builder・schema を直接読む。
+- report の Markdown 表示形式だけを確認する場合は、report rendering を仕様化する対象を先に読む。
 
 ## hash
-- c588820ada526aa1d88dae4e550b94560e56f46bda4c83c9908fc418176afc4a
+- 26a3b66fb10275c28f3b157fad0f98fb21102eda9ec05d53482e14d78badb3d4

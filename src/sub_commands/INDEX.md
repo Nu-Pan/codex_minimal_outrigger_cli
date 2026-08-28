@@ -32,22 +32,23 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装をまとめるディレクトリ。サブコマンドの入口と、report の publication／diagnostic pipeline を確認・変更する際の下位入口となる。
-- `__init__.py` は feedback サブコマンド全体の入口であり、feedback の挙動や実装を確認するときに進む。
-- `report.py` は固定済み report cut を起点に raw observation の検証、candidate 集約、normalization・verification、generation/report publication、incomplete 診断、状態遷移と cleanup を一つの transaction として扱う。`cmoc feedback report` の処理順序や再開可能な checkpoint、publication 前後の状態を調べる際の直接の入口となる。
+- feedback サブコマンド実装の入口。feedback 関連の CLI 処理を確認・変更するときに参照する。
+- 固定済み report cut を起点に、feedback report の検証、checkpoint 管理、issue・machine 集約、candidate 検証、正常 publication、incomplete 診断を処理する。feedback report の実行経路や状態遷移を調べる際の中心的な実装対象である。
 
 ## Read this when
-- feedback サブコマンドの挙動や実装を確認・変更するとき。
-- `cmoc feedback report` の report cut、checkpoint、candidate 集約、verification、publication、診断、cleanup、失敗・割り込み時の状態遷移を確認するとき。
+- feedback サブコマンドの実装や CLI 入口を確認・変更するとき。
+- feedback report の report cut 固定、再開・中断・失敗処理、cleanup、checkpoint、writer lock、current pointer の挙動を調べるとき。
+- feedback observation の検証結果を用いた normalization、verification、candidate 集約、正常 publication、incomplete 診断の処理を調べるとき。
+- feedback state と feedback report の仕様に対する実装対応を確認するとき。
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき。
-- feedback state の schema、generation・pointer・checkpoint の永続化契約そのものを確認するとき。
-- normalization または verification の prompt、builder、Structured Output schema の詳細を確認するとき。
-- CLI 共通 runner、subcommand logger、primary report fields など、feedback に固有でない共通動作だけを確認するとき。
+- feedback report 以外のサブコマンドを扱うとき。
+- feedback observation の入力形式や raw store の保存処理だけを調べるときは、観測入力と保存を直接定義する対象を先に読む。
+- issue normalization・verification 用の agent prompt や Structured Output schema だけを調べるときは、それぞれの builder・schema を直接読む。
+- report の Markdown 表示形式だけを確認するときは、report rendering を仕様化する対象を先に読む。
 
 ## hash
-- 1ced03effacb2252e6c608f03a14354c4661218c5f8f15842e7543ea1edc12d2
+- 247bd90db7c4b0a6ae3200d51a272f144142be3e05b33c1e8f81a1ead4a0263c
 
 # `indexing.py`
 

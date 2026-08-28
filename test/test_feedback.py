@@ -472,6 +472,36 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
         )
 
 
+def test_feedback_report_registers_indexing_preflight_before_cli_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """feedback report が本命 agent call 用 preflight を invocation 前に登録する。"""
+    events: list[str] = []
+
+    def record_enable_indexing_preflight() -> None:
+        """indexing preflight の登録順を記録する。"""
+        events.append("enable-indexing")
+
+    def record_run_cli_subcommand(*_args: object, **_kwargs: object) -> None:
+        """CLI runtime への委譲順を記録する。"""
+        events.append("run-cli")
+
+    monkeypatch.setattr(
+        feedback_report_module,
+        "enable_indexing_preflight",
+        record_enable_indexing_preflight,
+    )
+    monkeypatch.setattr(
+        feedback_report_module,
+        "run_cli_subcommand",
+        record_run_cli_subcommand,
+    )
+
+    feedback_report_module.cmoc_feedback_report_impl()
+
+    assert events == ["enable-indexing", "run-cli"]
+
+
 def test_feedback_normalize_builder_protects_nested_code_fences(
     tmp_path: Path,
 ) -> None:
