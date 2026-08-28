@@ -1,31 +1,97 @@
 {
   "num_parallel": 8,
   "codex": {
-    "model_providers": {},
-    "model": {
-      "mainstream": {
-        "model_provider": null,
-        "model": "gpt-5.6-terra"
-      },
-      "flagship": {
-        "model_provider": null,
-        "model": "gpt-5.6-sol"
-      },
-      "efficiency": {
-        "model_provider": null,
-        "model": "gpt-5.6-luna"
-      },
-      "minimum": {
-        "model_provider": null,
-        "model": "gpt-5.6-luna"
+    "model_providers": {
+      "codex": {
+        "settings": {}
       }
     },
-    "reasoning_effort": {
-      "low": "low",
-      "medium": "medium",
-      "high": "high",
-      "xhigh": "xhigh",
-      "max": "max"
+    "agent_calls": {
+      "build_session_join_conflict_resolution_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "max"
+      },
+      "build_feedback_verify_issue_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "max"
+      },
+      "build_oracle_investigation_launch_tui_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "max"
+      },
+      "build_oracle_edit_main_launch_exec_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "max"
+      },
+      "build_oracle_edit_reduction_launch_exec_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "max"
+      },
+      "build_realization_apply_fork_launch_exec_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "max"
+      },
+      "build_feedback_normalize_issue_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-terra",
+        "reasoning_effort": "high"
+      },
+      "build_tui_launch_tui_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "max"
+      },
+      "build_oracle_review_enumerate_finding_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "max"
+      },
+      "build_oracle_review_merge_finding_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "max"
+      },
+      "build_oracle_review_validate_finding_advocate_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "max"
+      },
+      "build_oracle_review_validate_finding_challenger_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "max"
+      },
+      "build_oracle_review_judge_finding_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "max"
+      },
+      "build_realization_refactor_fork_file_review_and_fix_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "max"
+      },
+      "build_realization_refactor_fork_change_summary_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "medium"
+      },
+      "build_indexing_index_entry_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "low"
+      },
+      "build_quota_availability_probe_parameter": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "low"
+      }
     }
   },
   "oracle_review": {

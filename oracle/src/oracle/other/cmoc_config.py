@@ -71,7 +71,7 @@ class CmocConfigCodex:
     # `AgentCallParameter.agent_call_kind` --> Codex CLI へ直接渡す設定
     agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
-            # merge 結果を守るため、既定設定の中で最も品質を優先する。
+            # NOTE merge 結果を守るため、既定設定の中で最も品質を優先する。
             "build_session_join_conflict_resolution_parameter": CodexCallConfig(
                 model_provider="codex",
                 model="gpt-5.6-sol",
@@ -82,6 +82,7 @@ class CmocConfigCodex:
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
+            # NOTE TUI 起動系なので性能最優先で ultra
             "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
                 model_provider="codex",
                 model="gpt-5.6-sol",
@@ -104,13 +105,14 @@ class CmocConfigCodex:
             ),
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="codex",
-                model="gpt-5.6-terra",
-                reasoning_effort="high",
+                model="gpt-5.6-sol",
+                reasoning_effort="max",
             ),
+            # NOTE TUI 起動系なので性能最優先で ultra
             "build_tui_launch_tui_parameter": CodexCallConfig(
                 model_provider="codex",
-                model="gpt-5.6-luna",
-                reasoning_effort="max",
+                model="gpt-5.6-sol",
+                reasoning_effort="ultra",
             ),
             "build_oracle_review_enumerate_finding_parameter": CodexCallConfig(
                 model_provider="codex",
@@ -147,13 +149,13 @@ class CmocConfigCodex:
                 model="gpt-5.6-luna",
                 reasoning_effort="medium",
             ),
-            # 呼び出し回数が多い単純な要約タスクなので、quota 消費を抑える。
+            # NOTE 呼び出し回数が多い単純な要約タスクなので、quota 消費を抑える。
             "build_indexing_index_entry_parameter": CodexCallConfig(
                 model_provider="codex",
                 model="gpt-5.6-luna",
                 reasoning_effort="low",
             ),
-            # 終了結果だけを使う probe なので、quota 消費を抑える。
+            # NOTE 終了結果だけを使う probe なので、quota 消費を抑える。
             "build_quota_availability_probe_parameter": CodexCallConfig(
                 model_provider="codex",
                 model="gpt-5.6-luna",
