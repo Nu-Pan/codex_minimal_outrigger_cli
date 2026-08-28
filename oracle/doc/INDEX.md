@@ -1,20 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を構成する正本文書群。CLI 自動補完、サブコマンド、session・run、feedback、ログ、通知、prompt、Codex 呼び出しなどの挙動仕様へ進むための上位入口。
-- 共通仕様と個別 workload 仕様を横断して、実装・変更・レビュー対象に対応する正本文書を選ぶための仕様ディレクトリ。
+- cmoc のアプリケーション仕様を集約する正本文書群。CLI サブコマンド、agent call、feedback、session/run、ログ、通知、自動補完、インデクシングなど、利用者向け挙動と横断的な実行契約の確認先を提供する。
+- 個別機能の仕様へ進むための上位入口であり、共通規約とサブコマンド固有仕様の担当範囲を整理している。
 
 ## Read this when
-- cmoc の CLI 挙動、workflow、状態管理、feedback、ログ、通知、prompt、Codex agent call などの正本仕様を調査・変更・レビューするとき。
-- 対象機能に対応する個別仕様の所在や、共通仕様と workload 固有仕様の責務分担を確認するとき。
+- cmoc の利用者向け挙動、CLI サブコマンド、workflow、agent call、feedback、session/run の正本仕様を探すとき
+- 複数のアプリケーション仕様にまたがる実行境界、状態遷移、ログ、通知、自動補完、インデクシングの仕様入口を確認するとき
 
 ## Do not read this when
-- 特定仕様の詳細が明確な場合は、このディレクトリ全体ではなく対応する個別の正本文書を直接読む。
-- 実装ファイルやテストの具体的な挙動だけを調べる場合は、対応する realization file を直接読む。
-- INDEX.md の生成・更新規則自体を確認する場合は、indexing の仕様を直接読む。
+- 対象となる単一仕様の内容が明確な場合は、一覧から該当する個別仕様を直接読む
+- 実装ファイル、テスト、または oracle file と realization file の分類規則だけを確認するときは、それぞれの対象ファイルや共通規約を直接読む
 
 ## hash
-- 57934ac439a98e323f85e57531901e5264433ad167ffce0817056c4afc8acd1b
+- bc02ae37e8ac2a42826d0f4fb76a62096f3c0459c6aeb3d24ed4f2338b087982
 
 # `branch_model.md`
 

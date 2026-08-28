@@ -401,21 +401,23 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の外部契約を一続きの統合テストとして検証する入口。Git 状態・config・refactor state・reporter の修復、修復順序と degraded/error 挙動、共有 doctor lock、linked worktree の境界を扱う。
-- 修復 commit が既存の staged/unstaged 差分、rename、削除、index flag、intent-to-add、追跡済みローカルファイルを壊さず、必要な runtime ファイルだけを扱うことを検証する。
-- doctor CLI と直接呼び出しの双方について、repository/worktree fixture と preprocess の副作用を横断して確認する統合テスト。
+- doctor preprocess の CLI と直接呼び出しにおける外部契約を検証する統合テスト。
+- Git ignore、.agents、config、refactor state の修復と必要な repair commit を、同一の repository/worktree lifecycle として確認する。
+- 共有 doctor lock、linked worktree、reporter の degraded/error 挙動、および既存の staged・unstaged な Git index 状態を保持する修復処理を検証する。
 
 ## Read this when
-- doctor preprocess や doctor CLI の Git 修復・commit・config/state 同期の外部挙動を変更または確認するとき。
-- linked worktree と repository root の修復対象の分離、共有 lock、reporter probe の順序や例外処理を調べるとき。
-- doctor が既存の staged/unstaged 差分や特殊な Git index 状態を保持する契約をテストから確認するとき。
+- doctor preprocess の修復対象、処理順序、commit 範囲、または修復後の CLI レポートを確認したいとき
+- repository と linked worktree にまたがる doctor lock・runtime file・Git ignore の挙動を確認したいとき
+- doctor 実行前から存在する staged change、unstaged hunk、rename、index flag、intent-to-add を保持する契約を確認したいとき
+- feedback reporter の利用不能を warning として扱う条件、または中断・予期しない例外を伝播する条件を確認したいとき
 
 ## Do not read this when
-- doctor preprocess の個別実装や正本仕様を直接確認したい場合は、まず doctor 実装または列挙された oracle 仕様を読むとき。
-- doctor 以外の CLI サブコマンド、一般的な Git fixture、単独の config/state 同期処理だけを扱う場合。
+- doctor preprocess の実装詳細や正本仕様の定義を確認したいときは、doctor の実装または列挙された正本仕様を直接読む
+- Git 操作の共通 fixture・CLI 実行ヘルパー・Git コマンドの補助実装を確認したいときは、それぞれの補助対象を直接読む
+- doctor 以外のサブコマンドや、個別の config・refactor state・feedback reporter 単体の挙動だけを確認したいときは、対応する対象を直接読む
 
 ## hash
-- 94e2efa5467d69666e4006dc13d6e619bb561ab7eb984cd7830e309d30e5c0c1
+- c5e51b505a15134402bc7a42f4fe540ef9af34b43f8cd33a17076d9baff903c3
 
 # `test_editing_run_cli.py`
 
@@ -827,21 +829,23 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値と、agent call ごとの model provider・model・reasoning effort の直接設定を検証するテスト。
-- config.json の読み書き・ラウンドトリップ、JSON/TOML 共通値を含む provider-local settings の保持、旧設定項目の除外を検証する。
-- 設定入力の型・値・入れ子深度、破損 JSON、非通常ファイル、symlink、named pipe などの不正条件を利用者向けエラーへ変換する境界を検証する。
+- CmocConfig の既定値と agent call ごとの Codex provider・model・reasoning effort の直接設定を検証するテスト。
+- config.json の section・map 順序、全設定値の round-trip、旧形式設定の除外を検証する。
+- JSON/TOML 共通値、必須文字列、整数、object 構造、深い入れ子、有限性などの入力検証と利用者向けエラー変換を検証する。
+- config path の欠落・非通常ファイル・named pipe・symlink を安全に扱い、doctor の案内や link 先非変更を確認する。
 
 ## Read this when
-- CmocConfig の既定値、設定 section の構造、agent call の直接設定、provider-local settings の永続化を変更・調査するとき
-- config_from_dict、config_to_dict、load_config、write_config の入力検証やエラー処理を変更・調査するとき
-- config.json の欠落・破損・過度な入れ子・不安全なパスに対する挙動を確認するとき
+- cmoc config の読み込み・書き込み・変換仕様に対するテスト挙動を確認するとき
+- CmocConfig の既定値、Codex provider、agent call 設定、oracle_review 設定の永続化を確認するとき
+- 不正な設定値や壊れた JSON に対する CmocError と UTF-8 安全なエラー報告を確認するとき
+- config path の安全性や、旧 config 形式の互換的な除外を確認するとき
 
 ## Do not read this when
-- agent call の実行処理、Codex provider 自体の実装、oracle review の内部ロジックを直接変更・調査するとき
-- 設定の仕様や実装を扱わず、他の runtime 機能のテストやエラー表示だけを確認するとき
+- CmocConfig の実装詳細や正本仕様そのものを確認する必要があるときは、設定実装または対応する oracle 文書を直接読む
+- config 永続化・入力検証以外のランタイム機能や、他のテスト領域を調べるときは、このテストを入口にしない
 
 ## hash
-- 34d010787612896edea632b4f502954292d0bae780e5762b9bc982839ced179e
+- 14001a43fd34eff5d41b32d930f11121102d14d32b77e94ef2513d7de1e773f6
 
 # `test_runtime_content.py`
 

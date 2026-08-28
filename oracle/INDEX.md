@@ -1,36 +1,32 @@
 # `doc`
 
 ## Summary
-- cmoc の正本文書群全体への上位入口。アプリケーション仕様、開発ルール、branch 運用、検討資料を領域別に選び、具体的な正本文書へ進むためのディレクトリ。
-- CLI の挙動、session・run、feedback、ログ、通知、prompt、Codex 呼び出しなどは app_spec、実装・環境・テストの規則は dev_rule、git による隔離モデルは branch_model、不採用案の背景は considered_alternative から確認する。
+- cmoc の正本文書群への上位入口。アプリケーション仕様、開発ルール、branch model、採用しなかった代替案など、実装・調査時に参照先を振り分ける。
+- 利用者向け挙動や実行契約は app_spec、開発・テスト・環境の規則は dev_rule、session/run の git 隔離モデルは branch_model、設計上の不採用案と理由は considered_alternative から確認する。
 
 ## Read this when
-- cmoc の正本仕様または開発関連文書の所在を判断するとき。
-- 対象機能の個別仕様、開発ルール、branch 運用、または設計上の不採用案へ進む上位入口が必要なとき。
+- cmoc の正本文書を探しており、対象がアプリケーション仕様、開発ルール、branch・worktree モデル、または不採用となった代替案のいずれかに該当するとき
+- 複数の文書領域にまたがる仕様・実装・調査の入口を選ぶ必要があるとき
 
 ## Do not read this when
-- 確認対象の機能やルールが明確で、対応する配下の個別文書を直接読めるとき。
-- 実装ファイルやテストの具体的な挙動だけを調べるとき。
-- INDEX.md の生成・更新規則そのものを調べるときは、app_spec 内の indexing 仕様を直接読む。
+- 対象文書の領域が明確で、app_spec、dev_rule、branch_model、considered_alternative のいずれかを直接読めるとき
+- 実装ファイル、テスト、または個別仕様の具体的な内容だけを確認したいとき
 
 ## hash
-- 04b8792d848e653c894d15a3fcc08488cdf7ad4c2a37fee7b7ebfd02f5fb490f
+- c51320ce58bcd02e3c03008f6ee6f5add39b9c50b3c1b3eecc24cfb4eaf4f229
 
 # `src`
 
 ## Summary
-- cmoc の agent call 構築、prompt 生成、設定・パスモデル、構造化文書レンダリング、feedback 処理を担う oracle 実装の入口です。
-- agent call の種類別処理は acp_builder、prompt の組み立てと規定文面は prompt_builder、共通の設定・パス・文書構造は other 配下から確認します。
+- oracle source の実装を構成する下位領域への入口。agent call 構築、prompt/policy、設定・パス・文書モデル、feedback 契約など、cmoc の動作を支える正本実装を責務別に辿るための階層。
 
 ## Read this when
-- oracle 実装の責務分担や下位領域の入口を確認したいとき。
-- agent call のパラメータ構築、prompt の生成、ファイルアクセス・routing・oracle/realization 関連 policy の実装を調べるとき。
-- cmoc の設定、agent call 用パス placeholder、構造化文書の生成・Markdown レンダリングを調べるとき。
+- oracle の実装全体で責務の分担や調査の開始地点を確認したいとき。
+- agent call、prompt/policy、設定・パス・構造化文書、feedback のいずれかに関わる実装を、責務別の下位領域へ切り分けて調べるとき。
 
 ## Do not read this when
-- oracle の意味仕様や開発規則を確認したいときは、対応する oracle/doc を直接読んでください。
-- 特定の agent call、prompt policy、feedback、設定・パスモデルの具体的な挙動だけを調べるときは、対応する下位ディレクトリまたは実装を直接読んでください。
-- INDEX.md の生成規則や routing の意味仕様だけを確認したいときは、対応する oracle/doc または専用の下位要素を直接読んでください。
+- 特定の下位領域の具体的な処理や契約だけを確認したいときは、その責務を直接扱う下位対象へ進む。
+- 既存の INDEX.md の内容やルーティング結果だけを確認したいとき。
 
 ## hash
-- 0f9b9bde67c18cf82babfce28d668895c006eae31818b5e27b4b8af7e8c07a01
+- b82e6de44f2da399749607fc7140e811d4cf744306f67ae2e14a45622a4b4712

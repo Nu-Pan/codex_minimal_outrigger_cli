@@ -35,23 +35,22 @@
 # `other`
 
 ## Summary
-- cmoc のリポジトリ別設定モデルと Codex 呼び出し・oracle review の設定を定義する。設定項目、既定値、シリアライズ構造を確認する入口。
-- パス表記とルートプレースホルダー、および agent call ごとの work root・repository root を導出するパスコンテキストを定義する。パス解決や worktree 境界を確認する入口。
-- 構造化文書要素を保持し、見出し・タグブロック・コードブロック・規定文を Markdown にレンダリングする。文書生成と Markdown 整形の挙動を確認する入口。
+- cmoc のリポジトリ固有設定をデータクラスとして定義する。並列数、Codex CLI の provider・agent call 設定、ファイルアクセス違反時のリカバリ回数、oracle review の各ループ上限を扱う設定モデルの入口。
+- cmoc で使用する root path placeholder と、agent call ごとの cwd・worktree・repository の対応を定義する。placeholder と実パスの相互変換、Git worktree を基準とした root 解決、パス境界の挙動を扱う実装の入口。
+- 構造化された文書要素を Markdown にレンダリングする。見出し階層、参照可能な cmoc ブロック、コードフェンス、規定文、空行および三重引用文字列の整形を扱う文書生成ヘルパーの入口。
 
 ## Read this when
-- CmocConfig の設定項目、既定値、Codex provider・agent call 設定、oracle review のループ上限を確認または変更するとき。
-- ルートプレースホルダー、agent call の cwd、Git worktree からの root 導出、実パス解決を確認または変更するとき。
-- 構造化文書の Markdown レンダリング、見出し深度、参照タグ、コードフェンス、規定文、空行整形を確認または変更するとき。
+- cmoc の設定項目、既定値、Codex CLI の provider-local 設定、agent call 設定、または oracle review のループ上限を確認・変更するとき。
+- root placeholder の定義・解決、agent call の cwd から導出される work root と repository root、Git worktree に基づくパス境界、または placeholder 付きパスの変換を確認・変更するとき。
+- 構造化文書を Markdown 化する処理、見出し深度、cmoc ブロック参照、コードフェンス、規定文、空行圧縮、または三重引用文字列の正規化を確認・変更するとき。
 
 ## Do not read this when
-- agent call のプロンプト生成や Codex 呼び出し処理そのものを調べるとき。
-- oracle review の所見生成・検証ロジック自体を調べるとき。
-- パス解決や worktree 境界に関係しない特定 CLI 機能だけを調べるとき。
-- Markdown 以外の出力や、構造化文書の具体的な利用内容・正本仕様を調べるとき。
+- 設定ファイルの実際の JSON 内容、設定の生成・同期や doctor の挙動、Codex CLI 呼び出しまたは oracle review の具体的な処理を確認するとき。
+- 特定の CLI 機能や oracle 文書の内容だけを調べ、root placeholder、worktree 境界、agent call のパスコンテキストに関係しないとき。
+- Markdown 以外の出力形式、文書要素の具体的な内容、正本仕様、またはこのヘルパーの利用側の処理を直接確認するとき。
 
 ## hash
-- 23e7cff4b233f70c36799f5ff2bd927e4f902b38799113a173b6dc009ae22480
+- 53e4e839f09195842b67ca2dbd261218f8f8944948dc6227a5745c791d4f4adf
 
 # `prompt_builder`
 

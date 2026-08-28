@@ -1,21 +1,20 @@
 # `cmoc_config.py`
 
 ## Summary
-- 開発対象リポジトリごとに異なる cmoc の挙動設定を集約する設定データモデル。JSON/TOML 共通値、Codex の provider・agent call 設定、oracle review のループ上限を扱う。
-- 設定値の既定値と構造を確認したいときの入口であり、`config.json` の生成・同期・人手調整に対応する構成を理解するために読む。
+- cmoc のリポジトリ固有設定を集約するデータクラス群。並列数、Codex CLI の provider・agent call 設定、oracle review のループ上限を扱う構成の入口。
 
 ## Read this when
-- CmocConfig の項目、既定値、Codex CLI 呼び出し設定、model provider 設定を変更または確認するとき。
-- `cmoc oracle review` の列挙・マージ・検証ループ上限を調整するとき。
-- 設定クラスを JSON/TOML にシリアライズする構造や、永続化される config.json との対応を調べるとき。
+- cmoc の設定項目や既定値を確認するとき
+- Codex CLI の provider-local 設定や agent call ごとの設定構造を確認するとき
+- oracle review の各ループ上限を確認するとき
 
 ## Do not read this when
-- agent call のプロンプト生成や個別の Codex 呼び出し処理そのものを調べる場合は、直接その実装を読む。
-- oracle review の所見生成・検証ロジックの挙動を調べる場合は、ループ設定ではなく該当する review 実装を直接読む。
-- 永続化ファイルの実際の内容だけを確認する場合は、生成された config.json を直接読む。
+- 設定ファイルの実際の JSON 内容を確認したいとき
+- 設定の生成・同期処理や doctor の挙動を確認したいとき
+- Codex CLI 呼び出しや oracle review の具体的な処理を確認したいとき
 
 ## hash
-- 39a62379f22af3b1e8547a6f499bc01750671c294099d12f46633d04200396bd
+- e81dd38d24740b171f955063f620157926c861e3e4ad2c11e0df2c7914e4808a
 
 # `path_model.py`
 

@@ -91,19 +91,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と oracle 実装をまとめる上位ディレクトリです。
-- 意味仕様・開発規則・branch model・検討資料は doc、agent call 構築・prompt 生成・設定・パスモデル・構造化文書・feedback 処理の実装は src から確認します。
+- cmoc の正本文書群と oracle source 実装を、責務別の下位領域へ辿るための上位入口。
+- 文書領域ではアプリケーション仕様、開発ルール、branch・worktree モデル、不採用案を扱う。
+- 実装領域では agent call、prompt/policy、設定・パス・構造化文書、feedback など cmoc の動作を支える責務を扱う。
 
 ## Read this when
-- cmoc の正本文書と oracle 実装のどちらを入口にするか判断するとき。
-- 仕様領域または実装領域の下位ディレクトリへ進む前に、oracle 全体の構成を確認するとき。
+- cmoc の oracle 配下で、正本文書または正本実装の責務領域を特定し、適切な下位対象から調査・変更を始めるとき
+- アプリケーション仕様、開発・テスト・環境規則、branch モデル、不採用案、または agent call・prompt/policy・設定・文書・feedback 実装の入口を選ぶとき
 
 ## Do not read this when
-- 確認対象の仕様文書や実装領域が明確で、doc または src 配下の対象を直接読めるとき。
-- 実装の具体的な挙動、個別の agent call、または特定仕様の詳細だけを調べるとき。
+- 確認したい領域が明確で、該当する文書領域または src 配下の責務領域を直接読めるとき
+- 実装ファイル、テスト、個別仕様、または既存の INDEX.md の具体的な内容だけを確認したいとき
 
 ## hash
-- acc67dba53c97311d3bbc6245e5cc3ff895fe7409ca14d9b28d40e66bfbb1808
+- 2e936e455e23a47d7dd8f8c644ff9832a0ad6e09316009ce77be0aeeaf5118bb
 
 # `pyproject.toml`
 
@@ -147,18 +148,19 @@
 # `test`
 
 ## Summary
-- cmoc のテストスイート全体への入口。ACP builder、CLI、Codex runtime、doctor、indexing、oracle review、session、feedback、prompt、state、Git/worktree、通知など、実装領域ごとの外部契約・回帰条件を検証するテストを収録する。
-- 対象機能の外部挙動や回帰条件を、個別テストへ分岐して確認するための上位ルーティング先。単体・統合・実経路受け入れ試験まで、機能境界に応じた検証入口を提供する。
+- cmoc の runtime、CLI、Codex 実行、ACP builder、各サブコマンドの外部契約を検証する回帰・統合テスト群と、テスト環境を隔離する共有 helper の入口。
+- 実装や正本仕様の変更に対して、終了結果、永続状態、Git/worktree、agent call、report、prompt、path 境界など観測可能な挙動を確認する。
 
 ## Read this when
-- cmoc の既存挙動をテストから確認したいとき
-- 変更対象の機能領域に対応する回帰テストや統合テストの入口を探すとき
-- CLI、Codex 実行、worktree、Git、state、report、通知などの外部契約を検証するとき
+- cmoc の CLI または runtime の外部挙動を変更・検証するとき
+- Codex 実行、ACP builder、prompt、file access、worktree、Git、report、state、feedback の契約をテストから確認するとき
+- 複数のサブコマンドや共通 runtime にまたがる統合 lifecycle を調査するとき
+- テスト用の Git repository、fake external command、Codex 環境、CLI 実行、toast 隔離など共有 test helper の利用方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装責務そのものを確認したいときは、対応する oracle 文書または実装ファイルを直接読む
-- Structured Output schema の項目・型・形式だけを確認したいときは、対応する schema を直接読む
-- テスト実行方法や開発環境の共通手順だけを確認したいときは、該当する開発規定・テスト実行手順を読む
+- 実装責務、正本仕様、schema、prompt 本文、または個別機能の設計を確認することが目的のときは、対応する src または oracle の対象を直接読む
+- テスト対象の一機能だけを確認できる専用テストや下位対象が明確なときは、このディレクトリ全体を読む必要はない
+- テスト実行手順だけを確認するときは、repository local の test_execution skill を読む
 
 ## hash
-- 3f3a6ac1e3d49bef39a33a64e667f41a0bc39a75ba25ecf7276369f014c9439e
+- 3344040bef5b1ee7c04d9d12a3edcf2cf9840e5e671c4ce416ea05a56661b179

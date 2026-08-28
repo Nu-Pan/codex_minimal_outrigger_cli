@@ -37,20 +37,21 @@
 # `codex_model_provider.md`
 
 ## Summary
-- Codex の agent call 種別ごとに、model provider ID・Model 名・Reasoning Effort 名を直接選択し、Codex CLI へ渡すための正本仕様。provider 定義 mapping、provider-local 設定、cmoc の責務境界と non-goal も定める。
+- 各 agent call 種別に対応する model provider、Model、Reasoning Effort の直接設定と、provider-local 設定 mapping の責務を定義する入口。
+- 設定値を Codex CLI の起動前に検証し、変換・丸め・fallback せず argv へ渡す規則と、cmoc が provider の運用を担わない境界を扱う。
 
 ## Read this when
-- agent call 種別に応じた Codex の model provider、Model、Reasoning Effort の設定や既定値を確認するとき。
-- provider ID の定義 mapping、provider-local 設定の表現、未知の provider や未設定 agent call 種別の扱いを確認するとき。
-- cmoc が provider の起動・管理や互換性検査を担うかなど、model provider に関する責務境界を判断するとき。
+- agent call 種別ごとの model provider、Model、Reasoning Effort の設定や既定値を確認するとき
+- provider 定義、provider-local key、未知の provider の扱いを確認するとき
+- 設定値を Codex CLI に反映する責務境界や、cmoc が provider 運用を保証しない範囲を確認するとき
 
 ## Do not read this when
-- 設定データ構造、field 名、型、既定値の正確な定義だけを確認したいときは、Codex 設定定義の正本を直接読む。
-- agent call 設定を Codex CLI の argv に反映する具体的な規則だけを確認したいときは、codex_exec_rule.md の該当節を直接読む。
-- prompt、sandbox、file access policy、network access、通知設定など、model provider 設定以外の agent call 設定を扱うとき。
+- 設定データ構造、field 名、型、既定値の正確な定義だけを確認したい場合は、指定された cmoc_config.py の定義を直接読むとき
+- agent_call_kind から Codex CLI argv へ反映する詳細規則だけを確認したい場合は、codex_exec_rule.md の該当節を直接読むとき
+- prompt、sandbox、file access policy、network access、通知設定の仕様を確認したい場合
 
 ## hash
-- 082b8537980b4db2f96fee2015bbd984fd4197a7a11f0195012986f0c14eb32e
+- 5d18119343b2bb16952d91246f29024d921a3f1dc2a762633e0c14edd859f4d4
 
 # `console_and_file_log.md`
 
