@@ -25,7 +25,7 @@
 
 ## TUI 起動パラメータ
 
-- TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、`AgentCallParameter`、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
+- TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
 - `build_oracle_investigation_launch_tui_parameter` が返したパラメータを変更せずに TUI 起動へ渡す
 - oracle file を扱う判断基準は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」を正本とする。正確な agent 向け文面は前述の builder を参照する
 - `cmoc tui` のような実行パラメータ決定用 agent call は行わない

@@ -6,8 +6,6 @@ from pathlib import Path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext, resolve_real_path
 
@@ -80,14 +78,8 @@ def build_indexing_index_entry_parameter(
     # NOTE
     #   この agent call は indexing preflight そのもの。
     #   よって run_indexing_preflight=False が正しい。
-    # NOTE
-    #   呼び出し回数がとにかく多いので、経済性がとても大事
-    #   非常に単純な要約タスクなので、かなり品質を下げても成立しやすい
-    #   cmoc 上の下限設定を採用
     return AgentCallParameter(
         agent_call_kind=build_indexing_index_entry_parameter.__name__,
-        model_class=ModelClass.MINIMUM,
-        reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),

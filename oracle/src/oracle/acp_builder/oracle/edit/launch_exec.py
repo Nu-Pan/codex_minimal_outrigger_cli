@@ -4,8 +4,6 @@
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
 from oracle.other.struct_doc import SDHeader, SDTagBlock, render_sd_node_as_markdown
@@ -55,8 +53,6 @@ def build_oracle_edit_main_launch_exec_parameter(
     )
     return AgentCallParameter(
         agent_call_kind=build_oracle_edit_main_launch_exec_parameter.__name__,
-        model_class=ModelClass.FLAGSHIP,
-        reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,
@@ -113,8 +109,6 @@ def build_oracle_edit_reduction_launch_exec_parameter(
     )
     return AgentCallParameter(
         agent_call_kind=build_oracle_edit_reduction_launch_exec_parameter.__name__,
-        model_class=ModelClass.FLAGSHIP,
-        reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,

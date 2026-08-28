@@ -4,7 +4,8 @@
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
 - 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする
-- 個別 agent call の AgentCallParameter builder は、対応する oracle doc が明示的に委譲した範囲で、正確な prompt 文面と起動パラメータを構築する
+- 個別 agent call の AgentCallParameter builder は、対応する oracle doc が明示的に委譲した範囲で、正確な prompt 文面と、model provider、Model、および Reasoning Effort を除く workload 固有の起動パラメータを構築する
+- `AgentCallParameter` の field 名、型、および既定値を含む正確な構造は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
 - 本書で agent call とは、1 個の `AgentCallParameter` に対する論理的な呼び出し単位を指す
 - Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
 - 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
@@ -139,31 +140,28 @@ call-scoped path context の適用範囲を次に示す。
 
 - agent call が発生させた差分がファイルアクセス制限に違反していないかの事後検証は禁止とする
 
-## Model provider, Model, Reasoning Effort
+## Model provider、Model、Reasoning Effort
 
-- Codex CLI に対する Model, Reasoning Effort は、全ての呼び出しで以下の argv により明示的に上書きする
+- agent call ごとの直接設定、値の意味、検証境界、および provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` を正本とする
+- cmoc は agent call ごとに、`AgentCallParameter.agent_call_kind` を key として `CmocConfigCodex` の対応する設定を取得する
+- 取得した model provider、Model、および Reasoning Effort は、初回、Structured Output の補正、retry、および quota 待機後の resume を含む同一 agent call 内の全 Codex call で変更せず使用する
+- quota availability probe は独立した agent call とし、probe 自身の `agent_call_kind` に対応する設定を使用する
+- Codex CLI に対する Model と Reasoning Effort は、全ての呼び出しで次の argv により明示的に上書きする
     - Model: `--model`, `{{model-name}}`
     - Reasoning Effort: `--config`, `model_reasoning_effort="{{reasoning-effort}}"`
-- `{{model-name}}` は `AgentCallParameter.model_class` を `CmocConfigCodex.model` で解決したモデル名とする
-- `{{reasoning-effort}}` は `AgentCallParameter.reasoning_effort` を `CmocConfigCodex.reasoning_effort` で解決した値とする
-- `AgentCallParameter.model_class` から解決した `CodexModelSpec.model_provider` が `None` の場合は、model provider に関する argv override を渡さない
-- null でない model provider ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` に従って Codex CLI 起動前に解決し、解決できなければエラーとする
-- null でない model provider ID は、次と同じ形の argv により呼び出し単位で明示的に上書きする
+- model provider ID は、次と同じ形の argv により呼び出し単位で明示的に上書きする
     ```text
     --config 'model_provider={{provider ID の TOML value}}'
     ```
-- 選択した provider の `CodexModelProviderConfig.settings` は、各 key/value を次と同じ形の argv により呼び出し単位で明示的に上書きする
+- 選択した provider の provider-local 設定は、各 key/value を次と同じ形の argv により呼び出し単位で明示的に上書きする
     ```text
     --config 'model_providers.{{provider ID の TOML key segment}}.{{provider-local key の TOML key segment}}={{provider-local setting の TOML value}}'
     ```
 - model provider ID、provider-local key、および provider-local setting は、意味を変えず Codex CLI が解釈できる TOML key/value として符号化する
 - 選択していない provider の設定を argv に渡してはならない
 - model provider の選択と provider-local 設定に `--profile`、`$CODEX_HOME/config.toml`、または project config を使用してはならない
-- 実経路統合テスト以外の通常実行では、各 AgentCallParameter builder の実行可能部分と docstring が、model class と reasoning effort の正確な選択と選択理由を所有する
-- 実際の model provider、model、および reasoning effort の値は `CmocConfigCodex` から解決する
-- 実経路統合テストだけに適用する model class と reasoning effort の例外は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする
-- この例外によって、通常実行の AgentCallParameter builder の責務を変更してはならない
-- cmoc は Model provider, Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
+- 実経路統合テストで使用する `CmocConfig` の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「実経路統合テスト」を正本とする
+- cmoc は Model provider、Model、Reasoning Effort の設定情報を Codex CLI プロンプトに注入しない
 
 ## プロンプトの渡し方
 
@@ -292,7 +290,7 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 - 補正中は、固定した差分を変動させてはいけない。補正 turn が差分を変動させた場合は、初回 Codex call 完了時の状態へ戻し、出力修正だけでは解消できない失敗として扱う
 - 差分不変性の検査を、file access mode 違反の判定またはリカバリに使用してはいけない
 - 補正 turn では indexing preflight を再実行しない
-- 補正 turn の model、reasoning effort、cwd、および Structured Output schema は、元の agent call と整合させる
+- 補正 turn の cwd と Structured Output schema は、元の agent call と整合させる
 
 ### 補正不能時の扱い
 

@@ -7,8 +7,6 @@ from pathlib import Path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import (
@@ -73,8 +71,6 @@ def build_realization_apply_fork_launch_exec_parameter(
     )
     return AgentCallParameter(
         agent_call_kind=build_realization_apply_fork_launch_exec_parameter.__name__,
-        model_class=ModelClass.FLAGSHIP,
-        reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,

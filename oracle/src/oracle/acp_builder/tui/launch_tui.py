@@ -4,8 +4,6 @@
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
 from oracle.other.struct_doc import SDHeader, SDTagBlock, render_sd_node_as_markdown
@@ -53,8 +51,6 @@ def build_tui_launch_tui_parameter(
     )
     return AgentCallParameter(
         agent_call_kind=build_tui_launch_tui_parameter.__name__,
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,

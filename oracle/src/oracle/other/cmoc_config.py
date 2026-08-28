@@ -4,17 +4,12 @@
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
 - `CmocConfig` は `{{work-root}}/.cmoc/gt/ar/config.json` として永続化される
 - `CmocConfig` を json にシリアライズする際、メンバーの順序は保持される
-- Enum 系を継承したクラスのインスタンスは value 化して json に保存する
-    - e.g. `ModelClass.MAINSTREAM` --> `mainstream`
 - `{{work-root}}/.cmoc/gt/ar/config.json` は `cmoc doctor` によって生成・同期される
 - `{{work-root}}/.cmoc/gt/ar/config.json` は人間によって編集・調整される
 """
 
 # std
 from dataclasses import dataclass, field
-
-# cmoc
-from oracle.acp_builder.basic import ModelClass, ReasoningEffort
 
 # JSON と TOML の両方で表現できる設定値
 type JsonTomlValue = (
@@ -28,6 +23,20 @@ class CodexModelProviderConfig:
 
     # provider-local key --> JSON/TOML 共通の設定値
     settings: dict[str, JsonTomlValue] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class CodexCallConfig:
+    """一つの agent call 種別から各 Codex call へ直接渡す設定。"""
+
+    # model provider ID
+    model_provider: str
+
+    # Model 名
+    model: str
+
+    # Reasoning Effort 名
+    reasoning_effort: str
 
 
 @dataclass(frozen=True)
@@ -49,46 +58,107 @@ class CmocConfig:
 
 
 @dataclass(frozen=True)
-class CodexModelSpec:
-    """Codex CLI 上のモデル指定"""
-
-    # model provider ID。None の場合は Codex CLI の既定値を使う
-    model_provider: str | None
-
-    # モデル名
-    model: str
-
-
-@dataclass(frozen=True)
 class CmocConfigCodex:
     """
     cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
     """
 
     # model provider ID --> provider-local な Codex config
-    model_providers: dict[str, CodexModelProviderConfig] = field(default_factory=dict)
-
-    # `ModelClass` --> Codex CLI が受理可能な Model 名
-    # NOTE
-    #   モデル名の未定義は禁止
-    #   モデル名は case sensitive なので注意
-    model: dict[ModelClass, CodexModelSpec] = field(
-        default_factory=lambda: {
-            ModelClass.MAINSTREAM: CodexModelSpec(None, "gpt-5.6-terra"),
-            ModelClass.FLAGSHIP: CodexModelSpec(None, "gpt-5.6-sol"),
-            ModelClass.EFFICIENCY: CodexModelSpec(None, "gpt-5.6-luna"),
-            ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.6-luna"),
-        }
+    model_providers: dict[str, CodexModelProviderConfig] = field(
+        default_factory=lambda: {"codex": CodexModelProviderConfig()}
     )
 
-    # `ReasoningEffort` --> Codex CLI が受理可能な Reasoning Effort 名
-    reasoning_effort: dict[ReasoningEffort, str] = field(
+    # `AgentCallParameter.agent_call_kind` --> Codex CLI へ直接渡す設定
+    agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
-            ReasoningEffort.LOW: "low",
-            ReasoningEffort.MEDIUM: "medium",
-            ReasoningEffort.HIGH: "high",
-            ReasoningEffort.XHIGH: "xhigh",
-            ReasoningEffort.MAX: "max",
+            # merge 結果を守るため、既定設定の中で最も品質を優先する。
+            "build_session_join_conflict_resolution_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-sol",
+                reasoning_effort="max",
+            ),
+            "build_feedback_verify_issue_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-sol",
+                reasoning_effort="max",
+            ),
+            "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-sol",
+                reasoning_effort="max",
+            ),
+            "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-sol",
+                reasoning_effort="max",
+            ),
+            "build_oracle_edit_reduction_launch_exec_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-sol",
+                reasoning_effort="max",
+            ),
+            "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-sol",
+                reasoning_effort="max",
+            ),
+            "build_feedback_normalize_issue_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-terra",
+                reasoning_effort="high",
+            ),
+            "build_tui_launch_tui_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            "build_oracle_review_enumerate_finding_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            "build_oracle_review_merge_finding_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            "build_oracle_review_validate_finding_advocate_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            "build_oracle_review_validate_finding_challenger_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            "build_oracle_review_judge_finding_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            "build_realization_refactor_fork_file_review_and_fix_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            "build_realization_refactor_fork_change_summary_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="medium",
+            ),
+            # 呼び出し回数が多い単純な要約タスクなので、quota 消費を抑える。
+            "build_indexing_index_entry_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="low",
+            ),
+            # 終了結果だけを使う probe なので、quota 消費を抑える。
+            "build_quota_availability_probe_parameter": CodexCallConfig(
+                model_provider="codex",
+                model="gpt-5.6-luna",
+                reasoning_effort="low",
+            ),
         }
     )
 

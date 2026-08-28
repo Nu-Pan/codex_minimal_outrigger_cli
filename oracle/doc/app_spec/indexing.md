@@ -108,7 +108,7 @@
 ### 目次情報の生成方法
 
 - 目次情報の生成対象 1 件ごとに、独立した agent call を行う
-- agent call は本書の「目次情報の意味要件」に従う。正確な prompt part、文面、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.py` の `build_indexing_index_entry_parameter` へ委譲する
+- agent call は本書の「目次情報の意味要件」に従う。正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.py` の `build_indexing_index_entry_parameter` へ委譲する
 - 「ファイル・ディレクトリ名」「ハッシュ値」などの機械的に処理可能な部分は cmoc が責任を持つ
 
 ## 目次情報生成の並列実行

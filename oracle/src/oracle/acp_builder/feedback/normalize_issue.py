@@ -7,8 +7,6 @@ from pathlib import Path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import (
@@ -68,8 +66,6 @@ def build_feedback_normalize_issue_parameter(
     )
     return AgentCallParameter(
         agent_call_kind=build_feedback_normalize_issue_parameter.__name__,
-        model_class=ModelClass.MAINSTREAM,
-        reasoning_effort=ReasoningEffort.HIGH,
         file_access_mode=FileAccessMode.READONLY,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),

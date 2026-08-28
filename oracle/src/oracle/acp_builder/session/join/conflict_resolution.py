@@ -6,8 +6,6 @@ from pathlib import Path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import (
     AgentCallPathContext,
@@ -36,7 +34,7 @@ def build_session_join_conflict_resolution_parameter(
 
     NOTE
         marker 解消に必要な専用 policy だけを選び、edit や refactor の広い policy は使わない。
-        余計な変更を避けるため preflight を行わず、merge 結果を守るため最高品質設定を使う。
+        余計な変更を避けるため preflight を行わない。
     """
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
     resolved_paths = [
@@ -82,8 +80,6 @@ def build_session_join_conflict_resolution_parameter(
     )
     return AgentCallParameter(
         agent_call_kind=build_session_join_conflict_resolution_parameter.__name__,
-        model_class=ModelClass.FLAGSHIP,
-        reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,

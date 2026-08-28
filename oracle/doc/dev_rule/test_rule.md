@@ -43,20 +43,19 @@
 - 公開末端サブコマンドの追加または rename に対して、対応する実経路統合テストケースがなければ test を失敗させる
 - Codex CLI 呼び出しには、実在の Codex CLI executable と実推論を使用する
 - Fake、mock、stub、記録済み response、または起動確認だけでは実経路統合テストを代替できない
-- 本番との差は、`{{test-root}}` による隔離、決定論的な入力、対話操作の自動化、および本書が定める実経路統合テスト専用のモデル設定に必要な範囲だけ許容する
+- 本番との差は、`{{test-root}}` による隔離、決定論的な入力、対話操作の自動化、および本書が定めるテスト用 `CmocConfig` の直接設定に必要な範囲だけ許容する
 - `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、実経路統合テストとはみなさない
 - 新規の公開末端サブコマンドには、同じ変更で対応する実経路統合テストケースを追加する
 
-### Model、Reasoning Effort、quota、および model provider
+### Model provider、Model、Reasoning Effort、および quota
 
-- 実経路統合テストから発生するすべての Codex call は、`ModelClass.MINIMUM` と `ReasoningEffort.LOW` を使用する
-- このモデル設定は実経路統合テストだけの例外とする
-- 通常実行では、各 `AgentCallParameter` builder が model class と reasoning effort の選択を担う
-- 自動テストによる quota 消費を一律には禁止しない
-- 実経路統合テストでは、通常の `CmocConfig` で選択される model provider の quota 消費を許容する
-- 実経路統合テストの仕様へ、具体的な model provider またはモデル名を固定してはならない
-- model provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` を正本とする
-- 実経路統合テストは、model provider に対する cmoc の責務境界を広げない
+- 実経路統合テストから発生する各 agent call は、テスト用 `CmocConfig` の対応する `agent_call_kind` entry から model provider、Model、および Reasoning Effort の直接文字列を取得する
+- テスト用 `CmocConfig` には、実経路統合テストから発生する各 agent call 種別の設定を用意する
+- テスト用 `CmocConfig` の直接設定は、必要な実推論を維持しながら実経路統合テストの quota 消費を抑えるために、通常の既定設定と異なる値を使用してよい
+- 実経路統合テスト専用の cmoc 固有なモデル分類または推論強度分類を導入してはならない
+- 自動テストによる quota 消費を一律には禁止せず、テスト用 `CmocConfig` で選択される model provider の quota 消費を許容する
+- 実経路統合テストの仕様または pytest command へ、具体的な model provider または Model 名を固定してはならない
+- model provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` を正本とし、実経路統合テストのために広げてはならない
 - quota 枯渇時の待機と再開を含む通常の Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする
 
 ## Fake Codex CLI

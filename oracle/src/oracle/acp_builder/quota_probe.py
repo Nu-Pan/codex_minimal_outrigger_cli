@@ -5,8 +5,6 @@ from pathlib import Path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import render_sd_node_as_markdown
@@ -32,12 +30,10 @@ def build_quota_availability_probe_parameter(
     )
     return AgentCallParameter(
         agent_call_kind=build_quota_availability_probe_parameter.__name__,
-        model_class=ModelClass.MINIMUM,
-        reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
-        # NOTE 終了結果だけを使う probe なので最小コスト設定とし、preflight の再帰を避ける。
+        # NOTE quota probe から indexing preflight が再帰するのを避ける。
         run_indexing_preflight=False,
     )

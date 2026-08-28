@@ -58,7 +58,7 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/o
 ## conflict marker 解消用の agent call
 
 - conflict 解消の意味仕様は、本書の「oracle file 規定と conflict 解消の優先順位」を正本とする
-- 正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_parameter` へ委譲する
+- 正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_parameter` へ委譲する
 - この agent call は `{{work-root}}` に対する編集操作を伴うため、必ず直列に実行すること
 - oracle edit、oracle review、または realization refactor のための規定を conflict 解消へ転用してはいけない
 

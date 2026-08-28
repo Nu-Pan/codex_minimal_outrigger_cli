@@ -6,8 +6,6 @@ from pathlib import Path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext
 
@@ -68,8 +66,6 @@ def build_oracle_review_merge_finding_parameter(
     )
     return AgentCallParameter(
         agent_call_kind=build_oracle_review_merge_finding_parameter.__name__,
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),

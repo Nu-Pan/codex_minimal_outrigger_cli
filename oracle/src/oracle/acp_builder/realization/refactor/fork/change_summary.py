@@ -7,8 +7,6 @@ from pathlib import Path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
 )
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import (
@@ -54,8 +52,6 @@ def build_realization_refactor_fork_change_summary_parameter(
         agent_call_kind=(
             build_realization_refactor_fork_change_summary_parameter.__name__
         ),
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.MEDIUM,
         file_access_mode=FileAccessMode.READONLY,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),

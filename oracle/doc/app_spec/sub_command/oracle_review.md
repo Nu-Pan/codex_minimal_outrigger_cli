@@ -45,7 +45,7 @@
 ## agent call 規定
 
 - 個別 agent call の意味上の責務と判断基準は本書で定義する。
-- 各段階の正確な prompt 文面、prompt part の選択、起動パラメータ、および選択理由は、次の builder へ委譲する。
+- 各段階の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、次の builder へ委譲する。
     - 新規所見の列挙: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.py` の `build_oracle_review_enumerate_finding_parameter`
     - 所見のマージ: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py` の `build_oracle_review_merge_finding_parameter`
     - 所見が妥当である理由の記述: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py` の `build_oracle_review_validate_finding_advocate_parameter`
