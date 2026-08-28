@@ -24,9 +24,9 @@
 - provider 定義 mapping は、model provider ID を単一 provider の provider-local 設定へ対応付ける
 - 各 provider-local 設定は、provider-local key を null 以外の JSON/TOML 共通値へ対応付ける
 - 設定された model provider ID が provider 定義 mapping に存在しない場合は、Codex CLI を起動する前にエラーとする
-- `model_provider="codex"` は Codex 規定 provider を選択する直接の provider ID とする
-- `codex` を cmoc 固有の論理名または sentinel として扱わず、別の provider ID へ変換してはならない
-- 既定の provider 定義には、provider-local 設定が空の `codex` を含める
+- `model_provider="openai"` は Codex CLI の組み込み既定 provider を選択する直接の provider ID とする
+- `openai` を cmoc 固有の論理名または sentinel として扱わず、別の provider ID へ変換してはならない
+- 既定の provider 定義には、provider-local 設定が空の `openai` を含める
 - Codex CLI の組み込み model provider を明示的に選択する場合を含め、provider-local 設定が不要な provider は空の provider-local 設定を持ってよい
 - cmoc は model provider ID の allowlist または provider 固有 schema を持たず、Codex CLI が受理する model provider ID と provider-local key を許容する
 - provider-local key は選択した provider の定義直下に属する key だけを表し、完全な Codex config path や provider 外の設定を含めてはならない

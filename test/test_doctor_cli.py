@@ -421,7 +421,7 @@ def test_doctor_generates_and_tracks_config(
     )
     assert "num_try_falv_recovery" not in json.loads(config_path.read_text())["codex"]
     assert json.loads(config_path.read_text())["codex"]["model_providers"] == {
-        "codex": {"settings": {}}
+        "openai": {"settings": {}}
     }
     assert (
         ".cmoc/gt/ar/config.json"
@@ -573,7 +573,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
     assert data["codex"]["model_providers"] == {
-        "codex": {"settings": {}},
+        "openai": {"settings": {}},
         "custom": {"settings": {}},
     }
     assert data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"] == {
@@ -584,9 +584,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     default_call = CmocConfig().codex.agent_calls[
         "build_indexing_index_entry_parameter"
     ]
-    assert data["codex"]["agent_calls"][
-        "build_indexing_index_entry_parameter"
-    ] == {
+    assert data["codex"]["agent_calls"]["build_indexing_index_entry_parameter"] == {
         "model_provider": default_call.model_provider,
         "model": default_call.model,
         "reasoning_effort": default_call.reasoning_effort,

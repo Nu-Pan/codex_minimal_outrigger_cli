@@ -65,7 +65,7 @@ class CmocConfigCodex:
 
     # model provider ID --> provider-local な Codex config
     model_providers: dict[str, CodexModelProviderConfig] = field(
-        default_factory=lambda: {"codex": CodexModelProviderConfig()}
+        default_factory=lambda: {"openai": CodexModelProviderConfig()}
     )
 
     # `AgentCallParameter.agent_call_kind` --> Codex CLI へ直接渡す設定
@@ -73,91 +73,91 @@ class CmocConfigCodex:
         default_factory=lambda: {
             # NOTE merge 結果を守るため、既定設定の中で最も品質を優先する。
             "build_session_join_conflict_resolution_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
             "build_feedback_verify_issue_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
             # NOTE TUI 起動系なので性能最優先で ultra
             "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
             "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
             "build_oracle_edit_reduction_launch_exec_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
             # NOTE TUI 起動系なので性能最優先で ultra
             "build_tui_launch_tui_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-sol",
                 reasoning_effort="ultra",
             ),
             "build_oracle_review_enumerate_finding_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="max",
             ),
             "build_oracle_review_merge_finding_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="max",
             ),
             "build_oracle_review_validate_finding_advocate_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="max",
             ),
             "build_oracle_review_validate_finding_challenger_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="max",
             ),
             "build_oracle_review_judge_finding_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="max",
             ),
             "build_realization_refactor_fork_file_review_and_fix_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="max",
             ),
             "build_realization_refactor_fork_change_summary_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="medium",
             ),
             # NOTE 呼び出し回数が多い単純な要約タスクなので、quota 消費を抑える。
             "build_indexing_index_entry_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="low",
             ),
             # NOTE 終了結果だけを使う probe なので、quota 消費を抑える。
             "build_quota_availability_probe_parameter": CodexCallConfig(
-                model_provider="codex",
+                model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="low",
             ),

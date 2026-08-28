@@ -35,7 +35,7 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
     config = CmocConfig()
 
     assert config.num_parallel == 8
-    assert config.codex.model_providers == {"codex": CodexModelProviderConfig()}
+    assert config.codex.model_providers == {"openai": CodexModelProviderConfig()}
     assert config.codex.agent_calls
     for agent_call_kind, call_config in config.codex.agent_calls.items():
         assert agent_call_kind
@@ -228,7 +228,7 @@ def test_config_rejects_invalid_codex_agent_call_settings(
 ) -> None:
     """直接設定の必須文字列が不正な config を拒否する。"""
     call_config: dict[str, object] = {
-        "model_provider": "codex",
+        "model_provider": "openai",
         "model": "gpt-model",
         "reasoning_effort": "high",
     }
@@ -247,7 +247,7 @@ def test_invalid_config_error_report_escapes_surrogate() -> None:
                 "codex": {
                     "agent_calls": {
                         "custom_call": {
-                            "model_provider": "codex",
+                            "model_provider": "openai",
                             "model": "\ud800",
                             "reasoning_effort": "high",
                         }
@@ -348,7 +348,7 @@ def test_config_preserves_generic_model_provider_settings() -> None:
     )
 
     assert config.codex.model_providers == {
-        "codex": CodexModelProviderConfig(),
+        "openai": CodexModelProviderConfig(),
         "provider.with.dot": CodexModelProviderConfig(settings),
         "builtin": CodexModelProviderConfig(),
     }
@@ -356,7 +356,7 @@ def test_config_preserves_generic_model_provider_settings() -> None:
         "provider.with.dot", "local-model", "deliberate"
     )
     assert config_to_dict(config)["codex"]["model_providers"] == {
-        "codex": {"settings": {}},
+        "openai": {"settings": {}},
         "provider.with.dot": {"settings": settings},
         "builtin": {"settings": {}},
     }
@@ -415,7 +415,7 @@ def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:
 def test_config_to_dict_rejects_unusable_in_memory_model_name(model: str) -> None:
     """型注釈を迂回した model 名も永続化境界で拒否する。"""
     config = CmocConfig()
-    config.codex.agent_calls["custom_call"] = CodexCallConfig("codex", model, "high")
+    config.codex.agent_calls["custom_call"] = CodexCallConfig("openai", model, "high")
 
     with pytest.raises(TypeError):
         config_to_dict(config)
