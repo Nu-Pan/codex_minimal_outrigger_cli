@@ -73,10 +73,10 @@ def build_oracle_and_realization_basic(
                     - realization implementation
                         - realization code のうち、実装ファイルを指す
                         - 純粋なソースコードだけでなく、プロダクトの挙動を記述する設定ファイル類も含む
-                        - 通常は `{{work-root}}/src` に配置されている
+                        - `{{work-root}}/src` に配置されている
                     - realization test
                         - realization test とは、realization code のうち、テストのソースコードを指す
-                        - 通常は `{{work-root}}/test` に配置されている
+                        - `{{work-root}}/test` に配置されている
                     - realization ancillary
                         - realization ancillary とは、realization file のうち、補助的なファイルを指す
                         - e.g. `{{work-root}}/.gitignore`, `{{work-root}}/bin/**/*`, ...

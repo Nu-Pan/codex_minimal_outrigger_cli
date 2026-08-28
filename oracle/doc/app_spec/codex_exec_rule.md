@@ -17,8 +17,10 @@
 - `agent_call_cwd` は、子 agent call に設定する cwd とする
 - `work_root` は、`agent_call_cwd` を含む最寄りの Git worktree root とする
 - `repo_root` は、`work_root` が属する Git repository の main worktree root とする
+- `work_root` と `repo_root` は、linked worktree、submodule、および separate git directory を含め、Git が保持する repository metadata から導出する
+- 名前が `.git` であるだけの通常の file または directory を Git repository metadata として扱ってはならない
 - `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
-- call-scoped path context、root placeholder、および導出処理の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `RootPathPlaceHolder` と `AgentCallPathContext` へ委譲する。prompt part との受け渡しは `{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py` の `PlaceholderMap`、完全 prompt への統合は `{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
+- call-scoped path context、root placeholder、および Git command を含む導出処理の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `RootPathPlaceHolder`、`AgentCallPathContext`、`resolve_work_root`、および `resolve_repo_root` へ委譲する。prompt part との受け渡しは `{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py` の `PlaceholderMap`、完全 prompt への統合は `{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 
 ### `{{work-root}}` に対する仮定
 

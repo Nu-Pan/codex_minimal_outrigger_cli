@@ -8,8 +8,10 @@ raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md
 
 - 位置引数を受け取らない。
 - サブコマンド固有 option を受け取らない。
-- Git commit を作成しない。
+- indexing preflight は、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従う `INDEX.md` の更新以外の file 変更を行わない。
+- Git commit は、その indexing preflight が `INDEX.md` の差分だけを commit する場合に限って許容する。
 - git working tree と staging area の clean 状態を要求しない。
+- invocation 開始時点に存在する `INDEX.md` 以外の差分は変更も commit もせず、そのまま維持する。
 - 編集 run を作らず、session state と run state を変更しない。
 
 ## 事前条件
@@ -26,6 +28,14 @@ raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md
 8. 再開可能な report cut があれば再利用し、なければ新しい cut を固定する。
 
 state root または current pointer が存在しない状態は、有効な初期状態とする。既存 state に corruption がある場合は state を変更せず、新しい report を publication しない。
+
+## indexing preflight と agent call の変更境界
+
+normalization agent と verification agent による feedback の調査は、それぞれの本命 agent call の indexing preflight が完了してから開始する。
+
+処理内容、実行条件、および実行タイミングは、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「インデクシングの仕様」と「インデクシングの実行条件・タイミング」を正本とする。正確な起動パラメータの選択値は、本書の「normalization」と「verification」が委譲する各 builder が所有する。
+
+normalization agent と verification agent 自身は、repository、feedback state、調査対象、またはその他の file を変更してはならない。
 
 ## report cut
 
@@ -88,7 +98,7 @@ normalization agent へ渡す情報を次に限定する。
 - 検証済みの構造化 observation
 - 機械的に絞り込んだ既存 candidate
 
-normalization agent は、summary、impact、原因、現在性、actionability、human action、verification verdict、または relation を生成しない。候補外の issue を探索せず、repository と feedback state を変更しない。
+normalization agent は、summary、impact、原因、現在性、actionability、human action、verification verdict、または relation を生成しない。候補外の issue を探索しない。
 
 既存 issue を選ぶ output の issue ID は、入力候補の issue ID と一致しなければならない。schema と決定論的事後条件に適合する output を受理できなければ、report 全体を失敗させる。
 
@@ -119,7 +129,7 @@ verification agent は、1 candidate と、その candidate に許可した repo
 
 正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py` の `build_feedback_verify_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
-verification agent は候補外の問題を探索せず、repository、config、feedback state、または問題の根拠を変更しない。
+verification agent は候補外の問題を探索しない。
 
 ### output の受理条件
 

@@ -24,6 +24,7 @@ NOTE
 """
 
 # std
+import os
 import subprocess
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -56,7 +57,8 @@ class AgentCallPathContext:
     """1 回の agent call で共有する root path の正本モデル。
 
     constructor は決定済みの AgentCallParameter.agent_call_cwd だけを受け取る。
-    work_root と repo_root は agent_call_cwd から導出し、呼び出し側から指定させない。
+    work_root と repo_root は agent_call_cwd と Git repository metadata から導出し、
+    呼び出し側から指定させない。
     構築後の値は変更できず、同じ agent call の prompt 全体で共有する。
 
     NOTE
@@ -85,9 +87,8 @@ class AgentCallPathContext:
                 f"(agent_call_cwd={resolved_agent_call_cwd})"
             )
 
-        # agent_call_cwd から worktree root を決め、その worktree が属する main root を決める
-        work_root = resolve_work_root(resolved_agent_call_cwd)
-        repo_root = resolve_repo_root(work_root)
+        # 同じ Git metadata 応答から worktree root と main worktree root を決める
+        work_root, repo_root = _resolve_git_worktree_roots(resolved_agent_call_cwd)
         object.__setattr__(self, "agent_call_cwd", resolved_agent_call_cwd)
         object.__setattr__(self, "work_root", work_root)
         object.__setattr__(self, "repo_root", repo_root)
@@ -179,48 +180,90 @@ def resolve_cmoc_root(
         raise ValueError("`{{cmoc-root}}` was not found")
 
 
+def _resolve_git_worktree_roots(
+    start_path: Path | None = None,
+) -> tuple[Path, Path]:
+    """Git repository metadata から worktree root と main worktree root を返す。
+
+    最寄りの worktree を Git discovery で特定する。linked worktree の場合は、
+    `git worktree list --porcelain -z` の先頭 record を main worktree とする。
+    """
+    resolved_start_path = (Path.cwd() if start_path is None else start_path).resolve()
+    # repository 選択用の環境変数で cwd 起点の探索を上書きさせない
+    git_environment = os.environ.copy()
+    for variable_name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"):
+        git_environment.pop(variable_name, None)
+
+    for candidate in _enumerate_candidates(start_path, Path.cwd()):
+        git_result = subprocess.run(
+            [
+                "git",
+                "rev-parse",
+                "--show-toplevel",
+                "--absolute-git-dir",
+                "--path-format=absolute",
+                "--git-common-dir",
+            ],
+            cwd=candidate,
+            text=True,
+            capture_output=True,
+            env=git_environment,
+        )
+        if git_result.returncode != 0:
+            continue
+
+        path_lines = git_result.stdout.splitlines()
+        if len(path_lines) != 3:
+            continue
+        worktree_root, git_dir, common_dir = (
+            Path(path_line).resolve() for path_line in path_lines
+        )
+        if not worktree_root.is_dir() or not resolved_start_path.is_relative_to(
+            worktree_root
+        ):
+            continue
+        if git_dir == common_dir:
+            return worktree_root, worktree_root
+
+        worktree_list_result = subprocess.run(
+            [
+                "git",
+                f"--git-dir={common_dir}",
+                "worktree",
+                "list",
+                "--porcelain",
+                "-z",
+            ],
+            text=True,
+            capture_output=True,
+            env=git_environment,
+        )
+        main_record = worktree_list_result.stdout.split("\0", maxsplit=1)[0]
+        if worktree_list_result.returncode != 0 or not main_record.startswith(
+            "worktree "
+        ):
+            continue
+        main_worktree_root = Path(main_record.removeprefix("worktree ")).resolve()
+        return worktree_root, main_worktree_root
+
+    raise ValueError("`{{work-root}}` was not found")
+
+
 def resolve_repo_root(
     start_path: Path | None = None,
 ) -> Path:
     """
     `{{repo-root}}` を返す。
-    これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
+    agent call path context の構築と root placeholder の解決に使用する。
     start_path が指定されていれば、その探索開始 path を起点とする。
     start_path が省略されていれば、cmoc process の cwd を探索開始 path とする。
-    最寄りの Git worktree marker から main worktree を特定する。
+    Git repository metadata から、所属 repository の main worktree を特定する。
     """
-    # 最寄りの worktree marker を優先し、外側の別 repository を誤認しない。
-    git_command_cwd: Path | None = None
-    for candidate in _enumerate_candidates(start_path, Path.cwd()):
-        dot_git_path = candidate / ".git"
-        if dot_git_path.is_dir():
-            return candidate
-        if dot_git_path.is_file():
-            git_command_cwd = candidate
-            break
-
-    # marker を見つけられない場合も、既存どおり開始位置から Git に問い合わせる。
-    if git_command_cwd is None:
-        if start_path is None:
-            git_command_cwd = Path.cwd()
-        elif start_path.is_dir():
-            git_command_cwd = start_path.resolve()
-        else:
-            git_command_cwd = start_path.resolve().parent
-    # git コマンドからの特定を試みる
-    # linked worktree の common directory から main worktree を解決する。
-    git_result = subprocess.run(
-        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-        cwd=git_command_cwd,
-        text=True,
-        capture_output=True,
-    )
-    if git_result.returncode == 0:
-        common_dir = git_result.stdout.strip()
-        if common_dir:
-            return Path(common_dir).parent
-    # 全部ダメだったら例外
-    raise ValueError("`{{repo-root}}` was not found")
+    try:
+        _, repo_root = _resolve_git_worktree_roots(start_path)
+    except ValueError:
+        raise ValueError("`{{repo-root}}` was not found") from None
+    return repo_root
 
 
 def resolve_run_root(
@@ -246,18 +289,12 @@ def resolve_work_root(
 ) -> Path:
     """
     `{{work-root}}` を返す。
-    これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
+    agent call path context の構築と root placeholder の解決に使用する。
     start_path が指定されていれば、その探索開始 path を起点とする。
     start_path が省略されていれば、cmoc process の cwd を探索開始 path とする。
-    「`.git` ファイル・ディレクトリを直下に持つディレクトリ」を探索する。
+    Git repository metadata から、探索開始 path を含む最寄りの worktree を特定する。
     """
-    # 指定された探索開始 path または cmoc process の cwd から探索する
-    for candidate in _enumerate_candidates(start_path, Path.cwd()):
-        dot_git_path = candidate / ".git"
-        if dot_git_path.is_dir() or dot_git_path.is_file():
-            return candidate
-    else:
-        raise ValueError("`{{work-root}}` was not found")
+    return _resolve_git_worktree_roots(start_path)[0]
 
 
 def resolve_ph_path(
