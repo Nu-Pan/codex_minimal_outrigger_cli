@@ -756,7 +756,7 @@
     "last_investigated_at": "2026-07-24_22-53_33_532064000"
   },
   "src/basic/acp.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "b6c1a325e0018a7ea29e9f189cdea64a1bf8ad87c15afcbd45cd971c888337fb",
     "last_investigated_at": "2026-07-24_23-04_29_031657000"
@@ -978,7 +978,7 @@
     "last_investigated_at": "2026-07-25_06-40_26_790302000"
   },
   "src/config/cmoc_config.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "46d78fa1d103a3d52db1f861d2187698122d2dde1940ff0b4c0d1a60ca7a87fa",
     "last_investigated_at": "2026-07-25_06-50_44_901970000"
@@ -1193,12 +1193,6 @@
     "last_investigated_sha256": "1ecaade4dee17221fe4bca8c1837bef8e9d28957fd6bee025a6b52c299aea9e1",
     "last_investigated_at": "2026-07-27_17-07_58_869347000"
   },
-  "test/_real_path_integration/sitecustomize.py": {
-    "investigation_required": false,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "6d7489648f9840d3b97de6fd9d74e5408a172504727844b0ede6e65379e8a8f0",
-    "last_investigated_at": "2026-08-09_07-59_38_510322000"
-  },
   "test/conftest.py": {
     "investigation_required": false,
     "last_investigation_result": "no_findings",
@@ -1266,7 +1260,7 @@
     "last_investigated_at": "2026-08-13_01-22_16_989816000"
   },
   "test/test_codex_runtime_home.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "90644336a4ff674ab3cec2a17d849dc6a717d45a37d1856b96b47308712584d9",
     "last_investigated_at": "2026-08-12_10-37_35_267443000"
@@ -1428,7 +1422,7 @@
     "last_investigated_at": "2026-07-26_13-12_59_350114000"
   },
   "test/test_runtime_codex_permissions.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "1e79dc80a0c9011af727643dd92c4ec3d855b3d0a1176410f044360e5b691cb3",
     "last_investigated_at": "2026-08-12_23-46_29_589366000"
