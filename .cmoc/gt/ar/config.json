@@ -44,7 +44,7 @@
       },
       "build_tui_launch_tui_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-5.6-sol",
         "reasoning_effort": "max"
       },
       "build_oracle_review_enumerate_finding_parameter": {
