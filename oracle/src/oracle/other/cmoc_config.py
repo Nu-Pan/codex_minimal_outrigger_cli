@@ -86,7 +86,7 @@ class CmocConfigCodex:
             "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-5.6-sol",
-                reasoning_effort="max",
+                reasoning_effort="ultra",
             ),
             "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
