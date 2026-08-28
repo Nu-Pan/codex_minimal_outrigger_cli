@@ -2,15 +2,19 @@
 
 ## プロンプトの手直しが必要
 
-- 普通に考えて、oracle findings review policy は Structured Output schema に書けば良い話では
-    - Structured Output schema についての指示は、可能な限り Structured Output schema に書くべき
-    - どうしても　Structured Output schema　に書けないものはプロンプトビルダーごとに個別の追加規定ってことにした方が良い
-- oracle src, oracle doc の棲み分けを詰め直したい
-    - コメント (docstring 含む) で正本仕様を書いて良い事にしたい
-    - 逆に動的生成プロンプト本体にはいままで通り正本仕様を書いちゃダメ
 - `build_*` の文面が思ってたよりもひどいかも、一緒にモデル呼び出しの重さも再検討が必要か
-- oracle src だけを選考して修正しまくったので、oracle doc 側を追従させる
+- oracle src だけを先行して修正しまくったので、oracle doc 側を追従させる
 - 全部テストが通るようにする
+
+## Codex の仕様調べるときは必ずソースコードを見に行ってくれ
+
+- 頼む
+
+## Ultra 試したい
+
+- リミットを使い切れていないので、バカ食いする可能性を受け入れてでも Ultra を使いたい
+- ただし、cmoc のデフォルトは Sol Max --> Sol High にしたい
+- 呼び出し別のモデル設定を cmoc config に出して、設定上で Ultra を使いたい
 
 ## python コメント記述規則をスキル化したい
 
@@ -27,18 +31,6 @@
 ## エディタ入力プロンプトが空の場合に処理が続行してしまう
 
 - 仕様変更が必要
-
-## cmoc oracle investigation の完全プロンプトがまぁまぁ終わってそう
-
-- これに限らず、全てのプロンプトにテコ入れが必要そうな雰囲気を感じる
-- やること
-    - 「プロンプト内地図」がプロンプト内全体を網羅するようにする
-    - 各規則・規範の見出しを意味が分かるように修正
-- コードが崩壊し始めているので、手作業での修正が必要
-
-## misc_specs.md を抹消したい
-
-- 普通に考えて、ちゃんとカテゴライズするべき
 
 ## cmoc refactor state sync after run join のコミットは run branch に積んだほうが良いように思える
 
