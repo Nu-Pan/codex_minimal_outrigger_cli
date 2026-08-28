@@ -18,15 +18,17 @@
 # `src`
 
 ## Summary
-- oracle source の実装を構成する下位領域への入口。agent call 構築、prompt/policy、設定・パス・文書モデル、feedback 契約など、cmoc の動作を支える正本実装を責務別に辿るための階層。
+- oracle文書を扱うcmocの実装定義をまとめ、agent call構築、prompt生成、設定・パス・構造化文書、feedback入力などの用途別領域への入口を提供する。
+- agent callのパラメータ構築やquota probeはacp_builder、promptと適用ポリシーはprompt_builder、設定・パス・構造化文書の基盤はother、feedback報告入力の契約はfeedbackへ進む。
 
 ## Read this when
-- oracle の実装全体で責務の分担や調査の開始地点を確認したいとき。
-- agent call、prompt/policy、設定・パス・構造化文書、feedback のいずれかに関わる実装を、責務別の下位領域へ切り分けて調べるとき。
+- oracle文書に関するagent callの起動パラメータ、prompt生成、ファイルアクセスやroutingなどの適用ポリシー、Structured Output入力契約を確認・変更するとき。
+- oracle実装の設定モデル、agent callのパスコンテキスト、構造化文書レンダリングなど、複数のoracle機能が共有する基盤を調べるとき。
 
 ## Do not read this when
-- 特定の下位領域の具体的な処理や契約だけを確認したいときは、その責務を直接扱う下位対象へ進む。
-- 既存の INDEX.md の内容やルーティング結果だけを確認したいとき。
+- oracleの意味仕様や編集・レビュー規則そのものを確認したいとき。
+- realizationの実装・テスト、session join、TUIなど特定の下位機能だけを調べる場合は、対応する下位ディレクトリを直接読むとき。
+- 既存のINDEX.mdのルーティング内容だけを確認したいとき。
 
 ## hash
-- b82e6de44f2da399749607fc7140e811d4cf744306f67ae2e14a45622a4b4712
+- d80ef6dd918331d63242f3561556df451f922fa14ead68396c806059c13145a5

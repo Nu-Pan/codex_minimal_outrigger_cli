@@ -1,20 +1,18 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約するデータクラス群。並列数、Codex CLI の provider・agent call 設定、oracle review のループ上限を扱う構成の入口。
+- 日本語技術文書のルーティングエントリー生成のため、指定された本文を根拠に対象の責務と入口を簡潔に整理します。
 
 ## Read this when
-- cmoc の設定項目や既定値を確認するとき
-- Codex CLI の provider-local 設定や agent call ごとの設定構造を確認するとき
-- oracle review の各ループ上限を確認するとき
+- CmocConfig とそのネストした設定データクラスの責務、既定値、JSON/TOML 表現、Codex CLI や oracle review の設定項目を確認したいとき。
+- 開発対象リポジトリ固有の cmoc 設定がどのように集約され、永続化・同期されるかの入口を確認したいとき。
 
 ## Do not read this when
-- 設定ファイルの実際の JSON 内容を確認したいとき
-- 設定の生成・同期処理や doctor の挙動を確認したいとき
-- Codex CLI 呼び出しや oracle review の具体的な処理を確認したいとき
+- 設定クラスの具体的なフィールド定義や既定値を直接確認したいときは、このルーティング情報ではなく対象本文を読むべきです。
+- agent call の生成規則や index エントリー生成処理そのものを確認したいときは、別の仕様・実装対象を直接読むべきです。
 
 ## hash
-- e81dd38d24740b171f955063f620157926c861e3e4ad2c11e0df2c7914e4808a
+- 4fcdbcad0a81da47e5d8298b116d3e3f6fa6a2c08d0a9c53a08a2898ef2ba25e
 
 # `path_model.py`
 
