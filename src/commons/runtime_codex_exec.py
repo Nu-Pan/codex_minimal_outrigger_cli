@@ -401,11 +401,13 @@ def run_codex_exec(
         run_agent_call_cwd: Path,
     ) -> dict[str, str]:
         """call log に残す論理値を実際の呼び出し parameter に揃える。"""
+        call_config = config.codex.agent_calls[run_parameter.agent_call_kind]
         return {
             "codex_home": str(run_codex_home),
             "agent_call_kind": run_parameter.agent_call_kind,
-            "model_class": run_parameter.model_class.value,
-            "reasoning_effort": run_parameter.reasoning_effort.value,
+            "model_provider": call_config.model_provider,
+            "model": call_config.model,
+            "reasoning_effort": call_config.reasoning_effort,
             "file_access_mode": run_parameter.file_access_mode.value,
             "cwd": str(run_agent_call_cwd.resolve()),
         }
@@ -908,8 +910,8 @@ def run_codex_exec(
                             quota_probe_parameter.agent_call_cwd
                         ).agent_call_cwd
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                        # quota probe は別の Codex call なので、最小の AgentCallParameter も
-                        # argv/cwd/env を駆動しなければならない。
+                        # quota probe は独立した agent call なので、固有の
+                        # AgentCallParameter も argv/cwd/env を駆動しなければならない。
                         probe_codex_home = resolve_codex_home(probe_agent_call_cwd)
                         validate_codex_home(probe_codex_home)
                         probe_codex_env = codex_subprocess_env(probe_codex_home)

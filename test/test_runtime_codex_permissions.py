@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex_profile import (
     build_codex_override_args,
     prepare_codex_override_args,
@@ -20,9 +20,7 @@ from config.cmoc_config import CmocConfig
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
-        agent_call_kind="test_agent_call",
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=mode,
         prompt="prompt",
         structured_output_schema_path=None,

@@ -18,18 +18,18 @@
 # `acp.py`
 
 ## Summary
-- oracle 側で定義された ACP 型を realization 側から再公開する互換層。型定義自体は保持せず、既存の `basic.acp` 参照を維持するための入口である。
+- oracle 側で定義された ACP のエージェント呼び出しパラメータ型とファイルアクセスモード型を、利用者向けの basic 名前空間から再公開する互換入口。正本型を複製せず、既存の oracle 定義を参照する。
 
 ## Read this when
-- ACP 型の import 経路、`basic.acp` 参照、または realization 側の公開面を変更・調査するとき
-- oracle 側の ACP 型と realization 側の再公開関係を確認するとき
+- ACP のエージェント呼び出しパラメータ型またはファイルアクセスモード型を、basic 名前空間から利用・確認する必要があるとき。
+- realization 側で basic.acp への参照を整理し、互換再公開層の削除可否を判断するとき。
 
 ## Do not read this when
-- ACP 型の正本定義や仕様を確認したいときは、直接 oracle 側の定義を読む
-- ACP 型や `basic.acp` の参照経路に関係しない処理を変更・調査するとき
+- oracle 側にある ACP 型の定義や詳細仕様を確認したいとき。
+- basic 名前空間以外の ACP 実装や、型を利用する具体的な処理を直接確認したいとき。
 
 ## hash
-- b6c1a325e0018a7ea29e9f189cdea64a1bf8ad87c15afcbd45cd971c888337fb
+- 53332796af2860b66db15176a77da24eb3dc94d8c7a9cd5ac7c0976c131ceef3
 
 # `path_model.py`
 

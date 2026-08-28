@@ -1,15 +1,14 @@
 import json
 import math
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 from oracle.other.cmoc_config import (
+    CodexCallConfig,
     CodexModelProviderConfig,
-    CodexModelSpec,
     JsonTomlValue,
 )
 
-from basic.acp import ModelClass, ReasoningEffort
 from config.cmoc_config import (
     CmocConfig,
     CmocConfigCodex,
@@ -18,8 +17,6 @@ from config.cmoc_config import (
 
 from .runtime_errors import CmocError
 from .runtime_paths import config_path
-
-_ConfigKey = TypeVar("_ConfigKey", ModelClass, ReasoningEffort)
 
 
 def _model_name(value: Any) -> str:
@@ -41,6 +38,22 @@ def _reasoning_effort_name(value: Any) -> str:
     return value
 
 
+def _model_provider_id(value: Any) -> str:
+    """Codex CLI へ直接渡せる必須の model provider ID を検証する。"""
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError
+    validate_json_toml_value(value)
+    return value
+
+
+def _agent_call_kind(value: Any) -> str:
+    """設定検索に使う安定した agent call 種別文字列を検証する。"""
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError
+    validate_json_toml_value(value)
+    return value
+
+
 def _config_int(value: Any) -> int:
     """永続化対象の int field が bool や別型に置き換わっていないか検証する。"""
     if type(value) is not int:
@@ -52,46 +65,34 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     """正本 config 型を、永続化 JSON の object 境界へ変換する。"""
     model_providers: dict[str, dict[str, dict[str, JsonTomlValue]]] = {}
     for provider_id, provider_config in config.codex.model_providers.items():
-        if not isinstance(provider_id, str) or not isinstance(
-            provider_config, CodexModelProviderConfig
-        ):
+        if not isinstance(provider_config, CodexModelProviderConfig):
             raise TypeError("invalid Codex model provider definition")
-        validate_json_toml_value(provider_id)
+        normalized_provider_id = _model_provider_id(provider_id)
         settings: dict[str, JsonTomlValue] = {}
         for key, setting_value in provider_config.settings.items():
             if not isinstance(key, str):
                 raise TypeError("invalid Codex model provider setting key")
             validate_json_toml_value(key)
             settings[key] = validate_json_toml_value(setting_value)
-        model_providers[provider_id] = {"settings": settings}
-    model: dict[str, dict[str, str | None]] = {}
-    for key, model_spec in config.codex.model.items():
-        if not isinstance(key, ModelClass) or not isinstance(
-            model_spec, CodexModelSpec
-        ):
-            raise TypeError("invalid Codex model definition")
-        model_provider = model_spec.model_provider
-        if model_provider is not None:
-            if not isinstance(model_provider, str):
-                raise TypeError("invalid Codex model provider ID")
-            validate_json_toml_value(model_provider)
-        model[key.value] = {
-            "model_provider": model_provider,
-            "model": _model_name(model_spec.model),
+        model_providers[normalized_provider_id] = {"settings": settings}
+    agent_calls: dict[str, dict[str, str]] = {}
+    for agent_call_kind, call_config in config.codex.agent_calls.items():
+        if not isinstance(call_config, CodexCallConfig):
+            raise TypeError("invalid Codex agent call definition")
+        normalized_kind = _agent_call_kind(agent_call_kind)
+        agent_calls[normalized_kind] = {
+            "model_provider": _model_provider_id(call_config.model_provider),
+            "model": _model_name(call_config.model),
+            "reasoning_effort": _reasoning_effort_name(
+                call_config.reasoning_effort
+            ),
         }
-
-    reasoning_effort: dict[str, str] = {}
-    for key, value in config.codex.reasoning_effort.items():
-        if not isinstance(key, ReasoningEffort):
-            raise TypeError("invalid Codex reasoning effort key")
-        reasoning_effort[key.value] = _reasoning_effort_name(value)
 
     return {
         "num_parallel": _config_int(config.num_parallel),
         "codex": {
             "model_providers": model_providers,
-            "model": model,
-            "reasoning_effort": reasoning_effort,
+            "agent_calls": agent_calls,
         },
         "oracle_review": {
             "num_enumerate_findings_loop": _config_int(
@@ -156,15 +157,18 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
         raise TypeError("JSON/TOML value is too deeply nested") from exc
 
 
-def _model_provider_map_from_dict(data: Any) -> dict[str, CodexModelProviderConfig]:
+def _model_provider_map_from_dict(
+    default: dict[str, CodexModelProviderConfig],
+    data: Any,
+) -> dict[str, CodexModelProviderConfig]:
     """provider-local 設定を型検証済みの正本設定型へ戻す。"""
     if not isinstance(data, dict):
         raise TypeError
-    restored: dict[str, CodexModelProviderConfig] = {}
+    restored = dict(default)
     for provider_id, value in data.items():
-        if not isinstance(provider_id, str) or not isinstance(value, dict):
+        if not isinstance(value, dict):
             raise TypeError
-        validate_json_toml_value(provider_id)
+        normalized_provider_id = _model_provider_id(provider_id)
         settings = value.get("settings", {})
         if not isinstance(settings, dict):
             raise TypeError
@@ -174,47 +178,31 @@ def _model_provider_map_from_dict(data: Any) -> dict[str, CodexModelProviderConf
                 raise TypeError
             validate_json_toml_value(key)
             restored_settings[key] = validate_json_toml_value(setting)
-        restored[provider_id] = CodexModelProviderConfig(restored_settings)
+        restored[normalized_provider_id] = CodexModelProviderConfig(
+            restored_settings
+        )
     return restored
 
 
-def _enum_str_map_from_dict(
-    default: dict[_ConfigKey, str],
+def _agent_call_map_from_dict(
+    default: dict[str, CodexCallConfig],
     data: Any,
-    key_type: type[_ConfigKey],
-) -> dict[_ConfigKey, str]:
-    """enum key の JSON 表現を、既定値補完済みの runtime map へ戻す。"""
+) -> dict[str, CodexCallConfig]:
+    """agent call ごとの直接設定を既定値補完済みの map へ戻す。"""
     restored = dict(default)
     if not isinstance(data, dict):
         raise TypeError
-    for key, value in data.items():
-        # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` は ReasoningEffort を
-        # Codex CLI 名へ変換するため、空名は不正な JSON 編集として扱う。
-        restored[key_type(key)] = _reasoning_effort_name(value)
-    return restored
-
-
-def _model_spec_map_from_dict(
-    default: dict[ModelClass, CodexModelSpec],
-    data: Any,
-) -> dict[ModelClass, CodexModelSpec]:
-    """JSON 由来の model spec map を正本 enum key と設定型へ戻す。"""
-    restored = dict(default)
-    if not isinstance(data, dict):
-        raise TypeError
-    for key, value in data.items():
+    for agent_call_kind, value in data.items():
         if not isinstance(value, dict):
             raise TypeError
-        provider = value.get("model_provider")
-        model = value.get("model")
-        # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` は未定義の Codex
-        # model 名を許可しないため、人手編集による空値はこの境界で失敗させる。
-        if provider is not None and not isinstance(provider, str):
-            raise TypeError
-        model = _model_name(model)
-        if isinstance(provider, str):
-            validate_json_toml_value(provider)
-        restored[ModelClass(key)] = CodexModelSpec(provider, model)
+        normalized_kind = _agent_call_kind(agent_call_kind)
+        restored[normalized_kind] = CodexCallConfig(
+            model_provider=_model_provider_id(value.get("model_provider")),
+            model=_model_name(value.get("model")),
+            reasoning_effort=_reasoning_effort_name(
+                value.get("reasoning_effort")
+            ),
+        )
     return restored
 
 
@@ -244,16 +232,12 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             raise TypeError("config top-level must be an object")
         codex_data = _section(data, "codex")
         model_providers = _model_provider_map_from_dict(
-            codex_data.get("model_providers", {})
+            default.codex.model_providers,
+            codex_data.get("model_providers", {}),
         )
-        model = _model_spec_map_from_dict(
-            default.codex.model,
-            codex_data.get("model", {}),
-        )
-        reasoning_effort = _enum_str_map_from_dict(
-            default.codex.reasoning_effort,
-            codex_data.get("reasoning_effort", {}),
-            ReasoningEffort,
+        agent_calls = _agent_call_map_from_dict(
+            default.codex.agent_calls,
+            codex_data.get("agent_calls", {}),
         )
 
         oracle_review_data = _section(data, "oracle_review")
@@ -261,8 +245,7 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
             codex=CmocConfigCodex(
                 model_providers=model_providers,
-                model=model,
-                reasoning_effort=reasoning_effort,
+                agent_calls=agent_calls,
             ),
             oracle_review=CmocConfigOracleReview(
                 num_enumerate_findings_loop=_int_value(

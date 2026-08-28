@@ -20,7 +20,7 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex import run_codex_exec
 from config.cmoc_config import CmocConfig
 
@@ -260,9 +260,7 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
         )
     )
     parameter = AgentCallParameter(
-        agent_call_kind="test_agent_call",
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt="prompt",
         structured_output_schema_path=schema_source,

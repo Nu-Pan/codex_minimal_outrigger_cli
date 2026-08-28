@@ -66,7 +66,7 @@ from acp.builder.oracle.review.validate_finding_advocate import (
 from acp.builder.oracle.review.validate_finding_challenger import (
     build_oracle_review_validate_finding_challenger_parameter,
 )
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -114,26 +114,22 @@ def test_review_compatibility_modules_export_only_builders(
     assert getattr(module, exported_name) is canonical_builder
 
 
-def test_oracle_review_merge_finding_uses_efficiency_model() -> None:
-    """merge finding builderがefficiency modelとmax reasoningを選ぶことを検証する。"""
+def test_oracle_review_merge_finding_uses_oracle_read_contract() -> None:
+    """merge finding builder が oracle read 契約を構築する。"""
     parameter = build_oracle_review_merge_finding_parameter(
         "[]", agent_call_cwd=REPO_ROOT
     )
 
-    assert parameter.model_class == ModelClass.EFFICIENCY
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
     assert parameter.run_indexing_preflight is True
 
 
-def test_oracle_review_judge_finding_uses_max_reasoning() -> None:
-    """judge finding builderがefficiency modelとmax reasoningを選ぶことを検証する。"""
+def test_oracle_review_judge_finding_uses_oracle_read_contract() -> None:
+    """judge finding builder が oracle read 契約を構築する。"""
     parameter = build_oracle_review_judge_finding_parameter(
         "finding", "advocate", "challenger", agent_call_cwd=REPO_ROOT
     )
 
-    assert parameter.model_class == ModelClass.EFFICIENCY
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
@@ -184,8 +180,6 @@ def test_oracle_review_enumerate_finding_schema_matches_oracle_source() -> None:
         "[]",
         agent_call_cwd=REPO_ROOT,
     )
-    assert parameter.model_class == ModelClass.EFFICIENCY
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
@@ -309,8 +303,6 @@ def test_oracle_review_validate_finding_schema_matches_oracle_source(
     parameter = builder(
         "finding", "known advocate", "known challenger", agent_call_cwd=REPO_ROOT
     )
-    assert parameter.model_class == ModelClass.EFFICIENCY
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
     assert "finding" in parameter.prompt
     assert "known advocate" in parameter.prompt

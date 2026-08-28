@@ -15,7 +15,7 @@ import acp.builder.session.join.conflict_resolution as session_conflict_resoluti
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import FileAccessMode
 
 
 @pytest.fixture
@@ -51,8 +51,6 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     conflicted_path = session_join_root / "conflict.md"
     parameter = build_session_join_conflict_resolution_parameter([conflicted_path])
 
-    assert parameter.model_class == ModelClass.FLAGSHIP
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == session_join_root.resolve()

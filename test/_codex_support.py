@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 
@@ -35,9 +35,7 @@ def codex_parameter(
 ) -> AgentCallParameter:
     """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
     return AgentCallParameter(
-        agent_call_kind="test_agent_call",
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=mode,
         prompt="prompt",
         structured_output_schema_path=None,

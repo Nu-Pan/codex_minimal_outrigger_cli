@@ -18,7 +18,7 @@ import acp.builder.oracle.investigation.launch_tui as launch_tui_module
 import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.investigation as investigation_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from main import app
 
 
@@ -217,8 +217,6 @@ def test_oracle_investigation_has_no_session_precondition(
     assert len(calls) == 1
     parameter, kwargs = calls[0]
     assert parameter is built_parameters[1]
-    assert parameter.model_class == ModelClass.FLAGSHIP
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()

@@ -13,7 +13,7 @@ from oracle.acp_builder.tui.launch_tui import (
 
 import acp.builder.tui.launch_tui as tui_launch_module
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import FileAccessMode
 
 
 @pytest.mark.parametrize(
@@ -36,8 +36,6 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     parameter = build_tui_launch_tui_parameter(original_prompt)
 
     assert parameter.agent_call_kind == "build_tui_launch_tui_parameter"
-    assert parameter.model_class == ModelClass.EFFICIENCY
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()

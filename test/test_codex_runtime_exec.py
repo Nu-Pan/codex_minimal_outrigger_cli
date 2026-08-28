@@ -12,9 +12,9 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import make_repo
-from oracle.other.cmoc_config import CodexModelProviderConfig, CodexModelSpec
+from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
 from config.cmoc_config import CmocConfig
@@ -86,9 +86,11 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     config = CmocConfig()
+    parameter = codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root)
+    call_config = config.codex.agent_calls[parameter.agent_call_kind]
 
     result = run_codex_exec(
-        codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
+        parameter,
         root=root,
         capacity_initial_sleep_sec=0,
         config=config,
@@ -100,7 +102,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
         "--ask-for-approval",
         "on-request",
         "--model",
-        config.codex.model[ModelClass.EFFICIENCY].model,
+        call_config.model,
     ]
     assert record["args"][record["args"].index("exec") + 1] == "--skip-git-repo-check"
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
@@ -110,7 +112,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert result.prompt_log_path.name.endswith("_prompt.md")
     assert codex_arg_value(record["args"], "--sandbox") == "workspace-write"
     override_config = codex_override_config(record["args"])
-    assert override_config["model_reasoning_effort"] == "low"
+    assert override_config["model_reasoning_effort"] == call_config.reasoning_effort
     assert "default_permissions" not in override_config
     assert "permissions" not in override_config
     assert (root / "oracle" / "created.md").read_text() == "created\n"
@@ -167,8 +169,8 @@ def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
             "wire_api": "responses",
         }
     )
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(
-        "local.provider", "local-model"
+    config.codex.agent_calls["test_agent_call"] = CodexCallConfig(
+        "local.provider", "local-model", "low"
     )
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -191,8 +193,6 @@ def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
     run_codex_exec(
         AgentCallParameter(
             agent_call_kind="test_agent_call",
-            model_class=ModelClass.MINIMUM,
-            reasoning_effort=ReasoningEffort.LOW,
             file_access_mode=FileAccessMode.READONLY,
             prompt="prompt",
             structured_output_schema_path=None,

@@ -20,7 +20,7 @@ import commons.indexing as indexing_module
 import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.edit as oracle_edit_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_state import (
     RunPart,
@@ -82,8 +82,6 @@ def _assert_exec_parameter(
     runs_indexing: bool,
 ) -> None:
     """2 回の exec に共通する起動契約を検証する。"""
-    assert parameter.model_class == ModelClass.FLAGSHIP
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.run_indexing_preflight is runs_indexing
