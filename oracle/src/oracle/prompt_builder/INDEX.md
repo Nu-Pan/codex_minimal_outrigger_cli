@@ -53,45 +53,34 @@
 # `parts`
 
 ## Summary
-- oracle と realization の基本概念を説明するプロンプト断片を構築する。
-- oracle file、realization file、uncategorised file の役割、下位概念、パス・git ignore・.git に基づく分類方法を扱う。
-- パス用プレースホルダーを展開可能な構造化文書ヘッダーとして組み立てる処理への入口である。
+- oracle と realization の基本概念・責務・下位分類・ファイル分類条件をプロンプトに組み込む関数。対象ディレクトリにある基本概念の入口。
 
 ## Read this when
-- oracle file と realization file の責務や生成関係を確認・変更するとき
-- oracle doc、oracle src、oracle test、realization implementation、realization test、realization ancillary の分類を確認するとき
-- uncategorised file のパス、git ignore、.git による分類条件を確認するとき
-- この説明を PlaceholderMap と SDHeader を用いて構築する処理を追跡するとき
+- oracle file と realization file の役割や編集主体、正本仕様との関係を確認するとき。
+- oracle doc・src・test、realization implementation・test・ancillary の区分を確認するとき。
+- ファイルが oracle、realization、uncategorised のどれに分類されるか、パス・git ignore・.git による条件を確認するとき。
 
 ## Do not read this when
-- oracle と realization の意味仕様そのものを確認するとき
-- プロンプト全体の組み立てや PlaceholderMap、SDHeader の一般仕様だけを確認するとき
-- 実装・テストの具体的な配置や挙動を調査するとき
+- 個別の oracle 文書、実装、テスト、補助ファイルの内容や詳細仕様を確認したいときは、対応する対象を直接読む。
+- プロンプト部品の共通構築方法や、INDEX.md の生成・探索規則だけを確認したいとき。
 
 ## hash
-- 83945362a1d47872fc2949b0af2fcdc1c3b5ddcc317626d697ee3d9c0ce2f929
+- 11fdebe915f6bc100905ce43e60b6e379d88ab51f3caa587627a16810c95f172
 
 # `policy`
 
 ## Summary
-- prompt builder の policy 実装群。agent call 向けに、conflict resolution、feedback reporting、file access、oracle／realization、INDEX.md routing、所見判定などの規定文面とプレースホルダーを構築する。各ファイルは個別 policy の生成入口であり、意味仕様そのものは対応する oracle doc や app specification へ委ねる。
+- agent call 向けの prompt builder policy 群をまとめたディレクトリ。conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing、oracle／realization、所見判定など、各作業領域の規定文面を構築する入口を提供する。
 
 ## Read this when
-- session join の conflict 解消方針や oracle file の意図保持規定を確認するときは conflict_resolution.py を読む
-- 全 agent call 共通の human feedback 報告規定を確認するときは feedback_reporting.py を読む
-- ファイルアクセスモード、リポジトリ境界、oracle／realization file の読み書き制限を確認するときは file_access.py を読む
-- INDEX.md エントリー生成方針を確認するときは index_entry.py を読む
-- oracle file の責務分担、委譲、優先関係を agent call 向け policy として確認するときは oracle.py を読む
-- oracle または realization に対する所見の根拠・分類・適用基準を確認するときは oracle_findings.py または realization_findings.py を読む
-- realization file 向け instruction の構築内容を確認するときは realization.py を読む
-- INDEX.md routing policy の prompt 構築や path context の placeholder 連携を確認するときは routing.py を読む
+- prompt builder における共通または作業種別別の policy 構築責務を調べるとき
+- agent call のファイルアクセス、routing、oracle／realization、conflict 解消、所見判定、feedback 報告に関する指示生成を確認・変更するとき
+- 対象 policy の責務に応じた具体的な prompt 構築ファイルを特定するとき
 
 ## Do not read this when
-- 個別の oracle file や realization file の意味仕様・具体的な実装を確認したいとき
-- INDEX.md の routing 意味仕様や feedback 報告の意味仕様など、policy の根拠となる正本仕様を確認したいとき
-- 生成済み prompt 全体の構成、agent call の実行処理、PlaceholderMap・SDHeader・SDPolicy の一般実装だけを確認したいとき
-- 実際のサンドボックス設定や Codex CLI の実行規則そのものを確認したいとき
-- oracle review の個別処理や realization file の実装挙動そのものを確認したいとき
+- 個別 policy の意味仕様そのものを確認するときは、各 policy が参照する oracle の仕様を直接読む
+- 生成済みプロンプトの実行規則や Codex CLI のサンドボックス設定を確認するとき
+- realization や oracle の具体的な実装・仕様本文を確認するときは、該当する realization file、oracle file、または設計規則へ直接進む
 
 ## hash
-- 4cdf674ceaea849791616b50baa4bec8a693b9c34ce6f9949bea7b574906a3ff
+- ceaf60626c4641336dd5d600594c0ae367b36f5622f0a1ab08204ec8be75b910

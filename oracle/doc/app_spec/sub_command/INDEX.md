@@ -43,23 +43,23 @@
 # `feedback_report.md`
 
 ## Summary
-- pending observation と直前の active state を report cut に固定し、検証済み issue の正常 report または inconclusive 診断 report を publication する `cmoc feedback report` の仕様入口。
-- validation、deduplication、machine observation の集約、agent observation の normalization、verification、publication、cleanup、再開・中断、および終了コードを定義する。
+- `cmoc feedback report` の report cut を固定し、feedback observation と直前の active issue を機械検証・集約・候補化したうえで、normalization agent と verification agent の結果に基づき、正常な active generation と Markdown report、または `incomplete` 診断 report を publication するサブコマンド。
+- CLI 契約、事前条件、report cut の再開、中断、cleanup、state corruption、publication failure、および終了コードまで含む feedback report 処理全体の仕様入口。
 
 ## Read this when
-- feedback observation と repository-local feedback state を入力に、人間対応が必要な issue の report 処理を実装・変更・検証するとき。
-- report cut、candidate の検証、incomplete 診断、current pointer の更新、または report 保存と cleanup の挙動を確認するとき。
-- `cmoc feedback report` の CLI 契約、事前条件、AI agent へ渡せる情報、受理条件、終了コードを確認するとき。
+- feedback observation から人間対応が必要な issue を抽出し、現在の active state と照合して report を生成する処理を実装・変更・レビューするとき。
+- validation、完全一致 deduplication、machine observation の threshold 集約、agent observation の normalization、candidate 全体の verification、または `inconclusive` を含む不完全結果の扱いを確認するとき。
+- current pointer と active generation の更新、report の保存形式、cut 固定後の再開、user interruption、cleanup、エラー時の invocation summary、および終了コードを確認するとき。
 
 ## Do not read this when
-- raw observation の収集規則だけを確認したいときは feedback observation の正本を読む。
-- feedback state の schema、lifecycle、active generation、report cut、incomplete 診断 report の永続化規則だけを確認したいときは feedback state の正本を読む。
-- normalization agent の prompt や Structured Output schema を変更・確認するときは normalize_issue の builder と schema を直接読む。
-- verification agent の prompt や Structured Output schema を変更・確認するときは verify_issue の builder と schema を直接読む。
-- 中断時の共通動作だけを確認したいときは subcommand interruption の正本を読む。
+- raw observation の収集規則だけを確認したい場合は `feedback_observation.md` を直接読む。
+- feedback state の schema、lifecycle、report cut、active generation、incomplete 診断 report の正本を確認したい場合は `feedback_state.md` を直接読む。
+- normalization または verification の prompt、起動パラメータ、選択理由、Structured Output schema の詳細を確認したい場合は各 builder と schema を直接読む。
+- INDEX.md の更新条件や indexing preflight の一般仕様だけを確認したい場合は `indexing.md` を直接読む。
+- 中断時の共通動作だけを確認したい場合は `subcommand_interruption.md` を直接読む。
 
 ## hash
-- 7d0236d90ced4013db5b8ca0af76c4d9a59046a4cfe840f767a8cfc64dfd1d61
+- 699c4688f1ba96ef6cd08dc66b65de3448243ae21ad8abcde691491f1aa69edc
 
 # `indexing.md`
 

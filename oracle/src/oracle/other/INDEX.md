@@ -17,21 +17,22 @@
 # `path_model.py`
 
 ## Summary
-- cmoc におけるパス表記、ルートプレースホルダー、agent call 単位のパスコンテキストを定義するモジュール。
-- `AgentCallPathContext` により agent call の cwd から work root と repository root を導出し、プレースホルダーと実パスの相互変換を提供する。
-- ルート解決、実パス解決、プレースホルダー変換の挙動や、Git worktree を基準にしたパス境界を確認するための入口となる。
+- cmoc のパス表記とルートプレースホルダを定義する基盤モデルです。
+- agent call の cwd から worktree root と main repository root を導出し、呼び出し全体で共有するパスコンテキストを提供します。
+- プレースホルダを絶対パスへ解決する処理と、絶対パスをプレースホルダ表記へ変換する処理を扱います。
+- Git metadata や cmoc の配置を探索して、repository・worktree・run の各ルートを特定します。
 
 ## Read this when
-- パスを `{{repo-root}}`、`{{work-root}}`、`{{run-root}}`、`{{cmoc-root}}` 形式で扱う実装や仕様を変更・調査するとき。
-- agent call の cwd、worktree、main repository の対応関係や、パスコンテキストの導出規則を確認するとき。
-- プレースホルダー付きパスと絶対パスの解決・変換処理を確認するとき。
+- agent call のパスコンテキスト、worktree root、main repository root の導出規則を確認するとき。
+- {{cmoc-root}}、{{repo-root}}、{{run-root}}、{{work-root}} の解決または変換処理を変更・調査するとき。
+- プレースホルダ付き相対パスの入力制約や、Git worktree metadata に基づくルート探索の挙動を確認するとき。
 
 ## Do not read this when
-- 特定の CLI 機能や oracle 文書の内容だけを調べ、パス解決・worktree 境界・プレースホルダー変換に関係しないとき。
-- 実装ではなく、既存の INDEX.md のルーティング情報だけを確認するとき。
+- 個別の CLI 機能や realization の実装責務だけを確認したいとき。
+- パスモデルを介さない一般的なファイル操作や、対象モジュール以外の仕様を直接調べるとき。
 
 ## hash
-- 1a839609f52bd2ae5d493f18d80e141471f0b0ca4961f329baac2c4849fc85d0
+- 7172c36b342a5b115ebddf8f4731b459a305d57195f24b2e2af448f2caabb628
 
 # `struct_doc.py`
 

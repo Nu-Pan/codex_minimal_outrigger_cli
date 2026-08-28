@@ -18,21 +18,20 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` による agent call の起動、パスコンテキスト、ファイルアクセス、モデル・provider、prompt、Structured Output、並列実行、失敗時処理に関する横断的な呼び出し規約を定める正本。
-- Codex CLI 呼び出しの argv、sandbox、ログ、session、quota・一時障害時の retry/resume、および feedback reporter の運用境界を確認するための入口。
+- cmoc から Codex CLI を呼び出す際の共通規約を定める入口。agent call の path context、sandbox と詳細なファイルアクセス制限、環境変数・argv による設定上書き、prompt とログの受け渡し、Structured Output、並列実行、quota・一時障害・想定外エラーの扱いを確認できる。
+- 個別 agent call の意味上の責務や判断基準は対応する oracle doc に委譲されるため、本書は Codex exec 呼び出し全体の実行境界と運用規約を確認するときに読む。
 
 ## Read this when
-- Codex CLI の agent call 実装、AgentCallParameter の起動処理、sandbox・承認設定、provider/model 設定、prompt の受け渡し、ログ保存を変更またはレビューするとき。
-- Structured Output の schema 検証・補正・session resume、quota 待機、サーバー一時障害の retry、並列呼び出し、Codex session 管理の挙動を確認するとき。
-- cmoc_feedback.submit_observation の call context 登録や、Codex CLI と feedback collector の連携境界を調査するとき。
+- Codex CLI の起動方法、呼び出し単位の cwd と root の導出、path placeholder、sandbox、ファイルアクセス制限を変更または確認するとき。
+- Codex CLI へ渡す model provider、model、reasoning effort、承認設定、MCP feedback reporter、prompt、Structured Output schema を変更または確認するとき。
+- Codex call のログ保存、session ID、出力補正、並列数、quota 待機、サーバー一時障害の retry、失敗時の扱いを変更または確認するとき。
 
 ## Do not read this when
-- 対象が個別 agent call の意味上の責務や判断基準であり、対応する oracle doc を直接読むべきとき。
-- AgentCallParameter の正確な field 構造、パス placeholder の導出、prompt の rendering 実装など、本文が明示的に委譲している oracle source の詳細を確認するとき。
-- Codex CLI 呼び出しを伴わない通常の realization 実装、テスト、または一般的なドキュメント作業だけを行うとき。
+- 個別 agent call が担う作業の意味上の責務や判断基準だけを確認する場合は、対応する oracle doc を直接読む。
+- AgentCallParameter の正確な field 名・型・既定値、path context の導出実装、prompt の統合・rendering 実装の詳細だけを確認する場合は、本書ではなく委譲先の oracle source を直接読む。
 
 ## hash
-- 593d1d201ac45f2378fd99a10e7233404e1569ac0ccec4acb1aa12fe556580e9
+- dd71b157e36f2a156de5cd58b43077cfe32a8084426ee68f2724238cc79a88fe
 
 # `codex_model_provider.md`
 
@@ -294,52 +293,20 @@
 # `sub_command`
 
 ## Summary
-- `cmoc doctor` の引数なし実行と doctor preprocess 呼び出し、全終了経路の primary report 保存要件を定義する。
-- workload 固有の fork で開始した編集 run の共通 lifecycle を定義し、run join／abandon、差分検査、merge、hook、state 同期、cleanup の入口となる。
-- pending observation と active state を report cut に固定し、feedback issue の validation、deduplication、normalization、verification、publication、再開、中断を扱う。
-- 現在の作業ツリーを対象に明示的なインデクシングを実行する `cmoc indexing` の引数、前提条件、doctor preprocess、primary report を定義する。
-- `cmoc oracle edit` の二段階 agent call による oracle file 編集について、実行順序、編集境界、差分、終了報告、中断を定義する。
-- oracle file を根拠に調査する TUI 起動フローについて、ユーザー指示、Codex CLI 起動、oracle／realization の扱いを定義する。
-- oracle snapshot または全 oracle file のレビューについて、所見の列挙・統合・検証・採否判定、隔離 run、中断、レポートを定義する。
-- 直近の oracle file 変更を realization file へ反映する `realization apply fork` の追従範囲、agent call、fork lifecycle、report、join 後 hook を定義する。
-- realization file の網羅的な refactor fork について、refactor state、target 選択、処理 cycle、unresolved target、完了・中断・エラー、report を定義する。
-- session branch を home branch に merge せず破棄する `cmoc session abandon` の前提条件、state 更新、branch cleanup、rollback、primary report を定義する。
-- 現在の local branch から session branch を作成する `cmoc session fork` の前提条件、branch 命名、state 初期化、rollback、primary report を定義する。
-- session branch を home branch に merge して終了する `cmoc session join` の merge、conflict 解消、state 更新、branch cleanup、primary report を定義する。
-- ユーザープロンプトへ cmoc 固有契約を注入して AI Agent CLI／TUI を起動する `cmoc tui` の前提条件、prompt lifecycle、起動境界、共通規定、Codex CLI 固有設定を定義する。
+- サブコマンド仕様の正本を案内する階層。各仕様は、個別コマンドの引数・事前条件・実行手順・終了処理を確認する入口であり、編集 run など複数コマンドに共通する lifecycle も含む。
 
 ## Read this when
-- doctor の引数、実行前提、doctor preprocess の呼び出し、または終了経路ごとの primary report を確認するとき。
-- 編集 run の fork・join・abandon、run state、想定内差分、merge、cleanup、または workload 共通 report を確認するとき。
-- feedback observation から issue candidate を形成し、検証・publication・current pointer 更新・cleanup・再開・中断を実装または検証するとき。
-- `cmoc indexing` の引数、未コミット差分の扱い、doctor preprocess、実行要約の保存内容を確認するとき。
-- `cmoc oracle edit` の agent call 構成、prompt、oracle file の編集境界、差分、終了処理、排他、中断を確認するとき。
-- oracle file を調査するためのユーザー指示受付、doctor 前処理、TUI 起動、Codex CLI パラメータ委譲を確認するとき。
-- oracle review の対象 scope、所見成立条件、重大度、agent call の段階、隔離 run、レポート生成を確認するとき。
-- `realization apply fork` の追従対象 commit 差分、agent call、fork 手順、終了状態、report、feedback 記録、join 後処理を確認するとき。
-- `realization refactor fork` の refactor state、調査 target の選択・処理、所見正規化、unresolved target、完了理由、report、join 後同期を確認するとき。
-- session の成果物を本流へ取り込まず破棄し、session state を abandoned にする手順や cleanup 失敗時の再実行条件を確認するとき。
-- local branch から session を開始する条件、session branch の命名、state 初期化、fork 失敗時の rollback、primary report を確認するとき。
-- session branch の merge、conflict 解消、session state の joined 更新、安全な branch 削除、終了 report を確認するとき。
-- `cmoc tui` の実行条件、prompt editor input 後の起動手順、cmoc 基本規定の注入、indexing preflight、Codex CLI 設定境界を確認するとき。
+- サブコマンドの仕様を調査・実装・変更・レビューするとき
+- 対象コマンドの事前条件、実行手順、状態遷移、report、エラー終了時の扱いを確認するとき
+- session、run、oracle、realization、feedback、TUI、indexing、doctor のコマンド境界を確認するとき
 
 ## Do not read this when
-- doctor preprocess の検証・修復内容そのものを確認するときは doctor preprocess の正本を直接読む。
-- session の join／abandon など外側の lifecycle、run isolation、session state schema、report 共通形式、feedback 境界だけを確認するときは対応する正本を直接読む。
-- raw feedback observation の収集規則、feedback state の schema・lifecycle、normalize／verify agent の prompt と schema、または interruption 共通動作だけを確認するとき。
-- インデクシング仕様そのものの詳細、または `cmoc indexing` 以外のサブコマンドを確認するとき。
-- oracle／realization の一般原則、prompt editor input、Codex exec 共通規約、doctor・indexing・feedback 等の個別仕様を確認するとき。
-- prompt editor input の lifecycle、正確な調査用 prompt、launch parameter、oracle／realization の一般原則、Codex CLI 共通起動規則だけを確認するとき。
-- oracle file の内容そのもの、個別 agent call の prompt／policy、自動生成 INDEX.md の品質、または実装ファイルをレビューするとき。
-- realization の一般的な追従・refactor、fork 共通 lifecycle、oracle／realization 適合性、apply 固有 launch parameter、feedback 共通仕様を確認するとき。
-- realization apply の短い変更 loop、oracle／realization 適合性、fork 共通 join／abandon、interruption 共通仕様、変更要約生成だけを確認するとき。
-- session join、未 join run の abandon、既 join 結果の rollback、または session state の一般仕様だけを確認するとき。
-- branch model、session state schema、timestamp、または `cmoc session fork` 以外の固有仕様だけを確認するとき。
-- 汎用 git merge、session 共通前提、branch model、feedback state の所有範囲、conflict 解消 prompt だけを確認するとき。
-- prompt editor input、正確な prompt part／workload 固有 launch parameter、oracle／realization、oracle review、indexing、feedback observation、Windows toast の詳細だけを確認するとき。
+- 特定のサブコマンドの詳細仕様を確認する場合は、該当する個別仕様へ直接進むとき
+- 共通の branch model、session state、run isolation、feedback state、prompt editor、agent call 規則などを確認したい場合は、それぞれの正本仕様へ直接進むとき
+- 実装ファイルや agent call builder の正確な prompt、引数、選択理由だけを確認したいとき
 
 ## hash
-- 80c3cbbd6f6d64eab943107e5287a9ab98daed28bc66ce92cd79bc0afb5672c5
+- 4d2a9496aba131ed79cfd48cd8f771432efd75e5b27abeff5ff276a3d2e5634f
 
 # `subcommand_interruption.md`
 
