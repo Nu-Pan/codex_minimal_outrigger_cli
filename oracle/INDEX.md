@@ -1,39 +1,36 @@
 # `doc`
 
 ## Summary
-- cmoc の正本ドキュメント群を機能・設計・開発ルールごとに参照する入口。アプリケーション仕様、session／run の branch model、不採用案、Python 開発ルールへの導線を提供する。
-- 各下位文書の責務境界と、実装・テスト・CLI 契約・環境構築など個別の確認先を示す。
+- cmoc の正本文書群全体への上位入口。アプリケーション仕様、開発ルール、branch 運用、検討資料を領域別に選び、具体的な正本文書へ進むためのディレクトリ。
+- CLI の挙動、session・run、feedback、ログ、通知、prompt、Codex 呼び出しなどは app_spec、実装・環境・テストの規則は dev_rule、git による隔離モデルは branch_model、不採用案の背景は considered_alternative から確認する。
 
 ## Read this when
-- cmoc の仕様・設計・開発ルールを横断して、最初に読むべき正本文書を探すとき。
-- CLI やアプリケーション挙動、session／run の git 隔離モデル、Python 実装規則、テスト要件・実行手順の参照先を判断するとき。
-- 現行設計で採用されなかった代替案と、その不採用理由を調査するとき。
+- cmoc の正本仕様または開発関連文書の所在を判断するとき。
+- 対象機能の個別仕様、開発ルール、branch 運用、または設計上の不採用案へ進む上位入口が必要なとき。
 
 ## Do not read this when
-- 確認対象の機能、設計要素、開発規則に対応する下位文書が明確で、その文書を直接読むべきとき。
-- 具体的な CLI 入出力契約、実装コード、テストコード、外部契約、環境操作手順など、正本文書群の概観を必要としないとき。
-- 採用済み workflow の具体的な操作方法や現在の実行結果だけを確認したいときは、該当する仕様・実装・テスト文書へ直接進むとき。
+- 確認対象の機能やルールが明確で、対応する配下の個別文書を直接読めるとき。
+- 実装ファイルやテストの具体的な挙動だけを調べるとき。
+- INDEX.md の生成・更新規則そのものを調べるときは、app_spec 内の indexing 仕様を直接読む。
 
 ## hash
-- 918be1efa91d612e344dfe3027b1018ad6a7e51d4d1fe695a8f0147231889227
+- 04b8792d848e653c894d15a3fcc08488cdf7ad4c2a37fee7b7ebfd02f5fb490f
 
 # `src`
 
 ## Summary
-- cmoc の agent call 構築・prompt 構築・補助モデルを実装する Python ソースのルート。AgentCallParameter、モデル種別、推論強度、ファイルアクセスモード、パスコンテキスト、構造化文書レンダリングなどの共通定義を含む。
-- 機能別の agent call builder は `oracle` 配下に分かれており、`acp_builder` は agent call の起動パラメータ、`prompt_builder` は完全 prompt と各種 policy、`other` はパス・設定・構造化文書の補助定義を扱う。feedback 用の入力定義も `oracle` 配下にある。
+- cmoc の agent call 構築、prompt 生成、設定・パスモデル、構造化文書レンダリング、feedback 処理を担う oracle 実装の入口です。
+- agent call の種類別処理は acp_builder、prompt の組み立てと規定文面は prompt_builder、共通の設定・パス・文書構造は other 配下から確認します。
 
 ## Read this when
-- agent call の共通パラメータ、論理モデル種別、推論強度、ファイルアクセスモード、agent call の cwd や root path の扱いを確認するとき。
-- oracle、realization、feedback、indexing、session、TUI などの機能別 agent call builder を調査・変更するときは `oracle/acp_builder` へ進むとき。
-- 完全 prompt の組み立て、placeholder の統合、oracle・realization・feedback・routing・file access などの policy を確認するときは `oracle/prompt_builder` へ進むとき。
-- AgentCallPathContext、root path の解決、設定、構造化文書の生成・Markdown レンダリングを確認するときは `oracle/other` へ進むとき。
-- feedback reporter の入力形式を確認するときは `oracle/feedback` へ進むとき。
+- oracle 実装の責務分担や下位領域の入口を確認したいとき。
+- agent call のパラメータ構築、prompt の生成、ファイルアクセス・routing・oracle/realization 関連 policy の実装を調べるとき。
+- cmoc の設定、agent call 用パス placeholder、構造化文書の生成・Markdown レンダリングを調べるとき。
 
 ## Do not read this when
-- Codex CLI などの実際の agent call 実行処理や、抽象的なモデル・推論設定を具体的な CLI 引数へ変換する処理を確認したいとき。
-- oracle や realization の意味仕様、正本文書、または実装・テストそのものを確認したいときは、対応する `oracle/doc`、`src`、`test` の対象へ直接進むとき。
-- 既存の INDEX.md のルーティング内容だけを確認したいとき。
+- oracle の意味仕様や開発規則を確認したいときは、対応する oracle/doc を直接読んでください。
+- 特定の agent call、prompt policy、feedback、設定・パスモデルの具体的な挙動だけを調べるときは、対応する下位ディレクトリまたは実装を直接読んでください。
+- INDEX.md の生成規則や routing の意味仕様だけを確認したいときは、対応する oracle/doc または専用の下位要素を直接読んでください。
 
 ## hash
-- 6e4bed8d8216f30c5d59a99ed73581d248342ba4b3e0fe7457fb4bc97c3049a7
+- 0f9b9bde67c18cf82babfce28d668895c006eae31818b5e27b4b8af7e8c07a01

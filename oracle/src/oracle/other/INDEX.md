@@ -1,21 +1,21 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を表すデータモデル。Codex CLI のモデル・推論設定、AI 呼び出しの並列数、ファイルアクセス違反時のリカバリ回数、oracle review の各ループ上限を定義する。設定の JSON/TOML 表現や既定値の構成を確認する入口でもある。
+- 開発対象リポジトリごとに異なる cmoc の挙動設定を集約する設定データモデル。JSON/TOML 共通値、Codex の provider・agent call 設定、oracle review のループ上限を扱う。
+- 設定値の既定値と構造を確認したいときの入口であり、`config.json` の生成・同期・人手調整に対応する構成を理解するために読む。
 
 ## Read this when
-- cmoc の設定項目を追加・変更するとき
-- Codex CLI のモデル、provider-local 設定、推論 effort、リカバリ試行回数の扱いを確認するとき
-- `cmoc oracle review` の所見列挙・マージ・検証ループの設定を確認するとき
-- 設定のシリアライズ規則や既定の設定構造を確認するとき
+- CmocConfig の項目、既定値、Codex CLI 呼び出し設定、model provider 設定を変更または確認するとき。
+- `cmoc oracle review` の列挙・マージ・検証ループ上限を調整するとき。
+- 設定クラスを JSON/TOML にシリアライズする構造や、永続化される config.json との対応を調べるとき。
 
 ## Do not read this when
-- Codex CLI の呼び出し処理そのものや CLI 実装の責務を確認したいとき
-- `cmoc oracle review` のレビュー処理の実装や所見生成ロジックを確認したいとき
-- 設定ファイルの実際の保存内容や人間による調整結果だけを確認したいとき
+- agent call のプロンプト生成や個別の Codex 呼び出し処理そのものを調べる場合は、直接その実装を読む。
+- oracle review の所見生成・検証ロジックの挙動を調べる場合は、ループ設定ではなく該当する review 実装を直接読む。
+- 永続化ファイルの実際の内容だけを確認する場合は、生成された config.json を直接読む。
 
 ## hash
-- 8b7d86400aa658565b80abc2ecd33aa4f7b0af8d9a43f907cd939972cc422efd
+- 39a62379f22af3b1e8547a6f499bc01750671c294099d12f46633d04200396bd
 
 # `path_model.py`
 

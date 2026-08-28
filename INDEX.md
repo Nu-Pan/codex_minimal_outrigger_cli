@@ -91,21 +91,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本ファイルをまとめるルート。`doc` はアプリケーション仕様・branch model・不採用案・開発ルールを、`src` は仕様から委譲された agent call builder、prompt、policy、補助定義、schema を扱う。
-- cmoc の挙動や設計の意味仕様と、agent call・prompt の正確な構築定義を、それぞれ対応する下位ディレクトリへ案内する入口。
+- cmoc の正本文書と oracle 実装をまとめる上位ディレクトリです。
+- 意味仕様・開発規則・branch model・検討資料は doc、agent call 構築・prompt 生成・設定・パスモデル・構造化文書・feedback 処理の実装は src から確認します。
 
 ## Read this when
-- cmoc の仕様・設計・開発ルール、session／run の隔離モデル、CLI サブコマンドの契約を横断して確認するとき。
-- agent call builder、prompt の構築、policy、構造化出力 schema、パスや設定などの正本定義の所在を判断するとき。
-- 現行設計で採用されなかった方式と、その不採用理由を調査するとき。
+- cmoc の正本文書と oracle 実装のどちらを入口にするか判断するとき。
+- 仕様領域または実装領域の下位ディレクトリへ進む前に、oracle 全体の構成を確認するとき。
 
 ## Do not read this when
-- 確認したい仕様、builder、policy、schema、設定、または補助定義が明確で、`doc` や `src` の該当下位項目を直接読むべきとき。
-- 実際の実装やテスト、実行時の状態・ログ・実行結果を確認したいとき。
-- 既存の INDEX.md によるルーティング情報だけを確認したいとき。
+- 確認対象の仕様文書や実装領域が明確で、doc または src 配下の対象を直接読めるとき。
+- 実装の具体的な挙動、個別の agent call、または特定仕様の詳細だけを調べるとき。
 
 ## hash
-- 6c67018f6b90c547750d3c1119fdb06d7c4f38c3fd79ae81b6e1723e03b21b31
+- acc67dba53c97311d3bbc6245e5cc3ff895fe7409ca14d9b28d40e66bfbb1808
 
 # `pyproject.toml`
 

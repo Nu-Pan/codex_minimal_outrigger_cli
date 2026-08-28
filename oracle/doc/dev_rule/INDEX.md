@@ -78,19 +78,18 @@
 # `test_rule.md`
 
 ## Summary
-- pytest を用いた realization test の意味上の要件を定め、決定論的な cmoc の制御ロジックと Codex CLI 呼び出しを伴う結合動作の検証範囲を示す。pytest の tmp_path に被テスト環境を隔離して構築する基本方針と、Fake Codex CLI の利用境界を扱う。実経路統合テストの正本用語、対象範囲、終了 code・外部結果の検証、公開末端サブコマンドとの機械的対応、Real Codex CLI・実推論・専用モデル設定の要件を定める。テスト実行手順や開発環境・依存関係の管理は、同階層の別文書ではなく指定された正本へ進むための入口となる。
+- realization test が満たすべき意味上の要件と、決定論的な制御ロジックおよび Codex CLI 呼び出し経路の検証範囲を定める文書。
+- pytest、tmp_path による隔離、実経路統合テストの用語・選択・検証要件、モデル設定、quota、Fake Codex CLI の扱いを確認するための入口。
 
 ## Read this when
-- realization test を追加・変更・レビューし、pytest、tmp_path による隔離、検証対象の goal/non-goal、または Fake Codex CLI の利用可否を判断するとき
-- 実経路統合テストの用語、pytest marker、公開末端サブコマンドとの対応、終了 code と外部から観測可能な結果の検証要件を確認するとき
-- Codex CLI 呼び出しを伴うテストで、Real Codex CLI、実推論、ModelClass.MINIMUM、ReasoningEffort.LOW、model provider の扱いを確認するとき
-- 公開末端サブコマンドを追加または rename し、対応する実経路統合テストケースの追加要否を確認するとき
+- realization test の追加・変更・レビューで、検証対象、テスト環境、実経路統合テストの定義や要件を判断するとき。
+- 公開末端サブコマンドとのテスト対応、実在 Codex CLI・実推論の使用、終了 code と外部結果の検証、テスト用 CmocConfig の設定を確認するとき。
+- pytest marker、test 用 tmp_path 隔離、Fake Codex CLI の適用範囲を決めるとき。
 
 ## Do not read this when
-- 構築済み環境での test・品質検査の選択、実行、完了判定、報告手順だけを確認するときは oracle/doc/dev_rule/test_execution.md を直接読む
-- 開発環境の新規構築、依存関係の追加、pip 操作だけを確認するときは oracle/doc/dev_rule/development_environment.md を直接読む
-- model provider に対する cmoc の責務境界や通常の Codex CLI 呼び出し規則を確認するときは、それぞれ指定された app_spec の正本を直接読む
-- LLM の回答品質、Codex CLI 自体、または model provider の正しさ・安定性を自動テストの目的として評価するとき
+- 構築済み環境での test・品質検査の選択、実行、完了判定、報告手順だけを確認したいときは、test_execution.md を直接読む。
+- 開発環境の新規構築、依存関係の追加、または pip 操作を行うときは、development_environment.md を直接読む。
+- Codex の model provider に関する責務境界や通常の quota 待機・再開規則だけを確認したいときは、指定された codex_model_provider.md または codex_exec_rule.md を直接読む。
 
 ## hash
-- ab3b21471ee33a0847b80cb9e5b2c2ff71b67034de4ee5a9b0b4b70c97e478e2
+- 4c8ae7117b0833069e0b6a410745b8d1b274d609c0bb2bf971d36abcc30b6d8d
