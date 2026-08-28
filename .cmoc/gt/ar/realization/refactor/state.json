@@ -42,7 +42,7 @@
     "last_investigated_at": "2026-08-12_22-07_42_178808000"
   },
   "oracle/doc/app_spec/codex_model_provider.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "928d25ace53f88c12fadd5a3b8fd311001343c040e43aa5dd25945d939bb0d82",
     "last_investigated_at": "2026-07-23_14-46_06_968345000"
