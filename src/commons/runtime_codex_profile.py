@@ -600,29 +600,38 @@ def build_codex_override_args(
     *,
     notification_command: Sequence[str] | None = None,
 ) -> list[str]:
-    """論理設定を専用 sandbox 引数と必要最小限の config argv にする。"""
+    """agent call の直接設定を sandbox と config argv にする。"""
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
-    model_spec = config.codex.model[parameter.model_class]
-    reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
+    try:
+        call_config = config.codex.agent_calls[parameter.agent_call_kind]
+    except KeyError as exc:
+        raise CmocError(
+            "Codex agent call 設定が未定義です。",
+            [
+                "{{work-root}}/.cmoc/gt/ar/config.json の codex.agent_calls を確認してください。"
+            ],
+            f"agent call kind: {parameter.agent_call_kind!r}",
+        ) from exc
     notification_argv: list[JsonTomlValue] = []
     notification_argv.extend(notification_command or ())
     args = [
         "--ask-for-approval",
         "on-request",
         "--model",
-        model_spec.model,
+        call_config.model,
         "--sandbox",
         sandbox_mode,
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
-        *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
+        *_config_override(
+            "model_reasoning_effort", _toml_string(call_config.reasoning_effort)
+        ),
         # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
         # user config の callback と組み込み TUI 通知を呼び出し単位で上書きする。
         *_config_override("notify", _toml_value(notification_argv)),
         *_config_override("tui.notifications", "false"),
         *_feedback_mcp_override_args(),
     ]
-    if model_spec.model_provider is not None:
-        args.extend(_model_provider_override_args(model_spec.model_provider, config))
+    args.extend(_model_provider_override_args(call_config.model_provider, config))
     return args
 
 

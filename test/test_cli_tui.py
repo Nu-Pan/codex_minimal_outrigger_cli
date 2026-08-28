@@ -18,7 +18,7 @@ import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.tui as tui_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from main import app
 
 
@@ -99,8 +99,6 @@ def test_tui_runs_editor_and_launches_codex_directly(
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
         assert kwargs["notification_command_name"] == "tui"
-        assert parameter.model_class == ModelClass.EFFICIENCY
-        assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
         assert parameter is builder_calls[1][1]

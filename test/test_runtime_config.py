@@ -14,12 +14,11 @@ from typing import cast
 import pytest
 from _git_support import make_repo
 from oracle.other.cmoc_config import (
+    CodexCallConfig,
     CodexModelProviderConfig,
-    CodexModelSpec,
     JsonTomlValue,
 )
 
-from basic.acp import ModelClass, ReasoningEffort
 from cmoc_runtime import (
     CmocError,
     config_from_dict,
@@ -31,33 +30,27 @@ from cmoc_runtime import (
 from config.cmoc_config import CmocConfig
 
 
-def test_config_defaults_match_logical_model_classes() -> None:
-    """既定 config が論理 model class と reasoning effort を埋める。"""
+def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
+    """既定の全 agent call 設定が定義済み provider を直接選ぶ。"""
     config = CmocConfig()
 
     assert config.num_parallel == 8
-    assert config.codex.model_providers == {}
-    assert config.codex.model == {
-        ModelClass.MAINSTREAM: CodexModelSpec(None, "gpt-5.6-terra"),
-        ModelClass.FLAGSHIP: CodexModelSpec(None, "gpt-5.6-sol"),
-        ModelClass.EFFICIENCY: CodexModelSpec(None, "gpt-5.6-luna"),
-        ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.6-luna"),
-    }
-    assert config.codex.reasoning_effort == {
-        ReasoningEffort.LOW: "low",
-        ReasoningEffort.MEDIUM: "medium",
-        ReasoningEffort.HIGH: "high",
-        ReasoningEffort.XHIGH: "xhigh",
-        ReasoningEffort.MAX: "max",
-    }
+    assert config.codex.model_providers == {"codex": CodexModelProviderConfig()}
+    assert config.codex.agent_calls
+    for agent_call_kind, call_config in config.codex.agent_calls.items():
+        assert agent_call_kind
+        assert call_config.model_provider in config.codex.model_providers
+        assert call_config.model
+        assert call_config.reasoning_effort
     assert config.oracle_review.num_enumerate_findings_loop == 2
     assert config.oracle_review.num_merge_findings_loop == 2
     assert config.oracle_review.num_validate_findings_loop == 2
 
 
 def test_config_json_preserves_oracle_member_order() -> None:
-    """config の JSON 化で model と reasoning effort の定義順を保つ。"""
-    data = config_to_dict(CmocConfig())
+    """config の JSON 化で agent call 直接設定の定義順を保つ。"""
+    config = CmocConfig()
+    data = config_to_dict(config)
 
     assert list(data) == [
         "num_parallel",
@@ -66,22 +59,9 @@ def test_config_json_preserves_oracle_member_order() -> None:
     ]
     assert list(data["codex"]) == [
         "model_providers",
-        "model",
-        "reasoning_effort",
+        "agent_calls",
     ]
-    assert list(data["codex"]["model"]) == [
-        "mainstream",
-        "flagship",
-        "efficiency",
-        "minimum",
-    ]
-    assert list(data["codex"]["reasoning_effort"]) == [
-        "low",
-        "medium",
-        "high",
-        "xhigh",
-        "max",
-    ]
+    assert list(data["codex"]["agent_calls"]) == list(config.codex.agent_calls)
 
 
 def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
@@ -107,13 +87,13 @@ def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
                 "model_providers": {
                     "provider": {"settings": {"endpoint": "http://127.0.0.1"}}
                 },
-                "model": {
-                    "minimum": {
+                "agent_calls": {
+                    "custom_call": {
                         "model_provider": "provider",
                         "model": "local-model",
+                        "reasoning_effort": "deliberate",
                     }
                 },
-                "reasoning_effort": {"low": "deliberate"},
             },
             "oracle_review": {
                 "num_enumerate_findings_loop": 3,
@@ -211,32 +191,50 @@ def test_config_rejects_symlinked_path_without_touching_link_target(
 
 
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])
-def test_config_rejects_non_object_codex_model_specs(value: object) -> None:
-    """model の値にオブジェクト以外を指定した config を拒否する。"""
+def test_config_rejects_non_object_codex_agent_call_settings(value: object) -> None:
+    """agent call 設定に object 以外を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {"model": {"mainstream": value}}})
+        config_from_dict({"codex": {"agent_calls": {"custom_call": value}}})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
 @pytest.mark.parametrize(
-    "spec",
+    ("field", "value"),
     [
-        {"model_provider": False, "model": "gpt-5.5"},
-        {"model_provider": [], "model": "gpt-5.5"},
-        {"model_provider": "provider", "model": ""},
-        {"model_provider": "provider", "model": "  "},
-        {"model_provider": "provider", "model": None},
-        {"model_provider": "provider", "model": "\x00"},
-        {"model_provider": "provider", "model": "\ud800"},
+        ("model_provider", False),
+        ("model_provider", None),
+        ("model_provider", []),
+        ("model_provider", ""),
+        ("model_provider", "  "),
+        ("model_provider", "\ud800"),
+        ("model", ""),
+        ("model", "  "),
+        ("model", None),
+        ("model", "\x00"),
+        ("model", "\ud800"),
+        ("reasoning_effort", False),
+        ("reasoning_effort", None),
+        ("reasoning_effort", []),
+        ("reasoning_effort", {}),
+        ("reasoning_effort", ""),
+        ("reasoning_effort", "  "),
+        ("reasoning_effort", "\ud800"),
     ],
 )
-def test_config_rejects_invalid_codex_model_specs(
-    spec: dict[str, object],
+def test_config_rejects_invalid_codex_agent_call_settings(
+    field: str,
+    value: object,
 ) -> None:
-    """model provider 型や model 名が不正な config を拒否する。"""
+    """直接設定の必須文字列が不正な config を拒否する。"""
+    call_config: dict[str, object] = {
+        "model_provider": "codex",
+        "model": "gpt-model",
+        "reasoning_effort": "high",
+    }
+    call_config[field] = value
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {"model": {"mainstream": spec}}})
+        config_from_dict({"codex": {"agent_calls": {"custom_call": call_config}}})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
@@ -247,10 +245,11 @@ def test_invalid_config_error_report_escapes_surrogate() -> None:
         config_from_dict(
             {
                 "codex": {
-                    "model": {
-                        "mainstream": {
-                            "model_provider": "provider",
+                    "agent_calls": {
+                        "custom_call": {
+                            "model_provider": "codex",
                             "model": "\ud800",
+                            "reasoning_effort": "high",
                         }
                     }
                 }
@@ -262,24 +261,7 @@ def test_invalid_config_error_report_escapes_surrogate() -> None:
     assert "\\ud800" in report
 
 
-@pytest.mark.parametrize("value", [False, None, [], {}, "", "  "])
-def test_config_rejects_non_string_reasoning_effort_names(value: object) -> None:
-    """reasoning effort 名に文字列以外や空文字列を指定した config を拒否する。"""
-    with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {"reasoning_effort": {"low": value}}})
-
-    assert exc_info.value.summary == "cmoc config が不正です。"
-
-
-def test_config_rejects_non_toml_reasoning_effort_name() -> None:
-    """TOML string として符号化できない reasoning effort 名を拒否する。"""
-    with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {"reasoning_effort": {"low": "\ud800"}}})
-
-    assert exc_info.value.summary == "cmoc config が不正です。"
-
-
-@pytest.mark.parametrize("field", ["model_providers", "model", "reasoning_effort"])
+@pytest.mark.parametrize("field", ["model_providers", "agent_calls"])
 @pytest.mark.parametrize("value", [None, [], "invalid"])
 def test_config_rejects_non_object_codex_name_maps(field: str, value: object) -> None:
     """codex の map field にオブジェクト以外を指定した config を拒否する。"""
@@ -354,10 +336,11 @@ def test_config_preserves_generic_model_provider_settings() -> None:
                     "provider.with.dot": {"settings": settings},
                     "builtin": {},
                 },
-                "model": {
-                    "minimum": {
+                "agent_calls": {
+                    "custom_call": {
                         "model_provider": "provider.with.dot",
                         "model": "local-model",
+                        "reasoning_effort": "deliberate",
                     }
                 },
             }
@@ -365,13 +348,15 @@ def test_config_preserves_generic_model_provider_settings() -> None:
     )
 
     assert config.codex.model_providers == {
+        "codex": CodexModelProviderConfig(),
         "provider.with.dot": CodexModelProviderConfig(settings),
         "builtin": CodexModelProviderConfig(),
     }
-    assert config.codex.model[ModelClass.MINIMUM] == CodexModelSpec(
-        "provider.with.dot", "local-model"
+    assert config.codex.agent_calls["custom_call"] == CodexCallConfig(
+        "provider.with.dot", "local-model", "deliberate"
     )
     assert config_to_dict(config)["codex"]["model_providers"] == {
+        "codex": {"settings": {}},
         "provider.with.dot": {"settings": settings},
         "builtin": {"settings": {}},
     }
@@ -430,10 +415,26 @@ def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:
 def test_config_to_dict_rejects_unusable_in_memory_model_name(model: str) -> None:
     """型注釈を迂回した model 名も永続化境界で拒否する。"""
     config = CmocConfig()
-    config.codex.model[ModelClass.MAINSTREAM] = CodexModelSpec(None, model)
+    config.codex.agent_calls["custom_call"] = CodexCallConfig("codex", model, "high")
 
     with pytest.raises(TypeError):
         config_to_dict(config)
+
+
+def test_config_drops_legacy_codex_model_class_maps() -> None:
+    """旧 model class と reasoning effort map を永続設定から除外する。"""
+    config = config_from_dict(
+        {
+            "codex": {
+                "model": {"minimum": {"model": "legacy"}},
+                "reasoning_effort": {"low": "legacy"},
+            }
+        }
+    )
+
+    codex_data = config_to_dict(config)["codex"]
+    assert "model" not in codex_data
+    assert "reasoning_effort" not in codex_data
 
 
 @pytest.mark.parametrize("value", [4, True, "1", None])

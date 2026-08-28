@@ -1,17 +1,16 @@
 # `join`
 
 ## Summary
-- session join の merge conflict 解消に使うエージェント呼び出し設定と専用 prompt を定義するファイル。競合対象パスの絶対パス解決、conflict marker の解消のみを求める方針、モデル・推論設定、リポジトリ書き込み権限を確認する入口。
+- `cmoc session join` の git merge conflict marker 解消用エージェント呼び出しパラメータを構築する。
+- conflict 対象ファイルのパス、専用の conflict 解消ポリシー、リポジトリ書き込み権限、起動時 prompt を設定する。
 
 ## Read this when
-- session join の merge conflict 解消処理を実装・変更・レビューするとき
-- conflict 解消用エージェントの prompt、対象パス解決、モデル設定、ファイル権限を確認するとき
-- conflict 解消時に余計な差分や仕様変更を避ける呼び出し条件を確認するとき
+- `session join` の conflict 解消で、エージェントの prompt や起動パラメータを確認・変更するとき。
+- conflict 対象ファイルの渡し方、oracle file の編集範囲、専用 policy、preflight を行わない起動設定を確認するとき。
 
 ## Do not read this when
-- 通常の session join の結合処理や conflict 以外のサブコマンドを確認するとき
-- 一般的な prompt 生成や共通のエージェント呼び出し型を確認するとき
-- 競合解消対象以外のファイル編集・リファクタリング方針を確認するとき
+- merge conflict marker の検出や解消処理そのものの実装を確認したいとき。
+- 一般的な prompt 構築、パス解決、または `session join` の他の処理を直接確認するとき。
 
 ## hash
-- a9737a6c2dc6c359d96a4b97a87bedf774a736724daba86c147c82a3bc4c00b7
+- ed5066dffdad8bf41dd14283cb3f55909165ea1b5e6b2d8e28d84269254cc962

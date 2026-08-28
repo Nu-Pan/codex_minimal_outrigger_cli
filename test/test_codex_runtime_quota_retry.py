@@ -33,7 +33,7 @@ import acp.builder.quota_probe as quota_probe_module
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
 from acp.builder.quota_probe import build_quota_availability_probe_parameter
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import SubcommandLogger
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_errors import CmocError
@@ -44,9 +44,7 @@ def quota_probe_prompt(agent_call_cwd: Path) -> str:
     """実在する quota probe adapter が生成する prompt を返す。"""
     return build_quota_availability_probe_parameter(
         AgentCallParameter(
-            agent_call_kind="test_agent_call",
-            model_class=ModelClass.EFFICIENCY,
-            reasoning_effort=ReasoningEffort.LOW,
+            agent_call_kind="build_realization_apply_fork_launch_exec_parameter",
             file_access_mode=FileAccessMode.READONLY,
             prompt="base",
             structured_output_schema_path=None,
@@ -117,22 +115,25 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "test_agent_call",
-        ModelClass.FLAGSHIP,
-        ReasoningEffort.LOW,
+        "build_realization_apply_fork_launch_exec_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
         root,
     )
     logger = SubcommandLogger(root, "test")
+    config = CmocConfig()
+    base_call_config = config.codex.agent_calls[parameter.agent_call_kind]
+    probe_call_config = config.codex.agent_calls[
+        "build_quota_availability_probe_parameter"
+    ]
 
     result = run_codex_exec(
         parameter,
         root=root,
         quota_poll_interval_sec=0,
         max_quota_polls=1,
-        config=CmocConfig(),
+        config=config,
         subcommand_logger=logger,
     )
 
@@ -147,13 +148,16 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         "--model",
     ]
     assert argv_calls[1][argv_calls[1].index("exec") + 1] == "--skip-git-repo-check"
-    assert codex_arg_value(argv_calls[1], "--model") == "gpt-5.6-luna"
+    assert codex_arg_value(argv_calls[1], "--model") == probe_call_config.model
     assert codex_arg_value(argv_calls[1], "--sandbox") == "read-only"
     assert "--approve-for-me" not in argv_calls[1]
     probe_config = codex_override_config(argv_calls[1])
     assert "approval_policy" not in probe_config
     assert probe_config["approvals_reviewer"] == "auto_review"
-    assert probe_config["model_reasoning_effort"] == "low"
+    assert (
+        probe_config["model_reasoning_effort"]
+        == probe_call_config.reasoning_effort
+    )
     assert "--profile" not in argv_calls[1]
     assert "--json" in argv_calls[1]
     assert "--output-last-message" in argv_calls[1]
@@ -185,8 +189,9 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert probe_logs[0]["argv"][1:] == argv_calls[1]
     assert "profile_name" not in probe_logs[0]
     assert "profile_path" not in probe_logs[0]
-    assert probe_logs[0]["model_class"] == "minimum"
-    assert probe_logs[0]["reasoning_effort"] == "low"
+    assert probe_logs[0]["model_provider"] == probe_call_config.model_provider
+    assert probe_logs[0]["model"] == probe_call_config.model
+    assert probe_logs[0]["reasoning_effort"] == probe_call_config.reasoning_effort
     assert probe_logs[0]["file_access_mode"] == "readonly"
     assert Path(probe_logs[0]["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
@@ -200,13 +205,20 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     main_logs = [log for _path, log in main_entries]
     assert len(main_logs) == 2
     assert [log["argv"][1:] for log in main_logs] == [argv_calls[0], argv_calls[2]]
+    for log in main_logs:
+        assert log["model_provider"] == base_call_config.model_provider
+        assert log["model"] == base_call_config.model
+        assert log["reasoning_effort"] == base_call_config.reasoning_effort
     initial_log = next(log for log in main_logs if "resume" not in log["argv"])
     resume_log = next(log for log in main_logs if "resume" in log["argv"])
     resume_entry = next((path, log) for path, log in main_entries if log is resume_log)
     assert initial_log["argv"][1:] == argv_calls[0]
     assert resume_log["argv"][1:] == argv_calls[2]
-    assert codex_arg_value(probe_logs[0]["argv"], "--model") == "gpt-5.6-luna"
-    assert codex_arg_value(initial_log["argv"], "--model") == "gpt-5.6-sol"
+    assert (
+        codex_arg_value(probe_logs[0]["argv"], "--model")
+        == probe_call_config.model
+    )
+    assert codex_arg_value(initial_log["argv"], "--model") == base_call_config.model
     assert codex_arg_value(initial_log["argv"], "--sandbox") == "read-only"
     assert codex_arg_value(resume_log["argv"], "--sandbox") == "read-only"
     assert "--profile" not in initial_log["argv"]
@@ -302,9 +314,7 @@ def test_capacity_probe_retry_skips_quota_poll_interval(
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     result = run_codex_exec(
         AgentCallParameter(
-            "test_agent_call",
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
+            "build_indexing_index_entry_parameter",
             FileAccessMode.READONLY,
             "prompt",
             None,
@@ -356,9 +366,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     with pytest.raises(KeyboardInterrupt):
         run_codex_exec(
             AgentCallParameter(
-                "test_agent_call",
-                ModelClass.EFFICIENCY,
-                ReasoningEffort.LOW,
+                "build_indexing_index_entry_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
@@ -389,12 +397,10 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
 
 
 def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> None:
-    """quota probe が正本 builder の完全 prompt と最小設定を使用する。"""
+    """quota probe が正本 builder の完全 prompt と固有 call kind を使用する。"""
     root = make_repo(tmp_path)
     base = AgentCallParameter(
-        agent_call_kind="test_agent_call",
-        model_class=ModelClass.FLAGSHIP,
-        reasoning_effort=ReasoningEffort.HIGH,
+        agent_call_kind="build_realization_apply_fork_launch_exec_parameter",
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt="base",
         structured_output_schema_path=None,
@@ -405,8 +411,7 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> N
     probe = build_quota_availability_probe_parameter(base)
 
     assert probe == build_canonical_quota_probe_parameter(root)
-    assert probe.model_class == ModelClass.MINIMUM
-    assert probe.reasoning_effort == ReasoningEffort.LOW
+    assert probe.agent_call_kind == "build_quota_availability_probe_parameter"
     assert probe.file_access_mode == FileAccessMode.READONLY
     assert probe.prompt
     assert "# human feedback reporting" in probe.prompt
@@ -477,9 +482,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     parameter = AgentCallParameter(
-        "test_agent_call",
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
+        "build_indexing_index_entry_parameter",
         FileAccessMode.PURE_ORACLE_READ,
         "prompt",
         None,
@@ -555,9 +558,7 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "test_agent_call",
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
+        "build_indexing_index_entry_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -614,9 +615,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "test_agent_call",
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
+        "build_indexing_index_entry_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -684,9 +683,7 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
     with pytest.raises(CmocError) as exc_info:
         run_codex_exec(
             AgentCallParameter(
-                "test_agent_call",
-                ModelClass.EFFICIENCY,
-                ReasoningEffort.LOW,
+                "build_indexing_index_entry_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
@@ -740,9 +737,7 @@ def test_quota_poll_limit_stops_before_probe(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "test_agent_call",
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
+        "build_indexing_index_entry_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -799,9 +794,7 @@ def test_quota_probe_failure_reports_probe_error(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "test_agent_call",
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
+        "build_indexing_index_entry_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -866,9 +859,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "test_agent_call",
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
+        "build_indexing_index_entry_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -937,9 +928,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "test_agent_call",
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
+        "build_indexing_index_entry_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -1004,9 +993,7 @@ def test_quota_polling_state_is_cleared_when_progress_output_fails(
         with pytest.raises(BrokenPipeError, match="closed output"):
             run_codex_exec(
                 AgentCallParameter(
-                    "test_agent_call",
-                    ModelClass.EFFICIENCY,
-                    ReasoningEffort.LOW,
+                    "build_indexing_index_entry_parameter",
                     FileAccessMode.READONLY,
                     "prompt",
                     None,

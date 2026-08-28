@@ -17,19 +17,19 @@
 # `normalize_issue.py`
 
 ## Summary
-- feedback observation と絞り込み済みの既存 issue 候補を比較し、同一 issue か新規 issue かを判断する prompt とエージェント起動パラメータを構築する関数。
-- 入力外のファイルやログを参照せず、候補 issue の ID を用いた決定論的な同一性判断へ誘導する。関連する Structured Output schema と prompt 構築処理への入口となる。
+- 構造化済み observation と絞り込み済みの既存 issue candidate を比較し、feedback issue が既存 issue と同一か新規かを判断するための prompt と agent call パラメータを構築する。
+- 入力以外のファイルや候補外 issue を参照せず、issue の同一性判断だけを行う処理への入口。
 
 ## Read this when
-- feedback issue の重複・同一性判定用 agent call の prompt 内容や起動設定を確認するとき
-- 構造化 observation と既存 issue candidate を入力する feedback 正規化処理を追跡するとき
+- feedback issue の同一性判定用 agent call の prompt、読み取り専用アクセス、入力データの埋め込み、または Structured Output の起動パラメータを確認するとき。
+- 既存 issue candidate の ID と判定結果の整合性を保証する定義を確認するとき。
 
 ## Do not read this when
-- feedback issue の summary、impact、原因、現在性、actionability、human action、verification、relation の生成仕様を確認したいとき
-- Structured Output のフィールド定義そのものを確認したいときは、隣接する schema ファイルを直接読むとき
+- issue の summary、impact、原因、現在性、actionability、human action、verification verdict、relation などの内容を生成・評価するとき。
+- feedback observation の構造化や候補 issue の事前絞り込みを実装・確認するとき。
 
 ## hash
-- 69cb83beff8477a42101a776bc451a1981fc221d00cd0f7f346aa2f32fc31d32
+- cb1860f7b19eafebdda71b17a16444566f4f368f4025fe0379692bdefb48f092
 
 # `verify_issue.json`
 
@@ -53,16 +53,16 @@
 # `verify_issue.py`
 
 ## Summary
-- feedback issue candidate の検証担当 agent call を構築する実装。report cut 時点で固定された参照と単一 candidate を埋め込み、読み取り専用・最大推論・routing policy 有効の検証パラメータを返す。
-- 検証 prompt には参照範囲、変更禁止、candidate ID と evidence の決定論的条件を定義し、対応する Structured Output schema と実行時パスコンテキストを設定する。
+- 人間向け feedback issue の検証用 agent call を構築する定義。report cut 時点で固定された参照と 1 件の issue candidate を入力し、検証担当向け prompt、読み取り専用アクセス、Structured Output schema、起動時の indexing 設定をまとめる。
 
 ## Read this when
-- feedback issue candidate の検証 agent call の prompt、モデル設定、読み取り範囲、report cut reference の扱いを変更または確認するとき
-- feedback 検証フローで返す AgentCallParameter の構築内容を追跡するとき
+- feedback issue candidate の検証 agent call の prompt 文面、参照範囲、読み取り専用制約、または起動パラメータを変更・確認するとき
+- report cut reference だけを根拠に candidate を検証する処理の入口を確認するとき
 
 ## Do not read this when
-- feedback issue の報告・観測登録や別の candidate 処理の実装を直接確認するとき
-- 検証結果の Structured Output 項目や型だけを確認したいときは、対応する schema を直接読むとき
+- 検証結果の Structured Output の項目や JSON schema 自体を確認したいとき
+- feedback issue の報告・観測送信や、candidate の生成・収集ロジックを直接確認したいとき
+- prompt の共通構築規則だけを確認する場合は、prompt builder の定義を直接読むとき
 
 ## hash
-- 1fe9f442f06cb28be74207276fb123757e4c3ac081bc3d2c5f074b4d24c97077
+- 326bd0555b76c69ddaeb61afece9fa3bdfd8c55426f476763614c74d5e2f1de7

@@ -94,6 +94,7 @@ def _run_codex_tui_process(
         config,
         notification_command=notification_command,
     )
+    call_config = config.codex.agent_calls[parameter.agent_call_kind]
     argv = [
         "codex",
         *override_args,
@@ -115,8 +116,9 @@ def _run_codex_tui_process(
                 "agent_call_kind": parameter.agent_call_kind,
                 "codex_call_id": codex_call_id,
                 "codex_home": str(codex_home),
-                "model_class": parameter.model_class.value,
-                "reasoning_effort": parameter.reasoning_effort.value,
+                "model_provider": call_config.model_provider,
+                "model": call_config.model,
+                "reasoning_effort": call_config.reasoning_effort,
                 "file_access_mode": parameter.file_access_mode.value,
                 "cwd": str(agent_call_cwd),
             },

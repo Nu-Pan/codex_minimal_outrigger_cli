@@ -83,8 +83,7 @@ def test_canonical_agent_builders_import_from_packaged_layout(
         (
             "import json; "
             "from pathlib import Path; "
-            "from basic.acp import AgentCallParameter, FileAccessMode, "
-            "ModelClass, ReasoningEffort; "
+            "from basic.acp import AgentCallParameter, FileAccessMode; "
             "from acp.builder.oracle.review.enumerate_finding import "
             "build_oracle_review_enumerate_finding_parameter as build; "
             "from acp.builder.quota_probe import "
@@ -95,8 +94,8 @@ def test_canonical_agent_builders_import_from_packaged_layout(
             "schema = json.loads(p.structured_output_schema_path.read_text()); "
             "assert schema['required'] == ['findings']; "
             "assert '# oracle findings policy' in p.prompt; "
-            "base = AgentCallParameter('base', ModelClass.MINIMUM, "
-            "ReasoningEffort.LOW, FileAccessMode.READONLY, 'base', None, Path.cwd()); "
+            "base = AgentCallParameter('base', FileAccessMode.READONLY, "
+            "'base', None, Path.cwd()); "
             "probe = build_probe(base); "
             "assert probe.prompt; "
             "assert '# human feedback reporting' in probe.prompt; "
@@ -177,7 +176,7 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
     """ACP basic の canonical 定義再公開を packaged layout で検証する。
 
     realization 側の公開 import が oracle 側の型を複製せず同一オブジェクトとして
-    再公開し、正本の enum 値を利用できることを確認する。
+    再公開し、正本の file access mode を利用できることを確認する。
     根拠: {{work-root}}/oracle/src/oracle/acp_builder/basic.py
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
@@ -190,13 +189,13 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
         target,
         (
             "import acp.builder; "
-            "from acp.builder.basic import AgentCallParameter, ModelClass; "
+            "from acp.builder.basic import AgentCallParameter, FileAccessMode; "
             "from oracle.acp_builder.basic import AgentCallParameter as Canonical; "
             "assert acp.builder.__all__ == ['basic']; "
             "assert sorted(n for n in vars(acp.builder) if not n.startswith('_')) == ['basic']; "
             "assert acp.builder.basic.AgentCallParameter is Canonical; "
             "assert AgentCallParameter is Canonical; "
-            "assert ModelClass.MAINSTREAM.value == 'mainstream'"
+            "assert FileAccessMode.READONLY.value == 'readonly'"
         ),
         tmp_path,
     )
@@ -222,8 +221,8 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
         (
             "import config.cmoc_config as c; "
             "expected = ['CmocConfig', 'CmocConfigCodex', "
-            "'CmocConfigOracleReview', 'CodexModelProviderConfig', "
-            "'CodexModelSpec', 'JsonTomlValue']; "
+            "'CmocConfigOracleReview', 'CodexCallConfig', "
+            "'CodexModelProviderConfig', 'JsonTomlValue']; "
             "assert c.__all__ == expected; "
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),

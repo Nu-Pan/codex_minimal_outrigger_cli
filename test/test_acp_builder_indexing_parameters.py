@@ -15,7 +15,7 @@ from oracle.acp_builder.indexing.index_entry import (
 
 import acp.builder.indexing.index_entry as indexing_index_entry_module
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import FileAccessMode
 
 
 @pytest.fixture
@@ -27,16 +27,14 @@ def indexing_target_path(tmp_path: Path) -> Path:
     return target_path
 
 
-def test_indexing_index_entry_uses_minimum_model_and_low_reasoning(
+def test_indexing_index_entry_uses_readonly_without_preflight(
     indexing_target_path: Path,
 ) -> None:
-    """index entry builderがminimum modelとlow reasoningを選ぶことを検証する。"""
+    """index entry builder が readonly かつ preflight なしで構築される。"""
     parameter = build_indexing_index_entry_parameter(
         indexing_target_path, "# README", indexing_target_path.parent
     )
 
-    assert parameter.model_class == ModelClass.MINIMUM
-    assert parameter.reasoning_effort == ReasoningEffort.LOW
     assert parameter.file_access_mode == FileAccessMode.READONLY
     assert parameter.agent_call_cwd == indexing_target_path.parent.resolve()
     assert parameter.run_indexing_preflight is False

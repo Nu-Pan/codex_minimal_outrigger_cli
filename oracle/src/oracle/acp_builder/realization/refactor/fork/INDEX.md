@@ -18,17 +18,19 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の変更差分を人間向けに要約する agent call の prompt と起動パラメータを構築する定義。差分を補助入力として完全 prompt に埋め込み、readonly・効率重視の実行条件と Structured Output schema を指定する。
+- refactor fork の作業差分を人間向けに要約する agent call の prompt と起動パラメータを構築する定義。
+- 差分を補助情報として prompt に埋め込み、readonly の作業範囲、作業ディレクトリ、Structured Output schema、indexing preflight を指定する入口。
 
 ## Read this when
-- refactor fork の変更差分要約 agent call の prompt 内容、入力差分の渡し方、実行モデルや推論設定、作業ディレクトリ、読み取り専用条件を確認・変更するとき。
+- refactor fork の変更要約 agent call の prompt 内容や起動パラメータを変更・確認するとき
+- raw git diff の受け渡し、linked worktree の作業ディレクトリ、要約用 agent call のアクセスモードを確認するとき
 
 ## Do not read this when
-- 変更要約の出力形式そのものを確認するときは、対応する Structured Output schema を直接読む。
-- refactor fork の実際の変更内容を確認するときは、この起動定義ではなく生成された raw git diff や対象の実装差分を直接読む。
+- refactor fork の変更要約結果の schema や要約処理そのものだけを確認するとき
+- refactor fork 以外の agent call 構築定義や、実際の refactor 実装差分を直接確認するとき
 
 ## hash
-- bc780d3ef3c3f1e9bee23801596aa74afa59f4c45e19bdc0ab6629272d98eec2
+- e38bf155f8b84590a82476b2f75f5bbdd9a735eca013044f0f261d68d26ff18a
 
 # `file_review_and_fix.json`
 
@@ -51,19 +53,17 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- refactor fork のファイル単位レビュー・修正用 AgentCallParameter を構築する定義。対象パスと実行用 worktree からパス文脈を作り、差分に依存しないレビュー・修正 prompt、各種 policy、構造化出力 schema、実行設定を組み立てる。レビュー対象の realization file と、それを起点に参照される prompt・oracle・path・構造化文書関連の実装へ進む入口となる。
+- ファイル単位レビュー兼修正用の agent call パラメータを構築する定義です。
+- 指定したレビュー対象 path と実行用 worktree から、レビュー・修正 prompt、アクセス範囲、Structured Output schema、実行時の作業ディレクトリをまとめた追従パラメータを生成します。
 
 ## Read this when
-- refactor fork のファイル単位レビュー・修正 agent call の prompt や実行パラメータを変更・調査するとき
-- 対象 path、run worktree、ファイルアクセスモード、モデル・推論設定、preflight 実行の構築方法を確認するとき
-- レビュー結果の realization policy、findings policy、routing policy、変更 path の事後条件がどこで prompt に組み込まれるか確認するとき
-- 対応する Structured Output schema と builder の整合性を確認するとき
+- ファイル単位で差分に依存しないレビュー・修正 agent call の入口を確認したいとき。
+- レビュー対象を起点に oracle file と realization file を調査し、対応する realization file の修正まで行う prompt 構築規則を確認したいとき。
 
 ## Do not read this when
-- レビュー・修正 agent call の一般的な実装詳細を直接調べる必要がなく、対象 realization file や対応 schema を直接読む方が目的に近いとき
-- refactor fork 以外の agent call 種別の parameter builder を調査するとき
-- prompt の共通生成処理そのものを調査するときは、この定義ではなく build_complete_prompt の実装を直接読むべきとき
-- パス解決や構造化文書の markdown rendering の仕様だけを確認したいときは、各 oracle・実装を直接読むべき
+- レビュー対象の実装内容そのものを確認したいとき。
+- レビュー結果の出力項目や JSON schema の詳細を確認したいとき。
+- 実際の realization のレビュー・修正処理を直接調査したいとき。
 
 ## hash
-- e258bae63612847e0bb508c912c8a6172b3bebf371d62279c1951a90de43134c
+- 0e411bfc7a3e9a8be6e838198582fe64854e1498226d51ec17ede9add2336ce0

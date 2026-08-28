@@ -30,7 +30,7 @@ from acp.builder.realization.refactor.fork.change_summary import (
 from acp.builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_fork_file_review_and_fix_parameter,
 )
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import FileAccessMode
 
 
 @pytest.fixture
@@ -76,8 +76,6 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
         run_worktree,
     )
 
-    assert parameter.model_class == ModelClass.FLAGSHIP
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.run_indexing_preflight is True
@@ -127,8 +125,6 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
         editing_run_worktree,
     )
 
-    assert review.model_class == ModelClass.EFFICIENCY
-    assert review.reasoning_effort == ReasoningEffort.MAX
     assert review.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert review.structured_output_schema_path is not None
     review_schema_path = oracle_schema_path(
@@ -162,8 +158,6 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     finding_schema = review_schema["properties"]["findings"]["items"]
     assert "changed_paths" in finding_schema["required"]
     assert finding_schema["properties"]["changed_paths"]["type"] == "array"
-    assert summary.model_class == ModelClass.EFFICIENCY
-    assert summary.reasoning_effort == ReasoningEffort.MEDIUM
     assert summary.file_access_mode == FileAccessMode.READONLY
     assert summary.structured_output_schema_path is not None
     summary_schema_path = oracle_schema_path(

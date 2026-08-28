@@ -14,9 +14,9 @@ from typing import cast
 
 import pytest
 from _codex_support import codex_arg_value, codex_override_config, codex_parameter
-from oracle.other.cmoc_config import CodexModelProviderConfig, CodexModelSpec
+from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import (
     build_codex_override_args,
@@ -48,29 +48,24 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
 ) -> None:
     """全 file access mode を専用 --sandbox 引数へ欠落なく変換する。"""
     config = CmocConfig()
-    args = build_codex_override_args(
-        codex_parameter(mode, agent_call_cwd=Path.cwd()), config
-    )
+    parameter = codex_parameter(mode, agent_call_cwd=Path.cwd())
+    call_config = config.codex.agent_calls[parameter.agent_call_kind]
+    args = build_codex_override_args(parameter, config)
 
     assert args.count("--sandbox") == 1
     assert codex_arg_value(args, "--sandbox") == sandbox
     assert codex_arg_value(args, "--ask-for-approval") == "on-request"
     assert "--approve-for-me" not in args
-    assert codex_arg_value(args, "--model") == (
-        config.codex.model[ModelClass.EFFICIENCY].model
-    )
+    assert codex_arg_value(args, "--model") == call_config.model
     parsed = codex_override_config(args)
     assert "approval_policy" not in parsed
     assert parsed["approvals_reviewer"] == "auto_review"
-    assert (
-        parsed["model_reasoning_effort"]
-        == (config.codex.reasoning_effort[ReasoningEffort.LOW])
-    )
+    assert parsed["model_reasoning_effort"] == call_config.reasoning_effort
     assert "permissions" not in parsed
     assert "default_permissions" not in parsed
     assert "sandbox_workspace_write" not in parsed
     assert "features" not in parsed
-    assert "model_provider" not in parsed
+    assert parsed["model_provider"] == call_config.model_provider
     assert "model_providers" not in parsed
     assert parsed["notify"] == []
     assert parsed["tui"] == {"notifications": False}
@@ -208,13 +203,13 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
     config.codex.model_providers["unused"] = CodexModelProviderConfig(
         {"secret": "must-not-be-forwarded"}
     )
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(provider_id, "local-model")
+    config.codex.agent_calls["test_agent_call"] = CodexCallConfig(
+        provider_id, "local-model", "provider-defined-effort"
+    )
 
     args = build_codex_override_args(
         AgentCallParameter(
             agent_call_kind="test_agent_call",
-            model_class=ModelClass.MINIMUM,
-            reasoning_effort=ReasoningEffort.LOW,
             file_access_mode=FileAccessMode.READONLY,
             prompt="prompt",
             structured_output_schema_path=None,
@@ -227,6 +222,7 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
     assert codex_arg_value(args, "--sandbox") == "read-only"
     assert codex_arg_value(args, "--model") == "local-model"
     assert parsed["model_provider"] == provider_id
+    assert parsed["model_reasoning_effort"] == "provider-defined-effort"
     assert parsed["model_providers"] == {
         provider_id: {
             "base.url": "http://127.0.0.1:43123/v1",
@@ -253,13 +249,13 @@ def test_codex_overrides_leave_bare_toml_key_segments_unquoted() -> None:
     config.codex.model_providers[provider_id] = CodexModelProviderConfig(
         {"name": "local provider"}
     )
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(provider_id, "local-model")
+    config.codex.agent_calls["test_agent_call"] = CodexCallConfig(
+        provider_id, "local-model", "low"
+    )
 
     args = build_codex_override_args(
         AgentCallParameter(
             agent_call_kind="test_agent_call",
-            model_class=ModelClass.MINIMUM,
-            reasoning_effort=ReasoningEffort.LOW,
             file_access_mode=FileAccessMode.READONLY,
             prompt="prompt",
             structured_output_schema_path=None,
@@ -274,16 +270,14 @@ def test_codex_overrides_leave_bare_toml_key_segments_unquoted() -> None:
 def test_codex_overrides_reject_undefined_selected_provider() -> None:
     """選択 provider の定義欠落を Codex 起動前の argv 構築で失敗させる。"""
     config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(
-        "missing-provider", "local-model"
+    config.codex.agent_calls["test_agent_call"] = CodexCallConfig(
+        "missing-provider", "local-model", "low"
     )
 
     with pytest.raises(CmocError, match="Codex model provider が未定義"):
         build_codex_override_args(
             AgentCallParameter(
                 agent_call_kind="test_agent_call",
-                model_class=ModelClass.MINIMUM,
-                reasoning_effort=ReasoningEffort.LOW,
                 file_access_mode=FileAccessMode.READONLY,
                 prompt="prompt",
                 structured_output_schema_path=None,
@@ -291,6 +285,17 @@ def test_codex_overrides_reject_undefined_selected_provider() -> None:
             ),
             config,
         )
+
+
+def test_codex_overrides_reject_missing_agent_call_setting() -> None:
+    """未設定の agent call 種別を値の推測なしで起動前に拒否する。"""
+    parameter = replace(
+        codex_parameter(agent_call_cwd=Path.cwd()),
+        agent_call_kind="missing_agent_call",
+    )
+
+    with pytest.raises(CmocError, match="Codex agent call 設定が未定義"):
+        build_codex_override_args(parameter, CmocConfig())
 
 
 def test_prepare_schema_preserves_source_bytes_for_hash_store(tmp_path: Path) -> None:

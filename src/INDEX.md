@@ -19,20 +19,18 @@
 # `basic`
 
 ## Summary
-- `basic.*` の旧来の公開 import 経路を維持する互換層。ACP 型、path model、構造化文書 API を realization 側から再公開し、実装や正本仕様そのものは保持しない。各モジュールの互換インターフェース確認から、対応する正本実装・仕様へ進む入口となる。
+- `basic.*` の互換 import 公開面をまとめた realization 側の入口。ACP 型、path model、構造化文書 API の旧参照から、各互換モジュールまたは再公開元の正本へ進むための下位要素入口を提供する。
 
 ## Read this when
-- `basic.*` の互換 import を維持・削除・移行する条件を判断するとき
-- realization 側の ACP 型、path model、構造化文書 API の公開経路を確認するとき
-- 旧 API から canonical な実装・型・仕様への参照関係を調査するとき
+- `basic` 名前空間に残る互換 API の範囲や、旧 import から移行先を確認したいとき。
+- ACP、path model、構造化文書の互換入口を横断して、個別モジュールを読むべきか判断するとき。
 
 ## Do not read this when
-- ACP 型、path model、構造化文書の正本仕様や実装詳細を確認したいときは、対応する oracle 側または canonical 側を直接読む
-- `basic.acp`、`basic.path_model`、`basic.struct_doc` の個別 API や再公開内容だけを確認したいときは、該当モジュールを直接読む
-- `basic.*` の互換公開面や参照経路に関係しない処理を調査・変更するとき
+- 個別 API の実装、再公開内容、型定義、描画仕様を確認したいときは、`basic.acp`、`basic.path_model`、`basic.struct_doc`、またはそれぞれの正本実装を直接読む。
+- 正本仕様そのものや、`basic` 名前空間と無関係な処理を調べるとき。
 
 ## hash
-- 64892c955750ada2d0b8daa7c36300b7de9145ab6117ea7e5befdbcd93ec574c
+- ea7ec701e546985b90dda735f067c250cdd2609d2464948e58591d98ccf40fd2
 
 # `cmoc_runtime.py`
 
@@ -52,36 +50,37 @@
 # `commons`
 
 ## Summary
-- commons は cmoc 全体で共有する runtime 実装を集約するパッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定・パス・Git・状態管理、ログ・エラー・レポート、feedback、run lifecycle、INDEX 更新、prompt editor などの共通処理を扱い、個別サブコマンドや下位 helper の実装へ進むための入口となる。
+- commons 配下の共通 runtime 実装をまとめたパッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定、Git・worktree、path、state、logging、report、feedback、run lifecycle など、複数のサブコマンドで共有する実行時機能への入口を提供する。
+- 共通 runtime の責務分担を確認し、対象機能に対応する個別 helper へ調査を進めるためのディレクトリ入口。
 
 ## Read this when
-- 複数の CLI サブコマンドや Codex 実行経路で共有される runtime 機能の配置を確認するとき
-- 設定、Git/worktree、状態、ログ、feedback、レポート、run lifecycle、INDEX 更新などの共通処理を調査・変更するとき
-- 目的の共通機能を担当する個別 runtime モジュールへ進む前に、commons 全体の責務範囲を確認するとき
+- cmoc の共通 runtime 機能の担当モジュールや、複数の実行経路で共有される API の入口を探すとき
+- CLI 実行、Codex 呼び出し、設定、Git/worktree、状態管理、ログ、report、feedback、run lifecycle の共通処理を横断して確認するとき
+- 対象機能がどの runtime helper に属するかを判断して、個別実装へ進むとき
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動を確認したい場合は、対応する個別モジュールを直接読むとき
-- 個別サブコマンドの業務処理や引数仕様だけを確認したい場合は、該当するサブコマンド実装を直接読むとき
-- 正本仕様、出力 schema、または特定機能の詳細なデータ契約だけを確認したい場合は、対応する仕様・定義ファイルを直接読むとき
+- 特定の runtime helper の内部挙動だけを調べる場合は、commons 配下の対応する個別実装を直接読む
+- CLI サブコマンド固有の業務処理や引数定義を確認する場合は、該当サブコマンド実装へ直接進む
+- Codex subprocess の起動境界、feedback の保存形式、state schema、report の正本仕様など、責務が明確な個別実装または仕様書だけを確認する場合
 
 ## hash
-- 05c4c30d097a8a44e51364af74653d92dd9005e13f7dbcd9f06a22f064610325
+- b3ff1e4cbfff007d7bb0ff3d9fc75543e0c831494c437249c85fb11a75d5f4b1
 
 # `config`
 
 ## Summary
-- 設定モジュールの互換入口を提供するディレクトリ。`__init__.py` は `config.*` 参照を成立させ、`cmoc_config.py` は oracle 側の設定型を定義せず realization 側から再公開する。設定仕様の確認先ではない。
+- 設定の正本を複製せず、oracle 側で定義された cmoc 設定型を realization 側で再公開する互換入口。既存の config 参照経路を維持するための階層。
 
 ## Read this when
-- 既存利用者の `config` または `config.cmoc_config` 参照を維持・確認するとき。
-- 設定型の import 経路や互換入口の有無を調べるとき。
+- 既存利用者や realization 側で config 経由の設定型参照を維持・確認するとき。
+- 互換入口の有無や、設定型の定義元を oracle 側へ統一する必要があるとき。
 
 ## Do not read this when
-- 設定定義の内容や仕様そのものを確認するときは、oracle 側の設定定義を直接読む。
-- 設定参照を新規に追加する実装判断では、利用側の参照経路を直接確認する。
+- 設定型の構造・値・仕様そのものを確認または変更するときは、oracle 側の定義元を直接読む。
+- config 経由の参照を新規実装する判断だけが必要なときは、利用側の参照経路を直接確認する。
 
 ## hash
-- fbc828970884bf16f7e7e6174e3461888e3c4000d754454ba9794e1d2c99d6f2
+- 210d91011e2bae467ef89956c606fa11dd52f78e193037b7f4f30993c3d2b11b
 
 # `main.py`
 

@@ -14,13 +14,13 @@ from pathlib import Path
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import make_repo, run_git
-from oracle.other.cmoc_config import CodexModelSpec
+from oracle.other.cmoc_config import CodexCallConfig
 
 import cmoc_runtime
 import commons.indexing as indexing_common
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.indexing as indexing_module
-from basic.acp import AgentCallParameter, ModelClass
+from basic.acp import AgentCallParameter
 from commons.runtime_results import CommandResult
 from main import app
 
@@ -196,8 +196,12 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     config = cmoc_runtime.sync_config(root)
-    custom_model = CodexModelSpec(None, "CUSTOM-INDEXING-EFFICIENCY")
-    config.codex.model[ModelClass.EFFICIENCY] = custom_model
+    custom_call_config = CodexCallConfig(
+        "codex", "CUSTOM-INDEXING-MODEL", "low"
+    )
+    config.codex.agent_calls[
+        "build_indexing_index_entry_parameter"
+    ] = custom_call_config
     cmoc_runtime.write_config(
         root / ".cmoc" / "gt" / "ar" / "config.json",
         config,
@@ -214,7 +218,7 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
         str(apply_worktree),
         "HEAD",
     )
-    seen_models: list[CodexModelSpec] = []
+    seen_call_configs: list[CodexCallConfig] = []
 
     class FakeCodexResult:
         """Codex の structured output を返すテスト用 fake。"""
@@ -229,7 +233,9 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
         """Codex 実行へ渡された設定を記録して固定結果を返す fake。"""
-        seen_models.append(kwargs["config"].codex.model[ModelClass.EFFICIENCY])
+        seen_call_configs.append(
+            kwargs["config"].codex.agent_calls[parameter.agent_call_kind]
+        )
         assert kwargs["root"] == root
         assert parameter.agent_call_cwd == apply_worktree
         assert "cwd" not in kwargs
@@ -237,8 +243,8 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
 
     indexing_common.run_indexing_preflight(apply_worktree, fake_codex_exec)
 
-    assert seen_models
-    assert set(seen_models) == {custom_model}
+    assert seen_call_configs
+    assert set(seen_call_configs) == {custom_call_config}
     assert (apply_worktree / "INDEX.md").is_file()
     assert (apply_worktree / ".cmoc" / "gt" / "ar" / "config.json").exists()
 

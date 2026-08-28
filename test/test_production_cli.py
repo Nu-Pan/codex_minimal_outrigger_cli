@@ -39,7 +39,6 @@ from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
 from typer.main import get_command
 
-from basic.acp import ModelClass, ReasoningEffort
 from commons.indexing import commit_index_updates, render_index_entry
 from commons.runtime_config import write_config
 from commons.runtime_feedback import (
@@ -51,7 +50,6 @@ from config.cmoc_config import CmocConfig
 from main import app
 
 _WORK_ROOT = Path(__file__).resolve().parents[1]
-_REAL_PATH_MODEL_HOOK = _WORK_ROOT / "test" / "_real_path_integration"
 _CMOC_CONSOLE = Path(sys.executable).with_name("cmoc")
 _REAL_CODEX = shutil.which("codex")
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
@@ -138,13 +136,24 @@ def _registered_leaf_commands(
     return {prefix}
 
 
-def _write_real_path_config(root: Path) -> None:
-    """通常の model provider 設定を保った実経路用 cmoc config を書く。"""
+def _real_path_config() -> CmocConfig:
+    """全 agent call 種別を直接テスト用設定へ対応付ける。"""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # model class と reasoning effort の例外は subprocess hook が parameter に適用する。
+    # 具体的な provider/Model 名を fixture に固定せず、quota 消費を抑える既定 entry
+    # の直接設定を全 agent call 種別へ適用する。
     config = CmocConfig(num_parallel=1)
-    config = replace(
+    quota_saving_call = config.codex.agent_calls[
+        "build_indexing_index_entry_parameter"
+    ]
+    return replace(
         config,
+        codex=replace(
+            config.codex,
+            agent_calls={
+                agent_call_kind: quota_saving_call
+                for agent_call_kind in config.codex.agent_calls
+            },
+        ),
         oracle_review=replace(
             config.oracle_review,
             num_enumerate_findings_loop=1,
@@ -152,6 +161,11 @@ def _write_real_path_config(root: Path) -> None:
             num_validate_findings_loop=1,
         ),
     )
+
+
+def _write_real_path_config(root: Path) -> None:
+    """実経路統合 subprocess 専用の直接設定を保存する。"""
+    config = _real_path_config()
     write_config(root / ".cmoc" / "gt" / "ar" / "config.json", config)
 
 
@@ -246,7 +260,6 @@ def _production_environment(
         # {{work-root}}/oracle/doc/dev_rule/test_rule.md
         "PYTHONPATH": os.pathsep.join(
             [
-                str(_REAL_PATH_MODEL_HOOK),
                 str(_WORK_ROOT / "src"),
                 str(_WORK_ROOT / "oracle" / "src"),
                 *([os.environ["PYTHONPATH"]] if os.environ.get("PYTHONPATH") else []),
@@ -304,7 +317,7 @@ def _run_without_codex_call(
 
 
 def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, object]:
-    """call log が実 CLI と実経路専用モデル設定を記録したことを確認する。"""
+    """call log が実 CLI と agent call 固有の直接設定を記録したことを確認する。"""
     payload = json.loads(path.read_text())
     assert isinstance(payload, dict)
     raw_argv = payload.get("argv")
@@ -314,27 +327,23 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
 
     assert argv[0] == "codex"
     assert ("exec" in argv) is not tui
-    assert payload["model_class"] == ModelClass.MINIMUM.value
-    assert payload["reasoning_effort"] == ReasoningEffort.LOW.value
-
-    config = CmocConfig()
-    model_spec = config.codex.model[ModelClass.MINIMUM]
-    assert codex_arg_value(argv, "--model") == model_spec.model
+    agent_call_kind = payload["agent_call_kind"]
+    assert isinstance(agent_call_kind, str)
+    config = _real_path_config()
+    call_config = config.codex.agent_calls[agent_call_kind]
+    assert payload["model_provider"] == call_config.model_provider
+    assert payload["model"] == call_config.model
+    assert payload["reasoning_effort"] == call_config.reasoning_effort
+    assert codex_arg_value(argv, "--model") == call_config.model
     override = codex_override_config(argv)
     assert "sandbox_workspace_write" not in override
     assert "features" not in override
-    assert (
-        override["model_reasoning_effort"]
-        == config.codex.reasoning_effort[ReasoningEffort.LOW]
-    )
-    if model_spec.model_provider is None:
-        assert "model_provider" not in override
-        assert "model_providers" not in override
-    else:
-        provider_id = model_spec.model_provider
-        assert override["model_provider"] == provider_id
-        providers = override["model_providers"]
-        assert isinstance(providers, dict)
+    assert override["model_reasoning_effort"] == call_config.reasoning_effort
+    provider_id = call_config.model_provider
+    assert override["model_provider"] == provider_id
+    providers = override.get("model_providers", {})
+    assert isinstance(providers, dict)
+    if config.codex.model_providers[provider_id].settings:
         assert (
             providers[provider_id] == config.codex.model_providers[provider_id].settings
         )

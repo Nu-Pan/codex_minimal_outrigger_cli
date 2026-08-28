@@ -36,6 +36,7 @@ import commons.runtime_feedback_store as feedback_store_module
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import ReporterAvailabilityError
 from commons.runtime_refactor import RefactorState
+from config.cmoc_config import CmocConfig
 
 
 def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -419,7 +420,9 @@ def test_doctor_generates_and_tracks_config(
         == ".cmoc/gt/ar/config.json"
     )
     assert "num_try_falv_recovery" not in json.loads(config_path.read_text())["codex"]
-    assert json.loads(config_path.read_text())["codex"]["model_providers"] == {}
+    assert json.loads(config_path.read_text())["codex"]["model_providers"] == {
+        "codex": {"settings": {}}
+    }
     assert (
         ".cmoc/gt/ar/config.json"
         in run_git(root, "show", "--name-only", "--format=", "HEAD").stdout.splitlines()
@@ -550,12 +553,15 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
                 "codex": {
                     "model_providers": {"custom": {"settings": {}}},
                     "num_try_falv_recovery": 4,
-                    "model": {
-                        "mainstream": {
+                    "agent_calls": {
+                        "build_tui_launch_tui_parameter": {
                             "model_provider": "custom",
                             "model": "CUSTOM",
+                            "reasoning_effort": "CUSTOM-EFFORT",
                         }
                     },
+                    "model": {"minimum": {"model": "LEGACY"}},
+                    "reasoning_effort": {"low": "LEGACY"},
                 },
             }
         )
@@ -566,19 +572,28 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     run_doctor(root)
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
-    assert data["codex"]["model_providers"] == {"custom": {"settings": {}}}
-    assert data["codex"]["model"]["mainstream"] == {
+    assert data["codex"]["model_providers"] == {
+        "codex": {"settings": {}},
+        "custom": {"settings": {}},
+    }
+    assert data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"] == {
         "model_provider": "custom",
         "model": "CUSTOM",
+        "reasoning_effort": "CUSTOM-EFFORT",
     }
-    assert data["codex"]["model"]["efficiency"] == {
-        "model_provider": None,
-        "model": "gpt-5.6-luna",
+    default_call = CmocConfig().codex.agent_calls[
+        "build_indexing_index_entry_parameter"
+    ]
+    assert data["codex"]["agent_calls"][
+        "build_indexing_index_entry_parameter"
+    ] == {
+        "model_provider": default_call.model_provider,
+        "model": default_call.model,
+        "reasoning_effort": default_call.reasoning_effort,
     }
     assert "num_try_falv_recovery" not in data["codex"]
-    assert data["codex"]["reasoning_effort"]["low"] == "low"
-    assert data["codex"]["reasoning_effort"]["xhigh"] == "xhigh"
-    assert data["codex"]["reasoning_effort"]["max"] == "max"
+    assert "model" not in data["codex"]
+    assert "reasoning_effort" not in data["codex"]
     assert "apply_fork" not in data
 
 
