@@ -14,6 +14,22 @@
 ## hash
 - 24db424d4c6fa917aeda82cd22244160d78e7ae3c487fa3a40e8bef4855c8ae8
 
+# `editor_input_handoff.py`
+
+## Summary
+- editor input handoff に関する明示的な規定を構築する対象。active な prompt editor input へ完成済み内容を渡す際の要求事項と禁止事項への入口。
+
+## Read this when
+- 人間が active target への handoff を明示的に要求し、target ID と editor work file 全体の完成済み content を使った引き渡し方法を確認するとき。
+- handoff の結果区分、失敗時の正式回答、または editor work file の直接書き換え禁止を確認するとき。
+
+## Do not read this when
+- editor input handoff の意味仕様そのものを確認したいときは、対象本文が参照する意味仕様を直接読むべき場合。
+- prompt editor input への handoff 以外の prompt builder policy や、通常のファイル編集方法を確認する場合。
+
+## hash
+- 8001e9961e3f78fef55ca40860be19ca409121ac4ac6d2c142c6c5ad3a354e4b
+
 # `feedback_reporting.py`
 
 ## Summary
@@ -33,22 +49,21 @@
 # `file_access.py`
 
 ## Summary
-- ファイルアクセスモードとパスコンテキストから、エージェント向けのファイル読み書き規定とプレースホルダー定義を構築する。
-- リポジトリ境界、保護対象ディレクトリ、AGENTS.md・INDEX.md・memo、および oracle／realization file の扱いをモード別に組み立てる処理の入口。
-- アクセス制御ポリシーの生成条件や、READONLY・PURE_ORACLE_READ・REPO_WRITE・PURE_ORACLE_WRITE・REALIZATION_WRITE・NO_POLICY の差異を確認するときに参照する。
+- ファイルアクセスモードに応じたエージェント向け読み書き制限ポリシーを構築する。
+- リポジトリ・作業領域のプレースホルダーを定義し、共通禁止事項と oracle／realization file のアクセス制限をモード別に組み立てる入口。
 
 ## Read this when
-- エージェント呼び出しで適用されるファイルアクセス規定の生成ロジックを調べるとき
-- FileAccessMode ごとの oracle file／realization file の読み書き制限を確認するとき
-- リポジトリルートと作業ルートが異なる場合の境界規定や、NO_POLICY の特殊扱いを確認するとき
+- エージェントプロンプトへ渡すファイルアクセス規定の生成条件や、FileAccessMode ごとの禁止事項を変更・確認するとき。
+- repo-root と work-root の関係に応じたアクセス制限、または oracle／realization file の読み書き可否を確認するとき。
+- NO_POLICY を含む、アクセス制限ポリシーのヘッダー・禁止事項・許可事項の組み立て方を調査するとき。
 
 ## Do not read this when
-- 個別の oracle file や realization file の内容・仕様を確認したいとき
-- 生成済みプロンプト全体の構成や他のプレースホルダーの生成を調べるときは、該当する prompt builder の対象へ直接進む場合
-- 実際のサンドボックス設定や Codex CLI の実行規則そのものを確認したいとき
+- ファイルアクセス制限そのものの正本仕様を確認するだけのときは、codex_exec_rule.md を直接読む。
+- Codex CLI の sandbox 設定や実際のアクセス enforcement を変更・調査するとき。
+- oracle file または realization file の具体的な内容や実装責務を確認するときは、対象ファイルを直接読む。
 
 ## hash
-- 9ce25523f13f5aee9d24c28d1232c1d323d36266e33b2e8c359511dd9cd320d4
+- dbf60281b2df6db41331254242521402f72e1534f3eca5fcf2423f6b94f28fcc
 
 # `index_entry.py`
 

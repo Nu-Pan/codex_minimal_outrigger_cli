@@ -91,20 +91,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・開発規則・運用モデル・設計判断を目的別に案内する文書群の入口。
-- アプリケーション仕様や開発ルールなどの正本文書は doc 配下へ、実装・prompt・agent call の処理詳細は src 配下へ進むための起点。
+- cmoc のアプリケーション挙動仕様、branch model、開発ルール、検討資料を確認する正本文書群への入口です。
+- agent call 構築、prompt・policy、feedback・indexing・session・TUI などの oracle 実装を確認する下位領域への入口です。
+- 現行仕様とその実装を対応づけて調査・変更するときに、文書領域と実装領域を振り分けます。
 
 ## Read this when
-- cmoc の仕様、開発・テスト規則、session/run の隔離モデル、または不採用設計を調査するとき。
-- agent call の prompt 構築、Structured Output、feedback、oracle／realization、INDEX.md 生成などの実装文書を探すとき。
+- cmoc の機能仕様、CLI 契約、session/run の隔離モデル、開発・テスト規則の担当文書を探すとき。
+- 不採用となった設計・実装方式と理由を確認するとき。
+- agent call の prompt 構築、Structured Output、feedback、indexing、oracle/realization 操作、TUI 起動の実装位置を調べるとき。
 
 ## Do not read this when
-- 特定機能の仕様本文、開発環境やテスト実行、branch model の具体的契約など、担当する下位文書が明らかなとき。
-- 実際の Codex CLI 起動・TUI 実行制御や、個別 schema の詳細を直接確認すべきとき。
-- 実装ファイルやテストの具体的な挙動だけを調べるとき。
+- 特定の仕様書、実装ファイル、Structured Output 定義、またはテスト実行手順が既に特定できているときは、その対象を直接読む。
+- 既存 INDEX.md の内容や生成・更新規則だけを確認するときは、対応する INDEX または規則文書を直接読む。
+- 一般的な CLI 実行処理や realization の個別実装だけを調査するときは、この領域全体を入口にしない。
 
 ## hash
-- 9c8225c8fdcb71e29afb9d35dda0b665ea834a59ce25be437aa6fb124deb9bef
+- c9c2c772a1132198a10aa0959d56cb49195ca9057955379e96533f4fde811c26
 
 # `pyproject.toml`
 

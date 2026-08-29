@@ -17,22 +17,22 @@
 # `complete_prompt.py`
 
 ## Summary
-- 選択した規定・追加プロンプト・目的・placeholder 定義を統合し、agent call 用の完全な構造化 prompt を構築する関数を定義する。
-- file access、routing、oracle/realization、各種 policy の有効化を個別に反映し、placeholder の競合を拒否する。
-- prompt の固定部分を前方、変動しやすい placeholder 定義を末尾に配置する構成も担う。
+- 選択した規定、補助文面、担当目的、パス由来の定義を統合し、agent 向けの完全な構造化 prompt を構築する入口。
+- 基礎規定を先頭にまとめ、個別ポリシー、追加文面、objective、placeholder 定義を所定の順序で配置する。
+- placeholder 名の重複は同値のみ統合し、異なる値の定義は拒否して prompt 内のパスコンテキスト分裂を防ぐ。
 
 ## Read this when
-- agent call に渡す完全 prompt の構築順序や構成を変更・確認するとき
-- 複数の policy builder と追加 prompt、目的、placeholder をどのように統合するか調べるとき
-- placeholder 定義の重複・異値競合時の扱いを確認するとき
+- agent call 用 prompt の全体構成、規定フラグの反映、補助 prompt の挿入位置を確認するとき。
+- placeholder 定義の統合や、同名異値を拒否する契約を確認するとき。
+- oracle・realization・routing・INDEX エントリーなどの各ポリシーを完全 prompt に含める経路を追うとき。
 
 ## Do not read this when
-- 個別の policy や prompt parts の本文だけを変更・確認する場合
-- agent call の path context や placeholder の具体的な生成規則を直接確認したい場合
-- prompt 構築結果を利用する呼び出し側の責務を調べる場合
+- 特定の個別ポリシー本文の内容や生成規則だけを確認したいときは、該当する policy builder を直接読む。
+- placeholder の具体的なパス値や path context の生成方法だけを調べるときは、パスコンテキストまたは placeholder 定義の担当対象を直接読む。
+- agent call の実行、CLI の責務、oracle・realization ファイル自体の規則を確認したいときは、この prompt 構築定義ではなく対応する正本仕様を読む。
 
 ## hash
-- c9791cc943c8eb9b7f6a711c477311d280bed62a08bdc4c9794edafa3edc1d35
+- 13960a4cb2822dc1d407c258248b09c4c8e90377d035cea4f5ad95ae6894c549
 
 # `editor_input.py`
 
@@ -70,17 +70,40 @@
 # `policy`
 
 ## Summary
-- agent call 向けの prompt builder policy 群をまとめたディレクトリ。conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing、oracle／realization、所見判定など、各作業領域の規定文面を構築する入口を提供する。
+- merge conflict 解消結果に適用する policy を構築し、両方の oracle file の意図・挙動の保持と、両立不能時の未解消事項としての報告を定める。
+- active な prompt editor input へ完成済み content を handoff する際の要求事項、結果報告、失敗時の扱い、直接書き換え禁止を定める。
+- 全 agent call 共通の human feedback 報告 policy を構築し、未解決問題の報告手段と、報告してはいけない事項を定める。
+- FileAccessMode と path context に応じて、repo-root・work-root・oracle file・realization file などの読み書き制限を構築する。
+- INDEX.md エントリー生成時の routing 情報に必要な責務・読む条件・境界と、詳細説明や推測の禁止事項を定める。
+- oracle doc と oracle src の正本責務、委譲、優先関係、仕様断片の扱い、oracle file の要求・禁止・許可事項を構築する。
+- oracle file の具体的記述に基づく所見の成立条件と、fatal・minor の分類基準、重複報告の禁止を定める。
+- realization file 向け policy を構築し、oracle file を正本仕様断片として扱う条件、実装者裁量、最小限の実装、検証要求を定める。
+- oracle file と realization file の記述・挙動の適合性を評価する所見 policy を構築し、修正対象とすべき明確な不整合・致命的問題を定める。
+- INDEX.md による routing のため、path context から root placeholder を取得し、対象本文へ進む判断規定と INDEX.md の位置づけを構築する。
 
 ## Read this when
-- prompt builder における共通または作業種別別の policy 構築責務を調べるとき
-- agent call のファイルアクセス、routing、oracle／realization、conflict 解消、所見判定、feedback 報告に関する指示生成を確認・変更するとき
-- 対象 policy の責務に応じた具体的な prompt 構築ファイルを特定するとき
+- session join の conflict 解消結果に求められる oracle file の意図保持や未解消事項の扱いを確認するとき。
+- prompt editor input への明示的な handoff 方法、結果区分、失敗時の正式回答を確認するとき。
+- agent call 共通の human feedback 報告方法や、報告対象外の問題を確認するとき。
+- FileAccessMode ごとのエージェント向けアクセス制限や、repo-root と work-root の関係を確認するとき。
+- INDEX.md エントリー生成時に routing 情報へ記載する責務・条件・境界を確認するとき。
+- oracle doc と oracle src の責務分担、委譲先、優先関係、oracle file の作成・レビュー規定を確認するとき。
+- oracle file の問題を所見として扱う基準や fatal・minor の分類を確認するとき。
+- realization file の実装方針、oracle file との関係、検証要求、不要実装の整理方針を確認するとき。
+- oracle file と realization file の適合性に関する所見の根拠と修正対象の基準を確認するとき。
+- INDEX.md を起点とした本文の探索規定や、本文と INDEX.md が食い違う場合の扱いを確認するとき。
 
 ## Do not read this when
-- 個別 policy の意味仕様そのものを確認するときは、各 policy が参照する oracle の仕様を直接読む
-- 生成済みプロンプトの実行規則や Codex CLI のサンドボックス設定を確認するとき
-- realization や oracle の具体的な実装・仕様本文を確認するときは、該当する realization file、oracle file、または設計規則へ直接進む
+- session join の意味仕様や oracle file 規定の優先順位そのものを確認するとき。
+- handoff の意味仕様そのもの、または通常のファイル編集方法を確認するとき。
+- human feedback 報告の意味仕様そのものや、個別 agent call の別 policy を確認するとき。
+- アクセス制限の正本仕様、Codex CLI の sandbox enforcement、個別 oracle・realization file の内容を確認するとき。
+- 既存の INDEX.md エントリーや、routing policy の根拠となる意味仕様を直接確認するとき。
+- oracle doc・oracle src の意味仕様そのもの、realization file の配置・実装責務、または test execution を確認するとき。
+- 個別 oracle review の意味仕様や、所見の定義そのものを確認するとき。
+- realization file の意味仕様や判断基準、または policy 構築後の agent call 実行を確認するとき。
+- oracle file 自体の仕様不足や定義上の問題を検討するとき。
+- INDEX.md の具体的な意味仕様、または PlaceholderMap・SDHeader・SDPolicy の一般実装を確認するとき。
 
 ## hash
-- ceaf60626c4641336dd5d600594c0ae367b36f5622f0a1ab08204ec8be75b910
+- b0c4e4ba71e7ae3432443a1985feb58065d5fd9498b0470631f1b917160ac3dd

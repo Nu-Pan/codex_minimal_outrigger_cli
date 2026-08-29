@@ -1,15 +1,17 @@
 # `oracle`
 
 ## Summary
-- agent call の呼び出し種別、論理的なファイルアクセスモード、完全な prompt、Structured Output schema、cwd、indexing preflight の実行有無を一つの不変データクラスへ集約する入口。
+- agent call 構築、プロンプト生成、feedback 入力契約、エディター入力引き渡し、設定・パス・構造化文書を扱う下位領域へのルーティング入口です。
 
 ## Read this when
-- agent call に設定される実行条件やパラメータ構造を確認するとき。
-- 呼び出し種別、アクセスモード、prompt、schema、cwd、preflight 設定の集約方法を確認するとき。
+- agent call の共通設定や用途別構成を調査するとき。
+- prompt、policy、oracle・realization、Structured Output schema、エディター入力の生成規則を確認するとき。
+- feedback の入力契約や、設定集約・パス解決・Markdown レンダリングの担当を探すとき。
 
 ## Do not read this when
-- 各ファイルアクセスモードの意味や Codex CLI sandbox との対応を確認するとき。
-- Agent Call Parameter の生成・利用、個別 builder の実装、または実際の agent call 実行処理を確認するとき。
+- 個別モジュールのフィールド定義、既定値、具体的な変換規則だけを確認したいとき。
+- 既存 INDEX.md のルーティングや、一般的な CLI の実行処理だけを調査したいとき。
+- collector の保存・集約や、feedback の検出・継続判断など、対象ディレクトリ外の責務を確認したいとき。
 
 ## hash
-- 89e1fdb33909870fc0431ce8fe0343524b64cf3e4b5400d6974b9d7ff902d574
+- ce3b8bb058d511e1397170755f4e142f3ea4f2a10065fbfd3cd64b61f4ad0875

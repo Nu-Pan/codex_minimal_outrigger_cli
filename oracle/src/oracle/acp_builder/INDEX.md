@@ -52,22 +52,21 @@
 # `oracle`
 
 ## Summary
-- oracle file の編集 agent call と、成功後の仕様削減 agent call の起動パラメータおよび完全 prompt を構築する。
-- oracle file を読み取り専用で調査する TUI の起動パラメータと、ユーザー指示を組み込んだ完全 prompt を構築する。
-- oracle review の所見列挙、擁護・反証理由の追加調査、採否判定、重複・矛盾整理に用いる agent call の prompt・起動設定・Structured Output 契約を定義する。
+- oracle file の編集・調査・レビューに関する agent call の起動設定と prompt 構築を扱う入口。
+- edit は本命編集と成功後の仕様削減、investigation は oracle 調査、review は所見の列挙・採否判定・統合・擁護・反証を担当する。
 
 ## Read this when
-- oracle file の編集または仕様削減 agent call について、編集権限、作業ディレクトリ、完全 prompt、indexing preflight、または起動条件を確認・変更するとき。
-- oracle file の読み取り専用調査 TUI について、ユーザー指示の組み込み、調査範囲、起動パラメータ、または調査結果の制約を確認するとき。
-- oracle review について、所見の新規列挙、妥当性の擁護・反証、採否判定、重複・矛盾の整理に関する agent call の入力、出力契約、または起動設定を確認・変更するとき。
+- oracle edit の編集または仕様削減で、prompt、oracle 専用アクセス、作業ディレクトリ、indexing preflight、未コミット変更の扱いを確認するとき。
+- oracle investigation の調査範囲、ユーザー指示の prompt への組み込み、読み取り専用条件、TUI 起動設定を確認するとき。
+- oracle review の所見列挙・採否判定・重複整理・擁護理由・反証理由について、入力情報、Structured Output schema、読み取り範囲、起動設定を確認するとき。
 
 ## Do not read this when
-- 具体的な oracle file の編集内容、調査対象の仕様、またはレビューで扱う所見の根拠を確認したい場合は、対象の oracle file やレビュー規則を直接読む。
-- agent call の共通 prompt 構築、共通パラメータ、ファイルアクセスモード、または Structured Output の一般定義を確認したい場合は、対応する共通 builder や型定義を直接読む。
-- 個別の review agent call の実行処理や、所見の保存・適用処理を確認したい場合は、対応する review 実装を直接読む。
+- 具体的な oracle file の編集内容、調査対象、レビュー基準を確認したいときは、対象の oracle file や対応する規則を直接読む。
+- 共通の完全 prompt 構築規則、agent call パラメータ、型定義を確認したいときは、対応する共通 builder や型定義を直接読む。
+- レビュー処理の実行本体や Structured Output の具体的な項目定義だけを確認したいときは、対応する review 実装または schema を直接読む。
 
 ## hash
-- c5de44c29c985d97336022d9d370ce2b9a3fe810734a82957798e867f079bf80
+- 46d8519a530fbdedfbacbea14e8a9297108dc072cb6f09a579abc1c6c148ccb4
 
 # `quota_probe.py`
 
@@ -119,16 +118,15 @@
 # `tui`
 
 ## Summary
-- `cmoc tui` 用の完全プロンプトと TUI 起動パラメータを構築する入口。
-- ユーザーのオリジナルプロンプトを動的ブロックとして完全プロンプトへ埋め込み、リポジトリ書き込み、リポジトリルート作業ディレクトリ、各種 oracle・realization・ルーティング規則を設定する。
+- 日本語技術文書のルーティング情報として、対象本文の責務を簡潔に整理します。
 
 ## Read this when
-- `cmoc tui` に渡すオリジナルプロンプトの埋め込み方や、生成される完全プロンプトの基本構成を確認するとき。
-- TUI 起動時の作業ディレクトリ、ファイルアクセスモード、エージェント呼び出し種別、構造化出力スキーマ、インデックス前処理の設定を確認するとき。
+- `cmoc tui` の起動パラメータ生成を調べるとき。
+- ユーザー入力を完全プロンプトへ埋め込み、リポジトリ書き込み権限・リポジトリルートの作業ディレクトリ・インデックス事前処理を含む TUI 起動条件を確認するとき。
 
 ## Do not read this when
-- 完全プロンプトの共通構築処理や SD ノードの Markdown レンダリング処理そのものを確認したいとき。
-- TUI サブコマンド側の引数処理や、TUI の画面表示・実行制御を確認したいとき。
+- 完全プロンプトの共通構造や適用するポリシー自体を確認したいとき。
+- TUI 起動後の実行処理や、`cmoc tui` 以外のサブコマンドのパラメータ生成を確認したいとき。
 
 ## hash
-- 1bdcb0487686ceacc8f2ff0eb31383ac9789f7f514570ba06209662e68b42cc6
+- 1a5e2bc53b3cf0fa64d52b3bd9ea867edb07e16a98856c1237c2a9e8de1975ae

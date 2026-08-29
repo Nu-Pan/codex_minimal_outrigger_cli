@@ -19,16 +19,19 @@
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動パラメータを構築し、ユーザー指示を調査用完全プロンプトへ組み込む入口。oracle ツリーの読み取り専用調査、作業ディレクトリ、ポリシー設定、起動前インデックス処理を定義する。
+- oracle investigation 用の調査担当 prompt と、Codex CLI の TUI 起動パラメータを構築する入口。
+- ユーザー指示を完全な prompt として組み込み、oracle ツリー限定の読み取り専用調査と根拠提示を指定する。
 
 ## Read this when
-- oracle 調査の TUI 起動時に、ユーザー指示の組み込み方、アクセス範囲、作業コンテキスト、各種ポリシー、構造化出力設定、起動前処理を確認するとき。
+- oracle investigation の TUI 起動時に、調査用 prompt の構成やファイルアクセスモードを確認したいとき。
+- ユーザー指示の prompt への引き渡し方や、リポジトリルート基準の起動パラメータを確認したいとき。
 
 ## Do not read this when
-- oracle 調査プロンプトの共通構造や oracle・ルーティング規則そのものを確認したいとき。完全プロンプト生成や各ポリシーの定義元を直接読む方が適切。
+- 共通の完全 prompt 生成規則そのものを確認したいときは、prompt builder の定義を直接読む。
+- oracle file の調査対象や開発環境・設計ルールの内容を確認したいときは、対応する oracle file を直接読む。
 
 ## hash
-- 4d40b4cdc8c4a0526ac30a8305525fd141a8684915360232fbd8ec6b1e30748f
+- 449385b2c86837baf6004374df7422ee765a3bc18d2fff8806417ef28dfb77c5
 
 # `review`
 

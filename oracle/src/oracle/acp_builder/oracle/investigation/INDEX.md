@@ -1,13 +1,16 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動パラメータを構築する実装。ユーザー指示を完全プロンプトの調査対象へ組み込み、oracle 調査用の読み取り専用アクセス、作業コンテキスト、ルーティング設定、起動前インデックス処理を指定する。
+- `cmoc oracle investigation` 用の調査担当 prompt と、Codex CLI の TUI 起動に渡す固定パラメータを構築する関数。
+- ユーザー指示を完全 prompt の原文として組み込み、oracle ツリー限定の読み取り専用調査、根拠提示、未定義事項の明示を指定する入口。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動時に、プロンプト、ファイルアクセスモード、作業ディレクトリ、構造化出力設定、または起動前処理がどう構成されるかを確認するとき。
+- oracle investigation の TUI 起動時に、調査用 prompt の構成やファイルアクセスモードを確認したいとき。
+- ユーザー指示を prompt に引き渡す方法や、リポジトリルートを基準にした起動パラメータを確認したいとき。
 
 ## Do not read this when
-- oracle file の調査プロンプト本文の共通構造や oracle 調査の一般規則を確認したいとき。完全プロンプト生成処理や oracle ポリシーの定義元を直接読む方が適切。
+- 共通の完全 prompt 生成規則そのものを確認したいときは、prompt builder の定義を直接読む。
+- oracle file の調査対象や開発環境・設計ルールの内容を確認したいときは、対応する oracle file を直接読む。
 
 ## hash
-- 2f1d0f078c90abb501958afcc5a3d04789329b06d0996cb23c947535eb337b8b
+- 5ace71c88215111020e0022c923899009cafc6d9cd12177a1a398a91b9b90f21
