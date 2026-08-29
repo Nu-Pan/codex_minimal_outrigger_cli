@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 
 import pytest
+from _git_support import make_repo
 from oracle.acp_builder.indexing.index_entry import (
     build_indexing_index_entry_parameter as build_oracle_indexing_index_entry_parameter,
 )
@@ -21,8 +22,8 @@ from basic.acp import FileAccessMode
 @pytest.fixture
 def indexing_target_path(tmp_path: Path) -> Path:
     """AgentCallPathContext が解決できる test-local target を用意する。"""
-    (tmp_path / ".git").mkdir()
-    target_path = tmp_path / "target.md"
+    root = make_repo(tmp_path)
+    target_path = root / "target.md"
     target_path.write_text("# README", encoding="utf-8")
     return target_path
 

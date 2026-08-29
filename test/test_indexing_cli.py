@@ -196,12 +196,10 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     config = cmoc_runtime.sync_config(root)
-    custom_call_config = CodexCallConfig(
-        "codex", "CUSTOM-INDEXING-MODEL", "low"
+    custom_call_config = CodexCallConfig("openai", "CUSTOM-INDEXING-MODEL", "low")
+    config.codex.agent_calls["build_indexing_index_entry_parameter"] = (
+        custom_call_config
     )
-    config.codex.agent_calls[
-        "build_indexing_index_entry_parameter"
-    ] = custom_call_config
     cmoc_runtime.write_config(
         root / ".cmoc" / "gt" / "ar" / "config.json",
         config,

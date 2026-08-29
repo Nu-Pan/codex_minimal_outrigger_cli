@@ -185,21 +185,21 @@
 # `runtime_config.py`
 
 ## Summary
-- 設定モデルを JSON へシリアライズし、JSON から既定値補完済みの設定モデルへ復元する実装。
-- Codex の model provider・agent call と oracle review の設定値を検証し、設定ファイルの読み書き、初期生成、同期を担う入口。
-- JSON/TOML 互換値、整数、モデル名、provider ID などの入力境界と、symlink・非通常ファイル・不正 JSON に対する CmocError 境界を扱う。
+- 設定オブジェクトを JSON として永続化・復元し、Codex provider／agent call と oracle review の設定値を検証するランタイム設定境界。
+- 設定ファイルの読み書き、既定値補完、型・値・循環構造・symlink・特殊ファイルの検査、および利用者向け CmocError への変換を担う。
 
 ## Read this when
-- 設定の永続化形式や設定値の検証規則を確認するとき。
-- 設定ファイルのロード、書き込み、既定設定の生成・同期、または設定エラーの利用者向け処理を追跡するとき。
-- Codex の provider／agent call 設定や oracle review のループ回数が設定ファイルへ変換・復元される経路を確認するとき。
+- cmoc の設定 JSON の保存形式や復元時の既定値補完を確認するとき。
+- Codex model provider、agent call、reasoning effort、oracle review loop の入力検証や設定エラーの扱いを変更・調査するとき。
+- config ファイルの symlink、通常ファイル判定、JSON/TOML 互換値、読み書きの安全境界を確認するとき。
 
 ## Do not read this when
-- 設定クラスのフィールド定義や既定値だけを確認したいとき。
-- CLI コマンドの引数処理、Codex の subprocess 実行、または oracle review 自体の制御を調べるときは、それぞれの直接の実装を読む。
+- Codex の設定型そのものや既定値の定義を確認したい場合は、参照先の正本設定型を直接読むとき。
+- CLI のコマンド処理、agent call の実行、oracle review のロジックを調べる場合は、それぞれの実装入口を直接読むとき。
+- 設定 JSON の具体的な利用箇所だけを確認する場合は、設定を呼び出す実装またはテストを直接読むとき。
 
 ## hash
-- e1c337adcd8ba52a9e7f66a7a7acaaaa6487e8124ba012b6c47bff6d4ac50f04
+- e49e094dfcfbed4f835910da9addc64ab91da1b60cd43d238abe84a161658b0b
 
 # `runtime_content.py`
 

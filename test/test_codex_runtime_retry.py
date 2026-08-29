@@ -913,10 +913,7 @@ def test_run_codex_exec_stops_after_retry_limit(
         [diagnostic] = diagnostics
         call_logs = [json.loads(path.read_text()) for path in call_paths]
         assert diagnostic["event_schema_version"] == 1
-        assert (
-            diagnostic["agent_call_kind"]
-            == "build_indexing_index_entry_parameter"
-        )
+        assert diagnostic["agent_call_kind"] == "build_indexing_index_entry_parameter"
         assert diagnostic["agent_call_id"] == call_logs[-1]["agent_call_id"]
         assert diagnostic["codex_call_id"] == call_logs[-1]["codex_call_id"]
         assert diagnostic["last_failure_stage"] == "schema_validation"

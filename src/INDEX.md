@@ -50,21 +50,108 @@
 # `commons`
 
 ## Summary
-- commons 配下の共通 runtime 実装をまとめたパッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定、Git・worktree、path、state、logging、report、feedback、run lifecycle など、複数のサブコマンドで共有する実行時機能への入口を提供する。
-- 共通 runtime の責務分担を確認し、対象機能に対応する個別 helper へ調査を進めるためのディレクトリ入口。
+- cmoc 共通 runtime helper を提供する commons パッケージの初期化ファイル。commons 配下の共通実行時補助機能を確認・変更するときの入口。
+- cmoc の実行時共通 API を集約する公開モジュール。CLI、Codex subprocess、設定、ログ、パス、Git worktree、状態管理などの共有機能への入口。
+- INDEX.md の検査・生成・更新 lifecycle を担う共通実装。directory traversal、entry 更新、hash 鮮度判定、snapshot 復元、lock、commit を扱う。
+- エディタを使った AI Agent prompt 入力の共通境界。作業ファイル予約、初期入力、エディタ起動、編集結果の抽出・保存・cleanup を扱う。
+- 最外側 CLI サブコマンドの実行 lifecycle を統括する。doctor、進行通知、feedback、診断ログ、primary report、terminal result、終了コードを連携する。
+- Codex exec と TUI の外部利用向け公開入口。各実行経路の具体的な処理は下位モジュールへ委譲する。
+- 1 回の Codex agent call における exec 制御の中心。Structured Output 検証、retry、quota 回復待ち、resume、ログ・event 記録を統合する。
+- Codex 起動失敗時の例外を console と event 用の共通エラーテキストへ変換する。
+- Codex exec/TUI 前の INDEX 更新 preflight 境界。登録・解除、再入抑止、直列化、実行 root 決定、Codex への委譲を扱う。
+- Codex CLI subprocess の実行境界。sandbox、argv、環境、CODEX_HOME、schema、process tracking、JSONL 出力と error 判定を扱う。
+- Codex TUI の起動経路。実行環境・argv、callback、call log、feedback、終了結果、起動失敗の処理を扱う。
+- 設定オブジェクトの JSON 永続化・復元と検証を担う runtime 設定境界。Codex provider、agent call、oracle review の値とファイル安全性を扱う。
+- ファイル・文字列の SHA-256 ハッシュ、内容ハッシュ付き安全な保存、バイナリの粗い判定を提供する。
+- doctor preprocess の修復 lifecycle と排他実行を扱う。config、refactor state、.gitignore、.agents の同期、temporary index、修復 commit を担う。
+- cmoc の実行時エラーを利用者向けレポートへ変換する。CmocError の保持情報と handled failure の描画規則を提供する。
+- invocation 単位の feedback collector と Codex call capability lifecycle を統合する。Unix socket 受付、protocol 検証、drain、degraded 処理、stable event 検出を扱う。
+- Codex 起動時の call-scoped stdio MCP feedback reporter。collector 通信、capability payload、JSON-RPC の MCP lifecycle、submit_observation を扱う。
+- feedback の repository-local state を管理する中心実装。report cut、generation、current pointer、aggregate、checkpoint、publication、cleanup、recovery、writer lock を扱う。
+- agent および machine rule の raw feedback observation を検査・mask・正規化し、fingerprint と content hash に基づき immutable store へ保存する。
+- Git subprocess、branch、linked worktree、path 安全性、Git ignore、oracle/realization file の列挙・分類を担う共通境界。
+- サブコマンド実行中の JSONL logger。event、warning、step・quota timing、Codex call 集計、ContextVar、feedback detector 連携を扱う。
+- repository/worktree/cmoc root、runtime 保存先、timestamp・duration 表示、process-wide cwd 制御を提供する共通 path utility。
+- 非対話サブコマンドの primary report 保存を保証する。既存 report 検証、fallback 生成、項目収集、保存失敗処理を担う。
+- runtime 情報から fallback primary report を構築する描画入口。template、front matter、terminal 状態、oracle review、feedback publication 状態を report に反映する。
+- 非対話末端サブコマンドの fallback primary report 定義を集約する。コマンド別の保存先、タイトル、必須項目、template を提供する。
+- realization refactor の state 管理実装。state の読み書き・検証・同期、調査対象選択、再調査要求、安全な path 検査を扱う。
+- CLI 実行結果の共有モデルを定義する。terminal result、外部コマンド結果、Codex Structured Output 検証問題、生成物・ログの契約を扱う。
+- editing run の worktree 解決と process cleanup の共通境界。run state lock、tracking、worktree identity、join/abandon 復旧を扱う。
+- editing run lifecycle の共通実装。session 条件、branch/worktree、state 遷移、process tracking、rollback/commit、INDEX 更新、差分許可判定を扱う。
+- editing run の fork、join、abandon report を保存する共通処理。YAML Front Matter、Markdown、実行段階、結果、変更 path の安全な描画を扱う。
+- session state の dataclass schema、状態値、永続化・復元・検証を担う。session/run branch 対応、lock、active session 検索、path 安全性を扱う。
+- Windows toast 通知と Codex TUI callback の非致命的 transport 境界。通知生成・送信、callback の invocation-local 状態、turn 重複排除、cleanup を扱う。
 
 ## Read this when
-- cmoc の共通 runtime 機能の担当モジュールや、複数の実行経路で共有される API の入口を探すとき
-- CLI 実行、Codex 呼び出し、設定、Git/worktree、状態管理、ログ、report、feedback、run lifecycle の共通処理を横断して確認するとき
-- 対象機能がどの runtime helper に属するかを判断して、個別実装へ進むとき
+- commons の公開入口やパッケージ初期化を確認するとき。
+- 共通 runtime API の公開シンボルや、複数実行経路で共有される runtime 機能の入口を確認するとき。
+- INDEX.md の preflight、更新、hash 検証、復元、lock、commit の挙動を調査・変更するとき。
+- prompt editor の作業ファイル、エディタ選択、入力抽出、保存、cleanup を調査・変更するとき。
+- 最外側 CLI の実行順序、終了処理、例外分類、終了コード、report、feedback、診断ログを調査・変更するとき。
+- Codex exec/TUI の公開 API と委譲境界を確認するとき。
+- Codex exec の retry、quota、resume、Structured Output 検証、ログ・event 記録を調査・変更するとき。
+- Codex 起動失敗のエラーテキスト整形を確認・変更するとき。
+- Codex 呼び出し前の indexing preflight、再入防止、lock、root 決定、委譲境界を調査・変更するとき。
+- Codex CLI の起動引数、sandbox、環境、schema、process tracking、JSONL protocol/error 解釈を調査・変更するとき。
+- Codex TUI の起動、callback、feedback、call log、終了処理を調査・変更するとき。
+- config の JSON 保存・復元、既定値補完、Codex/oracle review 設定検証、symlink・特殊 file 安全性を調査・変更するとき。
+- 内容ハッシュ、ハッシュ名付き保存、一時ファイル置換、regular file/symlink、バイナリ判定を調査・変更するとき。
+- doctor の修復、lock、temporary index、同期対象、修復 commit、既存差分復元を調査・変更するとき。
+- CmocError の属性、error rendering、ログ初期化前の handled failure 表示を調査・変更するとき。
+- feedback observation の収集、collector lifecycle、capability、degraded 境界、doctor 検査、stable event detector を調査・変更するとき。
+- feedback reporter の MCP JSON-RPC、collector 通信、payload 検証、submit_observation を調査・変更するとき。
+- feedback report cut、publication、checkpoint、aggregate、cleanup、discard、recovery、active state integrity を調査・変更するとき。
+- feedback raw observation の schema、secret masking、evidence path、fingerprint、ID、重複排除、atomic 保存、pending 判定を調査・変更するとき。
+- Git command、branch/worktree、path 安全性、ignore、oracle/realization 分類を調査・変更するとき。
+- event log、warning、step/quota timing、Codex call 集計、ContextVar logger、feedback detector 接続を調査・変更するとき。
+- root 解決、runtime 保存先、timestamp/duration 表示、cwd lock を調査・変更するとき。
+- primary report の保存保証、fallback 生成、項目統合、保存失敗時の処理を調査・変更するとき。
+- fallback primary report の template、front matter、terminal 状態、oracle review、feedback 状態の描画を調査・変更するとき。
+- コマンド別 primary report の保存先、タイトル、必須項目、template 登録を調査・変更するとき。
+- realization refactor state の schema、同期、調査対象選択、再調査、安全な保存を調査・変更するとき。
+- terminal result、外部コマンド結果、Codex 出力検証、生成物・ログ path の共有契約を調査・変更するとき。
+- editing run の join/abandon、worktree lookup、process tracking、process group cleanup を調査・変更するとき。
+- editing run の開始、state 遷移、branch/worktree lifecycle、差分検査、INDEX 更新、rollback/commit を調査・変更するとき。
+- editing run report の保存先、front matter、Markdown、実行結果、変更 path の描画を調査・変更するとき。
+- session state の schema、JSON 永続化、branch 対応、lock、active session、path 検証を調査・変更するとき。
+- Windows toast、TUI agent-turn-complete callback、重複排除、通知 transport の非致命性を調査・変更するとき。
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動だけを調べる場合は、commons 配下の対応する個別実装を直接読む
-- CLI サブコマンド固有の業務処理や引数定義を確認する場合は、該当サブコマンド実装へ直接進む
-- Codex subprocess の起動境界、feedback の保存形式、state schema、report の正本仕様など、責務が明確な個別実装または仕様書だけを確認する場合
+- 個別の runtime helper の実装詳細だけを調査するとき。
+- 特定の runtime 機能、個別 CLI、Codex preflight の具体的挙動だけを調査するとき。
+- prompt builder、schema、または個別 runtime module の仕様だけを調査するとき。
+- prompt の内容・skeleton 生成だけ、または prompt editor を使わない入力処理を調査するとき。
+- 個別サブコマンドの業務処理・引数定義、または専用の report/log/error 実装だけを調査するとき。
+- Codex exec/TUI の具体的挙動を調査するとき。
+- TUI の起動、または subprocess 環境・schema など exec 補助の個別処理だけを調査するとき。
+- 例外クラスや通常のログ処理など、起動失敗テキスト変換以外を調査するとき。
+- Codex subprocess 本体、agent call parameter、または indexing アルゴリズム自体を調査するとき。
+- agent call の業務ロジック、編集対象内容生成、Codex 境界と無関係な一般 process 管理を調査するとき。
+- Codex 設定上書き自体、設定定義、TUI 以外の呼び出し経路、共通 logging/feedback/path 詳細を調査するとき。
+- 設定型・既定値そのもの、CLI 実行、agent call、oracle review の個別ロジックを調査するとき。
+- hash を使う呼び出し側の同期・列挙規則、出力 schema、CLI 一般規則を調査するとき。
+- doctor の正本仕様、個別同期ロジック、Git/path/error/feedback の専用実装を調査するとき。
+- TerminalResult や通常成功結果、個別処理の error 生成、通常ログの詳細を調査するとき。
+- 観測 payload の永続化仕様、reporter schema、一般 logging・Git context・別 runtime helper を調査するとき。
+- observation 保存形式、feedback 仕様全体、feedback と無関係な MCP/CLI/runtime を調査するとき。
+- 低レベル observation 保存、report 集約・正規化・検証、CLI 引数、Markdown 内容生成、正本仕様を調査するとき。
+- collector/reporter の上位処理、feedback 正本仕様、低レベル JSON/ID utility だけを調査するとき。
+- Git/path 分類と無関係な CLI、oracle/realization の仕様内容、session orchestration だけを調査するとき。
+- サブコマンド固有処理、ログ正本仕様、feedback 検出・保存そのものを調査するとき。
+- primary report の項目定義・描画形式、ログ、path、terminal result 型、個別 app specification を調査するとき。
+- report の保存・生成処理、個別 report 内容、TUI 通知だけを調査するとき。
+- 個別の report 内容、保存処理、TUI-only の挙動を調査するとき。
+- refactor state と無関係な処理、state の具体的 field/JSON 形式だけを調査するとき。
+- 特定サブコマンドの結果内容、console/file log、Codex exec 手順や正本ルールを調査するとき。
+- Git worktree の低レベル操作、pidfd/process signal の個別 primitive、editing run 外部仕様を調査するとき。
+- workload 固有編集、state schema、Git 低レベル実装、INDEX アルゴリズム自体を調査するとき。
+- 個別 report 仕様、canonical 配置判断、ログ収集、run state 管理を調査するとき。
+- CLI 固有処理、state 正本仕様、state schema の詳細だけを調査するとき。
+- 通常の terminal result、最外側 lifecycle、通知本文仕様、通知と無関係な runtime 機能を調査するとき。
 
 ## hash
-- b3ff1e4cbfff007d7bb0ff3d9fc75543e0c831494c437249c85fb11a75d5f4b1
+- 4092c9567c064cc20f31d1c0f03a418e9dfea39446a2e827af28bc5cdca02347
 
 # `config`
 
@@ -119,18 +206,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装の上位ディレクトリ。doctor、feedback、indexing、oracle、realization、review、run、session、tui などのサブコマンド入口と、その下位実装へのルーティングを担う。
-- サブコマンド単位の実行フローや固有責務を調べる場合は該当するファイルまたはディレクトリへ進む。apply は現時点で実装がなく、将来の実装配置先として示されている。
+- サブコマンド実装をまとめるディレクトリ。apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui の各 CLI 入口または実装パッケージへ進むためのルーティング起点となる。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの入口を特定するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui などのサブコマンド固有の実行フロー、状態遷移、publication、commit、fork、join、入力編集を調べるとき。
-- サブコマンドの共通処理と固有処理の境界を確認し、該当する下位実装へ進む必要があるとき。
+- cmoc のサブコマンド実装の配置や、対象サブコマンドの CLI 入口を特定するとき。
+- 複数のサブコマンドにまたがる実装構成を確認し、個別の下位対象へ進む必要があるとき。
 
 ## Do not read this when
-- apply 以外の特定サブコマンドの詳細だけを確認したい場合は、該当する下位ファイルまたはディレクトリを直接読むとき。
-- CLI 共通ランタイム、正本仕様、prompt・Structured Output schema、state 永続化契約など、サブコマンド実装より直接の参照先がある内容だけを調べるとき。
-- apply サブコマンドの具体的な処理を確認したい場合は、実装が追加されるまでこのディレクトリ内に読むべき実装本文がないとき。
+- 特定サブコマンドの実行フローや処理内容を直接確認できる場合は、対応する下位ファイルまたはパッケージを直接読むとき。
+- サブコマンド共通ランタイム、正本仕様、agent prompt、Structured Output schema など、別の対象が直接定義する内容だけを確認するとき。
 
 ## hash
-- 6a9a3999323a338c86d5103fe10f53b6cc8682756035eb288e6212bd5c583f28
+- e9e67512829b6205e387bd76d8a036c9bcbb3ed84b729f79fe5a1028010ace67

@@ -1084,7 +1084,7 @@ def test_session_join_handles_conflict_path_containing_newline(
 
 def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
     """unmerged pathを絶対pathでerror detailへ出すことを検証する。"""
-    root = tmp_path
+    root = make_repo(tmp_path)
     target = root / "src" / "unmerged.py"
     target.parent.mkdir()
 
@@ -1110,7 +1110,7 @@ def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
 
 def test_session_join_stages_conflict_path_as_literal_pathspec(tmp_path: Path) -> None:
     """特殊文字を含む conflict path を literal pathspec として stage する。"""
-    root = tmp_path
+    root = make_repo(tmp_path)
     target = root / "src" / "[ab].txt"
     target.parent.mkdir()
     target.write_text("<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n")

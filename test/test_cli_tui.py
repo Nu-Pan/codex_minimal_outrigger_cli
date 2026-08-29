@@ -160,12 +160,12 @@ def test_tui_runs_editor_and_launches_codex_directly(
         "# oracle and realization basic",
         "# oracle policy",
         "# realization policy",
+        "# oracle findings policy",
+        "# realization findings policy",
         "# routing policy",
     ):
         assert heading in complete_prompt
     for heading in (
-        "# oracle findings policy",
-        "# realization findings policy",
         "# realization oracle reference policy",
         "# index entry policy",
     ):

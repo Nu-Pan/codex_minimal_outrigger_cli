@@ -154,10 +154,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     probe_config = codex_override_config(argv_calls[1])
     assert "approval_policy" not in probe_config
     assert probe_config["approvals_reviewer"] == "auto_review"
-    assert (
-        probe_config["model_reasoning_effort"]
-        == probe_call_config.reasoning_effort
-    )
+    assert probe_config["model_reasoning_effort"] == probe_call_config.reasoning_effort
     assert "--profile" not in argv_calls[1]
     assert "--json" in argv_calls[1]
     assert "--output-last-message" in argv_calls[1]
@@ -214,10 +211,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     resume_entry = next((path, log) for path, log in main_entries if log is resume_log)
     assert initial_log["argv"][1:] == argv_calls[0]
     assert resume_log["argv"][1:] == argv_calls[2]
-    assert (
-        codex_arg_value(probe_logs[0]["argv"], "--model")
-        == probe_call_config.model
-    )
+    assert codex_arg_value(probe_logs[0]["argv"], "--model") == probe_call_config.model
     assert codex_arg_value(initial_log["argv"], "--model") == base_call_config.model
     assert codex_arg_value(initial_log["argv"], "--sandbox") == "read-only"
     assert codex_arg_value(resume_log["argv"], "--sandbox") == "read-only"

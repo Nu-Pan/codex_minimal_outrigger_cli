@@ -89,19 +89,21 @@
 # `oracle_findings.py`
 
 ## Summary
-- oracle file に対する所見の判定規定を構築する関数を定義する。所見の根拠、fatal/minor の分類基準、基準の一貫性、重複や必須外の根拠の禁止を共通ポリシーとして返す。
-- oracle review の各ステップで共有される所見ポリシーの入口であり、所見の意味仕様そのものは参照先の oracle_review.md に委ねる。
+- oracle file に対する所見の判定基準を共通ポリシーとして構築する。
+- 所見として扱える問題の根拠と、fatal・minor の分類基準を定める。
+- 各 review ステップで共通利用する所見ポリシーへの入口となる。
 
 ## Read this when
-- oracle file や realization file に対する所見の判定基準を実装・確認するとき
-- oracle review の複数ステップで共通利用する所見ポリシーの構築内容を確認するとき
+- oracle file の具体的記述に基づく問題の判定基準を確認するとき。
+- 正本仕様の矛盾、実装者裁量で解決できない問題、表記上の問題を fatal・minor に分類するとき。
+- 所見の根拠にしてよい事項や、既解消問題の重複報告禁止を確認するとき。
 
 ## Do not read this when
-- oracle review における所見の意味仕様そのものを確認したいとき
-- 所見ポリシーを利用する個別の review 処理や、対象外の prompt builder 機能を直接確認するとき
+- 個別の oracle review の意味仕様や「所見」の定義そのものを確認する必要があるとき。
+- 所見ポリシーではなく、構造化文書の一般的なヘッダーやポリシー型の構築方法を確認するとき。
 
 ## hash
-- 2d39d1bf1c947568e0b48f622bf40d6d35a3a563f1cb875647045a661c425abb
+- 222577ede357976761a308e4a059785a1b0bb703c6c2671b5a5d9c222adafa51
 
 # `realization.py`
 

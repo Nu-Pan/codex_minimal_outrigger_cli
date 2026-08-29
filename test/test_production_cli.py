@@ -142,9 +142,7 @@ def _real_path_config() -> CmocConfig:
     # 具体的な provider/Model 名を fixture に固定せず、quota 消費を抑える既定 entry
     # の直接設定を全 agent call 種別へ適用する。
     config = CmocConfig(num_parallel=1)
-    quota_saving_call = config.codex.agent_calls[
-        "build_indexing_index_entry_parameter"
-    ]
+    quota_saving_call = config.codex.agent_calls["build_indexing_index_entry_parameter"]
     return replace(
         config,
         codex=replace(
