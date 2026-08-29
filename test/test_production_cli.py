@@ -450,6 +450,18 @@ def _answer_terminal_queries(
     return probe_buffer
 
 
+def _advance_trust_confirmation(
+    master_fd: int,
+    transcript: bytearray,
+    confirmation_ready: bool,
+) -> tuple[bool, bool]:
+    """信頼確認 prompt の描画後の poll で Enter を一度だけ送る。"""
+    if confirmation_ready:
+        os.write(master_fd, b"\r")
+        return True, True
+    return b"Press enter to continue" in transcript, False
+
+
 def _stop_tui_process_group(process: subprocess.Popen[bytes]) -> None:
     """失敗時に cmoc と、その Codex TUI child を同じ group から停止する。"""
     # start_new_session=True で作った group を leader だけ terminate すると、
@@ -485,6 +497,7 @@ def _run_cmoc_tui(
     message: str | None = None
     probe_buffer = b""
     answered_queries: set[bytes] = set()
+    trust_confirmation_ready = False
     trust_confirmed = False
     deadline = time.monotonic() + _PRODUCTION_COMMAND_TIMEOUT
     try:
@@ -511,10 +524,13 @@ def _run_cmoc_tui(
                 received,
                 answered_queries,
             )
-            if not trust_confirmed and b"Press enter to continue" in transcript:
-                # 隔離した test repository の初回 trust prompt は既定の Yes を選ぶ。
-                os.write(master_fd, b"\r")
-                trust_confirmed = True
+            if not trust_confirmed:
+                # 描画中の入力破棄を避け、次の poll で既定の Yes を選ぶ。
+                trust_confirmation_ready, trust_confirmed = _advance_trust_confirmation(
+                    master_fd,
+                    transcript,
+                    trust_confirmation_ready,
+                )
             message = _completed_tui_message(codex_home)
             if message is not None:
                 break
