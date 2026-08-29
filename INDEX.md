@@ -145,18 +145,19 @@
 # `test`
 
 ## Summary
-- cmoc の CLI、runtime、ACP builder、oracle review、session/run lifecycle、indexing、feedback、Codex 実行、Windows toast などの外部挙動と回帰条件を検証する pytest テスト群。
-- 個別機能の単体検証から、Git worktree・独立 process・PTY・実 Codex CLI を含む統合／受け入れ試験まで、実装や正本仕様に対する検証入口を提供する。
+- `test` 配下は、cmoc の runtime・CLI・Codex 呼び出し・Git/worktree・session/run lifecycle・oracle review・indexing・feedback・通知などの外部契約を検証するテスト群への入口です。
+- 単体テストから、独立 process・PTY・実 Codex CLI を使う実経路統合テストまで、成果物・永続 state・Git 状態・ログ・report・終了結果を観測して回帰を確認します。
+- 対象機能の実装仕様ではなく、変更された機能に対応する具体的なテスト要件、異常系境界、統合 lifecycle、または packaged import 境界を確認するために進みます。
 
 ## Read this when
-- cmoc の既存機能を変更・調査する際に、対象機能の外部契約や回帰テストの所在を確認したいとき。
-- CLI lifecycle、Codex runtime、ACP builder、indexing、oracle、session/run、feedback などの統合挙動や境界条件を検証するとき。
-- 実装変更に対応する単体・統合・実経路テストを選択するとき。
+- cmoc の CLI、runtime、Codex、Git/worktree、session/run、oracle、realization、indexing、feedback、通知の外部挙動を回帰テストで確認するとき。
+- 特定機能の成功・失敗・中断・cleanup・report・ログ・永続 state など、利用者から観測できる契約の検証条件を探すとき。
+- 実 Codex CLI、独立 process、PTY、または隔離された packaged layout による実経路の受け入れ条件を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装の意味そのものを確認することが目的で、テストではなく対応する oracle 文書や実装を直接読むべきとき。
-- 対象機能の具体的な実装手順、schema の内容、CLI 個別仕様だけを確認したいとき。
-- テスト対象と無関係な機能や、一般的な pytest の実行方法だけを調べるとき。
+- 正本仕様、設計、実装アルゴリズム、schema の内容、または prompt 本文を確認することが目的のときは、対応する oracle・実装・schema を直接読む。
+- テスト対象の外部挙動を変更せず、一般的な pytest 実行方法や Python 環境の規約だけを確認するとき。
+- 対象機能が明確で、その機能専用の下位テストまたは実装・仕様の方が必要な契約へ直接到達できるとき。
 
 ## hash
-- 258e796f9898abfa0622022079924df5666864aa1e402cbbd594a49f8f449e0f
+- b4bd2e167e7b9a2eaf0bf63debeb345dde8e14ecf1aca34a2efb06ec99c6f6ba

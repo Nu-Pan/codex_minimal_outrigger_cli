@@ -708,20 +708,35 @@
 # `test_production_cli.py`
 
 ## Summary
-- 日本語の受け入れ試験として、利用者向け cmoc の全末端サブコマンドを、独立 process・実 Codex CLI・実推論・PTY を含む本番経路で検証する。終了 code、report・state・Git・Codex call log、TUI の応答完了と終了を外部観測し、LLM の回答品質自体は判定しない。
-- CLI の登録済み末端一覧と固定シナリオを照合し、非対話 command の正常完了、indexing・oracle edit の call と成果物、session/run の状態遷移および worktree、TUI の実 Codex 応答後の終了を一続きの統合試験として扱う。
+- 全末端サブコマンドの本番経路を、独立 process・実 Codex CLI・実推論で検証する受け入れ試験。
+- CLI の終了 code、report・永続 state・Git 状態、Codex call log、PTY 上の TUI 応答完了と終了操作を確認し、LLM の回答品質自体は判定しない。
 
 ## Read this when
-- 利用者向け CLI の全末端サブコマンドが、実 executable と隔離済み環境を使う本番経路で完了することを受け入れ確認するとき。
-- 非対話 command の report・state・Git・call log、または TUI の PTY 応答完了・終了操作や実 Codex 呼び出しを検証するとき。
+- 全末端コマンドの登録と本番試験シナリオの対応漏れを確認するとき。
+- 非対話コマンドについて、実 Codex 呼び出し、report 生成、INDEX 更新、session/run の状態遷移、worktree の作成・後始末を追うとき。
+- tui または oracle investigation の実 Codex 応答、PTY の端末問い合わせ、信頼確認、応答後の終了処理を確認するとき。
 
 ## Do not read this when
-- LLM の回答内容の品質や意味判断そのものを評価するとき。
-- 単一サブコマンドの内部ロジック、単体テスト、または仕様本文を直接確認するだけでよいとき。
-- 実 Codex CLI、provider、独立 process、隔離環境、PTY を必要としない高速な検証を行うとき。
+- LLM の回答内容や品質そのものを評価するとき。
+- 個別サブコマンドの実装仕様を直接確認したいとき。対応するサブコマンド仕様や実装へ進む。
+- Codex CLI や provider を使わない単体テスト、または本番経路以外の制御ロジックだけを確認するとき。
 
 ## hash
-- 2f827489ff4a6895e6305c55b2713eba97ccc1db3c09795a0e8f1c47bad905ae
+- 4043a3d7af3b4a44612c91332b61abd08abe982d50d18421e24054a421d09aae
+
+# `test_production_cli_support.py`
+
+## Summary
+- 実経路統合テストで使用する PTY 操作 helper の trust 確認処理を検証するテスト。プロンプト検出直後では確定せず、次の poll で確認入力を送信する挙動を扱う。
+
+## Read this when
+- 実経路統合テストの PTY 操作 helper が、trust prompt 検出後の poll 間隔と確認入力の送信タイミングを満たすか確認するとき。
+
+## Do not read this when
+- trust 確認処理そのものの実装や本番 CLI の挙動を調べるときは、対応する実装または本番 CLI のテストを直接読む。
+
+## hash
+- d9d566558ddab2d388a8d45f171c1dbdf7a3bd90ce5e50bc62140d9f769d24e3
 
 # `test_prompt_editor_input.py`
 
