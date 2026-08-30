@@ -98,10 +98,13 @@ class CmocConfigCodex:
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
+            # NOTE
+            #   oracle --> realization のメインルート
+            #   大規模な修正になる可能性に備えて ultra
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-5.6-sol",
-                reasoning_effort="max",
+                reasoning_effort="ultra",
             ),
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="openai",
