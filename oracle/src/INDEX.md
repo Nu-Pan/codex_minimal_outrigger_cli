@@ -1,19 +1,16 @@
 # `oracle`
 
 ## Summary
-- cmoc の agent call に渡す prompt、起動パラメータ、パスコンテキスト、設定モデルを構築する定義のルートです。
-- 共通の prompt 組み立て、構造化 Markdown のレンダリング、ファイルアクセス・routing・oracle・realization などの policy、およびサブコマンド別の agent call 構築へ進む入口を提供します。
-- 設定集約、root path placeholder の解決、構造化文書の表現といった横断的な基盤責務も扱います。
+- AI コーディングエージェント呼び出しの prompt、起動パラメータ、入力契約、設定、パス解決、構造化文書レンダリングを扱う下位領域への入口。
+- agent call の構築、共通 prompt 生成、feedback 入力契約、エディタ入力、設定・パス基盤を目的別に案内する。
 
 ## Read this when
-- agent call の prompt、cwd、ファイルアクセス、path placeholder、Structured Output、editor input handoff の構築責務の所在を確認するとき。
-- 特定の cmoc サブコマンドに対応する agent call 構築箇所や、oracle review・realization・feedback・session join の処理段階を読む入口を探すとき。
-- cmoc の設定モデル、agent call ごとの Codex 設定、Git worktree に基づくパス解決、構造化文書の Markdown 化を調査・変更するとき。
+- agent call や prompt の構成、起動条件、入力契約、設定・パス解決、構造化文書の扱いについて、適切な下位領域を特定するとき。
+- feedback、oracle review、realization、editor input handoff などの処理段階や契約の確認先を探すとき。
 
 ## Do not read this when
-- agent call の実行処理、サブコマンドの業務ロジック、Codex CLI sandbox との対応詳細を確認したいときは、対応する実行本体または参照される正本仕様を直接読む。
-- 個別の policy、prompt 部品、サブコマンド別 builder、Structured Output schema、feedback state の具体的な契約や内容だけを確認したいときは、該当する下位対象を直接読む。
-- oracle file や realization file の意味仕様、個別のレビュー結果、collector の保存・集約処理そのものを確認したいとき。
+- 特定の下位要素の詳細仕様、実装、schema、保存・集約処理、または個別のレビュー結果だけを確認したいとき。
+- Codex CLI の実行処理、サブコマンドの業務ロジック、prompt の具体的な共通生成規則を直接調べたいとき。
 
 ## hash
-- cd25f09b1a616b64ae800eeac376b74af49a6237aacfcc6fa5eea5618623de3c
+- 38e66436c16f06ac0986d58948d26d13515f6bc69f97b4587936c7664ca2cc91

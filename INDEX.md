@@ -91,20 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書群です。アプリケーション仕様、branch・run の分離モデル、不採用案の背景、実装・環境・テストの開発ルールを扱います。
-- cmoc の agent call 構築実装と、その prompt、アクセス制御、Structured Output、設定、パス解決、構造化文書レンダリングを扱います。
+- cmoc の正本文書を収める領域。アプリケーション挙動、session／run の branch 分離モデル、不採用案、開発環境・設計・テストのルールを扱い、仕様・設計・実装判断の確認先を提供する。
+- 具体的な仕様や開発規則を確認するための入口であり、実装側では agent call の prompt、routing、oracle・realization、feedback、session join、TUI などの責務へ案内する。
 
 ## Read this when
-- cmoc の機能仕様、状態遷移、session／run の branch・worktree 分離、不採用案、実装・開発環境・テストのルールを確認するとき。
-- agent call の prompt、cwd、ファイルアクセス、Structured Output、サブコマンド別の起動定義、構造化文書モデルの実装箇所を探すとき。
+- cmoc の機能仕様、状態遷移、branch・worktree 分離モデルを確認するとき。
+- 設計上の不採用案や、実装・開発環境・テストに関する正本ルールを確認するとき。
+- 具体的な個別仕様や開発規則へ進む前に、読むべき正本文書の領域を判断するとき。
 
 ## Do not read this when
-- 具体的な実装コードやテストの挙動だけを確認する場合は、対応する realization file やテストを直接読む。
-- 個別仕様や開発ルールが特定できている場合は、文書群全体ではなく該当する下位文書を直接読む。
-- agent call の実行本体やサブコマンドの業務ロジックだけを確認する場合は、対応する実行処理を直接読む。
+- 実装コードやテストコードの具体的な挙動を確認する場合は、対応する realization file やテストを直接読むとき。
+- 個別仕様、開発環境、テスト要件など読む対象文書が特定できているとき。
+- INDEX.md の生成・更新規則だけを確認するとき。
 
 ## hash
-- a2a89b7813656d75fbdc2e39320eef2033cdd4b4513257845abf9309046c6059
+- 7faf82cdf740ab1812092f2f2599e9e47ca50e72f243cf1ac7f558781250bcb4
 
 # `pyproject.toml`
 
