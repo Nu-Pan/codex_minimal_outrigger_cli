@@ -112,20 +112,21 @@ call-scoped path context の適用範囲を次に示す。
 ### 詳細なファイルアクセス制限
 
 - 詳細なファイルアクセス制限は deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する
-- 全 file access mode では、次の制限を共通で適用する
+- `NO_POLICY` 以外の全 file access mode では、次の制限を共通で適用する
     - `{{work-root}}` と `{{repo-root}}` が同一の場合は、`{{work-root}}` ツリー外の読み書きを禁止する。両者が異なる場合は、`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外の読み書きを禁止する
     - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc/g*/ar` ツリー内の書き込みを禁止する。`{{work-root}}` と `{{repo-root}}` が異なる場合は、`{{repo-root}}/.cmoc/g*/ar` ツリー内の書き込みも禁止する
     - `AGENTS.md` と `INDEX.md` の書き込みを禁止する
     - `{{work-root}}/memo` の読み書きを禁止する
-- 各 mode は、共通制限に次の制限を追加する
+- `NO_POLICY` 以外の各 mode は、共通制限に次の制限を追加する
     - `READONLY`: oracle file と realization file の書き込みを禁止する
     - `PURE_ORACLE_READ`: oracle file の書き込みと realization file の読み書きを禁止する
     - `REPO_WRITE`: 追加の制限を設けない
     - `PURE_ORACLE_WRITE`: realization file の読み書きを禁止する
     - `REALIZATION_WRITE`: oracle file の書き込みを禁止する
-    - `NO_POLICY`: 詳細な file access instruction を prompt に追加しない特殊 mode とする
+- `NO_POLICY` は、共通 file access policy が存在しない有効な特殊 mode とする。必要な instruction は個別の `AgentCallParameter` builder がすべて構築する
 - 個別 agent call が選択する file access mode は、対応する oracle doc の作業範囲と一致させる。AgentCallParameter builder は、その正確な選択値を構築する
-- 本節の制限を agent へ伝える正確な prompt 文面と mode ごとの文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する
+- `build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および `NO_POLICY` 以外の mode の正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する
+- `build_complete_prompt` はその結果を処理し、共通 file access policy の追加可否を決める。完全 prompt への正確な追加条件は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない
 - 詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する
 
@@ -214,6 +215,16 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 - cmoc は `cmoc_feedback` の effective configuration 全体を呼び出し単位で支配する。user config、`$CODEX_HOME/config.toml`、または project config の server 定義、tool 設定、approval behavior、および起動情報に依存してはならず、それらによって別 tool の公開または reporter の置換を許してはならない
 - 通常の `cmoc_feedback.submit_observation` は、human approval、auto-review、または command sandbox escalation を要求せずに実行できるよう設定する
 - reporter と collector の残りの lifecycle は、同仕様の「collector と transport」を正本とする。初回 prompt で注入済みの reporting instruction は、correction schema または correction prompt へ重複させない
+
+## editor input handoff MCP
+
+editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` を正本とする。
+
+- `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
+- Codex TUI を起動する `AgentCallParameter` builder だけが MCP を有効にする。それ以外の builder は既定値を使用する
+- 有効な Codex TUI call には、`overwrite` だけを公開する `cmoc_editor_input` MCP server を提供する。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
+- handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
+- Codex TUI の builder は MCP と handoff instruction の両方を有効にする。agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
 
 ## Codex CLI 呼び出し情報の保存
 

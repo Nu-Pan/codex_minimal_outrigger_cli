@@ -13,10 +13,9 @@
 
 ## ユーザー指示と prompt の構築
 
-- エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」を正本とする。
+- editor input handoff を含むエディタ入力は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の共通 lifecycle を使用する。
 - editor 終了後に抽出した同じオリジナルのユーザー指示を、本命用と仕様削減用の builder に渡す。正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` と `build_oracle_edit_reduction_launch_exec_parameter` へ委譲する。
 - 構築済み prompt の受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
-- editor work file の排他的 writer は管理しない。他の TUI やエディタとの並行操作から生じる競合や不整合は、人間が管理する。
 
 ## agent call 前の条件
 
@@ -48,14 +47,13 @@
 ## 実行順序
 
 1. doctor preprocess を呼び出す。
-2. prompt editor input の lifecycle に従って、oracle file の最終状態に関するユーザー指示を受け取る。
-3. editor work file の一回の最終読み取り結果を保存し、オリジナルのユーザー指示を抽出する。
-4. オリジナルのユーザー指示から、本命用 `AgentCallParameter` を構築する。
-5. indexing preflight を 1 回実行する。
-6. agent call 前の条件を検査する。
-7. 本命 agent call を新しい `codex exec` session で実行する。
-8. 本命 agent call が成功した場合だけ、同じオリジナルのユーザー指示から仕様削減用 `AgentCallParameter` を構築し、新しい `codex exec` session で実行する。
-9. 最外側の `cmoc oracle edit` の primary report を保存して終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
+2. prompt editor input の共通 lifecycle に従って、oracle file の最終状態に関するオリジナルのユーザー指示を確定する。
+3. オリジナルのユーザー指示から、本命用 `AgentCallParameter` を構築する。
+4. indexing preflight を 1 回実行する。
+5. agent call 前の条件を検査する。
+6. 本命 agent call を新しい `codex exec` session で実行する。
+7. 本命 agent call が成功した場合だけ、同じオリジナルのユーザー指示から仕様削減用 `AgentCallParameter` を構築し、新しい `codex exec` session で実行する。
+8. 最外側の `cmoc oracle edit` の primary report を保存して終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
 
 - 本命 agent call と仕様削減 agent call の間に、indexing agent call、自動 commit、または別の補完用 agent call を挟まない。
 - 本命 agent call が失敗した場合は、仕様削減 agent call を開始せずエラー終了する。

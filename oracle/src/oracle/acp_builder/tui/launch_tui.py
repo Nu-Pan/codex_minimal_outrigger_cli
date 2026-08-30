@@ -50,6 +50,7 @@ def build_tui_launch_tui_parameter(
         oracle_findings_policy=True,
         realization_findings_policy=True,
         routing_policy=True,
+        editor_input_handoff_policy=True,
     )
     return AgentCallParameter(
         agent_call_kind=build_tui_launch_tui_parameter.__name__,
@@ -57,5 +58,6 @@ def build_tui_launch_tui_parameter(
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
+        enable_editor_input_handoff_mcp=True,
         run_indexing_preflight=True,
     )

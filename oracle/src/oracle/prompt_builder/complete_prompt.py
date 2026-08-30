@@ -9,6 +9,7 @@ from .basic import PlaceholderMap
 # local
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
 from .policy.conflict_resolution import build_conflict_resolution_policy
+from .policy.editor_input_handoff import build_editor_input_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
 from .policy.file_access import build_file_access_policy
 from .policy.index_entry import build_index_entry_policy
@@ -55,6 +56,7 @@ def build_complete_prompt(
     conflict_resolution_policy: bool = False,
     index_entry_policy: bool = False,
     routing_policy: bool = False,
+    editor_input_handoff_policy: bool = False,
 ) -> list[SDHeader | SDTagBlock]:
     """選択された agent 向け文面を完全 prompt として構築する。
 
@@ -62,6 +64,7 @@ def build_complete_prompt(
         summary: agent の担当、主作業、対象、および作業範囲。
         goal: agent call の終了時に満たされるべき状態。
         routing_policy: repository 内の参照先を選ぶ routing 文面を含めるか。
+        editor_input_handoff_policy: editor input handoff 文面を含めるか。
 
     Returns:
         agent call へ渡す構造化済み prompt。
@@ -109,10 +112,19 @@ def build_complete_prompt(
         fundamental_policy_prompt,
         build_feedback_reporting_policy(path_context),
     )
-    if file_access_mode != FileAccessMode.NO_POLICY:
+    if editor_input_handoff_policy:
         _append(
             fundamental_policy_prompt,
-            build_file_access_policy(file_access_mode, path_context),
+            build_editor_input_handoff_policy(),
+        )
+    file_access_policy_result = build_file_access_policy(
+        file_access_mode,
+        path_context,
+    )
+    if file_access_policy_result is not None:
+        _append(
+            fundamental_policy_prompt,
+            file_access_policy_result,
         )
     if routing_policy:
         _append(

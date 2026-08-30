@@ -49,6 +49,9 @@ class AgentCallParameter:
     # agent call に設定する cwd
     agent_call_cwd: Path
 
+    # cmoc_editor_input MCP server を呼び出し単位で有効化する
+    enable_editor_input_handoff_mcp: bool = False
+
     # True なら論理 agent call の初回 Codex call 前に indexing preflight を実行する
     # False なら indexing preflight を実行しない
     # 通常は True のままで良い

@@ -8,8 +8,12 @@ from oracle.prompt_builder.basic import PlaceholderMap
 def build_file_access_policy(
     mode: FileAccessMode,
     path_context: AgentCallPathContext,
-) -> tuple[PlaceholderMap, SDHeader]:
+) -> tuple[PlaceholderMap, SDHeader] | None:
     """エージェントに伝えるファイルアクセス制限規定の文面を構築する。
+
+    Returns:
+        共通 file access policy の placeholder 定義と文面。
+        `None` は、有効な mode に共通 file access policy が存在しないことだけを表す。
 
     NOTE
         意味仕様は `oracle/doc/app_spec/codex_exec_rule.md` の
@@ -17,6 +21,10 @@ def build_file_access_policy(
         いろいろあって、細かいアクセス制御はプロンプトによる指示とした。
         sandbox の設定は non-goal である。
     """
+    if mode is FileAccessMode.NO_POLICY:
+        # 有効な mode だが、共通 file access policy は存在しない。
+        return None
+
     # リポジトリ外への禁止事項
     # NOTE
     #   work-root 外の書き込み禁止は、言わなくてもわかりそう。
@@ -119,22 +127,6 @@ def build_file_access_policy(
                 "oracle file は書き込み禁止",
                 # realization file は書き込み許可
             ]
-        case FileAccessMode.NO_POLICY:
-            # NOTE
-            #   `build_complete_prompt` によるアクセス規定文面が生成されない
-            #   特殊文面を個別に構築する用の特別モードで、よほどのことがない限り使ってはいけない
-            return (
-                {},
-                SDHeader(
-                    "",
-                    SDPolicy(
-                        what_is_this="",
-                        require=(),
-                        prohibit=(),
-                        allow=(),
-                    ),
-                ),
-            )
         case _:
             raise ValueError(f"Invalid mode (mode={mode})")
     return (
