@@ -50,20 +50,21 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- エディタを使った AI Agent prompt 入力の共通境界を担う。作業用ファイルと入力保存先の予約、初期 prompt の書き込みとエディタ起動、編集後の安全な読み取り・保存・抽出、完了時の削除、関連 repository の ignore 保証を扱う。prompt editor の入出力挙動、エディタ選択、作業ファイル検証、入力保存の安全性を確認・変更するときの入口となる。
+- AI Agent 用 prompt のエディタ入力を受け付ける共通境界。作業用ファイルと保存用ログの確保、エディタ起動、入力の一度限りの収集・抽出、完了後の作業ファイル削除を扱う。
+- prompt editor の作業ルートに必要な `.cmoc` ignore の保証も担う。
 
 ## Read this when
-- prompt editor の作業ファイル予約・編集・収集・確定処理を変更するとき
-- 利用可能なエディタの選択規則や editor work file の検証を確認するとき
-- HTML comment 除去を含む最終 prompt 入力の抽出・保存境界を確認するとき
+- prompt editor input の予約からエディタ起動、入力収集、保存、後片付けまでのライフサイクルを確認するとき
+- エディタ選択、original prompt placeholder の検証、HTML comment と前後空白の除去、編集ファイルの妥当性検証の責務を確認するとき
+- prompt editor input を利用する CLI や TUI の共通境界を変更・調査するとき
 
 ## Do not read this when
-- prompt の内容や skeleton の生成規則だけを確認する場合は prompt builder の正本を直接読む
-- 一般的な runtime error、git ignore、path 解決の仕様だけを確認する場合は、それぞれの専用実装・正本を直接読む
-- prompt editor を使わない Agent prompt の構築や入力処理を確認する場合
+- prompt の初期表示内容や skeleton の構築規則を確認したいときは、prompt builder の対象を直接読む
+- editor handoff の通信・drain・無効化の内部仕様を確認したいときは、runtime editor input handoff の対象を直接読む
+- エラー型、Git ignore 実装、パス生成、timestamp の詳細を確認したいときは、それぞれの runtime helper を直接読む
 
 ## hash
-- 1d4a3162e3adb15aa78f7080838350612f461c281b606557b2732f786705354e
+- a699ab42a10395da76d252741020bf4b989721f53e0b7159f0759fe3df10bcfc
 
 # `runtime_cli.py`
 
@@ -149,38 +150,43 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess の実行境界を担い、sandbox・argv・CODEX_HOME・環境変数・schema 配置を起動前に整えます。
-- 実行中 subprocess の PID、start time、process group を追跡・検証し、安全な signal 送信、終了待機、abandon 時の cleanup を扱います。
-- Codex の stdout/stderr と JSONL event を解釈し、session token の抽出、capacity/quota retry 対象、その他の protocol/error 判定を提供します。
+- Codex CLI subprocess 境界として、起動時の argv・sandbox・cwd・CODEX_HOME・環境変数・MCP/schema 配置を扱う。
+- editing run の Codex child process tracking、process group の同一性検証、signal・終了待機・cleanup を扱う。
+- Codex の stdout/stderr と JSONL event を解析し、session ID、malformed output、capacity・quota・unexpected error を判定する。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox、model provider、通知、Feedback MCP、CODEX_HOME、schema の受け渡しを変更・調査するとき。
-- editing run の subprocess tracking、process group cleanup、PID reuse 対策、停止処理を変更・調査するとき。
-- Codex の JSONL 出力、session resume token、capacity/quota/unexpected error の判定や失敗時 detail を変更・調査するとき。
+- Codex CLI に渡す sandbox、config override、model provider、通知、feedback/editor handoff MCP の実行時設定を確認するとき。
+- Codex subprocess の起動、process group の追跡・停止、PID reuse 対策、tracking file の検証や cleanup を確認するとき。
+- Structured Output schema の配置、Codex JSONL の session ID 抽出、stderr/error event の集約、retry 対象エラーの判定を確認するとき。
 
 ## Do not read this when
-- Codex CLI 境界の外側にある agent call の業務ロジックや、編集対象ファイルの内容生成だけを扱うとき。
-- Codex subprocess の内部実装そのものや、一般的な process 管理をこの境界の設定・解釈と無関係に調査するとき。
+- Codex CLI subprocess の実行環境や機械的な実行結果の解釈ではなく、agent call の上位の業務フローや利用者向け orchestration を確認するとき。
+- Codex CLI の正本仕様や run isolation の仕様そのものを確認するときは、本文が参照する oracle 文書を直接読むとき。
+- runtime_config、runtime_content、runtime_paths など、設定値検証・ハッシュファイル保存・パス算出の個別実装だけを確認するとき。
 
 ## hash
-- c6bb976ca6ff9804a02bef5ec686014573b89c3a75210a7d55fb94e41d02e62e
+- afbe252cd215ec84c8b9554bf0554c2ba89e6916b5e792c40f1f91c52ef57daf
 
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI の起動経路を担当し、agent call のパス・設定・Codex Home・通知 callback・設定上書き argv を準備して subprocess を実行する入口。呼び出し記録、feedback call、成功・失敗イベント、終了結果や起動失敗のエラー化までを一連で扱う。
+- Codex TUI を、呼び出しパラメータに応じた設定上書き・作業ディレクトリ・環境変数・通知 callback とともに起動する実行入口。
+- Codex 呼び出しごとの call log、feedback 連携、成功・失敗 event、経過時間、return code を管理し、起動失敗や subprocess 失敗を cmoc の結果・例外へ変換する。
 
 ## Read this when
-- Codex TUI の起動、agent call の実行環境や argv の組み立て、call log・feedback・通知 callback のライフサイクルを確認するとき。
-- Codex subprocess の終了コード、起動例外、ログイベント、CmocError への変換を調査または変更するとき。
+- cmoc から Codex TUI を起動する処理の全体フローを確認するとき。
+- Codex subprocess に渡す argv、cwd、環境変数、設定上書き、editor input handoff、Windows 通知の連携を追跡するとき。
+- Codex 呼び出しの call log・feedback・logger event と、失敗時の例外処理の関係を確認するとき。
 
 ## Do not read this when
-- Codex の設定上書き内容そのものを変更・確認する場合は runtime_codex_profile を読む。
-- 設定ファイルの読み込みや agent call 設定の定義を確認する場合は runtime_config または CmocConfig の定義を直接読む。
-- TUI 以外の Codex 呼び出し経路や、共通のログ・feedback・パス処理の詳細だけを調べる場合は、それぞれの専用実装を直接読む。
+- Codex の設定上書き引数や subprocess 環境の生成規則だけを確認する場合は runtime_codex_profile を直接読む。
+- cmoc 設定の読み込み規則だけを確認する場合は runtime_config を直接読む。
+- 通知 callback の生成・終了処理だけを確認する場合は runtime_windows_toast を直接読む。
+- call log の保存先や timestamped path の規則だけを確認する場合は runtime_paths を直接読む。
+- feedback の開始・環境変数・保存処理の詳細だけを確認する場合は runtime_feedback を直接読む。
 
 ## hash
-- 0ac0d72ffe39d6e5c1d44c32dc3eaa9dcd6e1d744233b69fd6daf7a432f0a0c6
+- 220b2e83fb599da9f5f53066ef2f08c5037fc954caf4c1b5ffe1dbd32a7ba174
 
 # `runtime_config.py`
 
@@ -236,6 +242,61 @@
 
 ## hash
 - 134306bb5efc707045ace71a3d0639f1d447d3a00329773c9b03aa351c189f91
+
+# `runtime_editor_input_handoff.py`
+
+## Summary
+- editor 待機中に一時的な editor work file へ入力を IPC 経由で上書きする処理を確認するとき
+- handoff target の開始・終了、Unix socket 通信、request 検証、submission の直列化を調べるとき
+- editor work file の regular file・非 symlink・所定ディレクトリ内という安全性検証や UTF-8 上書き処理を確認するとき
+
+## Read this when
+- editor 待機中の入力 handoff の実装や、target のライフサイクルを変更・調査するとき
+- Unix socket 経由の submission 受付、repository・protocol・target の検証、受付結果の扱いを確認するとき
+- editor work file の安全な再検証と内容置換の挙動を確認するとき
+
+## Do not read this when
+- editor input handoff の protocol version や payload schema の定義だけを確認したいとき
+- editor work directory や socket path の算出規則だけを確認したいとき
+- editor の起動・待機処理、または handoff 以外の runtime error 処理を確認するとき
+
+## hash
+- 296d8647d0f6f864963ec55203aa6a97d2e3a6afa035c421a11d56a07e0013e2
+
+# `runtime_editor_input_handoff_mcp.py`
+
+## Summary
+- Codex TUI の active な prompt editor input file 全体置換を受け付ける stdio MCP server。
+- MCP JSON-RPC の初期化・疎通確認・tool 列挙・overwrite 呼び出しを処理し、同一 repository の active target へ Unix socket 経由で転送する。
+- 入力検証、target 応答検証、転送失敗の domain result を MCP の structuredContent と text で返す入口。
+
+## Read this when
+- editor input handoff を agent-facing MCP tool として起動・接続・呼び出しする処理を確認するとき
+- overwrite tool の MCP 公開情報、JSON-RPC message の処理、target への転送結果と失敗コードの境界を確認するとき
+
+## Do not read this when
+- overwrite payload の schema、socket path、handoff response の詳細なプロトコル定義を確認したいときは、参照される protocol module を直接読む
+- Codex TUI 側の editor input file 更新処理や active target の実装を確認したいとき
+
+## hash
+- a4bc2632f4628546168371b741912abf2a7ec677458c02efe2810d0470373cde
+
+# `runtime_editor_input_handoff_protocol.py`
+
+## Summary
+- editor input handoff の共有 schema 読み込み、環境変数による repository context の引き渡し、短い socket path の導出、newline-framed response の受信を定義する共通モジュール。
+- overwrite input の正本 schema を読み込み、validator を構築し、payload の適合性だけを判定する処理への入口。
+
+## Read this when
+- editor input handoff の schema 検証、MCP subprocess への repository context 追加、handoff socket path の生成、または socket response の受信処理を確認するとき。
+- 複数の editor input handoff 実装が共有する protocol version、環境変数、response size limit などの共通定義を確認するとき。
+
+## Do not read this when
+- overwrite input schema のプロパティや制約そのものを確認したいとき。正本の oracle package resource を直接確認する。
+- 特定の editor input handoff 呼び出し元の業務処理や、個別 MCP client/server の接続手順だけを確認したいとき。
+
+## hash
+- ca5ef865f63fd20f1a75edb959817dd7fd99882d9cc9ea4268da8823c234c1dd
 
 # `runtime_errors.py`
 

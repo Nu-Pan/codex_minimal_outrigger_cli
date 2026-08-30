@@ -125,6 +125,7 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
         target,
         (
             "import commons.prompt_editor_input as editor_input; "
+            "import commons.runtime_editor_input_handoff_mcp as handoff_mcp; "
             "import acp.builder.oracle.edit.launch_exec as edit_module; "
             "from pathlib import Path; "
             "from types import SimpleNamespace; "
@@ -136,6 +137,12 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "'build_oracle_edit_reduction_launch_exec_parameter']; "
             "assert sorted(n for n in vars(edit_module) if not n.startswith('_')) "
             "== sorted(edit_module.__all__); "
+            "listed = handoff_mcp._response({"
+            "'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list', 'params': {}}); "
+            "assert [tool['name'] for tool in listed['result']['tools']] "
+            "== ['overwrite']; "
+            "assert listed['result']['tools'][0]['inputSchema']['required'] "
+            "== ['target_id', 'content']; "
             "work, saved = "
             "editor_input.reserve_prompt_editor_input(Path.cwd()); "
             "skeleton = build_main("

@@ -2,13 +2,16 @@
 
 import re
 import shutil
-import stat
 import subprocess
 import time
 from pathlib import Path
 
 from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
 
+from .runtime_editor_input_handoff import (
+    start_editor_input_handoff,
+    validate_editor_work_file,
+)
 from .runtime_errors import CmocError
 from .runtime_git import ensure_cmoc_ignored
 from .runtime_paths import (
@@ -53,7 +56,7 @@ def edit_prompt_editor_input(
     """完全 prompt の skeleton を初期値としてエディタを起動する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     _require_single_original_prompt_placeholder(complete_prompt_skeleton)
-    _validate_editor_work_file(root, editor_work_path)
+    validate_editor_work_file(root, editor_work_path)
 
     # 正本が構築する案内と完全 prompt の skeleton を作業 file へ保存する。
     # {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
@@ -62,9 +65,14 @@ def edit_prompt_editor_input(
         encoding="utf-8",
     )
 
-    # エディタが戻った時点を入力完了とし、終了失敗は利用者向けエラーにする。
     argv = [*_select_editor(), str(editor_work_path)]
-    result = subprocess.run(argv)
+    target = start_editor_input_handoff(root, editor_work_path)
+    print(f"editor input handoff target ID: {target.target_id}", flush=True)
+    try:
+        # エディタが戻った後は target を drain・無効化してから処理を進める。
+        result = subprocess.run(argv)
+    finally:
+        target.close()
     if result.returncode != 0:
         raise CmocError(
             "エディタが正常終了しませんでした。",
@@ -81,7 +89,7 @@ def collect_prompt_editor_input(
     """作業 file を一度だけ最終読み取りし、入力を保存して返す。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     # 最終時点の通常 file を一度だけ読み、同じ結果を保存と入力抽出に使う。
-    _validate_editor_work_file(root, editor_work_path)
+    validate_editor_work_file(root, editor_work_path)
     final_read_result = editor_work_path.read_bytes()
     with input_copy_path.open("xb") as file:
         file.write(final_read_result)
@@ -124,36 +132,6 @@ def _extract_original_prompt(final_read_result: str) -> str:
         final_read_result,
         flags=re.DOTALL,
     ).strip()
-
-
-def _validate_editor_work_file(root: Path, path: Path) -> None:
-    """最終読み取り対象を所定 directory 内の通常 file に限定する。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    expected_dir = editor_work_dir(root)
-    try:
-        resolved_dir = expected_dir.resolve(strict=True)
-        mode = path.lstat().st_mode
-    except (OSError, RuntimeError) as exc:
-        raise _invalid_editor_work_file(path, "path is not readable") from exc
-    if not stat.S_ISREG(mode):
-        raise _invalid_editor_work_file(path, "path is not a regular file")
-    try:
-        resolved_path = path.resolve(strict=True)
-        resolved_path.relative_to(resolved_dir)
-    except (OSError, RuntimeError, ValueError) as exc:
-        raise _invalid_editor_work_file(
-            path,
-            f"path is outside editor work directory: {expected_dir}",
-        ) from exc
-
-
-def _invalid_editor_work_file(path: Path, reason: str) -> CmocError:
-    """不正な editor work file 用の利用者向けエラーを構築する。"""
-    return CmocError(
-        "editor work file を読み取れません。",
-        ["復旧用に残った editor work file を確認してから再実行してください。"],
-        f"path: {path}\nreason: {reason}",
-    )
 
 
 def _require_single_original_prompt_placeholder(

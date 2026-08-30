@@ -30,6 +30,7 @@ from config.cmoc_config import CmocConfig, JsonTomlValue
 
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
+from .runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from .runtime_errors import CmocError
 from .runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
@@ -594,6 +595,32 @@ def _feedback_mcp_override_args() -> list[str]:
     return args
 
 
+def _editor_input_handoff_mcp_override_args() -> list[str]:
+    """cmoc_editor_input server を overwrite 一つへ呼び出し単位で固定する。"""
+    server: dict[str, JsonTomlValue] = {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_editor_input_handoff_mcp"],
+        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV],
+        "enabled": True,
+        # handoff の利用可否は TUI agent call 自体の成功条件を変更しない。
+        "required": False,
+        "enabled_tools": ["overwrite"],
+        "disabled_tools": [],
+        "startup_timeout_sec": 5,
+        "tool_timeout_sec": 15,
+        "default_tools_approval_mode": "approve",
+        "tools": {"overwrite": {"approval_mode": "approve"}},
+    }
+    args = _config_override("mcp_servers.cmoc_editor_input", _toml_value(server))
+    args.extend(
+        _config_override(
+            f"shell_environment_policy.filters.{EDITOR_INPUT_REPOSITORY_ENV}",
+            _toml_string("exclude"),
+        )
+    )
+    return args
+
+
 def build_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
@@ -630,6 +657,11 @@ def build_codex_override_args(
         *_config_override("notify", _toml_value(notification_argv)),
         *_config_override("tui.notifications", "false"),
         *_feedback_mcp_override_args(),
+        *(
+            _editor_input_handoff_mcp_override_args()
+            if parameter.enable_editor_input_handoff_mcp
+            else []
+        ),
     ]
     args.extend(_model_provider_override_args(call_config.model_provider, config))
     return args
@@ -687,17 +719,18 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     if value is None:
         value = str(codex_home)
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # 別の Codex call や親 process の reporter context を degraded call へ継承させず、
-    # 現在 call の FeedbackCall が登録済み capability だけを後から追加できるようにする。
-    feedback_env_names = {
+    # 別の Codex call や親 process の MCP context を継承させず、現在 call が
+    # 明示的に有効化した context だけを後から追加できるようにする。
+    call_context_env_names = {
         FEEDBACK_CAPABILITY_ENV,
         FEEDBACK_COLLECTOR_ENV,
         FEEDBACK_PROTOCOL_ENV,
+        EDITOR_INPUT_REPOSITORY_ENV,
     }
     environment = {
         name: environment_value
         for name, environment_value in os.environ.items()
-        if name not in feedback_env_names
+        if name not in call_context_env_names
     }
     return {**environment, "CODEX_HOME": value}
 

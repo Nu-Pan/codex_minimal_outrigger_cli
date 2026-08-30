@@ -36,6 +36,9 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 from oracle.prompt_builder.policy.conflict_resolution import (
     build_conflict_resolution_policy as _build_conflict_resolution_policy,
 )
+from oracle.prompt_builder.policy.editor_input_handoff import (
+    build_editor_input_handoff_policy as _build_editor_input_handoff_policy,
+)
 from oracle.prompt_builder.policy.feedback_reporting import (
     build_feedback_reporting_policy as _build_feedback_reporting_policy,
 )
@@ -122,6 +125,12 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
             id="feedback-reporting",
         ),
         pytest.param(
+            _build_editor_input_handoff_policy,
+            ("**必須**", "**禁止**"),
+            1,
+            id="editor-input-handoff",
+        ),
+        pytest.param(
             lambda: _build_file_access_policy(FileAccessMode.READONLY, _path_context()),
             ("**禁止**", "**許容**"),
             1,
@@ -173,6 +182,7 @@ _POLICY_FLAG_HEADINGS = (
     ("conflict_resolution_policy", "# conflict resolution policy"),
     ("index_entry_policy", "# index entry policy"),
     ("routing_policy", "# routing policy"),
+    ("editor_input_handoff_policy", "# editor input handoff"),
 )
 
 

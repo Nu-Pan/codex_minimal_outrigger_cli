@@ -39,6 +39,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
+    assert parameter.enable_editor_input_handoff_mcp is True
     assert parameter.run_indexing_preflight is True
     complete_prompt = parameter.prompt
     for heading in (
@@ -48,6 +49,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
         "# oracle findings policy",
         "# realization findings policy",
         "# routing policy",
+        "# editor input handoff",
     ):
         assert heading in complete_prompt
     for heading in (

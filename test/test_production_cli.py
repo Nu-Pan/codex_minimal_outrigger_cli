@@ -41,6 +41,7 @@ from typer.main import get_command
 
 from commons.indexing import commit_index_updates, render_index_entry
 from commons.runtime_config import write_config
+from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_ENV,
@@ -354,6 +355,13 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
         FEEDBACK_COLLECTOR_ENV,
         FEEDBACK_PROTOCOL_ENV,
     ]
+    if tui:
+        editor_input_server = override["mcp_servers"]["cmoc_editor_input"]
+        assert editor_input_server["enabled_tools"] == ["overwrite"]
+        assert editor_input_server["required"] is False
+        assert editor_input_server["env_vars"] == [EDITOR_INPUT_REPOSITORY_ENV]
+    else:
+        assert "cmoc_editor_input" not in override["mcp_servers"]
     return payload
 
 

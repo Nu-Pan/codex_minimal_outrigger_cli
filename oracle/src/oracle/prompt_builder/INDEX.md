@@ -17,20 +17,18 @@
 # `complete_prompt.py`
 
 ## Summary
-- 各種ポリシー、補助文面、作業目的、パス用 placeholder を統合し、agent call に渡す完全な構造化 prompt の構築入口。
-- 有効化されたポリシーだけを所定の順序で追加し、placeholder 定義の衝突を拒否して一貫した prompt を生成する。
+- agent 向け完全 prompt の構築を担当する定義。基礎規定、選択式の各種 policy、caller 指定の目的・追加文面、placeholder 定義を所定の順序で統合し、構造化された prompt として返す。
 
 ## Read this when
-- agent 向け prompt 全体の構成順序や、基礎規定・個別規定・目的・placeholder の組み立て方を変更または確認するとき。
-- 新しい prompt policy や補助 prompt を完全 prompt に組み込む位置と有効化条件を判断するとき。
-- 同名 placeholder の統合や異値衝突時の扱いを確認するとき。
+- agent call に渡す完全 prompt の構成順序や、各 policy の有効化、placeholder 定義の統合規則を変更・確認するとき。
+- prompt builder の caller 指定文面と基礎規定・目的・動的情報の結合方法を確認するとき。
 
 ## Do not read this when
-- 個別ポリシーの本文や、そのポリシー固有の規則だけを変更・確認する場合は、対応する policy 実装を直接読む。
-- placeholder のパス文脈や構造化文書型の仕様だけを確認する場合は、対応する path model または struct document の実装を直接読む。
+- 個別 policy の本文や、oracle・realization・file access など単一の規定の内容だけを確認したいとき。
+- prompt の利用側や、構造化文書の一般的な表現形式だけを変更・確認するとき。
 
 ## hash
-- 8384e966043491a8d273f45b1696d0d50df4fcebbcc8f9eacf73bcf82a9d2697
+- 99b849f5be5a81f6ca755b30623e449e7694532c5899c9a63b31f8ba77744780
 
 # `editor_input.py`
 
@@ -68,15 +66,30 @@
 # `policy`
 
 ## Summary
-- agent call 向けの各種 prompt policy builder をまとめる入口。ファイルアクセス、oracle／realization、routing、INDEX.md エントリー、feedback 報告、conflict 解消などの規定文面を個別の責務ごとに構築する。
+- conflict_resolution.py は session join の merge conflict 解消結果に適用する policy を構築し、両マージ元の oracle file の意図・挙動の保持と、両立不能な事項の報告方針を定める。
+- editor_input_handoff.py は明示選択された active な prompt editor input へ完成済み content を handoff する際の要求条件、報告、失敗時の扱い、直接書き込み禁止を定める。
+- feedback_reporting.py は全 agent call 共通の human feedback 報告 policy を構築し、報告手段と禁止事項を定義する。
+- file_access.py は FileAccessMode ごとの agent 向けファイルアクセス規定を構築し、各 mode の deny-list、パス placeholder、保護領域の扱いを定める。
+- index_entry.py は INDEX.md エントリー生成用 policy を構築し、責務・読む条件・境界・禁止事項など routing 情報の判断基準を定める。
+- oracle.py は oracle file 向け policy を構築し、oracle doc と oracle src の責務分担、委譲、優先関係、未定義事項の扱いを示す。
+- oracle_findings.py は oracle file の所見判定 policy を構築し、根拠、fatal・minor の分類、重複報告禁止を定める。
+- realization.py は realization file を扱う agent call 向け instruction と policy を構築し、oracle file を正本仕様断片として扱う規定を組み立てる。
+- realization_findings.py は oracle file と realization file の適合性調査向け所見 policy を構築し、要求と挙動の不整合や明確な致命的問題を修正対象とする基準を定める。
+- routing.py は AgentCallPathContext から routing 用 placeholder と policy header を構築し、INDEX.md による routing 方針を agent prompt に組み込む。
 
 ## Read this when
-- agent call の prompt policy 生成経路や、対象となる規定文面の構築責務を調べるとき。
-- 特定の policy builder が担う要求・禁止・許可事項や、関連する placeholder・header の組み立てを確認するとき。
+- session join の conflict 解消方針や editor input handoff の実行条件を確認するときは、それぞれの対象から確認を始める。
+- agent call 共通の human feedback 報告規定を確認・変更するときは feedback_reporting.py を読む。
+- agent call のファイルアクセス mode ごとの制限を確認するときは file_access.py を読む。
+- INDEX.md エントリー生成方針や routing 情報の記載基準を確認するときは index_entry.py を読む。
+- oracle file の責務分担・優先関係・委譲や所見判定基準を確認するときは oracle.py または oracle_findings.py を読む。
+- realization file 向け instruction や oracle・realization 適合性の所見基準を確認するときは realization.py または realization_findings.py を読む。
+- AgentCallPathContext を起点とする routing policy の placeholder・header 構築を確認するときは routing.py を読む。
 
 ## Do not read this when
-- policy の根拠となる意味仕様や oracle／realization の正本規定を確認するときは、該当する oracle file を直接読む。
-- 生成された prompt の実行処理や、CLI の実際のファイルアクセス・conflict 解消処理を確認するときは、対応する実装を直接読む。
+- oracle file、realization file、INDEX.md、feedback 報告、routing の意味仕様そのものを確認したい場合は、各 policy の構築元ではなく参照先の正本仕様を直接読む。
+- 実際の oracle file や realization file の内容、CLI の具体的な実装、agent call の実行処理を確認する場合は、これらの policy builder ではなく該当する実装・仕様対象へ直接進む。
+- PlaceholderMap、SDHeader、SDPolicy の一般的な実装詳細だけを調べる場合は、このディレクトリを読む必要はない。
 
 ## hash
-- 636ae6f6435091b52dc231d6eb815385240799bf94933d2706ab8a46f57abd42
+- e393a95785f0bf8a6fcb279b6c36222345b30f838e7ff67acc1325aac33081f7

@@ -185,20 +185,19 @@
 # `test_acp_builder_tui_parameters.py`
 
 ## Summary
-- TUI 起動 builder が、オリジナル prompt を埋め込んだ完全 prompt と、リポジトリ書き込み・リポジトリ root 起動・indexing preflight などの固定実行パラメータを構築する経路を検証する。
-- 互換 module の公開面が canonical builder のみで構成され、canonical builder と同一の関数を公開していることを検証する。
+- TUI 起動 builder の固定パラメータ、実行ポリシー、prompt 構成を検証するテスト。
+- 互換 module の公開 API が現行の builder 関数だけに限定され、正本 builder と同一であることを検証する。
 
 ## Read this when
-- TUI 起動時の固定パラメータや prompt ポリシーの適用を確認するとき。
-- オリジナル prompt の内容にかかわらず、TUI 起動設定が一定であることを確認するとき。
-- TUI builder の互換 module における公開シンボルや canonical builder との対応を確認するとき。
+- TUI 起動用 builder の固定設定、prompt に含まれる規定、エディター入力引き継ぎや indexing preflight の挙動を確認・変更するとき。
+- acp.builder.tui.launch_tui の公開面や正本 builder との互換性を確認するとき。
 
 ## Do not read this when
-- TUI 起動 builder の実装仕様や prompt 構築処理そのものを確認する場合は、対応する正本実装を直接読むとよい。
-- TUI builder 以外の agent call parameter や、一般的な TUI の画面動作を調べる場合。
+- TUI 起動 builder の実装詳細そのものを調査・変更するときは、対応する正本実装を直接読む。
+- TUI 以外の builder、一般的な ACP 実行設定、または個別のリポジトリ fixture の挙動だけを確認するとき。
 
 ## hash
-- 9beb0f21daf26d9c5bd715e6167870a04b4702f7e745635e8fbea011a57eaf41
+- 2f1f66777abd195611728f1e4fc4976eef041041dcc863ebe5d317c75686f406
 
 # `test_basic_runtime.py`
 
@@ -389,19 +388,20 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行経路のテスト。完全な prompt と CLI 引数、アクセスモード、linked worktree の実行位置、call log とサブコマンドイベントの記録を検証する。Codex CLI 不在、KeyboardInterrupt、非 0 終了、timestamp 衝突時のログ保持も扱うため、TUI 呼び出しや実行結果の記録を確認する際の入口となる。
+- `run_codex_tui` の TUI 呼び出し契約を検証するテスト入口。完全な prompt、作業ディレクトリと sandbox、editor handoff、Codex CLI 引数、call log、サブコマンドイベント、異常終了を扱う。
 
 ## Read this when
-- Codex TUI の prompt 引き渡し、sandbox/access mode、--cd などの CLI 呼び出し引数を変更または検証するとき
-- Codex TUI の call log やサブコマンドイベント、CLI 不在・割り込み・非 0 終了時のエラー記録を変更または検証するとき
-- linked worktree での TUI 実行や同一 timestamp の call log 保存を扱うとき
+- TUI 実行時の prompt やアクセス境界が正しく引き渡されることを確認・変更するとき
+- Codex CLI の成功・不在・非 0 終了・KeyboardInterrupt に対するエラー処理やログ記録を確認するとき
+- TUI call log の保存、timestamp 衝突時の保持、サブコマンドイベントとの対応を確認するとき
 
 ## Do not read this when
-- 通常の非 TUI Codex 実行経路や別サブコマンドのテストを調べるとき
-- TUI の正本仕様やログ形式そのものを確認する必要があり、対応する仕様書を直接読むべきとき
+- Codex TUI 以外のサブコマンドや runtime 経路だけを扱うとき
+- TUI 呼び出しの実装詳細を直接確認する必要があり、対応する runtime 実装または oracle 仕様を読む方が適切なとき
+- prompt 内容や Codex 呼び出し、TUI ログに関係しないテストを扱うとき
 
 ## hash
-- aa2ec2639fe3480424c5b0d1994460fe8925eac0d11d713a7ad535307eb184ec
+- 49fff2db49c981db3f85249f330744fdff80d5e179ffeeaaa3c8ece91ce1b2c7
 
 # `test_doctor_cli.py`
 
@@ -442,6 +442,34 @@
 
 ## hash
 - 769b646539819645ba85fe8cd9adf544b57c9fa33747a87b4cab01d366c96de4
+
+# `test_editor_input_handoff.py`
+
+## Summary
+- editor input handoff のテストとして、active repository の target 受理、最後の内容による全面上書き、repository 不一致や symlink 化の拒否、受付済み処理完了までの close 待機を検証する。
+
+## Read this when
+- editor input handoff の lifecycle、target の受付条件、上書き先の安全境界、または close と受付済み submission の競合をテスト・レビューするとき。
+
+## Do not read this when
+- handoff の正本仕様や実装そのものを確認するときは、対応する oracle の仕様文書または realization implementation を直接読む。editor input handoff と無関係なテストを調べるとき。
+
+## hash
+- 390adebd6a73c8a0bcea3fa5b6b30345ef50c10a5fb73bf5ad38c202f6881d6b
+
+# `test_editor_input_handoff_mcp.py`
+
+## Summary
+- editor input handoff の agent-facing MCP インターフェースを検証するテスト。公開ツールが overwrite のみで正本 schema を使用することと、未検証入力を内容を漏らさず拒否することを確認する。
+
+## Read this when
+- editor input handoff の MCP ツール公開範囲、canonical schema の利用、入力検証・拒否時の情報非開示を確認または変更するとき。
+
+## Do not read this when
+- editor input handoff の正本仕様や schema 自体を確認するときは、それぞれの oracle ファイルを直接読む。MCP 実装の内部動作を変更するときは実装ファイルを直接読む。
+
+## hash
+- bc903262833d02528fc9b873c65d157ebdcc5a33ca6a648e0ca6acdf770761e6
 
 # `test_feedback.py`
 
@@ -559,23 +587,18 @@
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- `cmoc oracle investigation` の CLI 起動経路を検証し、session なしの main worktree での起動可否、前処理から TUI 起動までの順序、生成パラメータ、入力ファイルの後処理を確認するテスト。
-- oracle investigation の realization adapter が公開する補助 API を制限し、builder の公開境界を検証するテスト。
+- `oracle investigation` CLI の起動前処理から TUI 実行までの順序、prompt editor 入力の引き渡し、純粋な oracle 読み取りモード、および builder の公開 API 境界を検証するテスト。
 
 ## Read this when
-- `oracle investigation` サブコマンドの起動条件や session 前提を確認するとき。
-- doctor preprocess、prompt editor input、prompt builder、indexing preflight、TUI 起動の連携順序を変更または検証するとき。
-- oracle investigation のファイルアクセスモード、作業ディレクトリ、prompt 内容、入力コピーの後処理に関する CLI 挙動を確認するとき。
-- oracle investigation の realization adapter における公開 API の境界を変更または検証するとき。
+- `oracle investigation` の CLI 起動条件、session 前提の有無、doctor・editor・prompt builder・TUI の連携順序を変更または確認するとき。
+- oracle investigation 用 launch TUI builder の公開シンボルや、生成される AgentCallParameter の実行設定を変更または確認するとき。
 
 ## Do not read this when
-- oracle investigation の oracle 正本仕様そのものを調査するときは、参照されている oracle 文書を直接読む。
-- investigation の launch TUI builder 実装の詳細を変更または調査するときは、対応する realization 実装を直接読む。
-- CLI 全体の共通起動処理や、oracle investigation 以外のサブコマンドの挙動だけを確認するとき。
-- prompt editor input の共通仕様や indexing の一般仕様だけを確認するとき。
+- oracle investigation の正本仕様や prompt の内容そのものを確認したい場合は、テストではなく参照元の oracle 文書を直接読むとき。
+- oracle investigation と無関係な CLI サブコマンド、builder、または一般的な TUI 起動処理を調査するとき。
 
 ## hash
-- 361aab4aed3d21a67f310e409d9ced4e92b1423309a74552b8564600b5b2e806
+- 66fb4b6b4ebc6425071d43d85b709f0d1dbcb26b6059ff4cd8dc3a5835938ba8
 
 # `test_oracle_review_loop.py`
 
@@ -675,18 +698,21 @@
 # `test_packaged_import.py`
 
 ## Summary
-- 日本語文書のルーティングエントリーを生成するため、対象本文の責務と入口を確認します。
+- packaged layout にコピーした source tree から、canonical builder と関連公開モジュールを隔離環境で import できることを検証するテスト
+- oracle review・quota probe・oracle edit の builder が正本の schema、prompt、editor 入力を参照して期待する parameter を生成することを検証するテスト
+- ACP basic と cmoc config の realization 側公開面が、正本定義の再公開または設定定義だけに限定されることを検証するテスト
 
 ## Read this when
-- 対象の packaged layout、Python import 境界、または公開 API 再公開の検証内容を調べるとき。
-- oracle と realization のパッケージ配置が隔離環境で正しく import できるか、builder・prompt editor・config の公開面を確認するとき。
+- packaged layout、Python の import 境界、canonical builder の schema・prompt 参照を確認するとき
+- oracle edit の prompt editor 入出力 handoff、公開関数、file access mode、preflight の挙動を確認するとき
+- ACP basic または cmoc config の再公開 API と module namespace の限定性を検証するとき
 
 ## Do not read this when
-- packaged layout や import 境界ではなく、個別 builder の実装仕様・prompt 内容・schema 定義そのものを直接確認したいとき。
-- 通常の単体テスト実行方法や、対象外のパッケージ機能を調べるとき。
+- 個別の oracle builder や prompt editor の実装詳細を変更・調査する場合は、対応する正本実装を直接読むとき
+- packaged layout の import、公開 API の再公開・限定性、または prompt editor 入力境界に関係しないテストを扱うとき
 
 ## hash
-- 62a63eca0684e12d1a3bc34408a6387bc934467ee83db051e04f74f1890e5ac6
+- db82e692ebd82f7a16e2dacf4367c0fa5585ef0806eab3952e090f5dc0396d8b
 
 # `test_primary_report.py`
 
@@ -708,21 +734,22 @@
 # `test_production_cli.py`
 
 ## Summary
-- 全末端サブコマンドの本番経路を、独立 process・実 Codex CLI・実推論で検証する受け入れ試験。
-- CLI の終了 code、report・永続 state・Git 状態、Codex call log、PTY 上の TUI 応答完了と終了操作を確認し、LLM の回答品質自体は判定しない。
+- 全末端サブコマンドを、独立 process・実 Codex CLI・実推論を用いた利用者向け本番経路で検証する受け入れテスト。
+- CLI の終了 code と、report・state・Git・Codex call log など外部から観測できる制御結果を確認する。
+- 非対話サブコマンドと TUI サブコマンドを対象に、共通の隔離環境、実行経路、状態遷移、PTY 終了処理まで一続きで検証する。LLM の回答品質自体は判定しない。
 
 ## Read this when
-- 全末端コマンドの登録と本番試験シナリオの対応漏れを確認するとき。
-- 非対話コマンドについて、実 Codex 呼び出し、report 生成、INDEX 更新、session/run の状態遷移、worktree の作成・後始末を追うとき。
-- tui または oracle investigation の実 Codex 応答、PTY の端末問い合わせ、信頼確認、応答後の終了処理を確認するとき。
+- CLI の末端サブコマンドを追加・変更し、登録済み全末端が本番経路の代表正常系で検証されているか確認するとき。
+- 独立 process、実 Codex CLI、実推論、隔離された Codex 環境、または Codex call log の検証方法を確認するとき。
+- oracle・realization・run・session・feedback・indexing・doctor の非対話経路、または TUI の PTY 上の応答完了と終了操作を受け入れ試験で確認するとき。
 
 ## Do not read this when
-- LLM の回答内容や品質そのものを評価するとき。
-- 個別サブコマンドの実装仕様を直接確認したいとき。対応するサブコマンド仕様や実装へ進む。
-- Codex CLI や provider を使わない単体テスト、または本番経路以外の制御ロジックだけを確認するとき。
+- LLM の回答内容や文章品質そのものを評価するとき。
+- 単一サブコマンドの内部実装や単体ロジックだけを確認するときは、対象サブコマンドの実装・単体テストを直接読む。
+- 本番経路を使わない fixture 専用テスト、または一般的なテスト実行手順だけを確認するとき。
 
 ## hash
-- 4043a3d7af3b4a44612c91332b61abd08abe982d50d18421e24054a421d09aae
+- 5584b9a1f039f695471db4ff4c2e5f1fb92c5cbf9f6807003480edaf5e853466
 
 # `test_production_cli_support.py`
 
@@ -757,21 +784,19 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt part の各 policy builder と complete prompt の rendering、順序、placeholder 展開を回帰検証するテスト。
-- SDHeader・SDPolicy の構造、policy flag の注入、file access mode、root 定義、feedback 指示、各 policy の必須文面をまとめて検証する prompt builder テストの入口。
+- prompt part 各 policy の SDHeader rendering と complete prompt への注入・順序・重複排除・placeholder 展開を検証する回帰テスト。
+- prompt builder の policy 内容、file access mode 別の境界、root path context、oracle/realization の分類、および各 policy の適合性要求を確認する入口。
 
 ## Read this when
-- prompt part や policy builder の構造・文面・注入順序を変更または確認するとき。
-- complete prompt の placeholder、path context、file access mode、policy flag、feedback 指示の挙動を検証するとき。
-- prompt builder 関連の回帰テストや、policy の rendering 要件を確認するとき。
+- prompt part または complete prompt の rendering、policy block の選択・順序・独立注入、placeholder 定義、file access policy の mode 別挙動を変更・調査するとき。
+- prompt builder が oracle／realization の規定や INDEX entry、feedback reporting を完全 prompt に正しく反映しているか検証するとき。
 
 ## Do not read this when
-- INDEX.md のルーティング方針自体を確認したい場合は、routing policy の正本を直接読むとき。
-- 個別 policy の実装責務や正本仕様だけを確認したい場合は、対応する policy builder または oracle 文書を直接読むとき。
-- prompt builder と無関係な CLI、git 操作、他機能のテストを扱うとき。
+- prompt builder 本体の仕様や実装を確認することが目的で、回帰テストの期待挙動を確認する必要がないときは、対応する oracle doc または prompt_builder 実装を直接読む。
+- prompt builder と無関係なテスト、または prompt の内容ではなく一般的な Git ユーティリティや別機能の挙動だけを扱うとき。
 
 ## hash
-- 7d3944663b935e1e67910c94aa7750a81518e0f6d61c22d4f0465d18c9d89317
+- 2386e220e42913b144471692b1a2cdecf127b05e4234d4eb47af7e95ca8429e1
 
 # `test_runtime_cli.py`
 
@@ -830,19 +855,21 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv の model、sandbox、provider 上書きと feedback MCP 環境の分離を検証するテスト。schema のバイト保持と不正 JSON 入力の扱いも確認する。
+- Codex argv の sandbox、approval、model、provider 上書き契約を検証するテスト。
+- feedback MCP、editor input handoff MCP、環境変数除外、TUI notification 設定の call 単位の反映を検証する。
+- schema のバイト保持・SHA256 保存と、JSON 出力の encoding failure 処理を検証する。
 
 ## Read this when
-- Codex 起動時の file access mode と sandbox、approval、model/provider 設定の変換を変更・調査するとき。
-- feedback reporter の環境変数を Codex argv・subprocess env・MCP 設定へ渡す境界を変更・調査するとき。
-- provider 設定の TOML argv エンコード、schema の保存ハッシュ、Codex 出力 JSON の読み取りを変更・調査するとき。
+- Codex CLI 呼び出しの argv 上書き、file access mode と sandbox の対応、model/provider 設定、または未定義設定の起動前エラーを変更・調査するとき。
+- Codex subprocess 環境、feedback/editor MCP の注入、TUI notification callback 設定を変更・調査するとき。
+- schema の保存形式や output JSON の読み取り失敗処理を変更・調査するとき。
 
 ## Do not read this when
-- Codex の実装詳細だけを確認し、argv・provider・feedback・schema/output の契約を変更または検証しないとき。
-- 対象機能の挙動テストを追加・変更する場合でも、個別の実装契約を直接確認する必要がなく、より具体的な下位テストや仕様書へ進めるとき。
+- Codex runtime の実装契約を変更せず、他のサブコマンド固有ロジックや一般的なテスト実行だけを扱うとき。
+- provider の取得・起動・疎通確認など、cmoc が責務外とする model provider 自体の運用を扱うとき。
 
 ## hash
-- ce0ebe137caacb7ac9798341d4db9bb0b68cc536725ed2d662668e32d69ec793
+- a48594f69d9d4e72bcb18daf0e83af91934876ffbe6f1e3fc2c4c136232d06e0
 
 # `test_runtime_config.py`
 
