@@ -91,20 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書群です。アプリケーション仕様、branch・run の分離モデル、不採用案の背景、実装・環境・テストの開発ルールを扱います。
-- cmoc の agent call 構築実装と、その prompt、アクセス制御、Structured Output、設定、パス解決、構造化文書レンダリングを扱います。
+- cmoc の正本文書を収める領域。アプリケーション挙動、session／run の branch 分離モデル、不採用案、開発環境・設計・テストのルールを扱い、仕様・設計・実装判断の確認先を提供する。
+- 具体的な仕様や開発規則を確認するための入口であり、実装側では agent call の prompt、routing、oracle・realization、feedback、session join、TUI などの責務へ案内する。
 
 ## Read this when
-- cmoc の機能仕様、状態遷移、session／run の branch・worktree 分離、不採用案、実装・開発環境・テストのルールを確認するとき。
-- agent call の prompt、cwd、ファイルアクセス、Structured Output、サブコマンド別の起動定義、構造化文書モデルの実装箇所を探すとき。
+- cmoc の機能仕様、状態遷移、branch・worktree 分離モデルを確認するとき。
+- 設計上の不採用案や、実装・開発環境・テストに関する正本ルールを確認するとき。
+- 具体的な個別仕様や開発規則へ進む前に、読むべき正本文書の領域を判断するとき。
 
 ## Do not read this when
-- 具体的な実装コードやテストの挙動だけを確認する場合は、対応する realization file やテストを直接読む。
-- 個別仕様や開発ルールが特定できている場合は、文書群全体ではなく該当する下位文書を直接読む。
-- agent call の実行本体やサブコマンドの業務ロジックだけを確認する場合は、対応する実行処理を直接読む。
+- 実装コードやテストコードの具体的な挙動を確認する場合は、対応する realization file やテストを直接読むとき。
+- 個別仕様、開発環境、テスト要件など読む対象文書が特定できているとき。
+- INDEX.md の生成・更新規則だけを確認するとき。
 
 ## hash
-- a2a89b7813656d75fbdc2e39320eef2033cdd4b4513257845abf9309046c6059
+- 7faf82cdf740ab1812092f2f2599e9e47ca50e72f243cf1ac7f558781250bcb4
 
 # `pyproject.toml`
 
@@ -141,18 +142,17 @@
 # `test`
 
 ## Summary
-- pytest による cmoc のテスト群をまとめたディレクトリ。ACP builder、CLI、Codex runtime、Git・state・report、indexing、oracle review、session、realization などの単体・統合・実経路テストを、実装や仕様を確認するための機能別入口として提供する。
-- 特定機能の外部挙動、異常系、永続状態、worktree lifecycle、Codex 呼び出し契約、または複数機能の統合結果をテストから確認する際の入口となる。
+- test 配下の回帰・統合テストを、CLI、runtime、Codex、Git/worktree、INDEX、report、feedback、builder など機能別の検証入口として案内する。各テストは実装変更時に確認すべき外部契約や境界条件を示す。
 
 ## Read this when
-- cmoc の実装変更や仕様確認に対する回帰テストの入口を、機能領域別に探すとき
-- CLI、Codex runtime、ACP builder、indexing、oracle review、session、realization、feedback などの外部契約や統合挙動を検証するとき
-- テスト用の共通 fixture・helper、実経路統合テスト、または特定機能の異常系テストを探すとき
+- 変更・調査対象に対応する外部挙動や回帰条件を検証するテストの入口を探すとき
+- CLI lifecycle、Codex 実行、session/run、oracle review、realization、indexing、feedback、通知、設定、Git/worktree、prompt/builder の契約をテストから確認するとき
+- 単体テスト、統合テスト、実経路受け入れテストのどの範囲で検証されているかを把握するとき
 
 ## Do not read this when
-- 正本仕様や実装そのものの意味・詳細を確認することが目的で、対応する oracle 文書または realization 実装を直接読む方が適切なとき
-- テスト対象に含まれない機能や、一般的な pytest 実行手順だけを確認したいとき
-- 特定の単一機能について、同階層のテスト群ではなく対応する実装・schema・仕様ファイルを直接確認すべきとき
+- 正本仕様や実装の意味・アルゴリズムを確認することが目的のときは、対応する oracle 文書または実装を直接読む
+- テスト対象と無関係な機能を調べるとき
+- 一般的な pytest 実行手順や Python 環境の規約だけを確認するとき
 
 ## hash
-- 36f5273fd817bcbe00ee8ae3f9b36b4a0e2b9a76b4a2d9933c5731902c2a03cc
+- 30ec8207b1ff36b8257bed96a3d15af9929b9ab4d6e00c9f421e96a1d1eb6ec2

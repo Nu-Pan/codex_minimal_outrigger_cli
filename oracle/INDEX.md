@@ -18,21 +18,20 @@
 # `src`
 
 ## Summary
-- cmoc が Codex CLI などの agent call に渡す prompt と起動パラメータを構築する実装のルートです。
-- agent call の共通パラメータ、ファイルアクセスモード、Structured Output schema、およびサブコマンド別の起動定義を扱います。
-- prompt_builder は共通 prompt、placeholder、構造化 Markdown、oracle・realization・routing・feedback などの policy を構築します。
-- other は cmoc 設定、agent call 用の root path 解決、構造化文書のモデルと Markdown レンダリングを提供します。
-- editor_input_handoff はユーザー入力を editor へ渡すための初期入力定義を提供します。
+- AI コーディングエージェント呼び出しのパラメータと、用途別の prompt 起動定義を扱う実装領域。
+- agent call に共通する prompt 構築、ファイルアクセス、routing、oracle・realization、feedback、editor input handoff の規定を組み立てる。
+- 設定値、パスコンテキスト、構造化文書の Markdown レンダリングなど、prompt と agent call を支える基盤を提供する。
+- oracle review、realization の適用・リファクタ、session join、TUI、feedback issue 検証など、処理段階ごとの agent call 定義へ進む入口となる。
 
 ## Read this when
-- agent call の prompt、cwd、ファイルアクセスモード、Structured Output schema、または editor input handoff の構築箇所を探すとき。
-- cmoc のサブコマンド別に、oracle edit・oracle investigation・oracle review・realization・feedback・indexing・session join・TUI の agent call 定義を確認するとき。
-- prompt の共通組み立て、policy の適用、root path placeholder の解決、構造化文書の Markdown 化、または cmoc 設定モデルを調査するとき。
+- agent call の起動パラメータ、prompt 本文、Structured Output schema、ファイルアクセスモードの実装を確認するとき。
+- prompt に共通規定や個別ポリシーを組み込む方法、placeholder とパス解決、構造化文書のレンダリングを調べるとき。
+- oracle review、realization、feedback、session join、TUI などの用途別 agent call 実装の配置と責務を特定するとき。
 
 ## Do not read this when
-- agent call を実際に実行する処理やサブコマンドの業務ロジックを確認したい場合は、対応する実行本体を直接読むとき。
-- 個別の oracle file・realization file の意味仕様、レビュー結果、feedback state の保存や集約処理を確認したい場合は、対応する正本仕様または処理本体を直接読むとき。
-- 特定の prompt policy、Structured Output schema、サブコマンド別 builder の具体的な契約だけを確認したい場合は、該当する下位対象へ直接進むとき。
+- Codex CLI の実行処理やサブコマンド全体の業務ロジックを調べたいとき。
+- 正本となる意味仕様や agent call の運用要件を確認したいとき。
+- 特定の用途別 agent call の詳細だけを確認したい場合は、この領域全体ではなく対応する下位領域へ直接進むとき。
 
 ## hash
-- ddd0e22d3b2ab7507f5aff38e31ec39f570feb4d5a04baafeb145a0a1e6927a0
+- 1b15b9c3fb0dc58061ed11cf1f967195e8f05b2d76e4953c3127561b31f6c955
