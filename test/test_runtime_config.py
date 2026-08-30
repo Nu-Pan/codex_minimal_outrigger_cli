@@ -51,6 +51,7 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
         for agent_call_kind in (
             "build_feedback_normalize_issue_parameter",
             "build_oracle_investigation_launch_tui_parameter",
+            "build_realization_apply_fork_launch_exec_parameter",
             "build_tui_launch_tui_parameter",
         )
     } == {
@@ -58,6 +59,9 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
             "openai", "gpt-5.6-sol", "max"
         ),
         "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
+            "openai", "gpt-5.6-sol", "ultra"
+        ),
+        "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
             "openai", "gpt-5.6-sol", "ultra"
         ),
         "build_tui_launch_tui_parameter": CodexCallConfig(

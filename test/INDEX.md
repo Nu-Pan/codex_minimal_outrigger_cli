@@ -874,22 +874,21 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値、Codex provider・agent call 設定、oracle review の反復回数を検証する設定回帰テスト。
-- 設定の dict/JSON 変換、ファイルへの保存・読み込み、member order、legacy 設定の除外、provider-local の再帰的値の round-trip を検証する。
-- 不正な section・map・field・型・JSON・パス（ディレクトリ、named pipe、symlink）を利用者向け設定エラーとして拒否し、surrogate を含むエラーレポートも UTF-8 化できることを検証する。
+- CmocConfig の既定値と、codex / oracle_review の直接設定を検証する回帰テスト。
+- 設定の JSON 化・ファイル保存・読み込みによる round-trip と、既存メンバー順序・provider-local 値の保持を検証する。
+- 不正な型、値、深さ、JSON、パス、symlink、named pipe、および廃止済み設定を設定エラーまたは永続化境界で拒否・除外する。
 
 ## Read this when
-- CmocConfig の既定値、設定 schema、Codex model provider または直接指定 agent call の受理条件を確認するとき。
-- config_from_dict、config_to_dict、load_config、write_config の永続化や round-trip 挙動を変更・調査するとき。
-- 設定入力の拒否条件、設定ファイル path の安全な扱い、legacy 設定の互換処理を確認するとき。
+- CmocConfig の既定値や agent call ごとの model provider・model・reasoning effort を変更・調査するとき。
+- 設定の config.json への変換、保存、読み込み、round-trip、メンバー順序、任意の provider settings の保持を確認するとき。
+- 設定入力の型検証、JSON/TOML 共通値の受理条件、深い構造、壊れた JSON、異常な設定パス、エラー表示、legacy 設定の除外を確認するとき。
 
 ## Do not read this when
-- 設定の実装詳細そのものを確認する場合は、CmocConfig または runtime config の実装を直接読むとき。
-- oracle review の agent call 実行、Codex provider の仕様、エラー文面の正本を確認する場合は、テスト内で参照される oracle 文書を直接読むとき。
-- config 以外の CLI 動作や、設定 schema・永続化・入力検証に関係しないテストを調べるとき。
+- 設定の具体的な既定値や入力拒否、永続化境界の回帰条件を確認する必要がないとき。
+- CmocConfig の実装や config の正本仕様そのものを直接確認することが目的で、テストによる外部挙動の確認が不要なとき。
 
 ## hash
-- 3f2744d75321d26f2034561e7caddef12cc336b1fcc76e145127182cfc85dffb
+- f0878a4cdc6bc9e813bb663e7a74836c43ab303519d59c4d879c2ca68eca5f81
 
 # `test_runtime_content.py`
 
