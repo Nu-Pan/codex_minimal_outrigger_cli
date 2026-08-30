@@ -19,19 +19,18 @@
 # `investigation`
 
 ## Summary
-- oracle investigation 用の調査担当 prompt と、Codex CLI の TUI 起動パラメータを構築する入口。
-- ユーザー指示を完全な prompt として組み込み、oracle ツリー限定の読み取り専用調査と根拠提示を指定する。
+- oracle 調査用 TUI の起動パラメータを構築する入口で、完全 prompt、読み取り専用アクセス範囲、エディタ入力の引き渡し、indexing preflight の設定を扱う。
 
 ## Read this when
-- oracle investigation の TUI 起動時に、調査用 prompt の構成やファイルアクセスモードを確認したいとき。
-- ユーザー指示の prompt への引き渡し方や、リポジトリルート基準の起動パラメータを確認したいとき。
+- oracle investigation の TUI 起動時に使用する prompt や固定パラメータを確認するとき
+- oracle 調査 agent call のアクセス範囲、ユーザー指示の埋め込み、エディタ入力、indexing preflight の設定を確認するとき
 
 ## Do not read this when
-- 共通の完全 prompt 生成規則そのものを確認したいときは、prompt builder の定義を直接読む。
-- oracle file の調査対象や開発環境・設計ルールの内容を確認したいときは、対応する oracle file を直接読む。
+- oracle の調査対象や調査結果の正本仕様を確認するとき
+- TUI 起動パラメータではなく、完全 prompt の共通生成や構造化ドキュメントのレンダリングを直接確認するとき
 
 ## hash
-- 449385b2c86837baf6004374df7422ee765a3bc18d2fff8806417ef28dfb77c5
+- 8727733a129082b941140cb610c0aba04482c4e78e77bfdbd0bfee1b3cb7ae50
 
 # `review`
 

@@ -91,22 +91,19 @@
 # `oracle`
 
 ## Summary
-- cmoc のアプリケーション挙動仕様、branch model、開発ルール、検討資料を確認する正本文書群への入口です。
-- agent call 構築、prompt・policy、feedback・indexing・session・TUI などの oracle 実装を確認する下位領域への入口です。
-- 現行仕様とその実装を対応づけて調査・変更するときに、文書領域と実装領域を振り分けます。
+- cmoc の正本文書群を、アプリケーション仕様、branch・worktree 管理、採用しなかった代替案、開発ルールに分類して案内する上位入口。
+- 機能仕様や session／run の隔離モデル、設計判断の背景、実装・環境・テスト規約を確認するための下位文書への入口。
 
 ## Read this when
-- cmoc の機能仕様、CLI 契約、session/run の隔離モデル、開発・テスト規則の担当文書を探すとき。
-- 不採用となった設計・実装方式と理由を確認するとき。
-- agent call の prompt 構築、Structured Output、feedback、indexing、oracle/realization 操作、TUI 起動の実装位置を調べるとき。
+- cmoc の正本文書を探しており、アプリケーション挙動、session／run の branch 管理、設計上の不採用理由、開発・テスト規約のどこから確認するか判断するとき。
+- 複数の文書群にまたがる責務分担や、現行仕様と開発ルール・設計背景の適用範囲を確認するとき。
 
 ## Do not read this when
-- 特定の仕様書、実装ファイル、Structured Output 定義、またはテスト実行手順が既に特定できているときは、その対象を直接読む。
-- 既存 INDEX.md の内容や生成・更新規則だけを確認するときは、対応する INDEX または規則文書を直接読む。
-- 一般的な CLI 実行処理や realization の個別実装だけを調査するときは、この領域全体を入口にしない。
+- 特定の仕様書、実装、テスト、設定データ、外部契約の詳細だけを確認したいときは、該当する正本文書や対象ファイルを直接読む。
+- INDEX.md の生成規則や目次更新処理だけを確認したいときは、インデクシング仕様を直接読む。
 
 ## hash
-- c9c2c772a1132198a10aa0959d56cb49195ca9057955379e96533f4fde811c26
+- f59ff42b702bbf73150f5c20ca129d3a77ce52babf706cede82e5537f1d544bb
 
 # `pyproject.toml`
 

@@ -17,22 +17,20 @@
 # `complete_prompt.py`
 
 ## Summary
-- 選択した規定、補助文面、担当目的、パス由来の定義を統合し、agent 向けの完全な構造化 prompt を構築する入口。
-- 基礎規定を先頭にまとめ、個別ポリシー、追加文面、objective、placeholder 定義を所定の順序で配置する。
-- placeholder 名の重複は同値のみ統合し、異なる値の定義は拒否して prompt 内のパスコンテキスト分裂を防ぐ。
+- 各種ポリシー、補助文面、作業目的、パス用 placeholder を統合し、agent call に渡す完全な構造化 prompt の構築入口。
+- 有効化されたポリシーだけを所定の順序で追加し、placeholder 定義の衝突を拒否して一貫した prompt を生成する。
 
 ## Read this when
-- agent call 用 prompt の全体構成、規定フラグの反映、補助 prompt の挿入位置を確認するとき。
-- placeholder 定義の統合や、同名異値を拒否する契約を確認するとき。
-- oracle・realization・routing・INDEX エントリーなどの各ポリシーを完全 prompt に含める経路を追うとき。
+- agent 向け prompt 全体の構成順序や、基礎規定・個別規定・目的・placeholder の組み立て方を変更または確認するとき。
+- 新しい prompt policy や補助 prompt を完全 prompt に組み込む位置と有効化条件を判断するとき。
+- 同名 placeholder の統合や異値衝突時の扱いを確認するとき。
 
 ## Do not read this when
-- 特定の個別ポリシー本文の内容や生成規則だけを確認したいときは、該当する policy builder を直接読む。
-- placeholder の具体的なパス値や path context の生成方法だけを調べるときは、パスコンテキストまたは placeholder 定義の担当対象を直接読む。
-- agent call の実行、CLI の責務、oracle・realization ファイル自体の規則を確認したいときは、この prompt 構築定義ではなく対応する正本仕様を読む。
+- 個別ポリシーの本文や、そのポリシー固有の規則だけを変更・確認する場合は、対応する policy 実装を直接読む。
+- placeholder のパス文脈や構造化文書型の仕様だけを確認する場合は、対応する path model または struct document の実装を直接読む。
 
 ## hash
-- 13960a4cb2822dc1d407c258248b09c4c8e90377d035cea4f5ad95ae6894c549
+- 8384e966043491a8d273f45b1696d0d50df4fcebbcc8f9eacf73bcf82a9d2697
 
 # `editor_input.py`
 
@@ -70,40 +68,15 @@
 # `policy`
 
 ## Summary
-- merge conflict 解消結果に適用する policy を構築し、両方の oracle file の意図・挙動の保持と、両立不能時の未解消事項としての報告を定める。
-- active な prompt editor input へ完成済み content を handoff する際の要求事項、結果報告、失敗時の扱い、直接書き換え禁止を定める。
-- 全 agent call 共通の human feedback 報告 policy を構築し、未解決問題の報告手段と、報告してはいけない事項を定める。
-- FileAccessMode と path context に応じて、repo-root・work-root・oracle file・realization file などの読み書き制限を構築する。
-- INDEX.md エントリー生成時の routing 情報に必要な責務・読む条件・境界と、詳細説明や推測の禁止事項を定める。
-- oracle doc と oracle src の正本責務、委譲、優先関係、仕様断片の扱い、oracle file の要求・禁止・許可事項を構築する。
-- oracle file の具体的記述に基づく所見の成立条件と、fatal・minor の分類基準、重複報告の禁止を定める。
-- realization file 向け policy を構築し、oracle file を正本仕様断片として扱う条件、実装者裁量、最小限の実装、検証要求を定める。
-- oracle file と realization file の記述・挙動の適合性を評価する所見 policy を構築し、修正対象とすべき明確な不整合・致命的問題を定める。
-- INDEX.md による routing のため、path context から root placeholder を取得し、対象本文へ進む判断規定と INDEX.md の位置づけを構築する。
+- agent call 向けの各種 prompt policy builder をまとめる入口。ファイルアクセス、oracle／realization、routing、INDEX.md エントリー、feedback 報告、conflict 解消などの規定文面を個別の責務ごとに構築する。
 
 ## Read this when
-- session join の conflict 解消結果に求められる oracle file の意図保持や未解消事項の扱いを確認するとき。
-- prompt editor input への明示的な handoff 方法、結果区分、失敗時の正式回答を確認するとき。
-- agent call 共通の human feedback 報告方法や、報告対象外の問題を確認するとき。
-- FileAccessMode ごとのエージェント向けアクセス制限や、repo-root と work-root の関係を確認するとき。
-- INDEX.md エントリー生成時に routing 情報へ記載する責務・条件・境界を確認するとき。
-- oracle doc と oracle src の責務分担、委譲先、優先関係、oracle file の作成・レビュー規定を確認するとき。
-- oracle file の問題を所見として扱う基準や fatal・minor の分類を確認するとき。
-- realization file の実装方針、oracle file との関係、検証要求、不要実装の整理方針を確認するとき。
-- oracle file と realization file の適合性に関する所見の根拠と修正対象の基準を確認するとき。
-- INDEX.md を起点とした本文の探索規定や、本文と INDEX.md が食い違う場合の扱いを確認するとき。
+- agent call の prompt policy 生成経路や、対象となる規定文面の構築責務を調べるとき。
+- 特定の policy builder が担う要求・禁止・許可事項や、関連する placeholder・header の組み立てを確認するとき。
 
 ## Do not read this when
-- session join の意味仕様や oracle file 規定の優先順位そのものを確認するとき。
-- handoff の意味仕様そのもの、または通常のファイル編集方法を確認するとき。
-- human feedback 報告の意味仕様そのものや、個別 agent call の別 policy を確認するとき。
-- アクセス制限の正本仕様、Codex CLI の sandbox enforcement、個別 oracle・realization file の内容を確認するとき。
-- 既存の INDEX.md エントリーや、routing policy の根拠となる意味仕様を直接確認するとき。
-- oracle doc・oracle src の意味仕様そのもの、realization file の配置・実装責務、または test execution を確認するとき。
-- 個別 oracle review の意味仕様や、所見の定義そのものを確認するとき。
-- realization file の意味仕様や判断基準、または policy 構築後の agent call 実行を確認するとき。
-- oracle file 自体の仕様不足や定義上の問題を検討するとき。
-- INDEX.md の具体的な意味仕様、または PlaceholderMap・SDHeader・SDPolicy の一般実装を確認するとき。
+- policy の根拠となる意味仕様や oracle／realization の正本規定を確認するときは、該当する oracle file を直接読む。
+- 生成された prompt の実行処理や、CLI の実際のファイルアクセス・conflict 解消処理を確認するときは、対応する実装を直接読む。
 
 ## hash
-- b0c4e4ba71e7ae3432443a1985feb58065d5fd9498b0470631f1b917160ac3dd
+- 636ae6f6435091b52dc231d6eb815385240799bf94933d2706ab8a46f57abd42

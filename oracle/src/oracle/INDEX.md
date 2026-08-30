@@ -1,51 +1,36 @@
 # `acp_builder`
 
 ## Summary
-- Agent Call Parameter の呼び出し種別、ファイルアクセスモード、prompt、Structured Output schema、cwd、indexing preflight の設定をまとめるデータクラスです。
-- feedback issue の同一性判断と現在状態の検証に使う agent call の prompt、参照範囲、出力契約を扱う下位領域です。
-- INDEX.md エントリー生成用の Structured Output schema と、対象本文を埋め込んだ読み取り専用 agent call の構築を扱う下位領域です。
-- oracle file の編集・調査・レビューに使う agent call の prompt、専用アクセス権限、出力契約を扱う下位領域です。
-- Codex CLI の quota 回復確認用に、短い応答を返す読み取り専用 agent call の構築を定義します。
-- oracle file の変更を realization file へ反映する処理と、realization refactor の変更要約・レビュー・修正に使う agent call の構築を扱う下位領域です。
-- `cmoc session join` の git merge conflict 解消を依頼する agent call の対象ファイル、アクセス権限、preflight 設定を扱う下位領域です。
-- `cmoc tui` のユーザープロンプトを完全 prompt に組み込み、リポジトリ書き込み用 agent call の起動設定を構築する下位領域です。
+- AI コーディングエージェントの各種呼び出しに使う prompt、アクセスモード、cwd、Structured Output schema などの起動パラメータ構築をまとめる領域。
+- indexing、feedback、oracle、realization、session、tui、quota probe など、用途別の agent call 定義へ進む入口を提供する。
 
 ## Read this when
-- Agent call の共通パラメータ構造や、呼び出し時のアクセスモード・実行設定を確認するとき。
-- feedback issue の同一性判定または候補の現在状態検証に使う agent call の構成を確認するとき。
-- `cmoc indexing` の出力形式、prompt、対象本文の埋め込み、読み取り専用の起動条件を確認するとき。
-- oracle edit、investigation、review の agent call の調査範囲、書き込み範囲、Structured Output 契約を確認するとき。
-- quota の利用可能性を確認する probe の prompt と起動条件を確認するとき。
-- oracle と realization の差分追従、realization refactor の要約・レビュー・修正に使う agent call の構成を確認するとき。
-- `session join` における conflict marker 解消 agent call の対象指定と起動条件を確認するとき。
-- `cmoc tui` のオリジナルプロンプトの受け渡し、完全 prompt の構築、リポジトリルートでの起動条件を確認するとき。
+- agent call の用途別 builder、prompt、ファイルアクセス設定、cwd、Structured Output schema、エディタ入力や preflight の指定を確認・変更するとき。
+- 共通の呼び出しパラメータ定義から、indexing、feedback、oracle、realization、session、tui、quota probe の個別設定へ調査を始めるとき。
 
 ## Do not read this when
-- ファイルアクセスモード各値の正本上の意味や Codex CLI sandbox との対応だけを確認したいとき。
-- feedback observation の送信、候補の収集・絞り込み、issue 内容の生成や評価を確認したいとき。
-- 既存 INDEX.md のルーティング内容や、indexing サブコマンドの実行処理を確認したいとき。
-- 具体的な oracle file の要求、調査対象、レビュー基準、または共通 prompt 構築規則だけを確認したいとき。
-- 通常の quota 判定ロジックや、probe 以外の実作業を確認したいとき。
-- 通常の realization file の実装・テスト・設計規則や、一般的な agent call パラメータ定義を確認したいとき。
-- merge conflict marker の検出・解消処理そのものや、`session join` の別処理を確認したいとき。
-- 完全 prompt の共通構造、TUI 起動後の実行処理、または `cmoc tui` 以外のパラメータ生成を確認したいとき。
+- agent call の実行処理、共通 prompt の生成規則、CLI サブコマンドの引数解析を確認したいときは、対応する実行本体や共通 builder を直接読む。
+- 特定用途の出力項目・型・形式、個別 oracle や realization の仕様、レビューや conflict 解消の処理順序を確認したいときは、該当する下位ファイルを直接読む。
 
 ## hash
-- 4d7762341b1ced6ca569e19a87d6d8ec5e0ced2e05eb259847819de6e4573bc4
+- 9e9a9fc78f7198e9df1dc52bdad46335dc248b9ceb73b5605482c1d87e7e7b90
 
 # `editor_input_handoff`
 
 ## Summary
-- エディター入力を特定の対象へ上書きするための入力契約。スキーマ版、対象ID、書き込む本文を指定する。
+- cmoc のエディタ入力上書きツールが受け取る入力契約を定義する JSON Schema です。
+- 上書き対象を識別する値と、対象へ渡す内容を指定するための直接の参照先です。
 
 ## Read this when
-- エディター入力の上書き処理が受け取る入力条件や、スキーマ版・対象ID・上書き本文の指定方法を確認したいとき。
+- エディタ入力上書きツールの呼び出し形式を確認するとき。
+- 上書き対象と書き込む内容に必要な入力項目を確認するとき。
 
 ## Do not read this when
-- エディター入力を上書きする処理の実装を確認したいとき。対象IDの発行規則を確認したいとき。
+- エディタ入力上書き処理の実装やワークフローを確認するとき。
+- エディタ入力上書き以外のツール入力契約を確認するとき。
 
 ## hash
-- 0546c6e94155e6a00152e113604db89f5fb69242fa92b38b677a68a1e2ef8969
+- ab2b3f70177976188963683a20698484d105ee1df31cc928aa2c4f2b6ecbdd56
 
 # `feedback`
 
@@ -82,20 +67,16 @@
 # `prompt_builder`
 
 ## Summary
-- プロンプト生成に共通するプレースホルダ型、完全な agent 向け prompt の構築、エディタ入力の初期文面生成、oracle・realization 概念の組み込み、各種 policy の構築を担う prompt builder の入口。
-- プレースホルダ統合、prompt 全体の構成、エディタ入力への埋め込み、oracle・realization の分類、アクセス制限や routing などの policy 反映を確認するための下位要素への入口。
+- プロンプト構築に関する共通型、完全 prompt の統合、エディタ初期入力、oracle／realization 概念、各種 prompt policy builder を扱う実装群への入口。
+- placeholder の型定義から、policy の有効化・順序制御、衝突検出、完全 prompt やエディタ入力の生成まで、agent call 用プロンプトを組み立てる責務を分担する。
 
 ## Read this when
-- agent call 用の prompt がどのように構築され、規定・policy・objective・placeholder・補助文面が統合されるかを確認するとき。
-- エディタ入力の初期テキストや完全 prompt の埋め込み形式を確認するとき。
-- oracle・realization の概念や分類、agent call 共通 policy、ファイルアクセス制限、INDEX routing policy を prompt に組み込む処理を追うとき。
-- prompt builder 配下の共通型、prompt 構築、エディタ入力、parts、policy のどの担当へ進むべきか判断するとき。
+- agent call に渡す prompt の構成、policy の組み込み、placeholder 統合、またはエディタ入力の初期文面を確認・変更するとき。
+- oracle／realization の基本概念やファイル分類を prompt に反映する処理、または prompt policy builder の責務を調べるとき。
 
 ## Do not read this when
-- 個別 policy の意味仕様、oracle・realization の正本仕様、CLI の責務、INDEX.md の具体的な既存エントリーを直接確認したいときは、それぞれの正本仕様や対象ファイルを読む。
-- プレースホルダ対応表の型定義だけを確認したいときは basic.py を読む。
-- 具体的なテンプレート内容や置換規則だけを確認したいときは complete_prompt.py などの担当モジュールを直接読む。
-- プロンプト生成や入力初期化と無関係な struct_doc の構造定義・Markdown レンダリング仕様を確認するとき。
+- 個別 policy の根拠となる正本仕様、具体的な oracle 文書、実装・テストの詳細を確認するときは、それぞれの対象を直接読む。
+- prompt 生成後の CLI 実行、ファイルアクセス、conflict 解消、Markdown 構造化文書の詳細を確認するときは、対応する実装を直接読む。
 
 ## hash
-- 1e742fdbb7b3182cbf49f57010c1946fbaf88d99d702658840670258fb476025
+- 9fa2c0c8b03929044759263489ec8293b8010c9cd530a63420511275f1b0b7b4

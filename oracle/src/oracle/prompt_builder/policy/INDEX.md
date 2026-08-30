@@ -17,18 +17,19 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- editor input handoff に関する明示的な規定を構築する対象。active な prompt editor input へ完成済み内容を渡す際の要求事項と禁止事項への入口。
+- 明示的に選択された active な prompt editor input へ、完成済み content を handoff するための規定を提供する。
+- editor input handoff の意味仕様自体ではなく、handoff 実行時の要求条件、報告、失敗時の扱い、直接書き込み禁止を定める入口。
 
 ## Read this when
-- 人間が active target への handoff を明示的に要求し、target ID と editor work file 全体の完成済み content を使った引き渡し方法を確認するとき。
-- handoff の結果区分、失敗時の正式回答、または editor work file の直接書き換え禁止を確認するとき。
+- active target への editor input handoff を実行するか、その実行条件・渡す内容・結果報告・失敗時の対応を確認するとき。
+- prompt editor input の handoff 方法に関する規定を確認するとき。
 
 ## Do not read this when
-- editor input handoff の意味仕様そのものを確認したいときは、対象本文が参照する意味仕様を直接読むべき場合。
-- prompt editor input への handoff 以外の prompt builder policy や、通常のファイル編集方法を確認する場合。
+- editor input handoff の意味仕様や詳細な仕様定義を確認したいときは、参照先の仕様文書を直接読む。
+- handoff を伴わない prompt 構築や、editor work file への直接書き込みを扱うとき。
 
 ## hash
-- 8001e9961e3f78fef55ca40860be19ca409121ac4ac6d2c142c6c5ad3a354e4b
+- 46ce1870592067978ab455b3ef189575513d634ee2d165e5f28a1baee965ca06
 
 # `feedback_reporting.py`
 
@@ -49,21 +50,20 @@
 # `file_access.py`
 
 ## Summary
-- ファイルアクセスモードに応じたエージェント向け読み書き制限ポリシーを構築する。
-- リポジトリ・作業領域のプレースホルダーを定義し、共通禁止事項と oracle／realization file のアクセス制限をモード別に組み立てる入口。
+- ファイルアクセスモードごとのエージェント向け読み書き制限ポリシーを構築する入口。パス文脈に応じたリポジトリ外・管理領域・oracle/realization file の禁止事項を組み立て、プレースホルダー定義と構造化ポリシーヘッダーを返す。
 
 ## Read this when
-- エージェントプロンプトへ渡すファイルアクセス規定の生成条件や、FileAccessMode ごとの禁止事項を変更・確認するとき。
-- repo-root と work-root の関係に応じたアクセス制限、または oracle／realization file の読み書き可否を確認するとき。
-- NO_POLICY を含む、アクセス制限ポリシーのヘッダー・禁止事項・許可事項の組み立て方を調査するとき。
+- エージェント呼び出しで FileAccessMode 別のファイルアクセス制限文面、禁止事項、またはプレースホルダー展開を確認・変更するとき。
+- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE のいずれかで生成されるアクセス規定の差分を確認するとき。
+- AgentCallPathContext に基づく repo-root と work-root の扱い、および SDHeader/SDPolicy の構築箇所を調べるとき。
 
 ## Do not read this when
-- ファイルアクセス制限そのものの正本仕様を確認するだけのときは、codex_exec_rule.md を直接読む。
-- Codex CLI の sandbox 設定や実際のアクセス enforcement を変更・調査するとき。
-- oracle file または realization file の具体的な内容や実装責務を確認するときは、対象ファイルを直接読む。
+- INDEX.md の既存ルーティングや一般的なファイル操作規則だけを確認する場合。
+- CLI の実際のファイルアクセス実装や oracle/realization の内容を直接調べる場合は、それぞれの実装・正本仕様を直接読む。
+- FileAccessMode の定義や AgentCallPathContext のパスモデル自体を確認することが目的で、このポリシー生成処理を経由しない場合。
 
 ## hash
-- dbf60281b2df6db41331254242521402f72e1534f3eca5fcf2423f6b94f28fcc
+- 243210a00be789cd9a32ad27b7a99ebce33e43e034ea495e798cdc5112323813
 
 # `index_entry.py`
 
