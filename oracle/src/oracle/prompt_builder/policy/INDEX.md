@@ -50,20 +50,22 @@
 # `file_access.py`
 
 ## Summary
-- ファイルアクセスモードごとのエージェント向け読み書き制限ポリシーを構築する入口。パス文脈に応じたリポジトリ外・管理領域・oracle/realization file の禁止事項を組み立て、プレースホルダー定義と構造化ポリシーヘッダーを返す。
+- FileAccessMode に応じたエージェント向けファイル読み書き規定を構築する。
+- パスのプレースホルダー定義と、リポジトリ外・保護領域・oracle/realization file の禁止事項を SDHeader として返す。
+- NO_POLICY では共通規定がないことを表し、それ以外では mode ごとの deny-list と暗黙許可規則を生成する。
 
 ## Read this when
-- エージェント呼び出しで FileAccessMode 別のファイルアクセス制限文面、禁止事項、またはプレースホルダー展開を確認・変更するとき。
-- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE のいずれかで生成されるアクセス規定の差分を確認するとき。
-- AgentCallPathContext に基づく repo-root と work-root の扱い、および SDHeader/SDPolicy の構築箇所を調べるとき。
+- エージェント呼び出しに適用するファイルアクセス制限の文面を追加・変更・確認するとき。
+- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE のアクセス範囲の違いを確認するとき。
+- repo-root と work-root が異なる場合の .cmoc/gu/ar への読み書き制限を確認するとき。
 
 ## Do not read this when
-- INDEX.md の既存ルーティングや一般的なファイル操作規則だけを確認する場合。
-- CLI の実際のファイルアクセス実装や oracle/realization の内容を直接調べる場合は、それぞれの実装・正本仕様を直接読む。
-- FileAccessMode の定義や AgentCallPathContext のパスモデル自体を確認することが目的で、このポリシー生成処理を経由しない場合。
+- 実際の oracle file や realization file の仕様・実装内容を確認したいとき。
+- ファイルアクセス制限ではなく、プロンプト本文の組み立てや別のポリシー生成処理を直接調べるとき。
+- 既存の呼び出し側で生成済みのアクセス規定だけを確認すれば足りるとき。
 
 ## hash
-- 243210a00be789cd9a32ad27b7a99ebce33e43e034ea495e798cdc5112323813
+- 623e476078b6a53b5b7dae8b8903fff33708e8aa440ddefee96a071a9118c71d
 
 # `index_entry.py`
 

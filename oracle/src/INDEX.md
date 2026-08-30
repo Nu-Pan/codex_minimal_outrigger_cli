@@ -1,24 +1,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の設定値、Git worktree と root placeholder の解決、構造化文書の Markdown レンダリングを扱う共通基盤への入口。
-- agent call の prompt、policy、ファイルアクセス規定、oracle／realization の扱い、routing、editor input を組み立てる責務を担う。
-- 用途別 agent call に渡す prompt、cwd、Structured Output schema、アクセスモード、preflight などの起動パラメータを構築する。
-- oracle review、oracle investigation／edit、realization apply／refactor、feedback、session join、TUI、indexing、quota probe などの個別 agent call 定義への入口を提供する。
-- エディタ入力上書き、feedback reporter 入力、oracle review 所見、各種 Structured Output の契約を定義する下位要素を含む。
+- cmoc の agent call に渡す prompt、起動パラメータ、パスコンテキスト、設定モデルを構築する定義のルートです。
+- 共通の prompt 組み立て、構造化 Markdown のレンダリング、ファイルアクセス・routing・oracle・realization などの policy、およびサブコマンド別の agent call 構築へ進む入口を提供します。
+- 設定集約、root path placeholder の解決、構造化文書の表現といった横断的な基盤責務も扱います。
 
 ## Read this when
-- cmoc の設定モデル、agent call の cwd と worktree、root placeholder の解決、または構造化文書の生成規則を確認・変更するとき。
-- agent call の prompt 構成、policy の適用、ファイルアクセス制約、routing、oracle／realization の扱い、editor input の初期文面を調査・変更するとき。
-- 特定の cmoc 操作に対応する agent call の起動パラメータ、Structured Output schema、アクセスモード、preflight、または用途別 prompt を確認するとき。
-- oracle review の所見列挙・統合・検証・判定、feedback の検証・正規化、realization の編集、session conflict 解消などの個別処理の入口を探すとき。
-- エディタ入力上書きや feedback reporter など、外部ツールに渡す入力契約を確認するとき。
+- agent call の prompt、cwd、ファイルアクセス、path placeholder、Structured Output、editor input handoff の構築責務の所在を確認するとき。
+- 特定の cmoc サブコマンドに対応する agent call 構築箇所や、oracle review・realization・feedback・session join の処理段階を読む入口を探すとき。
+- cmoc の設定モデル、agent call ごとの Codex 設定、Git worktree に基づくパス解決、構造化文書の Markdown 化を調査・変更するとき。
 
 ## Do not read this when
-- 実際の Codex CLI 実行、サブコマンドの引数解析、agent call の実行後処理だけを確認したいときは、対応する実行本体を直接読む。
-- 特定の agent call の詳細な prompt 文面、出力項目・型・形式、個別 oracle／realization の仕様を確認したいときは、対応する下位ファイルを直接読む。
-- 設定値の具体的な既定値、パス解決の個別変換規則、Markdown ノードの詳細なレンダリング挙動を確認したいときは、該当する共通基盤ファイルを直接読む。
-- feedback の保存・集約・重複判定や、問題を検出して継続可否を判断するロジックだけを確認したいときは、collector または対応する処理本体を直接読む。
+- agent call の実行処理、サブコマンドの業務ロジック、Codex CLI sandbox との対応詳細を確認したいときは、対応する実行本体または参照される正本仕様を直接読む。
+- 個別の policy、prompt 部品、サブコマンド別 builder、Structured Output schema、feedback state の具体的な契約や内容だけを確認したいときは、該当する下位対象を直接読む。
+- oracle file や realization file の意味仕様、個別のレビュー結果、collector の保存・集約処理そのものを確認したいとき。
 
 ## hash
-- 33e10657bd5d9d30de8c498a08ffb513a616dd60197eaaaa3d6c7cb3b2c38236
+- cd25f09b1a616b64ae800eeac376b74af49a6237aacfcc6fa5eea5618623de3c

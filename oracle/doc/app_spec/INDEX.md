@@ -18,22 +18,21 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` による agent call の起動、パスコンテキスト、環境変数、sandbox・ファイルアクセス、provider/model、prompt、Structured Output、ログ、retry・quota、並列実行などの共通呼び出し規約を定める正本。cmoc の Codex CLI 呼び出し全体に関する判断の入口となる。
+- cmoc から Codex CLI を呼び出す際の agent call と Codex call の規約、path context、環境変数、preflight、argv 設定上書き、sandbox・ファイルアクセス、provider/model、prompt、feedback、Structured Output、並列実行、失敗時処理を定める実行規則。
+- Codex CLI 呼び出しの起動方法、ログ・session ID・schema の保存と検証、および quota・一時障害・想定外エラーへの扱いを確認するための app_spec の入口。
 
 ## Read this when
-- cmoc の `codex exec` または `codex exec resume` の起動方法・引数・stdin・ログ保存を変更または確認するとき
-- agent call の cwd、worktree/repository root、sandbox、ファイルアクセス制限、provider/model/reasoning effort、`CODEX_HOME` の扱いを判断するとき
-- Structured Output の schema 保存、検証、補正 turn、session 再開、quota 待機、retry、並列数、失敗処理を実装または確認するとき
-- feedback reporter、editor input handoff MCP、Codex call 情報の保存など、呼び出し lifecycle の共通規約を確認するとき
+- cmoc の Codex CLI 呼び出し方法、agent call の cwd や root 導出、環境変数、sandbox、詳細なファイルアクセス制限を変更・実装・レビューするとき。
+- model provider、model、reasoning effort、prompt の stdin 渡し、feedback reporter、editor input handoff、Structured Output、補正 turn、ログ保存、retry・quota 待機の挙動を確認するとき。
+- Codex exec の並列化や失敗処理が他の正本仕様と整合しているかを判断するとき。
 
 ## Do not read this when
-- 個別 agent call の意味上の責務や判断基準だけを確認したいときは、対応する oracle doc を直接読む
-- `AgentCallParameter` の正確な field、型、既定値を確認したいときは、指定された oracle source の定義を直接読む
-- prompt の共通構築・rendering、path model、file access policy、provider 設定、feedback observation などの詳細実装を確認したいときは、本文が委譲する各 oracle source または oracle doc を直接読む
-- 対象 repository 固有の開発環境、設計、テスト手順を確認したいときは、対応する repository の oracle doc を読む
+- Codex CLI 呼び出し規約ではなく、個別 agent call の意味上の責務や判断基準を確認する場合は、対応する oracle doc を直接読む。
+- Codex CLI の基本的な引数仕様や AgentCallParameter の正確な field 定義だけを確認する場合は、本書の委譲先である対応する oracle source を直接読む。
+- Windows toast notification、feedback observation、editor input handoff、model provider など個別機能の意味仕様だけを確認する場合は、それぞれ指定された正本仕様を直接読む。
 
 ## hash
-- 2bb53bff466be4bc4eef56cd9dc0c515d8033744d5538e6bf1e795e0c9ce2f52
+- ef14ed0250849cd044ee449571b1be0316fe4aa9abd8077d5ad9f34569627768
 
 # `codex_model_provider.md`
 

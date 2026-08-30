@@ -1,21 +1,21 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェントの呼び出しに必要なパラメータを、凍結データクラスとして定義する。
-- ファイルアクセスモード、初回 prompt、Structured Output schema、実行 cwd、MCP handoff、indexing preflight の設定を一つの値として扱う入口である。
+- AI コーディングエージェント呼び出しのパラメータ型と、ファイルアクセスモードを定義する。
+- エージェント呼び出し種別、アクセスモード、prompt、Structured Output schema、実行 cwd、editor input MCP の有効化、indexing preflight の設定をまとめる入口。
 
 ## Read this when
-- agent call の設定項目や、その値を保持するデータ構造を確認・変更するとき。
-- ファイルアクセスモード、prompt、schema path、cwd、editor input handoff、indexing preflight の指定箇所を追跡するとき。
-- 呼び出しパラメータを生成・受け渡しする処理の入口を確認するとき。
+- Agent Call Parameter の構造や生成・受け渡し項目を確認するとき
+- cmoc の論理的なファイルアクセスモードの列挙を確認するとき
+- agent call の editor input MCP または indexing preflight の設定を確認するとき
 
 ## Do not read this when
-- 各 FileAccessMode の意味や Codex CLI sandbox への対応規則を確認したいときは、本文が正本として参照する codex_exec_rule.md を直接読む。
-- agent call の具体的な生成ロジックや builder の責務を確認したいときは、該当する builder 実装を直接読む。
-- Structured Output schema の項目・型・形式を確認したいときは、指定された schema ファイルを直接読む。
+- 各ファイルアクセスモードの詳細な意味や Codex CLI sandbox への対応を確認したいときは、本文が参照する正本仕様を読む
+- agent call の具体的な構築処理や file access policy の生成処理を確認したいとき
+- Structured Output schema の機械的な受理条件を確認したいとき
 
 ## hash
-- 2bac01d9eb9cbdbaab5a4bdbd2c368aba8d1306255b5b9bf47ab67cfcb55e637
+- 23a9f8d92cc7f3453214b8f5042ba4a495fb3427ffa5434bb5113e25bed1200e
 
 # `feedback`
 
