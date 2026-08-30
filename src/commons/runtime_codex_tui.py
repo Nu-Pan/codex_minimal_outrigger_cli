@@ -17,6 +17,9 @@ from .runtime_codex_profile import (
     validate_codex_home,
 )
 from .runtime_config import load_config
+from .runtime_editor_input_handoff_protocol import (
+    editor_input_handoff_subprocess_env,
+)
 from .runtime_errors import CmocError
 from .runtime_feedback import begin_feedback_call
 from .runtime_feedback_store import uuid7_prefixed
@@ -63,6 +66,7 @@ def run_codex_tui(
             config=config,
             purpose=purpose,
             agent_call_cwd=agent_call_cwd,
+            repository=path_context.repo_root,
             codex_home=codex_home,
             log_dir=log_dir,
             notification_command=(
@@ -83,6 +87,7 @@ def _run_codex_tui_process(
     config: CmocConfig,
     purpose: str,
     agent_call_cwd: Path,
+    repository: Path,
     codex_home: Path,
     log_dir: Path,
     notification_command: list[str] | None,
@@ -139,7 +144,13 @@ def _run_codex_tui_process(
         log_paths=[call_path],
     )
     try:
-        environment = feedback_call.subprocess_env(codex_subprocess_env(codex_home))
+        environment = codex_subprocess_env(codex_home)
+        if parameter.enable_editor_input_handoff_mcp:
+            environment = editor_input_handoff_subprocess_env(
+                environment,
+                repository,
+            )
+        environment = feedback_call.subprocess_env(environment)
         result = run_codex_subprocess(
             argv,
             cwd=agent_call_cwd,

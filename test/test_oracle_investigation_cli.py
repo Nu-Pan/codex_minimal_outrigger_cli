@@ -220,12 +220,14 @@ def test_oracle_investigation_has_no_session_precondition(
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
+    assert parameter.enable_editor_input_handoff_mcp is True
     assert parameter.run_indexing_preflight is True
     assert kwargs["notification_command_name"] == "oracle investigation"
     complete_prompt = parameter.prompt
     assert "# oracle investigation policy" not in complete_prompt
     assert "# oracle policy" in complete_prompt
     assert "# routing policy" in complete_prompt
+    assert "# editor input handoff" in complete_prompt
     assert "oracle の根拠を調査する" in complete_prompt
     assert investigation_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert input_copy_path.read_text(encoding="utf-8") == "oracle の根拠を調査する"

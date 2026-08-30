@@ -25,6 +25,7 @@ from commons.runtime_codex_profile import (
     prepare_schema,
     read_output_json,
 )
+from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_ENV,
@@ -134,14 +135,44 @@ def test_feedback_capability_values_are_not_written_to_codex_argv(
         assert value not in rendered
 
 
-def test_codex_subprocess_env_does_not_inherit_feedback_context(
+def test_codex_overrides_enable_editor_input_handoff_only_when_selected() -> None:
+    """選択済み call だけに overwrite 一つの optional MCP を注入する。"""
+    parameter = replace(
+        codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=Path.cwd()),
+        enable_editor_input_handoff_mcp=True,
+    )
+
+    parsed = codex_override_config(build_codex_override_args(parameter, CmocConfig()))
+
+    editor_server = parsed["mcp_servers"]["cmoc_editor_input"]
+    assert editor_server == {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_editor_input_handoff_mcp"],
+        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV],
+        "enabled": True,
+        "required": False,
+        "enabled_tools": ["overwrite"],
+        "disabled_tools": [],
+        "startup_timeout_sec": 5,
+        "tool_timeout_sec": 15,
+        "default_tools_approval_mode": "approve",
+        "tools": {"overwrite": {"approval_mode": "approve"}},
+    }
+    assert (
+        parsed["shell_environment_policy"]["filters"][EDITOR_INPUT_REPOSITORY_ENV]
+        == "exclude"
+    )
+
+
+def test_codex_subprocess_env_does_not_inherit_stale_call_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """親 process の別 call 用 reporter context を Codex env へ継承しない。"""
+    """親 process の別 call 用 MCP context を Codex env へ継承しない。"""
     for name, value in (
         (FEEDBACK_CAPABILITY_ENV, "stale-capability"),
         (FEEDBACK_COLLECTOR_ENV, "/tmp/stale-collector.sock"),
         (FEEDBACK_PROTOCOL_ENV, "stale-protocol"),
+        (EDITOR_INPUT_REPOSITORY_ENV, "/tmp/stale-repository"),
     ):
         monkeypatch.setenv(name, value)
 
@@ -153,6 +184,7 @@ def test_codex_subprocess_env_does_not_inherit_feedback_context(
             FEEDBACK_CAPABILITY_ENV,
             FEEDBACK_COLLECTOR_ENV,
             FEEDBACK_PROTOCOL_ENV,
+            EDITOR_INPUT_REPOSITORY_ENV,
         )
     )
 

@@ -21,6 +21,7 @@ import commons.runtime_codex_tui as runtime_codex_tui
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_tui
+from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from commons.runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
@@ -60,6 +61,7 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
             "    'args': args,",
             "    'cwd': os.getcwd(),",
             "    'prompt_text': prompt,",
+            f"    'handoff_repository': os.environ.get({EDITOR_INPUT_REPOSITORY_ENV!r}),",
             "}))",
         ],
     )
@@ -84,6 +86,7 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(root.resolve())
     assert record["prompt_text"] == "complete prompt\n"
+    assert record["handoff_repository"] is None
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
     override_config = codex_override_config(record["args"])
@@ -127,6 +130,7 @@ def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
             "    'args': args,",
             "    'cwd': os.getcwd(),",
             "    'prompt_text': prompt,",
+            f"    'handoff_repository': os.environ.get({EDITOR_INPUT_REPOSITORY_ENV!r}),",
             "}))",
         ],
     )
@@ -136,6 +140,7 @@ def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
         replace(
             codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=linked),
             prompt="complete prompt\n",
+            enable_editor_input_handoff_mcp=True,
         ),
         root=root,
         config=CmocConfig(),
@@ -144,6 +149,7 @@ def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["prompt_text"] == "complete prompt\n"
+    assert record["handoff_repository"] == str(root.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
     call_log = _tui_call_logs(root)[0]
     call_data = json.loads(call_log.read_text())
