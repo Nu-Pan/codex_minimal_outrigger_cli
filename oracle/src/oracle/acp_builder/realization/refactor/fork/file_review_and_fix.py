@@ -25,18 +25,14 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
     """
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたはソフトウェア実装のファイル単位レビュー兼修正担当です
+        task="""
         - oracle file または realization file である `{{target-path}}` を起点に `{{work-root}}` ツリー内の所見を調査し、対応する realization file を修正すること
         """,
-        goal="""
-        - `{{target-path}}` 以外の必要な oracle file, realization file も読んでいること
-        - 列挙した所見が realization findings policy を満たしていること
-        - 発見した所見に対応する修正をベストエフォートで実施したこと
-        - 修正した file を再調査し、この agent call 内で対応可能な所見を残していないこと
-        - realization file が realization policy に従っていること
-        - 対象 repository が要求する必要な検証を完了していること
-        - 指定された Structured Output schema に従うこと
+        scope="""
+        - `{{target-path}}` のほか、調査と修正に必要な oracle file および realization file も対象とすること
+        """,
+        completion_criteria="""
+        - 発見した所見をこの agent call 内で可能な範囲で修正・検証し、修正した file の再調査後に対応可能な所見を残していないこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,

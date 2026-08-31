@@ -35,12 +35,10 @@ def build_oracle_review_merge_finding_parameter(
     """
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたはソフトウェア仕様断片レビュー結果の整理担当です
-        - `{{work-root}}/oracle` ツリー内の oracle file に対する所見リストを整理すること
+        task="""
+        - `{{work-root}}/oracle` ツリー内の oracle file に対する所見リストを整理する編集操作を決定すること
         """,
-        goal="""
-        - 指定の Structured Output schema に従って編集操作を列挙すること
+        completion_criteria="""
         - 編集操作実行後、所見同士の内容的な重複や相互矛盾が解消されていること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,

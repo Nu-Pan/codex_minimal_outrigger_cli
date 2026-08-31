@@ -17,12 +17,11 @@ def build_quota_availability_probe_parameter(
     """Codex CLI の quota 回復確認用 agent call を構築する。"""
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたは Codex CLI の利用可能性確認担当です
-        - 追加の調査や作業を行わず、短い応答を 1 回返すこと
+        task="""
+        - Codex CLI の利用可能性を確認するため、短い応答を 1 回返すこと
         """,
-        goal="""
-        - 応答を返して呼び出しを完了していること
+        non_goals="""
+        - 追加の調査や作業を行わないこと
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,

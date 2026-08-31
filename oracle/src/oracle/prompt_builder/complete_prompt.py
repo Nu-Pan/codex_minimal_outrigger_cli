@@ -41,8 +41,10 @@ def _merge_placeholder_definitions(
 
 def build_complete_prompt(
     *,
-    summary: str,
-    goal: str,
+    task: str,
+    scope: str | None = None,
+    completion_criteria: str | None = None,
+    non_goals: str | None = None,
     file_access_mode: FileAccessMode,
     path_context: AgentCallPathContext,
     aux_static_prompt: list[SDHeader | SDTagBlock] = list(),
@@ -61,8 +63,10 @@ def build_complete_prompt(
     """選択された agent 向け文面を完全 prompt として構築する。
 
     Args:
-        summary: agent の担当、主作業、対象、および作業範囲。
-        goal: agent call の終了時に満たされるべき状態。
+        task: agent call で実行する行為と対象。
+        scope: 対象、根拠、起点、および作業範囲。
+        completion_criteria: agent call 終了後に検証可能な call 固有の状態。
+        non_goals: 逸脱が予想される隣接作業のうち call 固有の対象外。
         routing_policy: repository 内の参照先を選ぶ routing 文面を含めるか。
         editor_input_handoff_policy: editor input handoff 文面を含めるか。
 
@@ -180,11 +184,17 @@ def build_complete_prompt(
         full_prompt.extend(aux_static_prompt)
 
     # caller 指定の目的
+    objective_prompt = [SDHeader("task", task)]
+    if scope is not None:
+        objective_prompt.append(SDHeader("scope", scope))
+    if completion_criteria is not None:
+        objective_prompt.append(SDHeader("completion criteria", completion_criteria))
+    if non_goals is not None:
+        objective_prompt.append(SDHeader("non-goals", non_goals))
     full_prompt.append(
         SDTagBlock(
             "objective",
-            SDHeader("summary", summary),
-            SDHeader("goal", goal),
+            *objective_prompt,
         )
     )
 

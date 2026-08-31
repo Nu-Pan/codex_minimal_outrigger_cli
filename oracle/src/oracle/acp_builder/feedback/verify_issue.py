@@ -25,24 +25,19 @@ def build_feedback_verify_issue_parameter(
     """report cut で固定した参照だけから 1 件の issue candidate を検証する。"""
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたは人間向け feedback issue の検証担当です
+        task="""
         - 1 件の issue candidate を report cut 時点の固定済み参照だけから検証すること
         """,
-        goal="""
-        - 指定された Structured Output schema に従って検証結果を返すこと
+        scope="""
+        - 入力された candidate と report cut reference だけを根拠とする
+        - それ以外 (file、live repository state、raw log、過去の Codex session、feedback state) を作業範囲に含めないこと
+        """,
+        non_goals="""
+        - candidate 外の問題を探索しないこと
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         aux_static_prompt=[
-            SDHeader(
-                "参照と変更の禁止",
-                """
-                - 入力された report cut reference 以外の file、live repository state、raw log、過去の Codex session、別 candidate、および feedback state を読んではならない
-                - candidate 外の問題を探索してはならない
-                - repository file、config、feedback state、または問題の根拠を変更してはならない
-                """,
-            ),
             SDHeader(
                 "Structured Output の決定論的事後条件",
                 """
@@ -64,7 +59,7 @@ def build_feedback_verify_issue_parameter(
             ),
         ],
         oracle_and_realization_basic=True,
-        routing_policy=True,
+        routing_policy=False,
     )
 
     return AgentCallParameter(

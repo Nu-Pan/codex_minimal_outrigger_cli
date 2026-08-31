@@ -50,16 +50,14 @@ def build_realization_apply_fork_launch_exec_parameter(
     # パラメータを生成
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
     complete_prompt = build_complete_prompt(
-        summary="""
-        - あなたは realization file の差分追従担当です
+        task="""
         - 追従対象変更 <cmoc_ref target="realization_apply_change"/> から読み取れる oracle file の変更を、`{{work-root}}` リポジトリ全体の realization file に反映すること
+        """,
+        scope="""
         - 差分に現れた file だけを作業範囲にせず、関連する oracle file と realization file をリポジトリ全体から調査すること
         """,
-        goal="""
+        completion_criteria="""
         - 追従対象変更 <cmoc_ref target="realization_apply_change"/> から読み取れる変更について、oracle file と realization file の間に齟齬がないこと
-        - 関連する既存 oracle file と realization file に論理的に整合していること
-        - 必要な realization implementation、realization test、realization ancillary の変更と検証が完了していること
-        - oracle file を変更していないこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,

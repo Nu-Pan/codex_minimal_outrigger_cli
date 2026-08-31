@@ -29,12 +29,8 @@ def build_realization_refactor_fork_change_summary_parameter(
     """
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたはソフトウェア変更内容の要約担当です
-        - `{{work-root}}` ツリー内の refactor 差分を、人間が読むために要約すること
-        """,
-        goal="""
-        - 指定された Structured Output schema に従って変更要約を返すこと
+        task="""
+        - 入力された run branch 上の refactor 差分を、人間が読むために要約すること
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,

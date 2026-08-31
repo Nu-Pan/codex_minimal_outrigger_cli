@@ -41,12 +41,8 @@ def build_oracle_review_validate_finding_advocate_parameter(
     """
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたはソフトウェア仕様断片レビュー所見の擁護担当です
+        task="""
         - 対象所見が妥当である理由を調査すること
-        """,
-        goal="""
-        - 指定の Structured Output schema に従うこと
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,

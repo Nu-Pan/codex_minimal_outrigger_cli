@@ -41,6 +41,7 @@
 ## 調査結果と変更の扱い
 
 - 調査結果は Codex CLI の TUI でユーザーへ回答する
+- 回答から、調査結果の根拠となる oracle file を特定できるようにする
 - 調査結果の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい
 - Codex CLI の TUI は oracle file を変更せず、realization file を読み書きしない
 - Codex CLI の TUI は oracle file の変更結果を自動 commit しない

@@ -186,6 +186,29 @@ prompt literal に、次の内容を正本として置いてはならない。
 - 正本を prompt literal 側へ移すことを目的とする詳細説明
 - oracle doc との競合時に prompt literal を優先させる規定
 
+### caller 固有の objective
+
+caller 固有の objective は、名目的な担当 role ではなく、その agent call 固有の目的を伝える。
+
+- task は常に設け、その agent call で実行する行為と対象を示す。
+- scope は、対象、根拠、起点、または作業範囲を task だけでは特定できない場合に設ける。scope は file access の許可または禁止を定義しない。
+- completion criteria は、agent call 終了後に検証可能な call 固有の状態がある場合に設ける。
+- non-goals は、隣接作業への逸脱が予想される場合に限り、call 固有の対象外を示す。一般的な禁止操作またはアクセス制限を置かない。
+
+独立した role または role 用の構造は設けない。agent call の機械的な識別は `AgentCallParameter.agent_call_kind` が担う。評価方向または責務に意味がある場合は、task の行為と判断対象、named policy、または call 固有の static prompt で具体化する。
+
+objective は、専用機構が所有する次の内容を重複させない。
+
+- 権限と一般的なアクセス禁止は、`AgentCallParameter.file_access_mode` と file access policy が所有する。
+- 再利用する判断基準と作業規定は、named policy が所有する。
+- call 固有の判断基準と、schema 外の決定論的事後条件は、caller の static prompt が所有する。
+- runtime input は、caller の dynamic prompt が所有する。
+- Structured Output の構造と schema で表現できる出力要件は、`AgentCallParameter.structured_output_schema_path` が指す schema が所有する。
+
+Structured Output schema に従うことだけを、completion criteria として重複させてはならない。schema または policy だけでは表現されない call 固有の完了状態がある場合だけ、completion criteria を設ける。
+
+objective の外側の block、正確な引数、項目名、構築順序、任意項目の省略条件、および rendering は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
+
 ### call 固有の実行時指示の優先関係
 
 `prompt > oracle file > installed skill` と表現される優先関係は、cmoc の恒常的な意味仕様ではなく、call 固有の目的、作業範囲、入力、および権限に適用する。この正確な agent-facing literal は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py` の `build_oracle_policy` へ委譲する。
@@ -342,6 +365,8 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 - 待機とは
     - 動作確認用のミニマルな Codex CLI 呼び出しを定期的に繰り返し実行する（ポーリング待機）
     - 動作確認の間隔は 30 分に１回とする
+- quota availability probe の task は短い応答を 1 回返すことに限定し、追加の調査または作業を non-goal とする
+- probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_parameter` へ委譲する
 - 並列に呼び出した Codex CLI 呼び出しが同時に待機に突入した場合
     - 一番最初に待機に入ったスレッドだけが代表してポーリングを行う
     - 複数スレッドで並列にポーリングを行うのは禁止

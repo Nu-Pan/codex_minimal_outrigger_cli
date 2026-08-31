@@ -42,16 +42,12 @@ def build_indexing_index_entry_parameter(
 
     # プロンプト
     prompt = build_complete_prompt(
-        summary="""
-        - あなたはソフトウェアリポジトリのルーティング文書作成担当です
+        task="""
         - `{{target-path}}` の `INDEX.md` 用エントリーを生成すること
-        """,
-        goal="""
-        - 指定された Structured Output schema に従ってエントリーを返すこと
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
-        aux_dynamic_prompt=[
+        aux_static_prompt=[
             SDHeader(
                 "エントリー生成規定",
                 """
@@ -60,6 +56,8 @@ def build_indexing_index_entry_parameter(
                 - `{{target-path}}` 以外の文章も必要に応じて参照すること
                 """,
             ),
+        ],
+        aux_dynamic_prompt=[
             SDHeader(
                 "`{{target-path}}` の内容",
                 SDCodeBlock(

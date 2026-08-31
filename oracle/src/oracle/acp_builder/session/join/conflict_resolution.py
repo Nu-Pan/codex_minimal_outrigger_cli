@@ -42,17 +42,22 @@ def build_session_join_conflict_resolution_parameter(
     ]
     path_list = "\n".join(str(path) for path in resolved_paths)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたは git merge conflict の解消担当です
+        task="""
         - `{{work-root}}` ツリー内の merge conflict marker を解消すること
         """,
-        goal="""
-        - conflict marker の解消以外の余計な差分が存在しないこと
-        - 作業前後で仕様の意味が変化していないこと
+        completion_criteria="""
         - conflict marker が残っていないこと
         """,
         file_access_mode=FileAccessMode.REPO_WRITE,
         path_context=path_context,
+        aux_static_prompt=[
+            SDHeader(
+                "additional file access policy",
+                """
+                - conflict 対象 oracle file は、この conflict marker 解消に必要な範囲だけ編集して良い
+                """,
+            ),
+        ],
         aux_dynamic_prompt=[
             SDHeader(
                 "conflict 対象ファイル",
@@ -60,12 +65,6 @@ def build_session_join_conflict_resolution_parameter(
                     "text",
                     path_list,
                 ),
-            ),
-            SDHeader(
-                "additional file access policy",
-                """
-                - conflict 対象 oracle file は、この conflict marker 解消に必要な範囲だけ編集して良い
-                """,
             ),
         ],
         oracle_and_realization_basic=True,

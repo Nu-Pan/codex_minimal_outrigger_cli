@@ -27,10 +27,10 @@ def build_tui_launch_tui_parameter(
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
     original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
     complete_prompt = build_complete_prompt(
-        summary=f"""
-        - オリジナルプロンプト {original_prompt_ref} に従って作業すること
+        task=f"""
+        - オリジナルプロンプト {original_prompt_ref} が要求する作業を実行すること
         """,
-        goal=f"""
+        completion_criteria=f"""
         - オリジナルプロンプト {original_prompt_ref} が要求する成果と完了条件を満たしていること
         """,
         file_access_mode=FileAccessMode.REPO_WRITE,

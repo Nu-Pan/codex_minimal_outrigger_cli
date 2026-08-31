@@ -26,15 +26,15 @@ def build_oracle_investigation_launch_tui_parameter(
     """
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
     complete_prompt = build_complete_prompt(
-        summary="""
-        - あなたは oracle file の調査担当です
-        - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する事項を調査対象とする
-        - `{{work-root}}/oracle` ツリー内の関連する oracle file を根拠とする読み取り専用調査を通常の作業範囲とする
+        task="""
+        - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する事項を調査し、結果を回答すること
         """,
-        goal="""
+        scope="""
+        - `{{work-root}}/oracle` ツリー内の関連する oracle file を根拠とすること
+        """,
+        completion_criteria="""
         - ユーザー指示が要求する調査結果がユーザーへ回答されていること
         - 調査結果の根拠となる oracle file を回答から特定できること
-        - oracle file で定義されている事項と未定義の事項を混同せず、未定義の事項を正本仕様として断定していないこと
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,

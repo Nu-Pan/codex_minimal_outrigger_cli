@@ -100,6 +100,8 @@ normalization agent へ渡す情報を次に限定する。
 
 normalization agent は、summary、impact、原因、現在性、actionability、human action、verification verdict、または relation を生成しない。候補外の issue を探索しない。
 
+agent が observation で申告した原因、重要度、および重複判定用 hint は、同一性判断の確定事実として扱わない。
+
 既存 issue を選ぶ output の issue ID は、入力候補の issue ID と一致しなければならない。schema と決定論的事後条件に適合する output を受理できなければ、report 全体を失敗させる。
 
 ## verification

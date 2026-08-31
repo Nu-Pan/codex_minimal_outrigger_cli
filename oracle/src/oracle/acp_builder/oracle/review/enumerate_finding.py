@@ -42,13 +42,11 @@ def build_oracle_review_enumerate_finding_parameter(
     """
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたはソフトウェア仕様断片のレビュー担当です
-        - `{{oracle-path}}` を起点に `{{oracle-root}}` ツリー内の oracle file をレビューすること
-        - 必要なら `{{oracle-path}}` 以外の関連する oracle file も読むこと
+        task="""
+        - oracle file をレビューし、既知の関連所見と重複しない新規所見を列挙すること
         """,
-        goal="""
-        - 指定の Structured Output schema に従って所見が列挙されていること
+        scope="""
+        - `{{oracle-path}}` を起点に `{{oracle-root}}` ツリーを調査し、必要な場合は他の関連する oracle file も根拠とすること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,

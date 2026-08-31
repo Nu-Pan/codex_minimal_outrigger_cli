@@ -25,23 +25,24 @@ def build_feedback_normalize_issue_parameter(
     """構造化 observation と絞り込み済み候補から issue の同一性だけを判断する。"""
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        summary="""
-        - あなたは人間向け feedback issue の同一性判断担当です
-        - 構造化済み observation を、絞り込み済みの既存 issue candidate と比較すること
-        - observation が入力候補と同じ issue か、新しい issue かだけを判断すること
+        task="""
+        - 構造化済み observation を絞り込み済みの既存 issue candidate と比較し、同じ issue か新しい issue かだけを判断すること
         """,
-        goal="""
-        - 指定された Structured Output schema に従って同一性判断を返すこと
-        - agent が申告した原因、重要度、および重複判定用 hint を確定事実として扱っていないこと
-        - issue の summary、impact、原因、現在性、actionability、human action、verification verdict、または relation を生成していないこと
+        scope="""
+        - 入力された observation と既存 issue candidate だけを根拠とすること
+        - 入力以外 (file、raw log、過去の Codex session、feedback state) を作業範囲に含めないこと
+        """,
+        non_goals="""
+        - issue の summary、impact、原因、現在性、actionability、human action、verification verdict、または relation を生成しないこと
+        - 候補外の issue を探索しないこと
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         aux_static_prompt=[
             SDHeader(
-                "参照禁止",
+                "同一性判断の基準",
                 """
-                - 入力以外の file、raw log、過去の Codex session、feedback state、および候補外 issue を読んではならない
+                - agent が申告した原因、重要度、および重複判定用 hint を確定事実として扱わないこと
                 """,
             ),
             SDHeader(
@@ -62,7 +63,7 @@ def build_feedback_normalize_issue_parameter(
             ),
         ],
         oracle_and_realization_basic=True,
-        routing_policy=True,
+        routing_policy=False,
     )
     return AgentCallParameter(
         agent_call_kind=build_feedback_normalize_issue_parameter.__name__,
