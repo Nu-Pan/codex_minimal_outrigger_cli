@@ -43,23 +43,24 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の report cut を固定し、feedback observation と直前の active issue を機械検証・集約・候補化したうえで、normalization agent と verification agent の結果に基づき、正常な active generation と Markdown report、または `incomplete` 診断 report を publication するサブコマンド。
-- CLI 契約、事前条件、report cut の再開、中断、cleanup、state corruption、publication failure、および終了コードまで含む feedback report 処理全体の仕様入口。
+- pending observation と直前の active state を report cut に固定し、検証済み issue を新しい active state と Markdown report へ publication する `cmoc feedback report` の挙動仕様。
+- normalization・verification agent の委譲境界、candidate の検証条件、正常 publication と `incomplete` 診断 report の分岐を定義する。
+- state corruption、validation failure、AI call failure、ユーザー中断、cleanup failure などに対する state 保持、再開、report 保存、終了コードを定義する。
 
 ## Read this when
-- feedback observation から人間対応が必要な issue を抽出し、現在の active state と照合して report を生成する処理を実装・変更・レビューするとき。
-- validation、完全一致 deduplication、machine observation の threshold 集約、agent observation の normalization、candidate 全体の verification、または `inconclusive` を含む不完全結果の扱いを確認するとき。
-- current pointer と active generation の更新、report の保存形式、cut 固定後の再開、user interruption、cleanup、エラー時の invocation summary、および終了コードを確認するとき。
+- `cmoc feedback report` の CLI 契約、事前条件、処理順序、report cut、agent call、publication、再開、または終了コードを確認するとき。
+- feedback observation や feedback state の正本仕様を参照しつつ、report 処理全体の責務境界と失敗時の扱いを把握するとき。
+- normalization agent または verification agent の呼び出し条件・入力制限・output 受理条件を確認するとき。
 
 ## Do not read this when
-- raw observation の収集規則だけを確認したい場合は `feedback_observation.md` を直接読む。
-- feedback state の schema、lifecycle、report cut、active generation、incomplete 診断 report の正本を確認したい場合は `feedback_state.md` を直接読む。
-- normalization または verification の prompt、起動パラメータ、選択理由、Structured Output schema の詳細を確認したい場合は各 builder と schema を直接読む。
-- INDEX.md の更新条件や indexing preflight の一般仕様だけを確認したい場合は `indexing.md` を直接読む。
-- 中断時の共通動作だけを確認したい場合は `subcommand_interruption.md` を直接読む。
+- raw observation の収集規則だけを確認したい場合は feedback observation の仕様を読むとき。
+- feedback state の schema、lifecycle、active generation、または incomplete 診断 report の保存規則だけを確認したい場合は feedback state の仕様を直接読むとき。
+- normalization や verification の正確な prompt、起動パラメータ、Structured Output schema を確認したい場合は、それぞれの builder と schema を直接読むとき。
+- `INDEX.md` の更新手順だけを確認したい場合は indexing の仕様を直接読むとき。
+- 中断時の共通動作だけを確認したい場合は subcommand interruption の仕様を直接読むとき。
 
 ## hash
-- 699c4688f1ba96ef6cd08dc66b65de3448243ae21ad8abcde691491f1aa69edc
+- 301c021961d85989d77dab4d5646caa54025fec7e4276a62aeb5e0e3a6fdeb81
 
 # `indexing.md`
 
@@ -100,24 +101,22 @@
 # `oracle_investigation.md`
 
 ## Summary
-- oracle file に関する調査指示を受け取り、Codex CLI の TUI を起動するサブコマンド。
-- doctor preprocess、エディタ入力 lifecycle、調査用 TUI 起動パラメータ構築までの調査開始フローを扱う。
-- oracle file を根拠とする調査の入口であり、具体的な prompt 構築や共通入力仕様の詳細は関連する正本へ委譲する。
+- oracle file に関するユーザーの調査指示を受け取り、oracle file を根拠とする調査結果を回答する Codex CLI の TUI 起動入口。
+- doctor preprocess、prompt editor input、起動パラメータ構築、および Codex CLI 起動までのサブコマンド手順を扱う。
+- oracle file の調査境界と、調査結果から根拠となる oracle file を特定可能にする回答方針を示す。
 
 ## Read this when
-- oracle file に関するユーザーの調査指示を受け取り、調査用 TUI を起動するサブコマンドの責務を確認するとき。
-- 調査指示の入力から doctor preprocess、TUI 起動パラメータ構築、Codex CLI 起動までの流れを確認するとき。
-- oracle file を調査対象とする際の TUI の調査境界と、変更を伴わない扱いを確認するとき。
+- oracle file についてユーザーから調査指示を受け、調査用 TUI の起動経路や入力ライフサイクルを確認するとき。
+- oracle file を根拠とする調査結果を Codex CLI の TUI で回答するサブコマンドの責務と制約を確認するとき。
 
 ## Do not read this when
-- oracle file を扱う一般的な判断基準だけを確認したい場合は、oracle_and_realization.md を直接読む。
-- エディタ入力の lifecycle の詳細だけを確認したい場合は、prompt_editor_input.md を直接読む。
-- editor input handoff の共通仕様だけを確認したい場合は、editor_input_handoff.md を直接読む。
-- Codex CLI の TUI 共通起動規則だけを確認したい場合は、tui.md を直接読む。
-- 正確な調査 prompt や workload 固有の起動パラメータだけを確認したい場合は、launch_tui.py の builder を直接読む。
+- oracle file を扱う判断基準そのものを確認したいときは、本文が参照する oracle_and_realization の正本を直接読むとき。
+- TUI の正確な prompt 文面、prompt part、workload 固有パラメータ、または選択理由を確認したいときは、builder の実装を直接読むとき。
+- エディタ入力 handoff の共通仕様を確認したいときは、本文が参照する editor_input_handoff の正本を直接読むとき。
+- Codex CLI の TUI 起動時に適用される設定範囲や終了時通知を確認したいときは、本文が参照する各 app_spec の正本を直接読むとき。
 
 ## hash
-- 8a30a558dbcea078414cea71c4e8b01024cefad44cbcb09332e4caced4e9b673
+- 9ec4f066220f0d964e268d571b1dd20c9dde74a07f557f5667c8f8ddfdd19888
 
 # `oracle_review.md`
 

@@ -18,19 +18,19 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の作業差分を人間向けに要約する agent call の prompt と起動パラメータを構築する定義。
-- 差分を補助情報として prompt に埋め込み、readonly の作業範囲、作業ディレクトリ、Structured Output schema、indexing preflight を指定する入口。
+- refactor fork の run branch 差分を人間向けに要約する agent call の prompt と起動パラメータを構築する入口。
+- 差分本文、linked worktree の作業コンテキスト、readonly 権限、変更要約用の実行条件をまとめて AgentCallParameter に変換する。
 
 ## Read this when
-- refactor fork の変更要約 agent call の prompt 内容や起動パラメータを変更・確認するとき
-- raw git diff の受け渡し、linked worktree の作業ディレクトリ、要約用 agent call のアクセスモードを確認するとき
+- refactor fork の変更差分要約処理を追加・変更・調査するとき。
+- run branch の差分を入力にした agent call の prompt 構成、作業ディレクトリ、readonly 実行条件、indexing preflight の設定を確認するとき。
 
 ## Do not read this when
-- refactor fork の変更要約結果の schema や要約処理そのものだけを確認するとき
-- refactor fork 以外の agent call 構築定義や、実際の refactor 実装差分を直接確認するとき
+- 変更要約 agent の出力内容や出力形式そのものを確認したいとき。
+- refactor fork 以外の agent call 構築や、差分生成・適用の処理を確認したいとき。
 
 ## hash
-- e38bf155f8b84590a82476b2f75f5bbdd9a735eca013044f0f261d68d26ff18a
+- c68ab8c4910f4000666585fbc7b22832c6233114efe3182086389dcb99bf6d28
 
 # `file_review_and_fix.json`
 
@@ -53,17 +53,15 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- ファイル単位レビュー兼修正用の agent call パラメータを構築する定義です。
-- 指定したレビュー対象 path と実行用 worktree から、レビュー・修正 prompt、アクセス範囲、Structured Output schema、実行時の作業ディレクトリをまとめた追従パラメータを生成します。
+- refactor fork におけるファイル単位のレビュー・修正用 AgentCallParameter の構築定義。指定した oracle または realization file を起点に調査対象と対応する realization file を特定し、レビュー・修正 prompt と実行条件を組み立てる。
 
 ## Read this when
-- ファイル単位で差分に依存しないレビュー・修正 agent call の入口を確認したいとき。
-- レビュー対象を起点に oracle file と realization file を調査し、対応する realization file の修正まで行う prompt 構築規則を確認したいとき。
+- refactor fork のファイル単位レビュー・修正 agent call の prompt、対象範囲、realization 書き込み権限、構造化出力、実行前 indexing 設定を確認するとき。
+- 差分に依存しない追従レビュー用パラメータの生成経路を調査するとき。
 
 ## Do not read this when
-- レビュー対象の実装内容そのものを確認したいとき。
-- レビュー結果の出力項目や JSON schema の詳細を確認したいとき。
-- 実際の realization のレビュー・修正処理を直接調査したいとき。
+- レビュー・修正対象の具体的な realization file の内容や個別所見を確認したいとき。
+- refactor fork 以外の agent call 構築定義、または共通 prompt 生成処理そのものを直接調査するとき。
 
 ## hash
-- 0e411bfc7a3e9a8be6e838198582fe64854e1498226d51ec17ede9add2336ce0
+- 8819b72b73854e978dd9b8ee00639c047de37c61468e1c0fa6c9860977ec2709

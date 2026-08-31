@@ -91,21 +91,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書を収める領域。アプリケーション挙動、session／run の branch 分離モデル、不採用案、開発環境・設計・テストのルールを扱い、仕様・設計・実装判断の確認先を提供する。
-- 具体的な仕様や開発規則を確認するための入口であり、実装側では agent call の prompt、routing、oracle・realization、feedback、session join、TUI などの責務へ案内する。
+- cmoc の正本資料と実装を束ねる最上位入口。アプリケーション仕様、branch・session 分離モデル、設計検討資料、開発ルールを機能別に選べる。
+- oracle 実装の入口。agent call 構築、prompt 構築、入力 handoff、feedback、設定・パス・構造化文書の下位領域へ振り分ける。
 
 ## Read this when
-- cmoc の機能仕様、状態遷移、branch・worktree 分離モデルを確認するとき。
-- 設計上の不採用案や、実装・開発環境・テストに関する正本ルールを確認するとき。
-- 具体的な個別仕様や開発規則へ進む前に、読むべき正本文書の領域を判断するとき。
+- cmoc の仕様または oracle 実装について、最初に読むべき下位領域を選ぶとき。
+- アプリケーション挙動、session・run の隔離、設計判断、Python 開発ルール、agent call、prompt、入力契約、設定・パスの複数領域を横断して調査するとき。
 
 ## Do not read this when
-- 実装コードやテストコードの具体的な挙動を確認する場合は、対応する realization file やテストを直接読むとき。
-- 個別仕様、開発環境、テスト要件など読む対象文書が特定できているとき。
-- INDEX.md の生成・更新規則だけを確認するとき。
+- 確認対象の個別仕様書、branch model、considered alternative、dev rule、または oracle 実装の下位領域が特定できているときは、その対象を直接読む。
+- 特定の CLI 入出力契約、prompt 構築規則、入力形式、feedback 契約、設定モデル、パス解決、構造化文書の実装だけを確認するとき。
 
 ## hash
-- 7faf82cdf740ab1812092f2f2599e9e47ca50e72f243cf1ac7f558781250bcb4
+- a9fd1ca6799ff1eb68dd51811bc1edce624396263d0784791f04a601658e2f0e
 
 # `pyproject.toml`
 

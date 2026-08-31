@@ -1,15 +1,15 @@
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` における git merge conflict marker 解消用のエージェント呼び出しパラメータを構築する。対象ファイルのパス、専用の conflict 解消ポリシー、リポジトリ書き込み権限、起動時の prompt を定義する。
+- session join の merge conflict marker 解消を行うエージェント呼び出しパラメータを構築する。対象パスの解決、専用ポリシーを含む prompt、書き込み権限、完了条件、起動設定をまとめる。
 
 ## Read this when
-- `session join` の conflict 解消処理で、エージェント呼び出しの prompt や起動パラメータを確認・変更するとき。
-- conflict 対象ファイルの渡し方、専用 policy の選択、preflight を行わない起動設定を確認するとき。
+- `cmoc session join` で指定されたファイルの merge conflict marker を解消するための prompt 文面やエージェント起動パラメータを確認・変更するとき。
+- conflict 解消対象パスの prompt への埋め込み方、conflict 解消専用の policy、preflight を行わない起動設定を確認するとき。
 
 ## Do not read this when
-- merge conflict 解消そのものの実装や marker 検出の挙動を確認したいとき。
-- 一般的な prompt 構築、パス解決、または他の session join 処理を直接確認する場合。
+- merge conflict marker の具体的な解消ロジックや対象ファイルの内容を確認したいときは、実際の conflict 対象ファイルを直接読む。
+- 通常の session join 動作、一般的な prompt 構築、または広い edit・refactor policy の定義だけを確認するとき。
 
 ## hash
-- 3f84977ff8ed2dbb6a3b6f3ad879a8ff87250576db2059d36087cfdd78ba3ee0
+- e34c50e655efc2b31b504a888b3a1bb5da5dd02de5bbeffc8ba9c27f82d87264
