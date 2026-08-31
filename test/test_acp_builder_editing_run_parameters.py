@@ -33,6 +33,13 @@ from acp.builder.realization.refactor.fork.file_review_and_fix import (
 from basic.acp import FileAccessMode
 
 
+def _objective_section(prompt: str) -> str:
+    """完全 prompt から caller 固有 objective block の本文を取り出す。"""
+    return prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+
+
 @pytest.fixture
 def editing_run_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """editing run builder が参照する linked worktree を test 内に隔離する。"""
@@ -84,6 +91,13 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     assert "base-commit" in parameter.prompt
     assert "fork-commit" in parameter.prompt
     assert "diff --git a/oracle/a.md b/oracle/a.md" in parameter.prompt
+    objective = _objective_section(parameter.prompt)
+    assert "# task" in objective
+    assert "oracle file の変更を、`{{work-root}}` リポジトリ全体" in objective
+    assert "# scope" in objective
+    assert "関連する oracle file と realization file をリポジトリ全体" in objective
+    assert "# completion criteria" in objective
+    assert "oracle file と realization file の間に齟齬がない" in objective
     for heading in ("# realization policy", "# realization findings policy"):
         assert heading in parameter.prompt
     assert "# oracle policy" not in parameter.prompt
@@ -143,7 +157,13 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert (
         "`evidences[].path` は変更 path の申告または照合に使用しない" in review.prompt
     )
-    assert "対象 repository が要求する必要な検証" in review.prompt
+    review_objective = _objective_section(review.prompt)
+    assert "# task" in review_objective
+    assert "# scope" in review_objective
+    assert "# completion criteria" in review_objective
+    assert "修正した file の再調査後に対応可能な所見を残していない" in (
+        review_objective
+    )
     assert "# realization oracle reference policy" not in review.prompt
     for heading in (
         "# oracle and realization basic",
@@ -170,6 +190,12 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in summary.prompt
     assert "# oracle and realization basic" in summary.prompt
     assert "# routing policy" in summary.prompt
+    summary_objective = _objective_section(summary.prompt)
+    assert "# task\n\n- 入力された run branch 上の refactor 差分" in (
+        summary_objective
+    )
+    for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
+        assert omitted_heading not in summary_objective
     summary_schema = json.loads(summary.structured_output_schema_path.read_text())
     assert summary_schema["properties"]["changes"]["minItems"] == 1
     start = summary.prompt.index("# run branch 上の refactor 差分")

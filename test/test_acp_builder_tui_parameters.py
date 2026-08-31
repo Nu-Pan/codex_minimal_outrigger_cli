@@ -58,6 +58,20 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
         "# realization oracle reference policy",
     ):
         assert heading not in complete_prompt
+    objective = complete_prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# task" in objective
+    assert "オリジナルプロンプト <cmoc_ref target=\"original_prompt\"/> が要求する作業" in (
+        objective
+    )
+    assert "# completion criteria" in objective
+    assert "要求する成果と完了条件を満たしている" in objective
+    assert "# scope" not in objective
+    assert "# non-goals" not in objective
+    assert complete_prompt.index('<cmoc_block id="objective">') < (
+        complete_prompt.index('<cmoc_block id="original_prompt">')
+    )
     assert original_prompt in complete_prompt
     if original_prompt == "{{original-prompt-here}}":
         assert complete_prompt.count(original_prompt) == 1

@@ -56,6 +56,12 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert parameter.agent_call_cwd == session_join_root.resolve()
     assert "conflict 対象ファイル" in parameter.prompt
     assert str(conflicted_path) in parameter.prompt
+    objective = parameter.prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# task" in objective
+    assert "# completion criteria" in objective
+    assert "conflict marker が残っていない" in objective
     assert parameter.run_indexing_preflight is False
     assert "# conflict resolution policy" in parameter.prompt
     assert "# routing policy" in parameter.prompt
@@ -78,9 +84,13 @@ def test_session_join_conflict_paths_protect_nested_code_fences(
     parameter = build_session_join_conflict_resolution_parameter([conflicted_path])
 
     start = parameter.prompt.index("# conflict 対象ファイル")
-    end = parameter.prompt.index("\n\n# additional file access policy", start)
+    end = parameter.prompt.index("\n\n# place holder definition", start)
     section = parameter.prompt[start:end]
     assert section.startswith("# conflict 対象ファイル\n\n````text\n")
     assert str(resolved_path) in section
     assert "conflict```" in section
     assert section.endswith("\n````")
+    assert parameter.prompt.index("# additional file access policy") < (
+        parameter.prompt.index('<cmoc_block id="objective">')
+    )
+    assert parameter.prompt.index('<cmoc_block id="objective">') < start

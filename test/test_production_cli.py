@@ -647,7 +647,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert "{{original-prompt-here}}" not in main_prompt
     reduction_prompt = Path(str(reduction_payload["prompt_log_path"])).read_text()
     assert EDITOR_PROMPT.strip() in reduction_prompt
-    assert "仕様削減の判断と参照の境界" in reduction_prompt
+    assert "# 仕様削減の判断条件" in reduction_prompt
     _state_path, oracle_edit_state_after = _load_session_state(root, session_branch)
     assert oracle_edit_state_after == oracle_edit_state_before
     assert oracle_edit_result.stdout.count("# 完了: cmoc oracle edit") == 1

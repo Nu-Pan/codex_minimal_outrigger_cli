@@ -135,21 +135,37 @@ def test_oracle_review_judge_finding_uses_oracle_read_contract() -> None:
 
 
 @pytest.mark.parametrize(
-    ("builder", "arguments"),
+    ("builder", "arguments", "expected_task", "expected_optional_headings"),
     [
         (
             build_oracle_review_enumerate_finding_parameter,
             (Path("{{work-root}}/oracle/spec.md"), "[]"),
+            "oracle file をレビューし、既知の関連所見と重複しない新規所見を列挙すること",
+            ("# scope",),
         ),
-        (build_oracle_review_merge_finding_parameter, ("[]",)),
-        (build_oracle_review_judge_finding_parameter, ("finding", "pro", "con")),
+        (
+            build_oracle_review_merge_finding_parameter,
+            ("[]",),
+            "`{{work-root}}/oracle` ツリー内の oracle file に対する所見リストを整理する編集操作を決定すること",
+            ("# completion criteria",),
+        ),
+        (
+            build_oracle_review_judge_finding_parameter,
+            ("finding", "pro", "con"),
+            "指定の所見を人間へ提示すべきか判定すること",
+            (),
+        ),
         (
             build_oracle_review_validate_finding_advocate_parameter,
             ("finding", "pro", "con"),
+            "対象所見が妥当である理由を調査すること",
+            (),
         ),
         (
             build_oracle_review_validate_finding_challenger_parameter,
             ("finding", "pro", "con"),
+            "対象所見が妥当ではない理由を調査すること",
+            (),
         ),
     ],
 )
@@ -157,8 +173,10 @@ def test_oracle_review_builders_select_required_policy_blocks(
     tmp_path: Path,
     builder: Callable[..., AgentCallParameter],
     arguments: tuple[object, ...],
+    expected_task: str,
+    expected_optional_headings: tuple[str, ...],
 ) -> None:
-    """review の全段階で oracle と所見判定の policy block を注入する。"""
+    """review の各段階で call 固有 objective と必要な policy を構築する。"""
     root = make_repo(tmp_path)
     parameter = builder(*arguments, agent_call_cwd=root)
     prompt = parameter.prompt
@@ -172,6 +190,15 @@ def test_oracle_review_builders_select_required_policy_blocks(
     assert "実装者裁量の範囲内で解決出来ない問題" in prompt
     assert "初歩的な言葉の問題" in prompt
     assert "所見に対して適用する基準は常に一貫していること" in prompt
+    objective = prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert f"# task\n\n- {expected_task}" in objective
+    for heading in ("# scope", "# completion criteria", "# non-goals"):
+        assert (heading in objective) is (heading in expected_optional_headings)
+    assert "# summary" not in objective
+    assert "# goal" not in objective
+    assert "指定された Structured Output schema に従" not in objective
 
 
 def test_oracle_review_enumerate_finding_schema_matches_oracle_source() -> None:

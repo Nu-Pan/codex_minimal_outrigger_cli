@@ -321,7 +321,21 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         == 1
     )
     assert "# file R/W policy (pure_oracle_write)" in complete_prompt_skeleton
-    assert "oracle file だけを編集し" in complete_prompt_skeleton
+    skeleton_objective = complete_prompt_skeleton.split(
+        '<cmoc_block id="objective">', 1
+    )[1].split("</cmoc_block>", 1)[0]
+    assert "# task" in skeleton_objective
+    assert "要求する最終状態を `{{work-root}}/oracle` ツリー内" in (
+        skeleton_objective
+    )
+    assert "# completion criteria" in skeleton_objective
+    assert "# scope" not in skeleton_objective
+    assert "# non-goals" not in skeleton_objective
+    assert "# 変更操作の制約" in complete_prompt_skeleton
+    assert "`git add`、`git commit`、`git stash`、branch 切替" in (
+        complete_prompt_skeleton
+    )
+    assert "変更を未コミットのまま残す" in complete_prompt_skeleton
     expected_events = [
         "doctor",
         "build-main-skeleton",
@@ -350,9 +364,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert "# oracle policy" in complete_prompt
     assert "# routing policy" in complete_prompt
-    assert "realization file、`INDEX.md`、`AGENTS.md` を編集していない" in (
-        complete_prompt
-    )
+    main_objective = complete_prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# task" in main_objective
+    assert "# completion criteria" in main_objective
+    assert "# 変更操作の制約" in complete_prompt
 
     if failure_stage == "main":
         assert built_reduction_parameters == []
@@ -366,8 +383,25 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         assert reduction_kwargs["config"] is main_kwargs["config"]
         assert reduction_kwargs["purpose"] == "oracle edit reduction"
         assert "oracle spec を更新する" in reduction_parameter.prompt
-        assert "仕様削減の判断と参照の境界" in reduction_parameter.prompt
-        assert "本命 agent call の prompt" in reduction_parameter.prompt
+        assert "# 変更操作の制約" in reduction_parameter.prompt
+        assert "変更を未コミットのまま残す" in reduction_parameter.prompt
+        assert "# 仕様削減の判断条件" in reduction_parameter.prompt
+        reduction_objective = reduction_parameter.prompt.split(
+            '<cmoc_block id="objective">', 1
+        )[1].split("</cmoc_block>", 1)[0]
+        assert "# task" in reduction_objective
+        assert "# scope" in reduction_objective
+        assert "# completion criteria" in reduction_objective
+        assert "# non-goals" in reduction_objective
+        assert "本命 agent call の prompt" in reduction_objective
+        assert reduction_parameter.prompt.index("# 仕様削減の判断条件") < (
+            reduction_parameter.prompt.index('<cmoc_block id="objective">')
+        )
+        assert reduction_parameter.prompt.index('<cmoc_block id="objective">') < (
+            reduction_parameter.prompt.index(
+                '<cmoc_block id="original_user_instruction">'
+            )
+        )
         assert "# oracle policy" in reduction_parameter.prompt
         assert "# routing policy" in reduction_parameter.prompt
 

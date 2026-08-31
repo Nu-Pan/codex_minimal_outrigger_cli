@@ -141,18 +141,17 @@
 # `test`
 
 ## Summary
-- cmoc の各機能について、CLI・runtime・builder・worktree・state・report・通知などの外部挙動と回帰条件を検証するテスト群。
-- 個別機能の実装変更時に、対応する統合テスト・runtime テスト・実経路テストへ進むための入口。
+- cmoc の実装・CLI・Codex 実行・oracle/realization lifecycle・設定・Git・prompt・通知などを、単体テスト、統合テスト、実経路テストで検証するテスト群への入口。
+- 各テストは個別機能の外部挙動、実装境界、正本仕様との適合、異常系や安全性の回帰条件を担当する。
 
 ## Read this when
-- cmoc の既存挙動や回帰条件をテストコードから確認したいとき
-- CLI、Codex 実行、indexing、oracle review、realization、session、feedback、state、worktree などの機能を変更・調査するとき
-- 本番経路や独立 process、PTY、Git 状態など、外部から観測できる統合挙動を確認するとき
+- cmoc の特定機能を変更・調査し、その外部契約や回帰テストの対象範囲を把握したいとき。
+- CLI lifecycle、Codex runtime、indexing、session、oracle review/edit/investigation、realization、feedback、設定、Git、prompt、TUI、通知などの検証入口を探すとき。
+- 実経路・subprocess・PTY・worktree・永続 state・report まで含む統合挙動を確認したいとき。
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認することが目的で、対応する oracle 文書または実装を直接読むべきとき
-- テスト対象と無関係な機能を調査するとき
-- 一般的な pytest 実行方法や Python 環境だけを確認したいとき
+- 正本仕様や実装の定義そのものを確認することが目的で、対応する oracle 文書または実装を直接読むべきとき。
+- テスト対象に含まれない機能の詳細、一般的なテスト実行手順、または単一の実装内部アルゴリズムだけを調べるとき。
 
 ## hash
-- 9006dcab5aed66846b9518884ae1546f45587f4d3b26648a5bee58a6397ae88b
+- 88026f3f2465bede4675627993d82d9e8a881b699279e2495a248da7b61a1207
