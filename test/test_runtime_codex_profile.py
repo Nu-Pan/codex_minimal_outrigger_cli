@@ -7,6 +7,8 @@
 """
 
 import hashlib
+import shlex
+import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -16,6 +18,7 @@ import pytest
 from _codex_support import codex_arg_value, codex_override_config, codex_parameter
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
+import commons.runtime_codex_profile as runtime_codex_profile
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import (
@@ -70,6 +73,7 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert "model_providers" not in parsed
     assert parsed["notify"] == []
     assert parsed["tui"] == {"notifications": False}
+    assert "hooks" not in parsed
     assert parsed["mcp_servers"] == {
         "cmoc_feedback": {
             "command": sys.executable,
@@ -200,23 +204,148 @@ def test_prepare_codex_overrides_matches_builder_defaults() -> None:
     )
 
 
-def test_codex_overrides_encode_tui_notification_command_as_toml_data() -> None:
-    """TUI callback argv を shell 文字列へ変換せず notification 設定へ渡す。"""
-    command = [
+def test_codex_overrides_pair_root_capture_with_legacy_notification() -> None:
+    """root SessionStart 記録と最終 legacy callback を対で設定する。"""
+    notification_command = [
+        "/notify python",
+        "/callback.py",
+        "codex-tui-callback",
+        "/state",
+        "repository '; Write-Error injected",
+    ]
+    session_start_command = [
         "/python with space",
         "/callback.py",
-        "repository '; Write-Error injected",
+        "codex-tui-session-start-hook",
+        "/state",
     ]
 
     args = build_codex_override_args(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
         CmocConfig(),
-        notification_command=command,
+        notification_command=notification_command,
+        session_start_command=session_start_command,
     )
 
     parsed = codex_override_config(args)
-    assert parsed["notify"] == command
+    assert parsed["notify"] == notification_command
     assert parsed["tui"] == {"notifications": False}
+    assert "features" not in parsed
+    hook_command = shlex.join(session_start_command)
+    hooks = parsed["hooks"]
+    assert isinstance(hooks, dict)
+    assert hooks["SessionStart"] == [
+        {
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": hook_command,
+                    "timeout": 10,
+                    "async": False,
+                }
+            ]
+        }
+    ]
+    assert "Stop" not in hooks
+    assert "SubagentStart" not in hooks
+    assert "SubagentStop" not in hooks
+    assert hooks["state"] == {
+        "/<session-flags>/config.toml:session_start:0:0": {
+            "enabled": True,
+            "trusted_hash": (
+                runtime_codex_profile._codex_session_start_hook_trusted_hash(
+                    hook_command
+                )
+            ),
+        }
+    }
+    assert "--dangerously-bypass-hook-trust" not in args
+    assert (
+        runtime_codex_profile._codex_session_start_hook_trusted_hash("echo hello")
+        == "sha256:863a01826297cdbe63da6b232502523983ae7bb9376872bf40eae001e6e226d4"
+    )
+
+
+def test_codex_overrides_disable_unpaired_notification_callback() -> None:
+    """root capture が欠ける場合は legacy callback を有効にしない。"""
+    args = build_codex_override_args(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        CmocConfig(),
+        notification_command=["/callback.py"],
+    )
+
+    parsed = codex_override_config(args)
+    assert parsed["notify"] == []
+    assert "hooks" not in parsed
+
+
+@pytest.mark.parametrize(
+    ("version_output", "returncode", "expected"),
+    [
+        (b"codex-cli 0.151.0\n", 0, True),
+        (b"codex-cli 0.152.0\n", 0, False),
+        (b"codex-cli 0.151.0\n", 1, False),
+    ],
+)
+def test_tui_notification_requires_exact_verified_codex_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    version_output: bytes,
+    returncode: int,
+    expected: bool,
+) -> None:
+    """未検証版では無絞り込み callback へ戻さず fail-closed にする。"""
+    calls: list[tuple[list[str], dict[str, object]]] = []
+
+    def fake_run(
+        args: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[bytes]:
+        """version probe の有限・非対話 subprocess 境界を記録する。"""
+        calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args, returncode, stdout=version_output)
+
+    monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fake_run)
+    environment = {"PATH": "/test/bin"}
+
+    assert (
+        runtime_codex_profile.codex_cli_supports_tui_notification_hooks(
+            tmp_path,
+            environment,
+        )
+        is expected
+    )
+    assert calls == [
+        (
+            ["codex", "--version"],
+            {
+                "cwd": tmp_path,
+                "env": environment,
+                "stdin": subprocess.DEVNULL,
+                "stdout": subprocess.PIPE,
+                "stderr": subprocess.DEVNULL,
+                "timeout": 2.0,
+                "check": False,
+            },
+        )
+    ]
+
+
+def test_tui_notification_version_probe_failure_is_nonfatal(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """version probe の起動失敗や timeout は callback 無効化だけに閉じる。"""
+
+    def fail_run(*_args: object, **_kwargs: object) -> object:
+        """有限時間を超えた version probe を再現する。"""
+        raise subprocess.TimeoutExpired(["codex", "--version"], 2)
+
+    monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fail_run)
+
+    assert not runtime_codex_profile.codex_cli_supports_tui_notification_hooks(
+        tmp_path,
+        {"PATH": "/test/bin"},
+    )
 
 
 def test_codex_overrides_encode_selected_generic_provider() -> None:

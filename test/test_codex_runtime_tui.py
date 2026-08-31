@@ -1,4 +1,5 @@
 import json
+import shlex
 import subprocess
 import sys
 from collections.abc import Callable
@@ -55,6 +56,9 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
         bin_dir / "codex",
         [
             "import json, os, pathlib, sys",
+            "if sys.argv[1:] == ['--version']:",
+            "    print('codex-cli 0.151.0')",
+            "    raise SystemExit(0)",
             "args = sys.argv[1:]",
             "prompt = args[-1]",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
@@ -100,12 +104,68 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     assert Path(notification_command[1]).name == "runtime_windows_toast.py"
     assert notification_command[2] == "codex-tui-callback"
     callback_state_root = Path(notification_command[3])
-    assert not callback_state_root.exists()
     assert notification_command[4:] == ["codex tui", root.name]
+    assert "features" not in override_config
+    hooks = override_config["hooks"]
+    assert isinstance(hooks, dict)
+    assert "Stop" not in hooks
+    assert "SubagentStart" not in hooks
+    assert "SubagentStop" not in hooks
+    [session_group] = hooks["SessionStart"]
+    [session_handler] = session_group["hooks"]
+    assert session_handler["type"] == "command"
+    assert session_handler["timeout"] == 10
+    assert session_handler["async"] is False
+    session_start_command = shlex.split(session_handler["command"])
+    assert session_start_command[0] == sys.executable
+    assert Path(session_start_command[1]).name == "runtime_windows_toast.py"
+    assert session_start_command[2] == "codex-tui-session-start-hook"
+    assert Path(session_start_command[3]) == callback_state_root
+    assert not callback_state_root.exists()
+    hook_state = hooks["state"]
+    assert list(hook_state) == ["/<session-flags>/config.toml:session_start:0:0"]
+    state = hook_state["/<session-flags>/config.toml:session_start:0:0"]
+    assert state["enabled"] is True
+    assert state["trusted_hash"].startswith("sha256:")
+    assert len(state["trusted_hash"]) == 71
     assert override_config["tui"] == {"notifications": False}
     assert "complete prompt" not in "\n".join(notification_command)
+    assert "complete prompt" not in "\n".join(session_start_command)
     assert "permissions" not in override_config
     assert "--output-schema" not in record["args"]
+
+
+def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """未検証 Codex では root filter なしの legacy callback を渡さない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "if sys.argv[1:] == ['--version']:",
+            "    print('codex-cli 0.152.0')",
+            "    raise SystemExit(0)",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps(sys.argv[1:]))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_tui(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
+        root=root,
+        config=CmocConfig(),
+    )
+
+    override_config = codex_override_config(json.loads(recorder.read_text()))
+    assert override_config["notify"] == []
+    assert "hooks" not in override_config
 
 
 def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(

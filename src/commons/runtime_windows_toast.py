@@ -65,6 +65,7 @@ class TuiNotificationCallback:
     """1 回の Codex TUI process に閉じた callback と重複排除領域。"""
 
     command: list[str]
+    session_start_command: list[str]
     _state_directory: TemporaryDirectory[str]
 
     def close(self) -> None:
@@ -80,7 +81,7 @@ def create_tui_notification_callback(
     command_name: str,
     repository_root: Path,
 ) -> TuiNotificationCallback | None:
-    """Codex が turn 完了時に起動する invocation-local callback を作る。"""
+    """root session を記録して turn 完了を絞り込む callback 群を作る。"""
     if not sys.executable:
         return None
 
@@ -89,15 +90,22 @@ def create_tui_notification_callback(
         state_directory = TemporaryDirectory(prefix="cmoc-toast-")
     except OSError:
         return None
+    script = str(Path(__file__).resolve())
+    session_start_command = [
+        sys.executable,
+        script,
+        "codex-tui-session-start-hook",
+        state_directory.name,
+    ]
     command = [
         sys.executable,
-        str(Path(__file__).resolve()),
+        script,
         "codex-tui-callback",
         state_directory.name,
         _short_text(command_name, "command"),
         repository_label(repository_root),
     ]
-    return TuiNotificationCallback(command, state_directory)
+    return TuiNotificationCallback(command, session_start_command, state_directory)
 
 
 def repository_label(repository_root: Path) -> str:
@@ -172,20 +180,77 @@ def _run_windows_toast_transport(title: str, message: str) -> bool:
     return result.returncode == 0
 
 
-def _claim_turn(state_root: Path, thread_id: str, turn_id: str) -> bool:
-    """TUI invocation 内で同じ turn を最初に受け取った callback だけを選ぶ。"""
-    if not thread_id or not turn_id or len(thread_id) > 512 or len(turn_id) > 512:
-        return False
+def _resolved_state_root(state_root: Path) -> Path | None:
+    """invocation-local state の既存通常 directory だけを解決する。"""
     try:
         resolved_root = state_root.resolve(strict=True)
     except OSError:
+        return None
+    return resolved_root if resolved_root.is_dir() else None
+
+
+def _valid_identity(value: str) -> bool:
+    """callback state の識別子として有限な非空文字列か判定する。"""
+    return bool(value) and len(value) <= 512
+
+
+def _record_root_session(state_root: Path, session_id: str) -> bool:
+    """root SessionStart が渡した session ID の marker を invocation 内へ記録する。"""
+    if not _valid_identity(session_id):
         return False
-    if not resolved_root.is_dir():
+    resolved_root = _resolved_state_root(state_root)
+    if resolved_root is None:
+        return False
+    digest = hashlib.sha256(session_id.encode("utf-8", errors="strict")).hexdigest()
+    marker = resolved_root / f"root-{digest}.session"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(marker, flags, 0o600)
+    except OSError:
+        return False
+    try:
+        os.close(descriptor)
+    except OSError:
+        return False
+    return True
+
+
+def _is_recorded_root_session(state_root: Path, session_id: str) -> bool:
+    """legacy callback の session が記録済み root と一致するか判定する。"""
+    if not _valid_identity(session_id):
+        return False
+    resolved_root = _resolved_state_root(state_root)
+    if resolved_root is None:
+        return False
+    digest = hashlib.sha256(session_id.encode("utf-8", errors="strict")).hexdigest()
+    marker = resolved_root / f"root-{digest}.session"
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(marker, flags)
+    except OSError:
+        return False
+    try:
+        os.close(descriptor)
+    except OSError:
+        return False
+    return True
+
+
+def _claim_turn(state_root: Path, session_id: str, turn_id: str) -> bool:
+    """TUI invocation 内で同じ turn を最初に受け取った callback だけを選ぶ。"""
+    if not _valid_identity(session_id) or not _valid_identity(turn_id):
+        return False
+    resolved_root = _resolved_state_root(state_root)
+    if resolved_root is None:
         return False
 
     # hash 固定名と O_EXCL により、並行 callback 間でも一度だけ所有権を得る。
     digest = hashlib.sha256(
-        f"{thread_id}\0{turn_id}".encode("utf-8", errors="strict")
+        f"{session_id}\0{turn_id}".encode("utf-8", errors="strict")
     ).hexdigest()
     marker = resolved_root / f"{digest}.seen"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
@@ -204,8 +269,30 @@ def _claim_turn(state_root: Path, thread_id: str, turn_id: str) -> bool:
     return True
 
 
+def _run_codex_tui_session_start_hook(
+    arguments: Sequence[str],
+    payload: object,
+) -> int:
+    """Codex の root SessionStart payload から session ID だけを記録する。"""
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/schema.rs#L496-L542
+    if len(arguments) != 2 or arguments[0] != "codex-tui-session-start-hook":
+        return 0
+    state_root = Path(arguments[1])
+    if (
+        not isinstance(payload, dict)
+        or payload.get("hook_event_name") != "SessionStart"
+    ):
+        return 0
+    session_id = payload.get("session_id")
+    if isinstance(session_id, str):
+        _record_root_session(state_root, session_id)
+    return 0
+
+
 def _run_codex_tui_callback(arguments: Sequence[str]) -> int:
-    """Codex の JSON callback から turn identity だけを受理する。"""
+    """最終 turn callback のうち記録済み root session だけを受理する。"""
+    # legacy callback は Stop continuation が終わった後にだけ起動される。
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/core/src/session/turn.rs#L503-L562
     if len(arguments) != 5 or arguments[0] != "codex-tui-callback":
         return 0
     state_root = Path(arguments[1])
@@ -217,11 +304,14 @@ def _run_codex_tui_callback(arguments: Sequence[str]) -> int:
         return 0
     if not isinstance(payload, dict) or payload.get("type") != "agent-turn-complete":
         return 0
-    thread_id = payload.get("thread-id")
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/legacy_notify.rs#L13-L72
+    session_id = payload.get("thread-id")
     turn_id = payload.get("turn-id")
-    if not isinstance(thread_id, str) or not isinstance(turn_id, str):
+    if not isinstance(session_id, str) or not isinstance(turn_id, str):
         return 0
-    if not _claim_turn(state_root, thread_id, turn_id):
+    if not _is_recorded_root_session(state_root, session_id):
+        return 0
+    if not _claim_turn(state_root, session_id, turn_id):
         return 0
 
     # callback payload の prompt/assistant 本文は通知内容へ渡さない。
@@ -230,11 +320,18 @@ def _run_codex_tui_callback(arguments: Sequence[str]) -> int:
 
 
 def main(arguments: Sequence[str] | None = None) -> int:
-    """Codex external notification callback の常に非致命的な入口。"""
+    """Codex TUI notification callback 群の常に非致命的な入口。"""
     try:
-        return _run_codex_tui_callback(
-            list(sys.argv[1:] if arguments is None else arguments)
-        )
+        resolved_arguments = list(sys.argv[1:] if arguments is None else arguments)
+        if (
+            len(resolved_arguments) == 2
+            and resolved_arguments[0] == "codex-tui-session-start-hook"
+        ):
+            return _run_codex_tui_session_start_hook(
+                resolved_arguments,
+                json.load(sys.stdin),
+            )
+        return _run_codex_tui_callback(resolved_arguments)
     except BaseException:
         return 0
 

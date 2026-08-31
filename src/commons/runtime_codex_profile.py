@@ -11,15 +11,17 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 
 import errno
 import fcntl
+import hashlib
 import json
 import os
 import re
 import select
+import shlex
 import signal
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from types import FrameType
@@ -41,6 +43,10 @@ from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
+_CODEX_TUI_NOTIFICATION_SUPPORTED_VERSION = b"codex-cli 0.151.0"
+_CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
+_TUI_SESSION_START_HOOK_KEY = "/<session-flags>/config.toml:session_start:0:0"
+_TUI_SESSION_START_HOOK_TIMEOUT_SEC = 10
 
 
 def _first_symlink_component(path: Path) -> Path | None:
@@ -485,6 +491,86 @@ def _config_override(key: str, toml_value: str) -> list[str]:
     return ["--config", f"{key}={toml_value}"]
 
 
+def codex_cli_supports_tui_notification_hooks(
+    cwd: Path,
+    environment: Mapping[str, str],
+) -> bool:
+    """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
+    try:
+        result = subprocess.run(
+            ["codex", "--version"],
+            cwd=cwd,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=_CODEX_VERSION_PROBE_TIMEOUT_SEC,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return (
+        result.returncode == 0
+        and result.stdout.strip() == _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSION
+    )
+
+
+def _codex_session_start_hook_trusted_hash(command: str) -> str:
+    """Codex 0.151.0 の SessionStart command identity を fingerprint 化する。"""
+    # Codex 0.151.0 / 78c290807ce710180111df227df3b7a4fe845452 の
+    # hook discovery と canonical JSON fingerprint に合わせる。interface が変わる
+    # version は呼び出し側の probe で無効化し、legacy notify へは戻さない。
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/engine/discovery.rs#L633-L778
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/config/src/fingerprint.rs#L47-L75
+    identity = {
+        "event_name": "session_start",
+        "hooks": [
+            {
+                "type": "command",
+                "command": command,
+                "timeout": _TUI_SESSION_START_HOOK_TIMEOUT_SEC,
+                "async": False,
+            }
+        ],
+    }
+    serialized = json.dumps(
+        identity,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(serialized).hexdigest()}"
+
+
+def _tui_session_start_hook_override_args(
+    session_start_command: Sequence[str] | None,
+) -> list[str]:
+    """root session ID を記録する invocation-local hook 設定を返す。"""
+    if not session_start_command:
+        return []
+    command = shlex.join(session_start_command)
+    # root は SessionStart、thread-spawned child は SubagentStart に分離される。
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/core/src/hook_runtime.rs#L109-L160
+    handler: dict[str, JsonTomlValue] = {
+        "type": "command",
+        "command": command,
+        "timeout": _TUI_SESSION_START_HOOK_TIMEOUT_SEC,
+        "async": False,
+    }
+    hooks: dict[str, JsonTomlValue] = {
+        "SessionStart": [{"hooks": [handler]}],
+        "state": {
+            _TUI_SESSION_START_HOOK_KEY: {
+                "enabled": True,
+                "trusted_hash": _codex_session_start_hook_trusted_hash(command),
+            }
+        },
+    }
+    # hooks feature は対象版の stable default に任せる。user/managed policy で無効なら
+    # callback なしへ fail-closed にし、TUI 本体の config load failure を起こさない。
+    return _config_override("hooks", _toml_value(hooks))
+
+
 def _model_provider_override_args(
     provider_id: str,
     config: CmocConfig,
@@ -626,6 +712,7 @@ def build_codex_override_args(
     config: CmocConfig,
     *,
     notification_command: Sequence[str] | None = None,
+    session_start_command: Sequence[str] | None = None,
 ) -> list[str]:
     """agent call の直接設定を sandbox と config argv にする。"""
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
@@ -639,8 +726,10 @@ def build_codex_override_args(
             ],
             f"agent call kind: {parameter.agent_call_kind!r}",
         ) from exc
+    callback_enabled = bool(notification_command and session_start_command)
     notification_argv: list[JsonTomlValue] = []
-    notification_argv.extend(notification_command or ())
+    if callback_enabled:
+        notification_argv.extend(notification_command or ())
     args = [
         "--ask-for-approval",
         "on-request",
@@ -653,9 +742,12 @@ def build_codex_override_args(
             "model_reasoning_effort", _toml_string(call_config.reasoning_effort)
         ),
         # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-        # user config の callback と組み込み TUI 通知を呼び出し単位で上書きする。
+        # legacy callback は root SessionStart が記録した session ID で絞り込む。
         *_config_override("notify", _toml_value(notification_argv)),
         *_config_override("tui.notifications", "false"),
+        *_tui_session_start_hook_override_args(
+            session_start_command if callback_enabled else None
+        ),
         *_feedback_mcp_override_args(),
         *(
             _editor_input_handoff_mcp_override_args()
@@ -703,6 +795,7 @@ def prepare_codex_override_args(
     config: CmocConfig | None = None,
     *,
     notification_command: Sequence[str] | None = None,
+    session_start_command: Sequence[str] | None = None,
 ) -> list[str]:
     """CmocConfig と任意の invocation-local callback から Codex argv を返す。"""
     resolved_config = config or CmocConfig()
@@ -710,6 +803,7 @@ def prepare_codex_override_args(
         parameter,
         resolved_config,
         notification_command=notification_command,
+        session_start_command=session_start_command,
     )
 
 

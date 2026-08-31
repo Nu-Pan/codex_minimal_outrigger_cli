@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
+from _command_support import write_python_executable
 
 import commons.runtime_windows_toast as runtime_windows_toast
 
@@ -123,11 +124,11 @@ def test_notification_failure_does_not_escape(
     assert calls == [("cmoc doctor", f"{tmp_path.name} — エラー終了")]
 
 
-def test_codex_callback_deduplicates_each_turn_and_ignores_message_text(
+def test_codex_callback_notifies_only_recorded_root_turn_once(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """同じ turn は一度だけ通知し、callback 本文を通知へ渡さない。"""
+    """記録済み root の turn だけを一度通知し、本文を通知へ渡さない。"""
     state_root = tmp_path / "callback-state"
     state_root.mkdir()
     calls: list[tuple[str, str]] = []
@@ -136,10 +137,21 @@ def test_codex_callback_deduplicates_each_turn_and_ignores_message_text(
         "_run_windows_toast_transport",
         lambda title, message: calls.append((title, message)) or True,
     )
+    session_arguments = ["codex-tui-session-start-hook", str(state_root)]
+    assert (
+        runtime_windows_toast._run_codex_tui_session_start_hook(
+            session_arguments,
+            {
+                "hook_event_name": "SessionStart",
+                "session_id": "root-session",
+            },
+        )
+        == 0
+    )
     payload = json.dumps(
         {
             "type": "agent-turn-complete",
-            "thread-id": "thread-1",
+            "thread-id": "root-session",
             "turn-id": "turn-1",
             "input-messages": ["prompt secret"],
             "last-assistant-message": "assistant secret",
@@ -153,20 +165,70 @@ def test_codex_callback_deduplicates_each_turn_and_ignores_message_text(
         payload,
     ]
 
+    child_payload = json.loads(payload)
+    child_payload["thread-id"] = "child-session"
+    child_arguments = [*arguments[:4], json.dumps(child_payload)]
+    assert runtime_windows_toast._run_codex_tui_callback(child_arguments) == 0
+    assert calls == []
+
     with ThreadPoolExecutor(max_workers=8) as executor:
-        results = list(executor.map(runtime_windows_toast.main, [arguments] * 8))
+        futures = [
+            executor.submit(
+                runtime_windows_toast._run_codex_tui_callback,
+                arguments,
+            )
+            for _ in range(8)
+        ]
+        results = [future.result() for future in futures]
 
     assert results == [0] * 8
     assert calls == [("cmoc oracle investigation", "repository — 入力待ち")]
     assert "prompt secret" not in repr(calls)
     assert "assistant secret" not in repr(calls)
 
+    assert (
+        runtime_windows_toast._run_codex_tui_session_start_hook(
+            session_arguments,
+            {
+                "hook_event_name": "SubagentStart",
+                "session_id": "child-session",
+            },
+        )
+        == 0
+    )
+    assert len(calls) == 1
+
     next_payload = json.loads(payload)
     next_payload["turn-id"] = "turn-2"
-    arguments[-1] = json.dumps(next_payload)
-    assert runtime_windows_toast.main(arguments) == 0
+    assert (
+        runtime_windows_toast._run_codex_tui_callback(
+            [*arguments[:4], json.dumps(next_payload)]
+        )
+        == 0
+    )
     assert calls[-1] == ("cmoc oracle investigation", "repository — 入力待ち")
     assert len(calls) == 2
+
+    # `/new` で同じ TUI process に増えた root session も記録対象にする。
+    assert (
+        runtime_windows_toast._run_codex_tui_session_start_hook(
+            session_arguments,
+            {
+                "hook_event_name": "SessionStart",
+                "session_id": "new-root-session",
+            },
+        )
+        == 0
+    )
+    new_root_payload = json.loads(payload)
+    new_root_payload["thread-id"] = "new-root-session"
+    assert (
+        runtime_windows_toast._run_codex_tui_callback(
+            [*arguments[:4], json.dumps(new_root_payload)]
+        )
+        == 0
+    )
+    assert len(calls) == 3
 
 
 def test_tui_callback_state_is_invocation_local(tmp_path: Path) -> None:
@@ -183,33 +245,69 @@ def test_tui_callback_state_is_invocation_local(tmp_path: Path) -> None:
     state_root = Path(callback.command[3])
     assert state_root.is_dir()
     assert callback.command[4:] == ["tui", "repository"]
+    assert callback.session_start_command == [
+        sys.executable,
+        str(Path(runtime_windows_toast.__file__).resolve()),
+        "codex-tui-session-start-hook",
+        str(state_root),
+    ]
 
     callback.close()
 
     assert not state_root.exists()
 
 
-def test_tui_callback_command_runs_as_standalone_script(tmp_path: Path) -> None:
-    """Codex が起動する実 argv で callback を実行し、一時 state だけを残す。"""
+def test_tui_callback_commands_run_as_standalone_scripts(
+    tmp_path: Path,
+) -> None:
+    """SessionStart stdin と legacy callback argv を standalone 実行する。"""
     callback = runtime_windows_toast.create_tui_notification_callback(
         "oracle investigation",
         tmp_path / "repository",
     )
     assert callback is not None
-    payload = json.dumps(
+    session_payload = json.dumps(
+        {
+            "hook_event_name": "SessionStart",
+            "session_id": "root-session",
+        }
+    )
+    turn_payload = json.dumps(
         {
             "type": "agent-turn-complete",
-            "thread-id": "thread-1",
+            "thread-id": "root-session",
             "turn-id": "turn-1",
         }
     )
     state_root = Path(callback.command[3])
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "powershell.exe",
+        ["import sys", "sys.stdin.buffer.read()"],
+    )
+    environment = {
+        **os.environ,
+        "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+    }
 
     try:
+        result = subprocess.run(
+            callback.session_start_command,
+            input=session_payload,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
         for _ in range(2):
             result = subprocess.run(
-                [*callback.command, payload],
-                env=os.environ,
+                [*callback.command, turn_payload],
+                env=environment,
                 text=True,
                 capture_output=True,
                 timeout=10,
@@ -219,5 +317,32 @@ def test_tui_callback_command_runs_as_standalone_script(tmp_path: Path) -> None:
             assert result.stdout == ""
             assert result.stderr == ""
         assert len(list(state_root.glob("*.seen"))) == 1
+        assert len(list(state_root.glob("root-*.session"))) == 1
+    finally:
+        callback.close()
+
+
+def test_tui_session_start_hook_malformed_json_is_nonfatal(tmp_path: Path) -> None:
+    """壊れた JSON stdin では記録せず、standalone hook を正常終了する。"""
+    callback = runtime_windows_toast.create_tui_notification_callback(
+        "tui",
+        tmp_path / "repository",
+    )
+    assert callback is not None
+    state_root = Path(callback.session_start_command[3])
+    try:
+        result = subprocess.run(
+            callback.session_start_command,
+            input="{",
+            env=os.environ,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
+        assert list(state_root.iterdir()) == []
     finally:
         callback.close()

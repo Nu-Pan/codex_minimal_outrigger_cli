@@ -10,6 +10,7 @@ from config.cmoc_config import CmocConfig
 from .runtime_cli import mark_current_tui_process_started
 from .runtime_codex_logging import format_codex_call_error
 from .runtime_codex_profile import (
+    codex_cli_supports_tui_notification_hooks,
     codex_subprocess_env,
     prepare_codex_override_args,
     resolve_codex_home,
@@ -53,11 +54,19 @@ def run_codex_tui(
     # validation を合わせる。
     codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
+    codex_environment = codex_subprocess_env(codex_home)
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     # callback state はこの TUI process invocation の期間だけ保持する。
-    notification_callback = create_tui_notification_callback(
-        notification_command_name or purpose,
-        root,
+    notification_callback = (
+        create_tui_notification_callback(
+            notification_command_name or purpose,
+            root,
+        )
+        if codex_cli_supports_tui_notification_hooks(
+            agent_call_cwd,
+            codex_environment,
+        )
+        else None
     )
     try:
         return _run_codex_tui_process(
@@ -68,9 +77,15 @@ def run_codex_tui(
             agent_call_cwd=agent_call_cwd,
             repository=path_context.repo_root,
             codex_home=codex_home,
+            codex_environment=codex_environment,
             log_dir=log_dir,
             notification_command=(
                 notification_callback.command
+                if notification_callback is not None
+                else None
+            ),
+            session_start_command=(
+                notification_callback.session_start_command
                 if notification_callback is not None
                 else None
             ),
@@ -89,15 +104,18 @@ def _run_codex_tui_process(
     agent_call_cwd: Path,
     repository: Path,
     codex_home: Path,
+    codex_environment: dict[str, str],
     log_dir: Path,
     notification_command: list[str] | None,
+    session_start_command: list[str] | None,
 ) -> CommandResult:
-    """invocation-local callback を設定した 1 つの Codex TUI process を実行する。"""
-    # user config の notify を無効化し、利用可能な場合だけ cmoc callback へ置換する。
+    """root session filter を設定した 1 つの Codex TUI process を実行する。"""
+    # 検証済みの場合だけ root session capture と legacy callback を対で設定する。
     override_args = prepare_codex_override_args(
         parameter,
         config,
         notification_command=notification_command,
+        session_start_command=session_start_command,
     )
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
     argv = [
@@ -144,7 +162,7 @@ def _run_codex_tui_process(
         log_paths=[call_path],
     )
     try:
-        environment = codex_subprocess_env(codex_home)
+        environment = dict(codex_environment)
         if parameter.enable_editor_input_handoff_mcp:
             environment = editor_input_handoff_subprocess_env(
                 environment,

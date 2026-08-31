@@ -91,4 +91,9 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
     monkeypatch.setattr(exec_module, "prepare_codex_override_args", fake_prepare)
     monkeypatch.setattr(tui_module, "prepare_codex_override_args", fake_prepare)
+    monkeypatch.setattr(
+        tui_module,
+        "codex_cli_supports_tui_notification_hooks",
+        lambda *_args: False,
+    )
     return override_args
