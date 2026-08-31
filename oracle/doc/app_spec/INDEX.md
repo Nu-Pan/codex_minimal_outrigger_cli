@@ -18,21 +18,23 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc から Codex CLI を呼び出す際の agent call と Codex call の規約、path context、環境変数、preflight、argv 設定上書き、sandbox・ファイルアクセス、provider/model、prompt、feedback、Structured Output、並列実行、失敗時処理を定める実行規則。
-- Codex CLI 呼び出しの起動方法、ログ・session ID・schema の保存と検証、および quota・一時障害・想定外エラーへの扱いを確認するための app_spec の入口。
+- codex exec を用いた agent call の実行規約を定義し、path context、環境変数、preflight、argv 上書き、sandbox・詳細アクセス制限、provider/model、prompt、feedback、Structured Output、並列化、失敗時処理、ログ保存を扱う。
+- Codex CLI 呼び出し仕様の実装・変更・レビューにおける、各 oracle doc と oracle src への委譲境界を示す上位の入口である。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し方法、agent call の cwd や root 導出、環境変数、sandbox、詳細なファイルアクセス制限を変更・実装・レビューするとき。
-- model provider、model、reasoning effort、prompt の stdin 渡し、feedback reporter、editor input handoff、Structured Output、補正 turn、ログ保存、retry・quota 待機の挙動を確認するとき。
-- Codex exec の並列化や失敗処理が他の正本仕様と整合しているかを判断するとき。
+- codex exec の起動引数、sandbox、承認設定、provider/model/reasoning effort、CODEX_HOME の扱いを確認するとき。
+- agent call の cwd と repository/worktree root、path placeholder、ファイルアクセス制限、prompt の構築・stdin handoff、ログや session ID の保存規約を調べるとき。
+- Structured Output の schema 保存・検証・補正、quota 待機、server capacity retry、想定外エラーの扱い、feedback reporter や editor input handoff の呼び出し規約を確認するとき。
+- 本規約が参照する oracle doc や oracle src の責務分担を確認し、個別の実装詳細へ進む前のルーティング起点を決めるとき。
 
 ## Do not read this when
-- Codex CLI 呼び出し規約ではなく、個別 agent call の意味上の責務や判断基準を確認する場合は、対応する oracle doc を直接読む。
-- Codex CLI の基本的な引数仕様や AgentCallParameter の正確な field 定義だけを確認する場合は、本書の委譲先である対応する oracle source を直接読む。
-- Windows toast notification、feedback observation、editor input handoff、model provider など個別機能の意味仕様だけを確認する場合は、それぞれ指定された正本仕様を直接読む。
+- 個別の path context、root 解決、prompt rendering、file access policy、AgentCallParameter の正確な構造を直接確認する場合は、本文が指定する対応する oracle src を読む。
+- 特定の agent call の意味上の責務や作業範囲を確認する場合は、対応する oracle doc を直接読む。
+- Windows toast 通知、feedback observation、editor input handoff など個別機能の正本仕様だけを確認する場合は、本文が指定する各 app_spec 文書へ直接進む。
+- 既存テストの実行方法や品質検査の選択を確認する場合は、repository local の test_execution skill を読む。
 
 ## hash
-- ef14ed0250849cd044ee449571b1be0316fe4aa9abd8077d5ad9f34569627768
+- 4af46e5b9911c0c044b4eb6bc8270aecdc54fae83712bd1e8bb455dbdf05d769
 
 # `codex_model_provider.md`
 
@@ -317,19 +319,52 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド固有仕様を、doctor・indexing・feedback、oracle 操作、realization 作業、session／run lifecycle、TUI に分類して確認するための入口。
-- 各サブコマンドの CLI 契約、事前条件、実行手順、agent call、状態更新、report、終了処理の仕様へ案内する。
+- `cmoc doctor` の明示的な preprocess 実行、引数・事前条件、全終了経路の primary report 保存を定義する入口。
+- 編集 run の fork・join・abandon 共通 lifecycle、状態遷移、差分検査、merge、cleanup、report 要件を定義する共通入口。
+- `cmoc feedback report` の report cut、agent 委譲、candidate 検証、publication、再開、失敗時 state・report 処理を定義する入口。
+- `cmoc indexing` による作業ツリーの明示的インデクシング、事前条件、実行手順、primary report 保存を定義する入口。
+- `cmoc oracle edit` のユーザー指示入力、本命・仕様削減 agent call、実行順序、編集境界、差分・report の扱いを定義する入口。
+- `cmoc oracle investigation` の oracle file 調査指示入力、TUI 起動、調査境界、回答方針を定義する入口。
+- `cmoc oracle review` のレビュー対象 scope、所見列挙・統合・検証・採否判定、隔離実行、レポート生成を定義する入口。
+- `cmoc realization apply fork` の直近 oracle 差分を realization file へ反映する短い編集 workload、agent call、fork lifecycle、report、join 後処理を定義する入口。
+- `cmoc realization refactor fork` の oracle／realization file 単位の追従調査・修正、refactor state 同期、unresolved target、編集 run lifecycle を定義する入口。
+- `cmoc session abandon` の session branch と成果物を merge せず破棄する手順、未 join run の前提、state 更新、cleanup、report を定義する入口。
+- `cmoc session fork` の local branch から session branch を作成する条件、初期 state 保存、branch 命名、失敗経路、primary report を定義する入口。
+- `cmoc session join` の session branch を home branch へ merge して session を完了する条件、conflict 解消、state 更新、branch cleanup、report を定義する入口。
+- `cmoc tui` のユーザープロンプト入力、cmoc 基本規定の注入、indexing・feedback 連携、AI Agent CLI／TUI 起動条件を定義する入口。
 
 ## Read this when
-- cmoc のサブコマンドの挙動を実装・変更・レビューするとき。
-- 特定のサブコマンド仕様、編集 run や session の lifecycle、feedback report、または TUI 起動処理の正本を探すとき。
+- doctor の引数、preprocess 実行、終了経路別 primary report を確認・変更・実装するとき。
+- 編集 run の fork・join・abandon 共通条件、run state、隔離資源、想定内差分、merge・cleanup・report を確認するとき。
+- feedback report の CLI 契約、report cut、normalization／verification、publication、再開、incomplete 診断、失敗時処理を確認するとき。
+- indexing の引数、未コミット差分の扱い、doctor preprocess、INDEX.md 更新、実行要約 report を確認するとき。
+- oracle edit のユーザー指示 handoff、本命・仕様削減 call、起動前検査、編集範囲、差分や commit の扱いを確認するとき。
+- oracle file を根拠に調査する TUI の入力 lifecycle、起動手順、調査結果の回答方針を確認するとき。
+- oracle のレビュー scope、所見成立・検証・採否、agent call の段階、隔離実行、レポート保存を確認するとき。
+- apply fork の差分始点・終点、oracle rename、agent call 回数、realization 編集境界、fork 終了・report・join 後 hook を確認するとき。
+- refactor fork の state schema、entry 同期、調査要求、file 単位の agent call、変更 path 検証、unresolved target、完了状態を確認するとき。
+- session の成果物を home branch へ取り込まず破棄する際の前提、対象、state 遷移、cleanup、primary report を確認するとき。
+- `cmoc session fork` の実行可能 branch、clean 条件、session branch 命名、初期 state、terminal result、primary report を確認するとき。
+- session branch の home branch への merge、conflict、session state 更新、branch 削除、終了報告を確認するとき。
+- `cmoc tui` の prompt editor input、cmoc 規定注入、indexing preflight、feedback observation、Codex CLI 起動、toast 通知を確認するとき。
 
 ## Do not read this when
-- サブコマンド共通の state schema、branch model、run isolation、prompt editor input、Codex exec、feedback observation／state などの正本だけを確認したいとき。
-- 正確な agent prompt や起動パラメータ、実装コード、または自動生成された INDEX.md の品質を確認したいとき。
+- doctor preprocess の検証・修復内容そのものだけを確認するときは `doctor_preprocess.md` を直接読む。
+- 個別 workload の fork 固有仕様、session lifecycle、state schema、report 共通形式、feedback 境界だけを確認するときは対応する正本を直接読む。
+- raw observation の収集、feedback state schema、builder の正確な prompt／schema、INDEX.md 更新手順、共通中断仕様だけを確認するときは対応する正本を直接読む。
+- インデクシング仕様そのもの、または `cmoc indexing` 以外のサブコマンドを確認するとき。
+- oracle file の一般判断基準、prompt editor／codex exec 共通規約、doctor・indexing・feedback の詳細だけを確認するとき。
+- oracle の判断基準、TUI prompt の正確な文面・起動 parameter、editor handoff、Codex CLI 設定範囲だけを確認するとき。
+- oracle 本文の内容、個別 agent prompt、一般的なコード品質、INDEX.md や実装ファイルのレビューを確認するとき。
+- file 単位の網羅的追従や refactor、共通 editing run、oracle／realization 適合性、apply の正確な launch parameter だけを確認するとき。
+- 短い apply 追従ループ、oracle／realization 適合性の一般原則、共通 join／abandon、共通中断、変更要約生成だけを確認するとき。
+- session join、未 join run の abandon、既 join 結果の rollback、session state schema の詳細だけを確認するとき。
+- branch model、session state schema、timestamp 形式、session fork 以外の固有仕様だけを確認するとき。
+- 汎用 git merge、session の共通事前条件、branch model の一般原則、feedback state 所有範囲、conflict agent prompt だけを確認するとき。
+- 正確な prompt part・workload parameter、prompt editor handoff、oracle／realization や review の意味仕様、個別 indexing・feedback・toast 仕様だけを確認するとき。
 
 ## hash
-- 12bd0ab0a28c411042dc96db8035bf9c24e27d2ba01425f7d9f7db1277f5a698
+- f4810a647d40d46a8c871c169b5df015081ef96fcbaf9d7732259fd7a08052d7
 
 # `subcommand_interruption.md`
 

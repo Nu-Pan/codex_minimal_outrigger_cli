@@ -18,19 +18,16 @@
 # `index_entry.py`
 
 ## Summary
-- `cmoc indexing` 用 agent call の prompt と起動パラメータを構築する。
-- 対象パスと本文を prompt に埋め込み、読み取り専用のルーティング文書生成を設定する入口である。
-- agent call の実行種別、cwd、Structured Output schema、indexing preflight 無効化を含む呼び出し条件を定義する。
+- `cmoc indexing` が対象ファイルまたはディレクトリの本文を根拠に INDEX.md エントリーを生成するための agent 呼び出しパラメータを構築する。
+- プロンプト、読み取り専用アクセス、対象パスと cwd の解決、Structured Output schema、indexing preflight 無効化をまとめて定義する。
 
 ## Read this when
-- `cmoc indexing` が生成する INDEX.md エントリー用 prompt の内容や構成を変更するとき。
-- indexing agent call の読み取り権限、cwd、Structured Output schema、preflight 設定を確認するとき。
-- 対象本文を prompt に渡す方法や、パス placeholder の解決方法を確認するとき。
+- `cmoc indexing` の INDEX.md エントリー生成 agent のプロンプト内容や起動パラメータを確認・変更するとき。
+- 対象パス、対象本文、agent call の cwd、出力スキーマの受け渡し方を確認するとき。
 
 ## Do not read this when
-- INDEX.md エントリーの出力項目や JSON schema 自体を変更・確認するとき。
-- agent call の実行処理や indexing サブコマンドの本体を調査するとき。
-- ルーティング文書の内容ではなく、一般的な agent call パラメータの仕様を確認するとき。
+- INDEX.md の既存エントリーやルーティング規則そのものを確認したいとき。
+- エントリー生成後の INDEX.md 更新処理や、Structured Output schema の項目定義を直接確認したいとき。
 
 ## hash
-- 87bd07d7912a435030cc1580ba4202f8d0b0d73922b440a9b81f7757ae2044bc
+- 234b06444cd61d87482412559eb2d8601711f26a258c04ea15c7636a8d598c8c

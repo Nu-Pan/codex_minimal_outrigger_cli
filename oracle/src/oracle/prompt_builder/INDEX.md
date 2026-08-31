@@ -17,18 +17,20 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent 向け完全 prompt の構築を担当する定義。基礎規定、選択式の各種 policy、caller 指定の目的・追加文面、placeholder 定義を所定の順序で統合し、構造化された prompt として返す。
+- agent call 向けの完全な構造化 prompt を構築する入口。task、作業範囲、完了条件、対象外、各種 policy、追加 prompt、placeholder 定義を統合し、固定的な規定から変動する定義まで所定の順序で組み立てる。
+- 同名 placeholder の定義を統合し、異なる値の衝突を拒否することで、call 内の path context の一貫性を保つ。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成順序や、各 policy の有効化、placeholder 定義の統合規則を変更・確認するとき。
-- prompt builder の caller 指定文面と基礎規定・目的・動的情報の結合方法を確認するとき。
+- agent call に渡す完全 prompt の構成やセクション順序を変更・確認するとき。
+- oracle、realization、routing、index entry などの policy をどの条件で prompt に含めるかを確認するとき。
+- 追加 prompt と path context 由来の placeholder 定義を統合する処理を変更・確認するとき。
 
 ## Do not read this when
-- 個別 policy の本文や、oracle・realization・file access など単一の規定の内容だけを確認したいとき。
-- prompt の利用側や、構造化文書の一般的な表現形式だけを変更・確認するとき。
+- 個別 policy builder の本文や規則だけを確認・変更するとき。
+- prompt の実行、agent call の起動、または個別の path・placeholder 値の定義を直接扱うとき。
 
 ## hash
-- 99b849f5be5a81f6ca755b30623e449e7694532c5899c9a63b31f8ba77744780
+- f7bf59de6f94a23373ba1de4655b1d898fd72d5caed4c05bcfab1faf0d681056
 
 # `editor_input.py`
 

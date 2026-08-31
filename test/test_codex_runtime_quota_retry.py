@@ -411,7 +411,17 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> N
     assert "# human feedback reporting" in probe.prompt
     assert probe.prompt.count("# human feedback reporting") == 1
     assert "# routing policy" not in probe.prompt
-    assert "追加の調査や作業を行わず" in probe.prompt
+    objective = probe.prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# task" in objective
+    assert "Codex CLI の利用可能性を確認するため、短い応答を 1 回返す" in (
+        objective
+    )
+    assert "# non-goals" in objective
+    assert "追加の調査や作業を行わない" in objective
+    assert "# scope" not in objective
+    assert "# completion criteria" not in objective
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False
     assert probe.agent_call_cwd == base.agent_call_cwd

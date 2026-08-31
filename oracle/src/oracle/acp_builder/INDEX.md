@@ -20,118 +20,122 @@
 # `feedback`
 
 ## Summary
-- feedback issue の同一性判断と検証に関する agent call の出力スキーマおよび実行定義をまとめた領域。既存 issue candidate との同一性判定、candidate の現在状態の verification、各処理の入力・参照範囲・Structured Output 契約への入口を提供する。
+- feedback issue の同一性判断と verification を行う agent call の出力契約・実装をまとめた入口。normalize_issue は observation と既存候補の同一性判定、verify_issue は report cut 時点の参照に基づく候補検証を担う。
 
 ## Read this when
-- feedback issue が既存 issue と同一か新規かを判定する出力契約や agent call の構築を確認するとき
-- 既存 issue candidate の現在状態を検証する出力契約、prompt、参照範囲、起動パラメータを確認するとき
+- feedback issue を既存候補と同一か新規か判定する出力形式または prompt・起動パラメータを確認するとき
+- issue candidate の現在状態を検証する出力形式、verdict、evidence、人間対応または理由の契約を確認するとき
+- 同一性判定や検証の入力範囲、候補・参照 ID の制約を確認するとき
 
 ## Do not read this when
-- feedback issue の観測送信、candidate の生成・収集、事前絞り込みなど、同一性判定や verification より前段の処理を確認したいとき
-- summary、impact、原因、actionability、relation など issue 内容の生成・評価ロジック自体を確認したいとき
-- feedback 領域以外の ACP builder 出力契約や共通 prompt builder の定義を確認したいとき
+- feedback issue の内容、候補生成、候補絞り込み、report cut reference の作成など、判定前のデータ準備を確認したいとき
+- summary、impact、原因、actionability、relation など issue の詳細評価を確認したいとき
+- raw log、過去の Codex session、feedback state、候補外 issue の探索を行いたいとき
+- normalize_issue または verify_issue 以外の agent call の出力契約を確認したいとき
 
 ## hash
-- f0a2adfa41b59b65486ef90e92abeb5d7312afadf418df2b8e1ea3364efe7f26
+- 673ee6efa708d1d4917d73695b4218a703ae4d931b53baaac092e1d5e10f9447
 
 # `indexing`
 
 ## Summary
-- INDEX.md エントリー生成 agent call の出力形式を定義する JSON Schema と、`cmoc indexing` 用 prompt・起動パラメータ構築を扱う。
-- 出力形式の確認は `index_entry.json`、indexing agent call の構成やアクセス条件の確認は `index_entry.py` から始める。
+- `cmoc indexing` の INDEX.md エントリー生成処理と、その agent 呼び出しパラメータを定義する。
+- INDEX.md エントリー生成結果の構造化出力スキーマを提供する。
 
 ## Read this when
-- INDEX.md エントリー生成結果の構造や必須項目を確認するとき。
-- `cmoc indexing` の prompt、対象本文の埋め込み、読み取り専用設定、cwd、Structured Output schema、preflight 設定を変更・確認するとき。
+- `cmoc indexing` のエントリー生成 prompt、対象本文の受け渡し、読み取り専用アクセス、agent call の cwd、Structured Output schema、indexing preflight 設定を確認・変更するとき。
+- 生成結果に必要な項目や各項目の意味を確認するとき。
 
 ## Do not read this when
-- INDEX.md の既存ルーティング内容を確認するとき。
-- indexing サブコマンドの実行処理や、一般的な agent call パラメータの仕様を調べるとき。
+- 既存の INDEX.md の内容やルーティング規則そのものを確認するとき。
+- エントリー生成後の INDEX.md 更新処理を確認するとき。
 
 ## hash
-- 37152661db8f1ea3ecd682fed2ac40879fd7c2e37781938b4986faf8d86eac21
+- e7df757d8890e511c5fe65777856c0ab09d293389dcbeb7919be9ba89f1db21d
 
 # `oracle`
 
 ## Summary
-- oracle file の編集と、成功後の仕様削減を行う agent call の起動条件・prompt・oracle 専用アクセス設定を扱う入口。
-- oracle file の読み取り専用調査用 TUI の prompt、アクセス範囲、エディタ入力連携、indexing preflight を扱う入口。
-- oracle review の所見列挙・採否判定・重複や矛盾の統合・擁護理由と反証理由の追加調査について、agent call の入力契約と Structured Output 定義を扱う入口。
+- oracle 編集では、ユーザー指示を oracle file へ反映する本命 call と、反映後の仕様を簡素化する削減 call の prompt・アクセス制約・起動条件を構築する。
+- oracle 調査では、ユーザー指示を埋め込んだ完全 prompt と、oracle file の読み取り専用調査および TUI 起動条件を構築する。
+- oracle review では、所見の列挙、妥当性の擁護・反証、採否判定、重複・矛盾の統合に用いる prompt・Structured Output 契約・起動条件を扱う。
 
 ## Read this when
-- oracle file の編集または仕様削減を実行する agent call の条件、書き込み範囲、作業ディレクトリ、indexing preflight を確認・変更するとき。
-- oracle file の調査用 TUI を起動する prompt、読み取り範囲、ユーザー指示やエディタ入力の引き渡しを確認するとき。
-- oracle review で所見を列挙・判定・整理し、擁護理由または反証理由を追加調査する agent call の入力、出力契約、起動設定を確認・変更するとき。
+- oracle の編集 call が変更対象、ユーザー指示、仕様削減、読み書き制約をどう扱うか確認するとき。
+- oracle の調査 call が調査範囲、根拠とする oracle file、読み取り専用アクセス、TUI への入力引き継ぎをどう構成するか確認するとき。
+- oracle review で新規所見を列挙する、所見の妥当性を支持または反証する、採否を判定する、または重複・矛盾を編集操作へ整理する条件を確認するとき。
 
 ## Do not read this when
-- 個別の oracle file の具体的な編集内容、調査対象、レビュー基準または所見の妥当性を確認するときは、対象の oracle file や対応する規則を直接読みます。
-- oracle review 以外の agent call の共通 prompt 構築、一般的な Structured Output 定義、または共通型の責務を確認するときは、対応する共通 builder や型定義を直接読みます。
-- 実装されたレビュー処理の実行順序や所見データの適用ロジックを確認するときは、agent call 設定ではなくレビュー実行本体を直接読みます。
+- oracle file の編集処理そのもの、仕様削減の判断基準、調査結果、または個別所見の具体的な妥当性を確認するとき。
+- session の join・競合解決や、oracle 以外の agent call の起動処理を確認するとき。
+- 所見の保存・表示・判定結果の適用処理、または共通の prompt・agent call 基盤の責務だけを確認するとき。
 
 ## hash
-- 2cdd369ab0d2cf5db0ab94c2d0a5c0a76ab5af802c30b692ae0ece86eb0abc42
+- 53464cf52b33ca194a1d59f8100c9adca3c6bfcee1f71cee0be0fdecaef02f0d
 
 # `quota_probe.py`
 
 ## Summary
-- Codex CLI の quota 回復確認用 agent call を構築する定義。短い応答だけを返す読み取り専用 probe の prompt と、再帰的な indexing preflight を避ける起動設定を扱う。
+- Codex CLI の利用可能性を確認する quota availability probe の prompt と agent call パラメータを構築する定義。
+- 読み取り専用・短い単発応答・追加調査なしの probe 条件を設定し、再帰的な indexing preflight を無効化する。
 
 ## Read this when
-- quota の利用可能性を確認する agent call の prompt、アクセスモード、作業ディレクトリ、起動オプションを確認・変更するとき。
+- Codex CLI の quota 回復確認用 agent call の prompt、アクセスモード、起動条件を確認または変更するとき。
+- quota probe が実行する最小限の確認内容や indexing preflight の扱いを確認するとき。
 
 ## Do not read this when
-- 通常の quota 判定ロジックや追加調査・実作業の実装を確認したいとき。この対象は probe の呼び出しパラメータ構築に限定される。
+- 通常の quota 管理ロジックや利用量計算を調べるとき。
+- 一般的な agent call パラメータや prompt 構築の仕様を確認する場合は、共通の builder 定義を直接読むとき。
 
 ## hash
-- 602e12a985f727cfbaeaa41f0c953171116fb1b35d8b4ee2bed1e136c524094c
+- 1ac746647bce56257d4ec7e41e2b7113802e8e2926f32e10699b404067da3ad6
 
 # `realization`
 
 ## Summary
-- fork 間の oracle file 差分を realization file へ反映する agent call の構築入口です。commit 範囲、raw git diff、write モードなど差分追従固有の起動条件を扱います。
-- realization refactor の変更要約およびファイル単位のレビュー・修正を行う agent call の契約と構築規則を扱う下位領域です。
+- `cmoc realization apply fork` の realization 追従用 AgentCallParameter を構築する定義。commit 範囲と oracle file の raw git diff を追従対象として、oracle file と realization file の齟齬調査・反映作業への入口を提供する。
 
 ## Read this when
-- fork 間の oracle file 差分を realization file へ反映する prompt や起動パラメータを確認・変更するとき
-- realization refactor の変更要約、レビュー、修正、検証に関する agent call の出力契約や起動条件を確認するとき
+- `cmoc realization apply fork` の Agent call に作業範囲、完了条件、realization 書き込み権限、linked worktree、indexing preflight を設定する方法を確認するとき。
+- commit 範囲と oracle file の raw git diff を追従対象変更として prompt に渡し、関連する oracle file と realization file をリポジトリ全体から調査させる条件を確認するとき。
 
 ## Do not read this when
-- 通常の realization file の実装やテスト、oracle の要求、realization の設計・実装規則を直接確認・変更したいとき
-- 差分追従や realization refactor 以外の agent call、一般的な prompt 構築処理を調べたいとき
+- 追従対象となる oracle file の具体的な差分や、個々の realization file への反映内容を確認するとき。
+- 共通の complete prompt 生成処理、構造化文書ノード、AgentCallParameter の一般仕様を確認するとき。
 
 ## hash
-- 2d27e7735e65ab72b50444188678a0540cf9d980b136c63dbc69c115c7000d81
+- a079e82e8258d856af2171fdcb4a2ae0fd6b6e3b681d5536e23edd520f6da873
 
 # `session`
 
 ## Summary
-- `cmoc session join` で発生した git merge conflict の解消をエージェントへ依頼する際の起動パラメータと prompt を構築する入口。対象ファイル、専用の解消ポリシー、書き込み権限、preflight を行わない起動条件を扱う。
+- `cmoc session join` における merge conflict marker 解消用のエージェント呼び出し構築への入口。対象パスを解決し、conflict 解消用 prompt と起動パラメータを組み立てる下位要素を扱う。
 
 ## Read this when
-- `session join` の conflict 解消に使うエージェントの prompt または起動パラメータを確認・変更するとき。
-- conflict 対象ファイルの指定方法、oracle file の編集範囲、専用 policy、preflight を省略する起動設定を確認するとき。
+- `session join` の merge conflict marker 解消に使うエージェント呼び出しの構築方法を確認・変更するとき。
+- conflict 対象パスの扱いや、解消用の prompt・アクセス制御・起動条件の構成を確認するとき。
 
 ## Do not read this when
-- merge conflict marker の検出・解消処理そのものを確認したいとき。
-- 一般的な prompt 構築、パス解決、または `session join` の別処理を直接確認したいとき。
+- merge conflict marker の具体的な解消処理や対象ファイルの内容を確認したいときは、conflict 対象ファイルを直接読む。
+- 一般的な prompt 構築、共通 policy、または通常の `session join` 処理フローを確認したいときは、それぞれのより直接的な対象を読む。
 
 ## hash
-- 474dd53a2350ba7cbcb30ec5589e1bc3aa4ba3efb068cdbcd18954d572068b7a
+- 47fcb891c8fda65984122c35dcab51fc85ba90bb4e1a6226eb2390001fc220f2
 
 # `tui`
 
 ## Summary
-- `cmoc tui` が AI Agent CLI/TUI に渡す起動パラメータと完全プロンプトを構築する実装。
-- オリジナルプロンプト、リポジトリルートを基準とする作業コンテキスト、ファイルアクセス・各種ポリシー、エディタ入力引き継ぎを起動設定へまとめる。
+- `cmoc tui` のTUI起動用パラメータと、オリジナルプロンプトを埋め込んだ完全プロンプトを構築する入口。
+- 作業コンテキスト、書き込み権限、oracle・realization・routing規則、エディタ入力引き継ぎ、インデックス事前処理を起動設定へ反映する。
 
 ## Read this when
-- `cmoc tui` の起動時に生成する完全プロンプトや固定起動パラメータを確認・変更するとき。
-- オリジナルプロンプトの埋め込み、作業ディレクトリの解決、TUI 起動時のファイルアクセス設定やポリシー適用を追跡するとき。
+- `cmoc tui` の起動パラメータやagent call設定を変更・調査するとき。
+- オリジナルプロンプトから完全プロンプトを構築する経路を確認するとき。
+- TUI起動時の作業ディレクトリ、ファイルアクセスモード、エディタ入力引き継ぎ、インデックス事前処理を確認するとき。
 
 ## Do not read this when
-- TUI の画面表示や対話制御そのものを調べるとき。
-- 完全プロンプトの共通的な生成規則を調べるとき。
-- TUI 起動後のエージェント実行処理や、別のサブコマンドの引数解析を調べるとき。
+- 完全プロンプトの一般的なレンダリング規則だけを確認したいとき。
+- agent callパラメータの型やアクセスモードの基本定義だけを確認したいとき。
 
 ## hash
-- 56d2d7c78b7a75e64846714b63956232cbc2a47c98f5a953b2691aaa6e8c4d39
+- 5c3a5e4bd169fa627acf9e0690c04d3dbacfbe37d6374016beda4e22a1909c83

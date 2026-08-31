@@ -1,38 +1,37 @@
 # `apply`
 
 ## Summary
-- `cmoc realization apply fork` の差分追従用 AgentCallParameter と prompt を構築する実装の入口。
-- commit 範囲と oracle file の raw git diff を prompt に埋め込み、リポジトリ全体の realization file を調査・更新・検証する処理を定義する。
-- realization write モード、作業ディレクトリ、実行前インデックス処理を含む fork 固有の agent call 起動条件を扱う。
+- `cmoc realization apply fork` の realization 追従用 AgentCallParameter を構築する定義。
+- commit 範囲と oracle file の raw git diff を prompt に埋め込み、リポジトリ全体の oracle file と realization file の齟齬確認・反映作業へ接続する入口。
 
 ## Read this when
-- fork 間の oracle file 差分を realization file へ反映する agent call の prompt や起動パラメータを確認・変更するとき。
-- commit 範囲や raw oracle git diff の受け渡し、関連する realization implementation・test・ancillary の調査および検証方針を確認するとき。
+- `cmoc realization apply fork` の Agent call に、作業範囲、完了条件、realization 書き込み権限、linked worktree、indexing preflight を設定する方法を確認したいとき。
+- commit 範囲と oracle file の raw git diff を追従対象変更として prompt に渡し、関連する oracle file と realization file をリポジトリ全体から調査させる条件を確認したいとき。
 
 ## Do not read this when
-- 通常の realization file の実装やテストの内容を直接確認・変更したいとき。
-- 差分追従以外の realization apply 起動経路や、一般的な prompt 構築処理を調べたいとき。
+- 追従対象となる oracle file の具体的な差分や、個々の realization file への反映内容を確認したいとき。
+- 共通の complete prompt 生成処理、構造化文書ノード、AgentCallParameter の一般仕様を確認したいとき。
 
 ## hash
-- 40e1c7f13fd865b82ff001df4d754455a926dc054d96a0ea79c9f055a25c9f60
+- 6a36f0da6fbe98fc95a2b9e31875f966b1b3b2f210b92cbe062bb4620b35c833
 
 # `refactor`
 
 ## Summary
-- realization refactor に関する変更要約と、ファイル単位のレビュー・修正を行う agent call の契約および構築規則を扱う下位領域です。
-- 変更要約では、差分を意味論的カテゴリごとに整理し、変更内容と変更ファイルを構造化して返します。
-- ファイル単位のレビュー・修正では、対象を起点に oracle と realization を調査し、所見、根拠、修正結果、検証結果、正味の変更範囲を構造化して返します。
-- 各 agent call は対応する Structured Output schema、prompt、ファイルアクセスモード、作業ディレクトリ、起動前処理の構築規則を定義します。
+- realization refactor の fork にある、変更要約用とファイル単位レビュー・修正用の agent call 定義、および各出力の Structured Output schema を扱う入口。
+- 変更差分の意味論的分類と人間向け要約、要約 prompt の構築・実行条件を確認できる。
+- ファイル単位レビュー・修正の対象範囲、oracle・realization の調査方針、修正と検証の条件、所見および変更 path の報告契約を確認できる。
 
 ## Read this when
-- realization refactor の変更内容を人間向けに分類・要約する agent call の出力契約や起動条件を確認するとき
-- realization refactor の特定ファイルを oracle と realization の規則に照らしてレビューし、必要な修正と検証を行う agent call の出力契約や構築規則を確認するとき
-- 所見ごとの根拠、対応状態、修正後検証、変更 path の申告条件を確認するとき
+- realization refactor の差分要約のカテゴリ、要約内容、根拠となる変更 file の扱いを確認するとき
+- realization refactor の変更要約 agent call の prompt、読み取り権限、実行前 indexing 条件を調査するとき
+- oracle file または realization file を起点とするファイル単位レビュー・修正の調査範囲、修正条件、検証条件を確認するとき
+- レビュー所見の根拠、oracle 要求、観測実装、修正状態、検証結果、realization file の net 差分の報告形式を確認するとき
 
 ## Do not read this when
-- realization refactor の具体的な実装内容、差分そのもの、またはレビュー対象ファイルの詳細を確認したいとき
-- oracle の要求や realization の設計・実装規則そのものを確認したいとき
-- realization refactor 以外の agent call、変更要約、レビュー・修正契約を確認したいとき
+- realization refactor の実装内容、具体的な差分、個別の分類結果やレビュー所見を確認したいとき
+- oracle file に記載された要求や設計責務そのものを確認するとき
+- realization refactor 以外の agent call 構築、差分生成・適用、通常の入出力契約を調査するとき
 
 ## hash
-- a6f5d695ca1ea7b22c6bdb69fad12142249b5078b9bad84ec5af579aa0731c0a
+- 988673e601c04074a857b8d938d37676cf7e6eaeb7814d686e2da68fb5b5ad93

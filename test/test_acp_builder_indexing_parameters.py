@@ -42,6 +42,21 @@ def test_indexing_index_entry_uses_readonly_without_preflight(
     assert "# index entry policy" in parameter.prompt
     assert "# oracle and realization basic" not in parameter.prompt
     assert "# routing policy" not in parameter.prompt
+    objective = parameter.prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# task\n\n- `{{target-path}}` の `INDEX.md` 用エントリーを生成" in (
+        objective
+    )
+    for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
+        assert omitted_heading not in objective
+    assert "指定された Structured Output schema に従" not in parameter.prompt
+    positions = [
+        parameter.prompt.index("# エントリー生成規定"),
+        parameter.prompt.index('<cmoc_block id="objective">'),
+        parameter.prompt.index("# `{{target-path}}` の内容"),
+    ]
+    assert positions == sorted(positions)
 
 
 def test_indexing_index_entry_schema_requires_non_empty_semantic_lists(

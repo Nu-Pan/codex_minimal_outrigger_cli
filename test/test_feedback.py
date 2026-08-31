@@ -382,7 +382,7 @@ def test_reporter_rejects_invalid_collector_result(
 
 
 def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) -> None:
-    """canonical prompt を保ち、入力だけを使う agent call を構築する。"""
+    """canonical prompt を保ち、入力だけを根拠とする agent call を構築する。"""
     root = make_repo(tmp_path)
     candidate_id = "fbi_" + "a" * 26
     observation_json = json.dumps({"observation_id": "fbo_input"})
@@ -424,14 +424,36 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
     assert verifier.structured_output_schema_path is not None
     assert normalizer.run_indexing_preflight is True
     assert verifier.run_indexing_preflight is True
+    normalizer_objective = normalizer.prompt.split(
+        '<cmoc_block id="objective">', 1
+    )[1].split("</cmoc_block>", 1)[0]
+    verifier_objective = verifier.prompt.split(
+        '<cmoc_block id="objective">', 1
+    )[1].split("</cmoc_block>", 1)[0]
     assert "同一性" in normalizer.prompt
     assert "`result.decision=new`" not in normalizer.prompt
+    assert "# scope" in normalizer_objective
+    assert "# non-goals" in normalizer_objective
+    assert "# 同一性判断の基準" in normalizer.prompt
+    assert (
+        "agent が申告した原因、重要度、および重複判定用 hint を確定事実として扱わない"
+        in normalizer.prompt
+    )
     assert "unresolved | resolved | not_actionable | inconclusive" not in (
         verifier.prompt
     )
-    for parameter in (normalizer, verifier):
+    assert "# scope" in verifier_objective
+    assert "# non-goals" in verifier_objective
+    assert "candidate 外の問題を探索しない" in verifier_objective
+    for parameter, objective in (
+        (normalizer, normalizer_objective),
+        (verifier, verifier_objective),
+    ):
         assert "# oracle and realization basic" in parameter.prompt
-        assert "# routing policy" in parameter.prompt
+        assert "# task" in objective
+        assert "# completion criteria" not in objective
+        assert "# routing policy" not in parameter.prompt
+        assert "指定された Structured Output schema に従" not in objective
     normalize_schema = json.loads(normalizer.structured_output_schema_path.read_text())
     verify_schema = json.loads(verifier.structured_output_schema_path.read_text())
     assert (

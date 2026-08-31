@@ -4,6 +4,7 @@
 SDHeader 出力を共有する一つの責務であるため、prompt builder 回帰として一箇所に保つ。
 
 対応する正本:
+- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/app_spec/feedback_observation.md
 - {{work-root}}/oracle/src/oracle/other/struct_doc.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/basic.py
@@ -193,8 +194,7 @@ def test_each_policy_flag_adds_only_its_block_once(
 ) -> None:
     """各 flag は対応する policy block だけを一度追加する。"""
     prompt = build_complete_prompt(
-        summary="- summary",
-        goal="- goal",
+        task="- task",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         **{selected_flag: True},
@@ -208,8 +208,7 @@ def test_each_policy_flag_adds_only_its_block_once(
 def test_selected_policy_blocks_remain_separate_without_deduplication() -> None:
     """選択した policy block は共有文面を削らず、それぞれ一度だけ注入する。"""
     prompt = build_complete_prompt(
-        summary="- summary",
-        goal="- goal",
+        task="- task",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         oracle_findings_policy=True,
@@ -289,10 +288,12 @@ def test_build_routing_policy_renders_core_reading_requirements() -> None:
 
 
 def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:
-    """完全 prompt は固定部から動的部へ並べ、summary と goal を objective に置く。"""
+    """完全 prompt は固定部から動的部へ並べ、call 固有 objective を構築する。"""
     prompt = build_complete_prompt(
-        summary="- あなたは prompt 検証担当です\n- 対象 prompt を確認すること",
-        goal="- prompt の参照関係が妥当であること",
+        task="- 対象 prompt を確認すること",
+        scope="- 入力された prompt を根拠とすること",
+        completion_criteria="- prompt の参照関係が妥当であること",
+        non_goals="- prompt を変更しないこと",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         aux_static_prompt=[SDHeader("caller static", "- static")],
@@ -306,9 +307,16 @@ def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:
     objective = rendered.split('<cmoc_block id="objective">', 1)[1].split(
         "</cmoc_block>", 1
     )[0]
-    assert "# summary\n\n- あなたは prompt 検証担当です" in objective
-    assert "- 対象 prompt を確認すること" in objective
-    assert "# goal\n\n- prompt の参照関係が妥当であること" in objective
+    objective_markers = (
+        "# task\n\n- 対象 prompt を確認すること",
+        "# scope\n\n- 入力された prompt を根拠とすること",
+        "# completion criteria\n\n- prompt の参照関係が妥当であること",
+        "# non-goals\n\n- prompt を変更しないこと",
+    )
+    objective_positions = [objective.index(marker) for marker in objective_markers]
+    assert objective_positions == sorted(objective_positions)
+    assert "# summary" not in objective
+    assert "# goal" not in objective
     assert '<cmoc_ref target="role"/>' not in rendered
     assert '<cmoc_block id="role">' not in rendered
     markers = (
@@ -324,11 +332,27 @@ def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:
     assert positions == sorted(positions)
 
 
+def test_complete_prompt_omits_unset_optional_objective_sections() -> None:
+    """task だけの call では未指定の objective 項目を描画しない。"""
+    prompt = build_complete_prompt(
+        task="- 短い応答を返すこと",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
+    )
+
+    rendered = render_sd_node_as_markdown(*prompt)
+    objective = rendered.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# task\n\n- 短い応答を返すこと" in objective
+    for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
+        assert omitted_heading not in objective
+
+
 def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
     """全 agent call の共通 feedback instruction が一経路だけで注入される。"""
     prompt = build_complete_prompt(
-        summary="- summary",
-        goal="- goal",
+        task="- task",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         aux_dynamic_prompt=[],
@@ -350,8 +374,7 @@ def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
 def test_complete_prompt_renders_file_classification_boundaries() -> None:
     """基本定義が三分類と owning repository の判定境界を伝える。"""
     prompt = build_complete_prompt(
-        summary="- summary",
-        goal="- goal",
+        task="- task",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         oracle_and_realization_basic=True,
@@ -385,8 +408,7 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
     context = _path_context()
 
     prompt = build_complete_prompt(
-        summary="- summary",
-        goal="- goal",
+        task="- task",
         file_access_mode=FileAccessMode.READONLY,
         path_context=context,
         aux_placeholder_def={"work-root": context.work_root},
@@ -395,8 +417,7 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
 
     with pytest.raises(ValueError, match="Conflicting placeholder definition"):
         build_complete_prompt(
-            summary="- summary",
-            goal="- goal",
+            task="- task",
             file_access_mode=FileAccessMode.READONLY,
             path_context=context,
             aux_placeholder_def={"work-root": tmp_path / "other-worktree"},
@@ -499,8 +520,7 @@ def test_file_access_policy_uses_root_specific_deny_lists(
 def test_no_policy_complete_prompt_omits_file_access_policy() -> None:
     """NO_POLICY 時に file access policy を挿入しないことを検証する。"""
     prompt = build_complete_prompt(
-        summary="summary",
-        goal="goal",
+        task="task",
         file_access_mode=FileAccessMode.NO_POLICY,
         path_context=_path_context(),
     )
@@ -512,8 +532,7 @@ def test_no_policy_complete_prompt_omits_file_access_policy() -> None:
 def test_complete_prompt_preserves_injected_policy_terms() -> None:
     """complete promptが注入した各policyの主要語とplaceholderを保持することを検証する。"""
     prompt = build_complete_prompt(
-        summary="- summary",
-        goal="- goal",
+        task="- task",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         aux_dynamic_prompt=[],
@@ -557,11 +576,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     monkeypatch.chdir(repo_root)
 
     prompt = build_complete_prompt(
-        summary=(
-            "- cmoc から呼び出された AI Agent です\n"
-            "- {{repo-root}} ツリー内の realization file を修正すること"
-        ),
-        goal="- realization policy と oracle policy に従うこと",
+        task="- {{repo-root}} ツリー内の realization file を修正すること",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         aux_dynamic_prompt=[
@@ -581,9 +596,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
 
     rendered = render_sd_node_as_markdown(*prompt)
 
-    assert "- realization policy と oracle policy に従うこと" in rendered
     assert "# aux realization file" in rendered
-    assert "cmoc から呼び出された" in rendered
     assert "{{repo-root}} ツリー内の realization file" in rendered
     assert "{{cmoc-root}} と {{run-root}} と {{work-root}} 配下" in rendered
     assert (
