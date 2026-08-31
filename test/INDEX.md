@@ -33,20 +33,19 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex 実行ラッパーのテストで共有する最小限の result double、テスト用環境、AgentCallParameter、CLI 引数検査、Codex override のスタブを提供する。
-- Codex の認証に依存しない一時ホーム環境の準備と、実行引数に含まれる設定の assertion 用解析が必要なテストへの入口となる。
+- Codex 実行ラッパーのテストで使う共通ヘルパーを提供する。
+- 一時的な Codex 環境、最小の結果 double、AgentCallParameter、CLI 引数の検査、Codex override の stub を扱う。
 
 ## Read this when
-- Codex 実行の runtime wrapper test を追加・変更・確認するとき。
-- テスト内で一時的な CODEX_HOME や AgentCallParameter を準備するとき。
-- Codex CLI 引数や override 設定を安定した値で検査するとき。
+- Codex 実行ラッパーのテストで、認証に依存しない一時環境や固定された CLI override を準備するとき。
+- AgentCallParameter の最小値、Codex 結果の検証対象、または `--config` を含む CLI 引数をテスト用に解析するとき。
 
 ## Do not read this when
-- Codex 実行ラッパーの本番実装を変更・調査するとき。
-- 共有テストヘルパーを使わない単体テストや、Codex 実行と無関係なテストを扱うとき。
+- Codex 実行ラッパーのテスト支援を必要とせず、対象機能の実装や別のテスト fixture を直接確認するとき。
+- Codex CLI の実運用設定や本番の認証環境を確認するとき。
 
 ## hash
-- 32cc029d96584138284c6907270d00fe89c9adafb5c7ad072cc5e37acc880a97
+- 1e5c23abd029819daf4c209ad023bd8ba2f6dc15a2284dd47b6b863c2e296c74
 
 # `_command_support.py`
 
@@ -388,20 +387,19 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- `run_codex_tui` の TUI 呼び出し契約を検証するテスト入口。完全な prompt、作業ディレクトリと sandbox、editor handoff、Codex CLI 引数、call log、サブコマンドイベント、異常終了を扱う。
+- Codex TUI 実行経路の代表的な外部挙動を検証するテスト。完全な prompt と CLI 引数、アクセスモード、editor handoff、callback 設定、call log、サブコマンドイベント、失敗時の例外・記録を扱う。
 
 ## Read this when
-- TUI 実行時の prompt やアクセス境界が正しく引き渡されることを確認・変更するとき
-- Codex CLI の成功・不在・非 0 終了・KeyboardInterrupt に対するエラー処理やログ記録を確認するとき
-- TUI call log の保存、timestamp 衝突時の保持、サブコマンドイベントとの対応を確認するとき
+- Codex TUI の呼び出し引数や prompt の引き渡しを変更・確認するとき。
+- Codex CLI の検証済みバージョンに応じた callback の有無やアクセス境界を変更・確認するとき。
+- TUI call log と codex_call イベントの成功・失敗記録、timestamp 衝突、CLI 不在、KeyboardInterrupt、非 0 終了を変更・確認するとき。
 
 ## Do not read this when
-- Codex TUI 以外のサブコマンドや runtime 経路だけを扱うとき
-- TUI 呼び出しの実装詳細を直接確認する必要があり、対応する runtime 実装または oracle 仕様を読む方が適切なとき
-- prompt 内容や Codex 呼び出し、TUI ログに関係しないテストを扱うとき
+- TUI 以外の Codex 実行経路や、prompt 生成そのものの仕様だけを確認するとき。
+- call log やサブコマンドイベントの共通実装を直接調査・変更するときは、まずその実装側の対象を読むとき。
 
 ## hash
-- 49fff2db49c981db3f85249f330744fdff80d5e179ffeeaaa3c8ece91ce1b2c7
+- d87c9676e29b74cff3f84c5030a951f8fa1414fe49e3ecb34a4512511b5bdabb
 
 # `test_doctor_cli.py`
 
@@ -855,21 +853,20 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv の sandbox、approval、model、provider 上書き契約を検証するテスト。
-- feedback MCP、editor input handoff MCP、環境変数除外、TUI notification 設定の call 単位の反映を検証する。
-- schema のバイト保持・SHA256 保存と、JSON 出力の encoding failure 処理を検証する。
+- Codex argv の model、sandbox、provider 上書き契約を検証するテスト。file access mode の sandbox 変換、approval・通知・MCP・環境変数設定、hook の組み合わせ、Codex CLI バージョン判定、provider TOML エンコード、未定義設定の拒否、schema 保存と JSON 出力処理を扱う。
 
 ## Read this when
-- Codex CLI 呼び出しの argv 上書き、file access mode と sandbox の対応、model/provider 設定、または未定義設定の起動前エラーを変更・調査するとき。
-- Codex subprocess 環境、feedback/editor MCP の注入、TUI notification callback 設定を変更・調査するとき。
-- schema の保存形式や output JSON の読み取り失敗処理を変更・調査するとき。
+- Codex 起動引数や subprocess 環境の構築を変更・検証するとき
+- sandbox、model provider、通知 callback、SessionStart hook、feedback/editor MCP の連携を確認するとき
+- schema のハッシュ保存や Codex 出力 JSON の読み取り挙動を変更・検証するとき
 
 ## Do not read this when
-- Codex runtime の実装契約を変更せず、他のサブコマンド固有ロジックや一般的なテスト実行だけを扱うとき。
-- provider の取得・起動・疎通確認など、cmoc が責務外とする model provider 自体の運用を扱うとき。
+- Codex argv・runtime_codex_profile の挙動に関係しない機能を扱うとき
+- 実装詳細ではなく、Codex 実行契約そのものを確認する必要があり、oracle の仕様文書を直接読むべきとき
+- provider 設定のデータモデルや全体設定の正本を確認する必要があり、設定定義の対象ファイルを直接読むべきとき
 
 ## hash
-- a48594f69d9d4e72bcb18daf0e83af91934876ffbe6f1e3fc2c4c136232d06e0
+- 5a6668fbe2dd6b931b0a99b89c26c9a1972867f440101dc420f85b37fb4bc3d9
 
 # `test_runtime_config.py`
 
@@ -1052,17 +1049,17 @@
 # `test_windows_toast.py`
 
 ## Summary
-- Windows toast の端末結果通知について、command・repository 名・状態だけを短く表示することを検証するテスト。
-- PowerShell transport への JSON stdin 受け渡し、通知失敗の隔離、Codex callback の turn 単位重複排除、TUI callback の一時 state と standalone 実行を検証する。
+- Windows toast の terminal 通知内容と transport 境界を検証するテスト。短い表示項目、JSON stdin による安全な PowerShell 呼び出し、通知失敗の非伝播を扱う。
+- Codex TUI callback の session 記録、root turn の一度だけの通知、子 session の除外、invocation 終了時の状態破棄、standalone hook/callback の動作を検証する。
 
 ## Read this when
-- Windows toast 通知の表示内容や失敗時の扱いを変更・検証するとき
-- PowerShell transport の引数・stdin・タイムアウト境界を確認するとき
-- Codex callback の通知重複排除、TUI invocation ごとの state 管理、callback コマンドの単独実行を確認するとき
+- Windows toast 通知の表示内容や PowerShell transport の入力境界を変更・確認するとき。
+- Codex TUI の SessionStart hook、agent-turn-complete callback、root/child session 判定、通知重複防止を変更・確認するとき。
+- callback 用一時状態のライフサイクルや standalone 実行時の stdin・argv・終了結果を変更・確認するとき。
 
 ## Do not read this when
-- Windows toast や Codex callback の実装・仕様を直接確認できる対象を読むべきとき
-- 通知機能および callback と無関係なテストや機能を扱うとき
+- Windows toast や Codex callback の実装挙動を調べる必要がなく、別機能のテストを確認するとき。
+- 通知本文の正本要件や設計意図そのものを確認するときは、この検証テストではなく参照仕様を直接読むとき。
 
 ## hash
-- 84d0bd768306cab5673028df7dde85de3da5ef75966aca5580f39d807942ba19
+- 9d0e7cc65dd50d20dd759f04074add3dd9a5980c2262bfc92cc69308760ed7f3

@@ -150,43 +150,44 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界として、起動時の argv・sandbox・cwd・CODEX_HOME・環境変数・MCP/schema 配置を扱う。
-- editing run の Codex child process tracking、process group の同一性検証、signal・終了待機・cleanup を扱う。
-- Codex の stdout/stderr と JSONL event を解析し、session ID、malformed output、capacity・quota・unexpected error を判定する。
+- Codex CLI subprocess の起動境界を担当し、sandbox、argv、環境変数、CODEX_HOME、schema 配置を構成する。
+- Codex subprocess の process tracking、PID reuse を考慮した process group の停止、stdout の JSONL error・resume token・capacity/quota 判定を扱う。
+- Codex CLI の実行環境と機械的な実行結果を解釈するための、呼び出し側から利用する境界入口である。
 
 ## Read this when
-- Codex CLI に渡す sandbox、config override、model provider、通知、feedback/editor handoff MCP の実行時設定を確認するとき。
-- Codex subprocess の起動、process group の追跡・停止、PID reuse 対策、tracking file の検証や cleanup を確認するとき。
-- Structured Output schema の配置、Codex JSONL の session ID 抽出、stderr/error event の集約、retry 対象エラーの判定を確認するとき。
+- Codex CLI の sandbox、model/provider、MCP、hook、notification を含む invocation-local argv を構成または確認するとき。
+- CODEX_HOME や subprocess 環境の継承・除外、schema の hash store 配置、Codex CLI 不在時の実行時エラーを確認するとき。
+- editing run の Codex child tracking、process group の安全な停止、PID reuse 対策を変更または調査するとき。
+- Codex JSONL の malformed event、error、capacity/quota、resume token の判定や復旧分岐を確認するとき。
 
 ## Do not read this when
-- Codex CLI subprocess の実行環境や機械的な実行結果の解釈ではなく、agent call の上位の業務フローや利用者向け orchestration を確認するとき。
-- Codex CLI の正本仕様や run isolation の仕様そのものを確認するときは、本文が参照する oracle 文書を直接読むとき。
-- runtime_config、runtime_content、runtime_paths など、設定値検証・ハッシュファイル保存・パス算出の個別実装だけを確認するとき。
+- Codex CLI 境界の外側にある agent call の業務フロー、prompt 内容、oracle/realization の仕様だけを確認したいとき。
+- Codex の実行結果ではなく、cmoc の一般的な設定値の定義や runtime path・content の実装を直接確認する場合。
+- Codex subprocess を起動せず、既存のテストや仕様書の内容だけを確認する場合。
 
 ## hash
-- afbe252cd215ec84c8b9554bf0554c2ba89e6916b5e792c40f1f91c52ef57daf
+- d3b25d89af852458219a3d5125022399df8a18746e1726ace5ebe8237004c313
 
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI を、呼び出しパラメータに応じた設定上書き・作業ディレクトリ・環境変数・通知 callback とともに起動する実行入口。
-- Codex 呼び出しごとの call log、feedback 連携、成功・失敗 event、経過時間、return code を管理し、起動失敗や subprocess 失敗を cmoc の結果・例外へ変換する。
+- Codex TUI を設定上書き argv、作業ディレクトリ、検証済み環境変数とともに起動する実行ラッパー。
+- 呼び出しごとの call log、フィードバック連携、通知フック、成功・失敗イベント、サブプロセス異常の処理を担う。
 
 ## Read this when
-- cmoc から Codex TUI を起動する処理の全体フローを確認するとき。
-- Codex subprocess に渡す argv、cwd、環境変数、設定上書き、editor input handoff、Windows 通知の連携を追跡するとき。
-- Codex 呼び出しの call log・feedback・logger event と、失敗時の例外処理の関係を確認するとき。
+- Codex TUI の起動引数や実行環境を組み立てる処理を確認するとき。
+- Codex 呼び出しの call log、実行時間、return code、成功・失敗イベントの記録経路を調べるとき。
+- Codex CLI/TUI の起動失敗や subprocess の失敗がどのように例外化されるかを確認するとき。
+- TUI 通知フック、editor input handoff、feedback call の実行時連携を追うとき。
 
 ## Do not read this when
-- Codex の設定上書き引数や subprocess 環境の生成規則だけを確認する場合は runtime_codex_profile を直接読む。
-- cmoc 設定の読み込み規則だけを確認する場合は runtime_config を直接読む。
-- 通知 callback の生成・終了処理だけを確認する場合は runtime_windows_toast を直接読む。
-- call log の保存先や timestamped path の規則だけを確認する場合は runtime_paths を直接読む。
-- feedback の開始・環境変数・保存処理の詳細だけを確認する場合は runtime_feedback を直接読む。
+- Codex CLI の設定値やプロファイル解決そのものを調べる場合は、対応する runtime_codex_profile 実装を直接読むとき。
+- Windows 通知の具体的な生成・終了処理を調べる場合は、runtime_windows_toast 実装を直接読むとき。
+- フィードバックの保存形式や識別子生成の詳細を調べる場合は、runtime_feedback_store などの下位実装を直接読むとき。
+- Codex TUI の呼び出し経路を扱わず、一般的なサブコマンドのログや設定読込だけを調べるとき。
 
 ## hash
-- 220b2e83fb599da9f5f53066ef2f08c5037fc954caf4c1b5ffe1dbd32a7ba174
+- 926736ab4e7fc5704331236c2ffb5513e530902f883e6fa242b276144ecbfa01
 
 # `runtime_config.py`
 
@@ -619,16 +620,19 @@
 # `runtime_windows_toast.py`
 
 ## Summary
-- Windows toast 通知と Codex TUI callback の非致命的な transport 境界を担うランタイム補助モジュール。通知文の短縮・固定化、Windows PowerShell/WinRT への有限時間 transport、TUI callback の invocation-local 状態と turn 重複排除を扱う。通知や callback 実装を確認する際の入口。
+- Windows toast 通知と Codex TUI callback の transport 境界を提供する。
+- 最外側サブコマンドの terminal result 通知、root session の記録、turn callback の重複排除と入力待ち通知を扱う。
+- 通知処理や callback state の失敗を本命処理へ伝播させない非致命的な入口である。
 
 ## Read this when
-- Windows toast 通知の生成・送信、PowerShell executable の解決、通知文の入力制約や長さ制限を変更・確認するとき。
-- Codex TUI の agent-turn-complete callback、thread/turn identity の受理、並行 callback の重複排除、callback 用一時 state の cleanup を変更・確認するとき。
-- 通知 transport や callback の失敗が本命処理の terminal result に影響しないことを確認するとき。
+- Windows toast の通知内容、PowerShell transport、または通知の失敗隔離を確認するとき。
+- Codex TUI の SessionStart と agent-turn-complete callback の紐付け、root session 判定、turn 重複排除を調べるとき。
+- 通知 callback の生成・終了処理や repository 識別子の短縮化を確認するとき。
 
 ## Do not read this when
-- Codex の通常の terminal result 判定や最外側サブコマンドのライフサイクルだけを調べるとき。
-- Windows toast や TUI callback と無関係な共通ランタイム機能、または通知本文の仕様を調べるとき。
+- 通常のコマンド実行結果や TUI の本命処理そのものを調べるとき。
+- 通知仕様の正本や Codex hook の外部契約を確認する必要があり、この実装の境界では足りないとき。
+- 通知を使わない CLI 機能や、callback state と無関係な一時ファイル処理を変更するとき。
 
 ## hash
-- d26eaaed129a3bddaf5f37f26de7b8533f56efc33bda3aa829ac8978b9dcad53
+- 2efbe0e8881fd50469f78d3cd87bdd8827465cd56493851394b4c94ceab522ff
