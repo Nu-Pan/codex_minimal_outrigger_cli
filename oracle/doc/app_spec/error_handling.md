@@ -50,7 +50,7 @@ internal failure は、仕様で想定済みの失敗へ変換されていない
 
 ## エラーとして扱わない結果
 
-個別仕様が正常な処理結果として定義する状態は、internal failure として扱わない。これには、`attention`、`incomplete`、`completed_with_unresolved`、およびレビュー所見が存在する結果を含む。
+個別仕様が正常な処理結果として定義する状態は、internal failure として扱わない。これには、`attention`、`incomplete`、および `completed_with_unresolved` を含む。
 
 中断可能サブコマンドのユーザー中断要求は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` に従って正常系として扱う。ユーザー中断要求では、stdout と stderr のどちらにもスタックトレースまたはコールスタックを表示しない。
 

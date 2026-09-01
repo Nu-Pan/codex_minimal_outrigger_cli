@@ -67,7 +67,6 @@ feedback report、`incomplete` 診断 report、active issue、および AI-gener
 自動変換しない成果物には、次のものが含まれる。
 
 - realization refactor の finding、resolution、および unresolved target
-- oracle review の finding と verdict
 - indexing の結果
 - agent call 固有の Structured Output
 - run、session、および TUI の完了結果

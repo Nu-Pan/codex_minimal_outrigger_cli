@@ -9,7 +9,6 @@
 
 - 現在の中断可能サブコマンドは以下とする。
     - `cmoc realization refactor fork`
-    - `cmoc oracle review`
     - `cmoc feedback report`
 - 中断可能サブコマンドとして追加できるのは、長時間実行され、かつ処理済みの範囲だけでも一貫した結果として確定できるサブコマンドに限る。
 - この条件を満たすだけでは中断可能サブコマンドとみなさず、個別仕様への明記を必須とする。
@@ -35,6 +34,5 @@
 ## 中断後の扱い
 
 - 中断後の refactor run の state と次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「ユーザー中断」を正本とする。
-- oracle review の部分結果と再開境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md` の「ユーザー中断」を正本とする。
 - feedback report の保存 state と再開方法は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「ユーザー中断と再開」を正本とする。
-- 編集 run または oracle review の中断位置を再開する checkpoint を保存してはいけない。feedback report が保存する正式な agent call result は処理位置ではなく固定入力に対する確定結果であるため、この禁止の対象外とする。
+- 編集 run の中断位置を再開する checkpoint を保存してはいけない。feedback report が保存する正式な agent call result は処理位置ではなく固定入力に対する確定結果であるため、この禁止の対象外とする。

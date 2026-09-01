@@ -8,7 +8,7 @@
 - 編集 run は `cmoc run join` または `cmoc run abandon` で終了する。
 - 汎用の `cmoc run fork` は提供しない。
 - `cmoc session join` と `cmoc session abandon` は外側の session lifecycle であり、この仕様の対象ではない。
-- `cmoc oracle edit`、read-only の investigation/review、cmoc 自身による機械的更新、および session join の conflict 解消は、この編集 run lifecycle の対象ではない。
+- `cmoc oracle edit`、read-only の investigation、cmoc 自身による機械的更新、および session join の conflict 解消は、この編集 run lifecycle の対象ではない。
 - run の隔離資源と一般 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md` の「run 作業隔離規則」を正本とする。
 - session と run の永続 state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の `{{cmoc-session-state-file}}` を正本とする。
 

@@ -290,7 +290,6 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 - schema または宣言済みの決定論的事後条件に含まれない意味的品質を、機械的な受理条件にしてはならない
 - 次の agent call では、Structured Output の自然言語部分を原則として日本語とする
     - realization refactor
-    - oracle review
     - feedback verification
 - 対象の Structured Output でも、識別子、path、command、log 原文、および引用は元の表記を維持してよい
 
