@@ -91,19 +91,17 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と oracle 実装をまとめた上位の参照領域。仕様・開発規則・branch model・不採用案は doc、agent call のパラメータ構築・prompt 構築・設定や構造化文書モデルは src から確認する。
+- cmoc の正本仕様・開発規則と oracle 実装群を束ねる上位入口。仕様領域では doc、agent call・prompt・設定・パス・構造化文書の実装領域では src 配下へ案内する。
 
 ## Read this when
-- cmoc の正本仕様と、その仕様を実現する oracle 実装の対応関係を調査するとき。
-- アプリケーション仕様、開発規則、branch model、不採用案の入口を探すとき。
-- agent call、prompt 構築、設定・パス解決、構造化文書モデルの調査開始点を決めるとき。
+- cmoc の仕様または oracle 実装について、目的に応じた下位文書・実装入口を判断するとき
+- CLI、session／run、Codex、feedback、ログ、通知、branch／worktree 分離、Python 開発規則、agent call、prompt、設定・パス・構造化文書を横断して所在や責務の境界を確認するとき
 
 ## Do not read this when
-- 特定の仕様文書、開発規則、agent call builder、prompt policy、設定クラス、パス解決処理、構造化文書モデルが明確で、下位対象を直接確認できるとき。
-- 具体的な realization 実装やテストだけを調査するとき。
+- 特定の挙動仕様、branch model、Python 開発規則、agent call builder、prompt policy、設定クラス、パス解決、構造化文書モデルの詳細だけを確認したいときは、該当する下位対象を直接読む
 
 ## hash
-- b64950c19b9ce692c02a58f4e62eb4e48d3ebd006adb626ad9c0aa8caa275890
+- 2fb3131def0c44cef97897819a2574046bb3e4e7d4c150ab9b58c5ec64e0fe64
 
 # `pyproject.toml`
 
