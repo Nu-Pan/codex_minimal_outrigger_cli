@@ -1,3 +1,5 @@
+"""cmoc 設定の検証、JSON 変換、読み書き、同期を担う。"""
+
 import json
 import math
 from pathlib import Path

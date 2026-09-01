@@ -32,21 +32,16 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージで、関連処理への入口となる。
-- `fork.py` は realization file の refactor fork を実行し、対象選択、refactor state と INDEX の初期化、agent 委譲、変更検証、commit、rollback、完了判定、report 保存までの lifecycle を担う。
+- realization のリファクタリング処理をまとめるパッケージで、関連する処理への入口となる。
+- realization refactor fork のライフサイクル全体を処理し、対象選択、file 単位の調査・修正、state 更新、commit、完了判定、report 公開までを一貫して担う。
 
 ## Read this when
 - realization のリファクタリング処理の構成や入口を確認するとき。
-- `cmoc realization refactor fork` の開始から joinable 公開までの lifecycle を調査・変更するとき。
-- refactor の target 選択、処理単位、state 管理、unresolved finding、rename reconciliation、完了判定を確認するとき。
-- agent の変更 path 検証、INDEX refresh、commit、rollback、Codex descendant cleanup、interruption/error handling を確認するとき。
+- refactor fork の進捗、unresolved finding・rename の追跡、cleanup、run state、report 整合性、commit や割り込み時の処理を確認するとき。
 
 ## Do not read this when
-- realization リファクタリング以外の処理を確認するとき。
-- 個別 realization file の調査・修正 agent prompt の内容だけを確認したいとき。
-- refactor の変更概要生成の Structured Output や prompt だけを確認したいとき。
-- 一般的な run join、run abandon、editing run の共通仕様だけを確認したいとき。
-- INDEX 更新の一般仕様だけを確認したいとき。
+- realization のリファクタリング以外の処理を確認するとき。
+- 単一 realization file のレビュー・修正 prompt、変更概要の分類・要約、refactor state の一般的な同期・保存・対象選択を直接確認したいとき。
 
 ## hash
-- 7850b8f9579f46b29dd86efdedd8da5a1b6592e89ab8fb8c097c19054b6e83e7
+- 84ab70b73b79351a0e8f785e819f8a4ad06a183784b47e782a24faa56c0c4b9a

@@ -1,3 +1,5 @@
+"""複数の実行経路で共有する cmoc runtime API を公開する。"""
+
 # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 
 import subprocess

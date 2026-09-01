@@ -1,3 +1,5 @@
+"""cmoc の root・保存先解決、時刻整形、cwd 切替を提供する。"""
+
 import os
 import threading
 import time

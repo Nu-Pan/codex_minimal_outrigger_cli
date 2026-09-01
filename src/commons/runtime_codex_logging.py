@@ -1,3 +1,5 @@
+"""Codex 呼び出し失敗を共通のエラーテキストへ変換する。"""
+
 from .runtime_errors import CmocError
 
 

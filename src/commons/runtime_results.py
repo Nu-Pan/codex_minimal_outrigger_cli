@@ -1,3 +1,5 @@
+"""CLI・外部コマンド・Codex exec の共有結果モデルを定義する。"""
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Protocol, Sequence

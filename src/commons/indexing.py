@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from contextvars import copy_context
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypedDict, cast
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -40,6 +40,12 @@ from .runtime_paths import cwd_override_active
 from .runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
+
+
+class _IndexEntry(TypedDict):
+    summary: list[str]
+    read_this_when: list[str]
+    do_not_read_this_when: list[str]
 
 
 @dataclass
@@ -441,16 +447,20 @@ def build_index_entry(
     content = target_content_for_indexing(path)
     log_root = repo_root(root)
     parameter = build_indexing_index_entry_parameter(path, content, root)
-    result = codex_exec(
-        parameter,
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # {{work-root}}/oracle/doc/app_spec/run_isolation.md
-        # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
-        # run worktree 側へ流れないよう repo root に固定する。
-        root=log_root,
-        config=load_config(root),
-        purpose=f"indexing index entry for {path}",
-    ).output_json
+    # parameter が指す index_entry.json で検証済みの値を、利用境界で一度だけ狭める。
+    result = cast(
+        _IndexEntry,
+        codex_exec(
+            parameter,
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
+            # run worktree 側へ流れないよう repo root に固定する。
+            root=log_root,
+            config=load_config(root),
+            purpose=f"indexing index entry for {path}",
+        ).output_json,
+    )
     return render_index_entry(root, path, result, digest=digest).rstrip()
 
 
@@ -502,7 +512,7 @@ def _directory_hash_relative_path(root: Path, path: Path) -> str:
 def render_index_entry(
     root: Path,
     path: Path,
-    entry: dict,
+    entry: _IndexEntry,
     digest: str | None = None,
 ) -> str:
     """schema 検証済み Structured Output から INDEX.md entry を生成する。"""

@@ -8,7 +8,7 @@
 
 from collections.abc import Collection
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, TypedDict, cast
 
 from acp.builder.realization.refactor.fork.change_summary import (
     build_realization_refactor_fork_change_summary_parameter,
@@ -65,6 +65,31 @@ from commons.runtime_run_lifecycle import (
 from commons.runtime_run_report import _render_changed_path, write_fork_report
 
 _UnresolvedFinding = tuple[str, str, Path]
+
+
+class _FindingResolution(TypedDict):
+    status: str
+    summary: str
+
+
+class _Finding(TypedDict):
+    title: str
+    changed_paths: list[str]
+    resolution: _FindingResolution
+
+
+class _FileReviewOutput(TypedDict):
+    findings: list[_Finding]
+
+
+class _ChangeSummary(TypedDict):
+    category: str
+    summary: str
+    changed_paths: list[str]
+
+
+class _ChangeSummaryOutput(TypedDict):
+    changes: list[_ChangeSummary]
 
 
 def cmoc_realization_refactor_fork_impl() -> None:
@@ -458,7 +483,9 @@ def _run_refactor_unit(
             ["Codex call log を確認してください。"],
             f"target: {target}\nreturncode: {result.returncode}",
         )
-    findings: list[dict] = result.output_json["findings"]
+    # file_review_and_fix.json で検証済みの値を、利用境界で一度だけ狭める。
+    file_review_output = cast(_FileReviewOutput, result.output_json)
+    findings = file_review_output["findings"]
     actual_changed_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,
@@ -811,7 +838,9 @@ def _completion_reason(
     return "completed_with_unresolved" if unresolved_targets else "natural_completion"
 
 
-def _completion_change_summary(context: EditingRunContext) -> list[dict] | None:
+def _completion_change_summary(
+    context: EditingRunContext,
+) -> list[_ChangeSummary] | None:
     """正常完了した refactor fork の tree 差分を要約する。"""
     diff = run_git(
         ["diff", "--binary", context.run_fork_commit, "HEAD"],
@@ -827,7 +856,9 @@ def _completion_change_summary(context: EditingRunContext) -> list[dict] | None:
         config=load_config(context.run_worktree),
         purpose="realization refactor change summary",
     )
-    return result.output_json["changes"]
+    # change_summary.json で検証済みの値を、利用境界で一度だけ狭める。
+    change_summary_output = cast(_ChangeSummaryOutput, result.output_json)
+    return change_summary_output["changes"]
 
 
 def _write_refactor_report(
@@ -837,7 +868,7 @@ def _write_refactor_report(
     units: list[tuple[str, int]],
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
     *,
-    summary: list[dict] | None,
+    summary: list[_ChangeSummary] | None,
     error: BaseException | None = None,
     cleanup_errors: list[str] | None = None,
 ) -> Path:
@@ -952,7 +983,7 @@ def _state_counts(state: RefactorState) -> dict[str, int]:
 
 
 def _render_summary(
-    summary: list[dict] | None,
+    summary: list[_ChangeSummary] | None,
     changed_paths: list[str],
 ) -> list[str]:
     """change summary を report 用 Markdown 行へ変換する。"""

@@ -1,3 +1,5 @@
+"""work root の INDEX.md を更新して commit する CLI 入口を提供する。"""
+
 from pathlib import Path
 
 from cmoc_runtime import (
