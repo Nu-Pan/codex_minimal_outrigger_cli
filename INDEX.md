@@ -91,17 +91,24 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・開発規則と oracle 実装群を束ねる上位入口。仕様領域では doc、agent call・prompt・設定・パス・構造化文書の実装領域では src 配下へ案内する。
+- oracle は cmoc の正本仕様と開発規則をまとめた上位文書群で、アプリケーション挙動・branch／worktree 分離・不採用案・Python 実装／環境／テストの各領域への入口を提供する。
+- CLI、session／run、Codex 呼び出し、ログ、feedback、通知などの個別仕様と、実装・開発環境・テストの規則を対応する下位文書へ案内する。
+- branch・commit・worktree による隔離モデルや、採用しなかった設計・作業方式の判断理由を確認するための入口でもある。
 
 ## Read this when
-- cmoc の仕様または oracle 実装について、目的に応じた下位文書・実装入口を判断するとき
-- CLI、session／run、Codex、feedback、ログ、通知、branch／worktree 分離、Python 開発規則、agent call、prompt、設定・パス・構造化文書を横断して所在や責務の境界を確認するとき
+- cmoc の正本仕様全体から、挙動・設計判断・開発規則に対応する下位文書の所在や境界を探すとき。
+- CLI、session／run、Codex、feedback、ログ、通知、INDEX、branch／worktree 分離など複数領域にまたがる仕様を調べるとき。
+- Python 実装規約、開発環境、テスト規則や実行手順を確認するとき。
+- 現行方針ではなく、不採用となった設計案や作業方式の理由を調べるとき。
 
 ## Do not read this when
-- 特定の挙動仕様、branch model、Python 開発規則、agent call builder、prompt policy、設定クラス、パス解決、構造化文書モデルの詳細だけを確認したいときは、該当する下位対象を直接読む
+- 特定の機能やサブコマンドの詳細挙動だけを確認したいときは、対応する app_spec 配下の個別仕様を直接読む。
+- branch model の具体的な操作契約だけを確認したいときは、branch model の本文を直接読む。
+- Python の実装・環境・テストに関する具体的な規則だけを確認したいときは、対応する dev_rule 配下の文書を直接読む。
+- 採用済み機能の仕様や realization の具体的な実装・テスト内容を調べるときは、該当する正本仕様または realization／test を直接読む。
 
 ## hash
-- 2fb3131def0c44cef97897819a2574046bb3e4e7d4c150ab9b58c5ec64e0fe64
+- 68fd195b54c2751fa1cf2d87011ff5333cb905dbc29bdf5523d3a4c683fe0f2a
 
 # `pyproject.toml`
 

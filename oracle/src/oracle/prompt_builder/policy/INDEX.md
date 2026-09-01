@@ -17,55 +17,59 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- 明示的に選択された active な prompt editor input へ、完成済み content を handoff するための規定を提供する。
-- editor input handoff の意味仕様自体ではなく、handoff 実行時の要求条件、報告、失敗時の扱い、直接書き込み禁止を定める入口。
+- 明示的に選択された editor input handoff 規定文面を構築する定義。
+- prompt editor input への完成済み content の handoff に関する規定を、構造化されたヘッダーとポリシーとして提供する。
+- handoff の意味仕様そのものではなく、editor input handoff 規定を prompt に組み込むための入口。
 
 ## Read this when
-- active target への editor input handoff を実行するか、その実行条件・渡す内容・結果報告・失敗時の対応を確認するとき。
-- prompt editor input の handoff 方法に関する規定を確認するとき。
+- editor input handoff に関する規定文面を構築・変更するとき。
+- active な prompt editor input へ完成済み content を渡す手順や制約を確認するとき。
+- editor input handoff policy の prompt builder 上の構造化を確認するとき。
 
 ## Do not read this when
-- editor input handoff の意味仕様や詳細な仕様定義を確認したいときは、参照先の仕様文書を直接読む。
-- handoff を伴わない prompt 構築や、editor work file への直接書き込みを扱うとき。
+- editor input handoff の意味仕様や利用者向けの詳細を確認したい場合。
+- prompt editor input 以外の policy を構築・変更する場合。
+- handoff の実行方法そのものを確認する場合。
 
 ## hash
-- 46ce1870592067978ab455b3ef189575513d634ee2d165e5f28a1baee965ca06
+- 1f6590350f14692e8d1830107145ccfd4d967f9ca30871845b7c120e11167621
 
 # `feedback_reporting.py`
 
 ## Summary
-- 全 agent call に共通する、人間向け feedback 報告規定のプロンプトポリシーを構築する。報告時の必須手段と禁止事項を SDHeader／SDPolicy として提供する。
+- 全 agent call に共通する、人間へ報告すべき未解決問題の判定基準と報告方法を、プロンプトへ組み込むポリシー構築定義。
+- フィードバック報告ポリシーの構造化文面を生成する処理への入口。
 
 ## Read this when
-- agent call 共通の human feedback 報告ルールを確認・変更するとき
-- 人間へ報告すべき問題の扱いや、feedback 報告ポリシーのプロンプト構築責務を調べるとき
+- agent call 共通の human feedback reporting 規定を確認・変更するとき。
+- 未解決問題を人間へ報告する条件、必須の報告手段、報告してはいけないケースの根拠を確認するとき。
 
 ## Do not read this when
-- feedback 報告の意味仕様そのものを確認するときは、参照先の app specification を直接読む
-- feedback 報告とは無関係な prompt builder や個別 agent call の仕様を調べるとき
+- feedback 報告ポリシーの意味仕様や報告基準そのものを確認したいときは、参照先の仕様文書を直接読む。
+- プロンプト構築全般や他の policy の責務だけを調べるとき。
 
 ## hash
-- a9912c718fc712efad38e202f9ebb1bcdc96dedc19ea3a5e55d107ab71b28543
+- f1b7f93b888020d8a67d4cf3fa572fa1b74b8cfef08077d9cce0c657e32b618d
 
 # `file_access.py`
 
 ## Summary
-- FileAccessMode に応じたエージェント向けファイル読み書き規定を構築する。
-- パスのプレースホルダー定義と、リポジトリ外・保護領域・oracle/realization file の禁止事項を SDHeader として返す。
-- NO_POLICY では共通規定がないことを表し、それ以外では mode ごとの deny-list と暗黙許可規則を生成する。
+- FileAccessMode と作業パス文脈から、エージェント向けの論理的なファイル読み書き禁止規定を構築する。
+- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE の各モードに応じて、oracle file と realization file のアクセス範囲を切り替える。
+- 共通のリポジトリ境界、保護対象ディレクトリ、AGENTS.md・INDEX.md・memo などの禁止事項を含む規定文面と、パス置換用の定義を返す。
 
 ## Read this when
-- エージェント呼び出しに適用するファイルアクセス制限の文面を追加・変更・確認するとき。
-- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE のアクセス範囲の違いを確認するとき。
-- repo-root と work-root が異なる場合の .cmoc/gu/ar への読み書き制限を確認するとき。
+- agent call 用プロンプトの file R/W policy を生成・変更・検証するとき。
+- FileAccessMode ごとの oracle file・realization file の読み書き可否や、repo-root と work-root の境界条件を確認するとき。
+- ファイルアクセス規定を Codex CLI の sandbox 設定へ変換せず、プロンプト上の deny-list として扱う実装を調べるとき。
 
 ## Do not read this when
-- 実際の oracle file や realization file の仕様・実装内容を確認したいとき。
-- ファイルアクセス制限ではなく、プロンプト本文の組み立てや別のポリシー生成処理を直接調べるとき。
-- 既存の呼び出し側で生成済みのアクセス規定だけを確認すれば足りるとき。
+- 個別の oracle file や realization file の内容・仕様を確認することが目的のとき。
+- 一般的なパスモデルや FileAccessMode の定義そのものを確認するときは、それぞれの定義元を直接読む。
+- 実際のエージェント作業に適用されるセッション固有のアクセス規定を確認するときは、生成済みのプロンプトや正本の実行規則を読む。
 
 ## hash
-- 623e476078b6a53b5b7dae8b8903fff33708e8aa440ddefee96a071a9118c71d
+- 913c0c5ff6c98eda1544e1e7a2d52c6db43d81533d71c7445a5971c3bbd1d31f
 
 # `index_entry.py`
 
@@ -145,17 +149,17 @@
 # `routing.py`
 
 ## Summary
-- `AgentCallPathContext` からルートのプレースホルダー定義を取得し、`work-root` を含む置換マップと routing policy 用の `SDHeader` を構築する関数。
-- `SDHeader` と `SDPolicy` を使って、`INDEX.md` による routing の基本方針をプロンプトへ組み込む。
-- routing の意味仕様そのものは `oracle/doc/app_spec/indexing.md` を参照する前提で、対象ファイルはその規定文面を動的に構成する入口となる。
+- INDEX.md による routing 規定文面を構築する関数。作業対象に近い INDEX.md を起点に、必要なファイルやディレクトリを特定するためのプロンプト定義への入口。
 
 ## Read this when
-- `INDEX.md` による routing policy のプロンプト生成や、そのヘッダー・ポリシー構築を変更または確認するとき。
-- `AgentCallPathContext` のルートプレースホルダー定義を routing policy の入力へ渡す処理を追うとき。
+- INDEX.md を使った文書 routing の規定文面を変更・確認するとき
+- 作業対象の階層や root placeholder を routing policy に組み込む必要があるとき
+- INDEX.md の位置づけや本文優先の方針をプロンプトへ反映する処理を調べるとき
 
 ## Do not read this when
-- `INDEX.md` の routing 意味仕様を確認したいときは、対象ファイルではなく `oracle/doc/app_spec/indexing.md` を直接読む。
-- `PlaceholderMap`、`SDHeader`、`SDPolicy` の一般的な実装詳細だけを確認したいとき。
+- INDEX.md の実際の配置内容や個別ファイルの責務を確認したいとき
+- routing policy の意味仕様そのものを確認したいときは、先に指定された index routing の正本仕様を読むべき場合
+- INDEX.md を使わないプロンプト文面や、別の policy header の構築だけを扱うとき
 
 ## hash
-- 908d29e185249c4aa4fecb62b09429a1b55e4022db7bd7c28d5d2ee749daebf3
+- dcaa865be45b4a4daf2a6c19e7e4706655ea8fd54e91ff1dff23acc0577c7118

@@ -51,39 +51,39 @@
 # `other`
 
 ## Summary
-- cmoc の共有基盤として、設定定義、agent call 間で使うパスコンテキスト、構造化文書の Markdown レンダリングを扱う要素への入口です。
-- 設定の既定値や Codex provider 対応、worktree・repository・run のルート解決、構造化文書の整形処理を確認できます。
+- リポジトリごとに変化する cmoc の挙動設定を集約し、JSON/TOML 共通値、Codex provider、agent call、全体設定の dataclass を定義する設定モデル。
+- agent call 全体で共有するパスコンテキストを構築し、worktree・main repository・run の各ルート導出と、cmoc のルートプレースホルダとの相互変換を担う基盤モデル。
+- 見出し、参照ブロック、コードブロック、規定などの構造化文書要素を保持し、cmoc の文書記法を Markdown へレンダリングするためのモデルと関数。
 
 ## Read this when
-- cmoc の設定項目、既定値、Codex CLI の provider・model・reasoning effort 対応を確認するとき。
-- agent call の設定や設定の永続化対象を確認するとき。
-- worktree root・main repository root・run root の導出規則や、cmoc プレースホルダの解決・変換を確認するとき。
-- 構造化文書を Markdown に変換する処理、見出し深度、参照ブロック、コードフェンス、規定文、空行の整形を確認するとき。
+- cmoc の設定項目や既定値、Codex CLI の provider・model・reasoning effort、agent call 種別ごとの設定、永続化対象を確認するとき。
+- agent call の cwd から worktree root や main repository root を導出する規則、{{cmoc-root}}・{{repo-root}}・{{run-root}}・{{work-root}} の解決や変換、Git metadata に基づくルート探索を確認するとき。
+- 構造化文書を Markdown に変換する処理、見出し階層、cmoc_block/cmoc_ref、コードフェンス、SDPolicy の出力形式、または関連する SDNode 系の責務を調べるとき。
 
 ## Do not read this when
-- 特定の agent call のプロンプト生成や実行処理そのものを調べるとき。
-- 設定値の JSON 同期・生成や doctor による永続化処理を直接確認したいとき。
-- 個別の CLI 機能や realization の実装責務だけを確認したいとき。
-- Markdown 以外の出力形式、文書要素の具体的内容、または正本仕様を直接確認したいとき。
+- 特定の agent call のプロンプト生成・実行処理や、設定値の JSON 同期・生成といった周辺処理そのものを調べるとき。
+- 個別の CLI 機能・realization の実装責務、またはパスモデルを介さない一般的なファイル操作を確認するとき。
+- Markdown 以外の文書形式、文書構造の仕様・入力生成規則、または cmoc の一般的な規定・参照ルーティング仕様を確認するとき。
 
 ## hash
-- 24d115721f401060c1235a3dfbb7d21b7338b4a1e75fe058d142daaef79bd859
+- 0e76c8bef13380706d6a2a5160587050fe6a42a1f1f5fd4753f1018ce0241d64
 
 # `prompt_builder`
 
 ## Summary
-- `prompt_builder` は、agent call に渡す完全な prompt と、その共通部品・入力初期文面・oracle／realization 概念を組み立てる実装群への入口。
-- 個別の policy builder、prompt template、editor input、共通 placeholder 型を確認するための下位要素を含む。
+- agent call 向け prompt builder の構成と、基礎規定・目的・追加文面・placeholder の統合入口を扱う階層。
+- oracle／realization の説明部品と、各種 policy 文面の構築定義へ進むための入口。
+- placeholder 型定義、エディタ初期入力、個別 policy の具体的な構築処理を確認するための下位要素を含む。
 
 ## Read this when
-- agent call 向け prompt の構成、共通部品の組み合わせ、policy の選択経路を把握したいとき。
-- prompt に注入される oracle／realization の概念、ファイル分類、routing や INDEX エントリー生成に関する構築経路を確認したいとき。
-- prompt builder 配下で、placeholder 型、完全 prompt 組み立て、editor 初期入力、または個別 policy builder の担当対象を特定したいとき。
+- agent call の prompt 構成、policy の選択・注入、placeholder の統合方針を確認したいとき。
+- oracle／realization、file access、routing、feedback、INDEX.md エントリーなどの prompt 規定の構築箇所を探すとき。
+- エディタへ渡す初期 prompt や、placeholder 置換値の型定義を確認したいとき。
 
 ## Do not read this when
-- 個別 policy の具体的な文面や生成処理だけを調べる場合は、該当する policy builder を直接読む。
-- 実際の oracle 文書、realization の実装・テスト、または生成済み prompt の実行処理を確認したい場合は、それぞれの対象を直接読む。
-- prompt builder と無関係な構造化文書ノード、SDHeader／SDPolicy などの共通データ型、CLI 挙動を調べる場合。
+- 個別 policy の意味仕様や正本規定そのものを確認したいときは、対応する仕様文書を直接読む。
+- 実際の placeholder 置換処理、プロンプト生成全体の実装詳細、または個別の oracle／realization ファイルだけを確認したいとき。
+- 構造化文書ノードの定義や Markdown レンダリング仕様を確認したいときは、struct_doc の実装を直接読む。
 
 ## hash
-- 096d45cf3746f5776a342ea0a7146c38e070e3c4defa4772c26f2762c025d687
+- 202b5294d9d93e0190edf37cad00ab13d1757028a86034f80cb25c6f39a4cdbe

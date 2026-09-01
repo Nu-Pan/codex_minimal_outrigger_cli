@@ -23,16 +23,18 @@
 # `src`
 
 ## Summary
-- cmoc の oracle 実装群における上位入口。agent call パラメータ、prompt 構築、用途別の起動・検証定義、設定・パス・構造化文書モデルを下位要素へ振り分ける。
-- agent call の呼び出し設定や用途別 builder を調べる場合は acp_builder、prompt の組み立て規則や各種ポリシーを調べる場合は prompt_builder、設定・パス解決・Markdown 構造化文書を調べる場合は other から読み始める。
+- cmoc の正本ソースを構成する階層で、設定・パスモデル・構造化文書モデル、agent call パラメータ、prompt 構築、入力契約を扱う。
+- agent call の実行側へ渡す構築定義と、用途別の prompt policy・feedback・editor input・TUI などの下位領域への入口となる。
 
 ## Read this when
-- oracle の実装全体で、agent call 関連の責務がどの下位要素にあるかを判断するとき。
-- 呼び出しパラメータ、prompt 構築、用途別起動処理、設定・パスモデルの調査開始点を決めるとき。
+- cmoc の設定値、Codex call パラメータ、agent call の cwd とパス placeholder、構造化文書モデルを確認するとき。
+- 完全 prompt の構築や policy の組み合わせ、agent call 入力契約、feedback・editor input handoff の形式を調べるとき。
+- 下位の acp_builder、prompt_builder、other など、特定の oracle ソース領域へ進む起点を判断するとき。
 
 ## Do not read this when
-- 特定の prompt policy、agent call builder、設定クラス、パス解決処理、または構造化文書モデルだけを確認したい場合は、対応する下位要素を直接読むとき。
-- agent call の実行結果の保存・集約や、oracle／realization 本文・INDEX.md 自体の編集方法を調べるとき。
+- 実際の CLI 実行、session join の競合解消、TUI 起動、oracle や realization 本文の編集処理を確認したいとき。
+- 特定の用途における具体的な prompt policy、agent call パラメータ、JSON Schema の詳細を確認したいときは、対応する下位対象を直接読むとき。
+- cmoc の意味仕様や一般的な開発規定を確認したいときは、対応する oracle/doc または dev_rule の正本を読むとき。
 
 ## hash
-- 4af0b7fbf24db6d6442d583b4b206d10b4771528c060ff8e984534a8ad377dc5
+- 591e6af7937d26eff09b85f86d6d3b5d3ea10092d5872e3222118477a515abf0

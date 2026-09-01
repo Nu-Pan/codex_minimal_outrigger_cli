@@ -1,18 +1,16 @@
 # `basic.py`
 
 ## Summary
-- プロンプト生成で共通利用するプレースホルダ対応表の型 `PlaceholderMap` を定義する標準モジュール。プレースホルダ名から置換先の文字列またはパスを対応付けるための入口であり、具体的なプロンプト構築処理を確認する対象ではない。
+- プレースホルダ名と、文字列またはパスによる置換値の対応を表す型定義。
 
 ## Read this when
-- プレースホルダの対応関係を表すデータ構造の型定義や、文字列・`Path` を含む置換値の仕様を確認したいとき。
-- プロンプト関連コードで共通の型エイリアスの定義元を特定したいとき。
+- プレースホルダ置換値を保持するマップの型や、値としてパスを許容する定義を確認したいとき。
 
 ## Do not read this when
-- プロンプトの生成手順、テンプレート展開、置換処理の実装を調べるときは、実際のプロンプト構築モジュールを直接読む。
-- プレースホルダ対応表の型定義に関係しないプロンプト仕様やCLI挙動を確認するとき。
+- プレースホルダの置換処理そのものや、プロンプト生成全体の規則を確認したいとき。
 
 ## hash
-- 526fb2d3d3f5fd312f3f1cc48c630d59e91568f38d6ac0d09bc5241792eb1e18
+- f8a558f24e4b59e54e49e1729d4c10dfd1b596dc0b1531a5b8e9a8e2f9a6194a
 
 # `complete_prompt.py`
 
@@ -50,34 +48,32 @@
 # `parts`
 
 ## Summary
-- oracle と realization の基本概念・責務・下位分類・ファイル分類条件をプロンプトに組み込む関数。対象ディレクトリにある基本概念の入口。
+- oracle file と realization file の役割・正本関係・下位概念を説明するプロンプト部品への入口
+- oracle／realization／uncategorised file をパス、git ignore、.git metadata から分類する基本条件を扱うプロンプト部品への入口
 
 ## Read this when
-- oracle file と realization file の役割や編集主体、正本仕様との関係を確認するとき。
-- oracle doc・src・test、realization implementation・test・ancillary の区分を確認するとき。
-- ファイルが oracle、realization、uncategorised のどれに分類されるか、パス・git ignore・.git による条件を確認するとき。
+- agent call のプロンプトに oracle file と realization file の基本知識を組み込む処理を変更・調査するとき
+- oracle／realization／uncategorised file の分類条件を説明するプロンプト構築部品を確認するとき
 
 ## Do not read this when
-- 個別の oracle 文書、実装、テスト、補助ファイルの内容や詳細仕様を確認したいときは、対応する対象を直接読む。
-- プロンプト部品の共通構築方法や、INDEX.md の生成・探索規則だけを確認したいとき。
+- oracle と realization の責務やファイル列挙を正本仕様として確認するとき
+- 実際のファイル分類ロジックや個別の oracle／realization ファイルを確認するとき
 
 ## hash
-- 11fdebe915f6bc100905ce43e60b6e379d88ab51f3caa587627a16810c95f172
+- 15ceae959181089e7d69c5cbc8d976b1c3727958999930a3bc56388caacf0f23
 
 # `policy`
 
 ## Summary
-- agent call 向けの各種 prompt policy を構築する実装群への入口。ファイルアクセス、oracle／realization、routing、conflict 解消、feedback 報告、editor handoff、INDEX.md エントリー生成、適合性所見に関する個別 policy の構築責務を扱う。
+- agent call 向けプロンプトに組み込む各種 policy 文面の構築定義をまとめた入口。ファイルアクセス、oracle・realization、routing、INDEX.md エントリー、conflict 解消、feedback 報告、editor input handoff など、個別の規定生成責務へ進むための階層。
 
 ## Read this when
-- agent call の prompt policy 生成処理を調査・変更するとき
-- 複数の共通 policy のうち、どの policy builder が担当するかを判断するとき
-- INDEX.md routing 用 instruction や oracle／realization 関連 instruction の構築経路を確認するとき
+- agent call の policy 文面を構築・変更・検証するとき。
+- 対象が file access、oracle、realization、routing、INDEX.md エントリー、conflict 解消、feedback 報告、editor input handoff のいずれかに関する場合に、該当する policy 定義への入口を確認するとき。
 
 ## Do not read this when
-- policy の意味仕様そのもの、oracle doc の規定、realization の設計・実装を確認したいとき
-- 個別 policy の詳細だけを調べる場合は、該当する policy builder を直接読む
-- 生成済み prompt の実行処理や、SDHeader・SDPolicy など共通データ型の実装だけを確認したいとき
+- 個別 policy の意味仕様や正本規定そのものを確認する場合は、対応する仕様文書を直接読むとき。
+- prompt builder の policy 以外の実装、実際に生成されたプロンプト、または realization・oracle の具体的な内容を確認する場合。
 
 ## hash
-- 25cd9d33fbc3b8ebdca0919263ba3f84e07dd17adb061a70f3baa8d01c6a0e63
+- 0554e67574c13677943bfba1d668f7564e4ca894d44ca124c69a88a20843d114

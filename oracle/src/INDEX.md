@@ -1,17 +1,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の agent call に関する prompt 構築・起動パラメータ定義の全体入口。共通の呼び出しパラメータ、パスコンテキスト、構造化文書レンダリング、用途別の prompt／Structured Output 定義へ進むための上位要素を含む。
-- agent call の用途別定義を調べる場合は、通常の呼び出しパラメータと quota probe、INDEX エントリー生成、feedback issue の正規化・検証、TUI 起動の各要素へ進む。prompt の構成規則を調べる場合は prompt builder、設定・パス・Markdown 構造化文書を調べる場合は other 配下が入口になる。
+- cmoc の正本となる設定・パスモデル・構造化文書モデルと、agent call の入力契約および prompt 構築定義をまとめた oracle ソース階層。
+- agent call の用途別パラメータ定義、prompt の policy・parts、feedback や editor input の入力契約へ進むための上位入口。
 
 ## Read this when
-- cmoc の agent call 構築定義全体を把握し、個別用途のパラメータ定義や prompt builder への進み先を判断するとき。
-- agent call の入力、cwd、ファイルアクセスモード、Structured Output、indexing preflight などの設定責務の所在を確認するとき。
+- cmoc の設定モデル、Codex provider と agent call の既定値、永続化対象を確認するとき。
+- agent call の cwd から導出される worktree・repository ルートや、cmoc のパス placeholder の解決規則を確認するとき。
+- 構造化文書ノードや cmoc の文書記法を Markdown へ変換するモデル・処理を確認するとき。
+- agent call の入力パラメータ、prompt の policy 構成、用途別の oracle・realization・feedback・TUI 定義の入口を探すとき。
+- editor input handoff や feedback reporter など、agent call に渡す JSON 入力契約を確認するとき。
 
 ## Do not read this when
-- 特定の用途の prompt 文面や Structured Output 契約だけを確認したい場合は、対応する下位要素を直接読むとき。
-- agent call の実行処理、feedback の保存・集約、oracle／realization 本文の編集、INDEX.md 更新そのものを調べるとき。
-- 設定、パス解決、構造化 Markdown の具体的な実装だけを確認したい場合は、other 配下を直接読むとき。
+- 実際の CLI 実行、agent call の起動、session join の競合解消、oracle や realization 本文の編集処理だけを確認したいとき。
+- 特定の agent call の具体的な prompt policy、用途別パラメータ、または JSON Schema の受理条件を確認したいときは、対応する下位対象を直接読むとき。
+- cmoc の一般規定や prompt の正本仕様そのものを確認したいときは、対応する仕様文書を直接読むとき。
 
 ## hash
-- 2d8ab99311ccb61be865c4d7227b8828d358066ec53ee55c577bd2c429f86e95
+- 8e4ca2bf185ddf79b8aad090e5404ed73730df6a062439f095afdb6ca42a7c9c
