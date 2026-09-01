@@ -1,3 +1,5 @@
+"""プレースホルダ名と文字列またはパスの置換値との対応を表す型定義。"""
+
 # std
 from pathlib import Path
 

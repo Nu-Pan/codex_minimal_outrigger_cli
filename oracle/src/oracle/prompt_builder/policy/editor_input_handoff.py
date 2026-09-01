@@ -1,3 +1,5 @@
+"""明示的に選択された editor input handoff 規定文面の構築定義。"""
+
 # cmoc
 from oracle.other.struct_doc import SDHeader, SDPolicy
 from oracle.prompt_builder.basic import PlaceholderMap

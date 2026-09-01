@@ -1,3 +1,5 @@
+"""INDEX.md を使って必要な文書へ進むための routing 規定文面の構築定義。"""
+
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDPolicy

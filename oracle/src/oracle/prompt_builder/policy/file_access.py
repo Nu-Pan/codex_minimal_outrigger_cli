@@ -1,3 +1,5 @@
+"""FileAccessMode に応じたファイルアクセス制限規定文面の構築定義。"""
+
 # cmoc
 from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext

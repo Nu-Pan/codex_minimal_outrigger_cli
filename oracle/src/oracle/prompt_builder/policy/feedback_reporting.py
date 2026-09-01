@@ -1,3 +1,5 @@
+"""全 agent call に共通する人間向け feedback 報告規定文面の構築定義。"""
+
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDPolicy

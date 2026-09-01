@@ -1,3 +1,5 @@
+"""oracle file と realization file の基本知識を説明する文面の構築定義。"""
+
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader

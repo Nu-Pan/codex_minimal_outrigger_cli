@@ -21,7 +21,7 @@ class SDHeader:
         self,
         title: str,
         *children: "SDNode",
-    ):
+    ) -> None:
         """
         コンストラクタ
         """
@@ -85,7 +85,7 @@ class SDTagBlock:
         self,
         block_id: str,
         *children: "SDNode",
-    ):
+    ) -> None:
         # ブロック ID
         if not isinstance(block_id, str):
             raise TypeError(f"block_id must be str (type={type(block_id)})")
@@ -114,16 +114,19 @@ class SDTagBlock:
 
     @property
     def block_id(self) -> str:
+        """参照可能なブロックの ID を取得する。"""
         return self._block_id
 
     @property
     def childlen(
         self,
     ) -> "list[SDNode]":
+        """レンダリング対象の子要素を取得する。"""
         return self._children
 
     @property
     def ref_tag(self) -> str:
+        """このブロックへの cmoc_ref 参照タグを取得する。"""
         return f'<cmoc_ref target="{self._block_id}"/>'
 
 
@@ -301,11 +304,11 @@ def _render_sd_code_block_as_markdown(
 
 def _render_sd_policy_as_markdown(
     sd_node: SDPolicy,
-):
+) -> str:
     """sd_node を markdown としてレンダリングする
 
     内部実装
-    str 専用
+    SDPolicy 専用
     """
     result: list[str] = list()
     if sd_node.what_is_this:
