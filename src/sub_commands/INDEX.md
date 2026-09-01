@@ -69,18 +69,26 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package。oracle の edit、investigation、review と、それらを構成する review 関連処理への入口として機能する。
+- oracle 系サブコマンドの package 境界を示し、oracle サブコマンド群への入口となる。
+- `cmoc oracle edit` の入力収集、起動前提の検証、本命 oracle 編集 agent call と仕様削減 agent call の実行フローを担う。
+- `cmoc oracle investigation` の調査指示入力、完全プロンプト構築、Codex TUI 起動までの read-only 実行フローを担う。
+- 編集関連の実装ファイルを含まない空のディレクトリで、現時点の下位要素へのルーティング先はない。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や、edit・investigation・review の CLI 実行フローを確認するとき。
-- oracle review の対象列挙、実行ループ、パス解決、レポート、INDEX 差分処理の関係を調べるとき。
+- oracle 系サブコマンドの package 構成や入口を確認するとき。
+- `cmoc oracle edit` の CLI フロー、入力編集、本命・仕様削減 agent call の起動条件や実行順序を確認するとき。
+- `cmoc oracle investigation` の CLI フロー、調査指示編集、プロンプト構築、Codex TUI 起動を確認するとき。
+- このディレクトリに編集関連ファイルが追加されたか確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細実装だけを確認したい場合は、edit.py、investigation.py、review.py など該当する下位ファイルを直接読む。
-- oracle 編集仕様、調査契約、review の正本仕様や prompt 内容だけを確認したい場合は、参照先の仕様文書を直接読む。
+- 個別 oracle サブコマンドの prompt 契約や仕様そのものを確認したいとき。
+- prompt editor の共通入出力処理だけを確認したいとき。
+- oracle edit の agent 起動パラメータ構築だけを確認したいとき。
+- oracle investigation の TUI 起動パラメータや共通 runtime の詳細だけを確認したいとき。
+- oracle サブコマンドの実装を調査するときに、空の編集ディレクトリだけを確認しようとしているとき。
 
 ## hash
-- f8ace4bb584dd384cdce6fa20923cf1810c64cd69dee3cc04ecf0af112384a0d
+- ed0e9b8fea43533d9ad7c042135f4f82804bdc36036c330a8498b11afa88fc9a
 
 # `realization`
 

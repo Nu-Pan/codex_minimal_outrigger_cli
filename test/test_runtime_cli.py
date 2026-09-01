@@ -157,7 +157,7 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
         runtime_cli.start_subcommand_step("1/1, 1/1", "nested", "nested")
         return TerminalResult(
             primary_report=report_path,
-            primary_report_role="review report",
+            primary_report_role="probe report",
             result="attention",
             next_actions=("report を確認してください。",),
         )
@@ -173,7 +173,7 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     stdout_lines = captured.out.splitlines()
     assert stdout_lines[0] == "# 完了: cmoc probe"
     assert stdout_lines[1] == (
-        f"- primary report (review report): `{report_path.resolve()}`"
+        f"- primary report (probe report): `{report_path.resolve()}`"
     )
     assert stdout_lines[2] == "- result: `attention`"
     assert stdout_lines[3] == "- 次の操作: report を確認してください。"
@@ -791,36 +791,16 @@ def test_cli_parse_error_report_is_written_to_stderr() -> None:
     assert "- 終了コード: `2`" in result.stderr
 
 
-@pytest.mark.parametrize(
-    ("argv", "parse_error", "allowed"),
-    [
-        (
-            ["realization", "apply", "fork", "--scope", "bad"],
-            "No such option: --scope",
-            [],
-        ),
-        (
-            ["oracle", "review", "--scope", "rolling"],
-            "Invalid value for '--scope'",
-            ["session", "full"],
-        ),
-    ],
-)
-def test_scope_options_are_rejected_by_cli_parser(
-    argv: list[str], parse_error: str, allowed: list[str]
-) -> None:
-    """scope の公開値制約はサブコマンド実行前の CLI 解析で拒否する。"""
+def test_unknown_subcommand_option_is_rejected_by_cli_parser() -> None:
+    """未知の option はサブコマンド実行前の CLI 解析で拒否する。"""
+    argv = ["realization", "apply", "fork", "--scope", "bad"]
     result = runner.invoke(app, argv)
 
     assert result.exit_code != 0
     assert result.stdout == ""
     assert "# 失敗: cmoc" in result.stderr
     assert "CLI 引数解析に失敗しました。" in result.stderr
-    assert parse_error in result.stderr
-    if allowed:
-        assert argv[-1] in result.stderr
-    for value in allowed:
-        assert value in result.stderr
+    assert "No such option: --scope" in result.stderr
 
 
 def test_cli_requires_current_directory_to_be_work_root(

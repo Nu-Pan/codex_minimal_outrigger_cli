@@ -1,42 +1,41 @@
 # `doc`
 
 ## Summary
-- cmoc の個別アプリケーション仕様を機能別に選ぶ上位入口。CLI、agent call、ログ、feedback、prompt editor、run/session、通知などの責務と境界を確認できる。
-- session と run を git branch・commit・worktree で隔離するモデルを定義する文書。分岐、統合、worktree、管理 branch の関係を確認できる。
-- 採用しなかった設計・作業方式と不採用理由を記録する検討資料群。現行仕様や実装手順ではなく、設計判断の背景を調査できる。
-- Python 実装、CLI の責務配置、開発環境、テスト要件、テスト実行手順へ振り分ける開発ルールの入口。
+- cmoc のアプリケーション仕様群への入口。CLI 実行、session／run、feedback、Codex 呼び出し、ログ、通知、editor input、文書分類などの個別仕様と、sub_command 配下のサブコマンド仕様へ案内する。
+- cmoc の session と run を git branch・commit・worktree で隔離するモデルを定義する正本文書。分岐、統合、run isolation、差分検査などの Git 管理上の関係を確認する入口。
+- cmoc の開発規則群への入口。Python コーディング、CLI 設計、開発環境、テスト要件、テスト実行手順を、それぞれの正本文書へ振り分ける。
+- cmoc realization refactor などで採用しなかった作業方式と、その不採用理由を記録する検討資料群。現行仕様や実装の根拠ではなく、過去の設計判断と代替案の背景を確認する入口。
 
 ## Read this when
-- cmoc のアプリケーション機能の挙動・責務・境界、または対応する個別仕様を選ぶとき。
-- session fork、run の分岐・統合、worktree の作成、branch や commit の役割を確認するとき。
-- 採用されなかった設計案や作業方式の理由を比較し、現行設計の判断背景を調査するとき。
-- Python の記述規則、CLI 実装の配置、環境構築、テスト要件、またはテスト実行手順の入口を選ぶとき。
+- cmoc のアプリケーション挙動に関する正本仕様を探すとき。
+- CLI、session／run、feedback、Codex CLI、ログ、通知、editor input、INDEX.md、または個別サブコマンドの仕様入口を判断するとき。
+- session fork・run の branch 分岐、commit、worktree、統合、または Git 管理対象の関係を実装・変更・調査するとき。
+- Python の記述規則、CLI の責務配置、開発環境、依存関係、テスト要件、または品質検査の実行手順を確認するとき。
+- realization refactor の作業フロー、file access policy、.gitignore 連携、AI-generated kaizen、oracle review、または作業計画レビューを採用しなかった理由を確認するとき。
 
 ## Do not read this when
-- 特定のアプリケーション機能の仕様が特定できている場合は、app_spec 配下の該当文書を直接読む。
-- branch と run の具体的な CLI 入出力契約や個別処理を確認する場合は、対応する app_spec 文書を直接読む。
-- 現行の仕様、実装方法、または操作手順を確認する場合は、considered_alternative ではなく正本仕様や開発ルールを読む。
-- 特定のコーディング規則、設計責務、環境条件、テスト要件、またはテスト実行手順を確認する場合は、dev_rule 配下の該当文書を直接読む。
+- 特定機能や特定サブコマンドの詳細な挙動、field、prompt、schema、出力、または実装責務を確認したいときは、app_spec 配下の該当する個別仕様書や sub_command 配下の仕様書を直接読む。
+- branch model の具体的な CLI 入出力契約や workload 固有の report を確認したいときは、対応するアプリケーション仕様を直接読む。
+- Python 環境の構築・依存関係・pip 操作、CLI 実装配置、テストの意味要件、またはテスト実行手順を確認したいときは、dev_rule 配下の対応文書を直接読む。
+- 現行の実装、realization file、アクセス制御、採用済み仕様、または具体的なテスト内容を確認したいときは、considered_alternative 配下の検討資料ではなく、該当する正本仕様・実装・テストを直接読む。
+- アプリケーション仕様、Git 管理モデル、開発規則、または設計判断に関係しない内容を調査するとき。
 
 ## hash
-- 8e736d485e6959297814940fa85e90630d15ccbbf82939c16014aad94899a32c
+- 9be31bd164815089e1f95ff0b781279aba37db221d3172f7ac992738170ad824
 
 # `src`
 
 ## Summary
-- oracle 実装パッケージのルート。agent call 構築、prompt 構築、入力 handoff、feedback、設定・パス・構造化文書の機能領域を束ねる。
-- agent call のパラメータや用途別 builder、session・TUI・review・realization の入口を調べる場合は `oracle/acp_builder` へ進む。
-- 完全 prompt、prompt policy、prompt parts の構築規則を調べる場合は `oracle/prompt_builder` へ進む。
-- editor input handoff や feedback の入力契約を調べる場合は、それぞれ `oracle/editor_input_handoff` または `oracle/feedback` へ進む。
-- 設定モデル、パス解決、構造化文書の実装を調べる場合は `oracle/other` へ進む。
+- cmoc の oracle 実装群における上位入口。agent call パラメータ、prompt 構築、用途別の起動・検証定義、設定・パス・構造化文書モデルを下位要素へ振り分ける。
+- agent call の呼び出し設定や用途別 builder を調べる場合は acp_builder、prompt の組み立て規則や各種ポリシーを調べる場合は prompt_builder、設定・パス解決・Markdown 構造化文書を調べる場合は other から読み始める。
 
 ## Read this when
-- oracle/src 配下の機能領域を特定し、調査対象の下位ディレクトリを選ぶとき。
-- agent call、prompt、入力契約、設定・パス、構造化文書の複数領域にまたがる oracle 実装の入口を確認するとき。
+- oracle の実装全体で、agent call 関連の責務がどの下位要素にあるかを判断するとき。
+- 呼び出しパラメータ、prompt 構築、用途別起動処理、設定・パスモデルの調査開始点を決めるとき。
 
 ## Do not read this when
-- 特定の agent call builder、prompt policy、入力契約、設定モデル、パスモデル、または構造化文書の具体的な実装を確認したいときは、対応する下位ディレクトリを直接読む。
-- session、TUI、review、realization、policy、parts など個別機能の挙動を調べるときは、該当する下位対象へ進む。
+- 特定の prompt policy、agent call builder、設定クラス、パス解決処理、または構造化文書モデルだけを確認したい場合は、対応する下位要素を直接読むとき。
+- agent call の実行結果の保存・集約や、oracle／realization 本文・INDEX.md 自体の編集方法を調べるとき。
 
 ## hash
-- 4307cf805748d8343d15f75cee2cd3dba18199117272e72e4dcd4575dc11c21d
+- 4af0b7fbf24db6d6442d583b4b206d10b4771528c060ff8e984534a8ad377dc5

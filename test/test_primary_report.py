@@ -10,7 +10,6 @@
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -72,25 +71,6 @@ _EARLY_ERROR_REPORTS = [
         "oracle edit",
         "oracle_edit",
         ("main_agent_call_status", "reduction_agent_call_status"),
-    ),
-    (
-        "oracle review",
-        "oracle_review",
-        (
-            "scope",
-            "session_branch",
-            "session_fork_commit",
-            "run_branch",
-            "run_fork_commit",
-            "run_join_commit",
-            "oracle_count_total",
-            "oracle_count_evaluated",
-            "fatal_findings_accepted_count",
-            "minor_findings_accepted_count",
-            "fatal_findings_rejected_count",
-            "minor_findings_rejected_count",
-            "result",
-        ),
     ),
     (
         "realization apply fork",
@@ -248,9 +228,6 @@ def test_early_error_saves_command_specific_primary_report(
     if command_name == "oracle edit":
         assert 'main_agent_call_status: "not_started"' in front_matter
         assert 'reduction_agent_call_status: "not_started"' in front_matter
-    if command_name == "oracle review":
-        assert 'result: "error"' in front_matter
-        assert "## Verdict" in rendered
     if command_name == "realization refactor fork":
         assert 'completion_reason: "error"' in front_matter
     if command_name == "realization apply fork":

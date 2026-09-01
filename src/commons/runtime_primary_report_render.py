@@ -3,7 +3,6 @@
 根拠:
 - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 """
 
 import json
@@ -27,9 +26,7 @@ def render_primary_report(
         *[f"{name}: {yaml_scalar(value)}" for name, value in fields],
         "---",
     ]
-    if spec.template == "oracle_review":
-        body = _oracle_review_body(classification, result, logger)
-    elif spec.template == "feedback_invocation":
+    if spec.template == "feedback_invocation":
         body = _feedback_invocation_body(
             classification,
             result,
@@ -111,41 +108,6 @@ def _summary_body(
         *_warning_error_lines(classification, result, logger),
         "## 次の操作",
         *([f"- {action}" for action in result.next_actions] or ["- なし"]),
-        "## 関連ログ",
-        *_log_lines(logger),
-    ]
-
-
-def _oracle_review_body(
-    classification: TerminalClassification,
-    result: TerminalResult,
-    logger: SubcommandLogger,
-) -> list[str]:
-    """早期終了でも oracle review の必須セクションを保つ。"""
-    reason = (
-        _detail_value(result, "理由") or "通常のレビュー処理を完了できませんでした。"
-    )
-    verdict = (
-        "ユーザー中断要求により、確定済みの部分結果だけで完了しました。"
-        if classification == "user_interruption"
-        else f"レビュー開始前または処理途中でエラーになりました。理由: {reason}"
-    )
-    return [
-        "# cmoc oracle review report",
-        "## Verdict",
-        verdict,
-        "## Evaluated oracle file",
-        "| No. | Oracle file | Findings |",
-        "|---:|---|---:|",
-        "| - | 未確定 | - |",
-        "## Fatal findings",
-        "- 確定済み所見なし",
-        "## Minor findings",
-        "- 確定済み所見なし",
-        "## 実行段階",
-        *_step_lines(logger, classification),
-        "## warning とエラー",
-        *_warning_error_lines(classification, result, logger),
         "## 関連ログ",
         *_log_lines(logger),
     ]
@@ -314,14 +276,6 @@ def _outcome_sentence(classification: TerminalClassification) -> str:
         "user_interruption": "この invocation はユーザー中断要求により完了しました。",
         "error": "この invocation はエラー終了しました。",
     }[classification]
-
-
-def _detail_value(result: TerminalResult, name: str) -> str | None:
-    """terminal detail の指定値を一行表示へ変換する。"""
-    for item_name, value in result.details:
-        if item_name == name:
-            return _inline_text(value)
-    return None
 
 
 def _inline_text(value: object) -> str:

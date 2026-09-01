@@ -192,21 +192,21 @@
 # `runtime_config.py`
 
 ## Summary
-- 設定オブジェクトを JSON として永続化・復元し、Codex provider／agent call と oracle review の設定値を検証するランタイム設定境界。
-- 設定ファイルの読み書き、既定値補完、型・値・循環構造・symlink・特殊ファイルの検査、および利用者向け CmocError への変換を担う。
+- 設定 JSON を CmocConfig と相互変換し、Codex の model provider・agent call 設定、並列数、provider-local 値を検証・既定値補完する。
+- 設定ファイルの安全な読み書きと同期を担い、symlink・特殊ファイル・不正 JSON を利用者向け CmocError として扱う。
 
 ## Read this when
-- cmoc の設定 JSON の保存形式や復元時の既定値補完を確認するとき。
-- Codex model provider、agent call、reasoning effort、oracle review loop の入力検証や設定エラーの扱いを変更・調査するとき。
-- config ファイルの symlink、通常ファイル判定、JSON/TOML 互換値、読み書きの安全境界を確認するとき。
+- 設定 JSON のシリアライズ、復元、既定値補完、JSON/TOML 互換値の検証を確認するとき。
+- Codex の model、reasoning effort、model provider、agent call 設定の入力検証や永続化境界を調べるとき。
+- config.json の生成・読み込み・同期、symlink や非通常ファイルに対する安全性、設定エラーの利用者向け境界を確認するとき。
 
 ## Do not read this when
-- Codex の設定型そのものや既定値の定義を確認したい場合は、参照先の正本設定型を直接読むとき。
-- CLI のコマンド処理、agent call の実行、oracle review のロジックを調べる場合は、それぞれの実装入口を直接読むとき。
-- 設定 JSON の具体的な利用箇所だけを確認する場合は、設定を呼び出す実装またはテストを直接読むとき。
+- CmocConfig や Codex 設定型の定義・既定値そのものを確認する場合は、正本の設定型定義を直接読むとき。
+- 設定ファイルのパス解決だけを確認する場合は、runtime_paths の定義を直接読むとき。
+- Codex agent call の実行や subprocess 起動の挙動を調べる場合は、実行処理とその仕様を直接読むとき。
 
 ## hash
-- e49e094dfcfbed4f835910da9addc64ab91da1b60cd43d238abe84a161658b0b
+- 55243ceb41a3446d28020eb9b82902a72dfdbfddc33a985bf486f9bc3fc2ea36
 
 # `runtime_content.py`
 
@@ -455,56 +455,58 @@
 # `runtime_primary_report.py`
 
 ## Summary
-- 非対話サブコマンドの primary report 保存を保証する共通処理。既存 report の検証、未作成時の fallback report 生成、予約済みファイルへの安全な書き込み、保存失敗時の内部エラー化を担う。
-- invocation 中に確定した report 項目を ContextVar で保持し、サブコマンド固有の初期値、結果詳細、completion reason、alias を統合して描画入力を組み立てる。
+- 非対話サブコマンドの primary report 保存を統括する共通ランタイム処理。
+- 個別処理が report を保存していない終了経路では、確定済みの invocation 情報から fallback report を生成し、保存済み report の検証と結果へのパス付与を行う。
+- サブコマンド別仕様に応じた必須項目、状態、完了理由、alias を集約して report renderer へ渡す入口。
 
 ## Read this when
-- 非対話サブコマンドの終了経路で primary report を必ず保存・検証する処理を確認するとき。
-- fallback report の項目収集、サブコマンド別の初期値や completion reason の補完、保存失敗時の扱いを変更するとき。
+- 非対話サブコマンドで primary report が作成される条件、fallback 保存、保存済み file の検証を確認するとき。
+- oracle edit、feedback report、realization apply/refactor fork などの終了経路で report 項目がどう補われるか調べるとき。
+- report context の開始・更新・リセットや、report 保存失敗時の内部エラー処理を追うとき。
 
 ## Do not read this when
-- primary report の項目定義や描画形式を確認したいときは、primary report の specs・render 実装を直接読む。
-- ログ記録、runtime path の生成、terminal result のデータ構造そのものを確認したいときは、それぞれの専用実装を直接読む。
+- 特定サブコマンドの primary report の項目定義や描画形式そのものを確認したいときは、primary report specs または renderer を直接読む。
+- report の保存先・timestamp 予約の一般的な仕組みだけを確認したいときは、runtime paths を直接読む。
+- 非対話サブコマンドの処理フローや終了分類の定義を確認したいだけで、report 保存経路を調べないとき。
 
 ## hash
-- 9efef3bfa97c0f61d3f677f5d6e15609ae708fb0e6f21da029a16343c077762e
+- d924aa5d44738e53605e8fcdc9d8bbb27487c48557b75ed85e3852c0aef12793
 
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済み runtime 情報から、テンプレート別の fallback primary report を構築する描画入口。front matter、通常 summary、oracle review、feedback invocation の本文を選択し、実行段階・終端結果・warning/error・次の操作・関連ログを出力する。
-- Codex event、publication event、checkpoint、processing status から oracle edit の agent call 状態や feedback publication・cleanup 状態を判定し、report に表示する補助関数群を含む。
+- 確定済み runtime 情報から invocation 用の fallback primary report を描画する。通常の実行概要に加え、feedback publication と混同しない部分結果・checkpoint・cleanup 状態を出力する。
+- oracle edit の agent call 状態、feedback publication 状態、実行段階、終端結果、warning/error、関連ログを report 用の確定値として集約する。
 
 ## Read this when
-- primary report の描画形式やテンプレート分岐を変更・確認するとき
-- terminal classification、TerminalResult、logger の確定情報が report の各節へどう反映されるかを確認するとき
-- oracle review または feedback invocation の状態表示、agent call status、publication cleanup status を追跡するとき
+- runtime 情報を primary report の Markdown/YAML 表現へ変換する処理を確認するとき
+- feedback report invocation の publication・checkpoint・cleanup 状態の表示規則を確認するとき
+- 実行済み step、Codex call、warning/error の report 出力内容を追跡するとき
 
 ## Do not read this when
-- runtime のログ記録方法や event の生成責務を確認したいとき
-- TerminalResult、PrimaryReportSpec、TerminalClassification の型・生成規則を確認したいとき
-- console/file log や各サブコマンドの report 内容の正本仕様を確認したいときは、対象の app_spec を直接読むとき
+- primary report の仕様や分類・結果データ構造そのものを変更または確認するとき
+- runtime logging の event 記録方法や logger のライフサイクルを確認するとき
+- feedback report の publication 処理自体や active state の管理を確認するとき
 
 ## hash
-- 77c22b878a93f2adbda20d2efcdbcfb9e4532e0ace9fd0045552b5d4b7f416ae
+- e8be5ae39e941ecbf5e0297b9bf6c92defef62c05ac7830e74993f811bfbf7f9
 
 # `runtime_primary_report_specs.py`
 
 ## Summary
-- 非対話末端サブコマンドに対応する fallback primary report の定義を集約する。コマンド名から保存先、役割、タイトル、必須項目、テンプレートを引く必要がある場合の入口であり、`primary_report_spec` が対応する仕様を返す。doctor、indexing、session 操作、oracle edit/review、realization apply/refactor、run join/abandon、feedback report の report 定義を扱う。
+- 日本語の技術文書として、対象モジュールの責務と、fallback primary report のサブコマンド別定義への入口を簡潔に示す。
+- 非対話末端サブコマンドの report 保存先・役割・タイトル・必須項目・テンプレートを登録し、command 名から定義を取得する箇所として位置づける。
 
 ## Read this when
-- fallback report の保存先、役割、タイトル、必須 front matter 項目、テンプレートをコマンド別に確認するとき
-- `primary_report_spec` の対応コマンドや、登録対象の primary report を変更するとき
-- 非対話末端サブコマンドの report 仕様と TUI 通知境界の対象範囲を確認するとき
+- fallback primary report のサブコマンド対応を追加・変更・確認するとき。
+- command 名に応じた report 仕様、保存先、必須 front matter 項目、テンプレート選択の登録元を探すとき。
 
 ## Do not read this when
-- TUI の通知境界を使う tui や oracle investigation の挙動だけを確認するとき
-- report の保存・生成処理そのものを調べるときは、まずその処理を実装する対象を読むとき
-- 個別サブコマンドの実行仕様や report 内容の詳細を確認するときは、対応する oracle の仕様書を直接読むとき
+- TUI の通知境界や oracle investigation の仕様を確認したいとき。
+- 個別サブコマンドの report 形式そのものや保存処理を直接確認したいときは、対応する app specification または report 実装を読む。
 
 ## hash
-- 860ffcd81816316046475df972b2d7c9da87f9906eea1cb45ff3226806a8d9c3
+- 03ab3079ba4eec09a22bbdb38539c3625c8d8d55adb318403c5d932dfeca0e65
 
 # `runtime_refactor.py`
 

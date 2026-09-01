@@ -415,9 +415,7 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> N
         "</cmoc_block>", 1
     )[0]
     assert "# task" in objective
-    assert "Codex CLI の利用可能性を確認するため、短い応答を 1 回返す" in (
-        objective
-    )
+    assert "Codex CLI の利用可能性を確認するため、短い応答を 1 回返す" in (objective)
     assert "# non-goals" in objective
     assert "追加の調査や作業を行わない" in objective
     assert "# scope" not in objective

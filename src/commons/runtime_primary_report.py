@@ -205,11 +205,6 @@ def _report_fields(
         # apply の共通 fork report は error 終了理由を必須項目として持つ。
         # run 開始前の fallback では個別 report が reason を渡せないため補う。
         known["completion_reason"] = "error"
-    if command_name == "oracle review":
-        known.setdefault("scope", _option_value(command_argv, "--scope"))
-        known["result"] = (
-            "interrupted" if classification == "user_interruption" else "error"
-        )
     if command_name == "oracle edit":
         for name, status in oracle_edit_statuses(logger).items():
             known.setdefault(name, status)
@@ -243,11 +238,3 @@ def _known_field(name: str, known: dict[str, object]) -> object:
         if alias in known:
             return known[alias]
     return None
-
-
-def _option_value(argv: tuple[str, ...], option: str) -> str | None:
-    """保存済み argv から値を取る option の直後だけを読む。"""
-    try:
-        return argv[argv.index(option) + 1]
-    except (ValueError, IndexError):
-        return None

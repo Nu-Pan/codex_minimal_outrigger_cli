@@ -43,12 +43,12 @@ def test_terminal_result_uses_only_short_required_fields(
     repository = tmp_path / "secret-parent" / "repository\nname"
 
     runtime_windows_toast.notify_terminal_result(
-        "oracle\treview",
+        "feedback\treport",
         repository,
         state,
     )
 
-    assert calls == [("cmoc oracle review", f"repository name — {state_text}")]
+    assert calls == [("cmoc feedback report", f"repository name — {state_text}")]
     rendered = "\n".join(calls[0])
     assert str(repository) not in rendered
     assert "secret-parent" not in rendered

@@ -8,7 +8,6 @@
 from oracle.other.cmoc_config import (
     CmocConfig,
     CmocConfigCodex,
-    CmocConfigOracleReview,
     CodexCallConfig,
     CodexModelProviderConfig,
     JsonTomlValue,
@@ -17,7 +16,6 @@ from oracle.other.cmoc_config import (
 __all__ = [
     "CmocConfig",
     "CmocConfigCodex",
-    "CmocConfigOracleReview",
     "CodexCallConfig",
     "CodexModelProviderConfig",
     "JsonTomlValue",

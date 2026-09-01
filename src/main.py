@@ -1,7 +1,6 @@
 import inspect
 import os
 from collections.abc import Sequence
-from enum import Enum
 from typing import Any, cast
 
 import click
@@ -16,7 +15,6 @@ from sub_commands.feedback.report import cmoc_feedback_report_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.oracle.edit import cmoc_oracle_edit_impl
 from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
-from sub_commands.oracle.review import cmoc_oracle_review_impl
 from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
 from sub_commands.realization.refactor.fork import cmoc_realization_refactor_fork_impl
 from sub_commands.run.abandon import cmoc_run_abandon_impl
@@ -25,13 +23,6 @@ from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
 from sub_commands.session.join import cmoc_session_join_impl
 from sub_commands.tui import cmoc_tui_impl
-
-
-class OracleReviewScope(str, Enum):
-    """oracle review の調査対象範囲を CLI option 値として表す。"""
-
-    session = "session"
-    full = "full"
 
 
 def _click_exception_types() -> tuple[type[BaseException], ...]:
@@ -189,15 +180,6 @@ def session_join() -> None:
 def session_abandon() -> None:
     """session branch を取り込まず破棄する CLI 入口。"""
     cmoc_session_abandon_impl()
-
-
-@oracle_app.command("review")
-def oracle_review(
-    scope: OracleReviewScope = typer.Option(OracleReviewScope.session, "--scope", "-s"),
-) -> None:
-    """oracle review を隔離 worktree で実行する CLI 入口。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-    cmoc_oracle_review_impl(scope.value)
 
 
 @oracle_app.command("edit")

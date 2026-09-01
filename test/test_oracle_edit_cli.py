@@ -325,9 +325,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         '<cmoc_block id="objective">', 1
     )[1].split("</cmoc_block>", 1)[0]
     assert "# task" in skeleton_objective
-    assert "要求する最終状態を `{{work-root}}/oracle` ツリー内" in (
-        skeleton_objective
-    )
+    assert "要求する最終状態を `{{work-root}}/oracle` ツリー内" in (skeleton_objective)
     assert "# completion criteria" in skeleton_objective
     assert "# scope" not in skeleton_objective
     assert "# non-goals" not in skeleton_objective

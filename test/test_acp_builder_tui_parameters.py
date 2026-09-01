@@ -46,13 +46,13 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
         "# oracle and realization basic",
         "# oracle policy",
         "# realization policy",
-        "# oracle findings policy",
         "# realization findings policy",
         "# routing policy",
         "# editor input handoff",
     ):
         assert heading in complete_prompt
     for heading in (
+        "# oracle findings policy",
         "# conflict resolution policy",
         "# index entry policy",
         "# realization oracle reference policy",
@@ -62,8 +62,9 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
         "</cmoc_block>", 1
     )[0]
     assert "# task" in objective
-    assert "オリジナルプロンプト <cmoc_ref target=\"original_prompt\"/> が要求する作業" in (
-        objective
+    assert (
+        'オリジナルプロンプト <cmoc_ref target="original_prompt"/> が要求する作業'
+        in (objective)
     )
     assert "# completion criteria" in objective
     assert "要求する成果と完了条件を満たしている" in objective

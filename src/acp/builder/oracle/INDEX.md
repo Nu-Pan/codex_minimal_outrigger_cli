@@ -49,15 +49,13 @@
 # `review`
 
 ## Summary
-- `cmoc oracle review` builder の realization adapter 群を収容するパッケージ。canonical 実装への互換 import 経路を提供し、finding の列挙・判定・merge・advocate／challenger 検証に関する関連実装へ進むための入口。
+- 対象ディレクトリには、INDEX.md 以外の本文が存在しないため、具体的な責務や読者向けの入口を特定できない。
 
 ## Read this when
-- `cmoc oracle review` builder における realization adapter の責務や、旧 import 経路から canonical 実装へ委譲される構成を確認するとき
-- oracle review の finding 処理について、互換 import の維持・利用箇所や canonical 実装への移行関係を調べるとき
+- 対象ディレクトリにレビュー関連の本文が追加され、その内容を確認する必要があるとき。
 
 ## Do not read this when
-- oracle review の正本仕様や、builder 以外の CLI 実装を確認するとき
-- finding 列挙・判定・merge・検証の具体的な処理内容や入出力仕様を確認するとき。互換経路ではなく canonical 実装を直接読む
+- 対象ディレクトリに本文がなく、別の正本対象を直接確認できるとき。
 
 ## hash
-- f9b763b21f8eb79c9de8bc550c70a9cf8de681e79ccc483de70d283621060a03
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
