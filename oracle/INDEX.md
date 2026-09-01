@@ -1,27 +1,19 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様群への入口。CLI 実行、session／run、feedback、Codex 呼び出し、ログ、通知、editor input、文書分類などの個別仕様と、sub_command 配下のサブコマンド仕様へ案内する。
-- cmoc の session と run を git branch・commit・worktree で隔離するモデルを定義する正本文書。分岐、統合、run isolation、差分検査などの Git 管理上の関係を確認する入口。
-- cmoc の開発規則群への入口。Python コーディング、CLI 設計、開発環境、テスト要件、テスト実行手順を、それぞれの正本文書へ振り分ける。
-- cmoc realization refactor などで採用しなかった作業方式と、その不採用理由を記録する検討資料群。現行仕様や実装の根拠ではなく、過去の設計判断と代替案の背景を確認する入口。
+- cmoc の正本文書群を、アプリケーション仕様、開発ルール、branch model、不採用案などの責務別入口へ案内する文書ツリー。
+- 対象の挙動・設計判断・開発規則に応じて、対応する下位文書を選ぶために使用する。
 
 ## Read this when
-- cmoc のアプリケーション挙動に関する正本仕様を探すとき。
-- CLI、session／run、feedback、Codex CLI、ログ、通知、editor input、INDEX.md、または個別サブコマンドの仕様入口を判断するとき。
-- session fork・run の branch 分岐、commit、worktree、統合、または Git 管理対象の関係を実装・変更・調査するとき。
-- Python の記述規則、CLI の責務配置、開発環境、依存関係、テスト要件、または品質検査の実行手順を確認するとき。
-- realization refactor の作業フロー、file access policy、.gitignore 連携、AI-generated kaizen、oracle review、または作業計画レビューを採用しなかった理由を確認するとき。
+- cmoc の正本仕様や開発規則を探しており、まず文書群の責務別の入口を判断したいとき。
+- アプリケーション挙動、git による隔離モデル、開発環境・設計・テスト規則、または不採用となった代替案を調査するとき。
 
 ## Do not read this when
-- 特定機能や特定サブコマンドの詳細な挙動、field、prompt、schema、出力、または実装責務を確認したいときは、app_spec 配下の該当する個別仕様書や sub_command 配下の仕様書を直接読む。
-- branch model の具体的な CLI 入出力契約や workload 固有の report を確認したいときは、対応するアプリケーション仕様を直接読む。
-- Python 環境の構築・依存関係・pip 操作、CLI 実装配置、テストの意味要件、またはテスト実行手順を確認したいときは、dev_rule 配下の対応文書を直接読む。
-- 現行の実装、realization file、アクセス制御、採用済み仕様、または具体的なテスト内容を確認したいときは、considered_alternative 配下の検討資料ではなく、該当する正本仕様・実装・テストを直接読む。
-- アプリケーション仕様、Git 管理モデル、開発規則、または設計判断に関係しない内容を調査するとき。
+- 特定機能の詳細な挙動、CLI 契約、実装配置、テスト要件などが既に明確で、対応する下位文書を直接確認できるとき。
+- 具体的な実装コードやテストコードの調査だけを行うとき。
 
 ## hash
-- 9be31bd164815089e1f95ff0b781279aba37db221d3172f7ac992738170ad824
+- 683bf33785d2b73f901add1c2da4c64db4864b82c687c551f4d3f893b3a49271
 
 # `src`
 

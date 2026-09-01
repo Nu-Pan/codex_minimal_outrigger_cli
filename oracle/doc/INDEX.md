@@ -36,31 +36,21 @@
 # `considered_alternative`
 
 ## Summary
-- cmoc realization refactorで採用しなかった作業方式と、その不採用理由を確認するための検討資料群。現行のファイル単位の調査・反映方針との違いを把握する入口。
-- agent call後のfile access policy違反の事後検査と自動リカバリー案を断念した経緯を確認する資料。誤検出や差分帰属の困難性を扱う。
-- .gitignoreの除外判定をpermission profileの例外へ変換する案と、その記法非互換性による不採用理由を確認する資料。
-- AI-generated kaizenや継続的な暗黙記憶を次回のCodex CLI実行へ注入しない設計理由と、INDEX・oracle・ログ・成果物による明示的な情報到達方針を確認する資料。
-- oracle fileの網羅的レビュー機能を採用せず、feedback observation/reportで人間対応が必要な問題を扱う方針を確認する資料。
-- AIに作業計画を作成させて人間がレビューする方式を採用せず、人間がoracleを編集しAIが実装可能性を確認する責務分担を採用した背景を確認する資料。
+- cmoc が採用しなかった設計案や作業方式を記録し、現行方針との違いと不採用理由を確認するための検討資料群。
+- refactor の作業フロー、file access policy、.gitignore 連携、AI-generated memory、oracle review、working plan review などの設計判断を扱う。
 
 ## Read this when
-- cmoc realization refactorの作業フロー、調査単位、修正単位の設計理由を確認するとき。
-- file access policy違反の事後検査、自動リカバリー、並列agentによる誤検出の検討経緯を調べるとき。
-- .gitignoreとpermission profileの連携案や、除外ファイルの例外規則を検討するとき。
-- AI-generated kaizen、memory、過去の失敗分析や改善案を後続実行へ自動注入する設計の採否を判断するとき。
-- oracle reviewを提供しない理由や、feedback observation/reportによる人間への問題報告の流れを確認するとき。
-- AI主導の作業計画レビュー方式と、人間によるoracle編集・AIによる実装追従の責務分担を比較するとき。
+- cmoc の設計案や作業方式が不採用となった理由を確認するとき
+- refactor の調査・修正単位、アクセス制御、永続的な AI 記憶、oracle 検査、作業計画レビューの採否を調べるとき
+- 採用済み方針と過去の代替案の境界や設計意図を確認するとき
 
 ## Do not read this when
-- 具体的なrealization fileの修正方法、実装責務、現行refactor state、対象ファイルの実装・テスト内容を確認したいとき。
-- 現行のfile access policy、アクセス制御・検査処理、または現在採用されている仕様を確認・変更するとき。
-- 現行の.gitignoreパターンや実行時アクセス制御を調査・実装するとき。
-- 個別のkaizen文面、レビュー観点、INDEX・oracle・ログ・成果物の具体形式、またはCodex CLI本体のmemory機能を調べるとき。
-- oracle file自体の正本内容、feedback observation/reportの正本仕様、通常workloadの具体的な実装・運用手順を確認するとき。
-- oracleとrealizationの一般定義、個別コマンドの仕様・実装手順・テスト仕様、採用済みworkflowの具体的操作を確認するとき。
+- 現行のアクセス制御、refactor state、feedback 報告、oracle や realization の仕様を確認したいとき
+- 具体的な realization file の実装方法、CLI の入出力、テスト内容を調べたいとき
+- 採用済み workflow の操作方法や実装責務を直接確認したいとき
 
 ## hash
-- f547b1f8191281da475eecf2949bb09d20ade64b9fde5b9d5990c97510bc872c
+- 9b342c36d29ca53f24b8fc2150e30340840913bf1d2deec724c22a615f5332bb
 
 # `dev_rule`
 
