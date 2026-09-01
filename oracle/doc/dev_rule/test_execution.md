@@ -4,6 +4,7 @@
 
 - この文書は、構築済みの cmoc 開発環境で test と品質検査を選択、実行、完了判定、および報告する手順を定める。
 - realization test が満たすべき意味上の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする。
+- 型注釈と docstring の意味上の品質要件は、`{{cmoc-root}}/oracle/doc/dev_rule/coding_rule.md` の「型ヒント」と「docstring」が所有する。
 - Python 環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` を正本とする。
 - この手順の実行中に環境を新規構築したり、依存関係を追加したり、pip を実行したりしてはいけない。
 - この手順を根拠に、agent call の file access mode、作業範囲、または sandbox の書き込み先を広げてはいけない。
@@ -42,7 +43,7 @@ cd "$cmoc_work_root"
 - `oracle/src`
 - `test`
 
-Python version、依存関係、pytest marker、timeout、Ruff、および mypy の機械可読な設定値は `pyproject.toml` を正本とする。選択した interpreter で次の command を実行する。
+`pyproject.toml` は、現在の検査に使用する機械可読な realization 設定とする。選択した interpreter で次の command を実行する。
 
 ```bash
 "$cmoc_python" -c 'import sys, tomllib; from pathlib import Path; config = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8")); print(sys.version.split()[0], config["project"]["requires-python"])'
@@ -111,7 +112,7 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 
 ## fresh な完了ゲートを実行する
 
-`src`、`oracle/src`、または `test` の Python code を変更した場合は、最後の変更後に次の全 command を現在の worktree で fresh に実行する。
+`src`、`oracle/src`、`test` の Python code、Ruff・mypy・pytest の設定、または開発依存関係を変更した場合は、最後の変更後に次の全 command を現在の worktree で fresh に実行する。
 
 ```bash
 "$cmoc_python" -m ruff check src oracle/src test
@@ -136,7 +137,7 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 
 ## 完了を判定する
 
-Python code 変更の完了には、fresh な完了ゲートの全 command が成功し、test rule が定める外部経路の検証要件を満たすことを要求する。
+fresh な完了ゲートの対象となる変更は、全 command が成功し、test rule が定める外部経路の検証要件を満たした場合に限り完了とする。
 
 - 実経路統合テストの未実行、失敗、または環境不足による skip がある場合は、full test 未完了とする。
 - その他の skip は reason と対象を確認し、今回必要な検証を欠く場合は未完了とする。

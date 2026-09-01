@@ -19,8 +19,9 @@ cwd を表す内部識別子には、cwd の主体または具体的な役割を
 
 ## 型ヒント
 
-- 型ヒントは必ず書く
-- `Any` は外部境界など必要な範囲に限定し、型付け済みの値へ不必要に流出させない
+- 型注釈は、`{{cmoc-root}}/src` と `{{cmoc-root}}/oracle/src` にある関数・メソッドの引数と戻り値に必須とする
+- `{{cmoc-root}}/test` は、型注釈の必須範囲に含めない
+- `Any` は外部境界など必要な局所範囲に限って許容し、型付け済みの値へ不必要に流出させない
 - 型エラーは実装または正確な型注釈で解消する
 - 広範な `type: ignore`、根拠のない `cast`、`Any`、または検査対象からの除外によって型エラーを隠してはいけない
 - `from __future__ import annotations` は使わない
@@ -35,11 +36,16 @@ cwd を表す内部識別子には、cwd の主体または具体的な役割を
 
 ## docstring
 
-- 関数・クラスなどには docstring を書く
-- docstring は google style に従う
-- シグネチャを見れば分かる情報を冗長に繰り返して、無駄に縦長にしない
-- コードだけでは読み取りにくい「その関数・クラスが何者か」を優先して説明する
+- docstring の機械検査対象は、`{{cmoc-root}}/src` と `{{cmoc-root}}/oracle/src` の公開 module・class・function・method とする
+- private helper と `{{cmoc-root}}/test` は、この機械検査を必須としない
+- docstring は Google style に従う
+- シグネチャや型注釈を言い換えるだけの説明は避ける。Google style を成立させるために必要な構造は、冗長とは扱わない
+- コードだけでは役割を読み取りにくい対象には説明を残す。説明の有用性は人手で判断する
 - 補足説明は、対象が docstring を持てる場合は docstring 内の `NOTE` に、持てない場合は `NOTE` コメントに書く
+
+## 機械検査の限界
+
+Ruff・mypy の成功だけでは、`Any` の必要性や docstring の有用性を保証しない。
 
 ## コメントと言語
 
