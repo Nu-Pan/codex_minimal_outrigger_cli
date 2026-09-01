@@ -48,20 +48,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex 呼び出し、設定、Git、ログ、パス、結果、状態、feedback、report、run lifecycle など、複数の実行経路で共有される実装への入口。
-- 個別の runtime helper と、それらを束ねる公開 API・実行ライフサイクルを確認するための下位モジュール群。
+- cmoc の共有 runtime helper と実行基盤を集約する commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、結果、状態、feedback、report、editing run など、複数の実行経路で共通利用される下位実装への入口。
+- INDEX.md の生成・更新、prompt editor input、Codex TUI／exec、feedback、primary report、editing run lifecycle など、横断的な実行時処理を責務別モジュールへルーティングするディレクトリ。
 
 ## Read this when
-- 複数の実行経路で共有される cmoc runtime 機能の配置や公開入口を確認するとき
-- CLI、Codex、設定、Git、ログ、feedback、report、run、state などの共通実行時処理を調査・変更するとき
-- 特定の runtime helper の担当モジュールを見つけ、適切な下位実装へ進む必要があるとき
+- 複数の cmoc 実行経路で共有される runtime API や helper の配置・責務を確認するとき
+- CLI、Codex、設定、Git、feedback、report、state、editing run などの共通実行時機能を調査・変更するとき
+- 対象機能の下位実装を探し、責務別の runtime モジュールへ進む入口を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動や個別の仕様だけを確認したいときは、commons 配下の担当モジュールを直接読む
-- 正本仕様、個別サブコマンドの業務ロジック、または Codex の外部契約だけを確認する場合は、それぞれの仕様文書や担当実装を直接読む
+- 特定の runtime helper の内部挙動だけを調査する場合は、commons 配下の対応する個別モジュールを直接読むとき
+- 個別サブコマンドの業務ロジック、TUI 自体、正本仕様、またはテスト固有の期待値を確認する場合
+- 共有 runtime を利用しない機能や、より下位の protocol・schema・renderer の具体的な内容だけを確認する場合
 
 ## hash
-- 11d75bfc5de12b1bc70890082b08e0e531fa9fa67d8abcfb59ce522b1c7ebbf3
+- 4bef3dfff552381de3924b8045893a80c5eb8ef78ffae5c29ea82ca72ccdac4e
 
 # `config`
 

@@ -429,16 +429,23 @@
 # `test_editor_input_handoff.py`
 
 ## Summary
-- editor input handoff のテストとして、active repository の target 受理、最後の内容による全面上書き、repository 不一致や symlink 化の拒否、受付済み処理完了までの close 待機を検証する。
+- editor input handoff の lifecycle と上書き境界を検証するテスト。
+- アクティブなリポジトリの target だけを受理し、最後の入力を確定する editor 待機経路の入口。
+- 各上書き時のリポジトリ一致、通常ファイル性、symlink 化防止、受付済み処理の完了待ちを検証する。
+- 認証前後の slow-trickle に対する絶対期限と、認証失敗時の content 非送信を検証する。
 
 ## Read this when
-- editor input handoff の lifecycle、target の受付条件、上書き先の安全境界、または close と受付済み submission の競合をテスト・レビューするとき。
+- editor input handoff の target lifecycle や close と submission の競合を確認するとき
+- MCP submission が対象リポジトリと対象ファイルへ安全に上書きできる条件を確認するとき
+- handoff protocol の認証、期限、認証失敗時の送信抑止を変更または検証するとき
 
 ## Do not read this when
-- handoff の正本仕様や実装そのものを確認するときは、対応する oracle の仕様文書または realization implementation を直接読む。editor input handoff と無関係なテストを調べるとき。
+- editor input handoff の実装詳細や正本仕様そのものを確認したいとき
+- prompt editor の予約・収集・確定処理だけを直接調べるとき
+- handoff と無関係なテストや機能を調べるとき
 
 ## hash
-- 390adebd6a73c8a0bcea3fa5b6b30345ef50c10a5fb73bf5ad38c202f6881d6b
+- 9ab43a007f209d8d5bf4eb7c56cd56ff7642ff30b85043ce513005c04e26db7c
 
 # `test_editor_input_handoff_mcp.py`
 
@@ -457,21 +464,21 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation を raw store から読み込み、agent issue の同一性判断と verification を経て active state へ集約するテスト群。
-- report cut の checkpoint、Codex call の再利用、中断・失敗時の再開、atomic publication、current pointer、generation hash、cleanup の整合性を検証する。
-- reporter/collector の MCP 境界、context・rate 制限、path 境界、secret masking、JSON・artifact 破損時の安全な停止を検証する。
+- feedback reporter、collector、raw observation store、report cut、verification、active state、atomic publication、cleanup の一連の外部挙動を同一 repository fixture で検証するテスト対象。
+- agent/machine observation の schema・secret masking・path 境界・idempotency・rate limit・call lifecycle と、feedback report の checkpoint 再開、incomplete/interruption、publication 後の compact state を扱う。
 
 ## Read this when
-- feedback report の raw observation 処理、候補の normalization・verification、machine aggregate の threshold 処理を確認または変更するとき
-- report cut の durable checkpoint、ユーザー中断や publication 失敗からの再開、active generation の publication と cleanup を確認するとき
-- feedback reporter/collector の入力検証、MCP protocol、repository path、秘密情報マスキング、破損 artifact の扱いをテストするとき
+- feedback observation の受付・保存・検証・重複整理・machine recurrence threshold の挙動を確認または変更するとき。
+- feedback report の report cut、Codex normalization/verification、checkpoint recovery、current pointer、generation hash、cleanup の整合性を確認するとき。
+- raw artifact、active generation、publication artifact の破損や未定義ファイルを検出して安全に停止する境界を調べるとき。
 
 ## Do not read this when
-- feedback の正本仕様や runtime 実装の責務を直接確認する場合は、対応する oracle 文書または実装対象へ進むとき
-- feedback report 以外のテスト、または一般的な CLI・fixture の挙動だけを確認するとき
+- feedback の CLI 表示だけ、または個別の正本 schema・builder 実装だけを直接確認すれば足りるとき。
+- feedback 機能と無関係な subcommand、一般的な repository fixture、または単純な unit test の実装を扱うとき。
+- ここで検証される外部挙動の変更を伴わず、対象モジュールの内部実装だけを読むとき。
 
 ## hash
-- 6c970e0bf2c9140f49f076b25b5b29e68d0a5e807d454da0f4cb31fe4ab29fe1
+- c8f74a33aa572c466755c30ff0f1b79621a126a041f640d70b776267787867da
 
 # `test_file_inventory.py`
 
@@ -624,19 +631,20 @@
 # `test_production_cli.py`
 
 ## Summary
-- 利用者向け entrypoint の全末端サブコマンドを、独立 process と実 Codex CLI で検証する受け入れ試験。
-- 実推論後に観測できる終了 code、report、永続 state、Git 状態、Codex call log、および TUI の PTY 応答完了・終了を確認する。
+- 全末端サブコマンドを、独立 process・実 Codex CLI・実推論による利用者向け本番経路で検証する受け入れ試験。
+- 非対話 command の終了 code、report、session/run state、Git、agent call log を確認し、TUI command は PTY 上の実 Codex 応答完了と正常終了まで検証する。
+- CLI の末端 command 登録と固定シナリオの一致も確認するため、新しい末端 command の本番経路試験漏れを検出する入口となる。
 
 ## Read this when
-- 本番経路で全末端サブコマンドの代表的な正常完了と、実 Codex 呼び出しの設定・記録を検証するとき
-- 非対話 command の session、run、indexing、oracle、feedback 経路や、TUI の実応答後の終了動作を横断的に確認するとき
+- 利用者向け CLI の全末端 command が、独立 process と実 Codex を使う本番経路で完了することを受け入れ検証するとき。
+- 非対話 command の外部状態遷移、call log の直接設定、または TUI の PTY 応答完了・終了操作を確認するとき。
 
 ## Do not read this when
-- LLM の回答品質や内容の妥当性を評価するとき
-- 特定サブコマンドの内部実装、個別仕様、または単体レベルの制御ロジックだけを確認するとき
+- LLM の回答品質、agent の意味判断、または個別 command の内部実装だけを確認したいとき。
+- 実 Codex や独立 process を使わない単体テスト、あるいは特定の report・state の実装詳細を直接調べるときは、該当する command のテストや仕様へ進む。
 
 ## hash
-- 45d35e5f2c5b698e4fa8a230de1f18eb00f76ea00b1c2778cb2238b7410a56ec
+- f9345c0fc3dc56a610326493eff8ef0d4ac00c357f4e37ee78eff09447e9647c
 
 # `test_production_cli_support.py`
 
@@ -744,20 +752,19 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv の model、sandbox、provider 上書き契約を検証するテスト。file access mode の sandbox 変換、approval・通知・MCP・環境変数設定、hook の組み合わせ、Codex CLI バージョン判定、provider TOML エンコード、未定義設定の拒否、schema 保存と JSON 出力処理を扱う。
+- Codex argv の model・sandbox・provider 上書きと、関連する MCP／環境変数／hook／TUI 通知設定を検証する realization test。Codex 起動前の設定検証、schema 保存、output JSON 読み取りの境界も扱う。
 
 ## Read this when
-- Codex 起動引数や subprocess 環境の構築を変更・検証するとき
-- sandbox、model provider、通知 callback、SessionStart hook、feedback/editor MCP の連携を確認するとき
-- schema のハッシュ保存や Codex 出力 JSON の読み取り挙動を変更・検証するとき
+- Codex の file access mode から sandbox への変換、model/provider の選択・TOML エンコード、未定義設定の拒否を変更または確認するとき。
+- feedback や editor input handoff の MCP 注入、call context の環境変数分離、SessionStart hook と legacy notification callback、Codex CLI バージョン検証を変更または確認するとき。
+- schema のバイト保持・ハッシュ保存や、不正 UTF-8 output の扱いを変更または確認するとき。
 
 ## Do not read this when
-- Codex argv・runtime_codex_profile の挙動に関係しない機能を扱うとき
-- 実装詳細ではなく、Codex 実行契約そのものを確認する必要があり、oracle の仕様文書を直接読むべきとき
-- provider 設定のデータモデルや全体設定の正本を確認する必要があり、設定定義の対象ファイルを直接読むべきとき
+- Codex argv の構築や runtime_codex_profile の境界挙動を扱わず、他の runtime 機能だけを変更・確認するとき。
+- 実装ではなく、Codex の一般的な仕様や oracle 文書そのものを確認するときは、参照先の正本を直接読むとき。
 
 ## hash
-- 5a6668fbe2dd6b931b0a99b89c26c9a1972867f440101dc420f85b37fb4bc3d9
+- bc202c6e31be5faa64b96036c718758c2b2a675d3001f7f09acddd10437c09fa
 
 # `test_runtime_config.py`
 

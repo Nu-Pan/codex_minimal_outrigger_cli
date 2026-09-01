@@ -160,23 +160,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess の起動境界を担当し、sandbox、argv、環境変数、CODEX_HOME、schema 配置を構成する。
-- Codex subprocess の process tracking、PID reuse を考慮した process group の停止、stdout の JSONL error・resume token・capacity/quota 判定を扱う。
-- Codex CLI の実行環境と機械的な実行結果を解釈するための、呼び出し側から利用する境界入口である。
+- Codex CLI subprocess 境界の実行環境・argv・schema 配置・process tracking・出力解析を扱う。Codex 起動条件の組み立てから、JSONL の error、capacity、quota、resume token の判定までを確認する入口。
 
 ## Read this when
-- Codex CLI の sandbox、model/provider、MCP、hook、notification を含む invocation-local argv を構成または確認するとき。
-- CODEX_HOME や subprocess 環境の継承・除外、schema の hash store 配置、Codex CLI 不在時の実行時エラーを確認するとき。
-- editing run の Codex child tracking、process group の安全な停止、PID reuse 対策を変更または調査するとき。
-- Codex JSONL の malformed event、error、capacity/quota、resume token の判定や復旧分岐を確認するとき。
+- Codex CLI に渡す sandbox、CODEX_HOME、環境変数、model provider、MCP、hook、schema、callback の設定を確認・変更するとき。
+- editing run の Codex subprocess tracking、process group の安全な停止、PID 再利用対策を調査するとき。
+- Codex の終了結果、JSONL event、schema output、capacity/quota retry、unexpected error の解釈を確認するとき。
 
 ## Do not read this when
-- Codex CLI 境界の外側にある agent call の業務フロー、prompt 内容、oracle/realization の仕様だけを確認したいとき。
-- Codex の実行結果ではなく、cmoc の一般的な設定値の定義や runtime path・content の実装を直接確認する場合。
-- Codex subprocess を起動せず、既存のテストや仕様書の内容だけを確認する場合。
+- Codex CLI 境界の外側にある agent call の業務フロー、設定定義そのもの、または利用者向けエラーの上位制御だけを確認するとき。
+- Codex subprocess の実装変更ではなく、個別の oracle 仕様や test 実行規則を直接確認すべきとき。
 
 ## hash
-- d3b25d89af852458219a3d5125022399df8a18746e1726ace5ebe8237004c313
+- 60c0ba3e7d4921e7c247f59cea4bfd16f2a7c29c01e2555b71280f3f8a9f9678
 
 # `runtime_codex_tui.py`
 
@@ -254,57 +250,55 @@
 # `runtime_editor_input_handoff.py`
 
 ## Summary
-- editor 待機中に一時的な editor work file へ入力を IPC 経由で上書きする処理を確認するとき
-- handoff target の開始・終了、Unix socket 通信、request 検証、submission の直列化を調べるとき
-- editor work file の regular file・非 symlink・所定ディレクトリ内という安全性検証や UTF-8 上書き処理を確認するとき
+- prompt editor の待機中に一時 handoff target を公開し、認証済み loopback TCP の IPC request を検証して、指定された editor work file の内容を安全に UTF-8 で上書きする処理を担う。
+- target ID・repository・protocol・payload を検証し、接続単位の受付を直列化しながら、認証失敗・不一致・書き込み失敗を content なしの結果で返す入口。
 
 ## Read this when
-- editor 待機中の入力 handoff の実装や、target のライフサイクルを変更・調査するとき
-- Unix socket 経由の submission 受付、repository・protocol・target の検証、受付結果の扱いを確認するとき
-- editor work file の安全な再検証と内容置換の挙動を確認するとき
+- prompt editor からの入力受け渡し、editor work file の検証・上書き、loopback IPC の認証や target lifecycle（開始・終了・接続処理）を変更または調査するとき。
+- handoff の拒否コード、対象 repository／target の対応付け、受付済み submission 完了後の close 動作を確認するとき。
 
 ## Do not read this when
-- editor input handoff の protocol version や payload schema の定義だけを確認したいとき
-- editor work directory や socket path の算出規則だけを確認したいとき
-- editor の起動・待機処理、または handoff 以外の runtime error 処理を確認するとき
+- handoff protocol の定数・認証方式・target ID 生成・payload schema 自体を変更または確認する場合は、まず runtime_editor_input_handoff_protocol 側を読むべきとき。
+- editor work directory のパス定義や一般的なエラー型の仕様だけを確認する場合は、runtime_paths または runtime_errors を直接読むべきとき。
 
 ## hash
-- 296d8647d0f6f864963ec55203aa6a97d2e3a6afa035c421a11d56a07e0013e2
+- b6f65e64a4f979d542579cdc933cddbd02af03ede3296f98288d933354448d44
 
 # `runtime_editor_input_handoff_mcp.py`
 
 ## Summary
-- Codex TUI の active な prompt editor input file 全体置換を受け付ける stdio MCP server。
-- MCP JSON-RPC の初期化・疎通確認・tool 列挙・overwrite 呼び出しを処理し、同一 repository の active target へ Unix socket 経由で転送する。
-- 入力検証、target 応答検証、転送失敗の domain result を MCP の structuredContent と text で返す入口。
+- Codex TUI の editor input handoff 用 stdio MCP server として、JSON-RPC の initialize・ping・tools/list・tools/call を処理する。
+- overwrite tool の入力を同一 repository の active target へ認証付き TCP 転送し、受理または定義済み domain failure を MCP structuredContent と text で返す。
 
 ## Read this when
-- editor input handoff を agent-facing MCP tool として起動・接続・呼び出しする処理を確認するとき
-- overwrite tool の MCP 公開情報、JSON-RPC message の処理、target への転送結果と失敗コードの境界を確認するとき
+- Codex TUI から prompt editor input の全体置換を active target へ引き渡す経路を確認するとき。
+- editor input handoff の MCP JSON-RPC transport、入力検証、target 認証、repository 一致、転送結果の検証を調べるとき。
+- overwrite tool の MCP 公開定義や、target unavailable・transport unavailable などの失敗応答の扱いを確認するとき。
 
 ## Do not read this when
-- overwrite payload の schema、socket path、handoff response の詳細なプロトコル定義を確認したいときは、参照される protocol module を直接読む
-- Codex TUI 側の editor input file 更新処理や active target の実装を確認したいとき
+- editor input handoff の target 側プロトコル、target ID の解析、認証処理そのものを調べるときは、runtime_editor_input_handoff_protocol の定義を直接読む。
+- Codex TUI の editor input file の生成・管理や、MCP server の起動元を調べるとき。
+- この server を介さない一般的な MCP tool や JSON-RPC の仕様だけを確認するとき。
 
 ## hash
-- a4bc2632f4628546168371b741912abf2a7ec677458c02efe2810d0470373cde
+- 83c1262909560b30ccadb74b693fabe1bfcfa31e1c993dce8ebe5414a9e8f723
 
 # `runtime_editor_input_handoff_protocol.py`
 
 ## Summary
-- editor input handoff の共有 schema 読み込み、環境変数による repository context の引き渡し、短い socket path の導出、newline-framed response の受信を定義する共通モジュール。
-- overwrite input の正本 schema を読み込み、validator を構築し、payload の適合性だけを判定する処理への入口。
+- editor input handoff の共有基盤。overwrite input schema の読み込み・適合検査、repository に紐づく loopback target ID の生成と解析、MCP subprocess 環境への repository context 付与を扱う。
+- editor input handoff の socket transport と capability 認証を担う。nonce と role-separated HMAC proof による client/server 認証、deadline 制御下の固定長 frame 通信、newline-framed response の読み取りを確認する入口。
 
 ## Read this when
-- editor input handoff の schema 検証、MCP subprocess への repository context 追加、handoff socket path の生成、または socket response の受信処理を確認するとき。
-- 複数の editor input handoff 実装が共有する protocol version、環境変数、response size limit などの共通定義を確認するとき。
+- editor input handoff の schema 適合、target ID routing、repository context、loopback 通信、認証 handshake、response framing の挙動を調査・変更するとき。
+- editor input handoff protocol version 2 の timeout、token、nonce、proof、response size 制約を確認するとき。
 
 ## Do not read this when
-- overwrite input schema のプロパティや制約そのものを確認したいとき。正本の oracle package resource を直接確認する。
-- 特定の editor input handoff 呼び出し元の業務処理や、個別 MCP client/server の接続手順だけを確認したいとき。
+- editor input handoff の overwrite input schema 本文そのものを確認したいときは、oracle package の overwrite_input.json を直接読む。
+- MCP client/server の呼び出し側の責務や editor UI の編集挙動だけを調査する場合は、各呼び出し側・UI 実装を直接読む。
 
 ## hash
-- ca5ef865f63fd20f1a75edb959817dd7fd99882d9cc9ea4268da8823c234c1dd
+- f02e87e636663f8bd6316b0e2cd379e49dc78d47dbed493405e7b17f31195052
 
 # `runtime_errors.py`
 
@@ -327,42 +321,40 @@
 # `runtime_feedback.py`
 
 ## Summary
-- invocation-scoped な feedback collector と Codex call 単位の capability lifecycle を統合する実装。
-- reporter からの request を Unix socket で並行受付し、protocol・capability・payload・HEAD commit・観測数の制約を検証して agent observation を保存する。
-- call 終了時には新規受付を停止し、in-flight request を drain して capability context を破棄する。collector 全体の停止時も同じ lifecycle を適用し、socket と worker を後処理する。
-- collector や reporter が利用不能な場合は本命処理を妨げず degraded call と stable な reporter_unavailable event／warning に移行する。doctor 用に collector protocol、reporter MCP interface、schema、protocol version を非破壊検査する。
-- allowlist 済みの reporter_unavailable および Structured Output validation exhausted event を検出し、安定した context と rule を付与した machine observation として保存する。feedback の invocation context、Git、log、runtime state 連携を確認する際の実装入口である。
+- サブコマンド invocation に紐づく feedback collector を管理し、Codex call ごとの capability 発行、reporter request の受付・保存・drain、および invocation 終了処理を担う。
+- agent observation の payload・protocol・context・rate limit を検証して保存し、collector や reporter の利用不能を degraded event と warning に変換する。
+- allowlist 済みの reporter unavailable および Structured Output validation exhausted event を machine observation として検出・保存する。
+- doctor が feedback reporter の schema、protocol、MCP tool 面、loopback collector の可用性を検証するための入口を提供する。
 
 ## Read this when
-- feedback observation の収集・保存経路を変更または調査するとき。
-- Codex call の並行受付、call 終了時の drain、capability の伝播・無効化を確認するとき。
-- reporter／collector の degraded 境界、doctor の可用性検査、または stable event detector を確認するとき。
+- feedback observation の受付・保存経路を確認または変更するとき
+- Codex call 単位の capability context、subprocess environment、call 終了時の drain 順序を確認するとき
+- invocation-scoped collector の起動・停止、並行 request 処理、rate limit、context 検証を確認するとき
+- reporter または collector の degraded event、allowlist detector、doctor による可用性検証を確認するとき
 
 ## Do not read this when
-- 観測 payload の永続化仕様や reporter tool の schema だけを確認する場合。
-- feedback lifecycle や detector を使わない一般的な logging、Git context 解決、または別の runtime helper を調査する場合。
+- feedback observation の永続化形式や RFC3339・UUID などの store 共通処理だけを確認するときは runtime feedback store を直接読む
+- reporter の MCP tool 実装や input schema 自体を確認するときは runtime feedback reporter を直接読む
+- feedback と無関係な Git context、logging、または一般的な CLI subcommand 処理だけを扱うとき
 
 ## hash
-- 52e99c67d8ad337f62f769559452b61d9fb64248c1addb602c0ede41ee77bc00
+- bed26c8238de67a48450134505611237f0de001ad94562e90d0c9da4758841e2
 
 # `runtime_feedback_reporter.py`
 
 ## Summary
-- Codex起動時のcall-scoped stdio MCP feedback reporterを実装するモジュール。collectorとのUnixソケット通信、capability envelope付きpayload転送、collector結果の検証、MCP JSON-RPCのinitialize・ping・tools/list・tools/call処理を担う。
-- 人間対応が必要なobservationをsubmit_observationツールとして公開するfeedback機能の実行入口であり、MCP reporterの通信契約や失敗時のdomain resultを確認する必要がある場合に読む。
+- Codex 起動時に使う call-scoped stdio MCP reporter として、submit_observation を JSON-RPC の MCP tool として受け付け、collector へ capability 付きで転送する。
+- collector との接続失敗や応答不正を agent-facing の accepted/rejected 結果へ変換し、構造化結果と JSON text の両方を返す。
 
 ## Read this when
-- feedback observationのMCP送信処理、collectorとの接続、プロトコル検証、再試行可能な拒否結果の扱いを変更または調査するとき
-- submit_observationのMCPツール公開内容やJSON-RPCメッセージ処理を確認するとき
-- reporterとcollector間の環境変数、Unixソケット、レスポンス検証の連携を確認するとき
+- cmoc_feedback.submit_observation の stdio MCP 通信、initialize・tools/list・tools/call の処理、または collector 転送時の結果検証と拒否分類を確認するとき。
 
 ## Do not read this when
-- observationの保存形式や入力スキーマの詳細だけを確認するときは、runtime_feedback_storeの定義を直接読む
-- feedback機能の仕様全体や利用条件を確認するときは、対応するfeedback observationのoracle仕様を直接読む
-- feedbackと無関係なMCPサーバー、CLI処理、または他のruntime機能を調査するとき
+- 観測内容の業務上の採否、保存、秘匿情報検査、レート制限など collector 内部の規則を確認するときは、対応する feedback observation の oracle file を直接読む。
+- feedback collector の環境変数、プロトコル定数、入力スキーマの定義だけを確認するときは、参照される runtime feedback 関連ファイルを直接読む。
 
 ## hash
-- 21e09ad163751f78770bbfbc9b3559d50a3a50ad1b4ca30f5a35b618b553d812
+- cd16242e628b6df7a2c87c475e91b41af685604592468dd8fdbd10c110a7160a
 
 # `runtime_feedback_state.py`
 
