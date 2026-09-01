@@ -11,12 +11,10 @@ collector lifecycle として一箇所に保つ。
 """
 
 import json
-import os
 import secrets
 import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from collections import deque
@@ -40,9 +38,11 @@ from .runtime_git import current_branch, head_commit
 from .runtime_logging import SubcommandLogger, current_subcommand_logger
 
 FEEDBACK_CAPABILITY_ENV = "CMOC_FEEDBACK_CAPABILITY"
-FEEDBACK_COLLECTOR_ENV = "CMOC_FEEDBACK_COLLECTOR_SOCKET"
+FEEDBACK_COLLECTOR_HOST = "127.0.0.1"
+FEEDBACK_COLLECTOR_PORT_ENV = "CMOC_FEEDBACK_COLLECTOR_PORT"
 FEEDBACK_PROTOCOL_ENV = "CMOC_FEEDBACK_PROTOCOL_VERSION"
 _MAX_COLLECTOR_REQUEST_BYTES = 64 * 1024
+_COLLECTOR_IO_TIMEOUT_SECONDS = 2.0
 _CURRENT_FEEDBACK_INVOCATION: ContextVar["FeedbackInvocation | None"] = ContextVar(
     "CURRENT_FEEDBACK_INVOCATION", default=None
 )
@@ -103,12 +103,16 @@ class FeedbackCall:
 
     def subprocess_env(self, base: dict[str, str]) -> dict[str, str]:
         """capability を argv へ載せず MCP process へ継承する環境を返す。"""
-        if self._invocation is None or self._call_context is None:
+        if (
+            self._invocation is None
+            or self._invocation.collector_port is None
+            or self._call_context is None
+        ):
             return base
         return {
             **base,
             FEEDBACK_CAPABILITY_ENV: self._call_context.capability,
-            FEEDBACK_COLLECTOR_ENV: str(self._invocation.socket_path),
+            FEEDBACK_COLLECTOR_PORT_ENV: str(self._invocation.collector_port),
             FEEDBACK_PROTOCOL_ENV: REPORTER_PROTOCOL_VERSION,
         }
 
@@ -154,9 +158,7 @@ class FeedbackInvocation:
         self.command = command
         self.logger = logger
         self.invocation_id = logger.invocation_id
-        self.socket_path = Path(tempfile.gettempdir()) / (
-            f"cmoc-feedback-{os.getuid()}-{secrets.token_hex(8)}.sock"
-        )
+        self.collector_port: int | None = None
         self._condition = threading.Condition()
         self._calls: dict[str, _CallContext] = {}
         self._accepted_agent: list[tuple[str, Path]] = []
@@ -204,17 +206,26 @@ class FeedbackInvocation:
         }
 
     def start(self) -> None:
-        """owner-only Unix socket で invocation-scoped collector を開始する。"""
-        self.socket_path.unlink(missing_ok=True)
-        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        """loopback TCP で invocation-scoped collector を開始する。"""
+        # Codex CLI 0.151.0 の ProxyRouted sandbox は AF_INET を許可し、
+        # agent command は collector の属する outer network namespace から隔離する。
+        # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/linux-sandbox/src/proxy_routing.rs#L120-L191
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            listener.bind(str(self.socket_path))
-            os.chmod(self.socket_path, 0o600)
+            listener.bind((FEEDBACK_COLLECTOR_HOST, 0))
             listener.listen()
             listener.settimeout(0.2)
+            address = listener.getsockname()
+            if (
+                not isinstance(address, tuple)
+                or len(address) < 2
+                or type(address[1]) is not int
+            ):
+                raise RuntimeError("feedback collector returned an invalid TCP address")
+            self.collector_port = address[1]
         except BaseException:
             listener.close()
-            self.socket_path.unlink(missing_ok=True)
+            self.collector_port = None
             raise
         self._listener = listener
         self._server_thread = threading.Thread(
@@ -225,17 +236,17 @@ class FeedbackInvocation:
         self._server_thread.start()
 
     def stop(self) -> None:
-        """全 call を drain し、collector IPC と temporary socket を閉じる。"""
+        """新規接続を止め、全 call を drain して collector IPC を閉じる。"""
         with self._condition:
             self._stopping = True
             contexts = list(self._calls.values())
             for context in contexts:
                 context.accepting = False
-        for context in contexts:
-            self.close_call(context)
         listener = self._listener
         if listener is not None:
             listener.close()
+        for context in contexts:
+            self.close_call(context)
         if self._server_thread is not None and self._server_thread.is_alive():
             self._server_thread.join(timeout=5)
         with self._condition:
@@ -243,7 +254,8 @@ class FeedbackInvocation:
         for worker in workers:
             if worker.is_alive():
                 worker.join(timeout=5)
-        self.socket_path.unlink(missing_ok=True)
+        self._listener = None
+        self.collector_port = None
 
     def _serve(self) -> None:
         """接続ごとに独立 worker を起動して parallel Codex call を分離する。"""
@@ -273,7 +285,14 @@ class FeedbackInvocation:
             with connection:
                 try:
                     request_data = b""
+                    read_deadline = time.monotonic() + _COLLECTOR_IO_TIMEOUT_SECONDS
                     while b"\n" not in request_data:
+                        remaining = read_deadline - time.monotonic()
+                        if remaining <= 0:
+                            raise TimeoutError(
+                                "collector request read deadline exceeded"
+                            )
+                        connection.settimeout(remaining)
                         chunk = connection.recv(8192)
                         if not chunk:
                             break
@@ -293,6 +312,7 @@ class FeedbackInvocation:
                         "collector could not process the request",
                         retryable=True,
                     ).result()
+                connection.settimeout(_COLLECTOR_IO_TIMEOUT_SECONDS)
                 connection.sendall(
                     json.dumps(
                         result, ensure_ascii=False, separators=(",", ":")
@@ -650,7 +670,7 @@ def validate_feedback_reporter_availability() -> None:
             "reporter", "version_mismatch", "feedback reporter schema is invalid"
         ) from exc
     invocation = current_feedback_invocation()
-    if invocation is None or not invocation.socket_path.is_socket():
+    if invocation is None or invocation.collector_port is None:
         raise ReporterAvailabilityError(
             "collector", "collector_unavailable", "feedback collector is unavailable"
         )
@@ -660,11 +680,11 @@ def validate_feedback_reporter_availability() -> None:
         raise ReporterAvailabilityError(
             "reporter", "version_mismatch", "feedback reporter protocol mismatch"
         )
-    _validate_collector_protocol(invocation.socket_path)
+    _validate_collector_protocol(invocation.collector_port)
     _validate_stdio_reporter(expected_schema, invocation.worktree)
 
 
-def _validate_collector_protocol(socket_path: Path) -> None:
+def _validate_collector_protocol(collector_port: int) -> None:
     """保存を行わない unknown capability request で collector framing を確認する。"""
     request = {
         "protocol": REPORTER_PROTOCOL_VERSION,
@@ -672,9 +692,9 @@ def _validate_collector_protocol(socket_path: Path) -> None:
         "payload": {},
     }
     try:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
             connection.settimeout(2)
-            connection.connect(str(socket_path))
+            connection.connect((FEEDBACK_COLLECTOR_HOST, collector_port))
             connection.sendall(
                 json.dumps(request, separators=(",", ":")).encode("utf-8") + b"\n"
             )

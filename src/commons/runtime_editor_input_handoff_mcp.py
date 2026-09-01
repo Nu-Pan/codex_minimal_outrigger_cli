@@ -7,11 +7,14 @@ import sys
 from pathlib import Path
 
 from .runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
     EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
+    EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
     EDITOR_INPUT_REPOSITORY_ENV,
-    editor_input_handoff_socket_path,
+    authenticate_editor_input_handoff_client,
     overwrite_input_is_valid,
     overwrite_input_schema,
+    parse_editor_input_handoff_target_id,
     read_handoff_response,
 )
 
@@ -73,19 +76,33 @@ def _submit(payload: object) -> dict[str, object]:
     target_id = payload["target_id"]
     assert isinstance(target_id, str)
     repository = Path(repository_value).resolve()
-    request = {
-        "protocol": EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
-        "repository": str(repository),
-        "payload": payload,
-    }
     try:
-        socket_path = editor_input_handoff_socket_path(repository, target_id)
+        route = parse_editor_input_handoff_target_id(repository, target_id)
     except UnicodeError:
         return _rejected("invalid_input", "tool input does not match schema", False)
+    if route is None:
+        return _rejected("target_unavailable", "target is not active", False)
+    address, token = route
     try:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-            connection.settimeout(10)
-            connection.connect(str(socket_path))
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
+            connection.settimeout(EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS)
+            connection.connect(address)
+            if not authenticate_editor_input_handoff_client(
+                connection,
+                token,
+                EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
+            ):
+                return _rejected(
+                    "transport_unavailable",
+                    "invalid editor input handoff response",
+                    True,
+                )
+            connection.settimeout(EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS)
+            request = {
+                "protocol": EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
+                "repository": str(repository),
+                "payload": payload,
+            }
             connection.sendall(
                 json.dumps(
                     request,
@@ -94,7 +111,10 @@ def _submit(payload: object) -> dict[str, object]:
                 ).encode("utf-8")
                 + b"\n"
             )
-            value = read_handoff_response(connection)
+            value = read_handoff_response(
+                connection,
+                EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
+            )
     except OSError:
         return _rejected("target_unavailable", "target is not active", False)
     validated = _validated_target_result(value)

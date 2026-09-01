@@ -36,7 +36,7 @@ from .runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from .runtime_errors import CmocError
 from .runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
-    FEEDBACK_COLLECTOR_ENV,
+    FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
 from .runtime_paths import schema_store_dir
@@ -652,7 +652,7 @@ def _feedback_mcp_override_args() -> list[str]:
         "args": ["-m", "commons.runtime_feedback_reporter"],
         "env_vars": [
             FEEDBACK_CAPABILITY_ENV,
-            FEEDBACK_COLLECTOR_ENV,
+            FEEDBACK_COLLECTOR_PORT_ENV,
             FEEDBACK_PROTOCOL_ENV,
         ],
         "enabled": True,
@@ -669,7 +669,7 @@ def _feedback_mcp_override_args() -> list[str]:
     # agent が起動する shell command へ継承させてはならない。
     for name in (
         FEEDBACK_CAPABILITY_ENV,
-        FEEDBACK_COLLECTOR_ENV,
+        FEEDBACK_COLLECTOR_PORT_ENV,
         FEEDBACK_PROTOCOL_ENV,
     ):
         args.extend(
@@ -817,7 +817,7 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     # 明示的に有効化した context だけを後から追加できるようにする。
     call_context_env_names = {
         FEEDBACK_CAPABILITY_ENV,
-        FEEDBACK_COLLECTOR_ENV,
+        FEEDBACK_COLLECTOR_PORT_ENV,
         FEEDBACK_PROTOCOL_ENV,
         EDITOR_INPUT_REPOSITORY_ENV,
     }

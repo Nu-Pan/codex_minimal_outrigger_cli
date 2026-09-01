@@ -6,11 +6,17 @@ import secrets
 import socket
 import stat
 import threading
+import time
 from pathlib import Path
 
 from .runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
+    EDITOR_INPUT_HANDOFF_HOST,
     EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
-    editor_input_handoff_socket_path,
+    EDITOR_INPUT_HANDOFF_TOKEN_BYTES,
+    EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
+    authenticate_editor_input_handoff_server,
+    build_editor_input_handoff_target_id,
     overwrite_input_is_valid,
 )
 from .runtime_errors import CmocError
@@ -68,11 +74,8 @@ class EditorInputHandoffTarget:
         """target identity と一時 transport state を初期化する。"""
         self.repository = repository.resolve()
         self.editor_work_path = editor_work_path
-        self.target_id = f"eit_{secrets.token_hex(16)}"
-        self.socket_path = editor_input_handoff_socket_path(
-            self.repository,
-            self.target_id,
-        )
+        self._token = secrets.token_bytes(EDITOR_INPUT_HANDOFF_TOKEN_BYTES)
+        self._target_id: str | None = None
         self._state_lock = threading.Lock()
         self._listener: socket.socket | None = None
         self._server_thread: threading.Thread | None = None
@@ -81,31 +84,54 @@ class EditorInputHandoffTarget:
         self._accepting = False
         self._closed = False
 
+    @property
+    def target_id(self) -> str:
+        """active target の opaque capability-bearing ID を返す。"""
+        if self._target_id is None:
+            raise RuntimeError("editor input handoff target is not active")
+        return self._target_id
+
     def start(self) -> None:
-        """owner-only Unix socket で active target を開始する。"""
+        """認証付き loopback TCP で active target を開始する。"""
         validate_editor_work_file(self.repository, self.editor_work_path)
-        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        bound = False
+        # Codex CLI 0.151.0 の ProxyRouted sandbox は AF_INET を許可し、
+        # AF_UNIX socket の生成を拒否する。
+        # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/linux-sandbox/src/landlock.rs#L170-L248
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            listener.bind(str(self.socket_path))
-            bound = True
-            os.chmod(self.socket_path, 0o600)
+            listener.bind((EDITOR_INPUT_HANDOFF_HOST, 0))
             listener.listen()
             listener.settimeout(0.1)
+            bound_address = listener.getsockname()
+            assert isinstance(bound_address, tuple)
+            port = bound_address[1]
+            assert isinstance(port, int)
+            target_id = build_editor_input_handoff_target_id(
+                self.repository,
+                port,
+                self._token,
+            )
         except BaseException:
             listener.close()
-            if bound:
-                self.socket_path.unlink(missing_ok=True)
             raise
         with self._state_lock:
             self._listener = listener
+            self._target_id = target_id
             self._accepting = True
         self._server_thread = threading.Thread(
             target=self._serve,
-            name=f"cmoc-editor-input-{self.target_id}",
+            name=f"cmoc-editor-input-loopback-{port}",
             daemon=True,
         )
-        self._server_thread.start()
+        try:
+            self._server_thread.start()
+        except BaseException:
+            with self._state_lock:
+                self._accepting = False
+                self._listener = None
+                self._server_thread = None
+            listener.close()
+            raise
 
     def close(self) -> None:
         """新規受付を止め、受付済み submission 完了後に target を無効化する。"""
@@ -129,7 +155,6 @@ class EditorInputHandoffTarget:
                 pass
         if self._server_thread is not None:
             self._server_thread.join()
-        self.socket_path.unlink(missing_ok=True)
 
     def _serve(self) -> None:
         """submission を一接続ずつ処理して同一 target の上書きを直列化する。"""
@@ -152,8 +177,19 @@ class EditorInputHandoffTarget:
                 self._current_submission_accepted = False
             try:
                 with connection:
-                    connection.settimeout(10)
-                    result = self._handle_connection(connection)
+                    if not authenticate_editor_input_handoff_server(
+                        connection,
+                        self._token,
+                        EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
+                    ):
+                        continue
+                    result = self._handle_connection(
+                        connection,
+                        EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
+                    )
+                    connection.settimeout(
+                        EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS
+                    )
                     connection.sendall(
                         json.dumps(
                             result,
@@ -169,11 +205,20 @@ class EditorInputHandoffTarget:
                     self._current_connection = None
                     self._current_submission_accepted = False
 
-    def _handle_connection(self, connection: socket.socket) -> dict[str, object]:
+    def _handle_connection(
+        self,
+        connection: socket.socket,
+        timeout_seconds: float,
+    ) -> dict[str, object]:
         """一つの IPC request を検証し、active target へ適用する。"""
         try:
+            deadline = time.monotonic() + timeout_seconds
             request_data = b""
             while b"\n" not in request_data:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("editor input handoff deadline exceeded")
+                connection.settimeout(remaining)
                 chunk = connection.recv(8192)
                 if not chunk:
                     break
@@ -240,9 +285,12 @@ def start_editor_input_handoff(
     try:
         target.start()
     except Exception as exc:
+        target.close()
         raise CmocError(
             "editor input handoff target を開始できませんでした。",
-            ["一時 socket の状態を確認してから cmoc コマンドを再実行してください。"],
-            f"socket: {target.socket_path}",
+            [
+                "local transport の状態を確認してから cmoc コマンドを再実行してください。"
+            ],
+            f"transport: {EDITOR_INPUT_HANDOFF_HOST} の一時 port",
         ) from exc
     return target

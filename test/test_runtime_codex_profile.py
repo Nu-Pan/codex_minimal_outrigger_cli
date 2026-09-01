@@ -31,7 +31,7 @@ from commons.runtime_codex_profile import (
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
-    FEEDBACK_COLLECTOR_ENV,
+    FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
 from config.cmoc_config import CmocConfig
@@ -80,7 +80,7 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
             "args": ["-m", "commons.runtime_feedback_reporter"],
             "env_vars": [
                 FEEDBACK_CAPABILITY_ENV,
-                FEEDBACK_COLLECTOR_ENV,
+                FEEDBACK_COLLECTOR_PORT_ENV,
                 FEEDBACK_PROTOCOL_ENV,
             ],
             "enabled": True,
@@ -95,7 +95,7 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     }
     assert parsed["shell_environment_policy"]["filters"] == {
         FEEDBACK_CAPABILITY_ENV: "exclude",
-        FEEDBACK_COLLECTOR_ENV: "exclude",
+        FEEDBACK_COLLECTOR_PORT_ENV: "exclude",
         FEEDBACK_PROTOCOL_ENV: "exclude",
     }
     assert "--profile" not in args
@@ -113,18 +113,22 @@ def test_codex_overrides_reject_unknown_file_access_mode() -> None:
         build_codex_override_args(parameter, CmocConfig())
 
 
-def test_feedback_capability_values_are_not_written_to_codex_argv(
+def test_feedback_call_context_values_are_not_written_to_codex_argv(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """MCP 起動情報は環境変数名だけを含み、call secret を argv に載せない。"""
-    secret_values = (
+    """MCP 起動情報は環境変数名だけを含み、call context を argv に載せない。"""
+    context_values = (
         "capability-secret-value",
-        "/tmp/private-collector.sock",
+        "43210",
         "private-protocol-value",
     )
     for name, value in zip(
-        (FEEDBACK_CAPABILITY_ENV, FEEDBACK_COLLECTOR_ENV, FEEDBACK_PROTOCOL_ENV),
-        secret_values,
+        (
+            FEEDBACK_CAPABILITY_ENV,
+            FEEDBACK_COLLECTOR_PORT_ENV,
+            FEEDBACK_PROTOCOL_ENV,
+        ),
+        context_values,
         strict=True,
     ):
         monkeypatch.setenv(name, value)
@@ -135,7 +139,7 @@ def test_feedback_capability_values_are_not_written_to_codex_argv(
     )
     rendered = "\n".join(args)
 
-    for value in secret_values:
+    for value in context_values:
         assert value not in rendered
 
 
@@ -174,7 +178,7 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
     """親 process の別 call 用 MCP context を Codex env へ継承しない。"""
     for name, value in (
         (FEEDBACK_CAPABILITY_ENV, "stale-capability"),
-        (FEEDBACK_COLLECTOR_ENV, "/tmp/stale-collector.sock"),
+        (FEEDBACK_COLLECTOR_PORT_ENV, "43210"),
         (FEEDBACK_PROTOCOL_ENV, "stale-protocol"),
         (EDITOR_INPUT_REPOSITORY_ENV, "/tmp/stale-repository"),
     ):
@@ -186,7 +190,7 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
         name not in environment
         for name in (
             FEEDBACK_CAPABILITY_ENV,
-            FEEDBACK_COLLECTOR_ENV,
+            FEEDBACK_COLLECTOR_PORT_ENV,
             FEEDBACK_PROTOCOL_ENV,
             EDITOR_INPUT_REPOSITORY_ENV,
         )

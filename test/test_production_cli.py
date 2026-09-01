@@ -44,7 +44,7 @@ from commons.runtime_config import write_config
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
-    FEEDBACK_COLLECTOR_ENV,
+    FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
 from config.cmoc_config import CmocConfig
@@ -345,7 +345,7 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     assert feedback_server["default_tools_approval_mode"] == "approve"
     assert feedback_server["env_vars"] == [
         FEEDBACK_CAPABILITY_ENV,
-        FEEDBACK_COLLECTOR_ENV,
+        FEEDBACK_COLLECTOR_PORT_ENV,
         FEEDBACK_PROTOCOL_ENV,
     ]
     if tui:

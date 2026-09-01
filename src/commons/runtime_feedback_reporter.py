@@ -11,7 +11,8 @@ import sys
 
 from .runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
-    FEEDBACK_COLLECTOR_ENV,
+    FEEDBACK_COLLECTOR_HOST,
+    FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
 from .runtime_feedback_store import (
@@ -85,10 +86,21 @@ def _validated_collector_result(value: object) -> dict[str, object] | None:
 
 def _submit(payload: object) -> dict[str, object]:
     """tool payload を capability envelope と分離して collector へ転送する。"""
-    socket_path = os.environ.get(FEEDBACK_COLLECTOR_ENV)
+    collector_port_text = os.environ.get(FEEDBACK_COLLECTOR_PORT_ENV)
     capability = os.environ.get(FEEDBACK_CAPABILITY_ENV)
     protocol = os.environ.get(FEEDBACK_PROTOCOL_ENV)
-    if not socket_path or not capability:
+    if (
+        not collector_port_text
+        or not collector_port_text.isascii()
+        or not collector_port_text.isdecimal()
+        or len(collector_port_text) > 5
+        or not capability
+    ):
+        return _rejected(
+            "collector_unavailable", "feedback collector context is unavailable", True
+        )
+    collector_port = int(collector_port_text)
+    if not 1 <= collector_port <= 65535:
         return _rejected(
             "collector_unavailable", "feedback collector context is unavailable", True
         )
@@ -100,9 +112,9 @@ def _submit(payload: object) -> dict[str, object]:
         "payload": payload,
     }
     try:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
             connection.settimeout(10)
-            connection.connect(socket_path)
+            connection.connect((FEEDBACK_COLLECTOR_HOST, collector_port))
             connection.sendall(
                 json.dumps(request, ensure_ascii=True, separators=(",", ":")).encode(
                     "utf-8"

@@ -16,10 +16,13 @@ agent-facing reporter から raw store、report cut、verification、current poi
 
 import hashlib
 import json
+import socket
+import threading
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
@@ -44,6 +47,10 @@ from acp.builder.feedback.verify_issue import build_feedback_verify_issue_parame
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_feedback import (
+    FEEDBACK_CAPABILITY_ENV,
+    FEEDBACK_COLLECTOR_HOST,
+    FEEDBACK_COLLECTOR_PORT_ENV,
+    FEEDBACK_PROTOCOL_ENV,
     FeedbackInvocation,
     ReporterAvailabilityError,
     begin_feedback_call,
@@ -60,6 +67,7 @@ from commons.runtime_feedback_state import (
     validate_observation_envelope,
 )
 from commons.runtime_feedback_store import (
+    REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
     canonical_json_bytes,
     feedback_completion_counts,
@@ -124,6 +132,37 @@ def _context(root: Path, *, session_id: str | None = None) -> dict[str, object]:
         "codex_session_id": None,
         "log_paths": [str((root / ".cmoc/gu/ar/log/test.jsonl").resolve())],
     }
+
+
+def _submit_to_feedback_collector(
+    port: int,
+    capability: str,
+    payload: object,
+) -> dict[str, object]:
+    """実 TCP transport で capability 付き request を送信する。"""
+    request = {
+        "protocol": REPORTER_PROTOCOL_VERSION,
+        "capability": capability,
+        "payload": payload,
+    }
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
+        connection.settimeout(5)
+        connection.connect((FEEDBACK_COLLECTOR_HOST, port))
+        connection.sendall(
+            json.dumps(request, ensure_ascii=True, separators=(",", ":")).encode(
+                "utf-8"
+            )
+            + b"\n"
+        )
+        response = b""
+        while b"\n" not in response:
+            chunk = connection.recv(8192)
+            if not chunk:
+                break
+            response += chunk
+    result = json.loads(response.split(b"\n", 1)[0])
+    assert isinstance(result, dict)
+    return result
 
 
 def _active_session(root: Path, monkeypatch: pytest.MonkeyPatch) -> str:
@@ -242,6 +281,7 @@ def test_reporter_exposes_only_canonical_submission_tool(
         }
     ]
     sent: list[bytes] = []
+    connected: list[tuple[str, int]] = []
 
     class FakeSocket:
         def __enter__(self) -> "FakeSocket":
@@ -253,8 +293,8 @@ def test_reporter_exposes_only_canonical_submission_tool(
         def settimeout(self, _seconds: int) -> None:
             return None
 
-        def connect(self, _path: str) -> None:
-            return None
+        def connect(self, address: tuple[str, int]) -> None:
+            connected.append(address)
 
         def sendall(self, value: bytes) -> None:
             sent.append(value)
@@ -263,14 +303,15 @@ def test_reporter_exposes_only_canonical_submission_tool(
             return b'{"status":"accepted","observation_id":"fbo_00000000-0000-7000-8000-000000000001","redaction_count":0}\n'
 
     monkeypatch.setattr(reporter_module.socket, "socket", lambda *_args: FakeSocket())
-    monkeypatch.setenv("CMOC_FEEDBACK_COLLECTOR_SOCKET", "/tmp/collector.sock")
-    monkeypatch.setenv("CMOC_FEEDBACK_CAPABILITY", "secret-capability")
-    monkeypatch.setenv("CMOC_FEEDBACK_PROTOCOL_VERSION", "1")
+    monkeypatch.setenv(FEEDBACK_COLLECTOR_PORT_ENV, "43210")
+    monkeypatch.setenv(FEEDBACK_CAPABILITY_ENV, "secret-capability")
+    monkeypatch.setenv(FEEDBACK_PROTOCOL_ENV, "1")
 
     result = reporter_module._submit(_payload())
 
     assert result["status"] == "accepted"
     request = json.loads(sent[0])
+    assert connected == [(FEEDBACK_COLLECTOR_HOST, 43210)]
     assert request["capability"] == "secret-capability"
     assert request["payload"] == _payload()
 
@@ -291,7 +332,7 @@ def test_reporter_returns_rejection_for_non_utf8_payload_text(
         def settimeout(self, _seconds: int) -> None:
             return None
 
-        def connect(self, _path: str) -> None:
+        def connect(self, _address: tuple[str, int]) -> None:
             return None
 
         def sendall(self, value: bytes) -> None:
@@ -304,14 +345,42 @@ def test_reporter_returns_rejection_for_non_utf8_payload_text(
             )
 
     monkeypatch.setattr(reporter_module.socket, "socket", lambda *_args: FakeSocket())
-    monkeypatch.setenv("CMOC_FEEDBACK_COLLECTOR_SOCKET", "/tmp/collector.sock")
-    monkeypatch.setenv("CMOC_FEEDBACK_CAPABILITY", "secret-capability")
-    monkeypatch.setenv("CMOC_FEEDBACK_PROTOCOL_VERSION", "1")
+    monkeypatch.setenv(FEEDBACK_COLLECTOR_PORT_ENV, "43210")
+    monkeypatch.setenv(FEEDBACK_CAPABILITY_ENV, "secret-capability")
+    monkeypatch.setenv(FEEDBACK_PROTOCOL_ENV, "1")
 
     result = reporter_module._submit(_payload(text="\ud800"))
 
     assert result["status"] == "rejected"
     assert json.loads(sent[0])["payload"]["evidence"][0]["text"] == "\ud800"
+
+
+@pytest.mark.parametrize(
+    "collector_port",
+    [None, "", "0", "65536", "000080", "not-a-port", " 123", "+123", "１２３"],
+)
+def test_reporter_rejects_malformed_collector_port(
+    monkeypatch: pytest.MonkeyPatch, collector_port: str | None
+) -> None:
+    """範囲外または不正な port へ接続せず unavailable result を返す。"""
+    if collector_port is None:
+        monkeypatch.delenv(FEEDBACK_COLLECTOR_PORT_ENV, raising=False)
+    else:
+        monkeypatch.setenv(FEEDBACK_COLLECTOR_PORT_ENV, collector_port)
+    monkeypatch.setenv(FEEDBACK_CAPABILITY_ENV, "secret-capability")
+    monkeypatch.setenv(FEEDBACK_PROTOCOL_ENV, "1")
+    monkeypatch.setattr(
+        reporter_module.socket,
+        "socket",
+        lambda *_args: pytest.fail("invalid collector port reached socket creation"),
+    )
+
+    assert reporter_module._submit(_payload()) == {
+        "status": "rejected",
+        "code": "collector_unavailable",
+        "message": "feedback collector context is unavailable",
+        "retryable": True,
+    }
 
 
 def test_reporter_probe_rejects_non_object_mcp_response(
@@ -359,7 +428,7 @@ def test_reporter_rejects_invalid_collector_result(
         def settimeout(self, _seconds: int) -> None:
             return None
 
-        def connect(self, _path: str) -> None:
+        def connect(self, _address: tuple[str, int]) -> None:
             return None
 
         def sendall(self, _value: bytes) -> None:
@@ -369,9 +438,9 @@ def test_reporter_rejects_invalid_collector_result(
             return response
 
     monkeypatch.setattr(reporter_module.socket, "socket", lambda *_args: FakeSocket())
-    monkeypatch.setenv("CMOC_FEEDBACK_COLLECTOR_SOCKET", "/tmp/collector.sock")
-    monkeypatch.setenv("CMOC_FEEDBACK_CAPABILITY", "secret-capability")
-    monkeypatch.setenv("CMOC_FEEDBACK_PROTOCOL_VERSION", "1")
+    monkeypatch.setenv(FEEDBACK_COLLECTOR_PORT_ENV, "43210")
+    monkeypatch.setenv(FEEDBACK_CAPABILITY_ENV, "secret-capability")
+    monkeypatch.setenv(FEEDBACK_PROTOCOL_ENV, "1")
 
     assert reporter_module._submit(_payload()) == {
         "status": "rejected",
@@ -981,36 +1050,243 @@ def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> N
 
 
 def test_collector_validates_context_rate_and_durable_observation(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """call capability の受理、rate limit、失効を raw 保存結果から確認する。"""
+    """loopback reporter 経由の受理、rate limit、失効を確認する。"""
     root = make_repo(tmp_path)
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
-    call = invocation.register_call(
-        agent_call_id="agc_one",
-        agent_call_kind="build_one",
-        codex_call_id="cdc_one",
-        codex_session_id="session_one",
-        log_paths=[root / ".cmoc/gu/ar/log/codex/call.json"],
-    )
-    request = {"protocol": "1", "capability": call.capability, "payload": _payload()}
+    invocation.start()
+    try:
+        call = invocation.register_call(
+            agent_call_id="agc_one",
+            agent_call_kind="build_one",
+            codex_call_id="cdc_one",
+            codex_session_id="session_one",
+            log_paths=[root / ".cmoc/gu/ar/log/codex/call.json"],
+        )
+        assert invocation.collector_port is not None
+        assert invocation._listener is not None
+        assert invocation._listener.getsockname() == (
+            FEEDBACK_COLLECTOR_HOST,
+            invocation.collector_port,
+        )
+        feedback_call = feedback_module.FeedbackCall(invocation, call)
+        reporter_environment = feedback_call.subprocess_env({})
+        for name, value in reporter_environment.items():
+            monkeypatch.setenv(name, value)
 
-    accepted = [invocation._submit_request(request) for _index in range(3)]
+        accepted = [reporter_module._submit(_payload()) for _index in range(3)]
 
-    assert all(result["status"] == "accepted" for result in accepted)
-    paths = iter_observation_paths(root)
-    assert len(paths) == 3
-    envelope = read_json_object(paths[0])
-    assert validate_observation_envelope(envelope) == []
-    assert envelope["context"]["agent_call_id"] == "agc_one"
-    with pytest.raises(FeedbackRejected) as rate_error:
-        invocation._submit_request(request)
-    assert rate_error.value.code == "rate_limited"
-    invocation.close_call(call)
-    with pytest.raises(FeedbackRejected) as context_error:
-        invocation._submit_request(request)
-    assert context_error.value.code == "context_invalid"
+        assert all(result["status"] == "accepted" for result in accepted)
+        paths = iter_observation_paths(root)
+        assert len(paths) == 3
+        envelope = read_json_object(paths[0])
+        assert validate_observation_envelope(envelope) == []
+        assert envelope["context"]["agent_call_id"] == "agc_one"
+        assert reporter_module._submit(_payload())["code"] == "rate_limited"
+        feedback_call.close()
+        assert reporter_module._submit(_payload())["code"] == "context_invalid"
+        invocation.stop()
+        assert reporter_module._submit(_payload())["code"] == "collector_unavailable"
+    finally:
+        invocation.stop()
+
+
+def test_feedback_call_close_drains_accepted_tcp_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """受付済み request の保存完了後にだけ capability を失効する。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    storage_started = threading.Event()
+    release_storage = threading.Event()
+    close_started = threading.Event()
+    close_finished = threading.Event()
+    submission_result: dict[str, object] = {}
+    submission_errors: list[BaseException] = []
+    close_errors: list[BaseException] = []
+    submission_thread: threading.Thread | None = None
+    close_thread: threading.Thread | None = None
+    original_store = feedback_module.store_agent_observation
+
+    def blocking_store(
+        repo: Path,
+        context: dict[str, Any],
+        payload: object,
+    ) -> tuple[dict[str, object], Path]:
+        """close 中も accepted request を保存途中に留める。"""
+        storage_started.set()
+        if not release_storage.wait(timeout=5):
+            raise RuntimeError("test did not release feedback storage")
+        return original_store(repo, context, payload)
+
+    monkeypatch.setattr(feedback_module, "store_agent_observation", blocking_store)
+    invocation.start()
+    try:
+        call = invocation.register_call(
+            agent_call_id="agc_drain",
+            agent_call_kind="build_drain",
+            codex_call_id="cdc_drain",
+            log_paths=[],
+        )
+        assert invocation.collector_port is not None
+
+        def submit() -> None:
+            """実 transport の結果または例外を親 thread へ渡す。"""
+            try:
+                submission_result.update(
+                    _submit_to_feedback_collector(
+                        invocation.collector_port,
+                        call.capability,
+                        _payload(),
+                    )
+                )
+            except BaseException as exc:
+                submission_errors.append(exc)
+
+        def close_call() -> None:
+            """対象 call の drain 完了を親 thread へ通知する。"""
+            close_started.set()
+            try:
+                invocation.close_call(call)
+            except BaseException as exc:
+                close_errors.append(exc)
+            finally:
+                close_finished.set()
+
+        submission_thread = threading.Thread(target=submit)
+        submission_thread.start()
+        assert storage_started.wait(timeout=2)
+        close_thread = threading.Thread(target=close_call)
+        close_thread.start()
+        assert close_started.wait(timeout=2)
+        assert not close_finished.wait(timeout=0.05)
+
+        release_storage.set()
+        submission_thread.join(timeout=5)
+        close_thread.join(timeout=5)
+
+        assert not submission_thread.is_alive()
+        assert not close_thread.is_alive()
+        assert submission_errors == []
+        assert close_errors == []
+        assert submission_result["status"] == "accepted"
+        assert len(iter_observation_paths(root)) == 1
+        rejected = _submit_to_feedback_collector(
+            invocation.collector_port,
+            call.capability,
+            _payload(),
+        )
+        assert rejected["code"] == "context_invalid"
+    finally:
+        release_storage.set()
+        if submission_thread is not None:
+            submission_thread.join(timeout=5)
+        if close_thread is not None:
+            close_thread.join(timeout=5)
+        invocation.stop()
+
+
+def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
+    """並行 call の片方を閉じても他方の request を継続受理する。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    invocation.start()
+    try:
+        first = invocation.register_call(
+            agent_call_id="agc_parallel_one",
+            agent_call_kind="build_parallel_one",
+            codex_call_id="cdc_parallel_one",
+            log_paths=[],
+        )
+        second = invocation.register_call(
+            agent_call_id="agc_parallel_two",
+            agent_call_kind="build_parallel_two",
+            codex_call_id="cdc_parallel_two",
+            log_paths=[],
+        )
+        assert invocation.collector_port is not None
+        start_submissions = threading.Event()
+        results: dict[str, dict[str, object] | BaseException] = {}
+
+        def submit(label: str, capability: str) -> None:
+            """二つの capability を同時に実 TCP collector へ送る。"""
+            start_submissions.wait(timeout=2)
+            try:
+                results[label] = _submit_to_feedback_collector(
+                    invocation.collector_port,
+                    capability,
+                    _payload(text=f"{label} call の observation"),
+                )
+            except BaseException as exc:
+                results[label] = exc
+
+        threads = [
+            threading.Thread(target=submit, args=("first", first.capability)),
+            threading.Thread(target=submit, args=("second", second.capability)),
+        ]
+        for thread in threads:
+            thread.start()
+        start_submissions.set()
+        for thread in threads:
+            thread.join(timeout=5)
+
+        assert all(not thread.is_alive() for thread in threads)
+        first_result = results.get("first")
+        second_result = results.get("second")
+        assert isinstance(first_result, dict)
+        assert isinstance(second_result, dict)
+        assert first_result["status"] == "accepted"
+        assert second_result["status"] == "accepted"
+
+        invocation.close_call(first)
+        first_rejected = _submit_to_feedback_collector(
+            invocation.collector_port,
+            first.capability,
+            _payload(),
+        )
+        second_accepted = _submit_to_feedback_collector(
+            invocation.collector_port,
+            second.capability,
+            _payload(text="second call remains active"),
+        )
+
+        assert first_rejected["code"] == "context_invalid"
+        assert second_accepted["status"] == "accepted"
+        paths = iter_observation_paths(root)
+        assert len(paths) == 3
+        contexts = {
+            read_json_object(path)["context"]["agent_call_id"] for path in paths
+        }
+        assert contexts == {"agc_parallel_one", "agc_parallel_two"}
+        invocation.close_call(second)
+    finally:
+        invocation.stop()
+
+
+def test_collector_limits_unauthenticated_request_read_time(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """改行前で停止した未認証接続を短い絶対 deadline で終了する。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    monkeypatch.setattr(feedback_module, "_COLLECTOR_IO_TIMEOUT_SECONDS", 0.05)
+    invocation.start()
+    try:
+        assert invocation.collector_port is not None
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
+            connection.settimeout(1)
+            connection.connect((FEEDBACK_COLLECTOR_HOST, invocation.collector_port))
+            connection.sendall(b"{")
+            response = json.loads(connection.recv(8192).split(b"\n", 1)[0])
+
+        assert response["code"] == "transport_unavailable"
+    finally:
+        invocation.stop()
 
 
 def test_collector_rejects_observation_without_current_head(
