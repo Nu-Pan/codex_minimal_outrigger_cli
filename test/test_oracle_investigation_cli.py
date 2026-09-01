@@ -209,15 +209,13 @@ def test_oracle_investigation_has_no_session_precondition(
         == 1
     )
     assert "# file R/W policy (pure_oracle_read)" in complete_prompt_skeleton
-    objective = complete_prompt_skeleton.split(
-        '<cmoc_block id="objective">', 1
-    )[1].split("</cmoc_block>", 1)[0]
+    objective = complete_prompt_skeleton.split('<cmoc_block id="objective">', 1)[
+        1
+    ].split("</cmoc_block>", 1)[0]
     assert "# task" in objective
     assert "要求する事項を調査し、結果を回答する" in objective
     assert "# scope" in objective
-    assert "`{{work-root}}/oracle` ツリー内の関連する oracle file を根拠" in (
-        objective
-    )
+    assert "`{{work-root}}/oracle` ツリー内の関連する oracle file を根拠" in (objective)
     assert "# completion criteria" in objective
     assert "調査結果がユーザーへ回答されている" in objective
     assert "根拠となる oracle file を回答から特定できる" in objective

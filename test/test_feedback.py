@@ -424,12 +424,12 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
     assert verifier.structured_output_schema_path is not None
     assert normalizer.run_indexing_preflight is True
     assert verifier.run_indexing_preflight is True
-    normalizer_objective = normalizer.prompt.split(
-        '<cmoc_block id="objective">', 1
-    )[1].split("</cmoc_block>", 1)[0]
-    verifier_objective = verifier.prompt.split(
-        '<cmoc_block id="objective">', 1
-    )[1].split("</cmoc_block>", 1)[0]
+    normalizer_objective = normalizer.prompt.split('<cmoc_block id="objective">', 1)[
+        1
+    ].split("</cmoc_block>", 1)[0]
+    verifier_objective = verifier.prompt.split('<cmoc_block id="objective">', 1)[
+        1
+    ].split("</cmoc_block>", 1)[0]
     assert "同一性" in normalizer.prompt
     assert "`result.decision=new`" not in normalizer.prompt
     assert "# scope" in normalizer_objective

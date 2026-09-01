@@ -35,9 +35,9 @@ from basic.acp import FileAccessMode
 
 def _objective_section(prompt: str) -> str:
     """完全 prompt から caller 固有 objective block の本文を取り出す。"""
-    return prompt.split('<cmoc_block id="objective">', 1)[1].split(
-        "</cmoc_block>", 1
-    )[0]
+    return prompt.split('<cmoc_block id="objective">', 1)[1].split("</cmoc_block>", 1)[
+        0
+    ]
 
 
 @pytest.fixture
@@ -101,7 +101,6 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     for heading in ("# realization policy", "# realization findings policy"):
         assert heading in parameter.prompt
     assert "# oracle policy" not in parameter.prompt
-    assert "# oracle findings policy" not in parameter.prompt
     assert "# conflict resolution policy" not in parameter.prompt
     assert "# realization oracle reference policy" not in parameter.prompt
     assert "# routing policy" in parameter.prompt
@@ -173,7 +172,6 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     ):
         assert heading in review.prompt
     assert "# oracle policy" not in review.prompt
-    assert "# oracle findings policy" not in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
     finding_schema = review_schema["properties"]["findings"]["items"]
     assert "changed_paths" in finding_schema["required"]
@@ -191,9 +189,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert "# oracle and realization basic" in summary.prompt
     assert "# routing policy" in summary.prompt
     summary_objective = _objective_section(summary.prompt)
-    assert "# task\n\n- 入力された run branch 上の refactor 差分" in (
-        summary_objective
-    )
+    assert "# task\n\n- 入力された run branch 上の refactor 差分" in (summary_objective)
     for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
         assert omitted_heading not in summary_objective
     summary_schema = json.loads(summary.structured_output_schema_path.read_text())

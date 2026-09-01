@@ -6,7 +6,6 @@
 - {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -46,7 +45,6 @@ def test_public_cli_leaf_commands_match_oracle() -> None:
         ("indexing",),
         ("oracle", "edit"),
         ("oracle", "investigation"),
-        ("oracle", "review"),
         ("realization", "apply", "fork"),
         ("realization", "refactor", "fork"),
         ("run", "abandon"),
@@ -70,7 +68,7 @@ def test_help_renders_without_typer_click_compatibility_error() -> None:
     assert "run" in rendered
 
     runner = CliRunner()
-    for command_path in (("oracle", "review"), ("run", "join")):
+    for command_path in (("oracle", "edit"), ("run", "join")):
         result = runner.invoke(app, [*command_path, "--help"])
         assert result.exit_code == 0, result.output
 

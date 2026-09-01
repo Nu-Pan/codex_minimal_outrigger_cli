@@ -14,7 +14,6 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/index_entry.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/oracle_findings.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
@@ -51,9 +50,6 @@ from oracle.prompt_builder.policy.index_entry import (
 )
 from oracle.prompt_builder.policy.oracle import (
     build_oracle_policy as _build_oracle_policy,
-)
-from oracle.prompt_builder.policy.oracle_findings import (
-    build_oracle_findings_policy as _build_oracle_findings_policy,
 )
 from oracle.prompt_builder.policy.realization import (
     build_realization_policy as _build_realization_policy,
@@ -100,12 +96,6 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
             ("**必須**", "**禁止**", "**許容**"),
             1,
             id="realization",
-        ),
-        pytest.param(
-            _build_oracle_findings_policy,
-            ("**必須**", "**禁止**"),
-            1,
-            id="oracle-findings",
         ),
         pytest.param(
             _build_realization_findings_policy,
@@ -178,7 +168,6 @@ _POLICY_FLAG_HEADINGS = (
     ("oracle_and_realization_basic", "# oracle and realization basic"),
     ("oracle_policy", "# oracle policy"),
     ("realization_policy", "# realization policy"),
-    ("oracle_findings_policy", "# oracle findings policy"),
     ("realization_findings_policy", "# realization findings policy"),
     ("conflict_resolution_policy", "# conflict resolution policy"),
     ("index_entry_policy", "# index entry policy"),
@@ -203,29 +192,6 @@ def test_each_policy_flag_adds_only_its_block_once(
     rendered = render_sd_node_as_markdown(*prompt)
     for _, heading in _POLICY_FLAG_HEADINGS:
         assert rendered.count(heading) == (1 if heading == selected_heading else 0)
-
-
-def test_selected_policy_blocks_remain_separate_without_deduplication() -> None:
-    """選択した policy block は共有文面を削らず、それぞれ一度だけ注入する。"""
-    prompt = build_complete_prompt(
-        task="- task",
-        file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
-        oracle_findings_policy=True,
-        realization_findings_policy=True,
-    )
-
-    rendered = render_sd_node_as_markdown(*prompt)
-    assert rendered.count("oracle file の具体的な記述だけから成立する問題") == 1
-    assert (
-        rendered.count(
-            "所見は oracle file, realization file の記述・挙動を根拠として持つ"
-        )
-        == 1
-    )
-    assert rendered.index("# oracle findings policy") < rendered.index(
-        "# realization findings policy"
-    )
 
 
 def test_oracle_policy_keeps_reference_and_authority_boundaries() -> None:
@@ -539,7 +505,6 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
         oracle_and_realization_basic=True,
         oracle_policy=True,
         realization_policy=True,
-        oracle_findings_policy=True,
         realization_findings_policy=True,
         conflict_resolution_policy=True,
         index_entry_policy=True,
@@ -548,7 +513,7 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
     rendered = render_sd_node_as_markdown(*prompt)
     assert "プロンプト > oracle file > installed skill の優先順位" in rendered
     assert "今現在の仕様を満たすために必要な realization file" in rendered
-    assert rendered.count("所見に対して適用する基準は常に一貫していること") == 2
+    assert rendered.count("所見に対して適用する基準は常に一貫していること") == 1
     assert "両方のマージ元ブランチの oracle file" in rendered
     assert "### 背景" not in rendered
     for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
@@ -558,7 +523,6 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
         "oracle and realization basic",
         "oracle policy",
         "realization policy",
-        "oracle findings policy",
         "realization findings policy",
         "conflict resolution policy",
         "index entry policy",
@@ -645,22 +609,3 @@ def test_build_index_entry_policy_renders_core_output_requirements() -> None:
     assert "summary" not in rendered
     assert "read_this_when" not in rendered
     assert "do_not_read_this_when" not in rendered
-
-
-def test_build_oracle_findings_policy_renders_core_review_requirements() -> None:
-    """oracle findings policy の severity と所見境界を検証する。"""
-    builder_result = _build_oracle_findings_policy()
-
-    assert isinstance(builder_result[1], SDHeader)
-
-    rendered = _render_policy(builder_result)
-    assert "oracle findings policy" in rendered
-    assert "oracle file の具体的な記述だけから成立する問題" in rendered
-    assert "fatal" in rendered
-    assert "minor" in rendered
-    assert "正本仕様断片同士の解釈の余地がない明確な矛盾" in rendered
-    assert "実装者裁量の範囲内で解決出来ない問題" in rendered
-    assert "誤字" in rendered
-    assert "用語不統一" in rendered
-    assert "所見に対して適用する基準は常に一貫していること" in rendered
-    assert "規定上必須とされていない事" in rendered

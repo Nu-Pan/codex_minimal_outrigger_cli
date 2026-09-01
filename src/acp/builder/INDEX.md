@@ -84,18 +84,19 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization adapter 群を収容するディレクトリ。`cmoc oracle` 配下の edit・investigation・review builder への入口であり、各下位 package の責務や canonical 実装への接続を確認する際のルーティング起点となる。
+- oracle command builder の realization package。oracle command builder 関連のパッケージ入口として機能する。
 
 ## Read this when
-- oracle command builder realization の全体構成や、edit・investigation・review の各 adapter package への入口を確認するとき。
-- 旧 import 経路から canonical builder 実装へ委譲される adapter の配置と責務を把握するとき。
+- oracle command builder の realization package の責務や構成を確認するとき。
+- oracle edit または oracle investigation の builder adapter へ進む入口を確認するとき。
 
 ## Do not read this when
-- oracle command builder の具体的な処理、入出力仕様、または CLI 全体の挙動を確認したいとき。該当する下位実装や正本仕様を直接読む。
-- oracle command builder 以外の処理や ACP 実装を調べるとき。
+- oracle command builder 以外の処理を確認するとき。
+- oracle edit の具体的な編集処理や CLI 全体の挙動を確認するときは、実装ファイルまたは上位の CLI 関連ファイルを直接読む。
+- oracle investigation の具体的な調査処理や正本 builder の仕様・挙動を確認するときは、oracle 側の実装を直接読む。
 
 ## hash
-- d41a2cb179f2fe2267ac0f956376de1844199e1a07466e143055e3d6a1131a30
+- 58c688dd7c1093d31b2606ce40f37a3ab07a5ffb88e26aa47c77e1f3045fa02c
 
 # `quota_probe.py`
 

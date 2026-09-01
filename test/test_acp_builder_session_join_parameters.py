@@ -67,11 +67,7 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert "# routing policy" in parameter.prompt
     for heading in ("# oracle policy", "# realization policy"):
         assert heading in parameter.prompt
-    for heading in (
-        "# oracle findings policy",
-        "# realization findings policy",
-    ):
-        assert heading not in parameter.prompt
+    assert "# realization findings policy" not in parameter.prompt
 
 
 def test_session_join_conflict_paths_protect_nested_code_fences(

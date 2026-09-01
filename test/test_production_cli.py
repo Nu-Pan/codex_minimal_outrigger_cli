@@ -70,7 +70,6 @@ NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("feedback", "report"),
     ("indexing",),
     ("oracle", "edit"),
-    ("oracle", "review"),
     ("realization", "apply", "fork"),
     ("realization", "refactor", "fork"),
     ("run", "abandon"),
@@ -152,12 +151,6 @@ def _real_path_config() -> CmocConfig:
                 agent_call_kind: quota_saving_call
                 for agent_call_kind in config.codex.agent_calls
             },
-        ),
-        oracle_review=replace(
-            config.oracle_review,
-            num_enumerate_findings_loop=1,
-            num_merge_findings_loop=1,
-            num_validate_findings_loop=1,
         ),
     )
 
@@ -616,7 +609,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
-    # active session 上の no-target review も report を生成する正常系である。
+    # active session 上の各 workload を検証する。
     home_branch = current_branch(root)
     run_without_codex("session", "fork")
     session_branch = current_branch(root)
@@ -654,11 +647,6 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert "- result:" not in oracle_edit_result.stdout
     assert "- completion_reason:" not in oracle_edit_result.stdout
 
-    review_dir = root / ".cmoc" / "gu" / "ar" / "report" / "oracle_review"
-    review_reports = set(review_dir.glob("*.md"))
-    run_without_codex("oracle", "review")
-    review_report = next(iter(set(review_dir.glob("*.md")) - review_reports))
-    assert "result: no_targets" in review_report.read_text()
     feedback_report_dir = root / ".cmoc" / "gu" / "ar" / "report" / "feedback"
     feedback_reports = set(feedback_report_dir.glob("*.md"))
     run_without_codex("feedback", "report")

@@ -55,15 +55,14 @@ def _copy_source_tree(source: Path, target: Path) -> None:
     )
 
 
-def test_canonical_agent_builders_import_from_packaged_layout(
+def test_quota_probe_imports_from_packaged_layout(
     tmp_path: Path,
 ) -> None:
-    """oracle review と quota probe の packaged import を検証する。
+    """quota probe の canonical builder を packaged layout で検証する。
 
-    正本 builder が packaged layout でも schema と完全 prompt を参照し、期待する
-    parameter を生成できることを確認する。
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.py
-    {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.json
+    正本 builder が packaged layout でも完全 prompt を参照し、期待する parameter
+    を生成できることを確認する。
+    根拠: {{work-root}}/oracle/src/oracle/acp_builder/quota_probe.py
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
     root = Path(__file__).parents[1]
@@ -81,19 +80,10 @@ def test_canonical_agent_builders_import_from_packaged_layout(
     result = _run_from_packaged_layout(
         target,
         (
-            "import json; "
             "from pathlib import Path; "
             "from basic.acp import AgentCallParameter, FileAccessMode; "
-            "from acp.builder.oracle.review.enumerate_finding import "
-            "build_oracle_review_enumerate_finding_parameter as build; "
             "from acp.builder.quota_probe import "
             "build_quota_availability_probe_parameter as build_probe; "
-            "p = build(Path('{{work-root}}/oracle/spec.md'), '[]', "
-            "agent_call_cwd=Path.cwd()); "
-            "assert p.structured_output_schema_path.name == 'enumerate_finding.json'; "
-            "schema = json.loads(p.structured_output_schema_path.read_text()); "
-            "assert schema['required'] == ['findings']; "
-            "assert '# oracle findings policy' in p.prompt; "
             "base = AgentCallParameter('base', FileAccessMode.READONLY, "
             "'base', None, Path.cwd()); "
             "probe = build_probe(base); "
@@ -230,8 +220,7 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
         (
             "import config.cmoc_config as c; "
             "expected = ['CmocConfig', 'CmocConfigCodex', "
-            "'CmocConfigOracleReview', 'CodexCallConfig', "
-            "'CodexModelProviderConfig', 'JsonTomlValue']; "
+            "'CodexCallConfig', 'CodexModelProviderConfig', 'JsonTomlValue']; "
             "assert c.__all__ == expected; "
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),

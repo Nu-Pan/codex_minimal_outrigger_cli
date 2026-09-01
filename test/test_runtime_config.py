@@ -68,9 +68,6 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
             "openai", "gpt-5.6-sol", "ultra"
         ),
     }
-    assert config.oracle_review.num_enumerate_findings_loop == 2
-    assert config.oracle_review.num_merge_findings_loop == 2
-    assert config.oracle_review.num_validate_findings_loop == 2
 
 
 def test_config_json_preserves_oracle_member_order() -> None:
@@ -81,7 +78,6 @@ def test_config_json_preserves_oracle_member_order() -> None:
     assert list(data) == [
         "num_parallel",
         "codex",
-        "oracle_review",
     ]
     assert list(data["codex"]) == [
         "model_providers",
@@ -120,11 +116,6 @@ def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
                         "reasoning_effort": "deliberate",
                     }
                 },
-            },
-            "oracle_review": {
-                "num_enumerate_findings_loop": 3,
-                "num_merge_findings_loop": 4,
-                "num_validate_findings_loop": 5,
             },
         }
     )
@@ -315,12 +306,11 @@ def test_config_rejects_invalid_model_provider_definitions(
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-@pytest.mark.parametrize("section", ["codex", "oracle_review"])
 @pytest.mark.parametrize("value", [None, [], "invalid"])
-def test_config_rejects_non_object_sections(section: str, value: object) -> None:
-    """各設定 section にオブジェクト以外を指定した config を拒否する。"""
+def test_config_rejects_non_object_codex_section(value: object) -> None:
+    """codex section にオブジェクト以外を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({section: value})
+        config_from_dict({"codex": value})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
@@ -330,12 +320,6 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
     [
         {"num_parallel": True},
         {"num_parallel": "3"},
-        {"oracle_review": {"num_enumerate_findings_loop": False}},
-        {"oracle_review": {"num_enumerate_findings_loop": "2"}},
-        {"oracle_review": {"num_merge_findings_loop": True}},
-        {"oracle_review": {"num_merge_findings_loop": "2"}},
-        {"oracle_review": {"num_validate_findings_loop": False}},
-        {"oracle_review": {"num_validate_findings_loop": "2"}},
     ],
 )
 def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:

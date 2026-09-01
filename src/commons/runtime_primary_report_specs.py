@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from typing import Literal
 
-ReportTemplate = Literal["summary", "oracle_review", "feedback_invocation"]
+ReportTemplate = Literal["summary", "feedback_invocation"]
 TerminalClassification = Literal["natural_completion", "user_interruption", "error"]
 
 
@@ -82,27 +82,6 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         "oracle edit execution report",
         "cmoc oracle edit report",
         ("main_agent_call_status", "reduction_agent_call_status"),
-    ),
-    "oracle review": PrimaryReportSpec(
-        "oracle_review",
-        "oracle review report",
-        "cmoc oracle review report",
-        (
-            "scope",
-            "session_branch",
-            "session_fork_commit",
-            "run_branch",
-            "run_fork_commit",
-            "run_join_commit",
-            "oracle_count_total",
-            "oracle_count_evaluated",
-            "fatal_findings_accepted_count",
-            "minor_findings_accepted_count",
-            "fatal_findings_rejected_count",
-            "minor_findings_rejected_count",
-            "result",
-        ),
-        "oracle_review",
     ),
     "realization apply fork": PrimaryReportSpec(
         "realization/apply/fork",

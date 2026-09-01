@@ -145,7 +145,7 @@ def test_command_codex_call_indexes_agent_call_worktree_before_log_root(
     result = codex_preflight_module.run_codex_exec(
         parameter,
         root=root,
-        purpose="oracle review enumerate findings",
+        purpose="realization apply fork",
     )
 
     assert isinstance(result, FakeCodexResult)
