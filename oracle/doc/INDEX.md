@@ -1,19 +1,21 @@
 # `app_spec`
 
 ## Summary
-- oracle/doc/app_spec は、cmoc の個別アプリケーション仕様をまとめた階層で、CLI 実行、補完、ログ、feedback、prompt editor、run/session、通知などの機能ごとの正本仕様へ進む入口。
-- 共通規約や個別機能の正確な実装詳細ではなく、対象機能の挙動・責務・境界を確認するために、該当する仕様文書を選ぶための上位ルーティング先。
+- cmoc のアプリケーション仕様を、CLI 実行、workflow、state、feedback、Codex 呼び出し、通知、文書分類などの個別仕様へ案内する正本仕様群の入口。
+- 各仕様書の責務と適用条件を確認し、対象の挙動や実装に対応する下位仕様へ進むために使用する。
 
 ## Read this when
-- cmoc の個別アプリケーション機能について、仕様上の責務、適用範囲、関連する正本仕様への入口を判断するとき。
-- CLI サブコマンド、agent call、feedback、prompt editor、run/session、INDEX.md、通知など複数の個別仕様から読む対象を選ぶとき。
+- cmoc のアプリケーション挙動に関する正本仕様を探すとき
+- CLI、session／run、feedback、Codex CLI、ログ、通知、editor input、INDEX.md などの個別仕様の入口を判断するとき
+- 複数の仕様書にまたがる責務の所在や、共通仕様と個別仕様の境界を確認するとき
 
 ## Do not read this when
-- 特定の機能の詳細仕様をすでに特定できている場合は、この階層の案内ではなく該当する個別仕様文書を直接読む。
-- 実装ファイル、テスト、設定データ構造、外部契約、または共通規約の正確な詳細だけを確認する場合。
+- 特定の仕様書の詳細な挙動、field、prompt、schema、実装規則だけを確認したいときは、該当する個別仕様書または委譲先を直接読む
+- アプリケーション仕様に関係しない開発環境、設計、テスト実行などの内部開発規則だけを確認したいとき
+- 実装やテストの具体的なコードを調査するときは、routing 後に対象ファイルを直接読む
 
 ## hash
-- d5706fb9aa373222f33241281b67d549051dc2881db9158a250ba3b155c18b03
+- 548fa2350bff66ad10100eefccd206da3a4309e7107e353cb1920e0be05cffdc
 
 # `branch_model.md`
 
@@ -34,20 +36,31 @@
 # `considered_alternative`
 
 ## Summary
-- cmoc の設計・リファクタで採用しなかった作業方式や仕様案を記録する検討資料群。事前計画、並列所見管理、事後アクセス違反検査、`.gitignore` 連携、AI-generated memory などの不採用理由を確認するための入口であり、採用済みの現行仕様や具体的な実装手順の正本ではない。
+- cmoc realization refactorで採用しなかった作業方式と、その不採用理由を確認するための検討資料群。現行のファイル単位の調査・反映方針との違いを把握する入口。
+- agent call後のfile access policy違反の事後検査と自動リカバリー案を断念した経緯を確認する資料。誤検出や差分帰属の困難性を扱う。
+- .gitignoreの除外判定をpermission profileの例外へ変換する案と、その記法非互換性による不採用理由を確認する資料。
+- AI-generated kaizenや継続的な暗黙記憶を次回のCodex CLI実行へ注入しない設計理由と、INDEX・oracle・ログ・成果物による明示的な情報到達方針を確認する資料。
+- oracle fileの網羅的レビュー機能を採用せず、feedback observation/reportで人間対応が必要な問題を扱う方針を確認する資料。
+- AIに作業計画を作成させて人間がレビューする方式を採用せず、人間がoracleを編集しAIが実装可能性を確認する責務分担を採用した背景を確認する資料。
 
 ## Read this when
-- cmoc realization の作業フローや調査単位について、採用しなかった代替案とその理由を比較するとき
-- AI による作業計画・memory の自動継承や、アクセス制御の事後検査、`.gitignore` 連携案の採否背景を調査するとき
-- 現行設計が特定の代替方式を採用しなかった根拠を確認したいとき
+- cmoc realization refactorの作業フロー、調査単位、修正単位の設計理由を確認するとき。
+- file access policy違反の事後検査、自動リカバリー、並列agentによる誤検出の検討経緯を調べるとき。
+- .gitignoreとpermission profileの連携案や、除外ファイルの例外規則を検討するとき。
+- AI-generated kaizen、memory、過去の失敗分析や改善案を後続実行へ自動注入する設計の採否を判断するとき。
+- oracle reviewを提供しない理由や、feedback observation/reportによる人間への問題報告の流れを確認するとき。
+- AI主導の作業計画レビュー方式と、人間によるoracle編集・AIによる実装追従の責務分担を比較するとき。
 
 ## Do not read this when
-- 現行のアクセス制御、refactor state、oracle、realization の仕様を確認・変更するとき
-- 具体的な realization file の実装方法、CLI の挙動、テスト手順を調べるとき
-- 採用済み workflow の操作方法や現在の実行結果だけを確認したいとき
+- 具体的なrealization fileの修正方法、実装責務、現行refactor state、対象ファイルの実装・テスト内容を確認したいとき。
+- 現行のfile access policy、アクセス制御・検査処理、または現在採用されている仕様を確認・変更するとき。
+- 現行の.gitignoreパターンや実行時アクセス制御を調査・実装するとき。
+- 個別のkaizen文面、レビュー観点、INDEX・oracle・ログ・成果物の具体形式、またはCodex CLI本体のmemory機能を調べるとき。
+- oracle file自体の正本内容、feedback observation/reportの正本仕様、通常workloadの具体的な実装・運用手順を確認するとき。
+- oracleとrealizationの一般定義、個別コマンドの仕様・実装手順・テスト仕様、採用済みworkflowの具体的操作を確認するとき。
 
 ## hash
-- 2306639b6cb9d46169d1e0614cafd6a1ff50856b67ccfe5f40849ae09d0cd405
+- f547b1f8191281da475eecf2949bb09d20ade64b9fde5b9d5990c97510bc872c
 
 # `dev_rule`
 

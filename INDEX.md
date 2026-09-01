@@ -91,19 +91,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本資料と実装を束ねる最上位入口。アプリケーション仕様、branch・session 分離モデル、設計検討資料、開発ルールを機能別に選べる。
-- oracle 実装の入口。agent call 構築、prompt 構築、入力 handoff、feedback、設定・パス・構造化文書の下位領域へ振り分ける。
+- cmoc の正本ドキュメント群への入口。アプリケーション挙動、session／run の Git 隔離モデル、開発規則、過去の設計判断を下位文書へ振り分ける。
+- cmoc の oracle 実装群への上位入口。agent call パラメータ、用途別の起動処理、prompt 構築、設定・パス解決、構造化文書モデルを担当領域ごとの下位要素へ案内する。
 
 ## Read this when
-- cmoc の仕様または oracle 実装について、最初に読むべき下位領域を選ぶとき。
-- アプリケーション挙動、session・run の隔離、設計判断、Python 開発ルール、agent call、prompt、入力契約、設定・パスの複数領域を横断して調査するとき。
+- cmoc の仕様・設計・開発規則・oracle 実装を調査する開始点を判断するとき。
+- CLI、session／run、feedback、Codex CLI、ログ、通知、editor input、Git 管理モデル、Python 開発規則、テスト規則の正本を探すとき。
+- agent call の設定・用途別 builder、prompt policy、設定モデル、パスモデル、Markdown 構造化文書の実装入口を判断するとき。
 
 ## Do not read this when
-- 確認対象の個別仕様書、branch model、considered alternative、dev rule、または oracle 実装の下位領域が特定できているときは、その対象を直接読む。
-- 特定の CLI 入出力契約、prompt 構築規則、入力形式、feedback 契約、設定モデル、パス解決、構造化文書の実装だけを確認するとき。
+- 特定のアプリケーション仕様、サブコマンド、開発規則、agent call builder、prompt policy、設定クラス、パス解決処理、または構造化文書モデルの詳細を確認したいときは、該当する下位対象を直接読む。
+- 具体的な CLI 入出力契約、field・schema・prompt の詳細、実装責務、テスト内容、または採用済み仕様を確認したいとき。
+- 現行仕様や実装の根拠ではなく、過去の代替案・不採用理由だけを確認したいときは、検討資料の下位対象を直接読む。
+- このディレクトリが扱う cmoc の仕様・oracle 実装と無関係な内容を調査するとき。
 
 ## hash
-- a9fd1ca6799ff1eb68dd51811bc1edce624396263d0784791f04a601658e2f0e
+- f968324aef230fe5dd515516128014dd2c0c6bba264122f30792c232522cb50f
 
 # `pyproject.toml`
 

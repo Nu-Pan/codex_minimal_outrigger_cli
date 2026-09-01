@@ -33,18 +33,13 @@
 # `review`
 
 ## Summary
-- oracle review における所見の列挙、採否判定、重複・矛盾の整理、妥当性の支持・反証調査を行う agent call の入出力契約と起動条件を扱う入口です。
-- 所見の Structured Output schema と、それぞれの prompt・起動パラメータ構築定義を対応づけて確認できます。
+- 対象ディレクトリ本文が提示されておらず、責務を根拠付きで判断できません。
 
 ## Read this when
-- oracle review の所見を生成・判定・統合・検証する agent call の出力契約を確認するとき。
-- 所見、既知の理由、oracle file、oracle 限定アクセスなどを agent call に渡す条件を確認するとき。
-- finding の重複排除、採否、置換・統合、支持理由・反証理由の追加調査を追跡するとき。
+- 対象ディレクトリの本文が追加され、担当範囲を確認したいとき
 
 ## Do not read this when
-- レビュー対象 oracle file の本文、所見の具体的な判定基準、または共通の prompt・agent call 基盤を確認したいとき。
-- 所見の保存・表示・判定結果の利用処理そのものを確認したいとき。
-- oracle review の所見以外の agent call の入出力契約を確認したいとき。
+- 本文がない現状では、このエントリーから具体的なレビュー作業へ進む必要があるとき
 
 ## hash
-- 7a2a526527f576d04784a652e7cd4974ff40eb54db37fd0a641df1244a12f2c1
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

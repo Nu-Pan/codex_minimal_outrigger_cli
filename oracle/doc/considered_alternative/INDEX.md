@@ -71,6 +71,24 @@
 ## hash
 - 5ef1ea0577ef57db18994f2e242ebf091720662552e236911b3608f9b8431527
 
+# `oracle_review.md`
+
+## Summary
+- 日本語の技術文書として、oracle file を網羅的にレビューする `cmoc oracle review` を採用しない判断と、その代替となる feedback observation/report の運用を説明する文書。
+- oracle review を避ける理由、通常の workload で解消できず人間対応が必要な問題の報告基準・確認手順、および潜在的問題を許容して oracle file を疎に保つ方針への入口。
+
+## Read this when
+- oracle file の網羅的レビュー機能を提供しない判断の理由を確認したいとき。
+- 通常の workload では解消できず、人間の対応が必要な問題を feedback observation として報告し、`cmoc feedback report` で確認する流れを調べるとき。
+
+## Do not read this when
+- oracle file 自体の具体的な内容や正本仕様を確認したいときは、対象の oracle file を直接読む。
+- agent による feedback observation の報告基準を確認したいときは feedback observation の正本を、report 処理の仕様を確認したいときは feedback report の正本を直接読む。
+- 通常の workload における具体的な実装・運用手順を調べるときは、この判断文書ではなく該当する仕様書や手順書を読む。
+
+## hash
+- 26bc4e365d2dcbfd47ea30ba88d6f688912bdad58597913d514cd81bb6e7ffbb
+
 # `working_plan_review.md`
 
 ## Summary
