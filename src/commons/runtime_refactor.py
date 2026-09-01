@@ -1,3 +1,5 @@
+"""realization refactor の調査 state を検証・同期・永続化する。"""
+
 import json
 import re
 import string

@@ -1,3 +1,5 @@
+"""active session を home branch へ取り込まず破棄する CLI 処理を実装する。"""
+
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 from cmoc_runtime import (
     CmocError,

@@ -33,35 +33,35 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- `commons.cmoc_runtime` の公開名を互換的に再公開する薄い import shim。pyproject が `cmoc_runtime` を公開し、ツリー内の呼び出し元がこのパスを直接 import している間の移行入口。
+- 互換 import path から共通 runtime API を再公開する入口。公開名は共通 runtime の限定された公開面に従い、runtime と型チェッカーへ同じ互換名を伝える。
 
 ## Read this when
-- `cmoc_runtime` の互換 import path、公開名、または runtime module への移行状況を確認するとき。
+- 既存の互換 import path を利用する呼び出し元、または共通 runtime API の再公開・移行状況を確認するとき。
 
 ## Do not read this when
-- runtime の実装や責務別 module の詳細を確認するときは、`commons.cmoc_runtime` または該当する runtime module を直接読む。
-- 互換 path の移行完了後は、この shim を読む必要はない。
+- 共通 runtime の実装内容や個別 API の責務を確認したいときは、直接 commons.cmoc_runtime を読む。
+- 互換 import path の移行完了後に削除可否だけを判断するときは、移行対象の責務別 runtime module と pyproject の公開設定を直接確認する。
 
 ## hash
-- ce0901465f229760c4bd1f4c5ce3f4a035bb53bf6aee04de082b5843cff3ff17
+- 43fb961149b599635a1abdceb8611969195b689f50ec716e0231e113d978fded
 
 # `commons`
 
 ## Summary
-- commons パッケージの共通 runtime API と、配下の個別 runtime 実装への入口を提供する。
-- CLI、Codex subprocess、設定、Git、状態、ログ、feedback、report、run lifecycle など、複数の実行経路で共有される処理を扱う。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex 呼び出し、設定、Git、ログ、パス、結果、状態、feedback、report、run lifecycle など、複数の実行経路で共有される実装への入口。
+- 個別の runtime helper と、それらを束ねる公開 API・実行ライフサイクルを確認するための下位モジュール群。
 
 ## Read this when
-- commons 配下の共通 runtime 機能の責務や公開入口を確認するとき
-- 複数の CLI・Codex 実行経路にまたがる runtime 処理の実装箇所を探すとき
-- 対象機能に対応する commons 配下の個別 runtime モジュールへ進む前に、パッケージ全体の構成を把握するとき
+- 複数の実行経路で共有される cmoc runtime 機能の配置や公開入口を確認するとき
+- CLI、Codex、設定、Git、ログ、feedback、report、run、state などの共通実行時処理を調査・変更するとき
+- 特定の runtime helper の担当モジュールを見つけ、適切な下位実装へ進む必要があるとき
 
 ## Do not read this when
-- 特定の runtime 機能の実装詳細だけを確認したいとき
-- 個別の CLI サブコマンド、正本仕様、または下位プロトコルの詳細を直接確認すれば足りるとき
+- 特定の runtime helper の内部挙動や個別の仕様だけを確認したいときは、commons 配下の担当モジュールを直接読む
+- 正本仕様、個別サブコマンドの業務ロジック、または Codex の外部契約だけを確認する場合は、それぞれの仕様文書や担当実装を直接読む
 
 ## hash
-- 1d88a39b97a69d3ab633efed7583550b5b6408a9b46c242623515b107959e67c
+- 11d75bfc5de12b1bc70890082b08e0e531fa9fa67d8abcfb59ce522b1c7ebbf3
 
 # `config`
 
@@ -83,20 +83,22 @@
 # `main.py`
 
 ## Summary
-- Typer を用いた cmoc CLI のルート入口を定義し、共通検証、TUI、セッション・oracle・realization・run・feedback 操作、INDEX 更新の各サブコマンドへ接続する。
-- Click/Typer の互換処理と CLI 引数解析エラーの cmoc 形式への変換を集約する、CLI 起動時の境界層である。
+- cmoc の CLI コマンドツリーと console script からの起動入口を定義する。
+- Typer と Click の互換境界、および通常の引数解析エラーを cmoc 形式へ変換する実行制御を担う。
+- doctor、tui、indexing、feedback、session、oracle、realization、run 各コマンドの CLI 入口を確認するための上位ルーティング対象。
 
 ## Read this when
-- cmoc の CLI ルート構成、サブコマンドの登録、console script からの起動経路を確認するとき。
-- Typer と Click の互換処理、補完 probe の扱い、CLI 引数解析エラーの報告形式を変更または調査するとき。
-- サブコマンド実装へ進む前に、どの CLI 操作がどの実装入口へ委譲されるかを確認するとき。
+- cmoc の CLI にコマンドまたはサブコマンドを追加・変更するとき。
+- Typer・Click のバージョン互換、CLI 引数解析エラー、補完 probe、終了コードの扱いを調査するとき。
+- console script の起動経路や、各 sub_commands 実装へ到達するコマンドツリーを確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの処理内容、業務ロジック、oracle・realization・session・run の内部動作だけを確認したいとき。
-- CLI の起動や引数解析に関係しない共通ランタイム、TUI、feedback、indexing の内部実装を直接調査するとき。
+- 特定サブコマンドの業務ロジックや実装詳細だけを調査・変更するときは、対応する sub_commands 配下を直接読む。
+- oracle、realization、session、run などの状態遷移や仕様を確認するときは、対応する正本仕様またはサブコマンド実装を直接読む。
+- CLI の INDEX.md 更新処理そのものを調査するときは、indexing の実装対象を直接読む。
 
 ## hash
-- ebbe5d4f9679a37c97d022394881ba83a1f198ead6fa3bca88743fadeec0a447
+- f11839e2670e14ecf92530a722e415c9b151e155dd0e16e294c198cb8c216a31
 
 # `oracle.py`
 
@@ -116,21 +118,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装のパッケージ入口。doctor、feedback、indexing、oracle、realization、run、session、tui など、各サブコマンド固有の実行フローへ進むための上位ルーティング対象。
-- サブコマンドごとの CLI 入口、実行制御、状態管理、agent call、worktree 操作、report 処理などを確認・変更するときに、該当する下位実装へ進む起点となる。
-- apply と review は現時点で実装本文がなく、将来実装が追加された場合にのみ個別の下位入口となる。
+- cmoc の各サブコマンド実装を収める上位パッケージ。doctor、feedback、indexing、oracle、realization、run、session、tui など、個別サブコマンドの CLI 入口や実行フローへ進むためのルーティング起点となる。
+- apply と review は現時点で実装本文がなく、対応する実装追加後に確認するための空の配置先である。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、どのサブコマンド固有実装を読むべきか確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui などのサブコマンド実行フローを調査・変更するとき。
-- 対象サブコマンドの責務が複数の下位実装に分かれており、個別ファイルへ進む前の package 境界を確認したいとき。
-- apply または review の実装が追加され、その実装入口を確認するとき。
+- cmoc のサブコマンド実装の構成や、特定サブコマンドの CLI 入口を確認するとき。
+- サブコマンド実装を横断して、対象となる個別パッケージへの入口を判断するとき。
+- apply または review の実装追加状況を確認するとき。
 
 ## Do not read this when
-- サブコマンド共通ランタイム、共通 prompt editor、report writer、Git 操作、state 永続化などの具体的な挙動だけを確認したいときは、対応する共通実装を直接読む。
-- サブコマンドの正本仕様や lifecycle 仕様だけを確認したいときは、対応する仕様書を直接読む。
-- 特定サブコマンドの実装本文をすでに特定しており、上位の package 構成や入口を確認する必要がないとき。
-- apply または review に実装がまだ存在しない状態で、その具体的な処理内容を確認しようとするとき。
+- サブコマンド共通 runtime、共通仕様、または個別サブコマンドの詳細処理だけを確認したいときは、対応する共通実装・仕様文書・下位対象を直接読む。
+- サブコマンドに関係しない処理を扱うとき。
 
 ## hash
-- 3b788be6586c73b5da0a93fa33952b37d59ef270878fdc6b10dac5bb6162b18e
+- 71d04caba284f35cce58018fa4db2891f361009a47b6592eaccd178b3b90ac75

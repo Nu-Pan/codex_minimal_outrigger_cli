@@ -1,3 +1,5 @@
+"""session と editing run の state schema、検証、永続化を提供する。"""
+
 import fcntl
 import json
 from collections.abc import Iterator

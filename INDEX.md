@@ -91,53 +91,50 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と oracle 実装をまとめた上位の参照領域。仕様・開発規則・branch model・不採用案は doc、agent call のパラメータ構築・prompt 構築・設定や構造化文書モデルは src から確認する。
+- cmoc の正本仕様・開発規則と oracle 実装群を束ねる上位入口。仕様領域では doc、agent call・prompt・設定・パス・構造化文書の実装領域では src 配下へ案内する。
 
 ## Read this when
-- cmoc の正本仕様と、その仕様を実現する oracle 実装の対応関係を調査するとき。
-- アプリケーション仕様、開発規則、branch model、不採用案の入口を探すとき。
-- agent call、prompt 構築、設定・パス解決、構造化文書モデルの調査開始点を決めるとき。
+- cmoc の仕様または oracle 実装について、目的に応じた下位文書・実装入口を判断するとき
+- CLI、session／run、Codex、feedback、ログ、通知、branch／worktree 分離、Python 開発規則、agent call、prompt、設定・パス・構造化文書を横断して所在や責務の境界を確認するとき
 
 ## Do not read this when
-- 特定の仕様文書、開発規則、agent call builder、prompt policy、設定クラス、パス解決処理、構造化文書モデルが明確で、下位対象を直接確認できるとき。
-- 具体的な realization 実装やテストだけを調査するとき。
+- 特定の挙動仕様、branch model、Python 開発規則、agent call builder、prompt policy、設定クラス、パス解決、構造化文書モデルの詳細だけを確認したいときは、該当する下位対象を直接読む
 
 ## hash
-- b64950c19b9ce692c02a58f4e62eb4e48d3ebd006adb626ad9c0aa8caa275890
+- 2fb3131def0c44cef97897819a2574046bb3e4e7d4c150ab9b58c5ec64e0fe64
 
 # `pyproject.toml`
 
 ## Summary
-- Python プロジェクトのパッケージ metadata、依存関係、CLI エントリーポイント、ビルド設定、pytest・Ruff・mypy の開発ツール設定を定義する正本設定。Python パッケージ構成や開発・品質検査の実行条件を確認する入口となる。
+- Pythonプロジェクトのパッケージ metadata、依存関係、CLIエントリーポイント、ビルド・配布設定、およびpytest・Ruff・mypyの開発ツール設定を定義する。
 
 ## Read this when
-- 依存関係、対応 Python バージョン、`cmoc` CLI の公開エントリーポイント、パッケージ配置、ビルド方式を確認するとき
-- pytest、Ruff、mypy のプロジェクト共通設定や開発用依存関係を確認するとき
+- Pythonのバージョン要件、実行時・開発時依存関係、`cmoc`コマンドのエントリーポイント、パッケージ探索や配布内容を確認するとき。
+- pytest、Ruff、mypyの共通設定を確認・変更するとき。
 
 ## Do not read this when
-- CLI の具体的な処理やランタイム挙動を確認したいときは、実装モジュールを直接読む
-- テストケースの内容や仕様上の期待動作を確認したいときは、該当する仕様・テストを直接読む
+- CLIの具体的な処理やランタイム挙動を確認するとき。
+- 個別テストの内容やテスト実行手順を確認するとき。
 
 ## hash
-- 6fb45f79a560a43b8ae51d23bdb53e4dc711587caffea78ce1020d595036510e
+- 3a783c008041cc5d2791af2abb3cfe1c24d8231f77689b906b36f62158c77455
 
 # `src`
 
 ## Summary
-- cmoc の realization 側ソース全体の公開入口と実行経路を提供する。
-- Typer による CLI ルート、互換 import shim、共通 runtime、ACP builder、サブコマンド実装、設定入口を横断して下位対象へ進むための起点。
+- `src` 配下の CLI 起動入口、互換 shim、共通 runtime、設定・サブコマンド群への上位ルーティング入口を提供する。
+- 公開 import の互換層と、実際の処理を担う下位パッケージを切り分けて調査するための入口となる。
 
 ## Read this when
-- cmoc CLI の起動経路、サブコマンド登録、互換 import の配置、または共通 runtime の責務境界を確認するとき。
-- ACP builder、設定、oracle package shim、サブコマンドなど、src 配下の複数領域にまたがる実装箇所を探すとき。
-- 対象機能の個別実装へ進む前に、realization 側の公開入口と下位パッケージの構成を把握するとき。
+- `src` の CLI 構成、console script の起動経路、または主要パッケージの配置関係を確認するとき。
+- 互換 import shim と oracle 側正本、commons の共有 runtime、sub_commands の個別 CLI 実装への進み方を判断するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime 機能、builder adapter、設定型、または oracle 正本の詳細実装をすでに特定しているときは、対応する下位対象や正本実装を直接読む。
-- 正本仕様や src と無関係な処理だけを調べるとき。
+- 個別コマンドの処理、共通 runtime helper、互換 API、設定型、または oracle 側の正本実装の詳細を確認するときは、対応する下位対象や正本ソースを直接読む。
+- `src` と無関係な仕様文書や、特定機能の入出力・状態遷移だけを調べるとき。
 
 ## hash
-- f57614489eeed377d522389c0fcbd63aa3e01387a17f82071d918179cec3b481
+- 54b2b73227c8690fcb16544e37c7ade569eb4f96cfa397bc3262b58348416903
 
 # `test`
 

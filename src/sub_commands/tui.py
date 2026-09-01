@@ -1,3 +1,5 @@
+"""利用者の依頼文から Codex TUI を起動する CLI 処理を実装する。"""
+
 from collections.abc import Callable
 from pathlib import Path
 

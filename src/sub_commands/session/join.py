@@ -1,3 +1,5 @@
+"""session branch を home branch へ merge し、conflict 解消を検証する。"""
+
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 import hashlib
 import json

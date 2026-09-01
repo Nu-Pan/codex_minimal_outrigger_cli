@@ -1,3 +1,5 @@
+"""最外側 CLI サブコマンドの実行ライフサイクルと終端処理を統括する。"""
+
 import traceback
 from collections.abc import Callable, Sequence
 from contextvars import ContextVar

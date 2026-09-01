@@ -1,3 +1,5 @@
+"""内容ハッシュの計算・保存と binary file の粗い判定を提供する。"""
+
 import hashlib
 import os
 import tempfile

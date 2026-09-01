@@ -1,3 +1,5 @@
+"""cmoc の実行時例外と利用者向けエラー描画を提供する。"""
+
 # {{work-root}}/oracle/doc/app_spec/error_handling.md
 
 from .runtime_results import TerminalResult

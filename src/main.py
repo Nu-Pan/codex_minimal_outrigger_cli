@@ -1,3 +1,5 @@
+"""cmoc の CLI command tree と起動時の Click/Typer 境界を定義する。"""
+
 import inspect
 import os
 from collections.abc import Sequence

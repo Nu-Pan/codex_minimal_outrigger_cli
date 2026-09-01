@@ -1,3 +1,5 @@
+"""サブコマンド単位の実行イベントと計測値を記録・集約する。"""
+
 import json
 import sys
 import threading

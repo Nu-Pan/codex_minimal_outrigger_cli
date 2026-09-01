@@ -1,3 +1,5 @@
+"""INDEX 更新 preflight を挟む Codex 実行境界を提供する。"""
+
 # {{work-root}}/oracle/doc/app_spec/indexing.md
 import threading
 from collections.abc import Callable

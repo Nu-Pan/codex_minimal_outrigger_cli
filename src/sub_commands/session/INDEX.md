@@ -15,52 +15,56 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc session abandon` の CLI 実装。active session を検証し、home branch へ切り替えた後に session state を abandoned として保存し、session branch を削除する。
-- cleanup 中に失敗・中断した場合は state と session branch を復元し、再実行可能な状態に戻せたかを含むエラー情報を返す。
+- active session を home branch に取り込まず abandoned 状態へ変更し、session branch を削除する CLI 処理の実装。
+- 事前条件の検証、home branch への切替、state 更新、session branch の cleanup、および失敗時の state・branch rollback を扱う。
 
 ## Read this when
-- session abandon の事前条件、home branch への切替、session branch 削除、cleanup 失敗時の rollback 挙動を確認・変更するとき
-- session abandon の terminal result や primary report の更新内容を確認するとき
+- `cmoc session abandon` の実行経路や、active session を破棄する処理を確認・変更するとき
+- cleanup 失敗時に session を再実行可能な状態へ戻す rollback 挙動を確認するとき
 
 ## Do not read this when
-- session の作成・実行・完了など、abandon 以外のライフサイクル処理を確認するとき
-- branch モデルや state ファイル形式そのものの正本仕様を確認するときは、対応する oracle 文書を直接読む
+- session の開始・再開・完了など、abandon 以外のライフサイクル処理を確認するとき
+- session 共通の状態形式や git 操作の一般仕様を確認することが目的で、共通実装または正本仕様を直接読む方が適切なとき
 
 ## hash
-- 4ae2c8a1df21e91e62492ee37e9cebced2e19e6a0cbf6f26ad8f2ea3b82f4b2d
+- 10bde8b05c4789feab0fc3d5e4f27fdae231b518bd24a47acbf3521617863a6d
 
 # `fork.py`
 
 ## Summary
-- 現在の通常の local branch から cmoc session branch を作成し、fork 元の HEAD commit と home branch を session state に保存する CLI 実装。active session の重複、managed branch、dirty worktree、branch/state の競合を検査し、作成途中の失敗時は branch と state file を rollback する。session 操作の実装入口として、session fork の実行経路と一意な session-id 生成処理を確認する対象。
+- 現在の通常の local branch から cmoc session branch と session state を作成する session fork の実装。
+- 既存 active session と session-id の衝突を確認し、worktree の clean 状態を要求したうえで fork を実行する。
+- branch 作成や state 保存に失敗した場合は、作成済み branch と state file を可能な範囲で rollback し、失敗状況を報告する。
 
 ## Read this when
-- `cmoc session fork` の CLI 実装や実行手順を確認するとき。
-- session branch の作成、fork 元 commit の固定、session state の保存、active session の重複防止を調べるとき。
-- session-id の衝突回避、排他制御、作成失敗時の rollback とエラー報告を調べるとき。
+- `cmoc session fork` の実行前提、session branch の分岐元、session state の保存処理を確認したいとき。
+- session-id が既存 branch や state file と衝突しない仕組みを確認したいとき。
+- session fork の失敗時に branch 切り替え、branch 削除、state file cleanup がどう処理されるかを追うとき。
 
 ## Do not read this when
-- session state の項目定義やライフサイクル仕様だけを確認する場合は、session state の仕様を直接読むとよい。
-- session fork 以外の session 操作の実装を確認する場合は、各操作に対応する実装を直接読むとよい。
-- 一般的な Git branch 操作や CLI 共通 runtime の仕様だけを確認する場合。
+- session の join や abandon の処理を確認したいとき。
+- SessionState のデータ形式や state file の一般的な仕様を確認したいとき。
+- session fork 以外の CLI サブコマンドの挙動を調べたいとき。
 
 ## hash
-- 0f70b5f0c7cc91b592360f84c5607e18ae2566ba58b0315093b14384c326a939
+- faf5a81034d58cc1120d2c5049ba3c74fde713f2fb5c92d6fe2dc22ef507be21
 
 # `join.py`
 
 ## Summary
-- session join サブコマンドの実行本体を担い、active な session branch を session home branch へ merge し、状態更新と local session branch の安全な削除まで処理する。
-- merge conflict 発生時は、conflict 対象の列挙、Codex による解消依頼、許可外変更と conflict marker の検査、stage、merge commit を一連で処理する。
+- session branch を home branch へ安全に merge し、merge conflict の解消と完了状態を検証する実行入口。
+- conflict 対象の列挙、Codex による marker 解消、許可範囲外の差分・marker・unmerged path の検査、merge 完了を扱う。
+- merge 後に session state を joined へ更新し、ancestor 判定に基づいて local session branch の削除を行う。
 
 ## Read this when
-- session join の実行条件、branch 切り替え、merge、session state 更新、session branch 削除の挙動を確認・変更するとき
-- session join の merge conflict 解消における対象 path の取得、変更範囲制限、marker 検査、stage、commit の挙動を確認・変更するとき
+- `cmoc session join` の実行経路、session branch と home branch の merge 前提条件、または merge 後の state 更新を確認するとき。
+- session join の conflict 解消方針、Codex 呼び出し後の差分制限、conflict marker や unmerged path の検証を調べるとき。
+- session branch の削除条件や、merge 結果・警告を含む terminal result の扱いを確認するとき。
 
 ## Do not read this when
-- session の状態遷移や session home branch の意味だけを確認したいとき
-- conflict resolution parameter の生成内容だけを確認したいとき
-- Git 実行、CLI 共通処理、state 永続化、primary report 更新などの共通機能だけを確認したいとき
+- session の状態形式や branch のライフサイクル全般を確認したい場合は、session state の仕様を直接読むとき。
+- conflict 解消パラメータの生成内容だけを確認したい場合は、conflict resolution builder を直接読むとき。
+- 共通の CLI 実行ラッパー、Git 操作、report 更新の一般仕様だけを確認したい場合は、それぞれの共通実装・仕様を直接読むとき。
 
 ## hash
-- 8d9957a1dd49e686536589b29c106f47595c0eba4129b413ba63a1ac4c3f1e14
+- 81bce26eb277ba3590b158ca91358efba4c73001d8e31f1c7441c179bc6f3a1e

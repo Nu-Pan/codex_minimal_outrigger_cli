@@ -1,3 +1,5 @@
+"""Codex TUI の起動と call log・実行結果の記録を担う。"""
+
 import json
 import subprocess
 import time

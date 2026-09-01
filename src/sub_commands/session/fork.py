@@ -1,3 +1,5 @@
+"""現在の local branch から session branch と state を作成する。"""
+
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
 from pathlib import Path
 
