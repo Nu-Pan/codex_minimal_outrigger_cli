@@ -1,20 +1,5 @@
 # 現在進行中
 
-## cmoc oracle review を削除する
-
-- cmoc oracle review をやめたい理由
-    - oracle だけを読んで問題点を洗い出す必要があるので「どこまでが問題か」が曖昧
-    - 根拠の薄い問題に基づいて修正をう繰り返すと、oracle file の過剰な詳細化・肥大化を招く
-- cmoc feedback report で代替したい
-    - 本当に困るような問題は feedback issue として報告される
-    - feedback issue は「解決不能な問題」という明確な条件が存在する
-    - oracle file の網羅的検査ではないので、潜在的な問題が残りうるが、実装を生成する過程で発見できなかった問題というのは問題ではないのでは？
-    - それに、これまでの経験上、仕様に多少問題があってもアプリは実装出来る
-    - feedback issue に任せてしまって良いだろう
-- よって
-    - cmoc oracle review を削除する
-    - cmoc oracle review を `considered_alternative` に追記する
-
 ## feedback issue を全部やっつける
 
 - 大量に溜まっててクソヤバい
