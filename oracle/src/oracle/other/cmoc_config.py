@@ -72,9 +72,9 @@ class CmocConfigCodex:
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
-            "build_feedback_verify_issue_parameter": CodexCallConfig(
+            "build_feedback_remediate_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-sol",
+                model="gpt-5.6-luna",
                 reasoning_effort="max",
             ),
             # NOTE TUI 起動系なので性能最優先で ultra

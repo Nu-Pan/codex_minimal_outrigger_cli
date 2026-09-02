@@ -12,6 +12,7 @@
 
 - run は 1 回のサブコマンド呼び出し内で fork から join または abandon まで完了してよい。
 - 明示的な確認を経て成果物を取り込む編集 run は、workload 固有の fork サブコマンドで開始し、後続の `cmoc run join` または `cmoc run abandon` で終了する。
+- self-joining workload は、workload 固有コマンドの同一 invocation 内で run を作成し、workload 固有の完了条件を満たした後に join してよい。
 - run とサブコマンド呼び出しを 1:1 の概念として扱ってはいけない。
 - read-only の investigation、cmoc 自身による機械的更新、および session join の conflict 解消は、明示的な join を必要とする編集 run ではない。
 

@@ -17,6 +17,7 @@
 
 - 中断可能サブコマンドでは、実行中の端末からの `Ctrl+C` をユーザー中断要求として受け付ける。
 - cmoc はユーザー中断要求を自ら処理し、子 process の想定外エラーとしてだけ扱ってはいけない。
+- 個別仕様が state を破損させず分割できない finalization 区間を定める場合、同区間の開始前に未処理の中断要求を確認し、開始後は次の整合した境界まで処理を中途半端に停止してはならない。
 - `Ctrl+C` 以外の入力をユーザー中断要求として扱うかは未定義とする。
 
 ## 共通動作
@@ -34,5 +35,6 @@
 ## 中断後の扱い
 
 - 中断後の refactor run の state と次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「ユーザー中断」を正本とする。
-- feedback report の保存 state と再開方法は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「ユーザー中断と再開」を正本とする。
-- 編集 run の中断位置を再開する checkpoint を保存してはいけない。feedback report が保存する正式な agent call result は処理位置ではなく固定入力に対する確定結果であるため、この禁止の対象外とする。
+- feedback report の issue 処理単位、run state、publication 禁止、observation retention、および次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「ユーザー中断」を正本とする。
+- 編集 run の中断位置を同じ run で再開する checkpoint を保存してはいけない。
+- feedback report は確定済み成果物を保持して `joinable` とするが、正常 publication と observation cleanup は行わない。利用者は `cmoc run join` または `cmoc run abandon` を選ぶ。

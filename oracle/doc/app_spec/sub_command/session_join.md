@@ -14,7 +14,7 @@
 
 ## 事前条件
 
-`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context と編集 run fork・session 終了の共通事前条件」を満たす。
+`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context と編集 run 開始・session 終了の共通事前条件」を満たす。
 
 以下の場合はエラー終了する。
 

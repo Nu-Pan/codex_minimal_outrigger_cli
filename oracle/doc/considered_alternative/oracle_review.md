@@ -12,7 +12,7 @@
 
 ## 代替
 
-通常の workload で解消できず、人間の対応が必要だと判明した問題を feedback observation として報告し、`cmoc feedback report` で確認する。
+通常の workload の規定範囲内で解消できない問題を feedback observation として報告する。`cmoc feedback report` は realization file だけで安全に解決できる問題を先に自動修正し、それでも人間対応が必要だと確認できた問題だけを正常 report で提示する。
 
 報告基準は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「agent による報告」を正本とする。report 処理は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の `cmoc feedback report` を正本とする。
 

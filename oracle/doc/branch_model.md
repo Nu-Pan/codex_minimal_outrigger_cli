@@ -74,6 +74,7 @@
 ### `{{cmoc-run-join-commit}}`
 
 - `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ merge した commit である。
+- join 時点ですでに run branch HEAD が session branch から到達可能であり、取り込む commit がない場合は、join を no-op として正常完了してよい。この場合 `{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。join の記録だけを目的とする空 commit を作ってはならない。
 
 ## git worktree
 

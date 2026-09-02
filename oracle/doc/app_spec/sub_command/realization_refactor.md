@@ -8,7 +8,7 @@
 - 所見調査・修正 call の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。
 - installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - 短い変更ループを担う realization apply とは workload を分ける。
-- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「明示的な join を必要とする編集 run の共通仕様」を正本とする。
+- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
 
 ## refactor state
 

@@ -88,9 +88,9 @@
 - 新規 file の entry 作成、削除 file の entry 削除、および hash 変更時の調査要求設定により entry 集合を同期する
 - file が存在するものの schema を満たさない場合は、既存の調査履歴を破棄せずエラー終了する
 
-### `cmoc run join` での同期時点
+### editing run の join での同期時点
 
-- active run の kind が `realization_refactor` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。
+- active run の kind が `realization_refactor` または `feedback_report` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。
 - これは session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
 - merge 後は kind にかかわらず、最終的な session tree に対して entry 集合を同期する。
 

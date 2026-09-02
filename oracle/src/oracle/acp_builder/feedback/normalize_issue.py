@@ -33,7 +33,7 @@ def build_feedback_normalize_issue_parameter(
         - 入力以外 (file、raw log、過去の Codex session、feedback state) を作業範囲に含めないこと
         """,
         non_goals="""
-        - issue の summary、impact、原因、現在性、actionability、human action、verification verdict、または relation を生成しないこと
+        - issue の summary、impact、原因、現在性、actionability、remediation result、human action、または relation を生成しないこと
         - 候補外の issue を探索しないこと
         """,
         file_access_mode=FileAccessMode.READONLY,
@@ -71,5 +71,5 @@ def build_feedback_normalize_issue_parameter(
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
-        run_indexing_preflight=True,
+        run_indexing_preflight=False,
     )

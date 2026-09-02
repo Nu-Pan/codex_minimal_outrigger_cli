@@ -1,12 +1,14 @@
 # feedback observation の収集
 
-本書は、observation の報告基準、収集経路、受け入れ検査、機械的検出、および raw 保存を定める。issue の同一性や現在状態は判断しない。
+本書は、observation の報告基準、収集経路、受け入れ検査、機械的検出、および raw 保存を定める。issue identity、remediation の可否、および現在状態は判断しない。
 
 ## agent による報告
 
 ### 報告基準
 
-agent は、現在の workload だけでは解消できず、現在の作業外にいる人間の対応によって次のいずれかが可能になる問題だけを報告する。
+agent は、現在の workload の規定範囲内では解消できず、後続の automatic remediation または人間対応の候補となる、具体的な根拠のある問題だけを報告する。
+
+報告対象は、後続の対応によって次のいずれかが可能になる問題に限定する。
 
 - 再発を防止する
 - 反復的な浪費を減らす
@@ -24,7 +26,17 @@ reporter の利用不能または submission の拒否は、本命 workload の�
 
 agent-facing interface は、Codex call ごとに起動する local stdio MCP reporter/client とする。MCP namespace は `cmoc_feedback` とし、`submit_observation` だけを公開する。MCP resource、prompt、任意の file access、command execution、または collector 管理機能を公開してはならない。
 
-input は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json` の root schema（JSON Pointer `#`）に適合する JSON object とする。同 schema を tool discovery と受け入れ検査の両方に使用する。repository、call ID、保存先、または capability を agent input に追加してはならない。
+新しい submission の input は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json` の root schema（JSON Pointer `#`）に適合する JSON object とする。同 schema を tool discovery と受け入れ検査の両方に使用する。repository、call ID、保存先、または capability を agent input に追加してはならない。
+
+同 schema の version は 2 とする。version 2 の `workload_limitation` は、現在の workload の規定範囲内で問題を解消できない理由を表し、`human_required` の判定を表さない。
+
+### reporter input v1 の互換処理
+
+新しい reporter submission は version 2 だけを使用する。durable 保存済みの version 1 observation は失わず、raw record を書き換えずに validation 対象とする。
+
+version 1 は、`schema_version=1` と `human_action_reason` を検査する。その他の field には version 2 と同じ規則を適用する。
+
+normalization 時だけ、`human_action_reason` を同じ文字列の `workload_limitation` として扱う transient な version 2 view へ変換する。元 version と変換規則は追跡可能にする。変換後の値も観測時の assertion であり、`human_required` の判定へ自動変換してはならない。
 
 tool result は、次のいずれかとする。
 
@@ -55,7 +67,7 @@ rejection code は、次の値に限定する。
 
 ### 受け入れ検査
 
-reporter と collector は、安全に保存できるかだけを検査する。原因、重要度、人間対応の必要性、および既存 issue との同一性は判断しない。
+reporter と collector は、安全に保存できるかだけを検査する。原因、重要度、automatic remediation の可否、人間対応の必要性、および既存 issue との同一性は判断しない。
 
 受け入れには、次の条件をすべて要求する。
 
@@ -111,6 +123,8 @@ Codex call の終了時は、その call について次の順序で処理する
 2. 受付済み request を処理し、accepted observation の保存を完了する。
 3. capability と MCP context を無効化する。
 
+feedback remediation の intake wave を閉じる場合は、その wave の remediation agent call に対応する全 context でこの終了処理を完了してから、collector の high-watermark を確定する。受付済み request の保存完了前に high-watermark を進めてはならない。
+
 parallel call の lifecycle は互いに分離する。TUI では、1 process の全 turn で同じ Codex call context を使用し、process 終了時に無効化する。
 
 reporter または collector の起動失敗、transport failure、および `rejected` result は、feedback の degradation として warning または構造化 event に記録する。本命 Codex workload を失敗または中断させない。
@@ -120,6 +134,8 @@ reporter または collector の起動失敗、transport failure、および `re
 ### detector の境界
 
 detector は、allowlist 済み rule と安定した構造化 log event から machine observation を作る。自由文の message、stderr、または command 全文を判定や issue key に使用してはならない。
+
+`cmoc feedback report` 自身の invocation error は、同 invocation の feedback issue または後続 invocation の machine observation へ変換してはならない。
 
 rule の評価は event の flush 後に行う。rule に一致した occurrence は、recurrence threshold 未満でも raw observation として保存する。集約と threshold 判定は `cmoc feedback report` が行う。
 
@@ -131,7 +147,7 @@ detector rule は、次の情報を固定する。
 
 - version を含む安定した `rule_id`
 - 入力 event type、schema version、および参照する型付き field
-- category、summary、impact、および人間が取り得る対応
+- category、summary、impact、現在の workload で解消できない理由、および後続で確認すべき対応
 - recurrence threshold、window、および distinct scope
 - 除外する期待動作
 - 低カーディナリティの `subject_type` と `normalized_subject_id` の構築方法
@@ -148,8 +164,8 @@ timestamp、session ID、run ID、call ID、自由文、一時 path、および 
 
 | `rule_id` | 対象 | threshold | 除外する状態 |
 |---|---|---|---|
-| `feedback.reporter_unavailable.v1` | reporter、collector、または transport の利用不能 | 30 日以内に異なる recurrence scope で 2 回 | payload 拒否、rate limit、agent が reporter を呼ばなかった場合 |
-| `codex.structured_output_validation_exhausted.v1` | 同じ agent call kind での Structured Output 受理失敗 | 30 日以内に異なる agent call かつ異なる recurrence scope で 2 回 | 補正成功、Structured Output を使わない call、ユーザー中断 |
+| `feedback.reporter_unavailable.v1` | reporter、collector、または transport の利用不能 | 30 日以内に異なる recurrence scope で 2 回 | payload 拒否、rate limit、agent が reporter を呼ばなかった場合、`cmoc feedback report` invocation 内の失敗 |
+| `codex.structured_output_validation_exhausted.v1` | 同じ agent call kind での Structured Output 受理失敗 | 30 日以内に異なる agent call かつ異なる recurrence scope で 2 回 | 補正成功、Structured Output を使わない call、ユーザー中断、`cmoc feedback report` invocation 内の失敗 |
 
 最初の rule は、`component` と `failure_code` を subject に使用する。2 番目の rule は、低カーディナリティの `agent_call_kind` を subject に使用し、schema hash と最後の failure stage を evidence として保持する。
 
@@ -181,8 +197,8 @@ raw record には、次の情報だけを保持する。
 
 accepted を返す前に、sibling temporary file への write、file flush、atomic rename、および parent directory の flush を完了する。accepted は local filesystem 上の保存だけを保証し、別 clone、別 machine、または hardware failure に対する backup を保証しない。
 
-raw observation は、新しい current pointer への正常 publication が完了するまで pending として保持する。report cut、checkpoint、または staged report を作成しただけでは削除しない。
+raw observation は、新しい current pointer への正常 publication が完了するまで pending として保持する。intake wave、report cut、checkpoint、run commit、merge、または staged report を作成しただけでは削除しない。
 
-publication 後は、同 report cut が処理した raw observation だけを idempotent に cleanup する。cut 固定後に追加された observation、別の未完了 cut が参照する observation、および validation を通過できなかった observation を削除してはならない。
+publication 後は、同 report cut が参照する intake wave で処理済みとなり、かつ最終 high-watermark 以前に durable 保存された raw observation だけを idempotent に cleanup する。最終 high-watermark より後に受理された observation、別の未完了処理が参照する observation、および validation を通過できなかった observation を削除してはならない。
 
 通常の非対話サブコマンドの terminal result には、pending observation 数だけを表示する。100 件以上ある場合、または最古の pending observation が 7 日以上前の場合は、`cmoc feedback report` の実行を促す warning を加える。件数を算出できない場合も warning とする。件数、算出失敗、または warning によって、サブコマンド固有の `result`、終了コード、run state、retry、または成功判定を変更してはならない。

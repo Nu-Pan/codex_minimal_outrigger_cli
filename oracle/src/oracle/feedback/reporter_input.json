@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "cmoc feedback reporter input v1",
+  "title": "cmoc feedback reporter input v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,14 +9,14 @@
     "severity",
     "summary",
     "impact",
-    "human_action_reason",
+    "workload_limitation",
     "cause",
     "evidence",
     "continuation"
   ],
   "properties": {
     "schema_version": {
-      "const": 1,
+      "const": 2,
       "description": "reporter input schema の version。"
     },
     "category": {
@@ -55,11 +55,11 @@
       "maxLength": 1200,
       "description": "現在の作業へ生じた影響。"
     },
-    "human_action_reason": {
+    "workload_limitation": {
       "type": "string",
       "minLength": 1,
       "maxLength": 1200,
-      "description": "現在の作業外にいる人間の対応が必要な理由。"
+      "description": "現在の workload の規定範囲内では問題を解消できない理由。automatic remediation の可否や human_required の判定は表さない。"
     },
     "cause": {
       "type": "object",
