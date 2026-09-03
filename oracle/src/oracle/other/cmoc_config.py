@@ -95,11 +95,12 @@ class CmocConfigCodex:
             ),
             # NOTE
             #   oracle --> realization のメインルート
-            #   大規模な修正になる可能性に備えて ultra
+            #   大規模な修正になる可能性に備えて ultra にしたら、一生収束しない大事故が発生
+            #   安定している max に戻す
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-5.6-sol",
-                reasoning_effort="ultra",
+                reasoning_effort="max",
             ),
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="openai",
