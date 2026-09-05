@@ -10,7 +10,7 @@
       "build_session_join_conflict_resolution_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "medium"
+        "reasoning_effort": "high"
       },
       "build_feedback_remediate_issue_parameter": {
         "model_provider": "openai",
@@ -20,17 +20,17 @@
       "build_oracle_investigation_launch_tui_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "medium"
+        "reasoning_effort": "high"
       },
       "build_oracle_edit_main_launch_exec_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "medium"
+        "reasoning_effort": "high"
       },
       "build_oracle_edit_reduction_launch_exec_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "medium"
+        "reasoning_effort": "high"
       },
       "build_realization_apply_fork_launch_exec_parameter": {
         "model_provider": "openai",
@@ -45,7 +45,7 @@
       "build_tui_launch_tui_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "medium"
+        "reasoning_effort": "high"
       },
       "build_realization_refactor_fork_file_review_and_fix_parameter": {
         "model_provider": "openai",

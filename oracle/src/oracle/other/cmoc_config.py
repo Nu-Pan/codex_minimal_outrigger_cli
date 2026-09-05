@@ -70,7 +70,7 @@ class CmocConfigCodex:
             "build_session_join_conflict_resolution_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="medium",
+                reasoning_effort="high",
             ),
             "build_feedback_remediate_issue_parameter": CodexCallConfig(
                 model_provider="openai",
@@ -83,19 +83,19 @@ class CmocConfigCodex:
             "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="medium",
+                reasoning_effort="high",
             ),
             # NOTE oracle file に影響を与えるので astra を使う
             "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="medium",
+                reasoning_effort="high",
             ),
             # NOTE oracle file に影響を与えるので astra を使う
             "build_oracle_edit_reduction_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="medium",
+                reasoning_effort="high",
             ),
             # oracle --> realization のメインルート
             # NOTE
@@ -118,7 +118,7 @@ class CmocConfigCodex:
             "build_tui_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="medium",
+                reasoning_effort="high",
             ),
             # NOTE
             #   ファイル単位処理なので呼び出し回数が非常に多く、その分コストが掛かる
