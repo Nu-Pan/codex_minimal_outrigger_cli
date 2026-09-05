@@ -23,7 +23,6 @@ def build_conflict_resolution_policy() -> tuple[PlaceholderMap, SDHeader]:
                 ),
                 prohibit=(
                     "realization file の都合または挙動を根拠に oracle file の意味を変更してはいけない",
-                    "conflict marker の解消に対して不必要な変更を行ってはいけない",
                 ),
             ),
         ),
