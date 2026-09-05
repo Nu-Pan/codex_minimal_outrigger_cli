@@ -69,34 +69,41 @@ class CmocConfigCodex:
             # NOTE merge 結果を守るため、既定設定の中で最も品質を優先する。
             "build_session_join_conflict_resolution_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-sol",
-                reasoning_effort="max",
+                model="gpt-6-astra",
+                reasoning_effort="medium",
             ),
             "build_feedback_remediate_issue_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="max",
             ),
-            # NOTE TUI 起動系なので性能最優先で ultra
+            # NOTE
+            #   oracle file に影響を与えるので astra を使う
+            #   TUI で人間とターンを回すので astra を使う
             "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-sol",
-                reasoning_effort="ultra",
+                model="gpt-6-astra",
+                reasoning_effort="medium",
             ),
+            # NOTE oracle file に影響を与えるので astra を使う
             "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-sol",
-                reasoning_effort="max",
+                model="gpt-6-astra",
+                reasoning_effort="medium",
             ),
+            # NOTE oracle file に影響を与えるので astra を使う
             "build_oracle_edit_reduction_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-sol",
-                reasoning_effort="max",
+                model="gpt-6-astra",
+                reasoning_effort="medium",
             ),
+            # oracle --> realization のメインルート
             # NOTE
-            #   oracle --> realization のメインルート
             #   大規模な修正になる可能性に備えて ultra にしたら、一生収束しない大事故が発生
-            #   安定している max に戻す
+            #   安定している max に戻した
+            # NOTE
+            #   realization file は GPT-5.6 で問題を感じていない
+            #   astra は使わない
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-5.6-sol",
@@ -107,12 +114,15 @@ class CmocConfigCodex:
                 model="gpt-5.6-sol",
                 reasoning_effort="max",
             ),
-            # NOTE TUI 起動系なので性能最優先で ultra
+            # NOTE TUI で人間とターンを回すので astra を使う
             "build_tui_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-sol",
-                reasoning_effort="ultra",
+                model="gpt-6-astra",
+                reasoning_effort="medium",
             ),
+            # NOTE
+            #   ファイル単位処理なので呼び出し回数が非常に多く、その分コストが掛かる
+            #   よって、コスパに優れる Luna しか選べない
             "build_realization_refactor_fork_file_review_and_fix_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-5.6-luna",
@@ -123,13 +133,13 @@ class CmocConfigCodex:
                 model="gpt-5.6-luna",
                 reasoning_effort="medium",
             ),
-            # NOTE 呼び出し回数が多い単純な要約タスクなので、quota 消費を抑える。
+            # NOTE 呼び出し回数が多い単純な要約タスクなので、Luna しか選べない。
             "build_indexing_index_entry_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-5.6-luna",
                 reasoning_effort="low",
             ),
-            # NOTE 終了結果だけを使う probe なので、quota 消費を抑える。
+            # NOTE 終了結果だけを使う probe なので、一番安いモデルで良い。
             "build_quota_availability_probe_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-5.6-luna",
