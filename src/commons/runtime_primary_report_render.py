@@ -6,8 +6,11 @@
 """
 
 import json
+import re
 from pathlib import Path
+from typing import Any
 
+from .runtime_feedback_store import mask_feedback_text
 from .runtime_logging import SubcommandLogger
 from .runtime_primary_report_specs import PrimaryReportSpec, TerminalClassification
 from .runtime_results import TerminalResult
@@ -35,7 +38,55 @@ def render_primary_report(
         )
     else:
         body = _summary_body(spec.title, classification, result, logger)
-    return "\n".join([*front_matter, *body, ""])
+    return "\n".join([*front_matter, *body, "", execution_record_markdown(logger)])
+
+
+def execution_record_markdown(
+    logger: SubcommandLogger | None,
+    *,
+    saved_events: tuple[dict[str, Any], ...] = (),
+) -> str:
+    """各 Codex call の最終出力と新規 observation を実行記録として掲載する。"""
+    lines = ["## 実行記録", "", "### Codex 最終出力", ""]
+    events = (*saved_events, *(logger.event_records() if logger else ()))
+    calls = (event for event in events if event.get("event") == "codex_call")
+    seen: set[str] = set()
+    for call in calls:
+        value = call.get("output_path")
+        if not isinstance(value, str) or value in seen:
+            continue
+        seen.add(value)
+        path = Path(value)
+        if not path.is_file():
+            continue
+        content = path.read_text(encoding="utf-8", errors="replace")
+        fence = "`" * max(
+            3, 1 + max((len(run) for run in re.findall(r"`+", content)), default=0)
+        )
+        lines.extend(
+            [f"出力: {path}", "", fence + "text", content.rstrip("\n"), fence, ""]
+        )
+    if not seen:
+        lines.extend(["取得済みの最終出力はありません。", ""])
+    lines.extend(["### 新規 feedback observation", ""])
+    observations = [
+        event
+        for event in events
+        if event.get("event") == "feedback_observation_accepted"
+    ]
+    for observation in observations:
+        content = mask_feedback_text(
+            json.dumps(observation["payload"], ensure_ascii=False, indent=2)
+        )
+        fence = "`" * max(
+            3, 1 + max((len(run) for run in re.findall(r"`+", content)), default=0)
+        )
+        lines.extend(
+            [str(observation["observation_id"]), "", fence + "json", content, fence, ""]
+        )
+    if not observations:
+        lines.extend(["新規に受理された observation はありません。", ""])
+    return "\n".join(lines)
 
 
 def oracle_edit_statuses(logger: SubcommandLogger) -> dict[str, object]:
@@ -135,8 +186,8 @@ def _feedback_invocation_body(
         f"- report cut: `{_field_status(fields.get('report_cut_id'))}`",
         "- normalization checkpoint: "
         f"`{_field_status(fields.get('normalization_checkpoint_count'))}`",
-        "- verification checkpoint: "
-        f"`{_field_status(fields.get('verification_checkpoint_count'))}`",
+        "- remediation checkpoint: "
+        f"`{_field_status(fields.get('remediation_checkpoint_count'))}`",
         f"- 確定済み部分結果: `{_field_status(fields.get('partial_result_count'))}`",
         "## 維持した state と未実行処理",
         f"- processing status: `{_field_status(fields.get('processing_status'))}`",

@@ -16,6 +16,7 @@ from pathlib import Path
 from .runtime_logging import SubcommandLogger
 from .runtime_paths import _reserve_timestamped_path, reports_dir, timestamp
 from .runtime_primary_report_render import (
+    execution_record_markdown,
     feedback_statuses,
     oracle_edit_statuses,
     render_primary_report,
@@ -106,6 +107,17 @@ def ensure_primary_report(
     """保存済み report を検証し、未作成の終了経路へ fallback を保存する。"""
     if result.primary_report is not None:
         _require_saved_report(result.primary_report)
+        # feedback publication は hash 確定前に実行記録を描画する。
+        # その他の個別 report は最外側 invocation の終了時に記録を追加する。
+        content = result.primary_report.read_text(encoding="utf-8")
+        if command_name == "feedback report":
+            if "\n## 実行記録\n" not in content:
+                raise PrimaryReportSaveError(result.primary_report)
+        else:
+            write_reserved_primary_report(
+                result.primary_report,
+                content.rstrip() + "\n\n" + execution_record_markdown(logger),
+            )
         return result
 
     context = _PRIMARY_REPORT_CONTEXT.get()

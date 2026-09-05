@@ -158,6 +158,7 @@ def _run_codex_tui_process(
     startup_failure: BaseException | None = None
     returncode: int | None = None
     feedback_call = begin_feedback_call(
+        agent_call_cwd=parameter.agent_call_cwd,
         agent_call_id=agent_call_id,
         agent_call_kind=parameter.agent_call_kind,
         codex_call_id=codex_call_id,

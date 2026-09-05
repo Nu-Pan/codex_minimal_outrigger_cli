@@ -192,7 +192,7 @@ def _response(request: object) -> dict[str, object] | None:
             "tools": [
                 {
                     "name": "submit_observation",
-                    "description": "人間対応が必要な問題の observation を cmoc collector へ送信する。",
+                    "description": "現在の workload では解消できない問題を、後続の自動修復または人間対応の候補として cmoc collector へ送信する。",
                     "inputSchema": reporter_input_schema(),
                     "annotations": {
                         "readOnlyHint": False,

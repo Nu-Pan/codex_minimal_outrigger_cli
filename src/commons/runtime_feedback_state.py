@@ -129,16 +129,16 @@ def normalization_checkpoint_path(
     )
 
 
-def verification_checkpoint_path(
+def remediation_checkpoint_path(
     repo: Path, report_cut_id: str, candidate_id: str
 ) -> Path:
-    """cut-scoped verification checkpoint path を返す。"""
+    """cut-scoped remediation checkpoint path を返す。"""
     if re.fullmatch(r"fbi_[a-z2-7]{26}", candidate_id) is None:
         raise ValueError(f"invalid feedback issue ID: {candidate_id!r}")
     return (
         report_cut_directory(repo, report_cut_id)
         / "checkpoint"
-        / "verification"
+        / "remediation"
         / f"{candidate_id}.json"
     )
 
@@ -287,7 +287,7 @@ def validate_observation_envelope(
         if not isinstance(payload, dict):
             errors.append("/payload: expected object")
         else:
-            errors.extend(reporter_input_validation_errors(payload))
+            errors.extend(reporter_input_validation_errors(payload, stored=True))
             if isinstance(fingerprints, list):
                 expected_indexes = {
                     index
@@ -407,6 +407,7 @@ def _validate_observation_context(context: _JsonObject) -> list[str]:
         None,
         "realization_apply",
         "realization_refactor",
+        "feedback_report",
     }:
         errors.append("/context/run_kind: unsupported value")
     if not _is_string_list(context.get("log_paths")):
@@ -497,7 +498,8 @@ def _validate_machine_observation(observation: _JsonObject) -> list[str]:
                 "impact",
                 "human_action",
                 "event_fields",
-            },
+            }
+            | ({"workload_limitation"} if "workload_limitation" in payload else set()),
         )
     )
     for name in (
@@ -511,6 +513,11 @@ def _validate_machine_observation(observation: _JsonObject) -> list[str]:
     ):
         if not isinstance(payload.get(name), str):
             errors.append(f"/payload/{name}: expected string")
+    if "workload_limitation" in payload and (
+        not isinstance(payload["workload_limitation"], str)
+        or not payload["workload_limitation"].strip()
+    ):
+        errors.append("/payload/workload_limitation: expected nonempty string")
     if not _is_version_one(payload.get("rule_version")):
         errors.append("/payload/rule_version: expected 1")
     if not isinstance(payload.get("event_fields"), dict):
@@ -1311,6 +1318,7 @@ def _load_generation(
             "generation_id",
             "report_cut_id",
             "created_at",
+            "session_commit",
             "issues",
             "machine_aggregates",
         },
@@ -1340,6 +1348,14 @@ def _load_generation(
     _require_timestamp(
         manifest.get("created_at"), manifest_path, "active generation created_at"
     )
+    if (
+        not isinstance(manifest.get("session_commit"), str)
+        or re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", manifest["session_commit"])
+        is None
+    ):
+        raise _corruption(
+            "active generation の session commit が不正です。", manifest_path
+        )
     issue_refs = manifest.get("issues")
     aggregate_refs = manifest.get("machine_aggregates")
     if not isinstance(issue_refs, list) or not isinstance(aggregate_refs, list):
@@ -1608,6 +1624,7 @@ def _validate_report_cut_manifest(
             "processing",
             "publication",
             "diagnostic",
+            "run",
         },
         path,
         "report cut manifest",
@@ -1720,8 +1737,8 @@ def _validate_report_cut_manifest(
         != {
             "normalization_builder",
             "normalization_schema",
-            "verification_builder",
-            "verification_schema",
+            "remediation_builder",
+            "remediation_schema",
             "deterministic_processing",
         }
         or not all(
@@ -1736,7 +1753,7 @@ def _validate_report_cut_manifest(
         )
     processing = _require_exact_fields(
         manifest.get("processing"),
-        {"status", "normalization_checkpoints", "verification_checkpoints", "failure"},
+        {"status", "normalization_checkpoints", "remediation_checkpoints", "failure"},
         path,
         "report cut processing",
     )
@@ -1761,11 +1778,11 @@ def _validate_report_cut_manifest(
             is_observation_id,
         ),
         (
-            "verification_checkpoints",
+            "remediation_checkpoints",
             "candidate_id",
             report_cut_directory(repo, str(report_cut_id_value))
             / "checkpoint"
-            / "verification",
+            / "remediation",
             lambda value: (
                 isinstance(value, str)
                 and re.fullmatch(r"fbi_[a-z2-7]{26}", value) is not None
@@ -1804,7 +1821,7 @@ def _validate_report_cut_manifest(
                     expected_kind=(
                         "normalization"
                         if name == "normalization_checkpoints"
-                        else "verification"
+                        else "remediation"
                     ),
                     expected_report_cut_id=str(report_cut_id_value),
                     expected_candidate_id=str(identifier),
@@ -1837,6 +1854,11 @@ def _validate_report_cut_manifest(
             path,
             processing=processing,
         )
+    from .runtime_feedback_run_state import validate_run_artifacts
+
+    validate_run_artifacts(
+        repo, manifest, path, allow_missing=allow_missing_cleanup_targets
+    )
     status = processing.get("status")
     if status in {"diagnostic_staging", "incomplete"} and diagnostic is None:
         raise _corruption(
@@ -1880,27 +1902,27 @@ def _validate_diagnostic_section(
     if diagnostic.get("result") != "incomplete":
         raise _corruption("diagnostic result が不正です。", path)
 
-    checkpoint_references = processing.get("verification_checkpoints")
+    checkpoint_references = processing.get("remediation_checkpoints")
     if not isinstance(checkpoint_references, list):
-        raise _corruption("diagnostic verification checkpoint が不正です。", path)
+        raise _corruption("diagnostic remediation checkpoint が不正です。", path)
     has_inconclusive = False
     checkpoint_root = (
-        report_cut_directory(repo, path.parent.name) / "checkpoint" / "verification"
+        report_cut_directory(repo, path.parent.name) / "checkpoint" / "remediation"
     )
     for reference in checkpoint_references:
         if not isinstance(reference, dict):
             raise _corruption(
-                "diagnostic verification checkpoint reference が不正です。", path
+                "diagnostic remediation checkpoint reference が不正です。", path
             )
         checkpoint = read_checkpoint(
             repo,
             {"path": reference.get("path"), "sha256": reference.get("sha256")},
             checkpoint_root,
-            "diagnostic verification checkpoint",
+            "diagnostic remediation checkpoint",
         )
         output = checkpoint.get("structured_output")
         result = output.get("result") if isinstance(output, dict) else None
-        verdict = result.get("verdict") if isinstance(result, dict) else None
+        verdict = result.get("status") if isinstance(result, dict) else None
         has_inconclusive = has_inconclusive or verdict == "inconclusive"
     if not has_inconclusive:
         raise _corruption("diagnostic に inconclusive checkpoint がありません。", path)
@@ -2218,7 +2240,7 @@ def _validate_report_cut_checkpoint(
     expected_report_cut_id: str,
     expected_candidate_id: str,
 ) -> None:
-    """formal normalization／verification checkpoint の content hash を検証する。"""
+    """formal normalization／remediation checkpoint の content hash を検証する。"""
     _require_exact_fields(
         checkpoint,
         {
@@ -2231,7 +2253,8 @@ def _validate_report_cut_checkpoint(
             "schema_sha256",
             "structured_output",
             "output_sha256",
-        },
+        }
+        | ({"input", "audit"} if expected_kind == "remediation" else set()),
         path,
         "report cut checkpoint",
     )
@@ -2244,6 +2267,10 @@ def _validate_report_cut_checkpoint(
         or not isinstance(output, dict)
     ):
         raise _corruption("report cut checkpoint identity が不正です。", path)
+    if expected_kind == "remediation":
+        from .runtime_feedback_run_state import validate_remediation_checkpoint
+
+        validate_remediation_checkpoint(checkpoint, path)
     for name in ("input_sha256", "builder_sha256", "schema_sha256", "output_sha256"):
         value = checkpoint.get(name)
         if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
@@ -2499,7 +2526,7 @@ def _validate_publication_section(
             )
     expected_old_generation.sort(key=lambda item: str(item["path"]))
     expected_work: list[_JsonObject] = []
-    for name in ("normalization_checkpoints", "verification_checkpoints"):
+    for name in ("normalization_checkpoints", "remediation_checkpoints"):
         entries = processing.get(name)
         if not isinstance(entries, list):
             raise _corruption(f"report cut {name} が不正です。", path)
@@ -2508,6 +2535,11 @@ def _validate_publication_section(
             for item in entries
             if isinstance(item, dict)
         )
+    from .runtime_feedback_run_state import run_artifact_references
+
+    expected_work.extend(
+        run_artifact_references(_read_canonical_object(path, "feedback manifest"))
+    )
     expected_work.sort(key=lambda item: str(item["path"]))
     expected_cleanup = {
         "observations": expected_observations,
@@ -2544,6 +2576,9 @@ def load_report_cut(repo: Path) -> tuple[_JsonObject, Path] | None:
         return None
     manifest_path = directories[0] / "manifest.json"
     manifest = _read_canonical_object(manifest_path, "report cut manifest")
+    from .runtime_feedback_run_state import recover_run_artifact_references
+
+    recover_run_artifact_references(repo, manifest, manifest_path)
     _validate_report_cut_manifest(
         repo,
         manifest,
@@ -2563,8 +2598,14 @@ def _validate_report_cut_artifact_inventory(
     processing = manifest.get("processing")
     if not isinstance(processing, dict):
         raise _corruption("report cut processing が不正です。", manifest_path)
+    from .runtime_feedback_run_state import run_artifact_references
+
     expected: set[Path] = {manifest_path.resolve(strict=False)}
-    for name in ("normalization_checkpoints", "verification_checkpoints"):
+    expected.update(
+        (repo / reference["path"]).resolve(strict=False)
+        for reference in run_artifact_references(manifest)
+    )
+    for name in ("normalization_checkpoints", "remediation_checkpoints"):
         entries = processing.get(name)
         if not isinstance(entries, list):
             raise _corruption(f"report cut {name} が不正です。", manifest_path)
@@ -2589,9 +2630,9 @@ def _validate_report_cut_artifact_inventory(
             is_observation_id,
         ),
         (
-            manifest_path.parent / "checkpoint" / "verification",
-            "verification",
-            verification_checkpoint_path,
+            manifest_path.parent / "checkpoint" / "remediation",
+            "remediation",
+            remediation_checkpoint_path,
             lambda value: (
                 isinstance(value, str)
                 and re.fullmatch(r"fbi_[a-z2-7]{26}", value) is not None
@@ -2669,11 +2710,15 @@ def write_report_cut_manifest(repo: Path, manifest: _JsonObject) -> tuple[Path, 
     if path.exists() or path.is_symlink():
         previous = _read_canonical_object(path, "report cut manifest")
         _validate_report_cut_manifest(repo, previous, path)
-        if previous.get("inputs") != manifest.get("inputs") or previous.get(
-            "cut_at"
-        ) != manifest.get("cut_at"):
-            raise _corruption("report cut の固定入力を更新しようとしました。", path)
-        current = load_active_state(repo).current
+        from .runtime_feedback_run_state import validate_manifest_update
+
+        validate_manifest_update(previous, manifest, path)
+        pointer_path = current_pointer_path(repo)
+        current = (
+            _read_canonical_object(pointer_path, "feedback current pointer")
+            if pointer_path.exists() or pointer_path.is_symlink()
+            else None
+        )
         if current is not None and current.get("report_cut_id") == report_cut_id_value:
             raise _corruption(
                 "publication 済み report cut manifest は更新できません。", path
@@ -2700,11 +2745,11 @@ def recover_report_cut_checkpoint_references(
             normalization_checkpoint_path,
         ),
         (
-            "verification_checkpoints",
+            "remediation_checkpoints",
             "candidate_id",
-            "verification",
-            manifest_path.parent / "checkpoint" / "verification",
-            verification_checkpoint_path,
+            "remediation",
+            manifest_path.parent / "checkpoint" / "remediation",
+            remediation_checkpoint_path,
         ),
     )
     for list_name, id_name, kind, root, expected_path_function in contracts:
@@ -2798,6 +2843,7 @@ def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -
         "processing",
         "publication",
         "diagnostic",
+        "run",
     }:
         raise _corruption("report cut manifest の top-level field が不正です。", path)
     if not _is_version_one(manifest.get("schema_version")) or not is_uuid7_prefixed(
@@ -2940,6 +2986,7 @@ def generation_artifacts(
     generation_id: str,
     report_cut_id: str,
     created_at: str,
+    session_commit: str,
     issues: dict[str, _JsonObject],
     machine_aggregates: dict[str, _JsonObject],
 ) -> tuple[_JsonObject, tuple[tuple[Path, bytes], ...], _JsonObject]:
@@ -2993,6 +3040,7 @@ def generation_artifacts(
         "generation_id": generation_id,
         "report_cut_id": report_cut_id,
         "created_at": created_at,
+        "session_commit": session_commit,
         "issues": issue_references,
         "machine_aggregates": aggregate_references,
     }
@@ -3136,6 +3184,9 @@ def publish_current_pointer(
 
 def cleanup_published_report(repo: Path) -> bool:
     """current pointer 切替後の cleanup を manifest 順で idempotent に完了する。"""
+    from .runtime_feedback_intake import forget_observation_receipt
+    from .runtime_feedback_store import observation_publication_lock
+
     state = load_active_state(repo)
     manifest = state.cleanup_manifest
     manifest_path = state.cleanup_manifest_path
@@ -3170,12 +3221,14 @@ def cleanup_published_report(repo: Path) -> bool:
 
     # raw observation は publication point 後にだけ削除する。
     for reference in _reference_list(cleanup, "observations", manifest_path):
-        _unlink_artifact_reference(
-            repo,
-            reference,
-            expected_root=feedback_root(repo) / "observation" / "v1",
-            description="processed observation",
-        )
+        with observation_publication_lock(repo):
+            _unlink_artifact_reference(
+                repo,
+                reference,
+                expected_root=feedback_root(repo) / "observation" / "v1",
+                description="processed observation",
+            )
+            forget_observation_receipt(repo, reference)
 
     # 切替前の generation は manifest に列挙した file だけを削除する。
     for reference in _reference_list(cleanup, "old_generation", manifest_path):
@@ -3284,13 +3337,19 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
         )
 
     # staging 済み artifact は manifest が明示する path/hash だけを削除する。
+    from .runtime_feedback_run_state import run_artifact_references
+
+    run_references = run_artifact_references(manifest)
     allowed_work_paths = {manifest_path.resolve(strict=False)}
+    allowed_work_paths.update(
+        (repo / reference["path"]).resolve(strict=False) for reference in run_references
+    )
     processing = manifest.get("processing")
     if not isinstance(processing, dict):
         raise _corruption(
             "discard 対象 report cut processing が不正です。", manifest_path
         )
-    for name in ("normalization_checkpoints", "verification_checkpoints"):
+    for name in ("normalization_checkpoints", "remediation_checkpoints"):
         references = processing.get(name)
         if not isinstance(references, list):
             raise _corruption(f"discard 対象 {name} が不正です。", manifest_path)
@@ -3391,7 +3450,7 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
         allowed_work_paths,
         "report cut",
     )
-    for name in ("normalization_checkpoints", "verification_checkpoints"):
+    for name in ("normalization_checkpoints", "remediation_checkpoints"):
         references = processing[name]
         assert isinstance(references, list)
         for reference in references:
@@ -3402,6 +3461,13 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
                 expected_root=manifest_path.parent,
                 description=f"discard {name}",
             )
+    for reference in run_references:
+        _unlink_artifact_reference(
+            repo,
+            reference,
+            expected_root=manifest_path.parent,
+            description="discard feedback run artifact",
+        )
     _durable_unlink(manifest_path)
     _prune_empty_directories(manifest_path.parent, report_work_root(repo))
 

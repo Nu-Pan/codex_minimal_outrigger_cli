@@ -27,44 +27,33 @@ from oracle.other.struct_doc import render_sd_node_as_markdown
 from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
 )
-from acp.builder.feedback.verify_issue import build_feedback_verify_issue_parameter
+from acp.builder.feedback.remediate_issue import (
+    build_feedback_remediate_issue_parameter,
+)
 from cmoc_runtime import (
     CmocError,
     TerminalResult,
     current_branch,
-    load_state_for_branch,
     mark_current_subcommand_interrupted,
-    repo_root,
     run_cli_subcommand,
     run_codex_exec,
-    start_subcommand_step,
-    work_root,
 )
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_feedback_state import (
     ActiveState,
     agent_canonical_key,
     artifact_reference,
-    cleanup_published_report,
     current_generation_artifacts,
     current_pointer_path,
-    discard_report_cut,
-    feedback_writer_lock,
     generation_artifacts,
     issue_id,
     load_active_state,
-    load_report_cut,
     machine_aggregate_id,
     machine_canonical_key,
-    new_generation_id,
-    new_report_cut_id,
     normalization_checkpoint_path,
     publish_current_pointer,
     publish_generation_artifacts,
-    recover_report_cut_checkpoint_references,
-    validate_feedback_state,
     validate_observation_envelope,
-    verification_checkpoint_path,
     write_checkpoint,
     write_report_cut_manifest,
 )
@@ -75,7 +64,6 @@ from commons.runtime_feedback_store import (
     iter_observation_paths,
     mask_feedback_text,
     observation_path,
-    observation_publication_lock,
     parse_rfc3339,
     read_json_object,
     rfc3339_now,
@@ -102,209 +90,16 @@ def cmoc_feedback_report_impl() -> None:
         command_argv=["cmoc", "feedback", "report"],
         # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
         interruptible=True,
+        doctor_preprocess=False,
         total_steps=7,
     )
 
 
 def _cmoc_feedback_report_body() -> TerminalResult:
-    """writer lock を確保して cleanup、cut、verification、publication を完了する。"""
-    repository = repo_root()
-    main_worktree = work_root()
-    try:
-        start_subcommand_step(
-            2,
-            "feedback report の事前条件を確認",
-            "validate feedback report preconditions",
-        )
-        _validate_preconditions(repository, main_worktree)
-    except KeyboardInterrupt:
-        # 共通 runner は KeyboardInterrupt を失敗終了へ変換するため、report cut
-        # 固定前の中断も feedback report 固有の正常な中断として記録する。
-        return _record_feedback_interruption(None, None)
+    """self-joining remediation run と publication を実行する。"""
+    from .remediation import run_feedback_report
 
-    # report cut 固定前から失敗終了まで repository-level writer lock を保持する。
-    try:
-        lock = feedback_writer_lock(repository)
-        lock.__enter__()
-    except KeyboardInterrupt:
-        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-        # writer lock の取得中、cut を開始していない invocation の中断を正常終了する。
-        return _record_feedback_interruption(None, None)
-    try:
-        return _cmoc_feedback_report_locked_body(repository, main_worktree)
-    finally:
-        # lock 解放中の Ctrl+C は、publication 後の正常完了処理失敗として common
-        # runner の error 経路へ伝播させる。
-        lock.__exit__(None, None, None)
-
-
-def _cmoc_feedback_report_locked_body(
-    repository: Path, main_worktree: Path
-) -> TerminalResult:
-    """保持中の writer lock 内で feedback report cut を処理する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    manifest: _JsonObject | None = None
-    manifest_path: Path | None = None
-    try:
-        start_subcommand_step(
-            3,
-            "feedback state と未完了 cleanup を確認",
-            "validate feedback active state",
-        )
-        state = validate_feedback_state(repository)
-        if state.cleanup_manifest is not None:
-            cleanup_published_report(repository)
-            state = validate_feedback_state(repository)
-
-        versions = _processing_versions()
-        resumable = load_report_cut(repository)
-        if resumable is not None:
-            manifest, manifest_path = resumable
-            recover_report_cut_checkpoint_references(
-                repository, manifest, manifest_path
-            )
-            processing = manifest["processing"]
-            assert isinstance(processing, dict)
-            if (
-                processing.get("status") == "incomplete"
-                or manifest["inputs"].get("versions") != versions
-            ):
-                # terminal incomplete と obsolete cut は raw を残して work state だけ捨てる。
-                discard_report_cut(repository, manifest, manifest_path)
-                manifest = None
-                manifest_path = None
-        if manifest is None or manifest_path is None:
-            start_subcommand_step(
-                4, "feedback report cut を固定", "freeze feedback report cut"
-            )
-            manifest, manifest_path = _create_report_cut(repository, state, versions)
-        update_primary_report_fields(
-            report_cut_id=manifest.get("report_cut_id"),
-            report_cut_at=manifest.get("cut_at"),
-        )
-        # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
-        return _process_report_cut(
-            repository,
-            main_worktree,
-            state,
-            manifest,
-            manifest_path,
-        )
-    except KeyboardInterrupt:
-        # cut 固定前にも Ctrl+C を正常な中断として処理する。create_report_cut が
-        # manifest を durable 保存した直後に中断した場合は、唯一の再開対象 cut を
-        # 再読してその state だけを interrupted にする。
-        if manifest is None or manifest_path is None:
-            resumable = load_report_cut(repository)
-            if resumable is not None:
-                manifest, manifest_path = resumable
-        if (
-            manifest is not None
-            and manifest_path is not None
-            and not _cut_is_current(repository, manifest)
-        ):
-            processing = manifest.get("processing")
-            status = processing.get("status") if isinstance(processing, dict) else None
-            if manifest.get("diagnostic") is None and status != "incomplete":
-                _set_processing_state(
-                    repository,
-                    manifest,
-                    "interrupted",
-                    "user interruption",
-                )
-        _update_feedback_progress_fields(manifest)
-        return _record_feedback_interruption(manifest, manifest_path)
-    except BaseException as exc:
-        if (
-            manifest is not None
-            and manifest_path is not None
-            and not _cut_is_current(repository, manifest)
-        ):
-            processing = manifest.get("processing")
-            status = processing.get("status") if isinstance(processing, dict) else None
-            if manifest.get("diagnostic") is None and status not in {
-                "diagnostic_staging",
-                "incomplete",
-                "publication_ready",
-            }:
-                _set_processing_state(
-                    repository,
-                    manifest,
-                    "failed" if status != "staging" else "staging",
-                    repr(exc),
-                )
-        _update_feedback_progress_fields(manifest)
-        raise
-
-
-def _validate_preconditions(repo: Path, worktree: Path) -> None:
-    """main worktree、active session branch、ready run state を検査する。"""
-    if repo.resolve() != worktree.resolve():
-        raise CmocError(
-            "feedback report は main worktree 上で実行してください。",
-            ["active session branch の main worktree へ移動してください。"],
-            f"repo_root: {repo}\nwork_root: {worktree}",
-        )
-    branch = current_branch(worktree)
-    update_primary_report_fields(session_branch=branch)
-    if not branch.startswith("cmoc/session/"):
-        raise CmocError(
-            "feedback report は active session branch 上で実行してください。",
-            ["`cmoc session fork` 後の branch で再実行してください。"],
-            branch,
-        )
-    _, state_path, state = load_state_for_branch(repo, branch)
-    if state.session.state != "active" or state.run.state != "ready":
-        raise CmocError(
-            "feedback report の session/run state が事前条件を満たしません。",
-            ["active session の editing run を join または abandon してください。"],
-            f"state: {state_path}\n{json.dumps(state.to_dict(), ensure_ascii=False)}",
-        )
-
-
-def _create_report_cut(
-    repo: Path, state: ActiveState, versions: _JsonObject
-) -> tuple[_JsonObject, Path]:
-    """pending raw、active state、および現在参照を一度だけ固定する。"""
-    report_cut_id_value = new_report_cut_id()
-    with observation_publication_lock(repo):
-        entries, observations = _pending_observations(repo)
-        cut_at = rfc3339_now()
-    references = _capture_report_cut_references(
-        repo,
-        observations,
-        state.issues,
-    )
-    _verify_captured_references(repo, references)
-    manifest: _JsonObject = {
-        "schema_version": 1,
-        "report_cut_id": report_cut_id_value,
-        "cut_at": cut_at,
-        "inputs": {
-            "observations": entries,
-            "current": _active_state_input(repo, state),
-            "references": references,
-            "versions": versions,
-        },
-        "processing": {
-            "status": "ready",
-            "normalization_checkpoints": [],
-            "verification_checkpoints": [],
-            "failure": None,
-        },
-        "publication": None,
-        "diagnostic": None,
-    }
-    manifest_path, _digest = write_report_cut_manifest(repo, manifest)
-    loaded = load_report_cut(repo)
-    if loaded is None or loaded[0] != manifest or loaded[1] != manifest_path:
-        raise CmocError(
-            "feedback report cut を durable に固定できませんでした。",
-            ["report cut work directory を確認して再実行してください。"],
-            str(manifest_path),
-        )
-    return manifest, manifest_path
+    return run_feedback_report()
 
 
 def _pending_observations(
@@ -592,30 +387,10 @@ def _capture_repository_reference(
     }
 
 
-def _verify_captured_references(repo: Path, references: list[_JsonObject]) -> None:
-    """manifest 保存直前に current reference を同じ path から再取得して比較する。"""
-    for reference in references:
-        if reference.get("kind") == "observation":
-            continue
-        path_value = reference.get("path")
-        subjects = reference.get("subjects")
-        if not isinstance(path_value, str) or not isinstance(subjects, list):
-            raise ValueError("captured repository reference is malformed")
-        current = _capture_repository_reference(
-            repo, repo / path_value, [str(value) for value in subjects]
-        )
-        if current != reference:
-            raise CmocError(
-                "feedback report cut の current reference が capture 中に変化しました。",
-                ["repository state が安定してから再実行してください。"],
-                str(repo / path_value),
-            )
-
-
 def _processing_versions() -> _JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
     normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
-    verify_builder = _builder_source_path(build_feedback_verify_issue_parameter)
+    verify_builder = _builder_source_path(build_feedback_remediate_issue_parameter)
     # 動的 code fence を構築する canonical renderer も checkpoint version に含める。
     prompt_renderer = _builder_source_path(render_sd_node_as_markdown)
     normalize_schema = normalize_builder.with_suffix(".json")
@@ -628,12 +403,21 @@ def _processing_versions() -> _JsonObject:
             (prompt_renderer,),
         ),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
-        "verification_builder": _builder_version_hash(
+        "remediation_builder": _builder_version_hash(
             verify_builder,
             (prompt_renderer,),
         ),
-        "verification_schema": sha256_bytes(verify_schema.read_bytes()),
-        "deterministic_processing": _combined_file_hash([module_path, state_path]),
+        "remediation_schema": sha256_bytes(verify_schema.read_bytes()),
+        "deterministic_processing": _combined_file_hash(
+            [
+                module_path,
+                state_path,
+                module_path.with_name("remediation.py"),
+                module_path.with_name("recovery.py"),
+                state_path.with_name("runtime_feedback_run_state.py"),
+                state_path.with_name("runtime_feedback_intake.py"),
+            ]
+        ),
     }
 
 
@@ -665,92 +449,6 @@ def _combined_file_hash(paths: list[Path]) -> str:
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
-
-
-def _process_report_cut(
-    repo: Path,
-    worktree: Path,
-    initial_state: ActiveState,
-    manifest: _JsonObject,
-    manifest_path: Path,
-) -> TerminalResult:
-    """固定済み cut を正常 publication または incomplete 診断まで進める。"""
-    processing = manifest.get("processing")
-    if not isinstance(processing, dict):
-        raise ValueError("report cut processing must be an object")
-    if processing.get("status") == "publication_ready":
-        start_subcommand_step(
-            7, "feedback report を publication", "publish feedback report"
-        )
-        return _resume_publication(repo, manifest, manifest_path)
-    resume_diagnostic = processing.get("status") == "diagnostic_staging"
-
-    # resume 時も raw と active input の hash/reference を再検証する。
-    observations = _read_cut_observations(repo, manifest)
-    current_state = load_active_state(repo)
-    if _active_state_input(repo, current_state) != manifest["inputs"].get("current"):
-        raise CmocError(
-            "feedback report cut の current active state が開始時から変化しています。",
-            ["current pointer と report cut manifest を人間が確認してください。"],
-            str(manifest_path),
-        )
-    if initial_state.current != current_state.current:
-        raise CmocError(
-            "feedback report 実行中に current pointer が変化しました。",
-            ["repository-level feedback writer の所有状態を確認してください。"],
-            str(current_pointer_path(repo)),
-        )
-
-    start_subcommand_step(
-        5,
-        "observation を検証・集約・normalization",
-        "process feedback issue candidates",
-    )
-    if not resume_diagnostic:
-        _set_processing_state(repo, manifest, "processing", None)
-    candidates, machine_aggregates = _build_candidates(
-        repo, worktree, manifest, observations, current_state
-    )
-
-    start_subcommand_step(
-        6, "全 issue candidate を verification", "verify feedback issue candidates"
-    )
-    verdicts = _verify_candidates(repo, worktree, manifest, candidates)
-    if any(result.get("verdict") == "inconclusive" for result in verdicts.values()):
-        start_subcommand_step(
-            7,
-            "incomplete 診断 report を保存",
-            "save incomplete feedback diagnostic",
-        )
-        return _publish_incomplete_report(
-            repo,
-            worktree,
-            manifest,
-            manifest_path,
-            candidates,
-            verdicts,
-        )
-
-    if resume_diagnostic:
-        raise CmocError(
-            "staged incomplete 診断と正式 checkpoint の verdict が一致しません。",
-            ["report cut manifest と checkpoint を人間が確認してください。"],
-            str(manifest_path),
-        )
-
-    start_subcommand_step(
-        7, "feedback report を publication", "publish feedback report"
-    )
-    return _publish_report(
-        repo,
-        worktree,
-        manifest,
-        manifest_path,
-        candidates,
-        machine_aggregates,
-        verdicts,
-        current_state,
-    )
 
 
 def _read_cut_observations(repo: Path, manifest: _JsonObject) -> dict[str, _JsonObject]:
@@ -816,12 +514,20 @@ def _build_candidates(
     manifest: _JsonObject,
     observations: dict[str, _JsonObject],
     state: ActiveState,
+    *,
+    previous_candidates: dict[str, _JsonObject] | None = None,
+    previous_aggregates: dict[str, _JsonObject] | None = None,
+    observed_at: str | None = None,
 ) -> tuple[dict[str, _JsonObject], dict[str, _JsonObject]]:
     """deterministic processing と必要な同一性判断だけで candidate 集合を作る。"""
-    candidates = {
-        current_issue_id: _candidate_from_active(issue)
-        for current_issue_id, issue in state.issues.items()
-    }
+    candidates = (
+        previous_candidates
+        if previous_candidates is not None
+        else {
+            current_issue_id: _candidate_from_active(issue)
+            for current_issue_id, issue in state.issues.items()
+        }
+    )
     inputs = manifest["inputs"]
     assert isinstance(inputs, dict)
 
@@ -837,9 +543,11 @@ def _build_candidates(
             agent_observations.append(observation)
     machine_aggregates = _process_machine_observations(
         repo,
-        manifest,
+        {**manifest, "cut_at": observed_at or manifest["cut_at"]},
         candidates,
-        state.machine_aggregates,
+        previous_aggregates
+        if previous_aggregates is not None
+        else state.machine_aggregates,
         machine_observations,
     )
 
@@ -1284,11 +992,20 @@ def _normalize_issue_identity(
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
     # deduplication hint は候補検索だけで使い、issue identity の根拠として
     # normalization agent へ渡さない。
+    from commons.runtime_feedback_store import reporter_payload_view
+
     normalization_observation = {
         **observation,
+        "compatibility": {
+            "source_schema_version": observation["payload"]["schema_version"],
+            "view_schema_version": 2,
+            "rule": "reporter-input-v1-to-v2"
+            if observation["payload"]["schema_version"] == 1
+            else "identity",
+        },
         "payload": {
             key: value
-            for key, value in observation["payload"].items()
+            for key, value in reporter_payload_view(observation["payload"]).items()
             if key != "deduplication_hint"
         },
     }
@@ -1306,56 +1023,50 @@ def _normalize_issue_identity(
     }
     input_sha256 = sha256_bytes(canonical_json_bytes(input_value))
     observation_id_value = str(observation["observation_id"])
-    checkpoint = _normalization_checkpoint(
+
+    def postcondition(
+        output: Any, changed_paths: frozenset[str]
+    ) -> tuple[StructuredOutputValidationIssue, ...]:
+        """候補外 issue ID を deterministic correction 対象にする。"""
+        del changed_paths
+        return _normalization_output_issues(output, allowed)
+
+    result = run_codex_exec(
+        parameter,
+        root=repo,
+        purpose="feedback issue identity normalization",
+        structured_output_postcondition=postcondition,
+    )
+    if (
+        not isinstance(result.output_json, dict)
+        or not _structured_output_matches_schema(result.output_json, schema_path)
+        or _normalization_output_issues(result.output_json, allowed)
+    ):
+        raise ValueError("normalization output does not satisfy its contract")
+    output_sha256 = sha256_bytes(canonical_json_bytes(result.output_json))
+    checkpoint = {
+        "schema_version": 1,
+        "kind": "normalization",
+        "report_cut_id": manifest["report_cut_id"],
+        "candidate_id": observation_id_value,
+        "input_sha256": input_sha256,
+        "builder_sha256": manifest["inputs"]["versions"]["normalization_builder"],
+        "schema_sha256": sha256_bytes(schema_path.read_bytes()),
+        "structured_output": result.output_json,
+        "output_sha256": output_sha256,
+    }
+    path = normalization_checkpoint_path(
+        repo, str(manifest["report_cut_id"]), observation_id_value
+    )
+    reference = write_checkpoint(repo, path, checkpoint)
+    _record_checkpoint(
         repo,
         manifest,
+        "normalization_checkpoints",
+        "observation_id",
         observation_id_value,
-        input_sha256,
-        parameter.agent_call_kind,
-        schema_path,
-        allowed,
+        reference,
     )
-    if checkpoint is None:
-
-        def postcondition(
-            output: Any, changed_paths: frozenset[str]
-        ) -> tuple[StructuredOutputValidationIssue, ...]:
-            """候補外 issue ID を deterministic correction 対象にする。"""
-            del changed_paths
-            return _normalization_output_issues(output, allowed)
-
-        result = run_codex_exec(
-            parameter,
-            root=repo,
-            purpose="feedback issue identity normalization",
-            structured_output_postcondition=postcondition,
-        )
-        if not isinstance(result.output_json, dict):
-            raise ValueError("normalization output must be an object")
-        output_sha256 = sha256_bytes(canonical_json_bytes(result.output_json))
-        checkpoint = {
-            "schema_version": 1,
-            "kind": "normalization",
-            "report_cut_id": manifest["report_cut_id"],
-            "candidate_id": observation_id_value,
-            "input_sha256": input_sha256,
-            "builder_sha256": manifest["inputs"]["versions"]["normalization_builder"],
-            "schema_sha256": sha256_bytes(schema_path.read_bytes()),
-            "structured_output": result.output_json,
-            "output_sha256": output_sha256,
-        }
-        path = normalization_checkpoint_path(
-            repo, str(manifest["report_cut_id"]), observation_id_value
-        )
-        reference = write_checkpoint(repo, path, checkpoint)
-        _record_checkpoint(
-            repo,
-            manifest,
-            "normalization_checkpoints",
-            "observation_id",
-            observation_id_value,
-            reference,
-        )
     structured_output = checkpoint.get("structured_output")
     if not isinstance(structured_output, dict):
         raise ValueError("normalization checkpoint output must be an object")
@@ -1367,59 +1078,6 @@ def _normalize_issue_identity(
         if result_value.get("decision") == "existing"
         else None
     )
-
-
-def _normalization_checkpoint(
-    repo: Path,
-    manifest: _JsonObject,
-    observation_id_value: str,
-    input_sha256: str,
-    agent_call_kind: str,
-    schema_path: Path,
-    allowed: set[str],
-) -> _JsonObject | None:
-    """同じ cut/input の正式な normalization checkpoint だけを再利用する。"""
-    reference = _find_checkpoint_reference(
-        manifest, "normalization_checkpoints", "observation_id", observation_id_value
-    )
-    if reference is None:
-        return None
-    path = repo / str(reference["path"])
-    if sha256_bytes(path.read_bytes()) != reference.get("sha256"):
-        raise CmocError(
-            "feedback normalization checkpoint hash が一致しません。",
-            ["checkpoint と report cut manifest を人間が確認してください。"],
-            str(path),
-        )
-    checkpoint = read_json_object(path)
-    expected = {
-        "schema_version": 1,
-        "kind": "normalization",
-        "report_cut_id": manifest["report_cut_id"],
-        "candidate_id": observation_id_value,
-        "input_sha256": input_sha256,
-        "builder_sha256": manifest["inputs"]["versions"]["normalization_builder"],
-        "schema_sha256": sha256_bytes(schema_path.read_bytes()),
-    }
-    if any(checkpoint.get(key) != value for key, value in expected.items()):
-        raise CmocError(
-            "feedback normalization checkpoint が固定入力と一致しません。",
-            ["checkpoint を再利用せず、state を人間が確認してください。"],
-            f"path: {path}\nagent_call_kind: {agent_call_kind}",
-        )
-    output = checkpoint.get("structured_output")
-    if (
-        not isinstance(output, dict)
-        or sha256_bytes(canonical_json_bytes(output)) != checkpoint.get("output_sha256")
-        or not _structured_output_matches_schema(output, schema_path)
-        or _normalization_output_issues(output, allowed)
-    ):
-        raise CmocError(
-            "feedback normalization checkpoint output が正式な契約を満たしません。",
-            ["checkpoint を人間が確認してください。"],
-            str(path),
-        )
-    return checkpoint
 
 
 def _normalization_output_issues(
@@ -1463,24 +1121,6 @@ def _record_checkpoint(
         entries.append(entry)
         entries.sort(key=lambda item: str(item[id_name]))
     write_report_cut_manifest(repo, manifest)
-
-
-def _find_checkpoint_reference(
-    manifest: _JsonObject, list_name: str, id_name: str, id_value: str
-) -> _JsonObject | None:
-    """manifest の checkpoint reference を ID で一意に選ぶ。"""
-    processing = manifest.get("processing")
-    entries = processing.get(list_name) if isinstance(processing, dict) else None
-    if not isinstance(entries, list):
-        raise ValueError(f"{list_name} must be an array")
-    matches = [
-        item
-        for item in entries
-        if isinstance(item, dict) and item.get(id_name) == id_value
-    ]
-    if len(matches) > 1:
-        raise ValueError(f"duplicate checkpoint reference: {id_value}")
-    return matches[0] if matches else None
 
 
 def _structured_output_matches_schema(output: _JsonObject, schema_path: Path) -> bool:
@@ -1819,112 +1459,7 @@ def _apply_machine_aggregate_to_candidate(
     candidate["machine_state"] = aggregate
 
 
-def _verify_candidates(
-    repo: Path,
-    worktree: Path,
-    manifest: _JsonObject,
-    candidates: dict[str, _JsonObject],
-) -> dict[str, _JsonObject]:
-    """全 candidate を一件ずつ固定参照だけで verification する。"""
-    inputs = manifest["inputs"]
-    assert isinstance(inputs, dict)
-    references = inputs.get("references")
-    if not isinstance(references, list):
-        raise ValueError("report cut references must be an array")
-    references_by_id = {
-        str(reference["reference_id"]): reference
-        for reference in references
-        if isinstance(reference, dict)
-        and isinstance(reference.get("reference_id"), str)
-    }
-    verdicts: dict[str, _JsonObject] = {}
-    for candidate_id_value, candidate in sorted(candidates.items()):
-        allowed_ids = candidate.get("reference_ids")
-        if not isinstance(allowed_ids, list):
-            raise ValueError("candidate reference_ids must be an array")
-        allowed_references = [
-            references_by_id[reference_id]
-            for reference_id in allowed_ids
-            if reference_id in references_by_id
-        ]
-        payload = _verification_candidate_payload(candidate)
-        parameter = build_feedback_verify_issue_parameter(
-            json.dumps(payload, ensure_ascii=False, sort_keys=True),
-            json.dumps(allowed_references, ensure_ascii=False, sort_keys=True),
-            worktree,
-        )
-        schema_path = parameter.structured_output_schema_path
-        assert schema_path is not None
-        input_value = {"candidate": payload, "references": allowed_references}
-        input_sha256 = sha256_bytes(canonical_json_bytes(input_value))
-        checkpoint = _verification_checkpoint(
-            repo,
-            manifest,
-            candidate_id_value,
-            input_sha256,
-            schema_path,
-            references_by_id,
-            set(str(value) for value in allowed_ids),
-        )
-        if checkpoint is None:
-
-            def postcondition(
-                output: Any,
-                changed_paths: frozenset[str],
-                *,
-                expected_candidate_id: str = candidate_id_value,
-                allowed: set[str] = set(str(value) for value in allowed_ids),
-            ) -> tuple[StructuredOutputValidationIssue, ...]:
-                """candidate ID、reference ID、current evidence の受理条件を検査する。"""
-                del changed_paths
-                return _verification_output_issues(
-                    output,
-                    expected_candidate_id,
-                    allowed,
-                    references_by_id,
-                )
-
-            result = run_codex_exec(
-                parameter,
-                root=repo,
-                purpose=f"feedback issue verification ({candidate_id_value})",
-                structured_output_postcondition=postcondition,
-            )
-            if not isinstance(result.output_json, dict):
-                raise ValueError("verification output must be an object")
-            checkpoint = {
-                "schema_version": 1,
-                "kind": "verification",
-                "report_cut_id": manifest["report_cut_id"],
-                "candidate_id": candidate_id_value,
-                "input_sha256": input_sha256,
-                "builder_sha256": manifest["inputs"]["versions"][
-                    "verification_builder"
-                ],
-                "schema_sha256": sha256_bytes(schema_path.read_bytes()),
-                "structured_output": result.output_json,
-                "output_sha256": sha256_bytes(canonical_json_bytes(result.output_json)),
-            }
-            path = verification_checkpoint_path(
-                repo, str(manifest["report_cut_id"]), candidate_id_value
-            )
-            reference = write_checkpoint(repo, path, checkpoint)
-            _record_checkpoint(
-                repo,
-                manifest,
-                "verification_checkpoints",
-                "candidate_id",
-                candidate_id_value,
-                reference,
-            )
-        output = checkpoint.get("structured_output")
-        if not isinstance(output, dict) or not isinstance(output.get("result"), dict):
-            raise ValueError("verification checkpoint result is malformed")
-        verdicts[candidate_id_value] = output["result"]
-    return verdicts
-
-
-def _verification_candidate_payload(candidate: _JsonObject) -> _JsonObject:
+def _remediation_candidate_payload(candidate: _JsonObject) -> _JsonObject:
     """verification agent に渡す機械集約済み candidate field だけを返す。"""
     names = (
         "schema_version",
@@ -1945,193 +1480,6 @@ def _verification_candidate_payload(candidate: _JsonObject) -> _JsonObject:
     return {name: candidate[name] for name in names}
 
 
-def _verification_checkpoint(
-    repo: Path,
-    manifest: _JsonObject,
-    candidate_id_value: str,
-    input_sha256: str,
-    schema_path: Path,
-    references_by_id: dict[str, _JsonObject],
-    allowed_ids: set[str],
-) -> _JsonObject | None:
-    """同じ cut/input の正式な verification checkpoint だけを再利用する。"""
-    reference = _find_checkpoint_reference(
-        manifest, "verification_checkpoints", "candidate_id", candidate_id_value
-    )
-    if reference is None:
-        return None
-    path = repo / str(reference["path"])
-    if sha256_bytes(path.read_bytes()) != reference.get("sha256"):
-        raise CmocError(
-            "feedback verification checkpoint hash が一致しません。",
-            ["checkpoint と report cut manifest を人間が確認してください。"],
-            str(path),
-        )
-    checkpoint = read_json_object(path)
-    expected = {
-        "schema_version": 1,
-        "kind": "verification",
-        "report_cut_id": manifest["report_cut_id"],
-        "candidate_id": candidate_id_value,
-        "input_sha256": input_sha256,
-        "builder_sha256": manifest["inputs"]["versions"]["verification_builder"],
-        "schema_sha256": sha256_bytes(schema_path.read_bytes()),
-    }
-    if any(checkpoint.get(key) != value for key, value in expected.items()):
-        raise CmocError(
-            "feedback verification checkpoint が固定入力と一致しません。",
-            ["checkpoint を再利用せず、state を人間が確認してください。"],
-            str(path),
-        )
-    output = checkpoint.get("structured_output")
-    if (
-        not isinstance(output, dict)
-        or sha256_bytes(canonical_json_bytes(output)) != checkpoint.get("output_sha256")
-        or not _structured_output_matches_schema(output, schema_path)
-        or _verification_output_issues(
-            output,
-            candidate_id_value,
-            allowed_ids,
-            references_by_id,
-        )
-    ):
-        raise CmocError(
-            "feedback verification checkpoint output が正式な契約を満たしません。",
-            ["checkpoint を人間が確認してください。"],
-            str(path),
-        )
-    return checkpoint
-
-
-def _verification_output_issues(
-    output: object,
-    candidate_id_value: str,
-    allowed_ids: set[str],
-    references_by_id: dict[str, _JsonObject],
-) -> tuple[StructuredOutputValidationIssue, ...]:
-    """verification schema 外の deterministic postcondition 違反を返す。"""
-    if not isinstance(output, dict) or not isinstance(output.get("result"), dict):
-        return ()
-    result = output["result"]
-    assert isinstance(result, dict)
-    issues: list[StructuredOutputValidationIssue] = []
-    if result.get("candidate_id") != candidate_id_value:
-        issues.append(
-            StructuredOutputValidationIssue(
-                "candidate ID",
-                "$.result.candidate_id",
-                repr(candidate_id_value),
-                repr(result.get("candidate_id")),
-            )
-        )
-    evidence = result.get("current_evidence")
-    evidence_items = evidence if isinstance(evidence, list) else []
-    used_ids = [
-        item.get("reference_id") for item in evidence_items if isinstance(item, dict)
-    ]
-    invalid_ids = [value for value in used_ids if value not in allowed_ids]
-    if invalid_ids:
-        issues.append(
-            StructuredOutputValidationIssue(
-                "allowed report cut references",
-                "$.result.current_evidence",
-                f"reference IDs from {sorted(allowed_ids)!r}",
-                repr(invalid_ids),
-            )
-        )
-    verdict = result.get("verdict")
-    if verdict in {"unresolved", "resolved", "not_actionable"}:
-        current_references = [
-            references_by_id[str(reference_id)]
-            for reference_id in used_ids
-            if isinstance(reference_id, str) and reference_id in references_by_id
-        ]
-        current_kinds = {reference.get("kind") for reference in current_references}
-        if not current_kinds.intersection(
-            {"repository_content", "current_fingerprint", "probe_result"}
-        ):
-            issues.append(
-                StructuredOutputValidationIssue(
-                    "concrete current evidence",
-                    "$.result.current_evidence",
-                    "at least one repository_content, current_fingerprint, or probe_result reference",
-                    repr(sorted(current_kinds, key=str)),
-                )
-            )
-        if verdict == "unresolved" and not any(
-            reference.get("kind") in {"repository_content", "probe_result"}
-            or (
-                reference.get("kind") == "current_fingerprint"
-                and reference.get("state") != "hashed"
-            )
-            for reference in current_references
-        ):
-            issues.append(
-                StructuredOutputValidationIssue(
-                    "semantic current evidence",
-                    "$.result.current_evidence",
-                    "repository content, probe result, or a non-hash fingerprint state",
-                    repr(sorted(current_kinds, key=str)),
-                )
-            )
-    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json が
-    # 所有する concrete text と文字数上限の意味を、末尾改行や空白だけの値でも
-    # 一貫して検証する。
-    text_values: list[tuple[str, object, int]] = [
-        ("reason", result.get("reason"), 1200),
-    ]
-    if verdict == "unresolved":
-        text_values.append(("human_action", result.get("human_action"), 1200))
-    for name, value, maximum in text_values:
-        if not isinstance(value, str):
-            continue
-        if not value.strip():
-            issues.append(
-                StructuredOutputValidationIssue(
-                    f"non-empty {name}",
-                    f"$.result.{name}",
-                    "a concrete non-whitespace string",
-                    repr(value),
-                )
-            )
-        if len(value) > maximum:
-            issues.append(
-                StructuredOutputValidationIssue(
-                    f"{name} length",
-                    f"$.result.{name}",
-                    f"at most {maximum} characters",
-                    repr(len(value)),
-                )
-            )
-    for index, item in enumerate(evidence_items):
-        if not isinstance(item, dict):
-            continue
-        for name, maximum in (("location", 500), ("finding", 1200)):
-            value = item.get(name)
-            if not isinstance(value, str):
-                continue
-            path = f"$.result.current_evidence[{index}].{name}"
-            if not value.strip():
-                issues.append(
-                    StructuredOutputValidationIssue(
-                        f"non-empty evidence {name}",
-                        path,
-                        "a concrete non-whitespace string",
-                        repr(value),
-                    )
-                )
-            if len(value) > maximum:
-                issues.append(
-                    StructuredOutputValidationIssue(
-                        f"evidence {name} length",
-                        path,
-                        f"at most {maximum} characters",
-                        repr(len(value)),
-                    )
-                )
-    return tuple(issues)
-
-
 def _publish_report(
     repo: Path,
     worktree: Path,
@@ -2146,14 +1494,15 @@ def _publish_report(
     unresolved_ids = sorted(
         candidate_id_value
         for candidate_id_value, verdict in verdicts.items()
-        if verdict.get("verdict") == "unresolved"
+        if verdict.get("status") == "human_required"
     )
     result = "attention" if unresolved_ids else "ok"
     publication = manifest.get("publication")
     if publication is None:
-        generated_at = rfc3339_now()
-        generation_id_value = new_generation_id()
-        report_path = _new_report_path(repo)
+        targets = manifest["run"]["targets"]
+        generated_at = targets["generated_at"]
+        generation_id_value = targets["generation_id"]
+        report_path = repo / targets["report"]
     elif isinstance(publication, dict):
         generated_at = str(publication["generated_at"])
         generation_id_value = str(publication["generation_id"])
@@ -2189,6 +1538,7 @@ def _publish_report(
         generation_id=generation_id_value,
         report_cut_id=str(manifest["report_cut_id"]),
         created_at=generated_at,
+        session_commit=_joined_session_commit(repo, manifest),
         issues=active_issues,
         machine_aggregates=machine_aggregates,
     )
@@ -2272,11 +1622,9 @@ def _publish_report(
         result,
         len(active_issues),
     )
-    cleanup_manifest = _finish_published_cleanup(repo, manifest_path)
     return _published_terminal_result(
         repo / str(report_reference["path"]),
         result,
-        cleanup_manifest,
     )
 
 
@@ -2292,18 +1640,19 @@ def _publish_incomplete_report(
     # {{work-root}}/oracle/doc/app_spec/feedback_state.md
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
     unresolved_count = sum(
-        verdict.get("verdict") == "unresolved" for verdict in verdicts.values()
+        verdict.get("status") == "human_required" for verdict in verdicts.values()
     )
     inconclusive_count = sum(
-        verdict.get("verdict") == "inconclusive" for verdict in verdicts.values()
+        verdict.get("status") == "inconclusive" for verdict in verdicts.values()
     )
     if inconclusive_count == 0:
         raise ValueError("incomplete report requires an inconclusive verdict")
 
     diagnostic = manifest.get("diagnostic")
     if diagnostic is None:
-        generated_at = rfc3339_now()
-        report_path = _new_report_path(repo, incomplete=True)
+        targets = manifest["run"]["targets"]
+        generated_at = targets["generated_at"]
+        report_path = repo / targets["incomplete_report"]
     elif isinstance(diagnostic, dict):
         generated_at = str(diagnostic["generated_at"])
         report_reference = diagnostic.get("report")
@@ -2391,7 +1740,7 @@ def _next_machine_aggregates(
             candidate.get("origin") != "machine_rule"
             or not isinstance(machine_state, dict)
             or not isinstance(verdict, dict)
-            or verdict.get("verdict") == "unresolved"
+            or verdict.get("status") == "human_required"
             or _machine_threshold_met(machine_state)
         ):
             continue
@@ -2445,11 +1794,9 @@ def _resume_publication(
         str(publication["result"]),
         None,
     )
-    cleanup_manifest = _finish_published_cleanup(repo, manifest_path)
     return _published_terminal_result(
         repo / str(publication["report"]["path"]),
         str(publication["result"]),
-        cleanup_manifest,
     )
 
 
@@ -2461,14 +1808,14 @@ def _active_issue_record(
     verified_at: str,
 ) -> _JsonObject:
     """unresolved candidate と最新 verification を compact active record にする。"""
-    if verdict.get("verdict") != "unresolved":
+    if verdict.get("status") != "human_required":
         raise ValueError("only unresolved candidates can become active issues")
     evidence = verdict.get("current_evidence")
     if not isinstance(evidence, list):
         raise ValueError("unresolved verdict current_evidence must be an array")
     materialized = [
         _materialize_current_evidence(item, references_by_id)
-        for item in evidence
+        for item in evidence[:5]
         if isinstance(item, dict)
     ]
     evidence_targets = [
@@ -2528,29 +1875,13 @@ def _materialize_current_evidence(
     evidence: _JsonObject, references_by_id: dict[str, _JsonObject]
 ) -> _JsonObject:
     """cut-scoped ID を削除予定 artifact に依存しない compact evidence へ解決する。"""
-    reference_id = evidence.get("reference_id")
-    if not isinstance(reference_id, str) or reference_id not in references_by_id:
-        raise ValueError("verification evidence uses an unknown reference ID")
-    reference = references_by_id[reference_id]
-    materialized: _JsonObject = {
-        "kind": reference.get("kind"),
-        "location": mask_feedback_text(str(evidence.get("location", ""))),
-        "finding": mask_feedback_text(str(evidence.get("finding", ""))),
+    del references_by_id
+    return {
+        "kind": "repository_content",
+        "path": mask_feedback_text(str(evidence["path"])),
+        "location": mask_feedback_text(str(evidence["location"])),
+        "finding": mask_feedback_text(str(evidence["finding"])),
     }
-    for name in (
-        "path",
-        "state",
-        "sha256",
-        "probe_id",
-        "observation_id",
-        "summary",
-    ):
-        value = reference.get(name)
-        if value is not None:
-            materialized[name] = (
-                mask_feedback_text(value) if isinstance(value, str) else value
-            )
-    return materialized
 
 
 def _report_cut_references_by_id(manifest: _JsonObject) -> dict[str, _JsonObject]:
@@ -2582,11 +1913,12 @@ def _render_feedback_report(
         ("generated_at", generated_at),
         ("repo_root", str(repo)),
         ("session_branch", current_branch(worktree)),
+        *_run_report_fields(manifest),
         ("report_cut_id", manifest["report_cut_id"]),
         ("report_cut_at", manifest["cut_at"]),
         ("active_generation_id", generation_id_value),
-        ("verification_candidate_count", _verification_candidate_count(manifest)),
-        ("unresolved_issue_count", len(issues)),
+        ("remediation_issue_count", _remediation_candidate_count(manifest)),
+        ("human_required_issue_count", len(issues)),
         ("result", result),
     )
     lines = [
@@ -2596,8 +1928,8 @@ def _render_feedback_report(
     ]
     lines.extend(["# cmoc feedback report", "", "## Issues", ""])
     if not issues:
-        lines.extend(["現在の未解決 issue はありません。", ""])
-        return "\n".join(lines)
+        lines.extend(["人間対応が必要な issue はありません。", ""])
+        return "\n".join([*lines, manifest["run"]["execution_record"] or ""])
     for issue_id_value, issue in sorted(issues.items()):
         verification = issue["verification"]
         assert isinstance(verification, dict)
@@ -2643,7 +1975,7 @@ def _render_feedback_report(
         else:
             lines.append("  - none")
         lines.append("")
-    return "\n".join(lines)
+    return "\n".join([*lines, manifest["run"]["execution_record"] or ""])
 
 
 def _render_incomplete_report(
@@ -2659,22 +1991,23 @@ def _render_incomplete_report(
     unresolved_ids = sorted(
         candidate_id_value
         for candidate_id_value, verdict in verdicts.items()
-        if verdict.get("verdict") == "unresolved"
+        if verdict.get("status") == "human_required"
     )
     inconclusive_ids = sorted(
         candidate_id_value
         for candidate_id_value, verdict in verdicts.items()
-        if verdict.get("verdict") == "inconclusive"
+        if verdict.get("status") == "inconclusive"
     )
     fields = (
         ("command", "cmoc feedback report"),
         ("generated_at", generated_at),
         ("repo_root", str(repo)),
         ("session_branch", current_branch(worktree)),
+        *_run_report_fields(manifest),
         ("report_cut_id", manifest["report_cut_id"]),
         ("report_cut_at", manifest["cut_at"]),
-        ("verification_candidate_count", len(verdicts)),
-        ("unresolved_candidate_count", len(unresolved_ids)),
+        ("remediation_issue_count", len(verdicts)),
+        ("human_required_issue_count", len(unresolved_ids)),
         ("inconclusive_candidate_count", len(inconclusive_ids)),
         ("result", "incomplete"),
     )
@@ -2688,7 +2021,7 @@ def _render_incomplete_report(
         "新しい active generation と current pointer は publication されていません。",
         "直前の正常 publication が存在する場合は、その publication が current のままです。",
         "",
-        "## 確定済みだが今回未 publication の unresolved candidate",
+        "## 確定済みだが今回未 publication の human_required issue",
         "",
         "以下の verdict は診断情報であり、今回の active generation へ publication されていません。",
         "直前の正常 active generation に同じ issue が含まれる可能性とは区別してください。",
@@ -2720,7 +2053,7 @@ def _render_incomplete_report(
         )
         lines.append("")
 
-    lines.extend(["## inconclusive candidate", ""])
+    lines.extend(["## inconclusive issue", ""])
     for candidate_id_value in inconclusive_ids:
         candidate = candidates[candidate_id_value]
         verdict = verdicts[candidate_id_value]
@@ -2739,7 +2072,7 @@ def _render_incomplete_report(
             references_by_id,
         )
         lines.append("")
-    return "\n".join(lines)
+    return "\n".join([*lines, manifest["run"]["execution_record"] or ""])
 
 
 def _append_diagnostic_current_evidence(
@@ -2771,16 +2104,16 @@ def _append_diagnostic_current_evidence(
         )
 
 
-def _verification_candidate_count(manifest: _JsonObject) -> int:
-    """正式 verification checkpoint 数を front matter の candidate 件数にする。"""
+def _remediation_candidate_count(manifest: _JsonObject) -> int:
+    """正式 remediation checkpoint 数を front matter の candidate 件数にする。"""
     processing = manifest.get("processing")
     checkpoints = (
-        processing.get("verification_checkpoints")
+        processing.get("remediation_checkpoints")
         if isinstance(processing, dict)
         else None
     )
     if not isinstance(checkpoints, list):
-        raise ValueError("verification checkpoints must be an array")
+        raise ValueError("remediation checkpoints must be an array")
     return len(checkpoints)
 
 
@@ -2858,7 +2191,7 @@ def _checkpoint_cleanup_references(manifest: _JsonObject) -> list[_JsonObject]:
     if not isinstance(processing, dict):
         raise ValueError("report cut processing must be an object")
     references: list[_JsonObject] = []
-    for name in ("normalization_checkpoints", "verification_checkpoints"):
+    for name in ("normalization_checkpoints", "remediation_checkpoints"):
         values = processing.get(name)
         if not isinstance(values, list):
             raise ValueError(f"{name} must be an array")
@@ -2867,6 +2200,9 @@ def _checkpoint_cleanup_references(manifest: _JsonObject) -> list[_JsonObject]:
             for item in values
             if isinstance(item, dict)
         )
+    from commons.runtime_feedback_run_state import run_artifact_references
+
+    references.extend(run_artifact_references(manifest))
     return sorted(references, key=lambda item: str(item["path"]))
 
 
@@ -2927,34 +2263,11 @@ def _record_incomplete_event(
             report_cut_id=manifest.get("report_cut_id"),
             report_path=_full_log_path(repo, report_reference.get("path")),
             result="incomplete",
-            verification_candidate_count=_verification_candidate_count(manifest),
+            verification_candidate_count=_remediation_candidate_count(manifest),
             unresolved_candidate_count=unresolved_count,
             inconclusive_candidate_count=inconclusive_count,
             normal_publication=False,
         )
-
-
-def _finish_published_cleanup(repo: Path, manifest_path: Path) -> Path | None:
-    """pointer 切替後の一時的な filesystem cleanup failure だけを warning にする。"""
-    try:
-        cleanup_published_report(repo)
-    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-    # filesystem の一時的な cleanup failure だけを warning にし、manifest/hash
-    # 不整合などの state corruption は required cleanup recovery failure として
-    # 共通 error 経路へ伝播させる。
-    except OSError as exc:
-        logger = current_subcommand_logger()
-        if logger is not None:
-            try:
-                logger.event(
-                    "feedback_report_cleanup_failed",
-                    report_cut_manifest_path=str(manifest_path),
-                    error=repr(exc),
-                )
-            except Exception:
-                pass
-        return manifest_path
-    return None
 
 
 def _set_processing_state(
@@ -2967,17 +2280,6 @@ def _set_processing_state(
     processing["status"] = status
     processing["failure"] = failure
     write_report_cut_manifest(repo, manifest)
-
-
-def _cut_is_current(repo: Path, manifest: _JsonObject) -> bool:
-    """report cut が既に current pointer の publication point を越えたか返す。"""
-    try:
-        state = load_active_state(repo)
-    except BaseException:
-        return False
-    return state.current is not None and state.current.get(
-        "report_cut_id"
-    ) == manifest.get("report_cut_id")
 
 
 def _record_feedback_interruption(
@@ -2996,9 +2298,9 @@ def _record_feedback_interruption(
     details: tuple[tuple[str, object], ...] = ()
     next_actions: tuple[str, ...] = ()
     if manifest_path is not None:
-        details = (("再開対象 report cut", manifest_path),)
+        details = (("保持した feedback run", manifest_path),)
         next_actions = (
-            "`cmoc feedback report` を再実行して同じ report cut を再開してください。",
+            "`cmoc run join` で確定済み修正を取り込むか、`cmoc run abandon` で破棄してください。",
         )
     return TerminalResult(details=details, next_actions=next_actions)
 
@@ -3009,7 +2311,7 @@ def _update_feedback_progress_fields(manifest: _JsonObject | None) -> None:
     if manifest is None:
         update_primary_report_fields(
             normalization_checkpoint_count=None,
-            verification_checkpoint_count=None,
+            remediation_checkpoint_count=None,
             partial_result_count=None,
             processing_status=None,
         )
@@ -3021,7 +2323,7 @@ def _update_feedback_progress_fields(manifest: _JsonObject | None) -> None:
         else None
     )
     verification = (
-        processing.get("verification_checkpoints")
+        processing.get("remediation_checkpoints")
         if isinstance(processing, dict)
         else None
     )
@@ -3036,7 +2338,7 @@ def _update_feedback_progress_fields(manifest: _JsonObject | None) -> None:
     )
     update_primary_report_fields(
         normalization_checkpoint_count=normalization_count,
-        verification_checkpoint_count=verification_count,
+        remediation_checkpoint_count=verification_count,
         partial_result_count=partial_result_count,
         processing_status=(
             processing.get("status") if isinstance(processing, dict) else None
@@ -3044,26 +2346,36 @@ def _update_feedback_progress_fields(manifest: _JsonObject | None) -> None:
     )
 
 
-def _published_terminal_result(
-    report_path: Path,
-    result: str,
-    cleanup_manifest: Path | None,
-) -> TerminalResult:
-    """正常 publication の primary report と cleanup 状態を返す。"""
-    warnings: tuple[str, ...] = ()
-    next_actions: tuple[str, ...] = ()
-    if cleanup_manifest is not None:
-        warnings = (
-            "feedback report は publication 済みですが "
-            f"cleanup は未完了です: {cleanup_manifest.resolve(strict=False)}",
-        )
-        next_actions = (
-            "`cmoc feedback report` を再実行して cleanup を再開してください。",
-        )
+def _published_terminal_result(report_path: Path, result: str) -> TerminalResult:
+    """確定済み publication を run finalization へ渡す。"""
     return TerminalResult(
         primary_report=report_path,
         primary_report_role="feedback report",
         result=result,
-        next_actions=next_actions,
-        warnings=warnings,
+    )
+
+
+def _joined_session_commit(repo: Path, manifest: _JsonObject) -> str:
+    """公開 generation の根拠となる検査済み session commit を読む。"""
+    from commons.runtime_feedback_run_state import read_run_artifact
+
+    return str(read_run_artifact(repo, manifest["run"]["completion"])["session_commit"])
+
+
+def _run_report_fields(manifest: _JsonObject) -> tuple[tuple[str, object], ...]:
+    """self-joining run の identity と finalization の確定情報を掲載する。"""
+    run = manifest["run"]
+    identity = run["identity"]
+    from commons.runtime_feedback_run_state import read_run_artifact
+
+    merged = read_run_artifact(Path(identity["repo"]), run["merged"])
+    return (
+        ("feedback_run_id", identity["run_branch"].rsplit("/", 1)[-1]),
+        ("run_kind", identity["kind"]),
+        ("run_branch", identity["run_branch"]),
+        ("run_fork_commit", identity["run_fork_commit"]),
+        ("run_worktree", identity["run_worktree"]),
+        ("run_join_commit", merged["run_join_commit"]),
+        ("final_high_watermark", run["high_watermark"]),
+        ("wave_count", len(run["waves"])),
     )

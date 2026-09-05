@@ -88,7 +88,7 @@ def test_quota_probe_imports_from_packaged_layout(
             "'base', None, Path.cwd()); "
             "probe = build_probe(base); "
             "assert probe.prompt; "
-            "assert '# human feedback reporting' in probe.prompt; "
+            "assert '# feedback observation reporting' in probe.prompt; "
             "assert '# routing policy' not in probe.prompt"
         ),
         tmp_path,

@@ -3,5 +3,5 @@
 対応する oracle file:
 
 - `{{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py`
-- `{{work-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py`
+- `{{work-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.py`
 """

@@ -604,7 +604,7 @@ def _is_agent_expected_path(
     branch: str,
 ) -> bool:
     """path が workload agent に許可された realization file か判定する。"""
-    if kind in {"realization_apply", "realization_refactor"}:
+    if kind in {"realization_apply", "realization_refactor", "feedback_report"}:
         return is_realization_file_path(root, root / path, branch=branch)
     return False
 
@@ -619,7 +619,9 @@ def _is_run_expected_path(
     """path が run branch の管理対象差分か判定する。"""
     if is_generated_index_path(root, path, base=fork_commit):
         return True
-    if kind == "realization_refactor" and _is_refactor_state_path(root, path):
+    if kind in {"realization_refactor", "feedback_report"} and _is_refactor_state_path(
+        root, path
+    ):
         return True
     if _is_agent_expected_path(root, kind, path, branch):
         return True

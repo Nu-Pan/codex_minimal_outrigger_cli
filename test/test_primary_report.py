@@ -203,6 +203,7 @@ def test_early_error_saves_command_specific_primary_report(
     captured = capsys.readouterr()
     assert exc_info.value.exit_code == 1
     assert captured.out == ""
+    assert "実行 ID: sci_" in captured.err.splitlines()[0]
     report_path = terminal_primary_report(captured.err)
     assert report_path.parent == (
         root / ".cmoc" / "gu" / "ar" / "report" / report_directory
@@ -269,12 +270,61 @@ def test_user_interruption_saves_feedback_invocation_summary(
     assert "# 中断完了: cmoc feedback report" in captured.out
     assert 'terminal_classification: "user_interruption"' in rendered
     assert "feedback publication または active state ではありません" in rendered
+
     assert "中断理由: `report cut を固定する前に停止しました。`" in rendered
     assert "## checkpoint と部分結果" in rendered
     assert "report cut: `not_fixed`" in rendered
     assert "確定済み部分結果: `not_fixed`" in rendered
     assert not list(report_path.parent.parent.glob("*.md"))
     assert not list(report_path.parent.parent.joinpath("incomplete").glob("*.md"))
+
+
+@pytest.mark.parametrize("supplied_report", [False, True])
+def test_primary_report_keeps_every_codex_output_and_accepted_observation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    supplied_report: bool,
+) -> None:
+    """初回 exec と resume の出力本文を、個別 report と fallback の両方へ残す。"""
+    from commons.runtime_logging import current_subcommand_logger
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+    outputs = ("first final output\n```embedded fence```\n", "resume final output\n")
+    observation = {
+        "summary": "accepted issue",
+        "workload_limitation": "different workload",
+    }
+
+    def body() -> TerminalResult:
+        logger = current_subcommand_logger()
+        for number, content in enumerate(outputs):
+            output = logger.path.with_name(f"output-{number}.txt")
+            output.write_text(content)
+            logger.event("codex_call", output_path=str(output))
+        logger.event(
+            "feedback_observation_accepted",
+            observation_id="fbo_test",
+            payload=observation,
+        )
+        if supplied_report:
+            saved = logger.path.with_suffix(".md")
+            saved.write_text(
+                "# Workload report\n\n## 実行記録\n本文にも同じ見出しがある。\n"
+            )
+            return TerminalResult(
+                primary_report=saved, primary_report_role="test report"
+            )
+        return TerminalResult()
+
+    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
+    captured = capsys.readouterr()
+    report = terminal_primary_report(captured.out).read_text()
+    assert all(content in report for content in outputs)
+    assert "accepted issue" in report
+    assert "different workload" in report
 
 
 def test_refactor_fallback_records_user_interruption_reason(

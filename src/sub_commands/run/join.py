@@ -10,6 +10,7 @@ cleanup は同じ active run の状態と failure rollback を共有する一つ
 """
 
 import os
+from collections.abc import Callable, Collection
 from dataclasses import replace
 from pathlib import Path
 
@@ -84,6 +85,9 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
     initial_context, _ = resolve_active_run({"joinable", "error"})
     with run_lifecycle_lock(initial_context.repo, initial_context.session_id):
         context, state = resolve_active_run({"joinable", "error"})
+        from sub_commands.feedback.recovery import require_manual_feedback_run
+
+        require_manual_feedback_run(context)
         update_primary_report_fields(
             run_kind=context.kind,
             session_branch=context.session_branch,
@@ -113,63 +117,13 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
             warnings.extend(
                 stop_tracked_codex_children(context.repo, context.session_id) or []
             )
-        require_clean_worktree(context.session_worktree)
-        require_clean_worktree(context.run_worktree)
-        run_changes = tree_changes(
-            context.run_worktree,
-            context.run_fork_commit,
-        )
-        session_changes = tree_changes(
-            context.session_worktree,
-            context.run_fork_commit,
-        )
-        session_unexpected = unexpected_session_paths(
-            context.session_worktree,
-            session_changes,
-            base=context.run_fork_commit,
-            ignored_paths=session_doctor_state_paths,
-        )
-        if session_unexpected:
-            _raise_unexpected(
-                context,
-                "session branch に想定外差分があります。",
-                session_unexpected,
-                warnings,
-            )
-        run_unexpected = unexpected_run_paths(
+        validate_run_join(
             context,
-            run_changes,
-            ignored_paths=run_doctor_state_paths,
+            warnings,
+            force_resolve=force_resolve,
+            session_ignored_paths=session_doctor_state_paths,
+            run_ignored_paths=run_doctor_state_paths,
         )
-        if run_unexpected and not force_resolve:
-            _raise_unexpected(
-                context,
-                "run branch に想定外差分があります。",
-                run_unexpected,
-                warnings,
-            )
-        if run_unexpected:
-            _revert_unexpected_run_paths(context, run_changes, run_unexpected)
-            warnings.append(
-                "--force-resolve reverted unexpected run paths: "
-                + ", ".join(run_unexpected)
-            )
-            run_changes = tree_changes(
-                context.run_worktree,
-                context.run_fork_commit,
-            )
-            remaining = unexpected_run_paths(
-                context,
-                run_changes,
-                ignored_paths=run_doctor_state_paths,
-            )
-            if remaining:
-                _raise_unexpected(
-                    context,
-                    "run branch の想定外差分を解消できませんでした。",
-                    remaining,
-                    warnings,
-                )
         session_head_before_join = head_commit(context.session_worktree)
         try:
             (
@@ -247,8 +201,11 @@ def _doctor_preprocess_for_join() -> set[str]:
         pass
     else:
         # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-        # merge 前の entry 同期遅延は refactor run だけに限定する。
-        sync_refactor_entries = state.run.kind != "realization_refactor"
+        # merge 前の entry 同期は refactor state を更新する run で遅延する。
+        sync_refactor_entries = state.run.kind not in {
+            "realization_refactor",
+            "feedback_report",
+        }
     run_doctor_preprocess(root, sync_refactor_entries=sync_refactor_entries)
     after = head_commit(root)
     if before == after:
@@ -264,13 +221,84 @@ def _doctor_preprocess_for_join() -> set[str]:
     }
 
 
-def _merge_and_finalize(
+def validate_run_join(
+    context: EditingRunContext,
+    warnings: list[str],
+    *,
+    force_resolve: bool = False,
+    session_ignored_paths: Collection[str] = (),
+    run_ignored_paths: Collection[str] = (),
+) -> None:
+    """明示 join と self-joining workload が共有する clean・差分検査を行う。"""
+    require_clean_worktree(context.session_worktree)
+    require_clean_worktree(context.run_worktree)
+    run_changes = tree_changes(
+        context.run_worktree,
+        context.run_fork_commit,
+    )
+    session_changes = tree_changes(
+        context.session_worktree,
+        context.run_fork_commit,
+    )
+    session_unexpected = unexpected_session_paths(
+        context.session_worktree,
+        session_changes,
+        base=context.run_fork_commit,
+        ignored_paths=session_ignored_paths,
+    )
+    if session_unexpected:
+        _raise_unexpected(
+            context,
+            "session branch に想定外差分があります。",
+            session_unexpected,
+            warnings,
+        )
+    run_unexpected = unexpected_run_paths(
+        context,
+        run_changes,
+        ignored_paths=run_ignored_paths,
+    )
+    if run_unexpected and not force_resolve:
+        _raise_unexpected(
+            context,
+            "run branch に想定外差分があります。",
+            run_unexpected,
+            warnings,
+        )
+    if run_unexpected:
+        _revert_unexpected_run_paths(context, run_changes, run_unexpected)
+        warnings.append(
+            "--force-resolve reverted unexpected run paths: "
+            + ", ".join(run_unexpected)
+        )
+        run_changes = tree_changes(
+            context.run_worktree,
+            context.run_fork_commit,
+        )
+        remaining = unexpected_run_paths(
+            context,
+            run_changes,
+            ignored_paths=run_ignored_paths,
+        )
+        if remaining:
+            _raise_unexpected(
+                context,
+                "run branch の想定外差分を解消できませんでした。",
+                remaining,
+                warnings,
+            )
+
+
+def merge_run(
     context: EditingRunContext,
     state: SessionState,
     warnings: list[str],
     session_head_before_join: str,
-) -> tuple[str, str, str | None, str, Path]:
-    """merge、hook、state 同期、結果保存、cleanup を一続きで確定する。"""
+    *,
+    on_merged: Callable[[str | None], None] | None = None,
+) -> tuple[str | None, str, str | None, str | None]:
+    """共通 merge と post-join を行い、state 初期化と資源 cleanup は呼出元に残す。"""
+    run_join_commit: str | None
     start_subcommand_step(3, "run branch を session へ merge", "merge run")
     merge = run_git(
         ["merge", "--no-ff", context.run_branch],
@@ -285,7 +313,12 @@ def _merge_and_finalize(
             session_head_before_join,
         )
     else:
-        run_join_commit = head_commit(context.session_worktree)
+        merged_head = head_commit(context.session_worktree)
+        run_join_commit = (
+            merged_head if merged_head != session_head_before_join else None
+        )
+    if on_merged is not None:
+        on_merged(run_join_commit)
     start_subcommand_step(4, "post-join hook と state 同期", "run post-join")
     hook_result = "none"
     # {{work-root}}/oracle/doc/app_spec/session_state.md
@@ -303,6 +336,33 @@ def _merge_and_finalize(
         context.session_worktree,
         "cmoc refactor state sync after run join",
     )
+    return (
+        run_join_commit,
+        hook_result,
+        state_sync_commit,
+        last_joined_apply_fork_commit,
+    )
+
+
+def _merge_and_finalize(
+    context: EditingRunContext,
+    state: SessionState,
+    warnings: list[str],
+    session_head_before_join: str,
+) -> tuple[str | None, str, str | None, str, Path]:
+    """merge、hook、state 同期、結果保存、cleanup を一続きで確定する。"""
+    run_join_commit, hook_result, state_sync_commit, last_joined_apply_fork_commit = (
+        merge_run(
+            context,
+            state,
+            warnings,
+            session_head_before_join,
+        )
+    )
+    if context.kind == "feedback_report":
+        from sub_commands.feedback.recovery import finish_manual_feedback_run
+
+        finish_manual_feedback_run(context, "joined")
     state_after_join = replace(
         state,
         session=replace(

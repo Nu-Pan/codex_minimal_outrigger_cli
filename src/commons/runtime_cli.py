@@ -101,6 +101,7 @@ def run_cli_subcommand(
         runtime_root = current_root if use_work_root_runtime else notification_root
         logger = SubcommandLogger(notification_root, name)
         logger_token = set_current_subcommand_logger(logger)
+        _emit_progress(f"実行 ID: {logger.invocation_id}")
         step_total_token = _CURRENT_STEP_TOTAL.set(total_steps)
         logger.event("command_invoked", argv=list(argv))
         feedback_invocation, feedback_token = start_feedback_invocation(

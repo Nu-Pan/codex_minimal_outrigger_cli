@@ -235,7 +235,6 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     assert "両方のマージ元ブランチの oracle file" in rendered_doc
     assert "意味を両立できる解決方法が無い場合" in rendered_doc
     assert "realization file の都合または挙動を根拠に" in rendered_doc
-    assert "conflict marker の解消に対して不必要な変更" in rendered_doc
 
 
 def test_build_routing_policy_renders_core_reading_requirements() -> None:
@@ -325,13 +324,10 @@ def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
     )
 
     rendered = render_sd_node_as_markdown(*prompt)
-    assert rendered.count("# human feedback reporting") == 1
+    assert rendered.count("# feedback observation reporting") == 1
     assert rendered.count("cmoc_feedback.submit_observation") == 1
-    assert (
-        "このセッション内でエージェントに課された規定の範囲内では解決できない問題"
-        in rendered
-    )
-    assert "セッション内で解決した問題" in rendered
+    assert "現在の workload の規定範囲内では解消できず" in rendered
+    assert "現在の workload 内で解決した問題" in rendered
     assert "仕様どおりの制約" in rendered
     assert "具体的な根拠がない改善案" in rendered
     assert "成功・失敗を根拠にセッションを中断・続行を判断してはならない" in (rendered)

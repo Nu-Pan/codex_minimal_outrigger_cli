@@ -47,6 +47,7 @@ from commons.runtime_feedback import (
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
+from commons.runtime_feedback_store import store_agent_observation
 from config.cmoc_config import CmocConfig
 from main import app
 
@@ -654,6 +655,64 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         iter(set(feedback_report_dir.glob("*.md")) - feedback_reports)
     )
     assert 'result: "ok"' in feedback_report.read_text()
+    # feedback の修復 call も実 Codex で実行し、終端分類後の自動 join を検査する。
+    # observation は現在性を再確認する入力であり、モデルの結論そのものは固定しない。
+    store_agent_observation(
+        root,
+        {
+            "repo_root": str(root),
+            "work_root": str(root),
+            "head_commit": run_git(root, "rev-parse", "HEAD").stdout.strip(),
+            "cmoc_session_id": session_branch.removeprefix("cmoc/session/"),
+            "run_id": None,
+            "run_kind": None,
+            "subcommand": "production fixture",
+            "subcommand_invocation_id": "sci_production_fixture",
+            "agent_call_id": "agc_production_fixture",
+            "agent_call_kind": "production_fixture",
+            "codex_call_id": "cdc_production_fixture",
+            "codex_session_id": None,
+            "log_paths": [],
+        },
+        {
+            "schema_version": 2,
+            "category": "tooling",
+            "severity": "low",
+            "summary": "README.md の存在を再確認する必要がある。",
+            "impact": "README が欠落すると repository の案内を参照できない。",
+            "workload_limitation": "観測元の workload は存在確認を対象としていなかった。",
+            "cause": {
+                "certainty": "unknown",
+                "description": "現在の tree で確認する。",
+            },
+            "evidence": [
+                {
+                    "kind": "file",
+                    "path": "README.md",
+                    "text": "README.md の存在が確認対象。",
+                }
+            ],
+            "continuation": "continued",
+        },
+    )
+    before_remediation = _codex_call_logs(root)
+    run_production("feedback", "report")
+    remediation_calls = [
+        _assert_real_codex_call(path)
+        for path in _codex_call_logs(root) - before_remediation
+    ]
+    remediation_calls = [
+        payload
+        for payload in remediation_calls
+        if payload.get("agent_call_kind") == "build_feedback_remediate_issue_parameter"
+    ]
+    assert remediation_calls
+    assert len({payload["agent_call_id"] for payload in remediation_calls}) == 1
+    for payload in remediation_calls:
+        assert Path(str(payload["cwd"])) != root
+    _state_path, feedback_state = _load_session_state(root, session_branch)
+    assert feedback_state["run"]["state"] == "ready"
+    assert run_git(root, "status", "--short").stdout.strip() == ""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # 2 workload と共通 join/abandon を本番 Codex 経路で観測する。
     for command, kind in [

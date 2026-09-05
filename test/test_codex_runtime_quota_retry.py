@@ -408,8 +408,8 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> N
     assert probe.agent_call_kind == "build_quota_availability_probe_parameter"
     assert probe.file_access_mode == FileAccessMode.READONLY
     assert probe.prompt
-    assert "# human feedback reporting" in probe.prompt
-    assert probe.prompt.count("# human feedback reporting") == 1
+    assert "# feedback observation reporting" in probe.prompt
+    assert probe.prompt.count("# feedback observation reporting") == 1
     assert "# routing policy" not in probe.prompt
     objective = probe.prompt.split('<cmoc_block id="objective">', 1)[1].split(
         "</cmoc_block>", 1

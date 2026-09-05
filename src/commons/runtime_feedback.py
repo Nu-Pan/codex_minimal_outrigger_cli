@@ -29,6 +29,7 @@ from .runtime_feedback_store import (
     REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
     parse_rfc3339,
+    read_json_object,
     rfc3339_now,
     store_agent_observation,
     store_machine_observation,
@@ -168,13 +169,16 @@ class FeedbackInvocation:
         self._stopping = False
         self._base_context = self._resolve_base_context()
 
-    def _resolve_base_context(self) -> dict[str, Any]:
+    def _resolve_base_context(
+        self, agent_call_cwd: Path | None = None
+    ) -> dict[str, Any]:
         """現在 branch から session/run context を best effort で確定する。"""
+        worktree = (agent_call_cwd or self.worktree).resolve()
         session_id: str | None = None
         run_id: str | None = None
         run_kind: str | None = None
         try:
-            branch = current_branch(self.worktree)
+            branch = current_branch(worktree)
             if branch.startswith("cmoc/session/"):
                 session_id = branch.split("/", 2)[2]
             elif branch.startswith("cmoc/run/"):
@@ -191,12 +195,12 @@ class FeedbackInvocation:
         except Exception:
             pass
         try:
-            commit = head_commit(self.worktree)
+            commit = head_commit(worktree)
         except Exception:
             commit = ""
         return {
             "repo_root": str(self.repo),
-            "work_root": str(self.worktree),
+            "work_root": str(worktree),
             "head_commit": commit,
             "cmoc_session_id": session_id,
             "run_id": run_id,
@@ -333,23 +337,21 @@ class FeedbackInvocation:
         codex_call_id: str,
         codex_session_id: str | None = None,
         log_paths: list[Path],
+        agent_call_cwd: Path | None = None,
     ) -> _CallContext:
         """Codex call 専用 capability と保存 context を登録する。"""
         capability = secrets.token_urlsafe(32)
-        try:
-            current_head = head_commit(self.worktree)
-        except Exception:
-            current_head = self._base_context["head_commit"]
+        base_context = self._resolve_base_context(agent_call_cwd)
         resolved_log_paths = list(
             dict.fromkeys(
                 str(path.resolve()) for path in [self.logger.path, *log_paths]
             )
         )
         context = {
-            **self._base_context,
+            **base_context,
             # doctor preprocess が invocation 開始後に repair commit を作り得るため、
             # observation 発生時点に最も近い Codex call 開始時の HEAD を使う。
-            "head_commit": current_head,
+            "head_commit": base_context["head_commit"],
             "agent_call_id": agent_call_id,
             "agent_call_kind": agent_call_kind,
             "codex_call_id": codex_call_id,
@@ -413,7 +415,9 @@ class FeedbackInvocation:
         try:
             storage_context = dict(context.context)
             try:
-                storage_context["head_commit"] = head_commit(self.worktree)
+                storage_context["head_commit"] = head_commit(
+                    Path(storage_context["work_root"])
+                )
             except Exception:
                 if not _is_git_object_id(storage_context.get("head_commit")):
                     raise FeedbackRejected(
@@ -436,6 +440,7 @@ class FeedbackInvocation:
                 observation_id = result["observation_id"]
                 assert isinstance(observation_id, str)
                 self._accepted_agent.append((observation_id, path))
+            self._record_accepted_observation(path)
             return result
         finally:
             with self._condition:
@@ -452,8 +457,24 @@ class FeedbackInvocation:
                 for observation_id, path in self._accepted_agent
             ]
 
+    def _record_accepted_observation(self, path: Path) -> None:
+        """cleanup 後も primary report が問題内容を掲載できるよう記録する。"""
+        try:
+            observation = read_json_object(path)
+            self.logger.event(
+                "feedback_observation_accepted",
+                observation_id=observation["observation_id"],
+                payload=observation["payload"],
+            )
+        except Exception:
+            self.logger.record_warning(
+                "受理済み feedback observation の実行記録保存に失敗しました。"
+            )
+
     def detect_event(self, event: dict[str, Any], log_path: Path) -> None:
         """allowlist 済み stable event を machine observation へ変換する。"""
+        if self.command == "feedback report":
+            return
         event_type = event.get("event_type")
         version = event.get("event_schema_version")
         event_id = event.get("event_id")
@@ -562,13 +583,14 @@ class FeedbackInvocation:
                 "context_invalid",
                 "collector context has an invalid HEAD commit",
             )
-        store_machine_observation(
+        _identity, path = store_machine_observation(
             self.repo,
             context,
             event=event,
             log_path=log_path,
             **rule,
         )
+        self._record_accepted_observation(path)
 
 
 def start_feedback_invocation(
@@ -632,6 +654,7 @@ def begin_feedback_call(
     codex_call_id: str,
     codex_session_id: str | None = None,
     log_paths: list[Path],
+    agent_call_cwd: Path | None = None,
 ) -> FeedbackCall:
     """Codex call context を登録し、利用不能なら nonfatal degraded call を返す。"""
     invocation = current_feedback_invocation()
@@ -646,6 +669,7 @@ def begin_feedback_call(
             codex_call_id=codex_call_id,
             codex_session_id=codex_session_id,
             log_paths=log_paths,
+            agent_call_cwd=agent_call_cwd,
         )
     except Exception:
         emit_reporter_unavailable("collector", "collector_unavailable")

@@ -717,6 +717,7 @@ def run_codex_exec(
         )
         attempt_started_at = time.perf_counter()
         feedback_call = begin_feedback_call(
+            agent_call_cwd=agent_call_cwd,
             agent_call_id=active_agent_call_id,
             agent_call_kind=active_agent_call_kind,
             codex_call_id=active_codex_call_id,
@@ -960,6 +961,7 @@ def run_codex_exec(
                         )
                         probe_started_at = time.perf_counter()
                         probe_feedback_call = begin_feedback_call(
+                            agent_call_cwd=probe_agent_call_cwd,
                             agent_call_id=active_agent_call_id,
                             agent_call_kind=active_agent_call_kind,
                             codex_call_id=active_codex_call_id,

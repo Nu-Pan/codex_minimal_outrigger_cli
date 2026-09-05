@@ -138,8 +138,19 @@ def _reporter_validator() -> Draft202012Validator:
     return Draft202012Validator(reporter_input_schema())
 
 
-def reporter_input_validation_errors(payload: object) -> list[str]:
+def reporter_input_validation_errors(
+    payload: object, *, stored: bool = False
+) -> list[str]:
     """正本 reporter schema に対する違反を JSON pointer 付きで返す。"""
+    if (
+        stored
+        and isinstance(payload, dict)
+        and type(payload.get("schema_version")) is int
+        and payload["schema_version"] == 1
+    ):
+        if "workload_limitation" in payload or "human_action_reason" not in payload:
+            return ["/payload: version 1 requires human_action_reason only"]
+        payload = reporter_payload_view(payload)
     errors = sorted(
         _reporter_validator().iter_errors(payload),
         key=lambda item: tuple(str(part) for part in item.path),
@@ -148,6 +159,19 @@ def reporter_input_validation_errors(payload: object) -> list[str]:
         f"/{'/'.join(str(part) for part in error.path)}: {error.message}"
         for error in errors
     ]
+
+
+def reporter_payload_view(payload: dict[str, Any]) -> dict[str, Any]:
+    """保存済み v1 assertion を raw を変更せず normalization 用 v2 view にする。"""
+    if payload.get("schema_version") != 1:
+        return dict(payload)
+    return {
+        **{
+            key: value for key, value in payload.items() if key != "human_action_reason"
+        },
+        "schema_version": 2,
+        "workload_limitation": payload.get("human_action_reason"),
+    }
 
 
 def feedback_root(repo: Path) -> Path:
@@ -367,6 +391,8 @@ def _store_observation(
     envelope: dict[str, Any],
 ) -> Path:
     """observation ID の重複を全日付 directory で検査して保存する。"""
+    from .runtime_feedback_intake import record_observation_receipt
+
     path = observation_path(repo, observation_id, observed_at)
     try:
         content = canonical_json_bytes(envelope)
@@ -411,8 +437,10 @@ def _store_observation(
                         "context_invalid",
                         f"observation ID collision or corruption: {existing}",
                     )
+                record_observation_receipt(repo, existing)
                 return existing.resolve()
             write_immutable_json(path, envelope)
+            record_observation_receipt(repo, path)
             return path.resolve()
         finally:
             fcntl.flock(directory_fd, fcntl.LOCK_UN)
@@ -710,6 +738,10 @@ def store_machine_observation(
             "normalized_subject_id": normalized_subject_id,
             "summary": summary,
             "impact": impact,
+            "workload_limitation": {
+                "feedback.reporter_unavailable.v1": "reporter の利用不能は本命 workload では修復できないため、後続の確認が必要である。",
+                "codex.structured_output_validation_exhausted.v1": "現在の論理 call では正式な出力を受理できず、builder と schema の確認が必要である。",
+            }[rule_id],
             "human_action": human_action,
             "event_fields": event_fields,
         },
