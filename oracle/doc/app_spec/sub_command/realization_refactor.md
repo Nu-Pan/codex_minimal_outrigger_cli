@@ -164,8 +164,12 @@ realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/orac
     - entry 総数、調査要求あり件数、および各 `last_investigation_result` の件数。
     - run branch 上の変更内容の要約。
 - `completed_with_unresolved` の report では、未調査 target の件数を 0 とする。調査要求あり件数は unresolved target の件数と一致しなければならない。
-- `natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は同 builder へ委譲する。
-- run branch の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。
+- `natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は同関数へ委譲する。
+- Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
+- 要約対象は、`{{cmoc-run-worktree}}` の repository における `{{cmoc-run-fork-commit}}` から、要約対象を確定した時点の run branch HEAD までの tree 差分全体とする。
+- cmoc は両端を commit ID に確定して要約 agent に渡す。後続の preflight や追加 commit を含め、確定後に比較範囲を動かさない。
+- 要約 agent は、既存の cwd と `{{work-root}}` を用い、指定範囲の差分を Git から取得して人間向けに要約する。この比較入力は、ファイル単位の所見調査・修正 call には追加しない。
+- 指定範囲の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。
 - ユーザー中断後またはエラー後は新しい agent call を行わず、確定済みの変更 path と所見情報から要約する。
 - `{{repo-root}}/.cmoc/gu/ar/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。
 - report 生成時点で確定していない項目は `null` または未実行とする。エラーになった処理段階、確定済みの部分作業、エラー、および関連ログは記録する。

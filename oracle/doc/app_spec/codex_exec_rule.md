@@ -113,10 +113,15 @@ call-scoped path context の適用範囲を次に示す。
 
 - 詳細なファイルアクセス制限は deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する
 - `NO_POLICY` 以外の全 file access mode では、次の制限を共通で適用する
-    - `{{work-root}}` と `{{repo-root}}` が同一の場合は、`{{work-root}}` ツリー外の読み書きを禁止する。両者が異なる場合は、`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外の読み書きを禁止する
+    - `{{work-root}}` と `{{repo-root}}` が同一の場合は、`{{work-root}}` ツリー外の読み書きを禁止する。両者が異なる場合は、`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外の読み書きを禁止する。ただし、次の Git metadata の読み取り例外を除く
     - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc/g*/ar` ツリー内の書き込みを禁止する。`{{work-root}}` と `{{repo-root}}` が異なる場合は、`{{repo-root}}/.cmoc/g*/ar` ツリー内の書き込みも禁止する
     - `AGENTS.md` と `INDEX.md` の書き込みを禁止する
     - `{{work-root}}/memo` の読み書きを禁止する
+- Git metadata の読み取り例外として、`{{work-root}}` に対する読み取り用 Git 操作が、その repository の履歴・差分取得に必要な metadata を内部参照することを許可する。linked worktree の共有 metadata など、worktree 外にある metadata も対象とする
+    - 別 worktree のファイル本文の閲覧や、対象外 repository の探索を一般的に許可するものではない
+    - Git metadata の変更は許可しない
+    - 履歴や差分を経由しても、oracle file、realization file、その他の対象への既存のアクセス境界を迂回してはならない
+    - この例外を理由に file access mode を追加・緩和してはならない
 - `NO_POLICY` 以外の各 mode は、共通制限に次の制限を追加する
     - `READONLY`: oracle file と realization file の書き込みを禁止する
     - `PURE_ORACLE_READ`: oracle file の書き込みと realization file の読み書きを禁止する
@@ -214,6 +219,16 @@ objective の外側の block、正確な引数、項目名、構築順序、任�
 `prompt > oracle file > installed skill` と表現される優先関係は、cmoc の恒常的な意味仕様ではなく、call 固有の目的、作業範囲、入力、および権限に適用する。この正確な agent-facing literal は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py` の `build_oracle_policy` へ委譲する。
 
 call 固有の実行時指示の優先関係は、prompt literal に cmoc の新しい意味仕様を作る権限を与えない。prompt literal と oracle doc が所有する意味仕様が食い違う場合は、prompt literal による仕様変更とは扱わず、oracle file 間の不整合として扱う。
+
+### Git 差分の参照入力
+
+- cmoc が Git 差分を agent の判断材料として自動付加する場合は、差分本文や変更 path 一覧の代わりに、取得に必要な参照情報だけを渡す
+- 初期 prompt の文字数を差分本文の大きさや変更 path 数に比例させないことを目的とする。agent が取得した差分も会話の入力となるため、総トークン数の削減は保証しない
+- 比較する repository、比較範囲、および対象条件は個別 workload が所有する。agent はその指定に従って必要な差分を Git から取得する
+- 取得失敗を正常に取得できた空差分として扱ってはならない。取得できない場合は個別 workload の既存の失敗処理に従い、独立した状態や追加の agent call を設けない
+- cmoc 自身が行う差分検査、変更 path の検証、空差分判定、および commit・rollback の責務は廃止・緩和しない
+- ユーザー自身が入力する文章に差分を含めることは禁止しない
+- Git command の具体的な組み合わせ、差分を読む回数・分割方法、および表示形式は固定しない。新しい汎用の差分入力 schema、永続 state、差分保存ファイル、root placeholder の追加は目的としない
 
 ### prompt の構築と受け渡し
 

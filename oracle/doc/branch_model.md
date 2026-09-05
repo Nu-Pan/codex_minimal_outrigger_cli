@@ -69,7 +69,7 @@
 
 - `{{cmoc-run-branch}}` の分岐元 commit である。
 - run 開始時点の `{{cmoc-session-branch}}` HEAD である。
-- apply が注入する差分の終点、run join 時の差分検査、および run report は、この名前を一貫して使用する。
+- apply の追従対象差分の終点、run join 時の差分検査、および run report は、この名前を一貫して使用する。
 
 ### `{{cmoc-run-join-commit}}`
 

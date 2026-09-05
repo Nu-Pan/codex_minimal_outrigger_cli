@@ -64,6 +64,7 @@ def build_file_access_policy(
     base_denials = [
         *out_repo_denials,
         "`{{work-root}}/.git` ツリー内は書き込み禁止",
+        "Git metadata は配置先によらず変更禁止",
         "`{{work-root}}/.agents` ツリー内は書き込み禁止",
         "`{{work-root}}/.codex` ツリー内は書き込み禁止",
         "`{{work-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止",
@@ -73,10 +74,8 @@ def build_file_access_policy(
     ]
     # mode 別の禁止事項
     # NOTE
-    #   許可項目を書こうとすると対象範囲・優先順位の明示に文字数が必要になって大変。
-    #   そもそも「書いてない＝リポジトリ全体の制約が適用される」ので、暗に分かるはず。
-    #   ということで、禁止されていない操作は許可される deny-list とし、
-    #   規定文面には禁止事項だけを書く。
+    #   禁止されていない操作は許可される deny-list とし、
+    #   worktree 外の Git metadata の読み取り例外だけを明示する。
     # NOTE
     #   Codex CLI sandbox への対応は `oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
     #   この関数が生成する詳細な規定はプロンプトとしてのみ使用し、permission profile や
@@ -139,7 +138,10 @@ def build_file_access_policy(
                 what_is_this="エージェントによるアクセスが満たすべき規定を以下に示す",
                 require=(),
                 prohibit=tuple(denials),
-                allow=("以上のルールで禁止されていない読み書きは暗黙に許可される。",),
+                allow=(
+                    "Git metadata の読み取り例外: `{{work-root}}` に対する読み取り用 Git 操作が、その repository の履歴・差分取得に必要な metadata を内部参照することを許可する。linked worktree の共有 metadata など worktree 外の metadata も含むが、別 worktree のファイル本文の閲覧や対象外 repository の探索を一般的に許可するものではない。この例外規定は file R/W policy 内で述べた禁止規則よりも優越する。",
+                    "以上のルールで禁止されていない読み書きは暗黙に許可される。",
+                ),
             ),
         ),
     )
