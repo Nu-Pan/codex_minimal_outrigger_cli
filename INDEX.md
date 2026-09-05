@@ -91,18 +91,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様、設計判断、開発ルールを目的別に参照するための入口。アプリケーション仕様、session・run の branch／commit／worktree モデル、検討済み代替案、Python・CLI・環境・テストの開発基準を扱う。
+- cmoc の正本ドキュメントを、アプリケーション仕様、開発ルール、設計判断などの領域別に選ぶ上位入口。
+- oracle のプログラム・設定ファイル向け詳細仕様を、agent call、エディタ入力、フィードバック、共通モデル、prompt 構築へ分類する入口。
 
 ## Read this when
-- cmoc の共通挙動や実行契約、session・run の隔離・統合モデル、採用しなかった設計案、または開発時の実装・環境・テスト規則を探すとき。
-- 複数の仕様・開発ルール文書群にまたがる確認で、目的に応じた下位文書への入口を判断したいとき。
+- cmoc の仕様、開発ルール、設計判断のどの文書から調査を始めるか判断するときは「doc」を読む。
+- oracle の実装・設定レベルの詳細について、agent call 構築、エディタ入力、フィードバック入力、共通モデル、prompt 構築のいずれの領域かを特定するときは「src」を読む。
 
 ## Do not read this when
-- 特定の仕様書、実装、テスト、oracle／realization の具体的内容だけを確認したいときは、対応する下位文書や実ファイルを直接読む。
-- INDEX.md の生成・更新規則だけを確認したいときは、indexing の仕様を直接読む。
+- 特定文書の本文、具体的な実装・テスト規約、または設計案の詳細を確認する場合は、「doc」ではなく該当する下位文書を直接読む。
+- 特定領域の実装・設定仕様だけを確認する場合は、「src」ではなく acp_builder、editor_input_handoff、feedback、other、prompt_builder の該当対象を直接読む。
+- 実際の CLI ワークフローや realization の実装挙動、または状態ファイルの内容だけを調べる場合は、この oracle 入口ではなく対応する realization・state 対象を直接読む。
 
 ## hash
-- e38c0c6e237adf5b4dd0374c1f069820769598880ccc889df3dfbb10c8a39db0
+- 6cf319c78af43e855ca28d0dc51403e6f5a6113a39ae6d43815b1e84dff9b8b3
 
 # `pyproject.toml`
 

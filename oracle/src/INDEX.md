@@ -1,20 +1,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の agent call、prompt 構築、設定、パス解決、構造化文書、および入力契約を定義する正本仕様群への入口。
-- agent call の共通パラメータと用途別起動定義、完全 prompt と policy 部品、設定モデル、Git worktree に基づくパス・placeholder 解決を扱う。
-- 構造化文書の Markdown レンダリングと、feedback・editor input handoff の JSON 入力スキーマを確認するための下位要素へ進める。
+- cmoc の正本仕様を、agent call 構築、エディタ入力、フィードバック入力、周辺基盤モデル、prompt 構築の領域に分けて案内する最上位の入口。
+- agent call や prompt の構築仕様を調べるときに、用途別の下位ディレクトリへ進むための分類点。
+- 各下位領域では、個別の型定義、JSON Schema、パスモデル、構造化文書、prompt policy などの正本仕様を扱う。
 
 ## Read this when
-- cmoc の agent call 構築に必要な共通型、用途別 prompt、Codex 起動設定、Structured Output の入力契約を調べるとき。
-- prompt に組み込む作業規定、placeholder の統合、agent call の cwd から導出する root、Git worktree のパス解決を確認するとき。
-- 見出し・参照可能ブロック・policy を含む構造化文書の生成や Markdown レンダリングの実装を確認するとき。
-- feedback 報告または editor input handoff に渡す JSON 入力項目と制約を確認するとき。
+- oracle 配下の正本仕様を横断して、目的に応じた下位領域の読み始めを判断するとき。
+- agent call のパラメータ構築、エディタ入力の契約、フィードバック報告入力、基盤モデル、または prompt 構築の仕様を探すとき。
 
 ## Do not read this when
-- 特定の agent call の実行処理、feedback の収集・重複判定、または TUI の個別ワークフローだけを確認したい場合は、対応する実装や下位仕様を直接読む。
-- Codex CLI の sandbox、起動規則、または oracle・realization の作業規定そのものを確認したい場合は、参照される正本仕様を直接読む。
-- INDEX.md の更新手順や、このディレクトリ外の CLI 機能・realization 実装を確認したい場合は、この対象を入口にしない。
+- 特定の下位領域の具体的な仕様だけを確認したい場合は、acp_builder、editor_input_handoff、feedback、other、または prompt_builder の該当対象を直接読む。
+- JSON Schema の受理条件だけを確認したい場合は、対応する Schema ファイルを直接読む。
+- 実装上の agent call 起動処理や CLI ワークフローだけを確認したい場合は、この正本仕様の入口ではなく対応する realization 側の実装を読む。
 
 ## hash
-- 8b3675f0505f7908c15be54a56953a32add9118ba72f3b907adba87f7ff79318
+- 723e70d34bd6d3ee43246438f01792c764265082dd8399c1140554334d528689

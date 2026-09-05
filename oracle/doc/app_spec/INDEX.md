@@ -312,22 +312,21 @@
 # `sub_command`
 
 ## Summary
-- 対象ディレクトリは、cmoc の各サブコマンドおよび共通編集 run の仕様へ進む入口を提供する。
-- doctor・indexing の実行手順と報告、oracle 調査・編集、TUI 起動、session fork/join/abandon、realization apply/refactor、feedback report の固有契約を扱う。
-- editing run は複数の編集系 workload に共通する開始・終了・join・abandon・report のライフサイクルを担う。
+- cmoc の各サブコマンド仕様を、CLI 契約、実行前提、処理手順、状態遷移、終了結果、primary report の確認先として案内する入口。
+- session・editing run・feedback remediation・oracle/realization・doctor/indexing・TUI など、サブコマンド固有の責務と共通仕様との参照境界を扱う。
 
 ## Read this when
-- cmoc サブコマンドの引数、事前条件、実行手順、終了経路、primary report を確認するとき。
-- oracle/realization の編集・調査、feedback remediation、session lifecycle、TUI 起動の仕様入口を探すとき。
-- 複数の編集系 workload に共通する run の同時実行制約、差分処理、merge、cleanup、state 遷移を確認するとき。
+- cmoc の特定サブコマンドの引数、実行前提、処理手順、状態遷移、終了経路、primary report を確認したいとき
+- 複数のサブコマンド仕様から、調べたい挙動を担う仕様ファイルを選びたいとき
+- sub_command 配下の仕様を変更・実装照合し、コマンド固有仕様と共通仕様の参照境界を確認したいとき
 
 ## Do not read this when
-- 特定サブコマンドの内部検証・修復内容や、共通仕様から委譲された run isolation・session state・branch model などの正本だけを確認したいとき。
-- 個別 workload に固有でない一般的な oracle/realization 適合性、feedback observation、Codex exec、通知、ログ、入力 handoff の詳細を直接確認したいとき。
-- サブコマンド仕様に該当しない realization 実装、read-only investigation、機械的更新、または session lifecycle のみを調べるとき。
+- branch model、session state、run isolation、timestamp などサブコマンド横断の正本だけを確認したいときは、対応する正本仕様を直接読む
+- 特定コマンドの実装詳細、prompt builder の選択ロジック、または doctor preprocess・indexing など参照先仕様の詳細だけを確認したいときは、対応する実装や正本仕様を直接読む
+- 編集 run の共通 lifecycle だけを確認したいときは editing_run を、feedback remediation 固有の詳細だけを確認したいときは feedback_report と関連仕様を直接読む
 
 ## hash
-- 8fd9195f73a48f364f4a1ab9a452cf915ff1d2707118eb8583cdbfa81cbb8e8f
+- 29eb600f632a7bf61bb524333e8a65559f84e14f0a38da489fcf30f8b4f384c2
 
 # `subcommand_interruption.md`
 

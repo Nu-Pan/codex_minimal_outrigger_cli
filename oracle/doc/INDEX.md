@@ -1,21 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を、共通挙動・状態管理・実行規約と各サブコマンド固有仕様に分けて参照するための入口。
-- CLI 実行、session／run lifecycle、feedback、ログ、入力 handoff、通知、oracle／realization 管理などの正本仕様と、sub_command 配下の個別 workload 仕様を扱う。
+- cmoc のアプリケーション仕様を、CLI の共通実行規則、各サブコマンド、session・run・feedback の状態管理、oracle／realization の責務、ログ・通知・補完などの横断契約に分けて案内する仕様群。cmoc の外部挙動や主要な処理境界を確認する際の入口となる。
 
 ## Read this when
-- cmoc の外部挙動や共通契約の正本仕様を探すとき
-- 複数のサブコマンドに関係する実行条件、状態遷移、ログ、feedback、Codex 呼び出し規約を確認するとき
-- 特定サブコマンドの詳細仕様へ進む前に、共通仕様と個別仕様の委譲先を確認するとき
+- cmoc のアプリケーション仕様から、調べたい挙動を担う正本仕様やサブコマンド仕様を選ぶとき
+- CLI 実行、session・editing run、feedback、oracle／realization、ログ、通知、自動補完などの横断的な仕様境界を確認するとき
+- 複数の個別仕様をまたいで cmoc の処理順序、状態遷移、責務分担を把握するとき
 
 ## Do not read this when
-- 特定の仕様文書の詳細だけを確認したいときは、該当する個別文書を直接読む
-- 実装・テストの具体的な挙動や oracle／realization file の実データだけを調べるとき
-- INDEX.md の生成・更新規則そのものだけを確認したいときは、indexing の仕様を直接読む
+- 特定の仕様本文、実装、テスト、または JSON schema の正確な定義を確認したいときは、ここで対象を絞った後に該当するファイルを直接読む
+- INDEX.md の生成・更新規則そのものを確認するときは indexing.md を直接読む
+- 個別機能の実装詳細や既存状態ファイルの実データだけを調べるときは、対応する realization または state ファイルを直接読む
 
 ## hash
-- 384d2be8d413e472ca75ddcbc711ccd1101ed8d16cfa43054417591304edee28
+- 76e84780df30f46fcff52ae75f8ce252234c4db04204d511eb39289e62aace7f
 
 # `branch_model.md`
 

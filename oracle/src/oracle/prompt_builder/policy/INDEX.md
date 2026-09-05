@@ -1,18 +1,19 @@
 # `conflict_resolution.py`
 
 ## Summary
-- session join の merge conflict 解消結果に適用する policy を構築する関数。両方のマージ元ブランチの oracle file の意図・挙動の保持、両立不能時の未解消事項としての報告、oracle file の意味変更と不要な変更の禁止を定義する。
+- session join の merge conflict 解消結果に適用する instruction policy を構築する。
+- 両方のマージ元ブランチの oracle file の意図と挙動を保持し、両立不能な場合は未解消事項として報告するための規定への入口となる。
 
 ## Read this when
-- session join の conflict 解消用 instruction の内容や、解消結果に求められる規定を確認するとき
-- merge conflict 解消における oracle file の意図・挙動の保持方針を確認するとき
+- session join の merge conflict 解消結果が満たすべき規定を確認・変更するとき。
+- oracle file の意味を優先した conflict 解消用 instruction の構築責務を確認するとき。
 
 ## Do not read this when
-- session join の意味仕様や oracle file 規定と conflict 解消の優先順位そのものを確認するとき
-- realization file の実装や挙動、または conflict 解消処理の具体的な実装を確認するとき
+- conflict 解消の意味仕様や優先順位そのものを確認するとき。
+- realization file の具体的な挙動や、別の prompt policy の責務を確認するとき。
 
 ## hash
-- 24db424d4c6fa917aeda82cd22244160d78e7ae3c487fa3a40e8bef4855c8ae8
+- b0fd6c6979c348db32d11701ae88945578823e68ad0159c81cd6154f69b1b153
 
 # `editor_input_handoff.py`
 

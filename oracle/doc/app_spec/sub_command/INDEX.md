@@ -193,23 +193,24 @@
 # `session_join.md`
 
 ## Summary
-- セッションブランチをホームブランチへマージして session を完了する `cmoc session join` の実行契約と終了処理を定義する。
-- 引数なしの join 手順、事前条件、home branch の進行時や merge conflict 発生時の扱い、conflict 解消用 agent call の委譲境界を確認する入口。
-- session state の joined 遷移、session branch の安全な cleanup、primary report の保存内容と全終了経路での報告要件を扱う。
+- `cmoc session join` が、現在の session branch を session home branch へ戻すための専用 merge コマンドであること、引数・事前条件・実行手順・後始末を定義する。
+- session 終了時の merge conflict 解消、oracle file の扱い、session state 更新、session branch 削除条件を確認するための入口となる。
+- session join の全終了経路で保存する primary report の記録要件を定義する。
 
 ## Read this when
-- `cmoc session join` の引数、事前検証、branch 切替、merge、conflict 解消、後始末の挙動を実装・変更・検証するとき。
-- session join と session state、repository-local feedback state、branch model、primary report の責務境界を確認するとき。
-- merge conflict 時の agent call の責務や、想定外エラー時の停止・通知・次操作を確認するとき。
+- `cmoc session join` の実装、変更、動作確認で、session branch と home branch の merge 手順を確認するとき。
+- session join の事前条件、doctor preprocess、session state の `joined` 遷移、branch cleanup の扱いを確認するとき。
+- merge conflict 発生時の conflict marker 解消、oracle file の優先順位、関連 agent call の要件を確認するとき。
+- session join の primary report に必要な終了結果、branch HEAD、merge commit、state、conflict、cleanup、診断ログの内容を確認するとき。
 
 ## Do not read this when
-- 通常の git branch 間 merge の汎用仕様を確認したいとき。
-- session 作成・編集 run 開始・session state の一般的なライフサイクルだけを確認したいときは、共通事前条件や session state の正本を直接読む。
-- conflict 解消 agent call の具体的な prompt 構築規則を確認したいときは、指定された conflict resolution realization を直接読む。
-- feedback state の所有範囲や配置だけを確認したいときは、feedback state の正本を直接読む。
+- 汎用的な git merge の仕様や repository の branch model 全体だけを調べるとき。
+- session の開始や active session context の共通事前条件を直接確認したいとき。
+- repository-local feedback state の所有範囲や配置だけを確認したいとき。
+- エラー分類やスタックトレースの共通規則だけを確認したいとき。
 
 ## hash
-- da2f776d4e8c591864b2bf81479cfabdc7b92b5ea150bcb81b105b545403806e
+- 0cf233cba3cb4ef8a419bfd111dbb05d3dabdac849d7d247b07255fec090b76a
 
 # `tui.md`
 

@@ -1,36 +1,34 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様、設計判断、開発基準を目的別に参照するための入口。アプリケーション仕様、session・run の branch／commit／worktree モデル、検討済み代替案、Python・CLI・環境・テストの開発ルールを扱う。
+- cmoc の正本ドキュメント群を、アプリケーション仕様、開発ルール、設計上の不採用案などの領域別に案内する上位入口。外部挙動、実装・テスト規約、設計判断の背景を確認する際に、適切な下位文書を選ぶために使う。
 
 ## Read this when
-- cmoc の共通挙動や実行契約、session・run の隔離・統合モデル、採用しなかった設計案、または開発時の実装・環境・テスト規則を探すとき。
-- 複数の仕様・開発ルール文書群にまたがる確認で、目的に応じた下位文書への入口を判断したいとき。
+- cmoc の仕様・開発ルール・設計判断に関する文書群から、調査対象の領域や下位文書を特定するとき
+- CLI の挙動、session・run の管理、Python 実装、テスト、環境構築、または過去の代替案のどの文書を読むべきか判断するとき
 
 ## Do not read this when
-- 特定の仕様書、実装、テスト、oracle／realization の具体的内容だけを確認したいときは、対応する下位文書や実ファイルを直接読む。
-- INDEX.md の生成・更新規則だけを確認したいときは、indexing の仕様を直接読む。
+- 特定の仕様、実装規約、テスト手順、設計案の本文を確認したい場合は、ここで領域を絞った後に該当する下位文書を直接読む
+- 実装・テストの具体的なコードや状態ファイルの内容だけを調べる場合は、対応する realization または state ファイルを直接読む
 
 ## hash
-- 97927464332eff7034d75a1aa4563e6f56650b8318409fc3341cca0f1f29cc1a
+- fbabaebc9593c9e5cb51b459913b55d4ad02def9c58e6421d01f22bd6f1de62e
 
 # `src`
 
 ## Summary
-- `oracle/src` は、cmoc の agent call・prompt・設定・パス解決・構造化文書・入力契約に関する正本仕様の下位要素への入口。
-- agent call の共通型や用途別起動定義、prompt と policy 部品、設定モデル、Git worktree に基づくパス解決を扱う。
-- Markdown の構造化文書レンダリングと feedback・editor input handoff の入力契約を確認するための起点。
+- oracle の正本仕様のうち、プログラム・設定ファイルとして記述された詳細を扱う入口。
+- agent call 構築、エディタ入力、フィードバック入力、共通モデル、prompt 構築の各領域へ進むための分類点。
+- acp_builder は agent call パラメータと起動関連、editor_input_handoff はエディタ入力契約、feedback はフィードバック報告入力、other は設定・パス・構造化文書の共通モデル、prompt_builder は prompt と policy の構築定義を扱う。
 
 ## Read this when
-- cmoc の agent call を構築する共通仕様、用途別 prompt、起動設定、または Structured Output の入力契約を調べるとき。
-- prompt へ作業規定や placeholder を統合する方法、agent call の cwd から導出する root、Git worktree のパス解決を確認するとき。
-- 見出し・参照可能ブロック・policy を含む構造化文書や Markdown レンダリングの仕様を確認するとき。
-- feedback 報告または editor input handoff の JSON 入力契約を確認するとき。
+- oracle/src 配下で、agent call の構築仕様、エディタ入力の入力契約、フィードバック報告の入力契約、共通モデル、または prompt 構築仕様の読み始める領域を判断するとき。
+- 自然言語の意味仕様ではなく、oracle doc から委譲された実装・設定レベルの正確な詳細を確認するとき。
 
 ## Do not read this when
-- 特定の agent call の実行処理、feedback の収集・重複判定、または TUI の個別ワークフローだけを確認したいときは、対応する実装や下位仕様を直接読む。
-- Codex CLI の sandbox・起動規則・oracle/realization の作業規定そのものを確認したいときは、参照先の正本仕様を直接読む。
-- INDEX.md の更新手順や、`oracle/src` の対象外にある CLI 機能・realization 実装を確認したいときは、この入口を読まず直接それらを調べる。
+- oracle doc が所有する意味仕様や人間意図だけを確認したい場合は、対応する oracle/doc の仕様を直接読む。
+- 特定の下位領域の詳細だけを確認したい場合は、acp_builder、editor_input_handoff、feedback、other、または prompt_builder の対象を直接読む。
+- 実際の CLI ワークフローや realization の実装挙動だけを確認したい場合は、対応する realization 側の実装を読む。
 
 ## hash
-- d6279a4fc59f16a23e8d865cca5152aa5ecce083c96fb983b23fcfacfdea1f0a
+- ccada7644a2477e1cbb46ced3efe2830744300a71d664378b085b909f483d087

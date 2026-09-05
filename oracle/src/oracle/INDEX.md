@@ -55,37 +55,32 @@
 # `other`
 
 ## Summary
-- cmoc の設定モデルを定義し、JSON/TOML 共通設定、Codex の provider・agent call 設定、並列数、ファイルアクセス違反時のリカバリ回数を扱う入口。
-- cmoc のパス表記とルートプレースホルダを定義し、agent call のパスコンテキスト導出、プレースホルダ解決・変換、Git metadata に基づく各ルート探索を扱う基盤。
-- 構造化ドキュメント要素を保持し、見出し、参照可能ブロック、コードブロック、規定を Markdown にレンダリングする実装への入口。
+- cmoc の周辺基盤モデルをまとめたディレクトリ。設定データクラス、Git worktree とルートプレースホルダを扱うパスコンテキスト、構造化文書を Markdown に変換する要素・レンダラーへの入口。
 
 ## Read this when
-- cmoc の設定項目、既定値、Codex 呼び出しごとの設定、provider-local 設定、不変性、JSON 構造や agent call 種別と Codex call 設定の対応を確認するとき。
-- agent call の cwd から導出される worktree root・main repository root、{{cmoc-root}}・{{repo-root}}・{{run-root}}・{{work-root}} の解決と変換、Git worktree metadata に基づく探索規則を確認するとき。
-- 構造化文書の Markdown レンダリング、見出し階層、cmoc_block/cmoc_ref、コードブロック、SDPolicy、SDNode、ntqs の挙動や利用方法を確認するとき。
+- cmoc のリポジトリ固有設定、agent call のパス解決、または構造化文書の Markdown レンダリングを横断して調べるとき
+- 個別モジュールの責務が設定・パスモデル・構造化文書のどれに属するかを判断し、該当する実装へ進むとき
 
 ## Do not read this when
-- 設定ファイルの生成・同期処理、JSON シリアライズ処理、特定の agent call の実行フロー、Codex CLI 起動、oracle・realization の処理内容を直接確認したいとき。
-- 個別の CLI 機能や realization の責務、パスモデルを介さない一般的なファイル操作、対象モジュール以外の仕様を確認したいとき。
-- Markdown 以外の文書形式のレンダリング、文書構造の仕様・入力生成規則、cmoc の一般的な規定や参照ルーティングの仕様を確認したいとき。
+- 特定の設定項目、ルートプレースホルダ解決、または Markdown 要素のレンダリングだけを調べる場合は、該当する個別モジュールを直接読むとき
+- agent call の具体的な処理フロー、CLI 呼び出し、設定ファイルの生成・同期など、これらの基盤モデルを利用する上位実装だけを調べるとき
 
 ## hash
-- 759f4486e74e9a2dc7d94c9b88105a0c80f67e3db342bfd6b8c2f69e04f20fb8
+- b39b9b65f91790a4f4f66f750bc72b78f59e3bdc4506213d8ba9d788a7f5a863
 
 # `prompt_builder`
 
 ## Summary
-- プロンプト構築の共通型、完全 prompt の組み立て、エディタ入力初期文面、oracle／realization 部品、および個別 policy 部品を扱うディレクトリへの入口。
-- agent call 向け prompt の構成と、作業規定を組み込む部品群を、共通構築処理・部品・policy 定義に分けて確認できる。
+- agent call 向けの完全 prompt とエディタ初期入力を組み立てる実装、および prompt 構築に使う部品・policy 定義をまとめたディレクトリ。
+- 型定義から入力文面生成、完全 prompt の統合、個別 policy の構築まで、prompt builder の責務へ進むための入口。
 
 ## Read this when
-- agent call に渡す prompt の構成、placeholder 定義の統合、またはエディタ入力への初期 prompt 埋め込みを調べるとき。
-- oracle／realization の説明部品や、file access・feedback・routing・INDEX エントリー生成などの作業 policy を prompt に組み込む処理を確認するとき。
-- 個別 policy の実装入口や、複数 policy を組み合わせる prompt builder の責務境界を確認したいとき。
+- agent call 用 prompt の構成、placeholder 統合、エディタ入力の初期文面、または個別 policy の選択・注入を確認・変更するとき。
+- oracle／realization の説明や分類条件を prompt 部品として組み込む処理の入口を確認したいとき。
 
 ## Do not read this when
-- 個別 policy の意味仕様そのもの、oracle／realization の正本仕様、実際のファイル分類や feedback 送信の実装を直接確認したいとき。
-- 生成済み prompt に適用されたセッション固有の規定や、一般的な Markdown・構造化文書の仕様だけを調べるとき。
+- 個別 policy の具体的な規定文や、その参照先である正本仕様を確認したい場合は、対応する policy モジュールまたは oracle file を直接読む。
+- prompt builder を使わない CLI、MCP tool、または realization file の具体的な挙動だけを調べる場合。
 
 ## hash
-- 145fa5a113548ca36370ff694cc94d668e6129137907d058a4d984453e7fbae5
+- d30a96d735a04a371f3b5eb78452467c917b2edbfc9927fd9d0981581840fa29
