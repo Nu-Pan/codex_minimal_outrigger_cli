@@ -200,7 +200,7 @@ merge conflict、差分不整合、または join 後検査失敗では正常 pu
 
 全 issue が `fixed | already_resolved | not_actionable | human_required` のいずれかに確定し、自動 join と join 後検査が成功した場合だけ正常 publication を行う。
 
-新しい active generation と正常 Markdown report には、`human_required` だけを含める。
+新しい active generation と正常 Markdown report の issue 一覧には、`human_required` だけを含める。
 
 正常 result は、次の 2 種類とする。
 
@@ -246,6 +246,8 @@ agent call failure、tool 失敗、validation 失敗、差分検査失敗、comm
 quota 枯渇、retry、Structured Output correction、および resume の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `codex exec` 呼び出し規約を正本とする。
 
 ## report の保存と表示
+
+primary report の実行記録には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「共通掲載内容」を適用し、以下の issue 一覧とは区別する。
 
 ### 正常 report
 

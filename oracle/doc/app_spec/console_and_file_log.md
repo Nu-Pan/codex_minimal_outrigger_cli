@@ -1,6 +1,6 @@
 # コンソール・ファイル、ログ出力規則
 
-本書は、非対話サブコマンドの console、primary report、サブコマンドログ、および terminal result に関する共通契約の正本とする。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、primary report の形式・保存先・項目・要約方法、次の操作、および終了コードを定義する。
+本書は、非対話サブコマンドの console、primary report、サブコマンドログ、および terminal result に関する共通契約の正本とする。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、primary report の形式・保存先・追加項目・要約方法、次の操作、および終了コードを定義する。
 
 ## 共通規則
 
@@ -8,6 +8,10 @@
 
 - console、primary report、およびエラー説明の自然言語部分は、個別仕様に指定がない限り日本語とする。
 - 識別子、path、command、JSON key、log 原文、および引用は元の表記を維持してよい。
+
+### 実行 ID の開始表示
+
+cmoc が console に出す人間向けログの先頭で、ユーザーが起動した最外側の末端サブコマンドの invocation を識別する実行 ID を stderr に表示する。TUI と自動補完への適用は、本書の「TUI と自動補完の境界」に従う。
 
 ### 時間表示のフォーマット
 
@@ -45,11 +49,20 @@
 - ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
 - primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。
 - `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
-- primary report の形式、保存先、項目、およびサブコマンド固有の要約方法は、個別サブコマンド仕様を正本とする。
+- primary report の形式、保存先、追加項目、およびサブコマンド固有の要約方法は、個別サブコマンド仕様を正本とする。
 - primary report 作成専用の追加 agent call は共通要件としない。個別仕様が report 生成手順として明示しない限り行わず、確定済みの情報から機械的に構築してよい。
 - cmoc 内部から呼び出したサブコマンド、処理関数、agent call、および Codex call は、独立した primary report を保存しない。
 
 primary report の保存に失敗し、完了契約を確定できない場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` に従って internal failure とする。この場合は、保存済みでない primary report の path を terminal result に表示しない。
+
+### 共通掲載内容
+
+primary report には、内部処理を含むその invocation の実行記録として、次の内容を一覧で掲載する。
+
+- 各 `codex exec`（`codex exec resume` を含む）で取得できた最終出力の本文。取得元は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `--output-last-message` を正本とする。
+- 実行中に新規受理された feedback observation の問題内容。掲載対象は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」における observation とする。
+
+一覧の順序とレイアウトは realization の裁量とする。
 
 ## terminal result
 
