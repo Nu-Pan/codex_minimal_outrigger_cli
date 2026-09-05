@@ -20,21 +20,21 @@
 # `feedback`
 
 ## Summary
-- feedback issue の同一性判断と verification を行う agent call の出力契約・実装をまとめた入口。normalize_issue は observation と既存候補の同一性判定、verify_issue は report cut 時点の参照に基づく候補検証を担う。
+- feedback issue の同一性判定と remediation を担う agent call の入口をまとめた対象。normalize_issue は観測結果と既存候補の同一性判定、remediate_issue は issue の存在確認・安全な修正・検証・結果分類を扱う。
+- 同一性判定と remediation の出力契約、およびそれぞれの agent call の prompt・起動条件・対象範囲を確認するための入口。
 
 ## Read this when
-- feedback issue を既存候補と同一か新規か判定する出力形式または prompt・起動パラメータを確認するとき
-- issue candidate の現在状態を検証する出力形式、verdict、evidence、人間対応または理由の契約を確認するとき
-- 同一性判定や検証の入力範囲、候補・参照 ID の制約を確認するとき
+- feedback observation が既存 issue と同一か新規かを判定する agent call の入力範囲、出力契約、起動パラメータを確認するとき
+- remediation agent call の結果分類、realization file への変更範囲、検証条件、変更 path を確認するとき
+- 同一性判定または remediation の Structured Output schema の必須フィールドと制約を確認するとき
 
 ## Do not read this when
-- feedback issue の内容、候補生成、候補絞り込み、report cut reference の作成など、判定前のデータ準備を確認したいとき
-- summary、impact、原因、actionability、relation など issue の詳細評価を確認したいとき
-- raw log、過去の Codex session、feedback state、候補外 issue の探索を行いたいとき
-- normalize_issue または verify_issue 以外の agent call の出力契約を確認したいとき
+- feedback observation の受付・構造化・送信、候補 issue の絞り込み、issue の生成・保存を確認するとき
+- issue の内容・原因・summary・impact・remediation を生成する処理を確認するとき
+- realization file 自体の実装や oracle file の内容、remediation の診断・修正手順を直接確認するとき
 
 ## hash
-- 673ee6efa708d1d4917d73695b4218a703ae4d931b53baaac092e1d5e10f9447
+- c440a1f2961e419b90e901094ecc23af576b8470688769c351b76a749cc1419f
 
 # `indexing`
 

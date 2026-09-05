@@ -37,19 +37,20 @@
 # `feedback_reporting.py`
 
 ## Summary
-- 全 agent call に共通する、人間へ報告すべき未解決問題の判定基準と報告方法を、プロンプトへ組み込むポリシー構築定義。
-- フィードバック報告ポリシーの構造化文面を生成する処理への入口。
+- 全 agent call に共通する feedback observation の報告規定文面を構築する。
+- 現在の workload では解消できず、後続の自動修復または人間対応候補となる具体的根拠のある問題について、MCP tool による報告条件と禁止事項を提供する。
 
 ## Read this when
-- agent call 共通の human feedback reporting 規定を確認・変更するとき。
-- 未解決問題を人間へ報告する条件、必須の報告手段、報告してはいけないケースの根拠を確認するとき。
+- agent call 共通の feedback observation reporting 規定を生成・変更・確認するとき。
+- feedback observation の報告基準を prompt policy として組み込む処理の入口を探すとき。
 
 ## Do not read this when
-- feedback 報告ポリシーの意味仕様や報告基準そのものを確認したいときは、参照先の仕様文書を直接読む。
-- プロンプト構築全般や他の policy の責務だけを調べるとき。
+- feedback observation の意味仕様そのものを確認したいときは、参照先として示される app specification を直接読む。
+- feedback observation の送信処理や MCP tool の実装を調べるとき。
+- prompt 全体の構築や、feedback reporting 以外の policy の責務を確認するとき。
 
 ## hash
-- f1b7f93b888020d8a67d4cf3fa572fa1b74b8cfef08077d9cce0c657e32b618d
+- 978b2d20e7642c085394f31b52b4e11c233aa27b52b44977d82c28e55713a540
 
 # `file_access.py`
 

@@ -1,16 +1,18 @@
 # `cmoc_config.py`
 
 ## Summary
-- 開発対象リポジトリごとに変わりうる cmoc の挙動設定を集約する、JSON/TOML 共通値・Codex model provider・agent call・全体設定の dataclass 定義。
+- リポジトリごとに変わりうる cmoc の挙動設定をデータクラスとして定義し、JSON/TOML 共通値、Codex の model provider・agent call 設定、並列数、ファイルアクセス規定違反時のリカバリ回数を扱う設定モデルへの入口。
 
 ## Read this when
-- cmoc の設定項目、既定値、Codex CLI の provider／model／reasoning effort 対応、agent call 種別ごとの直接渡し設定、または設定の永続化対象を確認するとき。
+- cmoc の設定項目、既定値、Codex CLI 呼び出しごとのモデル・推論強度、provider-local 設定、設定の不変性を確認するとき。
+- 設定を永続化する JSON の構造や、agent call 種別から Codex call へ渡す設定の対応を追うとき。
 
 ## Do not read this when
-- 特定の agent call のプロンプト生成や実行処理そのものを調べるとき。設定値の JSON 同期・生成処理を確認したい場合は、まず設定の永続化・doctor 側の実装を読むとき。
+- cmoc の実際の設定ファイル生成・同期処理や JSON シリアライズ処理の実装を調べるとき。
+- 特定の agent call の実行フロー、Codex CLI 起動処理、または oracle・realization の処理内容を直接確認したいとき。
 
 ## hash
-- 04493cdf9502dba228917f76aae2bffe2c5ab86e8589e2f256c55997ec2dbf9f
+- f7a977a4758fa6f836593070a9dcc284f5c1cec86d5b05a0da631a6e7924863b
 
 # `path_model.py`
 

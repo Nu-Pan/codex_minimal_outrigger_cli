@@ -1,19 +1,23 @@
 # `acp_builder`
 
 ## Summary
-- 各種 agent call の入力パラメータと prompt 構築定義をまとめたディレクトリ。共通の AgentCallParameter、indexing、oracle 編集・調査、quota probe、realization 追従、session join、TUI などの用途別設定への入口を提供する。
+- AI コーディングエージェント呼び出しの共通パラメータ型と、用途別の prompt・起動設定を構築する上位入口。
+- quota probe、INDEX.md エントリー生成、feedback issue の同一性判定・remediation、TUI 起動の各 agent call 定義へ進むための集約点。
+- indexing、feedback、tui の下位要素では、それぞれの agent call に固有の入力、アクセス権限、Structured Output、検証・起動条件を扱う。
 
 ## Read this when
-- agent call の起動条件、prompt、ファイルアクセス制御、cwd、editor input、indexing preflight、Structured Output schema などの構築定義を調べるとき
-- 特定の cmoc コマンドに対応する agent call パラメータの担当ファイルを特定し、用途別の定義へ進むとき
+- agent call builder 全体の責務分担や、共通パラメータから用途別定義への入口を確認するとき。
+- 複数の agent call に共通するファイルアクセスモード、prompt、cwd、Structured Output schema、indexing preflight の設定箇所を探すとき。
+- quota probe、indexing、feedback、または TUI の agent call 構築を調べる際に、該当する下位要素へ進む前の構成を把握するとき。
 
 ## Do not read this when
-- agent call の共通仕様や policy の定義そのものを確認したいときは、共通の prompt・builder 定義を直接読むとき
-- 実際の agent call 実行、session join の競合解消、oracle や realization の本文編集、INDEX.md 更新など、呼び出しパラメータ構築後の処理を確認したいとき
-- 特定の Structured Output schema の機械的な受理条件だけを確認したいときは、対応する schema 定義を直接読むとき
+- 特定の agent call の詳細な prompt、入力データ、結果分類、または起動条件だけを確認したい場合は、対応する下位要素を直接読む。
+- Codex CLI の sandbox へ対応するファイルアクセスモードの意味を確認したい場合は、basic.py が参照する正本仕様を読む。
+- Structured Output schema の機械的な受理条件だけを確認したい場合は、対応する JSON schema を直接読む。
+- INDEX.md の更新処理や、oracle・realization ファイル自体の内容を確認したい場合。
 
 ## hash
-- 7130b785d995a064147eb3ed76bbc875085e6b1cce25ed7963feead6351e8075
+- ff75a9e35d500113ace32d295f620adfcceb0cd342819a768c1ccb9b3397a6a5
 
 # `editor_input_handoff`
 
@@ -35,55 +39,53 @@
 # `feedback`
 
 ## Summary
-- 対象ディレクトリは、agent が検出した問題を feedback reporter から collector へ渡すための入力契約を扱う領域です。問題の分類・重要度・影響、人間の対応が必要な理由、原因の確信度、再確認可能な根拠、作業継続状態を表現・検証する下位要素への入口になります。
+- フィードバック問題報告入力の正本スキーマを扱う領域で、分類・重要度・影響・未解消制約・原因・再確認用根拠・継続状態の入力契約への入口。
 
 ## Read this when
-- feedback reporter の入力形式や、検出した問題を人間向け feedback として構造化する処理を確認するとき。
-- 入力契約を構成するスキーマや関連する検証定義を調査・変更するとき。
+- cmoc_feedback.submit_observation に送る問題報告の入力項目、許容値、文字数制約、根拠に応じた path 条件を確認するとき。
+- 問題報告を JSON として組み立てる際に、reporter input の形式と根拠記述の要件を確認するとき。
 
 ## Do not read this when
-- collector 側の保存、集約、重複判定の仕様だけを確認したいとき。
-- feedback の検出方法や、agent が作業を継続するかどうかの判断ロジックだけを確認したいとき。
+- 問題報告の送信手順や collector の処理を確認したいとき。
+- reporter input のスキーマではなく、フィードバック収集結果や重複判定の実装を確認したいとき。
 
 ## hash
-- a86d0e0a2687a4eed300cd97383ba6e521f2347418e4446a2bfba702aedcd9ba
+- 709d2b0ca7660b1772a43fe8fdaed710d40142564511ba28a435a49b6776aa67
 
 # `other`
 
 ## Summary
-- リポジトリごとに変化する cmoc の挙動設定を集約し、JSON/TOML 共通値、Codex provider、agent call、全体設定の dataclass を定義する設定モデル。
-- agent call 全体で共有するパスコンテキストを構築し、worktree・main repository・run の各ルート導出と、cmoc のルートプレースホルダとの相互変換を担う基盤モデル。
-- 見出し、参照ブロック、コードブロック、規定などの構造化文書要素を保持し、cmoc の文書記法を Markdown へレンダリングするためのモデルと関数。
+- cmoc の設定モデルを定義し、JSON/TOML 共通設定、Codex の provider・agent call 設定、並列数、ファイルアクセス違反時のリカバリ回数を扱う入口。
+- cmoc のパス表記とルートプレースホルダを定義し、agent call のパスコンテキスト導出、プレースホルダ解決・変換、Git metadata に基づく各ルート探索を扱う基盤。
+- 構造化ドキュメント要素を保持し、見出し、参照可能ブロック、コードブロック、規定を Markdown にレンダリングする実装への入口。
 
 ## Read this when
-- cmoc の設定項目や既定値、Codex CLI の provider・model・reasoning effort、agent call 種別ごとの設定、永続化対象を確認するとき。
-- agent call の cwd から worktree root や main repository root を導出する規則、{{cmoc-root}}・{{repo-root}}・{{run-root}}・{{work-root}} の解決や変換、Git metadata に基づくルート探索を確認するとき。
-- 構造化文書を Markdown に変換する処理、見出し階層、cmoc_block/cmoc_ref、コードフェンス、SDPolicy の出力形式、または関連する SDNode 系の責務を調べるとき。
+- cmoc の設定項目、既定値、Codex 呼び出しごとの設定、provider-local 設定、不変性、JSON 構造や agent call 種別と Codex call 設定の対応を確認するとき。
+- agent call の cwd から導出される worktree root・main repository root、{{cmoc-root}}・{{repo-root}}・{{run-root}}・{{work-root}} の解決と変換、Git worktree metadata に基づく探索規則を確認するとき。
+- 構造化文書の Markdown レンダリング、見出し階層、cmoc_block/cmoc_ref、コードブロック、SDPolicy、SDNode、ntqs の挙動や利用方法を確認するとき。
 
 ## Do not read this when
-- 特定の agent call のプロンプト生成・実行処理や、設定値の JSON 同期・生成といった周辺処理そのものを調べるとき。
-- 個別の CLI 機能・realization の実装責務、またはパスモデルを介さない一般的なファイル操作を確認するとき。
-- Markdown 以外の文書形式、文書構造の仕様・入力生成規則、または cmoc の一般的な規定・参照ルーティング仕様を確認するとき。
+- 設定ファイルの生成・同期処理、JSON シリアライズ処理、特定の agent call の実行フロー、Codex CLI 起動、oracle・realization の処理内容を直接確認したいとき。
+- 個別の CLI 機能や realization の責務、パスモデルを介さない一般的なファイル操作、対象モジュール以外の仕様を確認したいとき。
+- Markdown 以外の文書形式のレンダリング、文書構造の仕様・入力生成規則、cmoc の一般的な規定や参照ルーティングの仕様を確認したいとき。
 
 ## hash
-- 0e76c8bef13380706d6a2a5160587050fe6a42a1f1f5fd4753f1018ce0241d64
+- 759f4486e74e9a2dc7d94c9b88105a0c80f67e3db342bfd6b8c2f69e04f20fb8
 
 # `prompt_builder`
 
 ## Summary
-- agent call 向け prompt builder の構成と、基礎規定・目的・追加文面・placeholder の統合入口を扱う階層。
-- oracle／realization の説明部品と、各種 policy 文面の構築定義へ進むための入口。
-- placeholder 型定義、エディタ初期入力、個別 policy の具体的な構築処理を確認するための下位要素を含む。
+- プロンプト構築の共通型、完全 prompt の組み立て、エディタ入力初期文面、oracle／realization 部品、および個別 policy 部品を扱うディレクトリへの入口。
+- agent call 向け prompt の構成と、作業規定を組み込む部品群を、共通構築処理・部品・policy 定義に分けて確認できる。
 
 ## Read this when
-- agent call の prompt 構成、policy の選択・注入、placeholder の統合方針を確認したいとき。
-- oracle／realization、file access、routing、feedback、INDEX.md エントリーなどの prompt 規定の構築箇所を探すとき。
-- エディタへ渡す初期 prompt や、placeholder 置換値の型定義を確認したいとき。
+- agent call に渡す prompt の構成、placeholder 定義の統合、またはエディタ入力への初期 prompt 埋め込みを調べるとき。
+- oracle／realization の説明部品や、file access・feedback・routing・INDEX エントリー生成などの作業 policy を prompt に組み込む処理を確認するとき。
+- 個別 policy の実装入口や、複数 policy を組み合わせる prompt builder の責務境界を確認したいとき。
 
 ## Do not read this when
-- 個別 policy の意味仕様や正本規定そのものを確認したいときは、対応する仕様文書を直接読む。
-- 実際の placeholder 置換処理、プロンプト生成全体の実装詳細、または個別の oracle／realization ファイルだけを確認したいとき。
-- 構造化文書ノードの定義や Markdown レンダリング仕様を確認したいときは、struct_doc の実装を直接読む。
+- 個別 policy の意味仕様そのもの、oracle／realization の正本仕様、実際のファイル分類や feedback 送信の実装を直接確認したいとき。
+- 生成済み prompt に適用されたセッション固有の規定や、一般的な Markdown・構造化文書の仕様だけを調べるとき。
 
 ## hash
-- 202b5294d9d93e0190edf37cad00ab13d1757028a86034f80cb25c6f39a4cdbe
+- 145fa5a113548ca36370ff694cc94d668e6129137907d058a4d984453e7fbae5

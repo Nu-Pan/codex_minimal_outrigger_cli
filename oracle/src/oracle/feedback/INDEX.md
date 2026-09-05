@@ -1,15 +1,15 @@
 # `reporter_input.json`
 
 ## Summary
-- agent が検出した問題を人間向けの feedback reporter input として表現する JSON Schema。問題分類・重要度・影響・人間対応の理由・原因の確信度・再確認可能な根拠・作業継続状態を検証し、feedback collector へ渡す入力形式の入口となる。
+- cmoc feedback reporter が受け取る問題報告入力の正本スキーマ。分類、重要度、影響、workload 内で解消できない制約、原因、再確認用根拠、作業継続状態を定義する。
 
 ## Read this when
-- feedback reporter の入力項目、許容値、必須項目、文字数制限、原因や証拠の構造を確認するとき。
-- agent が検出した問題を collector が受け取れる形式へ整形する処理を実装・検証するとき。
+- cmoc_feedback.submit_observation に渡す報告入力の必須項目、許容値、文字数制約、根拠の記述条件を確認するとき。
+- 問題報告の JSON 形式や、根拠の種類に応じた path 必須条件を確認するとき。
 
 ## Do not read this when
-- collector 側の保存・集約・重複判定の仕様を確認したいとき。
-- feedback の検出方法や agent の作業継続判断そのものを確認したいとき。
+- 実際の問題報告を送信する手順や collector の処理を確認したいとき。
+- reporter input のスキーマではなく、フィードバックの収集結果や重複判定の実装を確認したいとき。
 
 ## hash
-- c3c07e9f43494e5bcda5f9fefd3c65f6d89617409082a24f6a67656143b38f97
+- 7b17a9d08b99bd759f347a6a613599ee6229b46e7765e2012afbfbc208f72dfe

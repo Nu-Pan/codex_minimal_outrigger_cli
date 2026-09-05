@@ -1,40 +1,36 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様と開発規則を、アプリケーション挙動、branch・worktree 分離、検討済み代替案、Python 実装・環境・テストの領域へ案内する上位文書群の入口。
-- アプリケーション仕様では CLI、session／run、Codex 呼び出し、ログ、feedback、通知、文書分類などの個別仕様へ進み、dev_rule では実装・環境・テストの開発規則へ進む。
-- branch・commit・worktree による session／run の隔離モデルと、採用しなかった設計案の判断理由を確認するための入口を含む。
+- cmoc の正本仕様、設計判断、開発基準を目的別に参照するための入口。アプリケーション仕様、session・run の branch／commit／worktree モデル、検討済み代替案、Python・CLI・環境・テストの開発ルールを扱う。
 
 ## Read this when
-- cmoc の正本仕様全体から、対象の挙動・設計判断・開発規則に対応する下位文書を探すとき
-- CLI、session／run、Codex、feedback、ログ、通知、INDEX、branch／worktree 分離など、複数領域にまたがる仕様の所在や境界を確認するとき
-- Python 実装規約、開発環境、テスト規則・実行手順を確認するとき
-- 現行方針ではなく、不採用となった設計案や作業方式の理由を調べるとき
+- cmoc の共通挙動や実行契約、session・run の隔離・統合モデル、採用しなかった設計案、または開発時の実装・環境・テスト規則を探すとき。
+- 複数の仕様・開発ルール文書群にまたがる確認で、目的に応じた下位文書への入口を判断したいとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンド、Codex 呼び出し、session／run、feedback、ログ、通知などの詳細な挙動だけを確認したいときは、対応する app_spec 配下の個別仕様を直接読む
-- branch model の具体的な操作契約だけを確認したいときは、branch model の本文を直接読む
-- Python の実装・環境・テストに関する具体的な規則だけを確認したいときは、対応する dev_rule 配下の文書を直接読む
-- 採用済み機能の仕様や realization の具体的な実装・テスト内容を調べるときは、該当する正本仕様または realization／test を直接読む
+- 特定の仕様書、実装、テスト、oracle／realization の具体的内容だけを確認したいときは、対応する下位文書や実ファイルを直接読む。
+- INDEX.md の生成・更新規則だけを確認したいときは、indexing の仕様を直接読む。
 
 ## hash
-- 48cde22103429c2c8d2414b0cb6017f336ba9f39fe1bfc38ef07e0231630e149
+- 97927464332eff7034d75a1aa4563e6f56650b8318409fc3341cca0f1f29cc1a
 
 # `src`
 
 ## Summary
-- cmoc の正本ソースを構成する階層で、設定・パスモデル・構造化文書モデル、agent call パラメータ、prompt 構築、入力契約を扱う。
-- agent call の実行側へ渡す構築定義と、用途別の prompt policy・feedback・editor input・TUI などの下位領域への入口となる。
+- `oracle/src` は、cmoc の agent call・prompt・設定・パス解決・構造化文書・入力契約に関する正本仕様の下位要素への入口。
+- agent call の共通型や用途別起動定義、prompt と policy 部品、設定モデル、Git worktree に基づくパス解決を扱う。
+- Markdown の構造化文書レンダリングと feedback・editor input handoff の入力契約を確認するための起点。
 
 ## Read this when
-- cmoc の設定値、Codex call パラメータ、agent call の cwd とパス placeholder、構造化文書モデルを確認するとき。
-- 完全 prompt の構築や policy の組み合わせ、agent call 入力契約、feedback・editor input handoff の形式を調べるとき。
-- 下位の acp_builder、prompt_builder、other など、特定の oracle ソース領域へ進む起点を判断するとき。
+- cmoc の agent call を構築する共通仕様、用途別 prompt、起動設定、または Structured Output の入力契約を調べるとき。
+- prompt へ作業規定や placeholder を統合する方法、agent call の cwd から導出する root、Git worktree のパス解決を確認するとき。
+- 見出し・参照可能ブロック・policy を含む構造化文書や Markdown レンダリングの仕様を確認するとき。
+- feedback 報告または editor input handoff の JSON 入力契約を確認するとき。
 
 ## Do not read this when
-- 実際の CLI 実行、session join の競合解消、TUI 起動、oracle や realization 本文の編集処理を確認したいとき。
-- 特定の用途における具体的な prompt policy、agent call パラメータ、JSON Schema の詳細を確認したいときは、対応する下位対象を直接読むとき。
-- cmoc の意味仕様や一般的な開発規定を確認したいときは、対応する oracle/doc または dev_rule の正本を読むとき。
+- 特定の agent call の実行処理、feedback の収集・重複判定、または TUI の個別ワークフローだけを確認したいときは、対応する実装や下位仕様を直接読む。
+- Codex CLI の sandbox・起動規則・oracle/realization の作業規定そのものを確認したいときは、参照先の正本仕様を直接読む。
+- INDEX.md の更新手順や、`oracle/src` の対象外にある CLI 機能・realization 実装を確認したいときは、この入口を読まず直接それらを調べる。
 
 ## hash
-- 591e6af7937d26eff09b85f86d6d3b5d3ea10092d5872e3222118477a515abf0
+- d6279a4fc59f16a23e8d865cca5152aa5ecce083c96fb983b23fcfacfdea1f0a

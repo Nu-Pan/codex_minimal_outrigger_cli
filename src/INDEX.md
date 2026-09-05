@@ -84,22 +84,21 @@
 # `main.py`
 
 ## Summary
-- cmoc の CLI コマンドツリーと console script からの起動入口を定義する。
-- Typer と Click の互換境界、および通常の引数解析エラーを cmoc 形式へ変換する実行制御を担う。
-- doctor、tui、indexing、feedback、session、oracle、realization、run 各コマンドの CLI 入口を確認するための上位ルーティング対象。
+- cmoc CLI のトップレベル入口と session／oracle／realization／run／feedback のコマンドツリーを定義する。
+- Typer の起動境界で Click 8.2 の help 互換性を補正し、通常の引数解析エラーを cmoc のエラーレポートへ変換する。
+- CLI 補完 probe では通常コマンドを実行せず、明示した completion marker を Click に渡す。
 
 ## Read this when
-- cmoc の CLI にコマンドまたはサブコマンドを追加・変更するとき。
-- Typer・Click のバージョン互換、CLI 引数解析エラー、補完 probe、終了コードの扱いを調査するとき。
-- console script の起動経路や、各 sub_commands 実装へ到達するコマンドツリーを確認するとき。
+- cmoc の利用可能なコマンド階層や、各コマンドがどのサブコマンド実装へ委譲されるかを確認するとき。
+- Typer／Click の互換処理、引数解析エラーの終了コード付き報告、または補完時の副作用防止を確認するとき。
+- console script から cmoc CLI を起動する入口を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務ロジックや実装詳細だけを調査・変更するときは、対応する sub_commands 配下を直接読む。
-- oracle、realization、session、run などの状態遷移や仕様を確認するときは、対応する正本仕様またはサブコマンド実装を直接読む。
-- CLI の INDEX.md 更新処理そのものを調査するときは、indexing の実装対象を直接読む。
+- 個別コマンドの実処理、oracle／realization のワークフロー、session／run のブランチ操作の詳細を確認したいとき。
+- INDEX.md 更新、TUI 起動、feedback report の生成規則そのものを確認したいときは、対応する委譲先の実装または仕様を直接読む。
 
 ## hash
-- f11839e2670e14ecf92530a722e415c9b151e155dd0e16e294c198cb8c216a31
+- cebff8c904ea04e4cf0994e553ef7082dece329269c6fbfaf592dc1bdb36db12
 
 # `oracle.py`
 

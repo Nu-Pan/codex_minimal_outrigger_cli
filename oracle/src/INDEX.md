@@ -1,20 +1,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本となる設定・パスモデル・構造化文書モデルと、agent call の入力契約および prompt 構築定義をまとめた oracle ソース階層。
-- agent call の用途別パラメータ定義、prompt の policy・parts、feedback や editor input の入力契約へ進むための上位入口。
+- cmoc の agent call、prompt 構築、設定、パス解決、構造化文書、および入力契約を定義する正本仕様群への入口。
+- agent call の共通パラメータと用途別起動定義、完全 prompt と policy 部品、設定モデル、Git worktree に基づくパス・placeholder 解決を扱う。
+- 構造化文書の Markdown レンダリングと、feedback・editor input handoff の JSON 入力スキーマを確認するための下位要素へ進める。
 
 ## Read this when
-- cmoc の設定モデル、Codex provider と agent call の既定値、永続化対象を確認するとき。
-- agent call の cwd から導出される worktree・repository ルートや、cmoc のパス placeholder の解決規則を確認するとき。
-- 構造化文書ノードや cmoc の文書記法を Markdown へ変換するモデル・処理を確認するとき。
-- agent call の入力パラメータ、prompt の policy 構成、用途別の oracle・realization・feedback・TUI 定義の入口を探すとき。
-- editor input handoff や feedback reporter など、agent call に渡す JSON 入力契約を確認するとき。
+- cmoc の agent call 構築に必要な共通型、用途別 prompt、Codex 起動設定、Structured Output の入力契約を調べるとき。
+- prompt に組み込む作業規定、placeholder の統合、agent call の cwd から導出する root、Git worktree のパス解決を確認するとき。
+- 見出し・参照可能ブロック・policy を含む構造化文書の生成や Markdown レンダリングの実装を確認するとき。
+- feedback 報告または editor input handoff に渡す JSON 入力項目と制約を確認するとき。
 
 ## Do not read this when
-- 実際の CLI 実行、agent call の起動、session join の競合解消、oracle や realization 本文の編集処理だけを確認したいとき。
-- 特定の agent call の具体的な prompt policy、用途別パラメータ、または JSON Schema の受理条件を確認したいときは、対応する下位対象を直接読むとき。
-- cmoc の一般規定や prompt の正本仕様そのものを確認したいときは、対応する仕様文書を直接読むとき。
+- 特定の agent call の実行処理、feedback の収集・重複判定、または TUI の個別ワークフローだけを確認したい場合は、対応する実装や下位仕様を直接読む。
+- Codex CLI の sandbox、起動規則、または oracle・realization の作業規定そのものを確認したい場合は、参照される正本仕様を直接読む。
+- INDEX.md の更新手順や、このディレクトリ外の CLI 機能・realization 実装を確認したい場合は、この対象を入口にしない。
 
 ## hash
-- 8e4ca2bf185ddf79b8aad090e5404ed73730df6a062439f095afdb6ca42a7c9c
+- 8b3675f0505f7908c15be54a56953a32add9118ba72f3b907adba87f7ff79318

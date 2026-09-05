@@ -74,18 +74,22 @@
 # `oracle_review.md`
 
 ## Summary
-- oracle file の独立した網羅検査と Markdown レポート作成を行う `cmoc oracle review` を採用しない理由と、通常の workload における feedback observation への代替方針を示す。
+- 通常の workload と独立した oracle file の網羅検査・Markdown レポート作成を行う `cmoc oracle review` を採用しない判断と、その理由を示す文書。
+- 意図的な未定義部分との境界が曖昧になり、根拠の薄い修正反復によって oracle file が過剰に詳細化・肥大化するリスクを説明する。
+- 通常の workload で解消できない問題を feedback observation として報告する代替方針と、潜在的な問題を残す不確実性を許容する判断を示す。
 
 ## Read this when
-- `cmoc oracle review` の提供可否や、oracle file を網羅検査しない設計判断を確認するとき。
-- 通常の workload で解消できない問題を feedback observation として報告する方針を確認するとき。
+- `cmoc oracle review` の提供可否や、oracle file の網羅検査を採用しない設計判断を確認するとき。
+- 通常の workload における oracle file の調査と、解消できない問題の feedback observation 報告との境界を確認するとき。
+- oracle file を疎に保ちつつ実装可能な安定状態を優先する方針を確認するとき。
 
 ## Do not read this when
-- 通常の workload における具体的な oracle file の調査方法を確認したいときは、対象の oracle file を直接読む。
-- feedback observation の報告基準や `cmoc feedback report` の処理手順を確認したいときは、各正本仕様を直接読む。
+- `cmoc feedback report` の具体的な処理手順や自動修正条件を確認したいときは、feedback report の正本を直接読む。
+- agent による feedback observation の報告基準を確認したいときは、feedback observation の正本を直接読む。
+- 通常の workload における個別の oracle file の内容や実装詳細だけを確認したいとき。
 
 ## hash
-- 9ac80042bef39829698bb2246bee6d3ce9f6347162f43e96af19ac1a3eb49ae1
+- 94dadc3181ebca75170b8ee418395e9d736cef7ea77eed49d78eb53d5f0e6230
 
 # `working_plan_review.md`
 

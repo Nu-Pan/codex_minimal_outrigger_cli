@@ -1,56 +1,55 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を、CLI 実行、workflow、state、feedback、Codex 呼び出し、通知、文書分類などの個別仕様へ案内する正本仕様群の入口。
-- 各仕様書の責務と適用条件を確認し、対象の挙動や実装に対応する下位仕様へ進むために使用する。
+- cmoc のアプリケーション仕様を、共通挙動・状態管理・実行規約と各サブコマンド固有仕様に分けて参照するための入口。
+- CLI 実行、session／run lifecycle、feedback、ログ、入力 handoff、通知、oracle／realization 管理などの正本仕様と、sub_command 配下の個別 workload 仕様を扱う。
 
 ## Read this when
-- cmoc のアプリケーション挙動に関する正本仕様を探すとき
-- CLI、session／run、feedback、Codex CLI、ログ、通知、editor input、INDEX.md などの個別仕様の入口を判断するとき
-- 複数の仕様書にまたがる責務の所在や、共通仕様と個別仕様の境界を確認するとき
+- cmoc の外部挙動や共通契約の正本仕様を探すとき
+- 複数のサブコマンドに関係する実行条件、状態遷移、ログ、feedback、Codex 呼び出し規約を確認するとき
+- 特定サブコマンドの詳細仕様へ進む前に、共通仕様と個別仕様の委譲先を確認するとき
 
 ## Do not read this when
-- 特定の仕様書の詳細な挙動、field、prompt、schema、実装規則だけを確認したいときは、該当する個別仕様書または委譲先を直接読む
-- アプリケーション仕様に関係しない開発環境、設計、テスト実行などの内部開発規則だけを確認したいとき
-- 実装やテストの具体的なコードを調査するときは、routing 後に対象ファイルを直接読む
+- 特定の仕様文書の詳細だけを確認したいときは、該当する個別文書を直接読む
+- 実装・テストの具体的な挙動や oracle／realization file の実データだけを調べるとき
+- INDEX.md の生成・更新規則そのものだけを確認したいときは、indexing の仕様を直接読む
 
 ## hash
-- 548fa2350bff66ad10100eefccd206da3a4309e7107e353cb1920e0be05cffdc
+- 384d2be8d413e472ca75ddcbc711ccd1101ed8d16cfa43054417591304edee28
 
 # `branch_model.md`
 
 ## Summary
-- cmoc が session と run を git branch・commit・worktree で隔離するモデルを定義する正本文書。各管理対象の命名、分岐元・統合先、run の差分検査に用いる commit、run 用 worktree の関係を確認する入口。
+- cmoc の session・run を隔離して管理する branch、commit、linked worktree のモデルを定義する。
+- session と run の分岐元・統合先、各 branch の用途、run 差分を識別する commit、および run worktree の関係を確認するための入口。
 
 ## Read this when
-- session fork や run の branch 分岐・統合、run worktree の作成、または関連する commit 名・役割を実装・変更・調査するとき。
-- cmoc 管理 branch と通常の local branch・remote-tracking branch の境界を確認するとき。
+- session fork、run の隔離、run join、差分検査、report の commit 基準を扱うとき。
+- cmoc 管理 branch と通常の local branch・remote-tracking branch の区別を確認するとき。
+- run の linked worktree の配置や、session home branch への統合関係を確認するとき。
 
 ## Do not read this when
-- branch model の具体的な CLI 入出力契約だけを確認する場合は、該当する CLI 仕様を直接読む。
-- git 操作を伴わない workload の実行内容や report の詳細仕様だけを確認する場合は、各機能の仕様・実装文書を直接読む。
+- branch・commit・worktree の運用モデルを扱わず、個別サブコマンドの実装手順や CLI 入出力だけを確認したいとき。
+- run state や report の具体的な形式だけを確認する場合。
 
 ## hash
-- c40f58b39046604d613c84f9bd18f7a9688be81e5c3b97293298f685511debdd
+- 0ded198aa853368ff378bf1184aaeaa04caad22fa5ef2c6e74a38c6ff413f291
 
 # `considered_alternative`
 
 ## Summary
-- cmoc が採用しなかった設計案や作業方式を記録し、現行方針との違いと不採用理由を確認するための検討資料群。
-- refactor の作業フロー、file access policy、.gitignore 連携、AI-generated memory、oracle review、working plan review などの設計判断を扱う。
+- cmoc の設計・運用で検討したが採用しなかった代替案を記録する資料群への入口。現行方針との違いや不採用理由を確認するための上位ルーティング対象。
 
 ## Read this when
-- cmoc の設計案や作業方式が不採用となった理由を確認するとき
-- refactor の調査・修正単位、アクセス制御、永続的な AI 記憶、oracle 検査、作業計画レビューの採否を調べるとき
-- 採用済み方針と過去の代替案の境界や設計意図を確認するとき
+- 現行仕様ではなく、作業フロー、アクセス制御、記憶、oracle review などに関する過去の代替案と、その採否理由を調べるとき。
+- 複数の不採用案を比較し、cmoc が採用した設計判断の背景を確認するとき。
 
 ## Do not read this when
-- 現行のアクセス制御、refactor state、feedback 報告、oracle や realization の仕様を確認したいとき
-- 具体的な realization file の実装方法、CLI の入出力、テスト内容を調べたいとき
-- 採用済み workflow の操作方法や実装責務を直接確認したいとき
+- 現行の実装方法、アクセス制御、refactor state、feedback 処理などの正本仕様を確認したいとき。
+- 特定の代替案の詳細ではなく、採用済みの CLI 挙動やテスト内容を調べたいとき。
 
 ## hash
-- 9b342c36d29ca53f24b8fc2150e30340840913bf1d2deec724c22a615f5332bb
+- f488f904c483ea51c8b0dae8971eeb56b2299b80f6aa29129650dec08027d65f
 
 # `dev_rule`
 
