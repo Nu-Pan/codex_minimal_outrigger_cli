@@ -1,37 +1,40 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様・設計判断・開発ルールを分類して置く上位文書ディレクトリ。
-- アプリケーションの共通 lifecycle、実行境界、状態・ログ・feedback、サブコマンド固有契約への入口。
-- 不採用となった設計・運用案と採否理由への入口。
-- Python 実装、CLI 責務分担、開発環境、テスト規則・実行手順への入口。
+- cmoc の正本仕様・設計判断・開発規則を、アプリケーション挙動、branch model、採用しなかった代替案、Python 実装・環境・テスト規則の領域別に参照するための上位入口。対象分野に応じて下位文書群へ進む判断基準を提供する。
 
 ## Read this when
-- cmoc の仕様、設計判断、または開発ルールについて、どの文書群から確認を始めるか判断するとき。
-- アプリケーション挙動、過去の代替案、Python/CLI 開発規約、環境、テスト手順のいずれかを調べるとき。
+- cmoc の仕様、設計、開発ルールを調査し、どの文書群を起点に読むべきか判断するとき
+- CLI、session・run、feedback、ログ、通知、oracle／realization などのアプリケーション挙動を確認するとき
+- Python 実装、CLI の責務分担、開発環境、テストの規則を確認するとき
+- 現行仕様ではなく、採用しなかった設計案や不採用理由を調べるとき
+- branch、commit、worktree の役割と session・run の隔離関係を確認するとき
 
 ## Do not read this when
-- 単一の実装、テスト、schema、状態データ、または個別文書の具体的内容だけを確認したいとき。
-- 特定サブコマンドや個別ルールの詳細を確認するため、文書群全体を読む必要がないとき。
-- INDEX.md の生成・更新規則そのものを確認したいとき。
+- 確認対象のアプリケーション仕様、branch model、開発規則、または代替案の本文が既に特定できているときは、対応する個別文書を直接読む
+- 特定サブコマンドの挙動、個別の agent call 規則、feedback の詳細、oracle／realization のファイル単位の責務を調べるときは、該当する下位仕様を直接読む
+- Python の具体的な実装や realization test の具体的な内容を理解したいときは、対応する実装・テスト対象を直接読む
+- INDEX.md の生成・更新規則だけを確認するときは、indexing に対応する仕様を直接読む
 
 ## hash
-- 1c302a7e45b505a98c9dac384bb8cbdba48442af21ddc97aa80a6768fd9bbbc8
+- d1d459fce84a0443e81986e6b5f81467e4424dc148bf46d106a9e6488c7939c9
 
 # `src`
 
 ## Summary
-- oracle 配下の入力スキーマ、agent call builder、設定・パス・prompt 構築の基盤を扱う入口。
-- エディタ上書き、フィードバック観測、agent call の共通型と用途別設定、prompt と policy 注入、Codex CLI や構造化文書の処理を確認するための上位ルーティング先。
+- Codex CLI を用いる cmoc の実装層で、agent call のパラメータ構築、prompt と policy の生成、パス・構造化文書・設定の共通処理を担う。
+- quota probe、indexing、feedback、oracle、realization、session、TUI などの用途別 call builder と、editor input handoff や feedback reporter の入力契約を提供する。
+- oracle と realization の扱い、ファイルアクセス制約、routing、Structured Output 連携を組み合わせて、用途ごとの agent call を構成する入口となる。
 
 ## Read this when
-- oracle/src 配下で、複数の入力契約や agent call 構築領域にまたがる仕様・実装の入口を判断するとき。
-- エディタ入力上書き、フィードバック報告、agent call、設定・パス・prompt 構築の正本領域を特定したいとき。
+- cmoc の agent call 構築における共通パラメータ、prompt、policy、パス解決、構造化文書処理の責務分担を確認するとき。
+- quota probe、indexing、feedback、oracle、realization、session、TUI の用途別 agent call builder や、editor input handoff・feedback reporter の入力契約を探すとき。
+- oracle・realization の正本責務、ファイルアクセスモード、INDEX.md routing、Structured Output を agent call に組み込む方法を調べるとき。
 
 ## Do not read this when
-- 特定の agent call の個別 prompt、入力、結果分類、検証条件だけを確認する場合。
-- エディタ上書き、フィードバック送信、collector、issue 同一性判定、remediation など個別処理の具体的挙動だけを確認する場合。
-- Codex CLI sandbox、Structured Output schema、個別 CLI 機能や MCP tool の詳細な契約・実装だけを確認する場合。
+- 特定用途の prompt、出力契約、起動パラメータの詳細だけを確認したいときは、該当する用途別 builder と schema を直接読む。
+- agent call の実行処理や Codex CLI の実際の挙動を調べるときは、実行層や対応する外部仕様を直接確認する。
+- oracle・realization・feedback の意味仕様、保存・受付処理、または個別の入力契約だけを調べるときは、それぞれの正本仕様や専用入力定義を直接読む。
 
 ## hash
-- 99c23199cd94a9204f0028ba7a4a480081afca0c849d618c5b1c4a7833577cfb
+- 39340166c0e1059ce1115273520875a712f43899db4538a882ffbf0de62d8b98

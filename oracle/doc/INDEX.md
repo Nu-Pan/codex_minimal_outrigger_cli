@@ -1,40 +1,38 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション挙動に関する正本仕様を集約し、共通 lifecycle・実行境界・ログ・状態管理・feedback と、各サブコマンド固有の契約への入口を提供する。
-- 共通仕様は、Codex CLI 呼び出し、自動補完、doctor 前処理、editor input、run/session 隔離、エラー・中断・通知、oracle／realization 分類などの横断的な責務を扱う。
-- サブコマンド仕様は、doctor、editing run、feedback report、indexing、oracle edit／investigation、realization apply／refactor、session 操作、TUI の個別挙動を定義する。
+- cmoc の CLI・セッション・feedback・oracle／realization・ログ・通知など、アプリケーション全体の正本仕様を分野別に参照する入口。個別仕様の責務境界と、関連する下位文書へ進むためのルーティング情報を提供する。
 
 ## Read this when
-- cmoc のアプリケーション仕様を実装・変更・レビューし、共通仕様と個別サブコマンド仕様のどこから確認を始めるか判断するとき。
-- 複数の実行経路にまたがる状態遷移、出力・ログ、Codex CLI 呼び出し、feedback、run/session lifecycle の契約を確認するとき。
-- 特定サブコマンドの目的、事前条件、処理手順、結果、状態更新、report または終了条件を正本仕様で確認するとき。
+- cmoc のアプリケーション仕様を調査し、対象分野に対応する正本仕様を選ぶとき
+- CLI 実行、session／run lifecycle、feedback、ログ、通知、oracle／realization、INDEX.md 運用などの共通仕様の入口を探すとき
+- 個別仕様間の参照関係や、共通契約と下位仕様の責務分担を確認するとき
 
 ## Do not read this when
-- 単一の実装ファイル、test、schema、または既存状態データの具体的内容だけを調べるときは、その対象を直接読むとき。
-- 個別仕様の詳細を確認する目的で、共通仕様群全体や対象外のサブコマンド仕様を読む必要がないとき。
-- INDEX.md の生成・更新規則そのものを確認するときは、インデクシング運用の正本仕様を直接読むとき。
+- 特定の仕様本文、実装、テスト、設定スキーマの詳細が既に特定できているときは、対応する個別対象を直接読む
+- INDEX.md の生成規則そのものだけを確認するときは indexing の仕様を直接読む
+- 特定サブコマンドや個別機能の挙動だけを確認するときは、該当する下位仕様を直接読む
 
 ## hash
-- d58e508e4055a557ae8341c6ab968715f25575495a37793328400cd3d97153c0
+- 7d13b700c48e1556bb3c6964e41f06b70364be965971ac085dcc554ae119e254
 
 # `branch_model.md`
 
 ## Summary
-- cmoc の session・run を隔離して管理する branch、commit、linked worktree のモデルを定義する。
-- session と run の分岐元・統合先、各 branch の用途、run 差分を識別する commit、および run worktree の関係を確認するための入口。
+- cmoc の session・run が利用する branch、commit、linked worktree の役割と関係を定義するモデル。通常の git branch との区別、分岐元・統合先、run の隔離方法を確認するための入口。
 
 ## Read this when
-- session fork、run の隔離、run join、差分検査、report の commit 基準を扱うとき。
-- cmoc 管理 branch と通常の local branch・remote-tracking branch の区別を確認するとき。
-- run の linked worktree の配置や、session home branch への統合関係を確認するとき。
+- session fork や run の branch 構成、分岐元・統合先 commit、run worktree の位置づけを確認するとき
+- cmoc 管理 branch と通常の local・remote-tracking branch の違い、または session と run の隔離関係を扱うとき
+- run の差分検査、apply の追従対象、join の no-op 条件を含む commit の意味を確認するとき
 
 ## Do not read this when
-- branch・commit・worktree の運用モデルを扱わず、個別サブコマンドの実装手順や CLI 入出力だけを確認したいとき。
-- run state や report の具体的な形式だけを確認する場合。
+- 個別の CLI サブコマンドの実行手順や state・report の詳細を確認したいとき
+- oracle の変更内容や realization の実装責務を確認したいとき
+- branch、commit、worktree の関係ではなく、git 一般の操作方法だけを調べるとき
 
 ## hash
-- 0ded198aa853368ff378bf1184aaeaa04caad22fa5ef2c6e74a38c6ff413f291
+- 2acd7424aee437c67f38a81333bef36915ec27f659402c48fa745ab596010e7b
 
 # `considered_alternative`
 

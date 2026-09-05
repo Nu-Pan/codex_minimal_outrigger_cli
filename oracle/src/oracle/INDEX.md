@@ -1,23 +1,22 @@
 # `acp_builder`
 
 ## Summary
-- AI コーディングエージェント呼び出しの共通パラメータ型と、用途別の prompt・起動設定を構築する上位入口。
-- quota probe、INDEX.md エントリー生成、feedback issue の同一性判定・remediation、TUI 起動の各 agent call 定義へ進むための集約点。
-- indexing、feedback、tui の下位要素では、それぞれの agent call に固有の入力、アクセス権限、Structured Output、検証・起動条件を扱う。
+- AI コーディングエージェント呼び出しの共通パラメータ型とファイルアクセスモードを定義する。
+- quota availability probe、INDEX.md エントリー生成、feedback issue 処理、oracle・realization・session・TUI など、用途別の agent call builder への入口をまとめる。
+- 各用途に応じた prompt、Structured Output schema、作業ディレクトリ、editor input handoff、indexing preflight の設定を確認できる。
 
 ## Read this when
-- agent call builder 全体の責務分担や、共通パラメータから用途別定義への入口を確認するとき。
-- 複数の agent call に共通するファイルアクセスモード、prompt、cwd、Structured Output schema、indexing preflight の設定箇所を探すとき。
-- quota probe、indexing、feedback、または TUI の agent call 構築を調べる際に、該当する下位要素へ進む前の構成を把握するとき。
+- agent call の共通パラメータ、アクセスモード、prompt、Structured Output schema、cwd、editor input handoff、または indexing preflight の設定を確認するとき。
+- 用途別の agent call builder を探すとき。
+- quota probe、indexing、feedback、oracle、realization、session、TUI の agent call 構築責務の入口を確認するとき。
 
 ## Do not read this when
-- 特定の agent call の詳細な prompt、入力データ、結果分類、または起動条件だけを確認したい場合は、対応する下位要素を直接読む。
-- Codex CLI の sandbox へ対応するファイルアクセスモードの意味を確認したい場合は、basic.py が参照する正本仕様を読む。
-- Structured Output schema の機械的な受理条件だけを確認したい場合は、対応する JSON schema を直接読む。
-- INDEX.md の更新処理や、oracle・realization ファイル自体の内容を確認したい場合。
+- 特定の agent call の prompt や出力契約の詳細を確認したいときは、該当する下位ファイルを直接読む。
+- agent call の共通実行処理や Codex CLI の実際の挙動を調査するとき。
+- oracle・realization file の具体的な内容、編集手順、または feedback issue の保存・受付処理を確認するとき。
 
 ## hash
-- ff75a9e35d500113ace32d295f620adfcceb0cd342819a768c1ccb9b3397a6a5
+- 1c30d36fd04b48d7e50c884f1e64ee15f70f18d6731aa581d251b69cfd0c1ed5
 
 # `editor_input_handoff`
 
@@ -75,16 +74,13 @@
 # `prompt_builder`
 
 ## Summary
-- agent call 向けの完全 prompt とエディタ初期入力を組み立てる実装、および prompt 構築に使う部品・policy 定義をまとめたディレクトリ。
-- 型定義から入力文面生成、完全 prompt の統合、個別 policy の構築まで、prompt builder の責務へ進むための入口。
+- 日本語技術文書として、prompt_builder 配下の型定義・完全 prompt 構築・エディタ入力・oracle／realization 部品・policy 集約を案内する入口。
 
 ## Read this when
-- agent call 用 prompt の構成、placeholder 統合、エディタ入力の初期文面、または個別 policy の選択・注入を確認・変更するとき。
-- oracle／realization の説明や分類条件を prompt 部品として組み込む処理の入口を確認したいとき。
+- agent call 向け prompt の構成、入力初期文面、placeholder 定義、oracle／realization のプロンプト部品、または policy 群の配置と選択条件を調べるとき。
 
 ## Do not read this when
-- 個別 policy の具体的な規定文や、その参照先である正本仕様を確認したい場合は、対応する policy モジュールまたは oracle file を直接読む。
-- prompt builder を使わない CLI、MCP tool、または realization file の具体的な挙動だけを調べる場合。
+- 個別 policy の具体的な文面や実装、placeholder 置換処理そのもの、prompt 全体の正本仕様を直接確認したいときは、該当する個別対象へ進む。
 
 ## hash
-- d30a96d735a04a371f3b5eb78452467c917b2edbfc9927fd9d0981581840fa29
+- aade97b212f1e61ff885fcb481c40e82d0a5db10c66c6039d706207c17519de7

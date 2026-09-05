@@ -18,19 +18,19 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の run branch 差分を人間向けに要約する agent call の prompt と起動パラメータを構築する入口。
-- 差分本文、linked worktree の作業コンテキスト、readonly 権限、変更要約用の実行条件をまとめて AgentCallParameter に変換する。
+- refactor fork の変更要約 agent call 用に、指定された始点・終点 commit 間の Git tree 差分を要約する prompt と起動パラメータを構築する。
+- 差分取得時の repository・commit 範囲固定、読み取り専用アクセス、失敗時の扱い、実行 cwd・構造化出力 schema・indexing preflight を含む agent call 設定への入口。
 
 ## Read this when
-- refactor fork の変更差分要約処理を追加・変更・調査するとき。
-- run branch の差分を入力にした agent call の prompt 構成、作業ディレクトリ、readonly 実行条件、indexing preflight の設定を確認するとき。
+- refactor fork の変更差分要約 agent call の prompt、commit 範囲、読み取り権限、起動 cwd、または出力設定を確認・変更するとき。
+- 指定 commit 間の差分を取得して要約する realization parameter の構築責務を調べるとき。
 
 ## Do not read this when
-- 変更要約 agent の出力内容や出力形式そのものを確認したいとき。
-- refactor fork 以外の agent call 構築や、差分生成・適用の処理を確認したいとき。
+- refactor fork の差分要約結果の出力項目や JSON schema 自体を確認するとき。
+- prompt 全体の共通生成規則や構造化文書のレンダリング実装を直接確認すべきとき。
 
 ## hash
-- c68ab8c4910f4000666585fbc7b22832c6233114efe3182086389dcb99bf6d28
+- 8ce6ede01b04ca8b537c53b595aab7743ffa6d50dec7b009314136714ac4547f
 
 # `file_review_and_fix.json`
 

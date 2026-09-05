@@ -94,18 +94,19 @@
 # `realization`
 
 ## Summary
-- `cmoc realization apply fork` の realization 追従用 AgentCallParameter を構築する定義。commit 範囲と oracle file の raw git diff を追従対象として、oracle file と realization file の齟齬調査・反映作業への入口を提供する。
+- `apply` は、指定した commit 範囲の oracle file 変更を realization file に追従させる agent call の起動条件・権限・差分判定を確認する入口。
+- `refactor` は、refactor fork の commit 差分の要約と、指定 realization file の調査・修正・検証を行う agent call の契約と実行条件を確認する入口。
 
 ## Read this when
-- `cmoc realization apply fork` の Agent call に作業範囲、完了条件、realization 書き込み権限、linked worktree、indexing preflight を設定する方法を確認するとき。
-- commit 範囲と oracle file の raw git diff を追従対象変更として prompt に渡し、関連する oracle file と realization file をリポジトリ全体から調査させる条件を確認するとき。
+- oracle file の commit 間変更を realization に反映する agent call の prompt、起動パラメータ、linked worktree、実行前 indexing、差分取得失敗時の扱いを確認するとき。
+- refactor fork の差分要約、変更分類、レビュー対象の調査、realization の修正・検証、または各 agent call の出力契約を確認するとき。
 
 ## Do not read this when
-- 追従対象となる oracle file の具体的な差分や、個々の realization file への反映内容を確認するとき。
-- 共通の complete prompt 生成処理、構造化文書ノード、AgentCallParameter の一般仕様を確認するとき。
+- 実際の Git 差分取得、fork の実行、realization file の具体的な編集、または個別の変更内容・レビュー結果を調べるとき。
+- 共通 prompt 構築、AgentCallParameter の一般仕様、oracle 要求・realization 実装そのもの、または構造化文書レンダリングを直接調査するとき。
 
 ## hash
-- a079e82e8258d856af2171fdcb4a2ae0fd6b6e3b681d5536e23edd520f6da873
+- 31b82bb17ffbff96848c92cef4fdbb63127a7fd62e30023fe68f1a68d6bd01ad
 
 # `session`
 

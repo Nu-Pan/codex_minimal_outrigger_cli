@@ -18,22 +18,24 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- Codex CLI の `codex exec` 呼び出しにおける、agent call と Codex call の単位、path context、環境変数、引数上書き、sandbox、ファイルアクセス、prompt、Structured Output、retry・quota 待機、並列実行、ログ保存の規約を定める正本。
-- Codex CLI を呼び出す実装や、その起動パラメータ、セッション再開、出力補正、feedback reporter、editor input handoff、入出力ログの扱いを確認するための入口。
+- cmoc が `codex exec` を呼び出す際の、agent call の path context、環境変数、preflight、argv 設定、sandbox、file access、prompt、feedback、ログ、Structured Output、並列実行、失敗時処理に関する横断的な呼び出し規約を定める正本。Codex CLI 呼び出しの共通契約や実行ライフサイクルを確認する入口。
 
 ## Read this when
-- Codex CLI の `codex exec` または `codex exec resume` の呼び出し経路を実装・変更・レビューするとき。
-- agent call の path context、file access mode、sandbox、provider・model・reasoning effort、環境変数、MCP 設定を決めるとき。
-- Structured Output の保存・検証・補正、quota 待機、capacity retry、Codex session ID、stdout・stderr・output ログの扱いを確認するとき。
-- Codex CLI 呼び出しに関する feedback observation または editor input handoff の lifecycle と設定を確認するとき。
+- `codex exec` の起動引数、sandbox または file access mode の対応を変更・確認するとき
+- agent call の cwd、work-root/repo-root、path placeholder、prompt の構築・受け渡しを扱うとき
+- Structured Output の検証・補正、session resume、quota 待機、retry、Codex call のログ保存を実装・確認するとき
+- feedback reporter、editor input handoff MCP、model provider の call-scoped 設定を扱うとき
+- Codex CLI 呼び出し全体の成功・失敗時動作や並列実行規則を確認するとき
 
 ## Do not read this when
-- Codex CLI 自体の一般的な利用方法や製品仕様を調べるだけで、cmoc の呼び出し規約を変更・検証しないとき。
-- 特定の builder が所有する agent call の詳細だけを確認する場合は、まず対応する builder または参照先の oracle doc を読むとき。
-- Codex CLI を呼び出さない realization の実装や通常のテスト手順だけを扱うとき。
+- 個別 workload の意味上の責務や判断基準を確認する場合は、対応する oracle doc を直接読むとき
+- `AgentCallParameter` の正確な field 定義・型・既定値だけを確認する場合は、指定された basic.py を直接読むとき
+- path context の導出アルゴリズムだけを確認する場合は、指定された path_model.py と prompt builder を直接読むとき
+- prompt の正確な rendering や個別 policy 文面だけを確認する場合は、指定された oracle src の該当実装を直接読むとき
+- Windows toast notification、model provider、feedback observation、editor input handoff など個別仕様の詳細だけを確認する場合は、各参照先の正本を直接読むとき
 
 ## hash
-- 729f32312d9e249304d31004868cf6811bea461b8f407e1d99443b213518c358
+- de22b64d3fbea09ab09c6f34180b9ee88f68d56862e6316b0dc1448545aefe64
 
 # `codex_model_provider.md`
 
@@ -274,21 +276,20 @@
 # `run_isolation.md`
 
 ## Summary
-- run の fork から join または abandon までの隔離作業 lifecycle と、run の成果物・状態を管理する境界を定める。
-- run 固有の branch、worktree、agent call の path context、および run-root 外への cmoc 管理データ書き込み例外を確認する入口。
+- run の fork から join または abandon までの隔離作業 lifecycle、branch・commit・worktree の扱い、および run-root 外への書き込み例外を定める規則。
 
 ## Read this when
-- run の作成、完了、取り込み、破棄の lifecycle を実装・確認するとき。
-- run の branch、worktree、agent call の作業場所や path context を判断するとき。
-- run 作業と session state、ログ、feedback state など repository-local 管理データの境界を確認するとき。
+- run の開始・完了・破棄、編集 run と self-joining workload の扱いを確認するとき。
+- run の branch、worktree、agent call の作業場所、または run-root 外の管理データ書き込み範囲を確認するとき。
 
 ## Do not read this when
-- branch、commit、worktree の具体的な命名規則だけを確認したいときは、正本である branch model を直接読む。
-- 永続化する run field のスキーマだけを確認したいときは、session_state の run field を直接読む。
-- ログ、feedback observation、feedback state の保存仕様だけを確認したいときは、それぞれの指定された正本仕様を直接読む。
+- 永続化する run state のフィールド定義を確認するときは session state 仕様を読む。
+- branch・commit・worktree の具体的な命名や分岐元を確認するときは branch model を読む。
+- agent call の正確な path context や Git metadata の詳細なアクセス制限を確認するときは codex exec rule を読む。
+- ログ、feedback observation、feedback state の保存先や lifecycle を個別に確認するときは、それぞれの正本仕様を直接読む。
 
 ## hash
-- 5575f423b305dead5e687877f02a52581dfb267c69053f153ac31a29b90887b8
+- 1f575686f1273a3e665a69180a449806d69bdaa49225490a5ac6fccc830c048f
 
 # `session_state.md`
 
@@ -310,19 +311,19 @@
 # `sub_command`
 
 ## Summary
-- `cmoc doctor` コマンドの仕様を定義し、doctor preprocess の明示的な呼び出し、引数・事前条件、終了経路ごとの primary report 保存要件を確認する入口。
+- cmoc の個別サブコマンド仕様を参照するための入口。doctor、indexing、oracle 操作、session lifecycle、editing run、feedback report、realization、tui の仕様を扱う。
+- 各サブコマンド固有の契約と、editing run・session state・branch model など共通正本仕様との責務境界を確認できる。
 
 ## Read this when
-- `cmoc doctor` の引数、実行手順、事前条件を確認するとき
-- doctor preprocess の実行結果を含む primary report の保存先・内容・対象終了経路を確認するとき
-- `cmoc doctor` のコマンド仕様を変更または実装と照合するとき
+- cmoc の個別サブコマンドの引数、事前条件、実行手順、終了経路、report 要件を調べるとき。
+- 個別サブコマンド仕様と共通 lifecycle・state・branch 仕様のどちらを参照すべきか判断するとき。
 
 ## Do not read this when
-- doctor preprocess 自体の検証・修復内容を確認したいときは、正本である `oracle/doc/app_spec/doctor_preprocess.md` を直接読む
-- doctor に関連する診断用サブコマンドの個別仕様だけを確認するとき
+- 特定のサブコマンドの詳細を確認する場合は、該当する個別仕様ファイルを直接読む。
+- サブコマンド以外の共通仕様や、realization・feedback などの下位仕様そのものを確認する場合は、参照先として指定された正本仕様を直接読む。
 
 ## hash
-- a3afc22acf3ae74fefbcb19c947661d56bd19d60c4a76fc297a25642f8e6d87d
+- b4874f35cbecb9d53750a3d1b461a28398d3c09101f81291dfbb436baf615043
 
 # `subcommand_interruption.md`
 

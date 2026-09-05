@@ -117,37 +117,40 @@
 # `realization_apply.md`
 
 ## Summary
-- 直近の oracle file 差分を realization file へ反映する realization apply fork の目的、追従範囲、agent call、終了処理を定義する仕様。
+- 直近の Git commit 群に含まれる oracle file の変更を realization file へ反映する、`realization apply fork` の目的・追従対象・agent call・実行手順・終了処理を定める仕様。
 
 ## Read this when
-- realization apply fork の差分始点・終点や、oracle 変更の追従範囲を確認するとき。
-- fork の agent call 実行条件、想定内差分、エラー処理、report 保存、join 後 hook を確認するとき。
+- realization apply の fork を開始・実行・終了するとき。
+- 追従対象となる oracle 差分、agent call の制約、run state、report、join 後 hook を確認するとき。
 
 ## Do not read this when
-- 編集 run に共通する fork・join・abandon の lifecycle だけを確認したいとき。
-- oracle file と realization file の適合性基準そのものを確認したいとき。
+- realization file の網羅的なリファクタや、fork 後の成果物取り込み・破棄だけを扱うとき。
+- 編集 run 全体に共通する fork・join・abandon lifecycle の仕様を確認したいときは、共通 lifecycle の正本を直接読む。
 
 ## hash
-- 56077d711ba3736e5cb7467db9983f244644f8e2b3ea2262d3c9ae30987b6512
+- 7e2f423353bd1ae16a90ba88e7ea0ef3cd181328810f0b8c4db8b9e0f1365074
 
 # `realization_refactor.md`
 
 ## Summary
-- realization refactor の fork workload として、oracle file・realization file の調査要求を状態管理し、current fork 内で未解決 target 以外を反復処理する仕様への入口。
-- 調査・修正 agent call、変更 path の検証、refactor state の同期、処理単位の commit、および unresolved target の扱いを定義する。
-- 自然完了・未解決付き完了・中断・エラーにおける完了条件、report、終了状態、終了コードを確認するための対象。
+- oracle file と realization file の追従調査・修正を、current fork の未解決 target を除いて要求がなくなるまで繰り返す realization refactor fork の正本仕様。
+- refactor state の同期、調査対象の選択、agent call 後の変更検証、処理単位の確定、完了判定、run lifecycle、report 生成を定義する。
 
 ## Read this when
-- realization refactor fork の開始、対象 file の選択、調査ループ、state 更新、変更確定の挙動を実装または確認するとき。
-- current fork で unresolved target を扱う方法、完了理由、run state、report の要件を確認するとき。
+- realization refactor fork の開始から loop、state 更新、realization file の修正、commit、完了までの動作を確認または変更するとき。
+- current fork の unresolved target、自然完了、未解決付き完了、ユーザー中断、その他のエラーの扱いを確認するとき。
+- refactor state の entry 集合、調査履歴、調査要求、調査対象選択順を確認するとき。
+- fork 終了 report、変更要約、終了コード、終了イベントに必要な情報を確認するとき。
 
 ## Do not read this when
-- 短い変更ループを担う realization apply の仕様だけを確認したいとき。
-- oracle file と realization file の適合性そのものを確認する場合は、正本である oracle_and_realization.md を直接読むとき。
-- fork・join・abandon の共通 lifecycle や中断の共通動作だけを確認する場合は、対応する共通仕様を直接読むとき。
+- 短い変更ループを担う realization apply の仕様だけを確認するとき。
+- fork、join、abandon の共通 lifecycle の詳細だけを確認するときは、共通編集 run 仕様を直接読むとき。
+- Ctrl+C を含む共通のサブコマンド中断規則だけを確認するときは、共通中断仕様を直接読むとき。
+- oracle file と realization file の適合性基準そのものを確認するときは、適合性の正本を直接読むとき。
+- agent call の prompt 構築や変更要約の具体的な実装を確認するときは、各 builder の正本を直接読むとき。
 
 ## hash
-- b89f383f2adc33af8d1825bd79aa3ff07eebcb0b26b698b28538b8728f812e76
+- 693099882c2c0b01d13c3984b85c82600d9808078350c4a59f54724fbffb5441
 
 # `session_abandon.md`
 
