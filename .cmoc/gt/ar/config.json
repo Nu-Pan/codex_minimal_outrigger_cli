@@ -12,9 +12,9 @@
         "model": "gpt-5.6-sol",
         "reasoning_effort": "max"
       },
-      "build_feedback_verify_issue_parameter": {
+      "build_feedback_remediate_issue_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-sol",
+        "model": "gpt-5.6-luna",
         "reasoning_effort": "max"
       },
       "build_oracle_investigation_launch_tui_parameter": {
@@ -66,6 +66,11 @@
         "model_provider": "openai",
         "model": "gpt-5.6-luna",
         "reasoning_effort": "low"
+      },
+      "build_feedback_verify_issue_parameter": {
+        "model_provider": "openai",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "max"
       }
     }
   }
