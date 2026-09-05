@@ -7,15 +7,20 @@
 # 基本設定
 # NOTE
 #   TUI ユースでは人間の認知コストを最小化したいので品質最優先の設定にしている
-model = "gpt-5.6-sol"
+model = "gpt-6-astra"
 #review_model = ...
-model_reasoning_effort = "ultra"
-plan_mode_reasoning_effort = "ultra"
+model_reasoning_effort = "medium"
+plan_mode_reasoning_effort = "medium"
 #model_context_window = ...
 #model_auto_compact_token_limit = ...
 #tool_output_token_limit = ...
 #model_verbosity = ... 
 #personality = ...
+
+
+# gpt-6-astra で追加された新しいコンテキストマネジメント戦略を有効化
+# 試しに…なのでヤバそうならいつでも消して良い
+features.context_management.experimental_mode = true
 
 # ルートディレクトリ設定
 #project_root_markers = ...
