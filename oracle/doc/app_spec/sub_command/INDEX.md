@@ -41,22 +41,22 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の一回の invocation における feedback observation の検証・正規化、issue 単位の realization 修正、commit、wave 処理、自動 join、publication、recovery、および終了結果を定義する CLI 仕様。
-- feedback remediation run の開始条件、隔離境界、agent call の制約、差分受理条件、issue state の確定、エラー・中断時の保持範囲を確認するための入口。
+- `cmoc feedback report` の仕様書。feedback observation の intake、issue identity の正規化と remediation、issue 単位の commit、intake wave、session branch への自動 join、publication、interruption/error recovery、report 保存および終了コードを定める。
+- feedback report の挙動を確認・変更する際の app_spec の入口であり、feedback observation・feedback state・branch/run isolation・editing run などの正本仕様と連携する。
 
 ## Read this when
-- `cmoc feedback report` の CLI 契約、run 開始・再開、wave loop、issue remediation、commit、automatic join、publication、または終了コードを実装・変更・検証するとき。
-- feedback observation を issue に正規化する条件や、`human_required`・`incomplete`・`error` の扱いを確認するとき。
-- feedback report、invocation report、current pointer、raw observation の保存・cleanup・recovery の整合性を調べるとき。
+- `cmoc feedback report` の CLI 契約、事前条件、run 開始・再開、または clean 検査を確認するとき。
+- raw observation の validation、machine/agent observation の normalization、issue identity ごとの remediation call、Structured Output 受理条件、差分検査、commit/rollback を確認するとき。
+- intake wave と high-watermark、自然完了、ユーザー中断、続行不能な失敗、自動 join、join 後 recovery、正常・incomplete・error report、publication、終了コードを確認するとき。
 
 ## Do not read this when
-- feedback observation の収集規則そのものを確認したいときは `feedback_observation` の正本を読む。
-- feedback の用語、結果分類、または repository-local state の一般契約を確認したいときは、それぞれの正本仕様を直接読む。
-- 編集 run の共通仕様、branch model、run isolation、session state、Codex exec、または interruption の一般規則だけを確認する場合は、対応する oracle を直接読む。
-- `cmoc feedback report` に固有でない realization 実装や、個別の remediation 対象の内容を調べる場合。
+- raw observation の収集方法や reporter input schema だけを確認したいときは、feedback observation の仕様を直接読む。
+- issue、current pointer、active generation、pending observation など repository-local state の schema・atomic publication・cleanup だけを確認したいときは、feedback state の仕様を直接読む。
+- branch/worktree の一般的な隔離や編集 run の共通 lifecycle、Codex 呼び出し規約、interruption の一般規則だけを確認したいときは、それぞれの正本仕様を直接読む。
+- normalization/remediation agent の prompt、起動パラメータ、または Structured Output schema の詳細だけを確認したいときは、指定された builder と schema を直接読む。
 
 ## hash
-- ca3f852578588c18d97f0cc9931237a9b461b1eeae26e086570c6cd477784447
+- 8c0138f68b3d0d814628d4961e2caf4a509ef4a460cec12dfcc6f582f5d7e024
 
 # `indexing.md`
 

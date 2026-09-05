@@ -1,20 +1,22 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を、CLI の共通実行規則、各サブコマンド、session・run・feedback の状態管理、oracle／realization の責務、ログ・通知・補完などの横断契約に分けて案内する仕様群。cmoc の外部挙動や主要な処理境界を確認する際の入口となる。
+- cmoc のアプリケーション挙動に関する正本仕様を集約し、共通 lifecycle・実行境界・ログ・状態管理・feedback と、各サブコマンド固有の契約への入口を提供する。
+- 共通仕様は、Codex CLI 呼び出し、自動補完、doctor 前処理、editor input、run/session 隔離、エラー・中断・通知、oracle／realization 分類などの横断的な責務を扱う。
+- サブコマンド仕様は、doctor、editing run、feedback report、indexing、oracle edit／investigation、realization apply／refactor、session 操作、TUI の個別挙動を定義する。
 
 ## Read this when
-- cmoc のアプリケーション仕様から、調べたい挙動を担う正本仕様やサブコマンド仕様を選ぶとき
-- CLI 実行、session・editing run、feedback、oracle／realization、ログ、通知、自動補完などの横断的な仕様境界を確認するとき
-- 複数の個別仕様をまたいで cmoc の処理順序、状態遷移、責務分担を把握するとき
+- cmoc のアプリケーション仕様を実装・変更・レビューし、共通仕様と個別サブコマンド仕様のどこから確認を始めるか判断するとき。
+- 複数の実行経路にまたがる状態遷移、出力・ログ、Codex CLI 呼び出し、feedback、run/session lifecycle の契約を確認するとき。
+- 特定サブコマンドの目的、事前条件、処理手順、結果、状態更新、report または終了条件を正本仕様で確認するとき。
 
 ## Do not read this when
-- 特定の仕様本文、実装、テスト、または JSON schema の正確な定義を確認したいときは、ここで対象を絞った後に該当するファイルを直接読む
-- INDEX.md の生成・更新規則そのものを確認するときは indexing.md を直接読む
-- 個別機能の実装詳細や既存状態ファイルの実データだけを調べるときは、対応する realization または state ファイルを直接読む
+- 単一の実装ファイル、test、schema、または既存状態データの具体的内容だけを調べるときは、その対象を直接読むとき。
+- 個別仕様の詳細を確認する目的で、共通仕様群全体や対象外のサブコマンド仕様を読む必要がないとき。
+- INDEX.md の生成・更新規則そのものを確認するときは、インデクシング運用の正本仕様を直接読むとき。
 
 ## hash
-- 76e84780df30f46fcff52ae75f8ce252234c4db04204d511eb39289e62aace7f
+- d58e508e4055a557ae8341c6ab968715f25575495a37793328400cd3d97153c0
 
 # `branch_model.md`
 

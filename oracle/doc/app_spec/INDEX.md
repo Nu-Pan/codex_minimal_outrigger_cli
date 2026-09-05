@@ -57,23 +57,21 @@
 # `console_and_file_log.md`
 
 ## Summary
-- 非対話サブコマンドの console 出力、primary report、terminal result、サブコマンドログに関する共通契約の正本。時間・パス表示、出力先、終端分類、確定順序、ログ記録要件、および TUI・自動補完との境界を定める。
+- 非対話サブコマンドの console、primary report、サブコマンドログ、terminal result に関する共通契約の正本。
+- 出力先、表示順序、終端処理、診断イベント、TUI・自動補完との境界を定める共通ルールの入口。
 
 ## Read this when
-- 非対話サブコマンドの stdout・stderr・進行通知・エラー表示を設計または確認するとき
-- primary report の保存条件、表示内容、保存失敗時の扱いを確認するとき
-- terminal result の分類・表示順序・終了後の出力禁止を確認するとき
-- サブコマンドログの保存先、JSON Lines 形式、即時 flush、診断イベント要件を確認するとき
-- TUI サブコマンドや cmoc oracle edit の report・terminal result 境界を確認するとき
+- 非対話サブコマンドの表示、primary report 保存、終了結果、ログ記録の仕様を確認するとき。
+- console 出力やサブコマンドログの実装が、共通契約・終端順序・診断記録に適合するか確認するとき。
+- TUI または自動補完と非対話サブコマンドの通知境界を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の result、completion_reason、primary report 内容、保存先、終了コードだけを確認したいとき
-- Windows toast の通知仕様だけを確認するときは windows_toast_notification.md を直接読むとき
-- 自動補完プローブの判定や通常処理の抑止だけを確認するときは cli_auto_completion.md を直接読むとき
-- エラー分類や internal failure の一般規則だけを確認するときは error_handling.md を直接読むとき
+- 個別サブコマンド固有の result、completion_reason、report 形式・保存先・終了コードだけを確認したいとき。
+- エラー処理、feedback observation、Windows toast、自動補完の詳細な正本仕様を直接確認すべきとき。
+- TUI の正常終了後の挙動だけを確認したいとき。
 
 ## hash
-- e2176d0abe25bd024fd4780aef42816fbaa17c4570d95a390de97d6c91e77a8c
+- 805bde194cfe9f589659a93a62beb4c3c5fe9fa981e1b984a28a5078ce82f53b
 
 # `doctor_preprocess.md`
 
@@ -312,21 +310,19 @@
 # `sub_command`
 
 ## Summary
-- cmoc の各サブコマンド仕様を、CLI 契約、実行前提、処理手順、状態遷移、終了結果、primary report の確認先として案内する入口。
-- session・editing run・feedback remediation・oracle/realization・doctor/indexing・TUI など、サブコマンド固有の責務と共通仕様との参照境界を扱う。
+- `cmoc doctor` コマンドの仕様を定義し、doctor preprocess の明示的な呼び出し、引数・事前条件、終了経路ごとの primary report 保存要件を確認する入口。
 
 ## Read this when
-- cmoc の特定サブコマンドの引数、実行前提、処理手順、状態遷移、終了経路、primary report を確認したいとき
-- 複数のサブコマンド仕様から、調べたい挙動を担う仕様ファイルを選びたいとき
-- sub_command 配下の仕様を変更・実装照合し、コマンド固有仕様と共通仕様の参照境界を確認したいとき
+- `cmoc doctor` の引数、実行手順、事前条件を確認するとき
+- doctor preprocess の実行結果を含む primary report の保存先・内容・対象終了経路を確認するとき
+- `cmoc doctor` のコマンド仕様を変更または実装と照合するとき
 
 ## Do not read this when
-- branch model、session state、run isolation、timestamp などサブコマンド横断の正本だけを確認したいときは、対応する正本仕様を直接読む
-- 特定コマンドの実装詳細、prompt builder の選択ロジック、または doctor preprocess・indexing など参照先仕様の詳細だけを確認したいときは、対応する実装や正本仕様を直接読む
-- 編集 run の共通 lifecycle だけを確認したいときは editing_run を、feedback remediation 固有の詳細だけを確認したいときは feedback_report と関連仕様を直接読む
+- doctor preprocess 自体の検証・修復内容を確認したいときは、正本である `oracle/doc/app_spec/doctor_preprocess.md` を直接読む
+- doctor に関連する診断用サブコマンドの個別仕様だけを確認するとき
 
 ## hash
-- 29eb600f632a7bf61bb524333e8a65559f84e14f0a38da489fcf30f8b4f384c2
+- a3afc22acf3ae74fefbcb19c947661d56bd19d60c4a76fc297a25642f8e6d87d
 
 # `subcommand_interruption.md`
 
