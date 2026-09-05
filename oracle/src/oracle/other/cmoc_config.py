@@ -106,8 +106,8 @@ class CmocConfigCodex:
             #   astra は使わない
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-sol",
-                reasoning_effort="max",
+                model="gpt-5-astra",
+                reasoning_effort="medium",
             ),
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="openai",
