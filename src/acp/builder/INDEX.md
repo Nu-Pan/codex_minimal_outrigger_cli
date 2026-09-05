@@ -51,18 +51,22 @@
 # `feedback`
 
 ## Summary
-- `feedback` 配下の builder adapter を、feedback issue の正規化・検証に関する処理を調べる際の入口として案内する。配下には同一性判断 builder と verification builder の互換 import 経路があり、実装仕様は対応する oracle 側を確認する。
+- feedback builder adapter 群の公開入口。issue の同一性判断と remediation 用の oracle builder へ進むための上位入口。
+- 構造化 observation と既存候補を比較し、feedback issue が既存か新規かだけを判断する builder の互換 import 経路。
+- 正規化済み feedback issue の存在確認、realization 修正、検証、結果分類を行う remediation builder の互換 import 経路。
 
 ## Read this when
-- feedback issue の normalization または verification に関する builder adapter の構成を確認するとき
-- feedback issue builder の互換 import 経路や、対応する oracle 実装への参照関係を確認するとき
+- feedback builder adapter の公開範囲や、normalization と remediation の下位入口を確認するとき
+- feedback issue の同一性判断 builder を呼び出す import 経路を確認するとき
+- 正規化済み issue の remediation builder を呼び出す import 経路や、修正・検証処理への入口を確認するとき
 
 ## Do not read this when
-- feedback 以外の builder adapter を調べるとき
-- 正規化・検証の実装ロジック、入力検証、パラメータ生成、出力仕様を確認するときは、対応する oracle file を直接読む
+- issue の同一性判断基準、入力制約、Structured Output 後条件などの実装仕様を確認したいときは対応する oracle の normalize_issue 実装を直接読む
+- issue remediation の修正対象、結果分類、差分記録、検証規則などの実装仕様を確認したいときは対応する oracle の remediate_issue 実装を直接読む
+- feedback issue 以外の builder や、builder adapter と無関係な一般処理を調べるとき
 
 ## hash
-- 08053b14ae66e2429f0bbd63341c153b782d94254b42351a90690a1191fc75fe
+- 1529291db1b39121475004620e5b9bdf14e83d05abc08e4f8a0b4bbb4099ee9e
 
 # `indexing`
 

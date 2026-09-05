@@ -314,23 +314,24 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota 超過後の probe/resume/retry 状態機械を検証するテスト群。
-- quota availability probe の共有、session ID に基づく resume、session ID 欠落時の prompt 再実行を扱う。
-- Codex 呼び出し列と call log・subcommand log、CODEX_HOME・cwd、stdout JSONL、待機状態の外部挙動を一体で確認する。
+- Codex quota 枯渇後の retry 状態機械を、代表 quota probe による待機、session ID に基づく resume、ID 欠落時の再実行として検証するテスト群。
+- retry 中の並行呼び出しで probe を共有し、probe の失敗や quota poll 上限を各呼び出しへ反映する挙動を扱う。
+- Codex 呼び出しの stdout JSONL、output、call log、subcommand log、CODEX_HOME、cwd を観測し、成功・失敗・割り込み時の外部結果を確認する。
+- quota probe adapter が正本 builder の prompt、call kind、readonly 属性、公開 API を維持することも検証する。
 
 ## Read this when
-- quota 超過からの復帰処理や quota polling の上限・待機間隔を確認するとき
-- 代表 probe の成功・失敗・capacity retry・KeyboardInterrupt の伝播を確認するとき
-- 並行 Codex 呼び出しで probe が共有され、復帰結果が各呼び出しへ反映されることを確認するとき
-- session ID、保存済み stdout JSONL、resume／再実行、Codex の cwd と CODEX_HOME の解決を追跡するとき
+- quota 枯渇後の Codex exec の polling、probe、resume、再実行の挙動を変更または検証するとき
+- 複数の Codex 呼び出しにおける代表 probe の共有、probe 失敗の伝播、quota poll 上限を調べるとき
+- quota retry に関する session ID 復元、stdout JSONL 検証、call log または subcommand log の記録を確認するとき
+- retry 中の CODEX_HOME や Codex cwd の解決、および quota probe adapter の契約を確認するとき
 
 ## Do not read this when
-- 通常の Codex exec 成功・失敗や quota と無関係な subprocess 挙動だけを扱うとき
-- quota probe の prompt 生成内容だけを確認したいときは、probe parameter builder の正本を直接読むとき
-- Codex 呼び出しのログ形式全般だけを確認したいときは、ログ実装または対応する仕様を直接読むとき
+- quota retry と無関係な通常の Codex exec 挙動だけを調べるとき
+- quota probe の正本 builder の実装詳細だけを変更または確認するとき
+- 一般的なテスト実行手順や、対象外の fixture・補助関数を直接調べるとき
 
 ## hash
-- b75871407adb2e49438f1ff544b45e70056621f5bee42af2b5780abc2d64ad5f
+- 331705e236ca1dae580b4ede239c53629f555cd6869c097a6ed0a5ee0669eeb1
 
 # `test_codex_runtime_retry.py`
 
@@ -464,21 +465,21 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback reporter、collector、raw observation store、report cut、verification、active state、atomic publication、cleanup の一連の外部挙動を同一 repository fixture で検証するテスト対象。
-- agent/machine observation の schema・secret masking・path 境界・idempotency・rate limit・call lifecycle と、feedback report の checkpoint 再開、incomplete/interruption、publication 後の compact state を扱う。
+- feedback reporter、collector、raw observation、active state、report cut、remediation、atomic publication、cleanup、recovery を同一 fixture で横断検証する feedback subsystem の統合テスト入口。
+- MCP reporter protocol、collector の認証・rate limit・drain・並行 call・失効、observation の schema/path/secret masking/idempotency、候補同一性・fingerprint・machine threshold、report 前提条件、Codex remediation wave、join/abandon/recovery、active generation の整合性を検証する。
 
 ## Read this when
-- feedback observation の受付・保存・検証・重複整理・machine recurrence threshold の挙動を確認または変更するとき。
-- feedback report の report cut、Codex normalization/verification、checkpoint recovery、current pointer、generation hash、cleanup の整合性を確認するとき。
-- raw artifact、active generation、publication artifact の破損や未定義ファイルを検出して安全に停止する境界を調べるとき。
+- feedback の agent-facing submission や collector transport の挙動を変更・調査するとき。
+- feedback report の候補正規化、remediation、late intake、report cut、active state publication、cleanup、復旧境界を変更・調査するとき。
+- feedback state の corruption、artifact hash、symlink/path boundary、legacy raw、machine observation threshold に関する回帰を確認するとき。
 
 ## Do not read this when
-- feedback の CLI 表示だけ、または個別の正本 schema・builder 実装だけを直接確認すれば足りるとき。
-- feedback 機能と無関係な subcommand、一般的な repository fixture、または単純な unit test の実装を扱うとき。
-- ここで検証される外部挙動の変更を伴わず、対象モジュールの内部実装だけを読むとき。
+- feedback 以外の CLI 機能や、単一の実装関数の局所的な単体テストだけを確認する場合。
+- 正本仕様そのものを確認する場合は、このテストではなく列挙された feedback observation/state/report などの oracle を直接読む。
+- 通常の CLI 実行や一般的な git/session 機能のテストだけが目的で、feedback report の lifecycle に関係しない場合。
 
 ## hash
-- c8f74a33aa572c466755c30ff0f1b79621a126a041f640d70b776267787867da
+- 0dc2c0bfb3f0c3d03c08f43e943d473ea807b2ac1117707d25113fee314e075b
 
 # `test_file_inventory.py`
 
@@ -594,57 +595,56 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout へソースツリーをコピーし、隔離した Python 実行環境で import 境界と公開 API を検証するテスト。
-- quota probe、oracle edit、prompt editor 入力、ACP basic、cmoc config の正本参照・再公開・公開面を確認する下位テストへの入口。
+- packaged layout 上で主要パッケージを隔離実行し、正本 builder・prompt editor・ACP basic・cmoc config の import 境界、公開 API、設定参照、および prompt 生成を検証するテスト。
 
 ## Read this when
-- パッケージ配置後の import が正本実装を参照することを確認したいとき。
-- quota probe や oracle edit の prompt 生成、prompt editor の入力引き渡し、ACP basic または cmoc config の公開境界を検証・変更するとき。
-- 外部 site-packages や実行者の設定に依存しない packaged layout テストの構成を確認するとき。
+- packaging 後の import 経路、setuptools の package 配置、oracle と realization の公開定義の再公開境界を変更・確認するとき。
+- quota probe、oracle edit、prompt editor 入出力、ACP basic、cmoc config の packaged layout 上の挙動や module namespace を検証するとき。
 
 ## Do not read this when
-- 個別の quota probe、oracle edit、prompt editor、ACP basic、cmoc config の実装仕様だけを確認する場合。
-- packaged layout 以外の一般的なテスト実行方法や、各正本モジュールの詳細実装を直接確認する場合。
+- packaged layout や import 境界に関係しない単一機能の実装・テストを扱うとき。
+- 正本 builder や prompt editor の仕様そのものを確認する必要があり、対応する oracle source または app specification を直接読むべきとき。
 
 ## hash
-- 2eac7131a1c17e799f6e2573ca32d52363dc77aabfe7bd75a6324ccc07800424
+- 824bdbfcc2443bd379c5d5d83d3508e14c8f6565cf2926afd34df97f6f351e88
 
 # `test_primary_report.py`
 
 ## Summary
-- 非対話サブコマンドの primary report 完了契約を検証するテスト。処理開始前のエラー、中断、refactor 中断、report 未保存時の内部失敗について、保存先・front matter・診断内容・終了状態・ログ記録を確認する。
-- 各サブコマンド固有の report 項目と、feedback report の publication 状態や中断時の checkpoint を検証するテスト群への入口。
+- 非対話末端サブコマンドの primary report 完了契約を検証するテスト。処理開始前のエラー、中断、Codex 出力と受理済み observation の保持、refactor 中断理由、未保存 report の内部失敗化について、保存先・front matter・端末出力・ログの整合性を確認する。
 
 ## Read this when
-- 非対話サブコマンドのエラー・中断時に primary report がどう確定されるかを調査するとき。
-- report の保存先、必須メタデータ、terminal classification、completion reason、feedback invocation summary、保存失敗時の内部失敗を変更・検証するとき。
-- runtime CLI の完了処理やサブコマンド固有 report 契約に対するテストカバレッジを確認するとき。
+- 非対話サブコマンドのエラー・中断時に primary report がどう保存され、どの完了分類や必須情報を持つべきか確認したいとき。
+- 共通の terminal result 処理が Codex 出力、feedback observation、report 保存失敗をどのように扱うか検証・変更するとき。
 
 ## Do not read this when
-- primary report の生成仕様そのもの、エラー文面、サブコマンドの通常処理仕様を確認したいだけで、完了契約のテスト実装を読む必要がないとき。
-- 特定サブコマンドの業務ロジックや Git 操作だけを調査するときは、対象サブコマンドの実装・仕様を直接読む。
-- テスト実行方法や共通 fixture の詳細だけを確認したいときは、テスト実行規則または共通テスト支援ファイルを直接読む。
+- 特定サブコマンド固有の正常系処理や業務ロジックを確認したいとき。
+- primary report の実装詳細やアプリケーション仕様そのものを確認する必要があり、対応する runtime 実装または oracle の仕様書を直接読むべきとき。
 
 ## hash
-- 48cc223a404c96eff19a2c4af3d1fa69a3e87ca809314e7904173c9f4e9e8769
+- feafa6e03f757c43127c9d8ead8da130b2ae4e4b6217cd9fb886dd05608a0e86
 
 # `test_production_cli.py`
 
 ## Summary
-- 全末端サブコマンドを、独立 process・実 Codex CLI・実推論による利用者向け本番経路で検証する受け入れ試験。
-- 非対話 command の終了 code、report、session/run state、Git、agent call log を確認し、TUI command は PTY 上の実 Codex 応答完了と正常終了まで検証する。
-- CLI の末端 command 登録と固定シナリオの一致も確認するため、新しい末端 command の本番経路試験漏れを検出する入口となる。
+- 利用者向け entrypoint から全末端サブコマンドを独立 process で実行し、実 Codex CLI・実推論を含む本番経路を受け入れ検証する試験。
+- 非対話 command の終了 code、report・session・run state、Git branch/worktree・commit・作業ツリー、Codex call log と prompt/config を確認する。
+- TUI command は実 PTY 上で端末 query、応答完了、終了操作を処理し、TUI session の完了 response、call log、Git 非変更を確認する。
+- 全末端 command の登録集合と固定シナリオを比較し、新しい公開末端の本番経路試験漏れを検出する。
 
 ## Read this when
-- 利用者向け CLI の全末端 command が、独立 process と実 Codex を使う本番経路で完了することを受け入れ検証するとき。
-- 非対話 command の外部状態遷移、call log の直接設定、または TUI の PTY 応答完了・終了操作を確認するとき。
+- 全末端サブコマンドを実際の cmoc console script と実 Codex CLI で検証したいとき。
+- 非対話 command の agent call、feedback remediation、session/run 状態遷移、report、Git side effect を受け入れ確認するとき。
+- TUI の実 Codex 応答、PTY 入出力、端末 capability query、応答後の終了処理を検証するとき。
+- 本番経路で使われる隔離 Codex home、認証情報、直接設定、call log の検証方法を確認するとき。
 
 ## Do not read this when
-- LLM の回答品質、agent の意味判断、または個別 command の内部実装だけを確認したいとき。
-- 実 Codex や独立 process を使わない単体テスト、あるいは特定の report・state の実装詳細を直接調べるときは、該当する command のテストや仕様へ進む。
+- 個別サブコマンドの仕様や実装責務を確認するときは、対応する app_spec または realization implementation を直接読む。
+- LLM の回答品質、プロンプト内容の意味的妥当性、単体ロジックだけを評価するとき。
+- 実 Codex や独立 process を使わない高速な単体・fixture テストの追加や実行だけを行うとき。
 
 ## hash
-- f9345c0fc3dc56a610326493eff8ef0d4ac00c357f4e37ee78eff09447e9647c
+- b2d6881ddff825377bf53aef1ba08e1ce1b37893bde58bfa9a224cb9b5d5d067
 
 # `test_production_cli_support.py`
 
@@ -679,22 +679,19 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt part の各 policy builder が生成する SDHeader の構造、カテゴリ順序、rendering を検証する回帰テスト。
-- complete prompt の policy 注入、objective の順序、placeholder 展開、feedback 指示、file access 境界を検証する。
-- prompt builder の出力変更や policy の責務・注入条件を確認するときのテスト入口。
+- 各 prompt part のレンダリングと complete prompt の組み立てを検証する回帰テスト。
+- policy の構造・カテゴリ順序・注入回数、objective や placeholder の展開、file access 境界、root context、主要な要求文の保持を確認する。
 
 ## Read this when
-- prompt part または complete prompt の rendering 結果を変更・調査するとき。
-- policy flag ごとの注入、共通 feedback 指示、objective セクション、placeholder の統合・展開を確認するとき。
-- file access mode、oracle/realization の境界、INDEX entry・routing policy の prompt 表現を検証するとき。
+- prompt builder や policy builder の rendering、complete prompt の構成、placeholder 展開、policy 注入、file access policy を変更または検証するとき。
+- prompt の回帰で、各 policy の出力構造や要求文が期待どおり保持されているかを確認するとき。
 
 ## Do not read this when
-- prompt builder の実装責務や正本仕様そのものを確認したいとき。
-- 個別 policy の詳細な生成ロジックだけを調査するときは、対応する policy 実装を直接読むとき。
-- prompt の動作ではなく、他の機能や一般的なテスト実行手順だけを確認するとき。
+- prompt builder の実装詳細そのものを変更する必要がなく、個別 policy の正本仕様や実装を直接確認すべきとき。
+- prompt の内容や構成を扱わない一般的なテスト、または他の機能領域の挙動を検証するとき。
 
 ## hash
-- fe15d71afb02cc331695a8e84027ac0b5f77efe963ae97c35ebbb9c6ce6e5c45
+- d8eb3bef210e0fc25c6d84f0a7d59331f76f2e976d9c0a26c932027306ab4add
 
 # `test_runtime_cli.py`
 
@@ -769,21 +766,21 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値と agent call ごとの直接設定を検証する回帰テスト。
-- config の JSON 変換、ファイル保存・読み込み、round-trip、および定義順の保持を検証する。
-- 不正な型・値・構造、深い JSON、危険な config path、旧設定項目の扱いを検証する設定境界の入口。
+- CmocConfig の既定値、Codex provider／agent call 設定、JSON 変換・保存・復元、および設定入力の型・値・構造検証を一つの回帰テスト群として検証する。
+- config schema の round-trip、旧設定項目の除外、壊れた JSON や不正なパスを利用者向けエラーへ変換する境界、provider-local 設定値の保持と拒否条件を確認する入口。
 
 ## Read this when
-- CmocConfig の既定値、Codex provider、agent call 設定、または config schema を変更・調査するとき。
-- config_from_dict、config_to_dict、load_config、write_config、render_error の設定入出力やエラー契約を変更・調査するとき。
-- config.json の永続化、JSON/TOML 共通値、入力拒否、symlink・named pipe などの path 安全性を確認するとき。
+- CmocConfig の既定 agent call や provider 設定、config.json の読み書き・JSON 化・round-trip 挙動を変更または調査するとき。
+- 設定入力の top-level、codex section、map、agent call、provider settings の受理条件、文字列・整数・JSON/TOML 値の検証、旧設定項目の永続化除外を確認するとき。
+- 壊れた JSON、過深ネスト、通常ファイルでないパス、named pipe、symlink、UTF-8 出力を含む config エラー処理の回帰を確認するとき。
 
 ## Do not read this when
-- 設定以外の runtime 機能や、config schema・設定ファイルの入出力に関係しないテストを扱うとき。
-- CmocConfig の実装詳細や正本仕様そのものを確認する必要があり、まず oracle の設定定義・仕様を直接読むべきとき。
+- CmocConfig や config.json の仕様・実装を直接扱わず、別の実行時機能や config 以外のテストを調査するとき。
+- provider 定義や agent call の設定値そのものではなく、oracle 側のモデルプロバイダー仕様を直接確認する必要があるときは、参照元の仕様を読む。
+- このテスト群が検証する入力拒否・永続化境界ではなく、一般的なエラー表示や別機能のファイル操作だけを調査するとき。
 
 ## hash
-- e4c7205b3a6230b66004fb7d3bcd33997a1b5a7748e12cfbcdaaa215f073dc17
+- f659e65dcd6ee95d7f23d663d4485da99077d0e2e7ce2becd6a034c42a87f907
 
 # `test_runtime_content.py`
 

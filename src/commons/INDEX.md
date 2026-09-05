@@ -73,24 +73,22 @@
 # `runtime_cli.py`
 
 ## Summary
-- 最外側 CLI サブコマンドの実行ライフサイクル全体を統括する入口。
-- doctor 前処理、実装呼び出し、診断ログ、feedback 回収、primary report 保存、terminal result の記録・表示を一元管理する。
-- 正常完了、ユーザー中断、handled failure、internal failure の終端処理と終了コードを扱う。
-- サブコマンド step の進捗通知、work root 実行前提の検査、TUI 起動後の中断境界、終端通知の安全な分離を確認するための上位実装。
+- 最外側 CLI サブコマンドの実行開始から終了までを統括し、作業ディレクトリ検査、診断ログ、feedback 回収、primary report 保存、terminal result 表示、終了コード、TUI 通知を管理する入口。
+- サブコマンドの正常完了、ユーザー中断、実行エラーを分類し、例外や警告を診断情報と次の操作へ統合する終端処理を提供する。
+- サブコマンド内の step 通知、ユーザー中断状態、TUI 起動境界の記録など、最外側ライフサイクルに連動する補助 API を含む。
 
 ## Read this when
-- CLI サブコマンドの開始から終了までの制御フローを調べるとき。
-- terminal result、診断ログ、primary report、feedback observation、Windows 通知が終端時にどう連携するか確認するとき。
-- KeyboardInterrupt やその他の例外、非ゼロ return code、TUI process 起動前後の中断処理を確認するとき。
-- サブコマンド step のログ記録と stderr 進捗通知、work root の実行前提を確認するとき。
+- 最外側 CLI サブコマンドの起動・終了ライフサイクル、例外処理、終了コード、terminal result の表示やログ記録を変更・確認するとき。
+- サブコマンドの作業ディレクトリ制約、doctor preprocess、feedback invocation、primary report、Windows 通知の連携を調査するとき。
+- ユーザー中断や TUI process 起動前後での KeyboardInterrupt の扱い、step 進捗通知の実装を確認するとき。
 
 ## Do not read this when
-- runtime_errors のエラー型や表示文言の定義だけを確認する場合。
-- runtime_feedback、runtime_logging、runtime_primary_report、runtime_results など下位モジュールの固有実装を直接調べる場合。
-- 個別サブコマンドの業務ロジックや TUI 自体の実装を確認する場合。
+- terminal result のデータ構造や個別エラー型だけを確認する場合は、それぞれの定義元を直接読むとよい。
+- サブコマンド固有の業務処理、doctor・feedback・logging・primary report の内部仕様だけを調査する場合は、各専用モジュールや正本仕様を直接読むとよい。
+- INDEX.md のルーティング情報だけを更新する場合。
 
 ## hash
-- 8f4ac5632a4344000bad4298ad3a8bcd2b9b2436597b81aaee9f959ceb3dd9ed
+- 614a76ab85097ee4d149a6c74833698082f693ef68108b9e087247704a81cc63
 
 # `runtime_codex.py`
 
@@ -109,18 +107,22 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- 1 回の Codex agent call における exec 実行制御の中心。Structured Output の検証・補正、capacity retry、quota 回復待ちと代表 probe、resume 継続、実行ログおよび subcommand event の記録を共有状態で統合する。
+- Structured Output の parse・JSON Schema・宣言済み事後条件を検証し、違反時の同一 session による補正 turn と成果物不変性を管理する。
+- Codex exec subprocess の argv、prompt、stdout/stderr、output、call log を生成・保存し、capacity retry、quota availability probe／待機／resume、失敗分類を一つの実行ループで制御する。
+- agent call・Codex call・subcommand event と quota／Structured Output の診断情報を関連付け、最終的な CodexExecResult または CmocError を返す実行制御の入口。
 
 ## Read this when
-- Codex exec の再試行、quota 待機・回復、Structured Output の schema／事後条件検証や補正、resume session の扱いを確認・変更するとき。
-- Codex subprocess の prompt・stdout・stderr・output・call log の保存や、実行結果および診断 event の記録経路を追うとき。
+- Codex exec の subprocess 起動条件、prompt／output／call log の保存、Structured Output 検証・補正の挙動を確認するとき。
+- capacity error の retry、quota 回復 probe と resume、session ID の扱い、実行イベントの記録を変更・調査するとき。
+- CodexExecResult の生成や Codex 呼び出し失敗の分類・診断情報の責務を確認するとき。
 
 ## Do not read this when
-- TUI の起動や表示制御だけを確認・変更するとき。
-- Codex subprocess の環境、schema 準備、エラー分類など個別の補助処理だけを確認し、exec の再試行・検証・ログ連携を扱わないとき。
+- TUI の起動・表示や exec 以外の CLI 分岐を扱うときは、TUI／CLI 分岐を担当する対象を直接読む。
+- Codex の設定値・profile・schema 準備・subprocess 低レベル処理そのものを変更するときは、対応する runtime_codex_profile などの専用対象を直接読む。
+- call log の一般的な出力形式、feedback store、git snapshot、path／logging の共通実装だけを確認したいときは、各専用 runtime module を直接読む。
 
 ## hash
-- 6b06256429db8ed183e22ed0aba5bcde099e77a232f92803bf7ea9a0fb9b94bf
+- 8bb5f0e82054e384de8c8a13bfea921d37a01ddb7c6ebc77b20dad939f73fddf
 
 # `runtime_codex_logging.py`
 
@@ -177,19 +179,19 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI を設定済みの実行環境で起動し、呼び出し単位の識別情報・設定・実行結果を call log とイベントへ記録する入口。
-- Codex CLI/TUI の起動前準備から subprocess 実行、feedback call の管理、成功・失敗時の CommandResult または CmocError までの実行経路を扱う。
+- Codex TUI を設定済みの実行環境と argv で起動し、呼び出し情報・実行時間・終了状態・エラーを call log と logger event に記録する実行入口。
+- TUI 通知フック、エディター入力引き渡し、feedback call の環境設定を呼び出し期間に組み込み、Codex subprocess の成功結果または cmoc エラーへ変換する。
 
 ## Read this when
-- Codex TUI の起動引数、作業ディレクトリ、Codex home、環境変数、通知フックの組み立てを確認するとき。
-- Codex 呼び出しの call log、実行時間、return code、feedback call、logger event、起動失敗や subprocess 失敗の処理を追うとき。
+- Codex TUI の起動処理、Codex subprocess の実行条件、call log の生成、実行結果や失敗時の記録・例外変換を確認するとき。
+- TUI 起動時の通知 callback や feedback call のライフサイクルを含む、Codex 呼び出し全体の制御経路を調べるとき。
 
 ## Do not read this when
-- Codex の設定値や profile の解決、通知 callback、ログ payload の整形など、個別の補助責務だけを確認する場合は担当モジュールを直接読むとよい。
-- Codex TUI の起動および呼び出し結果の記録に関係しない CLI 処理や一般的な結果型の確認では、この対象を読む必要はない。
+- Codex のホーム解決、環境変数、TUI hook 対応判定、override argv の具体的な規則だけを調べるときは runtime_codex_profile を直接読む。
+- ログ出力 API、コマンド結果型、通知 callback、feedback 保存処理の内部仕様だけを調べるときは、それぞれの専用モジュールを直接読む。
 
 ## hash
-- d46880f576c62bfb24e597933c0fb67f8654a1db7a36f402a90862948ff6c863
+- be1879e7d1cc6fa657d85ca4575847c2644aa61983618789a58ad6c443e699c7
 
 # `runtime_config.py`
 
@@ -321,75 +323,112 @@
 # `runtime_feedback.py`
 
 ## Summary
-- サブコマンド invocation に紐づく feedback collector を管理し、Codex call ごとの capability 発行、reporter request の受付・保存・drain、および invocation 終了処理を担う。
-- agent observation の payload・protocol・context・rate limit を検証して保存し、collector や reporter の利用不能を degraded event と warning に変換する。
-- allowlist 済みの reporter unavailable および Structured Output validation exhausted event を machine observation として検出・保存する。
-- doctor が feedback reporter の schema、protocol、MCP tool 面、loopback collector の可用性を検証するための入口を提供する。
+- サブコマンド invocation 単位の feedback collector を管理し、Codex call ごとの capability 発行、reporter request の並行受付・検証・保存、call 終了時の drain、degraded event の記録、allowlist 対象 event の machine observation 化を統合する。
 
 ## Read this when
-- feedback observation の受付・保存経路を確認または変更するとき
-- Codex call 単位の capability context、subprocess environment、call 終了時の drain 順序を確認するとき
-- invocation-scoped collector の起動・停止、並行 request 処理、rate limit、context 検証を確認するとき
-- reporter または collector の degraded event、allowlist detector、doctor による可用性検証を確認するとき
+- feedback observation の受付経路、capability と call context のライフサイクル、collector の起動・停止や並行処理を確認するとき。
+- reporter または collector の利用不能時の非致命処理、doctor による protocol/schema 検証、structured output failure などの detector を調べるとき。
+- Codex subprocess へ feedback 用環境変数を継承する処理、accepted observation の invocation 内追跡、event から observation への変換条件を確認するとき。
 
 ## Do not read this when
-- feedback observation の永続化形式や RFC3339・UUID などの store 共通処理だけを確認するときは runtime feedback store を直接読む
-- reporter の MCP tool 実装や input schema 自体を確認するときは runtime feedback reporter を直接読む
-- feedback と無関係な Git context、logging、または一般的な CLI subcommand 処理だけを扱うとき
+- feedback observation の永続化形式や payload/schema 自体を変更・確認する場合は、対応する runtime feedback store または oracle の仕様を直接読むとき。
+- MCP reporter 単体の公開 tool 実装や stdio protocol の詳細だけを調べる場合は、reporter 実装を直接読むとき。
+- 一般的な invocation lifecycle や subcommand logging の仕様だけを確認する場合は、関連する lifecycle・logging 実装を直接読むとき。
 
 ## hash
-- bed26c8238de67a48450134505611237f0de001ad94562e90d0c9da4758841e2
+- 818036fcfefd91330cf8d6fd10d3b3286aa9498c7f8cb60b5ccbcbd3231fed0b
+
+# `runtime_feedback_intake.py`
+
+## Summary
+- Collector が durable な受理順序を管理し、feedback raw observation の receipt 登録・high-watermark 固定・publication 後の receipt 削除を担う。
+- intake ledger の整合性、raw artifact 参照、重複登録、単調増加 sequence、collector 排他境界を検証する feedback intake の実装入口。
+
+## Read this when
+- feedback observation の受理順序、intake high-watermark、pending receipt の永続化または削除を変更・調査するとき。
+- collector の受理境界、raw observation の hash 検証、publication と intake の排他連携を確認するとき。
+
+## Do not read this when
+- feedback の canonical state や artifact 参照解決そのものを確認する場合は runtime_feedback_state を直接読むとき。
+- observation の保存場所、ID 判定、列挙処理そのものを確認する場合は runtime_feedback_store を直接読むとき。
+- publication の処理や collector の呼び出し順序を確認する場合は、それぞれの呼び出し元を直接読むとき。
+
+## hash
+- 3999eb3f98548ed171437d9300115a961e7764a1117b9a55368f1baf9d71d598
 
 # `runtime_feedback_reporter.py`
 
 ## Summary
-- Codex 起動時に使う call-scoped stdio MCP reporter として、submit_observation を JSON-RPC の MCP tool として受け付け、collector へ capability 付きで転送する。
-- collector との接続失敗や応答不正を agent-facing の accepted/rejected 結果へ変換し、構造化結果と JSON text の両方を返す。
+- 対象は、Codex が起動する call-scoped stdio MCP feedback reporter/client であり、MCP の初期化・ping・ツール一覧・submit_observation 呼び出しを newline-framed JSON-RPC として処理する。
+- feedback collector への接続情報と capability envelope を検証・分離して payload を転送し、collector の accepted/rejected domain result を検証して MCP の structuredContent と text の両方で返す。
+- collector context 不備、protocol 不一致、接続・応答異常を定義済みの rejection code と retryability に変換する。
 
 ## Read this when
-- cmoc_feedback.submit_observation の stdio MCP 通信、initialize・tools/list・tools/call の処理、または collector 転送時の結果検証と拒否分類を確認するとき。
+- feedback observation の submit_observation 呼び出し経路、MCP stdio JSON-RPC の reporter 動作、または collector との call-scoped transport 契約を確認・変更するとき。
+- collector から返る accepted/rejected 結果の agent-facing 検証や、MCP 応答への変換を確認するとき。
+- feedback reporter の protocol、capability、collector port 環境変数に関わる接続障害・再試行可否の扱いを調べるとき。
 
 ## Do not read this when
-- 観測内容の業務上の採否、保存、秘匿情報検査、レート制限など collector 内部の規則を確認するときは、対応する feedback observation の oracle file を直接読む。
-- feedback collector の環境変数、プロトコル定数、入力スキーマの定義だけを確認するときは、参照される runtime feedback 関連ファイルを直接読む。
+- feedback observation の payload schema、UUID 生成、保存・redaction・collector 側の受理処理そのものを確認したいときは、対応する runtime_feedback_store または collector の実装を直接読む。
+- MCP reporter ではなく、feedback observation の正本仕様や運用上の報告条件だけを確認したいとき。
 
 ## hash
-- cd16242e628b6df7a2c87c475e91b41af685604592468dd8fdbd10c110a7160a
+- 567f7eb4ab1a8bd68506702b9cefeb1cd52eae339a640aca15f4464c7ec7b21e
+
+# `runtime_feedback_run_state.py`
+
+## Summary
+- feedback run の immutable wave、seal、join 記録、および remediation checkpoint の整合性を検証する実装。
+- report cut manifest の run identity、入力、high-watermark、artifact path、canonical hash、commit、verification 記録を検査する。
+- artifact 保存と manifest 更新の間に停止した場合は、固定 path から未登録 artifact reference を復旧する。
+
+## Read this when
+- feedback report の run artifact、wave の順序、seal 後の変更禁止、join lifecycle の整合性を確認・変更するとき。
+- remediation checkpoint の schema、issue identity、変更 path、commit、差分 hash、機械検査、verification 記録の検証を調べるとき。
+- report cut manifest の更新規則や artifact 保存後の recovery 動作を確認するとき。
+
+## Do not read this when
+- feedback の正本状態仕様や lifecycle の意味を確認したいだけで、実装上の検証・復旧処理を調べる必要がないとき。
+- canonical JSON の保存・hash 生成そのものを確認する場合は、共通の feedback store 実装を直接読むとき。
+- report cut artifact の基本構造や参照 path の共通検証を確認する場合は、feedback state の共通実装を直接読むとき。
+
+## hash
+- 5512c681ec97b4e2ec363f7a51c8375a8d889169f51ef5598bc385f4398ef49f
 
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local state を一元管理する実装。report cut、active generation、current pointer、issue／machine aggregate、checkpoint、publication、incomplete 診断、cleanup、discard、排他 writer lock の整合性を検証し、atomic／immutable artifact の保存・切替・復旧を担う。feedback state transition や active state integrity の実装を追う際の中心的な入口。
+- feedback の repository-local active state と report cut の整合性を一元管理する。current pointer、generation、issue／machine aggregate、publication、incomplete 診断、checkpoint、cleanup の検証・保存・切替・回収を担い、異常終了時の復旧可能性と artifact 間の hash／identity 整合性を保つ。
 
 ## Read this when
-- feedback report の report cut 作成・再開・publication・cleanup・discard の状態遷移を確認するとき
-- current pointer、generation manifest、active issue／machine aggregate、Markdown report、checkpoint の相互参照と SHA256 検証を調べるとき
-- observation envelope、machine rule の allowlist、canonical identity、incomplete 診断、異常終了後の checkpoint recovery を確認するとき
+- feedback report の state transition、active generation の構築・公開、current pointer の切替、publication 後 cleanup、report cut の再開・破棄を実装または調査するとき
+- repository-local feedback artifact の schema、path／SHA256 reference、canonical JSON、symlink 防御、writer lock、current／work／cleanup state の整合性を確認するとき
+- incomplete 診断や remediation／normalization checkpoint と、正式 publication との相互排他・復旧規則を確認するとき
 
 ## Do not read this when
-- observation の収集・保存処理や低レベルの JSON／ID ユーティリティだけを確認するとき
-- report の集約・正規化・検証ロジック、CLI の引数処理、Markdown report の内容生成が主題のとき
-- feedback の正本仕様や利用者向けコマンド契約そのものを確認するとき
+- raw observation の収集・受付・receipt 管理だけを扱うときは observation intake／store の実装を直接読む
+- feedback report の Markdown 内容や agent 向け reference の生成規則だけを扱うときは report／report cut の生成実装または対応する oracle を直接読む
+- 個別の runtime error、CLI 引数、機械ルールの検出ロジックだけを扱い、repository state の遷移・整合性に触れないときはこのモジュールを読まない
 
 ## hash
-- 44a0d20282cf5752afb702a2fafb2cbb6d46d11a97ac91391ee397a2a5fe86fd
+- 60f65f4eb1273cc75069f75fa45ff270f94f8225c46a1b8e4367f746325165b0
 
 # `runtime_feedback_store.py`
 
 ## Summary
-- agent および machine rule の feedback raw observation を検査し、secret masking、repository 内 evidence path の正規化、fingerprint 付与、content hash に基づく重複排除を行って immutable durable store へ保存する実装。atomic publish、UUIDv7 または deterministic ID、RFC 3339 日付配置、pending 件数と蓄積 warning も扱う raw observation store の境界であり、feedback の受理・保存・未処理判定に関する下位実装への入口になる。
+- feedback raw observation の受理・安全化・immutable 保存を担う境界。schema 検査、secret masking、repository 内 evidence path の正規化と fingerprint、UUIDv7 または machine rule に基づく observation ID、atomic publish、重複・破損検査を一体として扱う。
+- 保存済み raw observation の列挙、未処理判定、完了時の pending 件数と蓄積 warning の計算を提供し、collector/report 間で同一 byte 表現と保存先を共有する入口になる。
 
 ## Read this when
-- feedback observation の入力 schema 検査、安全性検査、secret masking、evidence path 境界、fingerprint、ID、canonical JSON、content hash、atomic な immutable 保存の挙動を確認するとき
-- agent または machine rule が生成する observation の raw envelope と重複・衝突時の保存規則を変更または調査するとき
-- raw observation の列挙、未処理判定、通常サブコマンド完了時の pending 件数や warning の計算を確認するとき
+- feedback observation の入力検証、secret masking、evidence path 境界、fingerprint、observation ID、raw record の durable 保存または atomic publish の挙動を確認するとき。
+- raw observation の重複・衝突・一時ファイル回収、未処理件数、publication 後の処理済み判定を調べるとき。
 
 ## Do not read this when
-- feedback の正本となる受理条件や report cut、cleanup、公開状態の仕様だけを確認する場合は、対応する oracle または runtime state の実装を先に読むとき
-- raw observation の保存処理を呼び出す上位 MCP tool や collector の責務だけを確認し、検査・永続化の内部挙動を調べないとき
+- feedback の正本 schema や受理・公開状態の仕様そのものを確認する場合は、対応する oracle の仕様または schema を直接読むとき。
+- MCP feedback tool の呼び出し契約や report cut の業務フローだけを確認する場合は、この raw store の実装ではなく専用の reporter/reporting 対象を読むとき。
 
 ## hash
-- a2366392e08049378b6d393969dfaf84706fc68918598e6f506c7a076d8f1051
+- 799eb1fc8e066827ddc5bdadbbc81e6e7d18e235c871956a7dda3d85103c1a7b
 
 # `runtime_git.py`
 
@@ -451,58 +490,61 @@
 # `runtime_primary_report.py`
 
 ## Summary
-- 非対話サブコマンドの primary report 保存を統括する共通ランタイム処理。
-- 個別処理が report を保存していない終了経路では、確定済みの invocation 情報から fallback report を生成し、保存済み report の検証と結果へのパス付与を行う。
-- サブコマンド別仕様に応じた必須項目、状態、完了理由、alias を集約して report renderer へ渡す入口。
+- 非対話サブコマンドの primary report 保存を共通化する実行時モジュール。既存 report の検証、未作成時の fallback report 生成、保存失敗の internal error 化、invocation-local な report 項目の保持と確定値・alias の収集を担う。
 
 ## Read this when
-- 非対話サブコマンドで primary report が作成される条件、fallback 保存、保存済み file の検証を確認するとき。
-- oracle edit、feedback report、realization apply/refactor fork などの終了経路で report 項目がどう補われるか調べるとき。
-- report context の開始・更新・リセットや、report 保存失敗時の内部エラー処理を追うとき。
+- 非対話サブコマンドの終了経路で primary report を保存・再利用・検証する処理を確認または変更するとき
+- fallback report の共通項目、個別 command の確定項目、terminal classification、completion reason の扱いを確認するとき
+- oracle edit、feedback report、realization apply/refactor fork の report 保存前後の状態や status を追跡するとき
+- report 保存失敗時の例外、予約 path の後始末、空 file・symlink の検証を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの primary report の項目定義や描画形式そのものを確認したいときは、primary report specs または renderer を直接読む。
-- report の保存先・timestamp 予約の一般的な仕組みだけを確認したいときは、runtime paths を直接読む。
-- 非対話サブコマンドの処理フローや終了分類の定義を確認したいだけで、report 保存経路を調べないとき。
+- primary report の項目定義や command ごとの必須 field を確認するだけで、保存処理や fallback 生成を扱わないときは runtime_primary_report_specs を読む
+- report の Markdown 形式や execution record、status の描画規則だけを確認するときは runtime_primary_report_render を直接読む
+- runtime path の timestamp 付き保存先生成だけを扱うときは runtime_paths を直接読む
+- 実際の各サブコマンド固有の処理や oracle の仕様を確認するときは、その command の実装または対応する oracle 文書を直接読む
 
 ## hash
-- d924aa5d44738e53605e8fcdc9d8bbb27487c48557b75ed85e3852c0aef12793
+- f17e671e162ef4d65a9372533f58fce0846495ba96157054542d42cb14bc10ae
 
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済み runtime 情報から invocation 用の fallback primary report を描画する。通常の実行概要に加え、feedback publication と混同しない部分結果・checkpoint・cleanup 状態を出力する。
-- oracle edit の agent call 状態、feedback publication 状態、実行段階、終端結果、warning/error、関連ログを report 用の確定値として集約する。
+- 確定済み runtime 情報から、通常 invocation summary と feedback report invocation summary を Markdown 形式で描画する report writer。実行段階、終端分類、warning/error、次の操作、関連ログ、Codex 最終出力、新規 feedback observation を report に組み立てる。
+- PrimaryReportSpec の template に応じた本文生成に加え、YAML scalar、安全な inline 表現、Codex call の状態、feedback publication・cleanup の状態を補助関数として提供する。
 
 ## Read this when
-- runtime 情報を primary report の Markdown/YAML 表現へ変換する処理を確認するとき
-- feedback report invocation の publication・checkpoint・cleanup 状態の表示規則を確認するとき
-- 実行済み step、Codex call、warning/error の report 出力内容を追跡するとき
+- runtime 情報から primary report または feedback invocation summary を生成・変更するとき
+- report の実行段階、終端結果、warning/error、checkpoint、publication 状態、関連ログの表示規則を確認するとき
+- Codex call の最終出力や受理済み feedback observation を実行記録へ含める処理を調べるとき
 
 ## Do not read this when
-- primary report の仕様や分類・結果データ構造そのものを変更または確認するとき
-- runtime logging の event 記録方法や logger のライフサイクルを確認するとき
-- feedback report の publication 処理自体や active state の管理を確認するとき
+- feedback observation の受理・送信処理そのものを変更または調査するとき
+- PrimaryReportSpec、TerminalResult、SubcommandLogger などの確定情報源の定義を直接確認するとき
+- コンソール表示やファイルログの仕様自体を確認するときは、先に参照元の app specification を読むべき場合
 
 ## hash
-- e8be5ae39e941ecbf5e0297b9bf6c92defef62c05ac7830e74993f811bfbf7f9
+- 5b1e7706d781c004100b7c30cf2a89f59ba279e0d30a6e0f8d9ecdcdc1f7b540
 
 # `runtime_primary_report_specs.py`
 
 ## Summary
-- 日本語の技術文書として、対象モジュールの責務と、fallback primary report のサブコマンド別定義への入口を簡潔に示す。
-- 非対話末端サブコマンドの report 保存先・役割・タイトル・必須項目・テンプレートを登録し、command 名から定義を取得する箇所として位置づける。
+- 非対話末端サブコマンドごとの fallback primary report 定義を集約する入口。
+- command 名から report の保存先、役割、タイトル、追加必須項目、テンプレート種別を確認するための対象。
+- TUI と oracle investigation を除く現行サブコマンドの report 対応範囲を確認できる。
 
 ## Read this when
-- fallback primary report のサブコマンド対応を追加・変更・確認するとき。
-- command 名に応じた report 仕様、保存先、必須 front matter 項目、テンプレート選択の登録元を探すとき。
+- 特定の非対話末端サブコマンドが保存する primary report の定義を確認するとき。
+- report の保存先や役割、タイトル、追加項目、テンプレート種別を command 名から調べるとき。
+- fallback report の command 対応付けや、`primary_report_spec` による参照方法を確認するとき。
 
 ## Do not read this when
-- TUI の通知境界や oracle investigation の仕様を確認したいとき。
-- 個別サブコマンドの report 形式そのものや保存処理を直接確認したいときは、対応する app specification または report 実装を読む。
+- primary report 共通の保存・表示契約を確認したいときは、console と file log の正本仕様を直接読む。
+- 個別サブコマンドの処理手順、終了理由、終了コードを確認したいときは、対応する個別サブコマンド仕様を直接読む。
+- TUI または oracle investigation の通知境界を確認したいときは、対象の通知仕様を直接読む。
 
 ## hash
-- 03ab3079ba4eec09a22bbdb38539c3625c8d8d55adb318403c5d932dfeca0e65
+- 1154d05f178d551bf6a00b4ad66c7fbd37bfca1b37add5c62784b2edc2e08161
 
 # `runtime_refactor.py`
 
@@ -566,23 +608,20 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run のライフサイクルを一元管理する共通実装。session の事前条件検査、run branch/worktree の作成・公開・回収、active run の解決、state 遷移、process tracking、rollback/commit を扱う。
-- run worktree の INDEX 更新と commit、Git tree 差分の列挙・平坦化、agent・run・session ごとの想定外 path 検査、oracle diff、generated INDEX・refactor state の許可判定を提供する。
-- realization_apply と realization_refactor の workload が共有する lifecycle 境界の入口であり、各 workload 固有の編集処理や state schema の定義そのものは扱わない。
+- 明示的な join を必要とする editing run の共通 lifecycle 処理を担う。run の開始・state 遷移・commit、差分分類、INDEX 更新、cleanup 判定を EditingRunContext と lifecycle lock の共有下で扱う。
 
 ## Read this when
-- editing run の開始、joinable/error 遷移、cleanup、recovery の挙動を確認するとき
-- session branch・run branch・run worktree の対応や fork commit の不変条件を追跡するとき
-- workload 差分、oracle 差分、INDEX 更新、想定外 path の分類・許可範囲を確認するとき
+- editing run の開始、active run の解決・回収、joinable/error への state 遷移を変更または調査するとき
+- run worktree の差分許可範囲、oracle 差分、生成 INDEX.md の判定、work unit の commit・rollback を扱うとき
+- editing run lifecycle 全体で共有される不変条件や cleanup 判定を確認するとき
 
 ## Do not read this when
-- workload 固有の realization 編集処理を確認するときは、対応する realization 実装を直接読む
-- state のデータ構造や永続化形式を確認するときは、runtime_state.py を直接読む
-- Git 操作の低レベル実装を確認するときは、runtime_git.py を直接読む
-- INDEX 生成アルゴリズム自体を確認するときは、indexing.py または対応する仕様を直接読む
+- 個別 subcommand の利用者向け挙動や agent call の責務だけを確認する場合
+- editing run lifecycle の共通処理ではなく、canonical な配置や設計上の責務境界を確認する場合は design_rule.md を直接読むとき
+- INDEX.md の生成規則そのものを確認する場合は indexing の正本仕様を直接読むとき
 
 ## hash
-- 8c8b1600e08046fb1a53d73bd49e9318dfe8211e01208d2e12fc8d6921ce6763
+- 520604c564eb18319ffb651c3c67108fce6c990528d13d974c2fd03987391b14
 
 # `runtime_run_report.py`
 
@@ -605,23 +644,19 @@
 # `runtime_state.py`
 
 ## Summary
-- session と editing run の state schema を検証し、JSON として永続化する共通実装。
-- session branch・run branch と session state file の対応付け、state の読み込み、session の検索を提供する。
-- session fork の排他 lock と、session-id・branch 名・state path の安全性検証を担う。
+- session と editing run の永続 state を表す schema、JSON の厳密な検証・復元・保存、session/run branch からの state 解決、session fork 排他 lock、state path の隔離・安全性検査を提供する。
 
 ## Read this when
-- session state の JSON schema、state 値、session/run payload の不変条件を確認するとき
-- session branch または run branch から state を読み込む処理を調べるとき
-- state file の保存、復元、symlink・特殊 file・不正な session-id の拒否を確認するとき
-- session fork の同時実行を防ぐ共通 lock の扱いを確認するとき
+- session state の schema、state file の読み書き、session または run branch に対応する state の取得を実装・調査するとき
+- state の状態値、必須 field、run payload、branch 名、session identity の検証規則を確認するとき
+- session fork の排他制御や state path の symlink・非通常 file・session-id 検査の責務を確認するとき
 
 ## Do not read this when
-- session や editing run のライフサイクル手順・利用者向けコマンド仕様を確認したいとき
-- branch 命名規則全般や worktree 分離の設計だけを確認したいとき
-- state schema の具体的な field 定義だけを確認する必要があり、正本の session state 仕様を直接読めるとき
+- session や editing run の業務フロー、branch lifecycle、join/apply の手順そのものを確認したいときは、対応する app_spec または sub_command の仕様を先に読む
+- session state を利用する個別 command の振る舞いだけを調査し、state schema・永続化・branch 対応付けの実装詳細を確認する必要がないとき
 
 ## hash
-- 516116886eabbf58130ecd20a993172ec62f0a609709ddafa8d1383447dcd196
+- e867e541be6e472cdbb55968e876f035885214d00a56b21331c7e33a84ab05c5
 
 # `runtime_windows_toast.py`
 

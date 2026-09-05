@@ -15,41 +15,37 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の active editing run を停止し、run worktree・run branch・state・process tracking を cleanup して ready 状態へ戻す lifecycle 実装。running、error、joinable の各状態に応じた process 停止と、worktree・branch の削除結果を primary report および lifecycle report に反映する。
-- cleanup 対象が残った場合は branch を保持して再試行可能にし、失敗理由と警告を返す。run abandon の停止処理、cleanup、state 更新、最終 terminal result の流れを確認する入口。
+- `cmoc run abandon` の active editing run を停止し、run worktree・branch・state・process tracking を cleanup して ready 状態へ戻すライフサイクル実装。
+- running・error・joinable の状態ごとに process や残存 Codex child を停止し、worktree と branch の削除結果を検証して lifecycle report と terminal result を確定する。
 
 ## Read this when
-- `cmoc run abandon` の実装経路、active run の停止方法、run 資源の cleanup 順序を調べるとき。
-- running・error・joinable 状態ごとの process cleanup や、worktree・branch 削除失敗時の挙動を確認するとき。
-- abandon 完了時の state、process tracking、primary report、lifecycle report の更新内容を確認するとき。
+- `cmoc run abandon` の停止、破棄、cleanup 成否、警告、または ready 状態への遷移を確認・変更するとき。
+- run worktree／branch の削除や process tracking の扱い、状態別の停止処理を追跡するとき。
 
 ## Do not read this when
-- `run abandon` の正本仕様や利用者向け仕様を確認する場合は、対応する app_spec・lifecycle 仕様を直接読むとき。
-- run の作成、join、編集、merge など abandon 以外の lifecycle を調べる場合は、各サブコマンドの実装へ直接進むとき。
-- worktree・branch の一般的な git 操作だけを確認する場合は、共通 runtime helper を直接読むとき。
+- active run の通常実行・join・編集処理を確認したいとき。
+- cleanup 実装ではなく、run lifecycle の状態解決や report 生成の共通仕様を直接確認したいとき。
 
 ## hash
-- 9924a70203bbb39f9d7ac008a2285a850c13c5824d8ddf7b23a4866124ae71f1
+- 22e1710f8c5f8744e0406c2bda7b38f69fee7199c62b3c506918fd389b7fc0a9
 
 # `join.py`
 
 ## Summary
-- `cmoc run join` の workload 非依存な merge lifecycle を一括して担う realization file。active run の検証、差分検査、merge、INDEX 再生成、post-join state 同期、report 保存、失敗時 rollback、worktree・branch cleanup までを扱う。
-- joinable または error 状態の active run を session branch に統合し、想定外差分や merge conflict を検出する。`--force-resolve` による run branch 側の想定外差分の復元、および INDEX.md だけの conflict の再生成もここで処理する。
-- merge 後の refactor state 同期、primary report と lifecycle report の更新、cleanup 失敗時の error state 保持を含み、run join の成功・失敗・cleanup pending に関する状態遷移を確認する入口である。
+- `cmoc run join` の active editing run を対象に、差分検査、merge、post-join の INDEX・refactor state 同期、report 保存、state 更新、run 資源 cleanup までの共通 lifecycle を扱う。
+- join の成功・失敗・cleanup pending にまたがる state と rollback の不変条件を確認するための入口である。
 
 ## Read this when
-- `cmoc run join` の実装、merge 前後の差分検査、`--force-resolve` の挙動を確認するとき
-- run join 後の INDEX 再生成、post-join hook、refactor state 同期、report 保存を調査するとき
-- merge conflict、post-join failure、rollback、error state、worktree・branch cleanup の不変条件を確認するとき
+- `cmoc run join` の実行フロー、merge 前の clean・想定外差分検査、`--force-resolve` の復旧動作を確認または変更するとき
+- merge 後の post-join hook、INDEX 再生成、refactor state 同期、lifecycle report、active run state の遷移を確認するとき
+- merge conflict、post-join failure、report 保存失敗、worktree・branch cleanup failure の rollback と再試行条件を調べるとき
 
 ## Do not read this when
-- workload 固有の編集・apply・refactor 処理そのものを確認するときは、対応する workload 固有の realization file を直接読む
-- run join の正本仕様や状態遷移の定義を確認するときは、対応する oracle の仕様書を先に読む
-- 一般的な Git 操作や共通 runtime helper の実装だけを確認するときは、import 先の共通 runtime file を直接読む
+- workload 固有の編集処理や run の開始・abandon など、`cmoc run join` の共通 lifecycle より直接担当する別の実装を確認するとき
+- INDEX.md の生成規則そのもの、refactor state の同期規則そのもの、または lifecycle report の書式だけを確認するときは、それぞれの専用実装を直接読む
 
 ## hash
-- 23788546f2780854b953b77a98c9a713e695c501a3cd77c9e5a6f3b4bd10dd93
+- 7424843df552d068123dc689575b380aa6240eb87aa83f6d1468b900d16a4408
 
 # `lifecycle.py`
 

@@ -33,23 +33,25 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンド実装の入口。feedback 関連の CLI 処理を確認・変更するときに参照する。
-- 固定済み report cut を起点に、feedback report の検証、checkpoint 管理、issue・machine 集約、candidate 検証、正常 publication、incomplete 診断を処理する。feedback report の実行経路や状態遷移を調べる際の中心的な実装対象である。
+- feedback サブコマンドの実装群への入口。report の生成・検証・publication、remediation wave、run の recovery／cleanup を役割別に扱う。
+- report cut を入力に observation の正規化・recurrence 集約・candidate verification・publication／incomplete 診断を行う report pipeline を扱う。
+- issue 単位の remediation、seal・checkpoint・自動 join、merge 後の検証、publication recovery を含む feedback remediation の進行を扱う。
+- publication 後の finalization journal に基づく cleanup／recovery、feedback run の明示 join／abandon、終了監査、report cut cleanup を扱う。
 
 ## Read this when
-- feedback サブコマンドの実装や CLI 入口を確認・変更するとき。
-- feedback report の report cut 固定、再開・中断・失敗処理、cleanup、checkpoint、writer lock、current pointer の挙動を調べるとき。
-- feedback observation の検証結果を用いた normalization、verification、candidate 集約、正常 publication、incomplete 診断の処理を調べるとき。
-- feedback state と feedback report の仕様に対する実装対応を確認するとき。
+- feedback サブコマンドの実装を確認・変更するとき
+- feedback report の report cut、observation 集約、candidate verification、publication または incomplete 診断を調査するとき
+- feedback issue の remediation wave、seal、checkpoint、automatic join、merge 後検証、publication recovery を調査するとき
+- feedback report publication 後の cleanup／recovery、明示 join／abandon の許可境界、終了監査や report cut cleanup を調査するとき
 
 ## Do not read this when
-- feedback report 以外のサブコマンドを扱うとき。
-- feedback observation の入力形式や raw store の保存処理だけを調べるときは、観測入力と保存を直接定義する対象を先に読む。
-- issue normalization・verification 用の agent prompt や Structured Output schema だけを調べるときは、それぞれの builder・schema を直接読む。
-- report の Markdown 表示形式だけを確認するときは、report rendering を仕様化する対象を先に読む。
+- feedback observation の受付・envelope 検証・raw store 保存だけを調査するとき
+- normalize／remediate agent の parameter や Structured Output schema だけを確認するとき
+- feedback state や run state の永続化 API、wave／join 管理、generation artifact の一般形式だけを調査するとき
+- feedback 以外のサブコマンドや、feedback と無関係な report／Markdown／logging 処理を調査するとき
 
 ## hash
-- 247bd90db7c4b0a6ae3200d51a272f144142be3e05b33c1e8f81a1ead4a0263c
+- ebb29b414db56d59cea8a40f10fe2277dbb922c11514471cd61962804d9b8261
 
 # `indexing.py`
 
@@ -129,23 +131,20 @@
 # `run`
 
 ## Summary
-- editing run サブコマンドの共通 lifecycle 実装と、関連する abandon・join・旧 import path 互換 shim の入口。active run の停止、merge、cleanup、state・report 更新などの実装経路を確認する際に、配下の該当ファイルへ進むために読む。
+- editing run の lifecycle サブコマンド実装と、旧 import path 互換 shim の入口。abandon・join の停止／統合／cleanup フローや、commons 側へ委譲された lifecycle・report 共通処理の所在を確認する際に読む。
 
 ## Read this when
-- editing run サブコマンドの共通 lifecycle や配下の実装を横断して確認するとき。
-- run abandon の停止、cleanup、state 更新、失敗時の再試行可能状態を調べるとき。
-- run join の merge 前後処理、INDEX 再生成、rollback、report 保存、cleanup を調べるとき。
-- 旧 import path の互換 shim と canonical 実装への委譲関係を確認するとき。
+- `cmoc run abandon` または `cmoc run join` の状態遷移、差分検査、merge、post-join、cleanup、rollback、report 保存を調査・変更するとき。
+- 旧 `src.sub_commands.run.lifecycle`／report import path の互換性、commons 側への移行、shim の削除条件を確認するとき。
+- editing run の lifecycle 実装の担当ファイルを特定し、abandon・join の具体処理または旧 import path の互換層から読み始めるとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- run の正本仕様や状態遷移を確認するときは、対応する app_spec・lifecycle 仕様を直接読む。
-- workload 固有の編集・apply・refactor 処理を確認するときは、対応する workload 固有の実装を直接読む。
-- 共通 runtime helper や report writer の具体的な挙動を確認するときは、canonical 実装を直接読む。
-- 旧 import path との互換性が関係しない場合は、lifecycle.py や report.py の shim を読む必要はない。
+- lifecycle・report の共通処理そのものや INDEX 生成規則、refactor state 同期規則、report 書式を確認する場合に、配下の専用実装を直接読めるとき。
+- 旧 import path の互換性が関係せず、run の開始・通常実行・workload 固有編集など別の実装だけを確認するとき。
 
 ## hash
-- bf31b65cdb0353a73a14c0edd0e7dd69845bdd50bbe2cdc0aa876f71b4105f2b
+- 40e35fd9063663970e1add86290a2e56d6311a1d1e87a2233a7e472b14805f29
 
 # `session`
 
