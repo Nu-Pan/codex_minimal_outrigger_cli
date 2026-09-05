@@ -55,18 +55,22 @@
 # `other`
 
 ## Summary
-- cmoc の周辺基盤モデルをまとめたディレクトリ。設定データクラス、Git worktree とルートプレースホルダを扱うパスコンテキスト、構造化文書を Markdown に変換する要素・レンダラーへの入口。
+- 開発対象リポジトリごとに変わる cmoc 設定を集約し、Codex CLI の provider・agent call 設定、並列数、アクセス規定違反時の復旧試行回数を定義する設定モデル。設定の永続化と編集方針も扱う。
+- agent call の cwd と Git metadata から worktree・main repository・run のルートを導出し、{{cmoc-root}}、{{repo-root}}、{{run-root}}、{{work-root}} の解決・変換を担うパスコンテキストの基盤モデル。
+- 見出し、参照可能ブロック、コードブロック、規定を構造化して保持し、見出し階層や cmoc_block/cmoc_ref、コードフェンス、SDPolicy を Markdown にレンダリングする文書構造ヘルパー。
 
 ## Read this when
-- cmoc のリポジトリ固有設定、agent call のパス解決、または構造化文書の Markdown レンダリングを横断して調べるとき
-- 個別モジュールの責務が設定・パスモデル・構造化文書のどれに属するかを判断し、該当する実装へ進むとき
+- cmoc の設定項目、既定値、Codex CLI 呼び出し設定、provider-local 設定、設定の永続化・編集方針を確認するとき。
+- agent call の cwd から各ルートを導出する規則、パスプレースホルダの解決・変換、Git worktree metadata の探索挙動を確認するとき。
+- 構造化文書の要素、見出し深さ、cmoc_block/cmoc_ref、コードブロック、SDPolicy の Markdown 出力を調べるとき。
 
 ## Do not read this when
-- 特定の設定項目、ルートプレースホルダ解決、または Markdown 要素のレンダリングだけを調べる場合は、該当する個別モジュールを直接読むとき
-- agent call の具体的な処理フロー、CLI 呼び出し、設定ファイルの生成・同期など、これらの基盤モデルを利用する上位実装だけを調べるとき
+- agent call のプロンプト生成や Codex CLI の実際の呼び出し処理を調べるとき。設定の保存・同期の具体的な処理だけを調べる場合は、その処理の実装対象を直接読む。
+- 個別の CLI 機能や realization の実装責務だけを確認するとき。パスモデルを介さない一般的なファイル操作や他モジュールの仕様を調べるとき。
+- Markdown 以外の文書レンダリング、文書構造の仕様や入力生成規則、cmoc の一般的な規定・参照ルーティング仕様を確認するとき。
 
 ## hash
-- b39b9b65f91790a4f4f66f750bc72b78f59e3bdc4506213d8ba9d788a7f5a863
+- 411eec9964f041d171dbcd8abaab25593d0ee42c50677fbf43783e308ae381a3
 
 # `prompt_builder`
 

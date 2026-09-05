@@ -21,18 +21,17 @@
 # `src`
 
 ## Summary
-- oracle の正本仕様のうち、プログラム・設定ファイルとして記述された詳細を扱う入口。
-- agent call 構築、エディタ入力、フィードバック入力、共通モデル、prompt 構築の各領域へ進むための分類点。
-- acp_builder は agent call パラメータと起動関連、editor_input_handoff はエディタ入力契約、feedback はフィードバック報告入力、other は設定・パス・構造化文書の共通モデル、prompt_builder は prompt と policy の構築定義を扱う。
+- oracle 配下の入力スキーマ、agent call builder、設定・パス・prompt 構築の基盤を扱う入口。
+- エディタ上書き、フィードバック観測、agent call の共通型と用途別設定、prompt と policy 注入、Codex CLI や構造化文書の処理を確認するための上位ルーティング先。
 
 ## Read this when
-- oracle/src 配下で、agent call の構築仕様、エディタ入力の入力契約、フィードバック報告の入力契約、共通モデル、または prompt 構築仕様の読み始める領域を判断するとき。
-- 自然言語の意味仕様ではなく、oracle doc から委譲された実装・設定レベルの正確な詳細を確認するとき。
+- oracle/src 配下で、複数の入力契約や agent call 構築領域にまたがる仕様・実装の入口を判断するとき。
+- エディタ入力上書き、フィードバック報告、agent call、設定・パス・prompt 構築の正本領域を特定したいとき。
 
 ## Do not read this when
-- oracle doc が所有する意味仕様や人間意図だけを確認したい場合は、対応する oracle/doc の仕様を直接読む。
-- 特定の下位領域の詳細だけを確認したい場合は、acp_builder、editor_input_handoff、feedback、other、または prompt_builder の対象を直接読む。
-- 実際の CLI ワークフローや realization の実装挙動だけを確認したい場合は、対応する realization 側の実装を読む。
+- 特定の agent call の個別 prompt、入力、結果分類、検証条件だけを確認する場合。
+- エディタ上書き、フィードバック送信、collector、issue 同一性判定、remediation など個別処理の具体的挙動だけを確認する場合。
+- Codex CLI sandbox、Structured Output schema、個別 CLI 機能や MCP tool の詳細な契約・実装だけを確認する場合。
 
 ## hash
-- ccada7644a2477e1cbb46ced3efe2830744300a71d664378b085b909f483d087
+- 99c23199cd94a9204f0028ba7a4a480081afca0c849d618c5b1c4a7833577cfb
