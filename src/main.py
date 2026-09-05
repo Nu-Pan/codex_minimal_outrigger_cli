@@ -13,7 +13,6 @@ from cmoc_runtime import (
     render_error,
 )
 from sub_commands.doctor import cmoc_doctor_impl
-from sub_commands.feedback.report import cmoc_feedback_report_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.oracle.edit import cmoc_oracle_edit_impl
 from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
@@ -231,6 +230,10 @@ def indexing() -> None:
 def feedback_report() -> None:
     """pending feedback observation から current report を publication する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # feedback の builder 読み込みを、このコマンドの実行時に限定する。
+    # doctor などの独立したコマンドの起動を妨げないようにする。
+    from sub_commands.feedback.report import cmoc_feedback_report_impl
+
     cmoc_feedback_report_impl()
 
 
