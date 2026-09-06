@@ -953,6 +953,12 @@
     "last_investigated_sha256": "314f863a7cbf0d8eb6a2e9f72ee941edfcbbfcc5768f529aed40f09e96968cb9",
     "last_investigated_at": "2026-08-07_14-03_20_906233000"
   },
+  "src/sub_commands/feedback/decision.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/sub_commands/feedback/recovery.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -1240,6 +1246,18 @@
     "last_investigation_result": "findings",
     "last_investigated_sha256": "10436049f23b8d05eac6990be020ad98a6942fffd62de7782db7eed22f92e096",
     "last_investigated_at": "2026-08-13_18-52_11_548846000"
+  },
+  "test/test_feedback_decision.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_feedback_reconfirmation.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "test/test_file_inventory.py": {
     "investigation_required": true,
