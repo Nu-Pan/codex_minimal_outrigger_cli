@@ -478,6 +478,42 @@
 ## hash
 - 0dc2c0bfb3f0c3d03c08f43e943d473ea807b2ac1117707d25113fee314e075b
 
+# `test_feedback_decision.py`
+
+## Summary
+- feedback 判定の根拠に、Git 管理対象の設定ファイルと nested realization を含む worktree 入力の変化を反映できることを検証するテスト。
+- atomic write や checkout で生じるファイルモード変化を、Git のモード情報に基づいて判定できることを検証する。
+
+## Read this when
+- feedback 判定の入力基準が、通常ファイルだけでなく依存設定や nested realization を含むか確認したいとき。
+- worktree 入力の比較が、内容変更に加えて実行ビットなどのファイルモード変化を検出するか確認したいとき。
+
+## Do not read this when
+- feedback 判定の実装仕様や変更方法を確認したいときは、対応する sub_commands.feedback.decision の実装を直接読む。
+- feedback 以外の機能のテストや、一般的なテスト実行手順だけを確認したいとき。
+
+## hash
+- 948c93c1fe644e8328492207375c0fe5bec4541f7e7642f84f2cb994020bc1a8
+
+# `test_feedback_reconfirmation.py`
+
+## Summary
+- feedback.md と feedback_state.md の根拠変更を検出し、remediation の再確認、修復サイクル、checkpoint 参照回復を検証するテスト。
+- Git と Codex の境界をモックし、wave、checkpoint、seal、join、publish、active issue への根拠反映までの制御を対象にする。
+
+## Read this when
+- feedback の remediation 結果を後続変更後に再確認する挙動を調べるとき。
+- 根拠変更、追加観測、再修復サイクル、checkpoint 参照回復、seal 後の publish/recovery 制約を検証するとき。
+- human_required や inconclusive を含む結果が decision basis と active state にどう反映されるかを確認するとき。
+
+## Do not read this when
+- 通常の feedback intake や候補集約だけを調べるとき。
+- Git や Codex の実装そのもの、または remediation の一般的な単一結果処理だけを調べるとき。
+- 対象テストが検証する根拠再確認・封印・公開制御に関係しない feedback 機能を調べるとき。
+
+## hash
+- 1ff9b96c690b7381117e6576abd06c518e58add872e219c35836061ccd3103ad
+
 # `test_file_inventory.py`
 
 ## Summary

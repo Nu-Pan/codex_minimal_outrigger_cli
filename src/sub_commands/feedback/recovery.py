@@ -172,7 +172,7 @@ def _finish_from_journal(
     if (
         completion.get("report_cut_id") != journal["report_cut_id"]
         or completion.get("checks")
-        != {"reachability": True, "paths": True, "clean": True}
+        != {"reachability": True, "paths": True, "clean": True, "decision_basis": True}
         or journal["merged"].get("sealed") != completion.get("sealed")
     ):
         raise _failure("feedback finalization の join evidence が不正です。")
@@ -183,6 +183,12 @@ def _finish_from_journal(
                 raise _failure(
                     "feedback finalization の session tree が変更されています。"
                 )
+            from .decision import state_hash, worktree_inputs
+
+            if state_hash(worktree_inputs(context.session_worktree)) != completion.get(
+                "decision_inputs_sha256"
+            ):
+                raise _failure("feedback finalization の判定条件が変更されています。")
             if (
                 run_git(
                     [

@@ -373,40 +373,43 @@
 # `runtime_feedback_run_state.py`
 
 ## Summary
-- feedback run の immutable wave、seal、join 記録、および remediation checkpoint の整合性を検証する実装。
-- report cut manifest の run identity、入力、high-watermark、artifact path、canonical hash、commit、verification 記録を検査する。
-- artifact 保存と manifest 更新の間に停止した場合は、固定 path から未登録 artifact reference を復旧する。
+- feedback run の immutable wave、report cut の封印、join・publication 完了 artifact を検証する状態管理モジュール。
+- remediation checkpoint の入力・判定根拠・schema・実差分・commit 整合性を検査し、issue ごとの publication 対象を選ぶ。
+- manifest 更新の append-only 制約と、artifact 保存途中からの固定 path による recovery を担う。
 
 ## Read this when
-- feedback report の run artifact、wave の順序、seal 後の変更禁止、join lifecycle の整合性を確認・変更するとき。
-- remediation checkpoint の schema、issue identity、変更 path、commit、差分 hash、機械検査、verification 記録の検証を調べるとき。
-- report cut manifest の更新規則や artifact 保存後の recovery 動作を確認するとき。
+- feedback run の intake wave、high-watermark、seal、join、publication のライフサイクル整合性を確認するとき。
+- report cut artifact と manifest の hash・path・identity 対応、または immutable artifact の保存と回復処理を調べるとき。
+- remediation checkpoint の正式結果、判定根拠、循環診断、変更 path、commit の検証条件を確認するとき。
 
 ## Do not read this when
-- feedback の正本状態仕様や lifecycle の意味を確認したいだけで、実装上の検証・復旧処理を調べる必要がないとき。
-- canonical JSON の保存・hash 生成そのものを確認する場合は、共通の feedback store 実装を直接読むとき。
-- report cut artifact の基本構造や参照 path の共通検証を確認する場合は、feedback state の共通実装を直接読むとき。
+- feedback の全体仕様や run lifecycle の概念を確認したいだけで、状態 artifact の検証実装を追う必要がないとき。
+- 個別の remediation 入出力 schema や issue 判定ロジックそのものを確認する場合は、対応する schema・判定実装を直接読むとき。
+- feedback artifact の低レベルな canonical JSON 保存・hash 計算だけを確認する場合は、store 実装を直接読むとき。
 
 ## hash
-- 5512c681ec97b4e2ec363f7a51c8375a8d889169f51ef5598bc385f4398ef49f
+- ce27bea0545cf3ceff9ffef05c59d59675f6baaca9d9bd02f49eecc949608e21
 
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local active state と report cut の整合性を一元管理する。current pointer、generation、issue／machine aggregate、publication、incomplete 診断、checkpoint、cleanup の検証・保存・切替・回収を担い、異常終了時の復旧可能性と artifact 間の hash／identity 整合性を保つ。
+- feedback の raw observation envelope と machine rule／agent report の整合性を検証する入口。
+- current pointer が選ぶ active generation、issue、machine aggregate、report artifact を hash・identity・schema 付きで検証する責務を担う。
+- report cut の checkpoint、publication、incomplete 診断、cleanup、discard、generation 切替を一つの integrity boundary で管理する。
 
 ## Read this when
-- feedback report の state transition、active generation の構築・公開、current pointer の切替、publication 後 cleanup、report cut の再開・破棄を実装または調査するとき
-- repository-local feedback artifact の schema、path／SHA256 reference、canonical JSON、symlink 防御、writer lock、current／work／cleanup state の整合性を確認するとき
-- incomplete 診断や remediation／normalization checkpoint と、正式 publication との相互排他・復旧規則を確認するとき
+- feedback state の current pointer、active generation、issue または machine aggregate の整合性を確認するとき
+- feedback report cut の再開、checkpoint 回復、publication、incomplete 診断、cleanup、discard の挙動を確認するとき
+- report cut と active state の artifact reference、SHA256、canonical JSON、symlink 防止、writer lock の境界を確認するとき
 
 ## Do not read this when
-- raw observation の収集・受付・receipt 管理だけを扱うときは observation intake／store の実装を直接読む
-- feedback report の Markdown 内容や agent 向け reference の生成規則だけを扱うときは report／report cut の生成実装または対応する oracle を直接読む
-- 個別の runtime error、CLI 引数、機械ルールの検出ロジックだけを扱い、repository state の遷移・整合性に触れないときはこのモジュールを読まない
+- 観測の受付や publication receipt の保存など、feedback state の外側にある intake／store 処理だけを確認するとき
+- feedback report の Markdown 内容や表示形式を確認するとき
+- feedback の正本仕様や subcommand の利用者向け契約を直接確認できる場合
+- 個別の RFC3339、ID、JSON canonicalization、immutable file 保存 primitive だけを確認すれば足りるとき
 
 ## hash
-- 60f65f4eb1273cc75069f75fa45ff270f94f8225c46a1b8e4367f746325165b0
+- 1670a409420029022ba1f991378161262a36b161ec57263c69b28d1ecbf73887
 
 # `runtime_feedback_store.py`
 

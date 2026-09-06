@@ -129,17 +129,15 @@ def normalization_checkpoint_path(
     )
 
 
-def remediation_checkpoint_path(
-    repo: Path, report_cut_id: str, candidate_id: str
-) -> Path:
-    """cut-scoped remediation checkpoint path を返す。"""
-    if re.fullmatch(r"fbi_[a-z2-7]{26}", candidate_id) is None:
-        raise ValueError(f"invalid feedback issue ID: {candidate_id!r}")
+def remediation_checkpoint_path(repo: Path, report_cut_id: str, call_id: str) -> Path:
+    """issue ID と wave 番号で論理 call ごとの immutable path を返す。"""
+    if re.fullmatch(r"fbi_[a-z2-7]{26}\.[0-9]{8,}", call_id) is None:
+        raise ValueError(f"invalid feedback call ID: {call_id!r}")
     return (
         report_cut_directory(repo, report_cut_id)
         / "checkpoint"
         / "remediation"
-        / f"{candidate_id}.json"
+        / f"{call_id}.json"
     )
 
 
@@ -962,7 +960,14 @@ def _validate_active_issue(
         raise _corruption("active issue session count と digest が一致しません。", path)
     verification = _require_exact_fields(
         record.get("verification"),
-        {"report_cut_id", "verified_at", "reason", "current_evidence", "human_action"},
+        {
+            "report_cut_id",
+            "verified_at",
+            "reason",
+            "current_evidence",
+            "human_action",
+            "decision_basis",
+        },
         path,
         "active issue verification",
     )
@@ -983,6 +988,9 @@ def _validate_active_issue(
     )
     if not isinstance(verification.get("reason"), str) or not verification["reason"]:
         raise _corruption("active issue verification reason が空です。", path)
+    from .runtime_feedback_run_state import validate_decision_basis
+
+    validate_decision_basis(verification["decision_basis"], path, compact=True)
     evidence = verification.get("current_evidence")
     if (
         not isinstance(evidence, list)
@@ -1826,7 +1834,11 @@ def _validate_report_cut_manifest(
                     expected_report_cut_id=str(report_cut_id_value),
                     expected_candidate_id=str(identifier),
                 )
-            identifiers.append(str(identifier))
+            identifiers.append(
+                str(item["path"])
+                if name == "remediation_checkpoints"
+                else str(identifier)
+            )
         if identifiers != sorted(identifiers) or len(identifiers) != len(
             set(identifiers)
         ):
@@ -1909,7 +1921,9 @@ def _validate_diagnostic_section(
     checkpoint_root = (
         report_cut_directory(repo, path.parent.name) / "checkpoint" / "remediation"
     )
-    for reference in checkpoint_references:
+    from .runtime_feedback_run_state import selected_remediation_checkpoints
+
+    for reference in selected_remediation_checkpoints({"processing": processing}):
         if not isinstance(reference, dict):
             raise _corruption(
                 "diagnostic remediation checkpoint reference が不正です。", path
@@ -2660,11 +2674,12 @@ def _validate_report_cut_artifact_inventory(
                 raise _corruption(
                     "staged report result に未列挙 checkpoint があります。", artifact
                 )
-            identity = artifact.stem
+            call_id = artifact.stem
+            identity = call_id.split(".")[0] if kind == "remediation" else call_id
             if not identity_validator(identity):
                 raise _corruption("report cut checkpoint path が不正です。", artifact)
             try:
-                expected_path = path_factory(repo, report_cut_id_value, identity)
+                expected_path = path_factory(repo, report_cut_id_value, call_id)
             except ValueError as exc:
                 raise _corruption(
                     "report cut checkpoint path が不正です。", artifact
@@ -2756,8 +2771,8 @@ def recover_report_cut_checkpoint_references(
         entries = processing.get(list_name)
         if not isinstance(entries, list):
             raise _corruption(f"report cut {list_name} が不正です。", manifest_path)
-        by_id = {
-            str(item[id_name]): item
+        by_path = {
+            str(item["path"]): item
             for item in entries
             if isinstance(item, dict) and isinstance(item.get(id_name), str)
         }
@@ -2771,10 +2786,11 @@ def recover_report_cut_checkpoint_references(
                 and not checkpoint_path_value.is_symlink()
             ):
                 continue
-            identity = checkpoint_path_value.stem
+            call_id = checkpoint_path_value.stem
+            identity = call_id.split(".")[0] if kind == "remediation" else call_id
             try:
                 expected_path = expected_path_function(
-                    repo, report_cut_id_value, identity
+                    repo, report_cut_id_value, call_id
                 )
             except ValueError as exc:
                 raise _corruption(
@@ -2800,7 +2816,7 @@ def recover_report_cut_checkpoint_references(
             )
             reference = artifact_reference(repo, checkpoint_path_value)
             expected_entry = {id_name: identity, **reference}
-            existing = by_id.get(identity)
+            existing = by_path.get(str(reference["path"]))
             if existing is not None:
                 if existing != expected_entry:
                     raise _corruption(
@@ -2817,9 +2833,9 @@ def recover_report_cut_checkpoint_references(
                     checkpoint_path_value,
                 )
             entries.append(expected_entry)
-            by_id[identity] = expected_entry
+            by_path[str(reference["path"])] = expected_entry
             changed = True
-        entries.sort(key=lambda item: str(item[id_name]))
+        entries.sort(key=lambda item: (str(item[id_name]), str(item["path"])))
     if changed:
         write_report_cut_manifest(repo, manifest)
     return changed

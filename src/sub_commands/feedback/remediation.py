@@ -2,6 +2,8 @@
 
 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md。
 観測の集約と表示は report、永続 artifact の検査は runtime_feedback_run_state に委譲する。
+判定根拠の比較は decision に分離し、commit・rollback・finalization の例外境界は
+同じ run の状態遷移としてここで一続きに確認できるようにする。
 """
 
 import json
@@ -34,6 +36,7 @@ from commons.runtime_feedback_run_state import (
     new_run_record,
     read_run_artifact,
     save_run_artifact,
+    selected_remediation_checkpoints,
     validate_remediation_checkpoint,
 )
 from commons.runtime_feedback_state import (
@@ -85,7 +88,7 @@ from sub_commands.run.join import (
     validate_run_join,
 )
 
-from . import report
+from . import decision, report
 
 
 def run_feedback_report() -> TerminalResult:
@@ -152,10 +155,9 @@ def run_feedback_report() -> TerminalResult:
             manifest_path, _ = write_report_cut_manifest(repository, manifest)
             _update_progress(context, manifest, "running")
             with run_process_tracking(repository, context.session_id):
-                candidates, aggregates = _wave_loop(context, manifest, state)
+                candidates, aggregates, ignored = _wave_loop(context, manifest, state)
                 stop_tracked_codex_children(repository, context.session_id)
             # 自動 join に必要な doctor の機械更新を seal 前に確定する。
-            ignored = _doctor_preprocess_for_join()
             warnings: list[str] = []
             validate_run_join(context, warnings, session_ignored_paths=ignored)
             _seal(context, manifest, candidates, aggregates)
@@ -247,11 +249,12 @@ def _new_manifest(context: EditingRunContext, state: ActiveState) -> dict[str, A
 
 def _wave_loop(
     context: EditingRunContext, manifest: dict[str, Any], state: ActiveState
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    """保存順境界内の新規 identity がなくなるまで immutable wave を逐次処理する。"""
+) -> tuple[dict[str, Any], dict[str, Any], set[str]]:
+    """新規 issue と根拠が変化した全分類の結果を、最終状態に収束するまで処理する。"""
     candidates: dict[str, Any] | None = None
     aggregates: dict[str, Any] | None = None
-    processed: set[str] = set()
+    ignored: set[str] = set()
+    prepared = False
     while True:
         after = manifest["run"]["high_watermark"]
         # 未定義 artifact と invalid input を publication 前に拒否する。
@@ -288,13 +291,29 @@ def _wave_loop(
             previous_aggregates=aggregates,
             observed_at=captured_at,
         )
-        pending = {
-            identity: candidate
-            for identity, candidate in sorted(candidates.items())
-            if identity not in processed
-        }
+        files = decision.worktree_inputs(context.run_worktree)
+        pending = {}
+        for identity, candidate in sorted(candidates.items()):
+            history = decision.issue_history(context.repo, manifest, identity)
+            current = decision.decision_state(files, candidate)
+            if history and decision.basis_is_valid(
+                history[-1][1]["audit"]["decision_basis"], current
+            ):
+                continue
+            pending[identity] = {
+                **candidate,
+                "decision_state_sha256": decision.state_hash(current),
+                "reconfirmation": decision.reconfirmation(history, current),
+            }
         if manifest["run"]["waves"] and not pending:
-            return candidates, aggregates
+            if not prepared:
+                ignored = _doctor_preprocess_for_join()
+                validate_run_join(context, [], session_ignored_paths=ignored)
+                prepared = True
+                # 機械更新と、その間の intake を最終境界の検査へ含める。
+                continue
+            return candidates, aggregates, ignored
+        prepared = False
         sequence = len(manifest["run"]["waves"]) + 1
         wave = {
             "sequence": sequence,
@@ -306,6 +325,7 @@ def _wave_loop(
                 "versions": inputs["versions"],
                 "captured_at": captured_at,
                 "reporter_compatibility": "v1-raw-to-v2-view",
+                "decision_files": files,
             },
             "candidates": pending,
         }
@@ -323,7 +343,6 @@ def _wave_loop(
         write_report_cut_manifest(context.repo, manifest)
         for identity, candidate in pending.items():
             _remediate_issue(context, manifest, wave_reference, candidate)
-            processed.add(identity)
         # run_codex_exec は各 call の reporter を close/drain してから戻る。
         # 次の capture は、全 call の終了後に collector と同じ lock を取得する。
         _update_progress(context, manifest, "running")
@@ -412,8 +431,35 @@ def _remediate_issue(
     identity = candidate["candidate_id"]
     before = head_commit(context.run_worktree)
     require_clean_worktree(context.run_worktree)
+    history = decision.issue_history(context.repo, manifest, identity)
+    current = decision.decision_state(
+        decision.worktree_inputs(context.run_worktree), candidate
+    )
+    if history and decision.basis_is_valid(
+        history[-1][1]["audit"]["decision_basis"], current
+    ):
+        return
+    recheck = decision.reconfirmation(history, current)
     payload = report._remediation_candidate_payload(candidate)
     payload["issue_id"] = payload.pop("candidate_id")
+    payload["decision_state_sha256"] = decision.state_hash(current)
+    payload["reconfirmation"] = recheck
+    previous_evidence = (
+        set(history[-1][1]["input"]["issue"]["decision_evidence"]) if history else set()
+    )
+    additional_sources = {
+        observation_id
+        for digest, observation_id in candidate.get(
+            "decision_evidence_sources", {}
+        ).items()
+        if digest not in previous_evidence
+    }
+    # 表示用の bounded evidence に収まらない新しい根拠も、固定済み raw へ到達可能にする。
+    payload["evidence_observations"] = [
+        reference
+        for reference in manifest["inputs"]["observations"]
+        if reference["observation_id"] in additional_sources
+    ]
     parameter = build_feedback_remediate_issue_parameter(
         json.dumps(payload, ensure_ascii=False, sort_keys=True), context.run_worktree
     )
@@ -426,7 +472,27 @@ def _remediate_issue(
             output: Any, changed: frozenset[str]
         ) -> tuple[StructuredOutputValidationIssue, ...]:
             """runtime が算出した論理 call の net 差分を照合する。"""
-            return _remediation_output_issues(output, changed, identity)
+            issues = _remediation_output_issues(output, changed, identity)
+            if (
+                recheck
+                and recheck["cycle_states"]
+                and changed
+                and decision.state_hash(
+                    decision.decision_state(
+                        decision.worktree_inputs(context.run_worktree), candidate
+                    )
+                )
+                in recheck["cycle_states"]
+            ):
+                issues += (
+                    StructuredOutputValidationIssue(
+                        "convergence",
+                        "$.result.status",
+                        "a result that breaks the recorded cycle, or an inconclusive diagnosis without changes",
+                        "the same repair returned to a recorded cycle state",
+                    ),
+                )
+            return issues
 
         result = report.run_codex_exec(
             parameter,
@@ -457,12 +523,17 @@ def _remediate_issue(
             )
         if not report._structured_output_matches_schema(
             result.output_json, schema
-        ) or _remediation_output_issues(
-            result.output_json, frozenset(actual), identity
-        ):
+        ) or postcondition(result.output_json, frozenset(actual)):
             raise _failure(
                 "feedback remediation output と実差分または verification が一致しません。"
             )
+        basis = decision.decision_basis(
+            decision.decision_state(
+                decision.worktree_inputs(context.run_worktree), candidate
+            ),
+            result.output_json["result"],
+            recheck,
+        )
         if actual:
             sync_refactor_state(context.run_worktree)
             refresh_indexes(context.run_worktree, commit=False)
@@ -479,7 +550,12 @@ def _remediate_issue(
         )
         after = head_commit(context.run_worktree)
         require_clean_worktree(context.run_worktree)
-        input_value = {"issue": payload, "wave": wave, "before_commit": before}
+        input_value = {
+            "issue": payload,
+            "wave": wave,
+            "before_commit": before,
+            "decision_state": current,
+        }
         call_log = result.call_log_path
         checkpoint = {
             "schema_version": 1,
@@ -493,6 +569,7 @@ def _remediate_issue(
             "structured_output": result.output_json,
             "output_sha256": sha256_bytes(canonical_json_bytes(result.output_json)),
             "audit": {
+                "decision_basis": basis,
                 "wave": wave,
                 "before_commit": before,
                 "after_commit": after,
@@ -508,7 +585,9 @@ def _remediate_issue(
             },
         }
         path = remediation_checkpoint_path(
-            context.repo, manifest["report_cut_id"], identity
+            context.repo,
+            manifest["report_cut_id"],
+            f"{identity}.{int(Path(wave['path']).parent.name):08d}",
         )
         validate_remediation_checkpoint(checkpoint, path)
         reference = write_checkpoint(context.repo, path, checkpoint)
@@ -557,6 +636,9 @@ def _seal(
     aggregates: dict[str, Any],
 ) -> None:
     """wave loop の自然完了後に publication 入力と merge 対象を一度だけ封印する。"""
+    selected = selected_remediation_checkpoints(manifest)
+    files = decision.worktree_inputs(context.run_worktree)
+    _validate_selected_basis(context, selected, candidates, files)
     manifest["run"]["targets"] = {
         "generated_at": rfc3339_now(),
         "generation_id": new_generation_id(),
@@ -578,6 +660,8 @@ def _seal(
             "high_watermark": manifest["run"]["high_watermark"],
             "targets": manifest["run"]["targets"],
             "checkpoints": manifest["processing"]["remediation_checkpoints"],
+            "selected_checkpoints": selected,
+            "decision_inputs_sha256": decision.state_hash(files),
             "candidates": candidates,
             "machine_aggregates": aggregates,
             "run_head": head_commit(context.run_worktree),
@@ -612,6 +696,17 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
         context, seal["run_head"]
     ):
         raise _failure("feedback run HEAD が join 後 session tree から到達できません。")
+    files = decision.worktree_inputs(context.session_worktree)
+    if decision.state_hash(files) != seal["decision_inputs_sha256"]:
+        raise _failure(
+            "feedback join 後の入力が検証済み run の最終状態と一致しません。"
+        )
+    _validate_selected_basis(
+        context,
+        seal["selected_checkpoints"],
+        seal["candidates"],
+        files,
+    )
     paths: set[str] = set()
     for reference in manifest["processing"]["remediation_checkpoints"]:
         checkpoint = read_run_artifact(
@@ -641,22 +736,6 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
                 "feedback issue commit または net 差分 hash を確認できません。"
             )
         paths.update(audit["changed_paths"])
-        result = checkpoint["structured_output"]["result"]
-        if result["status"] == "human_required":
-            evidence_paths = {item["path"] for item in result["current_evidence"]}
-            changed_evidence = {
-                path
-                for change in tree_changes(
-                    context.session_worktree, audit["after_commit"]
-                )
-                for path in change.paths
-            }.intersection(evidence_paths)
-            if changed_evidence:
-                raise _failure(
-                    "human_required の evidence が修復時から変更されています。",
-                    detail="\n".join(sorted(changed_evidence)),
-                )
-            paths.update(evidence_paths)
     # 後続 issue が同じ path を編集できるため、最終 run tree と session tree を比較する。
     different = {
         path
@@ -673,8 +752,14 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
         "sealed": manifest["run"]["sealed"],
         "session_commit": head_commit(context.session_worktree),
         "run_head": seal["run_head"],
+        "decision_inputs_sha256": seal["decision_inputs_sha256"],
         "checked_paths": sorted(paths),
-        "checks": {"reachability": True, "paths": True, "clean": True},
+        "checks": {
+            "reachability": True,
+            "paths": True,
+            "clean": True,
+            "decision_basis": True,
+        },
     }
     if manifest["run"]["completion"] is None:
         save_run_artifact(context.repo, manifest, "completion", completion)
@@ -705,6 +790,28 @@ def _is_ancestor(context: EditingRunContext, commit: str) -> bool:
         ).returncode
         == 0
     )
+
+
+def _validate_selected_basis(
+    context: EditingRunContext,
+    references: list[dict[str, Any]],
+    candidates: dict[str, Any],
+    files: dict[str, str],
+) -> None:
+    """封印と join の両境界で、採用結果の根拠を全分類について照合する。"""
+    if {item["candidate_id"] for item in references} != set(candidates):
+        raise _failure("feedback report cut に未処理の issue があります。")
+    for reference in references:
+        checkpoint = read_run_artifact(
+            context.repo, {key: reference[key] for key in ("path", "sha256")}
+        )
+        validate_remediation_checkpoint(checkpoint, context.repo / reference["path"])
+        current = decision.decision_state(files, candidates[reference["candidate_id"]])
+        if not decision.basis_is_valid(checkpoint["audit"]["decision_basis"], current):
+            raise _failure(
+                "feedback の採用結果の判定根拠が現在状態に対して有効ではありません。",
+                detail=reference["candidate_id"],
+            )
 
 
 def _recover_join(context: EditingRunContext, manifest: dict[str, Any]) -> None:
@@ -744,6 +851,14 @@ def _recover_join(context: EditingRunContext, manifest: dict[str, Any]) -> None:
     else:
         # merge 後、機械的 state 同期だけが未完了の場合は Codex を使わず再実行する。
         require_clean_worktree(context.session_worktree)
+        files = decision.worktree_inputs(context.session_worktree)
+        if decision.state_hash(files) != seal["decision_inputs_sha256"]:
+            raise _failure(
+                "封印済み結果の根拠が変化した run は publication recovery の対象外です。"
+            )
+        _validate_selected_basis(
+            context, seal["selected_checkpoints"], seal["candidates"], files
+        )
         sync_refactor_state(context.session_worktree)
         commit_work_unit(
             context.session_worktree, "cmoc refactor state sync after feedback join"
@@ -760,11 +875,16 @@ def _publish(
     """join 後の封印済み候補と正式 checkpoint だけを publication に渡す。"""
     seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
     verdicts = {}
-    for reference in manifest["processing"]["remediation_checkpoints"]:
+    for reference in seal["selected_checkpoints"]:
         checkpoint = read_run_artifact(
             context.repo, {key: reference[key] for key in ("path", "sha256")}
         )
-        verdicts[reference["candidate_id"]] = checkpoint["structured_output"]["result"]
+        verdicts[reference["candidate_id"]] = {
+            **checkpoint["structured_output"]["result"],
+            "decision_basis": decision.compact_basis(
+                checkpoint["audit"]["decision_basis"]
+            ),
+        }
     if set(verdicts) != set(seal["candidates"]):
         raise _failure("feedback report cut に未処理の issue があります。")
     if manifest["processing"]["status"] == "publication_ready":

@@ -12,61 +12,74 @@
 ## hash
 - 314f863a7cbf0d8eb6a2e9f72ee941edfcbbfcc5768f529aed40f09e96968cb9
 
+# `decision.py`
+
+## Summary
+- Feedback 判定の再確認に使う repository 入力の固定、判定状態ハッシュ、正式 checkpoint 履歴、循環検知、判定根拠の記録を担う。
+- 依存 path の申告に限定せず、読める repository 入力全体を保守的な検証条件として扱う判定処理への入口。
+
+## Read this when
+- Feedback の判定根拠をどの入力から構成するか確認したいとき。
+- 再確認時の差分、過去 checkpoint の参照、同一判定入力へ戻る循環の検知を調べるとき。
+- 判定直後の verification・current evidence と入力状態を、後続処理から独立して記録する方法を確認したいとき。
+
+## Do not read this when
+- Feedback の結果分類や利用者向け仕様を確認したいだけで、判定根拠の保存・再確認履歴を扱わないとき。
+- 実行状態 artifact の読み書きや Git 入力列挙の個別実装を直接調べる必要があるときは、それぞれの runtime artifact・store・Git 共通処理の対象へ進むとき。
+
+## hash
+- 806899c5d09fab6e5b6bec975e51a34631c7f5ccfa119b846c3b60add9600dea
+
 # `recovery.py`
 
 ## Summary
-- Feedback report publication 後の finalization journal に基づく cleanup・recovery と、feedback run の自動 join 済み状態を明示 join/abandon から保護する境界を扱う。
-- feedback run を明示的に終了した場合の監査記録、report cut の checkpoint 回収、work artifact 破棄を扱う。
+- Feedback report の publication 後に、recovery journal を用いて cleanup・session の ready 遷移・隔離 run 資源回収を再開する処理と、明示的な join/abandon による終了との境界を扱う。
 
 ## Read this when
-- feedback report の publication 後に cleanup や finalization journal の recovery 処理を確認するとき
-- feedback run の自動 join と、明示 join/abandon を許可する条件の境界を変更・確認するとき
-- 明示終了した feedback run の監査記録や report cut cleanup の挙動を確認するとき
+- feedback report の正常完了後に cleanup が中断し、同じ report と join tree から finalization を再開・検証したいとき
+- feedback run を明示的な join または abandon の対象にしてよいか、その状態遷移と制約を確認したいとき
 
 ## Do not read this when
-- feedback report の判定・remediation・publication 自体の処理を確認するとき
-- feedback 以外の run の join/abandon や一般的な run lifecycle を変更するとき
-- 通常の feedback state 構造や report artifact の形式だけを確認するとき
+- feedback report の判定・remediation・publication 本体の仕様や実装を確認したいときは、それぞれの decision、remediation、publication 関連対象を直接読む
+- feedback state のデータ構造や一般的な report cut 操作だけを確認したいとき
 
 ## hash
-- eef1664e3984df8f96491c8a0e73e5a6855c7e0991d8d75b697d7a563e2260bb
+- f773aa1d190f88c1f8ee6bf1316dea8d5b7dedb83deb678e061d38b31243a712
 
 # `remediation.py`
 
 ## Summary
-- feedback issue の逐次 remediation wave、run の seal・自動 join、join 後の recovery、publication を一貫した境界で制御する。
-- agent の実差分、structured output、verification、checkpoint、commit 到達可能性を検証し、正式な issue 修復結果だけを session tree と report publication へ渡す。
-- feedback workflow における中断・エラー・SIGINT 保留、進捗記録、merge 成功後の publication recovery を扱う。
+- Feedback observation の issue 修復 wave を実行し、remediation checkpoint と commit を確定する処理を担う。
+- 封印済み run の join 成功を recovery し、最終 tree・判定根拠・差分 hash を検証して publication へ渡す。
+- commit、rollback、SIGINT 保留、run state 更新など、同一 feedback run の finalization 境界を確認する入口である。
 
 ## Read this when
-- feedback report の remediation wave、issue 単位の commit/checkpoint、automatic join、publication の順序や失敗回復を変更・調査するとき。
-- feedback run の seal、high watermark、checkpoint、merge 後の tree/hash 検証がどのように連携するか確認するとき。
-- feedback remediation agent の出力と実際の変更 path・verification を照合する処理を確認するとき。
+- feedback report の自動修復、wave の再処理、issue ごとの agent 出力と実差分の照合を調べるとき。
+- remediation checkpoint、sealed・merged・completion artifact の整合性、join 後の tree 検証を確認するとき。
+- feedback run の中断・失敗・publication recovery や、自動 join から report publication までの状態遷移を追うとき。
 
 ## Do not read this when
-- 観測の集約・表示や report の候補生成そのものを変更・調査するときは、feedback report 実装を直接読む。
-- 永続化された feedback artifact の形式・読み書き・検査規則だけを確認するときは、runtime_feedback_run_state などの artifact 管理対象を直接読む。
-- 一般的な run lifecycle、Git join、state 管理の共通仕様だけを確認するときは、対応する共通 runtime 実装を直接読む。
+- 観測の収集・集約・表示や report cut の候補生成を調べるときは report を直接読む。
+- feedback run artifact の読み書き・形式検証だけを調べるときは runtime_feedback_run_state を読む。
+- 判定状態、判定根拠、履歴比較のロジックだけを調べるときは decision を直接読む。
 
 ## hash
-- c3eaa004c03556abcc89fc26f974b208069bf705e11a48ab39bce446884b3b62
+- f266bff1dbb4e5dcd4db85a94da4d54edeb411a38d994bb097389098df005c2b
 
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の report cut を固定入力として、observation の検証・正規化・machine recurrence 集約・candidate verification・publication または incomplete 診断までを一つの transaction として扱う実装。
-- active issue、raw observation、repository reference、checkpoint、generation、report、current pointer の整合性と hash を確認し、中断・再開や異常時の durable state を管理する feedback report pipeline の入口。
+- feedback observation を固定済み report cut として検証・正規化・機械集約し、candidate の同一性判断と remediation verification を経て正常 report または incomplete 診断を publication する、`cmoc feedback report` の transaction 実装。
+- raw observation、active issue、current repository reference、処理 version、checkpoint、generation、pointer、cleanup を hash 付きで管理し、中断・再開と secret-safe な evidence materialization まで担う。
 
 ## Read this when
-- `cmoc feedback report` の report cut、candidate の同一性判定、machine rule の recurrence threshold、verification 結果、正常 publication または incomplete 診断の処理を変更・調査するとき。
-- feedback state と report cut の checkpoint、artifact hash、generation／pointer 切替、観測値や repository evidence の保存範囲を確認するとき。
-- feedback report の Markdown 出力、publication／diagnostic の transaction、interrupt・resume・cleanup・subcommand log の記録経路を追うとき。
+- `cmoc feedback report` の report cut、candidate 集約、normalization/remediation checkpoint、publication、incomplete 診断、中断復旧の挙動を実装または調査するとき。
+- feedback state の current generation、machine aggregate、raw observation、report artifact の整合性や hash、canonical JSON、repository reference の扱いを確認するとき。
 
 ## Do not read this when
-- feedback observation の受付・envelope 検証や raw store への保存処理だけを調査するときは、まず observation intake／store の実装を読む。
-- normalize／remediate agent に渡す parameter や Structured Output schema の内容だけを確認するときは、対応する builder と schema を直接読む。
-- feedback state の永続化 API、run state の wave／join 管理、generation artifact の一般的な形式だけを調査するときは、対応する commons または remediation／recovery 実装を直接読む。
-- 通常の別サブコマンドの report 生成や、feedback report と無関係な Markdown／logging 処理を調査するとき。
+- feedback observation の受付・envelope 検証だけを調べる場合は、観測保存や受付を直接担うモジュールを読む。
+- issue normalization や remediation agent の prompt/schema の詳細だけを調べる場合は、それぞれの builder、schema、agent 実装を直接読む。
+- 一般的な report 表示形式や共通 logging、generation state の仕様だけを確認する場合は、対応する oracle または共通 state モジュールを直接読む。
 
 ## hash
-- 755215736453938bf0404e4b8dddf20a284111c7dc1d10b60d1b808c25a776a5
+- 6e78fafac18b91b082c663a6dd08c450255e3afd980cebecaab9c994cce61a84

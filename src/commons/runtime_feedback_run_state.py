@@ -99,6 +99,88 @@ def read_run_artifact(repo: Path, reference: dict[str, Any]) -> dict[str, Any]:
     return _read_canonical_object(path, "feedback run artifact")
 
 
+def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    """各 issue の最後の論理 call を publication 用に選ぶ。履歴は削除しない。"""
+    selected: dict[str, dict[str, Any]] = {}
+    for reference in sorted(
+        manifest["processing"]["remediation_checkpoints"],
+        key=lambda item: int(Path(item["path"]).stem.split(".")[1]),
+    ):
+        selected[reference["candidate_id"]] = reference
+    return [selected[identity] for identity in sorted(selected)]
+
+
+def validate_decision_basis(
+    value: object, path: Path, *, compact: bool = False
+) -> None:
+    """判定条件の hash と、検査条件・結果の自己完結した記録を検査する。"""
+    basis = _require_exact_fields(
+        value,
+        {"scope", "verification", "current_evidence", "cycle_states"}
+        | ({"state_sha256"} if compact else {"state"}),
+        path,
+        "decision basis",
+    )
+    if basis["scope"] != "repository-inputs-v1":
+        raise _corruption("feedback 判定根拠の scope が不正です。", path)
+    digests = []
+    if compact:
+        digests.append(basis["state_sha256"])
+    else:
+        state = _require_exact_fields(
+            basis["state"], {"files", "evidence_sha256"}, path, "decision state"
+        )
+        if not isinstance(state["files"], dict):
+            raise _corruption("feedback 判定根拠の file 集合が不正です。", path)
+        for name in state["files"]:
+            if (
+                not isinstance(name, str)
+                or not name
+                or Path(name).is_absolute()
+                or ".." in Path(name).parts
+                or Path(name).as_posix() != name
+            ):
+                raise _corruption("feedback 判定根拠の path が不正です。", path)
+        digests.extend(state["files"].values())
+        digests.append(state["evidence_sha256"])
+    if not isinstance(basis["cycle_states"], list):
+        raise _corruption("feedback 循環診断の状態集合が不正です。", path)
+    digests.extend(basis["cycle_states"])
+    if any(
+        not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None
+        for value in digests
+    ):
+        raise _corruption("feedback 判定根拠の hash が不正です。", path)
+    if (
+        not isinstance(basis["verification"], list)
+        or not basis["verification"]
+        or not isinstance(basis["current_evidence"], list)
+    ):
+        raise _corruption("feedback 判定根拠の検査記録が不正です。", path)
+    if basis["cycle_states"] != sorted(set(basis["cycle_states"])):
+        raise _corruption(
+            "feedback 循環診断の状態が一意な hash 順ではありません。", path
+        )
+    if compact:
+        schema = json.loads(
+            resources.files("oracle.acp_builder.feedback")
+            .joinpath("remediate_issue.json")
+            .read_text()
+        )
+        for field, definition in (
+            ("verification", "verifications"),
+            ("current_evidence", "current_evidence_required"),
+        ):
+            if not Draft202012Validator(
+                {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
+            ).is_valid(basis[field]):
+                raise _corruption(
+                    "active issue の判定根拠が検査記録 schema に適合しません。", path
+                )
+        if basis["cycle_states"]:
+            raise _corruption("循環診断を active issue に変換できません。", path)
+
+
 def recover_run_artifact_references(
     repo: Path, manifest: dict[str, Any], path: Path
 ) -> None:
@@ -234,7 +316,6 @@ def validate_run_artifacts(
         "completion": path.parent / "publication_completion.json",
     }
     last_watermark = 0
-    wave_ids: set[str] = set()
     for sequence, reference in enumerate(run["waves"], 1):
         target = _validate_report_cut_artifact_reference(
             repo,
@@ -264,13 +345,8 @@ def validate_run_artifacts(
             <= run["high_watermark"]
         ):
             raise _corruption("feedback wave の high-watermark が不正です。", target)
-        if not isinstance(wave["candidates"], dict) or wave_ids.intersection(
-            wave["candidates"]
-        ):
-            raise _corruption(
-                "同じ issue identity が複数 wave の修復対象です。", target
-            )
-        wave_ids.update(wave["candidates"])
+        if not isinstance(wave["candidates"], dict):
+            raise _corruption("feedback wave の candidate 集合が不正です。", target)
         last_watermark = wave["high_watermark"]
     for name, expected in expected_paths.items():
         reference = run[name]
@@ -297,6 +373,7 @@ def validate_run_artifacts(
                 ("high_watermark", run["high_watermark"]),
                 ("targets", run["targets"]),
                 ("checkpoints", manifest["processing"]["remediation_checkpoints"]),
+                ("selected_checkpoints", selected_remediation_checkpoints(manifest)),
             ):
                 if value.get(key) != expected_value:
                     raise _corruption(
@@ -325,7 +402,10 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
     ):
         raise _corruption("remediation checkpoint の入力 hash が不正です。", path)
     _require_exact_fields(
-        input_value, {"issue", "wave", "before_commit"}, path, "remediation input"
+        input_value,
+        {"issue", "wave", "before_commit", "decision_state"},
+        path,
+        "remediation input",
     )
     if not isinstance(input_value["issue"], dict):
         raise _corruption("remediation issue input が不正です。", path)
@@ -351,10 +431,62 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
             "diff_sha256",
             "call_log",
             "mechanical_checks",
+            "decision_basis",
         },
         path,
         "remediation audit",
     )
+    validate_decision_basis(audit["decision_basis"], path)
+    basis = audit["decision_basis"]
+    if (
+        basis["verification"] != result["verification"]
+        or basis["current_evidence"] != result["current_evidence"]
+        or (basis["cycle_states"] and result["status"] != "inconclusive")
+    ):
+        raise _corruption("feedback 判定根拠と正式な検査記録が一致しません。", path)
+    issue = input_value["issue"]
+    if not isinstance(input_value["decision_state"], dict) or issue.get(
+        "decision_state_sha256"
+    ) != sha256_bytes(canonical_json_bytes(input_value["decision_state"])):
+        raise _corruption("feedback call の開始時判定条件がありません。", path)
+    validate_decision_basis({**basis, "state": input_value["decision_state"]}, path)
+    recheck = issue.get("reconfirmation")
+    if recheck is not None:
+        recheck = _require_exact_fields(
+            recheck,
+            {
+                "previous_checkpoint",
+                "previous_result",
+                "previous_basis",
+                "changes",
+                "history",
+                "cycle_states",
+                "cycle_reason",
+            },
+            path,
+            "feedback reconfirmation",
+        )
+        if (
+            not isinstance(recheck["history"], list)
+            or not recheck["history"]
+            or recheck["history"][-1] != recheck["previous_checkpoint"]
+            or recheck["previous_checkpoint"].get("candidate_id")
+            != checkpoint["candidate_id"]
+        ):
+            raise _corruption("feedback 再確認の先行 checkpoint が不正です。", path)
+    expected_cycle = (
+        recheck["cycle_states"]
+        if recheck and result["status"] == "inconclusive"
+        else []
+    )
+    if basis["cycle_states"] != expected_cycle:
+        raise _corruption("feedback 循環診断と再確認入力が一致しません。", path)
+    wave_sequence = Path(audit["wave"]["path"]).parent.name
+    if (
+        not wave_sequence.isdecimal()
+        or path.stem != f"{checkpoint['candidate_id']}.{int(wave_sequence):08d}"
+    ):
+        raise _corruption("feedback checkpoint の論理 call identity が不正です。", path)
     if (
         result["issue_id"] != checkpoint["candidate_id"]
         or input_value.get("issue", {}).get("issue_id") != checkpoint["candidate_id"]
