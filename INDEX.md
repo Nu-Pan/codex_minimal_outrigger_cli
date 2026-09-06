@@ -124,19 +124,19 @@
 # `src`
 
 ## Summary
-- src 配下の CLI 入口、互換 import、共通 runtime、正本パッケージ shim、サブコマンド実装を横断する上位ルーティング入口。
-- acp、basic、commons、config、oracle、sub_commands など、役割ごとの下位要素へ進む起点を提供する。
+- src の実装パッケージと互換入口を束ね、cmoc CLI と oracle／realization の実行経路へ進むための上位入口を提供する。
+- CLI トップレベル、共通 runtime、互換 shim、サブコマンド実装、builder／basic／config などの下位要素を含む。
 
 ## Read this when
-- src 配下の公開入口や主要パッケージの配置を横断して確認し、読むべき下位要素を判断するとき。
-- CLI のトップレベル入口、互換層、共通 runtime、正本解決、サブコマンド実装のいずれに進むかを確認するとき。
+- src 配下の実装構成を横断して確認し、目的の CLI 入口、共通 helper、互換 import、またはサブコマンド実装の配置を特定するとき。
+- cmoc の起動入口から oracle／realization、session／run、feedback、indexing、TUI などの処理経路へ進むルーティングを判断するとき。
 
 ## Do not read this when
-- 個別 API の実装、特定サブコマンドの詳細、正本 oracle の仕様、または共通 helper の内部挙動だけを確認したいときは、対応する下位要素や正本実装を直接読む。
-- src 配下と無関係な仕様、テスト、または INDEX.md 生成規則だけを確認するとき。
+- 特定ファイルの具体的な挙動、個別サブコマンドの処理、共通 runtime の内部実装、または互換 API の移行先だけを確認したいときは、src の入口ではなく該当する下位要素や正本実装を直接読む。
+- 正本仕様や INDEX.md の生成規則そのものを調査するとき。
 
 ## hash
-- bc3fb4c2c531f176553bdbeb39668285ebdc48634766e8e0d3969eeedcd4b2de
+- 192db88dee9cb243c495fd681156b36a9c08564d3705ab3c5da5a7c1f78c3160
 
 # `test`
 

@@ -15,14 +15,18 @@
 # `fork.py`
 
 ## Summary
-- `cmoc realization apply fork` の実行本体として、差分始点を解決し、realization 追従 agent を tracked run 内で実行して差分を検査・commit し、joinable または error の run と fork report を公開する入口。
+- `cmoc realization apply fork` の実行入口として、realization apply 用の editing run を作成し、oracle 差分範囲を固定して追従 agent を実行する。
+- agent の変更と生成された INDEX.md を検査・commit し、問題がなければ run を joinable として fork report に保存する。
+- agent の異常終了、想定外差分、agent による commit、cleanup 失敗などを error state と report に記録し、join または abandon へ案内する。
 
 ## Read this when
-- realization apply の fork 実行フロー、agent の差分境界・commit 検査、INDEX 生成を含む処理単位、run state や fork report の公開動作を確認するとき。
+- realization apply fork の実行手順、差分の始点 commit、agent 実行後の変更検査・commit、joinable/error run の状態遷移を確認するとき。
+- fork report の内容、cleanup warning、accepted feedback observation の反映、agent commit や遅延 child の隔離処理を調べるとき。
 
 ## Do not read this when
-- realization apply の launch parameter の組み立てだけを確認したいときは `launch_exec` 側を直接読む。
-- run の join・abandon、一般的な editing run lifecycle、または report の共通実装だけを確認したいときは、それぞれの専用実装を直接読む。
+- realization apply の agent 起動パラメータそのものを確認したいときは、launch_exec の対象へ直接進む。
+- editing run の共通ライフサイクルや run の join/abandon 実装を確認したいときは、runtime_run_lifecycle などの共通実装へ直接進む。
+- INDEX.md 生成の一般仕様や CLI の利用者向け仕様だけを確認したいときは、indexing または対応する app_spec 文書へ直接進む。
 
 ## hash
-- eb5f1df093651cc12c42ad80c06dbfe67bbf230af8893a7f4a22e8f4ed317970
+- 0fb56bca8d02ec46726835f1854370a90d49ced44af84e607cf75ffd0db3c47e
