@@ -37,23 +37,24 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の仕様を定義し、feedback observation の intake、issue の normalization・remediation、issue 単位の commit、wave 処理、自動 join、publication、interruption・error recovery、および report・終了コードの契約を示す。
+- `cmoc feedback report` の公開契約と、feedback remediation run の開始・wave処理・issue単位の修正・自動 join・publication・recovery 境界を定める正本仕様。
+- raw observation の validation、machine/agent observation の normalization、issue identity の決定、realization file 修正の受理条件と commit/rollback を確認する入口。
+- 正常・incomplete・user interruption・error の結果分類、report 保存内容、終了コード、current state と pending observation の扱いを確認するための仕様。
 
 ## Read this when
-- `cmoc feedback report` の公開 CLI 契約、開始・再開条件、feedback remediation run の隔離境界を確認するとき。
-- observation を issue identity に正規化し、remediation agent の呼び出し、差分検査、verification、commit、rollback の扱いを決めるとき。
-- intake wave と high-watermark、正常 publication、`incomplete`、user interruption、error 後の recovery を実装または確認するとき。
-- feedback report の保存形式、掲載対象、current evidence、状態遷移、終了コードを確認するとき。
+- `cmoc feedback report` の CLI 契約、事前条件、active run の再開、または run isolation を実装・レビューするとき。
+- feedback observation を issue candidate に集約し、normalization/remediation agent の呼び出し順序、入力境界、Structured Output、差分検査を確認するとき。
+- wave の high-watermark と停止条件、issue 単位の commit、rollback、自動 join、join 後検査、publication、cleanup、recovery を扱うとき。
+- 正常 report や incomplete 診断 report、interruption/error の invocation report、および終了コードの挙動を確認するとき。
 
 ## Do not read this when
-- raw observation の収集規則だけを確認する場合は feedback observation の正本を読む。
-- feedback の用語・結果分類だけを確認する場合は feedback の正本を読む。
-- repository-local state や atomic publication の schema・永続化契約だけを確認する場合は feedback_state の正本を読む。
-- 編集 run 共通の join・abandon・隔離規則だけを確認する場合は editing_run および関連する共通仕様を直接読む。
-- normalization または remediation agent の prompt、起動パラメータ、Structured Output schema を確認する場合は対応する oracle の実装・schema を直接読む。
+- feedback observation の収集形式そのものだけを確認したい場合は、raw observation の正本仕様を直接読む。
+- feedback 全体の用語・結果分類や repository-local state のスキーマだけを確認したい場合は、対応する feedback 正本仕様を直接読む。
+- agent prompt や Structured Output schema の具体的な定義だけを確認したい場合は、指定された ACP builder と schema を直接読む。
+- 編集 run の共通 lifecycle、branch model、Codex 実行規約、または interruption の一般規則だけを確認したい場合は、それぞれの共通正本仕様を直接読む。
 
 ## hash
-- 1e84569cf6a67570ac9cf21bbe4e4ddf0bb41d927be73a6aa72e22e5fe14facb
+- dc11e6ad67ec821133828771343d0554cfbfb54f36bd1efc570bca7cfa9c8c61
 
 # `indexing.md`
 
@@ -138,22 +139,20 @@
 # `realization_refactor.md`
 
 ## Summary
-- realization refactor の fork workload として、oracle file・realization file の追従調査、修正、検証、state 同期、commit、完了判定を定義する。
-- current fork の unresolved target を除外しながら、調査対象の選択から処理単位の結果確定までを管理する。
-- refactor state の履歴管理、fork の中断・エラー処理、終了 report と lifecycle の要件を定義する。
+- realization refactor fork の正本仕様。oracle file と realization file の調査・修正ループ、refactor state の同期、current fork の unresolved target 管理、完了・中断・エラー時のライフサイクルと report 生成を定義する。
 
 ## Read this when
-- realization refactor fork の開始条件、調査対象、処理順序、1 処理単位の判定を確認するとき
-- unresolved target を含む refactor loop の継続条件や完了理由を確認するとき
-- refactor state の同期規則、commit 単位、中断・エラー時の処理、終了 report の要件を確認するとき
+- realization refactor fork の処理順序、調査対象選択、state 更新、unresolved target の扱いを確認するとき
+- この workload の完了条件、ユーザー中断、エラー処理、report と終了コードの仕様を確認するとき
+- realization refactor の fork 固有動作と共通 editing run lifecycle の境界を確認するとき
 
 ## Do not read this when
-- 短い変更ループを担う realization apply の仕様だけを確認するとき
-- fork・join・abandon の共通 lifecycle の詳細だけを確認するとき
-- oracle file に対する realization file の適合性基準そのものを確認するとき
+- 短い変更ループを担う realization apply の仕様を確認したいとき
+- 共通の fork・join・abandon lifecycle の詳細だけを確認したいときは editing run の共通仕様を直接読むとき
+- oracle file と realization file の適合性基準そのものを確認したいときは oracle_and_realization.md を直接読むとき
 
 ## hash
-- 89a4c3d54e560fdd40193e5abeb550e014035545baa750d2f8e11b434d025205
+- c798e62379134713ab9e9c0bd5d8d4339c95f34b0232ca8bab6231b694b3c02f
 
 # `session_abandon.md`
 
