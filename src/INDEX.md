@@ -118,17 +118,18 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を配置する上位パッケージ。個別サブコマンドの CLI 入口や workload 固有処理へ進むためのルーティング対象となる。
-- apply は未実装で、doctor・feedback・indexing・oracle・realization・run・session・tui の各サブコマンド実装を役割別に含む。
+- cmoc の各サブコマンド実装パッケージへの入口。doctor、feedback、indexing、oracle、realization、review、run、session、tui の責務別実装へ進むための上位ルーティングを提供する。
+- サブコマンド単位で、CLI 入口、report・remediation、INDEX 更新、oracle 操作、realization workload、run・session lifecycle、TUI 起動などの処理を扱う。
+- apply と review は現時点で実装本文がなく、将来のサブコマンド実装配置先として位置づけられている。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成や、対象サブコマンドの入口を確認するとき。
-- 特定サブコマンドの実行フローを調査・変更する際に、その個別実装への入口を判断するとき。
-- サブコマンドの追加や、既存サブコマンド実装の配置先を確認するとき。
+- cmoc のサブコマンド実装の構成や、目的のサブコマンドに対応する実装パッケージを確認するとき。
+- doctor、feedback、indexing、oracle、realization、review、run、session、tui のいずれかの CLI 入口またはサブコマンド固有処理を調査・変更するとき。
+- apply または review の実装追加後に、その配置先を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理、共通 runtime、agent 起動パラメータ、状態永続化などの詳細だけを調査するときは、対応する下位実装や共通処理を直接読む。
-- サブコマンドに関係しない oracle、realization、report、Markdown、logging の処理だけを調査するとき。
+- 特定サブコマンドの具体的な処理内容、共通 runtime、prompt 契約、INDEX 生成規則などを直接調査する場合は、対応する下位実装または共通処理の対象へ進むとき。
+- サブコマンドに属さない oracle 仕様、共通 lifecycle API、永続化形式、一般的な Markdown・logging 処理だけを確認するとき。
 
 ## hash
-- deeb23db0238140d7fb017dbdac4df2d30ddf6e906ff407c51b053722a26e948
+- a2c81712426dd36496f5d5d963e6b0950f2063c34dc7e076af29b7c171a58e05

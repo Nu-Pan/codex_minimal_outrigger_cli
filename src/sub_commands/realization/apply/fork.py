@@ -87,7 +87,9 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                 ["session state file を確認してください。"],
                 str(context.state_path),
             )
-        start_subcommand_step(3, "oracle 差分の commit 範囲を確定", "resolve diff range")
+        start_subcommand_step(
+            3, "oracle 差分の commit 範囲を確定", "resolve diff range"
+        )
         # state の参照を commit ID に解決し、preflight 後も比較範囲を固定する。
         diff_base_commit = run_git(
             ["rev-parse", "--verify", f"{diff_base_commit}^{{commit}}"],

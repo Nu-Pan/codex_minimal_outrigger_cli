@@ -15,20 +15,21 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うモジュール。apply workload の実装を確認する入口となる。
-- `cmoc realization apply fork` の実行本体として、差分始点を解決し、realization 追従 agent を実行する。agent の差分と生成物を検査・commit し、joinable または error の run と fork report を公開する。
+- realization の apply workload を扱うモジュール群への入口。
+- apply fork の実行入口として、editing run の作成、oracle 差分範囲の固定、追従 agent の実行、変更検査と commit、joinable/error 状態の記録を担う。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき。
-- realization apply fork の実行フロー、差分始点の解決、agent の commit 検査、差分の検査・commit、INDEX 更新、run state や fork report の公開動作を確認するとき。
+- realization apply workload の構成や実装を調査・変更するとき
+- realization apply fork の実行手順、差分の始点、agent 実行後の変更検査・commit、joinable/error run の状態遷移を確認するとき
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき。
-- realization apply fork の launch parameter の組み立てだけを確認したいとき。
-- run の join・abandon、一般的な editing run lifecycle、または report の共通実装を確認したいとき。
+- apply workload 以外の realization 処理を扱うとき
+- realization apply の agent 起動パラメータを確認したいとき
+- editing run の共通 lifecycle や run の join・abandon 実装を確認したいとき
+- INDEX.md 生成の一般仕様や利用者向け CLI 仕様だけを確認したいとき
 
 ## hash
-- 858afe03b4cd355ac13913f774fb8c53980a1b90279c9a2af2f0dbcb29161d9c
+- c3a77808dce997fb29e44a0e9c6129da744dc557e9ee958b581a261b12cedb17
 
 # `refactor`
 
