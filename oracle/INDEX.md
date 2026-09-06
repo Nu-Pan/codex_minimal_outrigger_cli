@@ -1,23 +1,19 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様、開発ルール、設計判断の背景を目的別に案内する `oracle/doc` 配下の正本文書群への入口。
-- CLI・TUI・session/run・feedback・oracle・realization・ログ・通知などの現行仕様はアプリケーション仕様群へ、Python・CLI・環境・テストの規則は開発ルール群へ進む。
-- 採用されなかった設計案や判断理由を確認する場合は、検討資料群へ進む。
+- `oracle/doc` 配下の正本仕様・開発ルール・検討資料を横断的に案内する上位入口。CLI、session/run、branch、開発環境、設計、テスト、代替案の確認先を目的別に示す。
 
 ## Read this when
-- cmoc の正本仕様や開発規則について、最初に読む文書群と適用範囲を判断するとき。
-- CLI、TUI、session/run、feedback、oracle・realization、ログ、通知などのアプリケーション仕様の入口を探すとき。
-- Python 実装、CLI 設計、開発環境、テスト要件・実行手順の正本規則の入口を探すとき。
-- 現行仕様ではなく、不採用案や設計判断の背景を確認するとき。
+- cmoc の正本仕様や開発ルールについて、複数領域にまたがる入口または適切な下位文書を判断するとき。
+- CLI の実行・状態管理・branch/worktree・Python 開発・テストなどの領域横断的な責務や参照先を確認するとき。
+- 現行仕様ではなく、採用しなかった設計案や判断背景を調べる必要があるとき。
 
 ## Do not read this when
-- すでに目的の個別仕様本文や開発規則が特定できており、その対象を直接読めば足りるとき。
-- 実装、テスト、状態管理、アクセス制限、feedback処理などの具体的な内容だけを確認したいとき。
-- 個別の git 操作手順や、LLM・Codex CLI・model provider 自体の一般的な正しさだけを確認したいとき。
+- 特定の仕様本文、branch model、個別の Python・CLI・テスト規則、実装、テスト、prompt builder、schema、サブコマンドの詳細だけを確認したいときは、該当する下位対象を直接読む。
+- INDEX.md の生成規則、raw observation や repository-local feedback state など、対象が明確な個別仕様だけを確認したいときは対応する下位仕様を直接読む。
 
 ## hash
-- 64da91043f46efd3d3614fe4cca9824eaa06d7b82a5143d5abed6c40514bc79a
+- b9753729b5779d0e24331153e745177369a0382affde9e1c43b47cbb7d440e87
 
 # `src`
 

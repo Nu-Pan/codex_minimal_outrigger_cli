@@ -19,20 +19,19 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` を用いる agent call の共通規約を定義し、path context、sandbox・詳細なファイルアクセス制限、prompt、Structured Output、ログ、quota・retry・resume、並列実行などの判断基準を示す入口。
-- Codex CLI 呼び出しの引数上書き、`$CODEX_HOME`、feedback reporter、editor input handoff、および call・session 情報の保存要件を確認するための正本。
+- `codex exec` による Codex CLI 呼び出しの共通規約を定義し、agent call の path context、環境変数、preflight、argv 設定、sandbox・ファイルアクセス、prompt、feedback reporter、Structured Output、quota・retry・resume、並列実行、エラー処理までの実行境界を扱う。
+- Codex CLI の呼び出し実装や設定上書き、ログ・session ID・stdin/stdout の受け渡し、Structured Output の補正・検証、quota 待機または一時障害 retry の判断基準を確認する入口。
 
 ## Read this when
-- cmoc の `codex exec` 呼び出し、AgentCallParameter の構築、Codex CLI の sandbox や設定上書きを変更・実装するとき。
-- agent call の path context、file access policy、prompt 構築、Structured Output の検証・補正、session resume、quota 待機、retry、並列化を判断するとき。
-- Codex CLI のログ、session ID、feedback observation、editor input handoff の lifecycle や保存形式を確認するとき。
+- Codex CLI 呼び出しの引数、sandbox、approval、provider/model/reasoning effort、環境変数、path placeholder の扱いを設計・変更するとき。
+- agent call の prompt 構築・受け渡し、feedback reporter、editor input handoff、ログ保存、Structured Output 検証・resume、quota や retry の実装を確認するとき。
 
 ## Do not read this when
-- 個別 agent call の意味上の責務や workload 固有の判断基準だけを確認する場合は、対応する oracle doc を先に読む。
-- Codex CLI を呼び出さない実装、または本書が扱う共通呼び出し規約と無関係な仕様・テストを直接調べる場合。
+- 個別 agent call の意味上の責務や判断基準を確認する場合は、先に対応する workload 固有の oracle doc を読むとき。
+- `AgentCallParameter` の正確な field 定義や prompt 構築関数の実装詳細だけを確認する場合は、本書ではなく指定された oracle src を直接読むとき。
 
 ## hash
-- e7d60bf2ed16309b0179073ab07e46ab8eefb9f0692eec9ee72f202fc261563e
+- dc74e0ba2721cad592d1c0fe632cefb6f6de4cc73a1a1720bd16616f8d434030
 
 # `codex_model_provider.md`
 
