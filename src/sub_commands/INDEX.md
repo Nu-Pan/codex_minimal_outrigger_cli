@@ -33,25 +33,18 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装群への入口。report の生成・検証・publication、remediation wave、run の recovery／cleanup を役割別に扱う。
-- report cut を入力に observation の正規化・recurrence 集約・candidate verification・publication／incomplete 診断を行う report pipeline を扱う。
-- issue 単位の remediation、seal・checkpoint・自動 join、merge 後の検証、publication recovery を含む feedback remediation の進行を扱う。
-- publication 後の finalization journal に基づく cleanup／recovery、feedback run の明示 join／abandon、終了監査、report cut cleanup を扱う。
+- feedback サブコマンドの実装群への入口。判定根拠の固定・再確認、観測 report の集約と publication、issue remediation、完了後の recovery を扱う。
 
 ## Read this when
-- feedback サブコマンドの実装を確認・変更するとき
-- feedback report の report cut、observation 集約、candidate verification、publication または incomplete 診断を調査するとき
-- feedback issue の remediation wave、seal、checkpoint、automatic join、merge 後検証、publication recovery を調査するとき
-- feedback report publication 後の cleanup／recovery、明示 join／abandon の許可境界、終了監査や report cut cleanup を調査するとき
+- feedback サブコマンドの処理全体の構成や、report cut から remediation・publication・cleanup までの流れを確認するとき。
+- 判定履歴、report artifact、修復 checkpoint、cleanup recovery の責務分担を把握したうえで、feedback 実装を調査・変更するとき。
 
 ## Do not read this when
-- feedback observation の受付・envelope 検証・raw store 保存だけを調査するとき
-- normalize／remediate agent の parameter や Structured Output schema だけを確認するとき
-- feedback state や run state の永続化 API、wave／join 管理、generation artifact の一般形式だけを調査するとき
-- feedback 以外のサブコマンドや、feedback と無関係な report／Markdown／logging 処理を調査するとき
+- feedback 以外のサブコマンドを扱うとき。
+- feedback の一機能だけを直接調べる場合は、判定なら decision、report transaction なら report、修復なら remediation、完了後の再開なら recovery を直接読む。
 
 ## hash
-- ebb29b414db56d59cea8a40f10fe2277dbb922c11514471cd61962804d9b8261
+- 24dade829365d5b95bdcfa475ff2654168cabbdce73af3f9c68388163d8cf0a5
 
 # `indexing.py`
 

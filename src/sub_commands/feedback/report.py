@@ -413,6 +413,7 @@ def _processing_versions() -> _JsonObject:
                 module_path,
                 state_path,
                 module_path.with_name("remediation.py"),
+                module_path.with_name("decision.py"),
                 module_path.with_name("recovery.py"),
                 state_path.with_name("runtime_feedback_run_state.py"),
                 state_path.with_name("runtime_feedback_intake.py"),
@@ -620,6 +621,7 @@ def _candidate_from_active(issue: _JsonObject) -> _JsonObject:
         "source_observation_ids": [],
         "deduplication_hints": [],
         "reference_ids": [],
+        "previous_verification": issue["verification"],
     }
 
 
@@ -720,6 +722,27 @@ def _merge_observation(
         )
     payload = observation.get("payload")
     if isinstance(payload, dict):
+        # bounded な表示用 evidence に入りきらない追加根拠も再確認を必要とする。
+        # 受付 context、時刻、hint だけの差は判定入力の差に数えない。
+        decision_evidence = candidate.setdefault("decision_evidence", [])
+        digest = sha256_bytes(
+            canonical_json_bytes(
+                {
+                    "payload": {
+                        key: value
+                        for key, value in payload.items()
+                        if key != "deduplication_hint"
+                    },
+                    "fingerprints": observation.get("evidence_fingerprints", []),
+                }
+            )
+        )
+        if digest not in decision_evidence:
+            decision_evidence.append(digest)
+            decision_evidence.sort()
+        candidate.setdefault("decision_evidence_sources", {}).setdefault(
+            digest, observation_id_value
+        )
         evidence = payload.get("evidence")
         if isinstance(evidence, list):
             candidate["representative_evidence"] = _bounded_objects(
@@ -1116,10 +1139,11 @@ def _record_checkpoint(
     assert isinstance(entries, list)
     entry = {id_name: id_value, **reference}
     if not any(
-        isinstance(item, dict) and item.get(id_name) == id_value for item in entries
+        isinstance(item, dict) and item.get("path") == reference["path"]
+        for item in entries
     ):
         entries.append(entry)
-        entries.sort(key=lambda item: str(item[id_name]))
+        entries.sort(key=lambda item: (str(item[id_name]), str(item["path"])))
     write_report_cut_manifest(repo, manifest)
 
 
@@ -1477,7 +1501,10 @@ def _remediation_candidate_payload(candidate: _JsonObject) -> _JsonObject:
         "latest_fingerprints",
         "reference_ids",
     )
-    return {name: candidate[name] for name in names}
+    return {name: candidate[name] for name in names} | {
+        "decision_evidence": candidate.get("decision_evidence", []),
+        "previous_verification": candidate.get("previous_verification"),
+    }
 
 
 def _publish_report(
@@ -1862,6 +1889,7 @@ def _active_issue_record(
             "reason": mask_feedback_text(str(verdict["reason"])),
             "current_evidence": materialized,
             "human_action": mask_feedback_text(str(verdict["human_action"])),
+            "decision_basis": _masked_json_object(verdict["decision_basis"]),
         },
         "machine_state": (
             _masked_json_object(candidate["machine_state"])
@@ -2009,6 +2037,13 @@ def _render_incomplete_report(
         ("remediation_issue_count", len(verdicts)),
         ("human_required_issue_count", len(unresolved_ids)),
         ("inconclusive_candidate_count", len(inconclusive_ids)),
+        *(
+            (
+                f"{status}_issue_count",
+                sum(verdict.get("status") == status for verdict in verdicts.values()),
+            )
+            for status in ("fixed", "already_resolved", "not_actionable")
+        ),
         ("result", "incomplete"),
     )
     lines = [
@@ -2105,7 +2140,7 @@ def _append_diagnostic_current_evidence(
 
 
 def _remediation_candidate_count(manifest: _JsonObject) -> int:
-    """正式 remediation checkpoint 数を front matter の candidate 件数にする。"""
+    """再確認 call を重複計上せず、処理した issue identity 数を返す。"""
     processing = manifest.get("processing")
     checkpoints = (
         processing.get("remediation_checkpoints")
@@ -2114,7 +2149,7 @@ def _remediation_candidate_count(manifest: _JsonObject) -> int:
     )
     if not isinstance(checkpoints, list):
         raise ValueError("remediation checkpoints must be an array")
-    return len(checkpoints)
+    return len({item["candidate_id"] for item in checkpoints})
 
 
 def _new_report_path(repo: Path, *, incomplete: bool = False) -> Path:
