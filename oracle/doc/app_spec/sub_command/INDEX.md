@@ -37,24 +37,21 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の公開契約と、feedback remediation run の開始・wave処理・issue単位の修正・自動 join・publication・recovery 境界を定める正本仕様。
-- raw observation の validation、machine/agent observation の normalization、issue identity の決定、realization file 修正の受理条件と commit/rollback を確認する入口。
-- 正常・incomplete・user interruption・error の結果分類、report 保存内容、終了コード、current state と pending observation の扱いを確認するための仕様。
+- `cmoc feedback report` の CLI 契約、feedback observation の intake wave・issue 正規化・remediation、issue 単位の検証と commit、run の自動 join、publication、interruption・error recovery、および report 保存・終了コードを定義する feedback remediation の正本仕様。
 
 ## Read this when
-- `cmoc feedback report` の CLI 契約、事前条件、active run の再開、または run isolation を実装・レビューするとき。
-- feedback observation を issue candidate に集約し、normalization/remediation agent の呼び出し順序、入力境界、Structured Output、差分検査を確認するとき。
-- wave の high-watermark と停止条件、issue 単位の commit、rollback、自動 join、join 後検査、publication、cleanup、recovery を扱うとき。
-- 正常 report や incomplete 診断 report、interruption/error の invocation report、および終了コードの挙動を確認するとき。
+- feedback report の開始条件、既存 state の recovery、active observation の validation・normalization・deduplication を確認するとき。
+- issue remediation agent の call 境界、Structured Output の受理条件、realization 差分の検証、commit・rollback、再確認の規則を確認するとき。
+- intake wave の自然完了、run の自動 join、正常・incomplete・interruption・error 時の publication と state 保持、report 内容や終了コードを確認するとき。
 
 ## Do not read this when
-- feedback observation の収集形式そのものだけを確認したい場合は、raw observation の正本仕様を直接読む。
-- feedback 全体の用語・結果分類や repository-local state のスキーマだけを確認したい場合は、対応する feedback 正本仕様を直接読む。
-- agent prompt や Structured Output schema の具体的な定義だけを確認したい場合は、指定された ACP builder と schema を直接読む。
-- 編集 run の共通 lifecycle、branch model、Codex 実行規約、または interruption の一般規則だけを確認したい場合は、それぞれの共通正本仕様を直接読む。
+- feedback observation の schema・collector・raw observation の収集規則だけを確認したい場合は、feedback observation の正本を直接読む。
+- feedback state の schema、high-watermark、report cut、atomic publication の詳細だけを確認したい場合は、feedback_state の正本を直接読む。
+- 編集 run の一般的な join・abandon・隔離境界だけを確認したい場合は、editing run の共通仕様を直接読む。
+- agent prompt や Structured Output schema の具体的な生成定義だけを確認したい場合は、対応する oracle source と schema を直接読む。
 
 ## hash
-- dc11e6ad67ec821133828771343d0554cfbfb54f36bd1efc570bca7cfa9c8c61
+- 8b4ab1f5bf7cebd18a76e11b0a3b0275ba9d82d4f2bfe5c77173de1d546b4e22
 
 # `indexing.md`
 

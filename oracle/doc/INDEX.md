@@ -1,19 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc の CLI 自動補完、Codex CLI 呼び出し、共通ログ・エラー処理、doctor preprocess、editor input、feedback、session/run lifecycle、indexing、oracle・realization、各サブコマンドおよび TUI の正本仕様を横断的に案内する仕様ディレクトリ。
-- CLI の実行境界、agent call、状態管理、出力・通知、feedback remediation、仕様と実装の責務分担を確認するための下位仕様への入口。
+- cmoc のアプリケーション仕様を横断する正本文書群への入口。CLI 自動補完、Codex CLI 呼び出し、ログ・エラー処理、feedback、session/run、サブコマンド、通知、利用 workflow など、個別仕様へ進むための概要を提供する。
 
 ## Read this when
-- cmoc の CLI 実行、サブコマンド、TUI、session/run、feedback、indexing、oracle・realization、ログ・エラー処理などの正本仕様の所在と適用範囲を確認するとき。
-- 複数の下位仕様にまたがる責務分担や、個別仕様へ進むための入口を判断するとき。
+- cmoc のアプリケーションレベルの挙動仕様を調べ、対象領域に対応する正本仕様を選ぶとき
+- 複数のサブコマンドや共通 lifecycle、ログ、feedback、Codex CLI 呼び出しにまたがる仕様の参照先を探すとき
 
 ## Do not read this when
-- 特定の仕様本文、実装、テスト、prompt builder、schema、または個別サブコマンドの詳細だけを確認したいときは、一覧から該当する下位対象を直接読む。
-- INDEX.md の生成規則だけを確認したいときは indexing の仕様を、raw observation や repository-local feedback state の詳細だけを確認したいときは対応する feedback 下位仕様を直接読む。
+- 特定ファイルの詳細仕様を直接確認できる場合
+- 実装構造、prompt builder、Structured Output schema、state の具体的な配置など、個別仕様または実装ファイルが直接の参照先となる場合
 
 ## hash
-- 3f1d178f0dc04ca00cd162534f800ed5e0bd435a327cd54dd9c3984304eb1092
+- 7a979322e83f05dd4b4d46c6978624e6192ff333c92d9ab8f52c6796f29c32ea
 
 # `branch_model.md`
 

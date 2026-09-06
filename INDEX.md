@@ -91,19 +91,20 @@
 # `oracle`
 
 ## Summary
-- oracle 配下の正本仕様・開発ルール・検討資料を、領域横断の入口として案内する。CLI、状態管理、branch/worktree、開発環境、設計、テスト、代替案など、目的に応じた下位文書への導線を提供する。
+- cmoc のアプリケーション仕様、開発ルール、session・run の branch model、設計上の検討資料を目的別に案内する正本文書群の入口。現行仕様と開発規則を横断して参照する際の起点となる。
 
 ## Read this when
-- cmoc の正本仕様や開発ルールを調べる際に、まず対象領域や適切な下位文書を特定したいとき。
-- CLI、session/run、branch、Python 開発、テスト、設計判断など複数領域にまたがる参照先を確認するとき。
-- 採用されなかった設計案や判断背景を確認したいとき。
+- cmoc のアプリケーション挙動や開発ルールについて、複数領域にまたがる正本仕様の参照先を選ぶとき
+- session・run の branch・commit・worktree 関係を確認するとき
+- 現行仕様ではなく、不採用案や設計判断の背景を調べるとき
 
 ## Do not read this when
-- 特定の仕様本文、個別の開発ルール、実装、テスト、prompt builder、schema、サブコマンドの詳細だけを確認したいとき。
-- INDEX.md の生成規則、raw observation、repository-local feedback state など、対象が明確な個別仕様を直接確認したいとき。
+- 特定のサブ文書や実装ファイルが直接の参照先として明確なとき
+- 具体的な状態遷移、CLI 操作、Python 規約、テスト要件・実行手順などを直接確認したいとき
+- agent call の構築や実装上の共通処理を確認したいときは src を直接読む
 
 ## hash
-- 7731e8e6465875c0dffa4a3d17568d5e3395756973d528b6d5b447bbad1eafa2
+- dd1c92e2ad12d1e47ce56ce88ed9e4d9d5ba56c75d360c7247fc17b28fd00973
 
 # `pyproject.toml`
 

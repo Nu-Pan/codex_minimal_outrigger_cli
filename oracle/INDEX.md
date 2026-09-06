@@ -1,19 +1,20 @@
 # `doc`
 
 ## Summary
-- `oracle/doc` 配下の正本仕様・開発ルール・検討資料を横断的に案内する上位入口。CLI、session/run、branch、開発環境、設計、テスト、代替案の確認先を目的別に示す。
+- cmoc のアプリケーション仕様、開発ルール、session・run の branch model、設計上の検討資料を目的別に案内する正本文書群の入口。現行仕様と開発規則を横断して参照する際の起点となる。
 
 ## Read this when
-- cmoc の正本仕様や開発ルールについて、複数領域にまたがる入口または適切な下位文書を判断するとき。
-- CLI の実行・状態管理・branch/worktree・Python 開発・テストなどの領域横断的な責務や参照先を確認するとき。
-- 現行仕様ではなく、採用しなかった設計案や判断背景を調べる必要があるとき。
+- cmoc のアプリケーション挙動や開発ルールについて、複数領域にまたがる正本仕様の参照先を選ぶとき
+- session・run の branch・commit・worktree 関係を確認するとき
+- 現行仕様ではなく、不採用案や設計判断の背景を調べるとき
 
 ## Do not read this when
-- 特定の仕様本文、branch model、個別の Python・CLI・テスト規則、実装、テスト、prompt builder、schema、サブコマンドの詳細だけを確認したいときは、該当する下位対象を直接読む。
-- INDEX.md の生成規則、raw observation や repository-local feedback state など、対象が明確な個別仕様だけを確認したいときは対応する下位仕様を直接読む。
+- 特定のサブ文書や実装ファイルが直接の参照先として明確なとき
+- 具体的な状態遷移、CLI 操作、Python 規約、テスト要件・実行手順などを直接確認したいとき
+- 現行仕様ではなく、設計上の代替案や不採用理由を調べる必要がないとき
 
 ## hash
-- b9753729b5779d0e24331153e745177369a0382affde9e1c43b47cbb7d440e87
+- 7471aab60cda425c9f1441fe82cd4ab4cc1e169a9c46bf3d068622af066a133f
 
 # `src`
 

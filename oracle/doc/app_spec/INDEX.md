@@ -136,20 +136,23 @@
 # `feedback.md`
 
 ## Summary
-- feedback subsystem 全体の正本仕様。観測の収集から issue identity の確定、intake wave と high-watermark に基づく remediation、結果分類、publication、active issue の cleanup、既存 workload との境界、および non-goal を定義する上位の入口。
+- feedback subsystem 全体の目的、用語と issue 結果分類、remediation run の処理モデル、正本仕様の責務分担、既存 workload との境界、および non-goal を定義する上位仕様。
+- feedback の収集・状態管理・`cmoc feedback report` の責務境界を確認し、automatic remediation 後に人間対応が必要な issue と判定不能な `incomplete` 診断の扱いを理解するための入口。
 
 ## Read this when
-- feedback observation の収集・保存条件、issue の remediation 結果分類、feedback report の処理モデルや publication 条件を横断的に確認するとき
-- feedback 関連の各正本仕様（観測収集、repository-local state、feedback report）の責務分担や相互境界を確認するとき
-- 既存 workload の成果物を feedback issue として扱えるか、または feedback が他の成功判定・state・retry・recovery に影響するかを判断するとき
+- feedback observation、active issue、intake wave、high-watermark、publication、または issue remediation の結果分類を確認するとき。
+- `cmoc feedback report` の処理モデルや、normalization・agent call・commit・merge・publication の責務分担を確認するとき。
+- feedback に関する三つの正本仕様のどこを読むべきか判断するとき。
+- 既存 workload の成果物を feedback issue に自動変換してよいか、また feedback が他 workload の状態や成功判定へ影響するかを確認するとき。
 
 ## Do not read this when
-- 観測の具体的な報告基準・受け入れ検査・機械 detector・raw 保存だけを確認したいときは feedback_observation.md を読む
-- repository-local state、intake wave、high-watermark、checkpoint、publication、cleanup の詳細だけを確認したいときは feedback_state.md を読む
-- cmoc feedback report の CLI 事前条件、agent call、commit、merge、表示、終了結果だけを確認したいときは feedback_report.md を読む
+- observation の具体的な報告基準、受け入れ検査、機械 detector、raw 保存の詳細だけを確認したいときは、feedback observation の正本仕様へ進む。
+- repository-local state、checkpoint、publication、cleanup、または high-watermark の実装詳細だけを確認したいときは、feedback state の正本仕様へ進む。
+- CLI の事前条件、表示、終了結果、agent prompt、commit・merge・join 後の確定処理だけを確認したいときは、`cmoc feedback report` の正本仕様へ進む。
+- 個別の realization file の実装責務や既存 realization の挙動を確認するだけのとき。
 
 ## hash
-- 59eb07be774e715e2a3dffff6f206d6fef68c07a7c5a3b6c624429ffb65cd0a4
+- 4ede5c6040dc5275b935a5eac247006de95340f6a5928a4f14015326492a8fab
 
 # `feedback_observation.md`
 
@@ -172,22 +175,20 @@
 # `feedback_state.md`
 
 ## Summary
-- feedback remediation run が使用する repository-local state の正本仕様。active generation、current pointer、pending observation、intake wave、high-watermark、checkpoint、report cut、publication completion、正常／incomplete report、atomic publication、cleanup、および run lifecycle との整合を定義する。
-- feedback state の配置、artifact の責務、canonical JSON と hash、durability、writer lock、issue identity、active issue と machine aggregate の保持条件を確認するための入口。
-- wave loop の入力固定、collector の受理境界、remediation 結果の正式 checkpoint、publication 前後の検証・merge・cleanup 順序を確認するための入口。
+- feedback remediation run が使用する repository-local state の正本仕様。active generation、current pointer、pending observation、immutable な intake wave、high-watermark、checkpoint、report cut、publication completion、incomplete 診断 report、atomic publication、cleanup、および run lifecycle 整合を定義する。
 
 ## Read this when
-- feedback report の active state、pending observation、issue identity、recurrence aggregate の保存・更新仕様を実装または変更するとき。
-- intake wave、高水位境界、checkpoint、report cut、publication completion の生成・検証・再開動作を扱うとき。
-- 正常 report の atomic publication、incomplete 診断 report、cleanup、publication／join／abandon 失敗からの回復条件を確認するとき。
+- feedback state の配置、保持対象、issue identity、threshold 未満 aggregate、intake wave、高水位境界、checkpoint、report cut、publication、incomplete 処理、cleanup の仕様を確認するとき。
+- feedback report の実行結果をどの artifact と hash で結び付け、どの順序で正常 publication または診断保存するかを確認するとき。
+- feedback run の join・abandon 後に raw observation、current pointer、checkpoint、run artifact をどう扱うかを確認するとき。
 
 ## Do not read this when
-- raw observation の収集形式や detector rule 自体を確認するだけの場合は、指定された feedback observation の正本仕様を直接読む。
-- feedback report の Markdown 内容や invocation report の生成条件だけを確認する場合は、feedback_report の正本仕様を直接読む。
-- 編集 run の join／abandon 共通仕様だけを確認する場合は、editing_run の正本仕様を直接読む。
+- raw observation の収集規則や detector rule 自体を確認するときは、feedback observation の正本へ進む。
+- feedback report の call 回数・順序、intake wave loop、incomplete 条件、正常 publication 条件の詳細だけを確認するときは、feedback_report の正本へ進む。
+- 編集 run の join・abandon に関する共通仕様だけを確認するときは、editing_run の正本へ進む。
 
 ## hash
-- 17b0426857aedf5738ac7afac91e94f49cd9a1aabedde234468665e427b34017
+- bad132ad98b7f72868514930d4e523ade70d598e098cb299258a2101335b04a9
 
 # `indexing.md`
 
@@ -304,49 +305,19 @@
 # `sub_command`
 
 ## Summary
-- doctor の実行契約と終了時の primary report 保存要件を定義するコマンド仕様。
-- 編集 run の共通 lifecycle、状態遷移、隔離資源、join・abandon、report、merge 後処理を定義する上位共通仕様。
-- cmoc feedback report の remediation run、observation 正規化、issue 処理、publication、recovery、結果分類を定義する正本仕様。
-- cmoc indexing の実行条件、doctor preprocess、INDEX.md 更新、commit、primary report を定義するサブコマンド仕様。
-- cmoc oracle edit の editor input、agent call、oracle file 編集境界、report、終了処理を定義するサブコマンド仕様。
-- oracle file を根拠に調査結果を回答する oracle investigation の入力、TUI 起動、変更禁止、結果報告を定義するサブコマンド仕様。
-- oracle file の変更を realization file へ反映する realization apply fork の差分範囲、agent call、変更境界、commit、run state、report を定義する仕様。
-- oracle file と realization file の調査・修正ループ、refactor state、unresolved target、完了・中断・エラー時の report を定義する realization refactor fork の正本仕様。
-- アクティブな session を home branch へ merge せず破棄する session abandon の事前条件、cleanup、状態遷移、rollback、primary report を定義する仕様。
-- 現在の branch から cmoc session branch を作成し、session state と primary report を保存する session fork の実行契約。
-- 完了済み session branch を home branch へ no-ff merge する session join の事前条件、conflict 解消、state 更新、cleanup、primary report を定義する仕様。
-- cmoc 固有契約の注入から doctor preprocess、editor input、起動パラメータ構築、AI Agent CLI/TUI 起動までを定義する tui の全体仕様。
+- cmoc のサブコマンド仕様を横断的に参照する入口。doctor、indexing、tui、oracle edit・investigation、session fork・join・abandon、editing run、feedback report、realization apply・refactor など、各コマンドや共通ライフサイクルの実行契約を扱う。
 
 ## Read this when
-- doctor コマンドの引数、事前条件、実行手順、または全終了経路の primary report を確認するとき。
-- 編集 run の fork、join、abandon、run state、branch/worktree、差分、merge、cleanup、terminal report の共通要件を確認するとき。
-- feedback observation を issue candidate に集約し、remediation、wave 処理、commit/rollback、publication、recovery、終了コードを確認するとき。
-- 明示的な indexing の実行条件、未コミット差分の扱い、doctor preprocess、INDEX.md 更新、commit、完了報告を確認するとき。
-- oracle edit の実行順序、起動条件、editor input、agent call、oracle file の編集境界、primary report、失敗時の扱いを確認するとき。
-- oracle file を根拠に調査する command の入力 lifecycle、専用 TUI 起動、調査結果の報告、変更禁止を確認するとき。
-- realization apply fork の追従差分、対象 file、agent call、realization file のみの変更、commit、run state、fork report を確認するとき。
-- realization refactor fork の調査・修正順序、refactor state、unresolved target、完了・中断・エラー処理、report を確認するとき。
-- session を home branch に取り込まず破棄する手順、保護対象、cleanup、状態遷移、rollback、primary report を確認するとき。
-- session fork の実行条件、分岐元、session branch、session state、成功時の terminal result、失敗時の rollback と report を確認するとき。
-- session join の merge 条件、source/target branch、conflict 解消、session state 更新、branch cleanup、primary report を確認するとき。
-- cmoc tui の実行手順、契約注入、未コミット差分の扱い、indexing preflight、feedback observation、Windows toast、Codex CLI 起動条件を確認するとき。
+- cmoc のサブコマンドの引数、事前条件、実行手順、終了報告を確認するとき。
+- session・editing run・feedback・realization の fork、join、abandon、publication、report などの共通または個別ライフサイクルを調べるとき。
+- doctor preprocess、indexing preflight、TUI 起動、oracle 編集・調査、realization 反映・refactor の仕様への入口を探すとき。
 
 ## Do not read this when
-- doctor preprocess の検証・修復内容や個別診断の正本仕様だけを確認するとき。
-- workload 固有の intake、issue 処理、publication、refactor 同期、session lifecycle、session state、run isolation の詳細だけを確認するとき。
-- raw observation の収集形式、feedback 全体の用語・結果分類、repository-local state schema、agent prompt/schema の具体定義だけを確認するとき。
-- インデクシング処理の詳細仕様、doctor の診断動作、実装内部構造、INDEX.md のルーティング規則、report の一般形式だけを確認するとき。
-- oracle file の一般的な編集判断、prompt 構築、Codex exec 共通規約、indexing、doctor、session state、toast の詳細だけを確認するとき。
-- oracle file 自体の内容、editor handoff 共通仕様、TUI 共通仕様、builder の正確な prompt 文面、realization file の実装を直接確認するとき。
-- 共通の editing run lifecycle、prompt/builder、oracle-realization 適合性、または特定 realization file の内容だけを確認するとき。
-- realization apply の詳細、共通 fork/join/abandon lifecycle、oracle-realization 適合性基準だけを確認するとき。
-- session join、run abandon、session state の schema・状態遷移だけを確認するとき。
-- session fork 以外の session サブコマンド、branch model、session state schema、timestamp 形式だけを確認するとき。
-- 通常の git merge wrapper、session state、branch model、feedback state、error handling の詳細だけを確認するとき。
-- editor input lifecycle、prompt part と workload 固有 builder、oracle-realization、indexing、feedback observation、toast の詳細だけを確認するとき。
+- 個別サブコマンドの実装構造、prompt builder、Structured Output schema、oracle・realization の適合性基準、session state や feedback state など参照先の正本詳細だけを確認したいとき。
+- 実際の oracle file、realization file、INDEX.md の内容や一般的な CLI 実装を直接調べたいとき。
 
 ## hash
-- 248a41d4e4249d72aa5b6ce6c8eaa349866291e97abddddac9237c80c2cfc652
+- 4e587d6b55821d8ab6b445f702b817021c57a6349380b2e1bbc4144b5f79ef5e
 
 # `subcommand_interruption.md`
 
