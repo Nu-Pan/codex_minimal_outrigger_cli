@@ -26,7 +26,6 @@ from commons.runtime_run_lifecycle import (
     commit_work_unit,
     flattened_change_paths,
     is_generated_index_path,
-    raw_oracle_diff,
     recover_started_run,
     refresh_indexes,
     rollback_work_unit,
@@ -88,17 +87,16 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                 ["session state file を確認してください。"],
                 str(context.state_path),
             )
-        update_primary_report_fields(diff_base_commit=diff_base_commit)
-        start_subcommand_step(3, "oracle raw diff を構築", "build oracle diff")
-        oracle_diff = raw_oracle_diff(
+        start_subcommand_step(3, "oracle 差分の commit 範囲を確定", "resolve diff range")
+        # state の参照を commit ID に解決し、preflight 後も比較範囲を固定する。
+        diff_base_commit = run_git(
+            ["rev-parse", "--verify", f"{diff_base_commit}^{{commit}}"],
             context.run_worktree,
-            diff_base_commit,
-            context.run_fork_commit,
-        )
+        ).stdout.strip()
+        update_primary_report_fields(diff_base_commit=diff_base_commit)
         parameter = build_realization_apply_fork_launch_exec_parameter(
             diff_base_commit,
             context.run_fork_commit,
-            oracle_diff,
             context.run_worktree,
         )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")

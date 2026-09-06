@@ -50,20 +50,18 @@
 # `lifecycle.py`
 
 ## Summary
-- editing run のライフサイクル処理について、旧 `src.sub_commands.run.lifecycle` import path との互換性を保つための薄い委譲層。実体は `commons.runtime_run_lifecycle` にあり、このファイルは公開されていた helper と `unexpected_session_paths` の旧呼び出し形を再公開する。
-- 旧 import path の互換性、既存利用者の移行、または shim の削除可否を確認するときの入口であり、ライフサイクル処理そのものを変更・理解する場合は canonical 実装へ進む。
+- editing run 共通 lifecycle helper の旧 import path を維持する薄い互換 shim。canonical な共通実装を再公開し、旧 path 固有の session path 判定呼び出しを commons 側へ委譲する。
 
 ## Read this when
-- 旧 `src.sub_commands.run.lifecycle` を参照するコードの互換性を確認するとき
-- 旧 import path から commons 側への移行や、この shim の削除条件を検討するとき
+- editing run の lifecycle 操作を旧 import path から利用するコードの互換性や公開 helper を確認するとき
+- 旧 shim から canonical 実装へ移行する際に、再公開されるシンボルと委譲される session path 判定を確認するとき
 
 ## Do not read this when
-- editing run ライフサイクル処理の本体や挙動を調査・変更するとき
-- canonical helper の実装を直接確認できる場合
-- 旧 import path との互換性が関係しない作業
+- lifecycle 処理の本体仕様や新規変更を確認したいとき（commons 側の canonical 実装を直接読む）
+- editing run の lifecycle helper の旧 import path 互換性が関係しない処理を調べるとき
 
 ## hash
-- afea30cef15ff82115474870214a86f23715b484f0a0978114eab5bd12af41c6
+- fdb88ac943650b370240fd73bacf3729399025ad99668bc0c35571ab5624a017
 
 # `report.py`
 

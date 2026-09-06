@@ -21,6 +21,7 @@ from cmoc_runtime import (
     TerminalResult,
     current_subcommand_logger,
     file_sha256,
+    head_commit,
     load_config,
     mark_current_subcommand_interrupted,
     refactor_state_path,
@@ -842,15 +843,24 @@ def _completion_change_summary(
     context: EditingRunContext,
 ) -> list[_ChangeSummary] | None:
     """正常完了した refactor fork の tree 差分を要約する。"""
+    # preflight が追加 commit を作っても、空差分判定と要約の比較範囲を揃える。
+    summary_head_commit = head_commit(context.run_worktree)
     diff = run_git(
-        ["diff", "--binary", context.run_fork_commit, "HEAD"],
+        ["diff", "--quiet", context.run_fork_commit, summary_head_commit, "--"],
         context.run_worktree,
-    ).stdout
-    if not diff:
+        check=False,
+    )
+    if diff.returncode == 0:
         return None
+    if diff.returncode != 1:
+        raise CmocError(
+            "refactor 要約対象の差分を取得できませんでした。",
+            ["run report と Git の状態を確認してください。"],
+            diff.stderr,
+        )
     result = run_codex_exec(
         build_realization_refactor_fork_change_summary_parameter(
-            diff, context.run_worktree
+            context.run_fork_commit, summary_head_commit, context.run_worktree
         ),
         root=context.repo,
         config=load_config(context.run_worktree),

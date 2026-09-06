@@ -1,70 +1,68 @@
 # `app_spec`
 
 ## Summary
-- cmoc の CLI・セッション・feedback・oracle／realization・ログ・通知など、アプリケーション全体の正本仕様を分野別に参照する入口。個別仕様の責務境界と、関連する下位文書へ進むためのルーティング情報を提供する。
+- cmoc の実行・設定・状態管理・ログ・feedback・通知・編集 run など、アプリケーション共通の正本仕様を横断して案内する仕様群の入口。
+- サブコマンドやワークロード固有の契約から、Codex 呼び出し、前処理、エラー処理、indexing、session、oracle/realization 管理などの個別仕様へ進むための上位ルーティングを提供する。
 
 ## Read this when
-- cmoc のアプリケーション仕様を調査し、対象分野に対応する正本仕様を選ぶとき
-- CLI 実行、session／run lifecycle、feedback、ログ、通知、oracle／realization、INDEX.md 運用などの共通仕様の入口を探すとき
-- 個別仕様間の参照関係や、共通契約と下位仕様の責務分担を確認するとき
+- cmoc のアプリケーション全体に関わる正本仕様の所在を確認するとき
+- サブコマンド、編集 run、feedback、Codex agent call、ログ、通知、状態管理など複数領域にまたがる仕様の参照先を選ぶとき
+- 共通仕様と個別サブコマンド仕様の責務境界を確認するとき
 
 ## Do not read this when
-- 特定の仕様本文、実装、テスト、設定スキーマの詳細が既に特定できているときは、対応する個別対象を直接読む
-- INDEX.md の生成規則そのものだけを確認するときは indexing の仕様を直接読む
-- 特定サブコマンドや個別機能の挙動だけを確認するときは、該当する下位仕様を直接読む
+- 単一ファイルの具体的な実装、prompt、schema、provider 設定、feedback 観測、または個別サブコマンドの詳細だけを確認したいとき
+- 対象の仕様ファイルが既に特定できており、その本文を直接読む方が適切なとき
+- oracle/realization ファイルの列挙や実装コードの内部構造だけを調べるとき
 
 ## hash
-- 7d13b700c48e1556bb3c6964e41f06b70364be965971ac085dcc554ae119e254
+- 813c5fd1a5c266ad7e1644f37baccc8a76b65b67570baa2fdd6bac27f933b1dc
 
 # `branch_model.md`
 
 ## Summary
-- cmoc の session・run が利用する branch、commit、linked worktree の役割と関係を定義するモデル。通常の git branch との区別、分岐元・統合先、run の隔離方法を確認するための入口。
+- cmoc における session・run の branch、commit、worktree の役割と関係を定義する正本文書。
+- branch の作成元・命名・統合先、commit の fork/join、run worktree の分離条件を確認する入口。
 
 ## Read this when
-- session fork や run の branch 構成、分岐元・統合先 commit、run worktree の位置づけを確認するとき
-- cmoc 管理 branch と通常の local・remote-tracking branch の違い、または session と run の隔離関係を扱うとき
-- run の差分検査、apply の追従対象、join の no-op 条件を含む commit の意味を確認するとき
+- session fork、run の開始・分離・join、apply の追従対象、run report の commit 基準を扱うとき。
+- cmoc 管理 branch と通常の git branch、session home branch の意味を区別する必要があるとき。
+- branch・commit・linked worktree の用語や対応関係を確認するとき。
 
 ## Do not read this when
-- 個別の CLI サブコマンドの実行手順や state・report の詳細を確認したいとき
-- oracle の変更内容や realization の実装責務を確認したいとき
-- branch、commit、worktree の関係ではなく、git 一般の操作方法だけを調べるとき
+- run state や report の状態遷移そのものを確認したいとき。
+- oracle の変更手順や設計責務、test の実行規則を直接確認したいとき。
+- 個別の git 操作手順だけを知りたいときで、branch model の用語上の判断を必要としない場合。
 
 ## hash
-- 2acd7424aee437c67f38a81333bef36915ec27f659402c48fa745ab596010e7b
+- 955dd077586a6c946e3573d1b1bbde073736e4f7325fbd93ed6c09a3862fc858
 
 # `considered_alternative`
 
 ## Summary
-- cmoc の設計・運用で検討したが採用しなかった代替案を記録する資料群への入口。現行方針との違いや不採用理由を確認するための上位ルーティング対象。
+- realization refactor、file access policy、AI-generated memory、oracle review、作業計画レビューなど、採用しなかった設計案とその理由を記録した検討資料群への入口。現行仕様ではなく、設計判断の背景や代替案の評価を確認するための対象。
 
 ## Read this when
-- 現行仕様ではなく、作業フロー、アクセス制御、記憶、oracle review などに関する過去の代替案と、その採否理由を調べるとき。
-- 複数の不採用案を比較し、cmoc が採用した設計判断の背景を確認するとき。
+- realization refactorの作業フロー、file access policyの事後検査、.gitignore連携、AI-generated kaizenの自動注入、oracle review、作業計画レビューなどの不採用理由や設計背景を調べるとき。
 
 ## Do not read this when
-- 現行の実装方法、アクセス制御、refactor state、feedback 処理などの正本仕様を確認したいとき。
-- 特定の代替案の詳細ではなく、採用済みの CLI 挙動やテスト内容を調べたいとき。
+- 現行の正本仕様、具体的な実装、状態管理、アクセス制限、feedback処理、oracleやrealizationの個別内容を確認するとき。
 
 ## hash
-- f488f904c483ea51c8b0dae8971eeb56b2299b80f6aa29129650dec08027d65f
+- 06605a888f8a7f27a0c29a55cfa6d58e8128f3a61b16c54d5ba991b81213eb2c
 
 # `dev_rule`
 
 ## Summary
-- Python 実装規約、CLI の配置・責務分担、開発環境、テスト規則・実行手順を扱う開発ルール文書群への入口。実装方針から環境操作、テスト検証まで、開発時の判断基準を確認できる。
+- cmoc の Python 開発環境、コーディング、CLI 設計、テスト要件・実行手順を定める開発ルール群への入口。
+- Python 実装規約、CLI の責務分担、環境構築、テスト設計、テスト・品質検査の実行方法を、目的別の下位文書へ案内する。
 
 ## Read this when
-- Python 実装の命名、型ヒント、import、docstring、コメント、公開範囲、変更規模を確認するとき。
-- CLI のエントリーポイント、サブコマンド、共有処理の配置や責務分担を判断するとき。
-- Python 環境の構築、依存関係追加、pip 操作、実行環境の前提を確認するとき。
-- テストの意味上の要件、実経路統合テスト、Fake Codex CLI、または品質検査の実行・完了判定・報告手順を確認するとき。
+- cmoc の Python 実装・CLI 設計・開発環境・テストについて、どの正本規則を確認すべきか判断するとき。
+- 複数の開発ルール領域にまたがる変更や調査で、適切な下位規則への入口を探すとき。
 
 ## Do not read this when
-- 個別の realization 実装やテストの具体的な内容を理解したいときは、対応する本文を直接読む。
-- CLI の具体的な挙動や出力内容の正本仕様を確認したいときは、app_spec 配下を読む。
-- Codex の model provider の責務境界や quota 待機・再開規則を確認したいときは、指定された codex_model_provider.md または codex_exec_rule.md を直接読む。
+- 特定の Python コーディング規則、CLI 設計規則、開発環境、テスト要件、またはテスト実行手順が明確な場合は、該当する下位文書を直接読む。
+- 実装対象の個別コードや、LLM・Codex CLI・model provider 自体の一般的な正しさだけを確認するとき。
 
 ## hash
-- debf67359ab8bb2979d8fb2c946f26531b153aa8b7d8dd7bbbfc32fc4f4105b2
+- 0bfd3e30d446406ae5c3a3c2e06c9c65505d36888b4747ddaa79dde16d2cd762

@@ -541,40 +541,6 @@ def unexpected_session_paths(
     )
 
 
-def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
-    """両端のいずれかが oracle file である rename 対応 raw diff を返す。"""
-    candidates = sorted(
-        {
-            path
-            for change in tree_changes(worktree, base, end)
-            if any(
-                _is_oracle_tree_file(worktree, commit, path)
-                for commit in (base, end)
-                for path in change.paths
-            )
-            for path in change.paths
-        }
-    )
-    if not candidates:
-        return ""
-    # Git は `--` の後も pathspec の wildcard を解釈するため、literal pathspec を使う。
-    # これにより、1つの oracle filename が diff の対象を抑制・拡張することを防ぐ。
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    literal_candidates = [literal_pathspec(path) for path in candidates]
-    return run_git(
-        [
-            "diff",
-            "--binary",
-            "--find-renames",
-            base,
-            end,
-            "--",
-            *literal_candidates,
-        ],
-        worktree,
-    ).stdout
-
-
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
     """衝突しない run branch と管理 worktree path を予約候補として選ぶ。"""
     for _ in range(MAX_RUN_ID_ATTEMPTS):
@@ -649,9 +615,8 @@ def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
     """commit tree の path が oracle の regular-file entry か判定する。"""
     if not _is_oracle_path(path):
         return False
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    # raw diff の対象は両端で定義上の oracle file だった path に限るため、
-    # directory や Gitlink の tree entry は file として扱わない。
+    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md
+    # 削除・移動前の oracle 判定でも directory や Gitlink は file と扱わない。
     return _is_regular_tree_file(worktree, commit, path)
 
 

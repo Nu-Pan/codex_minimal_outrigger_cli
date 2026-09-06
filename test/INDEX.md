@@ -114,18 +114,17 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload の canonical builder adapter を検証し、apply/refactor builder の再公開経路、prompt 埋め込み、実行設定、canonical Structured Output schema、raw diff の境界保持を確認するテスト。
+- editing run workload の canonical builder adapter を検証するテスト。apply/refactor の builder が正本関数を再公開し、commit 参照、実行設定、prompt の規定、canonical Structured Output schema を正しく設定することを確認する。
 
 ## Read this when
-- editing run 用の apply または refactor builder の prompt 構成・実行設定・schema 選択・互換 import 経路を変更または検証するとき。
-- raw diff にコードフェンスや prompt 境界風のマーカーが含まれる場合の保持を確認するとき。
+- editing run 用の acp builder の互換 import 経路、prompt 構成、worktree、commit 範囲、Structured Output schema、所見の changed_paths を検証・変更するとき。
 
 ## Do not read this when
-- builder 本体の実装や canonical oracle 側の仕様を直接変更・確認する作業で、まず対象の実装ファイルや oracle file を読むべきとき。
-- editing run builder と無関係なテスト、または Structured Output schema の定義自体を調査するとき。
+- builder の実装自体を変更する場合は、対応する realization または oracle の builder 実装を直接読むとよい。
+- editing run と無関係な acp builder、または builder を利用しないテストの仕様を確認する場合。
 
 ## hash
-- 439e6930e836e54f978a4c3ca19223bddb83b1e7f7b6960d363ff265a2107eab
+- 7b8c305cc2e7ba8cd766c111e188bad18efb7411ec0ae321d18ad8f886a19b1a
 
 # `test_acp_builder_indexing_parameters.py`
 
@@ -411,21 +410,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。
-- realization apply/refactor の fork lifecycle、共通 session state・run worktree・branch・process tracking、agent 境界、INDEX 更新、commit/rollback、cleanup を検証する。
-- fork report と lifecycle report、primary report、通知、feedback observation、interruption、error recovery、force-resolve、merge conflict、rename/delete、異常な path や symlink の扱いまで一連の run lifecycle として確認する。
+- 編集 run の fork・join・abandon lifecycle を横断する realization test の入口。apply/refactor の run worktree、共有 state、commit/rollback、process tracking、INDEX 更新、report、interruption、cleanup の外部挙動を検証する。
+- run lifecycle 実装や realization apply/refactor fork、run join/abandon の変更で、複数機能にまたがる状態遷移・資源回収・成果物の整合性を確認したいときに読む。
 
 ## Read this when
-- realization apply/refactor fork の統合 lifecycle や共通 run state の挙動を変更・検証するとき
-- run join または run abandon の merge、cleanup、process 停止、branch/worktree 回収、失敗復旧を確認するとき
-- fork・join・abandon の report、通知、INDEX 更新、rollback、user interruption の連携を調査するとき
+- editing run の fork から joinable/error、join または abandon に至る共有 lifecycle を確認するとき
+- agent の予期しない差分・commit・遅延処理、INDEX refresh、process tracking、rollback、worktree/branch cleanup の境界を調べるとき
+- apply/refactor の report、interruption、unresolved target、session state 同期に関する回帰を確認するとき
 
 ## Do not read this when
-- 単一の realization apply/refactor 実装の詳細だけを確認する場合は、対象実装や専用テストを直接読む
-- INDEX.md 生成の一般規則だけを確認する場合は、この統合 lifecycle test を読む必要はない
+- 単一の run lifecycle helper や単一サブコマンドの実装詳細だけを確認したい場合は、対応する realization または run の実装・仕様を直接読む
+- INDEX エントリー生成規則や一般的なテスト実行手順だけを確認したい場合
+- fork/join/abandon と無関係な機能のテストを探している場合
 
 ## hash
-- 769b646539819645ba85fe8cd9adf544b57c9fa33747a87b4cab01d366c96de4
+- 61ebc58455915943dad6d3660caa69486f9b4100d83777f40a2ee27b1df52a70
 
 # `test_editor_input_handoff.py`
 
@@ -679,19 +678,18 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 各 prompt part のレンダリングと complete prompt の組み立てを検証する回帰テスト。
-- policy の構造・カテゴリ順序・注入回数、objective や placeholder の展開、file access 境界、root context、主要な要求文の保持を確認する。
+- 各 prompt part の rendering と complete prompt の組み立て結果を検証する回帰テスト。policy のカテゴリ順序・重複、optional section、placeholder、file access mode、各 policy の注入内容を確認する。
 
 ## Read this when
-- prompt builder や policy builder の rendering、complete prompt の構成、placeholder 展開、policy 注入、file access policy を変更または検証するとき。
-- prompt の回帰で、各 policy の出力構造や要求文が期待どおり保持されているかを確認するとき。
+- prompt builder の policy、placeholder 展開、SDHeader rendering、complete prompt のセクション順序を変更または検証するとき
+- 複数の policy flag、file access mode、root path context にまたがる prompt 回帰を確認するとき
 
 ## Do not read this when
-- prompt builder の実装詳細そのものを変更する必要がなく、個別 policy の正本仕様や実装を直接確認すべきとき。
-- prompt の内容や構成を扱わない一般的なテスト、または他の機能領域の挙動を検証するとき。
+- prompt builder の実装仕様や policy 本文を変更・確認することが目的で、対応する oracle または realization を直接読むべきとき
+- prompt builder と無関係なテストや個別機能の挙動を調査するとき
 
 ## hash
-- d8eb3bef210e0fc25c6d84f0a7d59331f76f2e976d9c0a26c932027306ab4add
+- 35c5492220739792073fe70cea194c4a06a3e4298763ed16db6dd4debe306c59
 
 # `test_runtime_cli.py`
 
