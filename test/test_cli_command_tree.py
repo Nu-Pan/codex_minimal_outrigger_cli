@@ -77,8 +77,9 @@ def test_feedback_report_exposes_no_subcommand_specific_options() -> None:
     """feedback report が位置引数と固有 option を公開しないことを確認する。"""
     command = get_command(app)
     feedback = command.commands["feedback"]
-    assert isinstance(feedback, click.Group)
-    report = feedback.commands["report"]
+    feedback_commands = getattr(feedback, "commands", None)
+    assert isinstance(feedback_commands, dict)
+    report = feedback_commands["report"]
     options = {
         option
         for parameter in report.params

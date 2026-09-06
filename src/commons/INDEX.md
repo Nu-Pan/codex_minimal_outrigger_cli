@@ -416,19 +416,19 @@
 # `runtime_feedback_store.py`
 
 ## Summary
-- feedback raw observation の受理・安全化・immutable 保存を担う境界。schema 検査、secret masking、repository 内 evidence path の正規化と fingerprint、UUIDv7 または machine rule に基づく observation ID、atomic publish、重複・破損検査を一体として扱う。
-- 保存済み raw observation の列挙、未処理判定、完了時の pending 件数と蓄積 warning の計算を提供し、collector/report 間で同一 byte 表現と保存先を共有する入口になる。
+- feedback raw observation の受理検査と durable store を担う境界。schema 検証、secret masking、evidence path の repo 内正規化、fingerprint・hash、atomic publish、machine/agent observation の保存、未処理件数の算出を確認できる。
 
 ## Read this when
-- feedback observation の入力検証、secret masking、evidence path 境界、fingerprint、observation ID、raw record の durable 保存または atomic publish の挙動を確認するとき。
-- raw observation の重複・衝突・一時ファイル回収、未処理件数、publication 後の処理済み判定を調べるとき。
+- feedback observation の入力検証、安全な secret masking、evidence path 制約、immutable raw record の保存・重複排除・回収を調べるとき。
+- agent または machine rule の observation envelope、ID、fingerprint、source event の生成規則を確認するとき。
+- 通常サブコマンド完了時の pending feedback 件数や蓄積 warning の算出元を確認するとき。
 
 ## Do not read this when
-- feedback の正本 schema や受理・公開状態の仕様そのものを確認する場合は、対応する oracle の仕様または schema を直接読むとき。
-- MCP feedback tool の呼び出し契約や report cut の業務フローだけを確認する場合は、この raw store の実装ではなく専用の reporter/reporting 対象を読むとき。
+- report の cut、公開 state、cleanup、または MCP の送信処理そのものを調べるとき。
+- feedback 以外の永続化や一般的な JSON schema の定義だけを確認したいとき。
 
 ## hash
-- 799eb1fc8e066827ddc5bdadbbc81e6e7d18e235c871956a7dda3d85103c1a7b
+- fbbf33340fe3d10413cf5f7e08b038de2a287770827d8fd2f8790bef5fc3b0f8
 
 # `runtime_git.py`
 

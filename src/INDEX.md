@@ -49,20 +49,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、結果、状態、feedback など、複数の実行経路で共有する runtime 機能への入口を提供する。
+- 対象ディレクトリ内の各 commons runtime module の責務と、同階層の別 module ではなく当該 module を読むべき入口を示す。
+- INDEX.md の生成・更新 lifecycle、Codex 実行、設定、Git、ログ、パス、結果、状態、feedback、editor handoff など、共通 runtime 機能ごとの調査入口を案内する。
 
 ## Read this when
-- 複数の実行経路で共有される runtime 機能の配置や公開 API の入口を確認するとき
-- CLI、Codex 実行、設定、Git、ログ、パス、結果、状態、feedback などの共通 helper を横断して利用・変更するとき
-- 対象となる個別 runtime helper を特定し、その実装へ進む入口を確認するとき
+- commons 配下の共通 runtime 機能について、対象の責務に対応する実装入口を判断するとき。
+- INDEX.md の lifecycle、Codex 実行、設定、Git、ログ、パス、状態、feedback、editor input などの共通実装を調査・変更するとき。
 
 ## Do not read this when
-- 特定の runtime helper の内部実装や個別挙動を直接確認したいとき
-- 特定サブコマンドの業務処理や個別仕様だけを確認したいとき
-- INDEX.md の生成規則や利用者向けルーティング仕様だけを確認したいとき
+- 特定の runtime module の内部挙動だけを調査する場合は、このディレクトリ全体の案内ではなく該当する個別実装を直接読むとき。
+- 正本仕様、Structured Output schema、個別 CLI の業務処理、またはテスト固有の期待値だけを確認する場合は、対応する仕様・schema・command・test を直接読むとき。
 
 ## hash
-- 852a52b5c7e2f1b59af62bec4fc5f522b2b4d0abae2c315719316fb2f06f2883
+- 83fa4a60b09548dc8dfab38ae63e0f92ca5d2fdd0a8907667bd4a658d2d5cf9b
 
 # `config`
 
@@ -84,21 +83,19 @@
 # `main.py`
 
 ## Summary
-- cmoc CLI のトップレベル入口と session／oracle／realization／run／feedback のコマンドツリーを定義する。
-- Typer の起動境界で Click 8.2 の help 互換性を補正し、通常の引数解析エラーを cmoc のエラーレポートへ変換する。
-- CLI 補完 probe では通常コマンドを実行せず、明示した completion marker を Click に渡す。
+- cmoc の CLI コマンドツリーを構成し、doctor・tui・indexing・feedback report と session／oracle／realization／run 配下の各コマンドを実装関数へ接続する起動入口。
+- Typer と Click の互換境界および CLI 引数解析エラーの cmoc 形式への変換を、このファイルで一元的に扱う。
 
 ## Read this when
-- cmoc の利用可能なコマンド階層や、各コマンドがどのサブコマンド実装へ委譲されるかを確認するとき。
-- Typer／Click の互換処理、引数解析エラーの終了コード付き報告、または補完時の副作用防止を確認するとき。
-- console script から cmoc CLI を起動する入口を確認するとき。
+- cmoc の公開 CLI コマンド構成、サブコマンドの登録、console script の起動経路を確認するとき。
+- Typer／Click の版差による help 互換性や、通常実行・補完 probe・引数解析エラーの境界を調査するとき。
 
 ## Do not read this when
-- 個別コマンドの実処理、oracle／realization のワークフロー、session／run のブランチ操作の詳細を確認したいとき。
-- INDEX.md 更新、TUI 起動、feedback report の生成規則そのものを確認したいときは、対応する委譲先の実装または仕様を直接読む。
+- 個別コマンドの業務処理や session／oracle／realization／run の詳細動作を確認したいときは、接続先の sub_commands 実装または対応する app_spec を直接読む。
+- INDEX.md の更新処理そのものや feedback observation の収集・報告仕様を確認したいときは、indexing／feedback の実装・正本仕様を直接読む。
 
 ## hash
-- cebff8c904ea04e4cf0994e553ef7082dece329269c6fbfaf592dc1bdb36db12
+- 31b3b57d02930d07729a3c68dc9072f718b7ccdc19fa4a18c399c6f4ba33cf6f
 
 # `oracle.py`
 

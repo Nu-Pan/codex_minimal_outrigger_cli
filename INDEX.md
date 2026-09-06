@@ -124,32 +124,36 @@
 # `src`
 
 ## Summary
-- src の実装パッケージと互換入口を束ね、cmoc CLI と oracle／realization の実行経路へ進むための上位入口を提供する。
-- CLI トップレベル、共通 runtime、互換 shim、サブコマンド実装、builder／basic／config などの下位要素を含む。
+- src 側の CLI 起動入口と互換 package shim、および処理種別・共通 runtime の実装群をまとめた realization の上位入口。
+- cmoc のコマンドツリー、互換 import、builder、commons、config、sub_commands など、src 配下の実装領域へ進むためのルーティングを提供する。
 
 ## Read this when
-- src 配下の実装構成を横断して確認し、目的の CLI 入口、共通 helper、互換 import、またはサブコマンド実装の配置を特定するとき。
-- cmoc の起動入口から oracle／realization、session／run、feedback、indexing、TUI などの処理経路へ進むルーティングを判断するとき。
+- src 配下の realization 実装の構成を確認し、CLI 起動入口・互換層・共通 runtime・サブコマンドのどの領域から調査を始めるか判断するとき。
+- cmoc の CLI コマンド登録や個別サブコマンド、acp／basic／config／oracle などの互換入口、または共通 runtime の実装入口を確認するとき。
 
 ## Do not read this when
-- 特定ファイルの具体的な挙動、個別サブコマンドの処理、共通 runtime の内部実装、または互換 API の移行先だけを確認したいときは、src の入口ではなく該当する下位要素や正本実装を直接読む。
-- 正本仕様や INDEX.md の生成規則そのものを調査するとき。
+- 個別ファイルの具体的な挙動、正本仕様、Structured Output schema、または特定サブコマンドの詳細だけを確認したい場合は、src の上位案内ではなく該当する下位実装や仕様を直接読む。
+- INDEX.md の生成規則や正本側 oracle 実装そのものだけを調べる場合は、src 全体ではなく indexing 関連の実装または oracle 側の対象を直接読む。
 
 ## hash
-- 192db88dee9cb243c495fd681156b36a9c08564d3705ab3c5da5a7c1f78c3160
+- d5b50b19a2d1c8435b731f89f62c81558aae7ab4829bd3483221f2370099082d
 
 # `test`
 
 ## Summary
-- CLI、Codex runtime、session/run、feedback、indexing、editor handoff、通知、Git、設定など、cmoc の主要機能を検証する realization テスト群と共有テスト補助の入口。各テストは対応する外部挙動、状態遷移、権限境界、エラー処理、成果物・ログ整合性を確認する。
+- cmoc の CLI、runtime、Codex 実行、session/run、feedback、indexing、TUI などについて、外部から観測できる挙動と回帰条件を検証する realization test 群。
+- 単体・統合・実経路のテストを通じて、状態遷移、Git・worktree、process、report、ログ、権限境界、エラー処理を確認するためのテスト入口。
 
 ## Read this when
-- cmoc の実装や仕様変更が既存の CLI 外部契約、Codex 実行、run/session lifecycle、feedback、indexing、Git、設定、エディタ handoff、通知などのテスト要件に影響するか確認するとき。
-- 対象機能に対応する回帰テスト、統合テスト、実経路テスト、または共有 fixture・helper の利用方法を探すとき。
+- 公開 CLI の command tree、共通 runner、doctor、indexing、oracle、session、editing run、feedback などの外部挙動を横断して確認するとき。
+- Codex exec/TUI、sandbox・provider 設定、JSONL 異常系、quota retry、process cleanup、call log の回帰条件を調べるとき。
+- Git ignore、worktree、branch、session/run state、refactor state、INDEX 更新、prompt editor、MCP handoff、primary report の検証契約を確認するとき。
+- 実際の Codex CLI、独立 process、PTY を使う本番経路または実経路統合試験の対象範囲を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認することが目的で、対応する oracle 文書または realization 実装を直接読むべきとき。
-- テスト対象の外部挙動や回帰条件に関係しない機能だけを調査するとき。
+- 正本仕様、Structured Output schema、実装アルゴリズム、CLI の個別仕様そのものを確認したいときは、各テストが示す oracle・schema・realization・実装対象を直接読む。
+- 特定の機能に関係しない一般的なテスト実行手順や、対象テストが検証していない挙動を調べるとき。
+- LLM の回答品質や推論内容そのものを評価したいとき。
 
 ## hash
-- 9b2804d53de294e9d6451135f93dc23ea3aff9a7ee760e1e10d7c42b9e1df60d
+- 46728ca38b5feb6f7993530dbd93dba876c855e7cce1efadf8c5628449628d61

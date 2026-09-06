@@ -14,6 +14,7 @@ record の同一性判定が重複するため、raw observation store の境界
 
 import fcntl
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -120,11 +121,30 @@ def sha256_bytes(value: bytes) -> str:
 def reporter_input_schema() -> dict[str, Any]:
     """oracle package resource から reporter input schema を読む。"""
     # schema field を realization へ複製しない。
-    schema_text = (
-        resources.files("oracle.feedback")
-        .joinpath("reporter_input.json")
-        .read_text(encoding="utf-8")
-    )
+    try:
+        schema_text = (
+            resources.files("oracle.feedback")
+            .joinpath("reporter_input.json")
+            .read_text(encoding="utf-8")
+        )
+    except NotADirectoryError:
+        # `oracle.feedback` is a namespace package in the source and editable
+        # installations.  importlib.resources cannot represent its merged
+        # resource directory, so resolve the canonical file from the concrete
+        # package search locations instead.
+        spec = importlib.util.find_spec("oracle.feedback")
+        locations = (
+            spec.submodule_search_locations
+            if spec is not None and spec.submodule_search_locations is not None
+            else ()
+        )
+        for location in locations:
+            candidate = Path(location) / "reporter_input.json"
+            if candidate.is_file():
+                schema_text = candidate.read_text(encoding="utf-8")
+                break
+        else:
+            raise
     loaded = json.loads(schema_text)
     if not isinstance(loaded, dict):
         raise TypeError("feedback reporter schema must be a JSON object")
