@@ -91,23 +91,19 @@
 # `oracle`
 
 ## Summary
-- oracle 配下の正本仕様・設計判断・開発規則を、アプリケーション挙動、branch model、代替案、Python 実装・環境・テスト規則の領域別に参照する上位文書群。対象分野に応じた下位文書への入口を提供する。
+- oracle 配下の正本仕様・開発ルールを、アプリケーション仕様、branch/run model、設計判断、実装規約などの目的別文書へ案内する上位入口。
+- 具体的な仕様や開発ルールの所在を判断し、対象領域の下位文書へ進むためのルーティングを提供する。
 
 ## Read this when
-- cmoc の仕様・設計・開発規則を調査し、対象領域の正本文書群を選ぶとき
-- CLI、session・run、feedback、ログ、通知、oracle／realization などのアプリケーション挙動を確認するとき
-- branch・commit・worktree の役割や session・run の隔離関係を確認するとき
-- Python 実装・開発環境・テスト規則を確認するとき
-- 現行仕様ではなく、採用しなかった設計案や不採用理由を調べるとき
+- cmoc の正本仕様・開発ルール全体から、目的に合う下位文書の領域や入口を選ぶとき
+- 複数の仕様領域や開発ルールにまたがる調査・変更で、最初に読むべき oracle 配下の文書群を判断するとき
 
 ## Do not read this when
-- 対象のアプリケーション仕様、branch model、代替案、または開発規則の本文が既に特定できているときは、対応する下位文書を直接読む
-- 特定サブコマンド、個別の agent call、feedback 詳細、oracle／realization のファイル単位の責務を調べるときは、該当する下位仕様を直接読む
-- Python の具体的な実装や realization test の具体的内容を確認するときは、対応する実装・テスト対象を直接読む
-- INDEX.md の生成・更新規則だけを確認するときは、indexing に対応する仕様を直接読む
+- 対象の具体的な仕様ファイル、開発ルール、設計判断資料、実装、prompt、schema、provider 設定、feedback 観測、または個別サブコマンドが既に特定できているとき
+- oracle 配下の個別文書の内容、realization の実装、または src の内部構造だけを確認するとき
 
 ## hash
-- 6b048649b08956af5e4c51ba26eebda5fa7f22a58a5a8eebe5353ef02c990c62
+- 301b946bc2dbdc132527b86bf752fbccda0d8add834d8afc960ede5e8789f54b
 
 # `pyproject.toml`
 
