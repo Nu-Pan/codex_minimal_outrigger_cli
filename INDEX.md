@@ -145,18 +145,17 @@
 # `test`
 
 ## Summary
-- `test` 配下の回帰・統合・実経路テスト群と、テスト共通ヘルパーを対象とする入口。CLI、Codex runtime、indexing、feedback、session/run、state、Git、editor handoff、通知など、実装の外部契約や状態遷移を検証する。
-- 個別機能の実装ではなく、対応する実装・正本仕様に対するテスト上の期待挙動、異常系、境界条件、公開 API、成果物・ログ・Git 状態の検証方法を確認するための階層。
+- `test` 配下の realization test・統合テスト・共有テスト helper をまとめた入口。CLI、runtime、Codex 実行、session/run、feedback、indexing、oracle/realization などの外部契約や回帰条件を、対象機能ごとのテストから確認できる。
 
 ## Read this when
-- cmoc の既存挙動に対する回帰条件、外部観測可能な契約、異常系や境界条件をテストから確認したいとき。
-- CLI、Codex 実行、indexing、feedback、session/run、state、Git、prompt/editor、通知などの変更で、影響するテスト入口を選びたいとき。
-- 単体テストだけでなく、複数機能をまたぐ lifecycle、実 Codex CLI、PTY、worktree、report、call log まで含む統合・実経路の検証対象を探すとき。
+- 実装や正本仕様の変更が、複数機能にまたがる外部挙動・永続 state・Git・process・report・Codex 呼び出しへ与える影響をテストから確認するとき。
+- 特定機能の回帰条件、統合経路、共有 fixture/helper の利用方法を探すとき。
+- CLI の末端 command、runtime の共通境界、session/run lifecycle、feedback、indexing、Codex 実行などの検証入口を選ぶとき。
 
 ## Do not read this when
-- 正本仕様、schema、実装アルゴリズム、個別サブコマンドの本体を確認することが目的のときは、対応する oracle 文書・schema・実装を直接読む。
-- 一般的な pytest 実行手順や Python 環境設定だけを確認したいとき。
-- 対象機能の外部契約や回帰条件を調べる必要がなく、テスト対象外の実装詳細だけを調査するとき。
+- 正本仕様や実装の責務・詳細を確認することが目的で、対応する oracle 文書や realization 実装を直接読むべきとき。
+- 単一の schema、builder、helper、または実装関数の局所的な仕様だけを確認したいとき。
+- 一般的な pytest 実行手順や、対象機能と無関係なテストの詳細を調べるとき。
 
 ## hash
-- 7e6a7b9c4c45c53de3a7a80121e2e29d0236ba08930028a5c66df5b240bdd0a2
+- cc6030b5b655644e15dad8a8672803b00a80d8efa67a76007ff30d94d73b6562
