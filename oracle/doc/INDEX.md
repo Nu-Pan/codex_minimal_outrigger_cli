@@ -1,19 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を横断する正本文書群への入口。CLI の共通実行契約、各サブコマンド、TUI、session/run lifecycle、feedback、oracle・realization、ログ・通知・時刻・自動補完などの責務別仕様を扱う。
-- 個別の仕様課題に応じて、共通契約または workload 固有仕様へ進むためのルーティング起点。
+- cmoc の CLI 自動補完、Codex CLI 呼び出し、共通ログ・エラー処理、doctor preprocess、editor input、feedback、session/run lifecycle、indexing、oracle・realization、各サブコマンドおよび TUI の正本仕様を横断的に案内する仕様ディレクトリ。
+- CLI の実行境界、agent call、状態管理、出力・通知、feedback remediation、仕様と実装の責務分担を確認するための下位仕様への入口。
 
 ## Read this when
-- cmoc の CLI、TUI、サブコマンド、agent call、session/run、feedback、oracle・realization、ログ、通知などに関する正本仕様の所在や適用範囲を判断するとき。
-- 共通仕様と個別 workload 仕様の責務境界を確認し、対象となるアプリケーション仕様へ読み進めるとき。
+- cmoc の CLI 実行、サブコマンド、TUI、session/run、feedback、indexing、oracle・realization、ログ・エラー処理などの正本仕様の所在と適用範囲を確認するとき。
+- 複数の下位仕様にまたがる責務分担や、個別仕様へ進むための入口を判断するとき。
 
 ## Do not read this when
-- 実装、テスト、または特定仕様本文の詳細だけを確認したい場合。
-- すでに対象となる個別の正本仕様が特定できており、その本文を直接読めば足りる場合。
+- 特定の仕様本文、実装、テスト、prompt builder、schema、または個別サブコマンドの詳細だけを確認したいときは、一覧から該当する下位対象を直接読む。
+- INDEX.md の生成規則だけを確認したいときは indexing の仕様を、raw observation や repository-local feedback state の詳細だけを確認したいときは対応する feedback 下位仕様を直接読む。
 
 ## hash
-- 59993309ae9cdec89862889c47ea005a3c144e41bcc8a96befe0b57930a49cb3
+- 3f1d178f0dc04ca00cd162534f800ed5e0bd435a327cd54dd9c3984304eb1092
 
 # `branch_model.md`
 
