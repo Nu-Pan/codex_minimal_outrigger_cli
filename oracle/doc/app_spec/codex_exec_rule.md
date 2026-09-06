@@ -104,8 +104,6 @@ call-scoped path context の適用範囲を次に示す。
 - command 単位 sandbox escalation は、作業固有の oracle file が sandbox 外実行を必要条件として明示し、agent が対象 command と理由を限定して要求する場合に限り許容する
 - escalation は対象 command とその descendant process だけへ適用し、agent call 全体の sandbox mode、`AgentCallParameter.file_access_mode`、または詳細なファイルアクセス制限を変更しない
 - command 単位 escalation のために `--sandbox danger-full-access` または `--dangerously-bypass-approvals-and-sandbox` を agent call 全体へ指定してはならない
-- cmoc 自己開発の GPU test に許容する command と具体的な escalation 手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする
-- GPU test の具体的な手順も、この節が定める一般的な command 単位 escalation 境界を広げてはいけない
 - cmoc は command 単位 escalation のための Codex exec rule を生成せず、永続的な prefix allow rule に依存しない
 
 ### model provider transport と Codex sandbox のネットワークアクセス
@@ -156,9 +154,14 @@ call-scoped path context の適用範囲を次に示す。
 - agent-facing な分類文面で伝える Git ignore 判定は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」が定める境界だけを表す
 - `git check-ignore` の判定結果をファイル分類や対象ファイルの選別に使用してよいが、Codex CLI の sandbox または permission profile を組み立てる入力にしてはならない
 
-## ファイルアクセス制限違反の事後検証とリカバリ
+## agent call の差分検証
 
-- agent call による差分について、ファイルアクセス制限への違反を事後検証してはならない
+仕様にない検証の追加によって、正常な作業が停止することを防ぐ。
+
+- cmoc は agent call の差分に対し、oracle file が要求する条件の機械的検証だけを行う。
+- ファイルアクセス制限や agent の作業範囲の指示だけを根拠に、差分の検証、受理拒否、またはリカバリ処理を追加してはならない。
+
+本節は、agent 自身が守るファイルアクセス制限を緩和せず、通常の実装修正やテスト実行一般を新たに禁止しない。
 
 ## Model provider、Model、Reasoning Effort
 
@@ -361,7 +364,6 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 - 初回 Codex call 完了時に、agent call の開始前を基準とする作業成果物の差分を固定する
 - Codex call ごとの prompt、log、および Structured Output schema の保存物は、本節でいう作業成果物の差分に含めない
 - 補正中は、固定した差分を変動させてはいけない。補正 turn が差分を変動させた場合は、初回 Codex call 完了時の状態へ戻し、出力修正だけでは解消できない失敗として扱う
-- 差分不変性の検査を、file access mode 違反の判定またはリカバリに使用してはいけない
 - 補正 turn では indexing preflight を再実行しない
 - 補正 turn の cwd と Structured Output schema は、元の agent call と整合させる
 

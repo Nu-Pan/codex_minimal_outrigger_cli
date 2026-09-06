@@ -93,7 +93,7 @@
     - 実際の変更 path 集合は、agent call の開始時点を基準として出力時点に残る realization file の net 差分を、schema の `changed_paths` と同じ path 表現へ正規化した集合とする。
     - 申告された変更 path 集合は、全所見の `changed_paths` の和集合とする。同じ path を複数の所見が申告してよいが、`evidences[].path` はこの集合に含めない。
     - Structured Output は、申告された変更 path 集合と実際の変更 path 集合が一致する場合だけ受理する。
-    - cmoc は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従って同事後条件を検証する。
+    - cmoc は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「機械的検証と正式な結果」に従って同事後条件を検証する。
     - 以下で実際の変更 path 集合という場合は、同事後条件の検証で算出した集合を指す。
     - `findings` が空の場合は、所見なしとする。
     - 次の条件をすべて満たす場合は、処理結果を所見なしへ正規化する。
@@ -111,7 +111,8 @@
 8. 正規化後の処理結果に `resolution.status=unresolved` の所見が 1 件以上ある場合は、処理単位の確定後に対象 path を current fork の unresolved target 集合へ追加する。
 9. unresolved target 集合を除いた調査対象が残っていれば、次の対象を選ぶ。
 
-- 想定外 path の変更と変更禁止対象への書き込みは、`changed_paths` の照合とは別に検査する。
+- 処理単位の commit 受理条件として、cmoc は想定外 path の変更と変更禁止対象への書き込みを、`changed_paths` の照合とは別に検査する。
+- 差分検証の共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」を正本とする。
 - agent call には commit 差分、変更 commit の列、または変更要約を注入してはいけない。
 - `resolution.status=fixed` は agent の自己申告である。その申告だけで、修正の意味的な正しさが証明されたと扱ってはいけない。
 - 所見なしへの正規化は cmoc の処理判定だけに適用する。agent が返した元の Structured Output と Codex call log は破棄または改変せず、調査可能な実行記録として保持する。

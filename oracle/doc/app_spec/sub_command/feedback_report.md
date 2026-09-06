@@ -147,9 +147,9 @@ cmoc は、論理 agent call の開始時点から正式な終了時点までの
 - `already_resolved`、`not_actionable`、および `inconclusive` は実際の差分を持たない。
 - `human_required` が差分を持つ場合、その差分は独立して安全であり、必要な verification が成功している。
 
-`changed_paths` の照合とは別に、run worktree の全 net 差分を検査する。oracle file、禁止 path、または workload の想定外 path に変更があれば、その処理単位を確定してはならない。
+処理単位の commit 受理条件として、`changed_paths` の照合とは別に、run worktree の全 net 差分を検査する。oracle file、禁止 path、または workload の想定外 path に変更があれば、その処理単位を確定してはならない。
 
-この検査は workload の commit 受理条件であり、file access mode 違反の判定またはリカバリとして扱わない。`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「ファイルアクセス制限違反の事後検証とリカバリ」を変更しない。
+差分検証の共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」を正本とする。
 
 agent が返した `fixed` の自己申告だけを、意味的な正しさの証明として扱ってはならない。正式な結果とするには、次の両方を満たす必要がある。
 
