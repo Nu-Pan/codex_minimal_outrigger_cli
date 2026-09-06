@@ -199,22 +199,18 @@
 # `test_cli_command_tree.py`
 
 ## Summary
-- 公開 CLI の末端 command 集合を正本仕様の列挙と照合し、Typer/Click 互換性を含む help 描画と feedback report の公開引数制約を検証するテスト。
-- CLI の command tree 構成や公開 leaf の追加・削除、help 描画互換性、feedback report の引数設計を確認する入口。
+- oracle 変更後に公開 CLI の末端 command 集合を固定し、doctor・indexing・tui・oracle・realization・run・session・feedback の公開構成を検証するテスト。Typer/Click の help 描画互換性と feedback report の引数・固有 option 非公開も確認する。
 
 ## Read this when
-- 公開 CLI の command 階層または leaf 集合を変更したとき。
-- Typer/Click の互換性に関わる help 描画を変更したとき。
-- feedback report の公開引数や option の有無を変更・確認するとき。
-- oracle 変更後に公開 CLI 集合が正本仕様と一致するか検証するとき。
+- 公開 CLI の leaf command 構成が正本仕様の列挙と一致しているか確認・変更するとき。
+- CLI help の Typer/Click 互換性、または feedback report の公開インターフェースを確認するとき。
 
 ## Do not read this when
-- 個別 command の実行処理や業務ロジックを変更・調査するとき。
-- 各 command の詳細な仕様や oracle 文書の内容を確認するとき。
-- CLI 全体の leaf 集合、help 互換性、feedback report の公開引数制約に関係しないテストを扱うとき。
+- 個別サブコマンドの詳細な挙動や引数仕様を確認するときは、対応する oracle のサブコマンド仕様を直接読む。
+- CLI の実装を変更するだけで、公開 command tree の回帰や help・feedback report の公開面を検証しないとき。
 
 ## hash
-- ea3eaf19b27e9c445d700a05e03705f0456394082844f77773c218031b164fa5
+- 59dc9370595498819ae498ddccc3451482b821dd36870885a3e72a26866de882
 
 # `test_cli_tui.py`
 

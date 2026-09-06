@@ -2,7 +2,7 @@
 
 import inspect
 import os
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any, cast
 
 import click
@@ -46,7 +46,10 @@ def _patch_typer_click_help_compatibility() -> None:
     # CLI の引数解釈とライブラリ間の互換境界は main.py に閉じ込める。
     if "ctx" in inspect.signature(click.Option.make_metavar).parameters:
         # Click 8.2 は metavar の生成に context を要求するが、Typer 0.12 は渡さない。
-        original_make_metavar = typer.core.TyperOption.make_metavar
+        original_make_metavar = cast(
+            Callable[[typer.core.TyperOption, object], str],
+            typer.core.TyperOption.make_metavar,
+        )
 
         def make_metavar_compatibility(
             self: typer.core.TyperOption,
