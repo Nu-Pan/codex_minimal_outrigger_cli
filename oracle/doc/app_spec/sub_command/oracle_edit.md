@@ -3,7 +3,7 @@
 ## 目的
 
 - oracle file の最終状態に関するユーザー指示を受け取り、本命と仕様削減の 2 回の `codex exec` agent call を直列に実行する。
-- 本命 agent call はユーザー指示を oracle file へ反映する。仕様削減 agent call は、本命成功後の現在状態から過剰な仕様を削減する。
+- 本命 agent call は、ユーザー指示を oracle file へ反映する。仕様削減 agent call は、本命 agent call の成功後の状態を起点に、過剰な仕様を削減する。
 - 起動前から存在する未コミット差分と 2 回の agent call による変更は分離しない。人間が、最終的な差分の確認、追加修正、commit、および破棄に責任を持つ。
 - このサブコマンドは編集 run ではない。fork、join、abandon lifecycle、run branch、linked worktree、および session state の `run` section は使用しない。
 
@@ -37,11 +37,16 @@
 
 ## 仕様削減 agent call の判断材料
 
-- 直前の本命 agent call が oracle file を変更し、その変更が起動前の既存差分と分離されず、現在の Git 未コミット差分に含まれていることを伝える。
+- 直前の本命 agent call が oracle file を変更したことを伝える。その変更は起動前の既存差分と分離されず、現在の Git 未コミット差分に含まれていることも伝える。
 - オリジナルのユーザー指示、現在の oracle file、および oracle file に関する現在の Git 未コミット差分だけを本命成果の判断材料とする。
-- 過剰な仕様文言を削除し、仕様を簡素化し、関連する仕様および規定への違反を修正させる。
+- 過剰な仕様文言を削除して仕様を簡素化させる。関連する仕様および規定への違反も修正させる。
 - オリジナルのユーザー指示が要求する人間意図、実装差を許容しない境界、および対象外の既存仕様の意味を維持させる。固定の削減率または文字数目標は設けない。
-- 適用できる installed skill は補助規定として使用してよい。installed skill がこの prompt、オリジナルのユーザー指示、cmoc 固有契約、または関連する oracle file と競合する場合は、installed skill 以外を優先する。installed skill の有無を完了条件にしてはならない。
+- 適用できる installed skill は補助規定として使用してよい。ただし、次の指示や規定と競合する場合は、競合する指示や規定を installed skill より優先する。
+    - この prompt
+    - オリジナルのユーザー指示
+    - cmoc 固有契約
+    - 関連する oracle file
+- installed skill の有無を完了条件にしてはならない。
 - 仕様削減用 prompt を、本命用 prompt、本命 agent の stdout、stderr、最終回答、call metadata、session ID、またはその他の session log から派生させてはならない。これらを仕様削減 agent に読ませたり、判断根拠にさせたりしてはならない。
 
 ## 実行順序
@@ -77,7 +82,13 @@
 
 - `natural_completion` と `error` のすべての終了経路で、oracle edit 実行要約を primary report として保存する。doctor preprocess、エディタ入力、indexing preflight、または agent call 前の条件で終了した場合も対象とする。
 - report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/ar/report/oracle_edit/{{time-stamp}}.md` に保存する。
-- front matter には、command、生成日時、repo root、terminal result の共通分類、終了コード、および本命・仕様削減 agent call の実行状況を含める。各実行状況から、未開始、開始済み、成功、および失敗を判別可能にする。
+- front matter には、次の実行情報を含める。
+    - command
+    - 生成日時
+    - repo root
+    - terminal result の共通分類
+    - 終了コード
+    - 本命・仕様削減 agent call の実行状況。それぞれについて、未開始、開始済み、成功、および失敗を判別可能にする。
 - 本文には、各 agent call の実行状況と確定結果、terminal result の要約、warning またはエラー、必要な次の操作、診断用サブコマンドログ、および実行した agent call に対応する Codex call log を含める。
 - 起動前の既存未コミット差分と agent call による変更を分離しない。report では、変更 path または意味的な変更内容をこの invocation 固有の成果として断定しない。
 

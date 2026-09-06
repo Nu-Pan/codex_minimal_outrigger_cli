@@ -43,7 +43,7 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 - TUI の起動前エラーまたは異常終了は、失敗結果を確定した後に 1 回だけ通知する。
 - 1 つの TUI process 内の各 turn を区別する。
 - 同じ turn の callback を複数回受け取った場合も、同じ Windows toast を重複表示しない。
-- turn の識別と重複排除は、その TUI process invocation 内に閉じる。
+- turn の識別と重複排除の範囲は、その TUI process invocation 内に限る。
 
 ## 通知内容
 
@@ -94,7 +94,7 @@ realization の実装前に、利用中の Codex CLI で次の外部契約を検
 - 通知処理には有限の上限時間を設け、本命処理を長時間待たせてはならない。
 - transport の欠落、起動失敗、または toast 表示失敗によって、サブコマンドの終了コード、run state、成果物、retry、または成功判定を変更してはならない。
 - 通知失敗を理由に、Codex call またはサブコマンドを再実行してはならない。
-- transport の具体方式と上限時間は、この節の境界を守る範囲で realization の裁量とする。
+- transport の具体的な方式と上限時間は、この節の境界を守る範囲で realization の裁量とする。
 
 ## 自動補完プローブ
 

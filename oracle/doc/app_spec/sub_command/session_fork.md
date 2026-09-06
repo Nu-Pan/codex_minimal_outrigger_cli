@@ -2,7 +2,7 @@
 
 ## 概要
 
-- `cmoc session fork` は、現在 checkout している `{{local-branch}}` を `{{cmoc-session-home-branch}}` とし、その HEAD から `{{cmoc-session-branch}}` を作成する。
+- `cmoc session fork` は、現在 checkout している `{{local-branch}}` を `{{cmoc-session-home-branch}}` とする。その HEAD から `{{cmoc-session-branch}}` を作成する。
 - branch の役割、分岐関係、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/oracle/doc/branch_model.md` の「概要」を正本とする。
 
 ## 引数

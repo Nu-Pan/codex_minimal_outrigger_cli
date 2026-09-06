@@ -6,7 +6,11 @@
 
 ### 報告基準
 
-agent は、現在の workload の規定範囲内では解消できず、後続の automatic remediation または人間対応の候補となる、具体的な根拠のある問題だけを報告する。
+agent は、次の条件をすべて満たす問題だけを報告する。
+
+- 現在の workload の規定範囲内では解消できない
+- 後続の automatic remediation または人間対応の候補となる
+- 具体的な根拠がある
 
 報告対象は、後続の対応によって次のいずれかが可能になる問題に限定する。
 
@@ -36,7 +40,7 @@ agent-facing interface は、Codex call ごとに起動する local stdio MCP re
 
 version 1 は、`schema_version=1` と `human_action_reason` を検査する。その他の field には version 2 と同じ規則を適用する。
 
-normalization 時だけ、`human_action_reason` を同じ文字列の `workload_limitation` として扱う transient な version 2 view へ変換する。元 version と変換規則は追跡可能にする。変換後の値も観測時の assertion であり、`human_required` の判定へ自動変換してはならない。
+normalization 時に限り、transient な version 2 view へ変換する。この view では、`human_action_reason` の文字列をそのまま `workload_limitation` として扱う。元の version と変換規則は追跡可能にする。変換後の値も観測時の assertion であり、`human_required` の判定へ自動変換してはならない。
 
 tool result は、次のいずれかとする。
 
@@ -67,7 +71,13 @@ rejection code は、次の値に限定する。
 
 ### 受け入れ検査
 
-reporter と collector は、安全に保存できるかだけを検査する。原因、重要度、automatic remediation の可否、人間対応の必要性、および既存 issue との同一性は判断しない。
+reporter と collector は、安全に保存できるかだけを検査する。次の事項は判断しない。
+
+- 原因
+- 重要度
+- automatic remediation の可否
+- 人間対応の必要性
+- 既存 issue との同一性
 
 受け入れには、次の条件をすべて要求する。
 
@@ -123,7 +133,7 @@ Codex call の終了時は、その call について次の順序で処理する
 2. 受付済み request を処理し、accepted observation の保存を完了する。
 3. capability と MCP context を無効化する。
 
-feedback remediation の intake wave を閉じる場合は、その wave の remediation agent call に対応する全 context でこの終了処理を完了してから、collector の high-watermark を確定する。受付済み request の保存完了前に high-watermark を進めてはならない。
+feedback remediation の intake wave を閉じる場合は、その wave の remediation agent call に対応する全 context で、上記の終了処理を完了する。その後に collector の high-watermark を確定する。受付済み request の保存完了前に high-watermark を進めてはならない。
 
 parallel call の lifecycle は互いに分離する。TUI では、1 process の全 turn で同じ Codex call context を使用し、process 終了時に無効化する。
 
@@ -139,7 +149,7 @@ detector は、allowlist 済み rule と安定した構造化 log event から m
 
 rule の評価は event の flush 後に行う。rule に一致した occurrence は、recurrence threshold 未満でも raw observation として保存する。集約と threshold 判定は `cmoc feedback report` が行う。
 
-検出または保存の失敗は、warning と構造化 log event に留める。本命 subcommand の結果、run state、retry、または recovery を変更しない。
+検出または保存に失敗した場合は、warning と構造化 log event への記録にとどめる。本命 subcommand の結果、run state、retry、または recovery を変更しない。
 
 ### rule registry
 
@@ -195,10 +205,22 @@ raw record には、次の情報だけを保持する。
 
 ### durability と retention
 
-accepted を返す前に、sibling temporary file への write、file flush、atomic rename、および parent directory の flush を完了する。accepted は local filesystem 上の保存だけを保証し、別 clone、別 machine、または hardware failure に対する backup を保証しない。
+accepted を返す前に、次の保存処理を完了する。
+
+1. sibling temporary file への write
+2. file flush
+3. atomic rename
+4. parent directory の flush
+
+accepted は local filesystem 上の保存だけを保証する。別 clone、別 machine、または hardware failure に対する backup は保証しない。
 
 raw observation は、新しい current pointer への正常 publication が完了するまで pending として保持する。intake wave、report cut、checkpoint、run commit、merge、または staged report を作成しただけでは削除しない。
 
 publication 後は、同 report cut が参照する intake wave で処理済みとなり、かつ最終 high-watermark 以前に durable 保存された raw observation だけを idempotent に cleanup する。最終 high-watermark より後に受理された observation、別の未完了処理が参照する observation、および validation を通過できなかった observation を削除してはならない。
 
-通常の非対話サブコマンドの terminal result には、pending observation 数だけを表示する。100 件以上ある場合、または最古の pending observation が 7 日以上前の場合は、`cmoc feedback report` の実行を促す warning を加える。件数を算出できない場合も warning とする。件数、算出失敗、または warning によって、サブコマンド固有の `result`、終了コード、run state、retry、または成功判定を変更してはならない。
+通常の非対話サブコマンドの terminal result には、pending observation 数だけを表示する。次のいずれかを満たす場合は、`cmoc feedback report` の実行を促す warning を加える。
+
+- pending observation が 100 件以上ある
+- 最古の pending observation が 7 日以上前である
+
+件数を算出できない場合も warning とする。件数、算出失敗、または warning によって、サブコマンド固有の `result`、終了コード、run state、retry、または成功判定を変更してはならない。

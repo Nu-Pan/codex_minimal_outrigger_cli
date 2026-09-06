@@ -35,7 +35,7 @@
 - `{{cmoc-session-home-branch}}`
 - `{{cmoc-session-home-branch}}` 上の commit
 - `{{cmoc-session-state-file}}` 自体
-- 既に保存済みの report
+- 保存済みの report
 - 未 join の編集 run
     - editing run が残っている場合は `cmoc session abandon` では処理せず、`cmoc run abandon` を要求する
 
@@ -43,7 +43,7 @@
 
 1. doctor preprocess を呼び出す
 2. 事前検証
-    - 事前条件を満たしている事を確認する
+    - 事前条件を満たしていることを確認する
 3. クリーンアップ
     1. `git switch {{cmoc-session-home-branch}}` を実行する。
     2. `{{cmoc-session-state-file}}` の `session.state` を `abandoned` に更新する。
@@ -59,7 +59,7 @@
 ## クリーンアップの途中で失敗した場合
 
 - クリーンアップで行った操作をロールバックし、再実行可能な状態にする
-- ユーザーに「問題の手動解決したうえで `cmoc session abandon` 再実行」を促す
+- 問題を手動で解決したうえで `cmoc session abandon` を再実行するよう、ユーザーに促す
 
 ## primary report
 

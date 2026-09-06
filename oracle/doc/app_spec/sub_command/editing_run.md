@@ -22,7 +22,9 @@ run の隔離資源と一般 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/
 
 1 session に active な編集 run は高々 1 つとする。active run の state field は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「run field」を正本とする。
 
-`run.state` が `running`、`joinable`、または `error` の間は、新しい editing run を開始しない。`joinable` または `error` の run に許可する lifecycle 操作は、原則としてその run に対する `cmoc run join` と `cmoc run abandon` だけとする。自動 join 済みの `feedback_report` では、workload 固有の `cmoc feedback report` recovery だけを許可する。
+`run.state` が `running`、`joinable`、または `error` の間は、新しい editing run を開始しない。
+
+`joinable` または `error` の run では、原則として、その run に対する `cmoc run join` と `cmoc run abandon` だけを lifecycle 操作として許可する。ただし、自動 join 済みの `feedback_report` では、workload 固有の `cmoc feedback report` recovery だけを許可する。
 
 ## 共通事前条件
 
@@ -101,7 +103,7 @@ merge または no-op join 後の tree 検査、publication、および workload
 5. join 結果と hook の結果を保存する。
 6. 明示的な join では、`run.state` を `ready` にし、active run 情報を初期化する。`feedback_report` の自動 join では、この更新を workload 固有の publication と cleanup が確定するまで遅延する。
 
-`INDEX.md` の conflict は cmoc が生成し直すことで解決してよい。`INDEX.md` 以外が conflict した場合は merge を中止して開始前の clean な状態へ戻し、`run.state` を `error` にして conflict path を report する。conflict 解消のための agent call は行わない。
+`INDEX.md` の conflict は、cmoc が生成し直すことで解決してよい。`INDEX.md` 以外が conflict した場合は、merge を中止して開始前の clean な状態へ戻す。そのうえで、`run.state` を `error` にして conflict path を report する。conflict 解消のための agent call は行わない。
 
 refactor state の同期規則は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` を正本とする。
 
@@ -150,7 +152,7 @@ feedback work state には join 結果と publication 未実施を記録する�
 
 active workload が `feedback_report` の場合は、abandon する commit に依存する `fixed` result を publication 可能な state から除外する。raw observation と直前の current pointer を保持し、破棄済み修正を適用済みとして扱ってはならない。
 
-self-joining 経路の join がすでに成功した `feedback_report` は、run branch を削除しても session tree 上の変更を破棄できないため `cmoc run abandon` の対象にしない。封印済み report cut の publication または cleanup が未完了であれば、`cmoc feedback report` recovery を要求する。
+self-joining 経路の join がすでに成功した `feedback_report` は、`cmoc run abandon` の対象にしない。run branch を削除しても、session tree 上の変更は破棄できないためである。封印済み report cut の publication または cleanup が未完了であれば、`cmoc feedback report` recovery を要求する。
 
 ## report と terminal result
 

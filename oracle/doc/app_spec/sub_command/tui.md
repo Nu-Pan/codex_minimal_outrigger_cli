@@ -4,7 +4,7 @@
 ## 概要
 
 - ユーザーから与えられたプロンプトへ cmoc 固有の契約を注入し、AI Agent CLI/TUI を起動する
-- installed skill の有無にかかわらず解釈できる、適用条件付きの cmoc 基本規定を固定で注入する
+- 適用条件を伴う固定の cmoc 基本規定を注入する。この規定は、installed skill の有無にかかわらず解釈できるものとする
 - 実行パラメータまたは注入規定を選定するための agent call は行わない
 
 ## 引数
@@ -30,7 +30,7 @@
 
 ### 全バックエンド共通
 
-- ユーザーのプロンプト入力後に `build_tui_launch_tui_parameter` で構築したパラメータを変更せず、TUI を直接起動する
+- ユーザーのプロンプト入力後、`build_tui_launch_tui_parameter` でパラメータを構築する。そのパラメータを変更せずに使い、TUI を直接起動する
 - TUI の意味上の責務と起動条件は本書を正本とする。正確な prompt part の選択、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter` へ委譲する
 - cmoc の基本規定は、各規定が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
 - TUI へ注入する基本規定の意味仕様は、次の文書を正本とする

@@ -3,7 +3,7 @@
 ## 概要
 
 - `cmoc session join` は、session を完了して `{{cmoc-session-home-branch}}` へ戻すためのコマンドである。
-- i.e. `cmoc session join` は、現在 checkout している `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
+- 具体的には、現在 checkout している `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
 - 通常の git branch 同士の汎用 merge wrapper ではない。
 - merge source、merge target、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/oracle/doc/branch_model.md` の「概要」を正本とする。
 
@@ -18,13 +18,13 @@
 
 以下の場合はエラー終了する。
 
-- 対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定出来ない
+- 対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定できない
 
 ## 実行手順
 
 1. doctor preprocess を呼び出す
 2. 事前検証
-    - 事前条件を満たしている事を確認する
+    - 事前条件を満たしていることを確認する
 3. マージ処理
     1. `git switch {{session-home-branch}}` を実行する
     2. `git merge --no-ff {{cmoc-session-branch}}` を実行する
@@ -50,7 +50,7 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/o
 
 1. cmoc は conflict 対象ファイルを列挙する
 2. conflict marker 解消用の agent call を行う
-3. cmoc は conflict marker が残っていない事を確認する
+3. cmoc は conflict marker が残っていないことを確認する
 4. cmoc は conflict 対象ファイルを `git add` する
 5. unmerged path が残っていないことを確認する
 6. cmoc が merge commit を作成する
@@ -78,8 +78,8 @@ session join の conflict 解消は、両 branch の意味を保ったまま mer
 
 ## `{{cmoc-managed-branch}}` 削除の条件
 
-- 安全であること（ブランチ削除により作業結果が失われないこと）の裏付けが取れた場合のみ `{{cmoc-session-branch}}` の削除を実行する
-- 確認に失敗した場合 `{{cmoc-managed-branch}}` は削除せず、 warning 扱いでユーザーに通知して続行する
+- ブランチを削除しても作業結果が失われないと確認できた場合に限り、`{{cmoc-session-branch}}` を削除する
+- 確認に失敗した場合は、`{{cmoc-managed-branch}}` を削除せず、warning としてユーザーに通知して続行する
 
 ## primary report
 

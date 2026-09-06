@@ -29,7 +29,7 @@
 
 #### 「`{{cmoc-managed-branch}}` 上で～」の定義
 
-「`{{cmoc-managed-branch}}` 上で～」という表現は、次の集合の和を指す。
+「`{{cmoc-managed-branch}}` 上で～」という表現は、次の二つを合わせた範囲を指す。
 
 - `{{cmoc-managed-branch}}` の作成元 commit から `HEAD` までの commit 上で起きたこと
 - working tree または staging area で起きていること
@@ -74,7 +74,9 @@
 ### `{{cmoc-run-join-commit}}`
 
 - `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ merge した commit である。
-- join 時点ですでに run branch HEAD が session branch から到達可能であり、取り込む commit がない場合は、join を no-op として正常完了してよい。この場合 `{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。join の記録だけを目的とする空 commit を作ってはならない。
+- join 時点ですでに run branch HEAD が session branch から到達可能であり、取り込む commit がない場合は、join を no-op として正常完了してよい。
+    - この場合、`{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。
+    - join の記録だけを目的とする空 commit を作ってはならない。
 
 ## git worktree
 

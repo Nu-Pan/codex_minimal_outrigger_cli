@@ -23,14 +23,18 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 
 - prompt editor input は、editor work file の生成後かつ editor の起動前に、opaque な target ID を持つ target を登録し、その ID を人間へ表示する。
 - target は editor の待機中だけ submission を受け付ける。
-- editor から処理が戻った後は、新規受付を停止し、受付済みの submission を完了させて target を無効にしてから、editor work file を最終読み取りする。
+- editor から処理が戻った後は、次の順に処理する。
+    1. submission の新規受付を停止する。
+    2. 受付済みの submission を完了させる。
+    3. target を無効にする。
+    4. editor work file を最終読み取りする。
 - target の登録と routing は一時的な runtime state とする。target 一覧、handoff 履歴、永続的な active state、および排他的 editor lock は設けない。
 
 ## MCP interface と上書き
 
 agent-facing MCP interface は `cmoc_editor_input.overwrite` だけとする。target の探索、file read、汎用 file write、command 実行、MCP resource、および MCP prompt は提供しない。
 
-- tool input は target ID と editor work file 全体の新しい内容を指定する。
+- tool input には、target ID と editor work file 全体の新しい内容を指定する。
 - cmoc は target が active であり、呼び出し元と同じ repository に属することを検証する。
 - cmoc は対象が所定の editor work directory 内にある regular file かつ非 symlink であることを、上書きのたびに検証する。
 - accepted submission は file 全体を単純に置換する。同じ target への accepted submission は直列化し、最後に適用した内容を残す。

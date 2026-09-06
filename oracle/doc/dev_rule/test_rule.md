@@ -3,7 +3,7 @@
 ## 責務境界
 
 - この文書は、realization test が満たすべき意味上の要件を定める
-- 構築済み環境で test と品質検査を選択、実行、完了判定、および報告する手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする
+- 構築済み環境での test と品質検査の手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする。対象は、検査の選択・実行・完了判定・報告とする
 - 開発環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` を正本とする
 
 ## 基本
@@ -14,10 +14,10 @@
 
 ## goal
 
-- cmoc の決定論的な制御ロジックが仕様どおりに動作する事を検証する
-    - e.g. git 状態の検査、作業ディレクトリの決定、対象ファイルの列挙、設定生成、ログ保存、状態更新、エラー処理、…
+- cmoc の決定論的な制御ロジックが仕様どおりに動作することを検証する
+    - 例：git 状態の検査、作業ディレクトリの決定、対象ファイルの列挙、設定生成、ログ保存、状態更新、エラー処理、…
 - Codex CLI 呼び出しを伴う経路では、cmoc が責任を持つ結合動作を検証する
-    - e.g. prompt 渡し、argv による設定、出力保存、schema 指定、response 後の処理、…
+    - 例：prompt 渡し、argv による設定、出力保存、schema 指定、response 後の処理、…
     - 実行経路の要件は、本書の「実経路統合テスト」で定める
 
 ## non-goal
@@ -36,7 +36,9 @@
 
 ### 検証要件
 
-- 実経路統合テストとは、利用者向け CLI entrypoint を独立 process で実行し、本番と同じ code path、実在の外部 executable、および必要な実推論を使って、response 後の処理と外部から観測可能な結果まで検証する realization test である
+- 実経路統合テストは、利用者向け CLI entrypoint を独立 process で実行する realization test である
+    - 本番と同じ code path、実在の外部 executable、および必要な実推論を使う
+    - response 後の処理と、外部から観測可能な結果まで検証する
 - 実行時点で公開されている全末端サブコマンドを対象とする
 - 各実経路統合テストケースは、終了 code とコマンド固有の外部から観測可能な結果を検証する
 - 公開末端サブコマンドと実経路統合テストケースの対応は、機械的に比較可能にする

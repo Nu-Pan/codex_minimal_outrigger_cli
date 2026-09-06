@@ -2,7 +2,7 @@
 
 ## goal
 
-- 各 agent call で使用する model provider、Model、および Reasoning Effort を、`CmocConfigCodex` の一つの対応 entry だけから直接決定する
+- 各 agent call の設定は、`CmocConfigCodex` の対応する一つの entry だけから直接決定する。対象は model provider、Model、および Reasoning Effort とする
 - Codex CLI が受理する名前を意味を変えずに渡し、cmoc 固有の論理分類や変換を介在させない
 
 ## agent call ごとの直接設定
@@ -11,8 +11,8 @@
 - 各 agent call 種別の設定は、model provider ID、Model 名、および Reasoning Effort 名を必須の直接文字列として持つ
 - model provider ID は null を許容しない
 - 対応する agent call 種別の設定が存在しない場合は、値を推測せず Codex CLI の起動前にエラーとする
-- `CmocConfigCodex` の既定値は、全ての既存 agent call 種別に一つずつ対応する設定を持つ
-- cmoc は、三つの直接文字列を別名へ解決し、近い値へ丸め、または fallback してはならない
+- `CmocConfigCodex` の既定値は、すべての既存 agent call 種別に一つずつ対応する設定を持つ
+- cmoc は、三つの直接文字列について、別名への解決、近い値への丸め、または fallback を行ってはならない
 - cmoc は、Model、Reasoning Effort、および model provider の組み合わせに対する互換性検査や allowlist を持たない
 - Codex CLI が設定を拒否した場合は、既存の Codex CLI 呼び出し失敗規則に従う
 - Structured Output の補正、retry、および quota 待機後の resume を個別の設定単位にしてはならない

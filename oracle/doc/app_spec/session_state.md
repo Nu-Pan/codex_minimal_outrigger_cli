@@ -7,7 +7,7 @@
 
 ## スキーマ設計の基本原則
 
-- 永続化する情報は必要最小限に留める。
+- 永続化する情報は必要最小限にとどめる。
 - その場で確実に解決できる情報は state に持たせない。
 - 1 session に未 join の編集 run は高々 1 つとする。
 - feedback の repository-local state はこの file に保存しない。保存対象と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
@@ -64,7 +64,7 @@ active session context を必要とするサブコマンドは、次の条件を
 
 ### `session.last_joined_apply_fork_commit`
 
-- その session で最後に merge へ成功した realization apply run の `{{cmoc-run-fork-commit}}` である。
+- その session で最後に merge に成功した realization apply run の `{{cmoc-run-fork-commit}}` である。
 - session 新規作成直後の初期値は `null` とする。
 - active run の kind が `realization_apply` である `cmoc run join` が merge に成功した場合だけ更新する。
 
@@ -75,7 +75,7 @@ active session context を必要とするサブコマンドは、次の条件を
 ### `run.state`
 
 - `ready` は active な編集 run がない状態である。
-- `running` は workload の処理が実行中である状態である。
+- `running` は workload の処理を実行している状態である。
 - `joinable` は、join、abandon、または self-joining workload の finalization を待つ状態である。
 - `error` は続行不能な失敗後である。join 済みの `feedback_report` では、`cmoc feedback report` による recovery を待つ。
 - session 新規作成直後の初期値は `ready` とする。
@@ -100,7 +100,11 @@ active session context を必要とするサブコマンドは、次の条件を
 
 - workload 固有の fork または self-joining workload が新しい編集 run を開始すると、`ready` から `running` へ遷移する。
 - 明示的な join を必要とする workload が正常終了すると `joinable` へ遷移する。
-- `feedback_report` は wave loop の自然完了時に `joinable` へ遷移し、自動 join、join 後検査、report の確定、および cleanup の完了時に `ready` へ遷移する。自動 join 後の失敗時は `error`、同じ run の recovery 完了時は `ready` へ遷移する。
+- `feedback_report` の状態は、次の時点で遷移する。
+    - wave loop の自然完了時は `joinable` へ遷移する。
+    - 自動 join、join 後検査、report の確定、および cleanup の完了時は `ready` へ遷移する。
+    - 自動 join 後の失敗時は `error` へ遷移する。
+    - 同じ run の recovery 完了時は `ready` へ遷移する。
 - 中断可能な workload が整合した処理単位でユーザー中断を完了すると `joinable` へ遷移する。
 - workload が続行不能な失敗で停止すると `error` へ遷移する。
 - `cmoc run join` または `cmoc run abandon` が正常終了すると `ready` へ遷移し、`kind`, `branch`, `fork_commit` を `null` に初期化する。

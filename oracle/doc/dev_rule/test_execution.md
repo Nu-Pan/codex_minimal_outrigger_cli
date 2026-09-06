@@ -2,7 +2,7 @@
 
 ## 責務境界
 
-- この文書は、構築済みの cmoc 開発環境で test と品質検査を選択、実行、完了判定、および報告する手順を定める。
+- この文書は、構築済みの cmoc 開発環境における test と品質検査の手順を定める。対象は、検査の選択・実行・完了判定・報告とする。
 - realization test が満たすべき意味上の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする。
 - 型注釈と docstring の意味上の品質要件は、`{{cmoc-root}}/oracle/doc/dev_rule/coding_rule.md` の「型ヒント」と「docstring」が所有する。
 - Python 環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` を正本とする。
@@ -11,7 +11,7 @@
 
 ## repository root と Python interpreter を決定する
 
-現在の worktree を検査対象とし、Python interpreter は現在の worktree、main worktree の順に構築済み環境から選択する。
+検査対象は現在の worktree とする。Python interpreter は、現在の worktree、main worktree の順に、構築済み環境から選択する。
 
 ```bash
 cmoc_work_root="$(git rev-parse --show-toplevel)"
@@ -54,7 +54,7 @@ cd "$cmoc_work_root"
 
 - 表示された Python version が `project.requires-python` を満たすことを確認する。
 - path、version、または module が不足している場合は検査を開始しない。
-- 不足している前提を具体的に報告し、環境構築が必要な未完了状態として停止する。
+- 不足している前提を具体的に報告する。環境構築が必要な未完了状態として、検査を停止する。
 - preflight の失敗を回避するために、その場で package を導入してはいけない。
 
 ## focused test と検査対象を選択する
@@ -142,7 +142,7 @@ fresh な完了ゲートの対象となる変更は、全 command が成功し�
 - 実経路統合テストの未実行、失敗、または環境不足による skip がある場合は、full test 未完了とする。
 - その他の skip は reason と対象を確認し、今回必要な検証を欠く場合は未完了とする。
 - test または品質検査の失敗を残したまま完了扱いにしてはいけない。
-- development mode と `ResourceWarning` 検査だけですべての resource leak を検出できるとは保証しない。
+- development mode と `ResourceWarning` 検査だけで、すべての resource leak を検出できる保証はない。
 
 ## 実行結果を報告する
 
@@ -159,4 +159,4 @@ fresh な完了ゲートの対象となる変更は、全 command が成功し�
 - model provider、quota、timeout など、出力から確認できた実行上の原因
 - full test が fresh に完了したか、未完了ならその理由
 
-失敗した期待値を変更すべきかという意味上の判断は、実行上の原因分類と同じ作業として扱わない。必要な場合は、別の仕様調査として明示する。
+test が失敗したとき、期待値を変更すべきかという意味上の判断は、実行上の原因分類とは別に扱う。この判断が必要な場合は、別の仕様調査であることを明示する。

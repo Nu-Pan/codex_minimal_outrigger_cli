@@ -43,7 +43,7 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
 └── invocation/{{time-stamp}}.md
 ```
 
-`observation/v1` の `v1` は raw observation 保存 layout の version であり、内包する reporter input schema の version とは独立する。reporter input version 2 の導入だけを理由に、既存 raw observation の path を移動しない。
+`observation/v1` の `v1` は、raw observation の保存 layout の version を表す。保存する reporter input schema の version とは独立している。reporter input version 2 の導入だけを理由に、既存 raw observation の path を移動しない。
 
 `{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session と run の join または abandon は、feedback state を暗黙に取り込み、巻き戻し、複製、または削除してはならない。
 
@@ -67,7 +67,14 @@ state を構成する artifact の役割を次に示す。
 | publication completion record | merge または no-op join 後の session commit、run branch の到達可能性、および最終 tree 検証結果を report cut と結び付ける immutable な記録 |
 | `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった処理の確定済み結果と blocker を materialize した durable な Markdown report |
 
-timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。current pointer が参照する generation manifest と正常 Markdown report の path および hash を検証できる場合だけ、その組を最新の正常 publication とする。current pointer は `incomplete` 診断 report を参照しない。
+次の情報から current state を推測してはならない。
+
+- timestamp
+- Git commit
+- branch reachability
+- directory の列挙順
+
+最新の正常 publication は、current pointer が参照する generation manifest と正常 Markdown report の組とする。ただし、両方の path と hash を検証できる場合に限る。current pointer は `incomplete` 診断 report を参照しない。
 
 ## JSON と排他制御
 
@@ -96,7 +103,7 @@ machine issue の canonical key は、detector rule が定める machine issue k
 
 agent observation から新しい issue を作る場合は、最初の observation ID から安定した canonical key を作る。normalization agent が既存 issue との同一性を選んだ場合は、既存の issue ID と canonical key を維持する。
 
-issue ID は canonical key の hash から決定論的に生成する。同じ issue ID と異なる canonical key が見つかった場合は collision として停止し、暗黙に salt を追加してはならない。
+issue ID は canonical key の hash から決定論的に生成する。同じ issue ID に対して異なる canonical key が見つかった場合は、collision として停止する。暗黙に salt を追加してはならない。
 
 active state に残っていない過去の agent issue と、後日の observation の同一性は判定しない。machine issue は canonical key が同じであれば、再発時にも同じ issue identity を使用する。
 
@@ -120,7 +127,7 @@ evidence は、削除予定の raw observation、intake wave、または report 
 
 machine observation は、rule の canonical key と recurrence window で集約する。threshold 未満の場合は issue を作らず、判定に必要な count、distinct dimension、time bucket、代表 evidence、および fingerprint だけを bounded aggregate として保持する。
 
-threshold を満たした aggregate は issue candidate へ昇格し、同じ generation に aggregate として重複保存しない。window 外の occurrence を除いた結果が空なら aggregate を削除する。threshold 未満 aggregate は人間向け report に表示しない。
+threshold を満たした aggregate は issue candidate へ昇格させる。同じ generation に aggregate として重複保存してはならない。window 外の occurrence を除いた結果が空なら aggregate を削除する。threshold 未満の aggregate は、人間向け report に表示しない。
 
 ## intake wave と high-watermark
 
@@ -136,7 +143,12 @@ threshold を満たした aggregate は issue candidate へ昇格し、同じ ge
 
 wave input は durable 保存後に変更しない。追加 evidence は後続 wave の入力として同じ issue identity へ関連付けてよいが、先行 wave を書き換えてはならない。
 
-同じ run ですでに remediation call を実行した issue identity と、同じ run で `fixed | already_resolved | not_actionable | human_required` に確定した issue identity は、後続 wave の remediation 対象にしない。完全な重複 observation も新しい wave の理由にしない。
+次の issue identity は、後続 wave の remediation 対象にしない。
+
+- 同じ run ですでに remediation call を実行した issue identity
+- 同じ run で `fixed | already_resolved | not_actionable | human_required` に確定した issue identity
+
+完全に重複する observation も、新しい wave を作る理由にしない。
 
 ### high-watermark
 
@@ -179,7 +191,7 @@ merge または no-op join 後は、session tree の commit と最終 tree 検�
 
 ## `incomplete` 診断 report
 
-全 issue が終端結果に達し、1 件以上が `inconclusive` である場合は、run branch の session branch への merge または no-op join の成功後に `incomplete` 診断 report を保存する。`inconclusive` を `human_required` または active issue に変換してはならない。
+全 issue が終端結果に達し、1 件以上が `inconclusive` である場合は、`incomplete` 診断 report を保存する。保存は、run branch から session branch への merge または no-op join の成功後に行う。`inconclusive` を `human_required` または active issue に変換してはならない。
 
 `incomplete` 診断 report は、次へ durable に保存する。
 
@@ -187,7 +199,15 @@ merge または no-op join 後は、session tree の commit と最終 tree 検�
 {{repo-root}}/.cmoc/gu/ar/report/feedback/incomplete/{{time-stamp}}.md
 ```
 
-診断 report は、intake wave、report cut、または checkpoint を削除しても単独で読める内容として durable 保存し、path と hash を再検証する。保存しても新しい active generation を作らず、current pointer、直前の active state、および raw observation を維持する。
+診断 report は、次の artifact を削除しても単独で読める内容にする。
+
+- intake wave
+- report cut
+- checkpoint
+
+report を durable 保存した後、path と hash を再検証する。
+
+診断 report を保存しても、新しい active generation は作らない。current pointer、直前の active state、および raw observation を維持する。
 
 診断 report を durable に保存できなかった場合は、処理を `incomplete` として完了させない。raw observation、直前の current pointer、report cut、および再確認に必要な正式な checkpoint を保持し、正常 publication と cleanup を行わずにエラー終了する。
 

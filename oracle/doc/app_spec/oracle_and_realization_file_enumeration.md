@@ -2,7 +2,7 @@
 
 ## 分類結果
 
-「oracle file を列挙」または「realization file を列挙」と言った場合、`{{work-root}}` 配下の全 file を拡張子で制限せず glob し、本節の条件で分類した結果と完全に一致させる。
+oracle file または realization file の列挙結果は、`{{work-root}}` 配下の全 file を拡張子で制限せず glob し、本節の条件で分類した結果と完全に一致させる。
 この full glob は結果の契約であり、検証済みの常時対象外 subtree まで物理的に traversal することは要求しない。
 
 列挙上の常時対象外 root は、次の `{{work-root}}` 直下の exact path とする。
@@ -46,7 +46,7 @@ doctor preprocess と realization refactor の refactor state 同期は、この
 常時対象外 root は、descendant の traversal 前に pruning する。
 nested の `.git` path は、実際の repository metadata であると確認できた場合だけ pruning 境界とする。
 
-存在する root の pruning 境界と nested の `.git` path は、repository metadata の確認または descendant の traversal より前に `lstat` 相当で検証する。
+root の pruning 境界と nested の `.git` path が存在する場合は、`lstat` 相当で検証する。この検証は、repository metadata の確認または descendant の traversal より前に行う。
 境界の種類ごとの扱いは次のとおりとする。
 
 - directory なら、その descendant を traversal しない

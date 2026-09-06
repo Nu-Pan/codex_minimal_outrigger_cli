@@ -4,7 +4,7 @@
 
 - run は、workload 固有の fork で開始し、join または abandon で終了する隔離作業の 1 instance である。
 - workload は、run が行う作業の種類である。
-- fork, join, abandon は run の lifecycle 操作を表す。公開 CLI のサブコマンド名と一致する場合に限らない。
+- fork, join, abandon は run の lifecycle 操作を表す。公開 CLI のサブコマンド名と一致するとは限らない。
 - run が使用する branch、commit、および worktree の定義と命名は、`{{cmoc-root}}/oracle/doc/branch_model.md` の `{{cmoc-run-branch}}` 以降を正本とする。
 - 永続化する run state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「run field」を正本とする。
 

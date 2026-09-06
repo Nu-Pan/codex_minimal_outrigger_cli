@@ -1,8 +1,12 @@
 # `cmoc feedback report`
 
-`cmoc feedback report` は、同一 invocation 内で feedback remediation run を作成し、安全な realization file の修正を issue 単位で commit して session branch へ自動 join する。正常 publication には、join 後も `human_required` である issue だけを掲載する。
+`cmoc feedback report` は、同一 invocation 内で feedback remediation run を作成する。安全な realization file の修正を issue 単位で commit した後、session branch へ自動 join する。正常 publication には、join 後も `human_required` である issue だけを掲載する。
 
-raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「feedback observation の収集」を正本とする。結果分類は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」を正本とする。repository-local state は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
+関連する仕様の正本を次に示す。
+
+- raw observation：`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「feedback observation の収集」
+- 結果分類：`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」
+- repository-local state：`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」
 
 ## CLI 契約
 
@@ -28,7 +32,7 @@ raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md
 9. `run.kind=feedback_report` として `{{cmoc-run-branch}}` と `{{cmoc-run-worktree}}` を作成し、`run.state=running` とする。
 10. collector の最初の high-watermark を確定し、最初の intake wave を固定する。
 
-clean 検査は doctor preprocess と indexing preflight の完了後に行う。新しい run の開始経路では `run.state=ready` を必須とする。後述する join 後 recovery は新しい run を開始しないため、この事前条件の例外とする。
+clean 検査は、doctor preprocess と indexing preflight の完了後に行う。新しい run を開始する場合は、`run.state=ready` を必須とする。後述する join 後 recovery は新しい run を開始しないため、この事前条件の例外とする。
 
 recovery 対象ではない active run が残っている場合、または事前条件に違反した場合は、新しい run を作らない。既存の worktree、staging area、raw observation、および current pointer を変更しない。
 
@@ -101,7 +105,11 @@ normalization agent は、summary、impact、原因、現在性、actionability�
 
 ### issue remediation agent call
 
-issue remediation agent call は、1 issue の現在状態の確認、realization file だけで可能な修正、および修正後の検証を同じ call 内で行う。
+issue remediation agent call は、1 issue について次の処理を同じ call 内で行う。
+
+1. 現在状態の確認
+2. realization file だけで可能な修正
+3. 修正後の検証
 
 正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.py` の `build_feedback_remediate_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
@@ -131,7 +139,10 @@ cmoc は、論理 agent call の開始時点から正式な終了時点までの
 
 - output の issue ID が入力 issue identity と一致する。
 - schema の `changed_paths` に重複がなく、そこから得る path 集合が実際の realization file の変更 path 集合と一致する。
-- path は正規化済みの `{{work-root}}` 相対 path であり、追加と変更は終了時点、削除は開始時点、rename は rename 前後の path で表す。
+- path は、正規化済みの `{{work-root}}` 相対 path とする。変更の種類ごとの表現は次のとおりとする。
+    - 追加と変更：終了時点の path
+    - 削除：開始時点の path
+    - rename：rename 前後の path
 - `fixed` は 1 件以上の実際の realization 差分と、成功した修正後 verification を持つ。
 - `already_resolved`、`not_actionable`、および `inconclusive` は実際の差分を持たない。
 - `human_required` が差分を持つ場合、その差分は独立して安全であり、必要な verification が成功している。
@@ -140,7 +151,10 @@ cmoc は、論理 agent call の開始時点から正式な終了時点までの
 
 この検査は workload の commit 受理条件であり、file access mode 違反の判定またはリカバリとして扱わない。`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「ファイルアクセス制限違反の事後検証とリカバリ」を変更しない。
 
-agent が返した `fixed` の自己申告だけを、意味的な正しさの証明として扱ってはならない。agent が必要な検証を実行して結果を報告し、cmoc が schema、決定論的事後条件、差分、および検証記録を照合できる場合だけ正式な結果とする。
+agent が返した `fixed` の自己申告だけを、意味的な正しさの証明として扱ってはならない。正式な結果とするには、次の両方を満たす必要がある。
+
+- agent が必要な検証を実行し、結果を報告している。
+- cmoc が、schema、決定論的事後条件、差分、および検証記録を照合できる。
 
 ### issue 単位の commit と rollback
 
@@ -153,7 +167,7 @@ agent が返した `fixed` の自己申告だけを、意味的な正しさの�
 
 実際の tracked 差分が空の場合は、空 commit を作らない。`already_resolved`、`not_actionable`、および差分のない `human_required` は、commit なしの正式な checkpoint としてよい。
 
-`human_required` であっても、安全で独立して検証済みの部分修正は同じ issue commit に残してよい。安全に部分確定できない変更は、処理単位全体を agent call 開始時点へ rollback する。
+`human_required` であっても、安全で独立して検証済みの部分修正は、同じ issue commit に残してよい。変更を安全に部分確定できない場合は、処理単位全体を agent call 開始時点へ rollback する。
 
 commit が成功する前に `fixed` として publication、active state からの除外、または observation cleanup を行ってはならない。commit または rollback 後は、次の issue call を開始する前に run worktree と staging area が整合した clean 状態でなければならない。
 
@@ -223,17 +237,36 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 自動 join 後の publication または cleanup に失敗した場合は、`run.state=error` とする。merge と publication point を巻き戻さず、raw observation、current pointer、および recovery に必要な run artifact を保持する。
 
-次回の `cmoc feedback report` は、state と immutable artifact から同じ run の join 成功と未完了処理を一意に特定し、join 後 tree を再検証できる場合だけ、その publication または cleanup を idempotent に再開する。新しい wave または Codex call は開始しない。安全に再開できない場合は `run.state=error` と資源を維持する。
+次回の `cmoc feedback report` は、次の条件を両方満たす場合だけ、その publication または cleanup を idempotent に再開する。
+
+- state と immutable artifact から、同じ run の join 成功と未完了処理を一意に特定できる。
+- join 後 tree を再検証できる。
+
+新しい wave または Codex call は開始しない。安全に再開できない場合は、`run.state=error` と資源を維持する。
 
 ## ユーザー中断
 
 本コマンドは中断可能サブコマンドとする。共通動作は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」を正本とする。
 
-`Ctrl+C` は issue remediation agent call 中を含む wave loop の実行中に受け付ける。要求後は新しい agent call や retry を開始せず、実行中の issue 処理単位を commit または rollback で整合させる。自動 join と publication は行わず、`run.state=joinable` として確定済み commit、raw observation、current pointer、および必要な checkpoint を保持する。
+`Ctrl+C` は、issue remediation agent call 中を含む wave loop の実行中に受け付ける。中断要求後は、新しい agent call や retry を開始せず、実行中の issue 処理単位を commit または rollback で整合させる。
+
+自動 join と publication は行わず、`run.state=joinable` とする。次の確定済み成果物と state は保持する。
+
+- 確定済み commit
+- raw observation
+- current pointer
+- 必要な checkpoint
 
 中断後は、`cmoc run join` で確定済み issue commit を session branch へ取り込むか、`cmoc run abandon` で run を破棄する。どちらの場合も feedback publication は行わず、次の `cmoc feedback report` が現在の session tree と pending observation を再確認する。
 
-自動 join の開始後は、merge または no-op join、join 後 tree 検査、publication、および cleanup を中途半端な状態で中断しないため、workload 固有の不可分な finalization とする。この区間の process interruption または操作失敗はユーザー中断の部分結果へ変換せず、自動 join の成否に応じて本書の recovery または続行不能な失敗として扱う。
+自動 join の開始後から cleanup までは、処理を途中で中断しないため、workload 固有の不可分な finalization とする。この区間には、次の処理を含む。
+
+1. merge または no-op join
+2. join 後 tree 検査
+3. publication
+4. cleanup
+
+この区間の process interruption または操作失敗は、ユーザー中断の部分結果へ変換しない。自動 join の成否に応じて、本書の recovery または続行不能な失敗として扱う。
 
 ## 続行不能な失敗
 
@@ -265,7 +298,17 @@ primary report の実行記録には、`{{cmoc-root}}/oracle/doc/app_spec/consol
 - remediation 対象 issue 数と `human_required` issue 数
 - `result: ok | attention`
 
-issue 一覧には、`human_required` だけを安定した issue ID 順で表示する。各 issue には、identity、category、summary、impact、human action、concrete current evidence、occurrence 集計、観測期間、および bounded representative evidence を簡潔に示す。
+issue 一覧には、`human_required` だけを安定した issue ID 順で表示する。各 issue には、次の情報を簡潔に示す。
+
+- identity
+- category
+- summary
+- impact
+- human action
+- concrete current evidence
+- occurrence 集計
+- 観測期間
+- bounded representative evidence
 
 current evidence は、削除予定の wave または checkpoint だけを指す link にしない。人間が report から確認できる path、subject、probe、location、fingerprint、または finding を materialize する。
 

@@ -18,7 +18,7 @@
     - `session.last_joined_apply_fork_commit` が存在する場合は、その commit。
     - 初回の場合は `session.session_fork_commit`。
 - Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
-- cmoc は始点と終点を commit ID に確定して agent に渡す。agent は既存の cwd と `{{work-root}}` を用い、その repository の指定した両 commit 間の差分を Git から取得する。
+- cmoc は、始点と終点の commit ID を確定して agent に渡す。agent は既存の cwd と `{{work-root}}` を用い、その repository で指定された両 commit 間の差分を Git から取得する。
 - 対象は、両端のいずれかで oracle file だった path とし、rename を考慮する。追加・削除と oracle 内外をまたぐ rename を含め、現在の oracle 配下だけを候補集合にしてはならない。
 - 上記に該当しない realization file、`INDEX.md`、その他の非 oracle file の変更は追従対象外とする。
 - 差分に現れた file だけを作業範囲としてはいけない。関連する oracle file と realization file を `{{work-root}}` リポジトリ全体から調査する。
@@ -52,14 +52,19 @@
 
 ## エラー
 
-- 本命 agent call を正常に開始または終了できない場合、差分を整合した単位へ commit または rollback できない場合、あるいは後処理に失敗した場合は `run.state` を `error` にする。
+- 次のいずれかに該当する場合は、`run.state` を `error` にする。
+    - 本命 agent call を正常に開始または終了できない。
+    - 差分を整合した単位として commit または rollback できない。
+    - 後処理に失敗した。
 - エラー後は `cmoc run join` で確定済み成果物を取り込むか、`cmoc run abandon` で run を破棄する。
 
 ## fork report と終了コード
 
 - `natural_completion` と `error` のすべての終了経路で report を保存する。共通 fork 事前条件違反など、run branch、run worktree、または本命 agent call の開始前に確定したエラーも対象とする。
 - 共通 run 項目に加え、terminal result の共通分類、差分の始点 commit、Codex CLI の終了結果、変更 path、エラー、および関連ログを含める。
-- YAML Front Matter には、この invocation で reporter が受理した feedback の `feedback_observation_count` と `feedback_observations` を含める。`feedback_observations` は `observation_id` と raw observation file の full `path` を持つ object の配列とする。0 件の場合も count は 0、配列は空とする。
+- YAML Front Matter には、この invocation で reporter が受理した feedback の情報を含める。
+    - `feedback_observation_count` は件数を表す。0 件の場合も 0 を含める。
+    - `feedback_observations` は、`observation_id` と raw observation file の full `path` を持つ object の配列とする。0 件の場合は空配列とする。
 - 差分の終点は共通項目の `{{cmoc-run-fork-commit}}` で表し、同じ commit を別項目として重複掲載しない。
 - AI による意味的な変更要約は生成しない。
 - `{{repo-root}}/.cmoc/gu/ar/report/realization/apply/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。

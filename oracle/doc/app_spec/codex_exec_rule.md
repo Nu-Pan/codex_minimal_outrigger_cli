@@ -4,7 +4,9 @@
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
 - 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする
-- 個別 agent call の AgentCallParameter builder は、対応する oracle doc が明示的に委譲した範囲で、正確な prompt 文面と、model provider、Model、および Reasoning Effort を除く workload 固有の起動パラメータを構築する
+- 個別 agent call の AgentCallParameter builder は、対応する oracle doc から明示的に委譲された範囲で、次の内容を構築する
+    - 正確な prompt 文面
+    - workload 固有の起動パラメータ。ただし、model provider、Model、および Reasoning Effort は除く
 - `AgentCallParameter` の field 名、型、および既定値を含む正確な構造は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
 - 本書で agent call とは、1 個の `AgentCallParameter` に対する論理的な呼び出し単位を指す
 - Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
@@ -20,7 +22,10 @@
 - `work_root` と `repo_root` は、linked worktree、submodule、および separate git directory を含め、Git が保持する repository metadata から導出する
 - 名前が `.git` であるだけの通常の file または directory を Git repository metadata として扱ってはならない
 - `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
-- call-scoped path context、root placeholder、および Git command を含む導出処理の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `RootPathPlaceHolder`、`AgentCallPathContext`、`resolve_work_root`、および `resolve_repo_root` へ委譲する。prompt part との受け渡しは `{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py` の `PlaceholderMap`、完全 prompt への統合は `{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
+- path context に関する正確な定義は、次の oracle src へ委譲する
+    - call-scoped path context、root placeholder、および Git command を含む導出処理：`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `RootPathPlaceHolder`、`AgentCallPathContext`、`resolve_work_root`、および `resolve_repo_root`
+    - prompt part との受け渡し：`{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py` の `PlaceholderMap`
+    - 完全 prompt への統合：`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`
 
 ### `{{work-root}}` に対する仮定
 
@@ -53,8 +58,8 @@ call-scoped path context の適用範囲を次に示す。
 
 ## 環境変数 `$CODEX_HOME`
 
-- cmoc 呼び出し時点で `$CODEX_HOME` が設定済みであるなら、それをそのまま Codex CLI に渡す
-- cmoc 呼び出し時点で `$CODEX_HOME` が未設定であるなら、`CODEX_HOME=${HOME}/.codex` 相当の絶対パスを設定して Codex CLI に渡す
+- cmoc 呼び出し時点で `$CODEX_HOME` が設定済みなら、その値をそのまま Codex CLI に渡す
+- cmoc 呼び出し時点で `$CODEX_HOME` が未設定なら、`CODEX_HOME=${HOME}/.codex` 相当の絶対パスを設定して Codex CLI に渡す
 
 ## preflight validation
 
@@ -74,7 +79,7 @@ call-scoped path context の適用範囲を次に示す。
     - `key=value` は 1 個の argv 要素として渡す
     - `value` は Codex CLI が解釈する TOML 値とする
 - cmoc が上書きする設定について、`$CODEX_HOME/config.toml` や project config の値に依存してはならない
-- 全ての Codex CLI 呼び出しで、次の承認設定を呼び出し単位の argv により明示的に上書きする
+- すべての Codex CLI 呼び出しで、次の承認設定を呼び出し単位の argv により明示的に上書きする
     - `approval_policy`: `"on-request"`
     - `approvals_reviewer`: `"auto_review"`
 - Codex CLI 呼び出しにおける Windows toast 通知の effective configuration、`codex exec` と TUI の境界、および callback の検証条件は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
@@ -83,7 +88,7 @@ call-scoped path context の適用範囲を次に示す。
 
 ### Codex CLI sandbox
 
-- 全ての Codex CLI 呼び出しで、専用引数 `--sandbox` を明示する
+- すべての Codex CLI 呼び出しで、専用引数 `--sandbox` を明示する
 - `--sandbox` の値は `read-only` または `workspace-write` のどちらかに限定する
 - `AgentCallParameter.file_access_mode` は次のように `--sandbox` へ対応付ける
     - `READONLY`, `PURE_ORACLE_READ`: `--sandbox read-only`
@@ -113,7 +118,9 @@ call-scoped path context の適用範囲を次に示す。
 
 - 詳細なファイルアクセス制限は deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する
 - `NO_POLICY` 以外の全 file access mode では、次の制限を共通で適用する
-    - `{{work-root}}` と `{{repo-root}}` が同一の場合は、`{{work-root}}` ツリー外の読み書きを禁止する。両者が異なる場合は、`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外の読み書きを禁止する。ただし、次の Git metadata の読み取り例外を除く
+    - ツリー外の読み書きは、次のように禁止する。ただし、後述する Git metadata の読み取り例外を除く
+        - `{{work-root}}` と `{{repo-root}}` が同一の場合：`{{work-root}}` ツリー外を禁止する
+        - 両者が異なる場合：`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外を禁止する
     - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc/g*/ar` ツリー内の書き込みを禁止する。`{{work-root}}` と `{{repo-root}}` が異なる場合は、`{{repo-root}}/.cmoc/g*/ar` ツリー内の書き込みも禁止する
     - `AGENTS.md` と `INDEX.md` の書き込みを禁止する
     - `{{work-root}}/memo` の読み書きを禁止する
@@ -137,7 +144,12 @@ call-scoped path context の適用範囲を次に示す。
 
 ### permission profile の不使用と動的生成禁止
 
-- cmoc は、動的生成を含め、permission profile の生成、更新、選択、Codex CLI への注入、および事前作成された permission profile への依存をしてはならない
+- cmoc は permission profile に関して、動的生成を含む次の操作を行ってはならない
+    - 生成
+    - 更新
+    - 選択
+    - Codex CLI への注入
+    - 事前作成された permission profile への依存
 - この禁止は動的生成の入力の種類を問わず、`AgentCallParameter`、file access mode、プロンプト、oracle file、設定、実在 path、ファイル一覧、`.gitignore` の規則、`git check-ignore` の判定結果、およびそれらの組み合わせを入力とする場合を含む
 - permission profile を一時ファイル、設定ファイル、argv、環境変数、`--config` など、いかなる経路でも Codex CLI に注入してはならない
 - oracle file が特定の path に対するアクセス制限を要求する場合も、その制限はプロンプトへ反映し、permission profile や path 単位の sandbox 設定へ変換してはならない
@@ -146,7 +158,7 @@ call-scoped path context の適用範囲を次に示す。
 
 ## ファイルアクセス制限違反の事後検証とリカバリ
 
-- agent call が発生させた差分がファイルアクセス制限に違反していないかの事後検証は禁止とする
+- agent call による差分について、ファイルアクセス制限への違反を事後検証してはならない
 
 ## Model provider、Model、Reasoning Effort
 
@@ -154,7 +166,7 @@ call-scoped path context の適用範囲を次に示す。
 - cmoc は agent call ごとに、`AgentCallParameter.agent_call_kind` を key として `CmocConfigCodex` の対応する設定を取得する
 - 取得した model provider、Model、および Reasoning Effort は、初回、Structured Output の補正、retry、および quota 待機後の resume を含む同一 agent call 内の全 Codex call で変更せず使用する
 - quota availability probe は独立した agent call とし、probe 自身の `agent_call_kind` に対応する設定を使用する
-- Codex CLI に対する Model と Reasoning Effort は、全ての呼び出しで次の argv により明示的に上書きする
+- Codex CLI に対する Model と Reasoning Effort は、すべての呼び出しで次の argv により明示的に上書きする
     - Model: `--model`, `{{model-name}}`
     - Reasoning Effort: `--config`, `model_reasoning_effort="{{reasoning-effort}}"`
 - model provider ID は、次と同じ形の argv により呼び出し単位で明示的に上書きする
@@ -250,7 +262,11 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 - reporting の意味は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
 - cmoc は Codex call の開始前に、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「collector と transport」が定める call context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする
 - cmoc は call-scoped な Codex CLI `--config` override により、MCP server namespace `cmoc_feedback`、公開 tool `submit_observation`、同 tool の approval behavior、および MCP process に必要な起動情報を設定する
-- cmoc は `cmoc_feedback` の effective configuration 全体を呼び出し単位で支配する。user config、`$CODEX_HOME/config.toml`、または project config の server 定義、tool 設定、approval behavior、および起動情報に依存してはならず、それらによって別 tool の公開または reporter の置換を許してはならない
+- cmoc は、`cmoc_feedback` の effective configuration 全体を呼び出し単位で管理する。user config、`$CODEX_HOME/config.toml`、または project config にある次の情報には依存してはならない。また、これらの設定によって、別 tool の公開または reporter の置換を許してはならない
+    - server 定義
+    - tool 設定
+    - approval behavior
+    - 起動情報
 - 通常の `cmoc_feedback.submit_observation` は、human approval、auto-review、または command sandbox escalation を要求せずに実行できるよう設定する
 - reporter と collector の残りの lifecycle は、同仕様の「collector と transport」を正本とする。初回 prompt で注入済みの reporting instruction は、correction schema または correction prompt へ重複させない
 
@@ -268,7 +284,7 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 
 - Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_call.json` に保存すること
 - `{{time-stamp}}_stdout.jsonl`, `{{time-stamp}}_stderr.log`, `{{time-stamp}}_output.json` に残らない情報だけを `{{time-stamp}}_call.json` に書くこと
-- 同一の Codex CLI 呼び出しの間で `{{time-stamp}}` は一致しなければならない
+- 同一の Codex CLI 呼び出しでは、`{{time-stamp}}` を一致させる
 - 1 回の agent call に初回と補正の複数 Codex call が含まれる場合は、Codex call ごとに別の `{{time-stamp}}` と log 一式を作成する
 - 後続の Codex call は、先行する Codex call の log または出力を上書きしてはならない
 
@@ -277,7 +293,7 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 - `--json` を必ず指定すること
 - stdout は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stdout.jsonl` に出力すること
 - stderr は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stderr.log` に出力すること
-- stdout, stderr をコンソールには流さないこと
+- stdout, stderr をコンソールに出力しないこと
 
 ## Codex session ID
 
@@ -299,7 +315,14 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
 - スキーマは、一度 `{{repo-root}}/.cmoc/gu/ar/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
 - `{{hash}}` は schema 本文の SHA256 ハッシュとする
-- Structured Output の field の意味、型、必須性、列挙値、配列要素数、入れ子、および field 間の構造的な組み合わせは、JSON Schema で説明できる限り schema だけで説明し、schema を正本とする
+- Structured Output の出力要件は、JSON Schema で説明できる限り schema だけで説明し、schema を正本とする。対象は次の事項とする
+    - field の意味
+    - 型
+    - 必須性
+    - 列挙値
+    - 配列要素数
+    - 入れ子
+    - field 間の構造的な組み合わせ
 - 出力要件を schema と prompt の両方で説明してはならない。prompt には schema で説明できない要件だけを記載する
 - 実行時状態との照合が必要で schema に置けない決定論的事後条件は、workload 固有の oracle doc を正本とする。対応する AgentCallParameter builder は、その正確な agent 向け文面を所有する
 - schema または宣言済みの決定論的事後条件に含まれない意味的品質を、機械的な受理条件にしてはならない
@@ -314,8 +337,8 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
     1. JSON parse
     2. JSON Schema validation
     3. 初回 prompt で宣言された決定論的事後条件の検証
-- cmoc が正式な結果として解釈してよいのは、最後に全検証へ合格した出力だけとする
-- 検証へ不合格だった出力を、部分的な結果、fallback、または後続処理の入力として解釈してはいけない
+- cmoc が正式な結果として解釈してよいのは、最後に全検証に合格した出力だけとする
+- 検証に不合格だった出力を、部分的な結果、fallback、または後続処理の入力として解釈してはいけない
 - 不合格だった出力と、初回および各補正の Codex call log は、破棄、上書き、または改変してはいけない
 
 ### 同じ session での出力補正
@@ -328,7 +351,7 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 - 補正 prompt には、検出できた検証エラーを出力修正に必要な範囲でまとめる
 - 各検証エラーには、違反した条件、対象 field または位置、期待値、および観測値を含める
 - 補正 prompt で、初回応答前に宣言されていなかった受理条件を追加してはいけない
-- 補正後の出力も、初回出力と同じ機械的検証へ通す
+- 補正後の出力にも、初回出力と同じ機械的検証を行う
 - 補正 Codex call は初回 Codex call 後に最大 2 回まで行う。したがって、出力生成 turn は初回を含めて最大 3 回とする
 - 出力補正の間隔を開ける必要はない
 
@@ -344,14 +367,14 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 
 ### 補正不能時の扱い
 
-- 最大 2 回の補正後も検証へ合格しない場合は、検証を緩和せず既存のエラー処理へ移る
+- 最大 2 回の補正後も検証に合格しない場合は、検証を緩和せず既存のエラー処理へ移る
 - prompt、schema、および validator が矛盾している場合は、補正によって矛盾を隠そうとせず既存のエラー処理へ移る
 - 作業成果物の差分変動、session の再開不能、またはその他の出力修正だけでは解消できない失敗も、検証を緩和せず既存のエラー処理へ移る
 - Structured Output の正式な結果を得られず既存のエラー処理へ移る場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` が定める `codex.structured_output_validation_exhausted` v1 event を、同仕様の安定 field とともに subcommand log へ記録する
 
 ## `codex exec` の並列呼び出し
 
-- fork-join 的な並列化が可能な場合は `codex exec` を並列実行しても良い
+- fork-join 的な並列化が可能な場合は `codex exec` を並列実行してもよい
 - ただし、最大並列数は `CmocConfig.num_parallel` で制限すること
 
 ## `codex exec` が失敗した場合
@@ -359,7 +382,7 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 ### 基本的な考え方
 
 - 異常な状態に基づいた無駄な作業によるトークンの浪費を避けたい
-- quota 不足で停止した場合は quota が復活するまで待機・再開してほしい
+- quota 不足で停止した場合は、quota が回復するまで待機し、その後に再開してほしい
 - OpenAI サーバー側の一時的な問題であることが明白な既知のエラーなら、自動的にリトライしてほしい
 
 ### Structured Output の出力契約違反
@@ -370,19 +393,19 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 ### quota 枯渇・レートリミットで停止した場合
 
 - quota が枯渇して Codex CLI の実行が停止した場合、再び実行可能な状態になるまで待機し、再開する
-- quota が枯渇とは
-    - e.g. 5h limit が枯渇して credits も無い
-    - e.g. weekly limit が枯渇して credits も無い
-- 再び実行可能な状態とは
-    - e.g. 5h limit がリセットされて、元々 weekly limit も残っていたので、実行可能になった
-    - e.g. 人間が credits を追加購入した
+- quota が枯渇した状態の例：
+    - 5h limit が枯渇し、credits もない
+    - weekly limit が枯渇し、credits もない
+- 再び実行可能な状態の例：
+    - weekly limit が残っている状態で 5h limit がリセットされ、実行可能になった
+    - 人間が credits を追加購入した
 - 待機とは
     - 動作確認用のミニマルな Codex CLI 呼び出しを定期的に繰り返し実行する（ポーリング待機）
-    - 動作確認の間隔は 30 分に１回とする
+    - 動作確認の間隔は 30 分に 1 回とする
 - quota availability probe の task は短い応答を 1 回返すことに限定し、追加の調査または作業を non-goal とする
 - probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_parameter` へ委譲する
-- 並列に呼び出した Codex CLI 呼び出しが同時に待機に突入した場合
-    - 一番最初に待機に入ったスレッドだけが代表してポーリングを行う
+- 並列実行中の Codex CLI 呼び出しが同時に待機へ入った場合は、次のように扱う
+    - 最初に待機へ入ったスレッドだけが、代表してポーリングを行う
     - 複数スレッドで並列にポーリングを行うのは禁止
 - 再開対象の session ID は、本書の「Codex session ID」に従って停止した Codex call の stdout JSONL から取得する
 - 再開とは
@@ -409,8 +432,8 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
     - `{"type":"error", "message": "...Selected model is at capacity..."}`
     - `{"type":"turn.failed", "error":{"message": "...Selected model is at capacity..."}}`
 - 8 回までリトライする
-- リトライの間隔は 5 sec を初期値として、リトライ失敗 1 回毎に間隔を倍に増やす
-- リトライが全て失敗したら、続行しようとせずに即時コマンド全体を失敗させる
+- リトライの間隔は 5 sec を初期値とし、リトライが 1 回失敗するごとに倍にする
+- リトライがすべて失敗したら、続行しようとせずに即時コマンド全体を失敗させる
 
 ### それ以外の想定外のエラー
 
@@ -419,6 +442,6 @@ editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/edi
 
 ## `.agents` 配下を編集出来ない問題
 
-- `.agents` ツリー内 Codex CLI で特別扱いされているため、人間が個別に approve しないと編集出来ない
-- `codex exec` は個別の approve が出来ないので `{{repo-root}}/.agents` 配下は絶対に編集できない（やろうとしても失敗する）
-- `.agents` ツリー内編集は cmoc としても禁止とする
+- `.agents` ツリー内は Codex CLI で特別扱いされているため、人間が個別に approve しないと編集できない
+- `codex exec` では個別に approve できないため、`{{repo-root}}/.agents` 配下は編集できない。編集を試みても失敗する
+- cmoc としても、`.agents` ツリー内の編集を禁止する

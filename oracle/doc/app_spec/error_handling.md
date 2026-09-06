@@ -6,7 +6,7 @@
 
 ### handled failure
 
-handled failure は、個別仕様または共通仕様が想定済みの失敗として判断可能にしたエラー終了である。少なくとも次の失敗を含む。
+handled failure は、個別仕様または共通仕様から、想定済みの失敗と判断できるエラー終了である。少なくとも次の失敗を含む。
 
 - 明示された事前条件への違反
 - 既知の conflict
@@ -31,7 +31,7 @@ internal failure は、仕様で想定済みの失敗へ変換されていない
 - 最外側の非対話末端サブコマンドは、エラーまでに確定した作業内容とエラー終端結果を、個別仕様が定める primary report に保存する。
 - primary report を保存した後に、`error` の terminal result とサブコマンド終了イベントを確定する。
 
-通常処理の失敗は、primary report を伴う handled failure または internal failure として確定する。primary report 自体を保存できない場合は、その結果に代えて report 保存基盤の internal failure を確定し、保存を確認できない report の役割または path を表示しない。
+通常処理の失敗は、primary report を伴う handled failure または internal failure として確定する。primary report 自体を保存できない場合は、その結果に代えて report 保存基盤の internal failure を確定する。この場合、保存を確認できない report の役割または path は表示しない。
 
 ## handled failure の表示
 

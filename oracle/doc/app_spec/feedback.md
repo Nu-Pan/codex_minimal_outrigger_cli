@@ -4,7 +4,7 @@
 
 feedback subsystem は、cmoc の作業中に見つかった問題を収集し、`cmoc feedback report` で安全な automatic remediation を先に完了する。
 
-正常な feedback publication は、automatic remediation 後も realization file の編集だけでは解決できず、現在の作業外にいる人間の対応が必要な issue だけを提示する。自動修正済みの issue は active issue または正常な人間向け issue 一覧へ残さない。
+正常な feedback publication では、現在の作業外にいる人間の対応が必要な issue だけを提示する。対象は、automatic remediation 後も realization file の編集だけでは解決できない issue に限る。自動修正済みの issue は、active issue または正常な人間向け issue 一覧へ残さない。
 
 `inconclusive` の issue がある場合は、正常 publication を行わない。代わりに、確定済みの結果と判定不能の原因を `incomplete` 診断 report で提示する。
 
@@ -36,11 +36,11 @@ feedback 全体で使用する用語と issue remediation の結果を次に示�
 | `inconclusive` | 許可された情報では結果を判定できない。`human_required` へ変換せず、`incomplete` 診断として扱う。 |
 | invocation error | agent call failure、Structured Output 受理失敗、差分検査失敗、commit 失敗、merge 失敗、publication 失敗など、feedback issue の状態ではなく invocation の処理失敗である。issue remediation の結果へ変換しない。 |
 
-理論上は realization file だけで修正できる可能性がある問題を、今回の agent call が完了できなかったことだけを理由に `human_required` としてはならない。
+理論上は realization file だけで修正できる可能性がある問題は、今回の agent call で完了できなかったという理由だけで `human_required` としてはならない。
 
 ## 処理モデル
 
-`cmoc feedback report` は、同一 invocation 内で自己完結する feedback remediation run を使用する。run branch 上で issue ごとの remediation と commit を逐次実行し、処理中に受理された新しい issue も immutable な intake wave として可能な限り処理する。
+`cmoc feedback report` は、同一 invocation 内で自己完結する feedback remediation run を使用する。run branch 上で、issue ごとの remediation と commit を逐次実行する。処理中に受理された新しい issue も、immutable な intake wave として可能な限り処理する。
 
 run branch を session branch へ自動 join した後に、join 後の tree を基準として publication を確定する。停止条件は、最終 high-watermark までに新しい未処理 issue identity がないことである。新しい異なる issue が継続的に発生する限り、自然完了しない。
 
@@ -68,7 +68,13 @@ feedback の仕様は、責務ごとに次の正本へ分ける。同じ schema�
 - run、session、および TUI の完了結果
 - feedback remediation run 自身の agent、tool、validation、差分検査、commit、merge、publication、または orchestration の失敗
 
-realization 作業中に oracle の問題を自己申告するのは、oracle file 間の矛盾、要求の実現不能、または外部挙動を左右する人間意図の選択が必要な場合に限る。実装詳細が未定義であること、複数の妥当な実装があること、または一般的な改善案だけを報告してはならない。
+realization 作業中に oracle の問題を自己申告できるのは、次の場合に限る。
+
+- oracle file 間に矛盾がある
+- 要求を実現できない
+- 外部挙動を左右する人間意図の選択が必要である
+
+実装詳細が未定義であること、複数の妥当な実装があること、または一般的な改善案だけを報告してはならない。
 
 accepted observation は、TUI の終了、ユーザー中断、または Codex process の異常終了にかかわらず保持する。本命成果物の commit または rollback と連動させない。
 

@@ -5,4 +5,4 @@
 - year は 4 桁ゼロ埋めとする
 - month、day、hour、minute、および sec は 2 桁ゼロ埋めとする
 - msec は 9 桁とする
-- timezone はそのマシンのローカルとする
+- timezone は、実行するマシンのローカルタイムゾーンとする

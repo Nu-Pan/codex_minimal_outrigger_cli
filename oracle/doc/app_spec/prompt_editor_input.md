@@ -31,7 +31,7 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 - 起動するエディタは、優先度が高い順に `code`、`nano`、`vim`、`vi` とする。
 - `code` で起動する場合は、必ず `--wait` を付ける。
 - エディタの編集対象は、editor work file とする。
-- エディタから cmoc に処理が戻ってきたら、ユーザー入力完了とみなす。
+- エディタから cmoc に処理が戻った時点で、ユーザー入力が完了したとみなす。
 
 ## editor input の確定手順
 
@@ -48,4 +48,4 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 8. 後続の AI Agent は、editor work file を参照してはならない。
 9. cmoc は、この確定手順が成功した場合に editor work file を削除する。失敗した場合は復旧用に残す。
 
-- skeleton 構築時と実行時のパラメータに対する全 field 比較、および exec 専用の prompt 一致検査は行わない。
+- skeleton 構築時と実行時のパラメータについて、全 field の比較は行わない。exec 専用の prompt 一致検査も行わない。
