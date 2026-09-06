@@ -49,18 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex 呼び出し、設定、Git、ログ、パス、状態、feedback、report、run lifecycle など、複数の実行経路で共有される実装への入口。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、結果、状態、feedback など、複数の実行経路で共有する runtime 機能への入口を提供する。
 
 ## Read this when
-- 複数のサブコマンドや実行経路にまたがる共通 runtime 機能を調査・変更するとき
-- 対象が CLI、Codex 実行、設定、Git、feedback、report、state、run lifecycle などの共有責務に関係し、個別実装へ進む前に担当モジュールを特定するとき
+- 複数の実行経路で共有される runtime 機能の配置や公開 API の入口を確認するとき
+- CLI、Codex 実行、設定、Git、ログ、パス、結果、状態、feedback などの共通 helper を横断して利用・変更するとき
+- 対象となる個別 runtime helper を特定し、その実装へ進む入口を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動だけを確認したいときは、commons 配下の該当モジュールを直接読む
-- 個別サブコマンドの業務処理、oracle／realization の仕様、または INDEX.md 生成規則だけを確認したいときは、それぞれの担当対象を直接読む
+- 特定の runtime helper の内部実装や個別挙動を直接確認したいとき
+- 特定サブコマンドの業務処理や個別仕様だけを確認したいとき
+- INDEX.md の生成規則や利用者向けルーティング仕様だけを確認したいとき
 
 ## hash
-- 16329db4a453f253ac54d05060f96453a76db62b6590d59c69d4079bef42dc54
+- 852a52b5c7e2f1b59af62bec4fc5f522b2b4d0abae2c315719316fb2f06f2883
 
 # `config`
 
@@ -116,18 +118,17 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装をまとめる package 入口。doctor、feedback、indexing、oracle、realization、run、session、tui など、各 CLI サブコマンドの実行入口と下位処理へのルーティングを扱う。
-- apply と review は現時点で実装がなく、対応するサブコマンド実装の追加先を示す空のディレクトリ。
+- cmoc の各サブコマンド実装を配置する上位パッケージ。個別サブコマンドの CLI 入口や workload 固有処理へ進むためのルーティング対象となる。
+- apply は未実装で、doctor・feedback・indexing・oracle・realization・run・session・tui の各サブコマンド実装を役割別に含む。
 
 ## Read this when
-- cmoc のサブコマンド構成や、特定サブコマンドの実装入口を確認するとき。
-- サブコマンドから共通 runtime、report、lifecycle、workload などの下位処理へ進む起点を特定するとき。
-- 新しいサブコマンド実装の配置先や、既存サブコマンドの package 境界を確認するとき。
+- cmoc のサブコマンド実装の構成や、対象サブコマンドの入口を確認するとき。
+- 特定サブコマンドの実行フローを調査・変更する際に、その個別実装への入口を判断するとき。
+- サブコマンドの追加や、既存サブコマンド実装の配置先を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理内容、仕様、状態管理、または共通 runtime の詳細を直接確認したいとき。
-- サブコマンドに関係しない oracle、realization file、Markdown、logging などの処理を調査するとき。
-- 実装が存在しない apply または review の具体的な処理を確認しようとしているとき。
+- 特定サブコマンドの具体的な処理、共通 runtime、agent 起動パラメータ、状態永続化などの詳細だけを調査するときは、対応する下位実装や共通処理を直接読む。
+- サブコマンドに関係しない oracle、realization、report、Markdown、logging の処理だけを調査するとき。
 
 ## hash
-- 51d612719685e3917036a36d7418029e4c699c2e29dade9b0d41241c4359f3c7
+- deeb23db0238140d7fb017dbdac4df2d30ddf6e906ff407c51b053722a26e948

@@ -608,20 +608,19 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- 明示的な join を必要とする editing run の共通 lifecycle 処理を担う。run の開始・state 遷移・commit、差分分類、INDEX 更新、cleanup 判定を EditingRunContext と lifecycle lock の共有下で扱う。
+- 明示的な join を必要とする editing run の開始から終了までを、EditingRunContext と lifecycle lock で一貫して管理する共通処理。
+- run の state 遷移、worktree・commit 管理、差分分類、INDEX 更新、cleanup 判定を担当する editing run lifecycle の実装入口。
 
 ## Read this when
-- editing run の開始、active run の解決・回収、joinable/error への state 遷移を変更または調査するとき
-- run worktree の差分許可範囲、oracle 差分、生成 INDEX.md の判定、work unit の commit・rollback を扱うとき
-- editing run lifecycle 全体で共有される不変条件や cleanup 判定を確認するとき
+- editing run の開始、active run の解決・recovery、joinable/error への state 遷移を確認するとき。
+- run worktree の commit・rollback、変更 path の分類、想定外差分の検出、INDEX 更新、branch/worktree cleanup の挙動を確認するとき。
 
 ## Do not read this when
-- 個別 subcommand の利用者向け挙動や agent call の責務だけを確認する場合
-- editing run lifecycle の共通処理ではなく、canonical な配置や設計上の責務境界を確認する場合は design_rule.md を直接読むとき
-- INDEX.md の生成規則そのものを確認する場合は indexing の正本仕様を直接読むとき
+- editing run lifecycle の正本となる設計・挙動仕様を確認する場合は、先に対応する oracle 文書を読むとき。
+- editing run と無関係な runtime 共通処理や、個別の realization 実装・テストだけを確認するとき。
 
 ## hash
-- 520604c564eb18319ffb651c3c67108fce6c990528d13d974c2fd03987391b14
+- c70574929f48b54fff769df3d424fa780771a96561cfa7365458a4d275830e30
 
 # `runtime_run_report.py`
 

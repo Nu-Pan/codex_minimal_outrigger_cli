@@ -445,6 +445,9 @@ def test_file_access_policy_titles_and_bodies_match_modes() -> None:
         rendered = render_sd_node_as_markdown(doc)
         assert doc.title == f"file R/W policy ({mode.value})"
         assert "以上のルールで禁止されていない読み書きは暗黙に許可される" in (rendered)
+        assert "Git metadata は配置先によらず変更禁止" in rendered
+        assert "Git metadata の読み取り例外" in rendered
+        assert "別 worktree のファイル本文の閲覧" in rendered
         for fragment in fragments:
             assert fragment in rendered
         for fragment in all_mode_specific_denials - mode_specific_denials[mode]:

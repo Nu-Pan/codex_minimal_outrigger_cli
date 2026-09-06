@@ -15,33 +15,34 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリで、apply workload の実装を確認する入口。配下には apply の共通入口と、`cmoc realization apply fork` の実行を統括する実装がある。
+- realization の apply 処理に関する workload を扱うモジュール。apply workload の実装を確認する入口となる。
+- `cmoc realization apply fork` の実行本体として、差分始点を解決し、realization 追従 agent を実行する。agent の差分と生成物を検査・commit し、joinable または error の run と fork report を公開する。
 
 ## Read this when
 - realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の処理順序、成功・失敗時の run state、差分の許可範囲、commit/rollback、fork report、cleanup を確認または変更するとき。
+- realization apply fork の実行フロー、差分始点の解決、agent の commit 検査、差分の検査・commit、INDEX 更新、run state や fork report の公開動作を確認するとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- realization apply の仕様や共通 editing run の契約を確認する場合は、対応する oracle/specification または共通 runtime 実装を直接読む。
-- fork 以外の realization apply サブコマンドの固有処理だけを確認する場合は、各サブコマンドの実装を直接読む。
+- realization apply fork の launch parameter の組み立てだけを確認したいとき。
+- run の join・abandon、一般的な editing run lifecycle、または report の共通実装を確認したいとき。
 
 ## hash
-- 6cf3290d311d6d35194046bbeed7ea4ee6eaa5b1b8233f1c0893a54b7da0f0d9
+- 858afe03b4cd355ac13913f774fb8c53980a1b90279c9a2af2f0dbcb29161d9c
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージで、関連する処理への入口となる。
-- realization refactor fork のライフサイクル全体を処理し、対象選択、file 単位の調査・修正、state 更新、commit、完了判定、report 公開までを一貫して担う。
+- realization のリファクタリング処理への入口となるパッケージ。
+- realization refactor fork の実行ライフサイクル、処理単位の進捗、unresolved findings、完了判定、変更・commit・INDEX 更新の検証、中断・エラー時の cleanup と report 保存を扱う。
 
 ## Read this when
 - realization のリファクタリング処理の構成や入口を確認するとき。
-- refactor fork の進捗、unresolved finding・rename の追跡、cleanup、run state、report 整合性、commit や割り込み時の処理を確認するとき。
+- realization refactor fork の lifecycle、進捗、unresolved findings、完了理由、変更概要、agent の変更・realization file・changed_paths・git commit・INDEX refresh の検証境界を確認するとき。
 
 ## Do not read this when
 - realization のリファクタリング以外の処理を確認するとき。
-- 単一 realization file のレビュー・修正 prompt、変更概要の分類・要約、refactor state の一般的な同期・保存・対象選択を直接確認したいとき。
+- refactor state の基本形式、run の join・abandon、共通の editing run lifecycle、一般的な INDEX 更新仕様だけを確認するとき。
 
 ## hash
-- 84ab70b73b79351a0e8f785e819f8a4ad06a183784b47e782a24faa56c0c4b9a
+- aae4389dc97e77f1c1b683be1312b56ab438920521b7cbf8b3efb45edd6d2a6c

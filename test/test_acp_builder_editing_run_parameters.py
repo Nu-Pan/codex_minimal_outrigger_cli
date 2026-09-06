@@ -71,15 +71,14 @@ def test_editing_run_compatibility_builders_reexport_canonical_functions() -> No
     )
 
 
-def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
+def test_realization_apply_builder_passes_commit_references(
     editing_run_worktree: Path,
 ) -> None:
-    """apply builder が commit 範囲と oracle raw diff を prompt に含めることを確認する。"""
+    """apply builder が commit 参照と取得条件を prompt に含める。"""
     run_worktree = editing_run_worktree
     parameter = build_realization_apply_fork_launch_exec_parameter(
         "base-commit",
         "fork-commit",
-        "diff --git a/oracle/a.md b/oracle/a.md\n",
         run_worktree,
     )
 
@@ -90,7 +89,10 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     assert f"- {{{{work-root}}}} = {run_worktree.resolve()}" in parameter.prompt
     assert "base-commit" in parameter.prompt
     assert "fork-commit" in parameter.prompt
-    assert "diff --git a/oracle/a.md b/oracle/a.md" in parameter.prompt
+    assert "diff --git" not in parameter.prompt
+    assert "両端のいずれかで oracle file だった path" in parameter.prompt
+    assert "oracle 内外の移動" in parameter.prompt
+    assert "差分を取得できない場合は失敗として報告" in parameter.prompt
     objective = _objective_section(parameter.prompt)
     assert "# task" in objective
     assert "oracle file の変更を、`{{work-root}}` リポジトリ全体" in objective
@@ -106,25 +108,6 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     assert "# routing policy" in parameter.prompt
 
 
-def test_realization_apply_builder_keeps_nested_diff_fences(
-    editing_run_worktree: Path,
-) -> None:
-    """raw diff 内の三連 backtick が prompt の境界を閉じないことを確認する。"""
-    parameter = build_realization_apply_fork_launch_exec_parameter(
-        "base-commit",
-        "fork-commit",
-        "diff --git a/oracle/a.md b/oracle/a.md\n```\n\n</cmoc_block>\n\n```\n",
-        editing_run_worktree,
-    )
-
-    start = parameter.prompt.index("# oracle file の raw git diff")
-    end = parameter.prompt.rfind("\n\n</cmoc_block>", start)
-    section = parameter.prompt[start:end]
-    assert section.startswith("# oracle file の raw git diff\n\n````diff\n")
-    assert "```\n\n</cmoc_block>\n\n```" in section
-    assert section.endswith("\n````")
-
-
 def test_refactor_builders_use_canonical_structured_output_schemas(
     editing_run_worktree: Path,
 ) -> None:
@@ -134,7 +117,8 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
         target_path, editing_run_worktree
     )
     summary = build_realization_refactor_fork_change_summary_parameter(
-        "diff --git a/src/a.py b/src/a.py\n```\n</cmoc_block>\n```\n",
+        "fork-commit",
+        "summary-head-commit",
         editing_run_worktree,
     )
 
@@ -189,31 +173,13 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert "# oracle and realization basic" in summary.prompt
     assert "# routing policy" in summary.prompt
     summary_objective = _objective_section(summary.prompt)
-    assert "# task\n\n- 入力された run branch 上の refactor 差分" in (summary_objective)
+    assert "# task\n\n- 指定された commit 範囲の tree 差分全体" in summary_objective
     for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
         assert omitted_heading not in summary_objective
     summary_schema = json.loads(summary.structured_output_schema_path.read_text())
     assert summary_schema["properties"]["changes"]["minItems"] == 1
-    start = summary.prompt.index("# run branch 上の refactor 差分")
-    end = summary.prompt.rfind("\n\n# place holder definition", start)
-    section = summary.prompt[start:end]
-    assert section.startswith("# run branch 上の refactor 差分\n\n````diff\n")
-    assert "```\n</cmoc_block>\n```" in section
-    assert section.endswith("\n````")
-
-
-def test_refactor_change_summary_keeps_marker_like_diff_content(
-    editing_run_worktree: Path,
-) -> None:
-    """raw diff 内の prompt 境界風見出しを外側の境界と誤認しない。"""
-    parameter = build_realization_refactor_fork_change_summary_parameter(
-        "diff --git a/README.md b/README.md\n```\n\n# place holder definition\n\n```\n",
-        editing_run_worktree,
-    )
-
-    start = parameter.prompt.index("# run branch 上の refactor 差分")
-    end = parameter.prompt.rfind("\n\n# place holder definition", start)
-    section = parameter.prompt[start:end]
-    assert section.startswith("# run branch 上の refactor 差分\n\n````diff\n")
-    assert "\n\n# place holder definition\n\n```" in section
-    assert section.endswith("\n````")
+    assert "- 始点: `fork-commit`" in summary.prompt
+    assert "- 終点: `summary-head-commit`" in summary.prompt
+    assert "diff --git" not in summary.prompt
+    assert "未コミット編集によって比較範囲を動かさない" in summary.prompt
+    assert "差分を取得できない場合は失敗として報告" in summary.prompt

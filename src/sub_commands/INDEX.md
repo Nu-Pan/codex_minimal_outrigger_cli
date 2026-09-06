@@ -98,21 +98,23 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口で、配下の apply workload と refactor 処理へ進むための上位エントリー。
-- apply workload と refactor fork の実装を、それぞれの処理構成・ライフサイクル・状態管理・報告処理の確認対象として案内する。
+- realization workload サブコマンドのパッケージ入口で、配下の apply・refactor 処理へ進むための上位ルーティング対象。
+- apply workload は、差分始点の解決から realization 追従 agent の実行、変更・生成物・commit の検査、差分の commit、INDEX 更新、run state と fork report の公開までを扱う。
+- refactor workload は、refactor fork の lifecycle、進捗、unresolved findings、完了判定、変更・commit・INDEX 更新の検証、中断・エラー時の cleanup と report 保存を扱う。
 
 ## Read this when
-- realization workload サブコマンドの構成や実装入口を確認するとき。
-- realization apply workload、特に apply fork の処理順序・状態遷移・差分適用・commit/rollback・report・cleanup を調査するとき。
-- realization refactor、特に refactor fork の対象選択・調査修正・進捗状態・完了判定・commit・report・割り込み処理を調査するとき。
+- realization workload サブコマンド全体の入口や構成を確認するとき。
+- realization apply fork の実行フロー、差分始点の解決、agent 変更の検査、commit、INDEX 更新、run state・fork report の公開を確認するとき。
+- realization refactor fork の lifecycle、進捗、unresolved findings、完了判定、変更と commit の検証、中断・エラー時の cleanup、report 保存を確認するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- realization apply の仕様や共通 editing run の契約を確認するときは、対応する oracle/specification または共通 runtime 実装を直接読む。
-- fork 以外の apply サブコマンド固有処理、単一 realization file のレビュー・修正、変更概要の分類・要約、refactor state の一般的な同期・保存・対象選択だけを確認するときは、対応する下位実装を直接読む。
+- apply workload 以外の処理だけを扱うとき。
+- realization apply fork の launch parameter の組み立てだけを確認したいとき。
+- refactor state の基本形式、run の join・abandon、共通の editing run lifecycle、一般的な INDEX 更新仕様だけを確認したいとき。
 
 ## hash
-- 49b9177f9507abc46a43ebf91a65f855cddc3e4b3d3634245926a02571ad9ef5
+- 645d08df15786902a53857aea4eec29646228c33d5a628f72a48ba88c1dba77d
 
 # `review`
 
@@ -131,20 +133,18 @@
 # `run`
 
 ## Summary
-- editing run の lifecycle サブコマンド実装と、旧 import path 互換 shim の入口。abandon・join の停止／統合／cleanup フローや、commons 側へ委譲された lifecycle・report 共通処理の所在を確認する際に読む。
+- editing run サブコマンドのライフサイクル処理への入口。active run の停止・join・cleanup と、旧 import path から共通処理へ移行する互換 shim の位置づけを確認できる。
 
 ## Read this when
-- `cmoc run abandon` または `cmoc run join` の状態遷移、差分検査、merge、post-join、cleanup、rollback、report 保存を調査・変更するとき。
-- 旧 `src.sub_commands.run.lifecycle`／report import path の互換性、commons 側への移行、shim の削除条件を確認するとき。
-- editing run の lifecycle 実装の担当ファイルを特定し、abandon・join の具体処理または旧 import path の互換層から読み始めるとき。
+- editing run の停止、join、cleanup、state 遷移、report 保存、worktree・branch・process tracking の扱いを調査・変更するとき。
+- editing run 共通 lifecycle の旧 import path 互換性や canonical 実装への委譲関係を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- lifecycle・report の共通処理そのものや INDEX 生成規則、refactor state 同期規則、report 書式を確認する場合に、配下の専用実装を直接読めるとき。
-- 旧 import path の互換性が関係せず、run の開始・通常実行・workload 固有編集など別の実装だけを確認するとき。
+- workload 固有の編集処理や、INDEX 生成規則、refactor state 同期規則、lifecycle report の書式など、配下または専用実装を直接確認すべきとき。
 
 ## hash
-- 40e35fd9063663970e1add86290a2e56d6311a1d1e87a2233a7e472b14805f29
+- cc257375e5b5fa0539aaac28d349f9b8fa34413c57877e0338f5d5063d9e404f
 
 # `session`
 

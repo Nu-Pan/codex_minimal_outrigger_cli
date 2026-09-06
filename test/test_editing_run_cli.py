@@ -10,6 +10,7 @@ fork report、および join/abandon は同じ lifecycle fixture を共有する
 import json
 import os
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import NoReturn
@@ -50,7 +51,6 @@ from commons.runtime_run_lifecycle import (
     GitChange,
     commit_work_unit,
     flattened_change_paths,
-    raw_oracle_diff,
     set_run_state,
     start_editing_run,
     unexpected_session_paths,
@@ -186,63 +186,6 @@ def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None
             GitChange("M", ("modified.md",)),
         ]
     ) == ["modified.md", "new.md"]
-
-
-def test_raw_oracle_diff_treats_changed_paths_as_literal_pathspecs(
-    tmp_path: Path,
-) -> None:
-    """oracle path の glob 文字を raw diff の pathspec として解釈しない。"""
-    root = make_repo(tmp_path)
-    special_path = root / "oracle" / "spec[1].md"
-    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    special_path.write_text("after\n")
-    run_git(root, "add", "-A")
-    run_git(root, "commit", "-m", "add special oracle path")
-    end = run_git(root, "rev-parse", "HEAD").stdout.strip()
-
-    diff = raw_oracle_diff(root, base, end)
-
-    assert "oracle/spec[1].md" in diff
-    assert "+after" in diff
-
-
-def test_raw_oracle_diff_excludes_oracle_gitlinks(
-    tmp_path: Path,
-) -> None:
-    """oracle file ではない Gitlink を raw diff に含めない。"""
-    root = make_repo(tmp_path)
-    gitlink = root / "oracle" / "gitlink"
-    gitlink.mkdir()
-    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    commit = base
-    run_git(
-        root,
-        "update-index",
-        "--add",
-        "--cacheinfo",
-        f"160000,{commit},oracle/gitlink",
-    )
-    run_git(root, "commit", "-m", "add oracle gitlink")
-    end = run_git(root, "rev-parse", "HEAD").stdout.strip()
-
-    assert raw_oracle_diff(root, base, end) == ""
-
-
-def test_raw_oracle_diff_excludes_oracle_symlinks(
-    tmp_path: Path,
-) -> None:
-    """oracle file ではない symlink を raw diff に含めない。"""
-    root = make_repo(tmp_path)
-    target = tmp_path / "outside.md"
-    target.write_text("outside\n")
-    symlink = root / "oracle" / "symlink.md"
-    symlink.symlink_to(target)
-    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    run_git(root, "add", "-f", "oracle/symlink.md")
-    run_git(root, "commit", "-m", "add oracle symlink")
-    end = run_git(root, "rev-parse", "HEAD").stdout.strip()
-
-    assert raw_oracle_diff(root, base, end) == ""
 
 
 def test_unexpected_session_paths_rejects_oracle_symlink(
@@ -716,6 +659,67 @@ def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
     ) == ["- rename: file renamed", "  - `new.md`"]
 
 
+def test_refactor_summary_freezes_range_before_preflight(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """要約の入力は追加 commit や未コミット編集から独立した参照にする。"""
+    _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    worktree = context.run_worktree
+    (worktree / "README.md").write_text("summary content\n" * 1000)
+    commit_work_unit(worktree, "summary target")
+    summary_head = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+    observed: list[str] = []
+    changes = [{"category": "implementation", "summary": "updated"}]
+
+    def capture_summary(parameter: AgentCallParameter, **_kwargs: object) -> object:
+        # 要約実行前の indexing preflight による追加 commit を再現する。
+        (worktree / "INDEX.md").write_text("later index\n")
+        commit_work_unit(worktree, "later preflight")
+        (worktree / "README.md").write_text("uncommitted\n")
+        observed.append(parameter.prompt)
+        assert parameter.agent_call_cwd == worktree.resolve()
+        return SimpleNamespace(output_json={"changes": changes})
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", capture_summary)
+
+    assert refactor_module._completion_change_summary(context) == changes
+    assert len(observed) == 1
+    prompt = observed[0]
+    assert f"- 始点: `{context.run_fork_commit}`" in prompt
+    assert f"- 終点: `{summary_head}`" in prompt
+    assert run_git(worktree, "rev-parse", "HEAD").stdout.strip() not in prompt
+    assert "summary content" not in prompt
+    assert "README.md" not in prompt
+    assert "uncommitted" not in prompt
+
+
+@pytest.mark.parametrize("missing_base", [False, True])
+def test_refactor_summary_distinguishes_empty_tree_and_git_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    missing_base: bool,
+) -> None:
+    """空 tree 差分では call を省略し、参照不正では既存の失敗処理へ渡す。"""
+    _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    run_git(context.run_worktree, "commit", "--allow-empty", "-m", "empty tree")
+    if missing_base:
+        context = replace(context, run_fork_commit="0" * 40)
+
+    def reject_call(*_args: object, **_kwargs: object) -> NoReturn:
+        raise AssertionError("summary agent must not run")
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", reject_call)
+
+    if missing_base:
+        with pytest.raises(CmocError, match="差分を取得できません"):
+            refactor_module._completion_change_summary(context)
+    else:
+        assert refactor_module._completion_change_summary(context) is None
+
+
 def test_refactor_change_summary_escapes_special_changed_paths() -> None:
     """change summary の path が Markdown の構造を壊さない。"""
     assert refactor_module._render_summary(
@@ -922,20 +926,23 @@ def test_apply_builder_uses_call_scoped_run_worktree(
 ) -> None:
     """process cwd を変えずに parameter と prompt が run worktree を共有する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    # 入力差分の本文・path 一覧が prompt に混ざらないことも確認する。
+    (root / "oracle" / "reference_only.md").write_text("oracle payload\n" * 1000)
+    run_git(root, "add", "oracle/reference_only.md")
+    run_git(root, "commit", "-m", "oracle change")
+    expected_base = _state(state_path)["session"]["session_fork_commit"]
     original_builder = apply_module.build_realization_apply_fork_launch_exec_parameter
     observed: list[tuple[Path, Path, Path, str]] = []
 
     def capture_builder(
         diff_base_commit: str,
         run_fork_commit: str,
-        raw_oracle_git_diff: str,
         run_worktree: Path,
     ) -> AgentCallParameter:
         """builder 構築時の process cwd、agent call cwd、prompt を記録する。"""
         parameter = original_builder(
             diff_base_commit,
             run_fork_commit,
-            raw_oracle_git_diff,
             run_worktree,
         )
         observed.append(
@@ -973,6 +980,11 @@ def test_apply_builder_uses_call_scoped_run_worktree(
     assert cmoc_process_cwd == root
     assert agent_call_cwd == run_worktree
     assert f"- {{{{work-root}}}} = {run_worktree}" in prompt
+    expected_end = _state(state_path)["run"]["fork_commit"]
+    assert f"- 始点: `{expected_base}`" in prompt
+    assert f"- 終点: `{expected_end}`" in prompt
+    assert "reference_only.md" not in prompt
+    assert "oracle payload" not in prompt
 
 
 def test_run_abandon_accepts_already_removed_run_worktree(
