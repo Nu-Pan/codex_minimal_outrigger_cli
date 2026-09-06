@@ -660,24 +660,21 @@
 # `test_production_cli.py`
 
 ## Summary
-- 全末端サブコマンドを、利用者向け entrypoint の独立 process・実 Codex CLI・実推論による本番経路で受け入れ検証する。
-- 非対話 command の終了 code、report、session/run state、Git 状態、Codex call log を検証し、TUI command は実 PTY 上で応答完了と終了操作まで確認する。
-- LLM の回答品質は判定せず、応答後の cmoc の制御と外部から観測できる副作用を検証対象とする。
+- 全末端サブコマンドの利用者向け本番経路を、独立 process・実 Codex CLI・実推論で受け入れ検証する統合テスト。非対話 command と PTY 上の TUI command を対象に、終了 code、report、永続 state、Git、Codex call log、および TUI の応答完了・終了を確認する。
 
 ## Read this when
-- 全末端サブコマンドの本番経路における代表正常系を確認したいとき
-- 実 Codex CLI と実推論を使った非対話 command の report・状態遷移・Git・call log を検証したいとき
-- TUI command の PTY、端末 capability query、応答完了、終了処理を検証したいとき
-- 新しい公開末端 command の追加漏れを本番経路試験で検出したいとき
+- 末端 subcommand の追加・削除や CLI command tree の変更があり、本番経路のシナリオ網羅性を確認するとき。
+- 独立 process、実 Codex CLI、隔離された Codex home、実推論を用いる全末端の受け入れ試験を変更・調査するとき。
+- 非対話 command の session・run・feedback・indexing・oracle・realization の状態遷移や call log 検証を確認するとき。
+- TUI の実 PTY、端末 capability query、Codex 応答完了、入力による終了経路を確認するとき。
 
 ## Do not read this when
-- LLM の回答品質や推論内容そのものを評価したいとき
-- 実 Codex CLI や実 provider を使わない単体テスト・制御ロジックのテストを確認したいとき
-- 個別 command の内部実装や仕様だけを調べたいとき
-- 本番経路ではなく fixture 内の簡易な command 実行だけを確認したいとき
+- 個別 subcommand の仕様や実装責務だけを確認する場合は、対応する app_spec または realization 実装を直接読む。
+- LLM の回答品質、prompt の意味判断、provider 自体の機能を評価する場合。
+- 実 Codex や独立 process を使わない単体テスト、fixture、内部 helper の局所的な検証だけを行う場合。
 
 ## hash
-- 9422b01020efa2fa259b1c613091405d2aa6cb8af098fa05421b843b3ddc7aec
+- 7efe790cc5442b9af8f44dfd52102c0b2a8f7f8b53e42a12b4c7bb9c2530437b
 
 # `test_production_cli_support.py`
 

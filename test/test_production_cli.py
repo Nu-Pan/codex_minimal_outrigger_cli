@@ -653,7 +653,9 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 
     feedback_report_dir = root / ".cmoc" / "gu" / "ar" / "report" / "feedback"
     feedback_reports = set(feedback_report_dir.glob("*.md"))
-    run_without_codex("feedback", "report")
+    # 先行する実推論が受理した pending observation があれば remediation call が
+    # 発生するため、feedback report 自身も Codex を許可する production 経路で実行する。
+    run_production("feedback", "report")
     feedback_report = next(
         iter(set(feedback_report_dir.glob("*.md")) - feedback_reports)
     )
