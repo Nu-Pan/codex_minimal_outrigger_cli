@@ -626,24 +626,24 @@
 # `test_production_cli.py`
 
 ## Summary
-- 利用者向け entrypoint から全末端サブコマンドを独立 process で実行し、実 Codex CLI・実推論を含む本番経路を受け入れ検証する試験。
-- 非対話 command の終了 code、report・session・run state、Git branch/worktree・commit・作業ツリー、Codex call log と prompt/config を確認する。
-- TUI command は実 PTY 上で端末 query、応答完了、終了操作を処理し、TUI session の完了 response、call log、Git 非変更を確認する。
-- 全末端 command の登録集合と固定シナリオを比較し、新しい公開末端の本番経路試験漏れを検出する。
+- 全末端サブコマンドを、利用者向け entrypoint の独立 process・実 Codex CLI・実推論による本番経路で受け入れ検証する。
+- 非対話 command の終了 code、report、session/run state、Git 状態、Codex call log を検証し、TUI command は実 PTY 上で応答完了と終了操作まで確認する。
+- LLM の回答品質は判定せず、応答後の cmoc の制御と外部から観測できる副作用を検証対象とする。
 
 ## Read this when
-- 全末端サブコマンドを実際の cmoc console script と実 Codex CLI で検証したいとき。
-- 非対話 command の agent call、feedback remediation、session/run 状態遷移、report、Git side effect を受け入れ確認するとき。
-- TUI の実 Codex 応答、PTY 入出力、端末 capability query、応答後の終了処理を検証するとき。
-- 本番経路で使われる隔離 Codex home、認証情報、直接設定、call log の検証方法を確認するとき。
+- 全末端サブコマンドの本番経路における代表正常系を確認したいとき
+- 実 Codex CLI と実推論を使った非対話 command の report・状態遷移・Git・call log を検証したいとき
+- TUI command の PTY、端末 capability query、応答完了、終了処理を検証したいとき
+- 新しい公開末端 command の追加漏れを本番経路試験で検出したいとき
 
 ## Do not read this when
-- 個別サブコマンドの仕様や実装責務を確認するときは、対応する app_spec または realization implementation を直接読む。
-- LLM の回答品質、プロンプト内容の意味的妥当性、単体ロジックだけを評価するとき。
-- 実 Codex や独立 process を使わない高速な単体・fixture テストの追加や実行だけを行うとき。
+- LLM の回答品質や推論内容そのものを評価したいとき
+- 実 Codex CLI や実 provider を使わない単体テスト・制御ロジックのテストを確認したいとき
+- 個別 command の内部実装や仕様だけを調べたいとき
+- 本番経路ではなく fixture 内の簡易な command 実行だけを確認したいとき
 
 ## hash
-- b2d6881ddff825377bf53aef1ba08e1ce1b37893bde58bfa9a224cb9b5d5d067
+- 9422b01020efa2fa259b1c613091405d2aa6cb8af098fa05421b843b3ddc7aec
 
 # `test_production_cli_support.py`
 

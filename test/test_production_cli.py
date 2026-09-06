@@ -171,7 +171,10 @@ def _write_noninteractive_fixture_instructions(root: Path) -> None:
 
 This is an intentionally minimal and internally consistent test repository.
 For a realization-refactor file review, report `findings` as an empty array and
-do not modify files. For every other call, follow its explicit prompt exactly.
+do not modify files. For feedback remediation of an observation about the
+existence of `README.md`, inspect the file, return `already_resolved` with no
+changes, and do not report another issue. For every other call, follow its
+explicit prompt exactly.
 """
     )
     run_git(root, "add", "AGENTS.md")
