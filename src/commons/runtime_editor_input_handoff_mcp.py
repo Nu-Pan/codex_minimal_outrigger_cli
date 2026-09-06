@@ -83,6 +83,7 @@ def _submit(payload: object) -> dict[str, object]:
     if route is None:
         return _rejected("target_unavailable", "target is not active", False)
     address, token = route
+    submission_started = False
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
             connection.settimeout(EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS)
@@ -103,7 +104,7 @@ def _submit(payload: object) -> dict[str, object]:
                 "repository": str(repository),
                 "payload": payload,
             }
-            connection.sendall(
+            request_data = (
                 json.dumps(
                     request,
                     ensure_ascii=True,
@@ -111,19 +112,33 @@ def _submit(payload: object) -> dict[str, object]:
                 ).encode("utf-8")
                 + b"\n"
             )
+            # sendall 自体が失敗しても、一部または全体が届いた可能性が残る。
+            submission_started = True
+            connection.sendall(request_data)
             value = read_handoff_response(
                 connection,
                 EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
             )
     except OSError:
-        return _rejected("target_unavailable", "target is not active", False)
+        if not submission_started:
+            return _rejected(
+                "transport_unavailable",
+                "editor input handoff connection failed before submission",
+                True,
+            )
+        value = None
     validated = _validated_target_result(value)
     if validated is None:
-        return _rejected(
-            "transport_unavailable",
-            "invalid editor input handoff response",
-            True,
-        )
+        # 応答を失っても受付済みの上書きは継続する。未反映とは断定しない。
+        return {
+            "status": "unknown",
+            "code": "transport_unavailable",
+            "message": (
+                "submission outcome is unknown; content may have been applied; "
+                "verify editor input before retrying"
+            ),
+            "retryable": False,
+        }
     return validated
 
 

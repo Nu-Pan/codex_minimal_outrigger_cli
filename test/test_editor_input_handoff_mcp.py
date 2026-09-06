@@ -6,12 +6,20 @@
 """
 
 import json
+import socket
+import threading
 from importlib import resources
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 import commons.runtime_editor_input_handoff_mcp as handoff_mcp
-from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
+from commons.runtime_editor_input_handoff import start_editor_input_handoff
+from commons.runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_REPOSITORY_ENV,
+    build_editor_input_handoff_target_id,
+)
 
 
 def test_handoff_mcp_exposes_only_overwrite_with_canonical_schema() -> None:
@@ -64,3 +72,106 @@ def test_handoff_mcp_rejects_invalid_input_without_returning_content(
         assert result["status"] == "rejected"
         assert result["code"] == "invalid_input"
         assert "private content" not in rendered
+
+
+@pytest.mark.parametrize("failure", ["timeout", "eof"])
+def test_handoff_response_loss_reports_unknown_while_write_completes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+) -> None:
+    """受付済み上書きの応答を失っても、非 active や未反映とは報告しない。"""
+    work = tmp_path / ".cmoc/gu/aw/editor_input/input.md"
+    work.parent.mkdir(parents=True)
+    work.write_text("initial", encoding="utf-8")
+    target = start_editor_input_handoff(tmp_path, work)
+    entered = threading.Event()
+    release = threading.Event()
+    overwrite = target._overwrite
+    read_response = handoff_mcp.read_handoff_response
+
+    def delayed_overwrite(content: str) -> None:
+        entered.set()
+        assert release.wait(5)
+        overwrite(content)
+
+    def lose_response(connection: socket.socket, _timeout: float) -> object:
+        assert entered.wait(2)
+        if failure == "eof":
+            connection.shutdown(socket.SHUT_RD)
+        return read_response(connection, 0.05)
+
+    monkeypatch.setattr(target, "_overwrite", delayed_overwrite)
+    monkeypatch.setattr(handoff_mcp, "read_handoff_response", lose_response)
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+    try:
+        response = handoff_mcp._response(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "overwrite",
+                    "arguments": {
+                        "target_id": target.target_id,
+                        "content": "private content",
+                    },
+                },
+            }
+        )
+        assert response is not None
+        result = response["result"]["structuredContent"]
+        assert result["status"] == "unknown"
+        assert result["code"] == "transport_unavailable"
+        assert result["retryable"] is False
+        assert "may have been applied" in result["message"]
+        assert "private content" not in json.dumps(response)
+        assert work.read_text(encoding="utf-8") == "initial"
+    finally:
+        release.set()
+        target.close()
+    assert work.read_text(encoding="utf-8") == "private content"
+
+
+@pytest.mark.parametrize(
+    ("stage", "error", "status", "retryable"),
+    [
+        ("connect", PermissionError(), "rejected", True),
+        ("authenticate", TimeoutError(), "rejected", True),
+        ("sendall", BrokenPipeError(), "unknown", False),
+    ],
+)
+def test_handoff_transport_errors_distinguish_submission_uncertainty(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+    error: OSError,
+    status: str,
+    retryable: bool,
+) -> None:
+    """送信前の失敗と、部分送信もあり得る送信中の失敗を区別する。"""
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+    authenticate = MagicMock(return_value=True)
+    if stage == "authenticate":
+        authenticate.side_effect = error
+    else:
+        getattr(connection, stage).side_effect = error
+    monkeypatch.setattr(handoff_mcp.socket, "socket", lambda *_args: connection)
+    monkeypatch.setattr(
+        handoff_mcp, "authenticate_editor_input_handoff_client", authenticate
+    )
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+    result = handoff_mcp._submit(
+        {
+            "target_id": build_editor_input_handoff_target_id(
+                tmp_path, 1234, b"x" * 16
+            ),
+            "content": "private content",
+        }
+    )
+    assert result["status"] == status
+    assert result["code"] == "transport_unavailable"
+    assert result["retryable"] is retryable
+    assert "not active" not in result["message"]
+    assert "private content" not in json.dumps(result)
