@@ -63,7 +63,7 @@ state を構成する artifact の役割を次に示す。
 | intake wave | その wave が処理する observation、active issue、正規化済み issue identity、および根拠の immutable な固定入力 |
 | high-watermark | collector が durable に受理済みである observation の atomic な上限境界 |
 | checkpoint | 受理済み normalization または remediation の入力、結果、検証、および commit を hash で結び付ける記録 |
-| report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、全終端結果、および merge 対象を固定する |
+| report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、採用する有効な結果、および merge 対象を固定する |
 | publication completion record | merge または no-op join 後の session commit、run branch の到達可能性、および最終 tree 検証結果を report cut と結び付ける immutable な記録 |
 | `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった処理の確定済み結果と blocker を materialize した durable な Markdown report |
 
@@ -114,7 +114,7 @@ active issue record は、次回の候補絞り込み、remediation、および�
 - issue identity、origin、category、summary、および impact
 - occurrence count、affected session count、最初と最後の観測日時
 - bounded な representative evidence、subject、および fingerprint
-- 最新の `human_required` result の reason、current evidence、および human action
+- 最新の `human_required` result の reason、current evidence、判定根拠、および human action
 - machine issue の場合だけ、recurrence window を評価できる bounded summary
 
 evidence は、削除予定の raw observation、intake wave、または report cut だけを参照してはならない。次回 report で再確認できる安定した subject と、人間が確認できる compact な説明を materialize する。secret を複製してはならない。
@@ -139,24 +139,20 @@ threshold を満たした aggregate は issue candidate へ昇格させる。同
 - 最初の wave の場合だけ、run 開始時の current pointer、全 active issue、および threshold 未満 aggregate
 - observation schema と互換 view の version
 - validation、normalization、deduplication、detector rule、および集約規則の version
-- normalization 後の未処理 issue identity と bounded evidence
+- normalization 後の未処理 issue identity、再確認対象の issue identity、および bounded evidence
+- 再確認対象の場合は、先行 checkpoint、判定根拠の変化、および関連する再確認履歴への参照
 
 wave input は durable 保存後に変更しない。追加 evidence は後続 wave の入力として同じ issue identity へ関連付けてよいが、先行 wave を書き換えてはならない。
 
-次の issue identity は、後続 wave の remediation 対象にしない。
-
-- 同じ run ですでに remediation call を実行した issue identity
-- 同じ run で `fixed | already_resolved | not_actionable | human_required` に確定した issue identity
-
-完全に重複する observation も、新しい wave を作る理由にしない。
+処理対象と再試行の条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「call 回数と順序」と「intake wave loop」を正本とする。
 
 ### high-watermark
 
 high-watermark は、collector の durable な受理順序に対する単調増加境界とする。directory の列挙順、timestamp、quiet period、または observation 件数から推測してはならない。
 
-wave 終了時は、対応する全 remediation reporter context の受付停止と drain を完了した後に high-watermark を atomic に確定する。前回境界より後、今回境界以前の observation を validation、normalization、および deduplication し、新しい未処理 issue identity があれば次の wave を作る。
+wave 終了時は、対応する全 remediation reporter context の受付停止と drain を完了した後に high-watermark を atomic に確定する。前回境界より後、今回境界以前の observation を validation、normalization、および deduplication する。新規受理がなければ前回と同じ high-watermark を使用してよい。
 
-新しい未処理 issue identity がなければ wave loop を自然完了し、最後の境界を最終 high-watermark とする。最終 high-watermark より後に受理された observation は、次回 invocation の pending input として残す。
+`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「処理モデル」が定める条件で wave loop を自然完了したとき、最後の境界を最終 high-watermark とする。最終 high-watermark より後に受理された observation は、次回 invocation の pending input として残す。
 
 ## checkpoint と report cut
 
@@ -168,12 +164,14 @@ issue remediation checkpoint は、少なくとも次の情報を hash で結び
 
 - run、wave、issue identity、論理 agent call、builder、および schema
 - 固定入力、正式な Structured Output、および終端結果
+- その結果の判定根拠
+- 再確認の場合は、先行 checkpoint、再確認を必要とした根拠の変化、および旧結果と新結果の関係
 - realization file の net 差分、`changed_paths` の照合、および変更禁止対象の検査結果
 - agent の検証結果と issue commit ID。差分がない場合は commit を作らなかったこと
 
 不適合 output、correction の途中結果、失敗した agent call、差分検査失敗、commit 失敗、および rollback 前の差分を正式な issue result checkpoint にしてはならない。これらは invocation error の診断情報として分離する。
 
-同じ run と同じ issue identity に正式な remediation checkpoint は高々 1 件とする。Structured Output correction、retry、および quota 待機後の resume は同じ論理 agent call の checkpoint に含める。
+正式な remediation checkpoint は論理 agent call ごとに高々 1 件とする。同じ run と同じ issue identity の再確認結果は、新しい checkpoint として追加する。Structured Output correction、retry、および quota 待機後の resume は同じ論理 agent call の checkpoint に含める。
 
 ### report cut
 
@@ -183,7 +181,7 @@ report cut は、少なくとも次の入力を固定する。
 
 - ordered intake wave と各 wave の hash
 - run 開始時の current pointer、active generation、および最終 high-watermark
-- 処理した issue identity と終端結果
+- 処理した issue identity ごとに採用する有効な結果と、対応する checkpoint の path と hash
 - issue commit、run branch HEAD、および merge 前の検証結果
 - 正常 publication target、`incomplete` 診断 target、および cleanup target
 
@@ -191,7 +189,7 @@ merge または no-op join 後は、session tree の commit と最終 tree 検�
 
 ## `incomplete` 診断 report
 
-全 issue が終端結果に達し、1 件以上が `inconclusive` である場合は、`incomplete` 診断 report を保存する。保存は、run branch から session branch への merge または no-op join の成功後に行う。`inconclusive` を `human_required` または active issue に変換してはならない。
+診断 report の保存条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「`incomplete`」を正本とする。
 
 `incomplete` 診断 report は、次へ durable に保存する。
 
@@ -215,7 +213,7 @@ report を durable 保存した後、path と hash を再検証する。
 
 ## 正常 report の atomic publication
 
-正常 publication は、report cut が参照する run branch の session branch への merge または no-op join が成功し、join 後の tree を最終状態として検証した後にだけ開始する。
+正常 publication の開始条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「正常 publication」を正本とする。
 
 新しい正常 report は、次の順序で publication する。
 

@@ -27,22 +27,30 @@ feedback 全体で使用する用語と issue remediation の結果を次に示�
 | issue candidate | observation と直前の active state から組み立てた、identity 確定前または remediation 前の候補。 |
 | issue identity | normalization 後に同一 issue として扱う安定した識別単位。 |
 | active issue | 直近の正常 publication で `human_required` と確定した issue。次回の再確認に必要な compact record を保持する。 |
-| intake wave | 1 回の feedback remediation run 内で固定した、未処理 issue identity と根拠の immutable な入力集合。 |
+| intake wave | 1 回の feedback remediation run 内で固定した、未処理または再確認対象の issue identity と根拠の immutable な入力集合。 |
 | high-watermark | collector が durable に受理済みであることを atomic に確定した observation の上限境界。 |
+| 判定根拠 | issue の結果分類が依存した状態。対象ファイルに加え、依存設定、検査の条件と結果など、判断に必要な根拠を含む。 |
+| 有効な結果 | 現在の状態に対して判定根拠の有効性を確認でき、再確認を必要としない issue の結果。 |
 | `fixed` | realization file の修正と必要な検証が完了した。正常な issue 一覧へ掲載しない。 |
 | `already_resolved` | 処理時点ですでに問題が存在しない。正常な issue 一覧へ掲載しない。 |
 | `not_actionable` | feedback の報告基準を満たさない。正常な issue 一覧へ掲載しない。 |
 | `human_required` | 問題が現在も存在し、oracle の変更、人間意図の確定、外部状態の変更など、realization file の編集だけでは満たせない具体的な対応が必要である。正常な issue 一覧へ掲載する。 |
-| `inconclusive` | 許可された情報では結果を判定できない。`human_required` へ変換せず、`incomplete` 診断として扱う。 |
+| `inconclusive` | 許可された情報では結果を判定できない、または再確認・再修正が同じ状態を往復して収束できないことが確認された。具体的な理由を持つ `incomplete` 診断として扱い、`human_required` へ変換しない。 |
 | invocation error | agent call failure、Structured Output 受理失敗、差分検査失敗、commit 失敗、merge 失敗、publication 失敗など、feedback issue の状態ではなく invocation の処理失敗である。issue remediation の結果へ変換しない。 |
 
 理論上は realization file だけで修正できる可能性がある問題は、今回の agent call で完了できなかったという理由だけで `human_required` としてはならない。
+
+判定は、その時点の判定根拠に対する結果である。後続処理で判定根拠が変わった場合は、結果分類を問わず再確認を必要とする。ファイル内容の変化だけで旧判定の誤りや問題の解消を断定してはならない。また、記載された 1 ファイルが不変であることだけを、判定全体の有効性の証明にしてはならない。
+
+判定根拠の表現と変更検知の具体的なアルゴリズムは、これらの要求を満たす範囲で実装者へ委ねる。
 
 ## 処理モデル
 
 `cmoc feedback report` は、同一 invocation 内で自己完結する feedback remediation run を使用する。run branch 上で、issue ごとの remediation と commit を逐次実行する。処理中に受理された新しい issue も、immutable な intake wave として可能な限り処理する。
 
-run branch を session branch へ自動 join した後に、join 後の tree を基準として publication を確定する。停止条件は、最終 high-watermark までに新しい未処理 issue identity がないことである。新しい異なる issue が継続的に発生する限り、自然完了しない。
+再確認と必要な再修正・判定更新は、同じ invocation 内で report cut の封印と merge の前に完了する。自然完了の条件は、最終 high-watermark までに新しい未処理 issue identity がなく、現在の最終状態に対して再確認が必要な判定も残っていないことである。
+
+run branch を session branch へ自動 join した後に、join 後の状態に対して有効な結果だけで publication を確定する。join 後の検証と recovery の適用境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」と「join 後の publication failure」を正本とする。
 
 ## 正本仕様の分担
 

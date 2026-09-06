@@ -92,12 +92,11 @@ normalization agent は、summary、impact、原因、現在性、actionability�
 
 ### call 回数と順序
 
-正規化済み issue identity 1 件につき、同じ feedback remediation run 内で issue remediation agent call を最大 1 回実行する。
+正規化済み issue identity の初回処理と、同じ run 内で判定根拠の変化に伴って行う各再確認を、それぞれ独立した論理 issue remediation agent call とする。
 
 - remediation call は feedback 固有の安定した `agent_call_kind` を使用する。
 - issue ID は runtime input とし、`agent_call_kind` に含めない。
 - Structured Output correction、retry、および quota 待機後の resume は、同じ論理 agent call として数える。
-- 同じ issue identity に複数の remediation agent を起動しない。
 - issue remediation call は、同じ run branch の最新状態を順に参照できるよう逐次実行する。
 - write 権限を持つ issue remediation call を並列実行しない。
 
@@ -110,6 +109,10 @@ issue remediation agent call は、1 issue について次の処理を同じ cal
 1. 現在状態の確認
 2. realization file だけで可能な修正
 3. 修正後の検証
+
+再確認 call には、現在の入力に加えて、先行判定とその判定根拠、再確認を必要とした変化、および関連する再確認履歴を渡す。
+
+収束不能を示す `inconclusive` は、その診断根拠が変わらない同じ状態の往復だけで再試行し続けてはならない。
 
 正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.py` の `build_feedback_remediate_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
@@ -183,16 +186,15 @@ commit が成功する前に `fixed` として publication、active state から
 2. wave の remediation agent call に対応する reporter context を close し、受付済み submission を drain する。
 3. collector が durable に受理済みの observation に対する high-watermark を atomic に確定する。
 4. 前回境界より後、今回の high-watermark 以前にある observation を validation、normalization、および deduplication する。
-5. 新しい未処理 issue identity があれば、次の immutable な intake wave を作成する。
-6. 新しい未処理 issue identity がなければ、wave loop を自然完了する。
+5. 後続の修正、機械的同期、および追加 evidence による判定根拠の変化を、全結果分類について確認する。
+6. 新しい未処理 issue identity または再確認が必要な判定があれば、次の immutable な intake wave を作成する。
+7. `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「処理モデル」が定める自然完了条件を満たした場合だけ、wave loop を自然完了する。
 
 次の入力だけを理由に、新しい remediation call または wave を増やしてはならない。
 
 - 既知 issue の完全な重複 observation
-- current run ですでに remediation call を実行した同一 issue identity
-- current run で `fixed`、`already_resolved`、`not_actionable`、または `human_required` と確定した issue identity
-
-同一 issue に追加された evidence は、最終判定の説明と occurrence 集計へ反映してよい。同じ run で 2 回目の remediation agent を起動してはならない。
+- 判定根拠に影響しない occurrence 集計の更新
+- 判定根拠が変わっていない処理済み issue への理由のない再試行
 
 最終 high-watermark より後に受理された observation は、次回の `cmoc feedback report` に pending として残す。quiet period、directory の列挙タイミング、または一定時間 observation がなかったことを停止条件にしてはならない。
 
@@ -200,11 +202,11 @@ commit が成功する前に `fixed` として publication、active state から
 
 ## 自動 join と join 後の確定
 
-wave loop が自然完了した場合は、全 issue の正式な checkpoint と最終 high-watermark を report cut に封印し、`run.state=joinable` とする。その後、同じ invocation 内で `cmoc run join` と同じ差分検査および merge 契約を使用して自動 join する。
+wave loop が自然完了した場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って封印し、`run.state=joinable` とする。その後、同じ invocation 内で `cmoc run join` と同じ差分検査および merge 契約を使用して自動 join する。
 
 自動 join 前に、`fixed` としての publication または observation cleanup を行ってはならない。
 
-merge または no-op join と post-join の後、issue commit の到達可能性、変更 path、必要な機械生成物、および publication evidence を join 後の session tree に対して検証する。publication と workload 固有 cleanup が完了するまで `run.state=joinable` と隔離資源を維持する。
+merge または no-op join と post-join の後、issue commit の到達可能性、変更 path、必要な機械生成物、および採用する全結果の判定根拠を join 後の session 状態に対して検証する。検証済みの内容の取り込みと、採用結果の有効性および publication の整合性を確認できなければ、join 後検査失敗とする。この段階で issue の再確認・再修正は開始しない。publication と workload 固有 cleanup が完了するまで `run.state=joinable` と隔離資源を維持する。
 
 merge conflict、差分不整合、または join 後検査失敗では正常 publication を行わない。run を `error` とし、run branch、run worktree、issue commit、raw observation、直前の current pointer、および診断情報を保持する。
 
@@ -212,7 +214,7 @@ merge conflict、差分不整合、または join 後検査失敗では正常 pu
 
 ### 正常 publication
 
-全 issue が `fixed | already_resolved | not_actionable | human_required` のいずれかに確定し、自動 join と join 後検査が成功した場合だけ正常 publication を行う。
+全 issue の採用する有効な結果が `fixed | already_resolved | not_actionable | human_required` のいずれかであり、自動 join と join 後検査が成功した場合だけ正常 publication を行う。
 
 新しい active generation と正常 Markdown report の issue 一覧には、`human_required` だけを含める。
 
@@ -227,7 +229,7 @@ issue commit ID、変更 path、agent verification、および cmoc の機械検
 
 ### `incomplete`
 
-`inconclusive` が 1 件以上ある場合も、残りの issue を可能な限り終端結果まで処理し、安全な issue commit を自動 join する。自動 join と join 後検査が成功した後に、正常 publication の代わりとして `incomplete` 診断 report を durable 保存する。
+採用する有効な結果に `inconclusive` が 1 件以上ある場合も、残りの issue の処理と必要な再確認を経て wave loop を自然完了し、安全な issue commit を自動 join する。自動 join と join 後検査が成功した後に、正常 publication の代わりとして `incomplete` 診断 report を durable 保存する。
 
 `incomplete` では、新しい active generation を作らず、current pointer と raw observation を維持する。`inconclusive` を `human_required` へ変換しない。
 
@@ -243,6 +245,8 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 - join 後 tree を再検証できる。
 
 新しい wave または Codex call は開始しない。安全に再開できない場合は、`run.state=error` と資源を維持する。
+
+封印済みの結果の更新や新たな修正を必要とする停止 run は、この recovery の対象外とする。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
 
 ## ユーザー中断
 
