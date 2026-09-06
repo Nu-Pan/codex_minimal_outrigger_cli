@@ -269,21 +269,16 @@
 # `runtime_editor_input_handoff_mcp.py`
 
 ## Summary
-- Codex TUI の editor input handoff 用 stdio MCP server として、JSON-RPC の initialize・ping・tools/list・tools/call を処理する。
-- overwrite tool の入力を同一 repository の active target へ認証付き TCP 転送し、受理または定義済み domain failure を MCP structuredContent と text で返す。
+- Codex TUI の editor input handoff を受け付ける newline-framed stdio MCP server。MCP の initialize、ping、tools/list、tools/call を処理し、active target へ overwrite payload を認証付き転送して structuredContent と text の両方で domain result を返す実行入口。
 
 ## Read this when
-- Codex TUI から prompt editor input の全体置換を active target へ引き渡す経路を確認するとき。
-- editor input handoff の MCP JSON-RPC transport、入力検証、target 認証、repository 一致、転送結果の検証を調べるとき。
-- overwrite tool の MCP 公開定義や、target unavailable・transport unavailable などの失敗応答の扱いを確認するとき。
+- Codex TUI の editor input 全体置換を MCP tool として公開する処理、stdio JSON-RPC の MCP 応答、active target への handoff 転送、認証・タイムアウト・repository 検証・転送結果の扱いを確認または変更するとき。
 
 ## Do not read this when
-- editor input handoff の target 側プロトコル、target ID の解析、認証処理そのものを調べるときは、runtime_editor_input_handoff_protocol の定義を直接読む。
-- Codex TUI の editor input file の生成・管理や、MCP server の起動元を調べるとき。
-- この server を介さない一般的な MCP tool や JSON-RPC の仕様だけを確認するとき。
+- editor input handoff の target 側ソケット実装、target ID の解釈、payload schema、認証プロトコル自体を確認・変更するときは、先に runtime_editor_input_handoff_protocol の定義を読む。MCP server の起動経路や Codex TUI 側の editor 管理だけを調べる場合も、このファイルを直接の入口にしない。
 
 ## hash
-- 83c1262909560b30ccadb74b693fabe1bfcfa31e1c993dce8ebe5414a9e8f723
+- 0a0a5a2a9973d4f8f0ab8c3cded9384d934144a9385dc91774ff2e0ecd3e44f6
 
 # `runtime_editor_input_handoff_protocol.py`
 

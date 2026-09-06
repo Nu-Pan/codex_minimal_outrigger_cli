@@ -446,16 +446,18 @@
 # `test_editor_input_handoff_mcp.py`
 
 ## Summary
-- editor input handoff の agent-facing MCP インターフェースを検証するテスト。公開ツールが overwrite のみで正本 schema を使用することと、未検証入力を内容を漏らさず拒否することを確認する。
+- editor input handoff の agent-facing MCP interface を検証するテスト。overwrite ツールのみの公開、正本 schema の提供、入力検証時の機密 content 非表示、送信結果を失った場合の unknown 判定、送信前後の transport failure に応じた status と retryable の区別を扱う。
 
 ## Read this when
-- editor input handoff の MCP ツール公開範囲、canonical schema の利用、入力検証・拒否時の情報非開示を確認または変更するとき。
+- editor input handoff MCP の公開ツール、canonical schema、入力拒否、応答喪失時の扱い、または transport error の submission uncertainty を確認・変更するとき
+- editor input handoff の MCP 実装が private content をエラー応答へ漏らさないことを検証するとき
 
 ## Do not read this when
-- editor input handoff の正本仕様や schema 自体を確認するときは、それぞれの oracle ファイルを直接読む。MCP 実装の内部動作を変更するときは実装ファイルを直接読む。
+- editor input handoff の基本プロトコルや overwrite payload の正本仕様そのものを確認するときは、参照先の oracle specification または schema を直接読む
+- MCP interface 以外の editor input handoff の実装や、一般的なテスト実行方法だけを確認するとき
 
 ## hash
-- bc903262833d02528fc9b873c65d157ebdcc5a33ca6a648e0ca6acdf770761e6
+- 96517b9ec0794de92ed71d12fb950b534f0a616d518acca5b916a6e85ecbbf97
 
 # `test_feedback.py`
 
