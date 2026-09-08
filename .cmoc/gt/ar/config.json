@@ -29,7 +29,7 @@
       },
       "build_realization_apply_fork_launch_exec_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5-astra",
+        "model": "gpt-6-astra",
         "reasoning_effort": "xhigh"
       },
       "build_feedback_remediate_issue_parameter": {

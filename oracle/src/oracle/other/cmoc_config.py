@@ -106,7 +106,7 @@ class CmocConfigCodex:
             #   よって、結論としては品質が重要
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5-astra",
+                model="gpt-6-astra",
                 reasoning_effort="xhigh",
             ),
             # NOTE
