@@ -12,6 +12,7 @@
 
 import os
 import sys
+from dataclasses import asdict
 from pathlib import Path
 from typing import cast
 
@@ -35,7 +36,7 @@ from config.cmoc_config import CmocConfig
 
 
 def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
-    """既定の全 agent call 設定が定義済み provider を直接選ぶ。"""
+    """全 agent call の正本既定値を設定補完と JSON 変換で保持する。"""
     config = CmocConfig()
 
     assert config.num_parallel == 8
@@ -46,31 +47,11 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
         assert call_config.model_provider in config.codex.model_providers
         assert call_config.model
         assert call_config.reasoning_effort
-    assert {
-        agent_call_kind: config.codex.agent_calls[agent_call_kind]
-        for agent_call_kind in (
-            "build_feedback_normalize_issue_parameter",
-            "build_feedback_remediate_issue_parameter",
-            "build_oracle_investigation_launch_tui_parameter",
-            "build_realization_apply_fork_launch_exec_parameter",
-            "build_tui_launch_tui_parameter",
-        )
-    } == {
-        "build_feedback_normalize_issue_parameter": CodexCallConfig(
-            "openai", "gpt-5.6-sol", "max"
-        ),
-        "build_feedback_remediate_issue_parameter": CodexCallConfig(
-            "openai", "gpt-5.6-luna", "max"
-        ),
-        "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
-            "openai", "gpt-6-astra", "high"
-        ),
-        "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
-            "openai", "gpt-6-astra", "medium"
-        ),
-        "build_tui_launch_tui_parameter": CodexCallConfig(
-            "openai", "gpt-6-astra", "high"
-        ),
+    restored = config_from_dict({})
+    assert restored.codex.agent_calls == config.codex.agent_calls
+    assert config_to_dict(restored)["codex"]["agent_calls"] == {
+        agent_call_kind: asdict(call_config)
+        for agent_call_kind, call_config in config.codex.agent_calls.items()
     }
 
 
