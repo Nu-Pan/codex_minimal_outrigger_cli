@@ -1,16 +1,17 @@
 # `oracle`
 
 ## Summary
-- AI コーディングエージェント呼び出しに必要な共通パラメータ、用途別 builder、prompt 構築、入力スキーマ、設定・パス・Markdown レンダリングの実装入口をまとめる領域。
+- cmoc の agent call 構築を支える正本モデルと入力契約をまとめた領域。agent call の共通設定・用途別 builder、prompt 構築、パス・設定・構造化文書、エディタ入力上書き、feedback 報告の入口を案内する。
 
 ## Read this when
-- agent call の共通設定や用途別 builder の責務を確認するとき。
-- prompt の構築規則、policy の組み込み、editor handoff、feedback 入力契約を調べるとき。
-- cmoc の設定・パス解決・構造化文書の Markdown 化に関する実装入口を探すとき。
+- agent call の構築責務や共通入力契約の所在を確認するとき。
+- prompt、パス、設定、構造化文書、エディタ入力 handoff、feedback 報告のどの領域から読み始めるべきか判断するとき。
+- quota probe、indexing、oracle・realization、session、TUI など用途別の builder を探すとき。
 
 ## Do not read this when
-- 特定機能の prompt、出力契約、スキーマ、保存処理などの詳細を確認する場合は、対応する下位対象を直接読むとき。
-- Codex CLI の実行処理そのもの、oracle・realization の具体的な仕様、または INDEX.md の構造規則だけを調べるとき。
+- 特定用途の agent call における prompt や Structured Output schema の詳細だけを確認したいとき。
+- agent call の実行処理や Codex CLI の実際の挙動を調査したいとき。
+- 設定保存、feedback 受付、oracle・realization の編集など、個別処理の実装や具体的な文書内容だけを確認したいとき。
 
 ## hash
-- ce77b41f4fdcc585628084d858cbdfacd67cf99e44a47ac4513cc27a257ad5a0
+- 7dd58b5536ac78fa779bdfa19789e1f95a6b7d64447b04ef07d412e12e3ab4c3

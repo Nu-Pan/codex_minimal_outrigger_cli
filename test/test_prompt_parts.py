@@ -123,7 +123,7 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
         ),
         pytest.param(
             lambda: _build_file_access_policy(FileAccessMode.READONLY, _path_context()),
-            ("**禁止**", "**許容**"),
+            ("**禁止**", "**例外**", "**補足情報**"),
             1,
             id="file-access",
         ),
@@ -160,7 +160,7 @@ def test_category_policy_blocks_are_flat_and_keep_category_order(
     assert [
         line
         for line in lines
-        if line in {"**必須**", "**禁止**", "**許容**", "**補足情報**"}
+        if line in {"**必須**", "**禁止**", "**許容**", "**例外**", "**補足情報**"}
     ] == list(categories)
 
 
@@ -406,65 +406,45 @@ def test_file_access_policy_titles_and_bodies_match_modes() -> None:
         },
     }
     all_mode_specific_denials = set().union(*mode_specific_denials.values())
-    expected = {
-        FileAccessMode.READONLY: [
-            "ツリー外は読み書き禁止",
-            "/.git` ツリー内は書き込み禁止",
-            "oracle file は書き込み禁止",
-            "realization file は書き込み禁止",
-            "/memo` は読み書き禁止",
-        ],
-        FileAccessMode.PURE_ORACLE_READ: [
-            "ツリー外は読み書き禁止",
-            "oracle file は書き込み禁止",
-            "realization file は読み書き禁止",
-        ],
-        FileAccessMode.REPO_WRITE: [
-            "ツリー外は読み書き禁止",
-            "/memo` は読み書き禁止",
-            "/.git` ツリー内は書き込み禁止",
-            "/.agents` ツリー内は書き込み禁止",
-            "/.codex` ツリー内は書き込み禁止",
-            "`AGENTS.md` は書き込み禁止",
-            "`INDEX.md` は書き込み禁止",
-        ],
-        FileAccessMode.PURE_ORACLE_WRITE: [
-            "ツリー外は読み書き禁止",
-            "/memo` は読み書き禁止",
-            "realization file は読み書き禁止",
-        ],
-        FileAccessMode.REALIZATION_WRITE: [
-            "ツリー外は読み書き禁止",
-            "/memo` は読み書き禁止",
-            "oracle file は書き込み禁止",
-        ],
+    common_denials = {
+        "`{{work-root}}` ツリー外は書き込み禁止",
+        "`{{work-root}}/.git` ツリー内は書き込み禁止",
+        "Git metadata は配置先によらず変更禁止",
+        "`{{work-root}}/.agents` ツリー内は書き込み禁止",
+        "`{{work-root}}/.codex` ツリー内は書き込み禁止",
+        "`{{work-root}}/.cmoc` ツリー内は書き込み禁止",
+        "`AGENTS.md` は書き込み禁止",
+        "`INDEX.md` は書き込み禁止",
+        "`{{work-root}}/memo` は読み書き禁止",
     }
 
-    for mode, fragments in expected.items():
+    for mode, fragments in mode_specific_denials.items():
         doc = _build_file_access_policy(mode, _path_context())[1]
         rendered = render_sd_node_as_markdown(doc)
         assert doc.title == f"file R/W policy ({mode.value})"
-        assert "以上のルールで禁止されていない読み書きは暗黙に許可される" in (rendered)
-        assert "Git metadata は配置先によらず変更禁止" in rendered
-        assert "Git metadata の読み取り例外" in rendered
-        assert "別 worktree のファイル本文の閲覧" in rendered
-        for fragment in fragments:
+        assert "deny list" in rendered
+        assert "ツリー外は読み書き禁止" not in rendered
+        assert "Git metadata の読み取り例外" not in rendered
+        exceptions = rendered.split("**例外**\n", 1)[1].split("**補足情報**", 1)[0]
+        assert "MCP 経由の外部ツールによるファイル書き込み" in exceptions
+        assert "Structured Output を受け取った外部ツールによるファイル書き込み" in (
+            exceptions
+        )
+        for fragment in common_denials | fragments:
             assert fragment in rendered
         for fragment in all_mode_specific_denials - mode_specific_denials[mode]:
             assert fragment not in rendered
 
 
-def test_file_access_policy_uses_root_specific_deny_lists(
+def test_file_access_policy_keeps_same_boundaries_in_linked_worktree(
     tmp_path: Path,
 ) -> None:
-    """main と linked worktree の各 path context に deny-list を構築する。"""
+    """main と linked worktree に同じ直接アクセス境界を伝える。"""
     root = make_repo(tmp_path)
     main_context = AgentCallPathContext(agent_call_cwd=root)
     main_rendered = render_sd_node_as_markdown(
         _build_file_access_policy(FileAccessMode.REPO_WRITE, main_context)[1]
     )
-    assert "`{{repo-root}}` ツリー外は読み書き禁止" in main_rendered
-    assert "`{{repo-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止" not in main_rendered
 
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "prompt-parts-linked", str(linked), "HEAD")
@@ -472,13 +452,21 @@ def test_file_access_policy_uses_root_specific_deny_lists(
     linked_rendered = render_sd_node_as_markdown(
         _build_file_access_policy(FileAccessMode.REPO_WRITE, linked_context)[1]
     )
-    assert (
-        "`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外は読み書き禁止"
-        in linked_rendered
+    assert linked_rendered == main_rendered
+    assert "/.cmoc/g*/ar" not in linked_rendered
+
+
+def test_editor_input_handoff_prohibits_direct_writes_and_permission_changes() -> None:
+    """handoff は直接編集や権限拡大の代替経路を案内しない。"""
+    rendered = _render_policy(_build_editor_input_handoff_policy())
+    prohibitions = rendered.split("**禁止**\n", 1)[1]
+
+    assert "- editor work file へ直接書き込んではならない" in prohibitions
+    assert "sandbox、network access、permission profile、または file access mode" in (
+        prohibitions
     )
-    assert "`{{repo-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止" in linked_rendered
-    assert "例外的に `{{repo-root}}/.cmoc/g*/ar` ツリー内は読み込み可能" not in (
-        linked_rendered
+    assert "handoff の代替として sandbox escalation を要求してはならない" in (
+        prohibitions
     )
 
 

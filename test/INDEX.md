@@ -709,18 +709,20 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 各 prompt part の rendering と complete prompt の組み立て結果を検証する回帰テスト。policy のカテゴリ順序・重複、optional section、placeholder、file access mode、各 policy の注入内容を確認する。
+- prompt part の rendering と complete prompt の組み立てを検証する回帰テスト。各 policy のカテゴリ順序・重複防止・内容境界、objective と動的セクションの配置、placeholder 展開、file access mode ごとの制約、INDEX 案内要件を確認する。
 
 ## Read this when
-- prompt builder の policy、placeholder 展開、SDHeader rendering、complete prompt のセクション順序を変更または検証するとき
-- 複数の policy flag、file access mode、root path context にまたがる prompt 回帰を確認するとき
+- prompt builder の policy、prompt part、complete prompt の構成や rendering を変更・調査するとき
+- prompt の placeholder、objective、policy 注入、file access 境界に関する回帰を確認するとき
+- prompt builder 関連のテスト失敗から、期待される出力構造や policy の責務を確認するとき
 
 ## Do not read this when
-- prompt builder の実装仕様や policy 本文を変更・確認することが目的で、対応する oracle または realization を直接読むべきとき
-- prompt builder と無関係なテストや個別機能の挙動を調査するとき
+- prompt builder の実装詳細そのものを確認したい場合は、対応する oracle の仕様や prompt_builder 実装を直接読むとき
+- prompt builder と無関係なテストや、単一 policy の仕様本文だけを確認する場合
+- INDEX.md エントリーの出力形式だけを確認する場合
 
 ## hash
-- 35c5492220739792073fe70cea194c4a06a3e4298763ed16db6dd4debe306c59
+- 96c97bd4148c1594d5e3c06203519cd3799bd4d3f3819edd77f4327de02593da
 
 # `test_runtime_cli.py`
 
@@ -956,19 +958,19 @@
 # `test_struct_doc_rendering.py`
 
 ## Summary
-- 構造化文書の Markdown renderer の単体テスト。空行縮約、コード fence、見出し深度、参照 block、参照検証を行い、SDPolicy の描画と basic.struct_doc 互換 API、child 型検証も確認する。renderer の整形挙動や互換性の変更時に、このテストを実装側の参照先として読む。
+- 構造化文書 Markdown renderer の整形挙動を検証するテスト。連続空行の縮約、可変長 fence、タグ block と参照表記、参照未検証、policy のカテゴリ順、互換 API の再公開、不正 child の拒否を扱う。
 
 ## Read this when
-- Markdown renderer の出力整形、コード block の fence、見出し深度、SDTagBlock の参照表現を変更・調査するとき。
-- SDPolicy のカテゴリ描画順や空カテゴリの扱いを変更・調査するとき。
-- basic.struct_doc の canonical 型再公開や構造化ノードの child 型検証を変更・調査するとき。
+- 構造化文書ノードの Markdown 描画結果や空行・code block・fence の仕様を変更または確認するとき
+- SDTagBlock、SDPolicy、canonical node、basic.struct_doc の互換 renderer の挙動を検証するとき
+- 構造化文書ノードの child 型検証や参照表記の描画挙動を調査するとき
 
 ## Do not read this when
-- renderer の実装仕様や内部アルゴリズムを確認する場合は、テストではなく oracle の struct_doc 実装を直接読む。
-- Markdown renderer と無関係なテストや、構造化文書ノードの生成規則だけを確認する場合は、このテストを入口にしない。
+- Markdown renderer の実装詳細や正本仕様を確認したいだけで、テストケースの期待挙動を調べる必要がないとき
+- 構造化文書以外のテストや、renderer を介さないデータ構造の変更を扱うとき
 
 ## hash
-- 74f66d1c3c2c7a3f1cc0fc799ad54ad3f43ea1aaaff9e5ea222269c0d228f0f1
+- 59777795fc220c56f39c46ca4ee6aa2b3d9cb6b4f47edec071c540bc15734205
 
 # `test_windows_toast.py`
 

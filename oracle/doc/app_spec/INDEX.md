@@ -19,19 +19,19 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` による Codex CLI 呼び出しの共通規約を定義し、agent call の path context、環境変数、preflight、argv 設定、sandbox・ファイルアクセス、prompt、feedback reporter、Structured Output、quota・retry・resume、並列実行、エラー処理までの実行境界を扱う。
-- Codex CLI の呼び出し実装や設定上書き、ログ・session ID・stdin/stdout の受け渡し、Structured Output の補正・検証、quota 待機または一時障害 retry の判断基準を確認する入口。
+- Codex CLI 呼び出しの共通規約を定義する正本文書。agent call の path context、環境・argv・sandbox、prompt、Structured Output、ログ、並列実行、失敗時処理など、実行と受理に関する横断的なルールを扱う。
 
 ## Read this when
-- Codex CLI 呼び出しの引数、sandbox、approval、provider/model/reasoning effort、環境変数、path placeholder の扱いを設計・変更するとき。
-- agent call の prompt 構築・受け渡し、feedback reporter、editor input handoff、ログ保存、Structured Output 検証・resume、quota や retry の実装を確認するとき。
+- Codex CLI の呼び出し方法、agent call の構築、sandbox や file access mode の対応、prompt の受け渡し、Structured Output の検証・補正、ログ保存、quota・一時障害・想定外エラー時の処理を確認または変更するとき。
+- 個別の oracle doc や builder が参照する、codex exec の共通実行境界・呼び出し単位・session・resume の規則を確認するとき。
 
 ## Do not read this when
-- 個別 agent call の意味上の責務や判断基準を確認する場合は、先に対応する workload 固有の oracle doc を読むとき。
-- `AgentCallParameter` の正確な field 定義や prompt 構築関数の実装詳細だけを確認する場合は、本書ではなく指定された oracle src を直接読むとき。
+- 個別 agent call の意味上の責務や判断基準だけを確認したい場合は、対応する oracle doc を直接読む。
+- AgentCallParameter の正確な field 定義・型・既定値だけを確認したい場合は、指定された basic.py を直接読む。
+- path context の導出、prompt の rendering・統合、file access policy、Structured Output schema の検証など、本文が明示的に委譲している詳細だけを確認したい場合は、対応する oracle src や schema を直接読む。
 
 ## hash
-- dc74e0ba2721cad592d1c0fe632cefb6f6de4cc73a1a1720bd16616f8d434030
+- 7ab98f352c8cc4a830381835c0865208a1fd5e5d36289b9a9997869dd432522d
 
 # `codex_model_provider.md`
 
@@ -94,22 +94,22 @@
 # `editor_input_handoff.md`
 
 ## Summary
-- 日本語技術文書のルーティング入口として、agent から待機中の prompt editor input へ完成内容を渡す editor input handoff の責務と、MCP 経由の全体上書き・target 検証・受付順序を扱う。
-- handoff の正本分担、active target のライフサイクル、agent-facing MCP interface の境界、および直接編集・最終読み取りを含む確定方法を確認する必要がある場合に読む。
+- Codex TUI の agent が、待機中の prompt editor input の editor work file へ完成済み内容を渡す handoff の責務と契約を定義する。
+- active target の登録・受付終了・submission 完了・無効化・最終読み取りまでのライフサイクルと、`cmoc_editor_input.overwrite` による全体置換の境界を示す。
 
 ## Read this when
-- Codex TUI agent が人間指定の active target へ完成済み内容を渡す処理を実装・変更・レビューするとき。
-- cmoc_editor_input.overwrite の利用条件、target の有効期間と同一 repository 検証、editor 終了後の最終入力確定順序を確認するとき。
-- prompt editor input の writer 境界や handoff instruction、overwrite input schema の正本への委譲関係を確認するとき。
+- prompt editor input への handoff の流れ、active target の扱い、submission の直列化や検証条件を確認するとき。
+- agent-facing MCP interface、agent の利用条件、拒否時の扱い、handoff の non-goal を確認するとき。
+- 正本仕様や input schema、handoff instruction の詳細から確認を始める前に、この機能の責務と参照先を把握するとき。
 
 ## Do not read this when
-- prompt editor input の通常の writer 境界や最終読み取りだけを確認する場合は prompt_editor_input.md を直接読む。
-- Codex TUI への MCP・handoff instruction の注入規則だけを確認する場合は codex_exec_rule.md の該当節を直接読む。
-- overwrite の JSON input schema の形式だけを確認する場合は overwrite_input.json を直接読む。
-- active target を使わない通常の aw ツリーへの agent 書き込みや、handoff 以外の editor 操作を扱う場合。
+- prompt editor input の writer 境界や最終確定手順だけを確認したいときは、指定された prompt editor input の正本を直接読む。
+- Codex の詳細なファイルアクセス制限や書き込み主体の責任分界だけを確認したいときは、指定された codex exec rule の正本を直接読む。
+- `cmoc_editor_input.overwrite` の厳密な input schema だけを確認したいときは、指定された schema を直接読む。
+- handoff instruction の正確な文面だけを確認したいときは、指定された policy 実装を直接読む。
 
 ## hash
-- 616c2e5129df87f81df1f8c90c999a2d74a1ce8adabb6327bd2175cd13dd91ae
+- e1452119a39cfc6a9599348ec3cbdb18a0d382959684437303995e8b8bce37db
 
 # `error_handling.md`
 
@@ -251,40 +251,35 @@
 # `prompt_editor_input.md`
 
 ## Summary
-- オリジナルプロンプトを入力する editor work file のライフサイクルと、確定後の保存・抽出・削除を定める仕様。
-- editor 初期内容、editor input handoff、完全 prompt の構築仕様へ進むための入口。
+- エディタ入力用 work file の lifecycle、初期構築の委譲先、handoff による上書き、最終読み取り結果の保存・コメント除去・プロンプト化、成功時削除と失敗時保持を定める仕様。
 
 ## Read this when
-- editor work file の生成、handoff による上書き、最終読み取り、検証、保存、コメント除去、削除または失敗時の保持を確認するとき。
-- オリジナルプロンプトの入力結果と保存コピーを分離する責務、または後続 agent の参照禁止を確認するとき。
-- editor input と完全 prompt・prompt skeleton の責務境界や、builder・サブコマンド固有仕様への委譲先を判断するとき。
+- オリジナルプロンプトをエディタ入力から確定する処理の順序、work file と保存コピーの責務分離、対象ファイルの安全性検証、または editor input handoff の適用範囲を確認するとき。
+- エディタ起動条件や、後続 agent が参照できる入力と参照してはならない作業ファイルの境界を確認するとき。
 
 ## Do not read this when
-- 初期コメントや template の正確な構築方法だけを確認したい場合は、editor input builder の仕様へ直接進むとき。
-- handoff の target lifecycle、MCP interface、上書き条件、失敗処理だけを確認したい場合は、editor input handoff の正本へ直接進むとき。
-- 完全 prompt skeleton やサブコマンドごとの prompt 構築規則だけを確認したい場合は、該当する TUI・oracle investigation・oracle edit の仕様へ直接進むとき。
+- 完全な prompt skeleton やサブコマンド固有の完全プロンプト構築を確認したいとき。各 agent call の builder、TUI、oracle investigation、oracle edit の正本を直接読むべき場合。
+- editor input handoff 自体の共通 target lifecycle や MCP 上書きインターフェースの詳細、agent の責務と権限を確認したいとき。専用の handoff 仕様を直接読むべき場合。
 
 ## hash
-- 41a5b59b12bd3d0eade984f80ffa12e14954a22c0f4dd0ef0a90e6302379c212
+- 13e136ce301fe9421bcbe25b0bd6e8c22366307c3b57b7b683f81bd7aafe4e25
 
 # `run_isolation.md`
 
 ## Summary
-- run の fork から join または abandon までの隔離作業ライフサイクル、branch/worktree の扱い、および run-root 外への書き込み例外を定める作業規則。
+- run の fork から join または abandon までの隔離作業 lifecycle と、サブコマンド呼び出しとの関係を定義する。
+- run の branch・worktree、agent call の cwd/path context、アクセス境界、ログ・session state・feedback state の管理責任を定義する。
 
 ## Read this when
-- run の開始・終了方法、明示的な join が必要な編集 run と self-joining／read-only 等の境界を確認するとき。
-- run の branch、worktree、agent call の作業場所、または cmoc 管理データの書き込み先に関する扱いを確認するとき。
-- run と session、feedback state、ログ、session state の境界を確認するとき。
+- run の lifecycle、branch/worktree 上の成果物、join・abandon の扱いを確認したいとき。
+- run 上の agent call の作業場所や path context、ファイルアクセス制限、cmoc 管理データとの責任分界を確認したいとき。
 
 ## Do not read this when
-- run の永続化フィールド定義そのものを確認する場合は session_state.md を直接読むとき。
-- run branch の命名・分岐元・worktree の正本定義を確認する場合は branch_model.md を直接読むとき。
-- agent call の詳細な path context や Git metadata の読み取り制限を確認する場合は codex_exec_rule.md を直接読むとき。
-- ログ、feedback observation、feedback state の保存仕様だけを確認する場合は、それぞれの指定された正本仕様を直接読むとき。
+- read-only investigation、cmoc 自身による機械的更新、または session join の conflict 解消について、明示的な join を必要とする編集 run の規則を確認する必要がないとき。
+- branch・worktree の命名規則や永続化 run field の正確な定義だけを確認したいとき。
 
 ## hash
-- b9a15bef02fe27b8f494d4fcf2f8e2604ed93c29f9edfd03b905f2cfa32c3be2
+- de4b790e3b7653d15e714e93ff42c426e6924581bf68112b1306102cea2e65ea
 
 # `session_state.md`
 

@@ -125,7 +125,10 @@ def test_render_sd_node_as_markdown_does_not_validate_references(
         assert rendered.count(fragment) == count
 
 
-def test_sd_policy_renders_only_non_empty_categories_in_fixed_order() -> None:
+@pytest.mark.parametrize("exception", [(), ("例外事項",)])
+def test_sd_policy_renders_only_non_empty_categories_in_fixed_order(
+    exception: tuple[str, ...],
+) -> None:
     """SDPolicy は説明と存在するカテゴリだけを所定順で描画する。"""
     rendered = render_sd_node_as_markdown(
         SDHeader(
@@ -134,6 +137,8 @@ def test_sd_policy_renders_only_non_empty_categories_in_fixed_order() -> None:
                 what_is_this="規定の説明",
                 require=("必須事項",),
                 prohibit=("禁止事項",),
+                allow=("許容事項",),
+                exception=exception,
                 supplemental=("補足事項",),
             ),
         )
@@ -142,12 +147,28 @@ def test_sd_policy_renders_only_non_empty_categories_in_fixed_order() -> None:
     assert [
         line
         for line in rendered.splitlines()
-        if line in {"**必須**", "**禁止**", "**許容**", "**補足情報**"}
-    ] == ["**必須**", "**禁止**", "**補足情報**"]
+        if line in {"**必須**", "**禁止**", "**許容**", "**例外**", "**補足情報**"}
+    ] == [
+        "**必須**",
+        "**禁止**",
+        "**許容**",
+        *(["**例外**"] if exception else []),
+        "**補足情報**",
+    ]
     assert "規定の説明" in rendered
     assert "- 必須事項" in rendered
     assert "- 禁止事項" in rendered
+    assert "- 許容事項" in rendered
     assert "- 補足事項" in rendered
+    if exception:
+        assert "- 例外事項" in rendered
+        assert "同じ policy 内の **必須**、**禁止**、**許容** のみに対して優越する" in (
+            rendered
+        )
+        assert rendered.index("優越する") < rendered.index("\n**必須**\n")
+    else:
+        assert "**例外**" not in rendered
+        assert "優越する" not in rendered
 
 
 def test_realization_compatibility_module_reexports_canonical_nodes() -> None:
