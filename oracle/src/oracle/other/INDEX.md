@@ -1,19 +1,21 @@
 # `cmoc_config.py`
 
 ## Summary
-- `CmocConfig` と関連する不変データクラスで、リポジトリごとに変わりうる cmoc の設定を集約し、JSON/TOML 共通値、Codex の provider・agent call 設定、並列数、アクセス規定違反時の復旧試行回数を定義する。
-- 設定の既定値と、agent call 種別ごとの model provider・model・reasoning effort の対応を確認するための入口。
+- cmoc のリポジトリ固有設定を表す不変データクラス群と、JSON/TOML 共通値、Codex の provider・agent call 設定を定義する。
+- 並列数、Codex の model provider・モデル・reasoning effort、ファイルアクセス規定違反時の復旧試行回数など、設定の既定値と永続化対象の構造を確認する入口。
 
 ## Read this when
-- cmoc の設定項目や既定値を調べるとき
-- Codex CLI の provider-local 設定、agent call ごとのモデル設定、並列数、復旧試行回数を変更・確認するとき
+- cmoc の設定項目や既定値を追加・変更・参照するとき。
+- Codex CLI の provider-local 設定、agent call 種別ごとのモデル選択、または設定クラスのシリアライズ順序を調べるとき。
+- config.json の生成・同期や、人間が調整する設定との対応関係を確認するとき。
 
 ## Do not read this when
-- 実際の永続化ファイル `.cmoc/gt/ar/config.json` の生成・同期や人間による調整方法だけを確認したいとき
-- 設定を利用する個別の処理の挙動を調べるときは、その処理の実装を直接読む場合
+- 特定の agent call の実行ロジックや Codex CLI の呼び出し処理を変更・調査するとき。
+- 設定値の JSON/TOML シリアライズ実装そのものを調べるときは、シリアライザや config.json 生成処理を直接読む。
+- 設定とは無関係な oracle 調査・編集・還元処理を扱うとき。
 
 ## hash
-- cae2f9a6ef429774e14d23af747acc5c54bdb278f5424b3ac4886283407a3908
+- 1b3b5793e5426a0c8a277c2621cfc403a18039ea25dac4469570e4c4c2e13276
 
 # `path_model.py`
 
