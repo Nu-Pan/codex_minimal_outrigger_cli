@@ -1,20 +1,18 @@
 # `AGENTS.md`
 
 ## Summary
-- cmoc 自己開発で恒常的に適用するリポジトリ固有の補足指示を定義する文書。動的生成プロンプトの権限・作業範囲は変更せず、Python 環境、設計、テスト、テスト実行に関する oracle file の参照先を案内する。
+- cmoc 自己開発時に、仕様文・agent への指示文・現在の agent への指示文を区別するための注意事項と、agent 向け指示文を単独で理解可能かつ仕様定義を含まない形に保つための基準。
 
 ## Read this when
-- cmoc リポジトリ自身の開発に関する作業を行うとき
-- Python 環境や依存関係、realization implementation、realization test、品質検査の標準参照先を確認するとき
-- 動的生成プロンプトとリポジトリ固有指示の関係を確認するとき
+- cmoc 自身のリポジトリを cmoc で開発しており、同じ文面が異なる情報レイヤーに現れる場合の解釈を確認するとき。
+- cmoc が呼び出す agent への指示文を作成・確認し、仕様への暗黙の依存や仕様定義の混入を避けるとき。
 
 ## Do not read this when
-- 動的生成プロンプトが定める作業範囲・ファイルアクセス・oracle/realization 規則だけを確認したいとき
-- 特定の実装やテストの詳細仕様を確認する必要があり、案内された oracle file を直接読むべきとき
-- cmoc 自己開発に関係しない一般的な作業を行うとき
+- cmoc の仕様そのものを調べる必要があるとき。
+- 具体的な実装、設定、CLI 挙動を確認する必要があり、レイヤー区別や agent 向け指示文の独立性が関係しないとき。
 
 ## hash
-- 89bee9d7c2af278bbd665139abcc639290db77ce14190f9d84c74505d635448d
+- da4f29cd7f635f81ead991302bf0b25e687760e47096c1c5efe20318b8c9a8f2
 
 # `LICENSE`
 
@@ -91,23 +89,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の現行仕様、開発ルール、session・run の branch model、設計検討資料を目的別に案内する正本文書群の入口。
-- agent call、prompt 構築、用途別 builder、設定・パス解決、構造化文書レンダリングなどの実装領域へ進む入口。
+- cmoc の正本仕様・開発規則・設計判断資料を領域別に案内する文書群への入口。
+- agent call の共通契約、用途別 ACP builder、prompt 構築、関連する補助モデルを確認するためのソース領域への入口。
 
 ## Read this when
-- cmoc のアプリケーション仕様や開発ルールを横断して参照するとき
-- session・run の branch、commit、worktree の関係を確認するとき
-- agent call や prompt 構築の共通実装、用途別 builder、設定・パスモデルの実装入口を探すとき
-- 現行仕様に加えて、設計上の代替案や不採用理由を調べるとき
+- cmoc の仕様・開発規則・branch・commit・worktree モデル、または不採用設計の資料の所在を判断するとき。
+- CLI 実行、session/run、Codex CLI、ログ、feedback、oracle/realization、状態管理の仕様入口を探すとき。
+- agent call の入力契約、用途別 builder、prompt 構成、パス解決、設定、構造化文書、feedback 報告入力の責務を確認するとき。
 
 ## Do not read this when
-- 特定のサブ文書や実装ファイルが直接の参照先として明確なとき
-- 具体的な状態遷移、CLI 操作、Python 規約、テスト要件・実行手順を直接確認したいとき
-- 特定用途の prompt、出力スキーマ、保存処理、個別 builder の詳細だけを確認したいとき
-- Codex CLI の実行処理そのもの、oracle・realization の具体的な仕様本文、または INDEX.md の構造規則だけを調べるとき
+- 確認対象の詳細が明確で、対応する個別の app_spec、dev_rule、branch model、considered alternative 文書、または下位ソースを直接読めるとき。
+- 実装コード、個別処理の実装、oracle・realization の編集方法、または INDEX.md 本文だけを確認したいとき。
 
 ## hash
-- 6d9092fcfba9c2880b7fadede6c5e78467ba22860b6fd4a63e6841aa8b3dd23a
+- a55c27c870e5389b3dcfc1e4f4c1c89e20a9cc9ce6869cf986ab5b1a6dab15f9
 
 # `pyproject.toml`
 

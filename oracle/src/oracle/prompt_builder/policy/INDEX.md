@@ -18,22 +18,18 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- 明示的に選択された editor input handoff 規定文面を構築する定義。
-- prompt editor input への完成済み content の handoff に関する規定を、構造化されたヘッダーとポリシーとして提供する。
-- handoff の意味仕様そのものではなく、editor input handoff 規定を prompt に組み込むための入口。
+- 明示的に選択された editor input handoff の規定文面を構築する定義。active な prompt editor input への完成済み content の handoff 条件、入力内容、結果報告、失敗時の対応を扱う。
 
 ## Read this when
-- editor input handoff に関する規定文面を構築・変更するとき。
-- active な prompt editor input へ完成済み content を渡す手順や制約を確認するとき。
-- editor input handoff policy の prompt builder 上の構造化を確認するとき。
+- 人間から active target への handoff を明示的に要求され、target ID が提示された場合の editor input handoff 規定を確認するとき。
+- editor work file への直接書き込み禁止や、handoff 失敗時の回答上の扱いを確認するとき。
 
 ## Do not read this when
-- editor input handoff の意味仕様や利用者向けの詳細を確認したい場合。
-- prompt editor input 以外の policy を構築・変更する場合。
-- handoff の実行方法そのものを確認する場合。
+- editor input handoff 以外の prompt 構築規定を確認する場合。
+- handoff の実行結果そのものや、editor work file の内容を確認する場合。
 
 ## hash
-- 1f6590350f14692e8d1830107145ccfd4d967f9ca30871845b7c120e11167621
+- 603b78cf401b4dc637877b582e0fe330f35d6e00d63d626106a975615e455832
 
 # `feedback_reporting.py`
 
@@ -56,18 +52,18 @@
 # `file_access.py`
 
 ## Summary
-- FileAccessMode と作業パスの文脈から、エージェント向けのファイル読み書き禁止事項・許可事項・例外を含む file R/W policy の文面を構築する。モードごとに oracle file と realization file の扱いを切り替えるポリシー生成の入口。
+- FileAccessMode ごとの共通ファイルアクセス制限文面を構築する定義。各モードの deny list と、MCP・Structured Output 経由の書き込み例外をプロンプトへ反映する入口。
 
 ## Read this when
-- エージェント呼び出しで file access policy の生成内容、FileAccessMode ごとのアクセス制約、またはパス placeholder の組み立てを変更・確認するとき。
-- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE の制約差や、禁止事項に含まれないアクセスの扱いを確認するとき。
+- FileAccessMode に応じた agent 向け file R/W policy の生成規則を確認・変更するとき
+- 共通の禁止対象、oracle/realization file のモード別制限、または外部ツールによる書き込み例外の扱いを確認するとき
 
 ## Do not read this when
-- 個別の oracle file・realization file の内容や、アクセス制約の正本仕様そのものを確認する場合は、まず対応する oracle 文書を読むとよい。
-- エージェントプロンプト全体の構築や別種の policy の責務を調べるだけで、FileAccessMode に応じた file R/W policy の生成が関係しない場合。
+- ファイルアクセス制限の意味仕様そのものを確認するときは、参照先として示される正本仕様を直接読むとき
+- 特定の agent prompt 全体の構成や FileAccessMode の定義自体を確認するとき
 
 ## hash
-- 1e0e98b845aea260be4c76075b5f0b9d04512b142e68ac2e792e397c269b3fa8
+- 2024227edecd081482ba2bc22f0eace6067cc3c7a3d4df39292d91c4f77837ad
 
 # `index_entry.py`
 

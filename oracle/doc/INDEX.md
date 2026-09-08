@@ -1,18 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を横断する正本文書群への入口。CLI 自動補完、Codex CLI 呼び出し、ログ・エラー処理、feedback、session/run、サブコマンド、通知、利用 workflow など、個別仕様へ進むための概要を提供する。
+- `oracle/doc/app_spec` は、cmoc の CLI 実行、サブコマンド、session/run、feedback、oracle/realization、ログ、通知などを定める正本仕様群への入口である。
+- 自動補完、Codex CLI 呼び出し、provider、console/file log、doctor preprocess、editor input、error handling、feedback、indexing、run/session lifecycle、割り込み、timestamp、usage、Windows toast など、横断的な実行契約と個別仕様を案内する。
+- 各文書の責務境界と詳細仕様を確認すべき条件を示し、該当する正本文書へ進むためのルーティング情報を提供する。
 
 ## Read this when
-- cmoc のアプリケーションレベルの挙動仕様を調べ、対象領域に対応する正本仕様を選ぶとき
-- 複数のサブコマンドや共通 lifecycle、ログ、feedback、Codex CLI 呼び出しにまたがる仕様の参照先を探すとき
+- cmoc の CLI 実行規約、サブコマンド、session/run lifecycle、feedback、indexing、oracle/realization、ログ、通知などの正本仕様の入口を探すとき。
+- 特定の実行契約や運用規則について、どの仕様文書を読むべきか判断するとき。
+- 自動補完、Codex CLI 呼び出し、エラー処理、割り込み、editor input などの共通境界を確認するとき。
 
 ## Do not read this when
-- 特定ファイルの詳細仕様を直接確認できる場合
-- 実装構造、prompt builder、Structured Output schema、state の具体的な配置など、個別仕様または実装ファイルが直接の参照先となる場合
+- 特定仕様の詳細、正確な field 定義、prompt 構築、Structured Output schema、実装内容を直接確認したいときは、一覧から該当する個別文書や委譲先を直接読む。
+- 実際の oracle file、realization file、または INDEX.md の本文内容を調べるだけで、仕様文書の案内や責務境界を確認する必要がないとき。
 
 ## hash
-- 7a979322e83f05dd4b4d46c6978624e6192ff333c92d9ab8f52c6796f29c32ea
+- b7427f113659bf59cdeb573202d849a481b37263914da29f7f722b67c0eaaa66
 
 # `branch_model.md`
 

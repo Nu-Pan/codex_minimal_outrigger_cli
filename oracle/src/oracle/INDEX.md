@@ -54,42 +54,32 @@
 # `other`
 
 ## Summary
-- 開発対象リポジトリ単位で変化する cmoc 設定を集約し、Codex CLI の provider・agent call 設定、並列数、アクセス規定違反時の復旧試行回数を定義する設定モデル。
-- agent call で共有するパスコンテキストと、{{cmoc-root}}・{{repo-root}}・{{run-root}}・{{work-root}} の解決・変換規則を提供するパス基盤。Git worktree metadata に基づく各ルートの探索も担う。
-- 構造化された文書ノードを Markdown へレンダリングし、見出し階層、参照可能ブロック、コードフェンス、規定文、三重引用文字列の整形を扱う下位ヘルパー。
+- `oracle/src/oracle/other` 配下の設定モデル、パスモデル、構造化文書モデルをまとめて案内する入口。cmoc の設定規則、agent call のパス解決、Markdown 文書ノードのレンダリング仕様を確認する際に使う。
 
 ## Read this when
-- cmoc の設定項目、既定値、Codex CLI 呼び出し単位のモデル設定、provider-local 設定、並列数、復旧試行回数、または設定ファイルの扱いを確認・変更するとき。
-- agent call の cwd から worktree root や main repository root を導出する規則、root placeholder の解決・実パス変換、Git worktree metadata に基づく探索を確認・変更するとき。
-- 構造化データから cmoc 用 Markdown を生成する処理、見出し深度、cmoc_block 参照タグ、可変長コードフェンス、規定文のレンダリング、ntqs の整形を確認・変更するとき。
+- cmoc の設定値や永続化方針、agent call の worktree・repository パスコンテキスト、または構造化文書の Markdown レンダリング挙動を調べるとき。
+- これらの基盤モデルを変更・利用し、設定、パス解決、または文書構造の責務の境界を確認するとき。
 
 ## Do not read this when
-- agent call のプロンプト生成や Codex CLI の実行フローそのものを調べるとき。設定値の永続化・同期処理だけを調べる場合は、その処理を実装する対象を直接読む。
-- 個別の CLI 機能や realization の実装責務だけを確認するとき。パスモデルを介さない一般的なファイル操作や、Git・root placeholder と無関係な仕様を調べるとき。
-- INDEX.md の構造やルーティング規則そのものを確認するとき。Markdown 以外の文書形式や、このレンダリングヘルパーを利用しない CLI 処理を調べるとき。
+- agent call のプロンプト生成や実際の CLI 呼び出し処理だけを調べるとき。
+- 個別のポリシー本文、文書テンプレート、または設定を保存・同期する具体的な処理だけを確認すれば足りるとき。
 
 ## hash
-- d05479d0fdfdc7f2d0f470cd2e5fd2e5d21cae1728681206596d6710fcda7ee2
+- 04a94efa62c483b4c1a3898829e98ebe9af20483444abe7158a5af612f965fff
 
 # `prompt_builder`
 
 ## Summary
-- agent call 向けの完全な構造化 prompt を、基礎文面、選択可能な各種 policy、目的、追加 prompt、path context の placeholder 定義から組み立てる prompt 構築層。
-- prompt editor の初期入力として、記入案内と完全 prompt の HTML コメント埋め込み文面を生成する入口。
-- oracle file と realization file の基本関係・分類を説明する共有 prompt 部品と、各 policy の生成定義を下位入口として提供する。
-- policy 配下には、file access、routing、INDEX.md エントリー、oracle／realization、feedback、conflict resolution、editor handoff など、個別規定の prompt 生成処理が分かれている。
+- `prompt_builder` は、agent call に渡す prompt の構成要素を定義・組み立てるディレクトリで、placeholder 型、完全 prompt の組み立て、エディタ初期入力、oracle／realization 関連部品、policy 群への入口を提供する。
 
 ## Read this when
-- agent call に渡す prompt の全体構成、構成要素の選択条件、placeholder の統合や競合拒否を確認したいとき。
-- prompt editor に表示する初期入力文面や、完全 prompt の埋め込み形式を確認・変更したいとき。
-- oracle file と realization file の基本的な役割・分類説明を prompt に組み込む箇所を確認したいとき。
-- 個別 policy の文面や生成条件を確認したいときは、policy 配下の対応する定義から調査を始めるとき。
+- agent 向け prompt の構成順序や placeholder 統合を確認したいとき。
+- prompt に注入する個別 policy や oracle／realization 関連部品の生成定義を探したいとき。
+- エディタへ渡す初期プロンプト文面の構築を確認したいとき。
 
 ## Do not read this when
-- 個別 policy の具体的な要求・禁止・許可事項だけを確認したいときは、prompt_builder 全体ではなく対応する policy 定義を直接読むとき。
-- oracle／realization の正本仕様、ファイル列挙規則、CLI の実装責務を確認したいときは、prompt builder ではなく対応する oracle file を読むとき。
-- prompt editor の Markdown ノード構造やレンダリング仕様だけを確認したいときは、editor input の構築処理ではなく struct_doc の実装を直接読むとき。
-- 生成済み prompt の実行方法や、policy に含まれない共通型の実装だけを調べるとき。
+- 個別 policy の意味仕様や実際のファイル分類ロジックを確認したいときは、それぞれの正本仕様・実装を直接読む。
+- 既存の INDEX.md、agent call の実行結果、または prompt 適用後の具体的な挙動だけを確認したいとき。
 
 ## hash
-- aeb93dfe1782811a44a35abb54d531084743b733f2f1fd65ba202a8c461b2ddf
+- 543de79184f238dedb0cd23351c980f80fa8a9fe16b06b4a9bc582e01dd8a9b3
