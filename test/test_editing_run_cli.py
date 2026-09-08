@@ -2983,7 +2983,7 @@ def test_refactor_fork_completes_persistent_full_cycle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor fork が全 target を調査して永続 cycle を完了する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     reviewed: list[str] = []
     summary_calls = 0
@@ -3043,9 +3043,7 @@ def test_refactor_fork_completes_persistent_full_cycle(
     state = _state(state_path)
     assert state["run"]["state"] == "joinable"
     parts = state["run"]["branch"].split("/")
-    worktree = (
-        Path(state_path).parents[4] / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    )
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     refactor_state = load_refactor_state(worktree)
     assert reviewed == sorted(refactor_state)
     assert all(not entry["investigation_required"] for entry in refactor_state.values())

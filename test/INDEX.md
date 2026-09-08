@@ -391,20 +391,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run lifecycle の統合 realization test を収録し、apply/refactor の fork、run join/abandon、state・worktree・branch・process tracking・report・INDEX 同期の検証へ進むためのテスト入口。
+- editing run の fork と共通 lifecycle を対象に、realization apply/refactor の処理、run worktree と branch の分離、state 遷移、成果物 merge を統合的に検証する。
+- Codex agent の予期しない file 変更・commit・遅延処理、INDEX 更新、process tracking、rollback、cleanup、interrupt、error report を検証する境界条件の入口となる。
+- run join/abandon の正常系、force-resolve、merge conflict、cleanup 失敗、既存 resource の回収、および primary/lifecycle report の保存を確認する。
 
 ## Read this when
-- realization apply/refactor fork の正常完了、失敗、中断、rollback、agent 差分検査、commit 境界を確認・変更するとき
-- run join または abandon の merge、force-resolve、cleanup、worktree/branch 保持、state 遷移、report 保存を確認・変更するとき
-- session/run の共通 lifecycle、worktree 隔離、Codex child tracking、INDEX refresh、refactor state 同期の統合挙動を検証するとき
+- realization apply/refactor fork と run join/abandon の間で共有される session state、run worktree、branch、process tracking の lifecycle を調査するとき。
+- agent または INDEX refresh による想定外差分・commit、遅延 child、rename/delete、symlink、cleanup 失敗、rollback、interrupt の挙動を確認するとき。
+- fork report、lifecycle report、primary report、completion reason、feedback observation の記録内容を検証するとき。
 
 ## Do not read this when
-- 実装本体の単一関数の詳細だけを調べる場合は、まず対応する commons、sub_commands、または runtime モジュールを直接読むとき
-- oracle の通知仕様や app specification 自体を確認する場合は、テストではなく参照されている仕様文書を直接読むとき
-- INDEX エントリー生成や一般的なテスト規約だけを確認する場合は、この統合テスト全体を読む必要がないとき
+- 個別の実装関数の通常系だけを確認したい場合は、対応する commons または sub_commands 配下の実装や、より直接的な単体テストを読む。
+- editing run と無関係な CLI、INDEX routing、oracle 仕様、一般的な Git 操作の挙動だけを調べる場合は、この統合テストを読まない。
 
 ## hash
-- 201ab4cde91aa05409ba132d91151025ef43ad00729aa9e2c74ab5fa79bf0ef7
+- 935c80a09dfe80e477e97632f9c2c34d79c5040e1e7fdfbf7d1e2afba9c08661
 
 # `test_editor_input_handoff.py`
 

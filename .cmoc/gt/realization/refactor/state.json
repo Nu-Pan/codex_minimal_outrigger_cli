@@ -97,9 +97,9 @@
   },
   "oracle/doc/app_spec/oracle_and_realization.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "19bdfd485f73ff97bdec11f8f6209f6e9d56e80c337fd76c019025599d8b80a5",
+    "last_investigated_at": "2026-09-09_08-43_15_542068000"
   },
   "oracle/doc/app_spec/oracle_and_realization_file_enumeration.md": {
     "investigation_required": true,

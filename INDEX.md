@@ -138,16 +138,15 @@
 # `test`
 
 ## Summary
-- pytest で検証する CLI、runtime、Codex 実行、indexing、feedback、session、oracle/realization などの回帰・統合テスト群を収録し、各機能の外部挙動や境界条件を確認するためのテスト入口。共通 fixture とテスト用 helper も含む。
+- `test` 配下の回帰・統合テストを、CLI、runtime、Codex 実行、indexing、feedback、session、editor handoff、通知などの外部挙動ごとに確認するための入口。共通 fixture やテスト用 helper も含め、実装変更がどの観測可能な契約へ影響するかを調べる。
 
 ## Read this when
-- 特定機能の実装変更が既存の CLI・runtime・Git・worktree・Codex subprocess・state・report・MCP などの外部契約へ与える影響を、対応する回帰テストから確認するとき。
-- 実経路統合テスト、サブコマンド別テスト、共通 fixture/helper の所在を探し、変更対象に対応する検証ケースへ進むとき。
+- `test` 配下で検証される CLI や runtime の外部契約、状態遷移、エラー境界、Git・worktree・process・report の回帰挙動を横断的に探すとき。
+- 特定機能の専用テスト、複数機能をまたぐ統合テスト、またはテスト共通 helper の責務を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装の詳細そのものを確認することが目的で、テストの期待挙動を調べる必要がないとき。対応する oracle、app specification、src、realization を直接読む。
-- pytest の共通実行環境や toast 隔離だけを確認したいときは、ディレクトリ全体ではなく conftest.py を読む。
-- 対象機能と無関係なテストや、実 Codex・PTY を使わない単体テストだけを調べるときは、対応する個別テストまたは helper に直接進む。
+- 正本仕様や実装の詳細を確認することが目的で、対応する `oracle`、`realization`、`src`、または app specification を直接読むべきとき。
+- テスト対象と無関係な機能の挙動や、一般的な pytest 実行方法だけを確認したいとき。
 
 ## hash
-- 5081fae4b1072cd8bdc6c4a12da8d6c2865ce7f3ce0d72a5f6676ac7ec60e018
+- 64274ea450b592387094514fd0c7d722e7937cebb6cc07e7a383f7a45e9f90d2
