@@ -84,7 +84,7 @@ session join の conflict 解消は、両 branch の意味を保ったまま mer
 ## primary report
 
 - `natural_completion` と `error` のすべての終了経路で、session join 実行要約を primary report として保存する。doctor preprocess または事前条件で終了した場合も対象とする。
-- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/ar/report/session/join/{{time-stamp}}.md` に保存する。
+- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/session/join/{{time-stamp}}.md` に保存する。
 - front matter には、command、生成日時、repo root、terminal result の共通分類、終了コード、session branch、home branch、merge 前の両 branch の HEAD commit、作成した merge commit、および session state の実行前後の値を含める。確定できなかった値は `null` とする。
 - 本文には、事前検証、branch 切替、merge 結果、conflict path、conflict 解消用 agent call と確定した解消結果、state 遷移、session branch の cleanup、warning またはエラー、必要な次の操作、および関連する診断用サブコマンドログと Codex call log を要約する。
 - 実行しなかった merge、conflict 解消、state 更新、または cleanup は未実行として扱う。確定していない解消結果を作ってはならない。

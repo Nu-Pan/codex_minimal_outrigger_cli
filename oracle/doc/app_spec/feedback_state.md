@@ -23,7 +23,7 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
 論理的な配置を次に示す。
 
 ```text
-{{repo-root}}/.cmoc/gu/ar/feedback/
+{{repo-root}}/.cmoc/gu/feedback/
 ├── observation/v1/...
 ├── active/current.json
 ├── active/generation/{{generation-id}}/
@@ -37,7 +37,7 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
     ├── report_cut.json
     └── publication_completion.json
 
-{{repo-root}}/.cmoc/gu/ar/report/feedback/
+{{repo-root}}/.cmoc/gu/report/feedback/
 ├── {{time-stamp}}.md
 ├── incomplete/{{time-stamp}}.md
 └── invocation/{{time-stamp}}.md
@@ -194,7 +194,7 @@ merge または no-op join 後は、session tree の commit と最終 tree 検�
 `incomplete` 診断 report は、次へ durable に保存する。
 
 ```text
-{{repo-root}}/.cmoc/gu/ar/report/feedback/incomplete/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/report/feedback/incomplete/{{time-stamp}}.md
 ```
 
 診断 report は、次の artifact を削除しても単独で読める内容にする。

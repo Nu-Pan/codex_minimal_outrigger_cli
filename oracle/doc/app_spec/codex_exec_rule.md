@@ -143,7 +143,7 @@ call-scoped path context の適用範囲を次に示す。
 agent の直接ファイルアクセス制限は、次の書き込みには適用しない。
 
 - MCP 経由の外部ツールによるファイル書き込み。書き込み先や file access mode を問わない
-- Structured Output の受け取り側による保存・更新と、cmoc 自身のログ保存、report 保存、indexing その他の管理処理。各機能の仕様に従い、既存の出力契約と受理条件を維持する。Structured Output 自体がファイルを書き込むわけではない
+- Structured Output の受け取り側による保存・更新と、cmoc 自身のログ保存、report 保存、indexing その他の管理処理。各機能が定める出力契約と受理条件に従う。Structured Output 自体がファイルを書き込むわけではない
 
 MCP の責任分界は次のとおりとする。
 
@@ -152,7 +152,11 @@ MCP の責任分界は次のとおりとする。
 
 `{{work-root}}/.cmoc` は cmoc の管理領域とする。agent から必要な更新を依頼する場合は、各機能が提供する MCP を使用する。cmoc 自身の管理処理を MCP 経由へ変更する必要はない。
 
-保存先に含まれる `ar`／`aw` はアクセス権の区分としない。既存の保存先パスを維持し、改名やデータ移行は行わない。保存記録と未信頼かつ可変な作業ファイルの用途・信頼性・lifecycle は、各機能の仕様で定める。
+`.cmoc/gt` と `.cmoc/gu` 配下の従来のアクセス区分 `ar`・`aw` の階層を廃止し、配下の相対構造を一段上へ配置する。各機能の所有 root、`gt`・`gu` の区分、および Git 追跡・非追跡の責務は維持する。
+
+cmoc は新レイアウトだけを生成・使用する。今回の構造変更に対する互換機構や自動移行は設けない。
+
+保存記録と未信頼かつ可変な作業ファイルの用途・信頼性・lifecycle は、各機能の仕様で定める。
 
 この責任分界を理由に、sandbox、permission profile、network access、または承認設定を拡張してはならない。必要性が確定していない MCP、汎用ファイル操作 MCP、または将来用の管理機構を追加しない。
 
@@ -278,7 +282,7 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 - Structured Output の補正 prompt は、初回 prompt を加工したものではなく、本書の出力補正規則に従う次の turn の入力として構築する
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
-- `AgentCallParameter.prompt` は、`{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_prompt.md` に保存する
+- `AgentCallParameter.prompt` は、`{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_prompt.md` に保存する
 - `AgentCallParameter.prompt` は stdin 経由で渡す。コマンド末尾に `-` を付け、`{{time-stamp}}_prompt.md` をリダイレクト入力する
 - argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
 
@@ -307,7 +311,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 ## Codex CLI 呼び出し情報の保存
 
-- Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_call.json` に保存すること
+- Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_call.json` に保存すること
 - `{{time-stamp}}_stdout.jsonl`, `{{time-stamp}}_stderr.log`, `{{time-stamp}}_output.json` に残らない情報だけを `{{time-stamp}}_call.json` に書くこと
 - 同一の Codex CLI 呼び出しでは、`{{time-stamp}}` を一致させる
 - 1 回の agent call に初回と補正の複数 Codex call が含まれる場合は、Codex call ごとに別の `{{time-stamp}}` と log 一式を作成する
@@ -316,13 +320,13 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 ## stdout, stderr の扱い
 
 - `--json` を必ず指定すること
-- stdout は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stdout.jsonl` に出力すること
-- stderr は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stderr.log` に出力すること
+- stdout は `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_stdout.jsonl` に出力すること
+- stderr は `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_stderr.log` に出力すること
 - stdout, stderr をコンソールに出力しないこと
 
 ## Codex session ID
 
-- Codex call の session ID は、対応する `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stdout.jsonl` から読み取る
+- Codex call の session ID は、対応する `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_stdout.jsonl` から読み取る
 - `type == thread.started` である要素の `thread_id` field を session ID とする
 
     ```json
@@ -331,14 +335,14 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 ## `--output-last-message`
 
-- `--output-last-message {{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_output.json` を必ず指定すること
+- `--output-last-message {{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_output.json` を必ず指定すること
 - cmoc が Codex CLI の作業結果を取り出す必要がある場合、`{{time-stamp}}_output.json` から読み出すこと
 
 ## Structured Output
 
 - Codex CLI に Structured Output を要求する場合は、必ず `--output-schema` を使うこと
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
-- スキーマは、一度 `{{repo-root}}/.cmoc/gu/ar/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
+- スキーマは、一度 `{{repo-root}}/.cmoc/gu/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
 - `{{hash}}` は schema 本文の SHA256 ハッシュとする
 - Structured Output の出力要件は、JSON Schema で説明できる限り schema だけで説明し、schema を正本とする。対象は次の事項とする
     - field の意味

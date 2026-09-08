@@ -23,7 +23,7 @@
 ## primary report
 
 - `natural_completion` と `error` のすべての終了経路で、インデクシング実行要約を primary report として保存する。事前条件違反や doctor preprocess の失敗も対象とする。
-- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/ar/report/indexing/{{time-stamp}}.md` に保存する。
+- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/indexing/{{time-stamp}}.md` に保存する。
 - front matter には、次の実行情報を含める。
     - command
     - 生成日時

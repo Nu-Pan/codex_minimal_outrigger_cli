@@ -16,8 +16,8 @@
 
 1. `{{repo-root}}/.cmoc/gu` が git 追跡対象外であることを保証する
 2. `{{work-root}}/.agents` が git 追跡対象であることを保証する
-3. `{{work-root}}/.cmoc/gt/ar/config.json` が git 追跡対象であることを保証する
-4. `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する
+3. `{{work-root}}/.cmoc/gt/config.json` が git 追跡対象であることを保証する
+4. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する
 5. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
 6. ここまでの作業で発生した tracked 差分を git commit する
 
@@ -59,23 +59,23 @@
 - `{{work-root}}/.agents` ツリー内に tracked file がない場合は `{{work-root}}/.agents/.gitkeep` を git index に追加する
 - 修復後も `{{work-root}}/.agents` ツリー内に tracked file がない場合はエラー終了する
 
-## 「`{{work-root}}/.cmoc/gt/ar/config.json` が git 追跡対象である事を保証する」の詳細
+## 「`{{work-root}}/.cmoc/gt/config.json` が git 追跡対象である事を保証する」の詳細
 
 ### 検証
 
-- `{{work-root}}/.cmoc/gt/ar/config.json` が存在していること
-- `{{work-root}}/.cmoc/gt/ar/config.json` が git 追跡対象であること
+- `{{work-root}}/.cmoc/gt/config.json` が存在していること
+- `{{work-root}}/.cmoc/gt/config.json` が git 追跡対象であること
 
 ### 修復
 
-- `{{work-root}}/.cmoc/gt/ar/config.json` が存在しなければ作成する
-- `{{work-root}}/.cmoc/gt/ar/config.json` を git 追跡対象に追加する
+- `{{work-root}}/.cmoc/gt/config.json` が存在しなければ作成する
+- `{{work-root}}/.cmoc/gt/config.json` を git 追跡対象に追加する
 
 ## 「refactor state が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する」の詳細
 
 ### 検証
 
-- `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が存在していること
+- `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が存在していること
 - 同 file が git 追跡対象であること
 - JSON のトップレベルが object であり、各 key と value が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の refactor state 仕様を満たすこと
 - 同期完了時点で、entry が `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」による全 oracle file と全 realization file の和集合に過不足なく対応すること

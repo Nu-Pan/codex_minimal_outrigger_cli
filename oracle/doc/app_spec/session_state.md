@@ -3,7 +3,7 @@
 ## 概要
 
 - cmoc workflow 上の session と、明示的または同一 invocation 内の自動 join で終了する編集 run の lifecycle を一意に定める JSON file である。
-- 保存先は `{{repo-root}}/.cmoc/gu/ar/session/{{session-id}}.json` とする。
+- 保存先は `{{repo-root}}/.cmoc/gu/session/{{session-id}}.json` とする。
 
 ## スキーマ設計の基本原則
 

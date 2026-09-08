@@ -164,8 +164,8 @@ self-joining 経路の join がすでに成功した `feedback_report` は、`cm
 - report から、run kind、branch、worktree、fork commit、実行前後の state、warning、および cleanup 結果を判別可能にする。
 - 同じ commit を workload 固有の別名でも重複掲載してはいけない。
 - fork report は変更 path と完了理由を含め、保存先と workload 固有項目は workload 固有仕様で定める。
-- join report は `{{repo-root}}/.cmoc/gu/ar/report/run/join/{{time-stamp}}.md` に保存し、`cmoc run join` の primary report とする。差分検査、想定外差分の扱い、merge と merge commit または no-op join、post-join hook、refactor state 同期、state 遷移、cleanup、エラー、および関連ログを要約する。
-- abandon report は `{{repo-root}}/.cmoc/gu/ar/report/run/abandon/{{time-stamp}}.md` に保存し、`cmoc run abandon` の primary report とする。停止した process、破棄対象、state 遷移、cleanup、残存資源、エラー、および関連ログを要約する。
+- join report は `{{repo-root}}/.cmoc/gu/report/run/join/{{time-stamp}}.md` に保存し、`cmoc run join` の primary report とする。差分検査、想定外差分の扱い、merge と merge commit または no-op join、post-join hook、refactor state 同期、state 遷移、cleanup、エラー、および関連ログを要約する。
+- abandon report は `{{repo-root}}/.cmoc/gu/report/run/abandon/{{time-stamp}}.md` に保存し、`cmoc run abandon` の primary report とする。停止した process、破棄対象、state 遷移、cleanup、残存資源、エラー、および関連ログを要約する。
 - join または abandon を開始できなかった場合は、確定できた active workload と state、事前条件違反、および未実行の処理を report する。実行していない merge、hook、破棄、または cleanup の結果を作ってはならない。
 - fork の terminal result では、次に実行可能な lifecycle 操作として `cmoc run join` と `cmoc run abandon` を示す。
 - join の terminal result では、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、および cleanup の結果をサブコマンド固有結果として判別可能にする。

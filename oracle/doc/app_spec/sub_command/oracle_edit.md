@@ -81,7 +81,7 @@
 ## primary report
 
 - `natural_completion` と `error` のすべての終了経路で、oracle edit 実行要約を primary report として保存する。doctor preprocess、エディタ入力、indexing preflight、または agent call 前の条件で終了した場合も対象とする。
-- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/ar/report/oracle_edit/{{time-stamp}}.md` に保存する。
+- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/oracle_edit/{{time-stamp}}.md` に保存する。
 - front matter には、次の実行情報を含める。
     - command
     - 生成日時

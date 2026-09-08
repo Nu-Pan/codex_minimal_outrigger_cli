@@ -291,7 +291,7 @@ primary report の実行記録には、`{{cmoc-root}}/oracle/doc/app_spec/consol
 正常 report は Markdown と YAML Front Matter で構成し、次へ保存する。
 
 ```text
-{{repo-root}}/.cmoc/gu/ar/report/feedback/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/report/feedback/{{time-stamp}}.md
 ```
 
 保存した正常 report を primary report とする。front matter には、少なくとも次の情報を含める。
@@ -334,7 +334,7 @@ front matter には、run と report cut の情報、各終端結果の件数、
 `user_interruption` と `error` では、今回の invocation report を primary report として次へ保存する。
 
 ```text
-{{repo-root}}/.cmoc/gu/ar/report/feedback/invocation/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/report/feedback/invocation/{{time-stamp}}.md
 ```
 
 front matter と本文から、少なくとも次の情報を判別可能にする。

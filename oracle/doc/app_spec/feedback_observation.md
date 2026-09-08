@@ -188,7 +188,7 @@ sandbox escalation は、期待動作との区別と安定した subject を既�
 raw observation は、1 observation 1 file で次へ保存する。
 
 ```text
-{{repo-root}}/.cmoc/gu/ar/feedback/observation/v1/YYYY/MM/DD/{{observation-id}}.json
+{{repo-root}}/.cmoc/gu/feedback/observation/v1/YYYY/MM/DD/{{observation-id}}.json
 ```
 
 agent submission の ID は `fbo_` と UUIDv7 の組み合わせとする。machine observation の ID は `rule_id` と event ID から決定論的に生成し、同じ event の再検出で同じ ID にする。

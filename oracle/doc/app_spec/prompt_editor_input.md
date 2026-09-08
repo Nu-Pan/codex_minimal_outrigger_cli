@@ -20,11 +20,11 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 
 | 役割 | path | 書き込み主体 |
 | --- | --- | --- |
-| editor work file | `{{repo-root}}/.cmoc/gu/aw/editor_input/{{time-stamp}}_orig.md` | cmoc が生成および削除する。人間は直接編集でき、cmoc は handoff submission に基づいて全面上書きできる。 |
-| 入力結果の保存コピー | `{{repo-root}}/.cmoc/gu/ar/log/editor_input/{{time-stamp}}_orig.md` | cmoc だけが書き込む。 |
+| editor work file | `{{repo-root}}/.cmoc/gu/editor_input/{{time-stamp}}_orig.md` | cmoc が生成および削除する。人間は直接編集でき、cmoc は handoff submission に基づいて全面上書きできる。 |
+| 入力結果の保存コピー | `{{repo-root}}/.cmoc/gu/log/editor_input/{{time-stamp}}_orig.md` | cmoc だけが書き込む。 |
 
 - editor work file は未信頼かつ可変な作業ファイルとする。cmoc と後続 agent は、その内容を保存記録として参照してはならない。
-- agent による直接編集の禁止と `ar`／`aw` の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
+- agent による直接編集の禁止と書き込み主体の責任分界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
 
 ## エディタの起動
 
@@ -38,7 +38,7 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 1. cmoc は、`build_prompt_editor_input_initial_text` の結果を初期値とする editor work file を作成する。
 2. cmoc は、editor work file の生成後から最終読み取り前まで、共通の handoff target lifecycle を適用する。
 3. cmoc は最終読み取り時に editor work file を検証する。検証条件を次に示す。
-    - 対象 path が `{{repo-root}}/.cmoc/gu/aw/editor_input` ディレクトリ内に収まる。
+    - 対象 path が `{{repo-root}}/.cmoc/gu/editor_input` ディレクトリ内に収まる。
     - 対象が regular file である。
     - 対象が symlink ではない。
 4. 検証に成功した場合、cmoc は editor work file を一度だけ読み取る。この結果を最終読み取り結果とする。

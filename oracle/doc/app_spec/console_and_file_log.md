@@ -115,7 +115,7 @@ Windows toast の対象、発火順序、通知内容、および失敗時の扱
 
 - ログファイルは、サブコマンドと 1:1 で対応させること
 - ログファイルは JSON Lines 形式であること
-- ログファイルは `{{repo-root}}/.cmoc/gu/ar/log/sub_command/{{time-stamp}}.jsonl` に出力すること
+- ログファイルは `{{repo-root}}/.cmoc/gu/log/sub_command/{{time-stamp}}.jsonl` に出力すること
 - ログファイルは `{{run-root}}` 側に出力してはいけない
 - サブコマンド中に発生したイベント 1 つを、ログファイルの 1 行に記録すること
 - イベントの追記はバッファリングせずに即時 flush すること

@@ -14,7 +14,7 @@
 
 ### 保存先と JSON schema
 
-- 正本の保存先は `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` とする。
+- 正本の保存先は `{{work-root}}/.cmoc/gt/realization/refactor/state.json` とする。
 - JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、次の object を value とする object である。
 
     ```json
@@ -176,7 +176,7 @@ realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/orac
 - 要約 agent は、既存の cwd と `{{work-root}}` を用い、指定範囲の差分を Git から取得して人間向けに要約する。この比較入力は、ファイル単位の所見調査・修正 call には追加しない。
 - 指定範囲の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。
 - ユーザー中断後またはエラー後は新しい agent call を行わず、確定済みの変更 path と所見情報から要約する。
-- `{{repo-root}}/.cmoc/gu/ar/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。
+- `{{repo-root}}/.cmoc/gu/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。
 - report 生成時点で確定していない項目は `null` または未実行とする。エラーになった処理段階、確定済みの部分作業、エラー、および関連ログは記録する。
 - サブコマンド終了イベントには `completion_reason`、unresolved target の件数、および report のフル path を含める。
 - `natural_completion`、`completed_with_unresolved`、および `user_interruption` は正常系の終了コードとし、`error` は非 0 とする。

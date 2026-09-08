@@ -2,10 +2,10 @@
 # cmoc config
 
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
-- `CmocConfig` は `{{work-root}}/.cmoc/gt/ar/config.json` として永続化される
+- `CmocConfig` は `{{work-root}}/.cmoc/gt/config.json` として永続化される
 - `CmocConfig` を json にシリアライズする際、メンバーの順序は保持される
-- `{{work-root}}/.cmoc/gt/ar/config.json` は `cmoc doctor` によって生成・同期される
-- `{{work-root}}/.cmoc/gt/ar/config.json` は人間によって編集・調整される
+- `{{work-root}}/.cmoc/gt/config.json` は `cmoc doctor` によって生成・同期される
+- `{{work-root}}/.cmoc/gt/config.json` は人間によって編集・調整される
 """
 
 # std
