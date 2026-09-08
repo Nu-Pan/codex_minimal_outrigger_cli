@@ -9,7 +9,8 @@ def build_editor_input_handoff_policy() -> tuple[PlaceholderMap, SDHeader]:
     """明示的に選択された editor input handoff 規定を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/editor_input_handoff.md` を参照。
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の
+        「agent の責務と権限」を参照。
     """
     return (
         {},
@@ -24,7 +25,9 @@ def build_editor_input_handoff_policy() -> tuple[PlaceholderMap, SDHeader]:
                     "handoff に失敗した場合は、必要に応じて手動で利用できる完成済み content を回答へ残すこと",
                 ),
                 prohibit=(
-                    "handoff の代替として editor work file へ直接書き込んだり、sandbox escalation を要求したりしてはならない",
+                    "editor work file へ直接書き込んではならない",
+                    "handoff のために sandbox、network access、permission profile、または file access mode を変更してはならない",
+                    "tool を利用できない場合や submission が拒否された場合に、handoff の代替として sandbox escalation を要求してはならない",
                 ),
             ),
         ),

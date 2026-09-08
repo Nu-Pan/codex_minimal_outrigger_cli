@@ -31,11 +31,10 @@
 - cmoc process の cwd が `{{repo-root}}` であっても、run 上の agent call の path context は `{{cmoc-run-worktree}}` から解決する。
 - 人間が `{{cmoc-run-worktree}}` を直接編集することは想定しない。
 
-## `{{run-root}}` 外への書き込み例外
+## run のアクセス境界と cmoc の管理処理
 
-- 原則として、run の作業は `{{run-root}}` ツリー内だけを読み書きする。
-- 読み取り用 Git 操作に必要な repository metadata の内部参照には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」が定める Git metadata の読み取り例外を適用する。
-- 個別仕様が明示する cmoc 管理データは、例外として `{{repo-root}}` 側へ書き込んでよい。
+- run 上のファイルアクセスは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
+- 個別仕様が明示する cmoc 管理データは、cmoc が `{{repo-root}}` 側へ書き込んでよい。
 - 実行ログの保存先は `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「サブコマンドログファイル」、session state の保存先は `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「概要」を正本とする。
 - feedback observation と feedback state の保存先および lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「raw observation の保存」と `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
 - run の join または abandon と feedback state の境界は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「スキーマ設計の基本原則」に従う。

@@ -10,7 +10,7 @@
 ## 構築定義の参照
 
 - editor の初期コメントと template の正確な構築は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` へ委譲する。
-- editor input handoff の target lifecycle、MCP interface、上書き、および失敗は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` を正本とする。
+- editor input handoff の target lifecycle と上書きは、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「handoff target」と「MCP interface と上書き」、失敗時の責務は同文書の「agent の責務と権限」を正本とする。
 - 完全 prompt skeleton と抽出後の完全 prompt は、各 agent call の正確な構築を所有する builder で構築する。oracle src への委譲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/tui.md` の「全バックエンド共通」、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md` の「TUI 起動パラメータ」、および `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「ユーザー指示と prompt の構築」を正本とする。
 - 生成済み editor input と skeleton は実行時生成物であり、editor lifecycle または prompt 文面の正本ではない。
 
@@ -20,11 +20,11 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 
 | 役割 | path | 書き込み主体 |
 | --- | --- | --- |
-| editor work file | `{{repo-root}}/.cmoc/gu/aw/editor_input/{{time-stamp}}_orig.md` | cmoc が生成および削除する。人間または agent は直接編集でき、cmoc は handoff submission に基づいて全面上書きできる。 |
+| editor work file | `{{repo-root}}/.cmoc/gu/aw/editor_input/{{time-stamp}}_orig.md` | cmoc が生成および削除する。人間は直接編集でき、cmoc は handoff submission に基づいて全面上書きできる。 |
 | 入力結果の保存コピー | `{{repo-root}}/.cmoc/gu/ar/log/editor_input/{{time-stamp}}_orig.md` | cmoc だけが書き込む。 |
 
-- `ar` は agent-readable かつ agent-write-prohibited な保存領域とする。
-- `aw` は agent が直接書き込める未信頼かつ可変な作業領域とする。cmoc と後続 agent は、`aw` の内容を保存記録として参照してはならない。
+- editor work file は未信頼かつ可変な作業ファイルとする。cmoc と後続 agent は、その内容を保存記録として参照してはならない。
+- agent による直接編集の禁止と `ar`／`aw` の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
 
 ## エディタの起動
 

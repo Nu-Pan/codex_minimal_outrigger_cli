@@ -114,19 +114,17 @@ call-scoped path context の適用範囲を次に示す。
 
 ### 詳細なファイルアクセス制限
 
-- 詳細なファイルアクセス制限は deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する
+- 詳細なファイルアクセス制限は、agent が直接行うファイルアクセスに適用する deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する
 - `NO_POLICY` 以外の全 file access mode では、次の制限を共通で適用する
-    - ツリー外の読み書きは、次のように禁止する。ただし、後述する Git metadata の読み取り例外を除く
-        - `{{work-root}}` と `{{repo-root}}` が同一の場合：`{{work-root}}` ツリー外を禁止する
-        - 両者が異なる場合：`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外を禁止する
-    - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc/g*/ar` ツリー内の書き込みを禁止する。`{{work-root}}` と `{{repo-root}}` が異なる場合は、`{{repo-root}}/.cmoc/g*/ar` ツリー内の書き込みも禁止する
+    - `{{work-root}}` ツリー外への書き込みを禁止する
+    - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc` ツリー内の書き込みを禁止する
+    - Git metadata は配置先によらず変更を禁止する
     - `AGENTS.md` と `INDEX.md` の書き込みを禁止する
     - `{{work-root}}/memo` の読み書きを禁止する
-- Git metadata の読み取り例外として、`{{work-root}}` に対する読み取り用 Git 操作が、その repository の履歴・差分取得に必要な metadata を内部参照することを許可する。linked worktree の共有 metadata など、worktree 外にある metadata も対象とする
-    - 別 worktree のファイル本文の閲覧や、対象外 repository の探索を一般的に許可するものではない
-    - Git metadata の変更は許可しない
-    - 履歴や差分を経由しても、oracle file、realization file、その他の対象への既存のアクセス境界を迂回してはならない
-    - この例外を理由に file access mode を追加・緩和してはならない
+- ツリー外であることだけを理由に読み取りを禁止しない。外部ログ、設定、ライブラリ、Git metadata も読み取りを許可する
+- 外部読み取りの許可は、明示的な読み取り禁止、mode 別のアクセス制限、および workload 固有の閲覧・判断材料の制限を解除しない。MCP や Git の履歴・差分を経由しても、明示的な読み取り禁止を迂回してはならない
+- 一度読んだ情報の影響を排除できないため、realization file の読み取り禁止は、判断の根拠への採用だけでなく閲覧自体に適用する
+- 外部読み取りの許可によって、対象 worktree の正本、追従対象 revision、作業範囲、または編集対象を変更してはならない
 - `NO_POLICY` 以外の各 mode は、共通制限に次の制限を追加する
     - `READONLY`: oracle file と realization file の書き込みを禁止する
     - `PURE_ORACLE_READ`: oracle file の書き込みと realization file の読み書きを禁止する
@@ -139,6 +137,24 @@ call-scoped path context の適用範囲を次に示す。
 - `build_complete_prompt` はその結果を処理し、共通 file access policy の追加可否を決める。完全 prompt への正確な追加条件は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない
 - 詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する
+
+### 書き込み主体の責任分界
+
+agent の直接ファイルアクセス制限は、次の書き込みには適用しない。
+
+- MCP 経由の外部ツールによるファイル書き込み。書き込み先や file access mode を問わない
+- Structured Output の受け取り側による保存・更新と、cmoc 自身のログ保存、report 保存、indexing その他の管理処理。各機能の仕様に従い、既存の出力契約と受理条件を維持する。Structured Output 自体がファイルを書き込むわけではない
+
+MCP の責任分界は次のとおりとする。
+
+- cmoc が提供する MCP の書き込みは、各 tool の仕様と検証で管理する。ユーザー設定・プロジェクト設定で追加された MCP の書き込み先を cmoc は制限・保証せず、その制御のための検査や仕組みを追加しない
+- MCP の例外はファイルアクセス上の書き込み制限だけに適用し、他の policy、各機能の利用条件、または workload の作業範囲を解除しない
+
+`{{work-root}}/.cmoc` は cmoc の管理領域とする。agent から必要な更新を依頼する場合は、各機能が提供する MCP を使用する。cmoc 自身の管理処理を MCP 経由へ変更する必要はない。
+
+保存先に含まれる `ar`／`aw` はアクセス権の区分としない。既存の保存先パスを維持し、改名やデータ移行は行わない。保存記録と未信頼かつ可変な作業ファイルの用途・信頼性・lifecycle は、各機能の仕様で定める。
+
+この責任分界を理由に、sandbox、permission profile、network access、または承認設定を拡張してはならない。必要性が確定していない MCP、汎用ファイル操作 MCP、または将来用の管理機構を追加しない。
 
 ### permission profile の不使用と動的生成禁止
 
@@ -235,6 +251,12 @@ objective の外側の block、正確な引数、項目名、構築順序、任�
 
 call 固有の実行時指示の優先関係は、prompt literal に cmoc の新しい意味仕様を作る権限を与えない。prompt literal と oracle doc が所有する意味仕様が食い違う場合は、prompt literal による仕様変更とは扱わず、oracle file 間の不整合として扱う。
 
+### SDPolicy の例外
+
+`SDPolicy.exception` は、同じ `SDPolicy` 内の「必須」「禁止」「許容」に優越する。他の policy、個別機能の利用条件、または workload 全体の制限を解除するものではない。
+
+カテゴリの正確な構造と agent 向け表示は、`{{cmoc-root}}/oracle/src/oracle/other/struct_doc.py` の `SDPolicy` と `_render_sd_policy_as_markdown` へ委譲する。
+
 ### Git 差分の参照入力
 
 - cmoc が Git 差分を agent の判断材料として自動付加する場合は、差分本文や変更 path 一覧の代わりに、取得に必要な参照情報だけを渡す
@@ -275,7 +297,7 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 ## editor input handoff MCP
 
-editor input handoff の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` を正本とする。
+editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」を正本とする。
 
 - `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
 - Codex TUI を起動する `AgentCallParameter` builder だけが MCP を有効にする。それ以外の builder は既定値を使用する

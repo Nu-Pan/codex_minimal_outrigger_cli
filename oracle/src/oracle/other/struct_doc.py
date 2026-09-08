@@ -156,6 +156,9 @@ class SDPolicy:
     """構造化された規定文章を表すクラス
 
     SDHeader 直下の単一要素として保持される事を想定している
+
+    例外の意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+    「SDPolicy の例外」を参照。
     """
 
     # この規定が一体何者であるかを述べる
@@ -173,6 +176,10 @@ class SDPolicy:
     # 1 項目 1 文で「～してもよい」が並ぶ
     # 必須・禁止との違いは、する・しないの裁量がエージェントに委ねられている事
     allow: tuple[str, ...] = field(default_factory=lambda: tuple())
+
+    # 「例外」カテゴリに属する規定のリスト
+    # 1 項目 1 文で「ただし、～は～して良い」が並ぶ
+    exception: tuple[str, ...] = field(default_factory=lambda: tuple())
 
     # 各規定が言っていることを理解するために必要な補足情報のリスト
     # 1 項目 1 文で補足情報を並べる
@@ -317,6 +324,12 @@ def _render_sd_policy_as_markdown(
             sd_node.what_is_this,
             "",
         ]
+    if sd_node.exception:
+        result += [
+            "",
+            "**例外**は、同じ policy 内の **必須**、**禁止**、**許容** のみに対して優越する。"
+            "",
+        ]
     if sd_node.require:
         result += [
             "",
@@ -344,6 +357,16 @@ def _render_sd_policy_as_markdown(
             "",
         ]
         result += [f"- {a}" for a in sd_node.allow]
+        result += [
+            "",
+        ]
+    if sd_node.exception:
+        result += [
+            "",
+            "**例外**",
+            "",
+        ]
+        result += [f"- {a}" for a in sd_node.exception]
         result += [
             "",
         ]

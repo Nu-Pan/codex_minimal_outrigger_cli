@@ -18,68 +18,29 @@ def build_file_access_policy(
         `None` は、有効な mode に共通 file access policy が存在しないことだけを表す。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/codex_exec_rule.md` の
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
         「ファイルアクセス制限」を参照。
-        いろいろあって、細かいアクセス制御はプロンプトによる指示とした。
         sandbox の設定は non-goal である。
     """
     if mode is FileAccessMode.NO_POLICY:
         # 有効な mode だが、共通 file access policy は存在しない。
         return None
 
-    # リポジトリ外への禁止事項
-    # NOTE
-    #   work-root 外の書き込み禁止は、言わなくてもわかりそう。
-    #   だが、規定文面としての整合性を優先して明示する。
-    # NOTE
-    #   ログ関係だけは例外的に `{{run-root}}` で作業していようと cmoc が `{{repo-root}}/.cmoc/gu/ar/log` に書きに行く。
-    #   その関係で、agent が `{{run-root}}` での作業中に `{{repo-root}}/.cmoc/gu/ar/log` を読みに行きたくなる事がある。
-    #   更に log から `{{repo-root}}/.cmoc` ツリー内を読みに行きたくなるはずである (report とか)。
-    #   work-root が異なる場合は、repo-root の `ar` を読み取り禁止の集合から外し、
-    #   書き込みだけを別の項目で禁止する。
-    repo_root = path_context.repo_root
-    work_root = path_context.work_root
-    if repo_root == work_root:
-        out_repo_denials = [
-            "`{{repo-root}}` ツリー外は読み書き禁止",
-        ]
-    else:
-        out_repo_denials = [
-            "`{{work-root}}` ツリー外かつ `{{repo-root}}/.cmoc/g*/ar` ツリー外は読み書き禁止",
-            "`{{repo-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止",
-        ]
-    # 共通の禁止事項
-    # NOTE
-    #   `.git`, `.agents`, `.codex` Codex CLI の実装で書き込み禁止とされている。
-    #   規定文面の整合性として明示する。
-    # NOTE
-    #   `AGENTS.md` の Codex CLI による書き換えは、実質的には自己の書き換え。
-    #   挙動を予測不能で非常に危険なので禁止する。
-    # NOTE
-    #   安いモデルを使って `INDEX.md` を更新する仕組みがすでにあって、それは READONLY で実行される。
-    #   高性能モデルが作業中に `INDEX.md` を触っちゃうのはトークンの無駄なのでやらせたくない。
-    #   よって、`REPO_WRITE` 系 mode では `INDEX.md` は書き込み禁止。
-    # NOTE
-    #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
+    # agent の直接アクセスに対する共通の禁止事項。
     base_denials = [
-        *out_repo_denials,
+        "`{{work-root}}` ツリー外は書き込み禁止",
         "`{{work-root}}/.git` ツリー内は書き込み禁止",
         "Git metadata は配置先によらず変更禁止",
         "`{{work-root}}/.agents` ツリー内は書き込み禁止",
         "`{{work-root}}/.codex` ツリー内は書き込み禁止",
-        "`{{work-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止",
+        "`{{work-root}}/.cmoc` ツリー内は書き込み禁止",
         "`AGENTS.md` は書き込み禁止",
         "`INDEX.md` は書き込み禁止",
+        # NOTE
+        #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
         "`{{work-root}}/memo` は読み書き禁止",
     ]
     # mode 別の禁止事項
-    # NOTE
-    #   禁止されていない操作は許可される deny-list とし、
-    #   worktree 外の Git metadata の読み取り例外だけを明示する。
-    # NOTE
-    #   Codex CLI sandbox への対応は `oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
-    #   この関数が生成する詳細な規定はプロンプトとしてのみ使用し、permission profile や
-    #   path 単位の sandbox 設定へ変換してはならない。
     match mode:
         case FileAccessMode.READONLY:
             # NOTE
@@ -135,12 +96,16 @@ def build_file_access_policy(
         SDHeader(
             f"file R/W policy ({mode.value})",
             SDPolicy(
-                what_is_this="エージェントによるアクセスが満たすべき規定を以下に示す",
+                what_is_this="エージェントの直接ファイルアクセスに適用する規定と、書き込み主体による例外を以下に示す",
                 require=(),
                 prohibit=tuple(denials),
-                allow=(
-                    "Git metadata の読み取り例外: `{{work-root}}` に対する読み取り用 Git 操作が、その repository の履歴・差分取得に必要な metadata を内部参照することを許可する。linked worktree の共有 metadata など worktree 外の metadata も含むが、別 worktree のファイル本文の閲覧や対象外 repository の探索を一般的に許可するものではない。この例外規定は file R/W policy 内で述べた禁止規則よりも優越する。",
-                    "以上のルールで禁止されていない読み書きは暗黙に許可される。",
+                allow=(),
+                exception=(
+                    "MCP 経由の外部ツールによるファイル書き込みは、この policy の書き込み制限の対象外とする",
+                    "Structured Output を受け取った外部ツールによるファイル書き込みは、この policy の書き込み制限の対象外とする",
+                ),
+                supplemental=(
+                    "この policy は deny list であり、許容されるファイルアクセスには言及していない",
                 ),
             ),
         ),
