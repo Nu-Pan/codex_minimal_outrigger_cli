@@ -23,21 +23,19 @@
 # `src`
 
 ## Summary
-- agent call の共通パラメータと用途別 ACP builder をまとめる領域。quota probe、session join、TUI、indexing、oracle、realization、feedback の構築入口を扱う。
-- agent へ渡す prompt を組み立てる領域。基本 prompt、policy、parts、editor input handoff、oracle・realization 関連の指示を扱う。
-- agent call を支える補助モデルの領域。パス解決、cmoc 設定、構造化文書、エディタ入力上書き、feedback reporter input を扱う。
+- cmoc の agent call に渡すパラメータ、ファイルアクセスモード、実行先コンテキストを定義する実装領域。
+- agent call の用途別に、oracle・realization の編集、レビュー、適用、所見処理、feedback、indexing、session join、TUI などの prompt と Structured Output 契約を構成する。
+- prompt の共通規定、oracle・realization の基本説明、routing、設定、パス解決、構造化文書のレンダリングを下位実装へ提供する入口。
 
 ## Read this when
-- agent call の共通入力契約や file access mode を確認するとき。
-- 用途別の ACP builder の入口を探すとき。
-- prompt の基本構成、policy、parts、または editor input handoff の構築責務を確認するとき。
-- パス placeholder の解決、cmoc 設定、構造化文書のモデルを確認するとき。
-- feedback issue の報告入力や remediation 用の agent call 契約を確認するとき。
+- cmoc の agent call の入力パラメータ、ファイルアクセスモード、Structured Output schema、実行コンテキストの構成を確認するとき。
+- oracle・realization の編集・レビュー・適用、feedback remediation、index entry 生成、session join、TUI など特定用途の agent call がどの prompt builder と結び付くかを調べるとき。
+- 複数の agent call に共通する prompt policy、oracle・realization の基本知識、routing、path model、設定モデル、構造化文書の生成処理を確認するとき。
 
 ## Do not read this when
-- 特定用途の prompt や Structured Output schema の詳細だけを確認したいときは、該当する下位ディレクトリまたは schema を直接読むとき。
-- agent call の実行処理や Codex CLI の実際の挙動を調査したいとき。
-- 設定保存、feedback 受付、oracle・realization の編集など、個別処理の実装だけを確認したいとき。
+- oracle file や realization file の人間向け正本仕様そのものを確認するときは、対応する仕様文書または対象ファイルを直接読む。
+- 特定用途の prompt、出力契約、または実行処理だけを確認したいときは、該当する用途別の下位領域へ直接進む。
+- Codex CLI や agent call の共通実行機構そのものの実際の挙動を確認したいときは、実行機構側の実装や仕様を直接読む。
 
 ## hash
-- eeb1fd7c1517b91faeca8d03ef33dd814546fe673b79bbec66e144013544ea78
+- 6681788c2c01203045116d052623f65b8c0336cd9c5b8ed7227731ec1ca20372

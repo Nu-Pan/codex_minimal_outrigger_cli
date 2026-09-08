@@ -54,18 +54,20 @@
 # `other`
 
 ## Summary
-- `oracle/src/oracle/other` 配下の設定モデル、パスモデル、構造化文書モデルをまとめて案内する入口。cmoc の設定規則、agent call のパス解決、Markdown 文書ノードのレンダリング仕様を確認する際に使う。
+- cmoc の設定モデル、パスコンテキスト、構造化 Markdown 文書モデルを扱う基盤モジュール群への入口。設定の既定値や Codex 呼び出し設定、プレースホルダ付きパスの解決、文書ノードの Markdown 化を確認・変更するときに参照する。
 
 ## Read this when
-- cmoc の設定値や永続化方針、agent call の worktree・repository パスコンテキスト、または構造化文書の Markdown レンダリング挙動を調べるとき。
-- これらの基盤モデルを変更・利用し、設定、パス解決、または文書構造の責務の境界を確認するとき。
+- cmoc の設定データモデルや Codex provider・agent call 設定を調べるとき。
+- worktree・repository・run のルート導出や {{cmoc-root}} などのパスプレースホルダ処理を調べるとき。
+- 見出し、タグ付きブロック、コードブロック、ポリシーなどの構造化文書を Markdown に変換する挙動を調べるとき。
 
 ## Do not read this when
-- agent call のプロンプト生成や実際の CLI 呼び出し処理だけを調べるとき。
-- 個別のポリシー本文、文書テンプレート、または設定を保存・同期する具体的な処理だけを確認すれば足りるとき。
+- 設定ファイルの実体や doctor による生成・同期処理だけを確認したいとき。
+- 個別の agent call 実行、Codex CLI 起動、設定値の検証・読み書きなどの呼び出し側処理を直接調べるとき。
+- 個別のポリシー本文や文書テンプレート、Markdown 以外の出力仕様だけを確認したいとき。
 
 ## hash
-- 04a94efa62c483b4c1a3898829e98ebe9af20483444abe7158a5af612f965fff
+- c2d41bb5a147876d4bcbc41ce5f4f1be5cc646617058ff26c92a7c090e5823ab
 
 # `prompt_builder`
 

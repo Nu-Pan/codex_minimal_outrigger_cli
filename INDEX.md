@@ -89,20 +89,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・開発規則・設計判断資料を領域別に案内する文書群への入口。
-- agent call の共通契約、用途別 ACP builder、prompt 構築、関連する補助モデルを確認するためのソース領域への入口。
+- oracle 配下の正本仕様・開発規則・設計判断資料へ進むための入口。
 
 ## Read this when
-- cmoc の仕様・開発規則・branch・commit・worktree モデル、または不採用設計の資料の所在を判断するとき。
-- CLI 実行、session/run、Codex CLI、ログ、feedback、oracle/realization、状態管理の仕様入口を探すとき。
-- agent call の入力契約、用途別 builder、prompt 構成、パス解決、設定、構造化文書、feedback 報告入力の責務を確認するとき。
+- cmoc の正本仕様、開発規則、branch・commit・worktree のモデル、または不採用設計資料の所在を判断するとき。
+- CLI 実行、session/run、Codex CLI、ログ、feedback、oracle/realization、状態管理などの仕様入口を探すとき。
+- Python 開発、CLI 設計、開発環境、テスト要件・実行手順の正本文書を探すとき。
 
 ## Do not read this when
-- 確認対象の詳細が明確で、対応する個別の app_spec、dev_rule、branch model、considered alternative 文書、または下位ソースを直接読めるとき。
-- 実装コード、個別処理の実装、oracle・realization の編集方法、または INDEX.md 本文だけを確認したいとき。
+- 特定の実行契約、状態遷移、prompt、Structured Output、ログ、feedback、テスト規則の詳細が分かっており、対応する個別仕様文書を直接読めるとき。
+- branch・commit・worktree の具体的な関係や、不採用案の具体的な判断理由を確認する対象が明確なとき。
+- 実装コード、oracle file、realization file、または INDEX.md の本文だけを確認したいとき。
 
 ## hash
-- a55c27c870e5389b3dcfc1e4f4c1c89e20a9cc9ce6869cf986ab5b1a6dab15f9
+- 8efd8d335e7aefdeb264a8dc7dadc22e2297cc9c2de7e7e925623c9b00f863f2
 
 # `pyproject.toml`
 
