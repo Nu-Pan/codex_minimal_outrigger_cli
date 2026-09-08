@@ -49,21 +49,20 @@
 # `commons`
 
 ## Summary
-- commons パッケージは、CLI 実行、Codex exec/TUI、設定、Git、ログ、パス、結果、状態、feedback、report、editor handoff など、cmoc の複数実行経路で共有する runtime helper の実装群をまとめる。
-- 配下の runtime_* モジュールを、共通 runtime API の公開窓口、各機能の実装境界、または lifecycle・永続化・IPC などの横断処理の入口として提供する。
+- commons runtime 共通機能を構成する各モジュールへの入口。INDEX lifecycle、Codex 実行、設定、Git、ログ、パス、feedback、state、report など、複数の CLI 実行経路で共有される処理を確認・変更するときに参照する。
 
 ## Read this when
-- 複数の CLI・Codex・feedback・run 経路にまたがる共通 runtime helper を探すとき。
-- 設定、Git、ログ、パス、結果、状態、report、editor handoff などの共有実装の担当モジュールを特定するとき。
-- commons パッケージの公開 runtime API や、共通 lifecycle・永続化・実行境界の実装入口を確認するとき。
+- 複数の CLI 実行経路にまたがる runtime 共通機能の責務や公開入口を把握するとき
+- Codex 実行、INDEX 管理、設定、Git、feedback、state、report、editor handoff などの共通実装を調査・変更するとき
+- 対象の個別 runtime module が不明で、commons 配下の責務の対応先を切り分けるとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理や利用者向け正本仕様だけを確認したいとき。
-- 個別 helper の詳細な挙動を確認する場合は、commons 配下の対応する runtime_* 実装を直接読むとき。
-- INDEX.md の生成規則や entry の Structured Output schema を確認するとき。
+- 特定サブコマンドの業務フローや利用者向け正本仕様だけを確認するとき
+- 対象が明確な個別 runtime module の内部実装、schema、report 表示、protocol、state lifecycle を直接調査するとき
+- commons 配下ではない CLI、TUI、oracle、realization 固有の処理を確認するとき
 
 ## hash
-- c18c84f01aa709fdab437b54820eed38fe3e1d2605df5c549727a2a739e53c50
+- beab4af558341c159a12d8036a548b455cc85bd21c2aa05434236e664fe35a5e
 
 # `config`
 
@@ -117,17 +116,17 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装パッケージへの入口。doctor、feedback、indexing、oracle、realization、run、session、tui など、サブコマンドごとの CLI 入口と処理構成を確認するための上位ルーティング先。
-- apply と review は現時点で実装本文がなく、将来の実装配置先としてのみ示されている。
+- cmoc の各サブコマンド実装を配置する package 境界であり、apply・doctor・feedback・indexing・oracle・realization・review・run・session・tui の実装入口を提供する。
+- サブコマンド全体の構成を把握し、目的のサブコマンド実装へ進むための上位ルーティング先となる。
 
 ## Read this when
-- サブコマンドの実装構成や、対象サブコマンドの CLI 入口を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかについて、配下の実装へ調査を開始するとき。
-- apply または review の実装追加・変更箇所を確認するとき。
+- cmoc のサブコマンド実装の配置や全体構成を確認するとき。
+- 特定のサブコマンド実装を調査する前に、対応する実装入口を選ぶとき。
+- 新しいサブコマンド実装の追加先や、既存サブコマンドの package 境界を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理内容を調べる場合は、対応するサブコマンド配下の実装を直接読む。
-- 共通 runtime、prompt editor、Git 操作、INDEX 生成規則など、サブコマンド横断の専用処理だけを調べる場合は、その担当対象を直接読む。
+- 特定サブコマンドの具体的な処理、prompt 契約、共通 runtime、ライフサイクルなどを確認したいときは、対応する下位実装を直接読む。
+- サブコマンド以外の共通処理や仕様を調査するとき。
 
 ## hash
-- 8e434f1aced2ffcda3aebf12837b079a66d67e8eda3a7f95d104677296577f7a
+- 1581b401631326b6fb49c6d4b053c8510331fbb5c5d0bd8761ab90b1ade4f3bc

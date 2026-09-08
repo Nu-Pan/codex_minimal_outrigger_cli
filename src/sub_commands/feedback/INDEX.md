@@ -15,56 +15,54 @@
 # `decision.py`
 
 ## Summary
-- Feedback 判定の再確認に使う repository 入力の固定、判定状態ハッシュ、正式 checkpoint 履歴、循環検知、判定根拠の記録を担う。
-- 依存 path の申告に限定せず、読める repository 入力全体を保守的な検証条件として扱う判定処理への入口。
+- Feedback 判定の根拠となる repository 入力・候補 evidence の識別と、正式 checkpoint 履歴に基づく再確認・循環診断をまとめる実装。
 
 ## Read this when
-- Feedback の判定根拠をどの入力から構成するか確認したいとき。
-- 再確認時の差分、過去 checkpoint の参照、同一判定入力へ戻る循環の検知を調べるとき。
-- 判定直後の verification・current evidence と入力状態を、後続処理から独立して記録する方法を確認したいとき。
+- Feedback 判定がどの repository 入力を対象にするか、入力状態や evidence の hash をどう固定するか確認したいとき。
+- 過去の remediation checkpoint と現在の判定入力を比較し、再確認理由・変更点・非収束 cycle の扱いを追跡したいとき。
 
 ## Do not read this when
-- Feedback の結果分類や利用者向け仕様を確認したいだけで、判定根拠の保存・再確認履歴を扱わないとき。
-- 実行状態 artifact の読み書きや Git 入力列挙の個別実装を直接調べる必要があるときは、それぞれの runtime artifact・store・Git 共通処理の対象へ進むとき。
+- Feedback 判定結果そのものの生成・分類規則を確認したいときは、候補の判定処理を直接読む。
+- 実行時 feedback artifact の保存形式や Git 上の oracle・realization ファイル列挙の詳細だけを確認したいときは、それぞれの担当モジュールを直接読む。
 
 ## hash
-- 806899c5d09fab6e5b6bec975e51a34631c7f5ccfa119b846c3b60add9600dea
+- cfd0a8fb5914cd539f64ac8a995b6c4c456d1e6961ac5c8a8aa58924acfb10c7
 
 # `recovery.py`
 
 ## Summary
-- Feedback report の publication 後に、recovery journal を用いて cleanup・session の ready 遷移・隔離 run 資源回収を再開する処理と、明示的な join/abandon による終了との境界を扱う。
+- Feedback report の publication 後に、finalization journal を用いて cleanup、状態遷移、隔離資源回収を確定する処理。
+- 中断後の finalization 再開と、report・session・run・join evidence の整合性検証を扱う。
+- 自動 join 済み feedback run の明示 join/abandon を拒否し、明示終了時は監査記録を残して work artifact を破棄する入口。
 
 ## Read this when
-- feedback report の正常完了後に cleanup が中断し、同じ report と join tree から finalization を再開・検証したいとき
-- feedback run を明示的な join または abandon の対象にしてよいか、その状態遷移と制約を確認したいとき
+- Feedback report の publication 後 cleanup、recovery、ready 遷移、run worktree 回収を確認したいとき。
+- finalization journal の検証条件や、cleanup 失敗時の error 状態遷移を調べたいとき。
+- feedback run に対する明示 join/abandon の可否、または手動終了時の後処理を確認したいとき。
 
 ## Do not read this when
-- feedback report の判定・remediation・publication 本体の仕様や実装を確認したいときは、それぞれの decision、remediation、publication 関連対象を直接読む
-- feedback state のデータ構造や一般的な report cut 操作だけを確認したいとき
+- Feedback report の判定や正常 publication の内容を調べるとき。
+- Feedback run の一般的な lifecycle、join 実装、または worktree 操作そのものを調べるとき。
 
 ## hash
-- f773aa1d190f88c1f8ee6bf1316dea8d5b7dedb83deb678e061d38b31243a712
+- 0f934ef6ab4862779c72ca07f413807a9d4251f1ad9da0193fab9dfe4e85d020
 
 # `remediation.py`
 
 ## Summary
-- Feedback observation の issue 修復 wave を実行し、remediation checkpoint と commit を確定する処理を担う。
-- 封印済み run の join 成功を recovery し、最終 tree・判定根拠・差分 hash を検証して publication へ渡す。
-- commit、rollback、SIGINT 保留、run state 更新など、同一 feedback run の finalization 境界を確認する入口である。
+- feedback issue の逐次修復を wave 単位で収束させ、正式 checkpoint の検証、自動 join、publication、同一 run の recovery までを一続きで制御する。
 
 ## Read this when
-- feedback report の自動修復、wave の再処理、issue ごとの agent 出力と実差分の照合を調べるとき。
-- remediation checkpoint、sealed・merged・completion artifact の整合性、join 後の tree 検証を確認するとき。
-- feedback run の中断・失敗・publication recovery や、自動 join から report publication までの状態遷移を追うとき。
+- feedback report の remediation 実行、issue ごとの実差分・verification・decision basis の照合、wave の再処理条件を確認したいとき。
+- sealed な feedback run の merge 成功確認、join 後の到達可能性・最終 tree 検査、report publication または publication recovery の処理を確認したいとき。
 
 ## Do not read this when
-- 観測の収集・集約・表示や report cut の候補生成を調べるときは report を直接読む。
-- feedback run artifact の読み書き・形式検証だけを調べるときは runtime_feedback_run_state を読む。
-- 判定状態、判定根拠、履歴比較のロジックだけを調べるときは decision を直接読む。
+- 観測の収集・候補生成・レポート表示の実装だけを確認したいときは report を直接読む。
+- feedback run の永続 artifact の読み書き・検証だけを確認したいときは runtime_feedback_run_state を直接読む。
+- 判定状態や decision basis の比較ロジックだけを確認したいときは decision を直接読む。
 
 ## hash
-- f266bff1dbb4e5dcd4db85a94da4d54edeb411a38d994bb097389098df005c2b
+- 7d170960fb63ea7d64a7e20e441e315e35e3c0873b11fa325673b7bbcc80e57e
 
 # `report.py`
 
