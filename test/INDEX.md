@@ -797,21 +797,22 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値、Codex provider／agent call 設定、JSON 変換・保存・復元、および設定入力の型・値・構造検証を一つの回帰テスト群として検証する。
-- config schema の round-trip、旧設定項目の除外、壊れた JSON や不正なパスを利用者向けエラーへ変換する境界、provider-local 設定値の保持と拒否条件を確認する入口。
+- CmocConfig の既定値と全 agent call の直接設定を検証する回帰テスト。
+- config の JSON 変換、ファイル保存・読み込み、値と型の検証、provider-local settings の保持を検証する。
+- 壊れた JSON、過度な入れ子、特殊なパス、symlink、named pipe、不正な UTF-8 などの設定境界を利用者向けエラーへ変換する契約を検証する。
+- 旧 codex 設定項目を永続化された公開面から除外する契約を検証する。
 
 ## Read this when
-- CmocConfig の既定 agent call や provider 設定、config.json の読み書き・JSON 化・round-trip 挙動を変更または調査するとき。
-- 設定入力の top-level、codex section、map、agent call、provider settings の受理条件、文字列・整数・JSON/TOML 値の検証、旧設定項目の永続化除外を確認するとき。
-- 壊れた JSON、過深ネスト、通常ファイルでないパス、named pipe、symlink、UTF-8 出力を含む config エラー処理の回帰を確認するとき。
+- CmocConfig の既定値、agent call の model/provider/reasoning 設定、provider 定義を確認したいとき
+- config.json の round-trip、JSON/TOML 共通値、入力拒否、永続化境界の挙動を確認したいとき
+- 設定ファイルの読み書きに関する異常系や安全なパス処理を確認したいとき
 
 ## Do not read this when
-- CmocConfig や config.json の仕様・実装を直接扱わず、別の実行時機能や config 以外のテストを調査するとき。
-- provider 定義や agent call の設定値そのものではなく、oracle 側のモデルプロバイダー仕様を直接確認する必要があるときは、参照元の仕様を読む。
-- このテスト群が検証する入力拒否・永続化境界ではなく、一般的なエラー表示や別機能のファイル操作だけを調査するとき。
+- CmocConfig の実装詳細や設定仕様の根拠を確認する場合は、実装または参照される oracle・app_spec を直接読むとき
+- 設定以外の runtime 処理、agent 呼び出し処理、TUI、feedback、oracle investigation の挙動を確認したいとき
 
 ## hash
-- f659e65dcd6ee95d7f23d663d4485da99077d0e2e7ce2becd6a034c42a87f907
+- 1a8d8b29e55c9e5ba148c7878a20fb3ee2e939be8bfe1e059fa498ee52ae2f5f
 
 # `test_runtime_content.py`
 

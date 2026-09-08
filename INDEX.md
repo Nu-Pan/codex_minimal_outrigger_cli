@@ -89,22 +89,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様、開発規則、branch model、設計上の不採用案を、責務別の文書群として参照する入口。
-- agent call、prompt、policy、feedback、oracle／realization、session、indexing などの実装構成を調べるための oracle src 群への入口。
-- 現行のアプリケーション挙動や開発手順の根拠には doc/app_spec・doc/dev_rule・branch_model を、過去の設計判断の背景には doc/considered_alternative を読む。
+- cmoc の正本仕様・開発規則・branch model・設計検討資料と、仕様を実装する oracle 側コード・構造化入力を、文書群と実装群に分けて参照する入口。
 
 ## Read this when
-- cmoc の現行仕様、開発規則、branch・worktree の概念、または採用しなかった設計案の所在を切り分けるとき。
-- agent call の builder、prompt と policy の組み立て、Structured Output、feedback、oracle／realization、session、indexing などの実装責務を調べるとき。
-- 仕様文書と oracle src のどちらが対象の正本か、または関連する実装入口を判断するとき。
+- cmoc の現行仕様、開発ルール、branch 関係、または採用しなかった設計案を確認するときは doc 配下へ進む。
+- oracle・realization・feedback・indexing・prompt 構築などの正本データ形式や agent call 構築コードを調べるときは src 配下へ進む。
+- 仕様とその実装の対応を横断して調査するとき。
 
 ## Do not read this when
-- 読むべき仕様文書、開発規則、branch model、検討資料、または実装ファイルがすでに特定できており、その対象だけを確認すればよいとき。
-- 実装の具体的な挙動を変更せず、Codex CLI や外部ツールの一般的な実行挙動だけを調査するとき。
-- 特定の subcommand、prompt policy、schema、oracle／realization file の詳細手順を直接確認したいとき。
+- 対象の仕様文書、開発規則、設計検討資料、または src 配下の個別モジュールがすでに特定できているとき。
+- 実装コード全体ではなく、特定の oracle／realization file の保存内容だけを確認したいとき。
 
 ## hash
-- 9e81cd34796f63b2270dc6f739d66dd914d97b04c8f0500b964252a1d83a80ee
+- 80c46483ee37fc83a4e2332e99156cf9e109ec0903b0a7214679b758eea7a9ea
 
 # `pyproject.toml`
 
@@ -145,19 +142,15 @@
 # `test`
 
 ## Summary
-- test 配下の共有ヘルパー、単体・回帰テスト、CLI 統合テスト、実経路受け入れテストをまとめた検証入口です。
-- CLI と runtime の外部契約、Codex 実行・TUI・prompt・権限境界、Git/worktree・state・session lifecycle、indexing・feedback・oracle・realization の回帰条件を確認できます。
-- 本番経路や独立 process・PTY・実 Codex CLI を用いた末端 command の検証範囲も含みます。
+- cmoc のテスト群をまとめた検証入口。CLI、runtime、Codex 実行、indexing、session・run・feedback、oracle・realization、prompt・editor、通知、統合実行などの外部契約と回帰条件を扱う。
 
 ## Read this when
-- 変更対象の外部挙動や回帰条件に対応するテスト入口を探すとき
-- CLI、runtime、Codex、Git/worktree、session/state、indexing、feedback、oracle、realization の複数機能にまたがる lifecycle や安全境界を検証するとき
-- 単体テストだけでなく、共有 fixture、CLI 統合、独立 process、PTY、実 Codex CLI による受け入れ挙動を確認するとき
+- cmoc の機能変更や不具合調査で、実装の期待される外部挙動・回帰条件・統合 lifecycle をテストから確認するとき。
+- 対象機能に対応する単体・runtime・CLI・実経路統合テストの入口を探すとき。
 
 ## Do not read this when
-- 正本仕様、schema、oracle、realization、または実装本体の意味と詳細を確認することが目的のとき
-- 特定テストの fixture や helper の局所実装だけを調べる場合は、該当する個別対象へ直接進むとき
-- テスト対象外の機能や、一般的な pytest 実行方法だけを確認したいとき
+- 正本仕様、実装詳細、schema、builder の定義そのものを確認することが目的の場合は、対応する oracle、realization、src、schema を直接読む。
+- 一般的なテスト実行手順や、特定機能と無関係な fixture・補助処理だけを確認したい場合。
 
 ## hash
-- c1719b295e2fc0adbb7e44c9b834c40bdc01b89476ce6ca02f271650dfd65bb8
+- 9256139bc39b80e924e88e85823305de7a94ab0d8b5e0007d1c07ade90c3dc43

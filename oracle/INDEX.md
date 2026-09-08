@@ -17,22 +17,21 @@
 # `src`
 
 ## Summary
-- AI コーディングエージェント呼び出しの共通パラメータ型、ファイルアクセスモード、パスコンテキストを提供する。
-- quota probe、indexing、feedback、oracle、realization、session、TUI など用途別の agent call パラメータ構築への入口を提供する。
-- prompt_builder で task・scope・completion criteria・non-goals、各種 policy、placeholder、構造化 Markdown prompt を組み立てる。
-- editor input handoff の初期文面、feedback issue の正規化・remediation、oracle と realization の編集・調査・追従・conflict 解消に関する call 設定を扱う。
-- other では root path の解決・placeholder 変換、構造化文書のレンダリング、cmoc と Codex の call 設定を扱う。
+- AI コーディングエージェント呼び出しに渡すパラメータ、アクセスモード、cwd、prompt、Structured Output schema をまとめる構成への入口。
+- agent call の prompt を組み立てる共通部品、ポリシー、oracle・realization の基本説明、routing、feedback 報告、editor input handoff を扱う。
+- indexing、feedback、oracle 編集・調査、realization の適用・リファクタ、session join、TUI、quota probe など用途別の起動パラメータ構築へ進む起点。
+- パス解決、cmoc 設定、構造化ドキュメントのレンダリングなど、agent call と prompt 構築を支える共通モデルも含む。
 
 ## Read this when
-- agent call の共通設定、アクセスモード、cwd、Structured Output schema、indexing preflight の設定を確認するとき。
-- 用途別 builder がどの prompt policy と対象パスを組み合わせるかを確認するとき。
-- oracle・realization の編集、レビュー、調査、追従、feedback remediation、session join conflict 解消の call 構築責務を調べるとき。
-- 構造化 prompt の生成・Markdown レンダリング、root path または placeholder の解決方法を確認するとき。
+- agent call の共通パラメータ、FileAccessMode、Structured Output schema、cwd、indexing preflight の扱いを確認または変更するとき。
+- 複数の agent call に共通する prompt、file access、oracle・realization、routing、feedback reporting の規定を確認するとき。
+- 特定の cmoc 操作に対応する agent call の prompt 構築や起動パラメータの入口を探すとき。
+- prompt のプレースホルダ、パスコンテキスト、設定モデル、構造化ドキュメントの生成・レンダリングを調べるとき.
 
 ## Do not read this when
-- Codex CLI の共通実行処理や外部ツール側の実際の挙動だけを調査するとき。
-- 特定用途の prompt、出力契約、編集対象の詳細が必要な場合は、該当する下位ディレクトリの対象を直接読む。
-- oracle・realization file の正本仕様や具体的な編集手順を確認するとき。
+- 特定の agent call の詳細な作業手順や出力契約だけを確認したいときは、該当する用途別 builder または schema を直接読む。
+- oracle doc、realization file、feedback state などの正本データや保存内容そのものを確認したいとき。
+- Codex CLI の実際の起動処理や、agent call 後の状態管理・実行結果処理だけを調査したいとき。
 
 ## hash
-- f6be3456a3ade6b98b42c74347001d21d3dc7d4625e3294082f534772d889d55
+- 06f5bcfd3a9c90663c02273f8af3360520ad35052c21128991733f46d58ec77c
