@@ -1,19 +1,17 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様に属するソースコード、設定スキーマ、agent call builder、prompt builder、および関連モデルをまとめる領域。
-- oracle file と realization file の基本モデルを基盤に、agent call の入力・出力契約、用途別の prompt、実行パラメータ、oracle・realization の編集・レビュー・適用処理を構成する。
-- quota probe、indexing、feedback、session、TUI、editor input handoff など、cmoc の各機能から利用される実装上の入口を提供する。
+- cmoc の oracle 正本を扱う実装領域で、agent call 構築、prompt・policy 生成、パス解決、構造化文書、editor handoff、feedback 入力契約などの基盤を提供する。
+- oracle に関する呼び出しパラメータ、入力スキーマ、prompt 部品、ファイルアクセス制約、パスコンテキスト、Markdown 構造化モデルを調べるための下位入口。
 
 ## Read this when
-- cmoc の oracle src にある agent call 構築、prompt 構築、設定・パス・文書モデル、または JSON schema を調べるとき。
-- oracle・realization の編集、レビュー、適用、所見処理や session join の agent call の構成を確認するとき。
-- 対象機能に対応する下位ディレクトリや builder、schema の入口を探すとき。
+- oracle の agent call や TUI・編集・調査・レビュー処理の構築定義を確認するとき。
+- oracle 関連 prompt、policy、入力スキーマ、アクセスモード、作業パス解決の実装を探すとき。
+- oracle を含む構造化文書のモデルや Markdown レンダリングの挙動を確認するとき。
 
 ## Do not read this when
-- oracle file や realization file の人間向け正本仕様そのものを確認したいときは、該当する仕様文書または対象ファイルを直接読む。
-- 特定の下位機能の prompt、出力契約、または実行処理だけを確認したいときは、該当する下位ディレクトリの対象へ直接進む。
-- Codex CLI や agent call の共通実行機構の実際の挙動だけを調べるとき。
+- oracle ファイルそのものの具体的な内容や編集手順を確認したいときは、対象の正本ファイルや専用処理を直接読む。
+- realization、feedback の収集・受付処理、または Codex CLI の共通実行挙動だけを調べるとき。
 
 ## hash
-- 151801d0bc12eed6d20d4ef9ea96f49ea4acacbc13c95a58131df82465e16a55
+- 7dd58b5536ac78fa779bdfa19789e1f95a6b7d64447b04ef07d412e12e3ab4c3

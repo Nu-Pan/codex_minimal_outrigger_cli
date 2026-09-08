@@ -23,19 +23,18 @@
 # `src`
 
 ## Summary
-- cmoc の agent call に渡すパラメータ、ファイルアクセスモード、実行先コンテキストを定義する実装領域。
-- agent call の用途別に、oracle・realization の編集、レビュー、適用、所見処理、feedback、indexing、session join、TUI などの prompt と Structured Output 契約を構成する。
-- prompt の共通規定、oracle・realization の基本説明、routing、設定、パス解決、構造化文書のレンダリングを下位実装へ提供する入口。
+- oracle の agent call パラメータ、prompt と policy の構築、プレースホルダ定義、ファイルアクセス制約、パスコンテキスト解決を担う実装領域。
+- 構造化文書モデルと Markdown レンダリング、editor input handoff、TUI・oracle・realization・feedback・indexing など各処理の呼び出しパラメータ構築への下位入口。
 
 ## Read this when
-- cmoc の agent call の入力パラメータ、ファイルアクセスモード、Structured Output schema、実行コンテキストの構成を確認するとき。
-- oracle・realization の編集・レビュー・適用、feedback remediation、index entry 生成、session join、TUI など特定用途の agent call がどの prompt builder と結び付くかを調べるとき。
-- 複数の agent call に共通する prompt policy、oracle・realization の基本知識、routing、path model、設定モデル、構造化文書の生成処理を確認するとき。
+- oracle の agent call 構築定義や Codex CLI 起動パラメータを確認するとき。
+- prompt の部品、policy、placeholder、ファイルアクセスモード、routing、feedback reporting の生成を調べるとき。
+- agent call の cwd・repo/work/run root 解決や、構造化文書のモデルと Markdown レンダリングを確認するとき。
+- editor 経由の入力 handoff、TUI、oracle 編集・調査、realization、feedback、indexing の呼び出し定義を探すとき。
 
 ## Do not read this when
-- oracle file や realization file の人間向け正本仕様そのものを確認するときは、対応する仕様文書または対象ファイルを直接読む。
-- 特定用途の prompt、出力契約、または実行処理だけを確認したいときは、該当する用途別の下位領域へ直接進む。
-- Codex CLI や agent call の共通実行機構そのものの実際の挙動を確認したいときは、実行機構側の実装や仕様を直接読む。
+- oracle 正本ファイルの具体的な内容や編集手順を確認したいときは、該当する正本ファイルまたは専用処理を直接読む。
+- realization の実装本体、feedback の収集・受付処理、または Codex CLI の共通実行挙動だけを調べるとき。
 
 ## hash
-- 6681788c2c01203045116d052623f65b8c0336cd9c5b8ed7227731ec1ca20372
+- eeb1fd7c1517b91faeca8d03ef33dd814546fe673b79bbec66e144013544ea78

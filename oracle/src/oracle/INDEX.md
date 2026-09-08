@@ -54,20 +54,20 @@
 # `other`
 
 ## Summary
-- cmoc の設定モデル、パスコンテキスト、構造化 Markdown 文書モデルを扱う基盤モジュール群への入口。設定の既定値や Codex 呼び出し設定、プレースホルダ付きパスの解決、文書ノードの Markdown 化を確認・変更するときに参照する。
+- cmoc の設定データ、パスコンテキスト、構造化文書の基盤モデルを確認する入口です。設定項目と既定値、Git worktree に基づくルート・プレースホルダ解決、構造化要素の Markdown レンダリングを扱います。
 
 ## Read this when
-- cmoc の設定データモデルや Codex provider・agent call 設定を調べるとき。
-- worktree・repository・run のルート導出や {{cmoc-root}} などのパスプレースホルダ処理を調べるとき。
-- 見出し、タグ付きブロック、コードブロック、ポリシーなどの構造化文書を Markdown に変換する挙動を調べるとき。
+- cmoc のリポジトリ固有設定の構造や agent call 別の provider・model 設定を確認するとき
+- agent call の worktree・repository・run ルートや {{cmoc-root}} などのプレースホルダ解決規則を確認するとき
+- 構造化された見出し、タグブロック、コードブロック、ポリシーの Markdown 変換挙動を確認するとき
 
 ## Do not read this when
-- 設定ファイルの実体や doctor による生成・同期処理だけを確認したいとき。
-- 個別の agent call 実行、Codex CLI 起動、設定値の検証・読み書きなどの呼び出し側処理を直接調べるとき。
-- 個別のポリシー本文や文書テンプレート、Markdown 以外の出力仕様だけを確認したいとき。
+- doctor による設定ファイルの生成・同期や、設定を読み込んで Codex CLI 呼び出しへ適用する処理だけを確認したいとき
+- 個別の agent call、oracle、realization の実行処理を確認したいとき
+- Markdown 以外の出力や、これらのモデルを利用する呼び出し側の仕様だけを調べたいとき
 
 ## hash
-- c2d41bb5a147876d4bcbc41ce5f4f1be5cc646617058ff26c92a7c090e5823ab
+- 04a94efa62c483b4c1a3898829e98ebe9af20483444abe7158a5af612f965fff
 
 # `prompt_builder`
 
