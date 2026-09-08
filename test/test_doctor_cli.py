@@ -64,7 +64,7 @@ def test_doctor_preprocess_repairs_git_state(
     result = run_doctor(root)
 
     report = terminal_primary_report(result)
-    assert report.parent == root / ".cmoc" / "gu" / "ar" / "report" / "doctor"
+    assert report.parent == root / ".cmoc" / "gu" / "report" / "doctor"
     rendered_report = report.read_text(encoding="utf-8")
     assert 'terminal_classification: "natural_completion"' in rendered_report
     assert "exit_code: 0" in rendered_report
@@ -83,8 +83,8 @@ def test_doctor_preprocess_repairs_git_state(
     ).stdout
     assert ".gitignore" in repair_commit_paths
     assert ".agents/.gitkeep" in repair_commit_paths
-    assert ".cmoc/gt/ar/config.json" in repair_commit_paths
-    assert ".cmoc/gt/ar/realization/refactor/state.json" in repair_commit_paths
+    assert ".cmoc/gt/config.json" in repair_commit_paths
+    assert ".cmoc/gt/realization/refactor/state.json" in repair_commit_paths
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout.strip() == ""
     assert (
         run_git(
@@ -97,15 +97,13 @@ def test_doctor_preprocess_repairs_git_state(
     )
     assert (
         subprocess.run(
-            ["git", "check-ignore", "--no-index", "-q", ".cmoc/gt/ar/config.json"],
+            ["git", "check-ignore", "--no-index", "-q", ".cmoc/gt/config.json"],
             cwd=root,
             check=False,
         ).returncode
         == 1
     )
-    state_path = (
-        root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
-    )
+    state_path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     state = json.loads(state_path.read_text())
     assert set(state) == {".gitignore", "README.md", "oracle/spec.md"}
     assert all(
@@ -193,9 +191,7 @@ def test_doctor_preprocess_continues_with_degraded_reporter(
 
     assert result.exit_code == 0
     assert "warning: feedback reporter unavailable (missing)" in result.stdout
-    log_paths = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
-    )
+    log_paths = list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))
     events = [
         json.loads(line) for path in log_paths for line in path.read_text().splitlines()
     ]
@@ -205,12 +201,12 @@ def test_doctor_preprocess_continues_with_degraded_reporter(
         and event.get("failure_code") == "missing"
         for event in events
     )
-    assert run_git(root, "ls-files", "--", ".cmoc/gt/ar/config.json").stdout.strip()
+    assert run_git(root, "ls-files", "--", ".cmoc/gt/config.json").stdout.strip()
     assert run_git(
         root,
         "ls-files",
         "--",
-        ".cmoc/gt/ar/realization/refactor/state.json",
+        ".cmoc/gt/realization/refactor/state.json",
     ).stdout.strip()
 
 
@@ -409,22 +405,22 @@ def test_doctor_generates_and_tracks_config(
     """doctor が既定 config を生成し、Git index へ追跡することを検証する。"""
 
     root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path = root / ".cmoc" / "gt" / "config.json"
     monkeypatch.chdir(root)
 
     run_doctor(root)
 
     assert config_path.is_file()
     assert (
-        run_git(root, "ls-files", "--", ".cmoc/gt/ar/config.json").stdout.strip()
-        == ".cmoc/gt/ar/config.json"
+        run_git(root, "ls-files", "--", ".cmoc/gt/config.json").stdout.strip()
+        == ".cmoc/gt/config.json"
     )
     assert "num_try_falv_recovery" not in json.loads(config_path.read_text())["codex"]
     assert json.loads(config_path.read_text())["codex"]["model_providers"] == {
         "openai": {"settings": {}}
     }
     assert (
-        ".cmoc/gt/ar/config.json"
+        ".cmoc/gt/config.json"
         in run_git(root, "show", "--name-only", "--format=", "HEAD").stdout.splitlines()
     )
 
@@ -443,11 +439,11 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
     run_doctor(root)
 
     assert (
-        run_git(root, "ls-files", "--", ".cmoc/gt/ar/config.json").stdout.strip()
-        == ".cmoc/gt/ar/config.json"
+        run_git(root, "ls-files", "--", ".cmoc/gt/config.json").stdout.strip()
+        == ".cmoc/gt/config.json"
     )
     check_ignore = subprocess.run(
-        ["git", "check-ignore", "--no-index", "-q", ".cmoc/gt/ar/config.json"],
+        ["git", "check-ignore", "--no-index", "-q", ".cmoc/gt/config.json"],
         cwd=root,
         check=False,
     )
@@ -461,27 +457,27 @@ def test_doctor_does_not_commit_preexisting_staged_config_change(
 
     root = make_repo(tmp_path)
     doctor_module.run_doctor_preprocess(root)
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path = root / ".cmoc" / "gt" / "config.json"
     data = json.loads(config_path.read_text())
     data["num_parallel"] = 99
     config_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-    run_git(root, "add", ".cmoc/gt/ar/config.json")
+    run_git(root, "add", ".cmoc/gt/config.json")
     before_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     doctor_module.run_doctor_preprocess(root)
 
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == before_head
     assert (
-        json.loads(run_git(root, "show", "HEAD:.cmoc/gt/ar/config.json").stdout)[
+        json.loads(run_git(root, "show", "HEAD:.cmoc/gt/config.json").stdout)[
             "num_parallel"
         ]
         != 99
     )
     assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
-        ".cmoc/gt/ar/config.json"
+        ".cmoc/gt/config.json"
     ]
     assert (
-        json.loads(run_git(root, "show", ":.cmoc/gt/ar/config.json").stdout)[
+        json.loads(run_git(root, "show", ":.cmoc/gt/config.json").stdout)[
             "num_parallel"
         ]
         == 99
@@ -530,11 +526,11 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
         ).returncode
         == 0
     )
-    assert not (root / ".cmoc" / "gt" / "ar" / "config.json").exists()
-    assert list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))
-    assert not (linked / ".cmoc" / "gu" / "ar" / "log" / "sub_command").exists()
+    assert not (root / ".cmoc" / "gt" / "config.json").exists()
+    assert list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))
+    assert not (linked / ".cmoc" / "gu" / "log" / "sub_command").exists()
     assert run_git(root, "status", "--short").stdout.strip() == ""
-    assert (linked / ".cmoc" / "gt" / "ar" / "config.json").exists()
+    assert (linked / ".cmoc" / "gt" / "config.json").exists()
     assert f"- repo_root: `{root}`" in result.stdout
 
 
@@ -544,7 +540,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     """既存 config の人間による値を保ったまま不足する既定値を同期することを検証する。"""
 
     root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     config_path.write_text(
         json.dumps(

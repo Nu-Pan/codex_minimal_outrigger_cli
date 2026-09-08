@@ -1536,7 +1536,7 @@ def load_active_state(repo: Path) -> ActiveState:
             "feedback current pointer result が generation の issue 数と一致しません。",
             pointer_path,
         )
-    report_root = repo / ".cmoc" / "gu" / "ar" / "report" / "feedback"
+    report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
     report_path = _validate_artifact_reference(
         repo,
         {"path": pointer.get("report_path"), "sha256": pointer.get("report_sha256")},
@@ -1944,7 +1944,7 @@ def _validate_diagnostic_section(
     report_reference = _artifact_reference_shape(
         diagnostic.get("report"), path, "incomplete diagnostic report"
     )
-    report_root = repo / ".cmoc" / "gu" / "ar" / "report" / "feedback" / "incomplete"
+    report_root = repo / ".cmoc" / "gu" / "report" / "feedback" / "incomplete"
     report_path = _validate_report_cut_artifact_reference(
         repo,
         report_reference,
@@ -2078,7 +2078,7 @@ def _validate_report_cut_current_input(
         or generation_path.name != "manifest.json"
     ):
         raise _corruption("report cut current generation path が不正です。", path)
-    report_root = repo / ".cmoc" / "gu" / "ar" / "report" / "feedback"
+    report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
     report_path = _validate_report_cut_artifact_reference(
         repo,
         {
@@ -2440,7 +2440,7 @@ def _validate_publication_section(
             )
         ):
             raise _corruption("publication generation artifact path が不正です。", path)
-    report_root = repo / ".cmoc" / "gu" / "ar" / "report" / "feedback"
+    report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
     report_path = _validate_report_cut_artifact_reference(
         repo,
         report_reference,
@@ -3161,7 +3161,7 @@ def publish_current_pointer(
             "new feedback result が generation の issue 数と一致しません。",
             generation_path,
         )
-    report_root = repo / ".cmoc" / "gu" / "ar" / "report" / "feedback"
+    report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
     report_path = _validate_artifact_reference(
         repo,
         report,
@@ -3425,14 +3425,14 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
             report_path = _resolve_reference_path(
                 repo,
                 report_reference.get("path"),
-                repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
+                repo / ".cmoc" / "gu" / "report" / "feedback",
                 "staged feedback report",
             )
             if report_path.exists() or report_path.is_symlink():
                 _unlink_artifact_reference(
                     repo,
                     report_reference,
-                    expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
+                    expected_root=repo / ".cmoc" / "gu" / "report" / "feedback",
                     description="staged feedback report",
                 )
 
@@ -3443,9 +3443,7 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
             raise _corruption(
                 "staged diagnostic report reference が不正です。", manifest_path
             )
-        report_root = (
-            repo / ".cmoc" / "gu" / "ar" / "report" / "feedback" / "incomplete"
-        )
+        report_root = repo / ".cmoc" / "gu" / "report" / "feedback" / "incomplete"
         report_path = _resolve_reference_path(
             repo,
             report_reference.get("path"),

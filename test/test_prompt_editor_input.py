@@ -89,10 +89,8 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
     assert initial_texts == [
         build_prompt_editor_input_initial_text(skeleton) for skeleton in skeletons
     ]
-    assert first_work.parent == tmp_path / ".cmoc" / "gu" / "aw" / "editor_input"
-    assert first_copy.parent == (
-        tmp_path / ".cmoc" / "gu" / "ar" / "log" / "editor_input"
-    )
+    assert first_work.parent == tmp_path / ".cmoc" / "gu" / "editor_input"
+    assert first_copy.parent == (tmp_path / ".cmoc" / "gu" / "log" / "editor_input")
     assert first_work.name == first_copy.name == "2026-06-27_10-00_00_000001000_orig.md"
     assert (
         second_work.name
@@ -109,6 +107,8 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
     assert first_input == "input-1"
     assert second_input == "input-2"
     assert not list(first_copy.parent.glob("*_cmpl.md"))
+    assert not (tmp_path / ".cmoc/gu/ar").exists()
+    assert not (tmp_path / ".cmoc/gu/aw").exists()
 
 
 def test_editor_input_uses_one_final_read_for_copy_and_prompt(

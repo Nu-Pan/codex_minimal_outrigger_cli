@@ -269,8 +269,8 @@ def test_ensure_cmoc_ignored_preserves_existing_pattern_and_runtime_state(
     assert ".cmoc/\n" in content
     assert "/.cmoc/gu/\n" in content
     for relative in (
-        ".cmoc/gt/ar/config.json",
-        ".cmoc/gt/ar/realization/refactor/state.json",
+        ".cmoc/gt/config.json",
+        ".cmoc/gt/realization/refactor/state.json",
     ):
         not_ignored = subprocess.run(
             ["git", "check-ignore", "--no-index", "-q", "--", relative],

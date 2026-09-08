@@ -39,11 +39,9 @@ def test_oracle_investigation_has_no_session_precondition(
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     time_stamp = "2026-08-03_00-00-00_000000000"
-    editor_work_path = (
-        root / ".cmoc" / "gu" / "aw" / "editor_input" / f"{time_stamp}_orig.md"
-    )
+    editor_work_path = root / ".cmoc" / "gu" / "editor_input" / f"{time_stamp}_orig.md"
     input_copy_path = (
-        root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / f"{time_stamp}_orig.md"
+        root / ".cmoc" / "gu" / "log" / "editor_input" / f"{time_stamp}_orig.md"
     )
     editor_work_path.parent.mkdir(parents=True, exist_ok=True)
     input_copy_path.parent.mkdir(parents=True, exist_ok=True)

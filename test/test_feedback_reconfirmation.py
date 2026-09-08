@@ -50,7 +50,7 @@ def feedback_run(tmp_path, monkeypatch):
     )
     state = load_active_state(repo)
     manifest = remediation._new_manifest(context, state)
-    manifest["run"]["invocation_log"] = ".cmoc/gu/ar/log/sub_command/invocation.jsonl"
+    manifest["run"]["invocation_log"] = ".cmoc/gu/log/sub_command/invocation.jsonl"
     invocation_log = repo / manifest["run"]["invocation_log"]
     invocation_log.parent.mkdir(parents=True)
     invocation_log.write_text("")

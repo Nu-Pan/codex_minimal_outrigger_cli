@@ -278,8 +278,8 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
     schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
     assert record["cwd"] == str(linked.resolve())
     assert result.schema_path == schema_arg
-    assert schema_arg.parent == root / ".cmoc" / "gu" / "ar" / "schema"
-    assert not (linked / ".cmoc" / "gu" / "ar" / "schema").exists()
+    assert schema_arg.parent == root / ".cmoc" / "gu" / "schema"
+    assert not (linked / ".cmoc" / "gu" / "schema").exists()
 
 
 def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(

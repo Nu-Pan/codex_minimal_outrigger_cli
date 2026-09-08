@@ -582,7 +582,7 @@ def _model_provider_override_args(
         raise CmocError(
             "Codex model provider が未定義です。",
             [
-                "{{work-root}}/.cmoc/gt/ar/config.json の codex.model_providers を確認してください。"
+                "{{work-root}}/.cmoc/gt/config.json の codex.model_providers を確認してください。"
             ],
             f"model provider ID: {provider_id!r}",
         ) from exc
@@ -606,7 +606,7 @@ def _model_provider_override_args(
             raise CmocError(
                 "Codex model provider 設定が不正です。",
                 [
-                    "{{work-root}}/.cmoc/gt/ar/config.json の provider-local key を確認してください。"
+                    "{{work-root}}/.cmoc/gt/config.json の provider-local key を確認してください。"
                 ],
                 f"model provider ID: {provider_id!r}\nkey: {key!r}",
             )
@@ -722,7 +722,7 @@ def build_codex_override_args(
         raise CmocError(
             "Codex agent call 設定が未定義です。",
             [
-                "{{work-root}}/.cmoc/gt/ar/config.json の codex.agent_calls を確認してください。"
+                "{{work-root}}/.cmoc/gt/config.json の codex.agent_calls を確認してください。"
             ],
             f"agent call kind: {parameter.agent_call_kind!r}",
         ) from exc

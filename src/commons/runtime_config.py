@@ -241,9 +241,7 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             detail = repr(data).encode("utf-8", "backslashreplace").decode("utf-8")
         raise CmocError(
             "cmoc config が不正です。",
-            [
-                "{{work-root}}/.cmoc/gt/ar/config.json を確認してから再実行してください。"
-            ],
+            ["{{work-root}}/.cmoc/gt/config.json を確認してから再実行してください。"],
             detail,
         ) from exc
 
@@ -299,7 +297,7 @@ def load_config(root: Path) -> CmocConfig:
         raise CmocError(
             "cmoc config が存在しません。",
             [
-                "cmoc doctor を実行して {{work-root}}/.cmoc/gt/ar/config.json を生成してください。"
+                "cmoc doctor を実行して {{work-root}}/.cmoc/gt/config.json を生成してください。"
             ],
             str(path),
         )
@@ -308,9 +306,7 @@ def load_config(root: Path) -> CmocConfig:
     if not path.is_file():
         raise CmocError(
             "cmoc config JSON を読み込めません。",
-            [
-                "{{work-root}}/.cmoc/gt/ar/config.json を通常の file に修正してください。"
-            ],
+            ["{{work-root}}/.cmoc/gt/config.json を通常の file に修正してください。"],
             str(path),
         )
     try:
@@ -318,13 +314,13 @@ def load_config(root: Path) -> CmocConfig:
     except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
         raise CmocError(
             "cmoc config JSON を読み込めません。",
-            ["{{work-root}}/.cmoc/gt/ar/config.json の JSON 構文を確認してください。"],
+            ["{{work-root}}/.cmoc/gt/config.json の JSON 構文を確認してください。"],
             str(path),
         ) from exc
     if not isinstance(data, dict):
         raise CmocError(
             "cmoc config の top-level は object である必要があります。",
-            ["{{work-root}}/.cmoc/gt/ar/config.json を object に修正してください。"],
+            ["{{work-root}}/.cmoc/gt/config.json を object に修正してください。"],
             str(path),
         )
     return config_from_dict(data)

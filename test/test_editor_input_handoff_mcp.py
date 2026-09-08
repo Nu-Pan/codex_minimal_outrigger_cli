@@ -81,7 +81,7 @@ def test_handoff_response_loss_reports_unknown_while_write_completes(
     failure: str,
 ) -> None:
     """受付済み上書きの応答を失っても、非 active や未反映とは報告しない。"""
-    work = tmp_path / ".cmoc/gu/aw/editor_input/input.md"
+    work = tmp_path / ".cmoc/gu/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial", encoding="utf-8")
     target = start_editor_input_handoff(tmp_path, work)

@@ -141,7 +141,7 @@ def _context(root: Path, *, session_id: str | None = None) -> dict[str, object]:
         "agent_call_kind": "build_feedback_test_parameter",
         "codex_call_id": "cdc_feedback_test",
         "codex_session_id": None,
-        "log_paths": [str((root / ".cmoc/gu/ar/log/test.jsonl").resolve())],
+        "log_paths": [str((root / ".cmoc/gu/log/test.jsonl").resolve())],
     }
 
 
@@ -219,7 +219,7 @@ def _remediation_output(
 
 
 def _fake_result(root: Path, output: dict[str, object]) -> SimpleNamespace:
-    directory = root / ".cmoc/gu/ar/log/feedback_test"
+    directory = root / ".cmoc/gu/log/feedback_test"
     directory.mkdir(parents=True, exist_ok=True)
     log = directory / f"call-{len(list(directory.iterdir()))}.json"
     log.write_text(json.dumps(output, ensure_ascii=False))
@@ -797,7 +797,7 @@ def test_collector_validates_context_rate_and_durable_observation(
             agent_call_kind="build_one",
             codex_call_id="cdc_one",
             codex_session_id="session_one",
-            log_paths=[root / ".cmoc/gu/ar/log/codex/call.json"],
+            log_paths=[root / ".cmoc/gu/log/codex/call.json"],
         )
         assert invocation.collector_port is not None
         assert invocation._listener is not None
@@ -1303,7 +1303,7 @@ def test_empty_report_publishes_current_generation(
     """candidate がなくても ok report と空 active generation を atomic publication する。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
-    log_dir = root / ".cmoc/gu/ar/log/sub_command"
+    log_dir = root / ".cmoc/gu/log/sub_command"
     previous_logs = set(log_dir.glob("*.jsonl"))
     monkeypatch.setattr(
         feedback_report_module,
@@ -1327,7 +1327,7 @@ def test_empty_report_publishes_current_generation(
     assert state.issues == {}
     assert state.machine_aggregates == {}
     assert load_report_cut(root) is None
-    [report] = (root / ".cmoc/gu/ar/report/feedback").glob("*.md")
+    [report] = (root / ".cmoc/gu/report/feedback").glob("*.md")
     text = report.read_text()
     assert 'result: "ok"' in text
     assert "human_required_issue_count: 0" in text
@@ -1648,7 +1648,7 @@ def test_agent_issue_is_verified_compacted_then_removed_for_terminal_verdict(
     assert second.exit_code == 0, second.output
     second_state = load_active_state(root)
     assert second_state.issues == {}
-    reports = list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
+    reports = list((root / ".cmoc/gu/report/feedback").glob("*.md"))
     assert len(reports) == 2
     assert second_state.current is not None
     current_report = root / str(second_state.current["report_path"])
@@ -1666,7 +1666,7 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
     """threshold 未満は bounded aggregate、到達後は remediation candidate にする。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/ar/log/test.jsonl"
+    log_path = root / ".cmoc/gu/log/test.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
     canonical_key: str | None = None
@@ -1714,7 +1714,7 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
                 _remediation_output(
                     candidate_id,
                     "human_required",
-                    reference_path=".cmoc/gu/ar/log/test.jsonl",
+                    reference_path=".cmoc/gu/log/test.jsonl",
                 ),
             )
         result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
@@ -1735,7 +1735,7 @@ def test_active_machine_issue_keeps_threshold_state_after_window_expires(
     """window 外で threshold 未満になった active machine issue を最後の state で再検証する。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/ar/log/test.jsonl"
+    log_path = root / ".cmoc/gu/log/test.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
     canonical_key: str | None = None
@@ -1778,7 +1778,7 @@ def test_active_machine_issue_keeps_threshold_state_after_window_expires(
         _remediation_output(
             candidate_id,
             "human_required",
-            reference_path=".cmoc/gu/ar/log/test.jsonl",
+            reference_path=".cmoc/gu/log/test.jsonl",
         ),
     )
     first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
@@ -1798,7 +1798,7 @@ def test_active_machine_issue_keeps_threshold_state_after_window_expires(
         _remediation_output(
             candidate_id,
             "human_required",
-            reference_path=".cmoc/gu/ar/log/test.jsonl",
+            reference_path=".cmoc/gu/log/test.jsonl",
         ),
     )
     second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
@@ -1817,7 +1817,7 @@ def test_active_machine_issue_keeps_threshold_state_after_window_expires(
         _remediation_output(
             candidate_id,
             "human_required",
-            reference_path=".cmoc/gu/ar/log/test.jsonl",
+            reference_path=".cmoc/gu/log/test.jsonl",
         ),
     )
     third = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
@@ -1891,7 +1891,7 @@ def test_invalid_raw_observation_blocks_publication(
     assert raw_path.read_text() == raw_content
     assert str(raw_path) in result.output
     assert not (feedback_root(root) / "active" / "current.json").exists()
-    assert not list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
+    assert not list((root / ".cmoc/gu/report/feedback").glob("*.md"))
     invocation_report = terminal_primary_report(result)
     assert invocation_report.parent.name == "invocation"
     assert 'terminal_classification: "error"' in invocation_report.read_text()

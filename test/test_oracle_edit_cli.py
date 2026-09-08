@@ -115,11 +115,9 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
     unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
     time_stamp = "2026-07-20_00-00-00_000000000"
-    editor_work_path = (
-        root / ".cmoc" / "gu" / "aw" / "editor_input" / f"{time_stamp}_orig.md"
-    )
+    editor_work_path = root / ".cmoc" / "gu" / "editor_input" / f"{time_stamp}_orig.md"
     input_copy_path = (
-        root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / f"{time_stamp}_orig.md"
+        root / ".cmoc" / "gu" / "log" / "editor_input" / f"{time_stamp}_orig.md"
     )
     editor_work_path.parent.mkdir(parents=True, exist_ok=True)
     input_copy_path.parent.mkdir(parents=True, exist_ok=True)
@@ -416,9 +414,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     )
     assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
     assert run_git(root, "status", "--short", "oracle/spec.md").stdout.strip()
-    assert not (
-        root / ".cmoc" / "gu" / "ar" / "report" / "oracle" / "edit" / "fork"
-    ).exists()
+    assert not (root / ".cmoc" / "gu" / "report" / "oracle" / "edit" / "fork").exists()
     terminal_output = result.stdout + result.stderr
     if failure_stage is None:
         assert "# 完了: cmoc oracle edit" in result.stdout
@@ -471,7 +467,7 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_work_file(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == 1
-    assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
+    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
 
 
 @pytest.mark.parametrize(

@@ -141,7 +141,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     )
     assert len(tui_calls) == 1
     orig_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_orig.md")
+        (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
     )
     assert len(orig_files) == 1
     editor_contents = orig_files[0].read_text()
@@ -150,10 +150,8 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert "# file R/W policy (repo_write)" in editor_contents
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
     assert "remove me" in editor_contents
-    assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
-    assert not list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
-    )
+    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
+    assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     complete_prompt = tui_calls[0][0].prompt
     assert "# file R/W policy (repo_write)" in complete_prompt
     for heading in (
@@ -183,7 +181,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     )
     assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
-    assert (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").is_dir()
+    assert (root / ".cmoc" / "gu" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
@@ -229,26 +227,18 @@ def test_tui_saves_editor_input_in_main_worktree(
     assert tui_kwargs["notification_command_name"] == "tui"
     assert parameter.agent_call_cwd == root.resolve()
     assert (
-        len(
-            list(
-                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
-                    "*_orig.md"
-                )
-            )
-        )
+        len(list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")))
         == 1
     )
     assert not list(
-        (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
+        (linked / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md")
     )
-    assert not list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
-    )
+    assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     complete_prompt = parameter.prompt
     assert "linked worktree task" in complete_prompt
     assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
-    assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
-    assert not list((linked / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
+    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
+    assert not list((linked / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
 
 
 def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
@@ -281,27 +271,16 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
     assert (
-        len(
-            list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))
-        )
-        == 1
+        len(list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))) == 1
     )
     assert (
-        len(
-            list(
-                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
-                    "*_orig.md"
-                )
-            )
-        )
+        len(list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")))
         == 1
     )
+    assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     assert not list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
+        (linked / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md")
     )
-    assert not list(
-        (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
-    )
-    assert not list((root / ".cmoc" / "gu" / "aw" / "editor_input").glob("*_orig.md"))
+    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert run_git(root, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""

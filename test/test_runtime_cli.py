@@ -183,7 +183,7 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     assert "cmoc probe: top level" in captured.err
     assert "nested" not in captured.err
 
-    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["classification"] == "natural_completion"
@@ -222,7 +222,7 @@ def test_internal_failure_traceback_is_logged_but_not_printed(
     assert "# 失敗: cmoc probe" in captured.err
     assert "unexpected failure" in captured.err
     assert "Traceback" not in captured.err
-    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     failure = events[-1]["failure"]
     assert failure["classification"] == "internal_failure"
@@ -275,7 +275,7 @@ def test_error_terminal_result_does_not_repeat_primary_report_path(
     assert captured.err.count(str(report_path.resolve())) == 1
     assert "conflict remains" in captured.err
 
-    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert str(report_path) in events[-1]["failure"]["detail"]
 
@@ -316,7 +316,7 @@ def test_detector_does_not_swallow_keyboard_interrupt(
             doctor_preprocess=False,
         )
 
-    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert not any(event["event"] == "feedback.detector_failed" for event in events)
 
@@ -345,7 +345,7 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
         )
 
     assert exc_info.value.exit_code == 1
-    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[0]["event"] == "command_invoked"
     assert any(event["event"] == "step_started" for event in events)
@@ -441,7 +441,7 @@ def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
     captured = capsys.readouterr()
     assert "# 失敗" not in captured.out
     assert "# 失敗" not in captured.err
-    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["returncode"] == 130
@@ -577,9 +577,7 @@ def test_cli_terminal_notification_boundary_on_success(
     def record_notification(command: str, repository: Path, state: str) -> None:
         """通知時点の logger と終了 event を検証する。"""
         assert runtime_cli.current_subcommand_logger() is None
-        [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob(
-            "*.jsonl"
-        )
+        [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
         events = [json.loads(line) for line in log_path.read_text().splitlines()]
         assert events[-1]["event"] == "command_finished"
         calls.append((command, repository, state))
@@ -689,7 +687,7 @@ def test_interruptible_cli_handles_common_preprocess_interrupt(
     )
 
     assert calls == ["interrupted"]
-    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["returncode"] == 0
@@ -888,7 +886,7 @@ def test_pre_log_check_failure_writes_subcommand_log(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
-    log_dir = root / ".cmoc" / "gu" / "ar" / "log" / "sub_command"
+    log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     log_paths_before = set(log_dir.glob("*.jsonl"))
     (root / "README.md").write_text("dirty\n")
 
@@ -933,6 +931,6 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
     assert doctor_roots == [linked.resolve()]
     assert pre_log_roots == [root.resolve()]
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    log_dir = root / ".cmoc" / "gu" / "ar" / "log" / "sub_command"
+    log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     assert len(list(log_dir.glob("*.jsonl"))) == 1
-    assert not (linked / ".cmoc" / "gu" / "ar" / "log" / "sub_command").exists()
+    assert not (linked / ".cmoc" / "gu" / "log" / "sub_command").exists()

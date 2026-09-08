@@ -76,7 +76,7 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     report = terminal_primary_report(result)
     rendered_report = report.read_text(encoding="utf-8")
     commit_id = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    assert report.parent == root / ".cmoc" / "gu" / "ar" / "report" / "indexing"
+    assert report.parent == root / ".cmoc" / "gu" / "report" / "indexing"
     assert f'commit_id: "{commit_id}"' in rendered_report
     assert "updated_indexes:" in rendered_report
     assert '"INDEX.md"' in rendered_report
@@ -111,9 +111,9 @@ def test_indexing_uninitialized_clean_repo_runs_doctor_and_generates_config(
     assert result.exit_code == 0
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert (root / ".agents" / ".gitkeep").is_file()
-    assert (root / ".cmoc" / "gt" / "ar" / "config.json").is_file()
+    assert (root / ".cmoc" / "gt" / "config.json").is_file()
     assert (root / "INDEX.md").is_file()
-    assert (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").is_dir()
+    assert (root / ".cmoc" / "gu" / "log" / "sub_command").is_dir()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -201,10 +201,10 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
         custom_call_config
     )
     cmoc_runtime.write_config(
-        root / ".cmoc" / "gt" / "ar" / "config.json",
+        root / ".cmoc" / "gt" / "config.json",
         config,
     )
-    run_git(root, "add", ".cmoc/gt/ar/config.json")
+    run_git(root, "add", ".cmoc/gt/config.json")
     run_git(root, "commit", "-m", "customize indexing model")
     apply_worktree = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
     run_git(
@@ -244,7 +244,7 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
     assert seen_call_configs
     assert set(seen_call_configs) == {custom_call_config}
     assert (apply_worktree / "INDEX.md").is_file()
-    assert (apply_worktree / ".cmoc" / "gt" / "ar" / "config.json").exists()
+    assert (apply_worktree / ".cmoc" / "gt" / "config.json").exists()
 
 
 def test_indexing_skips_codex_when_existing_hashes_are_fresh(

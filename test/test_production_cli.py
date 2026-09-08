@@ -159,7 +159,7 @@ def _real_path_config() -> CmocConfig:
 def _write_real_path_config(root: Path) -> None:
     """実経路統合 subprocess 専用の直接設定を保存する。"""
     config = _real_path_config()
-    write_config(root / ".cmoc" / "gt" / "ar" / "config.json", config)
+    write_config(root / ".cmoc" / "gt" / "config.json", config)
 
 
 def _write_noninteractive_fixture_instructions(root: Path) -> None:
@@ -296,7 +296,7 @@ def _run_cmoc(
 
 def _codex_call_logs(root: Path) -> set[Path]:
     """repository に保存された exec/TUI call log の集合を返す。"""
-    return set((root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json"))
+    return set((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
 
 
 def _run_without_codex_call(
@@ -372,7 +372,7 @@ def _is_tui_call_log(path: Path) -> bool:
 def _load_session_state(root: Path, branch: str) -> tuple[Path, dict[str, Any]]:
     """session branch に対応する外部永続 state を読み込む。"""
     session_id = branch.removeprefix("cmoc/session/")
-    path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
+    path = root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
     state = json.loads(path.read_text())
     assert isinstance(state, dict)
     return path, state
@@ -589,9 +589,9 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     # doctor は provider lifecycle に触れず本番 preprocess を完了する。
     run_without_codex("doctor")
     assert run_git(root, "status", "--short").stdout.strip() == ""
-    assert run_git(root, "ls-files", ".cmoc/gt/ar/config.json").stdout.strip()
+    assert run_git(root, "ls-files", ".cmoc/gt/config.json").stdout.strip()
     assert run_git(
-        root, "ls-files", ".cmoc/gt/ar/realization/refactor/state.json"
+        root, "ls-files", ".cmoc/gt/realization/refactor/state.json"
     ).stdout.strip()
 
     # indexing は実推論 response を INDEX.md と commit に反映する。
@@ -651,7 +651,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert "- result:" not in oracle_edit_result.stdout
     assert "- completion_reason:" not in oracle_edit_result.stdout
 
-    feedback_report_dir = root / ".cmoc" / "gu" / "ar" / "report" / "feedback"
+    feedback_report_dir = root / ".cmoc" / "gu" / "report" / "feedback"
     feedback_reports = set(feedback_report_dir.glob("*.md"))
     # 先行する実推論が受理した pending observation があれば remediation call が
     # 発生するため、feedback report 自身も Codex を許可する production 経路で実行する。

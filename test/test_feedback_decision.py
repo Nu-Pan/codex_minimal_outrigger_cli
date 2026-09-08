@@ -10,8 +10,8 @@ from sub_commands.feedback import decision
 @pytest.mark.parametrize(
     "changed",
     [
-        ".cmoc/gc/ar/config.json",
-        ".cmoc/gc/ar/realization/refactor/state.json",
+        ".cmoc/gt/config.json",
+        ".cmoc/gt/realization/refactor/state.json",
         "nested/source.py",
     ],
 )
@@ -20,11 +20,17 @@ def test_basis_captures_tracked_configuration_and_nested_inputs(
 ):
     paths = [
         "README.md",
-        ".cmoc/gc/ar/config.json",
-        ".cmoc/gc/ar/realization/refactor/state.json",
+        ".cmoc/gt/config.json",
+        ".cmoc/gt/realization/refactor/state.json",
         "nested/source.py",
     ]
-    for name in paths:
+    runtime_paths = [
+        ".cmoc/gu/log/codex/call.json",
+        ".cmoc/gu/editor_input/input.md",
+        ".cmoc/gu/feedback/active/current.json",
+        ".cmoc/gu/state/run_processes/session.pid",
+    ]
+    for name in [*paths, *runtime_paths]:
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("old\n")
@@ -32,7 +38,7 @@ def test_basis_captures_tracked_configuration_and_nested_inputs(
         decision,
         "run_git",
         lambda *_args: SimpleNamespace(
-            stdout="\0".join([*paths[:-1], "nested/"]) + "\0"
+            stdout="\0".join([*paths[:-1], *runtime_paths, "nested/"]) + "\0"
         ),
     )
     monkeypatch.setattr(
@@ -41,6 +47,7 @@ def test_basis_captures_tracked_configuration_and_nested_inputs(
         lambda _root: ([], [tmp_path / paths[-1]]),
     )
     before = decision.worktree_inputs(tmp_path)
+    assert set(before) == set(paths)
     (tmp_path / changed).write_text("new\n")
     after = decision.worktree_inputs(tmp_path)
     assert before["README.md"] == after["README.md"]

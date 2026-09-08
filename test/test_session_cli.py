@@ -57,7 +57,7 @@ def session_state_path(root: Path, session_branch: str) -> Path:
     """
 
     session_id = session_branch.removeprefix("cmoc/session/")
-    return root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
+    return root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
 
 
 def session_home_branch(root: Path, session_branch: str) -> str:
@@ -77,7 +77,7 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
     {{work-root}}/oracle/doc/app_spec/session_state.md
     """
 
-    path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
+    path = root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -154,7 +154,7 @@ def test_session_fork_creates_session_branch_and_state(
     }
     report = terminal_primary_report(result)
     rendered_report = report.read_text(encoding="utf-8")
-    assert report.parent == root / ".cmoc" / "gu" / "ar" / "report" / "session" / "fork"
+    assert report.parent == root / ".cmoc" / "gu" / "report" / "session" / "fork"
     assert f'session_branch: "{branch}"' in rendered_report
     assert f'home_branch: "{home_branch}"' in rendered_report
     assert 'session_state_after: "active"' in rendered_report
@@ -347,7 +347,7 @@ def test_session_fork_retries_session_id_collision(
     assert result.exit_code == 0
     assert current_branch(root) == f"cmoc/session/{next_id}"
     assert old_path.read_text() == original
-    assert (root / ".cmoc" / "gu" / "ar" / "session" / f"{next_id}.json").is_file()
+    assert (root / ".cmoc" / "gu" / "session" / f"{next_id}.json").is_file()
     assert f"- session_branch: `cmoc/session/{next_id}`" in result.output
 
 
@@ -358,7 +358,7 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
-    path = root / ".cmoc" / "gu" / "ar" / "session" / "broken.json"
+    path = root / ".cmoc" / "gu" / "session" / "broken.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps({"session": {"session_home_branch": home_branch}, "run": {}}) + "\n"
@@ -395,10 +395,7 @@ def test_session_fork_initializes_cmoc_ignore_and_writes_log(
         == 0
     )
     assert (
-        len(
-            list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))
-        )
-        == 1
+        len(list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))) == 1
     )
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
@@ -903,7 +900,7 @@ def test_session_join_preserves_repository_local_feedback_state(
     assert run_doctor(root).exit_code == 0
     fork = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert fork.exit_code == 0, fork.output
-    relative = ".cmoc/gu/ar/feedback/normalization_checkpoint/sentinel.json"
+    relative = ".cmoc/gu/feedback/normalization_checkpoint/sentinel.json"
     path = root / relative
     path.parent.mkdir(parents=True)
     content = '{"repository_local":true}\n'

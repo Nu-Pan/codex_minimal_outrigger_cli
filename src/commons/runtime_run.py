@@ -36,7 +36,7 @@ from .runtime_git import (
     expected_run_worktree,
     run_git,
 )
-from .runtime_paths import generated_agent_read_dir
+from .runtime_paths import untracked_data_dir
 
 
 class ProcessIdentity(NamedTuple):
@@ -102,9 +102,7 @@ def worktree_for_branch_optional(
 
 def run_process_id_path(root: Path, session_id: str) -> Path:
     """session ごとの editing run process tracking path を返す。"""
-    return (
-        generated_agent_read_dir(root) / "state" / "run_processes" / f"{session_id}.pid"
-    )
+    return untracked_data_dir(root) / "state" / "run_processes" / f"{session_id}.pid"
 
 
 @contextmanager

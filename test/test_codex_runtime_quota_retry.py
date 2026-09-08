@@ -165,7 +165,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     call_entries = [
         (path, json.loads(path.read_text()))
         for path in sorted(
-            (root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json")
+            (root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json")
         )
     ]
     call_logs = [log for _path, log in call_entries]

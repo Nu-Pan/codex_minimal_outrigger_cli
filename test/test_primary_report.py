@@ -205,9 +205,7 @@ def test_early_error_saves_command_specific_primary_report(
     assert captured.out == ""
     assert "実行 ID: sci_" in captured.err.splitlines()[0]
     report_path = terminal_primary_report(captured.err)
-    assert report_path.parent == (
-        root / ".cmoc" / "gu" / "ar" / "report" / report_directory
-    )
+    assert report_path.parent == (root / ".cmoc" / "gu" / "report" / report_directory)
     assert report_path.is_file()
     assert captured.err.count(str(report_path)) == 1
     rendered = report_path.read_text(encoding="utf-8")
@@ -389,7 +387,7 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     assert str(unsaved_path) not in captured.err
     assert "- primary report (" not in captured.err
     assert not unsaved_path.exists()
-    log_directory = root / ".cmoc" / "gu" / "ar" / "log" / "sub_command"
+    log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
     [log_path] = log_directory.glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     finished = events[-1]

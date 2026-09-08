@@ -76,7 +76,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     assert original_prompt in complete_prompt
     if original_prompt == "{{original-prompt-here}}":
         assert complete_prompt.count(original_prompt) == 1
-    assert not (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").exists()
+    assert not (root / ".cmoc" / "gu" / "log" / "editor_input").exists()
 
 
 def test_tui_launch_module_exports_only_builder() -> None:

@@ -30,7 +30,7 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
     files = {}
     for name in sorted(set(names) - {""}):
         parts = Path(name).parts
-        if parts[0] == "memo" or ".git" in parts or parts[:3] == (".cmoc", "gu", "ar"):
+        if parts[0] == "memo" or ".git" in parts or parts[:2] == (".cmoc", "gu"):
             continue
         path = worktree / name
         # symlink の参照先や nested worktree を暗黙に読むことはしない。

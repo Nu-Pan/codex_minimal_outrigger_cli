@@ -104,7 +104,7 @@ def run_feedback_report() -> TerminalResult:
     try:
         # doctor と必要な INDEX 更新を完了してから clean を判定する。
         _doctor_preprocess_for_join()
-        feedback_directory = repository / ".cmoc/gu/ar/feedback"
+        feedback_directory = repository / ".cmoc/gu/feedback"
         if (
             not (feedback_directory / "work").exists()
             and not (feedback_directory / "finalization.json").exists()
@@ -331,7 +331,7 @@ def _wave_loop(
         }
         wave_path = (
             context.repo
-            / ".cmoc/gu/ar/feedback/work"
+            / ".cmoc/gu/feedback/work"
             / manifest["report_cut_id"]
             / "wave"
             / str(sequence)
@@ -721,7 +721,7 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
             raise _failure("feedback issue の call log reference が不正です。")
         call_path = context.repo / call_log["path"]
         if (
-            not call_path.resolve().is_relative_to(context.repo / ".cmoc/gu/ar/log")
+            not call_path.resolve().is_relative_to(context.repo / ".cmoc/gu/log")
             or artifact_reference(context.repo, call_path) != call_log
         ):
             raise _failure("feedback issue の call log hash が一致しません。")

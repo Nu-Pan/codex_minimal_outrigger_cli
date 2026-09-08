@@ -196,7 +196,7 @@ def reporter_payload_view(payload: dict[str, Any]) -> dict[str, Any]:
 
 def feedback_root(repo: Path) -> Path:
     """repository 共通の feedback 永続データ root を返す。"""
-    return repo / ".cmoc" / "gu" / "ar" / "feedback"
+    return repo / ".cmoc" / "gu" / "feedback"
 
 
 def observation_root(repo: Path) -> Path:

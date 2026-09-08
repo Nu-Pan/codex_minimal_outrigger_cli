@@ -72,7 +72,7 @@ def save_run_artifact(
     repo: Path, manifest: dict[str, Any], name: str, content: dict[str, Any]
 ) -> dict[str, Any]:
     """immutable artifact を先に保存し、検証済み reference を manifest へ登録する。"""
-    directory = repo / ".cmoc/gu/ar/feedback/work" / manifest["report_cut_id"]
+    directory = repo / ".cmoc/gu/feedback/work" / manifest["report_cut_id"]
     relative = {
         "sealed": "report_cut.json",
         "join_intent": "join_intent.json",
@@ -92,7 +92,7 @@ def read_run_artifact(repo: Path, reference: dict[str, Any]) -> dict[str, Any]:
     path = _validate_report_cut_artifact_reference(
         repo,
         reference,
-        expected_root=repo / ".cmoc/gu/ar/feedback/work",
+        expected_root=repo / ".cmoc/gu/feedback/work",
         description="feedback run artifact",
         allow_missing=False,
     )
@@ -296,7 +296,7 @@ def validate_run_artifacts(
         raise _corruption("feedback run の repository または kind が不正です。", path)
     log = run["invocation_log"]
     if not isinstance(log, str) or not (repo / log).resolve().is_relative_to(
-        repo / ".cmoc/gu/ar/log/sub_command"
+        repo / ".cmoc/gu/log/sub_command"
     ):
         raise _corruption("feedback invocation log の path が不正です。", path)
     if (

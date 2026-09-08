@@ -164,7 +164,7 @@ def _finish_from_journal(
     report_reference = journal["report"]
     report_path = repo / report_reference["path"]
     if (
-        not report_path.resolve().is_relative_to(repo / ".cmoc/gu/ar/report/feedback")
+        not report_path.resolve().is_relative_to(repo / ".cmoc/gu/report/feedback")
         or artifact_reference(repo, report_path) != report_reference
     ):
         raise _failure("feedback finalization report の path/hash が不正です。")

@@ -80,7 +80,7 @@ def _start_session(
     assert result.exit_code == 0
     branch = current_branch(root)
     session_id = branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
     return root, branch, state_path
 
 
@@ -91,7 +91,7 @@ def _state(path: Path) -> dict:
 
 def _mark_refactor_target_no_findings(root: Path, target: str) -> None:
     """state sync が既存 target の変更を検出できる履歴を作る。"""
-    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     state = json.loads(path.read_text())
     state[target] = {
         "investigation_required": False,
@@ -1015,9 +1015,7 @@ def test_run_abandon_accepts_already_removed_run_worktree(
         "fork_commit": None,
     }
     assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
-    reports = list(
-        (root / ".cmoc" / "gu" / "ar" / "report" / "run" / "abandon").glob("*.md")
-    )
+    reports = list((root / ".cmoc" / "gu" / "report" / "run" / "abandon").glob("*.md"))
     assert len(reports) == 1
     assert "run worktree was already absent" in reports[0].read_text()
 
@@ -1145,9 +1143,7 @@ def test_run_abandon_reports_stale_child_stop_warning(
     result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    reports = list(
-        (root / ".cmoc" / "gu" / "ar" / "report" / "run" / "abandon").glob("*.md")
-    )
+    reports = list((root / ".cmoc" / "gu" / "report" / "run" / "abandon").glob("*.md"))
     assert len(reports) == 1
     report_text = reports[0].read_text()
     assert "run child process already stopped: 789" in report_text
@@ -1161,7 +1157,7 @@ def test_apply_report_fields_include_accepted_feedback_paths(
     observations = [
         {
             "observation_id": "fbo_feedback",
-            "path": "/repo/.cmoc/gu/ar/feedback/observation/fbo_feedback.json",
+            "path": "/repo/.cmoc/gu/feedback/observation/fbo_feedback.json",
         }
     ]
     monkeypatch.setattr(
@@ -1197,7 +1193,7 @@ def test_apply_report_fields_include_accepted_feedback_paths(
     assert "feedback_observation_count: 1" in front_matter
     assert (
         'feedback_observations: [{"observation_id": "fbo_feedback", '
-        '"path": "/repo/.cmoc/gu/ar/feedback/observation/fbo_feedback.json"}]'
+        '"path": "/repo/.cmoc/gu/feedback/observation/fbo_feedback.json"}]'
         in front_matter
     )
 
@@ -1358,9 +1354,9 @@ def test_apply_fork_reports_cleanup_warnings(
 
     assert result.exit_code == 0, result.output
     reports = list(
-        (
-            root / ".cmoc" / "gu" / "ar" / "report" / "realization" / "apply" / "fork"
-        ).glob("*.md")
+        (root / ".cmoc" / "gu" / "report" / "realization" / "apply" / "fork").glob(
+            "*.md"
+        )
     )
     assert len(reports) == 1
     report_text = reports[0].read_text()
@@ -1397,7 +1393,7 @@ def test_refactor_fork_tracks_initialization_indexing_codex_calls(
                             "category": "state",
                             "summary": "調査履歴を更新",
                             "changed_paths": [
-                                ".cmoc/gt/ar/realization/refactor/state.json"
+                                ".cmoc/gt/realization/refactor/state.json"
                             ],
                         }
                     ]
@@ -1512,16 +1508,9 @@ def test_refactor_fork_reports_cleanup_warnings(
     assert result.exit_code == 0, result.output
     assert _state(state_path)["run"]["state"] == "joinable"
     reports = list(
-        (
-            root
-            / ".cmoc"
-            / "gu"
-            / "ar"
-            / "report"
-            / "realization"
-            / "refactor"
-            / "fork"
-        ).glob("*.md")
+        (root / ".cmoc" / "gu" / "report" / "realization" / "refactor" / "fork").glob(
+            "*.md"
+        )
     )
     assert len(reports) == 1
     assert "run child process already stopped: 789" in reports[0].read_text()
@@ -1661,16 +1650,9 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
         "not_investigated"
     )
     reports = list(
-        (
-            root
-            / ".cmoc"
-            / "gu"
-            / "ar"
-            / "report"
-            / "realization"
-            / "refactor"
-            / "fork"
-        ).glob("*.md")
+        (root / ".cmoc" / "gu" / "report" / "realization" / "refactor" / "fork").glob(
+            "*.md"
+        )
     )
     assert len(reports) == 1
     report = reports[0].read_text()
@@ -1680,7 +1662,7 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
 
 @pytest.mark.parametrize(
     "managed_path",
-    ["INDEX.md", ".cmoc/gt/ar/realization/refactor/state.json"],
+    ["INDEX.md", ".cmoc/gt/realization/refactor/state.json"],
 )
 def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
     tmp_path: Path,
@@ -2041,9 +2023,9 @@ def test_apply_error_report_survives_change_inspection_failure(
     assert result.exit_code == 1
     assert _state(state_path)["run"]["state"] == "error"
     reports = list(
-        (
-            root / ".cmoc" / "gu" / "ar" / "report" / "realization" / "apply" / "fork"
-        ).glob("*.md")
+        (root / ".cmoc" / "gu" / "report" / "realization" / "apply" / "fork").glob(
+            "*.md"
+        )
     )
     assert len(reports) == 1
     assert "change inspection failed" in reports[0].read_text()
@@ -2116,16 +2098,9 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
     assert result.exit_code == (0 if interrupted else 1)
     assert _state(state_path)["run"]["state"] == expected_state
     reports = list(
-        (
-            root
-            / ".cmoc"
-            / "gu"
-            / "ar"
-            / "report"
-            / "realization"
-            / "refactor"
-            / "fork"
-        ).glob("*.md")
+        (root / ".cmoc" / "gu" / "report" / "realization" / "refactor" / "fork").glob(
+            "*.md"
+        )
     )
     assert len(reports) == 1
     report_text = reports[0].read_text()
@@ -2270,9 +2245,9 @@ def test_apply_start_failure_after_run_publish_is_reported(
     assert result.exit_code == 1
     assert _state(state_path)["run"]["state"] == "error"
     reports = list(
-        (
-            root / ".cmoc" / "gu" / "ar" / "report" / "realization" / "apply" / "fork"
-        ).glob("*.md")
+        (root / ".cmoc" / "gu" / "report" / "realization" / "apply" / "fork").glob(
+            "*.md"
+        )
     )
     assert len(reports) == 1
     assert terminal_primary_report(result) == reports[0]
@@ -2955,9 +2930,7 @@ def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
     assert _state(state_path)["run"]["state"] == "ready"
     assert not context.run_worktree.exists()
     assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
-    reports = list(
-        root.joinpath(".cmoc", "gu", "ar", "report", "run", "join").glob("*.md")
-    )
+    reports = list(root.joinpath(".cmoc", "gu", "report", "run", "join").glob("*.md"))
     assert reports == [terminal_primary_report(result)]
     rendered = reports[0].read_text()
     assert 'terminal_classification: "error"' in rendered
@@ -3032,7 +3005,7 @@ def test_refactor_fork_completes_persistent_full_cycle(
                             "category": "state",
                             "summary": "調査履歴を更新",
                             "changed_paths": [
-                                ".cmoc/gt/ar/realization/refactor/state.json"
+                                ".cmoc/gt/realization/refactor/state.json"
                             ],
                         }
                     ]
@@ -3252,7 +3225,7 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
                             "category": "state",
                             "summary": "調査履歴を更新",
                             "changed_paths": [
-                                ".cmoc/gt/ar/realization/refactor/state.json"
+                                ".cmoc/gt/realization/refactor/state.json"
                             ],
                         }
                     ]
@@ -3356,7 +3329,7 @@ def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
                             "category": "realization",
                             "summary": "README と INDEX entry を更新",
                             "changed_paths": [
-                                ".cmoc/gt/ar/realization/refactor/state.json",
+                                ".cmoc/gt/realization/refactor/state.json",
                                 "INDEX.md",
                                 "README.md",
                             ],
@@ -3411,7 +3384,7 @@ def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
         .splitlines()
     )
     assert {
-        ".cmoc/gt/ar/realization/refactor/state.json",
+        ".cmoc/gt/realization/refactor/state.json",
         "INDEX.md",
         "README.md",
     } <= committed_paths
@@ -3525,9 +3498,7 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     events = [
         json.loads(line)
-        for path in (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob(
-            "*.jsonl"
-        )
+        for path in (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
         for line in path.read_text().splitlines()
     ]
     completion = next(
@@ -3575,9 +3546,7 @@ def test_refactor_interrupt_before_run_creation_is_normal_completion(
     assert "# 失敗" not in result.output
     events = [
         json.loads(line)
-        for path in (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob(
-            "*.jsonl"
-        )
+        for path in (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
         for line in path.read_text().splitlines()
     ]
     assert any(

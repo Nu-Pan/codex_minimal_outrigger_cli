@@ -31,19 +31,17 @@ CMOC_CONFIG_IGNORE_EXCEPTIONS = (
     "/.cmoc/*",
     "!/.cmoc/gt/",
     "/.cmoc/gt/*",
-    "!/.cmoc/gt/ar/",
-    "/.cmoc/gt/ar/*",
-    "!/.cmoc/gt/ar/config.json",
-    "!/.cmoc/gt/ar/realization/",
-    "/.cmoc/gt/ar/realization/*",
-    "!/.cmoc/gt/ar/realization/refactor/",
-    "/.cmoc/gt/ar/realization/refactor/*",
-    "!/.cmoc/gt/ar/realization/refactor/state.json",
+    "!/.cmoc/gt/config.json",
+    "!/.cmoc/gt/realization/",
+    "/.cmoc/gt/realization/*",
+    "!/.cmoc/gt/realization/refactor/",
+    "/.cmoc/gt/realization/refactor/*",
+    "!/.cmoc/gt/realization/refactor/state.json",
 )
 CMOC_IGNORE_PROBE = ".cmoc/gu/.__cmoc_ignore_probe__"
 _CODEX_SNAPSHOT_EXCLUDED_PREFIXES = (
-    Path(".cmoc/gu/ar/log"),
-    Path(".cmoc/gu/ar/schema"),
+    Path(".cmoc/gu/log"),
+    Path(".cmoc/gu/schema"),
 )
 _FILE_INVENTORY_EXCLUDED_ROOT_NAMES = frozenset(
     {".git", ".agents", ".codex", ".cmoc", "memo"}

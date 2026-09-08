@@ -71,17 +71,23 @@ def test_config_json_preserves_oracle_member_order() -> None:
     assert list(data["codex"]["agent_calls"]) == list(config.codex.agent_calls)
 
 
-def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
-    """設定ファイルがない場合に doctor の実行を案内する。"""
-    root = make_repo(tmp_path)
+@pytest.mark.parametrize("legacy_config", [False, True])
+def test_load_config_missing_points_to_doctor(
+    tmp_path: Path, legacy_config: bool
+) -> None:
+    """新配置に設定がなければ、旧配置に依存せず doctor の実行を案内する。"""
+    root = tmp_path
+    if legacy_config:
+        write_config(root / ".cmoc/gt/ar/config.json", CmocConfig())
 
     with pytest.raises(CmocError) as exc_info:
         load_config(root)
 
     assert exc_info.value.summary == "cmoc config が存在しません。"
     assert exc_info.value.next_actions == [
-        "cmoc doctor を実行して {{work-root}}/.cmoc/gt/ar/config.json を生成してください。"
+        "cmoc doctor を実行して {{work-root}}/.cmoc/gt/config.json を生成してください。"
     ]
+    assert not (root / ".cmoc/gt/config.json").exists()
 
 
 def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
@@ -105,7 +111,7 @@ def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
         }
     )
 
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path = root / ".cmoc" / "gt" / "config.json"
     write_config(config_path, config)
 
     assert config_to_dict(load_config(root)) == config_to_dict(config)
@@ -115,7 +121,7 @@ def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
 def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
     """JSON 構文または UTF-8 が壊れた config を利用者向けエラーへ変換する。"""
     root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     config_path.write_bytes(payload)
 
@@ -128,7 +134,7 @@ def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> 
 def test_load_config_rejects_excessively_nested_json(tmp_path: Path) -> None:
     """JSON parser の recursion error を利用者向け設定エラーへ変換する。"""
     root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     depth = sys.getrecursionlimit() * 20
     config_path.write_text("[" * depth + "0" + "]" * depth)
@@ -142,7 +148,7 @@ def test_load_config_rejects_excessively_nested_json(tmp_path: Path) -> None:
 def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
     """config path が通常ファイルでない場合も読み込みエラーへ変換する。"""
     root = make_repo(tmp_path)
-    (root / ".cmoc" / "gt" / "ar" / "config.json").mkdir(parents=True)
+    (root / ".cmoc" / "gt" / "config.json").mkdir(parents=True)
 
     with pytest.raises(CmocError) as exc_info:
         load_config(root)
@@ -163,7 +169,7 @@ def test_config_rejects_non_object_top_level(data: object) -> None:
 def test_config_rejects_named_pipe_config_path(tmp_path: Path) -> None:
     """config path が named pipe の場合に read/write で block しない。"""
     root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     os.mkfifo(config_path)
 
@@ -180,7 +186,7 @@ def test_config_rejects_symlinked_path_without_touching_link_target(
     root = make_repo(tmp_path)
     outside = tmp_path / "outside-config.json"
     outside.write_text("original\n")
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     config_path.symlink_to(outside)
 
