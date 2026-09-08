@@ -89,18 +89,22 @@
 # `oracle`
 
 ## Summary
-- oracle 配下の正本仕様・実現結果を確認するための文書群への入口。
+- cmoc の正本仕様、開発規則、branch model、設計上の不採用案を、責務別の文書群として参照する入口。
+- agent call、prompt、policy、feedback、oracle／realization、session、indexing などの実装構成を調べるための oracle src 群への入口。
+- 現行のアプリケーション挙動や開発手順の根拠には doc/app_spec・doc/dev_rule・branch_model を、過去の設計判断の背景には doc/considered_alternative を読む。
 
 ## Read this when
-- oracle に記録された正本仕様や、その仕様を実現した結果を確認するとき。
+- cmoc の現行仕様、開発規則、branch・worktree の概念、または採用しなかった設計案の所在を切り分けるとき。
+- agent call の builder、prompt と policy の組み立て、Structured Output、feedback、oracle／realization、session、indexing などの実装責務を調べるとき。
+- 仕様文書と oracle src のどちらが対象の正本か、または関連する実装入口を判断するとき。
 
 ## Do not read this when
-- CLI 実行契約、prompt、Structured Output、ログ、feedback、session などの仕様を調べるときは、doc/app_spec または src の該当対象を直接読む。
-- Python 開発・設計・テスト規則を調べるときは、doc/dev_rule 配下を直接読む。
-- branch・commit・worktree の関係や不採用設計の理由を確認するときは、doc/branch_model.md または doc/considered_alternative 配下を直接読む。
+- 読むべき仕様文書、開発規則、branch model、検討資料、または実装ファイルがすでに特定できており、その対象だけを確認すればよいとき。
+- 実装の具体的な挙動を変更せず、Codex CLI や外部ツールの一般的な実行挙動だけを調査するとき。
+- 特定の subcommand、prompt policy、schema、oracle／realization file の詳細手順を直接確認したいとき。
 
 ## hash
-- b76a1cd7d879b4c6a4d0f100813937239319165fb924d4db187fcc66472b3f04
+- 9e81cd34796f63b2270dc6f739d66dd914d97b04c8f0500b964252a1d83a80ee
 
 # `pyproject.toml`
 
