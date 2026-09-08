@@ -175,3 +175,47 @@ def test_handoff_transport_errors_distinguish_submission_uncertainty(
     assert result["retryable"] is retryable
     assert "not active" not in result["message"]
     assert "private content" not in json.dumps(result)
+
+
+def test_handoff_mcp_strips_unexpected_target_result_fields(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """target response の余分な field を agent-facing result へ転送しない。"""
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+    monkeypatch.setattr(handoff_mcp.socket, "socket", lambda *_args: connection)
+    monkeypatch.setattr(
+        handoff_mcp,
+        "authenticate_editor_input_handoff_client",
+        lambda *_args: True,
+    )
+    monkeypatch.setattr(
+        handoff_mcp,
+        "read_handoff_response",
+        lambda *_args: {
+            "status": "rejected",
+            "code": "write_failed",
+            "message": "editor input overwrite failed",
+            "retryable": False,
+            "content": "private content",
+        },
+    )
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+
+    result = handoff_mcp._submit(
+        {
+            "target_id": build_editor_input_handoff_target_id(
+                tmp_path, 1234, b"x" * 16
+            ),
+            "content": "private content",
+        }
+    )
+
+    assert result == {
+        "status": "rejected",
+        "code": "write_failed",
+        "message": "editor input overwrite failed",
+        "retryable": False,
+    }
+    assert "private content" not in json.dumps(result)

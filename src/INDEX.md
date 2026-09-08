@@ -49,20 +49,19 @@
 # `commons`
 
 ## Summary
-- commons runtime 共通機能を構成する各モジュールへの入口。INDEX lifecycle、Codex 実行、設定、Git、ログ、パス、feedback、state、report など、複数の CLI 実行経路で共有される処理を確認・変更するときに参照する。
+- commons パッケージは、CLI・Codex 実行・設定・Git・ログ・パス・結果・状態・feedback・report など、cmoc の複数実行経路で共有する runtime API と補助実装の入口を提供する。
+- INDEX 更新、prompt editor、editor handoff、feedback、primary report、refactor、editing run、Windows 通知など、共通ライフサイクルや永続状態を担う下位 runtime モジュールへ進むためのまとまり。
 
 ## Read this when
-- 複数の CLI 実行経路にまたがる runtime 共通機能の責務や公開入口を把握するとき
-- Codex 実行、INDEX 管理、設定、Git、feedback、state、report、editor handoff などの共通実装を調査・変更するとき
-- 対象の個別 runtime module が不明で、commons 配下の責務の対応先を切り分けるとき
+- 複数の cmoc 実行経路にまたがる runtime 共通 API、ライフサイクル、状態管理、ログ、結果、パス、feedback、report の実装箇所を見つけたいとき。
+- 特定の commons runtime helper の責務を確認し、個別モジュールへ調査を振り分ける入口が必要なとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務フローや利用者向け正本仕様だけを確認するとき
-- 対象が明確な個別 runtime module の内部実装、schema、report 表示、protocol、state lifecycle を直接調査するとき
-- commons 配下ではない CLI、TUI、oracle、realization 固有の処理を確認するとき
+- 特定の runtime サブモジュールの詳細挙動、CLI サブコマンド固有の業務処理、または正本仕様だけを直接確認したいとき。
+- 対象が commons 配下の個別実装や oracle・仕様文書として明確な場合は、その直接の対象から読み始めるとき。
 
 ## hash
-- beab4af558341c159a12d8036a548b455cc85bd21c2aa05434236e664fe35a5e
+- 81bf723d3470193f19de4a7804d97d659dbe6ca6b10cd6167cd73294ab9dfb8f
 
 # `config`
 

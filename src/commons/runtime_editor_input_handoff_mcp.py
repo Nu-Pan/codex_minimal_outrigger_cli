@@ -45,7 +45,7 @@ def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
 def _validated_target_result(value: object) -> dict[str, object] | None:
     """target response が content を持たない domain result か検査する。"""
     if value == {"status": "accepted"}:
-        return value
+        return {"status": "accepted"}
     if not isinstance(value, dict) or value.get("status") != "rejected":
         return None
     code = value.get("code")
@@ -58,7 +58,12 @@ def _validated_target_result(value: object) -> dict[str, object] | None:
         or type(retryable) is not bool
     ):
         return None
-    return value
+    return {
+        "status": "rejected",
+        "code": code,
+        "message": message,
+        "retryable": retryable,
+    }
 
 
 def _submit(payload: object) -> dict[str, object]:
