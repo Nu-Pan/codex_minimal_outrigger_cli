@@ -19,19 +19,16 @@
 # `src`
 
 ## Summary
-- Codex CLI を用いる cmoc の実装層で、agent call のパラメータ構築、prompt と policy の生成、パス・構造化文書・設定の共通処理を担う。
-- quota probe、indexing、feedback、oracle、realization、session、TUI などの用途別 call builder と、editor input handoff や feedback reporter の入力契約を提供する。
-- oracle と realization の扱い、ファイルアクセス制約、routing、Structured Output 連携を組み合わせて、用途ごとの agent call を構成する入口となる。
+- `oracle` パッケージの実装をまとめる領域。agent call パラメータ、prompt の構築と policy、用途別 ACP builder、設定・パス解決、構造化文書の Markdown 化を扱う。
+- agent call や prompt の共通処理から、oracle・realization・feedback・indexing・editor input handoff などの用途別実装へ進む入口になる。
 
 ## Read this when
-- cmoc の agent call 構築における共通パラメータ、prompt、policy、パス解決、構造化文書処理の責務分担を確認するとき。
-- quota probe、indexing、feedback、oracle、realization、session、TUI の用途別 agent call builder や、editor input handoff・feedback reporter の入力契約を探すとき。
-- oracle・realization の正本責務、ファイルアクセスモード、INDEX.md routing、Structured Output を agent call に組み込む方法を調べるとき。
+- agent call の共通パラメータ、ファイルアクセスモード、prompt 構築、policy の組み込み規則を確認するとき。
+- 用途別 builder、入力スキーマ、設定・パスモデル、構造化文書レンダリングの実装入口を探すとき。
 
 ## Do not read this when
-- 特定用途の prompt、出力契約、起動パラメータの詳細だけを確認したいときは、該当する用途別 builder と schema を直接読む。
-- agent call の実行処理や Codex CLI の実際の挙動を調べるときは、実行層や対応する外部仕様を直接確認する。
-- oracle・realization・feedback の意味仕様、保存・受付処理、または個別の入力契約だけを調べるときは、それぞれの正本仕様や専用入力定義を直接読む。
+- 特定用途の prompt、出力スキーマ、保存処理、または個別 builder の詳細だけを確認したいとき。
+- Codex CLI の実行処理そのもの、oracle・realization の具体的な仕様本文、または INDEX.md の構造規則だけを調べるとき。
 
 ## hash
-- 39340166c0e1059ce1115273520875a712f43899db4538a882ffbf0de62d8b98
+- 5fde235f1ae58444b63d0140fc5d45b0504287d048843aed3269e9a184abe113

@@ -35,16 +35,16 @@
 # `struct_doc.py`
 
 ## Summary
-- 構造化ドキュメント要素（見出し、参照可能ブロック、コードブロック、規定）を保持し、Markdownへレンダリングするためのクラスと関数を定義する。
-- Markdownレンダリング時の見出し深さ、cmoc_block参照タグ、コードフェンス、規定カテゴリ、空行、三重引用文字列の正規化を扱う実装への入口。
+- 構造化された文書ノード（見出し、参照可能ブロック、コードブロック、規定、文字列）を Markdown へレンダリングするヘルパーと、三重引用文字列の正規化を提供する。
+- Markdown 見出しの深さを階層から自動計算し、cmoc_block や可変長フェンスを含む自然言語文書を生成するための下位実装。
 
 ## Read this when
-- 構造化された自然言語文書をMarkdownへ変換する挙動や、見出し階層・cmoc_block/cmoc_ref・コードブロック・SDPolicyの出力形式を確認したいとき。
-- SDHeader、SDTagBlock、SDCodeBlock、SDPolicy、SDNode、render_sd_node_as_markdown、ntqsの責務や利用方法を調べるとき。
+- プログラム上の階層構造から Markdown 文書を生成する処理を確認するとき。
+- SDHeader、SDTagBlock、SDCodeBlock、SDPolicy のレンダリング仕様や、ntqs による本文整形を調べるとき。
 
 ## Do not read this when
-- Markdown以外の文書形式のレンダリングや、文書構造自体の仕様・入力生成規則を確認したいとき。
-- cmocの一般的な規定や参照ルーティングの仕様だけを確認したいときは、まずそれぞれの正本仕様・ポリシー文書を読む。
+- INDEX.md の構造やルーティング規則そのものを確認したいとき。
+- Markdown 以外の文書形式のレンダリング実装、またはこのファイルを直接利用しない CLI の処理を調べるとき。
 
 ## hash
-- df3cddf6ae11ada0c83f33ecf46283d3e485a68c1383cfcec42ae78cd97f5a18
+- 6df4567a0a45f47b0e22c6def77446eb9b083ca9d26d65634bbdb2aecb24f7d5

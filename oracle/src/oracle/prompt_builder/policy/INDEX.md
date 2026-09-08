@@ -56,22 +56,18 @@
 # `file_access.py`
 
 ## Summary
-- FileAccessMode と作業パスの文脈から、エージェント向けのファイル読み書き禁止規定と Git metadata の読み取り例外を組み立てる定義。
-- 各アクセスモードに応じて oracle file と realization file のアクセス制約を切り替える。
-- prompt builder が共通の file R/W policy 文面とパス placeholder 定義を必要とする箇所から参照する。
+- FileAccessMode と作業パスの文脈から、エージェント向けのファイル読み書き禁止事項・許可事項・例外を含む file R/W policy の文面を構築する。モードごとに oracle file と realization file の扱いを切り替えるポリシー生成の入口。
 
 ## Read this when
-- FileAccessMode ごとのファイルアクセス禁止範囲や、repo-root と work-root の関係に応じた規定文面を確認・変更するとき。
-- oracle file・realization file・INDEX.md・AGENTS.md などのアクセス制約をプロンプトへ反映する処理を調査するとき。
-- ファイルアクセス policy の placeholder 定義や Git metadata 読み取り例外の組み立て位置を確認するとき。
+- エージェント呼び出しで file access policy の生成内容、FileAccessMode ごとのアクセス制約、またはパス placeholder の組み立てを変更・確認するとき。
+- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE の制約差や、禁止事項に含まれないアクセスの扱いを確認するとき。
 
 ## Do not read this when
-- ファイルアクセス規定の意味仕様を確認したいだけで、文面の構築実装を調べる必要がないとき。
-- 個別の FileAccessMode の定義や enum の意味を確認したいとき。
-- 生成されたエージェント向けプロンプト全体や他の policy の構築を調べるとき。
+- 個別の oracle file・realization file の内容や、アクセス制約の正本仕様そのものを確認する場合は、まず対応する oracle 文書を読むとよい。
+- エージェントプロンプト全体の構築や別種の policy の責務を調べるだけで、FileAccessMode に応じた file R/W policy の生成が関係しない場合。
 
 ## hash
-- b72ce53ddd900406c37436f8c7f3fc52922d2a9754b7261d122d294ac9e58a4a
+- 1e0e98b845aea260be4c76075b5f0b9d04512b142e68ac2e792e397c269b3fa8
 
 # `index_entry.py`
 
