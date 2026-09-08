@@ -89,22 +89,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・開発規則・設計判断資料を、branch model、app_spec、dev_rule、considered_alternative の領域別に探す入口。
-- oracle の agent call 構築、prompt・policy・placeholder、ファイルアクセス制約、パスコンテキスト解決、構造化文書レンダリングなどの実装領域への入口。
+- oracle 配下の正本仕様・実現結果を確認するための文書群への入口。
 
 ## Read this when
-- cmoc の仕様・開発規則・branch・commit・worktree モデル、または不採用設計の資料の所在を判断するとき。
-- CLI 実行、session/run、Codex CLI、ログ、feedback、oracle/realization、状態管理の正本仕様を探すとき。
-- oracle の agent call パラメータ、prompt 部品、policy、placeholder、アクセスモード、routing、cwd・repo/work/run root 解決の実装を確認するとき。
-- 構造化文書モデル、Markdown レンダリング、editor handoff、TUI、oracle・realization・feedback・indexing の呼び出し定義を探すとき。
+- oracle に記録された正本仕様や、その仕様を実現した結果を確認するとき。
 
 ## Do not read this when
-- 特定の app_spec または dev_rule 文書、branch_model、considered_alternative 文書が明確で、該当対象を直接読めるとき。
-- 特定の oracle 正本ファイルや realization・feedback の実装本体だけを確認したいとき。
-- 実装コード、oracle file、realization file、または INDEX.md の本文だけを確認したいとき。
+- CLI 実行契約、prompt、Structured Output、ログ、feedback、session などの仕様を調べるときは、doc/app_spec または src の該当対象を直接読む。
+- Python 開発・設計・テスト規則を調べるときは、doc/dev_rule 配下を直接読む。
+- branch・commit・worktree の関係や不採用設計の理由を確認するときは、doc/branch_model.md または doc/considered_alternative 配下を直接読む。
 
 ## hash
-- a55c27c870e5389b3dcfc1e4f4c1c89e20a9cc9ce6869cf986ab5b1a6dab15f9
+- b76a1cd7d879b4c6a4d0f100813937239319165fb924d4db187fcc66472b3f04
 
 # `pyproject.toml`
 

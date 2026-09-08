@@ -1,22 +1,19 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約する設定データクラスを定義する。
-- 並列実行数、Codex CLI の model provider と agent call 別設定、ファイルアクセス規定違反時のリカバリ試行回数を扱う。
-- 設定は JSON/TOML 表現を前提とし、永続化される設定構造の入口となる。
+- `CmocConfig` と関連する不変データクラスで、リポジトリごとに変わりうる cmoc の設定を集約し、JSON/TOML 共通値、Codex の provider・agent call 設定、並列数、アクセス規定違反時の復旧試行回数を定義する。
+- 設定の既定値と、agent call 種別ごとの model provider・model・reasoning effort の対応を確認するための入口。
 
 ## Read this when
-- cmoc の設定項目や既定値を確認したいとき
-- Codex CLI の provider-local 設定または agent call 種別ごとの model・reasoning effort を確認したいとき
-- 設定値の JSON/TOML 表現や設定データクラスの構造を確認したいとき
+- cmoc の設定項目や既定値を調べるとき
+- Codex CLI の provider-local 設定、agent call ごとのモデル設定、並列数、復旧試行回数を変更・確認するとき
 
 ## Do not read this when
-- 設定ファイルの生成・同期を行う doctor 処理を確認したいとき
-- 設定を実際に読み込み、Codex CLI 呼び出しへ適用する処理を確認したいとき
-- 個別の agent call の実行内容や oracle・realization の処理を確認したいとき
+- 実際の永続化ファイル `.cmoc/gt/ar/config.json` の生成・同期や人間による調整方法だけを確認したいとき
+- 設定を利用する個別の処理の挙動を調べるときは、その処理の実装を直接読む場合
 
 ## hash
-- d6ce4046ae9484f0eebdbb1e9bbc9e0ff6d7243038f8dcf18550fe038f1a67a5
+- cae2f9a6ef429774e14d23af747acc5c54bdb278f5424b3ac4886283407a3908
 
 # `path_model.py`
 

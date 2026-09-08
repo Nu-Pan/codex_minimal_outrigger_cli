@@ -23,18 +23,19 @@
 # `src`
 
 ## Summary
-- oracle の agent call パラメータ、prompt と policy の構築、プレースホルダ定義、ファイルアクセス制約、パスコンテキスト解決を担う実装領域。
-- 構造化文書モデルと Markdown レンダリング、editor input handoff、TUI・oracle・realization・feedback・indexing など各処理の呼び出しパラメータ構築への下位入口。
+- agent call の共通パラメータ型とファイルアクセスモード、および quota probe・indexing・feedback・oracle・realization・session・TUI など用途別 builder の入口。
+- prompt の構成・policy・placeholder・エディタ入力を組み立てる部品と、agent call 用 Structured Output schema の定義。
+- 設定値、作業ディレクトリや repository・run のルート解決、root placeholder、構造化文書の Markdown レンダリングを担う基盤実装。
 
 ## Read this when
-- oracle の agent call 構築定義や Codex CLI 起動パラメータを確認するとき。
-- prompt の部品、policy、placeholder、ファイルアクセスモード、routing、feedback reporting の生成を調べるとき。
-- agent call の cwd・repo/work/run root 解決や、構造化文書のモデルと Markdown レンダリングを確認するとき。
-- editor 経由の入力 handoff、TUI、oracle 編集・調査、realization、feedback、indexing の呼び出し定義を探すとき。
+- agent call の共通設定、アクセスモード、作業ディレクトリ、モデルや並列実行に関する実装を確認するとき。
+- 特定用途の agent call builder、prompt policy・部品、Structured Output schema、feedback 入力契約の入口を探すとき。
+- agent call で使うパスの導出・placeholder 解決や、構造化文書を Markdown 化する処理を確認するとき。
 
 ## Do not read this when
-- oracle 正本ファイルの具体的な内容や編集手順を確認したいときは、該当する正本ファイルまたは専用処理を直接読む。
-- realization の実装本体、feedback の収集・受付処理、または Codex CLI の共通実行挙動だけを調べるとき。
+- 特定の agent call の prompt、出力契約、または個別業務処理の詳細だけを確認したいときは、該当する下位対象を直接読む。
+- oracle・realization・feedback・session などの具体的な業務処理や保存手順だけを調べたいとき。
+- Codex CLI 自体の実行挙動や、永続化設定ファイルを人手で編集する方法だけを確認したいとき。
 
 ## hash
-- eeb1fd7c1517b91faeca8d03ef33dd814546fe673b79bbec66e144013544ea78
+- 8e9d32dcf135652a9dedc21690ecf798e779d58df42e49b33a1de9abf876b830
