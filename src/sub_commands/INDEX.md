@@ -127,18 +127,18 @@
 # `run`
 
 ## Summary
-- editing run サブコマンドのライフサイクル処理への入口。active run の停止・join・cleanup と、旧 import path から共通処理へ移行する互換 shim の位置づけを確認できる。
+- editing run 共通 lifecycle サブコマンドをまとめるパッケージの入口。配下の run lifecycle 実装へ進む起点。
 
 ## Read this when
-- editing run の停止、join、cleanup、state 遷移、report 保存、worktree・branch・process tracking の扱いを調査・変更するとき。
-- editing run 共通 lifecycle の旧 import path 互換性や canonical 実装への委譲関係を確認するとき。
+- editing run の abandon・join・共通 lifecycle helper・report writer の責務や実装箇所を判断するとき。
+- 配下の run lifecycle 実装を横断して、停止、merge、cleanup、互換 shim の入口を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- workload 固有の編集処理や、INDEX 生成規則、refactor state 同期規則、lifecycle report の書式など、配下または専用実装を直接確認すべきとき。
+- 特定の処理の詳細を確認するときは、この入口ではなく abandon.py、join.py、lifecycle.py、report.py の該当ファイルを直接読むとき。
 
 ## hash
-- cc257375e5b5fa0539aaac28d349f9b8fa34413c57877e0338f5d5063d9e404f
+- b2a68d5575ab0d4779707b00e06db2099bc40beca43bc2dadc3c5e5088eaae40
 
 # `session`
 

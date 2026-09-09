@@ -837,6 +837,78 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert current_branch(root) == session_branch
 
 
+@pytest.mark.parametrize("run_state", ["joinable", "error"])
+@pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
+@pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
+def test_apply_join_updates_diff_base_only_for_joinable_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    run_state: str,
+    has_run_change: bool,
+    has_previous_apply: bool,
+) -> None:
+    """join 開始時の state に応じた比較始点を、次回 apply へ渡す。"""
+    # realization_apply.md の「join 後 hook」を state、report、次回 prompt で検査する。
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    state = _state(state_path)
+    session_fork_commit = state["session"]["session_fork_commit"]
+    previous_base = session_fork_commit if has_previous_apply else None
+    state["session"]["last_joined_apply_fork_commit"] = previous_base
+    state_path.write_text(json.dumps(state))
+    (root / "oracle" / "spec.md").write_text("pending oracle change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "pending oracle change")
+    context = start_editing_run("realization_apply")
+    if has_run_change:
+        (context.run_worktree / "README.md").write_text("realized\n")
+        commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, run_state)
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert joined.exit_code == 0, joined.output
+    expected_base = (
+        context.run_fork_commit if run_state == "joinable" else previous_base
+    )
+    state = _state(state_path)
+    assert state["session"]["last_joined_apply_fork_commit"] == expected_base
+    assert state["run"]["state"] == "ready"
+    assert (root / "README.md").read_text() == (
+        "realized\n" if has_run_change else "# repo\n"
+    )
+    report = terminal_primary_report(joined).read_text()
+    hook_action = "updated" if run_state == "joinable" else "preserved"
+    for output in (joined.output, report):
+        assert f"session.last_joined_apply_fork_commit {hook_action}" in output
+        if run_state == "error":
+            assert "session.last_joined_apply_fork_commit updated" not in output
+    assert ("run_join_commit: null" in report) is (not has_run_change)
+
+    # 成果物の取り込み後も、未追従の oracle change を次回の比較範囲に残す。
+    prompts: list[str] = []
+
+    def capture_apply(
+        parameter: AgentCallParameter, **_kwargs: object
+    ) -> SimpleNamespace:
+        """次回 apply が受け取る commit 範囲を記録する。"""
+        prompts.append(parameter.prompt)
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", capture_apply)
+    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
+    fork = runner.invoke(app, ["realization", "apply", "fork"], catch_exceptions=False)
+
+    assert fork.exit_code == 0, fork.output
+    assert len(prompts) == 1
+    diff_base = expected_base if expected_base is not None else session_fork_commit
+    next_fork_commit = _state(state_path)["run"]["fork_commit"]
+    assert f"- 始点: `{diff_base}`" in prompts[0]
+    assert f"- 終点: `{next_fork_commit}`" in prompts[0]
+    oracle_diff = run_git(root, "diff", diff_base, next_fork_commit, "--", "oracle")
+    assert bool(oracle_diff.stdout) is (run_state == "error")
+
+
 def test_run_join_reports_joinable_child_stop_warnings(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2400,7 +2472,7 @@ def test_run_join_allows_oracle_change_on_session_branch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """session branch の oracle change を run join が保持する。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     _mark_refactor_target_no_findings(root, "oracle/spec.md")
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
@@ -2416,6 +2488,12 @@ def test_run_join_allows_oracle_change_on_session_branch(
     assert result.exit_code == 0
     assert (root / "README.md").read_text() == "realized\n"
     assert (root / "oracle" / "spec.md").read_text() == "session oracle change\n"
+    diff_base = _state(state_path)["session"]["last_joined_apply_fork_commit"]
+    assert diff_base == context.run_fork_commit
+    assert (
+        "session oracle change"
+        in run_git(root, "diff", diff_base, "HEAD", "--", "oracle/spec.md").stdout
+    )
 
 
 def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
@@ -2898,6 +2976,9 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
 
     assert joined.exit_code == 0
     assert (root / "README.md").read_text() == "realized\n"
+    assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
+    for output in (joined.output, terminal_primary_report(joined).read_text()):
+        assert "session.last_joined_apply_fork_commit updated" not in output
 
 
 def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
@@ -2928,6 +3009,10 @@ def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
     assert (root / "README.md").read_text() == "realized\n"
     assert "run join report の最終状態を保存できませんでした。" in result.output
     assert _state(state_path)["run"]["state"] == "ready"
+    assert (
+        _state(state_path)["session"]["last_joined_apply_fork_commit"]
+        == context.run_fork_commit
+    )
     assert not context.run_worktree.exists()
     assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
     reports = list(root.joinpath(".cmoc", "gu", "report", "run", "join").glob("*.md"))
@@ -2967,6 +3052,7 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
         "branch": context.run_branch,
         "fork_commit": context.run_fork_commit,
     }
+    assert state["session"]["last_joined_apply_fork_commit"] == context.run_fork_commit
     assert context.run_worktree.exists()
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
