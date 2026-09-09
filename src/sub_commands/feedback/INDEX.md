@@ -15,20 +15,22 @@
 # `decision.py`
 
 ## Summary
-- Feedback 判定の根拠状態と再確認履歴を構築する実装。repository 入力の内容・mode をハッシュ化し、判定入力、過去 checkpoint、再確認時の変更点、循環状態、検証結果を後続処理へ結び付ける。
+- Feedback 判定の入力状態を固定し、検証結果と再確認履歴を結び付ける。
+- tracked・未 ignore ファイルと oracle／realization ファイルを対象に、内容と Git mode のハッシュを作成する。
+- Git metadata など判定根拠から除外する対象を判定し、過去 checkpoint との入力差分や非収束サイクルを検出する。
 
 ## Read this when
-- Feedback の判定根拠が何を入力として固定・除外するか確認したいとき
-- 判定結果の再確認、過去 checkpoint との比較、非収束サイクルの診断を調べるとき
-- decision basis や canonical hash による入力状態の識別を変更・検証するとき
+- Feedback の判定根拠に含める repository 入力、ファイルハッシュ、Git metadata の除外条件を確認するとき。
+- 同じ candidate identity の checkpoint 履歴、再確認理由、過去結果、入力状態の変化を追跡するとき。
+- remediation 後に同じ判定入力へ戻る循環や inconclusive 判定の根拠を確認するとき。
 
 ## Do not read this when
-- Feedback の候補分類や結果分類そのものの仕様を確認したいときは、先に正本仕様を読むべき場合
-- checkpoint の保存形式や manifest の管理処理だけを調べるとき
-- Feedback 実行全体の CLI フローや remediation の適用処理を調べるとき
+- Feedback の候補収集や MCP への報告方法だけを確認したいとき。
+- run artifact の保存・読み出しや canonical JSON／SHA-256 の共通実装を直接確認すべきとき。
+- 判定ロジックではなく、oracle／realization ファイルの所有 repository 分類そのものを確認したいとき。
 
 ## hash
-- 437ac190f3519c7047e08a5b4abbac2256a6fad3474ac017156108b11f26054e
+- 7fd71b4bac5a2d74cb53e78434cd540fac99cd6331d2dc1dfc3d174fa05817dc
 
 # `recovery.py`
 

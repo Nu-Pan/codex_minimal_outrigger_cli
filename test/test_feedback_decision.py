@@ -125,6 +125,24 @@ def test_basis_excludes_verified_nested_git_metadata(tmp_path, monkeypatch):
     assert set(decision.worktree_inputs(tmp_path)) == {"nested/fake/.git/kept.txt"}
 
 
+def test_basis_ignores_deleted_tracked_nested_git_named_input(tmp_path, monkeypatch):
+    def fake_run_git(args, *_args, **_kwargs):
+        if args[0] == "ls-files":
+            return SimpleNamespace(
+                stdout="nested/fake/.git/deleted.txt\0", returncode=0
+            )
+        raise AssertionError("deleted paths must not trigger nested Git probing")
+
+    monkeypatch.setattr(decision, "run_git", fake_run_git)
+    monkeypatch.setattr(
+        decision,
+        "enumerate_oracle_and_realization_files",
+        lambda _root: ([], []),
+    )
+
+    assert decision.worktree_inputs(tmp_path) == {}
+
+
 def test_basis_rejects_git_output_path_outside_worktree(tmp_path, monkeypatch):
     outside = tmp_path / "outside.txt"
     outside.write_text("must not be read\n")

@@ -45,11 +45,11 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
             if parent != worktree and parent.is_relative_to(worktree)
         ):
             raise ValueError(f"feedback basis has a symlinked parent: {name}")
-        if _is_git_metadata_path(worktree, relative, git_metadata_repositories):
-            continue
         try:
             mode = path.lstat().st_mode
         except FileNotFoundError:
+            continue
+        if _is_git_metadata_path(worktree, relative, git_metadata_repositories):
             continue
         if stat.S_ISLNK(mode):
             content = os.fsencode(os.readlink(path))

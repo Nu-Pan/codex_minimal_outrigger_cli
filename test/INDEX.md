@@ -462,19 +462,19 @@
 # `test_feedback_decision.py`
 
 ## Summary
-- feedback 判定の入力基礎を検証する pytest テスト。依存設定、nested realization、通常の入力ファイル、Git のモード変更を判定対象として扱う。
-- Git 出力のパス検証、相対 worktree パスの正規化、nested Git 配下の非メタデータ入力の保持、検証済み nested Git メタデータの除外を確認する。
+- このテスト対象は、feedback 判定の入力基礎が Git 管理対象・依存設定・oracle/realization を含み、内容や実行モードの変更を検出することを検証する。
+- nested な .git 名ディレクトリでは実 Git メタデータを除外しつつ通常ファイルを追跡し、削除済み入力や worktree 外パスを扱わず、相対 worktree パスを正規化する境界を確認する。
 
 ## Read this when
-- feedback 判定の根拠に設定・realization・通常入力の変更が反映されるか確認するとき
-- worktree_inputs の Git モード差分、nested Git 入力、Git メタデータ除外、作業ツリー外パス拒否、相対パス正規化を検証するとき
+- feedback 判定根拠の入力集合が何を含むか、設定・realization・nested Git 構造の変更を検出できるか確認したいとき。
+- worktree_inputs のパス安全性、Git mode の扱い、削除済みファイルや相対パスの挙動を変更・調査するとき。
 
 ## Do not read this when
-- feedback 判定実装の詳細を確認したいとき
-- feedback の別機能や、このテストで扱わない CLI 挙動を調べるとき
+- feedback 判定ロジック本体や実装詳細を変更する場合で、入力基礎の回帰条件を確認する必要がないとき。
+- feedback 以外の機能のテストや、単に通常の Git メタデータ除外規則だけを調べるとき。
 
 ## hash
-- fc5bf49e03c544301783f2ee25cea8152ce4328137ebb9b20341ab89681b2d24
+- f0c7af0ef00a4294b786953306f7914c6ee5e82e2be7b0747ca77f3bf00c4051
 
 # `test_feedback_reconfirmation.py`
 

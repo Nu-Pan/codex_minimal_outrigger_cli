@@ -122,34 +122,34 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、session・oracle・realization・run・feedback などのサブコマンドを実装へ接続する上位層。
-- acp／basic／config の互換 import 入口、oracle への package shim、commons の共通 runtime、およびサブコマンド配下の処理へ進むための src 全体の案内役。
+- cmoc の CLI 起動入口と、互換 import、共通 runtime、サブコマンド実装をまとめた src 側の上位入口。
+- CLI command tree、oracle package shim、acp/basic/config の互換入口、commons の共有 runtime、各サブコマンドへ進むための案内を提供する。
 
 ## Read this when
-- cmoc の CLI コマンドツリー、起動時の Typer／Click 境界、サブコマンドの配置を確認するとき。
-- 共通 runtime、互換 import、oracle への接続、または各サブコマンドの実装入口を横断して次に読む対象を判断するとき。
+- cmoc の公開 CLI 構成、起動経路、引数解析境界、またはサブコマンドの配置を確認するとき。
+- 互換 import path から正本側実装へ移る導線や、共有 runtime の責務範囲を横断して確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理、共通 runtime API、設定、Git、state、report などの詳細を確認するときは、対応する下位パッケージやモジュールを直接読む。
-- 正本 oracle 実装、個別の互換 API、INDEX 更新や feedback 報告の仕様そのものを確認するときは、src の入口ではなく対応する実装または仕様対象を直接読む。
+- 特定の CLI サブコマンド、runtime helper、互換 API、または正本側 oracle 実装の詳細を確認したいときは、対応する下位要素や正本実装を直接読む。
+- 個別機能の仕様や実装だけを調査し、src 全体の入口・構成を確認する必要がないとき。
 
 ## hash
-- 8f2708f2de8db7e3341abed9b35b9d4e8bcd9e5ac45c3523dcb04a10441475f6
+- c5b35f1d22935cf8bb921f8b916b1580ec3d4c1963f9f296fadc080b6a62fffb
 
 # `test`
 
 ## Summary
-- `test` 配下の回帰・統合テスト群を、CLI、Codex runtime、indexing、feedback、session、prompt、Git/state、builder などの責務別に案内するテスト入口。実装や正本仕様ではなく、外部挙動・境界条件・ライフサイクルの検証対象を横断して探すために使用する。
+- `test` 配下の回帰・統合テストをまとめた入口。CLI、Codex runtime、indexing、feedback、session、state、prompt、Git、通知など、実装の外部挙動と境界条件を検証するテスト群へ進むための階層。
 
 ## Read this when
-- 特定機能の外部挙動、回帰条件、統合経路、CLI lifecycle、Codex process、Git/state、report、prompt、builder の検証ケースを探すとき。
-- 本番経路・実 Codex・PTY を含む受け入れ試験や、複数コンポーネント間の状態遷移をテストから確認するとき。
-- 対象機能に対応する専用テストの入口を特定し、実装変更後の検証範囲を判断するとき。
+- 実装変更や仕様確認に対応する回帰テストを探すとき
+- CLI、Codex 実行、indexing、feedback、session、state、prompt、Git、通知などの外部挙動をテストから確認したいとき
+- 単体テストから実経路統合テストまで、対象機能に対応する検証入口を選ぶとき
 
 ## Do not read this when
-- 正本仕様、schema、実装詳細、個別 runtime の設計を確認することが目的で、対応する oracle・realization・src の対象を直接読むべきとき。
-- テストを伴わない単純な実装確認や、テスト対象に含まれない一般的な CLI・Git・Codex の利用方法を調べるとき。
-- INDEX.md の構造や機械的なファイル所在だけを確認したいとき。
+- 正本仕様や実装そのものを確認することが目的で、テストの期待挙動を調べる必要がないとき
+- 対象機能が明確で、その機能専用の実装・仕様・テストへ直接進めるとき
+- テスト実行方法や共通の開発環境設定だけを確認したいとき
 
 ## hash
-- eb113d7a1f85d4752f80438ad1070692efbbb5937609a70e2ed0e12a8d7783f1
+- b5f74b10a6cf5f56e3813f2ac36f9e2de244bdb3ae3de9df3086ad4a57d09017
