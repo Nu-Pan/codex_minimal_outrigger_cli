@@ -49,20 +49,18 @@
 # `commons`
 
 ## Summary
-- commons runtime 共通機能を構成する各モジュールへの入口。INDEX lifecycle、Codex 実行、設定、Git、ログ、パス、feedback、state、report など、複数の CLI 実行経路で共有される処理を確認・変更するときに参照する。
+- commons 配下の共通 runtime 実装群への入口。CLI、Codex、feedback、state、report、Git、ログ、パスなど複数経路で共有される実行時境界を扱う。
 
 ## Read this when
-- 複数の CLI 実行経路にまたがる runtime 共通機能の責務や公開入口を把握するとき
-- Codex 実行、INDEX 管理、設定、Git、feedback、state、report、editor handoff などの共通実装を調査・変更するとき
-- 対象の個別 runtime module が不明で、commons 配下の責務の対応先を切り分けるとき
+- commons の共有 runtime API や各 helper の責務を確認・変更するとき。
+- Codex 実行、prompt editor、INDEX lifecycle、editing run、feedback などの共通基盤を調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務フローや利用者向け正本仕様だけを確認するとき
-- 対象が明確な個別 runtime module の内部実装、schema、report 表示、protocol、state lifecycle を直接調査するとき
-- commons 配下ではない CLI、TUI、oracle、realization 固有の処理を確認するとき
+- 特定 helper や CLI の個別処理、正本仕様、schema の詳細だけを確認したいとき。
+- commons と無関係な業務処理や INDEX の利用者向けルーティング規則だけを確認したいとき。
 
 ## hash
-- beab4af558341c159a12d8036a548b455cc85bd21c2aa05434236e664fe35a5e
+- b67ebdf1ada751cab10be42fb599a1bfcda2eab026f255fe6ee815f2a79a70cf
 
 # `config`
 
@@ -116,17 +114,18 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を配置する package 境界であり、apply・doctor・feedback・indexing・oracle・realization・review・run・session・tui の実装入口を提供する。
-- サブコマンド全体の構成を把握し、目的のサブコマンド実装へ進むための上位ルーティング先となる。
+- CLI サブコマンド実装を束ねるパッケージ入口。doctor、feedback、indexing、oracle、realization、run、session、tui の各サブコマンドの入口や実行フローへ進むための上位導線を提供する。
+- apply と review は現時点で実装本文がないディレクトリで、実装追加後の確認先として位置づけられる。
 
 ## Read this when
-- cmoc のサブコマンド実装の配置や全体構成を確認するとき。
-- 特定のサブコマンド実装を調査する前に、対応する実装入口を選ぶとき。
-- 新しいサブコマンド実装の追加先や、既存サブコマンドの package 境界を確認するとき。
+- 複数の CLI サブコマンドの実装配置や入口を確認するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかの実行フローを調査・変更するとき。
+- apply または review の実装追加後に配置先を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理、prompt 契約、共通 runtime、ライフサイクルなどを確認したいときは、対応する下位実装を直接読む。
-- サブコマンド以外の共通処理や仕様を調査するとき。
+- 特定サブコマンドの詳細処理を調べる場合は、該当する下位実装を直接読むとき。
+- CLI 共通 runtime、prompt、run lifecycle、INDEX 更新規則などの専用実装を確認する場合は、対応する対象を直接読むとき。
+- サブコマンド以外のパッケージや個別機能の仕様だけを確認するとき。
 
 ## hash
-- 1581b401631326b6fb49c6d4b053c8510331fbb5c5d0bd8761ab90b1ade4f3bc
+- 6eb49ce895542554312eb6a50eb007953caabe2ce2d8afb5270db4bc45a0356c

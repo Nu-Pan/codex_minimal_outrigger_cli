@@ -728,7 +728,7 @@ def store_machine_observation(
     event_id = event["event_id"]
     observed_at = event["occurred_at"]
     observation_id = machine_observation_id(rule_id, event_id)
-    event_fields = {
+    source_event_fields = {
         key: value
         for key, value in event.items()
         if key
@@ -738,6 +738,70 @@ def store_machine_observation(
             "command_text",
         }
     }
+    payload: dict[str, Any] = {
+        "rule_id": rule_id,
+        "rule_version": 1,
+        "category": category,
+        "subject_type": subject_type,
+        "normalized_subject_id": normalized_subject_id,
+        "summary": summary,
+        "impact": impact,
+        "workload_limitation": {
+            "feedback.reporter_unavailable.v1": "reporter の利用不能は本命 workload では修復できないため、後続の確認が必要である。",
+            "codex.structured_output_validation_exhausted.v1": "現在の論理 call では正式な出力を受理できず、builder と schema の確認が必要である。",
+        }[rule_id],
+        "human_action": human_action,
+        "event_fields": source_event_fields,
+    }
+    masked_payload, _ = _mask_payload(payload)
+    if not isinstance(masked_payload, dict):
+        raise FeedbackRejected(
+            "suspected_secret", "machine observation payload could not be redacted"
+        )
+
+    # machine identity と source event の相互参照は redact できない。これらの
+    # field 自体に secret が含まれる場合は、不整合な raw record を保存せず拒否する。
+    protected_payload_fields = {
+        "rule_id",
+        "rule_version",
+        "category",
+        "subject_type",
+        "normalized_subject_id",
+    }
+    protected_event_fields = {
+        "event_schema_version",
+        "event_id",
+        "event_type",
+        "occurred_at",
+        "subcommand_invocation_id",
+        "agent_call_id",
+        "agent_call_kind",
+        "codex_call_id",
+        "codex_session_id",
+        "component",
+        "failure_code",
+        "call_log_path",
+        "schema_sha256",
+        "last_failure_stage",
+    }
+    masked_event_fields = masked_payload.get("event_fields")
+    if not isinstance(masked_event_fields, dict):
+        raise FeedbackRejected(
+            "suspected_secret", "machine event fields could not be redacted"
+        )
+    for field in protected_payload_fields:
+        if masked_payload.get(field) != payload.get(field):
+            raise FeedbackRejected(
+                "suspected_secret",
+                f"machine payload identity field cannot be redacted: {field}",
+            )
+    for field in protected_event_fields:
+        if masked_event_fields.get(field) != source_event_fields.get(field):
+            raise FeedbackRejected(
+                "suspected_secret",
+                f"machine event identity field cannot be redacted: {field}",
+            )
+
     envelope: dict[str, Any] = {
         "schema_version": OBSERVATION_SCHEMA_VERSION,
         "observation_id": observation_id,
@@ -750,21 +814,7 @@ def store_machine_observation(
             "observation_schema": OBSERVATION_SCHEMA_VERSION,
             "rule_id": rule_id,
         },
-        "payload": {
-            "rule_id": rule_id,
-            "rule_version": 1,
-            "category": category,
-            "subject_type": subject_type,
-            "normalized_subject_id": normalized_subject_id,
-            "summary": summary,
-            "impact": impact,
-            "workload_limitation": {
-                "feedback.reporter_unavailable.v1": "reporter の利用不能は本命 workload では修復できないため、後続の確認が必要である。",
-                "codex.structured_output_validation_exhausted.v1": "現在の論理 call では正式な出力を受理できず、builder と schema の確認が必要である。",
-            }[rule_id],
-            "human_action": human_action,
-            "event_fields": event_fields,
-        },
+        "payload": masked_payload,
         "evidence_fingerprints": [],
         "source_event": {
             "event_id": event_id,

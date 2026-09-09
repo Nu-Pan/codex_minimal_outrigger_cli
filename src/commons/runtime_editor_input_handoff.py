@@ -29,6 +29,16 @@ def validate_editor_work_file(root: Path, path: Path) -> None:
     try:
         resolved_dir = expected_dir.resolve(strict=True)
         mode = path.lstat().st_mode
+        current = path.absolute()
+        while True:
+            if stat.S_ISLNK(current.lstat().st_mode):
+                raise _invalid_editor_work_file(
+                    path,
+                    "path uses a symlink component",
+                )
+            if current == current.parent:
+                break
+            current = current.parent
     except (OSError, RuntimeError) as exc:
         raise _invalid_editor_work_file(path, "path is not readable") from exc
     if not stat.S_ISREG(mode):

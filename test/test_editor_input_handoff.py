@@ -8,7 +8,6 @@
 import json
 import socket
 import threading
-import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -17,9 +16,11 @@ import pytest
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor_input_handoff as handoff_module
 import commons.runtime_editor_input_handoff_mcp as handoff_mcp
+from cmoc_runtime import CmocError
 from commons.runtime_editor_input_handoff import (
     EditorInputHandoffTarget,
     start_editor_input_handoff,
+    validate_editor_work_file,
 )
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
@@ -54,6 +55,15 @@ def _start_slow_trickle(
     thread = threading.Thread(target=send_slowly)
     thread.start()
     return stopped, thread
+
+
+def _wait_for_peer_close(connection: socket.socket) -> None:
+    """server が期限切れ接続を閉じるまで response を排水する。"""
+    try:
+        while connection.recv(8192):
+            pass
+    except (ConnectionAbortedError, ConnectionResetError):
+        pass
 
 
 def test_editor_wait_accepts_only_active_repository_target_and_last_content(
@@ -167,6 +177,26 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
         assert "must not escape" not in json.dumps(rejected)
     finally:
         target.close()
+
+
+def test_handoff_rejects_symlinked_work_directory(
+    tmp_path: Path,
+) -> None:
+    """editor work directory の symlink 経由で外部 file を上書きしない。"""
+    root = tmp_path / "repository"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "editor_input").mkdir()
+    (root / ".cmoc").mkdir()
+    (root / ".cmoc" / "gu").symlink_to(outside, target_is_directory=True)
+    editor_work = root / ".cmoc" / "gu" / "editor_input" / "input.md"
+    editor_work.write_text("outside", encoding="utf-8")
+
+    with pytest.raises(CmocError, match="editor work file"):
+        validate_editor_work_file(root, editor_work)
+
+    assert editor_work.read_text(encoding="utf-8") == "outside"
 
 
 def test_target_close_drains_an_accepted_submission(
@@ -293,7 +323,7 @@ def test_target_deadline_releases_unauthenticated_slow_trickle(
             assert stalled.recv(1)
             stopped, trickler = _start_slow_trickle(stalled, b"x", 0.05)
             try:
-                time.sleep(0.3)
+                _wait_for_peer_close(stalled)
                 monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
                 result = handoff_mcp._submit(
                     {"target_id": target.target_id, "content": "after deadline"}
@@ -331,7 +361,7 @@ def test_target_deadline_releases_authenticated_request_slow_trickle(
             assert authenticate_editor_input_handoff_client(stalled, token, 2)
             stopped, trickler = _start_slow_trickle(stalled, b"x", 0.05)
             try:
-                time.sleep(0.3)
+                _wait_for_peer_close(stalled)
                 monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
                 result = handoff_mcp._submit(
                     {"target_id": target.target_id, "content": "after deadline"}

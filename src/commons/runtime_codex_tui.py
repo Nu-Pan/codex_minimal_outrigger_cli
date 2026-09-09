@@ -57,6 +57,10 @@ def run_codex_tui(
     codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
     codex_environment = codex_subprocess_env(codex_home)
+    # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
+    # TUI の version probe も Codex executable を起動するため、agent call と
+    # selected provider の設定を検証してから probe を開始する。
+    prepare_codex_override_args(parameter, config)
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     # callback state はこの TUI process invocation の期間だけ保持する。
     notification_callback = (

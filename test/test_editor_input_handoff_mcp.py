@@ -29,10 +29,15 @@ def test_handoff_mcp_exposes_only_overwrite_with_canonical_schema() -> None:
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
-            "params": {"protocolVersion": "2025-06-18"},
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "test-client", "version": "1"},
+            },
         }
     )
     assert initialized is not None
+    assert initialized["result"]["protocolVersion"] == "2025-06-18"
     assert initialized["result"]["capabilities"] == {"tools": {"listChanged": False}}
 
     listed = handoff_mcp._response(
@@ -54,6 +59,117 @@ def test_handoff_mcp_exposes_only_overwrite_with_canonical_schema() -> None:
         )
         assert response is not None
         assert response["error"]["code"] == -32601
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"jsonrpc": "1.0", "id": 1, "method": "ping"},
+        {"jsonrpc": "2.0", "id": True, "method": "ping"},
+        {"jsonrpc": "2.0", "id": [], "method": "ping"},
+        {"jsonrpc": "2.0", "id": 1, "method": 1},
+        {"jsonrpc": "2.0", "id": 1, "method": "ping", "params": "invalid"},
+        {"jsonrpc": "2.0", "id": 1, "method": "ping", "params": []},
+    ],
+)
+def test_handoff_mcp_rejects_invalid_jsonrpc_request(
+    message: dict[str, object],
+) -> None:
+    """JSON-RPC 2.0 の request 形状を満たさない入力を実行しない。"""
+    assert handoff_mcp._response(message) == {
+        "jsonrpc": "2.0",
+        "id": None,
+        "error": {"code": -32600, "message": "Invalid Request"},
+    }
+
+
+@pytest.mark.parametrize("requested", ["2024-11-05", "future-version"])
+def test_handoff_mcp_negotiates_only_supported_protocol_version(
+    requested: str,
+) -> None:
+    """未対応の MCP protocol version をそのまま採用しない。"""
+    response = handoff_mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": requested,
+                "capabilities": {},
+                "clientInfo": {"name": "test-client", "version": "1"},
+            },
+        }
+    )
+    assert response is not None
+    assert response["result"]["protocolVersion"] == "2025-06-18"
+
+
+def test_handoff_mcp_requires_initialize_protocol_parameter() -> None:
+    """initialize の必須 protocolVersion 欠落を method error にする。"""
+    response = handoff_mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+    )
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {"code": -32602, "message": "Invalid params"},
+    }
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {
+            "protocolVersion": "2025-06-18",
+            "clientInfo": {"name": "client", "version": "1"},
+        },
+        {"protocolVersion": "2025-06-18", "capabilities": {}},
+        {
+            "protocolVersion": "2025-06-18",
+            "capabilities": [],
+            "clientInfo": {"name": "client", "version": "1"},
+        },
+        {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {},
+            "clientInfo": {"name": "client"},
+        },
+    ],
+)
+def test_handoff_mcp_requires_initialize_capabilities_and_client_info(
+    params: dict[str, object],
+) -> None:
+    """initialize の capabilities と clientInfo を必須として扱う。"""
+    response = handoff_mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": params}
+    )
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {"code": -32602, "message": "Invalid params"},
+    }
+
+
+def test_handoff_mcp_marks_domain_failure_as_tool_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """submission failure は MCP tool result の isError へ反映する。"""
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, "/tmp/repository")
+    response = handoff_mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "overwrite",
+                "arguments": {"target_id": "target", "content": []},
+            },
+        }
+    )
+    assert response is not None
+    result = response["result"]
+    assert result["structuredContent"]["status"] == "rejected"
+    assert result["isError"] is True
 
 
 def test_handoff_mcp_rejects_invalid_input_without_returning_content(
@@ -174,4 +290,48 @@ def test_handoff_transport_errors_distinguish_submission_uncertainty(
     assert result["code"] == "transport_unavailable"
     assert result["retryable"] is retryable
     assert "not active" not in result["message"]
+    assert "private content" not in json.dumps(result)
+
+
+def test_handoff_mcp_strips_unexpected_target_result_fields(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """target response の余分な field を agent-facing result へ転送しない。"""
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+    monkeypatch.setattr(handoff_mcp.socket, "socket", lambda *_args: connection)
+    monkeypatch.setattr(
+        handoff_mcp,
+        "authenticate_editor_input_handoff_client",
+        lambda *_args: True,
+    )
+    monkeypatch.setattr(
+        handoff_mcp,
+        "read_handoff_response",
+        lambda *_args: {
+            "status": "rejected",
+            "code": "write_failed",
+            "message": "editor input overwrite failed",
+            "retryable": False,
+            "content": "private content",
+        },
+    )
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+
+    result = handoff_mcp._submit(
+        {
+            "target_id": build_editor_input_handoff_target_id(
+                tmp_path, 1234, b"x" * 16
+            ),
+            "content": "private content",
+        }
+    )
+
+    assert result == {
+        "status": "rejected",
+        "code": "write_failed",
+        "message": "editor input overwrite failed",
+        "retryable": False,
+    }
     assert "private content" not in json.dumps(result)

@@ -4,6 +4,7 @@
 「intake wave と high-watermark」。順序番号は時刻や directory の列挙順から推測しない。
 """
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -49,10 +50,13 @@ def _read_ledger(repo: Path) -> dict[str, Any]:
             or receipt["sequence"] in sequences
         ):
             raise _corruption("feedback intake receipt が不正です。", path)
+        digest = receipt["sha256"]
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            raise _corruption("feedback intake receipt の SHA256 が不正です。", path)
         target = _resolve_reference_path(
             repo, receipt["path"], observation_root(repo), "intake receipt"
         )
-        if target.stem != identity:
+        if target.name != f"{identity}.json":
             raise _corruption("intake receipt の observation ID が一致しません。", path)
         sequences.add(receipt["sequence"])
     return value
@@ -62,8 +66,11 @@ def _register(repo: Path, ledger: dict[str, Any], path: Path) -> bool:
     """保存済み raw を一度だけ counter に登録する。呼び出し側が排他を保持する。"""
     reference = artifact_reference(repo, path)
     identity = path.stem
-    if not is_observation_id(identity):
+    if not is_observation_id(identity) or path.name != f"{identity}.json":
         raise _corruption("intake observation ID が不正です。", path)
+    _resolve_reference_path(
+        repo, reference["path"], observation_root(repo), "intake receipt"
+    )
     previous = ledger["pending"].get(identity)
     if previous is not None:
         if {key: previous[key] for key in ("path", "sha256")} != reference:
@@ -85,8 +92,16 @@ def record_observation_receipt(repo: Path, path: Path) -> None:
 
 def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, Any]]]:
     """collector と同じ排他で durable receipt の上限と今回の入力を固定する。"""
+    if type(after) is not int or after < 0:
+        raise _corruption(
+            "feedback high-watermark が不正です。", feedback_root(repo), repr(after)
+        )
     with observation_publication_lock(repo):
         ledger = _read_ledger(repo)
+        if after > ledger["high_watermark"]:
+            raise _corruption(
+                "feedback high-watermark が逆行しています。", feedback_root(repo)
+            )
         changed = False
         # 導入前の raw と、raw 保存直後に停止した submission をこの境界で受理する。
         # 既存 raw の時刻を元の受理順序とみなさず、ledger への登録順を新規確定する。
@@ -95,10 +110,6 @@ def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, 
         if changed:
             _atomic_write_json(feedback_root(repo) / "intake.json", ledger)
         watermark = ledger["high_watermark"]
-        if after < 0 or after > watermark:
-            raise _corruption(
-                "feedback high-watermark が逆行しています。", feedback_root(repo)
-            )
         entries = []
         for identity, receipt in ledger["pending"].items():
             reference = {key: receipt[key] for key in ("path", "sha256")}
@@ -116,8 +127,20 @@ def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, 
 
 def forget_observation_receipt(repo: Path, reference: dict[str, Any]) -> None:
     """publication が指定した raw の receipt だけを削除する。排他は呼び出し側が保持する。"""
+    if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
+        raise _corruption(
+            "cleanup receipt reference が不正です。", observation_root(repo)
+        )
+    target = _resolve_reference_path(
+        repo, reference["path"], observation_root(repo), "intake receipt"
+    )
+    identity = target.stem
+    if not is_observation_id(identity) or target.name != f"{identity}.json":
+        raise _corruption("cleanup receipt の observation ID が不正です。", target)
+    digest = reference["sha256"]
+    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise _corruption("cleanup receipt の SHA256 が不正です。", target)
     ledger = _read_ledger(repo)
-    identity = Path(reference["path"]).stem
     receipt = ledger["pending"].get(identity)
     if receipt is None:
         return

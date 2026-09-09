@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Callable, Literal
 
 from .runtime_errors import CmocError
-from .runtime_paths import worktrees_dir
+from .runtime_paths import repo_root, worktrees_dir
 from .runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/run/")
@@ -530,7 +530,11 @@ def git_common_dir(root: Path) -> Path:
 
 def _main_worktree_root(root: Path) -> Path:
     """linked worktreeからmain worktreeのrootを求める。"""
-    return git_common_dir(root).parent
+    # separate-git-dir repository では Git common directory の parent は
+    # worktree root ではない。branch model の {{repo-root}} を正本の root
+    # resolver から取得し、通常・linked・separate metadata の全てで run-root
+    # を {{repo-root}}/.cmoc/gu/worktree/... に揃える。
+    return repo_root(root)
 
 
 def _git_info_exclude_path(root: Path) -> Path:
@@ -1078,7 +1082,6 @@ def is_realization_file_path(
     repository = _repository_context_for_path(root, candidate)
     if repository is None:
         return False
-    relative = candidate.absolute().relative_to(root.absolute())
     if branch and not _path_exists_without_following_symlinks(candidate):
         # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
         # 含めず regular blob entry だけを branch の fallback として採用する。
@@ -1086,6 +1089,7 @@ def is_realization_file_path(
         # の「分類結果」
         # branch の blob は削除された path の追跡状態を補うが、現在の directory や
         # FIFO などの特殊 file を file として扱う根拠にはならない。
+        branch_relative = candidate.absolute().relative_to(repository.absolute())
         branch_entries = run_git(
             [
                 "ls-tree",
@@ -1093,14 +1097,14 @@ def is_realization_file_path(
                 "-z",
                 branch,
                 "--",
-                literal_pathspec(relative.as_posix()),
+                literal_pathspec(branch_relative.as_posix()),
             ],
-            root,
+            repository,
         ).stdout.split("\0")
         for entry in branch_entries:
             metadata, separator, entry_path = entry.partition("\t")
             metadata_fields = metadata.split()
-            if separator and entry_path == relative.as_posix():
+            if separator and entry_path == branch_relative.as_posix():
                 try:
                     entry_mode = int(metadata_fields[0], 8)
                 except (IndexError, ValueError):

@@ -574,6 +574,14 @@ def test_single_path_classifier_uses_nested_repository_context(tmp_path: Path) -
     assert not is_realization_file_path(root, dropped)
     assert not is_realization_file_path(root, nested / ".git" / "config")
 
+    deleted = nested / "deleted.py"
+    deleted.write_text("deleted\n")
+    run_git(nested, "add", "deleted.py")
+    run_git(nested, "commit", "-m", "add deleted realization")
+    deleted.unlink()
+
+    assert is_realization_file_path(root, deleted, branch="HEAD")
+
 
 @pytest.mark.parametrize("candidate_kind", ["regular-file", "ignored-symlink"])
 def test_inventory_git_work_is_constant_when_only_candidate_count_grows(

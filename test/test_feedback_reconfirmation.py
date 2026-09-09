@@ -12,7 +12,10 @@ import pytest
 from test_feedback import _context, _fake_result, _payload, _remediation_output
 
 from cmoc_runtime import CmocError
-from commons.runtime_feedback_run_state import selected_remediation_checkpoints
+from commons.runtime_feedback_run_state import (
+    selected_remediation_checkpoints,
+    validate_run_artifacts,
+)
 from commons.runtime_feedback_state import (
     artifact_reference,
     load_active_state,
@@ -24,6 +27,7 @@ from commons.runtime_feedback_store import (
     read_json_object,
     rfc3339_now,
     store_agent_observation,
+    write_immutable_json,
 )
 from commons.runtime_run_lifecycle import EditingRunContext
 from sub_commands.feedback import decision, remediation, report
@@ -162,6 +166,35 @@ def _add_candidate(harness, letter):
 
 def _run(harness):
     return remediation._wave_loop(harness.context, harness.manifest, harness.state)
+
+
+def test_run_artifacts_reject_noncontiguous_wave_boundaries(feedback_run):
+    """wave は直前の durable high-watermark から連続していなければならない。"""
+    harness = feedback_run
+    for sequence, (after, high_watermark) in enumerate(((0, 1), (2, 3)), 1):
+        wave_path = harness.path.parent / "wave" / str(sequence) / "input.json"
+        write_immutable_json(
+            wave_path,
+            {
+                "sequence": sequence,
+                "after": after,
+                "high_watermark": high_watermark,
+                "inputs": {},
+                "candidates": {},
+            },
+        )
+        harness.manifest["run"]["waves"].append(
+            artifact_reference(harness.context.repo, wave_path)
+        )
+    harness.manifest["run"]["high_watermark"] = 3
+
+    with pytest.raises(CmocError, match="high-watermark"):
+        validate_run_artifacts(
+            harness.context.repo,
+            harness.manifest,
+            harness.path,
+            allow_missing=False,
+        )
 
 
 def _join_and_publish(harness, monkeypatch):

@@ -22,6 +22,7 @@ import subprocess
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -34,6 +35,7 @@ import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_tui as runtime_codex_tui
 import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
+import commons.runtime_paths as runtime_paths
 import commons.runtime_windows_toast as runtime_windows_toast
 import main as main_module
 from cmoc_runtime import (
@@ -84,6 +86,21 @@ def test_format_duration_rejects_unrepresentable_values() -> None:
         format_duration(100 * 30 * 24 * 3600)
     with pytest.raises(ValueError, match="non-negative"):
         format_duration(-0.1)
+
+
+def test_timestamp_zero_pads_year_and_fraction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """timestamp の年と 9 桁の小数部を仕様どおり固定幅で生成する。"""
+
+    class FixedDateTime:
+        @classmethod
+        def now(cls) -> datetime:
+            return datetime(1, 2, 3, 4, 5, 6, 7)
+
+    monkeypatch.setattr(runtime_paths, "datetime", FixedDateTime)
+
+    assert runtime_paths.timestamp() == "0001-02-03_04-05_06_000007000"
 
 
 def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(

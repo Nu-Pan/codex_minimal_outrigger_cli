@@ -15,54 +15,61 @@
 # `decision.py`
 
 ## Summary
-- Feedback 判定の根拠となる repository 入力・候補 evidence の識別と、正式 checkpoint 履歴に基づく再確認・循環診断をまとめる実装。
+- Feedback 判定の入力状態を固定し、検証結果と再確認履歴を結び付ける。
+- tracked・未 ignore ファイルと oracle／realization ファイルを対象に、内容と Git mode のハッシュを作成する。
+- Git metadata など判定根拠から除外する対象を判定し、過去 checkpoint との入力差分や非収束サイクルを検出する。
 
 ## Read this when
-- Feedback 判定がどの repository 入力を対象にするか、入力状態や evidence の hash をどう固定するか確認したいとき。
-- 過去の remediation checkpoint と現在の判定入力を比較し、再確認理由・変更点・非収束 cycle の扱いを追跡したいとき。
+- Feedback の判定根拠に含める repository 入力、ファイルハッシュ、Git metadata の除外条件を確認するとき。
+- 同じ candidate identity の checkpoint 履歴、再確認理由、過去結果、入力状態の変化を追跡するとき。
+- remediation 後に同じ判定入力へ戻る循環や inconclusive 判定の根拠を確認するとき。
 
 ## Do not read this when
-- Feedback 判定結果そのものの生成・分類規則を確認したいときは、候補の判定処理を直接読む。
-- 実行時 feedback artifact の保存形式や Git 上の oracle・realization ファイル列挙の詳細だけを確認したいときは、それぞれの担当モジュールを直接読む。
+- Feedback の候補収集や MCP への報告方法だけを確認したいとき。
+- run artifact の保存・読み出しや canonical JSON／SHA-256 の共通実装を直接確認すべきとき。
+- 判定ロジックではなく、oracle／realization ファイルの所有 repository 分類そのものを確認したいとき。
 
 ## hash
-- cfd0a8fb5914cd539f64ac8a995b6c4c456d1e6961ac5c8a8aa58924acfb10c7
+- 7fd71b4bac5a2d74cb53e78434cd540fac99cd6331d2dc1dfc3d174fa05817dc
 
 # `recovery.py`
 
 ## Summary
-- Feedback report の publication 後に、finalization journal を用いて cleanup、状態遷移、隔離資源回収を確定する処理。
-- 中断後の finalization 再開と、report・session・run・join evidence の整合性検証を扱う。
-- 自動 join 済み feedback run の明示 join/abandon を拒否し、明示終了時は監査記録を残して work artifact を破棄する入口。
+- Feedback report の publication 後に、finalization journal を根拠として work artifact、session state、join 済み run の隔離資源を整合的かつ再実行可能に cleanup する処理。
+- 自動 join 済みの feedback run を明示的な join/abandon で終了させない境界と、明示終了された未 publication run の監査記録・work cleanup を扱う下位処理への入口。
 
 ## Read this when
-- Feedback report の publication 後 cleanup、recovery、ready 遷移、run worktree 回収を確認したいとき。
-- finalization journal の検証条件や、cleanup 失敗時の error 状態遷移を調べたいとき。
-- feedback run に対する明示 join/abandon の可否、または手動終了時の後処理を確認したいとき。
+- feedback publication 後の cleanup、finalization journal の検証・recovery、または session/run/worktree の整合性確認が必要なとき。
+- feedback run が自動 join 済みか、明示 join/abandon を許可できる状態かを判定したいとき。
 
 ## Do not read this when
-- Feedback report の判定や正常 publication の内容を調べるとき。
-- Feedback run の一般的な lifecycle、join 実装、または worktree 操作そのものを調べるとき。
+- feedback report の生成、remediation、decision、または publication 前の report cut 処理そのものを調べたいとき。
+- feedback run 以外の一般的な run lifecycle の join/abandon 処理を調べたいとき。
 
 ## hash
-- 0f934ef6ab4862779c72ca07f413807a9d4251f1ad9da0193fab9dfe4e85d020
+- c9708faad6582446fddd44536620cd42da92118571ca2cc4fd3a752c01242bc2
 
 # `remediation.py`
 
 ## Summary
-- feedback issue の逐次修復を wave 単位で収束させ、正式 checkpoint の検証、自動 join、publication、同一 run の recovery までを一続きで制御する。
+- feedback report の run 全体を制御し、観測の wave 処理から issue remediation、checkpoint 確定、自動 join、publication までを一続きに扱う実行入口。
+- remediation agent の出力・実差分・verification・判定根拠を照合し、commit と immutable checkpoint を確定する責務を持つ。
+- sealed、merged、completion の run artifact と session tree の整合性を検査し、中断・失敗時の rollback、error 化、join recovery、publication recovery を扱う。
 
 ## Read this when
-- feedback report の remediation 実行、issue ごとの実差分・verification・decision basis の照合、wave の再処理条件を確認したいとき。
-- sealed な feedback run の merge 成功確認、join 後の到達可能性・最終 tree 検査、report publication または publication recovery の処理を確認したいとき。
+- feedback report の新規実行、wave の再処理、high watermark に基づく観測取り込み、候補ごとの remediation の流れを確認するとき
+- remediation 出力の issue ID・変更パス・status・verification と実際の worktree 差分を照合する処理を調べるとき
+- remediation checkpoint の選択、判定根拠の再検証、sealed run の自動 join、join 後の publication または recovery を追跡するとき
+- SIGINT、中断、例外、未確定 checkpoint の rollback、run state の error 化、進捗記録の復元を確認するとき
 
 ## Do not read this when
-- 観測の収集・候補生成・レポート表示の実装だけを確認したいときは report を直接読む。
-- feedback run の永続 artifact の読み書き・検証だけを確認したいときは runtime_feedback_run_state を直接読む。
-- 判定状態や decision basis の比較ロジックだけを確認したいときは decision を直接読む。
+- 観測の正規化・集約・表示や publication レポートの詳細な生成規則だけを調べるときは report を直接読む
+- run artifact の schema、保存・読出し、checkpoint の低レベル検証だけを調べるときは runtime_feedback_run_state を直接読む
+- issue の候補化、判定状態、decision basis の比較規則だけを調べるときは decision を直接読む
+- 一般的な run join の merge 手順や editing run lifecycle の共通実装だけを調べるときは run lifecycle 側の対象を直接読む
 
 ## hash
-- 7d170960fb63ea7d64a7e20e441e315e35e3c0873b11fa325673b7bbcc80e57e
+- 64ec051c43e400457b2e1d68b7399b6092e998e13867c27212e5e5eb4818dd42
 
 # `report.py`
 

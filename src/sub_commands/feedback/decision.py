@@ -18,6 +18,7 @@ from commons.runtime_git import enumerate_oracle_and_realization_files
 
 def worktree_inputs(worktree: Path) -> dict[str, str]:
     """tracked 入力と未 ignore の追加 file の内容・mode を読み取りだけで固定する。"""
+    worktree = worktree.absolute()
     names = run_git(
         ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], worktree
     ).stdout.split("\0")
@@ -28,11 +29,15 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
         for path in (*oracle_files, *realization_files)
     )
     files = {}
+    git_metadata_repositories: dict[Path, bool] = {}
     for name in sorted(set(names) - {""}):
-        parts = Path(name).parts
-        if parts[0] == "memo" or ".git" in parts or parts[:2] == (".cmoc", "gu"):
+        relative = Path(name)
+        parts = relative.parts
+        if not parts or relative.is_absolute() or ".." in parts:
+            raise ValueError(f"feedback basis has an invalid path: {name}")
+        if parts[0] == "memo" or parts[:2] == (".cmoc", "gu"):
             continue
-        path = worktree / name
+        path = worktree / relative
         # symlink の参照先や nested worktree を暗黙に読むことはしない。
         if any(
             parent.is_symlink()
@@ -43,6 +48,8 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
         try:
             mode = path.lstat().st_mode
         except FileNotFoundError:
+            continue
+        if _is_git_metadata_path(worktree, relative, git_metadata_repositories):
             continue
         if stat.S_ISLNK(mode):
             content = os.fsencode(os.readlink(path))
@@ -58,6 +65,34 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
             raise ValueError(f"feedback basis is not a file: {name}")
         files[name] = sha256_bytes(git_mode.encode() + b"\0" + content)
     return files
+
+
+def _is_git_metadata_path(
+    worktree: Path, relative: Path, repository_cache: dict[Path, bool]
+) -> bool:
+    """実在する Git metadata の配下だけを判定根拠から除外する。"""
+    # root の .git は、linked worktree の場合も regular file の metadata である。
+    for index, part in enumerate(relative.parts):
+        if part != ".git":
+            continue
+        owner = worktree.joinpath(*relative.parts[:index])
+        if owner == worktree:
+            return True
+        if owner not in repository_cache:
+            result = run_git(
+                ["rev-parse", "--path-format=absolute", "--show-toplevel"],
+                owner,
+                check=False,
+            )
+            reported = result.stdout.strip()
+            repository_cache[owner] = (
+                getattr(result, "returncode", 1) == 0
+                and bool(reported)
+                and Path(reported).resolve() == owner.resolve()
+            )
+        if repository_cache[owner]:
+            return True
+    return False
 
 
 def decision_state(files: dict[str, str], candidate: dict[str, Any]) -> dict[str, Any]:
