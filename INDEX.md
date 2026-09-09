@@ -122,19 +122,25 @@
 # `src`
 
 ## Summary
-- cmoc の実行コードをまとめる最上位の入口。CLI 起動、互換 import、共有 runtime、oracle・realization・session・run などのサブコマンド群、INDEX.md 更新と feedback 処理への導線を提供する。
-- src 配下の具体的な実装へ進むための横断的な案内役であり、公開 CLI や互換層、共通基盤、サブコマンドの責務の所在を確認する起点となる。
+- cmoc の CLI 起動入口とコマンドツリーを構成し、doctor・tui・indexing・feedback、session・oracle・realization・run の各サブコマンドへ接続する実装ルート。
+- 互換 import path として acp、basic、config、cmoc_runtime、oracle を提供し、正本実装や共通 runtime への移行を支える。
+- commons 配下に CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、run lifecycle、report などの共有 runtime helper を集約する。
+- sub_commands 配下に利用者向け CLI の個別処理を配置し、acp 配下に builder adapter、共有 prompt 整形、index entry 生成、各種起動パラメータ構築をまとめる。
 
 ## Read this when
-- cmoc の CLI 全体構成、起動入口、公開 import 互換層、共有 runtime、またはサブコマンド群の配置を横断して確認したいとき。
-- 個別の実装や仕様を読む前に、src 配下のどの下位要素へ進むべきか判断したいとき。
+- cmoc の CLI 全体の起動経路、コマンド登録、互換境界を確認するときは main.py と互換モジュールを読む。
+- 共有 runtime の責務分担や、複数コマンドから利用される実行基盤を調査・変更するときは commons を読む。
+- 特定の CLI サブコマンドの入力処理、実行 lifecycle、状態遷移、結果報告の配置を確認するときは sub_commands を読む。
+- Codex 実行用 prompt や TUI 起動パラメータ、builder adapter、INDEX.md エントリー生成の構築処理を確認するときは acp.builder を読む。
 
 ## Do not read this when
-- 特定のコマンド、runtime helper、互換 shim、builder、または正本実装の具体的な挙動を確認したいときは、対応する下位要素を直接読む。
-- 正本仕様、oracle 側の実体実装、または INDEX.md の更新規則そのものを確認したいとき。
+- 特定サブコマンドの業務処理や正本仕様だけを確認したいときは、src 全体ではなく対応する sub_commands または oracle 側の実体を直接読む。
+- 共有 helper の個別挙動やデータ構造だけを調査したいときは、commons 全体ではなく該当する runtime module を直接読む。
+- 旧 import path の具体的な公開内容だけを確認したいときは、src 全体ではなく対応する互換モジュールまたは再公開元を直接読む。
+- INDEX.md の更新規則や生成ロジックだけを確認したいときは、src の入口ではなく commons.indexing と acp.builder.indexing を直接読む。
 
 ## hash
-- 236c07270b75455eb7ecdbfb23f95e590e3b13759d5ad6e5440b08482f8d8582
+- e1e5630b99eceba225153d364a97400ef115766452d4d2aac65a6e8f69c2e152
 
 # `test`
 

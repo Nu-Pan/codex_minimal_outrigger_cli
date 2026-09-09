@@ -685,9 +685,9 @@
   },
   "src/basic/struct_doc.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "0397791c0dc37c51edd489ea3dd01470322afc79499e4a5ddf069f9785bd13f9",
-    "last_investigated_at": "2026-08-09_08-27_31_112079000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "a211733e9b2de8e38da96c29745f4bd4d5a209692d9dbd59734c1e92cd9a4687",
+    "last_investigated_at": "2026-09-10_08-06_05_261097000"
   },
   "src/cmoc_runtime.py": {
     "investigation_required": false,

@@ -18,18 +18,18 @@
 # `basic`
 
 ## Summary
-- `basic.*` の互換 import 公開面をまとめた realization 側の入口。ACP 型、path model、構造化文書 API の旧参照から、各互換モジュールまたは再公開元の正本へ進むための下位要素入口を提供する。
+- `basic.*` の旧公開 import を維持する互換名前空間。ACP 型、path model、構造化文書 API は正本を複製せず、既存実装の再公開または委譲によって利用者向け入口を提供する。
 
 ## Read this when
-- `basic` 名前空間に残る互換 API の範囲や、旧 import から移行先を確認したいとき。
-- ACP、path model、構造化文書の互換入口を横断して、個別モジュールを読むべきか判断するとき。
+- `basic.*` の互換参照を維持・削除する条件や、利用者向け API の移行先を判断するとき。
+- ACP 型、path model、構造化文書の旧 API 入口を確認し、正本実装への委譲関係を追跡するとき。
 
 ## Do not read this when
-- 個別 API の実装、再公開内容、型定義、描画仕様を確認したいときは、`basic.acp`、`basic.path_model`、`basic.struct_doc`、またはそれぞれの正本実装を直接読む。
-- 正本仕様そのものや、`basic` 名前空間と無関係な処理を調べるとき。
+- ACP 型、path model、構造化文書の正本仕様・実装詳細を確認したいときは、各再公開元を直接読む。
+- 個別モジュールの具体的な公開内容や利用箇所だけを調べるときは、`basic` 全体ではなく該当モジュールまたは参照元を直接読む。
 
 ## hash
-- ea7ec701e546985b90dda735f067c250cdd2609d2464948e58591d98ccf40fd2
+- e66d85791589dac1aca9c82c3aeba73b5416451d343c2feb68cbe202afe895a9
 
 # `cmoc_runtime.py`
 
