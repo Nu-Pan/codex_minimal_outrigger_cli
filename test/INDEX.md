@@ -374,18 +374,23 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の CLI と直接呼び出しに対する統合テスト。`.cmoc/gu` の ignore、`.agents`、config、refactor state の修復・commit、reporter の degraded/error 挙動、共有 repository lock、Git index の既存 staged・unstaged 差分や index flag・rename・symlink の保持と安全性を検証する。
+- doctor preprocess の CLI と直接呼び出しにおける修復 lifecycle を検証する統合テスト。
+- `.cmoc/gu`、`.agents`、config、refactor state の修復、共有 repository/worktree の lock、reporter の可用性処理を扱う。
+- 修復 commit と既存の staged 差分、Git index の flag・rename・intent-to-add・削除を分離して保持する外部契約の検証入口。
 
 ## Read this when
-- doctor preprocess の修復順序、修復 commit、config/state の生成・同期、reporter probe、lock、linked worktree の挙動を変更・調査するとき。
-- doctor が呼び出し前の Git index や利用者の staged/unstaged 変更を保持できるか確認するとき。
+- doctor preprocess の外部挙動や修復順序を確認したいとき
+- repository と linked worktree にまたがる doctor lock や修復対象の配置を確認したいとき
+- doctor 実行前から存在する Git index の変更を保持したまま修復 commit する契約を確認したいとき
+- reporter 利用不能時の degraded warning と、割り込み・予期しない例外の伝播を確認したいとき
 
 ## Do not read this when
-- doctor preprocess の実装詳細そのものや正本仕様を確認することが目的で、外部挙動を検証するテストケースを読む必要がないとき。
-- doctor 以外の CLI サブコマンド、feedback reporter 単体、config/state 単体の挙動を直接調査するとき。
+- doctor preprocess の実装や正本仕様を直接調査する場合
+- doctor preprocess と無関係なサブコマンドや一般的な Git 操作のテストを調べる場合
+- 個別の config 同期、refactor state、reporter 実装の詳細だけを確認したい場合は、それぞれの実装・仕様・専用テストを直接読むとき
 
 ## hash
-- 305e22be5b02b487405f7da6f1165f799b953743f6f130eeee40af722f29630c
+- 6de3effa4bfd64724e4f0b0e677a4f5bd8ecf81bf565f7bfd2c80f5266646f92
 
 # `test_editing_run_cli.py`
 
@@ -776,19 +781,19 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値、JSON 変換・ファイル永続化、merge、入力検証、互換性のない旧設定の除外を一つの回帰テストとして検証する。
+- CmocConfig の既定値、JSON 変換・ファイル永続化、merge、Codex model provider／agent call 設定の入力検証を検証する設定回帰テスト。
 
 ## Read this when
-- 設定 schema の既定値や agent call の直接設定を変更するとき
-- config.json の読み書き、JSON/TOML 共通値、パスの安全性、入力拒否、利用者向け設定エラーを変更するとき
-- 旧 config 項目の互換性や公開 JSON 面への影響を確認するとき
+- 設定の既定値や JSON round-trip、config.json の読み書き、旧配置・旧設定との互換境界を確認したいとき。
+- Codex の model provider、agent call、recovery 試行回数、provider-local 設定の受理条件や不正入力時の利用者向けエラーを確認したいとき。
+- 壊れた JSON、深すぎる値、非通常ファイル、named pipe、symlink、UTF-8 出力など設定ファイル境界の安全性を確認したいとき。
 
 ## Do not read this when
-- 設定処理ではなく、agent call の実行、doctor の一般的な動作、または設定以外の CLI 機能を変更・調査するとき
-- CmocConfig の実装詳細や正本仕様そのものを確認する必要があり、対応する実装・仕様ファイルを直接読むべきとき
+- CmocConfig の実装仕様そのものや設定項目の正本定義を確認する場合は、まず設定実装・正本仕様を直接読むとき。
+- 設定以外の runtime 動作、agent call の実行処理、一般的なエラー表示の仕様だけを調べるとき。
 
 ## hash
-- 19e86b83909fb434f6c56699046b9d2c27ed4d8bab76595d9c04d09443cd6dbf
+- 66e4add2d47e76b67bd878d165dcaba70171c29428419fee85cf3aec7ba2623a
 
 # `test_runtime_content.py`
 

@@ -409,9 +409,9 @@
   },
   "oracle/src/oracle/other/cmoc_config.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "e90bca5f30bc59a885acd876512c52f6c26d38d3ebd0d5c68a92862d5300ca5d",
-    "last_investigated_at": "2026-08-09_08-08_43_891057000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "5b8eb2882961f95f73f811c3eaa5648cab07bc46ccbadd7156a8ce22c9a739d8",
+    "last_investigated_at": "2026-09-10_07-44_48_088102000"
   },
   "oracle/src/oracle/other/path_model.py": {
     "investigation_required": true,

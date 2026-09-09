@@ -92,6 +92,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         "codex": {
             "model_providers": model_providers,
             "agent_calls": agent_calls,
+            "num_try_falv_recovery": _config_int(config.codex.num_try_falv_recovery),
         },
     }
 
@@ -229,6 +230,11 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             codex=CmocConfigCodex(
                 model_providers=model_providers,
                 agent_calls=agent_calls,
+                num_try_falv_recovery=_int_value(
+                    codex_data,
+                    "num_try_falv_recovery",
+                    default.codex.num_try_falv_recovery,
+                ),
             ),
         )
     except (RecursionError, TypeError, ValueError) as exc:
