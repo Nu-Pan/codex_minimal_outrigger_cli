@@ -64,9 +64,9 @@ active session context を必要とするサブコマンドは、次の条件を
 
 ### `session.last_joined_apply_fork_commit`
 
-- その session で最後に merge に成功した realization apply run の `{{cmoc-run-fork-commit}}` である。
+- その session の apply の追従対象差分の始点として保持する commit である。
 - session 新規作成直後の初期値は `null` とする。
-- active run の kind が `realization_apply` である `cmoc run join` が merge に成功した場合だけ更新する。
+- 更新条件と保存する commit は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「join 後 hook」を正本とする。
 
 ## run field
 

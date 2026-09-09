@@ -4,6 +4,7 @@
 
 - realization apply は、直近の git commit 群から読み取れる oracle file の変更を realization file へ素早く反映する workload である。
 - fork の正常終了時には、少なくとも指定した commit 範囲から読み取れる oracle 変更について、oracle file と realization file の間に齟齬がない状態にする。
+- 追従を完了できなかった run の成果物を join しても、未追従の oracle 変更を次回 apply の比較範囲から外さない。
 - ファイル単位の網羅的な追従は non-goal とし、realization refactor が担う。
 - fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
 
@@ -13,16 +14,17 @@
 
 ## 追従対象差分
 
-- 差分の終点は `{{cmoc-run-fork-commit}}` とする。
+- 差分の終点は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「共通開始処理」で確定・保存した `run.fork_commit`（`{{cmoc-run-fork-commit}}`）とする。
 - 差分の始点は以下とする。
-    - `session.last_joined_apply_fork_commit` が存在する場合は、その commit。
-    - 初回の場合は `session.session_fork_commit`。
+    - `session.last_joined_apply_fork_commit` が `null` でない場合は、その commit。
+    - `null` の場合は `session.session_fork_commit`。
 - Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
 - cmoc は、始点と終点の commit ID を確定して agent に渡す。agent は既存の cwd と `{{work-root}}` を用い、その repository で指定された両 commit 間の差分を Git から取得する。
 - 対象は、両端のいずれかで oracle file だった path とし、rename を考慮する。追加・削除と oracle 内外をまたぐ rename を含め、現在の oracle 配下だけを候補集合にしてはならない。
 - 上記に該当しない realization file、`INDEX.md`、その他の非 oracle file の変更は追従対象外とする。
 - 差分に現れた file だけを作業範囲としてはいけない。関連する oracle file と realization file を `{{work-root}}` リポジトリ全体から調査する。
 - 差分は今回追従すべき oracle 変更を特定する根拠であり、realization file の変更内容を正本仕様へ逆流させる根拠ではない。
+- apply 実行中に session branch へ追加された oracle 変更は、次回 apply の比較範囲に残す。
 
 ## agent call と file access
 
@@ -75,4 +77,12 @@ feedback の収集は本命 agent call の共通 reporter だけで行う。appl
 
 ## join 後 hook
 
-- merge 成功時だけ、`session.last_joined_apply_fork_commit` をこの run の `{{cmoc-run-fork-commit}}` で更新する。
+`session.last_joined_apply_fork_commit` は、次の条件をすべて満たす `cmoc run join` で、対象 run の `run.fork_commit`（`{{cmoc-run-fork-commit}}`）に更新する。それ以外では値を保持する。
+
+- `run.kind` が `realization_apply` である。
+- その呼び出しが事前条件を検証して対象 run を確定する時点で、`run.state` が `joinable` である。
+- merge または no-op join が成立し、その取り込み結果が rollback されていない。
+
+join 失敗で `run.state=error` になった場合は、再試行後の apply が以前の比較範囲を再確認することを許容する。過去の fork 成功を記録・復元して更新資格を判定する処理や、そのための永続 field、成功 flag、状態値を追加してはならない。
+
+CLI の終了コードだけで join の成立を判定してはならない。取り込み確定後の report 保存や cleanup の失敗に対する rollback・recovery は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「cmoc run join」と「report と terminal result」に従う。

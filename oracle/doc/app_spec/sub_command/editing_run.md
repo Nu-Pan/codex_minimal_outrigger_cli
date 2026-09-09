@@ -103,9 +103,11 @@ merge または no-op join 後の tree 検査、publication、および workload
 5. join 結果と hook の結果を保存する。
 6. 明示的な join では、`run.state` を `ready` にし、active run 情報を初期化する。`feedback_report` の自動 join では、この更新を workload 固有の publication と cleanup が確定するまで遅延する。
 
+apply の比較始点の更新条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「join 後 hook」を正本とする。
+
 `INDEX.md` の conflict は、cmoc が生成し直すことで解決してよい。`INDEX.md` 以外が conflict した場合は、merge を中止して開始前の clean な状態へ戻す。そのうえで、`run.state` を `error` にして conflict path を report する。conflict 解消のための agent call は行わない。
 
-refactor state の同期規則は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` を正本とする。
+refactor state の同期規則は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」を正本とする。
 
 ### feedback run を明示 join した場合
 
@@ -169,5 +171,6 @@ self-joining 経路の join がすでに成功した `feedback_report` は、`cm
 - join または abandon を開始できなかった場合は、確定できた active workload と state、事前条件違反、および未実行の処理を report する。実行していない merge、hook、破棄、または cleanup の結果を作ってはならない。
 - fork の terminal result では、次に実行可能な lifecycle 操作として `cmoc run join` と `cmoc run abandon` を示す。
 - join の terminal result では、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、および cleanup の結果をサブコマンド固有結果として判別可能にする。
+- apply の比較始点を保持した join を、report や terminal result で「比較始点を更新した」と表示してはならない。
 - abandon の terminal result では、破棄対象と cleanup の結果をサブコマンド固有結果として判別可能にする。
 - terminal result の出力先、共通 field、および表示順序は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。
