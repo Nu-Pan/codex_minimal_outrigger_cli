@@ -390,21 +390,23 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の fork と共通 lifecycle を対象に、realization apply/refactor の処理、run worktree と branch の分離、state 遷移、成果物 merge を統合的に検証する。
-- Codex agent の予期しない file 変更・commit・遅延処理、INDEX 更新、process tracking、rollback、cleanup、interrupt、error report を検証する境界条件の入口となる。
-- run join/abandon の正常系、force-resolve、merge conflict、cleanup 失敗、既存 resource の回収、および primary/lifecycle report の保存を確認する。
+- workload fork と共通 run lifecycle の realization test を集約し、apply/refactor fork、run join/abandon、session state・worktree・branch・process tracking・report の状態遷移を検証する統合テスト。
+- agent や INDEX refresh による想定外変更・commit・遅延処理、rollback、cleanup、rename/delete、force-resolve、merge conflict、interruption、並行起動、破損した tracking などの異常系を検証する。
+- fork report・lifecycle report・terminal primary report の生成内容、feedback observation、change summary、refactor state、Codex child tracking、通知結果まで含めた lifecycle の完了条件を確認する。
 
 ## Read this when
-- realization apply/refactor fork と run join/abandon の間で共有される session state、run worktree、branch、process tracking の lifecycle を調査するとき。
-- agent または INDEX refresh による想定外差分・commit、遅延 child、rename/delete、symlink、cleanup 失敗、rollback、interrupt の挙動を確認するとき。
-- fork report、lifecycle report、primary report、completion reason、feedback observation の記録内容を検証するとき。
+- realization apply/refactor fork の lifecycle、run state、run worktree、session state の変更を調査・変更するとき
+- run join または run abandon の merge、cleanup、branch/worktree 削除、force-resolve の挙動を確認するとき
+- Codex child process tracking、INDEX refresh、agent 境界、想定外差分の検証、rollback、interruption、report 保存の回帰を確認するとき
+- fork/join/abandon に関係する report、refactor state、変更 path の扱いを変更するとき
 
 ## Do not read this when
-- 個別の実装関数の通常系だけを確認したい場合は、対応する commons または sub_commands 配下の実装や、より直接的な単体テストを読む。
-- editing run と無関係な CLI、INDEX routing、oracle 仕様、一般的な Git 操作の挙動だけを調べる場合は、この統合テストを読まない。
+- 単一の低レベル helper の実装や、fork/join/abandon の lifecycle を伴わない unit test だけを調べるとき
+- INDEX のルーティング仕様や app spec の正本を確認することが目的のときは、対応する oracle/specification を直接読む
+- 実際の subcommand 実装の詳細を変更する前に、まず対象実装と対応する app spec の挙動を確認すべきとき
 
 ## hash
-- 935c80a09dfe80e477e97632f9c2c34d79c5040e1e7fdfbf7d1e2afba9c08661
+- f370d18e99e7d79eb84f7505f437c82bf5f547bbc9465df0875dd2a2f3fc5cff
 
 # `test_editor_input_handoff.py`
 

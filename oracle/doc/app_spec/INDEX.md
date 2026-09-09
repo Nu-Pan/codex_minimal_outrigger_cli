@@ -286,34 +286,39 @@
 # `session_state.md`
 
 ## Summary
-- cmoc workflow の session と編集 run の lifecycle を永続化する JSON state の正本。session・run の状態、所属 branch、fork commit、feedback report の例外的な遷移を定義する。
+- cmoc workflow における session と編集 run のライフサイクル、およびそれらを永続化する state のスキーマと状態遷移を定める仕様。
+- session の active context、編集 run 開始、session 終了、join・abandon に共通する事前条件を確認するための入口。
+- session と run の各 field の意味、初期値、workload 種別、自動 join・recovery を含む状態遷移を確認する対象。
 
 ## Read this when
-- session の新規作成、active context の検証、編集 run の開始・join・abandon・recovery を実装または確認するとき
-- session または run の状態遷移、保存フィールド、初期値、run kind ごとの扱いを確認するとき
+- session state の JSON 構造、保存対象、各状態や field の意味を確認したいとき。
+- session fork、編集 run、join、abandon、feedback report の状態遷移や事前条件を実装・検証するとき。
+- apply の追従対象 commit や feedback state の責務分担を確認するとき。
 
 ## Do not read this when
-- feedback の repository-local state の保存対象や lifecycle を確認するときは feedback state の正本を読む
-- 個別 workload の処理仕様や git worktree 操作の詳細だけを確認したいときは、それぞれの workload・実装仕様へ直接進む
+- feedback の repository-local state の保存対象や lifecycle 自体を確認したいときは、feedback state の正本仕様を直接読む。
+- apply 後の hook における last_joined_apply_fork_commit の更新規則を確認したいときは、realization apply の正本仕様を直接読む。
+- oracle edit 固有の仕様や、個別 workload の詳細な処理手順だけを確認したいとき。
 
 ## hash
-- b1a0b22c975b866763b3e31c2b46f0416948bf08f4824946960932ca160951f8
+- 952da2b406d2dee7b88866e693ce53b39ee6010760e358d5b34675286c7e63b1
 
 # `sub_command`
 
 ## Summary
-- 対象ディレクトリ内の各サブコマンド仕様を、実行契約やライフサイクル別の入口として案内する索引。doctor・indexing・tui、session、editing run、feedback report、oracle／realization 系の仕様へ振り分ける。
+- cmoc のサブコマンド仕様への入口。doctor、indexing、tui、oracle・session・run の各操作、および feedback report に関する実行契約・ライフサイクル・終了報告を扱う。
+- サブコマンド固有の実行条件や処理手順を確認するための上位入口であり、共通する編集 run lifecycle、session lifecycle、branch、state、prompt builder、realization・oracle の詳細仕様へ案内する。
 
 ## Read this when
-- doctor、indexing、tui、session、editing run、feedback report、oracle edit／investigation、realization apply／refactor の実行条件・処理手順・終了時の報告や状態遷移を確認したいとき。
-- 複数のサブコマンド仕様のどれを読むべきか判断したいとき。
+- cmoc のサブコマンドの呼び出し条件、実行手順、状態遷移、agent call、差分処理、cleanup、または primary report の仕様を調べるとき。
+- doctor、indexing、tui、feedback report、oracle edit・investigation、realization apply・refactor、session fork・join・abandon、run join・abandon のどの仕様から読み始めるべきか判断するとき。
 
 ## Do not read this when
-- 対象サブコマンドの詳細契約をすでに特定できており、該当する個別仕様を直接確認できるとき。
-- 共通基盤仕様、参照先の oracle／realization 内容、ACP builder・schema、実装コードの詳細だけを確認したいとき。
+- 特定サブコマンドの内部処理、state schema、branch・run isolation、prompt 構築、realization・oracle の適合性、feedback state などの詳細だけを確認したいときは、対応する正本仕様を直接読む。
+- サブコマンド以外の一般的な実装構造や、既存の実行結果・診断ログだけを確認したいとき。
 
 ## hash
-- 5302083c296f14137255af72a5bf1dfbcb4930461534a330b4734997b2b77be6
+- ec57c9c16ea29afa49a33e201ad53200651c9cb97ab2e12b8b34f05e928729a0
 
 # `subcommand_interruption.md`
 

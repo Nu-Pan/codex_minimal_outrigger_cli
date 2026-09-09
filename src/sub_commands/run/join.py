@@ -326,10 +326,12 @@ def merge_run(
     # last_joined_apply_fork_commit を state object へ書き戻さない。
     last_joined_apply_fork_commit = state.session.last_joined_apply_fork_commit
     if context.kind == "realization_apply":
-        last_joined_apply_fork_commit = context.run_fork_commit
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # common の run_fork_commit と同じ commit を workload 固有名で重複掲載しない。
-        hook_result = "session.last_joined_apply_fork_commit updated"
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md の「join 後 hook」
+        # lock 内で対象 run を確定した時点の state を使い、error run の比較始点を保つ。
+        hook_result = "session.last_joined_apply_fork_commit preserved"
+        if context.state_before == "joinable":
+            last_joined_apply_fork_commit = context.run_fork_commit
+            hook_result = "session.last_joined_apply_fork_commit updated"
     _refresh_join_indexes(context, warnings)
     sync_refactor_state(context.session_worktree)
     state_sync_commit = commit_work_unit(
