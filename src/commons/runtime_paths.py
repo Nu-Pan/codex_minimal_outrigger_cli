@@ -79,7 +79,12 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
 
 def timestamp() -> str:
     """file name に使う衝突しにくい実行時刻表記を返す。"""
-    return datetime.now().strftime("%Y-%m-%d_%H-%M_%S_%f000")
+    now = datetime.now()
+    return (
+        f"{now.year:04d}-{now.month:02d}-{now.day:02d}_"
+        f"{now.hour:02d}-{now.minute:02d}_{now.second:02d}_"
+        f"{now.microsecond * 1000:09d}"
+    )
 
 
 def _reserve_timestamped_path(

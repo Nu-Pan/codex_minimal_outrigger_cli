@@ -720,21 +720,21 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error、log、preflight、completion 境界を、共通 runner・work root・subcommand event の外部契約として検証するテスト群。
-- duration 表示、サブコマンドログの衝突・並列記録、成功・失敗・中断時の terminal result、error report と traceback の扱いを確認する。
-- doctor preprocess、pre-log check、work root 制約、completion probe の副作用抑制、TUI 起動・通知境界を検証する。
+- CLI lifecycle における error report、console/file log、preflight、completion、終了通知の共通契約を検証するテスト群。
+- 共通 runner を通じた成功・handled failure・internal failure・非0終了・ユーザー中断の表示、ログ記録、終了コード、通知境界を確認する。
+- work root 制約、doctor preprocess、pre-log check、shell completion probe、TUI 起動前後の Ctrl+C を調査するための横断的な入口。
 
 ## Read this when
-- CLI runner の終了結果、stderr/stdout の error 表示、診断ログ、失敗分類、ユーザー中断の扱いを変更・調査するとき。
-- doctor の事前処理や pre-log check、work root 判定、completion probe が通常実行を迂回する境界を確認するとき。
-- TUI を含む terminal notification、Codex subprocess 起動前後の Ctrl+C、ログ flush・通知失敗時の保護を検証するとき。
+- CLI の stdout/stderr 形式、error report の簡潔さ、traceback の扱い、終了コードを確認したいとき
+- サブコマンドログの生成・イベント分類・flush failure 耐性や terminal notification のタイミングを確認したいとき
+- doctor preprocess、pre-log check、work root 判定、completion probe の副作用抑制、TUI の中断境界を調査したいとき
 
 ## Do not read this when
-- CLI の個別サブコマンド固有ロジックや、error・log・preflight・completion の共通 runner 境界に関係しない機能だけを扱うとき。
-- duration、ログ、error report、preflight、completion の実装詳細を直接確認する必要があり、対応する runtime 実装や oracle 仕様を読む方が先行すべきとき。
+- 特定サブコマンドの内部処理や個別 runtime モジュールの実装詳細を直接調べるとき
+- CLI lifecycle の共通外部契約ではなく、Codex subprocess の単体挙動、git 操作、設定値、個別のエラーモデルだけを確認するとき
 
 ## hash
-- 699e5d4d95a48d446c28424872cb29a53c0cce53d2157fe33ca2f12845c18cda
+- 0b11f2c5fa5c56f454f81867e5829917baf0820e3752fa8a8d21425bcc2e0aa8
 
 # `test_runtime_codex_conflicts.py`
 

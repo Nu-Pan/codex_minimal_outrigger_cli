@@ -122,32 +122,35 @@
 # `src`
 
 ## Summary
-- cmoc の src 側実装をまとめる上位入口であり、CLI 起動、互換 import、共通 runtime、サブコマンド実装、indexing・feedback などの主要経路へ進むための構成を示す。
-- acp、basic、config、commons、oracle shim、sub_commands など、役割ごとの下位入口を選択するためのルーティング起点となる。
+- src 配下の CLI 実装、互換入口、共通 runtime、サブコマンド群を横断する最上位の実装入口。
+- 起動入口から個別サブコマンド、共有基盤、oracle 側への互換導線を選ぶための上位ルーティング先。
 
 ## Read this when
-- cmoc の src 側で公開 CLI の起動経路、互換 import の配置、共通 runtime の責務、またはサブコマンド実装の全体構成を確認するとき。
-- 調査・変更対象が acp、basic、config、commons、oracle shim、sub_commands のどの入口に属するかを判断するとき。
+- src の公開 CLI 構成や、src 配下で目的の実装入口を選ぶ必要があるとき。
+- main.py、commons、sub_commands、互換 shim など複数の下位要素にまたがる実行経路を把握するとき。
 
 ## Do not read this when
-- 特定の runtime helper、互換モジュール、CLI サブコマンド、builder adapter、または oracle 正本の具体的な処理を確認したい場合は、対応する下位要素や正本実装を直接読む。
-- 利用者向け正本仕様、INDEX 生成規則、feedback observation の詳細、または src と無関係な処理を確認したい場合は、src の上位入口ではなく該当する仕様・実装を直接読む。
+- 特定サブコマンドの処理、共通 runtime の詳細、互換 API や oracle 正本の実装を確認したいときは、対応する下位要素を直接読む。
+- 正本仕様や INDEX.md の生成・更新契約そのものを確認したいときは、src の入口ではなく該当する仕様・実装を直接読む。
 
 ## hash
-- 6f5984cf87ae72b353128909ab2baac25958c3b7bc2c2d0ddb1156baf729286d
+- 08b615aca30f61e50454c22675d69f8231c20a5f75b51ac953521d37c0d63214
 
 # `test`
 
 ## Summary
-- cmoc のテストスイートを構成する入口。共有 fixture・テスト補助から、CLI、Codex runtime、indexing、feedback、session、oracle／realization、TUI などの外部挙動と境界条件を検証する下位テストへ進む。
+- `test` 配下の回帰・統合テストを、CLI、Codex runtime、indexing、feedback、session、state、Git、prompt editor、通知などの外部挙動や境界条件を確認する入口として整理する。
+- 正本仕様や実装そのものではなく、実装された公開挙動、ライフサイクル、永続状態、プロセス・ファイル境界をテストケースから確認したい場合の下位入口となる。
 
 ## Read this when
-- cmoc の機能変更や不具合調査で、実装された外部挙動・回帰条件・統合 lifecycle の検証例を探すとき。
-- 対象機能に対応する専用テスト、共有 fixture、Codex 実経路テスト、または安全性・失敗境界の検証入口を特定するとき。
+- 特定機能の回帰テストや統合テストを探すとき。
+- CLI の公開コマンド、Codex 呼び出し、worktree・Git・state lifecycle、INDEX 更新、feedback、editor handoff、通知などの外部観測可能な挙動を検証・変更するとき。
+- 通常系だけでなく、失敗・中断・rollback・cleanup・path 安全性・権限境界などのテスト根拠を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装の詳細そのものを確認したいときは、対応する oracle、src、または仕様文書を直接読む。
-- 単一機能の具体的な契約が明確で、対応する下位テストを直接読めるとき。
+- 正本仕様、schema、実装本体の詳細を確認することが目的で、対応する oracle・realization・src の対象を直接読めば足りるとき。
+- 単一機能の実装内部や共通 fixture の詳細だけを調べるとき。
+- テストを伴わない一般的な CLI 利用方法や、対象外の機能の仕様を確認するとき。
 
 ## hash
-- 1b8b673c1af344d54b5fec5acb5b1b3501bff425587e53a233ad6eac8f76725a
+- dbaaad338274a73b5c2d77eeb9271f9eac4360e3df5cfca32952878a347bc250

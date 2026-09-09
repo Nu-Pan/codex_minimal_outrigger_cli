@@ -470,19 +470,23 @@
 # `runtime_paths.py`
 
 ## Summary
-- cmoc の repository/worktree/cmoc root 解決、保存先ディレクトリ・設定パスの算出、時刻・経過時間の整形、排他的な timestamp path 予約、process-wide な cwd 切替を提供する runtime 共通モジュール。
+- cmoc の repository root・worktree root・cmoc 自身の root を解決し、session・report・log・editor・worktree・schema・config などの保存先 path を返す共通 runtime path API。
+- 実行時刻・console 時刻・duration の表示形式を整え、timestamp 付き path の排他的予約を行う。
+- process-wide な cwd 切替を直列化する pushd と、context 単位の cwd override 状態判定を提供する。
+- root 配下の memo 判定を symlink を追跡しない path 境界で行う。
 
 ## Read this when
-- repository root、worktree root、cmoc 自身の root、または .cmoc 配下の session・report・log・editor・worktree・schema・config・refactor state の保存先を特定・変更するとき
-- console/file log 用の timestamp や duration 表示、timestamp 付きファイルの衝突回避、memo 配下判定が必要なとき
-- cwd を一時的に切り替える処理や、その切替区間の検出、root 解決時の file/directory 起点処理を確認するとき
+- root 解決、cmoc 管理データの保存先、ログ・レポート・schema・editor 入出力の directory、config や refactor state の path を確認または変更するとき。
+- timestamp、console 時刻、duration の正規化表示、timestamp path の衝突回避を確認または変更するとき。
+- 外部 API の実行前提に合わせた cwd 切替、cwd override の状態、または process-wide な cwd の並列実行制御を確認するとき。
+- {{work-root}}/memo の所属判定や、root anchor から repository/worktree root を探索する処理を確認するとき。
 
 ## Do not read this when
-- 個別のサブコマンド仕様、ログ形式、editor 入力仕様、refactor の状態遷移など、保存先や runtime 共通処理ではなく呼び出し側の契約を直接確認すべきとき
-- root placeholder の一般的な解決規則そのものを確認したいときは、root resolver または path model の仕様・実装を読むとき
+- 対象の保存先や時刻・cwd 制御ではなく、各サブコマンド固有の処理、ログ内容、prompt 編集、設定値の意味を直接調べるとき。
+- root 解決の基盤である path model の仕様や、runtime error の型・表示契約そのものを確認する場合は、それぞれの定義元を直接読むとき.
 
 ## hash
-- 2ea981953761752570c1923e44a9bb939d24f04f75084bf7861941e8851e0794
+- 232a5aa40dc95f04e9e1498892cdbffae13d4deeb8e02dc38aebdeb589ec80d0
 
 # `runtime_primary_report.py`
 

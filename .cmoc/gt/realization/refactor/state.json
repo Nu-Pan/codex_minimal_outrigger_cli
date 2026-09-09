@@ -205,9 +205,9 @@
   },
   "oracle/doc/app_spec/timestamp.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "fdee683f00be4a26b05890895f8b4de3bf6d39a1ec7910a70edc96f4e2fbfc84",
+    "last_investigated_at": "2026-09-09_09-30_35_364209000"
   },
   "oracle/doc/app_spec/usage.md": {
     "investigation_required": true,
