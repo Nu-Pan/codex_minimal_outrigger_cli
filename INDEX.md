@@ -89,19 +89,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・設計資料と oracle パッケージ実装を横断する入口。アプリケーション仕様、branch/worktree モデル、開発規則、採用しなかった設計案、および agent call のパスモデル・prompt 構築・用途別 builder を目的別に辿る。
+- cmoc のアプリケーション仕様、設計判断、開発ルールを横断して参照する上位文書群への入口。
+- agent 呼び出しの共通設定、prompt 構築、用途別 builder、quota probe、indexing、feedback、session、TUI などを扱う oracle 実装ソースへの入口。
 
 ## Read this when
-- cmoc の仕様、開発ルール、branch・commit・worktree の関係、または過去の設計判断を調べるとき。
-- agent call の cwd・worktree・placeholder、構造化 prompt、policy 注入、用途別 Codex CLI builder、quota probe、indexing、feedback、session・TUI 経路の実装を調べるとき。
-- 仕様または実装の確認対象が doc と oracle パッケージのどちらに属するかを判断し、下位対象への入口を探すとき。
+- cmoc の複数機能にまたがる正本仕様や、仕様・設計資料・開発ルールの参照先を判断するとき
+- agent call のパラメータ、パス、prompt 構築、policy 注入、用途別の呼び出し経路を確認するとき
 
 ## Do not read this when
-- 確認したい正本仕様、設計判断、または実装経路がすでに特定できており、その下位対象だけを直接読む場合。
-- cmoc の一般的な実装コード、具体的な CLI 操作、realization file・oracle・feedback の個別処理、または Codex CLI 実行結果の詳細だけを確認したい場合。
+- 単一機能の具体的な挙動、状態遷移、prompt、実装詳細、契約、またはテスト手順を直接確認したいときは該当する下位対象を読む
+- 実装コード、実行結果、診断ログなど、oracle の仕様・実装入口が担わない対象だけを調べるとき
 
 ## hash
-- 1cd3907e258bae7965b499ed3028f14fa3eb3849c1d6f1879e589a24145cb375
+- 1755af272457d304ecffb1795c9981fb05e6a75d42056750348a0a64d2edc941
 
 # `pyproject.toml`
 

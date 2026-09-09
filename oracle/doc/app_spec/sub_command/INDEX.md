@@ -16,22 +16,21 @@
 # `editing_run.md`
 
 ## Summary
-- 編集 run を開始して終了する workload 横断の共通 lifecycle を定義する。
-- run の同時実行境界、共通事前条件、隔離 worktree での編集責務と想定内差分を定める。
-- realization 系の明示 join と feedback_report の self-joining、join／abandon、merge・post-join・cleanup・report の共通ルールを定める。
+- 編集 run を開始・終了する共通 lifecycle の正本で、対象 workload、同時実行境界、開始・編集・join・abandon の共通規則、report と terminal result の要件を定める。
+- realization apply/refactor の明示 join と feedback report の self-joining、差分検査・merge・post-join・cleanup の扱いを確認する入口。
 
 ## Read this when
-- 編集 run の開始前提、state 遷移、run branch／worktree、join または abandon の動作を確認するとき。
-- 複数 workload にまたがる差分検査、merge、post-join、cleanup、terminal report の共通仕様を確認するとき。
-- feedback_report の自動 join、失敗時 recovery、または realization 系 run の明示的な終了方法を確認するとき。
+- 編集 run の開始条件、active run の制約、run state の遷移、隔離資源、想定内差分を確認するとき。
+- cmoc run join または cmoc run abandon の事前条件、差分検査、merge/破棄、cleanup、report 内容を実装・調査するとき。
+- feedback_report の自動 join、recovery、publication 前後の扱いを確認するとき。
 
 ## Do not read this when
-- oracle edit、read-only investigation、run を作らない機械的更新、session lifecycle、session join の conflict 解消だけを扱うとき。
-- 特定 workload の preflight、intake、issue commit、publication、固有 cleanup などの詳細だけを確認するときは、workload 固有仕様を直接読む。
-- run isolation、session state、feedback の境界、console／file log の正本定義を確認するときは、本文の参照先仕様を直接読む。
+- cmoc session join/abandon など外側の session lifecycle を扱うとき。
+- cmoc oracle edit、read-only investigation、run を作らない機械的更新、または session join の conflict 解消だけを扱うとき。
+- workload 固有の apply/refactor/feedback の詳細仕様、session state、run isolation の正本を直接確認すべきとき。
 
 ## hash
-- 462ca7312f040670506e178bcb6a3c8bfc659970aff48a122eacdfb5fba14d40
+- a43d81e74fa9176411a2415754f3e14f3415e2ec3df14f0ab6a6c7e0f89709fc
 
 # `feedback_report.md`
 
@@ -114,21 +113,21 @@
 # `realization_apply.md`
 
 ## Summary
-- realization apply fork の目的、追従対象差分、agent call による realization file 更新、検査・commit・joinable 化までの実行契約を定義する。
-- oracle file の変更を realization file へ反映する apply workload の専用仕様であり、共通 lifecycle は編集 run の共通仕様を参照する。
+- realization apply の fork における追従対象差分、agent call、成果物確定までの実行契約を定義する仕様。
+- oracle file の変更を realization file へ反映する apply 処理の開始条件、差分範囲、エラー、report、join 後の状態更新を確認する入口。
 
 ## Read this when
-- realization apply fork の目的、差分の始点・終点、追従対象となる oracle file の範囲を確認したいとき。
-- 本命 agent call の実行条件、変更可能な file、終了後の検査・commit・report・run state を確認したいとき。
-- fork 完了時の report 要件、エラー時の扱い、join 後の session 更新を確認したいとき。
+- realization apply の fork がどの commit 範囲を対象にし、どのファイルを追従させるか確認するとき。
+- apply 固有の agent call を一回実行する条件、変更可能なファイル、完了判定、エラー処理を確認するとき。
+- fork report の記録内容や、join 成功後に次回 apply の比較始点を更新する条件を確認するとき.
 
 ## Do not read this when
-- fork・join・abandon に共通する lifecycle を確認したいときは、編集 run の共通仕様を直接読む。
-- oracle file と realization file の適合性に関する一般原則を確認したいときは、oracle と realization の共通仕様を直接読む。
-- prompt 文面や AgentCallParameter の構築方法だけを確認したいときは、専用の launch builder を直接読む。
+- fork・join・abandon に共通する編集 run の lifecycle だけを確認したいときは、共通 lifecycle の正本を直接読む。
+- oracle file と realization file の一般的な適合性判断だけを確認したいときは、その適合性を定義する正本を直接読む。
+- realization file の網羅的な refactor や apply 以外の sub-command の挙動を確認するとき。
 
 ## hash
-- 437790c9858deb2a5da4e5afe78a100b4459f87958afa5baa2f4e357eecf8e3d
+- 3765d5cf947931bec3b322703a1a07634977bff3b813031fc2eadb9f3bdff421
 
 # `realization_refactor.md`
 
