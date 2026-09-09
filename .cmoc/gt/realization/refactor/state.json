@@ -492,10 +492,10 @@
     "last_investigated_at": "2026-08-17_19-59_13_401715000"
   },
   "oracle/src/oracle/prompt_builder/policy/realization_findings.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "b531825f8f44927871a9b987eb21d9d6aef981e1207d9d654edfe6030b464f3e",
+    "last_investigated_at": "2026-09-09_12-23_35_560115000"
   },
   "oracle/src/oracle/prompt_builder/policy/routing.py": {
     "investigation_required": true,
