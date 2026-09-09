@@ -246,10 +246,10 @@
     "last_investigated_at": "2026-09-09_20-45_06_191846000"
   },
   "oracle/doc/considered_alternative/memory_alternative.md": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "5ef1ea0577ef57db18994f2e242ebf091720662552e236911b3608f9b8431527",
-    "last_investigated_at": "2026-07-24_00-17_08_035802000"
+    "last_investigated_sha256": "bdf5f8772491fd718cde867cc852b43c14722dbb097400a776dd3396450a65eb",
+    "last_investigated_at": "2026-09-09_21-10_14_406078000"
   },
   "oracle/doc/considered_alternative/oracle_review.md": {
     "investigation_required": true,
