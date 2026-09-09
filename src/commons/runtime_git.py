@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Callable, Literal
 
 from .runtime_errors import CmocError
-from .runtime_paths import worktrees_dir
+from .runtime_paths import repo_root, worktrees_dir
 from .runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/run/")
@@ -530,7 +530,11 @@ def git_common_dir(root: Path) -> Path:
 
 def _main_worktree_root(root: Path) -> Path:
     """linked worktreeからmain worktreeのrootを求める。"""
-    return git_common_dir(root).parent
+    # separate-git-dir repository では Git common directory の parent は
+    # worktree root ではない。branch model の {{repo-root}} を正本の root
+    # resolver から取得し、通常・linked・separate metadata の全てで run-root
+    # を {{repo-root}}/.cmoc/gu/worktree/... に揃える。
+    return repo_root(root)
 
 
 def _git_info_exclude_path(root: Path) -> Path:

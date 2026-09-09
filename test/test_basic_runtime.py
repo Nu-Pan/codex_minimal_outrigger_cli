@@ -154,6 +154,9 @@ def test_agent_call_path_context_resolves_separate_git_directory(
 
     assert context.work_root == worktree.resolve()
     assert context.repo_root == worktree.resolve()
+    assert expected_run_worktree(worktree, "cmoc/run/session/run") == (
+        worktree / ".cmoc" / "gu" / "worktree" / "session" / "run"
+    )
 
 
 def test_agent_call_path_context_ignores_repository_selection_environment(

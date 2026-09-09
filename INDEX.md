@@ -122,36 +122,39 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、doctor・tui・indexing・feedback、session・oracle・realization・run のサブコマンド構成を扱う。
-- acp・basic・config・commons の互換入口と共通 runtime、oracle package shim、sub_commands 配下の実行フローへ進むための上位ディレクトリ。
+- cmoc の CLI 起動入口と、互換 import・package shim・共通 runtime・サブコマンド群を束ねる `src` の上位入口。
+- `main.py` は CLI コマンドツリー、Typer／Click 互換処理、引数解析エラー変換を扱い、`sub_commands` 配下の実行フローへ接続する。
+- `acp`、`basic`、`config`、`cmoc_runtime.py`、`oracle.py` は旧公開名や import 経路を正本実装へつなぐ互換入口であり、`commons` は共有 runtime 実装群への入口となる。
 
 ## Read this when
-- cmoc の CLI コマンドツリー、console script の起動経路、Typer／Click の互換境界を確認するとき。
-- 複数のサブコマンドや共通 runtime、互換 import 入口を横断して、読むべき下位要素を判断するとき。
-- session・oracle・realization・run・feedback・indexing などの CLI 実行フローの入口を確認するとき。
+- cmoc の CLI 全体構成、起動経路、主要サブコマンドへの接続先を確認するとき。
+- Typer／Click の互換境界、CLI 引数解析エラー、補完 probe の扱いを調査するときは `main.py` を読む。
+- 旧 import path や `oracle.*` の解決経路、共有 runtime、サブコマンド群の配置を横断的に確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務処理や個別オプションの詳細を確認したいときは、対応する sub_commands 配下を直接読む。
-- 共通 runtime helper、互換 API、正本 oracle 実装の内部仕様だけを調査するときは、対応する下位モジュールや正本仕様を直接読む。
-- INDEX.md 更新規則や feedback observation の報告仕様そのものを確認するときは、indexing／feedback の専用実装または正本仕様を直接読む。
+- 特定サブコマンドの業務処理や個別 API の実装仕様を確認したい場合は、`sub_commands` や各互換モジュール・正本実装を直接読む。
+- 共通 runtime の個別責務、INDEX 更新、feedback、session／run lifecycle など専用処理の詳細を確認したい場合は、対応する下位要素を直接読む。
+- `src` と無関係な正本仕様や、単一モジュールの細部だけを調べる場合。
 
 ## hash
-- efc43c18c878a9c99c25dec76a7b9fafef08f1d356b37149aa9e5aa816a15299
+- 86192a966a2a01ebb3e2e5aeadb9d6479da8d19d8764ad3ccde186ef251915aa
 
 # `test`
 
 ## Summary
-- cmoc の実装・CLI・Codex runtime・feedback・indexing・session などを対象に、単体テストから実経路統合テストまでの回帰検証を集約するテストディレクトリ。共有 fixture/helper と機能別テストを入口として、外部挙動、永続 state、Git、process、report、MCP 境界を検証する。
+- `test` 配下は、cmoc の CLI・Codex runtime・indexing・oracle／realization・session・feedback・prompt・Git／state 管理を、単体から実経路統合までのテストで検証する主要な回帰テスト群です。
+- 各テストは、実装や正本仕様に対する外部契約、状態遷移、ファイル安全性、process／PTY、report／log、Structured Output、公開 API の境界を対象領域別に検証します。
+- 共通 fixture・テスト helper と、実 Codex／独立 process を用いる受け入れ試験が同階層にあり、対象機能の回帰条件や実行経路を探す入口になります。
 
 ## Read this when
-- cmoc の機能変更や不具合調査で、対応する外部挙動・回帰条件・統合経路のテストを探すとき。
-- CLI、Codex 実行、indexing、feedback、session、state、Git、prompt、通知などの実装変更が既存契約へ与える影響を確認するとき。
-- テスト共通の fixture、Codex/Git/CLI helper、または実経路統合テストの構成を確認するとき。
+- cmoc の機能変更が既存の CLI 外部挙動、Codex 実行、Git／worktree、永続 state、report、prompt、indexing、session、feedback の回帰に影響するか確認するとき。
+- 対象機能に対応するテストケース、共有 fixture／helper、または実 Codex・PTY を含む統合経路の検証方法を探すとき。
+- 公開 command tree、Structured Output、ファイルアクセス境界、process cleanup など、実装に対する回帰検証の入口を特定するとき。
 
 ## Do not read this when
-- 正本仕様や実装本体の意味を確認することが目的で、テストの期待挙動を調べる必要がないときは、対応する oracle・realization・src を直接読む。
-- 個別機能と無関係なテストや、対象テストが検証していない一般的な CLI・Git・Codex の利用方法を調べるとき。
-- INDEX エントリーの機械的な所在だけを確認したいとき。
+- 正本仕様や実装詳細そのものを確認・変更することが目的で、テストが検証する期待挙動を確認する必要がないとき。
+- 対象機能が `test` 配下の領域に該当しない、または個別の仕様・実装・schema・oracle を直接読む方が明確なとき。
+- 実 Codex／PTY／subprocess を使う受け入れ試験が不要で、高速な単体テストや特定の共通 helper だけを直接確認したいとき。
 
 ## hash
-- bbf4a5051704dc06019816b68342178ba774268eb5251bfbc5d32157272cf141
+- 1d9573a7e72944ef886823292484de9adabf4fdd22ff84ca5fb0f1d47aa5e796
