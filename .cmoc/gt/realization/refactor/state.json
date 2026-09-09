@@ -427,9 +427,9 @@
   },
   "oracle/src/oracle/prompt_builder/basic.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "526fb2d3d3f5fd312f3f1cc48c630d59e91568f38d6ac0d09bc5241792eb1e18",
-    "last_investigated_at": "2026-07-24_12-30_03_425586000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "f8a558f24e4b59e54e49e1729d4c10dfd1b596dc0b1531a5b8e9a8e2f9a6194a",
+    "last_investigated_at": "2026-09-09_21-29_31_917598000"
   },
   "oracle/src/oracle/prompt_builder/complete_prompt.py": {
     "investigation_required": true,
