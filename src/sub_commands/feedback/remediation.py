@@ -8,6 +8,7 @@
 
 import json
 import signal
+from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import replace
@@ -937,12 +938,6 @@ def _update_progress(
 ) -> None:
     """中断・エラー時に必要な確定情報を invocation report に残す。"""
     report._update_feedback_progress_fields(manifest)
-    logger = current_subcommand_logger()
-    committed = [
-        {"issue_id": event["issue_id"], "commit": event["audit"]["commit"]}
-        for event in (logger.event_records() if logger else ())
-        if event.get("event") == "feedback_issue_committed"
-    ]
     update_primary_report_fields(
         report_cut_id=manifest["report_cut_id"],
         report_cut_at=manifest["cut_at"],
@@ -952,7 +947,7 @@ def _update_progress(
         run_worktree=context.run_worktree,
         state_before=context.state_before,
         state_after=state,
-        confirmed_issue_commits=committed,
+        confirmed_issue_commits=_confirmed_issue_commits(context, manifest),
         wave_count=len(manifest["run"]["waves"]),
         final_high_watermark=manifest["run"]["high_watermark"],
         processed_issues=[
@@ -960,6 +955,56 @@ def _update_progress(
             for item in manifest["processing"]["remediation_checkpoints"]
         ],
     )
+
+
+def _confirmed_issue_commits(
+    context: EditingRunContext, manifest: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """durable checkpoint と現 invocation log から確定済み commit を復元する。"""
+    committed: list[dict[str, Any]] = []
+    processing = manifest.get("processing")
+    references = (
+        processing.get("remediation_checkpoints")
+        if isinstance(processing, dict)
+        else None
+    )
+    for reference in references if isinstance(references, list) else ():
+        if not isinstance(reference, dict):
+            continue
+        try:
+            checkpoint = read_run_artifact(
+                context.repo,
+                {key: reference[key] for key in ("path", "sha256")},
+            )
+            issue_id = checkpoint["candidate_id"]
+            commit = checkpoint["audit"]["commit"]
+        except (CmocError, KeyError, OSError, TypeError, ValueError):
+            # report progress must not hide the original interruption/error.
+            continue
+        if isinstance(issue_id, str) and (commit is None or isinstance(commit, str)):
+            committed.append({"issue_id": issue_id, "commit": commit})
+
+    logger = current_subcommand_logger()
+    logged: list[dict[str, Any]] = []
+    for event in logger.event_records() if logger else ():
+        if event.get("event") != "feedback_issue_committed":
+            continue
+        try:
+            issue_id = event["issue_id"]
+            commit = event["audit"]["commit"]
+        except (KeyError, TypeError):
+            continue
+        if isinstance(issue_id, str) and (commit is None or isinstance(commit, str)):
+            logged.append({"issue_id": issue_id, "commit": commit})
+
+    remaining = Counter((item["issue_id"], item["commit"]) for item in committed)
+    for item in logged:
+        key = (item["issue_id"], item["commit"])
+        if remaining[key]:
+            remaining[key] -= 1
+        else:
+            committed.append(item)
+    return committed
 
 
 @contextmanager
