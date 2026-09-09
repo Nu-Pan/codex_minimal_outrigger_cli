@@ -1,15 +1,15 @@
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` における merge conflict marker 解消用の AI エージェント呼び出しパラメータを構築する。対象パスを解決し、競合解消専用プロンプト、最高品質のモデル設定、リポジトリ書き込み権限、作業ディレクトリなどをまとめて返す。
+- session join の merge conflict marker 解消を行うエージェント呼び出しパラメータを構築する。対象パスの解決、専用ポリシーを含む prompt、書き込み権限、完了条件、起動設定をまとめる。
 
 ## Read this when
-- `cmoc session join` の merge conflict 解消フローや、その agent call パラメータを変更・調査するとき
-- 競合対象ファイルのパス解決、プロンプト内容、モデル・推論設定、preflight 実行設定を確認するとき
+- `cmoc session join` で指定されたファイルの merge conflict marker を解消するための prompt 文面やエージェント起動パラメータを確認・変更するとき。
+- conflict 解消対象パスの prompt への埋め込み方、conflict 解消専用の policy、preflight を行わない起動設定を確認するとき。
 
 ## Do not read this when
-- merge conflict の実際の解消ロジックや git 操作そのものを調査するとき
-- `session join` と無関係な agent call パラメータやプロンプト生成処理を調査するとき
+- merge conflict marker の具体的な解消ロジックや対象ファイルの内容を確認したいときは、実際の conflict 対象ファイルを直接読む。
+- 通常の session join 動作、一般的な prompt 構築、または広い edit・refactor policy の定義だけを確認するとき。
 
 ## hash
-- 298180d01535b5ff6cd3f62add67a2daeadcaecf749325c48db17b9ddbaf7a9e
+- e34c50e655efc2b31b504a888b3a1bb5da5dd02de5bbeffc8ba9c27f82d87264

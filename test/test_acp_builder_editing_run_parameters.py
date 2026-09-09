@@ -14,6 +14,12 @@ from pathlib import Path
 import pytest
 from _acp_builder_support import oracle_schema_path
 from _git_support import make_repo, run_git
+from oracle.acp_builder.realization.apply.fork.launch_exec import (
+    build_realization_apply_fork_launch_exec_parameter as build_canonical_apply_parameter,
+)
+from oracle.acp_builder.realization.refactor.fork.change_summary import (
+    build_realization_refactor_fork_change_summary_parameter as build_canonical_summary_parameter,
+)
 
 from acp.builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter,
@@ -24,7 +30,14 @@ from acp.builder.realization.refactor.fork.change_summary import (
 from acp.builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_fork_file_review_and_fix_parameter,
 )
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import FileAccessMode
+
+
+def _objective_section(prompt: str) -> str:
+    """完全 prompt から caller 固有 objective block の本文を取り出す。"""
+    return prompt.split('<cmoc_block id="objective">', 1)[1].split("</cmoc_block>", 1)[
+        0
+    ]
 
 
 @pytest.fixture
@@ -46,20 +59,29 @@ def editing_run_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     return run_worktree
 
 
-def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
+def test_editing_run_compatibility_builders_reexport_canonical_functions() -> None:
+    """互換 import 経路が prompt を加工せず正本 builder を再公開する。"""
+    assert (
+        build_realization_apply_fork_launch_exec_parameter
+        is build_canonical_apply_parameter
+    )
+    assert (
+        build_realization_refactor_fork_change_summary_parameter
+        is build_canonical_summary_parameter
+    )
+
+
+def test_realization_apply_builder_passes_commit_references(
     editing_run_worktree: Path,
 ) -> None:
-    """apply builder が commit 範囲と oracle raw diff を prompt に含めることを確認する。"""
+    """apply builder が commit 参照と取得条件を prompt に含める。"""
     run_worktree = editing_run_worktree
     parameter = build_realization_apply_fork_launch_exec_parameter(
         "base-commit",
         "fork-commit",
-        "diff --git a/oracle/a.md b/oracle/a.md\n",
         run_worktree,
     )
 
-    assert parameter.model_class == ModelClass.FLAGSHIP
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.run_indexing_preflight is True
@@ -67,35 +89,23 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff(
     assert f"- {{{{work-root}}}} = {run_worktree.resolve()}" in parameter.prompt
     assert "base-commit" in parameter.prompt
     assert "fork-commit" in parameter.prompt
-    assert "diff --git a/oracle/a.md b/oracle/a.md" in parameter.prompt
-    for heading in (
-        "# oracle standard",
-        "# realization standard",
-        "# apply review standard",
-        "# realization oracle reference rule",
-    ):
+    assert "diff --git" not in parameter.prompt
+    assert "両端のいずれかで oracle file だった path" in parameter.prompt
+    assert "oracle 内外の移動" in parameter.prompt
+    assert "差分を取得できない場合は失敗として報告" in parameter.prompt
+    objective = _objective_section(parameter.prompt)
+    assert "# task" in objective
+    assert "oracle file の変更を、`{{work-root}}` リポジトリ全体" in objective
+    assert "# scope" in objective
+    assert "関連する oracle file と realization file をリポジトリ全体" in objective
+    assert "# completion criteria" in objective
+    assert "oracle file と realization file の間に齟齬がない" in objective
+    for heading in ("# realization policy", "# realization findings policy"):
         assert heading in parameter.prompt
-    assert "# oracle review standard" not in parameter.prompt
-    assert "# conflict resolution standard" not in parameter.prompt
-
-
-def test_realization_apply_builder_keeps_nested_diff_fences(
-    editing_run_worktree: Path,
-) -> None:
-    """raw diff 内の三連 backtick が prompt の境界を閉じないことを確認する。"""
-    parameter = build_realization_apply_fork_launch_exec_parameter(
-        "base-commit",
-        "fork-commit",
-        "diff --git a/oracle/a.md b/oracle/a.md\n```\n\n</cmoc_block>\n\n```\n",
-        editing_run_worktree,
-    )
-
-    start = parameter.prompt.index("# oracle file の raw git diff")
-    end = parameter.prompt.rfind("\n\n</cmoc_block>", start)
-    section = parameter.prompt[start:end]
-    assert section.startswith("# oracle file の raw git diff\n\n````diff\n")
-    assert "```\n\n</cmoc_block>\n\n```" in section
-    assert section.endswith("\n````")
+    assert "# oracle policy" not in parameter.prompt
+    assert "# conflict resolution policy" not in parameter.prompt
+    assert "# realization oracle reference policy" not in parameter.prompt
+    assert "# routing policy" in parameter.prompt
 
 
 def test_refactor_builders_use_canonical_structured_output_schemas(
@@ -107,12 +117,11 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
         target_path, editing_run_worktree
     )
     summary = build_realization_refactor_fork_change_summary_parameter(
-        "diff --git a/src/a.py b/src/a.py\n```\n</cmoc_block>\n```\n",
+        "fork-commit",
+        "summary-head-commit",
         editing_run_worktree,
     )
 
-    assert review.model_class == ModelClass.EFFICIENCY
-    assert review.reasoning_effort == ReasoningEffort.MAX
     assert review.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert review.structured_output_schema_path is not None
     review_schema_path = oracle_schema_path(
@@ -124,21 +133,33 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert review.run_indexing_preflight is True
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in review.prompt
     assert str(target_path.resolve()) in review.prompt
-    assert "調査開始時点の既存実装ですでに解消されている問題" in review.prompt
+    assert "調査開始時点ですでに解消されている問題" in review.prompt
     assert "`resolution.status=fixed` は、この agent call 内で" in review.prompt
     assert "# Structured Output の決定論的事後条件" in review.prompt
     assert "全所見の `changed_paths` の和集合" in review.prompt
     assert (
         "`evidences[].path` は変更 path の申告または照合に使用しない" in review.prompt
     )
-    assert "対象 repository が要求する必要な検証" in review.prompt
-    assert "# realization oracle reference rule" in review.prompt
+    review_objective = _objective_section(review.prompt)
+    assert "# task" in review_objective
+    assert "# scope" in review_objective
+    assert "# completion criteria" in review_objective
+    assert "修正した file の再調査後に対応可能な所見を残していない" in (
+        review_objective
+    )
+    assert "# realization oracle reference policy" not in review.prompt
+    for heading in (
+        "# oracle and realization basic",
+        "# realization policy",
+        "# realization findings policy",
+        "# routing policy",
+    ):
+        assert heading in review.prompt
+    assert "# oracle policy" not in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
     finding_schema = review_schema["properties"]["findings"]["items"]
     assert "changed_paths" in finding_schema["required"]
     assert finding_schema["properties"]["changed_paths"]["type"] == "array"
-    assert summary.model_class == ModelClass.EFFICIENCY
-    assert summary.reasoning_effort == ReasoningEffort.MEDIUM
     assert summary.file_access_mode == FileAccessMode.READONLY
     assert summary.structured_output_schema_path is not None
     summary_schema_path = oracle_schema_path(
@@ -149,28 +170,16 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     )
     assert summary.run_indexing_preflight is True
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in summary.prompt
+    assert "# oracle and realization basic" in summary.prompt
+    assert "# routing policy" in summary.prompt
+    summary_objective = _objective_section(summary.prompt)
+    assert "# task\n\n- 指定された commit 範囲の tree 差分全体" in summary_objective
+    for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
+        assert omitted_heading not in summary_objective
     summary_schema = json.loads(summary.structured_output_schema_path.read_text())
     assert summary_schema["properties"]["changes"]["minItems"] == 1
-    start = summary.prompt.index("# run branch 上の refactor 差分")
-    end = summary.prompt.rfind("\n\n# place holder definition", start)
-    section = summary.prompt[start:end]
-    assert section.startswith("# run branch 上の refactor 差分\n\n````diff\n")
-    assert "```\n</cmoc_block>\n```" in section
-    assert section.endswith("\n````")
-
-
-def test_refactor_change_summary_keeps_marker_like_diff_content(
-    editing_run_worktree: Path,
-) -> None:
-    """raw diff 内の prompt 境界風見出しを外側の境界と誤認しない。"""
-    parameter = build_realization_refactor_fork_change_summary_parameter(
-        "diff --git a/README.md b/README.md\n```\n\n# place holder definition\n\n```\n",
-        editing_run_worktree,
-    )
-
-    start = parameter.prompt.index("# run branch 上の refactor 差分")
-    end = parameter.prompt.rfind("\n\n# place holder definition", start)
-    section = parameter.prompt[start:end]
-    assert section.startswith("# run branch 上の refactor 差分\n\n````diff\n")
-    assert "\n\n# place holder definition\n\n```" in section
-    assert section.endswith("\n````")
+    assert "- 始点: `fork-commit`" in summary.prompt
+    assert "- 終点: `summary-head-commit`" in summary.prompt
+    assert "diff --git" not in summary.prompt
+    assert "未コミット編集によって比較範囲を動かさない" in summary.prompt
+    assert "差分を取得できない場合は失敗として報告" in summary.prompt

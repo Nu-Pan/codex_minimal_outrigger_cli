@@ -2,14 +2,29 @@
 
 ## 概要
 
-- cmoc workflow 上の session と、明示的な join を必要とする編集 run の lifecycle を一意に定める JSON file である。
-- 保存先は `{{repo-root}}/.cmoc/gu/ar/session/{{session-id}}.json` とする。
+- cmoc workflow 上の session と、明示的または同一 invocation 内の自動 join で終了する編集 run の lifecycle を一意に定める JSON file である。
+- 保存先は `{{repo-root}}/.cmoc/gu/session/{{session-id}}.json` とする。
 
 ## スキーマ設計の基本原則
 
-- 永続化する情報は必要最小限に留める。
+- 永続化する情報は必要最小限にとどめる。
 - その場で確実に解決できる情報は state に持たせない。
 - 1 session に未 join の編集 run は高々 1 つとする。
+- feedback の repository-local state はこの file に保存しない。保存対象と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
+- session または run の状態遷移は、同仕様が所有する feedback state を変更しない。
+
+## active session context と編集 run 開始・session 終了の共通事前条件
+
+active session context を必要とするサブコマンドは、次の条件をすべて検証する。
+
+- 現在の branch が `{{cmoc-session-branch}}` である。
+- 対応する `{{cmoc-session-state-file}}` が存在する。
+- `session.state` が `active` である。
+
+編集 run を開始する workload 固有コマンド、`cmoc session join`、および `cmoc session abandon` は、さらに次の共通事前条件を満たす。
+
+- `run.state` が `ready` である。
+- `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分がない。
 
 ## スキーマ定義
 
@@ -23,7 +38,7 @@
   },
   "run": {
     "state": "ready | running | joinable | error",
-    "kind": "realization_apply | realization_refactor | null",
+    "kind": "realization_apply | realization_refactor | feedback_report | null",
     "branch": "... | null",
     "fork_commit": "... | null"
   }
@@ -49,42 +64,47 @@
 
 ### `session.last_joined_apply_fork_commit`
 
-- その session で最後に merge へ成功した realization apply run の `{{cmoc-run-fork-commit}}` である。
+- その session の apply の追従対象差分の始点として保持する commit である。
 - session 新規作成直後の初期値は `null` とする。
-- active run の kind が `realization_apply` である `cmoc run join` が merge に成功した場合だけ更新する。
+- 更新条件と保存する commit は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「join 後 hook」を正本とする。
 
 ## run field
 
+`run.state` が `ready` の場合は、`run.kind`、`run.branch`、および `run.fork_commit` を `null` とする。
+
 ### `run.state`
 
-- `ready` は未 join の編集 run がない状態である。
-- `running` は workload の処理が実行中である状態である。
-- `joinable` は正常終了、または整合した処理単位でのユーザー中断後で、`cmoc run join` または `cmoc run abandon` を待つ状態である。
-- `error` は続行不能な失敗後で、確定済み成果物に対する `cmoc run join` または run 全体に対する `cmoc run abandon` を待つ状態である。
+- `ready` は active な編集 run がない状態である。
+- `running` は workload の処理を実行している状態である。
+- `joinable` は、join、abandon、または self-joining workload の finalization を待つ状態である。
+- `error` は続行不能な失敗後である。join 済みの `feedback_report` では、`cmoc feedback report` による recovery を待つ。
 - session 新規作成直後の初期値は `ready` とする。
 
 ### `run.kind`
 
-- active な realization 編集 run の workload を表す。
-- `run.state` が `ready` の場合は `null` とする。
+- active な編集 run の workload を表す。
 - join と abandon はこの値から workload を解決する。
 - `cmoc oracle edit` は run ではなく、この field の値にならない。
+- `feedback_report` は同一 invocation 内で自動 join する。自動 join 前に残った run は join または abandon、自動 join 後の失敗は feedback report recovery の対象となる。
 
 ### `run.branch`
 
 - active run の `{{cmoc-run-branch}}` 名である。
-- `run.state` が `ready` の場合は `null` とする。
 
 ### `run.fork_commit`
 
 - active run の `{{cmoc-run-fork-commit}}` である。
 - apply の差分終点と run join の差分検査にも使用する。
-- `run.state` が `ready` の場合は `null` とする。
 
 ## 状態遷移
 
-- workload 固有の fork が新しい編集 run を開始すると、`ready` から `running` へ遷移する。
-- workload が正常終了すると `joinable` へ遷移する。
+- workload 固有の fork または self-joining workload が新しい編集 run を開始すると、`ready` から `running` へ遷移する。
+- 明示的な join を必要とする workload が正常終了すると `joinable` へ遷移する。
+- `feedback_report` の状態は、次の時点で遷移する。
+    - wave loop の自然完了時は `joinable` へ遷移する。
+    - 自動 join、join 後検査、report の確定、および cleanup の完了時は `ready` へ遷移する。
+    - 自動 join 後の失敗時は `error` へ遷移する。
+    - 同じ run の recovery 完了時は `ready` へ遷移する。
 - 中断可能な workload が整合した処理単位でユーザー中断を完了すると `joinable` へ遷移する。
 - workload が続行不能な失敗で停止すると `error` へ遷移する。
 - `cmoc run join` または `cmoc run abandon` が正常終了すると `ready` へ遷移し、`kind`, `branch`, `fork_commit` を `null` に初期化する。

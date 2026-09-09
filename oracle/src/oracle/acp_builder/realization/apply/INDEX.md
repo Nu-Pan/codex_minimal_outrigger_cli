@@ -1,17 +1,17 @@
 # `fork`
 
 ## Summary
-- `cmoc realization apply fork` 向けの codex exec 起動パラメータを構築する実装。oracle file の差分、commit 範囲、linked worktree を prompt に組み込み、realization file への差分追従を FLAGSHIP モデルへ委譲する入口。
+- `cmoc realization apply fork` 用の完全な作業 prompt と AgentCallParameter を構築する入口。
+- 指定 commit 範囲、linked worktree、realization 書き込み権限、実行前 indexing、oracle file 変更の差分追従条件を結び付ける。
 
 ## Read this when
-- oracle file の変更を realization file へ追従させる AgentCallParameter を構築・変更するとき
-- realization apply fork の prompt、作業範囲、差分参照、モデル設定、worktree 設定を確認するとき
-- 差分追従の完了条件や realization write の委譲方法を調査するとき
+- `cmoc realization apply fork` が差分追従 agent を起動する際の prompt と AgentCallParameter の構築経路を確認するとき。
+- 指定 commit 範囲から oracle file の変更を判定し、rename・追加・削除・oracle 配下外への移動を含めて realization file へ反映する作業条件を確認するとき。
+- realization 書き込み権限、linked worktree、実行前 indexing、差分取得失敗時の完了条件を確認するとき。
 
 ## Do not read this when
-- realization apply fork の差分適用ロジックやテストだけを調べるとき
-- 一般的な prompt 構築処理を調べるとき
-- AgentCallParameter や path context の共通定義を調べるとき
+- `cmoc realization apply fork` の実行処理、Git 差分取得そのもの、または realization file への具体的な反映処理を調べるとき。
+- 共通の prompt 構築処理や AgentCallParameter の一般仕様だけを確認するとき。
 
 ## hash
-- 3ce433d3436f0bdbab513ab255c879387e1240ebed7d75aed3f349f086bed814
+- e3625e501d3af9ba014ed26f875ed628355f29e89c30552980b479f818ff0044

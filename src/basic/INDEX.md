@@ -18,18 +18,18 @@
 # `acp.py`
 
 ## Summary
-- oracle 側で定義された ACP 型を realization 側から再公開する互換層。型定義自体は保持せず、既存の `basic.acp` 参照を維持するための入口である。
+- oracle 側で定義された ACP のエージェント呼び出しパラメータ型とファイルアクセスモード型を、利用者向けの basic 名前空間から再公開する互換入口。正本型を複製せず、既存の oracle 定義を参照する。
 
 ## Read this when
-- ACP 型の import 経路、`basic.acp` 参照、または realization 側の公開面を変更・調査するとき
-- oracle 側の ACP 型と realization 側の再公開関係を確認するとき
+- ACP のエージェント呼び出しパラメータ型またはファイルアクセスモード型を、basic 名前空間から利用・確認する必要があるとき。
+- realization 側で basic.acp への参照を整理し、互換再公開層の削除可否を判断するとき。
 
 ## Do not read this when
-- ACP 型の正本定義や仕様を確認したいときは、直接 oracle 側の定義を読む
-- ACP 型や `basic.acp` の参照経路に関係しない処理を変更・調査するとき
+- oracle 側にある ACP 型の定義や詳細仕様を確認したいとき。
+- basic 名前空間以外の ACP 実装や、型を利用する具体的な処理を直接確認したいとき。
 
 ## hash
-- b6c1a325e0018a7ea29e9f189cdea64a1bf8ad87c15afcbd45cd971c888337fb
+- 53332796af2860b66db15176a77da24eb3dc94d8c7a9cd5ac7c0976c131ceef3
 
 # `path_model.py`
 
@@ -48,15 +48,16 @@
 # `struct_doc.py`
 
 ## Summary
-- `oracle.other.struct_doc` の構造化文書 API を `basic` 側から再公開する入口。実装本体はここに置かず、既存の公開名を維持しながら利用者が `StructDoc` 系と `render_as_markdown` を引けるようにする。
+- canonical な構造化文書実装を再公開する旧 API 互換モジュール。構造化文書型の旧名エイリアス、タグ生成、Markdown 描画を扱い、実装の入口として下位の canonical renderer 参照へつなぐ。
+- 単一 root または root list を受ける旧来の描画 API が必要な場合に読む対象であり、描画処理そのものの仕様や canonical な型定義を確認する場合は参照先の正本実装を直接読む。
 
 ## Read this when
-- `basic.struct_doc` という公開名で構造化文書の型やレンダラを使う先を探しているとき。
-- `basic` 側の公開 API から、構造化文書の実体がどこから供給されるかを確認したいとき。
+- 旧 API の構造化文書型名や Markdown 描画関数の互換インターフェースを確認するとき
+- 構造化文書の利用者向け公開面や realization 側に残る旧参照を調査するとき
 
 ## Do not read this when
-- 構造化文書のレンダリング規則や型の制約そのものを知りたいときは、再公開先ではなく `oracle.other.struct_doc` を読む。
-- `basic.struct_doc` を残す必要性や削除条件を確認したいだけなら、この入口ではなく参照元の利用箇所を読む。
+- canonical な構造化文書の型定義、タグ生成、描画仕様を確認したいとき
+- 旧 API 互換層を経由せず canonical renderer の利用方法を確認できるとき
 
 ## hash
-- 0397791c0dc37c51edd489ea3dd01470322afc79499e4a5ddf069f9785bd13f9
+- a211733e9b2de8e38da96c29745f4bd4d5a209692d9dbd59734c1e92cd9a4687

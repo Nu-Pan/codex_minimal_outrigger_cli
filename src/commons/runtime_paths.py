@@ -1,3 +1,5 @@
+"""cmoc の root・保存先解決、時刻整形、cwd 切替を提供する。"""
+
 import os
 import threading
 import time
@@ -77,7 +79,12 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
 
 def timestamp() -> str:
     """file name に使う衝突しにくい実行時刻表記を返す。"""
-    return datetime.now().strftime("%Y-%m-%d_%H-%M_%S_%f000")
+    now = datetime.now()
+    return (
+        f"{now.year:04d}-{now.month:02d}-{now.day:02d}_"
+        f"{now.hour:02d}-{now.minute:02d}_{now.second:02d}_"
+        f"{now.microsecond * 1000:09d}"
+    )
 
 
 def _reserve_timestamped_path(
@@ -140,60 +147,67 @@ def format_duration(seconds: float) -> str:
 
 def sessions_dir(root: Path) -> Path:
     """session state の保存先 directory を返す。"""
-    return generated_agent_read_dir(root) / "session"
+    return untracked_data_dir(root) / "session"
 
 
 def reports_dir(root: Path, command: str) -> Path:
     """サブコマンド別 report 保存先 directory を返す。"""
-    return generated_agent_read_dir(root) / "report" / command
+    return untracked_data_dir(root) / "report" / command
 
 
 def logs_dir(root: Path) -> Path:
     """サブコマンド log 保存先 directory を返す。"""
-    return generated_agent_read_dir(root) / "log" / "sub_command"
+    return untracked_data_dir(root) / "log" / "sub_command"
 
 
-def editor_input_dir(root: Path) -> Path:
-    """エディタ入力と、その完全 prompt の保存先 directory を返す。"""
-    return generated_agent_read_dir(root) / "log" / "editor_input"
+def editor_work_dir(root: Path) -> Path:
+    """未信頼かつ可変な editor work file の directory を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    return untracked_data_dir(root) / "editor_input"
+
+
+def editor_input_log_dir(root: Path) -> Path:
+    """入力結果の保存コピーの directory を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    return untracked_data_dir(root) / "log" / "editor_input"
 
 
 def worktrees_dir(root: Path) -> Path:
     """cmoc 管理 worktree の保存先 directory を返す。"""
-    return root / ".cmoc" / "gu" / "worktree"
+    return untracked_data_dir(root) / "worktree"
 
 
 def codex_log_dir(root: Path) -> Path:
     """Codex call log 保存先 directory を返す。"""
-    return generated_agent_read_dir(root) / "log" / "codex"
+    return untracked_data_dir(root) / "log" / "codex"
 
 
 def schema_store_dir(root: Path) -> Path:
     """Structured Output schema store directory を返す。"""
-    return generated_agent_read_dir(root) / "schema"
+    return untracked_data_dir(root) / "schema"
 
 
 def config_path(root: Path) -> Path:
     """cmoc config JSON の保存 path を返す。"""
-    return _tracked_agent_read_dir(root) / "config.json"
+    return _tracked_data_dir(root) / "config.json"
 
 
 def refactor_state_path(root: Path) -> Path:
     """realization refactor の追跡 state 保存 path を返す。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    return _tracked_agent_read_dir(root) / "realization" / "refactor" / "state.json"
+    return _tracked_data_dir(root) / "realization" / "refactor" / "state.json"
 
 
-def generated_agent_read_dir(root: Path) -> Path:
-    """git 非追跡かつ agent 読み取り専用の runtime directory を返す。"""
+def untracked_data_dir(root: Path) -> Path:
+    """git 非追跡の cmoc 管理 directory を返す。"""
     # {{work-root}}/oracle/doc/app_spec/run_isolation.md
-    return root / ".cmoc" / "gu" / "ar"
+    return root / ".cmoc" / "gu"
 
 
-def _tracked_agent_read_dir(root: Path) -> Path:
-    """git 追跡かつ agent 読み取り専用の設定 directory を返す。"""
+def _tracked_data_dir(root: Path) -> Path:
+    """git 追跡する cmoc 管理 directory を返す。"""
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
-    return root / ".cmoc" / "gt" / "ar"
+    return root / ".cmoc" / "gt"
 
 
 def is_root_memo(root: Path, path: Path) -> bool:

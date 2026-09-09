@@ -1,4 +1,7 @@
+"""サブコマンド単位の実行イベントと計測値を記録・集約する。"""
+
 import json
+import sys
 import threading
 import time
 from contextvars import ContextVar, Token
@@ -7,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .runtime_feedback_store import uuid7_prefixed
 from .runtime_paths import _reserve_timestamped_path, logs_dir, timestamp
 
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
@@ -32,9 +36,12 @@ class SubcommandLogger:
         """実行中のサブコマンドが追記する log file を初期化する。"""
         self.root = root
         self.command = command
+        self.invocation_id = uuid7_prefixed("sci_")
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
         self.step_timings: list[StepTiming] = []
+        self.warning_messages: list[str] = []
+        self._event_records: list[dict[str, Any]] = []
         # ContextVar の worker context から同じ logger object が共有されるため、並列 Codex
         # event の追記と quota 待機時間の集計を直列化する。
         # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
@@ -56,6 +63,58 @@ class SubcommandLogger:
             with self.path.open("a") as f:
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 f.flush()
+            self._event_records.append(record.copy())
+        # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+        # detector は event が flush された後だけ評価し、失敗を本命 logger へ返さない。
+        if {
+            "event_schema_version",
+            "event_id",
+            "event_type",
+            "occurred_at",
+        }.issubset(record):
+            try:
+                from .runtime_feedback import detect_feedback_event
+
+                detect_feedback_event(record, self.path)
+            except Exception as exc:
+                # KeyboardInterrupt などのユーザー中断は detector failure として握り潰さない。
+                self._record_detector_failure(exc)
+
+    def _record_detector_failure(self, error: Exception) -> None:
+        """detector failure を nonfatal な自由 event と warning に留める。"""
+        record = {
+            "event": "feedback.detector_failed",
+            "command": self.command,
+            "timestamp": datetime.now().isoformat(),
+            "error": repr(error),
+        }
+        try:
+            with self._lock:
+                with self.path.open("a") as log_file:
+                    log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    log_file.flush()
+        except Exception:
+            pass
+        self.record_warning("feedback detector failed")
+
+    def record_warning(self, message: str, *, emit: bool = True) -> None:
+        """warning を terminal summary 用に保持し、必要なら stderr へ通知する。"""
+        with self._lock:
+            is_new = message not in self.warning_messages
+            if is_new:
+                self.warning_messages.append(message)
+        if is_new:
+            try:
+                self.event("warning", message=message)
+            except Exception:
+                pass
+        if not emit:
+            return
+        try:
+            print(f"warning: {message}", file=sys.stderr, flush=True)
+        except Exception:
+            # warning の console 出力失敗は本命結果を変更しない。
+            pass
 
     def start_step(
         self, index: str, description: str, log_description: str | None = None
@@ -79,6 +138,12 @@ class SubcommandLogger:
         if self.step_timings and self.step_timings[-1].elapsed_sec is None:
             step = self.step_timings[-1]
             step.elapsed_sec = time.perf_counter() - step.started_at
+            self.event(
+                "step_finished",
+                step=step.description,
+                step_index=step.index,
+                elapsed_sec=step.elapsed_sec,
+            )
 
     def elapsed(self) -> float:
         """サブコマンド開始からの経過秒を、完了表示と log 集計用に返す。"""
@@ -88,6 +153,20 @@ class SubcommandLogger:
         """Codex quota 待機をサブコマンド全体の待機時間として合算する。"""
         with self._lock:
             self.quota_wait_sec += seconds
+
+    def event_records(self) -> tuple[dict[str, Any], ...]:
+        """primary report が参照する flush 済み event の snapshot を返す。"""
+        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        with self._lock:
+            return tuple(record.copy() for record in self._event_records)
+
+    def codex_call_records(self) -> tuple[dict[str, Any], ...]:
+        """実行済み Codex call event だけを保存順で返す。"""
+        return tuple(
+            record
+            for record in self.event_records()
+            if record.get("event") == "codex_call"
+        )
 
 
 def set_current_subcommand_logger(

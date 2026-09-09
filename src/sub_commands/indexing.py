@@ -1,8 +1,10 @@
+"""work root の INDEX.md を更新して commit する CLI 入口を提供する。"""
+
 from pathlib import Path
 
-import typer
-
 from cmoc_runtime import (
+    TerminalResult,
+    head_commit,
     require_clean_worktree,
     require_cmoc_ignored,
     run_cli_subcommand,
@@ -17,6 +19,7 @@ from commons.indexing import (
     indexing_lock,
     update_indexes,
 )
+from commons.runtime_primary_report import update_primary_report_fields
 
 
 def cmoc_indexing_impl() -> None:
@@ -37,17 +40,36 @@ def cmoc_indexing_impl() -> None:
 
 def _cmoc_indexing_body(
     codex_exec: CodexExec | None = None,
-) -> None:
+) -> TerminalResult:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
     with indexing_lock(root):
+        commit_before_indexing = head_commit(root)
         start_subcommand_step(2, "インデクシングを明示的に実行", "run indexing")
         updated = update_indexes(root, codex_exec)
         start_subcommand_step(
             3, "インデクシング差分を commit", "commit indexing changes"
         )
         commit_index_updates(root, updated)
-    typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
+        commit_after_indexing = head_commit(root)
+    commit_id = (
+        commit_after_indexing
+        if commit_after_indexing != commit_before_indexing
+        else None
+    )
+    updated_indexes = [str(path.relative_to(root)) for path in updated]
+    update_primary_report_fields(
+        commit_id=commit_id,
+        updated_indexes=updated_indexes,
+        indexing_status="completed",
+    )
+    return TerminalResult(
+        details=(
+            ("updated_index_count", len(updated)),
+            ("commit_id", commit_id),
+            ("updated_indexes", updated_indexes),
+        )
+    )
 
 
 def require_indexing_cli_preconditions(root: Path) -> None:

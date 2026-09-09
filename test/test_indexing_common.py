@@ -5,16 +5,18 @@ CLI lifecycle から分離して検証する。根拠は
 `{{work-root}}/oracle/doc/app_spec/indexing.md`、
 `{{work-root}}/oracle/doc/app_spec/sub_command/indexing.md`、
 `{{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json`、
-`{{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py`。
+`{{work-root}}/oracle/src/oracle/prompt_builder/policy/index_entry.py`。
 
 この file は 16,000 文字を超えるが、INDEX entry の parse、hash、traversal、生成、
 並列更新は同じ indexing contract を検証する一つの責務である。分割すると、entry の
 鮮度と directory 更新順の観測文脈が複数 file に分散するため、現状は indexing の
 共通 runtime 回帰として一箇所に保つ。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+分割根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
+import hashlib
 import json
 import os
 import threading
@@ -191,6 +193,45 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     assert "## Do not read this when" in rendered
 
 
+def test_update_indexes_restores_partial_writes_when_entry_generation_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """後続 entry の生成失敗時に、先行した INDEX.md 書き込みを戻す。"""
+    root = make_repo(tmp_path)
+    cmoc_runtime.sync_config(root)
+    nested = root / "docs" / "nested"
+    nested.mkdir(parents=True)
+    ready = nested / "ready.md"
+    ready.write_text("ready\n")
+    failed = root / "docs" / "failed.md"
+    failed.write_text("failed\n")
+    original_nested_index = "original index\n"
+    (nested / "INDEX.md").write_text(original_nested_index)
+    run_git(root, "add", "docs")
+    run_git(root, "commit", "-m", "add indexing fixtures")
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        """深い directory は成功させ、後続 directory で失敗させる fake。"""
+        if path == failed:
+            raise cmoc_runtime.CmocError("entry generation failed", [], str(path))
+        return _render_test_entry(update_root, path, digest=digest)
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    with pytest.raises(cmoc_runtime.CmocError, match="entry generation failed"):
+        indexing_common.update_indexes(root)
+
+    assert (nested / "INDEX.md").read_text() == original_nested_index
+    assert not (root / "docs" / "INDEX.md").exists()
+    assert not (root / "INDEX.md").exists()
+    assert run_git(root, "status", "--short", "--untracked-files=no").stdout == ""
+
+
 @pytest.mark.parametrize("value", ["", "   ", "line1\nline2", "line1\rline2"])
 def test_render_index_entry_does_not_add_semantic_acceptance_conditions(
     tmp_path: Path, value: str
@@ -268,6 +309,47 @@ def test_update_indexes_reuses_entry_after_empty_file_becomes_directory(
 
     assert target not in calls
     assert existing_entry in (root / "INDEX.md").read_text()
+
+
+def test_index_target_hash_handles_non_utf8_child_name(tmp_path: Path) -> None:
+    """directory hash が非 UTF-8 filename を含んでも UTF-8 serialization を作る。"""
+    root = make_repo(tmp_path)
+    directory = root / "target"
+    directory.mkdir()
+    invalid_name = os.fsdecode(b"note-\xfe.txt")
+    target = directory / invalid_name
+    target.write_bytes(b"note\n")
+
+    content_hash = hashlib.sha256(b"note\n").hexdigest()
+    expected = hashlib.sha256(
+        f"file\0target/note-%FE.txt\0{content_hash}\n".encode("utf-8")
+    ).hexdigest()
+
+    assert indexing_common.index_target_hash(root, directory) == expected
+
+
+def test_index_target_hash_distinguishes_literal_percent_from_non_utf8_name(
+    tmp_path: Path,
+) -> None:
+    """directory hash が literal `%` と非 UTF-8 byte の filename を区別する。"""
+    literal_parent = tmp_path / "literal"
+    invalid_parent = tmp_path / "invalid"
+    literal_parent.mkdir()
+    invalid_parent.mkdir()
+    literal_root = make_repo(literal_parent)
+    invalid_root = make_repo(invalid_parent)
+    literal_directory = literal_root / "target"
+    invalid_directory = invalid_root / "target"
+    literal_directory.mkdir()
+    invalid_directory.mkdir()
+
+    (literal_directory / "note-%FE.txt").write_bytes(b"note\n")
+    invalid_name = os.fsdecode(b"note-\xfe.txt")
+    (invalid_directory / invalid_name).write_bytes(b"note\n")
+
+    assert indexing_common.index_target_hash(
+        literal_root, literal_directory
+    ) != indexing_common.index_target_hash(invalid_root, invalid_directory)
 
 
 def test_update_indexes_generates_sibling_entries_in_stable_render_order(

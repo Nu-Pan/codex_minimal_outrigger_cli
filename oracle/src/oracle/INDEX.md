@@ -1,55 +1,87 @@
 # `acp_builder`
 
 ## Summary
-- oracle の agent call パラメータ構築に関する正本実装を用途別にまとめたディレクトリです。共通の呼び出しパラメータ型、INDEX.md 生成、oracle 関連、realization 関連、session join、TUI 起動の各実装への入口を提供します。
+- AI コーディングエージェント呼び出しの共通パラメータ型とファイルアクセスモードを定義する。
+- quota availability probe、INDEX.md エントリー生成、feedback issue 処理、oracle・realization・session・TUI など、用途別の agent call builder への入口をまとめる。
+- 各用途に応じた prompt、Structured Output schema、作業ディレクトリ、editor input handoff、indexing preflight の設定を確認できる。
 
 ## Read this when
-- AgentCallParameter の型やモデル・推論強度・アクセスモードを確認するとき。
-- INDEX.md エントリー生成のスキーマや構築処理を調査するとき。
-- oracle、realization、session join、TUI など特定用途の agent call パラメータ構築を変更・調査するとき。
+- agent call の共通パラメータ、アクセスモード、prompt、Structured Output schema、cwd、editor input handoff、または indexing preflight の設定を確認するとき。
+- 用途別の agent call builder を探すとき。
+- quota probe、indexing、feedback、oracle、realization、session、TUI の agent call 構築責務の入口を確認するとき。
 
 ## Do not read this when
-- 実際の処理本体、差分適用、競合解消、git 操作を調査するとき。
-- 共通 prompt 構築やパスコンテキストなど、各用途の下位実装より共通領域を直接確認すべきとき。
-- 個別の構造化出力フィールド定義だけを確認するとき。
+- 特定の agent call の prompt や出力契約の詳細を確認したいときは、該当する下位ファイルを直接読む。
+- agent call の共通実行処理や Codex CLI の実際の挙動を調査するとき。
+- oracle・realization file の具体的な内容、編集手順、または feedback issue の保存・受付処理を確認するとき。
 
 ## hash
-- 2a571ac6da46c0f867122d11910d7f72f3de07fb3e0e1f7ea3e97ffe585a2479
+- 1c30d36fd04b48d7e50c884f1e64ee15f70f18d6731aa581d251b69cfd0c1ed5
+
+# `editor_input_handoff`
+
+## Summary
+- cmoc のエディタ入力上書きツールが受け取る入力契約を定義する JSON Schema です。
+- 上書き対象を識別する値と、対象へ渡す内容を指定するための直接の参照先です。
+
+## Read this when
+- エディタ入力上書きツールの呼び出し形式を確認するとき。
+- 上書き対象と書き込む内容に必要な入力項目を確認するとき。
+
+## Do not read this when
+- エディタ入力上書き処理の実装やワークフローを確認するとき。
+- エディタ入力上書き以外のツール入力契約を確認するとき。
+
+## hash
+- ab2b3f70177976188963683a20698484d105ee1df31cc928aa2c4f2b6ecbdd56
+
+# `feedback`
+
+## Summary
+- フィードバック問題報告入力の正本スキーマを扱う領域で、分類・重要度・影響・未解消制約・原因・再確認用根拠・継続状態の入力契約への入口。
+
+## Read this when
+- cmoc_feedback.submit_observation に送る問題報告の入力項目、許容値、文字数制約、根拠に応じた path 条件を確認するとき。
+- 問題報告を JSON として組み立てる際に、reporter input の形式と根拠記述の要件を確認するとき。
+
+## Do not read this when
+- 問題報告の送信手順や collector の処理を確認したいとき。
+- reporter input のスキーマではなく、フィードバック収集結果や重複判定の実装を確認したいとき。
+
+## hash
+- 709d2b0ca7660b1772a43fe8fdaed710d40142564511ba28a435a49b6776aa67
 
 # `other`
 
 ## Summary
-- リポジトリ設定、パスモデル、規範モデル、構造化文書レンダラーを担う Python ソース群。設定値や永続化構造、root 解決、規範の構造化、Markdown 出力を調査・変更する際の入口となる。
+- cmoc の設定モデル、パスコンテキスト、構造化文書の Markdown レンダリングを担う基盤モジュール群への入口。設定値の構造、リポジトリ内のパス解決、文書ノードの出力規則を確認する際に参照する。
 
 ## Read this when
-- CmocConfig や Codex 設定、oracle review の上限、JSON/TOML シリアライズを確認するとき
-- agent call の cwd・work/repository/run root、root placeholder、パス変換や検証を確認するとき
-- Standard・Requirement の構造や StructDoc への変換を確認するとき
-- StructDoc の階層、Markdown レンダリング、cmoc_ref 検証、コードブロックや空行処理を確認するとき
+- CmocConfig などの設定モデルや Codex CLI 呼び出し設定の既定値・構造を確認または変更するとき。
+- worktree・repository・run のルート導出、パスプレースホルダの解決・変換規則を調べるとき。
+- 見出し、タグ付きブロック、コードブロック、ポリシーなどの構造化文書を Markdown 化する仕様を調べるとき。
 
 ## Do not read this when
-- CLI の実行フロー、設定ファイルの生成・同期、agent call prompt 生成などの利用側処理だけを調査するとき
-- ModelClass、ReasoningEffort、StructDoc 自体など、別ファイルに定義された概念の詳細だけを確認するとき
-- 個別の規範本文や、Markdown レンダリングを通らない他の oracle 文書の仕様だけを確認するとき
+- Codex CLI の呼び出し実装や agent call の実行フローだけを調べるとき。
+- 設定の永続化・生成処理や doctor コマンドなど、設定モデルを利用する処理の挙動だけを確認したいとき。
+- 個別機能の動作、一般的なファイル操作、または個別のポリシー本文・テンプレートだけを直接確認すれば足りるとき。
 
 ## hash
-- 01ecbe8fd695e08e7b934d3c8c596ce87ab0fd7d09615d8dc1fb9728229c4da7
+- aad6313c4fdb76fe58bf0ac778bee22571cdf5d0e592669794065472800697e2
 
 # `prompt_builder`
 
 ## Summary
-- oracle と realization、適合性レビュー、ファイルアクセス、INDEX.md ルーティングなどの規範を、prompt builder 用の構造化文書へ変換する実装群を収録するディレクトリ。特定のレビュー規範やアクセス制約、仕様分類、ルーティング規則の生成処理への入口となる。
+- agent 呼び出し向けの完全な prompt と、エディタ入力用の初期文面を組み立てる実装群への入口。
+- placeholder の型定義、prompt 構築、editor input の生成、oracle／realization の説明部品、個別 policy の構築を扱う。
 
 ## Read this when
-- oracle file と realization file の適合性、レビュー所見、conflict 解消規範を調査・変更するとき。
-- AI エージェント向けのファイルアクセス規則や oracle・realization の定義を変更するとき。
-- INDEX.md のエントリー規範やルーティング規則の生成処理を調査・変更するとき。
-- prompt builder に注入する標準文書の構造、Requirement・Standard の扱い、oracle 参照ルールを確認するとき。
+- agent 向け prompt の構成順序、任意 policy の選択、目的・追加文面・placeholder の統合を確認するとき。
+- エディタへ渡す初期入力文面や、oracle／realization、feedback、file access、routing、INDEX エントリーなどの policy 部品の生成経路を調べるとき。
 
 ## Do not read this when
-- 特定の oracle 文書や realization 実装そのものの仕様・挙動を調査するとき。
-- Codex CLI の実行権限や sandbox 設定そのものを確認するとき。
-- prompt builder 以外のサブコマンド処理や、一般的なコード品質・ベストプラクティスだけをレビューするとき。
+- 個別 policy の具体的な規定文面や、その根拠となる正本仕様を直接確認したいとき。
+- 実際の placeholder 置換処理、構造化文書の定義、ファイル分類など、下位要素の個別実装だけを調べるとき。
 
 ## hash
-- dcb504c92f81d240b75e76c3ff2b11d6e83ee502510f7e4236ae8a6b09d48879
+- 373663e29b57adc872b0f07a299ffa1bbe020e9d6daccc6b0a9080367d4be4e8

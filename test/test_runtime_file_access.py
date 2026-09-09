@@ -2,7 +2,7 @@
 
 根拠:
 - {{work-root}}/oracle/src/oracle/acp_builder/basic.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 """
 
@@ -17,7 +17,7 @@ def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.REPO_WRITE.value == "repo_write"
     assert FileAccessMode.PURE_ORACLE_WRITE.value == "pure_oracle_write"
     assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
-    assert FileAccessMode.NO_RULE.value == "no_rule"
+    assert FileAccessMode.NO_POLICY.value == "no_policy"
 
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
@@ -33,4 +33,4 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
         == "workspace-write"
     )
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
-    assert file_access_to_sandbox_mode(FileAccessMode.NO_RULE) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.NO_POLICY) == "workspace-write"

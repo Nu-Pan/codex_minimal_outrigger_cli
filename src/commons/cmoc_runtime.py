@@ -1,7 +1,12 @@
+"""複数の実行経路で共有する cmoc runtime API を公開する。"""
+
+# {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+
 import subprocess
 import time
 
 from .runtime_cli import (
+    mark_current_subcommand_interrupted,
     require_current_directory_is_work_root,
     run_cli_subcommand,
     start_subcommand_step,
@@ -91,7 +96,7 @@ from .runtime_paths import (
     work_root,
     worktrees_dir,
 )
-from .runtime_results import CodexExecResult, CommandResult
+from .runtime_results import CodexExecResult, CommandResult, TerminalResult
 from .runtime_state import (
     RUN_KINDS,
     RUN_STATES,
@@ -119,6 +124,7 @@ __all__ = (
     "SessionPart",
     "SessionState",
     "SubcommandLogger",
+    "TerminalResult",
     "active_session_for_home",
     "branch_exists",
     "branch_session_id",
@@ -153,6 +159,7 @@ __all__ = (
     "load_config",
     "load_state_for_branch",
     "logs_dir",
+    "mark_current_subcommand_interrupted",
     "open_process_fd",
     "prepare_codex_override_args",
     "prepare_schema",

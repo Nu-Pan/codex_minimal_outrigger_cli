@@ -27,6 +27,15 @@
 
 - cmoc が管理する branch の総称である。
 
+#### 「`{{cmoc-managed-branch}}` 上で～」の定義
+
+「`{{cmoc-managed-branch}}` 上で～」という表現は、次の二つを合わせた範囲を指す。
+
+- `{{cmoc-managed-branch}}` の作成元 commit から `HEAD` までの commit 上で起きたこと
+- working tree または staging area で起きていること
+
+削除済み file は対象から除外する。rename は rename 後の path を対象とする。
+
 ### `{{cmoc-session-branch}}`
 
 - `cmoc session fork` が作成する `{{cmoc-managed-branch}}` である。
@@ -60,13 +69,14 @@
 
 - `{{cmoc-run-branch}}` の分岐元 commit である。
 - run 開始時点の `{{cmoc-session-branch}}` HEAD である。
-- apply が注入する差分の終点、run join 時の差分検査、および run report は、この名前を一貫して使用する。
-- 同じ commit に workload ごとの別名を割り当ててはいけない。
+- apply の追従対象差分の終点、run join 時の差分検査、および run report は、この名前を一貫して使用する。
 
 ### `{{cmoc-run-join-commit}}`
 
 - `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ merge した commit である。
-- workload ごとの別名を割り当ててはいけない。
+- join 時点ですでに run branch HEAD が session branch から到達可能であり、取り込む commit がない場合は、join を no-op として正常完了してよい。
+    - この場合、`{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。
+    - join の記録だけを目的とする空 commit を作ってはならない。
 
 ## git worktree
 
@@ -75,4 +85,3 @@
 - run を `{{repo-root}}` から隔離するための git linked worktree である。
 - `{{run-root}}` は `{{repo-root}}/.cmoc/gu/worktree/{{session-id}}/{{run-id}}` とする。
 - `{{cmoc-run-branch}}` を checkout し、run の workload を実行する。
-- workload ごとの別名を割り当ててはいけない。

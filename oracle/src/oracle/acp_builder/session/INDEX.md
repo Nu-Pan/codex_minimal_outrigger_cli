@@ -1,15 +1,16 @@
 # `join`
 
 ## Summary
-- `cmoc session join` の merge conflict marker 解消に用いる AI エージェント呼び出しパラメータを構築する。対象パス、専用プロンプト、モデル・推論設定、リポジトリ書き込み権限、作業ディレクトリ、preflight 実行設定をまとめて返す。
+- `cmoc session join` の merge conflict marker 解消に使うエージェント呼び出しパラメータを構築する。
+- conflict 対象パスを解決して prompt に渡し、専用の conflict resolution policy、書き込み権限、完了条件、起動設定を組み立てる。
 
 ## Read this when
-- `cmoc session join` の merge conflict 解消フローや agent call パラメータを変更・調査するとき
-- 競合対象ファイルのパス解決、プロンプト、モデル・推論設定、preflight 実行設定を確認するとき
+- `cmoc session join` の conflict marker 解消で、対象パスの解決や prompt への埋め込み方を確認・変更するとき。
+- conflict 解消時のファイルアクセス権限、oracle・realization・routing policy の指定、preflight 無効化、完了条件を確認・変更するとき。
 
 ## Do not read this when
-- merge conflict の実際の解消ロジックや git 操作そのものを調査するとき
-- `session join` と無関係な agent call パラメータやプロンプト生成処理を調査するとき
+- merge conflict marker の具体的な解消処理や対象ファイルの内容を確認したいときは、conflict 対象ファイルを直接読む。
+- 通常の `session join` の処理フローや、一般的な prompt 構築・広範な edit/refactor policy の定義だけを確認したいときは、より直接的な対象を読む。
 
 ## hash
-- 3d057a13d4707bd9002173b98cb25026c6f71e7ff9c9ea16ebda62e6b73eff33
+- 2e61ea38837d55d7b51462967943257eefadbc06397404588c50a6f3983a44bd

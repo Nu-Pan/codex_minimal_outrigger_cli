@@ -1,0 +1,68 @@
+{
+  "type": "object",
+  "description": "feedback issue の同一性判断 agent call の出力。",
+  "additionalProperties": false,
+  "required": [
+    "result"
+  ],
+  "properties": {
+    "result": {
+      "description": "同一性判断の結果。decision に対応する result object を返す。",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/existing_result"
+        },
+        {
+          "$ref": "#/$defs/new_result"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "existing_result": {
+      "type": "object",
+      "description": "入力候補と同じ issue と判断した場合の結果。",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "existing_issue_id"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "existing"
+          ],
+          "description": "observation が入力された既存 issue candidate と同じ issue である。"
+        },
+        "existing_issue_id": {
+          "type": "string",
+          "pattern": "^fbi_[a-z2-7]{26}$",
+          "description": "入力候補から選んだ同一 issue の ID。"
+        }
+      }
+    },
+    "new_result": {
+      "type": "object",
+      "description": "入力候補のいずれとも同じでないと判断した場合の結果。",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "existing_issue_id"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "new"
+          ],
+          "description": "observation は入力された既存 issue candidate のいずれとも同じではない。"
+        },
+        "existing_issue_id": {
+          "type": "null",
+          "description": "新しい issue とする場合は null。"
+        }
+      }
+    }
+  }
+}

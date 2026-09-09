@@ -1,5 +1,7 @@
 import json
+import shlex
 import subprocess
+import sys
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -14,12 +16,14 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
+from oracle.other.cmoc_config import CodexCallConfig
 
 import cmoc_runtime
 import commons.runtime_codex_tui as runtime_codex_tui
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_tui
+from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from commons.runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
@@ -29,27 +33,23 @@ from config.cmoc_config import CmocConfig
 
 def _tui_call_logs(root: Path) -> list[Path]:
     """repository に書き込まれた TUI call log を返す。"""
-    directory = root / ".cmoc" / "gu" / "ar" / "log" / "codex"
-    return list(directory.glob("*_tui_call.json"))
+    directory = root / ".cmoc" / "gu" / "log" / "codex"
+    return list(directory.glob("*_call.json"))
 
 
 # 根拠: TUI の prompt、アクセス境界、Codex 呼び出し、ログ出力を検証する。
 # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
-# {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+# {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+# {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
-def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
+def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """PURE_ORACLE_READ で完成済み prompt を読み、CLI 引数を制約どおり渡すことを確認する。"""
+    """PURE_ORACLE_READ の完全 prompt 本文と CLI 引数を変更せず渡す。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    prompt_path = (
-        root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / "20260101_cmpl.md"
-    )
-    prompt_path.parent.mkdir(parents=True)
-    prompt_path.write_text("complete prompt\n")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -57,13 +57,16 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
         bin_dir / "codex",
         [
             "import json, os, pathlib, sys",
+            "if sys.argv[1:] == ['--version']:",
+            "    print('codex-cli 0.151.0')",
+            "    raise SystemExit(0)",
             "args = sys.argv[1:]",
             "prompt = args[-1]",
-            "prompt_path = pathlib.Path(prompt.split(' を読んで')[0])",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
-            "    'prompt_text': prompt_path.read_text(),",
+            "    'prompt_text': prompt,",
+            f"    'handoff_repository': os.environ.get({EDITOR_INPUT_REPOSITORY_ENV!r}),",
             "}))",
         ],
     )
@@ -78,7 +81,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
                 FileAccessMode.PURE_ORACLE_READ,
                 agent_call_cwd=root,
             ),
-            prompt=f"{prompt_path} を読んで、その指示に従って下さい",
+            prompt="complete prompt\n",
             structured_output_schema_path=schema_path,
         ),
         root=root,
@@ -88,29 +91,155 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(root.resolve())
     assert record["prompt_text"] == "complete prompt\n"
+    assert record["handoff_repository"] is None
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
     override_config = codex_override_config(record["args"])
     assert codex_arg_value(record["args"], "--ask-for-approval") == "on-request"
+    assert "--approve-for-me" not in record["args"]
+    assert "approval_policy" not in override_config
     assert override_config["approvals_reviewer"] == "auto_review"
+    notification_command = override_config["notify"]
+    assert isinstance(notification_command, list)
+    assert notification_command[0] == sys.executable
+    assert Path(notification_command[1]).name == "runtime_windows_toast.py"
+    assert notification_command[2] == "codex-tui-callback"
+    callback_state_root = Path(notification_command[3])
+    assert notification_command[4:] == ["codex tui", root.name]
+    assert "features" not in override_config
+    hooks = override_config["hooks"]
+    assert isinstance(hooks, dict)
+    assert "Stop" not in hooks
+    assert "SubagentStart" not in hooks
+    assert "SubagentStop" not in hooks
+    [session_group] = hooks["SessionStart"]
+    [session_handler] = session_group["hooks"]
+    assert session_handler["type"] == "command"
+    assert session_handler["timeout"] == 10
+    assert session_handler["async"] is False
+    session_start_command = shlex.split(session_handler["command"])
+    assert session_start_command[0] == sys.executable
+    assert Path(session_start_command[1]).name == "runtime_windows_toast.py"
+    assert session_start_command[2] == "codex-tui-session-start-hook"
+    assert Path(session_start_command[3]) == callback_state_root
+    assert not callback_state_root.exists()
+    hook_state = hooks["state"]
+    assert list(hook_state) == ["/<session-flags>/config.toml:session_start:0:0"]
+    state = hook_state["/<session-flags>/config.toml:session_start:0:0"]
+    assert state["enabled"] is True
+    assert state["trusted_hash"].startswith("sha256:")
+    assert len(state["trusted_hash"]) == 71
+    assert override_config["tui"] == {"notifications": False}
+    assert "complete prompt" not in "\n".join(notification_command)
+    assert "complete prompt" not in "\n".join(session_start_command)
     assert "permissions" not in override_config
     assert "--output-schema" not in record["args"]
 
 
-def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
+def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """未検証 Codex では root filter なしの legacy callback を渡さない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "if sys.argv[1:] == ['--version']:",
+            "    print('codex-cli 0.152.0')",
+            "    raise SystemExit(0)",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps(sys.argv[1:]))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_tui(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
+        root=root,
+        config=CmocConfig(),
+    )
+
+    override_config = codex_override_config(json.loads(recorder.read_text()))
+    assert override_config["notify"] == []
+    assert "hooks" not in override_config
+
+
+def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree の完成済み prompt と、そのファイルアクセス上書きを維持することを確認する。"""
+    """未定義 call の TUI では Codex version probe より先に設定エラーにする。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    probe_calls: list[tuple[object, object]] = []
+
+    def record_version_probe(*args: object, **kwargs: object) -> bool:
+        """version probe が設定検証より先に走っていないことを記録する。"""
+        probe_calls.append((args, kwargs))
+        return False
+
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        record_version_probe,
+    )
+    parameter = replace(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
+        agent_call_kind="missing_agent_call",
+    )
+
+    with pytest.raises(CmocError, match="Codex agent call 設定が未定義"):
+        run_codex_tui(parameter, root=root, config=CmocConfig())
+
+    assert probe_calls == []
+
+
+def test_run_codex_tui_rejects_missing_provider_before_version_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """未定義 provider の TUI でも Codex version probe より先に失敗する。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    probe_calls: list[tuple[object, object]] = []
+
+    def record_version_probe(*args: object, **kwargs: object) -> bool:
+        """provider 検証前の version probe を記録する。"""
+        probe_calls.append((args, kwargs))
+        return False
+
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        record_version_probe,
+    )
+    config = CmocConfig()
+    config.codex.agent_calls["missing_provider_call"] = CodexCallConfig(
+        "missing-provider", "model", "low"
+    )
+    parameter = replace(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
+        agent_call_kind="missing_provider_call",
+    )
+
+    with pytest.raises(CmocError, match="Codex model provider が未定義"):
+        run_codex_tui(parameter, root=root, config=config)
+
+    assert probe_calls == []
+
+
+def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """linked worktree の完全 prompt 本文とアクセス上書きを維持する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-tui-runtime", str(linked), "HEAD")
-    prompt_path = (
-        root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / "20260101_cmpl.md"
-    )
-    prompt_path.parent.mkdir(parents=True)
-    prompt_path.write_text("complete prompt\n")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -120,11 +249,11 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "prompt = args[-1]",
-            "prompt_path = pathlib.Path(prompt.split(' を読んで')[0])",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
-            "    'prompt_text': prompt_path.read_text(),",
+            "    'prompt_text': prompt,",
+            f"    'handoff_repository': os.environ.get({EDITOR_INPUT_REPOSITORY_ENV!r}),",
             "}))",
         ],
     )
@@ -133,7 +262,8 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     run_codex_tui(
         replace(
             codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=linked),
-            prompt=f"{prompt_path} を読んで、その指示に従って下さい",
+            prompt="complete prompt\n",
+            enable_editor_input_handoff_mcp=True,
         ),
         root=root,
         config=CmocConfig(),
@@ -142,6 +272,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["prompt_text"] == "complete prompt\n"
+    assert record["handoff_repository"] == str(root.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
     call_log = _tui_call_logs(root)[0]
     call_data = json.loads(call_log.read_text())
@@ -159,7 +290,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
 def test_run_codex_tui_logs_successful_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """正常終了時に TUI の call log、サブコマンドイベント、コンソール要約を残すことを確認する。"""
+    """正常終了時に call log とサブコマンドイベントだけを残す。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -177,9 +308,9 @@ def test_run_codex_tui_logs_successful_call(
         reset_current_subcommand_logger(token)
 
     assert result.returncode == 0
-    console = capsys.readouterr().out
-    assert "- Purpose: `codex tui`" in console
-    assert "- Exit code: `0`" in console
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
@@ -215,8 +346,8 @@ def test_run_codex_tui_keeps_call_logs_on_timestamp_collision(
 
     call_logs = sorted(_tui_call_logs(root))
     assert [path.name for path in call_logs] == [
-        "2026-06-27_10-00_00_000001000_tui_call.json",
-        "2026-06-27_10-00_00_000002000_tui_call.json",
+        "2026-06-27_10-00_00_000001000_call.json",
+        "2026-06-27_10-00_00_000002000_call.json",
     ]
     assert [json.loads(path.read_text())["timestamp"] for path in call_logs] == [
         "2026-06-27_10-00_00_000001000",
@@ -231,15 +362,15 @@ def test_run_codex_tui_logs_missing_cli_failure(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    real_run: Callable[..., object] = subprocess.run
+    real_popen: Callable[..., object] = subprocess.Popen
 
-    def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
+    def fake_popen(args: list[str], *pos: object, **kwargs: object) -> object:
         """Codex の実行だけを CLI 不在に差し替え、他の subprocess は通す fake。"""
         if args[:1] == ["codex"]:
             raise FileNotFoundError("codex")
-        return real_run(args, *pos, **kwargs)
+        return real_popen(args, *pos, **kwargs)
 
-    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
+    monkeypatch.setattr(cmoc_runtime.subprocess, "Popen", fake_popen)
     logger = SubcommandLogger(root, "test")
     token = set_current_subcommand_logger(logger)
     try:
@@ -252,12 +383,11 @@ def test_run_codex_tui_logs_missing_cli_failure(
     finally:
         reset_current_subcommand_logger(token)
 
-    console = capsys.readouterr().err
+    captured = capsys.readouterr()
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
-    assert str(call_logs[0]) in console
-    assert "not started" in console
-    assert "Codex CLI が見つかりません" in console
+    assert captured.out == ""
+    assert captured.err == ""
 
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
@@ -293,8 +423,9 @@ def test_run_codex_tui_logs_keyboard_interrupt(
     finally:
         reset_current_subcommand_logger(token)
 
-    console = capsys.readouterr().err
-    assert "- Exit code: `not started`" in console
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
@@ -331,14 +462,16 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
         reset_current_subcommand_logger(token)
 
     captured = capsys.readouterr()
-    console = captured.err
     assert captured.out == ""
-    assert "- Purpose: `codex tui`" in console
-    assert "- Exit code: `7`" in console
+    assert captured.err == ""
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())
-    assert call_log["argv"][:3] == ["codex", "--ask-for-approval", "on-request"]
+    assert call_log["argv"][:3] == [
+        "codex",
+        "--ask-for-approval",
+        "on-request",
+    ]
     assert "--profile" not in call_log["argv"]
     assert "profile_name" not in call_log
     assert "profile_path" not in call_log

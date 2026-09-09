@@ -1,114 +1,143 @@
-# `apply`
-
-## Summary
-- このディレクトリには、参照可能な正本ソース本文がない。正本ソースの有無を確認するための入口である。
-
-## Read this when
-- このディレクトリの内容や、参照可能な正本ソースの有無を確認するとき。
-
-## Do not read this when
-- 実装仕様や処理内容を確認したいとき。
-
-## hash
-- 0af302f7be7ef5db5b5b3790733cdc5b9d23e3de43be05b57a4287af7ea9be0d
-
 # `basic.py`
 
 ## Summary
-- エージェント呼び出しに必要な論理モデルクラス、推論強度、ファイルアクセスモード、および呼び出し固有パラメータを定義する正本仕様の型モジュール。モデル選択やアクセス制御を扱う箇所の入口となる。
+- AI コーディングエージェント呼び出しのパラメータ型と、ファイルアクセスモードを定義する。
+- エージェント呼び出し種別、アクセスモード、prompt、Structured Output schema、実行 cwd、editor input MCP の有効化、indexing preflight の設定をまとめる入口。
 
 ## Read this when
-- AgentCallParameter の構造、利用可能なモデルクラス・推論強度・ファイルアクセスモードを確認するとき。
-- エージェント呼び出しのプロンプト、Structured Output スキーマ、作業ディレクトリ、インデックス事前処理の指定方法を確認するとき。
+- Agent Call Parameter の構造や生成・受け渡し項目を確認するとき
+- cmoc の論理的なファイルアクセスモードの列挙を確認するとき
+- agent call の editor input MCP または indexing preflight の設定を確認するとき
 
 ## Do not read this when
-- 実際のバックエンド用モデル名への解決方法を確認したいとき。
-- ファイルアクセス規則の詳細や Codex CLI sandbox への適用方法を確認したいとき。
-- エージェント呼び出しの生成・実行処理そのものを確認したいとき。
+- 各ファイルアクセスモードの詳細な意味や Codex CLI sandbox への対応を確認したいときは、本文が参照する正本仕様を読む
+- agent call の具体的な構築処理や file access policy の生成処理を確認したいとき
+- Structured Output schema の機械的な受理条件を確認したいとき
 
 ## hash
-- 688b81e8c85b0dec3716f65446db036b8c9ca17a9c20987507a52ee63aba7cbc
+- 23a9f8d92cc7f3453214b8f5042ba4a495fb3427ffa5434bb5113e25bed1200e
+
+# `feedback`
+
+## Summary
+- feedback issue の同一性判定と remediation を担う agent call の入口をまとめた対象。normalize_issue は観測結果と既存候補の同一性判定、remediate_issue は issue の存在確認・安全な修正・検証・結果分類を扱う。
+- 同一性判定と remediation の出力契約、およびそれぞれの agent call の prompt・起動条件・対象範囲を確認するための入口。
+
+## Read this when
+- feedback observation が既存 issue と同一か新規かを判定する agent call の入力範囲、出力契約、起動パラメータを確認するとき
+- remediation agent call の結果分類、realization file への変更範囲、検証条件、変更 path を確認するとき
+- 同一性判定または remediation の Structured Output schema の必須フィールドと制約を確認するとき
+
+## Do not read this when
+- feedback observation の受付・構造化・送信、候補 issue の絞り込み、issue の生成・保存を確認するとき
+- issue の内容・原因・summary・impact・remediation を生成する処理を確認するとき
+- realization file 自体の実装や oracle file の内容、remediation の診断・修正手順を直接確認するとき
+
+## hash
+- c440a1f2961e419b90e901094ecc23af576b8470688769c351b76a749cc1419f
 
 # `indexing`
 
 ## Summary
-- 対象ディレクトリは、INDEX.md エントリー生成用の出力スキーマと、その生成 agent call を構築する正本実装を扱う。JSON Schema はエントリーの必須配列構造を定義し、Python 実装は対象本文・生成規則・パス文脈・Structured Output 設定・実行パラメータを組み合わせる。
+- `cmoc indexing` の INDEX.md エントリー生成処理と、その agent 呼び出しパラメータを定義する。
+- INDEX.md エントリー生成結果の構造化出力スキーマを提供する。
 
 ## Read this when
-- INDEX.md エントリー生成の JSON 出力形式、必須項目、検証方法を確認するとき。
-- cmoc indexing が構築する INDEX.md エントリー生成 prompt や agent call の設定を変更・調査するとき。
+- `cmoc indexing` のエントリー生成 prompt、対象本文の受け渡し、読み取り専用アクセス、agent call の cwd、Structured Output schema、indexing preflight 設定を確認・変更するとき。
+- 生成結果に必要な項目や各項目の意味を確認するとき。
 
 ## Do not read this when
-- 対象ファイルやディレクトリの実際のルーティング内容を判断するとき。
-- INDEX.md 生成処理全体の共通実行フローや prompt 組み立て規則を調査するとき。
+- 既存の INDEX.md の内容やルーティング規則そのものを確認するとき。
+- エントリー生成後の INDEX.md 更新処理を確認するとき。
 
 ## hash
-- f4b3700b4ac69f46991ba15a9f8387648f1b5ac005e21e82d83214093f2a1652
+- e7df757d8890e511c5fe65777856c0ab09d293389dcbeb7919be9ba89f1db21d
 
 # `oracle`
 
 ## Summary
-- oracle 関連の agent call パラメータ構築実装を、用途別の下位領域へ案内するディレクトリです。調査用 TUI、レビュー処理、追加された編集関連ファイルの入口として機能します。
+- `cmoc oracle edit` の編集 agent call と、編集後の仕様削減 call の起動パラメータを構築する。
+- `cmoc oracle investigation` の完全プロンプトと Codex CLI TUI 起動パラメータを構築し、ユーザー指示を読み取り専用の oracle 調査経路へ組み込む。
+- 対象ディレクトリ本文が提示されていないレビュー用要素については、現時点で具体的な責務を判断できない。
 
 ## Read this when
-- oracle investigation または oracle review の agent call パラメータ構築や関連処理の場所を判断するとき。
-- このディレクトリに新しいファイルが追加され、その内容や用途を確認する必要があるとき。
+- `cmoc oracle edit` の agent call 起動条件、prompt 構成、起動パラメータ、または編集後の仕様削減 call への責務分担を確認・変更するとき。
+- `cmoc oracle investigation` の調査用完全プロンプト、ユーザー指示の埋め込み、TUI 起動時設定、読み取り専用アクセス、エディタ入力の引き継ぎ、またはインデックス事前処理を確認・変更するとき。
+- レビュー用要素の本文が追加され、その担当範囲を確認するとき。
 
 ## Do not read this when
-- 特定の下位領域の実装を直接確認できるとき。
-- 調査プロンプト本文、一般的な prompt builder の規則、レビュー基準や個別の JSON schema を確認するときは、対応する直接の対象を読む。
+- oracle file の編集処理そのものや仕様削減の判断基準を確認するとき。
+- oracle の調査結果や個別の oracle file の内容を確認するとき。
+- session の join・競合解決、または `cmoc oracle edit` と `cmoc oracle investigation` 以外の agent call 起動処理を調べるとき。
+- 本文が提示されていないレビュー用要素から、具体的なレビュー作業へ進むとき。
 
 ## hash
-- f9a6ea683fdb1467b3e08bbc813e68caf4347838296cbea3a57fa133663c147e
+- 8e63542424c486e8830235fcf7d9e025f8593acfeac6bf392e77b95216cd07e6
+
+# `quota_probe.py`
+
+## Summary
+- Codex CLI の利用可能性を確認する quota availability probe の prompt と agent call パラメータを構築する定義。
+- 読み取り専用・短い単発応答・追加調査なしの probe 条件を設定し、再帰的な indexing preflight を無効化する。
+
+## Read this when
+- Codex CLI の quota 回復確認用 agent call の prompt、アクセスモード、起動条件を確認または変更するとき。
+- quota probe が実行する最小限の確認内容や indexing preflight の扱いを確認するとき。
+
+## Do not read this when
+- 通常の quota 管理ロジックや利用量計算を調べるとき。
+- 一般的な agent call パラメータや prompt 構築の仕様を確認する場合は、共通の builder 定義を直接読むとき。
+
+## hash
+- 1ac746647bce56257d4ec7e41e2b7113802e8e2926f32e10699b404067da3ad6
 
 # `realization`
 
 ## Summary
-- oracle の変更を realization へ反映する apply fork と、差分要約・ファイル単位レビュー／修正を行う refactor fork の AgentCallParameter 構築実装と出力契約を扱うディレクトリです。各 fork の prompt、作業範囲、モデル・権限設定、検証条件、構造化出力スキーマを確認する入口になります。
+- `apply` は、指定した commit 範囲の oracle file 変更を realization file に追従させる agent call の起動条件・権限・差分判定を確認する入口。
+- `refactor` は、refactor fork の commit 差分の要約と、指定 realization file の調査・修正・検証を行う agent call の契約と実行条件を確認する入口。
 
 ## Read this when
-- oracle の変更追従用 apply fork の起動パラメータ、prompt、差分参照、worktree 設定、完了条件を変更・調査するとき
-- refactor fork の変更要約またはファイルレビュー・修正の出力契約、対象パス、権限、prompt、検証条件を変更・調査するとき
+- oracle file の commit 間変更を realization に反映する agent call の prompt、起動パラメータ、linked worktree、実行前 indexing、差分取得失敗時の扱いを確認するとき。
+- refactor fork の差分要約、変更分類、レビュー対象の調査、realization の修正・検証、または各 agent call の出力契約を確認するとき。
 
 ## Do not read this when
-- 実際の差分適用ロジックやテストを調べるときは apply の実装・テストを直接読む
-- 差分内容、対象 realization file、対応する oracle file の仕様適合性を調べるときは、該当する入力元や対象ファイルを直接読む
-- 一般的な prompt 構築、AgentCallParameter、path context の共通定義、または refactor fork 以外の agent call を調べるときは、対応する共通実装や各 fork の入口を直接読む
-- 構造化出力のフィールド定義だけを確認するときは、対応する JSON スキーマを直接読む
+- 実際の Git 差分取得、fork の実行、realization file の具体的な編集、または個別の変更内容・レビュー結果を調べるとき。
+- 共通 prompt 構築、AgentCallParameter の一般仕様、oracle 要求・realization 実装そのもの、または構造化文書レンダリングを直接調査するとき。
 
 ## hash
-- b58111c52a0d7454b89c0305ea7a258f86c5c1b36f7da171e89c5678f57fbfb9
+- 31b82bb17ffbff96848c92cef4fdbb63127a7fd62e30023fe68f1a68d6bd01ad
 
 # `session`
 
 ## Summary
-- `cmoc session join` のマージ競合解消用 AI エージェント呼び出しパラメータを構築する。対象パス、プロンプト、モデル・推論設定、書き込み権限、作業ディレクトリ、preflight 設定を扱う。
+- `cmoc session join` における merge conflict marker 解消用のエージェント呼び出し構築への入口。対象パスを解決し、conflict 解消用 prompt と起動パラメータを組み立てる下位要素を扱う。
 
 ## Read this when
-- `cmoc session join` の競合解消フローや agent call パラメータを変更・調査するとき
-- 競合対象パス、プロンプト、モデル・推論設定、preflight 設定を確認するとき
+- `session join` の merge conflict marker 解消に使うエージェント呼び出しの構築方法を確認・変更するとき。
+- conflict 対象パスの扱いや、解消用の prompt・アクセス制御・起動条件の構成を確認するとき。
 
 ## Do not read this when
-- マージ競合の実際の解消ロジックや git 操作を調査するとき
-- `session join` と無関係な agent call パラメータやプロンプト生成を調査するとき
+- merge conflict marker の具体的な解消処理や対象ファイルの内容を確認したいときは、conflict 対象ファイルを直接読む。
+- 一般的な prompt 構築、共通 policy、または通常の `session join` 処理フローを確認したいときは、それぞれのより直接的な対象を読む。
 
 ## hash
-- 9edbb85d9e4980b4dc7e83b2451f75687b86f1226f54c5c9d585cd0a300120fe
+- 47fcb891c8fda65984122c35dcab51fc85ba90bb4e1a6226eb2390001fc220f2
 
 # `tui`
 
 ## Summary
-- `cmoc tui` の TUI 起動用パラメータを構築する正本実装。完全なプロンプト、モデル・推論設定、リポジトリ書き込み権限、作業ディレクトリ、索引付け前処理などを含む `AgentCallParameter` を返す。TUI の起動条件・プロンプト保存先・エージェント呼び出し設定を確認する入口。
+- `cmoc tui` の TUI 起動パラメータと、ユーザーのオリジナルプロンプトを埋め込んだ完全プロンプトを構築する入口。
+- TUI 起動時のリポジトリ書き込み、作業ディレクトリ、エディター入力引き継ぎ、インデックス事前処理の設定を担う。
 
 ## Read this when
-- `cmoc tui` の起動動作を変更・調査するとき
-- TUI 用のプロンプト保存先、パスコンテキスト、モデル・推論設定、ファイルアクセスモードを確認するとき
-- TUI 起動パラメータの入力と返却内容の関係を確認するとき
+- `cmoc tui` の起動パラメータや起動時ポリシーを変更・調査するとき。
+- オリジナルプロンプトを完全プロンプトへ組み込む処理を確認するとき。
+- TUI 起動時の作業ディレクトリ、ファイルアクセスモード、エディター入力引き継ぎ、インデックス事前処理の設定を確認するとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドのエージェント呼び出し設定を調べるとき
-- 完全なプロンプトの構成や共通レンダリング処理自体を調べるとき
-- エージェント呼び出しパラメータの型定義や列挙値の意味だけを確認するとき
+- 完全プロンプトの共通構造や各種ポリシーの定義自体を変更・調査するときは、完全プロンプト構築側の定義を直接読む。
+- TUI 以外の agent call の起動パラメータだけを変更・調査するとき。
 
 ## hash
-- a6acf4afeb76df2a1fede86e399c363d611a15371b18ef1edc76a7397439eb83
+- fc6c0e67b291d5ff02434b89c61162777dfc6ec518ce6add34859b818545ae13

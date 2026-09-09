@@ -5,19 +5,23 @@
 CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
 subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
 失敗時文脈が増える。現状は Codex subprocess 境界として一箇所に保つ方が凝集性が高い。
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import errno
 import fcntl
+import hashlib
 import json
 import os
 import re
 import select
+import shlex
 import signal
 import subprocess
+import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from types import FrameType
@@ -28,11 +32,21 @@ from config.cmoc_config import CmocConfig, JsonTomlValue
 
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
+from .runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
 from .runtime_errors import CmocError
+from .runtime_feedback import (
+    FEEDBACK_CAPABILITY_ENV,
+    FEEDBACK_COLLECTOR_PORT_ENV,
+    FEEDBACK_PROTOCOL_ENV,
+)
 from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
+_CODEX_TUI_NOTIFICATION_SUPPORTED_VERSION = b"codex-cli 0.151.0"
+_CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
+_TUI_SESSION_START_HOOK_KEY = "/<session-flags>/config.toml:session_start:0:0"
+_TUI_SESSION_START_HOOK_TIMEOUT_SEC = 10
 
 
 def _first_symlink_component(path: Path) -> Path | None:
@@ -423,7 +437,7 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
-            | FileAccessMode.NO_RULE
+            | FileAccessMode.NO_POLICY
         ):
             return "workspace-write"
         case _:
@@ -477,6 +491,86 @@ def _config_override(key: str, toml_value: str) -> list[str]:
     return ["--config", f"{key}={toml_value}"]
 
 
+def codex_cli_supports_tui_notification_hooks(
+    cwd: Path,
+    environment: Mapping[str, str],
+) -> bool:
+    """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
+    try:
+        result = subprocess.run(
+            ["codex", "--version"],
+            cwd=cwd,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=_CODEX_VERSION_PROBE_TIMEOUT_SEC,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return (
+        result.returncode == 0
+        and result.stdout.strip() == _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSION
+    )
+
+
+def _codex_session_start_hook_trusted_hash(command: str) -> str:
+    """Codex 0.151.0 の SessionStart command identity を fingerprint 化する。"""
+    # Codex 0.151.0 / 78c290807ce710180111df227df3b7a4fe845452 の
+    # hook discovery と canonical JSON fingerprint に合わせる。interface が変わる
+    # version は呼び出し側の probe で無効化し、legacy notify へは戻さない。
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/engine/discovery.rs#L633-L778
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/config/src/fingerprint.rs#L47-L75
+    identity = {
+        "event_name": "session_start",
+        "hooks": [
+            {
+                "type": "command",
+                "command": command,
+                "timeout": _TUI_SESSION_START_HOOK_TIMEOUT_SEC,
+                "async": False,
+            }
+        ],
+    }
+    serialized = json.dumps(
+        identity,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(serialized).hexdigest()}"
+
+
+def _tui_session_start_hook_override_args(
+    session_start_command: Sequence[str] | None,
+) -> list[str]:
+    """root session ID を記録する invocation-local hook 設定を返す。"""
+    if not session_start_command:
+        return []
+    command = shlex.join(session_start_command)
+    # root は SessionStart、thread-spawned child は SubagentStart に分離される。
+    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/core/src/hook_runtime.rs#L109-L160
+    handler: dict[str, JsonTomlValue] = {
+        "type": "command",
+        "command": command,
+        "timeout": _TUI_SESSION_START_HOOK_TIMEOUT_SEC,
+        "async": False,
+    }
+    hooks: dict[str, JsonTomlValue] = {
+        "SessionStart": [{"hooks": [handler]}],
+        "state": {
+            _TUI_SESSION_START_HOOK_KEY: {
+                "enabled": True,
+                "trusted_hash": _codex_session_start_hook_trusted_hash(command),
+            }
+        },
+    }
+    # hooks feature は対象版の stable default に任せる。user/managed policy で無効なら
+    # callback なしへ fail-closed にし、TUI 本体の config load failure を起こさない。
+    return _config_override("hooks", _toml_value(hooks))
+
+
 def _model_provider_override_args(
     provider_id: str,
     config: CmocConfig,
@@ -488,7 +582,7 @@ def _model_provider_override_args(
         raise CmocError(
             "Codex model provider が未定義です。",
             [
-                "{{work-root}}/.cmoc/gt/ar/config.json の codex.model_providers を確認してください。"
+                "{{work-root}}/.cmoc/gt/config.json の codex.model_providers を確認してください。"
             ],
             f"model provider ID: {provider_id!r}",
         ) from exc
@@ -512,7 +606,7 @@ def _model_provider_override_args(
             raise CmocError(
                 "Codex model provider 設定が不正です。",
                 [
-                    "{{work-root}}/.cmoc/gt/ar/config.json の provider-local key を確認してください。"
+                    "{{work-root}}/.cmoc/gt/config.json の provider-local key を確認してください。"
                 ],
                 f"model provider ID: {provider_id!r}\nkey: {key!r}",
             )
@@ -548,26 +642,120 @@ def _model_provider_override_args(
     return args
 
 
+def _feedback_mcp_override_args() -> list[str]:
+    """cmoc_feedback server の effective configuration 全体を支配する。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # capability value は argv に載せず、Codex process の local environment から
+    # reporter process だけが whitelist 名で継承する。
+    server: dict[str, JsonTomlValue] = {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_feedback_reporter"],
+        "env_vars": [
+            FEEDBACK_CAPABILITY_ENV,
+            FEEDBACK_COLLECTOR_PORT_ENV,
+            FEEDBACK_PROTOCOL_ENV,
+        ],
+        "enabled": True,
+        "required": False,
+        "enabled_tools": ["submit_observation"],
+        "disabled_tools": [],
+        "startup_timeout_sec": 5,
+        "tool_timeout_sec": 15,
+        "default_tools_approval_mode": "approve",
+        "tools": {"submit_observation": {"approval_mode": "approve"}},
+    }
+    args = _config_override("mcp_servers.cmoc_feedback", _toml_value(server))
+    # MCP process への env_vars 転送には Codex process の環境が必要だが、同じ値を
+    # agent が起動する shell command へ継承させてはならない。
+    for name in (
+        FEEDBACK_CAPABILITY_ENV,
+        FEEDBACK_COLLECTOR_PORT_ENV,
+        FEEDBACK_PROTOCOL_ENV,
+    ):
+        args.extend(
+            _config_override(
+                f"shell_environment_policy.filters.{name}",
+                _toml_string("exclude"),
+            )
+        )
+    return args
+
+
+def _editor_input_handoff_mcp_override_args() -> list[str]:
+    """cmoc_editor_input server を overwrite 一つへ呼び出し単位で固定する。"""
+    server: dict[str, JsonTomlValue] = {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_editor_input_handoff_mcp"],
+        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV],
+        "enabled": True,
+        # handoff の利用可否は TUI agent call 自体の成功条件を変更しない。
+        "required": False,
+        "enabled_tools": ["overwrite"],
+        "disabled_tools": [],
+        "startup_timeout_sec": 5,
+        "tool_timeout_sec": 15,
+        "default_tools_approval_mode": "approve",
+        "tools": {"overwrite": {"approval_mode": "approve"}},
+    }
+    args = _config_override("mcp_servers.cmoc_editor_input", _toml_value(server))
+    args.extend(
+        _config_override(
+            f"shell_environment_policy.filters.{EDITOR_INPUT_REPOSITORY_ENV}",
+            _toml_string("exclude"),
+        )
+    )
+    return args
+
+
 def build_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
+    *,
+    notification_command: Sequence[str] | None = None,
+    session_start_command: Sequence[str] | None = None,
 ) -> list[str]:
-    """論理設定を専用 sandbox 引数と必要最小限の config argv にする。"""
+    """agent call の直接設定を sandbox と config argv にする。"""
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
-    model_spec = config.codex.model[parameter.model_class]
-    reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
+    try:
+        call_config = config.codex.agent_calls[parameter.agent_call_kind]
+    except KeyError as exc:
+        raise CmocError(
+            "Codex agent call 設定が未定義です。",
+            [
+                "{{work-root}}/.cmoc/gt/config.json の codex.agent_calls を確認してください。"
+            ],
+            f"agent call kind: {parameter.agent_call_kind!r}",
+        ) from exc
+    callback_enabled = bool(notification_command and session_start_command)
+    notification_argv: list[JsonTomlValue] = []
+    if callback_enabled:
+        notification_argv.extend(notification_command or ())
     args = [
         "--ask-for-approval",
         "on-request",
         "--model",
-        model_spec.model,
+        call_config.model,
         "--sandbox",
         sandbox_mode,
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
-        *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
+        *_config_override(
+            "model_reasoning_effort", _toml_string(call_config.reasoning_effort)
+        ),
+        # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+        # legacy callback は root SessionStart が記録した session ID で絞り込む。
+        *_config_override("notify", _toml_value(notification_argv)),
+        *_config_override("tui.notifications", "false"),
+        *_tui_session_start_hook_override_args(
+            session_start_command if callback_enabled else None
+        ),
+        *_feedback_mcp_override_args(),
+        *(
+            _editor_input_handoff_mcp_override_args()
+            if parameter.enable_editor_input_handoff_mcp
+            else []
+        ),
     ]
-    if model_spec.model_provider is not None:
-        args.extend(_model_provider_override_args(model_spec.model_provider, config))
+    args.extend(_model_provider_override_args(call_config.model_provider, config))
     return args
 
 
@@ -605,10 +793,18 @@ def validate_codex_home(codex_home: Path) -> None:
 def prepare_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig | None = None,
+    *,
+    notification_command: Sequence[str] | None = None,
+    session_start_command: Sequence[str] | None = None,
 ) -> list[str]:
-    """CmocConfig だけから path 非依存の Codex argv を返す。"""
+    """CmocConfig と任意の invocation-local callback から Codex argv を返す。"""
     resolved_config = config or CmocConfig()
-    return build_codex_override_args(parameter, resolved_config)
+    return build_codex_override_args(
+        parameter,
+        resolved_config,
+        notification_command=notification_command,
+        session_start_command=session_start_command,
+    )
 
 
 def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
@@ -616,11 +812,28 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     value = os.environ.get("CODEX_HOME")
     if value is None:
         value = str(codex_home)
-    return {**os.environ, "CODEX_HOME": value}
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # 別の Codex call や親 process の MCP context を継承させず、現在 call が
+    # 明示的に有効化した context だけを後から追加できるようにする。
+    call_context_env_names = {
+        FEEDBACK_CAPABILITY_ENV,
+        FEEDBACK_COLLECTOR_PORT_ENV,
+        FEEDBACK_PROTOCOL_ENV,
+        EDITOR_INPUT_REPOSITORY_ENV,
+    }
+    environment = {
+        name: environment_value
+        for name, environment_value in os.environ.items()
+        if name not in call_context_env_names
+    }
+    return {**environment, "CODEX_HOME": value}
 
 
 def run_codex_subprocess(
-    argv: list[str], **kwargs: Any
+    argv: list[str],
+    *,
+    process_started_callback: Callable[[], None] | None = None,
+    **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
     try:
@@ -629,7 +842,14 @@ def run_codex_subprocess(
         # call を stale または別 process の pid file へ向けてはならない。
         if _active_run_process_tracking_path is not None and argv[:1] == ["codex"]:
             return run_tracked_codex_subprocess(
-                argv, _active_run_process_tracking_path, **kwargs
+                argv,
+                _active_run_process_tracking_path,
+                process_started_callback=process_started_callback,
+                **kwargs,
+            )
+        if process_started_callback is not None:
+            return _run_subprocess_with_started_callback(
+                argv, process_started_callback, **kwargs
             )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
@@ -642,6 +862,50 @@ def run_codex_subprocess(
             ["Codex CLI をインストールし、PATH に codex を含めてください。"],
             f"argv: {argv}\nerror: {exc}",
         ) from exc
+
+
+def _run_subprocess_with_started_callback(
+    argv: list[str],
+    process_started_callback: Callable[[], None],
+    **kwargs: Any,
+) -> subprocess.CompletedProcess[Any]:
+    """Popen 後に TUI の process 起動境界を通知してから Codex を待つ。"""
+    input_data = kwargs.pop("input", None)
+    capture_output = kwargs.pop("capture_output", False)
+    check = kwargs.pop("check", False)
+    timeout = kwargs.pop("timeout", None)
+    if input_data is not None:
+        if kwargs.get("stdin") is not None:
+            raise ValueError("stdin and input arguments may not both be used.")
+        kwargs["stdin"] = subprocess.PIPE
+    if capture_output:
+        if kwargs.get("stdout") is not None or kwargs.get("stderr") is not None:
+            raise ValueError(
+                "stdout and stderr arguments may not be used with capture_output."
+            )
+        kwargs.setdefault("stdout", subprocess.PIPE)
+        kwargs.setdefault("stderr", subprocess.PIPE)
+
+    with subprocess.Popen(argv, **kwargs) as process:
+        try:
+            # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+            # Popen が成功した後だけ TUI process 起動済みとして扱い、起動前の
+            # KeyboardInterrupt を terminal failure notification の対象に残す。
+            process_started_callback()
+            stdout, stderr = process.communicate(input_data, timeout=timeout)
+        except BaseException:
+            process.kill()
+            raise
+
+        returncode = process.wait()
+        if check and returncode:
+            raise subprocess.CalledProcessError(
+                returncode,
+                argv,
+                output=stdout,
+                stderr=stderr,
+            )
+    return subprocess.CompletedProcess(argv, returncode, stdout, stderr)
 
 
 def _is_missing_codex_executable(
@@ -679,7 +943,11 @@ def run_process_tracking_active() -> bool:
 
 
 def run_tracked_codex_subprocess(
-    argv: list[str], tracking_path: Path, **kwargs: Any
+    argv: list[str],
+    tracking_path: Path,
+    *,
+    process_started_callback: Callable[[], None] | None = None,
+    **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """run abandon が止められるよう Codex subprocess group を記録する。"""
     input_data = kwargs.pop("input", None)
@@ -721,6 +989,11 @@ def run_tracked_codex_subprocess(
             with run_process_id_file_lock(tracking_path):
                 _validate_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+                if process_started_callback is not None:
+                    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+                    # Popen 成功直後に起動境界を通知し、tracking 更新中の中断も
+                    # すでに起動した TUI の終了として区別する。
+                    process_started_callback()
                 # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
                 # tracking 更新に失敗しても、後から PGID を再探索して別 group を停止しない
                 # よう、Popen 直後の identity snapshot を cleanup に引き継ぐ。

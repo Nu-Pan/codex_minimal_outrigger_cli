@@ -4,8 +4,8 @@
 ## 概要
 
 - ユーザーから与えられたプロンプトへ cmoc 固有の契約を注入し、AI Agent CLI/TUI を起動する
-- installed skill の有無にかかわらず解釈できる、適用条件付きの cmoc 基本規範を固定で注入する
-- 実行パラメータまたは注入規範を選定するための agent call は行わない
+- 適用条件を伴う固定の cmoc 基本規定を注入する。この規定は、installed skill の有無にかかわらず解釈できるものとする
+- 実行パラメータまたは注入規定を選定するための agent call は行わない
 
 ## 引数
 
@@ -13,42 +13,40 @@
 
 ## 事前条件
 
-- なし
+- git working tree と staging area が clean であることを事前条件にせず、いずれかに未コミット差分が存在しても実行する
 
 ## 実行手順
 
 1. doctor preprocess を呼び出す
-2. オリジナルプロンプトをユーザーからエディタ入力
-3. AI Agent CLI/TUI を起動
+2. prompt editor input の lifecycle に従って、オリジナルプロンプトをユーザーから受け取る
+3. `build_tui_launch_tui_parameter` で起動パラメータを構築する
+4. 構築した起動パラメータで AI Agent CLI/TUI を起動する
 
 ## 「オリジナルプロンプトをユーザーからエディタ入力」の詳細
 
-- エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする
-- エディタ編集対象ファイルの初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する
-- `automatically_injected_instruction` の具体的な文面と追加内容は realization file 側の実装裁量とする
+- エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」を正本とする
 
 ## 「AI Agent CLI/TUI を起動」の詳細
 
 ### 全バックエンド共通
 
-- ユーザーのプロンプト入力後、`build_tui_launch_tui_parameter` で構築した固定パラメータを使用して TUI を直接起動する
-- TUI 起動パラメータは `build_tui_launch_tui_parameter` を正本とする
-- builder は次の規範を、オリジナルプロンプトの内容によらず固定で注入する
-    - `build_oracle_standard`
-    - `build_realization_standard`
-    - `build_oracle_review_standard`
-    - `build_apply_review_standard`
-    - `build_realization_oracle_reference_rule`
-- 各規範は自身が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
-- installed skill は任意の追加規範として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
-- builder は model class を `FLAGSHIP`、reasoning effort を `MAX`、file access mode を `REPO_WRITE` とする
-- Structured Output は要求しない
-- TUI 起動前の indexing preflight を行う
+- ユーザーのプロンプト入力後、`build_tui_launch_tui_parameter` でパラメータを構築する。そのパラメータを変更せずに使い、TUI を直接起動する
+- TUI の意味上の責務と起動条件は本書を正本とする。正確な prompt part の選択、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter` へ委譲する
+- cmoc の基本規定は、各規定が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
+- TUI へ注入する基本規定の意味仕様は、次の文書を正本とする
+    - oracle file と realization file の責務: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file と realization file の責務」
+    - oracle file に対する realization file の適合性: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」
+- installed skill は任意の追加規定として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
+- TUI 起動前の indexing preflight は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従い、git working tree または staging area に既存差分があっても実行する
+- 共通 feedback instruction、TUI process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従う
+- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする
 
 ### Codex CLI の場合
 
 - 起動コマンドは `codex` とする (`codex exec` ではない)
+- editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` を正本とする
 - `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
     - 環境変数 `$CODEX_HOME`
     - preflight validation
     - Codex CLI 引数による設定上書き
+    - editor input handoff MCP

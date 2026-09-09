@@ -1,3 +1,5 @@
+"""INDEX 更新 preflight を挟む Codex 実行境界を提供する。"""
+
 # {{work-root}}/oracle/doc/app_spec/indexing.md
 import threading
 from collections.abc import Callable
@@ -16,14 +18,14 @@ from .runtime_codex import (
 )
 from .runtime_results import CodexExecCallable, CodexExecResult, CommandResult
 
-IndexingPreflight = Callable[[Path, CodexExecCallable], None]
+_IndexingPreflight = Callable[[Path, CodexExecCallable], None]
 
 _INDEXING_LOCK = threading.Lock()
 _INDEXING_ACTIVE: ContextVar[bool] = ContextVar("INDEXING_ACTIVE", default=False)
-_INDEXING_PREFLIGHT: IndexingPreflight | None = None
+_INDEXING_PREFLIGHT: _IndexingPreflight | None = None
 
 
-def configure_indexing_preflight(preflight: IndexingPreflight) -> None:
+def configure_indexing_preflight(preflight: _IndexingPreflight) -> None:
     """Codex 呼び出し前に実行する indexing preflight を登録する。"""
     global _INDEXING_PREFLIGHT
     _INDEXING_PREFLIGHT = preflight
@@ -53,18 +55,11 @@ def run_codex_exec(
 
 def run_codex_tui(
     parameter: AgentCallParameter,
-    *,
-    pre_launch_check: Callable[[], None] | None = None,
     **kwargs: Any,
 ) -> CommandResult:
-    """INDEX 更新と任意の直前検査を挟んで Codex TUI 実行本体へ委譲する。"""
+    """INDEX 更新を挟んで Codex TUI 実行本体へ委譲する。"""
     if parameter.run_indexing_preflight:
         _run_indexing_before_codex(_indexing_root_for_codex(parameter))
-    if pre_launch_check is not None:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-        # indexing が作る commit を事前条件へ反映し、検査後は TUI 起動まで
-        # workload 固有処理を挟まない。
-        pre_launch_check()
     return runtime_run_codex_tui(parameter, **kwargs)
 
 

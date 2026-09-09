@@ -2,13 +2,12 @@
 
 from pathlib import Path
 
-import typer
-
 from acp.builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter,
 )
 from cmoc_runtime import (
     CmocError,
+    TerminalResult,
     head_commit,
     load_config,
     load_state_for_branch,
@@ -18,13 +17,15 @@ from cmoc_runtime import (
     start_subcommand_step,
 )
 from commons.indexing import enable_indexing_preflight
+from commons.runtime_feedback import accepted_feedback_observations
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
     commit_work_unit,
     flattened_change_paths,
-    raw_oracle_diff,
+    is_generated_index_path,
     recover_started_run,
     refresh_indexes,
     rollback_work_unit,
@@ -50,7 +51,7 @@ def cmoc_realization_apply_fork_impl() -> None:
     )
 
 
-def _cmoc_realization_apply_fork_body() -> None:
+def _cmoc_realization_apply_fork_body() -> TerminalResult:
     """realization apply agent を実行し、差分を joinable run として公開する。"""
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
@@ -65,6 +66,16 @@ def _cmoc_realization_apply_fork_body() -> None:
         start_was_ready = session_run_was_ready()
         start_attempted = True
         context = start_editing_run("realization_apply")
+        update_primary_report_fields(
+            run_kind=context.kind,
+            session_branch=context.session_branch,
+            session_fork_commit=context.session_fork_commit,
+            run_branch=context.run_branch,
+            run_fork_commit=context.run_fork_commit,
+            run_worktree=context.run_worktree,
+            state_before=context.state_before,
+            state_after="running",
+        )
         _, _, state = load_state_for_branch(context.repo, context.session_branch)
         diff_base_commit = (
             state.session.last_joined_apply_fork_commit
@@ -76,16 +87,18 @@ def _cmoc_realization_apply_fork_body() -> None:
                 ["session state file を確認してください。"],
                 str(context.state_path),
             )
-        start_subcommand_step(3, "oracle raw diff を構築", "build oracle diff")
-        oracle_diff = raw_oracle_diff(
-            context.run_worktree,
-            diff_base_commit,
-            context.run_fork_commit,
+        start_subcommand_step(
+            3, "oracle 差分の commit 範囲を確定", "resolve diff range"
         )
+        # state の参照を commit ID に解決し、preflight 後も比較範囲を固定する。
+        diff_base_commit = run_git(
+            ["rev-parse", "--verify", f"{diff_base_commit}^{{commit}}"],
+            context.run_worktree,
+        ).stdout.strip()
+        update_primary_report_fields(diff_base_commit=diff_base_commit)
         parameter = build_realization_apply_fork_launch_exec_parameter(
             diff_base_commit,
             context.run_fork_commit,
-            oracle_diff,
             context.run_worktree,
         )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")
@@ -122,6 +135,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             if agent_commit_check_active and agent_head is not None:
                 _ensure_agent_did_not_commit(run_worktree, agent_head)
             codex_returncode = result.returncode
+            update_primary_report_fields(codex_returncode=codex_returncode)
             if result.returncode != 0:
                 raise CmocError(
                     "realization apply agent が正常終了しませんでした。",
@@ -141,6 +155,27 @@ def _cmoc_realization_apply_fork_body() -> None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
             # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
             # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # INDEX refresh 前に tracked Codex child を停止し、agent 終了後の遅延
+            # 書き込みを cmoc の生成差分へ混ぜない。
+            cleanup_warnings.extend(
+                stop_tracked_codex_children(context.repo, context.session_id)
+            )
+            if agent_commit_check_active and agent_head is not None:
+                _ensure_agent_did_not_commit(run_worktree, agent_head)
+            post_agent_paths = worktree_change_paths(
+                context.run_worktree,
+                include_rename_sources=True,
+            )
+            unexpected = unexpected_agent_paths(context, post_agent_paths)
+            unexpected.extend(
+                path
+                for path in post_agent_paths
+                if path not in changed_agent_paths and path not in unexpected
+            )
+            unexpected.sort()
+            if unexpected:
+                raise _unexpected_change_error(unexpected)
             refresh_indexes(context.run_worktree, commit=False)
             # {{work-root}}/oracle/doc/app_spec/run_isolation.md
             # 後続 process の遅い書き込みを差分検査・commit に混ぜないよう、最終
@@ -165,7 +200,11 @@ def _cmoc_realization_apply_fork_body() -> None:
                 path
                 for path in pending_paths
                 if path not in changed_agent_paths
-                and Path(path).name != "INDEX.md"
+                and not is_generated_index_path(
+                    context.run_worktree,
+                    path,
+                    base=context.run_fork_commit,
+                )
                 and path not in unexpected
             )
             unexpected.sort()
@@ -180,25 +219,37 @@ def _cmoc_realization_apply_fork_body() -> None:
             changes = tree_changes(context.run_worktree, context.run_fork_commit)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
+        changed_paths = flattened_change_paths(changes)
+        update_primary_report_fields(
+            state_after="joinable",
+            changed_paths=changed_paths,
+        )
         start_subcommand_step(7, "fork report を保存", "write fork report")
         report = write_fork_report(
             context,
             "realization/apply/fork",
             state_after="joinable",
             completion_reason="completed",
-            changed_paths=flattened_change_paths(changes),
+            changed_paths=changed_paths,
             codex_returncode=codex_returncode,
-            extra_fields={"diff_base_commit": diff_base_commit},
+            extra_fields=_apply_report_fields(diff_base_commit),
             body_lines=_cleanup_warning_lines(cleanup_warnings),
         )
     except BaseException as exc:
         if context is None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
             # 共通事前条件の CmocError では、既存 run をこの fork の失敗として
-            # 回収してはいけない。非 CmocError は start 後の公開処理失敗、または
-            # start 処理が context を呼び出し側へ返す前に送出した失敗だけを回収する。
-            if start_attempted and start_was_ready and not isinstance(exc, CmocError):
-                context = recover_started_run("realization_apply")
+            # 回収してはいけない。start が公開済み context を付加した例外、または
+            # start 処理が context を呼び出し側へ返す前の非 CmocError だけを回収する。
+            if start_attempted and start_was_ready:
+                if isinstance(exc, CmocError):
+                    published_context = getattr(
+                        exc, "_published_editing_run_context", None
+                    )
+                    if isinstance(published_context, EditingRunContext):
+                        context = published_context
+                else:
+                    context = recover_started_run("realization_apply")
             if context is None:
                 raise
         if agent_commit_check_active and agent_head is not None:
@@ -212,6 +263,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             codex_returncode,
             exc,
             cleanup_warnings,
+            agent_head=agent_head if agent_commit_check_active else None,
         )
         error = CmocError(
             "realization apply fork は error state で停止しました。",
@@ -220,10 +272,24 @@ def _cmoc_realization_apply_fork_body() -> None:
                 "run 全体を破棄する場合は `cmoc run abandon` を実行してください。",
             ],
             f"report: {report}\nerror: {exc!r}",
+            terminal_result=TerminalResult(
+                primary_report=report,
+                primary_report_role="realization apply fork report",
+                details=(("run_state", "error"),),
+                warnings=tuple(cleanup_warnings),
+            ),
         )
-        setattr(error, "cmoc_stdout", f"- fork report: `{report}`")
         raise error from exc
-    typer.echo(f"- fork report: `{report}`")
+    return TerminalResult(
+        primary_report=report,
+        primary_report_role="realization apply fork report",
+        details=(("run_state", "joinable"),),
+        next_actions=(
+            "`cmoc run join` で確定済み成果物を取り込んでください。",
+            "`cmoc run abandon` で run 全体を破棄できます。",
+        ),
+        warnings=tuple(cleanup_warnings),
+    )
 
 
 def _unexpected_change_error(paths: list[str]) -> CmocError:
@@ -284,6 +350,8 @@ def _record_error(
     codex_returncode: int | None,
     exc: BaseException,
     cleanup_warnings: list[str] | None = None,
+    *,
+    agent_head: str | None = None,
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
     cleanup_errors = list(cleanup_warnings or [])
@@ -293,12 +361,23 @@ def _record_error(
         )
     except BaseException as cleanup_error:
         cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
+    if agent_head is not None:
+        try:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+            # 初回検査後に遅延 child が作った commit も、停止完了後に検出して
+            # agent boundary の HEAD へ戻し、error run へ混入させない。
+            _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+        except BaseException as agent_commit_error:
+            cleanup_errors.append(
+                f"agent commit cleanup failed: {agent_commit_error!r}"
+            )
     try:
         rollback_work_unit(context.run_worktree)
     except BaseException as cleanup_error:
         cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
     try:
         set_run_state(context, "error")
+        update_primary_report_fields(state_after="error")
     except BaseException as state_error:
         cleanup_errors.append(f"state update failed: {state_error!r}")
     # 最終 git inspection が失敗しても error report を保存できるようにする。
@@ -310,6 +389,11 @@ def _record_error(
     except BaseException as change_error:
         cleanup_errors.append(f"change inspection failed: {change_error!r}")
         changed_paths = []
+    update_primary_report_fields(
+        changed_paths=changed_paths,
+        codex_returncode=codex_returncode,
+        error=repr(exc),
+    )
     return write_fork_report(
         context,
         "realization/apply/fork",
@@ -317,7 +401,7 @@ def _record_error(
         completion_reason="error",
         changed_paths=changed_paths,
         codex_returncode=codex_returncode,
-        extra_fields={"diff_base_commit": diff_base_commit},
+        extra_fields=_apply_report_fields(diff_base_commit),
         body_lines=[
             "## Error",
             repr(exc),
@@ -335,3 +419,20 @@ def _cleanup_warning_lines(warnings: list[str]) -> list[str]:
         "## Cleanup warnings",
         *([f"- {warning}" for warning in warnings] or ["- none"]),
     ]
+
+
+def _apply_report_fields(diff_base_commit: str | None) -> dict[str, object]:
+    """apply 固有の diff 始点と accepted feedback 参照を返す。"""
+    observations = accepted_feedback_observations()
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    # 通常 report の保存失敗後に共通 fallback が再試行しても、同じ invocation
+    # で受理した observation を失わないよう先に report context へ反映する。
+    update_primary_report_fields(
+        feedback_observation_count=len(observations),
+        feedback_observations=observations,
+    )
+    return {
+        "diff_base_commit": diff_base_commit,
+        "feedback_observation_count": len(observations),
+        "feedback_observations": observations,
+    }

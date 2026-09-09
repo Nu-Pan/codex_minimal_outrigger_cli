@@ -1,6 +1,8 @@
+"""cmoc の CLI command tree と起動時の Click/Typer 境界を定義する。"""
+
+import inspect
 import os
-from collections.abc import Sequence
-from enum import Enum
+from collections.abc import Callable, Sequence
 from typing import Any, cast
 
 import click
@@ -14,7 +16,6 @@ from sub_commands.doctor import cmoc_doctor_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.oracle.edit import cmoc_oracle_edit_impl
 from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
-from sub_commands.oracle.review import cmoc_oracle_review_impl
 from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
 from sub_commands.realization.refactor.fork import cmoc_realization_refactor_fork_impl
 from sub_commands.run.abandon import cmoc_run_abandon_impl
@@ -23,13 +24,6 @@ from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
 from sub_commands.session.join import cmoc_session_join_impl
 from sub_commands.tui import cmoc_tui_impl
-
-
-class OracleReviewScope(str, Enum):
-    """oracle review の調査対象範囲を CLI option 値として表す。"""
-
-    session = "session"
-    full = "full"
 
 
 def _click_exception_types() -> tuple[type[BaseException], ...]:
@@ -44,6 +38,37 @@ def _click_exception_types() -> tuple[type[BaseException], ...]:
 
 
 _CLICK_EXCEPTION_TYPES = _click_exception_types()
+
+
+def _patch_typer_click_help_compatibility() -> None:
+    """Click 8.2 の option help 変更を Typer の互換実装へ反映する。"""
+    # {{work-root}}/oracle/doc/dev_rule/design_rule.md
+    # CLI の引数解釈とライブラリ間の互換境界は main.py に閉じ込める。
+    if "ctx" in inspect.signature(click.Option.make_metavar).parameters:
+        # Click 8.2 は metavar の生成に context を要求するが、Typer 0.12 は渡さない。
+        original_make_metavar = cast(
+            Callable[[typer.core.TyperOption, object], str],
+            typer.core.TyperOption.make_metavar,
+        )
+
+        def make_metavar_compatibility(
+            self: typer.core.TyperOption,
+            ctx: click.Context | None = None,
+        ) -> str:
+            """Typer から context なしで呼ばれる metavar を補完する。"""
+            return original_make_metavar(
+                self,
+                ctx if ctx is not None else click.get_current_context(),
+            )
+
+        setattr(
+            typer.core.TyperOption,
+            "make_metavar",
+            make_metavar_compatibility,
+        )
+
+
+_patch_typer_click_help_compatibility()
 
 
 class _CmocTyperGroup(typer.core.TyperGroup):
@@ -73,7 +98,11 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                 if standalone_mode:
                     raise SystemExit(0)
                 return 0
-            return super().main(standalone_mode=standalone_mode, **click_kwargs)
+            # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+            # `_CMOC_COMPLETE` を常に Click へ明示し、呼び出し側の prog_name に
+            # 依存して通常 command が実行される経路を防ぐ。
+            completion_kwargs = {**click_kwargs, "complete_var": "_CMOC_COMPLETE"}
+            return super().main(standalone_mode=standalone_mode, **completion_kwargs)
         try:
             result = super().main(standalone_mode=False, **click_kwargs)
         # {{work-root}}/oracle/doc/app_spec/error_handling.md
@@ -93,7 +122,11 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                     click_exception.format_message(),
                 ) from exc
             except CmocError as report_error:
-                typer.echo(render_error(report_error))
+                typer.echo(
+                    f"{render_error(report_error)}\n"
+                    f"- 終了コード: `{click_exception.exit_code}`",
+                    err=True,
+                )
             if standalone_mode:
                 raise SystemExit(click_exception.exit_code) from exc
             raise
@@ -113,12 +146,14 @@ realization_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_apply_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_refactor_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 run_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
+feedback_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 app.add_typer(session_app, name="session")
 app.add_typer(oracle_app, name="oracle")
 app.add_typer(realization_app, name="realization")
 realization_app.add_typer(realization_apply_app, name="apply")
 realization_app.add_typer(realization_refactor_app, name="refactor")
 app.add_typer(run_app, name="run")
+app.add_typer(feedback_app, name="feedback")
 
 
 @app.command()
@@ -151,18 +186,10 @@ def session_abandon() -> None:
     cmoc_session_abandon_impl()
 
 
-@oracle_app.command("review")
-def oracle_review(
-    scope: OracleReviewScope = typer.Option(OracleReviewScope.session, "--scope", "-s"),
-) -> None:
-    """oracle review を隔離 worktree で実行する CLI 入口。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-    cmoc_oracle_review_impl(scope.value)
-
-
 @oracle_app.command("edit")
 def oracle_edit() -> None:
-    """oracle file を main worktree の Codex TUI で編集する CLI 入口。"""
+    """oracle file を main worktree の 2 回の Codex exec で編集する CLI 入口。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
     cmoc_oracle_edit_impl()
 
 
@@ -200,6 +227,17 @@ def run_abandon() -> None:
 def indexing() -> None:
     """work root の INDEX.md を更新する CLI 入口。"""
     cmoc_indexing_impl()
+
+
+@feedback_app.command("report")
+def feedback_report() -> None:
+    """pending feedback observation から current report を publication する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # feedback の builder 読み込みを、このコマンドの実行時に限定する。
+    # doctor などの独立したコマンドの起動を妨げないようにする。
+    from sub_commands.feedback.report import cmoc_feedback_report_impl
+
+    cmoc_feedback_report_impl()
 
 
 def main() -> None:

@@ -36,7 +36,7 @@ from .runtime_git import (
     expected_run_worktree,
     run_git,
 )
-from .runtime_paths import generated_agent_read_dir
+from .runtime_paths import untracked_data_dir
 
 
 class ProcessIdentity(NamedTuple):
@@ -67,8 +67,13 @@ def worktree_for_branch(root: Path, branch: str) -> Path:
     )
 
 
-def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
-    """branch が checkout されている worktree を返し、無ければ None を返す。"""
+def worktree_for_branch_optional(
+    root: Path,
+    branch: str,
+    *,
+    allow_missing: bool = False,
+) -> Path | None:
+    """branch の安全な worktree を返し、無ければ None を返す。"""
     output = run_git(["worktree", "list", "--porcelain"], root).stdout
     registered_path: Path | None = None
     resolved_path: Path | None = None
@@ -84,7 +89,10 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
                 # run-root 外へ解決される登録を受け入れない。
                 if registered_path != expected or resolved_path != expected:
                     return None
-                if not registered_path.is_dir() or not _has_linked_worktree_metadata(
+                if not registered_path.exists():
+                    if not allow_missing:
+                        return None
+                elif not registered_path.is_dir() or not _has_linked_worktree_metadata(
                     root, registered_path
                 ):
                     return None
@@ -94,9 +102,7 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
 
 def run_process_id_path(root: Path, session_id: str) -> Path:
     """session ごとの editing run process tracking path を返す。"""
-    return (
-        generated_agent_read_dir(root) / "state" / "run_processes" / f"{session_id}.pid"
-    )
+    return untracked_data_dir(root) / "state" / "run_processes" / f"{session_id}.pid"
 
 
 @contextmanager
@@ -422,8 +428,26 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
     else:
         current_start_time = process_start_time(process.process_id)
         if current_start_time is None:
-            return _stop_orphaned_child_process_group(
-                process, process_group_id, expected_members
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # pidfd が使えず proc stat も読めない場合は、leader の終了と観測欠落を
+            # 区別できない。kill(pid, 0) で終了を確認できた場合だけ orphan group の
+            # snapshot 検証へ進め、live process を停止済みとして cleanup しない。
+            try:
+                os.kill(process.process_id, 0)
+            except ProcessLookupError:
+                return _stop_orphaned_child_process_group(
+                    process, process_group_id, expected_members
+                )
+            except OSError as exc:
+                raise CmocError(
+                    "実行中 Codex subprocess の同一性を確認できません。",
+                    ["run process を確認し、停止後に再実行してください。"],
+                    f"pid: {process.process_id}\npgid: {process_group_id}\nerror: {exc}",
+                ) from exc
+            raise CmocError(
+                "実行中 Codex subprocess の同一性を確認できません。",
+                ["run process を確認し、停止後に再実行してください。"],
+                f"pid: {process.process_id}\npgid: {process_group_id}",
             )
         if process.start_time is None:
             raise CmocError(

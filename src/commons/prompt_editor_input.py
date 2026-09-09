@@ -3,45 +3,103 @@
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
 
+from .runtime_editor_input_handoff import (
+    start_editor_input_handoff,
+    validate_editor_work_file,
+)
 from .runtime_errors import CmocError
 from .runtime_git import ensure_cmoc_ignored
 from .runtime_paths import (
     _reserve_timestamped_path,
-    editor_input_dir,
+    editor_input_log_dir,
+    editor_work_dir,
     timestamp,
     work_root,
 )
 
+ORIGINAL_PROMPT_PLACEHOLDER = "{{original-prompt-here}}"
 
-def collect_prompt_editor_input(
+
+def reserve_prompt_editor_input(root: Path) -> tuple[Path, Path]:
+    """同じ timestamp を持つ作業 path と入力結果の保存 path を準備する。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # 可変な作業 file と cmoc だけが書く保存記録を別 directory に置く。
+    work_dir = editor_work_dir(root)
+    log_dir = editor_input_log_dir(root)
+    work_dir.mkdir(parents=True, exist_ok=True)
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # 削除済み work file と同じ timestamp の保存記録も上書きしない。
+    while True:
+        time_stamp, editor_work_path = _reserve_timestamped_path(
+            work_dir,
+            "_orig.md",
+            timestamp,
+        )
+        input_copy_path = log_dir / f"{time_stamp}_orig.md"
+        if not (input_copy_path.exists() or input_copy_path.is_symlink()):
+            return editor_work_path, input_copy_path
+        editor_work_path.unlink()
+        time.sleep(0.000001)
+
+
+def edit_prompt_editor_input(
     root: Path,
-    automatically_injected_instruction: str,
-) -> tuple[Path, str]:
-    """初期 prompt を保存・編集し、コメント除去済み入力と path を返す。"""
-    # 同じ timestamp の呼び出しでも入力を上書きしないよう先に path を予約する。
-    editor_dir = editor_input_dir(root)
-    editor_dir.mkdir(parents=True, exist_ok=True)
-    _, path = _reserve_timestamped_path(editor_dir, "_orig.md", timestamp)
+    editor_work_path: Path,
+    complete_prompt_skeleton: str,
+) -> None:
+    """完全 prompt の skeleton を初期値としてエディタを起動する。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    _require_single_original_prompt_placeholder(complete_prompt_skeleton)
+    validate_editor_work_file(root, editor_work_path)
+
+    # 正本が構築する案内と完全 prompt の skeleton を作業 file へ保存する。
     # {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
-    path.write_text(
-        build_prompt_editor_input_initial_text(automatically_injected_instruction),
+    editor_work_path.write_text(
+        build_prompt_editor_input_initial_text(complete_prompt_skeleton),
         encoding="utf-8",
     )
 
-    # エディタが戻った時点を入力完了とし、終了失敗は利用者向けエラーにする。
-    argv = [*_select_editor(), str(path)]
-    result = subprocess.run(argv)
+    argv = [*_select_editor(), str(editor_work_path)]
+    target = start_editor_input_handoff(root, editor_work_path)
+    print(f"editor input handoff target ID: {target.target_id}", flush=True)
+    try:
+        # エディタが戻った後は target を drain・無効化してから処理を進める。
+        result = subprocess.run(argv)
+    finally:
+        target.close()
     if result.returncode != 0:
         raise CmocError(
             "エディタが正常終了しませんでした。",
             ["エディタの状態を確認してから cmoc コマンドを再実行してください。"],
             f"command: {' '.join(argv)}\nreturncode: {result.returncode}",
         )
-    return path, _read_prompt_editor_input(path)
+
+
+def collect_prompt_editor_input(
+    root: Path,
+    editor_work_path: Path,
+    input_copy_path: Path,
+) -> str:
+    """作業 file を一度だけ最終読み取りし、入力を保存して返す。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # 最終時点の通常 file を一度だけ読み、同じ結果を保存と入力抽出に使う。
+    validate_editor_work_file(root, editor_work_path)
+    final_read_result = editor_work_path.read_bytes()
+    with input_copy_path.open("xb") as file:
+        file.write(final_read_result)
+    return _extract_original_prompt(final_read_result.decode("utf-8"))
+
+
+def finalize_prompt_editor_input(editor_work_path: Path) -> None:
+    """完全 prompt の構築成功後に editor work file を削除する。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    editor_work_path.unlink()
 
 
 def ensure_prompt_editor_roots_ignored(root: Path) -> None:
@@ -66,11 +124,25 @@ def _select_editor() -> list[str]:
     )
 
 
-def _read_prompt_editor_input(path: Path) -> str:
-    """HTML comment と前後の空白を除去して利用者入力を読む。"""
+def _extract_original_prompt(final_read_result: str) -> str:
+    """同じ最終読み取り結果から HTML comment と前後空白を除去する。"""
     return re.sub(
         r"<!--.*?-->",
         "",
-        path.read_text(encoding="utf-8"),
+        final_read_result,
         flags=re.DOTALL,
     ).strip()
+
+
+def _require_single_original_prompt_placeholder(
+    complete_prompt_skeleton: str,
+) -> None:
+    """完全 prompt の未確定位置が唯一であることを検証する。"""
+    count = complete_prompt_skeleton.count(ORIGINAL_PROMPT_PLACEHOLDER)
+    if count == 1:
+        return
+    raise CmocError(
+        "完全プロンプトの skeleton が不正です。",
+        ["cmoc の prompt builder と oracle file の整合性を確認してください。"],
+        f"placeholder: {ORIGINAL_PROMPT_PLACEHOLDER}\ncount: {count}",
+    )

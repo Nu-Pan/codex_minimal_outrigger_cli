@@ -1,3 +1,5 @@
+"""Codex TUI の起動と call log・実行結果の記録を担う。"""
+
 import json
 import subprocess
 import time
@@ -7,11 +9,10 @@ from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
-from .runtime_codex_logging import (
-    emit_codex_call_console,
-    format_codex_call_error,
-)
+from .runtime_cli import mark_current_tui_process_started
+from .runtime_codex_logging import format_codex_call_error
 from .runtime_codex_profile import (
+    codex_cli_supports_tui_notification_hooks,
     codex_subprocess_env,
     prepare_codex_override_args,
     resolve_codex_home,
@@ -19,7 +20,12 @@ from .runtime_codex_profile import (
     validate_codex_home,
 )
 from .runtime_config import load_config
+from .runtime_editor_input_handoff_protocol import (
+    editor_input_handoff_subprocess_env,
+)
 from .runtime_errors import CmocError
+from .runtime_feedback import begin_feedback_call
+from .runtime_feedback_store import uuid7_prefixed
 from .runtime_logging import current_subcommand_logger
 from .runtime_paths import (
     _reserve_timestamped_path,
@@ -27,6 +33,7 @@ from .runtime_paths import (
     timestamp,
 )
 from .runtime_results import CommandResult
+from .runtime_windows_toast import create_tui_notification_callback
 
 
 def run_codex_tui(
@@ -35,6 +42,7 @@ def run_codex_tui(
     root: Path | None = None,
     config: CmocConfig | None = None,
     purpose: str = "codex tui",
+    notification_command_name: str | None = None,
 ) -> CommandResult:
     """Codex TUI を設定上書き argv と call log を準備して起動する。"""
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
@@ -48,10 +56,74 @@ def run_codex_tui(
     # validation を合わせる。
     codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
+    codex_environment = codex_subprocess_env(codex_home)
+    # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
+    # TUI の version probe も Codex executable を起動するため、agent call と
+    # selected provider の設定を検証してから probe を開始する。
+    prepare_codex_override_args(parameter, config)
+    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    # callback state はこの TUI process invocation の期間だけ保持する。
+    notification_callback = (
+        create_tui_notification_callback(
+            notification_command_name or purpose,
+            root,
+        )
+        if codex_cli_supports_tui_notification_hooks(
+            agent_call_cwd,
+            codex_environment,
+        )
+        else None
+    )
+    try:
+        return _run_codex_tui_process(
+            parameter,
+            root=root,
+            config=config,
+            purpose=purpose,
+            agent_call_cwd=agent_call_cwd,
+            repository=path_context.repo_root,
+            codex_home=codex_home,
+            codex_environment=codex_environment,
+            log_dir=log_dir,
+            notification_command=(
+                notification_callback.command
+                if notification_callback is not None
+                else None
+            ),
+            session_start_command=(
+                notification_callback.session_start_command
+                if notification_callback is not None
+                else None
+            ),
+        )
+    finally:
+        if notification_callback is not None:
+            notification_callback.close()
+
+
+def _run_codex_tui_process(
+    parameter: AgentCallParameter,
+    *,
+    root: Path,
+    config: CmocConfig,
+    purpose: str,
+    agent_call_cwd: Path,
+    repository: Path,
+    codex_home: Path,
+    codex_environment: dict[str, str],
+    log_dir: Path,
+    notification_command: list[str] | None,
+    session_start_command: list[str] | None,
+) -> CommandResult:
+    """root session filter を設定した 1 つの Codex TUI process を実行する。"""
+    # 検証済みの場合だけ root session capture と legacy callback を対で設定する。
     override_args = prepare_codex_override_args(
         parameter,
         config,
+        notification_command=notification_command,
+        session_start_command=session_start_command,
     )
+    call_config = config.codex.agent_calls[parameter.agent_call_kind]
     argv = [
         "codex",
         *override_args,
@@ -60,34 +132,56 @@ def run_codex_tui(
         parameter.prompt,
     ]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    ts, call_path = _reserve_timestamped_path(log_dir, "_tui_call.json", timestamp)
+    ts, call_path = _reserve_timestamped_path(log_dir, "_call.json", timestamp)
+    agent_call_id = uuid7_prefixed("agc_")
+    codex_call_id = uuid7_prefixed("cdc_")
     call_path.write_text(
         json.dumps(
             {
                 "purpose": purpose,
                 "timestamp": ts,
                 "argv": argv,
+                "agent_call_id": agent_call_id,
+                "agent_call_kind": parameter.agent_call_kind,
+                "codex_call_id": codex_call_id,
                 "codex_home": str(codex_home),
-                "model_class": parameter.model_class.value,
-                "reasoning_effort": parameter.reasoning_effort.value,
+                "model_provider": call_config.model_provider,
+                "model": call_config.model,
+                "reasoning_effort": call_config.reasoning_effort,
                 "file_access_mode": parameter.file_access_mode.value,
                 "cwd": str(agent_call_cwd),
             },
             ensure_ascii=False,
             indent=2,
         )
-        + "\n"
+        + "\n",
+        encoding="utf-8",
     )
     started_at = time.perf_counter()
     failure: subprocess.CalledProcessError | None = None
     startup_failure: BaseException | None = None
     returncode: int | None = None
+    feedback_call = begin_feedback_call(
+        agent_call_cwd=parameter.agent_call_cwd,
+        agent_call_id=agent_call_id,
+        agent_call_kind=parameter.agent_call_kind,
+        codex_call_id=codex_call_id,
+        log_paths=[call_path],
+    )
     try:
+        environment = dict(codex_environment)
+        if parameter.enable_editor_input_handoff_mcp:
+            environment = editor_input_handoff_subprocess_env(
+                environment,
+                repository,
+            )
+        environment = feedback_call.subprocess_env(environment)
         result = run_codex_subprocess(
             argv,
             cwd=agent_call_cwd,
-            env=codex_subprocess_env(codex_home),
+            env=environment,
             check=True,
+            process_started_callback=mark_current_tui_process_started,
         )
         returncode = result.returncode
     except subprocess.CalledProcessError as exc:
@@ -95,11 +189,12 @@ def run_codex_tui(
         returncode = exc.returncode
     except BaseException as exc:
         startup_failure = exc
+    finally:
+        feedback_call.close()
     elapsed_sec = time.perf_counter() - started_at
     error: str | None = None
     if startup_failure is not None:
         error = format_codex_call_error(startup_failure)
-    emit_codex_call_console(purpose, call_path, elapsed_sec, returncode, error)
     logger = current_subcommand_logger()
     status = "succeeded" if returncode == 0 else "failed"
 
@@ -117,6 +212,9 @@ def run_codex_tui(
             "elapsed_sec": elapsed_sec,
             "call_log_path": str(call_path),
             "codex_home": str(codex_home),
+            "agent_call_id": agent_call_id,
+            "agent_call_kind": parameter.agent_call_kind,
+            "codex_call_id": codex_call_id,
         }
         if error is not None:
             payload["error"] = error

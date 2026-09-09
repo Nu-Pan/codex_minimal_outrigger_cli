@@ -12,17 +12,19 @@
 ## hash
 - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
-# `launch_tui.py`
+# `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` の TUI 起動用パラメータを構築する oracle src。パスコンテキスト、固定完全 prompt、ログ保存、モデル・権限・起動設定を組み立てる実装であり、oracle 編集起動フローの入口となる。
+- `cmoc oracle edit` における本命編集 agent call と、編集後の仕様削減 agent call の起動パラメータを構築する。
+- oracle file 編集向けの共通制約、ユーザー指示、ファイルアクセス権限、作業ディレクトリ、indexing 実行条件を各 call の prompt と parameter に反映する。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動処理、起動時 prompt、oracle 編集用ファイルアクセス権限、モデルや実行設定を確認・変更するとき。
+- `cmoc oracle edit` の agent call 起動条件、2 段階の prompt 構成、または起動パラメータを変更・調査するとき。
+- 本命の oracle 編集 call と、成功後に行う仕様削減 call の責務分担や共通編集制約を確認するとき。
 
 ## Do not read this when
-- oracle file の編集内容や編集 agent の一般的な prompt 仕様だけを確認したいときは、関連する prompt builder や oracle 仕様ファイルを直接読む。
-- TUI 起動後の agent 処理、oracle file の編集ロジック、ログ解析を調べるとき。
+- oracle file の編集処理そのものや、仕様削減の判断基準を変更する場合。対象の agent call が利用する prompt builder や oracle policy の定義を直接確認するとき。
+- session の join・競合解決や、`cmoc oracle edit` 以外の agent call の起動処理を調べるとき。
 
 ## hash
-- dfcda7b79c338ddff78034ac5ad94f9c26210703cfa05d6d6fee565f2d8d8a42
+- 19c637c880f6b5cf0b45147a1fbec63b7849264fc7e5edea4c2d4fc0d4f5104e

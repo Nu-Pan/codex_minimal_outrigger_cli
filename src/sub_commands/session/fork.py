@@ -1,11 +1,12 @@
+"""現在の local branch から session branch と state を作成する。"""
+
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
 from pathlib import Path
-
-import typer
 
 from cmoc_runtime import (
     CmocError,
     SessionState,
+    TerminalResult,
     active_session_for_home,
     branch_exists,
     current_branch,
@@ -24,6 +25,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_primary_report import update_primary_report_fields
 
 MAX_SESSION_ID_ATTEMPTS = 32
 
@@ -40,12 +42,17 @@ def cmoc_session_fork_impl() -> None:
     )
 
 
-def _cmoc_session_fork_body() -> None:
+def _cmoc_session_fork_body() -> TerminalResult:
     """現在の local branch から cmoc session branch を作成する。"""
     root = repo_root()
     work = work_root()
     start_subcommand_step(2, "現在の local branch を取得", "get current branch")
     branch = current_branch(work)
+    update_primary_report_fields(
+        home_branch=branch,
+        session_state_before=None,
+        session_state_after=None,
+    )
     if is_managed_branch(branch):
         raise CmocError(
             "cmoc managed branch 上では session fork できません。",
@@ -67,9 +74,14 @@ def _cmoc_session_fork_body() -> None:
             )
         start_subcommand_step(3, "現在の HEAD commit を取得", "get HEAD commit")
         start_commit = head_commit(work)
+        update_primary_report_fields(session_fork_commit=start_commit)
         start_subcommand_step(4, "session-id を生成", "generate session id")
         session_id = _new_session_id(root)
         session_branch = f"cmoc/session/{session_id}"
+        update_primary_report_fields(
+            session_id=session_id,
+            session_branch=session_branch,
+        )
         path = state_path(root, session_id)
         state = SessionState()
         state.session.session_home_branch = branch
@@ -79,8 +91,12 @@ def _cmoc_session_fork_body() -> None:
         )
         branch_created = False
         state_file_created = False
+        state_written = False
         try:
-            run_git(["switch", "-c", session_branch], work)
+            # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+            # HEAD 取得後に home branch が進んでも、state に記録した fork commit
+            # と実際の session branch の分岐元を一致させる。
+            run_git(["switch", "-c", session_branch, start_commit], work)
             branch_created = True
             start_subcommand_step(6, "session state を保存", "write session state")
             # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
@@ -90,6 +106,8 @@ def _cmoc_session_fork_body() -> None:
             path.touch(exist_ok=False)
             state_file_created = True
             write_state(path, state)
+            state_written = True
+            update_primary_report_fields(session_state_after="active")
         except BaseException as error:
             rollback_errors: list[str] = []
             # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
@@ -119,6 +137,16 @@ def _cmoc_session_fork_body() -> None:
                     rollback_errors.append(
                         f"session state cleanup failed: {rollback_error!r}"
                     )
+            update_primary_report_fields(
+                # 既存 state file の残存は今回の state 保存成功を意味しない。
+                # state path の競合時に既存 state を active と誤記しない。
+                session_state_after=(
+                    "active"
+                    if state_written and path.is_file() and not path.is_symlink()
+                    else None
+                ),
+                rollback_status="failed" if rollback_errors else "completed",
+            )
             details = [
                 f"original error: {error!r}",
                 "rollback errors:",
@@ -141,15 +169,11 @@ def _cmoc_session_fork_body() -> None:
             raise CmocError(
                 "session fork の作成に失敗しました。", guidance, "\n".join(details)
             ) from error
-        start_subcommand_step(7, "作成結果を表示", "show session result")
-        typer.echo(
-            "\n".join(
-                [
-                    "# cmoc session fork",
-                    f"- session_branch: `{session_branch}`",
-                    f"- session_home_branch: `{branch}`",
-                    f"- session_state_file: `{path}`",
-                ]
+        start_subcommand_step(7, "terminal result を確定", "finalize terminal result")
+        return TerminalResult(
+            details=(
+                ("session_branch", session_branch),
+                ("session_home_branch", branch),
             )
         )
 

@@ -1,11 +1,21 @@
-
 # コンソール・ファイル、ログ出力規則
+
+本書は、非対話サブコマンドの console、primary report、サブコマンドログ、および terminal result に関する共通契約の正本とする。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、primary report の形式・保存先・追加項目・要約方法、次の操作、および終了コードを定義する。
 
 ## 共通規則
 
+### 人間向け自然言語
+
+- console、primary report、およびエラー説明の自然言語部分は、個別仕様に指定がない限り日本語とする。
+- 識別子、path、command、JSON key、log 原文、および引用は元の表記を維持してよい。
+
+### 実行 ID の開始表示
+
+cmoc は、人間向け console ログの最初の出力として、実行 ID を stderr に表示する。この ID は、ユーザーが起動した最外側の末端サブコマンドの invocation を識別する。TUI と自動補完への適用は、本書の「TUI と自動補完の境界」に従う。
+
 ### 時間表示のフォーマット
 
-- stdout に流す時間表示は、`{{month}} Mo {{day}} Day {{hour}} Hr {{minute}} Min {{sec}}.{{msec}} Sec` を最大構成とする
+- console に流す時間表示は、`{{month}} Mo {{day}} Day {{hour}} Hr {{minute}} Min {{sec}}.{{msec}} Sec` を最大構成とする
 - `{{month}}`, `{{day}}`, `{{hour}}`, `{{minute}}`, `{{sec}}` は 2 桁・スペースパディング・右詰めとする
 - `{{msec}}` は 1 桁・ゼロ表示・小数点第 2 位以降は切り捨てとする
 - 値が 0 の上位単位は、`{{month}}` から順に、最初の 0 でない単位の直前まで省略する
@@ -15,65 +25,135 @@
 ### パス表示のフォーマット
 
 - ファイル・ディレクトリのパス文字列はフルパスで表現すること
-- パスの前後は何らかの区切り文字 (e.g. ダブルクォート、半角スペース、改行、…) で囲うこと
-- フォーマット的に元々囲われている場合 (e.g. JSON なら文字列はダブルクォートで囲われているはずである) は、元々の区切り文字にまかせて良い
+- パスの前後は区切り文字で囲むこと（例：ダブルクォート、半角スペース、改行）
+- 出力形式の区切り文字ですでに囲まれている場合は、その区切り文字を使ってよい（例：JSON の文字列を囲むダブルクォート）
+
+## 非対話サブコマンドの console 出力
+
+### 出力先の責務
+
+- stdout は、`natural_completion` または `user_interruption` の terminal result だけを表示する
+- stderr は、簡潔な進行通知、warning、および `error` の terminal result を表示する
+- terminal result は、ユーザーが起動した最外側の末端サブコマンドについて 1 回だけ表示する
+- cmoc 内部から呼び出したサブコマンド、処理関数、agent call、および Codex call は、独立した terminal result を表示しない
+
+### 進行通知
+
+- 進行通知は、cmoc が稼働中であることと、現在のトップレベルステップを人間が確認できる短い表示とする
+- 階層化された全サブステップを console へ列挙してはならない
+- サブステップ別の経過時間、個別 Codex call のログパス、および個別 Codex call の戻り値を、通常の進行通知へ列挙してはならない
+- 進行通知の具体的な文面、記号、および形式は、本節の意味と出力先を守る範囲で realization の裁量とする
+
+## primary report
+
+- ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
+- primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。
+- `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
+- primary report の形式、保存先、追加項目、およびサブコマンド固有の要約方法は、個別サブコマンド仕様を正本とする。
+- primary report 作成専用の追加 agent call は共通要件としない。個別仕様が report 生成手順として明示しない限り行わず、確定済みの情報から機械的に構築してよい。
+- cmoc 内部から呼び出したサブコマンド、処理関数、agent call、および Codex call は、独立した primary report を保存しない。
+
+primary report の保存に失敗し、完了契約を確定できない場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` に従って internal failure とする。この場合は、保存済みでない primary report の path を terminal result に表示しない。
+
+### 共通掲載内容
+
+primary report には、内部処理を含むその invocation の実行記録として、次の内容を一覧で掲載する。
+
+- 各 `codex exec`（`codex exec resume` を含む）で取得できた最終出力の本文。取得元は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `--output-last-message` を正本とする。
+- 実行中に新規受理された feedback observation の問題内容。掲載対象は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」における observation とする。
+
+一覧の順序とレイアウトは realization の裁量とする。
+
+## terminal result
+
+### 定義と分類
+
+terminal result は、最外側の末端サブコマンドについて確定した終端結果を、人間へ最後に示す 1 つの console 出力単位である。
+
+共通分類は、次の 3 種類とする。
+
+- `natural_completion`: サブコマンド固有の正常な処理結果を確定して自然完了した
+- `user_interruption`: ユーザー中断要求に従い、個別仕様が認める確定済みの部分結果で正常に完了した
+- `error`: エラー終了した
+
+共通分類、サブコマンド固有の `result` または `completion_reason`、および終了コードは、それぞれ独立した意味とする。終了コードだけから、共通分類、サブコマンド固有結果、またはスタックトレースの要否を決めてはならない。
+
+### 確定と表示の順序
+
+terminal result は、次の処理をすべて完了した後に確定して表示する。
+
+1. state、成果物、および終端結果に必要な情報を確定する
+2. 並列処理、非同期処理、および console へ出力し得る通知処理を停止または drain する
+3. 非対話サブコマンドでは、確定した作業内容と終端結果を primary report に保存する
+4. terminal result を含むサブコマンド終了イベントをサブコマンドログへ書き込み、flush する
+
+terminal result の表示後は、同じサブコマンドの stdout または stderr へ追加出力してはならない。
+
+### 表示内容
+
+terminal result は、該当する情報を次の優先順序で表示する。
+
+1. 完了、中断完了、または失敗の別と、サブコマンド名
+2. 非対話サブコマンドでは、primary report の役割とフルパス
+3. サブコマンド固有の `result` または `completion_reason` が存在する場合は、その値
+4. 次に必要な操作がある場合は、その操作
+5. warning の要約と、repository-local な pending feedback observation 数
+6. サブコマンド全体の経過時間と終了コード
+7. 診断用サブコマンドログのフルパス
+
+primary report は、そのサブコマンド結果について人間が読むべき report とする。primary report のフルパスは terminal result の見出し直後に表示し、同じパスを console の別の箇所へ重複表示してはならない。保存済みであることを確認した path だけを表示する。
+
+report 本文、candidate、および finding の詳細を console へ複製してはならない。
+
+pending feedback observation の件数と warning は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の通知境界に従う。
+
+Windows toast の対象、発火順序、通知内容、および失敗時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
 
 ## サブコマンドログファイル
 
 ### 基本要件
 
-- ログファイルはサブコマンドと 1:1 で存在すること
+- ログファイルは、サブコマンドと 1:1 で対応させること
 - ログファイルは JSON Lines 形式であること
-- ログファイルは `{{repo-root}}/.cmoc/gu/ar/log/sub_command/{{time-stamp}}.jsonl` に出力すること
+- ログファイルは `{{repo-root}}/.cmoc/gu/log/sub_command/{{time-stamp}}.jsonl` に出力すること
 - ログファイルは `{{run-root}}` 側に出力してはいけない
-- サブコマンド中に発生したイベント 1 つ = ログファイルの 1 行とすること
+- サブコマンド中に発生したイベント 1 つを、ログファイルの 1 行に記録すること
 - イベントの追記はバッファリングせずに即時 flush すること
 
-### 必須イベント
+### 診断記録
 
-- サブコマンド呼び出しイベント
-- サブコマンド内ステップ開始イベント
-- Codex CLI 呼び出しイベント
-- サブコマンド終了イベント
+サブコマンドログは、サブコマンド呼び出しから terminal result までを追跡できる完全な診断記録とする。少なくとも次の情報を記録する。
 
-### 各イベントに含める情報
+- サブコマンド呼び出し
+- 階層化されたサブステップを含む全ステップと、その時間
+- 全 Codex call と、対応する Codex call ログ、経過時間、および戻り値
+- warning
+- handled failure と internal failure の判別に必要なエラー詳細
+- terminal result を含むサブコマンド終了イベント
+- サブコマンド全体の経過時間、Codex CLI quota 回復待ち時間、および終了コード
 
-- 過去のサブコマンド実行時に起きた事の詳細を辿るのに必要な情報を含めること
-- 具体的項目は実装者の裁量で決めて良い
+過去のサブコマンド実行で起きたことを追跡するための具体的な field は、realization の裁量で定めてよい。例外として、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の detector rule が参照する event は、同仕様が定める `event_schema_version`, `event_id`, `event_type`, context、および rule 固有 field を安定した契約として含める。
 
-## サブコマンドログコンソール出力
+feedback detector は、安定契約として定義されていない自由文 field を判定に使用してはならない。
 
-### 基本要件
+## TUI と自動補完の境界
 
-- cmoc の稼働状況を人間が確認する用のログをコンソールに出力すること
-- 基本的には stdout に出力し、エラーだけは stderr に出力すること
+TUI の通知境界を適用するサブコマンドと非対話サブコマンドの分類は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。本書の primary report 契約は、その分類を変更しない。
 
-### フォーマット
+- `cmoc tui` および `cmoc oracle investigation` の正常な TUI 終了後には、非対話サブコマンド用の primary report または terminal result を追加しない
+- `cmoc oracle edit` は非対話サブコマンドとして本書を適用する。内部の各 `codex exec` は独立した terminal result を表示せず、最外側のサブコマンドが終了状態の確定後に 1 回だけ表示する
+- TUI の起動前エラーまたは異常終了には、本書と `{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` のエラー表示規則を適用する。非対話サブコマンド用の primary report は要求しない
+- TUI process へ制御を渡した後は、cmoc の進行通知を TUI の表示へ混入させない
+- 自動補完プローブの判定、console 出力、および通常処理の抑止は、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md` の「CLI 自動補完規則」を正本とする
 
-- コンソールログのフォーマットは markdown とする
-- 区切りには見出しを積極的に使う
-- 空行は挟まない
+## non-goal
 
-### 最低限必要な項目
+本書は、次の機能を要求しない。
 
-- 開始時点の通知
-    - 対応するサブコマンドログファイルのパス
-- サブコマンドを構成する各ステップに入った時の通知
-    - ステップ侵入通知は区切りも兼ねる
-    - フォーマットは `# YYYY/MM/DD HH:MM:SS.sss (i/N, j/M, ...) {{step description}}`
-    - `[YYYY/MM/DD HH:MM:SS]` はステップ開始時の日時で、空白パディング右詰め
-    - `[i/N, j/M, ...]` はそのステップの番号
-    - 例えば `i/N` は全 N ステップある中の i 番目のステップであることを表す
-    - ステップが階層構造になっている場合 `i/N, j/M, ...` のように全階層のステップ番号を並べる
-    - `{{step description}}` は、そのステップの簡潔な説明とする
-- Codex CLI を呼び出したことを表す通知
-    - 何を目的とした呼び出しであるかを表す短い説明
-    - 個別の呼び出し仕様が作成を要求する、対応する Codex CLI 呼び出しログファイルのパス
-    - `codex` 呼び出しから完了までにかかった時間
-    - `codex` が返した戻り値
-- 完了サマリー
-    - 対応するサブコマンドログファイルのパス
-    - サブコマンドを構成するステップ（サブステップを含む）別の経過時間
-    - サブコマンド全体の経過時間
-    - サブコマンド全体の Codex CLI quota 回復待ち時間
-    - サブコマンドの戻り値
+- ANSI color に依存する表示
+- TTY と non-TTY で意味が変わる動的表示
+- verbosity option または debug option
+- 機械可読な stdout 用の新しい JSON schema
+- 個別サブコマンド仕様が定める正常経路の report 本文の意味または判定基準の変更
+- Windows toast 通知内容の拡張
+- feedback detector が使用する安定した構造化 event 契約の変更

@@ -1,8 +1,9 @@
-# {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-import typer
+"""active session を home branch へ取り込まず破棄する CLI 処理を実装する。"""
 
+# {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 from cmoc_runtime import (
     CmocError,
+    TerminalResult,
     branch_exists,
     current_branch,
     delete_branch,
@@ -16,6 +17,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_primary_report import update_primary_report_fields
 
 
 def cmoc_session_abandon_impl() -> None:
@@ -29,21 +31,32 @@ def cmoc_session_abandon_impl() -> None:
     )
 
 
-def _cmoc_session_abandon_body() -> None:
+def _cmoc_session_abandon_body() -> TerminalResult:
     """active session を home branch へ merge せず破棄する。"""
     repo = repo_root()
     work = work_root()
     branch = current_branch(work)
+    update_primary_report_fields(
+        session_branch=branch,
+        session_state_before=None,
+        session_state_after=None,
+    )
     start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     _session_id, path, state = load_state_for_branch(repo, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError(
             "session abandon は session branch 上で実行してください。", [], branch
         )
+    home = state.session.session_home_branch
+    update_primary_report_fields(
+        home_branch=home,
+        session_state_before=state.session.state,
+    )
     if state.session.state != "active" or state.run.state != "ready":
         raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
+    session_commit = head_commit(work)
+    update_primary_report_fields(abandoned_branch_start_commit=session_commit)
     require_clean_worktree(work)
-    home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
     if not branch_exists(repo, home):
@@ -52,12 +65,15 @@ def _cmoc_session_abandon_body() -> None:
             ["session state file と git branch の状態を確認してください。"],
             f"session_home_branch: {home}",
         )
-    session_commit = head_commit(work)
     start_subcommand_step(3, "session をクリーンアップ", "cleanup session")
     try:
-        run_git(["switch", home], work)
+        # {{work-root}}/oracle/doc/branch_model.md
+        # session home branch は local branch なので、確認と切替の間に local ref が
+        # 消えても同名 remote-tracking branch を別の home branch として推測しない。
+        run_git(["switch", "--no-guess", home], work)
         state.session.state = "abandoned"
         write_state(path, state)
+        update_primary_report_fields(session_state_after="abandoned")
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
         # home branch を保持したまま session branch だけを削除する必要がある。
         delete_result = delete_branch(repo, branch, force=True)
@@ -74,8 +90,10 @@ def _cmoc_session_abandon_body() -> None:
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)
         rollback_errors: list[str] = []
         state.session.state = "active"
+        state_rollback_completed = False
         try:
             write_state(path, state)
+            state_rollback_completed = True
         except BaseException as rollback_error:
             rollback_errors.append(f"state rollback failed: {rollback_error!r}")
         try:
@@ -97,6 +115,10 @@ def _cmoc_session_abandon_body() -> None:
             f"session_home_branch: {home}",
             f"session_state_file: {path}",
         ]
+        update_primary_report_fields(
+            session_state_after="active" if state_rollback_completed else None,
+            rollback_status="failed" if rollback_errors else "completed",
+        )
         raise CmocError(
             "session abandon の cleanup に失敗しました。",
             [
@@ -105,14 +127,12 @@ def _cmoc_session_abandon_body() -> None:
             ],
             "\n".join(details),
         ) from error
-    start_subcommand_step(4, "結果を表示", "show session result")
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc session abandon",
-                f"- abandoned_branch: `{branch}`",
-                f"- switched_to: `{home}`",
-                "- session_state: `abandoned`",
-            ]
+    start_subcommand_step(4, "terminal result を確定", "finalize terminal result")
+    return TerminalResult(
+        details=(
+            ("abandoned_branch", branch),
+            ("switched_to", home),
+            ("session_state", "abandoned"),
+            ("cleanup", "completed"),
         )
     )

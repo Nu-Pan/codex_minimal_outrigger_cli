@@ -14,29 +14,32 @@
 2. 人間が `cmoc session fork` を呼び出す。
     - cmoc は現在の branch を `{{cmoc-session-home-branch}}` として記録する。
     - cmoc は `{{cmoc-session-branch}}` を作成して checkout する。
-3. 短い仕様変更・実装変更 loop を繰り返す。
+3. 仕様変更と実装変更の短い loop を繰り返す。
     1. 必要に応じて `cmoc oracle investigation` で read-only の調査を行う。
-    2. 人間が oracle file を直接編集するか、clean な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` の TUI を起動する。
-        - TUI の変更は未コミットで残る。人間が差分を確認し、必要なら追加修正する。
-    3. 人間が `cmoc oracle review` を呼び出し、必要なら oracle file を修正する。
-    4. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
-    5. 人間が `cmoc realization apply fork` を呼び出す。
-        - cmoc は前回 join 済み apply から現在までの oracle commit 差分を注入し、run worktree 上の `codex exec` 1 回でリポジトリ全体の realization を追従させる。
-    6. 人間が `cmoc run join` で apply run を取り込むか、`cmoc run abandon` で破棄する。
-    7. 人間が現状の実装で問題ないと判断するまで繰り返す。
+    2. 人間が oracle file を直接編集するか、main worktree の active な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` を呼び出す。
+    3. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
+    4. 人間が `cmoc realization apply fork` を呼び出す。
+    5. 人間が `cmoc run join` で apply run を取り込むか、`cmoc run abandon` で破棄する。
+    6. 人間が現状の実装で問題ないと判断するまで繰り返す。
 4. 必要に応じて、ファイル単位の網羅的な追従を行う。
     1. 人間が `cmoc realization refactor fork` を呼び出す。
-        - cmoc は refactor state の調査要求に従い、差分情報を渡さずに 1 file ずつ調査する。
-        - unresolved target は current fork 内で保留し、それ以外の調査要求がなくなるまで処理する。
-        - `natural_completion` による完全な自然完了、`completed_with_unresolved` による unresolved 付き完了、または `Ctrl+C` による整合した中断まで処理する。
     2. 人間が `cmoc run join` で確定済み成果物を取り込むか、`cmoc run abandon` で破棄する。
     3. 調査要求が残っている場合は、join 後に新しい `cmoc realization refactor fork` を開始する。
-5. 人間が `{{cmoc-session-branch}}` 上で `cmoc session join` を呼び出す。
+5. 必要に応じて、人間が `cmoc feedback report` を呼び出す。
+    - session worktree と staging area は clean にする。
+    - cmoc は run 上で安全な realization file の修正を issue ごとに commit し、処理中の新しい issue も intake wave で可能な限り処理する。
+    - 正常経路では run を自動 join し、`human_required` issue だけを report する。`inconclusive` があれば `incomplete` 診断 report を保存する。
+    - 自動 join 前に run が残った場合は `cmoc run join` または `cmoc run abandon` を使用する。自動 join 後の publication または cleanup は、次の `cmoc feedback report` が再開する。
+6. 人間が `{{cmoc-session-branch}}` 上で `cmoc session join` を呼び出す。
     - cmoc は `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
 
 ## workload の使い分け
 
-- realization apply は、直近の oracle 変更を短い loop で素早く realization へ反映するときに使う。
-- realization refactor は、変更差分に引っ張られず、全 oracle file と realization file の調査要求を収束させるときに使う。
-- oracle edit は main worktree 上で oracle file を直接編集する対話型 TUI であり、run lifecycle を使わない。
-- realization apply と realization refactor の編集 run は共通の明示的 fork/join lifecycle を使う。
+各 workload の目的と境界は、次の仕様を正本とする。
+
+- realization apply: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「目的」
+- realization refactor: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「目的」
+- oracle edit: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「目的」
+- feedback report: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の `cmoc feedback report`
+
+editing run に共通する lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を参照する。

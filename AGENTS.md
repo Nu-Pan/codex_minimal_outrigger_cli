@@ -1,17 +1,23 @@
-# cmoc 固有のリポジトリ指示
+# cmoc 自己開発上の注意
 
-Codex Minimal Outrigger CLI（cmoc）は、cmoc 自身を使ってこのリポジトリを開発する運用を前提とする。
-cmoc は agent call ごとにプロンプトを動的生成し、その作業における作業範囲、ファイルアクセス、oracle/realization の規則、INDEX.md によるルーティングを指定する。
+## 前提
 
-本ファイルは、動的生成プロンプトの内容を再定義せず、自己開発で恒常的に必要となるリポジトリ固有の指示だけを補足する。
-本ファイルの記述や参照先を根拠に、動的生成プロンプトが定める権限や作業範囲を広げてはならない。
+- Codex Minimal Outrigger CLI（cmoc）は、cmoc 自身を使ってこのリポジトリを開発する運用を前提とする
+- そのため、agent（これを読んでいるあなたのことです！）の視点では「agent へ与えられた指示文と全く同じ文面が編集対象のファイルにも登場する」事がある
+- つまり「文面が同じなのに情報のレイヤーが異なる」という現象が当たり前に起こる
 
-## 重要な参照先
+## 「レイヤー」の区別
 
-以下は cmoc 自己開発における標準的な作業方法を定める参照先である。
-本ファイルの説明と oracle file の本文に差がある場合は、oracle file の本文を優先する。
+以下の３種類は、異なるレイヤーの情報として明確に区別すること
 
-- Python 環境の新規構築、依存関係の追加、または pip の操作を行うときは、`oracle/doc/dev_rule/development_environment.md` を読む。
-- realization implementation の配置先や CLI 実装の責務境界を判断するときは、`oracle/doc/dev_rule/design_rule.md` を読む。
-- realization test の追加・変更・レビュー、または test が満たすべき要件を判断するときは、`oracle/doc/dev_rule/test_rule.md` を読む。
-- 既存 test と品質検査を選択・実行して結果を報告するときは、repository local の `oracle/doc/dev_rule/test_execution.md` skill を使う。通常の実行だけを理由として、上記の oracle file を事前に読む必要はない。
+- 「このセッションの作業対象の cmoc」の仕様を定義する文
+- 「このセッションの作業対象の cmoc」が呼び出す agent に渡す指示文
+- 「このセッションの agent」に与えられた指示文
+
+## 「指示文」の区別
+
+cmoc が agent に渡す指示文は以下の要件を満たすこと
+
+- それ単体で情報として完結しなければならない
+- 呼び出された agent が cmoc の仕様文章にアクセスしないと理解できない指示を含んではいけない
+- cmoc の仕様を定義する文を含んではいけない

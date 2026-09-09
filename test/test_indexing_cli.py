@@ -12,15 +12,15 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import make_repo, run_git
-from oracle.other.cmoc_config import CodexModelSpec
+from oracle.other.cmoc_config import CodexCallConfig
 
 import cmoc_runtime
 import commons.indexing as indexing_common
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.indexing as indexing_module
-from basic.acp import AgentCallParameter, ModelClass
+from basic.acp import AgentCallParameter
 from commons.runtime_results import CommandResult
 from main import app
 
@@ -73,6 +73,15 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     assert "generated skip condition" in rendered
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
+    report = terminal_primary_report(result)
+    rendered_report = report.read_text(encoding="utf-8")
+    commit_id = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    assert report.parent == root / ".cmoc" / "gu" / "report" / "indexing"
+    assert f'commit_id: "{commit_id}"' in rendered_report
+    assert "updated_indexes:" in rendered_report
+    assert '"INDEX.md"' in rendered_report
+    assert '"oracle/INDEX.md"' in rendered_report
+    assert 'indexing_status: "completed"' in rendered_report
 
 
 def test_indexing_uninitialized_clean_repo_runs_doctor_and_generates_config(
@@ -102,9 +111,9 @@ def test_indexing_uninitialized_clean_repo_runs_doctor_and_generates_config(
     assert result.exit_code == 0
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert (root / ".agents" / ".gitkeep").is_file()
-    assert (root / ".cmoc" / "gt" / "ar" / "config.json").is_file()
+    assert (root / ".cmoc" / "gt" / "config.json").is_file()
     assert (root / "INDEX.md").is_file()
-    assert (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").is_dir()
+    assert (root / ".cmoc" / "gu" / "log" / "sub_command").is_dir()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -171,7 +180,8 @@ def test_indexing_rejects_dirty_current_linked_worktree(
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "git 未コミット差分が存在します。" in result.stdout
+    assert result.stdout == ""
+    assert "git 未コミット差分が存在します。" in result.stderr
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert run_git(linked, "rev-parse", "HEAD").stdout.strip() == head_before
     assert not (linked / "INDEX.md").exists()
@@ -186,13 +196,15 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     config = cmoc_runtime.sync_config(root)
-    custom_model = CodexModelSpec(None, "CUSTOM-INDEXING-EFFICIENCY")
-    config.codex.model[ModelClass.EFFICIENCY] = custom_model
+    custom_call_config = CodexCallConfig("openai", "CUSTOM-INDEXING-MODEL", "low")
+    config.codex.agent_calls["build_indexing_index_entry_parameter"] = (
+        custom_call_config
+    )
     cmoc_runtime.write_config(
-        root / ".cmoc" / "gt" / "ar" / "config.json",
+        root / ".cmoc" / "gt" / "config.json",
         config,
     )
-    run_git(root, "add", ".cmoc/gt/ar/config.json")
+    run_git(root, "add", ".cmoc/gt/config.json")
     run_git(root, "commit", "-m", "customize indexing model")
     apply_worktree = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
     run_git(
@@ -204,7 +216,7 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
         str(apply_worktree),
         "HEAD",
     )
-    seen_models: list[CodexModelSpec] = []
+    seen_call_configs: list[CodexCallConfig] = []
 
     class FakeCodexResult:
         """Codex の structured output を返すテスト用 fake。"""
@@ -219,7 +231,9 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
         """Codex 実行へ渡された設定を記録して固定結果を返す fake。"""
-        seen_models.append(kwargs["config"].codex.model[ModelClass.EFFICIENCY])
+        seen_call_configs.append(
+            kwargs["config"].codex.agent_calls[parameter.agent_call_kind]
+        )
         assert kwargs["root"] == root
         assert parameter.agent_call_cwd == apply_worktree
         assert "cwd" not in kwargs
@@ -227,10 +241,10 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
 
     indexing_common.run_indexing_preflight(apply_worktree, fake_codex_exec)
 
-    assert seen_models
-    assert set(seen_models) == {custom_model}
+    assert seen_call_configs
+    assert set(seen_call_configs) == {custom_call_config}
     assert (apply_worktree / "INDEX.md").is_file()
-    assert (apply_worktree / ".cmoc" / "gt" / "ar" / "config.json").exists()
+    assert (apply_worktree / ".cmoc" / "gt" / "config.json").exists()
 
 
 def test_indexing_skips_codex_when_existing_hashes_are_fresh(
@@ -306,7 +320,10 @@ def test_commit_index_updates_rejects_git_diff_failure(
     root = make_repo(tmp_path)
     calls: list[tuple[list[str], bool]] = []
 
-    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    def fake_run_git(
+        args: list[str], git_cwd: Path, check: bool = True
+    ) -> CommandResult:
         """index commitのGit結果を固定し、diff失敗を再現する。"""
         calls.append((args, check))
         if args[0] == "add":
@@ -344,13 +361,13 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
         calls.append(update_root)
         raise AssertionError("dirty cmoc indexing must stop before updating INDEX.md")
 
-    monkeypatch.setattr(indexing_common, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "git 未コミット差分が存在します。" in result.stdout
-    assert "git 未コミット差分が存在します。" not in result.stderr
+    assert result.stdout == ""
+    assert "git 未コミット差分が存在します。" in result.stderr
     assert calls == []
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert not (root / "INDEX.md").exists()
@@ -360,10 +377,15 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
 def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_index(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """preflight が既存差分を保持しつつ INDEX.md だけを commit する。"""
+    """preflight が staged・unstaged 差分を保ち INDEX.md だけを commit する。"""
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
-    (root / "README.md").write_text("# repo\n\nchanged\n")
+    readme_path = root / "README.md"
+    readme_path.write_text("# staged change\n")
+    run_git(root, "add", "README.md")
+    readme_path.write_text("# unstaged change\n")
+    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
+    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
 
     def fake_update_indexes(
         update_root: Path, codex_exec: Callable[..., object] | None = None
@@ -384,4 +406,9 @@ def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_inde
         root, "show", "--name-only", "--pretty=", "HEAD"
     ).stdout.splitlines()
     assert committed_paths == ["INDEX.md"]
-    assert run_git(root, "status", "--short").stdout == " M README.md\n"
+    assert (
+        run_git(root, "diff", "--cached", "--", "README.md").stdout
+        == staged_diff_before
+    )
+    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
+    assert run_git(root, "status", "--short").stdout == "MM README.md\n"

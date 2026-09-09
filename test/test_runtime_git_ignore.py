@@ -2,17 +2,19 @@
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+- {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
 """
 
 import os
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from _git_support import make_repo, run_git
 
+import commons.runtime_git as runtime_git
 from cmoc_runtime import (
     CmocError,
     ensure_cmoc_ignored,
@@ -20,10 +22,11 @@ from cmoc_runtime import (
     is_git_ignored,
     is_untracked_git_ignored,
 )
+from commons.runtime_results import CommandResult
 
 
 def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
-    """cmoc/local が未 ignore の repo では literal ignore pattern を追加する。"""
+    """`.cmoc/gu` が未 ignore の repo では literal ignore pattern を追加する。"""
     root = make_repo(tmp_path)
 
     ensure_cmoc_ignored(root)
@@ -49,6 +52,24 @@ def test_ignore_checks_classify_literal_path_names(tmp_path: Path) -> None:
     assert is_untracked_git_ignored(root, path)
     assert is_git_ignored(root, magic_prefix_path)
     assert is_untracked_git_ignored(root, magic_prefix_path)
+
+
+def test_ignore_checks_respect_tracked_and_untracked_states(tmp_path: Path) -> None:
+    """tracked file は保持し、untracked file は ignore 状態に従って判定する。"""
+    root = make_repo(tmp_path)
+    ignored = root / "ignored.txt"
+    visible = root / "visible.txt"
+    ignored.write_text("ignored\n")
+    visible.write_text("visible\n")
+    (root / ".gitignore").write_text("ignored.txt\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "add", "-f", "ignored.txt")
+    run_git(root, "commit", "-m", "track ignored file")
+
+    assert is_git_ignored(root, ignored)
+    assert not is_untracked_git_ignored(root, ignored)
+    assert not is_git_ignored(root, visible)
+    assert not is_untracked_git_ignored(root, visible)
 
 
 @pytest.mark.parametrize(
@@ -92,6 +113,7 @@ def test_ensure_cmoc_ignored_rejects_non_file_info_exclude(tmp_path: Path) -> No
         ensure_cmoc_ignored(root)
 
 
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_ignore_checks_reject_non_file_global_exclude(tmp_path: Path) -> None:
     """global excludes が特殊 file でも git check-ignore を停止させない。"""
     root = make_repo(tmp_path)
@@ -106,6 +128,41 @@ def test_ignore_checks_reject_non_file_global_exclude(tmp_path: Path) -> None:
         ensure_cmoc_ignored(root)
 
 
+@pytest.mark.parametrize(
+    "checker",
+    [is_git_ignored, is_untracked_git_ignored],
+    ids=["index-aware", "untracked-aware"],
+)
+def test_ignore_checks_reject_check_ignore_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    checker: Callable[[Path, Path], bool],
+) -> None:
+    """check-ignore が判定不能なら未 ignore として分類しない。"""
+    root = make_repo(tmp_path)
+    path = root / "probe.txt"
+    path.write_text("probe\n")
+    original_run_git = runtime_git.run_git
+
+    def failing_check_ignore(
+        args: list[str], git_cwd: Path, check: bool = True
+    ) -> CommandResult:
+        """単一 path の check-ignore だけを失敗させる。"""
+        if args[:1] == ["check-ignore"]:
+            return CommandResult(
+                returncode=128,
+                stdout="",
+                stderr="simulated check-ignore failure",
+            )
+        return original_run_git(args, git_cwd, check)
+
+    monkeypatch.setattr(runtime_git, "run_git", failing_check_ignore)
+
+    with pytest.raises(CmocError, match="Git ignore 判定"):
+        checker(root, path)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_ignore_checks_reject_non_file_nested_gitignore(tmp_path: Path) -> None:
     """path 親 directory の特殊 .gitignore でも git check-ignore を停止させない。"""
     root = make_repo(tmp_path)
@@ -116,6 +173,22 @@ def test_ignore_checks_reject_non_file_nested_gitignore(tmp_path: Path) -> None:
     for checker in (is_git_ignored, is_untracked_git_ignored):
         with pytest.raises(CmocError, match="通常の file"):
             checker(root, source / "probe")
+
+
+def test_ignore_checks_do_not_inspect_ignored_symlink_target(
+    tmp_path: Path,
+) -> None:
+    """ignored symlink の参照先を ignore source として検査しない。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("*.link\n")
+    target = tmp_path / "outside"
+    target.mkdir()
+    (target / ".gitignore").mkdir()
+    link = root / "candidate.link"
+    link.symlink_to(target, target_is_directory=True)
+
+    for checker in (is_git_ignored, is_untracked_git_ignored):
+        assert checker(root, link)
 
 
 def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None:
@@ -181,10 +254,10 @@ def test_ensure_cmoc_ignored_in_exclude_rejects_symlinked_exclude(
     assert external.read_text() == "existing\n"
 
 
-def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_pattern(
+def test_ensure_cmoc_ignored_preserves_existing_pattern_and_runtime_state(
     tmp_path: Path,
 ) -> None:
-    """既存 pattern が有効でも root 固定 pattern を追記して表現を安定させる。"""
+    """既存 pattern を保ち、cmoc 管理 state の ignore 例外を維持する。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text(".cmoc/\n")
     run_git(root, "add", ".gitignore")
@@ -192,20 +265,17 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
 
     ensure_cmoc_ignored(root)
 
-    assert (root / ".gitignore").read_text() == (
-        ".cmoc/\n\n"
-        "!/.cmoc/\n"
-        "/.cmoc/*\n"
-        "!/.cmoc/gt/\n"
-        "/.cmoc/gt/*\n"
-        "!/.cmoc/gt/ar/\n"
-        "/.cmoc/gt/ar/*\n"
-        "!/.cmoc/gt/ar/config.json\n"
-        "!/.cmoc/gt/ar/realization/\n"
-        "/.cmoc/gt/ar/realization/*\n"
-        "!/.cmoc/gt/ar/realization/refactor/\n"
-        "/.cmoc/gt/ar/realization/refactor/*\n"
-        "!/.cmoc/gt/ar/realization/refactor/state.json\n"
-        "/.cmoc/gu/\n"
-    )
+    content = (root / ".gitignore").read_text()
+    assert ".cmoc/\n" in content
+    assert "/.cmoc/gu/\n" in content
+    for relative in (
+        ".cmoc/gt/config.json",
+        ".cmoc/gt/realization/refactor/state.json",
+    ):
+        not_ignored = subprocess.run(
+            ["git", "check-ignore", "--no-index", "-q", "--", relative],
+            cwd=root,
+            check=False,
+        )
+        assert not_ignored.returncode == 1
     assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"

@@ -1,22 +1,24 @@
 """TUI 起動直前の CLI 前処理の外部挙動を検証する。
 
-正本仕様: {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+正本仕様:
+- {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+- {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+- {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
 """
 
 from collections.abc import Iterator
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 from _cli_support import run_doctor, runner
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
-from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
 
 import commons.prompt_editor_input as prompt_editor_input_module
+import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.tui as tui_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from main import app
 
 
@@ -28,70 +30,36 @@ def reset_indexing_preflight() -> Iterator[None]:
     codex_preflight_module.disable_indexing_preflight()
 
 
-def test_editor_input_uses_canonical_text_and_keeps_timestamp_collisions(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """正本の初期値を使い、同じ timestamp の入力を上書きせず保持する。"""
-    timestamps = iter(
-        [
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000002000",
-        ]
-    )
-    opened: list[Path] = []
-    initial_texts: list[str] = []
-
-    monkeypatch.setattr(
-        prompt_editor_input_module,
-        "timestamp",
-        lambda: next(timestamps),
-    )
-    monkeypatch.setattr(
-        prompt_editor_input_module,
-        "_select_editor",
-        lambda: ["fake-editor"],
-    )
-
-    def fake_run(argv: list[str]) -> SimpleNamespace:
-        """editor subprocess の代わりに入力 file を作成する。"""
-        path = Path(argv[-1])
-        opened.append(path)
-        initial_texts.append(path.read_text(encoding="utf-8"))
-        path.write_text(f"input-{len(opened)}\n", encoding="utf-8")
-        return SimpleNamespace(returncode=0)
-
-    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
-
-    first_path, first_input = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path,
-        "- first automatic instruction",
-    )
-    second_path, second_input = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path,
-        "- second automatic instruction",
-    )
-
-    assert initial_texts == [
-        build_prompt_editor_input_initial_text("- first automatic instruction"),
-        build_prompt_editor_input_initial_text("- second automatic instruction"),
-    ]
-    assert first_path.name == "2026-06-27_10-00_00_000001000_orig.md"
-    assert second_path.name == "2026-06-27_10-00_00_000002000_orig.md"
-    assert first_path != second_path
-    assert first_input == "input-1"
-    assert second_input == "input-2"
-
-
 def test_tui_runs_editor_and_launches_codex_directly(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """編集済み prompt から追加 agent call なしで Codex TUI を起動する。"""
+    """既存差分を保ち、編集済み prompt から Codex TUI を直接起動する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
+    readme_path = root / "README.md"
+    readme_path.write_text("# staged change\n")
+    run_git(root, "add", "README.md")
+    readme_path.write_text("# unstaged change\n")
+    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
+    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
+    events: list[str] = []
+
+    real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
+
+    def record_run_doctor_preprocess(
+        target_root: Path,
+        *,
+        sync_refactor_entries: bool = True,
+    ) -> None:
+        """TUI invocation 内の doctor preprocess を記録して本来の処理へ委譲する。"""
+        events.append("doctor")
+        real_run_doctor_preprocess(
+            target_root,
+            sync_refactor_entries=sync_refactor_entries,
+        )
+
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_code = bin_dir / "code"
@@ -106,59 +74,122 @@ def test_tui_runs_editor_and_launches_codex_directly(
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    builder_calls: list[tuple[str, AgentCallParameter]] = []
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
+
+    real_build_parameter = tui_module.build_tui_launch_tui_parameter
+
+    def record_build_parameter(
+        original_prompt: str,
+    ) -> AgentCallParameter:
+        """skeleton 用と実行用の builder 呼び出しを記録する。"""
+        kind = (
+            "build-skeleton"
+            if original_prompt == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+            else "build-parameter"
+        )
+        events.append(kind)
+        parameter = real_build_parameter(original_prompt)
+        builder_calls.append((original_prompt, parameter))
+        return parameter
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         """TUI 起動 call を記録して生成パラメータを検証する。"""
+        events.append("tui")
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
-        assert parameter.model_class == ModelClass.FLAGSHIP
-        assert parameter.reasoning_effort == ReasoningEffort.MAX
+        assert kwargs["notification_command_name"] == "tui"
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
-        assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
-        assert "extra_read_paths" not in kwargs
+        assert parameter is builder_calls[1][1]
 
+    monkeypatch.setattr(
+        tui_module,
+        "enable_indexing_preflight",
+        lambda: events.append("enable"),
+    )
+    monkeypatch.setattr(
+        runtime_cli_module,
+        "run_doctor_preprocess",
+        record_run_doctor_preprocess,
+    )
+    monkeypatch.setattr(
+        tui_module,
+        "build_tui_launch_tui_parameter",
+        record_build_parameter,
+    )
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0
+    assert events == [
+        "enable",
+        "doctor",
+        "build-skeleton",
+        "build-parameter",
+        "tui",
+    ]
+    assert len(builder_calls) == 2
+    assert builder_calls[0][0] == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+    complete_prompt_skeleton = builder_calls[0][1].prompt
+    assert (
+        complete_prompt_skeleton.count(
+            prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+        )
+        == 1
+    )
     assert len(tui_calls) == 1
     orig_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_orig.md")
+        (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
     )
     assert len(orig_files) == 1
-    original_prompt = orig_files[0].read_text()
-    assert original_prompt.startswith(build_prompt_editor_input_initial_text(""))
-    complete_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
-    )
-    assert len(complete_files) == 1
-    complete_prompt = complete_files[0].read_text()
-    assert "# file read write rule - repo_write" in complete_prompt
-    assert "# oracle and realization basic" in complete_prompt
-    assert "# oracle standard" in complete_prompt
-    assert "# realization standard" in complete_prompt
-    assert "# oracle review standard" in complete_prompt
-    assert "# apply review standard" in complete_prompt
-    assert "# realization oracle reference rule" in complete_prompt
-    assert "# index entry standard" not in complete_prompt
+    editor_contents = orig_files[0].read_text()
+    assert editor_contents.startswith("<!--\n# このファイルの使い方")
+    assert '<cmoc_block id="prompt template">' in editor_contents
+    assert "# file R/W policy (repo_write)" in editor_contents
+    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
+    assert "remove me" in editor_contents
+    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
+    assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
+    complete_prompt = tui_calls[0][0].prompt
+    assert "# file R/W policy (repo_write)" in complete_prompt
+    for heading in (
+        "# oracle and realization basic",
+        "# oracle policy",
+        "# realization policy",
+        "# realization findings policy",
+        "# routing policy",
+    ):
+        assert heading in complete_prompt
+    for heading in (
+        "# oracle findings policy",
+        "# realization oracle reference policy",
+        "# index entry policy",
+    ):
+        assert heading not in complete_prompt
     assert '<cmoc_ref target="original_prompt"/>' in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt
     assert "remove me" not in complete_prompt
-    assert str(complete_files[0]) in tui_calls[0][0].prompt
+    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
+    assert builder_calls[1][0] == "# 依頼\n\nsrc を確認して必要なら直す"
+    assert readme_path.read_text() == "# unstaged change\n"
+    assert (
+        run_git(root, "diff", "--cached", "--", "README.md").stdout
+        == staged_diff_before
+    )
+    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
-    assert (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").is_dir()
+    assert (root / ".cmoc" / "gu" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
-def test_tui_saves_complete_prompt_in_linked_worktree(
+def test_tui_saves_editor_input_in_main_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """linked worktree 起動でも prompt と agent call context は main 側に置く。"""
+    """linked worktree 起動でも editor 記録と agent call context は main 側に置く。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -193,27 +224,21 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
-    assert "cwd" not in tui_kwargs
+    assert tui_kwargs["notification_command_name"] == "tui"
     assert parameter.agent_call_cwd == root.resolve()
     assert (
-        len(
-            list(
-                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
-                    "*_orig.md"
-                )
-            )
-        )
+        len(list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")))
         == 1
     )
-    complete_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
-    )
     assert not list(
-        (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
+        (linked / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md")
     )
-    assert len(complete_files) == 1
-    assert str(complete_files[0]) in parameter.prompt
-    assert "extra_read_paths" not in tui_kwargs
+    assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
+    complete_prompt = parameter.prompt
+    assert "linked worktree task" in complete_prompt
+    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
+    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
+    assert not list((linked / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
 
 
 def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
@@ -222,9 +247,6 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
 ) -> None:
     """repository と linked worktree の両方で `.cmoc` ignore を保証する。"""
     root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
-    config_path.parent.mkdir(parents=True)
-    config_path.write_text("{}\n")
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-tui-ignore", str(linked), "HEAD")
     monkeypatch.chdir(linked)
@@ -234,10 +256,8 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     write_python_executable(
         fake_code,
         [
-            "import pathlib, sys",
+            "import sys",
             "assert sys.argv[1:-1] == ['--wait']",
-            "path = pathlib.Path(sys.argv[-1])",
-            "path.write_text(path.read_text() + '\\nlinked ignore task\\n')",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -251,33 +271,16 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
     assert (
-        len(
-            list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))
-        )
-        == 1
+        len(list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))) == 1
     )
     assert (
-        len(
-            list(
-                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
-                    "*_orig.md"
-                )
-            )
-        )
+        len(list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")))
         == 1
     )
-    assert (
-        len(
-            list(
-                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
-                    "*_cmpl.md"
-                )
-            )
-        )
-        == 1
-    )
+    assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     assert not list(
-        (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
+        (linked / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md")
     )
+    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert run_git(root, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""

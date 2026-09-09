@@ -1,67 +1,56 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約するデータクラス群。並列数、Codex のモデル・provider・reasoning 設定、oracle review の各ループ上限を扱い、JSON/TOML 設定値や永続化対象の構造を定義する。
+- 開発対象リポジトリごとに変わりうる cmoc 設定をデータクラスとして定義し、並列数、Codex CLI の model provider・agent call 設定、ファイルアクセス規定違反時のリカバリ試行回数を扱う設定モデル。
+- Codex CLI 設定の構造や既定値、agent call 種別ごとのモデル・reasoning effort、provider-local 設定を確認・変更するときの入口。設定は JSON/TOML 共通値として表現でき、永続化対象の設定構造を確認する場合にも読む。
 
 ## Read this when
-- CmocConfig の項目、デフォルト値、Codex CLI 向け設定、oracle review のループ回数を変更・参照するとき
-- 設定の JSON シリアライズ対象や model provider 設定の型を確認するとき
+- CmocConfig、CmocConfigCodex、CodexCallConfig、CodexModelProviderConfig のフィールドや既定値を確認・変更するとき。
+- agent call 種別ごとの Codex CLI 呼び出し設定、model provider 設定、並列数、リカバリ試行回数の扱いを調べるとき。
+- config.json の生成・同期や人間による調整に対応する設定モデルの構造を確認するとき。
 
 ## Do not read this when
-- CLI コマンドの実行フローや設定ファイルの生成・同期処理を調べるとき
-- ModelClass や ReasoningEffort 自体の定義・意味を調べるときは、直接その定義元を読む
+- Codex CLI 呼び出し処理そのものや agent call の実行フローを調べる場合は、呼び出し実装側を直接読む。
+- config.json の実際の永続化・生成処理や doctor コマンドの挙動だけを確認する場合は、その処理を定義する対象を直接読む。
+- 設定値を利用する個別機能の動作だけを調べ、設定モデルのフィールドや既定値を確認する必要がない場合。
 
 ## hash
-- e7003c50485257f7fa16a0acaaf5ce70905c423e51d5a4c28ab9ab99113bc4eb
+- 5b8eb2882961f95f73f811c3eaa5648cab07bc46ccbadd7156a8ce22c9a739d8
 
 # `path_model.py`
 
 ## Summary
-- ルートパスプレースホルダと、agent call の cwd から repo/work/run root を導出するパスモデルを定義する。実パスとの相互変換、root 探索、call-scoped context の構築を扱う。パス解決や root placeholder、worktree 境界の実装・変更を確認するときの入口。
+- cmoc のパス表記とルートプレースホルダを定義する基盤モデルです。
+- agent call の cwd から worktree root と main repository root を導出し、呼び出し全体で共有するパスコンテキストを提供します。
+- プレースホルダを絶対パスへ解決する処理と、絶対パスをプレースホルダ表記へ変換する処理を扱います。
+- Git metadata や cmoc の配置を探索して、repository・worktree・run の各ルートを特定します。
 
 ## Read this when
-- root placeholder の追加・変更や、placeholder を含むパスの実体解決を調査するとき
-- agent call の cwd、work root、repository root、run root の導出規則を確認するとき
-- 実パスと placeholder 表記の変換、worktree 探索、パス入力の検証を変更・テストするとき
+- agent call のパスコンテキスト、worktree root、main repository root の導出規則を確認するとき。
+- {{cmoc-root}}、{{repo-root}}、{{run-root}}、{{work-root}} の解決または変換処理を変更・調査するとき。
+- プレースホルダ付き相対パスの入力制約や、Git worktree metadata に基づくルート探索の挙動を確認するとき。
 
 ## Do not read this when
-- CLI の具体的なサブコマンドや agent call prompt の生成処理だけを調査するとき
-- パスモデルを利用する個別機能の挙動だけを確認し、root 解決や placeholder 変換自体を扱わないとき
+- 個別の CLI 機能や realization の実装責務だけを確認したいとき。
+- パスモデルを介さない一般的なファイル操作や、対象モジュール以外の仕様を直接調べるとき。
 
 ## hash
-- 8660330a40e76a5e7acf35ec03434282d0e05c4569a0319712e061d391fc848b
-
-# `standard.py`
-
-## Summary
-- 規範（Standard）の定義モデルと、規範を構造化文書（StructDoc）へ変換する処理を提供する。Standard は題名、背景、要求、任意の判断例を保持し、Requirement は要求のラベルと本文を表す。
-
-## Read this when
-- Standard や Requirement のデータ構造・入力検証を確認するとき
-- 規範定義を StructDoc 形式へ変換する処理を確認するとき
-- INDEX.md エントリーなど、規範の適用形式を調査するとき
-
-## Do not read this when
-- 個別の規範本文や適用対象の要件を確認したいとき
-- StructDoc 自体の仕様や実装を確認したいときは、まず StructDoc の定義を直接読む場合
-- 規範を利用する呼び出し側の処理だけを調査するとき
-
-## hash
-- dc88f4650fb393d33b5b609ee0a739f9960737fd8fc42fd7cda51f037e1dab00
+- 7172c36b342a5b115ebddf8f4731b459a305d57195f24b2e2af448f2caabb628
 
 # `struct_doc.py`
 
 ## Summary
-- 階層構造を持つ文章を Markdown にレンダリングするクラスと補助関数を定義する。見出し深度、cmoc_block 参照の検証、コードブロック、空行、インデント正規化を扱う。
+- 階層化した文章要素（見出し、タグ付きブロック、コードブロック、構造化ポリシー）を保持し、Markdownへレンダリングするクラスとヘルパー関数を扱う。
+- Markdown出力の見出し深度、参照タグ、コードフェンス、空行整理、三重引用文字列のインデント正規化を確認するための入口。
 
 ## Read this when
-- 構造化文章の生成・編集・Markdown レンダリングを変更するとき
-- StructDoc、StructBlock、StructCodeBlock のデータ構造や cmoc_ref 検証を確認するとき
-- Markdown 出力の見出し深度、空行、コードブロック、インデント処理を確認するとき
+- 構造化された文書ノードの型や保持形式を変更・利用するとき。
+- SDHeader、SDTagBlock、SDCodeBlock、SDPolicyのMarkdown変換仕様を確認するとき。
+- コード本文中のバッククォート、ポリシー区分、空行やインデントのレンダリング挙動を調査するとき。
 
 ## Do not read this when
-- この構造化文章レンダラーの挙動やデータ構造に関係しない処理を変更・調査するとき
-- 単に他の oracle 文書や実装の仕様を確認したいだけで、Markdown レンダリング処理を通らないとき
+- Markdown以外の出力形式や、文書構造を生成する呼び出し側の仕様を確認したいとき。
+- 対象となる個別のポリシー本文や文書テンプレート自体を直接確認すれば足りるとき。
 
 ## hash
-- a920e827d70debca2724d15ef4c6b998c684a458b2d73d79f8ec8cd9ebeb4b98
+- 82108c5a2e45e6a12ccd0fad2e797635f574d6aadbf65031d920a3e3872857f8

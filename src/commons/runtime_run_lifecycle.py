@@ -8,10 +8,12 @@ INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を�
 責務である。分割すると、run branch の不変条件と差分許可範囲を複数 file で追う必要が
 生じるため、現状は editing run lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import os
+import stat
 from collections.abc import Collection
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -26,6 +28,8 @@ from .runtime_git import (
     current_branch,
     delete_branch,
     head_commit,
+    is_git_ignored,
+    is_oracle_file_path,
     is_realization_file_path,
     literal_pathspec,
     remove_worktree,
@@ -45,6 +49,7 @@ from .runtime_run import (
     expected_run_worktree,
     read_run_process_id,
     run_lifecycle_lock,
+    run_process_id_path,
     worktree_for_branch,
     worktree_for_branch_optional,
     write_run_process_id,
@@ -145,6 +150,16 @@ def start_editing_run(kind: str) -> EditingRunContext:
     with run_lifecycle_lock(repository, session_id):
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # editor 入力中や並行 process の間に状態が変わり得るため lock 内で再検査する。
+        locked_branch = current_branch(session_worktree)
+        if locked_branch != session_branch:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # lock 外で確認した session branch と fork 対象が変わった場合、別
+            # branch の HEAD から run を作成して元の state を更新しない。
+            raise CmocError(
+                "editing run の current branch が lock 内で変更されました。",
+                ["対象の session branch を確認してから再実行してください。"],
+                f"expected: {session_branch}\ncurrent: {locked_branch}",
+            )
         _, _, state = load_state_for_branch(repository, session_branch)
         if state.session.state != "active" or state.run.state != "ready":
             raise CmocError(
@@ -155,6 +170,18 @@ def start_editing_run(kind: str) -> EditingRunContext:
         require_clean_worktree(session_worktree)
         fork_commit = head_commit(session_worktree)
         run_branch, run_worktree = new_run_target(repository, session_id)
+        published_context = EditingRunContext(
+            repo=repository,
+            session_worktree=session_worktree,
+            session_id=session_id,
+            state_path=path,
+            session_branch=session_branch,
+            session_fork_commit=session_fork_commit,
+            kind=kind,
+            run_branch=run_branch,
+            run_fork_commit=fork_commit,
+            run_worktree=run_worktree,
+        )
         created = False
         published = False
         try:
@@ -174,8 +201,13 @@ def start_editing_run(kind: str) -> EditingRunContext:
             write_state(path, state)
             published = True
             write_run_process_id(repository, session_id, os.getpid())
-        except BaseException:
+        except BaseException as exc:
             if published:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # state を公開した後の CmocError も workload 側がこの run を
+                # report できるよう、競合時の CmocError と区別できる context を
+                # 例外へ付加する。
+                setattr(exc, "_published_editing_run_context", published_context)
                 state.run.state = "error"
                 write_state(path, state)
             else:
@@ -195,18 +227,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                 if branch_exists(repository, run_branch):
                     delete_branch(repository, run_branch, force=True)
             raise
-    return EditingRunContext(
-        repo=repository,
-        session_worktree=session_worktree,
-        session_id=session_id,
-        state_path=path,
-        session_branch=session_branch,
-        session_fork_commit=session_fork_commit,
-        kind=kind,
-        run_branch=run_branch,
-        run_fork_commit=fork_commit,
-        run_worktree=run_worktree,
-    )
+    return published_context
 
 
 def resolve_active_run(
@@ -290,6 +311,12 @@ def recover_started_run(kind: str) -> EditingRunContext | None:
     if context.kind != kind:
         return None
     tracked = read_run_process_id(context.repo, context.session_id)
+    tracking_path = run_process_id_path(context.repo, context.session_id)
+    if tracked is None and (tracking_path.exists() or tracking_path.is_symlink()):
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # 壊れた tracking を「未作成」と区別できないまま recovery すると、別
+        # process の active run をこの invocation が回収し得るため fail closed にする。
+        return None
     if tracked is not None and (
         tracked.process_id != os.getpid()
         or tracked.start_time is None
@@ -312,7 +339,12 @@ def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
             or state.run.kind != context.kind
             or state.run.branch != context.run_branch
             or state.run.fork_commit != context.run_fork_commit
+            or state.run.state not in {"running", run_state}
         ):
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # terminal state の公開後に遅延した cleanup が別の terminal state を
+            # 上書きしないよう、running からの一方向遷移として検査する。同じ
+            # state の再適用だけは、state write 直後の中断からの recovery に許可する。
             raise CmocError(
                 "editing run の state が実行中に変更されました。",
                 ["session state と run branch を確認してください。"],
@@ -372,7 +404,8 @@ def worktree_change_paths(
     include_rename_sources: bool = False,
 ) -> list[str]:
     """未 commit 差分の変更対象を repository 相対 path で返す。"""
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/branch_model.md の
+    # 「`{{cmoc-managed-branch}}` 上で～」の定義
     # report 用の既定値は rename 後の path だけを返し、差分の有無を判定する
     # 呼び出し側だけが rename 元も明示的に含める。
     paths = status_path_statuses(
@@ -444,7 +477,8 @@ def tree_changes(worktree: Path, base: str, end: str = "HEAD") -> list[GitChange
 
 def flattened_change_paths(changes: list[GitChange]) -> list[str]:
     """managed branch の変更 file path を重複なしで返す。"""
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/branch_model.md の
+    # 「`{{cmoc-managed-branch}}` 上で～」の定義
     # 削除 path と rename 元 path は変更対象の集合に含めず、rename 後だけを残す。
     paths: set[str] = set()
     for change in changes:
@@ -487,6 +521,7 @@ def unexpected_session_paths(
     session_worktree: Path,
     changes: list[GitChange],
     *,
+    base: str,
     ignored_paths: Collection[str] = (),
 ) -> list[str]:
     """run 開始後の session branch にある想定外 path を返す。"""
@@ -498,46 +533,12 @@ def unexpected_session_paths(
             for path in change.paths
             if path not in ignored
             and not (
-                _is_oracle_path(path)
-                or _is_index_path(path)
+                _is_oracle_change_path(session_worktree, base, path)
+                or is_generated_index_path(session_worktree, path, base=base)
                 or is_root_memo(session_worktree, session_worktree / path)
             )
         }
     )
-
-
-def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
-    """両端のいずれかが oracle file である rename 対応 raw diff を返す。"""
-    candidates = sorted(
-        {
-            path
-            for change in tree_changes(worktree, base, end)
-            if any(
-                _is_oracle_tree_file(worktree, commit, path)
-                for commit in (base, end)
-                for path in change.paths
-            )
-            for path in change.paths
-        }
-    )
-    if not candidates:
-        return ""
-    # Git は `--` の後も pathspec の wildcard を解釈するため、literal pathspec を使う。
-    # これにより、1つの oracle filename が diff の対象を抑制・拡張することを防ぐ。
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    literal_candidates = [literal_pathspec(path) for path in candidates]
-    return run_git(
-        [
-            "diff",
-            "--binary",
-            "--find-renames",
-            base,
-            end,
-            "--",
-            *literal_candidates,
-        ],
-        worktree,
-    ).stdout
 
 
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
@@ -569,7 +570,7 @@ def _is_agent_expected_path(
     branch: str,
 ) -> bool:
     """path が workload agent に許可された realization file か判定する。"""
-    if kind in {"realization_apply", "realization_refactor"}:
+    if kind in {"realization_apply", "realization_refactor", "feedback_report"}:
         return is_realization_file_path(root, root / path, branch=branch)
     return False
 
@@ -582,9 +583,11 @@ def _is_run_expected_path(
     fork_commit: str,
 ) -> bool:
     """path が run branch の管理対象差分か判定する。"""
-    if _is_index_path(path):
+    if is_generated_index_path(root, path, base=fork_commit):
         return True
-    if kind == "realization_refactor" and _is_refactor_state_path(root, path):
+    if kind in {"realization_refactor", "feedback_report"} and _is_refactor_state_path(
+        root, path
+    ):
         return True
     if _is_agent_expected_path(root, kind, path, branch):
         return True
@@ -595,7 +598,7 @@ def _is_run_expected_path(
 
 
 def _is_oracle_path(path: str) -> bool:
-    """repository 相対 path が INDEX/AGENTS 以外の oracle file か判定する。"""
+    """repository 相対 path が oracle file 候補の場所か判定する。"""
     parts = Path(path).parts
     return (
         bool(parts)
@@ -609,12 +612,16 @@ def _is_oracle_path(path: str) -> bool:
 
 
 def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
-    """commit tree の path が oracle の blob entry か判定する。"""
+    """commit tree の path が oracle の regular-file entry か判定する。"""
     if not _is_oracle_path(path):
         return False
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    # raw diff の対象は両端で定義上の oracle file だった path に限るため、
-    # directory や Gitlink の tree entry は file として扱わない。
+    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md
+    # 削除・移動前の oracle 判定でも directory や Gitlink は file と扱わない。
+    return _is_regular_tree_file(worktree, commit, path)
+
+
+def _is_regular_tree_file(worktree: Path, commit: str, path: str) -> bool:
+    """commit tree の path が regular file entry か判定する。"""
     entries = run_git(
         [
             "ls-tree",
@@ -629,19 +636,66 @@ def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
     for entry in entries:
         metadata, separator, entry_path = entry.partition("\t")
         metadata_fields = metadata.split()
-        if (
+        if not (
             separator
             and entry_path == path
             and len(metadata_fields) >= 2
             and metadata_fields[1] == "blob"
         ):
+            continue
+        try:
+            entry_mode = int(metadata_fields[0], 8)
+        except (IndexError, ValueError):
+            continue
+        if stat.S_ISREG(entry_mode):
             return True
     return False
 
 
-def _is_index_path(path: str) -> bool:
-    """repository 相対 path が INDEX.md か判定する。"""
-    return Path(path).name == "INDEX.md"
+def _is_oracle_change_path(worktree: Path, base: str, path: str) -> bool:
+    """change path が現在または fork 時点の oracle regular file か判定する。"""
+    candidate = worktree / path
+    if candidate.exists() or candidate.is_symlink():
+        return is_oracle_file_path(worktree, candidate)
+    return _is_oracle_tree_file(worktree, base, path)
+
+
+def is_generated_index_path(
+    root: Path,
+    path: str,
+    *,
+    base: str | None = None,
+) -> bool:
+    """cmoc が indexable directory に生成する INDEX.md か判定する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # 許可対象は任意の basename ではなく、indexing が実際に配置できる path に
+    # 限定する。hidden directory、symlink、git ignore 対象、root memo は indexable
+    # ではない。
+    relative = Path(path)
+    if relative.name != "INDEX.md":
+        return False
+    if any(part.startswith(".") for part in relative.parts[:-1]):
+        return False
+    candidate = root / relative
+    ancestor = root
+    for part in relative.parts[:-1]:
+        ancestor /= part
+        if ancestor.is_symlink():
+            return False
+    if candidate.is_symlink():
+        return False
+    if candidate.exists() and not candidate.is_file():
+        return False
+    parent = candidate.parent
+    if parent.exists() and not parent.is_dir():
+        return False
+    # 削除・rename 元では現在の parent が消えているため、fork tree の regular
+    # INDEX.md を fallback として許可する。{{work-root}}/oracle/doc/app_spec/indexing.md
+    if not parent.exists() and (
+        base is None or not _is_regular_tree_file(root, base, relative.as_posix())
+    ):
+        return False
+    return not is_root_memo(root, parent) and not is_git_ignored(root, parent)
 
 
 def _is_refactor_state_path(root: Path, path: str) -> bool:

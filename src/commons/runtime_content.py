@@ -1,3 +1,5 @@
+"""内容ハッシュの計算・保存と binary file の粗い判定を提供する。"""
+
 import hashlib
 import os
 import tempfile
@@ -7,10 +9,9 @@ from pathlib import Path
 def file_sha256(path: Path) -> str:
     """ファイル内容の SHA-256 digest を返す。
 
-    Git が保持する symlink の内容はリンク先 path なので、リンク先を追跡せず
-    その文字列を hash する。{{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    が symlink を oracle/realization file として分類するため、dangling symlink
-    も state 同期で扱える必要がある。
+    {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md の
+    「分類結果」では regular file だけが state 同期対象になる。symlink を扱う
+    他の caller では、link 先を追跡せず Git が保持する link 文字列を hash する。
     """
     content = os.fsencode(os.readlink(path)) if path.is_symlink() else path.read_bytes()
     return hashlib.sha256(content).hexdigest()

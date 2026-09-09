@@ -2,19 +2,14 @@
 # cmoc config
 
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
-- `CmocConfig` は `{{work-root}}/.cmoc/gt/ar/config.json` として永続化される
+- `CmocConfig` は `{{work-root}}/.cmoc/gt/config.json` として永続化される
 - `CmocConfig` を json にシリアライズする際、メンバーの順序は保持される
-- Enum 系を継承したクラスのインスタンスは value 化して json に保存する
-    - e.g. `ModelClass.MAINSTREAM` --> `mainstream`
-- `{{work-root}}/.cmoc/gt/ar/config.json` は `cmoc doctor` によって生成・同期される
-- `{{work-root}}/.cmoc/gt/ar/config.json` は人間によって編集・調整される
+- `{{work-root}}/.cmoc/gt/config.json` は `cmoc doctor` によって生成・同期される
+- `{{work-root}}/.cmoc/gt/config.json` は人間によって編集・調整される
 """
 
 # std
 from dataclasses import dataclass, field
-
-# cmoc
-from oracle.acp_builder.basic import ModelClass, ReasoningEffort
 
 # JSON と TOML の両方で表現できる設定値
 type JsonTomlValue = (
@@ -31,6 +26,20 @@ class CodexModelProviderConfig:
 
 
 @dataclass(frozen=True)
+class CodexCallConfig:
+    """一つの agent call 種別から各 Codex call へ直接渡す設定。"""
+
+    # model provider ID
+    model_provider: str
+
+    # Model 名
+    model: str
+
+    # Reasoning Effort 名
+    reasoning_effort: str
+
+
+@dataclass(frozen=True)
 class CmocConfig:
     """
     cmoc の設定 (config) を集約したクラス
@@ -42,22 +51,6 @@ class CmocConfig:
     # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
-    # `cmoc oracle review` サブコマンドの挙動設定
-    oracle_review: "CmocConfigOracleReview" = field(
-        default_factory=lambda: CmocConfigOracleReview()
-    )
-
-
-@dataclass(frozen=True)
-class CodexModelSpec:
-    """Codex CLI 上のモデル指定"""
-
-    # model provider ID。None の場合は Codex CLI の既定値を使う
-    model_provider: str | None
-
-    # モデル名
-    model: str
-
 
 @dataclass(frozen=True)
 class CmocConfigCodex:
@@ -66,51 +59,107 @@ class CmocConfigCodex:
     """
 
     # model provider ID --> provider-local な Codex config
-    model_providers: dict[str, CodexModelProviderConfig] = field(default_factory=dict)
+    model_providers: dict[str, CodexModelProviderConfig] = field(
+        default_factory=lambda: {"openai": CodexModelProviderConfig()}
+    )
 
-    # `ModelClass` --> Codex CLI が受理可能な Model 名
+    # `AgentCallParameter.agent_call_kind` --> Codex CLI へ直接渡す設定
     # NOTE
-    #   モデル名の未定義は禁止
-    #   モデル名は case sensitive なので注意
-    model: dict[ModelClass, CodexModelSpec] = field(
+    #   ベンチマークスコア上、GPT-5.6 Astra は xhigh, max に知能差はほとんど無いが、料金差はきっちりある
+    #   個別ベンチスコアで見ても、ほとんど横並び
+    #   よって、この設定ファイル内の選択基準的には GPT-5.6 Astra xhigh を最高品質とみなす
+    #   コスパを重視るすなら high に落としても良い
+    agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
-            ModelClass.MAINSTREAM: CodexModelSpec(None, "gpt-5.6-terra"),
-            ModelClass.FLAGSHIP: CodexModelSpec(None, "gpt-5.6-sol"),
-            ModelClass.EFFICIENCY: CodexModelSpec(None, "gpt-5.6-luna"),
-            ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.4-mini"),
+            # NOTE merge 結果を守るため、品質が最優先
+            "build_session_join_conflict_resolution_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="xhigh",
+            ),
+            # NOTE
+            #   oracle file に影響を与えるので品質が重要
+            #   TUI で人間とターンを回すので品質・速度が重要
+            "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="xhigh",
+            ),
+            # NOTE oracle file に影響を与えるので品質が重要
+            "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="xhigh",
+            ),
+            # NOTE oracle file に影響を与えるので品質が重要
+            "build_oracle_edit_reduction_launch_exec_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="xhigh",
+            ),
+            # oracle --> realization のメインルート
+            # NOTE
+            #   大規模な修正になる可能性に備えて ultra にしたら、一生収束しない大事故が発生した
+            #   GPT の事故調査報告によれば、修正が別の修正を呼ぶループに入ったっぽい
+            #   元々存在する実装や修正のプランの筋が良くなくて、AIがメンテ出来る汚さの限界付近に居るのかも
+            #   実装タスクはテストによる機械的検証が可能だが、機械的検証は「今回の実装が将来に禍根を残す可能性」までは見てくれない
+            #   よって、結論としては品質が重要
+            "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="xhigh",
+            ),
+            # NOTE
+            #   報告１つ毎に呼ぶ関係でコストが嵩みやすい
+            #   調査結果の正しさを機械的検証出来ないので、調査の網羅性は大事
+            #   Luna max しか選べない
+            "build_feedback_remediate_issue_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            # NOTE
+            #   issue の意味論的一致判定は比較的難易度が低いと予想して、まずは Luna で様子を見る
+            #   実際の feedback report が冗長気味なら Astra に上げる
+            "build_feedback_normalize_issue_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            # NOTE TUI で人間とターンを回すので品質が重要
+            "build_tui_launch_tui_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="xhigh",
+            ),
+            # NOTE
+            #   ファイル単位処理なので呼び出し回数が非常に多く、その分コストが掛かる
+            #   よって、コスパに優れる Luna しか選べない
+            "build_realization_refactor_fork_file_review_and_fix_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-5.6-luna",
+                reasoning_effort="max",
+            ),
+            # NOTE 単純な要約タスクなので Luna で良い
+            "build_realization_refactor_fork_change_summary_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-5.6-luna",
+                reasoning_effort="medium",
+            ),
+            # NOTE 呼び出し回数が非常に多い単純な要約タスクなので、Luna しか選べない。
+            "build_indexing_index_entry_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-5.6-luna",
+                reasoning_effort="low",
+            ),
+            # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
+            "build_quota_availability_probe_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-5.6-luna",
+                reasoning_effort="low",
+            ),
         }
     )
 
-    # `ReasoningEffort` --> Codex CLI が受理可能な Reasoning Effort 名
-    reasoning_effort: dict[ReasoningEffort, str] = field(
-        default_factory=lambda: {
-            ReasoningEffort.LOW: "low",
-            ReasoningEffort.MEDIUM: "medium",
-            ReasoningEffort.HIGH: "high",
-            ReasoningEffort.XHIGH: "xhigh",
-            ReasoningEffort.MAX: "max",
-        }
-    )
-
-    # ファイルアクセス規則違反時のリカバリ試行回数
+    # ファイルアクセス規定違反時のリカバリ試行回数
     num_try_falv_recovery: int = field(default=1)
-
-
-@dataclass(frozen=True)
-class CmocConfigOracleReview:
-    """
-    `cmoc oracle review` サブコマンドの挙動に関する設定を集約したクラス
-    """
-
-    # 所見リスト列挙ループの上限回数
-    num_enumerate_findings_loop: int = field(default=2)
-
-    # 所見リストマージループの上限回数
-    num_merge_findings_loop: int = field(default=2)
-
-    # 所見リスト検証ループの上限回数
-    # NOTE
-    #   検証ループは収束性が無く、無限に理由を追記し続ける傾向がある（これは現在の仕様上しょうがない）
-    #   よってこのループ回数は「judge 前に advocate/challenger にどれだけ議論させるかの予算」という意味合いを持つ。
-    #   生成される理由の妥当性もわからないので、１度だけ反論の機会を与えるという意味でループ数 2 としている。
-    num_validate_findings_loop: int = field(default=2)

@@ -1,15 +1,16 @@
 # `oracle`
 
 ## Summary
-- 対象ディレクトリの内容を確認し、用途別の agent call パラメータ構築と関連する prompt・設定実装への入口を示すルーティング情報です。
+- AI コーディングエージェント呼び出しの共通設定、用途別 builder、prompt 構築、入力スキーマを扱う実装群への入口。
+- quota probe、indexing、feedback、oracle・realization・session・TUI などの agent call 構築や、共通の prompt・Structured Output・作業環境設定を確認できる。
 
 ## Read this when
-- oracle の agent call パラメータ構築、INDEX.md エントリー生成、oracle・realization 関連の prompt builder 実装、session join、TUI 起動の処理を調査・変更するとき。
+- agent call の共通パラメータ、アクセスモード、prompt、Structured Output、cwd、editor input handoff、または indexing preflight を調べるとき。
+- 用途別の agent call builder や、agent 向け prompt・エディタ入力の構築経路を探すとき。
 
 ## Do not read this when
-- 実際の処理本体や差分適用、競合解消、git 操作を調査するとき。
-- 共通 prompt 構築、パスコンテキスト、設定・構造化文書レンダリングなど、下位の共通実装を直接確認すべきとき。
-- 個別の構造化出力フィールド定義や特定の oracle 文書本文だけを確認するとき。
+- 特定用途の prompt、出力契約、入力スキーマの詳細だけを確認したいときは、該当する下位対象を直接読む。
+- Codex CLI の実行処理、フィードバック送信処理、oracle・realization の具体的な内容や編集手順を調べるとき。
 
 ## hash
-- d4b31bc51a2e86acf8e37bdd9545cf73a3f4ad34e881a5776349ae0f627d3784
+- 38beea4879353cedd902bea8ee616ce2156e229752994451794d93df126b72d3

@@ -5,16 +5,20 @@ hash 検証、書き込み、commit は同じ index plan・lock・Codex context 
 責務である。分割すると、深さ順更新と entry の鮮度不変条件を複数 file で追う必要が
 生じるため、現状は indexing lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import fcntl
+import os
+import stat
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import copy_context
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal, TypedDict, cast
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -38,6 +42,12 @@ from .runtime_results import CodexExecCallable
 CodexExec = CodexExecCallable
 
 
+class _IndexEntry(TypedDict):
+    summary: list[str]
+    read_this_when: list[str]
+    do_not_read_this_when: list[str]
+
+
 @dataclass
 class _IndexDirectoryPlan:
     """一つのdirectoryで再利用または生成するINDEX entryの計画。"""
@@ -45,6 +55,18 @@ class _IndexDirectoryPlan:
     directory: Path
     entries: list[str | None]
     missing_children: list[tuple[int, Path, str]]
+
+
+_IndexFileKind = Literal["absent", "file", "symlink", "other"]
+
+
+@dataclass(frozen=True)
+class _IndexFileSnapshot:
+    """INDEX.md の更新前状態を復元するための最小 snapshot。"""
+
+    kind: _IndexFileKind
+    content: bytes | str | None = None
+    mode: int | None = None
 
 
 def enable_indexing_preflight() -> None:
@@ -110,9 +132,36 @@ def update_indexes(
     root: Path, codex_exec: CodexExecCallable | None = None
 ) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
-    config_root = root
     dirs = indexable_directories(root)
     dirs.append(root)
+    # {{work-root}}/oracle/doc/app_spec/indexing.md
+    # 深い directory の更新後に後続 entry が失敗しても、standalone indexing の
+    # clean worktree precondition を壊さず、同じ command を再実行できるようにする。
+    snapshots: dict[Path, _IndexFileSnapshot] = {}
+    try:
+        return _update_indexes(root, dirs, codex_exec, snapshots)
+    except BaseException as error:
+        try:
+            _restore_index_files(snapshots)
+        except Exception as restore_error:
+            raise CmocError(
+                "INDEX.md 更新失敗後の復元にも失敗しました。",
+                [
+                    "INDEX.md と Git の状態を確認し、復元できない path を手動で戻してから再実行してください。"
+                ],
+                f"original error: {error!r}\nrestore error: {restore_error!r}",
+            ) from error
+        raise
+
+
+def _update_indexes(
+    root: Path,
+    dirs: list[Path],
+    codex_exec: CodexExecCallable | None,
+    snapshots: dict[Path, _IndexFileSnapshot],
+) -> list[Path]:
+    """更新前 snapshot の下で INDEX.md を深さ順に再生成する。"""
+    config_root = root
     updated: list[Path] = []
     dirs_by_depth: dict[int, list[Path]] = {}
     for directory in dirs:
@@ -173,9 +222,50 @@ def update_indexes(
                 content += "\n"
             index_path = plan.directory / "INDEX.md"
             if _read_existing_index_content(index_path) != content:
+                snapshots.setdefault(index_path, _capture_index_file(index_path))
                 _write_index_file(index_path, content)
                 updated.append(index_path)
     return updated
+
+
+def _capture_index_file(index_path: Path) -> _IndexFileSnapshot:
+    """INDEX.md の file 種別、内容、mode を取得する。"""
+    try:
+        file_stat = index_path.lstat()
+    except FileNotFoundError:
+        return _IndexFileSnapshot("absent")
+    if stat.S_ISREG(file_stat.st_mode):
+        return _IndexFileSnapshot(
+            "file",
+            content=index_path.read_bytes(),
+            mode=stat.S_IMODE(file_stat.st_mode),
+        )
+    if stat.S_ISLNK(file_stat.st_mode):
+        return _IndexFileSnapshot("symlink", content=os.readlink(index_path))
+    return _IndexFileSnapshot("other")
+
+
+def _restore_index_files(
+    snapshots: dict[Path, _IndexFileSnapshot],
+) -> None:
+    """INDEX.md を更新開始時の file 状態へ戻す。"""
+    for index_path, snapshot in snapshots.items():
+        current = _capture_index_file(index_path)
+        if current == snapshot:
+            continue
+        if current.kind == "other" or snapshot.kind == "other":
+            raise OSError(f"cannot restore non-regular INDEX.md: {index_path}")
+        if current.kind != "absent":
+            index_path.unlink()
+        if snapshot.kind == "file":
+            if not isinstance(snapshot.content, bytes) or snapshot.mode is None:
+                raise OSError(f"invalid regular INDEX.md snapshot: {index_path}")
+            index_path.write_bytes(snapshot.content)
+            index_path.chmod(snapshot.mode)
+        elif snapshot.kind == "symlink":
+            if not isinstance(snapshot.content, str):
+                raise OSError(f"invalid symlink INDEX.md snapshot: {index_path}")
+            index_path.symlink_to(snapshot.content)
 
 
 def _plan_index_directory(root: Path, directory: Path) -> _IndexDirectoryPlan:
@@ -357,16 +447,20 @@ def build_index_entry(
     content = target_content_for_indexing(path)
     log_root = repo_root(root)
     parameter = build_indexing_index_entry_parameter(path, content, root)
-    result = codex_exec(
-        parameter,
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # {{work-root}}/oracle/doc/app_spec/run_isolation.md
-        # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
-        # run worktree 側へ流れないよう repo root に固定する。
-        root=log_root,
-        config=load_config(root),
-        purpose=f"indexing index entry for {path}",
-    ).output_json
+    # parameter が指す index_entry.json で検証済みの値を、利用境界で一度だけ狭める。
+    result = cast(
+        _IndexEntry,
+        codex_exec(
+            parameter,
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
+            # run worktree 側へ流れないよう repo root に固定する。
+            root=log_root,
+            config=load_config(root),
+            purpose=f"indexing index entry for {path}",
+        ).output_json,
+    )
     return render_index_entry(root, path, result, digest=digest).rstrip()
 
 
@@ -389,22 +483,40 @@ def index_target_hash(root: Path, path: Path) -> str:
     """INDEX.md entry の鮮度判定に使う対象 hash を計算する。"""
     if path.is_file():
         return file_sha256(path)
-    parts = []
+    parts: list[str] = []
     for child in indexable_children(root, path):
         child_hash = index_target_hash(root, child)
         kind = "dir" if child.is_dir() else "file"
-        parts.append(f"{kind}\0{child.relative_to(root)}\0{child_hash}\n")
+        relative_path = _directory_hash_relative_path(root, child)
+        parts.append(f"{kind}\0{relative_path}\0{child_hash}\n")
     return text_sha256("".join(parts))
+
+
+def _directory_hash_relative_path(root: Path, path: Path) -> str:
+    """directory hash 用 relative path を UTF-8 文字列へ正規化する。"""
+    relative_path = path.relative_to(root).as_posix()
+    # filesystem の surrogateescape 由来 byte はそのまま UTF-8 にできない。
+    # percent encoding で ASCII の可逆表現へ変換し、literal の `%` も escape
+    # prefix として予約することで、異なる filename の hash 衝突を防ぐ。
+    # {{work-root}}/oracle/doc/app_spec/indexing.md
+    encoded_parts: list[str] = []
+    for character in relative_path:
+        codepoint = ord(character)
+        if character == "%" or 0xDC80 <= codepoint <= 0xDCFF:
+            encoded_parts.extend(f"%{byte:02X}" for byte in os.fsencode(character))
+        else:
+            encoded_parts.append(character)
+    return "".join(encoded_parts)
 
 
 def render_index_entry(
     root: Path,
     path: Path,
-    entry: dict,
+    entry: _IndexEntry,
     digest: str | None = None,
 ) -> str:
     """schema 検証済み Structured Output から INDEX.md entry を生成する。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # schema 外の意味的な品質を、render 時の追加受理条件として再検証しない。
     digest = digest or index_target_hash(root, path)
     summary = entry["summary"]

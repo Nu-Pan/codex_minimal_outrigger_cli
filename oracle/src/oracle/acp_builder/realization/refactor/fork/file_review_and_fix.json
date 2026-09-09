@@ -1,5 +1,6 @@
 {
   "type": "object",
+  "description": "realization refactor のファイル単位レビュー・修正 agent call の出力。",
   "additionalProperties": false,
   "required": [
     "findings"
@@ -10,6 +11,7 @@
       "description": "この agent call が返す所見と対応結果のリスト。所見がない場合は空配列。",
       "items": {
         "type": "object",
+        "description": "この agent call で発見した所見 1 件と、その対応結果。",
         "additionalProperties": false,
         "required": [
           "title",
@@ -27,10 +29,11 @@
           },
           "evidences": {
             "type": "array",
-            "description": "調査時点の所見の根拠となる文言の位置情報。空配列は許容しない。",
+            "description": "調査時点の所見の根拠となる文言の位置情報。",
             "minItems": 1,
             "items": {
               "type": "object",
+              "description": "調査時点の所見を裏付ける位置情報 1 件。",
               "additionalProperties": false,
               "required": [
                 "path",
@@ -66,9 +69,10 @@
           },
           "changed_paths": {
             "type": "array",
-            "description": "この所見への対応による、agent call 開始時点を基準として終了時点に残る realization file の net 差分として申告する、正規化済みの `{{work-root}}` 相対 path の配列。対応する net 差分がない場合は空配列。追加と変更は終了時点の path、削除は開始時点の path、rename は rename 前後の path で表す。",
+            "description": "この所見への対応による realization file の net 差分を申告する path の配列。対応する net 差分がない場合は空配列。",
             "items": {
-              "type": "string"
+              "type": "string",
+              "description": "agent call 開始時点を基準として終了時点に残る net 差分の、正規化済み `{{work-root}}` 相対 path。追加と変更は終了時点の path、削除は開始時点の path、rename は rename 前後の path で表す。"
             }
           },
           "oracle_requirement": {
@@ -85,6 +89,7 @@
           },
           "resolution": {
             "type": "object",
+            "description": "所見への対応結果。",
             "additionalProperties": false,
             "required": [
               "status",
@@ -98,7 +103,7 @@
                   "fixed",
                   "unresolved"
                 ],
-                "description": "所見の対応状態。"
+                "description": "所見の対応状態。fixed は修正済みとして報告し、unresolved は未解消として報告する。"
               },
               "summary": {
                 "type": "string",

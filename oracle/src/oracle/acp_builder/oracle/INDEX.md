@@ -1,45 +1,45 @@
 # `edit`
 
 ## Summary
-- 現時点で本文ファイルを含まない空のディレクトリです。
+- `cmoc oracle edit` の編集 agent call 起動処理を扱うディレクトリです。空の `fork` と、編集 call および仕様削減 call の起動パラメータを構築する `launch_exec.py` を入口として含みます。
 
 ## Read this when
-- このディレクトリにファイルが追加され、その内容や用途を確認する必要があるとき。
+- `cmoc oracle edit` の agent call 起動条件、prompt 構成、起動パラメータ、または編集後の仕様削減 call の責務分担を確認するとき。
 
 ## Do not read this when
-- このディレクトリ配下の具体的なファイルを直接確認できる場合。
+- oracle file の編集処理そのものや仕様削減の判断基準を確認するとき。
+- session の join・競合解決、または `cmoc oracle edit` 以外の agent call 起動処理を調べるとき。
 
 ## hash
-- 5a0738490b6b32407892ee1cfe8c82273cebcea45d9451bbc9c34cc67ec0c2fe
+- 1eb610342b71ff8cafcb6c5f9b78e7d7a511e756c84d0ca8efcf60e6716fe9fa
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動パラメータを構築する実装。リポジトリルートを作業ディレクトリとして確定し、ユーザー指示を含む完全プロンプトの生成・保存、固定されたモデル・推論強度・ファイルアクセス権・起動設定の返却を担う。
+- `cmoc oracle investigation` 用の完全プロンプトと Codex CLI TUI 起動パラメータを構築する。
+- ユーザー指示を調査タスクへ埋め込み、関連する oracle file のみを根拠とする読み取り専用調査経路への入口を提供する。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動パラメータ、完全プロンプト生成、作業パス確定、起動ログ保存の挙動を変更・調査するとき。
+- oracle 調査の完全プロンプトに、ユーザー指示・調査範囲・完了条件をどう組み込むか確認または変更するとき。
+- oracle 調査用 TUI の起動時設定、読み取り専用アクセス、エディタ入力引き継ぎ、インデックス事前処理の構築を確認または変更するとき。
 
 ## Do not read this when
-- oracle investigation の調査プロンプト本文や一般的なプロンプト組み立て規則だけを確認したいとき。完全プロンプト生成実装や関連する prompt builder を直接読む。
-- TUI 起動以外の agent call パラメータ構築を変更するとき。
+- oracle の調査結果や個別の oracle file の内容を確認するときは、生成されたプロンプトではなく対象の oracle file を直接読む。
+- 一般的な ACP 起動パラメータや、`cmoc oracle investigation` 以外のコマンドの挙動だけを確認するとき。
 
 ## hash
-- 4b8e91f02a0cbc1814d86e74fce265c56c2c18045f8a0e539d69e095191183c8
+- cda250c1f5b522edf0c9b6f4645c9169f5f7f3418e796c85e3ab82d4b3ef1c5a
 
 # `review`
 
 ## Summary
-- `cmoc oracle review` の所見生成・検証・判定・統合に用いる agent call パラメータ構築実装と、各処理の Structured Output schema をまとめた領域。oracle review の各段階へ進むための入口となる。
+- 対象ディレクトリ本文が提示されておらず、責務を根拠付きで判断できません。
 
 ## Read this when
-- `cmoc oracle review` の所見列挙、妥当性検証、採否判定、重複・矛盾の統合処理を変更・調査するとき。
-- レビュー用 prompt、oracle-only の実行条件、モデル設定、Structured Output schema の接続を確認するとき。
+- 対象ディレクトリの本文が追加され、担当範囲を確認したいとき
 
 ## Do not read this when
-- レビュー所見そのものや oracle file のレビュー基準を確認するとき。
-- oracle review 全体の制御フローや共通の agent call・prompt 構築仕様だけを確認するとき。
-- 特定の判定結果・擁護理由・反証理由の出力形式だけを確認するときは、対応する JSON schema を直接読む。
+- 本文がない現状では、このエントリーから具体的なレビュー作業へ進む必要があるとき
 
 ## hash
-- aa5a80c4e150edd79472a494ab3f2e7844dac648ca9f7b235aad75d187414bfc
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

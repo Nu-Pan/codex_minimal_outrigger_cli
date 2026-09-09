@@ -7,10 +7,13 @@ from pathlib import Path
 
 import pytest
 from _git_support import make_repo
+from oracle.acp_builder.tui.launch_tui import (
+    build_tui_launch_tui_parameter as build_canonical_tui_launch_tui_parameter,
+)
 
 import acp.builder.tui.launch_tui as tui_launch_module
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import FileAccessMode
 
 
 @pytest.mark.parametrize(
@@ -18,51 +21,62 @@ from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
     [
         "# 依頼\n\nsrc の実装を確認する。",
         "README の構成を調査する。",
+        "{{original-prompt-here}}",
     ],
 )
-def test_tui_launch_builder_uses_fixed_parameter_and_standards(
+def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     original_prompt: str,
 ) -> None:
-    """オリジナル prompt によらず固定の規範と実行設定を使用する。"""
+    """オリジナル prompt によらず固定の規定と実行設定を使用する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
-    parameter = build_tui_launch_tui_parameter(
-        "2026-08-03_12-00_00_000000000",
-        original_prompt,
-    )
+    parameter = build_tui_launch_tui_parameter(original_prompt)
 
-    assert parameter.model_class == ModelClass.FLAGSHIP
-    assert parameter.reasoning_effort == ReasoningEffort.MAX
+    assert parameter.agent_call_kind == "build_tui_launch_tui_parameter"
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
+    assert parameter.enable_editor_input_handoff_mcp is True
     assert parameter.run_indexing_preflight is True
-    complete_path = (
-        root
-        / ".cmoc"
-        / "gu"
-        / "ar"
-        / "log"
-        / "editor_input"
-        / "2026-08-03_12-00_00_000000000_cmpl.md"
-    )
-    assert parameter.prompt == f"{complete_path} を読んで、その指示に従って下さい"
-    complete_prompt = complete_path.read_text(encoding="utf-8")
+    complete_prompt = parameter.prompt
     for heading in (
         "# oracle and realization basic",
-        "# oracle standard",
-        "# realization standard",
-        "# oracle review standard",
-        "# apply review standard",
-        "# realization oracle reference rule",
+        "# oracle policy",
+        "# realization policy",
+        "# realization findings policy",
+        "# routing policy",
+        "# editor input handoff",
     ):
         assert heading in complete_prompt
-    assert "# conflict resolution standard" not in complete_prompt
-    assert "# index entry standard" not in complete_prompt
+    for heading in (
+        "# oracle findings policy",
+        "# conflict resolution policy",
+        "# index entry policy",
+        "# realization oracle reference policy",
+    ):
+        assert heading not in complete_prompt
+    objective = complete_prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# task" in objective
+    assert (
+        'オリジナルプロンプト <cmoc_ref target="original_prompt"/> が要求する作業'
+        in (objective)
+    )
+    assert "# completion criteria" in objective
+    assert "要求する成果と完了条件を満たしている" in objective
+    assert "# scope" not in objective
+    assert "# non-goals" not in objective
+    assert complete_prompt.index('<cmoc_block id="objective">') < (
+        complete_prompt.index('<cmoc_block id="original_prompt">')
+    )
     assert original_prompt in complete_prompt
+    if original_prompt == "{{original-prompt-here}}":
+        assert complete_prompt.count(original_prompt) == 1
+    assert not (root / ".cmoc" / "gu" / "log" / "editor_input").exists()
 
 
 def test_tui_launch_module_exports_only_builder() -> None:
@@ -71,3 +85,4 @@ def test_tui_launch_module_exports_only_builder() -> None:
     assert {name for name in vars(tui_launch_module) if not name.startswith("_")} == {
         "build_tui_launch_tui_parameter"
     }
+    assert build_tui_launch_tui_parameter is build_canonical_tui_launch_tui_parameter

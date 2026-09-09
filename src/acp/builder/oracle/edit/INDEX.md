@@ -26,18 +26,18 @@
 ## hash
 - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
-# `launch_tui.py`
+# `launch_exec.py`
 
 ## Summary
-- oracle edit 用の TUI 起動パラメータを生成する realization adapter。リポジトリ実パスを解決し、完全な prompt の保存先となる editor input directory を準備したうえで、oracle 側の builder を呼び出す。
+- oracle edit 用の exec builder 関数を、正本実装から再公開する互換 import 経路。main launch と reduction launch の実行パラメータ生成を扱い、これらの関数を既存の ACP builder 配下から利用したい場合の入口となる。
 
 ## Read this when
-- oracle edit の TUI 起動パラメータ生成や、その前提となる editor input directory の準備を確認・変更するとき
-- realization 側から oracle edit の正本 builder を呼び出す経路を追跡するとき
+- oracle edit の main または reduction 用 launch exec パラメータ生成関数の import 経路を確認・変更するとき。
+- 正本実装ではなく、既存利用者向けの互換的な公開位置を確認するとき。
 
 ## Do not read this when
-- oracle 側の TUI builder の prompt 内容や本体ロジックを直接確認するとき
-- oracle edit や TUI 起動パラメータと無関係な builder、パス解決、実行時処理を調べるとき
+- oracle edit の exec builder の実装内容や挙動を変更・確認するときは、参照先の正本実装を直接読む。
+- oracle edit 以外の launch exec builder を扱うとき。
 
 ## hash
-- 7ae5d0a9e77b7cc62a050f8eb6bba220dcc501423e1bbf47bb6361478ecfe557
+- 92823c1681fff7cd05fd0241fc6feaa1950be8b3ca563e2ed2d327d95fb8504f

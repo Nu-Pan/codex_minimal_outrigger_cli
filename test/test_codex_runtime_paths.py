@@ -2,7 +2,7 @@
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 """
 
 import json
@@ -20,7 +20,7 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex import run_codex_exec
 from config.cmoc_config import CmocConfig
 
@@ -172,7 +172,7 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
 
     正本仕様:
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -260,8 +260,7 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
         )
     )
     parameter = AgentCallParameter(
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt="prompt",
         structured_output_schema_path=schema_source,
@@ -279,8 +278,8 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
     schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
     assert record["cwd"] == str(linked.resolve())
     assert result.schema_path == schema_arg
-    assert schema_arg.parent == root / ".cmoc" / "gu" / "ar" / "schema"
-    assert not (linked / ".cmoc" / "gu" / "ar" / "schema").exists()
+    assert schema_arg.parent == root / ".cmoc" / "gu" / "schema"
+    assert not (linked / ".cmoc" / "gu" / "schema").exists()
 
 
 def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(
@@ -289,7 +288,7 @@ def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(
     """linked worktree でも PURE_ORACLE_READ を専用 sandbox 引数へ変換する。
 
     正本仕様:
-        {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-exec-log"
@@ -340,7 +339,7 @@ def test_run_codex_exec_does_not_inject_agents_path_permissions(
     """`.agents` の実在 path を sandbox の個別設定へ変換しないことを検証する。
 
     正本仕様:
-        {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
     root = make_repo(tmp_path)
     agents_file = root / ".agents" / "nested" / "instructions.md"

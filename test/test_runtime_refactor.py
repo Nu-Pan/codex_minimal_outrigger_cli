@@ -1,10 +1,11 @@
 """realization refactor 永続 state の同期・選択規則を検証する。
 
-正本仕様: `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`,
-`{{work-root}}/oracle/doc/app_spec/misc_spec.md`。
+正本仕様:
+- `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`
+- `{{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md`
+- `{{work-root}}/oracle/doc/app_spec/timestamp.md`
 """
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,7 @@ from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (
     RefactorState,
+    is_normalized_relative_path,
     load_refactor_state,
     select_refactor_target,
     sync_refactor_state,
@@ -59,6 +61,7 @@ def test_refactor_state_sync_globs_nested_repository_files(tmp_path: Path) -> No
         str(tmp_path / "nested-git"),
         str(nested),
     )
+    run_git(nested, "config", "core.excludesFile", "/dev/null")
     (nested / "module.py").write_text("VALUE = 1\n")
 
     state = sync_refactor_state(root)
@@ -73,7 +76,8 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
     tmp_path: Path, relative: str
 ) -> None:
     """oracle/realization file classifier が work-root 外の path を拒否する。"""
-    # 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # 根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # の「分類結果」
     root = make_repo(tmp_path)
     (tmp_path / "outside.md").write_text("outside\n")
 
@@ -103,10 +107,38 @@ def test_refactor_target_classifiers_require_file_entries(
     assert not is_realization_file_path(root, root / "missing.py")
 
 
+def test_refactor_target_classifiers_reject_symlinked_parent(
+    tmp_path: Path,
+) -> None:
+    """classifier が symlink 親を通じて work-root 外の file を扱わない。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    source = root / "src"
+    source.mkdir()
+    (source / "module.py").write_text("inside\n")
+    (source / "deleted.py").write_text("deleted\n")
+    run_git(root, "add", "src/module.py", "src/deleted.py")
+    run_git(root, "commit", "-m", "add realization module")
+    (outside / "module.py").write_text("outside\n")
+    (source / "module.py").unlink()
+    (source / "deleted.py").unlink()
+    source.rmdir()
+    source.symlink_to(outside, target_is_directory=True)
+    (root / "oracle" / "linked").symlink_to(outside, target_is_directory=True)
+
+    assert not is_realization_file_path(root, root / "src" / "module.py", branch="HEAD")
+    assert not is_realization_file_path(
+        root, root / "src" / "deleted.py", branch="HEAD"
+    )
+    assert not is_oracle_file_path(root, root / "oracle" / "linked" / "module.py")
+
+
 @pytest.mark.parametrize(
     "replacement",
     [
         "directory",
+        "symlink",
         pytest.param(
             "fifo",
             marks=pytest.mark.skipif(
@@ -127,6 +159,8 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     path.unlink()
     if replacement == "directory":
         path.mkdir()
+    elif replacement == "symlink":
+        path.symlink_to(root / "missing")
     else:
         os.mkfifo(path)
 
@@ -162,37 +196,19 @@ def test_refactor_target_classifier_accepts_special_path_from_branch(
     assert is_realization_file_path(root, realization_file, branch="HEAD")
 
 
-def test_refactor_state_sync_hashes_dangling_oracle_symlink(
+def test_refactor_state_sync_rejects_oracle_symlink(
     tmp_path: Path,
 ) -> None:
-    """定義上の oracle file である dangling symlink を state 同期できる。"""
+    """state 同期が regular file ではない oracle symlink を拒否する。"""
     root = make_repo(tmp_path)
     link = root / "oracle" / "dangling.md"
     link.symlink_to("../missing.md")
     run_git(root, "add", "oracle/dangling.md")
     run_git(root, "commit", "-m", "add dangling oracle symlink")
 
-    state = sync_refactor_state(root)
-    expected_digest = hashlib.sha256(b"../missing.md").hexdigest()
-
-    assert "oracle/dangling.md" in state
-    state["oracle/dangling.md"].update(
-        {
-            "investigation_required": False,
-            "last_investigation_result": "no_findings",
-            "last_investigated_sha256": expected_digest,
-            "last_investigated_at": "2026-07-19_00-00_00_000000000",
-        }
-    )
-    write_refactor_state(root, state)
-    link.unlink()
-    link.symlink_to("../different-missing.md")
-
-    synchronized = sync_refactor_state(root)
-
-    changed = synchronized["oracle/dangling.md"]
-    assert changed["investigation_required"] is True
-    assert changed["last_investigated_sha256"] == expected_digest
+    assert not is_oracle_file_path(root, link)
+    with pytest.raises(CmocError, match="oracle/realization file"):
+        sync_refactor_state(root)
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
@@ -249,9 +265,7 @@ def test_refactor_state_rejects_symlinked_path_without_writing_target(
     root = make_repo(tmp_path)
     outside = tmp_path / "outside-state.json"
     outside.write_text("original\n")
-    state_path = (
-        root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
-    )
+    state_path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     state_path.parent.mkdir(parents=True)
     state_path.symlink_to(outside)
 
@@ -276,7 +290,7 @@ def test_refactor_state_rejects_symlinked_path_without_writing_target(
 def test_refactor_state_rejects_non_file_path(tmp_path: Path, path_kind: str) -> None:
     """state path が通常 file でない場合に read/write を block させない。"""
     root = make_repo(tmp_path)
-    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     if path_kind == "directory":
         path.mkdir()
@@ -320,7 +334,7 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
 def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
     """refactor state の親 path escape を拒否する。"""
     root = make_repo(tmp_path)
-    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(
         '{"../outside": {'
@@ -334,6 +348,12 @@ def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
         load_refactor_state(root)
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows path semantics are unavailable")
+def test_refactor_state_rejects_drive_relative_path() -> None:
+    """Windows の drive-relative path を work-root 相対 path として受け入れない。"""
+    assert not is_normalized_relative_path("C:outside")
+
+
 @pytest.mark.parametrize("result", [[], {}])
 def test_refactor_state_rejects_non_string_result(
     tmp_path: Path,
@@ -341,7 +361,7 @@ def test_refactor_state_rejects_non_string_result(
 ) -> None:
     """entry の調査結果が JSON string 以外なら schema error にする。"""
     root = make_repo(tmp_path)
-    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(
         json.dumps(
@@ -364,7 +384,7 @@ def test_refactor_state_rejects_non_string_result(
 def test_refactor_state_rejects_non_utf8_content(tmp_path: Path) -> None:
     """UTF-8 として読めない state は schema error にする。"""
     root = make_repo(tmp_path)
-    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(b'{"README.md": \xff}\n')
 
@@ -375,7 +395,7 @@ def test_refactor_state_rejects_non_utf8_content(tmp_path: Path) -> None:
 def test_refactor_state_rejects_nul_in_path_key(tmp_path: Path) -> None:
     """NUL を含む path key は file path として拒否する。"""
     root = make_repo(tmp_path)
-    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(
         json.dumps(
@@ -406,7 +426,7 @@ def test_refactor_state_rejects_noncanonical_path_or_timestamp(
 ) -> None:
     """正規化されていない path と timestamp を state schema で拒否する。"""
     root = make_repo(tmp_path)
-    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(
         json.dumps(

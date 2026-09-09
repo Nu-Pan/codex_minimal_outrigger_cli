@@ -9,7 +9,7 @@
 
 - 現在の中断可能サブコマンドは以下とする。
     - `cmoc realization refactor fork`
-    - `cmoc oracle review`
+    - `cmoc feedback report`
 - 中断可能サブコマンドとして追加できるのは、長時間実行され、かつ処理済みの範囲だけでも一貫した結果として確定できるサブコマンドに限る。
 - この条件を満たすだけでは中断可能サブコマンドとみなさず、個別仕様への明記を必須とする。
 
@@ -17,21 +17,24 @@
 
 - 中断可能サブコマンドでは、実行中の端末からの `Ctrl+C` をユーザー中断要求として受け付ける。
 - cmoc はユーザー中断要求を自ら処理し、子 process の想定外エラーとしてだけ扱ってはいけない。
+- 個別仕様が、state を破損させずには分割できない finalization 区間を定める場合は、区間の開始前に未処理の中断要求を確認する。開始後は、次の整合した境界に達するまで処理を途中で停止してはならない。
 - `Ctrl+C` 以外の入力をユーザー中断要求として扱うかは未定義とする。
 
 ## 共通動作
 
 - ユーザー中断要求を受け付けた cmoc は、新しい処理単位の開始を止める。
 - 実行中だった処理単位を完了させるか rollback するかは個別仕様または実装裁量とする。ただし、破損した部分結果や未確定の部分結果を完了済みとして残してはいけない。
-- 確定済みの部分結果を保持したまま、個別仕様が定める state 更新、後処理、report 保存、および終了 log 出力を行う。
+- 確定済みの部分結果を保持したまま、個別仕様が定める state 更新と後処理を行う。
+- 確定済みの部分作業と中断による終端結果を要約した primary report を、個別仕様が定める形式と保存先へ保存する。その後に `user_interruption` の terminal result をサブコマンドログと console へ出力する。共通の保存・出力規則は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。
 - ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。
-- report と終了 log から、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
+- primary report、個別仕様が保存を認める再開 state、および terminal result を含むサブコマンド終了イベントから、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
 - ユーザー中断要求を受け付けた後は、そのサブコマンドのための新しい Codex CLI 呼び出し、retry、quota 回復待ち、および Codex CLI session の再開を行わない。この指示は `codex_exec_rule.md` の待機・再開規則より優先する。
-- 通常の完了処理自体に失敗した場合は、ユーザー中断要求による正常系ではなく、個別仕様と error handling 規則に従う。
+- primary report の保存を含む完了処理自体に失敗した場合は、ユーザー中断要求による正常系ではなく、個別仕様と error handling 規則に従う。
+- ユーザー中断要求による terminal result の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
 
 ## 中断後の扱い
 
-- `cmoc realization refactor fork` は active run を `joinable` にし、同じ run を再開しない。
-- refactor の確定済み部分結果から続きを行う場合は、`cmoc run join` の後に新しい fork を開始する。
-- `cmoc oracle review` は途中位置から再開せず、同じサブコマンドを後から呼び出した場合は新しい run として扱う。
-- 中断から同じ run を再開するための checkpoint を保存してはいけない。
+- 中断後の refactor run の state と次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「ユーザー中断」を正本とする。
+- feedback report の issue 処理単位、run state、publication 禁止、observation retention、および次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「ユーザー中断」を正本とする。
+- 編集 run の中断位置を同じ run で再開する checkpoint を保存してはいけない。
+- feedback report は確定済み成果物を保持して `joinable` とするが、正常 publication と observation cleanup は行わない。利用者は `cmoc run join` または `cmoc run abandon` を選ぶ。

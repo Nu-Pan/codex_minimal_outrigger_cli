@@ -1,43 +1,52 @@
 """
-# Structured markdown
-
-- 階層構造を持つ自然言語文章を markdown にレンダリングするためのヘルパークラス
+- プログラム上は階層構造を保持し、それを自然言語文章にレンダリングするためのヘルパークラス
+- 今のところ markdown だけサポート
 - 主に見出しの深さを自動計算してくれることに価値がある
 """
 
 # std
 import re
 import textwrap
+from dataclasses import dataclass, field
 from xml.sax.saxutils import quoteattr
 
-_CMOC_REF_PATTERN = re.compile(r'<cmoc_ref target="([^"]+)"/>')
 
+class SDHeader:
+    """文章のヘッダー（見出し）を表すクラス
 
-class StructDoc:
-    """
-    構造化文章クラス
+    Markdown 的に言うところの、見出しを先頭とするブロック１つを表す。
     """
 
     def __init__(
         self,
         title: str,
-        *children: "StructDoc|StructBlock|StructCodeBlock|str",
-    ):
+        *children: "SDNode",
+    ) -> None:
         """
         コンストラクタ
         """
+        # タイトル
         self._title = title
-        self._children: list[StructDoc | StructBlock] | StructCodeBlock | str
-        if len(children) == 1 and isinstance(children[0], (StructCodeBlock, str)):
-            self._children = children[0]
+        # 子要素
+        self._children: "list[SDNode]"
+        if len(children) == 0:
+            raise ValueError(f"children must not be empty (title={title})")
+        elif len(children) == 1:
+            if isinstance(children[0], SDNode.__value__):
+                self._children = [children[0]]
+            else:
+                raise TypeError(
+                    "children contains unexpected type element "
+                    f"(title={title}, type={type(children[0])})"
+                )
         else:
             self._children = list()
             for c in children:
-                if isinstance(c, (StructDoc, StructBlock)):
+                if isinstance(c, SDNode.__value__):
                     self._children.append(c)
                 else:
                     raise TypeError(
-                        f"children contains unexpected type element (type={type(c)})"
+                        f"children contains unexpected type element (title={title}, type={type(c)})"
                     )
 
     @property
@@ -50,173 +59,339 @@ class StructDoc:
     @property
     def children(
         self,
-    ) -> "list[StructDoc | StructBlock] | StructCodeBlock | str":
+    ) -> "list[SDNode]":
         """
         子要素を取得する
         """
         return self._children
 
 
-class StructBlock:
-    """
-    `cmoc_block` としてレンダリングする親要素
+class SDTagBlock:
+    """XML タグ風表記によってマークされた参照可能な文章ブロックを表すクラス
 
-    プロンプト内でこのブロック参照するには `<cmoc_ref target="..."/>` の形式で記述する
-    """
+    このインスタンスの子要素 `{{child}}` は以下のようにレンダリングされる
 
-    def __init__(self, block_id: str, child: StructDoc):
-        if not isinstance(block_id, str):
-            raise TypeError(f"block_id has unexpected type (type={type(block_id)})")
-        if not block_id:
-            raise ValueError("block_id must not be empty")
-        if not isinstance(child, StructDoc):
-            raise TypeError(f"child has unexpected type (type={type(child)})")
-        self._block_id = block_id
-        self._child = child
+    ```markdown
+    <cmoc_block id="block_id">
+    {{child}}
+    </cmoc_block>
+    ```
 
-    @property
-    def block_id(self) -> str:
-        return self._block_id
-
-    @property
-    def child(self) -> StructDoc:
-        return self._child
-
-
-class StructCodeBlock:
-    """
-    StructDoc 内に挿入可能なコードブロック
+    このブロック参照するには `<cmoc_ref target="block_id"/>` の形式で記述する
+    この参照記法は `SDTagBlock.ref_tag` で生成可能
     """
 
     def __init__(
         self,
-        info: str | None,
-        body: str,
-    ):
-        """コンストラクタ
-
-        info:
-            コードブロックの先頭に挿入される info string
-            指定なしの場合は None を渡す
-            e.g. python, cpp, bash
-
-        body:
-            コードブロックで囲われる本体テキスト
-        """
-        self._info = info
-        self._body = body
-
-    @property
-    def info(self) -> str | None:
-        """
-        info string を取得する
-        """
-        return self._info
-
-    @property
-    def body(self) -> str:
-        """
-        本体テキストを取得する
-        """
-        return self._body
-
-
-def render_as_markdown(
-    struct_doc: StructDoc | StructBlock | list[StructDoc | StructBlock],
-) -> str:
-    """
-    struct_doc を markdown としてレンダリングする
-    """
-    if isinstance(struct_doc, (StructDoc, StructBlock)):
-        roots = [struct_doc]
-    elif isinstance(struct_doc, list):
-        roots = struct_doc
-        for root in roots:
-            if not isinstance(root, (StructDoc, StructBlock)):
+        block_id: str,
+        *children: "SDNode",
+    ) -> None:
+        # ブロック ID
+        if not isinstance(block_id, str):
+            raise TypeError(f"block_id must be str (type={type(block_id)})")
+        self._block_id = block_id
+        # 子要素
+        self._children: "list[SDNode]"
+        if len(children) == 0:
+            raise ValueError(f"children must not be empty (block_id={block_id})")
+        elif len(children) == 1:
+            if isinstance(children[0], SDNode.__value__):
+                self._children = [children[0]]
+            else:
                 raise TypeError(
-                    f"struct_doc contains unexpected type element (type={type(root)})"
+                    "children contains unexpected type element "
+                    f"(block_id={block_id}, type={type(children[0])})"
                 )
-    else:
-        raise TypeError(f"Invalid type of struct_doc (type={type(struct_doc)})")
-    _validate_references(roots)
-    return "\n".join(_render_as_markdown(root) for root in roots)
+        else:
+            self._children = list()
+            for c in children:
+                if isinstance(c, SDNode.__value__):
+                    self._children.append(c)
+                else:
+                    raise TypeError(
+                        f"children contains unexpected type element (block_id={block_id}, type={type(c)})"
+                    )
+
+    @property
+    def block_id(self) -> str:
+        """参照可能なブロックの ID を取得する。"""
+        return self._block_id
+
+    @property
+    def childlen(
+        self,
+    ) -> "list[SDNode]":
+        """レンダリング対象の子要素を取得する。"""
+        return self._children
+
+    @property
+    def ref_tag(self) -> str:
+        """このブロックへの cmoc_ref 参照タグを取得する。"""
+        return f'<cmoc_ref target="{self._block_id}"/>'
 
 
-def _render_as_markdown(
-    struct_node: StructDoc | StructBlock,
-    depth: int = 1,
+@dataclass(frozen=True)
+class SDCodeBlock:
+    """自然言語文章中に埋め込み可能なコードブロックを表すクラス
+
+    Markdown 的に言う所の、back quart 3 つ以上のフェンスで囲われたブロックのこと
+    ↓みたいなの
+
+    ```{{info-here}}
+    {{body-here}}
+    ```
+    """
+
+    # コードブロックの先頭に挿入される info string
+    # 指定なしの場合は None を渡す
+    # e.g. python, cpp, bash
+    info: str | None
+
+    # コードブロックで囲われる本体テキスト
+    body: str
+
+
+@dataclass(frozen=True)
+class SDPolicy:
+    """構造化された規定文章を表すクラス
+
+    SDHeader 直下の単一要素として保持される事を想定している
+
+    例外の意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+    「SDPolicy の例外」を参照。
+    """
+
+    # この規定が一体何者であるかを述べる
+    what_is_this: str
+
+    # 「必須」カテゴリに属する規定のリスト
+    # 1 項目 1 文で「～しなければならない」「～すること」が並ぶ
+    require: tuple[str, ...] = field(default_factory=lambda: tuple())
+
+    # 「禁止」カテゴリに属する規定のリスト
+    # 1 項目 1 文で「～してはいけない」「～は禁止」が並ぶ
+    prohibit: tuple[str, ...] = field(default_factory=lambda: tuple())
+
+    # 「許容」カテゴリに属する規定のリスト
+    # 1 項目 1 文で「～してもよい」が並ぶ
+    # 必須・禁止との違いは、する・しないの裁量がエージェントに委ねられている事
+    allow: tuple[str, ...] = field(default_factory=lambda: tuple())
+
+    # 「例外」カテゴリに属する規定のリスト
+    # 1 項目 1 文で「ただし、～は～して良い」が並ぶ
+    exception: tuple[str, ...] = field(default_factory=lambda: tuple())
+
+    # 各規定が言っていることを理解するために必要な補足情報のリスト
+    # 1 項目 1 文で補足情報を並べる
+    supplemental: tuple[str, ...] = field(default_factory=lambda: tuple())
+
+
+# SD... 系クラスをまとめた型エイリアス
+type SDNode = SDHeader | SDTagBlock | SDCodeBlock | SDPolicy | str
+
+
+def render_sd_node_as_markdown(
+    *sd_nodes: SDNode,
 ) -> str:
     """
-    struct_node を markdown としてレンダリングする
-    内部実装
+    sd_node を markdown としてレンダリングする
     """
-    if isinstance(struct_node, StructBlock):
-        result = f"<cmoc_block id={quoteattr(struct_node.block_id)}>\n"
-        result += _render_as_markdown(struct_node.child, depth)
-        result += "</cmoc_block>\n"
-        return _collapse_blank_lines(result)
+    return _collapse_blank_lines(_render_sd_node_as_markdown(*sd_nodes))
 
-    struct_doc = struct_node
-    # 見出しを生成
-    result = ""
-    result += ("#" * depth) + " " + struct_doc.title + "\n"
-    # 子要素を追加
-    if isinstance(struct_doc.children, list):
-        for c in struct_doc.children:
-            result += "\n"
-            result += _render_as_markdown(c, depth + 1) + "\n"
-    elif isinstance(struct_doc.children, StructCodeBlock):
-        result += "\n"
-        if struct_doc.children.info:
-            result += f"```{struct_doc.children.info}\n"
+
+def _render_sd_node_as_markdown(
+    *sd_nodes: SDNode,
+    depth: int = 0,
+) -> str:
+    """sd_node を markdown としてレンダリングする
+
+    内部実装の入口・再帰呼び出しの入口として使う
+    """
+    # 先頭から順番にレンダリングする
+    individual: list[str] = list()
+    for sd_node in sd_nodes:
+        if isinstance(sd_node, SDHeader):
+            individual.append(_render_sd_header_as_markdown(sd_node, depth + 1))
+        elif isinstance(sd_node, SDTagBlock):
+            # NOTE タグで囲っても見出しの深さは変わらないので depth はそのままで良い
+            individual.append(_render_sd_tag_block_as_markdown(sd_node, depth))
+        elif isinstance(sd_node, SDCodeBlock):
+            individual.append(_render_sd_code_block_as_markdown(sd_node))
+        elif isinstance(sd_node, SDPolicy):
+            individual.append(_render_sd_policy_as_markdown(sd_node))
+        elif isinstance(sd_node, str):
+            individual.append(_render_str_as_markdown(sd_node))
         else:
-            result += "```\n"
-        result += ntqs(struct_doc.children.body) + "\n"
-        result += "```\n"
-    elif isinstance(struct_doc.children, str):
-        result += "\n"
-        result += ntqs(struct_doc.children) + "\n"
+            raise TypeError(
+                f"Invalid sd_node type` (expect={SDNode}, actual={type(sd_node)})"
+            )
+    return "\n".join(individual)
+
+
+def _render_sd_header_as_markdown(
+    sd_node: SDHeader,
+    depth: int,
+) -> str:
+    """sd_node を markdown としてレンダリングする
+
+    内部実装
+    SDHeader 専用
+    """
+    # 見出し
+    result = ""
+    result += ("#" * depth) + " " + sd_node.title + "\n"
+    # 子要素
+    if isinstance(sd_node.children, list):
+        for c in sd_node.children:
+            result += "\n"
+            result += _render_sd_node_as_markdown(c, depth=depth)
+            result += "\n"
     else:
         raise TypeError(
-            f"Invalid type of struct_doc.children (type={type(struct_doc.children)})"
+            f"sd_node.children must be list (type={type(sd_node.children)})"
         )
-    result = _collapse_blank_lines(result)
-    # 正常終了
     return result
 
 
-def _validate_references(roots: list[StructDoc | StructBlock]) -> None:
+def _render_sd_tag_block_as_markdown(
+    sd_node: SDTagBlock,
+    depth: int,
+) -> str:
+    """sd_node を markdown としてレンダリングする
+
+    内部実装
+    SDTagBlock 専用
     """
-    参照先ブロックの欠落と block id の重複をレンダリング直前に検査する。
+    # ブロック開始
+    result = "\n"
+    result += f"<cmoc_block id={quoteattr(sd_node.block_id)}>\n"
+    result += "\n"
+    # 中身
+    for child in sd_node.childlen:
+        result += "\n"
+        result += _render_sd_node_as_markdown(child, depth=depth)
+        result += "\n"
+    # ブロック終了
+    result += "\n"
+    result += "</cmoc_block>\n"
+    result += "\n"
+    return result
 
-    根拠: <work-root>/oracle/doc/app_spec/prompt_standard.md
+
+def _render_sd_code_block_as_markdown(
+    sd_node: SDCodeBlock,
+) -> str:
+    """sd_node を markdown としてレンダリングする
+
+    内部実装
+    SDCodeBlock 専用
+
+    NOTE
+        動的本文中の backtick が外側の Markdown code block を閉じないよう、
+        本文の最長 backtick 列より 1 文字長く、かつ最低 3 文字の fence を使う。
     """
-    blocks: dict[str, StructBlock] = {}
-    refs: list[str] = []
+    # 本文を取得
+    body = ntqs(sd_node.body)
+    # フェンス文字列を生成
+    longest_backtick_run_length = max(
+        (len(match.group()) for match in re.finditer(r"`+", body)),
+        default=0,
+    )
+    fence = "`" * max(3, longest_backtick_run_length + 1)
+    # レンダリング
+    result = ""
+    if sd_node.info:
+        result += f"{fence}{sd_node.info}\n"
+    else:
+        result += f"{fence}\n"
+    result += body + "\n"
+    result += f"{fence}\n"
+    return result
 
-    def _visit(node: StructDoc | StructBlock) -> None:
-        if isinstance(node, StructBlock):
-            if node.block_id in blocks:
-                raise ValueError(f"Duplicate cmoc_block id (id={node.block_id!r})")
-            blocks[node.block_id] = node
-            _visit(node.child)
-            return
 
-        if isinstance(node.children, list):
-            for child in node.children:
-                _visit(child)
-        elif isinstance(node.children, str):
-            matches = list(_CMOC_REF_PATTERN.finditer(node.children))
-            if node.children.count("<cmoc_ref") != len(matches):
-                raise ValueError("Invalid cmoc_ref syntax")
-            refs.extend(match.group(1) for match in matches)
+def _render_sd_policy_as_markdown(
+    sd_node: SDPolicy,
+) -> str:
+    """sd_node を markdown としてレンダリングする
 
-    for root in roots:
-        _visit(root)
+    内部実装
+    SDPolicy 専用
+    """
+    result: list[str] = list()
+    if sd_node.what_is_this:
+        result += [
+            "",
+            sd_node.what_is_this,
+            "",
+        ]
+    if sd_node.exception:
+        result += [
+            "",
+            "**例外**は、同じ policy 内の **必須**、**禁止**、**許容** のみに対して優越する。"
+            "",
+        ]
+    if sd_node.require:
+        result += [
+            "",
+            "**必須**",
+            "",
+        ]
+        result += [f"- {r}" for r in sd_node.require]
+        result += [
+            "",
+        ]
+    if sd_node.prohibit:
+        result += [
+            "",
+            "**禁止**",
+            "",
+        ]
+        result += [f"- {p}" for p in sd_node.prohibit]
+        result += [
+            "",
+        ]
+    if sd_node.allow:
+        result += [
+            "",
+            "**許容**",
+            "",
+        ]
+        result += [f"- {a}" for a in sd_node.allow]
+        result += [
+            "",
+        ]
+    if sd_node.exception:
+        result += [
+            "",
+            "**例外**",
+            "",
+        ]
+        result += [f"- {a}" for a in sd_node.exception]
+        result += [
+            "",
+        ]
+    if sd_node.supplemental:
+        result += [
+            "",
+            "**補足情報**",
+            "",
+        ]
+        result += [f"- {s}" for s in sd_node.supplemental]
+        result += [
+            "",
+        ]
+    return "\n".join(result)
 
-    for target in refs:
-        if target not in blocks:
-            raise ValueError(f"cmoc_ref target is not present (target={target!r})")
+
+def _render_str_as_markdown(
+    sd_node: str,
+) -> str:
+    """sd_node を markdown としてレンダリングする
+
+    内部実装
+    str 専用
+    """
+    return ntqs(sd_node)
 
 
 def _collapse_blank_lines(text: str) -> str:

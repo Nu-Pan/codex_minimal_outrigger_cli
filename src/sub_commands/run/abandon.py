@@ -3,11 +3,10 @@
 import os
 from pathlib import Path
 
-import typer
-
 from cmoc_runtime import (
     CmocError,
     RunPart,
+    TerminalResult,
     branch_exists,
     delete_branch,
     remove_worktree,
@@ -18,6 +17,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import (
     delete_run_process_id,
     read_run_process_id,
@@ -43,7 +43,7 @@ def cmoc_run_abandon_impl() -> None:
     )
 
 
-def _cmoc_run_abandon_body() -> None:
+def _cmoc_run_abandon_body() -> TerminalResult:
     """active run を停止し、worktree・branch・state を cleanup する。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -59,6 +59,18 @@ def _cmoc_run_abandon_body() -> None:
             {"running", "joinable", "error"},
             allow_missing_run_worktree=True,
         )
+        from sub_commands.feedback.recovery import require_manual_feedback_run
+
+        require_manual_feedback_run(context)
+        update_primary_report_fields(
+            run_kind=context.kind,
+            session_branch=context.session_branch,
+            run_branch=context.run_branch,
+            run_fork_commit=context.run_fork_commit,
+            run_worktree=context.run_worktree,
+            state_before=state.run.state,
+            state_after=state.run.state,
+        )
         require_clean_worktree(context.session_worktree)
         warnings: list[str] = []
         stopped = "not_running"
@@ -68,6 +80,10 @@ def _cmoc_run_abandon_body() -> None:
             stopped = _stop_error_run(context, warnings)
         else:
             stopped = _stop_joinable_run(context, warnings)
+        if context.kind == "feedback_report":
+            from sub_commands.feedback.recovery import finish_manual_feedback_run
+
+            finish_manual_feedback_run(context, "abandoned")
         start_subcommand_step(3, "run worktree と branch を破棄", "cleanup run")
         if Path.cwd().resolve() == context.run_worktree.resolve():
             os.chdir(context.session_worktree)
@@ -79,14 +95,28 @@ def _cmoc_run_abandon_body() -> None:
             _remove_run_branch(context, warnings) if worktree_removed else False
         )
         if not worktree_removed or not branch_removed:
+            update_primary_report_fields(
+                process_stop=stopped,
+                worktree_removed=worktree_removed,
+                branch_removed=branch_removed,
+                cleanup="failed",
+            )
             raise CmocError(
                 "active run の cleanup を完了できません。",
                 ["git worktree list と run branch を確認して再実行してください。"],
                 f"worktree_removed: {worktree_removed}\nbranch_removed: {branch_removed}",
+                terminal_result=TerminalResult(warnings=tuple(warnings)),
             )
         state.run = RunPart()
         write_state(context.state_path, state)
         delete_run_process_id(context.repo, context.session_id)
+        update_primary_report_fields(
+            state_after="ready",
+            process_stop=stopped,
+            worktree_removed=worktree_removed,
+            branch_removed=branch_removed,
+            cleanup="completed",
+        )
         report = write_lifecycle_report(
             context,
             "abandon",
@@ -99,19 +129,18 @@ def _cmoc_run_abandon_body() -> None:
                 "cleanup": "completed",
             },
         )
-    start_subcommand_step(4, "abandon 結果を表示", "show abandon result")
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc run abandon",
-                f"- run_kind: `{context.kind}`",
-                f"- run_branch: `{context.run_branch}`",
-                f"- run_worktree: `{context.run_worktree}`",
-                f"- process_stop: `{stopped}`",
-                "- cleanup: `completed`",
-                f"- report: `{report}`",
-            ]
-        )
+    start_subcommand_step(4, "terminal result を確定", "finalize terminal result")
+    return TerminalResult(
+        primary_report=report,
+        primary_report_role="run abandon report",
+        details=(
+            ("run_kind", context.kind),
+            ("run_branch", context.run_branch),
+            ("run_worktree", context.run_worktree),
+            ("process_stop", stopped),
+            ("cleanup", "completed"),
+        ),
+        warnings=tuple(warnings),
     )
 
 
@@ -179,7 +208,14 @@ def _remove_run_worktree(
         warnings.append("run worktree was already absent")
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # Git の登録も消えている場合は、管理外 path として扱わず cleanup 済みとする。
-        if worktree_for_branch_optional(context.repo, context.run_branch) is None:
+        if (
+            worktree_for_branch_optional(
+                context.repo,
+                context.run_branch,
+                allow_missing=True,
+            )
+            is None
+        ):
             return True
     result = remove_worktree(context.repo, context.run_worktree)
     if result.returncode != 0 and (

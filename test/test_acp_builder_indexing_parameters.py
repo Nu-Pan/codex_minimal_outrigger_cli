@@ -1,41 +1,62 @@
 """indexing index entry builder の parameter、schema、互換公開面を検証する。
 
 対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.py、
-{{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json
+{{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json、
+{{work-root}}/oracle/doc/app_spec/indexing.md
 """
 
 import json
 from pathlib import Path
 
 import pytest
+from _git_support import make_repo
+from oracle.acp_builder.indexing.index_entry import (
+    build_indexing_index_entry_parameter as build_oracle_indexing_index_entry_parameter,
+)
 
 import acp.builder.indexing.index_entry as indexing_index_entry_module
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import FileAccessMode
 
 
 @pytest.fixture
 def indexing_target_path(tmp_path: Path) -> Path:
     """AgentCallPathContext が解決できる test-local target を用意する。"""
-    (tmp_path / ".git").mkdir()
-    target_path = tmp_path / "target.md"
+    root = make_repo(tmp_path)
+    target_path = root / "target.md"
     target_path.write_text("# README", encoding="utf-8")
     return target_path
 
 
-def test_indexing_index_entry_uses_minimum_model_and_low_reasoning(
+def test_indexing_index_entry_uses_readonly_without_preflight(
     indexing_target_path: Path,
 ) -> None:
-    """index entry builderがminimum modelとlow reasoningを選ぶことを検証する。"""
+    """index entry builder が readonly かつ preflight なしで構築される。"""
     parameter = build_indexing_index_entry_parameter(
         indexing_target_path, "# README", indexing_target_path.parent
     )
 
-    assert parameter.model_class == ModelClass.MINIMUM
-    assert parameter.reasoning_effort == ReasoningEffort.LOW
     assert parameter.file_access_mode == FileAccessMode.READONLY
     assert parameter.agent_call_cwd == indexing_target_path.parent.resolve()
     assert parameter.run_indexing_preflight is False
+    assert "# index entry policy" in parameter.prompt
+    assert "# oracle and realization basic" not in parameter.prompt
+    assert "# routing policy" not in parameter.prompt
+    objective = parameter.prompt.split('<cmoc_block id="objective">', 1)[1].split(
+        "</cmoc_block>", 1
+    )[0]
+    assert "# task\n\n- `{{target-path}}` の `INDEX.md` 用エントリーを生成" in (
+        objective
+    )
+    for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
+        assert omitted_heading not in objective
+    assert "指定された Structured Output schema に従" not in parameter.prompt
+    positions = [
+        parameter.prompt.index("# エントリー生成規定"),
+        parameter.prompt.index('<cmoc_block id="objective">'),
+        parameter.prompt.index("# `{{target-path}}` の内容"),
+    ]
+    assert positions == sorted(positions)
 
 
 def test_indexing_index_entry_schema_requires_non_empty_semantic_lists(
@@ -52,29 +73,26 @@ def test_indexing_index_entry_schema_requires_non_empty_semantic_lists(
         assert schema["properties"][key]["minItems"] == 1
 
 
-def test_indexing_index_entry_keeps_nested_code_fences_in_target_content(
+@pytest.mark.parametrize(
+    "target_content",
+    [
+        "before\n```\ninside\n```\nafter",
+        "before\n```\n\n# place holder definition\n\n```\nafter",
+    ],
+)
+def test_indexing_index_entry_protects_nested_target_content_fences(
     indexing_target_path: Path,
+    target_content: str,
 ) -> None:
     """対象本文内の三連 backtick が prompt の本文境界を閉じないことを検証する。"""
-    target_content = "before\n```\ninside\n```\nafter"
-
     parameter = build_indexing_index_entry_parameter(
         indexing_target_path, target_content, indexing_target_path.parent
     )
-
-    assert "````\nbefore\n```\ninside\n```\nafter\n````" in parameter.prompt
-
-
-def test_indexing_index_entry_keeps_placeholder_like_heading_in_target_content(
-    indexing_target_path: Path,
-) -> None:
-    """対象本文内の placeholder 風見出しを prompt の境界と誤認しないことを検証する。"""
-    target_content = "before\n```\n\n# place holder definition\n\n```\nafter"
-
-    parameter = build_indexing_index_entry_parameter(
+    oracle_parameter = build_oracle_indexing_index_entry_parameter(
         indexing_target_path, target_content, indexing_target_path.parent
     )
 
+    assert parameter == oracle_parameter
     start = parameter.prompt.index("# `{{target-path}}` の内容")
     end = parameter.prompt.rfind("\n\n# place holder definition")
     section = parameter.prompt[start:end]

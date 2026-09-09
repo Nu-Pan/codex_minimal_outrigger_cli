@@ -17,15 +17,14 @@
 # `launch_tui.py`
 
 ## Summary
-- 対象は、oracle investigation の正本 builder を呼び出す realization adapter です。エディタ入力用ディレクトリを準備したうえで、正本 builder に時刻情報とユーザー指示を渡し、AgentCallParameter を返します。エディタ入力ディレクトリの準備と正本 builder への委譲が、この対象へ進む理由です。
+- oracle investigation の正本 builder 関数を互換 import 経路として公開する。既存の acp.builder.oracle.investigation.launch_tui 利用箇所から正本実装へ接続するための入口で、oracle.* への移行完了後は削除対象となる。
 
 ## Read this when
-- oracle investigation の launch TUI 用パラメータ生成の realization adapter を確認するとき
-- 完全な prompt の保存先ディレクトリ準備や、正本 builder への委譲経路を追うとき
+- 既存の acp.builder.oracle.investigation.launch_tui import 経路の互換性や、oracle investigation の launch_tui builder への移行状況を確認するとき。
 
 ## Do not read this when
-- oracle 側の launch TUI builder の仕様や prompt 構築詳細を確認したいとき。対応する oracle ファイルを直接読む
-- launch TUI 以外の builder や、エディタ入力ディレクトリの一般的な実装だけを調べるとき
+- 正本の builder 実装や oracle investigation の仕様・挙動を確認したいときは、oracle 側の launch_tui 実装を直接読む。
+- acp.builder.oracle.investigation.launch_tui の互換性を調べる必要がない一般的な oracle investigation の調査では、このファイルを読む必要はない。
 
 ## hash
-- 96b75359027bd8481745a87868524bee4e86525e77f0f65b4b519ff3c00a126a
+- c9ebfcd1e073b1bb8b9430c48b70b35c88846eb0e05f45525bfa9f90da992c7e

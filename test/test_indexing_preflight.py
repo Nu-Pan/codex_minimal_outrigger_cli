@@ -12,7 +12,7 @@ from _git_support import make_repo, run_git
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 
@@ -51,8 +51,7 @@ def test_command_codex_call_runs_indexing_preflight(
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=FileAccessMode.READONLY,
         prompt="prompt",
         structured_output_schema_path=None,
@@ -108,8 +107,7 @@ def test_command_codex_call_indexes_agent_call_worktree_before_log_root(
     run_git(root, "worktree", "add", "-b", "codex-work", str(worktree))
     codex_cwd = worktree / "oracle"
     parameter = AgentCallParameter(
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=FileAccessMode.READONLY,
         prompt="prompt",
         structured_output_schema_path=None,
@@ -147,7 +145,7 @@ def test_command_codex_call_indexes_agent_call_worktree_before_log_root(
     result = codex_preflight_module.run_codex_exec(
         parameter,
         root=root,
-        purpose="oracle review enumerate findings",
+        purpose="realization apply fork",
     )
 
     assert isinstance(result, FakeCodexResult)
@@ -168,8 +166,7 @@ def test_command_tui_codex_call_runs_indexing_preflight(
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=FileAccessMode.READONLY,
         prompt="prompt",
         structured_output_schema_path=None,
@@ -195,10 +192,6 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         events.append("codex")
         assert call_parameter == parameter
 
-    def pre_launch_check() -> None:
-        """TUI 起動前の pre-launch 検査を記録する。"""
-        events.append("check")
-
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
@@ -211,10 +204,9 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         parameter,
         root=root,
         purpose="tui codex",
-        pre_launch_check=pre_launch_check,
     )
 
-    assert events == ["indexing", "check", "codex"]
+    assert events == ["indexing", "codex"]
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
@@ -296,8 +288,7 @@ def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
 
     root = make_repo(tmp_path)
     parameter = AgentCallParameter(
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=FileAccessMode.READONLY,
         prompt="prompt",
         structured_output_schema_path=None,
@@ -371,8 +362,7 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     index_path = root / "INDEX.md"
     events: list[Path] = []
     parameter = AgentCallParameter(
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt="prompt",
         structured_output_schema_path=None,

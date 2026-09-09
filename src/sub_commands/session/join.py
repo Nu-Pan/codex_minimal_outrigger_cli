@@ -1,3 +1,5 @@
+"""session branch を home branch へ merge し、conflict 解消を検証する。"""
+
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 import hashlib
 import json
@@ -5,15 +7,15 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
-import typer
-
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
 from cmoc_runtime import (
     CmocError,
     CommandResult,
+    TerminalResult,
     current_branch,
+    head_commit,
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
@@ -25,11 +27,12 @@ from cmoc_runtime import (
     write_state,
 )
 from commons.indexing import enable_indexing_preflight
-from commons.runtime_git import status_path_statuses
+from commons.runtime_git import literal_pathspec, status_path_statuses
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_results import CodexExecCallable
 
-CodexExec = CodexExecCallable
-GitRun = Callable[..., CommandResult]
+_CodexExec = CodexExecCallable
+_GitRun = Callable[..., CommandResult]
 
 
 def cmoc_session_join_impl() -> None:
@@ -46,11 +49,18 @@ def cmoc_session_join_impl() -> None:
     )
 
 
-def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> None:
+def _cmoc_session_join_body(
+    codex_exec: _CodexExec, git: _GitRun = run_git
+) -> TerminalResult:
     """active session branch を session home branch へ merge する。"""
     root = repo_root()
     work = work_root()
     branch = current_branch(work)
+    update_primary_report_fields(
+        session_branch=branch,
+        session_state_before=None,
+        session_state_after=None,
+    )
     start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
@@ -65,68 +75,75 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         )
     require_clean_worktree(work)
     home = state.session.session_home_branch
+    update_primary_report_fields(
+        home_branch=home,
+        session_state_before=state.session.state,
+    )
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
+    session_head_before_merge = head_commit(work)
+    update_primary_report_fields(
+        session_branch_head_before_merge=session_head_before_merge,
+    )
     start_subcommand_step(3, "session branch を merge", "merge session branch")
-    try:
-        run_git(["switch", home], work)
-        merge = git(["merge", "--no-ff", branch], work, check=False)
-        if merge.returncode != 0:
-            resolve_session_join_conflict(work, codex_exec, git)
-        state.session.state = "joined"
-        start_subcommand_step(4, "後始末と結果を表示", "finish session join")
-        write_state(path, state)
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-        # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
-        # remote-tracking ref で安全性を証明してはならない。
-        reachable = (
-            git(
-                ["merge-base", "--is-ancestor", branch, "HEAD"],
-                work,
-                check=False,
-            ).returncode
-            == 0
-        )
-        if reachable:
-            delete_result = git(["branch", "-d", branch], work, check=False)
-        else:
-            delete_result = CommandResult(
-                1, "", f"session branch is not merged: {branch}"
-            )
-    except BaseException as exc:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-        # precondition 後の failure では手動の git resolution が必要になり得るため、
-        # error report は既定の stdout path ではなく stderr に出す。
-        setattr(exc, "cmoc_error_to_stderr", True)
-        raise
+    # {{work-root}}/oracle/doc/app_spec/session_state.md:
+    # session_home_branch は local branch なので、同名 remote-tracking branch を
+    # Git に推測させて別の merge target を作らない。
+    run_git(["switch", "--no-guess", home], work)
+    home_head_before_merge = head_commit(work)
+    update_primary_report_fields(home_branch_head_before_merge=home_head_before_merge)
+    merge = git(["merge", "--no-ff", branch], work, check=False)
+    if merge.returncode != 0:
+        resolve_session_join_conflict(work, codex_exec, git)
+    head_after_merge = head_commit(work)
+    merge_commit = (
+        head_after_merge if head_after_merge != home_head_before_merge else None
+    )
+    update_primary_report_fields(merge_commit=merge_commit)
+    state.session.state = "joined"
+    start_subcommand_step(4, "後始末と terminal result を確定", "finish session join")
+    write_state(path, state)
+    update_primary_report_fields(session_state_after="joined")
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
+    # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
+    # remote-tracking ref で安全性を証明してはならない。
+    reachable = (
+        git(
+            ["merge-base", "--is-ancestor", branch, "HEAD"],
+            work,
+            check=False,
+        ).returncode
+        == 0
+    )
+    if reachable:
+        delete_result = git(["branch", "-d", branch], work, check=False)
+    else:
+        delete_result = CommandResult(1, "", f"session branch is not merged: {branch}")
     warnings: list[str] = []
     if delete_result.returncode != 0:
         warnings.append(f"session branch was not deleted: {branch}")
-    warning_lines = (
-        [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
-    )
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc session join",
-                f"- session_id: `{session_id}`",
-                f"- joined_to: `{home}`",
-                f"- deleted_session_branch: `{delete_result.returncode == 0}`",
-                "- warnings:",
-                *warning_lines,
-            ]
-        )
+    return TerminalResult(
+        details=(
+            ("session_id", session_id),
+            ("joined_to", home),
+            ("deleted_session_branch", delete_result.returncode == 0),
+        ),
+        warnings=tuple(warnings),
     )
 
 
 def resolve_session_join_conflict(
     root: Path,
-    codex_exec: CodexExec,
-    git: GitRun = run_git,
+    codex_exec: _CodexExec,
+    git: _GitRun = run_git,
 ) -> None:
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""
     start_subcommand_step("3/4, 1/5", "conflict 対象を列挙", "enumerate conflicts")
     conflicted_paths = _unmerged_paths(root, git)
+    update_primary_report_fields(
+        conflict_paths=[str(_absolute_path(path)) for path in conflicted_paths],
+        conflict_resolution_status="not_started",
+    )
     if not conflicted_paths:
         raise CmocError(
             "merge に失敗しましたが conflict 対象ファイルを特定できません。",
@@ -136,6 +153,7 @@ def resolve_session_join_conflict(
     before_codex = _changed_path_snapshot(root, git)
     before_conflict_contents = _conflict_file_contents(conflicted_paths)
     start_subcommand_step("3/4, 2/5", "conflict marker 解消を依頼", "resolve conflicts")
+    update_primary_report_fields(conflict_resolution_status="started")
     codex_exec(
         build_session_join_conflict_resolution_parameter(conflicted_paths),
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md:
@@ -143,6 +161,7 @@ def resolve_session_join_conflict(
         root=repo_root(root),
         purpose="session join conflict resolution",
     )
+    update_primary_report_fields(conflict_resolution_status="completed")
     _reject_non_conflict_changes(root, git, before_codex, conflicted_paths)
     _reject_conflict_context_changes(before_conflict_contents)
     start_subcommand_step(
@@ -161,7 +180,7 @@ def resolve_session_join_conflict(
         )
     start_subcommand_step("3/4, 4/5", "conflict 対象を stage", "stage conflicts")
     for path in conflicted_paths:
-        git(["add", "--", str(path.relative_to(root))], root)
+        git(["add", "--", literal_pathspec(str(path.relative_to(root)))], root)
     unmerged_paths = _unmerged_paths(root, git)
     start_subcommand_step(
         "3/4, 5/5", "unmerged path と merge 完了を確認", "finish conflict merge"
@@ -176,7 +195,7 @@ def resolve_session_join_conflict(
     git(["commit", "--no-edit"], root)
 
 
-def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
+def _unmerged_paths(root: Path, git: _GitRun) -> list[Path]:
     """Gitのunmerged pathをNUL framingで安全に読み取る。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
     # Git path には改行が含まれ得るため、conflict target は NUL framing を使う。
@@ -188,12 +207,13 @@ def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
 
 def _reject_non_conflict_changes(
     root: Path,
-    git: GitRun,
+    git: _GitRun,
     before_codex: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]],
     conflicted_paths: list[Path],
 ) -> None:
     """Codex 呼び出し後に許可範囲外の差分が変化していないか検査する。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py:
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md の
+    # 「oracle file 規定と conflict 解消の優先順位」:
     # conflict marker 解消に不要な別 file の変更を merge commit へ持ち込まない。
     allowed = {_absolute_path(path) for path in conflicted_paths}
     after_codex = _changed_path_snapshot(root, git)
@@ -239,16 +259,15 @@ def _conflict_file_contents(paths: list[Path]) -> dict[Path, bytes]:
 
 def _reject_conflict_context_changes(before_contents: dict[Path, bytes]) -> None:
     """conflict marker の外側へ agent が差分を加えた場合は merge を拒否する。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py:
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md の
+    # 「oracle file 規定と conflict 解消の優先順位」:
     # conflict marker の置換範囲外の仕様変更、実装改善、整形を merge commit に持ち込まない。
     changed: list[Path] = []
     for path, before in before_contents.items():
         after = _read_regular_file(path)
         if after is None:
-            if path.exists() or path.is_symlink():
-                changed.append(path)
-                continue
-            after = b""
+            changed.append(path)
+            continue
         if not _preserves_conflict_context(before, after):
             changed.append(path)
     if changed:
@@ -307,6 +326,7 @@ def _preserves_conflict_context(before: bytes, after: bytes) -> bool:
 
     @lru_cache(maxsize=None)
     def matches(segment_index: int, position: int) -> bool:
+        """指定位置から残りの conflict context segment を順序どおり探す。"""
         if segment_index == len(segments):
             # 最後の conflict block の置換本文は任意の line を含み得る。
             return True
@@ -334,7 +354,7 @@ def _preserves_conflict_context(before: bytes, after: bytes) -> bool:
 
 def _changed_path_snapshot(
     root: Path,
-    git: GitRun,
+    git: _GitRun,
 ) -> dict[Path, tuple[str, tuple[str, int, int, str | None] | None]]:
     """Codex 呼び出し前後の比較用に Git の変更 path と内容を記録する。"""
     snapshot: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]] = {}

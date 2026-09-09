@@ -1,0 +1,403 @@
+{
+  "type": "object",
+  "description": "feedback issue remediation agent call の出力。",
+  "additionalProperties": false,
+  "required": [
+    "result"
+  ],
+  "properties": {
+    "result": {
+      "description": "status に対応する issue remediation result。",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/fixed_result"
+        },
+        {
+          "$ref": "#/$defs/already_resolved_result"
+        },
+        {
+          "$ref": "#/$defs/not_actionable_result"
+        },
+        {
+          "$ref": "#/$defs/human_required_result"
+        },
+        {
+          "$ref": "#/$defs/inconclusive_result"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "issue_id": {
+      "type": "string",
+      "pattern": "^fbi_[a-z2-7]{26}$",
+      "description": "入力された正規化済み feedback issue の ID。"
+    },
+    "changed_path": {
+      "type": "string",
+      "pattern": "^[\\s\\S]{1,1024}$",
+      "description": "realization file の net 差分を表す正規化済み `{{work-root}}` 相対 path。"
+    },
+    "changed_paths_required": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/changed_path"
+      },
+      "description": "この issue の処理による 1 件以上の realization file の net 差分。"
+    },
+    "changed_paths_empty": {
+      "type": "array",
+      "maxItems": 0,
+      "items": {
+        "$ref": "#/$defs/changed_path"
+      },
+      "description": "realization file の net 差分がないことを表す空配列。"
+    },
+    "changed_paths_optional": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/changed_path"
+      },
+      "description": "安全で独立して検証済みの部分修正による net 差分。"
+    },
+    "current_evidence": {
+      "type": "object",
+      "description": "issue の現在状態または結果分類を裏付ける evidence 1 件。",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "location",
+        "finding"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1024}$",
+          "description": "evidence を確認した `{{work-root}}` 相対 path または識別可能な subject。"
+        },
+        "location": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,500}$",
+          "description": "path 内の行、field、symbol、command、または inspection 対象。"
+        },
+        "finding": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "issue の現在状態または結果分類を示す具体的な所見。"
+        }
+      }
+    },
+    "current_evidence_required": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/current_evidence"
+      },
+      "description": "結果分類を裏付ける 1 件以上の current evidence。"
+    },
+    "current_evidence_optional": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/current_evidence"
+      },
+      "description": "確認できた current evidence。確認できない場合は空配列。"
+    },
+    "successful_verification": {
+      "type": "object",
+      "description": "成功した verification 1 件。",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "status",
+        "summary"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1000}$",
+          "description": "実行した command または inspection。"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed"
+          ],
+          "description": "verification が成功した。"
+        },
+        "summary": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "verification の観測結果。"
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "description": "実行または試行した verification 1 件。",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "status",
+        "summary"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1000}$",
+          "description": "実行した command、inspection、または実行できなかった確認。"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "not_run"
+          ],
+          "description": "verification の実行結果。"
+        },
+        "summary": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "verification の観測結果または実行できなかった理由。"
+        }
+      }
+    },
+    "successful_verifications": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/successful_verification"
+      },
+      "description": "1 件以上の成功した verification。"
+    },
+    "verifications": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/verification"
+      },
+      "description": "1 件以上の実行または試行した verification。"
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[\\s\\S]{1,1200}$",
+      "description": "evidence と verification から status を導いた理由。"
+    },
+    "human_action": {
+      "type": "string",
+      "pattern": "^[\\s\\S]{1,1200}$",
+      "description": "現在の作業外にいる人間が取る必要のある具体的な対応。"
+    },
+    "no_human_action": {
+      "type": "null",
+      "description": "人間対応を結果として返さない。"
+    },
+    "fixed_result": {
+      "type": "object",
+      "description": "realization file の修正と検証を完了した結果。",
+      "additionalProperties": false,
+      "required": [
+        "issue_id",
+        "status",
+        "changed_paths",
+        "current_evidence",
+        "verification",
+        "reason",
+        "human_action"
+      ],
+      "properties": {
+        "issue_id": {
+          "$ref": "#/$defs/issue_id"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "fixed"
+          ]
+        },
+        "changed_paths": {
+          "$ref": "#/$defs/changed_paths_required"
+        },
+        "current_evidence": {
+          "$ref": "#/$defs/current_evidence_required"
+        },
+        "verification": {
+          "$ref": "#/$defs/successful_verifications"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        },
+        "human_action": {
+          "$ref": "#/$defs/no_human_action"
+        }
+      }
+    },
+    "already_resolved_result": {
+      "type": "object",
+      "description": "処理時点ですでに問題が存在しない結果。",
+      "additionalProperties": false,
+      "required": [
+        "issue_id",
+        "status",
+        "changed_paths",
+        "current_evidence",
+        "verification",
+        "reason",
+        "human_action"
+      ],
+      "properties": {
+        "issue_id": {
+          "$ref": "#/$defs/issue_id"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "already_resolved"
+          ]
+        },
+        "changed_paths": {
+          "$ref": "#/$defs/changed_paths_empty"
+        },
+        "current_evidence": {
+          "$ref": "#/$defs/current_evidence_required"
+        },
+        "verification": {
+          "$ref": "#/$defs/successful_verifications"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        },
+        "human_action": {
+          "$ref": "#/$defs/no_human_action"
+        }
+      }
+    },
+    "not_actionable_result": {
+      "type": "object",
+      "description": "feedback の報告基準を満たさない結果。",
+      "additionalProperties": false,
+      "required": [
+        "issue_id",
+        "status",
+        "changed_paths",
+        "current_evidence",
+        "verification",
+        "reason",
+        "human_action"
+      ],
+      "properties": {
+        "issue_id": {
+          "$ref": "#/$defs/issue_id"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_actionable"
+          ]
+        },
+        "changed_paths": {
+          "$ref": "#/$defs/changed_paths_empty"
+        },
+        "current_evidence": {
+          "$ref": "#/$defs/current_evidence_required"
+        },
+        "verification": {
+          "$ref": "#/$defs/successful_verifications"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        },
+        "human_action": {
+          "$ref": "#/$defs/no_human_action"
+        }
+      }
+    },
+    "human_required_result": {
+      "type": "object",
+      "description": "realization file の編集だけでは満たせない対応が必要な結果。",
+      "additionalProperties": false,
+      "required": [
+        "issue_id",
+        "status",
+        "changed_paths",
+        "current_evidence",
+        "verification",
+        "reason",
+        "human_action"
+      ],
+      "properties": {
+        "issue_id": {
+          "$ref": "#/$defs/issue_id"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "human_required"
+          ]
+        },
+        "changed_paths": {
+          "$ref": "#/$defs/changed_paths_optional"
+        },
+        "current_evidence": {
+          "$ref": "#/$defs/current_evidence_required"
+        },
+        "verification": {
+          "$ref": "#/$defs/verifications"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        },
+        "human_action": {
+          "$ref": "#/$defs/human_action"
+        }
+      }
+    },
+    "inconclusive_result": {
+      "type": "object",
+      "description": "許可された情報では結果を判定できない診断。",
+      "additionalProperties": false,
+      "required": [
+        "issue_id",
+        "status",
+        "changed_paths",
+        "current_evidence",
+        "verification",
+        "reason",
+        "human_action"
+      ],
+      "properties": {
+        "issue_id": {
+          "$ref": "#/$defs/issue_id"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "inconclusive"
+          ]
+        },
+        "changed_paths": {
+          "$ref": "#/$defs/changed_paths_empty"
+        },
+        "current_evidence": {
+          "$ref": "#/$defs/current_evidence_optional"
+        },
+        "verification": {
+          "$ref": "#/$defs/verifications"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        },
+        "human_action": {
+          "$ref": "#/$defs/no_human_action"
+        }
+      }
+    }
+  }
+}

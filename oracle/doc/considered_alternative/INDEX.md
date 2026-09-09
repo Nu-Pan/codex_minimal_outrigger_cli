@@ -1,93 +1,99 @@
 # `apply_behavior.md`
 
 ## Summary
-- cmoc realization refactor で採用しなかった作業方式と、その不採用理由を記録する文書。事前の作業計画立案や、所見の並列リストアップ・所見単位の修正を避け、永続的な調査要求に従ってファイル単位で調査と反映を進める現行方針との違いを確認するための入口。
+- realization refactorで採用しなかった二つの進め方（事前の作業計画立案、所見の並列リストアップ）と、その不採用理由を説明する文書。現行の永続的な調査要求に従うファイル単位の調査・反映方式との違いを確認するための入口。
 
 ## Read this when
-- cmoc realization refactor の作業フローや調査・修正単位の設計理由を確認するとき
-- 事前計画方式、並列所見調査、ダーティフラグ方式を採用しなかった背景を調べるとき
-- 現行の investigation_required の責務と、一時的な queue 管理方式との違いを確認するとき
+- realization refactorの作業フロー設計で、修正点確定後の独立した計画立案を採用しない理由を確認したいとき。
+- 所見を先に並列収集してから所見単位で修正する方式と、現行のfile単位の調査・反映方式の違いを確認したいとき。
 
 ## Do not read this when
-- 具体的な realization file の修正方法や実装責務を確認したいとき
-- 現行 refactor state の定義や運用仕様を直接確認したいとき
-- 単に対象ファイルの実装内容やテスト内容を調べたいとき
+- 現行realization refactorの具体的な実装仕様や状態管理の定義を確認したいとき。
+- oracle fileまたはrealization fileの個別の修正内容・所見を直接確認すべきとき。
 
 ## hash
-- 4ae063e03f4cee3284619dd468f190be9b8260cf5aaac9493faab0d08024688b
+- 75826a26abd23751d9e74980ff58a58f419472e9d085b0ef5eca57227f6960c0
 
-# `file_access_rule_violation_post_validation.md`
+# `file_access_policy_violation_post_validation.md`
 
 ## Summary
-- `cmoc` の事後検査として、agent call が作った差分を file access rule 違反の観点で再確認する案と、その案を false-positive 多発で見送った経緯を扱う。
-- この文書は、採用しなかった代替案の記録として読むもので、現行の差分検査実装や file access rule 本体の仕様を探す入口ではない。
+- agent call 後の差分を検査して file access policy 違反を検出し、違反時に別の agent call でリカバリーする案を、false-positive などの理由で断念した経緯を記録する検討資料。
 
 ## Read this when
-- 事後検査方式の採否や、なぜその方式をやめたかの判断根拠を確認したいとき。
-- `cmoc` が別 agent call によるリカバリーを構想していた痕跡を追いたいとき。
-- 並列編集時の false-positive や、`gitignore` 系を検査対象から外す扱いのような、見送った論点を確認したいとき。
+- file access policy 違反の事後検査や、違反検出後の自動リカバリー案を調査するとき。
+- 並列 agent による差分の誤検出、`.gitignore` 系の扱い、agent call 起因の差分判定の難しさを確認するとき。
 
 ## Do not read this when
-- 現在の file access rule の実装や検査ロジックそのものを知りたいとき。
-- 現行の差分検査の仕様、保存先、CLI 挙動を確認したいときは、より直接にそれらを扱う本文を読むべきで、この文書は読まなくてよい。
-- `cmoc` の現行リカバリー経路や agent 呼び出しの通常フローを確認したいとき。
+- 現行の file access policy や実装仕様を確認・変更するとき。
+- 過去の断念理由ではなく、現在の検査処理やリカバリー処理の詳細を直接調べるとき。
 
 ## hash
-- 6c1b9b5c04251202f8528be8834a5298c099c670559952955f3909d4125dd8dc
+- 6ca39e6855f9add5db8cb57a495360d319e2e83f99e9bb194b51126cb4138d59
 
 # `gitignore_to_permission_profile.md`
 
 ## Summary
-- `.gitignore` の除外判定を permission profile の読み書き例外へ変換する案を検討した記録。記法の非互換性により採用せず、現行のアクセス制限は別の正本仕様に従う方針と、変換を実行時分岐や fallback に使わない判断を示す。
+- .gitignore の除外判定を permission profile に変換して例外的な読み書きを許可する案の検討結果を記録する文書。採用しなかった理由と、記法互換性の具体的な制約を確認するための入口。
 
 ## Read this when
-- `.gitignore` と permission profile の連携案、その採否理由、または除外ファイルを自由に扱う例外規則の検討経緯を確認するとき。
+- .gitignore を利用して Codex CLI の permission profile を動的生成する案を検討・評価するとき。
+- git 追跡対象外ファイルを通常のアクセス制限の例外として扱う設計の背景や不採用理由を確認するとき。
 
 ## Do not read this when
-- 現行のファイルアクセス制限そのものを確認・変更するとき。指定された正本仕様を直接読むべきである。
-- .gitignore の現在の除外パターンや、実行時のアクセス制御を実装・調査するとき。
+- 現行のファイルアクセス制限の正本仕様や実装を確認するときは、permission profile の正本・実装対象を直接読む。
+- .gitignore の一般的な構文や git の追跡除外動作だけを調べるとき。
 
 ## hash
-- b30df9818914933f918982f74982684bbcc96a7ef97e7c179756ad599e7d3601
+- 043c7f3a7187986053ccac79f76718ead5448f728287b5bb77dc0e0bceda37f5
 
 # `memory_alternative.md`
 
 ## Summary
-- AI に実行結果の振り返りから kaizen を作らせ、それを後続の Codex CLI 実行へ自動注入する設計を cmoc が採用しない理由を説明する正本仕様断片。
-- 検証・整理・人間の採用判断を経ない AI-generated kaizen は、仕様、ログ、失敗分析、思い込みが混ざった曖昧な準仕様レイヤーになり、oracle とは別の暗黙仕様を生むため避けるべきだと位置づける。
-- cmoc が目指すべき方向を、AI に暗黙記憶を持たせることではなく、INDEX、oracle、ログ、実行成果物を通じて必要情報へ明示的に到達できる状態にすることとして示す。
+- AI-generated kaizen を後続の Codex CLI 実行へ自動注入しない理由を整理した検討資料。暗黙の準仕様化、誤診断の永続化、oracle との仕様単一性の損失、古い情報の混入を避け、仕様・入力・ログ・成果物・INDEX・oracle による明示的な情報到達を重視する。
 
 ## Read this when
-- AI-generated kaizen、memory、振り返り結果、改善案を次回以降の実行コンテキストへ自動で引き継ぐ機能を検討しているとき。
-- Codex CLI 呼び出しに継続的な指示、学習結果、失敗原因分析、過去の対処を自動注入する状態管理を追加すべきか判断するとき。
-- oracle 以外の場所に蓄積される暗黙の仕様や準仕様レイヤーが、cmoc の仕様単一性や追跡可能性を壊さないか確認したいとき。
-- cmoc における情報到達の方針として、永続的な AI 記憶ではなく、INDEX、oracle、ログ、実行成果物の整備を優先する根拠を確認したいとき。
+- AI-generated kaizen や AI の振り返り結果を次回以降の実行コンテキストへ自動反映する仕組みの採否を検討するとき
+- cmoc に暗黙記憶や memory 系の仕組みを導入することの問題点を確認するとき
+- oracle を正本仕様断片として維持し、実行の根拠を明示情報に限定する方針を確認するとき
 
 ## Do not read this when
-- 個別の kaizen 文面の書き方、レビュー観点、改善提案の内容そのものを設計したいだけで、自動的な次回実行への注入可否を扱わないとき。
-- INDEX、oracle、ログ、実行成果物の具体的な形式や配置、生成手順を確認したいとき。
-- Codex CLI 本体の memory 機能の詳細仕様や操作方法を調べたいとき。
-- 一時的な実行ログ、成果物、明示入力を今回限りの判断材料として読む処理を検討しており、継続的な暗黙記憶や自動注入を追加しないことが明らかなとき。
+- 実際の kaizen、oracle、ログ、実行成果物の内容や更新手順を確認したいとき
+- Codex CLI 本体の memory 機能の具体的な仕様や利用方法を調べたいとき
+- AI-generated kaizen の自動注入以外の実装方式や個別の実行障害を直接調査するとき
 
 ## hash
-- 5ef1ea0577ef57db18994f2e242ebf091720662552e236911b3608f9b8431527
+- bdf5f8772491fd718cde867cc852b43c14722dbb097400a776dd3396450a65eb
+
+# `oracle_review.md`
+
+## Summary
+- `cmoc oracle review` を採用しない判断の理由と、その代替として通常 workload の範囲外の問題を feedback observation として報告する方針を示す文書。
+
+## Read this when
+- `cmoc oracle review` の不採用理由や、oracle file の網羅検査を提供しない設計判断を確認するとき。
+- 通常の workload における oracle file 調査と、解消できない問題の feedback report への引き継ぎ方針を確認するとき。
+
+## Do not read this when
+- `cmoc feedback report` の具体的な処理仕様や自動修正条件を確認したいときは、feedback_report の正本を直接読む。
+- agent による feedback observation の報告基準を確認したいときは、feedback_observation の正本を直接読む。
+- 通常の workload に必要な個別の oracle file の内容や実装責務を調べるとき。
+
+## hash
+- 85eff2dc068f2ad2f8e8b693036af18e0c41551c0ec0754ce18e8311739b946e
 
 # `working_plan_review.md`
 
 ## Summary
-- AI に作業計画を出させて人間がレビューする方式を採用しなかった理由を説明する、設計上の不採用案メモ。
-- 人間が最終成果物に関心を持つ一方で、実装・設計の細部には介助が必要になるという前提から、人間と AI が同じ作業計画を共同管理する方式の問題を整理している。
-- 代替として、人間が正本仕様断片を編集し、AI がその実装可能性をレビューして実装を追従させる方式を採用した背景を示す。
+- AI に作業計画を作成・レビューさせる方式を採用せず、人間が oracle に want を明文化し、AI が実装可能性を確認して実装へ追従させる方針の背景を説明する文書。
+- 人間と AI の共同作業における速度差と、人間が実装・設計へ介助的に関与せざるを得ない事情を踏まえ、`cmoc eval-oracle` を中心とした開発スタイルの選択理由を示す。
 
 ## Read this when
-- AI に計画を書かせて人間がレビューする workflow を採用しない理由を確認したいとき。
-- 人間が oracle を編集し、AI が実装可能性を評価する方式の設計意図を確認したいとき。
-- 人間の want、AI の実装追従、作業計画レビューの責務分担を比較して判断したいとき。
+- `tgbt plan` や `/plan` による作業計画レビューを採用しない理由を確認したいとき。
+- oracle を人間が編集し、AI が実装を追従させる開発方針の背景や、`cmoc eval-oracle` の位置づけを理解したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な定義や責務を確認したいだけのとき。
-- 個別コマンドの入出力仕様、実装手順、テスト仕様を探しているとき。
-- 採用済み workflow の操作方法や CLI の具体的な挙動を確認したいとき。
+- 具体的な oracle の内容、実装手順、または CLI の操作方法を確認したいとき。
+- 作業計画そのものの作成・レビューや、個別の実装判断を行うとき。
 
 ## hash
-- f67c8c03a7304771c90eedfba5756a287112ba4a325f5a8c3d56a93f92c5d96d
+- b77118d588434b7038abe6c86e38acd6fc563eb52ca325508f0422c04e999c5f

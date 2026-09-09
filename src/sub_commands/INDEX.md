@@ -15,66 +15,100 @@
 # `doctor.py`
 
 ## Summary
-- `cmoc doctor` サブコマンドの実装。CLI ランタイム経由で doctor preprocess を 1 ステップ実行し、完了後に repo_root を表示する。doctor コマンドの実行経路と preprocess 呼び出しの入口として扱う。
+- `cmoc doctor` の CLI 入口を提供する。
+- CLI runtime 経由で doctor preprocess を明示的に 1 ステップ実行する。
+- 実行結果に現在の repo root を固有情報として返す。
 
 ## Read this when
-- doctor サブコマンドの実装や実行手順を変更・調査するとき
-- doctor preprocess の呼び出し位置、実行ステップ、表示内容を確認するとき
+- `cmoc doctor` のサブコマンド入口や、doctor preprocess の明示実行経路を確認するとき。
+- doctor 実行時のステップ定義や terminal result に含まれる repo root 情報を確認するとき。
 
 ## Do not read this when
-- doctor preprocess 自体の仕様や処理内容を確認したいときは、参照される oracle/doc/app_spec/doctor_preprocess.md を直接読む
-- CLI ランタイム共通処理の仕様や実装だけを確認したいとき
+- doctor preprocess の具体的な処理内容や成果物を確認したいとき。
+- CLI サブコマンド共通 runtime の実装や一般的な実行制御を確認したいとき。
 
 ## hash
-- 48cc149773f0620f64d4650bed55bdb7b42dada088e55d312892186978176836
+- 1eb417245f2ab7964031bcace08e76c91beda19e6b7c26b38e163f2ec9977c3b
+
+# `feedback`
+
+## Summary
+- `feedback` サブコマンド全体の実装入口。観測の受付後に行う判定、report cut と候補処理、issue remediation、checkpoint・publication、run cleanup／recovery の責務を横断して確認できる。
+
+## Read this when
+- `cmoc feedback` の実行全体や、観測から remediation・report publication・cleanup までの処理経路を確認・変更するとき。
+- feedback の decision、report、remediation、recovery のどの下位実装から読み始めるべきか判断したいとき。
+
+## Do not read this when
+- feedback observation の受付・保存や envelope 検証だけを確認したいとき。
+- feedback 内の単一責務の詳細を直接調べる場合は、decision、report、remediation、recovery の該当実装を直接読むとき。
+- feedback 以外のサブコマンドや一般的な run lifecycle の共通実装だけを扱うとき。
+
+## hash
+- 4334535c045c7dfcaa3f3434468fff79728b5bac5e8fa7baa249ca4d7c51b01b
 
 # `indexing.py`
 
 ## Summary
-- `cmoc indexing` サブコマンドの CLI 実行入口。worktree の安全条件を確認し、ロック下で INDEX.md の更新と差分 commit を実行する。
+- work root の INDEX.md を更新する indexing CLI の実行入口を提供する。
+- 実行前に cmoc 管理対象と clean worktree を確認し、排他ロック下で INDEX.md を更新・差分 commit し、結果を primary report に反映する。
 
 ## Read this when
-- `cmoc indexing` の実行フロー、worktree 前提条件、インデックス更新・commit 処理を変更または調査するとき。
+- `cmoc indexing` の CLI 入口、実行前提条件、または indexing 処理全体の実行フローを確認するとき
+- INDEX.md の更新、更新差分の commit、または indexing 実行結果の報告処理の呼び出し元を確認するとき
 
 ## Do not read this when
-- インデックス更新の具体的な処理や commit の実装自体を調査するときは、`commons.indexing` の実装を直接読む。
-- 他のサブコマンドの CLI 実行フローだけを調査するとき。
+- INDEX.md の具体的な更新規則や探索・生成ロジックを確認したいときは、indexing 共通処理の対象を直接読む
+- CLI 共通の実行制御や step 管理の仕様だけを確認したいときは、CLI runtime 共通処理の対象を直接読む
+- worktree の clean 判定や cmoc 管理対象の検査実装だけを確認したいときは、対応する runtime 検査処理を直接読む
 
 ## hash
-- 648fe512e7039f2060fbe5969945f9992a0b8b3697e92d2cbbf949083d8804ce
+- 1b5fb1518b06f7acdfb54acdb2e8ab410c4772fa381bae42ed1af943e6209ce0
 
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。oracle の編集・調査・レビューに関する CLI 実装と、それらを支える review 用の対象選定、ループ、パス、レポート、INDEX merge 処理への入口を提供する。
+- oracle 系サブコマンドの package 境界を示し、oracle サブコマンド群への入口となる。
+- `cmoc oracle edit` の入力収集、起動前提の検証、本命 oracle 編集 agent call と仕様削減 agent call の実行フローを担う。
+- `cmoc oracle investigation` の調査指示入力、完全プロンプト構築、Codex TUI 起動までの read-only 実行フローを担う。
+- 編集関連の実装ファイルを含まない空のディレクトリで、現時点の下位要素へのルーティング先はない。
 
 ## Read this when
-- oracle 系サブコマンドの構成や、各サブコマンド実装への入口を確認するとき。
-- oracle review の lifecycle、対象選定、所見処理、レポート生成、INDEX 差分 merge の実装箇所を特定するとき。
+- oracle 系サブコマンドの package 構成や入口を確認するとき。
+- `cmoc oracle edit` の CLI フロー、入力編集、本命・仕様削減 agent call の起動条件や実行順序を確認するとき。
+- `cmoc oracle investigation` の CLI フロー、調査指示編集、プロンプト構築、Codex TUI 起動を確認するとき。
+- このディレクトリに編集関連ファイルが追加されたか確認するとき。
 
 ## Do not read this when
-- 特定の oracle サブコマンドの詳細な起動処理を確認する場合は、そのサブコマンド実装を直接読む。
-- review の対象列挙、ループ、パス解決、レポート、INDEX 操作の個別仕様を確認する場合は、対応する実装ファイルを直接読む。
-- oracle の正本仕様を確認する場合は、対応する oracle 文書を直接読む。
+- 個別 oracle サブコマンドの prompt 契約や仕様そのものを確認したいとき。
+- prompt editor の共通入出力処理だけを確認したいとき。
+- oracle edit の agent 起動パラメータ構築だけを確認したいとき。
+- oracle investigation の TUI 起動パラメータや共通 runtime の詳細だけを確認したいとき。
+- oracle サブコマンドの実装を調査するときに、空の編集ディレクトリだけを確認しようとしているとき。
 
 ## hash
-- d6eaa49c796a99bf83921c0827a42b43a0eae8cb1d6a595c2cb1491c29f5a39f
+- ed0e9b8fea43533d9ad7c042135f4f82804bdc36036c330a8498b11afa88fc9a
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の処理構成、およびそれぞれの CLI 実行フローを下位要素へ案内する。
+- realization workload サブコマンドのパッケージ入口。
+- apply workload の実行入口と、editing run の作成、oracle 差分範囲の固定、追従 agent 実行、変更検査・commit、run 状態記録への入口。
+- refactor fork の lifecycle、進捗、unresolved findings、完了判定、変更・commit・INDEX 更新の検証、中断・エラー時の cleanup と report 保存への入口。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や、apply・refactor の処理入口を確認するとき。
-- realization apply fork または realization refactor fork の実行フローを調査するとき。
+- realization workload サブコマンドの構成や実装を確認するとき。
+- realization apply workload の実行手順、差分の始点、agent 実行後の変更検査・commit、joinable/error run の状態遷移を確認するとき。
+- realization refactor fork の lifecycle、進捗、完了判定、検証境界、cleanup、report 保存を確認するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
-- apply または refactor の個別実装、共通 lifecycle、起動パラメータなどを直接調査・変更するとき。
+- realization apply・refactor 以外の処理を確認するとき。
+- apply workload の agent 起動パラメータだけを確認したいとき。
+- editing run の共通 lifecycle、run の join・abandon、refactor state の基本形式を確認したいとき。
+- INDEX.md 生成の一般仕様や利用者向け CLI 仕様だけを確認したいとき。
 
 ## hash
-- 0a620d680086cb726879d3163877cd2bf0a1c519b912faba6686b81ec2e69e8f
+- 7863e2ae464f696f8c773550be032b394c7f18036877703b399cc1b482dfb7e2
 
 # `review`
 
@@ -93,51 +127,50 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。abandon・join の実装と、共通 lifecycle/report 実装への互換 shim を下位要素として案内する入口。
+- editing run 共通 lifecycle サブコマンドをまとめるパッケージの入口。配下の run lifecycle 実装へ進む起点。
 
 ## Read this when
-- editing run の abandon、join、ライフサイクル、report 連携を調査・変更するとき。
-- run worktree・branch・state・process tracking・rollback・cleanup・report の処理経路を追うとき。
+- editing run の abandon・join・共通 lifecycle helper・report writer の責務や実装箇所を判断するとき。
+- 配下の run lifecycle 実装を横断して、停止、merge、cleanup、互換 shim の入口を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- 特定の処理の実装詳細を確認する場合は、この入口ではなく配下の該当ファイルを直接読むとき。
-- 共通 lifecycle や report の canonical 実装そのものを確認する場合は、commons 側の実装を読むとき。
+- 特定の処理の詳細を確認するときは、この入口ではなく abandon.py、join.py、lifecycle.py、report.py の該当ファイルを直接読むとき。
 
 ## hash
-- 487cfc797f092144b6fb5980fa1a2c7f5200bee0e5d3f21250e7429a4fc84f01
+- b2a68d5575ab0d4779707b00e06db2099bc40beca43bc2dadc3c5e5088eaae40
 
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session のライフサイクル操作に関する実装を確認する際の入口となる。
-- session の abandon、fork、join を扱い、branch・state の作成、検証、更新、cleanup、失敗時のロールバックや merge conflict 解決を含む。
+- session サブコマンドの実装パッケージであり、session のライフサイクル処理を確認する際の入口となる。
+- session fork・join・abandon の各処理へ進むための下位実装の入口を提供する。
 
 ## Read this when
-- session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
-- session branch と state の作成・更新・削除、cleanup、失敗時の復旧処理を調査するとき。
-- session join の merge conflict 委譲、安全な差分制限、解決後の stage・commit 処理を確認・変更するとき。
+- session サブコマンドの実装構成やライフサイクル処理の入口を確認・変更するとき。
+- session fork、join、または abandon の具体的な実行経路を調べるとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- session の共通 state データ構造、runtime、Git status 取得などの一般仕様だけを確認するときは、対応する共通実装・仕様を直接読む。
-- conflict resolution 用 prompt の正本仕様や builder 実装そのものを確認するときは、対応する oracle または builder の対象を直接読む。
+- SessionState の共通仕様、Git 操作の共通実装、または conflict resolution builder の詳細だけを確認したいとき。
 
 ## hash
-- 8a0dfef628903e21e7fae720cdfc2150168e3c41e5d0776d9d80ec9fd63a111d
+- 2dbb14ef2fe555aa592c813a6dc6bea2bcd1a551c6e9140931e69cf339dca804
 
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行入口と本体処理を定義する。インデックス事前処理、オリジナルプロンプトの編集入力、TUI 起動パラメータの構築、Codex TUI の起動を担当する。
+- 利用者の依頼文を編集し、完全なプロンプトと TUI 起動パラメータを構築して Codex TUI を実行する `tui` サブコマンドの本体処理。
+- プロンプト入力の準備から収集・確定、実行前のインデックス作成準備、repository context と設定を用いた TUI 起動までを担う入口。
 
 ## Read this when
-- `cmoc tui` の実行フロー、プロンプト入力、TUI 起動処理を変更または調査するとき。
-- TUI 起動時のリポジトリルート、作業ルート、設定値の受け渡しを確認するとき。
+- `cmoc tui` の実行経路や、利用者入力から Codex TUI 起動までの流れを調査・変更するとき。
+- TUI 起動時の context・設定の受け渡しや、起動前の共通 CLI 処理を確認するとき。
 
 ## Do not read this when
-- TUI 起動パラメータの詳細仕様だけを確認したいときは、パラメータ構築側の実装や対応する仕様を直接読む。
-- プロンプトエディタの入力・ignore 処理だけを変更または調査するときは、入力処理側の実装や対応する仕様を直接読む。
+- TUI 起動パラメータの詳細だけを調査・変更する場合は、パラメータ構築担当の対象を直接読むとき。
+- プロンプト編集入力の予約・編集・収集・確定の仕様だけを確認する場合は、プロンプト入力担当の対象を直接読むとき。
+- CLI 共通実行基盤や設定ロードの一般仕様だけを確認する場合は、それぞれの担当対象を直接読むとき。
 
 ## hash
-- aa6f03a8d2a0cd859192f29279ebe32b845bd7c380a0ce0620b2b1a54dd3483e
+- 40d49f1a34914cf741647d5b3151e153ee8b1f25767665901565d7443e01b08a

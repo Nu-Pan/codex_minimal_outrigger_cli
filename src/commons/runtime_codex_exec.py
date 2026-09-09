@@ -6,11 +6,13 @@ subcommand event、補正・retry counter を共有する 1 つの状態機械�
 別 module へ分け、exec の分岐だけをここに残すことで責務境界を exec 実行制御
 へ限定している。quota 処理だけをさらに分離すると、resume session ID と log/event
 の読み取り文脈が呼び出し元と分断されるため、現状は一体で読む方が凝集性が高い。
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import json
 import subprocess
+import sys
 import threading
 import time
 from datetime import datetime, timedelta
@@ -23,10 +25,7 @@ from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
-from .runtime_codex_logging import (
-    emit_codex_call_console,
-    format_codex_call_error,
-)
+from .runtime_codex_logging import format_codex_call_error
 from .runtime_codex_profile import (
     codex_error_text,
     codex_subprocess_env,
@@ -43,6 +42,8 @@ from .runtime_codex_profile import (
 )
 from .runtime_config import load_config
 from .runtime_errors import CmocError
+from .runtime_feedback import begin_feedback_call
+from .runtime_feedback_store import rfc3339_now, sha256_bytes, uuid7_prefixed
 from .runtime_git import (
     WorktreeSnapshot,
     capture_worktree_snapshot,
@@ -70,11 +71,28 @@ _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMPS: dict[Path, str] = {}
 
 
+def _emit_quota_progress(message: str) -> None:
+    """quota 回復待ちの状態遷移だけを簡潔に stderr へ通知する。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    print(
+        f"# {console_timestamp()} Codex CLI quota wait: {message}",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
 def _write_prompt_log(path: Path, prompt: str) -> None:
     """Codex に渡した完全 prompt を再実行可能な stdin log として保存する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # prompt log 自体を再実行可能な stdin source とし、metadata にはしない。
     path.write_text(prompt, encoding="utf-8")
+
+
+# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+def _reject_non_json_constant(value: str) -> Any:
+    """JSON 仕様外の非有限数リテラルを JSON input から拒否する。"""
+    raise ValueError(f"non-standard JSON constant: {value}")
 
 
 def _read_required_output_json(path: Path) -> Any:
@@ -88,8 +106,8 @@ def _read_required_output_json(path: Path) -> Any:
     if not text.strip():
         raise ValueError(f"output file is empty: {path}")
     try:
-        return json.loads(text)
-    except json.JSONDecodeError as exc:
+        return json.loads(text, parse_constant=_reject_non_json_constant)
+    except ValueError as exc:
         raise ValueError(f"output file is not valid JSON: {exc}") from exc
 
 
@@ -224,8 +242,7 @@ def _base_exec_argv(override_args: list[str], agent_call_cwd: Path) -> list[str]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc は linked worktree や生成 root から Codex を実行し得るため、repo の検証は
     # Codex CLI startup ではなく cmoc 自身の preflight が担う。
-    # `--ask-for-approval` は Codex の root parser だけが受理するため、
-    # 共通の設定上書きは `exec` より前へ置く。
+    # Codex の root parser が受理する共通の設定上書きは `exec` より前へ置く。
     return [
         "codex",
         *override_args,
@@ -336,7 +353,10 @@ def run_codex_exec(
         try:
             schema_path = prepare_schema(root, schema_source_path)
             assert schema_path is not None
-            schema_definition = json.loads(schema_path.read_text(encoding="utf-8"))
+            schema_definition = json.loads(
+                schema_path.read_text(encoding="utf-8"),
+                parse_constant=_reject_non_json_constant,
+            )
             validator_class = validators.validator_for(schema_definition)
             validator_class.check_schema(schema_definition)
             schema_validator = validator_class(schema_definition)
@@ -344,6 +364,7 @@ def run_codex_exec(
             OSError,
             UnicodeError,
             json.JSONDecodeError,
+            ValueError,
             SchemaError,
             TypeError,
             AttributeError,
@@ -368,6 +389,11 @@ def run_codex_exec(
         if schema_path is not None
         else None
     )
+    # Structured Output correction 全体で共有する論理 agent call ID を先に固定する。
+    agent_call_id = uuid7_prefixed("agc_")
+    active_agent_call_id = agent_call_id
+    active_agent_call_kind = parameter.agent_call_kind
+    active_codex_call_id: str | None = None
 
     def _call_data(
         run_parameter: AgentCallParameter,
@@ -375,10 +401,13 @@ def run_codex_exec(
         run_agent_call_cwd: Path,
     ) -> dict[str, str]:
         """call log に残す論理値を実際の呼び出し parameter に揃える。"""
+        call_config = config.codex.agent_calls[run_parameter.agent_call_kind]
         return {
             "codex_home": str(run_codex_home),
-            "model_class": run_parameter.model_class.value,
-            "reasoning_effort": run_parameter.reasoning_effort.value,
+            "agent_call_kind": run_parameter.agent_call_kind,
+            "model_provider": call_config.model_provider,
+            "model": call_config.model,
+            "reasoning_effort": call_config.reasoning_effort,
             "file_access_mode": run_parameter.file_access_mode.value,
             "cwd": str(run_agent_call_cwd.resolve()),
         }
@@ -448,6 +477,8 @@ def run_codex_exec(
         run_output_path: Path,
         run_schema_path: Path | None,
         run_call_data: dict[str, str] | None = None,
+        run_agent_call_id: str | None = None,
+        run_codex_call_id: str | None = None,
     ) -> None:
         """後から実行条件を追跡できる call log JSON を保存する。"""
         path.write_text(
@@ -456,6 +487,8 @@ def run_codex_exec(
                     "purpose": run_purpose,
                     "timestamp": run_ts,
                     "argv": run_argv,
+                    "agent_call_id": run_agent_call_id or active_agent_call_id,
+                    "codex_call_id": run_codex_call_id or active_codex_call_id,
                     **(run_call_data or base_call_data),
                     "schema_path": str(run_schema_path) if run_schema_path else None,
                     "prompt_log_path": str(run_prompt_path),
@@ -487,27 +520,10 @@ def run_codex_exec(
         returncode: int | None,
         status: str,
         error: str | None = None,
-        console_error: str | None = None,
         run_codex_home: Path = codex_home,
     ) -> None:
-        """console と subcommand log の両方へ Codex call 結果を記録する。"""
+        """Codex call の結果を subcommand log へ記録する。"""
         elapsed_sec = time.perf_counter() - started_at
-        if console_error is None:
-            # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-            # returncode 0 でも malformed JSONL や最終 schema failure は error である。
-            # stdout/stderr 本文を console へ漏らさず、固定メッセージだけ stderr へ出す。
-            console_error = {
-                "failed": "Codex CLI 呼び出しが失敗しました。",
-                "structured_output_validation_failed": (
-                    "Codex CLI の Structured Output 検証に失敗しました。"
-                ),
-                "output_correction_failed": (
-                    "Codex CLI の Structured Output 補正に失敗しました。"
-                ),
-            }.get(status)
-        emit_codex_call_console(
-            run_purpose, run_call_path, elapsed_sec, returncode, console_error
-        )
         if logger is None:
             return
         payload: dict[str, Any] = {
@@ -527,7 +543,41 @@ def run_codex_exec(
         }
         if error is not None:
             payload["error"] = error
+        payload.update(
+            {
+                "agent_call_id": active_agent_call_id,
+                "agent_call_kind": active_agent_call_kind,
+                "codex_call_id": active_codex_call_id,
+            }
+        )
         logger.event("codex_call", **payload)
+
+    def _emit_structured_output_exhausted(
+        last_failure_stage: str,
+        run_call_path: Path,
+    ) -> None:
+        """正式出力を得られなかった stable diagnostic event を記録する。"""
+        if logger is None or schema_path is None:
+            return
+        try:
+            logger.event(
+                "codex.structured_output_validation_exhausted",
+                event_schema_version=1,
+                event_id=uuid7_prefixed("evt_"),
+                event_type="codex.structured_output_validation_exhausted",
+                occurred_at=rfc3339_now(),
+                subcommand_invocation_id=logger.invocation_id,
+                agent_call_id=active_agent_call_id,
+                agent_call_kind=active_agent_call_kind,
+                codex_call_id=active_codex_call_id,
+                codex_session_id=correction_session_id,
+                call_log_path=str(run_call_path),
+                schema_sha256=sha256_bytes(schema_path.read_bytes()),
+                last_failure_stage=last_failure_stage,
+            )
+        except BaseException:
+            # diagnostic の記録失敗を正式な Structured Output error へ混ぜない。
+            return
 
     def _ensure_correction_artifacts_unchanged(
         frozen_snapshot: WorktreeSnapshot | None,
@@ -539,6 +589,7 @@ def run_codex_exec(
         run_output_path: Path,
         started_at: float,
         returncode: int | None,
+        emit_exhausted: bool = True,
     ) -> None:
         """補正 turn の差分変動を復元し、補正不能な失敗として通知する。"""
         if frozen_snapshot is None:
@@ -551,6 +602,8 @@ def run_codex_exec(
             restore_worktree_snapshot(frozen_snapshot)
         except Exception as exc:
             detail = f"artifact inspection or restoration failed: {exc!r}"
+            if emit_exhausted:
+                _emit_structured_output_exhausted("artifact_changed", run_call_path)
             _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=run_call_path,
@@ -576,6 +629,8 @@ def run_codex_exec(
                 "restoration: succeeded",
             ]
         )
+        if emit_exhausted:
+            _emit_structured_output_exhausted("artifact_changed", run_call_path)
         _emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=run_call_path,
@@ -644,6 +699,9 @@ def run_codex_exec(
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = (
             _new_log_paths()
         )
+        active_agent_call_id = agent_call_id
+        active_agent_call_kind = parameter.agent_call_kind
+        active_codex_call_id = uuid7_prefixed("cdc_")
         current_argv = _build_argv(output_path, resume_session_id)
         _write_prompt_log(prompt_path, current_prompt)
         _write_call_log(
@@ -658,8 +716,25 @@ def run_codex_exec(
             run_schema_path=schema_path,
         )
         attempt_started_at = time.perf_counter()
+        feedback_call = begin_feedback_call(
+            agent_call_cwd=agent_call_cwd,
+            agent_call_id=active_agent_call_id,
+            agent_call_kind=active_agent_call_kind,
+            codex_call_id=active_codex_call_id,
+            codex_session_id=resume_session_id,
+            log_paths=[
+                call_path,
+                prompt_path,
+                stdout_path,
+                stderr_path,
+            ],
+        )
         try:
-            result = _run_with_prompt_file(current_argv, prompt_path)
+            result = _run_with_prompt_file(
+                current_argv,
+                prompt_path,
+                run_codex_env=feedback_call.subprocess_env(codex_env),
+            )
         except BaseException as exc:
             _ensure_correction_artifacts_unchanged(
                 frozen_artifact_snapshot,
@@ -670,8 +745,15 @@ def run_codex_exec(
                 run_output_path=output_path,
                 started_at=attempt_started_at,
                 returncode=None,
+                emit_exhausted=not isinstance(exc, KeyboardInterrupt),
             )
             startup_error = format_codex_call_error(exc)
+            if (
+                not isinstance(exc, KeyboardInterrupt)
+                and schema_path is not None
+                and output_corrections > 0
+            ):
+                _emit_structured_output_exhausted("resume_unavailable", call_path)
             _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
@@ -684,9 +766,10 @@ def run_codex_exec(
                 returncode=None,
                 status="failed",
                 error=startup_error,
-                console_error=startup_error,
             )
             raise
+        finally:
+            feedback_call.close()
         stdout_path.write_text(result.stdout, encoding="utf-8")
         stderr_path.write_text(result.stderr, encoding="utf-8")
         _ensure_correction_artifacts_unchanged(
@@ -747,12 +830,7 @@ def run_codex_exec(
                 with _QUOTA_CONDITION:
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
-                        print(
-                            "# "
-                            f"{console_timestamp()} "
-                            "Codex CLI quota wait: waiting for representative probe",
-                            flush=True,
-                        )
+                        _emit_quota_progress("waiting for representative probe")
                         _QUOTA_CONDITION.wait_for(lambda: not _QUOTA_POLLING)
                         waited_sec = time.perf_counter() - wait_started_at
                         quota_wait_sec += waited_sec
@@ -782,10 +860,7 @@ def run_codex_exec(
                     _QUOTA_PROBE_ERROR = None
                     _QUOTA_POLLING = True
                 try:
-                    print(
-                        f"# {console_timestamp()} Codex CLI quota wait: entering polling mode",
-                        flush=True,
-                    )
+                    _emit_quota_progress("entering polling mode")
                 except BaseException as exc:
                     with _QUOTA_CONDITION:
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -829,12 +904,15 @@ def run_codex_exec(
                         quota_probe_parameter = _quota_availability_probe_parameter(
                             parameter
                         )
+                        active_agent_call_id = uuid7_prefixed("agc_")
+                        active_agent_call_kind = quota_probe_parameter.agent_call_kind
+                        active_codex_call_id = uuid7_prefixed("cdc_")
                         probe_agent_call_cwd = AgentCallPathContext(
                             quota_probe_parameter.agent_call_cwd
                         ).agent_call_cwd
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                        # quota probe は別の Codex call なので、最小の AgentCallParameter も
-                        # argv/cwd/env を駆動しなければならない。
+                        # quota probe は独立した agent call なので、固有の
+                        # AgentCallParameter も argv/cwd/env を駆動しなければならない。
                         probe_codex_home = resolve_codex_home(probe_agent_call_cwd)
                         validate_codex_home(probe_codex_home)
                         probe_codex_env = codex_subprocess_env(probe_codex_home)
@@ -882,12 +960,26 @@ def run_codex_exec(
                             run_call_data=probe_call_data,
                         )
                         probe_started_at = time.perf_counter()
+                        probe_feedback_call = begin_feedback_call(
+                            agent_call_cwd=probe_agent_call_cwd,
+                            agent_call_id=active_agent_call_id,
+                            agent_call_kind=active_agent_call_kind,
+                            codex_call_id=active_codex_call_id,
+                            log_paths=[
+                                probe_call_path,
+                                probe_prompt_path,
+                                probe_stdout_path,
+                                probe_stderr_path,
+                            ],
+                        )
                         try:
                             poll = _run_with_prompt_file(
                                 probe_argv,
                                 probe_prompt_path,
                                 run_agent_call_cwd=probe_agent_call_cwd,
-                                run_codex_env=probe_codex_env,
+                                run_codex_env=probe_feedback_call.subprocess_env(
+                                    probe_codex_env
+                                ),
                             )
                         except BaseException as exc:
                             startup_error = format_codex_call_error(exc)
@@ -903,10 +995,11 @@ def run_codex_exec(
                                 returncode=None,
                                 status="failed",
                                 error=startup_error,
-                                console_error=startup_error,
                                 run_codex_home=probe_codex_home,
                             )
                             raise
+                        finally:
+                            probe_feedback_call.close()
                         probe_stdout_path.write_text(poll.stdout, encoding="utf-8")
                         probe_stderr_path.write_text(poll.stderr, encoding="utf-8")
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
@@ -943,6 +1036,7 @@ def run_codex_exec(
                             time.sleep(sleep_sec)
                             sleep_sec *= 2
                             capacity_retry_pending = True
+                            _emit_quota_progress("continuing")
                             continue
                         if not probe_available and (
                             probe_unexpected_error or not probe_quota_error
@@ -967,15 +1061,9 @@ def run_codex_exec(
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
                                 [
-                                    "stderr/stdout log を確認して原因を解消してください。"
+                                    "診断用サブコマンドログを確認して原因を解消してください。"
                                 ],
-                                _codex_failure_detail(
-                                    classification="quota availability probe failed",
-                                    returncode=poll.returncode,
-                                    call_path=probe_call_path,
-                                    stdout_path=probe_stdout_path,
-                                    stderr_path=probe_stderr_path,
-                                ),
+                                "quota availability probe returned an unexpected failure",
                             )
                         _emit_codex_call_event(
                             run_purpose="quota availability probe",
@@ -993,6 +1081,7 @@ def run_codex_exec(
                         )
                         if probe_available:
                             break
+                        _emit_quota_progress("continuing")
                 except BaseException as exc:
                     probe_error = exc
                     raise
@@ -1005,14 +1094,13 @@ def run_codex_exec(
                         _QUOTA_PROBE_ERROR = probe_error
                         _QUOTA_POLLING = False
                         _QUOTA_CONDITION.notify_all()
-                print(
-                    f"# {console_timestamp()} Codex CLI quota wait: resuming work",
-                    flush=True,
-                )
+                _emit_quota_progress("resuming work")
                 resume_session_id = correction_session_id or (
                     _extract_session_id_from_stdout_log(stdout_path)
                 )
                 continue
+            if schema_path is not None and output_corrections > 0:
+                _emit_structured_output_exhausted("resume_unavailable", call_path)
             _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
@@ -1055,6 +1143,9 @@ def run_codex_exec(
                     artifact_changed_paths,
                 )
             except Exception as exc:
+                _emit_structured_output_exhausted(
+                    "deterministic_postcondition", call_path
+                )
                 _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
@@ -1106,6 +1197,20 @@ def run_codex_exec(
                         error=rendered_issues,
                     )
                     continue
+                if failure_reason == "Codex session ID is unavailable":
+                    last_failure_stage = "resume_unavailable"
+                elif any(
+                    issue.condition == "JSON parse" for issue in validation_issues
+                ):
+                    last_failure_stage = "json_parse"
+                elif any(
+                    issue.condition.startswith("JSON Schema keyword")
+                    for issue in validation_issues
+                ):
+                    last_failure_stage = "schema_validation"
+                else:
+                    last_failure_stage = "deterministic_postcondition"
+                _emit_structured_output_exhausted(last_failure_stage, call_path)
                 detail = "\n".join(
                     [
                         f"schema: {schema_path}",

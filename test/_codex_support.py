@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 
@@ -28,16 +28,6 @@ def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return codex_home
 
 
-def configure_codex_home_for_test_local_ollama(codex_home: Path) -> None:
-    """Ollama 非対応の Codex 組み込み tool type を実経路試験だけで無効化する。"""
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # 現行 Codex が既定で送る namespace/web_search tool は Ollama の Responses
-    # endpoint が受理しないため、test-local provider に必要な差だけを隔離 home に置く。
-    (codex_home / "config.toml").write_text(
-        'web_search = "disabled"\n\n[features]\nmulti_agent = false\n'
-    )
-
-
 def codex_parameter(
     mode: FileAccessMode = FileAccessMode.READONLY,
     *,
@@ -45,8 +35,7 @@ def codex_parameter(
 ) -> AgentCallParameter:
     """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
     return AgentCallParameter(
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
+        agent_call_kind="build_indexing_index_entry_parameter",
         file_access_mode=mode,
         prompt="prompt",
         structured_output_schema_path=None,
@@ -102,4 +91,9 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
     monkeypatch.setattr(exec_module, "prepare_codex_override_args", fake_prepare)
     monkeypatch.setattr(tui_module, "prepare_codex_override_args", fake_prepare)
+    monkeypatch.setattr(
+        tui_module,
+        "codex_cli_supports_tui_notification_hooks",
+        lambda *_args: False,
+    )
     return override_args

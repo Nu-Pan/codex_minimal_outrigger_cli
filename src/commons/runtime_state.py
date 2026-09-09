@@ -1,3 +1,5 @@
+"""session と editing run の state schema、検証、永続化を提供する。"""
+
 import fcntl
 import json
 from collections.abc import Iterator
@@ -12,7 +14,7 @@ from .runtime_paths import sessions_dir
 
 SESSION_STATES = {"active", "joined", "abandoned", "error"}
 RUN_STATES = {"ready", "running", "joinable", "error"}
-RUN_KINDS = {"realization_apply", "realization_refactor"}
+RUN_KINDS = {"realization_apply", "realization_refactor", "feedback_report"}
 
 
 @dataclass

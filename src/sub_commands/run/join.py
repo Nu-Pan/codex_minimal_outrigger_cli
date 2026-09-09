@@ -5,19 +5,20 @@ cleanup は同じ active run の状態と failure rollback を共有する一つ
 分割すると、join の成功・失敗・cleanup pending の不変条件を複数 file で追う必要が
 生じるため、現状は run join lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+「realization file を扱う判断基準」
 """
 
 import os
+from collections.abc import Callable, Collection
 from dataclasses import replace
 from pathlib import Path
-
-import typer
 
 from cmoc_runtime import (
     CmocError,
     RunPart,
     SessionState,
+    TerminalResult,
     branch_exists,
     current_branch,
     delete_branch,
@@ -35,6 +36,7 @@ from cmoc_runtime import (
     write_state,
 )
 from commons.runtime_git import literal_pathspec
+from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_refactor import sync_refactor_state
 from commons.runtime_run import (
     delete_run_process_id,
@@ -48,6 +50,7 @@ from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
     commit_work_unit,
+    is_generated_index_path,
     refresh_indexes,
     resolve_active_run,
     tree_changes,
@@ -74,7 +77,7 @@ def cmoc_run_join_impl(force_resolve: bool = False) -> None:
     )
 
 
-def _cmoc_run_join_body(force_resolve: bool) -> None:
+def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
     """active run の差分を検査して merge、post-join 処理、cleanup を行う。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
     doctor_state_paths = _doctor_preprocess_for_join()
@@ -82,6 +85,18 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
     initial_context, _ = resolve_active_run({"joinable", "error"})
     with run_lifecycle_lock(initial_context.repo, initial_context.session_id):
         context, state = resolve_active_run({"joinable", "error"})
+        from sub_commands.feedback.recovery import require_manual_feedback_run
+
+        require_manual_feedback_run(context)
+        update_primary_report_fields(
+            run_kind=context.kind,
+            session_branch=context.session_branch,
+            run_branch=context.run_branch,
+            run_fork_commit=context.run_fork_commit,
+            run_worktree=context.run_worktree,
+            state_before=state.run.state,
+            state_after=state.run.state,
+        )
         warnings: list[str] = []
         current_worktree = work_root().resolve()
         session_doctor_state_paths = (
@@ -102,62 +117,13 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
             warnings.extend(
                 stop_tracked_codex_children(context.repo, context.session_id) or []
             )
-        require_clean_worktree(context.session_worktree)
-        require_clean_worktree(context.run_worktree)
-        run_changes = tree_changes(
-            context.run_worktree,
-            context.run_fork_commit,
-        )
-        session_changes = tree_changes(
-            context.session_worktree,
-            context.run_fork_commit,
-        )
-        session_unexpected = unexpected_session_paths(
-            context.session_worktree,
-            session_changes,
-            ignored_paths=session_doctor_state_paths,
-        )
-        if session_unexpected:
-            _raise_unexpected(
-                context,
-                "session branch に想定外差分があります。",
-                session_unexpected,
-                warnings,
-            )
-        run_unexpected = unexpected_run_paths(
+        validate_run_join(
             context,
-            run_changes,
-            ignored_paths=run_doctor_state_paths,
+            warnings,
+            force_resolve=force_resolve,
+            session_ignored_paths=session_doctor_state_paths,
+            run_ignored_paths=run_doctor_state_paths,
         )
-        if run_unexpected and not force_resolve:
-            _raise_unexpected(
-                context,
-                "run branch に想定外差分があります。",
-                run_unexpected,
-                warnings,
-            )
-        if run_unexpected:
-            _revert_unexpected_run_paths(context, run_changes, run_unexpected)
-            warnings.append(
-                "--force-resolve reverted unexpected run paths: "
-                + ", ".join(run_unexpected)
-            )
-            run_changes = tree_changes(
-                context.run_worktree,
-                context.run_fork_commit,
-            )
-            remaining = unexpected_run_paths(
-                context,
-                run_changes,
-                ignored_paths=run_doctor_state_paths,
-            )
-            if remaining:
-                _raise_unexpected(
-                    context,
-                    "run branch の想定外差分を解消できませんでした。",
-                    remaining,
-                    warnings,
-                )
         session_head_before_join = head_commit(context.session_worktree)
         try:
             (
@@ -172,8 +138,15 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 warnings,
                 session_head_before_join,
             )
+            update_primary_report_fields(
+                run_join_commit=run_join_commit,
+                post_join_hook=hook_result,
+                refactor_state_sync_commit=state_sync_commit,
+                cleanup=cleanup,
+                state_after="ready" if cleanup == "completed" else "error",
+            )
         except BaseException as exc:
-            if getattr(exc, "cmoc_stdout", None) is not None:
+            if isinstance(getattr(exc, "terminal_result", None), TerminalResult):
                 raise
             report = _record_join_failure(
                 context,
@@ -186,24 +159,32 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 "run join の merge または post-join 処理に失敗しました。",
                 ["run join report を確認してから join または abandon してください。"],
                 f"report: {report}\nerror: {exc!r}",
+                terminal_result=TerminalResult(
+                    primary_report=report,
+                    primary_report_role="run join report",
+                    warnings=tuple(warnings),
+                ),
             )
-            setattr(error, "cmoc_stdout", f"- run join report: `{report}`")
             raise error from exc
-    start_subcommand_step(6, "join 結果を表示", "show join result")
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc run join",
-                f"- run_kind: `{context.kind}`",
-                f"- run_branch: `{context.run_branch}`",
-                f"- run_join_commit: `{run_join_commit}`",
-                f"- post_join_hook: `{hook_result}`",
-                f"- refactor_state_sync_commit: `{state_sync_commit}`",
-                f"- cleanup: `{cleanup}`",
-                f"- report: `{report}`",
-                *[f"- warning: {warning}" for warning in warnings],
-            ]
-        )
+    start_subcommand_step(6, "terminal result を確定", "finalize terminal result")
+    next_actions = (
+        ("`cmoc run abandon` で残った run 資源の cleanup を再試行してください。",)
+        if cleanup != "completed"
+        else ()
+    )
+    return TerminalResult(
+        primary_report=report,
+        primary_report_role="run join report",
+        details=(
+            ("run_kind", context.kind),
+            ("run_branch", context.run_branch),
+            ("run_join_commit", run_join_commit),
+            ("post_join_hook", hook_result),
+            ("refactor_state_sync_commit", state_sync_commit),
+            ("cleanup", cleanup),
+        ),
+        next_actions=next_actions,
+        warnings=tuple(warnings),
     )
 
 
@@ -220,8 +201,11 @@ def _doctor_preprocess_for_join() -> set[str]:
         pass
     else:
         # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-        # merge 前の entry 同期遅延は refactor run だけに限定する。
-        sync_refactor_entries = state.run.kind != "realization_refactor"
+        # merge 前の entry 同期は refactor state を更新する run で遅延する。
+        sync_refactor_entries = state.run.kind not in {
+            "realization_refactor",
+            "feedback_report",
+        }
     run_doctor_preprocess(root, sync_refactor_entries=sync_refactor_entries)
     after = head_commit(root)
     if before == after:
@@ -237,13 +221,84 @@ def _doctor_preprocess_for_join() -> set[str]:
     }
 
 
-def _merge_and_finalize(
+def validate_run_join(
+    context: EditingRunContext,
+    warnings: list[str],
+    *,
+    force_resolve: bool = False,
+    session_ignored_paths: Collection[str] = (),
+    run_ignored_paths: Collection[str] = (),
+) -> None:
+    """明示 join と self-joining workload が共有する clean・差分検査を行う。"""
+    require_clean_worktree(context.session_worktree)
+    require_clean_worktree(context.run_worktree)
+    run_changes = tree_changes(
+        context.run_worktree,
+        context.run_fork_commit,
+    )
+    session_changes = tree_changes(
+        context.session_worktree,
+        context.run_fork_commit,
+    )
+    session_unexpected = unexpected_session_paths(
+        context.session_worktree,
+        session_changes,
+        base=context.run_fork_commit,
+        ignored_paths=session_ignored_paths,
+    )
+    if session_unexpected:
+        _raise_unexpected(
+            context,
+            "session branch に想定外差分があります。",
+            session_unexpected,
+            warnings,
+        )
+    run_unexpected = unexpected_run_paths(
+        context,
+        run_changes,
+        ignored_paths=run_ignored_paths,
+    )
+    if run_unexpected and not force_resolve:
+        _raise_unexpected(
+            context,
+            "run branch に想定外差分があります。",
+            run_unexpected,
+            warnings,
+        )
+    if run_unexpected:
+        _revert_unexpected_run_paths(context, run_changes, run_unexpected)
+        warnings.append(
+            "--force-resolve reverted unexpected run paths: "
+            + ", ".join(run_unexpected)
+        )
+        run_changes = tree_changes(
+            context.run_worktree,
+            context.run_fork_commit,
+        )
+        remaining = unexpected_run_paths(
+            context,
+            run_changes,
+            ignored_paths=run_ignored_paths,
+        )
+        if remaining:
+            _raise_unexpected(
+                context,
+                "run branch の想定外差分を解消できませんでした。",
+                remaining,
+                warnings,
+            )
+
+
+def merge_run(
     context: EditingRunContext,
     state: SessionState,
     warnings: list[str],
     session_head_before_join: str,
-) -> tuple[str, str, str | None, str, Path]:
-    """merge、hook、state 同期、結果保存、cleanup を一続きで確定する。"""
+    *,
+    on_merged: Callable[[str | None], None] | None = None,
+) -> tuple[str | None, str, str | None, str | None]:
+    """共通 merge と post-join を行い、state 初期化と資源 cleanup は呼出元に残す。"""
+    run_join_commit: str | None
     start_subcommand_step(3, "run branch を session へ merge", "merge run")
     merge = run_git(
         ["merge", "--no-ff", context.run_branch],
@@ -258,7 +313,12 @@ def _merge_and_finalize(
             session_head_before_join,
         )
     else:
-        run_join_commit = head_commit(context.session_worktree)
+        merged_head = head_commit(context.session_worktree)
+        run_join_commit = (
+            merged_head if merged_head != session_head_before_join else None
+        )
+    if on_merged is not None:
+        on_merged(run_join_commit)
     start_subcommand_step(4, "post-join hook と state 同期", "run post-join")
     hook_result = "none"
     # {{work-root}}/oracle/doc/app_spec/session_state.md
@@ -266,16 +326,45 @@ def _merge_and_finalize(
     # last_joined_apply_fork_commit を state object へ書き戻さない。
     last_joined_apply_fork_commit = state.session.last_joined_apply_fork_commit
     if context.kind == "realization_apply":
-        last_joined_apply_fork_commit = context.run_fork_commit
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # common の run_fork_commit と同じ commit を workload 固有名で重複掲載しない。
-        hook_result = "session.last_joined_apply_fork_commit updated"
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md の「join 後 hook」
+        # lock 内で対象 run を確定した時点の state を使い、error run の比較始点を保つ。
+        hook_result = "session.last_joined_apply_fork_commit preserved"
+        if context.state_before == "joinable":
+            last_joined_apply_fork_commit = context.run_fork_commit
+            hook_result = "session.last_joined_apply_fork_commit updated"
     _refresh_join_indexes(context, warnings)
     sync_refactor_state(context.session_worktree)
     state_sync_commit = commit_work_unit(
         context.session_worktree,
         "cmoc refactor state sync after run join",
     )
+    return (
+        run_join_commit,
+        hook_result,
+        state_sync_commit,
+        last_joined_apply_fork_commit,
+    )
+
+
+def _merge_and_finalize(
+    context: EditingRunContext,
+    state: SessionState,
+    warnings: list[str],
+    session_head_before_join: str,
+) -> tuple[str | None, str, str | None, str, Path]:
+    """merge、hook、state 同期、結果保存、cleanup を一続きで確定する。"""
+    run_join_commit, hook_result, state_sync_commit, last_joined_apply_fork_commit = (
+        merge_run(
+            context,
+            state,
+            warnings,
+            session_head_before_join,
+        )
+    )
+    if context.kind == "feedback_report":
+        from sub_commands.feedback.recovery import finish_manual_feedback_run
+
+        finish_manual_feedback_run(context, "joined")
     state_after_join = replace(
         state,
         session=replace(
@@ -287,24 +376,40 @@ def _merge_and_finalize(
     write_state(context.state_path, state_after_join)
     delete_run_process_id(context.repo, context.session_id)
     start_subcommand_step(5, "結果を保存して run 資源を cleanup", "cleanup run")
-    report = write_lifecycle_report(
-        context,
-        "join",
-        state_after="ready",
-        warnings=[*warnings, "cleanup pending"],
-        details={
-            "run_join_commit": run_join_commit,
-            "post_join_hook": hook_result,
-            "refactor_state_sync_commit": state_sync_commit,
-            "cleanup": "pending",
-        },
-    )
     cleanup = _cleanup_joined_run(context, warnings)
+    state_after_cleanup = "ready"
+    if cleanup != "completed":
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # cleanup できない run resource を保持したまま ready にすると active run の
+        # branch/worktree を state から再解決できず、後続の abandon も受け付けられない。
+        # merge 済み成果物は session branch に残し、run resource は error state として
+        # abandon で再試行できるようにする。
+        state_after_cleanup = "error"
+        write_state(
+            context.state_path,
+            replace(
+                state_after_join,
+                run=RunPart(
+                    state="error",
+                    kind=context.kind,
+                    branch=context.run_branch,
+                    fork_commit=context.run_fork_commit,
+                ),
+            ),
+        )
+        delete_run_process_id(context.repo, context.session_id)
+    update_primary_report_fields(
+        run_join_commit=run_join_commit,
+        post_join_hook=hook_result,
+        refactor_state_sync_commit=state_sync_commit,
+        cleanup=cleanup,
+        state_after=state_after_cleanup,
+    )
     try:
         report = write_lifecycle_report(
             context,
             "join",
-            state_after="ready",
+            state_after=state_after_cleanup,
             warnings=warnings,
             details={
                 "run_join_commit": run_join_commit,
@@ -312,13 +417,25 @@ def _merge_and_finalize(
                 "refactor_state_sync_commit": state_sync_commit,
                 "cleanup": cleanup,
             },
-            report_path=report,
         )
     except BaseException as report_error:
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # merge、ready state、cleanup が完了した後の report 更新失敗で、確定済み
+        # merge、ready state、cleanup が完了した後の report 保存失敗で、確定済み
         # merge を rollback し、唯一の復旧可能な run commit を失わせてはいけない。
-        warnings.append(f"final join report update failed: {report_error!r}")
+        update_primary_report_fields(
+            run_join_commit=run_join_commit,
+            post_join_hook=hook_result,
+            refactor_state_sync_commit=state_sync_commit,
+            cleanup=cleanup,
+            state_after=state_after_cleanup,
+            report_update="failed",
+        )
+        raise CmocError(
+            "run join report の最終状態を保存できませんでした。",
+            ["診断用サブコマンドログを確認してください。"],
+            repr(report_error),
+            terminal_result=TerminalResult(),
+        ) from report_error
     return run_join_commit, hook_result, state_sync_commit, cleanup, report
 
 
@@ -361,6 +478,13 @@ def _record_join_failure(
         fork_commit=context.run_fork_commit,
     )
     write_state(context.state_path, state)
+    update_primary_report_fields(
+        state_after="error",
+        run_join_commit=None,
+        post_join_hook="error",
+        cleanup="not_run",
+        error=repr(exc),
+    )
     return write_lifecycle_report(
         context,
         "join",
@@ -373,6 +497,8 @@ def _record_join_failure(
             "cleanup": "not_run",
             "error": repr(exc),
         },
+        terminal_classification="error",
+        exit_code=1,
     )
 
 
@@ -448,7 +574,14 @@ def _resolve_index_only_conflict_or_fail(
         context.session_worktree,
     ).stdout.split("\0")
     conflicts = [path for path in fields if path]
-    if conflicts and all(Path(path).name == "INDEX.md" for path in conflicts):
+    if conflicts and all(
+        is_generated_index_path(
+            context.session_worktree,
+            path,
+            base=context.run_fork_commit,
+        )
+        for path in conflicts
+    ):
         for path in conflicts:
             if _has_ours_conflict_stage(context.session_worktree, path):
                 run_git(
@@ -487,13 +620,19 @@ def _resolve_index_only_conflict_or_fail(
             "cleanup": "not_run",
             "conflict_paths": ", ".join(conflicts),
         },
+        terminal_classification="error",
+        exit_code=1,
     )
     error = CmocError(
         "INDEX.md 以外の merge conflict が発生しました。",
         ["run report を確認し、run を join または abandon してください。"],
         "\n".join(conflicts) or "merge failed without unmerged paths",
+        terminal_result=TerminalResult(
+            primary_report=report,
+            primary_report_role="run join report",
+            warnings=tuple(warnings),
+        ),
     )
-    setattr(error, "cmoc_stdout", f"- run join report: `{report}`")
     raise error
 
 
@@ -579,6 +718,13 @@ def _raise_unexpected(
     warnings: list[str],
 ) -> None:
     """想定外差分を report に記録して join failure として送出する。"""
+    update_primary_report_fields(
+        state_after=context.state_before,
+        run_join_commit=None,
+        post_join_hook="not_run",
+        cleanup="not_run",
+        unexpected_paths=paths,
+    )
     report = write_lifecycle_report(
         context,
         "join",
@@ -591,6 +737,8 @@ def _raise_unexpected(
             "cleanup": "not_run",
             "unexpected_paths": ", ".join(paths),
         },
+        terminal_classification="error",
+        exit_code=1,
     )
     error = CmocError(
         summary,
@@ -599,6 +747,10 @@ def _raise_unexpected(
             "session branch の成果物は手動で確認してください。",
         ],
         "\n".join(paths),
+        terminal_result=TerminalResult(
+            primary_report=report,
+            primary_report_role="run join report",
+            warnings=tuple(warnings),
+        ),
     )
-    setattr(error, "cmoc_stdout", f"- run join report: `{report}`")
     raise error
