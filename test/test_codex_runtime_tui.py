@@ -16,6 +16,7 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
+from oracle.other.cmoc_config import CodexCallConfig
 
 import cmoc_runtime
 import commons.runtime_codex_tui as runtime_codex_tui
@@ -166,6 +167,68 @@ def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
     override_config = codex_override_config(json.loads(recorder.read_text()))
     assert override_config["notify"] == []
     assert "hooks" not in override_config
+
+
+def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """未定義 call の TUI では Codex version probe より先に設定エラーにする。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    probe_calls: list[tuple[object, object]] = []
+
+    def record_version_probe(*args: object, **kwargs: object) -> bool:
+        """version probe が設定検証より先に走っていないことを記録する。"""
+        probe_calls.append((args, kwargs))
+        return False
+
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        record_version_probe,
+    )
+    parameter = replace(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
+        agent_call_kind="missing_agent_call",
+    )
+
+    with pytest.raises(CmocError, match="Codex agent call 設定が未定義"):
+        run_codex_tui(parameter, root=root, config=CmocConfig())
+
+    assert probe_calls == []
+
+
+def test_run_codex_tui_rejects_missing_provider_before_version_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """未定義 provider の TUI でも Codex version probe より先に失敗する。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    probe_calls: list[tuple[object, object]] = []
+
+    def record_version_probe(*args: object, **kwargs: object) -> bool:
+        """provider 検証前の version probe を記録する。"""
+        probe_calls.append((args, kwargs))
+        return False
+
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        record_version_probe,
+    )
+    config = CmocConfig()
+    config.codex.agent_calls["missing_provider_call"] = CodexCallConfig(
+        "missing-provider", "model", "low"
+    )
+    parameter = replace(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
+        agent_call_kind="missing_provider_call",
+    )
+
+    with pytest.raises(CmocError, match="Codex model provider が未定義"):
+        run_codex_tui(parameter, root=root, config=config)
+
+    assert probe_calls == []
 
 
 def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(

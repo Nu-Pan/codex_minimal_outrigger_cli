@@ -358,19 +358,16 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- `run_codex_tui` の Codex TUI 呼び出しを、prompt・作業ディレクトリ・sandbox・アクセスモード・editor handoff・override 設定・call log・subcommand event の観点から検証するテスト群。
-- 検証済み／未検証 Codex CLI の callback 設定、成功・CLI 不在・KeyboardInterrupt・非 0 終了時の失敗記録、および timestamp 衝突時の call log 保持を扱う。
+- Codex TUI 実行経路のテスト群。完全な prompt と CLI 引数、アクセスモード、linked worktree、設定検証、Codex バージョン別 callback、call log とサブコマンドイベントの成功・失敗記録を検証する。
 
 ## Read this when
-- Codex TUI 実行ラッパーの引数伝達、アクセス境界、callback の有効化条件、ログやエラー記録の挙動を変更・確認するとき。
-- Codex CLI の起動成功・未起動失敗・割り込み・非 0 終了を含む runtime テストの入口を探すとき。
+- Codex TUI の prompt 引き渡し、sandbox/access mode、agent/provider 設定の事前検証、バージョン依存 callback、通知 hook、または呼び出しログ・イベント記録の挙動を確認・変更するとき。
 
 ## Do not read this when
-- TUI ではなく通常の Codex 実行、prompt 生成、設定値そのもの、toast 通知、または editor handoff protocol の単独仕様を確認したいとき。
-- 対象の下位ヘルパーの実装や oracle・仕様文書を直接確認すべきで、`run_codex_tui` の外部挙動を検証する必要がないとき。
+- TUI 実行処理やそのログ・callback の挙動を対象にせず、Codex CLI 自体の一般仕様、他のサブコマンド、または個別の設定定義を直接調べるとき。
 
 ## hash
-- e5b6673bc8b6deaa18d0da9fb4fb5efd96def98af4ab813431bc3807b44be350
+- 71b57e2deec849d178ebc2657f9cd684e43ba2823cb25d7011c08578477769c1
 
 # `test_doctor_cli.py`
 

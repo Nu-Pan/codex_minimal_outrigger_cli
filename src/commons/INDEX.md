@@ -180,19 +180,19 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI を設定済みの実行環境と argv で起動し、呼び出し情報・実行時間・終了状態・エラーを call log と logger event に記録する実行入口。
-- TUI 通知フック、エディター入力引き渡し、feedback call の環境設定を呼び出し期間に組み込み、Codex subprocess の成功結果または cmoc エラーへ変換する。
+- `run_codex_tui` と内部の process 実行処理を通じて、設定・環境・通知 hook を準備し、Codex TUI を起動する入口。
+- Codex 呼び出しごとの call log、feedback call、成功・失敗 event、実行時間、return code を記録し、起動失敗や CLI/TUI 失敗を所定の例外へ変換する。
 
 ## Read this when
-- Codex TUI の起動処理、Codex subprocess の実行条件、call log の生成、実行結果や失敗時の記録・例外変換を確認するとき。
-- TUI 起動時の通知 callback や feedback call のライフサイクルを含む、Codex 呼び出し全体の制御経路を調べるとき。
+- Codex TUI の起動経路、agent call 用の argv・環境・設定上書き、通知 callback のライフサイクルを確認したいとき。
+- Codex 呼び出しの call log や logger event の記録内容、feedback call の開始・終了、失敗時の例外変換を追跡したいとき。
 
 ## Do not read this when
-- Codex のホーム解決、環境変数、TUI hook 対応判定、override argv の具体的な規則だけを調べるときは runtime_codex_profile を直接読む。
-- ログ出力 API、コマンド結果型、通知 callback、feedback 保存処理の内部仕様だけを調べるときは、それぞれの専用モジュールを直接読む。
+- Codex の設定値や provider・model の解決規則そのものを確認したいときは、各 runtime_codex_profile や設定関連の対象を直接読む。
+- call log の保存先や timestamped path の予約規則だけを確認したいときは、runtime_paths の対象を直接読む。
 
 ## hash
-- be1879e7d1cc6fa657d85ca4575847c2644aa61983618789a58ad6c443e699c7
+- 386f2f9b23ada07addbe00da7eb6efba9afc64949cd203eaebe904da24615bf6
 
 # `runtime_config.py`
 
