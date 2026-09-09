@@ -919,9 +919,9 @@
   },
   "src/commons/runtime_windows_toast.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "d26eaaed129a3bddaf5f37f26de7b8533f56efc33bda3aa829ac8978b9dcad53",
-    "last_investigated_at": "2026-08-08_17-23_36_850356000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "2efbe0e8881fd50469f78d3cd87bdd8827465cd56493851394b4c94ceab522ff",
+    "last_investigated_at": "2026-09-10_06-51_12_285529000"
   },
   "src/config/__init__.py": {
     "investigation_required": false,

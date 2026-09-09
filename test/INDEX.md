@@ -947,17 +947,20 @@
 # `test_windows_toast.py`
 
 ## Summary
-- Windows toast通知の端末結果表示とPowerShell transportを検証するテスト。通知内容を短く制限し、JSON stdinによる安全なデータ受け渡しと通知失敗の非伝播を確認する。
-- Codex TUI callbackのroot session記録、turn単位の重複排除、入力待ち通知、standalone hookの実行とinvocation終了時の状態破棄を検証する。
+- Windows toast 通知の表示内容と transport の安全な入力境界を検証するテスト。
+- 通知 transport の失敗が terminal result の処理を妨げないことを検証するテスト。
+- Codex TUI callback の root session 判定、通知の重複排除、本文非伝播、child session の除外を検証するテスト。
+- TUI callback の invocation 内状態、終了時の callback drain と cleanup を検証するテスト。
+- SessionStart hook と callback の standalone 実行、および malformed JSON の非致命的な扱いを検証するテスト。
 
 ## Read this when
-- Windows toast通知の表示内容、transport境界、失敗時の扱いを変更・確認するとき
-- Codex TUI callbackやSessionStart hookのsession判定、重複通知防止、状態管理、standalone実行を変更・確認するとき
+- Windows toast の文面、PowerShell transport、通知失敗時の挙動を変更・確認するとき。
+- Codex TUI callback の session 記録、root／child session 判定、turn 通知、重複排除を変更・確認するとき。
+- TUI callback の状態管理、終了処理、standalone hook の実行境界を変更・確認するとき。
 
 ## Do not read this when
-- 通知の正本仕様や利用者向け要件を確認したいとき
-- Windows toastやCodex callback以外のruntime機能を調べるとき
-- 実装ではなく一般的なpytest実行方法だけを確認したいとき
+- Windows toast または Codex TUI callback の実装・挙動を扱わない作業のとき。
+- 対象の個別テスト内容を直接確認することが目的で、テストファイルの責務案内が不要なとき。
 
 ## hash
-- ea5cc7268e5c77efed80f70cdaefe4beaf69f9e4aea734755736b3d8b040e0ef
+- b8cb59a99857de3b7f7b9e93dc6ae2d8d35b7194c3817327b0cc6186f98a29d4

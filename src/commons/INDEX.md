@@ -680,19 +680,19 @@
 # `runtime_windows_toast.py`
 
 ## Summary
-- Windows toast 通知と Codex TUI callback の transport 境界を提供する。
-- 最外側サブコマンドの terminal result 通知、root session の記録、turn callback の重複排除と入力待ち通知を扱う。
-- 通知処理や callback state の失敗を本命処理へ伝播させない非致命的な入口である。
+- `runtime_windows_toast.py` は、Windows toast 通知と Codex TUI callback の transport 境界を担う。
+- 最外側コマンドの terminal result 通知、TUI の root session 記録と turn 重複排除、通知用一時 state のライフサイクルを扱う。
+- 通知内容を短く正規化し、PowerShell/WinRT transport や callback の失敗を本命処理へ返さない非致命的な実行入口を提供する。
 
 ## Read this when
-- Windows toast の通知内容、PowerShell transport、または通知の失敗隔離を確認するとき。
-- Codex TUI の SessionStart と agent-turn-complete callback の紐付け、root session 判定、turn 重複排除を調べるとき。
-- 通知 callback の生成・終了処理や repository 識別子の短縮化を確認するとき。
+- Windows toast 通知の生成・送信経路、通知内容の制約、または transport の timeout／失敗時挙動を確認・変更するとき。
+- Codex TUI の SessionStart と turn-complete callback の関連付け、root session の識別、turn 単位の重複排除を調べるとき。
+- TUI callback 用の一時 state、実行中 marker、callback drain、cleanup の扱いを確認するとき。
 
 ## Do not read this when
-- 通常のコマンド実行結果や TUI の本命処理そのものを調べるとき。
-- 通知仕様の正本や Codex hook の外部契約を確認する必要があり、この実装の境界では足りないとき。
-- 通知を使わない CLI 機能や、callback state と無関係な一時ファイル処理を変更するとき。
+- 通知や TUI callback ではなく、コマンド本体の terminal result を決定する処理を変更・調査するとき。
+- Codex hook の仕様そのものや、通知を呼び出す上位の CLI orchestration だけを確認すれば足りるとき。
+- Windows 以外の一般的な表示・ログ出力 transport を扱うとき。
 
 ## hash
-- 2efbe0e8881fd50469f78d3cd87bdd8827465cd56493851394b4c94ceab522ff
+- 7742546cee921a9da07c022eab3f6a9212d4d1e5cadf6da59f6f8c626e7b948c

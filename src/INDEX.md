@@ -49,21 +49,21 @@
 # `commons`
 
 ## Summary
-- commons パッケージは、CLI・Codex 実行・設定・Git・ログ・パス・結果・状態・feedback・run など、cmoc の複数実行経路で共有する runtime API と補助処理を提供する。
-- INDEX.md の生成 lifecycle、Codex 呼び出し境界、prompt editor、feedback、editing run、primary report など、横断的な実行時処理を責務別の helper として確認するための入口。
+- cmoc の共通 runtime helper 群をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、結果、状態、feedback、editing run など、複数の実行経路から利用される共通実装への入口。
+- INDEX.md の lifecycle、Codex 実行境界、prompt editor、feedback、report、Git、state、editing run など、個別の runtime 責務へ進むためのディレクトリ。
 
 ## Read this when
-- 複数の cmoc 実行経路にまたがる共通 runtime 機能を調査・変更するとき。
-- Codex exec／TUI、設定、Git、ログ、パス、feedback、editing run、report、state などの共有境界から確認を始めるとき。
-- 個別責務の実装を探す前に、commons が提供する公開 runtime API や責務分割を把握したいとき。
+- 複数の cmoc 実行経路で共有される runtime API や helper の責務を確認するとき
+- Codex exec／TUI、設定、Git、ログ、パス、feedback、report、state、editing run などの共通実装の入口を探すとき
+- commons 配下の runtime helper を追加・変更し、関連する公開窓口や lifecycle 境界を確認するとき
 
 ## Do not read this when
-- 特定の helper やサブコマンドの詳細挙動だけを確認したいときは、該当する個別実装または正本仕様へ直接進む。
-- 利用者向けの CLI 手順や、feedback・Codex・editing run など単一領域の仕様だけを確認したいとき。
-- INDEX.md のエントリー生成規則そのものだけを確認したいときは、indexing の実装または正本仕様を直接読む。
+- 特定の runtime helper の内部挙動だけを調査する場合は、対応する個別実装ファイルを直接読むとき
+- 個別サブコマンドの業務処理や利用者向け仕様だけを確認する場合は、対応するサブコマンド実装または正本仕様を直接読むとき
+- INDEX.md の entry 生成規則そのものや、feedback payload・editor handoff schema など個別契約の詳細だけを確認する場合
 
 ## hash
-- 90afbf7910c99edd9837e6469e799ff26c6a1073f1798837cda8a7a1b2193110
+- 796a4aa0c78c935aec912727f29dfdb501e360a0c7c2eadd9ee8fb7b4e356b5f
 
 # `config`
 
