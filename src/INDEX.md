@@ -49,19 +49,23 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、feedback、state、report など横断的な実行基盤を確認・変更するときの入口。
-- 個別機能の実装へ進む前に、複数の実行経路で共有される API と lifecycle 境界を把握するための上位入口。
+- commons 配下で共有される runtime の実装入口。CLI・Codex 実行、設定、Git、ログ、パス、状態、結果、feedback、report、run lifecycle、editor input handoff など、複数の実行経路が利用する共通処理を扱う。
+- 実行前後の lifecycle、subprocess 境界、Structured Output 検証、quota／capacity 対応、エラー変換、診断ログ、primary report、Windows 通知など、上位実行経路を横断する制御の入口。
+- feedback の受付・保存・publication、session／run state、refactor state、worktree／process tracking、INDEX 更新、editor input handoff の IPC など、永続 state と安全な境界管理を確認するための下位実装への入口。
 
 ## Read this when
-- 複数の cmoc 実行経路にまたがる共通 runtime API、状態管理、実行制御、ログ、report、feedback の責務を調査・変更するとき
-- Codex exec／TUI、editing run、INDEX lifecycle、設定、Git、editor input handoff などの共通実装の所在を確認するとき
+- 複数の CLI・Codex・TUI 実行経路で共有される runtime API、共通 lifecycle、結果型、エラー処理、ログ、パス、設定、Git、state の実装を確認・変更するとき。
+- Codex subprocess の起動、Structured Output の検証、capacity／quota の retry、call log、TUI 通知、editor input handoff など、実行境界を調査するとき。
+- feedback observation の受付・保存・publication、primary report、editing run、refactor、INDEX 更新など、複数モジュールにまたがる共通の永続化・復旧・cleanup を追うとき。
+- 特定の共通責務を担当する runtime サブモジュールの入口を特定し、その実装へ進む必要があるとき。
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動や個別データ構造だけを確認したいときは、commons 配下の該当実装を直接読む
-- 利用者向けの正本仕様、schema 本文、個別サブコマンドの業務処理を確認することが目的のときは、対応する仕様・schema・サブコマンド実装を直接読む
+- 特定の CLI サブコマンドの業務処理や利用者向け仕様だけを確認したいときは、該当するサブコマンド実装または正本仕様を直接読む。
+- 特定の runtime helper、schema、error 型、report 定義、feedback payload、IPC protocol の詳細だけを調べるときは、commons 配下の対応する個別対象を直接読む。
+- INDEX.md の利用者向けルーティング規則や Codex 実行・editing run・feedback report の正本仕様そのものを確認するときは、対応する仕様文書を直接読む。
 
 ## hash
-- c14b37ec503fb67a24b32efc2ea5782305a60b94d95ed6a74945cad0a4778657
+- c0d2eb771276afadf6cb5aebd31b314b232db3ebc2e400aee1c29fd31907403b
 
 # `config`
 

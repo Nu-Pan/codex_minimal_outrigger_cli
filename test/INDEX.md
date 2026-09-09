@@ -485,26 +485,19 @@
 # `test_feedback_reconfirmation.py`
 
 ## Summary
-- feedback.md と feedback_state.md の根拠変更・再確認・封印後の公開可否を検証するテスト群。
-- 依存ファイル、機械的同期、追加証拠の変更が remediation 結果の再確認を発生させる条件を扱う。
-- checkpoint 参照の復旧、修復サイクルの収束判定、sealed 結果の変更後における join・recovery 拒否を確認する。
-- 通常の feedback 処理フローではなく、根拠の再評価と最終状態の不変性を検証する境界テストとして位置づけられる。
+- feedback.md と feedback_state.md の根拠変更・再確認・封印を、テスト用の実行環境で検証するテスト。wave の high-watermark 連続性、依存変更や機械的同期後の再確認、追加証拠の取り込み、修復サイクルの収束、checkpoint 参照復旧、封印後の不正な公開・復旧拒否、active issue の decision basis 具体化を扱う。
 
 ## Read this when
-- feedback の remediation 結果が依存変更や同期結果によって再確認される条件を調べるとき
-- 追加の観測証拠が occurrence count や再確認入力へ反映されるか確認するとき
-- checkpoint 参照の失敗後に履歴を復旧し、再確認を維持できるか調べるとき
-- 修復サイクルが収束せず incomplete になる条件、または新しい修復を受け入れる条件を確認するとき
-- sealed 結果の根拠が変更された場合の publish・join・recovery の拒否境界を確認するとき
-- human_required の結果が active issue として根拠を伴って materialize されるか確認するとき
+- feedback remediation の結果が依存ファイル変更や生成物同期をまたいで再確認される条件を確認したいとき。
+- 観測証拠・checkpoint・sealed result・active issue の根拠が、公開や復旧の可否にどう影響するかをテストから確認したいとき。
+- feedback の wave 境界、再修復サイクル、参照復旧の回帰ケースを変更・調査するとき。
 
 ## Do not read this when
-- feedback の観測取り込みや remediation の基本的な成功経路だけを確認するとき
-- 根拠変更・再確認・封印後の公開制約に関係しない実装やテストを調べるとき
-- 状態の保存形式や remediation の実装詳細を直接確認すべき作業で、境界条件の挙動検証が目的でないとき
+- feedback の実装ロジックそのものを変更・理解することが目的で、テストケースの期待挙動を確認する必要がないとき。
+- 一般的な issue 受付や remediation の初期入力形式だけを確認したいときは、対応する実装または基礎テストを直接読む。
 
 ## hash
-- d25e11c30639ed4b33a2df309d75026ad3fc70d02d37cf211bfc42e94fde62fc
+- bc8c252849f99c19ef9199bace74a387b79a66e3768ad99ade03cb9b7dcc5364
 
 # `test_file_inventory.py`
 

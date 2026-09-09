@@ -372,18 +372,18 @@
 # `runtime_feedback_run_state.py`
 
 ## Summary
-- Feedback run の immutable wave、report cut の封印、join artifact、remediation checkpoint を検証する実装への入口。run identity、入力の append-only 性、artifact path/hash、判定根拠と issue commit の整合性を扱う。
+- feedback run の immutable wave、issue checkpoint、seal、join 記録を検証・復旧する実装への入口。run の identity、入力の append-only 性、wave の順序と high-watermark、artifact の hash/path 対応、remediation checkpoint の schema・判定根拠・実差分整合性を扱う。
 
 ## Read this when
-- feedback run の lifecycle、wave の順序や high-watermark、report cut の seal、join 記録、publication 前提を確認するとき。
-- remediation checkpoint の canonical schema、decision basis、再確認・循環診断、変更 path・verification・commit の整合性を調べるとき。
+- feedback run の lifecycle、report cut の封印、join 完了条件、wave/checkpoint の不変性や整合性を確認・変更するとき。
+- artifact 保存と manifest 更新の中断からの復旧、remediation の正式 checkpoint と issue commit・verification の対応を追うとき。
 
 ## Do not read this when
-- feedback の一般的な入力収集や個別 artifact の保存実装だけを確認したいとき。
-- run lifecycle の定義や report cut の正本仕様そのものを確認するときは、まず対応する lifecycle・state 仕様または直接の保存処理を読むべきとき。
+- feedback run artifact の低レベルな canonical JSON 保存・hash 計算だけを確認したいときは、artifact store の実装を直接読む。
+- report cut の正本仕様や lifecycle の意味を確認したいときは、対応する仕様書・run lifecycle 実装を先に読む。
 
 ## hash
-- 90a8defa06d00db17047a0b55f5c838f1e0f9ad3549d2544ec0d1985abd72012
+- ca512d58c8152bdbf1c7511e173c03f7ce0695583418b170599a8945a0f5bf54
 
 # `runtime_feedback_state.py`
 

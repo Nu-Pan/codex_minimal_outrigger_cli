@@ -339,10 +339,9 @@ def validate_run_artifacts(
             wave["sequence"] != sequence
             or type(wave["after"]) is not int
             or type(wave["high_watermark"]) is not int
-            or not last_watermark
-            <= wave["after"]
-            <= wave["high_watermark"]
-            <= run["high_watermark"]
+            # A larger `after` would skip durable receipts between waves.
+            or wave["after"] != last_watermark
+            or not wave["after"] <= wave["high_watermark"] <= run["high_watermark"]
         ):
             raise _corruption("feedback wave の high-watermark が不正です。", target)
         if not isinstance(wave["candidates"], dict):
