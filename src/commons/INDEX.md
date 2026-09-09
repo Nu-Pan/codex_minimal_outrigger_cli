@@ -430,19 +430,23 @@
 # `runtime_git.py`
 
 ## Summary
-- Git subprocess、branch/worktree、安全な snapshot 復元、ignore 検証、および oracle/realization file の列挙・分類を担う共通 Git 境界。
+- Git subprocess実行、branch・linked worktreeの生成／削除、安全性検証を担う共通境界。
+- worktree snapshotの取得・復元と、Git ignore・repository pathに基づくoracle／realization fileの列挙・分類を扱う。
+- Git状態、path正規化、ignore source検証、symlinkや特殊fileの拒否を一元化するため、これらの挙動を確認・変更する際の入口となる。
 
 ## Read this when
-- Git の状態取得や未コミット差分の検証、branch・linked worktree の作成／削除、安全性検証を確認・変更するとき。
-- Codex call 前後の worktree snapshot、作業成果物の復元、Git ignore の保証・判定を扱うとき。
-- oracle file と realization file の列挙・分類、nested repository や symlink・特殊 file を含む path 安全性の判定を確認するとき。
+- Git commandのエラー変換、現在branchやHEAD、clean worktreeの検査を確認するとき。
+- cmoc管理branchやrun worktreeのpath対応、作成・削除・登録状態・metadata検証を確認するとき。
+- Codex call前後の作業成果物復元、Git ignore規則の保証、oracle／realization fileの列挙または単一path分類を確認するとき。
+- symlink経由の操作、ignore fileの種別検証、nested repositoryや特殊fileを含むpath安全性を変更するとき。
 
 ## Do not read this when
-- Git や path 分類の共通境界を変更せず、個別の command、session、state、report の業務フローだけを確認するときは、該当する上位 module や仕様を先に読む。
-- snapshot、worktree、ignore、oracle/realization file の挙動を調べる必要がないとき。
+- Git境界を利用する個別の上位workflowの手順や状態遷移だけを確認したい場合は、該当するworkflowまたはstate仕様を先に読む。
+- oracle／realization fileの分類基準そのものや、branch・worktreeの正本仕様を確認したい場合は、参照されている仕様文書を直接読む。
+- runtime_git.pyのGit状態・worktree・path分類に関係しないruntime helperの挙動だけを確認したい場合。
 
 ## hash
-- 45bdf3f82ca53dcfbf1db19f029fddfd321a6211879759a82edfc87a0a0abc37
+- 6cadf49d934716159dfb38edbf2372b5df98a54125292484654fa99b2bfc962b
 
 # `runtime_logging.py`
 

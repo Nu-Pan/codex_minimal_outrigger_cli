@@ -1078,7 +1078,6 @@ def is_realization_file_path(
     repository = _repository_context_for_path(root, candidate)
     if repository is None:
         return False
-    relative = candidate.absolute().relative_to(root.absolute())
     if branch and not _path_exists_without_following_symlinks(candidate):
         # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
         # 含めず regular blob entry だけを branch の fallback として採用する。
@@ -1086,6 +1085,7 @@ def is_realization_file_path(
         # の「分類結果」
         # branch の blob は削除された path の追跡状態を補うが、現在の directory や
         # FIFO などの特殊 file を file として扱う根拠にはならない。
+        branch_relative = candidate.absolute().relative_to(repository.absolute())
         branch_entries = run_git(
             [
                 "ls-tree",
@@ -1093,14 +1093,14 @@ def is_realization_file_path(
                 "-z",
                 branch,
                 "--",
-                literal_pathspec(relative.as_posix()),
+                literal_pathspec(branch_relative.as_posix()),
             ],
-            root,
+            repository,
         ).stdout.split("\0")
         for entry in branch_entries:
             metadata, separator, entry_path = entry.partition("\t")
             metadata_fields = metadata.split()
-            if separator and entry_path == relative.as_posix():
+            if separator and entry_path == branch_relative.as_posix():
                 try:
                     entry_mode = int(metadata_fields[0], 8)
                 except (IndexError, ValueError):

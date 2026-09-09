@@ -510,21 +510,21 @@
 # `test_file_inventory.py`
 
 ## Summary
-- oracle/realization file の full-tree 列挙契約と refactor state 同期を検証するテスト。Git ignore、除外境界、nested repository、linked worktree、特殊ファイル、symlink、非 UTF-8 名、ignore source、単一 path 分類、候補数増加時の Git 処理量を扱う。列挙実装や state 同期の挙動を変更・調査するときのテスト入口である。
+- oracle・realization file の full-tree 列挙と refactor state 同期を検証するテスト。
+- Git ignore、nested repository、linked worktree の metadata 境界を含むファイル分類を扱う。
+- symlink、FIFO、socket、device などの非通常パス拒否と、候補数増加時の Git 処理量不変性を検証する。
 
 ## Read this when
-- oracle/realization file の列挙結果、除外規則、Git ignore の適用範囲、nested repository や worktree の扱いを確認するとき
-- refactor state の初期化・同期・SHA 更新が列挙結果と一致することを検証するとき
-- symlink、FIFO、socket・device 相当 mode など非通常 file の拒否仕様を変更または調査するとき
-- 列挙処理の Git 呼び出し回数や候補数増加時の処理量を確認するとき
+- oracle・realization file の列挙対象、除外境界、Git ignore 判定、または refactor state の SHA 更新を確認するとき。
+- nested repository や linked worktree を含む実ファイル分類の挙動を確認するとき。
+- 列挙処理が非通常パスを拒否し、候補数に対して一定の Git 処理量を保つことを検証するとき。
 
 ## Do not read this when
-- 列挙や refactor state の挙動に関係しない機能の実装・テストを扱うとき
-- 正本仕様そのものの定義を確認する必要があり、テスト実装ではなく oracle/doc/app_spec 以下の仕様を直接読むべきとき
-- 列挙実装の具体的なアルゴリズムや CLI の責務を確認する必要があり、commons/runtime_git.py など実装対象を直接読むべきとき
+- 列挙処理の正本仕様や実装の詳細を確認したい場合。
+- このテストが扱う列挙・分類・state 同期以外の機能を調べる場合。
 
 ## hash
-- c496a10d66979d6149cd01d3a0ba72ac2031f7a275ff39f554d26b4ec7615331
+- b4efe4647289425b8ce87f82a78629b81640850bd7e750e4799ac2715559b9ef
 
 # `test_indexing_cli.py`
 

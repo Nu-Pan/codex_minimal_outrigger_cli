@@ -122,31 +122,32 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、互換 import、共通 runtime、設定、サブコマンド実装の上位パッケージをまとめた src 側の入口。CLI 全体の構成確認から、commons・sub_commands・oracle などの担当領域へ進むための階層。
+- cmoc の src 側実装をまとめる上位入口であり、CLI 起動、互換 import、共通 runtime、サブコマンド実装、indexing・feedback などの主要経路へ進むための構成を示す。
+- acp、basic、config、commons、oracle shim、sub_commands など、役割ごとの下位入口を選択するためのルーティング起点となる。
 
 ## Read this when
-- cmoc の CLI 起動経路、公開 import の互換入口、共通 runtime、またはサブコマンド実装の配置を横断して確認するとき。
-- 対象の責務が src 直下のどの入口（main.py、commons、sub_commands、oracle など）に属するかを判断するとき。
+- cmoc の src 側で公開 CLI の起動経路、互換 import の配置、共通 runtime の責務、またはサブコマンド実装の全体構成を確認するとき。
+- 調査・変更対象が acp、basic、config、commons、oracle shim、sub_commands のどの入口に属するかを判断するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime helper、互換 API、設定型、または正本 oracle 実装の具体的な挙動を確認したいときは、対応する下位要素や正本実装を直接読む。
-- INDEX.md 更新処理、feedback の収集・報告、CLI 個別処理など、責務が明確な対象を調査するとき。
+- 特定の runtime helper、互換モジュール、CLI サブコマンド、builder adapter、または oracle 正本の具体的な処理を確認したい場合は、対応する下位要素や正本実装を直接読む。
+- 利用者向け正本仕様、INDEX 生成規則、feedback observation の詳細、または src と無関係な処理を確認したい場合は、src の上位入口ではなく該当する仕様・実装を直接読む。
 
 ## hash
-- 058196ae0b8f602b77e2e18842472316ba1bb9cd4a30a98cd5e9bed806a88244
+- 6f5984cf87ae72b353128909ab2baac25958c3b7bc2c2d0ddb1156baf729286d
 
 # `test`
 
 ## Summary
-- `test` 配下の回帰・統合テストを、CLI、runtime、Codex 実行、indexing、feedback、session、editor handoff、通知などの外部挙動ごとに確認するための入口。共通 fixture やテスト用 helper も含め、実装変更がどの観測可能な契約へ影響するかを調べる。
+- cmoc のテストスイートを構成する入口。共有 fixture・テスト補助から、CLI、Codex runtime、indexing、feedback、session、oracle／realization、TUI などの外部挙動と境界条件を検証する下位テストへ進む。
 
 ## Read this when
-- `test` 配下で検証される CLI や runtime の外部契約、状態遷移、エラー境界、Git・worktree・process・report の回帰挙動を横断的に探すとき。
-- 特定機能の専用テスト、複数機能をまたぐ統合テスト、またはテスト共通 helper の責務を確認するとき。
+- cmoc の機能変更や不具合調査で、実装された外部挙動・回帰条件・統合 lifecycle の検証例を探すとき。
+- 対象機能に対応する専用テスト、共有 fixture、Codex 実経路テスト、または安全性・失敗境界の検証入口を特定するとき。
 
 ## Do not read this when
-- 正本仕様や実装の詳細を確認することが目的で、対応する `oracle`、`realization`、`src`、または app specification を直接読むべきとき。
-- テスト対象と無関係な機能の挙動や、一般的な pytest 実行方法だけを確認したいとき。
+- 正本仕様や実装の詳細そのものを確認したいときは、対応する oracle、src、または仕様文書を直接読む。
+- 単一機能の具体的な契約が明確で、対応する下位テストを直接読めるとき。
 
 ## hash
-- 64274ea450b592387094514fd0c7d722e7937cebb6cc07e7a383f7a45e9f90d2
+- 1b8b673c1af344d54b5fec5acb5b1b3501bff425587e53a233ad6eac8f76725a

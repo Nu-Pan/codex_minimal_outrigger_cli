@@ -49,19 +49,20 @@
 # `commons`
 
 ## Summary
-- commons パッケージは、CLI・Codex 実行・設定・Git・ログ・パス・結果・状態・feedback・report など、cmoc の複数実行経路で共有する runtime API と補助実装の入口を提供する。
-- INDEX 更新、prompt editor、editor handoff、feedback、primary report、refactor、editing run、Windows 通知など、共通ライフサイクルや永続状態を担う下位 runtime モジュールへ進むためのまとまり。
+- cmoc の CLI・Codex 実行・設定・Git・ログ・パス・結果・状態・feedback・editor handoff・run lifecycle などで共有される runtime helper 群と、公開 API の統合入口を提供する commons パッケージ。
 
 ## Read this when
-- 複数の cmoc 実行経路にまたがる runtime 共通 API、ライフサイクル、状態管理、ログ、結果、パス、feedback、report の実装箇所を見つけたいとき。
-- 特定の commons runtime helper の責務を確認し、個別モジュールへ調査を振り分ける入口が必要なとき。
+- 複数の実行経路で共有される runtime API を利用・追加・確認するとき。
+- 対象機能がどの共通 helper または公開入口に属するかを判断するとき。
+- Codex subprocess、サブコマンド lifecycle、設定永続化、Git/worktree、feedback state、report、session/run state などの共通実装を調査・変更するとき。
 
 ## Do not read this when
-- 特定の runtime サブモジュールの詳細挙動、CLI サブコマンド固有の業務処理、または正本仕様だけを直接確認したいとき。
-- 対象が commons 配下の個別実装や oracle・仕様文書として明確な場合は、その直接の対象から読み始めるとき。
+- 特定の runtime helper の内部実装だけを確認したい場合は、該当する個別 module を直接読む。
+- 個別サブコマンドの業務処理や利用者向け正本仕様だけを確認したい場合は、その command または仕様文書を直接読む。
+- INDEX の生成規則や entry prompt、Structured Output schema だけを確認したい場合は、indexing または専用 schema の対象を読む。
 
 ## hash
-- 81bf723d3470193f19de4a7804d97d659dbe6ca6b10cd6167cd73294ab9dfb8f
+- 4200b9679847a935d62e2fb490d0954ce80caf4e80c01b04fc7579fcb0899369
 
 # `config`
 
