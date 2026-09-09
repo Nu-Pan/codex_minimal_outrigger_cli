@@ -2893,6 +2893,60 @@ def test_run_join_resolves_deleted_session_index_conflict(
     assert _state(state_path)["run"]["state"] == "ready"
 
 
+def test_index_conflict_records_merge_before_post_join_refresh(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """INDEX conflict の merge を post-join failure より先に確定する。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    index_path = root / "INDEX.md"
+    index_path.write_text("base index\n")
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "add index")
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "INDEX.md").write_text("run index\n")
+    commit_work_unit(context.run_worktree, "run index change")
+    set_run_state(context, "joinable")
+    index_path.unlink()
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "delete session index")
+    session_head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    events: list[tuple[str, str | None]] = []
+
+    def fail_after_refresh_commit(
+        refresh_context: EditingRunContext, _warnings: list[str]
+    ) -> None:
+        """post-join refresh が commit 後に失敗する状態を再現する。"""
+        (refresh_context.session_worktree / "INDEX.md").write_text(
+            "post-join index\n"
+        )
+        run_git(refresh_context.session_worktree, "add", "INDEX.md")
+        run_git(
+            refresh_context.session_worktree,
+            "commit",
+            "-m",
+            "post-join index",
+        )
+        events.append(("refresh", None))
+        raise RuntimeError("injected post-join refresh failure")
+
+    monkeypatch.setattr(
+        run_join_module, "_refresh_join_indexes", fail_after_refresh_commit
+    )
+
+    with pytest.raises(RuntimeError, match="post-join refresh"):
+        run_join_module.merge_run(
+            context,
+            SessionState(),
+            [],
+            session_head_before,
+            on_merged=lambda commit: events.append(("merged", commit)),
+        )
+
+    assert [event[0] for event in events] == ["merged", "refresh"]
+    assert events[0][1] is not None
+
+
 def test_run_join_conflict_abort_failure_still_restores_session_tree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2990,25 +3044,28 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
         assert "session.last_joined_apply_fork_commit updated" not in output
 
 
-def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
+def test_run_join_keeps_completed_merge_when_final_report_update_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """cleanup 後の report 更新失敗で完了済み merge を rollback しない。"""
+    """cleanup 後の report 更新失敗でも保存済み report と merge を保持する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
     monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    original_write_report = run_join_module.write_lifecycle_report
 
     def fail_final_report(
         _report_context: EditingRunContext,
         _operation: str,
-        **_kwargs: object,
+        **kwargs: object,
     ) -> Path:
-        """cleanup 後に行う唯一の primary report 保存失敗を再現する。"""
-        raise RuntimeError("final report save failed")
+        """cleanup 前の report 保存後に行う最終更新失敗を再現する。"""
+        if kwargs.get("report_path") is not None:
+            raise RuntimeError("final report update failed")
+        return original_write_report(_report_context, _operation, **kwargs)
 
     monkeypatch.setattr(run_join_module, "write_lifecycle_report", fail_final_report)
     monkeypatch.setattr(
@@ -3032,9 +3089,50 @@ def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
     rendered = reports[0].read_text()
     assert 'terminal_classification: "error"' in rendered
     assert 'state_after: "ready"' in rendered
-    assert 'cleanup: "completed"' in rendered
-    assert 'report_update: "failed"' in rendered
-    assert "final report save failed" in rendered
+    assert 'cleanup: "pending"' in rendered
+    assert "cleanup pending" in rendered
+
+
+def test_run_join_saves_report_before_cleanup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run resource を削除する前に pending report を保存する。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    events: list[tuple[str, object]] = []
+    original_write_report = run_join_command_module.write_lifecycle_report
+
+    def record_report(
+        report_context: EditingRunContext,
+        operation: str,
+        **kwargs: object,
+    ) -> Path:
+        """report 保存の cleanup 前後の順序を記録する。"""
+        details = kwargs["details"]
+        assert isinstance(details, dict)
+        events.append(("report", details["cleanup"]))
+        return original_write_report(report_context, operation, **kwargs)
+
+    def record_cleanup(
+        _context: EditingRunContext, _warnings: list[str]
+    ) -> str:
+        """cleanup の開始を記録して成功を返す。"""
+        events.append(("cleanup", None))
+        return "completed"
+
+    monkeypatch.setattr(run_join_command_module, "write_lifecycle_report", record_report)
+    monkeypatch.setattr(run_join_module, "cleanup_joined_run", record_cleanup)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert events == [("report", "pending"), ("cleanup", None), ("report", "completed")]
+    assert (root / "README.md").read_text() == "realized\n"
 
 
 def test_run_join_preserves_active_state_when_cleanup_fails(

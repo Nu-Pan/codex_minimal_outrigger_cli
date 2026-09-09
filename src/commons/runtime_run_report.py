@@ -5,6 +5,8 @@
 """
 
 import html
+import os
+import tempfile
 from pathlib import Path
 
 from .runtime_logging import current_subcommand_logger
@@ -107,14 +109,23 @@ def write_lifecycle_report(
     details: dict[str, object],
     terminal_classification: TerminalClassification = "natural_completion",
     exit_code: int = 0,
+    report_path: Path | None = None,
 ) -> Path:
     """run join/abandon の共通情報と cleanup 結果を保存する。"""
-    directory = reports_dir(context.repo, f"run/{operation}")
-    directory.mkdir(parents=True, exist_ok=True)
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # report を書き始める前に path を予約し、同一 timestamp の run report を
-    # 別 run が上書きしないようにする。
-    generated_at, report_path = _reserve_timestamped_path(directory, ".md", timestamp)
+    if report_path is None:
+        directory = reports_dir(context.repo, f"run/{operation}")
+        directory.mkdir(parents=True, exist_ok=True)
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # report を書き始める前に path を予約し、同一 timestamp の run report を
+        # 別 run が上書きしないようにする。
+        generated_at, target_path = _reserve_timestamped_path(
+            directory, ".md", timestamp
+        )
+        new_report = True
+    else:
+        generated_at = timestamp()
+        target_path = report_path
+        new_report = False
     fields: list[tuple[str, object]] = [
         ("command", f"cmoc run {operation}"),
         ("repo_root", context.repo.resolve()),
@@ -163,8 +174,32 @@ def write_lifecycle_report(
             "",
         ]
     )
-    write_reserved_primary_report(report_path, content)
-    return report_path.resolve()
+    if new_report:
+        write_reserved_primary_report(target_path, content)
+    else:
+        _rewrite_lifecycle_report(target_path, content)
+    return target_path.resolve()
+
+
+def _rewrite_lifecycle_report(path: Path, content: str) -> None:
+    """既存の pending report を壊さずに最終結果へ置き換える。"""
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            temporary_file.write(content)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _render_changed_path(path: str, indent: str = "", label: str = "") -> str:

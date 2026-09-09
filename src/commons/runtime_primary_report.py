@@ -9,6 +9,8 @@ doctor preprocess や事前条件など、個別処理が report を作る前の
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 """
 
+import os
+import tempfile
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -114,7 +116,7 @@ def ensure_primary_report(
             if "\n## 実行記録\n" not in content:
                 raise PrimaryReportSaveError(result.primary_report)
         else:
-            write_reserved_primary_report(
+            rewrite_primary_report(
                 result.primary_report,
                 content.rstrip() + "\n\n" + execution_record_markdown(logger),
             )
@@ -173,6 +175,32 @@ def write_reserved_primary_report(path: Path, content: str) -> None:
         if isinstance(exc, PrimaryReportSaveError):
             raise
         raise PrimaryReportSaveError(path) from exc
+
+
+def rewrite_primary_report(path: Path, content: str) -> None:
+    """既存の primary report を更新し、失敗時も保存済み内容を保持する。"""
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            temporary_file.write(content)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        os.replace(temporary_path, path)
+        _require_saved_report(path)
+    except BaseException as exc:
+        if isinstance(exc, PrimaryReportSaveError):
+            raise
+        raise PrimaryReportSaveError(path) from exc
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _require_saved_report(path: Path) -> None:

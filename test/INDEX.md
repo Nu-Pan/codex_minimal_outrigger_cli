@@ -390,20 +390,22 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- realization apply/refactor の fork と run join/abandon を、共通の editing-run state・worktree・branch・process tracking・report lifecycle を通じて検証する統合テスト群。agent の差分制約、INDEX 更新、rollback、interrupt、cleanup、rename/delete、force-resolve、state 同期など、run lifecycle 全体の境界条件を扱う。
+- workload fork と共通 run join/abandon の統合 realization test を収録し、editing run の session state・run worktree・fork report・ライフサイクル cleanup を横断検証する。
+- apply/refactor fork の agent 境界、INDEX 更新、想定外差分・commit の拒否と rollback、process tracking、report 保存、割り込み時の状態復旧を確認する。
+- run join/abandon における成果物 merge、oracle と生成 INDEX の扱い、force-resolve、cleanup 失敗時の resource 保持、state hook 更新を検証する。
+- refactor の unresolved target、rename、change summary、永続 state、Structured Output の changed_paths 検証と完了 report を確認する。
 
 ## Read this when
-- realization apply/refactor fork の実行結果、run join/abandon の状態遷移や成果物取り込みを変更・調査するとき
-- run worktree、branch、process tracking、INDEX 更新、report 保存、rollback、cleanup の連携を検証するとき
-- agent による想定外差分・commit・遅延処理、利用者中断、並行 start、壊れた tracking などの異常経路を確認するとき
+- editing run の apply/refactor fork、run join、run abandon の統合ライフサイクル挙動を変更・調査・検証するとき。
+- run worktree の隔離、session state 遷移、agent child の停止、INDEX refresh、rollback または report の保存順序を確認するとき。
+- refactor state と unresolved findings、rename 後の target 同期、change summary の入力範囲や escape を確認するとき。
 
 ## Do not read this when
-- 単一の lifecycle helper や subcommand の局所実装だけを確認すれば足り、統合的な run state 遷移を扱わないとき
-- refactor の個別 target 選択や apply/refactor の prompt 形式だけを直接確認したいとき
-- INDEX 生成規則そのものや通知仕様そのものを調べる場合で、これらの run lifecycle との結合を確認する必要がないとき
+- 単一の実装関数や個別サブコマンドの局所的な挙動だけを確認する場合は、対応する実装・専用 test を直接読む。
+- editing run と無関係な INDEX routing、通常の session 操作、または一般的な Git 操作の仕様確認だけが目的の場合。
 
 ## hash
-- 2d6ae5252a108b26e7785f1c93f08fb91e464e3f7a6324043447b52c08e13629
+- 2a85e340523061dbbfb83d2e019aefc87f56d2903820987e446af60a07d059b5
 
 # `test_editor_input_handoff.py`
 
@@ -621,18 +623,21 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話末端サブコマンドの primary report 完了契約を検証するテスト。処理開始前エラー、中断、Codex 出力・受理済み observation の保持、refactor 中断理由、未保存 report の内部失敗化を確認する。
+- 非対話末端サブコマンドの primary report 完了契約を、pytest で検証するテスト群。
+- 早期エラー、中断、Codex 出力と accepted observation の保持、refactor の中断理由、report 更新失敗、未保存 report の内部失敗を対象に、保存先・front matter・ログ・端末出力の契約を確認する。
 
 ## Read this when
-- runtime_cli の各サブコマンドで、エラーや中断時の primary report 保存契約・front matter・診断ログを確認または変更するとき。
-- primary report と fallback report に実行出力や feedback observation を残す挙動、report 保存失敗の terminal result を検証するとき。
+- 非対話サブコマンドの primary report が、処理開始前のエラーでもコマンド固有の保存先と必須 front matter を保持するか確認したいとき。
+- ユーザー中断時の invocation summary、fallback report、completion_reason、report cut の状態を確認したいとき。
+- Codex の複数回の出力や accepted feedback observation の report への集約、primary report の atomic 更新失敗、未保存 report を internal failure として扱う契約を調べるとき。
 
 ## Do not read this when
-- primary report の生成・完了契約ではなく、個別サブコマンドの通常処理やドメインロジックだけを確認するとき。
-- テスト実装の詳細ではなく、根拠となるアプリケーション仕様そのものを確認したいとき。
+- primary report の通常実装やサブコマンド固有の業務処理そのものを変更・調査するとき。
+- oracle、realization、session など各サブコマンドの詳細な成功フローや仕様を直接確認したいときは、それぞれの実装・仕様対象を読む。
+- pytest の共通 fixture や CLI テスト支援関数の実装を調べるときは、対応する支援モジュールを直接読む。
 
 ## hash
-- 52290834aa28f4c4deaccbd6095641cb8fa31025e9fc4b8ebc5e951425c0af99
+- c443c9c13c8276744d26bc81fb9a6ca9dbef3933ae8d48d017f79958ffe86831
 
 # `test_production_cli.py`
 

@@ -126,22 +126,20 @@
 # `run`
 
 ## Summary
-- editing run サブコマンドの共通 lifecycle 実装と、旧 import path 互換 shim の入口。active run の abandon・join、共通 lifecycle/report 処理の配置を把握し、目的に応じた配下ファイルへ進むために読む。
+- 日本語の技術文書として、対象ディレクトリにある editing run のライフサイクル関連実装への入口。abandon・join の停止／統合／cleanup と、旧 import path の互換 shim を含む配下を、run lifecycle の共通処理やサブコマンド固有処理の調査時に振り分ける。
 
 ## Read this when
-- editing run の active run を停止・破棄して ready 状態へ戻す処理を調査・変更するときは abandon の実装を確認する場合。
-- editing run の join、merge 後の state 同期、report 保存、cleanup、失敗時 rollback を追跡するときは join の実装を確認する場合。
-- 旧 import path の lifecycle helper や report writer の互換性、canonical 実装への委譲・再公開を確認するときは lifecycle または report の shim を確認する場合。
-- この配下のどの run lifecycle 実装を読むべきか判断し、具体的な処理へ進む入口が必要なとき。
+- editing run の停止・統合・cleanup・report・状態遷移など、複数の run lifecycle 実装を横断して確認するとき。
+- `cmoc run abandon` または `cmoc run join` の処理入口を探すとき。
+- 旧 import path の lifecycle／report 互換性を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- lifecycle や report の共通処理本体の仕様・挙動だけを確認したいときは、commons 側の canonical 実装や report 管理モジュールを直接読む。
-- join が利用する差分検査・merge の workload 非依存ロジックだけを確認したいときは、対応する commons 実装を直接読む。
-- active run の解決、lock、process tracking などの一般的な run 管理挙動だけを確認したいときは、対応する run 管理モジュールを直接読む。
+- 共通 lifecycle の canonical 実装や workload 固有の merge・差分処理など、配下の特定実装を直接確認すべきとき。
+- run 作成・通常編集・差分生成など、abandon／join のライフサイクル範囲に直接関係しない処理だけを調べるとき。
 
 ## hash
-- 74e09ce4b5c61d7f6c2fa16b36693745b8500ff230e7a749d0ffb2603dd37e37
+- b692c0592ebbf0f3b0b5fd155b8143d42f7edb6c6653a1301d983d594801c52c
 
 # `session`
 

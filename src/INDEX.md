@@ -49,19 +49,21 @@
 # `commons`
 
 ## Summary
-- commons 配下の共通 runtime 実装を束ね、CLI、Codex 実行、設定、Git、ログ、パス、状態、結果などの横断的な実行時補助機能を提供するパッケージ。
-- 共通 runtime API や個別 helper の責務を確認し、複数の実行経路にまたがる処理の入口を判断するときに読む。
+- commons パッケージの共通 runtime helper と、CLI・Codex 実行・設定・Git・ログ・パス・結果・状態などを担う runtime module 群への入口。
+- INDEX lifecycle、prompt editor input、feedback、report、refactor、session/run state など、commons 配下の個別実装へ進むためのルーティング対象。
 
 ## Read this when
-- commons 配下の共通 runtime helper の構成、公開 API、実行ライフサイクル、状態・ログ・パス・Git などの横断機能を確認または変更するとき。
-- 特定の helper に入る前に、commons パッケージ全体の責務と関連する runtime モジュールの位置づけを把握したいとき。
+- commons 配下の共通 runtime 機能の責務や構成を確認するとき。
+- 複数の実行経路にまたがる runtime 処理を変更・調査するとき。
+- 個別実装へ進む前に、commons の共通入口を把握するとき。
 
 ## Do not read this when
-- 特定の runtime helper の内部実装や個別挙動だけを調査・変更する場合は、該当する runtime モジュールを直接読む。
-- commons 配下ではなく、個別サブコマンドの業務処理や正本仕様、専用 schema の内容を確認する場合。
+- 特定の runtime helper や個別サブコマンドの実装詳細だけを確認したいとき。
+- 対象が明確な場合に、個別 runtime module、仕様書、schema、または呼び出し側を直接読むとき。
+- INDEX.md のルーティング情報だけを更新するとき。
 
 ## hash
-- d57d30711e48dbf2b003dedcb823901cf13bc8cff4ae9c53c6993365eababe3b
+- 2f844af77815108cf6c0771a83ab9934ddab59738c0b2ee47353e7fab67c61fa
 
 # `config`
 
@@ -115,18 +117,41 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装とパッケージ入口をまとめる階層。
-- doctor、feedback、indexing、oracle、realization、review、run、session、tui などの個別サブコマンド処理へ進むための起点。
-- apply と review は現時点で実装本文がなく、将来の実装追加先として扱う。
+- apply サブコマンドの実装配置先。現在は実装がなく、将来の apply 実装への入口。
+- `cmoc doctor` の CLI 入口。doctor preprocess の明示実行と repo root を含む結果生成を担う。
+- feedback サブコマンドの入口。観測の report 化、判定、issue 修復、publication 後の recovery へ振り分ける。
+- INDEX.md 更新を行う indexing CLI の入口。前提検査、排他下での更新、差分 commit、結果報告を担う。
+- oracle 系サブコマンドの入口。oracle edit と oracle investigation の入力処理、検証、agent または TUI 起動を担う。
+- realization workload の入口。apply workload と refactor fork の lifecycle、agent 実行、変更検査、commit、状態記録を扱う。
+- review サブコマンドの実装配置先。現在は具体的な実装がなく、追加実装への配置上の入口。
+- editing run の共通 lifecycle 実装への入口。run abandon・join の停止、統合、cleanup、report、互換 shim を扱う。
+- session サブコマンドの入口。session fork・join・abandon の lifecycle 処理へ進むための起点。
+- 利用者入力から完全なプロンプトと TUI 起動パラメータを構築し、Codex TUI を実行する tui サブコマンド本体。
 
 ## Read this when
-- サブコマンド全体の構成や個別 CLI 入口の所在を確認するとき。
-- 特定サブコマンドの実行経路、agent call、run lifecycle、publication/recovery などの処理へ進む起点を探すとき。
-- apply または review の実装追加・変更箇所を確認するとき。
+- apply サブコマンドの実装が追加され、その処理内容や配置を確認するとき。
+- `cmoc doctor` の入口、doctor preprocess の明示実行、実行結果の repo root 情報を確認するとき。
+- feedback の全体構成を確認し、観測、判定、修復、publication 後 recovery の調査先を判断するとき。
+- `cmoc indexing` の実行前提、INDEX.md 更新、差分 commit、結果報告の呼び出し元を確認するとき。
+- oracle 系サブコマンドの構成、oracle edit の agent call、または oracle investigation の TUI 起動フローを確認するとき。
+- realization apply・refactor の実行手順、run 状態遷移、完了判定、変更検査、cleanup、report 保存を確認するとき。
+- review サブコマンドの実装ファイルを追加・変更する場所を確認するとき。
+- editing run の停止、統合、cleanup、report、状態遷移、または `cmoc run abandon`・`cmoc run join` の入口を確認するとき。
+- session サブコマンドの構成、または session fork・join・abandon の実行経路を確認するとき。
+- `cmoc tui` の入力収集、プロンプト構築、indexing 準備、context・設定の受け渡し、TUI 起動経路を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細仕様や共通 runtime、indexing 共通処理、run 管理などの実装本体を直接確認したいとき。
-- 個別モジュールの細部だけを調査するとき。
+- apply 以外のサブコマンドを扱うとき。
+- doctor preprocess の具体的な処理内容や成果物を調べるとき。
+- CLI 共通 runtime や一般的な実行制御を調べるとき。
+- feedback 内の特定処理の実装詳細が明確で、対応する下位モジュールを直接読めるとき。
+- INDEX.md の更新規則や探索・生成ロジックを調べるとき。
+- oracle 個別サブコマンドの prompt 契約や、共通 prompt editor・TUI runtime の詳細だけを調べるとき。
+- apply workload の agent 起動パラメータだけ、または editing run の共通 lifecycle だけを調べるとき。
+- review の具体的な処理内容や oracle review の仕様を調べるとき。
+- run の canonical lifecycle、workload 固有の merge・差分処理、run 作成や通常編集だけを調べるとき。
+- SessionState、Git 操作共通実装、conflict resolution builder の詳細だけを調べるとき。
+- TUI 起動パラメータ、prompt editor、CLI 共通 runtime、設定ロードの詳細だけを調べるとき。
 
 ## hash
-- 43a24c895a41fea858ca8a72921b9a5021e48285ca077c960b01013e6fadf7f3
+- 20c73fc92d6098ed124c44136844e4baa845f8adb2993fda18139d242116a965

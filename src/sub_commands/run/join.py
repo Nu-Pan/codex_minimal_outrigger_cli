@@ -196,6 +196,20 @@ def _merge_and_finalize(
     write_state(context.state_path, state_after_join)
     delete_run_process_id(context.repo, context.session_id)
     start_subcommand_step(5, "結果を保存して run 資源を cleanup", "cleanup run")
+    report = write_lifecycle_report(
+        context,
+        "join",
+        state_after="ready",
+        warnings=[*warnings, "cleanup pending"],
+        details={
+            "run_join_commit": run_join_commit,
+            "post_join_hook": hook_result,
+            "refactor_state_sync_commit": state_sync_commit,
+            "cleanup": "pending",
+        },
+        terminal_classification="error",
+        exit_code=1,
+    )
     cleanup = runtime_run_join.cleanup_joined_run(context, warnings)
     state_after_cleanup = "ready"
     if cleanup != "completed":
@@ -237,10 +251,11 @@ def _merge_and_finalize(
                 "refactor_state_sync_commit": state_sync_commit,
                 "cleanup": cleanup,
             },
+            report_path=report,
         )
     except BaseException as report_error:
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # merge、ready state、cleanup が完了した後の report 保存失敗で、確定済み
+        # merge、ready state、cleanup が完了した後の report 更新失敗で、確定済み
         # merge を rollback し、唯一の復旧可能な run commit を失わせてはいけない。
         update_primary_report_fields(
             run_join_commit=run_join_commit,
@@ -254,7 +269,11 @@ def _merge_and_finalize(
             "run join report の最終状態を保存できませんでした。",
             ["診断用サブコマンドログを確認してください。"],
             repr(report_error),
-            terminal_result=TerminalResult(),
+            terminal_result=TerminalResult(
+                primary_report=report,
+                primary_report_role="run join report",
+                warnings=tuple(warnings),
+            ),
         ) from report_error
     return run_join_commit, hook_result, state_sync_commit, cleanup, report
 

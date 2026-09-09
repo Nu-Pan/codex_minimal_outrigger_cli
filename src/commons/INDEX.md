@@ -487,22 +487,22 @@
 # `runtime_primary_report.py`
 
 ## Summary
-- 非対話サブコマンドの primary report 保存を共通化する実行時モジュール。既存 report の検証、未作成時の fallback report 生成、保存失敗の internal error 化、invocation-local な report 項目の保持と確定値・alias の収集を担う。
+- 非対話サブコマンドの primary report を、確定済みの runtime 情報から保存・検証・更新する共通処理。
+- 個別 report が未作成の終了経路では、command 別 spec と terminal 結果から fallback report を生成する。
+- report context の管理、項目の alias 解決、保存失敗時の cleanup、既存 report の原子的更新を担う。
 
 ## Read this when
-- 非対話サブコマンドの終了経路で primary report を保存・再利用・検証する処理を確認または変更するとき
-- fallback report の共通項目、個別 command の確定項目、terminal classification、completion reason の扱いを確認するとき
-- oracle edit、feedback report、realization apply/refactor fork の report 保存前後の状態や status を追跡するとき
-- report 保存失敗時の例外、予約 path の後始末、空 file・symlink の検証を確認するとき
+- 非対話サブコマンドの primary report 保存、fallback 生成、既存 report の再利用を確認するとき。
+- report 項目の確定値、command 別の補正、context と result details の統合を調べるとき。
+- report 保存の失敗処理、部分 file の除去、通常 file・symlink・空 file の検証を確認するとき。
 
 ## Do not read this when
-- primary report の項目定義や command ごとの必須 field を確認するだけで、保存処理や fallback 生成を扱わないときは runtime_primary_report_specs を読む
-- report の Markdown 形式や execution record、status の描画規則だけを確認するときは runtime_primary_report_render を直接読む
-- runtime path の timestamp 付き保存先生成だけを扱うときは runtime_paths を直接読む
-- 実際の各サブコマンド固有の処理や oracle の仕様を確認するときは、その command の実装または対応する oracle 文書を直接読む
+- primary report の項目定義や Markdown 表現を確認したいとき。
+- 個別サブコマンドの処理手順や終了条件を確認したいとき。
+- runtime logging、path、result 型の専用責務だけを確認したいとき。
 
 ## hash
-- f17e671e162ef4d65a9372533f58fce0846495ba96157054542d42cb14bc10ae
+- 95a22909f6d96cb2b44038b59c2fbf853761033dbb0f3f2764c0b12832c7121d
 
 # `runtime_primary_report_render.py`
 
@@ -605,21 +605,19 @@
 # `runtime_run_join.py`
 
 ## Summary
-- join 前処理、run/session の差分検証、merge と post-join hook、INDEX conflict の解決、失敗時の復元、merge 済み run の worktree・branch cleanup をまとめて担う runtime 共通処理。
-- 明示的な join と self-joining workload から共有される、clean worktree 条件、想定外差分の report・force-resolve、merge 後の state/index 同期、到達可能性を確認した安全な cleanup の入口。
+- editing run の join 処理で、session と run の差分検査、merge、INDEX 再生成、refactor state 同期、失敗時の復元・report 記録を共有する処理の入口。
+- merge 済み run の worktree と branch を到達可能性と削除結果を確認しながら cleanup する処理も担う。
 
 ## Read this when
-- editing run の join 処理で、事前の refactor state 同期や clean・差分検査の挙動を確認するとき。
-- run branch の merge、INDEX.md のみを許容する conflict 処理、post-join の INDEX 再生成や state 同期を調べるとき。
-- merge または post-join 失敗時の session worktree 復元、想定外差分の lifecycle report、merge 済み run の worktree・branch 削除条件を変更・確認するとき。
+- editing run の join が想定外差分、INDEX.md 限定 conflict、merge 後処理、session 復元、run 資源 cleanup の挙動を確認・変更するとき。
+- 明示的な join と self-joining workload が共有する検証・merge・post-join の流れを追うとき。
 
 ## Do not read this when
-- run の開始、通常の workload 実行、または join 前の active run 解決そのものを調べるときは、各処理を直接実装する runtime モジュールを読む。
-- state・refactor state・lifecycle report のデータ構造や永続化契約だけを確認するときは、それぞれの state、refactor、report モジュールを直接読む。
-- INDEX.md のルーティング生成規則そのものを調べるときは、INDEX 更新を担当する実装を直接読む。
+- run の開始や通常の process tracking、状態モデル、report の個別フォーマットだけを確認したいときは、それぞれの専用 runtime モジュールを直接読む。
+- join や cleanup に関係しない refactor、doctor、INDEX 生成の一般仕様だけを確認したいとき。
 
 ## hash
-- 98143372e53e3bb4061b9c7f39bf0fa08f444d5ed0d18eb6a42f61f83e9e9e93
+- ce45163af61ed1866924e7db60775bdf49b90c93c76866c8a9f16a69c436eb5e
 
 # `runtime_run_lifecycle.py`
 
@@ -641,20 +639,21 @@
 # `runtime_run_report.py`
 
 ## Summary
-- 対象ファイルは、editing run の fork report と run join/abandon の lifecycle report を、共通の YAML Front Matter、Markdown 本文、実行段階、関連ログ付きで保存する処理を担う。レポートの保存先・タイムスタンプ付きパス予約・終了分類・実行結果項目の組み立て、および変更パスや YAML 値の安全な描画を扱う。レポート生成や run lifecycle の出力形式、または変更パスの Markdown 安全性を確認・変更するときの入口であり、個別の report 出力仕様や canonical 配置の判断は参照先の仕様文書から始める。
+- editing run の fork report と lifecycle report を、YAML Front Matter、完了結果、変更パス、実行段階、関連ログを含む Markdown として生成・保存する共通処理。
+- run join/abandon のライフサイクルレポートでは、既存の pending report を安全に最終結果へ更新する入口も担う。
 
 ## Read this when
-- editing run の fork report または run join/abandon の lifecycle report の生成処理を確認・変更するとき
-- レポートの YAML Front Matter、Markdown セクション、実行段階、関連ログの共通構造を確認するとき
-- Git path や YAML 値をレポートへ安全に描画する処理を確認するとき
+- editing run の fork または run join/abandon に関するレポート生成・保存・更新処理を確認したいとき
+- 実行レポートへ状態、完了理由、変更パス、実行段階、関連ログを反映する処理の入口を探すとき
+- レポート内で Git path を Markdown として安全に描画する処理を確認したいとき
 
 ## Do not read this when
-- レポート本文の個別仕様だけを確認する場合は、参照先として示された editing run の正本仕様を先に読む
-- 共通処理の配置や CLI 実装責務だけを判断する場合は、canonical な設計ルールを先に読む
-- 実行ログの収集機構や run lifecycle の状態管理そのものを変更する場合は、それぞれの担当モジュールを直接読む
+- レポートに含める共通項目や canonical な配置規則を確認したいときは、参照コメントに示された設計・仕様文書を読むとき
+- EditingRunContext の状態や run lifecycle 自体の定義を確認したいときは、その専用実装へ進むとき
+- 実行段階や関連ログの具体的な内容を確認したいときは、それらを提供する logging 実装へ直接進むとき
 
 ## hash
-- 035a933571e86ee1771aa202a9a5d1636e59a567e650251bdb315a590306c38c
+- 7d1e833ac3dfed7166aa0416f412a5bb1bf7da3f834eafeefcd6695a870bc3b9
 
 # `runtime_state.py`
 

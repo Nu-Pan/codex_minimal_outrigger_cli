@@ -154,6 +154,7 @@ def merge_run(
     """共通 merge と post-join を行い、state 初期化と資源 cleanup は呼出元に残す。"""
     # merge の結果を確定し、workload 固有の state 初期化は呼出元へ返す。
     run_join_commit: str | None
+    index_conflict = False
     start_subcommand_step(3, "run branch を session へ merge", "merge run")
     merge = run_git(
         ["merge", "--no-ff", context.run_branch],
@@ -161,6 +162,7 @@ def merge_run(
         check=False,
     )
     if merge.returncode != 0:
+        index_conflict = True
         run_join_commit = _resolve_index_only_conflict_or_fail(
             context,
             state,
@@ -187,6 +189,8 @@ def merge_run(
             last_joined_apply_fork_commit = context.run_fork_commit
             hook_result = "session.last_joined_apply_fork_commit updated"
     _refresh_join_indexes(context, warnings)
+    if index_conflict:
+        warnings.append("INDEX.md conflicts were regenerated")
     sync_refactor_state(context.session_worktree)
     state_sync_commit = commit_work_unit(
         context.session_worktree,
@@ -292,8 +296,6 @@ def _resolve_index_only_conflict_or_fail(
                 )
         run_git(["commit", "--no-edit"], context.session_worktree)
         merge_commit = head_commit(context.session_worktree)
-        _refresh_join_indexes(context, warnings)
-        warnings.append("INDEX.md conflicts were regenerated")
         return merge_commit
     # INDEX.md 以外の conflict は join 開始前の clean tree へ戻して report する。
     restore_session_after_join_failure(context, session_head_before_join)
