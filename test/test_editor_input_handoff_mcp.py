@@ -33,6 +33,7 @@ def test_handoff_mcp_exposes_only_overwrite_with_canonical_schema() -> None:
         }
     )
     assert initialized is not None
+    assert initialized["result"]["protocolVersion"] == "2025-06-18"
     assert initialized["result"]["capabilities"] == {"tools": {"listChanged": False}}
 
     listed = handoff_mcp._response(
@@ -54,6 +55,57 @@ def test_handoff_mcp_exposes_only_overwrite_with_canonical_schema() -> None:
         )
         assert response is not None
         assert response["error"]["code"] == -32601
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"jsonrpc": "1.0", "id": 1, "method": "ping"},
+        {"jsonrpc": "2.0", "id": True, "method": "ping"},
+        {"jsonrpc": "2.0", "id": [], "method": "ping"},
+        {"jsonrpc": "2.0", "id": 1, "method": 1},
+        {"jsonrpc": "2.0", "id": 1, "method": "ping", "params": "invalid"},
+        {"jsonrpc": "2.0", "id": 1, "method": "ping", "params": []},
+    ],
+)
+def test_handoff_mcp_rejects_invalid_jsonrpc_request(
+    message: dict[str, object],
+) -> None:
+    """JSON-RPC 2.0 の request 形状を満たさない入力を実行しない。"""
+    assert handoff_mcp._response(message) == {
+        "jsonrpc": "2.0",
+        "id": None,
+        "error": {"code": -32600, "message": "Invalid Request"},
+    }
+
+
+@pytest.mark.parametrize("requested", ["2024-11-05", "future-version"])
+def test_handoff_mcp_negotiates_only_supported_protocol_version(
+    requested: str,
+) -> None:
+    """未対応の MCP protocol version をそのまま採用しない。"""
+    response = handoff_mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": requested},
+        }
+    )
+    assert response is not None
+    assert response["result"]["protocolVersion"] == "2025-06-18"
+
+
+def test_handoff_mcp_requires_initialize_protocol_parameter() -> None:
+    """initialize の必須 protocolVersion 欠落を method error にする。"""
+    response = handoff_mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+    )
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {"code": -32602, "message": "Invalid params"},
+    }
 
 
 def test_handoff_mcp_rejects_invalid_input_without_returning_content(

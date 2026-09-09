@@ -266,19 +266,19 @@
 # `runtime_editor_input_handoff_mcp.py`
 
 ## Summary
-- Codex TUI の editor input handoff 用 stdio MCP server として、newline-framed JSON-RPC の initialize・ping・tools/list・tools/call を処理する。
-- active な prompt editor input file 全体を置換する overwrite tool の入力検証、同一 repository の active target への認証付き転送、受付結果の domain failure・unknown outcome の整形を担う。
+- Codex TUI の editor input handoff を受け付ける stdio MCP サーバー。MCP 初期化・ping・tools/list・tools/call を処理し、active target へ prompt editor input 全体の置換要求を転送する。
+- 入力検証、repository と target の照合、認証付き socket 通信、転送結果の accepted／rejected／unknown 応答、および JSON-RPC エラー応答を担う。
 
 ## Read this when
-- editor input handoff MCP server の JSON-RPC 対応、overwrite tool の公開仕様、または stdio 入出力ループを確認・変更するとき。
-- handoff target への接続、認証、repository 一致、タイムアウト、転送結果の扱いを確認するとき。
+- Codex TUI の editor input handoff 用 MCP server の MCP メソッド、overwrite ツール、入力検証、target 転送、通信失敗時の応答を確認するとき。
+- active な prompt editor input file の置換処理が、どのような認証・repository 境界・再試行可能性で行われるかを確認するとき。
 
 ## Do not read this when
-- editor input handoff の target 側プロトコルや入力スキーマの詳細だけを確認したいときは、参照先の protocol module を直接読む。
-- Codex TUI の editor input handoff 全体の起動・target 管理を調べるときは、この MCP server の実装ではなく、それらを管理する対象から読み始める。
+- editor input handoff protocol の target ID 解析、認証、wire protocol、overwrite input schema 自体の仕様を確認したいときは、参照先の protocol module を直接読む。
+- Codex TUI 側の editor input file 管理や active target の生成・保持処理を確認したいときは、その実装箇所を直接読む。
 
 ## hash
-- 4937817b620cc9446edf383c862f69fe2be7f8e8e22672ced065c57530e675f2
+- 299b855ad27f1ece3e23ade8275e391af60badb505025b9b15b2ae59cfcaec63
 
 # `runtime_editor_input_handoff_protocol.py`
 

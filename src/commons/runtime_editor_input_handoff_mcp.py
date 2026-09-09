@@ -18,8 +18,9 @@ from .runtime_editor_input_handoff_protocol import (
     read_handoff_response,
 )
 
-MCP_PROTOCOL_VERSION = EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION
+MCP_PROTOCOL_VERSION = "2025-06-18"
 _SERVER_NAME = "cmoc-editor-input-handoff"
+_SERVER_VERSION = EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION
 _REJECTION_CODES = frozenset(
     {
         "invalid_input",
@@ -30,6 +31,38 @@ _REJECTION_CODES = frozenset(
         "write_failed",
     }
 )
+
+
+def _invalid_request() -> dict[str, object]:
+    """JSON-RPC request として解釈できない message の response を返す。"""
+    return {
+        "jsonrpc": "2.0",
+        "id": None,
+        "error": {"code": -32600, "message": "Invalid Request"},
+    }
+
+
+def _invalid_params(request_id: object) -> dict[str, object]:
+    """method-specific params を解釈できない request の response を返す。"""
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "error": {"code": -32602, "message": "Invalid params"},
+    }
+
+
+def _is_valid_request_id(value: object) -> bool:
+    """MCP が許可する string または integer の request ID か検査する。"""
+    return isinstance(value, str) or type(value) is int
+
+
+def _is_valid_jsonrpc_request(request: dict[object, object]) -> bool:
+    """MCP の JSON-RPC 2.0 request 形状を副作用なく検査する。"""
+    if request.get("jsonrpc") != "2.0" or not isinstance(request.get("method"), str):
+        return False
+    if "id" in request and not _is_valid_request_id(request["id"]):
+        return False
+    return "params" not in request or isinstance(request["params"], dict)
 
 
 def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
@@ -163,28 +196,28 @@ def _tool_result(result: dict[str, object]) -> dict[str, object]:
 
 def _response(request: object) -> dict[str, object] | None:
     """一つの MCP JSON-RPC message を処理する。"""
-    if not isinstance(request, dict):
-        return {
-            "jsonrpc": "2.0",
-            "id": None,
-            "error": {"code": -32600, "message": "Invalid Request"},
-        }
+    if not isinstance(request, dict) or not _is_valid_jsonrpc_request(request):
+        return _invalid_request()
     method = request.get("method")
     if "id" not in request:
         return None
     request_id = request["id"]
     if method == "initialize":
         parameters = request.get("params")
-        requested_protocol = (
-            parameters.get("protocolVersion") if isinstance(parameters, dict) else None
-        )
+        if not isinstance(parameters, dict) or not isinstance(
+            parameters.get("protocolVersion"), str
+        ):
+            return _invalid_params(request_id)
+        requested_protocol = parameters["protocolVersion"]
         protocol_version = (
-            requested_protocol if isinstance(requested_protocol, str) else "2025-06-18"
+            requested_protocol
+            if requested_protocol == MCP_PROTOCOL_VERSION
+            else MCP_PROTOCOL_VERSION
         )
         result: dict[str, object] = {
             "protocolVersion": protocol_version,
             "capabilities": {"tools": {"listChanged": False}},
-            "serverInfo": {"name": _SERVER_NAME, "version": MCP_PROTOCOL_VERSION},
+            "serverInfo": {"name": _SERVER_NAME, "version": _SERVER_VERSION},
         }
     elif method == "ping":
         result = {}
@@ -206,7 +239,9 @@ def _response(request: object) -> dict[str, object] | None:
         }
     elif method == "tools/call":
         parameters = request.get("params")
-        if not isinstance(parameters, dict) or parameters.get("name") != "overwrite":
+        if not isinstance(parameters, dict):
+            return _invalid_params(request_id)
+        if parameters.get("name") != "overwrite":
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
