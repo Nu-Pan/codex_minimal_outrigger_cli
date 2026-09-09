@@ -145,10 +145,13 @@ def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
         raise _failure(
             "feedback finalization journal と session identity が一致しません。"
         )
-    if session.run.state != "ready" and (
-        session.run.branch != context.run_branch
-        or session.run.kind != context.kind
-        or session.run.fork_commit != context.run_fork_commit
+    if session.run.state not in {"ready", "joinable", "error"} or (
+        session.run.state != "ready"
+        and (
+            session.run.branch != context.run_branch
+            or session.run.kind != context.kind
+            or session.run.fork_commit != context.run_fork_commit
+        )
     ):
         raise _failure("feedback finalization の対象とは異なる active run があります。")
     return context
@@ -162,9 +165,25 @@ def _finish_from_journal(
 
     context = _journal_context(repo, journal)
     report_reference = journal["report"]
+    if not isinstance(report_reference, dict) or set(report_reference) != {
+        "path",
+        "sha256",
+    }:
+        raise _failure("feedback finalization report の reference が不正です。")
+    report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
+    expected_report_root = (
+        report_root / "incomplete" if journal["result"] == "incomplete" else report_root
+    )
+    if (
+        not isinstance(report_reference["path"], str)
+        or Path(report_reference["path"]).is_absolute()
+    ):
+        raise _failure("feedback finalization report の path が不正です。")
     report_path = repo / report_reference["path"]
     if (
-        not report_path.resolve().is_relative_to(repo / ".cmoc/gu/report/feedback")
+        report_path.resolve(strict=False).parent
+        != expected_report_root.resolve(strict=False)
+        or report_path.suffix != ".md"
         or artifact_reference(repo, report_path) != report_reference
     ):
         raise _failure("feedback finalization report の path/hash が不正です。")
@@ -177,6 +196,9 @@ def _finish_from_journal(
     ):
         raise _failure("feedback finalization の join evidence が不正です。")
     with run_lifecycle_lock(repo, context.session_id):
+        # context 検証後に別 run が state を公開していないことを、変更操作の
+        # 直前に同じ lifecycle lock 内でも確認する。
+        context = _journal_context(repo, journal)
         try:
             require_clean_worktree(context.session_worktree)
             if head_commit(context.session_worktree) != completion["session_commit"]:
@@ -214,6 +236,13 @@ def _finish_from_journal(
                         "feedback finalization の run tree が変更されています。"
                     )
             state = validate_feedback_state(repo)
+            if journal["result"] != "incomplete" and (
+                state.current is None
+                or state.current["report_cut_id"] != journal["report_cut_id"]
+                or state.current["report_path"] != report_reference["path"]
+                or state.current["report_sha256"] != report_reference["sha256"]
+            ):
+                raise _failure("feedback publication point を確認できません。")
             work = load_report_cut(repo)
             if work is not None:
                 manifest, manifest_path = work
@@ -234,11 +263,6 @@ def _finish_from_journal(
                         )
                     discard_report_cut(repo, manifest, manifest_path)
                 else:
-                    if (
-                        state.current is None
-                        or state.current["report_cut_id"] != journal["report_cut_id"]
-                    ):
-                        raise _failure("feedback publication point を確認できません。")
                     cleanup_published_report(repo)
             # work artifact の cleanup が完了してから state と隔離資源を回収する。
             _, _, session = load_state_for_branch(repo, context.session_branch)
@@ -293,7 +317,8 @@ def require_manual_feedback_run(context: EditingRunContext) -> None:
 
     if context.kind != "feedback_report":
         return
-    if (feedback_root(context.repo) / "finalization.json").exists():
+    finalization_path = feedback_root(context.repo) / "finalization.json"
+    if finalization_path.exists() or finalization_path.is_symlink():
         raise _failure(
             "feedback run は自動 join 済みです。",
             [

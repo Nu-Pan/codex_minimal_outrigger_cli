@@ -33,21 +33,19 @@
 # `recovery.py`
 
 ## Summary
-- Feedback report の publication 後に、finalization journal を用いて cleanup、状態遷移、隔離資源回収を確定する処理。
-- 中断後の finalization 再開と、report・session・run・join evidence の整合性検証を扱う。
-- 自動 join 済み feedback run の明示 join/abandon を拒否し、明示終了時は監査記録を残して work artifact を破棄する入口。
+- Feedback report の publication 後に、finalization journal を根拠として work artifact、session state、join 済み run の隔離資源を整合的かつ再実行可能に cleanup する処理。
+- 自動 join 済みの feedback run を明示的な join/abandon で終了させない境界と、明示終了された未 publication run の監査記録・work cleanup を扱う下位処理への入口。
 
 ## Read this when
-- Feedback report の publication 後 cleanup、recovery、ready 遷移、run worktree 回収を確認したいとき。
-- finalization journal の検証条件や、cleanup 失敗時の error 状態遷移を調べたいとき。
-- feedback run に対する明示 join/abandon の可否、または手動終了時の後処理を確認したいとき。
+- feedback publication 後の cleanup、finalization journal の検証・recovery、または session/run/worktree の整合性確認が必要なとき。
+- feedback run が自動 join 済みか、明示 join/abandon を許可できる状態かを判定したいとき。
 
 ## Do not read this when
-- Feedback report の判定や正常 publication の内容を調べるとき。
-- Feedback run の一般的な lifecycle、join 実装、または worktree 操作そのものを調べるとき。
+- feedback report の生成、remediation、decision、または publication 前の report cut 処理そのものを調べたいとき。
+- feedback run 以外の一般的な run lifecycle の join/abandon 処理を調べたいとき。
 
 ## hash
-- 0f934ef6ab4862779c72ca07f413807a9d4251f1ad9da0193fab9dfe4e85d020
+- c9708faad6582446fddd44536620cd42da92118571ca2cc4fd3a752c01242bc2
 
 # `remediation.py`
 

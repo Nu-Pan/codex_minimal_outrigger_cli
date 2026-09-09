@@ -122,19 +122,23 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、doctor・tui・indexing・feedback、session・oracle・realization・run のコマンドツリーを構成する。
-- 互換 import 入口、共通 runtime、サブコマンド実装、ACP builder 群をまとめ、CLI から各処理へ進む上位層を担う。
+- cmoc の CLI 起動入口と command tree を構成し、doctor・tui・session・oracle・realization・run・feedback などのサブコマンドを実装へ接続する。
+- commons 配下に CLI・Codex 実行、設定、Git、ログ、状態、結果、feedback、report、run lifecycle などの共通 runtime を集約する。
+- acp・basic・config・cmoc_runtime・oracle は、既存の互換 import path から正本または実体モジュールへ進むための入口を提供する。
 
 ## Read this when
-- cmoc の CLI 公開コマンド、起動経路、引数解析、補完、Click/Typer 互換境界を確認するとき。
-- トップレベルの互換 import、共通 runtime、サブコマンド、ACP builder の責務分担や調査入口を判断するとき。
+- cmoc の公開 CLI 構成、起動経路、サブコマンドの登録、Typer／Click 境界を確認するときは main.py を読む。
+- 複数の実行経路で共有される runtime、状態管理、feedback、report、Codex 実行、Git、ログの実装入口を特定するときは commons を読む。
+- 既存の acp・basic・config・cmoc_runtime・oracle 参照の互換性や正本側への移行入口を確認するときは対応する互換パッケージまたはモジュールを読む。
+- 特定の CLI サブコマンドの処理フローを調査するときは sub_commands を読む。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、共通 runtime helper、互換 API、builder の生成仕様を確認したいときは、対応する下位要素を直接読む。
-- 正本仕様や oracle 側の実装、INDEX 更新・feedback 処理の詳細だけを確認したいときは、対応する仕様文書または実装を直接読む。
+- 特定サブコマンドの業務処理や利用者向け仕様だけを確認したいときは、この階層ではなく対応する sub_commands 配下を直接読む。
+- 共通 runtime の個別 API、error 型、report 定義、feedback payload、IPC protocol の詳細を確認したいときは commons 配下の対応する個別モジュールを直接読む。
+- 互換入口ではなく正本側の oracle 実装や個別 API の仕様を確認したいときは、対応する正本実装または下位要素を直接読む。
 
 ## hash
-- 2e239c1e407f15334ff90abb0734f456a2a0ff4525ed81ff9cdb89c3e27b39e3
+- 30a4f82eff27d3a9eeeb0a4b68c47766711d23f93a10afd879be294e6622abc3
 
 # `test`
 
