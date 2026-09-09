@@ -65,6 +65,20 @@ def _is_valid_jsonrpc_request(request: dict[object, object]) -> bool:
     return "params" not in request or isinstance(request["params"], dict)
 
 
+def _is_valid_initialize_params(value: object) -> bool:
+    """MCP initialize request の必須 parameter shape を検査する。"""
+    if not isinstance(value, dict):
+        return False
+    client_info = value.get("clientInfo")
+    return (
+        isinstance(value.get("protocolVersion"), str)
+        and isinstance(value.get("capabilities"), dict)
+        and isinstance(client_info, dict)
+        and isinstance(client_info.get("name"), str)
+        and isinstance(client_info.get("version"), str)
+    )
+
+
 def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
     """content を含まない agent-facing domain failure を返す。"""
     return {
@@ -190,7 +204,7 @@ def _tool_result(result: dict[str, object]) -> dict[str, object]:
             }
         ],
         "structuredContent": result,
-        "isError": False,
+        "isError": result.get("status") != "accepted",
     }
 
 
@@ -204,10 +218,9 @@ def _response(request: object) -> dict[str, object] | None:
     request_id = request["id"]
     if method == "initialize":
         parameters = request.get("params")
-        if not isinstance(parameters, dict) or not isinstance(
-            parameters.get("protocolVersion"), str
-        ):
+        if not _is_valid_initialize_params(parameters):
             return _invalid_params(request_id)
+        assert isinstance(parameters, dict)
         requested_protocol = parameters["protocolVersion"]
         protocol_version = (
             requested_protocol

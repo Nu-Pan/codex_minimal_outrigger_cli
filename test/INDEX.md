@@ -425,18 +425,18 @@
 # `test_editor_input_handoff_mcp.py`
 
 ## Summary
-- editor input handoff の agent-facing MCP interface を検証するテスト。公開ツールの限定、JSON-RPC/MCP protocol version の扱い、入力検証、送信失敗時の状態・再試行可能性、応答フィールドの秘匿と正規化を確認する。
+- editor input handoff の agent-facing MCP interface を検証するテスト。公開 tool、canonical schema、JSON-RPC/MCP protocol negotiation、入力検証、domain failure、transport failure 時の status・retryability・情報秘匿、応答 field の公開境界を扱う。
 
 ## Read this when
-- editor input handoff の MCP interface、overwrite tool、JSON-RPC request validation、canonical input schema の公開、または transport error の状態分類を変更・調査するとき。
-- 送信受付後に応答を失った場合や、送信前・送信中の失敗を agent-facing result としてどう報告するかを確認するとき。
+- editor input handoff MCP の公開契約や overwrite tool の agent-facing 応答を変更・確認するとき
+- JSON-RPC request validation、protocol version negotiation、tool error の分類、送信結果不確実性、content 非漏洩の挙動を確認するとき
 
 ## Do not read this when
-- MCP interface や editor input handoff の挙動を変更せず、別の editor input handoff 実装、protocol、正本仕様だけを直接調査するとき。
-- テスト実行方法や一般的な pytest 設定だけを確認したいとき。
+- editor input handoff のファイル上書き本体や target のライフサイクルだけを調べるとき
+- MCP interface ではなく canonical input schema の定義そのものを確認するときは、正本 schema を直接読む方が適切なとき
 
 ## hash
-- 91b93b45922d80236f8f46a2c08c7fc585b7ac345041d3c1686ee2916c9b5147
+- 94b33cbc1156b60501389bf4a9190cda3a8cfdc658a6a96ee66a075fb815866a
 
 # `test_feedback.py`
 
