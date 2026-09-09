@@ -111,7 +111,7 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
         ),
         pytest.param(
             lambda: _build_feedback_reporting_policy(_path_context()),
-            ("**必須**", "**禁止**"),
+            ("**必須**", "**禁止**", "**補足情報**"),
             1,
             id="feedback-reporting",
         ),
@@ -326,11 +326,11 @@ def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
     rendered = render_sd_node_as_markdown(*prompt)
     assert rendered.count("# feedback observation reporting") == 1
     assert rendered.count("cmoc_feedback.submit_observation") == 1
-    assert "現在の workload の規定範囲内では解消できず" in rendered
-    assert "現在の workload 内で解決した問題" in rendered
-    assert "仕様どおりの制約" in rendered
-    assert "具体的な根拠がない改善案" in rendered
-    assert "成功・失敗を根拠にセッションを中断・続行を判断してはならない" in (rendered)
+    fundamental_policy = rendered.split('<cmoc_block id="fundamental_policy">', 1)[
+        1
+    ].split("</cmoc_block>", 1)[0]
+    expected_policy = _render_policy(_build_feedback_reporting_policy(_path_context()))
+    assert fundamental_policy.count(expected_policy) == 1
 
 
 def test_complete_prompt_renders_file_classification_boundaries() -> None:

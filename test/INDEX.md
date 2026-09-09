@@ -687,20 +687,19 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt part の rendering と complete prompt の組み立てを検証する回帰テスト。各 policy のカテゴリ順序・重複防止・内容境界、objective と動的セクションの配置、placeholder 展開、file access mode ごとの制約、INDEX 案内要件を確認する。
+- prompt builder の回帰テストとして、各 policy の SDHeader レンダリングと完全 prompt の構成を検証する。policy のカテゴリ順序、flag ごとの注入、objective の配置、placeholder 展開、file access mode 別の境界、root 定義、主要な policy 文言を扱う。
 
 ## Read this when
-- prompt builder の policy、prompt part、complete prompt の構成や rendering を変更・調査するとき
-- prompt の placeholder、objective、policy 注入、file access 境界に関する回帰を確認するとき
-- prompt builder 関連のテスト失敗から、期待される出力構造や policy の責務を確認するとき
+- prompt builder や policy builder の出力構造・レンダリング結果を変更または検証するとき。
+- 完全 prompt の section 順序、objective の組み立て、placeholder の統合・展開、policy flag の注入を確認するとき。
+- file access mode、oracle・realization の境界、INDEX エントリー policy など、prompt に注入される規定の回帰結果を確認するとき。
 
 ## Do not read this when
-- prompt builder の実装詳細そのものを確認したい場合は、対応する oracle の仕様や prompt_builder 実装を直接読むとき
-- prompt builder と無関係なテストや、単一 policy の仕様本文だけを確認する場合
-- INDEX.md エントリーの出力形式だけを確認する場合
+- prompt builder の実装や対応する oracle 文書の仕様を直接確認することが目的で、テストではなく実装・正本を読むべきとき。
+- prompt builder と無関係なテストや、一般的なテスト実行方法だけを確認するとき。
 
 ## hash
-- 96c97bd4148c1594d5e3c06203519cd3799bd4d3f3819edd77f4327de02593da
+- 6c5374d50e9f97e824fd674cb937a32ecd85abe672e821d1c569c934ca4ada11
 
 # `test_runtime_cli.py`
 

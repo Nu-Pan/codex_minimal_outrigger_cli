@@ -89,20 +89,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書群と、AI コーディングエージェント呼び出しを構築する実装群を束ねる最上位の入口。仕様・開発規則・branch model・検討資料と、agent call の共通設定・prompt・用途別 builder のどちらを辿るかを切り分ける。
+- cmoc の正本仕様・設計資料と oracle パッケージ実装を横断する入口。アプリケーション仕様、branch/worktree モデル、開発規則、採用しなかった設計案、および agent call のパスモデル・prompt 構築・用途別 builder を目的別に辿る。
 
 ## Read this when
-- cmoc の仕様や設計判断を実装と関連づけて調べるとき。
-- agent call の共通設定、用途別 builder、prompt 構築、Structured Output、パスや入力スキーマの責務がどの下位領域にあるか判断するとき。
-- oracle と realization の処理、feedback、indexing、session、TUI など複数領域にまたがる調査・変更の入口を決めるとき。
+- cmoc の仕様、開発ルール、branch・commit・worktree の関係、または過去の設計判断を調べるとき。
+- agent call の cwd・worktree・placeholder、構造化 prompt、policy 注入、用途別 Codex CLI builder、quota probe、indexing、feedback、session・TUI 経路の実装を調べるとき。
+- 仕様または実装の確認対象が doc と oracle パッケージのどちらに属するかを判断し、下位対象への入口を探すとき。
 
 ## Do not read this when
-- 参照したい正本仕様、開発規則、branch model、検討資料が特定できており、その文書群へ直接進めるとき。
-- 特定の agent call builder、prompt 部品、入力スキーマ、設定・パスモデル、feedback・session・TUI の具体的な実装だけを確認したいとき。
-- Codex CLI の実行結果処理や、個別 oracle／realization file の内容・編集手順を直接調べるとき。
+- 確認したい正本仕様、設計判断、または実装経路がすでに特定できており、その下位対象だけを直接読む場合。
+- cmoc の一般的な実装コード、具体的な CLI 操作、realization file・oracle・feedback の個別処理、または Codex CLI 実行結果の詳細だけを確認したい場合。
 
 ## hash
-- ee374cba675736f8a9dbc3c5c27a866ee81dd475cdcc439e6890573f525515df
+- 1cd3907e258bae7965b499ed3028f14fa3eb3849c1d6f1879e589a24145cb375
 
 # `pyproject.toml`
 
@@ -143,19 +142,21 @@
 # `test`
 
 ## Summary
-- `test` 配下は、cmoc の CLI・Codex runtime・indexing・oracle／realization・session・feedback・prompt・Git／state 管理を、単体から実経路統合までのテストで検証する主要な回帰テスト群です。
-- 各テストは、実装や正本仕様に対する外部契約、状態遷移、ファイル安全性、process／PTY、report／log、Structured Output、公開 API の境界を対象領域別に検証します。
-- 共通 fixture・テスト helper と、実 Codex／独立 process を用いる受け入れ試験が同階層にあり、対象機能の回帰条件や実行経路を探す入口になります。
+- test ディレクトリは、cmoc の CLI・runtime・Codex 実行・TUI・session・feedback・indexing・oracle/realization などの外部挙動を回帰検証するテスト群と、テスト共通 helper をまとめた入口です。
+- 個別機能の正常系・異常系・永続 state・Git lifecycle・process 管理・prompt/builder 契約・本番経路を、対応する専用テストから確認できます。
+- 共通 helper は、対象テストの実行環境、fixture、fake external command、Git repository、Codex 呼び出し、doctor 出力などのテスト準備を支援します。
 
 ## Read this when
-- cmoc の機能変更が既存の CLI 外部挙動、Codex 実行、Git／worktree、永続 state、report、prompt、indexing、session、feedback の回帰に影響するか確認するとき。
-- 対象機能に対応するテストケース、共有 fixture／helper、または実 Codex・PTY を含む統合経路の検証方法を探すとき。
-- 公開 command tree、Structured Output、ファイルアクセス境界、process cleanup など、実装に対する回帰検証の入口を特定するとき。
+- cmoc の公開 CLI やサブコマンドの外部挙動を回帰テストから確認・変更するとき
+- Codex exec/TUI、prompt、builder、sandbox、process tracking、ログ、report、preflight の契約を検証するとき
+- indexing、oracle/realization、session、feedback、editor input、Git・state lifecycle のテスト対象を探すとき
+- 複数の機能領域をまたぐ本番経路・PTY・独立 process の受け入れ試験を確認するとき
+- テスト用の共通 fixture や一時環境、Git repository、fake command の準備方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認・変更することが目的で、テストが検証する期待挙動を確認する必要がないとき。
-- 対象機能が `test` 配下の領域に該当しない、または個別の仕様・実装・schema・oracle を直接読む方が明確なとき。
-- 実 Codex／PTY／subprocess を使う受け入れ試験が不要で、高速な単体テストや特定の共通 helper だけを直接確認したいとき。
+- 正本仕様、schema、実装本体の詳細を確認することが目的で、対応する oracle・realization・src の対象を直接読むべきとき
+- 特定テストの assertion、fixture、実装上の細部だけを確認したいときは、該当するテストファイルを直接読むとき
+- cmoc と無関係なテスト実行方法や、対象ディレクトリが扱わない機能を調べるとき
 
 ## hash
-- 1d9573a7e72944ef886823292484de9adabf4fdd22ff84ca5fb0f1d47aa5e796
+- 30d682bdef65cefa67fd93b92d69c8c1411b26372e2d71c2d7a42561bc58fb36

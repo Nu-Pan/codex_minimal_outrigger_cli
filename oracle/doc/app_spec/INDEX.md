@@ -157,18 +157,21 @@
 # `feedback_observation.md`
 
 ## Summary
-- feedback observation の報告基準、agent-facing reporter interface、collector/transport の境界、機械的検出ルール、raw observation の保存・durability・retention を定める正本仕様。
+- feedback observation の報告基準、agent-facing reporter interface、受け入れ検査、collector transport、call lifecycle、機械的 log detector の初期 rule、raw observation の保存・durability・retention を定める正本仕様。
 
 ## Read this when
-- feedback observation を報告する条件、MCP reporter の入力・結果・受け入れ検査、collector が確定する context と保存経路を確認するとき。
-- reporter/collector の利用不能時の扱い、structured log detector の allowlist・threshold・issue key、raw observation の ID・冪等性・cleanup・pending warning を実装または検証するとき。
+- feedback observation をいつ報告すべきか、reporter の入力・結果・拒否条件を確認するとき。
+- collector が context を確定し、observation を保存・無効化する経路や call 終了処理を変更するとき。
+- 構造化 log から machine observation を検出する rule、threshold、issue key を追加・変更するとき。
+- raw observation のファイル単位、idempotency、publication 前後の保持・cleanup、pending warning の扱いを確認するとき。
 
 ## Do not read this when
-- feedback observation の issue identity、remediation の可否、または現在状態を判断したいとき。
-- prompt への正確な文面や配置だけを確認する場合は、参照先として示された prompt builder の正本を直接読むとき。
+- feedback observation の issue identity、remediation の可否、現在状態そのものを判断するとき。
+- prompt への正確な agent 向け文面や完全 prompt の配置だけを変更するときは、本文が委譲する prompt builder の正本を直接読む。
+- report cut や remediation wave の集約・threshold 判定だけを扱うときは、該当する report 処理の仕様を直接読む。
 
 ## hash
-- 1289c626559dba65e28316c66209dc7af76b56fa4cd8a1d526381ed0a6d6471a
+- c6ec761df96b576b74040ac045e81ec88dd2b84c76101212d9bfea8e98173e50
 
 # `feedback_state.md`
 
