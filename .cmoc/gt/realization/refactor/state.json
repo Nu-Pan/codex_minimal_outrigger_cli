@@ -276,10 +276,10 @@
     "last_investigated_at": "2026-09-10_02-46_05_375424000"
   },
   "oracle/doc/dev_rule/development_environment.md": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "a13ec95d864a050b35a175111679065fa638c2688f4ff161232e4e1b5c4eab0d",
-    "last_investigated_at": "2026-08-03_08-28_05_718004000"
+    "last_investigated_sha256": "2a120c3c6f2224e4a7cb2a48344b62e80b763a5fe92a94abf2163a2134b55efc",
+    "last_investigated_at": "2026-09-10_05-34_52_649566000"
   },
   "oracle/doc/dev_rule/test_execution.md": {
     "investigation_required": true,
