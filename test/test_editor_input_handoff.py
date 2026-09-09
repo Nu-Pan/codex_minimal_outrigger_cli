@@ -17,9 +17,11 @@ import pytest
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor_input_handoff as handoff_module
 import commons.runtime_editor_input_handoff_mcp as handoff_mcp
+from cmoc_runtime import CmocError
 from commons.runtime_editor_input_handoff import (
     EditorInputHandoffTarget,
     start_editor_input_handoff,
+    validate_editor_work_file,
 )
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
@@ -167,6 +169,26 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
         assert "must not escape" not in json.dumps(rejected)
     finally:
         target.close()
+
+
+def test_handoff_rejects_symlinked_work_directory(
+    tmp_path: Path,
+) -> None:
+    """editor work directory の symlink 経由で外部 file を上書きしない。"""
+    root = tmp_path / "repository"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "editor_input").mkdir()
+    (root / ".cmoc").mkdir()
+    (root / ".cmoc" / "gu").symlink_to(outside, target_is_directory=True)
+    editor_work = root / ".cmoc" / "gu" / "editor_input" / "input.md"
+    editor_work.write_text("outside", encoding="utf-8")
+
+    with pytest.raises(CmocError, match="editor work file"):
+        validate_editor_work_file(root, editor_work)
+
+    assert editor_work.read_text(encoding="utf-8") == "outside"
 
 
 def test_target_close_drains_an_accepted_submission(

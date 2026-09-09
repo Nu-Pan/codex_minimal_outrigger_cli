@@ -410,23 +410,23 @@
 # `test_editor_input_handoff.py`
 
 ## Summary
-- editor input handoff の lifecycle と上書き境界を検証するテスト。
-- アクティブなリポジトリの target だけを受理し、最後の入力を確定する editor 待機経路の入口。
-- 各上書き時のリポジトリ一致、通常ファイル性、symlink 化防止、受付済み処理の完了待ちを検証する。
-- 認証前後の slow-trickle に対する絶対期限と、認証失敗時の content 非送信を検証する。
+- editor input handoff target の lifecycle と、MCP submission による最終入力の全面上書きを検証するテスト。
+- target ID、repository、認証済み通信、target close の境界を確認し、不正な送信や非アクティブ target を拒否する。
+- editor work file とその親ディレクトリの symlink 化を検証し、外部ファイルへの書き込みを防ぐ。
+- 未認証・認証済み通信の slow-trickle を絶対期限で打ち切り、後続 submission を処理できることを確認する。
 
 ## Read this when
-- editor input handoff の target lifecycle や close と submission の競合を確認するとき
-- MCP submission が対象リポジトリと対象ファイルへ安全に上書きできる条件を確認するとき
-- handoff protocol の認証、期限、認証失敗時の送信抑止を変更または検証するとき
+- editor input handoff の仕様・実装を変更し、target の受付状態や close の排他・排水動作への影響を確認するとき
+- MCP submission の認証、repository 一致、target ID の経路、入力内容の上書き動作を検証するとき
+- editor work file の検証や symlink 対策を変更するとき
+- handoff 通信の timeout、slow-trickle、後続接続の処理を確認するとき
 
 ## Do not read this when
-- editor input handoff の実装詳細や正本仕様そのものを確認したいとき
-- prompt editor の予約・収集・確定処理だけを直接調べるとき
-- handoff と無関係なテストや機能を調べるとき
+- editor input handoff と無関係な prompt editor 機能や一般的な MCP 機能だけを変更・調査するとき
+- テストが参照する正本仕様の意図や実装の詳細を直接確認する必要があるときは、正本仕様または実装対象を先に読むべき場合
 
 ## hash
-- 9ab43a007f209d8d5bf4eb7c56cd56ff7642ff30b85043ce513005c04e26db7c
+- 8f8a98447d2a5bd51580e7cfcac012a4dc7281135048314ef83da3a616a861c8
 
 # `test_editor_input_handoff_mcp.py`
 

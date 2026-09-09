@@ -49,20 +49,20 @@
 # `commons`
 
 ## Summary
-- commons パッケージの共通 runtime 実装をまとめるディレクトリ。CLI 実行、Codex exec／TUI、設定、Git、ログ、パス、状態、feedback、report、editor input など、複数の実行経路から共有される境界と補助機能への入口。
+- 対象ディレクトリは、CLI・Codex 実行・設定・Git・ログ・パス・feedback・state・report など、cmoc の複数実行経路で共有される runtime helper の実装群をまとめる共通層です。
+- 個別 helper の内部挙動を調査・変更する際は、責務に対応する各 runtime モジュールへ進むための入口です。
 
 ## Read this when
-- 複数の CLI・Codex 実行経路で共有される runtime helper の責務や公開入口を確認するとき
-- runtime の設定、実行制御、状態管理、feedback、report、Git、ログ、パス、editor input など横断的な共通処理の対象を探すとき
-- commons 配下の個別 runtime module を変更・調査する前に、共有 runtime API と関連する実装群の位置づけを確認するとき
+- 複数の実行経路にまたがる runtime 共通処理の配置や担当モジュールを見渡したいとき
+- CLI、Codex exec/TUI、設定、Git、ログ、パス、feedback、state、report、run lifecycle などの共有実装を調査・変更するとき
+- 特定の共通 helper の実装対象を選ぶ前に、commons 配下の runtime 構成を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動や個別サブコマンドの業務処理だけを確認したいときは、該当する個別実装または正本仕様を直接読む
-- INDEX.md の生成・更新ライフサイクルだけを調べるときは indexing の対象を直接読む
-- Codex CLI の一般仕様や利用者向け設定だけを確認するときは、commons 配下の実装ではなく対応する仕様・設定資料を直接読む
+- 特定モジュールの詳細な挙動だけを確認したい場合は、対応する個別 runtime helper を直接読むとき
+- 利用者向けの正本仕様、個別サブコマンドの業務フロー、または INDEX.md の生成規則だけを確認したいときは、それぞれの仕様・専用実装を直接読むとき
 
 ## hash
-- bac1da08e68246659d747b59cdea6d8f82987a88863d760599795373694838ca
+- 9e0f5093e9680d4b37befb3c92007844e7ce9b6d3d743c4889916980f29d697c
 
 # `config`
 

@@ -251,19 +251,17 @@
 # `runtime_editor_input_handoff.py`
 
 ## Summary
-- prompt editor の待機中に一時 handoff target を公開し、認証済み loopback TCP の IPC request を検証して、指定された editor work file の内容を安全に UTF-8 で上書きする処理を担う。
-- target ID・repository・protocol・payload を検証し、接続単位の受付を直列化しながら、認証失敗・不一致・書き込み失敗を content なしの結果で返す入口。
+- editor 待機中に公開する一時 handoff target と、認証付き loopback TCP による prompt editor input の IPC 境界を扱う。対象ファイルの検証、request の認証・検証、同一 target への content 上書き、受付終了と後処理を担う。
 
 ## Read this when
-- prompt editor からの入力受け渡し、editor work file の検証・上書き、loopback IPC の認証や target lifecycle（開始・終了・接続処理）を変更または調査するとき。
-- handoff の拒否コード、対象 repository／target の対応付け、受付済み submission 完了後の close 動作を確認するとき。
+- prompt editor から待機中の editor work file へ入力を引き渡す経路、target の lifecycle、loopback IPC の protocol/repository/target 検証、または安全なファイル上書き動作を確認・変更するとき。
 
 ## Do not read this when
-- handoff protocol の定数・認証方式・target ID 生成・payload schema 自体を変更または確認する場合は、まず runtime_editor_input_handoff_protocol 側を読むべきとき。
-- editor work directory のパス定義や一般的なエラー型の仕様だけを確認する場合は、runtime_paths または runtime_errors を直接読むべきとき。
+- editor input handoff の protocol 定数・target ID 生成・入力 schema の定義自体を確認したいときは protocol module を直接読む。
+- editor work directory のパス決定や一般的な runtime error の定義だけを確認したいときは、それぞれの専用 module を直接読む。
 
 ## hash
-- b6f65e64a4f979d542579cdc933cddbd02af03ede3296f98288d933354448d44
+- 9bb3f12d65911e0ade82686e13551167ce9078ee4a8d6d378cde4772ba866f69
 
 # `runtime_editor_input_handoff_mcp.py`
 
