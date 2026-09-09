@@ -427,22 +427,24 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行、branch と linked worktree の作成・削除、安全性検証を共通化する境界。
-- 追跡状態と Git ignore を検証し、worktree の filesystem snapshot 復元や oracle/realization file の列挙・分類を担う。
-- repository path、Git index、ignore source、symlink・特殊 file の扱いを横断して確認するための入口。
+- Git subprocess と repository 状態の共通境界を担う。
+- branch、linked worktree、worktree snapshot の作成・削除・復元と安全性検証を扱う。
+- Git ignore の保証・検査、および oracle/realization file の列挙・分類・判定への入口となる。
 
 ## Read this when
-- Git の状態、branch、linked worktree、worktree path の安全な作成・削除を調べるとき。
-- 作業成果物の snapshot、復元、symlink や特殊 file を含む filesystem 状態の扱いを確認するとき。
-- oracle file または realization file の列挙・分類、追跡状態、Git ignore 判定の実装を変更・調査するとき。
+- Git コマンドの実行結果を cmoc のエラーへ統一したいとき。
+- branch や linked worktree の対応、管理領域、symlink、Git metadata を検証または操作するとき。
+- Codex call 前後の作業成果物を snapshot・復元するとき。
+- `.cmoc/gu` の ignore 状態を初期化・保証・検査するとき。
+- repository path の Git ignore 状態や oracle/realization file の分類を判定するとき。
 
 ## Do not read this when
-- Git 境界を利用する個別 caller の業務フローだけを確認すればよく、共通の Git・path 安全性や file 分類の挙動を調べないとき。
-- oracle または realization の正本仕様や分類根拠そのものを確認したいときは、対応する仕様文書を直接読むとき。
-- 単一のエラー型、path 定義、結果型の詳細だけを確認する場合。
+- branch/worktree の利用規約や oracle/realization file の分類基準そのものを確認したいとき。
+- 個別サブコマンドの orchestration、state 管理、利用者向けエラー仕様を確認したいとき。
+- Git repository 状態、ignore、worktree、oracle/realization file に関係しない一般的な filesystem 操作を調べるとき。
 
 ## hash
-- 74ab70dc5c7b257b39a0441b309587dd6023faa9930a21304f46b6901b6274d9
+- ff2ec68eb452b3eb58854ef6c8bb97c043c85543d0b98a0754685e7bd6cd000c
 
 # `runtime_logging.py`
 

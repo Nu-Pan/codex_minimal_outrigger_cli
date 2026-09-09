@@ -497,21 +497,21 @@
 # `test_file_inventory.py`
 
 ## Summary
-- oracle・realization file の full-tree 列挙と refactor state 同期を検証するテスト。
-- Git ignore、nested repository、linked worktree の metadata 境界を含むファイル分類を扱う。
-- symlink、FIFO、socket、device などの非通常パス拒否と、候補数増加時の Git 処理量不変性を検証する。
+- 日本語技術文書のルーティング規定に従い、テスト本文だけを根拠に INDEX.md 向けの案内を整理した。
 
 ## Read this when
-- oracle・realization file の列挙対象、除外境界、Git ignore 判定、または refactor state の SHA 更新を確認するとき。
-- nested repository や linked worktree を含む実ファイル分類の挙動を確認するとき。
-- 列挙処理が非通常パスを拒否し、候補数に対して一定の Git 処理量を保つことを検証するとき。
+- full-tree の oracle/realization file インベントリが Git ignore、nested repository、metadata 境界を正しく扱うか確認するとき。
+- 通常ファイル・削除済みファイル・非 UTF-8 filename・symlink・FIFO・socket/device 相当 path の分類や拒否条件を検証するとき。
+- refactor state の列挙対象、SHA 更新、追加・変更・削除ファイルの同期挙動を確認するとき。
+- ignore source の repository 単位の適用、重複検証抑制、候補数増加時の Git 処理量一定性を確認するとき。
 
 ## Do not read this when
-- 列挙処理の正本仕様や実装の詳細を確認したい場合。
-- このテストが扱う列挙・分類・state 同期以外の機能を調べる場合。
+- 列挙や分類の実装を変更・デバッグする場合は、まず実装コードを直接読む。
+- 正本仕様の意図や契約そのものを確認する場合は、参照される仕様書を直接読む。
+- INDEX.md や AGENTS.md の運用規定を確認するだけの場合は、このテスト本文を読む必要はない。
 
 ## hash
-- b4efe4647289425b8ce87f82a78629b81640850bd7e750e4799ac2715559b9ef
+- da73a7c13009bf9a158acb7588923d43cea4dc320c8c451c03f5843438f61fec
 
 # `test_indexing_cli.py`
 

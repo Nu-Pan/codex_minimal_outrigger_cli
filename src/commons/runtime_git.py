@@ -1090,12 +1090,16 @@ def is_realization_file_path(
         # branch の blob は削除された path の追跡状態を補うが、現在の directory や
         # FIFO などの特殊 file を file として扱う根拠にはならない。
         branch_relative = candidate.absolute().relative_to(repository.absolute())
+        # nested repository は outer worktree の branch namespace を共有しないため、
+        # outer の run branch をそのまま ls-tree へ渡さず、nested repository 自身の
+        # checked-out tree を参照する。
+        tree_reference = branch if repository == root.absolute() else "HEAD"
         branch_entries = run_git(
             [
                 "ls-tree",
                 "-r",
                 "-z",
-                branch,
+                tree_reference,
                 "--",
                 literal_pathspec(branch_relative.as_posix()),
             ],
