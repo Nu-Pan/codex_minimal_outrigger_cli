@@ -30,10 +30,10 @@
     "last_investigated_at": "2026-07-23_14-03_39_178748000"
   },
   "oracle/doc/app_spec/cli_auto_completion.md": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "5d3e467991746592b1be1e88a9dfee48ee1826974290fafb96de45460efbf671",
-    "last_investigated_at": "2026-08-08_18-28_57_523481000"
+    "last_investigated_sha256": "5984f914f917b5166222542c4723e63cd36412462c22c9e76f7862c766e5f755",
+    "last_investigated_at": "2026-09-10_07-11_06_468648000"
   },
   "oracle/doc/app_spec/codex_exec_rule.md": {
     "investigation_required": true,
