@@ -122,18 +122,26 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の実装側パッケージ群と CLI 起動入口を置くトップレベルで、互換 shim、共通 runtime、サブコマンド、builder、設定などへ進むための階層入口を提供する。
+- cmoc の CLI 起動入口とコマンドツリーを構成し、doctor・tui・indexing・feedback、session・oracle・realization・run の各サブコマンドへ接続する。
+- CLI 共通処理、Codex 実行、設定、Git、ログ、状態、report、feedback、path などの runtime helper を commons にまとめる。
+- acp・basic・config・cmoc_runtime・oracle の互換入口を提供し、既存 import path から正本側または共通実装へ進む導線を維持する。
+- acp.builder と sub_commands 配下に、処理種別ごとの adapter、プロンプト整形、index-entry 生成、各サブコマンドの実装を配置する。
 
 ## Read this when
-- cmoc の実装配置、CLI 起動経路、共通 runtime、互換 import、またはサブコマンドの入口を横断して確認するとき。
-- 目的の実装を特定する前に、`src` 直下のパッケージやモジュールの責務境界を判断するとき。
+- cmoc の CLI 全体の起動経路、コマンド階層、Typer／Click の引数解析エラー処理を確認するときは main.py を読む。
+- 複数のコマンドや実行経路で共有される runtime API、状態管理、Codex 実行、Git、report、feedback の所在を確認するときは commons を読む。
+- session・oracle・realization・run・doctor・tui・indexing・feedback の具体的なコマンド入口を選ぶときは sub_commands を読む。
+- acp.builder の adapter、共有プロンプト処理、index-entry 生成の配置を確認するときは acp を読む。
+- 既存の acp.*、basic.*、config.*、cmoc_runtime、oracle.* import の互換経路を確認するときは対応する互換入口を読む。
 
 ## Do not read this when
-- 特定モジュールの内部仕様、個別コマンドの動作、正本側 oracle 実装、または builder の具体的な生成処理だけを確認したいときは、対応する下位要素や正本実装を直接読む。
-- INDEX.md の更新処理や個別 API の詳細仕様だけを確認したいときは、この階層入口ではなく担当する実装・仕様を直接読む。
+- 特定コマンドの業務処理、入力制約、ライフサイクル、prompt 契約を確認したいときは、src の上位入口ではなく対応する sub_commands または builder の下位要素を直接読む。
+- 共通 runtime helper の個別 API やデータ構造の詳細を確認したいときは、commons 配下の該当モジュールを直接読む。
+- 互換入口から再公開される型・API の定義や、oracle 側の正本実装・仕様を確認したいときは、対応する正本モジュールや仕様文書を直接読む。
+- INDEX.md の更新処理そのもの、feedback observation の収集・報告仕様、個別 schema の内容だけを確認したいときは、src のディレクトリ入口ではなく対応する実装・仕様・schema を直接読む。
 
 ## hash
-- 6b0aae08c04d93d467aaad89be9846090c418bae9a0616ef485c35de9f1eb0bf
+- 64c91b70c381104a668c7dd79fe42bcf747b4bb13a48da6762c0c484d554cb60
 
 # `test`
 

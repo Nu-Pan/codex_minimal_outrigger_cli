@@ -49,22 +49,19 @@
 # `commons`
 
 ## Summary
-- commons パッケージの初期化と共通 runtime helper の入口。
-- INDEX 更新 lifecycle、Codex 実行境界、設定、Git、ログ、パス、状態、feedback、editor input、primary report、doctor、editing run の共通実装を提供する。
-- 各 runtime サブモジュールを横断して API・責務の入口を確認するための階層。
+- cmoc の共通 runtime helper 群をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、feedback、state、report など横断的な実行基盤を確認・変更するときの入口。
+- 個別機能の実装へ進む前に、複数の実行経路で共有される API と lifecycle 境界を把握するための上位入口。
 
 ## Read this when
-- commons 配下の共通 runtime 機能の責務や入口を把握するとき。
-- INDEX 更新、Codex exec/TUI、feedback、editing run、session state、report、editor handoff の実装を調査・変更するとき。
-- 個別 helper を読む前に、該当する runtime 境界を特定するとき。
+- 複数の cmoc 実行経路にまたがる共通 runtime API、状態管理、実行制御、ログ、report、feedback の責務を調査・変更するとき
+- Codex exec／TUI、editing run、INDEX lifecycle、設定、Git、editor input handoff などの共通実装の所在を確認するとき
 
 ## Do not read this when
-- 特定 helper の内部実装だけを確認したい場合。
-- command 固有の業務処理や利用者向け正本仕様だけを確認したい場合。
-- INDEX.md のルーティング情報だけを更新する場合。
+- 特定の runtime helper の内部挙動や個別データ構造だけを確認したいときは、commons 配下の該当実装を直接読む
+- 利用者向けの正本仕様、schema 本文、個別サブコマンドの業務処理を確認することが目的のときは、対応する仕様・schema・サブコマンド実装を直接読む
 
 ## hash
-- b557f4d3b9b28a62059e6d8e9a7fe9521d8580839643d200cac9dfe9a782f496
+- c14b37ec503fb67a24b32efc2ea5782305a60b94d95ed6a74945cad0a4778657
 
 # `config`
 

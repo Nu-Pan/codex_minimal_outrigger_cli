@@ -336,20 +336,19 @@
 # `runtime_feedback_intake.py`
 
 ## Summary
-- Collector が durable な受理順序を管理し、feedback raw observation の receipt 登録・high-watermark 固定・publication 後の receipt 削除を担う。
-- intake ledger の整合性、raw artifact 参照、重複登録、単調増加 sequence、collector 排他境界を検証する feedback intake の実装入口。
+- Collector が受理した observation の durable な順序付けと feedback intake 境界を管理し、intake wave の high-watermark を提供する。
+- raw observation の receipt を検証・登録し、指定範囲の入力列挙と publication 後の receipt 削除を担う。
 
 ## Read this when
-- feedback observation の受理順序、intake high-watermark、pending receipt の永続化または削除を変更・調査するとき。
-- collector の受理境界、raw observation の hash 検証、publication と intake の排他連携を確認するとき。
+- feedback observation の accepted 後の受理順序、intake wave、high-watermark、または pending receipt の整合性を確認するとき。
+- raw observation の ledger 登録、既存 raw の取り込み、publication 対象 receipt の cleanup 境界を追うとき。
 
 ## Do not read this when
-- feedback の canonical state や artifact 参照解決そのものを確認する場合は runtime_feedback_state を直接読むとき。
-- observation の保存場所、ID 判定、列挙処理そのものを確認する場合は runtime_feedback_store を直接読むとき。
-- publication の処理や collector の呼び出し順序を確認する場合は、それぞれの呼び出し元を直接読むとき。
+- feedback observation の内容そのものの保存形式や publication 処理を確認したいときは、raw store または publication 側を直接読む。
+- 一般的な runtime state の canonical JSON 読み書きや参照パス解決だけを確認したいときは、共通 state helper を直接読む。
 
 ## hash
-- 3999eb3f98548ed171437d9300115a961e7764a1117b9a55368f1baf9d71d598
+- d730f6473bea9a4f073c847ff531d9441da323b88e7ab22bff7e38c078e740e6
 
 # `runtime_feedback_reporter.py`
 
