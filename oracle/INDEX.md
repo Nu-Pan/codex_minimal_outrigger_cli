@@ -1,18 +1,18 @@
 # `doc`
 
 ## Summary
-- cmoc の正本文書・開発規則・branch model・設計上の不採用案を、アプリケーション仕様、開発ルール、branch 関係、検討資料の責務別に振り分ける文書群への入口。現行仕様と実装に追従する規則、または過去の設計判断の背景を参照する際の起点となる。
+- cmoc のアプリケーション仕様、開発ルール、branch・worktree モデル、採用しなかった設計案を確認するための仕様・設計資料群の入口。現行仕様の個別契約、開発規則、branch 関係、設計判断の背景へ目的別に進む。
 
 ## Read this when
-- cmoc の仕様・開発規則・branch model・設計判断の背景のうち、どの文書群を読むべきか切り分けるとき。
-- 複数の領域にまたがる調査や変更で、現行の正本仕様、開発上の規則、Git の概念、採用しなかった案の境界を確認するとき。
+- cmoc のアプリケーション仕様や開発ルールを調べ、個別の正本文書へ進む前の参照先を判断したいとき。
+- session・run の branch・commit・worktree 関係、または採用しなかった設計案の背景を確認したいとき。
 
 ## Do not read this when
-- 参照対象の仕様文書、開発規則、branch model、または検討資料がすでに特定できており、その本文だけを確認したいとき。
-- 実装コード、個別の oracle／realization file、または特定 agent call の厳密な builder・schema を直接調べるとき。
+- 確認対象の仕様・開発規則・branch model・検討資料がすでに特定できており、その本文だけを読む場合。
+- 実装コード、realization file、oracle、個別 builder・schema、または具体的な git 操作手順を直接確認したい場合。
 
 ## hash
-- b3d44843265139beb73a7d08bfd6c1ff3a64b164c740395084b0a596820926ba
+- 859f07827ddc65323578d5f68da3450dc9d5702c223b783518a07a4f7fdbd597
 
 # `src`
 

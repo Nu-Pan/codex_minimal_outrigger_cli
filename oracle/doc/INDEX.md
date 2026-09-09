@@ -1,19 +1,18 @@
 # `app_spec`
 
 ## Summary
-- アプリケーション全体の正本仕様を、共通基盤・実行ライフサイクル・各サブコマンド・agent call・状態管理などの責務別仕様へ振り分ける入口。
-- cmoc の利用 workflow、実行・ログ・通知・補完の共通契約から、doctor、indexing、session、run、feedback、oracle／realization 系の個別仕様までを案内する。
+- cmoc のアプリケーション仕様を、共通実行規約・サブコマンド・状態管理・agent call・feedback・通知などの個別仕様へ振り分ける正本ドキュメント群。各仕様の責務と参照境界を確認するための入口。
 
 ## Read this when
-- cmoc のアプリケーション仕様全体から、調べたい実行契約・状態管理・サブコマンド・agent call・正本／実装境界に対応する仕様の入口を判断するとき。
-- 複数の仕様領域にまたがる変更や調査で、共通仕様と個別仕様の参照先を切り分けるとき。
+- cmoc の機能や実行ライフサイクルに関する正本仕様を探しており、個別仕様へ進む前に参照先を判断したいとき。
+- Codex CLI 呼び出し、ログ・エラー処理、session/run、feedback、indexing、通知など、複数のアプリケーション仕様にまたがる契約の入口を確認するとき。
 
 ## Do not read this when
-- 対象の仕様ファイルをすでに特定できており、その本文の詳細契約だけを確認したいとき。
-- 実装コード、個別の oracle／realization ファイル、または特定 agent call の厳密な builder・schema を直接調べるとき。
+- 対象の仕様ファイルがすでに特定できており、その本文の詳細契約だけを確認したいとき。
+- 実装コード、realization file、個別 builder・schema の正確な定義だけを調べるとき。
 
 ## hash
-- f2caac2ef5237065e6d8fbdcb4a9b300bfd71d54403851ab40af89b6ba4fd508
+- 38478482e48413fde0a7cd296b702a66f7778edc91312c3e890f14838ebf25f2
 
 # `branch_model.md`
 
