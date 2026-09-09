@@ -122,41 +122,34 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口とコマンドツリーを構成し、共通 runtime および各サブコマンドへ接続する。
-- acp、basic、config、oracle、cmoc_runtime の互換 import 入口と、commons の共通 runtime 実装をまとめる。
-- sub_commands 配下に doctor、tui、feedback、indexing、oracle、realization、run、session のサブコマンド実装を配置する。
+- cmoc の CLI 起動入口と、doctor・tui・indexing・feedback、session・oracle・realization・run のコマンドツリーを構成する。
+- 互換 import 入口、共通 runtime、サブコマンド実装、ACP builder 群をまとめ、CLI から各処理へ進む上位層を担う。
 
 ## Read this when
-- cmoc の CLI コマンド構成、起動処理、Typer／Click 境界を確認するときは main.py を読む。
-- 互換 import の公開面や oracle 側実装への接続経路を確認するときは acp、basic、config、cmoc_runtime、oracle.py を読む。
-- 複数の実行経路で共有される runtime、状態管理、エラー処理、Git、ログ、feedback、report、lifecycle を確認するときは commons を読む。
-- サブコマンドの配置や、目的の command 実装への入口を確認するときは sub_commands を読む。
+- cmoc の CLI 公開コマンド、起動経路、引数解析、補完、Click/Typer 互換境界を確認するとき。
+- トップレベルの互換 import、共通 runtime、サブコマンド、ACP builder の責務分担や調査入口を判断するとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理や利用者向け仕様だけを確認したいときは、sub_commands 配下の対応する実装を直接読む。
-- 互換入口の詳細な API、正本側 oracle 実装、または個別 runtime helper の仕様だけを確認したいときは、対応する下位要素や正本実装を直接読む。
-- INDEX.md のルーティング規則や CLI・feedback・editing run の正本仕様を確認したいときは、対応する仕様文書を直接読む。
+- 個別サブコマンドの業務処理、共通 runtime helper、互換 API、builder の生成仕様を確認したいときは、対応する下位要素を直接読む。
+- 正本仕様や oracle 側の実装、INDEX 更新・feedback 処理の詳細だけを確認したいときは、対応する仕様文書または実装を直接読む。
 
 ## hash
-- 85418cdb60cae7f34c88d704ef1258e993935ec45637b1aa7d6be34c302aa1e3
+- 2e239c1e407f15334ff90abb0734f456a2a0ff4525ed81ff9cdb89c3e27b39e3
 
 # `test`
 
 ## Summary
-- `test` 配下のテスト群と共有ヘルパーを、実装された外部挙動・runtime 境界・CLI lifecycle・Codex 実行・Git/state・feedback などの回帰検証入口として案内する。
-- 個別テストは、対象機能の外部契約や回帰条件を確認するための入口であり、正本仕様・実装詳細・schema 内容そのものは対応する oracle、realization、実装、または schema を直接読む。
+- `test` 配下は、CLI・Codex runtime・indexing・feedback・session・prompt editor・TUI などの外部挙動と回帰条件を検証する pytest テスト群をまとめた入口。共通 fixture／テスト支援から、個別機能の単体・統合・実経路テストまでを扱う。
 
 ## Read this when
-- `test` 配下で、共有 fixture/helper、CLI の末端 command と lifecycle、doctor・indexing・TUI・oracle・realization・session・feedback の統合挙動を調査または変更するとき。
-- Codex runtime の subprocess、JSONL、quota/retry、path、権限、TUI、process tracking、設定、state、Git ignore、file access、prompt editor、通知などの回帰テスト入口を探すとき。
-- 実際の Codex CLI・独立 process・PTY を使う本番経路や、外部から観測できる report・state・Git・call log の受け入れ挙動を確認するとき。
-- INDEX 更新、Structured Output builder、prompt rendering、editor input handoff、構造化文書 renderer、skill metadata など、テストで検証される横断的な契約を確認するとき。
+- cmoc の複数機能にまたがる回帰テストの対象や、どのテスト群から調査を始めるべきかを確認するとき。
+- CLI lifecycle、Codex subprocess、indexing、feedback、session、prompt editor、TUI などの実装変更に対して、対応する外部挙動テストを探すとき。
+- 実経路・PTY・Git worktree・永続 state・report まで含む統合／受け入れテストの入口を探すとき。
 
 ## Do not read this when
-- 正本仕様、oracle schema、realization 実装、builder 実装、runtime 実装などの内容自体を確認・変更する場合は、対応する正本または実装対象を直接読む。
-- 単一サブコマンドや単一 runtime 関数の内部仕様だけを調べる場合で、テストの期待挙動や回帰例を必要としないとき。
-- Codex 推論・PTY・独立 process を使う受け入れ試験が不要で、通常の単体テストや個別 fixture の範囲だけを確認するとき。
-- `INDEX.md` の構造・hash・ファイル所在など機械的情報だけを確認するとき。
+- 正本仕様や実装の詳細を確認することが目的の場合は、各テストが参照する oracle・仕様文書または src の対象実装を直接読むとき。
+- 特定機能のテスト内容が既に分かっており、同階層の個別テストへ直接進めるとき。
+- pytest の共通設定やテスト補助だけを確認したい場合は、該当する fixture／support ファイルを直接読むとき。
 
 ## hash
-- db9d29b92a0b7ff33bf500195c63ab46cfc342a51b9c00b5d0b610116afdcacb
+- b9002e24c9e4ce686755154f32c0c4865cd1c487a87f7b3524ed404a5f49685d

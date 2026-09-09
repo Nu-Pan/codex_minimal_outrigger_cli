@@ -1,5 +1,6 @@
 """feedback の判定根拠が依存設定と nested realization を含むことを検証する。"""
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -69,3 +70,98 @@ def test_basis_uses_git_modes_across_atomic_write_and_checkout(tmp_path, monkeyp
     assert decision.worktree_inputs(tmp_path) == before
     path.chmod(0o755)
     assert decision.worktree_inputs(tmp_path) != before
+
+
+def test_basis_includes_nonmetadata_nested_git_named_inputs(tmp_path, monkeypatch):
+    path = tmp_path / "nested" / "fake" / ".git" / "kept.txt"
+    path.parent.mkdir(parents=True)
+    path.write_text("old\n")
+
+    def fake_run_git(args, *_args, **_kwargs):
+        if args[0] == "ls-files":
+            return SimpleNamespace(stdout="nested/fake/.git/kept.txt\0", returncode=0)
+        return SimpleNamespace(stdout="", returncode=1)
+
+    monkeypatch.setattr(decision, "run_git", fake_run_git)
+    monkeypatch.setattr(
+        decision,
+        "enumerate_oracle_and_realization_files",
+        lambda _root: ([], [path]),
+    )
+
+    before = decision.worktree_inputs(tmp_path)
+    path.write_text("new\n")
+    after = decision.worktree_inputs(tmp_path)
+
+    assert set(before) == {"nested/fake/.git/kept.txt"}
+    assert before != after
+
+
+def test_basis_excludes_verified_nested_git_metadata(tmp_path, monkeypatch):
+    metadata = tmp_path / "nested" / ".git" / "config"
+    kept = tmp_path / "nested" / "fake" / ".git" / "kept.txt"
+    metadata.parent.mkdir(parents=True)
+    kept.parent.mkdir(parents=True)
+    metadata.write_text("metadata\n")
+    kept.write_text("kept\n")
+
+    def fake_run_git(args, cwd, *_args, **_kwargs):
+        if args[0] == "ls-files":
+            return SimpleNamespace(
+                stdout="nested/.git/config\0nested/fake/.git/kept.txt\0",
+                returncode=0,
+            )
+        if Path(cwd) == tmp_path / "nested":
+            return SimpleNamespace(stdout=f"{cwd}\n", returncode=0)
+        return SimpleNamespace(stdout="", returncode=1)
+
+    monkeypatch.setattr(decision, "run_git", fake_run_git)
+    monkeypatch.setattr(
+        decision,
+        "enumerate_oracle_and_realization_files",
+        lambda _root: ([], [kept]),
+    )
+
+    assert set(decision.worktree_inputs(tmp_path)) == {"nested/fake/.git/kept.txt"}
+
+
+def test_basis_rejects_git_output_path_outside_worktree(tmp_path, monkeypatch):
+    outside = tmp_path / "outside.txt"
+    outside.write_text("must not be read\n")
+    monkeypatch.setattr(
+        decision,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            stdout="../outside.txt\0", returncode=0
+        ),
+    )
+    monkeypatch.setattr(
+        decision,
+        "enumerate_oracle_and_realization_files",
+        lambda _root: ([], []),
+    )
+
+    with pytest.raises(ValueError, match="invalid path"):
+        decision.worktree_inputs(tmp_path / "worktree")
+
+    assert outside.read_text() == "must not be read\n"
+
+
+def test_basis_normalizes_relative_worktree_path(tmp_path, monkeypatch):
+    worktree = tmp_path / "worktree"
+    path = worktree / "source.py"
+    path.parent.mkdir()
+    path.write_text("source\n")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        decision,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(stdout="source.py\0"),
+    )
+    monkeypatch.setattr(
+        decision,
+        "enumerate_oracle_and_realization_files",
+        lambda root: ([], [root / "source.py"]),
+    )
+
+    assert set(decision.worktree_inputs(Path("worktree"))) == {"source.py"}

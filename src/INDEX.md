@@ -119,17 +119,18 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を配置する package 境界であり、apply・doctor・feedback・indexing・oracle・realization・review・run・session・tui の実装入口を提供する。
-- サブコマンド全体の構成を把握し、目的のサブコマンド実装へ進むための上位ルーティング先となる。
+- cmoc の複数のサブコマンド実装への入口。doctor、indexing、tui、feedback、oracle、realization、run、session などの処理を対象とする。
+- サブコマンドごとの CLI 入口や実装パッケージから、個別処理・共通 lifecycle・agent 実行経路へ進むための上位ルーティング先。
 
 ## Read this when
-- cmoc のサブコマンド実装の配置や全体構成を確認するとき。
-- 特定のサブコマンド実装を調査する前に、対応する実装入口を選ぶとき。
-- 新しいサブコマンド実装の追加先や、既存サブコマンドの package 境界を確認するとき。
+- cmoc のサブコマンド構成や、目的に応じた実装入口を確認するとき。
+- 複数のサブコマンドにまたがる実行経路や責務分担を調べるとき。
+- 対象サブコマンドの下位実装へ進む前に、適切な入口を判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理、prompt 契約、共通 runtime、ライフサイクルなどを確認したいときは、対応する下位実装を直接読む。
-- サブコマンド以外の共通処理や仕様を調査するとき。
+- 特定サブコマンドの具体的な処理だけを確認したいときは、該当する個別実装や下位パッケージを直接読む。
+- CLI 共通 runtime、INDEX 生成規則、Git 操作、または editing run・session の共通 lifecycle だけを確認したいときは、対応する専用対象を直接読む。
+- apply や review のように、現時点で実装本文がない対象の具体的な処理を調べるとき。
 
 ## hash
-- 1581b401631326b6fb49c6d4b053c8510331fbb5c5d0bd8761ab90b1ade4f3bc
+- cb2531c427c68e3ec7db165afa6a0a5055b993fc6e9291145f2aca17b48d4444

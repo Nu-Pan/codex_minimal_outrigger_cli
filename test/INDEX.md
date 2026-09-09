@@ -468,19 +468,19 @@
 # `test_feedback_decision.py`
 
 ## Summary
-- `worktree_inputs` の変更判定を検証するテストで、Git 管理対象・ネストした realization・通常のネスト入力を判定根拠へ含める責務を扱う。
-- フィードバック判定の入力基礎が、作業ツリーの内容だけでなくファイルモードの差異も捉えることを検証する。
+- feedback 判定の入力基礎を検証する pytest テスト。依存設定、nested realization、通常の入力ファイル、Git のモード変更を判定対象として扱う。
+- Git 出力のパス検証、相対 worktree パスの正規化、nested Git 配下の非メタデータ入力の保持、検証済み nested Git メタデータの除外を確認する。
 
 ## Read this when
-- feedback 判定の入力収集が依存設定、ネストした realization、通常入力、または実行時ファイルをどう扱うか確認したいとき。
-- アトミック書き込みや checkout に伴うモード変更を、フィードバック判定の差分として扱うか確認したいとき。
+- feedback 判定の根拠に設定・realization・通常入力の変更が反映されるか確認するとき
+- worktree_inputs の Git モード差分、nested Git 入力、Git メタデータ除外、作業ツリー外パス拒否、相対パス正規化を検証するとき
 
 ## Do not read this when
-- フィードバック判定の実装そのものや、入力収集以外の判定規則を変更・調査するとき。
-- 作業ツリー入力の網羅性やファイルモード差分を確認する必要がないとき。
+- feedback 判定実装の詳細を確認したいとき
+- feedback の別機能や、このテストで扱わない CLI 挙動を調べるとき
 
 ## hash
-- d01f0595cd4414c3055e12e8d0a6aef4b68ab759da69ce28ea5e406be67ca7e6
+- fc5bf49e03c544301783f2ee25cea8152ce4328137ebb9b20341ab89681b2d24
 
 # `test_feedback_reconfirmation.py`
 
