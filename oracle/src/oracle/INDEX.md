@@ -72,16 +72,16 @@
 # `prompt_builder`
 
 ## Summary
-- `prompt_builder` は、agent call に渡す prompt の構成要素を定義・組み立てるディレクトリで、placeholder 型、完全 prompt の組み立て、エディタ初期入力、oracle／realization 関連部品、policy 群への入口を提供する。
+- agent 呼び出し向けの完全な prompt と、エディタ入力用の初期文面を組み立てる実装群への入口。
+- placeholder の型定義、prompt 構築、editor input の生成、oracle／realization の説明部品、個別 policy の構築を扱う。
 
 ## Read this when
-- agent 向け prompt の構成順序や placeholder 統合を確認したいとき。
-- prompt に注入する個別 policy や oracle／realization 関連部品の生成定義を探したいとき。
-- エディタへ渡す初期プロンプト文面の構築を確認したいとき。
+- agent 向け prompt の構成順序、任意 policy の選択、目的・追加文面・placeholder の統合を確認するとき。
+- エディタへ渡す初期入力文面や、oracle／realization、feedback、file access、routing、INDEX エントリーなどの policy 部品の生成経路を調べるとき。
 
 ## Do not read this when
-- 個別 policy の意味仕様や実際のファイル分類ロジックを確認したいときは、それぞれの正本仕様・実装を直接読む。
-- 既存の INDEX.md、agent call の実行結果、または prompt 適用後の具体的な挙動だけを確認したいとき。
+- 個別 policy の具体的な規定文面や、その根拠となる正本仕様を直接確認したいとき。
+- 実際の placeholder 置換処理、構造化文書の定義、ファイル分類など、下位要素の個別実装だけを調べるとき。
 
 ## hash
-- 543de79184f238dedb0cd23351c980f80fa8a9fe16b06b4a9bc582e01dd8a9b3
+- 373663e29b57adc872b0f07a299ffa1bbe020e9d6daccc6b0a9080367d4be4e8

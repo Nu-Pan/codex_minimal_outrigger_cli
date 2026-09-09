@@ -17,21 +17,19 @@
 # `src`
 
 ## Summary
-- AI コーディングエージェント呼び出しに渡すパラメータ、アクセスモード、cwd、prompt、Structured Output schema をまとめる構成への入口。
-- agent call の prompt を組み立てる共通部品、ポリシー、oracle・realization の基本説明、routing、feedback 報告、editor input handoff を扱う。
-- indexing、feedback、oracle 編集・調査、realization の適用・リファクタ、session join、TUI、quota probe など用途別の起動パラメータ構築へ進む起点。
-- パス解決、cmoc 設定、構造化ドキュメントのレンダリングなど、agent call と prompt 構築を支える共通モデルも含む。
+- AI コーディングエージェント呼び出しを支える oracle パッケージの実装ソースへの入口。
+- agent call パラメータ、パスモデル、構造化文書、prompt 構築、用途別 builder など、呼び出し設定と入力文面を組み立てる処理を扱う。
+- quota probe、indexing、feedback、oracle・realization・session・TUI の各呼び出し経路や、editor input handoff の実装を下位対象から辿れる。
 
 ## Read this when
-- agent call の共通パラメータ、FileAccessMode、Structured Output schema、cwd、indexing preflight の扱いを確認または変更するとき。
-- 複数の agent call に共通する prompt、file access、oracle・realization、routing、feedback reporting の規定を確認するとき。
-- 特定の cmoc 操作に対応する agent call の prompt 構築や起動パラメータの入口を探すとき。
-- prompt のプレースホルダ、パスコンテキスト、設定モデル、構造化ドキュメントの生成・レンダリングを調べるとき.
+- agent call の共通パラメータ、ファイルアクセスモード、agent call の cwd、worktree パス、placeholder 解決を調べるとき。
+- 構造化された prompt の組み立て、policy の注入、placeholder の統合、editor 経由入力の初期文面を調べるとき。
+- 用途別の Codex CLI 呼び出し builder や quota probe、indexing、feedback、session、TUI の実装経路を確認するとき。
 
 ## Do not read this when
-- 特定の agent call の詳細な作業手順や出力契約だけを確認したいときは、該当する用途別 builder または schema を直接読む。
-- oracle doc、realization file、feedback state などの正本データや保存内容そのものを確認したいとき。
-- Codex CLI の実際の起動処理や、agent call 後の状態管理・実行結果処理だけを調査したいとき。
+- 特定用途の prompt や policy の本文だけを確認したいときは、prompt_builder 配下の該当対象を直接読む。
+- oracle・realization・feedback の個別処理や、session・TUI の具体的な起動処理だけを確認したいときは、それぞれの下位対象を直接読む。
+- Codex CLI の実行結果処理や、正本仕様・実装の適合性を確認したいときは、この実装入口ではなく該当する実行処理または仕様対象を読む。
 
 ## hash
-- 06f5bcfd3a9c90663c02273f8af3360520ad35052c21128991733f46d58ec77c
+- bf60aa7791a88cc168d94bc736b1151e2068727c0ff41d63b1ade7ad33c4de7f

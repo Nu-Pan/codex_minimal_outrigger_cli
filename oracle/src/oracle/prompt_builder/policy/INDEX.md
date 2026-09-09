@@ -34,20 +34,21 @@
 # `feedback_reporting.py`
 
 ## Summary
-- 全 agent call に共通する feedback observation の報告規定文面を構築する。
-- 現在の workload では解消できず、後続の自動修復または人間対応候補となる具体的根拠のある問題について、MCP tool による報告条件と禁止事項を提供する。
+- 対象は、全 agent call に共通する feedback observation 報告規定の構築処理であり、報告の必須条件、具体的根拠の基準、禁止事項、後続処理との関係を定義する。
+- feedback observation の報告ポリシーを変更・確認するとき、または agent call 共通のプロンプト規定への入口を探すときに読む。
 
 ## Read this when
-- agent call 共通の feedback observation reporting 規定を生成・変更・確認するとき。
-- feedback observation の報告基準を prompt policy として組み込む処理の入口を探すとき。
+- feedback observation の問題報告要件や禁止事項を変更・確認する場合
+- 全 agent call に共通する報告規定がどこで構築されるかを調べる場合
+- 報告ポリシーを prompt builder の出力へ組み込む処理を追跡する場合
 
 ## Do not read this when
-- feedback observation の意味仕様そのものを確認したいときは、参照先として示される app specification を直接読む。
-- feedback observation の送信処理や MCP tool の実装を調べるとき。
-- prompt 全体の構築や、feedback reporting 以外の policy の責務を確認するとき。
+- feedback observation の意味仕様そのものを確認する場合は、参照先の報告基準文書を直接読む
+- AgentCallPathContext や SDPolicy などの型・構造定義だけを確認する場合は、それぞれの定義元を直接読む
+- 対象と無関係な agent call のプロンプト構築や別のポリシーを調べる場合
 
 ## hash
-- 978b2d20e7642c085394f31b52b4e11c233aa27b52b44977d82c28e55713a540
+- 203fbeb6ca169491ad48cfd61c5d95aeff6128d33632b7b0d70e95f9e3ddf1c5
 
 # `file_access.py`
 
