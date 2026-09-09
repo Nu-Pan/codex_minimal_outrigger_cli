@@ -49,23 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群を提供する commons パッケージ。CLI の実行 lifecycle、Codex exec／TUI、設定、Git、ログ、パス、feedback、state、report、editing run、editor handoff など、複数の実行経路で共有する基盤処理の入口。
-- INDEX.md の探索・entry 生成・hash 判定・更新・復元・commit を含む indexing lifecycle の共通処理を扱う。
+- commons パッケージの共通 runtime 実装をまとめるディレクトリ。CLI 実行、Codex exec／TUI、設定、Git、ログ、パス、状態、feedback、report、editor input など、複数の実行経路から共有される境界と補助機能への入口。
 
 ## Read this when
-- 複数の CLI／Codex 実行経路で共有する runtime API の責務や公開窓口を確認するとき。
-- Codex subprocess の起動・Structured Output 検証・quota／capacity 処理、TUI、preflight、process tracking を調査・変更するとき。
-- 設定・Git／worktree・path・logging・error／result・primary report・session／editing run state などの共通境界を調査するとき。
-- feedback observation の受付・保存・publication state・report cut・remediation checkpoint、または editor input handoff の protocol／MCP／target lifecycle を確認するとき。
-- INDEX.md の自動生成、既存 entry の再利用、更新時の排他・失敗時復元・commit を確認するとき。
+- 複数の CLI・Codex 実行経路で共有される runtime helper の責務や公開入口を確認するとき
+- runtime の設定、実行制御、状態管理、feedback、report、Git、ログ、パス、editor input など横断的な共通処理の対象を探すとき
+- commons 配下の個別 runtime module を変更・調査する前に、共有 runtime API と関連する実装群の位置づけを確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの業務処理、正本仕様、oracle／realization の内容だけを確認したいとき。
-- 特定の runtime helper の詳細実装だけを調べる場合は、commons 配下の該当する個別実装を直接読む。
-- INDEX.md の entry 生成 prompt や Structured Output schema 自体を変更・確認するとき。
+- 特定の runtime helper の内部挙動や個別サブコマンドの業務処理だけを確認したいときは、該当する個別実装または正本仕様を直接読む
+- INDEX.md の生成・更新ライフサイクルだけを調べるときは indexing の対象を直接読む
+- Codex CLI の一般仕様や利用者向け設定だけを確認するときは、commons 配下の実装ではなく対応する仕様・設定資料を直接読む
 
 ## hash
-- 20dab6ab2cc58996e9cc7290ef3381dec8f1c701366a4d6d28342ddf539eafc5
+- bac1da08e68246659d747b59cdea6d8f82987a88863d760599795373694838ca
 
 # `config`
 

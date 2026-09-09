@@ -447,24 +447,23 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の reporter、collector、raw store、pending intake、issue 候補化、remediation、active state、report publication、cleanup、recovery を同一 fixture で検証する統合テスト群。
-- agent-facing の MCP submission、collector の capability/context/rate/deadline、UTF-8・schema・path 境界、secret masking、idempotency、並行 lifecycle を扱う。
-- normalization/remediation builder の prompt 境界と処理バージョン、候補 identity・evidence fingerprint・machine threshold の判定、遅延 observation の merge を検証する。
-- feedback report の precondition、sequential wave、worktree rollback、join/abandon、atomic publication、current pointer、generation integrity、cleanup corruption、未定義 raw artifact の失敗境界を確認する。
+- feedback の reporter、collector、raw observation、pending intake、issue candidate、remediation、active state、report cut、atomic publication、cleanup、復旧を一体の repository fixture で検証するテスト。
+- agent-facing observation submission の MCP discovery、TCP 転送、payload／collector response／context／rate limit／lifecycle の検証と、path 境界・secret masking・idempotence・不正 raw の拒否を扱う。
+- feedback report の preflight、normalization／remediation prompt の安全性と processing version、candidate identity／fingerprint／collision、machine observation の threshold・window・recurrence を検証する。
+- session 前提条件、修復 wave と遅延 intake、失敗時の rollback・manual completion・auto-join recovery、current pointer／generation artifact の整合性、publication 後の compact active state と cleanup failure を検証する。
 
 ## Read this when
-- feedback observation の受付から durable raw 保存、report 処理、active issue 集約、修復、publication、cleanup までの外部挙動を変更・調査するとき。
-- reporter protocol、collector の認証・失効・rate limit・transport、または observation envelope の検証を確認するとき。
-- feedback candidate の重複排除、fingerprint、machine observation の threshold/window、remediation wave の継続条件を確認するとき。
-- active state、generation manifest、current pointer、report cut、recovery・rollback の整合性や破損時の扱いを確認するとき。
+- feedback 機能全体の外部挙動を、agent reporter から collector、report、remediation、active state 公開まで通しで確認したいとき。
+- pending observation の受理・正規化・重複統合・machine threshold 判定、または report cut と current state の境界を調べるとき。
+- atomic publication、generation hash、cleanup／recovery、raw artifact 検証など、report 実行失敗時の保持・復旧条件を確認するとき。
 
 ## Do not read this when
-- feedback 以外の機能の通常の CLI 挙動や、feedback の正本仕様そのものを確認することが目的のとき。
-- reporter、collector、state、builder など個別実装の詳細だけを直接確認すれば足り、統合 lifecycle や publication 境界を追跡する必要がないとき。
-- 単に既存のテスト実行方法や共通 fixture の使い方を調べるだけのとき。
+- feedback の実装詳細を直接変更・調査する場合は、対象の runtime、store、state、report、remediation 実装を先に読むべきとき。
+- feedback 以外の subcommand や、単一の CLI 共通機能だけを検証したいとき。
+- テスト fixture や assertion ではなく、feedback の正本仕様そのものを確認・変更したいとき。
 
 ## hash
-- d862334abbf0e0bee729455b855c7da74296a8dc1b7ae35d07516f0901311fed
+- b5b41f732759e3a8385517e6bdd044656384913b6586ff8d0514b12ff7148481
 
 # `test_feedback_decision.py`
 

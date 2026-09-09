@@ -410,22 +410,19 @@
 # `runtime_feedback_store.py`
 
 ## Summary
-- feedback reporter の入力を正本 schema、安全性、secret masking、payload サイズ、evidence path の repository 境界に基づいて検査する処理。
-- agent および machine rule の raw observation を、canonical JSON、content hash、observation ID 重複検査、atomic publish、immutable record として repository-local durable store に保存する処理。
-- observation file の path 列挙、temporary record の回収、処理済み状態を除いた pending observation の抽出、および蓄積時の完了警告を扱う raw observation store の実装。
+- `runtime_feedback_store.py` は、agent および allowlist machine rule の feedback observation を検査・秘匿化・正規化し、重複排除可能な immutable raw record として durable store に発行する境界である。
+- reporter schema 検証、payload サイズ制限、secret masking、repository 内 evidence path の fingerprint、UUIDv7／決定的 observation ID、content hash、atomic publish、temporary recovery、pending 件数・蓄積警告までを一体として扱う。
 
 ## Read this when
-- feedback observation の受理可否、schema validation、secret masking、evidence fingerprint、repository 内 path 正規化を確認するとき
-- agent または machine rule の observation 保存、重複排除、immutable record、atomic publish、temporary file recovery を確認するとき
-- pending observation の列挙、処理済み observation の除外、未処理件数や蓄積警告の算出を確認するとき
+- feedback observation の受理条件、保存される raw envelope、secret masking、evidence path の安全性、immutable storage、重複・破損検査を確認するとき。
+- agent または machine rule の observation 保存経路、publication の atomicity、pending observation の列挙・完了件数警告を調べるとき。
 
 ## Do not read this when
-- feedback の正本仕様や reporter input schema の定義自体を確認したいとき
-- runtime intake の receipt 記録や publication 後の cleanup 状態管理だけを確認したいとき
-- MCP tool の observation 報告 API の呼び出し契約や外部公開形式だけを確認したいとき
+- feedback report の cut、state 更新、公開済み cleanup、または MCP の外部報告契約そのものを確認したいときは、対応する feedback state／report 実装を直接読む。
+- 一般的な console・file log の仕様や reporter input schema の定義だけを確認したいときは、この store の実装ではなく各正本仕様・schema resource を読む。
 
 ## hash
-- 5b92655884595f13a9b9b13d3022e6dbe8e5b17d74f14973a0975cb6a781f072
+- 941cc06d8889d6a0169f11c96313b20c2dac590c088e5b2a1a1ae275b943ef3b
 
 # `runtime_git.py`
 

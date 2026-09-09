@@ -1199,6 +1199,36 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
     assert observation["source_event"]["event_id"] == event["event_id"]
 
 
+def test_machine_detector_masks_secret_in_event_fields(tmp_path: Path) -> None:
+    """detector payload の追加 field も raw publication 前に secret masking する。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    secret = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
+    event = {
+        "event_schema_version": 1,
+        "event_id": "evt_machine_secret",
+        "event_type": "feedback.reporter_unavailable",
+        "occurred_at": rfc3339_now(),
+        "subcommand_invocation_id": logger.invocation_id,
+        "component": "collector",
+        "failure_code": "protocol_error",
+        "diagnostic": {"header": secret},
+    }
+
+    invocation.detect_event(event, logger.path)
+
+    [path] = iter_observation_paths(root)
+    observation = read_json_object(path)
+    raw_text = path.read_text(encoding="utf-8")
+    assert secret not in raw_text
+    assert (
+        observation["payload"]["event_fields"]["diagnostic"]["header"]
+        == "[REDACTED:authorization]"
+    )
+    assert validate_observation_envelope(observation) == []
+
+
 def test_completion_count_reports_only_pending_raw_observations(tmp_path: Path) -> None:
     """正常 report 前は raw store の pending 件数一値だけを返す。"""
     root = make_repo(tmp_path)
