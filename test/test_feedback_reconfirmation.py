@@ -125,7 +125,7 @@ def feedback_run(tmp_path, monkeypatch):
     monkeypatch.setattr(remediation, "refresh_indexes", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(remediation, "stop_tracked_codex_children", lambda *_args: None)
     monkeypatch.setattr(remediation, "_update_progress", lambda *_args: None)
-    monkeypatch.setattr(remediation, "_doctor_preprocess_for_join", lambda: set())
+    monkeypatch.setattr(remediation, "doctor_preprocess_for_join", lambda: set())
     monkeypatch.setattr(
         remediation, "validate_run_join", lambda *_args, **_kwargs: None
     )

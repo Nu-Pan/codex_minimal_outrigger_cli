@@ -69,6 +69,11 @@ from commons.runtime_run import (
     run_process_tracking,
     stop_tracked_codex_children,
 )
+from commons.runtime_run_join import (
+    doctor_preprocess_for_join,
+    merge_run,
+    validate_run_join,
+)
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
@@ -82,11 +87,6 @@ from commons.runtime_run_lifecycle import (
     unexpected_agent_paths,
     unexpected_run_paths,
     worktree_change_paths,
-)
-from sub_commands.run.join import (
-    _doctor_preprocess_for_join,
-    merge_run,
-    validate_run_join,
 )
 
 from . import decision, report
@@ -104,7 +104,7 @@ def run_feedback_report() -> TerminalResult:
     starting = False
     try:
         # doctor と必要な INDEX 更新を完了してから clean を判定する。
-        _doctor_preprocess_for_join()
+        doctor_preprocess_for_join()
         feedback_directory = repository / ".cmoc/gu/feedback"
         if (
             not (feedback_directory / "work").exists()
@@ -308,7 +308,7 @@ def _wave_loop(
             }
         if manifest["run"]["waves"] and not pending:
             if not prepared:
-                ignored = _doctor_preprocess_for_join()
+                ignored = doctor_preprocess_for_join()
                 validate_run_join(context, [], session_ignored_paths=ignored)
                 prepared = True
                 # 機械更新と、その間の intake を最終境界の検査へ含める。

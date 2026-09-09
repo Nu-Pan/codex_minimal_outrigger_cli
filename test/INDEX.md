@@ -390,23 +390,20 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run lifecycle の realization test を集約し、apply/refactor fork、run join/abandon、session state・worktree・branch・process tracking・report の状態遷移を検証する統合テスト。
-- agent や INDEX refresh による想定外変更・commit・遅延処理、rollback、cleanup、rename/delete、force-resolve、merge conflict、interruption、並行起動、破損した tracking などの異常系を検証する。
-- fork report・lifecycle report・terminal primary report の生成内容、feedback observation、change summary、refactor state、Codex child tracking、通知結果まで含めた lifecycle の完了条件を確認する。
+- realization apply/refactor の fork と run join/abandon を、共通の editing-run state・worktree・branch・process tracking・report lifecycle を通じて検証する統合テスト群。agent の差分制約、INDEX 更新、rollback、interrupt、cleanup、rename/delete、force-resolve、state 同期など、run lifecycle 全体の境界条件を扱う。
 
 ## Read this when
-- realization apply/refactor fork の lifecycle、run state、run worktree、session state の変更を調査・変更するとき
-- run join または run abandon の merge、cleanup、branch/worktree 削除、force-resolve の挙動を確認するとき
-- Codex child process tracking、INDEX refresh、agent 境界、想定外差分の検証、rollback、interruption、report 保存の回帰を確認するとき
-- fork/join/abandon に関係する report、refactor state、変更 path の扱いを変更するとき
+- realization apply/refactor fork の実行結果、run join/abandon の状態遷移や成果物取り込みを変更・調査するとき
+- run worktree、branch、process tracking、INDEX 更新、report 保存、rollback、cleanup の連携を検証するとき
+- agent による想定外差分・commit・遅延処理、利用者中断、並行 start、壊れた tracking などの異常経路を確認するとき
 
 ## Do not read this when
-- 単一の低レベル helper の実装や、fork/join/abandon の lifecycle を伴わない unit test だけを調べるとき
-- INDEX のルーティング仕様や app spec の正本を確認することが目的のときは、対応する oracle/specification を直接読む
-- 実際の subcommand 実装の詳細を変更する前に、まず対象実装と対応する app spec の挙動を確認すべきとき
+- 単一の lifecycle helper や subcommand の局所実装だけを確認すれば足り、統合的な run state 遷移を扱わないとき
+- refactor の個別 target 選択や apply/refactor の prompt 形式だけを直接確認したいとき
+- INDEX 生成規則そのものや通知仕様そのものを調べる場合で、これらの run lifecycle との結合を確認する必要がないとき
 
 ## hash
-- f370d18e99e7d79eb84f7505f437c82bf5f547bbc9465df0875dd2a2f3fc5cff
+- 2d6ae5252a108b26e7785f1c93f08fb91e464e3f7a6324043447b52c08e13629
 
 # `test_editor_input_handoff.py`
 
@@ -442,23 +439,24 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の reporter、collector、raw observation、pending intake、issue candidate、remediation、active state、report cut、atomic publication、cleanup、復旧を一体の repository fixture で検証するテスト。
-- agent-facing observation submission の MCP discovery、TCP 転送、payload／collector response／context／rate limit／lifecycle の検証と、path 境界・secret masking・idempotence・不正 raw の拒否を扱う。
-- feedback report の preflight、normalization／remediation prompt の安全性と processing version、candidate identity／fingerprint／collision、machine observation の threshold・window・recurrence を検証する。
-- session 前提条件、修復 wave と遅延 intake、失敗時の rollback・manual completion・auto-join recovery、current pointer／generation artifact の整合性、publication 後の compact active state と cleanup failure を検証する。
+- feedback の agent-facing reporter と loopback collector の公開境界、認証付き受理、rate limit、context 失効、transport timeout、secret masking、path boundary、idempotency を検証するテスト群。
+- feedback report の raw observation 読み込みから candidate の normalization・比較・merge、machine observation の recurrence threshold、remediation wave、checkpoint、rollback、recovery までを検証する。
+- active state の issue・machine aggregate・current pointer・report cut・generation manifest・cleanup を atomic に公開し、hash mismatch、未定義 artifact、破損、publication 前の不正 raw を拒否する外部境界を検証する。
 
 ## Read this when
-- feedback 機能全体の外部挙動を、agent reporter から collector、report、remediation、active state 公開まで通しで確認したいとき。
-- pending observation の受理・正規化・重複統合・machine threshold 判定、または report cut と current state の境界を調べるとき。
-- atomic publication、generation hash、cleanup／recovery、raw artifact 検証など、report 実行失敗時の保持・復旧条件を確認するとき。
+- feedback reporter の MCP discovery、collector 転送、collector response validation、利用不能時の扱いを確認するとき
+- agent または machine observation の raw store、schema validation、重複排除、secret masking、repository path 検証、pending 件数を調べるとき
+- feedback report の candidate identity、evidence fingerprint、normalization、remediation verdict、逐次 wave、late intake、Codex call、worktree rollback を追跡するとき
+- feedback report 後の compact active state、current report、generation manifest、cleanup、recovery、破損検出、publication 前提条件を確認するとき
 
 ## Do not read this when
-- feedback の実装詳細を直接変更・調査する場合は、対象の runtime、store、state、report、remediation 実装を先に読むべきとき。
-- feedback 以外の subcommand や、単一の CLI 共通機能だけを検証したいとき。
-- テスト fixture や assertion ではなく、feedback の正本仕様そのものを確認・変更したいとき。
+- feedback 以外のサブコマンドや一般的な CLI runtime のテストを調べるとき
+- 個別の normalize_issue・remediate_issue builder の prompt 仕様だけを確認すれば足りるとき
+- active state の具体的なデータ形式や正本仕様を直接確認する必要があるとき
+- このテスト群が検証する feedback の end-to-end 境界ではなく、単一実装関数の局所的な挙動だけを確認するとき
 
 ## hash
-- b5b41f732759e3a8385517e6bdd044656384913b6586ff8d0514b12ff7148481
+- a8dd3dde5b2049da1b425531702dbdcdd816a0b3819c8b5d3eed2e11362bae55
 
 # `test_feedback_decision.py`
 
@@ -480,19 +478,19 @@
 # `test_feedback_reconfirmation.py`
 
 ## Summary
-- feedback.md と feedback_state.md の根拠変更・再確認・封印を、テスト用の実行環境で検証するテスト。wave の high-watermark 連続性、依存変更や機械的同期後の再確認、追加証拠の取り込み、修復サイクルの収束、checkpoint 参照復旧、封印後の不正な公開・復旧拒否、active issue の decision basis 具体化を扱う。
+- feedback.md と feedback_state.md の根拠変更・再確認・封印の制御を、波の境界、checkpoint、join・publish、active state まで検証するテスト。
 
 ## Read this when
-- feedback remediation の結果が依存ファイル変更や生成物同期をまたいで再確認される条件を確認したいとき。
-- 観測証拠・checkpoint・sealed result・active issue の根拠が、公開や復旧の可否にどう影響するかをテストから確認したいとき。
-- feedback の wave 境界、再修復サイクル、参照復旧の回帰ケースを変更・調査するとき。
+- feedback の remediation 結果を依存ファイル変更、機械的同期、追加証拠に応じて再確認する挙動を調べるとき。
+- wave の high-watermark 連続性、checkpoint 参照の復旧、再修復サイクルの収束、不変な seal を確認するとき。
+- 封印後の根拠変更が publish・recovery を拒否されることや、human_required の decision basis が active issue に具体化されることを確認するとき。
 
 ## Do not read this when
-- feedback の実装ロジックそのものを変更・理解することが目的で、テストケースの期待挙動を確認する必要がないとき。
-- 一般的な issue 受付や remediation の初期入力形式だけを確認したいときは、対応する実装または基礎テストを直接読む。
+- feedback の受付・候補生成や、根拠変更を伴わない通常の remediation だけを調べるとき。
+- 一般的な Git 操作、run lifecycle、または再確認・封印に関係しない report/state 機能を確認するとき。
 
 ## hash
-- bc8c252849f99c19ef9199bace74a387b79a66e3768ad99ade03cb9b7dcc5364
+- 0b2a07fcdbd80e48126c3887d1d10ed6010eca6083ce6a0c5015e4bf7b3b460a
 
 # `test_file_inventory.py`
 

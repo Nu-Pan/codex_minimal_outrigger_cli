@@ -602,6 +602,25 @@
 ## hash
 - a30b60027e1b29689ed75c899c6ff56b1da6dd685a01d697ccad6f5b8d351a34
 
+# `runtime_run_join.py`
+
+## Summary
+- join 前処理、run/session の差分検証、merge と post-join hook、INDEX conflict の解決、失敗時の復元、merge 済み run の worktree・branch cleanup をまとめて担う runtime 共通処理。
+- 明示的な join と self-joining workload から共有される、clean worktree 条件、想定外差分の report・force-resolve、merge 後の state/index 同期、到達可能性を確認した安全な cleanup の入口。
+
+## Read this when
+- editing run の join 処理で、事前の refactor state 同期や clean・差分検査の挙動を確認するとき。
+- run branch の merge、INDEX.md のみを許容する conflict 処理、post-join の INDEX 再生成や state 同期を調べるとき。
+- merge または post-join 失敗時の session worktree 復元、想定外差分の lifecycle report、merge 済み run の worktree・branch 削除条件を変更・確認するとき。
+
+## Do not read this when
+- run の開始、通常の workload 実行、または join 前の active run 解決そのものを調べるときは、各処理を直接実装する runtime モジュールを読む。
+- state・refactor state・lifecycle report のデータ構造や永続化契約だけを確認するときは、それぞれの state、refactor、report モジュールを直接読む。
+- INDEX.md のルーティング生成規則そのものを調べるときは、INDEX 更新を担当する実装を直接読む。
+
+## hash
+- 98143372e53e3bb4061b9c7f39bf0fa08f444d5ed0d18eb6a42f61f83e9e9e93
+
 # `runtime_run_lifecycle.py`
 
 ## Summary

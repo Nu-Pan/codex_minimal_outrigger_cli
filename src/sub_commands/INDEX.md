@@ -33,19 +33,18 @@
 # `feedback`
 
 ## Summary
-- `feedback` サブコマンド全体の実装入口。観測の受付後に行う判定、report cut と候補処理、issue remediation、checkpoint・publication、run cleanup／recovery の責務を横断して確認できる。
+- feedback サブコマンドの実装を構成する入口。観測の report 化、判定根拠の固定、issue 修復から publication までの処理、publication 後の recovery を確認する際に、配下の各モジュールへ進むための起点となる。
 
 ## Read this when
-- `cmoc feedback` の実行全体や、観測から remediation・report publication・cleanup までの処理経路を確認・変更するとき。
-- feedback の decision、report、remediation、recovery のどの下位実装から読み始めるべきか判断したいとき。
+- feedback サブコマンドの全体構成や処理責務の分担を確認するとき。
+- 観測の report 化、判定、修復、publication 後の recovery のいずれを調べるべきか判断するとき。
 
 ## Do not read this when
-- feedback observation の受付・保存や envelope 検証だけを確認したいとき。
-- feedback 内の単一責務の詳細を直接調べる場合は、decision、report、remediation、recovery の該当実装を直接読むとき。
-- feedback 以外のサブコマンドや一般的な run lifecycle の共通実装だけを扱うとき。
+- feedback 以外のサブコマンドを扱うとき。
+- feedback 内の特定処理の実装詳細が明確で、対応するモジュールを直接読めるとき。
 
 ## hash
-- 4334535c045c7dfcaa3f3434468fff79728b5bac5e8fa7baa249ca4d7c51b01b
+- 1f41a27478b75b86ecbce42165c3ebc9b62a0477ad9331f07d46e1f424fee83a
 
 # `indexing.py`
 
@@ -127,18 +126,22 @@
 # `run`
 
 ## Summary
-- editing run 共通 lifecycle サブコマンドをまとめるパッケージの入口。配下の run lifecycle 実装へ進む起点。
+- editing run サブコマンドの共通 lifecycle 実装と、旧 import path 互換 shim の入口。active run の abandon・join、共通 lifecycle/report 処理の配置を把握し、目的に応じた配下ファイルへ進むために読む。
 
 ## Read this when
-- editing run の abandon・join・共通 lifecycle helper・report writer の責務や実装箇所を判断するとき。
-- 配下の run lifecycle 実装を横断して、停止、merge、cleanup、互換 shim の入口を確認するとき。
+- editing run の active run を停止・破棄して ready 状態へ戻す処理を調査・変更するときは abandon の実装を確認する場合。
+- editing run の join、merge 後の state 同期、report 保存、cleanup、失敗時 rollback を追跡するときは join の実装を確認する場合。
+- 旧 import path の lifecycle helper や report writer の互換性、canonical 実装への委譲・再公開を確認するときは lifecycle または report の shim を確認する場合。
+- この配下のどの run lifecycle 実装を読むべきか判断し、具体的な処理へ進む入口が必要なとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- 特定の処理の詳細を確認するときは、この入口ではなく abandon.py、join.py、lifecycle.py、report.py の該当ファイルを直接読むとき。
+- lifecycle や report の共通処理本体の仕様・挙動だけを確認したいときは、commons 側の canonical 実装や report 管理モジュールを直接読む。
+- join が利用する差分検査・merge の workload 非依存ロジックだけを確認したいときは、対応する commons 実装を直接読む。
+- active run の解決、lock、process tracking などの一般的な run 管理挙動だけを確認したいときは、対応する run 管理モジュールを直接読む。
 
 ## hash
-- b2a68d5575ab0d4779707b00e06db2099bc40beca43bc2dadc3c5e5088eaae40
+- 74e09ce4b5c61d7f6c2fa16b36693745b8500ff230e7a749d0ffb2603dd37e37
 
 # `session`
 

@@ -26,12 +26,13 @@ import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_codex_profile as codex_profile_module
 import commons.runtime_run as runtime_run_module
+import commons.runtime_run_join as run_join_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import commons.runtime_run_report as run_report_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.abandon as run_abandon_module
-import sub_commands.run.join as run_join_module
+import sub_commands.run.join as run_join_command_module
 import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
@@ -640,7 +641,7 @@ def test_run_join_doctor_sync_depends_on_active_run_kind(
         lambda _root, *, sync_refactor_entries: calls.append(sync_refactor_entries),
     )
 
-    run_join_module._doctor_preprocess_for_join()
+    run_join_module.doctor_preprocess_for_join()
 
     assert calls == [expected_sync]
 
@@ -781,6 +782,11 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     joined_process_stops: list[tuple[Path, str]] = []
     monkeypatch.setattr(
         run_join_module,
+        "stop_tracked_codex_children",
+        lambda repo, session_id: joined_process_stops.append((repo, session_id)),
+    )
+    monkeypatch.setattr(
+        run_join_command_module,
         "stop_tracked_codex_children",
         lambda repo, session_id: joined_process_stops.append((repo, session_id)),
     )
@@ -958,6 +964,9 @@ def test_run_join_tracks_indexing_codex_calls_and_stops_children_after_refresh(
 
     monkeypatch.setattr(run_join_module, "refresh_indexes", fake_refresh)
     monkeypatch.setattr(run_join_module, "stop_tracked_codex_children", record_stop)
+    monkeypatch.setattr(
+        run_join_command_module, "stop_tracked_codex_children", record_stop
+    )
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -2750,7 +2759,7 @@ def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
     )
 
     warnings: list[str] = []
-    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+    cleanup = run_join_module.cleanup_joined_run(context, warnings)
 
     assert cleanup == "preserved"
     assert warnings == ["run worktree cleanup failed"]
@@ -2792,7 +2801,7 @@ def test_run_join_cleanup_warns_when_worktree_removal_raises(
     )
 
     warnings: list[str] = []
-    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+    cleanup = run_join_module.cleanup_joined_run(context, warnings)
 
     assert cleanup == "preserved"
     assert warnings == ["run worktree cleanup failed"]
@@ -2842,7 +2851,7 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
     )
 
     warnings: list[str] = []
-    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+    cleanup = run_join_module.cleanup_joined_run(context, warnings)
 
     assert cleanup == "branch_preserved"
     assert deleted == [context.run_branch]
@@ -3002,6 +3011,9 @@ def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
         raise RuntimeError("final report save failed")
 
     monkeypatch.setattr(run_join_module, "write_lifecycle_report", fail_final_report)
+    monkeypatch.setattr(
+        run_join_command_module, "write_lifecycle_report", fail_final_report
+    )
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -3038,7 +3050,7 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
     monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         run_join_module,
-        "_cleanup_joined_run",
+        "cleanup_joined_run",
         lambda _context, warnings: warnings.append("cleanup pending") or "preserved",
     )
 

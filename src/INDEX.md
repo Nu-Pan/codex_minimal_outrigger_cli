@@ -49,18 +49,19 @@
 # `commons`
 
 ## Summary
-- commons 配下の共通 runtime 実装群への入口。CLI、Codex、feedback、state、report、Git、ログ、パスなど複数経路で共有される実行時境界を扱う。
+- commons 配下の共通 runtime 実装を束ね、CLI、Codex 実行、設定、Git、ログ、パス、状態、結果などの横断的な実行時補助機能を提供するパッケージ。
+- 共通 runtime API や個別 helper の責務を確認し、複数の実行経路にまたがる処理の入口を判断するときに読む。
 
 ## Read this when
-- commons の共有 runtime API や各 helper の責務を確認・変更するとき。
-- Codex 実行、prompt editor、INDEX lifecycle、editing run、feedback などの共通基盤を調査するとき。
+- commons 配下の共通 runtime helper の構成、公開 API、実行ライフサイクル、状態・ログ・パス・Git などの横断機能を確認または変更するとき。
+- 特定の helper に入る前に、commons パッケージ全体の責務と関連する runtime モジュールの位置づけを把握したいとき。
 
 ## Do not read this when
-- 特定 helper や CLI の個別処理、正本仕様、schema の詳細だけを確認したいとき。
-- commons と無関係な業務処理や INDEX の利用者向けルーティング規則だけを確認したいとき。
+- 特定の runtime helper の内部実装や個別挙動だけを調査・変更する場合は、該当する runtime モジュールを直接読む。
+- commons 配下ではなく、個別サブコマンドの業務処理や正本仕様、専用 schema の内容を確認する場合。
 
 ## hash
-- b67ebdf1ada751cab10be42fb599a1bfcda2eab026f255fe6ee815f2a79a70cf
+- d57d30711e48dbf2b003dedcb823901cf13bc8cff4ae9c53c6993365eababe3b
 
 # `config`
 
@@ -114,16 +115,18 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` は、cmoc の各サブコマンド実装をまとめるパッケージ境界であり、個別サブコマンドの入口や実行フローへ進むための上位ルーティング先となる。
-- apply は現時点で実装がなく、doctor、feedback、indexing、oracle、realization、review、run、session、tui などのサブコマンド実装が配下にある。
+- cmoc の各サブコマンド実装とパッケージ入口をまとめる階層。
+- doctor、feedback、indexing、oracle、realization、review、run、session、tui などの個別サブコマンド処理へ進むための起点。
+- apply と review は現時点で実装本文がなく、将来の実装追加先として扱う。
 
 ## Read this when
-- cmoc のサブコマンド構成を横断して確認するとき。
-- 特定のサブコマンドの入口や実行フローを調べる前に、該当する配下の実装へ進む先を判断するとき。
+- サブコマンド全体の構成や個別 CLI 入口の所在を確認するとき。
+- 特定サブコマンドの実行経路、agent call、run lifecycle、publication/recovery などの処理へ進む起点を探すとき。
+- apply または review の実装追加・変更箇所を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理、共通 runtime、run lifecycle、indexing 共通処理などを直接確認したいときは、対応する下位実装を読むとき。
-- apply サブコマンドの具体的な実装を確認したいときは、実装が追加されるまで読む対象がない。
+- 特定サブコマンドの詳細仕様や共通 runtime、indexing 共通処理、run 管理などの実装本体を直接確認したいとき。
+- 個別モジュールの細部だけを調査するとき。
 
 ## hash
-- 6c367c8a7c8cf65ab18209ec8fc7ba700c7b9332ca1f88a3fc0b639792ea61df
+- 43a24c895a41fea858ca8a72921b9a5021e48285ca077c960b01013e6fadf7f3
