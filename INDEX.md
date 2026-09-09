@@ -138,17 +138,19 @@
 # `test`
 
 ## Summary
-- `test` 配下は、CLI・Codex runtime・indexing・feedback・session・prompt editor・TUI などの外部挙動と回帰条件を検証する pytest テスト群をまとめた入口。共通 fixture／テスト支援から、個別機能の単体・統合・実経路テストまでを扱う。
+- CLI、runtime、Codex 実行、Git、state、feedback、indexing、session などの外部挙動を検証する pytest テスト群への入口。
+- 共通 helper・fixture と、各機能の単体・統合・実経路回帰テストを含み、実装変更がどの利用者向け契約へ影響するかを確認できる。
 
 ## Read this when
-- cmoc の複数機能にまたがる回帰テストの対象や、どのテスト群から調査を始めるべきかを確認するとき。
-- CLI lifecycle、Codex subprocess、indexing、feedback、session、prompt editor、TUI などの実装変更に対して、対応する外部挙動テストを探すとき。
-- 実経路・PTY・Git worktree・永続 state・report まで含む統合／受け入れテストの入口を探すとき。
+- CLI の公開 command、共通 lifecycle、preflight、report、通知、終了処理の外部契約を確認・変更するとき。
+- Codex exec/TUI、prompt、権限、process 管理、設定、ログ、schema、editor handoff の回帰挙動を調べるとき。
+- indexing、oracle、realization、feedback、session、Git、state、worktree、包装済み import の検証例を探すとき。
+- 実 Codex CLI、独立 process、PTY を用いた本番経路または実経路統合テストの受け入れ条件を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装の詳細を確認することが目的の場合は、各テストが参照する oracle・仕様文書または src の対象実装を直接読むとき。
-- 特定機能のテスト内容が既に分かっており、同階層の個別テストへ直接進めるとき。
-- pytest の共通設定やテスト補助だけを確認したい場合は、該当する fixture／support ファイルを直接読むとき。
+- 正本仕様や実装詳細そのものを確認・変更するときは、対応する oracle、realization、src、または仕様文書を直接読む。
+- 単一機能のテスト対象外にある一般的な pytest 実行方法や、無関係なサブコマンドの挙動を調べるとき。
+- LLM の回答品質やプロンプト内容そのものを評価するときは、このテスト群を入口にしない。
 
 ## hash
-- b9002e24c9e4ce686755154f32c0c4865cd1c487a87f7b3524ed404a5f49685d
+- 2e7bbe471b8676884d68d1fce3ca6acb4bec8ba3850337c7ef4e30edd2d08675

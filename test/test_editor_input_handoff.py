@@ -8,7 +8,6 @@
 import json
 import socket
 import threading
-import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -56,6 +55,15 @@ def _start_slow_trickle(
     thread = threading.Thread(target=send_slowly)
     thread.start()
     return stopped, thread
+
+
+def _wait_for_peer_close(connection: socket.socket) -> None:
+    """server が期限切れ接続を閉じるまで response を排水する。"""
+    try:
+        while connection.recv(8192):
+            pass
+    except (ConnectionAbortedError, ConnectionResetError):
+        pass
 
 
 def test_editor_wait_accepts_only_active_repository_target_and_last_content(
@@ -315,7 +323,7 @@ def test_target_deadline_releases_unauthenticated_slow_trickle(
             assert stalled.recv(1)
             stopped, trickler = _start_slow_trickle(stalled, b"x", 0.05)
             try:
-                time.sleep(0.3)
+                _wait_for_peer_close(stalled)
                 monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
                 result = handoff_mcp._submit(
                     {"target_id": target.target_id, "content": "after deadline"}
@@ -353,7 +361,7 @@ def test_target_deadline_releases_authenticated_request_slow_trickle(
             assert authenticate_editor_input_handoff_client(stalled, token, 2)
             stopped, trickler = _start_slow_trickle(stalled, b"x", 0.05)
             try:
-                time.sleep(0.3)
+                _wait_for_peer_close(stalled)
                 monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
                 result = handoff_mcp._submit(
                     {"target_id": target.target_id, "content": "after deadline"}
