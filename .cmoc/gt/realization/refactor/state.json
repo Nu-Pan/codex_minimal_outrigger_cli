@@ -924,10 +924,10 @@
     "last_investigated_at": "2026-07-25_06-40_26_790302000"
   },
   "src/config/cmoc_config.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "46d78fa1d103a3d52db1f861d2187698122d2dde1940ff0b4c0d1a60ca7a87fa",
-    "last_investigated_at": "2026-07-25_06-50_44_901970000"
+    "last_investigated_sha256": "e143f75a879b3dc46fb34ebbab3e7e3a0cf88bb6d8e061e1f98dfb2859e1aa87",
+    "last_investigated_at": "2026-09-09_22-07_20_680818000"
   },
   "src/main.py": {
     "investigation_required": true,
