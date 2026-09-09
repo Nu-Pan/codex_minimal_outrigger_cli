@@ -142,19 +142,21 @@
 # `test`
 
 ## Summary
-- `test` 配下は、cmoc の CLI・Codex runtime・indexing・oracle／realization・session・feedback・prompt・Git／state 管理を、単体から実経路統合までのテストで検証する主要な回帰テスト群です。
-- 各テストは、実装や正本仕様に対する外部契約、状態遷移、ファイル安全性、process／PTY、report／log、Structured Output、公開 API の境界を対象領域別に検証します。
-- 共通 fixture・テスト helper と、実 Codex／独立 process を用いる受け入れ試験が同階層にあり、対象機能の回帰条件や実行経路を探す入口になります。
+- test ディレクトリは、cmoc の CLI・runtime・Codex 実行・TUI・session・feedback・indexing・oracle/realization などの外部挙動を回帰検証するテスト群と、テスト共通 helper をまとめた入口です。
+- 個別機能の正常系・異常系・永続 state・Git lifecycle・process 管理・prompt/builder 契約・本番経路を、対応する専用テストから確認できます。
+- 共通 helper は、対象テストの実行環境、fixture、fake external command、Git repository、Codex 呼び出し、doctor 出力などのテスト準備を支援します。
 
 ## Read this when
-- cmoc の機能変更が既存の CLI 外部挙動、Codex 実行、Git／worktree、永続 state、report、prompt、indexing、session、feedback の回帰に影響するか確認するとき。
-- 対象機能に対応するテストケース、共有 fixture／helper、または実 Codex・PTY を含む統合経路の検証方法を探すとき。
-- 公開 command tree、Structured Output、ファイルアクセス境界、process cleanup など、実装に対する回帰検証の入口を特定するとき。
+- cmoc の公開 CLI やサブコマンドの外部挙動を回帰テストから確認・変更するとき
+- Codex exec/TUI、prompt、builder、sandbox、process tracking、ログ、report、preflight の契約を検証するとき
+- indexing、oracle/realization、session、feedback、editor input、Git・state lifecycle のテスト対象を探すとき
+- 複数の機能領域をまたぐ本番経路・PTY・独立 process の受け入れ試験を確認するとき
+- テスト用の共通 fixture や一時環境、Git repository、fake command の準備方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認・変更することが目的で、テストが検証する期待挙動を確認する必要がないとき。
-- 対象機能が `test` 配下の領域に該当しない、または個別の仕様・実装・schema・oracle を直接読む方が明確なとき。
-- 実 Codex／PTY／subprocess を使う受け入れ試験が不要で、高速な単体テストや特定の共通 helper だけを直接確認したいとき。
+- 正本仕様、schema、実装本体の詳細を確認することが目的で、対応する oracle・realization・src の対象を直接読むべきとき
+- 特定テストの assertion、fixture、実装上の細部だけを確認したいときは、該当するテストファイルを直接読むとき
+- cmoc と無関係なテスト実行方法や、対象ディレクトリが扱わない機能を調べるとき
 
 ## hash
-- 1d9573a7e72944ef886823292484de9adabf4fdd22ff84ca5fb0f1d47aa5e796
+- 30d682bdef65cefa67fd93b92d69c8c1411b26372e2d71c2d7a42561bc58fb36
