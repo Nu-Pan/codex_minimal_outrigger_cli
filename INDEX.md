@@ -139,17 +139,15 @@
 # `test`
 
 ## Summary
-- `test` 配下の回帰・統合テストをまとめた入口。CLI、Codex runtime、indexing、feedback、session、state、prompt、Git、通知など、実装の外部挙動と境界条件を検証するテスト群へ進むための階層。
+- cmoc の test 配下にある回帰・統合・実経路テスト群への入口。CLI、Codex runtime、indexing、feedback、session/run state、prompt、Git、通知などの外部挙動と境界条件を機能別に検証する。
 
 ## Read this when
-- 実装変更や仕様確認に対応する回帰テストを探すとき
-- CLI、Codex 実行、indexing、feedback、session、state、prompt、Git、通知などの外部挙動をテストから確認したいとき
-- 単体テストから実経路統合テストまで、対象機能に対応する検証入口を選ぶとき
+- 実装変更や不具合調査で、対象機能の外部契約・回帰条件・統合経路をテストから確認するとき。
+- 個別機能の単体テスト、CLI lifecycle、Codex subprocess、Git/worktree、INDEX 更新、feedback、session、TUI などの検証入口を探すとき。
 
 ## Do not read this when
-- 正本仕様や実装そのものを確認することが目的で、テストの期待挙動を調べる必要がないとき
-- 対象機能が明確で、その機能専用の実装・仕様・テストへ直接進めるとき
-- テスト実行方法や共通の開発環境設定だけを確認したいとき
+- 正本仕様や実装詳細そのものを確認・変更する場合は、各テストが示す oracle、realization、src、または仕様文書を直接読むとき。
+- テスト対象と無関係な機能や、一般的な pytest 実行方法だけを調べるとき。
 
 ## hash
-- b5f74b10a6cf5f56e3813f2ac36f9e2de244bdb3ae3de9df3086ad4a57d09017
+- 7261ac309f4d42bdd7b362c99d094574eb9233e6d549acb1cd550283971222b8

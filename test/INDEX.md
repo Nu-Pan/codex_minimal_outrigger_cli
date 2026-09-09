@@ -660,16 +660,16 @@
 # `test_production_cli_support.py`
 
 ## Summary
-- 実経路統合テストで使用する PTY 操作 helper の trust 確認処理を検証するテスト。プロンプト検出直後では確定せず、次の poll で確認入力を送信する挙動を扱う。
+- 実経路統合テストで使うPTY操作helperの挙動を検証するテスト。trust確認プロンプト検出後、次のpollで確定し、CR入力を送るまでの状態遷移を扱う。
 
 ## Read this when
-- 実経路統合テストの PTY 操作 helper が、trust prompt 検出後の poll 間隔と確認入力の送信タイミングを満たすか確認するとき。
+- 実経路CLIのtrust確認プロンプト処理や、PTY helperのpollタイミング・入力送信を確認または変更するとき。
 
 ## Do not read this when
-- trust 確認処理そのものの実装や本番 CLI の挙動を調べるときは、対応する実装または本番 CLI のテストを直接読む。
+- PTY操作helperではなく、CLI本体のtrust確認実装や、他の実経路統合テストの責務を直接確認するとき。
 
 ## hash
-- d9d566558ddab2d388a8d45f171c1dbdf7a3bd90ce5e50bc62140d9f769d24e3
+- 67687d4517bc714cca1ab03754abb96c90a374dbc48b788c0eed9ca2e6d1e5d1
 
 # `test_prompt_editor_input.py`
 

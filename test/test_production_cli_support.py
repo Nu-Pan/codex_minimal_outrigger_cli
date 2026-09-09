@@ -12,6 +12,15 @@ def test_trust_confirmation_waits_until_the_poll_after_prompt_detection() -> Non
     try:
         ready, confirmed = _advance_trust_confirmation(
             write_fd,
+            bytearray(),
+            False,
+        )
+
+        assert (ready, confirmed) == (False, False)
+        assert not select.select([read_fd], [], [], 0)[0]
+
+        ready, confirmed = _advance_trust_confirmation(
+            write_fd,
             bytearray(b"Press enter to continue"),
             False,
         )
