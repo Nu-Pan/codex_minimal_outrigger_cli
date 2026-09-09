@@ -360,10 +360,10 @@
     "last_investigated_at": "2026-08-14_11-38_26_097865000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "e76fe63bf6beed0b226e9f22def53577dccda561d911a3b47d58510b06565791",
-    "last_investigated_at": "2026-08-06_05-08_48_934742000"
+    "last_investigated_sha256": "13d5ef8771340eda2ba02624ffcf0dac54739301c226e31d353d8ce465e5d401",
+    "last_investigated_at": "2026-09-10_05-43_51_007607000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py": {
     "investigation_required": true,
