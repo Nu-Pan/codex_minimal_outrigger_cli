@@ -913,9 +913,9 @@
   },
   "src/commons/runtime_state.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "7c345df8bc8ad1c10a5993fce9b60cd0c0f988c6d884b110ba45c40cc928c14e",
-    "last_investigated_at": "2026-07-31_00-16_13_479746000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "e867e541be6e472cdbb55968e876f035885214d00a56b21331c7e33a84ab05c5",
+    "last_investigated_at": "2026-09-10_05-08_41_971209000"
   },
   "src/commons/runtime_windows_toast.py": {
     "investigation_required": true,
@@ -1392,7 +1392,7 @@
     "last_investigated_at": "2026-08-14_16-34_16_841275000"
   },
   "test/test_runtime_state.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "7704ec65a7ccb2ca1eb887987ff4d0658a605fdc0e76abf1e7cb8cb20e30980e",
     "last_investigated_at": "2026-07-30_15-53_09_925741000"

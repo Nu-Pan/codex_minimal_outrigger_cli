@@ -49,21 +49,20 @@
 # `commons`
 
 ## Summary
-- commons パッケージの共通 runtime helper と、CLI・Codex 実行・設定・Git・ログ・パス・結果・状態などを担う runtime module 群への入口。
-- INDEX lifecycle、prompt editor input、feedback、report、refactor、session/run state など、commons 配下の個別実装へ進むためのルーティング対象。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run lifecycle など、複数の実行経路から共有される処理への入口です。
 
 ## Read this when
-- commons 配下の共通 runtime 機能の責務や構成を確認するとき。
-- 複数の実行経路にまたがる runtime 処理を変更・調査するとき。
-- 個別実装へ進む前に、commons の共通入口を把握するとき。
+- 共通 runtime API の公開窓口や commons パッケージの構成を確認するとき
+- CLI・Codex・設定・Git・状態・feedback・report・run 管理などの共有実装を変更または調査するとき
+- 複数のサブコマンドにまたがる実行 lifecycle、外部プロセス境界、永続 state、成果物管理の責務を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper や個別サブコマンドの実装詳細だけを確認したいとき。
-- 対象が明確な場合に、個別 runtime module、仕様書、schema、または呼び出し側を直接読むとき。
-- INDEX.md のルーティング情報だけを更新するとき。
+- 特定の helper の内部挙動だけを確認したいときは、該当する個別 runtime module を直接読む
+- 利用者向けの正本仕様、個別サブコマンドの業務処理、または個別 schema の内容だけを確認したいとき
+- commons の共通処理を利用しない機能や、テスト固有の期待値だけを調べるとき
 
 ## hash
-- 2f844af77815108cf6c0771a83ab9934ddab59738c0b2ee47353e7fab67c61fa
+- 92a6715b519d87ad58d5e968e5a0e00757e947fe9435221021614e68c2dc22e3
 
 # `config`
 
