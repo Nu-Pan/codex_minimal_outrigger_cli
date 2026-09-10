@@ -192,10 +192,10 @@
     "last_investigated_at": "2026-08-13_23-58_07_385304000"
   },
   "oracle/doc/app_spec/sub_command/tui.md": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "7b3ddf391d97c35b5ed27eccedce59e66d13e19dc5255a905172ae2bb898c6b3",
-    "last_investigated_at": "2026-08-12_19-53_33_367009000"
+    "last_investigated_sha256": "12855333eacd44ad20a4d4bc55056d10d8fd1a57db3faf3c4a55337c7e8079b2",
+    "last_investigated_at": "2026-09-10_16-33_08_871896000"
   },
   "oracle/doc/app_spec/subcommand_interruption.md": {
     "investigation_required": true,
