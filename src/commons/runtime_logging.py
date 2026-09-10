@@ -27,6 +27,7 @@ class StepTiming:
     description: str
     started_at: float
     elapsed_sec: float | None = None
+    log_description: str | None = None
 
 
 class SubcommandLogger:
@@ -60,7 +61,7 @@ class SubcommandLogger:
             **payload,
         }
         with self._lock:
-            with self.path.open("a") as f:
+            with self.path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 f.flush()
             self._event_records.append(record.copy())
@@ -90,7 +91,7 @@ class SubcommandLogger:
         }
         try:
             with self._lock:
-                with self.path.open("a") as log_file:
+                with self.path.open("a", encoding="utf-8") as log_file:
                     log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
                     log_file.flush()
         except Exception:
@@ -126,7 +127,14 @@ class SubcommandLogger:
         限るため、console 表示名と JSON Lines の step 名は分けられる。
         """
         self.finish_current_step()
-        self.step_timings.append(StepTiming(index, description, time.perf_counter()))
+        self.step_timings.append(
+            StepTiming(
+                index=index,
+                description=description,
+                started_at=time.perf_counter(),
+                log_description=log_description or description,
+            )
+        )
         self.event(
             "step_started",
             step=log_description or description,
@@ -140,7 +148,7 @@ class SubcommandLogger:
             step.elapsed_sec = time.perf_counter() - step.started_at
             self.event(
                 "step_finished",
-                step=step.description,
+                step=step.log_description or step.description,
                 step_index=step.index,
                 elapsed_sec=step.elapsed_sec,
             )

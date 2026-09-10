@@ -452,21 +452,21 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド実行中の JSON Lines event、step timing、quota 待機時間、warning、Codex call 記録を集約する runtime logging の中核。
-- サブコマンド logger の生成・current context への設定・event 記録・step 計測結果の参照が必要な作業の入口。
+- サブコマンド実行中の JSON Lines event、step timing、quota 待機時間、warning、Codex call を記録・集約する logger。
+- ContextVar を介して、現在のサブコマンド logger を runtime helper から参照・差し替え・復元するための入口。
 
 ## Read this when
-- サブコマンド単位の実行ログや計測値の記録・集約方法を確認するとき。
-- SubcommandLogger の event、step timing、warning、quota 待機、Codex call の扱いを変更または調査するとき。
-- 深い runtime helper から current logger を参照・差し替え・復元する処理を確認するとき。
+- サブコマンドの実行イベントを永続ログへ記録する処理を確認したいとき
+- step の開始・終了時間、quota 待機時間、warning、Codex call の集約方法を確認したいとき
+- 現在の実行文脈に紐づくサブコマンド logger の取得や一時的な差し替えを確認したいとき
 
 ## Do not read this when
-- ログファイルの保存先や timestamp 付きパス予約の規則だけを確認したいときは runtime_paths を読む。
-- feedback event の検出・観測報告の仕様だけを確認したいときは runtime_feedback 関連の対象を直接読む。
-- サブコマンド固有の業務処理や console 表示の詳細だけを確認したいとき。
+- feedback detector の判定や報告処理そのものを確認したいとき
+- ログ保存先のパス予約や timestamp 生成の実装を確認したいとき
+- サブコマンド logger が生成した primary report の利用側を直接確認したいとき
 
 ## hash
-- 69426c7fe39b7f0c2f0c22a9d968d01c668c6534c04403297b742d6d9f7c4bea
+- d3550a9d5474f92ae25e4e13b18b45d3ee377682eb578bc909ff4ae4e1fb3f96
 
 # `runtime_paths.py`
 
