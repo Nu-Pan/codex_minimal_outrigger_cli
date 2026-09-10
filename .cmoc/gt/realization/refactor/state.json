@@ -1182,10 +1182,10 @@
     "last_investigated_at": "2026-08-18_02-36_37_258456000"
   },
   "test/test_codex_runtime_exec.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "da0c5fee023909e6ddf4596a63d57f4101daacc530ea0f703bcd64dea435bb05",
-    "last_investigated_at": "2026-08-13_01-22_16_989816000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "749a44c10250eb51e908b459a030fd3de815d281cc9b4f99077fdf8f50958f37",
+    "last_investigated_at": "2026-09-11_02-04_53_659388000"
   },
   "test/test_codex_runtime_home.py": {
     "investigation_required": false,
