@@ -114,17 +114,16 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload の canonical builder adapter を検証するテスト。apply/refactor の builder が正本関数を再公開し、commit 参照、実行設定、prompt の規定、canonical Structured Output schema を正しく設定することを確認する。
+- editing run workload 向けの apply/refactor builder adapter を、正本 builder の再公開、commit 参照を含む apply prompt、canonical Structured Output schema と実行設定の利用という観点から検証するテスト。
 
 ## Read this when
-- editing run 用の acp builder の互換 import 経路、prompt 構成、worktree、commit 範囲、Structured Output schema、所見の changed_paths を検証・変更するとき。
+- editing run の apply/fork launch_exec または refactor/fork change_summary・file_review_and_fix builder の互換性、prompt 内容、worktree・commit 範囲、Structured Output schema、file access mode、preflight 設定を確認・変更するとき。
 
 ## Do not read this when
-- builder の実装自体を変更する場合は、対応する realization または oracle の builder 実装を直接読むとよい。
-- editing run と無関係な acp builder、または builder を利用しないテストの仕様を確認する場合。
+- builder 本体の一般的な実装詳細や oracle の正本内容を直接調べることが目的のとき。apply/refactor builder の挙動検証ではなく、別 workload や別の builder adapter を扱うとき。
 
 ## hash
-- 7b8c305cc2e7ba8cd766c111e188bad18efb7411ec0ae321d18ad8f886a19b1a
+- 9811a6d8c31daae31e7187ca1374ce39dd66748b6e25b9e2f230cce0ab6a9d6e
 
 # `test_acp_builder_indexing_parameters.py`
 

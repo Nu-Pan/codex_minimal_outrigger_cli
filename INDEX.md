@@ -139,19 +139,17 @@
 # `test`
 
 ## Summary
-- test ディレクトリは、cmoc の CLI・runtime・Codex 実行・indexing・session・feedback・editor input・通知などを、単体から実経路まで外部観測可能な契約として検証する回帰テスト群を収める。
-- 個別機能の仕様や実装へ進む前に、対象機能の外部挙動、異常系、安全境界、状態遷移、Git・report・log への影響を確認するためのテスト入口である。
-- 共通 helper、fixture、builder parameter テスト、CLI 統合テスト、runtime 境界テスト、実 Codex/PTY を使う受け入れテストまで、機能横断の検証対象を含む。
+- cmoc のテストスイート。CLI、Codex runtime、indexing、oracle・realization・session・feedback、editor handoff、Git・state・通知などの外部契約と境界条件を検証する。
+- 個別機能の単体テストから、独立 process・PTY・実 Codex CLI を用いる実経路統合テストまで、実装や仕様を確認するための回帰テスト入口を提供する。
 
 ## Read this when
-- cmoc の公開 CLI、Codex runtime、TUI、indexing、session、feedback、editor input、Git/state、report/log、通知などの外部挙動をテスト観点から調査・変更するとき。
-- 対象機能の正常系だけでなく、失敗分類、リトライ、中断、cleanup、rollback、path・symlink・特殊ファイル・権限境界を回帰検証するとき。
-- 実経路や subprocess/PTY を含む受け入れ試験の範囲、またはテスト共通 helper・fixture・builder parameter の契約を確認するとき。
+- cmoc の特定機能について、実装された外部挙動、入力検証、エラー分類、永続状態、Git や filesystem の安全境界をテスト観点から確認・変更するとき。
+- CLI 全体の lifecycle、Codex 呼び出し、INDEX 更新、feedback、editor input、session/run lifecycle など複数コンポーネントにまたがる統合挙動を調査するとき。
+- 実 Codex CLI・独立 process・PTY を含む本番経路の受け入れ試験範囲や、観測可能な report・state・Git 結果を確認するとき。
 
 ## Do not read this when
-- 正本仕様、実装本体、schema、prompt の具体的な文面を確認することが主目的で、対応する oracle・realization・src・schema を直接読めるとき。
-- テスト対象と無関係な機能の仕様や、単一関数の局所実装だけを調査するとき。
-- 実 Codex 推論や CLI の受け入れ経路ではなく、通常の単体テストにも関係しない一般的な開発手順を確認するとき。
+- 正本仕様、実装本体、Structured Output schema、または個別 builder の詳細だけを確認したいときは、対応する仕様・実装・schema を直接読む。
+- テスト対象と無関係な機能を調査するとき、または一般的な pytest 実行方法や共通 fixture の詳細だけを知りたいとき。
 
 ## hash
-- 439c7acb3583a23e409617e555a86cfd6795021737ea33053a3220e63770a792
+- aec56850c7aa77909d4617d76c8a4180258a289f802a409dc814f5700212011a
