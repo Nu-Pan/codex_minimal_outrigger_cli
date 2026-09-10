@@ -504,10 +504,10 @@
     "last_investigated_at": "2026-08-17_20-10_30_692769000"
   },
   "pyproject.toml": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "6fb45f79a560a43b8ae51d23bdb53e4dc711587caffea78ce1020d595036510e",
-    "last_investigated_at": "2026-08-12_10-16_35_752255000"
+    "last_investigated_sha256": "3a783c008041cc5d2791af2abb3cfe1c24d8231f77689b906b36f62158c77455",
+    "last_investigated_at": "2026-09-10_15-01_19_002460000"
   },
   "src/acp/__init__.py": {
     "investigation_required": false,
