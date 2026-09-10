@@ -107,7 +107,9 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
     index_paths = [str(path.relative_to(root)) for path in updated]
     literal_index_paths = [literal_pathspec(path) for path in index_paths]
     if index_paths:
-        run_git(["add", "--", *literal_index_paths], root)
+        # INDEX.md は indexing が管理する生成物なので、利用者の広い ignore
+        # pattern に一致しても commit 対象へ追加する。
+        run_git(["add", "-f", "--", *literal_index_paths], root)
     if not index_paths:
         return
     diff_args = ["diff", "--cached", "--quiet", "--", *literal_index_paths]

@@ -122,33 +122,34 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、共通 runtime・互換 import・サブコマンド実装をまとめるソース階層。
-- acp、basic、config、oracle などの互換入口と、commons の共有 runtime、sub_commands の実行機能へ進むための上位ルーティング起点。
+- src は cmoc の CLI 起動・公開互換入口と、commons・sub_commands など主要実装領域を束ねる上位パッケージ。CLI の全体構成や、互換層から実体・サブコマンドへ進む入口を選ぶために読む。
 
 ## Read this when
-- cmoc の CLI 構成、共通 runtime、互換 import、またはサブコマンド実装の配置を横断して確認するとき。
-- 特定の機能を調査する前に、起動入口・共有処理・互換層・サブコマンドのどの下位要素へ進むべきか判断するとき。
+- cmoc の CLI 起動経路、公開入口、主要パッケージの配置を全体として把握するとき。
+- 特定の機能を調べる前に、commons・sub_commands・互換 shim など、どの下位要素へ進むべきか判断するとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンド、runtime helper、互換 API、正本仕様、または実装詳細だけを確認したいとき。
-- INDEX.md の更新処理や feedback observation の報告規則だけを調べるとき。
+- 特定コマンドの処理、共通 runtime の個別挙動、互換 API の実装詳細を確認するときは、対応する下位要素を直接読む。
+- 正本仕様や oracle 側実体の詳細、INDEX 更新や feedback の具体的な処理だけを調べるときは、src 全体ではなく該当する実装・仕様を直接読む。
 
 ## hash
-- 3ff59ba4ac4cf3275e4195930d6cd1492d4dba280c5489436a85b1f42a8e5de6
+- 44ce0777c54c5cb77e08afc9a1f0daeee95df2675ce5f723c8a2df05613745c5
 
 # `test`
 
 ## Summary
-- pytest による cmoc の回帰・統合テスト群を収録し、CLI、Codex runtime、indexing、session／run、feedback、prompt／editor、Git・state・report などの外部契約と安全境界を検証する。
-- 個別テストは、対象機能の正常系だけでなく、失敗・中断・再試行・cleanup・永続状態・worktree 境界まで観測可能な結果として確認する入口になる。
+- cmoc のテスト群を、共有 fixture・builder adapter・CLI・runtime・Codex 実行・indexing・oracle/realization・session・feedback・通知などの機能領域ごとに案内する入口。
+- 単体テストから実際の Codex CLI・PTY を使う受け入れ試験まで、外部挙動、永続 state、report、Git、process 管理の回帰検証を対象とする。
 
 ## Read this when
-- 変更または調査対象の機能について、実装変更が既存の CLI 外部挙動や runtime、Git、状態管理、report、Codex 呼び出しに与える影響を回帰確認するとき。
-- 対象機能に対応するテストファイルを特定し、専用の回帰条件や統合 lifecycle の検証範囲から確認を始めるとき。
+- 特定機能の回帰テスト、検証対象の外部契約、関連する fixture や統合テストの入口を探すとき。
+- CLI の lifecycle、Codex 実行、indexing、editor handoff、session、feedback、oracle/realization、Git、通知の挙動をテストから確認するとき。
+- 実経路の受け入れ試験や、report・state・Git・call log など観測可能な結果を横断して確認するとき。
 
 ## Do not read this when
-- 正本仕様、builder、oracle／realization、runtime 実装の詳細を確認したいときは、対応する仕様書や実装を直接読む。
-- テスト対象と無関係な機能、単一 helper の局所実装、または一般的な pytest 実行方法だけを調べるとき。
+- 正本仕様や実装本体の契約・詳細を確認したいときは、対応する仕様書や実装モジュールを直接読む。
+- 単一 helper の局所実装、一般的な pytest 実行方法、またはテスト対象外の機能を調べるとき。
+- INDEX.md の生成規則や schema の内容そのものだけを確認したいとき。
 
 ## hash
-- 673617a6d7982226f43a523cfdd00dcdeda2c3298c23dd80eb3eb165c890b68e
+- e77d6577d69fda794098079bc2a15ec3339f6b9db390f04a38c162945779f2ad

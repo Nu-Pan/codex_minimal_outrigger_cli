@@ -34,22 +34,21 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の検査・生成・更新・復元・commit を一貫して扱う indexing lifecycle の共通実装です。
-- 対象ディレクトリを走査し、既存 entry の hash による再利用判定、不足 entry の Codex 生成、INDEX.md の書き込みを行います。
-- 更新時の排他 lock、ファイル snapshot による失敗時復元、Git 差分確認と indexing commit までを担当します。
+- src/commons/indexing.py は、INDEX.md の検査・再利用・生成・ハッシュ鮮度確認・書き込み・復元・Git commit までを一つの indexing lifecycle として実装する共通モジュールです。
+- INDEX.md を深いディレクトリから更新する処理、既存 entry の検証と再利用、Codex による不足 entry の生成、更新失敗時の復元を確認したいときの入口です。
 
 ## Read this when
-- INDEX.md の自動生成・鮮度判定・entry 再利用の挙動を変更または調査するとき。
-- directory traversal、除外対象、hash 計算、Codex による entry 生成、更新の並列化を確認するとき。
-- INDEX.md 更新の排他制御、失敗時復元、または commit lifecycle を変更するとき。
+- INDEX.md の自動更新順序、対象ディレクトリ・子要素の選別、entry の hash による鮮度判定を調べるとき
+- INDEX.md entry の生成 prompt、Structured Output の描画、並列生成、Codex 実行時のコンテキストやログ設定を調べるとき
+- INDEX.md の lock、symlink・特殊ファイルの扱い、更新失敗時の snapshot 復元、更新差分の commit を調べるとき
 
 ## Do not read this when
-- INDEX.md entry の生成 prompt や Structured Output schema 自体を変更するときは、index entry builder または schema の対象を直接読む。
-- Codex 実行の preflight・profile・isolation の一般仕様だけを確認するときは、対応する runtime 実装または oracle 仕様を直接読む。
-- INDEX.md の利用者向けルーティング規則だけを確認するときは、indexing の正本仕様を直接読む。
+- INDEX.md entry の生成 schema や agent 向け prompt の定義そのものを変更・確認するときは、index entry parameter の実装を直接読むとき
+- Codex 実行前 preflight の登録や Codex 実行プロファイルの詳細だけを調べるときは、対応する runtime モジュールを直接読むとき
+- INDEX.md の利用者向け仕様や更新ルールの正本を確認するときは、app_spec 配下の仕様文書を直接読むとき
 
 ## hash
-- 66f2b0b29051fe7125e7b44e66cf4cdd014494a75ef6fa10c7031b7959d2e1ef
+- 8727115c4b41324a52633d2dd9222879c69da53497983ba73d586d48d1775a32
 
 # `prompt_editor_input.py`
 
