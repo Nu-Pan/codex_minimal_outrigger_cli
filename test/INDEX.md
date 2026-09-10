@@ -624,18 +624,20 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout へコピーした source tree 上で、quota probe、oracle edit／prompt editor、ACP basic、cmoc config の import 境界・公開面・正本再公開・prompt 生成を検証するテスト。
+- packaged layout にコピーした ACP・basic・commons・oracle・config の import 境界と公開面を検証するテスト。quota probe、oracle edit／prompt editor 入出力、ACP basic の正本型再公開、cmoc config の公開定義を対象に、隔離実行環境での参照先・名前空間・parameter 内容を確認する。
 
 ## Read this when
-- パッケージ化後の隔離環境で import が成立するか、設定や型の公開面が意図どおりか、canonical builder が正本 prompt と定義を参照するかを確認・変更するとき。
-- setuptools の package layout、Python import 境界、oracle edit の入力 handoff、または packaged layout 向けの回帰テストを調べるとき。
+- パッケージ配置後も canonical な正本や prompt を参照できるか確認したいとき
+- ACP builder、oracle edit、prompt editor、config の公開 import・__all__・module namespace の境界を変更または調査するとき
+- 実行ディレクトリや外部 site-packages の影響を除いた packaged layout での import 挙動を検証するとき
 
 ## Do not read this when
-- packaged layout や import 境界ではなく、個別 builder の prompt 内容・業務ロジックだけを確認するときは、対象の canonical builder や仕様文書を直接読む。
-- 通常の単体テスト追加・変更で、隔離 packaged layout、再公開される型・設定、または公開 namespace の検証を扱わないとき。
+- 対象が単一モジュールの内部ロジックや通常の開発環境での import だけに関する場合
+- quota probe、oracle edit／prompt editor、ACP basic、cmoc config の packaged layout 上の公開境界を確認する必要がない場合
+- テストの実装詳細ではなく、各 canonical 定義や prompt の正本仕様そのものを読むべき場合
 
 ## hash
-- da320ffda193df280a020db3ec0081c6ca44501d0c2311d40c30e5b60cd9cc41
+- 913323e3b0b5f350cfd8f7b402cd00c58649694cc98c8f2f0dcc84dc0bdea6af
 
 # `test_primary_report.py`
 

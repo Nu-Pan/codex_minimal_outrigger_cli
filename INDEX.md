@@ -140,17 +140,22 @@
 # `test`
 
 ## Summary
-- pytest による cmoc のテスト群を収録し、CLI、Codex runtime、indexing、feedback、session、state、Git、prompt、通知などの外部挙動・境界条件・統合 lifecycle を検証する。共通 fixture とテスト支援 helper も含む。
+- test 配下のテスト群は、cmoc の CLI・Codex runtime・indexing・session・feedback・prompt/editor・Git・state・通知などに関する外部挙動と安全境界を検証する回帰テストの集合である。
+- 個別テストは、通常経路だけでなく、失敗・中断・並列実行・linked worktree・不正入力・特殊ファイル・rollback などの境界条件を担当する。
+- support module と conftest は、テスト実行用の Codex、Git、外部コマンド、doctor、schema path、toast 隔離などの共通基盤を提供する。
 
 ## Read this when
-- 特定機能の実装変更に伴う回帰条件、外部契約、異常系、安全境界、または統合 lifecycle の検証例を探すとき。
-- CLI や Codex 実行、indexing、feedback、session、state、Git、prompt editor、TUI、通知などのテスト範囲と入口を確認するとき。
-- pytest 共通 fixture、テスト用 Git repository、fake external command、Codex 実行環境などの共有支援を利用・変更するとき。
+- cmoc の公開 CLI や末端サブコマンドの外部契約、終了結果、report・state・Git・ログの観測結果を回帰確認するとき
+- Codex exec/TUI の prompt、argv、sandbox、provider、quota retry、Structured Output、subprocess lifecycle、call log を検証するとき
+- indexing、INDEX 更新、oracle・realization、session lifecycle、feedback、editor input handoff、prompt editor の制御ロジックや安全境界をテストから確認するとき
+- Git・worktree・state・config・path・symlink・特殊ファイル・process tracking・Windows toast など、実行環境に関わる境界条件を調査するとき
+- テスト共通 fixture や helper の利用範囲、隔離条件、canonical schema・builder の互換公開面を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装本体の責務・詳細を確認することが目的で、テストの期待挙動を調べる必要がないとき。
-- 対象機能に対応する個別テストの範囲を超えた一般的なテスト実行方法だけを確認したいとき。
-- oracle・realization・schema・prompt 本文などの正本内容そのものを確認・変更するとき。
+- 正本仕様、schema、builder、実装本体の意図や詳細を確認することが目的のときは、各テストが対応付ける oracle・realization・src の対象へ直接進む
+- 単一関数の局所的な実装詳細や、テストが扱わない機能の挙動を調べるとき
+- テスト対象ではない一般的な CLI 利用方法、Codex の回答品質、または INDEX.md の生成規則そのものだけを確認したいとき
+- 個別の共通 helper・fixture の実装だけを確認したいときは、該当する support module または conftest を直接読む
 
 ## hash
-- 4525d2a0f89be947c78f99259ce99aaf3fa015c3bcffce83a97404cdedcaad18
+- b95dab8506414dbe7939838b951b670205c431c9f87cede08df66b984488937a

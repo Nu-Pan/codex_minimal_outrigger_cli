@@ -1303,9 +1303,9 @@
   },
   "test/test_packaged_import.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "381953699b0fc8d6f76afd61812604d09137d904cd4600a156a60975601949da",
-    "last_investigated_at": "2026-08-12_21-39_49_262574000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "da320ffda193df280a020db3ec0081c6ca44501d0c2311d40c30e5b60cd9cc41",
+    "last_investigated_at": "2026-09-10_18-06_00_734865000"
   },
   "test/test_primary_report.py": {
     "investigation_required": true,

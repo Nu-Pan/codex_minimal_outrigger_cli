@@ -19,7 +19,8 @@ def _run_from_packaged_layout(
 ) -> subprocess.CompletedProcess[str]:
     """隔離した packaged layout で Python コードを実行する。
 
-    `-S` と `PYTHONNOUSERSITE` で外部 site-packages の影響を除き、
+    `-S`、`-P`、および `PYTHONNOUSERSITE` で外部 site-packages と実行ディレクトリの
+    影響を除き、
     `PYTHONPATH` でコピーした tree だけを import 対象にする。実在する Git
     repository を作業ルートにする。HOME も一時
     ディレクトリ内へ向け、実行者の設定や認証情報を持ち込まない。
@@ -30,7 +31,7 @@ def _run_from_packaged_layout(
     home = tmp_path / "home"
     home.mkdir()
     return subprocess.run(
-        [sys.executable, "-S", "-c", code],
+        [sys.executable, "-S", "-P", "-c", code],
         cwd=work,
         env={
             **os.environ,
@@ -66,7 +67,7 @@ def test_quota_probe_imports_from_packaged_layout(
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
     root = Path(__file__).parents[1]
-    pyproject = tomllib.loads((root / "pyproject.toml").read_text())
+    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     setuptools_config = pyproject["tool"]["setuptools"]
     assert "oracle" not in setuptools_config["py-modules"]
     assert setuptools_config["package-dir"]["oracle"] == "oracle/src/oracle"
@@ -80,7 +81,10 @@ def test_quota_probe_imports_from_packaged_layout(
     result = _run_from_packaged_layout(
         target,
         (
+            "import sys; "
             "from pathlib import Path; "
+            "assert '' not in sys.path; "
+            "assert str(Path.cwd()) not in sys.path; "
             "from basic.acp import AgentCallParameter, FileAccessMode; "
             "from acp.builder.quota_probe import "
             "build_quota_availability_probe_parameter as build_probe; "
@@ -140,7 +144,8 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "editor_input._select_editor = lambda: ['fake-editor']; "
             "real_subprocess_run = editor_input.subprocess.run; "
             "editor_input.subprocess.run = lambda argv: "
-            "(Path(argv[-1]).write_text('oracle を編集する'), "
+            "(Path(argv[-1]).write_text('oracle \\u3092\\u7de8\\u96c6\\u3059\\u308b', "
+            "encoding='utf-8'), "
             "SimpleNamespace(returncode=0))[1]; "
             "editor_input.edit_prompt_editor_input("
             "Path.cwd(), work, skeleton); "
@@ -151,18 +156,19 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "editor_input.finalize_prompt_editor_input(Path.cwd(), work); "
             "r = build_reduction(original); "
             "assert not work.exists(); "
-            "assert saved.read_text() == 'oracle を編集する'; "
+            "assert saved.read_text(encoding='utf-8') == "
+            "'oracle \\u3092\\u7de8\\u96c6\\u3059\\u308b'; "
             "assert p.structured_output_schema_path is None; "
             "assert p.file_access_mode.value == 'pure_oracle_write'; "
             "assert p.run_indexing_preflight; "
-            "assert 'oracle を編集する' in p.prompt; "
+            "assert 'oracle \\u3092\\u7de8\\u96c6\\u3059\\u308b' in p.prompt; "
             "assert editor_input.ORIGINAL_PROMPT_PLACEHOLDER not in p.prompt; "
             "assert not list(saved.parent.glob('*_cmpl.md')); "
             "assert p.agent_call_cwd == Path.cwd(); "
             "assert r.structured_output_schema_path is None; "
             "assert r.file_access_mode.value == 'pure_oracle_write'; "
             "assert not r.run_indexing_preflight; "
-            "assert 'oracle を編集する' in r.prompt; "
+            "assert 'oracle \\u3092\\u7de8\\u96c6\\u3059\\u308b' in r.prompt; "
             "assert r.agent_call_cwd == Path.cwd()"
         ),
         tmp_path,
