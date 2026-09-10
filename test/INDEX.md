@@ -395,22 +395,24 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test を収録し、editing run の session state・run worktree・fork report・ライフサイクル cleanup を横断検証する。
-- apply/refactor fork の agent 境界、INDEX 更新、想定外差分・commit の拒否と rollback、process tracking、report 保存、割り込み時の状態復旧を確認する。
-- run join/abandon における成果物 merge、oracle と生成 INDEX の扱い、force-resolve、cleanup 失敗時の resource 保持、state hook 更新を検証する。
-- refactor の unresolved target、rename、change summary、永続 state、Structured Output の changed_paths 検証と完了 report を確認する。
+- workload fork と共通 run lifecycle の統合テストを扱う。
+- realization apply/refactor fork、run join/abandon、session state・run worktree・branch・process tracking の状態遷移を検証する。
+- fork report・lifecycle report・terminal report、INDEX 更新、refactor state 同期、feedback observation、変更 path の扱いを検証する。
+- agent の禁止変更・commit・遅延処理・cleanup・rollback・中断・競合・失敗復旧など、editing run の境界条件を一続きの lifecycle fixture で確認する。
 
 ## Read this when
-- editing run の apply/refactor fork、run join、run abandon の統合ライフサイクル挙動を変更・調査・検証するとき。
-- run worktree の隔離、session state 遷移、agent child の停止、INDEX refresh、rollback または report の保存順序を確認するとき。
-- refactor state と unresolved findings、rename 後の target 同期、change summary の入力範囲や escape を確認するとき。
+- realization apply または realization refactor の fork lifecycle を変更・調査するとき。
+- run join または run abandon の merge、cleanup、state 更新、report 保存を変更・調査するとき。
+- run worktree、branch、process tracking、INDEX refresh、refactor state の連携や異常時の rollback を確認するとき。
+- agent による想定外差分・commit、遅延 child、user interruption、cleanup failure などの統合挙動を検証するとき。
 
 ## Do not read this when
-- 単一の実装関数や個別サブコマンドの局所的な挙動だけを確認する場合は、対応する実装・専用 test を直接読む。
-- editing run と無関係な INDEX routing、通常の session 操作、または一般的な Git 操作の仕様確認だけが目的の場合。
+- 単一の実装関数や通常経路の細部だけを確認したいときは、対応する実装モジュールの単体テストや本文へ直接進む。
+- INDEX 生成そのものの仕様や一般的な indexing 処理だけを確認したいときは、この統合テストではなく indexing 関連の仕様・テストを読む。
+- run lifecycle と無関係な realization file の内容や、個別の CLI 基盤機能だけを調査するとき。
 
 ## hash
-- 2a85e340523061dbbfb83d2e019aefc87f56d2903820987e446af60a07d059b5
+- 5134a09a77ba801eded25c5a058798ea152cad5c27ed86c26b1af99475b480b1
 
 # `test_editor_input_handoff.py`
 

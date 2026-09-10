@@ -641,21 +641,19 @@
 # `runtime_run_report.py`
 
 ## Summary
-- editing run の fork report と lifecycle report を、YAML Front Matter、完了結果、変更パス、実行段階、関連ログを含む Markdown として生成・保存する共通処理。
-- run join/abandon のライフサイクルレポートでは、既存の pending report を安全に最終結果へ更新する入口も担う。
+- editing run の fork report と lifecycle report を生成・更新する共通処理を扱う。
+- レポートの YAML Front Matter、完了状態、変更パス、実行段階、関連ログなどの出力内容を組み立て、安全な Markdown 描画と保存を担う。
 
 ## Read this when
-- editing run の fork または run join/abandon に関するレポート生成・保存・更新処理を確認したいとき
-- 実行レポートへ状態、完了理由、変更パス、実行段階、関連ログを反映する処理の入口を探すとき
-- レポート内で Git path を Markdown として安全に描画する処理を確認したいとき
+- editing run の fork 実行結果または run join/abandon のライフサイクル結果をレポート化する処理を確認・変更するとき。
+- レポートの保存先予約、共通メタデータ、実行ログの反映、変更パスの Markdown エスケープを調べるとき。
 
 ## Do not read this when
-- レポートに含める共通項目や canonical な配置規則を確認したいときは、参照コメントに示された設計・仕様文書を読むとき
-- EditingRunContext の状態や run lifecycle 自体の定義を確認したいときは、その専用実装へ進むとき
-- 実行段階や関連ログの具体的な内容を確認したいときは、それらを提供する logging 実装へ直接進むとき
+- レポートの仕様や記載項目の正本を確認したいだけで、生成実装を読む必要がないとき。
+- レポート以外の runtime 処理や、個別サブコマンドのワークフローを直接調べるとき。
 
 ## hash
-- 7d1e833ac3dfed7166aa0416f412a5bb1bf7da3f834eafeefcd6695a870bc3b9
+- 9dfdc8e5c735a0e989c90fae68c6f227441e5050230ca7e3282c0884b0c1aeac
 
 # `runtime_state.py`
 

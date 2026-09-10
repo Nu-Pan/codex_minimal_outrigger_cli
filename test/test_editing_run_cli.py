@@ -2917,9 +2917,7 @@ def test_index_conflict_records_merge_before_post_join_refresh(
         refresh_context: EditingRunContext, _warnings: list[str]
     ) -> None:
         """post-join refresh が commit 後に失敗する状態を再現する。"""
-        (refresh_context.session_worktree / "INDEX.md").write_text(
-            "post-join index\n"
-        )
+        (refresh_context.session_worktree / "INDEX.md").write_text("post-join index\n")
         run_git(refresh_context.session_worktree, "add", "INDEX.md")
         run_git(
             refresh_context.session_worktree,
@@ -3118,14 +3116,14 @@ def test_run_join_saves_report_before_cleanup(
         events.append(("report", details["cleanup"]))
         return original_write_report(report_context, operation, **kwargs)
 
-    def record_cleanup(
-        _context: EditingRunContext, _warnings: list[str]
-    ) -> str:
+    def record_cleanup(_context: EditingRunContext, _warnings: list[str]) -> str:
         """cleanup の開始を記録して成功を返す。"""
         events.append(("cleanup", None))
         return "completed"
 
-    monkeypatch.setattr(run_join_command_module, "write_lifecycle_report", record_report)
+    monkeypatch.setattr(
+        run_join_command_module, "write_lifecycle_report", record_report
+    )
     monkeypatch.setattr(run_join_module, "cleanup_joined_run", record_cleanup)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)

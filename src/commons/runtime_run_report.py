@@ -5,8 +5,6 @@
 """
 
 import html
-import os
-import tempfile
 from pathlib import Path
 
 from .runtime_logging import current_subcommand_logger
@@ -15,7 +13,10 @@ from .runtime_paths import (
     reports_dir,
     timestamp,
 )
-from .runtime_primary_report import write_reserved_primary_report
+from .runtime_primary_report import (
+    rewrite_primary_report,
+    write_reserved_primary_report,
+)
 from .runtime_primary_report_render import (
     execution_step_lines,
     related_log_lines,
@@ -177,29 +178,8 @@ def write_lifecycle_report(
     if new_report:
         write_reserved_primary_report(target_path, content)
     else:
-        _rewrite_lifecycle_report(target_path, content)
+        rewrite_primary_report(target_path, content)
     return target_path.resolve()
-
-
-def _rewrite_lifecycle_report(path: Path, content: str) -> None:
-    """既存の pending report を壊さずに最終結果へ置き換える。"""
-    temporary_path: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            delete=False,
-        ) as temporary_file:
-            temporary_path = Path(temporary_file.name)
-            temporary_file.write(content)
-            temporary_file.flush()
-            os.fsync(temporary_file.fileno())
-        os.replace(temporary_path, path)
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
 
 
 def _render_changed_path(path: str, indent: str = "", label: str = "") -> str:
