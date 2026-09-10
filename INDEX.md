@@ -145,21 +145,18 @@
 # `test`
 
 ## Summary
-- テスト群は、ACP builder・Codex runtime・CLI・TUI・editor input・session/run state・Git・feedback・indexing など、cmoc の主要機能に対する外部契約と回帰条件を検証する。
-- 単体から実経路統合テストまで、prompt・Structured Output・sandbox・process 管理・通知・report・state・worktree・commit の挙動を観測可能な結果として確認する。
-- 正常系だけでなく、入力不備、Codex 出力異常、失敗・中断、競合、symlink・特殊ファイル、破損 state、cleanup・rollback などの安全境界を扱う。
-- 各テストは、対象機能の実装や正本仕様を直接読む前に、どの外部挙動と回帰条件が既に検証されているかを確認するための入口となる。
+- テストディレクトリは、cmoc の各機能について、CLI 統合経路・Codex 実行・Git/worktree・state/report・prompt/builder・安全境界などの外部契約と回帰条件を検証する入口です。対象機能の実行時挙動や複数コンポーネント間の lifecycle をテストから確認できます。
+- 単一の補助 helper、特定の builder、runtime 層、サブコマンド、feedback、indexing、session、TUI、通知、設定など、責務ごとに検証対象が分かれており、変更対象の挙動に対応するテストへ進むための階層入口です。
 
 ## Read this when
-- cmoc の CLI、Codex 実行、TUI、builder、editor input、session/run lifecycle、Git、feedback、indexing、report、通知、state の挙動をテスト観点から調査・変更するとき。
-- 実際の process・PTY・worktree・branch・commit・filesystem・ログ・report など、複数の外部状態にまたがる統合契約を確認するとき。
-- 異常系、再試行、競合解消、権限境界、入力検証、破損検出、復旧、cleanup、rollback の回帰条件を探すとき。
-- 複数のテスト領域にまたがる変更について、既存の公開面・実行順序・保存結果・副作用の検証範囲を把握するとき。
+- cmoc の既存挙動を外部観測可能なテスト条件から確認したいとき。
+- CLI サブコマンド、Codex runtime、Git/worktree、永続 state、report、prompt、builder、MCP、feedback、indexing、session、TUI などの回帰テストを探すとき。
+- 実装変更が既存の lifecycle、安全境界、公開 API、エラー分類、生成物やログの契約へ与える影響を確認するとき。
 
 ## Do not read this when
-- 単一モジュールの実装詳細、prompt の正本文面、Structured Output schema、CLI 個別仕様、または state・report の正本データ形式を直接確認することが目的のとき。
-- テストが扱わない機能の一般仕様や、個別サブコマンドの局所的な通常系だけを調べるとき。
-- テスト fixture・共通 helper・個別ケースの詳細を直接読む必要があり、ディレクトリ全体のテスト責務を把握する必要がないとき。
+- 正本仕様、schema、prompt 本文、実装アルゴリズムそのものを確認したいときは、テストが参照する対応する仕様・schema・実装を直接読む。
+- 単一関数の局所的な実装詳細や、テスト対象に含まれない機能を調査するとき。
+- 一般的な pytest の使い方や、個別テストの責務を特定できており、対象テストファイルへ直接進めるとき。
 
 ## hash
-- 505673d618cc229f5b330e07023a7cb2f79034d29a6d8a1d272cc325e17887a1
+- ad64070f282d92813922152b02d510bf26625863611354c713793cffc2c67c95

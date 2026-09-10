@@ -327,20 +327,19 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex exec の Structured Output 補正、capacity retry、JSONL エラー、中断、成果物差分保持を、再試行状態・subprocess 呼び出し・call log・subcommand event の連鎖として検証するテスト群。
+- Codex exec の Structured Output 補正、capacity retry、JSONL error、中断、成果物差分保持を、subprocess 呼び出し・retry 状態・call log・subcommand event の連続した外部挙動として検証するテスト群。
 
 ## Read this when
-- run_codex_exec の出力契約違反や schema validation、capacity failure、未知の JSONL error、KeyboardInterrupt の外部挙動を確認するとき。
-- Codex 呼び出し回数、同一 session の補正、retry 上限と backoff、call log および subcommand event の status・診断内容を確認するとき。
-- capacity retry や Structured Output 補正の前後で agent の成果物差分を保持・復元する挙動を検証するとき。
+- run_codex_exec の出力契約違反や parse failure の同一 session 補正、補正時の事後条件・成果物復元、session 欠落時の失敗を確認するとき。
+- capacity failure の再試行・指数 backoff・上限、および retry 中も agent diff を保持する挙動を確認するとき。
+- 未知の JSONL error、stdout JSONL 外の error marker、KeyboardInterrupt、schema 事前検証について、最終例外と call log／subcommand event の記録を確認するとき。
 
 ## Do not read this when
-- INDEX.md のルーティング情報だけを確認したいとき。
-- Codex exec の通常成功経路や、retry・失敗・ログ・差分保持を扱わない機能を調査するとき。
-- 実装本体の一般的な仕様や CLI 設定を直接確認する場合。このテスト群より run_codex_exec の実装または対応する正本仕様を読むべき。
+- INDEX.md のルーティングだけを確認したい場合や、run_codex_exec の通常成功経路・別の実装詳細を直接調べる場合。
+- 個別の Structured Output schema 定義や汎用的なログ仕様そのものを確認したい場合は、それぞれの正本仕様・実装対象を直接読む。
 
 ## hash
-- 92da92a517922b7f07759c9c350a0b948725f73aa4d9feba031ef993bd2faa87
+- f657c53dab552b1db74e14c2657330725653d50b0f4abda6a899c86efb08bccf
 
 # `test_codex_runtime_subprocess.py`
 

@@ -102,6 +102,13 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
         '{"bad": true}',
         '{"ok": true}',
     ]
+    for option in ("--cd", "--output-schema"):
+        initial_option_index = call_logs[0]["argv"].index(option)
+        correction_option_index = call_logs[1]["argv"].index(option)
+        assert (
+            call_logs[1]["argv"][correction_option_index + 1]
+            == call_logs[0]["argv"][initial_option_index + 1]
+        )
     prompts = [Path(log["prompt_log_path"]).read_text() for log in call_logs]
     assert prompts[0] == "prompt"
     assert prompts[1].startswith("# Structured Output の出力補正\n")
@@ -535,9 +542,22 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
     assert calls == 0
 
 
+@pytest.mark.parametrize(
+    "failure_event",
+    [
+        {"type": "error", "message": "Selected model is at capacity"},
+        {
+            "type": "turn.failed",
+            "error": {"message": "Selected model is at capacity"},
+        },
+    ],
+)
 @pytest.mark.parametrize("failure_returncode", [0, 1])
 def test_run_codex_exec_logs_capacity_retrying_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_returncode: int
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_event: dict[str, object],
+    failure_returncode: int,
 ) -> None:
     """capacity error を再試行し、戻り値に依存せず retry event を記録する。"""
     root = make_repo(tmp_path)
@@ -558,10 +578,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "if count == 0:",
-            (
-                "    print(json.dumps({'type': 'error', "
-                "'message': 'Selected model is at capacity'}))"
-            ),
+            f"    print(json.dumps({failure_event!r}))",
             f"    sys.exit({failure_returncode})",
             "output.write_text(json.dumps({'ok': True}))",
             "print(json.dumps({'type': 'turn.completed'}))",
