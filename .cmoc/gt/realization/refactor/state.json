@@ -1350,10 +1350,10 @@
     "last_investigated_at": "2026-07-26_13-12_59_350114000"
   },
   "test/test_runtime_codex_permissions.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "1e79dc80a0c9011af727643dd92c4ec3d855b3d0a1176410f044360e5b691cb3",
-    "last_investigated_at": "2026-08-12_23-46_29_589366000"
+    "last_investigated_sha256": "647b0984d15205ef401da1ccdb65378808a7ad39e4b303a152cbf4809a4a278b",
+    "last_investigated_at": "2026-09-10_20-31_42_078027000"
   },
   "test/test_runtime_codex_profile.py": {
     "investigation_required": true,
