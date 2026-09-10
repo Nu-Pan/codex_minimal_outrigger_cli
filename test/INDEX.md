@@ -546,19 +546,22 @@
 # `test_indexing_common.py`
 
 ## Summary
-- `commons.indexing` の INDEX entry 生成・解析・更新を直接検証する runtime 回帰テスト。入力検証、malformed entry の再生成、hash 一致時の再利用、更新失敗時のロールバックを扱う。
-- directory traversal の境界と更新順を検証する。空ディレクトリ、nested memo、symlink cycle、INDEX symlink、特殊ファイル、非 UTF-8 名、linked worktree の lock、非祖先ディレクトリの並列更新、worker logger 伝播を対象とする。
+- `commons.indexing` の INDEX entry と directory traversal を直接検証する共通回帰テスト群。
+- entry の render/parse、入力検証、hash の計算と再利用、更新順序、並列生成、失敗時の部分書き込み復元を扱う。
+- symlink cycle、特殊ファイル、非 UTF-8 名、空ディレクトリ、nested memo、linked worktree の lock など、INDEX 更新の境界条件を検証する。
 
 ## Read this when
-- `commons.indexing.update_indexes`、`render_index_entry`、`index_target_hash`、`target_content_for_indexing`、`indexing_lock_path` の挙動を変更・調査するとき
-- INDEX 更新の並列化、cwd lock、symlink・特殊ファイル処理、hash の安定性、Codex event ログ、部分書き込み復元を確認するとき
+- INDEX entry の生成・解析・hash 再利用・更新対象判定を変更または調査するとき
+- directory traversal の順序、祖先関係のない更新の並列実行、pushd 中の worker 制約を確認するとき
+- entry 生成失敗時の復元、symlink や特殊ファイルの除外、非 UTF-8 filename の hash、nested memo の扱いを確認するとき
 
 ## Do not read this when
-- CLI lifecycle や indexing サブコマンド全体の仕様・統合動作だけを確認する場合
-- INDEX entry の作成条件や traversal 方針の正本仕様を確認する場合は、参照されている app specification と schema を直接読むとき
+- CLI lifecycle や indexing サブコマンド全体の統合動作を確認することが目的のとき
+- 個別の INDEX entry の正本仕様や生成プロンプトを確認する場合に、実装・仕様そのものを直接読むべきとき
+- 一般的なファイル走査や並列処理を調べるだけで、`commons.indexing` の契約が関係しないとき
 
 ## hash
-- c8f16cdab76a8b0ac23b7144068a0ee4e6fc3f66db049e90da9f94c212a10473
+- abe89b033c919a9c2b5081e47033cdfb2e0bf160c92211daaf118e4482222840
 
 # `test_indexing_preflight.py`
 

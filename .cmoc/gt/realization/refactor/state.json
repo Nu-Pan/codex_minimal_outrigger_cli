@@ -1280,8 +1280,8 @@
   "test/test_indexing_common.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "f30e9bfcf9b18e461502e7d77f4a85942d72d95b3d439a7bbf3c3d76ceef54e4",
-    "last_investigated_at": "2026-08-13_02-24_17_728102000"
+    "last_investigated_sha256": "c8f16cdab76a8b0ac23b7144068a0ee4e6fc3f66db049e90da9f94c212a10473",
+    "last_investigated_at": "2026-09-11_03-15_24_423907000"
   },
   "test/test_indexing_preflight.py": {
     "investigation_required": false,
