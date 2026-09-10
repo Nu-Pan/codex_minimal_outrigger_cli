@@ -1022,8 +1022,8 @@
   "src/sub_commands/realization/apply/fork.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "710c25ffaf466fc4c12f3e50a2931903a5638de62df20e441080773388007503",
-    "last_investigated_at": "2026-08-13_01-46_18_486004000"
+    "last_investigated_sha256": "b30fec108c8bd6f48140f19d19c20336cb753eaf6e803fa9511b0df74ca87c3a",
+    "last_investigated_at": "2026-09-11_02-40_53_819581000"
   },
   "src/sub_commands/realization/refactor/__init__.py": {
     "investigation_required": false,

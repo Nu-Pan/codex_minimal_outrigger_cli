@@ -332,6 +332,31 @@ def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
     """同じ active run であることを確認して joinable/error を保存する。"""
     if run_state not in {"joinable", "error"}:
         raise ValueError(f"unsupported terminal run state: {run_state}")
+    return _set_run_state(
+        context,
+        run_state,
+        allowed_previous_states={"running", run_state},
+    )
+
+
+def set_run_error_after_joinable_publication(
+    context: EditingRunContext,
+) -> SessionState:
+    """joinable 公開後の同じ fork の失敗を error state として保存する。"""
+    return _set_run_state(
+        context,
+        "error",
+        allowed_previous_states={"joinable"},
+    )
+
+
+def _set_run_state(
+    context: EditingRunContext,
+    run_state: str,
+    *,
+    allowed_previous_states: set[str],
+) -> SessionState:
+    """active run の identity と許可済み遷移を検査して state を保存する。"""
     with run_lifecycle_lock(context.repo, context.session_id):
         _, _, state = load_state_for_branch(context.repo, context.session_branch)
         if (
@@ -339,12 +364,14 @@ def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
             or state.run.kind != context.kind
             or state.run.branch != context.run_branch
             or state.run.fork_commit != context.run_fork_commit
-            or state.run.state not in {"running", run_state}
+            or state.run.state not in allowed_previous_states
         ):
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
             # terminal state の公開後に遅延した cleanup が別の terminal state を
             # 上書きしないよう、running からの一方向遷移として検査する。同じ
-            # state の再適用だけは、state write 直後の中断からの recovery に許可する。
+            # state の再適用だけは、state write 直後の中断からの recovery に許可
+            # する。joinable 公開後の fork 自身の後処理 failure だけは専用の
+            # 遷移で error へ戻す。
             raise CmocError(
                 "editing run の state が実行中に変更されました。",
                 ["session state と run branch を確認してください。"],

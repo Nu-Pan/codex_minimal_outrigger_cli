@@ -49,21 +49,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 実装を提供する commons パッケージ。CLI 実行、Codex exec／TUI、設定、Git、ログ、パス、状態、feedback、report、editor input、run lifecycle など、複数の実行経路で共有される基盤機能への入口。
-- 共通 runtime の公開 API や、特定の runtime 境界を横断して挙動を確認・変更する際に、各責務別モジュールへ進むための上位入口。
+- cmoc の CLI、Codex 実行、設定、Git、ログ、パス、結果、状態、feedback、run、report、editor input などで共有される runtime 境界を提供する commons パッケージ。
+- 共通 runtime API や実行ライフサイクルを横断して確認し、対象の個別 runtime module へ進むための入口。
 
 ## Read this when
-- 複数の CLI・Codex・run・feedback 実行経路で共有される runtime 機能の責務や入口を確認するとき
-- 設定、Git、ログ、パス、状態、結果、report、editor input、feedback などの共通実装を変更・調査するとき
-- 対象の責務が特定の runtime サブモジュールに限定されず、commons 配下の公開境界や連携を確認するとき
+- 複数の実行経路で共有される cmoc runtime helper や公開 API を調査・変更するとき。
+- Codex exec/TUI、設定、Git/worktree、logging/report、feedback、session/editing run、editor input handoff の共通責務を確認するとき。
+- commons 配下で調査対象となる個別 runtime module の入口を特定するとき。
 
 ## Do not read this when
-- 特定の runtime サブモジュールの内部実装や個別挙動だけを調べる場合は、その責務に対応するモジュールを直接読む
-- Codex exec／TUI、feedback reporter、editor handoff、run lifecycle など、対象となる個別実装が明確な場合は上位ディレクトリ入口を経由せず該当モジュールを読む
-- 仕様書、schema、oracle、realization file の正本や、個別 CLI サブコマンドの業務処理だけを確認する場合
+- 特定の helper、protocol、schema、CLI サブコマンド、または正本仕様の詳細だけを確認したい場合。
+- INDEX.md の生成・更新規則そのものだけを調べたい場合。
+- commons と無関係な個別機能や利用側の業務ロジックだけを確認する場合。
 
 ## hash
-- d6fc7d3721c9d7587358c408096a8b5473f90d6417d2e5fc45aa370254517b98
+- d4e3bd6c549493dfbc1c037c39f10ad5aec9a427ffcd41316d5ef26660a0a70d
 
 # `config`
 
@@ -117,16 +117,18 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を集約するパッケージ境界。doctor・feedback・indexing・oracle・realization・run・session・tui などの実行入口と、配下の処理群への案内を担う。
-- feedback、run、session、realization など複数モジュールにまたがる処理の構成や責務分担を確認するための上位入口。
+- 対象ディレクトリは、CLI サブコマンドの実装をサブコマンド単位で配置する上位パッケージで、doctor・feedback・indexing・oracle・realization・run・session・tui など個別の実行入口へ進むためのルーティング起点です。
+- apply や review のように現時点で実装本文がない領域も含め、サブコマンド実装の追加・構成確認時に同階層の対象を振り分ける役割を担います。
 
 ## Read this when
-- サブコマンド実装全体の構成や、個別サブコマンドの実行入口を確認するとき。
-- 対象サブコマンドの処理が複数の下位モジュールに分かれており、適切な実装へ進む先を判断するとき。
+- CLI サブコマンド全体の構成を確認するとき。
+- 特定のサブコマンド実装へ進む入口や、サブコマンド間の配置・責務分担を判断するとき。
+- サブコマンド実装の追加先や、realization・oracle・run など配下の階層構成を確認するとき。
 
 ## Do not read this when
-- 対象サブコマンドや処理モジュールが明確で、対応する下位実装を直接確認できるとき。
-- サブコマンド共通 runtime や、個別処理の具体的な実装詳細だけを調べるとき。
+- 特定サブコマンドの具体的な処理、入力、状態遷移、runtime 呼び出しを確認・変更するときは、対応するサブコマンド実装を直接読む。
+- CLI 共通 runtime や INDEX.md の更新規則など、サブコマンド配置を越えた共通処理だけを調べるときは、対応する共通実装・仕様を直接読む。
+- サブコマンド以外のディレクトリや機能を扱うとき。
 
 ## hash
-- fb4f6a0a51924f89800232367c0ec1ade45afa0f030cb542f3572838df478e44
+- 2110f03c4c5f906941cc783b5ebdbe50a6e33d185134e816267312da6fcc32be

@@ -56,6 +56,7 @@ from commons.runtime_run_lifecycle import (
     refresh_indexes,
     rollback_work_unit,
     session_run_was_ready,
+    set_run_error_after_joinable_publication,
     set_run_state,
     start_editing_run,
     tree_changes,
@@ -112,6 +113,7 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
     units: list[tuple[str, int]] = []
     unresolved_findings: dict[str, list[_UnresolvedFinding]] = {}
     cleanup_warnings: list[str] = []
+    joinable_publication_attempted = False
     start_attempted = False
     start_was_ready = False
     try:
@@ -156,6 +158,7 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
                 stop_tracked_codex_children(context.repo, context.session_id) or []
             )
         start_subcommand_step(5, "run を joinable に更新", "publish joinable")
+        joinable_publication_attempted = True
         set_run_state(context, "joinable")
         update_primary_report_fields(state_after="joinable")
         start_subcommand_step(6, "fork report を保存", "write fork report")
@@ -229,6 +232,7 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
                 unresolved_findings,
                 interruption,
                 [*cleanup_warnings, *cleanup_errors],
+                joinable_publication_attempted=joinable_publication_attempted,
             )
         try:
             report = _write_refactor_report(
@@ -248,6 +252,7 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
                 unresolved_findings,
                 interruption,
                 [*cleanup_warnings, *cleanup_errors],
+                joinable_publication_attempted=joinable_publication_attempted,
             )
         # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
         mark_current_subcommand_interrupted()
@@ -288,14 +293,11 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
             rollback_work_unit(context.run_worktree)
         except BaseException as cleanup_error:
             error_cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
-        try:
-            set_run_state(context, "error")
-            update_primary_report_fields(
-                state_after="error",
-                completion_reason="error",
-            )
-        except BaseException as state_error:
-            error_cleanup_errors.append(f"state update failed: {state_error!r}")
+        _set_refactor_error_state(
+            context,
+            error_cleanup_errors,
+            joinable_publication_attempted=joinable_publication_attempted,
+        )
         _raise_refactor_error(
             context,
             units,
@@ -311,16 +313,15 @@ def _raise_refactor_interruption_error(
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
     interruption: BaseException,
     cleanup_errors: list[str],
+    *,
+    joinable_publication_attempted: bool = False,
 ) -> NoReturn:
     """中断後の cleanup failure を error state/report へ変換する。"""
-    try:
-        set_run_state(context, "error")
-        update_primary_report_fields(
-            state_after="error",
-            completion_reason="error",
-        )
-    except BaseException as state_error:
-        cleanup_errors.append(f"error state update failed: {state_error!r}")
+    _set_refactor_error_state(
+        context,
+        cleanup_errors,
+        joinable_publication_attempted=joinable_publication_attempted,
+    )
     _raise_refactor_error(
         context,
         units,
@@ -363,6 +364,41 @@ def _raise_refactor_error(
         ),
     )
     raise cmoc_error from error
+
+
+def _set_refactor_error_state(
+    context: EditingRunContext,
+    cleanup_errors: list[str],
+    *,
+    joinable_publication_attempted: bool,
+) -> None:
+    """refactor の失敗を許可済み terminal 遷移として保存する。"""
+    state_updated = False
+    try:
+        set_run_state(context, "error")
+        state_updated = True
+    except BaseException as state_error:
+        if joinable_publication_attempted:
+            try:
+                set_run_error_after_joinable_publication(context)
+                state_updated = True
+            except BaseException as recovery_error:
+                cleanup_errors.append(
+                    f"state update failed: {state_error!r}; "
+                    f"joinable publication recovery failed: {recovery_error!r}"
+                )
+        else:
+            cleanup_errors.append(f"state update failed: {state_error!r}")
+    if state_updated:
+        try:
+            update_primary_report_fields(
+                state_after="error",
+                completion_reason="error",
+            )
+        except BaseException as report_state_error:
+            cleanup_errors.append(
+                f"primary report state update failed: {report_state_error!r}"
+            )
 
 
 def _initialize_cycle(context: EditingRunContext) -> list[str]:

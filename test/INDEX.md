@@ -400,19 +400,22 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- 編集 run の fork・join・abandon lifecycle を横断して検証する realization test。apply/refactor の隔離 worktree、state 遷移、agent/INDEX 差分検査、commit/rollback、process tracking、report、interrupt、merge/cleanup を一続きの fixture で確認する。
+- workload fork と共通 run join/abandon の統合 realization test を扱うテストファイル。editing run の session state、隔離 run worktree、fork report、Codex child tracking、INDEX 更新、commit/rollback、join/abandon cleanup、refactor cycle、割り込み・失敗時の復旧と report/state 整合性を横断検証する。
+- apply fork と refactor fork の成果物処理、および run join/abandon の lifecycle 境界を確認するための統合テスト入口。
 
 ## Read this when
-- realization apply/refactor fork の run state 公開から joinable 完了までの挙動を確認したいとき。
-- run join または abandon の merge、force-resolve、worktree/branch cleanup、state hook、report 保存を調べるとき。
-- Codex child tracking、遅延変更・commit、INDEX 生成物、oracle 差分、rename/delete、 中断・失敗時 rollback の統合境界を確認するとき。
+- realization apply/refactor fork の成功・失敗・中断時の run state、worktree、branch、report、process tracking を検証する変更を行うとき。
+- run join または abandon の merge、INDEX conflict・生成物判定、想定外差分、cleanup、force-resolve、再試行動作を確認するとき。
+- refactor の unresolved target、rename 追従、change summary、単位 commit、Codex child 停止、遅延変更・遅延 commit の扱いを調査するとき。
+- fork/join lifecycle の共有 state や report、rollback、post-join hook、通知、Structured Output の差分申告検証に関するテストを探すとき。
 
 ## Do not read this when
-- 単一の実装関数や通常系の細部だけを確認したい場合は、対応する commons または sub_commands の実装・専用テストを直接読む。
-- INDEX エントリー生成や一般的な CLI 動作など、editing run の lifecycle 統合検証を必要としない場合。
+- 対象が単一の低レベル helper の通常系だけで、fork・join・abandon の lifecycle 統合や失敗復旧を扱わないとき。
+- 実装仕様そのものを確認する必要があり、まず realization apply/refactor、editing run、run isolation、indexing などの正本仕様や実装モジュールを直接読むべきとき。
+- INDEX.md の生成規則や一般的な indexing 動作だけを調べるとき。
 
 ## hash
-- d9017acd0160f365d7501d55b15f9b62531abc19fe0bd964410120535d47591c
+- ea403f1bf3b9691b55f8e35fae19b06bd8450d9499cf3e019a5f94defd96e062
 
 # `test_editor_input_handoff.py`
 

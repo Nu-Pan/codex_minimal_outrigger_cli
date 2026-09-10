@@ -122,35 +122,34 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、互換 import path、共通 runtime、サブコマンド実装への案内を担う src 階層。Typer／Click の互換処理を含む公開実行経路の上位入口。
+- cmoc の CLI 起動入口と、共通 runtime・互換 import・サブコマンド実装をまとめるソース階層。
+- acp、basic、config、oracle などの互換入口と、commons の共有 runtime、sub_commands の実行機能へ進むための上位ルーティング起点。
 
 ## Read this when
-- cmoc の CLI 起動経路、コマンドツリー、引数解析エラー処理、補完 probe の境界を確認するときは main.py を読む。
-- oracle.*、acp.*、basic.*、config.*、cmoc_runtime の互換 import 経路や、src 単体起動時の package shim を確認するときは対応する互換入口を読む。
-- 複数の実行経路で共有される runtime 機能や、doctor・feedback・indexing・oracle・realization・run・session・tui のサブコマンド構成から具体的な実装先を判断するときは commons または sub_commands を読む。
+- cmoc の CLI 構成、共通 runtime、互換 import、またはサブコマンド実装の配置を横断して確認するとき。
+- 特定の機能を調査する前に、起動入口・共有処理・互換層・サブコマンドのどの下位要素へ進むべきか判断するとき。
 
 ## Do not read this when
-- 正本側 oracle.* の実装、個別 runtime API の詳細、特定サブコマンドの業務処理だけを確認したいときは、src の上位入口ではなく対応する正本・commons の責務別モジュール・sub_commands 配下の実装を直接読む。
-- 互換入口の移行完了や削除条件だけを判断したいときは、各 shim の利用箇所と正本側の公開設定を直接確認する。
+- 特定の CLI サブコマンド、runtime helper、互換 API、正本仕様、または実装詳細だけを確認したいとき。
+- INDEX.md の更新処理や feedback observation の報告規則だけを調べるとき。
 
 ## hash
-- 5c29b099b3b82b5841bd9aec57e51f6fa909389901ae551fe5d47c945348c85b
+- 3ff59ba4ac4cf3275e4195930d6cd1492d4dba280c5489436a85b1f42a8e5de6
 
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の各機能について、CLI 統合・runtime・builder・state・Git・Codex・通知などの外部挙動と境界条件を検証する回帰テスト群を収録する。
-- 個別機能の実装や正本仕様へ進む前に、変更対象の利用者向けライフサイクル、失敗分類、永続状態、ファイル境界を観測可能なテスト例から確認するための入口。
+- cmoc のテスト群を、CLI・runtime・Codex 実行・indexing・feedback・session/run lifecycle・prompt/editor・通知などの外部契約と安全境界ごとに案内するテストディレクトリ。
+- 共通テスト helper、fixture、実経路統合テスト、および各機能の単体・統合・受け入れテストへの入口を提供する。
 
 ## Read this when
-- cmoc の CLI、Codex 実行、indexing、oracle／realization、session、feedback、editor handoff、runtime、通知などについて、実装変更が既存の外部契約や安全境界に与える影響を調べるとき。
-- 特定のサブコマンドや共通基盤の回帰条件を、単体テストから実経路統合テストまで横断して探すとき。
-- 対象機能の成功・失敗・中断時における report、state、Git 差分、process、ログなどの観測結果を確認したいとき。
+- 実装変更や仕様確認に対して、どの外部挙動・回帰テストを確認すべきかをテスト領域別に探すとき。
+- CLI lifecycle、Codex runtime、Git/worktree、indexing、feedback、session/run、prompt/editor、通知、設定、状態永続化などの検証範囲を確認するとき。
+- 実経路の独立 process・PTY・実 Codex CLI を含む受け入れ試験の対象範囲を調べるとき。
 
 ## Do not read this when
-- 正本仕様、schema、実装本体、prompt の正本文面そのものを確認することが目的で、検証例ではなく対応する oracle・実装・schema を直接読むべきとき。
-- テスト対象の外部挙動や回帰条件に関係しない、別機能の実装詳細や一般的な pytest の実行方法だけを調べるとき。
-- 実際の Codex 推論を含む受け入れ試験が必要ない単純な局所変更で、該当する専用テストや実装へ直接進む方が適切なとき。
+- 正本仕様、実装本体、schema、prompt の具体的内容を確認することが目的で、対応する oracle・src・schema ファイルを直接読むべきとき。
+- テスト対象の外部契約や回帰条件を調べる必要がなく、単純な開発環境設定や一般的な pytest 実行方法だけを確認したいとき。
 
 ## hash
-- fff1e60af15546ad9a001c8bae10a2ec06669821eee2dff5bfb1bb6d2b86df9a
+- 0e5c0420368c4e33f09824a96584d89dee8d11080af94e6d1175dc72262e4d5f
