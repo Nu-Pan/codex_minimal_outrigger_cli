@@ -363,22 +363,19 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 呼び出しにおける prompt、作業ディレクトリ、アクセスモード、handoff、通知・hook 設定の引き渡しを検証するテスト。
-- Codex agent/provider 設定の事前検証と、未検証 CLI バージョンでの callback 無効化を確認する。
-- TUI 呼び出しの成功、CLI 不在、KeyboardInterrupt、非 0 終了時における call log とサブコマンドイベントの記録、および timestamp 衝突時のログ保持を検証する。
+- Codex TUI 実行の統合テスト。完全な prompt と CLI 引数、アクセスモード、linked worktree、エディター引き渡し、通知・hook 設定、call log、サブコマンドイベントを検証する。
+- 設定不備や Codex CLI の未検証バージョン、CLI 不在、KeyboardInterrupt、非 0 終了時に、実行前検証・失敗分類・ログ保存・エラー報告が仕様どおりになることを確認する。
 
 ## Read this when
-- Codex TUI の実行引数や完全な prompt が正しく渡されるか確認するとき。
-- アクセス境界、linked worktree、editor input handoff、通知 hook の設定を確認するとき。
-- 設定不備や CLI バージョン差異に対する事前失敗・callback 制御を確認するとき。
-- TUI の各終了経路で call log とイベントログがどう記録されるか調べるとき。
+- Codex TUI 呼び出しの引数・prompt・sandbox・通知 hook・editor input handoff の挙動を変更または確認するとき。
+- Codex CLI 呼び出しの成功・失敗、call log、サブコマンドイベント、設定検証順序をテストする必要があるとき。
 
 ## Do not read this when
-- prompt 構築、アクセスモード、Codex 実行仕様そのものを確認する場合は、対応する正本仕様や実装を直接読むとき。
-- TUI 以外の Codex 実行経路や、ログ記録を伴わない処理だけを調べるとき。
+- Codex TUI 以外の実行経路や、prompt 構築そのものの仕様を直接確認したいとき。
+- テスト対象の実装ではなく、TUI の正本仕様や Codex CLI の一般的な利用方法だけを確認するとき。
 
 ## hash
-- c86c4099ab79aa0a24748d2c34339bcbfe339c6d670dd7600ba1b30e23e2c29a
+- 0b8c272c9146c04101b3c74e5cf5077085420878d1f8fd51d8f270fb8967d76e
 
 # `test_doctor_cli.py`
 
@@ -777,19 +774,22 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv の model・sandbox・provider 上書き契約を検証するテスト。
-- MCP 設定、環境変数分離、通知 hook、schema 保存、JSON 出力処理の起動前境界を検証する。
+- Codex argv の model・sandbox・provider 上書き引数を、各 FileAccessMode と agent call 設定に基づいて検証するテスト。
+- MCP context の環境変数隔離、editor input handoff の条件付き注入、SessionStart hook と legacy notification の組み合わせを検証する。
+- Codex CLI の検証済みバージョン判定、provider TOML のエンコード、未定義設定の fail-closed、schema のハッシュ保存と不正 JSON 出力の扱いを検証する。
 
 ## Read this when
-- Codex の argv 構築、sandbox と provider の選択、MCP 注入、通知 hook の対応条件を変更・確認するとき
-- runtime_codex_profile の schema 保存や出力 JSON 読み取りの挙動を変更・確認するとき
+- Codex 起動時の sandbox、approval、model、provider、MCP、notification または hook の argv 契約を変更・確認するとき。
+- Codex subprocess の環境変数継承や editor input handoff の注入条件を変更・確認するとき。
+- Codex CLI バージョン判定、provider 設定の TOML 化、未定義設定の起動前エラー、schema/output の入出力境界を変更・確認するとき。
 
 ## Do not read this when
-- Codex argv や runtime_codex_profile の契約に関係しない機能を変更・確認するとき
-- 個別の共通 fixture や別機能の仕様を直接調べるとき
+- Codex argv の上書き契約やその検証対象に関係せず、runtime_codex_profile の実装本体を直接調べるとき。
+- Codex の model/provider 仕様そのものを確認する必要があり、参照先の正本仕様を直接読むべきとき。
+- 一般的な pytest 実行方法や、対象テストが扱わない別の runtime・MCP 機能を調べるとき。
 
 ## hash
-- 142cb44530bc06a1eefe9e1deee7c6f92ecd71e42238a7a86ff8defb94d23036
+- e5b196651877a28704aea0701e21c400034bad1ba98f661d43ad2331662fad30
 
 # `test_runtime_config.py`
 

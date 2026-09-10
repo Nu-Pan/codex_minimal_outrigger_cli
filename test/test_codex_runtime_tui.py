@@ -57,7 +57,7 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
         bin_dir / "codex",
         [
             "import json, os, pathlib, sys",
-            "if sys.argv[1:] == ['--version']:",
+            "if '--version' in sys.argv[1:]:",
             "    print('codex-cli 0.153.4')",
             "    raise SystemExit(0)",
             "args = sys.argv[1:]",
@@ -151,7 +151,7 @@ def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
         bin_dir / "codex",
         [
             "import json, pathlib, sys",
-            "if sys.argv[1:] == ['--version']:",
+            "if '--version' in sys.argv[1:]:",
             "    print('codex-cli 0.152.0')",
             "    raise SystemExit(0)",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps(sys.argv[1:]))",

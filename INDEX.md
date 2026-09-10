@@ -122,40 +122,34 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口とサブコマンド構成を担い、doctor・tui・session・oracle・realization・run などを実装関数へ接続する。
-- acp・basic・config などの互換 import 入口と、Codex 実行・設定・Git・ログ・結果・状態などの共通 runtime helper をまとめる。
-- サブコマンド別の実装と builder adapter へ進むための上位階層であり、CLI の公開構成や共通処理の調査起点となる。
+- cmoc の src 側実装を束ねる上位入口で、CLI 起動、互換 import、共通 runtime、サブコマンド群へ進むための構成を確認する。
+- 公開 CLI の起動経路やコマンドツリーは main.py、共通実行時機能や INDEX.md lifecycle は commons、個別サブコマンドは sub_commands、互換名前空間は acp・basic・config・cmoc_runtime・oracle.py から確認できる。
 
 ## Read this when
-- cmoc の CLI 起動経路、コマンドツリー、Typer／Click の互換境界を確認するとき。
-- 互換 import 入口、共通 runtime、または session・oracle・realization・run などのサブコマンド実装の配置を俯瞰するとき。
+- src 配下の実装構成を俯瞰し、CLI・共通 runtime・互換入口・個別サブコマンドのどこから調査を始めるか判断するとき。
+- cmoc の起動入口から各コマンドや runtime 実装へ進む導線を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、特定 runtime helper、builder adapter の入力制約や生成結果を確認したいときは、対応する下位要素を直接読む。
-- 正本仕様や oracle 側の実体実装を確認したいときは、src の上位階層ではなく対応する仕様・実体モジュールを直接読む。
+- 特定コマンドの業務処理、共通 runtime の個別仕様、互換 import の詳細、正本 oracle 実装を確認したいときは、対応する下位要素や正本側を直接読む。
+- INDEX.md の生成・更新規則や正本仕様そのものだけを確認したいときは、src 全体ではなく該当する実装・仕様の直接の定義元を読む。
 
 ## hash
-- 2538658fa6f6fd0dace702d4a4531e48d2dcf4bb010d0c93623504e87874d438
+- 64a98b0a3e21d8668d2585f104b0edce7bfe79f082a578b1f794506b8f442736
 
 # `test`
 
 ## Summary
-- test 配下のテスト群は、cmoc の CLI・Codex runtime・indexing・session・feedback・prompt/editor・Git・state・通知などに関する外部挙動と安全境界を検証する回帰テストの集合である。
-- 個別テストは、通常経路だけでなく、失敗・中断・並列実行・linked worktree・不正入力・特殊ファイル・rollback などの境界条件を担当する。
-- support module と conftest は、テスト実行用の Codex、Git、外部コマンド、doctor、schema path、toast 隔離などの共通基盤を提供する。
+- cmoc のテストスイート。CLI・Codex runtime・worktree/Git・session/run lifecycle・feedback・indexing・editor handoff・通知など、実装の外部契約と安全境界を検証するテスト群、およびテスト実行用の共通 fixture/helper を含む。
 
 ## Read this when
-- cmoc の公開 CLI や末端サブコマンドの外部契約、終了結果、report・state・Git・ログの観測結果を回帰確認するとき
-- Codex exec/TUI の prompt、argv、sandbox、provider、quota retry、Structured Output、subprocess lifecycle、call log を検証するとき
-- indexing、INDEX 更新、oracle・realization、session lifecycle、feedback、editor input handoff、prompt editor の制御ロジックや安全境界をテストから確認するとき
-- Git・worktree・state・config・path・symlink・特殊ファイル・process tracking・Windows toast など、実行環境に関わる境界条件を調査するとき
-- テスト共通 fixture や helper の利用範囲、隔離条件、canonical schema・builder の互換公開面を確認するとき
+- 実装変更がどの外部挙動や lifecycle、filesystem/Git 境界に影響するかを確認するとき
+- 対象機能の回帰条件、統合テストの観測点、または対応するテスト支援を探すとき
+- CLI の実経路、Codex subprocess/TUI、report/state/call log などの受け入れ試験範囲を確認するとき
 
 ## Do not read this when
-- 正本仕様、schema、builder、実装本体の意図や詳細を確認することが目的のときは、各テストが対応付ける oracle・realization・src の対象へ直接進む
-- 単一関数の局所的な実装詳細や、テストが扱わない機能の挙動を調べるとき
-- テスト対象ではない一般的な CLI 利用方法、Codex の回答品質、または INDEX.md の生成規則そのものだけを確認したいとき
-- 個別の共通 helper・fixture の実装だけを確認したいときは、該当する support module または conftest を直接読む
+- 正本仕様や実装本体の詳細を確認することが目的で、対応する oracle・realization・src の対象を直接読むべきとき
+- 対象機能と無関係なテスト領域を調査するとき
+- 単一の schema や prompt 文面だけを確認すれば足り、テストの回帰条件を調べる必要がないとき
 
 ## hash
-- b95dab8506414dbe7939838b951b670205c431c9f87cede08df66b984488937a
+- 748222dc58c7d563fa99d1ac59432d5a3d4bd1f7301ce090c4eaf446bbaeb859

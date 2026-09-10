@@ -38,8 +38,8 @@
   "oracle/doc/app_spec/codex_exec_rule.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "7d18f4117a3b7cb80baf366c94c83d063742c17b869bba7a34851fd7dfd799f0",
-    "last_investigated_at": "2026-08-12_22-07_42_178808000"
+    "last_investigated_sha256": "987af56ac9b1b2bc5d4d7ff866b1eb819d74682f28dbda18f5402203e658d3f8",
+    "last_investigated_at": "2026-09-10_18-41_52_303361000"
   },
   "oracle/doc/app_spec/codex_model_provider.md": {
     "investigation_required": true,

@@ -325,7 +325,7 @@ def test_tui_notification_requires_exact_verified_codex_version(
     )
     assert calls == [
         (
-            ["codex", "--version"],
+            ["codex", "--sandbox", "read-only", "--version"],
             {
                 "cwd": tmp_path,
                 "env": environment,
@@ -347,7 +347,9 @@ def test_tui_notification_version_probe_failure_is_nonfatal(
 
     def fail_run(*_args: object, **_kwargs: object) -> object:
         """有限時間を超えた version probe を再現する。"""
-        raise subprocess.TimeoutExpired(["codex", "--version"], 2)
+        raise subprocess.TimeoutExpired(
+            ["codex", "--sandbox", "read-only", "--version"], 2
+        )
 
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fail_run)
 

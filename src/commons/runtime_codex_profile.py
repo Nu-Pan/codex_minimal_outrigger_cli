@@ -503,7 +503,7 @@ def codex_cli_supports_tui_notification_hooks(
     """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
     try:
         result = subprocess.run(
-            ["codex", "--version"],
+            ["codex", "--sandbox", "read-only", "--version"],
             cwd=cwd,
             env=environment,
             stdin=subprocess.DEVNULL,
