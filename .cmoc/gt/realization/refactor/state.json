@@ -348,10 +348,10 @@
     "last_investigated_at": "2026-09-10_20-02_10_303261000"
   },
   "oracle/src/oracle/acp_builder/quota_probe.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "6672e90eae1840a676b53dd2b4435362b16946cd9045feb31bfcffae81ebfe4a",
-    "last_investigated_at": "2026-08-13_09-59_27_959649000"
+    "last_investigated_sha256": "1ac746647bce56257d4ec7e41e2b7113802e8e2926f32e10699b404067da3ad6",
+    "last_investigated_at": "2026-09-11_03-56_10_092554000"
   },
   "oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py": {
     "investigation_required": true,
