@@ -49,21 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI、Codex 実行、設定、Git、パス、ログ、結果、state、feedback、editor input、report、editing run など、複数の実行経路で共有する runtime helper 群を提供するパッケージ。
-- 共通 runtime API の公開窓口と、各 lifecycle・永続化・外部プロセス境界の個別実装へ進むための入口。
+- `src/commons` は cmoc の共通 runtime 実装をまとめるパッケージで、CLI、Codex 実行、設定、Git、ログ、パス、feedback、state、report、run lifecycle など横断的な実行基盤の入口を提供する。
+- 共通 runtime API や個別 helper の責務、Codex・editor input handoff・feedback・run 管理など特定領域の実装を調べる際に、対象領域に対応するファイルへ進むためのディレクトリ入口。
 
 ## Read this when
-- 複数の cmoc 実行経路にまたがる共通 runtime 機能の責務や公開 API を確認するとき
-- CLI、Codex、Git、feedback、editor input、report、state、editing run の共通処理を変更・調査するとき
-- 個別 helper の実装へ進む前に、関連する runtime 境界と責務の分担を把握するとき
+- 複数の実行経路で共有される runtime 機能の所在や、commons 配下の責務分担を把握したいとき。
+- CLI の実行 lifecycle、Codex exec／TUI、設定、Git、ログ、パス、feedback、report、state、editing run などの共通基盤を変更・調査するとき。
+- 対象領域の専用 runtime helper を特定し、その実装入口から確認を始めたいとき。
 
 ## Do not read this when
-- 特定の helper の内部実装や個別挙動だけを確認したいときは、対応する runtime module を直接読む
-- 利用者向けの command 手順や正本仕様だけを確認したいときは、対応する app specification または subcommand 文書を直接読む
-- Structured Output schema、feedback payload schema、設定モデルなど個別の定義だけを確認したいときは、その定義元を直接読む
+- 特定の runtime helper の内部挙動だけを確認したい場合は、commons 配下の対応する個別実装を直接読む。
+- 個別サブコマンドの業務処理、正本仕様、schema、report 項目定義などが目的で、共通 runtime 実装の責務分担を確認する必要がないときは、それぞれの直接の定義元を読む。
 
 ## hash
-- 59a20ecb56acd04235c3bee72135265acb7a1754cef0f39e6938611cf20f0aa2
+- 870870b70b210f5982f71a1c4517a26c828dfe9910aed8c111da1afaaa2da54b
 
 # `config`
 

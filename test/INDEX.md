@@ -685,16 +685,20 @@
 # `test_prompt_editor_input.py`
 
 ## Summary
-- prompt editor input の予約・編集・最終収集・確定処理を、保存先の分離、入力抽出、editor 選択、異常系の安全性までテストする。
+- prompt editor input の外部挙動を検証する pytest。作業用 file と保存コピーの分離、入力抽出、エディタ選択、異常時の作業 file 保持を扱う。
+- 保存先や editor work file の path 境界、symlink、非 regular file に対する拒否と、handoff target の cleanup を検証する。prompt editor input の変更が複数の外部契約へ影響する場合の受け入れ条件として利用する。
 
 ## Read this when
-- prompt editor input のファイル配置、timestamp 衝突回避、skeleton の placeholder 検証、editor 起動引数、最終入力の収集、異常時の作業 file 保持を確認・変更するとき。
+- prompt editor input の予約・編集・収集・確定処理を変更または検証するとき。
+- エディタの優先順位や code の --wait、skeleton の placeholder、最終入力の読み取り回数を確認するとき。
+- 保存先の分離、path 境界、symlink 安全性、エラー時の cleanup と復旧可能性を確認するとき。
 
 ## Do not read this when
-- prompt editor input の実装や正本仕様そのものを直接確認すれば足り、テストケースの期待挙動や回帰検証を調べる必要がないとき。
+- prompt editor input の正本仕様や実装の詳細そのものを読むことが目的で、pytest の検証観点が不要なとき。
+- prompt editor input と無関係な CLI 入力、一般的なエディタ起動、または別機能のファイル保存を調べるとき。
 
 ## hash
-- d24e3977dcebff440617ed12b59c88e3dc47a000b3b9dd51cff790ef84f7f81c
+- 530fc4b3fb9899abbffd1f4c96018dfa3859f9dc114998cc586b4e2702c3a455
 
 # `test_prompt_parts.py`
 

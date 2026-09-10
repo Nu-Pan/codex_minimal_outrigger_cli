@@ -321,6 +321,105 @@ def test_editor_input_rejects_path_outside_work_directory(
     assert not input_copy.exists()
 
 
+@pytest.mark.parametrize("symlinked_directory", ["gu", "log"])
+def test_editor_input_rejects_symlinked_storage_directory(
+    tmp_path: Path,
+    symlinked_directory: str,
+) -> None:
+    """保存先 directory の symlink をたどって外部へ作成しない。"""
+    root = tmp_path / "repository"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    gu = root / ".cmoc" / "gu"
+    gu.mkdir(parents=True)
+    if symlinked_directory == "gu":
+        gu.rmdir()
+        gu.symlink_to(outside, target_is_directory=True)
+    else:
+        (gu / "editor_input").mkdir()
+        (gu / "log").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(CmocError, match="保存先"):
+        prompt_editor_input_module.reserve_prompt_editor_input(root)
+
+    assert not (outside / "editor_input").exists()
+    assert not (outside / "log").exists()
+
+
+def test_editor_input_rejects_saved_copy_outside_repository_path(
+    tmp_path: Path,
+) -> None:
+    """保存コピーを指定外 path へ書き込まない。"""
+    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
+        tmp_path
+    )
+    editor_work.write_text("input\n", encoding="utf-8")
+    outside_copy = tmp_path / "outside.md"
+
+    with pytest.raises(CmocError, match="保存コピー"):
+        prompt_editor_input_module.collect_prompt_editor_input(
+            tmp_path,
+            editor_work,
+            outside_copy,
+        )
+
+    assert not outside_copy.exists()
+    assert editor_work.read_text(encoding="utf-8") == "input\n"
+
+
+def test_editor_input_closes_handoff_when_target_id_display_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """target ID の表示失敗でも一時 handoff target を残さない。"""
+    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
+        tmp_path
+    )
+    closed = False
+
+    class FakeTarget:
+        """target close の呼び出しだけを記録する。"""
+
+        target_id = "eit_test"
+
+        def close(self) -> None:
+            nonlocal closed
+            closed = True
+
+    monkeypatch.setattr(
+        prompt_editor_input_module,
+        "_select_editor",
+        lambda: ["fake-editor"],
+    )
+    monkeypatch.setattr(
+        prompt_editor_input_module,
+        "start_editor_input_handoff",
+        lambda _root, _path: FakeTarget(),
+    )
+
+    def fail_print(*_args: object, **_kwargs: object) -> None:
+        """target ID 表示の失敗を再現する。"""
+        raise BrokenPipeError
+
+    monkeypatch.setattr(
+        prompt_editor_input_module,
+        "print",
+        fail_print,
+        raising=False,
+    )
+
+    with pytest.raises(BrokenPipeError):
+        prompt_editor_input_module.edit_prompt_editor_input(
+            tmp_path,
+            editor_work,
+            _SKELETON,
+        )
+
+    assert closed
+    assert editor_work.exists()
+
+
 def test_editor_input_keeps_work_file_when_editor_or_cleanup_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

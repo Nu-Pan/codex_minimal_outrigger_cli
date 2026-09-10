@@ -2,6 +2,7 @@
 
 import re
 import shutil
+import stat
 import subprocess
 import time
 from pathlib import Path
@@ -31,8 +32,10 @@ def reserve_prompt_editor_input(root: Path) -> tuple[Path, Path]:
     # 可変な作業 file と cmoc だけが書く保存記録を別 directory に置く。
     work_dir = editor_work_dir(root)
     log_dir = editor_input_log_dir(root)
-    work_dir.mkdir(parents=True, exist_ok=True)
-    log_dir.mkdir(parents=True, exist_ok=True)
+    for directory in (work_dir, log_dir):
+        _validate_editor_storage_path(directory, require_directory=True)
+        directory.mkdir(parents=True, exist_ok=True)
+        _validate_editor_storage_path(directory, require_directory=True)
 
     # 削除済み work file と同じ timestamp の保存記録も上書きしない。
     while True:
@@ -67,8 +70,8 @@ def edit_prompt_editor_input(
 
     argv = [*_select_editor(), str(editor_work_path)]
     target = start_editor_input_handoff(root, editor_work_path)
-    print(f"editor input handoff target ID: {target.target_id}", flush=True)
     try:
+        print(f"editor input handoff target ID: {target.target_id}", flush=True)
         # エディタが戻った後は target を drain・無効化してから処理を進める。
         result = subprocess.run(argv)
     finally:
@@ -90,6 +93,7 @@ def collect_prompt_editor_input(
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     # 最終時点の通常 file を一度だけ読み、同じ結果を保存と入力抽出に使う。
     validate_editor_work_file(root, editor_work_path)
+    _validate_editor_input_copy_path(root, editor_work_path, input_copy_path)
     final_read_result = editor_work_path.read_bytes()
     with input_copy_path.open("xb") as file:
         file.write(final_read_result)
@@ -99,6 +103,8 @@ def collect_prompt_editor_input(
 def finalize_prompt_editor_input(editor_work_path: Path) -> None:
     """完全 prompt の構築成功後に editor work file を削除する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # 親 directory の symlink をたどって、指定外の file を削除しない。
+    _validate_editor_storage_path(editor_work_path)
     editor_work_path.unlink()
 
 
@@ -132,6 +138,74 @@ def _extract_original_prompt(final_read_result: str) -> str:
         final_read_result,
         flags=re.DOTALL,
     ).strip()
+
+
+def _validate_editor_storage_path(
+    path: Path,
+    *,
+    require_directory: bool = False,
+) -> None:
+    """editor input の保存 path が symlink 経由でないことを検証する。"""
+    absolute = path.absolute()
+    current = absolute
+    while True:
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            mode = None
+        except OSError as exc:
+            raise CmocError(
+                "editor input の保存先を検証できません。",
+                [
+                    "editor input の保存先と親 directory を確認してから再実行してください。"
+                ],
+                f"path: {path}\nreason: {exc}",
+            ) from exc
+        if mode is not None:
+            if stat.S_ISLNK(mode):
+                raise CmocError(
+                    "editor input の保存先は symlink 経由で扱えません。",
+                    [
+                        "editor input の保存先と親 directory を通常の file/directory に戻してから再実行してください。"
+                    ],
+                    f"path: {path}\nsymlink: {current}",
+                )
+            if current != absolute and not stat.S_ISDIR(mode):
+                raise CmocError(
+                    "editor input の保存先の親が directory ではありません。",
+                    [
+                        "editor input の保存先と親 directory を通常の file/directory に戻してから再実行してください。"
+                    ],
+                    f"path: {path}\nnon-directory: {current}",
+                )
+            if require_directory and current == absolute and not stat.S_ISDIR(mode):
+                raise CmocError(
+                    "editor input の保存先 directory が通常の directory ではありません。",
+                    [
+                        "editor input の保存先と親 directory を通常の directory に戻してから再実行してください。"
+                    ],
+                    f"path: {path}",
+                )
+        if current == current.parent:
+            return
+        current = current.parent
+
+
+def _validate_editor_input_copy_path(
+    root: Path,
+    editor_work_path: Path,
+    input_copy_path: Path,
+) -> None:
+    """入力結果の保存コピーを仕様の repository path に限定する。"""
+    expected = editor_input_log_dir(root) / editor_work_path.name
+    if input_copy_path.absolute() != expected.absolute():
+        raise CmocError(
+            "editor input の保存コピー path が不正です。",
+            ["editor input の保存先を確認してから再実行してください。"],
+            f"path: {input_copy_path}\nexpected: {expected}",
+        )
+    _validate_editor_storage_path(input_copy_path.parent, require_directory=True)
+    _validate_editor_storage_path(input_copy_path)
 
 
 def _require_single_original_prompt_placeholder(
