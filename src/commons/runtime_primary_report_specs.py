@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from typing import Literal
 
-ReportTemplate = Literal["summary", "feedback_invocation"]
+ReportTemplate = Literal["summary", "feedback_invocation", "refactor_fork"]
 TerminalClassification = Literal["natural_completion", "user_interruption", "error"]
 
 
@@ -120,6 +120,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "refactor_state_path",
             "completion_reason",
         ),
+        "refactor_fork",
     ),
     "run join": PrimaryReportSpec(
         "run/join",

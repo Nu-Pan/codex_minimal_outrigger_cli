@@ -231,6 +231,14 @@ def test_early_error_saves_command_specific_primary_report(
         assert 'reduction_agent_call_status: "not_started"' in front_matter
     if command_name == "realization refactor fork":
         assert 'completion_reason: "error"' in front_matter
+        assert "## Current fork" in rendered
+        assert "- processed targets: not_fixed" in rendered
+        assert "## Unresolved targets" in rendered
+        assert "- count: not_fixed" in rendered
+        assert "## Unresolved findings" in rendered
+        assert "## Processing units" in rendered
+        assert "## Refactor state" in rendered
+        assert "## Change summary" in rendered
     if command_name == "realization apply fork":
         assert 'completion_reason: "error"' in front_matter
         assert "feedback_observation_count: 0" in front_matter

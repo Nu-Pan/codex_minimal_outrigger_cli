@@ -509,41 +509,39 @@
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済み runtime 情報から、通常 invocation summary と feedback report invocation summary を Markdown 形式で描画する report writer。実行段階、終端分類、warning/error、次の操作、関連ログ、Codex 最終出力、新規 feedback observation を report に組み立てる。
-- PrimaryReportSpec の template に応じた本文生成に加え、YAML scalar、安全な inline 表現、Codex call の状態、feedback publication・cleanup の状態を補助関数として提供する。
+- 確定済みの runtime 情報から、通常・feedback invocation・refactor fork の fallback primary report を構築する描画処理。実行段階、終端結果、warning/error、次の操作、診断ログ、Codex 最終出力、新規 observation を report へ反映する。
+- primary report の YAML front matter、template 別本文、実行記録、feedback publication 状態、Codex call 状態を扱う下位描画ロジックへの入口。
 
 ## Read this when
-- runtime 情報から primary report または feedback invocation summary を生成・変更するとき
-- report の実行段階、終端結果、warning/error、checkpoint、publication 状態、関連ログの表示規則を確認するとき
-- Codex call の最終出力や受理済み feedback observation を実行記録へ含める処理を調べるとき
+- fallback primary report の出力構造や template 別の本文を確認したいとき
+- 実行済み step、終端分類、warning/error、feedback publication 状態、Codex call 記録の report への反映方法を調べるとき
+- report に記録される Codex 最終出力や新規 feedback observation の扱いを確認するとき
 
 ## Do not read this when
-- feedback observation の受理・送信処理そのものを変更または調査するとき
-- PrimaryReportSpec、TerminalResult、SubcommandLogger などの確定情報源の定義を直接確認するとき
-- コンソール表示やファイルログの仕様自体を確認するときは、先に参照元の app specification を読むべき場合
+- primary report の仕様上の項目定義や publication の業務要件を確認したいときは、参照元の仕様文書を直接読むとき
+- runtime 情報の収集・ログ記録・結果分類そのものを変更または調査するとき
+- fallback report の呼び出し側や report 保存処理の責務だけを確認したいとき
 
 ## hash
-- 5b1e7706d781c004100b7c30cf2a89f59ba279e0d30a6e0f8d9ecdcdc1f7b540
+- bf5e67cf6d37203e73a7fefc399eae4ee16e0206f8d0d1c3750c8d82a6ef9a67
 
 # `runtime_primary_report_specs.py`
 
 ## Summary
-- 非対話末端サブコマンドごとの fallback primary report 定義を集約する入口。
-- command 名から report の保存先、役割、タイトル、追加必須項目、テンプレート種別を確認するための対象。
-- TUI と oracle investigation を除く現行サブコマンドの report 対応範囲を確認できる。
+- fallback primary report の個別サブコマンド定義を確認する入口。doctor、indexing、session、oracle edit、realization、run、feedback report の各非対話末端サブコマンドについて、レポート保存先・役割・タイトル・必須項目・テンプレートを登録し、command 名から定義を取得する。
 
 ## Read this when
-- 特定の非対話末端サブコマンドが保存する primary report の定義を確認するとき。
-- report の保存先や役割、タイトル、追加項目、テンプレート種別を command 名から調べるとき。
-- fallback report の command 対応付けや、`primary_report_spec` による参照方法を確認するとき。
+- fallback primary report のサブコマンド追加・変更時に、対象コマンドの保存先、レポートの役割、タイトル、必須項目、テンプレート登録を確認したいとき。
+- command 名から個別の primary report 定義を解決する処理を調査するとき。
+- session、realization、run、feedback report などの非対話末端サブコマンドが生成するレポート項目の定義を確認するとき.
 
 ## Do not read this when
-- primary report 共通の保存・表示契約を確認したいときは、console と file log の正本仕様を直接読む。
-- 個別サブコマンドの処理手順、終了理由、終了コードを確認したいときは、対応する個別サブコマンド仕様を直接読む。
-- TUI または oracle investigation の通知境界を確認したいときは、対象の通知仕様を直接読む。
+- TUI の通知境界や oracle investigation の仕様を調査するとき。
+- レポートの実際の生成・保存処理や、各サブコマンドの実行ロジックを直接調査するとき。
+- fallback primary report の個別サブコマンド登録や command 名からの定義解決に関係しない処理を調査するとき。
 
 ## hash
-- 1154d05f178d551bf6a00b4ad66c7fbd37bfca1b37add5c62784b2edc2e08161
+- adc63e8e13151af1225a3a6f3ed8e55c17596eda042385c33b258fd216c98974
 
 # `runtime_refactor.py`
 
@@ -623,19 +621,21 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- 明示的な join を必要とする editing run の開始から終了までを、EditingRunContext と lifecycle lock で一貫して管理する共通処理。
-- run の state 遷移、worktree・commit 管理、差分分類、INDEX 更新、cleanup 判定を担当する editing run lifecycle の実装入口。
+- 明示的なjoinを必要とするediting runのライフサイクル共通処理を担う。
+- runの開始・state遷移・work unitのcommit、差分分類、INDEX更新、cleanup判定へ進む入口となる。
+- EditingRunContextとlifecycle lockを共有するため、run branchとsession branchの不変条件を一体として追跡するときに確認する。
 
 ## Read this when
-- editing run の開始、active run の解決・recovery、joinable/error への state 遷移を確認するとき。
-- run worktree の commit・rollback、変更 path の分類、想定外差分の検出、INDEX 更新、branch/worktree cleanup の挙動を確認するとき。
+- editing runを開始し、isolated run branch/worktreeとstateを公開する処理を確認するとき。
+- active runの解決、joinable/errorへの状態遷移、process tracking、失敗時のrecoveryを確認するとき。
+- run worktree・session branch・agent変更・oracle・realization・生成INDEXの差分許可範囲やcleanup判定を確認するとき。
 
 ## Do not read this when
-- editing run lifecycle の正本となる設計・挙動仕様を確認する場合は、先に対応する oracle 文書を読むとき。
-- editing run と無関係な runtime 共通処理や、個別の realization 実装・テストだけを確認するとき。
+- realization fileの適用またはrefactorの個別処理の実装だけを確認するとき。
+- Git操作の低水準ラッパー、runtime stateのデータ定義、INDEX生成規則そのものを確認するときは、それぞれの専用対象を直接読む。
 
 ## hash
-- c70574929f48b54fff769df3d424fa780771a96561cfa7365458a4d275830e30
+- 6273f7f9438649aa2f837c029bb249e4e1ca88094c916f3415e7f17def5eaa0e
 
 # `runtime_run_report.py`
 

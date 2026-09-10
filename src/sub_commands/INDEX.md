@@ -84,23 +84,17 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。
-- apply workload の実行入口と、editing run の作成、oracle 差分範囲の固定、追従 agent 実行、変更検査・commit、run 状態記録への入口。
-- refactor fork の lifecycle、進捗、unresolved findings、完了判定、変更・commit・INDEX 更新の検証、中断・エラー時の cleanup と report 保存への入口。
+- realization workload サブコマンドの実装入口。配下の apply workload と refactor 処理へ進むための上位階層。
 
 ## Read this when
-- realization workload サブコマンドの構成や実装を確認するとき。
-- realization apply workload の実行手順、差分の始点、agent 実行後の変更検査・commit、joinable/error run の状態遷移を確認するとき。
-- realization refactor fork の lifecycle、進捗、完了判定、検証境界、cleanup、report 保存を確認するとき。
+- realization workload の構成を把握し、apply または refactor の実装を調査・変更するとき。
 
 ## Do not read this when
-- realization apply・refactor 以外の処理を確認するとき。
-- apply workload の agent 起動パラメータだけを確認したいとき。
-- editing run の共通 lifecycle、run の join・abandon、refactor state の基本形式を確認したいとき。
-- INDEX.md 生成の一般仕様や利用者向け CLI 仕様だけを確認したいとき。
+- realization workload に関係しない処理を扱うとき。
+- apply や refactor の具体的な実行手順・状態管理を確認するときは、配下の専用実装を直接読むとき。
 
 ## hash
-- 7863e2ae464f696f8c773550be032b394c7f18036877703b399cc1b482dfb7e2
+- 5d2a0cd56c9bfc9e145f47b449786efcc8b152fd0c3caeb969271b4655e4abcc
 
 # `review`
 

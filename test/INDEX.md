@@ -400,24 +400,19 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run lifecycle の統合テストを扱う。
-- realization apply/refactor fork、run join/abandon、session state・run worktree・branch・process tracking の状態遷移を検証する。
-- fork report・lifecycle report・terminal report、INDEX 更新、refactor state 同期、feedback observation、変更 path の扱いを検証する。
-- agent の禁止変更・commit・遅延処理・cleanup・rollback・中断・競合・失敗復旧など、editing run の境界条件を一続きの lifecycle fixture で確認する。
+- 日本語技術文書の作成規定を確認し、対象テストファイルの責務をINDEX.md向けに要約します。
 
 ## Read this when
-- realization apply または realization refactor の fork lifecycle を変更・調査するとき。
-- run join または run abandon の merge、cleanup、state 更新、report 保存を変更・調査するとき。
-- run worktree、branch、process tracking、INDEX refresh、refactor state の連携や異常時の rollback を確認するとき。
-- agent による想定外差分・commit、遅延 child、user interruption、cleanup failure などの統合挙動を検証するとき。
+- workload fork、realization apply/refactor fork、run join/abandonの統合ライフサイクル挙動をテストする必要があるとき
+- run worktree・session state・fork/lifecycle report・process tracking・INDEX同期・rollback/cleanup・中断復旧の境界を確認するとき
+- 共通のediting run fixtureを使ったapply/refactorとrun操作の実装変更が、state遷移・成果物merge・エラー処理に適合するか確認するとき
 
 ## Do not read this when
-- 単一の実装関数や通常経路の細部だけを確認したいときは、対応する実装モジュールの単体テストや本文へ直接進む。
-- INDEX 生成そのものの仕様や一般的な indexing 処理だけを確認したいときは、この統合テストではなく indexing 関連の仕様・テストを読む。
-- run lifecycle と無関係な realization file の内容や、個別の CLI 基盤機能だけを調査するとき。
+- 単一の実装関数の詳細仕様や個別サブコマンドの通常系だけを確認したいときは、対応する実装または専用のapp_spec文書を直接読む
+- INDEX生成処理そのものや一般的なテスト支援fixtureだけを調べるとき
 
 ## hash
-- 5134a09a77ba801eded25c5a058798ea152cad5c27ed86c26b1af99475b480b1
+- 8b7253ac12a4750fc5f31a20cf7de48f9499f0300203eaf3fe10c8a85cc71587
 
 # `test_editor_input_handoff.py`
 
@@ -638,21 +633,20 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話末端サブコマンドの primary report 完了契約を、pytest で検証するテスト群。
-- 早期エラー、中断、Codex 出力と accepted observation の保持、refactor の中断理由、report 更新失敗、未保存 report の内部失敗を対象に、保存先・front matter・ログ・端末出力の契約を確認する。
+- 日本語のテスト群として、非対話末端サブコマンドの primary report 完了契約を検証する。
+- 処理開始前のエラー、中断、Codex 出力・受理済み observation の保持、refactor 中断、既存 report の更新失敗、未保存 report パスの内部失敗を対象とする。
 
 ## Read this when
-- 非対話サブコマンドの primary report が、処理開始前のエラーでもコマンド固有の保存先と必須 front matter を保持するか確認したいとき。
-- ユーザー中断時の invocation summary、fallback report、completion_reason、report cut の状態を確認したいとき。
-- Codex の複数回の出力や accepted feedback observation の report への集約、primary report の atomic 更新失敗、未保存 report を internal failure として扱う契約を調べるとき。
+- 各サブコマンドの primary report に必要な保存先・front matter・完了理由が満たされるか確認するとき。
+- ユーザー中断時の invocation summary や、実行出力・feedback observation の report 反映を検証するとき。
+- primary report の atomic 更新失敗や保存未確認時の内部失敗処理を確認するとき。
 
 ## Do not read this when
-- primary report の通常実装やサブコマンド固有の業務処理そのものを変更・調査するとき。
-- oracle、realization、session など各サブコマンドの詳細な成功フローや仕様を直接確認したいときは、それぞれの実装・仕様対象を読む。
-- pytest の共通 fixture や CLI テスト支援関数の実装を調べるときは、対応する支援モジュールを直接読む。
+- primary report の完了契約や保存失敗処理を扱わず、個別サブコマンドの通常動作だけを確認するとき。
+- report 本文の生成実装や runtime logging の詳細を直接調べる必要があり、このテスト群ではなく実装・仕様の対象を読むべきとき。
 
 ## hash
-- c443c9c13c8276744d26bc81fb9a6ca9dbef3933ae8d48d017f79958ffe86831
+- a04b6c7a3c8f90bffc4730eca5f3f377b683ccacf67e191a9778a35e13c38947
 
 # `test_production_cli.py`
 

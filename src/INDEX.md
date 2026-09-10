@@ -49,18 +49,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 実装を集約する commons パッケージ。CLI の実行ライフサイクル、Codex exec／TUI 境界、設定・Git・状態・ログ・結果・path 管理、feedback、report、editing run、INDEX 更新など、複数のサブコマンドで共有する実行時処理への入口。
+- cmoc の共通 runtime 実装を提供する commons パッケージ。CLI 実行、Codex exec／TUI、設定、Git、ログ、パス、状態、feedback、report、editor input、run lifecycle など、複数の実行経路で共有される基盤機能への入口。
+- 共通 runtime の公開 API や、特定の runtime 境界を横断して挙動を確認・変更する際に、各責務別モジュールへ進むための上位入口。
 
 ## Read this when
-- 複数の cmoc 実行経路にまたがる runtime helper の責務や公開 API を確認・変更するとき。
-- Codex 呼び出し、INDEX 更新、feedback、report、editing run、設定・Git・state・process cleanup の共通実装を横断して調査するとき。
+- 複数の CLI・Codex・run・feedback 実行経路で共有される runtime 機能の責務や入口を確認するとき
+- 設定、Git、ログ、パス、状態、結果、report、editor input、feedback などの共通実装を変更・調査するとき
+- 対象の責務が特定の runtime サブモジュールに限定されず、commons 配下の公開境界や連携を確認するとき
 
 ## Do not read this when
-- 個別サブコマンドの業務フローや正本仕様だけを確認したいとき。
-- 特定の helper の内部実装、データ schema、表示形式などを直接調べる場合は、commons 配下の該当実装または対応する仕様・定義へ進むとき。
+- 特定の runtime サブモジュールの内部実装や個別挙動だけを調べる場合は、その責務に対応するモジュールを直接読む
+- Codex exec／TUI、feedback reporter、editor handoff、run lifecycle など、対象となる個別実装が明確な場合は上位ディレクトリ入口を経由せず該当モジュールを読む
+- 仕様書、schema、oracle、realization file の正本や、個別 CLI サブコマンドの業務処理だけを確認する場合
 
 ## hash
-- 250f92078e0e2114eba1be4262d96b48c3a9544f7dfaeb5a0797adfc3cad0f49
+- d6fc7d3721c9d7587358c408096a8b5473f90d6417d2e5fc45aa370254517b98
 
 # `config`
 
@@ -114,16 +117,15 @@
 # `sub_commands`
 
 ## Summary
-- src/sub_commands は、cmoc のサブコマンド実装をまとめる階層で、doctor・feedback・indexing・oracle・realization・review・run・session・tui などの個別入口へ進むための起点。
-- サブコマンド全体の構成や、目的に応じてどのサブコマンド実装を確認すべきかを判断するための上位ルーティング対象。
+- `src/sub_commands` は、cmoc の各サブコマンド実装をまとめる上位 package 境界。doctor、feedback、indexing、oracle、realization、run、session、tui などの実行入口と、未実装の apply・review の配置を確認するための起点となる。
 
 ## Read this when
-- cmoc のサブコマンド構成を俯瞰したいとき。
-- 扱うサブコマンドが明確でなく、doctor・feedback・indexing・oracle・realization・review・run・session・tui のいずれの実装へ進むべきか判断するとき。
+- サブコマンド全体の構成や、対象の処理領域に応じて個別サブコマンド実装へ進む入口を確認するとき。
+- 特定サブコマンドの CLI 入口、実行フロー、または配下 package の責務分担を調べるとき。
 
 ## Do not read this when
-- 特定のサブコマンドの入口、処理フロー、実行条件を確認したいときは、対応する個別サブコマンド実装を直接読む。
-- サブコマンド共通 runtime や INDEX.md 更新規則など、配下のサブコマンド実装に固有でない処理だけを確認したいとき。
+- サブコマンド共通 runtime、indexing 共通処理、または個別サブコマンドの具体的な処理手順を直接確認したいとき。
+- サブコマンド以外の cmoc 機能を扱うとき。
 
 ## hash
-- 4ece5c7118c76d786c4410de1f3e8d078a255f3260aa28c967c16cbcef056190
+- a858a4fde05df94a2e015f5f13202c2243df00f5b43fa39b4c08dc437bcad4e3

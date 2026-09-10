@@ -354,6 +354,18 @@ def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> N
     ]
 
 
+def test_worktree_change_paths_returns_normalized_relative_paths(
+    tmp_path: Path,
+) -> None:
+    """変更 path を refactor schema と同じ slash 区切りで返す。"""
+    root = make_repo(tmp_path)
+    nested = root / "nested" / "README.md"
+    nested.parent.mkdir()
+    nested.write_text("nested\n")
+
+    assert worktree_change_paths(root) == ["nested/README.md"]
+
+
 def test_apply_rolls_back_unexpected_oracle_change(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1739,6 +1751,160 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     report = reports[0].read_text()
     assert "## Completion\ncompleted_with_unresolved" in report
     assert "## Unresolved targets\n- count: 1\n- paths:\n  - `renamed.md`" in report
+
+
+def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """後続 target の rename でも既存 unresolved target を追従させる。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+    call_log = (tmp_path / "unresolved_call.json").resolve()
+    call_log.write_text("{}\n")
+    reviewed: list[str] = []
+    oracle_reviews = 0
+
+    def fake_refactor(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """README の unresolved 後、別 target で README を rename する。"""
+        nonlocal oracle_reviews
+        purpose = str(kwargs["purpose"])
+        if purpose == "realization refactor change summary":
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "changes": [
+                        {
+                            "category": "rename",
+                            "summary": "README renamed",
+                            "changed_paths": ["README.md", "renamed.md"],
+                        }
+                    ]
+                },
+            )
+        target = purpose.removeprefix("realization refactor: ")
+        reviewed.append(target)
+        if target == "README.md":
+            return SimpleNamespace(
+                returncode=0,
+                call_log_path=call_log,
+                output_json={
+                    "findings": [
+                        {
+                            "title": "README unresolved finding",
+                            "changed_paths": [],
+                            "resolution": {
+                                "status": "unresolved",
+                                "summary": "人間の判断が必要",
+                            },
+                        }
+                    ]
+                },
+            )
+        if target == "oracle/spec.md":
+            oracle_reviews += 1
+            if oracle_reviews > 1:
+                return SimpleNamespace(
+                    returncode=0,
+                    output_json={"findings": []},
+                )
+            worktree = parameter.agent_call_cwd
+            (worktree / "README.md").rename(worktree / "renamed.md")
+            (worktree / "renamed.md").write_text("completely different content\n")
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "findings": [
+                        {
+                            "title": "README rename",
+                            "changed_paths": ["README.md", "renamed.md"],
+                            "resolution": {
+                                "status": "fixed",
+                                "summary": "rename completed",
+                            },
+                        }
+                    ]
+                },
+            )
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    state = _state(state_path)
+    assert state["run"]["state"] == "joinable"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    refactor_state = load_refactor_state(worktree)
+    assert "README.md" not in refactor_state
+    assert refactor_state["renamed.md"]["investigation_required"] is True
+    assert reviewed.count("README.md") == 1
+    assert reviewed.count("oracle/spec.md") == 2
+    assert "renamed.md" not in reviewed
+    report = terminal_primary_report(result).read_text()
+    assert 'completion_reason: "completed_with_unresolved"' in report
+    assert "- count: 1" in report
+    assert "`renamed.md`" in report
+
+
+def test_refactor_missing_target_refreshes_indexes_before_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """消えた target の state 同期でも INDEX 更新を同じ単位へ含める。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path,
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="fork",
+        kind="realization_refactor",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="fork",
+        run_worktree=tmp_path,
+    )
+    events: list[str] = []
+
+    def record_commit(*_args: object, **_kwargs: object) -> None:
+        """missing target の commit 境界を記録する。"""
+        events.append("commit")
+
+    monkeypatch.setattr(
+        refactor_module,
+        "sync_refactor_state",
+        lambda _root: events.append("sync") or {},
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "refresh_indexes",
+        lambda *_args, **_kwargs: events.append("refresh") or [],
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "stop_tracked_codex_children",
+        lambda *_args, **_kwargs: events.append("stop") or [],
+    )
+    monkeypatch.setattr(refactor_module, "_commit_refactor_unit", record_commit)
+
+    refactor_module._run_refactor_unit(
+        context,
+        "README.md",
+        [],
+        {},
+        [],
+    )
+
+    assert events == ["sync", "refresh", "stop", "commit"]
 
 
 @pytest.mark.parametrize(
