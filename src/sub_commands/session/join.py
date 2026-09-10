@@ -22,6 +22,7 @@ from cmoc_runtime import (
     run_cli_subcommand,
     run_codex_exec,
     run_git,
+    session_fork_lock,
     start_subcommand_step,
     work_root,
     write_state,
@@ -54,82 +55,92 @@ def _cmoc_session_join_body(
 ) -> TerminalResult:
     """active session branch を session home branch へ merge する。"""
     root = repo_root()
-    work = work_root()
-    branch = current_branch(work)
-    update_primary_report_fields(
-        session_branch=branch,
-        session_state_before=None,
-        session_state_after=None,
-    )
-    start_subcommand_step(2, "事前条件を確認", "validate preconditions")
-    session_id, path, state = load_state_for_branch(root, branch)
-    if not branch.startswith("cmoc/session/"):
-        raise CmocError(
-            "session join は session branch 上で実行してください。", [], branch
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+    # conflict resolution agent call は session branch/worktree を直接編集するため、
+    # fork・join・abandon を同じ repository lock で直列化する。
+    with session_fork_lock(root):
+        work = work_root()
+        branch = current_branch(work)
+        update_primary_report_fields(
+            session_branch=branch,
+            session_state_before=None,
+            session_state_after=None,
         )
-    if state.session.state != "active" or state.run.state != "ready":
-        raise CmocError(
-            "session join の事前条件を満たしていません。",
-            ["session.state と run.state を確認してください。"],
-            json.dumps(state.to_dict(), ensure_ascii=False, indent=2),
+        start_subcommand_step(2, "事前条件を確認", "validate preconditions")
+        session_id, path, state = load_state_for_branch(root, branch)
+        if not branch.startswith("cmoc/session/"):
+            raise CmocError(
+                "session join は session branch 上で実行してください。", [], branch
+            )
+        if state.session.state != "active" or state.run.state != "ready":
+            raise CmocError(
+                "session join の事前条件を満たしていません。",
+                ["session.state と run.state を確認してください。"],
+                json.dumps(state.to_dict(), ensure_ascii=False, indent=2),
+            )
+        require_clean_worktree(work)
+        home = state.session.session_home_branch
+        update_primary_report_fields(
+            home_branch=home,
+            session_state_before=state.session.state,
         )
-    require_clean_worktree(work)
-    home = state.session.session_home_branch
-    update_primary_report_fields(
-        home_branch=home,
-        session_state_before=state.session.state,
-    )
-    if not home:
-        raise CmocError("session home branch を特定できません。", [], str(path))
-    session_head_before_merge = head_commit(work)
-    update_primary_report_fields(
-        session_branch_head_before_merge=session_head_before_merge,
-    )
-    start_subcommand_step(3, "session branch を merge", "merge session branch")
-    # {{work-root}}/oracle/doc/app_spec/session_state.md:
-    # session_home_branch は local branch なので、同名 remote-tracking branch を
-    # Git に推測させて別の merge target を作らない。
-    run_git(["switch", "--no-guess", home], work)
-    home_head_before_merge = head_commit(work)
-    update_primary_report_fields(home_branch_head_before_merge=home_head_before_merge)
-    merge = git(["merge", "--no-ff", branch], work, check=False)
-    if merge.returncode != 0:
-        resolve_session_join_conflict(work, codex_exec, git)
-    head_after_merge = head_commit(work)
-    merge_commit = (
-        head_after_merge if head_after_merge != home_head_before_merge else None
-    )
-    update_primary_report_fields(merge_commit=merge_commit)
-    state.session.state = "joined"
-    start_subcommand_step(4, "後始末と terminal result を確定", "finish session join")
-    write_state(path, state)
-    update_primary_report_fields(session_state_after="joined")
-    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-    # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
-    # remote-tracking ref で安全性を証明してはならない。
-    reachable = (
-        git(
-            ["merge-base", "--is-ancestor", branch, "HEAD"],
-            work,
-            check=False,
-        ).returncode
-        == 0
-    )
-    if reachable:
-        delete_result = git(["branch", "-d", branch], work, check=False)
-    else:
-        delete_result = CommandResult(1, "", f"session branch is not merged: {branch}")
-    warnings: list[str] = []
-    if delete_result.returncode != 0:
-        warnings.append(f"session branch was not deleted: {branch}")
-    return TerminalResult(
-        details=(
-            ("session_id", session_id),
-            ("joined_to", home),
-            ("deleted_session_branch", delete_result.returncode == 0),
-        ),
-        warnings=tuple(warnings),
-    )
+        if not home:
+            raise CmocError("session home branch を特定できません。", [], str(path))
+        session_head_before_merge = head_commit(work)
+        update_primary_report_fields(
+            session_branch_head_before_merge=session_head_before_merge,
+        )
+        start_subcommand_step(3, "session branch を merge", "merge session branch")
+        # {{work-root}}/oracle/doc/app_spec/session_state.md:
+        # session_home_branch は local branch なので、同名 remote-tracking branch を
+        # Git に推測させて別の merge target を作らない。
+        run_git(["switch", "--no-guess", home], work)
+        home_head_before_merge = head_commit(work)
+        update_primary_report_fields(
+            home_branch_head_before_merge=home_head_before_merge
+        )
+        merge = git(["merge", "--no-ff", branch], work, check=False)
+        if merge.returncode != 0:
+            resolve_session_join_conflict(work, codex_exec, git)
+        head_after_merge = head_commit(work)
+        merge_commit = (
+            head_after_merge if head_after_merge != home_head_before_merge else None
+        )
+        update_primary_report_fields(merge_commit=merge_commit)
+        state.session.state = "joined"
+        start_subcommand_step(
+            4, "後始末と terminal result を確定", "finish session join"
+        )
+        write_state(path, state)
+        update_primary_report_fields(session_state_after="joined")
+        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
+        # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
+        # remote-tracking ref で安全性を証明してはならない。
+        reachable = (
+            git(
+                ["merge-base", "--is-ancestor", branch, "HEAD"],
+                work,
+                check=False,
+            ).returncode
+            == 0
+        )
+        if reachable:
+            delete_result = git(["branch", "-d", branch], work, check=False)
+        else:
+            delete_result = CommandResult(
+                1, "", f"session branch is not merged: {branch}"
+            )
+        warnings: list[str] = []
+        if delete_result.returncode != 0:
+            warnings.append(f"session branch was not deleted: {branch}")
+        return TerminalResult(
+            details=(
+                ("session_id", session_id),
+                ("joined_to", home),
+                ("deleted_session_branch", delete_result.returncode == 0),
+            ),
+            warnings=tuple(warnings),
+        )
 
 
 def resolve_session_join_conflict(

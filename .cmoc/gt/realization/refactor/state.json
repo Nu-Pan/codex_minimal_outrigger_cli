@@ -121,9 +121,9 @@
   },
   "oracle/doc/app_spec/session_state.md": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "a51826f9117628aed11af12abea90cb9d81df228584fb1457e70afad67115828",
-    "last_investigated_at": "2026-08-11_22-28_20_144959000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "952da2b406d2dee7b88866e693ce53b39ee6010760e358d5b34675286c7e63b1",
+    "last_investigated_at": "2026-09-10_11-42_21_036153000"
   },
   "oracle/doc/app_spec/sub_command/doctor.md": {
     "investigation_required": true,

@@ -122,20 +122,22 @@
 # `src`
 
 ## Summary
-- cmoc の src 配下にある CLI 起動入口、互換 import 入口、共通 runtime、サブコマンド群を案内する最上位の実装入口。
-- コマンドツリーから共通基盤、互換層、個別サブコマンド実装へ進むための構成上の起点。
+- cmoc の CLI 起動入口と Typer／Click 互換境界を構成し、doctor・tui・indexing・feedback、session・oracle・realization・run の各サブコマンドを実装へ接続する。
+- cmoc_runtime や oracle.*、acp.*、basic.*、config.* などの互換 import 入口を提供し、共通 runtime・正本実装・旧公開名への導線をまとめる。
+- サブコマンド実装は用途別パッケージに分かれており、個別の実行フローや処理仕様へ進むための上位入口となる。
 
 ## Read this when
-- cmoc の CLI 全体の起動経路、公開コマンド構成、サブコマンドの配置を把握したいとき。
-- 互換 import と正本側実装の境界、または複数機能で共有される runtime 基盤の所在を確認したいとき。
-- 個別機能の実装を読む前に、src 配下でどの責務の入口を選ぶべきか判断したいとき。
+- cmoc の CLI コマンドツリー、console script の起動経路、または Typer／Click の引数解析・補完互換境界を確認するとき。
+- doctor・tui・indexing・feedback、session・oracle・realization・run のどのサブコマンド実装へ進むべきかを判断するとき。
+- 旧 import path から共通 runtime、oracle、acp、basic、config の正本実装へ移行する入口や公開面を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime helper、互換 shim、oracle／realization／run の具体的な挙動だけを確認したいときは、対応する下位要素を直接読む。
-- 正本仕様、schema、INDEX.md 更新規則、feedback の個別処理を調べるときは、専用の仕様または実装を直接読む。
+- 特定サブコマンドの業務処理、runtime API、feedback の状態遷移、または oracle／realization の正本仕様を確認したいときは、対応する下位実装や正本文書を直接読む。
+- 個別の互換モジュールが再公開する API の詳細や、具体的な移行完了条件だけを確認したいときは、その互換入口または移行先を直接読む。
+- INDEX.md の生成・更新処理そのものだけを確認したいときは、indexing の実装と共通 indexing runtime を直接読む。
 
 ## hash
-- af069280003367889b9d0d9fcfcebde5a26f31a92b83fdba90dd5eb033e58320
+- 303f30f0177f19a05c61e401273cab780f6d65b36a79826f3c7a7f2afbf4e6db
 
 # `test`
 

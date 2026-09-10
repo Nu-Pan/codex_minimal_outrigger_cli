@@ -151,7 +151,7 @@ def _reject_non_directory_state_path(path: Path) -> None:
 
 @contextmanager
 def session_fork_lock(root: Path) -> Iterator[None]:
-    """repository 共通の session fork 排他 lock を保持する。"""
+    """repository 共通の session lifecycle 排他 lock を保持する。"""
     lock_path = git_common_dir(root) / "cmoc-session-fork.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:

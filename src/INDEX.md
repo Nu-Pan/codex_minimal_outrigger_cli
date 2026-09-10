@@ -49,20 +49,22 @@
 # `commons`
 
 ## Summary
-- `src/commons` は cmoc の共通 runtime 実装をまとめるパッケージで、CLI、Codex 実行、設定、Git、ログ、パス、feedback、state、report、run lifecycle など横断的な実行基盤の入口を提供する。
-- 共通 runtime API や個別 helper の責務、Codex・editor input handoff・feedback・run 管理など特定領域の実装を調べる際に、対象領域に対応するファイルへ進むためのディレクトリ入口。
+- commons パッケージの初期化と、CLI・Codex・設定・Git・ログ・パス・状態・feedback などで共有される runtime API の入口を提供するディレクトリです。
+- INDEX.md の生成・更新 lifecycle、prompt editor input、Codex exec／TUI 実行、設定・Git・ログ・パス・結果・状態管理など、複数の実行経路から利用される runtime 境界を扱います。
+- feedback の受付・保存・report state・publication、editing run の lifecycle・join・report、Windows 通知など、個別の共通 runtime 機能へ進むための下位入口を含みます。
 
 ## Read this when
-- 複数の実行経路で共有される runtime 機能の所在や、commons 配下の責務分担を把握したいとき。
-- CLI の実行 lifecycle、Codex exec／TUI、設定、Git、ログ、パス、feedback、report、state、editing run などの共通基盤を変更・調査するとき。
-- 対象領域の専用 runtime helper を特定し、その実装入口から確認を始めたいとき。
+- commons の共通 runtime API やパッケージ入口を確認するとき。
+- Codex 実行、CLI lifecycle、INDEX lifecycle、prompt editor input、設定・Git・ログ・パス・結果・状態など、複数の実行経路にまたがる共通処理の入口を探すとき。
+- feedback の observation 受付・保存・状態管理や editing run の lifecycle・join・report など、commons 配下の共通 runtime 境界を横断して確認するとき。
 
 ## Do not read this when
-- 特定の runtime helper の内部挙動だけを確認したい場合は、commons 配下の対応する個別実装を直接読む。
-- 個別サブコマンドの業務処理、正本仕様、schema、report 項目定義などが目的で、共通 runtime 実装の責務分担を確認する必要がないときは、それぞれの直接の定義元を読む。
+- 特定の runtime サブモジュールの内部実装や個別挙動だけを確認したいときは、その個別モジュールを直接読む。
+- 個別サブコマンドの業務処理、正本仕様、oracle／realization file、または専用 schema の内容だけを確認したいときは、対応する下位対象を直接読む。
+- commons と無関係な機能や、INDEX.md の利用者向けルーティング規則だけを確認したいとき。
 
 ## hash
-- 870870b70b210f5982f71a1c4517a26c828dfe9910aed8c111da1afaaa2da54b
+- ba64c8b99a23a7c0022b0e35344bbb6b4e2ce922874446ea18a5dd770a9b3aed
 
 # `config`
 
@@ -116,41 +118,16 @@
 # `sub_commands`
 
 ## Summary
-- apply サブコマンドの実装配置先。現在は実装がなく、将来の apply 実装への入口。
-- `cmoc doctor` の CLI 入口。doctor preprocess の明示実行と repo root を含む結果生成を担う。
-- feedback サブコマンドの入口。観測の report 化、判定、issue 修復、publication 後の recovery へ振り分ける。
-- INDEX.md 更新を行う indexing CLI の入口。前提検査、排他下での更新、差分 commit、結果報告を担う。
-- oracle 系サブコマンドの入口。oracle edit と oracle investigation の入力処理、検証、agent または TUI 起動を担う。
-- realization workload の入口。apply workload と refactor fork の lifecycle、agent 実行、変更検査、commit、状態記録を扱う。
-- review サブコマンドの実装配置先。現在は具体的な実装がなく、追加実装への配置上の入口。
-- editing run の共通 lifecycle 実装への入口。run abandon・join の停止、統合、cleanup、report、互換 shim を扱う。
-- session サブコマンドの入口。session fork・join・abandon の lifecycle 処理へ進むための起点。
-- 利用者入力から完全なプロンプトと TUI 起動パラメータを構築し、Codex TUI を実行する tui サブコマンド本体。
+- src/sub_commands は、cmoc のサブコマンド実装を apply・doctor・feedback・indexing・oracle・realization・review・run・session・tui に分けて配置する上位パッケージである。
+- 各サブコマンドの CLI 入口や処理全体を確認する必要があり、個別サブコマンドの実装へ進むための最初のルーティング対象となる。
 
 ## Read this when
-- apply サブコマンドの実装が追加され、その処理内容や配置を確認するとき。
-- `cmoc doctor` の入口、doctor preprocess の明示実行、実行結果の repo root 情報を確認するとき。
-- feedback の全体構成を確認し、観測、判定、修復、publication 後 recovery の調査先を判断するとき。
-- `cmoc indexing` の実行前提、INDEX.md 更新、差分 commit、結果報告の呼び出し元を確認するとき。
-- oracle 系サブコマンドの構成、oracle edit の agent call、または oracle investigation の TUI 起動フローを確認するとき。
-- realization apply・refactor の実行手順、run 状態遷移、完了判定、変更検査、cleanup、report 保存を確認するとき。
-- review サブコマンドの実装ファイルを追加・変更する場所を確認するとき。
-- editing run の停止、統合、cleanup、report、状態遷移、または `cmoc run abandon`・`cmoc run join` の入口を確認するとき。
-- session サブコマンドの構成、または session fork・join・abandon の実行経路を確認するとき。
-- `cmoc tui` の入力収集、プロンプト構築、indexing 準備、context・設定の受け渡し、TUI 起動経路を確認するとき。
+- cmoc のサブコマンド構成を一覧し、対象となるサブコマンド実装の配下へ進む先を判断するとき。
+- サブコマンドの入口・実行フローを調べる際に、個別パッケージの所在を確認するとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドを扱うとき。
-- doctor preprocess の具体的な処理内容や成果物を調べるとき。
-- CLI 共通 runtime や一般的な実行制御を調べるとき。
-- feedback 内の特定処理の実装詳細が明確で、対応する下位モジュールを直接読めるとき。
-- INDEX.md の更新規則や探索・生成ロジックを調べるとき。
-- oracle 個別サブコマンドの prompt 契約や、共通 prompt editor・TUI runtime の詳細だけを調べるとき。
-- apply workload の agent 起動パラメータだけ、または editing run の共通 lifecycle だけを調べるとき。
-- review の具体的な処理内容や oracle review の仕様を調べるとき。
-- run の canonical lifecycle、workload 固有の merge・差分処理、run 作成や通常編集だけを調べるとき。
-- SessionState、Git 操作共通実装、conflict resolution builder の詳細だけを調べるとき。
-- TUI 起動パラメータ、prompt editor、CLI 共通 runtime、設定ロードの詳細だけを調べるとき。
+- 特定サブコマンドの具体的な処理や仕様が明確で、対応する配下の実装を直接確認できるとき。
+- サブコマンド共通の CLI runtime、設定、ライフサイクルなど、src/sub_commands 配下の個別入口ではなく共通処理を直接調べるとき。
 
 ## hash
-- 20c73fc92d6098ed124c44136844e4baa845f8adb2993fda18139d242116a965
+- 5b9d9de3a7c3b984b001093c71a119e4ead2a3c0e02beb49a9aeca3912ae5629

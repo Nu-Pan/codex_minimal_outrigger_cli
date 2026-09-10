@@ -659,22 +659,19 @@
 # `runtime_state.py`
 
 ## Summary
-- session と editing run の永続 state を表すデータ構造を定義し、JSON schema の厳密な検証・復元・安定保存を担う。
-- session branch / run branch から対応する session-id と state を解決し、state file の安全な読み書き、symlink・path 種別・session-id・branch 形式の検査を提供する。
-- session fork の repository 共通排他 lock と、home branch に紐づく active session state の検索を提供する。
+- session と editing run の状態 schema を検証し、state file の安全な読み書き、branch からの session 識別、session lifecycle の排他制御を提供する。session state の永続化や branch に対応する state の復元を行う処理への入口。
 
 ## Read this when
-- session state JSON の構造、状態値、必須 field、不変条件を確認したいとき。
-- session branch または run branch から state を読み込む処理、state の永続化や安全性検証を変更・調査するとき。
-- session fork の排他制御や home branch に対する active session の解決経路を確認するとき。
+- session の状態・run の状態を読み込む、検証する、保存する処理を追加または変更するとき
+- session branch や run branch から session-id を解決するとき
+- session lifecycle の同時実行を防ぐ lock や state file のパス安全性を確認するとき
 
 ## Do not read this when
-- session や run の具体的な CLI 操作手順・状態遷移の仕様を確認したいときは、対応する sub_command または正本仕様を直接読む。
-- git branch の命名規則全体や worktree isolation の設計を確認したいときは、branch model / run isolation の仕様を直接読む。
-- CmocError の共通形式や個別コマンドのエラー処理だけを調べるとき。
+- session や run の具体的な lifecycle 遷移、CLI 操作手順、branch 運用規則そのものを確認したいとき
+- state schema の正本仕様や個別 sub-command の振る舞いを直接確認すべきとき
 
 ## hash
-- ebff5adf5cf78205ad0b5c21374ad6f6b3c0574eab63f5cd56b0677345dde4da
+- 5ea0c7423ab0802ad641c4ab0261df8daafb98ae165de6a3cd56223766a955b0
 
 # `runtime_windows_toast.py`
 
