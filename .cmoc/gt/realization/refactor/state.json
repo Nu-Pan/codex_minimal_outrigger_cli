@@ -288,10 +288,10 @@
     "last_investigated_at": "2026-09-10_10-06_16_760876000"
   },
   "oracle/doc/dev_rule/test_rule.md": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "d0ae77dbeb53077ad82230fb8c0c2d81d56841ad396bdaad7e670dfbce68c506",
-    "last_investigated_at": "2026-08-12_13-31_35_278839000"
+    "last_investigated_sha256": "7afec483e6ff7e971fb1950621b011ee79cfbbfbcea066dcb0511892c5ccb922",
+    "last_investigated_at": "2026-09-10_15-37_00_543877000"
   },
   "oracle/src/oracle/acp_builder/basic.py": {
     "investigation_required": true,
