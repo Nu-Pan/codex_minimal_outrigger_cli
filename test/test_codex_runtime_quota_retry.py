@@ -256,8 +256,8 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert str(probe_call_path) not in captured.err
-    assert "entering polling mode" in captured.err
-    assert "resuming work" in captured.err
+    assert "Codex CLI の quota 回復待ち: ポーリングを開始" in captured.err
+    assert "Codex CLI の quota 回復待ち: 処理を再開" in captured.err
 
 
 def test_capacity_probe_retry_skips_quota_poll_interval(
@@ -400,7 +400,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     assert calls == ["prompt", probe_prompt]
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "entering polling mode" in captured.err
+    assert "Codex CLI の quota 回復待ち: ポーリングを開始" in captured.err
     assert "quota availability probe" not in captured.err
     assert "KeyboardInterrupt" not in captured.err
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
