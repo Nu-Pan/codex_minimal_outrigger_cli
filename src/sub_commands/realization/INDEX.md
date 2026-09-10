@@ -15,21 +15,19 @@
 # `apply`
 
 ## Summary
-- realization の apply workload を扱うモジュール群への入口。
-- apply fork の実行入口として、editing run の作成、oracle 差分範囲の固定、追従 agent の実行、変更検査と commit、joinable/error 状態の記録を担う。
+- realization の apply 処理に関する workload と、apply fork の実行・差分検査・処理単位確定を扱う実装群への入口。
 
 ## Read this when
-- realization apply workload の構成や実装を調査・変更するとき
-- realization apply fork の実行手順、差分の始点、agent 実行後の変更検査・commit、joinable/error run の状態遷移を確認するとき
+- realization apply workload の実装を調査・変更するとき
+- realization apply fork の run 作成、agent 実行、差分検査、commit、joinable 公開、成功・失敗 report の挙動を確認するとき
 
 ## Do not read this when
-- apply workload 以外の realization 処理を扱うとき
-- realization apply の agent 起動パラメータを確認したいとき
-- editing run の共通 lifecycle や run の join・abandon 実装を確認したいとき
-- INDEX.md 生成の一般仕様や利用者向け CLI 仕様だけを確認したいとき
+- apply workload 以外の処理を扱うとき
+- apply fork の agent 起動パラメータだけを確認するとき
+- editing run 共通ライフサイクルや realization apply agent の具体的な差分内容を直接確認するとき
 
 ## hash
-- c3a77808dce997fb29e44a0e9c6129da744dc557e9ee958b581a261b12cedb17
+- bea89968dea14226e760d3c9247a1219bab9432e20fd4963c5637d0245c3a499
 
 # `refactor`
 

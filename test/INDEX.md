@@ -400,19 +400,19 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- 日本語技術文書の作成規定を確認し、対象テストファイルの責務をINDEX.md向けに要約します。
+- 編集 run の fork・join・abandon lifecycle を横断して検証する realization test。apply/refactor の隔離 worktree、state 遷移、agent/INDEX 差分検査、commit/rollback、process tracking、report、interrupt、merge/cleanup を一続きの fixture で確認する。
 
 ## Read this when
-- workload fork、realization apply/refactor fork、run join/abandonの統合ライフサイクル挙動をテストする必要があるとき
-- run worktree・session state・fork/lifecycle report・process tracking・INDEX同期・rollback/cleanup・中断復旧の境界を確認するとき
-- 共通のediting run fixtureを使ったapply/refactorとrun操作の実装変更が、state遷移・成果物merge・エラー処理に適合するか確認するとき
+- realization apply/refactor fork の run state 公開から joinable 完了までの挙動を確認したいとき。
+- run join または abandon の merge、force-resolve、worktree/branch cleanup、state hook、report 保存を調べるとき。
+- Codex child tracking、遅延変更・commit、INDEX 生成物、oracle 差分、rename/delete、 中断・失敗時 rollback の統合境界を確認するとき。
 
 ## Do not read this when
-- 単一の実装関数の詳細仕様や個別サブコマンドの通常系だけを確認したいときは、対応する実装または専用のapp_spec文書を直接読む
-- INDEX生成処理そのものや一般的なテスト支援fixtureだけを調べるとき
+- 単一の実装関数や通常系の細部だけを確認したい場合は、対応する commons または sub_commands の実装・専用テストを直接読む。
+- INDEX エントリー生成や一般的な CLI 動作など、editing run の lifecycle 統合検証を必要としない場合。
 
 ## hash
-- 8b7253ac12a4750fc5f31a20cf7de48f9499f0300203eaf3fe10c8a85cc71587
+- d9017acd0160f365d7501d55b15f9b62531abc19fe0bd964410120535d47591c
 
 # `test_editor_input_handoff.py`
 

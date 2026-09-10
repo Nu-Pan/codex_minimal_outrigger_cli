@@ -117,15 +117,16 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` は、cmoc の各サブコマンド実装をまとめる上位 package 境界。doctor、feedback、indexing、oracle、realization、run、session、tui などの実行入口と、未実装の apply・review の配置を確認するための起点となる。
+- cmoc の各サブコマンド実装を集約するパッケージ境界。doctor・feedback・indexing・oracle・realization・run・session・tui などの実行入口と、配下の処理群への案内を担う。
+- feedback、run、session、realization など複数モジュールにまたがる処理の構成や責務分担を確認するための上位入口。
 
 ## Read this when
-- サブコマンド全体の構成や、対象の処理領域に応じて個別サブコマンド実装へ進む入口を確認するとき。
-- 特定サブコマンドの CLI 入口、実行フロー、または配下 package の責務分担を調べるとき。
+- サブコマンド実装全体の構成や、個別サブコマンドの実行入口を確認するとき。
+- 対象サブコマンドの処理が複数の下位モジュールに分かれており、適切な実装へ進む先を判断するとき。
 
 ## Do not read this when
-- サブコマンド共通 runtime、indexing 共通処理、または個別サブコマンドの具体的な処理手順を直接確認したいとき。
-- サブコマンド以外の cmoc 機能を扱うとき。
+- 対象サブコマンドや処理モジュールが明確で、対応する下位実装を直接確認できるとき。
+- サブコマンド共通 runtime や、個別処理の具体的な実装詳細だけを調べるとき。
 
 ## hash
-- a858a4fde05df94a2e015f5f13202c2243df00f5b43fa39b4c08dc437bcad4e3
+- fb4f6a0a51924f89800232367c0ec1ade45afa0f030cb542f3572838df478e44

@@ -163,9 +163,9 @@
   },
   "oracle/doc/app_spec/sub_command/realization_apply.md": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "e5a17052c2aa0756da0cf25cd1ff6899a42d012d9c1ee2b1283632364d896e25",
-    "last_investigated_at": "2026-08-13_01-12_07_818439000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "3765d5cf947931bec3b322703a1a07634977bff3b813031fc2eadb9f3bdff421",
+    "last_investigated_at": "2026-09-10_22-54_33_828347000"
   },
   "oracle/doc/app_spec/sub_command/realization_refactor.md": {
     "investigation_required": true,
