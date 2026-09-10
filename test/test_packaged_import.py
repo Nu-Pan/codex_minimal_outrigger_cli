@@ -148,7 +148,7 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "original = editor_input.collect_prompt_editor_input("
             "Path.cwd(), work, saved); "
             "p = build_main(original); "
-            "editor_input.finalize_prompt_editor_input(work); "
+            "editor_input.finalize_prompt_editor_input(Path.cwd(), work); "
             "r = build_reduction(original); "
             "assert not work.exists(); "
             "assert saved.read_text() == 'oracle を編集する'; "

@@ -72,7 +72,7 @@ def _cmoc_oracle_edit_body() -> None:
 
     start_subcommand_step(5, "本命起動パラメータを構築", "build main parameter")
     main_parameter = build_oracle_edit_main_launch_exec_parameter(instruction)
-    finalize_prompt_editor_input(editor_work_path)
+    finalize_prompt_editor_input(repository, editor_work_path)
     start_subcommand_step(6, "本命起動前 indexing", "indexing preflight")
 
     def _validate_and_start_main_step() -> None:

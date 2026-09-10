@@ -423,17 +423,19 @@
 # `test_editor_input_handoff.py`
 
 ## Summary
-- editor input handoff target の lifecycle、認証済み submission、repository/file 再検証、symlink 防止、deadline timeout、close 時の排水を検証するテスト。
+- editor input handoff target の lifecycle と、editor work file への全面上書き境界を検証するテスト。
+- repository 不一致、symlink 経由の書き込み、認証前の内容送信、target close 中の accepted submission、接続期限切れ後の後続 submission を確認する。
 
 ## Read this when
-- editor input handoff の上書き受付、target の有効期間、認証・repository 境界、ファイル安全性、slow-trickle timeout の挙動を確認または変更するとき。
+- editor input handoff の受理・拒否条件や、最後の submission を確定入力にする挙動を確認・変更するとき
+- repository 境界、editor work file の symlink 防止、target close の排水、認証・接続期限の安全性を確認するとき
 
 ## Do not read this when
-- editor input handoff の実装詳細や正本仕様そのものを確認する場合は、まず lifecycle と上書き境界の仕様・実装を直接読むとき。
-- prompt editor input の通常の予約・収集・確定処理だけを確認し、handoff 通信や安全境界の検証が不要なとき。
+- handoff の実装や protocol の詳細を確認したいときは、対応する実装・protocol の正本を直接読む
+- prompt editor input の予約・収集・確定処理だけを扱い、handoff submission の lifecycle や安全境界を扱わないとき
 
 ## hash
-- e657255bd2a2dae0b763cf7ed072c9cfb1cb524c9e16ac233f9927d1cf2b5b62
+- 3144fff6d2c0656c5524fd8ccb355fd92409ebc6e027b3eb7af68a660580ddf7
 
 # `test_editor_input_handoff_mcp.py`
 
@@ -582,56 +584,55 @@
 # `test_oracle_edit_cli.py`
 
 ## Summary
-- `cmoc oracle edit` の main worktree exec 制御を、成功時と main/reduction 失敗時の共通制御テストで検証する。
-- editor 入力、2 回の agent call、indexing preflight、Git 差分、session state、通知、レポートの境界を比較する。
-- oracle edit の skeleton 構築失敗と、linked worktree・非 session branch・inactive session による起動前提違反も検証する。
+- 対象は `cmoc oracle edit` の統合的な制御テストで、成功・本命 exec 失敗・仕様削減 exec 失敗を同じ invocation で検証する。
+- editor 入力、exec 起動パラメーター、indexing preflight、起動前提、Git 差分、session state、生成物の後始末、通知・レポートの境界を横断して確認する。
+- oracle edit の実装や仕様変更で、二段階 exec の順序・失敗時の分岐・未コミット変更の保持・利用者向け結果報告を確認したい場合の入口となる。
 
 ## Read this when
-- `cmoc oracle edit` の main worktree 実行順序や、成功・各失敗時の agent call 制御を確認したいとき。
-- oracle edit が既存の staged/unstaged 差分、session state、editor work file、通知、診断レポートをどう保持・後処理するかを確認したいとき。
-- oracle edit の起動前提違反や skeleton 構築失敗時の利用者向けエラー境界を確認したいとき。
+- `cmoc oracle edit` の成功時または main/reduction 失敗時の制御フローを変更・調査するとき。
+- editor work file と保存コピー、2 回の exec、indexing preflight、Git 差分や session state の不変条件をまとめて検証するとき。
+- oracle edit の起動前提違反、通知、terminal report の分類や agent call status の適合性を確認するとき。
 
 ## Do not read this when
-- oracle edit 本体の仕様や実装を直接確認したいときは、oracle の sub-command 仕様または launch exec 実装を読む。
-- 一般的な Git 差分保持や session state の共通処理だけを調べるときは、それぞれの共通機能のテストまたは実装を直接読む。
-- INDEX.md の構造や対象ファイルの機械的な所在だけを確認したいとき。
+- oracle edit の具体的な prompt 生成文面だけを確認したい場合は、実装側の builder や prompt の正本を直接読む。
+- oracle edit 以外の oracle サブコマンドや、一般的な Git・session state の共通処理だけを調べる場合。
+- 単純な editor 入出力や共通 CLI 通知の単体挙動だけを確認する場合は、それぞれの専用テストまたは実装へ直接進む。
 
 ## hash
-- bd21ee389d0615a346965d42d296d126cb537152209f1a8a6038cbf29f990fbb
+- 6d04630cb695af2bf39166fb62f85b6ce677236ffc18a3e21af8839f9209bf32
 
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- `oracle investigation` CLI の起動条件と、doctor・prompt editor・builder・preflight・TUI の連携順序を検証するテスト。
-- セッションなしの main worktree での起動、生成される launch parameter、editor 入力の反映、作業ファイルの後処理を検証する。
-- investigation の launch TUI realization adapter が builder だけを公開し、補助名を公開しないことを検証する。
+- `oracle investigation` CLI の起動経路を検証するテスト。セッション前提なしの main worktree で、doctor 前処理、prompt editor 入力、investigation 用パラメータ構築、indexing preflight、有効化後の TUI 起動までの順序と引き渡し内容を確認する。
+- investigation の realization adapter が公開する名前を builder だけに限定することを検証する。
 
 ## Read this when
-- `oracle investigation` の起動前処理、prompt editor 入力の受け渡し、indexing preflight、または TUI 起動パラメータの挙動を変更・確認するとき
-- investigation の launch TUI builder の公開範囲や `__all__` の契約を変更・確認するとき
+- `oracle investigation` の CLI 起動条件、prompt editor との連携、TUI 起動前後の処理順序を変更・調査するとき。
+- investigation 用 launch TUI builder の公開 API や補助名の漏出を確認するとき。
 
 ## Do not read this when
-- oracle investigation の一般的な調査手順や本体仕様だけを確認したいとき
-- doctor、prompt editor、indexing preflight、または TUI の個別実装を直接変更・確認するため、対象実装の専用テストや仕様を読むべきとき
+- `oracle investigation` の仕様本文や一般的な indexing 規則を確認したいだけのときは、参照元の oracle 文書を直接読む。
+- investigation 以外の sub-command の起動経路や builder 公開 API を扱うとき。
 
 ## hash
-- a8b2aeef3e6f800b29529e71a45bcc28ad7c351401fa68780d0211bb950932c7
+- 5add200a877c12b3d16a4f6f6e1eb5393f4dcfe53dab1dda40f47f5006c7866a
 
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout 上で主要パッケージを隔離実行し、正本 builder・prompt editor・ACP basic・cmoc config の import 境界、公開 API、設定参照、および prompt 生成を検証するテスト。
+- packaged layout へコピーした source tree 上で、quota probe、oracle edit／prompt editor、ACP basic、cmoc config の import 境界・公開面・正本再公開・prompt 生成を検証するテスト。
 
 ## Read this when
-- packaging 後の import 経路、setuptools の package 配置、oracle と realization の公開定義の再公開境界を変更・確認するとき。
-- quota probe、oracle edit、prompt editor 入出力、ACP basic、cmoc config の packaged layout 上の挙動や module namespace を検証するとき。
+- パッケージ化後の隔離環境で import が成立するか、設定や型の公開面が意図どおりか、canonical builder が正本 prompt と定義を参照するかを確認・変更するとき。
+- setuptools の package layout、Python import 境界、oracle edit の入力 handoff、または packaged layout 向けの回帰テストを調べるとき。
 
 ## Do not read this when
-- packaged layout や import 境界に関係しない単一機能の実装・テストを扱うとき。
-- 正本 builder や prompt editor の仕様そのものを確認する必要があり、対応する oracle source または app specification を直接読むべきとき。
+- packaged layout や import 境界ではなく、個別 builder の prompt 内容・業務ロジックだけを確認するときは、対象の canonical builder や仕様文書を直接読む。
+- 通常の単体テスト追加・変更で、隔離 packaged layout、再公開される型・設定、または公開 namespace の検証を扱わないとき。
 
 ## hash
-- 824bdbfcc2443bd379c5d5d83d3508e14c8f6565cf2926afd34df97f6f351e88
+- da320ffda193df280a020db3ec0081c6ca44501d0c2311d40c30e5b60cd9cc41
 
 # `test_primary_report.py`
 
@@ -686,20 +687,19 @@
 # `test_prompt_editor_input.py`
 
 ## Summary
-- prompt editor input の外部挙動を検証する pytest。作業用 file と保存コピーの分離、入力抽出、エディタ選択、異常時の作業 file 保持を扱う。
-- 保存先や editor work file の path 境界、symlink、非 regular file に対する拒否と、handoff target の cleanup を検証する。prompt editor input の変更が複数の外部契約へ影響する場合の受け入れ条件として利用する。
+- prompt editor input の外部挙動を検証するテスト。作業ファイルと保存コピーの分離、編集後の入力抽出、エディタ選択、パス境界、保存先の symlink 防止、異常時の後始末を確認する。
 
 ## Read this when
-- prompt editor input の予約・編集・収集・確定処理を変更または検証するとき。
-- エディタの優先順位や code の --wait、skeleton の placeholder、最終入力の読み取り回数を確認するとき。
-- 保存先の分離、path 境界、symlink 安全性、エラー時の cleanup と復旧可能性を確認するとき。
+- prompt editor input の予約・編集・入力収集・確定処理を変更または検証するとき
+- 作業ファイルと保存コピーの扱い、エディタ起動条件、ファイル種別やパス境界の安全性を確認するとき
+- prompt editor input の異常系や handoff target のクリーンアップ挙動を確認するとき
 
 ## Do not read this when
-- prompt editor input の正本仕様や実装の詳細そのものを読むことが目的で、pytest の検証観点が不要なとき。
-- prompt editor input と無関係な CLI 入力、一般的なエディタ起動、または別機能のファイル保存を調べるとき。
+- prompt editor input の実装や正本仕様そのものを確認する必要があり、テスト結果ではなく実装・仕様を直接読むべきとき
+- prompt editor input と無関係な機能のテストや実装を扱うとき
 
 ## hash
-- 530fc4b3fb9899abbffd1f4c96018dfa3859f9dc114998cc586b4e2702c3a455
+- b8b4b66dd01bf391cb9aa5acfb413d0b31af2123cba619bb3fe6b17fdc78898d
 
 # `test_prompt_parts.py`
 

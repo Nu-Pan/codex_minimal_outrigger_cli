@@ -100,11 +100,11 @@ def collect_prompt_editor_input(
     return _extract_original_prompt(final_read_result.decode("utf-8"))
 
 
-def finalize_prompt_editor_input(editor_work_path: Path) -> None:
+def finalize_prompt_editor_input(root: Path, editor_work_path: Path) -> None:
     """完全 prompt の構築成功後に editor work file を削除する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    # 親 directory の symlink をたどって、指定外の file を削除しない。
-    _validate_editor_storage_path(editor_work_path)
+    # 最終読み取りと同じ境界検証を行い、指定外の file を削除しない。
+    validate_editor_work_file(root, editor_work_path)
     editor_work_path.unlink()
 
 

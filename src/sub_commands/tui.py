@@ -74,7 +74,7 @@ def _cmoc_tui_body(
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
     parameter = build_tui_launch_tui_parameter(original_prompt)
-    finalize_prompt_editor_input(editor_work_path)
+    finalize_prompt_editor_input(root, editor_work_path)
 
     start_subcommand_step(5, "AI Agent TUI を起動", "launch agent TUI")
     run_codex_tui(

@@ -67,26 +67,19 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの package 境界を示し、oracle サブコマンド群への入口となる。
-- `cmoc oracle edit` の入力収集、起動前提の検証、本命 oracle 編集 agent call と仕様削減 agent call の実行フローを担う。
-- `cmoc oracle investigation` の調査指示入力、完全プロンプト構築、Codex TUI 起動までの read-only 実行フローを担う。
-- 編集関連の実装ファイルを含まない空のディレクトリで、現時点の下位要素へのルーティング先はない。
+- oracle サブコマンド群をまとめる package 境界で、配下の oracle 実装へ進む入口。
+- 編集系と調査系の oracle サブコマンド実装を含み、それぞれの実行入口や処理順序を確認する際の案内先。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や入口を確認するとき。
-- `cmoc oracle edit` の CLI フロー、入力編集、本命・仕様削減 agent call の起動条件や実行順序を確認するとき。
-- `cmoc oracle investigation` の CLI フロー、調査指示編集、プロンプト構築、Codex TUI 起動を確認するとき。
-- このディレクトリに編集関連ファイルが追加されたか確認するとき。
+- oracle サブコマンド群の構成や、編集・調査の実行入口を確認するとき。
+- oracle サブコマンドの処理フローを調べる際に、個別実装へ進む前の package 境界を把握したいとき。
 
 ## Do not read this when
-- 個別 oracle サブコマンドの prompt 契約や仕様そのものを確認したいとき。
-- prompt editor の共通入出力処理だけを確認したいとき。
-- oracle edit の agent 起動パラメータ構築だけを確認したいとき。
-- oracle investigation の TUI 起動パラメータや共通 runtime の詳細だけを確認したいとき。
-- oracle サブコマンドの実装を調査するときに、空の編集ディレクトリだけを確認しようとしているとき。
+- `cmoc oracle edit` の具体的な prompt、起動パラメータ、入力・runtime など個別仕様を確認したいときは、編集サブコマンドの実装を直接読む。
+- `cmoc oracle investigation` の具体的な起動パラメータや共通処理を確認したいときは、調査サブコマンドの実装または共通モジュールを直接読む。
 
 ## hash
-- ed0e9b8fea43533d9ad7c042135f4f82804bdc36036c330a8498b11afa88fc9a
+- 456170d0023177b8d7c1f88de8f89137bcb75bb6fb6530543e9ea7dcdd0ba8cc
 
 # `realization`
 
@@ -160,17 +153,17 @@
 # `tui.py`
 
 ## Summary
-- 利用者の依頼文を編集し、完全なプロンプトと TUI 起動パラメータを構築して Codex TUI を実行する `tui` サブコマンドの本体処理。
-- プロンプト入力の準備から収集・確定、実行前のインデックス作成準備、repository context と設定を用いた TUI 起動までを担う入口。
+- 利用者の依頼文を編集し、TUI 起動用の完全プロンプトとパラメータを構築して Codex TUI を実行する `tui` サブコマンドの本体処理。
+- 現在の repository と設定を取得し、プロンプト入力の予約・編集・収集・確定を経て、AI Agent TUI の起動へ進む入口。
 
 ## Read this when
-- `cmoc tui` の実行経路や、利用者入力から Codex TUI 起動までの流れを調査・変更するとき。
-- TUI 起動時の context・設定の受け渡しや、起動前の共通 CLI 処理を確認するとき。
+- `cmoc tui` の CLI 実行経路、プロンプト編集フロー、TUI 起動パラメータの構築、または Codex TUI の起動処理を確認・変更するとき。
+- TUI サブコマンドが現在の repository 状態や設定をどのように読み込み、入力編集から起動までを接続しているかを調べるとき。
 
 ## Do not read this when
-- TUI 起動パラメータの詳細だけを調査・変更する場合は、パラメータ構築担当の対象を直接読むとき。
-- プロンプト編集入力の予約・編集・収集・確定の仕様だけを確認する場合は、プロンプト入力担当の対象を直接読むとき。
-- CLI 共通実行基盤や設定ロードの一般仕様だけを確認する場合は、それぞれの担当対象を直接読むとき。
+- TUI 起動パラメータの内容や構築規則そのものを確認したいときは、参照される TUI parameter builder を直接読む。
+- プロンプト編集の予約・入力収集・確定の仕様を確認したいときは、prompt editor input の担当実装を直接読む。
+- 共通 CLI 実行制御、設定読み込み、repository・work root の解決の仕様を確認したいときは、それぞれの runtime 実装を直接読む。
 
 ## hash
-- 40d49f1a34914cf741647d5b3151e153ee8b1f25767665901565d7443e01b08a
+- b935bdedceb7574ad8a75f38c8fb3dc4750ea131140116b8658328016ddc18ac

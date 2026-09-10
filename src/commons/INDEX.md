@@ -54,22 +54,21 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- AI Agent 用 prompt のエディタ入力を開始し、初期内容を作業ファイルへ書き込む共通境界。
-- エディタ終了後の入力結果を一度だけ読み取り、保存コピーを作成して元の prompt を抽出する。
-- 作業ファイルと保存先の path 検証、エディタ選択、処理成功後の作業ファイル削除、`.cmoc` ignore の保証を担う。
+- AI Agent 向け prompt をエディタで編集し、入力結果を安全に保存・抽出・確定する共通境界を提供する。
+- 作業用 file と保存 copy の path 準備、エディタ起動、最終内容の一度だけの保存、完了後の作業 file 削除を扱う。
+- 保存先の symlink・親 directory・通常 file 性、入力 copy の repository 内 path、prompt skeleton の placeholder 一意性を検証する。
+- prompt editor/TUI 用 repository と現在の worktree の `.cmoc` ignore を保証し、利用可能な editor command を優先順で選択する。
 
 ## Read this when
-- AI Agent 用 prompt の編集開始から入力結果の保存・抽出・後片付けまでの流れを確認したいとき。
-- editor input の保存先に対する symlink 防止や repository/worktree の ignore 保証を確認したいとき。
-- 利用可能なエディタの選択規則や、prompt placeholder の個数検証を確認したいとき.
+- prompt の editor input 境界、作業 file／保存 copy のライフサイクル、または入力内容の抽出・確定処理を確認したいとき。
+- editor input の保存先検証、symlink 防止、path 制約、prompt skeleton の placeholder 検証、エディタ選択や handoff を調査・変更するとき。
 
 ## Do not read this when
-- prompt の skeleton やエディタ入力用初期案内文の構築内容を確認したいときは、prompt builder 側を直接読む。
-- エディタ handoff の通信、監視、作業ファイル検証の詳細実装を確認したいときは、runtime editor input handoff 側を直接読む。
-- runtime error や git、path の共通基盤そのものの仕様を確認したいときは、それぞれの専用モジュールを直接読む。
+- prompt の完全な構築規則や editor 初期表示文の正本を確認したいときは、prompt builder 側を直接読む。
+- editor handoff の内部実装や runtime error・path・git ignore の一般機能だけを調べる場合は、それぞれの専用 runtime module を直接読む。
 
 ## hash
-- 71086e405590f90b92d0052a9d3ba323474bb0008621055501689c479e84ec9b
+- 5218b3489e652ae0a1eac8fa1e97d33db6170bbb05a02de5bb68d3c557bdf395
 
 # `runtime_cli.py`
 

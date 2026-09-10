@@ -70,7 +70,7 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
         first_work,
         first_copy,
     )
-    prompt_editor_input_module.finalize_prompt_editor_input(first_work)
+    prompt_editor_input_module.finalize_prompt_editor_input(tmp_path, first_work)
     second_work, second_copy = prompt_editor_input_module.reserve_prompt_editor_input(
         tmp_path
     )
@@ -84,7 +84,7 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
         second_work,
         second_copy,
     )
-    prompt_editor_input_module.finalize_prompt_editor_input(second_work)
+    prompt_editor_input_module.finalize_prompt_editor_input(tmp_path, second_work)
 
     assert initial_texts == [
         build_prompt_editor_input_initial_text(skeleton) for skeleton in skeletons
@@ -367,6 +367,15 @@ def test_editor_input_rejects_saved_copy_outside_repository_path(
     assert not outside_copy.exists()
     assert editor_work.read_text(encoding="utf-8") == "input\n"
 
+    outside_work = tmp_path / "outside-work.md"
+    outside_work.write_text("must remain\n", encoding="utf-8")
+    with pytest.raises(CmocError, match="editor work file"):
+        prompt_editor_input_module.finalize_prompt_editor_input(
+            tmp_path,
+            outside_work,
+        )
+    assert outside_work.read_text(encoding="utf-8") == "must remain\n"
+
 
 def test_editor_input_closes_handoff_when_target_id_display_fails(
     tmp_path: Path,
@@ -476,8 +485,11 @@ def test_editor_input_keeps_work_file_when_editor_or_cleanup_fails(
     failed_finalize_work.unlink()
     failed_finalize_work.mkdir()
 
-    with pytest.raises(IsADirectoryError):
-        prompt_editor_input_module.finalize_prompt_editor_input(failed_finalize_work)
+    with pytest.raises(CmocError, match="editor work file"):
+        prompt_editor_input_module.finalize_prompt_editor_input(
+            tmp_path,
+            failed_finalize_work,
+        )
 
     assert failed_finalize_work.is_dir()
     assert saved_copy.read_text(encoding="utf-8") == "recoverable input\n"
