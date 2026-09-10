@@ -491,19 +491,22 @@
 # `test_feedback_reconfirmation.py`
 
 ## Summary
-- feedback.md と feedback_state.md の根拠変更・再確認・封印の制御を、波の境界、checkpoint、join・publish、active state まで検証するテスト。
+- feedback.md と feedback_state.md の根拠変更を検査し、remediation の再確認、checkpoint の整合性検証、wave の連続性、seal 後の公開・復旧制御を検証するテスト。
+- 依存ファイルや機械的同期による変更を検出した際に、各結果を再確認し、追加観測を重複計上せず取り込む経路のテスト入口。
+- 修復サイクルの非収束停止または新たな修復による収束、checkpoint 参照の復旧、根拠が変わった封印済み結果の公開拒否を確認する。
 
 ## Read this when
-- feedback の remediation 結果を依存ファイル変更、機械的同期、追加証拠に応じて再確認する挙動を調べるとき。
-- wave の high-watermark 連続性、checkpoint 参照の復旧、再修復サイクルの収束、不変な seal を確認するとき。
-- 封印後の根拠変更が publish・recovery を拒否されることや、human_required の decision basis が active issue に具体化されることを確認するとき。
+- feedback remediation の結果が後続の依存変更や index 同期で再検証される挙動を確認するとき。
+- run artifact、remediation checkpoint、audit reference の破損を適切な corruption エラーとして扱う条件を確認するとき。
+- 追加の agent 観測、reconfirmation、非収束修復サイクル、seal・join・publish・recovery の境界を検証するとき。
 
 ## Do not read this when
-- feedback の受付・候補生成や、根拠変更を伴わない通常の remediation だけを調べるとき。
-- 一般的な Git 操作、run lifecycle、または再確認・封印に関係しない report/state 機能を確認するとき。
+- feedback の通常の観測受付や候補生成だけを確認したいとき。
+- remediation の再確認や根拠の変化を伴わない単純な成功・失敗結果の処理だけを調べるとき。
+- checkpoint や封印済み結果の整合性ではなく、Git・Codex 境界以外の一般的な実装詳細を直接調べるとき。
 
 ## hash
-- 0b2a07fcdbd80e48126c3887d1d10ed6010eca6083ce6a0c5015e4bf7b3b460a
+- d2a6971912b02b2de06088bf7019ca7d617d4c6f18031723474190edf615750b
 
 # `test_file_inventory.py`
 

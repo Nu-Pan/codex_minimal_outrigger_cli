@@ -370,18 +370,23 @@
 # `runtime_feedback_run_state.py`
 
 ## Summary
-- feedback run の immutable wave、issue checkpoint、seal、join 記録を検証・復旧する実装への入口。run の identity、入力の append-only 性、wave の順序と high-watermark、artifact の hash/path 対応、remediation checkpoint の schema・判定根拠・実差分整合性を扱う。
+- feedback run の immutable wave と high-watermark の順序・境界を検証する。
+- report cut の seal、join intent、merge、completion artifact と manifest の整合性を検証し、保存途中の artifact reference を回復する。
+- remediation checkpoint の schema、hash、判定根拠、再確認履歴、実差分、commit、verification の一貫性を検証する。
+- run の intake・checkpoint・確定済み artifact が append-only か、publication 開始条件を満たすかを検証する。
 
 ## Read this when
-- feedback run の lifecycle、report cut の封印、join 完了条件、wave/checkpoint の不変性や整合性を確認・変更するとき。
-- artifact 保存と manifest 更新の中断からの復旧、remediation の正式 checkpoint と issue commit・verification の対応を追うとき。
+- feedback report の run lifecycle、report cut、seal、join、publication 前検査の整合性を確認または変更するとき。
+- immutable artifact の保存後に manifest 更新が中断した場合の回復処理を確認するとき。
+- remediation issue の正式 checkpoint や、判定条件・検査結果・commit・変更 path の対応を検証するとき。
 
 ## Do not read this when
-- feedback run artifact の低レベルな canonical JSON 保存・hash 計算だけを確認したいときは、artifact store の実装を直接読む。
-- report cut の正本仕様や lifecycle の意味を確認したいときは、対応する仕様書・run lifecycle 実装を先に読む。
+- feedback の低レベル canonical JSON 読み書きや artifact reference 生成だけを扱うとき。
+- 通常の issue remediation 実行や report cut の仕様定義を直接確認する必要があるとき。
+- run lifecycle 全般の状態遷移を確認するだけで、feedback 固有の記録検証を扱わないとき。
 
 ## hash
-- ca512d58c8152bdbf1c7511e173c03f7ce0695583418b170599a8945a0f5bf54
+- 476f83c465b16ece83fe112f8cb44ac5ae95aa8f2baa1275e3f7ef837038892a
 
 # `runtime_feedback_state.py`
 

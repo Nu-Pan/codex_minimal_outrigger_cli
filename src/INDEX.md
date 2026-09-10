@@ -49,19 +49,18 @@
 # `commons`
 
 ## Summary
-- cmoc の複数実行経路で共有される runtime helper 群をまとめた commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run lifecycle など横断的な共通処理を調査・変更する際の入口。
+- src/commons は、cmoc の共有 runtime API と、CLI・Codex 実行・設定・Git・ログ・パス・状態・feedback・report などの共通実行時処理を提供するパッケージ。共通実行基盤を横断して確認・変更するときの入口。
 
 ## Read this when
-- 複数のサブコマンドや実行経路にまたがる runtime API・ライフサイクル・共通状態管理の責務を確認するとき
-- Codex 実行境界、INDEX 更新、feedback、設定、Git、ログ、パス、report、session/run 管理の共通実装を探すとき
-- 特定の共通 runtime 機能の実装対象を選び、commons 配下の担当モジュールへ進むとき
+- 複数のサブコマンドや実行経路で共有される runtime API、ライフサイクル、結果・状態・ログ・パス処理を調査または変更するとき
+- Codex 実行、feedback、INDEX 更新、editor handoff、report、run/session 管理など、commons 配下の共通実装の入口を選ぶとき
 
 ## Do not read this when
-- 単一の runtime helper の内部挙動だけを確認したい場合は、該当する個別モジュールを直接読むとき
-- 利用者向けの正本仕様、schema、CLI 固有の業務処理、または Codex・Git・feedback など外部境界の詳細だけを確認する場合は、それぞれの仕様書や担当実装を直接読むとき
+- 特定の runtime サブモジュールの詳細挙動だけを確認したいときは、該当する個別モジュールを直接読む
+- 利用者向け仕様や個別サブコマンド固有の業務処理だけを確認したいときは、対応する仕様文書またはサブコマンド実装を直接読む
 
 ## hash
-- b8c5570ac08571d7579b3b970245b98316b848189fc821d15f9d5462c614bfa6
+- 5a26276d8a06b2621716b7f73af63d71d0a5f1c9cc912433a5c6ada5fae3f370
 
 # `config`
 

@@ -122,35 +122,33 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、互換 import、共有 runtime、サブコマンド実装をまとめる src 配下の最上位構成。
-- main.py が doctor・tui・session・oracle・realization・run・feedback などの CLI ツリーを実装関数へ接続し、acp・basic・config・cmoc_runtime・oracle.py が互換公開や package shim を提供する。
+- `src` は cmoc の実装ルートで、CLI 起動入口、共有 runtime、互換公開層、サブコマンド実装をまとめて下位要素へ振り分ける。
+- CLI 全体の構成や起動経路から個別のサブコマンド・共有処理・互換層へ進むための上位ルーティング入口。
 
 ## Read this when
-- src 全体の CLI コマンド構成、起動時の Typer／Click 境界、互換 import 経路、共有 runtime、サブコマンドの配置を確認するとき。
-- 調査対象が src 直下の公開入口・互換境界に属するか、commons、sub_commands、acp builder、または正本 oracle 実装へ進むべきかを判断するとき。
+- cmoc の src 配下にある主要な実装領域の責務分担や、CLI 入口から下位パッケージ・モジュールへ進む先を判断するとき。
+- CLI 起動、共通 runtime、互換 import、またはサブコマンド実装の配置を横断して確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務処理、個別 runtime helper、builder adapter、互換 API の具体的な定義を確認・変更するときは、対応する下位モジュールを直接読む。
-- 正本仕様や oracle 配下の実装詳細、INDEX 更新・feedback など個別機能の挙動だけを確認するときは、src 全体の入口ではなく担当する仕様書・実装を直接読む。
+- 特定サブコマンドの処理仕様、共有 runtime の個別挙動、互換層の移行詳細を確認・変更するときは、対応する下位要素を直接読む。
+- 正本仕様や実装の詳細、INDEX 更新・feedback など特定機能の具体的な規則だけを調べるときは、この階層ではなく該当する仕様・実装を直接読む。
 
 ## hash
-- 765470c09cd551d663f7639d4c6d2bbd0a5e93b2cd30f31da8d37801d4707a8a
+- be83eee7f5c2067506d22f923563a3d821d25b6ffc0dca492ce9d07bf6502f07
 
 # `test`
 
 ## Summary
-- テストディレクトリは、cmoc の各機能について、CLI 統合経路・Codex 実行・Git/worktree・state/report・prompt/builder・安全境界などの外部契約と回帰条件を検証する入口です。対象機能の実行時挙動や複数コンポーネント間の lifecycle をテストから確認できます。
-- 単一の補助 helper、特定の builder、runtime 層、サブコマンド、feedback、indexing、session、TUI、通知、設定など、責務ごとに検証対象が分かれており、変更対象の挙動に対応するテストへ進むための階層入口です。
+- test 配下の共有 helper と各種回帰テストを横断して案内するテストインベントリ。CLI、Codex runtime、indexing、oracle／realization、feedback、session、TUI、Git／worktree、report／state、MCP、filesystem 境界の検証入口を提供する。
 
 ## Read this when
-- cmoc の既存挙動を外部観測可能なテスト条件から確認したいとき。
-- CLI サブコマンド、Codex runtime、Git/worktree、永続 state、report、prompt、builder、MCP、feedback、indexing、session、TUI などの回帰テストを探すとき。
-- 実装変更が既存の lifecycle、安全境界、公開 API、エラー分類、生成物やログの契約へ与える影響を確認するとき。
+- test 配下で対象機能の回帰条件、統合テストの観測範囲、共有テスト支援、または CLI・runtime・indexing・oracle／realization・feedback・session・TUI の挙動を検証するテストを探すとき。
+- 複数のサブシステムにまたがる状態遷移、Git／worktree、Codex process、report／state、MCP、ファイルアクセスや filesystem 境界の検証対象を切り分けたいとき。
 
 ## Do not read this when
-- 正本仕様、schema、prompt 本文、実装アルゴリズムそのものを確認したいときは、テストが参照する対応する仕様・schema・実装を直接読む。
-- 単一関数の局所的な実装詳細や、テスト対象に含まれない機能を調査するとき。
-- 一般的な pytest の使い方や、個別テストの責務を特定できており、対象テストファイルへ直接進めるとき。
+- 正本仕様、schema、実装本体、prompt や builder の詳細を確認することが目的で、各テストが参照する対象ファイルへ直接進むべきとき。
+- test 配下の個別ファイルが扱う特定機能に限定された局所的な挙動だけを調べる場合は、この一覧ではなく該当するテストまたは実装を直接読むとき。
+- テスト対象と無関係な一般的な Git 操作、CLI 利用方法、または LLM の回答品質を確認したいとき。
 
 ## hash
-- ad64070f282d92813922152b02d510bf26625863611354c713793cffc2c67c95
+- 46446c8a59c921f751365a019a1b2d891601e6c80f260c315570c387a17e24c1

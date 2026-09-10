@@ -14,6 +14,7 @@ from test_feedback import _context, _fake_result, _payload, _remediation_output
 from cmoc_runtime import CmocError
 from commons.runtime_feedback_run_state import (
     selected_remediation_checkpoints,
+    validate_remediation_checkpoint,
     validate_run_artifacts,
 )
 from commons.runtime_feedback_state import (
@@ -194,6 +195,38 @@ def test_run_artifacts_reject_noncontiguous_wave_boundaries(feedback_run):
             harness.manifest,
             harness.path,
             allow_missing=False,
+        )
+
+
+def test_remediation_checkpoint_rejects_missing_top_level_hash(feedback_run):
+    """欠落した checkpoint hash を KeyError ではなく corruption として扱う。"""
+    harness = feedback_run
+    _add_candidate(harness, "a")
+    _run(harness)
+    loaded, _ = load_report_cut(harness.context.repo)
+    [reference] = loaded["processing"]["remediation_checkpoints"]
+    checkpoint = read_json_object(harness.context.repo / reference["path"])
+    checkpoint.pop("input_sha256")
+
+    with pytest.raises(CmocError, match="field set"):
+        validate_remediation_checkpoint(
+            checkpoint, harness.context.repo / reference["path"]
+        )
+
+
+def test_remediation_checkpoint_rejects_malformed_audit_reference(feedback_run):
+    """不正な audit reference を Path の例外ではなく corruption として扱う。"""
+    harness = feedback_run
+    _add_candidate(harness, "a")
+    _run(harness)
+    loaded, _ = load_report_cut(harness.context.repo)
+    [reference] = loaded["processing"]["remediation_checkpoints"]
+    checkpoint = read_json_object(harness.context.repo / reference["path"])
+    checkpoint["audit"]["wave"] = None
+
+    with pytest.raises(CmocError, match="wave"):
+        validate_remediation_checkpoint(
+            checkpoint, harness.context.repo / reference["path"]
         )
 
 
