@@ -1146,10 +1146,10 @@
     "last_investigated_at": "2026-08-13_11-24_10_385687000"
   },
   "test/test_acp_builder_session_join_parameters.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "718b5e1422beec39954660be9ba80163e000e1f8254181a7d8e0bed3f142ff1d",
-    "last_investigated_at": "2026-08-13_10-53_14_867019000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "8c6d839daf58bd270e88c069f8a33cc01c3034f833a7f86ea54cd48c05fdb50d",
+    "last_investigated_at": "2026-09-11_04-51_43_336061000"
   },
   "test/test_acp_builder_tui_parameters.py": {
     "investigation_required": true,
