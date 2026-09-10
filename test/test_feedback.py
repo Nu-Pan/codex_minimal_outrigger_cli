@@ -38,9 +38,9 @@ import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_feedback as feedback_module
 import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
+import commons.runtime_run_join as run_join_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
-import sub_commands.run.join as run_join_module
 from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
 )
@@ -1583,9 +1583,7 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         return _fake_result(root, output)
 
     target = feedback_report_module if fault == "publication" else recovery_module
-    name = (
-        "publish_current_pointer" if fault == "publication" else "_cleanup_joined_run"
-    )
+    name = "publish_current_pointer" if fault == "publication" else "cleanup_joined_run"
     if fault.endswith("_reference"):
         target = run_state_module
         name = "write_report_cut_manifest"

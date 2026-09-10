@@ -29,36 +29,32 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの実行フローを担う実装。入力された oracle 編集指示を編集・抽出し、本命の oracle 編集 agent call と、成功後に続く仕様削減 agent call を順序どおり実行する。main worktree、active な cmoc session branch など本命起動前提の検証もここで行う。
+- `cmoc oracle edit` の実行入口として、入力した oracle 編集指示から本命 agent call と、正常終了後に行う仕様削減 agent call までの処理を扱う。
+- 本命起動前の indexing と起動前提の検証を行い、各 agent call の開始・成功・失敗状態を primary report に反映する。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 実行フロー、prompt 編集入力の収集、oracle 編集 agent call の起動条件や実行順序を確認するとき。
-- 本命 agent call と仕様削減 agent call の状態報告、失敗時の扱い、subcommand step の進行を変更・調査するとき。
-- oracle 編集処理が main worktree または active な cmoc session branch を要求する理由と検証箇所を確認するとき。
+- `cmoc oracle edit` の入力から本命編集、後続の仕様削減までの実行順序を確認したいとき。
+- 本命 agent call の起動条件や agent call 状態の記録処理を確認したいとき。
 
 ## Do not read this when
-- oracle 編集 prompt の具体的な契約や最終状態の仕様を確認したいだけの場合は、参照コメントで示される oracle 編集仕様を直接読む。
-- prompt 編集入力の予約・編集・抽出・確定処理の詳細だけを確認したい場合は、`commons.prompt_editor_input` の実装を直接読む。
-- agent 起動パラメータの構築規則だけを確認したい場合は、`acp.builder.oracle.edit.launch_exec` の実装を直接読む。
-- CLI 共通の実行制御、設定読込、セッション状態管理、報告更新の詳細だけを確認したい場合は、それぞれの `cmoc_runtime` または `commons` の実装を直接読む。
+- oracle 編集 prompt や起動パラメータの内容を確認したいとき。
+- 入力エディタ、session 状態、Git branch、runtime report の個別仕様を確認したいとき。
 
 ## hash
-- 3fea2c4033a83d2e9495d8289341e4208205a0549b40ec929d9f7814d63989fe
+- f0d8bf212602a8c1e6bb8c66481ecf2f3eb7c3243eefce1f43269e8522705b66
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` サブコマンドの read-only TUI 実行入口。oracle 調査指示の入力受付、完全な調査プロンプトの構築、設定済みの Codex TUI 起動までを CLI runtime 経由で調整する。oracle investigation の CLI フローやプロンプト編集・TUI 起動処理を確認するときの入口。
+- `cmoc oracle investigation` サブコマンドの実行入口。入力した oracle 調査指示を編集・収集し、調査契約付きの起動パラメータで read-only Codex TUI を開始する。
 
 ## Read this when
-- `cmoc oracle investigation` の CLI 実行フローを変更・調査するとき
-- oracle 調査指示の編集、プロンプト skeleton の生成、Codex TUI 起動の連携を確認するとき
-- このサブコマンドの preflight、進捗段階、実行時設定の扱いを確認するとき
+- oracle investigation サブコマンドの実行手順や、調査指示の入力から Codex TUI 起動までの処理を確認・変更するとき。
+- oracle 調査用プロンプトの編集、設定読込、実行前処理、進捗ステップの連携を確認するとき。
 
 ## Do not read this when
-- oracle investigation の調査契約や prompt 内容そのものを確認したいとき
-- TUI 起動パラメータの詳細実装を確認したいとき
-- 共通の prompt editor 入出力処理だけを確認したいとき
+- oracle 調査用 TUI の起動パラメータそのものを変更するときは、起動パラメータ構築側の対象を直接読む。
+- 共通のプロンプト編集処理や CLI ランタイムの実装を確認するときは、それぞれの共通モジュールを直接読む。
 
 ## hash
-- b3511825621dd0ec025ea9cd1f9a1cffc0cf67f11581636bb480c9d62cb3501a
+- 65a583fe03422d9cb705c5055952e67db1df02b2631bd482e1c9918295fa6b9f

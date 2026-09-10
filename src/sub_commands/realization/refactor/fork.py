@@ -415,6 +415,10 @@ def _run_refactor_unit(
     target_path = context.run_worktree / target
     if not (target_path.is_file() or target_path.is_symlink()):
         sync_refactor_state(context.run_worktree)
+        refresh_indexes(context.run_worktree, commit=False)
+        cleanup_warnings.extend(
+            stop_tracked_codex_children(context.repo, context.session_id) or []
+        )
         _commit_refactor_unit(
             context,
             target,
@@ -519,9 +523,9 @@ def _run_refactor_unit(
         for finding in normalized_findings
         if finding.get("resolution", {}).get("status") == "unresolved"
     ]
-    unresolved_changed_paths = {
-        path for finding in unresolved for path in finding["changed_paths"]
-    }
+    declared_changed_paths = tuple(
+        finding["changed_paths"] for finding in normalized_findings
+    )
     _update_refactor_state(
         context,
         target,
@@ -577,7 +581,7 @@ def _run_refactor_unit(
         f"cmoc realization refactor {target}",
         pending_realization_paths=actual_changed_paths,
         state_paths_before=state_paths_before,
-        unresolved_changed_paths=unresolved_changed_paths,
+        declared_changed_paths=declared_changed_paths,
     )
 
 
@@ -629,7 +633,7 @@ def _commit_refactor_unit(
     *,
     pending_realization_paths: Collection[str] = (),
     state_paths_before: Collection[str] = (),
-    unresolved_changed_paths: Collection[str] = (),
+    declared_changed_paths: Collection[Collection[str]] = (),
 ) -> None:
     """commit 済み処理単位の report 進捗を interruption 前に公開する。
 
@@ -669,13 +673,13 @@ def _commit_refactor_unit(
                     if change.status.startswith("R") and len(change.paths) == 2
                 }
                 state = load_refactor_state(context.run_worktree)
-                if target not in rename_paths and target not in state:
+                if declared_changed_paths:
                     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
                     # Git は内容の変更量が大きい rename を delete/add として記録する。
-                    # 所見が宣言した changed_paths に旧 target と新 path が含まれ、そこから
-                    # 新しく現れた realization file が一つだけなら、先にその対応を採用する。
-                    # それ以外は、処理単位で新しく現れた realization file が一つだけの
-                    # 場合に限って旧 target をその path へ対応付ける。
+                    # 後続 target の call が以前の unresolved target を rename した場合
+                    # もあるため、current target だけでなく commit 前から unresolved だった
+                    # path も対応付ける。old/new が同じ finding の changed_paths に含まれ、
+                    # 新しい state entry が一つだけのときに限って対応を確定する。
                     new_state_paths = {
                         path
                         for path in pending_realization_paths
@@ -683,16 +687,24 @@ def _commit_refactor_unit(
                         and path in state
                         and path not in state_paths_before
                     }
-                    declared_candidates = sorted(
-                        path
-                        for path in unresolved_changed_paths
-                        if path in new_state_paths
-                    )
-                    candidates = declared_candidates or sorted(new_state_paths)
-                    if len(declared_candidates) == 1:
-                        rename_paths[target] = declared_candidates[0]
-                    elif len(candidates) == 1:
-                        rename_paths[target] = candidates[0]
+                    sources = [target, *unresolved_findings]
+                    for source in sources:
+                        if (
+                            source in rename_paths
+                            or source not in state_paths_before
+                            or source in state
+                        ):
+                            continue
+                        candidates = {
+                            path
+                            for changed_paths in declared_changed_paths
+                            if source in changed_paths
+                            for path in changed_paths
+                            if path in new_state_paths
+                        }
+                        candidates.difference_update(rename_paths.values())
+                        if len(candidates) == 1:
+                            rename_paths[source] = next(iter(candidates))
                 _reconcile_unresolved_findings(
                     state,
                     rename_paths,

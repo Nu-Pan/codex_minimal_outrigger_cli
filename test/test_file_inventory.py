@@ -220,6 +220,22 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert synchronized["oracle/spec.md"]["investigation_required"] is False
 
 
+def test_realization_classifier_uses_nested_head_for_deleted_file(
+    tmp_path: Path,
+) -> None:
+    """nested repository の削除 path を outer run branch で分類しない。"""
+    root = make_repo(tmp_path)
+    nested = _make_nested_repo(root / "nested")
+    target = nested / "nested.txt"
+    target.unlink()
+
+    assert is_realization_file_path(
+        root,
+        target,
+        branch="cmoc/run/session/run",
+    )
+
+
 def test_refactor_state_sync_round_trips_non_utf8_filename(tmp_path: Path) -> None:
     """非 UTF-8 filename も列挙結果と state entry を保持する。"""
     root = make_repo(tmp_path)

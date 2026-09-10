@@ -26,7 +26,9 @@ from _cli_support import terminal_primary_report
 from _git_support import make_repo
 
 import commons.runtime_cli as runtime_cli
+import commons.runtime_primary_report as primary_report_module
 from cmoc_runtime import CmocError, TerminalResult
+from commons.runtime_primary_report import PrimaryReportSaveError
 
 _EARLY_ERROR_REPORTS = [
     ("doctor", "doctor", ()),
@@ -229,6 +231,14 @@ def test_early_error_saves_command_specific_primary_report(
         assert 'reduction_agent_call_status: "not_started"' in front_matter
     if command_name == "realization refactor fork":
         assert 'completion_reason: "error"' in front_matter
+        assert "## Current fork" in rendered
+        assert "- processed targets: not_fixed" in rendered
+        assert "## Unresolved targets" in rendered
+        assert "- count: not_fixed" in rendered
+        assert "## Unresolved findings" in rendered
+        assert "## Processing units" in rendered
+        assert "## Refactor state" in rendered
+        assert "## Change summary" in rendered
     if command_name == "realization apply fork":
         assert 'completion_reason: "error"' in front_matter
         assert "feedback_observation_count: 0" in front_matter
@@ -353,6 +363,27 @@ def test_refactor_fallback_records_user_interruption_reason(
     front_matter = report_path.read_text(encoding="utf-8").split("---", 2)[1]
     assert 'terminal_classification: "user_interruption"' in front_matter
     assert 'completion_reason: "user_interruption"' in front_matter
+
+
+def test_existing_primary_report_survives_update_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """execution record の更新失敗で、cleanup 前に保存した report を失わない。"""
+    path = tmp_path / "report.md"
+    path.write_text("pending report\n")
+
+    def fail_replace(_temporary: Path, _target: Path) -> None:
+        """既存 report の atomic replacement failure を再現する。"""
+        raise OSError("injected report update failure")
+
+    monkeypatch.setattr(primary_report_module.os, "replace", fail_replace)
+
+    with pytest.raises(PrimaryReportSaveError):
+        primary_report_module.rewrite_primary_report(path, "final report\n")
+
+    assert path.read_text() == "pending report\n"
+    assert not list(tmp_path.glob(".report.md.*"))
 
 
 def test_unsaved_report_path_becomes_internal_failure_without_path_display(

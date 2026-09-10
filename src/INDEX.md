@@ -18,18 +18,18 @@
 # `basic`
 
 ## Summary
-- `basic.*` の互換 import 公開面をまとめた realization 側の入口。ACP 型、path model、構造化文書 API の旧参照から、各互換モジュールまたは再公開元の正本へ進むための下位要素入口を提供する。
+- `basic.*` の旧公開 import を維持する互換名前空間。ACP 型、path model、構造化文書 API は正本を複製せず、既存実装の再公開または委譲によって利用者向け入口を提供する。
 
 ## Read this when
-- `basic` 名前空間に残る互換 API の範囲や、旧 import から移行先を確認したいとき。
-- ACP、path model、構造化文書の互換入口を横断して、個別モジュールを読むべきか判断するとき。
+- `basic.*` の互換参照を維持・削除する条件や、利用者向け API の移行先を判断するとき。
+- ACP 型、path model、構造化文書の旧 API 入口を確認し、正本実装への委譲関係を追跡するとき。
 
 ## Do not read this when
-- 個別 API の実装、再公開内容、型定義、描画仕様を確認したいときは、`basic.acp`、`basic.path_model`、`basic.struct_doc`、またはそれぞれの正本実装を直接読む。
-- 正本仕様そのものや、`basic` 名前空間と無関係な処理を調べるとき。
+- ACP 型、path model、構造化文書の正本仕様・実装詳細を確認したいときは、各再公開元を直接読む。
+- 個別モジュールの具体的な公開内容や利用箇所だけを調べるときは、`basic` 全体ではなく該当モジュールまたは参照元を直接読む。
 
 ## hash
-- ea7ec701e546985b90dda735f067c250cdd2609d2464948e58591d98ccf40fd2
+- e66d85791589dac1aca9c82c3aeba73b5416451d343c2feb68cbe202afe895a9
 
 # `cmoc_runtime.py`
 
@@ -49,18 +49,21 @@
 # `commons`
 
 ## Summary
-- commons 配下の共通 runtime 実装群への入口。CLI、Codex、feedback、state、report、Git、ログ、パスなど複数経路で共有される実行時境界を扱う。
+- cmoc の共通 runtime 実装を提供する commons パッケージ。CLI 実行、Codex exec／TUI、設定、Git、ログ、パス、状態、feedback、report、editor input、run lifecycle など、複数の実行経路で共有される基盤機能への入口。
+- 共通 runtime の公開 API や、特定の runtime 境界を横断して挙動を確認・変更する際に、各責務別モジュールへ進むための上位入口。
 
 ## Read this when
-- commons の共有 runtime API や各 helper の責務を確認・変更するとき。
-- Codex 実行、prompt editor、INDEX lifecycle、editing run、feedback などの共通基盤を調査するとき。
+- 複数の CLI・Codex・run・feedback 実行経路で共有される runtime 機能の責務や入口を確認するとき
+- 設定、Git、ログ、パス、状態、結果、report、editor input、feedback などの共通実装を変更・調査するとき
+- 対象の責務が特定の runtime サブモジュールに限定されず、commons 配下の公開境界や連携を確認するとき
 
 ## Do not read this when
-- 特定 helper や CLI の個別処理、正本仕様、schema の詳細だけを確認したいとき。
-- commons と無関係な業務処理や INDEX の利用者向けルーティング規則だけを確認したいとき。
+- 特定の runtime サブモジュールの内部実装や個別挙動だけを調べる場合は、その責務に対応するモジュールを直接読む
+- Codex exec／TUI、feedback reporter、editor handoff、run lifecycle など、対象となる個別実装が明確な場合は上位ディレクトリ入口を経由せず該当モジュールを読む
+- 仕様書、schema、oracle、realization file の正本や、個別 CLI サブコマンドの業務処理だけを確認する場合
 
 ## hash
-- b67ebdf1ada751cab10be42fb599a1bfcda2eab026f255fe6ee815f2a79a70cf
+- d6fc7d3721c9d7587358c408096a8b5473f90d6417d2e5fc45aa370254517b98
 
 # `config`
 
@@ -114,16 +117,16 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` は、cmoc の各サブコマンド実装をまとめるパッケージ境界であり、個別サブコマンドの入口や実行フローへ進むための上位ルーティング先となる。
-- apply は現時点で実装がなく、doctor、feedback、indexing、oracle、realization、review、run、session、tui などのサブコマンド実装が配下にある。
+- cmoc の各サブコマンド実装を集約するパッケージ境界。doctor・feedback・indexing・oracle・realization・run・session・tui などの実行入口と、配下の処理群への案内を担う。
+- feedback、run、session、realization など複数モジュールにまたがる処理の構成や責務分担を確認するための上位入口。
 
 ## Read this when
-- cmoc のサブコマンド構成を横断して確認するとき。
-- 特定のサブコマンドの入口や実行フローを調べる前に、該当する配下の実装へ進む先を判断するとき。
+- サブコマンド実装全体の構成や、個別サブコマンドの実行入口を確認するとき。
+- 対象サブコマンドの処理が複数の下位モジュールに分かれており、適切な実装へ進む先を判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理、共通 runtime、run lifecycle、indexing 共通処理などを直接確認したいときは、対応する下位実装を読むとき。
-- apply サブコマンドの具体的な実装を確認したいときは、実装が追加されるまで読む対象がない。
+- 対象サブコマンドや処理モジュールが明確で、対応する下位実装を直接確認できるとき。
+- サブコマンド共通 runtime や、個別処理の具体的な実装詳細だけを調べるとき。
 
 ## hash
-- 6c367c8a7c8cf65ab18209ec8fc7ba700c7b9332ca1f88a3fc0b639792ea61df
+- fb4f6a0a51924f89800232367c0ec1ade45afa0f030cb542f3572838df478e44

@@ -415,7 +415,7 @@ def test_doctor_generates_and_tracks_config(
         run_git(root, "ls-files", "--", ".cmoc/gt/config.json").stdout.strip()
         == ".cmoc/gt/config.json"
     )
-    assert "num_try_falv_recovery" not in json.loads(config_path.read_text())["codex"]
+    assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
     assert json.loads(config_path.read_text())["codex"]["model_providers"] == {
         "openai": {"settings": {}}
     }
@@ -585,7 +585,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
         "model": default_call.model,
         "reasoning_effort": default_call.reasoning_effort,
     }
-    assert "num_try_falv_recovery" not in data["codex"]
+    assert data["codex"]["num_try_falv_recovery"] == 4
     assert "model" not in data["codex"]
     assert "reasoning_effort" not in data["codex"]
     assert "apply_fork" not in data

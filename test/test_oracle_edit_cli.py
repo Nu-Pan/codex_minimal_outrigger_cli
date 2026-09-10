@@ -206,11 +206,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     real_finalize_prompt_editor_input = oracle_edit_module.finalize_prompt_editor_input
 
     def record_finalize_prompt_editor_input(
+        target_root: Path,
         work_path: Path,
     ) -> None:
         """agent call 前の editor work file cleanup を記録する。"""
         events.append("finalize")
-        real_finalize_prompt_editor_input(work_path)
+        real_finalize_prompt_editor_input(target_root, work_path)
 
     monkeypatch.setattr(
         oracle_edit_module,

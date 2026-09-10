@@ -18,6 +18,7 @@ subcommand event を共有する一つの外部契約として一箇所で検証
 """
 
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -151,6 +152,48 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     assert logger.quota_wait_sec == pytest.approx(worker_count * 0.25)
 
 
+def test_subcommand_logger_writes_utf8_without_locale_dependency(
+    tmp_path: Path,
+) -> None:
+    """ASCII locale でも日本語を含む JSON Lines event を保存する。"""
+    source_root = Path(__file__).resolve().parents[1]
+    script = r"""
+import json
+import tempfile
+from pathlib import Path
+
+from commons.runtime_logging import SubcommandLogger
+
+root = Path(tempfile.mkdtemp())
+logger = SubcommandLogger(root, "probe")
+logger.event("warning", message="\u65e5\u672c\u8a9e warning")
+events = [
+    json.loads(line)
+    for line in logger.path.read_text(encoding="utf-8").splitlines()
+]
+assert events[0]["message"] == "\u65e5\u672c\u8a9e warning"
+print("ok")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "LC_ALL": "C",
+            "PYTHONCOERCECLOCALE": "0",
+            "PYTHONUTF8": "0",
+            "PYTHONPATH": os.pathsep.join(
+                [str(source_root / "src"), str(source_root / "oracle" / "src")]
+            ),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "ok"
+
+
 def test_noninteractive_success_emits_one_terminal_result_after_progress(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -171,7 +214,9 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     def succeed() -> TerminalResult:
         """トップレベルと内部 step を含む成功結果を返す。"""
         runtime_cli.start_subcommand_step(1, "top level", "top level")
-        runtime_cli.start_subcommand_step("1/1, 1/1", "nested", "nested")
+        runtime_cli.start_subcommand_step(
+            "1/1, 1/1", "nested", "nested log description"
+        )
         return TerminalResult(
             primary_report=report_path,
             primary_report_role="probe report",
@@ -205,7 +250,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["classification"] == "natural_completion"
     assert events[-1]["terminal_result"]["result"] == "attention"
-    assert any(event.get("step") == "nested" for event in events)
+    nested_steps = [
+        event["step"]
+        for event in events
+        if event.get("event") in {"step_started", "step_finished"}
+        and event.get("step_index") == "1/1, 1/1"
+    ]
+    assert nested_steps == ["nested log description", "nested log description"]
 
 
 def test_internal_failure_traceback_is_logged_but_not_printed(

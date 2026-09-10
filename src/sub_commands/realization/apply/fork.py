@@ -58,6 +58,8 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
     diff_base_commit: str | None = None
     agent_head: str | None = None
     agent_commit_check_active = False
+    preflight_head: str | None = None
+    work_unit_committed = False
     cleanup_warnings: list[str] = []
     start_attempted = False
     start_was_ready = False
@@ -216,6 +218,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                 "cmoc realization apply fork",
                 allow_empty=True,
             )
+            work_unit_committed = True
             changes = tree_changes(context.run_worktree, context.run_fork_commit)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
@@ -264,6 +267,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             exc,
             cleanup_warnings,
             agent_head=agent_head if agent_commit_check_active else None,
+            preflight_head=preflight_head if not work_unit_committed else None,
         )
         error = CmocError(
             "realization apply fork は error state で停止しました。",
@@ -352,6 +356,7 @@ def _record_error(
     cleanup_warnings: list[str] | None = None,
     *,
     agent_head: str | None = None,
+    preflight_head: str | None = None,
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
     cleanup_errors = list(cleanup_warnings or [])
@@ -370,6 +375,16 @@ def _record_error(
         except BaseException as agent_commit_error:
             cleanup_errors.append(
                 f"agent commit cleanup failed: {agent_commit_error!r}"
+            )
+    if preflight_head is not None:
+        try:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+            # 処理単位が確定する前に agent call が失敗した場合、callback 前の
+            # indexing commit も未確定差分として処理単位の開始 HEAD へ戻す。
+            _rollback_preflight_commits(context.run_worktree, preflight_head)
+        except BaseException as preflight_error:
+            cleanup_errors.append(
+                f"preflight commit cleanup failed: {preflight_error!r}"
             )
     try:
         rollback_work_unit(context.run_worktree)

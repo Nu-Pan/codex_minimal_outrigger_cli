@@ -43,7 +43,12 @@ from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
-_CODEX_TUI_NOTIFICATION_SUPPORTED_VERSION = b"codex-cli 0.151.0"
+_CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS = frozenset(
+    {
+        b"codex-cli 0.151.0",
+        b"codex-cli 0.153.4",
+    }
+)
 _CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
 _TUI_SESSION_START_HOOK_KEY = "/<session-flags>/config.toml:session_start:0:0"
 _TUI_SESSION_START_HOOK_TIMEOUT_SEC = 10
@@ -498,7 +503,7 @@ def codex_cli_supports_tui_notification_hooks(
     """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
     try:
         result = subprocess.run(
-            ["codex", "--version"],
+            ["codex", "--sandbox", "read-only", "--version"],
             cwd=cwd,
             env=environment,
             stdin=subprocess.DEVNULL,
@@ -511,16 +516,18 @@ def codex_cli_supports_tui_notification_hooks(
         return False
     return (
         result.returncode == 0
-        and result.stdout.strip() == _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSION
+        and result.stdout.strip() in _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS
     )
 
 
 def _codex_session_start_hook_trusted_hash(command: str) -> str:
-    """Codex 0.151.0 の SessionStart command identity を fingerprint 化する。"""
-    # Codex 0.151.0 / 78c290807ce710180111df227df3b7a4fe845452 の
-    # hook discovery と canonical JSON fingerprint に合わせる。interface が変わる
-    # version は呼び出し側の probe で無効化し、legacy notify へは戻さない。
+    """検証済み Codex の SessionStart command identity を fingerprint 化する。"""
+    # Codex 0.151.0 / 78c290807ce710180111df227df3b7a4fe845452 と
+    # 0.153.4 / 3d2ee51ca2d5db578f328aa75e20aa22c0197c9a の hook discovery と
+    # canonical JSON fingerprint に合わせる。interface が変わる version は
+    # 呼び出し側の probe で無効化し、legacy notify へは戻さない。
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/engine/discovery.rs#L633-L778
+    # https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/hooks/src/engine/discovery.rs#L733-L779
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/config/src/fingerprint.rs#L47-L75
     identity = {
         "event_name": "session_start",
@@ -545,12 +552,14 @@ def _codex_session_start_hook_trusted_hash(command: str) -> str:
 def _tui_session_start_hook_override_args(
     session_start_command: Sequence[str] | None,
 ) -> list[str]:
-    """root session ID を記録する invocation-local hook 設定を返す。"""
+    """hooks を有効化し、root session ID を記録する設定を返す。"""
     if not session_start_command:
         return []
     command = shlex.join(session_start_command)
     # root は SessionStart、thread-spawned child は SubagentStart に分離される。
-    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/core/src/hook_runtime.rs#L109-L160
+    # user/managed config の features.hooks=false に依存せず、callback と同じ
+    # invocation で hooks feature を有効化する。--enable は対象版の専用引数。
+    # https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/core/src/hook_runtime.rs#L109-L160
     handler: dict[str, JsonTomlValue] = {
         "type": "command",
         "command": command,
@@ -566,9 +575,11 @@ def _tui_session_start_hook_override_args(
             }
         },
     }
-    # hooks feature は対象版の stable default に任せる。user/managed policy で無効なら
-    # callback なしへ fail-closed にし、TUI 本体の config load failure を起こさない。
-    return _config_override("hooks", _toml_value(hooks))
+    return [
+        "--enable",
+        "hooks",
+        *_config_override("hooks", _toml_value(hooks)),
+    ]
 
 
 def _model_provider_override_args(

@@ -122,33 +122,35 @@
 # `src`
 
 ## Summary
-- src は cmoc CLI の起動入口と、互換 shim、共通 runtime、各サブコマンド実装への上位ルーティングを担う。
-- CLI コマンドツリーは main.py、正本 oracle への互換解決は oracle.py、共有実行基盤は commons、サブコマンド実装は sub_commands、その他の旧 import 互換入口は acp・basic・config・cmoc_runtime に分かれる。
+- cmoc の CLI 起動入口と、互換 import path、共通 runtime、サブコマンド実装への案内を担う src 階層。Typer／Click の互換処理を含む公開実行経路の上位入口。
 
 ## Read this when
-- cmoc の CLI 起動経路、公開サブコマンド構成、または src 配下の互換入口と実体実装の配置を横断的に確認するとき。
-- 特定の CLI・runtime・互換 import の詳細へ進む前に、main.py、commons、sub_commands、または対応する shim のどこから読み始めるか判断するとき。
+- cmoc の CLI 起動経路、コマンドツリー、引数解析エラー処理、補完 probe の境界を確認するときは main.py を読む。
+- oracle.*、acp.*、basic.*、config.*、cmoc_runtime の互換 import 経路や、src 単体起動時の package shim を確認するときは対応する互換入口を読む。
+- 複数の実行経路で共有される runtime 機能や、doctor・feedback・indexing・oracle・realization・run・session・tui のサブコマンド構成から具体的な実装先を判断するときは commons または sub_commands を読む。
 
 ## Do not read this when
-- 個別サブコマンドの処理、共通 runtime API、正本 oracle 実装、または特定の互換モジュールの詳細を確認したいときは、対応する下位要素や正本実装を直接読む。
-- INDEX.md の更新処理、feedback の報告仕様、設定型や構造化文書など、src 全体の入口判断を必要としない個別仕様を調べるとき。
+- 正本側 oracle.* の実装、個別 runtime API の詳細、特定サブコマンドの業務処理だけを確認したいときは、src の上位入口ではなく対応する正本・commons の責務別モジュール・sub_commands 配下の実装を直接読む。
+- 互換入口の移行完了や削除条件だけを判断したいときは、各 shim の利用箇所と正本側の公開設定を直接確認する。
 
 ## hash
-- b017d667c47a061b6ee13d421600b32c2a67ec7af6b7dd309638307e089fba94
+- 5c29b099b3b82b5841bd9aec57e51f6fa909389901ae551fe5d47c945348c85b
 
 # `test`
 
 ## Summary
-- test 配下の回帰・統合テストを、CLI、runtime、indexing、feedback、session、Codex、prompt、state などの外部挙動と境界条件ごとに検証する入口。共通 fixture/helper から実経路受け入れ試験まで、実装変更に対応する検証対象を探すために使う。
+- `test` ディレクトリは、cmoc の各機能について、CLI 統合・runtime・builder・state・Git・Codex・通知などの外部挙動と境界条件を検証する回帰テスト群を収録する。
+- 個別機能の実装や正本仕様へ進む前に、変更対象の利用者向けライフサイクル、失敗分類、永続状態、ファイル境界を観測可能なテスト例から確認するための入口。
 
 ## Read this when
-- cmoc の実装や公開 CLI の挙動を変更・調査し、対応する回帰テストや統合テストの観測契約を確認するとき。
-- runtime、Codex 実行、indexing、feedback、session lifecycle、state、Git、prompt/editor、TUI、通知など、特定機能のテスト入口を探すとき。
-- fixture、共通 helper、実 Codex・PTY を使う実経路試験を含め、外部状態・ログ・report・Git 差分まで検証するテスト範囲を確認するとき。
+- cmoc の CLI、Codex 実行、indexing、oracle／realization、session、feedback、editor handoff、runtime、通知などについて、実装変更が既存の外部契約や安全境界に与える影響を調べるとき。
+- 特定のサブコマンドや共通基盤の回帰条件を、単体テストから実経路統合テストまで横断して探すとき。
+- 対象機能の成功・失敗・中断時における report、state、Git 差分、process、ログなどの観測結果を確認したいとき。
 
 ## Do not read this when
-- 正本仕様、実装本体、schema の内容を確認・変更することが目的で、対応する oracle、realization、src、schema を直接読むべきとき。
-- テストが扱う回帰契約ではなく、一般的な pytest 実行方法や無関係な機能の詳細だけを調べるとき。
+- 正本仕様、schema、実装本体、prompt の正本文面そのものを確認することが目的で、検証例ではなく対応する oracle・実装・schema を直接読むべきとき。
+- テスト対象の外部挙動や回帰条件に関係しない、別機能の実装詳細や一般的な pytest の実行方法だけを調べるとき。
+- 実際の Codex 推論を含む受け入れ試験が必要ない単純な局所変更で、該当する専用テストや実装へ直接進む方が適切なとき。
 
 ## hash
-- d6d67bee368ac37d99a27cf3926a38f042ac4083f4a2b86ef05de478c8be6c6b
+- fff1e60af15546ad9a001c8bae10a2ec06669821eee2dff5bfb1bb6d2b86df9a

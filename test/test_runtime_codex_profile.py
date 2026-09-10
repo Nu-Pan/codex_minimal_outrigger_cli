@@ -74,6 +74,7 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert parsed["notify"] == []
     assert parsed["tui"] == {"notifications": False}
     assert "hooks" not in parsed
+    assert "--enable" not in args
     assert parsed["mcp_servers"] == {
         "cmoc_feedback": {
             "command": sys.executable,
@@ -235,6 +236,7 @@ def test_codex_overrides_pair_root_capture_with_legacy_notification() -> None:
     assert parsed["notify"] == notification_command
     assert parsed["tui"] == {"notifications": False}
     assert "features" not in parsed
+    assert args[args.index("--enable") + 1] == "hooks"
     hook_command = shlex.join(session_start_command)
     hooks = parsed["hooks"]
     assert isinstance(hooks, dict)
@@ -281,13 +283,16 @@ def test_codex_overrides_disable_unpaired_notification_callback() -> None:
     parsed = codex_override_config(args)
     assert parsed["notify"] == []
     assert "hooks" not in parsed
+    assert "--enable" not in args
 
 
 @pytest.mark.parametrize(
     ("version_output", "returncode", "expected"),
     [
         (b"codex-cli 0.151.0\n", 0, True),
+        (b"codex-cli 0.153.4\n", 0, True),
         (b"codex-cli 0.152.0\n", 0, False),
+        (b"codex-cli 0.153.4.1\n", 0, False),
         (b"codex-cli 0.151.0\n", 1, False),
     ],
 )
@@ -298,7 +303,7 @@ def test_tui_notification_requires_exact_verified_codex_version(
     returncode: int,
     expected: bool,
 ) -> None:
-    """未検証版では無絞り込み callback へ戻さず fail-closed にする。"""
+    """検証済み版だけを callback 対応として扱い、他は fail-closed にする。"""
     calls: list[tuple[list[str], dict[str, object]]] = []
 
     def fake_run(
@@ -320,7 +325,7 @@ def test_tui_notification_requires_exact_verified_codex_version(
     )
     assert calls == [
         (
-            ["codex", "--version"],
+            ["codex", "--sandbox", "read-only", "--version"],
             {
                 "cwd": tmp_path,
                 "env": environment,
@@ -342,7 +347,9 @@ def test_tui_notification_version_probe_failure_is_nonfatal(
 
     def fail_run(*_args: object, **_kwargs: object) -> object:
         """有限時間を超えた version probe を再現する。"""
-        raise subprocess.TimeoutExpired(["codex", "--version"], 2)
+        raise subprocess.TimeoutExpired(
+            ["codex", "--sandbox", "read-only", "--version"], 2
+        )
 
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fail_run)
 

@@ -15,16 +15,16 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の full-cycle workload を実行し、run の初期化から対象 file の調査・修正、完了判定、joinable 化、fork report 保存までを一貫して管理する。
-- 各処理単位で agent の変更、findings、unresolved 状態、refactor state、commit を検証・同期し、中断時やエラー時の rollback、run state 更新、report 保存も扱う。
+- realization refactor fork の full-cycle 実行本体。対象選択、file 単位の調査・修正、refactor state 更新、commit、unresolved 管理、完了判定、fork report 保存を一つの run lifecycle として扱う。
+- agent 実行後の差分・commit 検証、INDEX refresh、run state 更新、正常完了・中断・error 時の cleanup と report を担う実行経路。
 
 ## Read this when
-- realization refactor fork の lifecycle、処理単位の進捗、unresolved findings の管理、完了理由、変更概要、interruption/error cleanup の挙動を確認するとき。
-- agent が realization file と changed_paths、git commit、INDEX refresh に関して満たすべき検証境界を確認するとき。
+- realization refactor fork の処理順序、対象反復、unresolved finding、refactor state の完了条件を確認・変更するとき。
+- agent の変更、INDEX・state・commit の検証、run isolation、正常完了・中断・error 時の report と cleanup を調べるとき。
 
 ## Do not read this when
-- realization refactor の対象選択や state の基本形式だけを確認したいときは、refactor state を管理する対象を直接読む。
-- run の join、abandon、共通の editing run lifecycle、または一般的な INDEX 更新仕様だけを確認したいときは、それぞれの共通 runtime や oracle specification を直接読む。
+- 対象選択や refactor state 同期だけを確認したいときは、state 管理・target selection の実装を直接読む。
+- file review agent や change summary の prompt・schema 契約だけを確認したいときは、各 builder 実装を直接読む。
 
 ## hash
-- 7a4447331aa882f043d96b4ae3177c81a12bb66d1367b691eee6dda4b918ddae
+- e9715522b987a4379c54b9c07e1064b7b0251410fc086f5509df7387d2435d2c

@@ -67,6 +67,7 @@ def test_config_json_preserves_oracle_member_order() -> None:
     assert list(data["codex"]) == [
         "model_providers",
         "agent_calls",
+        "num_try_falv_recovery",
     ]
     assert list(data["codex"]["agent_calls"]) == list(config.codex.agent_calls)
 
@@ -438,9 +439,18 @@ def test_config_drops_legacy_codex_model_class_maps() -> None:
     assert "reasoning_effort" not in codex_data
 
 
-@pytest.mark.parametrize("value", [4, True, "1", None])
-def test_config_drops_legacy_codex_falv_recovery_try_count(value: object) -> None:
-    """廃止済みの recovery 試行回数を config JSON の公開面から除外する。"""
-    config = config_from_dict({"codex": {"num_try_falv_recovery": value}})
+def test_config_preserves_codex_falv_recovery_try_count() -> None:
+    """codex の recovery 試行回数を読み込みと JSON 化の両方で保持する。"""
+    config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
 
-    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]
+    assert config.codex.num_try_falv_recovery == 4
+    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 4
+
+
+@pytest.mark.parametrize("value", [True, "1", None])
+def test_config_rejects_invalid_codex_falv_recovery_try_count(value: object) -> None:
+    """recovery 試行回数へ int 以外を指定した config を拒否する。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"codex": {"num_try_falv_recovery": value}})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"

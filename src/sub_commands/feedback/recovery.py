@@ -40,8 +40,8 @@ from commons.runtime_run import (
     run_lifecycle_lock,
     worktree_for_branch,
 )
+from commons.runtime_run_join import cleanup_joined_run
 from commons.runtime_run_lifecycle import EditingRunContext
-from sub_commands.run.join import _cleanup_joined_run
 
 
 def finish_feedback_run(
@@ -270,7 +270,7 @@ def _finish_from_journal(
             write_state(context.state_path, session)
             warnings: list[str] = []
             if branch_exists(repo, context.run_branch):
-                cleanup = _cleanup_joined_run(context, warnings)
+                cleanup = cleanup_joined_run(context, warnings)
                 if cleanup != "completed":
                     raise _failure(
                         "feedback run の隔離資源 cleanup に失敗しました。",

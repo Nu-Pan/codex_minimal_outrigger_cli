@@ -36,6 +36,8 @@ def render_primary_report(
             logger,
             dict(fields),
         )
+    elif spec.template == "refactor_fork":
+        body = _refactor_fork_body(classification, result, logger)
     else:
         body = _summary_body(spec.title, classification, result, logger)
     return "\n".join([*front_matter, *body, "", execution_record_markdown(logger)])
@@ -201,6 +203,46 @@ def _feedback_invocation_body(
             [f"- {action}" for action in result.next_actions]
             or ["- 状態を確認して再実行してください。"]
         ),
+        "## 関連ログ",
+        *_log_lines(logger),
+    ]
+
+
+def _refactor_fork_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+) -> list[str]:
+    """refactor 固有 report の未確定項目を fallback でも明示する。"""
+    not_fixed = "not_fixed"
+    return [
+        "# cmoc realization refactor fork report",
+        _outcome_sentence(classification),
+        "## Current fork",
+        f"- processed targets: {not_fixed}",
+        f"- uninvestigated targets: {not_fixed}",
+        "## Processing units",
+        f"- {not_fixed}",
+        "## Unresolved targets",
+        f"- count: {not_fixed}",
+        "- paths:",
+        f"  - {not_fixed}",
+        "## Unresolved findings",
+        f"- {not_fixed}",
+        "## Refactor state",
+        f"- entries: {not_fixed}",
+        f"- investigation_required: {not_fixed}",
+        f"- not_investigated: {not_fixed}",
+        f"- no_findings: {not_fixed}",
+        f"- findings: {not_fixed}",
+        "## Change summary",
+        f"- {not_fixed}",
+        "## 終端結果",
+        *_terminal_lines(classification, result),
+        "## warning とエラー",
+        *_warning_error_lines(classification, result, logger),
+        "## 次の操作",
+        *([f"- {action}" for action in result.next_actions] or ["- なし"]),
         "## 関連ログ",
         *_log_lines(logger),
     ]

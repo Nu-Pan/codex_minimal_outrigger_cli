@@ -226,17 +226,24 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
     ):
         raise _invalid_refactor_state(path, f"entry value が不正です: {key}")
     validated_result = cast(_InvestigationResult, result)
-    if digest is not None and (
-        not isinstance(digest, str)
-        or len(digest) != 64
-        or any(character not in string.hexdigits for character in digest)
-    ):
-        raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
+    if digest is not None:
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in string.hexdigits for character in digest)
+        ):
+            raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
+        # file_sha256 は小文字を返すため、既存 state の大文字 hex も
+        # 同じ digest として扱い、変更なしの file を再調査へ戻さない。
+        digest = digest.lower()
     # {{work-root}}/oracle/doc/app_spec/timestamp.md
     # state の履歴時刻は、file name と同じ固定幅の {{time-stamp}} にそろえる。
     if investigated_at is not None and (
         not isinstance(investigated_at, str)
-        or re.fullmatch(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_\d{2}_\d{9}", investigated_at)
+        or re.fullmatch(
+            r"[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}_[0-9]{2}_[0-9]{9}",
+            investigated_at,
+        )
         is None
     ):
         raise _invalid_refactor_state(path, f"調査日時が不正です: {key}")

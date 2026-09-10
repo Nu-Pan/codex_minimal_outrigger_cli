@@ -26,12 +26,13 @@ import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_codex_profile as codex_profile_module
 import commons.runtime_run as runtime_run_module
+import commons.runtime_run_join as run_join_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import commons.runtime_run_report as run_report_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.abandon as run_abandon_module
-import sub_commands.run.join as run_join_module
+import sub_commands.run.join as run_join_command_module
 import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
@@ -353,6 +354,18 @@ def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> N
     ]
 
 
+def test_worktree_change_paths_returns_normalized_relative_paths(
+    tmp_path: Path,
+) -> None:
+    """変更 path を refactor schema と同じ slash 区切りで返す。"""
+    root = make_repo(tmp_path)
+    nested = root / "nested" / "README.md"
+    nested.parent.mkdir()
+    nested.write_text("nested\n")
+
+    assert worktree_change_paths(root) == ["nested/README.md"]
+
+
 def test_apply_rolls_back_unexpected_oracle_change(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -572,6 +585,52 @@ def test_apply_rolls_back_preflight_commit_before_agent_boundary(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
+def test_apply_rolls_back_preflight_commit_after_agent_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """本命 agent の開始後に失敗しても preflight commit を残さない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+
+    def fail_after_agent_boundary(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> NoReturn:
+        """preflight commit 後の agent failure を再現する。"""
+        worktree = parameter.agent_call_cwd
+        (worktree / "INDEX.md").write_text("preflight index\n")
+        run_git(worktree, "add", "INDEX.md")
+        run_git(worktree, "commit", "-m", "preflight index")
+        before_agent_call = kwargs["before_agent_call"]
+        assert callable(before_agent_call)
+        before_agent_call()
+        raise RuntimeError("agent failed")
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_after_agent_boundary)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    state = _state(state_path)
+    assert state["run"]["state"] == "error"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (
+        run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+        == state["run"]["fork_commit"]
+    )
+    assert (
+        "preflight index"
+        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    assert not (worktree / "INDEX.md").exists()
+    assert run_git(worktree, "status", "--porcelain").stdout == ""
+
+
 @pytest.mark.parametrize("unexpected_path", ["oracle/unexpected.md", "README.md"])
 def test_apply_rejects_unexpected_refresh_change_before_commit(
     tmp_path: Path,
@@ -640,7 +699,7 @@ def test_run_join_doctor_sync_depends_on_active_run_kind(
         lambda _root, *, sync_refactor_entries: calls.append(sync_refactor_entries),
     )
 
-    run_join_module._doctor_preprocess_for_join()
+    run_join_module.doctor_preprocess_for_join()
 
     assert calls == [expected_sync]
 
@@ -781,6 +840,11 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     joined_process_stops: list[tuple[Path, str]] = []
     monkeypatch.setattr(
         run_join_module,
+        "stop_tracked_codex_children",
+        lambda repo, session_id: joined_process_stops.append((repo, session_id)),
+    )
+    monkeypatch.setattr(
+        run_join_command_module,
         "stop_tracked_codex_children",
         lambda repo, session_id: joined_process_stops.append((repo, session_id)),
     )
@@ -958,6 +1022,9 @@ def test_run_join_tracks_indexing_codex_calls_and_stops_children_after_refresh(
 
     monkeypatch.setattr(run_join_module, "refresh_indexes", fake_refresh)
     monkeypatch.setattr(run_join_module, "stop_tracked_codex_children", record_stop)
+    monkeypatch.setattr(
+        run_join_command_module, "stop_tracked_codex_children", record_stop
+    )
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -1730,6 +1797,160 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     report = reports[0].read_text()
     assert "## Completion\ncompleted_with_unresolved" in report
     assert "## Unresolved targets\n- count: 1\n- paths:\n  - `renamed.md`" in report
+
+
+def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """後続 target の rename でも既存 unresolved target を追従させる。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+    call_log = (tmp_path / "unresolved_call.json").resolve()
+    call_log.write_text("{}\n")
+    reviewed: list[str] = []
+    oracle_reviews = 0
+
+    def fake_refactor(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """README の unresolved 後、別 target で README を rename する。"""
+        nonlocal oracle_reviews
+        purpose = str(kwargs["purpose"])
+        if purpose == "realization refactor change summary":
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "changes": [
+                        {
+                            "category": "rename",
+                            "summary": "README renamed",
+                            "changed_paths": ["README.md", "renamed.md"],
+                        }
+                    ]
+                },
+            )
+        target = purpose.removeprefix("realization refactor: ")
+        reviewed.append(target)
+        if target == "README.md":
+            return SimpleNamespace(
+                returncode=0,
+                call_log_path=call_log,
+                output_json={
+                    "findings": [
+                        {
+                            "title": "README unresolved finding",
+                            "changed_paths": [],
+                            "resolution": {
+                                "status": "unresolved",
+                                "summary": "人間の判断が必要",
+                            },
+                        }
+                    ]
+                },
+            )
+        if target == "oracle/spec.md":
+            oracle_reviews += 1
+            if oracle_reviews > 1:
+                return SimpleNamespace(
+                    returncode=0,
+                    output_json={"findings": []},
+                )
+            worktree = parameter.agent_call_cwd
+            (worktree / "README.md").rename(worktree / "renamed.md")
+            (worktree / "renamed.md").write_text("completely different content\n")
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "findings": [
+                        {
+                            "title": "README rename",
+                            "changed_paths": ["README.md", "renamed.md"],
+                            "resolution": {
+                                "status": "fixed",
+                                "summary": "rename completed",
+                            },
+                        }
+                    ]
+                },
+            )
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    state = _state(state_path)
+    assert state["run"]["state"] == "joinable"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    refactor_state = load_refactor_state(worktree)
+    assert "README.md" not in refactor_state
+    assert refactor_state["renamed.md"]["investigation_required"] is True
+    assert reviewed.count("README.md") == 1
+    assert reviewed.count("oracle/spec.md") == 2
+    assert "renamed.md" not in reviewed
+    report = terminal_primary_report(result).read_text()
+    assert 'completion_reason: "completed_with_unresolved"' in report
+    assert "- count: 1" in report
+    assert "`renamed.md`" in report
+
+
+def test_refactor_missing_target_refreshes_indexes_before_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """消えた target の state 同期でも INDEX 更新を同じ単位へ含める。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path,
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="fork",
+        kind="realization_refactor",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="fork",
+        run_worktree=tmp_path,
+    )
+    events: list[str] = []
+
+    def record_commit(*_args: object, **_kwargs: object) -> None:
+        """missing target の commit 境界を記録する。"""
+        events.append("commit")
+
+    monkeypatch.setattr(
+        refactor_module,
+        "sync_refactor_state",
+        lambda _root: events.append("sync") or {},
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "refresh_indexes",
+        lambda *_args, **_kwargs: events.append("refresh") or [],
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "stop_tracked_codex_children",
+        lambda *_args, **_kwargs: events.append("stop") or [],
+    )
+    monkeypatch.setattr(refactor_module, "_commit_refactor_unit", record_commit)
+
+    refactor_module._run_refactor_unit(
+        context,
+        "README.md",
+        [],
+        {},
+        [],
+    )
+
+    assert events == ["sync", "refresh", "stop", "commit"]
 
 
 @pytest.mark.parametrize(
@@ -2750,7 +2971,7 @@ def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
     )
 
     warnings: list[str] = []
-    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+    cleanup = run_join_module.cleanup_joined_run(context, warnings)
 
     assert cleanup == "preserved"
     assert warnings == ["run worktree cleanup failed"]
@@ -2792,7 +3013,7 @@ def test_run_join_cleanup_warns_when_worktree_removal_raises(
     )
 
     warnings: list[str] = []
-    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+    cleanup = run_join_module.cleanup_joined_run(context, warnings)
 
     assert cleanup == "preserved"
     assert warnings == ["run worktree cleanup failed"]
@@ -2842,7 +3063,7 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
     )
 
     warnings: list[str] = []
-    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+    cleanup = run_join_module.cleanup_joined_run(context, warnings)
 
     assert cleanup == "branch_preserved"
     assert deleted == [context.run_branch]
@@ -2882,6 +3103,58 @@ def test_run_join_resolves_deleted_session_index_conflict(
     assert result.exit_code == 0, result.output
     assert not index_path.exists()
     assert _state(state_path)["run"]["state"] == "ready"
+
+
+def test_index_conflict_records_merge_before_post_join_refresh(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """INDEX conflict の merge を post-join failure より先に確定する。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    index_path = root / "INDEX.md"
+    index_path.write_text("base index\n")
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "add index")
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "INDEX.md").write_text("run index\n")
+    commit_work_unit(context.run_worktree, "run index change")
+    set_run_state(context, "joinable")
+    index_path.unlink()
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "delete session index")
+    session_head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    events: list[tuple[str, str | None]] = []
+
+    def fail_after_refresh_commit(
+        refresh_context: EditingRunContext, _warnings: list[str]
+    ) -> None:
+        """post-join refresh が commit 後に失敗する状態を再現する。"""
+        (refresh_context.session_worktree / "INDEX.md").write_text("post-join index\n")
+        run_git(refresh_context.session_worktree, "add", "INDEX.md")
+        run_git(
+            refresh_context.session_worktree,
+            "commit",
+            "-m",
+            "post-join index",
+        )
+        events.append(("refresh", None))
+        raise RuntimeError("injected post-join refresh failure")
+
+    monkeypatch.setattr(
+        run_join_module, "_refresh_join_indexes", fail_after_refresh_commit
+    )
+
+    with pytest.raises(RuntimeError, match="post-join refresh"):
+        run_join_module.merge_run(
+            context,
+            SessionState(),
+            [],
+            session_head_before,
+            on_merged=lambda commit: events.append(("merged", commit)),
+        )
+
+    assert [event[0] for event in events] == ["merged", "refresh"]
+    assert events[0][1] is not None
 
 
 def test_run_join_conflict_abort_failure_still_restores_session_tree(
@@ -2981,27 +3254,33 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
         assert "session.last_joined_apply_fork_commit updated" not in output
 
 
-def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
+def test_run_join_keeps_completed_merge_when_final_report_update_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """cleanup 後の report 更新失敗で完了済み merge を rollback しない。"""
+    """cleanup 後の report 更新失敗でも保存済み report と merge を保持する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
     monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    original_write_report = run_join_module.write_lifecycle_report
 
     def fail_final_report(
         _report_context: EditingRunContext,
         _operation: str,
-        **_kwargs: object,
+        **kwargs: object,
     ) -> Path:
-        """cleanup 後に行う唯一の primary report 保存失敗を再現する。"""
-        raise RuntimeError("final report save failed")
+        """cleanup 前の report 保存後に行う最終更新失敗を再現する。"""
+        if kwargs.get("report_path") is not None:
+            raise RuntimeError("final report update failed")
+        return original_write_report(_report_context, _operation, **kwargs)
 
     monkeypatch.setattr(run_join_module, "write_lifecycle_report", fail_final_report)
+    monkeypatch.setattr(
+        run_join_command_module, "write_lifecycle_report", fail_final_report
+    )
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -3020,9 +3299,50 @@ def test_run_join_keeps_completed_merge_when_primary_report_save_fails(
     rendered = reports[0].read_text()
     assert 'terminal_classification: "error"' in rendered
     assert 'state_after: "ready"' in rendered
-    assert 'cleanup: "completed"' in rendered
-    assert 'report_update: "failed"' in rendered
-    assert "final report save failed" in rendered
+    assert 'cleanup: "pending"' in rendered
+    assert "cleanup pending" in rendered
+
+
+def test_run_join_saves_report_before_cleanup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run resource を削除する前に pending report を保存する。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    events: list[tuple[str, object]] = []
+    original_write_report = run_join_command_module.write_lifecycle_report
+
+    def record_report(
+        report_context: EditingRunContext,
+        operation: str,
+        **kwargs: object,
+    ) -> Path:
+        """report 保存の cleanup 前後の順序を記録する。"""
+        details = kwargs["details"]
+        assert isinstance(details, dict)
+        events.append(("report", details["cleanup"]))
+        return original_write_report(report_context, operation, **kwargs)
+
+    def record_cleanup(_context: EditingRunContext, _warnings: list[str]) -> str:
+        """cleanup の開始を記録して成功を返す。"""
+        events.append(("cleanup", None))
+        return "completed"
+
+    monkeypatch.setattr(
+        run_join_command_module, "write_lifecycle_report", record_report
+    )
+    monkeypatch.setattr(run_join_module, "cleanup_joined_run", record_cleanup)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert events == [("report", "pending"), ("cleanup", None), ("report", "completed")]
+    assert (root / "README.md").read_text() == "realized\n"
 
 
 def test_run_join_preserves_active_state_when_cleanup_fails(
@@ -3038,7 +3358,7 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
     monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         run_join_module,
-        "_cleanup_joined_run",
+        "cleanup_joined_run",
         lambda _context, warnings: warnings.append("cleanup pending") or "preserved",
     )
 

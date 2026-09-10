@@ -20,6 +20,9 @@ from oracle.acp_builder.realization.apply.fork.launch_exec import (
 from oracle.acp_builder.realization.refactor.fork.change_summary import (
     build_realization_refactor_fork_change_summary_parameter as build_canonical_summary_parameter,
 )
+from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
+    build_realization_refactor_fork_file_review_and_fix_parameter as build_canonical_review_parameter,
+)
 
 from acp.builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter,
@@ -68,6 +71,10 @@ def test_editing_run_compatibility_builders_reexport_canonical_functions() -> No
     assert (
         build_realization_refactor_fork_change_summary_parameter
         is build_canonical_summary_parameter
+    )
+    assert (
+        build_realization_refactor_fork_file_review_and_fix_parameter
+        is build_canonical_review_parameter
     )
 
 

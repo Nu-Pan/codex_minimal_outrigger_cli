@@ -124,11 +124,12 @@ def test_oracle_investigation_has_no_session_precondition(
     )
 
     def record_finalize_prompt_editor_input(
+        target_root: Path,
         work_path: Path,
     ) -> None:
         """TUI 起動前の editor work file cleanup を記録する。"""
         events.append("finalize")
-        real_finalize_prompt_editor_input(work_path)
+        real_finalize_prompt_editor_input(target_root, work_path)
 
     monkeypatch.setattr(
         investigation_module,

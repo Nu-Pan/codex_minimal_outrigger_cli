@@ -131,7 +131,7 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
         )
         == "final input"
     )
-    prompt_editor_input_module.finalize_prompt_editor_input(editor_work)
+    prompt_editor_input_module.finalize_prompt_editor_input(tmp_path, editor_work)
 
 
 def test_handoff_revalidates_file_and_repository_on_each_overwrite(

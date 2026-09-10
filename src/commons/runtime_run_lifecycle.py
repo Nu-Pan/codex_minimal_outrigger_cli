@@ -414,7 +414,10 @@ def worktree_change_paths(
         include_rename_sources=include_rename_sources,
     )
     return sorted(
-        {str(path.absolute().relative_to(worktree.absolute())) for _, path in paths}
+        {
+            path.absolute().relative_to(worktree.absolute()).as_posix()
+            for _, path in paths
+        }
     )
 
 
