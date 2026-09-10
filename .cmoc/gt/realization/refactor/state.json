@@ -606,10 +606,10 @@
     "last_investigated_at": "2026-07-24_20-24_27_077805000"
   },
   "src/acp/builder/realization/apply/fork/launch_exec.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "63d3b490194bc1558f63f4dddda55776611d4ee7a3cdcde632c9e57d9df7ca80",
-    "last_investigated_at": "2026-08-13_10-04_05_217920000"
+    "last_investigated_sha256": "383f0d2aed0b8d5c4573772e81b09790be3d587e72a832d0610df1d55c42340c",
+    "last_investigated_at": "2026-09-11_04-05_42_616915000"
   },
   "src/acp/builder/realization/refactor/__init__.py": {
     "investigation_required": false,
