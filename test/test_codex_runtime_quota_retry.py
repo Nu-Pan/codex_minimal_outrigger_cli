@@ -271,11 +271,12 @@ def test_capacity_probe_retry_skips_quota_poll_interval(
     sleeps: list[float] = []
     monkeypatch.setattr(runtime_codex_exec.time, "sleep", sleeps.append)
     calls: list[str] = []
+    main_count = 0
     probe_count = 0
 
     def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         """quota failure, capacity probe, recovery probe, resume の列を返す。"""
-        nonlocal probe_count
+        nonlocal main_count, probe_count
         stdin = cast(TextIO, kwargs["stdin"]).read()
         if "resume" in argv:
             kind = "resume"
@@ -286,6 +287,14 @@ def test_capacity_probe_retry_skips_quota_poll_interval(
         calls.append(kind)
         output = Path(argv[argv.index("--output-last-message") + 1])
         if kind == "initial":
+            main_count += 1
+            if main_count == 1:
+                return subprocess.CompletedProcess(
+                    argv,
+                    1,
+                    '{"type":"error","message":"Selected model is at capacity"}\n',
+                    "",
+                )
             return subprocess.CompletedProcess(
                 argv,
                 1,
@@ -321,10 +330,25 @@ def test_capacity_probe_retry_skips_quota_poll_interval(
         config=CmocConfig(),
     )
 
-    assert calls == ["initial", "probe", "probe", "resume"]
-    assert sleeps == [1800, 5]
+    assert calls == ["initial", "initial", "probe", "probe", "resume"]
+    assert sleeps == [5, 1800, 5]
     assert result.quota_wait_sec == 1800
     assert result.output_json == {"ok": True}
+    call_logs = [
+        json.loads(path.read_text())
+        for path in sorted(
+            (root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json")
+        )
+    ]
+    main_logs = [log for log in call_logs if log["purpose"] == "codex exec"]
+    probe_logs = [
+        log for log in call_logs if log["purpose"] == "quota availability probe"
+    ]
+    assert len({log["agent_call_id"] for log in main_logs}) == 1
+    assert len({log["codex_call_id"] for log in main_logs}) == 3
+    assert len({log["agent_call_id"] for log in probe_logs}) == 1
+    assert len({log["codex_call_id"] for log in probe_logs}) == 2
+    assert probe_logs[0]["agent_call_id"] != main_logs[0]["agent_call_id"]
 
 
 def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(

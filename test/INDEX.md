@@ -308,19 +308,22 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- quota 枯渇後の Codex exec の probe・resume・再実行を検証する回帰テスト群
-- 代表 quota probe の共有、失敗伝播、poll 上限、session ID 復元、ログ・cwd・CODEX_HOME 観測を扱う
+- Codex quota exceeded 後の probe・待機・resume・再実行を含む quota retry 状態機械の外部挙動を検証するテスト群。
+- session ID、代表 probe の共有、失敗伝播、call log・subcommand log、CODEX_HOME・cwd など、quota 復帰処理を追跡する観測点を一箇所で扱う。
 
 ## Read this when
-- Codex exec の quota 待機・復帰・resume または再実行の挙動を変更・調査するとき
-- quota probe の prompt、呼び出し設定、並行実行、失敗処理、実行ログの回帰を確認するとき
+- Codex exec の quota 枯渇からの復帰、session ID による resume、session ID 欠落時の再実行を確認するとき。
+- 代表 quota probe の構築内容、retry 回数・待機間隔、capacity failure や非 quota failure の扱いを調べるとき。
+- 並行呼び出しでの probe 共有や probe 失敗の伝播を確認するとき。
+- quota retry に伴う stdout JSONL、出力ファイル、call log、subcommand log、CODEX_HOME・Codex cwd の挙動を検証するとき。
 
 ## Do not read this when
-- INDEX エントリーのルーティングだけを確認したいとき
-- quota retry 以外の Codex exec 基本仕様や、実装本体ではなく別のテスト対象を直接調べるとき
+- quota retry 以外の Codex exec の通常成功・通常失敗、引数構築、一般的なログ仕様だけを調べるとき。
+- quota availability probe の正本仕様や builder 実装そのものを変更・確認するときは、まず対応する oracle 仕様または probe builder を読むとき。
+- INDEX.md の生成規則やリポジトリ全体のテスト方針だけを確認するとき。
 
 ## hash
-- a55306c525f326927a6d357bdbfbb0c0df6e9255dc482f519acb61d580540650
+- 57aa1c5154633bee0f1d75c54f0ac9f8546b027e3d74e3f3d410448d8fed7748
 
 # `test_codex_runtime_retry.py`
 

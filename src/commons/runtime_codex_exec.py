@@ -691,6 +691,9 @@ def run_codex_exec(
     capacity_retry_pending = False
     resume_session_id: str | None = None
     correction_session_id: str | None = None
+    quota_probe_agent_call_id: str | None = None
+    quota_probe_capacity_attempts = 0
+    quota_probe_sleep_sec = capacity_initial_sleep_sec
     current_prompt = parameter.prompt
     frozen_artifact_snapshot: WorktreeSnapshot | None = None
     artifact_changed_paths: frozenset[str] = frozenset()
@@ -891,6 +894,7 @@ def run_codex_exec(
                                 ),
                             )
                         quota_polls += 1
+                        capacity_retry = capacity_retry_pending
                         if capacity_retry_pending:
                             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
                             # capacity retry は自身の backoff をすでに待っているため、通常の
@@ -904,7 +908,12 @@ def run_codex_exec(
                         quota_probe_parameter = _quota_availability_probe_parameter(
                             parameter
                         )
-                        active_agent_call_id = uuid7_prefixed("agc_")
+                        if not capacity_retry:
+                            quota_probe_agent_call_id = uuid7_prefixed("agc_")
+                            quota_probe_capacity_attempts = 0
+                            quota_probe_sleep_sec = capacity_initial_sleep_sec
+                        assert quota_probe_agent_call_id is not None
+                        active_agent_call_id = quota_probe_agent_call_id
                         active_agent_call_kind = quota_probe_parameter.agent_call_kind
                         active_codex_call_id = uuid7_prefixed("cdc_")
                         probe_agent_call_cwd = AgentCallPathContext(
@@ -1015,9 +1024,9 @@ def run_codex_exec(
                         if (
                             probe_capacity_error
                             and not probe_unexpected_error
-                            and capacity_attempts < max_capacity_retries
+                            and quota_probe_capacity_attempts < max_capacity_retries
                         ):
-                            capacity_attempts += 1
+                            quota_probe_capacity_attempts += 1
                             quota_polls -= 1
                             _emit_codex_call_event(
                                 run_purpose="quota availability probe",
@@ -1033,8 +1042,8 @@ def run_codex_exec(
                                 error=probe_error_text,
                                 run_codex_home=probe_codex_home,
                             )
-                            time.sleep(sleep_sec)
-                            sleep_sec *= 2
+                            time.sleep(quota_probe_sleep_sec)
+                            quota_probe_sleep_sec *= 2
                             capacity_retry_pending = True
                             _emit_quota_progress("continuing")
                             continue
