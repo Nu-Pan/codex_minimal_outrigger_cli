@@ -548,22 +548,21 @@
 # `runtime_refactor.py`
 
 ## Summary
-- realization refactor の調査 state を読み込み、schema 検証、oracle/realization file 集合との同期、安定した JSON 永続化を担う。
-- 未調査・要再調査の対象を正本の優先順位で選択し、調査履歴の保持や新しい refactor cycle の開始を支援する。
-- state path の symlink・非通常ファイルを拒否し、相対 path、調査結果、SHA256、調査日時などの refactor 契約を検証する。
+- realization refactor の調査 state を読み込み、schema 検証、oracle/realization file 集合との同期、path 順保存、調査対象選択、再調査要求、state path の安全性検査を担う。
+- refactor state の entry と work-root 相対 path の形式・履歴整合性を検証し、不正な state を CmocError に変換する処理への入口。
 
 ## Read this when
-- realization refactor の state file の読み書き、schema 検証、調査対象の同期や選択の挙動を変更・確認するとき。
-- oracle file と realization file の列挙結果を refactor state に反映する処理や、調査履歴の再利用・再調査条件を確認するとき。
-- 不正な state、symlink 経由の state path、path・SHA256・timestamp の検証エラーの原因を調べるとき。
+- realization refactor の調査履歴 state の読み込み・保存・同期仕様や、次に調査する対象の選択を確認するとき。
+- oracle file または realization file の列挙結果を refactor state に反映する処理、digest 変更時の再調査要求、full refactor cycle の開始条件を追うとき。
+- refactor state の JSON schema、相対 path の正規化、SHA256・調査日時・未調査 entry の妥当性検証や symlink 経由アクセス拒否を確認するとき。
 
 ## Do not read this when
-- realization refactor の調査処理そのものや、個別 oracle/realization file の内容を確認することが目的で、state 管理を扱わないとき。
-- oracle/realization file の列挙規則自体を変更・確認するときは、列挙を実装する対象を直接読む。
-- state file の配置や realization refactor コマンド全体の利用者向け仕様を確認するときは、対応する app specification を直接読む。
+- realization refactor の実際の調査内容や findings の判定方法を確認したいとき。この対象は state の管理だけを扱う。
+- oracle/realization file の分類・列挙規則そのものを確認したいときは、列挙処理の正本を直接読む。
+- refactor state を利用する CLI の実行フローや利用者向け操作を確認したいときは、呼び出し側の sub-command 実装を先に読む。
 
 ## hash
-- 72b113fcdbd4ab228b598f72f2f630551707c388bc2d31947687aa2316ee10de
+- 14b8d96aa7dd9311a0f1c964035b9f9c4abdb2bbce6b7d6aae0e4b55376efc2b
 
 # `runtime_results.py`
 

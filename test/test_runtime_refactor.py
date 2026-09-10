@@ -417,7 +417,11 @@ def test_refactor_state_rejects_nul_in_path_key(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("key", "investigated_at"),
-    [("./README.md", "2026-07-19_00-00_00_000000000"), ("README.md", "invalid")],
+    [
+        ("./README.md", "2026-07-19_00-00_00_000000000"),
+        ("README.md", "invalid"),
+        ("README.md", "２０２６-０７-１９_００-００_００_０００００００００"),
+    ],
 )
 def test_refactor_state_rejects_noncanonical_path_or_timestamp(
     tmp_path: Path,
@@ -444,3 +448,27 @@ def test_refactor_state_rejects_noncanonical_path_or_timestamp(
 
     with pytest.raises(CmocError, match="refactor state"):
         load_refactor_state(root)
+
+
+def test_refactor_state_sync_treats_uppercase_digest_as_same_content(
+    tmp_path: Path,
+) -> None:
+    """大文字 hex の既存履歴を同じ SHA256 として同期する。"""
+    root = make_repo(tmp_path)
+    state = sync_refactor_state(root)
+    digest = file_sha256(root / "README.md")
+    state["README.md"].update(
+        {
+            "investigation_required": False,
+            "last_investigation_result": "no_findings",
+            "last_investigated_sha256": digest.upper(),
+            "last_investigated_at": "2026-07-19_00-00_00_000000000",
+        }
+    )
+    state_path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
+    state_path.write_text(json.dumps(state) + "\n")
+
+    synchronized = sync_refactor_state(root)
+
+    assert synchronized["README.md"]["investigation_required"] is False
+    assert synchronized["README.md"]["last_investigated_sha256"] == digest
