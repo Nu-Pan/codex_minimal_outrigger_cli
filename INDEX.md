@@ -139,17 +139,18 @@
 # `test`
 
 ## Summary
-- cmoc のテストスイート。CLI、Codex runtime、indexing、oracle・realization・session・feedback、editor handoff、Git・state・通知などの外部契約と境界条件を検証する。
-- 個別機能の単体テストから、独立 process・PTY・実 Codex CLI を用いる実経路統合テストまで、実装や仕様を確認するための回帰テスト入口を提供する。
+- test ディレクトリは、cmoc の各機能を対象にした pytest 回帰・統合・実経路テストの集合です。CLI lifecycle、Codex runtime、indexing、oracle／realization、session、feedback、editor handoff、Git・state・通知など、実装の外部契約と安全境界を検証する入口を提供します。
+- 個別テストは、対象機能の正常系・異常系・永続状態・process／filesystem 境界を、モックまたは独立 process／実 Codex CLI 経路から観測可能な結果として固定します。
 
 ## Read this when
-- cmoc の特定機能について、実装された外部挙動、入力検証、エラー分類、永続状態、Git や filesystem の安全境界をテスト観点から確認・変更するとき。
-- CLI 全体の lifecycle、Codex 呼び出し、INDEX 更新、feedback、editor input、session/run lifecycle など複数コンポーネントにまたがる統合挙動を調査するとき。
-- 実 Codex CLI・独立 process・PTY を含む本番経路の受け入れ試験範囲や、観測可能な report・state・Git 結果を確認するとき。
+- cmoc の実装変更に対する既存の外部挙動、回帰条件、統合 lifecycle、または安全境界を確認するとき。
+- 対象機能に対応する pytest テストの範囲や、どの観測結果が契約として検証されているかを探すとき。
+- 実 Codex CLI・PTY・Git・worktree・report・state・log まで含む受け入れ経路の検証方法を確認するとき。
 
 ## Do not read this when
-- 正本仕様、実装本体、Structured Output schema、または個別 builder の詳細だけを確認したいときは、対応する仕様・実装・schema を直接読む。
-- テスト対象と無関係な機能を調査するとき、または一般的な pytest 実行方法や共通 fixture の詳細だけを知りたいとき。
+- 正本仕様、schema、または実装本体の詳細を確認することが目的で、テストの期待挙動を調べる必要がないときは、対応する oracle・schema・src を直接読む。
+- 単一の内部関数の局所的な挙動だけを確認したいときは、その実装または専用のより直接的なテストへ進む。
+- 対象機能と無関係なテスト fixture、一般的な pytest 実行方法、または LLM の回答品質を調べるとき。
 
 ## hash
-- aec56850c7aa77909d4617d76c8a4180258a289f802a409dc814f5700212011a
+- 789e943eaa1be32da5fe6af15f2f80b233473014b1ac7580853631db27f8cd5a

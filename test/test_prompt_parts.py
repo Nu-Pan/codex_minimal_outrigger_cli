@@ -6,10 +6,16 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 対応する正本:
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+- {{work-root}}/oracle/doc/app_spec/editor_input_handoff.md
+- {{work-root}}/oracle/doc/app_spec/indexing.md
+- {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md
+- {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 - {{work-root}}/oracle/src/oracle/other/struct_doc.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/basic.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/feedback_reporting.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/index_entry.py
