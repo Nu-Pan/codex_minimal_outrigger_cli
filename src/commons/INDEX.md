@@ -163,20 +163,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess の起動境界を担当し、sandbox・argv・cwd・CODEX_HOME・環境変数・process tracking・schema 配置を構成する。
-- Codex CLI の実行結果を扱う入口として、JSONL の session ID 抽出、stderr・event message の集約、capacity・quota・unexpected error の判定を提供する。
+- Codex CLI subprocess 境界を担当し、起動時の sandbox・argv・cwd・CODEX_HOME・環境変数・schema 配置と、実行後の process tracking・group cleanup・JSONL 出力解釈を一体として扱う。
+- Codex CLI の session token 抽出、capacity/quota retry 判定、unexpected error 判定など、機械的な実行結果から呼び出し側が扱う状態を導出する入口になる。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox、cwd、CODEX_HOME、provider・MCP・hook の invocation-local 設定を確認または変更するとき。
-- Codex subprocess の process group tracking、PID reuse 対策、停止・cleanup、起動失敗時の実行時エラーを確認するとき。
-- Structured Output schema の配置、Codex JSONL 出力の解析、capacity・quota・malformed・unexpected error の扱いを確認するとき。
+- Codex CLI を起動する引数、sandbox、model provider、MCP、hook、notification、environment の構成を確認するとき
+- Codex subprocess の PID・process group の追跡、同一性検証、停止、SIGTERM/SIGKILL、tracking file の更新を確認するとき
+- CODEX_HOME の解決・検証、Structured Output schema の配置、Codex CLI 不在時の実行時エラー変換を確認するとき
+- Codex の stdout/stderr や JSONL event から session ID、error detail、capacity・quota・unexpected error を判定する処理を確認するとき
 
 ## Do not read this when
-- Codex CLI subprocess の argv・環境・実行結果の境界に関係しない、上位の agent call 制御や編集実行フローを確認するとき。
-- Codex CLI の一般仕様や利用者向け設定を直接確認したいときは、subprocess 境界の実装ではなく対応する仕様または設定の対象を読む。
+- Codex CLI の呼び出し境界や機械的な実行結果の解釈ではなく、上位の agent call orchestration、利用者向け UI、設定ファイルの正本仕様を確認したいとき
+- 対象本文にない Codex CLI の一般的な使い方や、個別の業務ロジックを調べるとき
+- INDEX.md のルーティング情報だけを確認すれば足り、subprocess の起動条件・cleanup・出力判定の詳細を調べる必要がないとき
 
 ## hash
-- 3c58df41b1156236a7221a5fe0df990eb99891bcbfd7f4f3f94ab068e9fed1fe
+- def9939636c376427c556bc7574cdd92c47c6a1e8ae6207b02611985f44b85c1
 
 # `runtime_codex_tui.py`
 

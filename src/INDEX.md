@@ -49,22 +49,18 @@
 # `commons`
 
 ## Summary
-- commons パッケージの初期化と、CLI・Codex・設定・Git・ログ・パス・状態・feedback などで共有される runtime API の入口を提供するディレクトリです。
-- INDEX.md の生成・更新 lifecycle、prompt editor input、Codex exec／TUI 実行、設定・Git・ログ・パス・結果・状態管理など、複数の実行経路から利用される runtime 境界を扱います。
-- feedback の受付・保存・report state・publication、editing run の lifecycle・join・report、Windows 通知など、個別の共通 runtime 機能へ進むための下位入口を含みます。
+- cmoc の共通 runtime API と、CLI・Codex 実行・設定・Git・ログ・パス・状態・feedback・run 管理などの横断的な実行時処理を提供する commons パッケージ。各機能の実装へ進む前の共通 runtime 層の入口。
 
 ## Read this when
-- commons の共通 runtime API やパッケージ入口を確認するとき。
-- Codex 実行、CLI lifecycle、INDEX lifecycle、prompt editor input、設定・Git・ログ・パス・結果・状態など、複数の実行経路にまたがる共通処理の入口を探すとき。
-- feedback の observation 受付・保存・状態管理や editing run の lifecycle・join・report など、commons 配下の共通 runtime 境界を横断して確認するとき。
+- 複数の実行経路にまたがる runtime API や共通ライフサイクル処理の責務を確認するとき。
+- CLI、Codex、設定、Git、ログ、パス、feedback、editing run などの共通実装の所在を判断するとき。
 
 ## Do not read this when
-- 特定の runtime サブモジュールの内部実装や個別挙動だけを確認したいときは、その個別モジュールを直接読む。
-- 個別サブコマンドの業務処理、正本仕様、oracle／realization file、または専用 schema の内容だけを確認したいときは、対応する下位対象を直接読む。
-- commons と無関係な機能や、INDEX.md の利用者向けルーティング規則だけを確認したいとき。
+- 特定サブコマンドの業務処理や正本仕様だけを確認したいとき。
+- 特定の runtime helper の詳細挙動を調べる場合は、commons 配下の該当モジュールを直接読むとき。
 
 ## hash
-- ba64c8b99a23a7c0022b0e35344bbb6b4e2ce922874446ea18a5dd770a9b3aed
+- 8e7a1d8533d293d07c4d4761643a30d11d3cde4f60331f53d9caaf85b1d29046
 
 # `config`
 

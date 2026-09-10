@@ -360,16 +360,22 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行経路のテスト群。完全な prompt と CLI 引数、アクセスモード、linked worktree、設定検証、Codex バージョン別 callback、call log とサブコマンドイベントの成功・失敗記録を検証する。
+- Codex TUI 呼び出しにおける prompt、作業ディレクトリ、アクセスモード、handoff、通知・hook 設定の引き渡しを検証するテスト。
+- Codex agent/provider 設定の事前検証と、未検証 CLI バージョンでの callback 無効化を確認する。
+- TUI 呼び出しの成功、CLI 不在、KeyboardInterrupt、非 0 終了時における call log とサブコマンドイベントの記録、および timestamp 衝突時のログ保持を検証する。
 
 ## Read this when
-- Codex TUI の prompt 引き渡し、sandbox/access mode、agent/provider 設定の事前検証、バージョン依存 callback、通知 hook、または呼び出しログ・イベント記録の挙動を確認・変更するとき。
+- Codex TUI の実行引数や完全な prompt が正しく渡されるか確認するとき。
+- アクセス境界、linked worktree、editor input handoff、通知 hook の設定を確認するとき。
+- 設定不備や CLI バージョン差異に対する事前失敗・callback 制御を確認するとき。
+- TUI の各終了経路で call log とイベントログがどう記録されるか調べるとき。
 
 ## Do not read this when
-- TUI 実行処理やそのログ・callback の挙動を対象にせず、Codex CLI 自体の一般仕様、他のサブコマンド、または個別の設定定義を直接調べるとき。
+- prompt 構築、アクセスモード、Codex 実行仕様そのものを確認する場合は、対応する正本仕様や実装を直接読むとき。
+- TUI 以外の Codex 実行経路や、ログ記録を伴わない処理だけを調べるとき。
 
 ## hash
-- 71b57e2deec849d178ebc2657f9cd684e43ba2823cb25d7011c08578477769c1
+- c86c4099ab79aa0a24748d2c34339bcbfe339c6d670dd7600ba1b30e23e2c29a
 
 # `test_doctor_cli.py`
 
@@ -649,24 +655,19 @@
 # `test_production_cli.py`
 
 ## Summary
-- 全末端サブコマンドを、利用者向け console script・実 Codex CLI・実推論・独立 process の本番経路で受け入れ検証する統合テスト。
-- 非対話コマンドでは終了 code、Codex call log、prompt/config、INDEX.md・report・session/run state・Git の外部状態遷移を確認し、Codex 不要経路の agent call 不発も検証する。
-- TUI コマンドでは実 PTY と Codex 応答完了までの経路を使い、端末 query 応答、完了応答、終了、TUI call log、Git 非変更を確認する。
-- Click に登録された末端コマンド集合と固定シナリオの一致を検査し、新しい公開末端の本番経路試験への追加漏れを検出する。
+- 利用者向け entrypoint の全末端サブコマンドを、独立 process・実 Codex CLI・実推論で検証する受け入れ試験。
+- 非対話および TUI の本番経路について、終了 code と report・state・Git・call log など外部から観測できる結果を確認する。
 
 ## Read this when
-- CLI の全公開末端が独立 process と実 Codex CLI を通る本番経路で検証されているか確認したいとき。
-- indexing、oracle edit、feedback report/remediation、realization の run、session fork/join/abandon の状態遷移や call log 契約を調べるとき。
-- tui または oracle investigation の実 PTY 操作、応答完了判定、終了処理、Git 非変更を確認するとき。
-- 新しい末端サブコマンドを追加し、受け入れシナリオ集合の更新要否を確認するとき。
+- 全末端サブコマンドの本番経路に検証漏れがないか確認したいとき。
+- 実 Codex 呼び出し、PTY 上の TUI 完了、状態遷移、Git の副作用を含む統合試験の範囲を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの通常の単体仕様や内部実装を直接確認したいときは、それぞれのサブコマンド仕様・実装・専用テストを読む。
-- LLM の回答品質やプロンプト内容そのものを評価したいとき。
-- 実 Codex や PTY を使わない高速なユニットテスト、fixture、共通テスト補助の挙動だけを調べるとき。
+- 個別サブコマンドの通常仕様や内部実装を確認したいとき。
+- LLM の回答品質を評価したいとき、または本番 entrypoint 以外の単体・局所テストを探しているとき。
 
 ## hash
-- 4f27b1f1abe154d220aa69a2554608d9722ec9c0c27b395304972af6eff0b27f
+- ec07e4f302b1a4a533e8c412646bd5599cd1ee058b29fd5293dc661ce2381b89
 
 # `test_production_cli_support.py`
 
@@ -770,19 +771,19 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv の model・sandbox・provider 上書きと、関連する MCP／環境変数／hook／TUI 通知設定を検証する realization test。Codex 起動前の設定検証、schema 保存、output JSON 読み取りの境界も扱う。
+- Codex argv の model・sandbox・provider 上書き契約を検証するテスト。
+- MCP 設定、環境変数分離、通知 hook、schema 保存、JSON 出力処理の起動前境界を検証する。
 
 ## Read this when
-- Codex の file access mode から sandbox への変換、model/provider の選択・TOML エンコード、未定義設定の拒否を変更または確認するとき。
-- feedback や editor input handoff の MCP 注入、call context の環境変数分離、SessionStart hook と legacy notification callback、Codex CLI バージョン検証を変更または確認するとき。
-- schema のバイト保持・ハッシュ保存や、不正 UTF-8 output の扱いを変更または確認するとき。
+- Codex の argv 構築、sandbox と provider の選択、MCP 注入、通知 hook の対応条件を変更・確認するとき
+- runtime_codex_profile の schema 保存や出力 JSON 読み取りの挙動を変更・確認するとき
 
 ## Do not read this when
-- Codex argv の構築や runtime_codex_profile の境界挙動を扱わず、他の runtime 機能だけを変更・確認するとき。
-- 実装ではなく、Codex の一般的な仕様や oracle 文書そのものを確認するときは、参照先の正本を直接読むとき。
+- Codex argv や runtime_codex_profile の契約に関係しない機能を変更・確認するとき
+- 個別の共通 fixture や別機能の仕様を直接調べるとき
 
 ## hash
-- bc202c6e31be5faa64b96036c718758c2b2a675d3001f7f09acddd10437c09fa
+- 142cb44530bc06a1eefe9e1deee7c6f92ecd71e42238a7a86ff8defb94d23036
 
 # `test_runtime_config.py`
 

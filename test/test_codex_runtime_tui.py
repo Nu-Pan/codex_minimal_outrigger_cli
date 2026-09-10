@@ -58,7 +58,7 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
         [
             "import json, os, pathlib, sys",
             "if sys.argv[1:] == ['--version']:",
-            "    print('codex-cli 0.151.0')",
+            "    print('codex-cli 0.153.4')",
             "    raise SystemExit(0)",
             "args = sys.argv[1:]",
             "prompt = args[-1]",
@@ -107,6 +107,7 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     callback_state_root = Path(notification_command[3])
     assert notification_command[4:] == ["codex tui", root.name]
     assert "features" not in override_config
+    assert record["args"][record["args"].index("--enable") + 1] == "hooks"
     hooks = override_config["hooks"]
     assert isinstance(hooks, dict)
     assert "Stop" not in hooks
