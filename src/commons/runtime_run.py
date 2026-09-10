@@ -37,6 +37,7 @@ from .runtime_git import (
     run_git,
 )
 from .runtime_paths import untracked_data_dir
+from .runtime_state import session_fork_lock
 
 
 class ProcessIdentity(NamedTuple):
@@ -107,9 +108,12 @@ def run_process_id_path(root: Path, session_id: str) -> Path:
 
 @contextmanager
 def run_lifecycle_lock(root: Path, session_id: str) -> Iterator[None]:
-    """run state の公開、join、abandon を session 内で直列化する。"""
-    lock_key = run_process_id_path(root, session_id).with_name(f"{session_id}.run")
-    with run_process_id_file_lock(lock_key):
+    """session と run の lifecycle 操作を repository 内で直列化する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # session fork/join/abandon も同じ state・branch・worktree を操作するため、
+    # session_fork_lock と異なる per-run lock を使うと stale な ready state の
+    # 保存や session branch の削除が run 開始と競合する。
+    with session_fork_lock(root):
         yield
 
 
