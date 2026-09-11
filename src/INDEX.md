@@ -49,21 +49,21 @@
 # `commons`
 
 ## Summary
-- commons パッケージは、cmoc の複数の実行経路で共有される runtime helper 群をまとめた領域です。
-- CLI、Codex exec／TUI、設定、Git、ログ、パス、結果、状態、feedback、report、editor input、run lifecycle などの共通実行時境界を提供します。
+- src/commons は、CLI 実行、Codex exec/TUI、設定、Git、ログ、パス、状態、結果、feedback、report、run lifecycle など、cmoc の複数経路で共有される runtime helper をまとめる共通実装層です。
+- Codex 実行前の INDEX preflight、Codex subprocess/TUI 境界、editor input handoff、feedback collector/reporter、primary report、session・editing run の state/lifecycle など、横断的な実行基盤へ進むための入口です。
 
 ## Read this when
-- 複数の実行経路で共有される runtime API や共通 helper の責務を把握するとき。
-- Codex 実行、設定永続化、Git／worktree、INDEX 更新、feedback、report、session／run state などの実装入口を探すとき。
-- commons 配下で調査対象となる個別 runtime module を選ぶ前に、機能領域の分担を確認するとき。
+- 複数の CLI または実行経路にまたがる共通 runtime API、実行ライフサイクル、エラー・結果・ログ・パス・設定・Git 境界を調査または変更するとき。
+- Codex exec/TUI の起動・preflight・Structured Output・retry、feedback の受付・保存・report、editor input handoff、session/run の state・join・cleanup を追う必要があるとき。
+- commons 配下で対象となる責務が複数の runtime helper にまたがり、個別モジュールへ進む前に共通実装層の構成と公開入口を把握するとき。
 
 ## Do not read this when
-- 特定の runtime helper の内部実装や個別挙動が明確で、対応する個別 module を直接読めるとき。
-- 利用者向けの正本仕様、個別サブコマンドの業務フロー、Structured Output schema 自体を確認するとき。
-- INDEX.md の生成 schema や agent 向け prompt の定義だけを確認するとき。
+- 特定サブコマンドの業務処理、利用者向け正本仕様、個別の schema・oracle 文書だけを確認する場合は、その専用実装または仕様文書を直接読むとき。
+- 単一の runtime helper の内部挙動が対象として明確な場合は、commons ディレクトリ全体ではなく該当する個別モジュールへ直接進むとき。
+- INDEX.md のルーティング情報だけを更新する場合。
 
 ## hash
-- 18587029c429b9c009f78ad2a1e1fe32b92a4271766f997343b0f788135eb523
+- fd7ffc8f53e9fb45c0ca1e6c4c5c23b63a0383dcb265ff72c29f0950a3ac6431
 
 # `config`
 

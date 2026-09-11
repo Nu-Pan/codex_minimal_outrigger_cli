@@ -1424,7 +1424,7 @@
   "test/test_windows_toast.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "853e8c0b3d5b0b9d70d4f38b85db12ae02d77d839fb21573f6f7d7a1c8a89a01",
-    "last_investigated_at": "2026-08-13_21-09_09_322826000"
+    "last_investigated_sha256": "b8cb59a99857de3b7f7b9e93dc6ae2d8d35b7194c3817327b0cc6186f98a29d4",
+    "last_investigated_at": "2026-09-11_18-22_24_545967000"
   }
 }

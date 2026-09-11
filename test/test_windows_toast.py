@@ -125,6 +125,31 @@ def test_notification_failure_does_not_escape(
     assert calls == [("cmoc doctor", f"{tmp_path.name} — エラー終了")]
 
 
+def test_completion_marker_disables_notification_initialization_and_transport(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """completion probe では callback state と transport を初期化しない。"""
+    monkeypatch.setenv("_CMOC_COMPLETE", "")
+    transport_checks: list[str] = []
+    monkeypatch.setattr(
+        runtime_windows_toast,
+        "_powershell_executable",
+        lambda: transport_checks.append("checked") or Path("powershell.exe"),
+    )
+
+    assert (
+        runtime_windows_toast.create_tui_notification_callback(
+            "doctor",
+            tmp_path,
+        )
+        is None
+    )
+    runtime_windows_toast.notify_terminal_result("doctor", tmp_path, "completed")
+    assert _REAL_WINDOWS_TOAST_TRANSPORT("title", "message") is False
+    assert transport_checks == []
+
+
 def test_codex_callback_notifies_only_recorded_root_turn_once(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
