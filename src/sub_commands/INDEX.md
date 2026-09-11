@@ -33,19 +33,18 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装入口。観測の集約・issue 判定・修復・publication・終了後の復旧を扱う配下実装への入口となる。
+- feedback サブコマンドの実装入口。観測の判定、修復、report publication、終了後の recovery を担当する下位モジュール群を扱う。
 
 ## Read this when
-- feedback サブコマンドの処理全体を確認・変更するとき。
-- 観測から report publication、remediation、run の finalization・recovery までの責務分担を把握するとき。
+- feedback サブコマンド全体の処理経路や、判定・修復・report publication・cleanup の責務分担を確認するとき。
+- feedback の入力状態、候補・issue の処理、run 状態遷移、checkpoint や publication 後の復旧を横断して調べるとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- feedback の個別処理だけを調べる場合は、判定・報告・修復・復旧を担当する配下対象を直接読むとき。
-- 共通の run lifecycle、state、artifact、agent prompt の実装だけを調べるとき。
+- feedback の共通 run lifecycle、永続 artifact の共通形式、観測受付の詳細だけを調べるときは、それぞれの共通実装や前段の対象を直接読む。
 
 ## hash
-- 46b824ee861751bfa69426cb890c01880f3d4ef0f2ca14e1cb80e297f8e5629c
+- fd6a9a91ccf9731ab10a053566a2dbfc5388448b4ac76b149c1aaf8aa42fbb34
 
 # `indexing.py`
 

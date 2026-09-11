@@ -451,23 +451,21 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の agent-facing reporter、collector、raw observation、active state、report cut、remediation、atomic publication、cleanup を同一 fixture で検証するテスト群。
-- feedback report の入力検証、rate limit、認証・context lifecycle、secret masking、symlink/path boundary、canonical JSON、状態 corruption 検出を確認する。
-- pending observation の候補化から remediation、逐次 wave、回復、terminal verdict、machine observation の threshold 集約まで、publication 後の compact active state と未処理 raw の境界を検証する入口。
+- feedback reporter と collector の受付・検証・保存、および raw observation から issue candidate、remediation、active state の atomic publication と cleanup までを同一 repository fixture で検証するテスト群。
+- MCP/loopback transport、payload・context・rate limit・UTF-8・secret masking・symlink 境界、並行 call、割り込み、rollback、再実行、generation artifact の整合性を確認する feedback report の統合テスト入口。
 
 ## Read this when
-- feedback reporter または collector の MCP protocol、TCP transport、capability、context、失敗時 warning の挙動を変更・調査するとき。
-- feedback observation の schema、raw store、redaction、path/reference validation、canonical JSON、pending inventory を変更・調査するとき。
-- feedback report の候補同一性、machine recurrence threshold、remediation wave、run recovery、active generation/current pointer、cleanup、publication の挙動を変更・調査するとき。
-- feedback state の artifact hash、manifest、report cut、未定義 artifact、symlink、corruption 検証に関わる変更を確認するとき。
+- feedback observation の reporter または collector の protocol、入力検証、durable raw storage、degraded warning の挙動を確認したいとき
+- feedback report の候補正規化・重複判定・threshold、remediation の wave 処理、active state の compact 化、current pointer、generation hash、cleanup、recovery を検証したいとき
+- session precondition、run join/abandon、user interruption、rollback、publication failure 後の再開可能性をテスト仕様から確認したいとき
 
 ## Do not read this when
-- feedback の一般的な CLI 構文や利用者向け仕様だけを確認する場合は、対応する subcommand 仕様を直接読む。
-- feedback 以外の subcommand、通常の session/run lifecycle、または一般的な logging の挙動だけを変更・調査する場合。
-- このファイルが検証する外部境界や制御ロジックに触れない、単純な fixture・テスト実行環境の保守だけを行う場合。
+- feedback の正本仕様や実装の詳細そのものを読むことが目的で、テストによる外部挙動の確認が不要なとき
+- 個別の normalize/remediate oracle schema や builder parameter の形式だけを確認すれば足りるとき
+- feedback 以外のサブコマンドや、単独の logging・session 一般仕様を調べるとき
 
 ## hash
-- 73051f60574e07db269b484e18f6dcd8cfd82331fe4fe4df6412c3d909ee9bcb
+- 9ecad917a1d12832782bba13ab42b5462c06908418af06a208a0e6b58c120383
 
 # `test_feedback_decision.py`
 

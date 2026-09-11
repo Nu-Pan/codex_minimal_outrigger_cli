@@ -2327,7 +2327,10 @@ def _set_processing_state(
 
 
 def _record_feedback_interruption(
-    manifest: _JsonObject | None, manifest_path: Path | None
+    manifest: _JsonObject | None,
+    manifest_path: Path | None,
+    *,
+    retained_run_path: Path | None = None,
 ) -> TerminalResult:
     """中断を正常系として subcommand state と log へ記録する。"""
     _update_feedback_progress_fields(manifest)
@@ -2341,8 +2344,13 @@ def _record_feedback_interruption(
         )
     details: tuple[tuple[str, object], ...] = ()
     next_actions: tuple[str, ...] = ()
-    if manifest_path is not None:
-        details = (("保持した feedback run", manifest_path),)
+    if manifest_path is not None or retained_run_path is not None:
+        details = (
+            (
+                "保持した feedback run",
+                manifest_path if manifest_path is not None else retained_run_path,
+            ),
+        )
         next_actions = (
             "`cmoc run join` で確定済み修正を取り込むか、`cmoc run abandon` で破棄してください。",
         )

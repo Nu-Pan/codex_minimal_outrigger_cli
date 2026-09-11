@@ -122,35 +122,34 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、互換入口・共通 runtime・サブコマンド実装へ進むための src 直下の構成を扱う。
+- cmoc の CLI 起動入口と、互換パッケージ、共通 runtime、サブコマンド実装を含む上位パッケージ。
+- CLI のコマンド階層や起動時の Click/Typer 境界処理は main.py、複数経路で共有する実行時 helper は commons、個別コマンドの実装領域は sub_commands へ進む。
+- acp、basic、config、oracle.py、cmoc_runtime.py は既存 import や正本実装への互換入口を提供する。
 
 ## Read this when
-- cmoc の CLI コマンド階層、起動時の Click/Typer 境界、doctor・tui・indexing などの上位入口を確認するとき。
-- acp・basic・config・oracle などの互換入口、または commons の共通 runtime へ調査を振り分けるとき。
-- session・oracle・realization・run・feedback の各サブコマンド群から個別実装へ進む前に、上位の構成を把握するとき。
+- cmoc の src 起動入口、CLI のコマンド階層、互換層と共通 runtime の配置を確認するとき。
+- 特定の処理へ進む前に、main.py、commons、sub_commands、または互換パッケージのどこを読むべきか判断するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime helper、互換モジュール、builder adapter の具体的な実装仕様を確認したいときは、対応する下位要素を直接読む。
-- 正本仕様や Structured Output schema、INDEX.md 生成規則だけを確認したいときは、src 直下ではなく該当する仕様・定義を直接読む。
+- 個別サブコマンドの処理順序、入力、状態遷移、runtime、成果物を確認したいときは、sub_commands 配下の対象を直接読む。
+- 共通 runtime の個別 API、互換 import の再公開内容、正本仕様や実装詳細を確認したいときは、対応する下位要素または正本側を直接読む。
 
 ## hash
-- fcfb634bf8f50c399576b4eb22cb5216f485dc8fa9b17ccb6ee6a241c77c0c89
+- a597777385a3397769cf2271c77f55aa0e4d729870b9b469a647cb169d10ea69
 
 # `test`
 
 ## Summary
-- test 配下の回帰・統合テストを、CLI、runtime、Codex 実行、indexing、feedback、editor handoff、Git/state などの外部契約と制御ロジックから目的別に探す入口。
-- 個別テストは、各機能の境界条件・失敗復旧・filesystem／process 安全性を確認する対象であり、実装や正本仕様の代替ではない。
+- test 配下の各テストについて、CLI・runtime・indexing・feedback・session などの機能領域ごとの外部挙動と回帰条件を案内するテスト入口。
+- 個別の helper、fixture、統合テスト、本番経路テストを通じて、実装変更時に確認すべき lifecycle・永続 state・Git・process・MCP・通知の境界を示す。
 
 ## Read this when
-- 変更または調査対象の外部挙動に対応する回帰テストを探すとき。
-- CLI lifecycle、Codex subprocess／TUI、indexing、feedback、session／run、state、Git、editor handoff、通知などの検証範囲を横断的に確認したいとき。
-- 特定の helper、builder adapter、runtime 境界、または実経路受け入れ試験の回帰条件を見つけたいとき。
+- 対象機能の外部挙動、失敗時の境界、永続 state、Git 副作用、Codex 呼び出し、CLI lifecycle をテスト観点から確認・変更するとき。
+- 個別テストが扱う領域に応じて、該当する CLI、runtime、builder、indexing、feedback、session、editor handoff、Git、通知の回帰条件を探すとき。
 
 ## Do not read this when
-- 正本仕様、schema、実装本体、prompt の文面を確認したいときは、対応する仕様・schema・実装対象を直接読む。
-- 単なるテスト実行方法や、対象テストが扱わない機能の詳細を調べるとき。
-- 外部契約や制御ロジックに関係しない一般的な fixture・補助処理だけを確認したいとき。
+- 正本仕様、実装本体、oracle schema、builder の詳細を直接確認することが目的で、テストの回帰条件を調べる必要がないとき。
+- test 配下の対象とは無関係な機能を調査するとき、または一般的な pytest 実行方法だけを確認したいとき。
 
 ## hash
-- 9d72de9b77a329602a458a432dcbd54527d1374780ab9b490f94212716b1faf8
+- f4b984d2dc777ffe6d191b5cfba4179f34e062ab30f184396bdbba5732f8d8cd

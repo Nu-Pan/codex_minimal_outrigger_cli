@@ -119,18 +119,16 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンドにおける CLI 入口と、feedback・oracle・realization・run・session の実装 package への上位ルーティングを提供する。
-- doctor、indexing、tui の直接実装と、サブコマンド固有処理を担う配下 package の入口を扱う。
+- cmoc の各サブコマンド実装と、realization・run・session・feedback・oracle などのサブパッケージをまとめる上位入口。
+- 特定のサブコマンドや共通処理の詳細を確認する前に、対象の実装領域を振り分けるために利用する。
 
 ## Read this when
-- サブコマンドの CLI 入口を横断して確認するとき。
-- doctor preprocess の明示実行、INDEX.md の更新・commit、または依頼文編集から Codex TUI 起動までの入口を調べるとき。
-- feedback、oracle、realization、run、session の各サブコマンド群から個別実装へ進む先を判断するとき。
+- cmoc のサブコマンド構成や、目的の処理がどのサブパッケージ・実装入口に属するかを確認するとき。
+- doctor・indexing・tui の単独サブコマンド、feedback・oracle・run・session・realization の配下へ進む前に、実装の階層と責務の範囲を把握するとき。
 
 ## Do not read this when
-- 特定サブコマンドの判定・報告・修復・復旧などの詳細処理を確認したい場合は、feedback 配下の担当実装を直接読むとき。
-- oracle の編集・調査、realization の apply・refactor、run の lifecycle、session の fork・join・abandon など個別処理の詳細だけを調べるときは、対応する下位対象を直接読むとき。
-- 共通 CLI runtime、prompt editor、indexing 共通処理、または TUI 起動パラメータの仕様だけを確認するときは、参照される共通実装を直接読むとき。
+- 特定サブコマンドの具体的な処理順序、入力、状態遷移、runtime、または成果物を確認したいときは、該当する実装ファイルや下位パッケージを直接読む。
+- サブコマンド以外の共通仕様や、対象ディレクトリ外の実装を調べるとき。
 
 ## hash
-- 60f844e1c51754322b2d2d6aea9bc87c6eaa1e98d46611027cfdb05326552010
+- 4538b42e8e68a426f6f8a6a48857fae9c8e26932113a2dc213ee4de15fdbbc36

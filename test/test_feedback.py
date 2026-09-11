@@ -22,7 +22,7 @@ from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, NoReturn
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
@@ -2063,6 +2063,107 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
     assert raw.exists()
     assert load_active_state(root).current is None
     assert load_report_cut(root) is None
+
+
+def test_feedback_interrupt_after_run_start_reports_retained_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run 公開直後の中断でも joinable state と run identity を report する。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    original_start = remediation_module.start_editing_run
+
+    def start_then_interrupt(kind: str) -> Any:
+        """run の state 公開後、context 返却前の中断を再現する。"""
+        original_start(kind)
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(remediation_module, "start_editing_run", start_then_interrupt)
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    session_state = json.loads(
+        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
+    )
+    assert session_state["run"]["state"] == "joinable"
+    report_text = terminal_primary_report(result).read_text()
+    assert 'terminal_classification: "user_interruption"' in report_text
+    assert 'run_kind: "feedback_report"' in report_text
+    assert 'state_before: "ready"' in report_text
+    assert 'state_after: "joinable"' in report_text
+    assert "保持した feedback run" in result.output
+
+
+def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """manifest の atomic write 後に中断しても interrupted 状態を保存する。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    original_write = remediation_module.write_report_cut_manifest
+
+    def write_then_interrupt(
+        repository: Path, manifest: dict[str, Any]
+    ) -> NoReturn:
+        """write の戻り値を受け取る前の中断を再現する。"""
+        original_write(repository, manifest)
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(
+        remediation_module, "write_report_cut_manifest", write_then_interrupt
+    )
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    session_state = json.loads(
+        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
+    )
+    assert session_state["run"]["state"] == "joinable"
+    manifest, _ = load_report_cut(root)
+    assert manifest["processing"]["status"] == "interrupted"
+    assert 'terminal_classification: "user_interruption"' in (
+        terminal_primary_report(result).read_text()
+    )
+
+
+def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """中断 cleanup の失敗を user interruption へ変換せず error にする。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _store_agent_issue(root, session_id)
+
+    def interrupting_agent(parameter: Any, **_kwargs: Any) -> NoReturn:
+        """差分を作成した issue 処理単位の中断を再現する。"""
+        (parameter.agent_call_cwd / "README.md").write_text("interrupted\n")
+        raise KeyboardInterrupt()
+
+    def fail_rollback(_worktree: Path) -> NoReturn:
+        """中断後の run-level rollback 失敗を再現する。"""
+        raise RuntimeError("rollback failed")
+
+    monkeypatch.setattr(feedback_report_module, "run_codex_exec", interrupting_agent)
+    monkeypatch.setattr(remediation_module, "rollback_work_unit", fail_rollback)
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert result.exit_code == 1, result.output
+    session_state = json.loads(
+        (
+            root
+            / ".cmoc"
+            / "gu"
+            / "session"
+            / f"{session_id}.json"
+        ).read_text()
+    )
+    assert session_state["run"]["state"] == "error"
+    report_text = terminal_primary_report(result).read_text()
+    assert 'terminal_classification: "error"' in report_text
+    assert 'state_after: "error"' in report_text
+    assert "rollback failed" in result.output
+    manifest, _ = load_report_cut(root)
+    assert manifest["processing"]["status"] == "failed"
 
 
 @pytest.mark.parametrize(

@@ -52,39 +52,37 @@
 # `remediation.py`
 
 ## Summary
-- Feedback issue の逐次修復から wave の収束、自動 join、publication までを同一 run の状態遷移として制御する実行入口。
-- 修復 agent の実差分・structured output・verification を照合し、issue ごとの commit と remediation checkpoint を確定する。
-- 封印済み候補の判定根拠、join 後の commit 到達可能性、最終 tree、publication recovery を検証する。
-- 観測の集約・表示は report、永続 artifact の検査は runtime_feedback_run_state、判定根拠の比較は decision に委譲する。
+- feedback issue の逐次修復から、自動 join、commit・rollback、finalization、publication、recovery までを同一 run の状態遷移として制御する実装。
+- 観測の集約・表示、判定根拠の比較、永続 artifact の検査を下位モジュールへ委譲し、修復 checkpoint と merge 後の整合性を検証する。
 
 ## Read this when
-- feedback report の新規実行、wave の追加取得と収束条件、自動 join、publication、または中断・失敗後の recovery を調べるとき。
-- feedback issue の remediation call、実差分と出力の整合性検証、rollback、commit、checkpoint 保存を追うとき。
-- sealed run の join 前後で、採用候補、判定根拠、commit 到達可能性、最終 realization tree の整合性を確認するとき。
+- feedback report の実行経路、自動修復 wave、issue commit、run の join または publication を調べるとき。
+- feedback run の中断・失敗・SIGINT、rollback、recovery、finalization の状態遷移を確認するとき。
+- 修復結果の structured output、changed paths、decision basis、checkpoint、merge 後 tree の検証箇所を探すとき。
 
 ## Do not read this when
-- 観測の集約・表示や report cut の入力生成だけを調べる場合は report を直接読む。
-- 判定状態や判定根拠の比較規則だけを調べる場合は decision を直接読む。
-- 永続 run artifact の形式、読み書き、checkpoint の検証だけを調べる場合は runtime_feedback_run_state を直接読む。
-- 一般的な run lifecycle、join、indexing、refactor state 同期の実装だけを調べる場合は、それぞれの委譲先を直接読む。
+- 観測の読み取り・集約や表示ロジックだけを調べるときは report を直接読む。
+- 判定根拠の比較・issue history・decision state の計算だけを調べるときは decision を直接読む。
+- 永続 run artifact の形式や検証だけを調べるときは runtime_feedback_run_state を直接読む。
+- feedback report 以外の一般的な run join、indexing、refactor state 同期の仕様だけを調べるとき。
 
 ## hash
-- 3d7922563fd8777d6682849433fad81558878b457a8738edccc7df8e61a9d7cd
+- 1509d830c51a5b09daf1fe909a18dd59f95ffecb905de754bbbccf075a579aad
 
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の report cut を起点に、raw observation の検証、candidate 集約、issue identity の正規化、machine recurrence の集約、remediation verification、publication または incomplete 診断までを一つの transaction として処理する。
-- current active state と固定済み reference、checkpoint、generation、report、pointer の hash・状態整合性を管理し、中断後の再開と安全な publication を担う。
+- feedback report サブコマンドの publication／diagnostic pipeline を担い、固定済み report cut に対する deterministic processing、candidate の normalization・verification、正常 publication、incomplete 診断、checkpoint 再開を一つの transaction として扱う実装。
+- raw observation と current repository reference を固定入力として候補を構築し、machine recurrence 集約と agent observation の同一性判断を経て、active issue・generation・Markdown report・current pointer の整合した保存へ進む処理の入口。
 
 ## Read this when
-- `cmoc feedback report` の raw observation から active issue、machine aggregate、report cut、checkpoint、generation、current pointer までの処理経路を確認するとき。
-- feedback report の issue 同一性判定、reference の固定、verification、正常 publication、incomplete 診断、中断・再開時の状態遷移を変更または調査するとき。
+- `cmoc feedback report` の処理全体、固定済み report cut、candidate の構築・同一性判断、normalization／remediation checkpoint、publication または incomplete 診断の挙動を調べるとき。
+- feedback observation から active issue、generation artifact、current pointer、正常／診断 report までの transaction 境界や中断後の再開経路を確認するとき。
 
 ## Do not read this when
-- feedback observation の受付や envelope 検証そのものを確認したいときは、観測保存・受付を担当する対象を先に読む。
-- normalize issue や remediate issue の agent prompt、Structured Output schema、個別の remediation 判定規則だけを確認したいときは、それぞれの builder・schema・判定対象を直接読む。
-- feedback state の共通 path、pointer、generation artifact の形式だけを確認したいときは、共通 state 管理対象を直接読む。
+- raw observation の受付・保存や observation envelope の定義だけを調べるときは、feedback report の前段にある observation store／受付実装を直接読む。
+- normalize／remediate agent に渡す個別 parameter や Structured Output schema の形式だけを確認するときは、それぞれの builder と schema を直接読む。
+- generation state、pointer、checkpoint の共通データ構造だけを確認するときは、runtime feedback state／run state の実装を直接読む。
 
 ## hash
-- eb94d66c031f52e22303f2941e8cad6d9244a088145b458f81812a44962ada0e
+- db935f9fd7366038e7f168d68d65802d8f9d3f3631c2430b5a2d6b7fa4c65f79
