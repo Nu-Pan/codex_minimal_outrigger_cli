@@ -49,21 +49,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 実装群をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run など横断的な実行時責務への入口。
-- 個別 runtime モジュールへ進む前に、共通 API と責務分割を把握するための上位ディレクトリ。
+- cmoc の共通 runtime helper 群をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run lifecycle など、複数の実行経路から共有される実装の入口。
+- 特定の runtime 責務に対応する実装ファイルへ進むための下位入口を提供し、INDEX 更新や editor input handoff などの横断的な runtime 境界も含む。
 
 ## Read this when
-- 複数の実行経路で共有される runtime API や共通実行時補助機能を確認・変更するとき
-- CLI、Codex、設定、Git、feedback、ログ、パス、状態、report、run の共通処理を横断して調査するとき
-- commons 配下の個別実装へ進む前に、責務の分割と公開入口を把握するとき
+- 複数の cmoc 実行経路で共有される runtime API や helper の所在を確認するとき
+- Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run lifecycle などの共通処理を調査・変更するとき
+- 特定の runtime 責務に対応する実装ファイルを選ぶ前に、commons 配下の構成と入口を確認するとき
 
 ## Do not read this when
-- 特定の runtime モジュールの内部実装や個別 API だけを調査・変更する場合
-- 特定サブコマンドの業務ロジック、正本仕様、schema、または個別 report 形式を直接確認する場合
-- 目的に直結する個別実装ファイルが明確な場合
+- 特定の runtime module の内部実装が明らかで、その個別ファイルを直接確認できるとき
+- CLI サブコマンド固有の業務処理や利用者向け仕様だけを調査するとき
+- 共通 runtime に関係しない application spec、oracle、realization、テスト固有の内容を確認するとき
 
 ## hash
-- decb3dbf9a1f8e9bd40434635af0caa6c8defa72bab6835832a90ad76c43d50a
+- 37598a1be356013e1759ebf0837d64b0b10254d4f8c94658604ccd912c707b0f
 
 # `config`
 

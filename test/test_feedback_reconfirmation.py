@@ -18,6 +18,8 @@ from commons.runtime_feedback_run_state import (
     validate_run_artifacts,
 )
 from commons.runtime_feedback_state import (
+    _validate_report_cut_checkpoint,
+    _validate_report_cut_manifest,
     artifact_reference,
     load_active_state,
     load_report_cut,
@@ -25,8 +27,11 @@ from commons.runtime_feedback_state import (
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
+    canonical_json_bytes,
+    observation_path,
     read_json_object,
     rfc3339_now,
+    sha256_bytes,
     store_agent_observation,
     write_immutable_json,
 )
@@ -195,6 +200,55 @@ def test_run_artifacts_reject_noncontiguous_wave_boundaries(feedback_run):
             harness.manifest,
             harness.path,
             allow_missing=False,
+        )
+
+
+def test_report_cut_rejects_duplicate_observation_entries(feedback_run):
+    """同じ raw observation を report cut の処理対象へ二重計上しない。"""
+    harness = feedback_run
+    observed_at = rfc3339_now()
+    observation_id = "fbo_00000000-0000-7000-8000-000000000001"
+    raw_path = observation_path(harness.context.repo, observation_id, observed_at)
+    write_immutable_json(
+        raw_path, {"observation_id": observation_id, "observed_at": observed_at}
+    )
+    entry = {
+        "observation_id": observation_id,
+        **artifact_reference(harness.context.repo, raw_path),
+    }
+    harness.manifest["inputs"]["observations"] = [entry, entry.copy()]
+
+    with pytest.raises(CmocError, match="重複"):
+        _validate_report_cut_manifest(
+            harness.context.repo, harness.manifest, harness.path
+        )
+
+
+def test_normalization_checkpoint_rejects_schema_invalid_output(tmp_path):
+    """normalization checkpoint は output hash だけで正式結果にならない。"""
+    output = {
+        "result": {"decision": "new", "existing_issue_id": None},
+        "unexpected": True,
+    }
+    checkpoint = {
+        "schema_version": 1,
+        "kind": "normalization",
+        "report_cut_id": "fbc_00000000-0000-7000-8000-000000000001",
+        "candidate_id": "fbo_00000000-0000-7000-8000-000000000001",
+        "input_sha256": "0" * 64,
+        "builder_sha256": "1" * 64,
+        "schema_sha256": "2" * 64,
+        "structured_output": output,
+        "output_sha256": sha256_bytes(canonical_json_bytes(output)),
+    }
+
+    with pytest.raises(CmocError, match="schema"):
+        _validate_report_cut_checkpoint(
+            checkpoint,
+            tmp_path / "normalization.json",
+            expected_kind="normalization",
+            expected_report_cut_id=checkpoint["report_cut_id"],
+            expected_candidate_id=checkpoint["candidate_id"],
         )
 
 

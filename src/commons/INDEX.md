@@ -388,21 +388,22 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local state を一元管理し、report cut、active generation、current pointer、publication、incomplete 診断、checkpoint、artifact cleanup の整合性を検証・保存・復旧する。
-- observation envelope と machine aggregate の canonical identity、参照 hash、閾値、時刻、状態遷移を検査し、異常終了後の report cut 再開や publication 後の cleanup を安全に進めるための主要な state 管理入口である。
+- feedback の repository-local active state と report cut を一体の integrity boundary で管理する。
+- current pointer、generation、publication、incomplete 診断、checkpoint、artifact の整合性を検証する。
+- feedback state の生成、公開、復旧、cleanup、破棄に使う path・ID・hash・canonical JSON の処理を提供する。
 
 ## Read this when
-- feedback report の state transition、active issue／machine aggregate、current pointer、generation publication の整合性を調べるとき
-- report cut の入力 snapshot、normalization／remediation checkpoint、incomplete 診断、publication artifact、cleanup target の検証や復旧を確認するとき
-- feedback state の破損検出、canonical JSON／SHA256 artifact reference、writer lock、publication 後 cleanup の挙動を追跡するとき
+- feedback の active state、current pointer、generation、report cut の整合性を調べるとき
+- publication 後の cleanup、incomplete 診断、checkpoint の復旧や検証を確認するとき
+- feedback state artifact の保存、公開、削除、hash 検証の実装入口を探すとき
 
 ## Do not read this when
-- observation の受付・保存や reporter 入力の収集だけを調べるとき
-- feedback report の実行 orchestration や remediation call の具体的な run state 検証だけを調べるとき
-- Markdown report の表示内容や app specification の正本を確認することが目的のとき
+- observation の受付・保存や reporter 入力の処理だけを確認したいとき
+- feedback report の上位実行フローや remediation の実行内容だけを確認したいとき
+- state の正本仕様や subcommand の利用者向け契約を確認する場合は、対応する oracle 文書を直接読むとき
 
 ## hash
-- b02d842124283f94ffd2958432289e41adbfe6e6730e090b5957318b4ae111a2
+- b9e12ba3380ce025ad0f63bc7b211b53e3cec0061e94c1787ad86db49932ac93
 
 # `runtime_feedback_store.py`
 

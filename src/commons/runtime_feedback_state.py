@@ -14,6 +14,7 @@
 import base64
 import fcntl
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -21,8 +22,13 @@ import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 from typing import Any
+
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
 
 from .runtime_errors import CmocError
 from .runtime_feedback_store import (
@@ -691,7 +697,13 @@ def _read_canonical_object(path: Path, description: str) -> _JsonObject:
         raise _corruption(
             f"{description} を canonical JSON として読めません。", path
         ) from exc
-    if not isinstance(value, dict) or canonical_json_bytes(value) != content:
+    try:
+        canonical = canonical_json_bytes(value)
+    except (TypeError, UnicodeError, ValueError) as exc:
+        raise _corruption(
+            f"{description} が canonical JSON object ではありません。", path
+        ) from exc
+    if not isinstance(value, dict) or canonical != content:
         raise _corruption(
             f"{description} が canonical JSON object ではありません。", path
         )
@@ -749,7 +761,12 @@ def _resolve_reference_path(
             f"{description} path が不正です。", expected_root, repr(raw_path)
         )
     repository = repo.resolve(strict=False)
-    candidate = (repository / raw_path).resolve(strict=False)
+    lexical_candidate = repository / raw_path
+    if _has_symlink_component(lexical_candidate):
+        raise _corruption(
+            f"{description} path が symlink を含みます。", lexical_candidate
+        )
+    candidate = lexical_candidate.resolve(strict=False)
     expected = expected_root.resolve(strict=False)
     if candidate != expected and expected not in candidate.parents:
         raise _corruption(f"{description} path が期待 root 外です。", candidate)
@@ -1701,13 +1718,16 @@ def _validate_report_cut_manifest(
                 )
         observation_path_value = str(item.get("path"))
         observation_hash = str(item.get("sha256"))
-        previous_hash = hashes_by_id.setdefault(
-            str(observation_id_value), observation_hash
-        )
-        if previous_hash != observation_hash:
-            raise _corruption("同じ observation ID に異なる hash があります。", path)
+        observation_id_string = str(observation_id_value)
+        if observation_id_string in hashes_by_id:
+            if hashes_by_id[observation_id_string] != observation_hash:
+                raise _corruption(
+                    "同じ observation ID に異なる hash があります。", path
+                )
+            raise _corruption("report cut observations に重複があります。", path)
+        hashes_by_id[observation_id_string] = observation_hash
         observed_entries.append(
-            (str(observation_id_value), observation_path_value, observation_hash)
+            (observation_id_string, observation_path_value, observation_hash)
         )
     if observed_entries != sorted(observed_entries):
         raise _corruption("report cut observations が ID/path 順ではありません。", path)
@@ -2285,12 +2305,68 @@ def _validate_report_cut_checkpoint(
         from .runtime_feedback_run_state import validate_remediation_checkpoint
 
         validate_remediation_checkpoint(checkpoint, path)
+    else:
+        try:
+            valid_output = _normalization_output_matches_schema(output)
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            SchemaError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise _corruption(
+                "normalization checkpoint schema を検証できません。", path
+            ) from exc
+        if not valid_output:
+            raise _corruption(
+                "normalization checkpoint output が schema に適合しません。", path
+            )
     for name in ("input_sha256", "builder_sha256", "schema_sha256", "output_sha256"):
         value = checkpoint.get(name)
         if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
             raise _corruption(f"report cut checkpoint {name} が不正です。", path)
     if sha256_bytes(canonical_json_bytes(output)) != checkpoint["output_sha256"]:
         raise _corruption("report cut checkpoint output hash が一致しません。", path)
+
+
+@lru_cache(maxsize=1)
+def _normalization_schema() -> dict[str, Any]:
+    """oracle package resource から normalization schema を読む。"""
+    try:
+        schema_text = (
+            resources.files("oracle.acp_builder.feedback")
+            .joinpath("normalize_issue.json")
+            .read_text(encoding="utf-8")
+        )
+    except NotADirectoryError:
+        # `oracle.acp_builder.feedback` is a namespace package in editable
+        # installations, where importlib.resources cannot merge duplicate
+        # package search locations into one resource directory.
+        spec = importlib.util.find_spec("oracle.acp_builder.feedback")
+        locations = (
+            spec.submodule_search_locations
+            if spec is not None and spec.submodule_search_locations is not None
+            else ()
+        )
+        for location in locations:
+            candidate = Path(location) / "normalize_issue.json"
+            if candidate.is_file():
+                schema_text = candidate.read_text(encoding="utf-8")
+                break
+        else:
+            raise
+    schema = json.loads(schema_text)
+    if not isinstance(schema, dict):
+        raise TypeError("normalization schema must be an object")
+    Draft202012Validator.check_schema(schema)
+    return schema
+
+
+def _normalization_output_matches_schema(output: dict[str, Any]) -> bool:
+    """normalization output が oracle schema に適合するかを返す。"""
+    return Draft202012Validator(_normalization_schema()).is_valid(output)
 
 
 def _artifact_reference_shape(

@@ -1617,6 +1617,62 @@ def test_canonical_json_rejects_non_json_numbers(value: float) -> None:
         canonical_json_bytes({"value": value})
 
 
+@pytest.mark.parametrize("content", [b'{"value":NaN}\n', b'{"value":"\\ud800"}\n'])
+def test_state_reader_wraps_noncanonical_json_values(
+    tmp_path: Path, content: bytes
+) -> None:
+    """state reader が canonical 化時の JSON value 例外を corruption にする。"""
+    path = tmp_path / "state.json"
+    path.write_bytes(content)
+
+    with pytest.raises(CmocError, match="canonical JSON object"):
+        feedback_state_module._read_canonical_object(path, "feedback state")
+
+
+def test_normalization_schema_supports_editable_namespace_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """editable namespace package でも oracle schema を読み込める。"""
+    original_files = feedback_state_module.resources.files
+
+    def raise_namespace_resource_error(package: str):
+        if package == "oracle.acp_builder.feedback":
+            raise NotADirectoryError(package)
+        return original_files(package)
+
+    monkeypatch.setattr(
+        feedback_state_module.resources, "files", raise_namespace_resource_error
+    )
+    feedback_state_module._normalization_schema.cache_clear()
+
+    assert feedback_state_module._normalization_output_matches_schema(
+        {"result": {"decision": "new", "existing_issue_id": None}}
+    )
+
+
+def test_state_reference_rejects_in_repository_symlink_alias(tmp_path: Path) -> None:
+    """artifact reference が同じ root 内の symlink を通常 file として扱わない。"""
+    root = make_repo(tmp_path)
+    expected_root = root / ".cmoc/gu/feedback/active/generation"
+    expected_root.mkdir(parents=True)
+    target = expected_root / "manifest.json"
+    content = b"artifact\n"
+    target.write_bytes(content)
+    alias = expected_root / "alias.json"
+    alias.symlink_to(target)
+
+    with pytest.raises(CmocError, match="symlink"):
+        feedback_state_module._validate_artifact_reference(
+            root,
+            {
+                "path": alias.relative_to(root).as_posix(),
+                "sha256": hashlib.sha256(content).hexdigest(),
+            },
+            expected_root=expected_root,
+            description="state artifact",
+        )
+
+
 def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(
     tmp_path: Path,
 ) -> None:
