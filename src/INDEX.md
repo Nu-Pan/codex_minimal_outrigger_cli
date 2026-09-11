@@ -49,21 +49,21 @@
 # `commons`
 
 ## Summary
-- src/commons は、CLI・Codex 実行・設定・Git・ログ・パス・状態・feedback など、複数の実行経路で共有する cmoc runtime helper 群の実装入口です。
-- Codex exec／TUI、INDEX 更新、editor input handoff、feedback 受付・保存、primary report、run lifecycle など、横断的な実行境界を機能別 runtime module から確認できます。
+- cmoc の共通 runtime 実装群をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run など横断的な実行時責務への入口。
+- 個別 runtime モジュールへ進む前に、共通 API と責務分割を把握するための上位ディレクトリ。
 
 ## Read this when
-- 複数の cmoc 実行経路にまたがる共通 runtime API、実行 lifecycle、結果・エラー・ログ・パス・状態管理の実装入口を探すとき。
-- Codex exec／TUI の起動・検証・preflight、INDEX 更新、editor input handoff、feedback の収集・保存、primary report、editing run の lifecycle を調査・変更するとき。
-- 個別の commons runtime module が担う責務を見渡し、対象の下位実装へ進む前の入口を確認するとき。
+- 複数の実行経路で共有される runtime API や共通実行時補助機能を確認・変更するとき
+- CLI、Codex、設定、Git、feedback、ログ、パス、状態、report、run の共通処理を横断して調査するとき
+- commons 配下の個別実装へ進む前に、責務の分割と公開入口を把握するとき
 
 ## Do not read this when
-- 特定の runtime module の内部実装や個別のデータモデルだけを調べる場合は、commons 配下の対応する実装ファイルを直接読むとき。
-- CLI サブコマンド固有の業務処理、利用者向け仕様、schema の正本、feedback report の表示内容など、commons の共通 runtime 境界を越えた責務を確認するとき。
-- INDEX.md の entry 生成 schema や agent 向け prompt の定義そのものを確認するときは、該当する parameter・prompt 定義を直接読むとき。
+- 特定の runtime モジュールの内部実装や個別 API だけを調査・変更する場合
+- 特定サブコマンドの業務ロジック、正本仕様、schema、または個別 report 形式を直接確認する場合
+- 目的に直結する個別実装ファイルが明確な場合
 
 ## hash
-- e3a606b4ca898bf23f518e77f7572dccf014112defb0da38022ccfa918f44717
+- decb3dbf9a1f8e9bd40434635af0caa6c8defa72bab6835832a90ad76c43d50a
 
 # `config`
 

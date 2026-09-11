@@ -328,6 +328,21 @@ def test_reporter_rejects_invalid_jsonrpc_request(
     }
 
 
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"jsonrpc": "1.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "method": 1},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": []},
+    ],
+)
+def test_reporter_does_not_reply_to_invalid_notifications(
+    message: dict[str, object],
+) -> None:
+    """不正な Request 形状の notification にも response を返さない。"""
+    assert reporter_module._response(message) is None
+
+
 @pytest.mark.parametrize("requested", ["2024-11-05", "future-version"])
 def test_reporter_negotiates_only_supported_mcp_protocol_version(
     requested: str,

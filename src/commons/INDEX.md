@@ -354,19 +354,19 @@
 # `runtime_feedback_reporter.py`
 
 ## Summary
-- MCP の newline-framed stdio サーバーとして、initialize・ping・tools/list・tools/call を処理し、submit_observation を collector に転送する feedback reporter。
-- collector の接続コンテキスト、プロトコル、応答形式を検証し、受理結果または分類済みの再試行可否付き拒否結果を MCP の structuredContent と text で返す。
+- Codex が起動する call-scoped stdio MCP サーバーとして、initialize・ping・tools/list・tools/call を処理し、submit_observation の payload を capability envelope とともに feedback collector へ転送する境界実装。collector 応答の検証と、agent 向け accepted/rejected 結果の MCP structuredContent・text 形式への変換も担う。
 
 ## Read this when
-- feedback observation の MCP stdio 通信、submit_observation の公開ツール定義、または collector への転送・応答検証を確認するとき。
-- MCP JSON-RPC の request 検証、initialize の capability 応答、通知や未知 method/tool の扱いを調べるとき。
+- feedback reporter の MCP JSON-RPC 通信、newline-framed stdio ループ、initialize や tools/call の応答、または collector 到達時の結果変換を確認・変更するとき
+- collector への接続条件、protocol mismatch、transport failure、collector 応答の妥当性検証など、agent-facing の拒否結果を調べるとき
 
 ## Do not read this when
-- feedback observation の保存形式、入力 schema の詳細、UUID や protocol version の定義だけを確認したいときは、対応する runtime_feedback_store などの下位対象を直接読む。
-- collector 側の受理・拒否判定や永続化の挙動を調べるときは、この reporter ではなく collector および feedback observation の仕様を読む。
+- submit_observation の入力スキーマ、UUID や redaction を含む永続化・検証規則そのものを確認するときは runtime_feedback_store の定義を直接読む
+- collector の受付処理、capability の発行、rate limit や secret 検査など collector 内部の挙動だけを調べるとき
+- MCP reporter を介さない feedback の仕様や、上位の問題報告ポリシーだけを確認するとき
 
 ## hash
-- e1473ddd06b7975f13eaa0226771933ec9789c2c3bd344fb5ab5ca9b0f36f727
+- 0dd124d5c38a80dfd33af41625b587248d28cbfe98a57b1d9450903d751c0f26
 
 # `runtime_feedback_run_state.py`
 

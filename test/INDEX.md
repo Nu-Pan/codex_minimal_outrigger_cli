@@ -452,23 +452,24 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback reporter と collector 間の MCP/stdio および TCP submission 境界を検証するテスト。
-- agent・machine observation の raw 保存、検証、secret masking、rate limit、idempotency、candidate 化を検証するテスト。
-- feedback report の precondition、normalization、remediation、sequential wave、recovery、rollback を検証するテスト。
-- report cut、active generation、current pointer、atomic publication、cleanup、corruption 検出による durable state の整合性を検証するテスト。
+- feedback の agent-facing reporter と collector transport を検証するテスト。
+- observation の schema・context・rate limit・secret masking・raw store 永続化を検証する。
+- pending observation の候補化、正規化、重複判定、remediation wave、rollback、recovery を同一 repository fixture で検証する。
+- active state、current pointer、generation manifest、report、cleanup の atomic publication と破損時の境界を検証する。
 
 ## Read this when
-- feedback reporter、collector transport、capability、payload schema、UTF-8、protocol error、rate limit、context lifecycle を変更・調査するとき。
-- feedback observation の raw store、agent/machine candidate の deduplication・fingerprint・threshold・expiry を変更・調査するとき。
-- feedback report の precondition、Codex normalization/remediation、worktree rollback、late intake、manual completion、auto-join recovery を変更・調査するとき。
-- active state の generation manifest、current pointer、report cut、cleanup、publication、artifact integrity 検証を変更・調査するとき。
+- feedback の reporter または collector の protocol、受付、失効、並行 call、degraded warning を確認したいとき
+- agent・machine observation の raw 保存、検証、legacy 互換、重複排除、完了件数を確認したいとき
+- feedback report の issue candidate、remediation、checkpoint、late intake、rollback、recovery の一連の挙動を確認したいとき
+- active state の generation、current pointer、report artifact、cleanup、publication failure の検証箇所を探したいとき
 
 ## Do not read this when
-- feedback 機能以外のテストや、単一モジュールの局所的な挙動だけを直接確認すれば判断できる変更を扱うとき。
-- 正本仕様や oracle の内容を確認・変更するときは、対応する仕様・oracle ファイルを直接読む。
+- feedback の正本仕様や実装の詳細を確認したいときは、対応する oracle または runtime・subcommand 実装を直接読むべきとき
+- feedback report の単一関数の内部実装だけを確認したいとき
+- feedback 以外の機能のテストや仕様を確認したいとき
 
 ## hash
-- bddd116aaa79610f2cab93437e8af8a97510eafd100d3d845c55beaffbab0591
+- 32dbe6c2728058a4c253e1a846c160533357dd3cd4c8b03cf63986cf37e4c1be
 
 # `test_feedback_decision.py`
 

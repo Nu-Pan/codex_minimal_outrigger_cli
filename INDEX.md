@@ -122,38 +122,39 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、互換 import、共通 runtime、サブコマンド実装へ進むための src 階層をまとめる。
-- main.py は Typer/Click の CLI command tree と引数解析境界を担い、oracle・realization・run・session などの実装入口へ接続する。
-- acp・basic・config・oracle・cmoc_runtime は既存 import path を正本実装または共通 runtime へつなぐ互換入口である。
-- commons は CLI、Codex、設定、Git、ログ、状態、feedback、run lifecycle など複数経路で共有する runtime helper の実装入口である。
-- sub_commands は doctor・tui・indexing と、feedback・oracle・realization・run・session などの CLI サブコマンド群へ進む上位入口である。
+- cmoc の CLI 起動入口とサブコマンド実装、共通 runtime、互換 import 入口、ACP builder をまとめる src 階層。CLI の command tree から doctor・tui・indexing・feedback・oracle・realization・run・session の各処理へ進み、共通処理は commons、互換 API は acp・basic・config・cmoc_runtime から追跡する。
 
 ## Read this when
-- cmoc の CLI command tree、起動処理、Typer/Click 互換境界を確認するとき。
-- 既存の acp.*、basic.*、config.*、cmoc_runtime などの互換 import の存続・移行経路を確認するとき。
-- 複数の実行経路で共有される runtime helper、状態管理、feedback、Codex 実行、run lifecycle の実装入口を探すとき。
-- CLI サブコマンドの実装配置や、doctor・tui・indexing・session・run・oracle・realization・feedback への進み方を確認するとき。
+- cmoc の CLI 全体構成、起動入口、サブコマンド群、共通 runtime、互換 import 層の責務分担を把握するとき。
+- 特定の下位実装へ進む前に、CLI・runtime・互換 API・ACP builder のどの領域を読むべきか判断するとき。
+- src 直下の公開入口から oracle 側実体や各サブコマンド実装への導線を確認するとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンド、runtime module、互換入口、または正本 oracle 実装の詳細を確認したいときは、対応する下位要素を直接読む。
-- 利用者向け仕様、正本仕様、schema、feedback report の具体的な内容だけを確認したいときは、src 階層の入口ではなく該当する仕様・実装を直接読む。
+- 特定サブコマンドの処理内容、個別 runtime API、ACP builder の生成規則、または oracle 側の正本実装を確認したいときは、対応する下位要素を直接読む。
+- CLI 引数解析の詳細や特定コマンドの業務ロジックだけを調査するときは、src 全体ではなく main.py または接続先の実装を読む。
+- 互換 import の移行条件や再公開 API の具体的な定義だけを確認するときは、acp・basic・config・cmoc_runtime の該当対象を直接読む。
 
 ## hash
-- 0f4c5b9cf756bec16b2d00971dee37bc940428e17705513c1f93b24b6c89deac
+- 7db9ad82826ca87a401fd86099a8eaeb4325af10b8b6fb405345da7b7844fa39
 
 # `test`
 
 ## Summary
-- cmoc の CLI、runtime、Codex 実行、indexing、feedback、session、oracle／realization などを対象に、外部から観測できる挙動・状態遷移・安全境界を検証する回帰テスト群への入口。
-- 単体 helper から実 Codex CLI を使う受け入れ試験まで、各機能の正常系・異常系・Git／worktree／process／report の連携を確認する。
+- test 配下は、cmoc の CLI・Codex runtime・indexing・session・feedback・editor handoff・Git・state・通知などについて、外部から観測できる挙動、安全境界、失敗復旧、公開 API を検証するテスト群への入口。
+- 個別機能の単体テストから実 Codex・独立 process・PTY を使う受け入れ試験までを含み、変更対象に対応するテストファイルを選ぶための案内を提供する。
+- 共通 helper と fixture は、テスト用の path 解決、CLI 実行、Codex 環境、fake command、Git repository、toast 隔離など、複数テストで共有する準備処理の入口となる。
 
 ## Read this when
-- 特定機能の外部契約、回帰条件、失敗時の状態、または複数サブシステム間の統合テスト範囲を確認するとき。
-- CLI・Codex・indexing・feedback・session・editor handoff・Git・worktree などの挙動を検証するテストの入口を探すとき。
+- CLI の command tree、共通 lifecycle、doctor、indexing、oracle、session、editing run、tui の外部挙動や統合 lifecycle を検証・変更するとき。
+- Codex exec/TUI の引数、prompt、sandbox、provider、quota retry、JSONL 異常、process 管理、ログ、schema 保存を確認するとき。
+- feedback の observation、report、remediation、reconfirmation、atomic publication や、editor input handoff の protocol・安全境界を調べるとき。
+- root/worktree、Git ignore、runtime state、refactor state、config、file access、content 保存、wrapper、Windows toast などの回帰条件を確認するとき。
+- 実際の Codex CLI、独立 process、PTY を含む本番経路の受け入れ範囲や、関連する共通 test helper の利用方法を確認するとき。
 
 ## Do not read this when
-- 対象機能の正本仕様、oracle、実装、Structured Output schema の内容を確認したいときは、対応する仕様・oracle・実装ファイルを直接読む。
-- 単一テストの具体的な fixture や期待値だけを確認したいときは、このディレクトリ全体ではなく該当テストファイルへ直接進む。
+- 正本仕様、Structured Output schema、prompt 本文、実装内部の詳細そのものを確認したいときは、各テストが案内する oracle・schema・実装ファイルへ直接進む。
+- テストが検証していない個別サブコマンドの通常仕様、一般的な Git 操作、Codex CLI の一般利用方法、または LLM の回答品質だけを調べるとき。
+- test 配下の共通回帰条件ではなく、単一の低レベル helper・API・renderer・state 実装の内部挙動だけを確認したいとき。
 
 ## hash
-- 161ac41af77195073a12787cbb3e93ab15eb2afc7be676c9e93bd43aa0282f92
+- 12534397c0309cd99d63d05ca7bd906c46d52a69254e02dbc3f9dfa7ad2784df

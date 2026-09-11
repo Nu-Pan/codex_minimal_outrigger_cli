@@ -216,12 +216,12 @@ def _tool_result(result: dict[str, object]) -> dict[str, object]:
 
 def _response(request: object) -> dict[str, object] | None:
     """一つの MCP JSON-RPC message を処理する。"""
+    # JSON-RPC notification は不正な Request であっても応答しない。
+    if isinstance(request, dict) and "id" not in request:
+        return None
     if not isinstance(request, dict) or not _is_valid_jsonrpc_request(request):
         return _invalid_request()
     method = request.get("method")
-    if "id" not in request:
-        # notification は状態を持たない reporter では応答不要である。
-        return None
     request_id = request["id"]
     if method == "initialize":
         parameters = request.get("params")
