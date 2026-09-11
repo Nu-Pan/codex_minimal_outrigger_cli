@@ -158,19 +158,25 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- 日本語技術文書のルーティング情報として、Codex CLI subprocess 境界の実行環境・argv・設定配置・process tracking・JSONL 結果判定を案内する。
-- Codex の起動条件、実行中 process の同一性確認と停止、Structured Output schema の配置、stdout/stderr の error・resume token・capacity/quota 判定を確認する入口である。
+- Codex CLI subprocess 境界の実装を担い、起動時の sandbox・argv・cwd・CODEX_HOME・環境変数・schema 配置と、終了時の機械的な結果解釈を一体で扱う。
+- editing run の Codex child process tracking、process group の同一性検証、安全な signal・cleanup、PID 再利用対策を提供する。
+- Codex の JSONL 出力から session ID、診断 message、capacity・quota・予期しない error を判定する。
+- model provider、MCP server、hook、Structured Output など、Codex 呼び出し単位の設定を argv として構成する。
 
 ## Read this when
-- Codex subprocess の sandbox、CODEX_HOME、MCP/environment override、schema 配置、起動失敗、process tracking、abandon 時の process group cleanup を調べるとき。
-- Codex JSONL の malformed event、error message、session ID、capacity error、quota error の判定経路を確認・変更するとき。
+- Codex CLI subprocess の起動条件、sandbox、argv、cwd、CODEX_HOME、環境変数、schema 配置を確認したいとき
+- editing run で追跡対象の child process や process group を安全に停止・cleanup する挙動を確認したいとき
+- Codex JSONL stdout、stderr、session ID、capacity・quota・予期しない error の判定を確認したいとき
+- model provider、MCP、hook、Structured Output の呼び出し単位設定がどのように Codex argv へ変換されるか確認したいとき
 
 ## Do not read this when
-- Codex CLI 呼び出し境界の実装や機械的な結果判定を扱わず、個別の agent call 設定、上位の run orchestration、または MCP reporter 自体の仕様だけを調べるとき。
-- 対象の下位関数を直接変更する作業で、既に呼び出し契約と失敗時の境界が明確になっているとき。
+- 上位の agent call の業務フローや利用者向けコマンド仕様だけを確認したいとき
+- Codex CLI 自体の一般仕様や外部サービスの利用方法を調べたいとき
+- process tracking の要件や停止手順を確認する目的で、実装ではなく editing run の正本仕様を直接読むべきとき
+- JSON schema の設計自体や一般的な JSONL protocol の仕様だけを確認したいとき
 
 ## hash
-- a53cff5e171b02c01742c1dd432ca6b444d1e9fb607ff447ba2974c725a2ca71
+- d59f5eb3a78eae69a258928e50e1a2e666a94efa5e81f117bbfd4443881e2368
 
 # `runtime_codex_tui.py`
 
