@@ -49,22 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 境界を構成し、CLI の終端処理、Codex exec/TUI、設定、Git、パス、ログ、結果、エラーを横断して利用する基盤。
-- INDEX.md の検査・生成・鮮度確認・書き込み・復元、doctor の修復、editing run の lifecycle と worktree/process cleanup を扱う実行管理の入口。
-- prompt editor handoff、feedback collector/reporter・durable store・report state、primary report、refactor state など、各機能の安全な IPC・永続化・状態管理を担う下位 runtime 群への入口。
+- commons 配下で共有される cmoc runtime API と実行時 helper 群への入口。
+- CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report、editor handoff など、複数の実行経路にまたがる共通基盤を扱う。
 
 ## Read this when
-- 複数の CLI 実行経路で共有される runtime API、実行 lifecycle、状態管理、ログ、結果、エラー処理の責務を横断して確認するとき。
-- Codex 実行前後の preflight、subprocess、Structured Output、retry、TUI、editor handoff、feedback、report、Git/worktree の連携境界を調査するとき。
-- INDEX 更新、doctor 修復、editing run、session state、feedback state など、複数の下位機能にまたがる整合性や復旧処理の入口を探すとき。
+- 複数の実行経路から利用される runtime API や共通 helper の責務を確認するとき。
+- commons 配下で対象となる個別 runtime module を選び、実装確認の入口を判断するとき。
+- Codex 実行、設定、Git、ログ、パス、状態、feedback、report、editor handoff の共通処理を横断して調べるとき。
 
 ## Do not read this when
-- 特定の機能の仕様や個別実装だけを確認したい場合は、対象となる runtime モジュールまたは対応する正本仕様を直接読むとき。
-- CLI サブコマンド固有の業務処理、設定モデル、feedback schema、editor handoff protocol など、共通 runtime の横断入口を必要としない調査を行うとき。
-- 単一の結果型、低レベルの Git/path 操作、個別の report 描画や保存処理だけを確認する場合。
+- 特定の runtime module の内部挙動や個別データ構造だけを確認する場合。
+- CLI サブコマンド固有の業務処理や正本仕様、schema 本文、テスト固有の期待値だけを確認する場合。
 
 ## hash
-- 9f0cbb04a3b9f259451331ee24daea364c347779cee7701c8ed2d31ef2400b5a
+- 0a6321f486fad5f65ed0cd70f351bf2ae0ba8805c92eff53e61d9ea1605d3bdf
 
 # `config`
 
@@ -118,18 +116,27 @@
 # `sub_commands`
 
 ## Summary
-- 対象ディレクトリは、CLI サブコマンドの実装をサブコマンド単位で配置する上位パッケージで、doctor・feedback・indexing・oracle・realization・run・session・tui など個別の実行入口へ進むためのルーティング起点です。
-- apply や review のように現時点で実装本文がない領域も含め、サブコマンド実装の追加・構成確認時に同階層の対象を振り分ける役割を担います。
+- サブコマンド実装をまとめるディレクトリ入口。doctor、feedback、indexing、oracle、realization、review、run、session、tui など、各サブコマンドの実行入口や配下の処理へ進むための上位ルーティング対象。
+- apply は現時点で実装ファイルがなく、将来 apply サブコマンドの実装が追加された場合に確認する対象。
+- doctor は `cmoc doctor` の CLI 入口と、doctor preprocess を CLI runtime 経由で明示的に 1 ステップ実行する処理を扱う。
+- feedback は判定根拠の固定・差分検出、remediation から publication、report 集約・公開、publication 後の recovery までを扱うモジュール群への入口。
+- indexing は work root の INDEX.md 更新、実行前提条件の検査、排他ロック、差分 commit、primary report 反映を行う CLI 入口。
+- oracle は編集系・調査系を含む oracle サブコマンド群の package 境界で、個別の実行入口や処理フローへ進むための対象。
+- realization は realization 配下の workload 実装をまとめ、apply と refactor の処理入口へ振り分けるディレクトリ。
+- review は review サブコマンドの realization 実装を配置するディレクトリだが、現時点で具体的な実装本文はない。
+- run は editing run の abandon・join に関する停止、統合、cleanup、report、状態遷移、および旧 import path の互換 shim を扱う実装群への入口。
+- session は session の fork・join・abandon に関する実行条件、状態遷移、branch 操作、失敗時 rollback を扱う実装パッケージ。
+- tui は依頼文の編集から完全プロンプト・起動パラメータの構築、Codex TUI の実行までを担う tui サブコマンド本体。
 
 ## Read this when
-- CLI サブコマンド全体の構成を確認するとき。
-- 特定のサブコマンド実装へ進む入口や、サブコマンド間の配置・責務分担を判断するとき。
-- サブコマンド実装の追加先や、realization・oracle・run など配下の階層構成を確認するとき。
+- src/sub_commands 配下のサブコマンド構成を把握し、個別の実装対象へ進む入口を判断するとき。
+- doctor、feedback、indexing、oracle、realization、review、run、session、tui のいずれかの CLI 入口または実装群を調査・変更するとき。
+- apply または review の実装追加先を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理、入力、状態遷移、runtime 呼び出しを確認・変更するときは、対応するサブコマンド実装を直接読む。
-- CLI 共通 runtime や INDEX.md の更新規則など、サブコマンド配置を越えた共通処理だけを調べるときは、対応する共通実装・仕様を直接読む。
-- サブコマンド以外のディレクトリや機能を扱うとき。
+- 特定サブコマンドの具体的な処理詳細だけを確認したい場合は、対応する下位実装を直接読むとき。
+- CLI runtime 共通処理、repository・work root 解決、共通 artifact や canonical JSON など、サブコマンド固有ではない処理だけを調べるとき。
+- src/sub_commands 配下のサブコマンドを扱わないとき。
 
 ## hash
-- 2110f03c4c5f906941cc783b5ebdbe50a6e33d185134e816267312da6fcc32be
+- d8ae54525d971b3f36638cdb3085808dc7fdbf5b60a1ce55c65ef16919497ada

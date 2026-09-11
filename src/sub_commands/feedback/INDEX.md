@@ -52,23 +52,20 @@
 # `remediation.py`
 
 ## Summary
-- feedback issue の逐次修復を wave 単位で収束させ、各 issue の実差分・検証結果・判定根拠を checkpoint と commit に確定する。
-- 修復済み run の join、merge 成功の recovery、最終 tree の整合性検査、report publication までを一続きの finalization として制御する。
-- SIGINT・例外・中断時の run state、進捗 report、rollback、確定済み artifact を管理し、未確定の修復や不正な入力を publication 前に拒否する。
+- feedback issue の逐次修復から自動 join、publication までを一続きの run 状態遷移として制御する。
+- 観測の取り込み、wave ごとの候補判定、remediation agent の実差分検証・checkpoint 化、seal、merge、join 後検証、report publication と recovery を担う。
 
 ## Read this when
-- feedback report の自動修復処理、wave の再実行条件、issue remediation の commit/checkpoint 化を確認するとき。
-- feedback run の seal・join・merge・publication、または join 後 recovery の状態遷移と整合性検査を追うとき。
-- 修復 agent の structured output、変更 path、verification、decision basis、checkpoint artifact の照合仕様を調べるとき。
-- 中断・失敗時の rollback、error 状態、進捗記録、確定済み merge を保持する例外境界を確認するとき。
+- feedback report の新規修復処理、自動 join、publication、SIGINT・例外時の recovery、または remediation checkpoint と判定根拠の整合性を確認・変更するとき。
+- wave loop の収束条件、候補ごとの remediation 実行、正式 checkpoint の選択、sealed run の join 成功確認を追う必要があるとき。
 
 ## Do not read this when
-- 観測の集約・候補生成・表示ロジックだけを調べる場合は report を直接読む。
-- 判定根拠の比較や issue history、decision state の計算だけを調べる場合は decision を直接読む。
-- run artifact の永続化・checkpoint 検証や run join の汎用処理だけを調べる場合は runtime_feedback_run_state、runtime_run_join などの委譲先を直接読む。
+- 観測の集約・表示や report 生成そのものの仕様・実装を確認したいときは report を読む。
+- 永続的な feedback run artifact の形式・読み書き・checkpoint 検証だけを確認したいときは runtime_feedback_run_state を読む。
+- 判定根拠の比較ロジックだけを確認したいときは decision を直接読む。
 
 ## hash
-- a081c9101876c2cc278adecaf7d1351e8679a2dd4ee3f0d2fed47407f6b85097
+- 5cf2cee7a5c69ff765889b2c63e265919ea51cba7fac75e57ba1081403f08776
 
 # `report.py`
 

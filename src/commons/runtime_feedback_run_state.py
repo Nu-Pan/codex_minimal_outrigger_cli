@@ -316,6 +316,7 @@ def validate_run_artifacts(
         "completion": path.parent / "publication_completion.json",
     }
     last_watermark = 0
+    missing_wave_artifact = False
     for sequence, reference in enumerate(run["waves"], 1):
         target = _validate_report_cut_artifact_reference(
             repo,
@@ -327,6 +328,16 @@ def validate_run_artifacts(
         if target != path.parent / "wave" / str(sequence) / "input.json":
             raise _corruption("feedback wave の順序または path が不正です。", path)
         if not target.exists():
+            # Cleanup removes work artifacts in manifest order and may stop
+            # after an earlier wave.  Once that happens, a later wave's
+            # `after` value cannot be checked because the preceding boundary
+            # is no longer available.  The current-pointer path explicitly
+            # opts into this missing-artifact state; retain structural/path
+            # validation while deferring cross-wave continuity until the
+            # manifest itself is removed.
+            missing_wave_artifact = True
+            continue
+        if missing_wave_artifact and allow_missing:
             continue
         wave = _read_canonical_object(target, "feedback intake wave")
         _require_exact_fields(

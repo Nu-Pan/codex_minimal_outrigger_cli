@@ -273,14 +273,46 @@ def _wave_loop(
         intake_number = len(manifest["run"]["waves"]) + 1
         for reference in references:
             reference["reference_id"] += f":intake{intake_number}"
+        # Persist the captured inputs before any normalization checkpoint can be
+        # written, but keep the durable boundary at the previous value until
+        # the corresponding immutable wave has been published below.  A stop
+        # between these two writes must be replayable from the same receipt
+        # range rather than looking consumed merely because the manifest was
+        # updated first.
+        observation_by_key = {
+            (
+                str(item["observation_id"]),
+                str(item["path"]),
+                str(item["sha256"]),
+            ): item
+            for item in inputs["observations"]
+            if isinstance(item, dict)
+        }
+        observation_by_key.update(
+            {
+                (
+                    str(item["observation_id"]),
+                    str(item["path"]),
+                    str(item["sha256"]),
+                ): item
+                for item in entries
+            }
+        )
         inputs["observations"] = sorted(
-            [*inputs["observations"], *entries],
+            observation_by_key.values(),
             key=lambda item: (item["observation_id"], item["path"]),
         )
-        inputs["references"] = sorted(
-            [*inputs["references"], *references], key=lambda item: item["reference_id"]
+        references_by_id = {
+            str(item["reference_id"]): item
+            for item in inputs["references"]
+            if isinstance(item, dict)
+        }
+        references_by_id.update(
+            {str(item["reference_id"]): item for item in references}
         )
-        manifest["run"]["high_watermark"] = watermark
+        inputs["references"] = sorted(
+            references_by_id.values(), key=lambda item: item["reference_id"]
+        )
         write_report_cut_manifest(context.repo, manifest)
         candidates, aggregates = report._build_candidates(
             context.repo,
@@ -341,6 +373,10 @@ def _wave_loop(
         write_immutable_json(wave_path, wave)
         wave_reference = artifact_reference(context.repo, wave_path)
         manifest["run"]["waves"].append(wave_reference)
+        # The wave file is durable before its high-watermark is published in
+        # the manifest.  Recovery can therefore never observe a consumed
+        # receipt range without the immutable input that owns it.
+        manifest["run"]["high_watermark"] = watermark
         write_report_cut_manifest(context.repo, manifest)
         for identity, candidate in pending.items():
             _remediate_issue(context, manifest, wave_reference, candidate)

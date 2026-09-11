@@ -122,19 +122,19 @@
 # `src`
 
 ## Summary
-- 対象ディレクトリ直下の CLI 起動入口、互換 shim、共通 runtime、設定、サブコマンド群を案内する上位ルーティング入口。
-- CLI 全体の構成と共通境界を確認し、必要な個別実装へ進むための入口。
+- src は cmoc CLI の起動入口と、互換層・共通 runtime・サブコマンド実装へ進むための上位ディレクトリ。
+- CLI コマンド登録、oracle／realization／session／run などのサブコマンド、共通基盤、旧 import path の互換入口を横断する際のルーティング対象。
 
 ## Read this when
-- `src` の公開入口や、CLI がどのサブコマンド・共通 runtime へ接続されるかを確認するとき。
-- 互換 import path、oracle/config の shim、共通 runtime、サブコマンド配置の全体像を把握してから下位要素へ進みたいとき。
+- src 配下の CLI 構成、公開入口、互換 import、共通 runtime、またはサブコマンド実装の調査・変更先を判断するとき。
+- 特定のサブコマンドや共通基盤へ進む前に、src 内の上位構成と入口を把握するとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な入力・処理・状態遷移を確認するときは、該当する下位実装を直接読む。
-- 個別の runtime API、設定型、oracle の正本実装、INDEX 更新や feedback の詳細仕様を確認するときは、対応する実体モジュールや正本仕様を直接読む。
+- 特定ファイルの実装詳細、正本仕様、個別サブコマンドの処理、または schema・テストの期待値だけを確認したいときは、src の下位対象や対応する正本・参照元を直接読む。
+- src 配下を扱わない作業や、共通 runtime 以外の外部実装だけを調べるとき。
 
 ## hash
-- e279f0fcae7402379827cdefcaabce53c7f4dbf2b9c2e84c572216c44322e6bd
+- fe4bb9338c4881f9aadf58e374663c0d223e9a85e9eb12fb7875f1ff11d43ceb
 
 # `test`
 

@@ -33,18 +33,18 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装を構成する入口。観測の report 化、判定根拠の固定、issue 修復から publication までの処理、publication 後の recovery を確認する際に、配下の各モジュールへ進むための起点となる。
+- feedback サブコマンドの実装を構成するモジュール群への入口。判定根拠の固定・差分検出、remediation から publication までの実行、report の集約・公開、publication 後の recovery を扱う。
 
 ## Read this when
-- feedback サブコマンドの全体構成や処理責務の分担を確認するとき。
-- 観測の report 化、判定、修復、publication 後の recovery のいずれを調べるべきか判断するとき。
+- feedback サブコマンドの判定、修復、自動 join、report publication、または publication 後の復旧処理を確認・変更するとき。
+- repository 入力や checkpoint 履歴の比較、report artifact の整合性、wave loop の収束、cleanup・状態遷移を追跡するとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- feedback 内の特定処理の実装詳細が明確で、対応するモジュールを直接読めるとき。
+- feedback の共通 run lifecycle・join 実装、観測の受付だけ、または共通の artifact／canonical JSON 実装だけを直接確認したいとき。
 
 ## hash
-- 1f41a27478b75b86ecbce42165c3ebc9b62a0477ad9331f07d46e1f424fee83a
+- ee6b3958b24a965377f9eb879f551e7d54dfd4c32744ef31ca3b6bc7127563bb
 
 # `indexing.py`
 

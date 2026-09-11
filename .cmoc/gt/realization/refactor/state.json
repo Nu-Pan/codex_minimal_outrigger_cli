@@ -86,8 +86,8 @@
   "oracle/doc/app_spec/feedback_state.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "e48bc94eb8576a2e559811a0097f633db9563055fe8dd42b07bf6122d0c3684d",
-    "last_investigated_at": "2026-08-13_14-36_55_953788000"
+    "last_investigated_sha256": "de856108b7f7bb4ef869151ad581f6b39e8c07e6cd40a5f3458ebbff5c2782ca",
+    "last_investigated_at": "2026-09-11_10-30_13_832056000"
   },
   "oracle/doc/app_spec/indexing.md": {
     "investigation_required": false,
