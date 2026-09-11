@@ -38,6 +38,8 @@ def render_primary_report(
         )
     elif spec.template == "refactor_fork":
         body = _refactor_fork_body(classification, result, logger)
+    elif spec.template == "session_join":
+        body = _session_join_body(classification, result, logger, dict(fields))
     else:
         body = _summary_body(spec.title, classification, result, logger)
     return "\n".join([*front_matter, *body, "", execution_record_markdown(logger)])
@@ -246,6 +248,89 @@ def _refactor_fork_body(
         "## 関連ログ",
         *_log_lines(logger),
     ]
+
+
+def _session_join_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> list[str]:
+    """session join 固有の実行要約を、確定済み情報だけから描画する。"""
+    merge_status = _operation_status(fields.get("merge_status"), classification)
+    conflict_paths = fields.get("conflict_paths")
+    if isinstance(conflict_paths, list):
+        conflict_lines = [f"- `{_inline_text(path)}`" for path in conflict_paths] or [
+            "- なし"
+        ]
+    else:
+        conflict_lines = [
+            "- 未実行"
+            if fields.get("merge_status") is None
+            else "- conflict は発生していません。"
+        ]
+    conflict_call_status = fields.get("conflict_resolution_status")
+    if conflict_call_status is None:
+        conflict_call = (
+            "未実行（conflict なし）"
+            if fields.get("merge_status") == "completed"
+            else "未実行"
+        )
+    else:
+        conflict_call = _operation_status(conflict_call_status, classification)
+    conflict_result = _operation_status(
+        fields.get("conflict_resolution_result"), classification
+    )
+    state_before = _field_status(fields.get("session_state_before"))
+    state_after = _field_status(fields.get("session_state_after"))
+    return [
+        "# cmoc session join report",
+        _outcome_sentence(classification),
+        "## 事前検証",
+        *_step_lines(logger, classification),
+        "## branch 切替と merge",
+        f"- session branch: `{_field_status(fields.get('session_branch'))}`",
+        f"- home branch: `{_field_status(fields.get('home_branch'))}`",
+        "- branch 切替: "
+        f"`{_operation_status(fields.get('branch_switch_status'), classification)}`",
+        "- merge 前の session branch HEAD: "
+        f"`{_field_status(fields.get('session_branch_head_before_merge'))}`",
+        "- merge 前の home branch HEAD: "
+        f"`{_field_status(fields.get('home_branch_head_before_merge'))}`",
+        f"- merge 結果: `{merge_status}`",
+        f"- 作成した merge commit: `{_field_status(fields.get('merge_commit'))}`",
+        "## conflict 解消",
+        "- conflict path:",
+        *conflict_lines,
+        f"- conflict 解消用 agent call: `{conflict_call}`",
+        f"- 確定した解消結果: `{conflict_result}`",
+        "## state 遷移",
+        f"- session state: `{state_before}` -> `{state_after}`",
+        "- state 更新: "
+        f"`{_operation_status(fields.get('state_update_status'), classification)}`",
+        "## session branch の cleanup",
+        "- cleanup: "
+        f"`{_operation_status(fields.get('session_branch_cleanup_status'), classification)}`",
+        "## 終端結果",
+        *_terminal_lines(classification, result),
+        "## warning とエラー",
+        *_warning_error_lines(classification, result, logger),
+        "## 次の操作",
+        *([f"- {action}" for action in result.next_actions] or ["- なし"]),
+        "## 関連ログ",
+        *_log_lines(logger),
+    ]
+
+
+def _operation_status(value: object, classification: TerminalClassification) -> str:
+    """operation の未実行・失敗・完了を report 用の短い値へ変換する。"""
+    if value is None:
+        return "未実行"
+    if value == "started":
+        return "失敗または未完了" if classification == "error" else "実行中"
+    if value == "not_confirmed":
+        return "未確認"
+    return _inline_text(value)
 
 
 def _step_lines(

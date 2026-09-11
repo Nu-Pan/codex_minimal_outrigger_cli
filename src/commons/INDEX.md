@@ -513,39 +513,40 @@
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済みの runtime 情報から、通常・feedback invocation・refactor fork の fallback primary report を構築する描画処理。実行段階、終端結果、warning/error、次の操作、診断ログ、Codex 最終出力、新規 observation を report へ反映する。
-- primary report の YAML front matter、template 別本文、実行記録、feedback publication 状態、Codex call 状態を扱う下位描画ロジックへの入口。
+- 確定済み runtime 情報を使って fallback primary report の front matter・本文・実行記録を描画する責務を担う。
+- feedback invocation、refactor fork、session join などの template ごとの要約と、共通の終端結果・warning/error・次操作・関連ログを組み立てる。
+- feedback publication 状態、oracle edit agent call 状態、実行済み step と Codex call log をイベントおよび logger から report 向け表示へ変換する入口である。
+- 未確定値や任意値を report 用に安全な YAML/Markdown 一行表現へ変換し、確定情報と未実行状態を区別して表示する。
 
 ## Read this when
-- fallback primary report の出力構造や template 別の本文を確認したいとき
-- 実行済み step、終端分類、warning/error、feedback publication 状態、Codex call 記録の report への反映方法を調べるとき
-- report に記録される Codex 最終出力や新規 feedback observation の扱いを確認するとき
+- fallback primary report の形式、template 別の invocation summary、実行記録、publication/checkpoint 状態の表示を確認したいとき。
+- runtime の terminal classification や logger event から、report の step・結果・warning/error・関連ログがどう描画されるか追跡したいとき。
+- session join や refactor fork の固有 report が、確定値・未確認値・未実行状態をどう表現するか確認したいとき。
 
 ## Do not read this when
-- primary report の仕様上の項目定義や publication の業務要件を確認したいときは、参照元の仕様文書を直接読むとき
-- runtime 情報の収集・ログ記録・結果分類そのものを変更または調査するとき
-- fallback report の呼び出し側や report 保存処理の責務だけを確認したいとき
+- feedback observation の受理・送信自体や、publication の処理フローを変更・調査する場合。
+- PrimaryReportSpec、TerminalResult、SubcommandLogger の定義やイベント生成元を直接確認すべき場合。
+- oracle の仕様本文や各 subcommand の正本仕様を確認することが主目的で、report 描画の実装詳細が不要な場合。
 
 ## hash
-- bf5e67cf6d37203e73a7fefc399eae4ee16e0206f8d0d1c3750c8d82a6ef9a67
+- e2a145dd25881eda74915b38a0975b9cc7791463b9b4c09d85023a459219346e
 
 # `runtime_primary_report_specs.py`
 
 ## Summary
-- fallback primary report の個別サブコマンド定義を確認する入口。doctor、indexing、session、oracle edit、realization、run、feedback report の各非対話末端サブコマンドについて、レポート保存先・役割・タイトル・必須項目・テンプレートを登録し、command 名から定義を取得する。
+- fallback primary report の個別サブコマンド定義を保持し、各非対話末端サブコマンドのレポート保存先・役割・タイトル・必須項目・テンプレートを登録する。
+- コマンド名から対応する PrimaryReportSpec を取得する、個別レポート仕様への入口。
 
 ## Read this when
-- fallback primary report のサブコマンド追加・変更時に、対象コマンドの保存先、レポートの役割、タイトル、必須項目、テンプレート登録を確認したいとき。
-- command 名から個別の primary report 定義を解決する処理を調査するとき。
-- session、realization、run、feedback report などの非対話末端サブコマンドが生成するレポート項目の定義を確認するとき.
+- 非対話末端サブコマンドの fallback report の保存先、front matter、必須項目、テンプレート登録を確認するとき。
+- command 名に対応する primary report 仕様の取得経路を確認するとき。
 
 ## Do not read this when
-- TUI の通知境界や oracle investigation の仕様を調査するとき。
-- レポートの実際の生成・保存処理や、各サブコマンドの実行ロジックを直接調査するとき。
-- fallback primary report の個別サブコマンド登録や command 名からの定義解決に関係しない処理を調査するとき。
+- TUI の通知境界を使う tui や oracle investigation の仕様を確認するとき。
+- 個別サブコマンドの実行処理やレポート本文の生成ロジックを直接調べるとき。
 
 ## hash
-- adc63e8e13151af1225a3a6f3ed8e55c17596eda042385c33b258fd216c98974
+- f38c578df9d19ef46790404ea94db32bf19c021482ce3738c97c6f4aaa6919d0
 
 # `runtime_refactor.py`
 

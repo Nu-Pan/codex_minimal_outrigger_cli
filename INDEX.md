@@ -122,34 +122,32 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、サブコマンド・共通 runtime・互換 import を担う実装領域をまとめる上位ディレクトリ。
-- CLI ツリーから各サブコマンドへ進む入口、Codex 実行や設定・Git・状態・feedback などの共有処理、旧 import path の互換層を確認できる。
+- src 配下の公開入口、CLI 起動経路、互換 shim、サブコマンド群、共有 runtime の構成を把握するための上位入口。
+- トップレベル CLI から各処理領域へ進む際に、下位要素の担当範囲を選ぶための案内を提供する。
 
 ## Read this when
-- cmoc の CLI コマンド階層、起動処理、Typer/Click 境界、引数解析エラーの扱いを確認するとき。
-- 目的の処理が session、oracle、realization、run、feedback などのどのサブコマンド領域に属するか振り分けるとき。
-- 複数の実行経路で共有される runtime helper、実行 lifecycle、設定、Git、状態、ログ、Codex 起動、feedback 処理の担当箇所を探すとき。
-- acp、basic、config、cmoc_runtime、oracle などの互換 import 入口と、正本実装への移行経路を確認するとき。
+- src 配下の公開入口や CLI 階層の構成を最初に確認するとき。
+- 個別のサブコマンドや runtime 実装へ進む前に、トップレベルの起動経路と下位領域の境界を判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理順序、入力制約、状態遷移、生成結果を確認したいときは、対応する下位パッケージや実装ファイルを直接読む。
-- 共通 helper の個別 API、正本仕様、schema、または互換層の具体的な再公開内容だけを確認したいときは、該当する下位要素や仕様を直接読む。
+- 特定サブコマンドの具体的な挙動や runtime helper の内部実装が明確なときは、対応する下位要素を直接読む。
+- 正本仕様、個別 workload の lifecycle、または特定 API の詳細だけを確認したいときは、この上位入口ではなく該当する下位要素や仕様を直接読む。
 
 ## hash
-- cf6027a767ad1772eae8d73eb305c10e76539e5e08dbf5e974169cf166129d95
+- 92c49d88b4920be6b54269aae95d8841e40a6dc5a0bfbe108f00b5e1e8227991
 
 # `test`
 
 ## Summary
-- test ディレクトリ配下の回帰・統合テストを、CLI、runtime、Codex 実行、indexing、session、feedback、editor handoff、通知などの外部挙動ごとに案内する入口。各テストは実装や正本仕様に対する具体的な契約・境界の検証を担う。
+- test 配下のテスト群を、対象機能ごとの外部契約・回帰条件へ案内するインベントリ入口。CLI、runtime、Codex 実行、indexing、feedback、session、editor、構造化文書など、個別テストへ進む判断材料を提供する。
 
 ## Read this when
-- 対象機能の外部挙動、失敗境界、永続 state、Git 副作用、Codex 呼び出し、CLI lifecycle の回帰条件をテストから確認したいとき。
-- 複数の関連テストを横断して、実行経路や統合時の観測可能な契約を調べる必要があるとき。
+- テスト対象の外部挙動や回帰条件を調べる際に、まず test 配下のどのテストへ進むべきか判断したいとき。
+- CLI・runtime・Codex・indexing・feedback・session・editor など複数領域にまたがる検証範囲や、専用テストへの入口を確認したいとき。
 
 ## Do not read this when
-- 正本仕様、実装詳細、schema、prompt 本文などを直接確認したいときは、対応する仕様・実装・oracle を読む。
-- 単一の補助関数や局所的なテスト fixture の詳細だけを確認したいときは、該当する個別テストまたは実装へ直接進む。
+- 特定機能の実装仕様や正本仕様そのものを確認したいときは、対応する実装・oracle・仕様文書を直接読む。
+- 個別テストの詳細な fixture、期待値、実行手順を確認したいときは、このインベントリではなく該当するテストファイルを直接読む。
 
 ## hash
-- 61ab34234c02817d0a3e9a95f622bf99a564cd9d80d4a036e1876c31b66bc49a
+- 1c58e8db67c6f802619fc3adbaf73fe26cbe5db9e7f9d3b106a18b43275a1898

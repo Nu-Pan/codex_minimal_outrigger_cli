@@ -910,21 +910,19 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork・join・abandon の CLI 外部挙動を、branch／state のライフサイクル、linked worktree、cleanup、rollback、dirty worktree 拒否、conflict 解消まで横断して回帰検証するテスト群。
-- session 状態遷移や conflict 解消処理の変更・不具合を、実際の CLI 実行と永続 state、Git branch、report、標準出力／標準エラーの観測から確認する入口。
+- session fork・join・abandon の CLI 回帰テストを一つの入口で扱い、session branch と永続 state のライフサイクル、linked worktree、cleanup、conflict 解消、dirty worktree 拒否などの外部挙動を検証する。
 
 ## Read this when
-- session fork／join／abandon の仕様変更や回帰を調査するとき。
-- session state、linked worktree、branch cleanup／rollback、preprocess、dirty worktree 制約の CLI 挙動を検証するとき。
-- session join の conflict marker 解消、Codex 呼び出し境界、対象外差分拒否、特殊な path 処理を確認するとき。
+- session の fork／join／abandon の挙動や、session branch・state の生成、遷移、復元、cleanup を確認・変更するとき。
+- linked worktree、home branch、state file、preprocess、conflict 解消の session join 経路を検証するとき。
+- session CLI のエラー出力、競合時の保護、oracle conflict の変更範囲を回帰テストから確認したいとき。
 
 ## Do not read this when
-- session CLI 以外のサブコマンドや、単体の内部実装だけを調べるとき。
-- session の正本仕様や実装そのものを直接確認すべきで、回帰テストの観測例が不要なとき。
-- 一般的な Git 操作や session state と無関係なテスト fixture を探しているとき。
+- session の実装本体や正本仕様そのものを確認することが目的で、テストによる外部挙動の確認が不要なとき。
+- fork／join／abandon 以外の CLI や、session state と無関係な一般的な Git・Codex 実行挙動を調べるとき。
 
 ## hash
-- e90d065467a287774d670afba2a8b1cfed81c302b072e71933246106519035f9
+- 39889ca9bc374aa4104603d1a853a3a82163b031220339dea3b75b5af3356805
 
 # `test_skill_metadata.py`
 

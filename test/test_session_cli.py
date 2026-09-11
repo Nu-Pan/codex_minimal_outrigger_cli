@@ -888,6 +888,10 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
     assert target.read_text() == "resolved change\nTitle\n=======\n"
     assert calls == ["session join conflict resolution"]
     assert modes == [FileAccessMode.REPO_WRITE]
+    rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert f"- `{target}`" in rendered_report
+    assert "- conflict 解消用 agent call: `completed`" in rendered_report
+    assert "- 確定した解消結果: `confirmed`" in rendered_report
 
 
 def test_session_join_preserves_repository_local_feedback_state(
@@ -1187,6 +1191,12 @@ def test_session_join_uses_linked_worktree_branch(
     assert f'home_branch: "{home_branch}"' in rendered_report
     assert 'session_state_after: "joined"' in rendered_report
     assert "merge_commit:" in rendered_report
+    assert "## 事前検証" in rendered_report
+    assert "## branch 切替と merge" in rendered_report
+    assert "- merge 結果: `completed`" in rendered_report
+    assert "- conflict 解消用 agent call: `未実行（conflict なし）`" in rendered_report
+    assert "- session state: `active` -> `joined`" in rendered_report
+    assert "- cleanup: `completed`" in rendered_report
 
 
 def test_session_join_preprocesses_linked_worktree_before_preconditions(
@@ -1409,6 +1419,8 @@ def test_session_join_handled_failure_is_written_to_stderr(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
     (root / "README.md").write_text("dirty\n")
 
     result = runner.invoke(app, ["session", "join"])
@@ -1418,6 +1430,9 @@ def test_session_join_handled_failure_is_written_to_stderr(
     assert "# 失敗: cmoc session join" in result.stderr
     assert "git 未コミット差分が存在します。" in result.stderr
     assert "Traceback" not in result.stderr
+    rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert f'home_branch: "{home_branch}"' in rendered_report
+    assert 'session_state_before: "active"' in rendered_report
 
 
 def test_session_join_unexpected_error_after_merge_is_written_to_stderr(

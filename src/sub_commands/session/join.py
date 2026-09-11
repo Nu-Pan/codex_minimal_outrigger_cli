@@ -68,6 +68,11 @@ def _cmoc_session_join_body(
         )
         start_subcommand_step(2, "事前条件を確認", "validate preconditions")
         session_id, path, state = load_state_for_branch(root, branch)
+        home = state.session.session_home_branch
+        update_primary_report_fields(
+            home_branch=home,
+            session_state_before=state.session.state,
+        )
         if not branch.startswith("cmoc/session/"):
             raise CmocError(
                 "session join は session branch 上で実行してください。", [], branch
@@ -79,11 +84,6 @@ def _cmoc_session_join_body(
                 json.dumps(state.to_dict(), ensure_ascii=False, indent=2),
             )
         require_clean_worktree(work)
-        home = state.session.session_home_branch
-        update_primary_report_fields(
-            home_branch=home,
-            session_state_before=state.session.state,
-        )
         if not home:
             raise CmocError("session home branch を特定できません。", [], str(path))
         session_head_before_merge = head_commit(work)
@@ -91,10 +91,15 @@ def _cmoc_session_join_body(
             session_branch_head_before_merge=session_head_before_merge,
         )
         start_subcommand_step(3, "session branch を merge", "merge session branch")
+        update_primary_report_fields(
+            branch_switch_status="started",
+            merge_status="started",
+        )
         # {{work-root}}/oracle/doc/app_spec/session_state.md:
         # session_home_branch は local branch なので、同名 remote-tracking branch を
         # Git に推測させて別の merge target を作らない。
         run_git(["switch", "--no-guess", home], work)
+        update_primary_report_fields(branch_switch_status="completed")
         home_head_before_merge = head_commit(work)
         update_primary_report_fields(
             home_branch_head_before_merge=home_head_before_merge
@@ -102,6 +107,7 @@ def _cmoc_session_join_body(
         merge = git(["merge", "--no-ff", branch], work, check=False)
         if merge.returncode != 0:
             resolve_session_join_conflict(work, codex_exec, git)
+        update_primary_report_fields(merge_status="completed")
         head_after_merge = head_commit(work)
         merge_commit = (
             head_after_merge if head_after_merge != home_head_before_merge else None
@@ -111,8 +117,13 @@ def _cmoc_session_join_body(
         start_subcommand_step(
             4, "後始末と terminal result を確定", "finish session join"
         )
+        update_primary_report_fields(state_update_status="started")
         write_state(path, state)
-        update_primary_report_fields(session_state_after="joined")
+        update_primary_report_fields(
+            session_state_after="joined",
+            state_update_status="completed",
+            session_branch_cleanup_status="started",
+        )
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
         # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
         # remote-tracking ref で安全性を証明してはならない。
@@ -133,6 +144,9 @@ def _cmoc_session_join_body(
         warnings: list[str] = []
         if delete_result.returncode != 0:
             warnings.append(f"session branch was not deleted: {branch}")
+            update_primary_report_fields(session_branch_cleanup_status="warning")
+        else:
+            update_primary_report_fields(session_branch_cleanup_status="completed")
         return TerminalResult(
             details=(
                 ("session_id", session_id),
@@ -154,6 +168,7 @@ def resolve_session_join_conflict(
     update_primary_report_fields(
         conflict_paths=[str(_absolute_path(path)) for path in conflicted_paths],
         conflict_resolution_status="not_started",
+        conflict_resolution_result="not_confirmed",
     )
     if not conflicted_paths:
         raise CmocError(
@@ -204,6 +219,7 @@ def resolve_session_join_conflict(
             unmerged,
         )
     git(["commit", "--no-edit"], root)
+    update_primary_report_fields(conflict_resolution_result="confirmed")
 
 
 def _unmerged_paths(root: Path, git: _GitRun) -> list[Path]:

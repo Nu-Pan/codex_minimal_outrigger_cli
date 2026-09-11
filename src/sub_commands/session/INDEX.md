@@ -52,19 +52,18 @@
 # `join.py`
 
 ## Summary
-- `session join` サブコマンドの実行経路と、merge conflict 発生時の解消・検証処理を扱う。
-- session branch を home branch へ安全に merge し、事前条件確認、merge 結果の記録、session state 更新、branch 後始末までを一連の処理として担う。
-- Codex による conflict 解消では、対象外の変更、conflict marker の残存、marker 外の内容変更、unmerged path の残存を検証してから merge を完了する。
+- session branch を home branch に merge し、conflict 解消の検証と後処理まで行う session join の実装責務を扱う。
+- session join の事前条件、Git merge、conflict 解消 agent の変更範囲検査、marker・unmerged path の確認、状態更新と session branch 削除を確認する入口。
 
 ## Read this when
-- session join の実装や実行順序、session branch から home branch への merge 条件を確認するとき。
-- merge conflict の対象列挙、Codex への解消依頼、変更範囲の制約、marker・stage・commit の検証を調べるとき。
-- session state の joined への更新、merge commit と branch 削除、primary report の更新動作を確認するとき。
+- session join の実行フロー、merge 対象 branch、事前条件、merge 後の session 状態更新を調べるとき。
+- merge conflict 発生時の解消依頼、許可される差分、conflict marker・unmerged path の検証、merge commit の確定条件を確認するとき。
+- session branch の cleanup 論理や削除警告、primary report の進捗項目を追跡するとき。
 
 ## Do not read this when
-- session の fork や abandon の処理を調べるとき。
-- conflict resolution parameter の構築内容そのものを確認したいときは、conflict resolution builder の実装を直接読む。
-- session state のデータモデルや全体仕様を確認したいときは、session state の正本仕様を直接読む。
+- session を fork、abandon、または別の subcommand として操作する処理だけを調べるとき。
+- conflict resolution parameter の具体的な agent 指示文だけを確認したい場合は、conflict resolution builder の定義を直接読むとき。
+- session state のデータ構造や共通 Git・runtime helper の一般仕様だけを確認する場合。
 
 ## hash
-- 762c16ec7830e17e574baa3c982683b666bf131ca6dc1ed36ade89499cb721b7
+- af434472386e37dbe94e11bd7377a2c67df8b69fa9f1d027fc5ed2ce9585aa41
