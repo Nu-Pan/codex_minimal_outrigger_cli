@@ -316,24 +316,23 @@
 # `runtime_feedback.py`
 
 ## Summary
-- サブコマンド invocation 単位の feedback collector を管理し、Codex call ごとの capability 発行、環境継承、request 受付、保存、drain、終了処理を担う。
-- reporter からの agent observation と allowlist 済み event からの machine observation を共通の context・保存機構へ接続する。
-- collector、reporter、transport の利用不能や Structured Output 検証枯渇を stable event と warning に変換し、本来の workload を妨げない degraded 境界を提供する。
-- doctor 向けに reporter schema、protocol、stdio MCP tool 面、collector の利用可能性を検証する入口を提供する。
+- サブコマンド invocation に一つだけ存在する feedback collector と、Codex call ごとの capability context を管理する。
+- reporter request の loopback TCP 受付、protocol 検証、並行処理、rate limit、call 終了時の drain、observation 保存を統合する。
+- collector や reporter の利用不能を degraded event と warning に変換し、allowlist 済み event を machine observation として検出・保存する。
+- doctor から reporter schema、MCP tool 面、collector protocol の可用性を非破壊に検証する入口を提供する。
 
 ## Read this when
-- feedback reporter の capability、collector IPC、Codex call の受付停止・drain・無効化のライフサイクルを確認するとき
-- agent observation の受理・rate limit・context 検証・保存結果、または invocation 内の accepted observation を追跡するとき
-- feedback reporter unavailable や Structured Output validation exhausted の event 検出・machine observation 化を確認するとき
-- doctor の reporter availability 検証、collector protocol probe、stdio reporter の MCP interface 検証を調べるとき
+- feedback reporter の capability・context 伝播、Codex call lifecycle、request の受付制御または終了時 drain を確認・変更するとき
+- invocation-scoped collector の起動・停止、並行 Codex call、rate limit、observation の受理・保存経路を追跡するとき
+- reporter unavailable や Structured Output validation exhausted の event detector、machine observation 化、または doctor の可用性検証を調べるとき
 
 ## Do not read this when
-- feedback observation の永続化形式や reporter input schema の定義そのものを確認したいときは、runtime_feedback_store 側を直接読む
-- Git の branch・HEAD 取得や subcommand logging の実装を確認したいときは、対応する runtime_git または runtime_logging 側を読む
-- feedback collector と reporter の統合動作に関係しない通常の CLI サブコマンド処理だけを調べるとき
+- observation の永続化形式や reporter 入力 schema の定義だけを確認する場合は、runtime feedback store または reporter 実装を直接読むとき
+- feedback 機能の正本仕様や利用者向け要件だけを確認する場合は、対応する仕様文書を直接読むとき
+- feedback context・collector・detector に関係しない通常の subprocess 実行やログ処理を調べるとき
 
 ## hash
-- 42e74f1df979cc5804652e108b31fabcdd01035c17a2b01e906694c41adf6b86
+- 847c2b8a0b1acb62d7737dda1971470d944fe7685bbd2d0da83d02bb013f30d9
 
 # `runtime_feedback_intake.py`
 

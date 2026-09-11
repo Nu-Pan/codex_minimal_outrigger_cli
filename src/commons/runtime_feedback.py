@@ -47,6 +47,7 @@ FEEDBACK_PROTOCOL_ENV = "CMOC_FEEDBACK_PROTOCOL_VERSION"
 # 偽陽性拒否されないよう、最大 3 倍と capability/envelope の余白を確保する。
 _MAX_COLLECTOR_REQUEST_BYTES = 128 * 1024
 _COLLECTOR_IO_TIMEOUT_SECONDS = 2.0
+_COLLECTOR_PROTOCOL_PROBE_FIELD = "_protocol_probe"
 _CURRENT_FEEDBACK_INVOCATION: ContextVar["FeedbackInvocation | None"] = ContextVar(
     "CURRENT_FEEDBACK_INVOCATION", default=None
 )
@@ -399,13 +400,22 @@ class FeedbackInvocation:
             self._calls.pop(context.capability, None)
 
     def _submit_request(self, request: object) -> dict[str, object]:
-        """capability context で agent payload を検査・保存する。"""
+        """internal probe または capability context の agent payload を処理する。"""
         if not isinstance(request, dict):
             raise FeedbackRejected(
                 "context_invalid", "collector request must be object"
             )
         if request.get("protocol") != REPORTER_PROTOCOL_VERSION:
             raise FeedbackRejected("protocol_mismatch", "reporter protocol mismatch")
+        if request.get(_COLLECTOR_PROTOCOL_PROBE_FIELD) is True:
+            if set(request) != {"protocol", _COLLECTOR_PROTOCOL_PROBE_FIELD}:
+                raise FeedbackRejected(
+                    "context_invalid", "collector protocol probe is malformed"
+                )
+            return {
+                "status": "accepted",
+                "protocol": REPORTER_PROTOCOL_VERSION,
+            }
         capability = request.get("capability")
         payload = request.get("payload")
         if not isinstance(capability, str):
@@ -726,11 +736,10 @@ def validate_feedback_reporter_availability() -> None:
 
 
 def _validate_collector_protocol(collector_port: int) -> None:
-    """保存を行わない unknown capability request で collector framing を確認する。"""
+    """保存を行わない内部 probe で collector framing と protocol を確認する。"""
     request = {
         "protocol": REPORTER_PROTOCOL_VERSION,
-        "capability": "doctor-probe-invalid-capability",
-        "payload": {},
+        _COLLECTOR_PROTOCOL_PROBE_FIELD: True,
     }
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
@@ -750,7 +759,10 @@ def _validate_collector_protocol(collector_port: int) -> None:
         raise ReporterAvailabilityError(
             "collector", "protocol_error", "feedback collector protocol probe failed"
         ) from exc
-    if not isinstance(value, dict) or value.get("code") != "context_invalid":
+    if value != {
+        "status": "accepted",
+        "protocol": REPORTER_PROTOCOL_VERSION,
+    }:
         raise ReporterAvailabilityError(
             "collector", "protocol_error", "feedback collector protocol is incompatible"
         )

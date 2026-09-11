@@ -965,6 +965,22 @@ def test_collector_validates_context_rate_and_durable_observation(
         invocation.stop()
 
 
+def test_collector_protocol_probe_does_not_report_expected_degradation(
+    tmp_path: Path,
+) -> None:
+    """doctor の transport probe が正常 invocation に warning を追加しない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    invocation.start()
+    try:
+        assert invocation.collector_port is not None
+        feedback_module._validate_collector_protocol(invocation.collector_port)
+        assert logger.warning_messages == []
+    finally:
+        invocation.stop()
+
+
 def test_collector_records_rejected_submission_as_degraded_warning(
     tmp_path: Path,
 ) -> None:

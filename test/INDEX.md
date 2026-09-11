@@ -452,22 +452,23 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation を raw store から取り込み、agent/machine issue の候補化・検証・remediation・active state への集約を検証する統合テスト。
-- collector と agent-facing reporter の MCP/TCP 境界、認証・入力検証・rate limit・UTF-8・secret masking・失敗時 warning を確認する。
-- session precondition、並行 call、遅延 intake、worktree cleanup、atomic publication、recovery、current pointer と active generation の整合性を検証する。
+- feedback reporter と collector 間の MCP/stdio および TCP submission 境界を検証するテスト。
+- agent・machine observation の raw 保存、検証、secret masking、rate limit、idempotency、candidate 化を検証するテスト。
+- feedback report の precondition、normalization、remediation、sequential wave、recovery、rollback を検証するテスト。
+- report cut、active generation、current pointer、atomic publication、cleanup、corruption 検出による durable state の整合性を検証するテスト。
 
 ## Read this when
-- feedback observation の受理から report publication、active state の compact 化、raw cleanup までの一連の挙動を変更・調査するとき。
-- feedback reporter、collector transport、observation store、candidate identity、machine recurrence threshold、remediation/recovery の実装を確認するとき。
-- active state や report cut、generation manifest、cleanup の破損時に publication と再実行がどう振る舞うかを確認するとき。
+- feedback reporter、collector transport、capability、payload schema、UTF-8、protocol error、rate limit、context lifecycle を変更・調査するとき。
+- feedback observation の raw store、agent/machine candidate の deduplication・fingerprint・threshold・expiry を変更・調査するとき。
+- feedback report の precondition、Codex normalization/remediation、worktree rollback、late intake、manual completion、auto-join recovery を変更・調査するとき。
+- active state の generation manifest、current pointer、report cut、cleanup、publication、artifact integrity 検証を変更・調査するとき。
 
 ## Do not read this when
-- feedback の単一関数や正本仕様だけを確認する場合は、対応する実装・oracle・仕様ファイルを直接読む。
-- feedback 以外の subcommand、一般的な CLI 起動、または本テストが対象としない機能の挙動を調べる場合。
-- INDEX.md の経路判断だけが目的で、observation lifecycle、reporter/collector 境界、publication/recovery の検証内容が不要な場合。
+- feedback 機能以外のテストや、単一モジュールの局所的な挙動だけを直接確認すれば判断できる変更を扱うとき。
+- 正本仕様や oracle の内容を確認・変更するときは、対応する仕様・oracle ファイルを直接読む。
 
 ## hash
-- 4056c8ab1a2d7f3f3db440cbc74845194a3cb0ccdcc85b914b3c14c1fcf75e21
+- bddd116aaa79610f2cab93437e8af8a97510eafd100d3d845c55beaffbab0591
 
 # `test_feedback_decision.py`
 
