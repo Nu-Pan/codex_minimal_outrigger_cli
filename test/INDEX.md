@@ -682,19 +682,22 @@
 # `test_prompt_editor_input.py`
 
 ## Summary
-- prompt editor input の外部挙動を検証するテスト。作業ファイルと保存コピーの分離、編集後の入力抽出、エディタ選択、パス境界、保存先の symlink 防止、異常時の後始末を確認する。
+- prompt editor input の外部挙動を検証するテスト。可変な作業 file と保存コピーの分離、入力抽出、エディタ選択、handoff の後始末を扱う。
+- 不正な skeleton、非通常 file、作業領域外 path、symlink された保存先、保存コピー先違反を拒否し、既存データを保護する境界を検証する。
+- エディタ失敗や確定後の cleanup 失敗時に復旧可能な作業 file と保存記録を保持する挙動を確認する。
 
 ## Read this when
-- prompt editor input の予約・編集・入力収集・確定処理を変更または検証するとき
-- 作業ファイルと保存コピーの扱い、エディタ起動条件、ファイル種別やパス境界の安全性を確認するとき
-- prompt editor input の異常系や handoff target のクリーンアップ挙動を確認するとき
+- prompt editor input の外部挙動を変更または検証するとき。
+- 作業 file と保存コピーのライフサイクル、timestamp 衝突回避、最終入力の抽出を確認するとき。
+- エディタ起動、handoff target、保存先の symlink 防止、path 境界、失敗時の安全性を確認するとき。
 
 ## Do not read this when
-- prompt editor input の実装や正本仕様そのものを確認する必要があり、テスト結果ではなく実装・仕様を直接読むべきとき
-- prompt editor input と無関係な機能のテストや実装を扱うとき
+- prompt editor input の正本仕様や実装の詳細だけを確認したいとき。
+- prompt editor input と無関係な機能のテストや実装を扱うとき。
+- 個別のエラー実装を直接調査する場合で、まず実装または正本仕様を読む方が適切なとき。
 
 ## hash
-- b8b4b66dd01bf391cb9aa5acfb413d0b31af2123cba619bb3fe6b17fdc78898d
+- a6f7918e3c8933bb2863937dfe8df4bb9b3f3a8e79ac042e866b38b7ec797cb8
 
 # `test_prompt_parts.py`
 
@@ -716,22 +719,22 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の共通 runner を通じて、error report、console／file log、doctor preflight、shell completion、終了通知、ユーザー中断の境界を検証するテスト群。
-- work root、subcommand event、終了処理を共有する CLI lifecycle の外部契約を横断的に確認する入口。
+- CLI runner の error、ログ、preflight、completion、終了通知の外部契約を検証するテスト群。共通 runner・work root・subcommand event にまたがる境界条件を一箇所で確認する。
 
 ## Read this when
-- CLI の成功・失敗結果、stderr／stdout、終了コード、診断ログの記録を確認したいとき
-- doctor preflight、work root 制約、shell completion probe の副作用抑制を確認したいとき
-- TUI と非対話 CLI の終了通知、KeyboardInterrupt、Codex subprocess 起動境界を確認したいとき
-- timestamp、duration 表示、並列 logger event、UTF-8 ログ保存の CLI 共通基盤を確認したいとき
+- CLI の成功・失敗時に stdout/stderr へ出す terminal result、終了コード、エラー詳細、ログ記録を確認・変更するとき。
+- doctor preprocess、work root 制約、pre-log check、current worktree の扱いを確認するとき。
+- shell completion probe が通常の preflight・初期化・command callback・副作用を回避する挙動を確認するとき。
+- TUI を含む Ctrl+C の扱い、終了通知、通知失敗時の境界を確認するとき。
+- duration/timestamp の表示形式や SubcommandLogger の並列記録・UTF-8・timestamp 衝突を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務処理や、そのコマンドだけの入力・出力を確認したいとき
-- error、log、preflight、completion の実装詳細や正本仕様を直接調べるときは、対応する runtime モジュールまたは oracle 仕様書へ進む
-- CLI lifecycle をまたがない単独のユーティリティやテストデータの挙動だけを確認したいとき
+- CLI の個別サブコマンド固有ロジックや、そのサブコマンド専用の入出力だけを確認・変更するとき。
+- Codex TUI の内部実装や feedback detector 単体の詳細を直接確認するとき。
+- CLI の共通 runner、終了処理、preflight、completion、ログ契約に関係しないテストや実装を扱うとき。
 
 ## hash
-- b5c552db2767c9b0d4121953446f754550721f65264738803e20a4cdb355080f
+- ea014f2b2a6c5756d5978e08b846b21f5fe17b89821874bdf22de4a13d5be09c
 
 # `test_runtime_codex_conflicts.py`
 

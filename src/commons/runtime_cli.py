@@ -411,9 +411,12 @@ def _finalize_subcommand(
     try:
         logger.event("command_finished", **event_payload)
     except BaseException:
-        # 元の結果を隠さない。ログ flush failure 自体は terminal result の診断 path
-        # から確認できる既存の内部障害として扱う。
-        pass
+        # 元の結果を隠さず、terminal event 自体は低レベル追記で回復する。
+        # 再試行も失敗した場合だけ、console の terminal result を優先して進める。
+        try:
+            logger.write_terminal_event(**event_payload)
+        except BaseException:
+            pass
 
     if emit_console:
         typer.echo(

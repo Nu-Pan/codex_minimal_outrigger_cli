@@ -53,41 +53,36 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- AI Agent 向け prompt をエディタで編集し、入力結果を安全に保存・抽出・確定する共通境界を提供する。
-- 作業用 file と保存 copy の path 準備、エディタ起動、最終内容の一度だけの保存、完了後の作業 file 削除を扱う。
-- 保存先の symlink・親 directory・通常 file 性、入力 copy の repository 内 path、prompt skeleton の placeholder 一意性を検証する。
-- prompt editor/TUI 用 repository と現在の worktree の `.cmoc` ignore を保証し、利用可能な editor command を優先順で選択する。
+- エディタ入力の作業ファイルを安全に準備・検証し、完全な prompt の編集、最終入力の保存と抽出、成功後の作業ファイル削除までを担う共通境界。
 
 ## Read this when
-- prompt の editor input 境界、作業 file／保存 copy のライフサイクル、または入力内容の抽出・確定処理を確認したいとき。
-- editor input の保存先検証、symlink 防止、path 制約、prompt skeleton の placeholder 検証、エディタ選択や handoff を調査・変更するとき。
+- AI Agent 用 prompt をエディタで編集する処理の流れ、作業ファイルと保存コピーのパス検証、エディタ選択、入力抽出、または repository の ignore 保証を確認したいとき。
 
 ## Do not read this when
-- prompt の完全な構築規則や editor 初期表示文の正本を確認したいときは、prompt builder 側を直接読む。
-- editor handoff の内部実装や runtime error・path・git ignore の一般機能だけを調べる場合は、それぞれの専用 runtime module を直接読む。
+- prompt の初期表示文そのものを構築する責務を確認したいときは prompt builder 側を読む。エディタ入力を利用する個別の CLI/TUI フローや、editor handoff の通信実装を直接確認したいときは、それぞれの呼び出し元・handoff 実装へ進む。
 
 ## hash
-- 5218b3489e652ae0a1eac8fa1e97d33db6170bbb05a02de5bb68d3c557bdf395
+- c4683b8f415b89d2fc617e29647f19598459fbd18abc3180ec946f01db780686
 
 # `runtime_cli.py`
 
 ## Summary
-- 最外側 CLI サブコマンドの実行開始から終了までを統括し、作業ディレクトリ検査、診断ログ、feedback 回収、primary report 保存、terminal result 表示、終了コード、TUI 通知を管理する入口。
-- サブコマンドの正常完了、ユーザー中断、実行エラーを分類し、例外や警告を診断情報と次の操作へ統合する終端処理を提供する。
-- サブコマンド内の step 通知、ユーザー中断状態、TUI 起動境界の記録など、最外側ライフサイクルに連動する補助 API を含む。
+- 最外側 CLI サブコマンドの実行ライフサイクルを統括し、診断ログ、feedback、primary report、terminal result、終了コード、通知、例外・中断処理を一貫して確定する実行境界。
+- サブコマンドの開始前処理、step 進行、正常終了・ユーザー中断・エラーの分類、および terminal result のコンソール／ログ出力を確認するための入口。
 
 ## Read this when
-- 最外側 CLI サブコマンドの起動・終了ライフサイクル、例外処理、終了コード、terminal result の表示やログ記録を変更・確認するとき。
-- サブコマンドの作業ディレクトリ制約、doctor preprocess、feedback invocation、primary report、Windows 通知の連携を調査するとき。
-- ユーザー中断や TUI process 起動前後での KeyboardInterrupt の扱い、step 進捗通知の実装を確認するとき。
+- 最外側サブコマンドの起動から終端までの制御フローを追うとき。
+- KeyboardInterrupt、実装例外、非ゼロ戻り値、TUI 起動前後の中断がどのように扱われるか確認するとき。
+- 診断ログ、feedback collector、primary report、Windows 通知、terminal result の確定順序や失敗時のフォールバックを変更・調査するとき。
+- サブコマンド step の記録、work root 検査、終了結果の Markdown／JSON 表現を確認するとき。
 
 ## Do not read this when
-- terminal result のデータ構造や個別エラー型だけを確認する場合は、それぞれの定義元を直接読むとよい。
-- サブコマンド固有の業務処理、doctor・feedback・logging・primary report の内部仕様だけを調査する場合は、各専用モジュールや正本仕様を直接読むとよい。
-- INDEX.md のルーティング情報だけを更新する場合。
+- 個別のエラー型、feedback の収集実装、primary report の保存実装、ログの詳細実装、通知実装そのものを直接調べるとき。
+- 特定サブコマンドの業務ロジックや CLI 引数定義だけを確認するとき。
+- terminal result のデータ型や固有のエラー文言だけを確認する場合は、それぞれの定義元を直接読むとき。
 
 ## hash
-- 614a76ab85097ee4d149a6c74833698082f693ef68108b9e087247704a81cc63
+- e6438f5a8ca342c6f004fcf777e8cc289634e8b22ead2a9b6a2016cfd255c94a
 
 # `runtime_codex.py`
 
@@ -458,21 +453,21 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド実行中の JSON Lines event、step timing、quota 待機時間、warning、Codex call を記録・集約する logger。
-- ContextVar を介して、現在のサブコマンド logger を runtime helper から参照・差し替え・復元するための入口。
+- サブコマンド実行中のイベントを JSON Lines に即時記録し、保存済みイベントのスナップショットを提供する中心的なロガー。
+- ステップ計測、quota 待機時間、warning、Codex call の集約と、実行コンテキストから現在の logger を参照・切り替えするための入口を担う。
 
 ## Read this when
-- サブコマンドの実行イベントを永続ログへ記録する処理を確認したいとき
-- step の開始・終了時間、quota 待機時間、warning、Codex call の集約方法を確認したいとき
-- 現在の実行文脈に紐づくサブコマンド logger の取得や一時的な差し替えを確認したいとき
+- サブコマンドの実行イベント、ログファイルへの記録順序、terminal event、warning、feedback detector 連携を確認するとき。
+- 完了サマリー用の step elapsed や quota 待機時間、Codex call 記録の集約方法を調べるとき。
+- 深い runtime helper から現在のサブコマンド logger を取得・設定・復元する方法を確認するとき。
 
 ## Do not read this when
-- feedback detector の判定や報告処理そのものを確認したいとき
-- ログ保存先のパス予約や timestamp 生成の実装を確認したいとき
-- サブコマンド logger が生成した primary report の利用側を直接確認したいとき
+- ログ保存先や timestamp 付きファイル予約の規則だけを確認したいときは、runtime paths の対象を直接読む。
+- feedback event の検出仕様や観測報告の判定を確認したいときは、feedback runtime の対象を直接読む。
+- コンソールやファイルログ全体の正本仕様を確認したいときは、対応する仕様書を直接読む。
 
 ## hash
-- d3550a9d5474f92ae25e4e13b18b45d3ee377682eb578bc909ff4ae4e1fb3f96
+- 3641ebc01ef48a1c4506bb5fd9bcb09d10c81d60c29c932688207564b049c712
 
 # `runtime_paths.py`
 

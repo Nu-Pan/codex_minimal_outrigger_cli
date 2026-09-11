@@ -122,33 +122,34 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と Typer/Click 境界を扱い、トップレベルおよび session・oracle・realization・run・feedback 配下のコマンドを各実装へ接続する。
-- acp・basic・config・cmoc_runtime などの互換公開入口と、commons の共有 runtime、sub_commands の業務処理、oracle shim の配置を振り分ける上位ディレクトリ。
+- cmoc の CLI 起動入口と、サブコマンド・共通 runtime・互換 import を担う実装領域をまとめる上位ディレクトリ。
+- CLI ツリーから各サブコマンドへ進む入口、Codex 実行や設定・Git・状態・feedback などの共有処理、旧 import path の互換層を確認できる。
 
 ## Read this when
-- cmoc の CLI 階層、起動時の引数解析・補完・エラー変換、または各サブコマンド実装への接続先を確認するとき。
-- 共有 runtime、互換 import、oracle shim、session・run・realization・feedback・oracle などの実装領域を特定し、適切な下位要素へ進むとき。
+- cmoc の CLI コマンド階層、起動処理、Typer/Click 境界、引数解析エラーの扱いを確認するとき。
+- 目的の処理が session、oracle、realization、run、feedback などのどのサブコマンド領域に属するか振り分けるとき。
+- 複数の実行経路で共有される runtime helper、実行 lifecycle、設定、Git、状態、ログ、Codex 起動、feedback 処理の担当箇所を探すとき。
+- acp、basic、config、cmoc_runtime、oracle などの互換 import 入口と、正本実装への移行経路を確認するとき。
 
 ## Do not read this when
-- 特定コマンドの処理順序、入力制約、状態遷移、生成結果、または個別 runtime API の実装詳細だけを確認したいときは、該当する下位要素を直接読む。
-- 正本仕様や oracle 側の実体実装、INDEX.md の生成規則だけを確認したいとき。
+- 特定サブコマンドの処理順序、入力制約、状態遷移、生成結果を確認したいときは、対応する下位パッケージや実装ファイルを直接読む。
+- 共通 helper の個別 API、正本仕様、schema、または互換層の具体的な再公開内容だけを確認したいときは、該当する下位要素や仕様を直接読む。
 
 ## hash
-- 77adbafbe175eddda5a39d6b1c67b56ff03a82fdaed2fcf029ac551b99199f1e
+- cf6027a767ad1772eae8d73eb305c10e76539e5e08dbf5e974169cf166129d95
 
 # `test`
 
 ## Summary
-- test 配下の回帰テストを、CLI・Codex runtime・indexing・doctor・feedback・session・editor input・Git/path/state・通知などの機能領域ごとに案内する。
-- 各テストは、実装や正本仕様そのものではなく、CLI 実行、subprocess、Git、report、state、ログ、ファイルシステムなど外部から観測できる契約を検証する入口である。
+- test ディレクトリ配下の回帰・統合テストを、CLI、runtime、Codex 実行、indexing、session、feedback、editor handoff、通知などの外部挙動ごとに案内する入口。各テストは実装や正本仕様に対する具体的な契約・境界の検証を担う。
 
 ## Read this when
-- CLI や Codex 実行経路、indexing、doctor、feedback、session、editor input、Git/path/state、通知の回帰条件を調べたいとき。
-- 特定機能について、単体・統合・実経路テストのどこから検証を始めるべきか切り分けたいとき。
+- 対象機能の外部挙動、失敗境界、永続 state、Git 副作用、Codex 呼び出し、CLI lifecycle の回帰条件をテストから確認したいとき。
+- 複数の関連テストを横断して、実行経路や統合時の観測可能な契約を調べる必要があるとき。
 
 ## Do not read this when
-- 正本仕様、schema、prompt、実装本体の詳細を確認することが目的で、テストの期待挙動を調べる必要がないとき。
-- test 配下が扱わない機能や、一般的な pytest 実行方法だけを確認したいとき。
+- 正本仕様、実装詳細、schema、prompt 本文などを直接確認したいときは、対応する仕様・実装・oracle を読む。
+- 単一の補助関数や局所的なテスト fixture の詳細だけを確認したいときは、該当する個別テストまたは実装へ直接進む。
 
 ## hash
-- 116febfc13b0f658a728be81dfcc8f6f93dbd6cb43006fb6a23833178854991f
+- 61ab34234c02817d0a3e9a95f622bf99a564cd9d80d4a036e1876c31b66bc49a

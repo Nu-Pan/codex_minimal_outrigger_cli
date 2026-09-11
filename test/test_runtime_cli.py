@@ -485,6 +485,9 @@ def test_cli_error_report_survives_failed_error_log_flush(
     assert "# 失敗: cmoc probe" in captured.err
     assert "callback failed" in captured.err
     assert "Traceback" not in captured.err
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
 
 
 def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(

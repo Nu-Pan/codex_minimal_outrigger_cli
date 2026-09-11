@@ -4,6 +4,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -71,7 +72,13 @@ def edit_prompt_editor_input(
     argv = [*_select_editor(), str(editor_work_path)]
     target = start_editor_input_handoff(root, editor_work_path)
     try:
-        print(f"editor input handoff target ID: {target.target_id}", flush=True)
+        # 非対話サブコマンドの stdout は terminal result 用なので、editor の
+        # 待機中に人間へ渡す target ID は stderr へ表示する。
+        print(
+            f"editor input handoff target ID: {target.target_id}",
+            file=sys.stderr,
+            flush=True,
+        )
         # エディタが戻った後は target を drain・無効化してから処理を進める。
         result = subprocess.run(argv)
     finally:
