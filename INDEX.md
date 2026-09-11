@@ -122,36 +122,33 @@
 # `src`
 
 ## Summary
-- src は cmoc の CLI 起動・コマンド接続と、互換 import、oracle shim、共通 runtime、サブコマンド実装の上位入口をまとめる。
-- CLI の階層や起動境界、または特定処理の実装領域を振り分ける必要がある場合に進む上位ディレクトリ。
+- cmoc の CLI 起動入口と Typer/Click 境界を扱い、トップレベルおよび session・oracle・realization・run・feedback 配下のコマンドを各実装へ接続する。
+- acp・basic・config・cmoc_runtime などの互換公開入口と、commons の共有 runtime、sub_commands の業務処理、oracle shim の配置を振り分ける上位ディレクトリ。
 
 ## Read this when
-- cmoc の CLI ツリー、起動時の互換性処理、console script からの入口を確認するとき。
-- oracle・realization・session・run・feedback などのサブコマンド実装領域や、commons の横断 runtime へ進む入口を判断するとき。
-- acp・basic・config・cmoc_runtime など旧公開 import の互換入口や、oracle パッケージ shim の挙動を確認するとき。
+- cmoc の CLI 階層、起動時の引数解析・補完・エラー変換、または各サブコマンド実装への接続先を確認するとき。
+- 共有 runtime、互換 import、oracle shim、session・run・realization・feedback・oracle などの実装領域を特定し、適切な下位要素へ進むとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務処理、状態遷移、入力・成果物、または個別 runtime module の詳細を確認したい場合は、対応する下位実装を直接読む。
-- 正本仕様や oracle 側実体の実装、INDEX.md の生成・検査規則だけを確認したい場合は、src の上位入口ではなく該当する正本仕様・実体・仕様文書を直接読む。
+- 特定コマンドの処理順序、入力制約、状態遷移、生成結果、または個別 runtime API の実装詳細だけを確認したいときは、該当する下位要素を直接読む。
+- 正本仕様や oracle 側の実体実装、INDEX.md の生成規則だけを確認したいとき。
 
 ## hash
-- 23fa3e923466e0529673fcd520a994d3b977b4f3e4242a3fff2de4e6b6abe5fc
+- 77adbafbe175eddda5a39d6b1c67b56ff03a82fdaed2fcf029ac551b99199f1e
 
 # `test`
 
 ## Summary
-- cmoc の CLI、Codex runtime、session、feedback、indexing、oracle／realization、prompt、通知などの外部挙動を回帰検証するテスト群。
-- 単体テストから実 Codex CLI・PTY を使う統合／受け入れ試験まで、状態・Git・report・ログ・ファイル境界を横断して確認する入口。
+- test 配下の回帰テストを、CLI・Codex runtime・indexing・doctor・feedback・session・editor input・Git/path/state・通知などの機能領域ごとに案内する。
+- 各テストは、実装や正本仕様そのものではなく、CLI 実行、subprocess、Git、report、state、ログ、ファイルシステムなど外部から観測できる契約を検証する入口である。
 
 ## Read this when
-- cmoc の利用者向け CLI や主要サブコマンドの外部契約を変更・調査するとき。
-- Codex 実行、session lifecycle、feedback、indexing、oracle／realization、prompt editor、通知の回帰条件をテストから確認するとき。
-- report・state・Git・ログ・worktree・ファイルアクセスなど、複数コンポーネントにまたがる実行結果を検証するとき。
+- CLI や Codex 実行経路、indexing、doctor、feedback、session、editor input、Git/path/state、通知の回帰条件を調べたいとき。
+- 特定機能について、単体・統合・実経路テストのどこから検証を始めるべきか切り分けたいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様や実装詳細を確認することが目的で、テストが示す回帰条件を必要としないとき。
-- テスト対象と無関係な機能や、単一モジュールの局所ロジックだけを調べるとき。
-- 実 Codex CLI や統合 lifecycle を伴わない一般的なテスト実行方法だけを確認したいとき。
+- 正本仕様、schema、prompt、実装本体の詳細を確認することが目的で、テストの期待挙動を調べる必要がないとき。
+- test 配下が扱わない機能や、一般的な pytest 実行方法だけを確認したいとき。
 
 ## hash
-- 7fb32a6361067352406e0e343b7cd0787b4b8ae491e540dd15f0cf701bc497e3
+- 116febfc13b0f658a728be81dfcc8f6f93dbd6cb43006fb6a23833178854991f

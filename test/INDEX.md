@@ -381,20 +381,22 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の共有ライフサイクルを、CLI と直接呼び出しの統合テストで検証する入口。Git 状態・config・refactor state・reporter 検証・lock・linked worktree を含む修復順序と副作用、既存 index の staged／unstaged／unmerged 状態の保持、symlink 拒否などの外部契約を扱う。
+- doctor preprocess の CLI と直接呼び出しを対象に、修復 lifecycle の外部契約を検証する統合テスト。
+- `.cmoc/gu` の ignore、`.agents/.gitkeep`、config、refactor state、reporter 検証の順序と degraded/error 挙動を確認する。
+- 共有 repository lock、linked worktree、既存の staged・unstaged・unmerged Git index 状態を保持したまま修復・commit する境界を検証する。
 
 ## Read this when
-- doctor preprocess の修復動作、修復順序、reporter 利用不能や例外の扱いを確認したいとき
-- doctor lock、linked worktree と repository の修復範囲、または Git index の既存状態を保持する契約を変更・検証するとき
-- doctor が生成・追跡する .agents/.gitkeep、config、refactor state、.gitignore の挙動を統合的に確認するとき
+- doctor preprocess の修復順序、reporter 事前検証、lock 待機、CLI レポートを確認するとき
+- config や refactor state の生成・同期、`.cmoc/gu` と `.agents` の追跡状態を確認するとき
+- doctor 実行前から存在する staged・unstaged・unmerged 差分、index flag、rename、intent-to-add の保持挙動を確認するとき
+- repository root と linked worktree 間で修復対象を分離する挙動を確認するとき
 
 ## Do not read this when
-- doctor preprocess の実装詳細そのものを調べるときは、まず doctor の本体や正本仕様を直接読む
-- CLI の一般的なサブコマンド実行、reporter 単体、config 単体、refactor state 単体の仕様だけを確認する場合
-- doctor preprocess と無関係なテストや、個別 fixture の共通実装だけを調べる場合
+- doctor preprocess の外部挙動や Git index 保持を調べる必要がないとき
+- doctor 以外のサブコマンド、単体の設定仕様、または個別実装の詳細を直接確認したいとき
 
 ## hash
-- ee7bfcc62ad1e7ca798cf06fb8128cc99271dc031be8c0f7dbe04128f0fdb637
+- b3994a1a204bf11f73ad6d9cd229074f8ba06a3b7b4f356336d6d74b7a2a89d8
 
 # `test_editing_run_cli.py`
 

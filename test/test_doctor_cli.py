@@ -711,18 +711,26 @@ def test_doctor_preserves_existing_untracked_gitkeep_content(
     assert run_git(root, "status", "--short").stdout == ""
 
 
-def test_doctor_restores_missing_tracked_gitkeep(tmp_path: Path) -> None:
+@pytest.mark.parametrize("index_flag", [None, "--skip-worktree"])
+def test_doctor_restores_missing_tracked_gitkeep(
+    tmp_path: Path,
+    index_flag: str | None,
+) -> None:
     """tracked な `.agents/.gitkeep` の unstaged deletion を復元する。"""
 
     root = make_repo(tmp_path)
     doctor_module.run_doctor_preprocess(root)
     gitkeep = root / ".agents" / ".gitkeep"
+    if index_flag is not None:
+        run_git(root, "update-index", index_flag, ".agents/.gitkeep")
+    before_flags = run_git(root, "ls-files", "-v", ".agents/.gitkeep").stdout
     gitkeep.unlink()
 
     doctor_module.run_doctor_preprocess(root)
 
     assert gitkeep.read_text() == ""
     assert run_git(root, "status", "--short").stdout == ""
+    assert run_git(root, "ls-files", "-v", ".agents/.gitkeep").stdout == before_flags
 
 
 @pytest.mark.parametrize("symlinked_path", ["agents", "gitkeep"])

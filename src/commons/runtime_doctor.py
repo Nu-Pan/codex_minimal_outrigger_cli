@@ -173,12 +173,27 @@ def _ensure_agents_tracked(root: Path) -> bool:
     if tracked:
         # tracked な .gitkeep の unstaged deletion でも、.agents を空のまま残さない。
         if not gitkeep.exists():
-            restored = run_git(
+            run_git(
                 ["restore", "--worktree", "--", ".agents/.gitkeep"],
                 root,
                 check=False,
             )
-            if restored.returncode != 0 and _head_entry(root, ".agents/.gitkeep"):
+            if not gitkeep.exists():
+                # git restore は skip-worktree entry を欠落した worktree へ
+                # 戻せないため、現在 index の blob を flag を保ったまま checkout
+                # する。通常 entry では最初の restore が成功するので実行しない。
+                run_git(
+                    [
+                        "checkout-index",
+                        "--force",
+                        "--ignore-skip-worktree-bits",
+                        "--",
+                        ".agents/.gitkeep",
+                    ],
+                    root,
+                    check=False,
+                )
+            if not gitkeep.exists() and _head_entry(root, ".agents/.gitkeep"):
                 run_git(
                     [
                         "restore",
