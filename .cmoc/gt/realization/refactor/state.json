@@ -1051,9 +1051,9 @@
   },
   "src/sub_commands/run/join.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "e0717ee4a4518cbef8aa7d0dab3623041764d23a87d91d5e7f2da8594114c0ac",
-    "last_investigated_at": "2026-08-13_22-37_21_135291000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "d3005c63ef00c0bd4359e8d9541a9876e69be25190cfd476ed55908980ae2397",
+    "last_investigated_at": "2026-09-11_19-55_12_838443000"
   },
   "src/sub_commands/run/lifecycle.py": {
     "investigation_required": true,

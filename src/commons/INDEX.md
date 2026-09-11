@@ -609,19 +609,22 @@
 # `runtime_run_join.py`
 
 ## Summary
-- editing run の join 処理で、session と run の差分検査、merge、INDEX 再生成、refactor state 同期、失敗時の復元・report 記録を共有する処理の入口。
-- merge 済み run の worktree と branch を到達可能性と削除結果を確認しながら cleanup する処理も担う。
+- editing run の join と cleanup で共有する runtime 処理を担う。
+- join 前の doctor 修復差分、session/run の clean 検査と想定外差分の処理、run branch の merge を扱う。
+- INDEX conflict の再生成、post-join の hook・state・refactor state 同期、join 失敗時の復元と report、merge 済み run の worktree・branch cleanup への入口となる。
 
 ## Read this when
-- editing run の join が想定外差分、INDEX.md 限定 conflict、merge 後処理、session 復元、run 資源 cleanup の挙動を確認・変更するとき。
-- 明示的な join と self-joining workload が共有する検証・merge・post-join の流れを追うとき。
+- editing run の join 前提条件、差分分類、--force-resolve の挙動を確認するとき。
+- run branch の merge と INDEX.md 限定 conflict の解決、post-join 同期の流れを確認するとき。
+- join 失敗時の session 復元、error state、lifecycle report、terminal result の扱いを確認するとき。
+- merge 済み run の worktree と branch がどの条件で削除または保持されるかを確認するとき。
 
 ## Do not read this when
-- run の開始や通常の process tracking、状態モデル、report の個別フォーマットだけを確認したいときは、それぞれの専用 runtime モジュールを直接読む。
-- join や cleanup に関係しない refactor、doctor、INDEX 生成の一般仕様だけを確認したいとき。
+- 個別の CLI サブコマンド、doctor の修復処理、低レベルの git 操作、state や report のデータ定義だけを確認したいとき。
+- run lifecycle の型定義や差分分類の詳細、INDEX.md 生成そのものの規則を直接調べるとき。
 
 ## hash
-- ce45163af61ed1866924e7db60775bdf49b90c93c76866c8a9f16a69c436eb5e
+- 0dd03b4ae2b198e31b2f756cec887a524ada4a9138ecb274ea01283da6db2b83
 
 # `runtime_run_lifecycle.py`
 

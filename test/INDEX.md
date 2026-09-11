@@ -399,22 +399,20 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test を扱うテストファイル。editing run の session state、隔離 run worktree、fork report、Codex child tracking、INDEX 更新、commit/rollback、join/abandon cleanup、refactor cycle、割り込み・失敗時の復旧と report/state 整合性を横断検証する。
-- apply fork と refactor fork の成果物処理、および run join/abandon の lifecycle 境界を確認するための統合テスト入口。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、隔離 run worktree、agent 差分、commit、fork report、process tracking、cleanup を同じ lifecycle fixture で検証する。
+- realization apply/refactor fork と run join/abandon の成功・失敗・中断・rollback・force-resolve・INDEX/Oracle 差分処理を横断し、実装間で共有される state 遷移と terminal report の契約を確認する。
 
 ## Read this when
-- realization apply/refactor fork の成功・失敗・中断時の run state、worktree、branch、report、process tracking を検証する変更を行うとき。
-- run join または abandon の merge、INDEX conflict・生成物判定、想定外差分、cleanup、force-resolve、再試行動作を確認するとき。
-- refactor の unresolved target、rename 追従、change summary、単位 commit、Codex child 停止、遅延変更・遅延 commit の扱いを調査するとき。
-- fork/join lifecycle の共有 state や report、rollback、post-join hook、通知、Structured Output の差分申告検証に関するテストを探すとき。
+- realization apply/refactor fork または workload fork の run lifecycle を変更・調査するとき。
+- run join/abandon の merge、cleanup、process tracking、post-join 同期、失敗時 rollback を確認するとき。
+- agent 境界、INDEX 更新、管理対象外差分、遅延 child・commit、interruption、fork/lifecycle report の挙動を実装に照合するとき。
 
 ## Do not read this when
-- 対象が単一の低レベル helper の通常系だけで、fork・join・abandon の lifecycle 統合や失敗復旧を扱わないとき。
-- 実装仕様そのものを確認する必要があり、まず realization apply/refactor、editing run、run isolation、indexing などの正本仕様や実装モジュールを直接読むべきとき。
-- INDEX.md の生成規則や一般的な indexing 動作だけを調べるとき。
+- 単一の production helper や単一サブコマンドの局所仕様だけを確認したい場合は、対応する実装または専用テストを直接読む。
+- INDEX 生成の一般的な仕組みや、統合 lifecycle を伴わない単純なテスト実行方法だけを調べる場合は、この対象を読む必要はない。
 
 ## hash
-- ea403f1bf3b9691b55f8e35fae19b06bd8450d9499cf3e019a5f94defd96e062
+- 7e825bb0828e981d69a7ec6be66220f77d69220f6c827b8cf45a1fdce6df73b1
 
 # `test_editor_input_handoff.py`
 

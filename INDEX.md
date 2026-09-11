@@ -122,33 +122,36 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口、互換 import 入口、共通 runtime helper、サブコマンド実装をまとめる実装ルート。
-- CLI の command tree と起動時境界、互換名前空間、共有 runtime、サブコマンド配下へ進むための上位ルーティング入口を提供する。
+- src は cmoc の CLI 起動・コマンド接続と、互換 import、oracle shim、共通 runtime、サブコマンド実装の上位入口をまとめる。
+- CLI の階層や起動境界、または特定処理の実装領域を振り分ける必要がある場合に進む上位ディレクトリ。
 
 ## Read this when
-- cmoc の CLI 全体構成、起動経路、主要な実装領域の振り分けを確認するとき。
-- 互換 import、共通 runtime、サブコマンド実装のいずれに進むべきかを判断するとき。
+- cmoc の CLI ツリー、起動時の互換性処理、console script からの入口を確認するとき。
+- oracle・realization・session・run・feedback などのサブコマンド実装領域や、commons の横断 runtime へ進む入口を判断するとき。
+- acp・basic・config・cmoc_runtime など旧公開 import の互換入口や、oracle パッケージ shim の挙動を確認するとき。
 
 ## Do not read this when
-- 特定コマンドの処理順序や入力・状態遷移・成果物を確認したい場合は、対応するサブコマンド実装を直接読む。
-- 共通 runtime の個別 API、互換名前空間の再公開内容、正本仕様や実体モジュールの詳細を確認したい場合は、この実装ルートではなく対応する下位要素を直接読む。
-- INDEX.md の生成規則やルーティング情報だけを更新する場合。
+- 特定サブコマンドの業務処理、状態遷移、入力・成果物、または個別 runtime module の詳細を確認したい場合は、対応する下位実装を直接読む。
+- 正本仕様や oracle 側実体の実装、INDEX.md の生成・検査規則だけを確認したい場合は、src の上位入口ではなく該当する正本仕様・実体・仕様文書を直接読む。
 
 ## hash
-- 766fbebaf968c25efa844242cc6c9897dfc29af9140eecdaa0614b5a8307c118
+- 23fa3e923466e0529673fcd520a994d3b977b4f3e4242a3fff2de4e6b6abe5fc
 
 # `test`
 
 ## Summary
-- `test` 配下の回帰・統合テストを、CLI、runtime、Codex 実行、indexing、session／editing lifecycle、feedback、prompt／editor handoff、Git／state／通知などの外部契約ごとに確認するための入口。実装変更がどの観測可能な挙動に影響するかをテスト群から追跡できる。
+- cmoc の CLI、Codex runtime、session、feedback、indexing、oracle／realization、prompt、通知などの外部挙動を回帰検証するテスト群。
+- 単体テストから実 Codex CLI・PTY を使う統合／受け入れ試験まで、状態・Git・report・ログ・ファイル境界を横断して確認する入口。
 
 ## Read this when
-- cmoc の変更や不具合調査で、該当する外部挙動・回帰条件・統合ライフサイクルを検証するテストを探すとき。
-- CLI サブコマンド、Codex runtime、INDEX 更新、session／run lifecycle、feedback、editor handoff、設定・Git・通知などの検証範囲を横断的に確認するとき。
+- cmoc の利用者向け CLI や主要サブコマンドの外部契約を変更・調査するとき。
+- Codex 実行、session lifecycle、feedback、indexing、oracle／realization、prompt editor、通知の回帰条件をテストから確認するとき。
+- report・state・Git・ログ・worktree・ファイルアクセスなど、複数コンポーネントにまたがる実行結果を検証するとき。
 
 ## Do not read this when
-- 正本仕様、実装詳細、個別 schema、builder の prompt 文面を確認することが目的で、テストの回帰条件が不要なときは、対応する仕様・実装・oracle を直接読む。
-- 単一の低レベル helper やテスト共通 fixture の詳細だけを調べる場合は、該当する個別テストまたは helper を直接読む。
+- 個別機能の正本仕様や実装詳細を確認することが目的で、テストが示す回帰条件を必要としないとき。
+- テスト対象と無関係な機能や、単一モジュールの局所ロジックだけを調べるとき。
+- 実 Codex CLI や統合 lifecycle を伴わない一般的なテスト実行方法だけを確認したいとき。
 
 ## hash
-- 586189a54c1462d2edd878f595100970609a9bcce4d2006df37291087a1c1690
+- 7fb32a6361067352406e0e343b7cd0787b4b8ae491e540dd15f0cf701bc497e3

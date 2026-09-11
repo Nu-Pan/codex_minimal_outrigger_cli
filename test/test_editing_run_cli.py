@@ -2898,6 +2898,29 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
     assert (root / "README.md").read_text() == "realized\n"
 
 
+def test_run_join_allows_doctor_config_repair(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """join 前 doctor の config 修復を session の想定外差分と判定しない。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    config = root / ".cmoc" / "gt" / "config.json"
+    config_data = json.loads(config.read_text())
+    config_data.pop("num_parallel")
+    config.write_text(json.dumps(config_data, indent=2) + "\n")
+    run_git(root, "add", ".cmoc/gt/config.json")
+    run_git(root, "commit", "-m", "create stale doctor config")
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert config.is_file()
+    assert "num_parallel" in json.loads(config.read_text())
+
+
 @pytest.mark.parametrize("change", ["rename", "delete"])
 def test_run_join_accepts_realization_rename_and_delete(
     tmp_path: Path,

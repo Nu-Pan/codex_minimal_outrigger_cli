@@ -49,21 +49,19 @@
 # `commons`
 
 ## Summary
-- src/commons は、CLI の実行ライフサイクル、Codex exec／TUI、設定、Git、ログ、パス、結果、状態、feedback、report、editor input など、複数のサブコマンドで共有する runtime helper の実装群を提供する。
-- 共通 runtime API や個別 helper の実装を横断して確認するための入口であり、INDEX 更新、Codex 実行境界、設定・状態・成果物の安全な保存、feedback と report の lifecycle を扱う下位モジュールへ進む起点になる。
+- src/commons は、CLI と Codex 実行を横断する共通 runtime API、設定・Git・ログ・パス・結果・状態・feedback などの基盤機能を提供するパッケージです。
+- INDEX.md の検査・生成・鮮度確認・復元・commit、prompt editor input、Codex exec/TUI、feedback、doctor、editing run、primary report など、複数の実行経路で共有される lifecycle 境界への入口を含みます。
 
 ## Read this when
-- 複数の CLI・Codex 実行経路で共有される runtime helper の責務や公開 API の所在を調べるとき。
-- 設定、Git、パス、ログ、結果、状態、feedback、report、editor input、INDEX 更新などの共通実行基盤を変更・調査するとき。
-- 特定の共通機能の実装箇所を特定し、commons 配下の個別 runtime module へ進む必要があるとき。
+- 複数の CLI・Codex 実行経路で共有される runtime API や、設定・Git・ログ・パス・結果・状態の共通処理を確認または変更するとき
+- INDEX.md の更新 lifecycle、prompt editor input、Codex subprocess/TUI、feedback collector/reporter、doctor、editing run、primary report などの共通実装の入口を探すとき
 
 ## Do not read this when
-- 特定のサブコマンド固有の業務フローや利用者向け仕様だけを確認したいときは、そのサブコマンド実装または正本仕様を直接読む。
-- 共通機能の仕様定義、入力 schema、個別の結果モデルや保存形式など、commons 配下の一つの専用対象に責務が限定される場合は、対応する下位対象を直接読む。
-- INDEX.md のルーティング情報だけを更新する場合。
+- 特定のサブコマンド固有の業務フローや利用者向け仕様だけを確認したいとき
+- 個別 runtime module の内部実装、データ schema、正本仕様を直接確認できる対象が明確なとき
 
 ## hash
-- 0efa3f6063e4b6cfeb3f5a6bd36c94768b9539b495432811173fb92967f64b68
+- 7d7a074d64bd3e34083fad79cb847acec641e84a71db4af51bfa5c356e7f6ecd
 
 # `config`
 
