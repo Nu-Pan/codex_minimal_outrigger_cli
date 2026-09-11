@@ -1416,10 +1416,10 @@
     "last_investigated_at": "2026-08-03_07-18_15_186250000"
   },
   "test/test_struct_doc_rendering.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "47d5a4c7a1dd53b0987d65acbc89ee232459d35a49eeca8c34d150fd5760a8a5",
-    "last_investigated_at": "2026-08-13_21-16_02_893539000"
+    "last_investigated_sha256": "59777795fc220c56f39c46ca4ee6aa2b3d9cb6b4f47edec071c540bc15734205",
+    "last_investigated_at": "2026-09-11_18-36_59_242807000"
   },
   "test/test_windows_toast.py": {
     "investigation_required": true,
