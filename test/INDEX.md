@@ -452,24 +452,21 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の agent-facing reporter と loopback collector の公開境界、認証付き受理、rate limit、context 失効、transport timeout、secret masking、path boundary、idempotency を検証するテスト群。
-- feedback report の raw observation 読み込みから candidate の normalization・比較・merge、machine observation の recurrence threshold、remediation wave、checkpoint、rollback、recovery までを検証する。
-- active state の issue・machine aggregate・current pointer・report cut・generation manifest・cleanup を atomic に公開し、hash mismatch、未定義 artifact、破損、publication 前の不正 raw を拒否する外部境界を検証する。
+- feedback の agent-facing reporter と collector から raw observation、issue candidate、remediation、active state の atomic publication、cleanup までを同一 fixture で検証する統合テスト。
+- MCP/JSON-RPC と TCP transport の入力検証、認証・rate limit・失敗時の degraded warning、secret masking、path boundary、UTF-8 制約を確認する。
+- pending observation の正規化・重複排除・threshold 集約、修復中の late intake、rollback/recovery、current pointer と generation artifact の整合性を検証する。
 
 ## Read this when
-- feedback reporter の MCP discovery、collector 転送、collector response validation、利用不能時の扱いを確認するとき
-- agent または machine observation の raw store、schema validation、重複排除、secret masking、repository path 検証、pending 件数を調べるとき
-- feedback report の candidate identity、evidence fingerprint、normalization、remediation verdict、逐次 wave、late intake、Codex call、worktree rollback を追跡するとき
-- feedback report 後の compact active state、current report、generation manifest、cleanup、recovery、破損検出、publication 前提条件を確認するとき
+- feedback report の受付境界や reporter protocol の挙動を確認・変更するとき。
+- raw observation から active issue、machine aggregate、remediation、report publication、cleanup までのライフサイクルを確認するとき。
+- atomic publication、失敗後の recovery、current pointer、generation manifest、active state の破損検出を確認するとき。
 
 ## Do not read this when
-- feedback 以外のサブコマンドや一般的な CLI runtime のテストを調べるとき
-- 個別の normalize_issue・remediate_issue builder の prompt 仕様だけを確認すれば足りるとき
-- active state の具体的なデータ形式や正本仕様を直接確認する必要があるとき
-- このテスト群が検証する feedback の end-to-end 境界ではなく、単一実装関数の局所的な挙動だけを確認するとき
+- feedback reporter の単一関数の実装詳細だけを確認する場合は、reporter 実装または専用の小粒度テストへ直接進む。
+- active state の schema や remediation の正本仕様そのものを確認する場合は、対応する仕様・builder・state 実装を直接読む。
 
 ## hash
-- a8dd3dde5b2049da1b425531702dbdcdd816a0b3819c8b5d3eed2e11362bae55
+- 9b05dd45c06132c23e3b5041feb629bac6ef0ad65ad34cf536af01b6485cc95f
 
 # `test_feedback_decision.py`
 

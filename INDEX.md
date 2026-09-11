@@ -122,33 +122,35 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の実装ルートで、CLI 起動入口、共有 runtime、互換公開層、サブコマンド実装をまとめて下位要素へ振り分ける。
-- CLI 全体の構成や起動経路から個別のサブコマンド・共有処理・互換層へ進むための上位ルーティング入口。
+- 対象ディレクトリ直下の CLI 起動入口、互換 shim、共通 runtime、設定、サブコマンド群を案内する上位ルーティング入口。
+- CLI 全体の構成と共通境界を確認し、必要な個別実装へ進むための入口。
 
 ## Read this when
-- cmoc の src 配下にある主要な実装領域の責務分担や、CLI 入口から下位パッケージ・モジュールへ進む先を判断するとき。
-- CLI 起動、共通 runtime、互換 import、またはサブコマンド実装の配置を横断して確認するとき。
+- `src` の公開入口や、CLI がどのサブコマンド・共通 runtime へ接続されるかを確認するとき。
+- 互換 import path、oracle/config の shim、共通 runtime、サブコマンド配置の全体像を把握してから下位要素へ進みたいとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理仕様、共有 runtime の個別挙動、互換層の移行詳細を確認・変更するときは、対応する下位要素を直接読む。
-- 正本仕様や実装の詳細、INDEX 更新・feedback など特定機能の具体的な規則だけを調べるときは、この階層ではなく該当する仕様・実装を直接読む。
+- 特定サブコマンドの具体的な入力・処理・状態遷移を確認するときは、該当する下位実装を直接読む。
+- 個別の runtime API、設定型、oracle の正本実装、INDEX 更新や feedback の詳細仕様を確認するときは、対応する実体モジュールや正本仕様を直接読む。
 
 ## hash
-- be83eee7f5c2067506d22f923563a3d821d25b6ffc0dca492ce9d07bf6502f07
+- e279f0fcae7402379827cdefcaabce53c7f4dbf2b9c2e84c572216c44322e6bd
 
 # `test`
 
 ## Summary
-- test 配下の共有 helper と各種回帰テストを横断して案内するテストインベントリ。CLI、Codex runtime、indexing、oracle／realization、feedback、session、TUI、Git／worktree、report／state、MCP、filesystem 境界の検証入口を提供する。
+- test 配下の回帰テスト群を、CLI、Codex runtime、indexing、session／editing、feedback、prompt／TUI、Git／state などの機能領域別に案内する。
+- 各テストが検証する外部挙動、失敗境界、状態遷移、filesystem・Git・process の安全性を確認するための入口を提供する。
 
 ## Read this when
-- test 配下で対象機能の回帰条件、統合テストの観測範囲、共有テスト支援、または CLI・runtime・indexing・oracle／realization・feedback・session・TUI の挙動を検証するテストを探すとき。
-- 複数のサブシステムにまたがる状態遷移、Git／worktree、Codex process、report／state、MCP、ファイルアクセスや filesystem 境界の検証対象を切り分けたいとき。
+- ある機能の外部契約、失敗境界、状態遷移、filesystem／Git／process 安全性を回帰テストから調べたいとき。
+- 対象機能のテスト範囲や、単体・統合・実経路テストの入口を選びたいとき。
+- CLI、Codex 実行、indexing、oracle／realization、session、feedback、prompt editor、通知などの検証例を横断して確認するとき。
 
 ## Do not read this when
-- 正本仕様、schema、実装本体、prompt や builder の詳細を確認することが目的で、各テストが参照する対象ファイルへ直接進むべきとき。
-- test 配下の個別ファイルが扱う特定機能に限定された局所的な挙動だけを調べる場合は、この一覧ではなく該当するテストまたは実装を直接読むとき。
-- テスト対象と無関係な一般的な Git 操作、CLI 利用方法、または LLM の回答品質を確認したいとき。
+- 正本仕様、実装本体、builder、schema、runtime module の詳細を確認することが目的のときは、対応する仕様・実装・oracle を直接読む。
+- テストが扱っていない機能や、LLM の回答品質そのものを調べたいとき。
+- 単一の低レベル helper の内部実装だけを確認したいときは、対応する実装または専用の小粒度テストへ直接進む。
 
 ## hash
-- 46446c8a59c921f751365a019a1b2d891601e6c80f260c315570c387a17e24c1
+- 264ddc552d3096ce9a6e21c384fd9f616e27c735226329946501e8edc5f16d93

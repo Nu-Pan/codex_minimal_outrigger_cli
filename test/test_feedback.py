@@ -306,6 +306,144 @@ def test_reporter_exposes_only_canonical_submission_tool(
     assert request["payload"] == _payload()
 
 
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"jsonrpc": "1.0", "id": 1, "method": "ping"},
+        {"jsonrpc": "2.0", "id": True, "method": "ping"},
+        {"jsonrpc": "2.0", "id": [], "method": "ping"},
+        {"jsonrpc": "2.0", "id": 1, "method": 1},
+        {"jsonrpc": "2.0", "id": 1, "method": "ping", "params": "invalid"},
+        {"jsonrpc": "2.0", "id": 1, "method": "ping", "params": []},
+    ],
+)
+def test_reporter_rejects_invalid_jsonrpc_request(
+    message: dict[str, object],
+) -> None:
+    """JSON-RPC 2.0 の request 形状を満たさない入力を実行しない。"""
+    assert reporter_module._response(message) == {
+        "jsonrpc": "2.0",
+        "id": None,
+        "error": {"code": -32600, "message": "Invalid Request"},
+    }
+
+
+@pytest.mark.parametrize("requested", ["2024-11-05", "future-version"])
+def test_reporter_negotiates_only_supported_mcp_protocol_version(
+    requested: str,
+) -> None:
+    """未対応の MCP protocol version をそのまま採用しない。"""
+    response = reporter_module._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": requested,
+                "capabilities": {},
+                "clientInfo": {"name": "test-client", "version": "1"},
+            },
+        }
+    )
+    assert response is not None
+    assert response["result"]["protocolVersion"] == "2025-06-18"
+
+
+def test_reporter_requires_initialize_parameters() -> None:
+    """initialize の必須 parameter 欠落を method error にする。"""
+    response = reporter_module._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+    )
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {"code": -32602, "message": "Invalid params"},
+    }
+
+
+def test_reporter_strips_unexpected_collector_result_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """collector response の余分な field を agent-facing result へ転送しない。"""
+
+    class FakeSocket:
+        def __enter__(self) -> "FakeSocket":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def settimeout(self, _seconds: int) -> None:
+            return None
+
+        def connect(self, _address: tuple[str, int]) -> None:
+            return None
+
+        def sendall(self, _value: bytes) -> None:
+            return None
+
+        def recv(self, _size: int) -> bytes:
+            return (
+                b'{"status":"rejected","code":"schema_invalid",'
+                b'"message":"invalid","retryable":false,'
+                b'"secret":"must-not-be-forwarded"}\n'
+            )
+
+    monkeypatch.setattr(reporter_module.socket, "socket", lambda *_args: FakeSocket())
+    monkeypatch.setenv(FEEDBACK_COLLECTOR_PORT_ENV, "43210")
+    monkeypatch.setenv(FEEDBACK_CAPABILITY_ENV, "secret-capability")
+    monkeypatch.setenv(FEEDBACK_PROTOCOL_ENV, "1")
+
+    assert reporter_module._submit(_payload()) == {
+        "status": "rejected",
+        "code": "schema_invalid",
+        "message": "invalid",
+        "retryable": False,
+    }
+
+
+def test_reporter_escapes_surrogates_on_stdio_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """collector result に不正な Unicode があっても stdio framing を壊さない。"""
+
+    class Utf8Stdout:
+        def __init__(self) -> None:
+            self.writes: list[bytes] = []
+
+        def write(self, value: str) -> int:
+            encoded = value.encode("utf-8")
+            self.writes.append(encoded)
+            return len(value)
+
+        def flush(self) -> None:
+            return None
+
+    stdout = Utf8Stdout()
+    monkeypatch.setattr(
+        reporter_module,
+        "_submit",
+        lambda _payload: {
+            "status": "rejected",
+            "code": "schema_invalid",
+            "message": "bad \ud800",
+            "retryable": False,
+        },
+    )
+    monkeypatch.setattr(
+        reporter_module.sys,
+        "stdin",
+        [
+            '{"jsonrpc":"2.0","id":1,"method":"tools/call",'
+            '"params":{"name":"submit_observation","arguments":{}}}\n'
+        ],
+    )
+    monkeypatch.setattr(reporter_module.sys, "stdout", stdout)
+
+    assert reporter_module.main() == 0
+    assert b"bad \\ud800" in b"".join(stdout.writes)
+
+
 def test_reporter_returns_rejection_for_non_utf8_payload_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -823,6 +961,175 @@ def test_collector_validates_context_rate_and_durable_observation(
         assert reporter_module._submit(_payload())["code"] == "context_invalid"
         invocation.stop()
         assert reporter_module._submit(_payload())["code"] == "collector_unavailable"
+    finally:
+        invocation.stop()
+
+
+def test_collector_records_rejected_submission_as_degraded_warning(
+    tmp_path: Path,
+) -> None:
+    """collector の rejected result を本命 workload と分離した warning に残す。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    invocation.start()
+    try:
+        call = invocation.register_call(
+            agent_call_id="agc_rejected_warning",
+            agent_call_kind="build_rejected_warning",
+            codex_call_id="cdc_rejected_warning",
+            log_paths=[],
+        )
+        assert invocation.collector_port is not None
+        rejected = _submit_to_feedback_collector(
+            invocation.collector_port,
+            call.capability,
+            {**_payload(), "summary": ""},
+        )
+
+        assert rejected["status"] == "rejected"
+        assert rejected["code"] == "schema_invalid"
+        assert logger.warning_messages == [
+            "feedback submission rejected (schema_invalid)"
+        ]
+        assert any(
+            event.get("event") == "warning"
+            and event.get("message") == "feedback submission rejected (schema_invalid)"
+            for event in logger.event_records()
+        )
+        invocation.close_call(call)
+    finally:
+        invocation.stop()
+
+
+def test_collector_records_unexpected_listener_failure_as_degraded_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """停止処理以外の listener failure を黙って collector 終了にしない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+
+    def fail_accept(_listener: socket.socket) -> tuple[socket.socket, object]:
+        raise OSError("injected listener failure")
+
+    monkeypatch.setattr(socket.socket, "accept", fail_accept)
+    invocation.start()
+    try:
+        assert invocation._server_thread is not None
+        invocation._server_thread.join(timeout=2)
+        assert not invocation._server_thread.is_alive()
+        assert logger.warning_messages == [
+            "feedback submission rejected (transport_unavailable)"
+        ]
+        assert any(
+            event.get("event") == "warning"
+            and event.get("message")
+            == "feedback submission rejected (transport_unavailable)"
+            for event in logger.event_records()
+        )
+    finally:
+        invocation.stop()
+
+
+def test_collector_handles_response_timeout_failure_as_degraded_warning(
+    tmp_path: Path,
+) -> None:
+    """response 送信時の timeout 設定失敗を worker 例外へ漏らさない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+
+    class FailingTimeoutConnection:
+        def __enter__(self) -> "FailingTimeoutConnection":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def settimeout(self, _seconds: float) -> None:
+            raise OSError("injected timeout failure")
+
+    invocation._handle_connection(FailingTimeoutConnection())  # type: ignore[arg-type]
+
+    assert logger.warning_messages == [
+        "feedback submission rejected (transport_unavailable)"
+    ]
+
+
+def test_collector_accepts_utf8_payload_at_wire_size_over_64_kib(
+    tmp_path: Path,
+) -> None:
+    """UTF-8 payload の制限を JSON ASCII escape の wire size で狭めない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    invocation.start()
+    try:
+        call = invocation.register_call(
+            agent_call_id="agc_utf8_wire_size",
+            agent_call_kind="build_utf8_wire_size",
+            codex_call_id="cdc_utf8_wire_size",
+            log_paths=[],
+        )
+        assert invocation.collector_port is not None
+        payload = {
+            **_payload(),
+            "evidence": [{"kind": "other", "text": "😀" * 900} for _index in range(8)],
+        }
+        assert len(canonical_json_bytes(payload)) - 1 <= 32 * 1024
+        assert (
+            len(
+                json.dumps(
+                    {
+                        "protocol": REPORTER_PROTOCOL_VERSION,
+                        "capability": call.capability,
+                        "payload": payload,
+                    },
+                    ensure_ascii=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            )
+            > 64 * 1024
+        )
+
+        result = _submit_to_feedback_collector(
+            invocation.collector_port, call.capability, payload
+        )
+        assert result["status"] == "accepted"
+        invocation.close_call(call)
+    finally:
+        invocation.stop()
+
+
+def test_collector_rejects_surrogate_payload_with_protocol_safe_response(
+    tmp_path: Path,
+) -> None:
+    """不正な Unicode payload の rejected result を response として返せる。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    invocation.start()
+    try:
+        call = invocation.register_call(
+            agent_call_id="agc_surrogate_response",
+            agent_call_kind="build_surrogate_response",
+            codex_call_id="cdc_surrogate_response",
+            log_paths=[],
+        )
+        assert invocation.collector_port is not None
+        result = _submit_to_feedback_collector(
+            invocation.collector_port,
+            call.capability,
+            {**_payload(), "summary": "bad \ud800"},
+        )
+        assert result == {
+            "status": "rejected",
+            "code": "schema_invalid",
+            "message": "payload must be valid UTF-8 JSON",
+            "retryable": False,
+        }
+        invocation.close_call(call)
     finally:
         invocation.stop()
 

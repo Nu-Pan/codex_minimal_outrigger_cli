@@ -49,18 +49,22 @@
 # `commons`
 
 ## Summary
-- src/commons は、cmoc の共有 runtime API と、CLI・Codex 実行・設定・Git・ログ・パス・状態・feedback・report などの共通実行時処理を提供するパッケージ。共通実行基盤を横断して確認・変更するときの入口。
+- cmoc の共通 runtime 境界を構成し、CLI の終端処理、Codex exec/TUI、設定、Git、パス、ログ、結果、エラーを横断して利用する基盤。
+- INDEX.md の検査・生成・鮮度確認・書き込み・復元、doctor の修復、editing run の lifecycle と worktree/process cleanup を扱う実行管理の入口。
+- prompt editor handoff、feedback collector/reporter・durable store・report state、primary report、refactor state など、各機能の安全な IPC・永続化・状態管理を担う下位 runtime 群への入口。
 
 ## Read this when
-- 複数のサブコマンドや実行経路で共有される runtime API、ライフサイクル、結果・状態・ログ・パス処理を調査または変更するとき
-- Codex 実行、feedback、INDEX 更新、editor handoff、report、run/session 管理など、commons 配下の共通実装の入口を選ぶとき
+- 複数の CLI 実行経路で共有される runtime API、実行 lifecycle、状態管理、ログ、結果、エラー処理の責務を横断して確認するとき。
+- Codex 実行前後の preflight、subprocess、Structured Output、retry、TUI、editor handoff、feedback、report、Git/worktree の連携境界を調査するとき。
+- INDEX 更新、doctor 修復、editing run、session state、feedback state など、複数の下位機能にまたがる整合性や復旧処理の入口を探すとき。
 
 ## Do not read this when
-- 特定の runtime サブモジュールの詳細挙動だけを確認したいときは、該当する個別モジュールを直接読む
-- 利用者向け仕様や個別サブコマンド固有の業務処理だけを確認したいときは、対応する仕様文書またはサブコマンド実装を直接読む
+- 特定の機能の仕様や個別実装だけを確認したい場合は、対象となる runtime モジュールまたは対応する正本仕様を直接読むとき。
+- CLI サブコマンド固有の業務処理、設定モデル、feedback schema、editor handoff protocol など、共通 runtime の横断入口を必要としない調査を行うとき。
+- 単一の結果型、低レベルの Git/path 操作、個別の report 描画や保存処理だけを確認する場合。
 
 ## hash
-- 5a26276d8a06b2621716b7f73af63d71d0a5f1c9cc912433a5c6ada5fae3f370
+- 9f0cbb04a3b9f259451331ee24daea364c347779cee7701c8ed2d31ef2400b5a
 
 # `config`
 
