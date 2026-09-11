@@ -1224,10 +1224,10 @@
     "last_investigated_at": "2026-08-14_10-57_27_167730000"
   },
   "test/test_doctor_cli.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "6d3a727fff60a0e576eb9151e28b5ce83b15ed42db91c97b6622684cb3ab7c96",
-    "last_investigated_at": "2026-08-13_23-14_03_598825000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "b3994a1a204bf11f73ad6d9cd229074f8ba06a3b7b4f356336d6d74b7a2a89d8",
+    "last_investigated_at": "2026-09-11_20-39_57_545690000"
   },
   "test/test_editing_run_cli.py": {
     "investigation_required": true,
