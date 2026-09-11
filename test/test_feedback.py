@@ -1486,6 +1486,41 @@ def test_report_reference_rejects_symlinked_parent_outside(tmp_path: Path) -> No
     assert feedback_report_module._repository_path(root, "link/secret.txt") is None
 
 
+def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> None:
+    """同じ file への symlink alias と実体 path を同じ issue subject にする。"""
+    root = make_repo(tmp_path)
+    target_directory = root / "nested"
+    target_directory.mkdir()
+    target = target_directory / "README.md"
+    target.write_text("subject\n")
+    (root / "alias").symlink_to(target_directory, target_is_directory=True)
+
+    _, first_path = store_agent_observation(
+        root, _context(root), _payload(path="alias/README.md")
+    )
+    first = read_json_object(first_path)
+    candidate = feedback_report_module._new_candidate(
+        first, f"agent\0{first['observation_id']}"
+    )
+    feedback_report_module._merge_observation(root, candidate, first)
+
+    _, second_path = store_agent_observation(
+        root, _context(root), _payload(path="nested/README.md")
+    )
+    second = read_json_object(second_path)
+    fingerprint = second["evidence_fingerprints"][0]
+    exact, comparison = feedback_report_module._agent_comparison_candidates(
+        second,
+        {candidate["candidate_id"]: candidate},
+        current_cut_fingerprint_pairs=[
+            (fingerprint["normalized_path"], "hashed", fingerprint["sha256"])
+        ],
+    )
+
+    assert exact is candidate
+    assert comparison == [candidate]
+
+
 def test_report_reference_masks_secret_across_content_limit(tmp_path: Path) -> None:
     """capture 上限をまたぐ private key block の断片を保存しない。"""
     root = make_repo(tmp_path)

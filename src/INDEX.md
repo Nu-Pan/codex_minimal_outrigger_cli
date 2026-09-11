@@ -118,20 +118,18 @@
 # `sub_commands`
 
 ## Summary
-- 対象ディレクトリは、各 CLI サブコマンドの実装入口をまとめる上位ルーティング対象です。
-- doctor・indexing・tui の実行入口、feedback・oracle・realization・run・session のサブコマンド群へ進む際の起点になります。
-- apply と review には現時点で実装ファイルがなく、将来の実装配置を示す空の境界です。
+- cmoc の各サブコマンドにおける CLI 入口と、feedback・oracle・realization・run・session の実装 package への上位ルーティングを提供する。
+- doctor、indexing、tui の直接実装と、サブコマンド固有処理を担う配下 package の入口を扱う。
 
 ## Read this when
-- CLI サブコマンドの実装を探す際に、対象ディレクトリ直下の入口またはサブコマンド群の構成を確認するとき。
-- doctor、indexing、tui の入口処理を確認するとき。
-- feedback、oracle、realization、run、session 配下の個別処理へ進む前に、サブコマンド群の上位境界を把握するとき。
-- apply または review の実装を追加・確認する場所を調べるとき。
+- サブコマンドの CLI 入口を横断して確認するとき。
+- doctor preprocess の明示実行、INDEX.md の更新・commit、または依頼文編集から Codex TUI 起動までの入口を調べるとき。
+- feedback、oracle、realization、run、session の各サブコマンド群から個別実装へ進む先を判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理、ライフサイクル、runtime、workload、入力編集などを確認したいときは、対応する下位実装を直接読む。
-- CLI 共通 runtime や共通 artifact、indexing の具体的な探索・生成規則など、対象ディレクトリのサブコマンド入口を越えた共通処理だけを調べるとき。
-- 対象ディレクトリに含まれないサブコマンドや、apply・review の実装が追加される前の具体的な処理内容を調べるとき。
+- 特定サブコマンドの判定・報告・修復・復旧などの詳細処理を確認したい場合は、feedback 配下の担当実装を直接読むとき。
+- oracle の編集・調査、realization の apply・refactor、run の lifecycle、session の fork・join・abandon など個別処理の詳細だけを調べるときは、対応する下位対象を直接読むとき。
+- 共通 CLI runtime、prompt editor、indexing 共通処理、または TUI 起動パラメータの仕様だけを確認するときは、参照される共通実装を直接読むとき。
 
 ## hash
-- 3dbdeec382e5df7c9535952100faf69c7703f14e5f84b408a1124ff34548f2d8
+- 60f844e1c51754322b2d2d6aea9bc87c6eaa1e98d46611027cfdb05326552010

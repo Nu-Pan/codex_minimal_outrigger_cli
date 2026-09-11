@@ -74,17 +74,17 @@
 # `report.py`
 
 ## Summary
-- feedback observation を固定済み report cut として検証・正規化・機械集約し、candidate の同一性判断と remediation verification を経て正常 report または incomplete 診断を publication する、`cmoc feedback report` の transaction 実装。
-- raw observation、active issue、current repository reference、処理 version、checkpoint、generation、pointer、cleanup を hash 付きで管理し、中断・再開と secret-safe な evidence materialization まで担う。
+- `cmoc feedback report` の report cut を起点に、raw observation の検証、candidate 集約、issue identity の正規化、machine recurrence の集約、remediation verification、publication または incomplete 診断までを一つの transaction として処理する。
+- current active state と固定済み reference、checkpoint、generation、report、pointer の hash・状態整合性を管理し、中断後の再開と安全な publication を担う。
 
 ## Read this when
-- `cmoc feedback report` の report cut、candidate 集約、normalization/remediation checkpoint、publication、incomplete 診断、中断復旧の挙動を実装または調査するとき。
-- feedback state の current generation、machine aggregate、raw observation、report artifact の整合性や hash、canonical JSON、repository reference の扱いを確認するとき。
+- `cmoc feedback report` の raw observation から active issue、machine aggregate、report cut、checkpoint、generation、current pointer までの処理経路を確認するとき。
+- feedback report の issue 同一性判定、reference の固定、verification、正常 publication、incomplete 診断、中断・再開時の状態遷移を変更または調査するとき。
 
 ## Do not read this when
-- feedback observation の受付・envelope 検証だけを調べる場合は、観測保存や受付を直接担うモジュールを読む。
-- issue normalization や remediation agent の prompt/schema の詳細だけを調べる場合は、それぞれの builder、schema、agent 実装を直接読む。
-- 一般的な report 表示形式や共通 logging、generation state の仕様だけを確認する場合は、対応する oracle または共通 state モジュールを直接読む。
+- feedback observation の受付や envelope 検証そのものを確認したいときは、観測保存・受付を担当する対象を先に読む。
+- normalize issue や remediate issue の agent prompt、Structured Output schema、個別の remediation 判定規則だけを確認したいときは、それぞれの builder・schema・判定対象を直接読む。
+- feedback state の共通 path、pointer、generation artifact の形式だけを確認したいときは、共通 state 管理対象を直接読む。
 
 ## hash
-- 6e78fafac18b91b082c663a6dd08c450255e3afd980cebecaab9c994cce61a84
+- eb94d66c031f52e22303f2941e8cad6d9244a088145b458f81812a44962ada0e

@@ -452,27 +452,23 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の agent-facing reporter と collector transport の公開境界、入力検証、認証、rate limit、失効、障害時の degraded warning を検証する。
-- raw observation の schema・UTF-8・canonical JSON・path boundary・symlink・secret masking・durable publication と、pending inventory の安全な扱いを検証する。
-- agent observation と machine observation の issue identity、evidence fingerprint、候補統合、重複排除、recurrence threshold、window expiry を検証する。
-- feedback report の precondition、段階的 remediation wave、checkpoint、worktree rollback、late intake、join/abandon、recovery を検証する。
-- active generation、current pointer、report cut、atomic publication、cleanup、artifact hash と manifest の整合性を検証し、publication 後に compact active state だけが残る境界を確認する。
+- feedback の agent-facing reporter、collector、raw observation、active state、report cut、remediation、atomic publication、cleanup を同一 fixture で検証するテスト群。
+- feedback report の入力検証、rate limit、認証・context lifecycle、secret masking、symlink/path boundary、canonical JSON、状態 corruption 検出を確認する。
+- pending observation の候補化から remediation、逐次 wave、回復、terminal verdict、machine observation の threshold 集約まで、publication 後の compact active state と未処理 raw の境界を検証する入口。
 
 ## Read this when
-- feedback report の外部挙動を変更または検証するとき
-- agent-facing feedback reporter と collector の通信・入力検証・受付 lifecycle を調べるとき
-- raw observation から issue candidate、active state、report artifact までの処理経路を追うとき
-- remediation の失敗、再開、手動終了、遅延 intake、cleanup recovery を確認するとき
-- active state や publication artifact の破損・改変・未定義ファイルに対する拒否挙動を確認するとき
+- feedback reporter または collector の MCP protocol、TCP transport、capability、context、失敗時 warning の挙動を変更・調査するとき。
+- feedback observation の schema、raw store、redaction、path/reference validation、canonical JSON、pending inventory を変更・調査するとき。
+- feedback report の候補同一性、machine recurrence threshold、remediation wave、run recovery、active generation/current pointer、cleanup、publication の挙動を変更・調査するとき。
+- feedback state の artifact hash、manifest、report cut、未定義 artifact、symlink、corruption 検証に関わる変更を確認するとき。
 
 ## Do not read this when
-- feedback の一般仕様だけを確認し、統合的な repository fixture の検証観点が不要なとき
-- reporter の stdio MCP protocol の詳細だけを調べるときは reporter 実装・protocol の直接検証へ進む
-- active state の artifact validation だけを調べるときは state validation の実装や専用仕様を直接読む
-- 個別の normalize/remediate prompt schema だけを調べるときは対応する builder と oracle schema を直接読む
+- feedback の一般的な CLI 構文や利用者向け仕様だけを確認する場合は、対応する subcommand 仕様を直接読む。
+- feedback 以外の subcommand、通常の session/run lifecycle、または一般的な logging の挙動だけを変更・調査する場合。
+- このファイルが検証する外部境界や制御ロジックに触れない、単純な fixture・テスト実行環境の保守だけを行う場合。
 
 ## hash
-- 8c5e93368956cf413a4577c195ceece7176b4b69491bfef5df2295797cff3e98
+- 73051f60574e07db269b484e18f6dcd8cfd82331fe4fe4df6412c3d909ee9bcb
 
 # `test_feedback_decision.py`
 

@@ -980,8 +980,8 @@
   "src/sub_commands/feedback/report.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "7edae973eab26cd5bd841202d4b1a5d179a8a8d1b279feb110828faff49f2eca",
-    "last_investigated_at": "2026-08-13_18-35_41_142962000"
+    "last_investigated_sha256": "6e78fafac18b91b082c663a6dd08c450255e3afd980cebecaab9c994cce61a84",
+    "last_investigated_at": "2026-09-11_14-34_26_555820000"
   },
   "src/sub_commands/indexing.py": {
     "investigation_required": true,

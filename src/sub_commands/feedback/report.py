@@ -779,13 +779,22 @@ def _observation_reference_targets(
     """次回 cut で再取得できる stable repository target を抽出する。"""
     targets: list[_JsonObject] = []
     payload = observation.get("payload")
+    fingerprints: dict[int, str] = {}
+    for item in observation.get("evidence_fingerprints", []):
+        if not isinstance(item, dict):
+            continue
+        evidence_index = item.get("evidence_index")
+        normalized_path = item.get("normalized_path")
+        if type(evidence_index) is int and isinstance(normalized_path, str):
+            fingerprints[evidence_index] = normalized_path
     if isinstance(payload, dict) and isinstance(payload.get("evidence"), list):
-        for evidence in payload["evidence"]:
-            if not isinstance(evidence, dict) or not isinstance(
-                evidence.get("path"), str
-            ):
+        for index, evidence in enumerate(payload["evidence"]):
+            if not isinstance(evidence, dict):
                 continue
-            candidate = _repository_path(repo, evidence["path"])
+            evidence_path = evidence.get("path")
+            if not isinstance(evidence_path, str):
+                continue
+            candidate = _repository_path(repo, fingerprints.get(index, evidence_path))
             if candidate is not None:
                 targets.append(
                     {
