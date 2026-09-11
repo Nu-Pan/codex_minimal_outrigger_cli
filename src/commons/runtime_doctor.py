@@ -427,7 +427,6 @@ def _restored_index(
                 root,
                 index_path,
             )
-        _run_git_with_index(["write-tree"], root, index_path)
         return index_path
     except BaseException:
         index_path.unlink(missing_ok=True)

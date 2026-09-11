@@ -122,36 +122,35 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動入口と、サブコマンド・共通 runtime・互換 import の実装群をまとめるソースルート。
-- CLI ツリー、Click/Typer 境界、doctor・indexing・oracle・realization・run・session などのサブコマンド、および commons・acp・basic 配下への入口を提供する。
+- cmoc の CLI 起動入口と、互換入口・共通 runtime・サブコマンド実装へ進むための src 直下の構成を扱う。
 
 ## Read this when
-- cmoc の CLI 全体構成、起動経路、サブコマンドと実装 package の接続を確認するとき。
-- Click/Typer の引数解析、補完、help 表示、CLI エラー変換など起動境界の挙動を調べるとき。
-- 共通 runtime、互換 import、またはサブコマンド群の責務ごとの入口を横断して確認するとき。
+- cmoc の CLI コマンド階層、起動時の Click/Typer 境界、doctor・tui・indexing などの上位入口を確認するとき。
+- acp・basic・config・oracle などの互換入口、または commons の共通 runtime へ調査を振り分けるとき。
+- session・oracle・realization・run・feedback の各サブコマンド群から個別実装へ進む前に、上位の構成を把握するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime module、builder、互換 shim の具体的な仕様や実装だけを確認したいときは、該当する下位要素を直接読む。
-- oracle・realization の正本仕様や実装を確認したいときは、src 側の入口ではなく正本側の対象を直接読む。
-- INDEX.md の生成・検査・鮮度管理の詳細だけを確認したいときは、indexing を担当する実装や仕様を直接読む。
+- 特定のサブコマンド、runtime helper、互換モジュール、builder adapter の具体的な実装仕様を確認したいときは、対応する下位要素を直接読む。
+- 正本仕様や Structured Output schema、INDEX.md 生成規則だけを確認したいときは、src 直下ではなく該当する仕様・定義を直接読む。
 
 ## hash
-- 3c22f31ed264d170086ba24d448474f9e33f67b5b6b255f212cf4c0701d1ee2b
+- fcfb634bf8f50c399576b4eb22cb5216f485dc8fa9b17ccb6ee6a241c77c0c89
 
 # `test`
 
 ## Summary
-- test 配下のテスト群を、CLI、Codex runtime、indexing、feedback、session/run lifecycle、prompt/editor、Git・state・process 管理などの外部契約と回帰条件へ進むための入口として案内する。
-- 各テストファイルは、対応する機能の外部挙動、失敗境界、永続状態、権限、安全性、統合 lifecycle の検証を担う。
+- test 配下の回帰・統合テストを、CLI、runtime、Codex 実行、indexing、feedback、editor handoff、Git/state などの外部契約と制御ロジックから目的別に探す入口。
+- 個別テストは、各機能の境界条件・失敗復旧・filesystem／process 安全性を確認する対象であり、実装や正本仕様の代替ではない。
 
 ## Read this when
-- cmoc の外部挙動や回帰条件をテストから横断的に調査し、対象機能に対応する test ファイルを選びたいとき。
-- CLI、Codex runtime、indexing、feedback、session/run lifecycle、prompt/editor、Git・state・process 管理などのテスト入口を探すとき。
-- 実装変更に伴う代表的な統合テスト・単体回帰テストの範囲を確認するとき。
+- 変更または調査対象の外部挙動に対応する回帰テストを探すとき。
+- CLI lifecycle、Codex subprocess／TUI、indexing、feedback、session／run、state、Git、editor handoff、通知などの検証範囲を横断的に確認したいとき。
+- 特定の helper、builder adapter、runtime 境界、または実経路受け入れ試験の回帰条件を見つけたいとき。
 
 ## Do not read this when
-- 正本仕様、実装詳細、Structured Output schema、または個別機能の契約そのものを確認することが目的で、対応する仕様・実装・schema を直接読むべきとき。
-- テスト対象の外部挙動に関係しない一般的な pytest 設定や、単一テストの詳細な fixture・期待値だけを確認したいとき。
+- 正本仕様、schema、実装本体、prompt の文面を確認したいときは、対応する仕様・schema・実装対象を直接読む。
+- 単なるテスト実行方法や、対象テストが扱わない機能の詳細を調べるとき。
+- 外部契約や制御ロジックに関係しない一般的な fixture・補助処理だけを確認したいとき。
 
 ## hash
-- 2b1a177afc599fb0bbad9dd37065d09c6fd415fd1fd79c68d104f382dc7d9abf
+- 9d72de9b77a329602a458a432dcbd54527d1374780ab9b490f94212716b1faf8

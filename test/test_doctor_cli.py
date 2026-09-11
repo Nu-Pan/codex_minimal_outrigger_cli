@@ -352,6 +352,36 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
     ]
 
 
+def test_doctor_preserves_preexisting_unmerged_index(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor が既存の unmerged index を検査・解消せず保持する。"""
+
+    root = make_repo(tmp_path)
+    base_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    run_git(root, "checkout", "-b", "doctor-conflict-side")
+    (root / "README.md").write_text("# side\n")
+    run_git(root, "commit", "-am", "side change")
+    run_git(root, "checkout", base_branch)
+    (root / "README.md").write_text("# main\n")
+    run_git(root, "commit", "-am", "main change")
+    merge = subprocess.run(
+        ["git", "merge", "doctor-conflict-side"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert merge.returncode != 0
+    assert run_git(root, "ls-files", "--unmerged", "--", "README.md").stdout
+
+    monkeypatch.chdir(root)
+    run_doctor(root)
+
+    assert run_git(root, "ls-files", "--unmerged", "--", "README.md").stdout
+
+
 def test_doctor_repairs_missing_index_without_dropping_tracked_files(
     tmp_path: Path,
 ) -> None:
