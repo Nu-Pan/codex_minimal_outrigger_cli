@@ -122,35 +122,35 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 実装と互換入口を含む src 配下の上位入口。CLI 起動、共通 runtime、互換 import、oracle／basic／config shim、サブコマンド群へ進むための構成を示す。
-- CLI コマンド登録は main.py、共通処理は commons、サブコマンド実装は sub_commands、互換 import の確認は対応する shim へ進むための上位ルーティング対象。
+- cmoc の CLI 起動入口とコマンドツリーを構成し、Typer／Click の互換境界を扱う。
+- acp・basic・config・oracle などの互換 import 入口と、commons の共通 runtime、sub_commands の各 CLI 実装へ進むための上位構成をまとめる。
 
 ## Read this when
-- cmoc の CLI 起動経路、コマンドツリー、互換 import、共通 runtime、サブコマンド実装の配置を確認するとき。
-- 特定の実装ファイルへ進む前に、src 直下の CLI・互換入口・共通処理・サブコマンドの境界を把握するとき。
+- cmoc の公開 CLI コマンド構成、起動経路、引数解析エラー処理を確認するとき。
+- acp・basic・config・oracle などの互換 import の入口や移行経路を確認するとき。
+- 共通 runtime helper 群の配置、または CLI サブコマンド実装の上位構成を確認するとき。
 
 ## Do not read this when
-- 特定コマンドの業務処理、runtime の内部仕様、oracle 側の正本実装、個別の互換 API を確認したいときは、対応する下位要素や正本モジュールを直接読む。
-- INDEX 更新、feedback observation、設定型、個別 builder などの詳細仕様だけを調べるときは、src 全体の入口ではなく担当する実装または正本仕様を読む。
+- 特定サブコマンドの業務処理や個別 runtime の詳細仕様を確認したいときは、対応する下位モジュールを直接読む。
+- 正本側の oracle 実装、互換入口の具体的な API、INDEX 更新や feedback の詳細規則を確認したいときは、それぞれの実体・仕様対象を直接読む。
+- 対象ディレクトリ外の UI、外部サービス、または個別テストの期待値だけを調べるとき。
 
 ## hash
-- 1676ed18aa14b5112e3661c846398f5848bcaab147fba36ea09fdeb9742f050a
+- 438783f1492585ba9033ea48cc3fb6b50312ca80d7cdf487d1ea30ead6b99abe
 
 # `test`
 
 ## Summary
-- `test` 配下の pytest テスト群を、CLI・runtime・Codex 実行・indexing・feedback・session・oracle/realization・共通 helper などの機能領域ごとに案内するテストインベントリ。各テストが検証する外部挙動、安全境界、状態 lifecycle、公開 API の入口を示す。
-- 実装や正本仕様の変更に対する回帰テストの選択を支援し、個別機能の統合テストから低レベル runtime・filesystem・Git 境界まで、目的に応じたテストファイルへ進むための入口となる。
+- cmoc のテスト群を、共有 helper・pytest fixture、runtime／CLI／Codex 実行基盤、indexing、oracle／realization、session／feedback、editor handoff、通知、実経路統合試験などの責務別に案内する入口。各テストは対応する外部挙動、状態遷移、境界条件、公開インターフェースの回帰検証を担う。
 
 ## Read this when
-- 変更・不具合調査の対象が CLI、Codex runtime、TUI、indexing、feedback、session、oracle/realization、prompt/editor、Git/state、通知、または関連テスト基盤のいずれかで、該当する回帰テストを探すとき。
-- 外部から観測できる終了結果、report・state・Git・process・ログ、filesystem の安全境界、公開 command/API の回帰条件を確認したいとき。
-- 対象機能に対応するテストの責務と、通常系・異常系・統合系のどの入口から確認を始めるべきか判断するとき。
+- 既存機能の外部契約や回帰条件をテストから確認したいとき。
+- CLI、Codex runtime、indexing、oracle／realization、session、feedback、editor handoff、Git／state／process 管理など、対象機能に対応するテストの入口を探すとき。
+- 実経路統合試験や共有テスト helper・fixture の責務を確認したいとき。
 
 ## Do not read this when
-- 正本仕様、実装本体、Structured Output schema、prompt の正本文面、または個別 helper の詳細そのものを確認・変更することが目的のときは、対応する仕様・schema・実装を直接読む。
-- テスト対象の機能領域に該当せず、単なる一般的な pytest 実行方法や無関係なテスト fixture を調べるとき。
-- LLM の回答品質やテスト本文に記載されていない将来用途を推測したいとき。
+- 正本仕様、schema、実装本体の詳細を確認することが目的で、テストの期待挙動を調べる必要がないとき。
+- 対象機能に固有のテスト契約ではなく、一般的な pytest 実行方法や無関係な補助コードを調べるとき。
 
 ## hash
-- f1a837772e3e1cb7917f38c0473be4e4fe9f6ad6a95b33a9e11b9416a89140f3
+- b82da7a5e5229982da3029b39de0564ed0f9fd03ca440d1b2ac2838b56683ef8

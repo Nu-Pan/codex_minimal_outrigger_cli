@@ -1567,12 +1567,61 @@ def test_machine_detector_masks_secret_in_event_fields(tmp_path: Path) -> None:
     assert validate_observation_envelope(observation) == []
 
 
+def test_machine_detector_masks_secret_in_event_field_keys(tmp_path: Path) -> None:
+    """detector payload の object key に含まれる secret も raw に残さない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    secret_key = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
+    event = {
+        "event_schema_version": 1,
+        "event_id": "evt_machine_secret_key",
+        "event_type": "feedback.reporter_unavailable",
+        "occurred_at": rfc3339_now(),
+        "subcommand_invocation_id": logger.invocation_id,
+        "component": "collector",
+        "failure_code": "protocol_error",
+        "diagnostic": {secret_key: "value"},
+    }
+
+    invocation.detect_event(event, logger.path)
+
+    [path] = iter_observation_paths(root)
+    observation = read_json_object(path)
+    raw_text = path.read_text(encoding="utf-8")
+    assert secret_key not in raw_text
+    assert observation["payload"]["event_fields"]["diagnostic"] == {
+        "[REDACTED:authorization]": "value"
+    }
+    assert validate_observation_envelope(observation) == []
+
+
 def test_completion_count_reports_only_pending_raw_observations(tmp_path: Path) -> None:
     """正常 report 前は raw store の pending 件数一値だけを返す。"""
     root = make_repo(tmp_path)
     store_agent_observation(root, _context(root), _payload())
 
     assert feedback_completion_counts(root) == (1, [])
+
+
+def test_agent_store_rejects_non_directory_observation_parent(
+    tmp_path: Path,
+) -> None:
+    """raw storage の非 directory parent を domain rejection として返す。"""
+    root = make_repo(tmp_path)
+    invalid_parent = feedback_root(root) / "observation" / "v1" / "2030"
+    invalid_parent.parent.mkdir(parents=True)
+    invalid_parent.write_text("not a directory")
+
+    with pytest.raises(FeedbackRejected) as rejected:
+        store_agent_observation(
+            root,
+            _context(root),
+            _payload(),
+            observed_at="2030-01-02T00:00:00Z",
+        )
+
+    assert rejected.value.code == "context_invalid"
 
 
 def test_legacy_raw_is_read_without_rewriting_but_new_v1_submission_is_rejected(

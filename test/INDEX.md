@@ -452,25 +452,27 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の reporter、collector、raw observation、issue candidate、remediation、active state、atomic publication、cleanup を一連の repository fixture で検証するテスト群。
-- MCP discovery と TCP 転送、入力検証、認証・rate limit・context 失効、UTF-8/secret masking、listener 障害など feedback 受付境界を扱う。
-- normalization と remediation の prompt 境界・候補同一性・fingerprint・collision・machine threshold を検証する。
-- session 前提、連続 remediation wave、失敗時の rollback と手動完了、auto-join 後の recovery、空 report を含む report lifecycle の入口。
-- active generation の hash・artifact・pointer 検証、raw corruption、cleanup corruption、legacy raw 互換、pending 件数を含む durable state の整合性を検証する。
+- feedback の agent-facing reporter と collector transport の公開境界、入力検証、認証、rate limit、失効、障害時の degraded warning を検証する。
+- raw observation の schema・UTF-8・canonical JSON・path boundary・symlink・secret masking・durable publication と、pending inventory の安全な扱いを検証する。
+- agent observation と machine observation の issue identity、evidence fingerprint、候補統合、重複排除、recurrence threshold、window expiry を検証する。
+- feedback report の precondition、段階的 remediation wave、checkpoint、worktree rollback、late intake、join/abandon、recovery を検証する。
+- active generation、current pointer、report cut、atomic publication、cleanup、artifact hash と manifest の整合性を検証し、publication 後に compact active state だけが残る境界を確認する。
 
 ## Read this when
-- feedback observation の agent-facing 送信から collector 保存までの挙動を変更・調査するとき。
-- feedback report の候補化、Codex による normalization/remediation、再検証、publication、cleanup、recovery を確認するとき。
-- raw observation や active state の schema、canonical JSON、path boundary、secret redaction、fingerprint、世代 artifact の安全性を確認するとき。
-- feedback report の session precondition、並行 call、失敗時 rollback、遅着 intake、machine observation threshold を確認するとき。
+- feedback report の外部挙動を変更または検証するとき
+- agent-facing feedback reporter と collector の通信・入力検証・受付 lifecycle を調べるとき
+- raw observation から issue candidate、active state、report artifact までの処理経路を追うとき
+- remediation の失敗、再開、手動終了、遅延 intake、cleanup recovery を確認するとき
+- active state や publication artifact の破損・改変・未定義ファイルに対する拒否挙動を確認するとき
 
 ## Do not read this when
-- feedback 機能以外の subcommand や一般的な CLI runtime の挙動だけを扱うとき。
-- 実装ではなく feedback の正本仕様そのものを確認・変更する必要があるときは、対応する oracle 仕様を直接読む。
-- 個別の reporter、feedback state、feedback store の実装詳細だけを調べる場合は、該当する実装・専用テストへ直接進む。
+- feedback の一般仕様だけを確認し、統合的な repository fixture の検証観点が不要なとき
+- reporter の stdio MCP protocol の詳細だけを調べるときは reporter 実装・protocol の直接検証へ進む
+- active state の artifact validation だけを調べるときは state validation の実装や専用仕様を直接読む
+- 個別の normalize/remediate prompt schema だけを調べるときは対応する builder と oracle schema を直接読む
 
 ## hash
-- af341036b81b9f6dbf1a8c3694f61f1f0f36970284d4c15a1b8f516bdd1b3579
+- 8c5e93368956cf413a4577c195ceece7176b4b69491bfef5df2295797cff3e98
 
 # `test_feedback_decision.py`
 

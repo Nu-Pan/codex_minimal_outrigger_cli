@@ -408,19 +408,22 @@
 # `runtime_feedback_store.py`
 
 ## Summary
-- `runtime_feedback_store.py` は、agent および allowlist machine rule の feedback observation を検査・秘匿化・正規化し、重複排除可能な immutable raw record として durable store に発行する境界である。
-- reporter schema 検証、payload サイズ制限、secret masking、repository 内 evidence path の fingerprint、UUIDv7／決定的 observation ID、content hash、atomic publish、temporary recovery、pending 件数・蓄積警告までを一体として扱う。
+- feedback observation の入力検証と raw observation の durable store を担う境界。
+- agent と machine rule の observation を secret masking、path 正規化、fingerprint、content hash、重複排除、atomic publish に通す。
+- 保存済み observation の列挙、未処理件数、蓄積時の warning を提供する。
 
 ## Read this when
-- feedback observation の受理条件、保存される raw envelope、secret masking、evidence path の安全性、immutable storage、重複・破損検査を確認するとき。
-- agent または machine rule の observation 保存経路、publication の atomicity、pending observation の列挙・完了件数警告を調べるとき。
+- feedback observation の受理条件、安全性検査、secret masking、repository 内 path 制約を確認するとき。
+- immutable raw record の保存、UUID または rule・event に基づく observation ID、重複・破損時の扱いを確認するとき。
+- 通常サブコマンド完了時の pending feedback 件数や report 実行 warning の計算元を確認するとき。
 
 ## Do not read this when
-- feedback report の cut、state 更新、公開済み cleanup、または MCP の外部報告契約そのものを確認したいときは、対応する feedback state／report 実装を直接読む。
-- 一般的な console・file log の仕様や reporter input schema の定義だけを確認したいときは、この store の実装ではなく各正本仕様・schema resource を読む。
+- report cut の公開状態、cleanup、または report 処理の状態遷移を確認したいとき。
+- reporter input schema の項目定義だけを確認したいとき。
+- feedback observation と無関係な一般的なファイル保存処理を調べるとき。
 
 ## hash
-- 941cc06d8889d6a0169f11c96313b20c2dac590c088e5b2a1a1ae275b943ef3b
+- cd470dabdd57221f2964d0db231c6a7ddd75aa12302e26a85ca77bbbaf894062
 
 # `runtime_git.py`
 

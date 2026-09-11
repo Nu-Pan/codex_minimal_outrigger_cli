@@ -49,21 +49,22 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run lifecycle など、複数の実行経路から共有される実装の入口。
-- 特定の runtime 責務に対応する実装ファイルへ進むための下位入口を提供し、INDEX 更新や editor input handoff などの横断的な runtime 境界も含む。
+- cmoc の共通 runtime helper 群をまとめる commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report など横断的な実行基盤を確認・変更するときの入口。
+- INDEX.md の検査・生成・鮮度確認・復元・commit を含む indexing lifecycle の実装と、Codex 実行前 preflight の連携を確認できる。
+- editor input handoff、feedback reporter、primary report、run lifecycle など、複数の実行経路で共有される境界処理を担当する。
 
 ## Read this when
-- 複数の cmoc 実行経路で共有される runtime API や helper の所在を確認するとき
-- Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run lifecycle などの共通処理を調査・変更するとき
-- 特定の runtime 責務に対応する実装ファイルを選ぶ前に、commons 配下の構成と入口を確認するとき
+- cmoc の複数コマンドにまたがる runtime API、実行結果、例外、ログ、パス、設定、Git、state の共通処理を調べるとき
+- Codex exec／TUI の起動、retry、preflight、Structured Output、process tracking、通知連携を確認するとき
+- INDEX 更新、feedback の受理・保存・公開、editor input handoff、primary report、editing run の共通 lifecycle を追うとき
 
 ## Do not read this when
-- 特定の runtime module の内部実装が明らかで、その個別ファイルを直接確認できるとき
-- CLI サブコマンド固有の業務処理や利用者向け仕様だけを調査するとき
-- 共通 runtime に関係しない application spec、oracle、realization、テスト固有の内容を確認するとき
+- 特定のサブコマンド固有の業務処理や利用者向け仕様だけを確認したいとき
+- 個別 runtime module の内部実装、schema、protocol、state model、report 定義など、より直接の対象が明確なとき
+- commons と無関係な UI、外部サービス、または個別テストの期待値だけを調べるとき
 
 ## hash
-- 37598a1be356013e1759ebf0837d64b0b10254d4f8c94658604ccd912c707b0f
+- 8af7338dec5ef1ac9945d68a4e82f39f9bed0536e85b5076be4d18d9c5019bcf
 
 # `config`
 
