@@ -25,6 +25,15 @@ from typer.testing import CliRunner
 from main import app
 
 
+@pytest.fixture(autouse=True)
+def _clear_completion_probe_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """通常の CLI tree test を外部の completion probe 環境から分離する。"""
+    # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+    monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
+
+
 def _leaves(
     command: click.Command,
     prefix: tuple[str, ...] = (),

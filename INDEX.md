@@ -141,18 +141,17 @@
 # `test`
 
 ## Summary
-- test ディレクトリは、cmoc の各機能を対象にした単体・統合・実経路テストの入口で、CLI、runtime、builder、indexing、feedback、session、prompt editor、通知などの外部契約と境界条件を検証する。
-- 個別テストファイルへ進む前に、対象機能の回帰条件や、複数コンポーネントをまたぐ実行・状態・Git・report の観測範囲を把握するための上位案内である。
+- test 配下のテスト群を、CLI、Codex runtime、indexing、feedback、session/run lifecycle、prompt/editor、Git・state・process 管理などの外部契約と回帰条件へ進むための入口として案内する。
+- 各テストファイルは、対応する機能の外部挙動、失敗境界、永続状態、権限、安全性、統合 lifecycle の検証を担う。
 
 ## Read this when
-- cmoc の機能変更や不具合調査で、対応する回帰テストの所在と検証対象を選ぶとき。
-- CLI の実行経路、Codex runtime、builder parameter、indexing、feedback、session/run lifecycle、editor handoff、通知、設定、Git・filesystem 境界などの挙動をテストから確認するとき。
-- 単体テストではなく、独立 process・PTY・実 Codex CLI・永続 state・report・Git 差分を含む統合または受け入れ試験の範囲を確認するとき。
+- cmoc の外部挙動や回帰条件をテストから横断的に調査し、対象機能に対応する test ファイルを選びたいとき。
+- CLI、Codex runtime、indexing、feedback、session/run lifecycle、prompt/editor、Git・state・process 管理などのテスト入口を探すとき。
+- 実装変更に伴う代表的な統合テスト・単体回帰テストの範囲を確認するとき。
 
 ## Do not read this when
-- 仕様本文や実装の詳細を直接確認することが目的で、テストが参照する正本仕様・schema・実装モジュールへ直接進むべきとき。
-- 対象機能が test ディレクトリで扱う回帰条件や外部観測境界に関係せず、個別の fixture・一般的なテスト実行環境だけを調べるとき。
-- LLM の回答品質そのものを評価したいとき。
+- 正本仕様、実装詳細、Structured Output schema、または個別機能の契約そのものを確認することが目的で、対応する仕様・実装・schema を直接読むべきとき。
+- テスト対象の外部挙動に関係しない一般的な pytest 設定や、単一テストの詳細な fixture・期待値だけを確認したいとき。
 
 ## hash
-- 1f03947dd59488cb712c02c607e1920ef96964eafe8cd4ecf12e299f9c3a68fb
+- 2b1a177afc599fb0bbad9dd37065d09c6fd415fd1fd79c68d104f382dc7d9abf
