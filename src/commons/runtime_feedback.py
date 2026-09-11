@@ -42,8 +42,12 @@ FEEDBACK_CAPABILITY_ENV = "CMOC_FEEDBACK_CAPABILITY"
 FEEDBACK_COLLECTOR_HOST = "127.0.0.1"
 FEEDBACK_COLLECTOR_PORT_ENV = "CMOC_FEEDBACK_COLLECTOR_PORT"
 FEEDBACK_PROTOCOL_ENV = "CMOC_FEEDBACK_PROTOCOL_VERSION"
-_MAX_COLLECTOR_REQUEST_BYTES = 64 * 1024
+# reporter は不正な UTF-8 文字列も安全に collector へ届けるため JSON wire 上で
+# ensure_ascii=True を使う。入力 payload の UTF-8 上限 32 KiB が wire escape によって
+# 偽陽性拒否されないよう、最大 3 倍と capability/envelope の余白を確保する。
+_MAX_COLLECTOR_REQUEST_BYTES = 128 * 1024
 _COLLECTOR_IO_TIMEOUT_SECONDS = 2.0
+_COLLECTOR_PROTOCOL_PROBE_FIELD = "_protocol_probe"
 _CURRENT_FEEDBACK_INVOCATION: ContextVar["FeedbackInvocation | None"] = ContextVar(
     "CURRENT_FEEDBACK_INVOCATION", default=None
 )
@@ -273,6 +277,10 @@ class FeedbackInvocation:
             except TimeoutError:
                 continue
             except OSError:
+                with self._condition:
+                    stopping = self._stopping
+                if not stopping:
+                    self._record_rejected_submission("transport_unavailable")
                 return
             worker = threading.Thread(
                 target=self._handle_connection,
@@ -304,30 +312,46 @@ class FeedbackInvocation:
                         if len(request_data) > _MAX_COLLECTOR_REQUEST_BYTES:
                             raise FeedbackRejected(
                                 "payload_too_large",
-                                "collector request exceeds 64 KiB",
+                                f"collector request exceeds {_MAX_COLLECTOR_REQUEST_BYTES // 1024} KiB",
                             )
                     request = json.loads(request_data.split(b"\n", 1)[0])
                     result = self._submit_request(request)
                 except FeedbackRejected as exc:
+                    self._record_rejected_submission(exc.code)
                     result = exc.result()
                 except BaseException:
+                    self._record_rejected_submission("transport_unavailable")
                     result = FeedbackRejected(
                         "transport_unavailable",
                         "collector could not process the request",
                         retryable=True,
                     ).result()
-                connection.settimeout(_COLLECTOR_IO_TIMEOUT_SECONDS)
-                connection.sendall(
-                    json.dumps(
-                        result, ensure_ascii=False, separators=(",", ":")
-                    ).encode("utf-8")
-                    + b"\n"
-                )
+                try:
+                    connection.settimeout(_COLLECTOR_IO_TIMEOUT_SECONDS)
+                    connection.sendall(
+                        json.dumps(
+                            result, ensure_ascii=True, separators=(",", ":")
+                        ).encode("utf-8")
+                        + b"\n"
+                    )
+                except (OSError, UnicodeError):
+                    self._record_rejected_submission("transport_unavailable")
         finally:
             current = threading.current_thread()
             with self._condition:
                 self._worker_threads.discard(current)
                 self._condition.notify_all()
+
+    def _record_rejected_submission(self, code: str) -> None:
+        """rejected result と collector transport failure を warning へ記録する。"""
+        try:
+            # rejection message は入力値を含み得るため、stable code だけを記録する。
+            self.logger.record_warning(
+                f"feedback submission rejected ({code})", emit=False
+            )
+        except BaseException:
+            # feedback degradation の記録自体が本命 workload を妨げない。
+            pass
 
     def register_call(
         self,
@@ -376,13 +400,22 @@ class FeedbackInvocation:
             self._calls.pop(context.capability, None)
 
     def _submit_request(self, request: object) -> dict[str, object]:
-        """capability context で agent payload を検査・保存する。"""
+        """internal probe または capability context の agent payload を処理する。"""
         if not isinstance(request, dict):
             raise FeedbackRejected(
                 "context_invalid", "collector request must be object"
             )
         if request.get("protocol") != REPORTER_PROTOCOL_VERSION:
             raise FeedbackRejected("protocol_mismatch", "reporter protocol mismatch")
+        if request.get(_COLLECTOR_PROTOCOL_PROBE_FIELD) is True:
+            if set(request) != {"protocol", _COLLECTOR_PROTOCOL_PROBE_FIELD}:
+                raise FeedbackRejected(
+                    "context_invalid", "collector protocol probe is malformed"
+                )
+            return {
+                "status": "accepted",
+                "protocol": REPORTER_PROTOCOL_VERSION,
+            }
         capability = request.get("capability")
         payload = request.get("payload")
         if not isinstance(capability, str):
@@ -698,22 +731,15 @@ def validate_feedback_reporter_availability() -> None:
         raise ReporterAvailabilityError(
             "collector", "collector_unavailable", "feedback collector is unavailable"
         )
-    from .runtime_feedback_reporter import MCP_PROTOCOL_VERSION
-
-    if MCP_PROTOCOL_VERSION != REPORTER_PROTOCOL_VERSION:
-        raise ReporterAvailabilityError(
-            "reporter", "version_mismatch", "feedback reporter protocol mismatch"
-        )
     _validate_collector_protocol(invocation.collector_port)
     _validate_stdio_reporter(expected_schema, invocation.worktree)
 
 
 def _validate_collector_protocol(collector_port: int) -> None:
-    """保存を行わない unknown capability request で collector framing を確認する。"""
+    """保存を行わない内部 probe で collector framing と protocol を確認する。"""
     request = {
         "protocol": REPORTER_PROTOCOL_VERSION,
-        "capability": "doctor-probe-invalid-capability",
-        "payload": {},
+        _COLLECTOR_PROTOCOL_PROBE_FIELD: True,
     }
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
@@ -733,7 +759,10 @@ def _validate_collector_protocol(collector_port: int) -> None:
         raise ReporterAvailabilityError(
             "collector", "protocol_error", "feedback collector protocol probe failed"
         ) from exc
-    if not isinstance(value, dict) or value.get("code") != "context_invalid":
+    if value != {
+        "status": "accepted",
+        "protocol": REPORTER_PROTOCOL_VERSION,
+    }:
         raise ReporterAvailabilityError(
             "collector", "protocol_error", "feedback collector protocol is incompatible"
         )

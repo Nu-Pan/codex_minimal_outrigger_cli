@@ -17,7 +17,7 @@ from .runtime_git import (
     require_clean_worktree,
     run_git,
 )
-from .runtime_paths import refactor_state_path, repo_root, work_root
+from .runtime_paths import repo_root, work_root
 from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
 from .runtime_results import TerminalResult
@@ -42,7 +42,7 @@ from .runtime_state import SessionState, load_state_for_branch, write_state
 
 
 def doctor_preprocess_for_join() -> set[str]:
-    """join 前の refactor state 同期を active run kind に合わせる。"""
+    """join 前の doctor 修復差分を active run kind に合わせて返す。"""
     # join 前の state を確認し、workload が更新する state の二重同期を避ける。
     root = work_root()
     before = head_commit(root)
@@ -63,13 +63,13 @@ def doctor_preprocess_for_join() -> set[str]:
     after = head_commit(root)
     if before == after:
         return set()
-    # doctor 自身が merge 前に同期した refactor state だけを session の差分から除外する。
-    refactor_state = refactor_state_path(root).relative_to(root)
+    # doctor 自身が merge 前に作成した修復 commit の全 path を session/run の
+    # 差分から除外する。config、.agents、refactor state も doctor の管理対象で
+    # あり、state だけを返すと config の同期を join が想定外差分と誤判定する。
     return {
         path
         for change in tree_changes(root, before, after)
         for path in change.paths
-        if Path(path) == refactor_state
     }
 
 

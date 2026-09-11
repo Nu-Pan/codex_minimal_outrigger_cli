@@ -9,11 +9,11 @@
 import json
 import signal
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from oracle.acp_builder.feedback.remediate_issue import (
     build_feedback_remediate_issue_parameter,
@@ -47,12 +47,14 @@ from commons.runtime_feedback_state import (
     load_report_cut,
     new_generation_id,
     new_report_cut_id,
+    recover_report_cut_checkpoint_references,
     remediation_checkpoint_path,
     validate_feedback_state,
     write_checkpoint,
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
+    _has_symlink_component,
     canonical_json_bytes,
     rfc3339_now,
     sha256_bytes,
@@ -81,6 +83,7 @@ from commons.runtime_run_lifecycle import (
     recover_started_run,
     refresh_indexes,
     resolve_active_run,
+    rollback_work_unit,
     set_run_state,
     start_editing_run,
     tree_changes,
@@ -106,9 +109,27 @@ def run_feedback_report() -> TerminalResult:
         # doctor と必要な INDEX 更新を完了してから clean を判定する。
         doctor_preprocess_for_join()
         feedback_directory = repository / ".cmoc/gu/feedback"
+        feedback_work_root = feedback_directory / "work"
+        # cleanup は空の work root 自体を残すため、root の存在だけでは
+        # recovery 対象の report cut を示さない。空 root の後続 invocation
+        # でも startup の indexing preflight を実行できるよう、実際の
+        # entry がある場合だけ preflight を遅延させる。
+        has_feedback_work = _has_symlink_component(feedback_work_root)
+        if not has_feedback_work and feedback_work_root.exists():
+            if not feedback_work_root.is_dir():
+                has_feedback_work = True
+            else:
+                try:
+                    has_feedback_work = any(feedback_work_root.iterdir())
+                except OSError:
+                    # 後続の state validation に同じ filesystem error を渡し、
+                    # preflight の commit で診断対象を隠さない。
+                    has_feedback_work = True
+        finalization_path = feedback_directory / "finalization.json"
         if (
-            not (feedback_directory / "work").exists()
-            and not (feedback_directory / "finalization.json").exists()
+            not has_feedback_work
+            and not _has_symlink_component(finalization_path)
+            and not finalization_path.exists()
         ):
             run_indexing_preflight(repository, report.run_codex_exec)
         branch = current_branch(session_worktree)
@@ -152,6 +173,7 @@ def run_feedback_report() -> TerminalResult:
                 )
             starting = True
             context = start_editing_run("feedback_report")
+            _update_context_progress(context, "running")
             manifest = _new_manifest(context, state)
             manifest_path, _ = write_report_cut_manifest(repository, manifest)
             _update_progress(context, manifest, "running")
@@ -187,35 +209,40 @@ def run_feedback_report() -> TerminalResult:
                     def merged(commit: str | None) -> None:
                         """post-join より先に merge 成功を durable に確定する。"""
                         assert context is not None
+                        assert manifest is not None
                         _record_merge(context, manifest, commit)
 
                     merge_run(context, current, warnings, before, on_merged=merged)
                     _complete_join(context, manifest)
                 result = _publish(context, manifest, manifest_path, state)
                 return finish_feedback_run(context, manifest, result)
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as interruption:
         if context is None and starting:
             context = recover_started_run("feedback_report")
+        if context is not None and (manifest is None or manifest_path is None):
+            manifest, manifest_path = _recover_manifest(context)
         if finalizing:
             if context is not None:
-                _set_error(context)
+                _raise_feedback_error(
+                    context,
+                    manifest,
+                    "feedback の自動 join または publication が中断されました。",
+                    [interruption],
+                    update_processing=False,
+                )
             raise _failure(
                 "feedback の自動 join または publication が中断されました。"
             ) from None
-        if context is not None:
-            stop_tracked_codex_children(repository, context.session_id)
-            set_run_state(context, "joinable")
-            if manifest is not None:
-                report._set_processing_state(repository, manifest, "interrupted", None)
-                _update_progress(context, manifest, "joinable")
-        return report._record_feedback_interruption(manifest, manifest_path)
+        if context is None:
+            return report._record_feedback_interruption(manifest, manifest_path)
+        return _complete_feedback_interruption(context, manifest, manifest_path)
     except BaseException as exc:
         if context is None and starting:
             context = recover_started_run("feedback_report")
+        if context is not None and (manifest is None or manifest_path is None):
+            manifest, manifest_path = _recover_manifest(context)
         if context is not None:
-            _set_error(context)
-            if manifest is not None:
-                _update_progress(context, manifest, "error")
+            _record_feedback_error(context, manifest, exc)
         logger = current_subcommand_logger()
         if logger is not None:
             logger.event(
@@ -273,14 +300,46 @@ def _wave_loop(
         intake_number = len(manifest["run"]["waves"]) + 1
         for reference in references:
             reference["reference_id"] += f":intake{intake_number}"
+        # Persist the captured inputs before any normalization checkpoint can be
+        # written, but keep the durable boundary at the previous value until
+        # the corresponding immutable wave has been published below.  A stop
+        # between these two writes must be replayable from the same receipt
+        # range rather than looking consumed merely because the manifest was
+        # updated first.
+        observation_by_key = {
+            (
+                str(item["observation_id"]),
+                str(item["path"]),
+                str(item["sha256"]),
+            ): item
+            for item in inputs["observations"]
+            if isinstance(item, dict)
+        }
+        observation_by_key.update(
+            {
+                (
+                    str(item["observation_id"]),
+                    str(item["path"]),
+                    str(item["sha256"]),
+                ): item
+                for item in entries
+            }
+        )
         inputs["observations"] = sorted(
-            [*inputs["observations"], *entries],
+            observation_by_key.values(),
             key=lambda item: (item["observation_id"], item["path"]),
         )
-        inputs["references"] = sorted(
-            [*inputs["references"], *references], key=lambda item: item["reference_id"]
+        references_by_id = {
+            str(item["reference_id"]): item
+            for item in inputs["references"]
+            if isinstance(item, dict)
+        }
+        references_by_id.update(
+            {str(item["reference_id"]): item for item in references}
         )
-        manifest["run"]["high_watermark"] = watermark
+        inputs["references"] = sorted(
+            references_by_id.values(), key=lambda item: item["reference_id"]
+        )
         write_report_cut_manifest(context.repo, manifest)
         candidates, aggregates = report._build_candidates(
             context.repo,
@@ -341,6 +400,10 @@ def _wave_loop(
         write_immutable_json(wave_path, wave)
         wave_reference = artifact_reference(context.repo, wave_path)
         manifest["run"]["waves"].append(wave_reference)
+        # The wave file is durable before its high-watermark is published in
+        # the manifest.  Recovery can therefore never observe a consumed
+        # receipt range without the immutable input that owns it.
+        manifest["run"]["high_watermark"] = watermark
         write_report_cut_manifest(context.repo, manifest)
         for identity, candidate in pending.items():
             _remediate_issue(context, manifest, wave_reference, candidate)
@@ -611,13 +674,36 @@ def _remediate_issue(
         )
     except BaseException:
         if not checkpoint_saved:
-            stop_tracked_codex_children(context.repo, context.session_id)
-            run_git(["reset", "--hard", before], context.run_worktree)
-            run_git(["clean", "-fd"], context.run_worktree)
-            require_clean_worktree(context.run_worktree)
-            update_primary_report_fields(
-                rollback={"issue_id": identity, "commit": before}
-            )
+            cleanup_errors: list[str] = []
+            rollback_succeeded = False
+            try:
+                stop_tracked_codex_children(context.repo, context.session_id)
+            except BaseException as cleanup_error:
+                cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
+            try:
+                # checkpoint が durable になる前の commit は未確定なので、
+                # 処理単位の開始 HEAD まで戻す。
+                run_git(["reset", "--hard", before], context.run_worktree)
+                run_git(["clean", "-fd"], context.run_worktree)
+                require_clean_worktree(context.run_worktree)
+                rollback_succeeded = True
+            except BaseException as cleanup_error:
+                cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
+            if rollback_succeeded:
+                try:
+                    update_primary_report_fields(
+                        rollback={"issue_id": identity, "commit": before}
+                    )
+                except BaseException as report_error:
+                    cleanup_errors.append(
+                        f"rollback report update failed: {report_error!r}"
+                    )
+            if cleanup_errors:
+                raise _failure(
+                    "feedback issue 処理単位の cleanup に失敗しました。",
+                    ["run state と Codex child process を確認してください。"],
+                    "\n".join(cleanup_errors),
+                )
         raise
 
 
@@ -921,6 +1007,211 @@ def _validate_context(context: EditingRunContext, manifest: dict[str, Any]) -> N
         if key != "state_before"
     ):
         raise _failure("feedback manifest と active run identity が一致しません。")
+
+
+def _update_context_progress(context: EditingRunContext, state: str) -> None:
+    """manifest 作成前でも invocation report の run identity を確定する。"""
+    update_primary_report_fields(
+        session_branch=context.session_branch,
+        run_kind=context.kind,
+        run_branch=context.run_branch,
+        run_fork_commit=context.run_fork_commit,
+        run_worktree=context.run_worktree,
+        state_before=context.state_before,
+        state_after=state,
+    )
+
+
+def _recover_manifest(
+    context: EditingRunContext,
+) -> tuple[dict[str, Any] | None, Path | None]:
+    """atomic write 後に context へ返らなかった manifest を同じ run から回収する。"""
+    try:
+        existing = load_report_cut(context.repo)
+    except BaseException:
+        return None, None
+    if existing is None:
+        return None, None
+    manifest, manifest_path = existing
+    try:
+        _validate_context(context, manifest)
+    except BaseException:
+        return None, None
+    return manifest, manifest_path
+
+
+def _complete_feedback_interruption(
+    context: EditingRunContext,
+    manifest: dict[str, Any] | None,
+    manifest_path: Path | None,
+) -> TerminalResult:
+    """中断された run を rollback、joinable、invocation report の順に確定する。"""
+    cleanup_errors: list[str] = []
+    try:
+        stop_tracked_codex_children(context.repo, context.session_id)
+    except BaseException as cleanup_error:
+        cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
+    try:
+        # issue commit は HEAD に残し、未確定の working tree だけを戻す。
+        rollback_work_unit(context.run_worktree)
+        require_clean_worktree(context.run_worktree)
+    except BaseException as cleanup_error:
+        cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
+    if cleanup_errors:
+        _raise_feedback_error(
+            context,
+            manifest,
+            "feedback の中断処理に失敗しました。",
+            cleanup_errors,
+        )
+
+    try:
+        set_run_state(context, "joinable")
+    except BaseException as state_error:
+        _raise_feedback_error(
+            context,
+            manifest,
+            "feedback の中断処理に失敗しました。",
+            [f"state update failed: {state_error!r}"],
+        )
+    if manifest is not None and manifest_path is not None:
+        try:
+            # checkpoint file の write と manifest reference の write の間で止まっても、
+            # durable な正式結果を report から取り落とさない。
+            recover_report_cut_checkpoint_references(
+                context.repo, manifest, manifest_path
+            )
+            report._set_processing_state(context.repo, manifest, "interrupted", None)
+        except BaseException as manifest_error:
+            _raise_feedback_error(
+                context,
+                manifest,
+                "feedback の中断処理に失敗しました。",
+                [f"interruption manifest update failed: {manifest_error!r}"],
+            )
+        try:
+            _update_progress(context, manifest, "joinable")
+        except BaseException as progress_error:
+            _raise_feedback_error(
+                context,
+                manifest,
+                "feedback の中断処理に失敗しました。",
+                [f"interruption report state failed: {progress_error!r}"],
+            )
+    else:
+        try:
+            _update_context_progress(context, "joinable")
+        except BaseException as progress_error:
+            _raise_feedback_error(
+                context,
+                manifest,
+                "feedback の中断処理に失敗しました。",
+                [f"interruption report state failed: {progress_error!r}"],
+            )
+    try:
+        return report._record_feedback_interruption(
+            manifest,
+            manifest_path,
+            retained_run_path=context.run_worktree,
+        )
+    except BaseException as report_error:
+        _raise_feedback_error(
+            context,
+            manifest,
+            "feedback の中断処理に失敗しました。",
+            [f"interruption report failed: {report_error!r}"],
+        )
+
+
+def _record_feedback_error(
+    context: EditingRunContext,
+    manifest: dict[str, Any] | None,
+    error: BaseException,
+) -> None:
+    """通常の failure でも run error と invocation report の進捗を保持する。"""
+    _set_feedback_error_state(context, manifest, error, update_processing=True)
+
+
+def _raise_feedback_error(
+    context: EditingRunContext,
+    manifest: dict[str, Any] | None,
+    summary: str,
+    errors: Sequence[BaseException | str],
+    *,
+    update_processing: bool = True,
+) -> NoReturn:
+    """中断後の cleanup failure を正常な user interruption へ変換しない。"""
+    _set_feedback_error_state(
+        context,
+        manifest,
+        errors[-1] if errors and isinstance(errors[-1], BaseException) else None,
+        update_processing=update_processing,
+    )
+    logger = current_subcommand_logger()
+    detail_values = [
+        value if isinstance(value, str) else repr(value) for value in errors
+    ]
+    if logger is not None:
+        try:
+            logger.event(
+                "feedback_remediation_failed",
+                error=summary,
+                cleanup_errors=detail_values,
+            )
+        except BaseException:
+            pass
+    cause = next(
+        (value for value in reversed(errors) if isinstance(value, BaseException)),
+        None,
+    )
+    failure = _failure(
+        summary,
+        ["invocation report と run state を確認してください。"],
+        "\n".join(detail_values),
+    )
+    if cause is None:
+        raise failure from None
+    raise failure from cause
+
+
+def _set_feedback_error_state(
+    context: EditingRunContext,
+    manifest: dict[str, Any] | None,
+    error: BaseException | None,
+    *,
+    update_processing: bool,
+) -> None:
+    """error state/report を best effort で確定し、元の failure を隠さない。"""
+    failures: list[str] = []
+    try:
+        _set_error(context)
+    except BaseException as state_error:
+        failures.append(f"error state update failed: {state_error!r}")
+    if manifest is not None and update_processing and all(
+        manifest.get(name) is None for name in ("publication", "diagnostic")
+    ):
+        try:
+            report._set_processing_state(
+                context.repo,
+                manifest,
+                "failed",
+                repr(error) if error is not None else "feedback interruption cleanup failed",
+            )
+        except BaseException as manifest_error:
+            failures.append(f"error manifest update failed: {manifest_error!r}")
+    try:
+        _update_context_progress(context, "error")
+        if manifest is not None:
+            _update_progress(context, manifest, "error")
+    except BaseException as progress_error:
+        failures.append(f"error report progress failed: {progress_error!r}")
+    if failures:
+        logger = current_subcommand_logger()
+        if logger is not None:
+            try:
+                logger.event("feedback_error_cleanup_failed", errors=failures)
+            except BaseException:
+                pass
 
 
 def _set_error(context: EditingRunContext) -> None:

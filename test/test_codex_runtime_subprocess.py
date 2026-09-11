@@ -622,8 +622,70 @@ def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
             ["codex"], tracking_path, text=True, capture_output=True
         )
 
-    assert stopped == [(4321, (4321, 333), ())]
+    assert stopped == [(4321, (4321, 333), ((4321, 333),))]
     assert process.returncode == 0
+
+
+def test_tracked_codex_subprocess_stops_descendant_when_leader_exits_before_tracking(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """leader 終了後も残る descendant を tracking 失敗時に停止する。"""
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+    snapshots = iter([((222, 20),), ((222, 20),), ()])
+    stopped: list[tuple[tuple[int, int], ...]] = []
+
+    class ExitedLeader:
+        """tracking 登録前に終了した leader の最小 double。"""
+
+        pid = 4321
+        returncode = 0
+
+        def poll(self) -> int:
+            """leader が終了済みであることを返す。"""
+            return self.returncode
+
+        def wait(self) -> int:
+            """cleanup 後の reap を完了する。"""
+            return self.returncode
+
+        def kill(self) -> None:
+            """fallback が leader を直接停止したことを記録する。"""
+            self.returncode = -signal.SIGKILL
+
+    process = ExitedLeader()
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: process,
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: next(snapshots),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda members, _sig: stopped.append(members),
+    )
+
+    def fail_record(*_args: object, **_kwargs: object) -> None:
+        """leader 終了後の tracking 更新失敗を再現する。"""
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
+
+    monkeypatch.setattr(
+        runtime_codex_profile, "_record_tracked_child_process", fail_record
+    )
+
+    with pytest.raises(UnicodeDecodeError):
+        run_tracked_codex_subprocess(
+            ["codex"], tracking_path, text=True, capture_output=True
+        )
+
+    assert stopped == [((222, 20),)]
 
 
 @pytest.mark.parametrize("group_members", [None, ()])

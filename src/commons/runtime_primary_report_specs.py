@@ -8,7 +8,9 @@
 from dataclasses import dataclass
 from typing import Literal
 
-ReportTemplate = Literal["summary", "feedback_invocation", "refactor_fork"]
+ReportTemplate = Literal[
+    "summary", "feedback_invocation", "refactor_fork", "session_join"
+]
 TerminalClassification = Literal["natural_completion", "user_interruption", "error"]
 
 
@@ -64,6 +66,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "session_state_before",
             "session_state_after",
         ),
+        "session_join",
     ),
     "session abandon": PrimaryReportSpec(
         "session/abandon",

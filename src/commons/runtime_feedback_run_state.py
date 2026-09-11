@@ -316,6 +316,7 @@ def validate_run_artifacts(
         "completion": path.parent / "publication_completion.json",
     }
     last_watermark = 0
+    missing_wave_artifact = False
     for sequence, reference in enumerate(run["waves"], 1):
         target = _validate_report_cut_artifact_reference(
             repo,
@@ -327,6 +328,16 @@ def validate_run_artifacts(
         if target != path.parent / "wave" / str(sequence) / "input.json":
             raise _corruption("feedback wave の順序または path が不正です。", path)
         if not target.exists():
+            # Cleanup removes work artifacts in manifest order and may stop
+            # after an earlier wave.  Once that happens, a later wave's
+            # `after` value cannot be checked because the preceding boundary
+            # is no longer available.  The current-pointer path explicitly
+            # opts into this missing-artifact state; retain structural/path
+            # validation while deferring cross-wave continuity until the
+            # manifest itself is removed.
+            missing_wave_artifact = True
+            continue
+        if missing_wave_artifact and allow_missing:
             continue
         wave = _read_canonical_object(target, "feedback intake wave")
         _require_exact_fields(
@@ -394,7 +405,35 @@ def validate_run_artifacts(
 
 def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> None:
     """canonical schema と issue commit の機械検査記録が正式結果に一致するか検査する。"""
-    input_value = checkpoint.get("input")
+    checkpoint = _require_exact_fields(
+        checkpoint,
+        {
+            "schema_version",
+            "kind",
+            "report_cut_id",
+            "candidate_id",
+            "input",
+            "input_sha256",
+            "builder_sha256",
+            "schema_sha256",
+            "structured_output",
+            "output_sha256",
+            "audit",
+        },
+        path,
+        "remediation checkpoint",
+    )
+    if (
+        type(checkpoint["schema_version"]) is not int
+        or checkpoint["schema_version"] != 1
+        or checkpoint["kind"] != "remediation"
+    ):
+        raise _corruption("remediation checkpoint identity が不正です。", path)
+    for field in ("input_sha256", "builder_sha256", "schema_sha256", "output_sha256"):
+        value = checkpoint[field]
+        if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+            raise _corruption(f"remediation checkpoint {field} が不正です。", path)
+    input_value = checkpoint["input"]
     if (
         not isinstance(input_value, dict)
         or sha256_bytes(canonical_json_bytes(input_value)) != checkpoint["input_sha256"]
@@ -418,6 +457,8 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
         raise _corruption(
             "remediation checkpoint output が schema に適合しません。", path
         )
+    if sha256_bytes(canonical_json_bytes(output)) != checkpoint["output_sha256"]:
+        raise _corruption("remediation checkpoint output hash が一致しません。", path)
     result = output["result"]
     audit = _require_exact_fields(
         checkpoint.get("audit"),
@@ -435,6 +476,25 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
         path,
         "remediation audit",
     )
+    for reference, description in (
+        (audit["wave"], "remediation audit wave"),
+        (audit["call_log"], "remediation audit call log"),
+    ):
+        reference = _require_exact_fields(
+            reference, {"path", "sha256"}, path, description
+        )
+        reference_path = reference["path"]
+        reference_hash = reference["sha256"]
+        if (
+            not isinstance(reference_path, str)
+            or not reference_path
+            or Path(reference_path).is_absolute()
+            or ".." in Path(reference_path).parts
+            or Path(reference_path).as_posix() != reference_path
+            or not isinstance(reference_hash, str)
+            or re.fullmatch(r"[0-9a-f]{64}", reference_hash) is None
+        ):
+            raise _corruption(f"{description} が不正です。", path)
     validate_decision_basis(audit["decision_basis"], path)
     basis = audit["decision_basis"]
     if (
@@ -465,13 +525,35 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
             path,
             "feedback reconfirmation",
         )
-        if (
-            not isinstance(recheck["history"], list)
-            or not recheck["history"]
-            or recheck["history"][-1] != recheck["previous_checkpoint"]
-            or recheck["previous_checkpoint"].get("candidate_id")
-            != checkpoint["candidate_id"]
-        ):
+        history = recheck["history"]
+        if not isinstance(history, list) or not history:
+            raise _corruption("feedback 再確認の先行 checkpoint が不正です。", path)
+        for reference in history:
+            reference = _require_exact_fields(
+                reference,
+                {"candidate_id", "path", "sha256"},
+                path,
+                "feedback reconfirmation checkpoint reference",
+            )
+            if (
+                not isinstance(reference["candidate_id"], str)
+                or not isinstance(reference["path"], str)
+                or not reference["path"]
+                or Path(reference["path"]).is_absolute()
+                or ".." in Path(reference["path"]).parts
+                or Path(reference["path"]).as_posix() != reference["path"]
+                or not isinstance(reference["sha256"], str)
+                or re.fullmatch(r"[0-9a-f]{64}", reference["sha256"]) is None
+                or reference["candidate_id"] != checkpoint["candidate_id"]
+            ):
+                raise _corruption("feedback 再確認の先行 checkpoint が不正です。", path)
+        previous_checkpoint = _require_exact_fields(
+            recheck["previous_checkpoint"],
+            {"candidate_id", "path", "sha256"},
+            path,
+            "feedback reconfirmation previous checkpoint",
+        )
+        if history[-1] != previous_checkpoint:
             raise _corruption("feedback 再確認の先行 checkpoint が不正です。", path)
     expected_cycle = (
         recheck["cycle_states"]

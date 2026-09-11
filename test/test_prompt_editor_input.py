@@ -20,6 +20,7 @@ _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
 def test_editor_input_separates_work_and_saved_files_without_overwriting(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """可変な作業 file と保存記録を分離し、timestamp 衝突を回避する。"""
     timestamps = iter(
@@ -106,6 +107,14 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
     )
     assert first_input == "input-1"
     assert second_input == "input-2"
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    handoff_lines = captured.err.splitlines()
+    assert len(handoff_lines) == 2
+    assert all(
+        line.startswith("editor input handoff target ID: eit_")
+        for line in handoff_lines
+    )
     assert not list(first_copy.parent.glob("*_cmpl.md"))
     assert not (tmp_path / ".cmoc/gu/ar").exists()
     assert not (tmp_path / ".cmoc/gu/aw").exists()

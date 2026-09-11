@@ -779,13 +779,22 @@ def _observation_reference_targets(
     """次回 cut で再取得できる stable repository target を抽出する。"""
     targets: list[_JsonObject] = []
     payload = observation.get("payload")
+    fingerprints: dict[int, str] = {}
+    for item in observation.get("evidence_fingerprints", []):
+        if not isinstance(item, dict):
+            continue
+        evidence_index = item.get("evidence_index")
+        normalized_path = item.get("normalized_path")
+        if type(evidence_index) is int and isinstance(normalized_path, str):
+            fingerprints[evidence_index] = normalized_path
     if isinstance(payload, dict) and isinstance(payload.get("evidence"), list):
-        for evidence in payload["evidence"]:
-            if not isinstance(evidence, dict) or not isinstance(
-                evidence.get("path"), str
-            ):
+        for index, evidence in enumerate(payload["evidence"]):
+            if not isinstance(evidence, dict):
                 continue
-            candidate = _repository_path(repo, evidence["path"])
+            evidence_path = evidence.get("path")
+            if not isinstance(evidence_path, str):
+                continue
+            candidate = _repository_path(repo, fingerprints.get(index, evidence_path))
             if candidate is not None:
                 targets.append(
                     {
@@ -2318,7 +2327,10 @@ def _set_processing_state(
 
 
 def _record_feedback_interruption(
-    manifest: _JsonObject | None, manifest_path: Path | None
+    manifest: _JsonObject | None,
+    manifest_path: Path | None,
+    *,
+    retained_run_path: Path | None = None,
 ) -> TerminalResult:
     """中断を正常系として subcommand state と log へ記録する。"""
     _update_feedback_progress_fields(manifest)
@@ -2332,8 +2344,13 @@ def _record_feedback_interruption(
         )
     details: tuple[tuple[str, object], ...] = ()
     next_actions: tuple[str, ...] = ()
-    if manifest_path is not None:
-        details = (("保持した feedback run", manifest_path),)
+    if manifest_path is not None or retained_run_path is not None:
+        details = (
+            (
+                "保持した feedback run",
+                manifest_path if manifest_path is not None else retained_run_path,
+            ),
+        )
         next_actions = (
             "`cmoc run join` で確定済み修正を取り込むか、`cmoc run abandon` で破棄してください。",
         )

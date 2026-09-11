@@ -41,25 +41,63 @@ _CLICK_EXCEPTION_TYPES = _click_exception_types()
 
 
 def _patch_typer_click_help_compatibility() -> None:
-    """Click 8.2 の option help 変更を Typer の互換実装へ反映する。"""
+    """Click 8.2 の metavar 引数変更を Typer の help 実装へ反映する。"""
     # {{work-root}}/oracle/doc/dev_rule/design_rule.md
     # CLI の引数解釈とライブラリ間の互換境界は main.py に閉じ込める。
     if "ctx" in inspect.signature(click.Option.make_metavar).parameters:
-        # Click 8.2 は metavar の生成に context を要求するが、Typer 0.12 は渡さない。
-        original_make_metavar = cast(
-            Callable[[typer.core.TyperOption, object], str],
+        # Click 8.2 は metavar の生成に context を要求するが、Typer 0.12 の rich
+        # help は標準 click.Option に context を渡さない。
+        original_click_make_metavar = cast(
+            Callable[[click.Option, click.Context | None], str],
+            click.Option.make_metavar,
+        )
+
+        def context_for_metavar(ctx: click.Context | None) -> click.Context | None:
+            """context 省略時に、現在の Click context を利用する。"""
+            if ctx is not None:
+                return ctx
+            try:
+                return click.get_current_context()
+            except RuntimeError:
+                # Direct な help rendering では context stack がないことがある。
+                # Click の built-in ParamType は None を受け取って metavar を生成できる。
+                return None
+
+        def click_make_metavar_compatibility(
+            self: click.Option,
+            ctx: click.Context | None = None,
+        ) -> str:
+            """Click 標準 option の context 省略呼び出しを補完する。"""
+            return original_click_make_metavar(
+                self,
+                context_for_metavar(ctx),
+            )
+
+        setattr(
+            click.Option,
+            "make_metavar",
+            click_make_metavar_compatibility,
+        )
+
+        original_typer_make_metavar = cast(
+            Callable[..., str],
             typer.core.TyperOption.make_metavar,
         )
+        typer_make_metavar_parameters = inspect.signature(
+            original_typer_make_metavar
+        ).parameters
 
         def make_metavar_compatibility(
             self: typer.core.TyperOption,
             ctx: click.Context | None = None,
         ) -> str:
             """Typer から context なしで呼ばれる metavar を補完する。"""
-            return original_make_metavar(
-                self,
-                ctx if ctx is not None else click.get_current_context(),
-            )
+            if "ctx" in typer_make_metavar_parameters:
+                return original_typer_make_metavar(
+                    self,
+                    context_for_metavar(ctx),
+                )
+            return original_typer_make_metavar(self)
 
         setattr(
             typer.core.TyperOption,

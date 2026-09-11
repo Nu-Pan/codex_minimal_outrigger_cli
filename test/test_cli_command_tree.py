@@ -15,11 +15,23 @@
 - {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
 """
 
+import inspect
+
 import click
+import pytest
 from typer.main import get_command
 from typer.testing import CliRunner
 
 from main import app
+
+
+@pytest.fixture(autouse=True)
+def _clear_completion_probe_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """通常の CLI tree test を外部の completion probe 環境から分離する。"""
+    # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+    monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
 
 
 def _leaves(
@@ -71,6 +83,16 @@ def test_help_renders_without_typer_click_compatibility_error() -> None:
     for command_path in (("oracle", "edit"), ("run", "join")):
         result = runner.invoke(app, [*command_path, "--help"])
         assert result.exit_code == 0, result.output
+
+
+def test_click_option_metavar_accepts_contextless_help_call() -> None:
+    """Click 8.2 の標準 option も Typer の旧 rich help から呼び出せる。"""
+    if "ctx" not in inspect.signature(click.Option.make_metavar).parameters:
+        pytest.skip("Click 8.2 より前は metavar に context を要求しない")
+
+    option = click.Option(["--value"])
+    with click.Context(click.Command("cmoc")):
+        assert option.make_metavar() == "TEXT"
 
 
 def test_feedback_report_exposes_no_subcommand_specific_options() -> None:

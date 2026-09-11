@@ -310,6 +310,24 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     assert run_git(root, "status", "--short").stdout.strip() == "?? .gitignore"
 
 
+def test_commit_index_updates_force_adds_ignored_index_paths(tmp_path: Path) -> None:
+    """ignore pattern に一致する生成 INDEX.md も commit する。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("INDEX.md\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore generated indexes")
+    index_path = root / "INDEX.md"
+    index_path.write_text("# generated\n")
+
+    indexing_common.commit_index_updates(root, [index_path])
+
+    committed_paths = run_git(
+        root, "show", "--name-only", "--pretty=", "HEAD"
+    ).stdout.strip()
+    assert committed_paths == "INDEX.md"
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+
+
 def test_commit_index_updates_rejects_git_diff_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -338,7 +356,7 @@ def test_commit_index_updates_rejects_git_diff_failure(
         indexing_common.commit_index_updates(root, [root / "INDEX.md"])
 
     assert calls == [
-        (["add", "--", ":(literal)INDEX.md"], True),
+        (["add", "-f", "--", ":(literal)INDEX.md"], True),
         (["diff", "--cached", "--quiet", "--", ":(literal)INDEX.md"], False),
     ]
 

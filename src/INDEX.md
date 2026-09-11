@@ -49,21 +49,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 実装を提供する commons パッケージ。CLI 実行、Codex exec／TUI、設定、Git、ログ、パス、状態、feedback、report、editor input、run lifecycle など、複数の実行経路で共有される基盤機能への入口。
-- 共通 runtime の公開 API や、特定の runtime 境界を横断して挙動を確認・変更する際に、各責務別モジュールへ進むための上位入口。
+- cmoc の共有 runtime 実装を集約する commons パッケージ。CLI、Codex 実行、設定、Git、ログ、パス、状態、feedback、report、run lifecycle など、複数の実行経路から利用される共通境界への入口。
 
 ## Read this when
-- 複数の CLI・Codex・run・feedback 実行経路で共有される runtime 機能の責務や入口を確認するとき
-- 設定、Git、ログ、パス、状態、結果、report、editor input、feedback などの共通実装を変更・調査するとき
-- 対象の責務が特定の runtime サブモジュールに限定されず、commons 配下の公開境界や連携を確認するとき
+- 複数のサブコマンドや実行経路にまたがる runtime 機能の入口・公開 API・共通 lifecycle を確認するとき
+- Codex 実行、INDEX 更新、feedback、設定、Git、state、report、run 管理などの共通実装の所在を調べるとき
+- 特定の runtime helper を読む前に、commons 配下で担当モジュールを選ぶとき
 
 ## Do not read this when
-- 特定の runtime サブモジュールの内部実装や個別挙動だけを調べる場合は、その責務に対応するモジュールを直接読む
-- Codex exec／TUI、feedback reporter、editor handoff、run lifecycle など、対象となる個別実装が明確な場合は上位ディレクトリ入口を経由せず該当モジュールを読む
-- 仕様書、schema、oracle、realization file の正本や、個別 CLI サブコマンドの業務処理だけを確認する場合
+- 特定の runtime helper の内部挙動が明確で、その個別実装を直接確認すれば足りるとき
+- 利用者向け仕様や個別 CLI の業務フローなど、commons の共通実装に関係しない内容を確認するとき
 
 ## hash
-- d6fc7d3721c9d7587358c408096a8b5473f90d6417d2e5fc45aa370254517b98
+- 8a48e24964f735f1b42748c0ac3f4b7740cdee4378a99f4c5c6f4c2c37036d3f
 
 # `config`
 
@@ -85,19 +83,21 @@
 # `main.py`
 
 ## Summary
-- cmoc の CLI コマンドツリーを構成し、doctor・tui・indexing・feedback report と session／oracle／realization／run 配下の各コマンドを実装関数へ接続する起動入口。
-- Typer と Click の互換境界および CLI 引数解析エラーの cmoc 形式への変換を、このファイルで一元的に扱う。
+- cmoc の Typer/Click CLI ツリーと起動入口を定義する。トップレベルおよび session、oracle、realization、run、feedback 配下の各コマンドを、対応するサブコマンド実装へ接続する。
+- Click/Typer の互換性補正、補完 probe の扱い、CLI 引数解析エラーの cmoc 形式への変換など、CLI 起動時の境界処理を担う。
 
 ## Read this when
-- cmoc の公開 CLI コマンド構成、サブコマンドの登録、console script の起動経路を確認するとき。
-- Typer／Click の版差による help 互換性や、通常実行・補完 probe・引数解析エラーの境界を調査するとき。
+- cmoc の CLI コマンド追加・変更や、コマンド階層とサブコマンド実装の接続先を確認するとき。
+- Typer/Click の版差による help 表示、補完、引数解析エラー、終了コードの挙動を調査・変更するとき。
+- console script からの起動経路や、feedback report の遅延ロードを確認するとき。
 
 ## Do not read this when
-- 個別コマンドの業務処理や session／oracle／realization／run の詳細動作を確認したいときは、接続先の sub_commands 実装または対応する app_spec を直接読む。
-- INDEX.md の更新処理そのものや feedback observation の収集・報告仕様を確認したいときは、indexing／feedback の実装・正本仕様を直接読む。
+- 個別コマンドの業務処理や、各サブコマンド実装の詳細を変更・調査するときは、対応する sub_commands 配下を直接読む。
+- oracle、realization、session、run などの内部ワークフロー仕様だけを確認したいときは、対応する正本仕様や実装を直接読む。
+- INDEX.md の生成規則や一般的なエラー処理仕様だけを確認したいときは、該当する仕様文書を直接読む。
 
 ## hash
-- 31b3b57d02930d07729a3c68dc9072f718b7ccdc19fa4a18c399c6f4ba33cf6f
+- 9779ae11e83145b4d1e6f180791ff3855507369621957c37448f8d4a6caed407
 
 # `oracle.py`
 
@@ -117,16 +117,42 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を集約するパッケージ境界。doctor・feedback・indexing・oracle・realization・run・session・tui などの実行入口と、配下の処理群への案内を担う。
-- feedback、run、session、realization など複数モジュールにまたがる処理の構成や責務分担を確認するための上位入口。
+- src/sub_commands 配下のサブコマンド実装と関連パッケージへの入口を提供する。
+- apply は現時点で実装がなく、将来追加された実装を確認するための空の境界である。
+- doctor.py は doctor CLI の入口、preprocess の明示実行、repo root を含む実行結果を扱う。
+- feedback は観測判定、修復、report publication、cleanup・recovery の処理経路を扱う。
+- indexing.py は前提条件確認、排他下での INDEX.md 更新と差分 commit、結果報告までの indexing CLI フローを扱う。
+- oracle は編集系・調査系 oracle サブコマンドの package 境界として個別実装へ案内する。
+- realization は apply と refactor の workload 実装へ進む上位入口である。
+- review は realization 配下の review 実装を置く境界だが、現時点で具体的な実装はない。
+- run は editing run の abandon・join、停止・統合・cleanup・report・状態遷移、旧 import path の互換 shim を扱う入口である。
+- session は session の fork・join・abandon、branch・state 操作、統合・破棄・rollback・cleanup を横断する入口である。
+- tui.py は依頼文の編集から完全プロンプトと起動パラメータを構築し、Codex TUI を実行する入口である。
 
 ## Read this when
-- サブコマンド実装全体の構成や、個別サブコマンドの実行入口を確認するとき。
-- 対象サブコマンドの処理が複数の下位モジュールに分かれており、適切な実装へ進む先を判断するとき。
+- src/sub_commands 配下のサブコマンド実装の構成や、各処理領域への入口を確認するとき。
+- doctor の CLI 入口、preprocess の明示実行、実行結果の repo root 情報を確認するとき。
+- feedback の判定・修復・report publication・run 状態遷移・cleanup/recovery を横断して調べるとき。
+- INDEX.md 更新の前提条件、排他実行、差分 commit、primary report 反映を確認するとき。
+- oracle サブコマンドの編集・調査系実装への案内が必要なとき。
+- realization 配下の apply／refactor workload の構成や入口を確認するとき。
+- review realization の実装配置場所を確認するとき。
+- editing run の abandon／join と共通 lifecycle の入口を探すとき。
+- session の fork／join／abandon を横断して追跡するとき。
+- cmoc tui のプロンプト編集、起動パラメータ構築、Codex TUI 起動経路を確認するとき。
 
 ## Do not read this when
-- 対象サブコマンドや処理モジュールが明確で、対応する下位実装を直接確認できるとき。
-- サブコマンド共通 runtime や、個別処理の具体的な実装詳細だけを調べるとき。
+- apply が追加される前に、apply サブコマンドの具体的な処理内容を確認したいとき。
+- 対象が別のサブコマンドで、該当する下位実装や共通 runtime が直接の確認先になるとき。
+- doctor preprocess の具体的処理や CLI 共通 runtime だけを調べるとき。
+- feedback の共通 run lifecycle、永続 artifact 形式、観測受付の詳細だけを調べるとき。
+- indexing の具体的な更新規則・探索生成ロジック、CLI runtime、worktree 検査実装だけを調べるとき。
+- oracle edit／investigation の個別 prompt、起動パラメータ、共通処理を調べるとき。
+- realization apply／refactor の具体的 lifecycle や実装詳細だけを調べるとき。
+- oracle review の処理内容や仕様を調べるとき。
+- 共通 lifecycle の canonical 実装、workload 固有処理、run 作成や通常編集だけを調べるとき。
+- 共通 CLI 実行基盤、Git 操作、state 永続化の一般仕様だけを調べるとき。
+- TUI parameter builder、prompt editor input、共通 runtime の仕様だけを調べるとき。
 
 ## hash
-- fb4f6a0a51924f89800232367c0ec1ade45afa0f030cb542f3572838df478e44
+- deb721ebf5c95173cb0930a28d16a7a968267419e7513e69de485d68a80780a1

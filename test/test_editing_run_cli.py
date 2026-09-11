@@ -2324,6 +2324,92 @@ def test_apply_error_report_survives_change_inspection_failure(
     assert "change inspection failed" in reports[0].read_text()
 
 
+def test_apply_report_failure_after_joinable_publication_sets_error_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """成功処理後の fork report failure でも run state と report を一致させる。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.setattr(
+        apply_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
+    )
+    original_write_report = apply_module.write_fork_report
+    calls = 0
+
+    def fail_completed_report(*args: object, **kwargs: object) -> Path:
+        """最初の completed report だけを失敗させる。"""
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("completed report failed")
+        return original_write_report(*args, **kwargs)
+
+    monkeypatch.setattr(apply_module, "write_fork_report", fail_completed_report)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert calls == 2
+    assert _state(state_path)["run"]["state"] == "error"
+    report = terminal_primary_report(result)
+    assert 'state_after: "error"' in report.read_text()
+
+
+def test_refactor_report_failure_after_joinable_publication_sets_error_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """refactor の fork report failure でも run state と report を一致させる。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "_initialize_cycle", lambda _context: None)
+    monkeypatch.setattr(
+        refactor_module,
+        "select_refactor_target",
+        lambda *_args: None,
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "_completion_reason",
+        lambda *_args: "natural_completion",
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "_completion_change_summary",
+        lambda *_args: None,
+    )
+    original_write_report = refactor_module.write_fork_report
+    calls = 0
+
+    def fail_completed_report(*args: object, **kwargs: object) -> Path:
+        """最初の completed report だけを失敗させる。"""
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("completed report failed")
+        return original_write_report(*args, **kwargs)
+
+    monkeypatch.setattr(refactor_module, "write_fork_report", fail_completed_report)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert calls == 2
+    assert _state(state_path)["run"]["state"] == "error"
+    report = terminal_primary_report(result)
+    assert 'state_after: "error"' in report.read_text()
+
+
 def test_apply_error_preserves_unreadable_process_tracking(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2810,6 +2896,29 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
 
     assert result.exit_code == 0
     assert (root / "README.md").read_text() == "realized\n"
+
+
+def test_run_join_allows_doctor_config_repair(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """join 前 doctor の config 修復を session の想定外差分と判定しない。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    config = root / ".cmoc" / "gt" / "config.json"
+    config_data = json.loads(config.read_text())
+    config_data.pop("num_parallel")
+    config.write_text(json.dumps(config_data, indent=2) + "\n")
+    run_git(root, "add", ".cmoc/gt/config.json")
+    run_git(root, "commit", "-m", "create stale doctor config")
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert config.is_file()
+    assert "num_parallel" in json.loads(config.read_text())
 
 
 @pytest.mark.parametrize("change", ["rename", "delete"])

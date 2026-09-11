@@ -1012,6 +1012,18 @@ def run_tracked_codex_subprocess(
                 if cleanup_start_time is not None:
                     cleanup_expected_leader = (process.pid, cleanup_start_time)
                 cleanup_expected_members = process_group_members(process.pid)
+                if (
+                    cleanup_expected_members is not None
+                    and cleanup_expected_leader is not None
+                    and cleanup_expected_leader not in cleanup_expected_members
+                ):
+                    # process_group_members は zombie leader を snapshot から除く。
+                    # leader 終了後も descendant が残る場合に、既知の leader identity
+                    # を落とすと stop_process_group が安全な group 停止を拒否する。
+                    cleanup_expected_members = (
+                        *cleanup_expected_members,
+                        cleanup_expected_leader,
+                    )
                 tracked_start_time = _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
                 )

@@ -54,17 +54,8 @@ class SubcommandLogger:
 
     def event(self, kind: str, **payload: Any) -> None:
         """実行時に後から検査したい event を安定した JSON record として残す。"""
-        record = {
-            "event": kind,
-            "command": self.command,
-            "timestamp": datetime.now().isoformat(),
-            **payload,
-        }
-        with self._lock:
-            with self.path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
-                f.flush()
-            self._event_records.append(record.copy())
+        record = self._new_event_record(kind, payload)
+        self._append_event_record(record)
         # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
         # detector は event が flush された後だけ評価し、失敗を本命 logger へ返さない。
         if {
@@ -80,6 +71,33 @@ class SubcommandLogger:
             except Exception as exc:
                 # KeyboardInterrupt などのユーザー中断は detector failure として握り潰さない。
                 self._record_detector_failure(exc)
+
+    def write_terminal_event(self, **payload: Any) -> None:
+        """terminal event を共通 event dispatch の失敗から回復して追記する。"""
+        with self._lock:
+            if (
+                self._event_records
+                and self._event_records[-1].get("event") == "command_finished"
+            ):
+                return
+        self._append_event_record(self._new_event_record("command_finished", payload))
+
+    def _new_event_record(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """event の共通 envelope を構築する。"""
+        return {
+            "event": kind,
+            "command": self.command,
+            "timestamp": datetime.now().isoformat(),
+            **payload,
+        }
+
+    def _append_event_record(self, record: dict[str, Any]) -> None:
+        """event record を即時 flush し、同じ順序で in-memory snapshot へ保存する。"""
+        with self._lock:
+            with self.path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                f.flush()
+            self._event_records.append(record.copy())
 
     def _record_detector_failure(self, error: Exception) -> None:
         """detector failure を nonfatal な自由 event と warning に留める。"""

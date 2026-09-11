@@ -15,32 +15,36 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload と、apply fork の実行・差分検査・処理単位確定を扱う実装群への入口。
+- realization の apply 処理に関する workload を扱い、apply workload 実装への入口となる。
+- realization apply fork の実行管理を担い、oracle 差分の追従、agent 実行、変更検査、commit、run state・fork report 反映までを扱う。
 
 ## Read this when
-- realization apply workload の実装を調査・変更するとき
-- realization apply fork の run 作成、agent 実行、差分検査、commit、joinable 公開、成功・失敗 report の挙動を確認するとき
+- realization の apply workload の内容を調査・変更するとき。
+- oracle 差分を追従する apply fork の開始条件、差分固定、agent 実行、変更検査、commit、joinable 公開の流れを確認するとき。
+- apply fork の失敗時の rollback、error report、cleanup warning の保存方法を確認するとき。
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき
-- apply fork の agent 起動パラメータだけを確認するとき
-- editing run 共通ライフサイクルや realization apply agent の具体的な差分内容を直接確認するとき
+- apply workload 以外の処理を扱うとき。
+- 通常の realization apply の agent 指示や仕様を確認するときは、対応する realization apply の仕様・launch 定義を直接読む。
+- 既存 run の join／abandon 操作や一般的な editing run ライフサイクルだけを調べるときは、共通 run ライフサイクルの対象を読む。
 
 ## hash
-- bea89968dea14226e760d3c9247a1219bab9432e20fd4963c5637d0245c3a499
+- 34f5bd87eebd7912ce893b5903b7f5ad75593ab25165f531e8f24f2407149894
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージ。fork の実行ライフサイクルを入口として、対象調査・修正、状態更新、commit、未解決事項管理、完了判定、report 保存までを扱う。
+- realization refactor package の処理をまとめる入口。fork による full-cycle の run lifecycle、対象 file の調査・修正、unresolved findings と state の管理、完了判定、report 公開までを扱う。
 
 ## Read this when
-- realization refactor fork の処理順序や対象反復、状態・commit・INDEX の検証、完了条件、cleanup、report を確認または変更するとき。
+- realization refactor fork の実行 lifecycle、処理単位、完了判定、report 公開の流れを確認・変更するとき。
+- 対象 file への agent 呼び出し、Structured Output、変更 path・commit の検証、refactor state や INDEX 同期を確認するとき。
+- unresolved findings の追跡、rename、中断・例外時の cleanup、rollback、error state の扱いを調査するとき。
 
 ## Do not read this when
-- realization のリファクタリング以外の処理を確認するとき。
-- 対象選択や refactor state 同期の詳細だけを確認するときは、専用の state 管理・target selection 実装を読むとき。
-- file review agent や change summary の prompt・schema 契約だけを確認するとき。
+- refactor 対象の選定や state 永続化そのものを確認したいとき。
+- 単一 realization file の agent 用 prompt や出力契約だけを確認したいとき。
+- 変更概要の生成・分類だけ、または共通 runtime の report、editing run、Git commit、process tracking の一般仕様だけを確認したいとき。
 
 ## hash
-- 189d1ee01f0ac00be80a00c9f83bab58c4fec771daf07b5797245060aa012226
+- 960468530a809af0978896b822d4814954ef3617dc5966ae0ab5315ddeab7e52

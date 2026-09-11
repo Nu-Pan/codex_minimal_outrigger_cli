@@ -76,7 +76,7 @@ def _emit_quota_progress(message: str) -> None:
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     print(
-        f"# {console_timestamp()} Codex CLI quota wait: {message}",
+        f"# {console_timestamp()} Codex CLI の quota 回復待ち: {message}",
         file=sys.stderr,
         flush=True,
     )
@@ -833,7 +833,7 @@ def run_codex_exec(
                 with _QUOTA_CONDITION:
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
-                        _emit_quota_progress("waiting for representative probe")
+                        _emit_quota_progress("代表 probe の実行を待機中")
                         _QUOTA_CONDITION.wait_for(lambda: not _QUOTA_POLLING)
                         waited_sec = time.perf_counter() - wait_started_at
                         quota_wait_sec += waited_sec
@@ -863,7 +863,7 @@ def run_codex_exec(
                     _QUOTA_PROBE_ERROR = None
                     _QUOTA_POLLING = True
                 try:
-                    _emit_quota_progress("entering polling mode")
+                    _emit_quota_progress("ポーリングを開始")
                 except BaseException as exc:
                     with _QUOTA_CONDITION:
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -1045,7 +1045,7 @@ def run_codex_exec(
                             time.sleep(quota_probe_sleep_sec)
                             quota_probe_sleep_sec *= 2
                             capacity_retry_pending = True
-                            _emit_quota_progress("continuing")
+                            _emit_quota_progress("待機を継続")
                             continue
                         if not probe_available and (
                             probe_unexpected_error or not probe_quota_error
@@ -1090,7 +1090,7 @@ def run_codex_exec(
                         )
                         if probe_available:
                             break
-                        _emit_quota_progress("continuing")
+                        _emit_quota_progress("待機を継続")
                 except BaseException as exc:
                     probe_error = exc
                     raise
@@ -1103,7 +1103,7 @@ def run_codex_exec(
                         _QUOTA_PROBE_ERROR = probe_error
                         _QUOTA_POLLING = False
                         _QUOTA_CONDITION.notify_all()
-                _emit_quota_progress("resuming work")
+                _emit_quota_progress("処理を再開")
                 resume_session_id = correction_session_id or (
                     _extract_session_id_from_stdout_log(stdout_path)
                 )

@@ -209,6 +209,7 @@ def test_update_indexes_restores_partial_writes_when_entry_generation_fails(
     (nested / "INDEX.md").write_text(original_nested_index)
     run_git(root, "add", "docs")
     run_git(root, "commit", "-m", "add indexing fixtures")
+    generated_paths: list[Path] = []
 
     def fake_build_index_entry(
         update_root: Path,
@@ -217,6 +218,7 @@ def test_update_indexes_restores_partial_writes_when_entry_generation_fails(
         codex_exec: Callable[..., object] | None = None,
     ) -> str:
         """深い directory は成功させ、後続 directory で失敗させる fake。"""
+        generated_paths.append(path)
         if path == failed:
             raise cmoc_runtime.CmocError("entry generation failed", [], str(path))
         return _render_test_entry(update_root, path, digest=digest)
@@ -226,6 +228,7 @@ def test_update_indexes_restores_partial_writes_when_entry_generation_fails(
     with pytest.raises(cmoc_runtime.CmocError, match="entry generation failed"):
         indexing_common.update_indexes(root)
 
+    assert generated_paths.index(ready) < generated_paths.index(failed)
     assert (nested / "INDEX.md").read_text() == original_nested_index
     assert not (root / "docs" / "INDEX.md").exists()
     assert not (root / "INDEX.md").exists()

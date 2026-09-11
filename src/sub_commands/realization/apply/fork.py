@@ -30,6 +30,7 @@ from commons.runtime_run_lifecycle import (
     refresh_indexes,
     rollback_work_unit,
     session_run_was_ready,
+    set_run_error_after_joinable_publication,
     set_run_state,
     start_editing_run,
     tree_changes,
@@ -60,6 +61,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
     agent_commit_check_active = False
     preflight_head: str | None = None
     work_unit_committed = False
+    joinable_publication_attempted = False
     cleanup_warnings: list[str] = []
     start_attempted = False
     start_was_ready = False
@@ -221,6 +223,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             work_unit_committed = True
             changes = tree_changes(context.run_worktree, context.run_fork_commit)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
+        joinable_publication_attempted = True
         set_run_state(context, "joinable")
         changed_paths = flattened_change_paths(changes)
         update_primary_report_fields(
@@ -268,6 +271,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             cleanup_warnings,
             agent_head=agent_head if agent_commit_check_active else None,
             preflight_head=preflight_head if not work_unit_committed else None,
+            joinable_publication_attempted=joinable_publication_attempted,
         )
         error = CmocError(
             "realization apply fork は error state で停止しました。",
@@ -357,6 +361,7 @@ def _record_error(
     *,
     agent_head: str | None = None,
     preflight_head: str | None = None,
+    joinable_publication_attempted: bool = False,
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
     cleanup_errors = list(cleanup_warnings or [])
@@ -390,11 +395,29 @@ def _record_error(
         rollback_work_unit(context.run_worktree)
     except BaseException as cleanup_error:
         cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
+    state_updated = False
     try:
         set_run_state(context, "error")
-        update_primary_report_fields(state_after="error")
+        state_updated = True
     except BaseException as state_error:
-        cleanup_errors.append(f"state update failed: {state_error!r}")
+        if joinable_publication_attempted:
+            try:
+                set_run_error_after_joinable_publication(context)
+                state_updated = True
+            except BaseException as recovery_error:
+                cleanup_errors.append(
+                    f"state update failed: {state_error!r}; "
+                    f"joinable publication recovery failed: {recovery_error!r}"
+                )
+        else:
+            cleanup_errors.append(f"state update failed: {state_error!r}")
+    if state_updated:
+        try:
+            update_primary_report_fields(state_after="error")
+        except BaseException as report_state_error:
+            cleanup_errors.append(
+                f"primary report state update failed: {report_state_error!r}"
+            )
     # 最終 git inspection が失敗しても error report を保存できるようにする。
     # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
     try:

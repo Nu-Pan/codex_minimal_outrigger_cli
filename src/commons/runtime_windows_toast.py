@@ -65,6 +65,11 @@ _ENCODED_POWERSHELL_SCRIPT = base64.b64encode(
 ).decode("ascii")
 
 
+def _completion_probe_active() -> bool:
+    """shell completion probe 中は notification boundary を無効にする。"""
+    return "_CMOC_COMPLETE" in os.environ
+
+
 @dataclass
 class TuiNotificationCallback:
     """1 回の Codex TUI process に閉じた callback と重複排除領域。"""
@@ -97,7 +102,7 @@ def create_tui_notification_callback(
     repository_root: Path,
 ) -> TuiNotificationCallback | None:
     """root session を記録して turn 完了を絞り込む callback 群を作る。"""
-    if not sys.executable:
+    if _completion_probe_active() or not sys.executable:
         return None
 
     # callback ごとの process 間重複排除にだけ使う一時 directory を用意する。
@@ -134,6 +139,8 @@ def notify_terminal_result(
     state: ToastState,
 ) -> None:
     """最外側サブコマンドの確定済み terminal result を通知する。"""
+    if _completion_probe_active():
+        return
     _notify_fields(command_name, repository_label(repository_root), state)
 
 
@@ -167,6 +174,8 @@ def _powershell_executable() -> Path | None:
 
 def _run_windows_toast_transport(title: str, message: str) -> bool:
     """JSON stdin と固定 PowerShell script で WinRT toast を有限時間だけ試行する。"""
+    if _completion_probe_active():
+        return False
     executable = _powershell_executable()
     if executable is None:
         return False
@@ -361,6 +370,8 @@ def _run_codex_tui_session_start_hook(
     payload: object,
 ) -> int:
     """Codex の root SessionStart payload から session ID だけを記録する。"""
+    if _completion_probe_active():
+        return 0
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/schema.rs#L496-L542
     if len(arguments) != 2 or arguments[0] != "codex-tui-session-start-hook":
         return 0
@@ -378,6 +389,8 @@ def _run_codex_tui_session_start_hook(
 
 def _run_codex_tui_callback(arguments: Sequence[str]) -> int:
     """最終 turn callback のうち記録済み root session だけを受理する。"""
+    if _completion_probe_active():
+        return 0
     callback_lease = None
     if len(arguments) >= 2 and arguments[0] == "codex-tui-callback":
         callback_lease = _begin_tui_callback_lease(Path(arguments[1]))
@@ -389,6 +402,8 @@ def _run_codex_tui_callback(arguments: Sequence[str]) -> int:
 
 def _run_codex_tui_callback_body(arguments: Sequence[str]) -> int:
     """callback payload を検証し、記録済み root session だけを通知する。"""
+    if _completion_probe_active():
+        return 0
     # legacy callback は Stop continuation が終わった後にだけ起動される。
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/core/src/session/turn.rs#L503-L562
     if len(arguments) != 5 or arguments[0] != "codex-tui-callback":
@@ -420,6 +435,8 @@ def _run_codex_tui_callback_body(arguments: Sequence[str]) -> int:
 def main(arguments: Sequence[str] | None = None) -> int:
     """Codex TUI notification callback 群の常に非致命的な入口。"""
     try:
+        if _completion_probe_active():
+            return 0
         resolved_arguments = list(sys.argv[1:] if arguments is None else arguments)
         if (
             len(resolved_arguments) == 2
