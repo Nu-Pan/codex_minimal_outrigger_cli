@@ -720,10 +720,10 @@
     "last_investigated_at": "2026-09-10_09-42_11_195584000"
   },
   "src/commons/runtime_cli.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "7a4b235c65908724cdfe59780a3318f8aae179b485fd4de3e2831d0249879008",
-    "last_investigated_at": "2026-08-13_21-53_02_889581000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "614a76ab85097ee4d149a6c74833698082f693ef68108b9e087247704a81cc63",
+    "last_investigated_at": "2026-09-11_19-03_37_052152000"
   },
   "src/commons/runtime_codex.py": {
     "investigation_required": false,
