@@ -306,10 +306,10 @@
     "last_investigated_at": "2026-09-10_10-54_34_696225000"
   },
   "oracle/src/oracle/acp_builder/feedback/normalize_issue.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "036ff1f061244c0860726b49546fb80933306c407207e135ecd6003c6b2eff48",
-    "last_investigated_at": "2026-08-13_15-40_49_011044000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "2151f8aa221438f82a77b1613a61062bb03b2d1dae49e1e22814268b9b36245c",
+    "last_investigated_at": "2026-09-11_11-07_17_731220000"
   },
   "oracle/src/oracle/acp_builder/feedback/remediate_issue.json": {
     "investigation_required": false,
