@@ -53,6 +53,7 @@ from commons.runtime_feedback_state import (
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
+    _has_symlink_component,
     canonical_json_bytes,
     rfc3339_now,
     sha256_bytes,
@@ -106,9 +107,27 @@ def run_feedback_report() -> TerminalResult:
         # doctor と必要な INDEX 更新を完了してから clean を判定する。
         doctor_preprocess_for_join()
         feedback_directory = repository / ".cmoc/gu/feedback"
+        feedback_work_root = feedback_directory / "work"
+        # cleanup は空の work root 自体を残すため、root の存在だけでは
+        # recovery 対象の report cut を示さない。空 root の後続 invocation
+        # でも startup の indexing preflight を実行できるよう、実際の
+        # entry がある場合だけ preflight を遅延させる。
+        has_feedback_work = _has_symlink_component(feedback_work_root)
+        if not has_feedback_work and feedback_work_root.exists():
+            if not feedback_work_root.is_dir():
+                has_feedback_work = True
+            else:
+                try:
+                    has_feedback_work = any(feedback_work_root.iterdir())
+                except OSError:
+                    # 後続の state validation に同じ filesystem error を渡し、
+                    # preflight の commit で診断対象を隠さない。
+                    has_feedback_work = True
+        finalization_path = feedback_directory / "finalization.json"
         if (
-            not (feedback_directory / "work").exists()
-            and not (feedback_directory / "finalization.json").exists()
+            not has_feedback_work
+            and not _has_symlink_component(finalization_path)
+            and not finalization_path.exists()
         ):
             run_indexing_preflight(repository, report.run_codex_exec)
         branch = current_branch(session_worktree)

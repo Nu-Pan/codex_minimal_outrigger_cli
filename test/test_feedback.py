@@ -1674,6 +1674,31 @@ def test_empty_report_publishes_current_generation(
     )
 
 
+def test_feedback_report_rechecks_indexing_after_empty_work_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cleanup 後に残る空の work root を recovery 対象と誤認しない。"""
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+
+    first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert first.exit_code == 0, first.output
+    work_root = feedback_root(root) / "work"
+    assert work_root.is_dir()
+    assert not any(work_root.iterdir())
+
+    calls: list[tuple[Path, object]] = []
+    monkeypatch.setattr(
+        remediation_module,
+        "run_indexing_preflight",
+        lambda repository, codex_exec: calls.append((repository, codex_exec)),
+    )
+    second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert second.exit_code == 0, second.output
+    assert calls == [(root, feedback_report_module.run_codex_exec)]
+
+
 @pytest.mark.parametrize("condition", ["dirty_worktree", "dirty_index", "inactive"])
 def test_feedback_preconditions_preserve_existing_changes_and_raw(
     tmp_path: Path,

@@ -116,27 +116,20 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装をまとめるディレクトリ入口。doctor、feedback、indexing、oracle、realization、review、run、session、tui など、各サブコマンドの実行入口や配下の処理へ進むための上位ルーティング対象。
-- apply は現時点で実装ファイルがなく、将来 apply サブコマンドの実装が追加された場合に確認する対象。
-- doctor は `cmoc doctor` の CLI 入口と、doctor preprocess を CLI runtime 経由で明示的に 1 ステップ実行する処理を扱う。
-- feedback は判定根拠の固定・差分検出、remediation から publication、report 集約・公開、publication 後の recovery までを扱うモジュール群への入口。
-- indexing は work root の INDEX.md 更新、実行前提条件の検査、排他ロック、差分 commit、primary report 反映を行う CLI 入口。
-- oracle は編集系・調査系を含む oracle サブコマンド群の package 境界で、個別の実行入口や処理フローへ進むための対象。
-- realization は realization 配下の workload 実装をまとめ、apply と refactor の処理入口へ振り分けるディレクトリ。
-- review は review サブコマンドの realization 実装を配置するディレクトリだが、現時点で具体的な実装本文はない。
-- run は editing run の abandon・join に関する停止、統合、cleanup、report、状態遷移、および旧 import path の互換 shim を扱う実装群への入口。
-- session は session の fork・join・abandon に関する実行条件、状態遷移、branch 操作、失敗時 rollback を扱う実装パッケージ。
-- tui は依頼文の編集から完全プロンプト・起動パラメータの構築、Codex TUI の実行までを担う tui サブコマンド本体。
+- 対象ディレクトリは、各 CLI サブコマンドの実装入口をまとめる上位ルーティング対象です。
+- doctor・indexing・tui の実行入口、feedback・oracle・realization・run・session のサブコマンド群へ進む際の起点になります。
+- apply と review には現時点で実装ファイルがなく、将来の実装配置を示す空の境界です。
 
 ## Read this when
-- src/sub_commands 配下のサブコマンド構成を把握し、個別の実装対象へ進む入口を判断するとき。
-- doctor、feedback、indexing、oracle、realization、review、run、session、tui のいずれかの CLI 入口または実装群を調査・変更するとき。
-- apply または review の実装追加先を確認するとき。
+- CLI サブコマンドの実装を探す際に、対象ディレクトリ直下の入口またはサブコマンド群の構成を確認するとき。
+- doctor、indexing、tui の入口処理を確認するとき。
+- feedback、oracle、realization、run、session 配下の個別処理へ進む前に、サブコマンド群の上位境界を把握するとき。
+- apply または review の実装を追加・確認する場所を調べるとき。
 
 ## Do not read this when
-- 特定サブコマンドの具体的な処理詳細だけを確認したい場合は、対応する下位実装を直接読むとき。
-- CLI runtime 共通処理、repository・work root 解決、共通 artifact や canonical JSON など、サブコマンド固有ではない処理だけを調べるとき。
-- src/sub_commands 配下のサブコマンドを扱わないとき。
+- 特定サブコマンドの詳細な処理、ライフサイクル、runtime、workload、入力編集などを確認したいときは、対応する下位実装を直接読む。
+- CLI 共通 runtime や共通 artifact、indexing の具体的な探索・生成規則など、対象ディレクトリのサブコマンド入口を越えた共通処理だけを調べるとき。
+- 対象ディレクトリに含まれないサブコマンドや、apply・review の実装が追加される前の具体的な処理内容を調べるとき。
 
 ## hash
-- d8ae54525d971b3f36638cdb3085808dc7fdbf5b60a1ce55c65ef16919497ada
+- 3dbdeec382e5df7c9535952100faf69c7703f14e5f84b408a1124ff34548f2d8

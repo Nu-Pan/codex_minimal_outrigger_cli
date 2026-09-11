@@ -452,21 +452,22 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の agent-facing reporter と collector から raw observation、issue candidate、remediation、active state の atomic publication、cleanup までを同一 fixture で検証する統合テスト。
-- MCP/JSON-RPC と TCP transport の入力検証、認証・rate limit・失敗時の degraded warning、secret masking、path boundary、UTF-8 制約を確認する。
-- pending observation の正規化・重複排除・threshold 集約、修復中の late intake、rollback/recovery、current pointer と generation artifact の整合性を検証する。
+- feedback の pending observation を raw store から取り込み、agent/machine issue の候補化・検証・remediation・active state への集約を検証する統合テスト。
+- collector と agent-facing reporter の MCP/TCP 境界、認証・入力検証・rate limit・UTF-8・secret masking・失敗時 warning を確認する。
+- session precondition、並行 call、遅延 intake、worktree cleanup、atomic publication、recovery、current pointer と active generation の整合性を検証する。
 
 ## Read this when
-- feedback report の受付境界や reporter protocol の挙動を確認・変更するとき。
-- raw observation から active issue、machine aggregate、remediation、report publication、cleanup までのライフサイクルを確認するとき。
-- atomic publication、失敗後の recovery、current pointer、generation manifest、active state の破損検出を確認するとき。
+- feedback observation の受理から report publication、active state の compact 化、raw cleanup までの一連の挙動を変更・調査するとき。
+- feedback reporter、collector transport、observation store、candidate identity、machine recurrence threshold、remediation/recovery の実装を確認するとき。
+- active state や report cut、generation manifest、cleanup の破損時に publication と再実行がどう振る舞うかを確認するとき。
 
 ## Do not read this when
-- feedback reporter の単一関数の実装詳細だけを確認する場合は、reporter 実装または専用の小粒度テストへ直接進む。
-- active state の schema や remediation の正本仕様そのものを確認する場合は、対応する仕様・builder・state 実装を直接読む。
+- feedback の単一関数や正本仕様だけを確認する場合は、対応する実装・oracle・仕様ファイルを直接読む。
+- feedback 以外の subcommand、一般的な CLI 起動、または本テストが対象としない機能の挙動を調べる場合。
+- INDEX.md の経路判断だけが目的で、observation lifecycle、reporter/collector 境界、publication/recovery の検証内容が不要な場合。
 
 ## hash
-- 9b05dd45c06132c23e3b5041feb629bac6ef0ad65ad34cf536af01b6485cc95f
+- 4056c8ab1a2d7f3f3db440cbc74845194a3cb0ccdcc85b914b3c14c1fcf75e21
 
 # `test_feedback_decision.py`
 
