@@ -1,21 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc の各 app spec を、CLI の自動補完、Codex agent call、model provider、出力・エラー処理、feedback、editor input、run・session lifecycle、各種サブコマンドなどの責務別に参照するための仕様群への入口。
-- 共通仕様と個別仕様の責務分担を確認し、対象機能の詳細を担う app spec へ進むための上位ルーティング対象。
+- cmoc のアプリケーション仕様群を横断する目次。自動補完、Codex CLI 実行、ログ・エラー処理、feedback、session/run lifecycle、サブコマンド、通知などの正本仕様への入口を提供する。
+- 個別仕様の責務や参照境界を把握し、実装・変更・レビュー時に適切な下位仕様へ進むための階層入口。
 
 ## Read this when
-- cmoc の app spec 群から、対象機能に対応する正本仕様を選びたいとき
-- 複数の app spec にまたがる CLI 実行、出力、feedback、session、editing run、TUI などの仕様の参照先を判断するとき
-- 個別仕様を読む前に、共通仕様と専門仕様の境界を把握したいとき
+- cmoc のアプリケーション仕様全体から、確認すべき正本仕様や関連する仕様領域を判断したいとき
+- CLI 実行、サブコマンド、session/run、feedback、ログ、通知、自動補完などの共通契約を調査・変更するとき
+- 複数の仕様領域にまたがる処理の責務分担や参照先を確認するとき
 
 ## Do not read this when
-- 特定の機能やサブコマンドの詳細仕様が明らかで、対応する個別 app spec を直接確認できるとき
-- 実装 module、exact な設定 field・型・schema、prompt の正確な文面など、app spec が直接所有しない詳細を確認したいとき
-- INDEX.md の生成規則や既存の目次内容だけを確認したいとき
+- 特定の機能の詳細な要求、正確な field・型・prompt・schema、または実装 API だけを確認したいときは、該当する下位仕様や正本実装を直接読む
+- INDEX.md の生成手順、一般的な開発環境、または対象仕様と無関係な実装詳細だけを確認したいとき
 
 ## hash
-- e469cdc5481e8972dc4a5bec1734c41ce793ce26085f3455d370fe86bfe0f9a4
+- 6afabbfd1c5abf76051c988ee8e8676137f32357712dfd6c8d3b4e14e4469941
 
 # `branch_model.md`
 

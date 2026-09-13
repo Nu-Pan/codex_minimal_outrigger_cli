@@ -15,16 +15,22 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` builder 用の realization adapter package。oracle edit 向け builder 実装へ進むためのパッケージ入口。
+- oracle edit builder の実装パッケージ入口を提供する。
+- oracle edit の起動 exec parameter builder へ互換 import 経路を提供する。
+- 現時点で案内対象となる内容を持たない空の下位ディレクトリを含む。
 
 ## Read this when
-- `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき。
+- oracle edit builder adapter の責務や実装入口を確認するとき
+- oracle edit の起動 exec parameter builder を互換 import 経路から参照するとき
+- 下位ディレクトリに新しい実装・テスト・補助ファイルが追加されたか確認するとき
 
 ## Do not read this when
-- oracle edit の具体的な編集処理や CLI 全体の挙動を確認するときは、実装ファイルまたは上位の CLI 関連ファイルを直接読む。
+- oracle edit の具体的な編集処理を確認・変更するとき
+- 正本 builder の実装や挙動を確認・変更するとき
+- 既存の実装やテストを調査するときは、対応する実装本体やテストを直接読む
 
 ## hash
-- b1383fbbd6c0d1e8620975620e380ef789da565e4710f09f8f46c23740359e26
+- 5da3687b9528c9878fc050790608d23901e1dec1e3fd53f6cda380ce869ed50e
 
 # `investigation`
 

@@ -1,17 +1,18 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` の編集 agent call 起動処理を扱うディレクトリです。空の `fork` と、編集 call および仕様削減 call の起動パラメータを構築する `launch_exec.py` を入口として含みます。
+- oracle edit の起動処理に関する実装の入口で、ユーザー指示・oracle file・未コミット差分から編集用 prompt と実行パラメータを組み立てる。
 
 ## Read this when
-- `cmoc oracle edit` の agent call 起動条件、prompt 構成、起動パラメータ、または編集後の仕様削減 call の責務分担を確認するとき。
+- `cmoc oracle edit` の初回 agent call に渡す prompt、oracle 専用書き込み権限、作業ディレクトリ、indexing preflight 無効化、または共通起動パラメータの構築条件を確認・変更するとき。
 
 ## Do not read this when
-- oracle file の編集処理そのものや仕様削減の判断基準を確認するとき。
-- session の join・競合解決、または `cmoc oracle edit` 以外の agent call 起動処理を調べるとき。
+- oracle edit の意味仕様や編集方針そのものを確認するとき。
+- 一般的な prompt 構築処理や構造化文書のレンダリングを確認・変更するとき。
+- この配下の具体的な実装ファイルを直接確認でき、ディレクトリ単位の案内が不要なとき。
 
 ## hash
-- 1eb610342b71ff8cafcb6c5f9b78e7d7a511e756c84d0ca8efcf60e6716fe9fa
+- b6de0a31af20ff4a66983cc26e233f190ebc0c996d24b4a24d10314c5cc9dccc
 
 # `investigation`
 

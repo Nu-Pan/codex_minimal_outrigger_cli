@@ -94,12 +94,10 @@ def execution_record_markdown(
 
 
 def oracle_edit_statuses(logger: SubcommandLogger) -> dict[str, object]:
-    """Codex event から本命・仕様削減 agent call の実行状況を確定する。"""
+    """Codex event から 1 回目・2 回目の編集 agent call の実行状況を確定する。"""
     return {
-        "main_agent_call_status": _agent_call_status(logger, "oracle edit main"),
-        "reduction_agent_call_status": _agent_call_status(
-            logger, "oracle edit reduction"
-        ),
+        "first_agent_call_status": _agent_call_status(logger, "oracle edit first"),
+        "second_agent_call_status": _agent_call_status(logger, "oracle edit second"),
     }
 
 
@@ -437,9 +435,8 @@ def _agent_call_status(logger: SubcommandLogger, purpose: str) -> str:
     }
     if any(event.get("status") in failure_statuses for event in matching):
         return "failed"
-    step_fragment = (
-        "本命 agent call" if purpose.endswith("main") else "仕様削減 agent call"
-    )
+    pass_number = 1 if purpose.endswith("first") else 2
+    step_fragment = f"{pass_number} 回目の編集 agent call"
     if matching or any(
         step_fragment in step.description for step in logger.step_timings
     ):

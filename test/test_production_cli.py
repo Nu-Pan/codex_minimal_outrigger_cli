@@ -624,7 +624,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert session_branch.startswith("cmoc/session/")
 
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-    # oracle edit は本命と仕様削減を別の exec agent call として直列実行する。
+    # oracle edit は同じ入力の編集を独立した exec agent call で直列実行する。
     _state_path, oracle_edit_state_before = _load_session_state(root, session_branch)
     oracle_edit_calls_before = _codex_call_logs(root)
     oracle_edit_result = run_production("oracle", "edit")
@@ -634,21 +634,42 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         payload = _assert_real_codex_call(call_path)
         purpose = str(payload["purpose"])
         oracle_edit_payloads.setdefault(purpose, []).append(payload)
-    assert "oracle edit main" in oracle_edit_payloads
-    assert "oracle edit reduction" in oracle_edit_payloads
-    main_payload = oracle_edit_payloads["oracle edit main"][0]
-    reduction_payload = oracle_edit_payloads["oracle edit reduction"][0]
-    assert main_payload["agent_call_id"] != reduction_payload["agent_call_id"]
-    assert "resume" not in main_payload["argv"]
-    assert "resume" not in reduction_payload["argv"]
+    assert "oracle edit first" in oracle_edit_payloads
+    assert "oracle edit second" in oracle_edit_payloads
+    first_payload = oracle_edit_payloads["oracle edit first"][0]
+    second_payload = oracle_edit_payloads["oracle edit second"][0]
+    assert first_payload["agent_call_id"] != second_payload["agent_call_id"]
+    assert "resume" not in first_payload["argv"]
+    assert "resume" not in second_payload["argv"]
 
     # 各 agent call の stdin に直接渡した完全 prompt 本文を追跡する。
-    main_prompt = Path(str(main_payload["prompt_log_path"])).read_text()
-    assert EDITOR_PROMPT.strip() in main_prompt
-    assert "{{original-prompt-here}}" not in main_prompt
-    reduction_prompt = Path(str(reduction_payload["prompt_log_path"])).read_text()
-    assert EDITOR_PROMPT.strip() in reduction_prompt
-    assert "# 仕様削減の判断条件" in reduction_prompt
+    first_prompt = Path(str(first_payload["prompt_log_path"])).read_text()
+    assert EDITOR_PROMPT.strip() in first_prompt
+    assert "{{original-prompt-here}}" not in first_prompt
+    second_prompt = Path(str(second_payload["prompt_log_path"])).read_text()
+    assert EDITOR_PROMPT.strip() in second_prompt
+    assert second_prompt == first_prompt
+    for key in (
+        "agent_call_kind",
+        "model_provider",
+        "model",
+        "reasoning_effort",
+        "cwd",
+    ):
+        assert first_payload[key] == second_payload[key]
+    for key in ("codex_call_id", "prompt_log_path", "stdout_log_path", "output_path"):
+        assert first_payload[key] != second_payload[key]
+    session_ids = []
+    for payload in (first_payload, second_payload):
+        events = Path(str(payload["stdout_log_path"])).read_text().splitlines()
+        session_ids.append(
+            next(
+                event["thread_id"]
+                for line in events
+                if (event := json.loads(line)).get("type") == "thread.started"
+            )
+        )
+    assert session_ids[0] != session_ids[1]
     _state_path, oracle_edit_state_after = _load_session_state(root, session_branch)
     assert oracle_edit_state_after == oracle_edit_state_before
     assert oracle_edit_result.stdout.count("# 完了: cmoc oracle edit") == 1
@@ -797,6 +818,20 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     status_before = run_git(root, "status", "--short").stdout
     calls_before = _codex_call_logs(root)
 
+    # Codex の実 hook から通知 transport まで到達することを、OS 通知だけ隔離して確認する。
+    toast_path = tmp_path / "toast.jsonl"
+    toast_bin = tmp_path / "toast-recorder"
+    toast_bin.mkdir()
+    write_python_executable(
+        toast_bin / "powershell.exe",
+        [
+            "import pathlib, sys",
+            f"with pathlib.Path({str(toast_path)!r}).open('a') as output:",
+            "    output.write(sys.stdin.read() + '\\n')",
+        ],
+    )
+    environment["PATH"] = f"{toast_bin}:{environment['PATH']}"
+
     # editor 自動化以外は、本番と同じ TUI、Codex executable、provider を使う。
     response, transcript = _run_cmoc_tui(
         cmoc,
@@ -814,5 +849,9 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     tui_payload = _assert_real_codex_call(next(iter(tui_calls)), tui=True)
     assert tui_payload["purpose"] == tui_purpose
     assert not exec_calls
+    notifications = [json.loads(line) for line in toast_path.read_text().splitlines()]
+    assert notifications == [
+        {"title": f"cmoc {' '.join(command)}", "message": f"{root.name} — 入力待ち"}
+    ]
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert run_git(root, "status", "--short").stdout == status_before

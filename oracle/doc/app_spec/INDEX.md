@@ -18,21 +18,19 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を agent call として実行する際の総合規約。path context、環境変数、preflight、argv 上書き、sandbox と詳細なファイルアクセス、prompt、feedback、Structured Output、並列実行、quota・一時障害・想定外エラーの扱いを定める。Codex 呼び出しの実装や失敗処理を確認する際の上位入口。
+- Codex CLI 呼び出しにおける agent call と Codex call の定義、path context、設定上書き、sandbox・ファイルアクセス制限、prompt 受け渡し、ログ保存、Structured Output 検証、並列化、quota・一時障害時の復旧規則を定める正本。
+- 個別 agent call の builder が oracle doc から委譲された prompt、起動パラメータ、file access mode、model provider 設定を Codex CLI 実行へ反映するための運用規約の入口。
 
 ## Read this when
-- codex exec または codex exec resume の呼び出し仕様を実装・変更・検証するとき。
-- agent call の cwd、root placeholder、sandbox、file access policy、prompt の構築・受け渡し、ログ保存、Structured Output 補正、quota 待機、retry の判断を確認するとき。
-- Codex CLI 呼び出しに関する複数の app spec や oracle src の責務分担を整理するとき。
+- Codex CLI の呼び出し方法、argv 設定、`CODEX_HOME`、sandbox、permission profile、MCP reporter、editor input handoff、ログ、session resume、Structured Output 補正、quota 待機、retry、または並列実行の仕様を確認するとき。
+- agent call の cwd・worktree・repository root の扱い、prompt の構築・stdin 受け渡し、Codex call の保存物や検証条件を実装・レビューするとき。
 
 ## Do not read this when
-- 個別 agent call の意味上の責務や判断基準だけを確認したい場合は、対応する oracle doc を直接読む。
-- AgentCallParameter の正確な field、型、既定値を確認したい場合は、指定された basic.py を直接読む。
-- prompt の正確な構築順序・rendering・policy 文面を確認したい場合は、対応する prompt builder の oracle src を直接読む。
-- feedback reporting、Windows toast 通知、editor input handoff、model provider など個別機能の正本だけを確認したい場合は、それぞれ指定された app spec または oracle src を直接読む。
+- 個別 agent call の意味上の責務や判断基準だけを確認したいときは、対応する oracle doc を直接読む。
+- `AgentCallParameter` の正確な field 名・型・既定値、path context の導出実装、prompt rendering、file access policy、Structured Output schema、quota probe などの詳細を確認したいときは、本文が委譲する対応する oracle src・oracle doc・schema を直接読む。
 
 ## hash
-- f0c7934f70d62ba79e5ab7d4ac49aac9e04e7aacb1cbab7ac15c251241558b5d
+- f259cad0ac80824a63b434aabebd0e3c61e0220ac2ffbb95eb9f0b7250704aa7
 
 # `codex_model_provider.md`
 
@@ -192,20 +190,21 @@
 # `indexing.md`
 
 ## Summary
-- `cmoc` が `{{work-root}}` 配下に `INDEX.md` を配置・更新するための正本仕様を定める。対象ディレクトリ・ファイルの選別、目次情報の形式と意味要件、ハッシュ、処理順序、agent call、並列実行、実行条件を扱う。
+- `INDEX.md` の自動インデクシングに関する仕様を定義し、処理対象の列挙、目次情報の生成・更新、ハッシュ検証、コミット、および agent call の実行方針を扱う。
+- インデクシングの実行手順や、目次情報生成の動作条件・並列化条件を確認するための入口となる。
 
 ## Read this when
-- `INDEX.md` の自動生成・更新・検証の仕様を確認するとき。
-- インデクシング対象の除外条件、目次情報の内容要件、ハッシュ計算、処理順序や並列実行の扱いを変更・実装するとき。
-- `INDEX.md` 生成用 agent call の入力や preflight 実行条件を確認するとき。
+- `INDEX.md` の生成・更新処理の仕様を確認するとき。
+- インデクシング対象の判定、処理順序、ハッシュ不一致時の再生成、または生成 agent call の実行条件を変更・検証するとき。
+- `INDEX.md` による routing の意味要件や、目次情報に含めるべき内容を判断するとき。
 
 ## Do not read this when
-- 個別ファイルやディレクトリの実装内容を直接確認することが目的で、`INDEX.md` インデクシングの動作仕様を扱わないとき。
-- 既存の `INDEX.md` の具体的なルーティング内容だけを確認したいときは、対象階層の `INDEX.md` を直接読む。
-- 一般的な文書作成や、インデクシング以外の `cmoc` サブコマンドの仕様を確認するとき。
+- 個別ファイルやディレクトリの実装内容そのものを確認したいとき。
+- 特定の目次エントリーの内容だけを確認したいときは、対象階層の `INDEX.md` を優先する。
+- インデクシングとは無関係な oracle app spec の仕様や、通常のファイル編集手順だけを調べるとき。
 
 ## hash
-- 72bf58396fb0fea67b9fe779dcfef81a14ca8dc4957659e6c9d30f29f5931dbc
+- 264015e5526f632f2c55d11933fca7f3bacd22fb5966cfc92a431c98c1bae5c9
 
 # `oracle_and_realization.md`
 
@@ -296,21 +295,22 @@
 # `sub_command`
 
 ## Summary
-- サブコマンド仕様の正本群への入口。各ファイルは、doctor・indexing・oracle・realization・feedback・session・editing run・TUI など、cmoc の個別操作または共通ライフサイクルを定義する。
-- 特定のサブコマンドの実行契約、編集 run のライフサイクル、session の fork／join／abandon、または TUI 起動契約を調べる際の同階層の入口。
+- cmoc のサブコマンド仕様群への入口。doctor、indexing、tui、oracle 操作、session lifecycle、editing run、feedback remediation の実行契約と終了報告を扱う。
+- サブコマンド固有の引数・事前条件・実行手順・状態遷移・agent 呼び出し境界・差分処理・report 保存要件を確認するための仕様集合。
+- session や editing run の lifecycle、realization／feedback の workload 固有処理、oracle 調査・編集、共通 TUI 起動の各仕様へ進むための階層入口。
 
 ## Read this when
-- cmoc のサブコマンド仕様を調査・変更し、対象操作の実行条件、処理手順、終了経路、report 要件を確認するとき
-- oracle／realization／feedback に関する workload 固有の処理、または session／editing run の状態遷移・cleanup・join を確認するとき
-- 複数のサブコマンド仕様のどれを読むべきか判断するため、仕様群の責務分担を把握したいとき
+- cmoc のサブコマンドを実装・変更・調査し、CLI 契約や実行前後の状態、終了コード、primary report の責務を確認するとき。
+- session fork／join／abandon、run join／abandon、realization apply／refactor、feedback report のどの正本仕様を読むべきか判断するとき。
+- doctor preprocess、indexing、TUI 起動、oracle file 操作など、サブコマンドの処理開始から成果報告までの境界を確認するとき。
 
 ## Do not read this when
-- 特定のサブコマンドの詳細仕様が明らかな場合は、この一覧からではなく該当する個別仕様を直接読むとき
-- oracle／realization の内容や適合性判定、feedback observation／state、Codex 起動パラメータなど、各仕様が参照する専門文書や実装だけを確認したいとき
-- INDEX.md の機械的な一覧情報や Structured Output の形式だけを確認したいとき
+- 個別サブコマンドの詳細実装、正確な prompt 文面、builder 引数、Structured Output schema を確認したいときは、仕様から参照される実装・schema を直接読む。
+- oracle／realization の責務・適合性、feedback の用語・raw observation・repository-local state、branch／session state、run isolation などの共通正本だけを確認したいときは、対応する共通仕様を直接読む。
+- INDEX.md の生成手順や AGENTS.md の運用規定そのものを確認したいときは、このサブコマンド仕様群ではなく該当する正本を読む。
 
 ## hash
-- 77a70d29bbc919c8a63f7bdd6c0f904a46ed56b0962a0afc6e60772908b8c5df
+- 21dfd878dc00742dbeac3ec9a0632c0111c791e46fc1c838b90e482773caa3d0
 
 # `subcommand_interruption.md`
 

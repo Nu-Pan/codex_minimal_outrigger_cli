@@ -1,22 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- AI コーディングエージェント呼び出しの共通パラメータ型とファイルアクセスモードを定義する。
-- quota probe、INDEX.md エントリー生成、feedback issue 処理、oracle 調査・編集、realization 追従・レビュー、session join の競合解消、TUI 起動に関する agent call 構築処理への入口。
-- 各 agent call の prompt、対象範囲、起動 cwd、Structured Output schema、editor input MCP、indexing preflight の設定を扱う。
+- 対象ディレクトリは、oracle・feedback・indexing・quota probe・realization・session・TUI などの用途別に、エージェント呼び出しの基本設定や prompt、出力契約を組み立てる下位要素への入口。
+- 共通の AgentCallParameter 定義を用途別の呼び出し構築へ振り分け、各用途固有の起動条件・権限・作業ディレクトリ・indexing 設定を確認するための階層。
 
 ## Read this when
-- agent call の共通パラメータや論理ファイルアクセスモードを確認するとき。
-- 特定の cmoc サブコマンドに対応する agent call の prompt、起動条件、権限、作業範囲を調べるとき。
-- feedback、indexing、oracle、realization、session join、TUI の下位処理へ進む入口を判断するとき。
+- oracle、feedback、indexing、quota probe、realization、session join、または TUI に関する agent call の構築条件や、対応する下位実装への入口を判断するとき。
+- 用途別の prompt、ファイルアクセス権、Structured Output、作業ディレクトリ、MCP handoff、indexing preflight の設定を横断して追跡するとき。
 
 ## Do not read this when
-- ファイルアクセスモードの正本上の意味や Codex CLI sandbox への対応を確認したいとき。
-- agent call の実際の実行処理、prompt 共通構造、path context、構造化文書のレンダリングを直接調べたいとき。
-- feedback の受付・候補 issue 管理、oracle file や realization file の具体的内容、通常の Git 差分処理そのものを調べたいとき。
+- 特定用途の agent call の具体的な prompt や出力契約だけを調べる場合は、該当する下位対象を直接読む。
+- 共通の呼び出しパラメータ型・既定値・ファイルアクセスモードの一般定義だけを確認する場合は、共通定義を直接読む。
+- 各用途の意味仕様、実際の Git 差分・realization 編集・merge 処理、または index エントリー生成規則そのものを調べる場合は、それぞれの正本仕様や実装を直接読む。
 
 ## hash
-- 9b2196fe2b6b7a617707200fe497dab2da9968d35ee417bca4b601de159c717c
+- cafaef716d95a07fc8596431f91a8d642d7186db92d487d2ba3f51f398fb3aae
 
 # `editor_input_handoff`
 
@@ -54,20 +52,22 @@
 # `other`
 
 ## Summary
-- cmoc の設定モデル、パスコンテキスト、構造化文書の Markdown レンダリングを担う基盤モジュール群への入口。設定値の構造、リポジトリ内のパス解決、文書ノードの出力規則を確認する際に参照する。
+- cmoc のリポジトリ固有設定を表すデータモデル。並列実行数、Codex の provider・model・推論設定、ファイルアクセス規定違反時のリカバリ試行回数を集約する。
+- パス表記とルートプレースホルダの基盤モデル。agent call の cwd から worktree・main repository を導出し、プレースホルダと絶対パスの相互変換を扱う。
+- 階層化された文章要素、参照可能なタグ付きブロック、コードブロック、構造化ポリシーを保持し、Markdownへレンダリングするための型と処理を提供する。
 
 ## Read this when
-- CmocConfig などの設定モデルや Codex CLI 呼び出し設定の既定値・構造を確認または変更するとき。
-- worktree・repository・run のルート導出、パスプレースホルダの解決・変換規則を調べるとき。
-- 見出し、タグ付きブロック、コードブロック、ポリシーなどの構造化文書を Markdown 化する仕様を調べるとき。
+- cmoc の設定項目や既定値、Codex call 種別ごとの provider・model・推論設定、JSON/TOML表現、並列数やリカバリ回数を確認・変更するとき。
+- agent call の cwd、worktree root、main repository root、{{cmoc-root}}・{{repo-root}}・{{run-root}}・{{work-root}} の解決規則やパス変換を確認・変更するとき。
+- 構造化文書のノード型、見出し深度、cmoc_ref／cmoc_block、コードフェンス、ポリシー、空行やインデントのMarkdownレンダリングを確認・変更するとき。
 
 ## Do not read this when
-- Codex CLI の呼び出し実装や agent call の実行フローだけを調べるとき。
-- 設定の永続化・生成処理や doctor コマンドなど、設定モデルを利用する処理の挙動だけを確認したいとき。
-- 個別機能の動作、一般的なファイル操作、または個別のポリシー本文・テンプレートだけを直接確認すれば足りるとき。
+- 設定ファイルの永続化・生成・同期や doctor の挙動を確認したいときは、設定入出力を担う対象を読むべき。
+- 個別の agent call、CLI、TUI、oracle、realization の実行フローを確認したいときは、それぞれの処理対象を直接読むべき。
+- 個別のポリシー本文・文書テンプレート、またはMarkdown以外の出力形式や生成側の仕様を確認したいときは、該当する対象を直接読むべき。
 
 ## hash
-- aad6313c4fdb76fe58bf0ac778bee22571cdf5d0e592669794065472800697e2
+- 4e0b3934e69f302d3c6e7691504546545c65bd697a2075c99ba4cd57455ef24d
 
 # `prompt_builder`
 

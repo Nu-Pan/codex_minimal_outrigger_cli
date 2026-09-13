@@ -1,21 +1,21 @@
 # `cmoc_config.py`
 
 ## Summary
-- 開発対象リポジトリごとに変わりうる cmoc 設定をデータクラスとして定義し、並列数、Codex CLI の model provider・agent call 設定、ファイルアクセス規定違反時のリカバリ試行回数を扱う設定モデル。
-- Codex CLI 設定の構造や既定値、agent call 種別ごとのモデル・reasoning effort、provider-local 設定を確認・変更するときの入口。設定は JSON/TOML 共通値として表現でき、永続化対象の設定構造を確認する場合にも読む。
+- cmoc のリポジトリ固有設定を集約するデータモデル。並列数、Codex の model provider 設定、agent call 種別ごとの model・推論設定、ファイルアクセス規定違反時のリカバリ試行回数を定義し、設定ファイルへの JSON/TOML 表現を支える。
 
 ## Read this when
-- CmocConfig、CmocConfigCodex、CodexCallConfig、CodexModelProviderConfig のフィールドや既定値を確認・変更するとき。
-- agent call 種別ごとの Codex CLI 呼び出し設定、model provider 設定、並列数、リカバリ試行回数の扱いを調べるとき。
-- config.json の生成・同期や人間による調整に対応する設定モデルの構造を確認するとき。
+- cmoc の設定項目や既定値を確認・変更するとき
+- Codex CLI の provider、model、reasoning effort を agent call 種別ごとに調整するとき
+- 設定値の JSON/TOML 対応やメンバー順序保持の前提を確認するとき
+- 並列実行数やファイルアクセス規定違反時のリカバリ回数を調整するとき
 
 ## Do not read this when
-- Codex CLI 呼び出し処理そのものや agent call の実行フローを調べる場合は、呼び出し実装側を直接読む。
-- config.json の実際の永続化・生成処理や doctor コマンドの挙動だけを確認する場合は、その処理を定義する対象を直接読む。
-- 設定値を利用する個別機能の動作だけを調べ、設定モデルのフィールドや既定値を確認する必要がない場合。
+- 実際の永続化・生成・同期処理の実装を確認したいとき。設定ファイルの読み書きや doctor の挙動を担う対象を直接読むべき
+- 個別の agent call の実行フローや TUI、oracle、realization の処理内容を確認したいとき
+- 設定値ではなく、既存実装のリファクタリングやテストの内容を確認したいとき
 
 ## hash
-- 5b8eb2882961f95f73f811c3eaa5648cab07bc46ccbadd7156a8ce22c9a739d8
+- ee5b4124d403fce92e2805370de4448ab820c775edd44780be0b71eaf35688be
 
 # `path_model.py`
 

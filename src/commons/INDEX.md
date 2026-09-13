@@ -154,25 +154,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装を担い、起動時の sandbox・argv・cwd・CODEX_HOME・環境変数・schema 配置と、終了時の機械的な結果解釈を一体で扱う。
-- editing run の Codex child process tracking、process group の同一性検証、安全な signal・cleanup、PID 再利用対策を提供する。
-- Codex の JSONL 出力から session ID、診断 message、capacity・quota・予期しない error を判定する。
-- model provider、MCP server、hook、Structured Output など、Codex 呼び出し単位の設定を argv として構成する。
+- Codex CLI subprocess 境界の実装入口。起動時の sandbox・config override・provider・MCP・callback・CODEX_HOME・環境変数を組み立て、実行中 process の追跡・安全な停止・schema 配置・JSONL 出力と capacity/quota/error 判定を担う。
 
 ## Read this when
-- Codex CLI subprocess の起動条件、sandbox、argv、cwd、CODEX_HOME、環境変数、schema 配置を確認したいとき
-- editing run で追跡対象の child process や process group を安全に停止・cleanup する挙動を確認したいとき
-- Codex JSONL stdout、stderr、session ID、capacity・quota・予期しない error の判定を確認したいとき
-- model provider、MCP、hook、Structured Output の呼び出し単位設定がどのように Codex argv へ変換されるか確認したいとき
+- Codex CLI の argv、環境変数、CODEX_HOME、sandbox、model provider、MCP 設定、Structured Output schema の起動条件を確認・変更するとき。
+- editing run の Codex subprocess tracking、process group の同一性検証、pidfd による signal、終了待機や cleanup を確認するとき。
+- Codex の stdout/stderr、JSONL event、session ID、capacity・quota・unexpected error の解釈を確認するとき。
 
 ## Do not read this when
-- 上位の agent call の業務フローや利用者向けコマンド仕様だけを確認したいとき
-- Codex CLI 自体の一般仕様や外部サービスの利用方法を調べたいとき
-- process tracking の要件や停止手順を確認する目的で、実装ではなく editing run の正本仕様を直接読むべきとき
-- JSON schema の設計自体や一般的な JSONL protocol の仕様だけを確認したいとき
+- Codex CLI 境界の実装ではなく、呼び出し側の agent call 制御、run 全体の状態遷移、または利用者向けエラー仕様だけを確認したいとき。
+- 入力 handoff、feedback collector、runtime path など個別 subsystem の内部実装を直接確認する必要があるとき。
 
 ## hash
-- d59f5eb3a78eae69a258928e50e1a2e666a94efa5e81f117bbfd4443881e2368
+- 85b6bb877c55fd3e7065aa7015fd909aa651c20564288a3715b8021756af2a59
 
 # `runtime_codex_tui.py`
 
@@ -494,60 +488,48 @@
 # `runtime_primary_report.py`
 
 ## Summary
-- 非対話サブコマンドの primary report を、確定済みの runtime 情報から保存・検証・更新する共通処理。
-- 個別 report が未作成の終了経路では、command 別 spec と terminal 結果から fallback report を生成する。
-- report context の管理、項目の alias 解決、保存失敗時の cleanup、既存 report の原子的更新を担う。
+- 非対話サブコマンドの primary report context を管理し、個別 report が未作成の終了経路では確定済み runtime 情報から fallback report を生成・保存する実装。既存 report の検証、実行記録の追記、予約済みパスへの安全な書き込み・更新、および保存失敗時の internal failure を扱う。
 
 ## Read this when
-- 非対話サブコマンドの primary report 保存、fallback 生成、既存 report の再利用を確認するとき。
-- report 項目の確定値、command 別の補正、context と result details の統合を調べるとき。
-- report 保存の失敗処理、部分 file の除去、通常 file・symlink・空 file の検証を確認するとき。
+- 非対話サブコマンドの primary report がどの終了経路で生成されるか、また fallback 保存時にどの runtime 項目や alias を report fields へ反映するか確認したいとき
+- primary report の保存確認、既存 report の安全な更新、保存失敗時の例外処理を変更・調査するとき
 
 ## Do not read this when
-- primary report の項目定義や Markdown 表現を確認したいとき。
-- 個別サブコマンドの処理手順や終了条件を確認したいとき。
-- runtime logging、path、result 型の専用責務だけを確認したいとき。
+- 特定サブコマンドの report 項目定義や分類仕様そのものを確認したいときは、primary report の spec・render 実装や各サブコマンドの正本仕様を直接読む
+- ログ出力の一般的な仕組み、runtime path の生成規則、TerminalResult の構造だけを確認したいとき
 
 ## hash
-- 95a22909f6d96cb2b44038b59c2fbf853761033dbb0f3f2764c0b12832c7121d
+- 45acbdb0c40b1fca093a1a7594a079e5c6f1eee83974e1a1a83964ba785eaa80
 
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済み runtime 情報を使って fallback primary report の front matter・本文・実行記録を描画する責務を担う。
-- feedback invocation、refactor fork、session join などの template ごとの要約と、共通の終端結果・warning/error・次操作・関連ログを組み立てる。
-- feedback publication 状態、oracle edit agent call 状態、実行済み step と Codex call log をイベントおよび logger から report 向け表示へ変換する入口である。
-- 未確定値や任意値を report 用に安全な YAML/Markdown 一行表現へ変換し、確定情報と未実行状態を区別して表示する。
+- 確定済みの runtime 情報と terminal 分類から、サブコマンド別の fallback primary report 本文・実行記録・状態要約を描画する。feedback invocation、refactor fork、session join 固有の report 形式と共通の warning・終端結果・関連ログ表示を扱う。
 
 ## Read this when
-- fallback primary report の形式、template 別の invocation summary、実行記録、publication/checkpoint 状態の表示を確認したいとき。
-- runtime の terminal classification や logger event から、report の step・結果・warning/error・関連ログがどう描画されるか追跡したいとき。
-- session join や refactor fork の固有 report が、確定値・未確認値・未実行状態をどう表現するか確認したいとき。
+- fallback primary report の構成、サブコマンド別 template の描画、Codex call や feedback observation の実行記録、または report 上の実行状態表示を確認・変更するとき。
 
 ## Do not read this when
-- feedback observation の受理・送信自体や、publication の処理フローを変更・調査する場合。
-- PrimaryReportSpec、TerminalResult、SubcommandLogger の定義やイベント生成元を直接確認すべき場合。
-- oracle の仕様本文や各 subcommand の正本仕様を確認することが主目的で、report 描画の実装詳細が不要な場合。
+- primary report の仕様や記載項目の根拠を確認するときは、参照される app specification を直接読む。runtime 情報の収集・event 記録・terminal result の生成を調べるときは、それぞれの store、logger、result 実装を直接読む。
 
 ## hash
-- e2a145dd25881eda74915b38a0975b9cc7791463b9b4c09d85023a459219346e
+- 921e40d8504b1db6e56f552bee4d4c69a5d4cc8be2f7d3c845d794ad7badbf81
 
 # `runtime_primary_report_specs.py`
 
 ## Summary
-- fallback primary report の個別サブコマンド定義を保持し、各非対話末端サブコマンドのレポート保存先・役割・タイトル・必須項目・テンプレートを登録する。
-- コマンド名から対応する PrimaryReportSpec を取得する、個別レポート仕様への入口。
+- fallback primary report を生成する非対話末端サブコマンドごとの仕様を登録し、command 名から保存先・役割・タイトル・必須項目・テンプレートを取得する定義。
 
 ## Read this when
-- 非対話末端サブコマンドの fallback report の保存先、front matter、必須項目、テンプレート登録を確認するとき。
-- command 名に対応する primary report 仕様の取得経路を確認するとき。
+- doctor、indexing、session、oracle edit、realization、run、feedback report の fallback report 仕様や必須項目を確認・変更するとき。
+- command 名に対応する primary report 定義の取得処理を確認するとき。
 
 ## Do not read this when
 - TUI の通知境界を使う tui や oracle investigation の仕様を確認するとき。
-- 個別サブコマンドの実行処理やレポート本文の生成ロジックを直接調べるとき。
+- fallback report の実際の保存処理や個別サブコマンドの実行ロジックを直接調べるとき。
 
 ## hash
-- f38c578df9d19ef46790404ea94db32bf19c021482ce3738c97c6f4aaa6919d0
+- 6cea29e517f04e01d25b2f9ca945ebb055cd05542cb349451a16ed5030e42062
 
 # `runtime_refactor.py`
 

@@ -69,19 +69,21 @@
 # `oracle`
 
 ## Summary
-- oracle サブコマンド群をまとめる package 境界で、配下の oracle 実装へ進む入口。
-- 編集系と調査系の oracle サブコマンド実装を含み、それぞれの実行入口や処理順序を確認する際の案内先。
+- 対象ディレクトリは oracle 系サブコマンドの package 境界を提供し、個別の edit / investigation 実装への入口となる。
+- edit は oracle 編集指示を受け、事前 indexing と起動条件を確認して、共有設定で編集 agent を実行する CLI 入口。
+- investigation は oracle 調査指示を編集・収集し、調査契約付きパラメータで read-only Codex TUI を起動する CLI 入口。
 
 ## Read this when
-- oracle サブコマンド群の構成や、編集・調査の実行入口を確認するとき。
-- oracle サブコマンドの処理フローを調べる際に、個別実装へ進む前の package 境界を把握したいとき。
+- oracle 系サブコマンドの package 境界や、edit と investigation のどちらを入口にすべきか確認するとき。
+- cmoc oracle edit の入力から事前処理・2 回の agent 実行までの流れを確認または変更するとき。
+- cmoc oracle investigation の入力編集から調査用 read-only TUI 起動までの流れを確認または変更するとき。
 
 ## Do not read this when
-- `cmoc oracle edit` の具体的な prompt、起動パラメータ、入力・runtime など個別仕様を確認したいときは、編集サブコマンドの実装を直接読む。
-- `cmoc oracle investigation` の具体的な起動パラメータや共通処理を確認したいときは、調査サブコマンドの実装または共通モジュールを直接読む。
+- oracle 編集 prompt の定義、共通 prompt editor、または agent 起動パラメータ構築の詳細だけを確認したいときは、それぞれの直接の定義・共通モジュール・builder を読む。
+- oracle サブコマンドの実装詳細を確認したいときは、この package 境界ではなく個別の実装対象を直接読む。
 
 ## hash
-- 456170d0023177b8d7c1f88de8f89137bcb75bb6fb6530543e9ea7dcdd0ba8cc
+- 4849deefdbc55cbab102859ca47f69082537d4762279973f27a6b9c36b3d4b6c
 
 # `realization`
 
