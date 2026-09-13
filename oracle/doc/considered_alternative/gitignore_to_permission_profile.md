@@ -2,15 +2,13 @@
 
 ## 採用結果
 
-- `.gitignore` または他の情報から permission profile を動的に生成する案は採用しない
-- 現行のファイルアクセス制限は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「ファイルアクセス制限」を正本とし、この不採用案を例外や追加規則として扱わない
-- permission profile との記法互換性が将来改善した場合も、この変換を実行時の分岐や fallback として使用しない
+`.gitignore` から permission profile を動的に生成する案は採用しなかった。現行の制限は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「permission profile の不使用と動的生成禁止」を正本とする。
 
 ## やりたかったこと
 
 - .gitignore 対象のファイルを、通常の読み書き規則の例外として、自由に読み書きできるようにしたかった
     - 厳密には、`git check-ignore` によって git 追跡対象から除外されていると判定されたファイルを指す
-- 想定していた状況の例：
+- 当時の読み書き規則を前提に想定していた状況の例：
     - agent が oracle への書き込みを禁止された作業をしている
     - 作業中に `{{work-root}}/oracle/**/__pycache__` が発生した
     - 作業完了前に agent はこの `__pycache__` を掃除したい
@@ -20,7 +18,7 @@
 
 ## 断念した理由
 
-- `.gitignore` と permission profile の記法に互換性がなく、正しく変換できなかった
-- 互換性がない記法の例：
+- 当時の `.gitignore` と permission profile の記法には互換性がなく、正しく変換できなかった
+- 互換性がなかった記法の例：
     - .gitignore では `{{dir-name}}/` によって、`{{dir-name}}` とマッチするディレクトリだけを除外できる。permission profile には、ディレクトリだけを対象とする記法がない
     - .gitignore では `?` や `[0-9]` のような柔軟な記法が可能だが、これは permission profile にはない

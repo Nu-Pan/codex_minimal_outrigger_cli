@@ -11,7 +11,7 @@ feedback state は、現在の `human_required` issue と、進行中の feedbac
 - active state へ未反映の pending observation
 - 直近の正常 publication で `human_required` と確定した issue の compact record
 - recurrence threshold 未満の machine observation の bounded aggregate
-- 中断、失敗、join 後の publication failure、または再検証から回復するための run manifest、intake wave、report cut、および正式な checkpoint
+- 中断・失敗後の明示 join または abandon と、join 後の publication・cleanup の recovery に必要な run manifest、intake wave、report cut、および正式な checkpoint
 - publication 済み report と、現在の正常 publication を選ぶ current pointer
 
 `fixed`、`already_resolved`、`not_actionable`、処理済み observation、および完了済み checkpoint を active state の履歴として残してはならない。issue commit、変更 path、および検証結果の監査情報は、feedback issue 一覧ではなく run report、invocation report、または subcommand log に保持してよい。
@@ -59,20 +59,14 @@ state を構成する artifact の役割を次に示す。
 |---|---|
 | active generation | 同じ正常 publication で確定した `human_required` issue と threshold 未満 aggregate の immutable な集合 |
 | current pointer | 現在の正常な active generation と Markdown report を一意に選ぶ publication point |
-| feedback run manifest | 1 invocation の入力、run identity、wave、join、publication、および cleanup の状態を結び付ける記録 |
+| feedback run manifest | 1 feedback remediation run の入力、run identity、wave、join、publication、および cleanup の状態を結び付ける記録 |
 | intake wave | その wave が処理する observation、active issue、正規化済み issue identity、および根拠の immutable な固定入力 |
-| high-watermark | collector が durable に受理済みである observation の atomic な上限境界 |
 | checkpoint | 受理済み normalization または remediation の入力、結果、検証、および commit を hash で結び付ける記録 |
 | report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、採用する有効な結果、および merge 対象を固定する |
 | publication completion record | merge または no-op join 後の session commit、run branch の到達可能性、および最終 tree 検証結果を report cut と結び付ける immutable な記録 |
 | `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった処理の確定済み結果と blocker を materialize した durable な Markdown report |
 
-次の情報から current state を推測してはならない。
-
-- timestamp
-- Git commit
-- branch reachability
-- directory の列挙順
+timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。
 
 最新の正常 publication は、current pointer が参照する generation manifest と正常 Markdown report の組とする。ただし、両方の path と hash を検証できる場合に限る。current pointer は `incomplete` 診断 report を参照しない。
 
@@ -121,7 +115,7 @@ evidence は、削除予定の raw observation、intake wave、または report 
 
 保持件数と集計情報は schema-fixed な上限を持つ。上限超過時の選択は、固定済み wave 入力に対して決定論的に行う。AI に保持対象を選ばせない。
 
-`fixed`、`already_resolved`、および `not_actionable` の issue は、新しい generation に含めない。`inconclusive` が 1 件でもある場合は、新しい generation 自体を publication しない。
+`inconclusive` が 1 件でもある場合は、新しい generation 自体を publication しない。
 
 ### threshold 未満の machine aggregate
 
@@ -142,13 +136,13 @@ threshold を満たした aggregate は issue candidate へ昇格させる。同
 - normalization 後の未処理 issue identity、再確認対象の issue identity、および bounded evidence
 - 再確認対象の場合は、先行 checkpoint、判定根拠の変化、および関連する再確認履歴への参照
 
-wave input は durable 保存後に変更しない。追加 evidence は後続 wave の入力として同じ issue identity へ関連付けてよいが、先行 wave を書き換えてはならない。
+wave input は durable 保存後に変更しない。追加 evidence は後続 wave の入力として同じ issue identity へ関連付けてよい。
 
 処理対象と再試行の条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「call 回数と順序」と「intake wave loop」を正本とする。
 
 ### high-watermark
 
-high-watermark は、collector の durable な受理順序に対する単調増加境界とする。directory の列挙順、timestamp、quiet period、または observation 件数から推測してはならない。
+high-watermark の意味は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」に従う。collector の durable な受理順序に対する単調増加境界として管理し、directory の列挙順、timestamp、quiet period、または observation 件数から推測してはならない。
 
 wave 終了時は、対応する全 remediation reporter context の受付停止と drain を完了した後に high-watermark を atomic に確定する。前回境界より後、今回境界以前の observation を validation、normalization、および deduplication する。新規受理がなければ前回と同じ high-watermark を使用してよい。
 

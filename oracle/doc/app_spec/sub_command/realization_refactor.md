@@ -3,7 +3,6 @@
 ## 目的
 
 - realization refactor は、oracle file と realization file を起点に、ファイル単位の追従調査を繰り返す workload である。current fork で保留した unresolved target 以外の調査要求がなくなるまで続ける。
-- 所見調査・修正を行う agent call には commit 差分や変更要約を渡さず、oracle file と realization file を調査対象として渡す。
 - 所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」を正本とする。
 - 所見調査・修正 call の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。
 - installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
@@ -14,13 +13,17 @@
 
 ### 保存先と JSON schema
 
-- refactor state の保存先は `{{work-root}}/.cmoc/gt/realization/refactor/state.json` とする。
-- JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、各 file の調査状態を value とする object である。調査状態は、次の field を持つ object とする。
+refactor state の保存先は `{{work-root}}/.cmoc/gt/realization/refactor/state.json` とする。
 
-- `investigation_required` は boolean とする。
-- `last_investigation_result` は `not_investigated | no_findings | findings` とする。
-- `last_investigated_sha256` は調査時点の file 内容に対する SHA256 文字列または `null` とする。
-- `last_investigated_at` は `{{time-stamp}}` または `null` とする。
+JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、各 file の調査状態を value とする object である。調査状態は、次の field を持つ object とする。
+
+| field | 型・値 |
+|---|---|
+| `investigation_required` | boolean |
+| `last_investigation_result` | `not_investigated`、`no_findings`、`findings` のいずれか |
+| `last_investigated_sha256` | 調査時点の file 内容に対する SHA256 文字列、または `null` |
+| `last_investigated_at` | `{{time-stamp}}`、または `null` |
+
 - `not_investigated` の entry は hash と日時をともに `null` とする。
 - absolute path と `..` による `{{work-root}}` 外参照を禁止する。
 - JSON object の記載順に意味を持たせない。
@@ -41,11 +44,10 @@
 
 ## current fork の unresolved target 集合
 
-- unresolved target 集合は current fork だけで使用する。
+- unresolved target 集合は current fork だけで使用し、新しい fork へ引き継がない。
 - 集合の要素は、正規化済みの `{{work-root}}` 相対 target path とする。
-- unresolved target 集合を refactor state に永続化してはいけない。この集合のために refactor state の schema を変更してはいけない。
-- unresolved target 集合を、次回 fork の選択を制御する skip または checkpoint として永続化してはいけない。
-- 前回の fork の unresolved target 集合を新しい fork へ引き継いではいけない。前回の fork で unresolved になった entry は、`last_investigation_result=findings` と `investigation_required=true` により再び調査対象になり得る。
+- refactor state または次回 fork の選択用 skip・checkpoint として永続化せず、この集合のために refactor state の schema を変更してはいけない。
+- 前回の fork で unresolved になった entry は、`last_investigation_result=findings` と `investigation_required=true` により再び調査対象になり得る。
 
 ## 引数と想定内差分
 
@@ -89,7 +91,6 @@
 4. 調査時点の hash、日時、および正規化後の所見有無を対象 entry に保存する。
     - 所見なし: `last_investigation_result=no_findings`, `investigation_required=false`
     - 所見あり: `last_investigation_result=findings`, `investigation_required=true`
-    - `resolution.status=unresolved` の所見が 1 件以上ある場合も所見ありとして扱い、`investigation_required=true` を維持する。
 5. agent call が変更した全 realization file を `investigation_required=true` にする。
 6. 追加、rename、削除後の entry 集合を同じ処理単位で同期する。
 7. realization file の差分、refactor state の更新、および cmoc が生成した `INDEX.md` を同じ処理単位の commit として確定する。
@@ -101,24 +102,22 @@
 - agent call には commit 差分、変更 commit の列、または変更要約を注入してはいけない。
 - `resolution.status=fixed` は agent の自己申告である。その申告だけで、修正の意味的な正しさが証明されたと扱ってはいけない。
 - 所見なしへの正規化は cmoc の処理判定だけに適用する。agent が返した元の Structured Output と Codex call log は破棄または改変せず、調査可能な実行記録として保持する。
-- 所見なしへ正規化した所見を current fork の unresolved target 集合へ追加してはいけない。synthetic `unresolved` への変換や、人間による判断、手動修正、手動承認を要求する workflow の追加も行わない。
-- 所見なしへの正規化を理由に run を error state にしてはいけない。処理単位を確定し、残りの target の処理を継続する。
+- 所見なしへ正規化した処理単位は、agent が空の `findings` を返した処理単位と同じ処理と完了判定を行う。synthetic `unresolved` への変換や、人間による判断、手動修正、手動承認を要求する workflow の追加は行わない。
 - 所見なしへの正規化は、`changed_paths` の照合、想定外 path と変更禁止対象の検査、または処理単位の commit・rollback 失敗に対する検査を緩和しない。
 - unresolved を含むことだけを理由に、処理単位を rollback したり refactor loop を停止したりしてはいけない。
-- unresolved を含む処理単位でも、realization file の差分、refactor state、および `INDEX.md` を整合した単位として確定する。
 
 ## 完了
 
-- path が current fork の unresolved target 集合に含まれない `investigation_required=true` の entry がなくなった時点で、refactor loop を完了する。
-- unresolved target 集合が空の場合は `natural_completion` とする。このとき、全 entry が `investigation_required=false` でなければならない。
-- unresolved target 集合が 1 件以上ある場合は `completed_with_unresolved` とする。このとき、`investigation_required=true` の entry の path 集合は current fork の unresolved target 集合と一致しなければならない。
-- `natural_completion` と `completed_with_unresolved` では、`run.state` を `joinable` にする。
-- `completed_with_unresolved` は正常系とする。Python 例外、エラー用 call stack、または `run.state=error` を使用してはいけない。
-- state object は空にせず、各 file の調査履歴を保持する。
-- 所見なしへ正規化した処理単位は、agent が空の `findings` を返した処理単位と同じく、所見なしとして完了条件を判定する。
-- `natural_completion` は、全 oracle file と realization file に調査要求が残っていないことを表す。
-- `completed_with_unresolved` は、current fork で調査可能な target をすべて処理し、未解決の調査要求だけを次回 fork へ残したことを表す。
-- いずれの完了も、ファイル単位調査で全問題を発見できること、LLM の回答品質、または agent の申告や作業内容の意味的な正しさを保証しない。
+path が current fork の unresolved target 集合に含まれない `investigation_required=true` の entry がなくなった時点で、refactor loop を完了する。完了理由は次の条件で決定する。
+
+| 完了理由 | 条件と残る調査要求 |
+|---|---|
+| `natural_completion` | unresolved target 集合が空であり、全 oracle file と realization file の entry が `investigation_required=false` である。 |
+| `completed_with_unresolved` | unresolved target 集合が 1 件以上あり、`investigation_required=true` の entry の path 集合がその集合と一致する。 |
+
+どちらも正常系として `run.state` を `joinable` にし、各 file の調査履歴を state object に保持する。`completed_with_unresolved` を Python 例外、エラー用 call stack、または `run.state=error` で扱ってはならない。
+
+いずれの完了も、ファイル単位調査で全問題を発見できること、LLM の回答品質、または agent の申告や作業内容の意味的な正しさを保証しない。
 
 ## ユーザー中断
 
@@ -153,7 +152,6 @@ realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/orac
     - 正規化後の処理結果に基づく処理単位ごとの所見数。所見なしへ正規化した処理単位は 0 件とする。
     - entry 総数、調査要求あり件数、および各 `last_investigation_result` の件数。
     - run branch 上の変更内容の要約。
-- `completed_with_unresolved` の report では、未調査 target の件数を 0 とする。調査要求あり件数は unresolved target の件数と一致しなければならない。
 - `natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は同関数へ委譲する。
 - Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
 - 要約対象は、`{{cmoc-run-worktree}}` の repository における `{{cmoc-run-fork-commit}}` から、要約対象を確定した時点の run branch HEAD までの tree 差分全体とする。

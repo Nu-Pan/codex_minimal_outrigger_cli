@@ -1,4 +1,3 @@
-
 # Doctor Preprocess
 
 ## 概要
@@ -7,8 +6,7 @@
 - doctor preprocess は各サブコマンドの本命処理の開始前に必ず実行される
 - 各サブコマンドに共通して必要な検証・修復は、個別サブコマンドではなく doctor preprocess の責務とする
 - 各サブコマンド固有の事前条件は、doctor preprocess が正常終了した後に検証する
-- doctor preprocess は、git working tree または staging area の clean 状態を検査しない
-- clean 状態を必要とするサブコマンドだけが、doctor preprocess の正常終了後に個別仕様として検査する
+- git working tree または staging area の clean 状態は、doctor preprocess では検査しない。clean 状態を必要とするサブコマンドが、doctor preprocess の正常終了後に個別仕様に従って検査する
 - 修復困難な場合はその場で cmoc をエラー終了する
 - feedback MCP reporter/client の利用不能だけは本命 workload を妨げないため、本書の reporter 固有規則を優先して degraded warning とする
 
@@ -54,7 +52,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 - `{{work-root}}/.agents` ツリー内に tracked file がない場合は `{{work-root}}/.agents/.gitkeep` を用意し、git index に追加する
 - 修復後も `{{work-root}}/.agents` ツリー内に tracked file がない場合はエラー終了する
 
-## 「`{{work-root}}/.cmoc/gt/config.json` が git 追跡対象である事を保証する」の詳細
+## 「`{{work-root}}/.cmoc/gt/config.json` が git 追跡対象であることを保証する」の詳細
 
 ### 検証
 
@@ -72,15 +70,14 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 - `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が存在していること
 - 同 file が git 追跡対象であること
-- JSON のトップレベルが object であり、各 key と value が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「保存先と JSON schema」を満たすこと
-- 同期完了時点で、entry が `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」による全 oracle file と全 realization file の和集合に過不足なく対応すること
-- 現在の file の SHA256 が最後に調査した hash と異なる entry で `investigation_required=true` であること
+- 同 file が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「保存先と JSON schema」を満たすこと
+- entry 集合と調査要求が、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」が定める同期完了時点の条件を満たすこと
 
 ### 修復
 
 - file が存在しなければ、空の object `{}` を保存する
 - file を git 追跡対象に追加する
-- 新規 file の entry 作成、削除 file の entry 削除、および hash 変更時の調査要求設定により entry 集合を同期する
+- 同文書の「entry 集合の同期」に従って entry 集合と調査要求を同期する
 - file が存在するものの schema を満たさない場合は、既存の調査履歴を破棄せずエラー終了する
 
 ### editing run の join での同期時点

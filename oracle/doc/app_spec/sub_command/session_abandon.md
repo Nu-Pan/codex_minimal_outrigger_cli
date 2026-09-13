@@ -3,7 +3,6 @@
 ## 概要
 
 - `cmoc session abandon` は、現在の `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` に merge せず破棄する。
-- session を完了させる `cmoc session join` とは異なり、session の成果物を本流へ取り込まない。
 - `cmoc session join` 済みの結果を取り消す rollback コマンドではない。
 - cmoc 管理下の session を破棄する正規の手段であり、ユーザーが手作業で `{{cmoc-session-branch}}` を削除する代わりに使う。
 
@@ -26,9 +25,7 @@
 `cmoc session abandon` は以下を破棄してよい。
 
 - `{{cmoc-session-branch}}`
-- `{{cmoc-session-branch}}` 上にだけ存在する commit
-- `{{cmoc-session-branch}}` 上で行われた oracle 改訂
-- `{{cmoc-session-branch}}` 上で行われた実装修正
+- `{{cmoc-session-branch}}` 上にだけ存在する commit。session 内の oracle 改訂と実装修正を含む。
 
 `cmoc session abandon` は以下を破棄してはいけない。
 
@@ -37,7 +34,6 @@
 - `{{cmoc-session-state-file}}` 自体
 - 保存済みの report
 - 未 join の編集 run
-    - editing run が残っている場合は `cmoc session abandon` では処理せず、`cmoc run abandon` を要求する
 
 ## 実行手順
 

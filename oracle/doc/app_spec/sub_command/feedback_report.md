@@ -38,8 +38,6 @@ run の branch、commit、および worktree の定義は、`{{cmoc-root}}/oracl
 
 ## feedback remediation run
 
-feedback remediation run は、1 回の `cmoc feedback report` invocation に対応する self-joining 編集 run とする。正常な wave loop の完了後は、同 invocation 内で run branch を session branch へ自動 join する。
-
 run branch 上の想定内差分を次に示す。
 
 - issue remediation agent が変更した realization file
@@ -125,7 +123,7 @@ issue remediation call の provider、model、および reasoning effort の既�
 
 ### Structured Output と結果分類
 
-agent は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」が定める issue remediation result を 1 つ返す。`human_required` は、realization file の編集だけでは満たせない対応を具体的な evidence で確認できた場合だけ使用する。処理の失敗は result に変換せず、invocation error とする。
+agent は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」に従って issue remediation result を 1 つ返す。
 
 `inconclusive` があっても、残りの issue は可能な限り処理する。
 
@@ -173,7 +171,7 @@ commit が成功する前に `fixed` として publication、active state から
 
 ## intake wave loop
 
-単一の可変 report cut は作らない。intake wave と high-watermark の state 契約は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「intake wave と high-watermark」を正本とする。
+intake wave と high-watermark の state 契約は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「intake wave と high-watermark」、report cut の封印条件は同文書の「report cut」を正本とする。
 
 各 wave の終了時は、次の順序で停止判定を行う。
 
@@ -191,7 +189,7 @@ commit が成功する前に `fixed` として publication、active state から
 - 判定根拠に影響しない occurrence 集計の更新
 - 判定根拠が変わっていない処理済み issue への理由のない再試行
 
-最終 high-watermark より後に受理された observation は、次回の `cmoc feedback report` に pending として残す。quiet period、directory の列挙タイミング、または一定時間 observation がなかったことを停止条件にしてはならない。
+quiet period、directory の列挙タイミング、または一定時間 observation がなかったことを停止条件にしてはならない。
 
 新しい異なる issue が継続的に発生する限り自然完了しない。issue 数、wave 数、または実行時間による任意の上限を設けない。ユーザー中断と続行不能な失敗だけを別の停止経路とする。
 
@@ -211,8 +209,6 @@ merge conflict、差分不整合、または join 後検査失敗では正常 pu
 
 全 issue の採用する有効な結果が `fixed | already_resolved | not_actionable | human_required` のいずれかであり、自動 join と join 後検査が成功した場合だけ正常 publication を行う。
 
-新しい active generation と正常 Markdown report の issue 一覧には、`human_required` だけを含める。
-
 正常 result は、次の 2 種類とする。
 
 - `ok`: `human_required` が 0 件
@@ -225,8 +221,6 @@ issue commit ID、変更 path、agent verification、および cmoc の機械検
 ### `incomplete`
 
 採用する有効な結果に `inconclusive` が 1 件以上ある場合も、残りの issue の処理と必要な再確認を経て wave loop を自然完了し、安全な issue commit を自動 join する。自動 join と join 後検査が成功した後に、正常 publication の代わりとして `incomplete` 診断 report を durable 保存する。
-
-`incomplete` では、新しい active generation を作らず、current pointer と raw observation を維持する。`inconclusive` を `human_required` へ変換しない。
 
 validation 失敗、agent call failure、Structured Output 受理失敗、差分検査失敗、commit 失敗、state corruption、merge 失敗、または durable report 保存失敗を `incomplete` として扱ってはならない。
 

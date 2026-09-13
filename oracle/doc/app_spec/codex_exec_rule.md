@@ -33,9 +33,7 @@ cmoc による操作対象 worktree である `{{work-root}}` は、次の要件
 
 - git で管理されている
 - `{{work-root}}/oracle` 配下に断片的な正本情報が記載されている（`{{cmoc-root}}` 配下がそうであるように）
-- `{{work-root}}` に固有の作業のノウハウは、Codex CLI が参照可能な追跡対象の文書、設定、script、または skill としてリポジトリ上に用意されている
-- `{{work-root}}/oracle` 配下の file 別に `codex exec` session を起動する責任は cmoc が負う
-- 言語、framework、tool 固有の手順を用意する責任は `{{work-root}}` が負い、その配置先を `.agents/skills` に限定しない
+- `{{work-root}}` 固有の作業のノウハウと、言語、framework、tool 固有の手順は、Codex CLI が参照可能な追跡対象の文書、設定、script、または skill として対象リポジトリが用意する。配置先は `.agents/skills` に限定しない
 
 ### cmoc process の cwd との関係
 
@@ -222,7 +220,7 @@ caller 固有の objective は、名目的な担当 role ではなく、その a
 
 - task は常に設け、その agent call で実行する行為と対象を示す。
 - scope は、対象、根拠、起点、または作業範囲を task だけでは特定できない場合に設ける。scope は file access の許可または禁止を定義しない。
-- completion criteria は、agent call 終了後に検証可能な call 固有の状態がある場合に設ける。
+- completion criteria は、agent call 終了後に検証可能で、schema または policy だけでは表現されない call 固有の完了状態がある場合に設ける。
 - non-goals は、隣接作業への逸脱が予想される場合に限り、call 固有の対象外を示す。一般的な禁止操作またはアクセス制限を置かない。
 
 独立した role または role 用の構造は設けない。agent call の機械的な識別は `AgentCallParameter.agent_call_kind` が担う。評価方向または責務に意味がある場合は、task の行為と判断対象、named policy、または call 固有の static prompt で具体化する。
@@ -234,8 +232,6 @@ objective は、専用機構が所有する次の内容を重複させない。
 - call 固有の判断基準と、schema 外の決定論的事後条件は、caller の static prompt が所有する。
 - runtime input は、caller の dynamic prompt が所有する。
 - Structured Output の構造と schema で表現できる出力要件は、`AgentCallParameter.structured_output_schema_path` が指す schema が所有する。
-
-Structured Output schema に従うことだけを、completion criteria として重複させてはならない。schema または policy だけでは表現されない call 固有の完了状態がある場合だけ、completion criteria を設ける。
 
 objective の外側の block、正確な引数、項目名、構築順序、任意項目の省略条件、および rendering は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
 
@@ -265,7 +261,7 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 - 完全 prompt の共通構築順序は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。同関数が、prompt part、目的、および placeholder 定義を統合する正確な順序を所有する
 - prompt の共通 rendering は、`{{cmoc-root}}/oracle/src/oracle/other/struct_doc.py` の `render_sd_node_as_markdown` へ委譲する。同関数が、構造化された prompt を Markdown 文字列へ変換する正確な rendering を所有する
-- builder が生成した `AgentCallParameter.prompt` は、初回 Codex call の stdin へ渡す入力とする。意味仕様または prompt 文面の正本ではない
+- builder が生成した `AgentCallParameter.prompt` は、初回 Codex call の stdin へ渡す入力とする
 - `AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する
 - realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない
 - cmoc は、確定した `AgentCallParameter.prompt` を変更せず、初回 Codex call に渡す

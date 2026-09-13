@@ -88,10 +88,7 @@
 ## console、ログ、および Windows toast
 
 - console、サブコマンドログ、および terminal result は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。
-- サブコマンドログは、2 回の agent call、対応する Codex call log、経過時間、戻り値、および最終的な terminal result を追跡可能にする。
-- 各 agent call の完全 prompt 本文の保存と stdin 渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt の構築と受け渡し」に従う。
-- 内部の各 `codex exec` は、独立した terminal result または Windows toast を通知しない。
-- 最外側の `cmoc oracle edit` は、終了状態を確定した後に terminal result と Windows toast をそれぞれ 1 回だけ通知する。Windows toast の詳細は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする。
+- Windows toast の通知境界と内容は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする。
 - 共通 reporter が受理した feedback observation は oracle edit の差分または成果物ではない。`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」に従う独立した実行記録とする。
 
 ## 中断と排他制御

@@ -76,10 +76,10 @@ session join の conflict 解消は、両 branch の意味を保ったまま mer
 - エラー分類とスタックトレースは、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従う
 - 手動解決が必要な場合は、実際に必要な操作をエラー terminal result の次の操作として示す
 
-## `{{cmoc-managed-branch}}` 削除の条件
+## `{{cmoc-session-branch}}` 削除の条件
 
 - ブランチを削除しても作業結果が失われないと確認できた場合に限り、`{{cmoc-session-branch}}` を削除する
-- 確認に失敗した場合は、`{{cmoc-managed-branch}}` を削除せず、warning としてユーザーに通知して続行する
+- 確認に失敗した場合は、`{{cmoc-session-branch}}` を削除せず、warning としてユーザーに通知して続行する
 
 ## primary report
 
