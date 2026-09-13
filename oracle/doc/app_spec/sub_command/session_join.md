@@ -58,17 +58,24 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/o
 ## conflict marker 解消用の agent call
 
 - conflict 解消の意味仕様は、本書の「oracle file 規定と conflict 解消の優先順位」を正本とする
-- 正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_parameter` へ委譲する
+- call 固有の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_parameter` へ委譲する
+- マージ固有の規定を agent に伝える正確な policy 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py` の `build_conflict_resolution_policy` へ委譲する
 - この agent call は `{{work-root}}` に対する編集操作を伴うため、必ず直列に実行すること
 
 ### oracle file 規定と conflict 解消の優先順位
 
-session join の conflict 解消は、両 branch の意味を保ったまま merge を完了するための作業であり、仕様変更または refactor を行う作業ではない。このため、conflict 対象 oracle file は marker 解消に必要な範囲だけ例外的に編集してよい。
+session join の conflict 解消結果は、共通の oracle・realization 規定と、本節のマージ固有の成果条件を同時に満たさなければならない。共通規定による整理・検証を適用し、ファイルアクセス境界の下で付随する編集の要否・範囲を agent の判断に委ねる。
+
+共通規定は、次の正本を参照する。
+
+- `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」まで、および「oracle file を扱う判断基準」「realization file を扱う判断基準」：正本責務・優先関係と、oracle・realization file の判断基準。
+- `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」「書き込み主体の責任分界」「SDPolicy の例外」：共通のアクセス境界と、例外の適用範囲。
+
+マージ固有の成果条件は、次のとおりとする。
 
 - conflict の両側と関連する oracle file を確認し、両 branch の両立する意図と挙動を解消結果に保持する
-- conflict 解消後も oracle file は realization file の正本であり、realization file の都合に合わせて oracle file の意味を変更してはいけない
-- conflict marker の解消に不要な仕様変更、実装改善、または別 file の変更を行ってはいけない
 - 両側の意味を両立できず人間意図の選択が必要な場合は、推測で一方を破棄せず未解消事項として報告する
+- 規定に違反する解消結果を解消完了として扱い、merge を成立させてはいけない
 
 ## その他、コマンドが想定外に失敗した場合
 

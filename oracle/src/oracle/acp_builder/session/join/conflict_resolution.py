@@ -33,8 +33,10 @@ def build_session_join_conflict_resolution_parameter(
         conflict marker 解消対象ファイルのパス。
 
     NOTE
-        marker 解消に必要な専用 policy だけを選び、edit や refactor の広い policy は使わない。
-        余計な変更を避けるため preflight を行わない。
+        `{{cmoc-root}}/oracle/doc/app_spec/sub_command/session_join.md` の
+        「oracle file 規定と conflict 解消の優先順位」に従い、解消後の状態にも共通規定を適用する。
+        その規定を agent に伝えるため oracle_policy と realization_policy を有効にする。
+        merge 進行中のため indexing preflight を行わない。
     """
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
     resolved_paths = [
@@ -50,14 +52,6 @@ def build_session_join_conflict_resolution_parameter(
         """,
         file_access_mode=FileAccessMode.REPO_WRITE,
         path_context=path_context,
-        aux_static_prompt=[
-            SDHeader(
-                "additional file access policy",
-                """
-                - conflict 対象 oracle file は、この conflict marker 解消に必要な範囲だけ編集して良い
-                """,
-            ),
-        ],
         aux_dynamic_prompt=[
             SDHeader(
                 "conflict 対象ファイル",

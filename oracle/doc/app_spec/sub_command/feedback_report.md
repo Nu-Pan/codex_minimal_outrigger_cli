@@ -75,14 +75,20 @@ normalization agent は、入力した observation が既存 candidate と同じ
 
 正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py` の `build_feedback_normalize_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
-normalization agent へ渡す情報を次に限定する。
+cmoc が normalization agent に渡す比較用の入力は、次の 2 つとする。
 
 - 検証済みの構造化 observation
 - 機械的に絞り込んだ既存 issue candidate
 
-normalization agent は、summary、impact、原因、現在性、actionability、remediation result、human action、または relation を生成しない。候補外の issue を探索しない。
+入力だけでは同一性の判断に必要な情報が得られない場合、normalization agent は処理経路や原因を含む関連情報を、`{{work-root}}` 内の oracle file、realization file などから読み取り専用で参照してよい。参照先の選択には、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「`INDEX.md` による routing」を適用する。候補外の issue は探索しない。
+
+normalization agent は独立した原因診断や、summary、impact、現在性、actionability、remediation result、human action、relation の生成は行わない。問題の現在状態の確認と修正は、本書の「issue remediation agent call」が担当する。
+
+同一性の判断では、観測当時の evidence と現在のファイル状態を区別する。ファイルの変化や問題の解消だけを理由に、別 issue と判断してはならない。
 
 既存 issue を選ぶ output の issue ID は、入力候補の issue ID と一致しなければならない。schema と宣言済みの決定論的事後条件に適合する output を受理できなければ、invocation error とする。
+
+判定の記録は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「checkpoint」に従う。
 
 ## 1 issue identity の処理単位
 

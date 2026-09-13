@@ -8,10 +8,10 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
     """oracle file が満たすべき規定を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md` の
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の
         「oracle doc と oracle src の正本責務」から
         「正本責務に基づく優先関係」までと「oracle file を扱う判断基準」、
-        `oracle/doc/app_spec/codex_exec_rule.md` の
+        `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
         「call 固有の実行時指示の優先関係」を参照。
     """
     return (
@@ -26,7 +26,6 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
                     "oracle file から実装差を許容する・しないの境界が読み取れる事",
                     "oracle file から、仕様の背後にある人間意図としての goal, non-goal が読み取れる事",
                     "合わせて読む必要がある oracle file は、root path placeholder を起点とする path、安定した locator、および簡潔な内容で特定すること",
-                    "プロンプトで作業対象として明示されていない部分は、既存の意味を可能な限り維持すること",
                     "複数個所で登場する同じ概念に専用の用語を与える時、その命名はリポジトリ全体で統一すること",
                     "「用語だけから推測される意味」と「oracle file から実際に読み取れる用語の意味」とが一致するように用語を命名すること",
                     "実装差を許容する余地を最大限尊重した仕様断片にすること",

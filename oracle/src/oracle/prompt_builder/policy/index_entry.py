@@ -8,7 +8,8 @@ def build_index_entry_policy() -> tuple[PlaceholderMap, SDHeader]:
     """INDEX.md エントリーが従う規定を構築する。
 
     NOTE
-        関連仕様は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` を参照。
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の
+        「目次情報の意味要件」を参照。
     """
     return (
         {},
@@ -19,9 +20,8 @@ def build_index_entry_policy() -> tuple[PlaceholderMap, SDHeader]:
                 require=(
                     "INDEX.md エントリーのルーティング情報には、対象を読むべき作業・質問・変更の条件を判断できる意味情報を書く",
                     "対象が担う責務と、同階層の他対象ではなくその対象へ進む理由を書く",
-                    "対象内容から根拠を持って言える責務・入口・読む条件だけを書く",
+                    "対象の現在内容を根拠とする",
                     "対象を読まなくてよい境界や、より直接読むべき別対象がある場合の境界を書く",
-                    "INDEX.md エントリーには、機械的な識別情報ではなく、対象を読むべきか判断するための意味情報だけを書く",
                 ),
                 prohibit=(
                     "ルーティング情報である INDEX.md エントリーに、対象本文を読まなければ理解できない詳細説明を展開してはいけない",

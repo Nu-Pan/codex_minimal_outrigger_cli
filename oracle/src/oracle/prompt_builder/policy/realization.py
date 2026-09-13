@@ -11,7 +11,7 @@ def build_realization_policy(
     """realization file が満たすべき規定を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md` の
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の
         「realization file を扱う判断基準」を参照。
     """
     return (
@@ -37,7 +37,7 @@ def build_realization_policy(
                     "不要になった実装・テスト (e.g. 旧仕様の分岐、未使用の識別子、置換済みコード) を残してはいけない",
                     "将来必要になる可能性だけを根拠に realization file を複雑化させてはいけない",
                     "シンプル化によって、正本仕様断片上必要とされる要素 (e.g. 意味、可読性、失敗時挙動、検証) を損なってはいけない",
-                    "`{{work-root}}` 固有の指示を根拠に含めずに `{{work-root}}.agents/skills` だけを根拠に作業方法を断定してはいけない",
+                    "`{{work-root}}` 固有の指示を根拠に含めずに `{{work-root}}/.agents/skills` だけを根拠に作業方法を断定してはいけない",
                 ),
                 allow=(
                     "どうしても oracle file をそのまま使用出来ない場合のみ、同等の機能を realization file に最小限の範囲内で実装しても良い",

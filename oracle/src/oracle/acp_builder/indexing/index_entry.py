@@ -11,7 +11,6 @@ from oracle.other.path_model import AgentCallPathContext, resolve_real_path
 
 # cmoc
 from oracle.other.struct_doc import (
-    SDCodeBlock,
     SDHeader,
     render_sd_node_as_markdown,
 )
@@ -31,6 +30,10 @@ def build_indexing_index_entry_parameter(
 
     agent_call_cwd: Path
         目次情報生成 agent call に設定する cwd
+
+    NOTE
+        `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「目次情報の生成方法」と
+        「`INDEX.md` による routing」に従い、本文は注入せず、既存 INDEX による routing も使わない。
     """
     # agent_call_cwd を確定してから完全 prompt 用の path context を構築する
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
@@ -46,15 +49,16 @@ def build_indexing_index_entry_parameter(
             SDHeader(
                 "`INDEX.md` 用エントリー生成規定",
                 """
-                - 必ずオリジナルの本文のみを根拠にエントリーを生成すること
+                - `{{target-path}}` がファイルならその本文を、ディレクトリならその現在内容を説明する実ファイルの本文を読むこと
                 - 既存の `INDEX.md` を読むのは禁止
-                - `{{target-path}}` と関係する文章も必要に応じて参照すること
+                - 対象の理解に必要な関連本文も参照してよい
                 """,
             ),
         ],
         aux_placeholder_def={
             "target-path": resolve_real_path(target_path, path_context),
         },
+        oracle_and_realization_basic=True,
         index_entry_policy=True,
         routing_policy=False,
     )
