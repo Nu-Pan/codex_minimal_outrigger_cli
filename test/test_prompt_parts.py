@@ -111,7 +111,7 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
         ),
         pytest.param(
             _build_conflict_resolution_policy,
-            ("**必須**", "**禁止**"),
+            ("**必須**", "**禁止**", "**許容**"),
             1,
             id="conflict-resolution",
         ),
@@ -238,9 +238,10 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     builder_result = _build_conflict_resolution_policy()
     rendered_doc = _render_policy(builder_result)
     assert "merge conflict を解決した結果が満たすべき規定" in rendered_doc
-    assert "両方のマージ元ブランチの oracle file" in rendered_doc
-    assert "意味を両立できる解決方法が無い場合" in rendered_doc
-    assert "realization file の都合または挙動を根拠に" in rendered_doc
+    assert "両 branch の両立する意図と挙動" in rendered_doc
+    assert "両側の意味を両立できず人間意図の選択が必要な場合" in rendered_doc
+    assert "適用される規定に違反する解消結果" in rendered_doc
+    assert "解消に付随する編集の要否・範囲は自ら判断してよい" in rendered_doc
 
 
 def test_build_routing_policy_renders_core_reading_requirements() -> None:
@@ -507,7 +508,7 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
     assert "プロンプト > oracle file > installed skill の優先順位" in rendered
     assert "今現在の仕様を満たすために必要な realization file" in rendered
     assert rendered.count("所見に対して適用する基準は常に一貫していること") == 1
-    assert "両方のマージ元ブランチの oracle file" in rendered
+    assert "両 branch の両立する意図と挙動" in rendered
     assert "### 背景" not in rendered
     for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered
@@ -593,7 +594,7 @@ def test_build_index_entry_policy_renders_core_output_requirements() -> None:
     rendered = _render_policy(builder_result)
     assert "index entry policy" in rendered
     assert "INDEX.md エントリーのルーティング情報" in rendered
-    assert "対象内容から根拠を持って言える責務・入口・読む条件" in rendered
+    assert "対象の現在内容を根拠とする" in rendered
     assert "機械的に補える情報" in rendered
     assert "対象が担う責務と、同階層の他対象ではなくその対象へ進む理由" in rendered
     assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered

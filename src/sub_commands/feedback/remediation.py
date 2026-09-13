@@ -1187,15 +1187,19 @@ def _set_feedback_error_state(
         _set_error(context)
     except BaseException as state_error:
         failures.append(f"error state update failed: {state_error!r}")
-    if manifest is not None and update_processing and all(
-        manifest.get(name) is None for name in ("publication", "diagnostic")
+    if (
+        manifest is not None
+        and update_processing
+        and all(manifest.get(name) is None for name in ("publication", "diagnostic"))
     ):
         try:
             report._set_processing_state(
                 context.repo,
                 manifest,
                 "failed",
-                repr(error) if error is not None else "feedback interruption cleanup failed",
+                repr(error)
+                if error is not None
+                else "feedback interruption cleanup failed",
             )
         except BaseException as manifest_error:
             failures.append(f"error manifest update failed: {manifest_error!r}")

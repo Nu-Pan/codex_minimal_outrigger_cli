@@ -917,13 +917,22 @@ def test_session_join_preserves_repository_local_feedback_state(
     assert run_git(root, "ls-files", "--", relative).stdout == ""
 
 
-def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    "extra_change", ["add", "modify", "delete", "rename", "marker"]
+)
+def test_session_join_includes_incidental_conflict_resolution_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra_change: str
 ) -> None:
-    """conflict agent が対象外 file を変更した merge を拒否する。"""
+    """付随する編集を merge に含め、移動先などの未解消 marker は拒否する。"""
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     extra = root / "src" / "extra.py"
+    if extra_change in {"modify", "delete", "rename"}:
+        extra.parent.mkdir()
+        extra.write_text("previous implementation\n")
+        run_git(root, "add", "src/extra.py")
+        run_git(root, "commit", "-m", "add related implementation")
+    moved = extra.with_name("moved.py")
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     assert (
@@ -947,28 +956,54 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
-        """対象外 file の変更を含む conflict agent の結果を再現する。"""
-        target.write_text("resolved change\n")
+        """両側の仕様を保持し、関連実装を整理する agent の結果を再現する。"""
+        target.write_text("home change\nsession change\n")
         extra.parent.mkdir(exist_ok=True)
-        extra.write_text("extra\n")
+        if extra_change == "delete":
+            extra.unlink()
+        elif extra_change == "rename":
+            extra.rename(moved)
+        elif extra_change == "marker":
+            extra.write_text("<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n")
+        else:
+            extra.write_text("related implementation\n")
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert result.exit_code != 0
     assert current_branch(root) == home_branch
-    assert "conflict 解消以外の差分が残っています。" in result.stderr
-    assert "src/extra.py" in result.stderr
-    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
+    if extra_change == "marker":
+        assert result.exit_code != 0
+        assert "conflict marker が残っています。" in result.stderr
+        assert str(extra) in result.stderr
+        assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
+        return
+    assert result.exit_code == 0, result.output
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert run_git(root, "show", "HEAD:oracle/spec.md").stdout == (
+        "home change\nsession change\n"
+    )
+    if extra_change in {"delete", "rename"}:
+        assert run_git(root, "ls-files", "--", "src/extra.py").stdout == ""
+    if extra_change == "rename":
+        assert (
+            run_git(root, "show", "HEAD:src/moved.py").stdout
+            == "previous implementation\n"
+        )
+    elif extra_change != "delete":
+        assert (
+            run_git(root, "show", "HEAD:src/extra.py").stdout
+            == "related implementation\n"
+        )
 
 
 @pytest.mark.parametrize("change_kind", ["context", "mode", "delete"])
-def test_session_join_rejects_extra_conflict_file_changes(
+def test_session_join_accepts_incidental_conflict_file_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change_kind: str
 ) -> None:
-    """conflict marker 解消以外の conflict file 変更を merge しない。
+    """marker 外の整理、mode 変更、削除を含む解消結果を merge する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md の
     「oracle file 規定と conflict 解消の優先順位」
@@ -997,7 +1032,6 @@ def test_session_join_rejects_extra_conflict_file_changes(
     target.write_text(home_content)
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "home change")
-    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
     run_git(root, "switch", session_branch)
 
     class FakeCodexResult:
@@ -1022,16 +1056,19 @@ def test_session_join_rejects_extra_conflict_file_changes(
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert result.exit_code != 0
+    assert result.exit_code == 0, result.output
     assert current_branch(root) == home_branch
-    expected_summary = (
-        "conflict 対象 file の不要な差分が残っています。"
-        if change_kind in {"context", "delete"}
-        else "conflict 解消以外の差分が残っています。"
-    )
-    assert expected_summary in result.stderr
-    assert str(target) in result.stderr
-    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    if change_kind == "delete":
+        assert run_git(root, "ls-files", "--", "oracle/spec.md").stdout == ""
+    else:
+        assert run_git(root, "show", "HEAD:oracle/spec.md").stdout == target.read_text()
+        if change_kind == "context":
+            assert target.read_text().endswith("changed suffix\n")
+        else:
+            assert run_git(
+                root, "ls-files", "--stage", "oracle/spec.md"
+            ).stdout.startswith("100755 ")
 
 
 def test_session_join_handles_conflict_path_containing_newline(

@@ -67,9 +67,7 @@ def doctor_preprocess_for_join() -> set[str]:
     # 差分から除外する。config、.agents、refactor state も doctor の管理対象で
     # あり、state だけを返すと config の同期を join が想定外差分と誤判定する。
     return {
-        path
-        for change in tree_changes(root, before, after)
-        for path in change.paths
+        path for change in tree_changes(root, before, after) for path in change.paths
     }
 
 

@@ -22,6 +22,7 @@ import os
 import threading
 from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from _codex_support import setup_codex_home, stub_codex_overrides
@@ -31,6 +32,7 @@ from _git_support import make_repo, run_git
 import cmoc_runtime
 import commons.indexing as indexing_common
 import commons.runtime_codex_preflight as codex_preflight
+from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from commons.runtime_logging import (
     SubcommandLogger,
     reset_current_subcommand_logger,
@@ -626,24 +628,52 @@ def test_update_indexes_replaces_index_symlink_without_writing_link_target(
     assert external_index.read_text() == "external\n"
 
 
-def test_target_content_for_indexing_does_not_follow_index_symlink(
-    tmp_path: Path,
+@pytest.mark.parametrize("target_kind", ["file", "directory", "index_symlink"])
+def test_build_index_entry_passes_path_without_embedding_contents(
+    tmp_path: Path, target_kind: str
 ) -> None:
-    """INDEX.md symlink のリンク先を agent prompt の本文に含めない。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/indexing.md
-    """
+    """生成 call へ本文や既存 INDEX を注入せず、対象 path と正本 prompt を渡す。"""
     root = make_repo(tmp_path)
-    directory = root / "docs"
-    directory.mkdir()
-    (directory / "visible.txt").write_text("inside\n")
-    external_index = tmp_path / "external-index.md"
-    external_index.write_text("outside-only\n")
-    (directory / "INDEX.md").symlink_to(external_index)
+    cmoc_runtime.sync_config(root)
+    body = "unique-target-body\n```\nnested content\n```\n"
+    old_index = "unique-old-index-body\n"
+    if target_kind == "file":
+        target = root / "target.md"
+        target.write_text(body)
+    else:
+        target = root / "docs"
+        target.mkdir()
+        (target / "visible.txt").write_text(body)
+        if target_kind == "index_symlink":
+            external_index = tmp_path / "external-index.md"
+            external_index.write_text(old_index)
+            (target / "INDEX.md").symlink_to(external_index)
+        else:
+            (target / "INDEX.md").write_text(old_index)
 
-    assert indexing_common.target_content_for_indexing(directory) == (
-        "INDEX.md\nvisible.txt"
+    entry = {
+        "summary": ["生成された説明"],
+        "read_this_when": ["対象の責務を確認するとき"],
+        "do_not_read_this_when": ["別の対象を確認するとき"],
+    }
+    calls = []
+
+    def fake_codex_exec(parameter, **_kwargs):
+        calls.append(parameter)
+        assert parameter == build_indexing_index_entry_parameter(target, root)
+        assert str(target) in parameter.prompt
+        assert body not in parameter.prompt
+        assert old_index not in parameter.prompt
+        return SimpleNamespace(output_json=entry)
+
+    rendered = indexing_common.build_index_entry(
+        root, target, codex_exec=fake_codex_exec
     )
+
+    assert len(calls) == 1
+    assert rendered == indexing_common.render_index_entry(root, target, entry).rstrip()
+    if target_kind == "index_symlink":
+        assert external_index.read_text() == old_index
 
 
 def test_indexing_lock_path_is_shared_across_linked_worktrees(tmp_path: Path) -> None:

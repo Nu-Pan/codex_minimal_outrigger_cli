@@ -86,7 +86,4 @@ def test_session_join_conflict_paths_protect_nested_code_fences(
     assert str(resolved_path) in section
     assert "conflict```" in section
     assert section.endswith("\n````")
-    assert parameter.prompt.index("# additional file access policy") < (
-        parameter.prompt.index('<cmoc_block id="objective">')
-    )
     assert parameter.prompt.index('<cmoc_block id="objective">') < start

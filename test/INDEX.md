@@ -128,38 +128,34 @@
 # `test_acp_builder_indexing_parameters.py`
 
 ## Summary
-- indexing index entry builder の parameter 構築と、readonly・cwd・preflight・prompt 内容の契約を検証するテスト。
-- INDEX.md エントリー生成用 Structured Output schema の semantic 配列が空でないことを検証するテスト。
-- 対象本文に三連 backtick が含まれる場合でも prompt の本文境界を保護し、oracle builder と同一結果になることを検証するテスト。
-- index entry 互換 module が builder のみを公開する互換公開面を検証するテスト。
+- `indexing index entry` builder の parameter 構築、Structured Output schema の非空 semantic 配列制約、互換公開面を検証するテスト。
 
 ## Read this when
-- indexing index entry builder の parameter 設定、prompt 構成、対象本文の fence 保護を確認したいとき。
-- INDEX.md エントリー生成 schema の必須配列制約を確認したいとき。
-- index entry 互換 module の公開シンボル制約を確認したいとき。
+- indexing 用 INDEX.md エントリー生成の入力、readonly・preflight 設定、プロンプト内容、schema 制約、互換 module の公開範囲を確認したいとき。
 
 ## Do not read this when
-- indexing index entry builder の正本実装や schema 定義そのものを変更・確認したいときは、対応する oracle の正本を直接読む。
-- INDEX.md エントリー生成以外の builder の parameter や公開面を確認したいとき。
+- 実際の index entry builder の実装や正本仕様を変更・確認する場合。
+- INDEX.md のルーティング規定そのものを確認する場合。
 
 ## hash
-- fe42771668749a837a24254c023413543d38b4aa68f0a34469fcac96a0e3ffb4
+- 7c7a612ceb0fea7d93b9194617a30b8e09dc6d821a83222afc7b9f97cacb9287
 
 # `test_acp_builder_session_join_parameters.py`
 
 ## Summary
-- session join の conflict resolution builder に関する互換モジュールの公開範囲、repo write 権限、prompt 構造、conflict path の code fence 保護を検証するテスト。
+- session join の conflict resolution builder 契約を検証するテスト
+- 互換モジュールの公開 export、repo write 権限を持つパラメータ、prompt の必須方針・完了条件、競合パス内の code fence 保護を確認する
 
 ## Read this when
-- session join の conflict resolution 用パラメータ生成、公開 API、ファイルアクセス権限、prompt の契約を変更・確認するとき。
-- conflict 対象ファイルの path を prompt に埋め込む際、三連 backtick を含む path の扱いを確認するとき。
+- session join の conflict resolution builder の公開 API やパラメータ生成契約を変更・確認するとき
+- conflict resolution 用 prompt の構成、権限、実行条件、または競合パスの code fence 処理を調べるとき
 
 ## Do not read this when
-- conflict resolution builder 本体の実装詳細を変更・調査する場合は、対応する正本実装を直接読むとき。
-- session join の conflict resolution 以外の builder や、一般的なテスト実行方法だけを確認するとき。
+- session join の通常の join 処理や conflict resolution 以外の builder を調べるとき
+- builder の正本実装そのものの詳細を確認する必要があり、対応する canonical 実装を直接読むべきとき
 
 ## hash
-- 8c6d839daf58bd270e88c069f8a33cc01c3034f833a7f86ea54cd48c05fdb50d
+- e2905c6eaa80aa691981e7bf3f13bbb09bd4522d617cf57ae72c86b9a367d77a
 
 # `test_acp_builder_tui_parameters.py`
 
@@ -452,21 +448,23 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback reporter と collector の受付・検証・保存、および raw observation から issue candidate、remediation、active state の atomic publication と cleanup までを同一 repository fixture で検証するテスト群。
-- MCP/loopback transport、payload・context・rate limit・UTF-8・secret masking・symlink 境界、並行 call、割り込み、rollback、再実行、generation artifact の整合性を確認する feedback report の統合テスト入口。
+- feedback の reporter、collector、raw observation、issue candidate、remediation、active state、atomic publication、cleanup を同一 fixture で検証する統合テストの入口。
+- agent-facing submission の JSON-RPC／TCP protocol、安全な UTF-8・secret masking・path 境界、rate limit、call lifecycle を確認する。
+- feedback report の precondition、候補同一性、再発 threshold、wave 処理、Codex remediation、interrupt／failure recovery、active artifact 整合性を検証する。
 
 ## Read this when
-- feedback observation の reporter または collector の protocol、入力検証、durable raw storage、degraded warning の挙動を確認したいとき
-- feedback report の候補正規化・重複判定・threshold、remediation の wave 処理、active state の compact 化、current pointer、generation hash、cleanup、recovery を検証したいとき
-- session precondition、run join/abandon、user interruption、rollback、publication failure 後の再開可能性をテスト仕様から確認したいとき
+- feedback observation の受付から report publication・active state 更新・raw cleanup までの一連の挙動を変更または確認するとき。
+- reporter／collector protocol、context capability、durable storage、並行 call、入力検証や degraded warning の回帰を調べるとき。
+- feedback report の候補 normalization、remediation、再検証、遅延 intake、run recovery、atomic publication の境界を確認するとき。
+- active generation、current pointer、report cut、cleanup manifest の corruption 検出や復旧動作を確認するとき。
 
 ## Do not read this when
-- feedback の正本仕様や実装の詳細そのものを読むことが目的で、テストによる外部挙動の確認が不要なとき
-- 個別の normalize/remediate oracle schema や builder parameter の形式だけを確認すれば足りるとき
-- feedback 以外のサブコマンドや、単独の logging・session 一般仕様を調べるとき
+- feedback の個別実装や正本仕様の詳細を直接確認したい場合は、対応する runtime／subcommand 実装または oracle specification を先に読むとき。
+- feedback 以外の subcommand、一般的な session／run lifecycle、または unrelated な MCP protocol の挙動だけを調べるとき。
+- 単純な fixture・テスト実行方法や、テスト対象の機械的なファイル配置だけを確認したいとき。
 
 ## hash
-- 9ecad917a1d12832782bba13ab42b5462c06908418af06a208a0e6b58c120383
+- 033d608871a089569bf9b8dcad9159e6a69186fc980f6aff2f3462bc9aba6414
 
 # `test_feedback_decision.py`
 
@@ -540,22 +538,21 @@
 # `test_indexing_common.py`
 
 ## Summary
-- `commons.indexing` の INDEX entry と directory traversal を直接検証する共通回帰テスト群。
-- entry の render/parse、入力検証、hash の計算と再利用、更新順序、並列生成、失敗時の部分書き込み復元を扱う。
-- symlink cycle、特殊ファイル、非 UTF-8 名、空ディレクトリ、nested memo、linked worktree の lock など、INDEX 更新の境界条件を検証する。
+- `commons.indexing` の INDEX entry 生成・解析・hash 再利用・directory traversal・並列更新を、CLI lifecycle から分離して直接検証する回帰テスト。入力検証、更新失敗時の復元、symlink・特殊ファイル・memo 境界、Codex worker のログ伝播と linked worktree 間の lock 共有を扱う。
 
 ## Read this when
-- INDEX entry の生成・解析・hash 再利用・更新対象判定を変更または調査するとき
-- directory traversal の順序、祖先関係のない更新の並列実行、pushd 中の worker 制約を確認するとき
-- entry 生成失敗時の復元、symlink や特殊ファイルの除外、非 UTF-8 filename の hash、nested memo の扱いを確認するとき
+- INDEX entry の malformed/fresh hash 処理、semantic acceptance、render/build contract を確認するとき
+- `update_indexes` の directory traversal、空 directory、memo 除外、symlink cycle、特殊ファイル、INDEX symlink 置換の挙動を確認するとき
+- INDEX 更新の順序・部分書き込み復元・非祖先 directory の並列実行・pushd 中の worker 制約を確認するとき
+- Codex entry 生成への対象本文や既存 INDEX の非注入、subcommand logger の伝播、linked worktree 間の indexing lock を確認するとき
 
 ## Do not read this when
-- CLI lifecycle や indexing サブコマンド全体の統合動作を確認することが目的のとき
-- 個別の INDEX entry の正本仕様や生成プロンプトを確認する場合に、実装・仕様そのものを直接読むべきとき
-- 一般的なファイル走査や並列処理を調べるだけで、`commons.indexing` の契約が関係しないとき
+- CLI の indexing subcommand lifecycle や利用者向けコマンド仕様だけを確認したいときは、CLI 実装または subcommand 仕様を直接読む
+- INDEX entry のプロンプト構築そのものを確認したいときは、`build_indexing_index_entry_parameter` とその正本仕様を直接読む
+- INDEX 更新以外の runtime、ログ、Git worktree の一般挙動を確認したいときは、このテストではなく該当する実装・テストを読む
 
 ## hash
-- abe89b033c919a9c2b5081e47033cdfb2e0bf160c92211daaf118e4482222840
+- d3cf3c7f0c1a35a4bce7ef500d7ef0d2c1cc15e11ff4c2a39ca25d78b3b0af3c
 
 # `test_indexing_preflight.py`
 
@@ -702,19 +699,20 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt part 各 policy の SDHeader 構造・カテゴリ順序・主要文言と、complete prompt の組み立て、動的セクション、placeholder 展開、file access 境界を回帰検証するテスト。prompt builder の変更が複数 policy の注入や出力順序、参照境界、モード別制約を壊していないか確認する入口。
+- prompt part と complete prompt の組み立てを検証する回帰テスト。各 policy の SDHeader 構造・カテゴリ順序、flag による注入、セクション順序、placeholder 展開、file access mode ごとの境界、主要な policy 内容を横断的に確認する。
 
 ## Read this when
-- prompt builder の policy 追加・変更、complete prompt のセクション順序や objective 構築、placeholder 定義・競合処理を変更または検証するとき。
-- oracle、realization、feedback、index entry、routing、editor handoff、file access 各 policy の rendering と complete prompt への注入結果を確認するとき。
-- file access mode ごとの書き込み境界、linked worktree での同一性、prompt の共通 feedback instruction を回帰確認するとき。
+- prompt builder や policy builder の変更が prompt の rendering、注入順序、placeholder、カテゴリ構造に影響する可能性があるとき
+- complete prompt の構成、policy flag、file access mode、linked worktree 境界の回帰を確認するとき
+- prompt parts の既存仕様に対するテスト失敗の原因を調査するとき
 
 ## Do not read this when
-- prompt builder 本体の実装詳細を変更せず、個別 policy の正本仕様や policy 文面そのものだけを確認するときは、対応する oracle doc または policy builder を直接読む。
-- prompt の rendering や complete prompt の組み立て、placeholder 展開、policy 注入に関係しないテストや機能を調査するとき。
+- prompt builder や policy の実装詳細を確認する必要があり、対応する oracle/src の実装を直接読むべきとき
+- 正本仕様そのものの意味や要求を確認するとき
+- prompt assembly と無関係な機能やテストを扱うとき
 
 ## hash
-- 9bdd688e0f3c2b8ceef425ae83819af3e80ea1fada4eed76888ae070a7c20e97
+- 36a50c821c1c0665eb048156038f0be7f3f5b3db6e6ca5c267ee7fc0cc708816
 
 # `test_runtime_cli.py`
 
@@ -910,19 +908,18 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork・join・abandon の CLI 回帰テストを一つの入口で扱い、session branch と永続 state のライフサイクル、linked worktree、cleanup、conflict 解消、dirty worktree 拒否などの外部挙動を検証する。
+- session fork・join・abandon の CLI 外部挙動を、session branch/state のライフサイクルとして横断検証する回帰テスト。linked worktree、state cleanup、conflict 解消、dirty worktree 拒否、競合・失敗時の rollback と報告出力を扱う。
 
 ## Read this when
-- session の fork／join／abandon の挙動や、session branch・state の生成、遷移、復元、cleanup を確認・変更するとき。
-- linked worktree、home branch、state file、preprocess、conflict 解消の session join 経路を検証するとき。
-- session CLI のエラー出力、競合時の保護、oracle conflict の変更範囲を回帰テストから確認したいとき。
+- session の fork、join、abandon に関する外部挙動や session state 遷移を確認・変更するとき。
+- linked worktree 対応、conflict 解消、branch/state cleanup、失敗時の復元、CLI の stdout/stderr・report 出力を検証するとき。
 
 ## Do not read this when
-- session の実装本体や正本仕様そのものを確認することが目的で、テストによる外部挙動の確認が不要なとき。
-- fork／join／abandon 以外の CLI や、session state と無関係な一般的な Git・Codex 実行挙動を調べるとき。
+- session の内部実装や単一関数の仕様を直接確認する場合は、対応する session サブコマンド実装または正本仕様を先に読む。
+- session 以外の CLI、一般的な Git 操作、feedback state 単体の挙動を確認する場合。
 
 ## hash
-- 39889ca9bc374aa4104603d1a853a3a82163b031220339dea3b75b5af3356805
+- 4f91fb472ef9369857c024c47ae72d39187f148c2d9ce7b1f51f2e8a707eb93a
 
 # `test_skill_metadata.py`
 
