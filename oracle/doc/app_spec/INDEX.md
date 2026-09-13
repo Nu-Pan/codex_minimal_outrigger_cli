@@ -296,20 +296,21 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様群への入口。doctor、indexing、oracle 操作、realization 操作、feedback report、session lifecycle、editing run、TUI の各正本へ、確認したい実行責務に応じて進むための案内を提供する。
+- サブコマンド仕様の正本群への入口。各ファイルは、doctor・indexing・oracle・realization・feedback・session・editing run・TUI など、cmoc の個別操作または共通ライフサイクルを定義する。
+- 特定のサブコマンドの実行契約、編集 run のライフサイクル、session の fork／join／abandon、または TUI 起動契約を調べる際の同階層の入口。
 
 ## Read this when
-- cmoc の特定サブコマンドの引数、事前条件、実行手順、終了経路、primary report を確認するとき。
-- session／editing run の fork・join・abandon、agent 委譲、差分・commit・cleanup、状態遷移の仕様を調べるとき。
-- oracle／realization／feedback／indexing／TUI の workload 固有の責務と、共通仕様との境界を確認するとき。
+- cmoc のサブコマンド仕様を調査・変更し、対象操作の実行条件、処理手順、終了経路、report 要件を確認するとき
+- oracle／realization／feedback に関する workload 固有の処理、または session／editing run の状態遷移・cleanup・join を確認するとき
+- 複数のサブコマンド仕様のどれを読むべきか判断するため、仕様群の責務分担を把握したいとき
 
 ## Do not read this when
-- 個別サブコマンドの実装、builder の具体的な prompt や起動パラメータ、Structured Output schema を確認したいとき。
-- oracle と realization の適合性、feedback observation／state、editor input handoff、Codex CLI 起動など、各正本が直接扱う詳細だけを確認したいとき。
-- このディレクトリに含まれない一般的な Git 操作や、特定の実行結果・診断ログだけを確認したいとき。
+- 特定のサブコマンドの詳細仕様が明らかな場合は、この一覧からではなく該当する個別仕様を直接読むとき
+- oracle／realization の内容や適合性判定、feedback observation／state、Codex 起動パラメータなど、各仕様が参照する専門文書や実装だけを確認したいとき
+- INDEX.md の機械的な一覧情報や Structured Output の形式だけを確認したいとき
 
 ## hash
-- d13f0ee932b1b807eb73e73329859e78505511da525c82bb379f903a6114e38d
+- 77a70d29bbc919c8a63f7bdd6c0f904a46ed56b0962a0afc6e60772908b8c5df
 
 # `subcommand_interruption.md`
 

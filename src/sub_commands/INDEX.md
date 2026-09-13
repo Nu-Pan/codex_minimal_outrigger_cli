@@ -33,18 +33,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装入口。観測の判定、修復、report publication、終了後の recovery を担当する下位モジュール群を扱う。
+- feedback サブコマンドの実装群への入口。観測から候補生成・判定・修復・publication、run の recovery まで、feedback 処理全体の責務を確認・変更するための対象。
 
 ## Read this when
-- feedback サブコマンド全体の処理経路や、判定・修復・report publication・cleanup の責務分担を確認するとき。
-- feedback の入力状態、候補・issue の処理、run 状態遷移、checkpoint や publication 後の復旧を横断して調べるとき。
+- feedback サブコマンドの処理全体や、report・decision・remediation・recovery 間の連携を確認するとき。
+- feedback observation の report 化、判定根拠の固定、issue 修復、publication 後の cleanup・状態遷移を調べるとき。
+- feedback run の checkpoint、auto join、再開、失敗・割り込み時の recovery を確認するとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- feedback の共通 run lifecycle、永続 artifact の共通形式、観測受付の詳細だけを調べるときは、それぞれの共通実装や前段の対象を直接読む。
+- feedback の共通 run lifecycle、MCP 受付、永続 artifact の共通形式だけを確認したいときは、それぞれの共通実装を直接読む。
+- feedback の個別判定・report・remediation・recovery の詳細だけを確認したいときは、対応する実装対象を直接読む。
 
 ## hash
-- fd6a9a91ccf9731ab10a053566a2dbfc5388448b4ac76b149c1aaf8aa42fbb34
+- c859de4db18a02664dc23f2d49a76187f99576ca08d03c0c40b2eb7aff981b64
 
 # `indexing.py`
 
@@ -132,20 +134,18 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の fork・join・abandon というライフサイクル操作を調べる際の入口となる。
-- session branch と session state の作成、home branch への統合、破棄、失敗時の rollback および cleanup を扱う下位実装へ案内する。
+- session サブコマンドのライフサイクル操作を実装するパッケージ。session の fork・join・abandon に関する処理を確認する際の入口となる。
 
 ## Read this when
-- session サブコマンドの実装構成やライフサイクル全体を確認・変更するとき。
-- session branch、session state、home branch の間で行われる fork・join・abandon の処理を横断して追跡するとき。
+- session サブコマンドの作成、home branch への統合、破棄、branch や state の更新・cleanup を確認または変更するとき。
+- session lifecycle 操作間の競合制御や、失敗時の rollback・完了報告を追跡するとき。
 
 ## Do not read this when
-- session サブコマンド以外の処理を扱うとき。
-- fork・join・abandon のいずれか一つの具体的な実行処理だけを調べるときは、該当する実装ファイルを直接読む場合。
-- 共通の CLI 実行基盤、Git 操作、state 永続化の一般仕様だけを確認したいとき。
+- session 以外のサブコマンドを扱うとき。
+- SessionState のデータ形式や共通 CLI 実行基盤など、session lifecycle の個別操作より下位・共通の実装を直接確認したいとき。
 
 ## hash
-- 333c87bd8bef74f1b9896e54e24198dc850689685ebe7c29a1b64bb0470b093d
+- 17d723012891b050c8bc34a1457a07c14395b92a377ae134af87d7abb9b06331
 
 # `tui.py`
 

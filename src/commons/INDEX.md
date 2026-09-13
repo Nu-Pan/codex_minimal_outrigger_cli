@@ -34,21 +34,22 @@
 # `indexing.py`
 
 ## Summary
-- src/commons/indexing.py は、INDEX.md の検査・再利用・生成・ハッシュ鮮度確認・書き込み・復元・Git commit までを一つの indexing lifecycle として実装する共通モジュールです。
-- INDEX.md を深いディレクトリから更新する処理、既存 entry の検証と再利用、Codex による不足 entry の生成、更新失敗時の復元を確認したいときの入口です。
+- INDEX.md の検査・生成・更新・復元・commit を担う indexing lifecycle の共通実装です。
+- directory traversal、既存 entry の hash による再利用判定、不足 entry の Codex 生成、深さ順の INDEX.md 更新を一体で扱います。
+- INDEX.md の snapshot 復元、symlink・特殊 file・binary file の扱い、index 対象 hash の計算、entry の render と形式検証を提供します。
 
 ## Read this when
-- INDEX.md の自動更新順序、対象ディレクトリ・子要素の選別、entry の hash による鮮度判定を調べるとき
-- INDEX.md entry の生成 prompt、Structured Output の描画、並列生成、Codex 実行時のコンテキストやログ設定を調べるとき
-- INDEX.md の lock、symlink・特殊ファイルの扱い、更新失敗時の snapshot 復元、更新差分の commit を調べるとき
+- INDEX.md の preflight 更新や indexing 用 lock、更新差分の commit 動作を変更・調査するとき。
+- directory ごとの INDEX.md entry の再利用条件、生成対象の列挙、深さ順更新、並列 Codex 呼び出しを確認するとき。
+- INDEX.md の hash 鮮度判定、既存 entry の形式検証、ファイル種別ごとの復元・書き込み挙動を確認するとき。
 
 ## Do not read this when
-- INDEX.md entry の生成 schema や agent 向け prompt の定義そのものを変更・確認するときは、index entry parameter の実装を直接読むとき
-- Codex 実行前 preflight の登録や Codex 実行プロファイルの詳細だけを調べるときは、対応する runtime モジュールを直接読むとき
-- INDEX.md の利用者向け仕様や更新ルールの正本を確認するときは、app_spec 配下の仕様文書を直接読むとき
+- INDEX.md entry の生成 parameter や Structured Output の定義だけを確認したいときは、index entry builder 側を直接読む。
+- Codex subprocess の preflight、profile、isolation など個別の実行制御だけを調べるときは、対応する runtime 実装を直接読む。
+- INDEX.md の正本仕様や利用者向けの indexing ルールを確認したいときは、仕様文書を直接読む。
 
 ## hash
-- 8727115c4b41324a52633d2dd9222879c69da53497983ba73d586d48d1775a32
+- 7eb8d50ee98b933ab01d70d2e3eb16b9bacc05edb8b32c8f7285bb176cce83b8
 
 # `prompt_editor_input.py`
 
@@ -608,22 +609,19 @@
 # `runtime_run_join.py`
 
 ## Summary
-- editing run の join と cleanup で共有する runtime 処理を担う。
-- join 前の doctor 修復差分、session/run の clean 検査と想定外差分の処理、run branch の merge を扱う。
-- INDEX conflict の再生成、post-join の hook・state・refactor state 同期、join 失敗時の復元と report、merge 済み run の worktree・branch cleanup への入口となる。
+- editing run の join 処理で、doctor 前処理、session/run worktree の差分検査、run branch の merge、INDEX conflict の解決、post-join 同期、および cleanup を共有する実装。
+- 明示的な join と self-joining workload が共有する検証・merge・失敗時復元・run worktree/branch 削除の入口。
 
 ## Read this when
-- editing run の join 前提条件、差分分類、--force-resolve の挙動を確認するとき。
-- run branch の merge と INDEX.md 限定 conflict の解決、post-join 同期の流れを確認するとき。
-- join 失敗時の session 復元、error state、lifecycle report、terminal result の扱いを確認するとき。
-- merge 済み run の worktree と branch がどの条件で削除または保持されるかを確認するとき。
+- editing run の join 失敗、想定外差分、merge conflict、post-join の INDEX/state 同期、または join 済み run の worktree/branch cleanup を調べるとき。
+- run branch を session branch に統合する共通処理や、INDEX.md だけを再生成して conflict を解消する挙動を変更するとき。
 
 ## Do not read this when
-- 個別の CLI サブコマンド、doctor の修復処理、低レベルの git 操作、state や report のデータ定義だけを確認したいとき。
-- run lifecycle の型定義や差分分類の詳細、INDEX.md 生成そのものの規則を直接調べるとき。
+- run の開始、通常の workload 実行、または join 前の run 状態解決そのものを調べるとき。
+- run lifecycle のデータ構造・差分分類・state/report の個別仕様だけを確認する場合は、対応する下位 runtime モジュールを直接読むとき。
 
 ## hash
-- 0dd03b4ae2b198e31b2f756cec887a524ada4a9138ecb274ea01283da6db2b83
+- 725fef246fa19969636930118d93ee6c13dcc1100e1c64f92215e1281a3cbd92
 
 # `runtime_run_lifecycle.py`
 

@@ -112,19 +112,18 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドに固有のエージェント呼び出し構築をまとめる層です。
-- 配下の join は、通常のマージ処理とは分離した merge conflict marker 解消用の呼び出し構築への入口です。
+- session join の merge conflict marker 解消に使うエージェント呼び出し定義。競合対象ファイルの実パス、編集権限、適用するポリシー、indexing preflight の扱いをまとめる。
 
 ## Read this when
-- session join で conflict marker を解消するエージェント呼び出しの対象ファイル、編集モード、専用 policy、indexing preflight の扱いを確認したいとき。
-- session 系の ACP builder 配下から、join の conflict 解消実装へ進む入口を探しているとき。
+- session join の競合解消で、対象ファイルの prompt への渡し方や、解消エージェントの実行条件を確認するとき。
+- conflict 解消後にも oracle・realization などの規定を適用する呼び出し設定を確認するとき。
 
 ## Do not read this when
-- session join の通常のマージ処理や、conflict 解消以外の処理を確認したいとき。
-- 共通の prompt 構築仕様や policy 定義そのものを確認したいときは、対応する共通 prompt builder または policy 定義を直接読むべきです。
+- 通常の merge 処理や session join 以外のサブコマンドにおけるエージェント呼び出し条件を確認するとき。
+- 共通の prompt 構築規則や共通パラメータの定義を確認するとき。
 
 ## hash
-- 473e6919b32f47e10a155d54b77abd5e6c8df9c307cee6988bdc1d456316eceb
+- 458cbb17539bf5bea207315042fa9cc6c0cfdb291d43cc29b17d06e511cd52cc
 
 # `tui`
 

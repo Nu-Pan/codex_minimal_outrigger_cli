@@ -446,9 +446,9 @@ def build_index_entry(
             ["cmoc indexing を通常の CLI 経由で再実行してください。"],
             str(path),
         )
-    content = target_content_for_indexing(path)
+    # 本文の選択と参照は oracle builder の指示に従って agent が行う。
     log_root = repo_root(root)
-    parameter = build_indexing_index_entry_parameter(path, content, root)
+    parameter = build_indexing_index_entry_parameter(path, root)
     # parameter が指す index_entry.json で検証済みの値を、利用境界で一度だけ狭める。
     result = cast(
         _IndexEntry,
@@ -464,21 +464,6 @@ def build_index_entry(
         ).output_json,
     )
     return render_index_entry(root, path, result, digest=digest).rstrip()
-
-
-def target_content_for_indexing(path: Path) -> str:
-    """INDEX entry 生成 prompt に渡す対象内容を取り出す。"""
-    if path.is_file():
-        return path.read_text(errors="ignore")
-    index_path = path / "INDEX.md"
-    # {{work-root}}/oracle/doc/app_spec/indexing.md の生成対象は work-root 内に
-    # 限る。INDEX.md symlink は _read_existing_index_content と同じく再利用せず、
-    # リンク先の内容を agent prompt へ読み込まない。
-    if index_path.is_file() and not index_path.is_symlink():
-        return index_path.read_text(errors="ignore")
-    return "\n".join(
-        child.name for child in sorted(path.iterdir(), key=lambda p: p.name)
-    )
 
 
 def index_target_hash(root: Path, path: Path) -> str:

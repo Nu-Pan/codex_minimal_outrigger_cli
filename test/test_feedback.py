@@ -47,7 +47,7 @@ from acp.builder.feedback.normalize_issue import (
 from acp.builder.feedback.remediate_issue import (
     build_feedback_remediate_issue_parameter,
 )
-from basic.acp import FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
@@ -688,9 +688,15 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     }
     captured_prompts: list[str] = []
 
-    def fake_run_codex_exec(parameter: object, **_kwargs: object) -> SimpleNamespace:
-        assert hasattr(parameter, "prompt")
-        captured_prompts.append(str(parameter.prompt))
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **_kwargs: object
+    ) -> SimpleNamespace:
+        assert parameter.agent_call_cwd == root
+        assert parameter.file_access_mode == FileAccessMode.READONLY
+        assert parameter.run_indexing_preflight is False
+        assert "# routing policy" in parameter.prompt
+        assert "# oracle and realization basic" in parameter.prompt
+        captured_prompts.append(parameter.prompt)
         return SimpleNamespace(
             output_json={"result": {"decision": "new", "existing_issue_id": None}}
         )
@@ -2102,9 +2108,7 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
     session_id = _active_session(root, monkeypatch)
     original_write = remediation_module.write_report_cut_manifest
 
-    def write_then_interrupt(
-        repository: Path, manifest: dict[str, Any]
-    ) -> NoReturn:
+    def write_then_interrupt(repository: Path, manifest: dict[str, Any]) -> NoReturn:
         """write の戻り値を受け取る前の中断を再現する。"""
         original_write(repository, manifest)
         raise KeyboardInterrupt()
@@ -2149,13 +2153,7 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
 
     assert result.exit_code == 1, result.output
     session_state = json.loads(
-        (
-            root
-            / ".cmoc"
-            / "gu"
-            / "session"
-            / f"{session_id}.json"
-        ).read_text()
+        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
     )
     assert session_state["run"]["state"] == "error"
     report_text = terminal_primary_report(result).read_text()

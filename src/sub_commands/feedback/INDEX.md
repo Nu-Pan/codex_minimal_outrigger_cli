@@ -52,22 +52,21 @@
 # `remediation.py`
 
 ## Summary
-- feedback issue の逐次修復から、自動 join、commit・rollback、finalization、publication、recovery までを同一 run の状態遷移として制御する実装。
-- 観測の集約・表示、判定根拠の比較、永続 artifact の検査を下位モジュールへ委譲し、修復 checkpoint と merge 後の整合性を検証する。
+- feedback issue の逐次修復から、自動 join、状態検証、publication、割り込み・失敗時の recovery までを同一 run の状態遷移として制御する実装。
+- report による観測・候補・publication、decision による判定根拠、runtime_feedback_run_state による永続 artifact 検査を結び付ける統合処理の入口。
 
 ## Read this when
-- feedback report の実行経路、自動修復 wave、issue commit、run の join または publication を調べるとき。
-- feedback run の中断・失敗・SIGINT、rollback、recovery、finalization の状態遷移を確認するとき。
-- 修復結果の structured output、changed paths、decision basis、checkpoint、merge 後 tree の検証箇所を探すとき。
+- feedback report の新規 run 開始、wave 処理、remediation checkpoint、seal、auto join、publication の流れを確認するとき。
+- feedback run の中断・エラー・join 後 recovery、rollback、SIGINT 保留、invocation report や run state の進捗更新を調べるとき。
+- commit、merge、最終 tree、decision basis、artifact hash の整合性検証がどの境界で行われるか確認するとき。
 
 ## Do not read this when
-- 観測の読み取り・集約や表示ロジックだけを調べるときは report を直接読む。
-- 判定根拠の比較・issue history・decision state の計算だけを調べるときは decision を直接読む。
-- 永続 run artifact の形式や検証だけを調べるときは runtime_feedback_run_state を直接読む。
-- feedback report 以外の一般的な run join、indexing、refactor state 同期の仕様だけを調べるとき。
+- 観測の収集・集約・表示や report 固有の候補生成・publication の詳細だけを確認したいときは、report の実装へ進む。
+- 採用判定や issue history、decision basis の比較ロジックだけを確認したいときは、decision の実装へ進む。
+- 永続 run artifact の形式・読み書き・checkpoint 検証だけを確認したいときは、runtime_feedback_run_state の実装へ進む。
 
 ## hash
-- 1509d830c51a5b09daf1fe909a18dd59f95ffecb905de754bbbccf075a579aad
+- 3cff3fece0363dc0fe5e24d429b5a3a7f442e17a443268e093b105ec4f6ba794
 
 # `report.py`
 

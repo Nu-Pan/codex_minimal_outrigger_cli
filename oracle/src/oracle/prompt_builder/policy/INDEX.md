@@ -1,18 +1,19 @@
 # `conflict_resolution.py`
 
 ## Summary
-- session join の merge conflict 解消結果に適用する規定を構築する。conflict の両側と関連する oracle file の意図を保持し、両立不能な場合は未解消事項として報告するための instruction 文面への入口。
+- session join で merge conflict を解消する結果が満たすべき規定を定義する instruction 文面の構築入口
+- conflict の両側と関連する oracle file の確認、両 branch の意図・挙動の保持、人間による選択が必要な場合の未解消報告、および解消に伴う編集判断を扱う
 
 ## Read this when
-- session join の merge conflict 解消方針を確認・変更するとき
-- conflict 解消結果に求める oracle file 優先の規定や、未解消事項の報告条件を確認するとき
+- session join の merge conflict 解消方針や、その結果を完了扱いにする条件を確認・変更するとき
+- conflict 解消用の instruction 文面を構築する責務の所在を確認するとき
 
 ## Do not read this when
-- session join 全体の意味仕様や conflict 解消の優先順位を確認したいときは、まず正本仕様を読むべき場合
-- conflict 解消の具体的な実装挙動や realization file 自体を調べるとき
+- session join の意味仕様そのものや oracle file 規定と conflict 解消の優先順位を確認するとき
+- conflict 解消以外の prompt policy、または具体的な conflict の個別判断を直接確認するとき
 
 ## hash
-- 939087b46316af049646fb574af9178fbd8b70bae62508db39c4ac9167c8d5a0
+- 2e420cbd70c8ef4ee3cc3c0a0f0e12c4051faf31e4f861e3b61286f0ba351c56
 
 # `editor_input_handoff.py`
 
@@ -103,22 +104,18 @@
 # `realization.py`
 
 ## Summary
-- realization file を扱う agent call 向けの instruction 文面を構築する関数。
-- path context から placeholder 定義を取得し、realization policy の見出しと、oracle file を正本仕様断片として扱うための require・prohibit・allow 規定を組み立てる。
-- realization policy の意味仕様自体は別の oracle file を参照する前提で、prompt builder における realization policy の生成入口となる。
+- realization file を扱う agent call 向け instruction 文面を構築する入口。oracle file を正本仕様断片として扱い、既存実装の活用、最小限の補完、不要な実装整理、検証・テストの扱いに関する realization policy を定義する。
 
 ## Read this when
-- realization file を対象とする agent call の instruction 生成経路を確認したいとき。
-- realization policy に含める placeholder 定義、見出し、要求・禁止・許可規定の構築元を調査または変更するとき。
-- prompt builder の policy 構築処理から realization file 向け規定がどのように組み立てられるかを確認したいとき。
+- realization file の変更・追加・整理に伴い、agent call に渡す作業規定の構築内容を確認したいとき
+- oracle file と realization file の関係、実装者の裁量範囲、YAGNI、既存実装の活用、検証要件を含む方針の入口を探しているとき
 
 ## Do not read this when
-- realization file を扱わない agent call の policy 構築を確認するとき。
-- realization file の意味仕様や判断基準そのものを確認したいときは、対象ファイルではなく doc/app_spec 側の oracle 仕様を直接読むべきである。
-- policy 構築後の agent call 実行や、PlaceholderMap・SDHeader・SDPolicy の一般的な実装を確認したいときは、それぞれの定義元を直接読むべきである。
+- realization file 自体の具体的な実装内容や、個別の oracle file の正本仕様を確認したいとき
+- agent call の基本的な instruction 構築や realization file 以外の policy を確認したいときは、該当する prompt builder の定義へ直接進むべき
 
 ## hash
-- f469ec0b2fb4ad1f8863fb6db277c5653d6cbf4b900fa85caa69e93541d61410
+- 36a10fbf5477337cdb240ee63c42952b7161f28c1d08a218325c8afe3881f510
 
 # `realization_findings.py`
 
