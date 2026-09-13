@@ -89,22 +89,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle file に関する正本仕様、開発規約、branch model、設計上の代替案、および oracle 固有の agent call・prompt・パスモデル実装への入口。oracle と realization の責務分離、分類・列挙、oracle 編集／調査、呼び出し設定を担当対象へ切り分けて参照するための文書群。
+- cmoc の oracle 機能に関する正本仕様、開発規約、branch model、設計代替案、実装・入力契約をまとめた上位入口。機能仕様と実装上の構築要素を対応する下位領域へ案内する。
 
 ## Read this when
-- oracle file の責務、realization file との適合関係、分類・列挙規則を確認するとき。
-- `cmoc oracle edit` や `cmoc oracle investigation` の実行目的、入力、完了条件、agent call の経路を調べるとき。
-- oracle 固有の prompt builder、policy、path model、構造化入力、呼び出しパラメータの実装を確認するとき。
-- oracle に関する開発・テスト規約、branch model、または採用・不採用となった設計判断を調査するとき。
+- oracle・realization の機能仕様、開発・テスト規約、session・run の分離と統合、または設計判断の背景を調査・変更するとき。
+- oracle の agent call 構築、prompt・policy、indexing、feedback、editor input handoff などの実装や入力契約の入口を探すとき。
 
 ## Do not read this when
-- agent call 全体に共通する設定や prompt 構築だけを調べるときは、上位の共通実装入口を直接読む。
-- feedback、realization、session、TUI など別領域の個別仕様や実装だけを確認したいときは、それぞれの対象を直接読む。
-- 単一の oracle 文書や単一 builder の詳細な入力・出力・実装挙動だけを確認したいときは、oracle 配下の該当対象を直接読む。
-- 機械的なファイル列挙やハッシュ計算だけを行い、oracle の意味仕様や責務分担を必要としないとき。
+- 単一機能の詳細手順、個別の schema、特定の実装挙動、または生成済み oracle・realization の内容だけを確認したいときは、対応する下位対象を直接読む。
+- 文書の意味や責務分担を必要としない機械的なファイル処理だけを行うとき。
 
 ## hash
-- 5d934eadb58979714c51a9c0785f9e0355f01a53eff110b25390887c833e7ca0
+- a47b1c173a39d560a69fcfc76bca3299a8728259e88d57144850dabb1961c9b1
 
 # `pyproject.toml`
 

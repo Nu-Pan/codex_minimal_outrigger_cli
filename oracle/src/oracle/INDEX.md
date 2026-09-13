@@ -1,22 +1,25 @@
 # `acp_builder`
 
 ## Summary
-- AI コーディングエージェント呼び出しの共通パラメータ型とファイルアクセスモードを定義する。
-- quota availability probe、INDEX.md エントリー生成、feedback issue 処理、oracle・realization・session・TUI など、用途別の agent call builder への入口をまとめる。
-- 各用途に応じた prompt、Structured Output schema、作業ディレクトリ、editor input handoff、indexing preflight の設定を確認できる。
+- AI コーディングエージェント呼び出しの prompt と AgentCallParameter を構築する定義を、用途別の下位ディレクトリに分けて扱う。
+- feedback は observation の issue 同一性判定と realization file の remediation、indexing は INDEX.md エントリー生成、oracle は oracle 操作、realization は realization 反映・refactor、session は conflict 解消、tui は TUI 起動を扱う。
+- quota_probe.py は Codex CLI の利用可能性確認用 agent call の構築を担う。
+- basic.py は agent call の共通パラメータ型と論理的ファイルアクセスモードを定義する。
 
 ## Read this when
-- agent call の共通パラメータ、アクセスモード、prompt、Structured Output schema、cwd、editor input handoff、または indexing preflight の設定を確認するとき。
-- 用途別の agent call builder を探すとき。
-- quota probe、indexing、feedback、oracle、realization、session、TUI の agent call 構築責務の入口を確認するとき。
+- agent call の用途別 builder 定義を探すとき。
+- feedback、indexing、oracle、realization、session、tui の各 agent call の prompt・アクセスモード・起動設定を確認または変更するとき。
+- 共通の AgentCallParameter や FileAccessMode の定義を確認するとき。
+- Codex CLI の quota availability probe の呼び出し条件を確認するとき。
 
 ## Do not read this when
-- 特定の agent call の prompt や出力契約の詳細を確認したいときは、該当する下位ファイルを直接読む。
-- agent call の共通実行処理や Codex CLI の実際の挙動を調査するとき。
-- oracle・realization file の具体的な内容、編集手順、または feedback issue の保存・受付処理を確認するとき。
+- 各 agent call の実行処理、対象ファイルの具体的な編集、Git 操作、または TUI の実行結果を確認したいとき。
+- アクセスモードの正本仕様や共通 prompt 構造を確認したいときは、参照される仕様・prompt builder を直接読むとき。
+- Structured Output schema の詳細な受理条件だけを確認したいときは、各用途の schema ファイルを直接読むとき。
+- 生成済み INDEX.md のルーティング内容や、feedback issue・oracle・realization の実体を確認したいとき。
 
 ## hash
-- 1c30d36fd04b48d7e50c884f1e64ee15f70f18d6731aa581d251b69cfd0c1ed5
+- 371d8cc6c1d1e383e47081dfc7116a7611329f77afdd6318908c836b7e845cae
 
 # `editor_input_handoff`
 

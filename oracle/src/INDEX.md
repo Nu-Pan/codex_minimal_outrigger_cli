@@ -1,16 +1,16 @@
 # `oracle`
 
 ## Summary
-- AI コーディングエージェント呼び出しの共通設定、用途別 builder、prompt 構築、入力スキーマを扱う実装群への入口。
-- quota probe、indexing、feedback、oracle・realization・session・TUI などの agent call 構築や、共通の prompt・Structured Output・作業環境設定を確認できる。
+- oracle 操作に関する AI エージェント呼び出しの prompt と起動パラメータを構築する定義群への入口。調査、編集、差分要約、realization 反映などの用途別 builder と、共通のアクセスモード・呼び出しパラメータを扱う。
 
 ## Read this when
-- agent call の共通パラメータ、アクセスモード、prompt、Structured Output、cwd、editor input handoff、または indexing preflight を調べるとき。
-- 用途別の agent call builder や、agent 向け prompt・エディタ入力の構築経路を探すとき。
+- oracle の調査・編集・差分要約・realization 反映に用いる agent call の prompt、アクセスモード、起動設定を確認または変更するとき。
+- oracle 配下の agent call builder の用途別構成や、oracle file と realization file の扱いを確認するとき。
 
 ## Do not read this when
-- 特定用途の prompt、出力契約、入力スキーマの詳細だけを確認したいときは、該当する下位対象を直接読む。
-- Codex CLI の実行処理、フィードバック送信処理、oracle・realization の具体的な内容や編集手順を調べるとき。
+- oracle の正本仕様や個別の prompt policy の本文を確認したいとき。
+- agent call の実行処理、Git 操作、TUI の実行結果、または生成済み oracle file の内容を確認したいとき。
+- Structured Output schema の具体的な形式や受理条件だけを確認したいとき。
 
 ## hash
-- 38beea4879353cedd902bea8ee616ce2156e229752994451794d93df126b72d3
+- a1db41c1a2e56f3a67f4b026de8c8efc34d1f49958f5ee1d25e75254b36847ca

@@ -39,19 +39,18 @@
 # `indexing`
 
 ## Summary
-- `cmoc indexing` の INDEX.md エントリー生成処理と、その agent 呼び出しパラメータを定義する。
-- INDEX.md エントリー生成結果の構造化出力スキーマを提供する。
+- INDEX.md エントリー生成用の JSON Schema と、その schema を使う indexing agent 呼び出し定義を扱うディレクトリ。前者は出力形式の確認、後者は `cmoc indexing` の prompt・起動設定・対象 context の確認や変更の入口になる。
 
 ## Read this when
-- `cmoc indexing` のエントリー生成 prompt、対象本文の受け渡し、読み取り専用アクセス、agent call の cwd、Structured Output schema、indexing preflight 設定を確認・変更するとき。
-- 生成結果に必要な項目や各項目の意味を確認するとき。
+- INDEX.md エントリー生成結果の必須項目や JSON Schema を確認したいとき。
+- `cmoc indexing` が indexing agent を呼び出す際の prompt、読み取り専用設定、構造化出力、preflight 設定を確認・変更したいとき。
 
 ## Do not read this when
-- 既存の INDEX.md の内容やルーティング規則そのものを確認するとき。
-- エントリー生成後の INDEX.md 更新処理を確認するとき。
+- 対象ファイルやディレクトリそのものの実際の責務を調べたいとき。
+- 生成済み INDEX.md のルーティング内容を確認したいとき。
 
 ## hash
-- e7df757d8890e511c5fe65777856c0ab09d293389dcbeb7919be9ba89f1db21d
+- b7ebde069e72bdb8df99995dfaad5b84e01791d88ff8130a107283e391529be1
 
 # `oracle`
 
