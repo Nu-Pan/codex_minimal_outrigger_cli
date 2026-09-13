@@ -20,7 +20,6 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 def build_indexing_index_entry_parameter(
     target_path: Path,
-    target_content: str,
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """
@@ -29,10 +28,6 @@ def build_indexing_index_entry_parameter(
 
     target_path: Path
         目次情報生成対象のファイルまたはディレクトリ
-
-    target_content: str
-        目次情報生成対象の内容
-        ディレクトリの場合は、その直下の `INDEX.md` の内容が渡される想定
 
     agent_call_cwd: Path
         目次情報生成 agent call に設定する cwd
@@ -49,21 +44,12 @@ def build_indexing_index_entry_parameter(
         path_context=path_context,
         aux_static_prompt=[
             SDHeader(
-                "エントリー生成規定",
+                "`INDEX.md` 用エントリー生成規定",
                 """
                 - 必ずオリジナルの本文のみを根拠にエントリーを生成すること
                 - 既存の `INDEX.md` を読むのは禁止
-                - `{{target-path}}` 以外の文章も必要に応じて参照すること
+                - `{{target-path}}` と関係する文章も必要に応じて参照すること
                 """,
-            ),
-        ],
-        aux_dynamic_prompt=[
-            SDHeader(
-                "`{{target-path}}` の内容",
-                SDCodeBlock(
-                    None,
-                    target_content,
-                ),
             ),
         ],
         aux_placeholder_def={
