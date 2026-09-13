@@ -1,50 +1,54 @@
 # `apply_behavior.md`
 
 ## Summary
-- cmoc realization refactor で採用しなかった事前計画・並列所見調査の理由を記録する補足資料。現行の file 単位の調査・反映方式を理解するための背景情報への入口。
+- cmoc realization refactor で、修正点リスト後の独立した作業計画立案や、所見の並列列挙・所見単位の修正を採用しなかった理由を説明する代替案検討記録。
+- 実装状態との乖離、所見の重複や False-Positive、ファイル間依存、文脈分断を避けるため、永続的な調査要求に従って file 単位で調査と反映を進める現行方式に至った判断の根拠を確認できる。
 
 ## Read this when
-- realization refactor の処理単位やループ設計について、事前計画や所見単位の並列処理を採用しなかった判断理由を確認したいとき。
-- 現行方式が、実装中の状態変化・依存関係・重複所見・文脈分断などをどう考慮した結果かを調べるとき。
+- realization refactor の調査・修正フローを設計または変更する際に、計画立案の独立化や所見調査の並列化を採用しない判断理由を確認したいとき。
+- 所見単位の修正、ファイル単位の処理、調査と反映の順序に関する設計上のトレードオフを検討するとき。
+- realization refactor の前身となった orchestration との違いや、現行方式へ移行した理由を調べるとき。
 
 ## Do not read this when
-- realization refactor の現行仕様、refactor state、refactor loop の具体的な動作を確認したいときは、正本仕様を直接読む。
-- 実際の実装箇所を修正・調査するときに、採用済みの処理手順だけが必要な場合。
+- realization refactor の現行仕様や処理手順そのものを確認したいときは、正本である realization_refactor の仕様を直接読む。
+- 特定の実装ファイルの具体的な不具合、修正内容、所見の詳細を調査するときは、この判断記録ではなく対象ファイルや対応する調査記録を読む。
+- 一般的な作業計画の立案方法や並列処理の設計を検討しているだけで、cmoc realization refactor の採用判断を確認する必要がないとき。
 
 ## hash
-- f4ca37fd0290a0c54ec62aa1a9a83f23dd83e7ef0562faa4ff58afc8864cd9fd
+- feb3514ab820c4b2b2323737a480acb41f0bd6aaecb280583faedf0233cc7a5f
 
 # `file_access_policy_violation_post_validation.md`
 
 ## Summary
-- agent call 後の差分を検査して file access policy 違反を検出し、違反時に別の agent call でリカバリーする案を、false-positive などの理由で断念した経緯を記録する検討資料。
+- file access policy 違反の事後検査と自動リカバリーを断念した経緯を記録し、並列編集による false-positive などの問題と関連仕様を削除した判断を確認するための資料。
 
 ## Read this when
-- file access policy 違反の事後検査や、違反検出後の自動リカバリー案を調査するとき。
-- 並列 agent による差分の誤検出、`.gitignore` 系の扱い、agent call 起因の差分判定の難しさを確認するとき。
+- file access policy 違反の事後検査・自動リカバリー案がなぜ断念されたかを調査するとき
+- agent call の差分を正確に判定できなかった事例や、関連仕様を削除した経緯を確認するとき
 
 ## Do not read this when
-- 現行の file access policy や実装仕様を確認・変更するとき。
-- 過去の断念理由ではなく、現在の検査処理やリカバリー処理の詳細を直接調べるとき。
+- 現行の agent call 差分検証の仕様や実装を確認・変更するとき
+- file access policy 自体の現行定義を確認するとき
 
 ## hash
-- 6ca39e6855f9add5db8cb57a495360d319e2e83f99e9bb194b51126cb4138d59
+- 385aa0a3b0190a2f4460e451a34e37e7b95178eb8e07614ca2146fc82ffa52bd
 
 # `gitignore_to_permission_profile.md`
 
 ## Summary
-- .gitignore の除外判定を permission profile の読み書き例外へ変換する案について、採用しなかった理由と実行時利用を禁じる判断を記録する。
+- `.gitignore` 対象を permission profile の例外として動的に扱う案の採否、想定していた用途、断念理由を確認するための記録。
+- `.gitignore` と permission profile の記法上の非互換性や、動的生成禁止という正本方針の経緯を調べる際の入口。
 
 ## Read this when
-- .gitignore 対象を permission profile の例外として扱う設計や、両者の記法互換性を検討するとき。
-- 現行のファイルアクセス制限を正本仕様に従わせ、この変換案を fallback や実行時分岐に使わない理由を確認するとき。
+- `.gitignore` の除外対象を agent の読み書き権限へ反映する設計や、permission profile の動的生成案を検討・再評価するとき。
+- この代替案が採用されなかった理由や、ディレクトリ限定指定・柔軟なパターン指定の非互換性を確認するとき。
 
 ## Do not read this when
-- 現行の permission profile やファイルアクセス制限の具体的な仕様を確認したいとき。
-- .gitignore の一般的な記法や git 追跡対象外ファイルの扱いを直接調べるとき。
+- 現行の permission profile の仕様や動的生成禁止の正式な判断を確認することが目的で、正本仕様を直接参照できるとき。
+- `.gitignore` や permission profile と無関係な読み書き制限、または個別の `__pycache__` の扱いだけを調べるとき。
 
 ## hash
-- b25695a7bfeafd936275ec65ae35b32df87b0cb6a195e9b22003c08302edd9e2
+- fd7e8ab368bd5a1429571454da71973f34c65523a3480778ccc37fa5245b7def
 
 # `memory_alternative.md`
 
@@ -84,15 +88,17 @@
 # `working_plan_review.md`
 
 ## Summary
-- 作業計画レビューを採用しなかった理由と、その代替として人間が oracle を編集し AI が実装を追従する方式を採用した判断を記録する文書。
+- 作業計画レビュー方式を採用しなかった当時の評価と判断を記録する文書。人間が望む成果物を oracle に定義し、AI がレビューと実装を担う役割分担の考え方、および人間と AI の共同作業に関する制約を確認するための入口。
 
 ## Read this when
-- `tgbt plan` や `/plan` のような計画レビューの導入理由・不採用理由を確認したいとき。
-- 人間と AI の役割分担、および oracle 中心の開発方針に至った評価を確認したいとき。
+- tgbt plan や /plan のような作業計画レビューを導入・評価する理由を確認したいとき
+- 成果物起点の oracle review 方式を採用した背景や、当時の AI への委任範囲の評価を調べるとき
+- 人間と AI の役割分担や、AI の生産速度が共同作業に与える問題意識を確認したいとき
 
 ## Do not read this when
-- 現在の oracle review の具体的な扱いや判断を確認したいときは、案内されている oracle review の文書を直接読むべき場合。
-- 作業計画の作成・実施手順そのものを確認したいとき。
+- 現在の oracle review の仕様・判断・代替案を確認したいとき
+- 具体的な作業計画の作成方法や、計画レビューの実行手順を知りたいとき
+- 当時の採用理由ではなく、実装や運用の具体的な手順を確認したいとき
 
 ## hash
-- 86f703748490a2b583c7663810655d2414fc22290edf44a7cad32981be3dbcf0
+- 091551bc712f8f2521559295791c6e3328bd4127c772a2f489c6349d7a4c9a18

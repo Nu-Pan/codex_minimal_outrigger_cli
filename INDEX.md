@@ -89,21 +89,22 @@
 # `oracle`
 
 ## Summary
-- AI コーディングエージェント呼び出しを支える oracle 実装群への入口。共通 call パラメータ、アクセスモード、cwd、prompt、Structured Output、editor handoff、indexing preflight の設定を扱う。
-- 完全 prompt と editor input の生成、各種 policy 部品、用途別の oracle・realization・feedback・session・TUI・indexing・quota probe builder へ進むための実装入口をまとめる。
+- cmoc の oracle file に関する正本仕様、開発規約、branch model、設計上の代替案、および oracle 固有の agent call・prompt・パスモデル実装への入口。oracle と realization の責務分離、分類・列挙、oracle 編集／調査、呼び出し設定を担当対象へ切り分けて参照するための文書群。
 
 ## Read this when
-- agent call の共通契約やファイルアクセス制御、実行ディレクトリ、Structured Output、editor input handoff、indexing preflight を確認するとき。
-- agent 向け prompt の構成や policy の組み込み、placeholder の統合、editor 初期入力の生成経路を調べるとき。
-- 用途別 agent call の起動条件・権限・入力文面・出力契約の実装箇所を探すとき。
+- oracle file の責務、realization file との適合関係、分類・列挙規則を確認するとき。
+- `cmoc oracle edit` や `cmoc oracle investigation` の実行目的、入力、完了条件、agent call の経路を調べるとき。
+- oracle 固有の prompt builder、policy、path model、構造化入力、呼び出しパラメータの実装を確認するとき。
+- oracle に関する開発・テスト規約、branch model、または採用・不採用となった設計判断を調査するとき。
 
 ## Do not read this when
-- 正本仕様や個別の oracle・realization file の内容を確認するときは、対応する仕様・ファイルを直接読んでください。
-- 特定用途の prompt や policy 本文だけを調べるときは、該当する下位対象へ直接進んでください。
-- Codex CLI の実行結果処理、一般的な実行フロー、テスト、ログや実行結果そのものを調査するときは、この実装入口を読まないでください。
+- agent call 全体に共通する設定や prompt 構築だけを調べるときは、上位の共通実装入口を直接読む。
+- feedback、realization、session、TUI など別領域の個別仕様や実装だけを確認したいときは、それぞれの対象を直接読む。
+- 単一の oracle 文書や単一 builder の詳細な入力・出力・実装挙動だけを確認したいときは、oracle 配下の該当対象を直接読む。
+- 機械的なファイル列挙やハッシュ計算だけを行い、oracle の意味仕様や責務分担を必要としないとき。
 
 ## hash
-- 2950ef2ef34b63b0f343acf81c74dd187b1c0affce241fcaba6fa897cdbeac8e
+- 5d934eadb58979714c51a9c0785f9e0355f01a53eff110b25390887c833e7ca0
 
 # `pyproject.toml`
 

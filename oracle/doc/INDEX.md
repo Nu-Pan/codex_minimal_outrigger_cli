@@ -1,20 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を収録する oracle doc 群。CLI の共通実行規約、サブコマンド、session・run lifecycle、feedback、ログ、通知、エディタ入力など、アプリケーション全体の責務と境界を確認するための入口。
+- cmoc のアプリケーション仕様を横断的に確認するための入口。自動補完、Codex CLI agent call、モデルプロバイダー、ログ・エラー処理、feedback、editor input、run/session lifecycle、indexing、各種サブコマンドなどの正本仕様へ進むための責務分担を整理する。
+- 個別機能の実装・変更・検証では、共通規則と機能固有の正本仕様を切り分けて参照するための上位ルーティング資料群。
 
 ## Read this when
-- cmoc のアプリケーションレベルの正本仕様を探しており、複数の機能にまたがる責務分担や参照先を確認したいとき
-- CLI 実行、workflow、session／editing run、feedback、出力・ログ、通知、自動補完、prompt editor などの仕様を確認・変更するとき
-- 対象機能の詳細仕様へ進む前に、共通契約や機能間の境界を把握したいとき
+- cmoc のアプリケーション仕様で、どの正本仕様から調査を始めるべきか判断したいとき
+- Codex 呼び出し、サブコマンド、feedback、編集入力、run/session、通知、ログ、エラー処理など複数の機能領域にまたがる責務境界を確認したいとき
+- 特定の仕様の配置・参照関係や、共通規則と個別仕様の使い分けを確認したいとき
 
 ## Do not read this when
-- 個別の実装 module、テスト、実行結果、診断ログそのものを調査・変更したいとき
-- 特定の schema、prompt literal、設定 field、内部 API など、本文が委譲する詳細の正本を直接確認すべきとき
-- 一般的な開発手順だけを確認したいときや、アプリケーション仕様に関係しない資料を探しているとき
+- 単一の機能やサブコマンドの詳細な実行手順・入力 schema・実装挙動だけを確認したいときは、対応する個別の正本仕様または実装を直接読む
+- INDEX.md の自動生成規則そのものを確認したいときは、indexing の正本仕様を直接読む
+- ファイルの列挙・ハッシュ計算など機械的な処理だけを確認したいとき
 
 ## hash
-- 832156c4e4eedb60f50b77630fa7622a95c82f15437c9e75a6d8309b31967729
+- bc793aa966f4b687c0f45366b18260e759b252d85a65a27ef728a6372c1071db
 
 # `branch_model.md`
 
@@ -38,18 +39,20 @@
 # `considered_alternative`
 
 ## Summary
-- cmoc の設計検討で不採用となった代替案と、その判断理由を記録する補足資料群への入口。現行の仕様や実装ではなく、現在の方式を選んだ背景を扱う。
+- cmoc の設計・運用上の代替案を比較検討した記録群。realization refactor の調査・修正単位、file access policy 違反対応、permission profile の動的生成、AI-generated kaizen の自動注入、oracle review、作業計画レビューを採用しなかった理由と、現在の方針へ至った判断材料への入口を提供する。
 
 ## Read this when
-- 事前計画、所見単位の並列処理、事後検査、自動リカバリー、.gitignore 連携、AI-generated kaizen の自動注入、oracle review、作業計画レビューなどの不採用理由を確認したいとき。
-- 現行方式が、状態変化・依存関係・誤検出・暗黙の準仕様化・情報の鮮度・人間と AI の役割分担をどう評価して選ばれたかを調べるとき。
+- cmoc の調査・修正フローや権限管理、明示的な情報伝達、oracle と feedback observation の役割分担について、過去の代替案と採否理由を確認したいとき。
+- realization refactor における file 単位の処理、並列編集・事後検査の扱い、作業計画レビューの導入可否など、設計上のトレードオフを再評価するとき。
+- 現行仕様を読む前に、関連する設計判断の背景や不採用となった方式の問題点を把握したいとき。
 
 ## Do not read this when
-- 現行の仕様、実装済みの処理手順、permission profile、feedback report、feedback observation、oracle、ログ、成果物の具体的な扱いを確認したいときは、それぞれの正本仕様や実装箇所を直接読む。
-- 不採用案の背景ではなく、現在採用されている機能の利用方法や個別の障害対応だけを調べるとき。
+- 現行仕様、処理手順、差分検証、permission profile、feedback report、feedback observation の正式な定義を確認・変更するときは、それぞれの正本仕様を直接読む。
+- 特定の実装不具合、個別の所見、実際の kaizen・oracle・ログ・成果物の内容を調査するときは、該当する実装や記録を直接読む。
+- cmoc と無関係な一般的な計画立案、並列処理、記憶機構、ファイル権限の設計だけを検討しているとき。
 
 ## hash
-- 5afa9314ec4f58e1359ac273ff335f483f6e9d9bbc9c2b7022a4cf4c001ac19c
+- 6d984c323206ea2495118aec7539f6628376a35f314ba33ac406919e9e5fd9db
 
 # `dev_rule`
 

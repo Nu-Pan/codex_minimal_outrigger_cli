@@ -18,20 +18,21 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` による agent call の実行規約を定める正本。path context、環境変数、preflight、argv 上書き、sandbox と詳細な file access policy、prompt の構築・受け渡し、feedback MCP、Structured Output、ログ、並列化、quota 待機、retry、失敗処理までを扱う。
+- cmoc が Codex CLI を agent call として実行する際の総合規約。path context、環境変数、preflight、argv 上書き、sandbox と詳細なファイルアクセス、prompt、feedback、Structured Output、並列実行、quota・一時障害・想定外エラーの扱いを定める。Codex 呼び出しの実装や失敗処理を確認する際の上位入口。
 
 ## Read this when
-- Codex CLI を呼び出す agent call の引数・cwd・root placeholder・model/provider・reasoning effort・sandbox・承認設定を決めるとき。
-- prompt、stdin、stdout/stderr、session ID、output-last-message、Structured Output の schema 保存・検証・補正を実装または確認するとき。
-- feedback reporter、editor input handoff MCP、Codex call ログ、並列実行、quota 回復待ち、既知の一時障害 retry、失敗時の扱いを確認するとき。
+- codex exec または codex exec resume の呼び出し仕様を実装・変更・検証するとき。
+- agent call の cwd、root placeholder、sandbox、file access policy、prompt の構築・受け渡し、ログ保存、Structured Output 補正、quota 待機、retry の判断を確認するとき。
+- Codex CLI 呼び出しに関する複数の app spec や oracle src の責務分担を整理するとき。
 
 ## Do not read this when
-- 個別 agent call の意味上の責務や判断基準を決めるときは、まず対応する oracle doc を読む。
-- AgentCallParameter の正確な field 定義・型・既定値を確認するときは、指定された oracle source を直接読む。
-- path context、prompt builder、file access policy、feedback reporting、editor input handoff、quota probe、Structured Output の正確な実装文面を確認するときは、本文が委譲する各 oracle source または oracle doc を直接読む。
+- 個別 agent call の意味上の責務や判断基準だけを確認したい場合は、対応する oracle doc を直接読む。
+- AgentCallParameter の正確な field、型、既定値を確認したい場合は、指定された basic.py を直接読む。
+- prompt の正確な構築順序・rendering・policy 文面を確認したい場合は、対応する prompt builder の oracle src を直接読む。
+- feedback reporting、Windows toast 通知、editor input handoff、model provider など個別機能の正本だけを確認したい場合は、それぞれ指定された app spec または oracle src を直接読む。
 
 ## hash
-- c7e8982afb6b77332992ba37b9ee2a7197e961293ecc9ab833747c4d8fe10217
+- f0c7934f70d62ba79e5ab7d4ac49aac9e04e7aacb1cbab7ac15c251241558b5d
 
 # `codex_model_provider.md`
 
@@ -75,21 +76,16 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- 各サブコマンドの本命処理開始前に共通検証・修復を行い、cmoc の実行基盤と管理対象ファイルの追跡・整合状態を保証する前処理の仕様。
-- feedback MCP reporter/client の起動可能性と collector との protocol compatibility を確認し、利用不能時は degraded warning として本命処理を継続する境界を定める。
+- 各サブコマンドの本命処理開始前に共通して実行される検証・修復処理を定義し、cmoc の実行基盤、追跡状態、refactor state、feedback reporter/client の事前条件を扱う。
 
 ## Read this when
-- サブコマンド共通の事前検証・修復、git 追跡状態、refactor state の schema・entry 集合同期、または前処理後の commit 条件を確認するとき。
-- feedback reporter/client の事前検証、protocol 不一致、利用不能時の warning と degraded 扱いを確認するとき。
-- realization_refactor または feedback_report の active run における state 同期タイミングを確認するとき。
+- サブコマンド共通の事前検証・修復、git 追跡／非追跡保証、refactor state の schema・entry 同期、または feedback reporter/client の利用不能時の degraded warning を確認するとき。
 
 ## Do not read this when
-- git working tree や staging area の clean 状態を、個別サブコマンド固有の事前条件として確認するとき。
-- doctor preprocess 完了後に行うサブコマンド固有の事前条件や、本命処理そのものの仕様を確認するとき。
-- reporter の repo-local executable の作成・配置・修復や、agent call の sandbox・schema・retry 条件を確認するとき。
+- git working tree や staging area の clean 状態など、doctor preprocess 後に各サブコマンド固有の仕様で検査される条件だけを確認するとき。
 
 ## hash
-- dc23aed86b94978b836335794d864e43b55f3aa6ca48a985b5e53480a05b3a84
+- 5524033594108d46485f83c748f533c89d8827f82f29f9c4e76a943821bb0ef3
 
 # `editor_input_handoff.md`
 
@@ -177,39 +173,39 @@
 # `feedback_state.md`
 
 ## Summary
-- feedback remediation run が使用する repository-local state の正本。active generation、current pointer、観測の intake wave と high-watermark、checkpoint、report cut、atomic publication、incomplete report、cleanup、および run lifecycle との整合を定める。
+- feedback remediation が使う repository-local state の正本。active generation、current pointer、run manifest、immutable な intake wave、high-watermark、checkpoint、report cut、publication completion、incomplete report、atomic publication、cleanup の責務と整合条件を定める。
 
 ## Read this when
-- feedback state の配置・所有範囲・保持対象を確認するとき
-- feedback report の観測取り込み、wave loop、high-watermark、checkpoint、report cut を設計・実装するとき
-- active issue や threshold 未満 aggregate の identity、bounded evidence、publication 対象を確認するとき
-- 正常 publication、incomplete 診断、atomic pointer 切替、cleanup、失敗回復の境界を確認するとき
-- feedback run の join または abandon が state に与える影響を確認するとき
+- feedback state の保存場所、artifact の役割、JSON canonicalization、排他制御、active issue と machine aggregate の保持条件を確認するとき
+- feedback report の wave 処理、checkpoint、report cut、正常 publication、incomplete 処理、cleanup、または run join・abandon との整合を実装・検証するとき
+- current pointer、high-watermark、immutable artifact、再開・失敗復旧の扱いを判断するとき
 
 ## Do not read this when
-- raw observation の収集規則だけを確認したいときは feedback observation の正本へ進むとき
-- feedback report の call 回数・処理順序・incomplete 条件・正常 publication の詳細だけを確認したいときは feedback_report の正本へ進むとき
-- 編集 run の join または abandon の共通仕様だけを確認したいときは editing_run の正本へ進むとき
-- feedback state の保存や publication に関係しない一般的な subcommand の仕様を確認するとき
+- raw observation の収集や detector rule 自体の正本仕様を確認するときは feedback_observation.md を読む
+- feedback report の call 回数・wave loop・正常 publication・incomplete の詳細な実行手順だけを確認するときは feedback_report.md を読む
+- feedback の用語・結果分類や処理モデルだけを確認するときは feedback.md を読む
+- 編集 run の join・abandon 共通仕様だけを確認するときは editing_run.md を読む
 
 ## hash
-- 35c173fd2ec9e7a1aa758feb3a7b004988467544d0f3c051a9f228b24e83dc46
+- 75de4ba04b1ddee142a3516c4615569c41916c4614d59252bb4a0918dee52f99
 
 # `indexing.md`
 
 ## Summary
-- `INDEX.md` の自動生成・更新に関する正本仕様を定義し、配置対象、目次項目、ルーティング情報、ハッシュ、処理順序、並列実行、実行条件を扱う。
+- `INDEX.md` の自動生成・更新に関する正本仕様。配置対象、目次対象、内容要件、ハッシュ、処理順序、agent call、並列実行、実行条件を定める。
 
 ## Read this when
-- `INDEX.md` のインデクシング処理の仕様や実行手順を確認・変更するとき。
-- 目次情報の生成単位、深さ優先の処理順序、並列化条件、既存差分や自動コミットの扱いを判断するとき。
+- `INDEX.md` の自動インデクシング仕様を確認・変更するとき。
+- 目次情報の意味要件や、対象ディレクトリの処理順序・並列化・更新条件を確認するとき。
+- インデックス生成用 agent call の委譲範囲や preflight 条件を確認するとき。
 
 ## Do not read this when
-- 個別ファイルやディレクトリの実装内容そのものを調べるとき。
-- 目次エントリーの具体的な文章だけを生成・確認する場合は、対象本文や生成処理の定義を直接読む。
+- 個別の `INDEX.md` エントリー本文だけを生成・確認する場合。
+- 対象ファイルの実装や、インデックス仕様以外のアプリケーション仕様を調査する場合。
+- 機械的な対象列挙やハッシュ計算だけを確認する場合。
 
 ## hash
-- 35388a7b547055265de2268f2b38171d327408430d8c17d8f25416383d1754e1
+- fec03fa964a71a48ba76fe0b6493e4c1aaa88fec6c6c9a0133404b6ce3c27ff8
 
 # `oracle_and_realization.md`
 
@@ -302,20 +298,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドと編集・セッション lifecycle の正本仕様への入口。doctor・indexing・tui、oracle investigation/edit、realization apply/refactor、feedback report、session fork/join/abandon、editing run 共通処理を扱う。
+- cmoc の各サブコマンドおよび主要な編集・セッション処理仕様へ進むための入口。コマンド固有の実行契約、run／session lifecycle、agent 委譲、report、終了処理を扱う下位仕様を整理している。
 
 ## Read this when
-- cmoc のサブコマンド実行契約、事前条件、処理手順、終了経路、primary report の要件を確認するとき。
-- oracle・realization・feedback に関する workload 固有の処理や、session／editing run の fork・join・abandon lifecycle を確認するとき。
-- 複数のサブコマンド仕様の責務分担や、共通仕様と workload 固有仕様のどちらを読むべきか判断するとき。
+- cmoc の特定サブコマンドの実行条件・手順・終了結果を確認したいとき
+- 編集 run、feedback report、session fork／join／abandon、oracle 操作、TUI、indexing、doctor の仕様入口を探すとき
+- primary report、差分検証、状態遷移、agent call など、複数の処理段階にまたがるコマンド固有の振る舞いを調べるとき
 
 ## Do not read this when
-- 個別サブコマンドの詳細実装、正確な prompt 文面、builder 引数、起動パラメータを確認したいときは、指定された実装や個別の正本仕様を直接読む。
-- doctor preprocess、feedback observation・feedback state、oracle／realization の適合性、prompt editor、Codex CLI、session state など、参照先の共通仕様だけを確認したいとき。
-- 特定の oracle file、realization file、実行結果、診断ログそのものを調査・編集したいとき。
+- 特定サブコマンドの詳細を既に把握しており、その正本仕様や実装を直接確認できるとき
+- branch model、run isolation、state schema、error handling、prompt editor などの共通規則だけを確認したいときは、各仕様が参照する共通の正本へ直接進むべきとき
+- oracle／realization の内容や適合性判定、feedback observation の収集・state 管理など、個別対象の詳細そのものだけを調べるとき
 
 ## hash
-- 709f9856f48540e49ca98924ba5674d495fffe5adea7d74c458fcc1702810c13
+- efc2f7dc73adcaf59d3e901a80722810c17ace72e345b1d3098457ad3d5566c7
 
 # `subcommand_interruption.md`
 
