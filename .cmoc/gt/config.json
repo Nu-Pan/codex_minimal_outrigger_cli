@@ -22,11 +22,6 @@
         "model": "gpt-6-astra",
         "reasoning_effort": "xhigh"
       },
-      "build_oracle_edit_reduction_launch_exec_parameter": {
-        "model_provider": "openai",
-        "model": "gpt-6-astra",
-        "reasoning_effort": "xhigh"
-      },
       "build_realization_apply_fork_launch_exec_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
@@ -66,6 +61,11 @@
         "model_provider": "openai",
         "model": "gpt-5.6-luna",
         "reasoning_effort": "low"
+      },
+      "build_oracle_edit_reduction_launch_exec_parameter": {
+        "model_provider": "openai",
+        "model": "gpt-6-astra",
+        "reasoning_effort": "xhigh"
       }
     },
     "num_try_falv_recovery": 1
