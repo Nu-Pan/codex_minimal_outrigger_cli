@@ -1,18 +1,18 @@
 # `apply_behavior.md`
 
 ## Summary
-- realization refactorで採用しなかった二つの進め方（事前の作業計画立案、所見の並列リストアップ）と、その不採用理由を説明する文書。現行の永続的な調査要求に従うファイル単位の調査・反映方式との違いを確認するための入口。
+- cmoc realization refactor で採用しなかった事前計画・並列所見調査の理由を記録する補足資料。現行の file 単位の調査・反映方式を理解するための背景情報への入口。
 
 ## Read this when
-- realization refactorの作業フロー設計で、修正点確定後の独立した計画立案を採用しない理由を確認したいとき。
-- 所見を先に並列収集してから所見単位で修正する方式と、現行のfile単位の調査・反映方式の違いを確認したいとき。
+- realization refactor の処理単位やループ設計について、事前計画や所見単位の並列処理を採用しなかった判断理由を確認したいとき。
+- 現行方式が、実装中の状態変化・依存関係・重複所見・文脈分断などをどう考慮した結果かを調べるとき。
 
 ## Do not read this when
-- 現行realization refactorの具体的な実装仕様や状態管理の定義を確認したいとき。
-- oracle fileまたはrealization fileの個別の修正内容・所見を直接確認すべきとき。
+- realization refactor の現行仕様、refactor state、refactor loop の具体的な動作を確認したいときは、正本仕様を直接読む。
+- 実際の実装箇所を修正・調査するときに、採用済みの処理手順だけが必要な場合。
 
 ## hash
-- 75826a26abd23751d9e74980ff58a58f419472e9d085b0ef5eca57227f6960c0
+- f4ca37fd0290a0c54ec62aa1a9a83f23dd83e7ef0562faa4ff58afc8864cd9fd
 
 # `file_access_policy_violation_post_validation.md`
 
@@ -33,18 +33,18 @@
 # `gitignore_to_permission_profile.md`
 
 ## Summary
-- .gitignore の除外判定を permission profile に変換して例外的な読み書きを許可する案の検討結果を記録する文書。採用しなかった理由と、記法互換性の具体的な制約を確認するための入口。
+- .gitignore の除外判定を permission profile の読み書き例外へ変換する案について、採用しなかった理由と実行時利用を禁じる判断を記録する。
 
 ## Read this when
-- .gitignore を利用して Codex CLI の permission profile を動的生成する案を検討・評価するとき。
-- git 追跡対象外ファイルを通常のアクセス制限の例外として扱う設計の背景や不採用理由を確認するとき。
+- .gitignore 対象を permission profile の例外として扱う設計や、両者の記法互換性を検討するとき。
+- 現行のファイルアクセス制限を正本仕様に従わせ、この変換案を fallback や実行時分岐に使わない理由を確認するとき。
 
 ## Do not read this when
-- 現行のファイルアクセス制限の正本仕様や実装を確認するときは、permission profile の正本・実装対象を直接読む。
-- .gitignore の一般的な構文や git の追跡除外動作だけを調べるとき。
+- 現行の permission profile やファイルアクセス制限の具体的な仕様を確認したいとき。
+- .gitignore の一般的な記法や git 追跡対象外ファイルの扱いを直接調べるとき。
 
 ## hash
-- 043c7f3a7187986053ccac79f76718ead5448f728287b5bb77dc0e0bceda37f5
+- b25695a7bfeafd936275ec65ae35b32df87b0cb6a195e9b22003c08302edd9e2
 
 # `memory_alternative.md`
 
@@ -84,16 +84,15 @@
 # `working_plan_review.md`
 
 ## Summary
-- AI に作業計画を作成・レビューさせる方式を採用せず、人間が oracle に want を明文化し、AI が実装可能性を確認して実装へ追従させる方針の背景を説明する文書。
-- 人間と AI の共同作業における速度差と、人間が実装・設計へ介助的に関与せざるを得ない事情を踏まえ、`cmoc eval-oracle` を中心とした開発スタイルの選択理由を示す。
+- 作業計画レビューを採用しなかった理由と、その代替として人間が oracle を編集し AI が実装を追従する方式を採用した判断を記録する文書。
 
 ## Read this when
-- `tgbt plan` や `/plan` による作業計画レビューを採用しない理由を確認したいとき。
-- oracle を人間が編集し、AI が実装を追従させる開発方針の背景や、`cmoc eval-oracle` の位置づけを理解したいとき。
+- `tgbt plan` や `/plan` のような計画レビューの導入理由・不採用理由を確認したいとき。
+- 人間と AI の役割分担、および oracle 中心の開発方針に至った評価を確認したいとき。
 
 ## Do not read this when
-- 具体的な oracle の内容、実装手順、または CLI の操作方法を確認したいとき。
-- 作業計画そのものの作成・レビューや、個別の実装判断を行うとき。
+- 現在の oracle review の具体的な扱いや判断を確認したいときは、案内されている oracle review の文書を直接読むべき場合。
+- 作業計画の作成・実施手順そのものを確認したいとき。
 
 ## hash
-- b77118d588434b7038abe6c86e38acd6fc563eb52ca325508f0422c04e999c5f
+- 86f703748490a2b583c7663810655d2414fc22290edf44a7cad32981be3dbcf0

@@ -1,19 +1,18 @@
 # `coding_rule.md`
 
 ## Summary
-- Python 実装の基本的なコーディング規則、cwd 識別子、型ヒント、import、docstring、コメント・ログの言語、非公開識別子の命名を定める開発ルール。
+- cmoc の Python 実装におけるコーディング規則を定める文書。命名・責務・型ヒント・import・docstring・コメント・非公開識別子など、実装時に守るべき基準への入口となる。
 
 ## Read this when
-- cmoc の Python コードを新規作成・変更・レビューするときに、命名、責務、型注釈、import、docstring、コメント、非公開識別子の規則を確認したい場合。
-- src または oracle/src の公開対象に対する型注釈・Google style docstring の適用範囲や、cwd を表す識別子の命名方針を確認する場合。
+- cmoc の src または oracle/src の実装を新規作成・変更・レビューするとき。
+- 識別子の命名、型注釈、import 構成、docstring、コメントやログの言語などの判断基準を確認したいとき。
 
 ## Do not read this when
-- 実行環境の構築や依存関係の扱いを確認する場合は、開発環境の規則を直接読む。
-- テストの追加・変更・実行方法だけを確認する場合は、テスト規則やテスト実行手順を直接読む。
-- 機械検査を通過した後の一般的な品質所見だけを求めており、コーディング規則自体を確認する必要がない場合。
+- 実装規則ではなく、cmoc の機能仕様や利用手順を確認したいとき。
+- テスト固有の規則だけを確認する場合。本文では test を型注釈・docstring の必須検査範囲から除外しているため、テストの詳細はテスト関連の対象を直接読む。
 
 ## hash
-- 4b3c191e6cf9e80e55f02ae55a91975ef315b242edd937f0c713ee5a6bd3f288
+- 7b69cc4f94c3fe9dfc733e35b3cc4adb199db63accbbc6132a7204d246d2a200
 
 # `design_rule.md`
 
@@ -35,54 +34,52 @@
 # `development_environment.md`
 
 ## Summary
-- Python 環境の新規構築、依存関係の追加、pip 操作に必要な開発環境の前提・命名・エンコード・仮想環境運用を定める入口。
-- 構築済み環境での通常の test 実行や品質検査の手順は扱わず、専用の test_execution.md へ案内する。
+- Python 仮想環境の新規作成、依存関係の追加、pip 操作に必要な開発環境の前提と手順を定める文書。
 
 ## Read this when
-- Python 仮想環境の新規作成、パッケージのインストールや追加、pip 操作の条件を確認するとき。
-- Python 実行環境、ファイル命名・エンコード、WSL2・VS Code・Codex CLI の開発前提を確認するとき。
+- Python 実行環境や仮想環境を新規構築するとき
+- pyproject.toml に依存関係を追加し、開発用パッケージをインストールするとき
+- 使用する Python インタプリタや pip の場所、環境上の命名・エンコード規則を確認するとき
 
 ## Do not read this when
-- 構築済み環境で既存 test や品質検査を選択・実行・完了判定・報告するときは、test_execution.md を直接読む。
-- 通常の test 実行だけを行うとき。
+- 構築済み環境で通常の test や品質検査を実行するだけのときは、検査手順の正本を直接読む
+- Python 環境の構築や依存関係の変更を伴わない通常の開発作業を行うとき
 
 ## hash
-- 2a120c3c6f2224e4a7cb2a48344b62e80b763a5fe92a94abf2163a2134b55efc
+- 5a954b891dfe79f56dde7f96c48d7171a032e728a180f42c152ff57cc29c1091
 
 # `test_execution.md`
 
 ## Summary
-- 構築済みの cmoc 開発環境で、Python interpreter の選択と preflight、focused test・品質検査の選定、pytest・Ruff・mypy の実行、実経路統合テスト、fresh な完了ゲート、結果報告までを定める手順書。
+- 構築済みの cmoc 開発環境で、pytest・Ruff・mypy による focused 検査、full 完了ゲート、実経路統合テストの選択・実行・完了判定・結果報告を定める手順書。
 
 ## Read this when
-- cmoc の test や品質検査を選択・実行するとき。
-- 変更内容に応じた focused test、Ruff、mypy、通常の pytest、実経路統合テストの範囲を判断するとき。
-- 検査完了の条件、skip の扱い、実行結果として報告すべき項目を確認するとき。
+- cmoc の変更に対して、使用する worktree と Python interpreter、preflight、検査範囲、pytest の warning 設定、Ruff・mypy・full test の実行条件を判断するとき。
+- focused test や実経路統合テストを実行し、skip・失敗・環境不足を含む完了可否と報告項目を確認するとき。
 
 ## Do not read this when
-- realization test が満たすべき意味上の要件を確認するときは、正本である test_rule.md を直接読む。
-- 型注釈や docstring の意味上の品質要件を確認するときは、coding_rule.md の該当箇所を読む。
-- Python 環境の新規構築、依存関係の追加、または pip 操作を行うときは、development_environment.md を読む。
+- realization test の意味上の要件、型注釈・docstring の品質要件、Python 環境構築や依存関係管理の正本を確認する場合は、それぞれの oracle 規約を直接読むとき。
+- 検査手順ではなく、実装や test 自体の変更方針・仕様適合性を確認するとき。
 
 ## hash
-- e7cb58f143adea1d01654cc07d75f27550a4707839532c2a4babee00fb915d5b
+- a4d0f1d56f4832dfe3af8055baed1962b4dba0f7c09db08edb25ed2f834962da
 
 # `test_rule.md`
 
 ## Summary
-- pytest による realization test の意味上の要件、隔離された tmp_path 環境、決定論的制御ロジック、および Codex CLI 連携の検証範囲を定める正本。
-- 実経路統合テストの用語、公開末端サブコマンドとの対応、実在の Codex CLI と実推論の使用、テスト用設定および quota の扱いを確認する入口。
-- Fake Codex CLI を使用できる条件と、テスト実行手順・環境構築手順を別の正本へ委譲する境界を示す。
+- realization test が検証すべき意味上の要件を定め、pytest・隔離された tmp_path 環境・決定論的制御ロジックのテスト方針を示す文書。
+- 実経路統合テストの正本用語、選択 marker、対象範囲、実在する Codex CLI と実推論を用いた検証要件、および公開末端サブコマンドとの対応要件を定める。
+- 実経路統合テストにおける agent call の設定取得、quota の扱い、model provider・Model・Reasoning Effort の境界と、Fake Codex CLI を使用できる条件を示す。
 
 ## Read this when
-- realization test の新規作成・変更・レビューで、pytest、隔離環境、検証対象、Fake Codex CLI の使用可否を判断するとき。
-- 利用者向け CLI の公開末端サブコマンドに対する実経路統合テストケースの要件や、Codex CLI 呼び出しの実推論・設定・観測結果の検証条件を確認するとき。
-- テスト用 CmocConfig、model provider・Model・Reasoning Effort、quota の扱いを仕様に照らして確認するとき。
+- realization test の目的、責務境界、配置、隔離環境、検証対象を確認するとき。
+- 実経路統合テストを追加・変更・選択するとき、特に公開末端サブコマンドとの対応や実在の Codex CLI を使う要件を確認するとき。
+- 実経路統合テストの agent call 設定、quota、model provider、または Fake Codex CLI の扱いを判断するとき。
 
 ## Do not read this when
-- 構築済み環境でのテスト・品質検査の選択、実行、完了判定、報告手順だけを確認したいときは test_execution.md を読む。
-- Python 環境の新規構築、依存関係の追加、または pip 操作を行うときは development_environment.md を読む。
-- LLM の回答品質、Codex CLI 自体、または model provider 自体の正しさを評価するテスト方針を求めているとき。
+- 構築済み環境での test・品質検査の選択、実行、完了判定、報告手順を確認したいとき。
+- 開発環境の新規構築、依存関係の追加、または pip 操作の手順を確認したいとき。
+- LLM や Codex CLI 自体の回答品質・安定性、または model provider の正しさを評価するとき。
 
 ## hash
-- 7afec483e6ff7e971fb1950621b011ee79cfbbfbcea066dcb0511892c5ccb922
+- 4df53f32146e8aa5b6649442dd2e4a581ce74a5e79bd2d1ea1b6a55edf35f234

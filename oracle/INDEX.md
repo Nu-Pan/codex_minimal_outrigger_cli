@@ -1,31 +1,20 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様、設計判断資料、開発ルールを横断して参照するための上位入口。
-- 自動補完、Codex CLI、provider、ログ、状態管理、feedback、run/session、サブコマンド、割り込み、通知などの個別仕様へ進むための構成を示す。
-- session・run の branch、commit、worktree の関係を確認する仕様への入口を含む。
-- 採用しなかった設計案やその理由を確認する検討資料への入口を含む。
-- Python 実装、CLI 設計、開発環境、テストの規則を目的別の下位文書へ案内する入口を含む。
+- cmoc のアプリケーション仕様を収録する正本文書群への入口。CLI 共通規約、サブコマンド、session・run lifecycle、feedback、ログ、通知、エディタ入力など、アプリケーション全体の責務と境界を確認できる。
 
 ## Read this when
-- cmoc のアプリケーション仕様について、複数の機能領域にまたがる正本仕様の所在や参照入口を判断するとき
-- 自動補完、Codex CLI 呼び出し、provider、ログ、feedback、state、editor input、run/session、サブコマンド、割り込み、timestamp、通知などの仕様から読む対象を選ぶとき
-- session fork、run の開始・分離・join、apply の追従対象、run report の commit 基準を確認するとき
-- branch・commit・linked worktree の役割や、cmoc 管理 branch と通常の git branch を区別するとき
-- 不採用となった設計案の理由や、設計判断の背景を調べるとき
-- Python 実装、CLI 設計、開発環境、テストについて、確認すべき開発ルールの領域を判断するとき
+- cmoc のアプリケーションレベルの正本仕様を探しており、複数機能にまたがる責務分担や参照先を確認するとき。
+- CLI 実行、workflow、session／editing run、feedback、出力・ログ、通知、自動補完、prompt editor などの仕様を確認・変更するとき。
+- 個別機能の詳細仕様へ進む前に、共通契約や機能間の境界を把握するとき。
 
 ## Do not read this when
-- 単一の機能やサブコマンドの具体的な挙動、状態 schema、prompt、実装、または exact な契約を直接確認したいときは該当する個別仕様を読む
-- run state や report の状態遷移そのものを確認したいときは該当する状態仕様を読む
-- oracle の変更手順や設計責務、test の実行規則を直接確認したいときは該当する個別仕様を読む
-- 現行の正本仕様や具体的な実装を確認したいときに、採用しなかった設計案の資料を読む
-- 特定の Python コーディング規則、CLI 設計規則、開発環境、テスト要件、またはテスト実行手順が明確な場合は該当する下位文書を直接読む
-- INDEX.md の生成規則や routing 情報の一般規約だけを確認したいときは indexing の仕様を読む
-- 対象仕様群に含まれない実装コード、実行結果、診断ログだけを調べるとき
+- 個別の実装 module、テスト、実行結果、診断ログそのものを調査・変更するとき。
+- 特定の schema、prompt literal、設定 field、内部 API など、より詳細な正本を直接確認すべきとき。
+- 一般的な開発手順や、アプリケーション仕様に関係しない資料だけを探しているとき。
 
 ## hash
-- 747ab3a417cefc4688c8f2ec7801768e03e22d6e56d5e24f51252864f426adb7
+- 33f39c95c9671dfcdaa987e3a36b11185c6a02fcdc8fc82ff6bfc0d7a67765c2
 
 # `src`
 
