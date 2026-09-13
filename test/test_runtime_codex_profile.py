@@ -291,6 +291,7 @@ def test_codex_overrides_disable_unpaired_notification_callback() -> None:
     [
         (b"codex-cli 0.151.0\n", 0, True),
         (b"codex-cli 0.153.4\n", 0, True),
+        (b"codex-cli 0.154.0\n", 0, True),
         (b"codex-cli 0.152.0\n", 0, False),
         (b"codex-cli 0.153.4.1\n", 0, False),
         (b"codex-cli 0.151.0\n", 1, False),

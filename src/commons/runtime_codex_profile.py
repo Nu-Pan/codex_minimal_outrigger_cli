@@ -47,6 +47,7 @@ _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS = frozenset(
     {
         b"codex-cli 0.151.0",
         b"codex-cli 0.153.4",
+        b"codex-cli 0.154.0",
     }
 )
 _CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
@@ -523,12 +524,19 @@ def codex_cli_supports_tui_notification_hooks(
 def _codex_session_start_hook_trusted_hash(command: str) -> str:
     """検証済み Codex の SessionStart command identity を fingerprint 化する。"""
     # Codex 0.151.0 / 78c290807ce710180111df227df3b7a4fe845452 と
-    # 0.153.4 / 3d2ee51ca2d5db578f328aa75e20aa22c0197c9a の hook discovery と
+    # 0.153.4 / 3d2ee51ca2d5db578f328aa75e20aa22c0197c9a、
+    # 0.154.0 / 6b9826e3aa83b1a5947db50f4332cb9c65f1b340 の hook discovery と
     # canonical JSON fingerprint に合わせる。interface が変わる version は
     # 呼び出し側の probe で無効化し、legacy notify へは戻さない。
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/engine/discovery.rs#L633-L778
     # https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/hooks/src/engine/discovery.rs#L733-L779
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/config/src/fingerprint.rs#L47-L75
+    # 0.154.0 も同じ正規化、root SessionStart、turn 完了後の notify を使う。
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/hooks/src/engine/discovery.rs#L766-L809
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/config/src/fingerprint.rs#L50-L79
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/hook_runtime.rs#L124-L166
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/session/turn.rs#L571-L611
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/hooks/src/legacy_notify.rs#L13-L69
     identity = {
         "event_name": "session_start",
         "hooks": [

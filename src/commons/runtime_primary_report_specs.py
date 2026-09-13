@@ -84,7 +84,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         "oracle_edit",
         "oracle edit execution report",
         "cmoc oracle edit report",
-        ("main_agent_call_status", "reduction_agent_call_status"),
+        ("first_agent_call_status", "second_agent_call_status"),
     ),
     "realization apply fork": PrimaryReportSpec(
         "realization/apply/fork",

@@ -29,19 +29,18 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` の実行入口として、入力した oracle 編集指示から本命 agent call と、正常終了後に行う仕様削減 agent call までの処理を扱う。
-- 本命起動前の indexing と起動前提の検証を行い、各 agent call の開始・成功・失敗状態を primary report に反映する。
+- `cmoc oracle edit` の実行入口。入力された oracle 編集指示を準備し、編集前の indexing と起動前提の確認を行ったうえで、同一設定を共有する 2 回の Codex exec を main worktree から実行する。
 
 ## Read this when
-- `cmoc oracle edit` の入力から本命編集、後続の仕様削減までの実行順序を確認したいとき。
-- 本命 agent call の起動条件や agent call 状態の記録処理を確認したいとき。
+- `cmoc oracle edit` の CLI 実行手順、2 回の編集 agent call、編集前 indexing、または main worktree・active session branch の起動条件を確認したいとき。
 
 ## Do not read this when
-- oracle 編集 prompt や起動パラメータの内容を確認したいとき。
-- 入力エディタ、session 状態、Git branch、runtime report の個別仕様を確認したいとき。
+- oracle 編集 prompt の内容や生成規約そのものを確認したいときは、編集 prompt の定義を直接読む。
+- prompt editor の入力保存・抽出・後処理だけを確認したいときは、共用 prompt editor 部品を直接読む。
+- oracle edit の agent 起動パラメータ生成だけを確認したいときは、対応する launch parameter builder を直接読む。
 
 ## hash
-- f0d8bf212602a8c1e6bb8c66481ecf2f3eb7c3243eefce1f43269e8522705b66
+- febd747e83ac4ac59bf08cc98699077cf8683955a708d5ed50a0d0bd84d1d229
 
 # `investigation.py`
 

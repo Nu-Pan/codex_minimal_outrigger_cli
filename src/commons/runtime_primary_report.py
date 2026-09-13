@@ -70,8 +70,8 @@ def start_primary_report_context(
     fields: dict[str, object] = {}
     if command_name == "oracle edit":
         fields = {
-            "main_agent_call_status": "not_started",
-            "reduction_agent_call_status": "not_started",
+            "first_agent_call_status": "not_started",
+            "second_agent_call_status": "not_started",
         }
     elif command_name == "realization apply fork":
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md

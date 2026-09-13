@@ -72,7 +72,7 @@ _EARLY_ERROR_REPORTS = [
     (
         "oracle edit",
         "oracle_edit",
-        ("main_agent_call_status", "reduction_agent_call_status"),
+        ("first_agent_call_status", "second_agent_call_status"),
     ),
     (
         "realization apply fork",
@@ -227,8 +227,8 @@ def test_early_error_saves_command_specific_primary_report(
     assert "early detail" in rendered
     assert "診断用サブコマンドログ" in rendered
     if command_name == "oracle edit":
-        assert 'main_agent_call_status: "not_started"' in front_matter
-        assert 'reduction_agent_call_status: "not_started"' in front_matter
+        assert 'first_agent_call_status: "not_started"' in front_matter
+        assert 'second_agent_call_status: "not_started"' in front_matter
     if command_name == "realization refactor fork":
         assert 'completion_reason: "error"' in front_matter
         assert "## Current fork" in rendered

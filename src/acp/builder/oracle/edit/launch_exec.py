@@ -2,11 +2,9 @@
 
 from oracle.acp_builder.oracle.edit.launch_exec import (
     build_oracle_edit_main_launch_exec_parameter,
-    build_oracle_edit_reduction_launch_exec_parameter,
 )
 
 # {{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
 __all__ = [
     "build_oracle_edit_main_launch_exec_parameter",
-    "build_oracle_edit_reduction_launch_exec_parameter",
 ]
