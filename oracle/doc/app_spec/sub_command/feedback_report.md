@@ -12,10 +12,8 @@
 
 - 位置引数を受け取らない。
 - サブコマンド固有 option を受け取らない。
-- 公開 CLI は `cmoc feedback report` のままとする。
 - 正常経路では、利用者に別の fork、join、または remediation 操作を要求しない。
-- doctor preprocess と必要な indexing preflight が作成する commit 以外に、session branch 上の既存差分を自動 commit してはならない。
-- git 未コミット差分を自動 stash、commit、revert、または破棄してはならない。
+- session branch 上の既存の git 未コミット差分を、自動 stash、commit、revert、または破棄してはならない。ただし、doctor preprocess と必要な indexing preflight が各仕様に従って作成する commit は許容する。
 
 ## 事前条件と run の開始または再開
 
@@ -32,7 +30,7 @@
 9. `run.kind=feedback_report` として `{{cmoc-run-branch}}` と `{{cmoc-run-worktree}}` を作成し、`run.state=running` とする。
 10. collector の最初の high-watermark を確定し、最初の intake wave を固定する。
 
-clean 検査は、doctor preprocess と indexing preflight の完了後に行う。新しい run を開始する場合は、`run.state=ready` を必須とする。後述する join 後 recovery は新しい run を開始しないため、この事前条件の例外とする。
+join 後 recovery は新しい run を開始しない。
 
 recovery 対象ではない active run が残っている場合、または事前条件に違反した場合は、新しい run を作らない。既存の worktree、staging area、raw observation、および current pointer を変更しない。
 
@@ -59,7 +57,7 @@ repository-local feedback state、subcommand log、および Codex call log は 
 
 各 raw observation の schema、path、および canonical hash は、対応する intake wave と一致しなければならない。同じ observation ID で hash が異なる場合は corruption とする。
 
-schema version 1 の pending observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「reporter input v1 の互換処理」に従って扱う。raw record を移行のために書き換えてはならない。
+schema version 1 の pending observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「reporter input v1 の互換処理」に従って扱う。
 
 1 件でも validation を通過できない input がある場合は、正常 publication を行わない。invalid input を処理済みとして削除せず、path と理由を invocation report と subcommand log に示す。
 
@@ -98,7 +96,6 @@ normalization agent は、summary、impact、原因、現在性、actionability�
 - issue ID は runtime input とし、`agent_call_kind` に含めない。
 - Structured Output correction、retry、および quota 待機後の resume は、同じ論理 agent call として数える。
 - issue remediation call は、同じ run branch の最新状態を順に参照できるよう逐次実行する。
-- write 権限を持つ issue remediation call を並列実行しない。
 
 各 wave 内の issue identity は、安定した issue ID 順で処理する。
 
@@ -118,15 +115,13 @@ issue remediation agent call は、1 issue について次の処理を同じ cal
 
 call の境界を次に示す。
 
-- `FileAccessMode.REALIZATION_WRITE` を使用する。
 - cwd は `{{cmoc-run-worktree}}` とする。
 - oracle file は読めるが変更できない。
 - realization file だけを agent の変更対象とする。
 - agent に feedback state file、Git index、branch、commit、または worktree lifecycle を操作させない。
-- agent に `git add` または `git commit` を実行させない。
 - candidate 外の issue を remediation 対象として探索させない。
 
-issue remediation call の既定は OpenAI の GPT-5.6 Luna、Reasoning Effort Max とする。provider、model、および reasoning effort の正確な設定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` が所有する。設定値を prompt 文面へ注入してはならない。
+issue remediation call の provider、model、および reasoning effort の既定値を含む正確な設定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` へ委譲する。設定値を prompt 文面へ注入してはならない。
 
 ### Structured Output と結果分類
 
@@ -280,7 +275,7 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 agent call failure、tool 失敗、validation 失敗、差分検査失敗、commit 失敗、および orchestration 失敗を feedback issue または `human_required` に変換してはならない。
 
-quota 枯渇、retry、Structured Output correction、および resume の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `codex exec` 呼び出し規約を正本とする。
+quota 枯渇、retry、Structured Output correction、および resume の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` 呼び出し規約」を正本とする。
 
 ## report の保存と表示
 

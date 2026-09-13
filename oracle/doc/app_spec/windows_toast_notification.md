@@ -3,7 +3,7 @@
 ## 目的と適用範囲
 
 - cmoc は、ユーザーが端末を見ていない場合に、処理の完了または人間の入力が必要になったことを Windows toast で知らせる。
-- 対象環境は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` が基本環境とする Windows 11 上の WSL2 とする。
+- 対象環境は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「基本環境」が定める Windows 11 上の WSL2 とする。
 - 通知対象は、ユーザーが直接起動した最外側の末端サブコマンドの terminal result と、Codex CLI の TUI における agent turn の完了とする。
 - 最外側の末端サブコマンドとは、1 回の `cmoc` invocation でユーザーの argv が選択した、実処理を持つ最も深いサブコマンドを指す。
 - cmoc の内部処理として呼び出す関数、agent call、または Codex call は、最外側の末端サブコマンドではない。
@@ -16,17 +16,16 @@
 ## 非対話サブコマンドの通知境界
 
 - TUI の通知境界を適用するサブコマンド以外の最外側の末端サブコマンドは、非対話サブコマンドとして扱う。
-- 非対話サブコマンドの primary report と terminal result の確定条件は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。確定した terminal result を 1 回だけ通知する。
-- `cmoc oracle edit` は非対話サブコマンドとして扱う。内部の 2 回の `codex exec` では通知せず、最外側のサブコマンドが終了状態を確定した後に 1 回だけ通知する。
+- 非対話サブコマンドの primary report と terminal result の確定条件は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「primary report」と「確定と表示の順序」を正本とする。確定した terminal result を 1 回だけ通知する。
 - 通知の成否を、terminal result の確定条件に含めてはならない。
 
 ### terminal result の分類
 
-terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。Windows toast は、同仕様が定める全共通分類を区別可能にする。
+terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「定義と分類」を正本とする。Windows toast は、同仕様が定める全共通分類を区別可能にする。
 
 `user_interruption` は、エラーとして通知してはならない。
 
-ユーザー中断要求の成立条件と完了処理は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする。
+ユーザー中断要求の成立条件と完了処理は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」を正本とする。
 
 非対話サブコマンドの内部にある次の処理では、Windows toast を通知しない。
 
@@ -41,9 +40,7 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 - agent turn 完了の状態は、サブコマンド完了ではなく「入力待ち」として通知する。
 - TUI の正常終了時は、ユーザー自身が終了操作を行っているため、サブコマンドの terminal result を追加で通知しない。
 - TUI の起動前エラーまたは異常終了は、失敗結果を確定した後に 1 回だけ通知する。
-- 1 つの TUI process 内の各 turn を区別する。
-- 同じ turn の callback を複数回受け取った場合も、同じ Windows toast を重複表示しない。
-- turn の識別と重複排除の範囲は、その TUI process invocation 内に限る。
+- turn の識別と重複排除の範囲は、その TUI process invocation 内に限る。同じ turn の callback を複数回受け取った場合も、重複通知しない。
 
 ## 通知内容
 
@@ -59,8 +56,7 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 
 - terminal result の通知には、経過時間を含めてよい。
 - prompt、assistant の回答本文、秘密情報、フルパス、および Windows の通知履歴へ残す必要がない情報を含めてはならない。
-- `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` のパス表示規則は、Windows toast の通知内容には適用しない。
-- 具体的な文面、表示形式、および repository を識別する短い情報の導出方法は、この節の境界を守る範囲で realization の裁量とする。
+- `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「パス表示のフォーマット」は、Windows toast の通知内容には適用しない。
 
 ## 決定論的な発火と Codex CLI の設定境界
 
@@ -88,13 +84,11 @@ realization の実装前に、利用中の Codex CLI で次の外部契約を検
 
 ## Windows toast transport
 
-- Windows 11 上の WSL2 から Windows toast を表示する。
 - 外部 PowerShell module または新しい Python package を必須依存にしてはならない。
 - 通知内容は、shell 文字列の組み立てに依存せず、データとして安全に transport へ渡す。
 - 通知処理には有限の上限時間を設け、本命処理を長時間待たせてはならない。
 - transport の欠落、起動失敗、または toast 表示失敗によって、サブコマンドの終了コード、run state、成果物、retry、または成功判定を変更してはならない。
 - 通知失敗を理由に、Codex call またはサブコマンドを再実行してはならない。
-- transport の具体的な方式と上限時間は、この節の境界を守る範囲で realization の裁量とする。
 
 ## 自動補完プローブ
 
@@ -104,11 +98,10 @@ realization の実装前に、利用中の Codex CLI で次の外部契約を検
 
 ## non-goal
 
-今回の仕様では、次の機能を要求しない。
+本書は、次の機能を要求しない。
 
 - agent turn の途中にある tool approval または追加承認要求の通知
 - toast のクリックによる terminal focus、action button、sound、または表示時間のカスタマイズ
-- prompt または assistant の回答本文の toast 表示
 - repository 設定から任意の host command を実行する仕組み
 - 通知履歴または永続的な通知 state の新設
 - Windows 以外の desktop notification 対応

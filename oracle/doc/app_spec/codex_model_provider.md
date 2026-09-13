@@ -9,7 +9,6 @@
 
 - 設定単位は、`AgentCallParameter.agent_call_kind` が表す安定した agent call 種別とする
 - 各 agent call 種別の設定は、model provider ID、Model 名、および Reasoning Effort 名を必須の直接文字列として持つ
-- model provider ID は null を許容しない
 - 対応する agent call 種別の設定が存在しない場合は、値を推測せず Codex CLI の起動前にエラーとする
 - `CmocConfigCodex` の既定値は、すべての既存 agent call 種別に一つずつ対応する設定を持つ
 - cmoc は、三つの直接文字列について、別名への解決、近い値への丸め、または fallback を行ってはならない
@@ -22,7 +21,7 @@
 ## provider 定義
 
 - provider 定義 mapping は、model provider ID を単一 provider の provider-local 設定へ対応付ける
-- 各 provider-local 設定は、provider-local key を null 以外の JSON/TOML 共通値へ対応付ける
+- 各 provider-local 設定は、provider-local key を null 以外の値へ対応付ける。値は JSON と TOML の双方へ一意に符号化できなければならない
 - 設定された model provider ID が provider 定義 mapping に存在しない場合は、Codex CLI を起動する前にエラーとする
 - `model_provider="openai"` は Codex CLI の組み込み既定 provider を選択する直接の provider ID とする
 - `openai` を cmoc 固有の論理名または sentinel として扱わず、別の provider ID へ変換してはならない
@@ -30,7 +29,6 @@
 - Codex CLI の組み込み model provider を明示的に選択する場合を含め、provider-local 設定が不要な provider は空の provider-local 設定を持ってよい
 - cmoc は model provider ID の allowlist または provider 固有 schema を持たず、Codex CLI が受理する model provider ID と provider-local key を許容する
 - provider-local key は選択した provider の定義直下に属する key だけを表し、完全な Codex config path や provider 外の設定を含めてはならない
-- provider-local の値は null を許容せず、JSON value と TOML value の双方へ一意に符号化できなければならない
 - git 追跡対象の `CmocConfig` に secret 値を直接保存してはならない
 
 ## cmoc の責務境界

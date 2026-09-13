@@ -73,7 +73,7 @@
 - report 生成時点で確定していない共通 run 項目、差分の始点 commit、Codex CLI の終了結果、または変更 path は、`null` または未実行として記録する。
 - `joinable` での終了は終了コード 0、`error` での終了は非 0 とする。
 
-feedback の収集は本命 agent call の共通 reporter だけで行う。apply 固有の Structured Output field、終了後の発見用 agent call、または feedback 件数による終了コード変更を追加してはならない。詳細は `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` を正本とする。
+feedback の収集は本命 agent call の共通 reporter だけで行う。apply 固有の Structured Output field、終了後の発見用 agent call、または feedback 件数による終了コード変更を追加してはならない。詳細は `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」と「non-goal」を正本とする。
 
 ## join 後 hook
 

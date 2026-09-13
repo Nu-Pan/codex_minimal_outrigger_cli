@@ -66,7 +66,7 @@ merge または no-op join 後の tree 検査、publication、および workload
 `cmoc run join` と `cmoc run abandon` は、次の条件を共通して検査する。
 
 - 現在の branch が `{{cmoc-session-branch}}` または active な `{{cmoc-run-branch}}` のいずれかである。
-- 対応する `session.state` は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の定義における `active` である。
+- 対応する `session.state` は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「`session.state`」が定める `active` である。
 
 ## `cmoc run join`
 
@@ -173,4 +173,4 @@ self-joining 経路の join がすでに成功した `feedback_report` は、`cm
 - join の terminal result では、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、および cleanup の結果をサブコマンド固有結果として判別可能にする。
 - apply の比較始点を保持した join を、report や terminal result で「比較始点を更新した」と表示してはならない。
 - abandon の terminal result では、破棄対象と cleanup の結果をサブコマンド固有結果として判別可能にする。
-- terminal result の出力先、共通 field、および表示順序は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。
+- terminal result の出力先、共通 field、および表示順序は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。

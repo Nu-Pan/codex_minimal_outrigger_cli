@@ -39,9 +39,7 @@ prompt literal に固有の役割、制限、および call 固有の実行時�
 
 oracle doc は、正確な詳細の正本責務を oracle src へ明示的に委譲してよい。委譲先の特定は「oracle file を扱う判断基準」の参照形式に従い、参照先が所有する範囲を明示する。
 
-委譲する oracle doc は、参照先が所有する詳細を本文へ複製しない。
-
-正本関係を相互に追跡する必要がある場合は、Codex へ注入されない oracle src の docstring、comment、または参照 metadata に、意味仕様を所有する oracle doc の repository-relative path と見出しを記載してよい。この記載によって、注入される literal または rendering 結果を変更してはならない。
+正本関係を相互に追跡する必要がある場合は、Codex へ注入されない oracle src の docstring、comment、または参照 metadata に、意味仕様を所有する oracle doc への参照を記載してよい。参照は「oracle file を扱う判断基準」の形式に従い、この記載によって、注入される literal または rendering 結果を変更してはならない。
 
 ## 正本責務に基づく優先関係
 
@@ -51,6 +49,8 @@ oracle doc と oracle src の優先関係は、ファイル種別の一律な上
 - oracle doc が明示的に委譲した正確な表現、構築、選択値、および schema については、参照先の oracle src を優先する。
 - 同じ意味仕様について oracle doc と oracle src が食い違う場合は、詳細な記述を選んで解決してはならない。oracle file 間の不整合として扱う。
 - generated prompt は、oracle doc または oracle src の正本を上書きしない。
+
+## realization file の責務
 
 realization file は、oracle file に記述された人間意図を具体化する成果物とする。realization file は AI が編集し、正本仕様を述べる場所にしてはならない。
 

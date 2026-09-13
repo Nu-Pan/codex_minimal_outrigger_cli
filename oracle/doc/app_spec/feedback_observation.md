@@ -34,15 +34,9 @@ agent-facing interface は、Codex call ごとに起動する local stdio MCP re
 
 同 schema の version は 2 とする。version 2 の `workload_limitation` は、現在の workload の規定範囲内で問題を解消できない理由を表し、`human_required` の判定を表さない。
 
-### reporter input v1 の互換処理
+### tool result
 
-新しい reporter submission は version 2 だけを使用する。durable 保存済みの version 1 observation は失わず、raw record を書き換えずに validation 対象とする。
-
-version 1 は、`schema_version=1` と `human_action_reason` を検査する。その他の field には version 2 と同じ規則を適用する。
-
-normalization 時に限り、transient な version 2 view へ変換する。この view では、`human_action_reason` の文字列をそのまま `workload_limitation` として扱う。元の version と変換規則は追跡可能にする。変換後の値も観測時の assertion であり、`human_required` の判定へ自動変換してはならない。
-
-tool result は、次のいずれかとする。
+tool result は、次のいずれかの形式とする。`status` 以外の値は例示である。
 
 ```json
 {"status":"accepted","observation_id":"fbo_...","redaction_count":0}
@@ -68,6 +62,14 @@ rejection code は、次の値に限定する。
 - `transport_unavailable`
 
 `retryable=true` を許容するのは、`rate_limited`、`collector_unavailable`、`transport_unavailable` だけとする。retryable は、本命 workload の retry を要求する意味ではない。
+
+### reporter input v1 の互換処理
+
+新しい reporter submission は version 2 だけを使用する。durable 保存済みの version 1 observation は失わず、raw record を書き換えずに validation 対象とする。
+
+version 1 は、`schema_version=1` と `human_action_reason` を検査する。その他の field には version 2 と同じ規則を適用する。
+
+normalization 時に限り、transient な version 2 view へ変換する。この view では、`human_action_reason` の文字列をそのまま `workload_limitation` として扱う。元の version と変換規則は追跡可能にする。変換後の値も観測時の assertion であり、`human_required` の判定へ自動変換してはならない。
 
 ### 受け入れ検査
 
@@ -119,7 +121,7 @@ Codex MCP tool
   -> repository-local raw observation
 ```
 
-collector だけが `.cmoc/gu` へ書き込む。reporter/client と agent は feedback file を直接操作しない。machine observation は reporter/client を経由せず、detector から collector へ渡す。
+この収集経路では、collector だけが raw observation を `.cmoc/gu` へ書き込む。reporter/client と agent は feedback file を直接操作しない。machine observation は reporter/client を経由せず、detector から collector へ渡す。
 
 capability は Codex call ごとに一意とし、対象 repository、work-root、agent call、および Codex call へ拘束する。capability value を prompt、Codex argv、Codex call log、または submission payload に含めてはならない。agent や agent が実行する command から collector IPC へ直接接続させてはならない。
 

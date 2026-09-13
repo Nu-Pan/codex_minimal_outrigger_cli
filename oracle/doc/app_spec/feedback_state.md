@@ -47,7 +47,7 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
 
 `{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session と run の join または abandon は、feedback state を暗黙に取り込み、巻き戻し、複製、または削除してはならない。
 
-`invocation/{{time-stamp}}.md` は `cmoc feedback report` の中断またはエラーを要約する primary report であり、feedback state または publication artifact ではない。current pointer の参照先にしない。内容と生成条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` を正本とする。
+`invocation/{{time-stamp}}.md` は `cmoc feedback report` の中断またはエラーを要約する primary report であり、feedback state または publication artifact ではない。current pointer の参照先にしない。内容と生成条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「中断・エラー時の invocation report」を正本とする。
 
 state root または current pointer が存在しない状態は、有効な初期状態とする。空 directory や `.gitkeep` は作らない。
 
@@ -217,7 +217,7 @@ report を durable 保存した後、path と hash を再検証する。
 
 新しい正常 report は、次の順序で publication する。
 
-1. `human_required` issue だけを含む新しい active generation の record と manifest を durable 保存する。
+1. 本書の「active generation」が定める record と manifest を、新しい generation として durable 保存する。
 2. Markdown report を最終 path へ durable 保存する。
 3. generation manifest と Markdown report の path および hash を再検証する。
 4. 両方を参照する current pointer を atomic に切り替える。

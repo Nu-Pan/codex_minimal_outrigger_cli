@@ -14,19 +14,8 @@
 
 ### 保存先と JSON schema
 
-- 正本の保存先は `{{work-root}}/.cmoc/gt/realization/refactor/state.json` とする。
-- JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、次の object を value とする object である。
-
-    ```json
-    {
-      "oracle/doc/example.md": {
-        "investigation_required": true,
-        "last_investigation_result": "not_investigated",
-        "last_investigated_sha256": null,
-        "last_investigated_at": null
-      }
-    }
-    ```
+- refactor state の保存先は `{{work-root}}/.cmoc/gt/realization/refactor/state.json` とする。
+- JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、各 file の調査状態を value とする object である。調査状態は、次の field を持つ object とする。
 
 - `investigation_required` は boolean とする。
 - `last_investigation_result` は `not_investigated | no_findings | findings` とする。
@@ -40,8 +29,7 @@
 ### entry 集合の同期
 
 - entry の対象は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
-- state 同期の完了時には、対象 file と entry に過不足があってはいけない。
-- 対象 file と entry の一致は、cmoc が同期を完了した時点の不変条件とする。同期時点には、doctor preprocess、refactor の各処理単位、run join 後などがある。人間の編集直後を含め、常時一致することは要求しない。
+- 対象 file と entry の過不足のない一致は、cmoc が同期を完了した時点の不変条件とする。同期時点には、doctor preprocess、refactor の各処理単位、run join 後などがある。人間の編集直後を含め、常時一致することは要求しない。
 - 新規 file には次の entry を作成する。
     - `investigation_required=true`
     - `last_investigation_result=not_investigated`
@@ -80,10 +68,8 @@
 ### 調査対象の選択
 
 - `investigation_required=true` であり、かつ path が current fork の unresolved target 集合に含まれない entry だけを調査対象とする。
-- current fork の unresolved target 集合に含まれる path を、同じ fork で再選択してはいけない。
 - `last_investigation_result=not_investigated` の entry を先に選ぶ。
 - その後は `last_investigated_at` の古い順に選び、同値なら path の昇順とする。
-- JSON object の記載順を選択順として使用してはいけない。
 
 ### 1 処理単位
 
@@ -94,7 +80,6 @@
     - 申告された変更 path 集合は、全所見の `changed_paths` の和集合とする。同じ path を複数の所見が申告してよいが、`evidences[].path` はこの集合に含めない。
     - Structured Output は、申告された変更 path 集合と実際の変更 path 集合が一致する場合だけ受理する。
     - cmoc は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「機械的検証と正式な結果」に従って同事後条件を検証する。
-    - 以下で実際の変更 path 集合という場合は、同事後条件の検証で算出した集合を指す。
     - `findings` が空の場合は、所見なしとする。
     - 次の条件をすべて満たす場合は、処理結果を所見なしへ正規化する。
         - `findings` が 1 件以上ある。
@@ -137,7 +122,7 @@
 
 ## ユーザー中断
 
-- この fork は中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする。
+- この fork は中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」を正本とする。
 - `Ctrl+C` は agent call 中を含む任意のタイミングで受け付ける。
 - 実行中の処理単位を commit まで完了するか、その処理単位全体を rollback する。realization file と refactor state の片方だけを確定してはいけない。
 - 中断後は `run.state` を `joinable` にする。

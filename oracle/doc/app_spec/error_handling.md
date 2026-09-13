@@ -1,6 +1,6 @@
 # エラーハンドリング規則
 
-本書は、エラー終了時の handled failure と internal failure の分類、およびスタックトレースの共通契約の正本とする。console と terminal result の出力先、表示順序、および共通 field は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。
+本書は、エラー終了時の handled failure と internal failure の分類、およびスタックトレースの共通契約の正本とする。console と terminal result の出力先、表示順序、および共通 field は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。
 
 ## エラー分類
 
@@ -12,7 +12,6 @@ handled failure は、個別仕様または共通仕様から、想定済みの�
 - 既知の conflict
 - 既知の state 異常
 - 外部 process の既知の失敗
-- 上記と同等に、仕様から想定済みと判断できる失敗
 
 ### internal failure
 
@@ -21,7 +20,6 @@ internal failure は、仕様で想定済みの失敗へ変換されていない
 - 未捕捉例外
 - 実装上の invariant 違反
 - primary report を保存できず、最外側の非対話末端サブコマンドの完了契約を確定できない障害
-- handled failure に分類できない想定外の内部障害
 
 終了コードだけから handled failure と internal failure を分類してはならない。
 
@@ -46,13 +44,12 @@ internal failure は、仕様で想定済みの失敗へ変換されていない
 - primary report 保存基盤以外の internal failure では、本書のエラー終了の確定処理を行う
 - internal failure のスタックトレースをサブコマンドログへ保存する
 - スタックトレースを console に表示する場合は stderr に表示し、簡潔なエラー terminal result より前に表示する
-- エラー terminal result を、そのサブコマンドの最後の console 出力にする
 
 ## エラーとして扱わない結果
 
 個別仕様が正常な処理結果として定義する状態は、internal failure として扱わない。これには、`attention`、`incomplete`、および `completed_with_unresolved` を含む。
 
-中断可能サブコマンドのユーザー中断要求は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` に従って正常系として扱う。ユーザー中断要求では、stdout と stderr のどちらにもスタックトレースまたはコールスタックを表示しない。
+中断可能サブコマンドのユーザー中断要求は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」に従って正常系として扱う。ユーザー中断要求では、stdout と stderr のどちらにもスタックトレースまたはコールスタックを表示しない。
 
 ## 個別仕様との関係
 

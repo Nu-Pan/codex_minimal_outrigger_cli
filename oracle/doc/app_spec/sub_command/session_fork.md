@@ -34,7 +34,7 @@
 ## `{{cmoc-session-branch}}` の命名規則
 
 - branch 名は、`{{cmoc-root}}/oracle/doc/branch_model.md` の `{{cmoc-session-branch}}` を正本とする。
-- `{{session-id}}` には、`{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` が定める `{{time-stamp}}` を使用する。
+- `{{session-id}}` には、`{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` の「タイムスタンプのフォーマット」が定める `{{time-stamp}}` を使用する。
 
 ## 任意 start point の扱い
 

@@ -82,7 +82,7 @@ call-scoped path context の適用範囲を次に示す。
 - すべての Codex CLI 呼び出しで、次の承認設定を呼び出し単位の argv により明示的に上書きする
     - `approval_policy`: `"on-request"`
     - `approvals_reviewer`: `"auto_review"`
-- Codex CLI 呼び出しにおける Windows toast 通知の effective configuration、`codex exec` と TUI の境界、および callback の検証条件は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
+- Codex CLI 呼び出しにおける Windows toast 通知の effective configuration、`codex exec` と TUI の境界、および callback の検証条件は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする
 
 ## ファイルアクセス制限
 
@@ -115,9 +115,10 @@ call-scoped path context の適用範囲を次に示す。
 ### 詳細なファイルアクセス制限
 
 - 詳細なファイルアクセス制限は、agent が直接行うファイルアクセスに適用する deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する
+- agent による `.agents` ツリー内の編集を禁止する
 - `NO_POLICY` 以外の全 file access mode では、次の制限を共通で適用する
     - `{{work-root}}` ツリー外への書き込みを禁止する
-    - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc` ツリー内の書き込みを禁止する
+    - `{{work-root}}/.git`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc` ツリー内の書き込みを禁止する
     - Git metadata は配置先によらず変更を禁止する
     - `AGENTS.md` と `INDEX.md` の書き込みを禁止する
     - `{{work-root}}/memo` の読み書きを禁止する
@@ -152,24 +153,13 @@ MCP の責任分界は次のとおりとする。
 
 `{{work-root}}/.cmoc` は cmoc の管理領域とする。agent から必要な更新を依頼する場合は、各機能が提供する MCP を使用する。cmoc 自身の管理処理を MCP 経由へ変更する必要はない。
 
-`.cmoc/gt` と `.cmoc/gu` 配下の従来のアクセス区分 `ar`・`aw` の階層を廃止し、配下の相対構造を一段上へ配置する。各機能の所有 root、`gt`・`gu` の区分、および Git 追跡・非追跡の責務は維持する。
-
-cmoc は新レイアウトだけを生成・使用する。今回の構造変更に対する互換機構や自動移行は設けない。
-
-保存記録と未信頼かつ可変な作業ファイルの用途・信頼性・lifecycle は、各機能の仕様で定める。
+cmoc の管理データは `.cmoc/gt` または `.cmoc/gu` 配下に配置する。所有 root、保存先、Git 追跡・非追跡の責務、および保存記録と作業ファイルの用途・信頼性・lifecycle は、各機能の仕様に従う。アクセス区分を表す `ar`・`aw` の中間階層、それを含む旧配置への互換機構、および旧配置からの自動移行は設けない。
 
 この責任分界を理由に、sandbox、permission profile、network access、または承認設定を拡張してはならない。必要性が確定していない MCP、汎用ファイル操作 MCP、または将来用の管理機構を追加しない。
 
 ### permission profile の不使用と動的生成禁止
 
-- cmoc は permission profile に関して、動的生成を含む次の操作を行ってはならない
-    - 生成
-    - 更新
-    - 選択
-    - Codex CLI への注入
-    - 事前作成された permission profile への依存
-- この禁止は動的生成の入力の種類を問わず、`AgentCallParameter`、file access mode、プロンプト、oracle file、設定、実在 path、ファイル一覧、`.gitignore` の規則、`git check-ignore` の判定結果、およびそれらの組み合わせを入力とする場合を含む
-- permission profile を一時ファイル、設定ファイル、argv、環境変数、`--config` など、いかなる経路でも Codex CLI に注入してはならない
+- cmoc は、入力の種類や伝達経路を問わず、permission profile の生成（動的生成を含む）、更新、選択、Codex CLI への注入、および事前作成された permission profile への依存を行ってはならない
 - oracle file が特定の path に対するアクセス制限を要求する場合も、その制限はプロンプトへ反映し、permission profile や path 単位の sandbox 設定へ変換してはならない
 - agent-facing な分類文面で伝える Git ignore 判定は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」が定める境界だけを表す
 - `git check-ignore` の判定結果をファイル分類や対象ファイルの選別に使用してよいが、Codex CLI の sandbox または permission profile を組み立てる入力にしてはならない
@@ -185,7 +175,7 @@ cmoc は新レイアウトだけを生成・使用する。今回の構造変更
 
 ## Model provider、Model、Reasoning Effort
 
-- agent call ごとの直接設定、値の意味、検証境界、および provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` を正本とする
+- agent call ごとの直接設定、値の意味、検証境界、および provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「Codex model provider」を正本とする
 - cmoc は agent call ごとに、`AgentCallParameter.agent_call_kind` を key として `CmocConfigCodex` の対応する設定を取得する
 - 取得した model provider、Model、および Reasoning Effort は、初回、Structured Output の補正、retry、および quota 待機後の resume を含む同一 agent call 内の全 Codex call で変更せず使用する
 - quota availability probe は独立した agent call とし、probe 自身の `agent_call_kind` に対応する設定を使用する
@@ -288,7 +278,7 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 ## feedback reporter と collector context
 
-- reporting の意味は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
+- reporting の意味は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「agent による報告」を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
 - cmoc は Codex call の開始前に、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「collector と transport」が定める call context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする
 - cmoc は call-scoped な Codex CLI `--config` override により、MCP server namespace `cmoc_feedback`、公開 tool `submit_observation`、同 tool の approval behavior、および MCP process に必要な起動情報を設定する
 - cmoc は、`cmoc_feedback` の effective configuration 全体を呼び出し単位で管理する。user config、`$CODEX_HOME/config.toml`、または project config にある次の情報には依存してはならない。また、これらの設定によって、別 tool の公開または reporter の置換を許してはならない
@@ -380,7 +370,6 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - 補正 prompt には、検出できた検証エラーを出力修正に必要な範囲でまとめる
 - 各検証エラーには、違反した条件、対象 field または位置、期待値、および観測値を含める
 - 補正 prompt で、初回応答前に宣言されていなかった受理条件を追加してはいけない
-- 補正後の出力にも、初回出力と同じ機械的検証を行う
 - 補正 Codex call は初回 Codex call 後に最大 2 回まで行う。したがって、出力生成 turn は初回を含めて最大 3 回とする
 - 出力補正の間隔を開ける必要はない
 
@@ -398,7 +387,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - 最大 2 回の補正後も検証に合格しない場合は、検証を緩和せず既存のエラー処理へ移る
 - prompt、schema、および validator が矛盾している場合は、補正によって矛盾を隠そうとせず既存のエラー処理へ移る
 - 作業成果物の差分変動、session の再開不能、またはその他の出力修正だけでは解消できない失敗も、検証を緩和せず既存のエラー処理へ移る
-- Structured Output の正式な結果を得られず既存のエラー処理へ移る場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` が定める `codex.structured_output_validation_exhausted` v1 event を、同仕様の安定 field とともに subcommand log へ記録する
+- Structured Output の正式な結果を得られず既存のエラー処理へ移る場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「rule registry」が定める `codex.structured_output_validation_exhausted` v1 event を、同仕様の安定 field とともに subcommand log へ記録する
 
 ## `codex exec` の並列呼び出し
 
@@ -450,7 +439,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
         - `{"type":"error","message":"...You hit your spend cap..."}`
         - `{"type":"turn.failed","error":{"message":"...You hit your spend cap..."}}`
 - ユーザー向けメッセージについて
-    - quota 枯渇による待機を行う場合、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` に従って、待機開始、継続中、および再開を簡潔な進行通知として表示する
+    - quota 枯渇による待機を行う場合、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「進行通知」に従って、待機開始、継続中、および再開を簡潔な進行通知として表示する
     - 動作確認用 Codex call ごとのログパス、経過時間、および戻り値を console へ列挙しない
     - 動作確認用 Codex call とその結果は、サブコマンドログから追跡可能にする
 
@@ -467,9 +456,3 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 - 続行しようとしない
 - 即時コマンド全体を失敗させる
-
-## `.agents` 配下を編集出来ない問題
-
-- `.agents` ツリー内は Codex CLI で特別扱いされているため、人間が個別に approve しないと編集できない
-- `codex exec` では個別に approve できないため、`{{repo-root}}/.agents` 配下は編集できない。編集を試みても失敗する
-- cmoc としても、`.agents` ツリー内の編集を禁止する

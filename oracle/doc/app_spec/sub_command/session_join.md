@@ -26,7 +26,7 @@
 2. 事前検証
     - 事前条件を満たしていることを確認する
 3. マージ処理
-    1. `git switch {{session-home-branch}}` を実行する
+    1. `git switch {{cmoc-session-home-branch}}` を実行する
     2. `git merge --no-ff {{cmoc-session-branch}}` を実行する
     3. conflict が発生した場合は、Codex CLI に conflict marker 解消を依頼する
 4. 後始末
@@ -73,7 +73,7 @@ session join の conflict 解消は、両 branch の意味を保ったまま mer
 ## その他、コマンドが想定外に失敗した場合
 
 - その時点で処理を打ち切り、ロールバック等はしない
-- エラー分類とスタックトレースは、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` に従う
+- エラー分類とスタックトレースは、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従う
 - 手動解決が必要な場合は、実際に必要な操作をエラー terminal result の次の操作として示す
 
 ## `{{cmoc-managed-branch}}` 削除の条件

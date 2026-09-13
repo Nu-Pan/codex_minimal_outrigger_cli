@@ -42,7 +42,6 @@ cmoc は、人間向け console ログの最初の出力として、実行 ID �
 - 進行通知は、cmoc が稼働中であることと、現在のトップレベルステップを人間が確認できる短い表示とする
 - 階層化された全サブステップを console へ列挙してはならない
 - サブステップ別の経過時間、個別 Codex call のログパス、および個別 Codex call の戻り値を、通常の進行通知へ列挙してはならない
-- 進行通知の具体的な文面、記号、および形式は、本節の意味と出力先を守る範囲で realization の裁量とする
 
 ## primary report
 
@@ -50,10 +49,10 @@ cmoc は、人間向け console ログの最初の出力として、実行 ID �
 - primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。
 - `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
 - primary report の形式、保存先、追加項目、およびサブコマンド固有の要約方法は、個別サブコマンド仕様を正本とする。
-- primary report 作成専用の追加 agent call は共通要件としない。個別仕様が report 生成手順として明示しない限り行わず、確定済みの情報から機械的に構築してよい。
+- primary report 作成専用の追加 agent call は、個別仕様が report 生成手順として明示する場合に限る。
 - cmoc 内部から呼び出したサブコマンド、処理関数、agent call、および Codex call は、独立した primary report を保存しない。
 
-primary report の保存に失敗し、完了契約を確定できない場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` に従って internal failure とする。この場合は、保存済みでない primary report の path を terminal result に表示しない。
+primary report の保存に失敗し、完了契約を確定できない場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー終了の確定」に従って internal failure とする。この場合は、保存済みでない primary report の path を terminal result に表示しない。
 
 ### 共通掲載内容
 
@@ -61,8 +60,6 @@ primary report には、内部処理を含むその invocation の実行記録�
 
 - 各 `codex exec`（`codex exec resume` を含む）で取得できた最終出力の本文。取得元は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `--output-last-message` を正本とする。
 - 実行中に新規受理された feedback observation の問題内容。掲載対象は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」における observation とする。
-
-一覧の順序とレイアウトは realization の裁量とする。
 
 ## terminal result
 
@@ -105,9 +102,9 @@ primary report は、そのサブコマンド結果について人間が読む�
 
 report 本文、candidate、および finding の詳細を console へ複製してはならない。
 
-pending feedback observation の件数と warning は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の通知境界に従う。
+pending feedback observation の件数と warning は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「durability と retention」が定める通知境界に従う。
 
-Windows toast の対象、発火順序、通知内容、および失敗時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
+Windows toast の対象、発火順序、通知内容、および失敗時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする。
 
 ## サブコマンドログファイル
 
@@ -132,17 +129,17 @@ Windows toast の対象、発火順序、通知内容、および失敗時の扱
 - terminal result を含むサブコマンド終了イベント
 - サブコマンド全体の経過時間、Codex CLI quota 回復待ち時間、および終了コード
 
-過去のサブコマンド実行で起きたことを追跡するための具体的な field は、realization の裁量で定めてよい。例外として、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の detector rule が参照する event は、同仕様が定める `event_schema_version`, `event_id`, `event_type`, context、および rule 固有 field を安定した契約として含める。
+過去のサブコマンド実行で起きたことを追跡するための具体的な field は、realization の裁量で定めてよい。例外として、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「rule registry」の detector rule が参照する event は、同仕様が定める `event_schema_version`, `event_id`, `event_type`, context、および rule 固有 field を安定した契約として含める。
 
 feedback detector は、安定契約として定義されていない自由文 field を判定に使用してはならない。
 
 ## TUI と自動補完の境界
 
-TUI の通知境界を適用するサブコマンドと非対話サブコマンドの分類は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。本書の primary report 契約は、その分類を変更しない。
+TUI の通知境界を適用するサブコマンドと非対話サブコマンドの分類は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「目的と適用範囲」と「非対話サブコマンドの通知境界」を正本とする。本書の primary report 契約は、その分類を変更しない。
 
 - `cmoc tui` および `cmoc oracle investigation` の正常な TUI 終了後には、非対話サブコマンド用の primary report または terminal result を追加しない
 - `cmoc oracle edit` は非対話サブコマンドとして本書を適用する。内部の各 `codex exec` は独立した terminal result を表示せず、最外側のサブコマンドが終了状態の確定後に 1 回だけ表示する
-- TUI の起動前エラーまたは異常終了には、本書と `{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` のエラー表示規則を適用する。非対話サブコマンド用の primary report は要求しない
+- TUI の起動前エラーまたは異常終了には、本書と `{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」のエラー表示規則を適用する。非対話サブコマンド用の primary report は要求しない
 - TUI process へ制御を渡した後は、cmoc の進行通知を TUI の表示へ混入させない
 - 自動補完プローブの判定、console 出力、および通常処理の抑止は、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md` の「CLI 自動補完規則」を正本とする
 

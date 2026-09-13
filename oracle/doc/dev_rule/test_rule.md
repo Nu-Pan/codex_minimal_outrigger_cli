@@ -3,8 +3,8 @@
 ## 責務境界
 
 - この文書は、realization test が満たすべき意味上の要件を定める
-- 構築済み環境での test と品質検査の手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする。対象は、検査の選択・実行・完了判定・報告とする
-- 開発環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` を正本とする
+- 構築済み環境での test と品質検査の手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「cmoc の test・品質検査実行手順」を正本とする。対象は、検査の選択・実行・完了判定・報告とする
+- 開発環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「cmoc 開発環境」を正本とする
 
 ## 基本
 
@@ -57,8 +57,8 @@
 - 実経路統合テスト専用の cmoc 固有なモデル分類または推論強度分類を導入してはならない
 - 自動テストによる quota 消費を一律には禁止せず、テスト用 `CmocConfig` で選択される model provider の quota 消費を許容する
 - 実経路統合テストの仕様または pytest command へ、具体的な model provider または Model 名を固定してはならない
-- model provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` を正本とし、実経路統合テストのために広げてはならない
-- quota 枯渇時の待機と再開を含む通常の Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする
+- model provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「cmoc の責務境界」を正本とし、実経路統合テストのために広げてはならない
+- quota 枯渇時の待機と再開を含む通常の Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` 呼び出し規約」を正本とする
 
 ## Fake Codex CLI
 

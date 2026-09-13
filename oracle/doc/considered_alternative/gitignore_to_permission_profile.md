@@ -3,7 +3,7 @@
 ## 採用結果
 
 - `.gitignore` または他の情報から permission profile を動的に生成する案は採用しない
-- 現行のファイルアクセス制限は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とし、この不採用案を例外や追加規則として扱わない
+- 現行のファイルアクセス制限は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「ファイルアクセス制限」を正本とし、この不採用案を例外や追加規則として扱わない
 - permission profile との記法互換性が将来改善した場合も、この変換を実行時の分岐や fallback として使用しない
 
 ## やりたかったこと

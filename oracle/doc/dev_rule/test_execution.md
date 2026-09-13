@@ -3,9 +3,9 @@
 ## 責務境界
 
 - この文書は、構築済みの cmoc 開発環境における test と品質検査の手順を定める。対象は、検査の選択・実行・完了判定・報告とする。
-- realization test が満たすべき意味上の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする。
+- realization test が満たすべき意味上の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「cmoc テスト実装規約」を正本とする。
 - 型注釈と docstring の意味上の品質要件は、`{{cmoc-root}}/oracle/doc/dev_rule/coding_rule.md` の「型ヒント」と「docstring」が所有する。
-- Python 環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` を正本とする。
+- Python 環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「cmoc 開発環境」を正本とする。
 - この手順の実行中に環境を新規構築したり、依存関係を追加したり、pip を実行したりしてはいけない。
 - この手順を根拠に、agent call の file access mode、作業範囲、または sandbox の書き込み先を広げてはいけない。
 

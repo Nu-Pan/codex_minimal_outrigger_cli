@@ -26,9 +26,6 @@
 ### 検証
 
 - 非追跡保証は `.cmoc/gu` の一部用途だけではなく、feedback の pending observation、active state、report cut、checkpoint、および Markdown report を含むツリー全体と、将来作成される全 descendant に適用する
-- 必要な操作
-    - `/.cmoc/gu/` を `{{repo-root}}/.gitignore` に追加する
-    - 既に tracked な `{{repo-root}}/.cmoc/gu` ツリー内ファイルは追跡を解除する (例：`git rm --cached`)
 - `{{repo-root}}/.cmoc/gu` 追跡対象外保証の完了判定は、以下の両方を満たすこととする
     - `git ls-files -- {{repo-root}}/.cmoc/gu` の出力が空である
     - `git check-ignore -q {{repo-root}}/.cmoc/gu/.__cmoc_ignore_probe__` が成功する
@@ -44,19 +41,17 @@
 
 ## 「`{{work-root}}/.agents` が git 追跡対象であることを保証する」の詳細
 
+agent が書き込めない `.agents` は、doctor preprocess があらかじめ用意する。
+
 ### 検証
 
 - `{{work-root}}/.agents` が存在すること
 - `{{work-root}}/.agents` ツリー内に git 追跡対象 file が 1 件以上あること
-- 必要な理由
-    - `{{work-root}}/.agents` は agent 操作禁止領域であり、差分が発生する余地をなくしたい
-    - そのため、あらかじめ作成しておく
 
 ### 修復
 
 - `{{work-root}}/.agents` が存在しなければ作成する
-- `{{work-root}}/.agents` が空ディレクトリならば `{{work-root}}/.agents/.gitkeep` を作成する
-- `{{work-root}}/.agents` ツリー内に tracked file がない場合は `{{work-root}}/.agents/.gitkeep` を git index に追加する
+- `{{work-root}}/.agents` ツリー内に tracked file がない場合は `{{work-root}}/.agents/.gitkeep` を用意し、git index に追加する
 - 修復後も `{{work-root}}/.agents` ツリー内に tracked file がない場合はエラー終了する
 
 ## 「`{{work-root}}/.cmoc/gt/config.json` が git 追跡対象である事を保証する」の詳細
@@ -77,7 +72,7 @@
 
 - `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が存在していること
 - 同 file が git 追跡対象であること
-- JSON のトップレベルが object であり、各 key と value が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の refactor state 仕様を満たすこと
+- JSON のトップレベルが object であり、各 key と value が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「保存先と JSON schema」を満たすこと
 - 同期完了時点で、entry が `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」による全 oracle file と全 realization file の和集合に過不足なく対応すること
 - 現在の file の SHA256 が最後に調査した hash と異なる entry で `investigation_required=true` であること
 
@@ -96,7 +91,7 @@
 
 ## feedback MCP reporter/client の事前検証
 
-- reporter の agent-facing interface と期待する protocol は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする。
+- reporter の agent-facing interface と期待する protocol は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「MCP interface」と「collector と transport」を正本とする。
 - doctor preprocess の検査は、次の事前判定に必要な範囲に限る。
     - cmoc が管理する local stdio MCP reporter/client を call 開始時に起動できること
     - 同 reporter/client と collector の protocol に互換性があること

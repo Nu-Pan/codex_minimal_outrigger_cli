@@ -11,9 +11,11 @@
 - その場で確実に解決できる情報は state に持たせない。
 - 1 session に未 join の編集 run は高々 1 つとする。
 - feedback の repository-local state はこの file に保存しない。保存対象と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
-- session または run の状態遷移は、同仕様が所有する feedback state を変更しない。
+- session または run の状態遷移だけを理由に feedback state を変更しない。
 
 ## active session context と編集 run 開始・session 終了の共通事前条件
+
+### active session context
 
 active session context を必要とするサブコマンドは、次の条件をすべて検証する。
 
@@ -21,12 +23,16 @@ active session context を必要とするサブコマンドは、次の条件を
 - 対応する `{{cmoc-session-state-file}}` が存在する。
 - `session.state` が `active` である。
 
+### 編集 run 開始・session 終了
+
 編集 run を開始する workload 固有コマンド、`cmoc session join`、および `cmoc session abandon` は、さらに次の共通事前条件を満たす。
 
 - `run.state` が `ready` である。
 - `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分がない。
 
 ## スキーマ定義
+
+以下は構造の模式表記であり、`|` は値の候補を表す。
 
 ```json
 {

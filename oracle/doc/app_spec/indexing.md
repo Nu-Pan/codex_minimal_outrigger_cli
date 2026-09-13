@@ -13,7 +13,6 @@
     - `.` から始まるディレクトリ
     - `.gitignore` の対象
     - `{{work-root}}/memo`
-    - バイナリファイル
 
 ## 目次作成対象ファイル・ディレクトリ
 
@@ -124,8 +123,8 @@
 
 ## インデクシングの実行条件・タイミング
 
-- インデクシングは `AgentCallParameter.run_indexing_preflight == True` の場合だけ実行する
-- 本命の agent call を実行する直前にインデクシングを実行する
+- agent call の preflight としてのインデクシングは、`AgentCallParameter.run_indexing_preflight == True` の場合だけ、本命の agent call を実行する直前に行う
+- ユーザーによる明示実行は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/indexing.md` の「実行手順」に従う
 
 ## `INDEX.md` が最新に保たれている状態でメンテナンス処理が実行されたら
 
