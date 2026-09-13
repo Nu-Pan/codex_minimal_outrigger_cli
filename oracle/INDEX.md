@@ -1,40 +1,39 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様、開発規約、branch model、設計上の代替案をまとめた文書群への入口。アプリケーション横断機能の仕様、session／run と Git の関係、Python・CLI・テストの開発規約、過去の設計判断を目的に応じて案内する。
+- cmoc の正本仕様・設計判断記録・開発規約を、責務別に参照するための文書群への入口。
+- app spec、branch・commit・worktree のモデル、過去の代替案と採否理由、Python・CLI・開発環境・テストの規約を扱う。
+- 機能仕様や開発作業の詳細を確認する際に、共通仕様と専門文書の境界を判断して適切な対象へ進むための上位ルーティング対象。
 
 ## Read this when
-- cmoc のアプリケーション機能や複数機能にまたがる実行条件・状態管理・出力契約の正本仕様を確認するとき
-- session／run の fork・join、branch・commit・worktree の役割や関係を扱うとき
-- Python 実装、CLI 構成、開発環境、依存関係、pytest・Ruff・mypy・統合テストの規約を確認するとき
-- 権限管理、feedback・oracle、realization refactor、作業計画などの設計判断について、代替案と採否理由を確認するとき
+- cmoc の正本仕様、設計判断の背景、branch・commit・worktree の関係、または開発・テスト規約の参照先を選びたいとき。
+- CLI 機能、session・run、権限管理、feedback、実装、開発環境、テストなど複数の責務にまたがる文書の境界を把握したいとき。
+- 個別文書を読む前に、app spec と開発規約・設計判断記録の役割分担を確認したいとき。
 
 ## Do not read this when
-- 個別機能の詳細要求、run state や report の状態遷移、oracle の変更手順、テスト固有の意味要件を直接確認したいときは、該当する正本仕様や規約の対象を読む
-- 実装モジュールの具体的な構成・内部 API、実際の不具合や記録内容を調査するときは、対応する realization・oracle source・実装・記録を直接読む
-- 一般的な workflow、個別の Git 操作手順、cmoc と無関係な設計判断だけを確認したいとき
+- 特定機能の詳細仕様、個別の git 操作、実装 module、設定 field・型・schema、prompt 文面、またはテスト固有の意味要件が明らかで、対応する専門文書を直接確認できるとき。
+- 実際の実装不具合、個別の所見、ログ、成果物、kaizen、oracle、feedback observation の内容を調査するとき。
+- INDEX.md の生成規則や既存の目次内容だけを確認したいとき。
 
 ## hash
-- 94ee87634d44cfa251bfca47da5b9dd579668335f84f608a421368d8a62b860c
+- 91170ac54c6125eb9167e75dc74450f730aec78fc96aa0bd783ee5036b89a093
 
 # `src`
 
 ## Summary
-- oracle の agent call 構築、prompt 構築、入力受け渡し、feedback 処理、realization・session・TUI・indexing 向けの機能群をまとめる実装ルート。
-- agent call のパラメータ、ファイルアクセスモード、quota probe、共通 prompt と policy の組み立てを確認する入口。
-- agent call 間で共有する Git worktree・root placeholder、cmoc 設定、構造化文書モデルなどの共通基盤を提供する。
-- oracle 編集・調査・レビュー、realization 適用・リファクタリング、session join、feedback、INDEX エントリー生成の個別処理へ進む上位入口。
+- cmoc の AI コーディングエージェント呼び出しを構築する Python 実装群への入口。共通の呼び出しパラメータとファイルアクセスモード、用途別の agent call 設定、完全 prompt の組み立て、構造化出力、各種ポリシーを扱う。
+- quota probe、INDEX.md エントリー生成、feedback issue の正規化・修正、oracle 調査・編集、realization 追従、session join の競合解消、TUI 起動など、個別機能の呼び出し構築へ進む起点。
+- パスコンテキスト、設定モデル、構造化文書の Markdown 化、prompt の部品化と editor input handoff など、agent call 構築を支える共通処理を提供する。
 
 ## Read this when
-- oracle 層の agent call 構成や prompt・policy の組み合わせを横断して調べるとき。
-- agent call の cwd、worktree root、placeholder、設定値、または構造化文書の扱いを確認するとき。
-- oracle、realization、feedback、session join、TUI、quota probe、indexing のどの下位機能から調査を始めるべきか判断するとき。
-- editor input handoff や Structured Output を含む呼び出しの共通構築経路を確認するとき。
+- AI コーディングエージェント呼び出しのパラメータ、論理的なファイルアクセスモード、起動 cwd、Structured Output、editor input handoff、または indexing preflight の設定を確認するとき。
+- cmoc の quota、indexing、feedback、oracle、realization、session join、TUI のいずれかに対応する agent call の prompt や起動条件を調べるとき。
+- 完全 prompt の構成、用途別ポリシーの注入、placeholder の解決、または構造化文書のレンダリング経路を追うとき。
 
 ## Do not read this when
-- 特定の agent call の prompt、schema、結果処理、または個別 workflow の詳細だけを確認したいときは、対応する下位ディレクトリや builder を直接読む。
-- Codex CLI の実行そのもの、設定ファイルの永続化処理、Git 操作、TUI の画面処理など、oracle の共通モデルを利用する下流処理だけを調べたいとき。
-- 実際の oracle file・realization file・feedback 入力の内容や、正本仕様・既存 INDEX エントリーそのものを確認したいとき。
+- ファイルアクセスモードや agent call の意味仕様そのものを確認したいときは、参照される正本仕様を直接読む。
+- 個別 agent call の実行処理、Codex CLI のプロセス制御、通常の Git 差分処理、feedback の受付・候補 issue 管理、または oracle／realization file の具体的内容だけを調べるとき。
+- INDEX.md のルーティング規則や oracle／realization の正本上の責務だけを確認したいときは、対応する仕様または下位の専用対象へ直接進む。
 
 ## hash
-- 21671c2a92b27891900b46015901b439b6d063ae05786891b33314756b3c60b5
+- 6a849be36944f6154ca91cce923cbbd5dea9fb4f61a17e9a836495325c077aba

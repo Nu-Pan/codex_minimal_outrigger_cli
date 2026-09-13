@@ -65,17 +65,18 @@
 # `policy`
 
 ## Summary
-- agent call 向けの prompt builder policy 定義群をまとめたディレクトリ。feedback 報告、file access、oracle／realization、conflict resolution、editor handoff、INDEX routing など、作業種別ごとの instruction 文面構築への入口を提供する。
+- agent call の prompt builder policy 群を、conflict 解消・editor input handoff・feedback 報告・file access・INDEX routing・oracle/realization・適合性所見などの責務別に案内するディレクトリ。
+- 各 policy の instruction 文面構築処理を起点として、共通規定の生成内容や個別 policy 間の責務境界を確認するための入口。
 
 ## Read this when
-- agent call の共通または作業種別固有の prompt policy を確認・変更するとき
-- oracle／realization file の扱い、feedback observation、file access、conflict resolution、editor handoff、INDEX routing の instruction 構築経路を調べるとき
-- 対象の prompt builder policy を選ぶために、各 policy の責務と適用境界を整理するとき
+- agent call に渡す共通または用途別の instruction policy を確認・変更するとき
+- prompt builder における file access、feedback reporting、INDEX routing、oracle/realization、conflict 解消などの規定の所在を整理するとき
+- 複数の policy を組み合わせた agent prompt の構築経路や、policy ごとの責務境界を調べるとき
 
 ## Do not read this when
-- prompt policy の意味仕様そのものを確認するときは、各 policy が参照する正本仕様を直接読む
-- 特定 policy の実装詳細だけを調べるときは、該当する個別定義を直接読む
-- prompt builder 以外の agent call 実行処理や、型・構造定義だけを確認するときは、それぞれの定義元を直接読む
+- session join、oracle、realization、INDEX routing などの意味仕様そのものを確認するときは、それぞれの正本仕様や対象ファイルを直接読む
+- 個別の conflict、editor handoff、feedback observation、または realization の具体的な実行結果を確認するとき
+- prompt builder policy と無関係な実装内容や、特定の型・構造定義だけを調べるとき
 
 ## hash
-- cd3773f3c4d3a96a88f184c415c231ca03e9b9889f3b634eac581276cbda7351
+- 543e087a02d871672964909460d952664ee6654820f1161717572b81c39928b2

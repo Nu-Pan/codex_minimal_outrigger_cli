@@ -1,16 +1,15 @@
 # `join`
 
 ## Summary
-- 対象ディレクトリは、session join における通常のマージ処理と分離して、merge conflict marker を解消するためのエージェント呼び出し設定を構築する層への入口です。
-- conflict 対象ファイルの指定、編集モード、専用の conflict 解消 policy、indexing preflight の扱いを確認・変更するときに読む対象です。
+- 対象ディレクトリ内の conflict_resolution.py は、session join のマージ競合マーカー解消を担当するエージェント呼び出し定義である。競合対象ファイルの実パスを prompt に渡し、リポジトリ編集を許可しつつ、oracle・realization・conflict resolution・routing の各ポリシーと indexing preflight を適用しない実行条件をまとめている。
 
 ## Read this when
-- session join の conflict 解消処理で、どのファイルを対象にどの編集条件でエージェントへ渡すかを確認したいとき。
-- merge conflict marker 解消用の prompt と起動パラメータを構築する実装の入口を探しているとき。
+- session join の conflict 解消で、競合対象ファイルの prompt への指定方法や、その解消エージェントに渡す実行条件を確認するとき。
+- conflict 解消 prompt にどのポリシーを適用し、どの preflight を省略するかを確認するとき。
 
 ## Do not read this when
-- session join の通常のマージ処理や、conflict 解消以外の prompt 構築を確認したいとき。
-- 構築済み prompt の共通仕様や個別 policy の定義そのものを確認したいときは、それぞれの prompt builder または policy 定義を直接読むべきです。
+- 通常の merge 処理や session join 以外のサブコマンドにおけるエージェント呼び出し条件を確認するとき。
+- prompt の共通構築規則や共通パラメータの定義を確認するときは、共通の prompt 構築定義を直接読むべきである。
 
 ## hash
-- ef52fb55bb2d74983186220c1a9c8ada7dbb290151f495891721e30577fa3f67
+- 9a895c2c67fed3d039706710c7e4a84cf716a5308c1cdc9e41dd1ff9c46e9ee3
