@@ -121,7 +121,8 @@
 
 ## インデクシングの実行条件・タイミング
 
-- agent call の preflight としてのインデクシングは、`AgentCallParameter.run_indexing_preflight == True` の場合だけ、本命の agent call を実行する直前に行う
+- agent call 共通実行経路による自動 preflight は、`AgentCallParameter.run_indexing_preflight == True` の場合だけ、その論理 agent call の初回 Codex call の直前に行う
+- `cmoc oracle edit` が呼び出し元として管理する indexing の順序と回数は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「実行順序」を正本とする
 - ユーザーによる明示実行は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/indexing.md` の「実行手順」に従う
 
 ## `INDEX.md` が最新に保たれている状態でメンテナンス処理が実行されたら

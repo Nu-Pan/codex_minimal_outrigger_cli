@@ -8,7 +8,7 @@
     - 正確な prompt 文面
     - workload 固有の起動パラメータ。ただし、model provider、Model、および Reasoning Effort は除く
 - `AgentCallParameter` の field 名、型、および既定値を含む正確な構造は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
-- 本書で agent call とは、1 個の `AgentCallParameter` に対する論理的な呼び出し単位を指す
+- 本書で agent call とは、1 個の `AgentCallParameter` を入力とする 1 回の論理的な実行単位を指す
 - Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
 - 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
 - cmoc は agent call ごとに、対応する builder を表す安定した低カーディナリティの `agent_call_kind` と一意な agent call ID を付与する
@@ -174,7 +174,8 @@ cmoc の管理データは `.cmoc/gt` または `.cmoc/gu` 配下に配置する
 ## Model provider、Model、Reasoning Effort
 
 - agent call ごとの直接設定、値の意味、検証境界、および provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「Codex model provider」を正本とする
-- cmoc は agent call ごとに、`AgentCallParameter.agent_call_kind` を key として `CmocConfigCodex` の対応する設定を取得する
+- cmoc は各 agent call に使用する設定を、`AgentCallParameter.agent_call_kind` を key として `CmocConfigCodex` の対応する entry から取得する
+- `cmoc oracle edit` の設定の確定時点と両回での共用は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「ユーザー指示と prompt の構築」に従う
 - 取得した model provider、Model、および Reasoning Effort は、初回、Structured Output の補正、retry、および quota 待機後の resume を含む同一 agent call 内の全 Codex call で変更せず使用する
 - quota availability probe は独立した agent call とし、probe 自身の `agent_call_kind` に対応する設定を使用する
 - Codex CLI に対する Model と Reasoning Effort は、すべての呼び出しで次の argv により明示的に上書きする

@@ -52,8 +52,8 @@ class AgentCallParameter:
     # cmoc_editor_input MCP server を呼び出し単位で有効化する
     enable_editor_input_handoff_mcp: bool = False
 
-    # True なら論理 agent call の初回 Codex call 前に indexing preflight を実行する
-    # False なら indexing preflight を実行しない
-    # 通常は True のままで良い
-    # 本命 agent call 自身が indexing である場合は indexing preflight をスキップする、というのが主な使い方
+    # agent call 共通実行経路による自動 indexing preflight の有効・無効
+    # 呼び出し元が管理する indexing を含む実行タイミングの意味仕様は、
+    # `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の
+    # 「インデクシングの実行条件・タイミング」を参照する。
     run_indexing_preflight: bool = True

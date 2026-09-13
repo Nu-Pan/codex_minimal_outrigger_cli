@@ -68,7 +68,7 @@ class CmocConfigCodex:
     #   ベンチマークスコア上、GPT-5.6 Astra は xhigh, max に知能差はほとんど無いが、料金差はきっちりある
     #   個別ベンチスコアで見ても、ほとんど横並び
     #   よって、この設定ファイル内の選択基準的には GPT-5.6 Astra xhigh を最高品質とみなす
-    #   コスパを重視るすなら high に落としても良い
+    #   コスパを重視するなら high に落としても良い
     agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
             # NOTE merge 結果を守るため、品質が最優先
@@ -87,12 +87,6 @@ class CmocConfigCodex:
             ),
             # NOTE oracle file に影響を与えるので品質が重要
             "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
-                model_provider="openai",
-                model="gpt-6-astra",
-                reasoning_effort="xhigh",
-            ),
-            # NOTE oracle file に影響を与えるので品質が重要
-            "build_oracle_edit_reduction_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="xhigh",
