@@ -20,37 +20,39 @@
 # `feedback`
 
 ## Summary
-- feedback issue の同一性判定と remediation を担う agent call の入口をまとめた対象。normalize_issue は観測結果と既存候補の同一性判定、remediate_issue は issue の存在確認・安全な修正・検証・結果分類を扱う。
-- 同一性判定と remediation の出力契約、およびそれぞれの agent call の prompt・起動条件・対象範囲を確認するための入口。
+- feedback issue の同一性判断と remediation に関する agent call の入出力契約、および起動パラメータ定義への入口。
 
 ## Read this when
-- feedback observation が既存 issue と同一か新規かを判定する agent call の入力範囲、出力契約、起動パラメータを確認するとき
-- remediation agent call の結果分類、realization file への変更範囲、検証条件、変更 path を確認するとき
-- 同一性判定または remediation の Structured Output schema の必須フィールドと制約を確認するとき
+- feedback issue の正規化・同一性判断・remediation agent call の出力形式や起動条件を確認するとき
+- 同一性判断用 schema、prompt 構築、remediation の安全な修正・検証条件を横断して確認するとき
 
 ## Do not read this when
-- feedback observation の受付・構造化・送信、候補 issue の絞り込み、issue の生成・保存を確認するとき
-- issue の内容・原因・summary・impact・remediation を生成する処理を確認するとき
-- realization file 自体の実装や oracle file の内容、remediation の診断・修正手順を直接確認するとき
+- feedback observation の受付・送信や候補 issue の収集・絞り込みそのものを確認したいとき
+- remediation 対象の realization 実装、oracle file、または同一性判断ロジックの本体を直接確認したいとき
+- INDEX.md のルーティング情報だけを確認したいとき
 
 ## hash
-- c440a1f2961e419b90e901094ecc23af576b8470688769c351b76a749cc1419f
+- 4233d6d48e0e4c6bc63d9fdfbba2e91b914293377ca8a3d4812ec56c032d7723
 
 # `indexing`
 
 ## Summary
-- INDEX.md エントリー生成用の JSON Schema と、その schema を使う indexing agent 呼び出し定義を扱うディレクトリ。前者は出力形式の確認、後者は `cmoc indexing` の prompt・起動設定・対象 context の確認や変更の入口になる。
+- 対象ディレクトリは、INDEX.md 用エントリー生成 agent call に関する実装と、その出力形式を定義するスキーマを扱う。
+- スキーマ定義は、要約・読む条件・読まなくてよい条件を必須の文字列配列として指定する。
+- 実装は、対象パスや完全な読み取り専用 prompt、構造化出力スキーマ、agent の作業ディレクトリ、indexing preflight 設定を組み立てて呼び出しパラメータを返す。
 
 ## Read this when
-- INDEX.md エントリー生成結果の必須項目や JSON Schema を確認したいとき。
-- `cmoc indexing` が indexing agent を呼び出す際の prompt、読み取り専用設定、構造化出力、preflight 設定を確認・変更したいとき。
+- INDEX.md 用エントリー生成の仕組みを変更・追跡するとき。
+- 生成 agent call の prompt 構成、対象パス解決、読み取り専用設定、構造化出力スキーマ、作業ディレクトリ、preflight 設定の関係を確認するとき。
+- 生成結果の JSON 構造や必須項目、および指定された出力形式への適合を確認するとき。
 
 ## Do not read this when
-- 対象ファイルやディレクトリそのものの実際の責務を調べたいとき。
-- 生成済み INDEX.md のルーティング内容を確認したいとき。
+- 対象ファイルやディレクトリそのものの実際の責務を調べるとき。
+- INDEX.md のルーティング内容やエントリー生成用 prompt の規則を確認するとき。
+- 一般的な prompt 完成処理や path context の実装だけを確認したいときは、対応する共通実装を直接読む。
 
 ## hash
-- b7ebde069e72bdb8df99995dfaad5b84e01791d88ff8130a107283e391529be1
+- 4d4c2433d75dca8bbb16c25f34731f6b7bd567719a957176b6c409d81f98ffc8
 
 # `oracle`
 
@@ -110,18 +112,19 @@
 # `session`
 
 ## Summary
-- `cmoc session join` における merge conflict marker 解消用のエージェント呼び出し構築への入口。対象パスを解決し、conflict 解消用 prompt と起動パラメータを組み立てる下位要素を扱う。
+- session 系サブコマンドに固有のエージェント呼び出し構築をまとめる層です。
+- 配下の join は、通常のマージ処理とは分離した merge conflict marker 解消用の呼び出し構築への入口です。
 
 ## Read this when
-- `session join` の merge conflict marker 解消に使うエージェント呼び出しの構築方法を確認・変更するとき。
-- conflict 対象パスの扱いや、解消用の prompt・アクセス制御・起動条件の構成を確認するとき。
+- session join で conflict marker を解消するエージェント呼び出しの対象ファイル、編集モード、専用 policy、indexing preflight の扱いを確認したいとき。
+- session 系の ACP builder 配下から、join の conflict 解消実装へ進む入口を探しているとき。
 
 ## Do not read this when
-- merge conflict marker の具体的な解消処理や対象ファイルの内容を確認したいときは、conflict 対象ファイルを直接読む。
-- 一般的な prompt 構築、共通 policy、または通常の `session join` 処理フローを確認したいときは、それぞれのより直接的な対象を読む。
+- session join の通常のマージ処理や、conflict 解消以外の処理を確認したいとき。
+- 共通の prompt 構築仕様や policy 定義そのものを確認したいときは、対応する共通 prompt builder または policy 定義を直接読むべきです。
 
 ## hash
-- 47fcb891c8fda65984122c35dcab51fc85ba90bb4e1a6226eb2390001fc220f2
+- 473e6919b32f47e10a155d54b77abd5e6c8df9c307cee6988bdc1d456316eceb
 
 # `tui`
 

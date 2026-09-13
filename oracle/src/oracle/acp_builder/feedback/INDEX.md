@@ -17,19 +17,19 @@
 # `normalize_issue.py`
 
 ## Summary
-- feedback observation と絞り込み済みの既存 issue candidate の同一性だけを判定する agent call の prompt と起動パラメータを構築する入口。
-- issue の内容や原因を生成せず、候補との比較結果を決定論的な条件付きで返す処理を扱う。
+- feedback observation と絞り込み済み既存 issue candidate の同一性判断に使う agent call parameter を構築する。読み取り専用の参照境界、同一性判断基準、Structured Output の事後条件を prompt に組み込み、判断用の構造化出力 schema と起動情報を返す。
 
 ## Read this when
-- feedback observation が既存 issue と同一か新規かを判定する prompt、入力範囲、Structured Output の事後条件を確認するとき
-- normalize issue 用の agent call パラメータや readonly の実行条件を変更するとき
+- feedback observation を既存 issue と同一か新規か判定する処理の prompt 構築や起動パラメータを変更するとき
+- observation・候補 issue・関連する oracle/realization 情報を用いた同一性判断の参照範囲を確認するとき
 
 ## Do not read this when
-- observation の申告や構造化、候補 issue の絞り込み、issue の summary・impact・remediation の生成を確認するとき
-- 同一性判定の実装ではなく、出力スキーマ自体の定義を直接確認すべきとき
+- feedback issue の summary や impact など、同一性判断後の issue 内容生成を変更するとき
+- 同一性判断の Structured Output schema 自体を確認・変更するとき
+- feedback observation の受付・正規化や候補 issue の絞り込み処理を直接確認するとき
 
 ## hash
-- 2151f8aa221438f82a77b1613a61062bb03b2d1dae49e1e22814268b9b36245c
+- a8c3a072f819f3c0c845bb1d0975325ae9dc16163c79355e7c944c5b9aee9217
 
 # `remediate_issue.json`
 

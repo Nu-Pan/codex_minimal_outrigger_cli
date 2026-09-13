@@ -89,18 +89,24 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle 機能に関する正本仕様、開発規約、branch model、設計代替案、実装・入力契約をまとめた上位入口。機能仕様と実装上の構築要素を対応する下位領域へ案内する。
+- cmoc のアプリケーション正本仕様、開発規約、branch model、設計上の代替案をまとめた文書群への入口。session／run・Git・oracle／realization・feedback・indexing などの横断的な仕様判断に進む起点となる。
+- Codex CLI を呼び出す oracle 実装と、agent call のパラメータ、prompt・policy、Structured Output、入力受け渡し、quota probe、共通パス・設定・構造化文書モデルをまとめた実装ルート。
+- oracle 編集・調査・レビュー、realization の適用・リファクタリング、session join、feedback 処理、TUI、INDEX エントリー生成など、個別 workflow の実装へ進む上位入口。
 
 ## Read this when
-- oracle・realization の機能仕様、開発・テスト規約、session・run の分離と統合、または設計判断の背景を調査・変更するとき。
-- oracle の agent call 構築、prompt・policy、indexing、feedback、editor input handoff などの実装や入力契約の入口を探すとき。
+- cmoc の複数機能にまたがる実行条件、状態管理、出力契約、権限、session／run と Git の関係を正本仕様から確認するとき
+- Python・CLI・開発環境・依存関係・pytest・Ruff・mypy・統合テストに関する開発規約を確認するとき
+- oracle の agent call 構築、共通 prompt・policy、cwd・worktree・placeholder・設定、構造化文書の扱いを横断して調べるとき
+- oracle、realization、feedback、session join、TUI、quota probe、indexing のどの個別領域を読むべきか判断するとき
+- 権限管理、feedback・oracle、realization refactor、作業計画などの設計判断について、採用された方針や代替案を確認するとき
 
 ## Do not read this when
-- 単一機能の詳細手順、個別の schema、特定の実装挙動、または生成済み oracle・realization の内容だけを確認したいときは、対応する下位対象を直接読む。
-- 文書の意味や責務分担を必要としない機械的なファイル処理だけを行うとき。
+- 特定のサブコマンド、agent call、prompt、schema、結果処理、または状態遷移の詳細だけを確認したいときは、対応する下位ディレクトリや正本仕様を直接読む
+- 実装モジュールの内部 API、実際の oracle／realization／feedback の内容、不具合の記録を調査するときは、対応する実装・記録・入力を直接読む
+- 一般的な Git 操作、cmoc と無関係な設計判断、または Codex CLI 実行そのものや TUI 画面の細部だけを確認したいとき
 
 ## hash
-- a47b1c173a39d560a69fcfc76bca3299a8728259e88d57144850dabb1961c9b1
+- edf61e27afd4184e646698a9ec9c39a62261dc15d712dcf887bffcc403fb7e52
 
 # `pyproject.toml`
 

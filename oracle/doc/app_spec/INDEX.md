@@ -192,39 +192,37 @@
 # `indexing.md`
 
 ## Summary
-- `INDEX.md` の自動生成・更新に関する正本仕様。配置対象、目次対象、内容要件、ハッシュ、処理順序、agent call、並列実行、実行条件を定める。
+- `cmoc` が `{{work-root}}` 配下に `INDEX.md` を配置・更新するための正本仕様を定める。対象ディレクトリ・ファイルの選別、目次情報の形式と意味要件、ハッシュ、処理順序、agent call、並列実行、実行条件を扱う。
 
 ## Read this when
-- `INDEX.md` の自動インデクシング仕様を確認・変更するとき。
-- 目次情報の意味要件や、対象ディレクトリの処理順序・並列化・更新条件を確認するとき。
-- インデックス生成用 agent call の委譲範囲や preflight 条件を確認するとき。
+- `INDEX.md` の自動生成・更新・検証の仕様を確認するとき。
+- インデクシング対象の除外条件、目次情報の内容要件、ハッシュ計算、処理順序や並列実行の扱いを変更・実装するとき。
+- `INDEX.md` 生成用 agent call の入力や preflight 実行条件を確認するとき。
 
 ## Do not read this when
-- 個別の `INDEX.md` エントリー本文だけを生成・確認する場合。
-- 対象ファイルの実装や、インデックス仕様以外のアプリケーション仕様を調査する場合。
-- 機械的な対象列挙やハッシュ計算だけを確認する場合。
+- 個別ファイルやディレクトリの実装内容を直接確認することが目的で、`INDEX.md` インデクシングの動作仕様を扱わないとき。
+- 既存の `INDEX.md` の具体的なルーティング内容だけを確認したいときは、対象階層の `INDEX.md` を直接読む。
+- 一般的な文書作成や、インデクシング以外の `cmoc` サブコマンドの仕様を確認するとき。
 
 ## hash
-- fec03fa964a71a48ba76fe0b6493e4c1aaa88fec6c6c9a0133404b6ce3c27ff8
+- 72bf58396fb0fea67b9fe779dcfef81a14ca8dc4957659e6c9d30f29f5931dbc
 
 # `oracle_and_realization.md`
 
 ## Summary
-- oracle file と realization file の責務、分類、正本責務の委譲・優先関係、および両者を扱う判断基準を定義する共通契約。oracle doc・oracle src・oracle test と realization implementation・test・ancillary の境界を確認する入口。
+- oracle file と realization file の分類、正本責務、優先関係、および相互適合性を定義する共通契約。oracle doc・oracle src・oracle test と realization implementation・test・ancillary の役割を区別し、仕様と実装を扱う際の判断基準を示す。
 
 ## Read this when
-- oracle file と realization file の役割や配置区分を判断するとき
-- oracle doc と oracle src のどちらを正本として扱うか、または仕様の不整合を整理するとき
-- oracle file の調査・レビュー、realization file の実装・テスト・リファクタリング方針を確認するとき
-- realization file が oracle file の明示要求に適合しているかを判定するとき
+- oracle file または realization file の新規作成・変更・レビューで、正本仕様の所有者、委譲された exact detail、または仕様適合性の判断基準を確認するとき。
+- oracle doc と oracle src の記述が競合している、あるいは realization file へ仕様を複製せず参照・生成・変換で対応する必要があるとき。
+- realization apply/refactor の修正対象を、明示仕様との不整合または realization file だけで確認できる致命的な不具合に限定するとき。
 
 ## Do not read this when
-- 特定の prompt literal、schema、builder の構築順序や選択値そのものを確認したいときは、委譲先の oracle src を直接読む
-- codex_exec_rule に定義された prompt literal 固有の役割や実行時指示の優先関係だけを確認したいとき
-- 対象ファイルの具体的な実装挙動やテスト結果だけを調べるとき
+- 個別の oracle file が所有する具体的な要求や prompt・schema の exact detail だけを確認したいときは、その参照先の oracle doc または oracle src を直接読む。
+- 一般的な実装品質改善、未定義部分の網羅的な分類、または INDEX.md の構造自体を確認したいとき。
 
 ## hash
-- 46c7c03ba471f72b893a854823ddd22b774518f557c34531fd677686cffb481c
+- b537a66957cc2885b4b401e3d9578d00e0c807711a2d183312385046bd006229
 
 # `oracle_and_realization_file_enumeration.md`
 
@@ -298,20 +296,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc の各サブコマンドおよび主要な編集・セッション処理仕様へ進むための入口。コマンド固有の実行契約、run／session lifecycle、agent 委譲、report、終了処理を扱う下位仕様を整理している。
+- cmoc のサブコマンド仕様群への入口。doctor、indexing、oracle 操作、realization 操作、feedback report、session lifecycle、editing run、TUI の各正本へ、確認したい実行責務に応じて進むための案内を提供する。
 
 ## Read this when
-- cmoc の特定サブコマンドの実行条件・手順・終了結果を確認したいとき
-- 編集 run、feedback report、session fork／join／abandon、oracle 操作、TUI、indexing、doctor の仕様入口を探すとき
-- primary report、差分検証、状態遷移、agent call など、複数の処理段階にまたがるコマンド固有の振る舞いを調べるとき
+- cmoc の特定サブコマンドの引数、事前条件、実行手順、終了経路、primary report を確認するとき。
+- session／editing run の fork・join・abandon、agent 委譲、差分・commit・cleanup、状態遷移の仕様を調べるとき。
+- oracle／realization／feedback／indexing／TUI の workload 固有の責務と、共通仕様との境界を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細を既に把握しており、その正本仕様や実装を直接確認できるとき
-- branch model、run isolation、state schema、error handling、prompt editor などの共通規則だけを確認したいときは、各仕様が参照する共通の正本へ直接進むべきとき
-- oracle／realization の内容や適合性判定、feedback observation の収集・state 管理など、個別対象の詳細そのものだけを調べるとき
+- 個別サブコマンドの実装、builder の具体的な prompt や起動パラメータ、Structured Output schema を確認したいとき。
+- oracle と realization の適合性、feedback observation／state、editor input handoff、Codex CLI 起動など、各正本が直接扱う詳細だけを確認したいとき。
+- このディレクトリに含まれない一般的な Git 操作や、特定の実行結果・診断ログだけを確認したいとき。
 
 ## hash
-- efc2f7dc73adcaf59d3e901a80722810c17ace72e345b1d3098457ad3d5566c7
+- d13f0ee932b1b807eb73e73329859e78505511da525c82bb379f903a6114e38d
 
 # `subcommand_interruption.md`
 

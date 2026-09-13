@@ -34,23 +34,23 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の開始・再開条件、intake wave、issue 単位の remediation、差分検証・commit、auto join、publication、recovery、interruption、error、および report・終了コードの正本仕様を扱う。
-- feedback observation を issue identity に正規化し、安全な realization 修正を行って自動 join する処理全体の入口であり、feedback report の実行動作や失敗時の state 保持を確認するための対象。
+- `cmoc feedback report` の feedback remediation run を開始・再開し、観測の検証と issue 正規化、issue 単位の安全な修正・commit、自動 join、結果 report の publication までを定義する正本仕様。
+- feedback observation から issue identity を形成し、agent call の結果・差分・検証記録を機械的に受理する処理と、wave、高水位、recovery、interruption、error の境界を扱う。
 
 ## Read this when
-- `cmoc feedback report` の CLI 契約、事前条件、run 開始・再開、または session との隔離境界を確認するとき。
-- raw observation の validation、machine・agent observation の normalization、issue remediation call、Structured Output、差分受理、issue commit、rollback の仕様を確認するとき。
-- intake wave の自然完了条件、auto join、join 後検査、publication、incomplete、user interruption、error recovery の扱いを確認するとき。
-- 正常・診断・中断・エラー時の report 保存内容、表示対象、および終了コードを確認するとき。
+- `cmoc feedback report` の CLI 契約、開始条件、run isolation、intake validation、normalization、remediation call、issue commit、wave loop、自動 join、publication、終了コードを確認したいとき。
+- feedback report が fixed、human_required、inconclusive、user interruption、error のどの結果になるか、また保存される report と recovery state を確認したいとき。
+- feedback issue の修正対象、禁止される差分、agent に委譲する prompt・schema・設定、および join 後の検査責務の境界を確認したいとき。
 
 ## Do not read this when
-- raw observation の収集方法、結果分類、feedback state の schema や report cut の詳細そのものを確認したい場合は、本文が参照する各正本仕様を直接読む。
-- normalize issue や remediate issue の prompt、workload 固有パラメータ、Structured Output schema の詳細を確認したい場合は、本文が指定する builder と schema を直接読む。
-- branch model、run isolation、編集 run 共通仕様、差分検証、割り込みなどの一般規則だけを確認したい場合は、本文が参照する共通仕様を直接読む。
-- feedback report の処理全体ではなく、個別の observation 収集・state 管理・agent call 実装・report 出力実装だけを調べる場合。
+- raw observation の schema や reporter input の互換処理そのものを確認したい場合は、feedback observation の正本を直接読む。
+- 結果分類や issue の用語定義だけを確認したい場合は、feedback の正本を直接読む。
+- repository-local feedback state、checkpoint、intake wave、高水位、report cut、atomic publication の詳細だけを確認したい場合は、feedback_state の正本を直接読む。
+- branch・commit・worktree の一般モデル、run isolation、編集 run の共通動作、割り込み、Codex 呼び出し規約、routing の詳細だけを確認したい場合は、それぞれの参照先仕様を直接読む。
+- feedback report の実装コードや agent parameter、Structured Output schema を確認・変更したい場合。
 
 ## hash
-- e0d8c7ffcf1eb59c94285b7e2e5b938ee4bf966681324ede8196f394f5bc6df7
+- fd8ae789299ab1280f1b86e9dec6dbaabd4e66cf19e4a824596550453c7fbb4e
 
 # `indexing.md`
 
@@ -182,25 +182,21 @@
 # `session_join.md`
 
 ## Summary
-- アクティブな session の作業ブランチを home branch に merge して session を joined にする、session 完了専用コマンドの仕様。通常の汎用 git merge 操作用途ではない。
-- 実行前提、branch 切替・no-ff merge、conflict marker 解消用 agent call、state 更新、session branch cleanup、primary report 保存までの終了処理を定める。
-- session join における branch model、feedback state、oracle file の扱いと、conflict や想定外の失敗時の境界を確認するための入口。
+- `cmoc session join` のセッション終了処理を定義する仕様。現在の session branch を home branch へマージし、conflict 解消、session state 更新、branch cleanup、primary report 保存までの実行契約を扱う。
 
 ## Read this when
-- session を完了して home branch に戻し、session branch を merge したいとき
-- session join の事前条件、merge conflict の解消手順、または session state の joined 遷移を確認するとき
-- session join 実行後の branch cleanup、primary report、warning・エラー時の次の操作を確認するとき
-- conflict 解消用 agent call の仕様上の制約や oracle file の優先順位を確認するとき
+- `cmoc session join` の引数、事前条件、branch merge、session 終了、conflict 解消、session branch 削除条件を確認するとき
+- session join の終了経路、エラー時の扱い、primary report の記録内容を実装または検証するとき
+- session join と feedback state、oracle file、realization file の責務境界を確認するとき
 
 ## Do not read this when
-- 通常の git branch 間の汎用 merge 方法を確認したいとき
-- session の開始・編集 run 開始条件そのものを確認したいときは、active session context と共通事前条件の正本を直接読むとき
-- branch の対応関係や default branch の扱いだけを確認したいときは branch model の正本を直接読むとき
-- repository-local feedback state の所有範囲と配置だけを確認したいときは feedback state の正本を直接読むとき
-- エラー分類の一般規則だけを確認したいときは error handling の正本を直接読むとき
+- 通常の git branch merge の仕様や汎用 merge wrapper の動作だけを確認したいとき
+- session の状態構造や共通事前条件そのものを確認したいときは、session state の正本を直接読む
+- conflict 解消用 agent call の具体的な prompt 構築を確認したいときは、指定された conflict resolution 実装を直接読む
+- feedback state の所有範囲と配置だけを確認したいときは、feedback state の正本を直接読む
 
 ## hash
-- 6f225eec297c984fa9e2fc9389c51ddcfe2139c4143c8d279c97ce40a39ebcf4
+- 4ca2f6ca17ed6639987243c402c14026c8ed2e9fec584fe313d42d9ab45bb8b6
 
 # `tui.md`
 

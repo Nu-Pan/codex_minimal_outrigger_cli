@@ -1,16 +1,16 @@
 # `join`
 
 ## Summary
-- `cmoc session join` の merge conflict marker 解消に使うエージェント呼び出しパラメータを構築する。
-- conflict 対象パスを解決して prompt に渡し、専用の conflict resolution policy、書き込み権限、完了条件、起動設定を組み立てる。
+- 対象ディレクトリは、session join における通常のマージ処理と分離して、merge conflict marker を解消するためのエージェント呼び出し設定を構築する層への入口です。
+- conflict 対象ファイルの指定、編集モード、専用の conflict 解消 policy、indexing preflight の扱いを確認・変更するときに読む対象です。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消で、対象パスの解決や prompt への埋め込み方を確認・変更するとき。
-- conflict 解消時のファイルアクセス権限、oracle・realization・routing policy の指定、preflight 無効化、完了条件を確認・変更するとき。
+- session join の conflict 解消処理で、どのファイルを対象にどの編集条件でエージェントへ渡すかを確認したいとき。
+- merge conflict marker 解消用の prompt と起動パラメータを構築する実装の入口を探しているとき。
 
 ## Do not read this when
-- merge conflict marker の具体的な解消処理や対象ファイルの内容を確認したいときは、conflict 対象ファイルを直接読む。
-- 通常の `session join` の処理フローや、一般的な prompt 構築・広範な edit/refactor policy の定義だけを確認したいときは、より直接的な対象を読む。
+- session join の通常のマージ処理や、conflict 解消以外の prompt 構築を確認したいとき。
+- 構築済み prompt の共通仕様や個別 policy の定義そのものを確認したいときは、それぞれの prompt builder または policy 定義を直接読むべきです。
 
 ## hash
-- 2e61ea38837d55d7b51462967943257eefadbc06397404588c50a6f3983a44bd
+- ef52fb55bb2d74983186220c1a9c8ada7dbb290151f495891721e30577fa3f67

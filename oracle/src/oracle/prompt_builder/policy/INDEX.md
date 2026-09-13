@@ -1,19 +1,18 @@
 # `conflict_resolution.py`
 
 ## Summary
-- session join の merge conflict 解消結果に適用する instruction policy を構築する。
-- 両方のマージ元ブランチの oracle file の意図と挙動を保持し、両立不能な場合は未解消事項として報告するための規定への入口となる。
+- session join の merge conflict 解消結果に適用する規定を構築する。conflict の両側と関連する oracle file の意図を保持し、両立不能な場合は未解消事項として報告するための instruction 文面への入口。
 
 ## Read this when
-- session join の merge conflict 解消結果が満たすべき規定を確認・変更するとき。
-- oracle file の意味を優先した conflict 解消用 instruction の構築責務を確認するとき。
+- session join の merge conflict 解消方針を確認・変更するとき
+- conflict 解消結果に求める oracle file 優先の規定や、未解消事項の報告条件を確認するとき
 
 ## Do not read this when
-- conflict 解消の意味仕様や優先順位そのものを確認するとき。
-- realization file の具体的な挙動や、別の prompt policy の責務を確認するとき。
+- session join 全体の意味仕様や conflict 解消の優先順位を確認したいときは、まず正本仕様を読むべき場合
+- conflict 解消の具体的な実装挙動や realization file 自体を調べるとき
 
 ## hash
-- b0fd6c6979c348db32d11701ae88945578823e68ad0159c81cd6154f69b1b153
+- 939087b46316af049646fb574af9178fbd8b70bae62508db39c4ac9167c8d5a0
 
 # `editor_input_handoff.py`
 
@@ -69,38 +68,37 @@
 # `index_entry.py`
 
 ## Summary
-- INDEX.md エントリーを生成する agent 向けの構築定義。ルーティング情報に含めるべき判断材料と、避けるべき記述を SDPolicy として定める。INDEX.md のエントリー生成方針を組み立てる処理の入口である。
+- INDEX.mdエントリー生成時のルーティング情報に、対象を読むべき作業・質問・変更の条件と、この対象が担う責務を示すための規定を定義する。
+- 対象内容を根拠に、過度な詳細や推測を避けつつ、対象へ進むべき境界と進まなくてよい境界を判断できるようにする。
 
 ## Read this when
-- INDEX.md エントリー生成用のプロンプト方針を確認・変更するとき。
-- ルーティング情報に記載する責務、読む条件、境界、禁止事項の定義を確認するとき。
+- INDEX.md用エントリーを生成・改訂するとき
+- 対象の責務、読むべき条件、または同階層の別対象との境界を整理するとき
 
 ## Do not read this when
-- 個別の対象を案内する既存 INDEX.md エントリーを確認するとき。
-- INDEX.md エントリー生成方針の根拠となる関連仕様を直接確認するとき。
+- INDEX.mdエントリー以外の一般的な文書編集を行うとき
+- Structured Outputの出力項目や型だけを確認したいとき
+- 対象ファイルの実装内容を直接調査・変更する必要があるとき
 
 ## hash
-- d1308402ec3ede69802fd23f408bc77c7ecb7e3723d5bac8cbc5cb67319a2a92
+- 6bf595b53b34a59a30230606ab87ee397ff028ac5e22c6136c02e9d6c7a62baa
 
 # `oracle.py`
 
 ## Summary
-- oracle file が満たすべき基本規定と、oracle doc・oracle src の正本責務、委譲、優先関係を agent call 向け指示として構築する関数。
-- `SDHeader`、`SDPolicy`、`PlaceholderMap` を用い、oracle policy として要求事項・禁止事項・許可事項・補足事項を返す。
-- oracle doc の意味仕様と oracle src の明示委譲された正確な詳細を区別し、仕様断片の未定義部分や実装差を扱う際の境界を示す。
+- oracle file を扱う agent call 向け instruction 文面の構築定義。oracle の正本責務・委譲関係・優先順位と、仕様断片の作成・修正時に守るべき境界を agent 向け規定として組み立てる。
 
 ## Read this when
-- oracle file の作成・変更・レビューで、oracle doc と oracle src の責務分担、優先関係、委譲先の特定方法を確認する場合。
-- agent call 向けに oracle policy、実装差の許容範囲、goal・non-goal、仕様断片の未定義事項を確認する場合。
-- oracle file 間の矛盾、誤記、重複、実現不能な仕様を調査する場合。
+- oracle file を扱う agent call の指示文面、正本仕様と実装詳細の責務分担、oracle file 間の優先関係を確認するとき。
+- oracle file に記述できる実装差の許容範囲、goal・non-goal、未定義事項の扱い、関連 oracle file の参照方法を判断するとき。
 
 ## Do not read this when
-- oracle policy の内容に関係しない prompt builder の実装詳細や、他の agent call 向け policy だけを確認する場合。
-- realization file の具体的な実装配置や CLI の責務境界を確認する場合は、design_rule など該当する oracle file を直接読む。
-- oracle file のテスト実行方法や品質検査だけを確認する場合は、test_execution の指示を直接読む。
+- oracle file の具体的な意味仕様そのものを確認したいときは、指定された oracle doc を直接読む。
+- oracle src が所有する正確な詳細や実装内容だけを確認したいときは、その委譲先の oracle src を直接読む。
+- realization file の内容や実装のみを確認し、oracle の作成・修正規定を必要としないとき。
 
 ## hash
-- b6d9fbf08611868a289a1eacd3ce0c71e5de186b37c9a2b69c9fc5dad045c686
+- 4e4de41de95647dfcd55ce5e4287127cd05c7c08f0e5a399c7ba06cf9b39419d
 
 # `realization.py`
 
