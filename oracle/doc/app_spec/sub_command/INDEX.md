@@ -72,21 +72,21 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` の目的、引数、ユーザー指示からの prompt 構築、本命・仕様削減 agent call の実行順序と編集境界を定める。
-- doctor preprocess、indexing preflight、起動前条件、失敗時処理、primary report、ログ、通知、終了状態および差分の扱いを確認するための入口。
+- `cmoc oracle edit` サブコマンドの正本仕様。oracle file を対象に、固定した同一入力・設定で新規 Codex session の agent call を直列に 2 回実行し、実行前後の条件、編集境界、終了状態、primary report、ログ通知、差分維持を定める。
 
 ## Read this when
-- `cmoc oracle edit` の実行可否や実行順序を確認するとき。
-- oracle file の編集を agent に委譲する処理、仕様削減 call、report・ログ・terminal result の扱いを変更または調査するとき。
-- 他の workload と異なり、run lifecycle、worktree 操作、自動 commit、終了後 indexing を行わない境界を確認するとき。
+- `cmoc oracle edit` の引数なしの実行フロー、prompt と AgentCallParameter の確定、doctor preprocess・indexing・2 回の agent call の順序を確認するとき
+- oracle file の編集対象・禁止操作、未コミット差分の扱い、成功・失敗時の終了条件を確認するとき
+- primary report、console・ログ・Windows toast、terminal result の保存・通知仕様を確認するとき
+- このサブコマンドが通常の編集 run、fork・join・session state の run section、追加レビュー工程とどう異なるかを確認するとき
 
 ## Do not read this when
-- oracle file の内容そのものや oracle file を扱う判断基準を確認したい場合は、参照先の oracle 関連仕様を直接読むとき。
-- prompt editor input、codex exec の共通規則、doctor preprocess、indexing、console・通知の詳細だけを確認したい場合は、それぞれの正本仕様を直接読むとき。
-- 実装の具体的な起動処理や builder の詳細だけを確認したい場合は、指定された実装ファイルを直接読むとき。
+- oracle file 共通の判断基準や prompt 引き渡しなど、本文で参照される別の正本仕様を直接確認すべきとき
+- `cmoc oracle investigation` や通常の run lifecycle の仕様だけを確認したいとき
+- INDEX.md、AGENTS.md、realization file の編集ルーティングや一般的な index 更新手順だけを確認したいとき
 
 ## hash
-- 97a58e3280ca0c36a137af24e1a1ab623bb16d5db612c172de14728b8f2eb16c
+- 310ed05dd76dc0b6bc1ffebed555cd8b0adc418a72bf50077477bb3e780258e5
 
 # `oracle_investigation.md`
 

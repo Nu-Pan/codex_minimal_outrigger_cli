@@ -89,22 +89,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様・開発規約・設計判断記録と、それらを実装へ反映する oracle 側の agent call 定義をまとめた参照群への入口。
-- app spec、branch model、開発・テスト規約、採用しなかった代替案を通じて、cmoc の共通仕様と設計上の判断根拠を確認できる。
-- quota、indexing、feedback、oracle・realization、session join、TUI などの調査・編集・修正処理に対応する prompt、構造化入力、Python 実装の参照起点。
+- oracle の正本情報を参照するための入口。期待される状態や検証基準を確認し、実装・成果物の妥当性を判断する際に利用する。
 
 ## Read this when
-- cmoc の正本仕様や開発規約、設計判断の背景を確認し、複数の専門領域にまたがる参照先を選びたいとき。
-- agent call の prompt 構成、ファイルアクセス方針、Structured Output、editor input handoff、または用途別の起動条件を調べるとき。
-- oracle・realization・feedback・indexing・session join などの調査や編集を、仕様と実装の両面から追跡したいとき。
+- oracle の内容や期待状態を確認するとき。
+- 実装や成果物が oracle に適合するかを検証するとき。
 
 ## Do not read this when
-- 特定機能の詳細仕様、個別の設定や schema、実装 module、テスト要件が明らかな場合は、対応する下位対象を直接読むとき。
-- 実際のログ、成果物、個別の不具合所見、feedback observation、oracle／realization の具体的な調査結果だけを確認するとき。
-- INDEX.md の生成規則や既存の目次内容だけを確認したいとき。
+- oracle の生成・収集処理を確認するときは、その処理を定義する専用対象を直接読む。
+- 実装、ログ、feedback、realization、INDEX.md の生成規則だけを調査するときは、対応する対象へ直接進む。
 
 ## hash
-- cca6d5cd4253d08a6c2ce1918661c62376332b7448fc4b605889a3a0b428e878
+- bdde09e78d5b3eeb17ba2a4172caecbe710c9b06864ccc7ae56a3b8f00bbca2b
 
 # `pyproject.toml`
 

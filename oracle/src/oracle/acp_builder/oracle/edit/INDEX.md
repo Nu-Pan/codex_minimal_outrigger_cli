@@ -15,16 +15,15 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` における本命編集 agent call と、編集後の仕様削減 agent call の起動パラメータを構築する。
-- oracle file 編集向けの共通制約、ユーザー指示、ファイルアクセス権限、作業ディレクトリ、indexing 実行条件を各 call の prompt と parameter に反映する。
+- `cmoc oracle edit` の起動時に、ユーザー指示・oracle file・未コミット差分をもとに編集用の完全 prompt と実行パラメータを構築する共通定義。
 
 ## Read this when
-- `cmoc oracle edit` の agent call 起動条件、2 段階の prompt 構成、または起動パラメータを変更・調査するとき。
-- 本命の oracle 編集 call と、成功後に行う仕様削減 call の責務分担や共通編集制約を確認するとき。
+- `cmoc oracle edit` の編集処理で、初回 agent call の prompt、oracle 専用書き込み権限、作業ディレクトリ、または indexing preflight 無効化の設定を確認・変更するとき。
+- oracle edit の両回で共用される起動パラメータの構築条件や、編集判断に渡すユーザー指示・差分情報を追跡するとき。
 
 ## Do not read this when
-- oracle file の編集処理そのものや、仕様削減の判断基準を変更する場合。対象の agent call が利用する prompt builder や oracle policy の定義を直接確認するとき。
-- session の join・競合解決や、`cmoc oracle edit` 以外の agent call の起動処理を調べるとき。
+- oracle edit の意味仕様や編集方針そのものを確認したいときは、参照先の oracle edit 仕様を直接読む。
+- prompt の一般的な構築処理や構造化文書のレンダリングだけを確認・変更するときは、それぞれの prompt builder または struct_doc の定義を直接読む。
 
 ## hash
-- 19c637c880f6b5cf0b45147a1fbec63b7849264fc7e5edea4c2d4fc0d4f5104e
+- f5b097e49881c316fd51016432ba38f20a21cc70a29ebd8a4be536a286108635

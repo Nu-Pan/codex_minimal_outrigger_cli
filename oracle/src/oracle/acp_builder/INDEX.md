@@ -1,21 +1,22 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェント呼び出しのパラメータ型と、ファイルアクセスモードを定義する。
-- エージェント呼び出し種別、アクセスモード、prompt、Structured Output schema、実行 cwd、editor input MCP の有効化、indexing preflight の設定をまとめる入口。
+- AIコーディングエージェント呼び出しのパラメータ型と、ファイルアクセスモードなどの呼び出し設定を定義する。
+- 呼び出し種別、アクセス制御、初回プロンプト、Structured Output schema、実行時の作業ディレクトリ、MCP handoff と indexing preflight の設定を扱う。
+- エージェント呼び出しを構築・実行する実装のうち、基本的なパラメータ表現と設定項目の入口となる。
 
 ## Read this when
-- Agent Call Parameter の構造や生成・受け渡し項目を確認するとき
-- cmoc の論理的なファイルアクセスモードの列挙を確認するとき
-- agent call の editor input MCP または indexing preflight の設定を確認するとき
+- エージェント呼び出しの設定項目や、その型・既定値・ファイルアクセスモードを確認したいとき。
+- 呼び出しパラメータを生成または受け渡す処理を変更する前に、基本データ構造を確認するとき。
+- Structured Output schema の指定、cwd、editor input handoff MCP、indexing preflight の有効化を扱うとき。
 
 ## Do not read this when
-- 各ファイルアクセスモードの詳細な意味や Codex CLI sandbox への対応を確認したいときは、本文が参照する正本仕様を読む
-- agent call の具体的な構築処理や file access policy の生成処理を確認したいとき
-- Structured Output schema の機械的な受理条件を確認したいとき
+- 特定の builder がどのような値を組み立てるかだけを確認したい場合は、該当する builder 実装を直接読む。
+- ファイルアクセスモードの正本仕様や Codex CLI sandbox との対応を確認したい場合は、参照先の仕様文書を直接読む。
+- インデクシングの実行条件・タイミングの意味仕様を確認したい場合は、indexing の正本仕様を直接読む。
 
 ## hash
-- 23a9f8d92cc7f3453214b8f5042ba4a495fb3427ffa5434bb5113e25bed1200e
+- 543b7fb62130cc282e6ae2c0cb1534f9fa2f7f24016c73d5013bc00d99a04aaa
 
 # `feedback`
 
@@ -57,23 +58,18 @@
 # `oracle`
 
 ## Summary
-- `cmoc oracle edit` の編集 agent call と、編集後の仕様削減 call の起動パラメータを構築する。
-- `cmoc oracle investigation` の完全プロンプトと Codex CLI TUI 起動パラメータを構築し、ユーザー指示を読み取り専用の oracle 調査経路へ組み込む。
-- 対象ディレクトリ本文が提示されていないレビュー用要素については、現時点で具体的な責務を判断できない。
+- oracle サブコマンド向けの agent 呼び出しパラメータ構築をまとめる入口。編集用 exec と調査用 TUI の prompt、ファイルアクセス権、作業ディレクトリ、indexing 設定を下位要素へ振り分ける。
 
 ## Read this when
-- `cmoc oracle edit` の agent call 起動条件、prompt 構成、起動パラメータ、または編集後の仕様削減 call への責務分担を確認・変更するとき。
-- `cmoc oracle investigation` の調査用完全プロンプト、ユーザー指示の埋め込み、TUI 起動時設定、読み取り専用アクセス、エディタ入力の引き継ぎ、またはインデックス事前処理を確認・変更するとき。
-- レビュー用要素の本文が追加され、その担当範囲を確認するとき。
+- `cmoc oracle edit` または `cmoc oracle investigation` の初回 agent 呼び出しに渡す指示、アクセス範囲、起動条件を確認・変更するとき。
+- サブコマンド固有の起動実装へ進む前に、oracle 向け ACP 構築の担当範囲を把握したいとき。
 
 ## Do not read this when
-- oracle file の編集処理そのものや仕様削減の判断基準を確認するとき。
-- oracle の調査結果や個別の oracle file の内容を確認するとき。
-- session の join・競合解決、または `cmoc oracle edit` と `cmoc oracle investigation` 以外の agent call 起動処理を調べるとき。
-- 本文が提示されていないレビュー用要素から、具体的なレビュー作業へ進むとき。
+- oracle の意味仕様や編集・調査結果そのものを確認するとき。
+- 共通 prompt 構築や一般的な ACP パラメータの実装を直接確認でき、oracle サブコマンド単位の案内が不要なとき。
 
 ## hash
-- 8e63542424c486e8830235fcf7d9e025f8593acfeac6bf392e77b95216cd07e6
+- d1619cfd52761e2429cbaa9191ac89d33276340a102965c1b2720094994517e1
 
 # `quota_probe.py`
 

@@ -1,19 +1,19 @@
 # `oracle`
 
 ## Summary
-- AI コーディングエージェント呼び出しの共通パラメータとファイルアクセスモードを定義する基盤。
-- quota probe、INDEX.md エントリー生成、feedback issue の正規化・修正、oracle 調査・編集、realization 追従、session join の conflict 解消、TUI 起動に関する agent call 構築処理への入口。
-- agent call ごとの prompt、対象範囲、起動 cwd、Structured Output、editor input handoff、indexing preflight の設定を扱う。
+- cmoc が agent 呼び出しに渡す設定、prompt、policy、構造化出力契約を用途別に組み立てる実装群への入口。
+- agent call の共通パラメータ、用途別 builder、prompt の統合、ファイルアクセス・oracle・realization・routing・feedback などの規定を扱う。
+- oracle、feedback、indexing、quota probe、realization、session join、TUI、およびエディタ入力上書きに関する下位実装や入力契約へ進むための階層。
 
 ## Read this when
-- agent call の共通パラメータ、論理ファイルアクセスモード、または起動設定を確認するとき。
-- cmoc の個別サブコマンドに対応する agent call の prompt、権限、対象範囲、Structured Output 設定を調べるとき。
-- quota、indexing、feedback、oracle、realization、session join、TUI の下位処理へ進む入口を判断するとき。
+- cmoc の agent 呼び出しを用途別に構築する条件、prompt の構成、出力契約、作業ディレクトリ、ファイルアクセス、indexing preflight を確認するとき。
+- oracle・realization・feedback・routing・conflict 解消などの policy を agent prompt に組み込む経路を横断して追跡するとき。
+- 特定用途の agent call builder、Structured Output 入力契約、または共通の設定・パス・構造化文書処理への入口を判断するとき。
 
 ## Do not read this when
-- ファイルアクセスモードの正本上の意味や Codex CLI sandbox への対応を確認したいとき。
-- agent call の実際の実行処理、prompt 共通構造、path context、構造化文書のレンダリングを直接調べたいとき。
-- feedback の受付・候補 issue 管理、oracle file や realization file の具体的内容、または通常の Git 差分処理そのものを調べたいとき。
+- 特定用途の prompt、起動条件、出力契約だけを調べる場合は、該当する下位 builder や schema を直接読む。
+- agent call の共通パラメータ型、設定値、パス解決、構造化文書処理の一般定義だけを確認する場合は、対応する共通実装を直接読む。
+- agent call の実行そのもの、各用途の意味仕様、oracle・realization の正本仕様、feedback の収集処理、または INDEX エントリー生成規則を確認する場合は、それぞれの実行処理・正本仕様・収集処理を直接読む。
 
 ## hash
-- cf42c0c1bc25a5598cb3a6eac062ad18110772b29f8f24ce997698b59713fcf6
+- 3f1f377679ddaf5e34f77103b155e66e5cd2798164272a8d66316be691967387
