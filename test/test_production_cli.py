@@ -41,7 +41,11 @@ from typer.main import get_command
 
 from commons.indexing import commit_index_updates, render_index_entry
 from commons.runtime_config import write_config
-from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
+from commons.runtime_editor_input_handoff import start_editor_input_handoff
+from commons.runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_REPOSITORY_ENV,
+    EDITOR_INPUT_SOURCE_ENV,
+)
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
@@ -360,7 +364,10 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
         editor_input_server = override["mcp_servers"]["cmoc_editor_input"]
         assert editor_input_server["enabled_tools"] == ["overwrite"]
         assert editor_input_server["required"] is False
-        assert editor_input_server["env_vars"] == [EDITOR_INPUT_REPOSITORY_ENV]
+        assert editor_input_server["env_vars"] == [
+            EDITOR_INPUT_REPOSITORY_ENV,
+            EDITOR_INPUT_SOURCE_ENV,
+        ]
     else:
         assert "cmoc_editor_input" not in override["mcp_servers"]
     return payload
@@ -832,14 +839,36 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     )
     environment["PATH"] = f"{toast_bin}:{environment['PATH']}"
 
-    # editor 自動化以外は、本番と同じ TUI、Codex executable、provider を使う。
-    response, transcript = _run_cmoc_tui(
-        cmoc,
-        root,
-        environment,
-        codex_home,
-        *command,
+    # 実際の MCP を介して、起動元が注入する送信元情報まで受信する。
+    work = root / ".cmoc/gu/editor_input/receiver.md"
+    work.parent.mkdir(parents=True, exist_ok=True)
+    work.write_text("initial")
+    target = start_editor_input_handoff(root, work)
+    handoff_instruction = (
+        "人間からの明示的な依頼です。次の active target に "
+        "cmoc_editor_input.overwrite を使って一度 handoff してください。\n"
+        f"target ID: {target.target_id}\n"
+        "goal と instructions は CMOC_HANDOFF_REQUEST、background は受け渡しの動作確認、"
+        "decisions と open_questions は該当なし、oracle_references は空配列です。\n"
+        "リポジトリのファイルは変更せず、tool の結果を短く報告してください。"
     )
+    write_python_executable(
+        tmp_path / "editor-bin/code",
+        [
+            "import pathlib, sys",
+            f"pathlib.Path(sys.argv[-1]).write_text({handoff_instruction!r})",
+        ],
+    )
+    try:
+        response, transcript = _run_cmoc_tui(
+            cmoc,
+            root,
+            environment,
+            codex_home,
+            *command,
+        )
+    finally:
+        target.close()
     assert response.strip()
     assert "Shutting down" in transcript
     new_calls = _codex_call_logs(root) - calls_before
@@ -849,6 +878,24 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     tui_payload = _assert_real_codex_call(next(iter(tui_calls)), tui=True)
     assert tui_payload["purpose"] == tui_purpose
     assert not exec_calls
+    body = work.read_text()
+    assert "CMOC_HANDOFF_REQUEST" in body, response
+    assert tui_payload["codex_call_id"] in body
+    source_events = [
+        (path, event)
+        for path in (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+        for line in path.read_text().splitlines()
+        if (event := json.loads(line)).get("event") == "editor_input_handoff_source"
+    ]
+    assert len(source_events) == 1
+    log_path, source = source_events[0]
+    assert source["subcommand"] == " ".join(command)
+    assert source["codex_call_id"] == tui_payload["codex_call_id"]
+    assert source["sub_command_log_path"] == str(log_path.resolve())
+    assert Path(source["call_log_path"]) == next(iter(tui_calls))
+    assert source["execution_id"] in body
+    assert str(log_path.resolve()) in body
+    assert source["execution_id"] in transcript
     notifications = [json.loads(line) for line in toast_path.read_text().splitlines()]
     assert notifications == [
         {"title": f"cmoc {' '.join(command)}", "message": f"{root.name} — 入力待ち"}

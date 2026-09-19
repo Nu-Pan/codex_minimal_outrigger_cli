@@ -17,7 +17,6 @@ from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
     authenticate_editor_input_handoff_server,
     build_editor_input_handoff_target_id,
-    overwrite_input_is_valid,
 )
 from .runtime_errors import CmocError
 from .runtime_paths import editor_work_dir
@@ -247,9 +246,14 @@ class EditorInputHandoffTarget:
                 False,
             )
         payload = request.get("payload")
-        if not overwrite_input_is_valid(payload):
-            return _rejected("invalid_input", "tool input does not match schema", False)
-        assert isinstance(payload, dict)
+        # agent-facing schema は MCP が検査済み。ここでは生成済み本文の IPC 形状を検査する。
+        if (
+            not isinstance(payload, dict)
+            or payload.keys() != {"target_id", "content"}
+            or not isinstance(payload["target_id"], str)
+            or not isinstance(payload["content"], str)
+        ):
+            return _rejected("invalid_input", "invalid handoff body request", False)
         if payload["target_id"] != self.target_id:
             return _rejected("target_unavailable", "target is not active", False)
         with self._state_lock:

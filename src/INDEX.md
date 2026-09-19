@@ -50,19 +50,20 @@
 # `commons`
 
 ## Summary
-- 対象ディレクトリは、cmoc の共通 runtime API と、INDEX 管理、Codex 実行、設定、Git、ログ、パス、状態、feedback、run などの横断的な実行時補助機能をまとめる commons パッケージです。
-- 各 runtime モジュールは、共有サブシステムの固有責務を実装し、CLI や Codex 実行経路から再利用される実装上の入口を提供します。
+- cmoc の複数サブコマンドで共有する runtime 基盤を収録する。CLI 実行ライフサイクル、設定・パス・Git・ログ・エラー・結果モデル、Codex 実行、feedback の収集と状態管理、editing run、refactor、INDEX 更新、primary report、editor input handoff、Windows 通知などを担当する。
 
 ## Read this when
-- 複数の実行経路にまたがる runtime helper の責務や公開 API の構成を確認するとき。
-- INDEX lifecycle、Codex subprocess/TUI、設定、Git/worktree、ログ・パス・結果、feedback、session/run state など、特定の共通 runtime subsystem の実装を調査・変更するとき。
+- 共有 runtime の責務やサブコマンド横断の実行経路を確認するとき
+- Codex 呼び出し、feedback、run lifecycle、report、設定、Git 状態管理の実装入口を探すとき
+- 複数の CLI 経路にまたがる共通処理を変更するとき
 
 ## Do not read this when
-- 利用者向けの正本仕様、個別サブコマンドの業務フロー、または特定 helper の詳細だけを確認したい場合。
-- 対象の責務が commons 配下の共通 runtime 実装ではなく、専用の仕様書・呼び出し元・下位定義にある場合。
+- 特定サブコマンド固有の業務処理だけを調べるとき
+- 対象配下の担当モジュールが既に特定できており、そのファイルを直接読む方が適切なとき
+- oracle の正本仕様や realization 全体のファイル分類だけを確認したいとき
 
 ## hash
-- ae5680b7e5c4b634f8ff29e3b4bab295ac08029fb5e242e7a9dce0041f56773a
+- 7cc96228c280be97d0e59b314362f4825759bfb19fd86a137796304649fa7a77
 
 # `config`
 

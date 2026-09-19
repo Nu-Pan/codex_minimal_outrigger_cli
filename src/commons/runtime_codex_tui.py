@@ -5,6 +5,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from oracle.editor_input_handoff.body import EditorInputHandoffSource
+
 from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
@@ -171,9 +173,28 @@ def _run_codex_tui_process(
     try:
         environment = dict(codex_environment)
         if parameter.enable_editor_input_handoff_mcp:
+            # call log と同じ ID を起動前に記録・flush し、MCP にも同じ値を供給する。
+            logger = current_subcommand_logger()
+            source = None
+            if logger is not None:
+                source = EditorInputHandoffSource(
+                    subcommand=logger.command,
+                    execution_id=logger.invocation_id,
+                    codex_call_id=codex_call_id,
+                    sub_command_log_path=logger.path.resolve(),
+                )
+                logger.event(
+                    "editor_input_handoff_source",
+                    subcommand=source.subcommand,
+                    execution_id=source.execution_id,
+                    codex_call_id=source.codex_call_id,
+                    sub_command_log_path=str(source.sub_command_log_path),
+                    call_log_path=str(call_path.resolve()),
+                )
             environment = editor_input_handoff_subprocess_env(
                 environment,
                 repository,
+                source,
             )
         environment = feedback_call.subprocess_env(environment)
         result = run_codex_subprocess(

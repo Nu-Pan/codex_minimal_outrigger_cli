@@ -2,7 +2,9 @@ import json
 import shlex
 import subprocess
 import sys
+import threading
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 
@@ -16,6 +18,7 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
+from _handoff_support import handoff_input
 from oracle.other.cmoc_config import CodexCallConfig
 
 import cmoc_runtime
@@ -23,7 +26,11 @@ import commons.runtime_codex_tui as runtime_codex_tui
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_tui
-from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
+from commons.runtime_editor_input_handoff import start_editor_input_handoff
+from commons.runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_REPOSITORY_ENV,
+    EDITOR_INPUT_SOURCE_ENV,
+)
 from commons.runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
@@ -482,3 +489,120 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     assert codex_events[0]["status"] == "failed"
     assert codex_events[0]["returncode"] == 7
     assert codex_events[0]["call_log_path"] == str(call_logs[0])
+
+
+def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
+    tmp_path, monkeypatch
+):
+    """並行する TUI の MCP が自身の起動前ログと一致する送信元を保持する。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setenv(EDITOR_INPUT_SOURCE_ENV, "stale-parent-source")
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        lambda *_args: False,
+    )
+    barrier = threading.Barrier(2)
+    loggers = {
+        name: SubcommandLogger(root, name) for name in ("tui", "oracle investigation")
+    }
+    observed = {}
+
+    def run_process(argv, **kwargs):
+        source = json.loads(kwargs["env"][EDITOR_INPUT_SOURCE_ENV])
+        logger = loggers[source["subcommand"]]
+        assert source["execution_id"] == logger.invocation_id
+        assert source["sub_command_log_path"] == str(logger.path.resolve())
+        events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+        event = next(
+            item for item in events if item["event"] == "editor_input_handoff_source"
+        )
+        assert {key: event[key] for key in source} == source
+        call = json.loads(Path(event["call_log_path"]).read_text())
+        assert call["codex_call_id"] == source["codex_call_id"]
+        assert source["codex_call_id"] != "cdc_indexing"
+        assert argv[-1] == "unchanged prompt"
+        assert all(
+            source[key] not in argv[-1]
+            for key in ("execution_id", "codex_call_id", "sub_command_log_path")
+        )
+        # 両起動が context を確定するまで待ち、別 process の stdio MCP へ渡す。
+        barrier.wait(timeout=5)
+        work = root / ".cmoc/gu/editor_input" / (source["codex_call_id"] + ".md")
+        work.parent.mkdir(parents=True, exist_ok=True)
+        work.write_text("initial")
+        target = start_editor_input_handoff(root, work)
+        try:
+            request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "overwrite",
+                    "arguments": handoff_input(target.target_id, "request context"),
+                },
+            }
+            requests = (json.dumps(request) + "\n") * 2
+            server = codex_override_config(argv)["mcp_servers"]["cmoc_editor_input"]
+            result = subprocess.run(
+                [server["command"], *server["args"]],
+                cwd=root,
+                env={
+                    "PATH": kwargs["env"]["PATH"],
+                    "PYTHONDONTWRITEBYTECODE": "1",
+                    **{name: kwargs["env"][name] for name in server["env_vars"]},
+                    **server["env"],
+                },
+                input=requests,
+                text=True,
+                capture_output=True,
+                timeout=10,
+                check=True,
+            )
+            responses = [json.loads(line) for line in result.stdout.splitlines()]
+            assert len(responses) == 2
+            assert all(
+                item["result"]["structuredContent"] == {"status": "accepted"}
+                for item in responses
+            )
+            assert "request context" not in result.stdout + result.stderr
+            body = work.read_text()
+            for key in (
+                "subcommand",
+                "execution_id",
+                "codex_call_id",
+                "sub_command_log_path",
+            ):
+                assert source[key] in body
+            observed[source["subcommand"]] = source
+        finally:
+            target.close()
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", run_process)
+
+    def launch(name):
+        logger = loggers[name]
+        token = set_current_subcommand_logger(logger)
+        try:
+            logger.event("codex_call", codex_call_id="cdc_indexing")
+            return run_codex_tui(
+                replace(
+                    codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
+                    prompt="unchanged prompt",
+                    enable_editor_input_handoff_mcp=True,
+                ),
+                root=root,
+                config=CmocConfig(),
+                purpose=name,
+            )
+        finally:
+            reset_current_subcommand_logger(token)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert all(result.returncode == 0 for result in pool.map(launch, loggers))
+    assert len({source["codex_call_id"] for source in observed.values()}) == 2
+    for name, source in observed.items():
+        completed = loggers[name].codex_call_records()[-1]
+        assert completed["codex_call_id"] == source["codex_call_id"]

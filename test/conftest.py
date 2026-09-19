@@ -1,11 +1,14 @@
 """pytest process と子 process の Windows toast 外部副作用を隔離する。"""
 
+import json
 import os
 from pathlib import Path
 
 import pytest
+from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.runtime_windows_toast as runtime_windows_toast
+from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
 
 
 @pytest.fixture(autouse=True)
@@ -27,3 +30,23 @@ def _isolate_windows_toast_transport(
         "_run_windows_toast_transport",
         lambda _title, _message: True,
     )
+
+
+@pytest.fixture
+def handoff_source(tmp_path, monkeypatch):
+    """実行中の送信側 TUI に結び付いた MCP context を用意する。"""
+    source = EditorInputHandoffSource(
+        "oracle investigation", "sci_sender", "cdc_sender", tmp_path / "sender.jsonl"
+    )
+    monkeypatch.setenv(
+        EDITOR_INPUT_SOURCE_ENV,
+        json.dumps(
+            {
+                "subcommand": source.subcommand,
+                "execution_id": source.execution_id,
+                "codex_call_id": source.codex_call_id,
+                "sub_command_log_path": str(source.sub_command_log_path),
+            }
+        ),
+    )
+    return source
