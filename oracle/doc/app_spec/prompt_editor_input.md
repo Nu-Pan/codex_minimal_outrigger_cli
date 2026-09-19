@@ -24,6 +24,7 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 | 入力結果の保存コピー | `{{repo-root}}/.cmoc/gu/log/editor_input/{{time-stamp}}_orig.md` | cmoc だけが書き込む。 |
 
 - editor work file は未信頼かつ可変な作業ファイルとする。cmoc と後続 agent は、その内容を保存記録として参照してはならない。
+- 入力確定後は、保存した最終読み取り結果と、そこから抽出したオリジナルプロンプトを使用する。送り元が handoff 後に会話を続けても、確定済み入力を再取得・更新しない。
 - agent による直接編集の禁止と書き込み主体の責任分界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
 
 ## エディタの起動

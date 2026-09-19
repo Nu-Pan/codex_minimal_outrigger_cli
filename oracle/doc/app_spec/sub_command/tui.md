@@ -45,6 +45,7 @@
 
 - 起動コマンドは `codex` とする (`codex exec` ではない)
 - editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
+- 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う
 - `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
     - 環境変数 `$CODEX_HOME`
     - preflight validation

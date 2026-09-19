@@ -133,6 +133,18 @@ Windows toast の対象、発火順序、通知内容、および失敗時の扱
 
 feedback detector は、安定契約として定義されていない自由文 field を判定に使用してはならない。
 
+### TUI 送信元情報の記録
+
+editor input handoff を有効にする `cmoc tui` と `cmoc oracle investigation` では、TUI process を起動する前に、次の対応を既存のサブコマンドログへ記録し、flush を完了する。
+
+- 本書の「実行 ID の開始表示」で定める実行 ID と、送信元のサブコマンド名
+- 起動する TUI process の Codex call ID と、対応するログ保存先
+- その実行の診断用サブコマンドログのフルパス
+
+Codex call ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」で定める識別子を使い、記録する送信元情報は同文書の「editor input handoff MCP」に従って MCP の呼び出し元コンテキストへ供給する実際の値と一致させる。送り元が実行中でも、この対応から既に保存された記録へ到達できるようにする。終了時にだけ保存される戻り値や最終結果を、対応の特定に必要としてはならない。
+
+この記録は送信元の識別と保存済み記録への到達を保証する。TUI 会話全文や最終回答の保存・取得保証は追加しない。本文の受け渡しと tool result・log の境界は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」と「MCP interface と上書き」に従う。
+
 ## TUI と自動補完の境界
 
 TUI の通知境界を適用するサブコマンドと非対話サブコマンドの分類は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「目的と適用範囲」と「非対話サブコマンドの通知境界」を正本とする。本書の primary report 契約は、その分類を変更しない。
@@ -141,6 +153,7 @@ TUI の通知境界を適用するサブコマンドと非対話サブコマン�
 - `cmoc oracle edit` は非対話サブコマンドとして本書を適用する。内部の各 `codex exec` は独立した terminal result を表示せず、最外側のサブコマンドが終了状態の確定後に 1 回だけ表示する
 - TUI の起動前エラーまたは異常終了には、本書と `{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」のエラー表示規則を適用する。非対話サブコマンド用の primary report は要求しない
 - TUI process へ制御を渡した後は、cmoc の進行通知を TUI の表示へ混入させない
+- TUI の起動前には実行 ID の開始表示を行い、サブコマンドログの記録規則を適用する。handoff を有効にする経路は、本書の「TUI 送信元情報の記録」も満たす
 - 自動補完プローブの判定、console 出力、および通常処理の抑止は、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md` の「CLI 自動補完規則」を正本とする
 
 ## non-goal

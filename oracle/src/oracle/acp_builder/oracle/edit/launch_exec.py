@@ -41,9 +41,6 @@ def build_oracle_edit_main_launch_exec_parameter(
         completion_criteria="""
         - 関連する oracle file が、オリジナルのユーザー指示から導かれる目標状態を満たしていること。既に満たしている場合は、追加変更なしで完了してよい
         """,
-        non_goals="""
-        - 過去の agent の会話（prompt を含む）、最終回答、実行ログ（stdout、stderr、call metadata、session ID を含む）を探索・参照すること
-        """,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         path_context=path_context,
         aux_static_prompt=[

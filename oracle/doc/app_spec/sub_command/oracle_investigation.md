@@ -27,6 +27,7 @@
 
 - TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
 - この TUI では editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
+- 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う
 - `build_oracle_investigation_launch_tui_parameter` が返したパラメータを変更せずに TUI 起動へ渡す
 - oracle file を扱う判断基準は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」を正本とする。正確な agent 向け文面は前述の builder を参照する
 - 実行パラメータ決定用の agent call は行わない
@@ -41,6 +42,7 @@
 ## 調査結果と変更の扱い
 
 - 調査結果は Codex CLI の TUI でユーザーへ回答する
+- 人間が editor input handoff を要求した場合の本文と回答の責務は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」に従う
 - 調査結果の根拠となる oracle file を、回答から特定できるようにする
 - 調査結果の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい
 - Codex CLI の TUI は oracle file を変更せず、realization file を読み書きしない

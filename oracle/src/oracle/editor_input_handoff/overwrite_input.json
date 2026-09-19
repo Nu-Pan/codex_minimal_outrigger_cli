@@ -5,14 +5,68 @@
   "additionalProperties": false,
   "required": [
     "target_id",
-    "content"
+    "goal",
+    "instructions",
+    "background",
+    "decisions",
+    "open_questions",
+    "oracle_references"
   ],
   "properties": {
     "target_id": {
-      "type": "string"
+      "$ref": "#/$defs/nonblank_text",
+      "description": "人間が明示した引き渡し先の target ID。"
     },
-    "content": {
-      "type": "string"
+    "goal": {
+      "$ref": "#/$defs/nonblank_text",
+      "description": "受信側で達成してほしい目標状態。"
+    },
+    "instructions": {
+      "$ref": "#/$defs/nonblank_text",
+      "description": "受信側へ依頼する具体的な作業。"
+    },
+    "background": {
+      "$ref": "#/$defs/nonblank_text",
+      "description": "依頼の意図・背景。該当する内容がない場合や未確認の場合も、その状態を記述する。"
+    },
+    "decisions": {
+      "$ref": "#/$defs/nonblank_text",
+      "description": "決定事項とその理由。該当する内容がない場合や未確認の場合も、その状態を記述する。"
+    },
+    "open_questions": {
+      "$ref": "#/$defs/nonblank_text",
+      "description": "未確定事項。該当する内容がない場合や未確認の場合も、その状態を記述する。"
+    },
+    "oracle_references": {
+      "type": "array",
+      "description": "作業に必要な oracle の参照。参照がなければ空配列にする。参照先の簡潔な内容と参照理由は依頼や背景の自由記述に含める。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file_path",
+          "loc_desc"
+        ],
+        "properties": {
+          "file_path": {
+            "$ref": "#/$defs/nonblank_text",
+            "description": "参照先の oracle file の絶対パス。"
+          },
+          "loc_desc": {
+            "anyOf": [
+              { "$ref": "#/$defs/nonblank_text" },
+              { "type": "null" }
+            ],
+            "description": "参照箇所を示す見出し、識別子、JSON Pointer などの安定した locator。行番号を使わない。ファイル全体を参照する場合は null。"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonblank_text": {
+      "type": "string",
+      "pattern": "\\S"
     }
   }
 }

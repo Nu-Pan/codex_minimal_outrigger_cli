@@ -24,6 +24,7 @@ def build_tui_launch_tui_parameter(
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
+    # ユーザー入力と選択した policy から完全 prompt を構築する。
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
     original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
     complete_prompt = build_complete_prompt(

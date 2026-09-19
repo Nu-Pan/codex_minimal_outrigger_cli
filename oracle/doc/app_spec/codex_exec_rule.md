@@ -13,6 +13,7 @@
 - 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
 - cmoc は agent call ごとに、対応する builder を表す安定した低カーディナリティの `agent_call_kind` と一意な agent call ID を付与する
 - cmoc は初回、補正、および TUI process ごとに一意な Codex call ID を付与する
+- 最外側の末端サブコマンドの invocation を識別する実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。agent call ID および Codex call ID とは識別対象を区別する
 
 ## agent call の path context
 
@@ -266,6 +267,7 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 - `AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する
 - realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない
 - cmoc は、確定した `AgentCallParameter.prompt` を変更せず、初回 Codex call に渡す
+- editor input handoff の本文生成と送信元情報の注入は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「本文の生成」に従い、受信側の editor input 確定前に完結させる
 - Structured Output の補正 prompt は、初回 prompt を加工したものではなく、本書の出力補正規則に従う次の turn の入力として構築する
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
@@ -295,6 +297,9 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - 有効な Codex TUI call には、`overwrite` だけを公開する `cmoc_editor_input` MCP server を提供する。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
 - handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - Codex TUI の builder は MCP と handoff instruction の両方を有効にする。agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
+- `cmoc tui` と `cmoc oracle investigation` では、cmoc の起動・呼び出し管理経路が、送信側 TUI process に対応する実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う
+- TUI process の起動前に、その process の Codex call ID の確保、MCP への送信元情報の供給、および `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」に従う記録と flush を完了する。ログの対応付けと MCP への供給には同じ実際の値を使い、indexing など別の Codex call の ID を代用せず、TUI 起動時に別の ID を再発行しない
+- この準備を skeleton 構築の前提にはしない。送信元情報は、skeleton と入力確定後の TUI prompt のいずれの builder 引数にも含めず、転記用の情報を prompt へ注入しない
 
 ## Codex CLI 呼び出し情報の保存
 

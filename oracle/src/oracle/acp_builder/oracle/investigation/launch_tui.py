@@ -24,6 +24,7 @@ def build_oracle_investigation_launch_tui_parameter(
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
+    # 調査指示と選択した policy から完全 prompt を構築する。
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
     complete_prompt = build_complete_prompt(
         task="""

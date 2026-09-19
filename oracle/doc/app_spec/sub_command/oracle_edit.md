@@ -3,7 +3,7 @@
 ## 目的
 
 - oracle file の最終状態に関するユーザー指示を受け取り、その指示から導かれる目標状態への編集を、同じ目的・入力・設定の固定 2 回の agent call で直列に実行する。
-- 新しいコンテキストで現在のリポジトリ状態から判断し直すことで、残った不足を解消できるという仮説に基づく。汎用の反復回数設定や追加のレビュー工程は設けない。
+- 各回を新しい Codex session で開始し、現在のリポジトリ状態と目標状態を照合し直すことで、残った不足を解消できるという仮説に基づく。汎用の反復回数設定や追加のレビュー工程は設けない。
 - 人間が、最終的な差分の確認、追加修正、commit、および破棄に責任を持つ。差分の扱いは、本書の「終了と差分」で定める。
 - このサブコマンドは編集 run ではない。fork、join、abandon lifecycle、run branch、linked worktree、および session state の `run` section は使用しない。
 
@@ -14,7 +14,9 @@
 ## ユーザー指示と prompt の構築
 
 - editor input handoff を含むエディタ入力は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」が定める共通 lifecycle を使用する。
-- editor 終了後に抽出して確定したオリジナルのユーザー指示から、両回で使用する完全 prompt と `AgentCallParameter` を一度だけ構築する。正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` と `_build_oracle_edit_static_prompt` へ委譲する。
+- editor 終了後に抽出して確定したオリジナルのユーザー指示から、両回で使用する完全 prompt と `AgentCallParameter` を一度だけ構築する。正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ委譲する。
+- cmoc が自動構築する方針・指示文は、過去の agent の会話、最終回答、および実行ログへの参照について言及しない。この構築上の規則を、人間が入力した作業指示の内容を削除する処理として適用しない。
+- handoff を受けた場合も、入力確定後は本書の「実行順序」に従って編集へ進み、送り元の TUI 終了や最終結果の確定を開始条件にしない。
 - 同じ時点で、共通 builder に対応する `CmocConfigCodex.agent_calls` の既存 entry と、選択した provider の定義から、model provider、Model、Reasoning Effort、および使用する provider-local 設定の値を確定する。設定 key を維持し、人間が調整した値を両回へ引き継ぐ。設定の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex` を参照する。
 - `AgentCallParameter` の全内容と確定した設定値を変更せず両回で使用し、1 回目が cmoc 自身の builder や設定定義を編集しても、再構築・再取得しない。
 - 構築済み prompt の受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt の構築と受け渡し」を正本とする。
@@ -43,7 +45,6 @@
 - 作業範囲は目標状態の達成に必要な関連仕様のまとまりとし、指示に明記された箇所や既に差分がある箇所だけに限定せず、必要な追加・削除・統合・再構成を選べるようにする。ユーザー指示が要求する人間意図と実装差を許容しない境界を満たし、対象外の既存仕様の意味を維持する。
 - 未コミット差分は起動前からの変更も含み得る判断材料であり、完成済みの成果や今回の呼び出しだけに由来する成果とはみなさない。
 - 各 agent は、`{{work-root}}` の Git worktree で、staging area、working tree、および Git 未追跡の新規 oracle file の状態を含めて、現在の oracle file と未コミットの変更を取得する。参照入力の渡し方と取得失敗の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
-- 過去の agent の会話（prompt を含む）、最終回答、実行ログ（stdout、stderr、call metadata、session ID を含む）の探索・参照は、両回とも判断の対象外とする。
 - 完了条件は、関連する oracle file が目標状態を満たしていることとする。既に満たしていれば不必要に変更せず完了することを目指す。2 回目の追加変更、文字数の削減、または品質の向上は完了条件にしない。
 - oracle file と installed skill の共通判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」に従う。file access、oracle、routing などの共通 policy は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「caller 固有の objective」が定める責務分担に従って組み込む。
 
