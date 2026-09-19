@@ -1,18 +1,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本実装を構成する Python モジュールと Structured Output 定義をまとめたディレクトリ。
-- パス解決・設定モデル・構造化文書、agent call 用 prompt と各種ポリシー、ACP の実行パラメータ、feedback 処理、TUI・editor handoff の入出力を扱う。
+- cmoc の oracle 実装を構成する Python モジュールと Structured Output schema の入口。agent 呼び出しパラメータ、プロンプト生成、パス・設定・構造化文書モデル、フィードバック報告、エディタ入力引き渡しを扱う。
+- acp_builder は agent call のパラメータ構築と、oracle 編集・調査、realization、session、TUI、feedback、indexing 各処理の呼び出し定義をまとめる。
+- prompt_builder は agent に渡す完全 prompt と、ファイルアクセス・oracle/realization・routing・index entry などのポリシー文面を組み立てる。
+- other は cmoc 設定、Git worktree を含むパスモデル、構造化文書のデータモデルと Markdown レンダリングを提供する。
+- editor_input_handoff は MCP 経由の入力を送信元情報付き Markdown 本文へ変換し、overwrite_input.json が入力形式を定義する。
+- feedback は feedback reporter の Structured Output schema を提供し、問題分類・影響・根拠・継続状態の入力形式を定義する。
 
 ## Read this when
-- oracle の実装や設定モデルを確認・変更するとき。
-- agent call の prompt、ポリシー、Structured Output、実行パラメータの生成経路を追跡するとき。
-- feedback 処理や TUI、editor handoff の正本データ形式を確認するとき。
+- oracle 実装全体の責務分担や、agent call・prompt・設定・パスモデルの入口を確認するとき
+- oracle/src/oracle 配下のどの領域を読むべきか判断するとき
 
 ## Do not read this when
-- 正本ドキュメントの要求や設計意図だけを確認する場合。
-- realization 側の実装やテストの挙動だけを確認する場合。
-- 特定の下位責務が明確で、oracle/src/oracle 全体ではなく対応する下位ディレクトリを直接読む方が適切な場合。
+- 特定の agent call 実装、prompt policy、設定値、パス解決、入力本文生成の詳細を確認したいときは、該当する下位ディレクトリを直接読む
+- 正本仕様文書や realization 実装・テストの内容を確認するとき
 
 ## hash
-- d82ce4bc223e9cec8356b8545dd722aeb2c82ce5a26e0989db34bf2e42de4935
+- 917c8ed879151c5799e1d0a3452c49c375cdd5f07531de71ab28f4ba69863e15

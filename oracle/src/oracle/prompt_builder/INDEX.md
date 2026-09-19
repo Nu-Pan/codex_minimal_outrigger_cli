@@ -15,19 +15,19 @@
 # `complete_prompt.py`
 
 ## Summary
-- 選択されたポリシー、呼び出し固有の目的、追加文面、placeholder 定義を所定の順序で統合し、agent call 用の完全な構造化 prompt を構築する中心実装。
-- placeholder の重複定義を検査し、同名異値を拒否することで、呼び出し内のパス文脈や入力定義の不整合を防ぐ。
+- 選択した規定、追加プロンプト、呼び出し固有の目的、プレースホルダー定義を順序付けて統合し、agent 呼び出しへ渡す完全な構造化 prompt を構築する。
+- 各 prompt 部分のプレースホルダー定義を衝突検出付きで統合し、同名異値の定義を拒否することで、呼び出し内のパス文脈の一貫性を保つ。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成順序、ポリシーの有効化、目的情報や動的入力の注入、placeholder 定義の統合を変更・確認するとき。
-- 複数の prompt builder 部品をどの順序で組み合わせ、どの条件で含めるかを調べるとき。
+- agent 呼び出しへ渡す prompt の構成順序や、各種 policy フラグがどの規定を有効化するかを確認するとき。
+- 追加 prompt・目的情報・path context 由来のプレースホルダーが最終 prompt にどう組み込まれるか、または定義衝突時の挙動を確認するとき。
 
 ## Do not read this when
-- 特定のポリシー本文や prompt 断片の内容だけを確認・変更する場合は、対応する policy または parts の実装を直接読む。
-- 完全 prompt の呼び出し元がどの場面でこの builder を呼ぶかを調べる場合は、acp_builder 側の呼び出し実装を直接読む。
+- 個別の policy や prompt 部分の本文を変更・確認する場合は、この統合処理ではなく対応する builder を直接読む。
+- agent 呼び出しの path context 自体やプレースホルダーの元データを確認する場合は、path context の定義元を直接読む。
 
 ## hash
-- a6adab4c25e7bebecb0dfc393aaa0d172684b09d4bd954c53bfe624891526ce3
+- 1b0d6941e94d7a3bb70fff393f0b2f4ee0f151d5556d58b6dbf8196677b8ca81
 
 # `editor_input.py`
 
@@ -65,19 +65,16 @@
 # `policy`
 
 ## Summary
-- prompt_builder が agent call 向けに埋め込む各種 policy の構築定義をまとめるディレクトリ。
-- INDEX.md routing、file access、oracle／realization、feedback observation、conflict resolution、editor input handoff など、作業種別ごとの instruction 文面と placeholder の構築入口を提供する。
-- 個別 policy の責務・規定文面・関連 path context の扱いを確認するための下位ファイル群への入口。
+- 対象ディレクトリは、oracle prompt builder が生成するエージェント向け指示文に組み込む policy 断片をまとめた層です。
+- この層では、作業セッションの基本規定やファイル分類・編集制約など、生成プロンプトが従うべき共通ポリシーを扱います。
 
 ## Read this when
-- agent call の prompt に組み込まれる policy の種類、文面、適用条件、または構築処理を確認・変更するとき。
-- 複数の prompt policy のうち、oracle／realization、routing、file access、feedback reporting など特定領域の構築定義を探すとき。
-- policy builder が返す構造化文面や placeholder の組み立て方を調査するとき。
+- oracle prompt builder の policy 断片を確認・変更するとき
+- 生成プロンプトに適用される共通の作業規定やファイル R/W 制約の入口を探すとき
 
 ## Do not read this when
-- policy の意味仕様そのものを確認したいとき。各実装の docstring が参照する oracle/doc 配下の正本仕様を直接読むべきである。
-- prompt builder の共通構築処理、構造化文書型、FileAccessMode、path context などの定義だけを確認したいときは、それぞれの定義元を直接読むべきである。
-- 個別の agent call の実行処理や、生成された prompt の実際の呼び出し結果を確認したいとき。
+- 個別の prompt builder 実装ロジックを確認したいときは、まずその実装ディレクトリを読む
+- 生成済みプロンプトの具体的な対象別内容だけを確認したいときは、該当する下位 policy 断片を直接読む
 
 ## hash
-- eebd402ded5725ce86c97aac6f9677832f521a8f6e0ce55f8ffd449358efcd3b
+- d229d4910cf0a524fdb33be74bbcbe23a0da6772e9ec64609111bf0e49352da7

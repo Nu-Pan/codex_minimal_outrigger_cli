@@ -89,22 +89,23 @@
 # `oracle`
 
 ## Summary
-- 人間が所有する正本仕様を、意味仕様の文書と、prompt・path・agent call などの正確な構築定義に分けて保持する領域。
-- アプリケーション仕様、branch model、開発規則、代替案の検討記録を含み、cmoc の責務・制約・判断基準を定義する。
-- prompt builder と ACP builder の oracle 実装が、仕様で委譲された prompt 文面・schema・起動パラメータ・パスモデルを具体化する。
+- oracle/doc は cmoc の正本仕様を分野別に収録し、全体モデル、アプリケーション仕様、サブコマンド仕様、開発規則、採用しなかった代替案を確認する入口です。
+- oracle/src は正本仕様に対応する実装・設定・JSON Schema を収録し、agent call の prompt 構築、ポリシー、入力 handoff、feedback、パスモデルなどの具体的定義を確認する入口です。
+- oracle は人間が所有する正本仕様領域であり、ここを読むのは realization 側の実装・テストを変更またはレビューする前に、意図された挙動と制約を確定したい場合です。
 
 ## Read this when
-- cmoc の正本仕様、責務分担、branch/run のモデル、サブコマンドの挙動、開発規則を確認するとき。
-- oracle doc と oracle src のどちらが対象事項の正本を所有するか判断するとき。
-- agent prompt の構築、INDEX エントリー生成、path context、agent call parameter の正確な定義を変更・レビューするとき。
+- cmoc の全体仕様、責務分担、branch・run・session のモデルを確認したいとき
+- 特定のサブコマンドや共通機能の正本仕様を確認したいとき
+- realization の実装が従うべき prompt 構築、入力形式、ポリシー、JSON Schema の定義を確認したいとき
+- 仕様変更や実装レビューの前に、人間意図の正本を特定したいとき
 
 ## Do not read this when
-- realization の実装やテストの具体的な挙動だけを調べる場合は、まず src または test の該当対象を直接読む。
-- 既存仕様を参照せずに一般的な設計・実装方針だけを検討する場合。
-- 過去の代替案や検討経緯が不要で、確定した個別仕様だけを確認したい場合は、関連する app_spec または dev_rule の対象を直接読む。
+- 製品の実際の動作実装を直接追うことが目的で、正本仕様の確認が済んでいるとき
+- realization 側のテスト結果や実装差分だけを確認したいとき
+- INDEX.md の生成方法そのものを確認したいときは、oracle 配下のインデックス仕様や専用 builder を直接読むべきとき
 
 ## hash
-- f0e068affefb9899a3553bcb7de998603590bf87e1a9468e46beb362d0678db1
+- 42750b97d1a6c7d5082125bef6f31e33c918e0c175e111c9c3e592ebfe942845
 
 # `pyproject.toml`
 

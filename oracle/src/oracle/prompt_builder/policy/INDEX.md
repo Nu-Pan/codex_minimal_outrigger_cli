@@ -18,20 +18,19 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- 明示的に選択された editor input handoff の送信元情報ブロックと、handoff 実行時の agent の責務・禁止事項を prompt 用構造として定義する。送信元情報ではサブコマンド名、実行 ID、Codex call ID、絶対パスのログ情報を扱い、ポリシーでは target ID と完成済み content の handoff 条件、content に含める情報、結果報告と失敗時の扱いを定める。
+- `build_editor_input_handoff_policy` は、明示的に選択された editor input handoff 規定を構築する関数です。
+- active target への handoff 条件、tool 引数への情報分離、oracle 参照、結果報告、禁止事項を `SDHeader` と `SDPolicy` として定義します。
 
 ## Read this when
-- editor input handoff の送信元情報を prompt に組み込む処理を確認したいとき。
-- active な prompt editor へ完成済み内容を渡す際の使用条件、content の要件、禁止事項を確認・変更するとき。
-- サブコマンドログパスの絶対パス検証や handoff 用の構造化 prompt ブロックを調べるとき。
+- editor input handoff の要求条件・引き渡す情報・禁止事項を確認するとき。
+- prompt builder が handoff 規定をどのような構造で生成するか確認するとき。
 
 ## Do not read this when
-- prompt builder 全体の共通構築処理や placeholder の一般仕様だけを調べたいとき。
-- editor input handoff の意味仕様そのものを確認したいときは、参照先の oracle 文書を直接読むべきである。
-- 実際の editor tool 呼び出しや editor work file の書き込み実装を調べたいときは、呼び出し側または tool 実装を直接読むべきである。
+- handoff の意味仕様そのものを確認したいとき。doc の「agent の責務と権限」を直接読むべきです。
+- prompt builder の別の policy や、editor work file の実装を確認したいとき。
 
 ## hash
-- 58a936ac419af8a05f2a7f2caf9c5dff79a8eb0c0e8852d5940c10248559a08c
+- 2e8a6979680b6eb147b94752fc3dfe4a711bb817c1a104f35a7ddb302fd212aa
 
 # `feedback_reporting.py`
 

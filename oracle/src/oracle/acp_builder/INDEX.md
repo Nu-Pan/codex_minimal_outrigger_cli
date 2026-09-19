@@ -58,20 +58,19 @@
 # `oracle`
 
 ## Summary
-- `cmoc oracle` 向けの agent 起動パラメータ定義をまとめた正本ソース群。oracle 編集・調査の prompt、ファイルアクセス境界、作業ディレクトリ、入出力引き継ぎ、indexing 実行条件を構築する。
-- 編集系は `edit`、調査系は `investigation`、レビュー系は `review` 以下へ進むための入口。
+- oracle edit と oracle investigation の agent 呼び出しパラメータを構築する oracle 実装群への入口。編集用は oracle file の編集 prompt と実行条件を、調査用は oracle file の読み取り調査 prompt と TUI 起動条件を定義する。
+- edit、investigation、review の各下位領域に分かれており、具体的な編集起動定義は edit、調査起動定義は investigation、レビュー関連は review へ進む。
 
 ## Read this when
-- `cmoc oracle edit` または `cmoc oracle investigation` の agent 起動条件、prompt 構成、oracle 読み書き境界を変更・確認するとき。
-- oracle builder の編集・調査・レビュー機能の下位実装へ進む入口を判断するとき。
+- `cmoc oracle edit` または `cmoc oracle investigation` の agent 呼び出し条件、prompt 構築、oracle file のアクセスモードを確認するとき。
+- edit・investigation・review のどの下位領域を読むべきか判断するとき。
 
 ## Do not read this when
-- 個別の編集 prompt 実装だけを確認したい場合は `edit` 以下へ直接進むとき。
-- 調査 TUI の起動パラメータだけを確認したい場合は `investigation` 以下へ直接進むとき。
-- レビュー処理の具体的な判定・列挙・統合を確認したい場合は `review` 以下へ直接進むとき。
+- 編集用の共通パラメータの詳細は edit、調査用 TUI 起動の詳細は investigation、レビュー固有の内容は review を直接読むべきとき。
+- oracle/acp_builder 以外の prompt 構築や agent 呼び出し定義を確認するとき。
 
 ## hash
-- 2d228d51b405864438ceed1b72041f4ec08ca667739a6d0da891de160a62f50f
+- f4582d290e75b542a6b5a3544c47702eb09f41bb370d713eaac6ab0936d8cedf
 
 # `quota_probe.py`
 
@@ -126,15 +125,16 @@
 # `tui`
 
 ## Summary
-- `cmoc tui` 用の Codex CLI TUI 起動パラメータを構築する実装。ユーザー入力を完全プロンプトへ組み込み、リポジトリ書き込み権限・エディタ入力引き渡し・事前インデックス処理などの起動設定をまとめる。
+- 対象ディレクトリは、oracle の ACP builder における TUI 関連の正本実装をまとめる層です。
+- TUI の表示・操作フローや、それを構成する補助モジュールへ進むための入口として機能します。
 
 ## Read this when
-- `cmoc tui` の起動パラメータ、プロンプト構築、エディタ入力引き渡し設定を変更・確認するとき
-- ACP Builder のTUI起動処理の正本実装への入口を探しているとき
+- ACP builder の TUI の正本実装を確認・変更するとき。
+- TUI の画面挙動、ユーザー操作、または TUI 内部の構成要素の責務を調べるとき。
 
 ## Do not read this when
-- TUI起動後のCLI実行やユーザーインターフェース表示の詳細を調べるとき
-- TUIパラメータの利用側やテストの具体的な挙動だけを確認したいとき
+- TUI ではなく ACP builder の別機能や一般的な CLI 実装を確認するとき。
+- 対象ディレクトリ内の特定モジュールの詳細な責務が既に分かっており、そのファイルを直接読む方が適切なとき。
 
 ## hash
-- 935a8554a3ac0eaa0977f1851d84446d2f935386510e75f6f68934c30a0fa572
+- 836dff7fc239e65eeaf26cf004384877eeb62eca168b517e83023db318370d55

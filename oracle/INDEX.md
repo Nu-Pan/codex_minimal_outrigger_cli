@@ -1,43 +1,39 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様を、製品挙動、サブコマンド、開発規約、採用しなかった設計案に分けて収録する文書群。
-- app_spec はセッション、run、agent 呼び出し、feedback、oracle/realization、ログなどの現行仕様を扱い、配下の sub_command は各 CLI サブコマンドと編集 run の仕様への入口となる。
-- dev_rule は開発環境、設計、コーディング、テスト実装、検査実行の規約を扱う。
-- considered_alternative は現行仕様ではなく、採用しなかった方式の判断理由や代替方針を確認するための記録である。
+- cmoc の自然言語による正本仕様ドキュメント群。ブランチモデル、アプリケーション仕様、開発規約、および採用しなかった設計案の記録を、カテゴリ別の下位文書への入口として提供する。
 
 ## Read this when
-- cmoc の現行の製品仕様や CLI の挙動を確認・改訂するとき
-- 特定のサブコマンド、セッション、編集 run、feedback、oracle/realization の仕様を調べるとき
-- 実装・テストの設計方針、コーディング規約、検査手順を確認するとき
-- 採用されなかった設計案の背景や、現行方式を選んだ理由を確認するとき
+- cmoc の仕様全体から確認を始めるとき。
+- サブコマンド、状態管理、ファイル分類、ログ、フィードバック、開発・テスト規約などの正本ドキュメントを探すとき。
+- 現在の仕様に加えて、過去に検討したが採用しなかった設計判断の理由を確認するとき。
 
 ## Do not read this when
-- 仕様ではなく、現在の実装コードやテストコードの具体的な挙動だけを確認したいとき
-- 既に対象の仕様領域やサブコマンドが特定できており、その配下の文書を直接読めるとき
-- 一般的な開発手順だけを確認したい場合に、製品仕様全体を読む必要がないとき
-- 採用されなかった設計案の経緯を必要とせず、現行仕様だけを実装・検証するとき
+- 特定の仕様内容が分かっており、該当する下位の Markdown 文書を直接読めるとき。
+- 実装コードの具体的な挙動を確認したいとき。
+- テストコードや実行成果物を確認したいとき。
 
 ## hash
-- 4f750ff34be04dbceb7a8d1cc5b5cdc50abcfd4b68c4124bd06fdc78a082e975
+- 503724d55ffb90f47222b9428eacdfd484103d837bf015d41949314fc4ce1d4b
 
 # `src`
 
 ## Summary
-- cmoc の agent 呼び出しパラメータを定義する層で、アクセスモード、作業 prompt、Structured Output schema、実行コンテキストをまとめる。
-- feedback、INDEX エントリー生成、oracle 編集・調査・レビュー、realization の適用・リファクタリング、TUI、セッション結合など、用途別の agent call builder と schema を収録する。
-- prompt_builder 配下では完全 prompt の合成と、ファイルアクセス、oracle/realization、routing、feedback 報告、競合解消などの共通規定を構築する。
-- other 配下ではパス・設定・構造化 Markdown のモデルと変換処理を提供し、editor_input_handoff と feedback では外部 handoff 用の入力 schema を定義する。
+- oracle/src は cmoc の oracle 実装と agent 呼び出し用 Structured Output schema の入口で、ACP builder、prompt builder、設定・パス・構造化文書モデル、editor input handoff、feedback を含む。
+- ACP builder は agent call の共通パラメータと、quota probe、INDEX エントリー生成、oracle 編集・調査、realization、feedback、session、TUI の起動定義を扱う。
+- prompt builder は完全 prompt、プレースホルダー、ファイルアクセスや oracle/realization、routing、feedback などのポリシー文面を組み立てる。
+- other は cmoc 設定、リポジトリおよび worktree のパスモデル、構造化文書と Markdown レンダリングを提供する。
+- editor_input_handoff は MCP から受け取った依頼と送信元情報を editor work file 用 Markdown に変換し、feedback は問題報告入力の Structured Output schema を定義する。
 
 ## Read this when
-- agent call の起動条件、prompt の構成、アクセス境界、Structured Output、または実行対象の path context を確認・変更するとき。
-- cmoc のサブコマンド別に agent 呼び出しの入力文面や結果 schema の正本実装を調べるとき。
-- 共通 prompt policy、placeholder の解決、Markdown 構造化、設定・パスモデルの挙動を確認するとき。
+- oracle/src 全体の責務分担や、agent call・prompt・設定・パスモデルの実装入口を確認するとき。
+- oracle/src 配下で対象の領域を選び、ACP builder、prompt builder、other、editor input handoff、feedback のいずれから調査を始めるか判断するとき。
+- oracle 実装と agent 呼び出し用 schema の関係を横断して確認するとき。
 
 ## Do not read this when
-- 意味仕様や人間意図の正本を確認したいときは oracle/doc を先に読む。
-- realization の実装やテストの挙動だけを確認したいときは src または test の該当対象へ直接進む。
-- 特定の一つの agent call の詳細だけが必要な場合は、このディレクトリ全体ではなく対応する acp_builder 配下のファイルと schema を直接読む。
+- 特定の agent call、prompt policy、設定値、パス解決、入力本文生成、feedback schema の詳細が既に特定できているときは、該当する下位ディレクトリまたはファイルを直接読む。
+- 正本仕様文書、realization 実装、realization テスト、または個別の CLI 実行フローを確認したいとき。
+- INDEX.md のルーティング規則自体や、対象ディレクトリに属さない文書を確認したいとき。
 
 ## hash
-- d44cc3463836d0c07a528fb994e662bf4aa103fdb8767b2bc90feac49e6d2767
+- a90235014b807cc22977faac2b7ceadfe75ee1cb8ce3cd410c50ad72d3b33259

@@ -1,38 +1,38 @@
 # `acp_builder`
 
 ## Summary
-- ACP builder の各種 agent call について、prompt、アクセスモード、作業ディレクトリ、Structured Output、indexing 実行条件などの起動パラメータを構築する実装群。
-- oracle 編集・調査、realization 追従・修正、feedback 処理、index entry 生成、TUI 起動、session conflict 解消、quota probe への入口を含む。
+- ACP builder の oracle 実装群。agent 呼び出し用のアクセス境界・prompt・作業ディレクトリ・Structured Output・indexing 実行条件を組み立てる共通パラメータ定義を中心に、quota probe、INDEX エントリー生成、oracle 編集・調査、realization 反映・レビュー・要約、feedback 処理、session conflict 解消、TUI 起動の各経路を扱う。
 
 ## Read this when
-- ACP builder の agent call パラメータや prompt 構築の責務を確認したいとき。
-- サブコマンド別の agent 起動条件、ファイルアクセス境界、Structured Output schema の関連を調べるとき。
-- 特定の処理を担当する下位領域が不明で、まず builder 全体の構成と入口を把握したいとき。
+- ACP builder の agent 呼び出し経路について、どの作業を要求し、どのファイル境界・出力形式・実行条件で起動するかを確認したいとき。
+- 特定の cmoc サブコマンドが agent に渡す prompt と AgentCallParameter の構築元を調査・変更するとき。
 
 ## Do not read this when
-- INDEX.md のルーティング生成処理だけを確認したい場合は、indexing の下位項目を直接読むとき。
-- oracle 編集、feedback、realization、session など特定機能の実装詳細だけが必要な場合は、対応する下位ディレクトリへ直接進むとき。
-- agent call の実行そのものや prompt policy の正本仕様を確認する場合は、この builder ではなく実行経路または oracle/doc の仕様を読むとき。
+- agent 呼び出しの意味仕様やサブコマンド仕様そのものを確認したいときは、対応する oracle/doc を直接読む。
+- 実際の realization 実装やテストの挙動を確認したいときは、src または test の対応対象を直接読む。
+- INDEX.md エントリー生成の Structured Output schema だけを確認したいときは、indexing/index_entry.json を直接読む。
 
 ## hash
-- 68207a8b15fc00df719e967c0efaf97818fe1d3a936fa898af8d8de3b13e3d0d
+- d2d161d8be6b60ce45b9a741d529ef03d94012b0e87c5915587929641315e373
 
 # `editor_input_handoff`
 
 ## Summary
-- cmoc のエディタ入力上書きツールが受け取る入力契約を定義する JSON Schema です。
-- 上書き対象を識別する値と、対象へ渡す内容を指定するための直接の参照先です。
+- editor_input_handoff は、MCP から受け取った依頼項目と送信元 TUI process の識別情報を、editor work file 用の Markdown 本文へ引き渡す正本定義の入口です。
+- 送信元情報の必須識別子・絶対ログパス検証、依頼項目の節構成、任意コンテキストと oracle 参照の出力、機械値の JSON 文字列表記、コメント開始記号の可視化を確認する場合に進みます。
+- 入力項目の許可構造・必須項目・文字列制約だけを確認したい場合は、ディレクトリ全体ではなく入力スキーマを直接参照します。
 
 ## Read this when
-- エディタ入力上書きツールの呼び出し形式を確認するとき。
-- 上書き対象と書き込む内容に必要な入力項目を確認するとき。
+- editor input handoff の本文生成や、送信元コンテキストの扱いを変更・レビューするとき。
+- 依頼本文に含める任意項目、oracle 参照、診断用ログ情報の構造を確認するとき。
 
 ## Do not read this when
-- エディタ入力上書き処理の実装やワークフローを確認するとき。
-- エディタ入力上書き以外のツール入力契約を確認するとき。
+- 特定の入力フィールドの JSON Schema 制約だけを確認したいとき。
+- 送信元情報のデータ構造だけを確認したいとき。
+- 本文生成や送信元情報に関係しない oracle の仕様を調べるとき。
 
 ## hash
-- ab2b3f70177976188963683a20698484d105ee1df31cc928aa2c4f2b6ecbdd56
+- 5da37d594048cc0bdebcf702b6348abe238b5ce462efcb9b69b26ce965baf442
 
 # `feedback`
 
@@ -73,18 +73,20 @@
 # `prompt_builder`
 
 ## Summary
-- agent に渡す完全 prompt を、パス由来の placeholder 定義、基礎規定、選択式 policy、目的、追加文面の順に組み立てる中核モジュール。
-- prompt_builder.basic は placeholder の型を定義し、parts と policy の各 builder は oracle/realization、アクセス制限、routing、INDEX entry、feedback などの構造化文面を提供する。
-- editor_input はエディタ経由のユーザー入力用初期文面を生成し、complete_prompt は各部品の placeholder 衝突を検査して最終 prompt を構成する。
+- agent 向け完全プロンプトの構築、プレースホルダー統合、共通規定・選択式ポリシー・目的・追加文面の配置を担う prompt_builder の実装群。
+- エディタ入力用の初期文面を、利用手順と完全プロンプトの埋め込み位置を含む構造化テキストとして生成する。
+- policy はファイルアクセス、oracle/realization、routing、feedback、conflict 解消、editor handoff など個別規定の生成入口であり、parts は共通の oracle/realization 基礎説明などの文面部品を提供する。
+- basic.py はプレースホルダー名と置換値の型を定義し、complete_prompt.py が各 builder を選択的に組み合わせて最終プロンプトを構成する。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成、含める policy、目的情報、placeholder の統合方法を確認・変更するとき。
-- oracle/realization や INDEX entry など、既存の構造化された規定文面を prompt builder へ組み込む流れを調べるとき。
-- エディタ経由の入力テンプレートや、完全 prompt 内へユーザー入力を配置する初期文面を確認するとき。
+- agent 呼び出しへ渡す完全プロンプトの構造、規定の有効化、目的・追加文面・プレースホルダーの配置を変更または調査するとき。
+- プロンプト生成に含める個別ポリシーや共通説明の責務を確認し、policy または parts 配下の該当 builder へ進むとき。
+- エディタ経由の入力初期文面や、完全プロンプト内の入力埋め込み位置を変更または確認するとき。
 
 ## Do not read this when
-- 個別 policy の本文だけを確認すれば足り、完全 prompt への組み込み順序や共通 builder の挙動を調べる必要がないとき。
-- prompt builder 以外の agent call 実行、構造化文書のレンダリング、パスコンテキストの実装を直接調べるとき。
+- 完成済みプロンプトを利用する呼び出し側の挙動だけを調べ、生成定義自体を変更しないとき。
+- 特定の個別規定の本文だけが必要で、該当する policy または parts のファイルが既に特定できているとき。
+- プレースホルダーの値を提供するパスコンテキストや、構造化文書のレンダリング実装だけを調べるとき。
 
 ## hash
-- a6dea3d0ece30dbee8bf9e1a110fe12b1e4f33ffd357b6fa9ef909ac02ace9d5
+- 10462f3b8a39801a408529fa5d0b0252d4b1988557e3ee0982d96cbb82f06a72

@@ -1,16 +1,16 @@
 # `launch_tui.py`
 
 ## Summary
-- 対象は、Oracle 側の ACP builder 調査用 TUI を起動する処理を担う実装ファイルです。
-- 調査用起動処理の挙動、起動引数、または TUI 起動経路を確認・変更するときの入口になります。
+- `cmoc oracle investigation` の完全 prompt と read-only TUI 起動パラメータを構築する正本 builder。oracle 限定の読み取り範囲、パス情報、エディタ入力引き継ぎ、indexing preflight などを調査実行条件へまとめる。
 
 ## Read this when
-- Oracle の ACP builder 調査フローで TUI の起動方法や起動時の処理を確認したいとき。
-- この調査用ランチャーの引数処理や呼び出し先との接続を変更するとき。
+- oracle investigation の agent 起動条件、調査 prompt の構成、oracle の読み取り専用境界を確認・変更するとき
+- oracle investigation 用の TUI 起動パラメータが、入力指示や実行前処理をどう引き渡すか確認するとき
 
 ## Do not read this when
-- TUI 本体の画面表示・対話ロジックを直接調べたいときは、起動先の実装を直接読んでください。
-- ACP builder の一般的な実装や仕様を確認したいだけで、調査用 TUI の起動経路に関係しないとき。
+- oracle investigation の CLI 入力編集から builder 呼び出しまでの実行順序を確認したいときは、サブコマンド実装を直接読む
+- 互換 import adapter の構成や移行状況を確認したいときは、acp 側の adapter を読む
+- oracle investigation の具体的な調査内容や oracle 文書の仕様を確認したいときは、対象の oracle 文書を直接読む
 
 ## hash
-- 23f74c627d7e822d0314711a4c1c36a76a8a4571bc5b0dc9ec7ab45f182154fb
+- 28ed0f4a6ff3ec4c848e616c9693ca045c2b38d6144afc5e9a2634373d446ba2

@@ -91,19 +91,19 @@
 # `oracle_investigation.md`
 
 ## Summary
-- `cmoc oracle investigation` サブコマンドの正本仕様。引数なしでユーザーの oracle file 調査指示を受け取り、指定された builder で Codex CLI TUI を起動し、oracle file を根拠とする日本語中心の調査結果を回答するまでの流れ・境界・変更禁止事項を定める。
+- `cmoc oracle investigation` サブコマンドの正本仕様。引数なしでユーザーの oracle file 調査指示を受け取り、所定の前処理と prompt editor input lifecycle を経て、builder が構築したパラメータで Codex CLI の TUI を起動し、oracle file を根拠とする日本語中心の調査結果を回答する責務と、変更禁止・自動 commit 禁止などの境界を定める。
 
 ## Read this when
-- oracle file の調査サブコマンドの実行手順、TUI 起動、入力 handoff、調査結果の扱いを確認するとき。
-- `oracle investigation` の意味上の調査境界や oracle/realization file の扱いを仕様として確認・変更するとき。
+- `cmoc oracle investigation` の利用者向け挙動、実行手順、調査対象の境界、TUI 起動の扱い、調査結果や oracle file・realization file の変更可否を確認したいとき
+- oracle file を調査するサブコマンドの仕様を確認するとき
 
 ## Do not read this when
-- 正確な prompt 文面や workload 固有の起動パラメータを確認したいときは、委譲先の `build_oracle_investigation_launch_tui_parameter` を直接読む。
-- プロンプトエディタ入力、editor input handoff、Codex CLI 共通起動規則、通知、インデクシングの詳細を確認したいときは、それぞれ指定された共通仕様を直接読む。
-- realization 側の実装やテストの具体的な動作を確認・変更したいとき。
+- 正確な prompt 文面、prompt part、workload 固有の起動パラメータ、agent 向け instruction の実装を確認したいときは、委譲先の `build_oracle_investigation_launch_tui_parameter` を直接読む
+- エディタ入力の共通 lifecycle や editor input handoff の共通仕様を確認したいときは、参照先の正本を直接読む
+- Codex CLI TUI の共通起動規則や indexing の共通条件だけを確認したいときは、該当する共通仕様を直接読む
 
 ## hash
-- a6f56434847b1d870323ecb5a8b84e5b5f444621ce4f267a20b6cf355e4a6932
+- f071044ce9ce3924239a96edce9ed9d4a6c1382db5ed8de32482d70f7256b3c8
 
 # `realization_apply.md`
 
@@ -198,18 +198,17 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの正本仕様。プロンプト編集、起動パラメータ構築、AI Agent CLI/TUI の起動、および共通規定・バックエンド固有設定の適用範囲を定める。
-- TUI の意味上の責務と起動条件を確認するための入口であり、詳細な prompt part 選択や workload 固有パラメータは実装側の builder、関連する共通規定は参照先の正本仕様へ委譲している。
+- `cmoc tui` サブコマンドの正本仕様。ユーザープロンプトのエディタ入力から起動パラメータ構築、AI Agent CLI/TUI の起動までの共通手順と、cmoc 固有規定・indexing・feedback・通知の適用条件を定める。バックエンド固有の起動条件として Codex CLI の設定も扱う。
 
 ## Read this when
-- `cmoc tui` の実行手順、引数、事前条件、プロンプト入力、TUI 起動条件を確認または変更するとき。
-- TUI に注入される cmoc 固有規定、indexing preflight、feedback observation、終了通知の適用範囲を確認するとき。
-- Codex CLI をバックエンドとする TUI 起動で、起動コマンド、editor input handoff、`CODEX_HOME`、preflight validation、引数上書きを確認するとき。
+- `cmoc tui` の実行手順、事前条件、プロンプト入力、または TUI 起動時の共通規定を確認したいとき
+- TUI に注入する cmoc 固有契約や indexing・feedback・終了通知の適用根拠を確認したいとき
+- Codex CLI バックエンドの起動コマンド、環境変数、引数上書き、editor input handoff の仕様を確認したいとき
 
 ## Do not read this when
-- TUI の prompt part の正確な選択、具体的な起動パラメータ、選択理由を直接調べるときは、`build_tui_launch_tui_parameter` の実装を先に読む。
-- プロンプトエディタ入力、editor input handoff、indexing、feedback observation、Windows toast 通知などの詳細仕様だけを確認したいときは、本文から参照される各正本仕様を直接読む。
-- TUI 以外のサブコマンドや、AI Agent CLI/TUI の実装コード・テストだけを調べるとき。
+- TUI サブコマンド以外のサブコマンドの仕様を確認したいとき
+- プロンプトエディタ入力、editor input handoff、indexing、feedback observation、Windows toast の詳細な正本仕様そのものを確認したいときは、本文から案内される各専用仕様を直接読む
+- 起動パラメータの正確な prompt part や workload 固有の選択理由を確認したいときは、本文が委譲する `build_tui_launch_tui_parameter` の正本実装を直接読む
 
 ## hash
-- 5171b3c99b1c71659f1d9c077e62efb96e810035502d50193213b541a0bf9478
+- b3db6bd5ca11eaf0b6d6446e11050c169531682a1f2c0e0476dafd049ecd121f
