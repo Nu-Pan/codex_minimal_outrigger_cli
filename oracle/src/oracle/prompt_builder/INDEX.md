@@ -15,19 +15,19 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全な構造化 prompt を、基礎規定・任意ポリシー・目的・追加文面・placeholder 定義から組み立てる入口。
-- ファイルアクセス、routing、oracle/realization、feedback、INDEX エントリーなどの各ポリシーを独立したフラグで選択し、placeholder の競合を拒否しながら統合する。
+- 選択されたポリシー、呼び出し固有の目的、追加文面、placeholder 定義を所定の順序で統合し、agent call 用の完全な構造化 prompt を構築する中心実装。
+- placeholder の重複定義を検査し、同名異値を拒否することで、呼び出し内のパス文脈や入力定義の不整合を防ぐ。
 
 ## Read this when
-- agent 向け prompt の構成順序、任意ポリシーの注入条件、caller 指定の目的や追加 prompt の組み込み方を確認するとき。
-- path context 由来の placeholder 定義と追加定義の統合、および同名異値の拒否動作を調べるとき。
+- agent call に渡す完全 prompt の構成順序、ポリシーの有効化、目的情報や動的入力の注入、placeholder 定義の統合を変更・確認するとき。
+- 複数の prompt builder 部品をどの順序で組み合わせ、どの条件で含めるかを調べるとき。
 
 ## Do not read this when
-- 個別ポリシーの具体的な文面や生成ロジックだけを確認したいときは、対応する policy モジュールを直接読む。
-- prompt に含まれる oracle、realization、routing、file access などの個別規定の内容自体を確認したいとき。
+- 特定のポリシー本文や prompt 断片の内容だけを確認・変更する場合は、対応する policy または parts の実装を直接読む。
+- 完全 prompt の呼び出し元がどの場面でこの builder を呼ぶかを調べる場合は、acp_builder 側の呼び出し実装を直接読む。
 
 ## hash
-- 1b0d6941e94d7a3bb70fff393f0b2f4ee0f151d5556d58b6dbf8196677b8ca81
+- a6adab4c25e7bebecb0dfc393aaa0d172684b09d4bd954c53bfe624891526ce3
 
 # `editor_input.py`
 
@@ -65,18 +65,19 @@
 # `policy`
 
 ## Summary
-- agent call の prompt builder policy 群を、conflict 解消・editor input handoff・feedback 報告・file access・INDEX routing・oracle/realization・適合性所見などの責務別に案内するディレクトリ。
-- 各 policy の instruction 文面構築処理を起点として、共通規定の生成内容や個別 policy 間の責務境界を確認するための入口。
+- prompt_builder が agent call 向けに埋め込む各種 policy の構築定義をまとめるディレクトリ。
+- INDEX.md routing、file access、oracle／realization、feedback observation、conflict resolution、editor input handoff など、作業種別ごとの instruction 文面と placeholder の構築入口を提供する。
+- 個別 policy の責務・規定文面・関連 path context の扱いを確認するための下位ファイル群への入口。
 
 ## Read this when
-- agent call に渡す共通または用途別の instruction policy を確認・変更するとき
-- prompt builder における file access、feedback reporting、INDEX routing、oracle/realization、conflict 解消などの規定の所在を整理するとき
-- 複数の policy を組み合わせた agent prompt の構築経路や、policy ごとの責務境界を調べるとき
+- agent call の prompt に組み込まれる policy の種類、文面、適用条件、または構築処理を確認・変更するとき。
+- 複数の prompt policy のうち、oracle／realization、routing、file access、feedback reporting など特定領域の構築定義を探すとき。
+- policy builder が返す構造化文面や placeholder の組み立て方を調査するとき。
 
 ## Do not read this when
-- session join、oracle、realization、INDEX routing などの意味仕様そのものを確認するときは、それぞれの正本仕様や対象ファイルを直接読む
-- 個別の conflict、editor handoff、feedback observation、または realization の具体的な実行結果を確認するとき
-- prompt builder policy と無関係な実装内容や、特定の型・構造定義だけを調べるとき
+- policy の意味仕様そのものを確認したいとき。各実装の docstring が参照する oracle/doc 配下の正本仕様を直接読むべきである。
+- prompt builder の共通構築処理、構造化文書型、FileAccessMode、path context などの定義だけを確認したいときは、それぞれの定義元を直接読むべきである。
+- 個別の agent call の実行処理や、生成された prompt の実際の呼び出し結果を確認したいとき。
 
 ## hash
-- 543e087a02d871672964909460d952664ee6654820f1161717572b81c39928b2
+- eebd402ded5725ce86c97aac6f9677832f521a8f6e0ce55f8ffd449358efcd3b

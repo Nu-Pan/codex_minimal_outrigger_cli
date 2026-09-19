@@ -89,18 +89,22 @@
 # `oracle`
 
 ## Summary
-- oracle の正本情報を参照するための入口。期待される状態や検証基準を確認し、実装・成果物の妥当性を判断する際に利用する。
+- 人間が所有する正本仕様を、意味仕様の文書と、prompt・path・agent call などの正確な構築定義に分けて保持する領域。
+- アプリケーション仕様、branch model、開発規則、代替案の検討記録を含み、cmoc の責務・制約・判断基準を定義する。
+- prompt builder と ACP builder の oracle 実装が、仕様で委譲された prompt 文面・schema・起動パラメータ・パスモデルを具体化する。
 
 ## Read this when
-- oracle の内容や期待状態を確認するとき。
-- 実装や成果物が oracle に適合するかを検証するとき。
+- cmoc の正本仕様、責務分担、branch/run のモデル、サブコマンドの挙動、開発規則を確認するとき。
+- oracle doc と oracle src のどちらが対象事項の正本を所有するか判断するとき。
+- agent prompt の構築、INDEX エントリー生成、path context、agent call parameter の正確な定義を変更・レビューするとき。
 
 ## Do not read this when
-- oracle の生成・収集処理を確認するときは、その処理を定義する専用対象を直接読む。
-- 実装、ログ、feedback、realization、INDEX.md の生成規則だけを調査するときは、対応する対象へ直接進む。
+- realization の実装やテストの具体的な挙動だけを調べる場合は、まず src または test の該当対象を直接読む。
+- 既存仕様を参照せずに一般的な設計・実装方針だけを検討する場合。
+- 過去の代替案や検討経緯が不要で、確定した個別仕様だけを確認したい場合は、関連する app_spec または dev_rule の対象を直接読む。
 
 ## hash
-- bdde09e78d5b3eeb17ba2a4172caecbe710c9b06864ccc7ae56a3b8f00bbca2b
+- f0e068affefb9899a3553bcb7de998603590bf87e1a9468e46beb362d0678db1
 
 # `pyproject.toml`
 

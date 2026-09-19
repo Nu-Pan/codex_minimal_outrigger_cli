@@ -18,18 +18,20 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- 明示的に選択された editor input handoff の規定文面を構築する定義。active な prompt editor input への完成済み content の handoff 条件、入力内容、結果報告、失敗時の対応を扱う。
+- 明示的に選択された editor input handoff の送信元情報ブロックと、handoff 実行時の agent の責務・禁止事項を prompt 用構造として定義する。送信元情報ではサブコマンド名、実行 ID、Codex call ID、絶対パスのログ情報を扱い、ポリシーでは target ID と完成済み content の handoff 条件、content に含める情報、結果報告と失敗時の扱いを定める。
 
 ## Read this when
-- 人間から active target への handoff を明示的に要求され、target ID が提示された場合の editor input handoff 規定を確認するとき。
-- editor work file への直接書き込み禁止や、handoff 失敗時の回答上の扱いを確認するとき。
+- editor input handoff の送信元情報を prompt に組み込む処理を確認したいとき。
+- active な prompt editor へ完成済み内容を渡す際の使用条件、content の要件、禁止事項を確認・変更するとき。
+- サブコマンドログパスの絶対パス検証や handoff 用の構造化 prompt ブロックを調べるとき。
 
 ## Do not read this when
-- editor input handoff 以外の prompt 構築規定を確認する場合。
-- handoff の実行結果そのものや、editor work file の内容を確認する場合。
+- prompt builder 全体の共通構築処理や placeholder の一般仕様だけを調べたいとき。
+- editor input handoff の意味仕様そのものを確認したいときは、参照先の oracle 文書を直接読むべきである。
+- 実際の editor tool 呼び出しや editor work file の書き込み実装を調べたいときは、呼び出し側または tool 実装を直接読むべきである。
 
 ## hash
-- 603b78cf401b4dc637877b582e0fe330f35d6e00d63d626106a975615e455832
+- 58a936ac419af8a05f2a7f2caf9c5dff79a8eb0c0e8852d5940c10248559a08c
 
 # `feedback_reporting.py`
 

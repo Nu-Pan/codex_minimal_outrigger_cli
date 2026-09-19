@@ -1,35 +1,34 @@
 # `edit`
 
 ## Summary
-- oracle edit の起動処理に関する実装の入口で、ユーザー指示・oracle file・未コミット差分から編集用 prompt と実行パラメータを組み立てる。
+- `cmoc oracle edit` の共通編集パラメータを構築する実装を含むディレクトリ。ユーザー指示、oracle の編集範囲、未コミット差分の確認、編集制約、oracle 書き込み権限、実行時パス、prompt、preflight 無効化をまとめて設定する。
 
 ## Read this when
-- `cmoc oracle edit` の初回 agent call に渡す prompt、oracle 専用書き込み権限、作業ディレクトリ、indexing preflight 無効化、または共通起動パラメータの構築条件を確認・変更するとき。
+- `cmoc oracle edit` の agent 呼び出し用 prompt や実行パラメータを変更・確認するとき
+- oracle 編集時のファイルアクセス権限、Git 差分の扱い、編集制約、実行コンテキストを確認するとき
 
 ## Do not read this when
-- oracle edit の意味仕様や編集方針そのものを確認するとき。
-- 一般的な prompt 構築処理や構造化文書のレンダリングを確認・変更するとき。
-- この配下の具体的な実装ファイルを直接確認でき、ディレクトリ単位の案内が不要なとき。
+- oracle edit 以外のサブコマンドの agent 呼び出しパラメータを確認するとき
+- 共通 prompt 構築関数やパスモデル自体の実装を直接確認すべきとき
 
 ## hash
-- b6de0a31af20ff4a66983cc26e233f190ebc0c996d24b4a24d10314c5cc9dccc
+- 32eab9c41322d7aa05de231fd3c417958aa7a571a2cdecd155553c54cc8d1579
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` 用の完全プロンプトと Codex CLI TUI 起動パラメータを構築する。
-- ユーザー指示を調査タスクへ埋め込み、関連する oracle file のみを根拠とする読み取り専用調査経路への入口を提供する。
+- `cmoc oracle investigation` 用の TUI 起動パラメータを構築し、oracle のみを読む調査プロンプト、パス情報、エディタ入力引き継ぎ、インデックス前処理などの実行条件をまとめる定義。
 
 ## Read this when
-- oracle 調査の完全プロンプトに、ユーザー指示・調査範囲・完了条件をどう組み込むか確認または変更するとき。
-- oracle 調査用 TUI の起動時設定、読み取り専用アクセス、エディタ入力引き継ぎ、インデックス事前処理の構築を確認または変更するとき。
+- oracle file を対象にした調査依頼のプロンプト構成や、調査用 TUI の起動条件を確認したいとき。
+- ユーザー指示を完全プロンプトへ組み込み、oracle 根拠の提示を要求する調査呼び出しの流れを追いたいとき。
 
 ## Do not read this when
-- oracle の調査結果や個別の oracle file の内容を確認するときは、生成されたプロンプトではなく対象の oracle file を直接読む。
-- 一般的な ACP 起動パラメータや、`cmoc oracle investigation` 以外のコマンドの挙動だけを確認するとき。
+- 調査機能の実装全体や、プロンプト部品の詳細を確認する場合は、呼び出される prompt builder・policy 定義を直接読む。
+- 実際の ACP 実行処理、TUI 本体、または oracle file の内容を確認したい場合は、それぞれの実装・正本仕様へ直接進む。
 
 ## hash
-- cda250c1f5b522edf0c9b6f4645c9169f5f7f3418e796c85e3ab82d4b3ef1c5a
+- d5fba5277668e25b089790de50470a4c2378b8d6fe9531350d1abe8fb85a8508
 
 # `review`
 

@@ -1,20 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- 対象ディレクトリは、oracle・feedback・indexing・quota probe・realization・session・TUI などの用途別に、エージェント呼び出しの基本設定や prompt、出力契約を組み立てる下位要素への入口。
-- 共通の AgentCallParameter 定義を用途別の呼び出し構築へ振り分け、各用途固有の起動条件・権限・作業ディレクトリ・indexing 設定を確認するための階層。
+- ACP builder の各種 agent call について、prompt、アクセスモード、作業ディレクトリ、Structured Output、indexing 実行条件などの起動パラメータを構築する実装群。
+- oracle 編集・調査、realization 追従・修正、feedback 処理、index entry 生成、TUI 起動、session conflict 解消、quota probe への入口を含む。
 
 ## Read this when
-- oracle、feedback、indexing、quota probe、realization、session join、または TUI に関する agent call の構築条件や、対応する下位実装への入口を判断するとき。
-- 用途別の prompt、ファイルアクセス権、Structured Output、作業ディレクトリ、MCP handoff、indexing preflight の設定を横断して追跡するとき。
+- ACP builder の agent call パラメータや prompt 構築の責務を確認したいとき。
+- サブコマンド別の agent 起動条件、ファイルアクセス境界、Structured Output schema の関連を調べるとき。
+- 特定の処理を担当する下位領域が不明で、まず builder 全体の構成と入口を把握したいとき。
 
 ## Do not read this when
-- 特定用途の agent call の具体的な prompt や出力契約だけを調べる場合は、該当する下位対象を直接読む。
-- 共通の呼び出しパラメータ型・既定値・ファイルアクセスモードの一般定義だけを確認する場合は、共通定義を直接読む。
-- 各用途の意味仕様、実際の Git 差分・realization 編集・merge 処理、または index エントリー生成規則そのものを調べる場合は、それぞれの正本仕様や実装を直接読む。
+- INDEX.md のルーティング生成処理だけを確認したい場合は、indexing の下位項目を直接読むとき。
+- oracle 編集、feedback、realization、session など特定機能の実装詳細だけが必要な場合は、対応する下位ディレクトリへ直接進むとき。
+- agent call の実行そのものや prompt policy の正本仕様を確認する場合は、この builder ではなく実行経路または oracle/doc の仕様を読むとき。
 
 ## hash
-- cafaef716d95a07fc8596431f91a8d642d7186db92d487d2ba3f51f398fb3aae
+- 68207a8b15fc00df719e967c0efaf97818fe1d3a936fa898af8d8de3b13e3d0d
 
 # `editor_input_handoff`
 
@@ -72,19 +73,18 @@
 # `prompt_builder`
 
 ## Summary
-- agent call に渡す完全な構造化 prompt を組み立てる入口と、追加 prompt・目的・placeholder の統合を扱う。
-- ファイルアクセス、routing、oracle／realization、feedback、conflict 解消、INDEX エントリーなど、用途別の prompt policy を責務ごとに提供する。
-- エディタ入力用の初期文面や、oracle／realization の基本知識など、agent prompt に注入する構造化文面の部品を提供する。
+- agent に渡す完全 prompt を、パス由来の placeholder 定義、基礎規定、選択式 policy、目的、追加文面の順に組み立てる中核モジュール。
+- prompt_builder.basic は placeholder の型を定義し、parts と policy の各 builder は oracle/realization、アクセス制限、routing、INDEX entry、feedback などの構造化文面を提供する。
+- editor_input はエディタ経由のユーザー入力用初期文面を生成し、complete_prompt は各部品の placeholder 衝突を検査して最終 prompt を構成する。
 
 ## Read this when
-- agent call の完全 prompt の構成順序、任意 policy の有効化、目的・追加文面の組み込み方を確認・変更するとき。
-- prompt builder における file access、routing、oracle／realization、feedback、conflict 解消、INDEX routing などの規定の構築経路を調べるとき。
-- placeholder 定義の統合や、エディタ経由の prompt 初期文面、agent 向け構造化文面の部品を確認するとき。
+- agent call に渡す完全 prompt の構成、含める policy、目的情報、placeholder の統合方法を確認・変更するとき。
+- oracle/realization や INDEX entry など、既存の構造化された規定文面を prompt builder へ組み込む流れを調べるとき。
+- エディタ経由の入力テンプレートや、完全 prompt 内へユーザー入力を配置する初期文面を確認するとき。
 
 ## Do not read this when
-- 個別 policy の正本仕様や具体的な規定内容だけを確認したいときは、対応する policy の実装または正本仕様を直接読む。
-- oracle／realization の責務そのもの、実際のファイル分類、または INDEX routing の意味仕様を確認したいときは、対応する正本仕様を直接読む。
-- prompt builder と無関係な型定義、実装処理、または特定の agent call の実行結果を調べるとき。
+- 個別 policy の本文だけを確認すれば足り、完全 prompt への組み込み順序や共通 builder の挙動を調べる必要がないとき。
+- prompt builder 以外の agent call 実行、構造化文書のレンダリング、パスコンテキストの実装を直接調べるとき。
 
 ## hash
-- fdaaf063c3dbeda9f12257a80401506b9f0817056db9742b249d1d488e45dff6
+- a6dea3d0ece30dbee8bf9e1a110fe12b1e4f33ffd357b6fa9ef909ac02ace9d5
