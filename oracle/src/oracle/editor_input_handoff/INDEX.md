@@ -1,32 +1,32 @@
 # `body.py`
 
 ## Summary
-- 項目別の依頼内容と検証済みの送信元情報から、editor work file を置換する Markdown 本文を構築する正本実装です。必須項目の検証、任意の oracle 参照の整形、送信元識別情報の配置、見出し順序とレンダリングを確認するときの入口になります。
+- 項目別の依頼情報、oracle文書参照、送信元識別情報を検証済みMarkdown本文へ組み立てる正本実装。
+- 送信元情報の必須識別子と絶対ログパスを検証し、入力項目・参照ファイル・機械的な送信元情報を所定の見出しで出力する。
 
 ## Read this when
-- editor input handoff の本文生成、必須項目の空値扱い、oracle 参照の挿入、または送信元情報の出力形式を変更・確認するとき。
-- handoff 本文の正確な見出し・順序・項目表記を、仕様から実装へ追跡するとき。
+- editor work fileへ渡すhandoff本文の構成や各セクションの生成内容を確認したいとき。
+- 送信元識別子やサブコマンドログパスの入力条件、または空の自由記述項目に対する拒否条件を確認したいとき。
+- oracle参照を本文へMarkdownとして配置する処理の入口を確認したいとき。
 
 ## Do not read this when
-- handoff の入力 schema、送信元情報のデータ供給・検証、または agent-facing MCP の受付処理だけを調査するときは、それぞれの専用 oracle source や仕様を直接読む。
-- editor work file の target routing、待機 lifecycle、最終読み取り、または Codex TUI への注入手順だけを調査するとき。
+- 入力JSONのスキーマ検証、oracle参照の変換、target検証、ファイル書き込みの責務を確認したいときは、呼び出し側やoverwrite_input.jsonを直接読む。
+- Markdownノードや文書参照の具体的なレンダリング仕様だけを確認したいときは、struct_docまたはdoc_ref_modelを直接読む。
 
 ## hash
-- 92d68f381f9124196075afccf753cab24f47dc0effeaa46913cf6858da50fd4a
+- 12319c5ad75f95d87d65eb34af4f3283437dc76ff157c2bf2d57022ae09ea272
 
 # `overwrite_input.json`
 
 ## Summary
-- 対象は oracle/editor_input_handoff における overwrite_input の入力データを定義する JSON ファイルで、編集対象の入力を上書きするために渡す値を扱う。
-- 同階層の実装・仕様ファイルを横断して概要を確認したい場合ではなく、overwrite_input の入力形式や上書き操作への受け渡し条件を確認する際の入口となる。
+- エディタ入力引き渡しの上書き処理へ渡す JSON 入力の正本スキーマ。必須の依頼内容・背景・判断事項・未確定事項と、任意の oracle 参照を検証する入口。
 
 ## Read this when
-- 編集対象の入力を上書きする処理へ渡される JSON 入力の構造や値を確認するとき。
-- editor_input_handoff の中で、追加入力や別のハンドオフ形式ではなく overwrite_input の扱いを調べるとき。
+- editor input handoff の上書き入力項目、必須条件、oracle 参照形式、追加プロパティ禁止の扱いを確認または変更するとき
 
 ## Do not read this when
-- 入力上書きの実際の実装手順や実行時挙動を確認したい場合は、対応する realization 実装やテストを直接読むとき。
-- editor_input_handoff 全体の責務や他の入力形式との関係だけを知りたい場合は、上位の仕様・案内対象から読み始めるとき。
+- 検証済み入力から生成される Markdown 本文の構成や送信元情報の扱いを確認するときは、本文生成実装や対応する仕様を直接読む場合
+- 実際の上書き処理の呼び出し、target の検証、ファイル書き込みの挙動だけを調べるとき
 
 ## hash
-- 740bd6adb777e14fe1f704c1c40e9f9d897eb1a3bd1ef783d887c2219aa8003a
+- 4f0053706addcf6b548b8030916909e4dfd772a613b61227eee0ef1c9df272d1

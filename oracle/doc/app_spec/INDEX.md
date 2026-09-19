@@ -92,21 +92,23 @@
 # `editor_input_handoff.md`
 
 ## Summary
-- Codex TUI の agent から待機中の prompt editor input へ、active target ID を指定して依頼を渡す handoff 機能の正本仕様。agent と MCP の責務分担、target lifecycle、本文生成、送信元情報、上書き制約、非目標を定義する。
+- Codex TUI の agent から、待機中の prompt editor input へ依頼内容を引き渡す共通機能の正本仕様。
+- active target の登録・受付停止・無効化までの lifecycle、単純な全体上書き、入力検証、直列適用、および MCP の責務を定義する。
+- agent が作成する目標・作業・背景・決定事項・未確定事項と、MCP が注入する本文形式・参照情報・送信元情報の分担を定める。
+- 参照情報の表現、送信元情報の識別と供給、handoff を行わない場合の制約、および自動発見・自動保存などの non-goal を示す。
 
 ## Read this when
-- prompt editor input への agent handoff の lifecycle、target routing、MCP 上書き仕様、本文生成規則、agent の入力責務を確認するとき
-- editor input handoff の実装が、指定された active target のみを扱い、送信元情報や本文生成を正しく MCP 側へ委譲しているか確認するとき
-- handoff に関係する prompt editor input、Codex 実行規則、ログ記録、overwrite schema、body builder の役割分担を把握するとき
+- prompt editor input への handoff 機能の要件、target の受付 lifecycle、または agent-facing overwrite interface を確認・変更するとき
+- handoff 本文の構成、agent と MCP の責務分界、参照情報の渡し方、送信元情報の扱いを確認するとき
+- handoff の失敗条件、上書きの適用範囲、直列化、ログへの自由記述非出力を確認するとき
 
 ## Do not read this when
-- prompt editor input の writer 境界や最終確定手順そのものを確認する場合は、委譲先の prompt editor input 仕様を直接読むとき
-- overwrite の field 名・型・必須条件を確認する場合は、overwrite_input.json の root schema を直接読むとき
-- handoff instruction、送信元データ構造、本文の見出しや配置の実装詳細を確認する場合は、各委譲先の oracle source を直接読むとき
-- 一般的な Codex 実行規則やログ仕様だけを確認する場合は、codex_exec_rule.md または console_and_file_log.md を直接読むとき
+- prompt editor input の writer 境界や最終確定手順そのものを確認したい場合は、委譲先として示された prompt editor input の正本を直接読むとき
+- handoff instruction の固定文面、入力 schema の field 定義、本文 builder や送信元データ構造の実装詳細を確認したい場合は、本文中で指定された各 oracle src を直接読むとき
+- 一般的な agent 実行時のファイルアクセス制限や TUI ログ記録の仕様だけを確認したい場合は、それぞれの責務を持つ正本仕様を直接読むとき
 
 ## hash
-- 8402f01e266ef80303aed6cdd6584e174723b0770c2a8de62278c583eab36ac8
+- 1e21cbcebb713b1bac016e7188ebb1429c9cb4b824948973a67458b9dc0a5b03
 
 # `error_handling.md`
 

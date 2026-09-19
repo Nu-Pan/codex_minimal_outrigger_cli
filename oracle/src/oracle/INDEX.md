@@ -18,18 +18,21 @@
 # `editor_input_handoff`
 
 ## Summary
-- editor_input_handoff の正本ソース群です。overwrite_input.json は上書き入力の必須・任意項目と oracle 参照の入力構造を定義し、body.py は検証済み項目と送信元識別情報から editor work file 用 Markdown 本文を生成します。
+- 項目別の依頼内容と送信元コンテキストから、editor work file に置き換える Markdown 本文を構築する正本実装と、その入力検証定義をまとめたディレクトリです。
+- 入力項目の検証、oracle 参照の本文変換、送信元識別情報と絶対ログパスの保持、および本文セクションのレンダリングを確認するときの入口です。
 
 ## Read this when
-- editor input handoff の入力形式、必須項目、任意項目、oracle 参照の指定方法を確認するとき。
-- handoff 本文の見出し構成、参照ファイルの挿入、送信元情報の出力、送信元識別情報や絶対ログパスの検証を確認するとき。
+- editor input handoff の本文生成規則や、送信元情報の必須条件を確認したいとき。
+- overwrite 処理へ渡す入力の必須項目・空白禁止・oracle 参照形式を確認したいとき。
+- 入力検証後にどの情報が本文へ配置されるかを追いたいとき。
 
 ## Do not read this when
-- 実際の editor work file の書き込み、target 検証、TUI への引き渡し手順や実行時ライフサイクルを調査するとき。
-- handoff の意味仕様そのものを確認するときは、参照されている oracle 文書を直接読むとき。
+- editor input handoff の意味仕様そのものや運用フローを確認したい場合は、参照されている oracle の仕様文書を先に読むべきとき。
+- 本文生成や overwrite 入力の仕様ではなく、送信側・受信側の TUI process の呼び出し処理を調べるとき。
+- すでに検証済みの本文だけを扱い、生成規則や入力制約を確認する必要がないとき。
 
 ## hash
-- dfd27325f2bb27ac022266eb66f6023a5b83bbee7ec9aa54b1bb49c3c3c90d2f
+- eb8b1b4663c10cb6d1b7d99365d3c0c73a1c0c047264abc56d933bea5b69965b
 
 # `feedback`
 
@@ -50,38 +53,37 @@
 # `other`
 
 ## Summary
-- cmoc の共通モデルと文書生成補助を担う oracle 実装群。agent call のルートパス解決、構造化文書の Markdown 化、文書参照の表現、リポジトリ単位の cmoc/Codex 設定モデルを扱う。
+- cmoc の周辺データモデルと Markdown 表現をまとめた基盤モジュール群。構造化文書ノードのレンダリング、agent call のルートパスとプレースホルダー解決、cmoc/Codex 設定の型定義、文書参照の検証・Markdown 化を扱う。これらの共通モデルや変換処理を調査・変更するときの入口となる。
 
 ## Read this when
-- agent call の cwd から repo/work/run/cmoc の各ルートを導出する処理や、プレースホルダ付きパスの解決を確認・変更するとき。
-- 見出し・タグブロック・コードブロック・規定文を構造化して Markdown にレンダリングする処理を確認・変更するとき。
-- 文書参照の保持や、単一・複数参照の Markdown 表現を確認・変更するとき。
-- cmoc の並列数、Codex provider、agent call ごとの model/reasoning 設定などの設定モデルを確認・変更するとき。
+- 構造化された文書・規定・コードブロックを Markdown に変換する処理を確認したいとき。
+- agent call の cwd、Git worktree、{{repo-root}} などのパスプレースホルダー解決を確認したいとき。
+- cmoc の並列数、Codex provider、model、reasoning effort などの設定データ構造を確認したいとき。
+- 文書参照の絶対パス要件や、参照箇所を含む Markdown 表現を確認したいとき。
 
 ## Do not read this when
-- 上記の共通モデルや補助処理ではなく、特定の agent call、CLI コマンド、ドキュメント仕様の実装だけを直接確認すれば足りるとき。
-- oracle の正本ドキュメントやテストの内容を確認するときは、それぞれ oracle/doc または oracle/test を直接読むとき。
+- 対象の個別機能の意味仕様や運用手順を確認したい場合は、まず oracle/doc 配下の対応する正本仕様を読む。
+- 実際の agent 呼び出し、設定ファイル入出力、文書編集フローの統合動作を確認したい場合は、これらのモデルを利用する上位モジュールを直接読む。
 
 ## hash
-- d1ba1b3dd508b475bbe1e860ce3af41b36c5cebe3c2a454474648de9144876c2
+- 132f6ad70f74df3ce03caecf2ade0c806c7a578a1a6f5d56b18719fce0863031
 
 # `prompt_builder`
 
 ## Summary
-- agent 向け完全プロンプトの構築、プレースホルダー統合、共通規定・選択式ポリシー・目的・追加文面の配置を担う prompt_builder の実装群。
-- エディタ入力用の初期文面を、利用手順と完全プロンプトの埋め込み位置を含む構造化テキストとして生成する。
-- policy はファイルアクセス、oracle/realization、routing、feedback、conflict 解消、editor handoff など個別規定の生成入口であり、parts は共通の oracle/realization 基礎説明などの文面部品を提供する。
-- basic.py はプレースホルダー名と置換値の型を定義し、complete_prompt.py が各 builder を選択的に組み合わせて最終プロンプトを構成する。
+- agent 向けの完全な構造化 prompt を、共通ポリシー、選択的ポリシー、追加文面、目的、プレースホルダー定義の順に組み立てる実装群。
+- prompt のプレースホルダー定義を型として表し、同名異値の衝突を検出して一貫性を保つ。
+- oracle／realization の基本知識、ファイルアクセス、routing、feedback 報告、INDEX エントリー、oracle／realization の扱いなど、個別の指示文面を構築する部品群。
+- エディタ経由で入力するプロンプトの初期表示文面を、使用説明・記入目安・完全 prompt のテンプレートから生成する。
 
 ## Read this when
-- agent 呼び出しへ渡す完全プロンプトの構造、規定の有効化、目的・追加文面・プレースホルダーの配置を変更または調査するとき。
-- プロンプト生成に含める個別ポリシーや共通説明の責務を確認し、policy または parts 配下の該当 builder へ進むとき。
-- エディタ経由の入力初期文面や、完全プロンプト内の入力埋め込み位置を変更または確認するとき。
+- agent 呼び出しへ渡す完全 prompt の構成順序、ポリシーの有効化条件、追加 prompt、目的、またはプレースホルダー統合を確認・変更するとき。
+- agent に埋め込む個別の作業規定や、oracle／realization の基本説明、routing、feedback、アクセス制限、INDEX エントリー規定の構築を確認・変更するとき。
+- エディタ入力用の初期文面や、完全 prompt のテンプレートを HTML コメント内へ配置する処理を確認・変更するとき。
 
 ## Do not read this when
-- 完成済みプロンプトを利用する呼び出し側の挙動だけを調べ、生成定義自体を変更しないとき。
-- 特定の個別規定の本文だけが必要で、該当する policy または parts のファイルが既に特定できているとき。
-- プレースホルダーの値を提供するパスコンテキストや、構造化文書のレンダリング実装だけを調べるとき。
+- 正本仕様そのもの、実際のファイル分類、agent 呼び出しの実行制御、または prompt_builder を呼び出す上位処理を調べるとき。
+- 個別ポリシーの意味仕様や、個別機能の実装・テストの挙動を直接確認する場合は、対応する oracle または呼び出し側・テストを読むとき。
 
 ## hash
-- 10462f3b8a39801a408529fa5d0b0252d4b1988557e3ee0982d96cbb82f06a72
+- 2ef6c993df27b5ca069f795dd99d2ca7d4d110b7d4bc199b22d5205da4cb418e
