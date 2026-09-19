@@ -18,21 +18,18 @@
 # `editor_input_handoff`
 
 ## Summary
-- editor_input_handoff は、MCP から受け取った依頼項目と送信元 TUI process の識別情報を、editor work file 用の Markdown 本文へ引き渡す正本定義の入口です。
-- 送信元情報の必須識別子・絶対ログパス検証、依頼項目の節構成、任意コンテキストと oracle 参照の出力、機械値の JSON 文字列表記、コメント開始記号の可視化を確認する場合に進みます。
-- 入力項目の許可構造・必須項目・文字列制約だけを確認したい場合は、ディレクトリ全体ではなく入力スキーマを直接参照します。
+- editor_input_handoff の正本ソース群です。overwrite_input.json は上書き入力の必須・任意項目と oracle 参照の入力構造を定義し、body.py は検証済み項目と送信元識別情報から editor work file 用 Markdown 本文を生成します。
 
 ## Read this when
-- editor input handoff の本文生成や、送信元コンテキストの扱いを変更・レビューするとき。
-- 依頼本文に含める任意項目、oracle 参照、診断用ログ情報の構造を確認するとき。
+- editor input handoff の入力形式、必須項目、任意項目、oracle 参照の指定方法を確認するとき。
+- handoff 本文の見出し構成、参照ファイルの挿入、送信元情報の出力、送信元識別情報や絶対ログパスの検証を確認するとき。
 
 ## Do not read this when
-- 特定の入力フィールドの JSON Schema 制約だけを確認したいとき。
-- 送信元情報のデータ構造だけを確認したいとき。
-- 本文生成や送信元情報に関係しない oracle の仕様を調べるとき。
+- 実際の editor work file の書き込み、target 検証、TUI への引き渡し手順や実行時ライフサイクルを調査するとき。
+- handoff の意味仕様そのものを確認するときは、参照されている oracle 文書を直接読むとき。
 
 ## hash
-- 5da37d594048cc0bdebcf702b6348abe238b5ce462efcb9b69b26ce965baf442
+- dfd27325f2bb27ac022266eb66f6023a5b83bbee7ec9aa54b1bb49c3c3c90d2f
 
 # `feedback`
 
@@ -53,22 +50,20 @@
 # `other`
 
 ## Summary
-- cmoc のリポジトリ固有設定を表すデータモデル。並列実行数、Codex の provider・model・推論設定、ファイルアクセス規定違反時のリカバリ試行回数を集約する。
-- パス表記とルートプレースホルダの基盤モデル。agent call の cwd から worktree・main repository を導出し、プレースホルダと絶対パスの相互変換を扱う。
-- 階層化された文章要素、参照可能なタグ付きブロック、コードブロック、構造化ポリシーを保持し、Markdownへレンダリングするための型と処理を提供する。
+- cmoc の共通モデルと文書生成補助を担う oracle 実装群。agent call のルートパス解決、構造化文書の Markdown 化、文書参照の表現、リポジトリ単位の cmoc/Codex 設定モデルを扱う。
 
 ## Read this when
-- cmoc の設定項目や既定値、Codex call 種別ごとの provider・model・推論設定、JSON/TOML表現、並列数やリカバリ回数を確認・変更するとき。
-- agent call の cwd、worktree root、main repository root、{{cmoc-root}}・{{repo-root}}・{{run-root}}・{{work-root}} の解決規則やパス変換を確認・変更するとき。
-- 構造化文書のノード型、見出し深度、cmoc_ref／cmoc_block、コードフェンス、ポリシー、空行やインデントのMarkdownレンダリングを確認・変更するとき。
+- agent call の cwd から repo/work/run/cmoc の各ルートを導出する処理や、プレースホルダ付きパスの解決を確認・変更するとき。
+- 見出し・タグブロック・コードブロック・規定文を構造化して Markdown にレンダリングする処理を確認・変更するとき。
+- 文書参照の保持や、単一・複数参照の Markdown 表現を確認・変更するとき。
+- cmoc の並列数、Codex provider、agent call ごとの model/reasoning 設定などの設定モデルを確認・変更するとき。
 
 ## Do not read this when
-- 設定ファイルの永続化・生成・同期や doctor の挙動を確認したいときは、設定入出力を担う対象を読むべき。
-- 個別の agent call、CLI、TUI、oracle、realization の実行フローを確認したいときは、それぞれの処理対象を直接読むべき。
-- 個別のポリシー本文・文書テンプレート、またはMarkdown以外の出力形式や生成側の仕様を確認したいときは、該当する対象を直接読むべき。
+- 上記の共通モデルや補助処理ではなく、特定の agent call、CLI コマンド、ドキュメント仕様の実装だけを直接確認すれば足りるとき。
+- oracle の正本ドキュメントやテストの内容を確認するときは、それぞれ oracle/doc または oracle/test を直接読むとき。
 
 ## hash
-- 4e0b3934e69f302d3c6e7691504546545c65bd697a2075c99ba4cd57455ef24d
+- d1ba1b3dd508b475bbe1e860ce3af41b36c5cebe3c2a454474648de9144876c2
 
 # `prompt_builder`
 

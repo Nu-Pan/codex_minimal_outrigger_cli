@@ -17,6 +17,22 @@
 ## hash
 - ee5b4124d403fce92e2805370de4448ab820c775edd44780be0b71eaf35688be
 
+# `doc_ref_model.py`
+
+## Summary
+- 対象は、ドキュメント参照モデルに関する oracle 側の Python 定義を扱う。
+
+## Read this when
+- ドキュメント参照モデルの構造・値・検証規則を確認したいとき。
+- oracle/src/oracle/other 配下で、ドキュメント参照を表す型やデータ構造の正本を読む必要があるとき。
+
+## Do not read this when
+- 実際の実行処理や realization 側の実装を変更・調査する場合。
+- 対象の個別定義ではなく、別の oracle モデルやテストの仕様を直接確認すべき場合。
+
+## hash
+- faeac331f2dbaeb027bb34a86bb1b4c25f788097183d9fbf318a71e9db0e6ecf
+
 # `path_model.py`
 
 ## Summary

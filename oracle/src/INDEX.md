@@ -1,20 +1,24 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle 実装を構成する Python モジュールと Structured Output schema の入口。agent 呼び出しパラメータ、プロンプト生成、パス・設定・構造化文書モデル、フィードバック報告、エディタ入力引き渡しを扱う。
-- acp_builder は agent call のパラメータ構築と、oracle 編集・調査、realization、session、TUI、feedback、indexing 各処理の呼び出し定義をまとめる。
-- prompt_builder は agent に渡す完全 prompt と、ファイルアクセス・oracle/realization・routing・index entry などのポリシー文面を組み立てる。
-- other は cmoc 設定、Git worktree を含むパスモデル、構造化文書のデータモデルと Markdown レンダリングを提供する。
-- editor_input_handoff は MCP 経由の入力を送信元情報付き Markdown 本文へ変換し、overwrite_input.json が入力形式を定義する。
-- feedback は feedback reporter の Structured Output schema を提供し、問題分類・影響・根拠・継続状態の入力形式を定義する。
+- cmoc の oracle source 群を構成する実装・設定・Structured Output schema の入口。agent call 用 prompt、アクセス方針、サブコマンド別の起動パラメータ、feedback 処理、入力 handoff、共有データモデルを扱う。
+- `acp_builder` は各サブコマンドや内部処理について、prompt 本文・ファイルアクセスモード・実行 cwd・schema・indexing 条件をまとめた AgentCallParameter を構築する。
+- `prompt_builder` は複数のポリシーと共通の oracle/realization 説明を組み合わせ、agent に渡す完全 prompt を生成する。
+- `other` は path 解決、構造化文書、設定、ドキュメント参照など、prompt と agent call builder が共有する基盤モデルを提供する。
+- `editor_input_handoff` と `feedback` は、それぞれ editor 引き渡し入力の schema・本文生成、および feedback observation の入力 schema を定義する。
 
 ## Read this when
-- oracle 実装全体の責務分担や、agent call・prompt・設定・パスモデルの入口を確認するとき
-- oracle/src/oracle 配下のどの領域を読むべきか判断するとき
+- cmoc が agent を呼び出す際の prompt、アクセス境界、cwd、Structured Output schema、indexing 条件を変更・調査するとき
+- 新しいサブコマンドまたは内部 agent call の起動パラメータ構築箇所を探すとき
+- 共通 prompt の構成要素や oracle/realization、routing、file access などの policy 組み合わせを確認するとき
+- editor input handoff や feedback reporting の入力形式・本文生成を確認するとき
+- path、構造化文書、設定、ドキュメント参照の共有モデルが必要なとき
 
 ## Do not read this when
-- 特定の agent call 実装、prompt policy、設定値、パス解決、入力本文生成の詳細を確認したいときは、該当する下位ディレクトリを直接読む
-- 正本仕様文書や realization 実装・テストの内容を確認するとき
+- oracle の人間向け意味仕様やサブコマンドの詳細要件を確認したいときは、まず `oracle/doc` の該当仕様を読むべきとき
+- 実際の製品挙動を実装・検証する realization code や realization test の変更箇所を直接探しているとき
+- 単一の agent call の呼び出し結果や実行制御だけを調べる場合で、対応する `src` 側の利用箇所を直接読む方が適切なとき
+- INDEX 生成以外の目的で、対象配下の個別ファイルの詳細実装だけを確認したいとき
 
 ## hash
-- 917c8ed879151c5799e1d0a3452c49c375cdd5f07531de71ab28f4ba69863e15
+- 5814398d8b64ce54dd97128d902a9d1fe50d2d5c651cfc9a80577b306c4c66d3

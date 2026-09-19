@@ -1,19 +1,18 @@
 # `body.py`
 
 ## Summary
-- 検証済みの editor input 項目と送信元 TUI process 情報から、受信側へ渡す Markdown 本文全体を構築する正本実装。任意の背景情報・oracle 参照を省略可能な章として配置し、送信元識別子と絶対ログパスを記録する。
+- 項目別の依頼内容と検証済みの送信元情報から、editor work file を置換する Markdown 本文を構築する正本実装です。必須項目の検証、任意の oracle 参照の整形、送信元識別情報の配置、見出し順序とレンダリングを確認するときの入口になります。
 
 ## Read this when
-- editor input handoff の本文構成、項目の配置、任意項目や oracle 参照の扱いを確認したいとき。
-- 送信元 TUI process の識別情報を本文へ引き渡す処理や、入力本文中のコメント開始記号の扱いを確認したいとき。
+- editor input handoff の本文生成、必須項目の空値扱い、oracle 参照の挿入、または送信元情報の出力形式を変更・確認するとき。
+- handoff 本文の正確な見出し・順序・項目表記を、仕様から実装へ追跡するとき。
 
 ## Do not read this when
-- 送信元情報の型、不足値、ログパスの絶対パス検証を確認したいときは、同階層の source.py を直接読む。
-- MCP tool input の検証済み項目や許可されるフィールド構造を確認したいときは、同階層の overwrite_input.json を直接読む。
-- editor input handoff の意味仕様や TUI/MCP の呼び出し制御を確認したいときは、参照される oracle 文書または呼び出し側実装を直接読む。
+- handoff の入力 schema、送信元情報のデータ供給・検証、または agent-facing MCP の受付処理だけを調査するときは、それぞれの専用 oracle source や仕様を直接読む。
+- editor work file の target routing、待機 lifecycle、最終読み取り、または Codex TUI への注入手順だけを調査するとき。
 
 ## hash
-- 551f441e7b828986223438685bad190bfe801889c2dce883accfe01a211379b4
+- 92d68f381f9124196075afccf753cab24f47dc0effeaa46913cf6858da50fd4a
 
 # `overwrite_input.json`
 
@@ -31,17 +30,3 @@
 
 ## hash
 - 740bd6adb777e14fe1f704c1c40e9f9d897eb1a3bd1ef783d887c2219aa8003a
-
-# `source.py`
-
-## Summary
-- MCP呼び出し元へ渡すエディタ入力の送信元情報を、不変なデータ構造として定義する。識別子の空白値と、サブコマンドログパスの絶対パス性を生成・補完なしで検証する送信元情報の入口。
-
-## Read this when
-- エディタ入力引き継ぎで保持する送信元識別子やサブコマンドログパスの構造・入力検証を確認または変更するとき
-
-## Do not read this when
-- エディタ入力引き継ぎ全体の意味仕様や呼び出し元・利用先の処理を確認するとき。まず関連する仕様文書や利用側の実装を直接読むべき場合
-
-## hash
-- 0e2bdf5cf9b9de75d852ce8c8730bbebf89251fd72d48cfea31886189c0342c1
