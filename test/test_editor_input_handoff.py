@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from _handoff_support import handoff_body, handoff_input
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor_input_handoff as handoff_module
@@ -69,6 +70,7 @@ def _wait_for_peer_close(connection: socket.socket) -> None:
 def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    handoff_source,
 ) -> None:
     """表示 target だけを待機中に受理し、最後の全面上書きを確定入力にする。"""
     editor_work, input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
@@ -93,15 +95,11 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
         target_id = displayed[0].removeprefix("editor input handoff target ID: ")
         monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path / "other"))
         results.append(
-            handoff_mcp._submit({"target_id": target_id, "content": "wrong repository"})
+            handoff_mcp._submit(handoff_input(target_id, "wrong repository"))
         )
         monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-        results.append(
-            handoff_mcp._submit({"target_id": target_id, "content": "first"})
-        )
-        results.append(
-            handoff_mcp._submit({"target_id": target_id, "content": "final input\n"})
-        )
+        results.append(handoff_mcp._submit(handoff_input(target_id, "first")))
+        results.append(handoff_mcp._submit(handoff_input(target_id, "final input\n")))
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
@@ -116,20 +114,22 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     assert results[0]["status"] == "rejected"
     assert results[1:] == [{"status": "accepted"}, {"status": "accepted"}]
     assert "final input" not in json.dumps(results, ensure_ascii=False)
-    assert editor_work.read_text(encoding="utf-8") == "final input\n"
-
-    inactive = handoff_mcp._submit(
-        {"target_id": target_id, "content": "must not be applied"}
+    assert editor_work.read_text(encoding="utf-8") == handoff_body(
+        "final input\n", handoff_source
     )
+
+    inactive = handoff_mcp._submit(handoff_input(target_id, "must not be applied"))
     assert inactive["status"] == "rejected"
-    assert editor_work.read_text(encoding="utf-8") == "final input\n"
+    assert editor_work.read_text(encoding="utf-8") == handoff_body(
+        "final input\n", handoff_source
+    )
     assert (
         prompt_editor_input_module.collect_prompt_editor_input(
             tmp_path,
             editor_work,
             input_copy,
         )
-        == "final input"
+        == handoff_body("final input\n", handoff_source).strip()
     )
     prompt_editor_input_module.finalize_prompt_editor_input(tmp_path, editor_work)
 
@@ -137,6 +137,7 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
 def test_handoff_revalidates_file_and_repository_on_each_overwrite(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    handoff_source,
 ) -> None:
     """repository 不一致と symlink 化を拒否し、リンク先へ書き込まない。"""
     editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
@@ -169,7 +170,7 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
         editor_work.symlink_to(outside)
         monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
         rejected = handoff_mcp._submit(
-            {"target_id": target.target_id, "content": "must not escape"}
+            handoff_input(target.target_id, "must not escape")
         )
         assert rejected["status"] == "rejected"
         assert rejected["code"] == "write_failed"
@@ -202,6 +203,7 @@ def test_handoff_rejects_symlinked_work_directory(
 def test_target_close_drains_an_accepted_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    handoff_source,
 ) -> None:
     """受付済み上書きが完了するまで close が target を破棄しない。"""
     editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
@@ -224,7 +226,7 @@ def test_target_close_drains_an_accepted_submission(
     submission_result: list[dict[str, object]] = []
     submitter = threading.Thread(
         target=lambda: submission_result.append(
-            handoff_mcp._submit({"target_id": target.target_id, "content": "drained"})
+            handoff_mcp._submit(handoff_input(target.target_id, "drained"))
         )
     )
     submitter.start()
@@ -246,17 +248,22 @@ def test_target_close_drains_an_accepted_submission(
 
     assert closed.is_set()
     assert submission_result == [{"status": "accepted"}]
-    assert editor_work.read_text(encoding="utf-8") == "drained"
+    assert editor_work.read_text(encoding="utf-8") == handoff_body(
+        "drained", handoff_source
+    )
     inactive = handoff_mcp._submit(
-        {"target_id": target.target_id, "content": "must not be applied"}
+        handoff_input(target.target_id, "must not be applied")
     )
     assert inactive["status"] == "rejected"
-    assert editor_work.read_text(encoding="utf-8") == "drained"
+    assert editor_work.read_text(encoding="utf-8") == handoff_body(
+        "drained", handoff_source
+    )
 
 
 def test_client_does_not_send_content_to_unauthenticated_listener(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    handoff_source,
 ) -> None:
     """server proof が不正なら request body を loopback peer へ渡さない。"""
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -289,7 +296,7 @@ def test_client_does_not_send_content_to_unauthenticated_listener(
     server_thread.start()
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
 
-    result = handoff_mcp._submit({"target_id": target_id, "content": "private content"})
+    result = handoff_mcp._submit(handoff_input(target_id, "private content"))
     server_thread.join(timeout=2)
 
     assert not server_thread.is_alive()
@@ -302,6 +309,7 @@ def test_client_does_not_send_content_to_unauthenticated_listener(
 def test_target_deadline_releases_unauthenticated_slow_trickle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    handoff_source,
 ) -> None:
     """proof の slow-trickle を絶対期限で切り、次の submission を処理する。"""
     editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
@@ -326,13 +334,15 @@ def test_target_deadline_releases_unauthenticated_slow_trickle(
                 _wait_for_peer_close(stalled)
                 monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
                 result = handoff_mcp._submit(
-                    {"target_id": target.target_id, "content": "after deadline"}
+                    handoff_input(target.target_id, "after deadline")
                 )
             finally:
                 stopped.set()
                 trickler.join(timeout=2)
         assert result == {"status": "accepted"}
-        assert editor_work.read_text(encoding="utf-8") == "after deadline"
+        assert editor_work.read_text(encoding="utf-8") == handoff_body(
+            "after deadline", handoff_source
+        )
     finally:
         target.close()
 
@@ -340,6 +350,7 @@ def test_target_deadline_releases_unauthenticated_slow_trickle(
 def test_target_deadline_releases_authenticated_request_slow_trickle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    handoff_source,
 ) -> None:
     """認証後 request の slow-trickle を切り、次の submission を処理する。"""
     editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
@@ -364,12 +375,14 @@ def test_target_deadline_releases_authenticated_request_slow_trickle(
                 _wait_for_peer_close(stalled)
                 monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
                 result = handoff_mcp._submit(
-                    {"target_id": target.target_id, "content": "after deadline"}
+                    handoff_input(target.target_id, "after deadline")
                 )
             finally:
                 stopped.set()
                 trickler.join(timeout=2)
         assert result == {"status": "accepted"}
-        assert editor_work.read_text(encoding="utf-8") == "after deadline"
+        assert editor_work.read_text(encoding="utf-8") == handoff_body(
+            "after deadline", handoff_source
+        )
     finally:
         target.close()

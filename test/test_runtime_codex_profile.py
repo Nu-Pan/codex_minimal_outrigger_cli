@@ -28,7 +28,10 @@ from commons.runtime_codex_profile import (
     prepare_schema,
     read_output_json,
 )
-from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
+from commons.runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_REPOSITORY_ENV,
+    EDITOR_INPUT_SOURCE_ENV,
+)
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
@@ -157,7 +160,8 @@ def test_codex_overrides_enable_editor_input_handoff_only_when_selected() -> Non
     assert editor_server == {
         "command": sys.executable,
         "args": ["-m", "commons.runtime_editor_input_handoff_mcp"],
-        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV],
+        "env": {"PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")},
+        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV],
         "enabled": True,
         "required": False,
         "enabled_tools": ["overwrite"],
@@ -182,6 +186,7 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
         (FEEDBACK_COLLECTOR_PORT_ENV, "43210"),
         (FEEDBACK_PROTOCOL_ENV, "stale-protocol"),
         (EDITOR_INPUT_REPOSITORY_ENV, "/tmp/stale-repository"),
+        (EDITOR_INPUT_SOURCE_ENV, "stale-source"),
     ):
         monkeypatch.setenv(name, value)
 
@@ -194,6 +199,7 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
             FEEDBACK_COLLECTOR_PORT_ENV,
             FEEDBACK_PROTOCOL_ENV,
             EDITOR_INPUT_REPOSITORY_ENV,
+            EDITOR_INPUT_SOURCE_ENV,
         )
     )
 

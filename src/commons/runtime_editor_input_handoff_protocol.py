@@ -12,10 +12,13 @@ from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from oracle.editor_input_handoff.body import EditorInputHandoffSource
+
 if TYPE_CHECKING:
     from jsonschema.validators import Draft202012Validator
 
 EDITOR_INPUT_REPOSITORY_ENV = "CMOC_EDITOR_INPUT_REPOSITORY"
+EDITOR_INPUT_SOURCE_ENV = "CMOC_EDITOR_INPUT_SOURCE"
 EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION = "2"
 EDITOR_INPUT_HANDOFF_HOST = "127.0.0.1"
 EDITOR_INPUT_HANDOFF_TOKEN_BYTES = 16
@@ -60,12 +63,44 @@ def overwrite_input_is_valid(payload: object) -> bool:
 def editor_input_handoff_subprocess_env(
     base: dict[str, str],
     repository: Path,
+    source: EditorInputHandoffSource | None,
 ) -> dict[str, str]:
-    """MCP process へ渡す repository context を Codex 環境へ追加する。"""
-    return {
+    """この TUI process の repository と送信元だけを MCP 環境へ渡す。"""
+    # 親 process の送信元を引き継がず、この呼び出しの値で置換する。
+    environment = {
         **base,
         EDITOR_INPUT_REPOSITORY_ENV: str(repository.resolve()),
     }
+    environment.pop(EDITOR_INPUT_SOURCE_ENV, None)
+    if source is not None:
+        environment[EDITOR_INPUT_SOURCE_ENV] = json.dumps(
+            {
+                "subcommand": source.subcommand,
+                "execution_id": source.execution_id,
+                "codex_call_id": source.codex_call_id,
+                "sub_command_log_path": str(source.sub_command_log_path),
+            }
+        )
+    return environment
+
+
+def editor_input_handoff_source_from_env() -> EditorInputHandoffSource:
+    """MCP の起動元が供給した送信元を、推定や値の補完なしで検査する。"""
+    # transport の形状を検査し、値の意味は正本の型へ委譲する。
+    value = json.loads(os.environ.get(EDITOR_INPUT_SOURCE_ENV, "null"))
+    fields = {"subcommand", "execution_id", "codex_call_id", "sub_command_log_path"}
+    if (
+        not isinstance(value, dict)
+        or value.keys() != fields
+        or not all(isinstance(item, str) for item in value.values())
+    ):
+        raise ValueError("editor input handoff source is unavailable")
+    return EditorInputHandoffSource(
+        subcommand=value["subcommand"],
+        execution_id=value["execution_id"],
+        codex_call_id=value["codex_call_id"],
+        sub_command_log_path=Path(value["sub_command_log_path"]),
+    )
 
 
 def _repository_fingerprint(repository: Path) -> str:

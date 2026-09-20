@@ -463,17 +463,25 @@ def test_file_access_policy_keeps_same_boundaries_in_linked_worktree(
     assert "/.cmoc/g*/ar" not in linked_rendered
 
 
-def test_editor_input_handoff_prohibits_direct_writes_and_permission_changes() -> None:
-    """handoff は直接編集や権限拡大の代替経路を案内しない。"""
+def test_editor_input_handoff_keeps_context_and_scope_boundaries() -> None:
+    """明示された相手へ単独で理解できる依頼を渡し、経緯や権限を補わない。"""
     rendered = _render_policy(_build_editor_input_handoff_policy())
-    prohibitions = rendered.split("**禁止**\n", 1)[1]
+    requirements, prohibitions = rendered.split("**禁止**\n", 1)
 
-    assert "- editor work file へ直接書き込んではならない" in prohibitions
-    assert "sandbox、network access、permission profile、または file access mode" in (
-        prohibitions
+    assert (
+        "人間が active target への handoff を明示的に要求し、target ID を提示した場合だけ"
+        in requirements
     )
-    assert "handoff の代替として sandbox escalation を要求してはならない" in (
-        prohibitions
+    assert "送り元の会話を読まなくても依頼を理解できる" in requirements
+    assert (
+        "handoff の成否にかかわらず agent call に要求された回答または成果物を満たす"
+        in requirements
+    )
+    assert "経緯や決定が存在しない箇所を勝手に補ってはならない" in prohibitions
+    assert "handoff を根拠とした作業スコープの拡大はしてはならない" in prohibitions
+    assert (
+        "handoff に失敗した場合の代替手段として sandbox escalation を要求してはならない"
+        in prohibitions
     )
 
 

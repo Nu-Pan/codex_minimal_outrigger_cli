@@ -6,12 +6,16 @@ import socket
 import sys
 from pathlib import Path
 
+from oracle.editor_input_handoff.body import build_editor_input_handoff_body
+from oracle.other.doc_ref_model import DocRef
+
 from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
     EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
     EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
     EDITOR_INPUT_REPOSITORY_ENV,
     authenticate_editor_input_handoff_client,
+    editor_input_handoff_source_from_env,
     overwrite_input_is_valid,
     overwrite_input_schema,
     parse_editor_input_handoff_target_id,
@@ -114,7 +118,7 @@ def _validated_target_result(value: object) -> dict[str, object] | None:
 
 
 def _submit(payload: object) -> dict[str, object]:
-    """tool input を同じ repository の active target へ転送する。"""
+    """項目別入力と送信元から本文を生成し、同じ repository の target へ渡す。"""
     repository_value = os.environ.get(EDITOR_INPUT_REPOSITORY_ENV)
     if repository_value is None:
         return _rejected(
@@ -134,6 +138,31 @@ def _submit(payload: object) -> dict[str, object]:
         return _rejected("invalid_input", "tool input does not match schema", False)
     if route is None:
         return _rejected("target_unavailable", "target is not active", False)
+    # 送信元は tool input や受信先から推測せず、起動時の context だけを使う。
+    try:
+        source = editor_input_handoff_source_from_env()
+    except (ValueError, TypeError):
+        return _rejected(
+            "source_unavailable", "editor input handoff source is unavailable", False
+        )
+    try:
+        references = [
+            DocRef(Path(reference["file_path"]), reference["loc_desc"])
+            for reference in payload["oracle_references"]
+        ]
+        content = build_editor_input_handoff_body(
+            goal=payload["goal"],
+            instructions=payload["instructions"],
+            background=payload["background"],
+            decisions=payload["decisions"],
+            open_questions=payload["open_questions"],
+            oracle_references=references,
+            source=source,
+        )
+        content.encode("utf-8")
+    except Exception:
+        # builder や検証器の例外には入力本文が含まれ得るため転記しない。
+        return _rejected("invalid_input", "handoff body could not be built", False)
     address, token = route
     submission_started = False
     try:
@@ -154,7 +183,7 @@ def _submit(payload: object) -> dict[str, object]:
             request = {
                 "protocol": EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
                 "repository": str(repository),
-                "payload": payload,
+                "payload": {"target_id": target_id, "content": content},
             }
             request_data = (
                 json.dumps(

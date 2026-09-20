@@ -18,19 +18,18 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- `build_editor_input_handoff_policy` は、明示的に選択された editor input handoff 規定を構築する関数です。
-- active target への handoff 条件、tool 引数への情報分離、oracle 参照、結果報告、禁止事項を `SDHeader` と `SDPolicy` として定義します。
+- 明示的に選択された editor input handoff 規定を、構造化されたヘッダーとポリシーとして構築する定義。handoff 使用条件、内容の自己完結性、成果責務、失敗時の手動利用、禁止事項を下位のプロンプト構築処理へ渡す入口。
 
 ## Read this when
-- editor input handoff の要求条件・引き渡す情報・禁止事項を確認するとき。
-- prompt builder が handoff 規定をどのような構造で生成するか確認するとき。
+- editor input handoff に関する規定文面をプロンプトへ組み込む処理を確認・変更するとき
+- handoff の要求条件や、handoff 成否にかかわらず成果を満たす責務の定義を確認するとき
 
 ## Do not read this when
-- handoff の意味仕様そのものを確認したいとき。doc の「agent の責務と権限」を直接読むべきです。
-- prompt builder の別の policy や、editor work file の実装を確認したいとき。
+- handoff 規定の意味仕様そのものを確認したい場合は、参照先の editor input handoff 仕様文書を直接読むとき
+- editor input の受け渡し実行や MCP tool の実装を変更・調査するときは、その実行側の対象を直接読むとき
 
 ## hash
-- 2e8a6979680b6eb147b94752fc3dfe4a711bb817c1a104f35a7ddb302fd212aa
+- 2589589aef28efd5b484abe63c5775ee11d4d29bcad60673b4e034cf37835982
 
 # `feedback_reporting.py`
 

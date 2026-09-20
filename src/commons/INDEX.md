@@ -154,36 +154,41 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装入口。起動時の sandbox・config override・provider・MCP・callback・CODEX_HOME・環境変数を組み立て、実行中 process の追跡・安全な停止・schema 配置・JSONL 出力と capacity/quota/error 判定を担う。
+- Codex CLI subprocess 境界を担い、実行環境（sandbox、argv、cwd、CODEX_HOME、環境変数、schema）とプロセス追跡・停止を構成する。
+- Codex CLI の実行結果を読み取り、JSON/JSONL 出力、resume token、capacity・quota・unexpected error を判定する。
 
 ## Read this when
-- Codex CLI の argv、環境変数、CODEX_HOME、sandbox、model provider、MCP 設定、Structured Output schema の起動条件を確認・変更するとき。
-- editing run の Codex subprocess tracking、process group の同一性検証、pidfd による signal、終了待機や cleanup を確認するとき。
-- Codex の stdout/stderr、JSONL event、session ID、capacity・quota・unexpected error の解釈を確認するとき。
+- Codex CLI の起動引数・設定上書き・環境変数・schema 配置を変更または確認するとき
+- Codex subprocess の PID/プロセスグループ追跡、停止、symlink や PID 再利用対策を確認するとき
+- Codex CLI の stdout/stderr や JSONL エラー分類、resume token 抽出の挙動を調べるとき
 
 ## Do not read this when
-- Codex CLI 境界の実装ではなく、呼び出し側の agent call 制御、run 全体の状態遷移、または利用者向けエラー仕様だけを確認したいとき。
-- 入力 handoff、feedback collector、runtime path など個別 subsystem の内部実装を直接確認する必要があるとき。
+- Codex CLI の呼び出し元がどのタイミングで実行するかを調べるときは、直接の利用側を読む
+- Codex CLI 自体の仕様や設定ファイルの正本を確認するときは、oracle 文書を読む
+- Codex CLI と無関係な共通設定・フィードバック・エラー処理の詳細を調べるときは、それぞれの専用モジュールを読む
 
 ## hash
-- 85b6bb877c55fd3e7065aa7015fd909aa651c20564288a3715b8021756af2a59
+- a7b22509ed90f358555dd35505e208f7d9508723530be1913c00be57d064f6c4
 
 # `runtime_codex_tui.py`
 
 ## Summary
-- `run_codex_tui` と内部の process 実行処理を通じて、設定・環境・通知 hook を準備し、Codex TUI を起動する入口。
-- Codex 呼び出しごとの call log、feedback call、成功・失敗 event、実行時間、return code を記録し、起動失敗や CLI/TUI 失敗を所定の例外へ変換する。
+- Codex TUI の実行 API と、その起動前設定・環境準備・通知フック設定を担う。
+- Codex CLI を単一プロセスとして起動し、呼び出し情報を call log に記録し、フィードバック連携、エディター入力引き渡し、終了結果・失敗情報をサブコマンドログへ反映する。
+- TUI の起動条件、Codex ホームやモデル設定の検証、バージョンに応じた通知フック、戻り値と例外の扱いを確認するための共通ランタイム入口である。
 
 ## Read this when
-- Codex TUI の起動経路、agent call 用の argv・環境・設定上書き、通知 callback のライフサイクルを確認したいとき。
-- Codex 呼び出しの call log や logger event の記録内容、feedback call の開始・終了、失敗時の例外変換を追跡したいとき。
+- Codex TUI の起動引数、作業ディレクトリ、設定上書き、環境変数、通知フックを変更・調査するとき。
+- TUI 呼び出しの call log、フィードバック呼び出し、エディター入力引き渡し、成功・失敗時のログや例外処理を確認するとき。
+- `runtime_codex.py` から公開される `run_codex_tui` の実行経路を追い、関連テストの挙動を確認するとき。
 
 ## Do not read this when
-- Codex の設定値や provider・model の解決規則そのものを確認したいときは、各 runtime_codex_profile や設定関連の対象を直接読む。
-- call log の保存先や timestamped path の予約規則だけを確認したいときは、runtime_paths の対象を直接読む。
+- Codex exec のみの実装を確認する場合は、`runtime_codex_exec.py` を直接読む。
+- 画面表示や個別ウィジェットの挙動、Windows 通知の具体的実装だけを調査する場合は、それぞれの UI・通知モジュールを直接読む。
+- Codex の設定値やプロファイル解決の詳細だけを確認する場合は、`runtime_codex_profile.py` と設定定義を直接読む。
 
 ## hash
-- 386f2f9b23ada07addbe00da7eb6efba9afc64949cd203eaebe904da24615bf6
+- 484ec3d3df272bc8fac044d36fa032c05aef5351ee5bf6e8e97142d097b8ae40
 
 # `runtime_config.py`
 
@@ -244,54 +249,57 @@
 # `runtime_editor_input_handoff.py`
 
 ## Summary
-- editor 待機中に公開する一時 handoff target と、認証付き loopback TCP による prompt editor input の IPC 境界を扱う。対象ファイルの検証、request の認証・検証、同一 target への content 上書き、受付終了と後処理を担う。
+- editor work file を所定ディレクトリ内の regular non-symlink file として検証する。
+- 認証付き loopback TCP を使い、editor 待機中の一時 handoff target を開始・受付・終了する。
+- 受信した IPC request の protocol、repository、target ID、payload を検証し、対象ファイルを UTF-8 内容で安全に置換する。
+- handoff の成功・失敗結果と、開始時の CmocError を構築する。
 
 ## Read this when
-- prompt editor から待機中の editor work file へ入力を引き渡す経路、target の lifecycle、loopback IPC の protocol/repository/target 検証、または安全なファイル上書き動作を確認・変更するとき。
+- editor work file の検証条件を変更・調査するとき。
+- editor 待機中の入力 handoff、認証付き loopback transport、request 検証、対象ファイル上書きの挙動を変更・調査するとき。
+- handoff target のライフサイクルや受付済み submission の終了処理を確認するとき。
 
 ## Do not read this when
-- editor input handoff の protocol 定数・target ID 生成・入力 schema の定義自体を確認したいときは protocol module を直接読む。
-- editor work directory のパス決定や一般的な runtime error の定義だけを確認したいときは、それぞれの専用 module を直接読む。
+- handoff protocol の定数や target ID 生成規則そのものを確認したいときは、protocol 定義を直接読む。
+- editor work directory のパス決定だけを確認したいときは、runtime paths の定義を直接読む。
+- editor 側の UI 操作や MCP 呼び出しの入力定義だけを確認したいときは、それぞれの実装を直接読む。
 
 ## hash
-- 9bb3f12d65911e0ade82686e13551167ce9078ee4a8d6d378cde4772ba866f69
+- cab0fcf5fee4947bb8265d1c2500d6265eec24e4b7d7d68169299bb7f997dfec
 
 # `runtime_editor_input_handoff_mcp.py`
 
 ## Summary
-- Codex TUI の editor input handoff 用 stdio MCP server として、JSON-RPC/MCP の initialize・ping・tools/list・tools/call を処理する。
-- overwrite ツールの入力を検証し、同一 repository の active editor input target へ認証付き TCP 転送して、受付結果または転送結果不明を返す。
-- editor input handoff のプロトコル詳細や入力スキーマ自体ではなく、stdio MCP の公開インターフェースと target 転送境界を確認するための入口。
+- Codex TUI向けのnewline-framed stdio MCPサーバーとして、JSON-RPCのinitialize・ping・tools/list・tools/callを処理する。
+- overwriteツールの入力を検証し、送信元コンテキストから本文を生成して、同一repositoryのactiveなprompt editor input targetへ認証済みTCP接続で引き渡す。
+- 入力不備、対象・送信元・通信の利用不能、書き込み失敗や結果不明を、structuredContentとtextの双方を含むMCP結果として返す。
 
 ## Read this when
-- Codex TUI の editor input handoff MCP server の起動方式、newline-framed stdio 通信、JSON-RPC 応答を確認するとき。
-- overwrite ツールの公開仕様、入力検証、active target への転送、認証付き通信、受付結果の扱いを調査・変更するとき。
-- MCP の initialize、ping、tools/list、tools/call、未知 method、parse error への応答を確認するとき。
+- prompt editor input全体の置換をMCPツールとして実行する経路を調べるとき。
+- JSON-RPCリクエストの検証、overwrite入力の処理、targetへの認証・送信、結果コードやretryable判定を確認するとき。
 
 ## Do not read this when
-- editor input handoff の target ID 解析、認証、入力スキーマ、応答プロトコルの詳細を直接確認する場合は、参照先の protocol helper を読むとき。
-- Codex TUI 側での editor input file の生成・active target 管理・実際の上書き処理を調査する場合。
-- MCP server と無関係な一般的な stdio 入出力や、別の tool の実装を確認する場合。
+- editor input handoffのプロトコル定義やtarget IDの解決規則そのものを確認したいときは、protocol実装を直接読む。
+- handoff本文の生成規則やDocRefの意味を確認したいときは、本文builderや関連oracle定義を直接読む。
+- MCPサーバー以外のランタイム共通処理や、別の入力経路を調べるとき。
 
 ## hash
-- 092019b886475559163d5680b5c50d7f07682ab54f5d56b36f68c53d44aee490
+- 3bfb844b138049b7e9c8f58451c0edb280cecc48caf10ab7f1bc27f436d52fae
 
 # `runtime_editor_input_handoff_protocol.py`
 
 ## Summary
-- editor input handoff の共有基盤。overwrite input schema の読み込み・適合検査、repository に紐づく loopback target ID の生成と解析、MCP subprocess 環境への repository context 付与を扱う。
-- editor input handoff の socket transport と capability 認証を担う。nonce と role-separated HMAC proof による client/server 認証、deadline 制御下の固定長 frame 通信、newline-framed response の読み取りを確認する入口。
+- ランタイムのエディタ入力ハンドオフに共通する入力スキーマ検証、送信元環境変数、repository-bound target ID、loopback routing、capability token 認証用 socket protocol を提供する。
 
 ## Read this when
-- editor input handoff の schema 適合、target ID routing、repository context、loopback 通信、認証 handshake、response framing の挙動を調査・変更するとき。
-- editor input handoff protocol version 2 の timeout、token、nonce、proof、response size 制約を確認するとき。
+- ランタイムの editor input handoff の target 生成・解析、MCP subprocess への環境変数受け渡し、入力 schema 検証、または client/server 認証 transport を変更・確認するとき。
 
 ## Do not read this when
-- editor input handoff の overwrite input schema 本文そのものを確認したいときは、oracle package の overwrite_input.json を直接読む。
-- MCP client/server の呼び出し側の責務や editor UI の編集挙動だけを調査する場合は、各呼び出し側・UI 実装を直接読む。
+- handoff 本文の構成や送信元データ型そのものを確認したいときは oracle/editor_input_handoff の正本実装を直接読む。
+- エディタ UI の起動・入力確定や target lifecycle の統合挙動だけを確認したいときは、対応する runtime handoff 実装・テストを直接読む。
 
 ## hash
-- f02e87e636663f8bd6316b0e2cd379e49dc78d47dbed493405e7b17f31195052
+- cb87e23462e0791eebdddd44ec6106bcb93bec3e214009b3fa9894ad20a0ad00
 
 # `runtime_errors.py`
 

@@ -65,16 +65,19 @@
 # `policy`
 
 ## Summary
-- 対象ディレクトリは、oracle prompt builder が生成するエージェント向け指示文に組み込む policy 断片をまとめた層です。
-- この層では、作業セッションの基本規定やファイル分類・編集制約など、生成プロンプトが従うべき共通ポリシーを扱います。
+- agent call に埋め込む各種ポリシー文面の構築定義をまとめたディレクトリ。
+- ファイルアクセス、oracle／realization の責務、feedback 報告、routing、INDEX.md エントリー、editor handoff、conflict 解消など、個別の作業条件に応じた規定文面を生成する。
+- ポリシーの適用条件や構築内容を変更・確認するときの入口であり、実際の仕様本文や個別機能の実装を調べる入口ではない。
 
 ## Read this when
-- oracle prompt builder の policy 断片を確認・変更するとき
-- 生成プロンプトに適用される共通の作業規定やファイル R/W 制約の入口を探すとき
+- agent call に渡される共通または作業種別固有のポリシーを追加・変更・確認するとき。
+- ファイルアクセスモード、oracle／realization の扱い、INDEX.md 生成、routing、feedback 報告などの指示文面がどこで構築されるか調べるとき。
+- 複数のポリシー構築関数にまたがる prompt_builder の挙動を確認するとき。
 
 ## Do not read this when
-- 個別の prompt builder 実装ロジックを確認したいときは、まずその実装ディレクトリを読む
-- 生成済みプロンプトの具体的な対象別内容だけを確認したいときは、該当する下位 policy 断片を直接読む
+- 正本仕様そのものの意味や要求を確認したいときは、各ファイルの NOTE が示す oracle/doc の仕様を直接読む。
+- ポリシーを実際に組み合わせて agent call を生成する流れを調べたいときは、prompt_builder の呼び出し側を直接読む。
+- 個別の実装・テストの挙動や不具合を調べるだけなら、このポリシー定義群ではなく該当する realization code または realization test を読む。
 
 ## hash
-- d229d4910cf0a524fdb33be74bbcbe23a0da6772e9ec64609111bf0e49352da7
+- 4660bf87f78374397dc3926501123161537f907a6bffbb66ffce6634101b7309

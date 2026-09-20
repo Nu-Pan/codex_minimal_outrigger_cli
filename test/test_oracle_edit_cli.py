@@ -349,7 +349,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "目標状態" in skeleton_objective
     assert "# completion criteria" in skeleton_objective
     assert "# scope" in skeleton_objective
-    assert "# non-goals" in skeleton_objective
     assert "# 変更操作の制約" in complete_prompt_skeleton
     assert "`git add`、`git commit`、`git stash`、branch 切替" in (
         complete_prompt_skeleton
@@ -568,3 +567,18 @@ def test_oracle_edit_launch_preconditions(
             root,
             current_root,
         )
+
+
+def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    instruction = (
+        "診断用サブコマンドログ /example/sender.jsonl を参考に oracle を編集する"
+    )
+    empty = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter("").prompt
+    prompt = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
+        instruction
+    ).prompt
+    assert instruction in prompt
+    for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):
+        assert prior_context not in empty

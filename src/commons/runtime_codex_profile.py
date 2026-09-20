@@ -32,7 +32,10 @@ from config.cmoc_config import CmocConfig, JsonTomlValue
 
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
-from .runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
+from .runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_REPOSITORY_ENV,
+    EDITOR_INPUT_SOURCE_ENV,
+)
 from .runtime_errors import CmocError
 from .runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
@@ -702,10 +705,15 @@ def _feedback_mcp_override_args() -> list[str]:
 
 def _editor_input_handoff_mcp_override_args() -> list[str]:
     """cmoc_editor_input server を overwrite 一つへ呼び出し単位で固定する。"""
+    # Codex 0.154.0 は env_vars の値を起動元の環境から MCP child へ渡す。
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/rmcp-client/src/utils.rs#L14-L24
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/rmcp-client/src/stdio_server_launcher.rs#L236-L260
     server: dict[str, JsonTomlValue] = {
         "command": sys.executable,
         "args": ["-m", "commons.runtime_editor_input_handoff_mcp"],
-        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV],
+        # 共有 venv の editable install が別 checkout を指していても起動元と揃える。
+        "env": {"PYTHONPATH": str(Path(__file__).resolve().parents[1])},
+        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV],
         "enabled": True,
         # handoff の利用可否は TUI agent call 自体の成功条件を変更しない。
         "required": False,
@@ -717,12 +725,13 @@ def _editor_input_handoff_mcp_override_args() -> list[str]:
         "tools": {"overwrite": {"approval_mode": "approve"}},
     }
     args = _config_override("mcp_servers.cmoc_editor_input", _toml_value(server))
-    args.extend(
-        _config_override(
-            f"shell_environment_policy.filters.{EDITOR_INPUT_REPOSITORY_ENV}",
-            _toml_string("exclude"),
+    for name in (EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV):
+        args.extend(
+            _config_override(
+                f"shell_environment_policy.filters.{name}",
+                _toml_string("exclude"),
+            )
         )
-    )
     return args
 
 
@@ -839,6 +848,7 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
         FEEDBACK_COLLECTOR_PORT_ENV,
         FEEDBACK_PROTOCOL_ENV,
         EDITOR_INPUT_REPOSITORY_ENV,
+        EDITOR_INPUT_SOURCE_ENV,
     }
     environment = {
         name: environment_value
