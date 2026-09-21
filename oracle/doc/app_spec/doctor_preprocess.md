@@ -2,13 +2,11 @@
 
 ## 概要
 
-- doctor preprocess は、`{{repo-root}}` で cmoc を正常に実行できるか検証し、可能な限り修復を試みる
-- doctor preprocess は各サブコマンドの本命処理の開始前に必ず実行される
-- 各サブコマンドに共通して必要な検証・修復は、個別サブコマンドではなく doctor preprocess の責務とする
-- 各サブコマンド固有の事前条件は、doctor preprocess が正常終了した後に検証する
-- git working tree または staging area の clean 状態は、doctor preprocess では検査しない。clean 状態を必要とするサブコマンドが、doctor preprocess の正常終了後に個別仕様に従って検査する
-- 修復困難な場合はその場で cmoc をエラー終了する
-- feedback MCP reporter/client の利用不能だけは本命 workload を妨げないため、本書の reporter 固有規則を優先して degraded warning とする
+doctor preprocess は、`{{repo-root}}` で cmoc を正常に実行できるか検証し、可能な限り修復を試みる。各サブコマンドに共通する検証・修復を担い、本命処理の開始前に必ず実行する。
+
+各サブコマンド固有の事前条件は、doctor preprocess の正常終了後に検証する。git working tree または staging area の clean 状態も、これを必要とするサブコマンドが個別仕様に従って検査し、doctor preprocess では検査しない。
+
+修復困難な場合は、その場で cmoc をエラー終了する。ただし、feedback MCP reporter/client の利用不能は本命 workload を妨げないため、本書の reporter 固有規則に従って degraded warning とする。
 
 ## 実行手順
 
@@ -82,9 +80,9 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 ### editing run の join での同期時点
 
-- active run の kind が `realization_refactor` または `feedback_report` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。
-- これは session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
-- merge 後は kind にかかわらず、最終的な session tree に対して entry 集合を同期する。
+active run の kind が `realization_refactor` または `feedback_report` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。これは、session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
+
+merge 後は kind にかかわらず、最終的な session tree に対して entry 集合を同期する。
 
 ## feedback MCP reporter/client の事前検証
 

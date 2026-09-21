@@ -73,8 +73,7 @@ merge または no-op join 後の tree 検査、publication、および workload
 ### active workload の解決
 
 - join 対象の workload と branch は session state の `run.kind` と `run.branch` から解決する。
-- workload を指定する位置引数や option は受け取らない。
-- 位置引数なしとし、想定外差分への対応用 option `--force-resolve` を受け取る。
+- 位置引数や workload を指定する option は受け取らず、想定外差分への対応用 option `--force-resolve` を受け取る。
 
 ### 事前条件
 

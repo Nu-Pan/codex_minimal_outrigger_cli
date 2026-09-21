@@ -2,15 +2,13 @@
 
 ## 概要
 
-- `cmoc session join` は、session を完了して `{{cmoc-session-home-branch}}` へ戻すためのコマンドである。
-- 具体的には、現在 checkout している `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
-- 通常の git branch 同士の汎用 merge wrapper ではない。
-- merge source、merge target、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/oracle/doc/branch_model.md` の「概要」を正本とする。
+`cmoc session join` は、現在 checkout している `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge し、session を完了して home branch へ戻すコマンドである。通常の git branch 同士の汎用 merge wrapper としては使用しない。
+
+merge source、merge target、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/oracle/doc/branch_model.md` の「git branch」と「git commit」を正本とする。
 
 ## 引数
 
-- 引数なし
-- merge source も merge target も引数では受け取らない
+引数は受け取らず、merge source と merge target は session から決定する。
 
 ## 事前条件
 

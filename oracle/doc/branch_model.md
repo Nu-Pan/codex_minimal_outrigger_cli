@@ -2,11 +2,7 @@
 
 ## 概要
 
-- cmoc は `{{local-branch}}` から `{{cmoc-session-branch}}` を作る。
-- run は `{{cmoc-session-branch}}` から共通の `{{cmoc-run-branch}}` を作る。
-- workload の種類は branch、commit、worktree の別名ではなく、run state と report で表す。
-- `{{repository-default-branch}}` は特別扱いしない。
-- `cmoc session fork` 実行時に checkout されている `{{local-branch}}` を `{{cmoc-session-home-branch}}` とする。
+cmoc は、人間が作業する session と、そこから隔離して成果物を作る run を、branch、commit、および worktree で管理する。workload の種類は、これらの別名ではなく run state と report で表す。
 
 ## git branch
 
@@ -14,6 +10,7 @@
 
 - cmoc 管理ではない、その git repository の既定 branch である。
 - 典型的には `main`, `master` である。
+- cmoc は、この branch を特別扱いしない。
 
 ### `{{local-branch}}`
 
@@ -38,7 +35,7 @@
 
 ### `{{cmoc-session-branch}}`
 
-- `cmoc session fork` が作成する `{{cmoc-managed-branch}}` である。
+- `cmoc session fork` が `{{local-branch}}` から作成する `{{cmoc-managed-branch}}` である。
 - 命名規則は `cmoc/session/{{session-id}}` とする。
 - ユーザーはこの branch 上で oracle の変更を確認し、各種サブコマンドを呼び出す。
 
@@ -49,7 +46,7 @@
 
 ### `{{cmoc-run-branch}}`
 
-- run を `{{cmoc-session-branch}}` から隔離するための `{{cmoc-managed-branch}}` である。
+- `{{cmoc-session-branch}}` から作成し、run の作業を隔離するための `{{cmoc-managed-branch}}` である。
 - 命名規則は workload にかかわらず `cmoc/run/{{session-id}}/{{run-id}}` とする。
 - run の差分を git commit として積み上げ、ユーザーが直接作業する branch にはしない。
 - 1 つの branch は 1 つの run instance だけに対応する。

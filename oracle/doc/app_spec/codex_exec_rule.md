@@ -3,14 +3,14 @@
 ## 基本
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
+- 本書で agent call とは、1 個の `AgentCallParameter` を入力とする 1 回の論理的な実行単位を指す
+- Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
+- 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
 - 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする
 - 個別 agent call の AgentCallParameter builder は、対応する oracle doc から明示的に委譲された範囲で、次の内容を構築する
     - 正確な prompt 文面
     - workload 固有の起動パラメータ。ただし、model provider、Model、および Reasoning Effort は除く
 - `AgentCallParameter` の field 名、型、および既定値を含む正確な構造は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
-- 本書で agent call とは、1 個の `AgentCallParameter` を入力とする 1 回の論理的な実行単位を指す
-- Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
-- 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
 - cmoc は agent call ごとに、対応する builder を表す安定した低カーディナリティの `agent_call_kind` と一意な agent call ID を付与する
 - cmoc は初回、補正、および TUI process ごとに一意な Codex call ID を付与する
 - 最外側の末端サブコマンドの invocation を識別する実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。agent call ID および Codex call ID とは識別対象を区別する
@@ -251,8 +251,8 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 ### Git 差分の参照入力
 
-- cmoc が Git 差分を agent の判断材料として自動付加する場合は、差分本文や変更 path 一覧の代わりに、取得に必要な参照情報だけを渡す
-- 初期 prompt の文字数を差分本文の大きさや変更 path 数に比例させないことを目的とする。agent が取得した差分も会話の入力となるため、総トークン数の削減は保証しない
+初期 prompt の文字数を差分本文の大きさや変更 path 数に比例させないため、cmoc が Git 差分を agent の判断材料として自動付加する場合は、取得に必要な参照情報だけを渡す。差分本文や変更 path 一覧は渡さない。agent が取得した差分も会話の入力となるため、総トークン数の削減は保証しない。
+
 - 比較する repository、比較範囲、および対象条件は個別 workload が所有する。agent はその指定に従って必要な差分を Git から取得する
 - 取得失敗を正常に取得できた空差分として扱ってはならない。取得できない場合は個別 workload の既存の失敗処理に従い、独立した状態や追加の agent call を設けない
 - cmoc 自身が行う差分検査、変更 path の検証、空差分判定、および commit・rollback の責務は廃止・緩和しない
@@ -263,16 +263,14 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 - 完全 prompt の共通構築順序は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。同関数が、prompt part、目的、および placeholder 定義を統合する正確な順序を所有する
 - prompt の共通 rendering は、`{{cmoc-root}}/oracle/src/oracle/other/struct_doc.py` の `render_sd_node_as_markdown` へ委譲する。同関数が、構造化された prompt を Markdown 文字列へ変換する正確な rendering を所有する
-- builder が生成した `AgentCallParameter.prompt` は、初回 Codex call の stdin へ渡す入力とする
 - `AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する
 - realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない
-- cmoc は、確定した `AgentCallParameter.prompt` を変更せず、初回 Codex call に渡す
+- cmoc は、builder が生成して確定した `AgentCallParameter.prompt` を変更せず、初回 Codex call に渡す
 - editor input handoff の本文生成と送信元情報の注入は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「本文の生成」に従い、受信側の editor input 確定前に完結させる
 - Structured Output の補正 prompt は、初回 prompt を加工したものではなく、本書の出力補正規則に従う次の turn の入力として構築する
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
-- `AgentCallParameter.prompt` は、`{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_prompt.md` に保存する
-- `AgentCallParameter.prompt` は stdin 経由で渡す。コマンド末尾に `-` を付け、`{{time-stamp}}_prompt.md` をリダイレクト入力する
+- `AgentCallParameter.prompt` は、`{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_prompt.md` に保存する。初回 Codex call のコマンド末尾に `-` を付け、このファイルを stdin へリダイレクト入力する
 - argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
 
 ## feedback reporter と collector context
@@ -400,9 +398,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 ### 基本的な考え方
 
-- 異常な状態に基づいた無駄な作業によるトークンの浪費を避けたい
-- quota 不足で停止した場合は、quota が回復するまで待機し、その後に再開してほしい
-- OpenAI サーバー側の一時的な問題であることが明白な既知のエラーなら、自動的にリトライしてほしい
+失敗時は、異常な状態のまま作業を続けてトークンを浪費することを避ける。quota 不足では回復を待って再開し、OpenAI サーバー側の一時的な問題であることが明白な既知のエラーでは自動 retry する。具体的な条件と処理は、以下の各節で定める。
 
 ### Structured Output の出力契約違反
 
@@ -418,28 +414,23 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - 再び実行可能な状態の例：
     - weekly limit が残っている状態で 5h limit がリセットされ、実行可能になった
     - 人間が credits を追加購入した
-- 待機とは
-    - 動作確認用のミニマルな Codex CLI 呼び出しを定期的に繰り返し実行する（ポーリング待機）
-    - 動作確認の間隔は 30 分に 1 回とする
+- 待機中は、動作確認用のミニマルな Codex CLI 呼び出しを 30 分に 1 回実行する（ポーリング待機）
 - quota availability probe の task は短い応答を 1 回返すことに限定し、追加の調査または作業を non-goal とする
 - probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_parameter` へ委譲する
 - 並列実行中の Codex CLI 呼び出しが同時に待機へ入った場合は、次のように扱う
     - 最初に待機へ入ったスレッドだけが、代表してポーリングを行う
     - 複数スレッドで並列にポーリングを行うのは禁止
 - 再開対象の session ID は、本書の「Codex session ID」に従って停止した Codex call の stdout JSONL から取得する
-- 再開とは
-    - 停止した時のセッションを `codex exec ... resume ...` サブコマンドで復元したうえで、全く同じプロンプトで実行する
-    - セッション ID の取得に失敗した場合、resume せずに単に同一の設定で再実行する
-- quota 枯渇の判定方法
-    - `codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合
-        - `{"type":"error","message":"...Quota exceeded..."}`
-        - `{"type":"turn.failed","error":{"message":"...Quota exceeded..."}}`
-        - `{"type":"error","message":"...You've hit your usage limit..."}`
-        - `{"type":"turn.failed","error":{"message":"...You've hit your usage limit..."}}`
-        - `{"type":"error","message":"...out of credits.."}`
-        - `{"type":"turn.failed","error":{"message":"...out of credits..."}}`
-        - `{"type":"error","message":"...You hit your spend cap..."}`
-        - `{"type":"turn.failed","error":{"message":"...You hit your spend cap..."}}`
+- 再開時は、停止した時のセッションを `codex exec ... resume ...` サブコマンドで復元し、全く同じプロンプトで実行する。セッション ID の取得に失敗した場合は、resume せず同一の設定で再実行する
+- `codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合は、quota 枯渇と判定する
+    - `{"type":"error","message":"...Quota exceeded..."}`
+    - `{"type":"turn.failed","error":{"message":"...Quota exceeded..."}}`
+    - `{"type":"error","message":"...You've hit your usage limit..."}`
+    - `{"type":"turn.failed","error":{"message":"...You've hit your usage limit..."}}`
+    - `{"type":"error","message":"...out of credits.."}`
+    - `{"type":"turn.failed","error":{"message":"...out of credits..."}}`
+    - `{"type":"error","message":"...You hit your spend cap..."}`
+    - `{"type":"turn.failed","error":{"message":"...You hit your spend cap..."}}`
 - ユーザー向けメッセージについて
     - quota 枯渇による待機を行う場合、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「進行通知」に従って、待機開始、継続中、および再開を簡潔な進行通知として表示する
     - 動作確認用 Codex call ごとのログパス、経過時間、および戻り値を console へ列挙しない
@@ -447,14 +438,13 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 ### サーバーの一時的不調で失敗した場合
 
-- `codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合
-    - `{"type":"error", "message": "...Selected model is at capacity..."}`
-    - `{"type":"turn.failed", "error":{"message": "...Selected model is at capacity..."}}`
-- 8 回までリトライする
-- リトライの間隔は 5 sec を初期値とし、リトライが 1 回失敗するごとに倍にする
-- リトライがすべて失敗したら、続行しようとせずに即時コマンド全体を失敗させる
+`codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合は、8 回までリトライする。
+
+- `{"type":"error", "message": "...Selected model is at capacity..."}`
+- `{"type":"turn.failed", "error":{"message": "...Selected model is at capacity..."}}`
+
+リトライの間隔は 5 sec を初期値とし、リトライが 1 回失敗するごとに倍にする。すべて失敗した場合は、コマンド全体を直ちに失敗させる。
 
 ### それ以外の想定外のエラー
 
-- 続行しようとしない
-- 即時コマンド全体を失敗させる
+作業を続行せず、コマンド全体を直ちに失敗させる。

@@ -29,7 +29,7 @@
 - ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。
 - primary report、個別仕様が保存を認める再開 state、および terminal result を含むサブコマンド終了イベントから、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
 - ユーザー中断要求を受け付けた後は、そのサブコマンドのための新しい Codex CLI 呼び出し、retry、quota 回復待ち、および Codex CLI session の再開を行わない。この規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「quota 枯渇・レートリミットで停止した場合」にある待機・再開規則より優先する。
-- primary report の保存を含む完了処理自体に失敗した場合は、ユーザー中断要求による正常系ではなく、個別仕様と error handling 規則に従う。
+- primary report の保存を含む完了処理自体に失敗した場合は、ユーザー中断要求による正常系として扱わない。個別仕様と、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従ってエラー処理を行う。
 - ユーザー中断要求による terminal result の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする。
 
 ## 中断後の扱い

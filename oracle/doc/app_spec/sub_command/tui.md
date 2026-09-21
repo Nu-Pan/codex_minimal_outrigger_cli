@@ -22,7 +22,7 @@
 3. `build_tui_launch_tui_parameter` で起動パラメータを構築する
 4. 構築した起動パラメータで AI Agent CLI/TUI を起動する
 
-## 「オリジナルプロンプトをユーザーからエディタ入力」の詳細
+## ユーザー指示の入力
 
 - エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」を正本とする
 
@@ -30,7 +30,7 @@
 
 ### 全バックエンド共通
 
-- ユーザーのプロンプト入力後、`build_tui_launch_tui_parameter` でパラメータを構築する。そのパラメータを変更せずに使い、TUI を直接起動する
+- `build_tui_launch_tui_parameter` が返したパラメータを変更せずに使い、TUI を直接起動する
 - TUI の意味上の責務と起動条件は本書を正本とする。正確な prompt part の選択、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter` へ委譲する
 - cmoc の基本規定は、各規定が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
 - TUI へ注入する基本規定の意味仕様は、次の文書を正本とする

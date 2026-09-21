@@ -25,11 +25,11 @@ internal failure は、仕様で想定済みの失敗へ変換されていない
 
 ## エラー終了の確定
 
-- handled failure と internal failure は、個別仕様が定める state 確定、rollback、および後処理を行う。
-- 最外側の非対話末端サブコマンドは、エラーまでに確定した作業内容とエラー終端結果を、個別仕様が定める primary report に保存する。
-- primary report を保存した後に、`error` の terminal result とサブコマンド終了イベントを確定する。
+cmoc は、handled failure と internal failure のどちらの場合も、個別仕様が定める state 確定、rollback、および後処理を行う。
 
-通常処理の失敗は、primary report を伴う handled failure または internal failure として確定する。primary report 自体を保存できない場合は、その結果に代えて report 保存基盤の internal failure を確定する。この場合、保存を確認できない report の役割または path は表示しない。
+最外側の非対話末端サブコマンドでは、エラーまでに確定した作業内容とエラー終端結果を、個別仕様が定める primary report に保存する。その後、`error` の terminal result とサブコマンド終了イベントを確定する。
+
+primary report 自体を保存できない場合は、元の失敗結果に代えて report 保存基盤の internal failure を確定する。この場合、保存を確認できない report の役割または path は表示しない。
 
 ## handled failure の表示
 

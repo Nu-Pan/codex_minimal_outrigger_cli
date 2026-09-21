@@ -4,13 +4,10 @@
 
 ## やりたかったこと
 
-- cmoc が agent call による差分を事後検査し、file access policy への違反がないか確認する
-- 事後検査で違反が見つかった場合、cmoc は別の agent call でリカバリーを試みる
+cmoc が agent call による差分を事後検査し、file access policy への違反がないか確認する方式を検討した。違反が見つかった場合は、別の agent call でリカバリーを試みる想定だった。
 
 ## 断念した理由
 
-- false-positive による cmoc の停止が相次いだ
-- 例えば、単一の `{{run-root}}` を並列 agent で編集すると、互いの差分を violation と判定してしまう
-- また、`.gitignore` 系を検査対象に含めない方針が realization file にうまく反映されず、oracle file への定義が必要かを検討していた
-- これらの経験から、「agent call が発生させた差分」を正確に判定すること自体に疑問が残った
-- 当時は新たな違反を見ていなかったため、一旦断念し、それらの仕様を git commit hash 49ef351d687235a0e8ea2dc9e3eb2dc7ab8ae852 で削除した
+false-positive による cmoc の停止が相次いだ。例えば、単一の `{{run-root}}` を並列 agent で編集すると、互いの差分を violation と判定してしまった。また、`.gitignore` 系を検査対象に含めない方針が realization file にうまく反映されず、oracle file への定義が必要かを検討していた。
+
+これらの経験から、「agent call が発生させた差分」を正確に判定すること自体に疑問が残った。当時は新たな違反を確認していなかったため、事後検査と自動リカバリーをいったん断念し、その仕様を git commit hash 49ef351d687235a0e8ea2dc9e3eb2dc7ab8ae852 で削除した。

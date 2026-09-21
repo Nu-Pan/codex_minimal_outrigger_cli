@@ -57,10 +57,17 @@ regular file の扱いにより、linked worktree の `.git` metadata file を�
 検証済みの pruned directory の descendant は、個別の列挙と非通常ファイル検証のどちらも行わない。
 
 pruning されなかった領域では directory を traversal し、regular file を分類候補とする。
+
 同領域の symlink は dereference せず、symlink 自身の path を owning repository における通常の index-aware な Git ignore 判定の対象とする。
-symlink が untracked かつ ignored と確定した場合だけ、その path を分類対象外として列挙を継続する。
-tracked、unignored、または ignore 状態を確定できない symlink は、列挙をエラー終了する。
+判定結果に応じて、次のように扱う。
+
+| symlink の状態 | 列挙時の扱い |
+|---|---|
+| untracked かつ ignored と確定した | その path を分類対象外として列挙を継続する |
+| tracked、unignored、または ignore 状態を確定できない | 列挙をエラー終了する |
+
 symlink の参照先は `{{work-root}}` 内外のどちらにあっても、traversal、分類、または repository context の検出対象としない。
+
 同領域の FIFO、socket、device、およびその他の非通常ファイルは、追跡せず列挙をエラー終了する。
 
 directory が Git ignore 対象であることだけを理由に pruning してはならない。

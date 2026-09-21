@@ -17,7 +17,7 @@
 - editor 終了後に抽出して確定したオリジナルのユーザー指示から、両回で使用する完全 prompt と `AgentCallParameter` を一度だけ構築する。正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ委譲する。
 - cmoc が自動構築する方針・指示文は、過去の agent の会話、最終回答、および実行ログへの参照について言及しない。この構築上の規則を、人間が入力した作業指示の内容を削除する処理として適用しない。
 - handoff を受けた場合も、入力確定後は本書の「実行順序」に従って編集へ進み、送り元の TUI 終了や最終結果の確定を開始条件にしない。
-- 同じ時点で、共通 builder に対応する `CmocConfigCodex.agent_calls` の既存 entry と、選択した provider の定義から、model provider、Model、Reasoning Effort、および使用する provider-local 設定の値を確定する。設定 key を維持し、人間が調整した値を両回へ引き継ぐ。設定の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex` を参照する。
+- 両回で使用する完全 prompt と `AgentCallParameter` の構築時に、共通 builder に対応する `CmocConfigCodex.agent_calls` の既存 entry と、選択した provider の定義から、model provider、Model、Reasoning Effort、および使用する provider-local 設定の値を確定する。設定 key を維持し、人間が調整した値を両回へ引き継ぐ。設定の正確な定義は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex` を参照する。
 - `AgentCallParameter` の全内容と確定した設定値を変更せず両回で使用し、1 回目が cmoc 自身の builder や設定定義を編集しても、再構築・再取得しない。
 - 構築済み prompt の受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt の構築と受け渡し」を正本とする。
 - prompt は両回に共通とし、実行回に依存する役割や前提を設けない。agent 向け文面に 2 回実行の内部制御や設計仮説を含めない。
@@ -35,7 +35,7 @@
 ## agent call の構成
 
 - 各回は、別の新しい Codex session に対する `codex exec` の初回 call とする。2 回目を、1 回目の session に対する `codex exec resume` として起動してはならない。
-- agent call ID、Codex call ID、session ID、ログ保存先、および call-scoped な管理情報は、各実行を独立して識別・管理する。識別とログの共通規約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」「Codex CLI 呼び出し情報の保存」「Codex session ID」を参照する。
+- 各実行を独立して識別・管理するため、agent call ID、Codex call ID、session ID、ログ保存先、および call-scoped な管理情報を実行ごとに分ける。識別とログの共通規約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」「Codex CLI 呼び出し情報の保存」「Codex session ID」を参照する。
 - 各 agent call 内の retry、quota 回復待ち後の resume、および失敗処理には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」を適用し、正常系の 2 回実行とは区別する。
 - 実行パラメータを決めるための追加 agent call は行わない。
 

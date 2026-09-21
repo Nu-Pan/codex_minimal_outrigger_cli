@@ -69,7 +69,7 @@ append、merge、patch、差分適用、既存内容との conflict 判定、お
 
 ### tool result と log
 
-handoff の自由記述入力や生成した handoff 本文を、いずれの tool result、handoff 処理の log、および検証エラーにも複製しない。handoff ガイド取得の成功結果として保持済みガイドの文面を返すことは、この制限の対象外とする。
+handoff の自由記述入力や生成した handoff 本文を、tool result、handoff 処理の log、および検証エラーのいずれにも複製しない。handoff ガイド取得の成功結果として保持済みガイドの文面を返すことは、この制限の対象外とする。
 
 ## 本文の生成
 
@@ -90,7 +90,7 @@ handoff の自由記述入力や生成した handoff 本文を、いずれの to
 - handoff のために sandbox、network access、permission profile、または file access mode を変更してはならない。
 - handoff ガイドを取得できない場合は、その handoff の overwrite を行わない。
 - tool を利用できない場合、handoff ガイドの取得に失敗した場合、または submission が拒否された場合に、handoff の代替として sandbox escalation を要求してはならない。
-- 各 tool の結果を正確に報告し、ガイド取得と handoff の成否にかかわらず、agent call が要求する正式な回答または成果物を満たす。失敗時は、必要なら agent が作成した依頼・コンテキスト部分を手動利用できる形で回答へ残す。MCP が注入する送信元情報を含めた同一の完成済み全文の再構築は求めない。
+- 各 tool の結果を正確に報告し、ガイド取得と handoff の成否にかかわらず、正式な回答または成果物に関する agent call の要求を満たす。失敗時は、必要なら agent が作成した依頼・コンテキスト部分を手動利用できる形で回答へ残す。MCP が注入する送信元情報を含めた同一の完成済み全文の再構築は求めない。
 
 ## 参照情報
 

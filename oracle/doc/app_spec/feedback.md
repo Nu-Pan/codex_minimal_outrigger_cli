@@ -4,7 +4,7 @@
 
 feedback subsystem は、cmoc の作業中に見つかった問題を収集し、`cmoc feedback report` で安全な automatic remediation を先に完了する。
 
-正常な feedback publication では、現在の作業外にいる人間の対応が必要な issue だけを提示する。対象は、automatic remediation 後も realization file の編集だけでは解決できない issue に限る。自動修正済みの issue は、active issue または正常な人間向け issue 一覧へ残さない。
+正常な feedback publication では、現在の作業の外で人間による対応が必要な issue だけを提示する。対象は、automatic remediation 後も realization file の編集だけでは解決できない issue に限る。自動修正済みの issue は、active issue または正常な人間向け issue 一覧へ残さない。
 
 `inconclusive` の issue がある場合は、正常 publication を行わない。代わりに、確定済みの結果と判定不能の原因を `incomplete` 診断 report で提示する。
 

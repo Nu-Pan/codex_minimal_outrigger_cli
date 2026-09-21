@@ -48,9 +48,7 @@
 
 ## 状態遷移
 
-- `cmoc session abandon` が正常終了した場合、`session.state` は `abandoned` になる。
-- `abandoned` になった session は active session ではない。
-- したがって、同じ `{{cmoc-session-home-branch}}` から新しい `cmoc session fork` を実行してよい。
+`cmoc session abandon` が正常終了した場合、`session.state` は `abandoned` となり、active session ではなくなる。そのため、同じ `{{cmoc-session-home-branch}}` から新しい `cmoc session fork` を実行してよい。
 
 ## クリーンアップの途中で失敗した場合
 

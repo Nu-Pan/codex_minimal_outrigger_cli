@@ -1,6 +1,6 @@
 # feedback observation の収集
 
-本書は、observation の報告基準、収集経路、受け入れ検査、機械的検出、および raw 保存を定める。issue identity、remediation の可否、および現在状態は判断しない。
+本書は、observation の報告基準、収集経路、受け入れ検査、機械的検出、および raw 保存を定める。収集時には、issue identity、remediation の可否、および問題の現在状態を判断しない。
 
 ## agent による報告
 
@@ -107,7 +107,7 @@ agent に実行 context を入力させてはならない。collector は、call
 - reporter、protocol、observation schema、および detector rule の version
 - evidence path の正規化結果、fingerprint、および fingerprint を取得できなかった理由
 
-agent call ID は Structured Output の correction call と共有する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
+初回 call と Structured Output の correction call は、同じ agent call ID を使用する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
 
 ### 保存経路
 

@@ -82,7 +82,7 @@ cmoc が normalization agent に渡す比較用の入力は、次の 2 つとす
 
 入力だけでは同一性の判断に必要な情報が得られない場合、normalization agent は処理経路や原因を含む関連情報を、`{{work-root}}` 内の oracle file、realization file などから読み取り専用で参照してよい。参照先の選択には、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「`INDEX.md` による routing」を適用する。候補外の issue は探索しない。
 
-normalization agent は独立した原因診断や、summary、impact、現在性、actionability、remediation result、human action、relation の生成は行わない。問題の現在状態の確認と修正は、本書の「issue remediation agent call」が担当する。
+normalization agent は独立した原因診断や、summary、impact、現在性、actionability、remediation result、human action、relation の生成は行わない。問題の現在状態の確認と修正は、本書の「issue remediation agent call」で定める call が担う。
 
 同一性の判断では、観測当時の evidence と現在のファイル状態を区別する。ファイルの変化や問題の解消だけを理由に、別 issue と判断してはならない。
 
@@ -113,7 +113,7 @@ issue remediation agent call は、1 issue について次の処理を同じ cal
 
 再確認 call には、現在の入力に加えて、先行判定とその判定根拠、再確認を必要とした変化、および関連する再確認履歴を渡す。
 
-収束不能を示す `inconclusive` は、その診断根拠が変わらない同じ状態の往復だけで再試行し続けてはならない。
+収束不能を理由に `inconclusive` と判定した issue について、cmoc は、その診断根拠が変わらないまま同じ状態を往復する再試行を続けてはならない。
 
 正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.py` の `build_feedback_remediate_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
@@ -201,7 +201,7 @@ quiet period、directory の列挙タイミング、または一定時間 observ
 
 ## 自動 join と join 後の確定
 
-wave loop が自然完了した場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って封印し、`run.state=joinable` とする。その後、同じ invocation 内で `cmoc run join` と同じ差分検査および merge 契約を使用して自動 join する。
+wave loop が自然完了した場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って report cut を封印し、`run.state=joinable` とする。その後、同じ invocation 内で `cmoc run join` と同じ差分検査および merge 契約を使用して自動 join する。
 
 自動 join 前に、`fixed` としての publication または observation cleanup を行ってはならない。
 
@@ -258,7 +258,7 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 中断後は、`cmoc run join` で確定済み issue commit を session branch へ取り込むか、`cmoc run abandon` で run を破棄する。どちらの場合も feedback publication は行わず、次の `cmoc feedback report` が現在の session tree と pending observation を再確認する。
 
-自動 join の開始後から cleanup までは、処理を途中で中断しないため、workload 固有の不可分な finalization とする。この区間には、次の処理を含む。
+自動 join の開始後から cleanup までは、workload 固有の不可分な finalization とし、処理を途中で中断しない。この区間には、次の処理を含む。
 
 1. merge または no-op join
 2. join 後 tree 検査

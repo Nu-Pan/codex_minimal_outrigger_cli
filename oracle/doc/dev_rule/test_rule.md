@@ -2,8 +2,9 @@
 
 ## 責務境界
 
-- この文書は、realization test が満たすべき意味上の要件を定める
-- 構築済み環境での test と品質検査の手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「cmoc の test・品質検査実行手順」を正本とする。対象は、検査の選択・実行・完了判定・報告とする
+本書は、realization test が満たすべき意味上の要件を定める。検査の実行手順と環境構築は、次の正本に従う。
+
+- 構築済み環境での test と品質検査の選択・実行・完了判定・報告は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「cmoc の test・品質検査実行手順」を正本とする
 - 開発環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「cmoc 開発環境」を正本とする
 
 ## 基本

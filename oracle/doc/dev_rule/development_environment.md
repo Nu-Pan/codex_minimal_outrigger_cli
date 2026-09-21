@@ -2,15 +2,15 @@
 
 ## 責務境界
 
-- この文書は、Python 環境の新規構築、依存関係の追加、および pip の操作に必要な条件を定める
-- 構築済み環境での既存 test と品質検査の手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「cmoc の test・品質検査実行手順」を正本とする。対象は、検査の選択・実行・完了判定・報告とする
-- 通常の test 実行だけを理由として、この文書を事前に読む必要はない
+本書は、Python 環境の新規構築、依存関係の追加、および pip の操作に必要な条件を定める。
+
+構築済み環境での既存 test と品質検査の選択・実行・完了判定・報告は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「cmoc の test・品質検査実行手順」を正本とする。通常の test 実行だけを理由として、本書を事前に読む必要はない。
 
 ## 基本環境
 
 - WSL2 Ubuntu 24.04 on Windows 11
-- vscode (with Remote Development Extension)
-- `{{cmoc-root}}/codex_minimal_outrigger_cli.code-workspace` を vscode で開いた環境
+- VS Code (with Remote Development Extension)
+- `{{cmoc-root}}/codex_minimal_outrigger_cli.code-workspace` を VS Code で開いた環境
 - Codex CLI が利用可能
 
 ## ファイルエンコード

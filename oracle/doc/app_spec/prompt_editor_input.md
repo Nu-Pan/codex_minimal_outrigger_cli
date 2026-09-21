@@ -2,10 +2,9 @@
 
 ## 概要
 
-- 本書は、オリジナルプロンプトを受け取る editor work file の lifecycle を定める。
-- editor work file は依頼本文を受け取るために使い、人間向けの案内を入力に混入させない。
-- editor の待機中は、共通の editor input handoff による editor work file 全体の上書きも受け付ける。
-- cmoc は、人間の直接入力と handoff 入力を共通に扱い、検証済み editor work file の一回の最終読み取り結果を保存と入力確定に使う。
+本書は、オリジナルプロンプトを受け取る editor work file の lifecycle を定める。editor work file は依頼本文を受け取るために使い、人間向けの案内を入力に混入させない。
+
+editor の待機中は、人間の直接入力に加え、共通の editor input handoff による editor work file 全体の上書きも受け付ける。どちらの入力も、本書の「editor input の確定手順」に従って保存・確定する。
 
 ## 構築定義の参照
 
@@ -24,7 +23,7 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 | 入力結果の保存コピー | `{{repo-root}}/.cmoc/gu/log/editor_input/{{time-stamp}}_orig.md` | cmoc だけが書き込む。 |
 
 - editor work file は未信頼かつ可変な作業ファイルとする。cmoc と後続 agent は、その内容を保存記録として参照してはならない。
-- 入力確定後は、保存した最終読み取り結果と、そこから抽出したオリジナルプロンプトを使用する。送り元が handoff 後に会話を続けても、確定済み入力を再取得・更新しない。
+- 入力確定後は、保存した最終読み取り結果と、そこから抽出したオリジナルプロンプトを使用する。後続の AI Agent は editor work file を参照してはならない。送り元が handoff 後に会話を続けても、確定済み入力を再取得・更新しない。
 - agent による直接編集の禁止と書き込み主体の責任分界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
 
 ## エディタの起動
@@ -48,7 +47,6 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 6. cmoc は、最終読み取り結果を加工せず、入力結果の保存コピーへ保存する。
 7. cmoc は、同じ最終読み取り結果の前後の空白文字だけを `strip` で除去し、オリジナルプロンプトとする。HTML コメントも本文として保持する。
 8. 呼び出し元は、サブコマンド固有仕様に従ってオリジナルプロンプトを反映し、完全プロンプトを確定する。
-9. 後続の AI Agent は、editor work file を参照してはならない。
-10. cmoc は、この確定手順が成功した場合に editor work file を削除する。失敗した場合は復旧用に残す。
+9. cmoc は、この確定手順が成功した場合に editor work file を削除する。失敗した場合は復旧用に残す。
 
 - skeleton 構築時と実行時のパラメータについて、全 field の比較は行わない。exec 専用の prompt 一致検査も行わない。
