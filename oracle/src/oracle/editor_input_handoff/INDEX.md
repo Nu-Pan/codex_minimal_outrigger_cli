@@ -16,39 +16,51 @@
 ## hash
 - 12319c5ad75f95d87d65eb34af4f3283437dc76ff157c2bf2d57022ae09ea272
 
-# `get_initial_guide_input.json`
+# `get_handoff_guide_input.json`
 
 ## Summary
-- 人間が明示した引き渡し先の target ID を指定して、editor input handoff の初期ガイド取得を依頼するための入力スキーマ。handoff 本文を上書きする入力ではなく、初期文面の取得処理への入口。
+- 人間が指定した target ID を受け取り、対応するエディター入力ハンドオフ・ガイド取得処理へ渡すための入力スキーマです。入力は空白でない単一の target ID に限定されます。
 
 ## Read this when
-- editor input handoff の初期ガイド取得処理で、呼び出し側が指定する引き渡し先を確認・変更するとき。
-- handoff の上書き入力ではなく、初期ガイド取得用の入力形式を確認するとき。
+- target ID を指定してハンドオフ・ガイド取得を呼び出す入力契約を確認・変更するとき。
 
 ## Do not read this when
-- editor input handoff の本文生成や送信元情報の構築を確認したいときは body.py を直接読む。
-- handoff 本文を構成して上書きする入力形式を確認したいときは overwrite_input.json を読む。
-- 初期ガイド取得の結果形式を確認したいときは get_initial_guide_result.json を読む。
+- ハンドオフ・ガイド本文の生成規則や取得結果の形式を確認するときは、対応する実装または result スキーマを直接読むべきです。
 
 ## hash
-- 974d4321449ff50132781f72dfec8e889680b57b93d34960d2a3f9baabdafeec
+- ba99ecf430882cf3dcd443d0fa70e892ac1b45f060980faf7f53381f4104bc72
 
-# `get_initial_guide_result.json`
+# `get_handoff_guide_result.json`
 
 ## Summary
-- エディタ入力ハンドオフの初期ガイド取得結果を定義する JSON Schema。取得成功時の初期文面、または取得失敗時の理由を表現する。
+- `editor_input_handoff` の get_handoff_guide 操作が返す結果の JSON Schema。成功時は対象に対応する handoff ガイド本文、失敗時は取得できなかった理由を表す。
 
 ## Read this when
-- 初期ガイド取得処理の返却形式を確認・変更するとき
-- 初期文面が取得できた場合と取得できない場合の結果構造を確認するとき
+- get_handoff_guide の結果契約を確認・変更するとき。
+- 成功・失敗それぞれの返却形式を実装やテストから確認するとき。
 
 ## Do not read this when
-- 初期ガイド取得の入力形式を確認するときは get_initial_guide_input.json を読む
-- 初期ガイド取得の処理ロジックを確認・変更するときは body.py を直接読む
-- 初期ガイド以外のエディタ入力ハンドオフ結果を扱うとき
+- get_handoff_guide 以外の操作の結果形式を確認するとき。
+- handoff ガイド本文の生成ロジックや対象選択の実装を直接調べるとき。
 
 ## hash
-- 7a2f649247b8325d0987fc463601abef5d779f372be90771252880bb726daaff
+- cd2702db609493b0f02ee5273bea04cb843f841a35261e6ed36d43c8d28a35ef
+
+# `guide.py`
+
+## Summary
+- 完全 prompt skeleton を受け取り、受信先への依頼作成方法・記入項目・参照上の注意を含む Markdown の handoff ガイド文面を構築する関数。生成物には受信先の prompt template をタグ付きで埋め込む。
+
+## Read this when
+- 受信先の editor input handoff ガイドの文面構築や、そのガイドに含める prompt template の扱いを確認したいとき
+- handoff ガイドの使い方・記入の目安・完全 prompt skeleton の配置を調べるとき
+
+## Do not read this when
+- handoff 本文の項目、空欄検証、参照ファイル、送信元情報の注入を確認したいとき
+- handoff target の lifecycle や MCP の入力・上書き処理を確認したいとき
+
+## hash
+- a27040792ca678e214a6c0c0b6cf9adc30029ce6da5b9ffa7df74f6a22beb3ba
 
 # `overwrite_input.json`
 

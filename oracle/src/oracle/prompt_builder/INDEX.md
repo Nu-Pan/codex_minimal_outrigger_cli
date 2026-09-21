@@ -32,18 +32,18 @@
 # `editor_input.py`
 
 ## Summary
-- ユーザー入力用エディタに注入する初期テキストを構築する関数を定義する。使い方・記入の目安と、完全プロンプトのテンプレートをHTMLコメントブロック内にMarkdownとして埋め込み、後続エージェントへ渡す入力ファイルの初期状態を生成する。
+- 人間が直接記入する editor work file の初期文面を構築する関数を扱う。入力先を示す短い HTML コメントと、後続 AI エージェントへの指示に含めるべき成果・範囲・制約の案内を定義している。
 
 ## Read this when
-- エディタ経由で後続AIエージェントへ渡すプロンプト入力ファイルの初期文面や、完全プロンプトの埋め込み形式を確認・変更するとき。
-- 初期テキストの説明見出し、記入指針、HTMLコメントによる非表示化の構築処理を調べるとき。
+- editor work file の初期表示文面や、人間向けの入力案内を確認・変更したいとき。
+- prompt editor input の構築定義から、初期文面の正確な生成箇所を確認するとき。
 
 ## Do not read this when
-- プロンプト全体のテンプレート内容や置換規則そのものを確認したい場合は、完全プロンプトのテンプレート定義を直接読む。
-- 構造化文書ノードの定義やMarkdownレンダリング仕様を確認したい場合は、struct_docの実装を直接読む。
+- editor input handoff の target lifecycle、MCP interface、handoff ガイド、上書き処理を確認したいとき。
+- editor input の保存・編集・確定手順全体を確認したいときは、prompt editor input の仕様や editor input handoff の実装を直接読む。
 
 ## hash
-- 801c5e31f4bbfc2b036f94ce9ef77536f12136fe02cba369a4f477b5b6150d35
+- 03cafd44b4796d454e5d88c18a1e838f441ea7bba43e5968fbffc5ecba1ff92b
 
 # `parts`
 
@@ -65,17 +65,17 @@
 # `policy`
 
 ## Summary
-- agent call に注入する各種 policy の構築定義をまとめた領域。ファイルアクセス、oracle と realization の責務、所見、routing、INDEX.md エントリー、conflict 解消、editor input handoff、feedback observation 報告の規定を扱う。
+- prompt_builder が agent call 向けの共通方針文面を構築する oracle source 群。
+- feedback 報告、oracle/realization の扱い、ファイルアクセス、文書 routing、editor handoff、conflict 解消、INDEX.md エントリー生成の規定を個別の builder として定義する。
 
 ## Read this when
-- agent call に適用する共通規定の追加・変更・整理を行うとき
-- oracle／realization の扱い、ファイルアクセス制限、文書 routing、INDEX.md エントリー生成、handoff、feedback 報告の prompt 構成を確認するとき
-- 複数の policy 構築定義が組み合わさる生成経路を調べるとき
+- agent call に注入する共通方針の責務や適用範囲を確認するとき。
+- prompt_builder の方針文面を追加・変更するとき。
+- 特定の作業種別に対応する policy builder の所在を判断するとき。
 
 ## Do not read this when
-- 特定の oracle doc や oracle src が定める意味仕様そのものを確認するとき
-- 生成済み prompt の実際の出力だけを確認したいとき
-- 対象 policy と無関係な prompt builder の基本構造や呼び出し側を直接調べるとき
+- 個別 policy の詳細な文面や実装を確認する段階では、対象ディレクトリ全体ではなく該当する Python ファイルを直接読むべきとき。
+- prompt_builder の方針以外の実装、テスト、または oracle doc の意味仕様を確認したいとき。
 
 ## hash
-- de66a135d0695366ca0871a48b1fb42af83cdb1c1f05a860cfce12a605277d58
+- 4df12d7b3142fc58756e971376a5e53ff89c517f8303b87d73134ea7938827d9

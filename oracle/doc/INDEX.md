@@ -1,19 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を構成する正本文書群。CLI の共通規則、session・run の状態と隔離、oracle/realization の責務、editor・feedback・ログ・エラー・通知などの横断仕様を扱う。
-- 配下の `sub_command` は、doctor、session、oracle、realization、feedback、TUI、indexing など各サブコマンド固有の引数、事前条件、実行手順、結果、終了処理を定義する下位仕様への入口。
+- cmoc アプリケーションの正本仕様をまとめる文書群への入口。CLI 共通規則、Codex 呼び出し・モデルプロバイダ、ログ、doctor preprocess、feedback、状態管理、prompt/TUI、indexing、oracle・realization の責務を扱う。
+- サブコマンド仕様は `sub_command` 配下に分離され、doctor、各種 run/session 操作、feedback、indexing、oracle investigation/edit、realization apply/refactor、TUI などの個別契約を定義する。
 
 ## Read this when
-- cmoc のアプリケーション仕様全体の構成や、共通仕様とサブコマンド仕様のどちらから確認すべきか判断するとき。
-- CLI 動作、session/run lifecycle、feedback、oracle/realization、ログ、エラー処理など複数の仕様領域にまたがる変更や調査を始めるとき。
+- アプリケーション全体の正本仕様の構成や、共通仕様とサブコマンド仕様の責務分担を確認したいとき。
+- 複数の機能領域にまたがる挙動を調査し、共通規則から個別サブコマンド仕様へ辿る必要があるとき。
+- 対象機能に対応する正本仕様文書がどこにあるかを判断するとき。
 
 ## Do not read this when
-- 特定の共通仕様の詳細を確認する場合は、該当する直下の仕様文書を直接読むべきとき。
-- 特定サブコマンドの挙動だけを確認する場合は、`sub_command` 配下の該当文書を直接読むべきとき。
+- 単一の共通機能の詳細を確認する場合は、直下の該当仕様文書を直接読む。
+- 特定のサブコマンドの契約だけを確認する場合は、`sub_command` 配下の該当文書を直接読む。
+- 実装やテストの具体的な挙動を確認する場合は、対応する realization source または test を読む。
 
 ## hash
-- ca2ae4c8c8bb01389df88e69fc66e672e78938bf181b61577af7ed7a44b07293
+- f08eabe76b41e6efac331e5c1b889ab9321aff41dee064bcca201ae312214e27
 
 # `branch_model.md`
 

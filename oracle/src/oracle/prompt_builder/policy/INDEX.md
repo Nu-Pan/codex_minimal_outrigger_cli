@@ -18,18 +18,18 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- 別セッションで入力を待つ target へ作業依頼を引き渡すための、editor input handoff 規定文面を構築する。受信先ガイドの確認、項目別の依頼内容と oracle 参照の作成、同一 target への handoff、成功・失敗時の報告と成果維持を定める。
+- 明示的に要求された editor input handoff の依頼内容を構築するポリシー定義。受信側ガイドの確認、項目別入力、oracle 参照、MCP による handoff 実行、失敗時の成果物維持に関する要件と禁止事項を提供する。
 
 ## Read this when
-- 人間から active target への handoff を明示的に要求され、target ID を使って editor input の初期ガイド取得や上書きを行うとき。
-- handoff の依頼項目、oracle 参照、受信先制約、失敗時の扱いを確認・変更するとき。
+- 別セッションの指定された target へ作業依頼やコンテキストを引き渡す手順・入力項目・参照指定の制約を確認するとき。
+- editor input handoff の利用条件、受信側ガイドの扱い、handoff 失敗時の対応を確認するとき。
 
 ## Do not read this when
-- プロンプト構築の一般規則や editor input handoff 以外の policy を扱うとき。
-- editor work file の直接編集や、handoff を伴わない通常の作業依頼を扱うとき。
+- INDEX.md エントリー生成そのものの手順を確認したいときは、index entry 用のポリシー対象を読むべきである。
+- 一般的な prompt 構築や editor work file への直接編集権限を確認したいときは、対応する共通ポリシーを直接読むべきである。
 
 ## hash
-- 0832e7e45daa4d7757dbfc7ff9895e37a89c8a885c81fe891ec08878cd108732
+- 9bb5a374044b10bb1f6e6651d31c960fac592e9ffb466cd4702362b15421102d
 
 # `feedback_reporting.py`
 
