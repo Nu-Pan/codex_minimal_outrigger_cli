@@ -9,7 +9,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
+from oracle.prompt_builder.editor_input import (
+    build_prompt_editor_input_console_guidance,
+)
 
 import commons.prompt_editor_input as prompt_editor_input_module
 from cmoc_runtime import CmocError
@@ -87,9 +89,7 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
     )
     prompt_editor_input_module.finalize_prompt_editor_input(tmp_path, second_work)
 
-    assert initial_texts == [
-        build_prompt_editor_input_initial_text(skeleton) for skeleton in skeletons
-    ]
+    assert initial_texts == ["", ""]
     assert first_work.parent == tmp_path / ".cmoc" / "gu" / "editor_input"
     assert first_copy.parent == (tmp_path / ".cmoc" / "gu" / "log" / "editor_input")
     assert first_work.name == first_copy.name == "2026-06-27_10-00_00_000001000_orig.md"
@@ -105,11 +105,13 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
     assert second_copy.read_text(encoding="utf-8") == (
         "<!-- editor note -->\ninput-2\n"
     )
-    assert first_input == "input-1"
-    assert second_input == "input-2"
+    assert first_input == "<!-- editor note -->\ninput-1"
+    assert second_input == "<!-- editor note -->\ninput-2"
     captured = capsys.readouterr()
     assert captured.out == ""
-    handoff_lines = captured.err.splitlines()
+    guidance = build_prompt_editor_input_console_guidance()
+    assert captured.err.count(guidance) == 2
+    handoff_lines = captured.err.replace(guidance, "").splitlines()
     assert len(handoff_lines) == 2
     assert all(
         line.startswith("editor input handoff target ID: eit_")
@@ -165,45 +167,7 @@ def test_editor_input_uses_one_final_read_for_copy_and_prompt(
 
     assert final_reads == 1
     assert input_copy.read_bytes() == b"<!-- note -->\r\nfinal input\r\n"
-    assert original_prompt == "final input"
-
-
-@pytest.mark.parametrize(
-    "complete_prompt_skeleton",
-    [
-        "# marker is missing\n",
-        "{{original-prompt-here}}\n{{original-prompt-here}}\n",
-    ],
-)
-def test_editor_input_rejects_skeleton_without_one_placeholder(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    complete_prompt_skeleton: str,
-) -> None:
-    """置換対象が一つでない skeleton ではエディタを起動しない。"""
-    editor_work, input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    editor_started = False
-
-    def fake_run(_argv: list[str]) -> SimpleNamespace:
-        """不正 skeleton で呼ばれてはならない editor 起動を記録する。"""
-        nonlocal editor_started
-        editor_started = True
-        return SimpleNamespace(returncode=0)
-
-    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
-
-    with pytest.raises(CmocError, match="skeleton"):
-        prompt_editor_input_module.edit_prompt_editor_input(
-            tmp_path,
-            editor_work,
-            complete_prompt_skeleton,
-        )
-
-    assert editor_started is False
-    assert editor_work.exists()
-    assert not input_copy.exists()
+    assert original_prompt == "<!-- note -->\r\nfinal input"
 
 
 @pytest.mark.parametrize(
@@ -413,7 +377,7 @@ def test_editor_input_closes_handoff_when_target_id_display_fails(
     monkeypatch.setattr(
         prompt_editor_input_module,
         "start_editor_input_handoff",
-        lambda _root, _path: FakeTarget(),
+        lambda _root, _path, _skeleton: FakeTarget(),
     )
 
     def fail_print(*_args: object, **_kwargs: object) -> None:
@@ -464,6 +428,7 @@ def test_editor_input_keeps_work_file_when_editor_or_cleanup_fails(
             _SKELETON,
         )
     assert failed_editor_work.exists()
+    assert not list(failed_editor_work.parent.glob("*.guide.md"))
     assert not failed_copy.exists()
 
     failed_finalize_work, saved_copy = (

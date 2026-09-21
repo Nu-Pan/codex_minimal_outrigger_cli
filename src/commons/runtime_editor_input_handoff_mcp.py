@@ -16,8 +16,8 @@ from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     authenticate_editor_input_handoff_client,
     editor_input_handoff_source_from_env,
-    overwrite_input_is_valid,
-    overwrite_input_schema,
+    handoff_payload_is_valid,
+    handoff_schema,
     parse_editor_input_handoff_target_id,
     read_handoff_response,
 )
@@ -93,8 +93,13 @@ def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
     }
 
 
-def _validated_target_result(value: object) -> dict[str, object] | None:
-    """target response が content を持たない domain result か検査する。"""
+def _validated_target_result(value: object, *, guide: bool) -> dict[str, object] | None:
+    """ガイド取得の正本 schema と本文を返さない上書き結果を検査する。"""
+    if guide:
+        if not handoff_payload_is_valid("get_handoff_guide_result", value):
+            return None
+        assert isinstance(value, dict)
+        return value
     if value == {"status": "accepted"}:
         return {"status": "accepted"}
     if not isinstance(value, dict) or value.get("status") != "rejected":
@@ -119,6 +124,21 @@ def _validated_target_result(value: object) -> dict[str, object] | None:
 
 def _submit(payload: object) -> dict[str, object]:
     """項目別入力と送信元から本文を生成し、同じ repository の target へ渡す。"""
+    return _call_target(payload, tool_name="overwrite")
+
+
+def _get_handoff_guide(payload: object) -> dict[str, object]:
+    """指定された active target の保持済みガイドだけを取得する。"""
+    # 共通 transport の失敗も、正本が定める取得結果の形へ収める。
+    result = _call_target(payload, tool_name="get_handoff_guide")
+    if handoff_payload_is_valid("get_handoff_guide_result", result):
+        return result
+    return {"status": "error", "message": result["message"]}
+
+
+def _call_target(payload: object, *, tool_name: str) -> dict[str, object]:
+    """入力を検証し、認証した同一 repository の target に要求を送る。"""
+    # 取得と上書きで repository と target の検証、認証 transport を共用する。
     repository_value = os.environ.get(EDITOR_INPUT_REPOSITORY_ENV)
     if repository_value is None:
         return _rejected(
@@ -126,7 +146,7 @@ def _submit(payload: object) -> dict[str, object]:
             "editor input handoff context is unavailable",
             True,
         )
-    if not overwrite_input_is_valid(payload):
+    if not handoff_payload_is_valid(f"{tool_name}_input", payload):
         return _rejected("invalid_input", "tool input does not match schema", False)
     assert isinstance(payload, dict)
     target_id = payload["target_id"]
@@ -134,35 +154,41 @@ def _submit(payload: object) -> dict[str, object]:
     repository = Path(repository_value).resolve()
     try:
         route = parse_editor_input_handoff_target_id(repository, target_id)
-    except UnicodeError:
+    except (UnicodeError, TypeError):
         return _rejected("invalid_input", "tool input does not match schema", False)
     if route is None:
         return _rejected("target_unavailable", "target is not active", False)
-    # 送信元は tool input や受信先から推測せず、起動時の context だけを使う。
-    try:
-        source = editor_input_handoff_source_from_env()
-    except (ValueError, TypeError):
-        return _rejected(
-            "source_unavailable", "editor input handoff source is unavailable", False
-        )
-    try:
-        references = [
-            DocRef(Path(reference["file_path"]), reference["loc_desc"])
-            for reference in payload["oracle_references"]
-        ]
-        content = build_editor_input_handoff_body(
-            goal=payload["goal"],
-            instructions=payload["instructions"],
-            background=payload["background"],
-            decisions=payload["decisions"],
-            open_questions=payload["open_questions"],
-            oracle_references=references,
-            source=source,
-        )
-        content.encode("utf-8")
-    except Exception:
-        # builder や検証器の例外には入力本文が含まれ得るため転記しない。
-        return _rejected("invalid_input", "handoff body could not be built", False)
+    guide = tool_name == "get_handoff_guide"
+    target_payload = {"target_id": target_id}
+    if not guide:
+        # 送信元は tool input や受信先から推測せず、起動時の context だけを使う。
+        try:
+            source = editor_input_handoff_source_from_env()
+        except (ValueError, TypeError):
+            return _rejected(
+                "source_unavailable",
+                "editor input handoff source is unavailable",
+                False,
+            )
+        try:
+            references = [
+                DocRef(Path(reference["file_path"]), reference["loc_desc"])
+                for reference in payload["oracle_references"]
+            ]
+            content = build_editor_input_handoff_body(
+                goal=payload["goal"],
+                instructions=payload["instructions"],
+                background=payload["background"],
+                decisions=payload["decisions"],
+                open_questions=payload["open_questions"],
+                oracle_references=references,
+                source=source,
+            )
+            content.encode("utf-8")
+        except Exception:
+            # builder や検証器の例外には入力本文が含まれ得るため転記しない。
+            return _rejected("invalid_input", "handoff body could not be built", False)
+        target_payload["content"] = content
     address, token = route
     submission_started = False
     try:
@@ -183,7 +209,7 @@ def _submit(payload: object) -> dict[str, object]:
             request = {
                 "protocol": EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
                 "repository": str(repository),
-                "payload": {"target_id": target_id, "content": content},
+                "payload": target_payload,
             }
             request_data = (
                 json.dumps(
@@ -196,10 +222,18 @@ def _submit(payload: object) -> dict[str, object]:
             # sendall 自体が失敗しても、一部または全体が届いた可能性が残る。
             submission_started = True
             connection.sendall(request_data)
-            value = read_handoff_response(
-                connection,
-                EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
-            )
+            if guide:
+                # 完全 prompt を含むガイドは、小さな上書き結果の上限で切り詰めない。
+                value = read_handoff_response(
+                    connection,
+                    EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
+                    max_bytes=None,
+                )
+            else:
+                value = read_handoff_response(
+                    connection,
+                    EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
+                )
     except OSError:
         if not submission_started:
             return _rejected(
@@ -208,8 +242,13 @@ def _submit(payload: object) -> dict[str, object]:
                 True,
             )
         value = None
-    validated = _validated_target_result(value)
+    validated = _validated_target_result(value, guide=guide)
     if validated is None:
+        if guide:
+            return {
+                "status": "error",
+                "message": "handoff guide could not be retrieved",
+            }
         # 応答を失っても受付済みの上書きは継続する。未反映とは断定しない。
         return {
             "status": "unknown",
@@ -233,7 +272,7 @@ def _tool_result(result: dict[str, object]) -> dict[str, object]:
             }
         ],
         "structuredContent": result,
-        "isError": result.get("status") != "accepted",
+        "isError": result.get("status") not in ("accepted", "ok"),
     }
 
 
@@ -267,29 +306,41 @@ def _response(request: object) -> dict[str, object] | None:
         result = {
             "tools": [
                 {
+                    "name": "get_handoff_guide",
+                    "description": "指定された active target の handoff ガイドを取得する。",
+                    "inputSchema": handoff_schema("get_handoff_guide_input"),
+                    "outputSchema": handoff_schema("get_handoff_guide_result"),
+                    "annotations": {
+                        "readOnlyHint": True,
+                        "openWorldHint": False,
+                    },
+                },
+                {
                     "name": "overwrite",
                     "description": "active な prompt editor input file 全体を置換する。",
-                    "inputSchema": overwrite_input_schema(),
+                    "inputSchema": handoff_schema("overwrite_input"),
                     "annotations": {
                         "readOnlyHint": False,
                         "destructiveHint": True,
                         "idempotentHint": False,
                         "openWorldHint": False,
                     },
-                }
+                },
             ]
         }
     elif method == "tools/call":
         parameters = request.get("params")
         if not isinstance(parameters, dict):
             return _invalid_params(request_id)
-        if parameters.get("name") != "overwrite":
+        name = parameters.get("name")
+        if name not in ("get_handoff_guide", "overwrite"):
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "error": {"code": -32602, "message": "Unknown tool"},
             }
-        result = _tool_result(_submit(parameters.get("arguments")))
+        handler = _get_handoff_guide if name == "get_handoff_guide" else _submit
+        result = _tool_result(handler(parameters.get("arguments")))
     else:
         return {
             "jsonrpc": "2.0",

@@ -47,7 +47,7 @@ def _cmoc_tui_body(
     config: CmocConfig,
 ) -> None:
     """依頼文を編集し、構築したパラメータで Codex TUI を起動する。"""
-    # オリジナル prompt だけ未確定の完全 prompt を初期表示に使う。
+    # オリジナル prompt だけ未確定の完全 prompt を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"

@@ -15,15 +15,16 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` の起動実行で共用する AgentCallParameter を構築する oracle 実装。ユーザー指示、oracle の編集範囲・完了条件・各種制約、Git 未コミット差分の参照方針を完全 prompt にまとめ、oracle 専用の書き込み設定と実行コンテキストを返す。
+- `cmoc oracle edit` の両実行経路で共用する agent call パラメータを構築する。ユーザー指示、oracle の編集範囲、未コミット差分の扱い、編集制約を prompt に組み込み、oracle file のみを書き換える実行設定を返す。
 
 ## Read this when
-- `cmoc oracle edit` が agent 起動時に渡す prompt や編集制約を確認したいとき。
-- oracle 編集用のファイルアクセスモード、作業ディレクトリ、indexing preflight の設定を調べるとき。
+- `cmoc oracle edit` が agent に渡す共通 prompt、oracle file の編集境界、未コミット差分の参照条件を確認したいとき。
+- oracle 編集用 agent call の作業ディレクトリ、ファイルアクセスモード、indexing preflight の設定を変更・検証するとき。
 
 ## Do not read this when
-- oracle 編集 prompt の中身ではなく、一般的な agent パラメータ構築や realization 編集の起動処理を調べるとき。
-- ACP builder の別の起動経路や、実際の oracle ファイル編集ロジックを確認したいとき。
+- `cmoc oracle edit` の仕様本文やユーザー向けサブコマンド仕様を確認したいときは、参照先の oracle doc を直接読む。
+- ACP builder の一般的なパラメータ型や prompt の汎用レンダリング処理を確認したいときは、依存する basic または prompt_builder の実装を直接読む。
+- INDEX.md の生成や更新処理そのものを確認したいとき。
 
 ## hash
-- 191187e210a251ab2a10cda576f1f7c6da445e17dbd13414ca42268e1d47aaf1
+- 65c9a27bb8749f0674f3f6c599c4f97ed09837bdb509f03d4625e458e2e7d68a

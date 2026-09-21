@@ -9,6 +9,8 @@ import threading
 import time
 from pathlib import Path
 
+from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
+
 from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
     EDITOR_INPUT_HANDOFF_HOST,
@@ -79,10 +81,18 @@ def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
 class EditorInputHandoffTarget:
     """一つの editor work file だけを editor 待機中に公開する target。"""
 
-    def __init__(self, repository: Path, editor_work_path: Path) -> None:
+    def __init__(
+        self,
+        repository: Path,
+        editor_work_path: Path,
+        complete_prompt_skeleton: str,
+    ) -> None:
         """target identity と一時 transport state を初期化する。"""
         self.repository = repository.resolve()
         self.editor_work_path = editor_work_path
+        self.handoff_guide_path = editor_work_path.with_suffix(".guide.md")
+        self._complete_prompt_skeleton = complete_prompt_skeleton
+        self._guide_created = False
         self._token = secrets.token_bytes(EDITOR_INPUT_HANDOFF_TOKEN_BYTES)
         self._target_id: str | None = None
         self._state_lock = threading.Lock()
@@ -103,6 +113,11 @@ class EditorInputHandoffTarget:
     def start(self) -> None:
         """認証付き loopback TCP で active target を開始する。"""
         validate_editor_work_file(self.repository, self.editor_work_path)
+        # 登録前に受信先の雛形を独立した file へ保存し、既存 file は上書きしない。
+        guide_text = build_editor_input_handoff_guide(self._complete_prompt_skeleton)
+        with self.handoff_guide_path.open("x", encoding="utf-8", newline="") as guide:
+            self._guide_created = True
+            guide.write(guide_text)
         # Codex CLI 0.151.0 の ProxyRouted sandbox は AF_INET を許可し、
         # AF_UNIX socket の生成を拒否する。
         # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/linux-sandbox/src/landlock.rs#L170-L248
@@ -164,6 +179,9 @@ class EditorInputHandoffTarget:
                 pass
         if self._server_thread is not None:
             self._server_thread.join()
+        # 受付済み取得・上書きを完了してから、target 固有のガイドを破棄する。
+        if self._guide_created:
+            self.handoff_guide_path.unlink(missing_ok=True)
 
     def _serve(self) -> None:
         """submission を一接続ずつ処理して同一 target の上書きを直列化する。"""
@@ -246,12 +264,12 @@ class EditorInputHandoffTarget:
                 False,
             )
         payload = request.get("payload")
-        # agent-facing schema は MCP が検査済み。ここでは生成済み本文の IPC 形状を検査する。
+        # agent-facing schema は MCP が検査済み。取得と上書きの IPC 形状だけを検査する。
         if (
             not isinstance(payload, dict)
-            or payload.keys() != {"target_id", "content"}
+            or payload.keys() not in ({"target_id"}, {"target_id", "content"})
             or not isinstance(payload["target_id"], str)
-            or not isinstance(payload["content"], str)
+            or ("content" in payload and not isinstance(payload["content"], str))
         ):
             return _rejected("invalid_input", "invalid handoff body request", False)
         if payload["target_id"] != self.target_id:
@@ -260,6 +278,14 @@ class EditorInputHandoffTarget:
             if not self._accepting:
                 return _rejected("target_unavailable", "target is not active", False)
             self._current_submission_accepted = True
+        if "content" not in payload:
+            # 編集中の本文を代用せず、保持済みガイドの文面をそのまま返す。
+            try:
+                validate_editor_work_file(self.repository, self.handoff_guide_path)
+                guide_text = self.handoff_guide_path.read_bytes().decode("utf-8")
+            except (CmocError, OSError, UnicodeError):
+                return {"status": "error", "message": "handoff guide is unavailable"}
+            return {"status": "ok", "guide_text": guide_text}
         content = payload["content"]
         assert isinstance(content, str)
         try:
@@ -293,9 +319,12 @@ class EditorInputHandoffTarget:
 def start_editor_input_handoff(
     repository: Path,
     editor_work_path: Path,
+    complete_prompt_skeleton: str,
 ) -> EditorInputHandoffTarget:
     """editor 待機期間に使う一時 handoff target を開始する。"""
-    target = EditorInputHandoffTarget(repository, editor_work_path)
+    target = EditorInputHandoffTarget(
+        repository, editor_work_path, complete_prompt_skeleton
+    )
     try:
         target.start()
     except Exception as exc:

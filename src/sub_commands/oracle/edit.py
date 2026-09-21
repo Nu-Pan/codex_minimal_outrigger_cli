@@ -44,7 +44,7 @@ def _cmoc_oracle_edit_body() -> None:
     repository = repo_root()
     current_root = work_root()
 
-    # oracle 編集契約を含む完全 prompt の skeleton を初期表示に使う。
+    # oracle 編集契約を含む完全 prompt の skeleton を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
     start_subcommand_step(2, "編集 prompt の skeleton を構築", "build edit skeleton")
     complete_prompt_skeleton = build_oracle_edit_main_launch_exec_parameter(

@@ -1,6 +1,5 @@
 """AI Agent 用 prompt をエディタから受け取る共通境界。"""
 
-import re
 import shutil
 import stat
 import subprocess
@@ -8,7 +7,9 @@ import sys
 import time
 from pathlib import Path
 
-from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
+from oracle.prompt_builder.editor_input import (
+    build_prompt_editor_input_console_guidance,
+)
 
 from .runtime_editor_input_handoff import (
     start_editor_input_handoff,
@@ -57,25 +58,28 @@ def edit_prompt_editor_input(
     editor_work_path: Path,
     complete_prompt_skeleton: str,
 ) -> None:
-    """完全 prompt の skeleton を初期値としてエディタを起動する。"""
+    """空の入力 file と独立した handoff ガイドを準備し、エディタを起動する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    _require_single_original_prompt_placeholder(complete_prompt_skeleton)
     validate_editor_work_file(root, editor_work_path)
 
-    # 正本が構築する案内と完全 prompt の skeleton を作業 file へ保存する。
-    # {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
-    editor_work_path.write_text(
-        build_prompt_editor_input_initial_text(complete_prompt_skeleton),
-        encoding="utf-8",
-    )
+    # 人間向け案内や受信側の雛形を依頼本文へ混入させない。
+    editor_work_path.write_text("", encoding="utf-8")
 
     argv = [*_select_editor(), str(editor_work_path)]
-    target = start_editor_input_handoff(root, editor_work_path)
+    target = start_editor_input_handoff(
+        root, editor_work_path, complete_prompt_skeleton
+    )
     try:
         # 非対話サブコマンドの stdout は terminal result 用なので、editor の
         # 待機中に人間へ渡す target ID は stderr へ表示する。
         print(
             f"editor input handoff target ID: {target.target_id}",
+            file=sys.stderr,
+            flush=True,
+        )
+        print(
+            build_prompt_editor_input_console_guidance(),
+            end="",
             file=sys.stderr,
             flush=True,
         )
@@ -104,7 +108,7 @@ def collect_prompt_editor_input(
     final_read_result = editor_work_path.read_bytes()
     with input_copy_path.open("xb") as file:
         file.write(final_read_result)
-    return _extract_original_prompt(final_read_result.decode("utf-8"))
+    return final_read_result.decode("utf-8").strip()
 
 
 def finalize_prompt_editor_input(root: Path, editor_work_path: Path) -> None:
@@ -135,16 +139,6 @@ def _select_editor() -> list[str]:
         ["code, nano, vim, vi のいずれかを PATH から起動できるようにしてください。"],
         "searched: code, nano, vim, vi",
     )
-
-
-def _extract_original_prompt(final_read_result: str) -> str:
-    """同じ最終読み取り結果から HTML comment と前後空白を除去する。"""
-    return re.sub(
-        r"<!--.*?-->",
-        "",
-        final_read_result,
-        flags=re.DOTALL,
-    ).strip()
 
 
 def _validate_editor_storage_path(
@@ -213,17 +207,3 @@ def _validate_editor_input_copy_path(
         )
     _validate_editor_storage_path(input_copy_path.parent, require_directory=True)
     _validate_editor_storage_path(input_copy_path)
-
-
-def _require_single_original_prompt_placeholder(
-    complete_prompt_skeleton: str,
-) -> None:
-    """完全 prompt の未確定位置が唯一であることを検証する。"""
-    count = complete_prompt_skeleton.count(ORIGINAL_PROMPT_PLACEHOLDER)
-    if count == 1:
-        return
-    raise CmocError(
-        "完全プロンプトの skeleton が不正です。",
-        ["cmoc の prompt builder と oracle file の整合性を確認してください。"],
-        f"placeholder: {ORIGINAL_PROMPT_PLACEHOLDER}\ncount: {count}",
-    )

@@ -148,7 +148,7 @@ def test_feedback_call_context_values_are_not_written_to_codex_argv(
 
 
 def test_codex_overrides_enable_editor_input_handoff_only_when_selected() -> None:
-    """選択済み call だけに overwrite 一つの optional MCP を注入する。"""
+    """選択済み call だけに ガイド取得と上書きの optional MCP を注入する。"""
     parameter = replace(
         codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=Path.cwd()),
         enable_editor_input_handoff_mcp=True,
@@ -164,12 +164,15 @@ def test_codex_overrides_enable_editor_input_handoff_only_when_selected() -> Non
         "env_vars": [EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV],
         "enabled": True,
         "required": False,
-        "enabled_tools": ["overwrite"],
+        "enabled_tools": ["get_handoff_guide", "overwrite"],
         "disabled_tools": [],
         "startup_timeout_sec": 5,
         "tool_timeout_sec": 15,
         "default_tools_approval_mode": "approve",
-        "tools": {"overwrite": {"approval_mode": "approve"}},
+        "tools": {
+            "get_handoff_guide": {"approval_mode": "approve"},
+            "overwrite": {"approval_mode": "approve"},
+        },
     }
     assert (
         parsed["shell_environment_policy"]["filters"][EDITOR_INPUT_REPOSITORY_ENV]
@@ -298,6 +301,7 @@ def test_codex_overrides_disable_unpaired_notification_callback() -> None:
         (b"codex-cli 0.151.0\n", 0, True),
         (b"codex-cli 0.153.4\n", 0, True),
         (b"codex-cli 0.154.0\n", 0, True),
+        (b"codex-cli 0.155.1\n", 0, True),
         (b"codex-cli 0.152.0\n", 0, False),
         (b"codex-cli 0.153.4.1\n", 0, False),
         (b"codex-cli 0.151.0\n", 1, False),

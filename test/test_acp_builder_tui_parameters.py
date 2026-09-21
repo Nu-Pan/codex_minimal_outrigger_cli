@@ -73,9 +73,10 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     assert complete_prompt.index('<cmoc_block id="objective">') < (
         complete_prompt.index('<cmoc_block id="original_prompt">')
     )
-    assert original_prompt in complete_prompt
-    if original_prompt == "{{original-prompt-here}}":
-        assert complete_prompt.count(original_prompt) == 1
+    original_block = complete_prompt.split('<cmoc_block id="original_prompt">', 1)[
+        1
+    ].split("</cmoc_block>", 1)[0]
+    assert original_prompt in original_block
     assert not (root / ".cmoc" / "gu" / "log" / "editor_input").exists()
 
 

@@ -122,7 +122,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert events == [
         "enable",
         "doctor",
@@ -132,24 +132,16 @@ def test_tui_runs_editor_and_launches_codex_directly(
     ]
     assert len(builder_calls) == 2
     assert builder_calls[0][0] == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
-    complete_prompt_skeleton = builder_calls[0][1].prompt
-    assert (
-        complete_prompt_skeleton.count(
-            prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
-        )
-        == 1
-    )
     assert len(tui_calls) == 1
     orig_files = list(
         (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
     )
     assert len(orig_files) == 1
     editor_contents = orig_files[0].read_text()
-    assert editor_contents.startswith("<!--\n# このファイルの使い方")
-    assert '<cmoc_block id="prompt template">' in editor_contents
-    assert "# file R/W policy (repo_write)" in editor_contents
-    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
-    assert "remove me" in editor_contents
+    assert (
+        editor_contents
+        == "\n<!-- remove me -->\n# 依頼\n\nsrc を確認して必要なら直す\n"
+    )
     assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     complete_prompt = tui_calls[0][0].prompt
@@ -171,9 +163,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert '<cmoc_ref target="original_prompt"/>' in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt
-    assert "remove me" not in complete_prompt
-    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
-    assert builder_calls[1][0] == "# 依頼\n\nsrc を確認して必要なら直す"
+    assert "<!-- remove me -->" in complete_prompt
+    assert (
+        builder_calls[1][0]
+        == "<!-- remove me -->\n# 依頼\n\nsrc を確認して必要なら直す"
+    )
     assert readme_path.read_text() == "# unstaged change\n"
     assert (
         run_git(root, "diff", "--cached", "--", "README.md").stdout
@@ -220,7 +214,7 @@ def test_tui_saves_editor_input_in_main_worktree(
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
@@ -236,7 +230,6 @@ def test_tui_saves_editor_input_in_main_worktree(
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     complete_prompt = parameter.prompt
     assert "linked worktree task" in complete_prompt
-    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert not list((linked / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
 
@@ -267,7 +260,7 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
     assert (

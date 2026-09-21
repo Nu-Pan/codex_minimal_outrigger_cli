@@ -87,21 +87,23 @@
 # `editor_input_handoff.md`
 
 ## Summary
-- Codex TUI の agent が、別の prompt editor input で待機中の editor work file に依頼を引き渡す共通機能の正本仕様。
-- handoff target の lifecycle、ガイド取得・上書き用 MCP、本文生成、agent の責務、送信元情報、参照情報、および非目標を定義する。
+- Codex TUI agent から待機中の prompt editor input へ依頼を引き渡す共通機能の正本仕様。active target の lifecycle、handoff ガイド、MCP の取得・上書き、本文生成、送信元情報、agent の責務と非目的を定める。
+- 入力確定や直接ファイルアクセスなどの詳細は関連する正本へ委譲し、本書では handoff 特有の責務と境界を統合的に示す。
 
 ## Read this when
-- prompt editor input への依頼引き渡し、handoff target の登録・無効化、または handoff ガイドの保持条件を確認するとき。
-- cmoc_editor_input.get_handoff_guide / overwrite の責務、入力制約、上書き動作、失敗条件を確認するとき。
-- handoff 本文の生成責務、agent と MCP の分担、送信元情報や oracle 参照の扱いを確認するとき。
+- prompt editor input への handoff 機能の設計・実装・検証を行うとき。
+- handoff target の登録から無効化までの lifecycle、受付順序、上書きの直列化、または失敗時の扱いを確認するとき。
+- get_handoff_guide・overwrite の利用条件、agent の責務、handoff 本文の生成責任、送信元情報の扱いを確認するとき。
+- handoff と prompt editor input、file access policy、実行ログ、関連する input/result schema の責任分界を確認するとき。
 
 ## Do not read this when
-- prompt editor input の writer 境界や最終確定手順だけを確認する場合は、prompt_editor_input.md を直接読むとき。
-- Codex 実行規則における MCP 注入やファイルアクセス制限の詳細だけを確認する場合は、codex_exec_rule.md を直接読むとき。
-- handoff ガイドの固定文面、JSON schema、本文データ構造の正確な定義を確認する場合は、文書が委譲している oracle source/schema を直接読むとき。
+- 通常の prompt editor input の writer 境界や最終確定手順だけを確認する場合は、prompt editor input の正本を直接読む。
+- handoff ガイドや本文の正確な文面・データ構造・schema を確認する場合は、委譲先の builder、model、input/result schema を直接読む。
+- Codex TUI の一般的な実行規則、file access 制限、ログ記録の詳細だけを確認する場合は、それぞれの正本を直接読む。
+- target を介さない入力経路や、handoff 以外の editor 機能の仕様を調べる場合。
 
 ## hash
-- 75c45de054f873384319299006e2f83036c3249f6d4bb3fa706352a630bb44ca
+- 04fda011e989f32e6f933762b6d98f13f79ba71532b42f504974d964e0a07b25
 
 # `error_handling.md`
 
@@ -241,20 +243,23 @@
 # `prompt_editor_input.md`
 
 ## Summary
-- エディタ用作業ファイルのライフサイクル、入力確定時の検証・保存・コメント除去、エディタ起動条件、cmoc・人間・後続 agent の責務分界を定める正本仕様。関連する handoff やサブコマンド固有の prompt 構築仕様への入口でもある。
+- prompt editor用の作業ファイルと保存コピーの責務分界、生成から確定・削除までのeditor input lifecycleを定義する正本仕様。
+- 人間入力とhandoff入力の共通処理、エディタ選択・起動条件、最終読み取り時のファイル検証、保存およびオリジナルプロンプト抽出の規則を扱う。
+- handoffの詳細なtarget lifecycleや失敗時責務、サブコマンド別の完全prompt構築、console案内の正確な文面は、それぞれ参照先の仕様・builderへ委譲している。
 
 ## Read this when
-- プロンプト編集への入力ファイルを生成・編集・handoff・確定・保存・削除する挙動を確認または変更するとき
-- editor work file の検証条件、最終読み取り、コメント除去、入力結果の扱いを確認するとき
-- エディタの起動優先順位や、cmoc・人間・後続 agent の書き込み・参照責務を確認するとき
+- editor inputの作業ファイル、保存コピー、入力確定、削除条件の仕様を確認・変更するとき
+- 人間の直接編集とeditor input handoffを同じ入力経路で扱う lifecycleを確認するとき
+- エディタの起動優先順位や最終ファイル検証、入力内容のstrip・保存規則を確認するとき
 
 ## Do not read this when
-- editor input handoff の共通 target lifecycle や MCP interface 自体を確認したいときは、handoff の正本仕様を直接読むとき
-- 完全 prompt の構築やサブコマンド固有のユーザー指示反映を確認したいときは、該当するサブコマンド仕様を直接読むとき
-- 実行時に生成される editor input、handoff ガイド、skeleton の内容だけを確認したいとき
+- handoff targetの詳細なlifecycle、ガイド、MCP interface、失敗時のagent責務だけを確認したいときはeditor_input_handoff.mdを直接読む
+- 完全promptの構築やサブコマンド固有の入力反映を確認したいときは、対応するsub_command仕様を直接読む
+- console案内の正確な文面だけを確認したいときはeditor_input.pyのbuilder定義を直接読む
+- 実行時生成物そのものの内容を確認したいときは、本仕様ではなく該当する生成物を確認する
 
 ## hash
-- 1909b2e405fd07d105f875c7303566edaec4bf723368f51b83bff3a91249d427
+- 547182614e5d769157f4ac2bb737bf406b0e02bf8802d89e59fe8358fa351c63
 
 # `run_isolation.md`
 
