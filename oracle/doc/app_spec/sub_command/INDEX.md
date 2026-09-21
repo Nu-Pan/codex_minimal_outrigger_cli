@@ -16,41 +16,39 @@
 # `editing_run.md`
 
 ## Summary
-- 編集 run を開始する workload、同時実行制約、共通開始・終了処理、join／abandon の検証・差分検査・cleanup、および report と terminal result の共通仕様を定める。
+- 編集 run の共通ライフサイクル仕様。realization apply/refactor と feedback report の開始条件、同時実行境界、run の開始・join・abandon、差分検査、merge、cleanup、report および terminal result を定める。
+- 個別 workload の仕様へ進む前に、編集 run に共通する state 遷移と lifecycle 操作の基準を確認するための入口。
 
 ## Read this when
-- realization apply／refactor または feedback report の編集 run lifecycle を実装・変更・調査するとき
-- cmoc run join／abandon の事前条件、merge、post-join、状態遷移、差分扱い、cleanup を確認するとき
-- editing run の report や terminal result に必要な共通情報と終了経路を確認するとき
+- 編集 run を開始・継続・join・abandon する処理の共通条件や state 遷移を確認するとき。
+- run branch/worktree の差分検査、merge、conflict、cleanup、report の共通仕様を確認または変更するとき。
+- realization_apply、realization_refactor、feedback_report の workload 固有仕様と共通 lifecycle の境界を確認するとき。
 
 ## Do not read this when
-- run の隔離資源や session／run state の正本定義だけを確認したいとき
-- realization apply、realization refactor、feedback report の workload 固有処理だけを確認したいとき
-- oracle edit、read-only investigation、session lifecycle、または conflict 解消の仕様を確認するとき
+- cmoc oracle edit、read-only investigation、run を作らない機械的更新、session lifecycle の仕様だけを確認するとき。
+- 特定 workload の preflight、編集対象、join 後 hook、feedback publication などの詳細だけを確認する場合は、対応する workload 固有仕様を直接読むとき。
+- run の隔離資源や session state の正本仕様そのものを確認する場合は、run_isolation.md または session_state.md を直接読むとき。
 
 ## hash
-- ba9914a84f850ac36212be33adf25c274aed5767c3045eddb7ab0c0989c78339
+- 830fbfc103458377b86486a6a495a1e518466d7bdf95616b8e9314bd775a34a0
 
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の feedback remediation run を開始・再開し、観測の検証と issue 正規化、issue 単位の安全な修正・commit、自動 join、結果 report の publication までを定義する正本仕様。
-- feedback observation から issue identity を形成し、agent call の結果・差分・検証記録を機械的に受理する処理と、wave、高水位、recovery、interruption、error の境界を扱う。
+- `cmoc feedback report` の仕様を定義し、同一 invocation 内で raw observation を検証・正規化し、issue 単位の realization 修正と検証を行い、安全な変更を commit して session branch へ自動 join し、結果を publication する処理の入口。
 
 ## Read this when
-- `cmoc feedback report` の CLI 契約、開始条件、run isolation、intake validation、normalization、remediation call、issue commit、wave loop、自動 join、publication、終了コードを確認したいとき。
-- feedback report が fixed、human_required、inconclusive、user interruption、error のどの結果になるか、また保存される report と recovery state を確認したいとき。
-- feedback issue の修正対象、禁止される差分、agent に委譲する prompt・schema・設定、および join 後の検査責務の境界を確認したいとき。
+- feedback observation から issue の intake、normalization、remediation、commit、wave 処理、自動 join、publication の動作条件を確認したいとき
+- `cmoc feedback report` の CLI 契約、run 開始・再開条件、入力検証、結果分類、差分検査、rollback、recovery 境界を確認したいとき
 
 ## Do not read this when
-- raw observation の schema や reporter input の互換処理そのものを確認したい場合は、feedback observation の正本を直接読む。
-- 結果分類や issue の用語定義だけを確認したい場合は、feedback の正本を直接読む。
-- repository-local feedback state、checkpoint、intake wave、高水位、report cut、atomic publication の詳細だけを確認したい場合は、feedback_state の正本を直接読む。
-- branch・commit・worktree の一般モデル、run isolation、編集 run の共通動作、割り込み、Codex 呼び出し規約、routing の詳細だけを確認したい場合は、それぞれの参照先仕様を直接読む。
-- feedback report の実装コードや agent parameter、Structured Output schema を確認・変更したい場合。
+- raw observation の収集や reporter input の互換処理だけを確認したいときは feedback_observation.md を直接読む
+- feedback の用語・結果分類・repository-local state の詳細だけを確認したいときは feedback.md または feedback_state.md を直接読む
+- 一般的な編集 run の lifecycle、branch、join、隔離規則だけを確認したいときは editing_run.md や branch_model.md、run_isolation.md を直接読む
+- normalization または remediation agent の prompt、起動設定、Structured Output schema を確認したいときは対応する oracle/src の定義を直接読む
 
 ## hash
-- fd8ae789299ab1280f1b86e9dec6dbaabd4e66cf19e4a824596550453c7fbb4e
+- ddee2abe29119930c791c1228a0a205c2569ffd2d8df708f8fea538548cb7ada
 
 # `indexing.md`
 
@@ -72,21 +70,20 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` の仕様を定義し、oracle file の最終状態に向けた固定 2 回の直列 agent call、実行前条件、編集境界、終了状態、primary report、ログ通知、および中断・排他制御を扱う。
-- oracle の編集サブコマンドの実行手順や agent call の構成を確認するための入口であり、一般的な編集 run や realization 操作の仕様とは区別される。
+- `cmoc oracle edit` の引数なしサブコマンド仕様。ユーザー指示から共通の prompt と設定を構築し、同一 worktree 上で独立した新規 Codex session による編集 agent call を最大 2 回直列実行する流れ、編集境界、終了状態、差分維持、primary report・ログ・通知の扱いを定める。
 
 ## Read this when
-- `cmoc oracle edit` の実行条件、引数、prompt 構築、2 回の agent call の順序を確認したいとき
-- oracle file の編集権限、差分の扱い、終了状態、report・ログ・通知の要件を確認したいとき
-- oracle 編集と indexing、prompt editor input、Codex exec rule など関連仕様との接続を確認したいとき
+- `cmoc oracle edit` の起動条件、prompt 構築、2 回の agent call の実行順序を確認するとき。
+- oracle file の編集だけを許可する agent 境界、未コミット差分の扱い、成功・失敗時の終了条件を確認するとき。
+- oracle edit 実行の report、console、ログ、Windows toast、feedback observation の記録責務を確認するとき。
 
 ## Do not read this when
-- 通常の realization 編集 run、oracle investigation、realization apply/refactor など別サブコマンドの動作を確認したいとき
-- 共通の prompt editor input、Codex exec、session state、ログ出力の詳細だけを確認したいときは、本文が参照する各共通仕様を直接読むほうが適切です
-- oracle edit の実装コードやテストの挙動を確認したいときは、対応する oracle/src または realization の実装・テストを直接読むほうが適切です
+- oracle file の調査・参照専用処理の仕様を確認したいときは、`oracle investigation` の仕様を読む。
+- prompt editor input、Codex 実行規則、session state、indexing、共通設定の詳細だけを確認したいときは、本書から参照される各正本文書を直接読む。
+- oracle edit の実装詳細やテストケースだけを確認したいときは、対応する realization の実装・テスト対象を直接読む。
 
 ## hash
-- 365058fd1ee85c8e70813a63efe3a3ff6e88354cdf4ad698daa3639365233709
+- 0deac4c1d7d4f50c8ab16b5efd16281ee5a772515a6c6a7d7d1ec18011b858f5
 
 # `oracle_investigation.md`
 
@@ -145,70 +142,67 @@
 # `session_abandon.md`
 
 ## Summary
-- 現在の session branch を home branch に merge せず破棄する `cmoc session abandon` の正規手順を定義する。事前条件、破棄してよい対象と保持対象、cleanup、状態遷移、失敗時の rollback、primary report の保存内容を確認できる。
+- `cmoc session abandon` の正本仕様。現在の session branch を home branch に統合せず破棄するための引数、事前条件、破棄対象と保護対象、cleanup 手順、状態遷移、失敗時の rollback、primary report 要件を定義する。
 
 ## Read this when
-- session を merge せず終了・破棄する操作の仕様を確認したいとき
-- session branch の削除、session state の abandoned 遷移、未 join run の扱いを実装または検証するとき
-- abandon 実行結果や全終了経路の primary report 要件を確認するとき
+- セッションを merge せず破棄する操作の仕様を確認・変更するとき
+- session abandon の事前条件、branch や commit の破棄範囲、session state の遷移、cleanup 失敗時の扱いを確認するとき
+- abandon 実行結果の primary report に必要な内容を確認するとき
 
 ## Do not read this when
-- session を home branch へ取り込む join の仕様を確認したいとき
-- 未 join の編集 run 自体を破棄する操作を確認したいときは、先に run abandon の仕様を読むべきとき
-- session の fork や共通 session state の一般事前条件だけを確認したいときは、対応する共通仕様を直接読むべきとき
+- session fork、session join、run abandon など別サブコマンド固有の仕様を確認するとき
+- active session context や編集 run 開始・終了に共通する事前条件だけを確認したいときは、session_state.md を直接読むべきとき
+- 実装やテストの具体的な挙動を確認したいときは、対応する realization implementation や realization test を直接読むべきとき
 
 ## hash
-- 6693d787af8d136f93e9fdd4e763fa320c81acbfb048c6ede2917d1d587144c2
+- 66430bb557888daabc21ed34f04ad44f912bb48eee2e058b50c62f1f7697311a
 
 # `session_fork.md`
 
 ## Summary
-- `cmoc session fork` の引数なし実行について、実行対象ブランチの事前条件、セッションブランチの作成・checkout、初期 session 情報の保存、終了時の primary report を定める仕様。
+- 現在のローカルブランチを起点にセッション用ブランチを作成・checkoutし、初期セッション状態と実行結果を保存する `cmoc session fork` の仕様。
 
 ## Read this when
-- 現在のローカルブランチを起点に新しい cmoc セッションを開始する処理の条件や手順を確認するとき。
-- セッションブランチの命名、初期状態の保存、または fork 実行結果・失敗時 report の内容を確認するとき。
+- セッション用ブランチの作成条件、分岐元、命名規則、初期状態保存、または実行結果レポートの仕様を確認したいとき。
 
 ## Do not read this when
-- 任意の start point を指定する操作や、既存セッションの状態遷移そのものを確認したいとき。
-- ブランチの役割・分岐関係の正本や session state の schema を直接確認する必要があるとき。
+- 既存セッションの操作や通常のブランチ運用を確認したいとき。分岐元を任意の start point で指定する方法を探しているときは、このサブコマンドではなく事前のブランチ切替を確認するとき。
 
 ## hash
-- e0cb5c94c8eda9ec1bae324fdf4074934553a4e9671a9c02fd7809d2f68e610d
+- ecba04632a0bb7a01b4f1564c7c549999206201fe1c990f8297f3d9ed56e3267
 
 # `session_join.md`
 
 ## Summary
-- 完了した session を home branch へ戻すための join 処理の正本。merge 対象と実行順序、conflict 解消、session state 更新、branch cleanup、primary report の要件を扱う。
-- session join の挙動や終了経路、conflict 対応、実行結果の記録を確認する際の入口。通常の汎用 git merge の仕様ではなく、session 専用の処理を確認したい場合に読む。
+- `cmoc session join` の正本仕様。現在の session branch を session home branch へ merge して session を完了する処理の入口。
+- 引数・事前条件・branch 操作・conflict 解消・session state 更新・branch cleanup・primary report の規定を扱う。
 
 ## Read this when
-- session を完了して home branch へ戻す処理の仕様を確認・変更するとき
-- session branch と home branch の merge 条件、conflict 解消手順、または branch cleanup の扱いを確認するとき
-- join の session state 遷移、primary report、エラー終了時の記録要件を確認するとき
+- session join の実行条件、merge 対象、conflict 解消、終了状態や報告内容を確認・変更するとき。
+- session join の実装やテストが、session 完了処理と merge 後の後始末に適合しているか調べるとき。
 
 ## Do not read this when
-- 通常の git branch 間 merge の一般仕様だけを確認したいとき
-- session の作成・実行・終了前提条件そのものを確認したいときは、active session context と共通事前条件の正本を直接読む
-- oracle・realization file の共通ルールや feedback state の所有範囲を確認したいときは、それぞれの専用仕様を直接読む
+- session の作成や通常の session 操作など、join 以外のサブコマンドの仕様を確認したいとき。
+- conflict 解消用 agent call の具体的な prompt 構築だけを確認する場合は、指定された conflict resolution の oracle source を直接読むとき。
+- branch model、session state、feedback state、error handling の共通正本だけを確認したい場合は、本文が参照する各仕様を直接読むとき。
 
 ## hash
-- e9a33e780fe88d7c52a49a5cd71f06019b836474f87f4b7c450f8ce642e3a306
+- 7fa84b7ada96672e9532bbfc8e6eead631a1dda0a186bdba899a319496b11ca3
 
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの正本仕様。ユーザープロンプトのエディタ入力から起動パラメータ構築、AI Agent CLI/TUI の起動までの共通手順と、cmoc 固有規定・indexing・feedback・通知の適用条件を定める。バックエンド固有の起動条件として Codex CLI の設定も扱う。
+- `cmoc tui` サブコマンドの責務と実行手順を定義し、プロンプト入力から AI Agent CLI/TUI 起動までの共通契約と Codex CLI 固有設定への入口を示す。
 
 ## Read this when
-- `cmoc tui` の実行手順、事前条件、プロンプト入力、または TUI 起動時の共通規定を確認したいとき
-- TUI に注入する cmoc 固有契約や indexing・feedback・終了通知の適用根拠を確認したいとき
-- Codex CLI バックエンドの起動コマンド、環境変数、引数上書き、editor input handoff の仕様を確認したいとき
+- `cmoc tui` の引数、事前条件、doctor preprocess、プロンプト入力、起動パラメータ構築、TUI 起動手順を確認するとき。
+- TUI に注入する cmoc 基本規定、indexing preflight、feedback observation、終了時通知の適用条件を確認するとき。
+- Codex CLI をバックエンドとする TUI 起動で、editor input handoff、環境変数、preflight validation、引数上書きを確認するとき。
 
 ## Do not read this when
-- TUI サブコマンド以外のサブコマンドの仕様を確認したいとき
-- プロンプトエディタ入力、editor input handoff、indexing、feedback observation、Windows toast の詳細な正本仕様そのものを確認したいときは、本文から案内される各専用仕様を直接読む
-- 起動パラメータの正確な prompt part や workload 固有の選択理由を確認したいときは、本文が委譲する `build_tui_launch_tui_parameter` の正本実装を直接読む
+- プロンプトエディタ入力の詳細な lifecycle を確認したい場合は、prompt_editor_input.md を直接読むとき。
+- 起動パラメータの正確な prompt part、文面、workload 固有設定、選択理由を確認したい場合は、launch_tui.py を直接読むとき。
+- oracle と realization の責務・適合性、indexing、feedback observation、Windows toast の詳細仕様を確認したい場合は、それぞれ本文中に指定された正本を直接読むとき。
 
 ## hash
-- b3db6bd5ca11eaf0b6d6446e11050c169531682a1f2c0e0476dafd049ecd121f
+- aaf4cb73da7956a14562e10acc24d1d7e3d60da93c8c67ba4327debaebf15e79

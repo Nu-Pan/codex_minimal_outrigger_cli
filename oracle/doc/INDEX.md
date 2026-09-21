@@ -1,74 +1,68 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様をまとめた正本ドキュメント群。利用 workflow、oracle/realization の分類、prompt・editor input、session/run lifecycle、feedback、logging、indexing、error handling、provider などの共通挙動を定義する。
-- `sub_command` 配下は、doctor、session、oracle、realization、feedback、indexing、TUI など各 CLI サブコマンド固有の責務・引数・前提条件・実行手順を確認するための入口である。
+- cmoc アプリケーション仕様の正本文書群への入口。共通動作、ファイル分類、セッション、フィードバック、ログ、入力引き渡し、インデクシングなどの横断仕様と、各サブコマンドの実行契約を扱う。
+- 共通仕様を確認したうえで、編集・調査・適用・セッション管理・フィードバック・診断など、目的に対応するサブコマンド仕様へ進むための上位層。
 
 ## Read this when
-- cmoc 全体の動作仕様や利用 workflow を確認するとき
-- 複数のサブコマンドにまたがる session、run、prompt、feedback、oracle/realization の共通ルールを確認するとき
-- 特定のサブコマンドの動作を調べる際に、共通仕様とサブコマンド仕様の関係を把握するとき
+- cmoc のアプリケーション全体の挙動や共通ルールを確認するとき
+- 複数のサブコマンドにまたがるファイル分類、セッション、ログ、入力、フィードバック、インデクシングの責務を確認するとき
+- 対象となるサブコマンド仕様を特定し、その実行契約の読み始める場所を判断するとき
 
 ## Do not read this when
-- 単一サブコマンドの詳細だけが必要で、`sub_command` 配下の該当仕様を直接読めるとき
-- 実装上の正確な prompt 文面、builder の引数、設定値を確認したいとき。その場合は各仕様が参照する `oracle/src` の実装を読むべきである
-- INDEX.md の生成規則だけを確認したいときは、`indexing.md` を直接読むべきである
+- 特定のサブコマンドの詳細な実行手順だけを確認する場合は、対象サブコマンドの仕様文書を直接読むとき
+- 実装の具体的な prompt 構築、設定定義、または agent call の詳細だけを確認する場合は、各仕様から委譲先として示される oracle src を直接読むとき
+- INDEX.md の生成規則や既存の索引内容だけを確認する場合は、この対象の仕様本文を読む必要がないとき
 
 ## hash
-- d6ab447f5051611be7fb77ee2474d09fb66734cb5ee6eb13ab60c882d6f79ab6
+- cb09b1be8b7a09dccda3c6378e1fc72870fc6dcd97fed77496cef626dd86ba1e
 
 # `branch_model.md`
 
 ## Summary
-- cmoc における session・run の branch、commit、worktree の役割と関係を定義する正本文書。
-- branch の作成元・命名・統合先、commit の fork/join、run worktree の分離条件を確認する入口。
+- cmoc の session と run を隔離・統合する branch、commit、worktree のモデルを定義し、各管理対象の作成元・用途・命名規則・merge と no-op join の扱いを示す正本仕様。
 
 ## Read this when
-- session fork、run の開始・分離・join、apply の追従対象、run report の commit 基準を扱うとき。
-- cmoc 管理 branch と通常の git branch、session home branch の意味を区別する必要があるとき。
-- branch・commit・linked worktree の用語や対応関係を確認するとき。
+- session や run の branch 分岐、commit の対応関係、worktree の配置・checkout、run の join や apply の追従対象を確認するとき。
 
 ## Do not read this when
-- run state や report の状態遷移そのものを確認したいとき。
-- oracle の変更手順や設計責務、test の実行規則を直接確認したいとき。
-- 個別の git 操作手順だけを知りたいときで、branch model の用語上の判断を必要としない場合。
+- 個別サブコマンドの実行手順や state・report の具体的なデータ形式だけを確認したいときは、該当するコマンド仕様または state・report の仕様を直接読む。
 
 ## hash
-- 955dd077586a6c946e3573d1b1bbde073736e4f7325fbd93ed6c09a3862fc858
+- 050468051eb3f13e9078de3878694d8566c3b19997da1278b00fb0a9fa35d108
 
 # `considered_alternative`
 
 ## Summary
-- cmoc の設計・運用上の代替案を比較検討した記録群。realization refactor の調査・修正単位、file access policy 違反対応、permission profile の動的生成、AI-generated kaizen の自動注入、oracle review、作業計画レビューを採用しなかった理由と、現在の方針へ至った判断材料への入口を提供する。
+- 採用しなかった設計案を記録する oracle 文書群。作業計画レビュー、並列所見調査、事後的なアクセス違反検査、.gitignore からの権限生成、AI 生成 kaizen の自動注入、oracle 網羅レビューの不採用理由を扱う。
+- 現行仕様そのものではなく、代替案を退けた判断根拠や当時の設計上の懸念を確認するための補助的な参照先。
 
 ## Read this when
-- cmoc の調査・修正フローや権限管理、明示的な情報伝達、oracle と feedback observation の役割分担について、過去の代替案と採否理由を確認したいとき。
-- realization refactor における file 単位の処理、並列編集・事後検査の扱い、作業計画レビューの導入可否など、設計上のトレードオフを再評価するとき。
-- 現行仕様を読む前に、関連する設計判断の背景や不採用となった方式の問題点を把握したいとき。
+- 現在の設計判断について、過去に検討された代替方式とその不採用理由を確認するとき。
+- 作業計画レビュー、並列ファイル調査、差分の事後検証、権限プロファイル動的生成、memory 自動注入、oracle review の採否を再評価するとき。
+- 特定の代替案の詳細を読む前に、対象ディレクトリ内の関連する設計判断記録へ進むとき。
 
 ## Do not read this when
-- 現行仕様、処理手順、差分検証、permission profile、feedback report、feedback observation の正式な定義を確認・変更するときは、それぞれの正本仕様を直接読む。
-- 特定の実装不具合、個別の所見、実際の kaizen・oracle・ログ・成果物の内容を調査するときは、該当する実装や記録を直接読む。
-- cmoc と無関係な一般的な計画立案、並列処理、記憶機構、ファイル権限の設計だけを検討しているとき。
+- 現行の仕様、状態遷移、処理ループ、権限規則、feedback 報告基準を確認したいときは、対応する正本仕様を直接読む。
+- 実装やテストの現在の挙動、具体的な修正手順、実際の ignore 判定を調べたいときは、対応する realization file やリポジトリ設定へ直接進む。
+- 過去の不採用理由や設計判断の背景を必要としない一般的な案内では、このディレクトリを読む必要はない。
 
 ## hash
-- 6d984c323206ea2495118aec7539f6628376a35f314ba33ac406919e9e5fd9db
+- 5ce81f7165ac735106e8957743573558e46db4a633c9ffda405499cb4d50172c
 
 # `dev_rule`
 
 ## Summary
-- cmoc の開発規約群への入口。Python 実装のコーディング、CLI の責務分担と共通機能の配置、開発環境の構築、テストの意味要件・実行手順を扱う。
+- 対象は、cmoc 自身の開発におけるエージェント向け作業規定を定める正本文書であり、情報レイヤー、指示文の自己完結性、問題報告、ファイル分類・読み書き制約、oracle と realization の関係を扱う。
+- この文書は、作業対象の分類や編集可否、正本仕様と実装の境界を判断するための上位ルールへの入口である。
 
 ## Read this when
-- cmoc の Python 実装や CLI 構成を新規作成・変更・レビューし、命名・型注釈・責務分担・共通機能の配置を判断するとき。
-- 開発環境や依存関係を構築・変更するとき。
-- pytest・Ruff・mypy・実経路統合テストの対象、実行条件、完了判定、または realization test の検証要件を確認するとき。
+- cmoc リポジトリで、エージェントがどのファイルを読める・変更できるか、また oracle と realization をどう区別するかを確認するとき。
+- エージェント向け指示文と cmoc の仕様文を区別し、作業上の問題報告やファイル分類の扱いを判断するとき。
 
 ## Do not read this when
-- cmoc の機能仕様や利用手順そのものを確認したいとき。
-- 構築済み環境での通常の検査手順だけを確認したい場合は、テスト実行手順の対象を直接読むとき。
-- 実装規則ではなくテスト固有の意味要件だけを確認したい場合は、テスト規約の対象を直接読むとき。
-- Python 環境の構築や依存関係の変更を伴わない通常の開発作業では、開発環境の対象を読む必要がないとき。
+- INDEX.md のルーティング形式や対象一覧だけを確認したいとき。
+- 具体的な実装・テスト・正本仕様の内容を直接確認する必要があり、対象となる src、test、oracle/doc の個別ファイルへ進めるとき。
 
 ## hash
-- a075a93a49793f0fcae674074efb36753c7eb1dba5fbc16071c8061f18435a8e
+- d72e431c5be6aff957fe4fa0c8997fa93fbc38246aa9a4aeb7a1e30c806a7fc4

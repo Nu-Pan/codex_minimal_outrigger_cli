@@ -1,52 +1,54 @@
 # `coding_rule.md`
 
 ## Summary
-- cmoc の Python 実装におけるコーディング規則を定める文書。命名・責務・型ヒント・import・docstring・コメント・非公開識別子など、実装時に守るべき基準への入口となる。
+- cmoc の Python 実装に適用する基本的なコーディング規則を定める正本。PEP 8、責務と入出力、過剰実装の回避に加え、cwd 識別子、型ヒント、import、docstring、コメント、非公開識別子の扱いを確認する入口。
 
 ## Read this when
-- cmoc の src または oracle/src の実装を新規作成・変更・レビューするとき。
-- 識別子の命名、型注釈、import 構成、docstring、コメントやログの言語などの判断基準を確認したいとき。
+- cmoc または oracle/src の実装で命名・型注釈・import・docstring・コメント・公開範囲を決めるとき
+- Ruff や mypy などの機械検査だけでは判断できないコード品質上の規約を確認するとき
+- cwd を表す識別子や agent call 関連の変数名を追加・変更するとき
 
 ## Do not read this when
-- 実装規則ではなく、cmoc の機能仕様や利用手順を確認したいとき。
-- テスト固有の規則だけを確認する場合。本文では test を型注釈・docstring の必須検査範囲から除外しているため、テストの詳細はテスト関連の対象を直接読む。
+- 機能の振る舞い、入出力仕様、CLI 操作、データ形式の正本仕様を確認したいとき
+- テスト固有の設計や fixture の規約だけを確認したいとき
+- 個別の実装箇所を直接調査するだけで、コーディング方針の判断が不要なとき
 
 ## hash
-- 7b69cc4f94c3fe9dfc733e35b3cc4adb199db63accbbc6132a7204d246d2a200
+- 63c5f274802e9cf39e0da98fc168f9282d6181d4635cf6989b3566615a687b26
 
 # `design_rule.md`
 
 ## Summary
-- CLI の実装責務を定め、Typer によるエントリーポイントとサブコマンド本命処理の分離方針を示す設計規則。
-- 複数サブコマンドで共通利用する機能を commons 配下へ配置する境界を定義する。
+- cmoc の CLI 実装配置と共通機能の配置ルールを定める設計規約です。
+- CLI の引数解釈は src/main.py、各サブコマンドの本命処理は src/sub_commands 配下、複数サブコマンドで共有する機能は src/commons 配下に置く構成を示します。
 
 ## Read this when
-- CLI のエントリーポイント、引数解釈、サブコマンド実装の配置や責務分担を変更・確認するとき。
-- サブコマンド間で共有するユーティリティ、定数、エラー処理などの配置を判断するとき。
+- CLI のエントリーポイント、サブコマンド処理、または共通ユーティリティの実装場所や分割方針を決めるとき。
+- src/main.py と src/sub_commands 配下の責務分担、または複数サブコマンドで使う機能の配置を確認するとき。
 
 ## Do not read this when
-- CLI や共通系の実装責務・配置を扱わず、個別サブコマンドの本命処理だけを直接確認するとき。
-- テスト実行方法や開発環境の構築手順を確認するとき。
+- 個別サブコマンドの仕様や処理内容を確認したいときは、そのサブコマンドの oracle doc または実装を直接読みます。
+- Typer や共通機能の具体的な API、エラー仕様、テスト方針を確認したいときは、対応する詳細仕様やコードを直接読みます。
 
 ## hash
-- 6050a02f8b64d7a55ae83b1504dc36e6a782b2da777aedd8ed114ebd87e8fc23
+- 5140757764500307eeae7ac0ea55ba98c6fb640c5f775d67e6a04e8b7a813867
 
 # `development_environment.md`
 
 ## Summary
-- Python 仮想環境の新規作成、依存関係の追加、pip 操作に必要な開発環境の前提と手順を定める文書。
+- cmoc 開発環境の正本ルール。前提となる開発環境、文字コードと命名規則、Python 仮想環境の使用方法、依存関係追加時の手順を定める。
 
 ## Read this when
-- Python 実行環境や仮想環境を新規構築するとき
-- pyproject.toml に依存関係を追加し、開発用パッケージをインストールするとき
-- 使用する Python インタプリタや pip の場所、環境上の命名・エンコード規則を確認するとき
+- Python 環境を新規構築するとき。
+- 依存関係やパッケージを追加・インストールするとき。
+- Python インタプリタ、pip、ファイルエンコード、命名規則など開発環境上の条件を確認するとき。
 
 ## Do not read this when
-- 構築済み環境で通常の test や品質検査を実行するだけのときは、検査手順の正本を直接読む
-- Python 環境の構築や依存関係の変更を伴わない通常の開発作業を行うとき
+- 構築済み環境で既存テストや品質検査を実行・判定・報告するだけのときは、test_execution.md を直接読む。
+- 個別の機能仕様や実装内容を確認・変更するときは、対象の oracle doc や src/test を直接読む。
 
 ## hash
-- 5a954b891dfe79f56dde7f96c48d7171a032e728a180f42c152ff57cc29c1091
+- 5d2103792f6eb36a50a8cccddb6f6f101ec5cfa830aec08dd17885163ae9cad0
 
 # `test_execution.md`
 
@@ -67,19 +69,20 @@
 # `test_rule.md`
 
 ## Summary
-- realization test が検証すべき意味上の要件を定め、pytest・隔離された tmp_path 環境・決定論的制御ロジックのテスト方針を示す文書。
-- 実経路統合テストの正本用語、選択 marker、対象範囲、実在する Codex CLI と実推論を用いた検証要件、および公開末端サブコマンドとの対応要件を定める。
-- 実経路統合テストにおける agent call の設定取得、quota の扱い、model provider・Model・Reasoning Effort の境界と、Fake Codex CLI を使用できる条件を示す。
+- realization test が満たす意味上の要件を定め、pytest・隔離された tmp_path 環境・テストの目的と非目的を示す。
+- 実経路統合テストについて、対象範囲、独立 process 実行、実在の Codex CLI と実推論、サブコマンド対応、設定と quota の扱いを定める。
+- 実経路統合テスト以外で決定論的な制御ロジックを検証する場合の Fake Codex CLI の利用境界を示す。
 
 ## Read this when
-- realization test の目的、責務境界、配置、隔離環境、検証対象を確認するとき。
-- 実経路統合テストを追加・変更・選択するとき、特に公開末端サブコマンドとの対応や実在の Codex CLI を使う要件を確認するとき。
-- 実経路統合テストの agent call 設定、quota、model provider、または Fake Codex CLI の扱いを判断するとき。
+- realization test の設計・実装方針、テスト対象と非対象の境界を確認したいとき。
+- 実経路統合テストケースの追加・変更、公開末端サブコマンドとの対応、Codex CLI 呼び出しを伴う検証方法を判断するとき。
+- Fake Codex CLI を使える条件や、テスト用 CmocConfig の model provider・Model・Reasoning Effort 設定を確認するとき。
 
 ## Do not read this when
-- 構築済み環境での test・品質検査の選択、実行、完了判定、報告手順を確認したいとき。
-- 開発環境の新規構築、依存関係の追加、または pip 操作の手順を確認したいとき。
-- LLM や Codex CLI 自体の回答品質・安定性、または model provider の正しさを評価するとき。
+- 構築済み環境での test・品質検査の実行手順や完了判定を確認したいときは、test_execution.md を直接読む。
+- 開発環境の構築、依存関係の追加、pip 操作を確認したいときは、development_environment.md を直接読む。
+- Codex CLI の model provider に関する責務境界や通常の呼び出し規則を確認したいときは、指定された app_spec 文書を直接読む。
+- 個別の実装コードやテストケースの詳細を確認したいときは、該当する realization test・実装ファイルを直接読む。
 
 ## hash
-- 4df53f32146e8aa5b6649442dd2e4a581ce74a5e79bd2d1ea1b6a55edf35f234
+- 4de13a36023c782020e6db812050bab16c4767d51ec2aecfba87dba18a69ea45
