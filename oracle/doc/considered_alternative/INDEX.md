@@ -37,20 +37,21 @@
 # `gitignore_to_permission_profile.md`
 
 ## Summary
-- .gitignore の無視対象を permission profile の例外的な読み書き許可へ動的変換する案について、採用しなかった結果と具体的な検討内容を記録する文書。
-- permission profile と .gitignore の記法に互換性がなく、ディレクトリ限定指定や一部のパターンを正確に表現できないため、変換案を断念した理由を確認できる。
+- .gitignore の ignore 判定結果を permission profile の例外的な読み書き許可へ動的変換する案について、採用しなかった判断と検討理由を記録する oracle 文書。
+- gitignore と permission profile の記法差により、ディレクトリ限定指定や `?`・文字クラスなどを正確に変換できないことを根拠に、案を断念した経緯を扱う。
 
 ## Read this when
-- .gitignore の判定結果を permission profile の読み書き規則へ反映する設計や、その採否理由を確認するとき。
-- git ignore 対象の削除・編集許可を permission profile の例外として扱う案を検討するとき。
+- .gitignore の無視対象を permission profile の読み書き例外として扱う設計案の採否を確認するとき。
+- git check-ignore の結果を Codex CLI の permission profile に反映する案の問題点を調べるとき。
+- ignore 対象の削除・編集許可を権限規則へ変換する代替設計を検討するとき。
 
 ## Do not read this when
-- 現行の permission profile の仕様や禁止事項を確認したいときは、正本である codex_exec_rule.md を直接読む。
-- .gitignore の現在のパターンや実際の ignore 判定を調べるときは、リポジトリの .gitignore と git check-ignore の結果を直接確認する。
-- permission profile の具体的な設定方法や実装を知りたいとき。
+- 現行の permission profile の不使用・動的生成禁止という正本仕様を確認したいときは、codex_exec_rule.md を直接読む。
+- .gitignore の現在のパターンや実際の ignore 判定を確認したいときは、.gitignore と git check-ignore の結果を直接調べる。
+- permission profile の具体的な設定方法や実装を確認したいとき。
 
 ## hash
-- 3c40d786231e0fbca364c00b33e64be3dc52eb5513092ced7eb7f87915ade183
+- 987eb09968e110f446ed1d4ba07c5ed1edec235bc979c1b816138f8ab088b763
 
 # `memory_alternative.md`
 

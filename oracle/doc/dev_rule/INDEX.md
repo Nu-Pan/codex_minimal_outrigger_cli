@@ -53,38 +53,38 @@
 # `test_execution.md`
 
 ## Summary
-- 構築済みの cmoc 開発環境で、Python interpreter と preflight 条件を確認し、focused test・品質検査・実経路統合テスト・fresh な完了ゲートの選択、実行、完了判定、結果報告を定める手順書。関連するテスト仕様、コーディング規約、開発環境の正本への入口でもある。
+- 構築済みの cmoc 開発環境で、Python interpreter と repository root の決定、preflight、focused test・品質検査の選択、pytest/Ruff/mypy の実行、実経路統合テストを含む fresh な完了ゲート、完了判定、結果報告を定める手順。関連するテスト要件・コーディング要件・環境構築要件との責務境界も示す。
 
 ## Read this when
-- cmoc のテストや Ruff・mypy の実行対象、実行コマンド、warning の扱い、実経路統合テストの分離方法を決めるとき。
-- 変更後に fresh な完了ゲートを実行し、未完了条件や skip・failure の理由を報告するとき。
+- 変更に対して、どの test・品質検査を選び、どの interpreter と command で実行し、何をもって完了と判定するかを確認するとき。
+- focused test、full test、実経路統合テスト、Ruff、mypy、ResourceWarning 検査の実行条件や結果報告項目を確認するとき。
+- 検査を開始できない環境不足や、失敗・skip・外部要因をどのように分類して報告するかを判断するとき。
 
 ## Do not read this when
-- テストそのものが満たす意味上の要件を確認したいときは、テスト実装規約を直接読む。
-- 型注釈・docstring の品質要件を確認したいときは、コーディング規約を直接読む。
-- Python 環境の構築や依存関係、pip 操作の手順を確認したいときは、開発環境の正本を直接読む。
-- 個別の実装やテストコードの仕様・挙動を確認したいとき。
+- realization test が満たす意味上の要件を確認したいときは、test_rule.md を直接読む。
+- 型注釈や docstring の品質要件を確認したいときは、coding_rule.md を直接読む。
+- Python 環境の新規構築、依存関係追加、pip 操作の規則を確認したいときは、development_environment.md を直接読む。
+- 個別テストの実装や対象機能の仕様を調べたいときは、対応する test code または仕様文書を直接読む。
 
 ## hash
-- 3715cf45eaba6acb3862f6f56e7b24cdbdbd67d27a08b072fcb25aa4ea5ec167
+- 0a22e5471b7fa296113c99fc5490cdc5fb01a49dd278cf4a16d2fd76f7389ff5
 
 # `test_rule.md`
 
 ## Summary
-- realization test が満たす意味上の要件を定め、pytest・隔離された tmp_path 環境・テストの目的と非目的を示す。
-- 実経路統合テストについて、対象範囲、独立 process 実行、実在の Codex CLI と実推論、サブコマンド対応、設定と quota の扱いを定める。
-- 実経路統合テスト以外で決定論的な制御ロジックを検証する場合の Fake Codex CLI の利用境界を示す。
+- realization test が満たす意味要件を定め、pytest、隔離された tmp_path 環境、検証対象の範囲、実経路統合テストの用語・網羅性・実 Codex CLI 要件、model/quota の扱い、Fake Codex CLI の利用条件を示すテスト規約。
+- テストの実行手順や環境構築そのものではなく、テスト実装時の責務境界と検証方針を確認するための正本。
 
 ## Read this when
-- realization test の設計・実装方針、テスト対象と非対象の境界を確認したいとき。
-- 実経路統合テストケースの追加・変更、公開末端サブコマンドとの対応、Codex CLI 呼び出しを伴う検証方法を判断するとき。
-- Fake Codex CLI を使える条件や、テスト用 CmocConfig の model provider・Model・Reasoning Effort 設定を確認するとき。
+- realization test の目的、対象範囲、配置場所、隔離環境の作り方を決めるとき。
+- 実経路統合テストの命名、pytest marker、公開末端サブコマンドとの対応、実在する Codex CLI と実推論の使用要件を確認するとき。
+- Fake Codex CLI を使える条件や、テスト用 CmocConfig による model provider・Model・Reasoning Effort・quota の扱いを確認するとき。
 
 ## Do not read this when
-- 構築済み環境での test・品質検査の実行手順や完了判定を確認したいときは、test_execution.md を直接読む。
-- 開発環境の構築、依存関係の追加、pip 操作を確認したいときは、development_environment.md を直接読む。
-- Codex CLI の model provider に関する責務境界や通常の呼び出し規則を確認したいときは、指定された app_spec 文書を直接読む。
-- 個別の実装コードやテストケースの詳細を確認したいときは、該当する realization test・実装ファイルを直接読む。
+- 構築済み環境での test・品質検査の選択、実行、完了判定、報告手順を確認したいときは test_execution.md を読む。
+- 開発環境の構築、依存関係の追加、pip 操作を確認したいときは development_environment.md を読む。
+- cmoc の model provider や Codex CLI 呼び出し自体の正本仕様を確認したいときは codex_model_provider.md または codex_exec_rule.md を直接読む。
+- 個別の実装やテストケースの具体的な挙動を確認したいときは、対応する src または test の対象を読む。
 
 ## hash
-- 4de13a36023c782020e6db812050bab16c4767d51ec2aecfba87dba18a69ea45
+- 4c45eaa5a952d3edc1f7519a672e12fe47e4bbd91a584f3372f66383ab696cca

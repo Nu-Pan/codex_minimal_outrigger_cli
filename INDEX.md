@@ -89,22 +89,23 @@
 # `oracle`
 
 ## Summary
-- 人間が所有する cmoc の正本仕様ツリー。対象リポジトリの要求・責務・判断基準などの意味仕様と、そこから委譲された prompt 構築、builder、schema、algorithm の正確な定義を扱う。
-- oracle/doc はアプリケーション仕様、開発規則、サブコマンド仕様、設計上の代替案を確認する入口であり、意味仕様の根拠を調べるときに進む。
-- oracle/src は oracle doc から委譲された実行可能な正本定義を扱い、prompt builder、ACP builder、feedback、editor input handoff などの exact な構築・選択・schema を確認するときに進む。
+- 人間が所有し責任を負う正本仕様を集約する領域です。自然言語の意味仕様、正確なアルゴリズム・prompt・schemaを担う正本実装、関連する検査用の正本テストを扱います。
+- `oracle/doc` には cmoc の目的、運用規則、ファイル分類、フィードバック、実行方式、開発規則などの意味仕様が整理されています。
+- `oracle/src` には oracle doc から委譲された prompt 構築、ポリシー、index entry生成、設定・パスモデルなどの実行可能な正本詳細があります。
 
 ## Read this when
-- cmoc の要求、正本仕様、責務分担、設計判断の根拠を確認するとき。
-- 仕様から委譲された prompt の構築方法、builder の挙動、選択値、schema、algorithm を確認するとき。
-- 仕様と実装の適合性を調査するため、意味仕様と委譲された正確な定義を対応付ける必要があるとき。
+- cmocの要求、責務、制約、goal・non-goalなどの意味仕様を確認するとき
+- promptの正確な文面、構築順序、schema、選択値など、oracle docから委譲された詳細を確認するとき
+- realization側の実装やテストが人間の正本仕様に適合しているか調査するとき
 
 ## Do not read this when
-- realization 側の実装やテストの具体的な挙動だけを確認する場合は、該当する src や test を直接読む。
-- すでに oracle/doc または oracle/src 内の個別ファイルが特定できている場合は、oracle 全体を読み直さず対象ファイルへ進む。
-- INDEX.md の生成・更新そのものの機械的処理を確認するだけの場合は、対象の実装手順や個別仕様を直接読む。
+- 製品の実装挙動だけを確認・変更する場合は、対応する `src` を直接読むとき
+- 製品のテストだけを確認・変更する場合は、対応する `test` を直接読むとき
+- 正本仕様ではなく、生成済みpromptや現在の実装から仕様を推測したいとき
+- リポジトリ全体の作業規定や目次生成規則だけを確認する場合は、対応する運用文書を直接読むとき
 
 ## hash
-- d03457d0f1efe7985cd2496f280588df8fc2c55b62895752c7f747246c310fd8
+- 525c3fea5fe4110620201dd4e369dfec0faf94929f4e7c4c8a11e19a8d248ddb
 
 # `pyproject.toml`
 

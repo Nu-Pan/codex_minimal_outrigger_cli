@@ -36,20 +36,22 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の CLI 契約、run 開始・再開、observation の validation と issue 処理、remediation、commit/rollback、自動 join、publication を定義する正本仕様。
-- feedback report の実行経路や issue 単位の安全な修正、結果分類、差分検証、recovery の扱いを確認するための上位仕様入口。
+- `cmoc feedback report` の仕様。feedback run の開始・再開、observation の validation／normalization、issue 単位の remediation・commit・rollback、intake wave、auto join、publication、recovery を定める。
+- feedback observation や state、branch／run isolation などの関連仕様を参照しながら、問題報告を収集して安全な realization file 修正を統合する処理の入口となる。
 
 ## Read this when
-- `cmoc feedback report` の起動条件、run lifecycle、入力検証、issue の正規化・修正、commit、join、publication の挙動を実装またはレビューするとき。
-- feedback observation を issue として処理し、修正結果や人間対応が必要な結果をどの条件で公開するか確認するとき。
+- `cmoc feedback report` の CLI 契約、開始条件、既存 run の recovery、issue 処理、publication 結果を確認したいとき。
+- feedback observation を issue identity にまとめ、remediation agent の結果を検証して issue 単位で commit・join する流れを調べるとき。
+- 正常結果、`incomplete`、validation／agent／commit／merge／publication failure の扱いを確認するとき。
 
 ## Do not read this when
-- raw observation の収集形式だけを確認したい場合は、feedback observation の仕様を直接読む。
-- feedback の用語・結果分類、repository-local state、branch model、run isolation、agent call の詳細契約だけを確認したい場合は、本文が参照する各専門仕様を直接読む。
-- `cmoc feedback report` と無関係なサブコマンドの CLI 契約や一般的な INDEX.md routing を調べる場合。
+- raw observation の収集形式や reporter input の詳細だけを確認したいときは、feedback observation の仕様を直接読むべきである。
+- feedback state の schema、checkpoint、high-watermark、report cut、atomic publication の詳細だけを確認したいときは、feedback state の仕様を直接読むべきである。
+- 一般的な編集 run の隔離、join、abandon、差分検査を確認したいときは、editing run の共通仕様を直接読むべきである。
+- 実装の起動パラメータや Structured Output schema を確認したいときは、参照先の oracle source を直接読むべきである。
 
 ## hash
-- fec6ea4ffbff21c49ec05fd9f076c27669e9d2ab3809cf37176fb4637406e980
+- a9c8c19650d4628e4654a07688d5595439bb5ee072799887bcb59d083de542e7
 
 # `indexing.md`
 
@@ -71,21 +73,18 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` の仕様を定義し、ユーザー指示から oracle file の目標状態を導くための固定2回の直列編集、prompt・設定の共有、agent call 前提、編集境界、実行順序、終了状態、primary report・ログ通知、および中断・排他制御を扱う。oracle edit の実行挙動や関連する正本仕様を確認する際の入口。
+- oracle file `cmoc oracle edit` の目的、入力確定と共通 prompt 構築、2 回の独立した編集 agent call、編集境界、実行順序、終了状態、primary report・ログ通知、および中断・排他制御を定めるサブコマンド仕様。
 
 ## Read this when
-- `cmoc oracle edit` の実行順序、2回の独立した agent call、prompt と設定の確定方法を確認するとき
-- oracle edit が編集できる対象、禁止される Git・worktree 操作、差分の扱いを確認するとき
-- primary report、console・ログ、terminal result、Windows toast の保存・通知境界を確認するとき
-- oracle edit の起動前条件、終了状態、失敗時の扱い、中断・排他制御を確認するとき
+- `cmoc oracle edit` の実行条件、2 回の編集 call の扱い、agent に許可する編集範囲を確認したいとき。
+- oracle edit の prompt 構築、差分の扱い、終了結果、report やログの保存規則を確認したいとき。
 
 ## Do not read this when
-- oracle file の編集判断基準や共通の prompt 受け渡し規則だけを確認したい場合は、本文が参照する共通仕様を直接読むとき
-- 実装の具体的な起動パラメータ構築を確認したい場合は、`launch_exec.py` の正本実装を直接読むとき
-- oracle edit 以外のサブコマンドの仕様や、INDEX.md の生成規則を確認したいとき
+- oracle file の調査・参照だけを行う `oracle investigation` の仕様を確認したいとき。
+- oracle 以外の編集や INDEX.md 生成の仕様を確認したいときは、対応するサブコマンド仕様へ直接進む。
 
 ## hash
-- d2b564041ee091f57ea83d57d62e419f794d744341aad1a93d7f36fcddc62c89
+- 255690eafe5c6b213f5dd57a1538bdeadd4339645c1fbfb37b5b2e8e3a7948e8
 
 # `oracle_investigation.md`
 
