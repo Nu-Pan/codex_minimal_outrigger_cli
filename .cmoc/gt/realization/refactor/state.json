@@ -1332,7 +1332,7 @@
     "last_investigated_at": "2026-09-10_21-01_06_451219000"
   },
   "test/test_oracle_investigation_cli.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "5add200a877c12b3d16a4f6f6e1eb5393f4dcfe53dab1dda40f47f5006c7866a",
     "last_investigated_at": "2026-09-10_17-46_14_722369000"
