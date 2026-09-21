@@ -21,8 +21,8 @@ def build_oracle_edit_main_launch_exec_parameter(
     """`cmoc oracle edit` の両回で共用するパラメータを構築する。
 
     Args:
-        user_instruction: oracle file の最終状態に関するユーザー指示。
-            エディタへ提示する完全 prompt の skeleton を構築する場合は、
+        user_instruction: oracle file の最終状態に関する、入力確定済みのユーザー指示。
+            handoff ガイドへ提示する完全 prompt の skeleton を構築する場合は、
             `{{original-prompt-here}}` を渡す。
 
     Returns:

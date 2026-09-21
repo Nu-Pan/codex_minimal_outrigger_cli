@@ -17,8 +17,8 @@ def build_tui_launch_tui_parameter(
 
     Args:
         original_prompt: ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す
-            オリジナルプロンプト。コメント除去と strip は呼び出し側で完了している
-            想定。エディタへ提示する完全プロンプトの skeleton を構築する場合は、
+            オリジナルプロンプト。前後空白の strip は呼び出し側で完了している
+            想定。handoff ガイドへ提示する完全プロンプトの skeleton を構築する場合は、
             `{{original-prompt-here}}` を渡す。
 
     Returns:

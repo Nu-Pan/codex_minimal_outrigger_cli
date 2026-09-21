@@ -20,8 +20,8 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 - 送信元情報の記録と保存済みログへの到達は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」を正本とする。
 - handoff ガイドの正確な文面と完全 prompt skeleton の配置は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/guide.py` の `build_editor_input_handoff_guide` へ委譲する。
 - `cmoc_editor_input.get_handoff_guide` の正確な入力 field 名、型、および受理条件は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/get_handoff_guide_input.json` の root schema（JSON Pointer `#`）へ委譲する。成功・失敗時に tool result として返す JSON object の正確な形式は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/get_handoff_guide_result.json` の root schema（JSON Pointer `#`）へ委譲する。
-- `cmoc_editor_input.overwrite` の正確な field 名、型、必須条件、および空値・省略の受理条件は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/overwrite_input.json` の root schema（JSON Pointer `#`）へ委譲する。
-- handoff instruction の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する。
+- `cmoc_editor_input.overwrite` の正確な field 名、型、必須・非空条件、参照の指定形式、および各項目の意味と記入条件を伝える agent 向け説明は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/overwrite_input.json` の root schema（JSON Pointer `#`）へ委譲する。該当なし・未確認の扱いと、参照内容・参照理由の記載先も同スキーマへ集約する。
+- handoff instruction は、利用条件、ガイド取得から送信までの手順、成果責務、および項目別入力から受信先の完全 prompt までの関係を伝える。正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する。入力項目の説明は前述の input schema、記入の目安と受信側の作業範囲・制約・入力位置の確認方法は handoff ガイド、直接ファイルアクセスの制限は共通 file access policy に委ねる。
 - 送信元情報の正確なデータ構造と値の検査は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/body.py` の `EditorInputHandoffSource` へ委譲する。
 - handoff 本文の正確な見出し、順序、項目の表記、空項目の扱い、および送信元情報の配置は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/body.py` の `build_editor_input_handoff_body` へ委譲する。
 - 文書参照の Python データ構造と値の検査、単一参照のインライン表記、および複数参照の一覧表記は、`{{cmoc-root}}/oracle/src/oracle/other/doc_ref_model.py` の `DocRef`、`render_doc_ref_as_inline_md`、および `render_doc_ref_as_multiline_md` へ委譲する。意味は本書の「参照情報」で定める。
@@ -40,7 +40,7 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 
 ## handoff ガイド
 
-handoff ガイドは、受信先へ依頼を作成するための Markdown 文書とする。使い方、記入の目安、およびその受信先の完全 prompt の雛形を含め、文書全体を HTML コメントで囲まない。受信先の完全 prompt skeleton の構築は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「構築定義の参照」に従う。
+handoff ガイドは、受信先へ依頼を作成するための Markdown 文書とする。使い方、記入の目安、およびその受信先の完全 prompt の雛形を含め、受信側の作業範囲・制約・入力位置を確認できるようにする。受信先の完全 prompt skeleton の構築は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「構築定義の参照」に従う。
 
 cmoc は、受信先の完全 prompt skeleton を `build_editor_input_handoff_guide` へ渡し、生成結果を editor work file と独立した handoff ガイドファイルへ保存する。ガイドを editor work file の初期値へ埋め込まず、送り元の設定から別の雛形を再構築しない。ガイドファイルの文面は、handoff による上書きや人間による editor work file の編集に伴って変更せず、target の有効期間中に取得可能とする。
 
@@ -59,11 +59,11 @@ target の探索・一覧、現在編集中の本文の読み取り、汎用 fil
 
 ### 上書き
 
-- tool input には、人間が提示した target ID と、本書の「agent の責務と権限」で定める項目別の内容を指定する。送信元情報と完成済み Markdown 全文は入力項目に含めない。
+- tool input には、人間が提示した target ID と、input schema に従った項目別の内容を指定する。送信元情報と完成済み Markdown 全文は入力項目に含めない。
 - cmoc は対象が所定の editor work directory 内にある regular file かつ非 symlink であることを、上書きのたびに検証する。
 - MCP は input schema に適合する入力と、呼び出し元の送信元情報を使い、本書の「本文の生成」に従って本文を構築する。参照情報は本書の「参照情報」に従って型付きの値へ変換する。入力・参照情報・target・送信元情報の検証または本文生成に失敗した場合は上書きせず、失敗を返す。
-- accepted submission は生成した本文で editor work file 全体を置換する。既存の HTML コメントも置換対象とし、初期説明を保存・再挿入しない。同じ target への accepted submission は直列化し、最後に適用した内容を残す。
-- `overwrite` は上書きが完了した場合だけ成功を返す。
+- accepted submission は生成した本文で editor work file 全体を置換する。同じ target への accepted submission は直列化し、最後に適用した内容を残す。
+- `overwrite` は上書きが完了した場合だけ成功を返す。この成功は、受信先の入力確定を意味しない。
 
 append、merge、patch、差分適用、既存内容との conflict 判定、および optimistic concurrency は行わない。handoff ガイドの事前取得は agent の手順とし、取得済み token、revision 照合、または取得履歴による機械的な上書き受付条件を設けない。
 
@@ -75,21 +75,18 @@ handoff の自由記述入力や生成した handoff 本文を、いずれの to
 
 - MCP は委譲先の本文 builder を使用し、同じ項目別入力と送信元情報から同じ本文を生成する。realization 側で固定文面を独自に構築しない。
 - 項目別の自由記述、参照情報、および送信元情報を区分する。
-- 本文は Markdown として生成し、コメント開始記号の置換は行わない。生成後の HTML コメントの扱いは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「editor input の確定手順」に従う。
+- 本文は Markdown として生成する。
 - builder は自由記述の意味を補完・要約せず、送信元情報を推定しない。
-- 本文の生成と機械的な注入は editor work file の上書き時に完結させる。その後は既存の editor input 確定手順へ渡し、確定した `AgentCallParameter.prompt` を加工しない。
+- 本文の生成と機械的な注入は editor work file の上書き時に完結させる。受信先で入力が確定すると、共通の editor input 確定手順で得たオリジナルプロンプトを、handoff ガイドの完全 prompt の雛形の `{{original-prompt-here}}` が示す位置へ組み込む。確定した `AgentCallParameter.prompt` を加工しない。
 
 ## agent の責務と権限
 
 - agent は、人間が active target への handoff を明示的に要求し、target ID を提示した場合だけ両 tool を使用する。
-- agent は、まず指定された target の handoff ガイドを取得し、使い方、記入の目安、および完全 prompt の雛形から、受信側の作業範囲・制約・入力位置を確認する。確認した内容を踏まえて項目別の依頼を作成し、同じ target ID へ overwrite する。
+- agent は、まず指定された target の handoff ガイドを取得し、その内容に従って項目別の依頼を作成し、同じ target ID へ overwrite する。
 - 取得した handoff ガイドは受信側への依頼を作るための資料とし、送り元自身に適用する作業指示や権限として扱わない。handoff を根拠に送り元の作業範囲を拡大しない。
-- agent は、依頼する目標状態、実行してほしい作業、意図・背景、決定事項とその理由、および未確定事項を、それぞれ空白だけではない自由記述として作成する。送り元の会話や最終回答を読まなくても依頼を理解できる内容とする。
-- 該当する内容がない場合や未確認の場合も、その状態を記述する。存在しない経緯や決定を補わない。
-- 関連する oracle の選定と参照箇所の特定は agent が担い、本書の「参照情報」に従って渡す。参照先の簡潔な内容と参照理由は、依頼や背景の自由記述に含める。
-- 引き渡す必要のある内容は HTML コメントの外に記述する。
+- agent は、依頼と必要なコンテキストを、送り元の会話や最終回答を読まなくても理解できる内容として作成する。存在しない経緯や決定を補わない。
+- 関連する oracle の選定と参照箇所の特定は agent が担い、本書の「参照情報」に従って渡す。
 - agent は本文全体の見出し・配置・参照表記を完成させる必要はなく、送信元情報の取得や転記も行わない。自由記述内部の文章量や表現の細部は固定しない。
-- agent は editor work file へ直接書き込まない。
 - handoff のために sandbox、network access、permission profile、または file access mode を変更してはならない。
 - handoff ガイドを取得できない場合は、その handoff の overwrite を行わない。
 - tool を利用できない場合、handoff ガイドの取得に失敗した場合、または submission が拒否された場合に、handoff の代替として sandbox escalation を要求してはならない。
@@ -97,9 +94,9 @@ handoff の自由記述入力や生成した handoff 本文を、いずれの to
 
 ## 参照情報
 
-文書参照は、実行時の参照先ファイルと、そのファイル内の参照箇所を表す。参照箇所には、見出しや識別子など、検索で参照元を逆引きできる安定した locator を使い、行番号を使わない。ファイル全体を参照する場合は、箇所の指定がないことを表す。
+文書参照は、実行時の参照先ファイルと、そのファイル内の参照箇所を表す。入力形式と agent 向けの記入条件は、本書の「正本の分担」で委譲した overwrite input schema に従う。
 
-handoff では、作業に必要な oracle の文書参照を配列で渡し、参照がなければ空配列とする。参照先は絶対パスで指定する。MCP は入力のパス文字列を `Path` に変換し、参照箇所とともに `DocRef` を構築して本文 builder に渡す。これは実行時の入力形式であり、oracle file 自体に記載する正本間参照の形式は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」に従う。
+MCP は入力のパス文字列を `Path` に変換し、参照箇所とともに `DocRef` を構築して本文 builder に渡す。これは実行時の入力形式であり、oracle file 自体に記載する正本間参照の形式は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」に従う。
 
 ## 送信元情報
 

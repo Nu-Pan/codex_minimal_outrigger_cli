@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "cmoc editor input overwrite tool input",
+  "description": "自由記述項目の goal、instructions、background、decisions、open_questions には、該当する内容がない場合や未確認の場合も、その状態を記述する。",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -27,19 +28,19 @@
     },
     "background": {
       "$ref": "#/$defs/nonblank_text",
-      "description": "依頼の意図・背景。該当する内容がない場合や未確認の場合も、その状態を記述する。"
+      "description": "依頼の意図・背景。"
     },
     "decisions": {
       "$ref": "#/$defs/nonblank_text",
-      "description": "決定事項とその理由。該当する内容がない場合や未確認の場合も、その状態を記述する。"
+      "description": "決定事項とその理由。"
     },
     "open_questions": {
       "$ref": "#/$defs/nonblank_text",
-      "description": "未確定事項。該当する内容がない場合や未確認の場合も、その状態を記述する。"
+      "description": "未確定事項。"
     },
     "oracle_references": {
       "type": "array",
-      "description": "作業に必要な oracle の参照。参照がなければ空配列にする。参照先の簡潔な内容と参照理由は依頼や背景の自由記述に含める。",
+      "description": "作業に必要な oracle の参照。参照がなければ空配列にする。参照先の簡潔な内容と参照理由は instructions または background に含める。",
       "items": {
         "type": "object",
         "additionalProperties": false,

@@ -17,7 +17,7 @@ def build_oracle_investigation_launch_tui_parameter(
 
     Args:
         user_instruction: ユーザーがエディタ入力した、oracle file に関する調査指示。
-            コメント除去と strip は呼び出し側で完了している想定。エディタへ提示する
+            前後空白の strip は呼び出し側で完了している想定。handoff ガイドへ提示する
             完全プロンプトの skeleton を構築する場合は、
             `{{original-prompt-here}}` を渡す。
 
