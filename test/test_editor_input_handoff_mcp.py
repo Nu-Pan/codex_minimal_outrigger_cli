@@ -14,6 +14,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from _handoff_support import handoff_body, handoff_input
+from jsonschema.validators import Draft202012Validator
+from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
 
 import commons.runtime_editor_input_handoff_mcp as handoff_mcp
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
@@ -26,8 +28,94 @@ from commons.runtime_editor_input_handoff_protocol import (
 pytestmark = pytest.mark.usefixtures("handoff_source")
 
 
-def test_handoff_mcp_exposes_only_overwrite_with_canonical_schema() -> None:
-    """tool 一つだけを公開し、正本 schema を複製せず返す。"""
+def _get_guide_result(arguments):
+    response = handoff_mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": "guide",
+            "method": "tools/call",
+            "params": {"name": "get_handoff_guide", "arguments": arguments},
+        }
+    )
+    result = response["result"]
+    value = result["structuredContent"]
+    schema = json.loads(
+        resources.files("oracle.editor_input_handoff")
+        .joinpath("get_handoff_guide_result.json")
+        .read_text(encoding="utf-8")
+    )
+    Draft202012Validator(schema).validate(value)
+    assert json.loads(result["content"][0]["text"]) == value
+    assert result["isError"] is (value["status"] == "error")
+    return value
+
+
+def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkeypatch):
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work.parent.mkdir(parents=True)
+    work.write_text("private editor content")
+    skeleton = "受信先の制約\r\n" * 10000 + "{{original-prompt-here}}"
+    target = start_editor_input_handoff(tmp_path, work, skeleton)
+    monkeypatch.delenv(EDITOR_INPUT_SOURCE_ENV)
+    try:
+        result = _get_guide_result({"target_id": target.target_id})
+        assert result == {
+            "status": "ok",
+            "guide_text": build_editor_input_handoff_guide(skeleton),
+        }
+        assert "private editor content" not in json.dumps(result)
+        assert work.read_text() == "private editor content"
+    finally:
+        target.close()
+    assert not target.handoff_guide_path.exists()
+
+
+@pytest.mark.parametrize("damage", ["missing", "invalid_utf8", "symlink"])
+def test_unavailable_guide_never_returns_editor_content(tmp_path, monkeypatch, damage):
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work.parent.mkdir(parents=True)
+    work.write_text("private editor content")
+    target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
+    try:
+        target.handoff_guide_path.unlink()
+        if damage == "invalid_utf8":
+            target.handoff_guide_path.write_bytes(b"\xff")
+        elif damage == "symlink":
+            target.handoff_guide_path.symlink_to(work)
+        result = _get_guide_result({"target_id": target.target_id})
+        assert result["status"] == "error"
+        assert "private editor content" not in json.dumps(result)
+        assert work.read_text() == "private editor content"
+    finally:
+        target.close()
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        None,
+        {},
+        {"target_id": " "},
+        {"target_id": 1},
+        {"target_id": "unknown"},
+        {"target_id": "\ud800"},
+        {"target_id": "unknown", "content": "private input"},
+        {"target_id": "unknown", "file_path": "private input"},
+    ],
+)
+def test_handoff_guide_rejects_invalid_or_unknown_target_without_input_leak(
+    tmp_path, monkeypatch, arguments
+):
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+    result = _get_guide_result(arguments)
+    assert result["status"] == "error"
+    assert "private input" not in json.dumps(result)
+
+
+def test_handoff_mcp_exposes_only_guide_and_overwrite_with_canonical_schemas() -> None:
+    """取得と上書きだけを公開し、正本 schema を複製せず返す。"""
     initialized = handoff_mcp._response(
         {
             "jsonrpc": "2.0",
@@ -49,13 +137,19 @@ def test_handoff_mcp_exposes_only_overwrite_with_canonical_schema() -> None:
     )
     assert listed is not None
     tools = listed["result"]["tools"]
-    assert [tool["name"] for tool in tools] == ["overwrite"]
-    expected_schema = json.loads(
+    assert [tool["name"] for tool in tools] == ["get_handoff_guide", "overwrite"]
+    for tool in tools:
+        expected_schema = json.loads(
+            resources.files("oracle.editor_input_handoff")
+            .joinpath(f"{tool['name']}_input.json")
+            .read_text(encoding="utf-8")
+        )
+        assert tool["inputSchema"] == expected_schema
+    assert tools[0]["outputSchema"] == json.loads(
         resources.files("oracle.editor_input_handoff")
-        .joinpath("overwrite_input.json")
+        .joinpath("get_handoff_guide_result.json")
         .read_text(encoding="utf-8")
     )
-    assert tools[0]["inputSchema"] == expected_schema
 
     for method in ("resources/list", "prompts/list"):
         response = handoff_mcp._response(
@@ -205,7 +299,7 @@ def test_handoff_response_loss_reports_unknown_while_write_completes(
     work = tmp_path / ".cmoc/gu/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial", encoding="utf-8")
-    target = start_editor_input_handoff(tmp_path, work)
+    target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
     entered = threading.Event()
     release = threading.Event()
     overwrite = target._overwrite
@@ -358,7 +452,7 @@ def test_invalid_handoff_fields_leave_target_untouched(tmp_path, change):
     work = tmp_path / ".cmoc/gu/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial")
-    target = start_editor_input_handoff(tmp_path, work)
+    target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
     try:
         with pytest.MonkeyPatch.context() as patch:
             patch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
@@ -390,7 +484,7 @@ def test_missing_or_invalid_source_refuses_handoff(
     work = tmp_path / ".cmoc/gu/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial")
-    target = start_editor_input_handoff(tmp_path, work)
+    target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
     try:
         monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
         if isinstance(source_change, dict) and source_change:
@@ -421,7 +515,7 @@ def test_handoff_uses_canonical_body_and_typed_references(
     work = tmp_path / ".cmoc/gu/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial")
-    target = start_editor_input_handoff(tmp_path, work)
+    target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     reference_path = tmp_path / "oracle/doc/spec.md"
     fields = handoff_input(target.target_id, "本文を保持する <!-- コメント -->\n続き")
@@ -457,7 +551,7 @@ def test_handoff_builder_failure_does_not_leak_input_or_write(tmp_path, monkeypa
     work = tmp_path / ".cmoc/gu/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial")
-    target = start_editor_input_handoff(tmp_path, work)
+    target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
 
     def fail(**_kwargs):

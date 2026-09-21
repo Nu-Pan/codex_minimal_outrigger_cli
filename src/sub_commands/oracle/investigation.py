@@ -40,7 +40,7 @@ def _cmoc_oracle_investigation_body() -> None:
     root = repo_root()
     current_root = work_root()
 
-    # oracle 調査契約を含む完全 prompt の skeleton を初期表示に使う。
+    # oracle 調査契約を含む完全 prompt の skeleton を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
     start_subcommand_step(
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"

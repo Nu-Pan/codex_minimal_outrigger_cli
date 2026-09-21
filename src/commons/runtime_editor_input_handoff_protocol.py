@@ -31,33 +31,34 @@ _CLIENT_PROOF_CONTEXT = b"cmoc-editor-input-handoff-v2/client\0"
 _SERVER_PROOF_CONTEXT = b"cmoc-editor-input-handoff-v2/server\0"
 
 
-@lru_cache(maxsize=1)
-def overwrite_input_schema() -> dict[str, Any]:
-    """oracle package resource から overwrite input schema を読む。"""
+@lru_cache(maxsize=3)
+def handoff_schema(name: str) -> dict[str, Any]:
+    """oracle package resource から handoff の入出力 schema を読む。"""
+    # 呼び出し側が指定する正本 resource を共用する。
     schema_text = (
         resources.files("oracle.editor_input_handoff")
-        .joinpath("overwrite_input.json")
+        .joinpath(f"{name}.json")
         .read_text(encoding="utf-8")
     )
     loaded = json.loads(schema_text)
     if not isinstance(loaded, dict):
-        raise TypeError("editor input overwrite schema must be a JSON object")
+        raise TypeError("editor input handoff schema must be a JSON object")
     return loaded
 
 
-@lru_cache(maxsize=1)
-def _overwrite_input_validator() -> "Draft202012Validator":
+@lru_cache(maxsize=3)
+def _handoff_validator(name: str) -> "Draft202012Validator":
     """正本 schema から受け入れ検査用 validator を構築する。"""
     from jsonschema.validators import Draft202012Validator
 
-    schema = overwrite_input_schema()
+    schema = handoff_schema(name)
     Draft202012Validator.check_schema(schema)
     return Draft202012Validator(schema)
 
 
-def overwrite_input_is_valid(payload: object) -> bool:
+def handoff_payload_is_valid(name: str, payload: object) -> bool:
     """content 本文をエラーへ複製せず、正本 schema への適合だけを返す。"""
-    return not any(_overwrite_input_validator().iter_errors(payload))
+    return not any(_handoff_validator(name).iter_errors(payload))
 
 
 def editor_input_handoff_subprocess_env(
@@ -241,8 +242,10 @@ def authenticate_editor_input_handoff_client(
 def read_handoff_response(
     connection: socket.socket,
     timeout_seconds: float,
+    *,
+    max_bytes: int | None = _HANDOFF_RESPONSE_LIMIT,
 ) -> dict[str, object] | None:
-    """MCP client 用に小さな newline-framed response を読む。"""
+    """期限内に newline-framed response を読み、任意の受信量上限を適用する。"""
     deadline = time.monotonic() + timeout_seconds
     response = b""
     while b"\n" not in response:
@@ -251,7 +254,7 @@ def read_handoff_response(
         if not chunk:
             break
         response += chunk
-        if len(response) > _HANDOFF_RESPONSE_LIMIT:
+        if max_bytes is not None and len(response) > max_bytes:
             return None
     try:
         value = json.loads(response.split(b"\n", 1)[0])

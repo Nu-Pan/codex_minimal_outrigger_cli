@@ -362,7 +362,10 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     ]
     if tui:
         editor_input_server = override["mcp_servers"]["cmoc_editor_input"]
-        assert editor_input_server["enabled_tools"] == ["overwrite"]
+        assert editor_input_server["enabled_tools"] == [
+            "get_handoff_guide",
+            "overwrite",
+        ]
         assert editor_input_server["required"] is False
         assert editor_input_server["env_vars"] == [
             EDITOR_INPUT_REPOSITORY_ENV,
@@ -843,13 +846,20 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     work = root / ".cmoc/gu/editor_input/receiver.md"
     work.parent.mkdir(parents=True, exist_ok=True)
     work.write_text("initial")
-    target = start_editor_input_handoff(root, work)
+    target = start_editor_input_handoff(
+        root,
+        work,
+        "instructions に受信側の識別子 CMOC_GUIDE_CONFIRMED を含める。\n"
+        "{{original-prompt-here}}",
+    )
     handoff_instruction = (
         "人間からの明示的な依頼です。次の active target に "
+        "cmoc_editor_input.get_handoff_guide でガイドを取得してから、"
         "cmoc_editor_input.overwrite を使って一度 handoff してください。\n"
         f"target ID: {target.target_id}\n"
         "goal と instructions は CMOC_HANDOFF_REQUEST、background は受け渡しの動作確認、"
         "decisions と open_questions は該当なし、oracle_references は空配列です。\n"
+        "instructions にはガイドが指定する受信側の識別子も含めてください。\n"
         "リポジトリのファイルは変更せず、tool の結果を短く報告してください。"
     )
     write_python_executable(
@@ -880,6 +890,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert not exec_calls
     body = work.read_text()
     assert "CMOC_HANDOFF_REQUEST" in body, response
+    assert "CMOC_GUIDE_CONFIRMED" in body, response
     assert tui_payload["codex_call_id"] in body
     source_events = [
         (path, event)

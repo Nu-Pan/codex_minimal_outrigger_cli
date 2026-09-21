@@ -203,10 +203,7 @@ def test_oracle_investigation_has_no_session_precondition(
     assert len(editor_calls) == 1
     assert editor_calls[0][:2] == (editor_work_path, input_copy_path)
     complete_prompt_skeleton = editor_calls[0][2]
-    assert (
-        complete_prompt_skeleton.count(investigation_module.ORIGINAL_PROMPT_PLACEHOLDER)
-        == 1
-    )
+    assert complete_prompt_skeleton == built_parameters[0].prompt
     assert "# file R/W policy (pure_oracle_read)" in complete_prompt_skeleton
     objective = complete_prompt_skeleton.split('<cmoc_block id="objective">', 1)[
         1
@@ -234,7 +231,6 @@ def test_oracle_investigation_has_no_session_precondition(
     assert "# routing policy" in complete_prompt
     assert "# editor input handoff" in complete_prompt
     assert "oracle の根拠を調査する" in complete_prompt
-    assert investigation_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert input_copy_path.read_text(encoding="utf-8") == "oracle の根拠を調査する"
     assert not editor_work_path.exists()
     assert not list(input_copy_path.parent.glob("*_cmpl.md"))

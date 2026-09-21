@@ -51,6 +51,7 @@ _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS = frozenset(
         b"codex-cli 0.151.0",
         b"codex-cli 0.153.4",
         b"codex-cli 0.154.0",
+        b"codex-cli 0.155.1",
     }
 )
 _CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
@@ -540,6 +541,10 @@ def _codex_session_start_hook_trusted_hash(command: str) -> str:
     # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/hook_runtime.rs#L124-L166
     # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/session/turn.rs#L571-L611
     # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/hooks/src/legacy_notify.rs#L13-L69
+    # 0.155.1 も同じ hash と root SessionStart、turn 完了時の callback を使う。
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/hooks/src/engine/discovery.rs#L734-L758
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/core/src/hook_runtime.rs#L126-L161
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/core/src/session/turn.rs#L638-L679
     identity = {
         "event_name": "session_start",
         "hooks": [
@@ -704,10 +709,12 @@ def _feedback_mcp_override_args() -> list[str]:
 
 
 def _editor_input_handoff_mcp_override_args() -> list[str]:
-    """cmoc_editor_input server を overwrite 一つへ呼び出し単位で固定する。"""
+    """cmoc_editor_input server をガイド取得と上書きへ呼び出し単位で固定する。"""
     # Codex 0.154.0 は env_vars の値を起動元の環境から MCP child へ渡す。
     # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/rmcp-client/src/utils.rs#L14-L24
     # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/rmcp-client/src/stdio_server_launcher.rs#L236-L260
+    # 0.155.1 でも enabled_tools は tool の元の名前で filter される。
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/codex-mcp/src/tools.rs#L59-L97
     server: dict[str, JsonTomlValue] = {
         "command": sys.executable,
         "args": ["-m", "commons.runtime_editor_input_handoff_mcp"],
@@ -717,12 +724,15 @@ def _editor_input_handoff_mcp_override_args() -> list[str]:
         "enabled": True,
         # handoff の利用可否は TUI agent call 自体の成功条件を変更しない。
         "required": False,
-        "enabled_tools": ["overwrite"],
+        "enabled_tools": ["get_handoff_guide", "overwrite"],
         "disabled_tools": [],
         "startup_timeout_sec": 5,
         "tool_timeout_sec": 15,
         "default_tools_approval_mode": "approve",
-        "tools": {"overwrite": {"approval_mode": "approve"}},
+        "tools": {
+            "get_handoff_guide": {"approval_mode": "approve"},
+            "overwrite": {"approval_mode": "approve"},
+        },
     }
     args = _config_override("mcp_servers.cmoc_editor_input", _toml_value(server))
     for name in (EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV):

@@ -50,20 +50,18 @@
 # `commons`
 
 ## Summary
-- cmoc の複数サブコマンドで共有する runtime 基盤を収録する。CLI 実行ライフサイクル、設定・パス・Git・ログ・エラー・結果モデル、Codex 実行、feedback の収集と状態管理、editing run、refactor、INDEX 更新、primary report、editor input handoff、Windows 通知などを担当する。
+- cmoc の CLI 実行を支える共通 runtime 実装を集約するディレクトリです。Codex の exec/TUI 起動、設定・パス・プロセス管理、ログ・結果・primary report、feedback、editor input handoff、INDEX/doctor、editing run の state と lifecycle を横断する基盤処理を扱います。
 
 ## Read this when
-- 共有 runtime の責務やサブコマンド横断の実行経路を確認するとき
-- Codex 呼び出し、feedback、run lifecycle、report、設定、Git 状態管理の実装入口を探すとき
-- 複数の CLI 経路にまたがる共通処理を変更するとき
+- 複数のサブコマンドにまたがる runtime の責務分担や、Codex 実行から結果記録・run 管理までの共通フローを調べるとき。
+- 個別の実装に入る前に、対象機能が CLI lifecycle、Codex 境界、report/log、feedback、INDEX、または editing run のどの共通処理に属するか確認するとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理だけを調べるとき
-- 対象配下の担当モジュールが既に特定できており、そのファイルを直接読む方が適切なとき
-- oracle の正本仕様や realization 全体のファイル分類だけを確認したいとき
+- 特定の機能の実装箇所が明確なときは、このディレクトリ全体ではなく該当する `runtime_*.py` または `indexing.py` を直接読んでください。
+- oracle 仕様の意味や要求を確認したいときは、ここではなく対応する `oracle` 配下の仕様を読んでください。
 
 ## hash
-- 7cc96228c280be97d0e59b314362f4825759bfb19fd86a137796304649fa7a77
+- d091aec2288b6ae87881364fe11b6902a426440086cd09774112ac57a0965fe9
 
 # `config`
 
@@ -119,18 +117,16 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ入口。doctor・feedback・indexing・oracle・realization・review・run・session・tui など、各サブコマンド固有の処理へ進むための上位ルーティング対象。
-- サブコマンドの CLI 入口から処理全体の流れを確認し、個別のサブコマンド実装や配下の lifecycle・workload 処理へ振り分けるために使用する。
+- CLI の個別サブコマンド実装をまとめる入口で、doctor・tui・indexing と、session・run・feedback・oracle・realization の各サブコマンド群を扱う。
+- session は session branch の作成・参加・破棄、run は editing run の共通 lifecycle、feedback は報告・判定・修復・復旧、oracle は oracle の編集・調査、realization は apply/refactor workload の実装へ進むための下位入口である。
 
 ## Read this when
-- cmoc の特定サブコマンドの CLI 入口や、複数サブコマンドにまたがる実装配置を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui などの処理対象を見つけ、対応する下位実装へ進むとき。
-- 対象サブコマンドの実装が存在しないことや、実装追加先のディレクトリを確認するとき。
+- cmoc のサブコマンド全体から、どの機能群の実装を確認・変更すべきか判断するとき。
+- doctor・tui・indexing の直接処理、または session・run・feedback・oracle・realization のサブコマンド群への入口を確認するとき。
 
 ## Do not read this when
-- サブコマンド共通の CLI runtime、設定、repository 解決などの実装だけを確認したいときは、対応する共通実装を直接読む。
-- 特定サブコマンドの詳細な lifecycle、workload、report、prompt 編集、判定、修復処理だけを確認したいときは、対応する下位実装を直接読む。
-- サブコマンド以外の処理や、oracle・realization など配下の個別対象だけを扱うとき。
+- 特定のサブコマンドの詳細な処理フローや引数・状態遷移を確認する場合は、該当する下位ファイルを直接読む。
+- サブコマンド共通でない基盤処理や、oracle・realization の正本仕様を確認する場合は、このディレクトリではなく対応する実装・仕様を直接読む。
 
 ## hash
-- dd236f5958843801a2b95694b304f5a9df1ff5f05986849d8ae0b92a1623b59a
+- 0227d566b83c7cef8c3c9a07493a4ffdcf672baba4f37324c7d0829b2737fcbf

@@ -13,6 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 from _handoff_support import handoff_body, handoff_input
+from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor_input_handoff as handoff_module
@@ -93,12 +94,32 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     def fake_run(_argv: list[str]) -> SimpleNamespace:
         """editor 待機中に別 process 相当の MCP submission を送る。"""
         target_id = displayed[0].removeprefix("editor input handoff target ID: ")
+        assert editor_work.read_bytes() == b""
+        guide_paths = list(editor_work.parent.glob("*.guide.md"))
+        assert len(guide_paths) == 1
+        expected_guide = build_editor_input_handoff_guide(_SKELETON)
+        assert guide_paths[0].read_text() == expected_guide
         monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path / "other"))
+        assert (
+            handoff_mcp._get_handoff_guide({"target_id": target_id})["status"]
+            == "error"
+        )
         results.append(
             handoff_mcp._submit(handoff_input(target_id, "wrong repository"))
         )
         monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+        expected_result = {"status": "ok", "guide_text": expected_guide}
+        assert (
+            handoff_mcp._get_handoff_guide({"target_id": target_id}) == expected_result
+        )
         results.append(handoff_mcp._submit(handoff_input(target_id, "first")))
+        assert (
+            handoff_mcp._get_handoff_guide({"target_id": target_id}) == expected_result
+        )
+        editor_work.write_text("human edited body")
+        assert (
+            handoff_mcp._get_handoff_guide({"target_id": target_id}) == expected_result
+        )
         results.append(handoff_mcp._submit(handoff_input(target_id, "final input\n")))
         return SimpleNamespace(returncode=0)
 
@@ -111,6 +132,8 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
 
     target_id = displayed[0].removeprefix("editor input handoff target ID: ")
     assert target_id.startswith("eit_")
+    assert not list(editor_work.parent.glob("*.guide.md"))
+    assert handoff_mcp._get_handoff_guide({"target_id": target_id})["status"] == "error"
     assert results[0]["status"] == "rejected"
     assert results[1:] == [{"status": "accepted"}, {"status": "accepted"}]
     assert "final input" not in json.dumps(results, ensure_ascii=False)
@@ -144,7 +167,9 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
         tmp_path
     )
     editor_work.write_text("initial", encoding="utf-8")
-    target = start_editor_input_handoff(tmp_path, editor_work)
+    target = start_editor_input_handoff(
+        tmp_path, editor_work, "{{original-prompt-here}}"
+    )
     try:
         request = {
             "protocol": EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
@@ -221,7 +246,9 @@ def test_target_close_drains_an_accepted_submission(
         original_overwrite(self, content)
 
     monkeypatch.setattr(EditorInputHandoffTarget, "_overwrite", delayed_overwrite)
-    target = start_editor_input_handoff(tmp_path, editor_work)
+    target = start_editor_input_handoff(
+        tmp_path, editor_work, "{{original-prompt-here}}"
+    )
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     submission_result: list[dict[str, object]] = []
     submitter = threading.Thread(
@@ -320,7 +347,9 @@ def test_target_deadline_releases_unauthenticated_slow_trickle(
         "EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS",
         0.2,
     )
-    target = start_editor_input_handoff(tmp_path, editor_work)
+    target = start_editor_input_handoff(
+        tmp_path, editor_work, "{{original-prompt-here}}"
+    )
     route = parse_editor_input_handoff_target_id(tmp_path, target.target_id)
     assert route is not None
     address, _token = route
@@ -361,7 +390,9 @@ def test_target_deadline_releases_authenticated_request_slow_trickle(
         "EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS",
         0.2,
     )
-    target = start_editor_input_handoff(tmp_path, editor_work)
+    target = start_editor_input_handoff(
+        tmp_path, editor_work, "{{original-prompt-here}}"
+    )
     route = parse_editor_input_handoff_target_id(tmp_path, target.target_id)
     assert route is not None
     address, token = route
