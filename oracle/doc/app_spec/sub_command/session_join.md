@@ -14,29 +14,20 @@ merge source、merge target、および `{{repository-default-branch}}` の扱�
 
 `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context と編集 run 開始・session 終了の共通事前条件」を満たす。
 
-以下の場合はエラー終了する。
-
-- 対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定できない
+対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定できない場合は、エラー終了する。
 
 ## 実行手順
 
-1. doctor preprocess を呼び出す
-2. 事前検証
-    - 事前条件を満たしていることを確認する
-3. マージ処理
-    1. `git switch {{cmoc-session-home-branch}}` を実行する
-    2. `git merge --no-ff {{cmoc-session-branch}}` を実行する
-    3. conflict が発生した場合は、Codex CLI に conflict marker 解消を依頼する
-4. 後始末
-    1. `{{cmoc-session-state-file}}` の `session.state` を `joined` にする
-    2. 安全に削除できる場合のみ `{{cmoc-session-branch}}` を削除する
+1. doctor preprocess を呼び出す。
+2. 事前条件を満たしていることを確認する。
+3. `git switch {{cmoc-session-home-branch}}` を実行する。
+4. `git merge --no-ff {{cmoc-session-branch}}` を実行する。conflict が発生した場合は、本書の「`git merge` がコンフリクトした場合」に従って解消する。
+5. `{{cmoc-session-state-file}}` の `session.state` を `joined` にする。
+6. 安全に削除できる場合のみ `{{cmoc-session-branch}}` を削除する。
 
 ## `{{cmoc-session-home-branch}}` が進んでいた場合
 
-`{{cmoc-session-home-branch}}` が session 作成後に進んでいてもエラーにはしない。
-`cmoc session join` は、実行時点の `{{cmoc-session-home-branch}}` HEAD に `{{cmoc-session-branch}}` を merge する。
-
-merge conflict が発生した場合は通常の conflict として扱う。
+`{{cmoc-session-home-branch}}` が session 作成後に進んでいてもエラーにはせず、実行時点の同 branch の HEAD に `{{cmoc-session-branch}}` を merge する。ここで merge conflict が発生した場合も、通常の conflict として扱う。
 
 ## feedback state との境界
 

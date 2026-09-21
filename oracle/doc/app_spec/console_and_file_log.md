@@ -141,7 +141,7 @@ editor input handoff を有効にする `cmoc tui` と `cmoc oracle investigatio
 - 起動する TUI process の Codex call ID と、対応するログ保存先
 - その実行の診断用サブコマンドログのフルパス
 
-Codex call ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」で定める識別子を使い、記録する送信元情報は同文書の「editor input handoff MCP」に従って MCP の呼び出し元コンテキストへ供給する実際の値と一致させる。送り元が実行中でも、この対応から既に保存された記録へ到達できるようにする。終了時にだけ保存される戻り値や最終結果を、対応の特定に必要としてはならない。
+Codex call ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」で定める識別子を使い、記録する送信元情報は同文書の「editor input handoff MCP」に従って MCP の呼び出し元コンテキストへ供給する実際の値と一致させる。送信元が実行中でも、この対応から既に保存された記録へ到達できるようにする。終了時にだけ保存される戻り値や最終結果を、対応の特定に必要としてはならない。
 
 この記録は送信元の識別と保存済み記録への到達を保証する。TUI 会話全文や最終回答の保存・取得保証は追加しない。本文の受け渡しと tool result・log の境界は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」と「tool result と log」に従う。
 

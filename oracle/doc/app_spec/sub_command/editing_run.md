@@ -157,19 +157,48 @@ self-joining 経路の join がすでに成功した `feedback_report` は、`cm
 
 ## report と terminal result
 
-- fork、self-joining workload、join、および abandon の report は Markdown と YAML Front Matter で構成する。
-- join と abandon は、共通事前条件違反を含む `natural_completion` と `error` のすべての終了経路で report を保存する。
-- fork report の YAML Front Matter は、少なくとも `run_kind`、`session_branch`、`session_fork_commit`、`run_branch`、`run_fork_commit`、`run_worktree`、`state_before`、`state_after` を含む。確定できない項目は `null` とし、存在しない branch、commit、worktree、または state を作ってはならない。
-- self-joining workload の primary report は、上記の run identity と state に加えて、自動 join、workload 固有の確定処理、および cleanup の結果を含む。保存先と追加項目は workload 固有仕様で定める。
-- join report と abandon report の YAML Front Matter は、少なくとも command、生成日時、repo root、terminal result の共通分類、終了コード、`run_kind`、`session_branch`、`run_branch`、`run_fork_commit`、`run_worktree`、`state_before`、`state_after` を含む。join report は、`{{cmoc-run-join-commit}}` または no-op join のため `null` であることも含む。その他の確定できない項目も `null` とする。
-- report から、run kind、branch、worktree、fork commit、実行前後の state、warning、および cleanup 結果を判別可能にする。
-- 同じ commit を workload 固有の別名でも重複掲載してはいけない。
-- fork report は変更 path と完了理由を含め、保存先と workload 固有項目は workload 固有仕様で定める。
-- join report は `{{repo-root}}/.cmoc/gu/report/run/join/{{time-stamp}}.md` に保存し、`cmoc run join` の primary report とする。差分検査、想定外差分の扱い、merge と merge commit または no-op join、post-join hook、refactor state 同期、state 遷移、cleanup、エラー、および関連ログを要約する。
-- abandon report は `{{repo-root}}/.cmoc/gu/report/run/abandon/{{time-stamp}}.md` に保存し、`cmoc run abandon` の primary report とする。停止した process、破棄対象、state 遷移、cleanup、残存資源、エラー、および関連ログを要約する。
-- join または abandon を開始できなかった場合は、確定できた active workload と state、事前条件違反、および未実行の処理を report する。実行していない merge、hook、破棄、または cleanup の結果を作ってはならない。
+### 共通内容
+
+fork、self-joining workload、join、および abandon の report は Markdown と YAML Front Matter で構成する。report から、run kind、branch、worktree、fork commit、実行前後の state、warning、および cleanup 結果を判別可能にする。同じ commit を workload 固有の別名でも重複掲載してはいけない。
+
+### fork と self-joining workload の report
+
+fork report の YAML Front Matter は、少なくとも次の項目を含む。
+
+- workload：`run_kind`
+- branch：`session_branch`、`run_branch`
+- fork commit：`session_fork_commit`、`run_fork_commit`
+- worktree：`run_worktree`
+- 実行前後の state：`state_before`、`state_after`
+
+確定できない項目は `null` とし、存在しない branch、commit、worktree、または state を作ってはならない。fork report には変更 path と完了理由も含める。保存先と workload 固有項目は、workload 固有仕様で定める。
+
+self-joining workload の primary report は、上記の run identity と state に加えて、自動 join、workload 固有の確定処理、および cleanup の結果を含む。保存先と追加項目は、workload 固有仕様で定める。
+
+### join と abandon の report
+
+join と abandon は、共通事前条件違反を含む `natural_completion` と `error` のすべての終了経路で report を保存する。両 report の YAML Front Matter は、少なくとも次の項目を含む。
+
+- 実行情報：command、生成日時、repo root、terminal result の共通分類、終了コード
+- workload：`run_kind`
+- branch：`session_branch`、`run_branch`
+- fork commit と worktree：`run_fork_commit`、`run_worktree`
+- 実行前後の state：`state_before`、`state_after`
+
+join report の YAML Front Matter には `{{cmoc-run-join-commit}}` も含め、no-op join の場合は `null` とする。その他の確定できない項目も `null` とする。
+
+| report | 保存先と役割 | 本文で要約する内容 |
+|---|---|---|
+| join report | `{{repo-root}}/.cmoc/gu/report/run/join/{{time-stamp}}.md` に保存し、`cmoc run join` の primary report とする。 | 差分検査、想定外差分の扱い、merge と merge commit または no-op join、post-join hook、refactor state 同期、state 遷移、cleanup、エラー、および関連ログ。 |
+| abandon report | `{{repo-root}}/.cmoc/gu/report/run/abandon/{{time-stamp}}.md` に保存し、`cmoc run abandon` の primary report とする。 | 停止した process、破棄対象、state 遷移、cleanup、残存資源、エラー、および関連ログ。 |
+
+join または abandon を開始できなかった場合は、確定できた active workload と state、事前条件違反、および未実行の処理を report する。実行していない merge、hook、破棄、または cleanup の結果を作ってはならない。
+
+### terminal result
+
+terminal result の出力先、共通 field、および表示順序は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。各 lifecycle 操作では、次の内容を示す。
+
 - fork の terminal result では、次に実行可能な lifecycle 操作として `cmoc run join` と `cmoc run abandon` を示す。
 - join の terminal result では、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、および cleanup の結果をサブコマンド固有結果として判別可能にする。
 - apply の比較始点を保持した join を、report や terminal result で「比較始点を更新した」と表示してはならない。
 - abandon の terminal result では、破棄対象と cleanup の結果をサブコマンド固有結果として判別可能にする。
-- terminal result の出力先、共通 field、および表示順序は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。

@@ -9,7 +9,7 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 - 人間が指定した active target だけへ内容を渡す。
 - 初回の handoff 後や人間による編集後も、独立して保持した handoff ガイドを参照して受信先に適した依頼を作成できるようにする。
 - agent が自由記述の内容を担い、MCP が本文の形式と機械的な情報の注入を担う。
-- 受信側が送り元の実行中でも依頼を理解して作業を開始できるよう、必要なコンテキストと送信元情報を本文で渡す。
+- 受信側が送信元の実行中でも依頼を理解して作業を開始できるよう、必要なコンテキストと送信元情報を本文で渡す。
 - handoff の有無にかかわらず、file access mode、Codex sandbox、および prompt editor input の最終確定方法を維持する。
 
 ## 正本の分担
@@ -42,7 +42,7 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 
 handoff ガイドは、受信先へ依頼を作成するための Markdown 文書とする。使い方、記入の目安、およびその受信先の完全 prompt の雛形を含め、受信側の作業範囲・制約・入力位置を確認できるようにする。受信先の完全 prompt skeleton の構築は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「構築定義の参照」に従う。
 
-cmoc は、受信先の完全 prompt skeleton を `build_editor_input_handoff_guide` へ渡し、生成結果を editor work file と独立した handoff ガイドファイルへ保存する。ガイドを editor work file の初期値へ埋め込まず、送り元の設定から別の雛形を再構築しない。ガイドファイルの文面は、handoff による上書きや人間による editor work file の編集に伴って変更せず、target の有効期間中に取得可能とする。
+cmoc は、受信先の完全 prompt skeleton を `build_editor_input_handoff_guide` へ渡し、生成結果を editor work file と独立した handoff ガイドファイルへ保存する。ガイドを editor work file の初期値へ埋め込まず、送信元の設定から別の雛形を再構築しない。ガイドファイルの文面は、handoff による上書きや人間による editor work file の編集に伴って変更せず、target の有効期間中に取得可能とする。
 
 ## MCP interface
 
@@ -83,8 +83,8 @@ handoff の自由記述入力や生成した handoff 本文を、tool result、h
 
 - agent は、人間が active target への handoff を明示的に要求し、target ID を提示した場合だけ両 tool を使用する。
 - agent は、まず指定された target の handoff ガイドを取得し、その内容に従って項目別の依頼を作成し、同じ target ID へ overwrite する。
-- 取得した handoff ガイドは受信側への依頼を作るための資料とし、送り元自身に適用する作業指示や権限として扱わない。handoff を根拠に送り元の作業範囲を拡大しない。
-- agent は、依頼と必要なコンテキストを、送り元の会話や最終回答を読まなくても理解できる内容として作成する。存在しない経緯や決定を補わない。
+- 取得した handoff ガイドは受信側への依頼を作るための資料とし、送信元自身に適用する作業指示や権限として扱わない。handoff を根拠に送信元の作業範囲を拡大しない。
+- agent は、依頼と必要なコンテキストを、送信元の会話や最終回答を読まなくても理解できる内容として作成する。存在しない経緯や決定を補わない。
 - 関連する oracle の選定と参照箇所の特定は agent が担い、本書の「参照情報」に従って渡す。
 - agent は本文全体の見出し・配置・参照表記を完成させる必要はなく、送信元情報の取得や転記も行わない。自由記述内部の文章量や表現の細部は固定しない。
 - handoff のために sandbox、network access、permission profile、または file access mode を変更してはならない。
@@ -107,9 +107,9 @@ MCP は入力のパス文字列を `Path` に変換し、参照箇所ととも�
 - 送信元 TUI process に対応する既存の Codex call ID
 - 対応する診断用サブコマンドログのフルパス
 
-cmoc は実際の呼び出しに付与・保持する値を、送信側 TUI process に結び付いた MCP の呼び出し元コンテキストへ供給する。MCP はこの情報を本文 builder に渡す。送信元情報を転記用 prompt または tool input として agent に渡さず、handoff 専用の ID 体系は作らない。
+cmoc は実際の呼び出しに付与・保持する値を、送信元 TUI process に結び付いた MCP の呼び出し元コンテキストへ供給する。MCP はこの情報を本文 builder に渡す。送信元情報を転記用 prompt または tool input として agent に渡さず、handoff 専用の ID 体系は作らない。
 
-並行する TUI process 間でコンテキストを取り違えず、同じ送信側 TUI process の各 turn では、その process に対応する実行情報を使用する。受信先 target の情報から送信元を推定せず、target ID と送信元の識別子を相互に代用しない。必要な送信元情報を取得できない場合は、推測・捏造で補わず handoff の失敗を返す。
+並行する TUI process 間でコンテキストを取り違えず、同じ送信元 TUI process の各 turn では、その process に対応する実行情報を使用する。受信先 target の情報から送信元を推定せず、target ID と送信元の識別子を相互に代用しない。必要な送信元情報を取得できない場合は、推測・捏造で補わず handoff の失敗を返す。
 
 起動・呼び出し管理経路からの供給と準備順序は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う。内部 transport や module の分割は、本書の責務と lifecycle を満たす範囲で実装に委ねる。
 

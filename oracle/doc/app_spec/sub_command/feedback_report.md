@@ -25,12 +25,13 @@
 4. session worktree と staging area が clean であることを確認する。
 5. repository-level feedback writer 排他を取得する。
 6. current pointer、pending recovery、および既存 feedback state の schema、path、hash、branch reference の整合性を検証する。
-7. 自動 join 済み feedback run の publication または publication 後 cleanup を再開できる場合は、後述する recovery を先に完了する。
-8. recovery 対象がない場合は、session state の `run.state` が `ready` であることを確認する。
-9. `run.kind=feedback_report` として `{{cmoc-run-branch}}` と `{{cmoc-run-worktree}}` を作成し、`run.state=running` とする。
-10. collector の最初の high-watermark を確定し、最初の intake wave を固定する。
 
-join 後 recovery は新しい run を開始しない。
+その後は、既存 run の状態に応じて分岐する。自動 join 済み feedback run の publication または publication 後 cleanup を再開できる場合は、本書の「join 後の publication failure」に従って recovery を完了する。この経路では、新しい run を開始しない。
+
+recovery 対象がない場合は、session state の `run.state` が `ready` であることを確認し、次の順序で新しい run を開始する。
+
+1. `run.kind=feedback_report` として `{{cmoc-run-branch}}` と `{{cmoc-run-worktree}}` を作成し、`run.state=running` とする。
+2. collector の最初の high-watermark を確定し、最初の intake wave を固定する。
 
 recovery 対象ではない active run が残っている場合、または事前条件に違反した場合は、新しい run を作らない。既存の worktree、staging area、raw observation、および current pointer を変更しない。
 

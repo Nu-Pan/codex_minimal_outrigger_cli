@@ -14,9 +14,7 @@
 
 `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context と編集 run 開始・session 終了の共通事前条件」を満たす。
 
-以下の場合はエラー終了する。
-
-- `{{cmoc-session-home-branch}}` が存在しない
+`{{cmoc-session-home-branch}}` が存在しない場合は、エラー終了する。
 
 未 join の編集 run が残っている場合は、先に `cmoc run abandon` で破棄する。
 
@@ -37,10 +35,9 @@
 
 ## 実行手順
 
-1. doctor preprocess を呼び出す
-2. 事前検証
-    - 事前条件を満たしていることを確認する
-3. クリーンアップ
+1. doctor preprocess を呼び出す。
+2. 事前条件を満たしていることを確認する。
+3. クリーンアップとして、次の操作を順に行う。
     1. `git switch {{cmoc-session-home-branch}}` を実行する。
     2. `{{cmoc-session-state-file}}` の `session.state` を `abandoned` に更新する。
     3. `{{cmoc-session-branch}}` を強制削除する。

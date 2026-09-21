@@ -2,31 +2,36 @@
 
 ## 基本
 
-- cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
-- 本書で agent call とは、1 個の `AgentCallParameter` を入力とする 1 回の論理的な実行単位を指す
-- Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
-- 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
-- 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする
-- 個別 agent call の AgentCallParameter builder は、対応する oracle doc から明示的に委譲された範囲で、次の内容を構築する
-    - 正確な prompt 文面
-    - workload 固有の起動パラメータ。ただし、model provider、Model、および Reasoning Effort は除く
-- `AgentCallParameter` の field 名、型、および既定値を含む正確な構造は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
-- cmoc は agent call ごとに、対応する builder を表す安定した低カーディナリティの `agent_call_kind` と一意な agent call ID を付与する
-- cmoc は初回、補正、および TUI process ごとに一意な Codex call ID を付与する
-- 最外側の末端サブコマンドの invocation を識別する実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。agent call ID および Codex call ID とは識別対象を区別する
+cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う。本書では、論理的な実行単位と個々の CLI 呼び出しを次のように区別する。
+
+| 用語 | 実行単位 | cmoc が付与する識別情報 |
+|---|---|---|
+| agent call | 1 個の `AgentCallParameter` を入力とする論理的な実行。Structured Output を補正する場合は、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回と数える。 | 対応する builder を表す安定した低カーディナリティの `agent_call_kind` と、一意な agent call ID |
+| Codex call | 初回実行や補正を含む個々の Codex CLI 呼び出し。 | 初回、補正、および TUI process ごとに一意な Codex call ID |
+
+最外側の末端サブコマンドの invocation を識別する実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。agent call ID および Codex call ID とは識別対象を区別する。
+
+個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする。AgentCallParameter builder は、その oracle doc から明示的に委譲された範囲で、正確な prompt 文面と workload 固有の起動パラメータを構築する。ただし、model provider、Model、および Reasoning Effort は構築対象から除く。
+
+`AgentCallParameter` の field 名、型、および既定値を含む正確な構造は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。
 
 ## agent call の path context
 
-- `agent_call_cwd` は、子 agent call に設定する cwd とする
-- `work_root` は、`agent_call_cwd` を含む最寄りの Git worktree root とする
-- `repo_root` は、`work_root` が属する Git repository の main worktree root とする
-- `work_root` と `repo_root` は、linked worktree、submodule、および separate git directory を含め、Git が保持する repository metadata から導出する
-- 名前が `.git` であるだけの通常の file または directory を Git repository metadata として扱ってはならない
-- `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
-- path context に関する正確な定義は、次の oracle src へ委譲する
-    - call-scoped path context、root placeholder、および Git command を含む導出処理：`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `RootPathPlaceHolder`、`AgentCallPathContext`、`resolve_work_root`、および `resolve_repo_root`
-    - prompt part との受け渡し：`{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py` の `PlaceholderMap`
-    - 完全 prompt への統合：`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`
+agent call の path context は、その call に設定する cwd を起点に決める。
+
+| 識別子 | 意味 |
+|---|---|
+| `agent_call_cwd` | 子 agent call に設定する cwd |
+| `work_root` | `agent_call_cwd` を含む最寄りの Git worktree root |
+| `repo_root` | `work_root` が属する Git repository の main worktree root |
+
+`AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない。`work_root` と `repo_root` は、linked worktree、submodule、および separate git directory を含め、Git が保持する repository metadata から導出する。名前が `.git` であるだけの通常の file または directory を、Git repository metadata として扱ってはならない。
+
+path context に関する正確な定義は、次の oracle src へ委譲する。
+
+- call-scoped path context、root placeholder、および Git command を含む導出処理：`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `RootPathPlaceHolder`、`AgentCallPathContext`、`resolve_work_root`、および `resolve_repo_root`
+- prompt part との受け渡し：`{{cmoc-root}}/oracle/src/oracle/prompt_builder/basic.py` の `PlaceholderMap`
+- 完全 prompt への統合：`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`
 
 ### `{{work-root}}` に対する仮定
 
@@ -57,15 +62,11 @@ call-scoped path context の適用範囲を次に示す。
 
 ## 環境変数 `$CODEX_HOME`
 
-- cmoc 呼び出し時点で `$CODEX_HOME` が設定済みなら、その値をそのまま Codex CLI に渡す
-- cmoc 呼び出し時点で `$CODEX_HOME` が未設定なら、`CODEX_HOME=${HOME}/.codex` 相当の絶対パスを設定して Codex CLI に渡す
+cmoc 呼び出し時点で `$CODEX_HOME` が設定済みなら、その値をそのまま Codex CLI に渡す。未設定なら、`CODEX_HOME=${HOME}/.codex` 相当の絶対パスを設定して渡す。
 
 ## preflight validation
 
-- cmoc は Codex CLI 呼び出し前に「Codex CLI が実際に参照する `$CODEX_HOME`」に対する preflight validation を行う
-- preflight validation では `$CODEX_HOME` がディレクトリとして存在することを確かめる
-- model provider 固有の認証要件を cmoc が一律に検証してはならない
-- preflight validation に失敗した場合、cmoc の実行を即時失敗させる
+cmoc は Codex CLI 呼び出し前に、Codex CLI が実際に参照する `$CODEX_HOME` がディレクトリとして存在することを検証する。この preflight validation に失敗した場合は、cmoc の実行を即時失敗させる。model provider 固有の認証要件を cmoc が一律に検証してはならない。
 
 ## Codex CLI 引数による設定上書き
 
@@ -87,15 +88,16 @@ call-scoped path context の適用範囲を次に示す。
 
 ### Codex CLI sandbox
 
-- すべての Codex CLI 呼び出しで、専用引数 `--sandbox` を明示する
-- `--sandbox` の値は `read-only` または `workspace-write` のどちらかに限定する
-- `AgentCallParameter.file_access_mode` は次のように `--sandbox` へ対応付ける
-    - `READONLY`, `PURE_ORACLE_READ`: `--sandbox read-only`
-    - `REPO_WRITE`, `PURE_ORACLE_WRITE`, `REALIZATION_WRITE`, `NO_POLICY`: `--sandbox workspace-write`
-- `AgentCallParameter` を使用しない動作確認用の Codex CLI 呼び出しでは `--sandbox read-only` を使う
-- 上記にない file access mode を受け取った場合は、sandbox を推測せず Codex CLI 呼び出し前に失敗させる
-- `$CODEX_HOME/config.toml` や project config の sandbox 設定に依存してはならない
-- sandbox は専用引数で指定し、`--config` で上書きしてはならない
+すべての Codex CLI 呼び出しで、専用引数 `--sandbox` を明示する。値は `read-only` または `workspace-write` に限定し、`AgentCallParameter.file_access_mode` に応じて次のように決める。
+
+| file access mode | sandbox |
+|---|---|
+| `READONLY`, `PURE_ORACLE_READ` | `--sandbox read-only` |
+| `REPO_WRITE`, `PURE_ORACLE_WRITE`, `REALIZATION_WRITE`, `NO_POLICY` | `--sandbox workspace-write` |
+
+表にない file access mode を受け取った場合は、sandbox を推測せず Codex CLI 呼び出し前に失敗させる。`AgentCallParameter` を使用しない動作確認用の呼び出しでは `--sandbox read-only` を使う。
+
+sandbox の指定は専用引数だけで行い、`--config` で上書きしたり、`$CODEX_HOME/config.toml` や project config の sandbox 設定に依存したりしてはならない。
 
 ### command 単位の sandbox 外実行
 
@@ -295,7 +297,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - 有効な Codex TUI call には `cmoc_editor_input` MCP server を提供する。handoff ガイド取得と上書きの公開 tool は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「MCP interface」に従う。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
 - handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - Codex TUI の builder は MCP と handoff instruction の両方を有効にする。agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
-- `cmoc tui` と `cmoc oracle investigation` では、cmoc の起動・呼び出し管理経路が、送信側 TUI process に対応する実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う
+- `cmoc tui` と `cmoc oracle investigation` では、cmoc の起動・呼び出し管理経路が、送信元 TUI process に対応する実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う
 - TUI process の起動前に、その process の Codex call ID の確保、MCP への送信元情報の供給、および `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」に従う記録と flush を完了する。ログの対応付けと MCP への供給には同じ実際の値を使い、indexing など別の Codex call の ID を代用せず、TUI 起動時に別の ID を再発行しない
 - この準備を skeleton 構築の前提にはしない。送信元情報は、skeleton と入力確定後の TUI prompt のいずれの builder 引数にも含めず、転記用の情報を prompt へ注入しない
 

@@ -21,12 +21,14 @@ doctor preprocess は、`{{repo-root}}` で cmoc を正常に実行できるか�
 
 ### 検証
 
-- 非追跡保証は `.cmoc/gu` の一部用途だけではなく、feedback の pending observation、active state、report cut、checkpoint、および Markdown report を含むツリー全体と、将来作成される全 descendant に適用する
-- `{{repo-root}}/.cmoc/gu` 追跡対象外保証の完了判定は、以下の両方を満たすこととする
-    - `git ls-files -- {{repo-root}}/.cmoc/gu` の出力が空である
-    - `git check-ignore -q {{repo-root}}/.cmoc/gu/.__cmoc_ignore_probe__` が成功する
-        - これは `{{repo-root}}/.cmoc/gu` 配下に将来作成されるファイルが git ignore 対象になることを確認するための probe path である
-        - この probe のために実ファイルを作成する必要はない
+非追跡保証は、`{{repo-root}}/.cmoc/gu` ツリー全体と、将来作成される全 descendant に適用する。feedback の pending observation、active state、report cut、checkpoint、および Markdown report も含む。
+
+完了判定では、次の両方を満たすことを確認する。
+
+- `git ls-files -- {{repo-root}}/.cmoc/gu` の出力が空である。
+- `git check-ignore -q {{repo-root}}/.cmoc/gu/.__cmoc_ignore_probe__` が成功する。
+
+後者の probe path は、将来作成されるファイルが git ignore 対象になることを確認するために使う。この probe のために実ファイルを作成する必要はない。
 
 ### 修復
 

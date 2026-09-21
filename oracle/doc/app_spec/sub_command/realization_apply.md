@@ -2,11 +2,9 @@
 
 ## 目的
 
-- realization apply は、直近の git commit 群から読み取れる oracle file の変更を realization file へ素早く反映する workload である。
-- fork の正常終了時には、少なくとも指定した commit 範囲から読み取れる oracle 変更について、oracle file と realization file の間に齟齬がない状態にする。
-- 追従を完了できなかった run の成果物を join しても、未追従の oracle 変更を次回 apply の比較範囲から外さない。
-- ファイル単位の網羅的な追従は non-goal とし、realization refactor が担う。
-- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
+realization apply は、直近の git commit 群から読み取れる oracle file の変更を realization file へ素早く反映する workload である。fork の正常終了時には、少なくとも指定した commit 範囲から読み取れる oracle 変更について、oracle file と realization file の間に齟齬がない状態にする。追従を完了できなかった run の成果物を join しても、未追従の oracle 変更を次回 apply の比較範囲から外さない。
+
+ファイル単位の網羅的な追従は non-goal とし、realization refactor が担う。fork、join、abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
 
 ## 引数
 
@@ -39,9 +37,7 @@
 
 ## 想定内差分
 
-- agent が変更する realization file。
-- cmoc が生成する任意階層の `INDEX.md`。
-- agent は `INDEX.md` を変更せず、cmoc が生成する。
+想定内差分は、agent が変更する realization file と、cmoc が生成する任意階層の `INDEX.md` とする。`INDEX.md` は agent の変更対象にしない。
 
 ## 実行手順
 

@@ -2,7 +2,7 @@
 
 ## 概要
 
-cmoc は、人間が作業する session と、そこから隔離して成果物を作る run を、branch、commit、および worktree で管理する。workload の種類は、これらの別名ではなく run state と report で表す。
+cmoc は、人間が作業する session と、そこから隔離して成果物を作る run を、branch、commit、および worktree で管理する。これらには workload に共通の名称を使い、workload の種類は run state と report で表す。
 
 ## git branch
 
@@ -71,9 +71,8 @@ cmoc は、人間が作業する session と、そこから隔離して成果物
 ### `{{cmoc-run-join-commit}}`
 
 - `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ merge した commit である。
-- join 時点ですでに run branch HEAD が session branch から到達可能であり、取り込む commit がない場合は、join を no-op として正常完了してよい。
-    - この場合、`{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。
-    - join の記録だけを目的とする空 commit を作ってはならない。
+
+join 時点ですでに run branch HEAD が session branch から到達可能であり、取り込む commit がない場合は、join を no-op として正常完了してよい。この場合、`{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。join の記録だけを目的とする空 commit を作ってはならない。
 
 ## git worktree
 

@@ -2,12 +2,13 @@
 
 ## 責務境界
 
-- この文書は、構築済みの cmoc 開発環境における test と品質検査の手順を定める。対象は、検査の選択・実行・完了判定・報告とする。
+この文書は、構築済みの cmoc 開発環境における test と品質検査の選択・実行・完了判定・報告を定める。関連する要件は、次の正本に従う。
+
 - realization test が満たすべき意味上の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「cmoc テスト実装規約」を正本とする。
 - 型注釈と docstring の意味上の品質要件は、`{{cmoc-root}}/oracle/doc/dev_rule/coding_rule.md` の「型ヒント」と「docstring」が所有する。
 - Python 環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「cmoc 開発環境」を正本とする。
-- この手順の実行中に環境を新規構築したり、依存関係を追加したり、pip を実行したりしてはいけない。
-- この手順を根拠に、agent call の file access mode、作業範囲、または sandbox の書き込み先を広げてはいけない。
+
+この手順の実行中に環境を新規構築したり、依存関係を追加したり、pip を実行したりしてはいけない。また、この手順を根拠に、agent call の file access mode、作業範囲、または sandbox の書き込み先を広げてはいけない。
 
 ## repository root と Python interpreter を決定する
 
@@ -52,10 +53,7 @@ cd "$cmoc_work_root"
 "$cmoc_python" -m mypy --version
 ```
 
-- 表示された Python version が `project.requires-python` を満たすことを確認する。
-- path、version、または module が不足している場合は検査を開始しない。
-- 不足している前提を具体的に報告する。環境構築が必要な未完了状態として、検査を停止する。
-- preflight の失敗を回避するために、その場で package を導入してはいけない。
+表示された Python version が `project.requires-python` を満たすことを確認する。必要な path、version、または module が揃わない場合は検査を開始せず、不足している前提を具体的に報告する。この場合は、環境構築が必要な未完了状態として検査を停止する。
 
 ## focused test と検査対象を選択する
 

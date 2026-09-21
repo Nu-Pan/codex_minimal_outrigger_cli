@@ -2,13 +2,12 @@
 
 ## 概要
 
-- cmoc workflow 上の session と、明示的または同一 invocation 内の自動 join で終了する編集 run の lifecycle を一意に定める JSON file である。
-- 保存先は `{{repo-root}}/.cmoc/gu/session/{{session-id}}.json` とする。
+`{{cmoc-session-state-file}}` は、cmoc workflow 上の session と編集 run の lifecycle を一意に定める JSON file である。編集 run は、明示的な join・abandon または同一 invocation 内の自動 join で終了する。保存先は `{{repo-root}}/.cmoc/gu/session/{{session-id}}.json` とする。
 
 ## スキーマ設計の基本原則
 
-- 永続化する情報は必要最小限にとどめる。
-- その場で確実に解決できる情報は state に持たせない。
+永続化する情報は必要最小限にとどめ、その場で確実に解決できる情報は state に持たせない。
+
 - 1 session に未 join の編集 run は高々 1 つとする。
 - feedback の repository-local state はこの file に保存しない。保存対象と lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
 - session または run の状態遷移だけを理由に feedback state を変更しない。
@@ -55,14 +54,11 @@ active session context を必要とするサブコマンドは、次の条件を
 
 ### `session.state`
 
-- 現在の session の状態である。
-- session 新規作成直後の初期値は `active` とする。
-- `cmoc session` 系サブコマンドによって遷移する。
+現在の session の状態を表す。新規作成直後の初期値は `active` とし、`cmoc session` 系サブコマンドによって遷移する。
 
 ### `session.session_home_branch`
 
-- session の fork 元 branch であり join 先でもある。
-- `cmoc session fork` が、その時点で checkout している `{{local-branch}}` 名で初期化する。
+session の fork 元 branch であり、join 先でもある。`cmoc session fork` が、その時点で checkout している `{{local-branch}}` 名で初期化する。
 
 ### `session.session_fork_commit`
 
@@ -70,9 +66,7 @@ active session context を必要とするサブコマンドは、次の条件を
 
 ### `session.last_joined_apply_fork_commit`
 
-- その session の apply の追従対象差分の始点として保持する commit である。
-- session 新規作成直後の初期値は `null` とする。
-- 更新条件と保存する commit は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「join 後 hook」を正本とする。
+その session の apply の追従対象差分の始点として保持する commit であり、session 新規作成直後の初期値は `null` とする。更新条件と保存する commit は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「join 後 hook」を正本とする。
 
 ## run field
 
@@ -80,18 +74,20 @@ active session context を必要とするサブコマンドは、次の条件を
 
 ### `run.state`
 
-- `ready` は active な編集 run がない状態である。
-- `running` は workload の処理を実行している状態である。
-- `joinable` は、join、abandon、または self-joining workload の finalization を待つ状態である。
-- `error` は続行不能な失敗後である。join 済みの `feedback_report` では、`cmoc feedback report` による recovery を待つ。
-- session 新規作成直後の初期値は `ready` とする。
+編集 run の状態を表し、session 新規作成直後の初期値は `ready` とする。
+
+| 値 | 状態 |
+|---|---|
+| `ready` | active な編集 run がない。 |
+| `running` | workload の処理を実行している。 |
+| `joinable` | join、abandon、または self-joining workload の finalization を待っている。 |
+| `error` | 続行不能な失敗で停止している。join 済みの `feedback_report` では、`cmoc feedback report` による recovery を待つ。 |
 
 ### `run.kind`
 
-- active な編集 run の workload を表す。
-- join と abandon はこの値から workload を解決する。
-- `cmoc oracle edit` は run ではなく、この field の値にならない。
-- `feedback_report` は同一 invocation 内で自動 join する。自動 join 前に残った run は join または abandon、自動 join 後の失敗は feedback report recovery の対象となる。
+active な編集 run の workload を表し、join と abandon はこの値から workload を解決する。`cmoc oracle edit` は run ではないため、この field の値にならない。
+
+`feedback_report` は同一 invocation 内で自動 join する。自動 join 前に残った run は join または abandon、自動 join 後の失敗は feedback report recovery の対象となる。
 
 ### `run.branch`
 
@@ -99,8 +95,7 @@ active session context を必要とするサブコマンドは、次の条件を
 
 ### `run.fork_commit`
 
-- active run の `{{cmoc-run-fork-commit}}` である。
-- apply の差分終点と run join の差分検査にも使用する。
+active run の `{{cmoc-run-fork-commit}}` であり、apply の差分終点と run join の差分検査にも使用する。
 
 ## 状態遷移
 

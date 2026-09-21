@@ -101,5 +101,4 @@ feedback subsystem は、次の処理を行わない。
 - 自由文の広範な正規表現など、不安定な根拠から machine observation を作ること
 - realization file 以外の変更で issue を自動解決すること
 - write 権限を持つ issue remediation agent を並列実行すること
-- issue を feedback report 以外の workload の成功判定、run state、retry、または recovery の入力にすること
 - 過去の Markdown report を active state、deduplication、または最新 report の判定に使用すること
