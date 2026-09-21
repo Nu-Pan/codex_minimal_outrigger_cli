@@ -53,18 +53,20 @@
 # `test_execution.md`
 
 ## Summary
-- 構築済みの cmoc 開発環境で、pytest・Ruff・mypy による focused 検査、full 完了ゲート、実経路統合テストの選択・実行・完了判定・結果報告を定める手順書。
+- 構築済みの cmoc 開発環境で、Python interpreter と preflight 条件を確認し、focused test・品質検査・実経路統合テスト・fresh な完了ゲートの選択、実行、完了判定、結果報告を定める手順書。関連するテスト仕様、コーディング規約、開発環境の正本への入口でもある。
 
 ## Read this when
-- cmoc の変更に対して、使用する worktree と Python interpreter、preflight、検査範囲、pytest の warning 設定、Ruff・mypy・full test の実行条件を判断するとき。
-- focused test や実経路統合テストを実行し、skip・失敗・環境不足を含む完了可否と報告項目を確認するとき。
+- cmoc のテストや Ruff・mypy の実行対象、実行コマンド、warning の扱い、実経路統合テストの分離方法を決めるとき。
+- 変更後に fresh な完了ゲートを実行し、未完了条件や skip・failure の理由を報告するとき。
 
 ## Do not read this when
-- realization test の意味上の要件、型注釈・docstring の品質要件、Python 環境構築や依存関係管理の正本を確認する場合は、それぞれの oracle 規約を直接読むとき。
-- 検査手順ではなく、実装や test 自体の変更方針・仕様適合性を確認するとき。
+- テストそのものが満たす意味上の要件を確認したいときは、テスト実装規約を直接読む。
+- 型注釈・docstring の品質要件を確認したいときは、コーディング規約を直接読む。
+- Python 環境の構築や依存関係、pip 操作の手順を確認したいときは、開発環境の正本を直接読む。
+- 個別の実装やテストコードの仕様・挙動を確認したいとき。
 
 ## hash
-- a4d0f1d56f4832dfe3af8055baed1962b4dba0f7c09db08edb25ed2f834962da
+- 3715cf45eaba6acb3862f6f56e7b24cdbdbd67d27a08b072fcb25aa4ea5ec167
 
 # `test_rule.md`
 
