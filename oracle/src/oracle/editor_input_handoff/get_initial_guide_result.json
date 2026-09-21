@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "cmoc editor input initial guide tool result",
+  "type": "object",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "initial_text"
+      ],
+      "properties": {
+        "status": {
+          "const": "ok"
+        },
+        "initial_text": {
+          "type": "string",
+          "description": "target に保持した生成時の初期文面。"
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "message"
+      ],
+      "properties": {
+        "status": {
+          "const": "error"
+        },
+        "message": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "初期ガイドを取得できなかった理由。"
+        }
+      }
+    }
+  ]
+}

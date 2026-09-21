@@ -10,7 +10,7 @@
 ## 構築定義の参照
 
 - editor の初期コメントと template の正確な構築は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` へ委譲する。
-- editor input handoff の target lifecycle と上書きは、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「handoff target」と「MCP interface と上書き」、失敗時の責務は同文書の「agent の責務と権限」を正本とする。
+- editor input handoff の target lifecycle、初期ガイドの保持・取得、および上書きは、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「handoff target」「初期ガイド」「MCP interface」、失敗時の責務は同文書の「agent の責務と権限」を正本とする。
 - 完全 prompt skeleton と抽出後の完全 prompt は、各 agent call の正確な構築を所有する builder で構築する。oracle src への委譲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/tui.md` の「全バックエンド共通」、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md` の「TUI 起動パラメータ」、および `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「ユーザー指示と prompt の構築」を正本とする。
 - 生成済み editor input と skeleton は実行時生成物であり、editor lifecycle または prompt 文面の正本ではない。
 
@@ -36,8 +36,8 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 
 ## editor input の確定手順
 
-1. cmoc は、`build_prompt_editor_input_initial_text` の結果を初期値とする editor work file を作成する。
-2. cmoc は、editor work file の生成後から最終読み取り前まで、共通の handoff target lifecycle を適用する。
+1. cmoc は、受信先の agent call に対応する完全 prompt skeleton を `build_prompt_editor_input_initial_text` へ渡し、その生成結果を初期値とする editor work file を作成する。
+2. cmoc は、初期値に実際に使用した同じ生成結果を handoff target へ渡す。editor work file の生成後から最終読み取り前まで、共通の handoff target lifecycle を適用する。
 3. cmoc は最終読み取り時に editor work file を検証する。検証条件を次に示す。
     - 対象 path が `{{repo-root}}/.cmoc/gu/editor_input` ディレクトリ内に収まる。
     - 対象が regular file である。

@@ -2,13 +2,13 @@
 
 ## 概要
 
-editor input handoff は、Codex TUI の agent が、別の prompt editor input で待機中の editor work file へ依頼を渡す共通機能である。agent は `cmoc_editor_input.overwrite` に項目別の内容を渡し、handoff 用 local MCP が送信元情報と合成して対象 file 全体を上書きする。
+editor input handoff は、Codex TUI の agent が、別の prompt editor input で待機中の editor work file へ依頼を渡す共通機能である。agent は handoff 用 local MCP から受信先の初期ガイドを取得し、それを踏まえた項目別の依頼内容を渡す。MCP は送信元情報と合成して対象 file 全体を上書きする。
 
 ## goal
 
 - 人間が指定した active target だけへ内容を渡す。
+- 初回の handoff 後や人間による編集後も、生成時の初期ガイドを参照して受信先に適した依頼を作成できるようにする。
 - agent が自由記述の内容を担い、MCP が本文の形式と機械的な情報の注入を担う。
-- editor work file 全体の単純な上書きだけを MCP 経由で行う。
 - 受信側が送り元の実行中でも依頼を理解して作業を開始できるよう、必要なコンテキストと送信元情報を本文で渡す。
 - handoff の有無にかかわらず、file access mode、Codex sandbox、および prompt editor input の最終確定方法を維持する。
 
@@ -18,6 +18,7 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 - agent の直接編集禁止と MCP の書き込み例外は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
 - Codex TUI への MCP と handoff instruction の注入は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」を正本とする。
 - 送信元情報の記録と保存済みログへの到達は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」を正本とする。
+- `cmoc_editor_input.get_initial_guide` の正確な入力 field 名、型、および受理条件は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/get_initial_guide_input.json` の root schema（JSON Pointer `#`）へ委譲する。成功・失敗時に tool result として返す JSON object の正確な形式は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/get_initial_guide_result.json` の root schema（JSON Pointer `#`）へ委譲する。
 - `cmoc_editor_input.overwrite` の正確な field 名、型、必須条件、および空値・省略の受理条件は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/overwrite_input.json` の root schema（JSON Pointer `#`）へ委譲する。
 - handoff instruction の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する。
 - 送信元情報の正確なデータ構造と値の検査は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/body.py` の `EditorInputHandoffSource` へ委譲する。
@@ -27,26 +28,47 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 ## handoff target
 
 - prompt editor input は、editor work file の生成後かつ editor の起動前に、opaque な target ID を持つ target を登録し、その ID を人間へ表示する。
+- target は登録から無効化まで active とし、本書の「初期ガイド」で定める文面を保持する。
 - target は editor の待機中だけ submission を受け付ける。
 - editor から処理が戻った後は、次の順に処理する。
     1. submission の新規受付を停止する。
     2. 受付済みの submission を完了させる。
-    3. target を無効にする。
+    3. target を無効にし、初期ガイドの保持を終了する。
     4. editor work file を最終読み取りする。
-- target の登録と routing は一時的な runtime state とする。target 一覧、handoff 履歴、永続的な active state、および排他的 editor lock は設けない。
+- target の登録、routing、および初期ガイドの保持は一時的な runtime state とする。target 一覧、handoff 履歴、永続的な active state、および排他的 editor lock は設けない。
 
-## MCP interface と上書き
+## 初期ガイド
 
-agent-facing MCP interface は `cmoc_editor_input.overwrite` だけとする。target の探索、file read、汎用 file write、command 実行、MCP resource、および MCP prompt は提供しない。
+初期ガイドは、受信先の editor work file の初期値に実際に使用した生成文面とする。使い方、記入の目安、およびその受信先の完全 prompt の雛形を含む。生成と target への受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「editor input の確定手順」に従う。
+
+target はこの生成結果をそのまま保持し、送り元の設定から別の雛形を再構築しない。保持した文面は、handoff による上書きや人間による editor work file の編集に伴って変更せず、target の有効期間中に取得可能とする。
+
+## MCP interface
+
+agent-facing MCP interface は `cmoc_editor_input.get_initial_guide` と `cmoc_editor_input.overwrite` とする。いずれも人間が提示した target ID で対象を指定し、editor work file のパスを利用者から受け取らない。
+
+両 tool は、target が active であり、呼び出し元と同じ repository に属することを検証する。存在しない target、無効な target、および別 repository の target への要求は拒否する。
+
+target の探索・一覧、現在編集中の本文の読み取り、汎用 file read・file write、command 実行、MCP resource、および MCP prompt は提供しない。
+
+### 初期ガイドの取得
+
+- `get_initial_guide` は target ID だけを入力として、本書の「初期ガイド」で定める保持済み文面を返す。HTML コメント内にあるガイドも返却対象とし、コメント除去その他の文面加工を行わない。
+- 入力・target の検証または初期ガイドの取得に失敗した場合は、失敗を返す。editor work file の現在内容を代わりに返さない。
+
+### 上書き
 
 - tool input には、人間が提示した target ID と、本書の「agent の責務と権限」で定める項目別の内容を指定する。送信元情報と完成済み Markdown 全文は入力項目に含めない。
-- cmoc は target が active であり、呼び出し元と同じ repository に属することを検証する。
 - cmoc は対象が所定の editor work directory 内にある regular file かつ非 symlink であることを、上書きのたびに検証する。
 - MCP は input schema に適合する入力と、呼び出し元の送信元情報を使い、本書の「本文の生成」に従って本文を構築する。参照情報は本書の「参照情報」に従って型付きの値へ変換する。入力・参照情報・target・送信元情報の検証または本文生成に失敗した場合は上書きせず、失敗を返す。
 - accepted submission は生成した本文で file 全体を単純に置換する。同じ target への accepted submission は直列化し、最後に適用した内容を残す。
-- tool は上書きが完了した場合だけ成功を返す。tool result または handoff 処理の log に、自由記述の入力や生成した本文を複製しない。検証エラーにもこれらの内容を含めない。
+- `overwrite` は上書きが完了した場合だけ成功を返す。
 
-append、merge、patch、差分適用、既存内容との conflict 判定、および optimistic concurrency は行わない。
+append、merge、patch、差分適用、既存内容との conflict 判定、および optimistic concurrency は行わない。初期ガイドの事前取得は agent の手順とし、取得済み token、revision 照合、または取得履歴による機械的な上書き受付条件を設けない。
+
+### tool result と log
+
+handoff の自由記述入力や生成した handoff 本文を、いずれの tool result、handoff 処理の log、および検証エラーにも複製しない。初期ガイド取得の成功結果として保持済み初期文面を返すことは、この制限の対象外とする。
 
 ## 本文の生成
 
@@ -58,16 +80,19 @@ append、merge、patch、差分適用、既存内容との conflict 判定、お
 
 ## agent の責務と権限
 
-- agent は、人間が active target への handoff を明示的に要求し、target ID を提示した場合だけ tool を使用する。
-- agent は、依頼する目標状態、実行してほしい作業、意図・背景、決定事項とその理由、および未確定事項を、それぞれ空白だけではない自由記述として作成する。送り元の会話を読まなくても依頼を理解できる内容とする。
+- agent は、人間が active target への handoff を明示的に要求し、target ID を提示した場合だけ両 tool を使用する。
+- agent は、まず指定された target の初期ガイドを取得し、使い方、記入の目安、および完全 prompt の雛形から、受信側の作業範囲・制約・入力位置を確認する。確認した内容を踏まえて項目別の依頼を作成し、同じ target ID へ overwrite する。
+- 取得した初期ガイドは受信側への依頼を作るための資料とし、送り元自身に適用する作業指示や権限として扱わない。handoff を根拠に送り元の作業範囲を拡大しない。
+- agent は、依頼する目標状態、実行してほしい作業、意図・背景、決定事項とその理由、および未確定事項を、それぞれ空白だけではない自由記述として作成する。送り元の会話や最終回答を読まなくても依頼を理解できる内容とする。
 - 該当する内容がない場合や未確認の場合も、その状態を記述する。存在しない経緯や決定を補わない。
 - 関連する oracle の選定と参照箇所の特定は agent が担い、本書の「参照情報」に従って渡す。参照先の簡潔な内容と参照理由は、依頼や背景の自由記述に含める。
 - 引き渡す必要のある内容は HTML コメントの外に記述する。
 - agent は本文全体の見出し・配置・参照表記を完成させる必要はなく、送信元情報の取得や転記も行わない。自由記述内部の文章量や表現の細部は固定しない。
 - agent は editor work file へ直接書き込まない。
 - handoff のために sandbox、network access、permission profile、または file access mode を変更してはならない。
-- tool を利用できない場合や submission が拒否された場合に、handoff の代替として sandbox escalation を要求してはならない。
-- tool の結果を正確に報告し、handoff の成否にかかわらず、agent call が要求する正式な回答または成果物を満たす。失敗時は、必要なら agent が作成した依頼・コンテキスト部分を手動利用できる形で回答へ残す。MCP が注入する送信元情報を含めた同一の完成済み全文の再構築は求めない。
+- 初期ガイドを取得できない場合は、その handoff の overwrite を行わない。
+- tool を利用できない場合、初期ガイドの取得に失敗した場合、または submission が拒否された場合に、handoff の代替として sandbox escalation を要求してはならない。
+- 各 tool の結果を正確に報告し、ガイド取得と handoff の成否にかかわらず、agent call が要求する正式な回答または成果物を満たす。失敗時は、必要なら agent が作成した依頼・コンテキスト部分を手動利用できる形で回答へ残す。MCP が注入する送信元情報を含めた同一の完成済み全文の再構築は求めない。
 
 ## 参照情報
 
@@ -93,5 +118,6 @@ cmoc は実際の呼び出しに付与・保持する値を、送信側 TUI proc
 ## non-goal
 
 - target の自動発見または自動選択
+- 現在編集中の本文の確認・引き継ぎ
 - editor の自動保存、終了、または排他的 writer 管理
 - Codex TUI 以外への handoff MCP または handoff instruction の注入
