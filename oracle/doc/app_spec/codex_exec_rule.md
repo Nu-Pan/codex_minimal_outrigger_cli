@@ -294,7 +294,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 - `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
 - Codex TUI を起動する `AgentCallParameter` builder だけが MCP を有効にする。それ以外の builder は既定値を使用する
-- 有効な Codex TUI call には `cmoc_editor_input` MCP server を提供する。初期ガイド取得と上書きの公開 tool は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「MCP interface」に従う。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
+- 有効な Codex TUI call には `cmoc_editor_input` MCP server を提供する。handoff ガイド取得と上書きの公開 tool は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「MCP interface」に従う。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
 - handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - Codex TUI の builder は MCP と handoff instruction の両方を有効にする。agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
 - `cmoc tui` と `cmoc oracle investigation` では、cmoc の起動・呼び出し管理経路が、送信側 TUI process に対応する実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "cmoc editor input initial guide tool input",
+  "title": "cmoc editor input handoff guide tool input",
   "type": "object",
   "additionalProperties": false,
   "required": [
