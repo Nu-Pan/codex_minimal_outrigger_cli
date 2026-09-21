@@ -53,7 +53,7 @@ cd "$cmoc_work_root"
 "$cmoc_python" -m mypy --version
 ```
 
-表示された Python version が `project.requires-python` を満たすことを確認する。必要な path、version、または module が揃わない場合は検査を開始せず、不足している前提を具体的に報告する。この場合は、環境構築が必要な未完了状態として検査を停止する。
+表示された Python version が `project.requires-python` を満たすことを確認する。必要な path、version、または module が揃わない場合は、環境構築が必要な未完了状態として検査を開始せず、不足している前提を具体的に報告する。
 
 ## focused test と検査対象を選択する
 

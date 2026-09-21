@@ -115,30 +115,45 @@ sandbox の指定は専用引数だけで行い、`--config` で上書きした�
 
 ### 詳細なファイルアクセス制限
 
-- 詳細なファイルアクセス制限は、agent が直接行うファイルアクセスに適用する deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する
-- agent による `.agents` ツリー内の編集を禁止する
-- `NO_POLICY` 以外の全 file access mode では、次の制限を共通で適用する
-    - `{{work-root}}` ツリー外への書き込みを禁止する
-    - `{{work-root}}/.git`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc` ツリー内の書き込みを禁止する
-    - Git metadata は配置先によらず変更を禁止する
-    - `AGENTS.md` と `INDEX.md` の書き込みを禁止する
-    - `{{work-root}}/memo` の読み書きを禁止する
-- ツリー外であることだけを理由に読み取りを禁止しない。外部ログ、設定、ライブラリ、Git metadata も読み取りを許可する
-- 外部読み取りの許可は、明示的な読み取り禁止、mode 別のアクセス制限、および workload 固有の閲覧・判断材料の制限を解除しない。MCP や Git の履歴・差分を経由しても、明示的な読み取り禁止を迂回してはならない
-- 一度読んだ情報の影響を排除できないため、realization file の読み取り禁止は、判断の根拠への採用だけでなく閲覧自体に適用する
-- 外部読み取りの許可によって、対象 worktree の正本、追従対象 revision、作業範囲、または編集対象を変更してはならない
-- `NO_POLICY` 以外の各 mode は、共通制限に次の制限を追加する
-    - `READONLY`: oracle file と realization file の書き込みを禁止する
-    - `PURE_ORACLE_READ`: oracle file の書き込みと realization file の読み書きを禁止する
-    - `REPO_WRITE`: 追加の制限を設けない
-    - `PURE_ORACLE_WRITE`: realization file の読み書きを禁止する
-    - `REALIZATION_WRITE`: oracle file の書き込みを禁止する
-- `NO_POLICY` は、共通 file access policy が存在しない有効な特殊 mode とする。必要な instruction は個別の `AgentCallParameter` builder がすべて構築する
-- 個別 agent call が選択する file access mode は、対応する oracle doc の作業範囲と一致させる。AgentCallParameter builder は、その正確な選択値を構築する
-- `build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および `NO_POLICY` 以外の mode の正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する
-- `build_complete_prompt` はその結果を処理し、共通 file access policy の追加可否を決める。完全 prompt への正確な追加条件は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
-- path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない
-- 詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する
+詳細なファイルアクセス制限は、agent が直接行うファイルアクセスに適用する deny-list とする。共通制限または各 mode の追加制限で禁止されていない読み書きは許可する。個別 agent call の file access mode は、対応する oracle doc の作業範囲と一致させ、AgentCallParameter builder が正確な選択値を構築する。
+
+#### 共通制限と mode 別の追加制限
+
+agent による `.agents` ツリー内の編集は、file access mode にかかわらず禁止する。
+
+`NO_POLICY` 以外の全 file access mode には、次の共通制限を適用する。
+
+- `{{work-root}}` ツリー外への書き込みを禁止する。
+- `{{work-root}}/.git`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc` ツリー内の書き込みを禁止する。
+- Git metadata は配置先によらず変更を禁止する。
+- `AGENTS.md` と `INDEX.md` の書き込みを禁止する。
+- `{{work-root}}/memo` の読み書きを禁止する。
+
+`NO_POLICY` 以外の各 mode は、共通制限に次の制限を追加する。
+
+| file access mode | 追加制限 |
+|---|---|
+| `READONLY` | oracle file と realization file の書き込みを禁止する。 |
+| `PURE_ORACLE_READ` | oracle file の書き込みと realization file の読み書きを禁止する。 |
+| `REPO_WRITE` | 追加の制限を設けない。 |
+| `PURE_ORACLE_WRITE` | realization file の読み書きを禁止する。 |
+| `REALIZATION_WRITE` | oracle file の書き込みを禁止する。 |
+
+`NO_POLICY` は、共通 file access policy が存在しない有効な特殊 mode とする。必要な instruction は個別の `AgentCallParameter` builder がすべて構築する。
+
+#### 読み取りの範囲
+
+`{{work-root}}` ツリー外であることだけを理由に読み取りを禁止しない。外部ログ、設定、ライブラリ、Git metadata も読み取りを許可する。ただし、この許可は、明示的な読み取り禁止、mode 別のアクセス制限、および workload 固有の閲覧・判断材料の制限を解除しない。MCP や Git の履歴・差分を経由しても、明示的な読み取り禁止を迂回してはならない。
+
+一度読んだ情報の影響を排除できないため、realization file の読み取り禁止は、判断の根拠への採用だけでなく閲覧自体に適用する。また、外部読み取りの許可によって、対象 worktree の正本、追従対象 revision、作業範囲、または編集対象を変更してはならない。
+
+#### prompt の構築と sandbox との関係
+
+`build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および `NO_POLICY` 以外の mode の正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する。
+
+`build_complete_prompt` はこの結果に基づいて共通 file access policy の追加可否を決める。完全 prompt への正確な追加条件は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
+
+path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない。詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する。
 
 ### 書き込み主体の責任分界
 

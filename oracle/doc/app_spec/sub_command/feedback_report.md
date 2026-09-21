@@ -1,6 +1,6 @@
 # `cmoc feedback report`
 
-`cmoc feedback report` は、同一 invocation 内で feedback remediation run を作成する。安全な realization file の修正を issue 単位で commit した後、session branch へ自動 join する。正常 publication には、join 後も `human_required` である issue だけを掲載する。
+`cmoc feedback report` は、同一 invocation 内で feedback remediation run を作成する。安全な realization file の修正を issue 単位で commit した後、session branch へ自動 join する。正常 publication で公開する issue 一覧には、join 後も `human_required` である issue だけを掲載する。
 
 関連する仕様の正本を次に示す。
 
@@ -310,7 +310,7 @@ issue 一覧には、`human_required` だけを安定した issue ID 順で表�
 - 観測期間
 - bounded representative evidence
 
-current evidence は、削除予定の wave または checkpoint だけを指す link にしない。人間が report から確認できる path、subject、probe、location、fingerprint、または finding を materialize する。
+current evidence には、人間が report から確認できる path、subject、probe、location、fingerprint、または finding を記載する。削除予定の wave または checkpoint への link だけで済ませてはならない。
 
 ### `incomplete` 診断 report
 

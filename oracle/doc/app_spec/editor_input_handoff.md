@@ -14,14 +14,29 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 
 ## 正本の分担
 
+### 共通仕様
+
 - prompt editor input の writer 境界と最終読み取りは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「ファイルの役割」と「editor input の確定手順」を正本とする。
 - agent の直接編集禁止と MCP の書き込み例外は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
 - Codex TUI への MCP と handoff instruction の注入は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」を正本とする。
 - 送信元情報の記録と保存済みログへの到達は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」を正本とする。
-- handoff ガイドの正確な文面と完全 prompt skeleton の配置は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/guide.py` の `build_editor_input_handoff_guide` へ委譲する。
-- `cmoc_editor_input.get_handoff_guide` の正確な入力 field 名、型、および受理条件は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/get_handoff_guide_input.json` の root schema（JSON Pointer `#`）へ委譲する。成功・失敗時に tool result として返す JSON object の正確な形式は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/get_handoff_guide_result.json` の root schema（JSON Pointer `#`）へ委譲する。
-- `cmoc_editor_input.overwrite` の正確な field 名、型、必須・非空条件、参照の指定形式、および各項目の意味と記入条件を伝える agent 向け説明は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/overwrite_input.json` の root schema（JSON Pointer `#`）へ委譲する。該当なし・未確認の扱いと、参照内容・参照理由の記載先も同スキーマへ集約する。
-- handoff instruction は、利用条件、ガイド取得から送信までの手順、成果責務、および項目別入力から受信先の完全 prompt までの関係を伝える。正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する。入力項目の説明は前述の input schema、記入の目安と受信側の作業範囲・制約・入力位置の確認方法は handoff ガイド、直接ファイルアクセスの制限は共通 file access policy に委ねる。
+
+### ガイドと instruction
+
+handoff ガイドの正確な文面と完全 prompt skeleton の配置は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/guide.py` の `build_editor_input_handoff_guide` へ委譲する。
+
+handoff instruction は、利用条件、ガイド取得から送信までの手順、成果責務、および項目別入力から受信先の完全 prompt までの関係を伝える。正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する。
+
+入力項目の説明は本書の「MCP の入出力」で定める input schema、記入の目安と受信側の作業範囲・制約・入力位置の確認方法は handoff ガイド、直接ファイルアクセスの制限は共通 file access policy に委ねる。
+
+### MCP の入出力
+
+`cmoc_editor_input.get_handoff_guide` の正確な入力 field 名、型、および受理条件は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/get_handoff_guide_input.json` の root schema（JSON Pointer `#`）へ委譲する。成功・失敗時に tool result として返す JSON object の正確な形式は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/get_handoff_guide_result.json` の root schema（JSON Pointer `#`）へ委譲する。
+
+`cmoc_editor_input.overwrite` の正確な field 名、型、必須・非空条件、参照の指定形式、および各項目の意味と記入条件を伝える agent 向け説明は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/overwrite_input.json` の root schema（JSON Pointer `#`）へ委譲する。該当なし・未確認の扱いと、参照内容・参照理由の記載先も同スキーマへ集約する。
+
+### 本文と参照の構築
+
 - 送信元情報の正確なデータ構造と値の検査は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/body.py` の `EditorInputHandoffSource` へ委譲する。
 - handoff 本文の正確な見出し、順序、項目の表記、空項目の扱い、および送信元情報の配置は、`{{cmoc-root}}/oracle/src/oracle/editor_input_handoff/body.py` の `build_editor_input_handoff_body` へ委譲する。
 - 文書参照の Python データ構造と値の検査、単一参照のインライン表記、および複数参照の一覧表記は、`{{cmoc-root}}/oracle/src/oracle/other/doc_ref_model.py` の `DocRef`、`render_doc_ref_as_inline_md`、および `render_doc_ref_as_multiline_md` へ委譲する。意味は本書の「参照情報」で定める。
@@ -81,16 +96,25 @@ handoff の自由記述入力や生成した handoff 本文を、tool result、h
 
 ## agent の責務と権限
 
-- agent は、人間が active target への handoff を明示的に要求し、target ID を提示した場合だけ両 tool を使用する。
-- agent は、まず指定された target の handoff ガイドを取得し、その内容に従って項目別の依頼を作成し、同じ target ID へ overwrite する。
-- 取得した handoff ガイドは受信側への依頼を作るための資料とし、送信元自身に適用する作業指示や権限として扱わない。handoff を根拠に送信元の作業範囲を拡大しない。
-- agent は、依頼と必要なコンテキストを、送信元の会話や最終回答を読まなくても理解できる内容として作成する。存在しない経緯や決定を補わない。
-- 関連する oracle の選定と参照箇所の特定は agent が担い、本書の「参照情報」に従って渡す。
-- agent は本文全体の見出し・配置・参照表記を完成させる必要はなく、送信元情報の取得や転記も行わない。自由記述内部の文章量や表現の細部は固定しない。
-- handoff のために sandbox、network access、permission profile、または file access mode を変更してはならない。
-- handoff ガイドを取得できない場合は、その handoff の overwrite を行わない。
-- tool を利用できない場合、handoff ガイドの取得に失敗した場合、または submission が拒否された場合に、handoff の代替として sandbox escalation を要求してはならない。
-- 各 tool の結果を正確に報告し、ガイド取得と handoff の成否にかかわらず、正式な回答または成果物に関する agent call の要求を満たす。失敗時は、必要なら agent が作成した依頼・コンテキスト部分を手動利用できる形で回答へ残す。MCP が注入する送信元情報を含めた同一の完成済み全文の再構築は求めない。
+agent は、人間が active target への handoff を明示的に要求し、target ID を提示した場合だけ両 tool を使用する。handoff のために sandbox、network access、permission profile、または file access mode を変更してはならない。
+
+### 依頼の作成と送信
+
+1. 指定された target の handoff ガイドを取得する。
+2. ガイドの内容に従って項目別の依頼を作成する。
+3. 同じ target ID へ overwrite する。
+
+取得したガイドは受信側への依頼を作るための資料であり、送信元自身に適用する作業指示や権限として扱わない。handoff を根拠に送信元の作業範囲を拡大しない。
+
+agent は、依頼と必要なコンテキストを、送信元の会話や最終回答を読まなくても理解できる内容として作成する。存在しない経緯や決定を補わない。関連する oracle の選定と参照箇所の特定も agent が担い、本書の「参照情報」に従って渡す。
+
+本文全体の見出し・配置・参照表記は本文 builder が担うため、agent が完成させる必要はない。agent は送信元情報の取得や転記も行わない。自由記述内部の文章量や表現の細部は固定しない。
+
+### 失敗時と結果報告
+
+handoff ガイドを取得できない場合は、その handoff の overwrite を行わない。また、tool を利用できない場合、ガイドの取得に失敗した場合、または submission が拒否された場合に、handoff の代替として sandbox escalation を要求してはならない。
+
+agent は各 tool の結果を正確に報告し、ガイド取得と handoff の成否にかかわらず、正式な回答または成果物に関する agent call の要求を満たす。失敗時は、必要なら agent が作成した依頼・コンテキスト部分を手動利用できる形で回答へ残す。MCP が注入する送信元情報を含めた同一の完成済み全文の再構築は求めない。
 
 ## 参照情報
 

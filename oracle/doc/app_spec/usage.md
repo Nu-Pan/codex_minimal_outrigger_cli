@@ -14,13 +14,12 @@
 2. 人間が `cmoc session fork` を呼び出す。
     - cmoc は現在の branch を `{{cmoc-session-home-branch}}` として記録する。
     - cmoc は `{{cmoc-session-branch}}` を作成して checkout する。
-3. 仕様変更と実装変更の短い loop を繰り返す。
+3. 人間が現状の実装で問題ないと判断するまで、仕様変更と実装変更の短い loop を繰り返す。
     1. 必要に応じて `cmoc oracle investigation` で read-only の調査を行う。
     2. 人間が oracle file を直接編集するか、main worktree の active な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` を呼び出す。
     3. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
     4. 人間が `cmoc realization apply fork` を呼び出す。
     5. 人間が `cmoc run join` で apply run を取り込むか、`cmoc run abandon` で破棄する。
-    6. 人間が現状の実装で問題ないと判断するまで繰り返す。
 4. 必要に応じて、ファイル単位の網羅的な追従を行う。
     1. 人間が `cmoc realization refactor fork` を呼び出す。
     2. 人間が `cmoc run join` で確定済み成果物を取り込むか、`cmoc run abandon` で破棄する。

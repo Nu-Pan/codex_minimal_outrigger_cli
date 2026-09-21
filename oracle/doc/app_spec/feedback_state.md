@@ -64,7 +64,7 @@ state を構成する artifact の役割を次に示す。
 | checkpoint | 受理済み normalization または remediation の入力、結果、検証、および commit を hash で結び付ける記録 |
 | report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、採用する有効な結果、および merge 対象を固定する |
 | publication completion record | merge または no-op join 後の session commit、run branch の到達可能性、および最終 tree 検証結果を report cut と結び付ける immutable な記録 |
-| `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった処理の確定済み結果と blocker を materialize した durable な Markdown report |
+| `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった処理について、確定済み結果と完了を妨げた原因を記載した durable な Markdown report |
 
 timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。
 
@@ -111,7 +111,7 @@ active issue record は、次回の候補絞り込み、remediation、および�
 - 最新の `human_required` result の reason、current evidence、判定根拠、および human action
 - machine issue の場合だけ、recurrence window を評価できる bounded summary
 
-evidence は、削除予定の raw observation、intake wave、または report cut だけを参照してはならない。次回 report で再確認できる安定した subject と、人間が確認できる compact な説明を materialize する。secret を複製してはならない。
+evidence は、削除予定の raw observation、intake wave、または report cut だけを参照してはならない。次回 report で再確認できるよう、安定した subject と、人間が確認できる簡潔な説明を record に保存する。secret を複製してはならない。
 
 保持件数と集計情報は schema-fixed な上限を持つ。上限超過時の選択は、固定済み wave 入力に対して決定論的に行う。AI に保持対象を選ばせない。
 
