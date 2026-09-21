@@ -58,19 +58,21 @@
 # `oracle`
 
 ## Summary
-- oracle edit と oracle investigation の agent 呼び出しパラメータを構築する oracle 実装群への入口。編集用は oracle file の編集 prompt と実行条件を、調査用は oracle file の読み取り調査 prompt と TUI 起動条件を定義する。
-- edit、investigation、review の各下位領域に分かれており、具体的な編集起動定義は edit、調査起動定義は investigation、レビュー関連は review へ進む。
+- oracle 操作向けの agent 呼び出し定義をまとめる入口。調査用 TUI 起動、編集用 exec 起動、およびレビュー関連の下位領域へ進むための構成を持つ。
+- investigation は oracle file を読み取り専用で調査する prompt と TUI 起動パラメータ、edit は oracle file を編集する prompt と exec 起動パラメータを扱う。review はレビュー関連の下位領域への入口である。
 
 ## Read this when
-- `cmoc oracle edit` または `cmoc oracle investigation` の agent 呼び出し条件、prompt 構築、oracle file のアクセスモードを確認するとき。
-- edit・investigation・review のどの下位領域を読むべきか判断するとき。
+- oracle file の調査・編集・レビューを行う agent 呼び出しの責務分担を確認したいとき
+- 調査用 TUI 起動または編集用 exec 起動のパラメータ構築を確認したいとき
+- oracle 操作に関する下位ディレクトリの入口を選びたいとき
 
 ## Do not read this when
-- 編集用の共通パラメータの詳細は edit、調査用 TUI 起動の詳細は investigation、レビュー固有の内容は review を直接読むべきとき。
-- oracle/acp_builder 以外の prompt 構築や agent 呼び出し定義を確認するとき。
+- 個別の oracle file の仕様本文を確認したいとき
+- agent 呼び出しの共通データ型や prompt 構築処理そのものを確認したいときは、それぞれの定義元へ直接進むべきとき
+- 対象外の通常実装や realization 側の agent 呼び出しを確認したいとき
 
 ## hash
-- f4582d290e75b542a6b5a3544c47702eb09f41bb370d713eaac6ab0936d8cedf
+- 531c5b4f16cd0fe40e11d6852435580547172f4b86d0c93bbfdb9968e61c01e8
 
 # `quota_probe.py`
 
@@ -125,16 +127,13 @@
 # `tui`
 
 ## Summary
-- 対象ディレクトリは、oracle の ACP builder における TUI 関連の正本実装をまとめる層です。
-- TUI の表示・操作フローや、それを構成する補助モジュールへ進むための入口として機能します。
+- `cmoc tui` のTUI起動用プロンプトと固定起動パラメータを構築する定義。ユーザー入力を完全プロンプトへ組み込み、リポジトリ書き込み権限・エディタ入力引き継ぎ・索引付け前処理などの起動条件を設定する入口。
 
 ## Read this when
-- ACP builder の TUI の正本実装を確認・変更するとき。
-- TUI の画面挙動、ユーザー操作、または TUI 内部の構成要素の責務を調べるとき。
+- `cmoc tui` の起動時に、ユーザープロンプトがどのように完全プロンプトへ変換され、Codex CLI向けの起動パラメータへ反映されるかを確認・変更するとき。
 
 ## Do not read this when
-- TUI ではなく ACP builder の別機能や一般的な CLI 実装を確認するとき。
-- 対象ディレクトリ内の特定モジュールの詳細な責務が既に分かっており、そのファイルを直接読む方が適切なとき。
+- TUI内部の画面表示や対話処理、または共通プロンプト生成規則そのものを調べる場合。このディレクトリではなく、それぞれの実装対象や共通プロンプト構築箇所を直接読むとき。
 
 ## hash
-- 836dff7fc239e65eeaf26cf004384877eeb62eca168b517e83023db318370d55
+- f28546aef0423a86dd61a08732f512eec7b68a81bb94a95ff72b3c793e49b0b7

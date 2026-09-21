@@ -89,21 +89,26 @@
 # `oracle`
 
 ## Summary
-- 人間が所有する正本仕様を、文書による意味仕様と、明示委譲された構築・アルゴリズム・schema の oracle src に分けて保持する領域。cmoc の開発規約、アプリケーション仕様、サブコマンド仕様、prompt 構築定義などを含み、realization の根拠を確認する入口となる。
+- cmoc の正本仕様を集約する oracle ツリー。アプリケーション全体の目的・責務・状態・実行規則を確認する入口。
+- oracle/doc/app_spec は、CLI サブコマンド、セッション／run 隔離、prompt・Codex 呼び出し、feedback、INDEX.md、ログ、エラー処理などの現行仕様を扱う。
+- oracle/doc/dev_rule は、開発環境・設計・コーディング・テスト実行とテスト実装に関する開発規約を扱う。
+- oracle/doc/branch_model.md は branch・commit・worktree の命名と関係、oracle/doc/considered_alternative は不採用案と判断理由を扱う。
+- oracle/src は、仕様から委譲された構造定義・prompt builder・ACP builder・入力 handoff・feedback などの機械的な正本断片を確認する入口。
 
 ## Read this when
-- cmoc の要求、責務、判断基準、goal・non-goal などの意味仕様を確認するとき
-- prompt の正確な文面、構築順序、選択値、schema、アルゴリズムの正本を確認するとき
-- 実装やテストが従うべき正本仕様を特定するとき
-- oracle file と realization file の責務や優先関係を確認するとき
+- cmoc の仕様全体を俯瞰し、どの正本文書または正本コードへ進むべきか判断したいとき
+- CLI のサブコマンド、run/session の状態管理、agent 呼び出し、feedback、ファイル分類や INDEX 処理の仕様を調べるとき
+- realization の変更が oracle の人間意図に適合しているか確認する起点を探すとき
+- 開発規約や branch/worktree の運用規則、不採用案の背景を確認したいとき
 
 ## Do not read this when
-- 対象の具体的な実装挙動だけを確認する場合は、対応する realization の src を直接読むとき
-- 既に確認対象の oracle doc または oracle src が特定できている場合は、このディレクトリ全体を読む必要がないとき
-- 生成済み prompt や INDEX の routing 情報だけを確認する場合は、生成物または対象の INDEX を直接読むとき
+- 対象の具体的な実装変更を行う段階で、対応する realization/src または realization/test が既に特定されているとき
+- 正本仕様全体ではなく、特定のサブコマンドや機能の詳細だけを確認したい場合は、まず oracle/doc/app_spec またはその sub_command 配下の該当ファイルを直接読むとき
+- INDEX.md の生成規則そのものだけを確認したい場合は、oracle/doc/app_spec/indexing.md を直接読むとき
+- 不採用案の判断理由が不要で、現行仕様だけを確認すれば足りるときは oracle/doc/considered_alternative を読む必要がない
 
 ## hash
-- e26235b9e2c5748cfa4de439e70c694a079ae0a491e010795a0e52469a8ebd9b
+- 254efaa626e51db5b784071bcf890018df8f586b8f0e24ced8f07f95e50d1de9
 
 # `pyproject.toml`
 

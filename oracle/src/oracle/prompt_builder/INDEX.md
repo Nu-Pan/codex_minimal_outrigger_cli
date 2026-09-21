@@ -32,18 +32,19 @@
 # `editor_input.py`
 
 ## Summary
-- 人間が直接記入する editor work file の初期文面を構築する関数を扱う。入力先を示す短い HTML コメントと、後続 AI エージェントへの指示に含めるべき成果・範囲・制約の案内を定義している。
+- エディタ起動前に stderr へ表示する、人間向け入力案内の文面を構築する関数を定義する。
+- 完全な prompt や editor input handoff のライフサイクルではなく、直接入力時の短い console 案内だけを担当する。
 
 ## Read this when
-- editor work file の初期表示文面や、人間向けの入力案内を確認・変更したいとき。
-- prompt editor input の構築定義から、初期文面の正確な生成箇所を確認するとき。
+- エディタ起動前に表示する入力案内の文面を確認・変更するとき。
+- 人間が editor work file に記入すべき内容の案内を調べるとき。
 
 ## Do not read this when
-- editor input handoff の target lifecycle、MCP interface、handoff ガイド、上書き処理を確認したいとき。
-- editor input の保存・編集・確定手順全体を確認したいときは、prompt editor input の仕様や editor input handoff の実装を直接読む。
+- 完全 prompt の構築、prompt skeleton、または agent call 固有の prompt 文面を調べるとき。
+- editor work file の生成・検証・保存・削除や handoff target のライフサイクルを調べるときは、対応する lifecycle または handoff の仕様・実装を直接読む。
 
 ## hash
-- 03cafd44b4796d454e5d88c18a1e838f441ea7bba43e5968fbffc5ecba1ff92b
+- 3de6b88dbdaa9fe6a5c264e7320b747738cac05b66a607ff2dc2ec77f46f6c2f
 
 # `parts`
 
@@ -65,17 +66,19 @@
 # `policy`
 
 ## Summary
-- prompt_builder が agent call 向けの共通方針文面を構築する oracle source 群。
-- feedback 報告、oracle/realization の扱い、ファイルアクセス、文書 routing、editor handoff、conflict 解消、INDEX.md エントリー生成の規定を個別の builder として定義する。
+- agent call に埋め込む各種 policy 文面の構築定義をまとめた領域。oracle／realization の扱い、ファイルアクセス制限、INDEX.md routing、feedback 報告、editor handoff、conflict 解消、適合性所見など、作業種別ごとの規定生成が必要な場合の入口となる。
+- 各ファイルは個別の policy 構築関数を提供し、`SDHeader` と `SDPolicy` による要求・禁止・許容事項、および必要な path placeholder を定義する。ファイルアクセス policy だけはアクセスモードにより内容を分岐し、共通規定がないモードでは `None` を返す。
+- この領域を変更・確認する際は、生成される agent 向け instruction の規定文面や、policy の適用対象を調べる場合に進む。正本仕様そのものや prompt 全体の組み立てを確認する場合は、参照先の oracle 文書または上位の prompt_builder 定義を直接読む。
 
 ## Read this when
-- agent call に注入する共通方針の責務や適用範囲を確認するとき。
-- prompt_builder の方針文面を追加・変更するとき。
-- 特定の作業種別に対応する policy builder の所在を判断するとき。
+- agent call に含める規定の種類、適用条件、要求・禁止事項を確認したいとき。
+- oracle／realization の責務、INDEX.md の routing、ファイルアクセス mode、feedback 報告、editor handoff、conflict 解消の policy 文面を変更・レビューするとき。
+- policy 文面に必要な root path placeholder の渡し方や、mode に応じた生成結果の分岐を確認したいとき。
 
 ## Do not read this when
-- 個別 policy の詳細な文面や実装を確認する段階では、対象ディレクトリ全体ではなく該当する Python ファイルを直接読むべきとき。
-- prompt_builder の方針以外の実装、テスト、または oracle doc の意味仕様を確認したいとき。
+- 正本仕様の意味や要件そのものを確認したいときは、各ファイルの NOTE に示された oracle 文書を直接読む。
+- 生成された prompt の全体構成や policy の呼び出し順を確認したいときは、上位の prompt_builder 実装を直接読む。
+- 対象となる一つの policy の文面だけを調べる場合は、このディレクトリ全体ではなく該当する policy 定義ファイルへ直接進む。
 
 ## hash
-- 4df12d7b3142fc58756e971376a5e53ff89c517f8303b87d73134ea7938827d9
+- c85472cf46bb89ab21d6ffb46302995d38d40aa5edaa9487ea3c6a2675b0f19d

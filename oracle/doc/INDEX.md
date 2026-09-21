@@ -1,21 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc アプリケーションの正本仕様をまとめる文書群への入口。CLI 共通規則、Codex 呼び出し・モデルプロバイダ、ログ、doctor preprocess、feedback、状態管理、prompt/TUI、indexing、oracle・realization の責務を扱う。
-- サブコマンド仕様は `sub_command` 配下に分離され、doctor、各種 run/session 操作、feedback、indexing、oracle investigation/edit、realization apply/refactor、TUI などの個別契約を定義する。
+- cmoc のアプリケーション仕様をまとめた正本ドキュメント群。利用 workflow、oracle/realization の分類、prompt・editor input、session/run lifecycle、feedback、logging、indexing、error handling、provider などの共通挙動を定義する。
+- `sub_command` 配下は、doctor、session、oracle、realization、feedback、indexing、TUI など各 CLI サブコマンド固有の責務・引数・前提条件・実行手順を確認するための入口である。
 
 ## Read this when
-- アプリケーション全体の正本仕様の構成や、共通仕様とサブコマンド仕様の責務分担を確認したいとき。
-- 複数の機能領域にまたがる挙動を調査し、共通規則から個別サブコマンド仕様へ辿る必要があるとき。
-- 対象機能に対応する正本仕様文書がどこにあるかを判断するとき。
+- cmoc 全体の動作仕様や利用 workflow を確認するとき
+- 複数のサブコマンドにまたがる session、run、prompt、feedback、oracle/realization の共通ルールを確認するとき
+- 特定のサブコマンドの動作を調べる際に、共通仕様とサブコマンド仕様の関係を把握するとき
 
 ## Do not read this when
-- 単一の共通機能の詳細を確認する場合は、直下の該当仕様文書を直接読む。
-- 特定のサブコマンドの契約だけを確認する場合は、`sub_command` 配下の該当文書を直接読む。
-- 実装やテストの具体的な挙動を確認する場合は、対応する realization source または test を読む。
+- 単一サブコマンドの詳細だけが必要で、`sub_command` 配下の該当仕様を直接読めるとき
+- 実装上の正確な prompt 文面、builder の引数、設定値を確認したいとき。その場合は各仕様が参照する `oracle/src` の実装を読むべきである
+- INDEX.md の生成規則だけを確認したいときは、`indexing.md` を直接読むべきである
 
 ## hash
-- f08eabe76b41e6efac331e5c1b889ab9321aff41dee064bcca201ae312214e27
+- d6ab447f5051611be7fb77ee2474d09fb66734cb5ee6eb13ab60c882d6f79ab6
 
 # `branch_model.md`
 

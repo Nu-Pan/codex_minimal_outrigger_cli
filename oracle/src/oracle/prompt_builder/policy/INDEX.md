@@ -18,18 +18,20 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- 明示的に要求された editor input handoff の依頼内容を構築するポリシー定義。受信側ガイドの確認、項目別入力、oracle 参照、MCP による handoff 実行、失敗時の成果物維持に関する要件と禁止事項を提供する。
+- 明示的に要求された editor input handoff について、受信先ガイドの取得、項目別依頼の作成、同一 target への上書き送信、結果報告と失敗時の手動利用可能な成果物の残し方を定めるポリシー構築定義。
 
 ## Read this when
-- 別セッションの指定された target へ作業依頼やコンテキストを引き渡す手順・入力項目・参照指定の制約を確認するとき。
-- editor input handoff の利用条件、受信側ガイドの扱い、handoff 失敗時の対応を確認するとき。
+- 別セッションの target へ依頼を引き渡す手順や、handoff 用 MCP tool の使用条件・入力内容を確認したいとき
+- 受信先ガイドに従った依頼を作成し、ガイド取得時と同じ target ID へ送信する流れを確認したいとき
+- handoff の成否にかかわらず agent call の成果物を満たす責務や、失敗時の代替的な回答内容を確認したいとき
 
 ## Do not read this when
-- INDEX.md エントリー生成そのものの手順を確認したいときは、index entry 用のポリシー対象を読むべきである。
-- 一般的な prompt 構築や editor work file への直接編集権限を確認したいときは、対応する共通ポリシーを直接読むべきである。
+- handoff ではなく、通常の作業指示の構築や送り元自身への適用規則を確認したいとき
+- editor input handoff の正本仕様そのものを確認したいときは、参照先の oracle doc を直接読むべきとき
+- sandbox・権限・ファイルアクセスの一般規則や、handoff 以外の MCP tool の使用規則を確認したいとき
 
 ## hash
-- 9bb5a374044b10bb1f6e6651d31c960fac592e9ffb466cd4702362b15421102d
+- 588d0d4741adaf6b19b64eb136eead75ebf20491ffe92f79cc74fca0f8279199
 
 # `feedback_reporting.py`
 

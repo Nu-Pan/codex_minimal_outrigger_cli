@@ -1,38 +1,42 @@
 # `acp_builder`
 
 ## Summary
-- ACP builder の oracle 実装群。agent 呼び出し用のアクセス境界・prompt・作業ディレクトリ・Structured Output・indexing 実行条件を組み立てる共通パラメータ定義を中心に、quota probe、INDEX エントリー生成、oracle 編集・調査、realization 反映・レビュー・要約、feedback 処理、session conflict 解消、TUI 起動の各経路を扱う。
+- Codex CLI／TUI を呼び出すための AgentCallParameter と prompt を構築する oracle 実装群。
+- 共通のファイルアクセスモードや呼び出し設定に加え、oracle 操作、INDEX 生成、realization 追従・修正、feedback 処理、TUI、quota probe、conflict 解消の各用途を扱う。
+- 下位ディレクトリは用途別の起動パラメータ定義と Structured Output schema の入口になっている。
 
 ## Read this when
-- ACP builder の agent 呼び出し経路について、どの作業を要求し、どのファイル境界・出力形式・実行条件で起動するかを確認したいとき。
-- 特定の cmoc サブコマンドが agent に渡す prompt と AgentCallParameter の構築元を調査・変更するとき。
+- ACP builder の共通呼び出しパラメータ、prompt 構築、アクセスモード、indexing preflight の設定を確認したいとき。
+- 特定のサブコマンドがどの agent call 設定や schema を使うかを用途別に調査したいとき。
+- oracle と realization の編集・調査経路、feedback remediation、session join conflict 解消の呼び出し境界を確認したいとき。
 
 ## Do not read this when
-- agent 呼び出しの意味仕様やサブコマンド仕様そのものを確認したいときは、対応する oracle/doc を直接読む。
-- 実際の realization 実装やテストの挙動を確認したいときは、src または test の対応対象を直接読む。
-- INDEX.md エントリー生成の Structured Output schema だけを確認したいときは、indexing/index_entry.json を直接読む。
+- 特定用途の詳細な prompt や出力 schema だけを確認したい場合は、該当する下位ディレクトリのファイルを直接読むとき。
+- agent call の実行そのものや、正本仕様の意味を調べる場合は、この builder 群ではなく実行経路または oracle/doc の該当仕様を読むとき。
+- INDEX エントリー生成の出力形式だけを確認したい場合は、indexing 配下の schema を直接読むとき。
 
 ## hash
-- d2d161d8be6b60ce45b9a741d529ef03d94012b0e87c5915587929641315e373
+- 0781e495a5330d8e854e6c252d0d48e9d64d26d3a163700b22cc842730efa045
 
 # `editor_input_handoff`
 
 ## Summary
-- エディター入力 handoff の正本実装と入出力スキーマをまとめるディレクトリ。
-- 受信先 prompt の雛形から handoff ガイドを構築し、項目別依頼と送信元情報から editor work file 用 Markdown 本文を生成する。
-- target ID、依頼項目、oracle 参照、handoff ガイド取得結果の検証形式も定義する。
+- エディター入力の引き渡しガイドを、受信先プロンプト雛形から構築する処理と入力仕様を扱う。
+- 目標・依頼内容・背景・決定事項・未確定事項・oracle参照・送信元情報から、引き渡し本文を生成する正本実装を扱う。
+- 引き渡し本文の上書き入力と、target指定によるガイド取得結果のJSON Schemaを提供する。
 
 ## Read this when
-- エディター入力 handoff のガイド生成、本文構成、送信元情報の検証・埋め込みを確認するとき。
-- handoff 関連ツールの入力・出力 JSON スキーマを確認するとき。
-- editor work file を置換する本文のセクションや必須入力を調べるとき。
+- エディター入力のhandoffガイドや本文の生成・構成を変更または確認するとき。
+- handoff入力の必須項目、空白禁止、oracle参照、target IDの検証条件を確認するとき。
+- 送信元のサブコマンド名・実行ID・Codex call ID・絶対ログパスの扱いを確認するとき。
 
 ## Do not read this when
-- handoff 以外の入力経路や、生成された editor work file の後続処理だけを調べるとき。
-- 正本仕様書の意味を確認することが目的で、実装やスキーマの具体化を読む必要がないときは、関連する oracle/doc を直接読む。
+- 受信先プロンプト雛形そのものの仕様だけを確認したいとき。
+- handoff以外のMCP入力や一般的なJSON Schemaの設計を確認するとき。
+- 生成済みeditor work fileの利用方法や、送信側・受信側の外部処理を直接確認したいとき。
 
 ## hash
-- 68bf245bcf970263c4224cc2131ea1718c36c112f9d15a08df975aed88f86b3e
+- 81d54f916ad10b2fde754c477225f9ad30fefa2c05abfe95bc96a49d8e98575b
 
 # `feedback`
 
@@ -71,18 +75,18 @@
 # `prompt_builder`
 
 ## Summary
-- agent 向け完全 prompt の構築、editor input 初期文面、placeholder 型、および各種 policy 文面の oracle 定義をまとめるディレクトリ。
-- `policy` 配下には file access、routing、oracle／realization、feedback、conflict resolution、INDEX エントリー生成、editor input handoff など、選択的に prompt へ組み込む規定がある。
-- `parts` 配下には oracle file と realization file の基本概念・分類を説明する prompt 部品がある。
+- agent 向け完全 prompt の構築を担い、基本情報・oracle/realization の責務・ファイルアクセス・routing・INDEX.md 作成・各種作業ポリシーを選択的に組み立てる。
+- 配下の部品は、共通のプレースホルダ型、完全 prompt の統合、エディタ案内、oracle/realization 基礎説明、および個別ポリシー文面の構築を分担する。
 
 ## Read this when
-- 完全 prompt の構成、policy の有効化、placeholder の統合、または agent call に渡す規定文面を確認・変更するとき。
-- prompt_builder 配下の policy や部品を横断して、どの規定が prompt に組み込まれるかを調べるとき。
-- editor input の初期文面や、oracle／realization の基本説明を生成する処理を確認するとき。
+- agent call に渡す prompt の構成、ポリシーの有効化、プレースホルダ定義の統合方法を変更・確認するとき。
+- INDEX.md 用エントリー、routing、oracle/realization、ファイルアクセス、feedback 報告などの指示文面の責務や生成内容を確認するとき。
+- prompt_builder 配下の個別ポリシーや構築部品のどれを起点に読むべきか判断するとき。
 
 ## Do not read this when
-- 単一の policy や部品の具体的な規定だけが必要な場合は、その配下の該当ファイルを直接読むとよい。
-- prompt の生成や oracle／realization の規定と無関係な機能を調べるとき。
+- prompt の意味仕様そのものや人間向けの正本仕様を確認する場合は、参照先の oracle/doc を直接読む。
+- 生成された prompt の実行時挙動や製品側の実装を確認する場合は、対応する realization 実装・テストを直接読む。
+- エディタ入力の内容だけを確認する場合は、prompt_builder 全体ではなく editor_input の構築定義またはその参照仕様を読む。
 
 ## hash
-- a41a39cfb1731bbc7eb3a0ea1c1285a2407a90af77c5a289ff6affa8a2d34e52
+- 1a0f39daf96a3386bb5d4bff3dbc311e774ddd3381795ddd4210912264c57d0f

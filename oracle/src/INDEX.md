@@ -1,17 +1,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本ソースを集約するディレクトリ。prompt の構築、agent call の起動パラメータ、パス・設定・文書構造モデル、editor handoff、feedback、ACP 処理などを扱う。
-- prompt_builder は agent 向け規定と完全 prompt を組み立て、acp_builder は各サブコマンドの実行用パラメータと構造化出力定義を提供する。
-- other は共有モデルと補助機能、editor_input_handoff と feedback は入力引き継ぎおよび問題報告関連の正本実装を担う。
+- cmoc が AI エージェントへ渡す完全なプロンプト、作業規定、目的、プレースホルダーを組み立てる正本実装。
+- ACP 呼び出しのパラメータ、ファイルアクセスモード、各サブコマンド向けのプロンプト生成を定義する。
+- editor input handoff の本文・ガイド生成、文書参照や構造化 Markdown、パス・設定モデルなどの共通データ構造を提供する。
+- indexing、oracle 編集・調査、realization の適用・リファクタリング、feedback 処理、session join の conflict 解消といった個別エージェント呼び出しの構築入口を含む。
 
 ## Read this when
-- cmoc の prompt、agent call、ACP 実行フロー、パスモデル、設定モデル、または editor handoff・feedback の正本実装を調査・変更するとき。
-- 対象となる機能の正本ソースが prompt_builder、acp_builder、other、editor_input_handoff、feedback のどこにあるかを判断するとき。
+- エージェント呼び出しの prompt、アクセス制約、Structured Output、cwd、indexing preflight の組み立てを変更・確認するとき。
+- cmoc の各サブコマンドがどの agent call builder を使い、どのポリシーや入力を注入するかを追跡するとき。
+- editor input handoff、feedback、conflict 解消、INDEX エントリー生成などの実行用パラメータや本文生成の責務を確認するとき。
+- 共通のパスモデル、文書参照、構造化ドキュメント表現、設定モデルの仕様を参照するとき。
 
 ## Do not read this when
-- realization 側の実装やテストの挙動だけを確認したいときは、この oracle ソースではなく src または test 配下を直接読む。
-- 特定機能の詳細実装を確認する段階では、このディレクトリ全体ではなく prompt_builder、acp_builder、other、editor_input_handoff、feedback の該当サブディレクトリまたはファイルへ直接進む。
+- INDEX.md のルーティング規則そのものだけを確認したいときは、対象ディレクトリではなく indexing の正本仕様を直接読む。
+- 特定のサブコマンドの実行処理や CLI/TUI の制御フローだけを調べる場合は、対応する realization 実装を直接読む。
+- oracle の意味仕様や利用者向け要件を確認する場合は、この実装群ではなく oracle/doc の正本仕様を読む。
+- テストの期待値や回帰条件だけを確認する場合は、対応する oracle/test または realization test を直接読む。
 
 ## hash
-- 6b58bddd2082da49793ebaedeb853277f586a7c3720df98f84c33dc588845d3d
+- ce9371b2c72c30277876c76e3264d62760bc37803434a13347f6077c6bcfde2e
