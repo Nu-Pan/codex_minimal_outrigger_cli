@@ -72,19 +72,22 @@
 # `test_rule.md`
 
 ## Summary
-- realization test が満たす意味要件を定め、pytest、隔離された tmp_path 環境、検証対象の範囲、実経路統合テストの用語・網羅性・実 Codex CLI 要件、model/quota の扱い、Fake Codex CLI の利用条件を示すテスト規約。
-- テストの実行手順や環境構築そのものではなく、テスト実装時の責務境界と検証方針を確認するための正本。
+- realization test が満たす意味要件を定める正本規約。pytest、tmp_path による隔離、決定論的制御ロジックと Codex CLI 結合動作の検証範囲を扱う。
+- 実経路統合テストの用語、pytest marker、公開末端サブコマンドとの対応、実在する Codex CLI と実推論の使用、model provider・Model・Reasoning Effort・quota の扱いを定める。
+- 実経路統合テスト以外では、Real Codex CLI が不要な決定論的制御ロジックの検証に限り Fake Codex CLI を使用できる。
 
 ## Read this when
-- realization test の目的、対象範囲、配置場所、隔離環境の作り方を決めるとき。
-- 実経路統合テストの命名、pytest marker、公開末端サブコマンドとの対応、実在する Codex CLI と実推論の使用要件を確認するとき。
-- Fake Codex CLI を使える条件や、テスト用 CmocConfig による model provider・Model・Reasoning Effort・quota の扱いを確認するとき。
+- realization test の目的、責務境界、対象とすべき cmoc の制御ロジックを決めるとき。
+- 実経路統合テストを追加・変更し、用語、marker、公開サブコマンドとの対応、外部から観測可能な結果、実際の Codex CLI 呼び出し要件を確認するとき。
+- テスト用 CmocConfig や agent call の model provider、Model、Reasoning Effort、quota の扱いを設計するとき。
+- Fake Codex CLI を使ったテストが許容される範囲を判断するとき。
 
 ## Do not read this when
-- 構築済み環境での test・品質検査の選択、実行、完了判定、報告手順を確認したいときは test_execution.md を読む。
-- 開発環境の構築、依存関係の追加、pip 操作を確認したいときは development_environment.md を読む。
-- cmoc の model provider や Codex CLI 呼び出し自体の正本仕様を確認したいときは codex_model_provider.md または codex_exec_rule.md を直接読む。
-- 個別の実装やテストケースの具体的な挙動を確認したいときは、対応する src または test の対象を読む。
+- 構築済み環境での test・品質検査の実行手順、完了判定、報告方法を確認したいときは test_execution.md を読む。
+- 開発環境の新規構築、依存関係の追加、pip 操作を確認したいときは development_environment.md を読む。
+- model provider に対する cmoc の責務境界を確認したいときは codex_model_provider.md を読む。
+- quota 枯渇時を含む通常の Codex CLI 呼び出し規則を確認したいときは codex_exec_rule.md を読む。
+- テスト対象の具体的な実装コードや個別テストケースの内容を確認したいときは、対応する realization test のソースを直接読む。
 
 ## hash
-- 4c45eaa5a952d3edc1f7519a672e12fe47e4bbd91a584f3372f66383ab696cca
+- 9037578e7664d3488c6282dd2a7d2a1a75307be476ba4ac6978d0454edd6cb74
