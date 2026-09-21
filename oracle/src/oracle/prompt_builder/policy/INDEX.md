@@ -18,18 +18,18 @@
 # `editor_input_handoff.py`
 
 ## Summary
-- 明示的に選択された editor input handoff 規定を、構造化されたヘッダーとポリシーとして構築する定義。handoff 使用条件、内容の自己完結性、成果責務、失敗時の手動利用、禁止事項を下位のプロンプト構築処理へ渡す入口。
+- 別セッションで入力を待つ target へ作業依頼を引き渡すための、editor input handoff 規定文面を構築する。受信先ガイドの確認、項目別の依頼内容と oracle 参照の作成、同一 target への handoff、成功・失敗時の報告と成果維持を定める。
 
 ## Read this when
-- editor input handoff に関する規定文面をプロンプトへ組み込む処理を確認・変更するとき
-- handoff の要求条件や、handoff 成否にかかわらず成果を満たす責務の定義を確認するとき
+- 人間から active target への handoff を明示的に要求され、target ID を使って editor input の初期ガイド取得や上書きを行うとき。
+- handoff の依頼項目、oracle 参照、受信先制約、失敗時の扱いを確認・変更するとき。
 
 ## Do not read this when
-- handoff 規定の意味仕様そのものを確認したい場合は、参照先の editor input handoff 仕様文書を直接読むとき
-- editor input の受け渡し実行や MCP tool の実装を変更・調査するときは、その実行側の対象を直接読むとき
+- プロンプト構築の一般規則や editor input handoff 以外の policy を扱うとき。
+- editor work file の直接編集や、handoff を伴わない通常の作業依頼を扱うとき。
 
 ## hash
-- 2589589aef28efd5b484abe63c5775ee11d4d29bcad60673b4e034cf37835982
+- 0832e7e45daa4d7757dbfc7ff9895e37a89c8a885c81fe891ec08878cd108732
 
 # `feedback_reporting.py`
 

@@ -1,22 +1,19 @@
 # `oracle`
 
 ## Summary
-- cmocの正本ソースを構成するPython実装とJSONスキーマのルート。agent向け完全プロンプト、各種ポリシー、oracle/realizationの分類・ルーティング、ACP起動パラメータ、TUI・編集・調査・適用・競合解消・フィードバック処理、入力引き継ぎ、Markdown構造化レンダリング、パス・設定・文書参照モデルを提供する。
-- prompt_builder は作業目的に応じた完全プロンプトと、oracle/realization、ファイルアクセス、ルーティング、フィードバック、編集入力引き継ぎ等の規定文を組み立てる入口。
-- acp_builder は各cmocサブコマンドの agent 呼び出しパラメータを構築する入口で、実行対象・作業権限・作業ディレクトリ・構造化出力スキーマ・index preflight の組み合わせを定義する。
-- other は構造化Markdown、パス解決、設定、文書参照など、プロンプト生成とACP構築で共有される基盤モデルを扱う。editor_input_handoff と feedback は、エディタ入力の本文生成およびフィードバック報告入力に関する正本データ構造を扱う。
+- cmoc の oracle 側実装をまとめるディレクトリで、パス・設定・文書構造などの基盤モデル、agent 向け完全 prompt と各種 policy の構築、agent call 用パラメータ、indexing・oracle/realization 操作・feedback 処理・TUI 起動を扱う。
+- `other` は設定・パス解決・文書参照・構造化文書などの共有モデル、`prompt_builder` は agent に渡す prompt と制約文面、`acp_builder` は各処理の agent call パラメータと実行単位、`editor_input_handoff` と `feedback` は入力引き渡しおよび問題報告用の補助処理への入口である。
 
 ## Read this when
-- cmocがagentへ渡す完全プロンプトや、特定のポリシー文面がどの正本ソースから生成されるかを確認するとき。
-- cmocサブコマンドのACP起動条件、ファイルアクセスモード、作業対象、実行時の補助プロンプト、構造化出力設定を確認するとき。
-- oracle file と realization file の分類、ルーティング、INDEXエントリー生成、フィードバック処理の実装上の入口を探すとき。
-- Markdown構造化文書のレンダリング、パス・リポジトリルート解決、設定・文書参照モデルなど、複数機能が共有する基盤を確認するとき。
+- oracle 側の共有データモデル、パス placeholder、設定、文書参照、または構造化 Markdown の責務を確認するときは `other` 配下から読む。
+- agent に渡す prompt の組み立て、ファイルアクセスや oracle/realization、routing、index entry などの policy を確認するときは `prompt_builder` 配下から読む。
+- 特定の cmoc 操作がどの agent call を構築し、どの schema・cwd・アクセスモードを指定するかを確認するときは `acp_builder` 配下の該当操作から読む。
+- indexing の INDEX.md エントリー生成の起点を確認するときは `acp_builder/indexing`、問題報告の入力形式や処理を確認するときは `feedback`、エディタ経由の入力処理を確認するときは `editor_input_handoff` から読む。
 
 ## Do not read this when
-- 単一サブコマンドの実装詳細だけを確認する場合は、該当する acp_builder 配下の個別モジュールへ直接進むべきである。
-- agent向けポリシーの本文だけを確認する場合は、該当する prompt_builder/policy または prompt_builder/parts の個別モジュールを直接読むべきである。
-- INDEXエントリー生成の出力形式や処理だけを確認する場合は、acp_builder/indexing の個別実装とスキーマを直接読むべきである。
-- 共有Markdownレンダリングやパス解決の挙動だけを確認する場合は、other 配下の該当モジュールを直接読むべきである。
+- 単一の処理の具体的な実装だけを確認したい場合は、このディレクトリ全体ではなく、該当する `acp_builder`・`prompt_builder`・`other` の下位ファイルを直接読む。
+- 正本仕様や利用者向けの動作説明を確認したい場合は、oracle 実装ディレクトリではなく対応する `oracle/doc` を読む。
+- 実際に動作する realization 実装やテストの挙動を確認したい場合は、oracle/src 配下ではなく `src` または `test` の該当箇所を読む。
 
 ## hash
-- 05a17c8e3332077ce1ef9515bd777ee2cd20ab201d7b7a079a5532d40ca1a54c
+- 9b9ebf7f9e409b92aac9eb76699beaa45b07da345063e258fce40abbb3a26d52

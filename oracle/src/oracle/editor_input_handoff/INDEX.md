@@ -16,6 +16,40 @@
 ## hash
 - 12319c5ad75f95d87d65eb34af4f3283437dc76ff157c2bf2d57022ae09ea272
 
+# `get_initial_guide_input.json`
+
+## Summary
+- 人間が明示した引き渡し先の target ID を指定して、editor input handoff の初期ガイド取得を依頼するための入力スキーマ。handoff 本文を上書きする入力ではなく、初期文面の取得処理への入口。
+
+## Read this when
+- editor input handoff の初期ガイド取得処理で、呼び出し側が指定する引き渡し先を確認・変更するとき。
+- handoff の上書き入力ではなく、初期ガイド取得用の入力形式を確認するとき。
+
+## Do not read this when
+- editor input handoff の本文生成や送信元情報の構築を確認したいときは body.py を直接読む。
+- handoff 本文を構成して上書きする入力形式を確認したいときは overwrite_input.json を読む。
+- 初期ガイド取得の結果形式を確認したいときは get_initial_guide_result.json を読む。
+
+## hash
+- 974d4321449ff50132781f72dfec8e889680b57b93d34960d2a3f9baabdafeec
+
+# `get_initial_guide_result.json`
+
+## Summary
+- エディタ入力ハンドオフの初期ガイド取得結果を定義する JSON Schema。取得成功時の初期文面、または取得失敗時の理由を表現する。
+
+## Read this when
+- 初期ガイド取得処理の返却形式を確認・変更するとき
+- 初期文面が取得できた場合と取得できない場合の結果構造を確認するとき
+
+## Do not read this when
+- 初期ガイド取得の入力形式を確認するときは get_initial_guide_input.json を読む
+- 初期ガイド取得の処理ロジックを確認・変更するときは body.py を直接読む
+- 初期ガイド以外のエディタ入力ハンドオフ結果を扱うとき
+
+## hash
+- 7a2f649247b8325d0987fc463601abef5d779f372be90771252880bb726daaff
+
 # `overwrite_input.json`
 
 ## Summary

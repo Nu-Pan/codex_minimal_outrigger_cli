@@ -89,23 +89,24 @@
 # `oracle`
 
 ## Summary
-- oracle は cmoc の正本仕様を集約する領域で、自然言語仕様、仕様を表す実装・設定、設計上の検討記録を含みます。
-- oracle/doc はアプリケーション仕様、開発規則、ブランチモデル、代替案を扱います。
-- oracle/src はプロンプト生成、ACP 呼び出しパラメータ、フィードバック、セッション、エディター連携など、仕様を具体化するソースと構造化定義を扱います。
-- 現在 oracle/test ディレクトリはなく、テストの正本はこの対象には含まれていません。
+- 人間が所有する正本仕様を集約する oracle ツリー。cmoc のアプリケーション仕様、開発規則、設計上の検討結果、branch model を oracle doc として扱う。
+- oracle doc は CLI・session/run・oracle/realization・agent call・feedback・editor・logging などの仕様領域と、各サブコマンド固有の規約への入口を提供する。
+- oracle src は正本仕様に対応するデータ構造、prompt policy、path model、builder、JSON schema、補助実装を保持し、仕様から委譲された正確な構造や生成規則を確認する場所である。
+- 配下は app_spec、dev_rule、considered_alternative などの文書領域と、prompt_builder・acp_builder・feedback などの正本ソース領域に分かれ、realization の設計・実装・検証時に参照する根拠となる。
 
 ## Read this when
-- cmoc の人間意図としての正本仕様を確認するとき
-- 仕様の適用範囲、開発規則、採用・検討された設計方針を確認するとき
-- 実装や設定の期待される構造・入力・出力を正本から確認するとき
+- cmoc の人間意図・正本仕様・設計上の判断を確認してから実装やレビューを始めるとき
+- 複数の機能にまたがる共通規約、サブコマンドの契約、agent call の指示、oracle/realization の責務分界を調べるとき
+- 仕様が委譲する正確な field・型・schema・prompt 構築規則を oracle src で確認するとき
+- 仕様変更や realization の適合性判断に際して、関連する正本 doc と正本 src の参照先を特定するとき
 
 ## Do not read this when
-- 仕様ではなく src 配下の realization 実装の詳細だけを調べるとき
-- 特定の仕様ファイルやソースファイルがすでに特定され、oracle 全体の構成を確認する必要がないとき
-- テスト実装やテスト実行結果を確認するとき（この oracle ツリーには oracle/test がない）
+- 生成済み realization の具体的な実装挙動だけを調べる場合は、対応する src または test を直接読むとき
+- 特定の仕様領域が明確な場合は、oracle 直下を漫然と読むのではなく該当する oracle doc・src の本文へ直接進めるとき
+- 正本仕様そのものの変更ではなく、既存仕様に従った通常の補助作業だけを行うとき
 
 ## hash
-- 806960276525017c7274fa4b781312c3d9cd297cc5b3d6d455766c49a74db4f2
+- e5c07305e4123e264a42fae8d969b477d26a82c3a37f5d32cb3506f1ce312e5f
 
 # `pyproject.toml`
 

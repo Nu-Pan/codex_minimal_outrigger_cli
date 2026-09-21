@@ -18,21 +18,19 @@
 # `editor_input_handoff`
 
 ## Summary
-- 項目別の依頼内容と送信元コンテキストから、editor work file に置き換える Markdown 本文を構築する正本実装と、その入力検証定義をまとめたディレクトリです。
-- 入力項目の検証、oracle 参照の本文変換、送信元識別情報と絶対ログパスの保持、および本文セクションのレンダリングを確認するときの入口です。
+- エディタ入力を handoff 用 Markdown 本文へ変換する正本実装と、その初期ガイド取得・入力上書き MCP 入出力スキーマをまとめたディレクトリ。
+- 自由記述項目、oracle 参照、送信元 TUI process 情報を検証・配置し、生成本文の構造と送信元識別情報の要件を定義する。
 
 ## Read this when
-- editor input handoff の本文生成規則や、送信元情報の必須条件を確認したいとき。
-- overwrite 処理へ渡す入力の必須項目・空白禁止・oracle 参照形式を確認したいとき。
-- 入力検証後にどの情報が本文へ配置されるかを追いたいとき。
+- エディタ入力の handoff 本文の生成規則、送信元情報の必須条件、または入力上書き処理の引数・結果形式を確認したいとき。
+- 初期ガイドの取得対象や、target ID を指定した入力引き渡しのインターフェースを確認するとき。
 
 ## Do not read this when
-- editor input handoff の意味仕様そのものや運用フローを確認したい場合は、参照されている oracle の仕様文書を先に読むべきとき。
-- 本文生成や overwrite 入力の仕様ではなく、送信側・受信側の TUI process の呼び出し処理を調べるとき。
-- すでに検証済みの本文だけを扱い、生成規則や入力制約を確認する必要がないとき。
+- エディタ入力の意味仕様そのものや、呼び出し側が担う target 検証・ファイル書き込みの実装を確認したいとき。
+- handoff ではなく一般的な文書参照、構造化文書レンダリング、または別の TUI 処理だけを調べたいとき。
 
 ## hash
-- eb8b1b4663c10cb6d1b7d99365d3c0c73a1c0c047264abc56d933bea5b69965b
+- 592e58465f3236999d26bf4377b0ea61d23d53f9f9f4ff1e78900dedfa8e4d38
 
 # `feedback`
 
@@ -71,19 +69,19 @@
 # `prompt_builder`
 
 ## Summary
-- agent 向けの完全な構造化 prompt を、共通ポリシー、選択的ポリシー、追加文面、目的、プレースホルダー定義の順に組み立てる実装群。
-- prompt のプレースホルダー定義を型として表し、同名異値の衝突を検出して一貫性を保つ。
-- oracle／realization の基本知識、ファイルアクセス、routing、feedback 報告、INDEX エントリー、oracle／realization の扱いなど、個別の指示文面を構築する部品群。
-- エディタ経由で入力するプロンプトの初期表示文面を、使用説明・記入目安・完全 prompt のテンプレートから生成する。
+- agent 向け完全 prompt の構築と、placeholder 定義の統合を担う実装群です。共通の基礎規定、選択式 policy、作業目的、追加 prompt を構造化して組み立てます。
+- editor 経由で入力する prompt の初期文面を構築し、入力位置や記入上の注意を提示する機能を含みます。
+- prompt に埋め込む oracle・realization の基本説明と、ファイルアクセス、routing、feedback 報告、oracle・realization の扱い、conflict 解消、INDEX エントリー生成などの個別規定を構成要素として提供します。
 
 ## Read this when
-- agent 呼び出しへ渡す完全 prompt の構成順序、ポリシーの有効化条件、追加 prompt、目的、またはプレースホルダー統合を確認・変更するとき。
-- agent に埋め込む個別の作業規定や、oracle／realization の基本説明、routing、feedback、アクセス制限、INDEX エントリー規定の構築を確認・変更するとき。
-- エディタ入力用の初期文面や、完全 prompt のテンプレートを HTML コメント内へ配置する処理を確認・変更するとき。
+- agent call に渡す完全 prompt の構成、policy の有効化、placeholder の衝突処理を確認・変更するとき。
+- prompt builder の共通規定や個別 policy の文面を追加・修正するとき。
+- editor 経由の prompt 入力初期文面や、oracle・realization の基本説明を確認するとき。
 
 ## Do not read this when
-- 正本仕様そのもの、実際のファイル分類、agent 呼び出しの実行制御、または prompt_builder を呼び出す上位処理を調べるとき。
-- 個別ポリシーの意味仕様や、個別機能の実装・テストの挙動を直接確認する場合は、対応する oracle または呼び出し側・テストを読むとき。
+- prompt builder の個別 policy の詳細だけを確認したい場合は、その policy 実装を直接読む。
+- prompt の利用側における agent call 実行、path context の生成、または構造化文書のレンダリングだけを調べる場合。
+- 正本仕様そのものや realization 側の実装を確認する場合。
 
 ## hash
-- 2ef6c993df27b5ca069f795dd99d2ca7d4d110b7d4bc199b22d5205da4cb418e
+- bae927033440968c87c65a3c2ba1bb819d3d317bffc7a3cfb9ce2d92aee46613
