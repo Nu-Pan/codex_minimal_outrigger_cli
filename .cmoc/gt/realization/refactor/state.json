@@ -401,13 +401,19 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/src/oracle/editor_input_handoff/get_initial_guide_input.json": {
+  "oracle/src/oracle/editor_input_handoff/get_handoff_guide_input.json": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/src/oracle/editor_input_handoff/get_initial_guide_result.json": {
+  "oracle/src/oracle/editor_input_handoff/get_handoff_guide_result.json": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/editor_input_handoff/guide.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
