@@ -34,11 +34,12 @@ workload 固有仕様が preflight 後の staging area も clean とする場合
 
 ## 共通開始処理
 
+workload は、write 権限を持つ本命 agent call の開始前に、次の準備を完了しなければならない。
+
 1. run isolation 仕様に従って、`{{cmoc-run-fork-commit}}`、`{{cmoc-run-branch}}`、および `{{cmoc-run-worktree}}` を確定する。
 2. session state の `run.state` を `running` にし、`kind`、`branch`、`fork_commit` を保存する。
-3. workload の編集作業を `{{cmoc-run-worktree}}` 上で行う。
 
-workload は、write 権限を持つ本命 agent call の開始前に共通開始処理を完了しなければならない。
+準備後、workload の編集作業を `{{cmoc-run-worktree}}` 上で行う。
 
 ## 編集責務と想定内差分
 
@@ -177,7 +178,7 @@ self-joining workload の primary report は、上記の run identity と state 
 
 ### join と abandon の report
 
-join と abandon は、共通事前条件違反を含む `natural_completion` と `error` のすべての終了経路で report を保存する。両 report の YAML Front Matter は、少なくとも次の項目を含む。
+join と abandon は、`natural_completion` と `error` のすべての終了経路で report を保存する。共通事前条件に違反して開始できなかった場合も対象とする。両 report の YAML Front Matter は、少なくとも次の項目を含む。
 
 - 実行情報：command、生成日時、repo root、terminal result の共通分類、終了コード
 - workload：`run_kind`

@@ -105,7 +105,7 @@ cmoc は、申告された変更 path 集合と実際の変更 path 集合が一
 
 `resolution.status=fixed` は agent の自己申告であり、その申告だけで修正の意味的な正しさが証明されたと扱ってはいけない。所見なしへの正規化は cmoc の処理判定だけに適用し、agent が返した元の Structured Output と Codex call log は、破棄または改変せず調査可能な実行記録として保持する。
 
-所見なしへ正規化した処理単位は、agent が空の `findings` を返した処理単位と同じ処理と完了判定を行う。synthetic `unresolved` への変換や、人間による判断、手動修正、手動承認を要求する workflow の追加は行わない。
+所見なしへ正規化した処理単位にも、agent が空の `findings` を返した場合と同じ処理と完了判定を適用する。synthetic `unresolved` への変換や、人間による判断、手動修正、手動承認を要求する workflow の追加は行わない。
 
 #### 処理単位の境界
 

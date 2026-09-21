@@ -8,7 +8,7 @@
 
 agent は、次の条件をすべて満たす問題だけを報告する。
 
-- 現在の workload の規定範囲内では、agent のセッション内で解決できない
+- 未解決であり、現在の workload の規定範囲内では agent のセッション内で解決できない
 - 明確な問題であると断言できる具体的な根拠がある
 - agent のセッション外で行う automatic remediation または人間対応の候補となる
 
@@ -18,7 +18,7 @@ agent は、次の条件をすべて満たす問題だけを報告する。
 - 反復的な浪費を減らす
 - 外部挙動を左右する人間意図を確定する
 
-セッション内で解決済みの問題と仕様どおりの制約は報告しない。報告対象を発見した時点で reporter を使用し、その後も可能な限り本命 workload を継続する。報告対象がなければ、feedback 用の出力や reporter call を行わない。
+仕様どおりの制約は報告しない。報告対象を発見した時点で reporter を使用し、その後も可能な限り本命 workload を継続する。報告対象がなければ、feedback 用の出力や reporter call を行わない。
 
 報告の成功・失敗を、セッションの中断・続行の判断根拠にしてはならない。reporter の利用不能または submission の拒否は、本命 workload の成功条件を変更しない。
 
@@ -65,7 +65,7 @@ rejection code は、次の値に限定する。
 
 ### reporter input v1 の互換処理
 
-新しい reporter submission は version 2 だけを使用する。durable 保存済みの version 1 observation は失わず、raw record を書き換えずに validation 対象とする。
+durable 保存済みの version 1 observation は失わず、raw record を書き換えずに validation 対象とする。
 
 version 1 は、`schema_version=1` と `human_action_reason` を検査する。その他の field には version 2 と同じ規則を適用する。
 
@@ -99,7 +99,7 @@ reporter と collector は、安全に保存できるかだけを検査する。
 
 ### context の確定
 
-agent に実行 context を入力させてはならない。collector は、call-scoped capability から次の context を確定する。
+collector は、call-scoped capability から次の context を確定する。agent には実行 context を入力させない。
 
 - observation、session、run、subcommand、agent call、および Codex call の識別情報
 - `{{repo-root}}`、`{{work-root}}`、観測時の HEAD commit
@@ -111,7 +111,7 @@ agent に実行 context を入力させてはならない。collector は、call
 
 ### 保存経路
 
-raw observation は、次の経路だけで保存する。
+agent が報告した observation は、次の経路だけで raw observation として保存する。
 
 ```text
 Codex MCP tool

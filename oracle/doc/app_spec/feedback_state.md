@@ -169,7 +169,7 @@ issue remediation checkpoint は、少なくとも次の情報を hash で結び
 
 ### report cut
 
-単一の可変 report cut を intake に使用してはならない。report cut は、wave loop が自然完了した後に一度だけ封印する。
+report cut は、wave loop が自然完了した後に一度だけ封印する。intake に単一の可変 report cut を使用してはならない。
 
 report cut は、少なくとも次の入力を固定する。
 

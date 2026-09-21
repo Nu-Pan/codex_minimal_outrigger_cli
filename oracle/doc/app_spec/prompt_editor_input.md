@@ -13,6 +13,8 @@ editor の待機中は、人間の直接入力に加え、共通の editor input
 - 完全 prompt skeleton と入力確定後の完全 prompt は、各 agent call の正確な構築を所有する builder で構築する。oracle src への委譲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/tui.md` の「全バックエンド共通」、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md` の「TUI 起動パラメータ」、および `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「ユーザー指示と prompt の構築」を正本とする。
 - 生成済み editor input、handoff ガイド、および skeleton は実行時生成物であり、editor lifecycle または prompt 文面の正本ではない。
 
+skeleton 構築時と実行時のパラメータについて、全 field の比較は行わない。exec 専用の prompt 一致検査も行わない。
+
 ## ファイルの役割
 
 editor input では、可変な作業ファイルと cmoc が保存する記録を分離する。
@@ -48,5 +50,3 @@ editor input では、可変な作業ファイルと cmoc が保存する記録�
 7. cmoc は、同じ最終読み取り結果の前後の空白文字だけを `strip` で除去し、オリジナルプロンプトとする。HTML コメントも本文として保持する。
 8. 呼び出し元は、サブコマンド固有仕様に従ってオリジナルプロンプトを反映し、完全プロンプトを確定する。
 9. cmoc は、この確定手順が成功した場合に editor work file を削除する。失敗した場合は復旧用に残す。
-
-- skeleton 構築時と実行時のパラメータについて、全 field の比較は行わない。exec 専用の prompt 一致検査も行わない。

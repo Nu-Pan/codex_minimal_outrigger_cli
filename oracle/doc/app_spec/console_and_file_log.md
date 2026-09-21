@@ -17,7 +17,7 @@ cmoc は、人間向け console ログの最初の出力として、実行 ID �
 
 - console に流す時間表示は、`{{month}} Mo {{day}} Day {{hour}} Hr {{minute}} Min {{sec}}.{{msec}} Sec` を最大構成とする
 - `{{month}}`, `{{day}}`, `{{hour}}`, `{{minute}}`, `{{sec}}` は 2 桁・スペースパディング・右詰めとする
-- `{{msec}}` は 1 桁・ゼロ表示・小数点第 2 位以降は切り捨てとする
+- `{{msec}}` は小数点以下 1 桁を表し、値が 0 の場合も表示する。小数点第 2 位以降は切り捨てる
 - 値が 0 の上位単位は、`{{month}}` から順に、最初の 0 でない単位の直前まで省略する
 - `{{sec}}.{{msec}} Sec` は常に表示する
 - 例えば、経過時間が 10 時間の場合は `10 Hr  0 Min  0.0 Sec` と表示する
@@ -45,10 +45,9 @@ cmoc は、人間向け console ログの最初の出力として、実行 ID �
 
 ## primary report
 
-- ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
-- primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。
+primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
+
 - `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
-- primary report の形式、保存先、追加項目、およびサブコマンド固有の要約方法は、個別サブコマンド仕様を正本とする。
 - primary report 作成専用の追加 agent call は、個別仕様が report 生成手順として明示する場合に限る。
 - cmoc 内部から呼び出したサブコマンド、処理関数、agent call、および Codex call は、独立した primary report を保存しない。
 

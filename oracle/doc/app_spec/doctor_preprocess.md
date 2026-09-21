@@ -13,11 +13,11 @@ doctor preprocess は、`{{repo-root}}` で cmoc を正常に実行できるか�
 1. `{{repo-root}}/.cmoc/gu` が git 追跡対象外であることを保証する
 2. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 3. `{{work-root}}/.cmoc/gt/config.json` が git 追跡対象であることを保証する
-4. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する
+4. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema を満たし、entry 集合と調査要求が同期済みであることを保証する
 5. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
 6. ここまでの作業で発生した tracked 差分を git commit する
 
-## 「`{{repo-root}}/.cmoc/gu` が git 追跡対象外であることを保証する」の詳細
+## `{{repo-root}}/.cmoc/gu` の非追跡保証
 
 ### 検証
 
@@ -37,7 +37,7 @@ doctor preprocess は、`{{repo-root}}` で cmoc を正常に実行できるか�
 - `{{repo-root}}/.cmoc/gu` ツリー内に tracked file があれば、working tree 上の実ファイルを残したまま git index から除外する
 - 修復後も完了判定を満たさない場合はエラー終了する
 
-## 「`{{work-root}}/.agents` が git 追跡対象であることを保証する」の詳細
+## `{{work-root}}/.agents` の追跡保証
 
 agent が書き込めない `.agents` は、doctor preprocess があらかじめ用意する。
 
@@ -52,7 +52,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 - `{{work-root}}/.agents` ツリー内に tracked file がない場合は `{{work-root}}/.agents/.gitkeep` を用意し、git index に追加する
 - 修復後も `{{work-root}}/.agents` ツリー内に tracked file がない場合はエラー終了する
 
-## 「`{{work-root}}/.cmoc/gt/config.json` が git 追跡対象であることを保証する」の詳細
+## `{{work-root}}/.cmoc/gt/config.json` の追跡保証
 
 ### 検証
 
@@ -64,7 +64,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 - `{{work-root}}/.cmoc/gt/config.json` が存在しなければ作成する
 - `{{work-root}}/.cmoc/gt/config.json` を git 追跡対象に追加する
 
-## 「refactor state が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する」の詳細
+## refactor state の追跡保証と同期
 
 ### 検証
 

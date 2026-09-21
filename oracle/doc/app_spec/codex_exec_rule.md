@@ -70,15 +70,15 @@ cmoc は Codex CLI 呼び出し前に、Codex CLI が実際に参照する `$COD
 
 ## Codex CLI 引数による設定上書き
 
+cmoc は、`AgentCallParameter`、`CmocConfig` などから決まる呼び出し単位の設定を、Codex CLI の argv で明示的に上書きする。cmoc が上書きする設定については、`$CODEX_HOME/config.toml` や project config の値に依存してはならない。
+
 - cmoc は Codex CLI 呼び出しに `--profile` (`-p`) を指定してはならない
 - cmoc は Codex CLI 呼び出しのために `$CODEX_HOME/{{name}}.config.toml` を生成してはならない
-- `AgentCallParameter`, `CmocConfig` などから決まる呼び出し単位の設定は、Codex CLI の argv で明示的に上書きする
 - 上書き対象に専用引数が存在する場合は専用引数を使う
 - 専用引数が存在しない設定は、`--config` (`-c`) と `key=value` 形式の設定値を使って上書きする
     - `--config` は設定項目ごとに繰り返してよい
     - `key=value` は 1 個の argv 要素として渡す
     - `value` は Codex CLI が解釈する TOML 値とする
-- cmoc が上書きする設定について、`$CODEX_HOME/config.toml` や project config の値に依存してはならない
 - すべての Codex CLI 呼び出しで、次の承認設定を呼び出し単位の argv により明示的に上書きする
     - `approval_policy`: `"on-request"`
     - `approvals_reviewer`: `"auto_review"`
@@ -209,7 +209,6 @@ cmoc の管理データは `.cmoc/gt` または `.cmoc/gu` 配下に配置する
     ```
 - model provider ID、provider-local key、および provider-local setting は、意味を変えず Codex CLI が解釈できる TOML key/value として符号化する
 - 選択していない provider の設定を argv に渡してはならない
-- model provider の選択と provider-local 設定に `--profile`、`$CODEX_HOME/config.toml`、または project config を使用してはならない
 - 実経路統合テストで使用する `CmocConfig` の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「実経路統合テスト」を正本とする
 - cmoc は Model provider、Model、Reasoning Effort の設定情報を Codex CLI プロンプトに注入しない
 
@@ -278,17 +277,20 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 ### prompt の構築と受け渡し
 
+`AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する。cmoc は、builder が生成して確定した値を変更せず、初回 Codex call に渡す。realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない。
+
 - 完全 prompt の共通構築順序は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。同関数が、prompt part、目的、および placeholder 定義を統合する正確な順序を所有する
 - prompt の共通 rendering は、`{{cmoc-root}}/oracle/src/oracle/other/struct_doc.py` の `render_sd_node_as_markdown` へ委譲する。同関数が、構造化された prompt を Markdown 文字列へ変換する正確な rendering を所有する
-- `AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する
-- realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない
-- cmoc は、builder が生成して確定した `AgentCallParameter.prompt` を変更せず、初回 Codex call に渡す
-- editor input handoff の本文生成と送信元情報の注入は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「本文の生成」に従い、受信側の editor input 確定前に完結させる
-- Structured Output の補正 prompt は、初回 prompt を加工したものではなく、本書の出力補正規則に従う次の turn の入力として構築する
-- Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する
-- プロンプト本文を argv に載せてはならない
-- `AgentCallParameter.prompt` は、`{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_prompt.md` に保存する。初回 Codex call のコマンド末尾に `-` を付け、このファイルを stdin へリダイレクト入力する
-- argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
+
+prompt の確定前後に行う処理は、次のように区別する。
+
+- editor input handoff の本文生成と送信元情報の注入は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「本文の生成」に従い、受信側の editor input 確定前に完結させる。
+- Structured Output の補正 prompt は、本書の「同じ session での出力補正」に従い、次の turn の入力として構築する。初回 prompt は加工しない。
+- Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する。
+
+`AgentCallParameter.prompt` は、`{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_prompt.md` に保存する。初回 Codex call のコマンド末尾に `-` を付け、このファイルを stdin へリダイレクト入力する。
+
+プロンプト本文を argv に載せてはならない。argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする。
 
 ## feedback reporter と collector context
 
@@ -308,10 +310,10 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」を正本とする。
 
 - `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
-- Codex TUI を起動する `AgentCallParameter` builder だけが MCP を有効にする。それ以外の builder は既定値を使用する
+- Codex TUI を起動する `AgentCallParameter` builder だけが、MCP と handoff instruction の両方を有効にする。それ以外の builder は `enable_editor_input_handoff_mcp` の既定値を使用する
 - 有効な Codex TUI call には `cmoc_editor_input` MCP server を提供する。handoff ガイド取得と上書きの公開 tool は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「MCP interface」に従う。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
 - handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
-- Codex TUI の builder は MCP と handoff instruction の両方を有効にする。agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
+- handoff instruction の正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
 - `cmoc tui` と `cmoc oracle investigation` では、cmoc の起動・呼び出し管理経路が、送信元 TUI process に対応する実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う
 - TUI process の起動前に、その process の Codex call ID の確保、MCP への送信元情報の供給、および `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」に従う記録と flush を完了する。ログの対応付けと MCP への供給には同じ実際の値を使い、indexing など別の Codex call の ID を代用せず、TUI 起動時に別の ID を再発行しない
 - この準備を skeleton 構築の前提にはしない。送信元情報は、skeleton と入力確定後の TUI prompt のいずれの builder 引数にも含めず、転記用の情報を prompt へ注入しない
@@ -424,34 +426,32 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 ### quota 枯渇・レートリミットで停止した場合
 
-- quota が枯渇して Codex CLI の実行が停止した場合、再び実行可能な状態になるまで待機し、再開する
-- quota が枯渇した状態の例：
-    - 5h limit が枯渇し、credits もない
-    - weekly limit が枯渇し、credits もない
-- 再び実行可能な状態の例：
-    - weekly limit が残っている状態で 5h limit がリセットされ、実行可能になった
-    - 人間が credits を追加購入した
-- 待機中は、動作確認用のミニマルな Codex CLI 呼び出しを 30 分に 1 回実行する（ポーリング待機）
-- quota availability probe の task は短い応答を 1 回返すことに限定し、追加の調査または作業を non-goal とする
-- probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_parameter` へ委譲する
-- 並列実行中の Codex CLI 呼び出しが同時に待機へ入った場合は、次のように扱う
-    - 最初に待機へ入ったスレッドだけが、代表してポーリングを行う
-    - 複数スレッドで並列にポーリングを行うのは禁止
-- 再開対象の session ID は、本書の「Codex session ID」に従って停止した Codex call の stdout JSONL から取得する
-- 再開時は、停止した時のセッションを `codex exec ... resume ...` サブコマンドで復元し、全く同じプロンプトで実行する。セッション ID の取得に失敗した場合は、resume せず同一の設定で再実行する
-- `codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合は、quota 枯渇と判定する
-    - `{"type":"error","message":"...Quota exceeded..."}`
-    - `{"type":"turn.failed","error":{"message":"...Quota exceeded..."}}`
-    - `{"type":"error","message":"...You've hit your usage limit..."}`
-    - `{"type":"turn.failed","error":{"message":"...You've hit your usage limit..."}}`
-    - `{"type":"error","message":"...out of credits.."}`
-    - `{"type":"turn.failed","error":{"message":"...out of credits..."}}`
-    - `{"type":"error","message":"...You hit your spend cap..."}`
-    - `{"type":"turn.failed","error":{"message":"...You hit your spend cap..."}}`
-- ユーザー向けメッセージについて
-    - quota 枯渇による待機を行う場合、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「進行通知」に従って、待機開始、継続中、および再開を簡潔な進行通知として表示する
-    - 動作確認用 Codex call ごとのログパス、経過時間、および戻り値を console へ列挙しない
-    - 動作確認用 Codex call とその結果は、サブコマンドログから追跡可能にする
+quota が枯渇して Codex CLI の実行が停止した場合は、再び実行可能な状態になるまで待機し、再開する。例えば、5h limit または weekly limit が枯渇し、credits もない場合が該当する。回復の例には、weekly limit が残っている状態で 5h limit がリセットされて実行可能になった場合や、人間による credits の追加購入で実行可能になった場合がある。
+
+#### quota 枯渇の判定
+
+`codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合は、quota 枯渇と判定する。
+
+- `{"type":"error","message":"...Quota exceeded..."}`
+- `{"type":"turn.failed","error":{"message":"...Quota exceeded..."}}`
+- `{"type":"error","message":"...You've hit your usage limit..."}`
+- `{"type":"turn.failed","error":{"message":"...You've hit your usage limit..."}}`
+- `{"type":"error","message":"...out of credits.."}`
+- `{"type":"turn.failed","error":{"message":"...out of credits..."}}`
+- `{"type":"error","message":"...You hit your spend cap..."}`
+- `{"type":"turn.failed","error":{"message":"...You hit your spend cap..."}}`
+
+#### 待機と再開
+
+待機中は、動作確認用のミニマルな Codex CLI 呼び出しを 30 分に 1 回実行する（ポーリング待機）。この quota availability probe の task は短い応答を 1 回返すことに限定し、追加の調査または作業を non-goal とする。probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_parameter` へ委譲する。
+
+並列実行中の Codex CLI 呼び出しが同時に待機へ入った場合は、最初に待機へ入ったスレッドだけが代表してポーリングを行う。
+
+再開対象の session ID は、本書の「Codex session ID」に従って、停止した Codex call の stdout JSONL から取得する。取得できた場合は、停止した時のセッションを `codex exec ... resume ...` サブコマンドで復元し、全く同じプロンプトで実行する。取得に失敗した場合は、resume せず同一の設定で再実行する。
+
+#### 表示と記録
+
+quota 枯渇による待機開始、継続中、および再開は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「進行通知」に従って簡潔に表示する。動作確認用 Codex call ごとのログパス、経過時間、および戻り値は console へ列挙せず、各 call とその結果をサブコマンドログから追跡可能にする。
 
 ### サーバーの一時的不調で失敗した場合
 

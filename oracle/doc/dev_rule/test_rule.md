@@ -7,12 +7,6 @@
 - 構築済み環境での test と品質検査の選択・実行・完了判定・報告は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「cmoc の test・品質検査実行手順」を正本とする
 - 開発環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「cmoc 開発環境」を正本とする
 
-## 基本
-
-- pytest を使用する
-- realization test は `{{cmoc-root}}/test` に実装する
-- pytest の `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
-
 ## goal
 
 - cmoc の決定論的な制御ロジックが仕様どおりに動作することを検証する。例えば、git 状態の検査、作業ディレクトリの決定、対象ファイルの列挙、設定生成、ログ保存、状態更新、エラー処理などを対象とする。
@@ -22,6 +16,12 @@
 
 - LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
 - Codex CLI 自体または model provider の正しさや安定性を保証することは目的としない
+
+## 基本
+
+- pytest を使用する
+- realization test は `{{cmoc-root}}/test` に実装する
+- pytest の `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
 
 ## 実経路統合テスト
 

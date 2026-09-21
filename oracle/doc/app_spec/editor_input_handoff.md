@@ -92,7 +92,8 @@ handoff の自由記述入力や生成した handoff 本文を、tool result、h
 - 項目別の自由記述、参照情報、および送信元情報を区分する。
 - 本文は Markdown として生成する。
 - builder は自由記述の意味を補完・要約せず、送信元情報を推定しない。
-- 本文の生成と機械的な注入は editor work file の上書き時に完結させる。受信先で入力が確定すると、共通の editor input 確定手順で得たオリジナルプロンプトを、handoff ガイドの完全 prompt の雛形の `{{original-prompt-here}}` が示す位置へ組み込む。確定した `AgentCallParameter.prompt` を加工しない。
+
+本文の生成と機械的な注入は、editor work file の上書き時に完結させる。その後、受信先の cmoc は、共通の editor input 確定手順で得たオリジナルプロンプトを完全 prompt へ組み込む。組み込む位置は、handoff ガイドに含まれる完全 prompt の雛形の `{{original-prompt-here}}` で示す。確定した `AgentCallParameter.prompt` は加工しない。
 
 ## agent の責務と権限
 

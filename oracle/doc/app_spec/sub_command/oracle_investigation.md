@@ -2,7 +2,7 @@
 
 ## 概要
 
-- oracle file に関するユーザーの調査指示をエディタから受け取り、Codex CLI の TUI を起動する。TUI は oracle file を根拠に調査し、その結果を回答する
+cmoc は、oracle file に関するユーザーの調査指示をエディタから受け取り、Codex CLI の TUI を起動する。TUI 内の agent は、oracle file を根拠に調査し、その結果を回答する。
 
 ## 引数
 
@@ -45,6 +45,6 @@
 - 人間が editor input handoff を要求した場合の本文と回答の責務は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」に従う
 - 調査結果の根拠となる oracle file を、回答から特定できるようにする
 - 調査結果の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい
-- Codex CLI の TUI は oracle file を変更せず、realization file を読み書きしない
+- TUI 内の agent は oracle file を変更せず、realization file を読み書きしない
 - Codex CLI の TUI は oracle file の変更結果を自動 commit しない
 - TUI 起動前の indexing preflight による `INDEX.md` 更新および自動 commit は、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「インデクシングの実行条件・タイミング」と「処理対象」に従って cmoc が行う

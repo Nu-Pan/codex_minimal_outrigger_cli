@@ -88,7 +88,8 @@ accepted observation は、TUI の終了、ユーザー中断、または Codex 
 
 ## 共通原則
 
-- feedback report、`incomplete` 診断 report、active issue、および AI-generated kaizen を、通常の後続 Codex call へ自動注入しない。
+- feedback report、`incomplete` 診断 report、および active issue を、通常の後続 Codex call へ自動注入しない。
+- AI-generated kaizen を後続の Codex CLI 呼び出しへ自動注入しない。kaizen の意味と非注入の理由は、`{{cmoc-root}}/oracle/doc/considered_alternative/memory_alternative.md` の「AI-generated kaizen を自動的に次回実行へ反映しない理由」を参照する。
 - 別 clone、別 machine、または Git remote への feedback data の複製は保証しない。
 - realization apply と realization refactor の既存の意味を変更しない。refactor state を feedback issue queue として流用しない。
 

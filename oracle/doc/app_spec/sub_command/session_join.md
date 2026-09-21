@@ -53,7 +53,7 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/o
 
 ### oracle file 規定と conflict 解消の優先順位
 
-session join の conflict 解消結果は、共通の oracle・realization 規定と、本節のマージ固有の成果条件を同時に満たさなければならない。共通規定による整理・検証を適用し、ファイルアクセス境界の下で付随する編集の要否・範囲を agent の判断に委ねる。
+session join の conflict 解消結果は、共通の oracle・realization 規定と、本節のマージ固有の成果条件を同時に満たさなければならない。agent は共通規定に従って整理・検証を行い、ファイルアクセス境界の範囲内で付随する編集の要否と範囲を判断する。
 
 共通規定は、次の正本を参照する。
 
