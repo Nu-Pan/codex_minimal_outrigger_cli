@@ -50,23 +50,18 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実行を支える共通 runtime 実装群。サブコマンドのライフサイクル、Codex exec/TUI 起動、設定・パス・Git・ログ・結果・エラー処理を横断的に提供する。
-- セッション、editing run、refactor state の状態管理と join・cleanup・report 保存を扱う。
-- INDEX 更新、doctor 前処理、prompt editor input handoff、feedback、primary report、Windows 通知など、複数の実行経路で共有される補助機能への入口。
+- cmoc の実行基盤を構成する共通 Python モジュール群。設定・パス・Git／worktree 管理、Codex subprocess 実行、run lifecycle、CLI/TUI、構造化結果・primary report、feedback の収集・保存・報告、editor input handoff、診断・リファクタ状態、INDEX 更新など、複数のコマンドから共有される実行時責務を提供する。
 
 ## Read this when
-- CLI の共通実行境界やサブコマンド終了処理を調べるとき
-- Codex の起動、Structured Output、TUI、quota/capacity retry、実行ログを調べるとき
-- session/editing run の state 遷移、worktree cleanup、report 保存を調べるとき
-- 設定、パス、Git 操作、feedback、INDEX 更新など横断的な runtime 機能の実装箇所を探すとき
+- cmoc の複数コマンドにまたがる実行基盤の責務や、実行状態・プロセス・Git worktree・feedback・レポートの連携を確認したいとき。
+- 特定の共通機能の入口がまだ分からず、設定、Codex 呼び出し、run 管理、結果報告、feedback 処理のどのモジュールから調査を始めるか判断したいとき。
 
 ## Do not read this when
-- 特定のサブコマンド固有の業務処理を調べるとき
-- oracle 仕様や正本ドキュメントを確認するとき
-- commons 内の特定モジュールの詳細だけで解決できるとき
+- 単一の機能の具体的な実装やデータ形式を確認する目的で、対応する runtime_*.py または prompt_editor_input.py を直接読めるとき。
+- CLI の個別サブコマンドや oracle／仕様文書の内容だけを確認したいとき。
 
 ## hash
-- adc90c174edc424da24cee5db920711ab1df834d9865ccfad58a0a061b6f5f46
+- e2f7095fce90c9e107f9007a48e080d2fd158a1877962f7d42f7449f76114253
 
 # `config`
 

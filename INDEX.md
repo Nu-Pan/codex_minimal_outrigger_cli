@@ -125,45 +125,40 @@
 # `src`
 
 ## Summary
-- cmoc CLI の実装ルート。`main.py` が Typer/Click のコマンドツリーと起動時互換処理を定義し、各サブコマンドを `sub_commands` 配下へ委譲する。
-- `commons` は CLI 実行、Codex subprocess、Git、設定、状態、ログ、レポート、フィードバック、パスなど複数コマンドで共有する runtime 基盤を提供する。
-- `sub_commands` は doctor、indexing、session、oracle、realization、run、feedback、TUI などの利用者向け操作単位を実装する。
-- `acp/builder` は oracle 側の ACP builder を realization から利用するための実装・委譲層を構成する。
-- `basic` と `config` は oracle 側で定義された ACP 型・設定型や構造化文書機能を再公開し、正本定義の複製を避ける互換層として機能する。
-- `oracle.py` は src 起動時に `oracle/src/oracle` を解決する package shim であり、正本側 oracle package への参照を成立させる。
+- cmoc の realization 実装本体。CLI の起動・サブコマンド登録、互換 import shim、設定・基本型、Codex 呼び出し、Git/worktree、セッション・run lifecycle、feedback、ログ・レポート、INDEX 更新などの実行時責務を、`acp`・`commons`・`basic`・`config`・`sub_commands` 配下へ分担して提供する。
+- 利用者向け CLI の挙動を追う場合は `main.py` と `sub_commands`、共通実行基盤や状態管理を追う場合は `commons`、ACP 呼び出し構築を追う場合は `acp`、互換公開 API や設定型を追う場合は `basic`・`config` へ進む入口となる。
+- `oracle` 側の正本実装を複製せず再公開する shim と、正本を参照して動作する realization code が混在するため、製品の実際の実行経路や変更対象を確認する際に読む対象である。
 
 ## Read this when
-- CLI コマンドの追加・変更、Typer/Click の引数解析、起動時エラー処理を調べるときは `main.py` から確認する。
-- 複数のコマンドにまたがる Codex 起動、Git 操作、実行状態、ログ、レポート、設定、フィードバック処理の挙動を調べるときは `commons` から確認する。
-- 利用者向けの session、oracle、realization、run、feedback、doctor、indexing 操作の具体的な処理を変更・調査するときは `sub_commands` の該当階層へ進む。
-- ACP builder の呼び出し境界や正本側 builder の再公開経路を調べるときは `acp/builder` を確認する。
-- oracle 側の型・設定・構造化文書を realization から参照する互換経路を確認するときは `basic`、`config`、`oracle.py` を確認する。
+- cmoc の CLI コマンド、サブコマンドの接続、起動時の引数処理を確認・変更するとき。
+- Codex の exec/TUI 呼び出し、設定解決、プロセス追跡、Git worktree、セッション・run 状態、feedback、ログ・レポートの実装を確認するとき。
+- INDEX 更新や oracle/realization のファイル分類など、cmoc 自身の開発運用を実装レベルで追うとき。
 
 ## Do not read this when
-- 特定のサブコマンドの内部処理だけが対象で、`sub_commands` 配下の該当ファイルへ直接進めるとき。
-- 共有 runtime の単一機能だけが対象で、`commons` 配下の該当モジュールへ直接進めるとき。
-- oracle の正本仕様や正本実装そのものを確認する必要があり、`src` の再公開・委譲層では目的を満たせないとき。
-- CLI の利用方法ではなく、正本側の ACP builder や設定定義の内容を直接確認すべきとき。
+- 正本仕様や人間の意図を確認したいときは `oracle` 配下を直接読む。
+- テストの期待値・fixture・回帰検証を確認したいときは `test` 配下を直接読む。
+- 対象の責務が特定の下位領域に限定されている場合は、`acp`・`commons`・`basic`・`config`・`sub_commands` の該当 INDEX と実ファイルを直接読む。
+- 補助スクリプトや開発用メタデータだけを扱うときは realization ancillary を直接読む。
 
 ## hash
-- 4b4dfdfe6c23c880192b9740c4cf8f46667d2c8305fb9642b6a7c341c5d038b1
+- 4343a9b88c81635ba3277af4c02f8a8858ea97006f12acf1996d764d5bf2e105
 
 # `test`
 
 ## Summary
-- pytest による単体・統合・受け入れテスト群と共有 fixture/helper を収録する検証ディレクトリ。CLI lifecycle、Codex 実行、Git/worktree・session state、indexing、feedback、editor handoff、prompt、設定、ログ、通知などの外部契約を、oracle の仕様・schema を参照しながら検証する。
-- `_real_path_integration` には実際の Codex CLI・独立 process・PTY を用いた実経路統合テストがあり、通常の mock ベーステストとは異なる受け入れ検証の入口となる。
-- `_acp_builder_support.py`、`_codex_support.py`、`_git_support.py` などの共有 helper と `conftest.py` が、schema 参照、fake Codex・Git repository、CLI 実行、通知・handoff の副作用隔離を提供する。
+- pytest による実現コードの回帰検証一式。CLI、ランタイム、Codex 呼び出し、設定・パス・権限、インデックス生成、フィードバック、編集実行、プロンプト、ACP builder、入出力 handoff などの挙動を、正常系・異常系・中断・復旧・境界条件を含めて検証する。
+- 複数テストで共有する pytest fixture、CLI 実行補助、Codex 実行スタブ、Git・handoff・command 用のテスト支援コードも含む。対象機能の個別テストだけでなく、サブコマンド間の連携や状態遷移、ファイル変更・ロールバックの検証へ進む入口である。
 
 ## Read this when
-- テストスイート全体の構成、対象機能ごとの回帰テストの所在、または共有 fixture・helper の役割を把握したいとき。
-- CLI、runtime、Codex、Git/worktree、session、indexing、feedback、handoff などの外部挙動を検証・変更し、対応するテストの入口を探すとき。
-- 実際の Codex CLI と独立 process・PTY を使う受け入れ試験を実行・調査するときは、`_real_path_integration` から確認するとき。
+- 実装変更が既存の CLI またはランタイム挙動に与える影響を確認したいとき。
+- Codex 呼び出しの retry・quota・subprocess・権限・設定・出力処理を検証したいとき。
+- インデックス、フィードバック、編集 run、oracle 操作、session 状態の変更や復旧を検証したいとき。
+- 共有 fixture やテスト用スタブを使った再現手順を確認したいとき。
 
 ## Do not read this when
-- 実装の詳細や正本仕様そのものを確認したいときは、対応する `src` または `oracle` のファイルを直接読むとき。
-- 特定機能の個別検証内容が既に分かっている場合は、このディレクトリ全体ではなく対応する `test_*.py` を直接読むとき。
-- Codex 推論を伴わない通常の単体・mock ベーステストだけを扱い、実経路統合テストの仕組みを確認する必要がないときは、`_real_path_integration` を読む必要はない。
+- 正本仕様の要求や根拠を確認したいときは oracle 配下を直接読むべきです。
+- 実装の具体的な処理や設定値を確認したいときは src 配下を直接読むべきです。
+- 単一機能の検証内容が明確な場合は、このディレクトリ全体ではなく対応する test_*.py を直接読むべきです。
 
 ## hash
-- a5e0d71af45ea6d173918efe99c0b2f14e080c9c84c6ce9bd975dc404d2618a2
+- 4615ec14b59f66adbe6c4d4a002d15aef745bac457bb2ffa122e552f97fc46f3

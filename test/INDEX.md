@@ -341,19 +341,19 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex exec の Structured Output 検証失敗、capacity retry、JSONL エラー、中断、成果物差分復元を、再試行状態・subprocess 呼び出し回数・call log・subcommand event の一連の外部挙動として検証するテスト。
+- `run_codex_exec` の再試行状態機械に関する外部挙動を検証する異常系テスト群。Structured Output の補正・parse failure・事後条件違反、capacity/quota retry、中断、未知の JSONL error、retry 上限、差分保持、call log と subcommand event の整合性を fake Codex CLI で確認する。
 
 ## Read this when
-- Codex runtime の再試行や出力補正の挙動を確認・変更するとき。
-- 出力契約違反、非有限数、不正 JSON、欠落出力、capacity failure、未知の JSONL error、中断、補正時の成果物変更に関する回帰を調べるとき。
-- Codex call log の内容、session の継続、イベント status、成果物差分の保持・復元を検証するとき。
+- Codex CLI の Structured Output 検証失敗を同一 session で補正する挙動や、補正時の成果物復元・ログを変更または調査するとき。
+- capacity・quota・JSONL error・KeyboardInterrupt など `run_codex_exec` の再試行や最終失敗処理を変更するとき。
+- Codex 呼び出し回数、backoff、retry 上限、agent/codex call log、subcommand event の状態列が期待どおりか確認するとき。
 
 ## Do not read this when
-- retry や失敗時ログを伴わない Codex runtime の機能だけを確認するとき。
-- INDEX 生成そのものや、Codex 呼び出し以外の機能を調べるときは、対象実装または専用の別テストを直接読むべき。
+- Codex CLI の通常成功経路、引数生成、作業ディレクトリやホーム設定だけを変更・調査するときは、対応する専用テストを直接読む。
+- retry とは無関係な TUI、パス解決、quota 専用実装、subprocess 基盤の詳細を調べるときは、同階層の専用テストまたは実装を直接読む。
 
 ## hash
-- 3ec06dc112de46898f9d78000d0ce485366e98071ea35ea07e1261d266fa95db
+- c54daa9b00b6a78aa18cfd492e1dced6fdd1f98c6ec6643b1dcbb8b668a18b44
 
 # `test_codex_runtime_subprocess.py`
 

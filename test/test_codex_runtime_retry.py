@@ -22,7 +22,7 @@ from pathlib import Path
 import pytest
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
-from _git_support import make_repo
+from _git_support import make_repo, run_git
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
@@ -324,6 +324,18 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
 ) -> None:
     """補正 turn が変動させた成果物を初回 call 完了時へ戻して失敗する。"""
     root = make_repo(tmp_path)
+    nested = root / "nested"
+    nested.mkdir()
+    run_git(nested, "init", "--template=/dev/null")
+    run_git(nested, "config", "user.email", "cmoc@example.invalid")
+    run_git(nested, "config", "user.name", "cmoc test")
+    run_git(nested, "config", "commit.gpgsign", "false")
+    run_git(nested, "config", "core.hooksPath", "/dev/null")
+    run_git(nested, "config", "core.excludesFile", "/dev/null")
+    nested_file = nested / "tracked.txt"
+    nested_file.write_text("nested initial\n")
+    run_git(nested, "add", "tracked.txt")
+    run_git(nested, "commit", "-m", "initial nested")
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "artifact_change_bin"
@@ -341,6 +353,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
             "readme = pathlib.Path('README.md')",
             "readme.write_text('correction change\\n' if count else 'first call change\\n')",
             "if count:",
+            "    pathlib.Path('nested/tracked.txt').write_text('correction-only\\n')",
             "    pathlib.Path('extra.py').write_text('correction-only\\n')",
             "    pathlib.Path('oracle/spec.md').unlink()",
             "payload = {'ok': True} if count else {'bad': True}",
@@ -379,6 +392,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
 
     assert counter.read_text() == "2"
     assert (root / "README.md").read_text() == "first call change\n"
+    assert nested_file.read_text() == "nested initial\n"
     assert not (root / "extra.py").exists()
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
