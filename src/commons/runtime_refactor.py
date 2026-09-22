@@ -2,6 +2,7 @@
 
 import json
 import re
+import stat
 import string
 from collections.abc import Collection
 from pathlib import Path
@@ -156,9 +157,26 @@ def _reject_symlinked_state_path(path: Path) -> None:
 
 
 def _reject_non_file_state_path(path: Path) -> None:
-    """state path が通常 file でない場合の block と raw exception を防ぐ。"""
+    """state path と既存の親を通常の file/directory に限定する。"""
     if path.exists() and not path.is_file():
         raise _invalid_refactor_state(path, "state path は通常ファイルではありません。")
+    parent = path.parent
+    while True:
+        try:
+            mode = parent.lstat().st_mode
+        except FileNotFoundError:
+            mode = None
+        except OSError as exc:
+            raise _invalid_refactor_state(
+                path, "state path の親 directory を検証できません。"
+            ) from exc
+        if mode is not None and not stat.S_ISDIR(mode):
+            raise _invalid_refactor_state(
+                path, "state path の親が通常の directory ではありません。"
+            )
+        if parent == parent.parent:
+            return
+        parent = parent.parent
 
 
 def _validated_state(path: Path, value: object) -> RefactorState:

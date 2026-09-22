@@ -303,6 +303,36 @@ def test_refactor_state_rejects_non_file_path(tmp_path: Path, path_kind: str) ->
         write_refactor_state(root, {})
 
 
+@pytest.mark.parametrize(
+    "parent_kind",
+    [
+        "file",
+        pytest.param(
+            "fifo",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+    ],
+)
+def test_refactor_state_rejects_non_directory_parent(
+    tmp_path: Path, parent_kind: str
+) -> None:
+    """state の親が通常 directory でない場合に read/write を block させない。"""
+    root = make_repo(tmp_path)
+    parent = root / ".cmoc" / "gt" / "realization" / "refactor"
+    parent.parent.mkdir(parents=True)
+    if parent_kind == "file":
+        parent.write_text("not a directory\n")
+    else:
+        os.mkfifo(parent)
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+    with pytest.raises(CmocError, match="refactor state"):
+        write_refactor_state(root, {})
+
+
 def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
     tmp_path: Path,
 ) -> None:

@@ -50,20 +50,22 @@
 # `commons`
 
 ## Summary
-- cmoc の実行基盤を構成する共通 Python モジュール群。CLI サブコマンドの統括、Codex の exec/TUI 呼び出し、設定・パス・状態管理、Git と run/worktree ライフサイクル、ログ・結果・primary report、feedback、編集入力 handoff、index 更新など、複数コマンドから共有される処理を扱う。
+- cmoc の各サブコマンドが共有する runtime 基盤で、CLI 実行 lifecycle、Codex 呼び出し、設定・パス・Git/worktree 管理、session/run state 永続化を扱う。
+- 実行結果・primary report・feedback の収集と報告、ログ、エラー、エディタ入力、TUI/通知、INDEX.md の検査・生成・commit まで、複数の実行経路にまたがる共通境界を提供する。
+- 個別サブコマンドの処理へ入る前に、共通の実行状態・ファイル配置・Codex 連携・報告処理を確認するための入口である。
 
 ## Read this when
-- 共通ランタイムの責務や、複数コマンドにまたがる実行フローを確認したいとき
-- Codex 呼び出し、プロセス追跡、設定、Git/worktree、セッション状態、レポート、feedback、index 更新の実装入口を探すとき
-- src 配下のコマンド実装から利用される共有処理を変更するとき
+- cmoc のサブコマンド実行 lifecycle、session/run の状態遷移、または共通 runtime API を変更・調査するとき
+- Codex subprocess/TUI、設定、Git worktree、ログ・report・feedback、エディタ入力、通知の共通挙動を確認するとき
+- INDEX.md の更新処理や、複数の実行経路で共有されるエラー・結果処理の入口を特定するとき
 
 ## Do not read this when
-- 特定コマンド固有の仕様や処理だけを確認したいときは、そのコマンドの実装または oracle の対応文書を直接読む
-- 共通モジュールの一機能の詳細を調べるときは、src/commons 配下の該当モジュールを直接読む
-- 正本仕様そのものを確認・改訂するときは oracle 配下を読む
+- 特定サブコマンド固有の業務処理や、その正本仕様だけを確認したいとき
+- 共通 runtime を経由しない個別の oracle・テスト・UI 実装を直接調べる場合
+- 単一モジュールの詳細なアルゴリズムだけが目的で、対象ファイルが既に特定できているとき
 
 ## hash
-- 1517e0503c1a78007f618c320f95ce6e865ec3ca7739f6b6c46ccdf456a56fa4
+- 666bb72865a7dd421e184efee3cbfcfbc16a0e79f2d09a48a4443879c0243081
 
 # `config`
 
