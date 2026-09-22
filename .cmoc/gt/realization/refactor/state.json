@@ -1016,8 +1016,8 @@
   "src/sub_commands/indexing.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "5b254b536c60d465922e7592e423030a458acf28d2899bef100dd4163d6f7c26",
-    "last_investigated_at": "2026-08-17_23-02_18_692042000"
+    "last_investigated_sha256": "273cd0aecd7905c02ed812dd0c3aba37321fc748312192759e24f211db0c7dc3",
+    "last_investigated_at": "2026-09-23_05-56_00_823595000"
   },
   "src/sub_commands/oracle/__init__.py": {
     "investigation_required": false,
