@@ -36,7 +36,7 @@ from .runtime_git import (
     expected_run_worktree,
     run_git,
 )
-from .runtime_paths import untracked_data_dir
+from .runtime_paths import repo_root, untracked_data_dir
 from .runtime_state import session_fork_lock
 
 
@@ -81,8 +81,15 @@ def worktree_for_branch_optional(
     for line in output.splitlines():
         if line.startswith("worktree "):
             registered_path = Path(line.removeprefix("worktree ")).absolute()
-            resolved_path = registered_path.resolve()
-        elif line == f"branch refs/heads/{branch}" and resolved_path is not None:
+            try:
+                resolved_path = registered_path.resolve()
+            except (OSError, RuntimeError):
+                registered_path = resolved_path = None
+        elif (
+            line == f"branch refs/heads/{branch}"
+            and registered_path is not None
+            and resolved_path is not None
+        ):
             if branch.startswith("cmoc/run/"):
                 # {{work-root}}/oracle/doc/branch_model.md
                 expected = expected_run_worktree(root, branch)
@@ -90,13 +97,21 @@ def worktree_for_branch_optional(
                 # run-root 外へ解決される登録を受け入れない。
                 if registered_path != expected or resolved_path != expected:
                     return None
-                if not registered_path.exists():
-                    if not allow_missing:
-                        return None
-                elif not registered_path.is_dir() or not _has_linked_worktree_metadata(
-                    root, registered_path
-                ):
+            if not registered_path.exists():
+                if not allow_missing:
                     return None
+            elif not registered_path.is_dir():
+                return None
+            elif branch.startswith("cmoc/run/"):
+                if not _has_linked_worktree_metadata(root, registered_path):
+                    return None
+            elif resolved_path != repo_root(root) and not _has_linked_worktree_metadata(
+                root, registered_path
+            ):
+                # session worktree も、main worktree またはこの repository の
+                # linked worktree であることを確認してから返す。Git の stale な
+                # 登録だけでは、削除・置換された外部 directory を区別できない。
+                return None
             return resolved_path
     return None
 

@@ -50,18 +50,23 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実行を支える共通 runtime 実装群。Codex exec/TUI の起動、設定・パス・Git・プロセス管理、session/editing run の state と lifecycle、INDEX 更新、feedback・logging・primary report、editor input handoff、Windows 通知など、複数のサブコマンドが共有する境界とデータモデルを扱う。
+- cmoc の実行基盤を構成する共通 Python モジュール群。CLI のライフサイクル、パス・設定・Git・状態管理、Codex subprocess/TUI 呼び出し、フィードバック受付と永続化、実行結果・レポート生成、インデックス更新、エディター入力引き渡しなど、複数コマンドから共有されるランタイム責務を扱う。
 
 ## Read this when
-- 複数のサブコマンドにまたがる実行ライフサイクル、Codex 呼び出し、worktree/run 管理、共通 state・report・logging、INDEX 更新の挙動を調査または変更するとき。
-- 個別サブコマンドの処理から、共有 runtime API・結果モデル・保存先解決・エラー処理の実装へ追跡するとき。
+- CLI サブコマンドの開始・終了・エラー処理や実行結果の記録を調べるとき。
+- Codex の subprocess/TUI 実行、プロセス追跡・停止、設定や sandbox 用引数の組み立てを変更するとき。
+- フィードバック観測の検証・保存・受付、実行状態や成果物の復旧を調べるとき。
+- 主レポート、実行レポート、ログ、パス、作業ツリー、インデックス更新など、複数機能を横断する共通ランタイム処理を変更するとき。
+- エディター入力の収集や MCP ベースの handoff、Codex 実行前の preflight を確認するとき。
 
 ## Do not read this when
-- 単一サブコマンド固有の業務処理や CLI 定義だけを確認したいときは、そのサブコマンドの実装を直接読むべきです。
-- 特定の共通機能の詳細だけが必要な場合は、runtime_codex、runtime_state、indexing、runtime_run_lifecycle など該当モジュールを直接読むべきです。
+- 特定の CLI サブコマンド固有の業務フローだけを調べる場合は、そのコマンド実装を直接読むとき。
+- 正本仕様や設定モデルの定義を確認する場合は、ここではなく oracle または設定定義側を直接読むとき。
+- インデックス本文の生成規則だけを確認する場合は、対象のインデックス生成実装を直接読むとき。
+- 特定のレポート形式やフィードバック schema の詳細だけを確認する場合は、対応する個別モジュールや schema 定義を直接読むとき。
 
 ## hash
-- 97c57e39c9e8174b94a7b9e3ccd11ec538ea3e0f6b1704a49e35dbe94b9424d1
+- f828986bf67943275941f1b5f21b4dfe697bdacfe4bf61ee4264e288761ef55c
 
 # `config`
 

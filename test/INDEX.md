@@ -193,22 +193,21 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- Root/worktree と path model の runtime 契約を検証するテスト群。
-- root placeholder、repository root、linked worktree、submodule、separate Git directory の解決境界を確認する。
-- 並列な AgentCallPathContext と pushd における cwd の直列化・call 単位の分離を確認する。
-- managed run worktree の作成・検索・削除について、管理領域、branch 対応、Git 登録、symlink、安全な置換の境界を検証する。
+- Root/worktree のパス解決契約と、Git repository・linked worktree・submodule・separate git directory の境界を検証する基本ランタイム回帰テスト。
+- プロセス全体の cwd 操作、並列実行時の call-scoped context、memo 判定、Git 設定からの分離を検証する。
+- managed run/session worktree の作成・検索・削除について、branch/path 対応、登録状態、symlink、不正な配置や stale path の拒否を検証する。
 
 ## Read this when
-- root/worktree の解決や root placeholder の挙動を変更・調査するとき
-- 並列実行時の process-global cwd 保護や AgentCallPathContext の独立性を確認するとき
-- run worktree の path 検証、Git 登録確認、symlink 拒否、作成・削除の安全性を確認するとき
+- repository root、work root、run root、root placeholder、または agent call path context の解決を変更・確認するとき。
+- pushd や相対 cwd の並列安全性、Git の global config からの独立性、memo path 判定を変更・確認するとき。
+- managed worktree の作成・検索・削除、branch と配置パスの対応、symlink や stale な Git 登録先への安全性を変更・確認するとき。
 
 ## Do not read this when
-- 個別の path_model 実装詳細を直接確認したいとき
-- Git fixture の生成補助や、ここで扱わない runtime 機能のテストを調べるとき
+- 個別の path model 実装詳細だけを確認したい場合は、path model の実装と専用テストを直接読む。
+- run worktree のライフサイクル以外の機能や、CLI の上位フロー・agent 呼び出し仕様を確認したい場合は、対応する実装・仕様・専用テストへ進む。
 
 ## hash
-- cd2b23cfd1ebaccb5155151d0e354beb35889ded3412fbe6e3d6cc24aada6298
+- 9942c6dcd1ebb9875a3cacf18573018053cbbc306956d52ee8c53ef0dcfbc1b8
 
 # `test_cli_command_tree.py`
 

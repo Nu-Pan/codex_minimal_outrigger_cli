@@ -581,19 +581,20 @@
 # `runtime_run.py`
 
 ## Summary
-- editing run の lifecycle 共通境界として、branch の安全な worktree 解決、run process tracking、親 run と Codex child process group の同一性検証付き停止・cleanup を扱う。
+- editing run の worktree 解決、lifecycle lock、run process tracking、process identity 検証、親 run と Codex child process group の安全な停止・cleanup を担う共通 runtime 境界。run の join/abandon や error cleanup で、worktree の安全性または追跡 process の停止確認が必要な場合の入口。
 
 ## Read this when
-- editing run の join・abandon・error cleanup で、session state と同じ lock を使う worktree 解決や process tracking の読み書き・停止処理を確認するとき。
-- run process または Codex child group を PID・start time・process group の検証付きで安全に停止する経路を調べるとき。
-- run branch の worktree が managed path と linked worktree metadata を満たすか、tracking file の破損や stale process を fail-closed に扱う実装を確認するとき。
+- editing run の branch から安全な worktree を解決する処理を確認したいとき
+- run の lifecycle 操作を直列化する lock や process tracking file の読み書きを確認したいとき
+- abandon・error cleanup で親 run process または追跡済み Codex child group を PID 再利用や stale tracking に配慮して停止する処理を確認したいとき
 
 ## Do not read this when
-- worktree 解決や run process の lifecycle cleanup に関係せず、通常の Git 操作、session state の一般処理、または Codex subprocess の起動実装だけを調べるとき。
-- 実行中 process の停止や tracking file の検証ではなく、個別の低レベル process API の仕様を直接確認したいとき。
+- run process の起動方法や Codex profile 固有の process tracking 実装を確認したいときは runtime_codex_profile.py を読む
+- Git command の実行や worktree metadata の詳細を確認したいときは runtime_git.py を読む
+- run state や session fork の正本仕様そのものを確認したいときは oracle/doc 配下の関連仕様を直接読む
 
 ## hash
-- 5d25161c64bdb367a272d99d14ab61054d48a9f32aedc2a5f1a3d457f409f3ac
+- e4b79dd7896358d8e93f2bde8bb0c9e1a3698c3d4ac4aee8d1405cb328391624
 
 # `runtime_run_join.py`
 
