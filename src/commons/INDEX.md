@@ -163,18 +163,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI の subprocess 境界を担当し、プロセス追跡・安全な停止、sandbox/CODEX_HOME・各種設定 override の構築、環境変数、schema 配置、出力 JSONL のエラー判定をまとめて扱う共通ランタイム実装。
+- Codex CLI の subprocess 境界を担い、実行環境・sandbox/argv・CODEX_HOME・MCP/Hook 設定・schema 配置、プロセス追跡と停止、JSONL 出力・resume token・エラー分類をまとめて扱う。
 
 ## Read this when
-- Codex CLI の起動環境や argv override、CODEX_HOME、sandbox、model provider、feedback/editor MCP、session hook の設定を確認・変更するとき。
-- Codex 子プロセスの PID・プロセスグループ追跡、安全な停止、subprocess 実行、schema 配置、resume token や JSONL エラー判定を確認・変更するとき。
+- Codex CLI の起動引数、環境変数、設定 override、schema、または実行結果の解釈を変更・確認するとき
+- Codex subprocess の PID/プロセスグループ追跡、停止、PID 再利用対策、tracking file の安全性を確認するとき
+- Codex CLI の capacity/quota/unexpected error 判定や resume token 抽出の実装を確認するとき
 
 ## Do not read this when
-- Codex CLI の個別コマンドの業務ロジックや呼び出し方だけを確認したい場合は、まずそのコマンド実装・呼び出し元を直接読む。
-- 設定値の正本仕様や利用者向け手順を確認したい場合は、oracle の仕様文書や設定ドキュメントを読む。
+- Codex CLI 境界ではなく、一般的なランタイム設定・パス・エラー・feedback の個別実装を確認するときは、それぞれの専用モジュールを直接読むべきです
+- このモジュールを呼び出す上位の run/edit フロー全体の仕様や UI 挙動だけを確認するときは、先に該当する呼び出し元を読むべきです
 
 ## hash
-- 046258c7aa902d1a5e63269513d47cab0a17a7a90eb3c0cdc9d3dffeca5e473f
+- 4a7ae4470fcd971c79a731969723791dc46d8fffff04b7a11d253b1f57f5aa6e
 
 # `runtime_codex_tui.py`
 

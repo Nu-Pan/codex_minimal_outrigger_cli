@@ -358,20 +358,21 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- Codex subprocess と run process の安全な追跡・停止・cleanup を検証するテスト群。pidfd、process group、PID 再利用、leader 終了、tracking file の不正状態、signal 保留、child の停止・reap、継承環境変数の扱いを対象とする。
+- Codex subprocess の安全な起動・追跡・終了処理を検証するテスト群。
+- pidfd、process group、PID 再利用、tracking file、SIGTERM 保留、cleanup 失敗時の kill/reap、callback 通知などの境界条件を扱う。
+- runtime_codex_profile、runtime_run、cmoc_runtime の subprocess 実装に対する回帰検証の入口。
 
 ## Read this when
-- Codex subprocess の起動後 tracking 登録、signal 処理、専用 process group の停止、または run process cleanup の安全性を変更・調査するとき。
-- pidfd や process identity の検証、stale/reused PID・PGID の fail-closed 動作を確認したいとき。
-- tracking file の形式検証、特殊 file・encoding 異常、tracking 更新失敗時の child cleanup を扱うとき。
+- Codex subprocess の起動、process group の追跡・停止、run tracking file の更新、シグナル処理を変更または調査するとき。
+- child process の cleanup、PID/PGID の同一性検証、leader 終了後の descendant 処理に関する回帰を確認するとき。
+- Codex 起動 callback、継承環境変数、cwd エラー変換など subprocess 起動契約を確認するとき。
 
 ## Do not read this when
-- Codex subprocess や run process の追跡・停止・cleanup に関係しない機能を扱うとき。
-- 実装ではなく、通常の Codex CLI 起動仕様や toast 通知の詳細だけを確認したいときは、該当する正本仕様や実装対象を直接読む。
-- 一般的な pytest 共通処理や subprocess の基本動作だけを調べるとき。
+- Codex subprocess の実装詳細や正本仕様を確認したい場合は、まず src 側の runtime 実装または参照される oracle 文書を読む。
+- subprocess の追跡・停止・cleanup と無関係なテストや、プロジェクト全体のテスト一覧だけを確認したい場合。
 
 ## hash
-- 9b31764b42d859d15d00773bcfb2c969454bdcf789915b1b361e4656d601e06e
+- 2ad93e368a2e1dfee9f5d37f790c1d0b2fe297f29a657419d091f4c1a0314193
 
 # `test_codex_runtime_tui.py`
 
