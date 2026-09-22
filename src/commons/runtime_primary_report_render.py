@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .runtime_errors import safe_text
 from .runtime_feedback_store import mask_feedback_text
 from .runtime_logging import SubcommandLogger
 from .runtime_primary_report_specs import PrimaryReportSpec, TerminalClassification
@@ -152,8 +153,8 @@ def yaml_scalar(value: object) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     if isinstance(value, (list, dict)):
-        return json.dumps(value, ensure_ascii=False, sort_keys=True)
-    return json.dumps(str(value), ensure_ascii=False)
+        return json.dumps(_safe_json_value(value), ensure_ascii=False, sort_keys=True)
+    return json.dumps(safe_text(value), ensure_ascii=False)
 
 
 def execution_step_lines(
@@ -760,10 +761,21 @@ def _outcome_sentence(classification: TerminalClassification) -> str:
 def _inline_text(value: object) -> str:
     """任意の確定値を Markdown の一行へ安全に収める。"""
     if isinstance(value, Path):
-        text = str(value.resolve(strict=False))
+        text = safe_text(value.resolve(strict=False))
     else:
-        text = str(value)
+        text = safe_text(value)
     return text.replace("`", "'").replace("\r", " ").replace("\n", " | ")
+
+
+def _safe_json_value(value: object) -> object:
+    """report の JSON/YAML 値から Unicode surrogate を除く。"""
+    if isinstance(value, str):
+        return safe_text(value)
+    if isinstance(value, list):
+        return [_safe_json_value(item) for item in value]
+    if isinstance(value, dict):
+        return {safe_text(key): _safe_json_value(item) for key, item in value.items()}
+    return value
 
 
 def _field_status(value: object) -> str:

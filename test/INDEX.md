@@ -735,22 +735,22 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI runner の error、ログ、preflight、completion、終了通知の外部契約を検証するテスト群。共通 runner・work root・subcommand event にまたがる境界条件を一箇所で確認する。
+- CLI 実行時の時間表示・タイムスタンプ・サブコマンドログの形式、安全な並行書き込み、UTF-8 保存を検証する。
+- 成功・失敗・例外・割り込み・preflight の各終了経路で、terminal result、error report、stderr、ログ、通知が仕様どおり分離・記録されることを検証する。
+- CLI のエラー表示、引数解析、work root 制約、自動補完プローブ、通常処理と副作用の抑止を検証する。
 
 ## Read this when
-- CLI の成功・失敗時に stdout/stderr へ出す terminal result、終了コード、エラー詳細、ログ記録を確認・変更するとき。
-- doctor preprocess、work root 制約、pre-log check、current worktree の扱いを確認するとき。
-- shell completion probe が通常の preflight・初期化・command callback・副作用を回避する挙動を確認するとき。
-- TUI を含む Ctrl+C の扱い、終了通知、通知失敗時の境界を確認するとき。
-- duration/timestamp の表示形式や SubcommandLogger の並列記録・UTF-8・timestamp 衝突を確認するとき。
+- CLI ランタイムの終了処理、エラー処理、ログ記録、通知境界を変更・調査するとき
+- サブコマンドの preflight、KeyboardInterrupt、completion probe、引数解析の挙動を確認するとき
+- duration や timestamp の表示形式、SubcommandLogger の並行性・エンコーディングを変更するとき
 
 ## Do not read this when
-- CLI の個別サブコマンド固有ロジックや、そのサブコマンド専用の入出力だけを確認・変更するとき。
-- Codex TUI の内部実装や feedback detector 単体の詳細を直接確認するとき。
-- CLI の共通 runner、終了処理、preflight、completion、ログ契約に関係しないテストや実装を扱うとき。
+- 個別サブコマンド固有の業務ロジックや command tree の定義だけを確認したいとき
+- primary report の保存・更新処理を直接調査するとき
+- Codex TUI や feedback reporter の内部実装そのものを変更・調査するとき
 
 ## hash
-- ea014f2b2a6c5756d5978e08b846b21f5fe17b89821874bdf22de4a13d5be09c
+- 9618e226e9033e411888685b082aded627b26f2c8691ad5c8bd9d436bee85d37
 
 # `test_runtime_codex_conflicts.py`
 

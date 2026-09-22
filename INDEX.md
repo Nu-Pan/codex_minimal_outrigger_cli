@@ -125,41 +125,44 @@
 # `src`
 
 ## Summary
-- cmoc CLI の起動点と Click/Typer の互換・エラー処理を担う。
-- 共通 runtime として、設定、パス、Git/worktree、Codex 実行、状態管理、ログ、エラー、結果、通知を提供する。
-- session・run・oracle・realization・review・feedback・doctor・indexing・tui などのサブコマンド実装を束ねる。
-- ACP builder 群は、各種 agent 呼び出し用パラメータの構築、index entry 生成、oracle/realization 操作、TUI 起動を担当する。
-- basic・config・oracle は、正本側モジュールや旧 import path との互換公開を提供する。
-- 個別の CLI 挙動を変更・調査する場合は該当する sub_commands または acp/builder 配下へ進み、共有実行基盤を調べる場合は commons 配下へ進む。
+- cmoc の CLI 起動境界とトップレベル command tree を定義する入口。引数解析、補完、Click/Typer 互換処理、サブコマンド実装への振り分けを確認するときに読む。
+- 共通の基礎型・パスモデル・構造化ドキュメント・oracle import shim を提供する基盤層。実装間で共有されるデータ型や oracle 側公開 API との互換境界を確認するときに進む。
+- サブコマンド共通の runtime 層。CLI 実行ライフサイクル、doctor、ログ、エラー、feedback、Git、state、primary report、Codex 実行、run/session 管理など横断的な処理を確認するときに読む。
+- session、run、oracle、realization、feedback、indexing、doctor、TUI など利用者向け操作の command 実装群。特定の CLI 操作の事前条件、状態遷移、Git 操作、agent 呼び出しを変更・調査するときは該当する下位パッケージへ進む。
+- ACP builder 層は、index entry、feedback、oracle 編集・調査、realization の apply/refactor、session join など agent 呼び出し用パラメータの構築を担う。agent への入力形式や builder 固有の処理を確認するときに読む。
+- 設定と公開用互換モジュールを含む cmoc の実装ソース全体。特定の機能を調べる場合は、まず該当する runtime、sub_commands、builder の下位対象を直接読む。
 
 ## Read this when
-- cmoc の CLI 全体の入口、サブコマンド構成、共通実行基盤の責務を把握したいとき
-- Codex の exec/TUI 起動、Git/worktree 管理、session/run 状態、設定やログの共有処理を調査するとき
-- indexing、oracle、realization、feedback など複数の機能領域を横断して変更するとき
+- cmoc の実装全体の責務分担や、CLI 入口から共通 runtime・サブコマンド・ACP builder へ至る構成を把握したいとき
+- 複数の command や共通 runtime にまたがる変更箇所を特定したいとき
+- トップレベルの import、公開互換層、設定、CLI 起動挙動の所在を確認したいとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細仕様だけを確認したいときは、対応する src/sub_commands 配下を直接読む
-- ACP の agent 呼び出しパラメータ構築だけを確認したいときは、src/acp/builder 配下を直接読む
-- 正本仕様や正本実装の内容を確認したいときは、src ではなく oracle 配下を読む
+- 単一の CLI サブコマンドの詳細だけを調べる場合は src/sub_commands 配下の該当ファイルを直接読む
+- 共通 runtime の一機能だけを調べる場合は src/commons 配下の該当 runtime モジュールを直接読む
+- agent 呼び出しパラメータの構築だけを調べる場合は src/acp/builder 配下の該当 builder を直接読む
+- oracle の正本仕様やテストの内容を確認することが目的の場合は src ではなく oracle または test の該当対象へ進む
 
 ## hash
-- d1b12ef05e31a3b2e53ecebfebab0b06b87defac799b5b417604f36f0c81d993
+- cd7e7a151a44e143f6bb1b8ac5be052f82da876dc289afb993c14220924b68af
 
 # `test`
 
 ## Summary
-- プロジェクト全体の pytest 検証スイート。CLI、Codex 実行、ACP builder、feedback、indexing、編集 run lifecycle、Git・ファイルアクセス、設定、レポート生成、構造化文書 rendering、wrapper などの実装契約と回帰条件を、単体・統合テストとして検証する。
-- 共通 fixture と test helper は、外部プロセス、MCP 通信、Git 状態、CLI 実行、Codex 応答、テスト用ファイル構成を隔離・再現するための下位入口であり、複数テスト群にまたがる試験基盤を確認するときに読む。
+- pytest による cmoc の実装・CLI・Codex 実行・Git/worktree・session state の回帰検証を集約するテストスイート。
+- ACP builder、prompt builder、設定・状態永続化、ファイルアクセス、Windows 通知などの単体契約を検証する。
+- doctor、editing run、session fork/join/abandon、oracle 操作、indexing、TUI などの CLI 外部挙動と失敗時のログ・通知・ロールバックを検証する。
+- 共有 fixture/helper と、独立プロセス・PTY・実 Codex CLI を用いる受け入れ試験も含む。
 
 ## Read this when
-- 実装変更が CLI や runtime、Codex 連携、feedback、indexing、編集 lifecycle、Git 操作、レポート、設定などの既存契約へ与える影響を確認したいとき
-- 回帰テストの対象範囲や、特定機能に対応するテストファイルを探すとき
-- 複数の実装層をまたぐ統合挙動、失敗時の rollback・cleanup・reporting、プロセスや外部境界の隔離方法を検証したいとき
+- テストスイート全体の責務範囲や、ある実装変更がどの回帰テスト群に影響するかを把握したいとき。
+- CLI lifecycle、Codex runtime、Git/worktree、session state、設定、prompt、builder の挙動をテストから確認したいとき。
+- 共有 fixture、fake 外部コマンド、Git repository、Codex home、Windows toast 隔離などのテスト実行基盤を確認したいとき。
 
 ## Do not read this when
-- 単一機能の実装仕様や内部処理を確認したいときは、対応する src 配下を直接読む
-- 個別の期待値・fixture・失敗シナリオの詳細が必要なときは、該当する test_*.py を直接読む
-- real_path 系の下位テストだけを確認したいときは、test/_real_path_integration 配下を直接読む
+- 特定機能の正本仕様や実装の詳細を確認したいときは、対応する oracle または src 配下を直接読む。
+- 単一テストの具体的な期待値や再現手順だけを調べる場合は、該当する test_*.py を直接読む。
+- real path integration の個別ルーティングを確認する場合は、test/_real_path_integration/ 配下を直接読む。
 
 ## hash
-- 7ddb8d7a983bbc0fe9fc6a66d6690cbddd16ab4685126d95021f0927f56aefac
+- 903c06eda560e58bd229e20164727e4a95f3cc5ca0f0aac62a2f9386162494ab

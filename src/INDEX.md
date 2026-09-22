@@ -50,19 +50,24 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実行を支える共通 runtime 実装群。Codex の exec/TUI 起動、設定・パス・エラー・ログ・結果の共通処理に加え、feedback、report、session/editing run の state と lifecycle、INDEX 更新、editor input handoff など複数のサブコマンドで共有される境界を扱う。
-- 特定のサブコマンド固有処理ではなく、実行環境・永続 state・外部プロセス・共通報告の不変条件を確認または変更するときの入口。
+- cmoc の共有 runtime 実装を集約するディレクトリで、設定・パス・state・Git/worktree・logging・error/result・CLI lifecycle などの基盤境界を扱う。
+- Codex exec/TUI の起動、実行環境・process tracking・preflight・結果解釈を提供する。
+- INDEX.md の検査・生成・hash 検証・commit lifecycle を扱うため、INDEX 更新の挙動を確認・変更するときの入口になる。
+- feedback observation の collector、MCP reporter、schema 検証、secret masking、immutable store、intake/state/report/run lifecycle を構成する。
+- editing run の開始・join・cleanup、worktree/process cleanup、run report と artifact 検証を共有する。
+- prompt editor input handoff と MCP transport、Windows toast など外部入出力境界の共通処理を提供する。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる runtime 挙動、Codex subprocess 境界、共通ログ・report、state/lifecycle、INDEX 更新の実装を調査・変更するとき。
-- 個別機能の実装から呼び出される共通 helper や、実行結果・設定・パスの共有モデルを確認するとき。
+- cmoc の複数サブコマンドにまたがる runtime 基盤の責務や共有 API を確認したいとき。
+- Codex 呼び出し、INDEX 更新、feedback observation、editing run の lifecycle に関する実装を調査・変更するとき。
+- CLI の終端結果、ログ、設定、Git 状態、process cleanup の連携を追う必要があるとき。
 
 ## Do not read this when
-- 一つのサブコマンド固有の業務処理や、その対象が直接所有する仕様だけを確認したいときは、該当するサブコマンド実装や oracle を直接読む。
-- 共通 runtime を介さない単独の UI・設定・ドキュメント内容を確認したいときは、このディレクトリ全体を読む必要はない。
+- 特定のサブコマンド固有の業務処理や正本仕様を確認したいときは、対応する上位実装または oracle を直接読む。
+- 特定モジュールの細部だけが必要な場合は、runtime の責務全体を読むのではなく該当ファイルを直接確認する。
 
 ## hash
-- 2344fe473e77cbfef259e8fb5ec962eefbd5f0f79b7e9b04324a6926a2df8383
+- 10f6c76138da912509882c0d36fc9b3ca80d5e984c2b8299925b55e52307e4d0
 
 # `config`
 

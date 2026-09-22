@@ -95,7 +95,10 @@ class SubcommandLogger:
         """event record を即時 flush し、同じ順序で in-memory snapshot へ保存する。"""
         with self._lock:
             with self.path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                # 例外メッセージや path には Unicode surrogate が含まれ得る。
+                # internal failure の traceback を必ずログへ残せるよう、JSON の
+                # escape 表現で UTF-8 へ安全に保存する。
+                f.write(json.dumps(record, ensure_ascii=True) + "\n")
                 f.flush()
             self._event_records.append(record.copy())
 
@@ -110,7 +113,7 @@ class SubcommandLogger:
         try:
             with self._lock:
                 with self.path.open("a", encoding="utf-8") as log_file:
-                    log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    log_file.write(json.dumps(record, ensure_ascii=True) + "\n")
                     log_file.flush()
         except Exception:
             pass

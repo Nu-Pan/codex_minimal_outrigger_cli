@@ -9,7 +9,7 @@ from typing import Any, Literal
 import typer
 
 from .runtime_doctor import run_doctor_preprocess
-from .runtime_errors import DEFAULT_NEXT_ACTION, CmocError, render_error
+from .runtime_errors import DEFAULT_NEXT_ACTION, CmocError, render_error, safe_text
 from .runtime_feedback import start_feedback_invocation, stop_feedback_invocation
 from .runtime_feedback_store import feedback_completion_counts
 from .runtime_logging import (
@@ -443,16 +443,20 @@ def _error_terminal_result(
     if error is None:
         return result
     if isinstance(error, CmocError):
-        reason = error.summary
-        detail = _without_primary_report_path(error.detail, result.primary_report)
-        actions = tuple(error.next_actions) or (DEFAULT_NEXT_ACTION,)
+        reason = safe_text(error.summary)
+        detail = _without_primary_report_path(
+            safe_text(error.detail), result.primary_report
+        )
+        actions = tuple(safe_text(action) for action in error.next_actions) or (
+            DEFAULT_NEXT_ACTION,
+        )
     elif isinstance(error, KeyboardInterrupt):
         reason = "サブコマンドが中断されました。"
         detail = "KeyboardInterrupt"
-        actions = result.next_actions
+        actions = tuple(safe_text(action) for action in result.next_actions)
     else:
-        reason = str(error) or error.__class__.__name__
-        detail = repr(error)
+        reason = safe_text(str(error) or error.__class__.__name__)
+        detail = safe_text(repr(error))
         actions = ("診断用サブコマンドログを確認してください。",)
     error_details: tuple[tuple[str, object], ...] = (("理由", reason),)
     if detail:
@@ -533,25 +537,33 @@ def _terminal_result_record(
     """console と同じ terminal result を JSON event 用 object にする。"""
     return {
         "classification": classification,
-        "command": command_name,
-        "primary_report_role": result.primary_report_role,
+        "command": safe_text(command_name),
+        "primary_report_role": (
+            safe_text(result.primary_report_role)
+            if result.primary_report_role is not None
+            else None
+        ),
         "primary_report_path": (
-            str(result.primary_report.resolve(strict=False))
+            safe_text(result.primary_report.resolve(strict=False))
             if result.primary_report is not None
             else None
         ),
-        "result": result.result,
-        "completion_reason": result.completion_reason,
+        "result": safe_text(result.result) if result.result is not None else None,
+        "completion_reason": (
+            safe_text(result.completion_reason)
+            if result.completion_reason is not None
+            else None
+        ),
         "details": [
-            {"name": name, "value": _record_value(value)}
+            {"name": safe_text(name), "value": _record_value(value)}
             for name, value in result.details
         ],
-        "next_actions": list(result.next_actions),
-        "warnings": list(warnings),
+        "next_actions": [safe_text(action) for action in result.next_actions],
+        "warnings": [safe_text(warning) for warning in warnings],
         "pending_feedback_observation_count": pending,
         "elapsed_sec": elapsed,
         "returncode": returncode,
-        "diagnostic_log_path": str(log_path.resolve(strict=False)),
+        "diagnostic_log_path": safe_text(log_path.resolve(strict=False)),
     }
 
 
@@ -571,28 +583,29 @@ def _render_terminal_result(
         "user_interruption": "中断完了",
         "error": "失敗",
     }[classification]
-    lines = [f"# {heading}: cmoc {command_name}"]
+    lines = [f"# {heading}: cmoc {safe_text(command_name)}"]
     if result.primary_report is not None:
         lines.append(
-            f"- primary report ({result.primary_report_role}): "
-            f"`{result.primary_report.resolve(strict=False)}`"
+            f"- primary report ({safe_text(result.primary_report_role)}): "
+            f"`{safe_text(result.primary_report.resolve(strict=False))}`"
         )
     if result.result is not None:
-        lines.append(f"- result: `{result.result}`")
+        lines.append(f"- result: `{safe_text(result.result)}`")
     if result.completion_reason is not None:
-        lines.append(f"- completion_reason: `{result.completion_reason}`")
+        lines.append(f"- completion_reason: `{safe_text(result.completion_reason)}`")
     lines.extend(
-        f"- {name}: `{_display_value(value)}`" for name, value in result.details
+        f"- {safe_text(name)}: `{_display_value(value)}`"
+        for name, value in result.details
     )
-    lines.extend(f"- 次の操作: {action}" for action in result.next_actions)
-    lines.extend(f"- warning: {warning}" for warning in warnings)
+    lines.extend(f"- 次の操作: {safe_text(action)}" for action in result.next_actions)
+    lines.extend(f"- warning: {safe_text(warning)}" for warning in warnings)
     pending_text = "unavailable" if pending is None else str(pending)
     lines.extend(
         [
             f"- pending feedback observation: `{pending_text}`",
             f"- 経過時間: `{format_duration(elapsed)}`",
             f"- 終了コード: `{returncode}`",
-            f"- 診断用サブコマンドログ: `{log_path.resolve(strict=False)}`",
+            f"- 診断用サブコマンドログ: `{safe_text(log_path.resolve(strict=False))}`",
         ]
     )
     return "\n".join(lines)
@@ -601,19 +614,19 @@ def _render_terminal_result(
 def _display_value(value: object) -> str:
     """terminal result の scalar を一つの Markdown field に収める。"""
     if isinstance(value, Path):
-        return str(value.resolve(strict=False))
-    return str(value).replace("`", "'").replace("\n", " | ")
+        value = value.resolve(strict=False)
+    return safe_text(value).replace("`", "'").replace("\n", " | ")
 
 
 def _record_value(value: object) -> object:
     """Path だけを JSON 化可能なフルパスへ変換する。"""
     if isinstance(value, Path):
-        return str(value.resolve(strict=False))
+        return safe_text(value.resolve(strict=False))
     if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    return str(value)
+        return safe_text(value) if isinstance(value, str) else value
+    return safe_text(value)
 
 
 def _deduplicate(values: Sequence[str]) -> tuple[str, ...]:
     """表示順を保ったまま重複する案内を除く。"""
-    return tuple(dict.fromkeys(value for value in values if value))
+    return tuple(dict.fromkeys(safe_text(value) for value in values if value))

@@ -75,22 +75,21 @@
 # `runtime_cli.py`
 
 ## Summary
-- 最外側 CLI サブコマンドの実行ライフサイクルを統括し、診断ログ、feedback、primary report、terminal result、終了コード、通知、例外・中断処理を一貫して確定する実行境界。
-- サブコマンドの開始前処理、step 進行、正常終了・ユーザー中断・エラーの分類、および terminal result のコンソール／ログ出力を確認するための入口。
+- 最外側 CLI サブコマンドの実行ライフサイクルを統括し、作業ディレクトリ検査、doctor 前処理、診断ログ、feedback 回収、例外処理、終了コードを管理する。
+- 正常完了・ユーザー中断・エラーの terminal result を統合し、primary report の保存、サブコマンドログへの終了イベント記録、コンソール表示、Windows 通知までを一元化する。
+- step 開始通知、中断状態や TUI 起動境界の記録、terminal result の JSON/Markdown 変換など、CLI 共通ランタイム処理への入口となる。
 
 ## Read this when
-- 最外側サブコマンドの起動から終端までの制御フローを追うとき。
-- KeyboardInterrupt、実装例外、非ゼロ戻り値、TUI 起動前後の中断がどのように扱われるか確認するとき。
-- 診断ログ、feedback collector、primary report、Windows 通知、terminal result の確定順序や失敗時のフォールバックを変更・調査するとき。
-- サブコマンド step の記録、work root 検査、終了結果の Markdown／JSON 表現を確認するとき。
+- CLI サブコマンド全体の開始から終了までの制御、終了分類、終了コード、例外時の表示やログ記録を調査・変更するとき。
+- primary report、feedback observation の回収、診断ログ、terminal result、Windows 通知がサブコマンド終了時にどう連携するか確認するとき。
+- トップレベル step の進行通知や、work root 実行前提、ユーザー中断・TUI プロセス境界の共通処理を確認するとき。
 
 ## Do not read this when
-- 個別のエラー型、feedback の収集実装、primary report の保存実装、ログの詳細実装、通知実装そのものを直接調べるとき。
-- 特定サブコマンドの業務ロジックや CLI 引数定義だけを確認するとき。
-- terminal result のデータ型や固有のエラー文言だけを確認する場合は、それぞれの定義元を直接読むとき。
+- 個別サブコマンドの業務ロジックや、その実装が返す固有の TerminalResult 内容だけを調べたいとき。
+- エラー型、ログ出力、feedback 保存、primary report 保存、パス解決、Windows 通知の個別実装を直接確認したいときは、それぞれの専用 runtime モジュールを先に読むべきである。
 
 ## hash
-- e6438f5a8ca342c6f004fcf777e8cc289634e8b22ead2a9b6a2016cfd255c94a
+- f9dfb095fd9f0ffaf1bf2f1c624175119f0fbb102a5debfa87ad5c730d715266
 
 # `runtime_codex.py`
 
@@ -308,20 +307,22 @@
 # `runtime_errors.py`
 
 ## Summary
-- cmoc の実行時例外と利用者向け失敗レポート描画を担う。
-- CmocError にエラー概要、復旧・調査手順、原因詳細、任意の終端結果を保持させ、render_error で handled failure を利用者向けテキストへ整形する。
+- cmoc の実行時例外と利用者向け失敗メッセージの共通処理を提供する。
+- CmocError にエラー概要、復旧・調査手順、詳細情報、任意の端末結果を保持させ、safe_text で診断値を UTF-8 表示可能な文字列へ変換する。
+- render_error は CmocError と未処理例外を利用者向けの簡潔な handled failure 形式へ描画し、ログ初期化前などの失敗境界から利用される。
 
 ## Read this when
-- cmoc の実行時例外に利用者向けの概要・次の操作・詳細情報を持たせる必要があるとき。
-- ログ初期化前などの境界で例外を簡潔な失敗レポートとして描画する処理を確認・変更するとき。
-- CmocError と一般例外で表示内容や既定の次の操作がどう分かれるか確認するとき。
+- 実行時エラーを利用者向けレポートへ変換する処理を変更・確認するとき。
+- CmocError の保持情報、既定の次の操作、診断値の安全な文字列化を確認するとき。
+- サブコマンドや共通処理が CmocError を生成・捕捉する際の共通インターフェースを確認するとき。
 
 ## Do not read this when
-- 実行時結果の型や終端状態そのものを確認したい場合は、まず runtime_results の定義を読むとき。
-- 特定の呼び出し元が例外を送出・捕捉する流れだけを調べる場合は、その呼び出し元を直接確認するとき。
+- 特定サブコマンド固有のエラー発生条件や復旧手順を確認したい場合は、そのサブコマンド実装を直接読む。
+- 端末結果の構造や意味だけを確認したい場合は runtime_results の定義を直接読む。
+- エラー報告の保存・更新やログ初期化後の一次レポート処理を確認したい場合は、対応するレポート実装を直接読む。
 
 ## hash
-- b85627317e4500c89817fba814fe8a9f12af599767725957be6b045711aa2245
+- 7aebf501056b06c1339e7a20e20c997aec60001f55a492420dbdf02dc935e836
 
 # `runtime_feedback.py`
 
@@ -458,21 +459,18 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド実行中のイベントを JSON Lines に即時記録し、保存済みイベントのスナップショットを提供する中心的なロガー。
-- ステップ計測、quota 待機時間、warning、Codex call の集約と、実行コンテキストから現在の logger を参照・切り替えするための入口を担う。
+- サブコマンド単位の JSON Lines 実行イベント、警告、step 計測、Codex quota 待機時間をスレッド安全に記録・集約する共通 logger と、現在の実行コンテキストから参照するための ContextVar 操作を提供する。
 
 ## Read this when
-- サブコマンドの実行イベント、ログファイルへの記録順序、terminal event、warning、feedback detector 連携を確認するとき。
-- 完了サマリー用の step elapsed や quota 待機時間、Codex call 記録の集約方法を調べるとき。
-- 深い runtime helper から現在のサブコマンド logger を取得・設定・復元する方法を確認するとき。
+- サブコマンドのイベントログ、ログファイルへの即時 flush、step の経過時間、警告、quota 待機時間の集計を変更または調査するとき
+- runtime helper から現在のサブコマンド logger を取得・差し替え・復元する流れを確認するとき
 
 ## Do not read this when
-- ログ保存先や timestamp 付きファイル予約の規則だけを確認したいときは、runtime paths の対象を直接読む。
-- feedback event の検出仕様や観測報告の判定を確認したいときは、feedback runtime の対象を直接読む。
-- コンソールやファイルログ全体の正本仕様を確認したいときは、対応する仕様書を直接読む。
+- 個別サブコマンドの業務処理やイベント payload の生成元を調べるときは、その呼び出し元を直接読む
+- ログ保存先のパス生成やフィードバック検出の詳細だけを調べるときは、それぞれの専用モジュールを直接読む
 
 ## hash
-- 3641ebc01ef48a1c4506bb5fd9bcb09d10c81d60c29c932688207564b049c712
+- 40bb2fff7a655247514fdf91c55a4f3375c733d25c84e0a751771d45edd6147a
 
 # `runtime_paths.py`
 
@@ -513,22 +511,20 @@
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済みの runtime 情報、分類結果、処理結果、実行ログから fallback の primary report を構築する描画モジュール。
-- feedback、doctor、indexing、session fork/join/abandon、refactor fork、oracle edit、apply fork などの処理種別ごとに、実行段階・状態・結果・警告・次操作・関連ログをテンプレート別に整形する。
-- Codex 最終出力と受理済み feedback observation を実行記録として Markdown に埋め込み、YAML front matter 用の値や各種ステータスも安全に文字列化する。
+- 確定済みの runtime 情報と処理分類に基づき、複数の invocation 種別（doctor、indexing、session 操作、feedback、oracle edit、realization apply など）に対応する fallback primary report の front matter・本文・実行記録を描画する共通レンダラー。
+- Codex 最終出力、受理済み feedback observation、実行済み step、警告・エラー、次の操作、関連ログを安全に Markdown 化する補助関数群も提供する。
 
 ## Read this when
-- fallback primary report の構成、処理種別ごとの描画分岐、または実行記録の掲載方法を確認したいとき
-- runtime の確定結果や logger のイベントが、利用者向けレポートのどの項目へ反映されるかを追跡するとき
-- レポートの終端結果、warning/error、次の操作、関連ログの共通出力を調べるとき
+- runtime の実行結果を primary report としてどの形式で表示するか確認・変更したいとき。
+- 特定の invocation 種別に固有の report セクション、状態表示、checkpoint、cleanup、merge、feedback publication の表現を調べたいとき。
+- 実行記録や Codex 出力、feedback observation の Markdown 埋め込み方法を確認したいとき。
 
 ## Do not read this when
-- runtime 情報の生成、terminal classification の判定、または処理結果そのものの確定規則を調べたいときは、対応する specs・results・呼び出し元を直接読む
-- feedback observation の保存やマスキングの実装を調べたいときは feedback store 側を直接読む
-- 実際の Codex 呼び出し、Git 操作、session/run 状態遷移の実装を調べたいときは、それぞれの実行処理側を読む
+- report の仕様上の正本や各 invocation の入力・状態遷移そのものを確認したいときは、参照される oracle 文書や runtime の spec・results・呼び出し元を直接読む。
+- ログの記録方法、feedback の保存・マスキング、端末結果の分類ロジックを変更・調査するだけなら、それぞれの担当モジュールを直接読む。
 
 ## hash
-- b115a21119d4b379b583ebd9770e07dd1de1d46ae013d1c74b86be6eea79b59c
+- e1696f196e1379586669839e4d1e6905712024504a45bb92b3879fa60968dfc1
 
 # `runtime_primary_report_specs.py`
 
