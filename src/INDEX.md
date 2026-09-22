@@ -50,27 +50,23 @@
 # `commons`
 
 ## Summary
-- cmoc の複数の実行経路から利用される共通 runtime API と、設定・パス・結果・エラー・ログ・Git/worktree・session/run state などの基盤処理を提供する。
-- Codex exec/TUI の起動、process 管理、structured output、schema、feedback 通信、editor input handoff、Windows 通知など、外部プロセスとの境界を実装する。
-- INDEX.md の検査・entry 生成・hash 検証・更新 commit、および doctor による INDEX/管理ファイルの修復 lifecycle を扱う。
-- feedback の observation 保存・受理順序・active state・report cut・publication・remediation checkpoint を検証し永続化する。
-- editing run の開始・join・cleanup・report、prompt editor input、refactor state、primary report など、CLI サブコマンド間で共有される実行 lifecycle を支える。
+- cmoc の複数コマンドで共有する runtime 実装を集約するディレクトリです。
+- CLI 実行の開始・終了、Codex exec/TUI の起動境界、設定・パス・Git・プロセス管理、session/editing run の state と lifecycle、ログ・report・feedback、エディタ入力、INDEX 更新を担当します。
+- 個別コマンド固有の処理ではなく、複数の実行経路が共有する状態・結果モデルと副作用制御を確認するための共通層です。
 
 ## Read this when
-- 複数の CLI サブコマンドに共通する runtime 挙動、状態遷移、エラー処理、ログ、設定、保存先を調査または変更するとき
-- Codex の exec/TUI 呼び出し、process tracking、structured output、feedback reporter、editor handoff、通知の境界を確認するとき
-- session や editing run の worktree、branch、join、cleanup、report、永続 state の実装を確認するとき
-- INDEX.md の生成・検証・commit、または doctor の修復処理を変更・調査するとき
-- feedback observation の durable store、publication、診断、checkpoint 検証を変更・調査するとき
+- 複数の CLI サブコマンドにまたがる実行 lifecycle、エラー終端、ログ、report、feedback の挙動を調べるとき。
+- Codex subprocess の argv・環境・schema・quota/retry・TUI 起動や、その前後の preflight を変更するとき。
+- session/editing run の state、worktree、process cleanup、join・commit・INDEX 更新の共通処理を確認するとき。
+- 設定、Git、パス、ファイル内容、共有結果モデルなどの runtime 基盤の実装箇所を特定するとき。
 
 ## Do not read this when
-- 特定のサブコマンド固有の業務フローや prompt 内容だけを確認したいときは、そのサブコマンド実装や oracle 仕様を先に読むべきである
-- INDEX.md の利用者向けルーティング情報だけを確認したいときは、対象の INDEX.md を直接読むべきである
-- 共通 runtime を呼び出す単一機能の挙動だけを調査し、共有境界・状態・保存形式に関係しないとき
-- oracle の正本仕様を確認することが目的のときは、対応する oracle/doc・oracle/src・oracle/test を直接読むべきである
+- 特定サブコマンドだけの業務ロジックや prompt/spec の正本を調べる場合は、そのコマンド実装または oracle 文書を直接読むべきです。
+- 単一の共通機能の詳細だけを確認する場合は、runtime_cli、runtime_codex_*、runtime_run_*、runtime_state など該当する個別モジュールを直接読むべきです。
+- INDEX.md の生成結果や索引更新の利用者側挙動だけを確認する場合は、indexing.py 以外の対象を読む必要はありません。
 
 ## hash
-- 9576b2b6fb1b4be67aa0e5c26574ddc987f78d50ebc7c1f588b881752b66c2d0
+- 11cab3bbd8d547196bab2117e6f357097c5fc7f830b829c28ce66f84303fa879
 
 # `config`
 

@@ -2804,8 +2804,10 @@ def test_run_join_allows_oracle_change_on_session_branch(
 
 
 def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
-    """存在しない親や symlink 経由の INDEX.md を cmoc 生成物として扱わない。"""
+    """repository 外や indexable でない親の INDEX.md を生成物として扱わない。"""
     root = make_repo(tmp_path)
+    outside_directory = tmp_path / "outside"
+    outside_directory.mkdir()
     generated_directory = root / "generated"
     generated_directory.mkdir()
     symlink_target = root / "symlink-target"
@@ -2814,6 +2816,10 @@ def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
     (symlink_target / "nested").mkdir()
 
     assert lifecycle_module.is_generated_index_path(root, "generated/INDEX.md")
+    assert not lifecycle_module.is_generated_index_path(
+        root, str(outside_directory / "INDEX.md")
+    )
+    assert not lifecycle_module.is_generated_index_path(root, "../outside/INDEX.md")
     assert not lifecycle_module.is_generated_index_path(root, "missing/INDEX.md")
     assert not lifecycle_module.is_generated_index_path(root, "symlink-parent/INDEX.md")
     assert not lifecycle_module.is_generated_index_path(

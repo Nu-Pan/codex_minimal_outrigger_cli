@@ -613,20 +613,19 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始・state 遷移・commit・INDEX 更新・cleanup 判定を、共有 context と lifecycle lock のもとで扱う共通ライフサイクル処理。
-- session/run の事前条件、active run 解決、process tracking recovery、Git 差分分類と許可 path 検査の入口。
+- editing run の開始・復旧・状態遷移と、session/run branch および worktree の整合性を管理する共通実装です。
+- work unit の rollback/commit、INDEX 更新、Git 差分の分類、agent や run が変更できる path の検証までを一体として扱います。
 
 ## Read this when
-- editing run の開始や joinable/error 遷移を実装・調査するとき。
-- run/session worktree の recovery、workload の commit、INDEX 再生成を確認するとき。
-- oracle・realization・生成 INDEX を含む差分の許可範囲や cleanup 判定を確認するとき。
+- editing run の開始・終了・復旧、state 遷移、run lifecycle lock、branch/worktree の検証を確認または変更するとき。
+- work unit の commit/rollback、INDEX 更新、run/session/agent の想定外差分検出や許可 path 判定を調べるとき。
 
 ## Do not read this when
-- 個別 workload の realization 内容や sub-command 固有処理だけを確認したいとき。
-- INDEX 生成、Git 操作、state schema の専用実装そのものを直接確認したいとき。
+- 個別の CLI サブコマンドや workload の実行内容だけを調べる場合は、そのサブコマンドの実装を直接読んでください。
+- Git 操作、state ファイル、INDEX 生成の個別プリミティブだけを確認する場合は、それぞれを定義する共通モジュールへ直接進んでください。
 
 ## hash
-- b42694dc0663a5c2bd950713a03cd7a5b38820df5ac68e68b3ba297786f69691
+- 0e3867daa6f9b04b9e687306fe011b2ca3f0e46ddccb22bac0f811ef48516b9b
 
 # `runtime_run_report.py`
 
