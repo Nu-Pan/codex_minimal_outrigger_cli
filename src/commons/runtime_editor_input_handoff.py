@@ -371,11 +371,7 @@ def _open_directory_for_unlink(path: Path) -> int | None:
     """directory fd が使える環境で、cleanup 対象の親 directory を保持する。"""
     if os.unlink not in os.supports_dir_fd:
         return None
-    flags = (
-        os.O_RDONLY
-        | getattr(os, "O_DIRECTORY", 0)
-        | getattr(os, "O_NOFOLLOW", 0)
-    )
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:
         return os.open(path, flags)
     except OSError:

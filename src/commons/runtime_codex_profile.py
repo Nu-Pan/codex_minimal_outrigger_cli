@@ -502,14 +502,14 @@ def _config_override(key: str, toml_value: str) -> list[str]:
 
 
 def codex_cli_supports_tui_notification_hooks(
-    cwd: Path,
+    codex_process_cwd: Path,
     environment: Mapping[str, str],
 ) -> bool:
     """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
     try:
         result = subprocess.run(
             ["codex", "--sandbox", "read-only", "--version"],
-            cwd=cwd,
+            cwd=codex_process_cwd,
             env=environment,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,

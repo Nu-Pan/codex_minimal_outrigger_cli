@@ -34,22 +34,24 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の検査・生成・更新・復元・commit を担う indexing lifecycle の共通実装です。
-- directory traversal、既存 entry の hash による再利用判定、不足 entry の Codex 生成、深さ順の INDEX.md 更新を一体で扱います。
-- INDEX.md の snapshot 復元、symlink・特殊 file・binary file の扱い、index 対象 hash の計算、entry の render と形式検証を提供します。
+- INDEX.md の検査・再生成・復元・Git commit までのライフサイクルを統括する共通実装。
+- 対象ディレクトリと子要素を列挙し、既存 entry の hash による再利用判定、不足 entry の Codex 生成、Structured Output の描画を行う。
+- symlink・特殊ファイル・binary・git ignore・memo などを除外し、対象ファイルやディレクトリの内容から鮮度判定用 hash を計算する。
+- 更新時は repository 単位の lock、深さ順処理、失敗時の INDEX.md 復元、必要な差分だけの indexing commit を扱う。
 
 ## Read this when
-- INDEX.md の preflight 更新や indexing 用 lock、更新差分の commit 動作を変更・調査するとき。
-- directory ごとの INDEX.md entry の再利用条件、生成対象の列挙、深さ順更新、並列 Codex 呼び出しを確認するとき。
-- INDEX.md の hash 鮮度判定、既存 entry の形式検証、ファイル種別ごとの復元・書き込み挙動を確認するとき。
+- INDEX.md の自動生成や更新順序、entry の再利用条件を変更・調査するとき
+- INDEX.md 対象の除外規則、hash 計算、既存 entry の形式検証を確認するとき
+- indexing の並列 Codex 呼び出し、lock、失敗時復元、Git commit の挙動を確認するとき
+- Codex の Structured Output から INDEX.md entry を組み立てる処理を変更するとき
 
 ## Do not read this when
-- INDEX.md entry の生成 parameter や Structured Output の定義だけを確認したいときは、index entry builder 側を直接読む。
-- Codex subprocess の preflight、profile、isolation など個別の実行制御だけを調べるときは、対応する runtime 実装を直接読む。
-- INDEX.md の正本仕様や利用者向けの indexing ルールを確認したいときは、仕様文書を直接読む。
+- INDEX.md entry の内容そのものを作成・修正したいだけで、生成ライフサイクルの実装を確認する必要がないとき
+- Codex 呼び出し用の entry 生成パラメータ仕様を直接確認したいときは、index entry builder の対象を読むとき
+- INDEX.md の正本仕様や運用ルールを確認したいときは、oracle の indexing 仕様を直接読むとき
 
 ## hash
-- 7eb8d50ee98b933ab01d70d2e3eb16b9bacc05edb8b32c8f7285bb176cce83b8
+- 4ba775165c440665c11e7e25f5005aeb4fd35e013cccda0e900ef6a2893f9c39
 
 # `prompt_editor_input.py`
 
@@ -161,21 +163,18 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の共通ランタイム処理を担い、実行環境の安全な準備と実行結果の機械的解釈をまとめる。
-- プロセス追跡・pidfd・プロセスグループ停止、sandbox と argv の変換、CODEX_HOME と環境変数、設定 override、schema 配置、Codex subprocess 起動を扱う。
-- Codex CLI の JSONL 標準出力・標準エラーからエラー種別や resume token を抽出し、capacity・quota・unexpected error を判定する。
+- Codex CLI の subprocess 境界を担当し、プロセス追跡・安全な停止、sandbox/CODEX_HOME・各種設定 override の構築、環境変数、schema 配置、出力 JSONL のエラー判定をまとめて扱う共通ランタイム実装。
 
 ## Read this when
-- Codex subprocess の起動条件、実行環境、設定 override、schema、MCP や editor handoff の注入を調べるとき。
-- editing run の child process tracking、プロセスグループ停止、PID 再利用対策などの安全性を確認するとき。
-- Codex CLI の出力解析、resume token 抽出、エラー分類の入口を探すとき。
+- Codex CLI の起動環境や argv override、CODEX_HOME、sandbox、model provider、feedback/editor MCP、session hook の設定を確認・変更するとき。
+- Codex 子プロセスの PID・プロセスグループ追跡、安全な停止、subprocess 実行、schema 配置、resume token や JSONL エラー判定を確認・変更するとき。
 
 ## Do not read this when
-- Codex CLI subprocess 境界に関係しない一般的な設定・パス・エラー処理を調べるとき。
-- 対象の具体的な設定キー、argv の完全な組み立て、出力解析規則を確認する場合は、この案内ではなく対象ファイル本文を直接読むべきとき。
+- Codex CLI の個別コマンドの業務ロジックや呼び出し方だけを確認したい場合は、まずそのコマンド実装・呼び出し元を直接読む。
+- 設定値の正本仕様や利用者向け手順を確認したい場合は、oracle の仕様文書や設定ドキュメントを読む。
 
 ## hash
-- 8328c6d1c0239957e297598b591ddb49529e151e34e088d3f0c930a391693c0c
+- 046258c7aa902d1a5e63269513d47cab0a17a7a90eb3c0cdc9d3dffeca5e473f
 
 # `runtime_codex_tui.py`
 
@@ -252,19 +251,22 @@
 # `runtime_editor_input_handoff.py`
 
 ## Summary
-- エディター作業ファイルを一時的な handoff target として公開し、認証付き loopback TCP 経由の取得・上書き要求を検証して処理する。対象ファイルの regular file／非 symlink／所定 work directory 内という安全条件、target ID・repository・protocol の照合、guide の生成と cleanup、受付終了後の後始末までを担う。
+- エディタ待機中に単一の editor work file を一時 target として公開し、認証付き loopback TCP 経由でガイド取得または UTF-8 内容の全体上書きを受け付ける実行時 handoff 境界。
+- 対象ファイルの regular file・非 symlink・所定 editor work directory 内という制約を検証し、target ID、プロトコル、repository、入力 payload を検査する。
+- handoff guide の生成・提供・安全な削除、接続の直列化、受付終了後の cleanup、失敗時の利用者向けエラー変換までを担う。
 
 ## Read this when
-- エディター待機中の入力 handoff target の開始・終了、IPC request の認証と検証、guide の取得、作業ファイルの UTF-8 上書き、安全なファイル検査または cleanup を確認・変更するとき。
-- handoff の失敗コード、timeout、target ID、repository mismatch、guide の一時公開と削除の挙動を追うとき。
+- editor work file を editor 待機期間に公開・取得・上書きする実行時フローを確認するとき。
+- loopback IPC の認証、target ID、handoff request の検証、取得・上書き結果の扱いを追跡するとき。
+- editor work file や一時 guide の symlink 対策、所在検証、cleanup の安全性を確認するとき。
 
 ## Do not read this when
-- エディター入力 handoff の protocol 定数や認証・target ID 生成の定義そのものを確認するときは、protocol 実装を直接読む。
-- editor work directory のパス規則や runtime エラー型の定義だけを確認するときは、対応する共通モジュールを直接読む。
-- MCP 側の agent-facing schema や prompt editor 自体の UI・編集動作を確認するとき。
+- プロンプト本文の生成や editor input handoff guide の文面定義そのものを確認したいときは、guide 生成側を直接読む。
+- エディタからの入力要求を発行する上位フローや、IPC プロトコル定数・認証方式の定義を確認したいときは、利用側または protocol モジュールを直接読む。
+- editor work file の内容解析・編集操作・CLI の通常の入力処理を確認したいとき。
 
 ## hash
-- 62028464309d2eda50f5aa27ec9164e19e10985a1a38a5c96c07c7f44e25f040
+- ef3c7e60d6e7c3fc5f224b72ccaa3c7dcfe7e88554c19a18579be955053ce91d
 
 # `runtime_editor_input_handoff_mcp.py`
 
@@ -473,23 +475,21 @@
 # `runtime_paths.py`
 
 ## Summary
-- cmoc の repository root・worktree root・cmoc 自身の root を解決し、session・report・log・editor・worktree・schema・config などの保存先 path を返す共通 runtime path API。
-- 実行時刻・console 時刻・duration の表示形式を整え、timestamp 付き path の排他的予約を行う。
-- process-wide な cwd 切替を直列化する pushd と、context 単位の cwd override 状態判定を提供する。
-- root 配下の memo 判定を symlink を追跡しない path 境界で行う。
+- cmoc の repository root・worktree root・cmoc 自身の root を解決し、解決失敗を実行時エラーへ変換する共通 API。
+- timestamp と console 用時刻、duration の表示整形、および timestamp 付きファイルの排他的予約を提供する。
+- session・report・log・editor・worktree・schema・config・refactor state など、cmoc が利用する保存先 path を一元的に組み立てる。
+- process-wide な cwd 切替を lock と context state で安全に管理し、cwd 前提の処理を直列化する。
 
 ## Read this when
-- root 解決、cmoc 管理データの保存先、ログ・レポート・schema・editor 入出力の directory、config や refactor state の path を確認または変更するとき。
-- timestamp、console 時刻、duration の正規化表示、timestamp path の衝突回避を確認または変更するとき。
-- 外部 API の実行前提に合わせた cwd 切替、cwd override の状態、または process-wide な cwd の並列実行制御を確認するとき。
-- {{work-root}}/memo の所属判定や、root anchor から repository/worktree root を探索する処理を確認するとき。
+- root の解決、保存先ディレクトリや設定・state path の場所、時刻・duration の表記、または cwd 切替の並行実行時の挙動を調べるとき。
+- runtime path API を利用する複数のサブシステムにまたがるパス関連の不具合を、共通実装から確認するとき。
 
 ## Do not read this when
-- 対象の保存先や時刻・cwd 制御ではなく、各サブコマンド固有の処理、ログ内容、prompt 編集、設定値の意味を直接調べるとき。
-- root 解決の基盤である path model の仕様や、runtime error の型・表示契約そのものを確認する場合は、それぞれの定義元を直接読むとき.
+- 特定サブコマンドの業務ロジック、ログ内容、設定値の意味そのものを調べるとき。
+- 個別の保存データ形式や root 解決元の低レベル実装を直接確認すべきときは、それぞれの呼び出し側・設定実装・path model を読むべきである。
 
 ## hash
-- 232a5aa40dc95f04e9e1498892cdbffae13d4deeb8e02dc38aebdeb589ec80d0
+- 4216425d84f307e83f7abb0d1ba5e7535b57366d97e092ac9a51f953d2021079
 
 # `runtime_primary_report.py`
 

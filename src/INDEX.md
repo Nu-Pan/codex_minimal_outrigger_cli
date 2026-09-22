@@ -50,22 +50,19 @@
 # `commons`
 
 ## Summary
-- cmoc の各サブコマンドが共有する runtime 基盤で、CLI 実行 lifecycle、Codex 呼び出し、設定・パス・Git/worktree 管理、session/run state 永続化を扱う。
-- 実行結果・primary report・feedback の収集と報告、ログ、エラー、エディタ入力、TUI/通知、INDEX.md の検査・生成・commit まで、複数の実行経路にまたがる共通境界を提供する。
-- 個別サブコマンドの処理へ入る前に、共通の実行状態・ファイル配置・Codex 連携・報告処理を確認するための入口である。
+- cmoc の共通 runtime 層。CLI サブコマンドの実行 lifecycle、設定・状態・パス管理、Git/worktree 操作、ログ・レポート・feedback、Codex exec/TUI 起動、editor input handoff、INDEX 更新など、複数の実行経路が共有する基盤処理を提供する。
+- 個別サブコマンドの業務処理ではなく、実行境界・永続 state・外部プロセス・成果物記録を横断して扱う共通 API とデータモデルの入口。
 
 ## Read this when
-- cmoc のサブコマンド実行 lifecycle、session/run の状態遷移、または共通 runtime API を変更・調査するとき
-- Codex subprocess/TUI、設定、Git worktree、ログ・report・feedback、エディタ入力、通知の共通挙動を確認するとき
-- INDEX.md の更新処理や、複数の実行経路で共有されるエラー・結果処理の入口を特定するとき
+- 複数の CLI サブコマンドに共通する実行 lifecycle、Codex 呼び出し、Git/worktree 管理、ログ・レポート、feedback、state 永続化の挙動を調べるとき。
+- 共通 runtime API や結果モデルの責務・連携関係を確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理や、その正本仕様だけを確認したいとき
-- 共通 runtime を経由しない個別の oracle・テスト・UI 実装を直接調べる場合
-- 単一モジュールの詳細なアルゴリズムだけが目的で、対象ファイルが既に特定できているとき
+- 特定サブコマンド固有の業務フローや正本仕様を確認したいときは、そのサブコマンドの実装または oracle 文書を直接読んでください。
+- 個別の共通機能の詳細を調べる場合は、このディレクトリ全体ではなく該当する runtime モジュールを直接読んでください。
 
 ## hash
-- 666bb72865a7dd421e184efee3cbfcfbc16a0e79f2d09a48a4443879c0243081
+- d5cce425edadea97b1502f53ea11350e60a2935e8e8fd348b4cc07da4b92d559
 
 # `config`
 

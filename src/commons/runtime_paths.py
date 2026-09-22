@@ -13,8 +13,10 @@ from basic.path_model import RootPathPlaceHolder, resolve_real_path
 
 from .runtime_errors import CmocError
 
-_CWD_LOCK = threading.RLock()
-_CWD_OVERRIDE_DEPTH: ContextVar[int] = ContextVar("CWD_OVERRIDE_DEPTH", default=0)
+_CMOC_PROCESS_CWD_LOCK = threading.RLock()
+_CMOC_PROCESS_CWD_OVERRIDE_DEPTH: ContextVar[int] = ContextVar(
+    "CMOC_PROCESS_CWD_OVERRIDE_DEPTH", default=0
+)
 
 
 def repo_root(root_anchor: Path | None = None) -> Path:
@@ -51,7 +53,7 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
     Returns:
         placeholder が示す絶対 root path。
     """
-    with _CWD_LOCK:
+    with _CMOC_PROCESS_CWD_LOCK:
         if root_anchor is None:
             return resolve_real_path(placeholder)
         # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
@@ -221,24 +223,26 @@ def is_root_memo(root: Path, path: Path) -> bool:
     return candidate == memo or memo in candidate.parents
 
 
-def cwd_override_active() -> bool:
+def cmoc_process_cwd_override_active() -> bool:
     """現在の context が ``pushd`` による cwd 切替区間内かを返す。"""
-    return _CWD_OVERRIDE_DEPTH.get() > 0
+    return _CMOC_PROCESS_CWD_OVERRIDE_DEPTH.get() > 0
 
 
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
     """外部 API が cwd 前提を持つ区間を process-wide に直列化する。"""
     # os.chdir は process-global なので、切替から復元まで lock を保持する。
-    with _CWD_LOCK:
-        previous = Path.cwd()
+    with _CMOC_PROCESS_CWD_LOCK:
+        previous_cmoc_process_cwd = Path.cwd()
         os.chdir(path)
-        token = _CWD_OVERRIDE_DEPTH.set(_CWD_OVERRIDE_DEPTH.get() + 1)
+        token = _CMOC_PROCESS_CWD_OVERRIDE_DEPTH.set(
+            _CMOC_PROCESS_CWD_OVERRIDE_DEPTH.get() + 1
+        )
         try:
             yield
         finally:
-            _CWD_OVERRIDE_DEPTH.reset(token)
-            os.chdir(previous)
+            _CMOC_PROCESS_CWD_OVERRIDE_DEPTH.reset(token)
+            os.chdir(previous_cmoc_process_cwd)
 
 
 def cmoc_root() -> Path:
