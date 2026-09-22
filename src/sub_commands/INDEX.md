@@ -140,20 +140,21 @@
 # `session`
 
 ## Summary
-- session のサブコマンド実装パッケージで、現在の local branch から session branch と state を作る fork、session branch を home branch に merge して必要なら conflict 解消する join、merge せず session branch を破棄する abandon を扱う。
-- session lifecycle の branch・state 操作は repository lock と事前条件検証を伴い、各コマンドの実装詳細を確認する入口として機能する。
+- session サブコマンドの実装パッケージ。現在の local branch から session branch を作成する fork、session branch を home branch に取り込む join、取り込まず破棄する abandon の処理をまとめている。
+- 各サブコマンドは CLI runtime、session state、Git branch 操作、事前条件検証、失敗時の rollback または conflict 解消を担当する。
 
 ## Read this when
-- session の作成、home branch への統合、または破棄の CLI 挙動を調べるとき
-- session branch、session state、cleanup、rollback、merge conflict 解消の責務を追跡するとき
-- session サブコマンドの実装ファイルを横断して lifecycle の整合性を確認するとき
+- session fork・join・abandon のCLI挙動や相互関係を調べるとき
+- session branch、home branch、session state の生成・取り込み・破棄処理の実装入口を探すとき
+- session 操作の失敗時処理、cleanup、rollback、merge conflict 解消の流れを確認するとき
 
 ## Do not read this when
-- session 内の特定コマンドの詳細実装だけを確認する場合は、対応する fork.py、join.py、または abandon.py を直接読むとき
-- session 以外の CLI サブコマンドや共通 runtime の挙動を調べるときは、それぞれの実装・共通モジュールを直接読むとき
+- session 操作以外のサブコマンドを調べるとき
+- fork、join、abandon のいずれか特定の処理の詳細だけを確認する場合で、該当する個別ファイルを直接読めるとき
+- session state の共通データ形式や CLI 全体の dispatch 機構だけを調べるとき
 
 ## hash
-- 96e187aaa4fa29aadd197b21c2aab9d6513bd8b3578c394eb90638dd4d2c0f97
+- 664c168771428e71725c317487f8328ea05c9f72db44a66b39d5aa95f450f263
 
 # `tui.py`
 

@@ -20,6 +20,7 @@ import json
 import stat
 import subprocess
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -197,6 +198,51 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["session_fork_commit"] == captured_head
     assert run_git(root, "rev-parse", session_branch).stdout.strip() == captured_head
+
+
+def test_session_fork_rechecks_branch_after_lifecycle_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """lock 待ち中に branch が切り替わっても state と分岐元を一致させる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    original_home = current_branch(root)
+    alternate = "alternate-home"
+    run_git(root, "branch", alternate)
+    run_git(root, "switch", alternate)
+    (root / "README.md").write_text("alternate home\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "advance alternate home")
+    alternate_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "switch", original_home)
+
+    original_lock = session_fork_module.session_fork_lock
+
+    @contextmanager
+    def switch_branch_while_locked(repository: Path) -> Iterator[None]:
+        """fork が lock を取得した直後の branch 切替を再現する。"""
+        with original_lock(repository):
+            run_git(repository, "switch", alternate)
+            yield
+
+    monkeypatch.setattr(
+        session_fork_module, "session_fork_lock", switch_branch_while_locked
+    )
+
+    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    session_branch = current_branch(root)
+    assert session_branch.startswith("cmoc/session/")
+    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert state["session"]["session_home_branch"] == alternate
+    assert state["session"]["session_fork_commit"] == alternate_commit
+    assert run_git(root, "rev-parse", session_branch).stdout.strip() == alternate_commit
 
 
 def test_session_fork_rolls_back_when_state_save_fails(

@@ -46,22 +46,22 @@ def _cmoc_session_fork_body() -> TerminalResult:
     """現在の local branch から cmoc session branch を作成する。"""
     root = repo_root()
     work = work_root()
-    start_subcommand_step(2, "現在の local branch を取得", "get current branch")
-    branch = current_branch(work)
-    update_primary_report_fields(
-        home_branch=branch,
-        session_state_before=None,
-        session_state_after=None,
-    )
-    if is_managed_branch(branch):
-        raise CmocError(
-            "cmoc managed branch 上では session fork できません。",
-            ["通常の local branch に checkout してから再実行してください。"],
-            f"current branch: {branch}",
-        )
-    ensure_cmoc_ignored_in_exclude(work)
-    require_clean_worktree(work)
     with session_fork_lock(root):
+        start_subcommand_step(2, "現在の local branch を取得", "get current branch")
+        branch = current_branch(work)
+        update_primary_report_fields(
+            home_branch=branch,
+            session_state_before=None,
+            session_state_after=None,
+        )
+        if is_managed_branch(branch):
+            raise CmocError(
+                "cmoc managed branch 上では session fork できません。",
+                ["通常の local branch に checkout してから再実行してください。"],
+                f"current branch: {branch}",
+            )
+        ensure_cmoc_ignored_in_exclude(work)
+        require_clean_worktree(work)
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
         # active session と session-id を lock 内で再確認し、同じ home branch に
         # 複数の session branch/state が公開される競合を防ぐ。
