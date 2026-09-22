@@ -125,26 +125,27 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動境界とトップレベル command tree を定義する入口。引数解析、補完、Click/Typer 互換処理、サブコマンド実装への振り分けを確認するときに読む。
-- 共通の基礎型・パスモデル・構造化ドキュメント・oracle import shim を提供する基盤層。実装間で共有されるデータ型や oracle 側公開 API との互換境界を確認するときに進む。
-- サブコマンド共通の runtime 層。CLI 実行ライフサイクル、doctor、ログ、エラー、feedback、Git、state、primary report、Codex 実行、run/session 管理など横断的な処理を確認するときに読む。
-- session、run、oracle、realization、feedback、indexing、doctor、TUI など利用者向け操作の command 実装群。特定の CLI 操作の事前条件、状態遷移、Git 操作、agent 呼び出しを変更・調査するときは該当する下位パッケージへ進む。
-- ACP builder 層は、index entry、feedback、oracle 編集・調査、realization の apply/refactor、session join など agent 呼び出し用パラメータの構築を担う。agent への入力形式や builder 固有の処理を確認するときに読む。
-- 設定と公開用互換モジュールを含む cmoc の実装ソース全体。特定の機能を調べる場合は、まず該当する runtime、sub_commands、builder の下位対象を直接読む。
+- cmoc の実装ルート。CLI のコマンドツリーと起動境界は `main.py`、互換公開 API は `cmoc_runtime.py` と `basic`・`config`、実行時共通処理は `commons`、コマンド固有処理は `sub_commands`、Agent 呼び出しパラメータの互換 adapter は `acp` に分かれている。
+- `main.py` は doctor、tui、session、oracle、realization、run、feedback、indexing 系の CLI 入口を登録し、Click/Typer の互換処理と CLI エラーの cmoc 形式への変換を担当する。
+- `commons` は root・path、Git/worktree、設定、CLI ライフサイクル、run/session 状態、primary report、feedback、Codex 実行、INDEX 更新など複数コマンドで共有する runtime 基盤を扱う。
+- `sub_commands` は CLI サブコマンドの実体で、oracle の編集・調査、realization の apply/refactor、session と run の fork/join/abandon、feedback の報告・判定・修復・復旧、doctor・tui・indexing を実装する。
+- `acp` は oracle 側の builder 実装を realization 側から参照する互換 import 経路で、各 workload の起動パラメータ、index entry、feedback、conflict resolution などを再公開する。
+- `basic` と `config` は oracle 側の ACP 型・path model・構造化文書・設定定義を複製せず既存 import path に提供する薄い互換層である。
 
 ## Read this when
-- cmoc の実装全体の責務分担や、CLI 入口から共通 runtime・サブコマンド・ACP builder へ至る構成を把握したいとき
-- 複数の command や共通 runtime にまたがる変更箇所を特定したいとき
-- トップレベルの import、公開互換層、設定、CLI 起動挙動の所在を確認したいとき
+- CLI コマンドの追加・登録、引数解析、起動時エラー処理を変更するときは `main.py` から確認する。
+- 複数のサブコマンドにまたがる状態管理、Git/worktree、設定、ログ、report、feedback、Codex 実行の挙動を調査・変更するときは `commons` を確認する。
+- 特定の `cmoc` サブコマンドの処理や workload lifecycle を変更するときは、対応する `sub_commands` 配下を直接確認する。
+- Agent 呼び出しパラメータの構築や oracle 実装への互換参照を変更するときは `acp`、`basic`、`config` を確認する。
 
 ## Do not read this when
-- 単一の CLI サブコマンドの詳細だけを調べる場合は src/sub_commands 配下の該当ファイルを直接読む
-- 共通 runtime の一機能だけを調べる場合は src/commons 配下の該当 runtime モジュールを直接読む
-- agent 呼び出しパラメータの構築だけを調べる場合は src/acp/builder 配下の該当 builder を直接読む
-- oracle の正本仕様やテストの内容を確認することが目的の場合は src ではなく oracle または test の該当対象へ進む
+- 正本仕様や oracle 実装そのものを確認したい場合は `src` の互換層ではなく `oracle` 配下を直接読む。
+- INDEX 更新の具体的なエントリー生成規則だけを確認したい場合は `src` 全体ではなく `commons/indexing.py` と関連する正本仕様を読む。
+- 単一サブコマンドの詳細実装だけが必要な場合は `main.py` や他のサブコマンドを一括して読む必要はなく、対応する `sub_commands` ファイルへ直接進む。
+- テストの期待値や回帰ケースだけを確認したい場合は `src` ではなく `test` 配下を読む。
 
 ## hash
-- cd7e7a151a44e143f6bb1b8ac5be052f82da876dc289afb993c14220924b68af
+- 613ce51ea0d556c73e474a210984db766cd148ea10db21b9219e81f2dfea79eb
 
 # `test`
 

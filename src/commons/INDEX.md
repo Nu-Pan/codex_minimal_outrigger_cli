@@ -127,19 +127,18 @@
 # `runtime_codex_logging.py`
 
 ## Summary
-- Codex 呼び出し失敗を console と event で共有できるエラーテキストへ変換する共通処理。
-- CmocError は要約と詳細を組み合わせ、その他の例外は文字列表現へフォールバックする。
+- Codex 呼び出し時の例外を、コンソールとイベントログで共通利用する利用者向けエラーテキストへ変換する補助関数を提供する。CmocError では概要と診断詳細を結合し、それ以外の例外では文字列表現を用い、空の場合も例外型を失わない表現にする。
 
 ## Read this when
-- Codex 呼び出し失敗時に表示・記録するエラーテキストの変換規則を確認するとき。
-- CmocError と一般例外で異なるエラー表現を確認するとき。
+- Codex CLI 呼び出し失敗時のエラーメッセージ形式を確認・変更するとき
+- CmocError と一般例外のログ表示差異を調査するとき
 
 ## Do not read this when
-- CmocError の定義や分類を確認したいときは、runtime_errors の定義を直接読む。
-- console や event のログ仕様、または呼び出し側の処理経路を確認したいとき。
+- Codex CLI の起動引数や実行フローを変更・調査するときは、Codex 実行処理の実装を直接読む
+- ログファイルの保存先やサブコマンド単位のロガー動作を確認するときは、ランタイムログ実装を直接読む
 
 ## hash
-- 3aa3362456bf077cfb72f5407ab784e4f4d46eff44fb6df4722e2fb2f92d0586
+- dbc22241cdd8af0da9bd7074e31f3617345bcf1035252f3a0ed0d40cce7b117e
 
 # `runtime_codex_preflight.py`
 

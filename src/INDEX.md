@@ -50,24 +50,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime 実装を集約するディレクトリで、設定・パス・state・Git/worktree・logging・error/result・CLI lifecycle などの基盤境界を扱う。
-- Codex exec/TUI の起動、実行環境・process tracking・preflight・結果解釈を提供する。
-- INDEX.md の検査・生成・hash 検証・commit lifecycle を扱うため、INDEX 更新の挙動を確認・変更するときの入口になる。
-- feedback observation の collector、MCP reporter、schema 検証、secret masking、immutable store、intake/state/report/run lifecycle を構成する。
-- editing run の開始・join・cleanup、worktree/process cleanup、run report と artifact 検証を共有する。
-- prompt editor input handoff と MCP transport、Windows toast など外部入出力境界の共通処理を提供する。
+- cmoc の CLI 実行基盤を支える共通 runtime 実装群。設定・パス・状態・結果・エラー・ログ・Git/worktree 操作、Codex exec/TUI 起動、feedback の受付・保存・報告、editing run lifecycle、doctor/index 更新、editor input handoff など、複数サブコマンドから共有される境界処理を扱う。
+- 各 Python ファイルは責務ごとの共通 API や状態機械を提供し、oracle/realization の分類、永続化データの検証、プロセス追跡と cleanup、MCP transport、fallback report 描画などの実行時不変条件を実装している。
 
 ## Read this when
-- cmoc の複数サブコマンドにまたがる runtime 基盤の責務や共有 API を確認したいとき。
-- Codex 呼び出し、INDEX 更新、feedback observation、editing run の lifecycle に関する実装を調査・変更するとき。
-- CLI の終端結果、ログ、設定、Git 状態、process cleanup の連携を追う必要があるとき。
+- 複数の CLI サブコマンドにまたがる実行 lifecycle、共通エラー処理、ログ、状態保存、Git/worktree 操作を調べるとき
+- Codex subprocess、TUI、feedback MCP、editor input handoff との runtime 境界を確認するとき
+- 特定の機能から呼び出される共通 API の責務分担や、永続化・cleanup の開始点を探すとき
 
 ## Do not read this when
-- 特定のサブコマンド固有の業務処理や正本仕様を確認したいときは、対応する上位実装または oracle を直接読む。
-- 特定モジュールの細部だけが必要な場合は、runtime の責務全体を読むのではなく該当ファイルを直接確認する。
+- 特定サブコマンド固有の業務処理や画面・CLI 引数の仕様だけを確認したいときは、そのサブコマンドの実装を直接読む方が適切です
+- 正本仕様や oracle のデータモデルを確認したいときは、src/commons ではなく対応する oracle/doc または oracle/src を直接読むべきです
+- 単一の共通モジュールの詳細な挙動を変更・検証したいときは、ディレクトリ全体ではなく該当する runtime_*.py を直接読んでください
 
 ## hash
-- 10f6c76138da912509882c0d36fc9b3ca80d5e984c2b8299925b55e52307e4d0
+- 1a10399448bddf93f172ec2c2493b3321ccfd267932a76417731fd1e5365549a
 
 # `config`
 
