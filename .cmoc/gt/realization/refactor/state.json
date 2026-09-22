@@ -146,8 +146,8 @@
   "oracle/doc/app_spec/sub_command/indexing.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "6da65bf626302c7e09422df55b857ba32f68cd979df32eb3e6a012829058e684",
-    "last_investigated_at": "2026-08-17_22-05_41_391338000"
+    "last_investigated_sha256": "8a2acc19195064829931578f12875ea420efb5ab64e1889c6c68e9ebfbad5381",
+    "last_investigated_at": "2026-09-23_04-30_41_325694000"
   },
   "oracle/doc/app_spec/sub_command/oracle_edit.md": {
     "investigation_required": true,

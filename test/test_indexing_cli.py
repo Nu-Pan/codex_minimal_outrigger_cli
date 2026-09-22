@@ -392,6 +392,76 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
     assert run_git(root, "status", "--short").stdout == " M README.md\n"
 
 
+def test_indexing_error_report_records_failed_indexing_execution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INDEX 更新の失敗を、未実行ではなく error report へ記録する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+
+    def fail_update_indexes(
+        _update_root: Path, _codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
+        """インデクシング処理の途中失敗を再現する。"""
+        raise cmoc_runtime.CmocError(
+            "INDEX 更新に失敗しました。", ["原因を確認してください。"], "test failure"
+        )
+
+    monkeypatch.setattr(indexing_module, "update_indexes", fail_update_indexes)
+
+    result = runner.invoke(app, ["indexing"], catch_exceptions=False)
+
+    assert result.exit_code != 0
+    report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert 'indexing_status: "failed"' in report
+    assert "updated_indexes: []" in report
+    assert "- 実行状態: `failed`" in report
+    assert "- commit 作成処理: `未実行`" in report
+    assert "INDEX 更新に失敗しました。" in report
+
+
+def test_indexing_error_report_records_failed_commit_after_indexing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """commit の失敗時にも更新対象と commit 処理の状態を report へ残す。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    index_path = root / "INDEX.md"
+
+    def fake_update_indexes(
+        update_root: Path, _codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
+        """INDEX 更新済みの commit 失敗を再現する。"""
+        index_path.write_text("# generated\n")
+        return [update_root / "INDEX.md"]
+
+    def fail_commit_index_updates(_root: Path, _updated: list[Path]) -> None:
+        """commit 処理の失敗を再現する。"""
+        raise cmoc_runtime.CmocError(
+            "INDEX commit に失敗しました。",
+            ["Git の状態を確認してください。"],
+            "test failure",
+        )
+
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(
+        indexing_module, "commit_index_updates", fail_commit_index_updates
+    )
+
+    result = runner.invoke(app, ["indexing"], catch_exceptions=False)
+
+    assert result.exit_code != 0
+    report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert 'indexing_status: "completed"' in report
+    assert 'updated_indexes: ["INDEX.md"]' in report
+    assert 'commit_status: "failed"' in report
+    assert "commit_id: null" in report
+    assert "- commit 作成処理: `failed`" in report
+    assert "INDEX commit に失敗しました。" in report
+
+
 def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_index(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

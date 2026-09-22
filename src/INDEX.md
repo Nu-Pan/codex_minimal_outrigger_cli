@@ -50,22 +50,19 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実行基盤で共有される runtime 実装群。Codex の exec/TUI 呼び出し、設定・パス・Git・状態・結果・ログ・report、feedback、editor input handoff、editing run、INDEX/doctor lifecycle など、複数のサブコマンドから利用する共通境界を扱う。
-- 個別サブコマンドの処理手順や仕様本文ではなく、共通 runtime API の責務・状態モデル・外部プロセス境界・永続化処理を確認するための入口。
+- cmoc の CLI 実行を支える共通 runtime 実装群。Codex の exec/TUI 起動、設定・パス・エラー・ログ・結果の共通処理に加え、feedback、report、session/editing run の state と lifecycle、INDEX 更新、editor input handoff など複数のサブコマンドで共有される境界を扱う。
+- 特定のサブコマンド固有処理ではなく、実行環境・永続 state・外部プロセス・共通報告の不変条件を確認または変更するときの入口。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる runtime 共通処理の挙動を調べるとき。
-- Codex subprocess の起動、sandbox・schema・resume・process tracking、TUI、実行ログや結果の扱いを確認するとき。
-- 設定、パス、Git worktree、session/editing run state、feedback、primary report、editor input handoff の共有処理を追うとき。
-- INDEX 更新や doctor preprocess、run lifecycle など、複数ファイルで不変条件を共有する lifecycle の実装位置を特定するとき。
+- 複数の CLI サブコマンドにまたがる runtime 挙動、Codex subprocess 境界、共通ログ・report、state/lifecycle、INDEX 更新の実装を調査・変更するとき。
+- 個別機能の実装から呼び出される共通 helper や、実行結果・設定・パスの共有モデルを確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの正本仕様や利用者向け手順を確認したいときは、対応する oracle/doc またはサブコマンド実装を直接読む。
-- 単一の共通モジュールの詳細な API やデータ形式だけを確認したいときは、src/commons 配下の該当ファイルを直接読む。
-- INDEX.md の生成・検査処理だけを調べる場合は indexing.py、editing run の lifecycle だけを調べる場合は runtime_run_lifecycle.py など、対象モジュールへ直接進む。
+- 一つのサブコマンド固有の業務処理や、その対象が直接所有する仕様だけを確認したいときは、該当するサブコマンド実装や oracle を直接読む。
+- 共通 runtime を介さない単独の UI・設定・ドキュメント内容を確認したいときは、このディレクトリ全体を読む必要はない。
 
 ## hash
-- 73e6794a1e9d50a8e42b941c6804f1163fa2be9f38753c894ecd21c31764304e
+- 2344fe473e77cbfef259e8fb5ec962eefbd5f0f79b7e9b04324a6926a2df8383
 
 # `config`
 
@@ -121,18 +118,19 @@
 # `sub_commands`
 
 ## Summary
-- CLI のサブコマンド実装を集約する入口で、doctor・indexing・TUI、oracle／realization、session・run・feedback 系の処理へ進むための上位ディレクトリ。
-- oracle 配下は oracle の調査・編集、session 配下は session の fork・join・abandon、run 配下は editing run の lifecycle、feedback 配下は feedback の報告・判定・復旧を扱う。
+- CLI サブコマンドの実装をまとめる入口で、doctor・indexing・tui と、oracle／realization／run／session／feedback の各サブコマンド群へ進むための上位ディレクトリ。
+- oracle は正本仕様の調査・編集、realization は realization 操作、run は managed run の join・abandon・lifecycle・report、session は session branch の fork・join・abandon を担当する。
+- feedback は観測報告の生成、判定根拠、逐次 remediation、publication 後の recovery を分担する。
 
 ## Read this when
-- CLI サブコマンドの実装箇所を特定するとき
-- session、run、feedback、oracle などのサブコマンド処理の入口や処理分岐を確認するとき
-- doctor、indexing、TUI のサブコマンド固有処理を調べるとき
+- CLI サブコマンド全体の構成や、目的別の実装グループを確認したいとき。
+- 特定の操作に対応する実装へ進む前に、oracle・realization・run・session・feedback のどの配下を読むべきか判断するとき。
+- doctor、indexing、tui のトップレベル処理を確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細実装が分かっており、対応する個別ファイルを直接読むとき
-- サブコマンド共通の runtime・prompt・git・state 処理を調べるとき
-- oracle の正本仕様やサブコマンドの仕様そのものを確認するとき
+- 特定サブコマンドの詳細な状態遷移・検証・エラー処理を確認したい場合は、対応する個別ファイルを直接読む。
+- 共通ランタイム、設定、agent parameter builder、永続化処理の仕様や実装だけを調べる場合は、対応する src 配下の共通モジュールや oracle 文書を直接読む。
+- サブコマンド以外の CLI 起動・登録経路だけを確認したい場合は、上位の CLI エントリーを読む。
 
 ## hash
-- 7ef62275c2779691a108dfa2df9bb3bcbe137dfa9d4d72f61292887594e21738
+- e2312630e36a944c683e299e1cb459e5e1cac749acba4f552f0424ac1ab478ed

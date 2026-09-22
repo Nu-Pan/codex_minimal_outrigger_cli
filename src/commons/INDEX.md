@@ -513,19 +513,22 @@
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済みの runtime 情報と terminal 結果から、template 種別ごとの fallback primary report 本文を生成する。実行段階、終端結果、warning・エラー、次の操作、関連ログに加え、feedback・session・run・oracle edit などの固有状態を Markdown として描画する。
-- Codex call の最終出力や feedback observation、step timing、publication event を実行記録・状態表示へ変換し、未確定値を完了済みと誤認しない表現で記録する。
+- 確定済みの runtime 情報、分類結果、処理結果、実行ログから fallback の primary report を構築する描画モジュール。
+- feedback、doctor、indexing、session fork/join/abandon、refactor fork、oracle edit、apply fork などの処理種別ごとに、実行段階・状態・結果・警告・次操作・関連ログをテンプレート別に整形する。
+- Codex 最終出力と受理済み feedback observation を実行記録として Markdown に埋め込み、YAML front matter 用の値や各種ステータスも安全に文字列化する。
 
 ## Read this when
-- runtime primary report の Markdown 構成、template 別の report 内容、terminal classification の表示を確認・変更するとき。
-- 実行段階、Codex call log、feedback publication 状態、session/run の状態遷移を fallback report に反映する処理を追うとき。
+- fallback primary report の構成、処理種別ごとの描画分岐、または実行記録の掲載方法を確認したいとき
+- runtime の確定結果や logger のイベントが、利用者向けレポートのどの項目へ反映されるかを追跡するとき
+- レポートの終端結果、warning/error、次の操作、関連ログの共通出力を調べるとき
 
 ## Do not read this when
-- runtime 情報の収集・保存や terminal result の生成そのものを調べるときは、各担当の store・logging・result 実装を直接読む。
-- INDEX.md の更新処理や oracle 仕様本文を確認するだけの場合は、この report 描画実装ではなく該当する indexing 実装または oracle 文書を読む。
+- runtime 情報の生成、terminal classification の判定、または処理結果そのものの確定規則を調べたいときは、対応する specs・results・呼び出し元を直接読む
+- feedback observation の保存やマスキングの実装を調べたいときは feedback store 側を直接読む
+- 実際の Codex 呼び出し、Git 操作、session/run 状態遷移の実装を調べたいときは、それぞれの実行処理側を読む
 
 ## hash
-- d7c7c6a1b7322213ba7eeba339d2dffce86303d2d13977760b3f4922be323006
+- b115a21119d4b379b583ebd9770e07dd1de1d46ae013d1c74b86be6eea79b59c
 
 # `runtime_primary_report_specs.py`
 

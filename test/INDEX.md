@@ -542,19 +542,20 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- `cmoc indexing` の CLI 実行、preflight、worktree 対象判定、doctor 初期化、Codex による INDEX.md 生成、ハッシュによる再生成省略、INDEX 更新の限定 commit を外部挙動として検証するテスト群への入口。
+- `cmoc indexing` の CLI と preflight／commit lifecycle を外部挙動として検証するテストです。doctor による初期化、現在の worktree 判定、Codex の index entry 生成、INDEX.md の更新・freshness 判定、INDEX.md のみの commit、失敗時 report を扱います。
 
 ## Read this when
-- `cmoc indexing` の正常系・初期化・linked worktree・dirty worktree の拒否条件を確認したいとき。
-- INDEX.md 更新前後の preflight、worktree 固有設定、Codex 呼び出し、fresh hash の扱いを確認したいとき。
-- INDEX.md だけを commit し、既存の staged・unstaged 差分を保持する commit lifecycle や git diff 異常時の失敗処理を調べるとき。
+- `cmoc indexing` の事前条件、doctor、linked worktree 対応、INDEX.md 更新、Codex 呼び出し、commit の回帰条件を確認したいとき。
+- INDEX.md のみを commit 対象にする処理や、更新失敗・commit 失敗時の report 内容を変更するとき。
+- indexing preflight が既存の staged／unstaged 非 INDEX 差分を保持できるか確認したいとき。
 
 ## Do not read this when
-- INDEX.md のルーティング規則そのものや生成用 Structured Output schema を確認したいときは、対応する正本仕様・schema を直接読む。
-- `cmoc indexing` 以外のサブコマンドや、INDEX 更新処理の実装詳細そのものを調べることが目的のとき。
+- indexing CLI の実装詳細を調べる場合は、まず `src` 側の indexing 実装を直接読むとき。
+- INDEX.md エントリー生成の Structured Output schema 自体を変更・確認する場合は、対応する oracle schema を直接読むとき。
+- indexing と無関係な CLI やテストの挙動を調べる場合。
 
 ## hash
-- 73ebd8fa4054a36b25c4047c4178951c65411cd8182e6d414b35ba21bef6e627
+- 10dd535ac20670cbc1dd042d1e3d4b366d2574b606a774bfd45c058ee9272f7d
 
 # `test_indexing_common.py`
 

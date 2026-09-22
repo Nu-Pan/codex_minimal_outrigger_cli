@@ -232,6 +232,7 @@ def _indexing_body(
         "## インデクシング",
         f"- 実行状態: `{_operation_status(fields.get('indexing_status'), classification)}`",
         f"- 更新した INDEX.md: `{_field_status(fields.get('updated_indexes'))}`",
+        f"- commit 作成処理: `{_operation_status(fields.get('commit_status'), classification)}`",
         f"- 作成した commit: `{_field_status(fields.get('commit_id'))}`",
         *_standard_tail(classification, result, logger),
     ]

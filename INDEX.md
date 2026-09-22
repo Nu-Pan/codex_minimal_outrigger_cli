@@ -125,43 +125,42 @@
 # `src`
 
 ## Summary
-- cmoc の Python 実装本体。Typer/Click による CLI のコマンドツリーと起動境界、doctor・TUI・session・run・oracle・realization・feedback・indexing 各サブコマンドの入口を提供する。
-- サブコマンド共通の実行ライフサイクル、エラー処理、ログ、feedback observation、primary report、Git/worktree 状態、Codex subprocess/TUI 起動、設定、結果、パスなどの runtime 共通機能を集約する。
-- ACP builder 配下には、index entry や feedback issue など Codex agent 呼び出し用パラメータを組み立てる互換入口と、oracle 実装を利用する builder がある。
-- basic・config・commons は、公開 API の互換再エクスポートを含む基盤型、設定検証・永続化、INDEX 更新、feedback、Git、run/session 状態管理などを担当する。
+- cmoc CLI の実装ルート。Typer/Click のコマンドツリーを `main.py` で定義し、共通 runtime、設定、型・構造化文書の互換公開、サブコマンド処理、Codex 呼び出し用 builder adapter を提供する。
+- `commons` は CLI lifecycle、ログ・レポート、Git/worktree、Codex exec/TUI、設定、状態、feedback、INDEX 更新など複数コマンドが共有する実行基盤を担う。
+- `sub_commands` は doctor、TUI、indexing、oracle、realization、session、run など利用者向け CLI 操作を責務ごとに実装する。
+- `acp` は oracle 側の ACP builder を realization 側の既存 import 経路へ接続する adapter 群で、builder ごとの parameter 構築入口を公開する。
+- `basic` と `config` は ACP 型、path model、構造化文書、設定定義の互換公開・利用入口を提供し、トップレベルの runtime module は共通 runtime API の後方互換 import を維持する。
 
 ## Read this when
-- cmoc CLI のコマンド構成、サブコマンドの入口、または起動時の Click/Typer 境界を確認したいとき。
-- 複数のサブコマンドに共通する実行 lifecycle、エラー報告、ログ、feedback、Codex 呼び出し、worktree/Git 状態の扱いを調べるとき。
-- INDEX.md 更新、feedback observation/report、run/session 管理、oracle・realization 操作の実装上の入口を特定したいとき。
-- 設定、公開互換 import、共通データ型や runtime API の責務を横断的に把握したいとき。
+- cmoc の CLI コマンド構成、サブコマンドの実装入口、またはコマンド横断の runtime lifecycle を変更・調査するとき。
+- Codex exec/TUI の起動、worktree・session・run 管理、ログ・primary report・feedback・INDEX 更新の連携を追うとき。
+- 既存の `basic.*`、`config.*`、`acp.builder.*` import 経路や oracle 実装との adapter 境界を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な状態遷移や処理規則だけを確認したい場合は、src/sub_commands 配下の該当モジュールを直接読むとよい。
-- 共通 runtime の個別責務だけを確認したい場合は、src/commons 配下の該当 runtime モジュールを直接読むとよい。
-- Codex agent 呼び出し用パラメータの具体的な構築内容だけを確認したい場合は、src/acp/builder 配下の該当 builder を直接読むとよい。
-- 正本仕様や oracle 実装そのものを確認する場合は、src ではなく oracle 配下の対象を読むべきである。
+- INDEX.md の生成ロジックだけを調べる場合は `commons/indexing.py` と `sub_commands/indexing.py` を直接読むとき。
+- 特定の CLI 操作だけを調べる場合は `sub_commands` 配下の該当実装と対応する builder を直接読むとき。
+- 正本仕様や oracle 実装そのものを確認する場合は `oracle` 配下を直接読むとき。
 
 ## hash
-- 1159817e6dbb8128cd6e6faa972edfa9f447f9d236efea3227d058ac5155dfa1
+- 1025651b28235ddb0ebdf4200b5bc82b2e87c3a581dbea9bd95b52dbc8aa4a94
 
 # `test`
 
 ## Summary
-- pytest の共有 fixture・テストヘルパーと、Codex 実行、CLI、session/editing run、indexing、feedback、prompt、runtime、Git/file lifecycle などの回帰テストをまとめた realization test 集合。
-- 個別テストファイルは、対応する機能領域の外部挙動・状態遷移・失敗時の cleanup/report・正本仕様との契約を検証する入口になる。
-- `test_production_cli.py` 系は独立プロセスと実 CLI を使う本番経路検証、その他の領域別ファイルは fake や fixture を用いた詳細な単体・統合検証を担う。
+- `test/` は、CLI・runtime・Codex連携・ACP builder・session state・feedback・file access・Windows toast など、cmoc の実装契約と正本仕様への適合を pytest で検証する realization test 群です。
+- `_git_support.py`、`_codex_support.py`、`_cli_support.py` などの共有 helper と `conftest.py` の fixture が、隔離された Git repository、Codex 環境、CLI 実行、Windows toast transport を各テストへ提供します。
+- テストは機能領域ごとに分割され、公開 CLI の外部挙動、runtime の状態・設定・path・subprocess 処理、prompt/editor handoff、feedback、構造化文書 renderer、repository local skill metadata などを検証します。大規模な runtime/session 回帰は、共有する状態遷移や不変条件を保つため単一ファイルに集約されています。
 
 ## Read this when
-- テスト全体の責務分布を把握したいとき
-- 対象機能に対応するテストファイルを選びたいとき
-- CLI、Codex runtime、indexing、feedback、session/editing run などの回帰検証の入口を探すとき
-- 共有 fixture、外部コマンド fake、Git 操作用 helper の構成を確認したいとき
+- 実装変更が既存の CLI 外部挙動、runtime 契約、Codex 実行、session lifecycle、file classification、feedback、または TUI に与える影響を確認するとき。
+- テスト fixture、fake command、Git repository helper、Codex parameter helper、または Windows toast の副作用隔離を変更するとき。
+- 正本仕様に対応する回帰テストの所在を機能領域から探すとき。
+- 新しい realization implementation の契約を検証するテストを追加・修正するとき。
 
 ## Do not read this when
-- 特定機能の期待仕様そのものを確認したいときは、対応する `oracle/doc` または `oracle/src` を直接読む
-- 既知の個別テストの実装や失敗原因を調べるときは、該当する `test_*.py` を直接読む
-- 本番 CLI の実経路だけを確認したいときは `test_production_cli.py` とその helper を直接読む
+- 製品実装の仕様や正本の意図そのものを確認したい場合は、対応する `oracle/doc` または `oracle/src` を先に読む。
+- 特定の機能の詳細なテスト内容を確認する場合は、`test/` 全体ではなく該当する `test_*.py` と必要な共有 helper を直接読む。
+- pytest の一般的な実行方法だけを確認したい場合は、個別テスト本文を読む必要はない。
 
 ## hash
-- 25acdbde1017767fd3363ed92ae016068f2551a8a849362b425d2b55b7509d41
+- 3afeaa08db64c8b44d521ab551f05af248741856c42b3dca362101df68f9b8fe

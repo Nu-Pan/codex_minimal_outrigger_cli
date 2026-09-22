@@ -51,20 +51,19 @@
 # `indexing.py`
 
 ## Summary
-- work root の INDEX.md を更新する indexing CLI の実行入口を提供する。
-- 実行前に cmoc 管理対象と clean worktree を確認し、排他ロック下で INDEX.md を更新・差分 commit し、結果を primary report に反映する。
+- `cmoc indexing` CLI の実行入口と本体を提供し、対象 work root の INDEX.md を更新して必要な差分を commit する。実行前に cmoc の ignore 設定と clean worktree を検査し、ロック、進捗・結果報告、割り込みや失敗状態の記録まで統括する。
 
 ## Read this when
-- `cmoc indexing` の CLI 入口、実行前提条件、または indexing 処理全体の実行フローを確認するとき
-- INDEX.md の更新、更新差分の commit、または indexing 実行結果の報告処理の呼び出し元を確認するとき
+- INDEX.md の自動更新・commit を行う indexing サブコマンドの実行条件、処理順序、失敗時状態、結果報告を確認したいとき
+- `cmoc indexing` の CLI 入口や、インデックス更新処理をどの runtime API 経由で呼び出すかを変更・調査するとき
 
 ## Do not read this when
-- INDEX.md の具体的な更新規則や探索・生成ロジックを確認したいときは、indexing 共通処理の対象を直接読む
-- CLI 共通の実行制御や step 管理の仕様だけを確認したいときは、CLI runtime 共通処理の対象を直接読む
-- worktree の clean 判定や cmoc 管理対象の検査実装だけを確認したいときは、対応する runtime 検査処理を直接読む
+- INDEX.md の個別内容の生成規則やファイル探索・更新アルゴリズムそのものを確認したいときは、`commons.indexing` の実装を直接読むべき場合
+- clean worktree 検査や cmoc ignore 判定の共通仕様だけを確認したいときは、runtime 側の precondition 実装を直接読むべき場合
+- indexing 以外の CLI サブコマンドの挙動を調べるとき
 
 ## hash
-- 1b5fb1518b06f7acdfb54acdb2e8ab410c4772fa381bae42ed1af943e6209ce0
+- 273cd0aecd7905c02ed812dd0c3aba37321fc748312192759e24f211db0c7dc3
 
 # `oracle`
 
