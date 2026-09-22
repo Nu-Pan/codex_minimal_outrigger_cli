@@ -55,6 +55,7 @@ def execution_record_markdown(
     events = (*saved_events, *(logger.event_records() if logger else ()))
     calls = (event for event in events if event.get("event") == "codex_call")
     seen: set[str] = set()
+    rendered_output = False
     for call in calls:
         value = call.get("output_path")
         if not isinstance(value, str) or value in seen:
@@ -67,10 +68,18 @@ def execution_record_markdown(
         fence = "`" * max(
             3, 1 + max((len(run) for run in re.findall(r"`+", content)), default=0)
         )
+        rendered_output = True
         lines.extend(
-            [f"出力: {path}", "", fence + "text", content.rstrip("\n"), fence, ""]
+            [
+                f"出力: `{_inline_text(path)}`",
+                "",
+                fence + "text",
+                content.rstrip("\n"),
+                fence,
+                "",
+            ]
         )
-    if not seen:
+    if not rendered_output:
         lines.extend(["取得済みの最終出力はありません。", ""])
     lines.extend(["### 新規 feedback observation", ""])
     observations = [
@@ -406,7 +415,7 @@ def _feedback_cleanup_status(
 
 def _log_lines(logger: SubcommandLogger) -> list[str]:
     """診断用 subcommand log と実行済み Codex call log を列挙する。"""
-    lines = [f"- 診断用サブコマンドログ: `{logger.path.resolve(strict=False)}`"]
+    lines = [f"- 診断用サブコマンドログ: `{_inline_text(logger.path)}`"]
     for event in logger.codex_call_records():
         call_path = event.get("call_log_path")
         if not isinstance(call_path, str):
@@ -414,7 +423,7 @@ def _log_lines(logger: SubcommandLogger) -> list[str]:
         purpose = _inline_text(event.get("purpose", "Codex call"))
         status = _inline_text(event.get("status", "unknown"))
         lines.append(
-            f"- Codex call ({purpose}, {status}): `{Path(call_path).resolve(strict=False)}`"
+            f"- Codex call ({purpose}, {status}): `{_inline_text(Path(call_path))}`"
         )
     return lines
 

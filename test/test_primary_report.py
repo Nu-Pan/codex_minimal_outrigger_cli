@@ -335,6 +335,71 @@ def test_primary_report_keeps_every_codex_output_and_accepted_observation(
     assert "different workload" in report
 
 
+def test_primary_report_explains_when_codex_output_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """最終出力 artifact が無い失敗でも、未取得状態を report に残す。"""
+    from commons.runtime_logging import current_subcommand_logger
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+
+    def body() -> TerminalResult:
+        logger = current_subcommand_logger()
+        assert logger is not None
+        logger.event(
+            "codex_call",
+            output_path=str(root / "missing-output.txt"),
+            status="failed",
+        )
+        return TerminalResult()
+
+    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
+
+    report = terminal_primary_report(capsys.readouterr().out).read_text()
+    assert "### Codex 最終出力" in report
+    assert "取得済みの最終出力はありません。" in report
+
+
+def test_primary_report_delimits_and_escapes_artifact_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Codex artifact path の Markdown delimiter を壊さずに report へ載せる。"""
+    from commons.runtime_logging import current_subcommand_logger
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+    output_path = root / "output`file.txt"
+    call_log_path = root / "call`file.json"
+
+    def body() -> TerminalResult:
+        logger = current_subcommand_logger()
+        assert logger is not None
+        output_path.write_text("final output\n")
+        logger.event(
+            "codex_call",
+            output_path=str(output_path),
+            call_log_path=str(call_log_path),
+            purpose="unsafe path",
+            status="succeeded",
+        )
+        return TerminalResult()
+
+    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
+
+    report = terminal_primary_report(capsys.readouterr().out).read_text()
+    expected_output = str(output_path.resolve()).replace("`", "'")
+    expected_call_log = str(call_log_path.resolve()).replace("`", "'")
+    assert f"出力: `{expected_output}`" in report
+    assert f"Codex call (unsafe path, succeeded): `{expected_call_log}`" in report
+
+
 def test_refactor_fallback_records_user_interruption_reason(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

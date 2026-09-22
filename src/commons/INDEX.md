@@ -513,16 +513,25 @@
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済みの runtime 情報と terminal 分類から、サブコマンド別の fallback primary report 本文・実行記録・状態要約を描画する。feedback invocation、refactor fork、session join 固有の report 形式と共通の warning・終端結果・関連ログ表示を扱う。
+- 確定済みの runtime 情報、終端分類、実行結果、ログから primary report の Markdown を構築する共通レンダラー。
+- 通常 invocation、feedback report invocation、refactor fork、session join それぞれの report 本文を選択し、実行段階・終端結果・warning/error・次の操作・関連ログを出力する。
+- Codex 最終出力、新規 feedback observation、publication や cleanup、agent call の状態など、実行記録と状態表示に必要な補助情報もこのファイルで整形する。
+- YAML scalar や Markdown の一行値、未確定値、operation 状態を安全な report 表示へ変換する低レベル整形処理を担う。
 
 ## Read this when
-- fallback primary report の構成、サブコマンド別 template の描画、Codex call や feedback observation の実行記録、または report 上の実行状態表示を確認・変更するとき。
+- primary report の出力形式、template ごとの本文構成、実行段階や終端結果の表示内容を変更・確認するとき
+- feedback publication と invocation summary の状態表示を確認するとき
+- session join や refactor fork 固有の report 項目、Codex call・observation の実行記録表示を調べるとき
+- report に埋め込む値の YAML・Markdown 安全化や未確定状態の表現を確認するとき
 
 ## Do not read this when
-- primary report の仕様や記載項目の根拠を確認するときは、参照される app specification を直接読む。runtime 情報の収集・event 記録・terminal result の生成を調べるときは、それぞれの store、logger、result 実装を直接読む。
+- report の入力となる PrimaryReportSpec、TerminalResult、TerminalClassification の定義や判定ロジックを調べるときは、それぞれの定義元を直接読む
+- report を生成する呼び出し元、サブコマンドの実行制御、ログの記録方法を調べるときは、該当する実行・ロギング実装を直接読む
+- oracle 仕様そのものや report の正本要件を確認するときは、参照されている oracle 文書を読む
+- primary report 以外のファイル出力や一般的な Markdown ユーティリティの責務を調べるときは、該当する別実装を読む
 
 ## hash
-- 921e40d8504b1db6e56f552bee4d4c69a5d4cc8be2f7d3c845d794ad7badbf81
+- 7d131ac1b99f5112256ca07fc0640265763158f35ac6829feabfd292bb5e04c5
 
 # `runtime_primary_report_specs.py`
 
