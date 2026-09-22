@@ -9,7 +9,7 @@ from basic.acp import AgentCallParameter, FileAccessMode
 
 
 class FakeCodexResult:
-    """INDEX entry test 用の最小 Structured Codex result double。"""
+    """Structured Codex result を置き換える最小の共有 test double。"""
 
     def __init__(self, output_json: object | None = None) -> None:
         """structured outputの検証対象を初期化する。"""

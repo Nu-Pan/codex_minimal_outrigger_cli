@@ -150,20 +150,21 @@
 # `test`
 
 ## Summary
-- `test` は cmoc の実装に対する回帰検証群で、公開 CLI、セッション・編集実行、Codex runtime、ACP builder、indexing、feedback、prompt、設定・パッケージ公開面などの挙動を横断的に検証する。
-- 各 `test_*.py` は機能領域ごとの具体的な契約・異常系・外部プロセス連携を検証し、`_*.py` はテスト用の Codex、CLI、Git、handoff などの共有 fixture／補助処理を提供する。
-- このディレクトリは、oracle の正本仕様に対する realization の適合性や、実装変更による CLI・runtime・builder 周辺の回帰を確認するための検証入口である。
+- cmoc の CLI、ランタイム、Codex 実行、設定、セッション・編集フローを検証する pytest テスト群。
+- oracle/realization の分類・同期・refactor、INDEX 生成と preflight、構造化出力やプロンプト構築を検証するテスト群。
+- feedback MCP、観測の収集・正規化・永続化・再試行・復旧、およびレポート生成を検証するテスト群。
+- ファイルアクセス、Git ignore、プロセス停止、エディタ入力 handoff、パッケージ化レイアウトなどの境界条件・安全性を検証するテスト群。
+- conftest.py と各 _support.py は、テスト用 fixture、CLI 実行、Git、Codex、ACP builder、handoff の共通補助を提供する。
 
 ## Read this when
-- CLI コマンド構成、help、completion、doctor、indexing、oracle 操作、session、feedback、TUI の公開挙動を確認したいとき。
-- Codex subprocess の argv・環境・権限・quota retry・session resume・ログ・エラー処理を確認したいとき。
-- ACP builder と prompt、structured output、editor input handoff、oracle／realization の編集実行パラメータが正本と一致するか確認したいとき。
-- 設定、Git ignore、ファイルアクセス、runtime state、packaged import、構造化文書 rendering などの横断的な回帰を検証したいとき。
+- テスト追加・変更時に、対象機能の既存回帰テスト群を探すとき
+- CLI、ランタイム、indexing、feedback、refactor、handoff の挙動を検証したいとき
+- 境界条件や異常系を含む cmoc の統合的な検証範囲を把握したいとき
 
 ## Do not read this when
-- 実装の具体的な責務や処理手順を知りたいだけなら、対応する `src` 配下を直接読む。
-- 要求・制約・CLI仕様の正本を確認したい場合は、対応する `oracle` 配下の仕様を直接読む。
-- 特定機能の検証内容だけを確認したい場合は、このディレクトリ全体ではなく該当する `test_*.py` と共有補助ファイルだけを読む。
+- 実装の具体的な挙動や仕様の正本を確認したいときは src または oracle を直接読むとき
+- 特定の機能の詳細な期待値・fixture・アサーションを確認したいときは該当する test_*.py を直接読むとき
+- テスト実行方法や共通 fixture の詳細だけを確認したいときは conftest.py または該当する _support.py を直接読むとき
 
 ## hash
-- 9c7d09ce1e1d12452d653777e4d02fd0ad944b8364a5062d948aa2367ad3f0a2
+- e8278e726c02602267a971a434068f6b4cbccf61abae449c6aaab632ba0ac92e

@@ -33,19 +33,16 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex 実行ラッパーのテストで使う共通ヘルパーを提供する。
-- 一時的な Codex 環境、最小の結果 double、AgentCallParameter、CLI 引数の検査、Codex override の stub を扱う。
+- Codex 実行関連テストで共有する test double、環境変数付きの一時 Codex 環境、既定パラメータ生成、CLI 引数・設定値の解析、Codex override の stub を提供するテスト支援モジュール。
 
 ## Read this when
-- Codex 実行ラッパーのテストで、認証に依存しない一時環境や固定された CLI override を準備するとき。
-- AgentCallParameter の最小値、Codex 結果の検証対象、または `--config` を含む CLI 引数をテスト用に解析するとき。
+- 複数の Codex runtime・CLI・indexing テストで共通するセットアップ、引数検証、結果 double、または subprocess 用 override を確認・変更するとき。
 
 ## Do not read this when
-- Codex 実行ラッパーのテスト支援を必要とせず、対象機能の実装や別のテスト fixture を直接確認するとき。
-- Codex CLI の実運用設定や本番の認証環境を確認するとき。
+- 個別テストの業務ロジック、検証対象の CLI 挙動、または本番実装そのものを確認したいときは、利用元のテストや対応する src ファイルを直接読む。
 
 ## hash
-- 1e5c23abd029819daf4c209ad023bd8ba2f6dc15a2284dd47b6b863c2e296c74
+- 143fb59f7aea70bdf2acb90fdf4cd24e8d1b4f0481ef54983bbfe88dce60d482
 
 # `_command_support.py`
 
