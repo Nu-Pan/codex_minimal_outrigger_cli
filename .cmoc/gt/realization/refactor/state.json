@@ -402,10 +402,10 @@
     "last_investigated_at": "2026-09-22_08-50_51_023945000"
   },
   "oracle/src/oracle/editor_input_handoff/get_handoff_guide_input.json": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "ba99ecf430882cf3dcd443d0fa70e892ac1b45f060980faf7f53381f4104bc72",
+    "last_investigated_at": "2026-09-22_09-07_15_670196000"
   },
   "oracle/src/oracle/editor_input_handoff/get_handoff_guide_result.json": {
     "investigation_required": true,
