@@ -115,7 +115,10 @@ def _cmoc_session_fork_body() -> TerminalResult:
             # この invocation で作成できた branch だけを削除する。
             if branch_created:
                 try:
-                    run_git(["switch", branch], work)
+                    # {{work-root}}/oracle/doc/branch_model.md
+                    # home branch は local branch なので、元の ref が競合中に消えても
+                    # 同名 remote-tracking branch を rollback 先として推測しない。
+                    run_git(["switch", "--no-guess", branch], work)
                 except BaseException as rollback_error:
                     rollback_errors.append(
                         f"home branch rollback failed: {rollback_error!r}"

@@ -118,19 +118,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめる入口で、doctor・indexing・tui と、oracle／realization／run／session／feedback の各サブコマンド群へ進むための上位ディレクトリ。
-- oracle は正本仕様の調査・編集、realization は realization 操作、run は managed run の join・abandon・lifecycle・report、session は session branch の fork・join・abandon を担当する。
-- feedback は観測報告の生成、判定根拠、逐次 remediation、publication 後の recovery を分担する。
+- cmoc の CLI サブコマンド実装を集約するディレクトリ。doctor・indexing・tui の単体コマンド入口に加え、oracle、realization、feedback、run、session などのサブコマンド群を配下のパッケージで管理する。
+- oracle は oracle の編集・調査、realization は apply と refactor の workload、feedback は observation の判定・修復・report、run は editing run の join・abandon・report・共通 lifecycle、session は fork・join・abandon を担当する。
+- 個別サブコマンドの挙動や変更箇所を調べる際は、対象コマンド名に対応する配下パッケージまたは直下の実装ファイルへ進む。run 配下には共通処理の旧 import path を保つ shim も含まれる。
 
 ## Read this when
-- CLI サブコマンド全体の構成や、目的別の実装グループを確認したいとき。
-- 特定の操作に対応する実装へ進む前に、oracle・realization・run・session・feedback のどの配下を読むべきか判断するとき。
-- doctor、indexing、tui のトップレベル処理を確認したいとき。
+- cmoc の CLI サブコマンド全体の構成や、コマンド名から実装の入口を特定したいとき
+- doctor・indexing・tui の直下コマンド、または oracle・realization・feedback・run・session 系の処理を確認・変更するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細な状態遷移・検証・エラー処理を確認したい場合は、対応する個別ファイルを直接読む。
-- 共通ランタイム、設定、agent parameter builder、永続化処理の仕様や実装だけを調べる場合は、対応する src 配下の共通モジュールや oracle 文書を直接読む。
-- サブコマンド以外の CLI 起動・登録経路だけを確認したい場合は、上位の CLI エントリーを読む。
+- 特定のサブコマンドの詳細な処理、仕様、テストを確認したいときは、このディレクトリの案内ではなく対応する実装ファイルや関連する正本仕様を直接読むとき
+- サブコマンドに属さない共通 runtime・builder・commons の実装を調べるときは、それぞれの配置先を直接読むとき
 
 ## hash
-- e2312630e36a944c683e299e1cb459e5e1cac749acba4f552f0424ac1ab478ed
+- 0a1ba06c02c2358b7021ba7df3d674cba52d12fe8b00a72cb583e680e2641188

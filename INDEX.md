@@ -125,42 +125,43 @@
 # `src`
 
 ## Summary
-- cmoc CLI の実装ルート。Typer/Click のコマンドツリーを `main.py` で定義し、共通 runtime、設定、型・構造化文書の互換公開、サブコマンド処理、Codex 呼び出し用 builder adapter を提供する。
-- `commons` は CLI lifecycle、ログ・レポート、Git/worktree、Codex exec/TUI、設定、状態、feedback、INDEX 更新など複数コマンドが共有する実行基盤を担う。
-- `sub_commands` は doctor、TUI、indexing、oracle、realization、session、run など利用者向け CLI 操作を責務ごとに実装する。
-- `acp` は oracle 側の ACP builder を realization 側の既存 import 経路へ接続する adapter 群で、builder ごとの parameter 構築入口を公開する。
-- `basic` と `config` は ACP 型、path model、構造化文書、設定定義の互換公開・利用入口を提供し、トップレベルの runtime module は共通 runtime API の後方互換 import を維持する。
+- cmoc の CLI エントリーポイントと Typer/Click 互換境界を定義する。
+- 共通 runtime、設定、パス・ACP 型、ログ・実行状態・エラー処理など、各サブコマンドが利用する基盤機能を提供する。
+- INDEX.md の検査・生成・更新・commit lifecycle を実装する。
+- session、oracle、realization、run、feedback、doctor、TUI などの CLI サブコマンド実装を提供する。
+- oracle 側の正本モジュールを既存の import path から参照するための basic、acp、config 互換アダプターを含む。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンドの実装入口、またはコマンド横断の runtime lifecycle を変更・調査するとき。
-- Codex exec/TUI の起動、worktree・session・run 管理、ログ・primary report・feedback・INDEX 更新の連携を追うとき。
-- 既存の `basic.*`、`config.*`、`acp.builder.*` import 経路や oracle 実装との adapter 境界を確認するとき。
+- cmoc の CLI コマンド構成、起動処理、引数解析エラーの扱いを確認したいとき
+- runtime の共通処理、設定、実行状態、ログ、エラー報告の責務を確認したいとき
+- INDEX.md の生成・検査・commit 処理の流れを確認したいとき
+- session、oracle、realization、run、feedback などのサブコマンドの入口を確認したいとき
+- 既存の basic、acp、config import path がどの正本実装へ委譲されるか確認したいとき
 
 ## Do not read this when
-- INDEX.md の生成ロジックだけを調べる場合は `commons/indexing.py` と `sub_commands/indexing.py` を直接読むとき。
-- 特定の CLI 操作だけを調べる場合は `sub_commands` 配下の該当実装と対応する builder を直接読むとき。
-- 正本仕様や oracle 実装そのものを確認する場合は `oracle` 配下を直接読むとき。
+- 特定サブコマンドの詳細実装だけを確認したい場合は、該当する src/sub_commands または src/acp/builder 配下へ直接進むとき
+- 正本仕様や oracle 実装そのものを確認したいとき
+- テストの期待動作や回帰条件を確認したいとき
+- INDEX.md の既存エントリー内容だけを確認したいとき
 
 ## hash
-- 1025651b28235ddb0ebdf4200b5bc82b2e87c3a581dbea9bd95b52dbc8aa4a94
+- 17f3de6ead6d01b161c6196e77f3416b4dbd7a96328dd8561f3e6e7345d42025
 
 # `test`
 
 ## Summary
-- `test/` は、CLI・runtime・Codex連携・ACP builder・session state・feedback・file access・Windows toast など、cmoc の実装契約と正本仕様への適合を pytest で検証する realization test 群です。
-- `_git_support.py`、`_codex_support.py`、`_cli_support.py` などの共有 helper と `conftest.py` の fixture が、隔離された Git repository、Codex 環境、CLI 実行、Windows toast transport を各テストへ提供します。
-- テストは機能領域ごとに分割され、公開 CLI の外部挙動、runtime の状態・設定・path・subprocess 処理、prompt/editor handoff、feedback、構造化文書 renderer、repository local skill metadata などを検証します。大規模な runtime/session 回帰は、共有する状態遷移や不変条件を保つため単一ファイルに集約されています。
+- プロジェクトの実装・CLI・Codex実行基盤・セッション管理・設定・状態・Git境界・フィードバック・構造化文書・通知などを対象とするpytestテスト群と、共通fixture／テスト支援モジュールの入口。
+- 個別機能の挙動、異常系、境界条件、並行実行、ファイルアクセス制約、サブプロセス制御、CLI出力およびoracleとの互換性を検証する。
 
 ## Read this when
-- 実装変更が既存の CLI 外部挙動、runtime 契約、Codex 実行、session lifecycle、file classification、feedback、または TUI に与える影響を確認するとき。
-- テスト fixture、fake command、Git repository helper、Codex parameter helper、または Windows toast の副作用隔離を変更するとき。
-- 正本仕様に対応する回帰テストの所在を機能領域から探すとき。
-- 新しい realization implementation の契約を検証するテストを追加・修正するとき。
+- 実装変更が既存のテスト契約や回帰検出範囲に影響するか確認したいとき
+- 複数の機能領域にまたがるテストの配置や共通fixture・支援コードを把握したいとき
+- 新しいテストを追加する前に、対象機能に対応する既存テスト群を探すとき
 
 ## Do not read this when
-- 製品実装の仕様や正本の意図そのものを確認したい場合は、対応する `oracle/doc` または `oracle/src` を先に読む。
-- 特定の機能の詳細なテスト内容を確認する場合は、`test/` 全体ではなく該当する `test_*.py` と必要な共有 helper を直接読む。
-- pytest の一般的な実行方法だけを確認したい場合は、個別テスト本文を読む必要はない。
+- 単一機能の実装詳細を確認したいときは、対応するsrc配下またはoracle配下を直接読むべきとき
+- 特定の失敗原因やケースの期待値を調べるときは、該当するtest_*.pyを直接読むべきとき
+- テスト実行方法や環境設定だけを確認したいときは、プロジェクトの設定・支援ファイルを直接読むべきとき
 
 ## hash
-- 3afeaa08db64c8b44d521ab551f05af248741856c42b3dca362101df68f9b8fe
+- 63c019543e9643ddb1fca7b8f6320edb981fd66d6322d9087fac44ba205304bc

@@ -238,6 +238,74 @@ def test_session_fork_rolls_back_when_state_save_fails(
     assert "session_state_file_exists: False" in result.stderr
 
 
+def test_session_fork_rollback_does_not_guess_remote_home_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """rollback が消えた local home branch を remote から推測しない。
+
+    根拠:
+    - {{work-root}}/oracle/doc/branch_model.md
+    - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    home_branch = current_branch(root)
+    home_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "--bare", str(remote)],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    run_git(root, "remote", "add", "origin", str(remote))
+    run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
+    run_git(root, "config", "checkout.defaultRemote", "origin")
+
+    session_id = "2026-06-27_01-02_03_000000000"
+    session_branch = f"cmoc/session/{session_id}"
+    monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
+
+    def fail_write_state(_path: Path, _state: cmoc_runtime.SessionState) -> None:
+        """rollback 中の remote branch 推測を再現するため local ref を消す。"""
+        run_git(root, "branch", "-D", home_branch)
+        raise OSError("state write failed")
+
+    monkeypatch.setattr(session_fork_module, "write_state", fail_write_state)
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == session_branch
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/heads/{home_branch}"],
+            root,
+            check=False,
+        ).returncode
+        != 0
+    )
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/remotes/origin/{home_branch}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/heads/{session_branch}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
+    assert not session_state_path(root, session_branch).exists()
+    assert "session fork の作成に失敗しました。" in result.stderr
+
+
 def test_session_fork_does_not_delete_branch_from_id_collision_race(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
