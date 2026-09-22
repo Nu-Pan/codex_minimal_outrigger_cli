@@ -827,6 +827,11 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     status_before = run_git(root, "status", "--short").stdout
     calls_before = _codex_call_logs(root)
+    report_root = root / ".cmoc" / "gu" / "report"
+    report_snapshot_before = {
+        path: path.read_bytes() if path.is_file() else None
+        for path in report_root.rglob("*")
+    }
 
     # Codex の実 hook から通知 transport まで到達することを、OS 通知だけ隔離して確認する。
     toast_path = tmp_path / "toast.jsonl"
@@ -881,6 +886,15 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         target.close()
     assert response.strip()
     assert "Shutting down" in transcript
+    report_snapshot_after = {
+        path: path.read_bytes() if path.is_file() else None
+        for path in report_root.rglob("*")
+    }
+    assert report_snapshot_after == report_snapshot_before
+    assert not any(
+        f"# {heading}: cmoc {' '.join(command)}" in transcript
+        for heading in ("完了", "中断完了", "失敗")
+    )
     new_calls = _codex_call_logs(root) - calls_before
     tui_calls = {path for path in new_calls if _is_tui_call_log(path)}
     exec_calls = new_calls - tui_calls

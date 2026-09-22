@@ -667,22 +667,20 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実際の cmoc console script と実 Codex CLI を独立 process で起動し、非対話・TUI を含む全末端サブコマンドの本番経路を受け入れ検証する統合テスト。
-- CLI の終了コード、外部から観測できる report・state・Git・Codex call log、実推論後の状態遷移、PTY 上の応答完了と終了操作を確認する。
-- 共通の隔離環境・fixture・call log 検証・PTY 制御を一体で扱い、CLI 登録済み末端コマンドと検証シナリオの追加漏れも検出する。
+- 利用者向け `cmoc` console script を独立 process で起動し、非対話の全末端サブコマンドと PTY 上の TUI 末端を、実 Codex CLI・実推論・隔離環境で検証する受け入れテスト。終了コード、call log、report、session/run state、Git 状態、INDEX 更新、PTY 応答完了と終了処理まで確認する。
 
 ## Read this when
-- production CLI の全末端サブコマンドが独立 process と実 Codex 経由で期待どおり完了するか確認するとき。
-- CLI の終了コード、agent call の直接設定、feedback/editor MCP 設定、永続 state・Git・call log の更新を調べるとき。
-- TUI の PTY 起動、端末 capability query、応答完了、入力消去・終了操作の本番経路を検証するとき。
+- CLI の末端サブコマンド追加・変更が本番相当の独立プロセス経路、実 Codex 呼び出し、状態遷移、Git・report・INDEX の外部結果に与える影響を確認したいとき。
+- TUI の PTY 起動、端末 capability query、信頼確認、実 Codex 応答完了、終了操作の統合挙動を調査したいとき。
+- Codex 呼び出し設定、prompt の引き渡し、call log、feedback remediation の本番経路を検証したいとき。
 
 ## Do not read this when
-- 単一の CLI 関数や Click command の内部ロジックだけを調べるときは、対応する src 側実装やより限定的なテストを読む。
-- LLM の回答品質そのもの、個別 agent call の意味判断、または Codex CLI 自体の単体挙動だけを調べるとき。
-- production path ではない fixture 構築、低レベルの Git helper、runtime store など単独部品の仕様を確認するときは、直接その実装・専用テストへ進む。
+- 個別サブコマンドの単体ロジックや内部関数だけを確認したいときは、対応する実装テストや仕様を直接読む。
+- LLM の回答品質や prompt 内容そのものの妥当性を評価したいときは、このテストでは判定対象外のため、該当する仕様・専用テストを読む。
+- 実 Codex CLI や PTY を使わない高速な正常系・異常系の検証だけが必要なときは、この本番経路受け入れテストを起点にしない。
 
 ## hash
-- 9c964c31f1ee11448bf999e71cad242aed7aa106bf859caf01be47093ef711c0
+- 35c274f4d232487f24897917497b2a7868e406577f81f03d1c9b43fd177cc5e7
 
 # `test_production_cli_support.py`
 

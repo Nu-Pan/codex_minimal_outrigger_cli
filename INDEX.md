@@ -150,21 +150,18 @@
 # `test`
 
 ## Summary
-- cmoc の CLI、ランタイム、Codex 実行、設定、セッション・編集フローを検証する pytest テスト群。
-- oracle/realization の分類・同期・refactor、INDEX 生成と preflight、構造化出力やプロンプト構築を検証するテスト群。
-- feedback MCP、観測の収集・正規化・永続化・再試行・復旧、およびレポート生成を検証するテスト群。
-- ファイルアクセス、Git ignore、プロセス停止、エディタ入力 handoff、パッケージ化レイアウトなどの境界条件・安全性を検証するテスト群。
-- conftest.py と各 _support.py は、テスト用 fixture、CLI 実行、Git、Codex、ACP builder、handoff の共通補助を提供する。
+- pytest による realization test 群を収録し、CLI lifecycle、Codex 実行、indexing、session/run state、feedback、prompt、editor handoff、設定・path・Git 境界などの外部契約と回帰を検証する。
+- 共通 fixture・fake executable・Git repository helper・Codex stub は補助モジュールに集約され、各テストファイルは機能領域ごとの単体・統合・本番経路検証を担う。
 
 ## Read this when
-- テスト追加・変更時に、対象機能の既存回帰テスト群を探すとき
-- CLI、ランタイム、indexing、feedback、refactor、handoff の挙動を検証したいとき
-- 境界条件や異常系を含む cmoc の統合的な検証範囲を把握したいとき
+- 実装変更が対応する CLI、runtime、Codex 呼び出し、状態遷移、prompt builder、index 更新、feedback、ファイル列挙などの回帰影響を確認するとき。
+- 仕様変更に対して、どの外部挙動・エラー境界・永続化結果をテストすべきか調べるとき。
+- 本番経路や実 Codex CLI を含む受け入れ検証が必要なときは test_production_cli.py を起点に確認するとき。
 
 ## Do not read this when
-- 実装の具体的な挙動や仕様の正本を確認したいときは src または oracle を直接読むとき
-- 特定の機能の詳細な期待値・fixture・アサーションを確認したいときは該当する test_*.py を直接読むとき
-- テスト実行方法や共通 fixture の詳細だけを確認したいときは conftest.py または該当する _support.py を直接読むとき
+- 正本仕様の意味や要求を確認したいときは oracle/doc または oracle/src を直接読む。
+- 単一機能の詳細な期待値を確認したいときは、該当する test_*.py とその共通 helper を直接読む。
+- INDEX エントリーの生成・解析ロジック自体を調べたいときは、テスト群ではなく src の indexing 実装と対応する正本を読む。
 
 ## hash
-- e8278e726c02602267a971a434068f6b4cbccf61abae449c6aaab632ba0ac92e
+- 3d29ffdccddac18093a4e8ba619b2f2a8d73d44526040c365bd026a52d838755
