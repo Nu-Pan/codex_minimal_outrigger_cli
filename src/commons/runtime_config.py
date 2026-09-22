@@ -3,7 +3,7 @@
 import json
 import math
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from oracle.other.cmoc_config import (
     CodexCallConfig,
@@ -18,6 +18,11 @@ from config.cmoc_config import (
 
 from .runtime_errors import CmocError
 from .runtime_paths import config_path
+
+
+def _reject_non_json_constant(value: str) -> NoReturn:
+    """JSON 仕様外の非有限数リテラルを設定 JSON から拒否する。"""
+    raise ValueError(f"non-standard JSON constant: {value}")
 
 
 def _model_name(value: Any) -> str:
@@ -316,8 +321,11 @@ def load_config(root: Path) -> CmocConfig:
             str(path),
         )
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
+        data = json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=_reject_non_json_constant,
+        )
+    except (OSError, UnicodeError, ValueError, RecursionError) as exc:
         raise CmocError(
             "cmoc config JSON を読み込めません。",
             ["{{work-root}}/.cmoc/gt/config.json の JSON 構文を確認してください。"],

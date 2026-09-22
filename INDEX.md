@@ -125,44 +125,45 @@
 # `src`
 
 ## Summary
-- cmoc の実行時実装を集約するディレクトリ。CLI のコマンドツリーと起動境界、サブコマンド本体、共通 runtime のライフサイクル・エラー・ログ・Git・設定・フィードバック処理、ACP builder、互換 import path を扱う。
-- main.py が Typer/Click の CLI 入口と互換処理を定義し、sub_commands が各コマンドの入口、commons が横断的な実行基盤、acp/builder が Codex 実行を伴う生成・編集・調査処理を担うため、実行時の責務分担を確認する際の入口となる。
-- INDEX.md の検査・生成・commit lifecycle は commons/indexing.py にまとまり、sub_commands/indexing.py がその処理を work root と CLI の実行ライフサイクルへ接続する。
+- cmoc CLI の実装ルート。`main.py` が Typer/Click のコマンドツリーと起動時互換処理を定義し、各サブコマンドを `sub_commands` 配下へ委譲する。
+- `commons` は CLI 実行、Codex subprocess、Git、設定、状態、ログ、レポート、フィードバック、パスなど複数コマンドで共有する runtime 基盤を提供する。
+- `sub_commands` は doctor、indexing、session、oracle、realization、run、feedback、TUI などの利用者向け操作単位を実装する。
+- `acp/builder` は oracle 側の ACP builder を realization から利用するための実装・委譲層を構成する。
+- `basic` と `config` は oracle 側で定義された ACP 型・設定型や構造化文書機能を再公開し、正本定義の複製を避ける互換層として機能する。
+- `oracle.py` は src 起動時に `oracle/src/oracle` を解決する package shim であり、正本側 oracle package への参照を成立させる。
 
 ## Read this when
-- CLI コマンドの登録、引数解釈、Typer/Click 互換処理、または cmoc の起動入口を確認したいとき
-- サブコマンドの実行順序、doctor preprocess、ログ、feedback、primary report、終了結果、エラー処理を追いたいとき
-- INDEX.md の生成・検査・ハッシュ検証・更新・commit の実装を確認したいとき
-- Codex exec を使う oracle、realization、session、TUI、feedback builder の実行経路を確認したいとき
-- 設定、パス、Git、Codex subprocess、Windows 通知などの共通 runtime API の責務を調べたいとき
+- CLI コマンドの追加・変更、Typer/Click の引数解析、起動時エラー処理を調べるときは `main.py` から確認する。
+- 複数のコマンドにまたがる Codex 起動、Git 操作、実行状態、ログ、レポート、設定、フィードバック処理の挙動を調べるときは `commons` から確認する。
+- 利用者向けの session、oracle、realization、run、feedback、doctor、indexing 操作の具体的な処理を変更・調査するときは `sub_commands` の該当階層へ進む。
+- ACP builder の呼び出し境界や正本側 builder の再公開経路を調べるときは `acp/builder` を確認する。
+- oracle 側の型・設定・構造化文書を realization から参照する互換経路を確認するときは `basic`、`config`、`oracle.py` を確認する。
 
 ## Do not read this when
-- 正本仕様や人間の意図を確認したいときは oracle 配下を直接読む
-- テストケース、fixture、回帰条件を確認したいときは test 配下を直接読む
-- INDEX.md の利用者向けルーティング情報だけが必要なときは INDEX.md を読む
-- 特定コマンドの詳細実装だけが必要で、CLI 全体の登録や共通 runtime の挙動を追う必要がないときは該当する sub_commands または commons のファイルを直接読む
+- 特定のサブコマンドの内部処理だけが対象で、`sub_commands` 配下の該当ファイルへ直接進めるとき。
+- 共有 runtime の単一機能だけが対象で、`commons` 配下の該当モジュールへ直接進めるとき。
+- oracle の正本仕様や正本実装そのものを確認する必要があり、`src` の再公開・委譲層では目的を満たせないとき。
+- CLI の利用方法ではなく、正本側の ACP builder や設定定義の内容を直接確認すべきとき。
 
 ## hash
-- 0a482bd65aeb988ec0687e47247adab67815a03ef5d89737fa311595d4b7956e
+- 4b4dfdfe6c23c880192b9740c4cf8f46667d2c8305fb9642b6a7c341c5d038b1
 
 # `test`
 
 ## Summary
-- cmoc の実装全体を対象にした pytest テストスイートで、CLI コマンド、実行時設定、Codex subprocess/TUI 連携、プロンプト生成、ファイルアクセス、パス・Git worktree 境界を検証する。
-- インデックス生成、oracle 編集・realization 実行、セッション管理、run の fork/join/apply/abandon、エラー復旧とロールバックなど、主要な開発ワークフローの状態遷移を検証する。
-- feedback の MCP 通信、観測の正規化・保存・検証、再発判定、レポート生成、破損・中断時の復旧を検証する。
-- 共通 fixture と補助モジュールはテスト環境の隔離、CLI 実行、Codex 応答、Git 操作、handoff を支え、特定機能の検証へ進むための入口となる。
-- _real_path_integration は実パスを用いた統合検証を分離して扱う。
+- pytest による単体・統合・受け入れテスト群と共有 fixture/helper を収録する検証ディレクトリ。CLI lifecycle、Codex 実行、Git/worktree・session state、indexing、feedback、editor handoff、prompt、設定、ログ、通知などの外部契約を、oracle の仕様・schema を参照しながら検証する。
+- `_real_path_integration` には実際の Codex CLI・独立 process・PTY を用いた実経路統合テストがあり、通常の mock ベーステストとは異なる受け入れ検証の入口となる。
+- `_acp_builder_support.py`、`_codex_support.py`、`_git_support.py` などの共有 helper と `conftest.py` が、schema 参照、fake Codex・Git repository、CLI 実行、通知・handoff の副作用隔離を提供する。
 
 ## Read this when
-- 実装変更が CLI、ランタイム、Codex 連携、インデックス、feedback、セッション処理の既存動作に影響しないか確認したいとき
-- 複数コンポーネントをまたぐ状態遷移、エラー処理、ロールバック、セキュリティ境界の回帰を調べたいとき
-- どの機能領域のテストから読み始めるべきか判断したいとき
+- テストスイート全体の構成、対象機能ごとの回帰テストの所在、または共有 fixture・helper の役割を把握したいとき。
+- CLI、runtime、Codex、Git/worktree、session、indexing、feedback、handoff などの外部挙動を検証・変更し、対応するテストの入口を探すとき。
+- 実際の Codex CLI と独立 process・PTY を使う受け入れ試験を実行・調査するときは、`_real_path_integration` から確認するとき。
 
 ## Do not read this when
-- 正本仕様や要求の根拠を確認したいときは oracle/doc または oracle/test を直接読むべきとき
-- 単一機能の具体的な実装や一つのテストケースの詳細を確認したいときは対応する src または test ファイルへ直接進むべきとき
-- 実パス依存の統合動作だけが目的のときは test/_real_path_integration へ直接進むべきとき
+- 実装の詳細や正本仕様そのものを確認したいときは、対応する `src` または `oracle` のファイルを直接読むとき。
+- 特定機能の個別検証内容が既に分かっている場合は、このディレクトリ全体ではなく対応する `test_*.py` を直接読むとき。
+- Codex 推論を伴わない通常の単体・mock ベーステストだけを扱い、実経路統合テストの仕組みを確認する必要がないときは、`_real_path_integration` を読む必要はない。
 
 ## hash
-- b40d11c85bbf8d620797db79d6d6015d9646c24ff664f3a7984cbb7f9644ac4c
+- a5e0d71af45ea6d173918efe99c0b2f14e080c9c84c6ce9bd975dc404d2618a2

@@ -50,19 +50,23 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 層。CLI サブコマンドの実行 lifecycle、設定・状態・パス管理、Git/worktree 操作、ログ・レポート・feedback、Codex exec/TUI 起動、editor input handoff、INDEX 更新など、複数の実行経路が共有する基盤処理を提供する。
-- 個別サブコマンドの業務処理ではなく、実行境界・永続 state・外部プロセス・成果物記録を横断して扱う共通 API とデータモデルの入口。
+- cmoc の CLI 実行を支える共通 runtime 実装群。サブコマンドのライフサイクル、Codex exec/TUI 起動、設定・パス・Git・ログ・結果・エラー処理を横断的に提供する。
+- セッション、editing run、refactor state の状態管理と join・cleanup・report 保存を扱う。
+- INDEX 更新、doctor 前処理、prompt editor input handoff、feedback、primary report、Windows 通知など、複数の実行経路で共有される補助機能への入口。
 
 ## Read this when
-- 複数の CLI サブコマンドに共通する実行 lifecycle、Codex 呼び出し、Git/worktree 管理、ログ・レポート、feedback、state 永続化の挙動を調べるとき。
-- 共通 runtime API や結果モデルの責務・連携関係を確認したいとき。
+- CLI の共通実行境界やサブコマンド終了処理を調べるとき
+- Codex の起動、Structured Output、TUI、quota/capacity retry、実行ログを調べるとき
+- session/editing run の state 遷移、worktree cleanup、report 保存を調べるとき
+- 設定、パス、Git 操作、feedback、INDEX 更新など横断的な runtime 機能の実装箇所を探すとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務フローや正本仕様を確認したいときは、そのサブコマンドの実装または oracle 文書を直接読んでください。
-- 個別の共通機能の詳細を調べる場合は、このディレクトリ全体ではなく該当する runtime モジュールを直接読んでください。
+- 特定のサブコマンド固有の業務処理を調べるとき
+- oracle 仕様や正本ドキュメントを確認するとき
+- commons 内の特定モジュールの詳細だけで解決できるとき
 
 ## hash
-- d5cce425edadea97b1502f53ea11350e60a2935e8e8fd348b4cc07da4b92d559
+- adc90c174edc424da24cee5db920711ab1df834d9865ccfad58a0a061b6f5f46
 
 # `config`
 
