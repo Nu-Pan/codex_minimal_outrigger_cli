@@ -417,22 +417,19 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- 編集用 run の fork・join・abandon・refactor lifecycle を横断する統合テスト。
-- session state、専用 worktree、変更 path・report、agent 子プロセス停止、index 更新、commit/rollback、異常終了と復旧の挙動を検証する。
-- realization apply/refactor と共通 run lifecycle の境界、oracle・INDEX・realization 変更の許可／拒否、および cleanup・競合解決の回帰検出を担う。
+- editing run の統合テスト群として、apply/refactor の fork・実行・join・abandon にまたがる lifecycle、session state、worktree、Git差分、index更新、process追跡、report生成、失敗時のrollbackとcleanupを検証する。
+- CLI入口を介した正常系・異常系に加え、run state遷移、oracle・realization変更の境界、競合・中断・cleanup失敗時の終端状態までを共通fixtureで確認する。
 
 ## Read this when
-- 編集 run の開始から joinable 化、join、abandon、refactor 完了までの状態遷移や復旧条件を確認するとき
-- agent による禁止変更・commit・遅延書き込み、index refresh、worktree cleanup、report 生成の統合挙動を検証するとき
-- run lifecycle の共通実装と realization apply/refactor CLI の適合性を確認するとき
+- editing run の fork、refactor/apply、join、abandon のライフサイクルやCLI統合挙動を変更・調査するとき。
+- run state、worktree/Git差分、index refresh、Codex process追跡、primary report、rollback・cleanupの回帰を確認するとき。
 
 ## Do not read this when
-- 個別の run lifecycle 実装や CLI コマンドの詳細を直接確認したいとき
-- INDEX 更新機構そのものや Codex 呼び出し実装だけを確認したいとき
-- このファイルが対象としない一般的な session、refactor state、通知仕様を確認したいとき
+- 単一の編集ロジックや共通ユーティリティの実装だけを確認したいとき。
+- editing run のライフサイクル、CLI統合、状態遷移、rollback・cleanupの挙動に関係しないテストを探しているとき。
 
 ## hash
-- 8f6830d455c3b0f27d1ab33841dcbcf111cb239685812ee94869cd9a062e70f1
+- 3c4a3e5964f74258074dfebc1df14ba08268879ab2b5aaced632ca2ed0bbb39b
 
 # `test_editor_input_handoff.py`
 

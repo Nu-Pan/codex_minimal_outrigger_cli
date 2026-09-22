@@ -32,19 +32,19 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の active editing run を検証し、merge、post-join state 同期、report 保存、cleanup までを一続きで確定するライフサイクル入口。
-- join 中の失敗では session の未確定差分を復旧し、run を error state として report するため、merge 後の状態遷移や rollback の不変条件を確認する起点。
+- `cmoc run join` の実行入口として、joinable/error の active editing run を検証し、merge、post-join state 同期、lifecycle report 保存、run 資源 cleanup、terminal result 確定までを一続きで扱う。
+- merge や post-join 処理に失敗した場合は、session の未確定差分を復旧し、run を error state として保存・報告する。cleanup 失敗時も merge 済み成果物を保持し、後続の abandon による再試行へつなげる。
 
 ## Read this when
-- `cmoc run join` の merge 成否、post-join hook、state 同期、cleanup pending/completed の挙動を調べるとき。
-- active run の joinable/error 状態、手動 feedback run の完了、run 資源の cleanup 再試行や失敗時 report を追跡するとき。
+- `cmoc run join` の active run 検証から merge、state 遷移、report、cleanup までの統合ライフサイクルを確認するとき。
+- joinable/error 状態の run、手動 feedback run の完了処理、merge 後の cleanup pending/completed、失敗時 rollback と error report を追跡するとき。
 
 ## Do not read this when
-- join 前の run 作成・編集・差分生成の仕様だけを確認したいときは、該当する run lifecycle または編集処理の対象を直接読む。
-- workload 固有の差分検査や merge 実装の詳細だけを確認したいときは、`runtime_run_join` 側を直接読む。
+- run の作成・通常実行・編集や join 前の差分生成だけを確認したいときは、該当する run lifecycle または編集処理を直接読む。
+- workload 固有の差分検査・merge 実装や cleanup の細部だけを確認したいときは、`runtime_run_join` を直接読む。
 
 ## hash
-- d3005c63ef00c0bd4359e8d9541a9876e69be25190cfd476ed55908980ae2397
+- e855693570b80b1fe82488c2fb73438e2bf219df6eebc3f9b3a2030fc0104073
 
 # `lifecycle.py`
 

@@ -2904,6 +2904,50 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
     assert (root / "README.md").read_text() == "realized\n"
 
 
+def test_run_join_from_run_worktree_tracks_main_doctor_repairs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run 起点の doctor が session 側へ行う修復も join の許可差分に含める。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    gitignore = root / ".gitignore"
+    gitignore.write_text(gitignore.read_text().replace("/.cmoc/gu/\n", ""))
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "create stale cmoc ignore")
+
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.chdir(context.run_worktree)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert "/.cmoc/gu/" in gitignore.read_text()
+
+
+def test_run_join_from_run_worktree_rejects_prior_session_doctor_path_change(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor と同じ path の先行 session 差分を管理差分として隠さない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    gitignore = root / ".gitignore"
+    gitignore.write_text("user session change\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "change cmoc ignore policy")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.chdir(context.run_worktree)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert ".gitignore" in result.output
+    assert _state(state_path)["run"]["state"] == "joinable"
+
+
 def test_run_join_allows_doctor_config_repair(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

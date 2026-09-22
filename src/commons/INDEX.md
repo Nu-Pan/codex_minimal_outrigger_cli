@@ -596,19 +596,17 @@
 # `runtime_run_join.py`
 
 ## Summary
-- editing run の join 処理で、doctor 前処理、session/run worktree の差分検査、run branch の merge、INDEX conflict の解決、post-join 同期、および cleanup を共有する実装。
-- 明示的な join と self-joining workload が共有する検証・merge・失敗時復元・run worktree/branch 削除の入口。
+- editing run の join と cleanup で共有するランタイム処理を担う。join 前の doctor 修復差分の分類、session/run worktree の差分検査、run branch の merge、INDEX 再生成、refactor state 同期、失敗時の復元、merge 済み run の worktree・branch cleanup をまとめて扱う。
 
 ## Read this when
-- editing run の join 失敗、想定外差分、merge conflict、post-join の INDEX/state 同期、または join 済み run の worktree/branch cleanup を調べるとき。
-- run branch を session branch に統合する共通処理や、INDEX.md だけを再生成して conflict を解消する挙動を変更するとき。
+- editing run の join 処理で、想定外差分の検出・force-resolve、merge conflict の扱い、post-join の INDEX/state 同期、または join 後の資源削除を変更・確認するとき。
 
 ## Do not read this when
-- run の開始、通常の workload 実行、または join 前の run 状態解決そのものを調べるとき。
-- run lifecycle のデータ構造・差分分類・state/report の個別仕様だけを確認する場合は、対応する下位 runtime モジュールを直接読むとき。
+- session join コマンド固有の入力処理や conflict 解決の入口を確認したいときは、まず該当する subcommand 実装を読むべき。
+- doctor、git 操作、state、lifecycle report など個別共通機能そのものの仕様や実装を確認したいときは、それぞれの runtime モジュールを直接読むべき。
 
 ## hash
-- 725fef246fa19969636930118d93ee6c13dcc1100e1c64f92215e1281a3cbd92
+- 46506c97e11174a974708f743af245fcb53f4671b5c59fa683b7a3aba38d237e
 
 # `runtime_run_lifecycle.py`
 

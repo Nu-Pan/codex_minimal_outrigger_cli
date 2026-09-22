@@ -50,23 +50,21 @@
 # `commons`
 
 ## Summary
-- cmoc の複数コマンドで共有する runtime 実装を集約するディレクトリです。
-- CLI 実行の開始・終了、Codex exec/TUI の起動境界、設定・パス・Git・プロセス管理、session/editing run の state と lifecycle、ログ・report・feedback、エディタ入力、INDEX 更新を担当します。
-- 個別コマンド固有の処理ではなく、複数の実行経路が共有する状態・結果モデルと副作用制御を確認するための共通層です。
+- cmoc の CLI 実行基盤を構成する共通 runtime 実装群。Codex の exec/TUI 呼び出し、設定・パス・Git 操作、ログ・結果・primary report、feedback、state、editing run lifecycle、editor input handoff、INDEX 更新、doctor/refactor 処理を横断的に提供する。
+- 個別サブコマンドの機能実装ではなく、複数の実行経路が共有する状態管理・プロセス境界・永続化・終了処理を確認するための共通層。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる実行 lifecycle、エラー終端、ログ、report、feedback の挙動を調べるとき。
-- Codex subprocess の argv・環境・schema・quota/retry・TUI 起動や、その前後の preflight を変更するとき。
-- session/editing run の state、worktree、process cleanup、join・commit・INDEX 更新の共通処理を確認するとき。
-- 設定、Git、パス、ファイル内容、共有結果モデルなどの runtime 基盤の実装箇所を特定するとき。
+- CLI の実行 lifecycle、Codex 呼び出し、共有 runtime state、ログ/report、feedback、editing run、INDEX 更新の共通挙動を調べるとき
+- 複数サブコマンドにまたがるエラー処理、設定、パス解決、Git/worktree、プロセス cleanup の入口を特定するとき
+- 共通 runtime API がどの module に分担されているかを把握してから個別実装を追うとき
 
 ## Do not read this when
-- 特定サブコマンドだけの業務ロジックや prompt/spec の正本を調べる場合は、そのコマンド実装または oracle 文書を直接読むべきです。
-- 単一の共通機能の詳細だけを確認する場合は、runtime_cli、runtime_codex_*、runtime_run_*、runtime_state など該当する個別モジュールを直接読むべきです。
-- INDEX.md の生成結果や索引更新の利用者側挙動だけを確認する場合は、indexing.py 以外の対象を読む必要はありません。
+- 特定サブコマンド固有の業務処理だけを調べるときは、そのサブコマンドの実装を直接読む
+- 正本仕様や要求の意味を確認するときは oracle 配下の仕様を読む
+- Codex CLI 自体の一般的な使い方や外部サービスの仕様を確認するときは、この共通実装ではなく該当する仕様・公式資料を読む
 
 ## hash
-- 11cab3bbd8d547196bab2117e6f357097c5fc7f830b829c28ce66f84303fa879
+- 8b2444d3b1b441780afae5f9c3ce48eb228d964aa56f9816389775122b56283b
 
 # `config`
 
@@ -122,16 +120,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI の個別サブコマンド実装をまとめる入口で、doctor・tui・indexing と、session・run・feedback・oracle・realization の各サブコマンド群を扱う。
-- session は session branch の作成・参加・破棄、run は editing run の共通 lifecycle、feedback は報告・判定・修復・復旧、oracle は oracle の編集・調査、realization は apply/refactor workload の実装へ進むための下位入口である。
+- cmoc のサブコマンド実装を集約する入口で、doctor・indexing・tui、および oracle/realization/run/session/feedback の各 workload・ライフサイクル処理へ進むための階層。
+- feedback は観測の集約、判定根拠、逐次修復、publication後の復旧を扱い、run と session は編集実行の join・abandon・branch lifecycle を扱う。
+- oracle と realization はそれぞれ正本編集・調査と realization の apply/refactor workload を扱うため、該当するサブコマンドの挙動を確認・変更するときの入口になる。
+- indexing・doctor・tui は独立したCLI処理として、INDEX更新、doctor preprocess、Codex TUI起動を担当する。
 
 ## Read this when
-- cmoc のサブコマンド全体から、どの機能群の実装を確認・変更すべきか判断するとき。
-- doctor・tui・indexing の直接処理、または session・run・feedback・oracle・realization のサブコマンド群への入口を確認するとき。
+- サブコマンド全体のCLI入口や、どの機能群の実装へ進むべきかを判断するとき。
+- feedback reportの生成・修復・復旧、editing runのjoin/abandon、sessionのfork/join/abandonを確認するとき。
+- oracleまたはrealization workloadの起動処理や、doctor・indexing・tuiのCLI動作を確認するとき。
 
 ## Do not read this when
-- 特定のサブコマンドの詳細な処理フローや引数・状態遷移を確認する場合は、該当する下位ファイルを直接読む。
-- サブコマンド共通でない基盤処理や、oracle・realization の正本仕様を確認する場合は、このディレクトリではなく対応する実装・仕様を直接読む。
+- 特定のサブコマンドの詳細な仕様や状態遷移を確認する場合は、対応するサブディレクトリまたはoracle仕様を直接読むべきとき。
+- 共通runtime・builder・commonsの実装だけを調査する場合。
+- INDEX.mdの生成規則や既存インデックス内容そのものを確認する場合。
 
 ## hash
-- 0227d566b83c7cef8c3c9a07493a4ffdcf672baba4f37324c7d0829b2737fcbf
+- fb261a3a130c89b81b61cb25b64d1d2a616fe0731c72f939431698219b1943a0

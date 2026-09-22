@@ -119,20 +119,21 @@
 # `run`
 
 ## Summary
-- 日本語の技術文書として、対象ディレクトリにある editing run のライフサイクル関連実装への入口。abandon・join の停止／統合／cleanup と、旧 import path の互換 shim を含む配下を、run lifecycle の共通処理やサブコマンド固有処理の調査時に振り分ける。
+- `cmoc run` の共通 lifecycle サブコマンド入口。active editing run の join と abandon を扱い、差分検査、merge、状態同期、report 保存、process/worktree/branch の cleanup までを実行する。
+- `join.py` は active run の差分を検証して merge・post-join 処理・cleanup・失敗時の復旧状態を一続きで管理する。
+- `abandon.py` は running・joinable・error の run を停止し、残存 process、worktree、branch、state を破棄する。
+- `lifecycle.py` と `report.py` は旧 import path を維持する互換 shim で、共通実装を `commons` 側へ委譲する。
 
 ## Read this when
-- editing run の停止・統合・cleanup・report・状態遷移など、複数の run lifecycle 実装を横断して確認するとき。
-- `cmoc run abandon` または `cmoc run join` の処理入口を探すとき。
-- 旧 import path の lifecycle／report 互換性を確認するとき。
+- `cmoc run join` または `cmoc run abandon` の lifecycle、run 資源の cleanup、状態遷移、report 生成の入口を確認するとき。
+- run サブコマンド配下の join/abandon 実装と、旧 import path から共通 helper/report writer へ委譲する構成を把握するとき。
 
 ## Do not read this when
-- editing run 以外のサブコマンドを扱うとき。
-- 共通 lifecycle の canonical 実装や workload 固有の merge・差分処理など、配下の特定実装を直接確認すべきとき。
-- run 作成・通常編集・差分生成など、abandon／join のライフサイクル範囲に直接関係しない処理だけを調べるとき。
+- run の共通 lifecycle ではなく、個別 workload の実行処理や別サブコマンドの仕様を確認するとき。
+- 共通 helper の具体的な差分検査・状態管理・report 生成ロジック自体を確認したい場合は、`commons` 配下の実装を直接読むとき。
 
 ## hash
-- b692c0592ebbf0f3b0b5fd155b8143d42f7edb6c6653a1301d983d594801c52c
+- 5dbf72af186979cb7f3a15000c0370971cd5ca84a83a441de5ff9d67db47f064
 
 # `session`
 
