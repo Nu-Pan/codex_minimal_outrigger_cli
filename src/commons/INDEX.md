@@ -179,22 +179,18 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI の実行 API と、その起動前設定・環境準備・通知フック設定を担う。
-- Codex CLI を単一プロセスとして起動し、呼び出し情報を call log に記録し、フィードバック連携、エディター入力引き渡し、終了結果・失敗情報をサブコマンドログへ反映する。
-- TUI の起動条件、Codex ホームやモデル設定の検証、バージョンに応じた通知フック、戻り値と例外の扱いを確認するための共通ランタイム入口である。
+- Codex TUI の起動前検証、設定上書き argv の構築、通知・入力引き渡し・feedback 用環境の準備、call log の保存、Codex サブプロセス実行、成功・失敗イベント記録を一体で担うランタイム入口。
 
 ## Read this when
-- Codex TUI の起動引数、作業ディレクトリ、設定上書き、環境変数、通知フックを変更・調査するとき。
-- TUI 呼び出しの call log、フィードバック呼び出し、エディター入力引き渡し、成功・失敗時のログや例外処理を確認するとき。
-- `runtime_codex.py` から公開される `run_codex_tui` の実行経路を追い、関連テストの挙動を確認するとき。
+- Codex TUI の起動条件、実行時環境、設定上書き、通知フック、editor input handoff、feedback 連携、call log、終了コードや失敗処理を確認・変更するとき。
 
 ## Do not read this when
-- Codex exec のみの実装を確認する場合は、`runtime_codex_exec.py` を直接読む。
-- 画面表示や個別ウィジェットの挙動、Windows 通知の具体的実装だけを調査する場合は、それぞれの UI・通知モジュールを直接読む。
-- Codex の設定値やプロファイル解決の詳細だけを確認する場合は、`runtime_codex_profile.py` と設定定義を直接読む。
+- Codex CLI の argv や provider 設定そのものの定義だけを確認したいときは、設定・profile 側の実装を直接読む。
+- ログの JSON 形式や共通 logger の動作だけを確認したいときは、ログ関連の実装を直接読む。
+- Windows 通知、feedback、editor input handoff の個別実装だけを確認したいときは、それぞれの専用モジュールを直接読む。
 
 ## hash
-- 484ec3d3df272bc8fac044d36fa032c05aef5351ee5bf6e8e97142d097b8ae40
+- 62811e0fac78a60c799432f482ea88bcb59880589f1a73896fff0f978d61e428
 
 # `runtime_config.py`
 

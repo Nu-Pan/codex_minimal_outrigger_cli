@@ -50,19 +50,27 @@
 # `commons`
 
 ## Summary
-- cmoc の実行基盤を構成する共通モジュール群。設定・パス・Git/worktree・session/run state、Codex 実行、CLI lifecycle、ログと結果、primary report、feedback の収集・保存・公開、editor input handoff、INDEX 更新など、複数のコマンド経路から共有される境界処理を担う。
-- 特定の機能実装ではなく、実行状態や永続化、外部プロセス・MCP・ファイルシステムとの安全な接続を横断的に確認するための入口。
+- cmoc の複数の実行経路から利用される共通 runtime API と、設定・パス・結果・エラー・ログ・Git/worktree・session/run state などの基盤処理を提供する。
+- Codex exec/TUI の起動、process 管理、structured output、schema、feedback 通信、editor input handoff、Windows 通知など、外部プロセスとの境界を実装する。
+- INDEX.md の検査・entry 生成・hash 検証・更新 commit、および doctor による INDEX/管理ファイルの修復 lifecycle を扱う。
+- feedback の observation 保存・受理順序・active state・report cut・publication・remediation checkpoint を検証し永続化する。
+- editing run の開始・join・cleanup・report、prompt editor input、refactor state、primary report など、CLI サブコマンド間で共有される実行 lifecycle を支える。
 
 ## Read this when
-- 複数の CLI サブコマンドに共通する実行 lifecycle、状態管理、worktree 操作、Codex 呼び出し、report/feedback 処理を調べるとき。
-- 共通 runtime API の変更が、設定・Git・session/run・feedback・editor handoff・INDEX 更新のどの境界に影響するか確認するとき。
+- 複数の CLI サブコマンドに共通する runtime 挙動、状態遷移、エラー処理、ログ、設定、保存先を調査または変更するとき
+- Codex の exec/TUI 呼び出し、process tracking、structured output、feedback reporter、editor handoff、通知の境界を確認するとき
+- session や editing run の worktree、branch、join、cleanup、report、永続 state の実装を確認するとき
+- INDEX.md の生成・検証・commit、または doctor の修復処理を変更・調査するとき
+- feedback observation の durable store、publication、診断、checkpoint 検証を変更・調査するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務ロジックや UI の詳細を調べる場合は、その機能の実装を直接読むとき。
-- 単一モジュールの関数仕様だけを確認する場合は、src/commons 配下の該当ファイルを直接読むとき。
+- 特定のサブコマンド固有の業務フローや prompt 内容だけを確認したいときは、そのサブコマンド実装や oracle 仕様を先に読むべきである
+- INDEX.md の利用者向けルーティング情報だけを確認したいときは、対象の INDEX.md を直接読むべきである
+- 共通 runtime を呼び出す単一機能の挙動だけを調査し、共有境界・状態・保存形式に関係しないとき
+- oracle の正本仕様を確認することが目的のときは、対応する oracle/doc・oracle/src・oracle/test を直接読むべきである
 
 ## hash
-- e9b96f04fdad251b012dbbfee6281b9997420d703d255053622df7cd64bc49b4
+- 9576b2b6fb1b4be67aa0e5c26574ddc987f78d50ebc7c1f588b881752b66c2d0
 
 # `config`
 

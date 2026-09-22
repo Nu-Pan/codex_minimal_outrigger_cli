@@ -239,6 +239,38 @@ def test_run_codex_tui_rejects_missing_provider_before_version_probe(
     assert probe_calls == []
 
 
+def test_run_codex_tui_skips_notification_probe_during_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """シェル補完中は通知設定の Codex version probe を実行しない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    probe_marker = tmp_path / "notification-probe-called"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import pathlib, sys",
+            f"probe_marker = pathlib.Path({str(probe_marker)!r})",
+            "if '--version' in sys.argv[1:]:",
+            "    probe_marker.write_text('called')",
+            "    raise SystemExit(0)",
+            "raise SystemExit(0)",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setenv("_CMOC_COMPLETE", "")
+
+    run_codex_tui(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
+        root=root,
+        config=CmocConfig(),
+    )
+
+    assert not probe_marker.exists()
+
+
 def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

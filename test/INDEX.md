@@ -376,22 +376,23 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行経路の統合テストを集約し、完全な prompt と CLI 引数、作業ディレクトリ、アクセスモード、設定上書きを検証する。
-- Codex CLI のバージョン未検証、設定不足、CLI 不在、非ゼロ終了、KeyboardInterrupt などの失敗時に、適切な例外・終了状態・ログ記録となることを検証する。
-- TUI 呼び出しログの衝突回避、サブコマンドイベント、linked worktree、エディタ入力 handoff MCP の並行実行時の送信元対応を検証する。
+- Codex TUI 実行の統合テストを担い、完全な prompt と CLI 引数、アクセスモード、通知フック、設定検証順序、補完時の挙動を検証する。
+- TUI 呼び出しの成功・CLI 不在・KeyboardInterrupt・非ゼロ終了時について、call log とサブコマンドイベントの記録およびエラー報告を検証する。
+- linked worktree と並行実行時の editor-input handoff、呼び出し識別子、ログ対応、MCP へのコンテキスト伝達を検証する。
+- TUI ランタイムの外部から観測可能な実行契約を横断的に確認する入口であり、単一の補助関数や個別のログ形式だけを調べる場合の対象ではない。
 
 ## Read this when
-- Codex TUI が prompt、CLI オプション、sandbox/access mode、worktree、設定上書きを正しく引き渡しているか確認するとき。
-- TUI 実行の成功・失敗・割り込み時に call log とサブコマンドイベントが期待どおり保存されるか調べるとき。
-- 複数の TUI 実行や editor input handoff MCP の並行処理で、呼び出し識別子とログ対応が崩れないか確認するとき。
+- Codex TUI の prompt・CLI 引数・sandbox・通知設定・フック設定の受け渡しを確認または変更するとき。
+- TUI 実行前の設定検証、Codex version probe、シェル補完時の分岐を確認するとき。
+- TUI 呼び出しの成功・失敗・割り込み時に、call log とサブコマンドイベントがどう記録されるかを確認するとき。
+- linked worktree、editor-input handoff、並行 TUI 実行の識別と MCP 連携を調査するとき。
 
 ## Do not read this when
-- TUI 以外の Codex 実行経路や一般的なログ実装の詳細だけを調べるとき。
-- テスト fixture や共通 helper の実装を直接確認したいときは、対象の _support モジュールを読むべきである。
-- TUI の本体仕様や実装変更の詳細を確認したいときは、commons.runtime_codex_tui などの実装対象と対応する oracle 文書を直接読むべきである。
+- TUI 以外の Codex 実行経路や、単独の設定・ログ・editor-input handoff 実装の内部仕様だけを調査するときは、対応する実装または専用テストを直接読む。
+- TUI の実行契約や失敗時の記録、並行 handoff の対応関係を確認する必要がない単純なテスト探索では、この統合テスト全体を読む必要はない。
 
 ## hash
-- 46598d7985b31cf4017e61d889c0c2e1f83d82f87f63953d9ea54cfa5d5f79b0
+- efe03d1ff8bd413810a5dcb72c452b37c9b6a4c4d52a40616d729a07720a2b56
 
 # `test_doctor_cli.py`
 
