@@ -50,18 +50,19 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実行を支える共通 runtime 実装を集約するディレクトリです。Codex の exec/TUI 起動、設定・パス・プロセス管理、ログ・結果・primary report、feedback、editor input handoff、INDEX/doctor、editing run の state と lifecycle を横断する基盤処理を扱います。
+- cmoc の実行基盤を構成する共通モジュール群。設定・パス・Git/worktree・session/run state、Codex 実行、CLI lifecycle、ログと結果、primary report、feedback の収集・保存・公開、editor input handoff、INDEX 更新など、複数のコマンド経路から共有される境界処理を担う。
+- 特定の機能実装ではなく、実行状態や永続化、外部プロセス・MCP・ファイルシステムとの安全な接続を横断的に確認するための入口。
 
 ## Read this when
-- 複数のサブコマンドにまたがる runtime の責務分担や、Codex 実行から結果記録・run 管理までの共通フローを調べるとき。
-- 個別の実装に入る前に、対象機能が CLI lifecycle、Codex 境界、report/log、feedback、INDEX、または editing run のどの共通処理に属するか確認するとき。
+- 複数の CLI サブコマンドに共通する実行 lifecycle、状態管理、worktree 操作、Codex 呼び出し、report/feedback 処理を調べるとき。
+- 共通 runtime API の変更が、設定・Git・session/run・feedback・editor handoff・INDEX 更新のどの境界に影響するか確認するとき。
 
 ## Do not read this when
-- 特定の機能の実装箇所が明確なときは、このディレクトリ全体ではなく該当する `runtime_*.py` または `indexing.py` を直接読んでください。
-- oracle 仕様の意味や要求を確認したいときは、ここではなく対応する `oracle` 配下の仕様を読んでください。
+- 特定サブコマンド固有の業務ロジックや UI の詳細を調べる場合は、その機能の実装を直接読むとき。
+- 単一モジュールの関数仕様だけを確認する場合は、src/commons 配下の該当ファイルを直接読むとき。
 
 ## hash
-- d091aec2288b6ae87881364fe11b6902a426440086cd09774112ac57a0965fe9
+- e9b96f04fdad251b012dbbfee6281b9997420d703d255053622df7cd64bc49b4
 
 # `config`
 

@@ -102,6 +102,7 @@ class EditorInputHandoffTarget:
         self._current_submission_accepted = False
         self._accepting = False
         self._closed = False
+        self._handoff_guide_directory_fd: int | None = None
 
     @property
     def target_id(self) -> str:
@@ -118,6 +119,9 @@ class EditorInputHandoffTarget:
         with self.handoff_guide_path.open("x", encoding="utf-8", newline="") as guide:
             self._guide_created = True
             guide.write(guide_text)
+        self._handoff_guide_directory_fd = _open_directory_for_unlink(
+            self.handoff_guide_path.parent
+        )
         # Codex CLI 0.151.0 の ProxyRouted sandbox は AF_INET を許可し、
         # AF_UNIX socket の生成を拒否する。
         # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/linux-sandbox/src/landlock.rs#L170-L248
@@ -181,7 +185,9 @@ class EditorInputHandoffTarget:
             self._server_thread.join()
         # 受付済み取得・上書きを完了してから、target 固有のガイドを破棄する。
         if self._guide_created:
-            self.handoff_guide_path.unlink(missing_ok=True)
+            self._remove_handoff_guide()
+        else:
+            _close_directory_fd(self._take_handoff_guide_directory_fd())
 
     def _serve(self) -> None:
         """submission を一接続ずつ処理して同一 target の上書きを直列化する。"""
@@ -315,6 +321,28 @@ class EditorInputHandoffTarget:
         finally:
             os.close(descriptor)
 
+    def _take_handoff_guide_directory_fd(self) -> int | None:
+        """handoff guide の cleanup 用 directory descriptor を一度だけ取り出す。"""
+        directory_fd = self._handoff_guide_directory_fd
+        self._handoff_guide_directory_fd = None
+        return directory_fd
+
+    def _remove_handoff_guide(self) -> None:
+        """保持した directory から guide を削除し、親 path の差し替えを追従しない。"""
+        directory_fd = self._take_handoff_guide_directory_fd()
+        if directory_fd is None:
+            _unlink_handoff_guide_if_parent_is_safe(
+                self.repository, self.handoff_guide_path
+            )
+            return
+        try:
+            try:
+                os.unlink(self.handoff_guide_path.name, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
+        finally:
+            _close_directory_fd(directory_fd)
+
 
 def start_editor_input_handoff(
     repository: Path,
@@ -337,3 +365,42 @@ def start_editor_input_handoff(
             f"transport: {EDITOR_INPUT_HANDOFF_HOST} の一時 port",
         ) from exc
     return target
+
+
+def _open_directory_for_unlink(path: Path) -> int | None:
+    """directory fd が使える環境で、cleanup 対象の親 directory を保持する。"""
+    if os.unlink not in os.supports_dir_fd:
+        return None
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    try:
+        return os.open(path, flags)
+    except OSError:
+        return None
+
+
+def _close_directory_fd(directory_fd: int | None) -> None:
+    """保持した cleanup 用 directory fd を閉じる。"""
+    if directory_fd is not None:
+        os.close(directory_fd)
+
+
+def _unlink_handoff_guide_if_parent_is_safe(root: Path, path: Path) -> None:
+    """directory fd 非対応環境でも symlink 親を追従せず guide を削除する。"""
+    expected_dir = editor_work_dir(root)
+    try:
+        resolved_dir = expected_dir.resolve(strict=True)
+        current = path.parent.absolute()
+        while True:
+            if stat.S_ISLNK(current.lstat().st_mode):
+                return
+            if current == current.parent:
+                break
+            current = current.parent
+        path.parent.resolve(strict=True).relative_to(resolved_dir)
+        path.unlink(missing_ok=True)
+    except (OSError, RuntimeError, ValueError):
+        return

@@ -255,24 +255,19 @@
 # `runtime_editor_input_handoff.py`
 
 ## Summary
-- editor work file に対応する一時的な editor input handoff target を管理する実行時モジュール。
-- 認証付き loopback IPC の開始・受付・終了、target ID による要求検証、handoff ガイド取得、検証済みファイルへの UTF-8 全面上書きを担当する。
-- editor work file とガイドの regular file・配置・symlink 境界を再検証し、受付済み submission の完了後に target とガイドを破棄する。
-- protocol の定数・target ID の構築や認証方式そのものは protocol モジュール、agent-facing MCP の schema と公開 tool は MCP モジュール、ガイド本文の生成は oracle 側 guide モジュールへ進む。
+- エディター作業ファイルを一時的な handoff target として公開し、認証付き loopback TCP 経由の取得・上書き要求を検証して処理する。対象ファイルの regular file／非 symlink／所定 work directory 内という安全条件、target ID・repository・protocol の照合、guide の生成と cleanup、受付終了後の後始末までを担う。
 
 ## Read this when
-- editor input handoff の target lifecycle、loopback IPC、要求受付、ガイド取得、または editor work file の handoff 上書き処理を確認・変更するとき。
-- handoff 対象のパス検証、symlink 防止、repository・target ID の照合、終了時の cleanup を調べるとき。
-- prompt editor 待機中に handoff target を開始する呼び出し経路から、実際の runtime 処理へ追跡するとき。
+- エディター待機中の入力 handoff target の開始・終了、IPC request の認証と検証、guide の取得、作業ファイルの UTF-8 上書き、安全なファイル検査または cleanup を確認・変更するとき。
+- handoff の失敗コード、timeout、target ID、repository mismatch、guide の一時公開と削除の挙動を追うとき。
 
 ## Do not read this when
-- handoff protocol の定数・認証・target ID 形式だけを確認したい場合は runtime_editor_input_handoff_protocol.py を直接読む。
-- MCP tool の入力 schema、送信元情報、または agent-facing の公開処理だけを確認したい場合は runtime_editor_input_handoff_mcp.py と対応する oracle schema を直接読む。
-- handoff ガイドや上書き本文の正本フォーマットを確認したい場合は oracle/editor_input_handoff 配下を直接読む。
-- prompt editor の起動順序や最終入力確定処理だけを確認したい場合は、その lifecycle を担当する subcommand・prompt editor 実装を直接読む。
+- エディター入力 handoff の protocol 定数や認証・target ID 生成の定義そのものを確認するときは、protocol 実装を直接読む。
+- editor work directory のパス規則や runtime エラー型の定義だけを確認するときは、対応する共通モジュールを直接読む。
+- MCP 側の agent-facing schema や prompt editor 自体の UI・編集動作を確認するとき。
 
 ## hash
-- 87e4f7bbfb5df163c6d96e59e5e73ddcc9f63b5f9c9be8f59097558ff3ca01c2
+- 62028464309d2eda50f5aa27ec9164e19e10985a1a38a5c96c07c7f44e25f040
 
 # `runtime_editor_input_handoff_mcp.py`
 

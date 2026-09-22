@@ -437,20 +437,22 @@
 # `test_editor_input_handoff.py`
 
 ## Summary
-- editor input handoff の runtime lifecycle と安全境界を検証する統合テスト。active target、repository/file 再検証、symlink 防止、受付済み submission の drain、認証前後の slow trickle による deadline 解放を扱う。
+- エディター入力ハンドオフのライフサイクルを検証し、アクティブな対象への最終上書き、終了後の拒否、受付済み処理の完了待ちを扱う。
+- リポジトリ不一致、symlink 経由の外部ファイル上書き・削除、認証前の入力送信を拒否する安全性を検証する。
+- 未認証・認証済み接続の slow-trickle に対する絶対期限と、その後の新しい submission の処理継続を検証する。
 
 ## Read this when
-- prompt editor input の待機中 handoff が、表示された active target と現在の repository に限定され、最後の全面上書きが確定入力になることを確認したいとき
-- handoff target の close・deadline・認証・socket 通信が、受付済み入力の完了や未認証接続の解放を正しく扱うか調べるとき
-- editor work file やその親ディレクトリの symlink 化、repository 不一致、外部ファイルへの書き込み防止を確認するとき
+- エディター入力ハンドオフの受付・終了・上書き境界に関する回帰条件を確認するとき。
+- 対象 ID、リポジトリ検証、ファイル／ディレクトリの symlink 安全性、認証前の機密入力保護を確認するとき。
+- 接続の認証、タイムアウト、slow-trickle 攻撃への耐性と、期限後の処理継続を確認するとき。
 
 ## Do not read this when
-- agent-facing MCP の tool schema や get_handoff_guide/overwrite の応答形式だけを確認したいときは、test_editor_input_handoff_mcp.py と対応する oracle schema を先に読む
-- prompt editor input 全体の確定手順や editor 起動経路、TUI の送信元情報供給だけを調べるときは、対応する prompt/TUI/runtime のテストを直接読む
-- handoff 本文・ガイドの正確な文面や prompt policy の生成規則だけを確認したいときは、oracle の body.py・guide.py・policy とその専用テストを読む
+- エディター入力ハンドオフの実装詳細を確認したいときは、対応する src 側の実装を直接読むとき。
+- 正本仕様の要求内容を確認したいときは、参照されている oracle の仕様ファイルを直接読むとき。
+- 一般的なプロンプト編集処理やハンドオフ以外のテストを調べるとき。
 
 ## hash
-- 6edab61e0aa14b66ac6432daf31fcaf2c1ea10b3068f21aa1099f28b3bfa05e4
+- d8b41142a3d7f7d030bd83bacd50559891e9668fa3f96690a6680c87d7e70842
 
 # `test_editor_input_handoff_mcp.py`
 

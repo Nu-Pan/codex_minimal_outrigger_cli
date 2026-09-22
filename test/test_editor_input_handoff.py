@@ -225,6 +225,34 @@ def test_handoff_rejects_symlinked_work_directory(
     assert editor_work.read_text(encoding="utf-8") == "outside"
 
 
+def test_target_close_does_not_follow_replaced_guide_parent(
+    tmp_path: Path,
+) -> None:
+    """guide cleanup が差し替えられた親 symlink の外部 file を削除しない。"""
+    root = tmp_path / "repository"
+    root.mkdir()
+    editor_input = root / ".cmoc" / "gu" / "editor_input"
+    editor_input.mkdir(parents=True)
+    editor_work = editor_input / "input.md"
+    editor_work.write_text("initial", encoding="utf-8")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    external_guide = outside / "input.guide.md"
+    external_guide.write_text("must remain", encoding="utf-8")
+
+    target = start_editor_input_handoff(
+        root, editor_work, "{{original-prompt-here}}"
+    )
+    moved_editor_input = tmp_path / "moved-editor-input"
+    editor_input.rename(moved_editor_input)
+    editor_input.symlink_to(outside, target_is_directory=True)
+
+    target.close()
+
+    assert external_guide.read_text(encoding="utf-8") == "must remain"
+    assert not (moved_editor_input / "input.guide.md").exists()
+
+
 def test_target_close_drains_an_accepted_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
