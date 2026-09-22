@@ -56,9 +56,19 @@ def _cmoc_session_abandon_body() -> TerminalResult:
             home_branch=home,
             session_state_before=state.session.state,
         )
-        if state.session.state != "active" or state.run.state != "ready":
+        if state.session.state != "active":
             raise CmocError(
-                "session abandon の事前条件を満たしていません。", [], str(path)
+                "session abandon の事前条件を満たしていません。",
+                ["session state が active の session branch で再実行してください。"],
+                f"session.state: {state.session.state}\n{path}",
+            )
+        if state.run.state != "ready":
+            raise CmocError(
+                "session abandon の事前条件を満たしていません。",
+                [
+                    "先に `cmoc run abandon` で未 join の編集 run を破棄してから再実行してください。"
+                ],
+                f"run.state: {state.run.state}\n{path}",
             )
         session_commit = head_commit(work)
         update_primary_report_fields(abandoned_branch_start_commit=session_commit)
@@ -110,7 +120,9 @@ def _cmoc_session_abandon_body() -> TerminalResult:
                 if not branch_exists(repo, branch):
                     run_git(["branch", branch, session_commit], repo)
                 if branch_exists(repo, branch):
-                    run_git(["switch", branch], work)
+                    # session branch は local branch なので、復元確認と checkout の間に
+                    # local ref が消えても同名 remote-tracking branch を推測しない。
+                    run_git(["switch", "--no-guess", branch], work)
             except BaseException as rollback_error:
                 rollback_errors.append(f"branch rollback failed: {rollback_error!r}")
             details = [

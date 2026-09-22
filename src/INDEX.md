@@ -118,17 +118,20 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の CLI サブコマンド実装を集約するディレクトリ。doctor・indexing・tui の単体コマンド入口に加え、oracle、realization、feedback、run、session などのサブコマンド群を配下のパッケージで管理する。
-- oracle は oracle の編集・調査、realization は apply と refactor の workload、feedback は observation の判定・修復・report、run は editing run の join・abandon・report・共通 lifecycle、session は fork・join・abandon を担当する。
-- 個別サブコマンドの挙動や変更箇所を調べる際は、対象コマンド名に対応する配下パッケージまたは直下の実装ファイルへ進む。run 配下には共通処理の旧 import path を保つ shim も含まれる。
+- cmoc の CLI サブコマンド実装を集約する入口。doctor・indexing・tui と、session、run、feedback、oracle、realization などの機能別サブコマンドへ進む起点。
+- doctor は doctor preprocess の明示実行、indexing は INDEX.md の更新と commit、tui は依頼文の編集後に Codex TUI を起動する処理を担当する。
+- feedback は観測・判定・再確認・公開後の復旧、run と session は実行単位の作成・join・abandon・fork、oracle は正本仕様の調査・編集を扱う。
+- realization は realization の apply/refactor fork を実装し、agent 実行、差分検査、commit、joinable run 公開までの lifecycle を扱う。apply と review は配下の機能別サブコマンドへの入口として確認する。
 
 ## Read this when
-- cmoc の CLI サブコマンド全体の構成や、コマンド名から実装の入口を特定したいとき
-- doctor・indexing・tui の直下コマンド、または oracle・realization・feedback・run・session 系の処理を確認・変更するとき
+- cmoc の CLI サブコマンドがどの機能別モジュールへ振り分けられているかを確認したいとき
+- サブコマンドの入口処理、run lifecycle、agent 起動、差分 commit、INDEX 更新の実装箇所を探すとき
+- doctor、indexing、tui、feedback、oracle、realization、run、session のいずれかのサブコマンドを変更・調査するとき
 
 ## Do not read this when
-- 特定のサブコマンドの詳細な処理、仕様、テストを確認したいときは、このディレクトリの案内ではなく対応する実装ファイルや関連する正本仕様を直接読むとき
-- サブコマンドに属さない共通 runtime・builder・commons の実装を調べるときは、それぞれの配置先を直接読むとき
+- 特定のサブコマンドの詳細仕様や処理フローが既に分かっているときは、対応する配下ディレクトリまたは実装ファイルを直接読む
+- サブコマンドが参照する共通 runtime や prompt builder の責務だけを調べるときは、対応する commons または acp の実装を直接読む
+- INDEX.md の生成処理そのものだけを調べるときは indexing.py と commons.indexing の実装を直接読む
 
 ## hash
-- 0a1ba06c02c2358b7021ba7df3d674cba52d12fe8b00a72cb583e680e2641188
+- cea228258046616e1522bbcfc7a1e4192477e27f547e7f8f7a804a3020dedada

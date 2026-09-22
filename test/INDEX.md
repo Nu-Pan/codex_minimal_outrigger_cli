@@ -930,19 +930,18 @@
 # `test_session_cli.py`
 
 ## Summary
-- `session fork`・`abandon`・`join` のCLI外部挙動を、セッションブランチと永続stateのライフサイクルとして横断的に検証する回帰テスト群。
-- ブランチ作成・切替・削除、state保存とrollback、ID衝突や競合、linked worktree、dirty worktree、preprocess、merge/conflict解決、report/stderr出力までを対象とする。
+- session fork・join・abandon の CLI 外部挙動を、session branch/state のライフサイクルを軸に検証する回帰テスト群。branch と state の生成・更新・削除、rollback、衝突、dirty worktree 拒否、linked worktree、conflict 解決、preprocess、報告出力までを同じ fixture 文脈で扱う。
 
 ## Read this when
-- sessionサブコマンドのライフサイクル全体に関する回帰テストや、fork・abandon・join間で共有されるstate/branch遷移を確認するとき。
-- セッション操作の競合・失敗時rollback、linked worktree、conflict resolution、CLI report出力の挙動を調べるとき。
+- session CLI の fork・join・abandon のライフサイクル変更や回帰調査を行うとき
+- session branch/state、linked worktree、cleanup・rollback、conflict 解決、または関連する CLI 外部報告の挙動を確認するとき
 
 ## Do not read this when
-- 特定のsessionサブコマンドの実装詳細だけを確認したいときは、対応するsrc実装やoracle仕様を直接読むべき。
-- セッション機能以外のCLI、または個別の共通fixture・Gitヘルパーの実装を調べるとき。
+- session CLI 以外の機能や、単一の実装関数の詳細を直接確認するだけのとき
+- session の正本仕様を確認する必要があるときは oracle の該当仕様を、実装の挙動を確認する必要があるときは src/sub_commands/session 以下を先に読むべき場合
 
 ## hash
-- 13c64a16c463b0ff072d6d0afe9b2042a3d90988be9fb3b3b4b08c26d50973b9
+- 8db720b48a8767fe3230ef86cd83f620cd0dd96412f85b44cdde80004d5e6800
 
 # `test_skill_metadata.py`
 
