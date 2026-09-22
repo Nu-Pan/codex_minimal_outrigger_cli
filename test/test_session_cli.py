@@ -1516,6 +1516,47 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     assert "conflict marker が残っています。" in result.stderr
 
 
+def test_session_join_codex_failure_explains_manual_conflict_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
+    root = make_repo(tmp_path)
+    target = root / "README.md"
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    def failing_codex_exec(parameter: object, **kwargs: object) -> object:
+        """Codex CLIの既知の失敗を再現する。"""
+        raise CmocError(
+            "Codex CLI 呼び出しが失敗しました。",
+            ["stderr/stdout log を確認して原因を解消してください。"],
+            "call log",
+        )
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", failing_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict を手動で解消し" in result.stderr
+    assert "対象 path を git add し、git commit を実行してください。" in result.stderr
+    assert "stderr/stdout log を確認して原因を解消してください。" in result.stderr
+
+
 def test_session_join_conflict_uses_main_worktree_path_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

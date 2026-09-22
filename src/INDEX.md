@@ -122,16 +122,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI のサブコマンド実装をまとめる入口で、doctor・tui・indexing と、oracle・realization・run・session・feedback の各サブコマンド群を扱う。
-- 各サブコマンド群は、ライフサイクル操作、フィードバック報告・修復、セッション管理、oracle 操作など、コマンド単位の処理と状態遷移を実装する。
+- CLI のサブコマンド実装を集約する入口で、doctor・indexing・TUI、oracle／realization、session・run・feedback 系の処理へ進むための上位ディレクトリ。
+- oracle 配下は oracle の調査・編集、session 配下は session の fork・join・abandon、run 配下は editing run の lifecycle、feedback 配下は feedback の報告・判定・復旧を扱う。
 
 ## Read this when
-- CLI サブコマンドの一覧、構成、担当領域を把握したいとき。
-- 特定のサブコマンドを追加・変更し、その実装の配置先や関連する処理群を確認するとき。
+- CLI サブコマンドの実装箇所を特定するとき
+- session、run、feedback、oracle などのサブコマンド処理の入口や処理分岐を確認するとき
+- doctor、indexing、TUI のサブコマンド固有処理を調べるとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細な挙動だけを確認したい場合は、配下の該当ファイルまたはサブディレクトリを直接読む。
-- CLI 全体の起動処理や共通ランタイム、引数解析の仕様だけを確認したい場合は、親階層や共通実装を直接読む。
+- 特定サブコマンドの詳細実装が分かっており、対応する個別ファイルを直接読むとき
+- サブコマンド共通の runtime・prompt・git・state 処理を調べるとき
+- oracle の正本仕様やサブコマンドの仕様そのものを確認するとき
 
 ## hash
-- 6a34f7867b3168ad4d0f1da9f4ee2f9f46b0593951cd7e27916c7e29d31da349
+- 7ef62275c2779691a108dfa2df9bb3bcbe137dfa9d4d72f61292887594e21738

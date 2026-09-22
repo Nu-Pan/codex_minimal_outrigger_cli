@@ -930,18 +930,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork・join・abandon の CLI 外部挙動を、session branch/state のライフサイクルとして横断検証する回帰テスト。linked worktree、state cleanup、conflict 解消、dirty worktree 拒否、競合・失敗時の rollback と報告出力を扱う。
+- session fork・join・abandon の CLI 外部挙動を検証する回帰テスト。session branch と永続 state の生成・更新・削除、衝突や rollback、linked worktree、dirty worktree、conflict 解消、preprocess、報告出力と失敗時の保全を対象とする。
+- fork／join／abandon の session ライフサイクルや、session state・Git branch・worktree の整合性に関する変更の影響範囲を確認する入口。個別の state schema の単体検証ではなく、CLI 呼び出しを通した状態遷移の統合的な回帰を読む。
 
 ## Read this when
-- session の fork、join、abandon に関する外部挙動や session state 遷移を確認・変更するとき。
-- linked worktree 対応、conflict 解消、branch/state cleanup、失敗時の復元、CLI の stdout/stderr・report 出力を検証するとき。
+- session fork・join・abandon の CLI 挙動を変更または調査するとき
+- session state と managed branch の生成・遷移・cleanup、衝突時の rollback、linked worktree 対応を確認するとき
+- session CLI の conflict 解消、preprocess、dirty worktree 拒否、エラー報告や primary report の回帰を確認するとき
 
 ## Do not read this when
-- session の内部実装や単一関数の仕様を直接確認する場合は、対応する session サブコマンド実装または正本仕様を先に読む。
-- session 以外の CLI、一般的な Git 操作、feedback state 単体の挙動を確認する場合。
+- session state の payload 検証や branch 名解析そのものを確認したいときは test_runtime_state.py を読む
+- session CLI 以外の primary report 形式だけを確認したいときは test_primary_report.py を読む
+- oracle edit CLI の session 状態と editor・通知境界を確認したいときは test_oracle_edit_cli.py を読む
 
 ## hash
-- 4f91fb472ef9369857c024c47ae72d39187f148c2d9ce7b1f51f2e8a707eb93a
+- e887f5cdbdee389c19c4248a8ac67ac000cb098cec14071dfb166d127fcaf34c
 
 # `test_skill_metadata.py`
 

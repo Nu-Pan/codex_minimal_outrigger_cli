@@ -141,18 +141,18 @@
 # `session`
 
 ## Summary
-- session サブコマンドのライフサイクル操作を実装するパッケージ。session の fork・join・abandon に関する処理を確認する際の入口となる。
+- セッションのライフサイクルを扱うサブコマンド群で、現在のローカルブランチからの session fork、session branch の home branch への join、active session の abandon と、join 時の conflict 解消・後始末を実装する。
 
 ## Read this when
-- session サブコマンドの作成、home branch への統合、破棄、branch や state の更新・cleanup を確認または変更するとき。
-- session lifecycle 操作間の競合制御や、失敗時の rollback・完了報告を追跡するとき。
+- session の作成・統合・破棄の挙動を確認または変更するとき。
+- session branch、session state、home branch の連携や、session join の merge conflict 解消処理を調べるとき。
 
 ## Do not read this when
-- session 以外のサブコマンドを扱うとき。
-- SessionState のデータ形式や共通 CLI 実行基盤など、session lifecycle の個別操作より下位・共通の実装を直接確認したいとき。
+- session サブコマンドの個別処理を直接確認すべき場合。
+- session 以外のサブコマンドや、共通 runtime・state 定義そのものを調べる場合。
 
 ## hash
-- 17d723012891b050c8bc34a1457a07c14395b92a377ae134af87d7abb9b06331
+- ce4bd4c74792e950f549ab9cc3b3bd97f15021d6bb850edc1cdf56b567e9cfd3
 
 # `tui.py`
 
