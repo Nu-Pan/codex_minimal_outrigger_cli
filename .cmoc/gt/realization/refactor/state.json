@@ -1158,10 +1158,10 @@
     "last_investigated_at": "2026-07-27_17-07_58_869347000"
   },
   "test/_handoff_support.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "0bf82cfbb81f22d3a0345534414f77b906a61181b469c36b8a9e3d8b260afc31",
+    "last_investigated_at": "2026-09-22_10-14_44_009516000"
   },
   "test/conftest.py": {
     "investigation_required": true,
