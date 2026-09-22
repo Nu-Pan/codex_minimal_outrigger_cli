@@ -89,18 +89,21 @@
 # `realization`
 
 ## Summary
-- `realization` サブコマンド配下の workload 実装をまとめるディレクトリ入口。apply と refactor の各処理へ進むための上位ルーティング対象。
+- realization workload サブコマンド群の入口。apply と refactor の fork 処理を、それぞれ差分追従と realization ファイルの調査・修正として実行し、run lifecycle・Codex 呼び出し・差分管理・report 保存までを統括する。
+- apply は配下の fork 実装へ進み、oracle 差分を基準に realization 側を追従させる処理を確認するときの入口。
+- refactor は配下の fork 実装へ進み、realization file の選択、調査・修正、未解決 finding の管理、完了判定を確認するときの入口。
 
 ## Read this when
-- realization サブコマンドの workload 構成や、apply／refactor の処理入口を確認するとき。
-- realization 配下で apply または refactor の workload 実装を調査・変更するとき。
+- realization サブコマンド全体の責務や apply/refactor のどちらへ進むべきか判断したいとき。
+- run の作成、Codex agent 実行、差分の検査・commit、joinable 公開、report 保存が realization workload でどう束ねられているか確認したいとき。
 
 ## Do not read this when
-- realization サブコマンド以外の処理を扱うとき。
-- apply または refactor の具体的な lifecycle・実装詳細だけを確認したい場合は、対応する下位対象を直接読む。
+- apply の差分追従処理の具体的な lifecycle を確認したい場合は apply/fork.py を直接読んでください。
+- refactor の target 選択、file review、finding 解決、完了判定の詳細を確認したい場合は refactor/fork.py を直接読んでください。
+- realization 以外のサブコマンドや共通 runtime の仕様を確認したい場合は、それぞれの対象ディレクトリ・共通モジュールへ直接進んでください。
 
 ## hash
-- 485bfb2542457396c18017597ca6537502902f62230f1c638da651edbaddf10d
+- 8ed8cb54c41a7f86e43d6ac96becc69e63b1136b99f0fd9304c4bff206f5b3ea
 
 # `review`
 

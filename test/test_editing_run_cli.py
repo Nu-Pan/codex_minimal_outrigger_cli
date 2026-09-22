@@ -1940,6 +1940,11 @@ def test_refactor_missing_target_refreshes_indexes_before_commit(
         "stop_tracked_codex_children",
         lambda *_args, **_kwargs: events.append("stop") or [],
     )
+    monkeypatch.setattr(
+        refactor_module,
+        "worktree_change_paths",
+        lambda *_args, **_kwargs: [],
+    )
     monkeypatch.setattr(refactor_module, "_commit_refactor_unit", record_commit)
 
     refactor_module._run_refactor_unit(
@@ -1951,6 +1956,35 @@ def test_refactor_missing_target_refreshes_indexes_before_commit(
     )
 
     assert events == ["sync", "refresh", "stop", "commit"]
+
+
+def test_refactor_missing_target_rejects_unexpected_processing_unit_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """消えた target の同期単位でも想定外 path を commit しない。"""
+    _root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    (context.run_worktree / "README.md").unlink()
+    unexpected_path = context.run_worktree / "memo" / "unexpected.md"
+    unexpected_path.parent.mkdir()
+    unexpected_path.write_text("must not be committed\n")
+    before_head = run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip()
+
+    with pytest.raises(CmocError, match="想定外差分"):
+        refactor_module._run_refactor_unit(
+            context,
+            "README.md",
+            [],
+            {},
+            [],
+        )
+
+    assert run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip() == (
+        before_head
+    )
 
 
 @pytest.mark.parametrize(

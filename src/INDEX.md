@@ -119,20 +119,16 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装を集約する入口で、doctor・indexing・tui、および oracle/realization/run/session/feedback の各 workload・ライフサイクル処理へ進むための階層。
-- feedback は観測の集約、判定根拠、逐次修復、publication後の復旧を扱い、run と session は編集実行の join・abandon・branch lifecycle を扱う。
-- oracle と realization はそれぞれ正本編集・調査と realization の apply/refactor workload を扱うため、該当するサブコマンドの挙動を確認・変更するときの入口になる。
-- indexing・doctor・tui は独立したCLI処理として、INDEX更新、doctor preprocess、Codex TUI起動を担当する。
+- CLI のサブコマンド実装をまとめる入口で、doctor・tui・indexing と、oracle・realization・run・session・feedback の各サブコマンド群を扱う。
+- 各サブコマンド群は、ライフサイクル操作、フィードバック報告・修復、セッション管理、oracle 操作など、コマンド単位の処理と状態遷移を実装する。
 
 ## Read this when
-- サブコマンド全体のCLI入口や、どの機能群の実装へ進むべきかを判断するとき。
-- feedback reportの生成・修復・復旧、editing runのjoin/abandon、sessionのfork/join/abandonを確認するとき。
-- oracleまたはrealization workloadの起動処理や、doctor・indexing・tuiのCLI動作を確認するとき。
+- CLI サブコマンドの一覧、構成、担当領域を把握したいとき。
+- 特定のサブコマンドを追加・変更し、その実装の配置先や関連する処理群を確認するとき。
 
 ## Do not read this when
-- 特定のサブコマンドの詳細な仕様や状態遷移を確認する場合は、対応するサブディレクトリまたはoracle仕様を直接読むべきとき。
-- 共通runtime・builder・commonsの実装だけを調査する場合。
-- INDEX.mdの生成規則や既存インデックス内容そのものを確認する場合。
+- 特定サブコマンドの詳細な挙動だけを確認したい場合は、配下の該当ファイルまたはサブディレクトリを直接読む。
+- CLI 全体の起動処理や共通ランタイム、引数解析の仕様だけを確認したい場合は、親階層や共通実装を直接読む。
 
 ## hash
-- fb261a3a130c89b81b61cb25b64d1d2a616fe0731c72f939431698219b1943a0
+- 6a34f7867b3168ad4d0f1da9f4ee2f9f46b0593951cd7e27916c7e29d31da349

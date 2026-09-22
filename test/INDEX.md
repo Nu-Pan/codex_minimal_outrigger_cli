@@ -417,19 +417,20 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の統合テスト群として、apply/refactor の fork・実行・join・abandon にまたがる lifecycle、session state、worktree、Git差分、index更新、process追跡、report生成、失敗時のrollbackとcleanupを検証する。
-- CLI入口を介した正常系・異常系に加え、run state遷移、oracle・realization変更の境界、競合・中断・cleanup失敗時の終端状態までを共通fixtureで確認する。
+- 編集実行 run の統合ライフサイクルを検証する realization テスト。session/run の fork・state 遷移・worktree と変更パスの扱い、apply/refactor の処理単位、index 更新、agent 変更検査、join/abandon、rollback・cleanup・process tracking、report と警告、割り込み・失敗からの復旧までを共通 fixture として扱う。
 
 ## Read this when
-- editing run の fork、refactor/apply、join、abandon のライフサイクルやCLI統合挙動を変更・調査するとき。
-- run state、worktree/Git差分、index refresh、Codex process追跡、primary report、rollback・cleanupの回帰を確認するとき。
+- 編集実行 run の開始から完了・join・abandon・rollback までのライフサイクルを確認するとき
+- apply または refactor の fork、index 更新、変更パス検査、report、cleanup、子プロセス停止の回帰条件を調べるとき
+- session branch・run branch・worktree・state の相互作用や、失敗・割り込み後に joinable/error state へ遷移する条件を確認するとき
 
 ## Do not read this when
-- 単一の編集ロジックや共通ユーティリティの実装だけを確認したいとき。
-- editing run のライフサイクル、CLI統合、状態遷移、rollback・cleanupの挙動に関係しないテストを探しているとき。
+- 編集実行 run の実装仕様そのものを確認したい場合は、参照される realization 実装や oracle 文書を直接読むとき
+- 個別の CLI サブコマンドの単純な引数解析・表示だけを調べるとき
+- 対象ファイル内の具体的なテストケースや期待値を確認したい場合は、この案内ではなく対象ファイルを直接読むとき
 
 ## hash
-- 3c4a3e5964f74258074dfebc1df14ba08268879ab2b5aaced632ca2ed0bbb39b
+- 86847e9625e22ae03d30c5fb610e97d3ae3ee861990eb5bb8c35025e7bfc053f
 
 # `test_editor_input_handoff.py`
 
