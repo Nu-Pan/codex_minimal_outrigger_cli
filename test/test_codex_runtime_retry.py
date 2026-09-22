@@ -439,6 +439,11 @@ def test_run_codex_exec_logs_keyboard_interrupt(
         ("missing", [], "does not exist"),
         ("empty", ["output.write_text('')"], "is empty"),
         ("malformed", ["output.write_text('{')"], "is not valid JSON"),
+        (
+            "deeply_nested",
+            ["output.write_text('[' * 10000 + '0' + ']' * 10000)"],
+            "is not valid JSON",
+        ),
     ],
 )
 def test_run_codex_exec_corrects_structured_output_parse_failure(

@@ -341,19 +341,19 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex exec の Structured Output 補正、capacity retry、JSONL error、中断、成果物差分保持を、subprocess 呼び出し・retry 状態・call log・subcommand event の連続した外部挙動として検証するテスト群。
+- Codex exec の Structured Output 検証失敗、capacity retry、JSONL エラー、中断、成果物差分復元を、再試行状態・subprocess 呼び出し回数・call log・subcommand event の一連の外部挙動として検証するテスト。
 
 ## Read this when
-- run_codex_exec の出力契約違反や parse failure の同一 session 補正、補正時の事後条件・成果物復元、session 欠落時の失敗を確認するとき。
-- capacity failure の再試行・指数 backoff・上限、および retry 中も agent diff を保持する挙動を確認するとき。
-- 未知の JSONL error、stdout JSONL 外の error marker、KeyboardInterrupt、schema 事前検証について、最終例外と call log／subcommand event の記録を確認するとき。
+- Codex runtime の再試行や出力補正の挙動を確認・変更するとき。
+- 出力契約違反、非有限数、不正 JSON、欠落出力、capacity failure、未知の JSONL error、中断、補正時の成果物変更に関する回帰を調べるとき。
+- Codex call log の内容、session の継続、イベント status、成果物差分の保持・復元を検証するとき。
 
 ## Do not read this when
-- INDEX.md のルーティングだけを確認したい場合や、run_codex_exec の通常成功経路・別の実装詳細を直接調べる場合。
-- 個別の Structured Output schema 定義や汎用的なログ仕様そのものを確認したい場合は、それぞれの正本仕様・実装対象を直接読む。
+- retry や失敗時ログを伴わない Codex runtime の機能だけを確認するとき。
+- INDEX 生成そのものや、Codex 呼び出し以外の機能を調べるときは、対象実装または専用の別テストを直接読むべき。
 
 ## hash
-- f657c53dab552b1db74e14c2657330725653d50b0f4abda6a899c86efb08bccf
+- 3ec06dc112de46898f9d78000d0ce485366e98071ea35ea07e1261d266fa95db
 
 # `test_codex_runtime_subprocess.py`
 
@@ -788,21 +788,22 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex 実行プロファイル周辺の契約テストを集約し、file access mode の sandbox 変換、model/provider 設定、MCP・環境変数の注入、通知 hook、process tracking 補助、schema/output 処理の境界を検証する。
-- Codex 起動前の argv 構築や version probe の失敗時挙動を確認したい場合に、runtime 実装の単体テスト入口として読む。
+- Codex 起動時の argv・sandbox・model/provider・MCP・hook 上書き契約を検証する回帰テスト群。
+- Codex subprocess 環境の call context 分離、検証済み CLI バージョン判定、schema 保存と出力 JSON 読み取りの失敗処理も対象とする。
+- Codex プロファイル構築の入力検証や provider 設定の TOML エンコードを確認したい場合の入口となる。
 
 ## Read this when
-- Codex の sandbox、model/provider、MCP context、hook、通知 callback の argv 契約を変更・確認するとき。
-- Codex subprocess 環境の継承防止、schema の保存・読み出し、未定義設定や未知 mode の fail-fast 挙動を確認するとき。
-- runtime_codex_profile の変更に対する既存の回帰検出範囲を把握するとき。
+- Codex 起動引数や sandbox、model/provider の上書き仕様が変更されたとき。
+- feedback・editor input handoff MCP、SessionStart hook、legacy notification callback の連携を確認するとき。
+- Codex CLI バージョン判定、schema のハッシュ保存、出力 JSON の異常系を回帰確認するとき。
 
 ## Do not read this when
-- Codex の実行フローそのものや process lifecycle の詳細実装を調べる場合は、まず src/commons/runtime_codex_profile.py または関連 runtime テストを直接読む。
-- Codex CLI の一般的な仕様や oracle の正本要件を確認する場合は、このテストではなく参照先の oracle 文書を読む。
-- session CLI、TUI、quota retry など特定の呼び出し経路だけを調べる場合は、それぞれの専用テストへ直接進む。
+- 通常のランタイム実装の詳細を調べるときは、対応する src 側の runtime_codex_profile 実装を直接読むとき。
+- Codex の正本仕様や要求理由を確認するときは、参照されている oracle/doc の仕様を読むとき。
+- Codex プロファイル以外の機能やテスト fixture の挙動だけを調べるとき。
 
 ## hash
-- 8ebdf237940a7b0eb3a75927c070204abbd25290a90f4a3753b65220fcbcae8d
+- 8f7ee1e5010db8e559f8c77556f7bf7bde5ab2068620ff79392f574671bf6ca5
 
 # `test_runtime_config.py`
 

@@ -1221,7 +1221,7 @@ def read_output_json(path: Path) -> Any:
         return None
     try:
         return json.loads(output_text)
-    except (json.JSONDecodeError, UnicodeError):
+    except (RecursionError, json.JSONDecodeError, UnicodeError):
         return None
 
 
