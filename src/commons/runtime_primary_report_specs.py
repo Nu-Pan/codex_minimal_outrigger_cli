@@ -9,7 +9,18 @@ from dataclasses import dataclass
 from typing import Literal
 
 ReportTemplate = Literal[
-    "summary", "feedback_invocation", "refactor_fork", "session_join"
+    "summary",
+    "doctor",
+    "indexing",
+    "session_fork",
+    "session_join",
+    "session_abandon",
+    "oracle_edit",
+    "apply_fork",
+    "refactor_fork",
+    "run_join",
+    "run_abandon",
+    "feedback_invocation",
 ]
 TerminalClassification = Literal["natural_completion", "user_interruption", "error"]
 
@@ -33,12 +44,14 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         "doctor",
         "doctor execution report",
         "cmoc doctor report",
+        template="doctor",
     ),
     "indexing": PrimaryReportSpec(
         "indexing",
         "indexing execution report",
         "cmoc indexing report",
         ("commit_id",),
+        "indexing",
     ),
     "session fork": PrimaryReportSpec(
         "session/fork",
@@ -52,6 +65,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "session_state_before",
             "session_state_after",
         ),
+        "session_fork",
     ),
     "session join": PrimaryReportSpec(
         "session/join",
@@ -79,12 +93,14 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "session_state_before",
             "session_state_after",
         ),
+        "session_abandon",
     ),
     "oracle edit": PrimaryReportSpec(
         "oracle_edit",
         "oracle edit execution report",
         "cmoc oracle edit report",
         ("first_agent_call_status", "second_agent_call_status"),
+        "oracle_edit",
     ),
     "realization apply fork": PrimaryReportSpec(
         "realization/apply/fork",
@@ -106,6 +122,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "feedback_observation_count",
             "feedback_observations",
         ),
+        "apply_fork",
     ),
     "realization refactor fork": PrimaryReportSpec(
         "realization/refactor/fork",
@@ -139,6 +156,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "state_after",
             "run_join_commit",
         ),
+        "run_join",
     ),
     "run abandon": PrimaryReportSpec(
         "run/abandon",
@@ -153,6 +171,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "state_before",
             "state_after",
         ),
+        "run_abandon",
     ),
     "feedback report": PrimaryReportSpec(
         "feedback/invocation",

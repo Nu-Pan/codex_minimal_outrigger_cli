@@ -50,20 +50,22 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実行基盤を構成する共通 runtime 実装群。設定・パス・Git/worktree・state・logging・feedback・report・run lifecycle を管理し、Codex exec/TUI、editor input handoff、INDEX 更新、Windows 通知などの実行境界を提供する。
+- cmoc の CLI 実行基盤で共有される runtime 実装群。Codex の exec/TUI 呼び出し、設定・パス・Git・状態・結果・ログ・report、feedback、editor input handoff、editing run、INDEX/doctor lifecycle など、複数のサブコマンドから利用する共通境界を扱う。
+- 個別サブコマンドの処理手順や仕様本文ではなく、共通 runtime API の責務・状態モデル・外部プロセス境界・永続化処理を確認するための入口。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる実行ライフサイクル、永続 state、ログ、レポート、feedback、worktree 管理の共通処理を確認したいとき。
-- Codex の subprocess 起動、Structured Output、TUI、editor input handoff、または INDEX.md 更新の実装入口を探すとき。
-- 対象の責務が特定の runtime モジュールに限定できず、commons 内の連携関係を把握する必要があるとき。
+- 複数の CLI サブコマンドにまたがる runtime 共通処理の挙動を調べるとき。
+- Codex subprocess の起動、sandbox・schema・resume・process tracking、TUI、実行ログや結果の扱いを確認するとき。
+- 設定、パス、Git worktree、session/editing run state、feedback、primary report、editor input handoff の共有処理を追うとき。
+- INDEX 更新や doctor preprocess、run lifecycle など、複数ファイルで不変条件を共有する lifecycle の実装位置を特定するとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理や oracle 仕様だけを確認したいときは、該当する src または oracle の対象を直接読む。
-- 共通処理のうち一つの責務だけを調べる場合は、runtime_paths、runtime_git、runtime_feedback_*、runtime_run_* など該当する個別モジュールを直接読む。
-- INDEX.md の生成・検査アルゴリズムだけを確認する場合は indexing.py を直接読む。
+- 特定サブコマンドの正本仕様や利用者向け手順を確認したいときは、対応する oracle/doc またはサブコマンド実装を直接読む。
+- 単一の共通モジュールの詳細な API やデータ形式だけを確認したいときは、src/commons 配下の該当ファイルを直接読む。
+- INDEX.md の生成・検査処理だけを調べる場合は indexing.py、editing run の lifecycle だけを調べる場合は runtime_run_lifecycle.py など、対象モジュールへ直接進む。
 
 ## hash
-- 597424050f9eb57336e92fa5636783e8512ddead3e46efa24f248ee6057e1853
+- 73e6794a1e9d50a8e42b941c6804f1163fa2be9f38753c894ecd21c31764304e
 
 # `config`
 

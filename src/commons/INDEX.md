@@ -513,41 +513,37 @@
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済みの runtime 情報、終端分類、実行結果、ログから primary report の Markdown を構築する共通レンダラー。
-- 通常 invocation、feedback report invocation、refactor fork、session join それぞれの report 本文を選択し、実行段階・終端結果・warning/error・次の操作・関連ログを出力する。
-- Codex 最終出力、新規 feedback observation、publication や cleanup、agent call の状態など、実行記録と状態表示に必要な補助情報もこのファイルで整形する。
-- YAML scalar や Markdown の一行値、未確定値、operation 状態を安全な report 表示へ変換する低レベル整形処理を担う。
+- 確定済みの runtime 情報と terminal 結果から、template 種別ごとの fallback primary report 本文を生成する。実行段階、終端結果、warning・エラー、次の操作、関連ログに加え、feedback・session・run・oracle edit などの固有状態を Markdown として描画する。
+- Codex call の最終出力や feedback observation、step timing、publication event を実行記録・状態表示へ変換し、未確定値を完了済みと誤認しない表現で記録する。
 
 ## Read this when
-- primary report の出力形式、template ごとの本文構成、実行段階や終端結果の表示内容を変更・確認するとき
-- feedback publication と invocation summary の状態表示を確認するとき
-- session join や refactor fork 固有の report 項目、Codex call・observation の実行記録表示を調べるとき
-- report に埋め込む値の YAML・Markdown 安全化や未確定状態の表現を確認するとき
+- runtime primary report の Markdown 構成、template 別の report 内容、terminal classification の表示を確認・変更するとき。
+- 実行段階、Codex call log、feedback publication 状態、session/run の状態遷移を fallback report に反映する処理を追うとき。
 
 ## Do not read this when
-- report の入力となる PrimaryReportSpec、TerminalResult、TerminalClassification の定義や判定ロジックを調べるときは、それぞれの定義元を直接読む
-- report を生成する呼び出し元、サブコマンドの実行制御、ログの記録方法を調べるときは、該当する実行・ロギング実装を直接読む
-- oracle 仕様そのものや report の正本要件を確認するときは、参照されている oracle 文書を読む
-- primary report 以外のファイル出力や一般的な Markdown ユーティリティの責務を調べるときは、該当する別実装を読む
+- runtime 情報の収集・保存や terminal result の生成そのものを調べるときは、各担当の store・logging・result 実装を直接読む。
+- INDEX.md の更新処理や oracle 仕様本文を確認するだけの場合は、この report 描画実装ではなく該当する indexing 実装または oracle 文書を読む。
 
 ## hash
-- 7d131ac1b99f5112256ca07fc0640265763158f35ac6829feabfd292bb5e04c5
+- d7c7c6a1b7322213ba7eeba339d2dffce86303d2d13977760b3f4922be323006
 
 # `runtime_primary_report_specs.py`
 
 ## Summary
-- fallback primary report を生成する非対話末端サブコマンドごとの仕様を登録し、command 名から保存先・役割・タイトル・必須項目・テンプレートを取得する定義。
+- fallback primary report のサブコマンド別仕様を登録し、保存先・役割・タイトル・必須フィールド・テンプレートを一元化する定義ファイル。
+- command 名から対応する PrimaryReportSpec を取得する lookup 関数を提供し、doctor、indexing、session、realization、run、feedback 系の非対話末端サブコマンドを対象とする。
+- TUI 通知境界の tui と oracle investigation は登録対象外であり、primary report 仕様を確認する入口としてこのファイルを読む。
 
 ## Read this when
-- doctor、indexing、session、oracle edit、realization、run、feedback report の fallback report 仕様や必須項目を確認・変更するとき。
-- command 名に対応する primary report 定義の取得処理を確認するとき。
+- fallback primary report の対象コマンド、保存先、front matter の役割、タイトル、必須フィールド、テンプレート対応を確認・変更するとき。
+- command 名から primary report 仕様を解決する lookup の挙動や、登録済みサブコマンドの範囲を調べるとき。
 
 ## Do not read this when
-- TUI の通知境界を使う tui や oracle investigation の仕様を確認するとき。
-- fallback report の実際の保存処理や個別サブコマンドの実行ロジックを直接調べるとき。
+- 実際の report ファイル生成、保存処理、出力タイミングだけを調べる場合は、生成処理を実装する対象を直接読むとき。
+- TUI 通知や oracle investigation の仕様、または個別テンプレートの本文形式だけを調べる場合は、それぞれの専用仕様・実装を直接読むとき。
 
 ## hash
-- 6cea29e517f04e01d25b2f9ca945ebb055cd05542cb349451a16ed5030e42062
+- 65ca5fc4c11b5cba1fbf37529e57f05ec073d09bc90569b39c1607b75bbc6ed1
 
 # `runtime_refactor.py`
 

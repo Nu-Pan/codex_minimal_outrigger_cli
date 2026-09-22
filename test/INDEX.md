@@ -647,18 +647,19 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話サブコマンドの primary report 完了契約を検証するテスト。早期エラー・中断時の保存先と front matter、Codex 出力・feedback observation の保持、artifact パスのエスケープ、refactor 中断理由、保存・更新失敗時の internal failure を対象とする。
+- 非対話サブコマンドの primary report 完了契約を検証するテストです。処理開始前エラー、中断、Codex 出力・feedback observation の保持、artifact パスの安全な表示、fallback、保存失敗時の internal failure を対象にします。
 
 ## Read this when
-- primary report の保存・完了分類・必須メタデータが、各サブコマンドの早期失敗や中断を含めて正しく確定されるか確認したいとき。
-- Codex 出力や feedback observation の report 反映、artifact パスの Markdown 安全性、report 保存失敗時のエラー秘匿を検証したいとき。
+- primary report の分類、保存先、front matter、診断セクション、必須フィールドを確認したいとき。
+- Codex 実行結果や feedback observation がレポートへ保持されるか、またレポート保存・更新失敗時の安全な失敗処理を確認したいとき。
+- doctor、indexing、session、realization、run、feedback 系サブコマンドの早期エラー報告契約を横断的に確認したいとき。
 
 ## Do not read this when
-- primary report の実装詳細や report のレンダリング規則そのものを確認したいときは、src/commons/runtime_primary_report.py などの実装を直接読む。
-- primary report 以外のサブコマンド固有機能や、通常のコマンド処理のテストを確認したいとき。
+- primary report の実装ロジックを理解・変更したいときは、まず runtime_primary_report や runtime_cli の実装を直接読むとき。
+- 個別サブコマンド固有の処理仕様や、primary report と無関係な CLI テストだけを調べるとき。
 
 ## hash
-- a60904cf7bbc4d66edf1383cb1c61405f827c7bd77d09cf7a25efcf5e2902185
+- a672eb69f2cda5f790a344f3cc71d1b9bfa9867daa1b7f42e6e4c5a473f0432e
 
 # `test_production_cli.py`
 

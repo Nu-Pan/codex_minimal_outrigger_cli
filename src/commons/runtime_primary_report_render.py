@@ -29,17 +29,34 @@ def render_primary_report(
         *[f"{name}: {yaml_scalar(value)}" for name, value in fields],
         "---",
     ]
+    field_values = dict(fields)
     if spec.template == "feedback_invocation":
         body = _feedback_invocation_body(
             classification,
             result,
             logger,
-            dict(fields),
+            field_values,
         )
+    elif spec.template == "doctor":
+        body = _doctor_body(spec.title, classification, result, logger)
+    elif spec.template == "indexing":
+        body = _indexing_body(classification, result, logger, field_values)
+    elif spec.template == "session_fork":
+        body = _session_fork_body(classification, result, logger, field_values)
     elif spec.template == "refactor_fork":
         body = _refactor_fork_body(classification, result, logger)
     elif spec.template == "session_join":
-        body = _session_join_body(classification, result, logger, dict(fields))
+        body = _session_join_body(classification, result, logger, field_values)
+    elif spec.template == "session_abandon":
+        body = _session_abandon_body(classification, result, logger, field_values)
+    elif spec.template == "oracle_edit":
+        body = _oracle_edit_body(classification, result, logger, field_values)
+    elif spec.template == "apply_fork":
+        body = _apply_fork_body(classification, result, logger, field_values)
+    elif spec.template == "run_join":
+        body = _run_join_body(classification, result, logger, field_values)
+    elif spec.template == "run_abandon":
+        body = _run_abandon_body(classification, result, logger, field_values)
     else:
         body = _summary_body(spec.title, classification, result, logger)
     return "\n".join([*front_matter, *body, "", execution_record_markdown(logger)])
@@ -164,6 +181,17 @@ def _summary_body(
         _outcome_sentence(classification),
         "## 実行段階",
         *_step_lines(logger, classification),
+        *_standard_tail(classification, result, logger),
+    ]
+
+
+def _standard_tail(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+) -> list[str]:
+    """全 fallback report に共通する終端、警告、次操作、ログを描画する。"""
+    return [
         "## 終端結果",
         *_terminal_lines(classification, result),
         "## warning とエラー",
@@ -172,6 +200,78 @@ def _summary_body(
         *([f"- {action}" for action in result.next_actions] or ["- なし"]),
         "## 関連ログ",
         *_log_lines(logger),
+    ]
+
+
+def _doctor_body(
+    title: str,
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+) -> list[str]:
+    """doctor preprocess の実行有無と結果を fallback report に残す。"""
+    return [
+        f"# {title}",
+        _outcome_sentence(classification),
+        "## doctor preprocess",
+        f"- 検査と修復: `{_stage_status(logger, classification)}`",
+        *_standard_tail(classification, result, logger),
+    ]
+
+
+def _indexing_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> list[str]:
+    """indexing の実行結果と INDEX 更新結果を fallback report に残す。"""
+    return [
+        "# cmoc indexing report",
+        _outcome_sentence(classification),
+        "## インデクシング",
+        f"- 実行状態: `{_operation_status(fields.get('indexing_status'), classification)}`",
+        f"- 更新した INDEX.md: `{_field_status(fields.get('updated_indexes'))}`",
+        f"- 作成した commit: `{_field_status(fields.get('commit_id'))}`",
+        *_standard_tail(classification, result, logger),
+    ]
+
+
+def _session_fork_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> list[str]:
+    """session fork の branch、state、rollback の確定値を描画する。"""
+    session_branch = fields.get("session_branch")
+    state_after = fields.get("session_state_after")
+    branch_status = (
+        "completed"
+        if state_after == "active"
+        else "未確認"
+        if session_branch is not None
+        else "未実行"
+    )
+    state_status = "completed" if state_after is not None else "未実行"
+    return [
+        "# cmoc session fork report",
+        _outcome_sentence(classification),
+        "## branch の作成と checkout",
+        f"- home branch: `{_field_status(fields.get('home_branch'))}`",
+        f"- session branch: `{_field_status(session_branch)}`",
+        f"- fork commit: `{_field_status(fields.get('session_fork_commit'))}`",
+        f"- branch 作成と checkout: `{branch_status}`",
+        "## session state file と状態遷移",
+        f"- session state file 作成と保存: `{state_status}`",
+        "- session state file path: `not_fixed`",
+        "- session state: "
+        f"`{_field_status(fields.get('session_state_before'))}` -> "
+        f"`{_field_status(state_after)}`",
+        "## rollback と残存資源",
+        f"- rollback: `{_operation_status(fields.get('rollback_status'), classification)}`",
+        "- 残存 branch・state file: `未確認`",
+        *_standard_tail(classification, result, logger),
     ]
 
 
@@ -329,6 +429,167 @@ def _session_join_body(
     ]
 
 
+def _session_abandon_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> list[str]:
+    """session abandon の対象、state、cleanup、rollback を描画する。"""
+    state_after = fields.get("session_state_after")
+    cleanup = _detail_or_field(fields, result, "cleanup")
+    cleanup_status = _operation_status(cleanup, classification)
+    if cleanup is None and state_after == "abandoned":
+        cleanup_status = "completed"
+    return [
+        "# cmoc session abandon report",
+        _outcome_sentence(classification),
+        "## 破棄対象",
+        f"- session branch: `{_field_status(fields.get('session_branch'))}`",
+        f"- home branch: `{_field_status(fields.get('home_branch'))}`",
+        "- branch 上の commit: "
+        f"`{_field_status(fields.get('abandoned_branch_start_commit'))}`",
+        "## branch 切替と state 遷移",
+        f"- home branch への切替: `{_branch_switch_status(fields, classification)}`",
+        "- session state: "
+        f"`{_field_status(fields.get('session_state_before'))}` -> "
+        f"`{_field_status(state_after)}`",
+        f"- state 更新: `{_state_update_status(state_after)}`",
+        "## branch 削除と cleanup",
+        f"- branch 削除と cleanup: `{cleanup_status}`",
+        f"- cleanup detail: `{_field_status(cleanup)}`",
+        "## rollback と残存資源",
+        f"- rollback: `{_operation_status(fields.get('rollback_status'), classification)}`",
+        "- 残存 branch・state file: `未確認`",
+        *_standard_tail(classification, result, logger),
+    ]
+
+
+def _oracle_edit_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> list[str]:
+    """oracle edit の二つの agent call 状態を描画する。"""
+    return [
+        "# cmoc oracle edit report",
+        _outcome_sentence(classification),
+        "## agent call",
+        f"- first agent call: `{_field_status(fields.get('first_agent_call_status'))}`",
+        "- second agent call: "
+        f"`{_field_status(fields.get('second_agent_call_status'))}`",
+        "## 編集結果",
+        "- oracle file の編集結果は agent call log と差分を参照してください。",
+        *_standard_tail(classification, result, logger),
+    ]
+
+
+def _apply_fork_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> list[str]:
+    """realization apply fork の run、差分、Codex、feedback を描画する。"""
+    return [
+        "# cmoc realization apply fork report",
+        _outcome_sentence(classification),
+        "## run",
+        f"- run kind: `{_field_status(fields.get('run_kind'))}`",
+        f"- session branch: `{_field_status(fields.get('session_branch'))}`",
+        f"- session fork commit: `{_field_status(fields.get('session_fork_commit'))}`",
+        f"- run branch: `{_field_status(fields.get('run_branch'))}`",
+        f"- run fork commit: `{_field_status(fields.get('run_fork_commit'))}`",
+        f"- run worktree: `{_field_status(fields.get('run_worktree'))}`",
+        "- state: "
+        f"`{_field_status(fields.get('state_before'))}` -> "
+        f"`{_field_status(fields.get('state_after'))}`",
+        f"- completion reason: `{_field_status(fields.get('completion_reason'))}`",
+        "## 追従差分と Codex result",
+        f"- diff base commit: `{_field_status(fields.get('diff_base_commit'))}`",
+        f"- Codex returncode: `{_field_status(fields.get('codex_returncode'))}`",
+        f"- changed paths: `{_field_status(fields.get('changed_paths'))}`",
+        "## feedback observation",
+        "- accepted observation count: "
+        f"`{_field_status(fields.get('feedback_observation_count'))}`",
+        f"- accepted observations: `{_field_status(fields.get('feedback_observations'))}`",
+        *_standard_tail(classification, result, logger),
+    ]
+
+
+def _run_join_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> list[str]:
+    """run join の差分検査、取り込み、hook、state、cleanup を描画する。"""
+    run_join_commit = _detail_or_field(fields, result, "run_join_commit")
+    return [
+        "# cmoc run join report",
+        _outcome_sentence(classification),
+        "## run join",
+        f"- run kind: `{_field_status(fields.get('run_kind'))}`",
+        f"- session branch: `{_field_status(fields.get('session_branch'))}`",
+        f"- run branch: `{_field_status(fields.get('run_branch'))}`",
+        f"- run worktree: `{_field_status(fields.get('run_worktree'))}`",
+        "- state: "
+        f"`{_field_status(fields.get('state_before'))}` -> "
+        f"`{_field_status(fields.get('state_after'))}`",
+        "## 差分検査と merge / no-op join",
+        f"- run fork commit: `{_field_status(fields.get('run_fork_commit'))}`",
+        f"- run join commit: `{_field_status(run_join_commit)}`",
+        "- 差分検査: `未実行`",
+        "- 想定外差分: `未確認`",
+        "- merge または no-op join: "
+        f"`{_operation_status(run_join_commit, classification)}`",
+        "## post-join と cleanup",
+        f"- post-join hook: `{_field_status(fields.get('post_join_hook'))}`",
+        f"- refactor state 同期: `{_field_status(fields.get('refactor_state_sync_commit'))}`",
+        f"- cleanup: `{_field_status(fields.get('cleanup'))}`",
+        "- 残存資源: `未確認`",
+        *_standard_tail(classification, result, logger),
+    ]
+
+
+def _run_abandon_body(
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> list[str]:
+    """run abandon の process、対象、state、cleanup を描画する。"""
+    return [
+        "# cmoc run abandon report",
+        _outcome_sentence(classification),
+        "## process と cleanup",
+        f"- process stop: `{_field_status(fields.get('process_stop'))}`",
+        f"- worktree: `{_field_status(fields.get('run_worktree'))}`",
+        f"- branch: `{_field_status(fields.get('run_branch'))}`",
+        f"- worktree removed: `{_field_status(fields.get('worktree_removed'))}`",
+        f"- branch removed: `{_field_status(fields.get('branch_removed'))}`",
+        f"- cleanup: `{_field_status(fields.get('cleanup'))}`",
+        "- 残存資源: `未確認`",
+        "## state 遷移",
+        "- state: "
+        f"`{_field_status(fields.get('state_before'))}` -> "
+        f"`{_field_status(fields.get('state_after'))}`",
+        *_standard_tail(classification, result, logger),
+    ]
+
+
+def _detail_or_field(
+    fields: dict[str, object], result: TerminalResult, name: str
+) -> object:
+    """front matter context を優先し、terminal result の detail を補う。"""
+    if name in fields:
+        return fields[name]
+    return next(
+        (value for detail_name, value in result.details if detail_name == name), None
+    )
+
+
 def _operation_status(value: object, classification: TerminalClassification) -> str:
     """operation の未実行・失敗・完了を report 用の短い値へ変換する。"""
     if value is None:
@@ -338,6 +599,39 @@ def _operation_status(value: object, classification: TerminalClassification) -> 
     if value == "not_confirmed":
         return "未確認"
     return _inline_text(value)
+
+
+def _branch_switch_status(
+    fields: dict[str, object], classification: TerminalClassification
+) -> str:
+    """branch 名から switch の実行を推測せず、確定可能な状態だけを示す。"""
+    if fields.get("session_state_after") == "abandoned":
+        return "completed"
+    if fields.get("home_branch") is None:
+        return "未実行"
+    return _operation_status("not_confirmed", classification)
+
+
+def _state_update_status(value: object) -> str:
+    """state の値を、更新操作の status として安全に表示する。"""
+    return "completed" if value is not None else "未実行"
+
+
+def _stage_status(
+    logger: SubcommandLogger, classification: TerminalClassification
+) -> str:
+    """step 記録から doctor preprocess の実行状態を要約する。"""
+    doctor_steps = [
+        step for step in logger.step_timings if "doctor preprocess" in step.description
+    ]
+    if not doctor_steps:
+        return "未実行"
+    step = doctor_steps[-1]
+    if classification == "error" and logger.step_timings[-1] is step:
+        return "error"
+    if classification == "user_interruption" and logger.step_timings[-1] is step:
+        return "user_interruption"
+    return "completed" if step.elapsed_sec is not None else "started"
 
 
 def _step_lines(

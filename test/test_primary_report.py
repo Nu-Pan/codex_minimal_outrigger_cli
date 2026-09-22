@@ -142,6 +142,17 @@ _EARLY_ERROR_REPORTS = [
         "feedback/invocation",
         (
             "session_branch",
+            "run_kind",
+            "run_branch",
+            "run_fork_commit",
+            "run_worktree",
+            "state_before",
+            "state_after",
+            "wave_count",
+            "final_high_watermark",
+            "processed_issues",
+            "confirmed_issue_commits",
+            "rollback",
             "report_cut_id",
             "report_cut_at",
             "normal_publication_status",
@@ -150,6 +161,37 @@ _EARLY_ERROR_REPORTS = [
         ),
     ),
 ]
+
+_EARLY_ERROR_SECTIONS = {
+    "doctor": ("## doctor preprocess",),
+    "indexing": ("## インデクシング", "更新した INDEX.md"),
+    "session fork": (
+        "## branch の作成と checkout",
+        "## session state file と状態遷移",
+        "## rollback と残存資源",
+    ),
+    "session join": ("## branch 切替と merge", "## state 遷移"),
+    "session abandon": (
+        "## 破棄対象",
+        "## branch 切替と state 遷移",
+        "## branch 削除と cleanup",
+        "## rollback と残存資源",
+    ),
+    "oracle edit": ("## agent call", "first agent call", "second agent call"),
+    "realization apply fork": (
+        "## run",
+        "## 追従差分と Codex result",
+        "## feedback observation",
+    ),
+    "realization refactor fork": ("## Current fork", "## Refactor state"),
+    "run join": (
+        "## run join",
+        "## 差分検査と merge / no-op join",
+        "## post-join と cleanup",
+    ),
+    "run abandon": ("## process と cleanup", "## state 遷移"),
+    "feedback report": ("## 確定済みの部分結果", "## 維持した state と未実行処理"),
+}
 
 
 def _disable_external_completion(
@@ -172,6 +214,7 @@ def _disable_external_completion(
     ("command_name", "report_directory", "required_fields"),
     _EARLY_ERROR_REPORTS,
 )
+@pytest.mark.parametrize("failure_stage", ("doctor_preprocess", "precondition"))
 def test_early_error_saves_command_specific_primary_report(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -179,6 +222,7 @@ def test_early_error_saves_command_specific_primary_report(
     command_name: str,
     report_directory: str,
     required_fields: tuple[str, ...],
+    failure_stage: str,
 ) -> None:
     """処理開始前の error でも固有の保存先と必須 front matter を保つ。"""
     root = make_repo(tmp_path)
@@ -186,20 +230,28 @@ def test_early_error_saves_command_specific_primary_report(
     _disable_external_completion(monkeypatch)
 
     def fail_precondition(_runtime_root: Path) -> None:
-        """doctor preprocess 後の共通事前条件での終了を再現する。"""
+        """report 保存前の処理開始エラーを再現する。"""
         raise CmocError("early failure", ["retry command"], "early detail")
 
     def command_body_must_not_start() -> None:
         """事前条件の失敗後にサブコマンド本体を開始しないことを検証する。"""
         pytest.fail("command body started after precondition failure")
 
+    if failure_stage == "doctor_preprocess":
+        monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", fail_precondition)
+        pre_log_check = None
+        doctor_preprocess = True
+    else:
+        pre_log_check = fail_precondition
+        doctor_preprocess = False
+
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
             command_body_must_not_start,
             command_name=command_name,
             command_argv=("cmoc", *command_name.split(), "--scope", "all"),
-            pre_log_check=fail_precondition,
-            doctor_preprocess=False,
+            pre_log_check=pre_log_check,
+            doctor_preprocess=doctor_preprocess,
         )
 
     captured = capsys.readouterr()
@@ -222,10 +274,12 @@ def test_early_error_saves_command_specific_primary_report(
     assert "理由:" not in front_matter
     assert "詳細:" not in front_matter
     for field in required_fields:
-        assert f"{field}:" in front_matter
+        assert field in metadata
     assert "early failure" in rendered
     assert "early detail" in rendered
     assert "診断用サブコマンドログ" in rendered
+    for section in _EARLY_ERROR_SECTIONS[command_name]:
+        assert section in rendered
     if command_name == "oracle edit":
         assert 'first_agent_call_status: "not_started"' in front_matter
         assert 'second_agent_call_status: "not_started"' in front_matter
