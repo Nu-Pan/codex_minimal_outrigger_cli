@@ -426,3 +426,45 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     assert finished["failure"]["classification"] == "internal_failure"
     assert finished["failure"]["target_path"] == str(unsaved_path.absolute())
     assert finished["terminal_result"]["primary_report_path"] is None
+
+
+def test_unreadable_existing_report_becomes_internal_failure_without_path_display(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """既存 report の読み取り失敗も report 基盤の internal failure にする。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+    unreadable_path = root / "unreadable-report.md"
+    unreadable_path.write_bytes(b"\xff")
+
+    def return_unreadable_report() -> TerminalResult:
+        return TerminalResult(
+            primary_report=unreadable_path,
+            primary_report_role="doctor execution report",
+        )
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            return_unreadable_report,
+            command_name="doctor",
+            command_argv=("cmoc", "doctor"),
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert exc_info.value.exit_code == 1
+    assert "# 失敗: cmoc doctor" in captured.err
+    assert "primary report の保存を確認できませんでした。" in captured.err
+    assert str(unreadable_path) not in captured.err
+    assert "- primary report (" not in captured.err
+    log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
+    [log_path] = log_directory.glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    finished = events[-1]
+    assert finished["event"] == "command_finished"
+    assert finished["failure"]["classification"] == "internal_failure"
+    assert finished["failure"]["target_path"] == str(unreadable_path.absolute())
+    assert finished["terminal_result"]["primary_report_path"] is None

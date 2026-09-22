@@ -496,18 +496,19 @@
 # `runtime_primary_report.py`
 
 ## Summary
-- 非対話サブコマンドの primary report context を管理し、個別 report が未作成の終了経路では確定済み runtime 情報から fallback report を生成・保存する実装。既存 report の検証、実行記録の追記、予約済みパスへの安全な書き込み・更新、および保存失敗時の internal failure を扱う。
+- 非対話サブコマンドの primary report context を管理し、既存レポートの検証・追記または未作成時の fallback レポート生成を担う。
+- レポート項目を実行結果・終了分類・logger・invocation 中の確定値から組み立て、安全な一時ファイル置換と保存確認を行う。
 
 ## Read this when
-- 非対話サブコマンドの primary report がどの終了経路で生成されるか、また fallback 保存時にどの runtime 項目や alias を report fields へ反映するか確認したいとき
-- primary report の保存確認、既存 report の安全な更新、保存失敗時の例外処理を変更・調査するとき
+- 非対話サブコマンド終了時の primary report 保存経路や fallback 生成を確認したいとき
+- report の項目収集、既存レポートへの実行記録追記、保存失敗時の扱いを変更・調査するとき
 
 ## Do not read this when
-- 特定サブコマンドの report 項目定義や分類仕様そのものを確認したいときは、primary report の spec・render 実装や各サブコマンドの正本仕様を直接読む
-- ログ出力の一般的な仕組み、runtime path の生成規則、TerminalResult の構造だけを確認したいとき
+- レポートの項目定義や Markdown 描画形式そのものを確認したいときは、先に runtime_primary_report_specs.py または runtime_primary_report_render.py を読む
+- 終了結果の生成やサブコマンド固有の処理を確認したいだけで、primary report の保存・補完経路に関係しないとき
 
 ## hash
-- 45acbdb0c40b1fca093a1a7594a079e5c6f1eee83974e1a1a83964ba785eaa80
+- b9af89f7a318419a73703cefb4869c39e19347779f569cdaaea1fe0d708a5e9c
 
 # `runtime_primary_report_render.py`
 

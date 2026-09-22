@@ -647,20 +647,19 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話末端サブコマンドの primary report 完了契約を検証するテスト。処理開始前エラー、中断、Codex 出力・feedback observation の保持、fallback report、既存 report の保全、保存未確認時の internal failure を対象とする。
+- 非対話サブコマンドの primary report 完了契約を横断的に検証するテスト。事前エラー・ユーザー中断・Codex 出力と受理済み観測の保持・fallback の中断理由・既存レポート更新失敗・保存確認不能時の内部失敗を対象とする。
 
 ## Read this when
-- 非対話サブコマンドのエラー・ユーザー中断時に primary report が保存される契約を確認または変更するとき。
-- primary report の front matter、サブコマンド固有フィールド、実行出力・観測結果の保持、保存失敗時の扱いを検証するとき。
-- runtime_cli の terminal result 完了処理や primary report 保存基盤の回帰テストの入口を探すとき。
+- primary report の生成・更新・fallback・保存確認、または terminal result の完了分類を変更・調査するとき。
+- 各サブコマンドの早期エラーや中断時に、固有保存先・front matter・診断内容・出力保持の回帰を確認するとき。
+- レポート保存失敗時に既存ファイルを保持し、パスを表示せず内部失敗として扱う挙動を確認するとき。
 
 ## Do not read this when
-- サブコマンド本体の正常系処理や個別ドメインロジックだけを変更・調査するとき。
-- primary report の生成仕様そのものを確認したい場合は、まず対象テストではなく対応する正本仕様や生成実装を直接読むべきとき。
-- feedback observation の送信・受付仕様だけを調査し、terminal report への反映や完了契約を扱わないとき。
+- primary report 基盤や terminal result の挙動ではなく、個別サブコマンド本体の処理だけを変更・調査するとき。
+- このファイルが列挙する完了契約の検証対象外である、別のログ・レポート形式や一般的な CLI 入力処理だけを扱うとき。
 
 ## hash
-- b79c947a242aa1ba0becf608e296fc8ac05a47056bf2e55d30bf5e449e5ac32c
+- 8fbcaf13f96350306d3ccc7113b29ba4b4f86ff3937d583755941870f89b3489
 
 # `test_production_cli.py`
 

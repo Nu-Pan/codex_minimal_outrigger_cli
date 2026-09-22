@@ -50,23 +50,20 @@
 # `commons`
 
 ## Summary
-- cmoc の実行基盤を構成する共通 Python モジュール群。CLI のライフサイクル、パス・設定・Git・状態管理、Codex subprocess/TUI 呼び出し、フィードバック受付と永続化、実行結果・レポート生成、インデックス更新、エディター入力引き渡しなど、複数コマンドから共有されるランタイム責務を扱う。
+- cmoc の複数の実行経路で共有する runtime 基盤を集約するディレクトリ。CLI lifecycle、Codex exec/TUI 起動、設定・パス・Git・state 管理、run lifecycle、feedback observation、editor input handoff、logging/reporting、INDEX 更新などの共通境界を提供する。
 
 ## Read this when
-- CLI サブコマンドの開始・終了・エラー処理や実行結果の記録を調べるとき。
-- Codex の subprocess/TUI 実行、プロセス追跡・停止、設定や sandbox 用引数の組み立てを変更するとき。
-- フィードバック観測の検証・保存・受付、実行状態や成果物の復旧を調べるとき。
-- 主レポート、実行レポート、ログ、パス、作業ツリー、インデックス更新など、複数機能を横断する共通ランタイム処理を変更するとき。
-- エディター入力の収集や MCP ベースの handoff、Codex 実行前の preflight を確認するとき。
+- cmoc のサブコマンドから再利用される runtime API や、実行 lifecycle・永続 state・外部 Codex 呼び出しの共通処理を調べるとき
+- Git worktree と run/session の分離、feedback の受理・保存・report、editor input handoff、primary report/logging の実装入口を探すとき
+- 複数の機能領域にまたがるエラー処理、結果モデル、パス解決、設定同期などの共有不変条件を確認するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンド固有の業務フローだけを調べる場合は、そのコマンド実装を直接読むとき。
-- 正本仕様や設定モデルの定義を確認する場合は、ここではなく oracle または設定定義側を直接読むとき。
-- インデックス本文の生成規則だけを確認する場合は、対象のインデックス生成実装を直接読むとき。
-- 特定のレポート形式やフィードバック schema の詳細だけを確認する場合は、対応する個別モジュールや schema 定義を直接読むとき。
+- INDEX.md の生成・検査 lifecycle だけを調べる場合は indexing.py を直接読む
+- 特定のサブコマンド固有の仕様や oracle 文書を確認する場合は、対応する oracle/doc またはサブコマンド実装を直接読む
+- 個別の Codex 呼び出し、feedback store、Git 操作、state schema、report rendering の詳細だけが必要な場合は、src/commons 配下の該当 runtime_*.py を直接読む
 
 ## hash
-- f828986bf67943275941f1b5f21b4dfe697bdacfe4bf61ee4264e288761ef55c
+- 75579be0112c3a8f7062318465798d2b4b8d6039fc5acf20df0d424e9d892e36
 
 # `config`
 
