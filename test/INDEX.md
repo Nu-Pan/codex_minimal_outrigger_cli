@@ -417,20 +417,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- 編集実行 run の統合ライフサイクルを検証する realization テスト。session/run の fork・state 遷移・worktree と変更パスの扱い、apply/refactor の処理単位、index 更新、agent 変更検査、join/abandon、rollback・cleanup・process tracking、report と警告、割り込み・失敗からの復旧までを共通 fixture として扱う。
+- editing run の統合テスト群。realization apply/refactor の fork、session state と run worktree の lifecycle、変更検出・rollback・index refresh、join/abandon、process tracking、report と interrupt/error recovery を共通 fixture で検証する。
+- CLI と共通 runtime helper の境界、および legacy shim・oracle/realization path 判定・変更 path summary など、editing run lifecycle に関わる回帰条件の入口となるテスト。
 
 ## Read this when
-- 編集実行 run の開始から完了・join・abandon・rollback までのライフサイクルを確認するとき
-- apply または refactor の fork、index 更新、変更パス検査、report、cleanup、子プロセス停止の回帰条件を調べるとき
-- session branch・run branch・worktree・state の相互作用や、失敗・割り込み後に joinable/error state へ遷移する条件を確認するとき
+- realization apply/refactor の editing run が開始・実行・完了・失敗・中断した際の state 遷移や worktree/branch cleanup を確認したいとき。
+- run join または abandon の受入条件、force resolve、merge conflict、cleanup failure、process tracking、report 保存を調べたいとき。
+- agent や indexing refresh による予期しない変更、oracle/realization の変更 path 判定、rollback と postcondition 検証の回帰を調査したいとき。
 
 ## Do not read this when
-- 編集実行 run の実装仕様そのものを確認したい場合は、参照される realization 実装や oracle 文書を直接読むとき
-- 個別の CLI サブコマンドの単純な引数解析・表示だけを調べるとき
-- 対象ファイル内の具体的なテストケースや期待値を確認したい場合は、この案内ではなく対象ファイルを直接読むとき
+- editing run の本体仕様や実装を変更・理解したい場合は、まず対応する oracle 仕様または src/commons/runtime_run_lifecycle.py・src/sub_commands/realization/*・src/sub_commands/run/* を直接読むべき。
+- 一般的な CLI dispatcher の挙動だけを確認したい場合は、src/commons/runtime_cli.py や test/test_runtime_cli.py を読むべき。
+- Codex builder の引数生成だけを確認したい場合は、test/test_acp_builder_editing_run_parameters.py を読むべき。
 
 ## hash
-- 86847e9625e22ae03d30c5fb610e97d3ae3ee861990eb5bb8c35025e7bfc053f
+- 092c2abe6b4d31acc49af3c7812e1bce4951bd84111904cd5cbf74c3df1380f4
 
 # `test_editor_input_handoff.py`
 
@@ -469,23 +470,21 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の reporter、collector、raw observation、issue candidate、remediation、active state、atomic publication、cleanup を同一 fixture で検証する統合テストの入口。
-- agent-facing submission の JSON-RPC／TCP protocol、安全な UTF-8・secret masking・path 境界、rate limit、call lifecycle を確認する。
-- feedback report の precondition、候補同一性、再発 threshold、wave 処理、Codex remediation、interrupt／failure recovery、active artifact 整合性を検証する。
+- Feedback 観測の reporter、collector、正規化、状態管理、公開・cleanup の境界を検証する回帰テスト群。
+- agent-facing の MCP 提出、入力・通信エラー、安全な秘匿化、観測の永続化、再発判定、atomic publication と復旧を確認する入口。
 
 ## Read this when
-- feedback observation の受付から report publication・active state 更新・raw cleanup までの一連の挙動を変更または確認するとき。
-- reporter／collector protocol、context capability、durable storage、並行 call、入力検証や degraded warning の回帰を調べるとき。
-- feedback report の候補 normalization、remediation、再検証、遅延 intake、run recovery、atomic publication の境界を確認するとき。
-- active generation、current pointer、report cut、cleanup manifest の corruption 検出や復旧動作を確認するとき。
+- フィードバック観測の送信・collector 通信・reporter protocol の挙動を確認または変更するとき。
+- 観測の schema 検証、secret masking、issue 判定、threshold、raw/active state、report cut、cleanup、復旧の回帰を調べるとき。
+- feedback report の preflight、正規化 builder、agent/machine observation の保存と公開処理に対するテスト期待値を確認するとき。
 
 ## Do not read this when
-- feedback の個別実装や正本仕様の詳細を直接確認したい場合は、対応する runtime／subcommand 実装または oracle specification を先に読むとき。
-- feedback 以外の subcommand、一般的な session／run lifecycle、または unrelated な MCP protocol の挙動だけを調べるとき。
-- 単純な fixture・テスト実行方法や、テスト対象の機械的なファイル配置だけを確認したいとき。
+- フィードバック機能と無関係な CLI 機能やテストの挙動を確認するとき。
+- テスト基盤や fixture 共通処理そのものを調べる場合で、フィードバック固有の期待動作を読む必要がないとき。
+- 本番実装の詳細を直接確認すべきで、テストによる回帰条件の確認が目的でないとき。
 
 ## hash
-- 033d608871a089569bf9b8dcad9159e6a69186fc980f6aff2f3462bc9aba6414
+- 0a71b6c7dc09d57391507f9170f7b6a66213e1682051cb5da885d62bcb1d51a2
 
 # `test_feedback_decision.py`
 

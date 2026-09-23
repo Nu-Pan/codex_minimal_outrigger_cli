@@ -62,9 +62,6 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
     initial_context, _ = resolve_active_run({"joinable", "error"})
     with run_lifecycle_lock(initial_context.repo, initial_context.session_id):
         context, state = resolve_active_run({"joinable", "error"})
-        from sub_commands.feedback.recovery import require_manual_feedback_run
-
-        require_manual_feedback_run(context)
         update_primary_report_fields(
             run_kind=context.kind,
             session_branch=context.session_branch,
@@ -74,6 +71,9 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
             state_before=state.run.state,
             state_after=state.run.state,
         )
+        from sub_commands.feedback.recovery import require_manual_feedback_run
+
+        require_manual_feedback_run(context)
         warnings: list[str] = []
         session_doctor_state_paths = runtime_run_join.doctor_paths_for_join(
             doctor_state_paths,
