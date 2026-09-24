@@ -17,6 +17,7 @@ from .runtime_git import (
     require_clean_worktree,
     run_git,
 )
+from .runtime_merge_conflict import resolve_merge_conflicts
 from .runtime_paths import repo_root, work_root
 from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
@@ -31,14 +32,12 @@ from .runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
     commit_work_unit,
-    is_generated_index_path,
     refresh_indexes,
     tree_changes,
     unexpected_run_paths,
-    unexpected_session_paths,
 )
 from .runtime_run_report import write_lifecycle_report
-from .runtime_state import SessionState, load_state_for_branch, write_state
+from .runtime_state import SessionState, load_state_for_branch
 
 
 def doctor_preprocess_changes_for_join() -> dict[Path, tuple[str, set[str]]]:
@@ -112,7 +111,6 @@ def validate_run_join(
     warnings: list[str],
     *,
     force_resolve: bool = False,
-    session_ignored_paths: Collection[str] = (),
     run_ignored_paths: Collection[str] = (),
 ) -> None:
     """明示 join と self-joining workload が共有する clean・差分検査を行う。"""
@@ -123,23 +121,7 @@ def validate_run_join(
         context.run_worktree,
         context.run_fork_commit,
     )
-    session_changes = tree_changes(
-        context.session_worktree,
-        context.run_fork_commit,
-    )
-    session_unexpected = unexpected_session_paths(
-        context.session_worktree,
-        session_changes,
-        base=context.run_fork_commit,
-        ignored_paths=session_ignored_paths,
-    )
-    if session_unexpected:
-        _raise_unexpected(
-            context,
-            "session branch に想定外差分があります。",
-            session_unexpected,
-            warnings,
-        )
+    # session 側の commit 済み変更は file 種別を問わず統合対象にする。
     run_unexpected = unexpected_run_paths(
         context,
         run_changes,
@@ -183,12 +165,44 @@ def merge_run(
     warnings: list[str],
     session_head_before_join: str,
     *,
-    on_merged: Callable[[str | None], None] | None = None,
-) -> tuple[str | None, str, str | None, str | None]:
+    on_merged: Callable[[str | None, dict[str, object]], None] | None = None,
+    feedback_report_cut_path: Path | None = None,
+) -> tuple[str | None, str, str | None, str | None, dict[str, object]]:
+    """merge 前の失敗は開始時へ戻し、commit 後は未確定作業差分だけ除く。"""
+    try:
+        return _merge_run_body(
+            context,
+            state,
+            warnings,
+            session_head_before_join,
+            on_merged=on_merged,
+            feedback_report_cut_path=feedback_report_cut_path,
+        )
+    except BaseException:
+        if head_commit(context.session_worktree) == session_head_before_join:
+            restore_session_after_join_failure(context, session_head_before_join)
+        else:
+            run_git(["reset", "--hard", "HEAD"], context.session_worktree)
+            run_git(["clean", "-fd"], context.session_worktree)
+        raise
+
+
+def _merge_run_body(
+    context: EditingRunContext,
+    state: SessionState,
+    warnings: list[str],
+    session_head_before_join: str,
+    *,
+    on_merged: Callable[[str | None, dict[str, object]], None] | None = None,
+    feedback_report_cut_path: Path | None = None,
+) -> tuple[str | None, str, str | None, str | None, dict[str, object]]:
     """共通 merge と post-join を行い、state 初期化と資源 cleanup は呼出元に残す。"""
     # merge の結果を確定し、workload 固有の state 初期化は呼出元へ返す。
     run_join_commit: str | None
-    index_conflict = False
+    resolution: dict[str, object] = {
+        "agent_status": "not_needed",
+        "initial_conflicts": [],
+    }
     start_subcommand_step(3, "run branch を session へ merge", "merge run")
     merge = run_git(
         ["merge", "--no-ff", context.run_branch],
@@ -196,25 +210,34 @@ def merge_run(
         check=False,
     )
     if merge.returncode != 0:
-        index_conflict = True
-        run_join_commit = _resolve_index_only_conflict_or_fail(
-            context,
-            state,
-            warnings,
-            session_head_before_join,
+        from oracle.acp_builder.run.join.conflict_resolution import (
+            build_run_join_conflict_resolution_parameter,
         )
+
+        run_head = head_commit(context.run_worktree)
+        resolution = resolve_merge_conflicts(
+            context.session_worktree,
+            build_run_join_conflict_resolution_parameter(
+                run_head,
+                session_head_before_join,
+                context.session_worktree,
+                feedback_report_cut_path=feedback_report_cut_path,
+            ),
+            refresh_indexes=lambda: _refresh_merge_indexes(context, warnings),
+            purpose="run join conflict resolution",
+        )
+        run_join_commit = head_commit(context.session_worktree)
     else:
         merged_head = head_commit(context.session_worktree)
         run_join_commit = (
             merged_head if merged_head != session_head_before_join else None
         )
     if on_merged is not None:
-        on_merged(run_join_commit)
+        on_merged(run_join_commit, resolution)
     # merge 後の共通 hook と state 同期を実行する。
     start_subcommand_step(4, "post-join hook と state 同期", "run post-join")
     hook_result = "none"
-    # post-join 処理の失敗時は merge を戻して error state にするため、成功確定まで
-    # last_joined_apply_fork_commit を state object へ書き戻さない。
+    # 確定前の state object へ比較始点を書き戻さない。
     last_joined_apply_fork_commit = state.session.last_joined_apply_fork_commit
     if context.kind == "realization_apply":
         # lock 内で対象 run を確定した時点の state を使い、error run の比較始点を保つ。
@@ -222,20 +245,40 @@ def merge_run(
         if context.state_before == "joinable":
             last_joined_apply_fork_commit = context.run_fork_commit
             hook_result = "session.last_joined_apply_fork_commit updated"
-    _refresh_join_indexes(context, warnings)
-    if index_conflict:
-        warnings.append("INDEX.md conflicts were regenerated")
-    sync_refactor_state(context.session_worktree)
-    state_sync_commit = commit_work_unit(
-        context.session_worktree,
-        "cmoc refactor state sync after run join",
-    )
+    try:
+        _refresh_join_indexes(context, warnings)
+        sync_refactor_state(context.session_worktree)
+        state_sync_commit = commit_work_unit(
+            context.session_worktree,
+            "cmoc refactor state sync after run join",
+        )
+    except BaseException as exc:
+        setattr(exc, "_merge_resolution", resolution)
+        setattr(exc, "_merge_commit", run_join_commit)
+        setattr(exc, "_post_join_hook", hook_result)
+        raise
     return (
         run_join_commit,
         hook_result,
         state_sync_commit,
         last_joined_apply_fork_commit,
+        resolution,
     )
+
+
+def _refresh_merge_indexes(context: EditingRunContext, warnings: list[str]) -> None:
+    """merge 進行中の INDEX を更新し、差分を merge commit に含める。"""
+    with run_process_tracking(context.repo, context.session_id):
+        write_run_process_id(context.repo, context.session_id, os.getpid())
+        try:
+            refresh_indexes(context.session_worktree, commit=False)
+        finally:
+            try:
+                warnings.extend(
+                    stop_tracked_codex_children(context.repo, context.session_id) or []
+                )
+            finally:
+                delete_run_process_id(context.repo, context.session_id)
 
 
 def _refresh_join_indexes(
@@ -290,79 +333,6 @@ def _revert_unexpected_run_paths(
     commit_work_unit(context.run_worktree, "cmoc run force resolve")
 
 
-def _resolve_index_only_conflict_or_fail(
-    context: EditingRunContext,
-    state: SessionState,
-    warnings: list[str],
-    session_head_before_join: str,
-) -> str:
-    """INDEX.md だけの conflict を再生成し、それ以外は error report へ移す。"""
-    # unmerged path を調べ、INDEX.md だけなら再生成へ進める。
-    fields = run_git(
-        ["diff", "--name-only", "-z", "--diff-filter=U"],
-        context.session_worktree,
-    ).stdout.split("\0")
-    conflicts = [path for path in fields if path]
-    if conflicts and all(
-        is_generated_index_path(
-            context.session_worktree,
-            path,
-            base=context.run_fork_commit,
-        )
-        for path in conflicts
-    ):
-        for path in conflicts:
-            if _has_ours_conflict_stage(context.session_worktree, path):
-                run_git(
-                    ["checkout", "--ours", "--", literal_pathspec(path)],
-                    context.session_worktree,
-                )
-                run_git(
-                    ["add", "--", literal_pathspec(path)],
-                    context.session_worktree,
-                )
-            else:
-                # session 側で削除された INDEX.md には ours stage がないため、削除を
-                # stage してから再生成処理へ渡す。
-                run_git(
-                    ["rm", "-f", "--", literal_pathspec(path)],
-                    context.session_worktree,
-                )
-        run_git(["commit", "--no-edit"], context.session_worktree)
-        merge_commit = head_commit(context.session_worktree)
-        return merge_commit
-    # INDEX.md 以外の conflict は join 開始前の clean tree へ戻して report する。
-    restore_session_after_join_failure(context, session_head_before_join)
-    state.run.state = "error"
-    write_state(context.state_path, state)
-    report = write_lifecycle_report(
-        context,
-        "join",
-        state_after="error",
-        warnings=warnings,
-        details={
-            "run_join_commit": None,
-            "post_join_hook": "not_run",
-            "refactor_state_sync_commit": None,
-            "cleanup": "not_run",
-            "conflict_paths": ", ".join(conflicts),
-        },
-        terminal_classification="error",
-        exit_code=1,
-    )
-    error = CmocError(
-        "INDEX.md 以外の merge conflict が発生しました。",
-        ["run report を確認し、run を join または abandon してください。"],
-        "\n".join(conflicts) or "merge failed without unmerged paths",
-        terminal_result=TerminalResult(
-            primary_report=report,
-            primary_report_role="run join report",
-            warnings=tuple(warnings),
-        ),
-    )
-    raise error
-
-
 def restore_session_after_join_failure(
     context: EditingRunContext,
     session_head_before_join: str,
@@ -378,19 +348,6 @@ def restore_session_after_join_failure(
         run_git(["merge", "--abort"], context.session_worktree, check=False)
     run_git(["reset", "--hard", session_head_before_join], context.session_worktree)
     run_git(["clean", "-fd"], context.session_worktree)
-
-
-def _has_ours_conflict_stage(root: Path, path: str) -> bool:
-    """unmerged path に session 側の stage 2 が存在するか判定する。"""
-    # stage 2 があれば session 側の内容を残してから index を再生成する。
-    fields = run_git(
-        ["ls-files", "-u", "-z", "--", literal_pathspec(path)], root
-    ).stdout.split("\0")
-    for field in fields:
-        metadata, separator, _path = field.partition("\t")
-        if separator and len(metadata.split()) >= 3 and metadata.split()[2] == "2":
-            return True
-    return False
 
 
 def cleanup_joined_run(

@@ -15,52 +15,54 @@
 # `decision.py`
 
 ## Summary
-- フィードバック判定の根拠状態を識別し、過去の処理履歴との比較から再確認に関する情報を組み立てる。
+- feedback の判定で比較するリポジトリ入力と候補の根拠を収集し、内容・実行属性と根拠から状態を識別します。判定に含めない生成物や Git metadata もここで扱います。
+- 正式 checkpoint の履歴をたどって再確認の要否、前回からの変化、同じ状態へ戻る循環をまとめ、検査記録に結び付いた判定根拠を作成します。
 
 ## Read this when
-- 判定根拠の状態比較や、過去の判定を再確認する条件を調べるとき。
+- feedback 判定の入力範囲や変更検知を見直すとき。
+- 過去の判定との照合、再確認、循環検出、判定根拠の保存形式を調べるとき。
 
 ## Do not read this when
-- 再確認を含む remediation の処理順序や実行制御を変更するときは、remediation の処理を担う対象から確認する。
-- 実行 artifact の形式や検証規則だけを変更するときは、その形式と検証を担う対象から確認する。
+- 候補の組み立て、agent call、修正・commit、report の封印や publication など、feedback remediation 全体の進行を調べるときは、呼び出し側の処理へ進んでください。
+- checkpoint の構造や artifact の整合性検証を調べるときは、その検証処理へ進んでください。
 
 ## hash
-- 7fd71b4bac5a2d74cb53e78434cd540fac99cd6331d2dc1dfc3d174fa05817dc
+- 9eb918f99fc41cdd7265ae270bf52adc7e2ad5c866fa886aec21234e5435cacc
 
 # `recovery.py`
 
 ## Summary
-- Feedback report の publication 後に、finalization journal と join evidence を照合し、cleanup と session/run の終了状態を再開可能な形で確定する。
-- Feedback report run の明示 join/abandon を自動 publication と調整し、手動終了時の記録と未公開 work の破棄を担う。
+- feedback report 公開後の finalization journal を検証し、中断後に cleanup と run の ready 遷移を再開する。
+- 自動 join 済みの feedback run を手動 join/abandon から保護し、明示終了時には未公開の report cut を監査記録後に片付ける。
 
 ## Read this when
-- report の公開後に cleanup が中断し、同じ report cut と join 状態から recovery を追うとき。
-- feedback report run に対する明示 join/abandon の制約や、手動終了時の記録・work cleanup を確認するとき。
+- feedback report 公開後に cleanup が中断し、journal や run state を照合して完了処理を再開する方法を調べるとき。
+- feedback run の手動 join/abandon が許可される条件や、明示終了時の report cut の扱いを調べるとき。
 
 ## Do not read this when
-- report の生成、修復、正規化、候補検証の手順を調べるときは、report pipeline または remediation coordinator を読む。
-- 通常の run join/abandon の merge、worktree、branch cleanup を調べるときは、run lifecycle 側を読む。
+- observation の収集、候補の修復、join 判定など report の実行フロー自体を調べるときは、そのフローの実装へ進む。
+- report の候補作成、証拠処理、本文描画、publication の内容を調べるときは、それらを担う report 処理へ進む。
 
 ## hash
-- 69e04af943a1db08bab64464419b23ec2fa9d39ad79a788ed3b8fbc4eddfe230
+- 82c9bc8ca34a2d26169c8f2010d33da72b95c8edbe73990a8921a584743ddd64
 
 # `remediation.py`
 
 ## Summary
-- feedback の修復 run を制御し、観測を wave 単位で取り込みながら issue ごとの修復、差分検証、commit、checkpoint を進める。
-- run の成果を封印して join と publication へ渡し、中断・失敗時の rollback、recovery、進捗確定も扱う。集計・レポート処理と判定根拠の比較は、それぞれの専用処理へ委譲する。
+- feedback report の制御を担い、wave ごとの観測取込み、issue 修復の実差分検証と checkpoint、自動 join、公開までを一連の run 状態遷移として進める。
+- 候補の集約や判定根拠の算出そのものではなく、それらを呼び出して修復の順序と run の整合を保つ処理を確認する入口。
 
 ## Read this when
-- feedback report の wave intake から issue 修復・checkpoint までの進行や収束条件を変更・調査するとき。
-- 修復成果の join、join 後の検査、publication への受け渡し、または中断・失敗時の run 状態回復を扱うとき。
+- 観測を wave に取り込んでから issue を修復し、差分検証・commit・checkpoint・自動 join へ進む制御を変更または調査するとき。
+- 自動 join・公開の回復や、中断・失敗時の run 状態と進捗記録の扱いを変更または調査するとき。
 
 ## Do not read this when
-- CLI の起動処理、観測の集計、正規化、レポート内容や publication の内部だけを扱うときは、該当する report 処理から確認する。
-- 判定入力の hash、根拠の有効性、再確認履歴だけを扱うときは、判定処理から確認する。
-- run artifact の読み書きや形式検証だけを扱うときは、artifact 状態管理の処理から確認する。
+- 観測の検証・候補集約・レポート内容の生成や公開処理そのものが主題なら、それらを担う処理から確認するとき。
+- 判定根拠の内容、入力変更の検出、再確認条件そのものが主題なら、判定ロジックから確認するとき。
+- 公開後の cleanup や明示的な join・abandon の扱いそのものが主題なら、その終了処理から確認するとき。
 
 ## hash
-- 3cff3fece0363dc0fe5e24d429b5a3a7f442e17a443268e093b105ec4f6ba794
+- 8348e183bd3a45453ddbf84f708c80841415b5c6f1df637a4046e8134da340bb
 
 # `report.py`
 

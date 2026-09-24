@@ -1,4 +1,4 @@
-"""feedback の判定根拠が依存設定と nested realization を含むことを検証する。"""
+"""feedback の判定根拠に依存設定を含め、機械生成物を除くことを検証する。"""
 
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,7 +12,6 @@ from sub_commands.feedback import decision
     "changed",
     [
         ".cmoc/gt/config.json",
-        ".cmoc/gt/realization/refactor/state.json",
         "nested/source.py",
     ],
 )
@@ -48,7 +47,7 @@ def test_basis_captures_tracked_configuration_and_nested_inputs(
         lambda _root: ([], [tmp_path / paths[-1]]),
     )
     before = decision.worktree_inputs(tmp_path)
-    assert set(before) == set(paths)
+    assert set(before) == set(paths) - {".cmoc/gt/realization/refactor/state.json"}
     (tmp_path / changed).write_text("new\n")
     after = decision.worktree_inputs(tmp_path)
     assert before["README.md"] == after["README.md"]

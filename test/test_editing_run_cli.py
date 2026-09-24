@@ -25,6 +25,7 @@ import commons.indexing as indexing_module
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_codex_profile as codex_profile_module
+import commons.runtime_merge_conflict as merge_conflict_module
 import commons.runtime_run as runtime_run_module
 import commons.runtime_run_join as run_join_module
 import commons.runtime_run_lifecycle as lifecycle_module
@@ -54,7 +55,6 @@ from commons.runtime_run_lifecycle import (
     flattened_change_paths,
     set_run_state,
     start_editing_run,
-    unexpected_session_paths,
     worktree_change_paths,
 )
 from commons.runtime_state import SessionState
@@ -166,18 +166,6 @@ def test_legacy_lifecycle_shim_reexports_agent_path_validation() -> None:
     assert "unexpected_agent_paths" in legacy_lifecycle_module.__all__
 
 
-def test_legacy_lifecycle_shim_keeps_session_path_call_contract(
-    tmp_path: Path,
-) -> None:
-    """旧 run lifecycle import path が base 省略の呼び出しを受け付ける。"""
-    root = make_repo(tmp_path)
-
-    assert legacy_lifecycle_module.unexpected_session_paths(
-        root,
-        [GitChange("A", ("src/new.py",))],
-    ) == ["src/new.py"]
-
-
 def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:
     """fork reportの変更pathは削除とrename元を含めない。"""
     assert flattened_change_paths(
@@ -187,46 +175,6 @@ def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None
             GitChange("M", ("modified.md",)),
         ]
     ) == ["modified.md", "new.md"]
-
-
-def test_unexpected_session_paths_rejects_oracle_symlink(
-    tmp_path: Path,
-) -> None:
-    """session 差分の oracle 判定が symlink を regular file として扱わない。"""
-    root = make_repo(tmp_path)
-    target = tmp_path / "outside.md"
-    target.write_text("outside\n")
-    symlink = root / "oracle" / "symlink.md"
-    symlink.symlink_to(target)
-    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
-
-    assert unexpected_session_paths(
-        root,
-        [GitChange("A", ("oracle/symlink.md",))],
-        base=base,
-    ) == ["oracle/symlink.md"]
-
-
-def test_unexpected_session_paths_allows_deleted_oracle_file(
-    tmp_path: Path,
-) -> None:
-    """session branch の fork 時点 oracle file の削除を許可する。"""
-    root = make_repo(tmp_path)
-    oracle_path = root / "oracle" / "deleted.md"
-    oracle_path.write_text("before\n")
-    run_git(root, "add", "oracle/deleted.md")
-    run_git(root, "commit", "-m", "add oracle file")
-    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    oracle_path.unlink()
-
-    assert (
-        unexpected_session_paths(
-            root,
-            [GitChange("D", ("oracle/deleted.md",))],
-            base=base,
-        )
-        == []
-    )
 
 
 def test_run_reports_keep_distinct_files_on_timestamp_collision(
@@ -1056,7 +1004,7 @@ def test_run_join_rejects_index_refresh_side_effect(
     assert result.exit_code == 1
     assert _state(state_path)["run"]["state"] == "error"
     assert not (root / "index-side-effect.txt").exists()
-    assert (root / "README.md").read_text() == "# repo\n"
+    assert (root / "README.md").read_text() == "realized\n"
 
 
 def test_apply_builder_uses_call_scoped_run_worktree(
@@ -2923,11 +2871,11 @@ def test_run_join_accepts_deleted_nested_generated_index(
     assert result.exit_code == 0, result.output
 
 
-def test_run_join_rejects_non_generated_index_change_on_session_branch(
+def test_run_join_preserves_non_generated_index_change_on_session_branch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """hidden directory の INDEX.md を cmoc 生成物として merge しない。"""
+    """session 側の commit 済み変更は種類によらず統合する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
@@ -2942,9 +2890,9 @@ def test_run_join_rejects_non_generated_index_change_on_session_branch(
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
-    assert result.exit_code == 1
-    assert ".agents/INDEX.md" in result.output
-    assert _state(state_path)["run"]["state"] == "joinable"
+    assert result.exit_code == 0, result.output
+    assert managed_index.read_text() == "not generated\n"
+    assert _state(state_path)["run"]["state"] == "ready"
 
 
 def test_run_join_from_run_worktree_allows_doctor_state_sync(
@@ -2989,11 +2937,11 @@ def test_run_join_from_run_worktree_tracks_main_doctor_repairs(
     assert "/.cmoc/gu/" in gitignore.read_text()
 
 
-def test_run_join_from_run_worktree_rejects_prior_session_doctor_path_change(
+def test_run_join_from_run_worktree_preserves_prior_session_doctor_path_change(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """doctor と同じ path の先行 session 差分を管理差分として隠さない。"""
+    """doctor と同じ path の先行 session 差分も統合する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
     gitignore = root / ".gitignore"
@@ -3006,9 +2954,9 @@ def test_run_join_from_run_worktree_rejects_prior_session_doctor_path_change(
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
-    assert result.exit_code == 1
-    assert ".gitignore" in result.output
-    assert _state(state_path)["run"]["state"] == "joinable"
+    assert result.exit_code == 0, result.output
+    assert "user session change" in gitignore.read_text()
+    assert _state(state_path)["run"]["state"] == "ready"
 
 
 def test_run_join_allows_doctor_config_repair(
@@ -3365,6 +3313,7 @@ def test_index_conflict_records_merge_before_post_join_refresh(
     monkeypatch.setattr(
         run_join_module, "_refresh_join_indexes", fail_after_refresh_commit
     )
+    monkeypatch.setattr(run_join_module, "_refresh_merge_indexes", lambda *_args: None)
 
     with pytest.raises(RuntimeError, match="post-join refresh"):
         run_join_module.merge_run(
@@ -3372,7 +3321,7 @@ def test_index_conflict_records_merge_before_post_join_refresh(
             SessionState(),
             [],
             session_head_before,
-            on_merged=lambda commit: events.append(("merged", commit)),
+            on_merged=lambda commit, _resolution: events.append(("merged", commit)),
         )
 
     assert [event[0] for event in events] == ["merged", "refresh"]
@@ -3396,7 +3345,6 @@ def test_run_join_conflict_abort_failure_still_restores_session_tree(
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
     )
-    state = SessionState()
     commands: list[list[str]] = []
 
     def fake_run_git(
@@ -3406,44 +3354,26 @@ def test_run_join_conflict_abort_failure_still_restores_session_tree(
     ) -> SimpleNamespace:
         """join rollback の分岐を確認するための Git 実行結果を返す。"""
         commands.append(args)
-        if args[:2] == ["diff", "--name-only"]:
-            return SimpleNamespace(returncode=0, stdout="README.md\0")
         if args[:2] == ["rev-parse", "-q"]:
             return SimpleNamespace(returncode=0, stdout="")
         if args == ["merge", "--abort"]:
             return SimpleNamespace(returncode=1, stdout="")
         return SimpleNamespace(returncode=0, stdout="")
 
-    report = tmp_path / "report.md"
     monkeypatch.setattr(run_join_module, "run_git", fake_run_git)
-    monkeypatch.setattr(
-        run_join_module,
-        "write_state",
-        lambda *_args, **_kwargs: None,
+    run_join_module.restore_session_after_join_failure(
+        context, "session-head-before-join"
     )
-    monkeypatch.setattr(
-        run_join_module,
-        "write_lifecycle_report",
-        lambda *_args, **_kwargs: report,
-    )
-
-    with pytest.raises(CmocError, match="INDEX.md 以外"):
-        run_join_module._resolve_index_only_conflict_or_fail(
-            context,
-            state,
-            [],
-            "session-head-before-join",
-        )
 
     assert ["reset", "--hard", "session-head-before-join"] in commands
     assert ["clean", "-fd"] in commands
 
 
-def test_run_join_rolls_back_merge_when_post_join_sync_fails(
+def test_run_join_keeps_merge_when_post_join_sync_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """post-join 同期失敗時に merge と state 更新を rollback する。"""
+    """post-join 同期失敗時は確定済み merge と run 資源を保持する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -3460,8 +3390,8 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
     failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert failed.exit_code == 1
-    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
-    assert (root / "README.md").read_text() == "# repo\n"
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() != session_head
+    assert (root / "README.md").read_text() == "realized\n"
     assert _state(state_path)["run"]["state"] == "error"
     assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
@@ -3474,6 +3404,132 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
     assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
     for output in (joined.output, terminal_primary_report(joined).read_text()):
         assert "session.last_joined_apply_fork_commit updated" not in output
+
+
+def test_run_join_failure_report_keeps_merge_commit_after_index_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """post-join の生成 commit 後に失敗しても元の merge commit を報告する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+
+    def commit_index(worktree: Path, *, commit: bool) -> list[Path]:
+        assert commit
+        (worktree / "INDEX.md").write_text("updated after merge\n")
+        run_git(worktree, "add", "INDEX.md")
+        run_git(worktree, "commit", "-m", "post-join index")
+        return []
+
+    monkeypatch.setattr(run_join_module, "refresh_indexes", commit_index)
+
+    def sync_state(worktree: Path) -> None:
+        state_file = worktree / ".cmoc/gt/realization/refactor/state.json"
+        state_file.write_text(state_file.read_text() + "\n")
+
+    monkeypatch.setattr(run_join_module, "sync_refactor_state", sync_state)
+    original_report = run_join_command_module.write_lifecycle_report
+    attempts = 0
+
+    def fail_first_report(*args: object, **kwargs: object) -> Path:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("injected report failure")
+        return original_report(*args, **kwargs)
+
+    monkeypatch.setattr(
+        run_join_command_module, "write_lifecycle_report", fail_first_report
+    )
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert attempts == 2
+    state_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    index_commit = run_git(root, "rev-parse", "HEAD^").stdout.strip()
+    merge_commit = run_git(root, "rev-parse", "HEAD^^").stdout.strip()
+    assert len({state_commit, index_commit, merge_commit}) == 3
+    assert _state(state_path)["run"]["state"] == "error"
+    report = terminal_primary_report(result).read_text()
+    assert f'run_join_commit: "{merge_commit}"' in report
+    assert f'run_join_commit: "{index_commit}"' not in report
+    assert f'refactor_state_sync_commit: "{state_commit}"' in report
+    assert 'post_join_hook: "session.last_joined_apply_fork_commit updated"' in report
+
+
+def test_run_join_integrates_content_conflict_and_incidental_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run と session の変更を agent が統合し、付随編集も merge へ含める。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("run change\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    (root / "README.md").write_text("session change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session change")
+    run_head = run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip()
+    session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    def fake_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
+        assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
+        assert parameter.agent_call_cwd == root
+        assert run_head in parameter.prompt
+        assert session_head in parameter.prompt
+        (root / "README.md").write_text("session change\nrun change\n")
+        (root / "src" / "related.py").parent.mkdir(exist_ok=True)
+        (root / "src" / "related.py").write_text("value = 1\n")
+        return SimpleNamespace(
+            output_text="merge_resolution: resolved\n検証: 両側の内容を確認しました。\n"
+        )
+
+    monkeypatch.setattr(merge_conflict_module, "run_codex_exec", fake_codex)
+    monkeypatch.setattr(run_join_module, "_refresh_merge_indexes", lambda *_args: None)
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert (root / "README.md").read_text() == "session change\nrun change\n"
+    assert (root / "src" / "related.py").read_text() == "value = 1\n"
+    assert _state(state_path)["run"]["state"] == "ready"
+    assert "src/related.py" in terminal_primary_report(result).read_text()
+
+
+def test_run_join_rolls_back_unresolved_content_conflict(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """agent が未解消と報告した merge は付随編集ごと開始前へ戻す。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("run change\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    (root / "README.md").write_text("session change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session change")
+    session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    def fake_codex(_parameter: AgentCallParameter, **_kwargs: object) -> object:
+        (root / "src" / "incidental.py").parent.mkdir(exist_ok=True)
+        (root / "src" / "incidental.py").write_text("value = 1\n")
+        return SimpleNamespace(
+            output_text="merge_resolution: unresolved\n検証不足: 人間意図を確認できません。\n"
+        )
+
+    monkeypatch.setattr(merge_conflict_module, "run_codex_exec", fake_codex)
+    failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert failed.exit_code == 1
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
+    assert (root / "README.md").read_text() == "session change\n"
+    assert not (root / "src" / "incidental.py").exists()
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert _state(state_path)["run"]["state"] == "error"
+    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
 
 def test_run_join_keeps_completed_merge_when_final_report_update_fails(

@@ -35,7 +35,7 @@ from commons.runtime_feedback_store import (
     store_agent_observation,
     write_immutable_json,
 )
-from commons.runtime_run_lifecycle import EditingRunContext
+from commons.runtime_run_lifecycle import EditingRunContext, GitChange
 from sub_commands.feedback import decision, remediation, report
 
 
@@ -516,7 +516,7 @@ def test_sealed_result_cannot_publish_or_recover_with_changed_basis(
     h = feedback_run
     identity = _add_candidate(h, "a")
     h.handler = lambda _issue: _remediation_output(identity, status)
-    candidates, aggregates, _ = _run(h)
+    candidates, aggregates = _run(h)
     remediation._seal(h.context, h.manifest, candidates, aggregates)
     seal_path = h.context.repo / h.manifest["run"]["sealed"]["path"]
     sealed_bytes = seal_path.read_bytes()
@@ -540,6 +540,143 @@ def test_sealed_result_cannot_publish_or_recover_with_changed_basis(
     assert seal_path.read_bytes() == sealed_bytes
     assert len(h.calls) == 1
     assert artifact_reference(h.context.repo, seal_path) == h.manifest["run"]["sealed"]
+
+
+def test_verified_merge_adjustment_keeps_sealed_result_without_run_tree_equality(
+    feedback_run, monkeypatch
+):
+    """agent 検証済み調整なら封印結果と最終 tree の対応を別に記録する。"""
+    h = feedback_run
+    identity = _add_candidate(h, "a")
+    h.handler = lambda _issue: _remediation_output(identity, "already_resolved")
+    candidates, aggregates = _run(h)
+    remediation._seal(h.context, h.manifest, candidates, aggregates)
+    seal = read_json_object(h.context.repo / h.manifest["run"]["sealed"]["path"])
+    for source in h.context.run_worktree.iterdir():
+        (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
+    (h.context.session_worktree / "dependency.conf").write_text("joined adjustment\n")
+    log_path = h.context.repo / h.manifest["run"]["invocation_log"]
+    log_path.write_text(json.dumps({"event": "agent_verification"}) + "\n")
+    remediation._record_merge(
+        h.context,
+        h.manifest,
+        "merge-commit",
+        {
+            "agent_status": "resolved",
+            "agent_report": "merge_resolution: resolved\n検証: 採用結果を維持。",
+            "call_log": str(log_path),
+            "initial_conflicts": ["dependency.conf"],
+        },
+    )
+    monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
+
+    def changes(_root, base, *_args):
+        return [] if base == "merge-commit" else [GitChange("M", ("dependency.conf",))]
+
+    monkeypatch.setattr(remediation, "tree_changes", changes)
+    remediation._complete_join(h.context, h.manifest)
+    completion = read_json_object(
+        h.context.repo / h.manifest["run"]["completion"]["path"]
+    )
+
+    assert completion["merge_adjustment"]["agent_status"] == "resolved"
+    assert completion["final_decision_inputs_sha256"] != seal["decision_inputs_sha256"]
+    assert completion["merged"] == h.manifest["run"]["merged"]
+    assert completion["checks"]["decision_basis"] is True
+    log_path.write_text(json.dumps({"event": "tampered"}) + "\n")
+    with pytest.raises(CmocError, match="最終状態"):
+        remediation._complete_join(h.context, h.manifest)
+
+
+def test_recovery_uses_saved_merge_verification_after_commit(feedback_run, monkeypatch):
+    """merge commit 後の停止では同じ封印入力の call log を再利用する。"""
+    h = feedback_run
+    identity = _add_candidate(h, "a")
+    h.handler = lambda _issue: _remediation_output(identity, "already_resolved")
+    candidates, aggregates = _run(h)
+    remediation._seal(h.context, h.manifest, candidates, aggregates)
+    seal = read_json_object(h.context.repo / h.manifest["run"]["sealed"]["path"])
+    parameter = SimpleNamespace(
+        agent_call_kind="build_run_join_conflict_resolution_parameter",
+        file_access_mode=SimpleNamespace(value="realization_write"),
+        prompt=f"sealed: {h.manifest['run']['sealed']['path']}",
+    )
+    monkeypatch.setattr(
+        remediation,
+        "build_run_join_conflict_resolution_parameter",
+        lambda *_args, **_kwargs: parameter,
+    )
+    log_dir = h.context.repo / ".cmoc/gu/log/codex"
+    log_dir.mkdir(parents=True)
+    call_path = log_dir / "join_call.json"
+    prompt_path = log_dir / "join_prompt.md"
+    output_path = log_dir / "join_output.json"
+    prompt_path.write_text(parameter.prompt)
+    output_path.write_text(
+        "merge_resolution: resolved\n採用結果を維持する調整と検証を実施。\n"
+    )
+    call_path.write_text(
+        json.dumps(
+            {
+                "purpose": "run join conflict resolution",
+                "agent_call_kind": parameter.agent_call_kind,
+                "file_access_mode": parameter.file_access_mode.value,
+                "cwd": str(h.context.session_worktree.resolve()),
+                "prompt_log_path": str(prompt_path),
+                "output_path": str(output_path),
+            }
+        )
+    )
+    invocation_log = h.context.repo / h.manifest["run"]["invocation_log"]
+    invocation_log.write_text(
+        json.dumps(
+            {
+                "event": "codex_call",
+                "purpose": "run join conflict resolution",
+                "status": "succeeded",
+                "returncode": 0,
+                "call_log_path": str(call_path),
+                "prompt_log_path": str(prompt_path),
+                "output_path": str(output_path),
+            }
+        )
+        + "\n"
+    )
+    merge_head = "b" * 40
+    monkeypatch.setattr(
+        remediation,
+        "head_commit",
+        lambda root: (
+            merge_head if root == h.context.session_worktree else seal["run_head"]
+        ),
+    )
+    monkeypatch.setattr(
+        remediation,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            stdout=f"{seal['session_head_before']} {seal['run_head']}\n",
+            returncode=0,
+        ),
+    )
+    monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
+    monkeypatch.setattr(remediation.decision, "state_hash", lambda _files: "changed")
+    monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
+    monkeypatch.setattr(remediation, "_complete_join", lambda *_args: None)
+
+    remediation._recover_join(h.context, h.manifest)
+    merged = read_json_object(h.context.repo / h.manifest["run"]["merged"]["path"])
+    assert merged["run_join_commit"] == merge_head
+    assert merged["resolution"]["agent_status"] == "resolved"
+    assert merged["resolution"]["recovered_from_call_log"] is True
+    assert merged["resolution"]["call_log"] == artifact_reference(
+        h.context.repo, call_path
+    )
+
+    output_path.write_text("merge_resolution: unresolved\n")
+    with pytest.raises(CmocError, match="検証を一意に確認"):
+        remediation._recover_merge_resolution(
+            h.context, h.manifest, seal, required=True
+        )
 
 
 def test_active_issue_materializes_basis_without_checkpoint_dependency(

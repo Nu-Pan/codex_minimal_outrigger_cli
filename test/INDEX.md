@@ -163,19 +163,19 @@
 # `test_acp_builder_session_join_parameters.py`
 
 ## Summary
-- session join の conflict 解消用 builder が生成する呼び出しパラメータと prompt の契約を検証し、互換 import の公開範囲、canonical builder との同一性、conflict 対象 path の code fence 保護を扱うテスト。
+- session join の競合解消 call builderについて、互換 import の公開契約と、merge 中に使う起動パラメータの構成を検証する。
+- commit 参照や Git の統合状況を prompt に渡し、共通の競合解消方針を組み込む契約を確認する。
 
 ## Read this when
-- conflict 解消 builder の呼び出し設定や prompt の条件を変更するとき。
-- 互換 import の公開面や、対象 path を含む prompt の code fence に関する回帰を調べるとき。
+- session join の競合解消 call の互換 export、権限・作業場所・preflight、commit 参照、prompt 構成を確認または変更するとき。
+- この call 境界の契約テストや fixture を編集するとき。
 
 ## Do not read this when
-- fork・join・abandon の CLI 外部挙動や session state の遷移を調べるときは、session CLI のテストを読む。
-- conflict 対象 path と Codex sandbox 引数の関係を調べるときは、runtime conflict のテストを読む。
-- builder の実際の prompt 構築や仕様上の意図を確認・変更するときは、その定義や正本を直接読む。
+- builder の実装詳細を追うときは、このテストが参照する正本の builder 定義を直接読む。
+- 共通の競合解消 prompt の方針や要件を調べるときは、共通 prompt builder または対応する正本仕様を直接読む。
 
 ## hash
-- e2905c6eaa80aa691981e7bf3f13bbb09bd4522d617cf57ae72c86b9a367d77a
+- 6dc9d53c6ec3cdb482f8a6a0020e53ee0cf047992dbff3416a154d9cd9269a4d
 
 # `test_acp_builder_tui_parameters.py`
 
@@ -421,19 +421,22 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- realization apply/refactor の fork と共通の run join/abandon を、worktree、state 遷移、差分の commit・rollback、report、process cleanup までまたいで確認する統合テスト群です。
-- 個別の helper の挙動より、fork・join・abandon 間の連携不具合や変更の回帰を調べる入口です。
+- realization apply/refactor fork と共有 editing run の join/abandon を、session state・run worktree・report・indexing・process cleanup にまたがる CLI 統合テストで検証する。
+- 共通の lifecycle fixture で、実行中の失敗や中断、変更の commit/rollback、join 時の統合・cleanup まで追うため、複数の run lifecycle 境界に及ぶ変更の確認先となる。
 
 ## Read this when
-- apply/refactor の fork から run の join または abandon まで、branch・worktree・state の受け渡しや cleanup の連携を調査・変更するとき。
-- INDEX や doctor の更新、Codex child の停止が run の差分検査・状態・report とどう連動するか確認するとき。
+- apply/refactor fork の開始から joinable または error 状態への遷移まで、失敗時の rollback、割り込み後の回復、report の整合性を横断して確認するとき。
+- run join/abandon における session state、変更の統合、indexing や doctor との連携、worktree・branch cleanup の CLI 上の結果を確認するとき。
+- 単一 helper の動作ではなく、複数の run lifecycle 処理をまたぐ変更の統合動作を確認するとき。
 
 ## Do not read this when
-- editing run を介さない session の fork・join・状態遷移が対象なら、session lifecycle を扱うテストから確認するとき。
-- 問題が ACP builder の parameter・prompt 構築や、process tracking・report rendering の単独の挙動に限られるなら、対応する個別テストまたは実装から確認するとき。
+- session/run の state schema、branch 解析、state 読み書きだけを確認するときは、その状態管理に絞った実装やテストから読む。
+- 共通 CLI の error・log・preflight・completion 境界だけを確認するときは、その CLI runtime 境界のテストから読む。
+- feedback の observation 受付、report、remediation 固有の動作を確認するときは、feedback workflow の実装やテストから読む。
+- 特定の runtime helper や fork command の内部処理だけを確認するときは、対象実装とその範囲に絞ったテストから読む。
 
 ## hash
-- 9d52ce5d77dc328f5f8fc4c54ea8997931d7a33f49d75830312b1fc781dc72f7
+- 93b10a964fa895b9431249ac88203162c88301e322f50b18a67cc38c714c9928
 
 # `test_editor_input_handoff.py`
 
@@ -470,50 +473,53 @@
 # `test_feedback.py`
 
 ## Summary
-- agent-facing reporter と collector の送受信から、観測の保存、候補処理、修復 wave、active state の公開・復旧まで、feedback workflow をまたぐ動作と境界条件を検証する。
-- pending observation から compact な active state への移行や、公開後の整合性・破損検出を含む結合テストの入口。
+- feedback observation の受付・保存から候補化、remediation、公開、cleanup までを横断して検証する。reporter と collector の通信、machine detector、active state の確定と回復も扱う。
+- 公開後に compact な active state だけが残ることや、失敗・中断時の rollback と recovery を確認する。
 
 ## Read this when
-- reporter の MCP protocol や collector 通信、入力検証、拒否・劣化時の挙動を調べるとき。
-- 観測の保存・正規化・重複処理、report cut と active state、修復 wave、遅れて届く観測、公開・復旧の流れを調べるとき。
+- agent-facing reporter や collector の受付、観測の保存・秘匿処理、machine detector の回帰を追うとき。
+- feedback report の wave 処理から remediation・publication まで、または失敗・中断・state corruption 時の動作を横断して調べるとき。
 
 ## Do not read this when
-- 判定に含める worktree 入力やその fingerprint の規則だけを調べるときは、その責務に絞ったテストから確認する。
-- report cut の根拠変更に伴う再確認や封印の分岐だけを調べるときは、その責務に絞ったテストから確認する。
+- 判定用 worktree evidence の収集・除外だけを調べる場合は、判定根拠に特化したテストから始める。
+- 主報告の表示・保存だけを調べる場合は、primary report に特化したテストから始める。
+- remediation checkpoint の再確認や sealed result の recovery だけを調べる場合は、その状態遷移に特化したテストから始める。
 
 ## hash
-- 0a71b6c7dc09d57391507f9170f7b6a66213e1682051cb5da885d62bcb1d51a2
+- 4afca4ec220c0ab7f49b4416764709e6a41f77f9c82c08882e5e2b0d5ffef8f9
 
 # `test_feedback_decision.py`
 
 ## Summary
-- feedback 判定根拠に含める worktree 入力の収集と識別を検証するテスト。依存設定や nested realization の取り込み、入力の除外、パス検査、Git mode に基づく差分を扱う。
+- feedback 判定根拠に含める worktree 入力の収集とハッシュ化を検証する。入力の除外、安全なパス処理、Git mode の扱い、nested `.git` の判別に関する回帰テストが中心。
 
 ## Read this when
-- feedback 判定根拠の入力範囲や変更検知を変えるとき、特に nested repository、`.git` 名の扱い、Git mode、相対・不正パスの回帰を確認するとき。
+- 判定根拠の入力対象や除外対象を変えるとき、その変更が `worktree_inputs` の回帰条件に与える影響を確認する。
+- 入力内容・実行 mode のハッシュ化、nested repository の metadata 判定、削除済みパスや worktree 外パスの扱いを調べる。
 
 ## Do not read this when
-- feedback の候補分類や checkpoint・再確認の振る舞いだけを調べるときは、該当する実装や専用テストから確認する。
+- feedback の報告・修復フローや生成物全般の振る舞いを調べるときは、統合テストを扱う `test_feedback.py` から確認する。
+- checkpoint、再確認履歴、修復の収束判定を調べるときは、`test_feedback_reconfirmation.py` へ進む。
 
 ## hash
-- f0c7af0ef00a4294b786953306f7914c6ee5e82e2be7b0747ca77f3bf00c4051
+- d5bd58b9507279e39eada8a25463b14cfc95ca656eebd5c8d46bb2ce59c0eacf
 
 # `test_feedback_reconfirmation.py`
 
 ## Summary
-- feedback report cut 内で issue remediation の再確認条件、入力差分、再修理の循環診断を検証する。
-- wave と high-watermark、report cut と checkpoint の整合性、参照回復、seal 後の判定根拠、active issue への根拠引継ぎを検証する。
+- Feedback remediation の既存判定が、依存内容・同期結果・追加証拠の変化を受けて再確認される条件と、修復サイクルの収束・停止を検証する。
+- 再確認処理に関わる wave や checkpoint の整合性と復旧、seal 後の join/recovery、active issue への判定根拠の引き継ぎまでを扱う回帰テスト群。
 
 ## Read this when
-- 後続の修復や機械的同期、追加 evidence、repository 入力の変更を受けた再確認と、非収束 cycle の判定を変更するとき。
-- feedback run の wave、checkpoint の検証・回復、seal 後の publication や join 回復を変更するとき。
+- 依存ファイルや同期処理、追加証拠の変更が既存の修復結果を再確認させる挙動や、再確認ループの終了条件を変更するとき。
+- wave・checkpoint の検証や参照復旧、seal 後に判定根拠が変化した場合の join/recovery、active issue への検証根拠の保存を変更するとき。
 
 ## Do not read this when
-- reporter の受信・transport・raw observation 保存など、再確認や run checkpoint に触れない処理を変更するときは、全体の feedback 処理を検証する対象から読み始める。
-- 判定根拠に含める tracked・nested repository 入力の範囲だけを変更するときは、その入力収集を直接検証する対象から読む。
+- collector の MCP protocol、raw observation の受け付け・保存、candidate の正規化や照合だけを変更し、remediation の再確認ライフサイクルに関係しないとき。
+- feedback の通常実行・中断・publication の統合動作を変更し、再確認、checkpoint 復旧、seal 後の join/recovery 条件に関係しないとき。
 
 ## hash
-- e1494d5d117db36e69ac913bd3bc923bdfa07d9eafe59efbfe9f511c5ca7e9fa
+- dcbcaf52641db642b7c4a03a73a63eeaf49515f0f0e5c829ffe2d38c7e4c26f5
 
 # `test_file_inventory.py`
 
@@ -655,21 +661,21 @@
 # `test_production_cli.py`
 
 ## Summary
-- 利用者向け CLI の全末端コマンドを独立プロセスで実行し、実 Codex CLI の応答後に終了コードや外部から観測できる結果で制御を検証する実経路統合テストです。
-- 非対話コマンドと PTY を使う TUI 経路をまとめて扱い、LLM の回答品質は判定しません。
+- 全末端サブコマンドの代表的な正常系を、利用者向け CLI の本番経路で確かめる受け入れテスト。
+- 独立プロセスで実 Codex と実推論を使い、CLI 結果、call log、report、session/run state、Git 状態など外部から見える結果を検証する。TUI では PTY、editor handoff、通知も扱い、LLM の回答品質は評価しない。
+- 実推論を含む本番経路全体の挙動を調べる入口。個々のコマンド内部や実行時機能を対象にする focused test とは責務が異なる。
 
 ## Read this when
-- 公開末端コマンドの追加・変更に伴う実経路統合テストの網羅性を確認するとき。
-- 実 Codex CLI と独立プロセスを使った応答後の状態遷移や外部結果を確認するとき。
-- TUI の実応答、PTY 操作、通知や入力引き渡しを含む本番経路を確認するとき。
+- 全末端コマンドを独立プロセスで実行し、実 Codex を通した代表的な本番経路や、その外部可視な状態変化を確認・変更するとき。
+- TUI の PTY 上の応答完了・終了、通知、editor handoff が実 Codex の実行と連携するかを調べるとき。
 
 ## Do not read this when
-- 単一コマンドの分岐や決定論的な挙動を調べるときは、そのコマンドに対応する CLI テストや実装へ進んでください。
-- Codex 呼び出しの個別機構や再試行を調べるときは、対応するランタイムテストへ進んでください。
-- LLM の回答品質やモデルプロバイダーの正しさを評価するとき。このテストの対象外です。
+- 個々のコマンドや runtime の内部ロジック、決定論的な状態遷移を調べるときは、その機能を直接扱う focused test から始める。
+- PTY helper 単体のタイミング挙動だけを調べるときは、その helper を直接検証するテストを読む。
+- LLM の回答品質や agent の判断の正しさを評価するとき。このテストはそれらを判定対象としていない。
 
 ## hash
-- 1fd40928475d5482df94b10a006eed3f4733e1a9e9eff66a11dca9677c45dd44
+- 9b68e218cbbd2ee0d24575fc50fd428b1d6e5cdb065bf32cc18daed34fbd5ff5
 
 # `test_production_cli_support.py`
 
@@ -705,19 +711,18 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt の各 policy part と complete prompt の組み立て・描画結果に関する回帰をまとめて検証する。
-- 構成要素の描画形式や順序、選択した規定の反映、placeholder の統合を確認する入口となる。
+- 各 prompt policy builder の出力と、完全 prompt の組み立て結果を回帰確認するテスト群です。カテゴリ順や主要文言、policy の注入、objective と追加 prompt の並び、file access mode、root placeholder の統合と競合時の失敗を検証します。
 
 ## Read this when
-- policy part の描画形式やカテゴリ順序、complete prompt への追加・省略・配置、objective や placeholder 定義の回帰を確認するとき。
-- file access mode や path context を含む prompt 組み立ての変更が、複数の規定にどう反映されるか確認するとき。
+- 完全 prompt の構成、任意 section や policy flag の反映、placeholder 処理を変更・調査するとき。
+- policy の描画内容やカテゴリ順、file access mode ごとの出力に対する回帰確認が必要なとき。
 
 ## Do not read this when
-- 個別の規定が何を要求するか、またはその文面を決める場合は、対応する正本仕様や policy builder を直接確認するとき。
-- editor の起動、入力ファイルの保存・検証など、prompt の組み立て以外の editor input 挙動を調べるとき。
+- 個別 policy の規範や実装の詳細を確認するときは、該当する正本仕様または policy builder を直接参照してください。
+- editor input の保存・確定や handoff 通信の実動作だけを調べるときは、それらの外部動作を扱う専用テストを参照してください。
 
 ## hash
-- 2330cc39b839ccb18243aaf7a11b30cd967363a13bb5efbd3f144c42959a3594
+- 347074435cc4236f0e03aaf9098fa4c867f1c150e1588d26d2dacefb3d9acf45
 
 # `test_runtime_cli.py`
 
@@ -740,17 +745,19 @@
 # `test_runtime_codex_conflicts.py`
 
 ## Summary
-- セッション結合時の競合パスは prompt にだけ反映され、Codex の sandbox 引数や permission 上書きがパスごとに変化しないことを確認するテストです。
+- session join の競合解消用 agent call で、commit 参照値を prompt に渡し、値を反転しても起動 argv が同一であること、`REPO_WRITE` が `--sandbox workspace-write` になること、commit 値や詳細な権限設定が argv の設定上書きに現れないことを検証する回帰テストです。
+- 個別 builder の生成契約や Codex runtime 全般の規則ではなく、session join 固有の入力から Codex 起動引数への受け渡しを確認する入口です。
 
 ## Read this when
-- セッション結合の競合パスを prompt と Codex 起動引数の両方へどう反映するか、その回帰を確認するとき。
+- session join の競合解消で、commit 参照を prompt に保ち、commit 値を Codex 起動引数へ混入させない条件を確認・変更するとき。
+- session join 用の `REPO_WRITE` 設定が Codex sandbox 引数へ反映され、詳細な権限設定の上書きを追加しない条件を確認するとき。
 
 ## Do not read this when
-- file access mode ごとの一般的な sandbox 設定や、パス別 permission 入力を受け付けない API を調べるときは、それぞれの専用テストへ進んでください。
-- 競合解決 prompt の組み立て方そのものを調べるときは、実装を直接確認してください。
+- builder 自体の公開経路、prompt、cwd、schema、preflight の契約を確認する場合は、個別 builder の契約テストから確認してください。
+- 全 file access mode の sandbox 対応や、Codex argv の汎用上書き規則を確認する場合は、runtime profile 全般のテストから確認してください。
 
 ## hash
-- 8a87436b654938a146bd3624bb6125d96a016fc954bfaec1f63c87a6fe83d99c
+- 7566dc363da52fc232d712c2475b89454e6e229823475d8c030c5d99ea315806
 
 # `test_runtime_codex_permissions.py`
 
@@ -769,18 +776,20 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex の argv 上書き、sandbox と provider の選択、MCP 用環境変数、通知 callback の版判定、schema と JSON 出力の扱いを検証するテスト。Codex 呼び出しの設定境界を変更・調査するときの入口。
+- Codex CLI 呼び出し設定について、sandbox、model/provider、MCP と環境変数、TUI 通知 callback の構成が期待どおりになる契約を検証するテスト。
+- schema の保存時に元の bytes を保つことと、不正な encoding や過剰にネストした JSON output を失敗として扱う境界も確認する。
 
 ## Read this when
-- file access mode から sandbox 引数への変換や Codex 設定の構築を変更・調査するとき。
-- Codex 向け環境変数の分離、通知 callback の有効条件、schema 保存、出力 JSON の読み取りを確認するとき。
+- Codex CLI の argv 構築、provider 設定、file access mode に応じた sandbox、または MCP 設定と環境変数の分離を変更・確認するとき。
+- TUI 通知 callback の設定や、対応する Codex CLI の版を限定する挙動を変更・確認するとき。
+- schema 保存や JSON output 読み取りの境界を変更・確認するとき。
 
 ## Do not read this when
-- Codex subprocess の起動・停止や child process tracking を調べるとき。
-- Codex 実行全体の JSONL 結果分類、呼び出しエラー、CODEX_HOME の検証を調べるとき。
+- Codex 実行設定の正本ルールを確認するとき。oracle の仕様文書を直接読む。
+- process tracking・終了処理、CODEX_HOME の preflight、または Codex 実行全体の回復挙動を確認するとき。このテストはそれらの動作を網羅しない。
 
 ## hash
-- 8f7ee1e5010db8e559f8c77556f7bf7bde5ab2068620ff79392f574671bf6ca5
+- dc52f560b4025b34db754b946cac5acbe1df364a045d3e95daa3276db01972a3
 
 # `test_runtime_config.py`
 
@@ -899,20 +908,18 @@
 # `test_session_cli.py`
 
 ## Summary
-- `cmoc session fork`・`abandon`・`join` の CLI 統合テストを集約し、session branch と state のライフサイクル、linked worktree、失敗時の cleanup と rollback を検証する。
-- `join` の merge と conflict 解消から CLI の成功・失敗報告までを、同じ session lifecycle の文脈で確認する入口。
+- session fork・join・abandon の CLI 外部挙動を検証し、branch と state の遷移、linked worktree、失敗時の後始末、join の競合解決を扱う。
 
 ## Read this when
-- session CLI の branch/state 遷移、home branch への切替、linked worktree 対応、cleanup・rollback の外部挙動を調べるとき。
-- session join の merge、conflict 解消用 agent call、その成否に伴う CLI 報告を調べるとき。
+- session の fork・join・abandon が branch や state をどう変更するか、またはその失敗時の挙動を確認・変更するとき。
+- linked worktree での session 操作や、join 時の競合・後始末を含む CLI 回帰範囲を確認するとき。
 
 ## Do not read this when
-- run の fork/join/abandon や run 専用 state・worktree lifecycle を調べるときは、run lifecycle の CLI テストを読む。
-- state JSON の形式検証や読み書き時の path 制約だけを調べるときは、state 専用テストを読む。
-- doctor の preprocess 修復や session join の conflict 解消 prompt 構築だけを調べるときは、それぞれの専用テストを読む。
+- 共有の競合解決処理や個別の補助機能だけを調べるときは、それぞれの実装と専用テストへ進む場合。
+- session 以外の CLI コマンドや run のライフサイクルを調べるとき。
 
 ## hash
-- c691a5682e667ec2a5f50faacf151f201e98982197a684f82afa853837abb915
+- d0291e38c7e44507926ae3a54e4b2ae8f73d09ace19b20b0ccd28d3a5dc42f37
 
 # `test_skill_metadata.py`
 

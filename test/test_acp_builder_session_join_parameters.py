@@ -48,20 +48,22 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
 ) -> None:
     """conflict resolution 用パラメータが repo write 権限を使う契約を検証する。"""
 
-    conflicted_path = session_join_root / "conflict.md"
-    parameter = build_session_join_conflict_resolution_parameter([conflicted_path])
+    source, target = "a" * 40, "b" * 40
+    parameter = build_session_join_conflict_resolution_parameter(
+        source, target, session_join_root
+    )
 
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == session_join_root.resolve()
-    assert "conflict 対象ファイル" in parameter.prompt
-    assert str(conflicted_path) in parameter.prompt
+    assert source in parameter.prompt
+    assert target in parameter.prompt
+    assert "conflict 対象ファイル" not in parameter.prompt
     objective = parameter.prompt.split('<cmoc_block id="objective">', 1)[1].split(
         "</cmoc_block>", 1
     )[0]
     assert "# task" in objective
-    assert "# completion criteria" in objective
-    assert "conflict marker が残っていない" in objective
+    assert "進行中の merge" in objective
     assert parameter.run_indexing_preflight is False
     assert "# conflict resolution policy" in parameter.prompt
     assert "# routing policy" in parameter.prompt
@@ -70,20 +72,14 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert "# realization findings policy" not in parameter.prompt
 
 
-def test_session_join_conflict_paths_protect_nested_code_fences(
+def test_session_join_conflict_prompt_passes_commit_references_without_path_list(
     session_join_root: Path,
 ) -> None:
-    """競合 path 内の三連 backtick が code block の境界を閉じないことを検証する。"""
-    conflicted_path = Path("{{work-root}}/conflict" + "```" + ".txt")
-    resolved_path = session_join_root / ("conflict" + "```" + ".txt")
-
-    parameter = build_session_join_conflict_resolution_parameter([conflicted_path])
-
-    start = parameter.prompt.index("# conflict 対象ファイル")
-    end = parameter.prompt.index("\n\n# place holder definition", start)
-    section = parameter.prompt[start:end]
-    assert section.startswith("# conflict 対象ファイル\n\n````text\n")
-    assert str(resolved_path) in section
-    assert "conflict```" in section
-    assert section.endswith("\n````")
-    assert parameter.prompt.index('<cmoc_block id="objective">') < start
+    """差分と競合一覧は agent が Git から取得できる参照だけを渡す。"""
+    parameter = build_session_join_conflict_resolution_parameter(
+        "c" * 40, "d" * 40, session_join_root
+    )
+    assert "共通祖先" in parameter.prompt
+    assert "進行中の merge の Git index" in parameter.prompt
+    assert "`" + "c" * 40 + "`" in parameter.prompt
+    assert "`" + "d" * 40 + "`" in parameter.prompt

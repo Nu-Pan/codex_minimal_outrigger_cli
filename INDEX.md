@@ -113,39 +113,37 @@
 # `src`
 
 ## Summary
-- cmoc の CLI command tree と、各コマンドの処理への受け渡しを定義する。
-- 複数コマンドが使う runtime を担い、Codex 起動、設定、Git と state、ログとレポート、feedback、INDEX 更新などの共通処理をまとめる。
-- コマンド固有の処理と ACP builder の adapter を含み、一部の旧 import 経路から oracle 側の正本実装や型を公開する。
+- cmoc の CLI 起動・コマンド別処理・共有 runtime を担う実装コードです。
+- 一部の設定、基本型、ACP builder は正本側の実装を既存の import 経路で公開する互換層で、oracle package を解決する shim も含みます。
 
 ## Read this when
-- CLI の command 構成や、コマンド名から実処理へ至る経路を確認するとき。
-- 変更が複数コマンドにまたがる、または Codex 起動・設定・Git と state・ログ・feedback・INDEX 更新などの共通処理に関わるとき。
-- この領域の import 経路が oracle 側の正本実装や型をどう公開しているか調べるとき。
+- CLI の起動、コマンド登録や引数処理から、個別処理の実行までをたどるとき。
+- Git、worktree、session、run、Codex process、ログ、feedback、indexing など、複数コマンドで共有する実行基盤を調べるとき。
+- 既存の import 経路が正本側の builder や設定・基本型へどう接続されるか確認するとき。
 
 ## Do not read this when
-- 特定コマンドの処理だけを追う場合は、そのコマンド固有の処理領域から読む。
-- 単一の共通 runtime 処理だけを変更・調査する場合は、その処理を担う領域から直接読む。
-- oracle 側の正本仕様や実装自体を確認・変更する場合は、対応する oracle の文書やソースを直接読む。
+- 仕様上の挙動や agent に渡す指示の正本を確認するときは、oracle の仕様文書を直接読んでください。
+- 特定コマンドの実行順序やエラー処理だけを調べるときは、そのコマンドの workload 実装へ直接進んでください。
+- ACP builder の正本の内容や設定定義そのものを確認するときは、互換層を広く読むより正本側の実装を直接確認してください。
+- テストの期待値や fixture を確認するときは、対応するテスト実装へ直接進んでください。
 
 ## hash
-- 1824cb2179c104e9b51340753f72ae42ed944cf5d795ea350bfd43b0aec32e2d
+- 39a5c9e34ab974c701131e3dc223519a46304f00e1087d9e55708d09d022b762
 
 # `test`
 
 ## Summary
-- 実装挙動の回帰テストをまとめ、CLI の各種操作、Git・worktree と session/run の状態管理、indexing、feedback report の処理を検証する。
-- Codex の起動設定、出力処理、quota 待機・回復、中断時の subprocess 制御、TUI 通知といった runtime の契約も扱う。
-- prompt と builder、構造化文書、設定、パッケージ import、wrapper を確認するテストに加え、実 CLI を独立プロセスや PTY から検証する受け入れテストがある。共有 helper と fixture は Git repository、外部コマンド、通知 transport などをテスト用に隔離する。
+- pytest による realization test 群。CLI サブコマンド、Codex 呼び出し、セッション状態、ファイル判定、indexing、feedback、editor handoff などの制御と、外部から確認できる結果を検証する。
+- 共有 fixture や補助関数を備え、実 Codex CLI と実推論を使う本番経路の統合テストも含む。
 
 ## Read this when
-- CLI コマンドや report、indexing、feedback、session/run の挙動を変更し、回帰を確認する場所を探すとき。
-- Codex runtime の設定・出力・回復・中断処理や prompt/builder の変更が、既存の契約に与える影響を調べるとき。
-- 本番経路に近い独立プロセス・実 CLI・PTY の検証や、テスト環境の共有 fixture と隔離方法を確認するとき。
+- 制御ロジックの回帰テストを追加・修正するときや、関連するテスト領域を探すとき。
+- 複数のテストで使う fixture や補助関数、本番経路の統合検証を変更するとき。
 
 ## Do not read this when
-- 期待される仕様だけを確認したいときは、対応する正本仕様や schema を直接読む。
-- 現在の処理実装を追うだけなら、対象機能の実装へ直接進む。
-- 一つの限定された挙動の assertion を調べる場合は、その領域の個別テストへ進み、テスト群全体の責務を読む必要はない。
+- 正本の要求や実装の詳細を確認・変更するときは、該当する仕様または実装を直接読む。
+- 特定の振る舞いに対応するテストだけを追うときは、その領域のテストへ直接進む。
+- テストの実行方法、選択、完了判定や報告の規則を確認するときは、専用の実行手順を参照する。
 
 ## hash
-- b870f0c64965e0a8848270bdb6ca23372944797601b0e643b7f309e3f8aeeb64
+- fb2fbd4a22fa7f39d140d0deeaa1a236d42b7357c3f0aeed40821e29adf21118

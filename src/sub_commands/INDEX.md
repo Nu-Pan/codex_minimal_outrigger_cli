@@ -32,19 +32,20 @@
 # `feedback`
 
 ## Summary
-- `cmoc feedback report` が observation を report cut に固定し、issue の集約・判定・修復から通常または未完了レポートの公開まで進める実装群への入口です。
-- feedback 専用 run の自動 join、判定根拠の再確認、publication 後の回復と cleanup も扱います。
+- `cmoc feedback report` の観測集約、issue の検証、レポート公開と未完了時の診断を扱う。
+- 修復 run の進行・join と再開後の後処理をまとめ、判定入力の再確認履歴も管理する。
 
 ## Read this when
-- feedback report の入力固定、候補集約、修復の反復、収束・中断時の処理、レポート公開の挙動を変更・調査するとき。
-- feedback 専用 run の join や publication 後の回復、および修復結果の判定根拠を確認するとき。
+- feedback report の固定入力、候補集約・正規化・検証、表示内容や公開結果を変更・調査するとき。
+- feedback report 固有の逐次修復、自動 join、中断後の再開、finalization を追うとき。
+- 修正や証拠の変化が過去の判定に与える影響、再確認や循環診断を調べるとき。
 
 ## Do not read this when
-- 共通 feedback artifact の保存形式や共有検証だけが主題なら、共通 runtime 側から確認するとき。
-- CLI のコマンド登録だけが主題なら CLI 入口を、issue 用 agent の prompt や出力 schema だけが主題なら builder 側を確認するとき。
+- `submit_observation` の受付、reporter/collector の通信、raw observation の保存だけを変更するときは、受付・保存を担う共通処理から確認する。
+- feedback report 固有ではない共通の状態保存や run/session lifecycle の挙動を変更するときは、それぞれの共通実装から確認する。
 
 ## hash
-- c859de4db18a02664dc23f2d49a76187f99576ca08d03c0c40b2eb7aff981b64
+- f2d2912851836f069573712d51956412bf0e83533f2fb1c453ba49d9b7657a20
 
 # `indexing.py`
 
@@ -114,40 +115,39 @@
 # `run`
 
 ## Summary
-- editing run を完了する `cmoc run join` の差分検査、merge、post-join 同期、結果記録、run 資源の cleanup を扱います。run 単位の統合手順を追う入口であり、session 全体の lifecycle や workload ごとの fork 処理とは責務が異なります。
-- `cmoc run abandon` の process 停止、worktree・branch・state の cleanup と結果記録を扱います。
-- 共有 lifecycle・report 処理への旧 import path を保つ互換層も含みます。
+- editing run の join と abandon の lifecycle を担います。join の検査・merge 呼び出し、state と report の更新、失敗時の復旧、資源 cleanup を追う入口です。
+- abandon 時の process 停止、run worktree と branch の削除、state と report の更新を扱います。
+- 旧 import path を保つ互換 shim も含みます。共通 helper と report writer の正規実装は commons にあります。
 
 ## Read this when
-- `cmoc run join` の差分検査、merge、post-join 処理、失敗時の rollback、report、cleanup の流れを変更するとき。
-- `cmoc run abandon` の process 停止、state 更新、worktree・branch の cleanup を変更するとき。
-- 共有 lifecycle・report 処理への旧 import path の互換性を保守するとき。
+- active editing run の join について、merge 前の検査から post-join 処理、state・report 更新、失敗時の復旧や cleanup まで調べるとき。
+- active editing run の abandon に伴う process 停止、worktree・branch 削除、state 更新を調べるとき。
+- 旧 import path の互換性や、ここから公開される共通 helper の利用を調べるとき。
 
 ## Do not read this when
-- run の共有 lifecycle、report、join helper 自体を変更するときは、その共有 runtime の実装を直接参照してください。
-- session 全体の fork・join・abandon を変更するときは、session lifecycle の実装を参照してください。
-- workload 固有の fork や実行処理を変更するときは、該当 workload の実装を参照してください。
+- session 全体の fork・join・abandon の処理を調べるときは、session の lifecycle 処理を参照してください。
+- workload ごとの editing run の fork や実行処理を調べるときは、該当する workload の fork 処理を参照してください。
+- 共通の run lifecycle helper、join 共通処理、report writer の実装を変更するときは、commons にある正規実装を直接参照してください。
 
 ## hash
-- 88a67686777c235c098c1a860ee9dbc17ebc7dfef9ce5614dcfb638e6b48fb01
+- 5614640a93310490b428e0ffe253e8270725fe73428f80f614384dae636d314b
 
 # `session`
 
 ## Summary
-- `session fork` による session 作成と `session join`・`session abandon` による取り込み・破棄を実行する CLI 処理の実装群です。
-- branch 切替や session state 更新を担い、fork と abandon の失敗時復旧も扱うため、session の lifecycle 動作を調べる入口になります。
+- session branch を作成し、home branch へ統合するか、統合せず破棄する CLI 処理の実装入口です。
+- 各操作の state 遷移、branch の後始末、失敗時の復旧処理を横断して確認できます。
 
 ## Read this when
-- `cmoc session fork` の作成条件、session branch と state の作成、または失敗時の rollback を確認・変更するとき。
-- `cmoc session join` の home branch への merge、conflict 解消、state 更新や session branch の後始末を扱うとき。
-- `cmoc session abandon` で session を取り込まず破棄する処理や、失敗時の復旧を扱うとき。
+- session の fork・join・abandon の事前条件や処理、state 遷移、失敗時の復旧を調べる・変更する場合。
+- 複数の session 操作にまたがる branch と state の整合を確認する場合。
 
 ## Do not read this when
-- CLI のコマンド登録や名前を確認する場合は `src/main.py` を読むとき。
-- session state のデータ形式、検証、永続化自体を調べる場合は `src/commons/runtime_state.py` を読むとき。
+- 単一の session 操作だけを調べる場合は、その操作の実装へ直接進んでください。
+- 共通の state 形式や Git・session runtime の処理自体を調べる・変更する場合は、それらの定義へ直接進んでください。
 
 ## hash
-- 664c168771428e71725c317487f8328ea05c9f72db44a66b39d5aa95f450f263
+- 300aee23aa170007f8f71e9386a3ee9d7f75553c7d4dea7d5d8eebebb446f3ea
 
 # `tui.py`
 

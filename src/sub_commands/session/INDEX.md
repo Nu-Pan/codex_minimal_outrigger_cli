@@ -47,16 +47,17 @@
 # `join.py`
 
 ## Summary
-- 現在の active session branch を、session state が示す home branch に merge して session を完了する処理を担う。
-- merge conflict の解消依頼と結果確認、session state の更新、安全性を確認した session branch cleanup までを扱う。
+- 現在の session branch を記録済み home branch に merge し、session の完了と安全な branch cleanup まで行う CLI 処理を担う。
+- join 固有の競合解消呼び出しも含むため、merge、session state 更新、完了後 cleanup の実装を調べる入口となる。
 
 ## Read this when
-- `cmoc session join` の実際の処理、競合時の解消、完了後の状態や cleanup を確認・変更するとき。
+- active session を home branch に取り込んで完了するコマンドの動作や変更箇所を確認するとき。
+- session join 中の競合解消、joined state への更新、条件付き branch cleanup を調べるとき。
 
 ## Do not read this when
-- session join の正本仕様を確認・変更するときは、その仕様を直接読む。
-- session branch の作成や破棄を扱うときは、`cmoc session fork` または `cmoc session abandon` の処理へ進む。
-- 編集 run の取り込みを扱うときは、別の `cmoc run join` の処理へ進む。
+- session branch の新規作成と state 初期化を調べるときは、fork の処理へ進む。
+- home branch に merge せず session を破棄する動作を調べるときは、abandon の処理へ進む。
+- session lifecycle を介さない一般的な Git merge の動作を調べるとき。
 
 ## hash
-- f5e66b3bd1eddafe6db63d5dc50c2382e13e25be362483fda5d765d0148c3e3e
+- 3d6413b6e1023842a5a07d50f4a24357af4c697fa6e2db14f327bdd35546c614

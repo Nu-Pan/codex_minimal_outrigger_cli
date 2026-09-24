@@ -29,6 +29,7 @@ from _git_support import current_branch, make_repo, run_git
 
 import cmoc_runtime
 import commons.runtime_codex_preflight as codex_preflight_module
+import commons.runtime_merge_conflict as merge_conflict_module
 import sub_commands.session.abandon as session_module
 import sub_commands.session.fork as session_fork_module
 import sub_commands.session.join as session_join_module
@@ -1090,6 +1091,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
         """
 
+        output_text = "merge_resolution: resolved\n"
         output_json = None
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
@@ -1103,7 +1105,8 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
         modes.append(parameter.file_access_mode)
         assert set(kwargs) == {"root", "purpose"}
         assert parameter.agent_call_cwd == root
-        assert str(target) in parameter.prompt
+        assert "統合対象" in parameter.prompt
+        assert str(target) not in parameter.prompt
         override_args = build_codex_override_args(
             parameter,
             CmocConfig(),
@@ -1117,6 +1120,9 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(
+        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
+    )
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
@@ -1127,7 +1133,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
     assert modes == [FileAccessMode.REPO_WRITE]
     rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
     assert f"- `{target}`" in rendered_report
-    assert "- conflict 解消用 agent call: `completed`" in rendered_report
+    assert "- conflict 解消用 agent call: `resolved`" in rendered_report
     assert "- 確定した解消結果: `confirmed`" in rendered_report
 
 
@@ -1190,6 +1196,7 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
     class FakeCodexResult:
         """conflict resolution の成功を表す最小 fake result。"""
 
+        output_text = "merge_resolution: resolved\n"
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
@@ -1207,6 +1214,9 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(
+        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
+    )
 
     result = runner.invoke(app, ["session", "join"])
 
@@ -1214,7 +1224,7 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
     if extra_change == "marker":
         assert result.exit_code != 0
         assert "conflict marker が残っています。" in result.stderr
-        assert str(extra) in result.stderr
+        assert "src/extra.py" in result.stderr
         assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
         return
     assert result.exit_code == 0, result.output
@@ -1274,6 +1284,7 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     class FakeCodexResult:
         """conflict resolution の成功を表す最小 fake result。"""
 
+        output_text = "merge_resolution: resolved\n"
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
@@ -1290,6 +1301,9 @@ def test_session_join_accepts_incidental_conflict_file_changes(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(
+        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
+    )
 
     result = runner.invoke(app, ["session", "join"])
 
@@ -1337,17 +1351,22 @@ def test_session_join_handles_conflict_path_containing_newline(
     class FakeCodexResult:
         """conflict resolution成功を表す最小結果double。"""
 
+        output_text = "merge_resolution: resolved\n"
         output_json = None
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
         """conflict pathをpromptに含め、解消済み内容を書き込む。"""
         assert set(kwargs) == {"root", "purpose"}
         assert parameter.agent_call_cwd == root
-        assert str(target) in parameter.prompt
+        assert "統合対象" in parameter.prompt
+        assert str(target) not in parameter.prompt
         target.write_text("resolved change\n")
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(
+        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
+    )
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
@@ -1357,62 +1376,18 @@ def test_session_join_handles_conflict_path_containing_newline(
     assert run_git(root, "diff", "--name-only", "-z", "--diff-filter=U").stdout == ""
 
 
-def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
-    """unmerged pathを絶対pathでerror detailへ出すことを検証する。"""
+def test_session_join_reads_unmerged_paths_with_newlines(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Git index の path は NUL 区切りで読み、改行を保持する。"""
     root = make_repo(tmp_path)
-    target = root / "src" / "unmerged.py"
-    target.parent.mkdir()
 
-    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
-    def fake_git(args: list[str], git_cwd: Path) -> cmoc_runtime.CommandResult:
-        """unmerged pathをNUL区切りで返すGit double。"""
-        if args == ["diff", "--name-only", "-z", "--diff-filter=U"]:
-            return cmoc_runtime.CommandResult(0, "src/unmerged.py\0", "")
-        return cmoc_runtime.CommandResult(0, "", "")
+    def fake_git(args: list[str], _root: Path) -> cmoc_runtime.CommandResult:
+        assert args == ["diff", "--name-only", "-z", "--diff-filter=U"]
+        return cmoc_runtime.CommandResult(0, "src/line\nbreak.txt\0", "")
 
-    def fake_codex_exec(parameter: object, **kwargs: object) -> object:
-        """Codex呼び出しが不要な経路のための最小double。"""
-        return object()
-
-    with pytest.raises(CmocError) as error:
-        session_join_module.resolve_session_join_conflict(
-            root, fake_codex_exec, fake_git
-        )
-
-    assert error.value.summary == "unmerged path が残っています。"
-    assert error.value.detail == str(target)
-
-
-def test_session_join_stages_conflict_path_as_literal_pathspec(tmp_path: Path) -> None:
-    """特殊文字を含む conflict path を literal pathspec として stage する。"""
-    root = make_repo(tmp_path)
-    target = root / "src" / "[ab].txt"
-    target.parent.mkdir()
-    target.write_text("<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n")
-    unmerged_calls = 0
-    add_calls: list[list[str]] = []
-
-    def fake_git(args: list[str], git_cwd: Path) -> cmoc_runtime.CommandResult:
-        """conflict 解消で呼ばれる Git 操作を記録する。"""
-        nonlocal unmerged_calls
-        if args == ["diff", "--name-only", "-z", "--diff-filter=U"]:
-            unmerged_calls += 1
-            output = "src/[ab].txt\0" if unmerged_calls == 1 else ""
-            return cmoc_runtime.CommandResult(0, output, "")
-        if args == ["status", "--porcelain=v1", "-z", "-uall"]:
-            return cmoc_runtime.CommandResult(0, "", "")
-        if args[:2] == ["add", "--"]:
-            add_calls.append(args)
-        return cmoc_runtime.CommandResult(0, "", "")
-
-    def fake_codex_exec(_parameter: object, **_kwargs: object) -> object:
-        """conflict marker を対象 path 内だけで解消する。"""
-        target.write_text("resolved\n")
-        return object()
-
-    session_join_module.resolve_session_join_conflict(root, fake_codex_exec, fake_git)
-
-    assert add_calls == [["add", "--", ":(literal)src/[ab].txt"]]
+    monkeypatch.setattr(merge_conflict_module, "run_git", fake_git)
+    assert merge_conflict_module.unmerged_paths(root) == ["src/line\nbreak.txt"]
 
 
 @pytest.mark.parametrize(
@@ -1427,8 +1402,8 @@ def test_session_join_stages_conflict_path_as_literal_pathspec(tmp_path: Path) -
     ],
 )
 def test_session_join_conflict_marker_detection(text: str, expected: bool) -> None:
-    """conflict marker blockの残存判定が各入力に一致することを検証する。"""
-    assert session_join_module._has_conflict_marker_block(text) is expected
+    """未解決 marker block の検出は bare Markdown separator を許す。"""
+    assert merge_conflict_module._has_conflict_marker_block(text) is expected
 
 
 def test_session_join_uses_linked_worktree_branch(
@@ -1537,6 +1512,7 @@ def test_session_join_stages_delete_conflict_resolution(
     class FakeCodexResult:
         """conflict resolution成功を表す最小結果double。"""
 
+        output_text = "merge_resolution: resolved\n"
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
@@ -1545,6 +1521,9 @@ def test_session_join_stages_delete_conflict_resolution(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(
+        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
+    )
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
@@ -1734,6 +1713,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     class FakeCodexResult:
         """conflict resolution結果だけを提供する最小double。"""
 
+        output_text = "merge_resolution: resolved\n"
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
@@ -1742,6 +1722,9 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(
+        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
+    )
 
     result = runner.invoke(app, ["session", "join"])
 
@@ -1753,7 +1736,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     assert "conflict marker が残っています。" in result.stderr
 
 
-def test_session_join_codex_failure_explains_manual_conflict_completion(
+def test_session_join_codex_failure_reports_unresolved_merge(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
@@ -1789,15 +1772,14 @@ def test_session_join_codex_failure_explains_manual_conflict_completion(
 
     assert result.exit_code != 0
     assert current_branch(root) == home_branch
-    assert "conflict を手動で解消し" in result.stderr
-    assert "対象 path を git add し、git commit を実行してください。" in result.stderr
+    assert "Codex CLI 呼び出しが失敗しました。" in result.stderr
     assert "stderr/stdout log を確認して原因を解消してください。" in result.stderr
 
 
-def test_session_join_conflict_uses_main_worktree_path_context(
+def test_session_join_conflict_uses_merge_target_worktree_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree の conflict 解消でも main worktree context を使用する。
+    """linked worktree の conflict 解消は merge target の cwd を使用する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
     {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -1832,6 +1814,7 @@ def test_session_join_conflict_uses_main_worktree_path_context(
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
         """
 
+        output_text = "merge_resolution: resolved\n"
         output_json = None
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
@@ -1848,10 +1831,13 @@ def test_session_join_conflict_uses_main_worktree_path_context(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(
+        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
+    )
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    assert seen == {"root": root, "agent_call_cwd": root}
+    assert seen == {"root": root, "agent_call_cwd": linked}
     assert current_branch(linked) == home_branch
     assert target.read_text() == "resolved change\nTitle\n=======\n"
