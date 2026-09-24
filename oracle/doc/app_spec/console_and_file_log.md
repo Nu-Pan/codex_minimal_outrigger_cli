@@ -59,8 +59,26 @@ primary report の保存に失敗し、完了契約を確定できない場合�
 
 primary report には、内部処理を含むその invocation の実行記録として、次の内容を一覧で掲載する。
 
-- 各 `codex exec`（`codex exec resume` を含む）で取得できた最終出力の本文。取得元は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `--output-last-message` を正本とする。
+- 各 `codex exec`（`codex exec resume` による再開・補正を含む）で取得できた最終出力の本文と、元の出力ファイルへの参照。取得・保存先は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `--output-last-message` を正本とする。
 - 実行中に新規受理された feedback observation の問題内容。掲載対象は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」における observation とする。
+
+共通掲載対象の本文を、省略・要約または原本への参照だけで置き換えてはならない。
+
+#### Structured Output の表示
+
+共通掲載対象の各呼び出しで取得した Structured Output には、本書が primary report の対象とするすべての終了経路で、次の表示要件を適用する。表示加工は cmoc の primary report 生成が担い、report 内の表現だけを対象とする。agent 向け指示や schema に表示責務を追加せず、この加工のための追加 agent call は行わない。
+
+JSON として解析できる場合は、次を満たす表示にする。
+
+- オブジェクト・配列の階層とキー・値の対応を読み取れる整形表示にする。キー、値、型の区別、および配列順序を保持し、空文字列・`null`・空配列などを識別できるようにする。
+- 文字列は、JSON の解釈に必要なデコードを一度だけ行い、Unicode エスケープは対応する文字として、文字列内の改行は実際の改行として読めるようにする。デコード後の文字列に含まれるリテラルのバックスラッシュと `n` の並びや JSON 風の文章を、追加でデコード・再解析してはならない。
+- 引用符やバックスラッシュを含む文字列も、本文と表示上の区切りを取り違えない形で示す。
+
+具体的なレイアウト、インデント幅、見出しの形は、上記の可読性と忠実性を満たす範囲で実装裁量とする。表示結果自体の JSON 構文への準拠や、文字列内の Markdown の装飾表示は要求しない。
+
+JSON として解析できない場合は、その旨と取得できた原文を実行記録へ掲載する。解析できても、schema または宣言済みの決定論的事後条件の検証に不合格だった出力は、不合格であり正式な結果ではないと判別できるように表示する。
+
+Structured Output の受理条件と不合格出力の保持は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Structured Output > 機械的検証と正式な結果」を正本とする。表示できることを受理条件に加えたり、表示変換で出力補正や結果の受理を代替したりしてはならない。
 
 ## terminal result
 
