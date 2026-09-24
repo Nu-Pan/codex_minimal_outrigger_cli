@@ -1,26 +1,24 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様ドキュメント群。アプリケーション仕様、サブコマンド仕様、開発規約、ブランチモデル、採用しなかった設計案を定義する。
-- app_spec は cmoc の利用者向け機能・状態・入出力・エラー・agent call・feedback・indexing などの現在仕様を扱い、sub_command 配下は各サブコマンドの詳細仕様への入口となる。
-- dev_rule は開発環境、設計・コーディング規則、テスト実装規約、テストと品質検査の実行手順を扱う。
-- considered_alternative は現行仕様ではなく、採用・不採用判断の背景を確認するための記録である。
-- branch_model はリポジトリのブランチ運用モデルを定義する。
+- cmoc の人間所有の正本仕様ドキュメント群。app_spec は CLI の利用方法、実行ライフサイクル、agent 呼び出し、feedback、INDEX、oracle/realization、各サブコマンドの振る舞いを定義する。
+- branch_model.md は cmoc が管理する branch・commit・worktree の概念と関係を定義する。
+- considered_alternative は採用しなかった設計案と、その判断理由を記録する。
+- dev_rule は実装設計、開発環境、コーディング、テスト実装、テスト実行に関する開発規約を定義する。
 
 ## Read this when
-- cmoc の正本仕様やサブコマンドの要求を確認するとき
-- 実装・テスト・設定が仕様に適合しているか調査するとき
-- 開発規約、検証手順、ブランチ運用、feedback や agent call の扱いを確認するとき
-- 現行設計が採用された理由や代替案の判断背景を調べるとき
+- cmoc の正本仕様、CLI の挙動、状態遷移、agent 連携、feedback 処理を確認するときは app_spec から読む。
+- branch や worktree の意味、命名、commit の関係を確認するときは branch_model.md を読む。
+- 実装・テストの開発規約や検証手順を確認するときは dev_rule から読む。
+- 過去に検討されたが採用されなかった設計判断の理由を確認するときは considered_alternative から読む。
 
 ## Do not read this when
-- 実装の具体的な現在挙動だけを確認したいときは src 配下を直接読む
-- テストコードや fixture の具体的な構成だけを確認したいときは test 配下を直接読む
-- 仕様解釈を必要としない補助ファイルや生成ログだけを扱うとき
-- 採用判断の背景が不要で、現在の要求だけを確認したいときは considered_alternative 配下へ進まない
+- 現在の実装や設定の挙動を確認したいときは src を読む。
+- テストコードやテスト fixture の具体的な検証内容を確認したいときは test を読む。
+- 特定の仕様文書が既に分かっている場合は、このディレクトリ全体ではなく該当する文書を直接読む。
 
 ## hash
-- c9f88bdb394f39adb35b8064ce6db68a03ebd6d0e763ab8b4ddafe6f10c8ec98
+- 1e7c6caf1e3db663ed74333b357c9d1f0ebbc50d60fad9d6244bcf82784a1fc3
 
 # `src`
 
