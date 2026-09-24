@@ -455,6 +455,21 @@ def _run_refactor_unit(
         cleanup_warnings.extend(
             stop_tracked_codex_children(context.repo, context.session_id) or []
         )
+        all_unit_paths = worktree_change_paths(
+            context.run_worktree,
+            include_rename_sources=True,
+        )
+        unexpected = _unexpected_refactor_unit_paths(
+            context,
+            changed_agent_paths=[],
+            pending_paths=all_unit_paths,
+        )
+        if unexpected:
+            raise CmocError(
+                "refactor 処理単位に想定外差分があります。",
+                ["run worktree の差分を確認してください。"],
+                "\n".join(unexpected),
+            )
         _commit_refactor_unit(
             context,
             target,
@@ -583,16 +598,11 @@ def _run_refactor_unit(
         context.run_worktree,
         include_rename_sources=True,
     )
-    unexpected = unexpected_run_paths(
+    unexpected = _unexpected_refactor_unit_paths(
         context,
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-        # status と tree diff の分類は path 単位で同じなので一時 change として扱う。
-        [_status_change(path) for path in all_unit_paths],
+        changed_agent_paths=actual_changed_paths,
+        pending_paths=all_unit_paths,
     )
-    unexpected.extend(
-        _unexpected_refresh_paths(context, actual_changed_paths, all_unit_paths)
-    )
-    unexpected = sorted(set(unexpected))
     if unexpected:
         raise CmocError(
             "refactor 処理単位に想定外差分があります。",
@@ -781,6 +791,26 @@ def _reconcile_unresolved_findings(
 def _status_change(path: str) -> GitChange:
     """未 commit path を共通の差分分類へ渡す最小 GitChange にする。"""
     return GitChange("M", (path,))
+
+
+def _unexpected_refactor_unit_paths(
+    context: EditingRunContext,
+    *,
+    changed_agent_paths: Collection[str],
+    pending_paths: Collection[str],
+) -> list[str]:
+    """処理単位の commit 前に想定外の run worktree 差分を返す。"""
+    pending = list(pending_paths)
+    unexpected = unexpected_run_paths(
+        context,
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # status と tree diff の分類は path 単位で同じなので一時 change として扱う。
+        [_status_change(path) for path in pending],
+    )
+    unexpected.extend(
+        _unexpected_refresh_paths(context, list(changed_agent_paths), pending)
+    )
+    return sorted(set(unexpected))
 
 
 def _unexpected_refresh_paths(

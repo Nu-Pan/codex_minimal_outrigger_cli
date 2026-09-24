@@ -702,7 +702,7 @@ def is_generated_index_path(
     # 限定する。hidden directory、symlink、git ignore 対象、root memo は indexable
     # ではない。
     relative = Path(path)
-    if relative.name != "INDEX.md":
+    if relative.is_absolute() or ".." in relative.parts or relative.name != "INDEX.md":
         return False
     if any(part.startswith(".") for part in relative.parts[:-1]):
         return False

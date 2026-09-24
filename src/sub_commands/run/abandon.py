@@ -59,9 +59,6 @@ def _cmoc_run_abandon_body() -> TerminalResult:
             {"running", "joinable", "error"},
             allow_missing_run_worktree=True,
         )
-        from sub_commands.feedback.recovery import require_manual_feedback_run
-
-        require_manual_feedback_run(context)
         update_primary_report_fields(
             run_kind=context.kind,
             session_branch=context.session_branch,
@@ -71,6 +68,9 @@ def _cmoc_run_abandon_body() -> TerminalResult:
             state_before=state.run.state,
             state_after=state.run.state,
         )
+        from sub_commands.feedback.recovery import require_manual_feedback_run
+
+        require_manual_feedback_run(context)
         require_clean_worktree(context.session_worktree)
         warnings: list[str] = []
         stopped = "not_running"
@@ -80,6 +80,7 @@ def _cmoc_run_abandon_body() -> TerminalResult:
             stopped = _stop_error_run(context, warnings)
         else:
             stopped = _stop_joinable_run(context, warnings)
+        update_primary_report_fields(process_stop=stopped)
         if context.kind == "feedback_report":
             from sub_commands.feedback.recovery import finish_manual_feedback_run
 

@@ -1,6 +1,7 @@
 """Codex TUI の起動と call log・実行結果の記録を担う。"""
 
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -65,17 +66,15 @@ def run_codex_tui(
     prepare_codex_override_args(parameter, config)
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     # callback state はこの TUI process invocation の期間だけ保持する。
-    notification_callback = (
-        create_tui_notification_callback(
+    notification_callback = None
+    if "_CMOC_COMPLETE" not in os.environ and codex_cli_supports_tui_notification_hooks(
+        agent_call_cwd,
+        codex_environment,
+    ):
+        notification_callback = create_tui_notification_callback(
             notification_command_name or purpose,
             root,
         )
-        if codex_cli_supports_tui_notification_hooks(
-            agent_call_cwd,
-            codex_environment,
-        )
-        else None
-    )
     try:
         return _run_codex_tui_process(
             parameter,

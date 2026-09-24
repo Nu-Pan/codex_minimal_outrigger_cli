@@ -2207,6 +2207,10 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     for operation in ("join", "abandon"):
         rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
         assert rejected.exit_code == 1, rejected.output
+        rejected_report = terminal_primary_report(rejected).read_text(encoding="utf-8")
+        assert 'run_kind: "feedback_report"' in rejected_report
+        assert 'state_before: "error"' in rejected_report
+        assert 'state_after: "error"' in rejected_report
     monkeypatch.setattr(target, name, original)
     monkeypatch.setattr(
         feedback_report_module,

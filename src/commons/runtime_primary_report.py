@@ -108,18 +108,26 @@ def ensure_primary_report(
 ) -> TerminalResult:
     """保存済み report を検証し、未作成の終了経路へ fallback を保存する。"""
     if result.primary_report is not None:
-        _require_saved_report(result.primary_report)
-        # feedback publication は hash 確定前に実行記録を描画する。
-        # その他の個別 report は最外側 invocation の終了時に記録を追加する。
-        content = result.primary_report.read_text(encoding="utf-8")
-        if command_name == "feedback report":
-            if "\n## 実行記録\n" not in content:
-                raise PrimaryReportSaveError(result.primary_report)
-        else:
-            rewrite_primary_report(
-                result.primary_report,
-                content.rstrip() + "\n\n" + execution_record_markdown(logger),
-            )
+        report_path = result.primary_report
+        try:
+            _require_saved_report(report_path)
+            # feedback publication は hash 確定前に実行記録を描画する。
+            # その他の個別 report は最外側 invocation の終了時に記録を追加する。
+            content = report_path.read_text(encoding="utf-8")
+            if command_name == "feedback report":
+                if "\n## 実行記録\n" not in content:
+                    raise PrimaryReportSaveError(report_path)
+            else:
+                rewrite_primary_report(
+                    report_path,
+                    content.rstrip() + "\n\n" + execution_record_markdown(logger),
+                )
+        except PrimaryReportSaveError:
+            raise
+        except BaseException as exc:
+            # 保存済み path の読み取りや execution record の追記も、完了契約を
+            # 確定するための report 保存処理に含める。
+            raise PrimaryReportSaveError(report_path) from exc
         return result
 
     context = _PRIMARY_REPORT_CONTEXT.get()

@@ -34,17 +34,13 @@
 # `refactor`
 
 ## Summary
-- realization refactor package の処理をまとめる入口。fork による full-cycle の run lifecycle、対象 file の調査・修正、unresolved findings と state の管理、完了判定、report 公開までを扱う。
+- realization の refactor fork サブコマンドを実行する単一ワークロードで、対象選択、ファイル単位の調査・修正、未解決 finding 管理、完了判定、run 状態更新、割り込み時の後処理、fork report 保存までの lifecycle を担う。
 
 ## Read this when
-- realization refactor fork の実行 lifecycle、処理単位、完了判定、report 公開の流れを確認・変更するとき。
-- 対象 file への agent 呼び出し、Structured Output、変更 path・commit の検証、refactor state や INDEX 同期を確認するとき。
-- unresolved findings の追跡、rename、中断・例外時の cleanup、rollback、error state の扱いを調査するとき。
+- realization refactor fork の実行フロー、run の joinable/error/interrupted 遷移、対象ファイルの修正処理、完了報告を確認したいとき。
 
 ## Do not read this when
-- refactor 対象の選定や state 永続化そのものを確認したいとき。
-- 単一 realization file の agent 用 prompt や出力契約だけを確認したいとき。
-- 変更概要の生成・分類だけ、または共通 runtime の report、editing run、Git commit、process tracking の一般仕様だけを確認したいとき。
+- refactor fork の内部 lifecycle ではなく、別の realization サブコマンドや個別の change summary／file review builder の仕様を確認したいとき。
 
 ## hash
-- 960468530a809af0978896b822d4814954ef3617dc5966ae0ab5315ddeab7e52
+- 3ce928d565a11c0b77ec274c84a07ee75ebf6e61799aaa1112966ce4aa056db6

@@ -20,6 +20,7 @@ import json
 import stat
 import subprocess
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -199,6 +200,51 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
     assert run_git(root, "rev-parse", session_branch).stdout.strip() == captured_head
 
 
+def test_session_fork_rechecks_branch_after_lifecycle_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """lock 待ち中に branch が切り替わっても state と分岐元を一致させる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    original_home = current_branch(root)
+    alternate = "alternate-home"
+    run_git(root, "branch", alternate)
+    run_git(root, "switch", alternate)
+    (root / "README.md").write_text("alternate home\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "advance alternate home")
+    alternate_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "switch", original_home)
+
+    original_lock = session_fork_module.session_fork_lock
+
+    @contextmanager
+    def switch_branch_while_locked(repository: Path) -> Iterator[None]:
+        """fork が lock を取得した直後の branch 切替を再現する。"""
+        with original_lock(repository):
+            run_git(repository, "switch", alternate)
+            yield
+
+    monkeypatch.setattr(
+        session_fork_module, "session_fork_lock", switch_branch_while_locked
+    )
+
+    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    session_branch = current_branch(root)
+    assert session_branch.startswith("cmoc/session/")
+    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert state["session"]["session_home_branch"] == alternate
+    assert state["session"]["session_fork_commit"] == alternate_commit
+    assert run_git(root, "rev-parse", session_branch).stdout.strip() == alternate_commit
+
+
 def test_session_fork_rolls_back_when_state_save_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -236,6 +282,74 @@ def test_session_fork_rolls_back_when_state_save_fails(
     assert "session fork の作成に失敗しました。" in result.stderr
     assert "session_branch_exists: False" in result.stderr
     assert "session_state_file_exists: False" in result.stderr
+
+
+def test_session_fork_rollback_does_not_guess_remote_home_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """rollback が消えた local home branch を remote から推測しない。
+
+    根拠:
+    - {{work-root}}/oracle/doc/branch_model.md
+    - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    home_branch = current_branch(root)
+    home_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "--bare", str(remote)],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    run_git(root, "remote", "add", "origin", str(remote))
+    run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
+    run_git(root, "config", "checkout.defaultRemote", "origin")
+
+    session_id = "2026-06-27_01-02_03_000000000"
+    session_branch = f"cmoc/session/{session_id}"
+    monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
+
+    def fail_write_state(_path: Path, _state: cmoc_runtime.SessionState) -> None:
+        """rollback 中の remote branch 推測を再現するため local ref を消す。"""
+        run_git(root, "branch", "-D", home_branch)
+        raise OSError("state write failed")
+
+    monkeypatch.setattr(session_fork_module, "write_state", fail_write_state)
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == session_branch
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/heads/{home_branch}"],
+            root,
+            check=False,
+        ).returncode
+        != 0
+    )
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/remotes/origin/{home_branch}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/heads/{session_branch}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
+    assert not session_state_path(root, session_branch).exists()
+    assert "session fork の作成に失敗しました。" in result.stderr
 
 
 def test_session_fork_does_not_delete_branch_from_id_collision_race(
@@ -591,6 +705,35 @@ def test_session_abandon_requires_existing_home_branch(
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
 
 
+def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """未joinのrunがある場合に先行するcleanup操作を案内する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    path = session_state_path(root, session_branch)
+    state = json.loads(path.read_text())
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state["run"] = {
+        "state": "joinable",
+        "kind": "realization_refactor",
+        "branch": f"cmoc/run/{session_id}/run-id",
+        "fork_commit": state["session"]["session_fork_commit"],
+    }
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+
+    result = runner.invoke(app, ["session", "abandon"])
+
+    assert result.exit_code != 0
+    assert "先に `cmoc run abandon`" in result.stderr
+    assert current_branch(root) == session_branch
+
+
 def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -789,6 +932,100 @@ def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_eff
     assert run_git(root, "rev-parse", session_branch).stdout.strip() == session_commit
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
+
+
+def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_race(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """rollback中に消えたlocal session branchをremoteから推測しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    state_path = session_state_path(root, session_branch)
+    home_branch = session_home_branch(root, session_branch)
+    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "--bare", str(remote)],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    run_git(root, "remote", "add", "origin", str(remote))
+    run_git(root, "switch", home_branch)
+    (root / "README.md").write_text("remote target\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "advance remote branch target")
+    remote_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "push", "origin", f"{remote_commit}:refs/heads/{session_branch}")
+    run_git(root, "fetch", "origin")
+    run_git(root, "config", "checkout.defaultRemote", "origin")
+    run_git(root, "switch", session_branch)
+
+    original_run_git = session_module.run_git
+    original_branch_exists = session_module.branch_exists
+    original_delete_branch = session_module.delete_branch
+    recreated = False
+    raced = False
+
+    def record_recreated_branch(
+        args: list[str], git_cwd: Path, check: bool = True
+    ) -> cmoc_runtime.CommandResult:
+        """rollbackのbranch復元を検出する。"""
+        nonlocal recreated
+        result = original_run_git(args, git_cwd, check)
+        if args == ["branch", session_branch, session_commit]:
+            recreated = True
+        return result
+
+    def remove_recreated_branch(repository: Path, branch: str) -> bool:
+        """branch存在確認とcheckoutの間にlocal refが消える競合を再現する。"""
+        nonlocal raced
+        exists = original_branch_exists(repository, branch)
+        if branch == session_branch and recreated and exists and not raced:
+            original_run_git(["branch", "-D", branch], repository)
+            raced = True
+        return exists
+
+    def delete_then_interrupt(
+        repository: Path, branch: str, force: bool = False
+    ) -> None:
+        """session branch削除後の中断を再現する。"""
+        result = original_delete_branch(repository, branch, force)
+        assert result.returncode == 0
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(session_module, "run_git", record_recreated_branch)
+    monkeypatch.setattr(session_module, "branch_exists", remove_recreated_branch)
+    monkeypatch.setattr(session_module, "delete_branch", delete_then_interrupt)
+
+    result = runner.invoke(app, ["session", "abandon"])
+
+    assert result.exit_code != 0
+    assert raced
+    assert current_branch(root) == home_branch
+    assert json.loads(state_path.read_text())["session"]["state"] == "active"
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/heads/{session_branch}"],
+            root,
+            check=False,
+        ).returncode
+        != 0
+    )
+    assert (
+        cmoc_runtime.run_git(
+            ["show-ref", "--verify", f"refs/remotes/origin/{session_branch}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 @pytest.mark.parametrize("command", ["abandon", "join"])
@@ -1514,6 +1751,47 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     assert "conflict marker が残っています。" not in result.stdout
     assert "# 失敗: cmoc session join" in result.stderr
     assert "conflict marker が残っています。" in result.stderr
+
+
+def test_session_join_codex_failure_explains_manual_conflict_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
+    root = make_repo(tmp_path)
+    target = root / "README.md"
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    def failing_codex_exec(parameter: object, **kwargs: object) -> object:
+        """Codex CLIの既知の失敗を再現する。"""
+        raise CmocError(
+            "Codex CLI 呼び出しが失敗しました。",
+            ["stderr/stdout log を確認して原因を解消してください。"],
+            "call log",
+        )
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", failing_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict を手動で解消し" in result.stderr
+    assert "対象 path を git add し、git commit を実行してください。" in result.stderr
+    assert "stderr/stdout log を確認して原因を解消してください。" in result.stderr
 
 
 def test_session_join_conflict_uses_main_worktree_path_context(

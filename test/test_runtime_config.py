@@ -118,9 +118,18 @@ def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
     assert config_to_dict(load_config(root)) == config_to_dict(config)
 
 
-@pytest.mark.parametrize("payload", [b"{", b"\xff"])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"{",
+        b"\xff",
+        b'{"unused": NaN}',
+        b'{"unused": Infinity}',
+        b'{"unused": -Infinity}',
+    ],
+)
 def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
-    """JSON 構文または UTF-8 が壊れた config を利用者向けエラーへ変換する。"""
+    """壊れた JSON または UTF-8 の config を利用者向けエラーへ変換する。"""
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)

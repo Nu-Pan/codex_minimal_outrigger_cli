@@ -1,7 +1,7 @@
 """editing run の join と cleanup で共有する runtime 処理。"""
 
 import os
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Mapping
 from pathlib import Path
 
 from .runtime_cli import start_subcommand_step
@@ -41,11 +41,13 @@ from .runtime_run_report import write_lifecycle_report
 from .runtime_state import SessionState, load_state_for_branch, write_state
 
 
-def doctor_preprocess_for_join() -> set[str]:
-    """join 前の doctor 修復差分を active run kind に合わせて返す。"""
+def doctor_preprocess_changes_for_join() -> dict[Path, tuple[str, set[str]]]:
+    """join 前 doctor の修復 path を修復した worktree ごとに返す。"""
     # join 前の state を確認し、workload が更新する state の二重同期を避ける。
-    root = work_root()
-    before = head_commit(root)
+    root = work_root().resolve()
+    main_root = repo_root(root).resolve()
+    repair_roots = (main_root,) if main_root == root else (main_root, root)
+    before = {repair_root: head_commit(repair_root) for repair_root in repair_roots}
     sync_refactor_entries = True
     try:
         branch = current_branch(root)
@@ -60,15 +62,49 @@ def doctor_preprocess_for_join() -> set[str]:
             "feedback_report",
         }
     run_doctor_preprocess(root, sync_refactor_entries=sync_refactor_entries)
-    after = head_commit(root)
-    if before == after:
+    # doctor は linked run 起点でも main worktree と current worktree の両方を修復
+    # する。修復 path を一つの集合へ潰すと、session 側の commit を run 側の修復
+    # と誤って扱うため、各 worktree の HEAD 差分を所有 root ごとに保持する。
+    changes: dict[Path, tuple[str, set[str]]] = {}
+    for repair_root, before_commit in before.items():
+        after_commit = head_commit(repair_root)
+        changes[repair_root] = (
+            before_commit,
+            {
+                path
+                for change in tree_changes(repair_root, before_commit, after_commit)
+                for path in change.paths
+            }
+            if before_commit != after_commit
+            else set(),
+        )
+    return changes
+
+
+def doctor_paths_for_join(
+    changes: Mapping[Path, tuple[str, Collection[str]]],
+    worktree: Path,
+    base: str,
+) -> set[str]:
+    """doctor が追加した path だけを join の差分除外対象へ取り出す。"""
+    repair = changes.get(worktree.resolve())
+    if repair is None:
         return set()
-    # doctor 自身が merge 前に作成した修復 commit の全 path を session/run の
-    # 差分から除外する。config、.agents、refactor state も doctor の管理対象で
-    # あり、state だけを返すと config の同期を join が想定外差分と誤判定する。
-    return {
-        path for change in tree_changes(root, before, after) for path in change.paths
+    before_commit, doctor_paths = repair
+    preexisting_paths = {
+        path
+        for change in tree_changes(worktree, base, before_commit)
+        for path in change.paths
     }
+    # doctor と同じ path に先行する session/run 差分がある場合は、path 全体を
+    # 管理差分として扱わず、ユーザーまたは workload の差分検査を維持する。
+    return set(doctor_paths).difference(preexisting_paths)
+
+
+def doctor_preprocess_for_join() -> set[str]:
+    """current worktree の join 前 doctor 修復差分を返す。"""
+    repair = doctor_preprocess_changes_for_join().get(work_root().resolve())
+    return set() if repair is None else set(repair[1])
 
 
 def validate_run_join(

@@ -502,14 +502,14 @@ def _config_override(key: str, toml_value: str) -> list[str]:
 
 
 def codex_cli_supports_tui_notification_hooks(
-    cwd: Path,
+    codex_process_cwd: Path,
     environment: Mapping[str, str],
 ) -> bool:
     """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
     try:
         result = subprocess.run(
             ["codex", "--sandbox", "read-only", "--version"],
-            cwd=cwd,
+            cwd=codex_process_cwd,
             env=environment,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
@@ -1028,11 +1028,6 @@ def run_tracked_codex_subprocess(
             with run_process_id_file_lock(tracking_path):
                 _validate_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
-                if process_started_callback is not None:
-                    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-                    # Popen 成功直後に起動境界を通知し、tracking 更新中の中断も
-                    # すでに起動した TUI の終了として区別する。
-                    process_started_callback()
                 # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
                 # tracking 更新に失敗しても、後から PGID を再探索して別 group を停止しない
                 # よう、Popen 直後の identity snapshot を cleanup に引き継ぐ。
@@ -1052,6 +1047,12 @@ def run_tracked_codex_subprocess(
                         *cleanup_expected_members,
                         cleanup_expected_leader,
                     )
+                if process_started_callback is not None:
+                    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+                    # Popen 成功直後に起動境界を通知し、tracking 更新中の中断も
+                    # すでに起動した TUI の終了として区別する。cleanup 用 identity は
+                    # callback 自体が失敗しても利用できるよう先に確保する。
+                    process_started_callback()
                 tracked_start_time = _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
                 )
@@ -1221,7 +1222,7 @@ def read_output_json(path: Path) -> Any:
         return None
     try:
         return json.loads(output_text)
-    except (json.JSONDecodeError, UnicodeError):
+    except (RecursionError, json.JSONDecodeError, UnicodeError):
         return None
 
 

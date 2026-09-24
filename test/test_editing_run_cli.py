@@ -1395,6 +1395,31 @@ def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
 
+def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """停止済み process を、その後の cleanup 失敗 report にも残す。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_abandon_module, "_stop_joinable_run", lambda *_args: "stopped")
+
+    def fail_worktree_cleanup(*_args: object) -> NoReturn:
+        """停止後の worktree cleanup failure を再現する。"""
+        raise RuntimeError("cleanup failed after process stop")
+
+    monkeypatch.setattr(run_abandon_module, "_remove_run_worktree", fail_worktree_cleanup)
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 1, result.output
+    report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert 'process_stop: "stopped"' in report
+    assert _state(state_path)["run"]["state"] == "joinable"
+    assert context.run_worktree.exists()
+
+
 def test_apply_fork_tracks_indexing_codex_calls(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1940,6 +1965,11 @@ def test_refactor_missing_target_refreshes_indexes_before_commit(
         "stop_tracked_codex_children",
         lambda *_args, **_kwargs: events.append("stop") or [],
     )
+    monkeypatch.setattr(
+        refactor_module,
+        "worktree_change_paths",
+        lambda *_args, **_kwargs: [],
+    )
     monkeypatch.setattr(refactor_module, "_commit_refactor_unit", record_commit)
 
     refactor_module._run_refactor_unit(
@@ -1951,6 +1981,35 @@ def test_refactor_missing_target_refreshes_indexes_before_commit(
     )
 
     assert events == ["sync", "refresh", "stop", "commit"]
+
+
+def test_refactor_missing_target_rejects_unexpected_processing_unit_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """消えた target の同期単位でも想定外 path を commit しない。"""
+    _root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    (context.run_worktree / "README.md").unlink()
+    unexpected_path = context.run_worktree / "memo" / "unexpected.md"
+    unexpected_path.parent.mkdir()
+    unexpected_path.write_text("must not be committed\n")
+    before_head = run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip()
+
+    with pytest.raises(CmocError, match="想定外差分"):
+        refactor_module._run_refactor_unit(
+            context,
+            "README.md",
+            [],
+            {},
+            [],
+        )
+
+    assert run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip() == (
+        before_head
+    )
 
 
 @pytest.mark.parametrize(
@@ -2804,8 +2863,10 @@ def test_run_join_allows_oracle_change_on_session_branch(
 
 
 def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
-    """存在しない親や symlink 経由の INDEX.md を cmoc 生成物として扱わない。"""
+    """repository 外や indexable でない親の INDEX.md を生成物として扱わない。"""
     root = make_repo(tmp_path)
+    outside_directory = tmp_path / "outside"
+    outside_directory.mkdir()
     generated_directory = root / "generated"
     generated_directory.mkdir()
     symlink_target = root / "symlink-target"
@@ -2814,6 +2875,10 @@ def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
     (symlink_target / "nested").mkdir()
 
     assert lifecycle_module.is_generated_index_path(root, "generated/INDEX.md")
+    assert not lifecycle_module.is_generated_index_path(
+        root, str(outside_directory / "INDEX.md")
+    )
+    assert not lifecycle_module.is_generated_index_path(root, "../outside/INDEX.md")
     assert not lifecycle_module.is_generated_index_path(root, "missing/INDEX.md")
     assert not lifecycle_module.is_generated_index_path(root, "symlink-parent/INDEX.md")
     assert not lifecycle_module.is_generated_index_path(
@@ -2896,6 +2961,50 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
 
     assert result.exit_code == 0
     assert (root / "README.md").read_text() == "realized\n"
+
+
+def test_run_join_from_run_worktree_tracks_main_doctor_repairs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run 起点の doctor が session 側へ行う修復も join の許可差分に含める。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    gitignore = root / ".gitignore"
+    gitignore.write_text(gitignore.read_text().replace("/.cmoc/gu/\n", ""))
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "create stale cmoc ignore")
+
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.chdir(context.run_worktree)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert "/.cmoc/gu/" in gitignore.read_text()
+
+
+def test_run_join_from_run_worktree_rejects_prior_session_doctor_path_change(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor と同じ path の先行 session 差分を管理差分として隠さない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    gitignore = root / ".gitignore"
+    gitignore.write_text("user session change\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "change cmoc ignore policy")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.chdir(context.run_worktree)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert ".gitignore" in result.output
+    assert _state(state_path)["run"]["state"] == "joinable"
 
 
 def test_run_join_allows_doctor_config_repair(

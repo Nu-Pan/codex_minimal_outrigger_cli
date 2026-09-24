@@ -51,20 +51,19 @@
 # `indexing.py`
 
 ## Summary
-- work root の INDEX.md を更新する indexing CLI の実行入口を提供する。
-- 実行前に cmoc 管理対象と clean worktree を確認し、排他ロック下で INDEX.md を更新・差分 commit し、結果を primary report に反映する。
+- `cmoc indexing` CLI の実行入口と本体を提供し、対象 work root の INDEX.md を更新して必要な差分を commit する。実行前に cmoc の ignore 設定と clean worktree を検査し、ロック、進捗・結果報告、割り込みや失敗状態の記録まで統括する。
 
 ## Read this when
-- `cmoc indexing` の CLI 入口、実行前提条件、または indexing 処理全体の実行フローを確認するとき
-- INDEX.md の更新、更新差分の commit、または indexing 実行結果の報告処理の呼び出し元を確認するとき
+- INDEX.md の自動更新・commit を行う indexing サブコマンドの実行条件、処理順序、失敗時状態、結果報告を確認したいとき
+- `cmoc indexing` の CLI 入口や、インデックス更新処理をどの runtime API 経由で呼び出すかを変更・調査するとき
 
 ## Do not read this when
-- INDEX.md の具体的な更新規則や探索・生成ロジックを確認したいときは、indexing 共通処理の対象を直接読む
-- CLI 共通の実行制御や step 管理の仕様だけを確認したいときは、CLI runtime 共通処理の対象を直接読む
-- worktree の clean 判定や cmoc 管理対象の検査実装だけを確認したいときは、対応する runtime 検査処理を直接読む
+- INDEX.md の個別内容の生成規則やファイル探索・更新アルゴリズムそのものを確認したいときは、`commons.indexing` の実装を直接読むべき場合
+- clean worktree 検査や cmoc ignore 判定の共通仕様だけを確認したいときは、runtime 側の precondition 実装を直接読むべき場合
+- indexing 以外の CLI サブコマンドの挙動を調べるとき
 
 ## hash
-- 1b5fb1518b06f7acdfb54acdb2e8ab410c4772fa381bae42ed1af943e6209ce0
+- 273cd0aecd7905c02ed812dd0c3aba37321fc748312192759e24f211db0c7dc3
 
 # `oracle`
 
@@ -89,18 +88,21 @@
 # `realization`
 
 ## Summary
-- `realization` サブコマンド配下の workload 実装をまとめるディレクトリ入口。apply と refactor の各処理へ進むための上位ルーティング対象。
+- realization workload サブコマンド群の入口。apply と refactor の fork 処理を、それぞれ差分追従と realization ファイルの調査・修正として実行し、run lifecycle・Codex 呼び出し・差分管理・report 保存までを統括する。
+- apply は配下の fork 実装へ進み、oracle 差分を基準に realization 側を追従させる処理を確認するときの入口。
+- refactor は配下の fork 実装へ進み、realization file の選択、調査・修正、未解決 finding の管理、完了判定を確認するときの入口。
 
 ## Read this when
-- realization サブコマンドの workload 構成や、apply／refactor の処理入口を確認するとき。
-- realization 配下で apply または refactor の workload 実装を調査・変更するとき。
+- realization サブコマンド全体の責務や apply/refactor のどちらへ進むべきか判断したいとき。
+- run の作成、Codex agent 実行、差分の検査・commit、joinable 公開、report 保存が realization workload でどう束ねられているか確認したいとき。
 
 ## Do not read this when
-- realization サブコマンド以外の処理を扱うとき。
-- apply または refactor の具体的な lifecycle・実装詳細だけを確認したい場合は、対応する下位対象を直接読む。
+- apply の差分追従処理の具体的な lifecycle を確認したい場合は apply/fork.py を直接読んでください。
+- refactor の target 選択、file review、finding 解決、完了判定の詳細を確認したい場合は refactor/fork.py を直接読んでください。
+- realization 以外のサブコマンドや共通 runtime の仕様を確認したい場合は、それぞれの対象ディレクトリ・共通モジュールへ直接進んでください。
 
 ## hash
-- 485bfb2542457396c18017597ca6537502902f62230f1c638da651edbaddf10d
+- 8ed8cb54c41a7f86e43d6ac96becc69e63b1136b99f0fd9304c4bff206f5b3ea
 
 # `review`
 
@@ -119,36 +121,40 @@
 # `run`
 
 ## Summary
-- 日本語の技術文書として、対象ディレクトリにある editing run のライフサイクル関連実装への入口。abandon・join の停止／統合／cleanup と、旧 import path の互換 shim を含む配下を、run lifecycle の共通処理やサブコマンド固有処理の調査時に振り分ける。
+- `cmoc run` 配下の実装入口で、active editing run の join と abandon の lifecycle を扱う。
+- `join.py` は差分検査、merge、post-join 状態同期、report 保存、cleanup と失敗時の復旧状態を一連で処理する。
+- `abandon.py` は実行中 run の停止、worktree・branch・state の cleanup、report 保存を処理する。
+- `lifecycle.py` と `report.py` は旧 import path を維持する互換 shim で、共通実装を `commons` へ委譲する。
 
 ## Read this when
-- editing run の停止・統合・cleanup・report・状態遷移など、複数の run lifecycle 実装を横断して確認するとき。
-- `cmoc run abandon` または `cmoc run join` の処理入口を探すとき。
-- 旧 import path の lifecycle／report 互換性を確認するとき。
+- `cmoc run join` または `cmoc run abandon` の処理フロー、状態遷移、merge・cleanup・report の挙動を確認・変更するとき。
+- run サブコマンド固有の lifecycle 実装や、旧 import path の互換 shim を調べるとき。
 
 ## Do not read this when
-- editing run 以外のサブコマンドを扱うとき。
-- 共通 lifecycle の canonical 実装や workload 固有の merge・差分処理など、配下の特定実装を直接確認すべきとき。
-- run 作成・通常編集・差分生成など、abandon／join のライフサイクル範囲に直接関係しない処理だけを調べるとき。
+- run 以外のサブコマンドの処理を確認するとき。
+- 共通 lifecycle・report 処理の本体や正本仕様を確認する場合は、`commons` 配下または `oracle` 配下の対応対象を直接読むとき。
 
 ## hash
-- b692c0592ebbf0f3b0b5fd155b8143d42f7edb6c6653a1301d983d594801c52c
+- 88a67686777c235c098c1a860ee9dbc17ebc7dfef9ce5614dcfb638e6b48fb01
 
 # `session`
 
 ## Summary
-- session サブコマンドのライフサイクル操作を実装するパッケージ。session の fork・join・abandon に関する処理を確認する際の入口となる。
+- session サブコマンドの実装パッケージ。現在の local branch から session branch を作成する fork、session branch を home branch に取り込む join、取り込まず破棄する abandon の処理をまとめている。
+- 各サブコマンドは CLI runtime、session state、Git branch 操作、事前条件検証、失敗時の rollback または conflict 解消を担当する。
 
 ## Read this when
-- session サブコマンドの作成、home branch への統合、破棄、branch や state の更新・cleanup を確認または変更するとき。
-- session lifecycle 操作間の競合制御や、失敗時の rollback・完了報告を追跡するとき。
+- session fork・join・abandon のCLI挙動や相互関係を調べるとき
+- session branch、home branch、session state の生成・取り込み・破棄処理の実装入口を探すとき
+- session 操作の失敗時処理、cleanup、rollback、merge conflict 解消の流れを確認するとき
 
 ## Do not read this when
-- session 以外のサブコマンドを扱うとき。
-- SessionState のデータ形式や共通 CLI 実行基盤など、session lifecycle の個別操作より下位・共通の実装を直接確認したいとき。
+- session 操作以外のサブコマンドを調べるとき
+- fork、join、abandon のいずれか特定の処理の詳細だけを確認する場合で、該当する個別ファイルを直接読めるとき
+- session state の共通データ形式や CLI 全体の dispatch 機構だけを調べるとき
 
 ## hash
-- 17d723012891b050c8bc34a1457a07c14395b92a377ae134af87d7abb9b06331
+- 664c168771428e71725c317487f8328ea05c9f72db44a66b39d5aa95f450f263
 
 # `tui.py`
 

@@ -502,3 +502,13 @@ def test_read_output_json_returns_none_for_invalid_utf8(
     output.write_bytes(b"\xff")
 
     assert read_output_json(output) is None
+
+
+def test_read_output_json_returns_none_for_excessively_nested_json(
+    tmp_path: Path,
+) -> None:
+    """JSON decoder の recursion failure を schema-less output failure として扱う。"""
+    output = tmp_path / "output.json"
+    output.write_text("[" * 10_000 + "0" + "]" * 10_000)
+
+    assert read_output_json(output) is None

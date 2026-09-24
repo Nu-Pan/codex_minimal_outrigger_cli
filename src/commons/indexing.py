@@ -36,7 +36,7 @@ from cmoc_runtime import (
 from .runtime_codex_preflight import configure_indexing_preflight
 from .runtime_codex_profile import run_process_tracking_active
 from .runtime_git import git_common_dir, literal_pathspec
-from .runtime_paths import cwd_override_active
+from .runtime_paths import cmoc_process_cwd_override_active
 from .runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
@@ -194,7 +194,7 @@ def _update_indexes(
                     ),
                 )
 
-            if cwd_override_active() or run_process_tracking_active():
+            if cmoc_process_cwd_override_active() or run_process_tracking_active():
                 # pushd は scope 全体で process-global cwd lock を保持する。
                 # この thread が worker を待つ間に worker が repo_root/work_root で
                 # block しないよう、isolated run worktree は lock 所有 thread で作る。

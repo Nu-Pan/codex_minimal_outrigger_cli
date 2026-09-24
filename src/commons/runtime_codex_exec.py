@@ -107,7 +107,7 @@ def _read_required_output_json(path: Path) -> Any:
         raise ValueError(f"output file is empty: {path}")
     try:
         return json.loads(text, parse_constant=_reject_non_json_constant)
-    except ValueError as exc:
+    except (RecursionError, ValueError) as exc:
         raise ValueError(f"output file is not valid JSON: {exc}") from exc
 
 

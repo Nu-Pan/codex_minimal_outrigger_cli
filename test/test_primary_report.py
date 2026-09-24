@@ -142,6 +142,17 @@ _EARLY_ERROR_REPORTS = [
         "feedback/invocation",
         (
             "session_branch",
+            "run_kind",
+            "run_branch",
+            "run_fork_commit",
+            "run_worktree",
+            "state_before",
+            "state_after",
+            "wave_count",
+            "final_high_watermark",
+            "processed_issues",
+            "confirmed_issue_commits",
+            "rollback",
             "report_cut_id",
             "report_cut_at",
             "normal_publication_status",
@@ -150,6 +161,37 @@ _EARLY_ERROR_REPORTS = [
         ),
     ),
 ]
+
+_EARLY_ERROR_SECTIONS = {
+    "doctor": ("## doctor preprocess",),
+    "indexing": ("## インデクシング", "更新した INDEX.md"),
+    "session fork": (
+        "## branch の作成と checkout",
+        "## session state file と状態遷移",
+        "## rollback と残存資源",
+    ),
+    "session join": ("## branch 切替と merge", "## state 遷移"),
+    "session abandon": (
+        "## 破棄対象",
+        "## branch 切替と state 遷移",
+        "## branch 削除と cleanup",
+        "## rollback と残存資源",
+    ),
+    "oracle edit": ("## agent call", "first agent call", "second agent call"),
+    "realization apply fork": (
+        "## run",
+        "## 追従差分と Codex result",
+        "## feedback observation",
+    ),
+    "realization refactor fork": ("## Current fork", "## Refactor state"),
+    "run join": (
+        "## run join",
+        "## 差分検査と merge / no-op join",
+        "## post-join と cleanup",
+    ),
+    "run abandon": ("## process と cleanup", "## state 遷移"),
+    "feedback report": ("## 確定済みの部分結果", "## 維持した state と未実行処理"),
+}
 
 
 def _disable_external_completion(
@@ -172,6 +214,7 @@ def _disable_external_completion(
     ("command_name", "report_directory", "required_fields"),
     _EARLY_ERROR_REPORTS,
 )
+@pytest.mark.parametrize("failure_stage", ("doctor_preprocess", "precondition"))
 def test_early_error_saves_command_specific_primary_report(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -179,6 +222,7 @@ def test_early_error_saves_command_specific_primary_report(
     command_name: str,
     report_directory: str,
     required_fields: tuple[str, ...],
+    failure_stage: str,
 ) -> None:
     """処理開始前の error でも固有の保存先と必須 front matter を保つ。"""
     root = make_repo(tmp_path)
@@ -186,20 +230,28 @@ def test_early_error_saves_command_specific_primary_report(
     _disable_external_completion(monkeypatch)
 
     def fail_precondition(_runtime_root: Path) -> None:
-        """doctor preprocess 後の共通事前条件での終了を再現する。"""
+        """report 保存前の処理開始エラーを再現する。"""
         raise CmocError("early failure", ["retry command"], "early detail")
 
     def command_body_must_not_start() -> None:
         """事前条件の失敗後にサブコマンド本体を開始しないことを検証する。"""
         pytest.fail("command body started after precondition failure")
 
+    if failure_stage == "doctor_preprocess":
+        monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", fail_precondition)
+        pre_log_check = None
+        doctor_preprocess = True
+    else:
+        pre_log_check = fail_precondition
+        doctor_preprocess = False
+
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
             command_body_must_not_start,
             command_name=command_name,
             command_argv=("cmoc", *command_name.split(), "--scope", "all"),
-            pre_log_check=fail_precondition,
-            doctor_preprocess=False,
+            pre_log_check=pre_log_check,
+            doctor_preprocess=doctor_preprocess,
         )
 
     captured = capsys.readouterr()
@@ -222,10 +274,12 @@ def test_early_error_saves_command_specific_primary_report(
     assert "理由:" not in front_matter
     assert "詳細:" not in front_matter
     for field in required_fields:
-        assert f"{field}:" in front_matter
+        assert field in metadata
     assert "early failure" in rendered
     assert "early detail" in rendered
     assert "診断用サブコマンドログ" in rendered
+    for section in _EARLY_ERROR_SECTIONS[command_name]:
+        assert section in rendered
     if command_name == "oracle edit":
         assert 'first_agent_call_status: "not_started"' in front_matter
         assert 'second_agent_call_status: "not_started"' in front_matter
@@ -335,6 +389,71 @@ def test_primary_report_keeps_every_codex_output_and_accepted_observation(
     assert "different workload" in report
 
 
+def test_primary_report_explains_when_codex_output_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """最終出力 artifact が無い失敗でも、未取得状態を report に残す。"""
+    from commons.runtime_logging import current_subcommand_logger
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+
+    def body() -> TerminalResult:
+        logger = current_subcommand_logger()
+        assert logger is not None
+        logger.event(
+            "codex_call",
+            output_path=str(root / "missing-output.txt"),
+            status="failed",
+        )
+        return TerminalResult()
+
+    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
+
+    report = terminal_primary_report(capsys.readouterr().out).read_text()
+    assert "### Codex 最終出力" in report
+    assert "取得済みの最終出力はありません。" in report
+
+
+def test_primary_report_delimits_and_escapes_artifact_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Codex artifact path の Markdown delimiter を壊さずに report へ載せる。"""
+    from commons.runtime_logging import current_subcommand_logger
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+    output_path = root / "output`file.txt"
+    call_log_path = root / "call`file.json"
+
+    def body() -> TerminalResult:
+        logger = current_subcommand_logger()
+        assert logger is not None
+        output_path.write_text("final output\n")
+        logger.event(
+            "codex_call",
+            output_path=str(output_path),
+            call_log_path=str(call_log_path),
+            purpose="unsafe path",
+            status="succeeded",
+        )
+        return TerminalResult()
+
+    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
+
+    report = terminal_primary_report(capsys.readouterr().out).read_text()
+    expected_output = str(output_path.resolve()).replace("`", "'")
+    expected_call_log = str(call_log_path.resolve()).replace("`", "'")
+    assert f"出力: `{expected_output}`" in report
+    assert f"Codex call (unsafe path, succeeded): `{expected_call_log}`" in report
+
+
 def test_refactor_fallback_records_user_interruption_reason(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -425,4 +544,46 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     assert finished["event"] == "command_finished"
     assert finished["failure"]["classification"] == "internal_failure"
     assert finished["failure"]["target_path"] == str(unsaved_path.absolute())
+    assert finished["terminal_result"]["primary_report_path"] is None
+
+
+def test_unreadable_existing_report_becomes_internal_failure_without_path_display(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """既存 report の読み取り失敗も report 基盤の internal failure にする。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+    unreadable_path = root / "unreadable-report.md"
+    unreadable_path.write_bytes(b"\xff")
+
+    def return_unreadable_report() -> TerminalResult:
+        return TerminalResult(
+            primary_report=unreadable_path,
+            primary_report_role="doctor execution report",
+        )
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            return_unreadable_report,
+            command_name="doctor",
+            command_argv=("cmoc", "doctor"),
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert exc_info.value.exit_code == 1
+    assert "# 失敗: cmoc doctor" in captured.err
+    assert "primary report の保存を確認できませんでした。" in captured.err
+    assert str(unreadable_path) not in captured.err
+    assert "- primary report (" not in captured.err
+    log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
+    [log_path] = log_directory.glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    finished = events[-1]
+    assert finished["event"] == "command_finished"
+    assert finished["failure"]["classification"] == "internal_failure"
+    assert finished["failure"]["target_path"] == str(unreadable_path.absolute())
     assert finished["terminal_result"]["primary_report_path"] is None

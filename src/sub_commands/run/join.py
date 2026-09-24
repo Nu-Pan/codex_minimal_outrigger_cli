@@ -21,7 +21,6 @@ from cmoc_runtime import (
     head_commit,
     run_cli_subcommand,
     start_subcommand_step,
-    work_root,
     write_state,
 )
 from commons.runtime_primary_report import update_primary_report_fields
@@ -58,14 +57,11 @@ def cmoc_run_join_impl(force_resolve: bool = False) -> None:
 def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
     """active run の差分を検査して merge、post-join 処理、cleanup を行う。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
-    doctor_state_paths = runtime_run_join.doctor_preprocess_for_join()
+    doctor_state_paths = runtime_run_join.doctor_preprocess_changes_for_join()
     start_subcommand_step(2, "active run と差分を検査", "validate active run")
     initial_context, _ = resolve_active_run({"joinable", "error"})
     with run_lifecycle_lock(initial_context.repo, initial_context.session_id):
         context, state = resolve_active_run({"joinable", "error"})
-        from sub_commands.feedback.recovery import require_manual_feedback_run
-
-        require_manual_feedback_run(context)
         update_primary_report_fields(
             run_kind=context.kind,
             session_branch=context.session_branch,
@@ -75,17 +71,19 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
             state_before=state.run.state,
             state_after=state.run.state,
         )
+        from sub_commands.feedback.recovery import require_manual_feedback_run
+
+        require_manual_feedback_run(context)
         warnings: list[str] = []
-        current_worktree = work_root().resolve()
-        session_doctor_state_paths = (
-            doctor_state_paths
-            if current_worktree == context.session_worktree.resolve()
-            else set()
+        session_doctor_state_paths = runtime_run_join.doctor_paths_for_join(
+            doctor_state_paths,
+            context.session_worktree,
+            context.run_fork_commit,
         )
-        run_doctor_state_paths = (
-            doctor_state_paths
-            if current_worktree == context.run_worktree.resolve()
-            else set()
+        run_doctor_state_paths = runtime_run_join.doctor_paths_for_join(
+            doctor_state_paths,
+            context.run_worktree,
+            context.run_fork_commit,
         )
         if state.run.state == "error":
             _stop_error_run(context, warnings)

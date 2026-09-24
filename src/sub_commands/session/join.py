@@ -178,13 +178,24 @@ def resolve_session_join_conflict(
     before_codex = _changed_path_snapshot(root, git)
     start_subcommand_step("3/4, 2/5", "conflict marker 解消を依頼", "resolve conflicts")
     update_primary_report_fields(conflict_resolution_status="started")
-    codex_exec(
-        build_session_join_conflict_resolution_parameter(conflicted_paths),
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md:
-        # Codex がこの worktree を編集しても config/log は repo-root に残す。
-        root=repo_root(root),
-        purpose="session join conflict resolution",
-    )
+    try:
+        codex_exec(
+            build_session_join_conflict_resolution_parameter(conflicted_paths),
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md:
+            # Codex がこの worktree を編集しても config/log は repo-root に残す。
+            root=repo_root(root),
+            purpose="session join conflict resolution",
+        )
+    except CmocError as error:
+        raise CmocError(
+            error.summary,
+            [
+                "conflict を手動で解消し、conflict marker と unmerged path がないことを確認してから対象 path を git add し、git commit を実行してください。",
+                *error.next_actions,
+            ],
+            error.detail,
+            terminal_result=error.terminal_result,
+        ) from error
     update_primary_report_fields(conflict_resolution_status="completed")
     # 付随する編集も解消結果として扱い、未変更の自動 merge 結果は再 stage しない。
     # 根拠: session_join.md「oracle file 規定と conflict 解消の優先順位」

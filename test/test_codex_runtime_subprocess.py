@@ -626,6 +626,80 @@ def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
     assert process.returncode == 0
 
 
+def test_tracked_codex_subprocess_stops_group_when_started_callback_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """起動 callback の失敗でも process group を停止して child を reap する。"""
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+    stopped: list[
+        tuple[
+            int,
+            tuple[int, int] | None,
+            tuple[tuple[int, int], ...] | None,
+        ]
+    ] = []
+
+    class RunningProcess:
+        """started callback の失敗後も生存している fake process。"""
+
+        pid = 4321
+        returncode: int | None = None
+        waited = False
+
+        def poll(self) -> int | None:
+            """fake process が cleanup 前は生存していることを返す。"""
+            return self.returncode
+
+        def kill(self) -> None:
+            """group cleanup 不能時の最終 fallback を許容する。"""
+            self.returncode = -signal.SIGKILL
+
+        def wait(self) -> int:
+            """group cleanup 後に process を reap したことを記録する。"""
+            self.waited = True
+            self.returncode = 0
+            return 0
+
+    process = RunningProcess()
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: process,
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((4321, 333), (4322, 444)),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "stop_process_group",
+        lambda process_group_id, expected_leader=None, expected_members=None: (
+            stopped.append((process_group_id, expected_leader, expected_members))
+        ),
+    )
+
+    def fail_started_callback() -> None:
+        """起動通知側の失敗を再現する。"""
+        raise RuntimeError("started callback failed")
+
+    with pytest.raises(RuntimeError, match="started callback failed"):
+        run_tracked_codex_subprocess(
+            ["codex"],
+            tracking_path,
+            process_started_callback=fail_started_callback,
+            text=True,
+            capture_output=True,
+        )
+
+    assert stopped == [(4321, (4321, 333), ((4321, 333), (4322, 444)))]
+    assert process.waited
+    assert process.returncode == 0
+
+
 def test_tracked_codex_subprocess_stops_descendant_when_leader_exits_before_tracking(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

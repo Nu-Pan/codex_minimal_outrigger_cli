@@ -15,20 +15,19 @@
 # `fork.py`
 
 ## Summary
-- `cmoc realization refactor fork` の full-cycle workload を実装し、run 初期化、realization file の調査・修正、current fork 内の unresolved findings 管理、完了判定、変更概要と report 公開を一つの lifecycle として扱う。
-- 対象 file ごとの agent 呼び出し、変更 path・commit の検証、refactor state と INDEX の同期、処理単位の commit、rename を含む unresolved findings の追跡を担う。
-- 中断・例外時には Codex 子プロセス停止、rollback、run state 更新、error/interruption report 生成までを処理する。
+- `realization refactor fork` サブコマンドのフルサイクル実行を担う。対象選択、Codex による realization file の調査・修正、変更単位の検証とコミット、未解決 finding の管理、完了判定、joinable run の公開、fork report の保存までを一つの進捗状態で処理する。
+- refactor state、run worktree、プロセス追跡、割り込み・失敗時の rollback／error state 更新を連携させるため、refactor fork の実行 lifecycle や cleanup、完了結果の生成を確認したい場合の入口となる。
 
 ## Read this when
-- realization refactor fork の run lifecycle、処理単位、完了理由、report 公開の流れを確認・変更するとき。
-- 対象 file の agent call と Structured Output、変更 path、commit、INDEX refresh の検証を確認するとき。
-- unresolved findings、refactor state の完了不変条件、rename 後の追跡、中断・cleanup failure・error state の扱いを調査するとき。
+- realization refactor fork の実行フロー、対象選択から report 保存までの状態遷移を確認したいとき
+- refactor unit の agent 呼び出し、変更パス検証、commit、未解決 finding、完了判定の挙動を調べたいとき
+- 割り込み・実行失敗・cleanup 失敗時の rollback、run state、エラー報告の処理を確認したいとき
 
 ## Do not read this when
-- refactor 対象の選定や state 永続化そのものだけを確認したい場合は、refactor state を直接扱う実装へ進む。
-- 単一 realization file の agent 用 prompt や出力契約だけを確認したい場合は、file review builder を直接読む。
-- 変更概要の生成・分類だけを確認したい場合は、change summary builder を直接読む。
-- editing run、Git commit、process tracking、共通 report 書き込みの一般仕様だけを確認したい場合は、対応する共通 runtime 実装や正本仕様を直接読む。
+- refactor 対象選択や state のデータ操作だけを確認したい場合は、直接 `commons.runtime_refactor` の実装を読むとよい
+- 個別の file review／change summary agent に渡すパラメータ定義だけを確認したい場合は、対応する `acp.builder.realization.refactor.fork` の builder を直接読むとよい
+- fork report の描画形式だけを確認したい場合は、`commons.runtime_run_report` を直接読むとよい
+- realization refactor fork 以外のサブコマンドの実行 lifecycle を調べる場合は、このファイルを入口にしない
 
 ## hash
-- d5963edeaa2a5c06a3febebd425fa49dbdef490daaf8b91eb7df4bfafd45ff02
+- 7542a2e19bf12f229981f05177ab389c957a9bde56273b4d6c4343933d568912

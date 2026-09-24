@@ -298,6 +298,43 @@ def test_internal_failure_traceback_is_logged_but_not_printed(
     assert "ValueError: unexpected failure" in failure["traceback"]
 
 
+def test_internal_failure_with_surrogate_message_still_finishes_log(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """異常メッセージの surrogate で terminal event を失わない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    monkeypatch.setattr(
+        runtime_cli,
+        "start_feedback_invocation",
+        lambda *_args: (None, None),
+    )
+
+    def fail() -> None:
+        """UTF-8 の scalar value でない例外メッセージを再現する。"""
+        raise ValueError("unexpected failure\ud800")
+
+    with pytest.raises(typer.Exit):
+        runtime_cli.run_cli_subcommand(
+            fail,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "# 失敗: cmoc probe" in captured.err
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
+    failure = events[-1]["failure"]
+    assert failure["classification"] == "internal_failure"
+    assert "unexpected failure\\ud800" in failure["traceback"]
+
+
 def test_error_terminal_result_does_not_repeat_primary_report_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

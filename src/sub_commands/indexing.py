@@ -46,22 +46,46 @@ def _cmoc_indexing_body(
     with indexing_lock(root):
         commit_before_indexing = head_commit(root)
         start_subcommand_step(2, "インデクシングを明示的に実行", "run indexing")
-        updated = update_indexes(root, codex_exec)
+        update_primary_report_fields(
+            indexing_status="started",
+            updated_indexes=[],
+        )
+        try:
+            updated = update_indexes(root, codex_exec)
+        except KeyboardInterrupt:
+            update_primary_report_fields(indexing_status="interrupted")
+            raise
+        except BaseException:
+            update_primary_report_fields(indexing_status="failed")
+            raise
+        updated_indexes = [str(path.relative_to(root)) for path in updated]
+        update_primary_report_fields(
+            indexing_status="completed",
+            updated_indexes=updated_indexes,
+        )
         start_subcommand_step(
             3, "インデクシング差分を commit", "commit indexing changes"
         )
-        commit_index_updates(root, updated)
+        update_primary_report_fields(
+            commit_status="not_needed" if not updated else "started"
+        )
+        try:
+            commit_index_updates(root, updated)
+        except KeyboardInterrupt:
+            update_primary_report_fields(commit_status="interrupted")
+            raise
+        except BaseException:
+            update_primary_report_fields(commit_status="failed")
+            raise
         commit_after_indexing = head_commit(root)
     commit_id = (
         commit_after_indexing
         if commit_after_indexing != commit_before_indexing
         else None
     )
-    updated_indexes = [str(path.relative_to(root)) for path in updated]
     update_primary_report_fields(
         commit_id=commit_id,
-        updated_indexes=updated_indexes,
-        indexing_status="completed",
+        commit_status="completed" if updated else "not_needed",
     )
     return TerminalResult(
         details=(

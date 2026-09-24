@@ -50,18 +50,21 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実行を支える共通 runtime 実装を集約するディレクトリです。Codex の exec/TUI 起動、設定・パス・プロセス管理、ログ・結果・primary report、feedback、editor input handoff、INDEX/doctor、editing run の state と lifecycle を横断する基盤処理を扱います。
+- cmoc の CLI 実行基盤を支える共通 runtime 実装群。設定・パス・状態・結果・エラー・ログ・Git/worktree 操作、Codex exec/TUI 起動、feedback の受付・保存・報告、editing run lifecycle、doctor/index 更新、editor input handoff など、複数サブコマンドから共有される境界処理を扱う。
+- 各 Python ファイルは責務ごとの共通 API や状態機械を提供し、oracle/realization の分類、永続化データの検証、プロセス追跡と cleanup、MCP transport、fallback report 描画などの実行時不変条件を実装している。
 
 ## Read this when
-- 複数のサブコマンドにまたがる runtime の責務分担や、Codex 実行から結果記録・run 管理までの共通フローを調べるとき。
-- 個別の実装に入る前に、対象機能が CLI lifecycle、Codex 境界、report/log、feedback、INDEX、または editing run のどの共通処理に属するか確認するとき。
+- 複数の CLI サブコマンドにまたがる実行 lifecycle、共通エラー処理、ログ、状態保存、Git/worktree 操作を調べるとき
+- Codex subprocess、TUI、feedback MCP、editor input handoff との runtime 境界を確認するとき
+- 特定の機能から呼び出される共通 API の責務分担や、永続化・cleanup の開始点を探すとき
 
 ## Do not read this when
-- 特定の機能の実装箇所が明確なときは、このディレクトリ全体ではなく該当する `runtime_*.py` または `indexing.py` を直接読んでください。
-- oracle 仕様の意味や要求を確認したいときは、ここではなく対応する `oracle` 配下の仕様を読んでください。
+- 特定サブコマンド固有の業務処理や画面・CLI 引数の仕様だけを確認したいときは、そのサブコマンドの実装を直接読む方が適切です
+- 正本仕様や oracle のデータモデルを確認したいときは、src/commons ではなく対応する oracle/doc または oracle/src を直接読むべきです
+- 単一の共通モジュールの詳細な挙動を変更・検証したいときは、ディレクトリ全体ではなく該当する runtime_*.py を直接読んでください
 
 ## hash
-- d091aec2288b6ae87881364fe11b6902a426440086cd09774112ac57a0965fe9
+- 1a10399448bddf93f172ec2c2493b3321ccfd267932a76417731fd1e5365549a
 
 # `config`
 
@@ -117,16 +120,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI の個別サブコマンド実装をまとめる入口で、doctor・tui・indexing と、session・run・feedback・oracle・realization の各サブコマンド群を扱う。
-- session は session branch の作成・参加・破棄、run は editing run の共通 lifecycle、feedback は報告・判定・修復・復旧、oracle は oracle の編集・調査、realization は apply/refactor workload の実装へ進むための下位入口である。
+- cmoc の CLI サブコマンド実装をまとめる入口で、doctor・tui・indexing と、session・run・feedback・oracle・realization などのライフサイクル別サブコマンド群を提供する。各下位パッケージは固有の状態遷移や処理を担当するため、複数サブコマンドにまたがる入口や全体構成を確認するときの起点となる。
 
 ## Read this when
-- cmoc のサブコマンド全体から、どの機能群の実装を確認・変更すべきか判断するとき。
-- doctor・tui・indexing の直接処理、または session・run・feedback・oracle・realization のサブコマンド群への入口を確認するとき。
+- CLI サブコマンドの全体構成や共通の起動・前処理を調べるとき。
+- 複数のサブコマンド領域にまたがる変更や、サブコマンドのルーティング先を確認するとき。
 
 ## Do not read this when
-- 特定のサブコマンドの詳細な処理フローや引数・状態遷移を確認する場合は、該当する下位ファイルを直接読む。
-- サブコマンド共通でない基盤処理や、oracle・realization の正本仕様を確認する場合は、このディレクトリではなく対応する実装・仕様を直接読む。
+- session、run、feedback、oracle、realization など特定領域の処理だけを調べる場合。
+- doctor、tui、indexing の単一実装だけを直接確認すれば足りる場合。
 
 ## hash
-- 0227d566b83c7cef8c3c9a07493a4ffdcf672baba4f37324c7d0829b2737fcbf
+- ff35d3cd4dae01a84a3a0bf64a17d29b2884cee76fa1adf740608249f4321ac3

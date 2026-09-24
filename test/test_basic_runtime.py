@@ -433,6 +433,31 @@ def test_run_worktree_lookup_rejects_replaced_registered_path(
     assert worktree_for_branch_optional(root, "cmoc/run/session/run") is None
 
 
+@pytest.mark.parametrize("replacement", ["missing", "file", "directory"])
+def test_session_worktree_lookup_rejects_invalid_registered_path(
+    tmp_path: Path, replacement: str
+) -> None:
+    """session branch も stale な Git 登録先を worktree として扱わない。"""
+    root = make_repo(tmp_path)
+    target = tmp_path / "session-worktree"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        "cmoc/session/session",
+        str(target),
+        "HEAD",
+    )
+    target.rename(tmp_path / "moved-session-worktree")
+    if replacement == "file":
+        target.write_text("not a worktree\n")
+    elif replacement == "directory":
+        target.mkdir()
+
+    assert worktree_for_branch_optional(root, "cmoc/session/session") is None
+
+
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
 def test_create_run_worktree_rejects_symlink_components(
     tmp_path: Path, symlink_component: str
