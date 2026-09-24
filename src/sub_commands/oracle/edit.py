@@ -20,7 +20,6 @@ from commons.prompt_editor_input import (
     collect_prompt_editor_input,
     edit_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
-    finalize_prompt_editor_input,
     reserve_prompt_editor_input,
 )
 from commons.runtime_git import current_branch
@@ -50,28 +49,26 @@ def _cmoc_oracle_edit_body() -> None:
     complete_prompt_skeleton = build_oracle_edit_main_launch_exec_parameter(
         ORIGINAL_PROMPT_PLACEHOLDER
     ).prompt
-    # skeleton の構築に成功した後でだけ editor work file を予約する。
-    editor_work_path, input_copy_path = reserve_prompt_editor_input(repository)
+    # skeleton の構築に成功した後でだけ editor input file を予約する。
+    input_path = reserve_prompt_editor_input(repository)
 
     start_subcommand_step(3, "oracle 最終状態の指示を入力", "edit instruction")
     edit_prompt_editor_input(
         repository,
-        editor_work_path,
+        input_path,
         complete_prompt_skeleton,
     )
 
     start_subcommand_step(4, "入力結果を保存・抽出", "save and extract input")
     instruction = collect_prompt_editor_input(
         repository,
-        editor_work_path,
-        input_copy_path,
+        input_path,
     )
 
     start_subcommand_step(5, "共用する入力と設定を確定", "prepare edit calls")
     parameter = build_oracle_edit_main_launch_exec_parameter(instruction)
     # JSON から復元した設定を両回で共用し、自己編集後の定義・設定を再取得しない。
     config = load_config(current_root)
-    finalize_prompt_editor_input(repository, editor_work_path)
     start_subcommand_step(6, "編集前 indexing", "indexing before edits")
     run_indexing_preflight(repository, run_codex_exec)
     start_subcommand_step(7, "編集起動の事前条件を確認", "validate edit launch")

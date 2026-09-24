@@ -162,14 +162,8 @@ def logs_dir(root: Path) -> Path:
     return untracked_data_dir(root) / "log" / "sub_command"
 
 
-def editor_work_dir(root: Path) -> Path:
-    """未信頼かつ可変な editor work file の directory を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    return untracked_data_dir(root) / "editor_input"
-
-
 def editor_input_log_dir(root: Path) -> Path:
-    """入力結果の保存コピーの directory を返す。"""
+    """編集から確定保存まで使う editor input file の directory を返す。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     return untracked_data_dir(root) / "log" / "editor_input"
 

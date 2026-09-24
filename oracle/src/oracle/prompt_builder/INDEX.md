@@ -32,19 +32,16 @@
 # `editor_input.py`
 
 ## Summary
-- エディタ起動前に stderr へ表示する、人間向け入力案内の文面を構築する関数を定義する。
-- 完全な prompt や editor input handoff のライフサイクルではなく、直接入力時の短い console 案内だけを担当する。
+- エディタ起動前にコンソールへ表示する、人間が後続 AI エージェントへの指示を入力するための短い案内文を構築する。成果物・作業範囲・制約を具体的に記入するよう促し、その案内を依頼本文とは分離して返す。
 
 ## Read this when
-- エディタ起動前に表示する入力案内の文面を確認・変更するとき。
-- 人間が editor work file に記入すべき内容の案内を調べるとき。
+- エディタ入力ファイルに記入する内容の事前案内や、そのコンソール表示文を確認・変更するとき。
 
 ## Do not read this when
-- 完全 prompt の構築、prompt skeleton、または agent call 固有の prompt 文面を調べるとき。
-- editor work file の生成・検証・保存・削除や handoff target のライフサイクルを調べるときは、対応する lifecycle または handoff の仕様・実装を直接読む。
+- エディタ入力の受け渡し仕様や依頼本文への組み込み全体を調べるときは、まず対応する仕様・受け渡し実装を直接読むべき場合。
 
 ## hash
-- 3de6b88dbdaa9fe6a5c264e7320b747738cac05b66a607ff2dc2ec77f46f6c2f
+- ed6c215c953dd93134584d847eb261a0d68073e57ead7513cab2ee4cded3e815
 
 # `parts`
 

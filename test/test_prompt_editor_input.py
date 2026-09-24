@@ -5,6 +5,7 @@
 - {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
 """
 
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -19,12 +20,12 @@ from cmoc_runtime import CmocError
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
 
 
-def test_editor_input_separates_work_and_saved_files_without_overwriting(
+def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """可変な作業 file と保存記録を分離し、timestamp 衝突を回避する。"""
+    """同じ本文 path を保存まで使い、timestamp 衝突と旧データの変更を避ける。"""
     timestamps = iter(
         [
             "2026-06-27_10-00_00_000001000",
@@ -32,81 +33,52 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
             "2026-06-27_10-00_00_000002000",
         ]
     )
+    old_recovery = tmp_path / ".cmoc/gu/editor_input/old_orig.md"
+    old_log = tmp_path / ".cmoc/gu/log/editor_input/old_orig.md"
+    for existing in (old_recovery, old_log):
+        existing.parent.mkdir(parents=True, exist_ok=True)
+        existing.write_bytes(b"old input\r\n")
     opened: list[Path] = []
-    initial_texts: list[str] = []
-    skeletons = ["# first\n\n{{original-prompt-here}}\n", _SKELETON]
-
     monkeypatch.setattr(
-        prompt_editor_input_module,
-        "timestamp",
-        lambda: next(timestamps),
+        prompt_editor_input_module, "timestamp", lambda: next(timestamps)
     )
     monkeypatch.setattr(
-        prompt_editor_input_module,
-        "_select_editor",
-        lambda: ["fake-editor"],
+        prompt_editor_input_module, "_select_editor", lambda: ["fake-editor"]
     )
 
     def fake_run(argv: list[str]) -> SimpleNamespace:
-        """初期値を記録し、利用者の最終入力へ置き換える。"""
         path = Path(argv[-1])
         opened.append(path)
-        initial_texts.append(path.read_text(encoding="utf-8"))
+        assert path.read_bytes() == b""
         path.write_text(
-            f"<!-- editor note -->\ninput-{len(opened)}\n",
-            encoding="utf-8",
+            f"<!-- editor note -->\ninput-{len(opened)}\n", encoding="utf-8"
         )
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
+    paths = []
+    for number in (1, 2):
+        input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+        paths.append(input_path)
+        assert input_path.parent == old_log.parent
+        prompt_editor_input_module.edit_prompt_editor_input(
+            tmp_path, input_path, _SKELETON
+        )
+        original_prompt = prompt_editor_input_module.collect_prompt_editor_input(
+            tmp_path, input_path
+        )
+        assert original_prompt == f"<!-- editor note -->\ninput-{number}"
+        assert input_path.read_text(encoding="utf-8") == original_prompt + "\n"
 
-    first_work, first_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    prompt_editor_input_module.edit_prompt_editor_input(
-        tmp_path,
-        first_work,
-        skeletons[0],
-    )
-    first_input = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path,
-        first_work,
-        first_copy,
-    )
-    prompt_editor_input_module.finalize_prompt_editor_input(tmp_path, first_work)
-    second_work, second_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    prompt_editor_input_module.edit_prompt_editor_input(
-        tmp_path,
-        second_work,
-        skeletons[1],
-    )
-    second_input = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path,
-        second_work,
-        second_copy,
-    )
-    prompt_editor_input_module.finalize_prompt_editor_input(tmp_path, second_work)
-
-    assert initial_texts == ["", ""]
-    assert first_work.parent == tmp_path / ".cmoc" / "gu" / "editor_input"
-    assert first_copy.parent == (tmp_path / ".cmoc" / "gu" / "log" / "editor_input")
-    assert first_work.name == first_copy.name == "2026-06-27_10-00_00_000001000_orig.md"
-    assert (
-        second_work.name
-        == second_copy.name
-        == ("2026-06-27_10-00_00_000002000_orig.md")
-    )
-    assert first_work != second_work
-    assert not first_work.exists()
-    assert not second_work.exists()
-    assert first_copy.read_text(encoding="utf-8") == ("<!-- editor note -->\ninput-1\n")
-    assert second_copy.read_text(encoding="utf-8") == (
-        "<!-- editor note -->\ninput-2\n"
-    )
-    assert first_input == "<!-- editor note -->\ninput-1"
-    assert second_input == "<!-- editor note -->\ninput-2"
+    assert opened == paths
+    assert [path.name for path in paths] == [
+        "2026-06-27_10-00_00_000001000_orig.md",
+        "2026-06-27_10-00_00_000002000_orig.md",
+    ]
+    assert paths[0].read_text(encoding="utf-8") == "<!-- editor note -->\ninput-1\n"
+    assert set(old_log.parent.iterdir()) == {old_log, *paths}
+    assert list(old_recovery.parent.iterdir()) == [old_recovery]
+    assert old_log.read_bytes() == old_recovery.read_bytes() == b"old input\r\n"
     captured = capsys.readouterr()
     assert captured.out == ""
     guidance = build_prompt_editor_input_console_guidance()
@@ -117,57 +89,35 @@ def test_editor_input_separates_work_and_saved_files_without_overwriting(
         line.startswith("editor input handoff target ID: eit_")
         for line in handoff_lines
     )
-    assert not list(first_copy.parent.glob("*_cmpl.md"))
-    assert not (tmp_path / ".cmoc/gu/ar").exists()
-    assert not (tmp_path / ".cmoc/gu/aw").exists()
 
 
-def test_editor_input_uses_one_final_read_for_copy_and_prompt(
+def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """保存コピーと prompt 抽出を同じ一回の最終読み取り結果から行う。"""
-    editor_work, input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    monkeypatch.setattr(
-        prompt_editor_input_module,
-        "_select_editor",
-        lambda: ["fake-editor"],
-    )
-
-    def fake_run(argv: list[str]) -> SimpleNamespace:
-        """最終読み取り対象へ raw 入力を書き込む。"""
-        Path(argv[-1]).write_bytes(b"<!-- note -->\r\nfinal input\r\n")
-        return SimpleNamespace(returncode=0)
-
-    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
-    prompt_editor_input_module.edit_prompt_editor_input(
-        tmp_path,
-        editor_work,
-        _SKELETON,
-    )
+    """最終読み取り後の再編集にかかわらず、保存と抽出に固定した原文を使う。"""
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    raw_input = "  <!-- note -->\r\n確定した入力\r\n".encode("utf-8")
+    input_path.write_bytes(raw_input)
     original_read_bytes = Path.read_bytes
     final_reads = 0
 
-    def record_read_bytes(path: Path) -> bytes:
-        """editor work file の読み取り回数を記録する。"""
+    def read_then_edit(path: Path) -> bytes:
         nonlocal final_reads
-        if path == editor_work:
+        content = original_read_bytes(path)
+        if path == input_path:
             final_reads += 1
-        return original_read_bytes(path)
+            path.write_text("later human edit", encoding="utf-8")
+        return content
 
-    monkeypatch.setattr(Path, "read_bytes", record_read_bytes)
-
+    monkeypatch.setattr(Path, "read_bytes", read_then_edit)
     original_prompt = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path,
-        editor_work,
-        input_copy,
+        tmp_path, input_path
     )
 
     assert final_reads == 1
-    assert input_copy.read_bytes() == b"<!-- note -->\r\nfinal input\r\n"
-    assert original_prompt == "<!-- note -->\r\nfinal input"
+    assert original_read_bytes(input_path) == raw_input
+    assert original_prompt == raw_input.decode("utf-8").strip()
 
 
 @pytest.mark.parametrize(
@@ -187,9 +137,7 @@ def test_editor_input_selects_editor_in_specified_priority(
     wait_for_editor: bool,
 ) -> None:
     """仕様の優先順と code 専用の --wait を editor 起動 argv で検証する。"""
-    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     calls: list[list[str]] = []
 
     monkeypatch.setattr(
@@ -207,91 +155,72 @@ def test_editor_input_selects_editor_in_specified_priority(
 
     prompt_editor_input_module.edit_prompt_editor_input(
         tmp_path,
-        editor_work,
+        input_path,
         _SKELETON,
     )
 
     expected_argv = [f"/fake/{expected_editor}"]
     if wait_for_editor:
         expected_argv.append("--wait")
-    assert calls == [[*expected_argv, str(editor_work)]]
+    assert calls == [[*expected_argv, str(input_path)]]
 
 
-@pytest.mark.parametrize("replacement", ["symlink", "directory", "missing"])
-def test_editor_input_rejects_non_regular_final_work_file(
+@pytest.mark.parametrize("replacement", ["symlink", "directory", "missing", "fifo"])
+def test_editor_input_rejects_invalid_final_file_without_reading(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     replacement: str,
 ) -> None:
-    """エディタ終了後の symlink、directory、欠落 file を拒否する。"""
-    editor_work, input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    monkeypatch.setattr(
-        prompt_editor_input_module,
-        "_select_editor",
-        lambda: ["fake-editor"],
-    )
+    """通常 file 以外の入力は読み取りも上書きも行わない。"""
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    outside = tmp_path / "outside.md"
+    outside.write_text("must remain", encoding="utf-8")
+    input_path.unlink()
+    if replacement == "symlink":
+        input_path.symlink_to(outside)
+    elif replacement == "directory":
+        input_path.mkdir()
+    elif replacement == "fifo":
+        os.mkfifo(input_path)
 
-    def fake_run(_argv: list[str]) -> SimpleNamespace:
-        """エディタが作業 file の種別を変更した状態を再現する。"""
-        editor_work.unlink()
-        if replacement == "symlink":
-            target = editor_work.with_name("symlink-target.md")
-            target.write_text("outside snapshot\n", encoding="utf-8")
-            editor_work.symlink_to(target)
-        elif replacement == "directory":
-            editor_work.mkdir()
-        return SimpleNamespace(returncode=0)
+    def unexpected_read(_path: Path) -> bytes:
+        pytest.fail("invalid input must not be read")
 
-    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
-    prompt_editor_input_module.edit_prompt_editor_input(
-        tmp_path,
-        editor_work,
-        _SKELETON,
-    )
-
-    with pytest.raises(CmocError, match="editor work file"):
-        prompt_editor_input_module.collect_prompt_editor_input(
-            tmp_path,
-            editor_work,
-            input_copy,
-        )
-
-    assert not input_copy.exists()
+    monkeypatch.setattr(Path, "read_bytes", unexpected_read)
+    with pytest.raises(CmocError, match="editor input file"):
+        prompt_editor_input_module.collect_prompt_editor_input(tmp_path, input_path)
+    assert outside.read_text(encoding="utf-8") == "must remain"
 
 
-def test_editor_input_rejects_path_outside_work_directory(
+@pytest.mark.parametrize(
+    "relative_path", ["outside.md", ".cmoc/gu/editor_input/recovery.md"]
+)
+@pytest.mark.parametrize("operation", ["edit", "collect"])
+def test_editor_input_rejects_path_outside_input_directory(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    relative_path: str,
+    operation: str,
 ) -> None:
-    """所定の editor work directory 外にある通常 file を拒否する。"""
-    reserved_work, input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    outside = tmp_path / "outside.md"
+    """旧復旧先を含む所定 directory 外の file を編集・確定しない。"""
+    reserved = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    outside = tmp_path / relative_path
+    outside.parent.mkdir(parents=True, exist_ok=True)
     outside.write_text("do not overwrite\n", encoding="utf-8")
-    editor_started = False
 
-    def fake_run(_argv: list[str]) -> SimpleNamespace:
-        """境界外 path で呼ばれてはならない editor 起動を記録する。"""
-        nonlocal editor_started
-        editor_started = True
-        return SimpleNamespace(returncode=0)
+    def unexpected_run(_argv: list[str]) -> SimpleNamespace:
+        pytest.fail("invalid input must not reach the editor")
 
-    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
-
-    with pytest.raises(CmocError, match="editor work file"):
-        prompt_editor_input_module.edit_prompt_editor_input(
-            tmp_path,
-            outside,
-            _SKELETON,
-        )
-
-    assert editor_started is False
+    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", unexpected_run)
+    with pytest.raises(CmocError, match="editor input file"):
+        if operation == "edit":
+            prompt_editor_input_module.edit_prompt_editor_input(
+                tmp_path, outside, _SKELETON
+            )
+        else:
+            prompt_editor_input_module.collect_prompt_editor_input(tmp_path, outside)
     assert outside.read_text(encoding="utf-8") == "do not overwrite\n"
-    assert reserved_work.exists()
-    assert not input_copy.exists()
+    assert reserved.exists()
 
 
 @pytest.mark.parametrize("symlinked_directory", ["gu", "log"])
@@ -310,7 +239,6 @@ def test_editor_input_rejects_symlinked_storage_directory(
         gu.rmdir()
         gu.symlink_to(outside, target_is_directory=True)
     else:
-        (gu / "editor_input").mkdir()
         (gu / "log").symlink_to(outside, target_is_directory=True)
 
     with pytest.raises(CmocError, match="保存先"):
@@ -320,44 +248,12 @@ def test_editor_input_rejects_symlinked_storage_directory(
     assert not (outside / "log").exists()
 
 
-def test_editor_input_rejects_saved_copy_outside_repository_path(
-    tmp_path: Path,
-) -> None:
-    """保存コピーを指定外 path へ書き込まない。"""
-    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    editor_work.write_text("input\n", encoding="utf-8")
-    outside_copy = tmp_path / "outside.md"
-
-    with pytest.raises(CmocError, match="保存コピー"):
-        prompt_editor_input_module.collect_prompt_editor_input(
-            tmp_path,
-            editor_work,
-            outside_copy,
-        )
-
-    assert not outside_copy.exists()
-    assert editor_work.read_text(encoding="utf-8") == "input\n"
-
-    outside_work = tmp_path / "outside-work.md"
-    outside_work.write_text("must remain\n", encoding="utf-8")
-    with pytest.raises(CmocError, match="editor work file"):
-        prompt_editor_input_module.finalize_prompt_editor_input(
-            tmp_path,
-            outside_work,
-        )
-    assert outside_work.read_text(encoding="utf-8") == "must remain\n"
-
-
 def test_editor_input_closes_handoff_when_target_id_display_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """target ID の表示失敗でも一時 handoff target を残さない。"""
-    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     closed = False
 
     class FakeTarget:
@@ -394,76 +290,76 @@ def test_editor_input_closes_handoff_when_target_id_display_fails(
     with pytest.raises(BrokenPipeError):
         prompt_editor_input_module.edit_prompt_editor_input(
             tmp_path,
-            editor_work,
+            input_path,
             _SKELETON,
         )
 
     assert closed
-    assert editor_work.exists()
+    assert input_path.exists()
 
 
-def test_editor_input_keeps_work_file_when_editor_or_cleanup_fails(
+def test_editor_input_keeps_input_when_editor_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """エディタ失敗と確定後の削除失敗では作業 file を残す。"""
+    """エディタ失敗時は入力を復旧用に残し、handoff guide は削除する。"""
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     monkeypatch.setattr(
-        prompt_editor_input_module,
-        "_select_editor",
-        lambda: ["fake-editor"],
-    )
-    failed_editor_work, failed_copy = (
-        prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
-    )
-    monkeypatch.setattr(
-        prompt_editor_input_module.subprocess,
-        "run",
-        lambda _argv: SimpleNamespace(returncode=7),
+        prompt_editor_input_module, "_select_editor", lambda: ["fake-editor"]
     )
 
+    def failed_editor(argv: list[str]) -> SimpleNamespace:
+        Path(argv[-1]).write_text("recoverable input\n", encoding="utf-8")
+        return SimpleNamespace(returncode=7)
+
+    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", failed_editor)
     with pytest.raises(CmocError, match="正常終了"):
         prompt_editor_input_module.edit_prompt_editor_input(
-            tmp_path,
-            failed_editor_work,
-            _SKELETON,
+            tmp_path, input_path, _SKELETON
         )
-    assert failed_editor_work.exists()
-    assert not list(failed_editor_work.parent.glob("*.guide.md"))
-    assert not failed_copy.exists()
+    assert input_path.read_text(encoding="utf-8") == "recoverable input\n"
+    assert list(input_path.parent.iterdir()) == [input_path]
 
-    failed_finalize_work, saved_copy = (
-        prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
-    )
 
-    def successful_editor(argv: list[str]) -> SimpleNamespace:
-        """確定後の削除失敗前まで入力処理を成功させる。"""
-        Path(argv[-1]).write_text("recoverable input\n", encoding="utf-8")
-        return SimpleNamespace(returncode=0)
+@pytest.mark.parametrize("failure_stage", ["write", "flush", "replace"])
+def test_editor_input_preserves_input_when_final_save_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_stage: str,
+) -> None:
+    """保存途中の書き込み・flush・置換の失敗で、本文を失わない。"""
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    raw_input = b"recoverable input\r\n"
+    input_path.write_bytes(raw_input)
+    real_temporary_file = prompt_editor_input_module.tempfile.NamedTemporaryFile
 
-    monkeypatch.setattr(
-        prompt_editor_input_module.subprocess,
-        "run",
-        successful_editor,
-    )
-    prompt_editor_input_module.edit_prompt_editor_input(
-        tmp_path,
-        failed_finalize_work,
-        _SKELETON,
-    )
-    original_prompt = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path,
-        failed_finalize_work,
-        saved_copy,
-    )
-    assert original_prompt == "recoverable input"
-    failed_finalize_work.unlink()
-    failed_finalize_work.mkdir()
+    def fail(*_args, **_kwargs):
+        raise OSError("save failed")
 
-    with pytest.raises(CmocError, match="editor work file"):
-        prompt_editor_input_module.finalize_prompt_editor_input(
-            tmp_path,
-            failed_finalize_work,
+    if failure_stage == "write":
+
+        def partial_write_file(*args, **kwargs):
+            temporary = real_temporary_file(*args, **kwargs)
+            write = temporary.write
+
+            def partial_write(content):
+                write(content[:3])
+                fail()
+
+            monkeypatch.setattr(temporary, "write", partial_write)
+            return temporary
+
+        monkeypatch.setattr(
+            prompt_editor_input_module.tempfile,
+            "NamedTemporaryFile",
+            partial_write_file,
         )
+    elif failure_stage == "flush":
+        monkeypatch.setattr(prompt_editor_input_module.os, "fsync", fail)
+    else:
+        monkeypatch.setattr(prompt_editor_input_module.os, "replace", fail)
 
-    assert failed_finalize_work.is_dir()
-    assert saved_copy.read_text(encoding="utf-8") == "recoverable input\n"
+    with pytest.raises(OSError, match="save failed"):
+        prompt_editor_input_module.collect_prompt_editor_input(tmp_path, input_path)
+    assert input_path.read_bytes() == raw_input
+    assert list(input_path.parent.iterdir()) == [input_path]

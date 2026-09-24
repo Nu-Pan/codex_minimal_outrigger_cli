@@ -848,7 +848,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     environment["PATH"] = f"{toast_bin}:{environment['PATH']}"
 
     # 実際の MCP を介して、起動元が注入する送信元情報まで受信する。
-    work = root / ".cmoc/gu/editor_input/receiver.md"
+    work = root / ".cmoc/gu/log/editor_input/receiver.md"
     work.parent.mkdir(parents=True, exist_ok=True)
     work.write_text("initial")
     target = start_editor_input_handoff(

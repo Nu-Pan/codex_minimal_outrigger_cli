@@ -561,7 +561,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
         )
         # 両起動が context を確定するまで待ち、別 process の stdio MCP へ渡す。
         barrier.wait(timeout=5)
-        work = root / ".cmoc/gu/editor_input" / (source["codex_call_id"] + ".md")
+        work = root / ".cmoc/gu/log/editor_input" / (source["codex_call_id"] + ".md")
         work.parent.mkdir(parents=True, exist_ok=True)
         work.write_text("initial")
         target = start_editor_input_handoff(root, work, "{{original-prompt-here}}")

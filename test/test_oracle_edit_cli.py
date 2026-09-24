@@ -116,13 +116,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
     unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
     time_stamp = "2026-07-20_00-00-00_000000000"
-    editor_work_path = root / ".cmoc" / "gu" / "editor_input" / f"{time_stamp}_orig.md"
-    input_copy_path = (
+    input_path = (
         root / ".cmoc" / "gu" / "log" / "editor_input" / f"{time_stamp}_orig.md"
     )
-    editor_work_path.parent.mkdir(parents=True, exist_ok=True)
-    input_copy_path.parent.mkdir(parents=True, exist_ok=True)
-    editor_calls: list[tuple[Path, Path, str]] = []
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    editor_calls: list[tuple[Path, str]] = []
     built_main_parameters: list[AgentCallParameter] = []
     events: list[str] = []
     notifications: list[tuple[str, Path, str]] = []
@@ -144,11 +142,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     def fake_reserve_prompt_editor_input(
         target_root: Path,
-    ) -> tuple[Path, Path]:
+    ) -> Path:
         """決定論的な editor path を返す。"""
         assert target_root == root
-        editor_work_path.touch()
-        return editor_work_path, input_copy_path
+        input_path.touch()
+        return input_path
 
     real_build_main_parameter = (
         oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
@@ -175,29 +173,20 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         """エディタへ渡す path と完全 prompt skeleton を記録する。"""
         events.append("editor")
         assert target_root == root
-        editor_calls.append((work_path, input_copy_path, complete_prompt_skeleton))
+        editor_calls.append((work_path, complete_prompt_skeleton))
+        work_path.write_text("oracle spec を更新する", encoding="utf-8")
+
+    real_collect_prompt_editor_input = oracle_edit_module.collect_prompt_editor_input
 
     def fake_collect_prompt_editor_input(
         target_root: Path,
         work_path: Path,
-        saved_copy_path: Path,
     ) -> str:
         """一回の最終読み取りから抽出した入力を返す。"""
         events.append("collect")
         assert target_root == root
-        assert work_path == editor_work_path
-        saved_copy_path.write_text("oracle spec を更新する", encoding="utf-8")
-        return "oracle spec を更新する"
-
-    real_finalize_prompt_editor_input = oracle_edit_module.finalize_prompt_editor_input
-
-    def record_finalize_prompt_editor_input(
-        target_root: Path,
-        work_path: Path,
-    ) -> None:
-        """agent call 前の editor work file cleanup を記録する。"""
-        events.append("finalize")
-        real_finalize_prompt_editor_input(target_root, work_path)
+        assert work_path == input_path
+        return real_collect_prompt_editor_input(target_root, work_path)
 
     monkeypatch.setattr(
         oracle_edit_module,
@@ -223,11 +212,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         oracle_edit_module,
         "collect_prompt_editor_input",
         fake_collect_prompt_editor_input,
-    )
-    monkeypatch.setattr(
-        oracle_edit_module,
-        "finalize_prompt_editor_input",
-        record_finalize_prompt_editor_input,
     )
     calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
@@ -279,6 +263,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         override_args.append(build_codex_override_args(parameter, kwargs["config"]))
         if len(calls) == 1:
             events.append("first")
+            assert input_path.read_text(encoding="utf-8") == "oracle spec を更新する"
+            input_path.write_text("later human edit", encoding="utf-8")
             if first_changes:
                 (root / "oracle" / "spec.md").write_text("# first edit\n")
 
@@ -335,8 +321,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     assert result.exit_code == (0 if failure_stage is None else 1)
     assert len(built_main_parameters) == 2
-    assert editor_calls[0][:2] == (editor_work_path, input_copy_path)
-    complete_prompt_skeleton = editor_calls[0][2]
+    assert editor_calls[0][0] == input_path
+    complete_prompt_skeleton = editor_calls[0][1]
     assert (
         complete_prompt_skeleton.count(oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER)
         == 1
@@ -361,7 +347,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         "collect",
         "build-main",
         "config",
-        "finalize",
         "indexing",
         "check",
         "first",
@@ -404,9 +389,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         assert second_kwargs["purpose"] == "oracle edit second"
         assert override_args[1] == override_args[0]
 
-    assert input_copy_path.read_text(encoding="utf-8") == "oracle spec を更新する"
-    assert not editor_work_path.exists()
-    assert not list(input_copy_path.parent.glob("*_cmpl.md"))
+    assert input_path.read_text(encoding="utf-8") == "later human edit"
+    assert not list(input_path.parent.glob("*_cmpl.md"))
     expected_spec = "# second edit\n"
     if failure_stage == "first":
         expected_spec = "# first edit\n" if first_changes else spec_before
@@ -453,11 +437,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "診断用サブコマンドログ" in report
 
 
-def test_oracle_edit_builder_failure_does_not_reserve_editor_work_file(
+def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """skeleton 構築に失敗した場合は editor work file を残さない。"""
+    """skeleton 構築に失敗した場合は editor input file を残さない。"""
     root = _prepared_repo(tmp_path, monkeypatch)
 
     def fail_build_main_parameter(_user_instruction: str) -> AgentCallParameter:
@@ -473,7 +457,7 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_work_file(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == 1
-    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
+    assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md"))
 
 
 @pytest.mark.parametrize("failure_stage", ["config", "indexing", "preconditions"])

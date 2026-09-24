@@ -55,21 +55,20 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- エディタ入力の共通ライフサイクルを担い、作業ファイルと保存コピーの予約、利用可能なエディタの起動、handoff を含む入力確定、保存、抽出、完了後の削除を提供する。
-- TUI と oracle 系サブコマンドが共有する入力境界として、パス検証、symlink 防止、保存先の限定、editor root の `.cmoc` ignore 保証も扱う。
+- プロンプトのエディタ入力に関する実行時共通境界を担い、入力ファイルの予約、エディタ起動、editor input handoff の開始、入力内容の確定保存・抽出をまとめて提供する。
+- 入力保存先の検証、symlink 経由の拒否、利用可能なエディタの選択、確定保存時の安全な置換、および `.cmoc` の ignore 保証も扱う。TUI や oracle サブコマンドから共通 lifecycle を利用する入口である。
 
 ## Read this when
-- TUI または oracle edit・investigation のエディタ入力処理を追跡するとき。
-- editor work file の予約、エディタ選択、handoff 起動、最終読み取り、入力保存、プロンプト抽出、作業ファイル削除の挙動を確認・変更するとき。
-- editor input の保存先検証、symlink 対策、保存コピーの path 制約、`.cmoc` ignore 保証を確認するとき。
+- プロンプト編集ファイルの予約からエディタ終了後の読み取り・保存までの共通 lifecycle を確認したいとき。
+- エディタ起動、handoff target の開始・終了、入力ファイルの検証や安全な確定保存の実装を変更・調査するとき。
 
 ## Do not read this when
-- サブコマンド固有の完全 prompt 構築や起動パラメータの仕様を確認したいときは、各サブコマンドの builder または正本仕様を先に読む。
-- handoff target の生成・通信・ガイド内容の詳細だけを確認したいときは、runtime の handoff 実装または handoff 正本仕様を直接読む。
-- エディタ入力を利用する呼び出し元の処理順序だけを確認したいときは、TUI または oracle サブコマンド実装を直接読む。
+- editor input handoff の MCP protocol、target 認証、ガイド生成そのものを確認したいときは、`runtime_editor_input_handoff` または関連する oracle の handoff 定義を直接読む。
+- TUI や oracle サブコマンド固有の prompt 構築・呼び出し順序を確認したいときは、該当するサブコマンド実装を直接読む。
+- エディタ向け console 案内や完全 prompt の正本定義を確認したいときは、`oracle.prompt_builder` と `prompt_editor_input` の仕様を直接読む。
 
 ## hash
-- 4284e8dbedca6c2cd5e537f7cd5dc50fc7719fe2096a6a918ac16af2b019662e
+- 5350b9e1fa5ac518ba0a30ef4b5390e8e5e6e9e2d53854d6a1f7fdbd0b748447
 
 # `runtime_cli.py`
 
@@ -270,22 +269,23 @@
 # `runtime_editor_input_handoff.py`
 
 ## Summary
-- エディタ待機中に単一の editor work file を一時 target として公開し、認証付き loopback TCP 経由でガイド取得または UTF-8 内容の全体上書きを受け付ける実行時 handoff 境界。
-- 対象ファイルの regular file・非 symlink・所定 editor work directory 内という制約を検証し、target ID、プロトコル、repository、入力 payload を検査する。
-- handoff guide の生成・提供・安全な削除、接続の直列化、受付終了後の cleanup、失敗時の利用者向けエラー変換までを担う。
+- editor input file を所定ディレクトリ内の regular non-symlink file として検証し、handoff 対象の安全な境界を確保する。
+- prompt editor 待機中だけ有効な一時 handoff target を生成・公開し、opaque target ID と認証付き loopback TCP IPC で guide 取得・本文上書きを受け付ける。
+- 保持した handoff guide を返し、受理した本文で editor input file 全体を UTF-8 上書きする。受付停止、処理完了、guide 削除までを close 処理で管理する。
+- target の起動失敗、無効な要求、repository や target の不一致、guide 取得・上書き失敗を protocol 結果または CmocError として扱う。
 
 ## Read this when
-- editor work file を editor 待機期間に公開・取得・上書きする実行時フローを確認するとき。
-- loopback IPC の認証、target ID、handoff request の検証、取得・上書き結果の扱いを追跡するとき。
-- editor work file や一時 guide の symlink 対策、所在検証、cleanup の安全性を確認するとき。
+- prompt editor input handoff の runtime target lifecycle、guide の一時保持・取得・削除、または editor input file の検証・上書き動作を確認するとき
+- handoff の loopback IPC、認証、request 検証、同一 target への submission の直列化を調査・変更するとき
+- prompt editor input の待機処理から handoff target を開始・終了する経路を確認するとき
 
 ## Do not read this when
-- プロンプト本文の生成や editor input handoff guide の文面定義そのものを確認したいときは、guide 生成側を直接読む。
-- エディタからの入力要求を発行する上位フローや、IPC プロトコル定数・認証方式の定義を確認したいときは、利用側または protocol モジュールを直接読む。
-- editor work file の内容解析・編集操作・CLI の通常の入力処理を確認したいとき。
+- agent 向け handoff instruction や guide 本文の正確な文面を確認したいときは oracle 側の対応 builder を直接読む
+- MCP の agent-facing input/result schema や本文生成、送信元情報の構造を確認したいときは runtime MCP、oracle schema、本文 builder を直接読む
+- Codex TUI への MCP・環境情報注入や prompt editor input の上位 orchestration だけを調査するときは対応する runtime/TUI 実装を直接読む
 
 ## hash
-- ef3c7e60d6e7c3fc5f224b72ccaa3c7dcfe7e88554c19a18579be955053ce91d
+- 6de2f85902dfd93f0b0786fcafd25fee61571abc12fd1650b8021d3c79b3e93d
 
 # `runtime_editor_input_handoff_mcp.py`
 
@@ -496,21 +496,21 @@
 # `runtime_paths.py`
 
 ## Summary
-- cmoc の repository root・worktree root・cmoc 自身の root を解決し、解決失敗を実行時エラーへ変換する共通 API。
-- timestamp と console 用時刻、duration の表示整形、および timestamp 付きファイルの排他的予約を提供する。
-- session・report・log・editor・worktree・schema・config・refactor state など、cmoc が利用する保存先 path を一元的に組み立てる。
-- process-wide な cwd 切替を lock と context state で安全に管理し、cwd 前提の処理を直列化する。
+- cmocのrepository/worktree root解決、実行時刻・経過時間の整形、session・report・log・schema・worktreeなどの管理パス算出、memo判定、process-wideなcwd切替を提供する共通ランタイムヘルパー。
 
 ## Read this when
-- root の解決、保存先ディレクトリや設定・state path の場所、時刻・duration の表記、または cwd 切替の並行実行時の挙動を調べるとき。
-- runtime path API を利用する複数のサブシステムにまたがるパス関連の不具合を、共通実装から確認するとき。
+- root_anchorからrepository rootまたはworktree rootを解決する挙動を確認したいとき
+- cmoc管理データの保存先、設定・refactor stateのパス、各種ログや入力履歴の配置規則を確認したいとき
+- timestampやconsole timestamp、durationの表示形式・境界条件を確認したいとき
+- pushdによるcwd切替の排他制御や、memo配下判定のパス境界を確認したいとき
 
 ## Do not read this when
-- 特定サブコマンドの業務ロジック、ログ内容、設定値の意味そのものを調べるとき。
-- 個別の保存データ形式や root 解決元の低レベル実装を直接確認すべきときは、それぞれの呼び出し側・設定実装・path model を読むべきである。
+- 特定の保存データの内容や個別サブコマンドの処理を確認したいだけで、共通パス計算の実装を確認する必要がないとき
+- root解決元のplaceholder定義やパスモデル自体の仕様を確認する場合は、まずbasic.path_model側を読むとき
+- 各関数の呼び出し順や利用目的を確認したい場合は、直接の呼び出し元・関連するサブコマンド実装を読むべきとき
 
 ## hash
-- 4216425d84f307e83f7abb0d1ba5e7535b57366d97e092ac9a51f953d2021079
+- 8a017cb7f721c5291df27f535e8fb948d67d887ae9abd5b0a167fb4d91e5a0d3
 
 # `runtime_primary_report.py`
 

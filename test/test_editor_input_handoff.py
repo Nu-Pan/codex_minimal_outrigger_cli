@@ -22,7 +22,7 @@ from cmoc_runtime import CmocError
 from commons.runtime_editor_input_handoff import (
     EditorInputHandoffTarget,
     start_editor_input_handoff,
-    validate_editor_work_file,
+    validate_editor_input_file,
 )
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION,
@@ -74,9 +74,7 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     handoff_source,
 ) -> None:
     """表示 target だけを待機中に受理し、最後の全面上書きを確定入力にする。"""
-    editor_work, input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     displayed: list[str] = []
     results: list[dict[str, object]] = []
     monkeypatch.setattr(
@@ -94,8 +92,8 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     def fake_run(_argv: list[str]) -> SimpleNamespace:
         """editor 待機中に別 process 相当の MCP submission を送る。"""
         target_id = displayed[0].removeprefix("editor input handoff target ID: ")
-        assert editor_work.read_bytes() == b""
-        guide_paths = list(editor_work.parent.glob("*.guide.md"))
+        assert input_path.read_bytes() == b""
+        guide_paths = list(input_path.parent.glob("*.guide.md"))
         assert len(guide_paths) == 1
         expected_guide = build_editor_input_handoff_guide(_SKELETON)
         assert guide_paths[0].read_text() == expected_guide
@@ -116,7 +114,7 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
         assert (
             handoff_mcp._get_handoff_guide({"target_id": target_id}) == expected_result
         )
-        editor_work.write_text("human edited body")
+        input_path.write_text("human edited body")
         assert (
             handoff_mcp._get_handoff_guide({"target_id": target_id}) == expected_result
         )
@@ -126,35 +124,41 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
     prompt_editor_input_module.edit_prompt_editor_input(
         tmp_path,
-        editor_work,
+        input_path,
         _SKELETON,
     )
 
     target_id = displayed[0].removeprefix("editor input handoff target ID: ")
     assert target_id.startswith("eit_")
-    assert not list(editor_work.parent.glob("*.guide.md"))
+    assert not list(input_path.parent.glob("*.guide.md"))
     assert handoff_mcp._get_handoff_guide({"target_id": target_id})["status"] == "error"
     assert results[0]["status"] == "rejected"
     assert results[1:] == [{"status": "accepted"}, {"status": "accepted"}]
     assert "final input" not in json.dumps(results, ensure_ascii=False)
-    assert editor_work.read_text(encoding="utf-8") == handoff_body(
+    assert input_path.read_text(encoding="utf-8") == handoff_body(
         "final input\n", handoff_source
     )
 
     inactive = handoff_mcp._submit(handoff_input(target_id, "must not be applied"))
     assert inactive["status"] == "rejected"
-    assert editor_work.read_text(encoding="utf-8") == handoff_body(
+    assert input_path.read_text(encoding="utf-8") == handoff_body(
         "final input\n", handoff_source
     )
     assert (
         prompt_editor_input_module.collect_prompt_editor_input(
             tmp_path,
-            editor_work,
-            input_copy,
+            input_path,
         )
         == handoff_body("final input\n", handoff_source).strip()
     )
-    prompt_editor_input_module.finalize_prompt_editor_input(tmp_path, editor_work)
+    assert (
+        handoff_mcp._submit(handoff_input(target_id, "after confirmation"))["status"]
+        == "rejected"
+    )
+    assert handoff_mcp._get_handoff_guide({"target_id": target_id})["status"] == "error"
+    assert input_path.read_text(encoding="utf-8") == handoff_body(
+        "final input\n", handoff_source
+    )
 
 
 def test_handoff_revalidates_file_and_repository_on_each_overwrite(
@@ -163,12 +167,10 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
     handoff_source,
 ) -> None:
     """repository 不一致と symlink 化を拒否し、リンク先へ書き込まない。"""
-    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    editor_work.write_text("initial", encoding="utf-8")
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    input_path.write_text("initial", encoding="utf-8")
     target = start_editor_input_handoff(
-        tmp_path, editor_work, "{{original-prompt-here}}"
+        tmp_path, input_path, "{{original-prompt-here}}"
     )
     try:
         request = {
@@ -187,12 +189,12 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
             mismatch = read_handoff_response(connection, 2)
         assert mismatch is not None
         assert mismatch["code"] == "repository_mismatch"
-        assert editor_work.read_text(encoding="utf-8") == "initial"
+        assert input_path.read_text(encoding="utf-8") == "initial"
 
         outside = tmp_path / "outside.md"
         outside.write_text("outside", encoding="utf-8")
-        editor_work.unlink()
-        editor_work.symlink_to(outside)
+        input_path.unlink()
+        input_path.symlink_to(outside)
         monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
         rejected = handoff_mcp._submit(
             handoff_input(target.target_id, "must not escape")
@@ -205,24 +207,24 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
         target.close()
 
 
-def test_handoff_rejects_symlinked_work_directory(
+def test_handoff_rejects_symlinked_input_directory(
     tmp_path: Path,
 ) -> None:
-    """editor work directory の symlink 経由で外部 file を上書きしない。"""
+    """editor input directory の symlink 経由で外部 file を上書きしない。"""
     root = tmp_path / "repository"
     root.mkdir()
     outside = tmp_path / "outside"
     outside.mkdir()
-    (outside / "editor_input").mkdir()
+    (outside / "log" / "editor_input").mkdir(parents=True)
     (root / ".cmoc").mkdir()
     (root / ".cmoc" / "gu").symlink_to(outside, target_is_directory=True)
-    editor_work = root / ".cmoc" / "gu" / "editor_input" / "input.md"
-    editor_work.write_text("outside", encoding="utf-8")
+    input_path = root / ".cmoc" / "gu" / "log" / "editor_input" / "input.md"
+    input_path.write_text("outside", encoding="utf-8")
 
-    with pytest.raises(CmocError, match="editor work file"):
-        validate_editor_work_file(root, editor_work)
+    with pytest.raises(CmocError, match="editor input file"):
+        validate_editor_input_file(root, input_path)
 
-    assert editor_work.read_text(encoding="utf-8") == "outside"
+    assert input_path.read_text(encoding="utf-8") == "outside"
 
 
 def test_target_close_does_not_follow_replaced_guide_parent(
@@ -231,16 +233,16 @@ def test_target_close_does_not_follow_replaced_guide_parent(
     """guide cleanup が差し替えられた親 symlink の外部 file を削除しない。"""
     root = tmp_path / "repository"
     root.mkdir()
-    editor_input = root / ".cmoc" / "gu" / "editor_input"
+    editor_input = root / ".cmoc" / "gu" / "log" / "editor_input"
     editor_input.mkdir(parents=True)
-    editor_work = editor_input / "input.md"
-    editor_work.write_text("initial", encoding="utf-8")
+    input_path = editor_input / "input.md"
+    input_path.write_text("initial", encoding="utf-8")
     outside = tmp_path / "outside"
     outside.mkdir()
     external_guide = outside / "input.guide.md"
     external_guide.write_text("must remain", encoding="utf-8")
 
-    target = start_editor_input_handoff(root, editor_work, "{{original-prompt-here}}")
+    target = start_editor_input_handoff(root, input_path, "{{original-prompt-here}}")
     moved_editor_input = tmp_path / "moved-editor-input"
     editor_input.rename(moved_editor_input)
     editor_input.symlink_to(outside, target_is_directory=True)
@@ -257,10 +259,8 @@ def test_target_close_drains_an_accepted_submission(
     handoff_source,
 ) -> None:
     """受付済み上書きが完了するまで close が target を破棄しない。"""
-    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
-    editor_work.write_text("initial", encoding="utf-8")
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    input_path.write_text("initial", encoding="utf-8")
     entered = threading.Event()
     release = threading.Event()
     original_overwrite = EditorInputHandoffTarget._overwrite
@@ -273,7 +273,7 @@ def test_target_close_drains_an_accepted_submission(
 
     monkeypatch.setattr(EditorInputHandoffTarget, "_overwrite", delayed_overwrite)
     target = start_editor_input_handoff(
-        tmp_path, editor_work, "{{original-prompt-here}}"
+        tmp_path, input_path, "{{original-prompt-here}}"
     )
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     submission_result: list[dict[str, object]] = []
@@ -301,14 +301,14 @@ def test_target_close_drains_an_accepted_submission(
 
     assert closed.is_set()
     assert submission_result == [{"status": "accepted"}]
-    assert editor_work.read_text(encoding="utf-8") == handoff_body(
+    assert input_path.read_text(encoding="utf-8") == handoff_body(
         "drained", handoff_source
     )
     inactive = handoff_mcp._submit(
         handoff_input(target.target_id, "must not be applied")
     )
     assert inactive["status"] == "rejected"
-    assert editor_work.read_text(encoding="utf-8") == handoff_body(
+    assert input_path.read_text(encoding="utf-8") == handoff_body(
         "drained", handoff_source
     )
 
@@ -365,16 +365,14 @@ def test_target_deadline_releases_unauthenticated_slow_trickle(
     handoff_source,
 ) -> None:
     """proof の slow-trickle を絶対期限で切り、次の submission を処理する。"""
-    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     monkeypatch.setattr(
         handoff_module,
         "EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS",
         0.2,
     )
     target = start_editor_input_handoff(
-        tmp_path, editor_work, "{{original-prompt-here}}"
+        tmp_path, input_path, "{{original-prompt-here}}"
     )
     route = parse_editor_input_handoff_target_id(tmp_path, target.target_id)
     assert route is not None
@@ -395,7 +393,7 @@ def test_target_deadline_releases_unauthenticated_slow_trickle(
                 stopped.set()
                 trickler.join(timeout=2)
         assert result == {"status": "accepted"}
-        assert editor_work.read_text(encoding="utf-8") == handoff_body(
+        assert input_path.read_text(encoding="utf-8") == handoff_body(
             "after deadline", handoff_source
         )
     finally:
@@ -408,16 +406,14 @@ def test_target_deadline_releases_authenticated_request_slow_trickle(
     handoff_source,
 ) -> None:
     """認証後 request の slow-trickle を切り、次の submission を処理する。"""
-    editor_work, _input_copy = prompt_editor_input_module.reserve_prompt_editor_input(
-        tmp_path
-    )
+    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     monkeypatch.setattr(
         handoff_module,
         "EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS",
         0.2,
     )
     target = start_editor_input_handoff(
-        tmp_path, editor_work, "{{original-prompt-here}}"
+        tmp_path, input_path, "{{original-prompt-here}}"
     )
     route = parse_editor_input_handoff_target_id(tmp_path, target.target_id)
     assert route is not None
@@ -438,7 +434,7 @@ def test_target_deadline_releases_authenticated_request_slow_trickle(
                 stopped.set()
                 trickler.join(timeout=2)
         assert result == {"status": "accepted"}
-        assert editor_work.read_text(encoding="utf-8") == handoff_body(
+        assert input_path.read_text(encoding="utf-8") == handoff_body(
             "after deadline", handoff_source
         )
     finally:

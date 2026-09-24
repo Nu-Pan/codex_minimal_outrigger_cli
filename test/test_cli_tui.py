@@ -17,6 +17,8 @@ from _git_support import make_repo, run_git
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
+import sub_commands.oracle.edit as oracle_edit_module
+import sub_commands.oracle.investigation as investigation_module
 import sub_commands.tui as tui_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from main import app
@@ -28,6 +30,52 @@ def reset_indexing_preflight() -> Iterator[None]:
     codex_preflight_module.disable_indexing_preflight()
     yield
     codex_preflight_module.disable_indexing_preflight()
+
+
+@pytest.mark.parametrize(
+    "command", [["tui"], ["oracle", "investigation"], ["oracle", "edit"]]
+)
+def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    command: list[str],
+) -> None:
+    """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "code",
+        [
+            "import pathlib, sys",
+            "pathlib.Path(sys.argv[-1]).write_bytes(b'recoverable input\\r\\n')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
+    real_replace = prompt_editor_input_module.os.replace
+
+    def fail_input_save(source, destination):
+        if Path(destination).parent == root / ".cmoc/gu/log/editor_input":
+            raise OSError("input save failed")
+        return real_replace(source, destination)
+
+    def unexpected_agent_call(*_args, **_kwargs):
+        pytest.fail("input save failure must prevent agent calls")
+
+    monkeypatch.setattr(prompt_editor_input_module.os, "replace", fail_input_save)
+    monkeypatch.setattr(tui_module, "run_codex_tui", unexpected_agent_call)
+    monkeypatch.setattr(investigation_module, "run_codex_tui", unexpected_agent_call)
+    monkeypatch.setattr(oracle_edit_module, "run_codex_exec", unexpected_agent_call)
+
+    result = runner.invoke(app, command, catch_exceptions=False)
+
+    assert result.exit_code == 1
+    files = list((root / ".cmoc/gu/log/editor_input").iterdir())
+    assert len(files) == 1
+    assert files[0].name.endswith("_orig.md")
+    assert files[0].read_bytes() == b"recoverable input\r\n"
 
 
 def test_tui_runs_editor_and_launches_codex_directly(
