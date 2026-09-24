@@ -45,6 +45,25 @@
 ## hash
 - ed6c215c953dd93134584d847eb261a0d68073e57ead7513cab2ee4cded3e815
 
+# `merge_conflict_resolution.py`
+
+## Summary
+- run join・feedback の自動 join・session join で共有する、競合解消 agent 向け prompt を組み立てます。共通の目的と作業範囲、両 commit の参照入力、Git から変更と競合状態を取得する指示、適用する共通 policy をまとめます。
+- 呼び出し元固有の追加指示も共通 prompt に組み込みます。各 join の起動設定や競合解消方針の具体的な文面ではなく、それらを組み合わせる入口です。
+
+## Read this when
+- join 間で共通する競合解消 prompt の目的、入力、調査指示、policy の構成を変更・確認するとき。
+- agent に渡す commit 情報や、進行中の競合状態を Git から取得させる指示を変更・確認するとき。
+- 呼び出し元固有の追加指示を共通 prompt に取り込む方法を確認するとき。
+
+## Do not read this when
+- 競合解消の判断基準、編集上の制約、完了報告の具体的な文面を変更するときは、競合解消 policy の定義を読む。
+- 個別 join の起動パラメータ、アクセス範囲、追加指示を変更するときは、その join の call 構築を読む。
+- join の状態管理・復旧などの契約や、完全 prompt の汎用的な構成処理を変更するときは、それぞれの仕様または共通構築処理を読む。
+
+## hash
+- e1a7317d4ddd169865e0804dcc070a2962827116a4663cb3a51fee42fae7550a
+
 # `parts`
 
 ## Summary
@@ -64,16 +83,17 @@
 # `policy`
 
 ## Summary
-- agent call の prompt に個別に挿入する規定文面を組み立てる builder 群です。
-- ファイルアクセス、routing、oracle・realization、INDEX エントリー、所見、feedback、handoff、conflict 解消の規定を扱います。意味仕様は各 builder が参照する正本にあり、ここでは prompt 用文面を構築します。
+- agent call の完全 prompt に組み込む共有規定文面を構築する。ファイルアクセス、oracle・realization file の扱い、適合性所見、INDEX routing と entry 生成、feedback 報告、editor handoff、競合解消を扱う。
+- 各規定の文面と placeholder を作る層であり、どの規定を有効にするかや完全 prompt 内の配置は上位の組み立て側が担う。
 
 ## Read this when
-- prompt に含まれる個別規定の文面を調べたり変更したりするとき。
-- 特定の規定領域を担当する builder と、その生成内容を確認するとき。
+- agent に渡す共有規定の文面や、その規定用 placeholder の生成を変更するとき。
+- ファイルアクセス、oracle・realization の扱い、適合性所見、INDEX routing・entry 生成、feedback 報告、editor handoff、競合解消のどの規定を確認すべきか判断するとき。
 
 ## Do not read this when
-- 規定の正本上の意味や変更可否を判断するときは、builder が案内する oracle doc を直接読んでください。
-- 規定の有効化条件や prompt 全体の組み立て順を調べるときは、prompt の構築側を直接読んでください。
+- 規定の意味や優先関係を変更・判断するときは、人間が所有する正本仕様を起点にする。
+- 完全 prompt で規定を有効化する条件、追加順序、全体の構成や placeholder 統合を変更するときは、prompt 組み立て側を起点にする。
+- sandbox の設定やファイルアクセス制限の実際の強制動作を変更するとき。この対象が定義するのは agent に渡す規定文面。
 
 ## hash
-- c85472cf46bb89ab21d6ffb46302995d38d40aa5edaa9487ea3c6a2675b0f19d
+- 3633df97a332c1d5b7f37a3e994ae78804e1727d6022c2c6b313988982972944

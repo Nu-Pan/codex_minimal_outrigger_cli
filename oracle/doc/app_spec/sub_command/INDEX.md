@@ -17,40 +17,42 @@
 # `editing_run.md`
 
 ## Summary
-- Workload を横断する編集 run の開始条件、同時実行制約、共通処理と終了状態を定める。
-- 明示的な join・abandon と feedback の自動 join に関する差分検査、merge、復旧、cleanup、および lifecycle の report と terminal result の入口となる。
+- realization apply、realization refactor、feedback report の編集 run に共通する開始条件、状態遷移、同時実行制約、差分確定、join・abandon の lifecycle を扱う。
+- 共通の join 検査、merge と競合解消、後処理、cleanup、report の入口となる。workload 固有の処理や隔離資源・session state の正本定義は、それぞれの仕様に委ねる。
 
 ## Read this when
-- 編集 run を開始する際に、共通事前条件や別の active run がある場合の扱いを確認するとき。
-- run の join・abandon、自動 join 後の復旧、差分検査、merge、cleanup の共通動作を実装・確認するとき。
-- lifecycle 操作の report や terminal result に必要な共通要件を確認するとき。
+- 編集 run を開始できる条件や、active run の状態によって許される操作を確認するとき。
+- join・abandon の共通事前条件、差分検査、merge、競合解消、失敗時の復旧、cleanup、report の扱いを確認するとき。
+- realization apply・refactor の明示的 join と feedback report の自動 join に共通する lifecycle の範囲を確認するとき。
 
 ## Do not read this when
-- branch・worktree の隔離資源や agent call の path context を確認するときは、それらを正本とする仕様から読む。
-- session・run の永続 schema、field の定義、状態遷移の全体を確認するときは、その state を正本とする仕様から読む。
-- 個別 workload の処理手順、編集可能な file、固有 hook や report 項目を確認するときは、その workload の仕様から読む。
-- oracle edit、read-only investigation、run を作らない機械的更新、または session join の conflict 解消を扱うとき。
+- realization apply の比較範囲、本命 call、fork report、join 後 hook の詳細を確認するときは、その workload 固有仕様を読む。
+- realization refactor の state、調査 loop、処理単位、完了条件を確認するときは、その workload 固有仕様を読む。
+- feedback report の intake、issue remediation、publication、固有 recovery を確認するときは、その workload 固有仕様を読む。
+- run の隔離資源や session state の正本定義を確認するときは、各共通定義を直接読む。session fork・join・abandon、oracle edit・investigation、run を作らない更新、session join の競合解消も、それぞれの専用仕様を読む。
+- workload または競合解消 call の正確な prompt、引数、起動パラメータを確認するときは、該当する builder 実装を読む。
 
 ## hash
-- 6628d03f20fa0263aac00c7fad8a0f7c4fee22daff0ac0537af0b1a2a5f9f50a
+- 0d7455112605d5b68550bed8daface9bacf931f6288aaee020e7a9cc4ce43570
 
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の実行全体を定める。run の開始・再開、observation の intake と issue 処理、修正の検査・commit、自動 join、report の publication、割り込みや失敗からの recovery を扱う。
+- `cmoc feedback report` のコマンド固有仕様。raw observation の intake と issue の正規化、issue ごとの確認・修正・検証・commit、session branch への自動 join を定める。
+- wave 処理の完了、publication と recovery、正常・incomplete・中断・エラー時の report と終了結果を定める。正常な人間向け issue 一覧には `human_required` の issue を掲載する。
 
 ## Read this when
-- feedback report コマンドの orchestration、wave の進行、issue remediation の受理と commit、join・publication、report・終了コードの挙動を変更または確認するとき。
+- `cmoc feedback report` の事前条件、run 開始・再開、intake、issue 処理、修正受理条件の実装や適合性を確認するとき。
+- feedback run の wave 完了、自動 join、report の publication、失敗後の recovery、中断・エラー時の表示や終了結果を調べるとき。
 
 ## Do not read this when
-- raw observation の入力形式・受付・検出規則を調べるときは、observation 収集仕様から読む。
-- feedback の結果分類や自然完了条件を調べるときは、feedback 共通仕様から読む。
-- repository-local state の artifact、checkpoint、high-watermark、report cut、atomic publication を調べるときは、feedback state 仕様から読む。
-- remediation agent の prompt・起動設定・Structured Output schema の詳細を調べるときは、それぞれの parameter builder と schema を直接読む。
-- run の一般的な join・abandon や Codex 実行の共通規則を調べるときは、対応する共通仕様から読む。
+- observation の報告基準、MCP 受付、機械検出、raw observation の保存だけを扱うときは、feedback observation の収集仕様から読む。
+- issue の結果分類の意味や feedback 全体の目的・既存 workload との境界だけを扱うときは、feedback の全体仕様から読む。
+- repository-local state の artifact、checkpoint、report cut、atomic publication、cleanup の契約だけを扱うときは、feedback state の仕様から読む。
+- 編集 run の一般的な join・abandon lifecycle や隔離規則だけを扱うときは、編集 run の共通仕様から読む。
 
 ## hash
-- 3f5ad345b2853ee7abf7a9368cf52acf4930ca304778e37f6e9161a5f1546401
+- 82adddf2397f1d4791e2b306f2f8c97d8a225833eeb4524f5805950a82212028
 
 # `indexing.md`
 
@@ -108,20 +110,18 @@
 # `realization_apply.md`
 
 ## Summary
-- 直近の Git commit 群に含まれる oracle file の変更を realization file に追従させる `cmoc realization apply fork` の workload 仕様。
-- 比較範囲と追従対象の決め方、agent 実行の境界、report、および join 後の比較始点更新を定義する。ファイル単位の網羅調査を行う refactor とは担当範囲が異なる。
+- realization apply fork の workload 固有仕様。commit 範囲内の oracle 変更を関連する実装へ反映し、追従結果と次回比較範囲の更新を定める。
 
 ## Read this when
-- apply の比較範囲や、変更・rename を含む oracle file の追従対象を確認するとき。
-- apply の agent 実行条件、成果物やエラー時の扱い、join 後に次回の比較始点がどう更新されるかを確認するとき。
+- oracle 変更を commit 範囲に沿って realization へ反映する apply の対象範囲、実行、報告、または join 後の扱いを確認するとき。
 
 ## Do not read this when
-- oracle file と realization file をファイル単位で網羅的に調査する workload を扱うときは、realization refactor の項目から読む。
-- apply と refactor に共通する fork・join・abandon の lifecycle を調べるときは、編集 run の共通仕様から読む。
-- oracle file に対する realization file の適合性の判断基準を調べるときは、その基準を定める項目を直接読む。
+- fork・join・abandon の共通 lifecycle や競合解消だけを確認するときは、編集 run の共通仕様を読む。
+- oracle と realization の適合性の一般基準だけを確認するときは、その適合性を定める共通仕様を読む。
+- commit 範囲に限らない網羅的な realization 調査を行うときは realization refactor を、正確な prompt や起動パラメータを確認するときは apply の起動処理を読む。
 
 ## hash
-- a0db197eb14906040824ae799d0e65afbb3e9bf8eba59b1eb6602e42b37fa9e8
+- 157bca255b589aa3e1b86622a0c1f0102bc0a9a83a6a7ed5c63396de014c082f
 
 # `realization_refactor.md`
 
@@ -179,23 +179,20 @@
 # `session_join.md`
 
 ## Summary
-- 現在の session branch を session home branch に merge して session を完了する処理について、事前条件、競合解消、状態更新、branch cleanup、実行要約の記録を定める。
+- `cmoc session join` が現在の session branch を session の home branch に merge して session を完了する際の、コマンド固有の実行と後処理を定める。
+- home branch の進行、競合解消の呼び出しと失敗時の扱い、安全な branch cleanup、実行要約の保存を確認する入口。
 
 ## Read this when
-- `session join` の事前条件、merge 手順、状態遷移、branch cleanup を確認するとき。
-- join 中の競合解消で両 branch の意図をどう保つか、どの条件で merge を成立させず未解消事項として報告するかを判断するとき。
-- join の終了経路や実行要約に記録する内容を確認するとき。
+- `cmoc session join` の実行順序、session state の遷移、merge 後の cleanup や実行要約を変更・調査するとき。
+- session join が home branch への merge をどう進め、競合解消や失敗をどう扱うか確認するとき。
 
 ## Do not read this when
-- session の作成や分岐元の設定を扱うときは、session fork の仕様を読む。
-- session branch を merge せず破棄するときは、session abandon の仕様を読む。
-- session と編集 run に共通する状態 schema、事前条件、状態遷移を確認するときは、session state の仕様を読む。
-- branch の役割や既定 branch の扱いを確認するときは、branch model の仕様を読む。
-- 競合解消用 agent call の正確な prompt・起動パラメータや policy 文面を確認するときは、それぞれを構築する実装を読む。
-- repository-local feedback state の lifecycle や、共通のエラー分類・stack trace 規則を確認するときは、それぞれの正本仕様を読む。
+- session の作成や、merge せずに破棄する手順を確認するときは、それぞれの session fork / abandon の仕様を読む。
+- branch と commit の共通定義、session の共通事前条件・state schema、共通の競合解消判断やエラー分類が必要なときは、それらを定める仕様を直接読む。この文書は session join 固有の利用方法を定める。
+- `cmoc run join` や feedback report による自動 join の実行手順を確認するとき。これらは別のコマンド仕様で扱う。
 
 ## hash
-- 07ab427429ba278647f2fd6eeb6e68567cd026f8a3784fd3266c9e60c28e7919
+- ec27889b327dd0f6adbc0741aa24d24339f24cb60e6a69a06a3f955f01b9e926
 
 # `tui.md`
 

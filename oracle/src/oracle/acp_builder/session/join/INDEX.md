@@ -1,16 +1,15 @@
 # `conflict_resolution.py`
 
 ## Summary
-- `session join` の conflict marker 解消を依頼する agent call の prompt と起動パラメータを組み立てる oracle 実装です。
-- conflict 対象のパスや書き込み範囲、適用する policy、indexing preflight の有無など、call 固有の設定を確認する入口です。
+- session branch を home branch に統合する際の競合解消用 agent call を構築し、統合先 worktree と編集範囲を設定する。
 
 ## Read this when
-- `session join` の conflict 解消用 agent call の指示構成や起動設定を調べる、または変更するとき。
-- conflict 対象の渡し方、適用 policy、ファイルアクセス範囲、preflight の扱いを確認するとき。
+- session join 中に merge conflict が発生し、競合解消 call の起動設定を確認・変更するとき。
+- 競合解消 call が merge 中の作業場所や indexing preflight をどう扱うか調べるとき。
 
 ## Do not read this when
-- conflict 解消の意味上の優先順位や解消結果の条件を確認するときは、session join の正本仕様を参照してください。
-- agent に渡す conflict 解消 policy の文面を確認するときは、その policy を構築する専用の実装を参照してください。
+- run の成果を session に統合する競合解消 call を調べるときは、その処理専用の構築定義へ進む。
+- 競合の判断基準や解消結果の受理・報告に関する意味仕様を確認するときは、共通の merge 競合解消仕様へ進む。
 
 ## hash
-- d3d540546185bbb5c3d563cebd8a74820bdeac0f4e6bd05fb823865c3d21966d
+- 99dbe0e5be70c445fe13eee24816ab6806de4d3f3124dbe3b3897b19bc642d3c

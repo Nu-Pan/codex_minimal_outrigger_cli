@@ -1,19 +1,18 @@
 # `conflict_resolution.py`
 
 ## Summary
-- session join の merge conflict 解消時に agent へ渡す、マージ固有の成果条件を組み立てる。両側の意図を保ち、意味を両立できず人間の選択が要る場合は推測で片側を捨てず未解消として報告する方針を定める。
+- join 系の競合解消 prompt に共通で渡す agent 規定を構築し、両 branch の意図を保つ統合、必要な付随編集と検証、未解消の判断・報告の境界を定める。
 
 ## Read this when
-- session join の conflict 解消 agent に伝える成果条件を確認・変更するとき。
-- 両側の意図を両立できない conflict を agent にどう扱わせるか見直すとき。
+- join の競合解消 agent に渡す共通規定や、解消完了・未解消の報告条件を確認または変更するとき。
+- 競合箇所の選択に加え、関連ファイルの編集や検証をどこまで agent に任せるか確認するとき。
 
 ## Do not read this when
-- session join の呼び出し側がこの policy を選ぶ条件、conflict 対象の受け渡し、起動設定を調べる場合は、呼び出し構成の定義を読む。
-- prompt 全体で各 policy を選択・連結する共通動作を調べる場合は、prompt 組み立ての定義を読む。
-- conflict 解消手順や、共通 oracle・realization 規定との優先関係を含む意味仕様を調べる場合は、session join の正本仕様を読む。
+- 競合解消の意味基準そのものを変更するときは、参照先の正本仕様を読む。
+- join 固有の merge 入力取得、Git 状態の読み取り、commit の指定、prompt 全体の組み立てを調べるときは、その処理を担う prompt 構築側へ進む。
 
 ## hash
-- 2e420cbd70c8ef4ee3cc3c0a0f0e12c4051faf31e4f861e3b61286f0ba351c56
+- 78feb169eaa2b114c8a6602cdf03b24437314d08747d725a323d2a599cf84440
 
 # `editor_input_handoff.py`
 
