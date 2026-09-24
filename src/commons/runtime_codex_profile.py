@@ -20,6 +20,7 @@ import shlex
 import signal
 import subprocess
 import sys
+import threading
 import time
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
@@ -30,6 +31,7 @@ from typing import Any
 from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig, JsonTomlValue
 
+from .runtime_codex_recovery import CodexOutcome
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
 from .runtime_editor_input_handoff_protocol import (
@@ -875,6 +877,9 @@ def run_codex_subprocess(
     **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
+    cancellation = kwargs.pop("cancellation", None)
+    if cancellation is not None and cancellation.is_set():
+        raise KeyboardInterrupt
     try:
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # tracking は editing run の内部 state なので、継承した env var だけで無関係な Codex
@@ -884,11 +889,16 @@ def run_codex_subprocess(
                 argv,
                 _active_run_process_tracking_path,
                 process_started_callback=process_started_callback,
+                cancellation=cancellation,
                 **kwargs,
             )
-        if process_started_callback is not None:
+        if (
+            process_started_callback is not None
+            or cancellation is not None
+            or kwargs.get("timeout") is not None
+        ):
             return _run_subprocess_with_started_callback(
-                argv, process_started_callback, **kwargs
+                argv, process_started_callback, cancellation=cancellation, **kwargs
             )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
@@ -905,7 +915,9 @@ def run_codex_subprocess(
 
 def _run_subprocess_with_started_callback(
     argv: list[str],
-    process_started_callback: Callable[[], None],
+    process_started_callback: Callable[[], None] | None,
+    *,
+    cancellation: threading.Event | None = None,
     **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """Popen 後に TUI の process 起動境界を通知してから Codex を待つ。"""
@@ -925,15 +937,24 @@ def _run_subprocess_with_started_callback(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
 
+    if cancellation is not None or timeout is not None:
+        kwargs["start_new_session"] = True
     with subprocess.Popen(argv, **kwargs) as process:
         try:
             # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
             # Popen が成功した後だけ TUI process 起動済みとして扱い、起動前の
             # KeyboardInterrupt を terminal failure notification の対象に残す。
-            process_started_callback()
-            stdout, stderr = process.communicate(input_data, timeout=timeout)
+            if process_started_callback is not None:
+                process_started_callback()
+            stdout, stderr = _communicate_codex_process(
+                process, input_data, timeout, cancellation
+            )
         except BaseException:
-            process.kill()
+            if kwargs.get("start_new_session"):
+                _kill_codex_process_group(process)
+            else:
+                process.kill()
+            process.communicate()
             raise
 
         returncode = process.wait()
@@ -945,6 +966,48 @@ def _run_subprocess_with_started_callback(
                 stderr=stderr,
             )
     return subprocess.CompletedProcess(argv, returncode, stdout, stderr)
+
+
+def _kill_codex_process_group(process: subprocess.Popen[Any]) -> None:
+    # communicate は KeyboardInterrupt の配送前に child を reap し得る。
+    # 終了済み leader の PGID を再利用された group へ送ってはいけない。
+    if process.poll() is not None:
+        if process_group_has_running_member(process.pid):
+            raise _unverified_process_group_error(process.pid)
+        return
+    # 生きた専用 session leader は、この thread が reap するまで PID を保持する。
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
+def _communicate_codex_process(
+    process: subprocess.Popen[Any],
+    input_data: Any,
+    timeout: float | None,
+    cancellation: threading.Event | None,
+) -> tuple[Any, Any]:
+    # timeout は probe 一回の期限であり、回復待ち全体の期限ではない。
+    if timeout is None and cancellation is None:
+        return process.communicate(input_data)
+    deadline = time.monotonic() + timeout if timeout is not None else None
+    while True:
+        if cancellation is not None and cancellation.is_set():
+            raise KeyboardInterrupt
+        remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+        interval = remaining
+        if cancellation is not None:
+            interval = min(remaining, 0.1) if remaining is not None else 0.1
+        try:
+            result = process.communicate(input_data, timeout=interval)
+            # 終了済み child は reap 済みなので group signal を送らない。
+            # 呼び出し側が結果を受理する前に、再度中断状態を確認する。
+            return result
+        except subprocess.TimeoutExpired:
+            if deadline is not None and time.monotonic() >= deadline:
+                raise
+            input_data = None
 
 
 def _is_missing_codex_executable(
@@ -986,9 +1049,11 @@ def run_tracked_codex_subprocess(
     tracking_path: Path,
     *,
     process_started_callback: Callable[[], None] | None = None,
+    cancellation: threading.Event | None = None,
     **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """run abandon が止められるよう Codex subprocess group を記録する。"""
+    timeout = kwargs.pop("timeout", None)
     input_data = kwargs.pop("input", None)
     capture_output = kwargs.pop("capture_output", False)
     check = kwargs.pop("check", False)
@@ -1113,7 +1178,17 @@ def run_tracked_codex_subprocess(
     finally:
         _restore_sigterm_handler()
     try:
-        stdout, stderr = process.communicate(input_data)
+        try:
+            stdout, stderr = _communicate_codex_process(
+                process, input_data, timeout, cancellation
+            )
+        except (subprocess.TimeoutExpired, KeyboardInterrupt):
+            if timeout is None and cancellation is None:
+                # 通常の tracked call の終了処理は workload の責務に保つ。
+                raise
+            _kill_codex_process_group(process)
+            process.communicate()
+            raise
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
         if check and result.returncode:
             raise subprocess.CalledProcessError(
@@ -1272,33 +1347,6 @@ def extract_resume_token(stdout_text: str) -> str | None:
     return None
 
 
-def _codex_jsonl_error_messages(stdout_text: str) -> list[str | None]:
-    """Codex JSONL の error event message を retry 判定用に抽出する。"""
-    messages: list[str | None] = []
-    for line in stdout_text.splitlines():
-        try:
-            item = json.loads(line)
-        except json.JSONDecodeError:
-            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # process が zero を返し output-last-message file が有効でも、JSONL protocol
-            # violation は unexpected error である。
-            messages.append(None)
-            continue
-        if not isinstance(item, dict):
-            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # malformed event は unexpected error であり、retry signal にはならない。
-            messages.append(None)
-            continue
-        if item.get("type") == "error":
-            message = item.get("message")
-            messages.append(message if isinstance(message, str) else None)
-        elif item.get("type") == "turn.failed":
-            error = item.get("error")
-            message = error.get("message") if isinstance(error, dict) else None
-            messages.append(message if isinstance(message, str) else None)
-    return messages
-
-
 _CAPACITY_ERROR_MARKER = "Selected model is at capacity"
 _QUOTA_ERROR_MARKERS = (
     "Quota exceeded",
@@ -1308,33 +1356,58 @@ _QUOTA_ERROR_MARKERS = (
 )
 
 
-def is_capacity_error(stdout_text: str) -> bool:
-    """Codex JSONL 上の model capacity error だけを retry 対象として判定する。"""
-    return any(
-        isinstance(message, str) and _CAPACITY_ERROR_MARKER in message
-        for message in _codex_jsonl_error_messages(stdout_text)
-    )
+def _failure_outcome(message: object) -> CodexOutcome:
+    # top-level CLI error 診断だけを分類し、tool/command の本文には適用しない。
+    if not isinstance(message, str):
+        return "failed"
+    quota = any(marker in message for marker in _QUOTA_ERROR_MARKERS)
+    capacity = _CAPACITY_ERROR_MARKER in message
+    if quota and not capacity:
+        return "quota"
+    if capacity and not quota:
+        return "transient"
+    return "failed"
 
 
-def is_quota_error(stdout_text: str) -> bool:
-    """usage limit 系の Codex JSONL error を quota 待機対象として判定する。"""
-    return any(
-        isinstance(message, str) and marker in message
-        for message in _codex_jsonl_error_messages(stdout_text)
-        for marker in _QUOTA_ERROR_MARKERS
-    )
-
-
-def is_unexpected_error(stdout_text: str) -> bool:
-    """既知の capacity/quota 以外の Codex JSONL error を検出する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # recovery path があるのは capacity と quota event だけである。malformed またはその他の
-    # error event を subprocess の zero return code で隠してはならない。
-    return any(
-        not isinstance(message, str)
-        or (
-            _CAPACITY_ERROR_MARKER not in message
-            and not any(marker in message for marker in _QUOTA_ERROR_MARKERS)
-        )
-        for message in _codex_jsonl_error_messages(stdout_text)
-    )
+def classify_codex_call(stdout_text: str, returncode: int) -> CodexOutcome:
+    """CLI 終了状態と最後の turn 診断から、成功または回復待ちの理由を返す。"""
+    # oracle/doc/app_spec/codex_exec_rule.md の最終的な成功と失敗の判断。
+    # Codex 0.155.1: JSONL terminal と exit status の両方を確認する。
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/exec/src/event_processor_with_jsonl_output.rs#L506-L556
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/exec/src/lib.rs#L1243-L1264
+    # event stream を解釈できない場合は回復を推定しない。
+    errors: list[CodexOutcome] = []
+    terminal: str | None = None
+    final_failure: CodexOutcome = "failed"
+    for line in stdout_text.splitlines():
+        try:
+            item = json.loads(line)
+        except (ValueError, RecursionError):
+            return "failed"
+        if not isinstance(item, dict):
+            return "failed"
+        event_type = item.get("type")
+        if not isinstance(event_type, str):
+            return "failed"
+        if event_type in {"turn.completed", "turn.failed"}:
+            if terminal is not None:
+                return "failed"
+            terminal = event_type
+            if event_type == "turn.failed":
+                error = item.get("error")
+                final_failure = _failure_outcome(
+                    error.get("message") if isinstance(error, dict) else None
+                )
+        elif event_type == "error":
+            if terminal is not None:
+                return "failed"
+            errors.append(_failure_outcome(item.get("message")))
+        elif terminal is not None and event_type == "turn.started":
+            return "failed"
+    if terminal == "turn.completed":
+        return "succeeded" if returncode == 0 else "failed"
+    if terminal == "turn.failed":
+        return final_failure
+    if errors and len(set(errors)) == 1:
+        return errors[-1]
+    return "failed"

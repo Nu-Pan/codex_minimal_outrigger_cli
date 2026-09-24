@@ -139,7 +139,7 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     def record_worker_event(index: int) -> None:
         """共有 logger への並列書き込みを再現する。"""
         barrier.wait()
-        logger.add_quota_wait(0.25)
+        logger.add_recovery_wait("quota", 0.25)
         logger.event("worker", index=index)
 
     with ThreadPoolExecutor(max_workers=worker_count) as executor:

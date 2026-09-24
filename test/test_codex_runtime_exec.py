@@ -92,7 +92,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     result = run_codex_exec(
         parameter,
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=config,
     )
 
@@ -146,7 +146,7 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
     result = run_codex_exec(
         codex_parameter(agent_call_cwd=root),
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
     )
 
@@ -199,7 +199,7 @@ def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
             agent_call_cwd=root,
         ),
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=config,
     )
 
