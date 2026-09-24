@@ -109,7 +109,7 @@ class CmocConfigCodex:
             #   Luna max しか選べない
             "build_feedback_remediate_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="max",
             ),
             # NOTE
@@ -117,7 +117,7 @@ class CmocConfigCodex:
             #   実際の feedback report が冗長気味なら Astra に上げる
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="max",
             ),
             # NOTE TUI で人間とターンを回すので品質が重要
@@ -131,25 +131,25 @@ class CmocConfigCodex:
             #   よって、コスパに優れる Luna しか選べない
             "build_realization_refactor_fork_file_review_and_fix_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="max",
             ),
             # NOTE 単純な要約タスクなので Luna で良い
             "build_realization_refactor_fork_change_summary_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="medium",
             ),
             # NOTE 呼び出し回数が非常に多い単純な要約タスクなので、Luna しか選べない。
             "build_indexing_index_entry_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="low",
             ),
             # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
             "build_quota_availability_probe_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="low",
             ),
         }

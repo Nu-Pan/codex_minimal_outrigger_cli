@@ -29,12 +29,12 @@
       },
       "build_feedback_remediate_issue_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "max"
       },
       "build_feedback_normalize_issue_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "max"
       },
       "build_tui_launch_tui_parameter": {
@@ -44,22 +44,22 @@
       },
       "build_realization_refactor_fork_file_review_and_fix_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "max"
       },
       "build_realization_refactor_fork_change_summary_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "medium"
       },
       "build_indexing_index_entry_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "low"
       },
       "build_quota_availability_probe_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "low"
       },
       "build_oracle_edit_reduction_launch_exec_parameter": {
