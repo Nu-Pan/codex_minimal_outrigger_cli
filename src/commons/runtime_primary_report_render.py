@@ -7,14 +7,21 @@
 
 import json
 import re
+from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from .runtime_errors import safe_text
 from .runtime_feedback_store import mask_feedback_text
 from .runtime_logging import SubcommandLogger
 from .runtime_primary_report_specs import PrimaryReportSpec, TerminalClassification
 from .runtime_results import TerminalResult
+
+
+class _JsonObjectPairs(NamedTuple):
+    """同名キーも含め、JSON object の出現順を表示用に保持する。"""
+
+    entries: list[tuple[str, Any]]
 
 
 def render_primary_report(
@@ -82,17 +89,53 @@ def execution_record_markdown(
         path = Path(value)
         if not path.is_file():
             continue
-        content = path.read_text(encoding="utf-8", errors="replace")
-        fence = "`" * max(
-            3, 1 + max((len(run) for run in re.findall(r"`+", content)), default=0)
-        )
+        is_structured = isinstance(call.get("schema_path"), str)
+        try:
+            content = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            content = path.read_text(
+                encoding="utf-8",
+                errors="backslashreplace" if is_structured else "replace",
+            )
+            invalid_utf8 = True
+        else:
+            invalid_utf8 = False
+        display = content
+        notes: list[str] = []
+        if is_structured:
+            # 受理判定には触れず、call ごとの保存済み原文を report 用にだけ整える。
+            if call.get("status") in {
+                "output_correction_requested",
+                "structured_output_validation_failed",
+            }:
+                notes.append("検証不合格（正式な結果ではありません）。")
+            elif call.get("status") != "succeeded":
+                notes.append("正式な結果ではありません。")
+            if invalid_utf8:
+                notes.append("JSON として解析できません。取得できた原文を示します。")
+            else:
+                try:
+                    parsed = json.loads(
+                        content,
+                        object_pairs_hook=_JsonObjectPairs,
+                        parse_float=Decimal,
+                        parse_constant=_reject_json_constant,
+                    )
+                except (ValueError, RecursionError):
+                    notes.append(
+                        "JSON として解析できません。取得できた原文を示します。"
+                    )
+                else:
+                    display = _render_structured_value(parsed)
+        fence = _code_fence(display)
         rendered_output = True
         lines.extend(
             [
-                f"出力: `{_inline_text(path)}`",
+                f"出力: {_path_code_span(path)}",
+                *notes,
                 "",
                 fence + "text",
-                content.rstrip("\n"),
+                display,
                 fence,
                 "",
             ]
@@ -109,15 +152,91 @@ def execution_record_markdown(
         content = mask_feedback_text(
             json.dumps(observation["payload"], ensure_ascii=False, indent=2)
         )
-        fence = "`" * max(
-            3, 1 + max((len(run) for run in re.findall(r"`+", content)), default=0)
-        )
+        fence = _code_fence(content)
         lines.extend(
             [str(observation["observation_id"]), "", fence + "json", content, fence, ""]
         )
     if not observations:
         lines.extend(["新規に受理された observation はありません。", ""])
     return "\n".join(lines)
+
+
+def _reject_json_constant(value: str) -> None:
+    """JSON 仕様外の非有限数を表示上も有効な JSON と誤認しない。"""
+    # Python の json.loads は標準外の NaN/Infinity を既定で受け取る。
+    raise ValueError(f"non-standard JSON constant: {value}")
+
+
+def _render_structured_value(value: Any) -> str:
+    """JSON の階層と型を保ち、文字列内の改行だけを実際の改行にする。"""
+    # parse 済みの値だけをたどり、深い JSON でも再帰上限で report を失わない。
+    fragments: list[str] = []
+    pending: list[tuple[str, Any, int]] = [("value", value, 0)]
+    while pending:
+        kind, current, depth = pending.pop()
+        if kind == "text":
+            fragments.append(current)
+        elif isinstance(current, (_JsonObjectPairs, list)):
+            entries: list[tuple[Any, Any]]
+            if isinstance(current, _JsonObjectPairs):
+                is_object = True
+                entries = current.entries
+                opening, closing = "{", "}"
+            else:
+                is_object = False
+                entries = list(enumerate(current))
+                opening, closing = "[", "]"
+            if not entries:
+                fragments.append("{}" if is_object else "[]")
+                continue
+            fragments.append(opening + "\n")
+            pending.append(("text", "\n" + "  " * depth + closing, 0))
+            for index in range(len(entries) - 1, -1, -1):
+                key, item = entries[index]
+                pending.append(("text", ",\n" if index < len(entries) - 1 else "", 0))
+                pending.append(("value", item, depth + 1))
+                prefix = "  " * (depth + 1)
+                if is_object:
+                    prefix += _display_json_string(str(key)) + ": "
+                pending.append(("text", prefix, 0))
+        elif isinstance(current, str):
+            fragments.append(_display_json_string(current))
+        elif isinstance(current, Decimal):
+            fragments.append(str(current))
+        else:
+            fragments.append(json.dumps(current, ensure_ascii=False))
+    return "".join(fragments)
+
+
+def _display_json_string(value: str) -> str:
+    """引用符とバックスラッシュを区切りと区別して一度だけ表示する。"""
+    # 改行で先に分割し、元のリテラル \\n を再解釈しない。
+    segments = [
+        json.dumps(segment, ensure_ascii=False)[1:-1]
+        .encode("utf-8", errors="backslashreplace")
+        .decode("utf-8")
+        for segment in value.split("\n")
+    ]
+    return '"' + "\n".join(segments) + '"'
+
+
+def _code_fence(value: str) -> str:
+    """本文中の backtick run より長い Markdown fence を選ぶ。"""
+    # 文字列の内容を escape せず掲載できる区切りを選ぶ。
+    return "`" * max(
+        3, 1 + max((len(run) for run in re.findall(r"`+", value)), default=0)
+    )
+
+
+def _path_code_span(path: Path) -> str:
+    """元の出力 path の backtick も保持して参照として示す。"""
+    # code span の delimiter を path に含まれる backtick より長くする。
+    value = safe_text(path.resolve(strict=False))
+    delimiter = "`" * max(
+        1, 1 + max((len(run) for run in re.findall(r"`+", value)), default=0)
+    )
+    padding = " " if value.startswith("`") or value.endswith("`") else ""
+    return f"{delimiter}{padding}{value}{padding}{delimiter}"
 
 
 def oracle_edit_statuses(logger: SubcommandLogger) -> dict[str, object]:

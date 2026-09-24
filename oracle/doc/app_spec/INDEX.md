@@ -61,19 +61,21 @@
 # `console_and_file_log.md`
 
 ## Summary
-- 非対話サブコマンドに共通する console、primary report、terminal result、サブコマンドログの契約を定め、個別サブコマンド仕様や TUI・自動補完との適用境界を示す。
+- 非対話サブコマンドの console、primary report、terminal result、JSONL 診断ログに共通する出力契約を定める。実行 ID・時間・パスの表示、進行通知と診断記録の責務、および TUI と自動補完での適用境界を扱う。
 
 ## Read this when
-- 非対話サブコマンドで stdout と stderr の役割、進行通知、表示形式の共通規則を確認するとき
-- primary report や terminal result をいつ確定し、何を表示・記録するかを確認するとき
-- サブコマンドログの診断要件や、TUI・自動補完に対する共通契約の適用範囲を確認するとき
+- 非対話サブコマンド共通の console 出力先や表示内容、実行 ID・時間・パスの書式、進行通知、terminal result の確定順序や表示項目を変更するとき。
+- primary report の共通掲載内容や、Structured Output と feedback observation の report 内での表示を変更するとき。
+- サブコマンドの JSONL 診断ログの記録内容・flush、回復待ちの追跡、TUI 送信元情報との対応を変更するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の result、completion_reason、report の形式・保存先・内容、次の操作、終了コードだけを調べるときは、そのサブコマンド仕様を直接読む
-- TUI の通知判定、Codex の回復待ち判断、feedback observation の検出・保持条件など、参照先の個別規則だけを調べるときは、その規則の仕様を直接読む
+- 個別サブコマンド固有の結果、report の形式や保存先、次の操作、終了コードを確認・変更するときは、そのサブコマンドの仕様を直接読む。
+- Codex call の実行条件、Structured Output の受理・補正、回復待ちや再開の判断を変更するときは、それらを定める Codex 呼び出し規則を直接読む。この文書は primary report 内での表示方法を扱う。
+- TUI 通知の内容・発火条件や、自動補完プローブ固有の出力抑止を変更するときは、それぞれの境界を定める仕様を直接読む。
+- ログ名に使う timestamp の構文を確認・変更するときは、タイムスタンプ形式の仕様を直接読む。
 
 ## hash
-- 2acec05eba06fdd4282bd97a3fdee737825b3da2c1382fc370608cfdf4e9bd8a
+- adb8a86c45b45fc795edf7cbe5a7940b1d369ee13610625eed441daece87817e
 
 # `doctor_preprocess.md`
 
