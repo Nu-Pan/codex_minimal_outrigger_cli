@@ -146,7 +146,7 @@ class CmocConfigCodex:
             "build_indexing_index_entry_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-luna",
-                reasoning_effort="high",
+                reasoning_effort="max",
             ),
             # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
             "build_quota_availability_probe_parameter": CodexCallConfig(

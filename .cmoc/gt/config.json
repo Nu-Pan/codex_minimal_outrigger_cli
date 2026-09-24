@@ -55,7 +55,7 @@
       "build_indexing_index_entry_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-luna",
-        "reasoning_effort": "high"
+        "reasoning_effort": "max"
       },
       "build_quota_availability_probe_parameter": {
         "model_provider": "openai",
