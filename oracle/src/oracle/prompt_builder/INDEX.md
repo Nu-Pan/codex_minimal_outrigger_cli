@@ -45,6 +45,23 @@
 ## hash
 - ed6c215c953dd93134584d847eb261a0d68073e57ead7513cab2ee4cded3e815
 
+# `merge_conflict_resolution.py`
+
+## Summary
+- run join と session join に共通する競合解消 prompt の構築入口。共通の目的・調査範囲・commit 参照入力を、呼出元のアクセス範囲や追加指示とともに完全 prompt に組み立てる。
+- 競合解消の意味上の判断基準や、各 join 固有の起動条件を定める対象ではない。
+
+## Read this when
+- run join と session join が共有する競合解消 prompt の目的、Git 参照入力、追加指示の組み込み方、適用する共通規定を確認・変更するとき。
+
+## Do not read this when
+- 競合解消の意味上の判断基準や報告要件を確認・変更するときは、正本仕様または共通の競合解消方針の定義を読む。
+- 完全 prompt への共通規定や文面の統合方法を変更するときは、汎用 prompt 構築の定義を読む。
+- run join または session join の個別のアクセス範囲、起動条件、追加指示を変更するときは、その join 固有の call 構築定義を読む。
+
+## hash
+- e1a7317d4ddd169865e0804dcc070a2962827116a4663cb3a51fee42fae7550a
+
 # `parts`
 
 ## Summary
@@ -64,16 +81,17 @@
 # `policy`
 
 ## Summary
-- agent call の prompt に個別に挿入する規定文面を組み立てる builder 群です。
-- ファイルアクセス、routing、oracle・realization、INDEX エントリー、所見、feedback、handoff、conflict 解消の規定を扱います。意味仕様は各 builder が参照する正本にあり、ここでは prompt 用文面を構築します。
+- agent call 向けの policy 文面を組み立てる層です。feedback 報告、ファイルアクセス、oracle と realization の扱い、適合性所見、競合解消、INDEX routing と entry、editor handoff の個別規定を扱います。
+- 一部の builder は file access mode や path context に応じて文面や参照値を構成します。
 
 ## Read this when
-- prompt に含まれる個別規定の文面を調べたり変更したりするとき。
-- 特定の規定領域を担当する builder と、その生成内容を確認するとき。
+- これらの規定の文面や、mode・path context に応じた構築方法を変更・調査するとき。
+- 特定の policy が担う制約や、その agent call 向け文面の生成元を確認するとき。
 
 ## Do not read this when
-- 規定の正本上の意味や変更可否を判断するときは、builder が案内する oracle doc を直接読んでください。
-- 規定の有効化条件や prompt 全体の組み立て順を調べるときは、prompt の構築側を直接読んでください。
+- 完全 prompt の構成、policy の選択条件、配置順を調べるときは、prompt 統合側を直接読む。
+- エディタ起動前の案内や、競合解消 prompt 全体の構築を調べるときは、それぞれの専用 builder を直接読む。
+- policy の正本となる意味仕様を変更・判断するときは、該当する oracle doc を直接読む。
 
 ## hash
-- c85472cf46bb89ab21d6ffb46302995d38d40aa5edaa9487ea3c6a2675b0f19d
+- 3633df97a332c1d5b7f37a3e994ae78804e1727d6022c2c6b313988982972944

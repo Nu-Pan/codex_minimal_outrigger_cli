@@ -1,19 +1,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の agent 呼び出し用 prompt と起動パラメータを組み立てる実装群。呼び出し種別ごとの構築と共通文面の組み込みを追う入口となる。
-- 呼び出し間で共有するパス解決、設定、文書参照、構造化 Markdown のモデルを含む。
-- エディタ入力 handoff の案内・本文生成と、feedback 入力の定義も担う。
+- agent call ごとの起動 parameter と固有 prompt を組み立て、呼び出しによっては Structured Output の契約も与える実装群。
+- 共通 prompt と policy の合成に加え、path、文書参照、構造化 Markdown、設定を扱う共通モデルを提供する。
+- editor input handoff のガイドと本文、および handoff や feedback observation に関わる入出力契約も含む。
 
 ## Read this when
-- agent 向け指示、共有ポリシー、呼び出し時のパス情報の生成を調べたり変更したりするとき。個別の呼び出し構築と共通の prompt 組み立ての責務を確認できる。
-- 複数の呼び出し構築に使われるパス解決、文書レンダリング、参照または設定モデルに関わるとき。
-- handoff の案内・本文生成、または feedback の入力定義に関わるとき。
+- cmoc が agent call に渡す prompt、アクセス境界、起動 parameter の構成箇所を横断して追跡・変更するとき。
+- 共通 prompt 部品と個別 call の組み合わせ方や、path・文書参照・設定モデルの分担を調べるとき。
 
 ## Do not read this when
-- CLI の引数処理、コマンド実行、agent や MCP の起動、worktree の作成や実行管理を変更するときは、その実行経路の実装から読む。この対象は主に呼び出し用の文面とデータを構築する。
-- サブコマンドの動作や共有規則の意図・意味を確認または改訂するときは、該当する正本仕様から読む。
-- 対象が単一の呼び出し種別、共有モデル、handoff、feedback 定義に絞れているときは、その責務を持つ下位要素から読む。
+- 単一の agent call の動作や結果契約だけを調べるときは、全体ではなく該当機能の構築処理と schema から読む。
+- handoff の本文・ガイドや MCP 入出力だけを扱うときは、その担当実装へ直接進む。
+- 人間意図やコマンドの意味仕様を確認するときは、実装ではなく対応する oracle doc を読む。
 
 ## hash
-- 67b130f133164c34c02926e84ddeaa13f62a01f5a010a64b5699478d25ad295e
+- c4b22e1920be566579dc3ca207f5c6e13efc7a19750c4c37d485b84f1827956b

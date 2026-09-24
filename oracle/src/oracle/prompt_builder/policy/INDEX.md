@@ -1,19 +1,19 @@
 # `conflict_resolution.py`
 
 ## Summary
-- session join の merge conflict 解消時に agent へ渡す、マージ固有の成果条件を組み立てる。両側の意図を保ち、意味を両立できず人間の選択が要る場合は推測で片側を捨てず未解消として報告する方針を定める。
+- join 時の内容競合を agent に解消させる共通指示を組み立て、両 branch の両立する意図の保持、必要な付随編集と検証、管理操作との境界、完了・未解消の報告を定める。
+- 統合判断と報告の共通文面の入口であり、各 join 固有の編集範囲・起動条件・失敗時処理は対応するコマンド仕様が担う。
 
 ## Read this when
-- session join の conflict 解消 agent に伝える成果条件を確認・変更するとき。
-- 両側の意図を両立できない conflict を agent にどう扱わせるか見直すとき。
+- run/session の join や feedback の自動 join で内容競合を agent に委ねる共通指示、または完了判断・報告要件を確認・変更するとき。
+- 両 branch の意図を統合する付随編集や検証、および agent が行わない管理操作の境界を確認するとき。
 
 ## Do not read this when
-- session join の呼び出し側がこの policy を選ぶ条件、conflict 対象の受け渡し、起動設定を調べる場合は、呼び出し構成の定義を読む。
-- prompt 全体で各 policy を選択・連結する共通動作を調べる場合は、prompt 組み立ての定義を読む。
-- conflict 解消手順や、共通 oracle・realization 規定との優先関係を含む意味仕様を調べる場合は、session join の正本仕様を読む。
+- 特定 join コマンドの編集範囲、起動条件、失敗時復旧や publication の流れだけを調べる場合は、対応するコマンド仕様を直接読む。
+- 一般的なファイルアクセス制限や oracle・realization の扱いを調べる場合は、それぞれの共通規定を直接読む。
 
 ## hash
-- 2e420cbd70c8ef4ee3cc3c0a0f0e12c4051faf31e4f861e3b61286f0ba351c56
+- 78feb169eaa2b114c8a6602cdf03b24437314d08747d725a323d2a599cf84440
 
 # `editor_input_handoff.py`
 

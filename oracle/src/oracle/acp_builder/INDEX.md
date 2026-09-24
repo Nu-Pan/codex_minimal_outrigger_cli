@@ -100,20 +100,40 @@
 ## hash
 - 31b82bb17ffbff96848c92cef4fdbb63127a7fd62e30023fe68f1a68d6bd01ad
 
+# `run`
+
+## Summary
+- run の成果を session に統合する競合解消 agent call を構築し、共通の merge prompt に run 固有の書き込み範囲を設定する。
+- 自動 feedback join で封印済み report cut が渡される場合は、採用結果を維持するための追加指示と検証条件も組み込む。
+
+## Read this when
+- run join の競合解消 call が使う commit と作業 worktree、編集範囲や preflight の設定を確認・変更するとき。
+- 自動 feedback join で封印済み report cut を受け取り、統合時に採用結果を保つ指示と検証条件を確認・変更するとき。
+
+## Do not read this when
+- session の成果を home に統合する競合解消 call を調べるときは、session join 用の構築箇所を読む。
+- run join と session join に共通する競合解消 prompt の方針を調べるときは、共通 prompt の構築箇所を読む。
+
+## hash
+- b3b8b7437ad2e699724c477d3f9987a835573fe44d120f2f5518ab3c444f88a0
+
 # `session`
 
 ## Summary
-- cmoc session join の merge conflict marker 解消を依頼する agent call の prompt と起動パラメーターを組み立てる。
-- 競合対象のパスを prompt に渡し、共通ポリシーを適用した repo-write call として設定する。
+- session join の merge で競合が起きた際、merge 前の両 branch の HEAD と home branch の worktree を使って、競合解消用 agent call を組み立てる。
+- 共通の競合解消 prompt に session 固有の作業文脈と oracle・realization の書き込み範囲を渡す。merge 進行中のため indexing preflight は行わない。
 
 ## Read this when
-- cmoc session join の conflict marker 解消用の指示内容や呼び出し設定を変更・確認するとき。
+- session join の競合解消用 agent call の構築条件を調べる、または変更するとき。
+- session branch から home branch への統合で使う call を、他の join 用 call と区別するとき。
 
 ## Do not read this when
-- 共通の agent call パラメーターやアクセスモードの定義だけを確認する場合は、共通定義を直接読む。
+- join 全体で共通する競合解消 prompt、方針、受理・検証ルールを調べるときは、共通の競合解消定義を読む。
+- run の成果を session に統合する call や、封印済み feedback 結果を伴う自動統合を調べるときは、その呼出元固有の定義を読む。
+- session join の事前条件、branch や state の遷移、実行報告など全体の流れを調べるときは、session join の仕様を読む。
 
 ## hash
-- 458cbb17539bf5bea207315042fa9cc6c0cfdb291d43cc29b17d06e511cd52cc
+- cfac7ceaa0be71f7986284b1deb359de21dd7764c8f88997f891d31abfcdb5ee
 
 # `tui`
 

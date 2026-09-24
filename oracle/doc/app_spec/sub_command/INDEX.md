@@ -17,40 +17,41 @@
 # `editing_run.md`
 
 ## Summary
-- Workload を横断する編集 run の開始条件、同時実行制約、共通処理と終了状態を定める。
-- 明示的な join・abandon と feedback の自動 join に関する差分検査、merge、復旧、cleanup、および lifecycle の report と terminal result の入口となる。
+- realization apply・refactor と feedback report に共通する編集 run の開始条件、状態遷移、同時実行の境界を定める。
+- `cmoc run join` と `cmoc run abandon` の共通条件、差分検査、merge 後処理、回復、cleanup、report の入口となる。
 
 ## Read this when
-- 編集 run を開始する際に、共通事前条件や別の active run がある場合の扱いを確認するとき。
-- run の join・abandon、自動 join 後の復旧、差分検査、merge、cleanup の共通動作を実装・確認するとき。
-- lifecycle 操作の report や terminal result に必要な共通要件を確認するとき。
+- 編集 run の共通事前条件、開始準備、または active run の制約を確認するとき。
+- join・abandon の共通動作、想定外差分の扱い、cleanup 条件、report の要件を確認するとき。
+- feedback report の自動 join など、個別 workload にまたがる共通 lifecycle の扱いを確認するとき。
 
 ## Do not read this when
-- branch・worktree の隔離資源や agent call の path context を確認するときは、それらを正本とする仕様から読む。
-- session・run の永続 schema、field の定義、状態遷移の全体を確認するときは、その state を正本とする仕様から読む。
-- 個別 workload の処理手順、編集可能な file、固有 hook や report 項目を確認するときは、その workload の仕様から読む。
-- oracle edit、read-only investigation、run を作らない機械的更新、または session join の conflict 解消を扱うとき。
+- apply・refactor・feedback report 固有の処理、許可差分、hook、publication、recovery の詳細を知りたい場合は、その workload の仕様へ進む。
+- session lifecycle、run の隔離資源、永続 state の定義、競合解消の判断基準や agent prompt の詳細だけを確認したい場合は、それぞれを定義する仕様へ進む。
+- oracle edit や read-only investigation の手順を確認したい場合は、それぞれの仕様へ進む。
 
 ## hash
-- 6628d03f20fa0263aac00c7fad8a0f7c4fee22daff0ac0537af0b1a2a5f9f50a
+- 0d7455112605d5b68550bed8daface9bacf931f6288aaee020e7a9cc4ce43570
 
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の実行全体を定める。run の開始・再開、observation の intake と issue 処理、修正の検査・commit、自動 join、report の publication、割り込みや失敗からの recovery を扱う。
+- feedback report の実行全体を定め、observation の取り込みと issue の正規化、issue 単位の修正・確定、自動 join、publication、各種 report、再開・中断・失敗時の扱いを説明する。正常 publication では、join 後も人手対応が必要な issue を掲載する。
 
 ## Read this when
-- feedback report コマンドの orchestration、wave の進行、issue remediation の受理と commit、join・publication、report・終了コードの挙動を変更または確認するとき。
+- feedback report の開始条件、新規 run の作成、既存 run の recovery を確認するとき。
+- 取り込んだ observation の正規化、remediation call、差分の受理、issue 単位の commit・rollback、wave の停止条件を調べるとき。
+- 自動 join と join 後の検証、正常または incomplete の publication、report の内容、終了結果、中断・エラー後の扱いを確認するとき。
 
 ## Do not read this when
-- raw observation の入力形式・受付・検出規則を調べるときは、observation 収集仕様から読む。
-- feedback の結果分類や自然完了条件を調べるときは、feedback 共通仕様から読む。
-- repository-local state の artifact、checkpoint、high-watermark、report cut、atomic publication を調べるときは、feedback state 仕様から読む。
-- remediation agent の prompt・起動設定・Structured Output schema の詳細を調べるときは、それぞれの parameter builder と schema を直接読む。
-- run の一般的な join・abandon や Codex 実行の共通規則を調べるときは、対応する共通仕様から読む。
+- observation の報告条件、受け入れ、保存や検出規則を調べるときは、observation 収集の仕様を読む。
+- feedback 全体の用語、結果分類、処理モデルを確認するときは、共通 feedback 仕様を読む。
+- repository-local state の形式、耐久性、checkpoint、report cut、cleanup の詳細を調べるときは、feedback state の仕様を読む。
+- run の共通 lifecycle、隔離境界、join・abandon の一般規則を確認するときは、編集 run の共通仕様を読む。
+- agent に渡す正確な prompt や Structured Output schema を確認するときは、それぞれを定める実装側の定義を読む。
 
 ## hash
-- 3f5ad345b2853ee7abf7a9368cf52acf4930ca304778e37f6e9161a5f1546401
+- 82adddf2397f1d4791e2b306f2f8c97d8a225833eeb4524f5805950a82212028
 
 # `indexing.md`
 
@@ -108,20 +109,22 @@
 # `realization_apply.md`
 
 ## Summary
-- 直近の Git commit 群に含まれる oracle file の変更を realization file に追従させる `cmoc realization apply fork` の workload 仕様。
-- 比較範囲と追従対象の決め方、agent 実行の境界、report、および join 後の比較始点更新を定義する。ファイル単位の網羅調査を行う refactor とは担当範囲が異なる。
+- Git commit 範囲から特定した oracle file の変更を realization file へ反映する `realization apply` の workload 固有仕様です。
+- 追従対象の決め方、本命 agent call の制約、成果物の確定と report、join 後の更新条件を定めます。
 
 ## Read this when
-- apply の比較範囲や、変更・rename を含む oracle file の追従対象を確認するとき。
-- apply の agent 実行条件、成果物やエラー時の扱い、join 後に次回の比較始点がどう更新されるかを確認するとき。
+- 直近の commit 範囲にある oracle file の変更と realization file の追従要否を確認するとき。
+- 変更 path の追加・削除や oracle 内外をまたぐ rename を含め、apply の追従範囲を判断するとき。
+- apply の agent call、完了条件、report、または join 後 hook の挙動を確認するとき。
 
 ## Do not read this when
-- oracle file と realization file をファイル単位で網羅的に調査する workload を扱うときは、realization refactor の項目から読む。
-- apply と refactor に共通する fork・join・abandon の lifecycle を調べるときは、編集 run の共通仕様から読む。
-- oracle file に対する realization file の適合性の判断基準を調べるときは、その基準を定める項目を直接読む。
+- fork・join・abandon の共通 lifecycle を確認するときは `editing_run.md` を読む。
+- ファイル単位で unresolved target の調査を続ける refactor の手順を確認するときは `realization_refactor.md` を読む。
+- oracle と realization の適合性判断基準そのものを確認するときは `oracle_and_realization.md` を読む。
+- apply の正確な prompt 文面や起動パラメータを確認するときは、委譲先の builder 定義を読む。
 
 ## hash
-- a0db197eb14906040824ae799d0e65afbb3e9bf8eba59b1eb6602e42b37fa9e8
+- 157bca255b589aa3e1b86622a0c1f0102bc0a9a83a6a7ed5c63396de014c082f
 
 # `realization_refactor.md`
 
@@ -179,23 +182,20 @@
 # `session_join.md`
 
 ## Summary
-- 現在の session branch を session home branch に merge して session を完了する処理について、事前条件、競合解消、状態更新、branch cleanup、実行要約の記録を定める。
+- `cmoc session join` の仕様。現在の session branch を home branch に merge して session を完了する際の処理を定める。
+- session 固有の merge、競合解消、状態遷移、報告を確認する入口。
 
 ## Read this when
-- `session join` の事前条件、merge 手順、状態遷移、branch cleanup を確認するとき。
-- join 中の競合解消で両 branch の意図をどう保つか、どの条件で merge を成立させず未解消事項として報告するかを判断するとき。
-- join の終了経路や実行要約に記録する内容を確認するとき。
+- `cmoc session join` の実装や挙動を確認するとき。
+- join 時の競合解消、予期しない失敗、session 完了後の状態や報告の扱いを確認するとき。
 
 ## Do not read this when
-- session の作成や分岐元の設定を扱うときは、session fork の仕様を読む。
-- session branch を merge せず破棄するときは、session abandon の仕様を読む。
-- session と編集 run に共通する状態 schema、事前条件、状態遷移を確認するときは、session state の仕様を読む。
-- branch の役割や既定 branch の扱いを確認するときは、branch model の仕様を読む。
-- 競合解消用 agent call の正確な prompt・起動パラメータや policy 文面を確認するときは、それぞれを構築する実装を読む。
-- repository-local feedback state の lifecycle や、共通のエラー分類・stack trace 規則を確認するときは、それぞれの正本仕様を読む。
+- session の作成や破棄だけを確認する場合は、それぞれ fork または abandon の仕様へ進む。
+- branch の一般的な役割や merge の基準だけを確認する場合は、branch model を読む。
+- session 共通の事前条件、競合解消の共通方針、一般的なエラー分類だけを確認する場合は、それぞれの共通仕様へ進む。
 
 ## hash
-- 07ab427429ba278647f2fd6eeb6e68567cd026f8a3784fd3266c9e60c28e7919
+- ec27889b327dd0f6adbc0741aa24d24339f24cb60e6a69a06a3f955f01b9e926
 
 # `tui.md`
 

@@ -1,21 +1,20 @@
 # `cmoc_config.py`
 
 ## Summary
-- リポジトリごとに変わりうる cmoc の設定データ構造と既定値を定義し、Codex provider・呼び出し別設定、並列数、回復試行数をまとめる。
-- 永続化され人が調整する設定のモデルについて、正確な項目と既定値を確認する入口。
+- cmoc のリポジトリ別設定を表すデータ型と具体的な既定値を定義する。
+- 並列数、Codex provider-local 設定、agent call ごとのモデル設定、回復試行数を変更するときの確認先。
 
 ## Read this when
-- 設定項目、型、既定値、またはシリアライズ時の順序を確認・変更するとき。
-- Codex の provider-local 設定や agent call ごとの provider・model・reasoning effort の既定選択を調べるとき。
-- 最大並列数やファイルアクセス違反時の回復試行数を調べるとき。
+- CmocConfig や Codex 設定の構成・型・既定値を確認または変更するとき。
+- 新しい agent call の Codex 設定や provider 定義の既定値を追加・調整するとき。
 
 ## Do not read this when
-- 設定の読み込み、検証、ディスクへの保存処理を調べるときは、設定処理の実装へ直接進む。
-- Codex CLI への引数反映や障害回復 probe の動作を調べるときは、呼び出し実行の仕様へ直接進む。
-- doctor による設定の生成・同期・追跡保証を調べるときは、そのライフサイクルを定める仕様へ直接進む。
+- Codex 設定の要件や CLI への反映規則を確認する場合は、それらを定める仕様文書を直接読む。
+- 設定 JSON の検証・変換・読み書き・生成・同期を変更する場合は、その処理を担う実行時設定実装から確認する。
+- 設定から argv を組み立てる処理や subprocess 実行時の動作を変更する場合は、Codex の実行時処理から確認する。
 
 ## hash
-- 8c0ecd1e5dea641a4d4d1e287fbac588f7ab51589b25c897978890649d185afa
+- 2dae89b5f70856e073d156dc1f9ae521ff7b2741104498f02efe863f673ffc7f
 
 # `doc_ref_model.py`
 
