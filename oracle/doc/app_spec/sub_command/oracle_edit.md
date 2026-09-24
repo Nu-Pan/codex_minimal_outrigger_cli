@@ -112,5 +112,5 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
 ## 中断と排他制御
 
 - このサブコマンドは中断可能サブコマンドに含めない。
-- lock file、process 重複検出、active または running 状態の永続化、および editor work file の排他的 writer 管理を導入しない。
+- lock file、process 重複検出、active または running 状態の永続化、および editor input file の排他的 writer 管理を導入しない。
 - 他の cmoc process またはエディタとの並行操作から生じる競合や不整合は、人間が管理する。

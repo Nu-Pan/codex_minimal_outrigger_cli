@@ -60,7 +60,7 @@ def build_editor_input_handoff_body(
         source: 送信側 TUI process の呼び出し元コンテキストから取得した値。
 
     Returns:
-        editor work file 全体を置換する Markdown 本文。
+        editor input file 全体を置換する Markdown 本文。
 
     Raises:
         ValueError: 自由記述項目が空文字列または空白だけの場合。

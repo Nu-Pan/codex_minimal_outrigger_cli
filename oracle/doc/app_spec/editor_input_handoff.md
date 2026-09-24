@@ -2,7 +2,7 @@
 
 ## 概要
 
-editor input handoff は、Codex TUI の agent が、別の prompt editor input で待機中の editor work file へ依頼を渡す共通機能である。agent は handoff 用 local MCP から受信先の handoff ガイドを取得し、それを踏まえた項目別の依頼内容を渡す。MCP は送信元情報と合成して対象 file 全体を上書きする。
+editor input handoff は、Codex TUI の agent が、別の prompt editor input で待機中の editor input file へ依頼を渡す共通機能である。agent は handoff 用 local MCP から受信先の handoff ガイドを取得し、それを踏まえた項目別の依頼内容を渡す。MCP は送信元情報と合成して対象 file 全体を上書きする。
 
 ## goal
 
@@ -43,41 +43,41 @@ handoff instruction は、利用条件、ガイド取得から送信までの手
 
 ## handoff target
 
-- prompt editor input は、editor work file と handoff ガイドファイルの生成後かつ editor の起動前に、opaque な target ID を持つ target を登録し、その ID を人間へ表示する。
+- prompt editor input は、editor input file と handoff ガイドファイルの生成後かつ editor の起動前に、opaque な target ID を持つ target を登録し、その ID を人間へ表示する。
 - target は登録から無効化まで active とし、本書の「handoff ガイド」で定めるファイルを対応付けて保持する。
 - target は editor の待機中だけ submission を受け付ける。
 - editor から処理が戻った後は、次の順に処理する。
     1. submission の新規受付を停止する。
     2. 受付済みの submission を完了させる。
     3. target を無効にし、handoff ガイドファイルを削除する。
-    4. editor work file を最終読み取りする。
+    4. editor input file を最終読み取りする。
 - target の登録、routing、および handoff ガイドの保持は一時的な runtime state とする。target 一覧、handoff 履歴、永続的な active state、および排他的 editor lock は設けない。
 
 ## handoff ガイド
 
 handoff ガイドは、受信先へ依頼を作成するための Markdown 文書とする。使い方、記入の目安、およびその受信先の完全 prompt の雛形を含め、受信側の作業範囲・制約・入力位置を確認できるようにする。受信先の完全 prompt skeleton の構築は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「構築定義の参照」に従う。
 
-cmoc は、受信先の完全 prompt skeleton を `build_editor_input_handoff_guide` へ渡し、生成結果を editor work file と独立した handoff ガイドファイルへ保存する。ガイドを editor work file の初期値へ埋め込まず、送信元の設定から別の雛形を再構築しない。ガイドファイルの文面は、handoff による上書きや人間による editor work file の編集に伴って変更せず、target の有効期間中に取得可能とする。
+cmoc は、受信先の完全 prompt skeleton を `build_editor_input_handoff_guide` へ渡し、生成結果を editor input file と独立した handoff ガイドファイルへ保存する。ガイドを editor input file の初期値へ埋め込まず、送信元の設定から別の雛形を再構築しない。ガイドファイルの文面は、handoff による上書きや人間による editor input file の編集に伴って変更せず、target の有効期間中に取得可能とする。
 
 ## MCP interface
 
-agent-facing MCP interface は `cmoc_editor_input.get_handoff_guide` と `cmoc_editor_input.overwrite` とする。いずれも人間が提示した target ID で対象を指定し、editor work file のパスを利用者から受け取らない。
+agent-facing MCP interface は `cmoc_editor_input.get_handoff_guide` と `cmoc_editor_input.overwrite` とする。いずれも人間が提示した target ID で対象を指定し、editor input file のパスを利用者から受け取らない。
 
-両 tool は、target が active であり、呼び出し元と同じ repository に属することを検証する。存在しない target、無効な target、および別 repository の target への要求は拒否する。
+両 tool は、target が active であり、呼び出し元と同じ repository に属することを検証する。存在しない target、入力確定後を含む無効な target、および別 repository の target への要求は拒否する。
 
 target の探索・一覧、現在編集中の本文の読み取り、汎用 file read・file write、command 実行、MCP resource、および MCP prompt は提供しない。
 
 ### handoff ガイドの取得
 
 - `get_handoff_guide` は target ID だけを入力として、本書の「handoff ガイド」で定めるガイドファイルの文面を加工せず返す。
-- 入力・target の検証または handoff ガイドの取得に失敗した場合は、失敗を返す。editor work file の現在内容を代わりに返さない。
+- 入力・target の検証または handoff ガイドの取得に失敗した場合は、失敗を返す。editor input file の現在内容を代わりに返さない。
 
 ### 上書き
 
 - tool input には、人間が提示した target ID と、input schema に従った項目別の内容を指定する。送信元情報と完成済み Markdown 全文は入力項目に含めない。
-- cmoc は対象が所定の editor work directory 内にある regular file かつ非 symlink であることを、上書きのたびに検証する。
+- cmoc は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「editor input の確定手順」で定めるファイル検証を、上書きのたびにも行う。条件を満たさない場合は上書きせず、失敗を返す。
 - MCP は input schema に適合する入力と、呼び出し元の送信元情報を使い、本書の「本文の生成」に従って本文を構築する。参照情報は本書の「参照情報」に従って型付きの値へ変換する。入力・参照情報・target・送信元情報の検証または本文生成に失敗した場合は上書きせず、失敗を返す。
-- accepted submission は生成した本文で editor work file 全体を置換する。同じ target への accepted submission は直列化し、最後に適用した内容を残す。
+- accepted submission は生成した本文で editor input file 全体を置換する。同じ target への accepted submission は直列化し、最後に適用した内容を残す。
 - `overwrite` は上書きが完了した場合だけ成功を返す。この成功は、受信先の入力確定を意味しない。
 
 append、merge、patch、差分適用、既存内容との conflict 判定、および optimistic concurrency は行わない。handoff ガイドの事前取得は agent の手順とし、取得済み token、revision 照合、または取得履歴による機械的な上書き受付条件を設けない。
@@ -93,7 +93,7 @@ handoff の自由記述入力や生成した handoff 本文を、tool result、h
 - 本文は Markdown として生成する。
 - builder は自由記述の意味を補完・要約せず、送信元情報を推定しない。
 
-本文の生成と機械的な注入は、editor work file の上書き時に完結させる。その後、受信先の cmoc は、共通の editor input 確定手順で得たオリジナルプロンプトを完全 prompt へ組み込む。組み込む位置は、handoff ガイドに含まれる完全 prompt の雛形の `{{original-prompt-here}}` で示す。確定した `AgentCallParameter.prompt` は加工しない。
+本文の生成と機械的な注入は、editor input file の上書き時に完結させる。その後、受信先の cmoc は、共通の editor input 確定手順で得たオリジナルプロンプトを完全 prompt へ組み込む。組み込む位置は、handoff ガイドに含まれる完全 prompt の雛形の `{{original-prompt-here}}` で示す。確定した `AgentCallParameter.prompt` は加工しない。
 
 ## agent の責務と権限
 

@@ -2,7 +2,7 @@
 
 
 def build_prompt_editor_input_console_guidance() -> str:
-    """人間が editor work file に記入する内容を短く案内する。
+    """人間が editor input file に記入する内容を短く案内する。
 
     NOTE:
         意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の
