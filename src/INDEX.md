@@ -50,22 +50,21 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実行を支える共通 runtime 実装群。Codex の exec/TUI 起動、設定・パス・プロセス・エラー・ログ・feedback、session/editing run の state と lifecycle、report、INDEX 更新、editor input handoff など、複数サブコマンドで共有する境界とデータモデルを提供する。
-- 個別サブコマンドの処理ではなく、実行ライフサイクルや永続 state、外部プロセス、共通報告・索引更新の不変条件を確認・変更するときの入口。
+- cmoc の実行基盤を構成する共通 Python モジュール群。設定・パス・Git と worktree 管理、Codex subprocess/TUI 実行、CLI のライフサイクル、ログ・レポート・エラー処理、feedback 状態管理、エディタ入力受け渡し、実行結果と状態の永続化を横断的に提供する。
+- コマンド実装から共通ランタイム機能へ進む入口。特定機能の詳細を調べる場合は、設定なら runtime_config.py、Git 操作なら runtime_git.py、Codex 呼び出しなら runtime_codex*.py、レポートなら runtime_primary_report*.py / runtime_run_report.py、feedback なら runtime_feedback*.py を直接読む。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる runtime 共通処理を調べるとき。
-- Codex subprocess の起動条件、回復・中断、sandbox/profile、ログや primary report の共通挙動を確認するとき。
-- session/editing run の state 遷移、worktree cleanup、commit、INDEX 更新の連携を追うとき。
-- editor input handoff、feedback、設定、パス、Git 判定などの共通境界を変更するとき。
+- 複数の CLI サブコマンドにまたがる実行制御、状態管理、永続化、エラー処理の責務を確認したいとき
+- Codex の subprocess/TUI 呼び出し、プロセス追跡、設定・パス解決、Git worktree 操作の共通入口を探すとき
+- 実行結果・主レポート・feedback 記録がどの共通モジュールで組み立てられるかを確認したいとき
 
 ## Do not read this when
-- 特定サブコマンド固有の orchestration や UI を確認するだけなら、そのサブコマンドの実装を直接読む。
-- 正本仕様や要求の根拠を確認する場合は、対応する oracle 文書を直接読む。
-- INDEX エントリーの検査・生成 lifecycle だけを調べる場合は indexing 実装を、editing run の lifecycle だけを調べる場合は runtime_run_lifecycle など該当ファイルを直接読む。
+- 特定サブコマンド固有の業務フローだけを確認したいときは、そのサブコマンドの実装を直接読む
+- 個別の共通機能の実装詳細だけが必要な場合は、このディレクトリ全体ではなく対応する runtime_*.py を直接読む
+- 正本仕様やテストの内容を確認したい場合は、対応する oracle または test 配下を読む
 
 ## hash
-- 663d96f26b2f9d4937901061d9e15a1a3af1e95e5173bcdd97412168223b656f
+- aade47cd64a36f4243bc56866db4c4f0ec0d3fe1376cdc9a187aaedf857f31c1
 
 # `config`
 
@@ -121,15 +120,16 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の CLI サブコマンド実装をまとめる入口で、doctor・tui・indexing と、session・run・feedback・oracle・realization などのライフサイクル別サブコマンド群を提供する。各下位パッケージは固有の状態遷移や処理を担当するため、複数サブコマンドにまたがる入口や全体構成を確認するときの起点となる。
+- cmoc の主要な CLI サブコマンド実装をまとめた入口で、直接実行される indexing・tui・doctor と、session・run・feedback・oracle・realization 系の下位サブコマンド群を扱う。
+- セッション管理、実行 lifecycle、feedback 対応、oracle 操作、realization workload の具体的な処理へ進むための上位ルーティング地点である。
 
 ## Read this when
-- CLI サブコマンドの全体構成や共通の起動・前処理を調べるとき。
-- 複数のサブコマンド領域にまたがる変更や、サブコマンドのルーティング先を確認するとき。
+- cmoc のサブコマンド全体の構成や、目的に応じて session・run・feedback・oracle・realization のどの下位領域を読むべきか判断するとき。
+- indexing、TUI 起動、doctor preprocess など、パッケージ直下の CLI 入口の実装を確認するとき。
 
 ## Do not read this when
-- session、run、feedback、oracle、realization など特定領域の処理だけを調べる場合。
-- doctor、tui、indexing の単一実装だけを直接確認すれば足りる場合。
+- 特定の session・run・feedback・oracle・realization サブコマンドの詳細な状態遷移や処理を確認したい場合は、対応する下位ディレクトリを直接読むとき。
+- INDEX.md の生成処理そのものだけを確認したい場合は、indexing の実装や関連する commons を直接読むとき。
 
 ## hash
-- ff35d3cd4dae01a84a3a0bf64a17d29b2884cee76fa1adf740608249f4321ac3
+- 23dd540833356ed991b93ee0866a813892301840802bef26cb23e96883d3ca1b

@@ -52,7 +52,7 @@ def _get_guide_result(arguments):
 
 def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkeypatch):
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("private editor content")
     skeleton = "受信先の制約\r\n" * 10000 + "{{original-prompt-here}}"
@@ -74,7 +74,7 @@ def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkey
 @pytest.mark.parametrize("damage", ["missing", "invalid_utf8", "symlink"])
 def test_unavailable_guide_never_returns_editor_content(tmp_path, monkeypatch, damage):
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("private editor content")
     target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
@@ -296,7 +296,7 @@ def test_handoff_response_loss_reports_unknown_while_write_completes(
     handoff_source,
 ) -> None:
     """受付済み上書きの応答を失っても、非 active や未反映とは報告しない。"""
-    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial", encoding="utf-8")
     target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
@@ -449,7 +449,7 @@ def test_handoff_mcp_strips_unexpected_target_result_fields(
     ],
 )
 def test_invalid_handoff_fields_leave_target_untouched(tmp_path, change):
-    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial")
     target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
@@ -481,7 +481,7 @@ def test_invalid_handoff_fields_leave_target_untouched(tmp_path, change):
 def test_missing_or_invalid_source_refuses_handoff(
     tmp_path, monkeypatch, source_change
 ):
-    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial")
     target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
@@ -512,7 +512,7 @@ def test_handoff_uses_canonical_body_and_typed_references(
     from oracle.editor_input_handoff.body import build_editor_input_handoff_body
     from oracle.other.doc_ref_model import DocRef
 
-    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial")
     target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
@@ -548,7 +548,7 @@ def test_handoff_uses_canonical_body_and_typed_references(
 
 
 def test_handoff_builder_failure_does_not_leak_input_or_write(tmp_path, monkeypatch):
-    work = tmp_path / ".cmoc/gu/editor_input/input.md"
+    work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("initial")
     target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")

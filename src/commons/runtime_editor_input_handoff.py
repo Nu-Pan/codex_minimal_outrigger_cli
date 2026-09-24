@@ -21,19 +21,19 @@ from .runtime_editor_input_handoff_protocol import (
     build_editor_input_handoff_target_id,
 )
 from .runtime_errors import CmocError
-from .runtime_paths import editor_work_dir
+from .runtime_paths import editor_input_log_dir
 
 
-def validate_editor_work_file(root: Path, path: Path) -> None:
-    """対象を所定 editor work directory 内の regular non-symlink file に限る。"""
-    expected_dir = editor_work_dir(root)
+def validate_editor_input_file(root: Path, path: Path) -> None:
+    """対象を所定 editor input directory 内の regular non-symlink file に限る。"""
+    expected_dir = editor_input_log_dir(root)
     try:
         resolved_dir = expected_dir.resolve(strict=True)
         mode = path.lstat().st_mode
         current = path.absolute()
         while True:
             if stat.S_ISLNK(current.lstat().st_mode):
-                raise _invalid_editor_work_file(
+                raise _invalid_editor_input_file(
                     path,
                     "path uses a symlink component",
                 )
@@ -41,24 +41,24 @@ def validate_editor_work_file(root: Path, path: Path) -> None:
                 break
             current = current.parent
     except (OSError, RuntimeError) as exc:
-        raise _invalid_editor_work_file(path, "path is not readable") from exc
+        raise _invalid_editor_input_file(path, "path is not readable") from exc
     if not stat.S_ISREG(mode):
-        raise _invalid_editor_work_file(path, "path is not a regular file")
+        raise _invalid_editor_input_file(path, "path is not a regular file")
     try:
         resolved_path = path.resolve(strict=True)
         resolved_path.relative_to(resolved_dir)
     except (OSError, RuntimeError, ValueError) as exc:
-        raise _invalid_editor_work_file(
+        raise _invalid_editor_input_file(
             path,
-            f"path is outside editor work directory: {expected_dir}",
+            f"path is outside editor input directory: {expected_dir}",
         ) from exc
 
 
-def _invalid_editor_work_file(path: Path, reason: str) -> CmocError:
-    """不正な editor work file 用の利用者向けエラーを構築する。"""
+def _invalid_editor_input_file(path: Path, reason: str) -> CmocError:
+    """不正な editor input file 用の利用者向けエラーを構築する。"""
     return CmocError(
-        "editor work file を読み取れません。",
-        ["復旧用に残った editor work file を確認してから再実行してください。"],
+        "editor input file を読み取れません。",
+        ["復旧用に残った editor input file を確認してから再実行してください。"],
         f"path: {path}\nreason: {reason}",
     )
 
@@ -79,18 +79,18 @@ def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
 
 
 class EditorInputHandoffTarget:
-    """一つの editor work file だけを editor 待機中に公開する target。"""
+    """一つの editor input file だけを editor 待機中に公開する target。"""
 
     def __init__(
         self,
         repository: Path,
-        editor_work_path: Path,
+        input_path: Path,
         complete_prompt_skeleton: str,
     ) -> None:
         """target identity と一時 transport state を初期化する。"""
         self.repository = repository.resolve()
-        self.editor_work_path = editor_work_path
-        self.handoff_guide_path = editor_work_path.with_suffix(".guide.md")
+        self.input_path = input_path
+        self.handoff_guide_path = input_path.with_suffix(".guide.md")
         self._complete_prompt_skeleton = complete_prompt_skeleton
         self._guide_created = False
         self._token = secrets.token_bytes(EDITOR_INPUT_HANDOFF_TOKEN_BYTES)
@@ -113,7 +113,7 @@ class EditorInputHandoffTarget:
 
     def start(self) -> None:
         """認証付き loopback TCP で active target を開始する。"""
-        validate_editor_work_file(self.repository, self.editor_work_path)
+        validate_editor_input_file(self.repository, self.input_path)
         # 登録前に受信先の雛形を独立した file へ保存し、既存 file は上書きしない。
         guide_text = build_editor_input_handoff_guide(self._complete_prompt_skeleton)
         with self.handoff_guide_path.open("x", encoding="utf-8", newline="") as guide:
@@ -287,7 +287,7 @@ class EditorInputHandoffTarget:
         if "content" not in payload:
             # 編集中の本文を代用せず、保持済みガイドの文面をそのまま返す。
             try:
-                validate_editor_work_file(self.repository, self.handoff_guide_path)
+                validate_editor_input_file(self.repository, self.handoff_guide_path)
                 guide_text = self.handoff_guide_path.read_bytes().decode("utf-8")
             except (CmocError, OSError, UnicodeError):
                 return {"status": "error", "message": "handoff guide is unavailable"}
@@ -303,11 +303,11 @@ class EditorInputHandoffTarget:
     def _overwrite(self, content: str) -> None:
         """target を再検証し、同じ regular file 全体を UTF-8 content で置換する。"""
         content_bytes = content.encode("utf-8")
-        validate_editor_work_file(self.repository, self.editor_work_path)
+        validate_editor_input_file(self.repository, self.input_path)
         flags = (
             os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
         )
-        descriptor = os.open(self.editor_work_path, flags)
+        descriptor = os.open(self.input_path, flags)
         try:
             if not stat.S_ISREG(os.fstat(descriptor).st_mode):
                 raise OSError("editor input target is not a regular file")
@@ -346,13 +346,11 @@ class EditorInputHandoffTarget:
 
 def start_editor_input_handoff(
     repository: Path,
-    editor_work_path: Path,
+    input_path: Path,
     complete_prompt_skeleton: str,
 ) -> EditorInputHandoffTarget:
     """editor 待機期間に使う一時 handoff target を開始する。"""
-    target = EditorInputHandoffTarget(
-        repository, editor_work_path, complete_prompt_skeleton
-    )
+    target = EditorInputHandoffTarget(repository, input_path, complete_prompt_skeleton)
     try:
         target.start()
     except Exception as exc:
@@ -386,7 +384,7 @@ def _close_directory_fd(directory_fd: int | None) -> None:
 
 def _unlink_handoff_guide_if_parent_is_safe(root: Path, path: Path) -> None:
     """directory fd 非対応環境でも symlink 親を追従せず guide を削除する。"""
-    expected_dir = editor_work_dir(root)
+    expected_dir = editor_input_log_dir(root)
     try:
         resolved_dir = expected_dir.resolve(strict=True)
         current = path.parent.absolute()

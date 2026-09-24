@@ -68,22 +68,22 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実行境界を提供し、調査系と編集系の CLI ワークフローを分担する。
-- oracle investigation は入力された調査指示をもとに prompt を組み立て、indexing 前処理後に read-only の Codex TUI を起動する。
-- oracle edit は oracle 編集指示を受け取り、main worktree 上の active session branch などの前提を検証したうえで、共通設定による編集 agent call を 2 回実行し、各結果を primary report に反映する。
+- oracle 系サブコマンドの実装入口をまとめるパッケージ。
+- `oracle edit` は main worktree の active な cmoc session branch で、編集指示に基づく Codex exec を 2 回実行する。
+- `oracle investigation` は入力された調査指示から Codex TUI を起動する read-only ワークロード。
 
 ## Read this when
-- oracle investigation または oracle edit の CLI 実行フロー、prompt 入力、agent 起動、実行前後の状態更新を確認・変更するとき。
-- oracle edit の main worktree・session branch 前提や、2 回の編集 agent call の制御を調べるとき。
-- oracle 系サブコマンドの処理へ入る入口や、調査系と編集系の責務分担を判断するとき。
+- `cmoc oracle edit` の入力処理、事前条件、indexing、2 回の agent call、実行状態更新を確認するとき
+- `cmoc oracle investigation` の入力処理、prompt 構築、TUI 起動経路を確認するとき
+- oracle 系サブコマンドの CLI 実装入口を特定するとき
 
 ## Do not read this when
-- Codex 起動パラメータの詳細な構築規則だけを確認したいときは、対応する builder 実装を直接読むべきである。
-- prompt 編集用の共通入出力や indexing、session 状態管理の詳細だけを確認したいときは、それぞれの共通 runtime 実装を直接読むべきである。
-- oracle の正本仕様や編集対象そのものを確認したいときは、この実行ラッパーではなく oracle 側の仕様・対象ファイルへ進むべきである。
+- oracle 編集・調査用 prompt の正本契約を確認したい場合は `oracle/doc` 配下の対象を直接読む
+- Codex 起動パラメータの生成ロジックを確認したい場合は `acp/builder/oracle` 配下の対応する builder を直接読む
+- 共通の入力編集、runtime、indexing 処理だけを確認したい場合は、それぞれの `commons` または `cmoc_runtime` の実装へ直接進む
 
 ## hash
-- 48440dc909a9ff3dc83a8f6cf0a475468df0f0b49112edd3bb0086e9c61d0191
+- 1a9e0c51494360d2a9d1b70d5b85eced5b137036aaec5e8584803914f1c38434
 
 # `realization`
 
@@ -159,17 +159,16 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行入口と本体処理を担い、インデックス前処理・入力編集・TUI 起動までの手順を統括する。
-- 現在のリポジトリと作業ルートから設定を読み込み、入力された依頼文を TUI 起動用パラメータへ変換して Codex TUI を起動する処理への入口。
+- `cmoc tui` サブコマンドの実行入口と本体処理を提供し、indexing preflight・入力エディタ・TUI 起動処理を所定の順序で連携する。
+- 現在の repository と設定を取得し、完全な prompt skeleton を用意して利用者の依頼文を編集・収集した後、TUI 起動パラメータを構築して Codex TUI を起動する。
 
 ## Read this when
-- `cmoc tui` の CLI 実行フロー、プロンプト編集、TUI 起動パラメータ構築、または Codex TUI 起動処理の連携を調べるとき。
-- サブコマンド共通ランタイムへの接続や、現在の repository・work root・設定の受け渡しを確認するとき。
+- `cmoc tui` の CLI 実行入口、処理順序、prompt 編集入力から Codex TUI 起動までの連携を確認・変更するとき。
+- TUI サブコマンドが indexing preflight、ログ付き共通 CLI runner、TUI 固有の通知・起動設定をどのように接続するかを確認するとき。
 
 ## Do not read this when
-- TUI 起動パラメータの詳細な構築規則だけを確認したいときは、`acp.builder.tui.launch_tui` の実装を直接読む。
-- プロンプト編集ファイルの予約・収集・確定処理だけを確認したいときは、`commons.prompt_editor_input` を直接読む。
-- Codex TUI の実際の起動処理や実行結果の扱いだけを確認したいときは、`cmoc_runtime` の `run_codex_tui` 実装を直接読む。
+- TUI 起動時に注入する prompt の内容や固定起動パラメータ自体を確認・変更するときは、TUI parameter builder の実装を直接読む。
+- prompt の予約・編集・収集や共通 Codex TUI runtime の挙動だけを確認するときは、それぞれの専用モジュールを直接読む。
 
 ## hash
-- 70f2b0260c5debb76680c0f1935b776b0313bdf02fbb06eb7466d9d159212a8d
+- 52be00ca2b1f26a3ffa44743eeed684258aed27c06159476b93bf37d9cc4e2d2

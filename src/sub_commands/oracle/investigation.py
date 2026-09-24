@@ -17,7 +17,6 @@ from commons.prompt_editor_input import (
     collect_prompt_editor_input,
     edit_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
-    finalize_prompt_editor_input,
     reserve_prompt_editor_input,
 )
 
@@ -45,7 +44,7 @@ def _cmoc_oracle_investigation_body() -> None:
     start_subcommand_step(
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"
     )
-    editor_work_path, input_copy_path = reserve_prompt_editor_input(root)
+    input_path = reserve_prompt_editor_input(root)
     complete_prompt_skeleton = build_oracle_investigation_launch_tui_parameter(
         ORIGINAL_PROMPT_PLACEHOLDER
     ).prompt
@@ -53,18 +52,16 @@ def _cmoc_oracle_investigation_body() -> None:
     start_subcommand_step(3, "oracle 調査指示を入力", "edit investigation")
     edit_prompt_editor_input(
         root,
-        editor_work_path,
+        input_path,
         complete_prompt_skeleton,
     )
     instruction = collect_prompt_editor_input(
         root,
-        editor_work_path,
-        input_copy_path,
+        input_path,
     )
 
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
     parameter = build_oracle_investigation_launch_tui_parameter(instruction)
-    finalize_prompt_editor_input(root, editor_work_path)
     start_subcommand_step(5, "Codex TUI を起動", "launch Codex TUI")
     run_codex_tui(
         parameter,

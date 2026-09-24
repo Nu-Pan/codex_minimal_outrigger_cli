@@ -1,10 +1,11 @@
 """AI Agent 用 prompt をエディタから受け取る共通境界。"""
 
+import os
 import shutil
 import stat
 import subprocess
 import sys
-import time
+import tempfile
 from pathlib import Path
 
 from oracle.prompt_builder.editor_input import (
@@ -13,14 +14,13 @@ from oracle.prompt_builder.editor_input import (
 
 from .runtime_editor_input_handoff import (
     start_editor_input_handoff,
-    validate_editor_work_file,
+    validate_editor_input_file,
 )
 from .runtime_errors import CmocError
 from .runtime_git import ensure_cmoc_ignored
 from .runtime_paths import (
     _reserve_timestamped_path,
     editor_input_log_dir,
-    editor_work_dir,
     timestamp,
     work_root,
 )
@@ -28,47 +28,32 @@ from .runtime_paths import (
 ORIGINAL_PROMPT_PLACEHOLDER = "{{original-prompt-here}}"
 
 
-def reserve_prompt_editor_input(root: Path) -> tuple[Path, Path]:
-    """同じ timestamp を持つ作業 path と入力結果の保存 path を準備する。"""
+def reserve_prompt_editor_input(root: Path) -> Path:
+    """編集から確定保存まで共用する空の本文 file を予約する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    # 可変な作業 file と cmoc だけが書く保存記録を別 directory に置く。
-    work_dir = editor_work_dir(root)
-    log_dir = editor_input_log_dir(root)
-    for directory in (work_dir, log_dir):
-        _validate_editor_storage_path(directory, require_directory=True)
-        directory.mkdir(parents=True, exist_ok=True)
-        _validate_editor_storage_path(directory, require_directory=True)
-
-    # 削除済み work file と同じ timestamp の保存記録も上書きしない。
-    while True:
-        time_stamp, editor_work_path = _reserve_timestamped_path(
-            work_dir,
-            "_orig.md",
-            timestamp,
-        )
-        input_copy_path = log_dir / f"{time_stamp}_orig.md"
-        if not (input_copy_path.exists() or input_copy_path.is_symlink()):
-            return editor_work_path, input_copy_path
-        editor_work_path.unlink()
-        time.sleep(0.000001)
+    # 保存済み入力も編集中の入力も、排他的な予約で上書きを避ける。
+    directory = editor_input_log_dir(root)
+    _validate_editor_storage_path(directory, require_directory=True)
+    directory.mkdir(parents=True, exist_ok=True)
+    _validate_editor_storage_path(directory, require_directory=True)
+    _, input_path = _reserve_timestamped_path(directory, "_orig.md", timestamp)
+    return input_path
 
 
 def edit_prompt_editor_input(
     root: Path,
-    editor_work_path: Path,
+    input_path: Path,
     complete_prompt_skeleton: str,
 ) -> None:
     """空の入力 file と独立した handoff ガイドを準備し、エディタを起動する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    validate_editor_work_file(root, editor_work_path)
+    validate_editor_input_file(root, input_path)
 
     # 人間向け案内や受信側の雛形を依頼本文へ混入させない。
-    editor_work_path.write_text("", encoding="utf-8")
+    input_path.write_text("", encoding="utf-8")
 
-    argv = [*_select_editor(), str(editor_work_path)]
-    target = start_editor_input_handoff(
-        root, editor_work_path, complete_prompt_skeleton
-    )
+    argv = [*_select_editor(), str(input_path)]
+    target = start_editor_input_handoff(root, input_path, complete_prompt_skeleton)
     try:
         # 非対話サブコマンドの stdout は terminal result 用なので、editor の
         # 待機中に人間へ渡す target ID は stderr へ表示する。
@@ -97,26 +82,37 @@ def edit_prompt_editor_input(
 
 def collect_prompt_editor_input(
     root: Path,
-    editor_work_path: Path,
-    input_copy_path: Path,
+    input_path: Path,
 ) -> str:
-    """作業 file を一度だけ最終読み取りし、入力を保存して返す。"""
+    """本文を一度だけ読み、同じ path へ確定保存して入力を返す。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     # 最終時点の通常 file を一度だけ読み、同じ結果を保存と入力抽出に使う。
-    validate_editor_work_file(root, editor_work_path)
-    _validate_editor_input_copy_path(root, editor_work_path, input_copy_path)
-    final_read_result = editor_work_path.read_bytes()
-    with input_copy_path.open("xb") as file:
-        file.write(final_read_result)
+    validate_editor_input_file(root, input_path)
+    final_read_result = input_path.read_bytes()
+    _save_editor_input(root, input_path, final_read_result)
     return final_read_result.decode("utf-8").strip()
 
 
-def finalize_prompt_editor_input(root: Path, editor_work_path: Path) -> None:
-    """完全 prompt の構築成功後に editor work file を削除する。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    # 最終読み取りと同じ境界検証を行い、指定外の file を削除しない。
-    validate_editor_work_file(root, editor_work_path)
-    editor_work_path.unlink()
+def _save_editor_input(root: Path, input_path: Path, content: bytes) -> None:
+    """書き込み完了までは元の入力を保持し、確定原文へ置換する。"""
+    # 同じ filesystem 内で置換し、書き込み・flush・置換の失敗で本文を壊さない。
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=input_path.parent,
+            prefix=f".{input_path.name}.",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            temporary_file.write(content)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        validate_editor_input_file(root, input_path)
+        os.replace(temporary_path, input_path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def ensure_prompt_editor_roots_ignored(root: Path) -> None:
@@ -190,20 +186,3 @@ def _validate_editor_storage_path(
         if current == current.parent:
             return
         current = current.parent
-
-
-def _validate_editor_input_copy_path(
-    root: Path,
-    editor_work_path: Path,
-    input_copy_path: Path,
-) -> None:
-    """入力結果の保存コピーを仕様の repository path に限定する。"""
-    expected = editor_input_log_dir(root) / editor_work_path.name
-    if input_copy_path.absolute() != expected.absolute():
-        raise CmocError(
-            "editor input の保存コピー path が不正です。",
-            ["editor input の保存先を確認してから再実行してください。"],
-            f"path: {input_copy_path}\nexpected: {expected}",
-        )
-    _validate_editor_storage_path(input_copy_path.parent, require_directory=True)
-    _validate_editor_storage_path(input_copy_path)
