@@ -18,64 +18,60 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc から Codex CLI を呼び出す際の agent call と Codex call の区別、path context、CODEX_HOME、preflight validation、argv による設定上書き、sandbox と詳細な file access policy、書き込み責任分界、差分検証、model provider・model・reasoning effort、prompt literal の規則を定める app_spec の規約。関連する実装・個別 workload の責務は、本文中で委譲先として示される oracle doc/src を確認するための入口。
+- Codex CLI 呼び出しにおける agent call と個別 Codex call の識別、call-scoped path context、環境変数、preflight、argv による設定上書き、sandbox と詳細な file access policy、書き込み責任分界、model/provider 設定、prompt 構築規則を定める正本仕様。
+- Codex CLI の起動規則や agent-facing prompt の設計を確認する際の上位エントリであり、個別フィールドの型や導出アルゴリズムは本文から委譲先の oracle src・oracle doc へ進む。
 
 ## Read this when
-- Codex CLI の呼び出し引数、承認設定、sandbox、model/provider 設定、CODEX_HOME の扱いを実装・検証するとき。
-- agent call の識別、call-scoped path context、work root/repo root の導出、prompt への placeholder 反映を確認するとき。
-- file access mode に応じた直接ファイルアクセス制限、MCP・Structured Output・cmoc 管理処理との責任分界、または agent call 差分検証の境界を判断するとき。
-- prompt literal の役割・制限や、個別 builder・path model・complete prompt などの委譲先をたどる必要があるとき。
+- cmoc が Codex CLI を起動する引数、環境、sandbox、承認設定、provider・model・reasoning effort を確認または変更するとき。
+- agent call の cwd、worktree/repository root、file access mode、prompt literal、Structured Output 補正や retry の扱いを確認するとき。
+- Codex CLI 呼び出しに関する仕様の責務分界や、委譲先の正本を特定するとき。
 
 ## Do not read this when
-- 特定の AgentCallParameter の正確な field 定義・型・既定値だけを確認したいときは、本文が委譲する oracle src を直接読む。
-- 個別 agent call の意味上の責務や workload 固有の判断基準だけを確認したいときは、対応する oracle doc を直接読む。
-- 実行 ID の表示、Windows toast 通知、model provider の正本規則、prompt 全体の統合条件など、本文が明示する別の正本を直接確認できる場合。
+- AgentCallParameter の正確な field 定義・型・既定値だけを確認したい場合は、直接 `basic.py` の定義を読むとき。
+- path context の導出、placeholder の受け渡し、prompt 統合、file access policy の正確な文面だけを調査する場合は、本文が指定する対応する oracle src を直接読むとき。
+- 個別の model provider 設定値や `oracle edit` の確定時点だけを調べる場合は、本文が参照する専門の oracle doc を直接読むとき。
 
 ## hash
-- 94ccf40217a4fbca2a1e9526ed4a16b67abfd0d7d4ac815484bed79cf90fe54b
+- 166a4ba2c8ecb7baddc6866094143b762e38b91ea70e096cc83b097741757c81
 
 # `codex_model_provider.md`
 
 ## Summary
-- Codex の agent call 設定と provider 定義を定める正本仕様。call 種別ごとの model provider・Model・Reasoning Effort の直接指定、provider-local 設定、未知値の事前エラー、Codex CLI への委譲範囲を扱う。
+- 通常の agent call における model provider、Model、Reasoning Effort の直接設定と、設定不足・CLI拒否時の扱いを定める仕様。
+- 一時障害の回復確認 probe だけに適用される設定継承例外と、quota待機から切り替わる場合の確認条件を定める。
+- provider ID と provider-local 設定の定義、Codex CLIへ委譲する責務、および cmoc が担わない provider 運用範囲を定める。
 
 ## Read this when
-- Codex provider の設定値、provider-local 設定、agent call 種別ごとの直接設定、または cmoc の責務境界を確認・変更するとき。
-- Codex CLI に渡す設定の意味や、cmoc が provider の運用・認証・推論環境を保証しないことを確認するとき。
+- agent call 種別ごとの Codex 設定取得、直接文字列の扱い、設定欠如時のエラー条件を確認するとき。
+- 一時障害の回復確認 probe がどの設定を使うべきか、通常の quota availability probe とどう区別するかを確認するとき。
+- provider ID、provider-local 設定、組み込み openai provider、secret 保存禁止の扱いを確認するとき。
+- cmoc が provider の起動・診断・修復・疎通確認などを担当するか判断するとき。
 
 ## Do not read this when
-- 設定データ構造・field 名・型・既定値の正確な定義だけを確認したい場合は、指定された cmoc_config.py の定義を直接読む。
-- agent call 設定を Codex CLI の argv へ反映する詳細だけを確認したい場合は、codex_exec_rule.md の該当節を直接読む。
-- prompt、sandbox、file access policy、network access、通知設定の仕様だけを確認したい場合。
+- Codex CLI の argv 反映、実行失敗時の処理、回復待ちと再開の詳細を確認したいときは、先に codex_exec_rule.md を読む。
+- CodexCallConfig、CodexModelProviderConfig、CmocConfigCodex の正確な field 名・型・既定値を確認したいときは、指定された cmoc_config.py を直接読む。
+- prompt、sandbox、file access policy、network access、通知設定の仕様を確認したいときは、この文書ではなく各設定の正本を読む。
 
 ## hash
-- 4d7551997d7651bcc8f39f51bdff5a2d533178146c6ba53bf4fcee2e0ee17c9a
+- d81b0aff42367a14e32d9a0367ee01f90d59cdee6e69a70e4521ca2e96eede62
 
 # `console_and_file_log.md`
 
 ## Summary
-- 非対話サブコマンドの console、primary report、サブコマンドログ、terminal result に関する共通契約を定義する正本仕様。
-- 自然言語・実行 ID・時間・パスの表示形式、stdout/stderr の責務、進行通知、終端結果の分類・確定順序・表示内容を定める。
-- primary report の保存条件と掲載内容、JSON Lines 形式のサブコマンドログ、診断記録、TUI 送信元情報の記録要件を定める。
-- TUI・自動補完と非対話サブコマンドの通知境界、および本書が要求しない表示・機械可読化・個別仕様への非介入範囲を示す。
-- コンソールやログの共通動作、report と terminal result の生成・表示順序、サブコマンドログの記録要件を確認する際の入口となる。
+- 非対話サブコマンドに共通する console、primary report、terminal result、サブコマンドログの正本契約を定める。自然言語・時間・パスの表示形式、stdout/stderr の責務、終端結果の分類と確定順序、report の掲載内容、JSON Lines 診断記録、TUI・自動補完との境界を確認するための入口である。
 
 ## Read this when
-- 非対話サブコマンドの stdout、stderr、進行通知、実行 ID、経過時間、パス表示を確認・変更するとき。
-- primary report の保存条件、共通掲載内容、terminal result の分類・表示順序・終了処理を確認するとき。
-- サブコマンドログの保存先、JSON Lines 形式、flush、診断イベント、Codex call や TUI 送信元情報の記録要件を確認するとき。
-- TUI や自動補完に対して、非対話サブコマンド用の report・terminal result・通知規則が適用される境界を確認するとき。
+- 非対話サブコマンドの console 出力、primary report、terminal result、終了コード、実行時間、パス表示を実装・変更・レビューするとき。
+- サブコマンドログの保存先、イベント記録、flush、Codex call や回復待ちの診断情報を確認するとき。
+- cmoc tui、cmoc oracle investigation、cmoc oracle edit、または自動補完に対する通知・report の適用境界を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の result、completion_reason、primary report の本文形式・保存先・終了コードを確認する場合は、該当する個別サブコマンド仕様を直接読むとき。
-- エラー分類や primary report 保存失敗時の扱いを詳細に確認する場合は、error_handling.md を直接読むとき。
-- feedback observation の掲載対象・通知境界や detector event 契約を詳細に確認する場合は、feedback.md または feedback_observation.md を直接読むとき。
-- Codex exec の出力取得方法や call 識別子、editor input handoff の境界を詳細に確認する場合は、codex_exec_rule.md または editor_input_handoff.md を直接読むとき。
-- Windows toast、自動補完、または TUI 固有の通知仕様そのものを確認する場合は、windows_toast_notification.md または cli_auto_completion.md を直接読むとき。
-- 実際の出力・ログ生成処理の実装を調べる場合は、この正本仕様ではなく対応する realization code を読むとき。
+- 個別サブコマンド固有の result、completion_reason、primary report 本文、保存先、終了コードを確認する場合は、先にそのサブコマンド仕様を読むべきとき。
+- エラー終了の確定、feedback observation の保持・通知、Windows toast、自動補完、editor input handoff の詳細な正本契約だけを確認したいときは、本文が参照する各専門仕様へ直接進むべきである。
+- ANSI 表示、verbosity/debug option、機械可読 stdout JSON schema など、本書が non-goal として要求していない機能を検討するとき。
 
 ## hash
-- cad7192b5d672a86bfdee8559ade0677c06c179f2d991ccc515b6f30aa660114
+- 2acec05eba06fdd4282bd97a3fdee737825b3da2c1382fc370608cfdf4e9bd8a
 
 # `doctor_preprocess.md`
 
@@ -119,22 +115,23 @@
 # `error_handling.md`
 
 ## Summary
-- handled failure と internal failure の分類基準、エラー終了時の state 確定・rollback・primary report 保存、terminal result とログの扱いを定める共通仕様。handled failure／internal failure の表示差異、スタックトレースの出力先、正常結果として扱う状態、および個別仕様との優先関係を確認する入口。
+- handled failure と internal failure の分類基準、エラー終了時の state 確定・rollback・primary report 保存、terminal result とログ・コンソールへの表示契約を定める共通エラーハンドリング仕様。
 
 ## Read this when
-- エラー終了の種類を分類するとき。
-- エラー時の state 確定、rollback、primary report、終了イベントの契約を確認するとき。
-- handled failure と internal failure の console・stderr・サブコマンドログへの表示規則を確認するとき。
-- エラーではなく正常系として扱う attention、incomplete、completed_with_unresolved、またはユーザー中断の扱いを確認するとき。
-- 個別仕様に明記されていないエラー処理の共通規則を確認するとき。
+- エラー終了の原因を handled failure と internal failure のどちらに分類するか判断するとき。
+- エラー時の state 確定、rollback、primary report 保存、終了イベントの順序や失敗時の扱いを確認するとき。
+- エラー terminal result、stdout・stderr、サブコマンドログに表示・保存すべき内容やスタックトレースの扱いを確認するとき。
+- attention、incomplete、completed_with_unresolved、ユーザー中断要求をエラー扱いしない条件を確認するとき。
+- 個別仕様にエラー時の指定がない事項へ適用する共通規則を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドが定める固有の state、rollback、report、次の操作、終了コードだけを確認したいときは、そのサブコマンドの個別仕様を直接読む。
-- console と terminal result の出力先・表示順序・共通 field の正本を確認したいときは、console_and_file_log.md を直接読む。
-- ユーザー中断の詳細契約だけを確認したいときは、subcommand_interruption.md を直接読む。
+- console と terminal result の出力先・表示順序・共通 field だけを確認したい場合は、参照先の console_and_file_log.md を直接読む。
+- codex exec の回復待ち可否や終了条件だけを確認したい場合は、codex_exec_rule.md を直接読む。
+- ユーザー中断要求の詳細な正常系処理だけを確認したい場合は、subcommand_interruption.md を直接読む。
+- 特定サブコマンド固有の state、rollback、report、次の操作、終了コードを確認したい場合は、そのサブコマンドの個別仕様を直接読む。
 
 ## hash
-- e9fb772b9ff82c04863d89094041268f30ab642d5c643ef179b1dfae86f51a4e
+- 5be1589b159f55673b8aa806bb251dcb24129c629488bd9099703f3cc60ddb8b
 
 # `feedback.md`
 
@@ -179,21 +176,21 @@
 # `feedback_state.md`
 
 ## Summary
-- feedback remediation run が利用する repository-local state の正本仕様。active generation、current pointer、observation、run manifest、intake wave、checkpoint、report cut、publication、cleanup の責務・配置・不変性・排他制御・ライフサイクル整合を定める。
+- feedback remediation run が利用する repository-local state の正本仕様で、active generation、current pointer、run manifest、intake wave、checkpoint、report cut、publication completion record の責務と保持範囲を定める。
+- feedback state の配置、canonical JSON と排他制御、high-watermark、正常・中断時の publication、incomplete report、cleanup、および run lifecycle との整合を扱う。
 
 ## Read this when
-- feedback state の保存場所、artifact の役割、active issue や high-watermark の扱いを確認するとき
-- feedback report の checkpoint、report cut、atomic publication、incomplete report、cleanup の仕様を確認するとき
-- feedback remediation run の join・abandon と repository-local state の整合を確認するとき
+- feedback state の artifact 構成、保持対象、所有範囲、または保存・排他制御の規則を確認したいとき。
+- feedback remediation の wave、high-watermark、checkpoint、report cut、atomic publication、incomplete、cleanup の扱いを確認したいとき。
+- current pointer が選ぶ正常 publication や、失敗・中断後に保持すべき recovery state の境界を判断したいとき。
 
 ## Do not read this when
-- raw observation の収集規則や detector rule を確認したいときは feedback_observation.md を読む
-- feedback report の呼び出し回数・wave loop・正常 publication 条件の詳細を確認したいときは feedback_report.md を読む
-- high-watermark の用語・結果分類そのものを確認したいときは feedback.md を読む
-- 編集 run の join・abandon 共通仕様を確認したいときは editing_run.md を直接読む
+- raw observation の収集や detector rule の正本を確認したいときは、feedback observation の仕様を直接読む。
+- cmoc feedback report の呼び出し回数、wave loop、incomplete 条件など subcommand 固有の手順を確認したいときは、feedback_report の仕様を直接読む。
+- 編集 run の join・abandon 共通仕様だけを確認したいときは、editing_run の仕様を直接読む。
 
 ## hash
-- 15675539d0880011b20f720a5f32b951638d1533ce430a41b7354429edd9f561
+- 468afed690bdbf9a62b19435e6cff957892fc6e24ac6791dc9966bbacb6d3d59
 
 # `indexing.md`
 
@@ -307,41 +304,43 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様をまとめた入口で、doctor、indexing、TUI、oracle 編集・調査、realization の apply/refactor、feedback report、session の fork/join/abandon、および編集 run の共通 lifecycle を扱う。
-- 個別サブコマンドの引数、事前条件、実行手順、状態遷移、report、cleanup、agent call 境界を確認したい場合に、配下の対応する仕様書へ進むための階層である。
-- 複数の編集 workload に共通する run の隔離、同時実行制約、join/abandon、差分検査、merge、post-join、report 規則は editing_run.md が入口となる。
+- cmoc の各サブコマンド仕様を、セッション fork/join/abandon、編集 run、oracle 編集、realization apply/refactor、feedback report、診断・索引・TUI などの責務別に整理した仕様群。
+- 個別コマンドの CLI 契約、事前条件、実行手順、状態遷移、agent call、差分・commit、primary report、失敗時 recovery の正本仕様への入口。
 
 ## Read this when
-- cmoc のサブコマンド仕様を横断的に確認したいとき。
-- 対象コマンドの個別仕様書がどれかを判断したいとき。
-- 編集 run の開始・終了、join、abandon、差分検査など共通 lifecycle を確認したいとき。
-- session lifecycle、feedback remediation、realization 操作、oracle 操作、または TUI の仕様を確認したいとき。
+- サブコマンド全体の仕様分担を把握し、対象コマンドの詳細仕様へ進む入口を選びたいとき
+- サブコマンドの追加・変更・挙動確認で、共通の session/run lifecycle と workload 固有契約の境界を確認したいとき
+- 複数のサブコマンドにまたがる primary report、branch、worktree、feedback、または agent call の仕様参照先を特定したいとき
 
 ## Do not read this when
-- 特定のコマンドの詳細挙動が明確で、その個別仕様書を直接読めるとき。
-- doctor preprocess、indexing、branch model、session state、feedback state など、サブコマンドから参照される共通正本そのものを確認したいとき。
-- 実装コードの prompt 構築や agent 起動パラメータの詳細だけを確認したいとき。
+- 特定コマンドの詳細な引数、処理手順、状態遷移、出力、または recovery だけを確認したい場合は、対応する個別仕様文書を直接読むとき
+- サブコマンドが呼び出す doctor preprocess、indexing、feedback state、run isolation、session state などの共通機構そのものを確認したい場合は、それぞれの正本仕様を直接読むとき
+- 実装の具体的な prompt 構築、Structured Output schema、または agent 起動パラメータだけを確認したい場合は、仕様から参照される対応する oracle source/schema を直接読むとき
 
 ## hash
-- 5299f6f5544a68cc77ff0076ffd9e4feaa4e167456146328150c17eed47009b4
+- 6eb18352ec1a69dcdef1e0dea68c9575bfc0d24b25b8b2b76a89591455ed8c65
 
 # `subcommand_interruption.md`
 
 ## Summary
-- 中断可能なサブコマンド、Ctrl+C によるユーザー中断の扱い、共通の完了処理と正常系としての結果、ならびに中断後の個別仕様へのルーティングを定める仕様。
+- 中断可能な2つのサブコマンド（`realization refactor fork` と `feedback report`）における Ctrl+C の扱いと、確定済み部分結果を保った正常完了の共通規則を定める。
+- 中断要求の受付、不可分な finalization 区間、quota・障害待機中の優先順位、state 更新・primary report 保存・terminal result 出力までの完了手順を扱う。
+- 中断後の各サブコマンド固有の state や次の操作は、対応する個別仕様へ案内する上位仕様である。
 
 ## Read this when
-- `cmoc realization refactor fork` または `cmoc feedback report` の実行中断時の挙動を確認したいとき。
-- Ctrl+C を受け付けるサブコマンドの範囲、新規処理や Codex CLI 呼び出しの停止、確定済み部分結果の保存・報告方法を確認したいとき。
-- 中断後の refactor run や feedback report の扱いを、個別仕様へ進む前に確認したいとき。
+- `cmoc realization refactor fork` または `cmoc feedback report` の Ctrl+C 中断動作を実装・レビューするとき。
+- 中断時に新規処理を止める条件、実行中処理の完了または rollback、finalization の境界を確認するとき。
+- 中断後も部分結果を保持して primary report と `user_interruption` terminal result を保存・出力する流れを確認するとき。
+- 中断後の個別 state や次の操作を調べる前に、共通規則と対応する個別仕様への入口を確認するとき。
 
 ## Do not read this when
-- 中断後の refactor run の state や次の操作の詳細を確認したい場合は、realization_refactor.md を直接読むべきとき。
-- feedback report の issue 処理単位、run state、publication、observation retention の詳細を確認したい場合は、feedback_report.md を直接読むべきとき。
-- 一般的なログ出力、エラーハンドリング、Windows toast 通知の詳細だけを確認したいときは、それぞれの個別仕様を直接読むべきとき。
+- 中断を伴わない通常のサブコマンド実行仕様だけを確認するとき。
+- `realization refactor fork` の中断後 state・次の操作だけを確認する場合は、対応する realization refactor 個別仕様を直接読むとき。
+- `feedback report` の issue 処理単位・run state・publication・observation retention だけを確認する場合は、対応する feedback report 個別仕様を直接読むとき。
+- コンソールやファイルへの一般的な出力規則、エラー処理、Windows toast の詳細だけを確認する場合は、それぞれの個別正本仕様を直接読むとき。
 
 ## hash
-- 94528cdef2a9e0e7e08890fa8a816581222faa3575e00c31ad52904df9f10f4d
+- f6c9b45edee50bd7faee4fded3f9410f6eeae81c61ab9e7d92b017786b1d8699
 
 # `timestamp.md`
 
@@ -378,17 +377,17 @@
 # `windows_toast_notification.md`
 
 ## Summary
-- 対象は、WSL2 上の cmoc が非対話サブコマンドの terminal result と TUI の agent turn 完了を Windows toast で通知する仕様を定める。通知境界、状態分類、通知内容、Codex CLI 設定境界、未検証外部契約、Windows transport の制約、自動補完時の扱いを確認する入口である。
+- Windows 11 の WSL2 環境で、非対話サブコマンドの terminal result と TUI の agent turn 完了を Windows toast で通知する境界・通知内容・発火決定性・Codex CLI callback 契約検証・安全な transport 制約を定める正本仕様。
 
 ## Read this when
-- Windows toast 通知の発火条件、非対話サブコマンドと TUI の通知境界、通知状態や必須内容を実装・レビューするとき。
-- Codex CLI の callback 契約を検証するとき、または通知 transport の安全性・独立性・失敗時の非干渉を確認するとき。
-- 自動補完プローブで通知を抑止する条件や、通知対象外の内部処理を確認するとき。
+- Windows toast 通知の対象範囲、通知タイミング、terminal result の分類、TUI の turn 完了通知を確認・変更するとき
+- Codex CLI の callback 設定や event 契約を検証し、通知を cmoc の lifecycle event と結び付けるとき
+- 通知 transport の依存関係、安全なデータ受け渡し、有限時間、失敗時の非干渉、自動補完時の抑制条件を確認するとき
 
 ## Do not read this when
-- Windows toast 通知の具体的なコンソールログ分類や primary report の確定順序だけを確認する場合は、参照先の console_and_file_log 仕様を直接読む。
-- ユーザー中断の成立条件や完了処理だけを確認する場合は、subcommand_interruption 仕様を直接読む。
-- Windows 11・WSL2 の基本環境だけを確認する場合は、development_environment 仕様を直接読む。
+- console/file log における primary report や terminal result の確定規則そのものを確認したいときは console_and_file_log.md を直接読む
+- ユーザー中断の成立条件や完了処理を確認したいときは subcommand_interruption.md を直接読む
+- 具体的な実装コード、テスト、または Codex CLI の実測結果だけを確認したいときは対応する realization・検証資料を直接読む
 
 ## hash
-- f2e4656a7af56decf9e282a1f5f146f44255c7dfc15c4bfef7808e8af0a755ac
+- cbe3d0bba1c661dc1b92c4d2876fb72fb85f82ed0fc122eae2badefd5d798d98

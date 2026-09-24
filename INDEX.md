@@ -89,22 +89,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様ツリー。CLI の利用方法、サブコマンド、セッション・run lifecycle、editor input handoff、feedback、indexing、oracle/realization の関係、エラー処理、ログ・状態管理などの要求を oracle/doc に定める。
-- cmoc の正本実装・設定・データ定義。prompt builder、ACP builder、editor input、feedback、quota、indexing、session、oracle edit、realization apply/refactor など、仕様を具体化する oracle/src のコードと JSON 定義を扱う。
-- 正本仕様に従う開発・テスト規約。環境構築、設計、コーディング、テスト実装、品質検査の選択と実行手順を確認する入口。
+- cmoc の正本仕様を構成する上位ディレクトリで、自然言語仕様と仕様生成に関わる正本ソースへの入口を提供する。
+- oracle/doc はアプリケーション仕様、開発規則、採用しなかった代替案などの正本文書を扱う。
+- oracle/src は仕様に基づくプロンプト・パラメータ・パスモデルなどの正本ソースを扱う。
 
 ## Read this when
-- cmoc の機能仕様、CLI サブコマンドの動作、状態遷移、ファイルアクセス、agent call、prompt 構築、feedback、indexing の正本を確認するとき。
-- oracle file の要求を realization 側へ反映する方法や、oracle/src の builder・設定・補助処理の責務を調べるとき。
-- 開発環境、コーディング規約、テスト要件、品質検査の完了条件を確認するとき。
+- cmoc の正本仕様全体を把握したいとき
+- 仕様文書と、それを具体化する正本ソースの対応を確認したいとき
+- app_spec・dev_rule・considered_alternative の文書群、または oracle/src 以下の生成ロジックへ進む入口を選びたいとき
 
 ## Do not read this when
-- 既存の realization 実装や realization test の具体的なコードだけを調査するときは、src または test の該当対象を直接読みます。
-- 対象となる単一のサブコマンド仕様や単一の oracle/src モジュールが明確な場合は、oracle 配下全体ではなくその正本ファイルを直接読みます。
-- INDEX.md や AGENTS.md などの管理用ファイルだけを確認したいとき。
+- 個別の仕様文書を確認したいときは oracle/doc 以下の該当ファイルを直接読む
+- 正本ソースの具体的な処理を確認したいときは oracle/src 以下の該当ファイルを直接読む
+- 実装結果やテストなど oracle 外の realization を確認したいとき
 
 ## hash
-- 7bc5c9d802468769b64070de45faf89ec723b419d11565e110b78c8dc49e48b6
+- 0925947f042a7bcb4cb002db118869af041e3655a16f3e17a615ce1d35f528a8
 
 # `pyproject.toml`
 
