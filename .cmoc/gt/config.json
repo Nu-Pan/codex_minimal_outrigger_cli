@@ -12,6 +12,11 @@
         "model": "gpt-6-astra",
         "reasoning_effort": "max"
       },
+      "build_run_join_conflict_resolution_parameter": {
+        "model_provider": "openai",
+        "model": "gpt-6-astra",
+        "reasoning_effort": "max"
+      },
       "build_oracle_investigation_launch_tui_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
