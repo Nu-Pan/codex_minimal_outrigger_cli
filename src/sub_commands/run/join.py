@@ -23,6 +23,7 @@ from cmoc_runtime import (
     start_subcommand_step,
     write_state,
 )
+from commons.runtime_merge_conflict import unmerged_paths
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import (
     delete_run_process_id,
@@ -75,11 +76,6 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
 
         require_manual_feedback_run(context)
         warnings: list[str] = []
-        session_doctor_state_paths = runtime_run_join.doctor_paths_for_join(
-            doctor_state_paths,
-            context.session_worktree,
-            context.run_fork_commit,
-        )
         run_doctor_state_paths = runtime_run_join.doctor_paths_for_join(
             doctor_state_paths,
             context.run_worktree,
@@ -97,7 +93,6 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
             context,
             warnings,
             force_resolve=force_resolve,
-            session_ignored_paths=session_doctor_state_paths,
             run_ignored_paths=run_doctor_state_paths,
         )
         session_head_before_join = head_commit(context.session_worktree)
@@ -108,6 +103,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
                 state_sync_commit,
                 cleanup,
                 report,
+                resolution,
             ) = _merge_and_finalize(
                 context,
                 state,
@@ -119,6 +115,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> TerminalResult:
                 post_join_hook=hook_result,
                 refactor_state_sync_commit=state_sync_commit,
                 cleanup=cleanup,
+                conflict_resolution=resolution,
                 state_after="ready" if cleanup == "completed" else "error",
             )
         except BaseException as exc:
@@ -169,16 +166,50 @@ def _merge_and_finalize(
     state: SessionState,
     warnings: list[str],
     session_head_before_join: str,
-) -> tuple[str | None, str, str | None, str, Path]:
+) -> tuple[str | None, str, str | None, str, Path, dict[str, object]]:
     """merge、hook、state 同期、結果保存、cleanup を一続きで確定する。"""
-    run_join_commit, hook_result, state_sync_commit, last_joined_apply_fork_commit = (
-        runtime_run_join.merge_run(
+    (
+        run_join_commit,
+        hook_result,
+        state_sync_commit,
+        last_joined_apply_fork_commit,
+        resolution,
+    ) = runtime_run_join.merge_run(
+        context,
+        state,
+        warnings,
+        session_head_before_join,
+    )
+    try:
+        return _finalize_merged_run(
             context,
             state,
             warnings,
-            session_head_before_join,
+            run_join_commit,
+            hook_result,
+            state_sync_commit,
+            last_joined_apply_fork_commit,
+            resolution,
         )
-    )
+    except BaseException as exc:
+        setattr(exc, "_merge_commit", run_join_commit)
+        setattr(exc, "_merge_resolution", resolution)
+        setattr(exc, "_post_join_hook", hook_result)
+        setattr(exc, "_state_sync_commit", state_sync_commit)
+        raise
+
+
+def _finalize_merged_run(
+    context: EditingRunContext,
+    state: SessionState,
+    warnings: list[str],
+    run_join_commit: str | None,
+    hook_result: str,
+    state_sync_commit: str | None,
+    last_joined_apply_fork_commit: str | None,
+    resolution: dict[str, object],
+) -> tuple[str | None, str, str | None, str, Path, dict[str, object]]:
+    """確定した merge の identity を保ちながら state と report を更新する。"""
     if context.kind == "feedback_report":
         from sub_commands.feedback.recovery import finish_manual_feedback_run
 
@@ -204,6 +235,7 @@ def _merge_and_finalize(
             "post_join_hook": hook_result,
             "refactor_state_sync_commit": state_sync_commit,
             "cleanup": "pending",
+            "conflict_resolution": resolution,
         },
         terminal_classification="error",
         exit_code=1,
@@ -248,6 +280,7 @@ def _merge_and_finalize(
                 "post_join_hook": hook_result,
                 "refactor_state_sync_commit": state_sync_commit,
                 "cleanup": cleanup,
+                "conflict_resolution": resolution,
             },
             report_path=report,
         )
@@ -273,7 +306,7 @@ def _merge_and_finalize(
                 warnings=tuple(warnings),
             ),
         ) from report_error
-    return run_join_commit, hook_result, state_sync_commit, cleanup, report
+    return run_join_commit, hook_result, state_sync_commit, cleanup, report, resolution
 
 
 def _record_join_failure(
@@ -283,10 +316,30 @@ def _record_join_failure(
     exc: BaseException,
     session_head_before_join: str,
 ) -> Path:
-    """未確定 post-join 差分を除き、active run を error として report する。"""
-    runtime_run_join.restore_session_after_join_failure(
-        context, session_head_before_join
+    """merge 前なら作業差分を戻し、確定済み merge は保持して報告する。"""
+    current_head = head_commit(context.session_worktree)
+    worktree_advanced = current_head != session_head_before_join
+    merge_commit = getattr(
+        exc,
+        "_merge_commit",
+        current_head if worktree_advanced else None,
     )
+    merge_committed = merge_commit is not None
+    post_join_hook = getattr(exc, "_post_join_hook", "not_run")
+    state_sync_commit = getattr(exc, "_state_sync_commit", None)
+    conflicts = (
+        unmerged_paths(context.session_worktree) if not worktree_advanced else []
+    )
+    if not worktree_advanced:
+        runtime_run_join.restore_session_after_join_failure(
+            context, session_head_before_join
+        )
+    else:
+        # post-join の未確定作業差分だけ除去し、成立した merge は保持する。
+        from cmoc_runtime import run_git
+
+        run_git(["reset", "--hard", "HEAD"], context.session_worktree)
+        run_git(["clean", "-fd"], context.session_worktree)
     state.run = RunPart(
         state="error",
         kind=context.kind,
@@ -296,10 +349,12 @@ def _record_join_failure(
     write_state(context.state_path, state)
     update_primary_report_fields(
         state_after="error",
-        run_join_commit=None,
-        post_join_hook="error",
+        run_join_commit=merge_commit,
+        post_join_hook=post_join_hook,
+        refactor_state_sync_commit=state_sync_commit,
         cleanup="not_run",
         error=repr(exc),
+        conflict_paths=conflicts,
     )
     return write_lifecycle_report(
         context,
@@ -307,11 +362,25 @@ def _record_join_failure(
         state_after="error",
         warnings=warnings,
         details={
-            "run_join_commit": None,
-            "post_join_hook": "error",
-            "refactor_state_sync_commit": None,
+            "run_join_commit": merge_commit,
+            "merge_committed": merge_committed,
+            "session_head_after_failure": current_head
+            if merge_committed
+            else session_head_before_join,
+            "post_join_hook": post_join_hook,
+            "refactor_state_sync_commit": state_sync_commit,
             "cleanup": "not_run",
             "error": repr(exc),
+            "conflict_paths": conflicts,
+            "conflict_resolution": getattr(
+                exc,
+                "_merge_resolution",
+                {
+                    "agent_status": "unresolved" if conflicts else "not_needed",
+                    "initial_conflicts": conflicts,
+                    "reason": getattr(exc, "detail", repr(exc)),
+                },
+            ),
         },
         terminal_classification="error",
         exit_code=1,

@@ -44,20 +44,19 @@
 # `commons`
 
 ## Summary
-- コマンド間で共有する cmoc runtime 基盤で、サブコマンドの開始・終了、設定と状態、Codex 実行、Git・worktree、編集 run、INDEX 更新と doctor 修復、feedback、報告・ログなどを担う。
-- 共通 API と責務別の runtime 境界をまとめているため、複数コマンドに関わる共有動作や、これらの境界をまたぐ変更の入口となる。
+- 各サブコマンドが共有する runtime 実装の入口です。CLI の実行とログ、Codex 呼び出し、設定・パス・Git 操作、session と editing run、feedback、INDEX 更新、report、editor handoff、通知などを扱います。
+- 複数のコマンドにまたがる runtime の責務や連携を追うときに参照します。
 
 ## Read this when
-- 複数のサブコマンドに共通する runtime の挙動を追う、または共通境界にまたがる変更を行うとき。
-- Codex 実行、Git・worktree と編集 run、feedback、INDEX 更新・doctor 修復の間で状態や終了処理がどう連携するか調べるとき。
+- 複数のサブコマンドから使われる runtime の挙動、状態管理、Git 操作、process cleanup を変更または調査するとき。
+- Codex 呼び出し、feedback の保存と publication、INDEX 更新、report、editor handoff など、共有実装の担当範囲を確認するとき。
 
 ## Do not read this when
-- 単一コマンド固有の動作だけを調べる場合は、そのコマンド側から始め、共有 runtime が関わる箇所だけを確認する。
-- 設定や挙動の正本を確認する場合は、共有実装ではなく該当する正本へ直接進む。
-- 変更対象の共有責務がすでに分かっている場合は、パッケージ全体ではなくその責務の実装から読む。
+- 要件や規範を確認するときは、対応する oracle の仕様文書を参照してください。
+- 作業が単一コマンド固有の手順、agent prompt、機能の組み立てに限られるときは、そのコマンド実装または agent call 構築側から確認してください。
 
 ## hash
-- aade47cd64a36f4243bc56866db4c4f0ec0d3fe1376cdc9a187aaedf857f31c1
+- b88a97608aec3b422c66cd27144dd6710e96a11606abf943966462babaaa033e
 
 # `config`
 
@@ -110,19 +109,21 @@
 # `sub_commands`
 
 ## Summary
-- doctor・tui・indexing と oracle、session、run、realization、feedback の各サブコマンド固有の実行処理を担う。
-- 実行前提の確認から agent 起動、成果の検査、状態・報告の更新、中断回復、merge、cleanup までを制御し、共通 runtime や parameter builder を利用する。
-- CLI の登録・引数解釈ではなく、呼び出されたコマンドの処理本体を調べる入口。
+- cmoc の各サブコマンドを CLI runtime に接続し、コマンド固有の処理と状態遷移を実装する層。
+- 診断・索引更新・TUI 起動、oracle 編集・調査、realization の適用・リファクタリング、session と editing run の管理、feedback observation の処理と report 公開を扱う。
+- 入力収集、Codex 呼び出し、変更検査、state・report 更新、回復と cleanup の流れをコマンド単位で追う入口。
 
 ## Read this when
-- 対象コマンド固有の実行手順、事前条件、状態遷移、失敗時の処理を調べる・変更する。
-- feedback report の観測処理、修復、publication と最終処理の流れを追う。
-- session/run の join・abandon や realization の fork が連携する処理を調べる。
+- サブコマンドの実行時の振る舞い、前提条件、エラー処理、結果報告の流れを変更または調査するとき。
+- session や editing run の作成・統合・破棄が、worktree や state にどう作用するか確認するとき。
+- feedback observation の取り込みから判定・修復・report 公開、または中断後の回復までを追うとき。
+- oracle や realization を扱うコマンドが、対話入力・agent 呼び出し・変更検査をどう組み立てるか調べるとき。
 
 ## Do not read this when
-- CLI のコマンド登録、構文、オプション、起動時の互換処理を調べる場合は、CLI の入口を直接読む。
-- Git 操作、プロセス追跡、状態管理、indexing など複数コマンドで共有する挙動を調べる場合は、共通 runtime の実装を直接読む。
-- agent に渡す指示文や parameter の内容、または正本仕様を確認する場合は、対応する builder や oracle の仕様を直接読む。
+- CLI コマンドの登録、引数、ディスパッチ経路だけを変更・確認するときは、CLI command tree の入口を読む。
+- 特定のサブコマンド群の局所的な実装だけが対象なら、この階層全体ではなく対応する下位項目から読む。
+- 複数コマンドで共有する Git・state・run lifecycle・indexing の処理を変更するときは、その共通処理の実装を直接読む。
+- agent に渡す prompt の構築や、コマンドの意図を定める正本仕様を調べるときは、それぞれの builder または oracle 仕様を読む。
 
 ## hash
-- 23dd540833356ed991b93ee0866a813892301840802bef26cb23e96883d3ca1b
+- b8de349368fadbb1699708a754fc7ce7ffb655dd6e533d27fcd74a1051e340f3

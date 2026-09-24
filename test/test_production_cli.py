@@ -144,10 +144,12 @@ def _registered_leaf_commands(
 def _real_path_config() -> CmocConfig:
     """全 agent call 種別を直接テスト用設定へ対応付ける。"""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # 具体的な provider/Model 名を fixture に固定せず、quota 消費を抑える既定 entry
+    # 具体的な provider/Model 名を fixture に固定せず、短い推論に使う既定 entry
     # の直接設定を全 agent call 種別へ適用する。
     config = CmocConfig(num_parallel=1)
-    quota_saving_call = config.codex.agent_calls["build_indexing_index_entry_parameter"]
+    quota_saving_call = config.codex.agent_calls[
+        "build_realization_refactor_fork_change_summary_parameter"
+    ]
     return replace(
         config,
         codex=replace(
@@ -478,7 +480,9 @@ def _advance_trust_confirmation(
     if confirmation_ready:
         os.write(master_fd, b"\r")
         return True, True
-    return b"Press enter to continue" in transcript, False
+    return (
+        b"Press enter to continue" in transcript or b"Trust and continue" in transcript
+    ), False
 
 
 def _stop_tui_process_group(process: subprocess.Popen[bytes]) -> None:

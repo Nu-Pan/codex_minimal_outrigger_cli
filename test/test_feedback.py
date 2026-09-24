@@ -39,6 +39,7 @@ import commons.runtime_feedback as feedback_module
 import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
 import commons.runtime_run_join as run_join_module
+import sub_commands.feedback.decision as decision_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
 from acp.builder.feedback.normalize_issue import (
@@ -2294,6 +2295,25 @@ def test_agent_issue_is_verified_compacted_then_removed_for_terminal_verdict(
     assert len(generation_directories) == 1
 
 
+def test_feedback_basis_ignores_join_generated_files(tmp_path: Path) -> None:
+    """join 後の INDEX と refactor state の同期は採用結果の本文根拠を変えない。"""
+    root = make_repo(tmp_path)
+    index = root / "oracle/INDEX.md"
+    state = root / ".cmoc/gt/realization/refactor/state.json"
+    state.parent.mkdir(parents=True)
+    index.write_text("first index\n")
+    state.write_text("{}\n")
+    run_git(root, "add", "oracle/INDEX.md", ".cmoc/gt/realization/refactor/state.json")
+    baseline = decision_module.worktree_inputs(root)
+
+    index.write_text("regenerated index\n")
+    state.write_text('{"entry": {}}\n')
+    assert decision_module.worktree_inputs(root) == baseline
+
+    (root / "oracle/spec.md").write_text("# updated spec\n")
+    assert decision_module.worktree_inputs(root) != baseline
+
+
 def test_machine_observation_stays_bounded_until_recurrence_threshold(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2304,13 +2324,19 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
     canonical_key: str | None = None
+    # 集約の threshold を確認するため、壁時計が数秒戻っても window 内の時刻を使う。
+    observed_at = (
+        (datetime.now(timezone.utc) - timedelta(minutes=5))
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
     for index in range(2):
         event = {
             "event_schema_version": 1,
             "event_id": f"evt_{index}",
             "event_type": "feedback.reporter_unavailable",
-            "occurred_at": rfc3339_now(),
+            "occurred_at": observed_at,
             "subcommand_invocation_id": f"scope_{index}",
             "component": "reporter",
             "failure_code": "missing",

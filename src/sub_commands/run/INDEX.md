@@ -33,36 +33,34 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の実行ライフサイクルをまとめ、active run の確認、共通 merge 処理の呼び出し、join 固有の state・report 更新、失敗時の復旧と cleanup を調整する。
-- 差分検査や merge の共通処理は runtime helper に委譲し、run の破棄処理は別の lifecycle に分かれている。
+- `cmoc run join` の制御フローをまとめ、active run の確認から共通の検査・merge 処理の呼び出し、join 固有の state・report 更新、失敗時の復旧と cleanup までを調整する。
+- join の成功・失敗・cleanup pending を通じた全体の状態遷移を追う入口となる。
 
 ## Read this when
-- `cmoc run join` の実行順序や `--force-resolve`、join 後の state・report、失敗時の復旧や cleanup pending の扱いを確認・変更するとき。
-- 共通 merge 処理の結果を join 側で run の種類ごとにどう反映するか追うとき。
+- `cmoc run join` の実行順序や active run の条件、join 固有の state・report 更新を調べるとき。
+- merge 後の処理に失敗した場合の復旧や、確定済み merge と cleanup pending の扱いを確認するとき。
 
 ## Do not read this when
-- 差分検査、merge conflict 解決、INDEX 更新など共通処理の実装だけを調べるときは、それらを担う runtime helper を直接読む。
-- run の停止や worktree・branch の破棄だけを調べるときは、abandon の lifecycle を読む。
-- CLI コマンドや option の登録だけを調べるときは、コマンド定義を読む。
+- 差分検査や `--force-resolve` の詳細、conflict resolution、共通 merge・hook・cleanup の実装を調べるときは、共通の join runtime 処理から読む。
+- run の破棄や、join 後に残った資源の cleanup 再試行を調べるときは、abandon の処理から読む。
 
 ## hash
-- 908869cb009c6790fd268053eeaccff300bc032e82c401427c6a2c302692be34
+- a7c43f8b9e7f8f5fac5ef922a7217ef64aa20cf4b3f84f78d728f346676dd7a6
 
 # `lifecycle.py`
 
 ## Summary
-- 編集 run の共通 helper を旧 import 経路から利用するための互換 shim。型と関数を共通実装から再公開し、session-path 判定 helper では `base` 省略を受け付けて共通実装へ委譲する。
+- editing run 共通 helper の旧 import path を保つ薄い互換 shim。共通 lifecycle 実装の型と関数を再公開する。
 
 ## Read this when
-- 旧 import 経路の公開内容や互換性を確認するとき。
-- session-path 判定 helper の `base` 省略呼び出しが維持されているか確認するとき。
+- 旧 import path の互換性や、ここから再公開する helper の範囲を確認・変更するとき。
 
 ## Do not read this when
-- 編集 run の開始、state 遷移、commit、差分判定など、実動作の仕様や変更先を調べるときは共通実装へ進む。
-- join・abandon・report のコマンド固有の処理を調べるときは、それぞれのコマンド実装へ進む。
+- editing run の開始、状態遷移、差分処理などの実装を追う・変更するときは、共通 lifecycle の実装を直接読む。
+- join や abandon など個別コマンドの手順を追う・変更するときは、そのコマンドの実装を直接読む。
 
 ## hash
-- fdb88ac943650b370240fd73bacf3729399025ad99668bc0c35571ab5624a017
+- 12aa75149d22d3c200f120d96e5588ad2a8d7bad421838c34a2010ef375244b8
 
 # `report.py`
 

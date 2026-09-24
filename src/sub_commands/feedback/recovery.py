@@ -208,7 +208,8 @@ def _finish_from_journal(
             from .decision import state_hash, worktree_inputs
 
             if state_hash(worktree_inputs(context.session_worktree)) != completion.get(
-                "decision_inputs_sha256"
+                "final_decision_inputs_sha256",
+                completion.get("decision_inputs_sha256"),
             ):
                 raise _failure("feedback finalization の判定条件が変更されています。")
             if (

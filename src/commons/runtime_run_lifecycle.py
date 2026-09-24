@@ -29,7 +29,6 @@ from .runtime_git import (
     delete_branch,
     head_commit,
     is_git_ignored,
-    is_oracle_file_path,
     is_realization_file_path,
     literal_pathspec,
     remove_worktree,
@@ -547,30 +546,6 @@ def unexpected_run_paths(
     )
 
 
-def unexpected_session_paths(
-    session_worktree: Path,
-    changes: list[GitChange],
-    *,
-    base: str,
-    ignored_paths: Collection[str] = (),
-) -> list[str]:
-    """run 開始後の session branch にある想定外 path を返す。"""
-    ignored = set(ignored_paths)
-    return sorted(
-        {
-            path
-            for change in changes
-            for path in change.paths
-            if path not in ignored
-            and not (
-                _is_oracle_change_path(session_worktree, base, path)
-                or is_generated_index_path(session_worktree, path, base=base)
-                or is_root_memo(session_worktree, session_worktree / path)
-            )
-        }
-    )
-
-
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
     """衝突しない run branch と管理 worktree path を予約候補として選ぶ。"""
     for _ in range(MAX_RUN_ID_ATTEMPTS):
@@ -627,29 +602,6 @@ def _is_run_expected_path(
     return _is_agent_expected_path(root, kind, path, fork_commit)
 
 
-def _is_oracle_path(path: str) -> bool:
-    """repository 相対 path が oracle file 候補の場所か判定する。"""
-    parts = Path(path).parts
-    return (
-        bool(parts)
-        and parts[0] == "oracle"
-        and Path(path).name
-        not in {
-            "AGENTS.md",
-            "INDEX.md",
-        }
-    )
-
-
-def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
-    """commit tree の path が oracle の regular-file entry か判定する。"""
-    if not _is_oracle_path(path):
-        return False
-    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md
-    # 削除・移動前の oracle 判定でも directory や Gitlink は file と扱わない。
-    return _is_regular_tree_file(worktree, commit, path)
-
-
 def _is_regular_tree_file(worktree: Path, commit: str, path: str) -> bool:
     """commit tree の path が regular file entry か判定する。"""
     entries = run_git(
@@ -680,14 +632,6 @@ def _is_regular_tree_file(worktree: Path, commit: str, path: str) -> bool:
         if stat.S_ISREG(entry_mode):
             return True
     return False
-
-
-def _is_oracle_change_path(worktree: Path, base: str, path: str) -> bool:
-    """change path が現在または fork 時点の oracle regular file か判定する。"""
-    candidate = worktree / path
-    if candidate.exists() or candidate.is_symlink():
-        return is_oracle_file_path(worktree, candidate)
-    return _is_oracle_tree_file(worktree, base, path)
 
 
 def is_generated_index_path(

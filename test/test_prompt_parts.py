@@ -111,8 +111,8 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
         ),
         pytest.param(
             _build_conflict_resolution_policy,
-            ("**必須**", "**禁止**", "**許容**"),
-            1,
+            ("**必須**", "**禁止**"),
+            3,
             id="conflict-resolution",
         ),
         pytest.param(
@@ -156,13 +156,17 @@ def test_category_policy_blocks_are_flat_and_keep_category_order(
     builder_result = builder()
     policy_header = builder_result[1]
     assert len(policy_header.children) == policy_count
-    assert all(isinstance(child, SDPolicy) for child in policy_header.children)
+    assert isinstance(policy_header.children[0], SDPolicy)
+    if policy_count != 3:
+        assert all(isinstance(child, SDPolicy) for child in policy_header.children)
 
     rendered = _render_policy(builder_result)
     lines = rendered.splitlines()
 
     assert len([line for line in lines if line.startswith("# ")]) == 1
-    assert not any(line.startswith("## ") for line in lines)
+    assert len([line for line in lines if line.startswith("## ")]) == (
+        2 if policy_count == 3 else 0
+    )
     assert [
         line
         for line in lines
@@ -237,11 +241,11 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     """conflict 解消結果の保持・報告・変更境界を伝える。"""
     builder_result = _build_conflict_resolution_policy()
     rendered_doc = _render_policy(builder_result)
-    assert "merge conflict を解決した結果が満たすべき規定" in rendered_doc
+    assert "両 branch の変更を整合したマージ結果" in rendered_doc
     assert "両 branch の両立する意図と挙動" in rendered_doc
-    assert "両側の意味を両立できず人間意図の選択が必要な場合" in rendered_doc
+    assert "新しい人間意図の選択が必要な場合" in rendered_doc
     assert "適用される規定に違反する解消結果" in rendered_doc
-    assert "解消に付随する編集の要否・範囲は自ら判断してよい" in rendered_doc
+    assert "初期の競合一覧にない関連ファイル" in rendered_doc
 
 
 def test_build_routing_policy_renders_core_reading_requirements() -> None:

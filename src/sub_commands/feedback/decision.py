@@ -2,7 +2,7 @@
 
 根拠: oracle/doc/app_spec/feedback.md の「用語と結果分類」。依存 path の申告を
 完全とはみなさず、読める repository 入力全体を保守的な検証条件として記録する。
-raw log と Git metadata は根拠の変更検知に混ぜない。
+raw log、Git metadata、cmoc の機械生成物は根拠の変更検知に混ぜない。
 """
 
 import os
@@ -14,11 +14,13 @@ from cmoc_runtime import run_git
 from commons.runtime_feedback_run_state import read_run_artifact
 from commons.runtime_feedback_store import canonical_json_bytes, sha256_bytes
 from commons.runtime_git import enumerate_oracle_and_realization_files
+from commons.runtime_paths import refactor_state_path
 
 
 def worktree_inputs(worktree: Path) -> dict[str, str]:
-    """tracked 入力と未 ignore の追加 file の内容・mode を読み取りだけで固定する。"""
+    """本文と依存設定の内容・mode を、機械生成物を除いて固定する。"""
     worktree = worktree.absolute()
+    refactor_state = refactor_state_path(worktree).relative_to(worktree)
     names = run_git(
         ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], worktree
     ).stdout.split("\0")
@@ -35,7 +37,12 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
         parts = relative.parts
         if not parts or relative.is_absolute() or ".." in parts:
             raise ValueError(f"feedback basis has an invalid path: {name}")
-        if parts[0] == "memo" or parts[:2] == (".cmoc", "gu"):
+        if (
+            parts[0] == "memo"
+            or parts[:2] == (".cmoc", "gu")
+            or relative.name == "INDEX.md"
+            or relative == refactor_state
+        ):
             continue
         path = worktree / relative
         # symlink の参照先や nested worktree を暗黙に読むことはしない。

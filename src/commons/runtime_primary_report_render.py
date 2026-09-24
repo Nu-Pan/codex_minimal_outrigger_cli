@@ -390,6 +390,20 @@ def _session_join_body(
     conflict_result = _operation_status(
         fields.get("conflict_resolution_result"), classification
     )
+    agent_report = fields.get("conflict_agent_report")
+    if isinstance(agent_report, str) and agent_report.strip():
+        fence = "`" * max(
+            3, 1 + max((len(run) for run in re.findall(r"`+", agent_report)), default=0)
+        )
+        agent_lines = [fence + "text", agent_report.rstrip("\n"), fence]
+    else:
+        agent_lines = ["- 未実行または出力なし"]
+    incidental = fields.get("conflict_incidental_paths")
+    incidental_lines = (
+        [f"- `{_inline_text(path)}`" for path in incidental]
+        if isinstance(incidental, list) and incidental
+        else ["- なし"]
+    )
     state_before = _field_status(fields.get("session_state_before"))
     state_after = _field_status(fields.get("session_state_after"))
     return [
@@ -413,6 +427,10 @@ def _session_join_body(
         *conflict_lines,
         f"- conflict 解消用 agent call: `{conflict_call}`",
         f"- 確定した解消結果: `{conflict_result}`",
+        "### agent の判断と検証",
+        *agent_lines,
+        "### 付随編集",
+        *incidental_lines,
         "## state 遷移",
         f"- session state: `{state_before}` -> `{state_after}`",
         "- state 更新: "

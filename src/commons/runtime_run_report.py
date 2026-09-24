@@ -5,6 +5,8 @@
 """
 
 import html
+import json
+import re
 from pathlib import Path
 
 from .runtime_logging import current_subcommand_logger
@@ -153,6 +155,17 @@ def write_lifecycle_report(
     related_logs = (
         related_log_lines(logger) if logger is not None else ["- unavailable"]
     )
+    resolution = details.get("conflict_resolution")
+    if operation == "join":
+        serialized = json.dumps(
+            resolution or {"agent_status": "not_needed"}, ensure_ascii=False, indent=2
+        )
+        fence = "`" * max(
+            3, 1 + max((len(run) for run in re.findall(r"`+", serialized)), default=0)
+        )
+        resolution_lines = ["## Conflict resolution", fence + "json", serialized, fence]
+    else:
+        resolution_lines = []
     content = "\n".join(
         [
             "---",
@@ -168,6 +181,7 @@ def write_lifecycle_report(
             ),
             "## Warnings",
             *([f"- {warning}" for warning in warnings] or ["- none"]),
+            *resolution_lines,
             "## Execution stages",
             *execution,
             "## Related logs",
