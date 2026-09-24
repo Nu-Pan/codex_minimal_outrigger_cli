@@ -732,7 +732,7 @@
     "last_investigated_at": "2026-07-24_23-51_40_540341000"
   },
   "src/commons/cmoc_runtime.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2282038ccfafc69ddc768e194cb1fbd33abaf42e4e7d481c102882236996ac05",
     "last_investigated_at": "2026-09-10_08-21_17_745930000"
@@ -784,6 +784,12 @@
     "last_investigation_result": "findings",
     "last_investigated_sha256": "046258c7aa902d1a5e63269513d47cab0a17a7a90eb3c0cdc9d3dffeca5e473f",
     "last_investigated_at": "2026-09-22_20-58_29_339753000"
+  },
+  "src/commons/runtime_codex_recovery.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "src/commons/runtime_codex_tui.py": {
     "investigation_required": true,
@@ -1212,25 +1218,25 @@
     "last_investigated_at": "2026-09-22_11-51_04_953098000"
   },
   "test/test_codex_runtime_errors.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "d499de66908c2d372163f1a6bea8610646987bbab9ee4b54cd52f2b6628873d8",
     "last_investigated_at": "2026-08-18_02-36_37_258456000"
   },
   "test/test_codex_runtime_exec.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "749a44c10250eb51e908b459a030fd3de815d281cc9b4f99077fdf8f50958f37",
     "last_investigated_at": "2026-09-11_02-04_53_659388000"
   },
   "test/test_codex_runtime_home.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "3cd2943266f8820d8285def29bafb570aa56b1fcdd9caeae51809dc6b395cc18",
     "last_investigated_at": "2026-09-10_15-15_50_576146000"
   },
   "test/test_codex_runtime_paths.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "6fada71b05aedce5adcbfa8a1774ac8f7bd21b87b140c96b22a25cddc1423ecf",
     "last_investigated_at": "2026-09-10_10-26_59_275100000"
@@ -1240,6 +1246,12 @@
     "last_investigation_result": "findings",
     "last_investigated_sha256": "a55306c525f326927a6d357bdbfbb0c0df6e9255dc482f519acb61d580540650",
     "last_investigated_at": "2026-09-10_17-29_12_007579000"
+  },
+  "test/test_codex_runtime_recovery.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "test/test_codex_runtime_retry.py": {
     "investigation_required": true,
@@ -1320,7 +1332,7 @@
     "last_investigated_at": "2026-09-11_03-15_24_423907000"
   },
   "test/test_indexing_preflight.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "8e4c49958ddfb34d504a365dee9746cabb8d8e61bb901055f2465904bfb6a93e",
     "last_investigated_at": "2026-09-10_10-40_14_744632000"
