@@ -25,7 +25,9 @@
 
 ユーザー中断要求を受け付けた cmoc は、新しい処理単位の開始を止める。実行中だった処理単位を完了させるか rollback するかは個別仕様または実装裁量とする。ただし、破損した部分結果や未確定の部分結果を完了済みとして残してはいけない。
 
-また、中断要求を受け付けた後は、そのサブコマンドのための新しい Codex CLI 呼び出し、retry、quota 回復待ち、および Codex CLI session の再開を行わない。この規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「quota 枯渇・レートリミットで停止した場合」にある待機・再開規則より優先する。
+中断要求は、quota または一時障害による待機中と、回復確認 probe の実行中にも受け付ける。受け付けた後は待機を終了し、実行中の probe も終了処理へ移す。そのサブコマンドのための新しい Codex CLI 呼び出し、probe、retry、回復待ち、および Codex CLI session の再開を行わない。probe の成功と競合した場合も、中断要求を優先する。
+
+この優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「回復待ちと再開」に優先する。ただし、本書の「中断要求の通知」が定める不可分な finalization 区間の扱いは維持する。待機中の中断を理由に、個別 workload が要求する処理単位の commit・rollback または確定済み部分結果の保持を省略してはならない。
 
 確定済みの部分結果を保持したまま、次の順序で完了処理を行う。
 
@@ -44,3 +46,4 @@ Windows toast による terminal result の通知は、`{{cmoc-root}}/oracle/doc
 - 中断後の refactor run の state と次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「ユーザー中断」を正本とする。
 - feedback report の issue 処理単位、run state、publication 禁止、observation retention、および次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「ユーザー中断」を正本とする。
 - 編集 run の中断位置を同じ run で再開する checkpoint を保存してはいけない。
+- Codex CLI の障害からの自動再開は、ユーザー中断後に同じ編集 run の作業を再開する権限を与えない。

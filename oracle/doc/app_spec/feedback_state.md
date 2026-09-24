@@ -165,7 +165,7 @@ issue remediation checkpoint は、少なくとも次の情報を hash で結び
 
 不適合 output、correction の途中結果、失敗した agent call、差分検査失敗、commit 失敗、および rollback 前の差分を正式な issue result checkpoint にしてはならない。これらは invocation error の診断情報として分離する。
 
-正式な remediation checkpoint は論理 agent call ごとに高々 1 件とする。同じ run と同じ issue identity の再確認結果は、新しい checkpoint として追加する。Structured Output correction、retry、および quota 待機後の resume は同じ論理 agent call の checkpoint に含める。
+正式な remediation checkpoint は論理 agent call ごとに高々 1 件とする。同じ run と同じ issue identity の再確認結果は、新しい checkpoint として追加する。Structured Output correction、retry、および quota または一時障害の回復待ち後の再開は同じ論理 agent call の checkpoint に含める。
 
 ### report cut
 

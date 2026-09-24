@@ -4,6 +4,8 @@
 
 ## エラー分類
 
+handled failure／internal failure は、エラー終了の性質による分類であり、回復待ちの対象かどうかとは別に判断する。Codex CLI の回復待ちの可否と終了条件は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」を正本とし、エラー終了へ移る場合に本節の基準で分類する。
+
 ### handled failure
 
 handled failure は、個別仕様または共通仕様から、想定済みの失敗と判断できるエラー終了である。少なくとも次の失敗を含む。

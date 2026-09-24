@@ -42,6 +42,8 @@ cmoc は、人間向け console ログの最初の出力として、実行 ID �
 - 進行通知は、cmoc が稼働中であることと、現在のトップレベルステップを人間が確認できる短い表示とする
 - 階層化された全サブステップを console へ列挙してはならない
 - サブステップ別の経過時間、個別 Codex call のログパス、および個別 Codex call の戻り値を、通常の進行通知へ列挙してはならない
+- Codex CLI の回復待ちでは、現在の待機理由、待機の継続、次回確認の目安、理由変更、復旧後の再開、および待機終了の理由を簡潔に示す。待機・再開の判断は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「回復待ちと再開」を正本とする
+- 個別 probe の呼び出し情報や結果は、本書の「診断記録」に残す。probe ごとの詳細を進行通知へ列挙せず、probe の成功をサブコマンドの完了として表示しない
 
 ## primary report
 
@@ -79,7 +81,7 @@ terminal result は、最外側の末端サブコマンドについて確定し�
 terminal result は、次の処理をすべて完了した後に確定して表示する。
 
 1. state、成果物、および終端結果に必要な情報を確定する
-2. 並列処理、非同期処理、および console へ出力し得る通知処理を停止または drain する
+2. 並列処理、非同期処理、回復待ち・probe・再開の処理、および console へ出力し得る通知処理を停止または drain する
 3. 非対話サブコマンドでは、確定した作業内容と終端結果を primary report に保存する
 4. terminal result を含むサブコマンド終了イベントをサブコマンドログへ書き込み、flush する
 
@@ -123,10 +125,11 @@ Windows toast の対象、発火順序、通知内容、および失敗時の扱
 - サブコマンド呼び出し
 - 階層化されたサブステップを含む全ステップと、その時間
 - 全 Codex call と、対応する Codex call ログ、経過時間、および戻り値
+- 回復待ちの開始・継続、理由とその変更、個別 probe の結果、復旧、再開と再発、および待機終了の理由。停止した呼び出しと probe・再開を対応付け、確認した呼び出し条件と結果の適用範囲を追跡可能にする
 - warning
 - handled failure と internal failure の判別に必要なエラー詳細
 - terminal result を含むサブコマンド終了イベント
-- サブコマンド全体の経過時間、Codex CLI quota 回復待ち時間、および終了コード
+- サブコマンド全体の経過時間、Codex CLI の quota と一時障害それぞれの回復待ち時間、および終了コード。待機理由が変わった場合も、各理由で待った時間を追跡可能にする
 
 過去のサブコマンド実行で起きたことを追跡するための具体的な field は、realization の裁量で定めてよい。例外として、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「rule registry」の detector rule が参照する event は、同仕様が定める `event_schema_version`, `event_id`, `event_type`, context、および rule 固有 field を安定した契約として含める。
 

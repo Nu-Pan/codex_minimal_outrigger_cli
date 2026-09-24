@@ -31,7 +31,7 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 
 - `codex exec`
 - Structured Output の補正 turn
-- retry、および quota 回復待ち後の再開
+- retry、quota または一時障害の回復確認 probe、および回復待ち後の再開
 - 並列 agent call
 
 ## TUI の通知境界

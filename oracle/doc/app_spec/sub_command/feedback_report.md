@@ -99,7 +99,7 @@ normalization agent は独立した原因診断や、summary、impact、現在�
 
 - remediation call は feedback 固有の安定した `agent_call_kind` を使用する。
 - issue ID は runtime input とし、`agent_call_kind` に含めない。
-- Structured Output correction、retry、および quota 待機後の resume は、同じ論理 agent call として数える。
+- Structured Output correction、retry、および quota または一時障害の回復待ち後の再開は、同じ論理 agent call として数える。回復確認 probe は issue remediation call に数えない。
 - issue remediation call は、同じ run branch の最新状態を順に参照できるよう逐次実行する。
 
 各 wave 内の issue identity は、安定した issue ID 順で処理する。
@@ -276,7 +276,7 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 agent call failure、tool 失敗、validation 失敗、差分検査失敗、commit 失敗、および orchestration 失敗を feedback issue または `human_required` に変換してはならない。
 
-quota 枯渇、retry、Structured Output correction、および resume の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` 呼び出し規約」を正本とする。
+quota と一時障害の分類・回復待ち・再開は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」に従う。Structured Output の補正と受理条件は、同文書の「Structured Output」に従う。これらの処理でも続行できない場合に、本節の終了処理へ移る。
 
 ## report の保存と表示
 

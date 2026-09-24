@@ -6,8 +6,8 @@ cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行�
 
 | 用語 | 実行単位 | cmoc が付与する識別情報 |
 |---|---|---|
-| agent call | 1 個の `AgentCallParameter` を入力とする論理的な実行。Structured Output を補正する場合は、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回と数える。 | 対応する builder を表す安定した低カーディナリティの `agent_call_kind` と、一意な agent call ID |
-| Codex call | 初回実行や補正を含む個々の Codex CLI 呼び出し。 | 初回、補正、および TUI process ごとに一意な Codex call ID |
+| agent call | 1 個の `AgentCallParameter` を入力とする論理的な実行。初回実行、Structured Output の補正、retry、および回復待ち後の再開を合わせて 1 回と数える。回復確認 probe は別の agent call とする。 | 対応する builder を表す安定した低カーディナリティの `agent_call_kind` と、一意な agent call ID |
+| Codex call | 初回実行、補正、retry、回復待ち後の再開、および probe を含む個々の Codex CLI 呼び出し。 | 各 CLI 呼び出し、および TUI process ごとに一意な Codex call ID |
 
 最外側の末端サブコマンドの invocation を識別する実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。agent call ID および Codex call ID とは識別対象を区別する。
 
@@ -192,10 +192,9 @@ cmoc の管理データは `.cmoc/gt` または `.cmoc/gu` 配下に配置する
 ## Model provider、Model、Reasoning Effort
 
 - agent call ごとの直接設定、値の意味、検証境界、および provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「Codex model provider」を正本とする
-- cmoc は各 agent call に使用する設定を、`AgentCallParameter.agent_call_kind` を key として `CmocConfigCodex` の対応する entry から取得する
+- cmoc は各 agent call に使用する設定を、同仕様の「agent call ごとの直接設定」と「回復確認 probe の設定例外」に従って取得する
 - `cmoc oracle edit` の設定の確定時点と両回での共用は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「ユーザー指示と prompt の構築」に従う
-- 取得した model provider、Model、および Reasoning Effort は、初回、Structured Output の補正、retry、および quota 待機後の resume を含む同一 agent call 内の全 Codex call で変更せず使用する
-- quota availability probe は独立した agent call とし、probe 自身の `agent_call_kind` に対応する設定を使用する
+- 取得した model provider、Model、Reasoning Effort、および provider-local 設定は、初回、Structured Output の補正、retry、および回復待ち後の再開を含む同一 agent call 内の全 Codex call で変更せず使用する
 - Codex CLI に対する Model と Reasoning Effort は、すべての呼び出しで次の argv により明示的に上書きする
     - Model: `--model`, `{{model-name}}`
     - Reasoning Effort: `--config`, `model_reasoning_effort="{{reasoning-effort}}"`
@@ -323,8 +322,9 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_call.json` に保存すること
 - `{{time-stamp}}_stdout.jsonl`, `{{time-stamp}}_stderr.log`, `{{time-stamp}}_output.json` に残らない情報だけを `{{time-stamp}}_call.json` に書くこと
 - 同一の Codex CLI 呼び出しでは、`{{time-stamp}}` を一致させる
-- 1 回の agent call に初回と補正の複数 Codex call が含まれる場合は、Codex call ごとに別の `{{time-stamp}}` と log 一式を作成する
+- 初回、補正、retry、回復待ち後の再開、および各 probe の Codex call ごとに、別の `{{time-stamp}}` と log 一式を作成する
 - 後続の Codex call は、先行する Codex call の log または出力を上書きしてはならない
+- 停止した呼び出しと probe・再開の対応、および各確認結果は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「診断記録」に従ってサブコマンドログから追跡可能にする
 
 ## stdout, stderr の扱い
 
@@ -390,6 +390,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - 各検証エラーには、違反した条件、対象 field または位置、期待値、および観測値を含める
 - 補正 prompt で、初回応答前に宣言されていなかった受理条件を追加してはいけない
 - 補正 Codex call は初回 Codex call 後に最大 2 回まで行う。したがって、出力生成 turn は初回を含めて最大 3 回とする
+- 回復待ち、待機理由の変更、probe の成功、または再開後の再発によって、補正回数の上限をリセットしてはならない
 - 出力補正の間隔を開ける必要はない
 
 ### 補正 turn の実行条件
@@ -417,20 +418,23 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 ### 基本的な考え方
 
-失敗時は、異常な状態のまま作業を続けてトークンを浪費することを避ける。quota 不足では回復を待って再開し、OpenAI サーバー側の一時的な問題であることが明白な既知のエラーでは自動 retry する。具体的な条件と処理は、以下の各節で定める。
+一時的な利用不能によって、それまでの作業を失ったり、本来の作業を繰り返して浪費したりすることを避ける。cmoc が管理する `codex exec` と `codex exec resume` が quota 枯渇または対象の一時障害で失敗した場合は、呼び出しを保留し、最小限の回復確認 probe で利用可能になるまで待つ。TUI 内部と、その他の外部処理には、この回復待ちを適用しない。
+
+### 最終的な成功と失敗の判断
+
+- CLI の正常終了と、当該 Codex call の最終的な成功をともに確認できた場合は、途中にエラーが記録されていても通常の出力取得・検証へ進む。途中のエラー記録だけで回復待ちを開始してはならない
+- 成功を確認できない場合や終端情報が矛盾する場合は、回復済みと推定しない。最終的な失敗を識別できる診断に基づいて以下の分類を行い、原因を判別できなければ回復待ちの対象外とする
+- CLI の実行成功と、Structured Output を正式な結果として受理できることは区別する。出力受理には本書の「機械的検証と正式な結果」を適用する
 
 ### Structured Output の出力契約違反
 
-- Structured Output の機械的検証に不合格だった場合は、本書の「同じ session での出力補正」に従う
+- Structured Output の機械的検証に不合格だった場合は、回復待ちへ入れず、本書の「同じ session での出力補正」に従う
 - schema または宣言済みの決定論的事後条件に含まれない意味的な判定を、出力補正の開始条件にしてはいけない
+- 補正用の CLI 呼び出し自体が quota 枯渇または対象の一時障害で停止した場合には回復待ちを適用するが、補正上限、同じ session の再開、および「補正 turn の実行条件」は維持する。これらを満たして再開できない場合は「補正不能時の扱い」に従う
 
 ### quota 枯渇・レートリミットで停止した場合
 
-quota が枯渇して Codex CLI の実行が停止した場合は、再び実行可能な状態になるまで待機し、再開する。例えば、5h limit または weekly limit が枯渇し、credits もない場合が該当する。回復の例には、weekly limit が残っている状態で 5h limit がリセットされて実行可能になった場合や、人間による credits の追加購入で実行可能になった場合がある。
-
-#### quota 枯渇の判定
-
-`codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合は、quota 枯渇と判定する。
+本書の「最終的な成功と失敗の判断」を経て、Codex call の最終的な失敗が stdout JSONL の次の明示的診断によるものと確認できる場合は、quota 枯渇に分類する。例えば、5h limit または weekly limit が枯渇し、credits もない場合が該当する。
 
 - `{"type":"error","message":"...Quota exceeded..."}`
 - `{"type":"turn.failed","error":{"message":"...Quota exceeded..."}}`
@@ -441,27 +445,80 @@ quota が枯渇して Codex CLI の実行が停止した場合は、再び実行
 - `{"type":"error","message":"...You hit your spend cap..."}`
 - `{"type":"turn.failed","error":{"message":"...You hit your spend cap..."}}`
 
-#### 待機と再開
+### 一時障害で失敗した場合
 
-待機中は、動作確認用のミニマルな Codex CLI 呼び出しを 30 分に 1 回実行する（ポーリング待機）。この quota availability probe の task は短い応答を 1 回返すことに限定し、追加の調査または作業を non-goal とする。probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_parameter` へ委譲する。
-
-並列実行中の Codex CLI 呼び出しが同時に待機へ入った場合は、最初に待機へ入ったスレッドだけが代表してポーリングを行う。
-
-再開対象の session ID は、本書の「Codex session ID」に従って、停止した Codex call の stdout JSONL から取得する。取得できた場合は、停止した時のセッションを `codex exec ... resume ...` サブコマンドで復元し、全く同じプロンプトで実行する。取得に失敗した場合は、resume せず同一の設定で再実行する。
-
-#### 表示と記録
-
-quota 枯渇による待機開始、継続中、および再開は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「進行通知」に従って簡潔に表示する。動作確認用 Codex call ごとのログパス、経過時間、および戻り値は console へ列挙せず、各 call とその結果をサブコマンドログから追跡可能にする。
-
-### サーバーの一時的不調で失敗した場合
-
-`codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合は、8 回までリトライする。
+一時障害は、Codex CLI と選択した model provider の間の一時的な利用不能と識別できる失敗に限る。基本対象は、Codex call の最終的な失敗が stdout JSONL の次の診断によるものと確認できる capacity 不足とする。
 
 - `{"type":"error", "message": "...Selected model is at capacity..."}`
 - `{"type":"turn.failed", "error":{"message": "...Selected model is at capacity..."}}`
 
-リトライの間隔は 5 sec を初期値とし、リトライが 1 回失敗するごとに倍にする。すべて失敗した場合は、コマンド全体を直ちに失敗させる。
+capacity 以外を対象に含める場合も、CLI と provider 間の一時的な利用不能と識別できることを必要条件とする。作業中の command、tool、または別の外部処理の失敗を、Codex CLI 自体の一時障害として扱ってはならない。具体的な追加診断の採否は、本書の「未確定事項」で区別する。
 
-### それ以外の想定外のエラー
+capacity 不足も本書の「回復待ちと再開」に従う。短時間 retry を先行させる段階は要求しない。
 
-作業を続行せず、コマンド全体を直ちに失敗させる。
+### 回復待ちの対象外
+
+quota 枯渇にも対象の一時障害にも分類できない失敗では、回復待ちへ入らず終了処理へ移る。認証・設定不備、恒久エラー、および原因不明の失敗がこれに該当する。HTTP status や「タイムアウト」などの語だけで、一時障害と断定してはならない。
+
+### 回復確認 probe
+
+probe は、停止した本来の作業を進めず、短い応答を 1 回返して利用可能性を確認する呼び出しとする。
+
+- 停止した呼び出しとは別の Codex session で、読み取り専用で実行する。追加の調査や作業を行わない
+- probe は 1 回の確認結果を返す。probe 自身の失敗から、別の回復待ちを再帰的に開始してはならない
+- 無応答が続く場合も有限時間でその確認を終え、成功を確認できなかった失敗として分類する。無応答だけから、復旧または以前と同じ待機理由を推定しない
+- 本書の「最終的な成功と失敗の判断」に従って当該 Codex call の成功を確認し、所定の短い応答も得られた場合だけ、再開を試みるための成功とする。probe の成功を、本来の作業の成功として扱ってはならない
+
+probe の設定取得と、一時障害の確認に必要な設定継承は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「回復確認 probe の設定例外」を正本とする。
+
+quota availability probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_parameter` へ委譲する。回復確認の目的、成功条件、待機・再開の判断は本書が所有し、builder または generated prompt へ委譲しない。
+
+### 回復待ちと再開
+
+#### 待機理由と確認間隔
+
+quota と一時障害の回復待ちは、次の共通規則に従う。
+
+- 待機中は、それまでの作業状態と呼び出し記録を保持する
+- quota の確認は 30 分に 1 回とする。一時障害の確認間隔は「未確定事項」に従い、quota の間隔と混同しない
+- probe の直近の確認結果が quota または対象の一時障害なら、その理由で待機する。理由が変わった場合は、待機理由と確認間隔を切り替えて通知する
+- 対象外の失敗へ変わった場合は、以前の理由で待ち続けず、待機を終了してエラー処理へ移る
+- 回復待ちを確認回数または総待機時間だけで自動打切りしてはならない。復旧、対象外の失敗、または適用対象で受理したユーザー中断まで待機する。probe 1 回の無応答を打ち切ることは、総待機時間の上限とは区別する
+
+#### 並列呼び出しの確認結果共有
+
+復旧確認に関わる呼び出し条件と待機理由が同じで、probe の設定継承の適用範囲を含めて確認結果を適用できると分かる範囲では、代表一つの probe を共有する。条件の同等性が分からない呼び出しへ成功結果を広げてはならない。理由が変わった場合もこの共有条件を満たす範囲で扱う。
+
+#### 復旧後の再開と再発
+
+probe が成功したら、保留していた呼び出しの再開を試みる。通常の作業呼び出しは、次の規則に従う。
+
+- 再開対象の session ID は、本書の「Codex session ID」に従って、停止した Codex call の stdout JSONL から取得する。同じ agent call で既に特定できた元の session ID は保持し、後続 call で再取得できないことだけを理由に未取得扱いにしない
+- session ID を取得できた場合は、その session を `codex exec resume` で復元し、停止した呼び出しと同じ prompt、同じ設定で実行する
+- session ID を取得できない場合は、同じ prompt と設定で再実行する
+- session ID があるのに再開できない場合は、新しい session へ自動で切り替えず、失敗として終了処理へ移る。ただし、再開用 CLI 呼び出しの失敗が quota または対象の一時障害なら、再分類して回復待ちへ戻る
+
+Structured Output の補正には、本書の「同じ session での出力補正」と「補正 turn の実行条件」を優先する。補正の session を特定できない場合を、通常の作業呼び出しの再実行で代替してはならない。
+
+再開後も、最終的な成功・失敗の判断と出力検証を省略しない。quota または対象の一時障害が再発した場合は、改めて分類した理由で待機へ戻る。
+
+#### 中断と終了処理
+
+ユーザー中断の対象と優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「対象」と「共通動作」に従う。回復待ちを導入したことだけを根拠に、中断対象外のサブコマンドへ正常中断を追加してはならない。
+
+待機対象外の失敗または再開不能で続行を断念する場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー分類」と「エラー終了の確定」に従う。終了時の commit、rollback、部分成果、および state の扱いは各 workload の正本を維持し、共通の回復処理で一律に変更しない。特に、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に対する自動 rollback を追加してはならない。
+
+#### 表示と記録
+
+待機理由、継続、次回確認、理由変更、復旧後の再開、および待機終了の console 表示は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「進行通知」に従う。各 probe とその結果、呼び出しとの対応、および待機時間を含む経過は、同仕様の「診断記録」に従う。
+
+### 未確定事項
+
+次の事項は、採用済みの回復待ち方針から区別して未確定のまま残す。
+
+- 一時障害の確認間隔。5 分は暫定候補であり、確定値ではない
+- capacity 以外の具体的な診断集合と厳密な対応表。HTTP 503、接続断、応答タイムアウトは追加候補であり、個別診断の採否は未確定とする。対象範囲の境界は「一時障害で失敗した場合」に従う
+- probe の設定継承を、一時障害の確認を含まない既存 quota 待機全体にも適用するか。確定済みの例外と理由変更時の適用範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「回復確認 probe の設定例外」に従う
+- 中断対象外サブコマンドの長期待機を終了する操作と、そのときの成果の扱い。正常中断の対象を追加するには個別仕様の変更が必要であり、既存の終了・差分規則は維持する
+
+一方、合意した失敗分類を認識する方法、probe の無応答を判定する具体時間、待機の細かな調整、代表 probe の選定、およびログの具体的な項目・文言は、確定済みの振る舞いを満たす範囲で実装裁量とする。この裁量によって、上記の未確定事項を確定済みの人間判断として扱ってはならない。
