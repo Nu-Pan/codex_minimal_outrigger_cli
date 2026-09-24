@@ -140,11 +140,13 @@ class CmocConfigCodex:
                 model="gpt-6-luna",
                 reasoning_effort="medium",
             ),
-            # NOTE 呼び出し回数が非常に多い単純な要約タスクなので、Luna しか選べない。
+            # NOTE
+            #   呼び出し回数が非常に多い単純な要約タスクなので、Luna しか選べない。
+            #   Low だと要約内容の問題が頻発するので high に上げた
             "build_indexing_index_entry_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-luna",
-                reasoning_effort="low",
+                reasoning_effort="high",
             ),
             # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
             "build_quota_availability_probe_parameter": CodexCallConfig(
