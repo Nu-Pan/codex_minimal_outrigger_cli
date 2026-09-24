@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 import typer
 
+from .runtime_codex_recovery import install_recovery_interruption
 from .runtime_doctor import run_doctor_preprocess
 from .runtime_errors import DEFAULT_NEXT_ACTION, CmocError, render_error, safe_text
 from .runtime_feedback import start_feedback_invocation, stop_feedback_invocation
@@ -95,6 +96,9 @@ def run_cli_subcommand(
         feedback_invocation = None
         stop_feedback_invocation(invocation, token)
 
+    restore_recovery_interruption = (
+        install_recovery_interruption() if interruptible else None
+    )
     try:
         current_root = work_root()
         notification_root = repo_root()
@@ -246,6 +250,8 @@ def run_cli_subcommand(
         terminal_state = "failed"
         raise typer.Exit(failed_returncode) from exc
     finally:
+        if restore_recovery_interruption is not None:
+            restore_recovery_interruption()
         # terminal result へ到達する通常経路では既に drain 済みである。初期化途中の
         # 想定外 failure だけをここで回収し、collector を残さない。
         if feedback_token is not None:
@@ -394,6 +400,7 @@ def _finalize_subcommand(
         "returncode": returncode,
         "elapsed_sec": elapsed,
         "quota_wait_sec": logger.quota_wait_sec,
+        "transient_wait_sec": logger.transient_wait_sec,
         "pending_feedback_observation_count": pending,
         "warnings": list(logger.warning_messages),
         "terminal_result": terminal_record,

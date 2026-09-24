@@ -1403,13 +1403,17 @@ def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_abandon_module, "_stop_joinable_run", lambda *_args: "stopped")
+    monkeypatch.setattr(
+        run_abandon_module, "_stop_joinable_run", lambda *_args: "stopped"
+    )
 
     def fail_worktree_cleanup(*_args: object) -> NoReturn:
         """停止後の worktree cleanup failure を再現する。"""
         raise RuntimeError("cleanup failed after process stop")
 
-    monkeypatch.setattr(run_abandon_module, "_remove_run_worktree", fail_worktree_cleanup)
+    monkeypatch.setattr(
+        run_abandon_module, "_remove_run_worktree", fail_worktree_cleanup
+    )
 
     result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
 

@@ -1,20 +1,10 @@
-"""1 回の agent call に含まれる Codex call の実行ループを扱う。
-
-このファイルは 16,000 文字を超えるが、Structured Output 検証・補正、capacity
-retry、quota 代表 probe、resume 継続は同じ subprocess 結果、call log、
-subcommand event、補正・retry counter を共有する 1 つの状態機械である。TUI 起動は
-別 module へ分け、exec の分岐だけをここに残すことで責務境界を exec 実行制御
-へ限定している。quota 処理だけをさらに分離すると、resume session ID と log/event
-の読み取り文脈が呼び出し元と分断されるため、現状は一体で読む方が凝集性が高い。
-根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
-「realization file を扱う判断基準」
-"""
+"""Codex exec の出力検証・補正と、回復待ち後の同一 call 再開を制御する。"""
 
 import json
 import subprocess
-import sys
 import threading
 import time
+from copy import deepcopy
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -27,18 +17,23 @@ from config.cmoc_config import CmocConfig
 
 from .runtime_codex_logging import format_codex_call_error
 from .runtime_codex_profile import (
+    classify_codex_call,
     codex_error_text,
     codex_subprocess_env,
     extract_resume_token,
-    is_capacity_error,
-    is_quota_error,
-    is_unexpected_error,
     prepare_codex_override_args,
     prepare_schema,
     read_output_json,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
+)
+from .runtime_codex_recovery import (
+    CodexOutcome,
+    RecoveryReason,
+    check_recovery_interruption,
+    current_recovery_cancellation,
+    wait_for_recovery,
 )
 from .runtime_config import load_config
 from .runtime_errors import CmocError
@@ -53,7 +48,6 @@ from .runtime_logging import SubcommandLogger, current_subcommand_logger
 from .runtime_paths import (
     _reserve_timestamped_path,
     codex_log_dir,
-    console_timestamp,
     timestamp,
 )
 from .runtime_results import (
@@ -62,24 +56,9 @@ from .runtime_results import (
     StructuredOutputValidationIssue,
 )
 
-_QUOTA_CONDITION = threading.Condition()
-_QUOTA_POLLING = False
-_QUOTA_PROBE_AVAILABLE = False
-_QUOTA_PROBE_ERROR: BaseException | None = None
 _MAX_OUTPUT_CORRECTIONS = 2
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMPS: dict[Path, str] = {}
-
-
-def _emit_quota_progress(message: str) -> None:
-    """quota 回復待ちの状態遷移だけを簡潔に stderr へ通知する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    print(
-        f"# {console_timestamp()} Codex CLI の quota 回復待ち: {message}",
-        file=sys.stderr,
-        flush=True,
-    )
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -319,16 +298,18 @@ def run_codex_exec(
     config: CmocConfig | None = None,
     purpose: str = "codex exec",
     structured_output_postcondition: StructuredOutputPostcondition | None = None,
-    max_capacity_retries: int = 8,
-    capacity_initial_sleep_sec: float = 5.0,
+    # 一時障害の確認間隔は未確定なので、runtime の暫定値として 5 分を使う。
+    transient_poll_interval_sec: float = 300.0,
+    probe_timeout_sec: float = 120.0,
     quota_poll_interval_sec: float = 1800.0,
-    max_quota_polls: int | None = None,
     subcommand_logger: SubcommandLogger | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 補正、実行記録を一括制御する。"""
+    # 設定の外部変更を correction・probe・resume へ持ち込まない。
+    check_recovery_interruption()
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
-    config = config or load_config(path_context.work_root)
+    config = deepcopy(config or load_config(path_context.work_root))
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
     agent_call_cwd = path_context.agent_call_cwd
@@ -399,9 +380,10 @@ def run_codex_exec(
         run_parameter: AgentCallParameter,
         run_codex_home: Path,
         run_agent_call_cwd: Path,
+        run_config: CmocConfig = config,
     ) -> dict[str, str]:
         """call log に残す論理値を実際の呼び出し parameter に揃える。"""
-        call_config = config.codex.agent_calls[run_parameter.agent_call_kind]
+        call_config = run_config.codex.agent_calls[run_parameter.agent_call_kind]
         return {
             "codex_home": str(run_codex_home),
             "agent_call_kind": run_parameter.agent_call_kind,
@@ -450,10 +432,12 @@ def run_codex_exec(
         *,
         run_agent_call_cwd: Path = agent_call_cwd,
         run_codex_env: dict[str, str] = codex_env,
+        timeout: float | None = None,
     ) -> subprocess.CompletedProcess[str]:
         """prompt logをstdinとしてCodex subprocessを起動する。"""
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # prompt log file は `codex exec ... -` の stdin source である。
+        check_recovery_interruption()
         with run_prompt_path.open(encoding="utf-8") as prompt_file:
             return run_codex_subprocess(
                 run_argv,
@@ -463,6 +447,8 @@ def run_codex_exec(
                 encoding="utf-8",
                 capture_output=True,
                 env=run_codex_env,
+                timeout=timeout,
+                cancellation=current_recovery_cancellation(),
             )
 
     def _write_call_log(
@@ -505,6 +491,7 @@ def run_codex_exec(
 
     call_started_at = time.perf_counter()
     quota_wait_sec = 0.0
+    transient_wait_sec = 0.0
     logger = subcommand_logger or current_subcommand_logger()
 
     def _emit_codex_call_event(
@@ -532,6 +519,7 @@ def run_codex_exec(
             "returncode": returncode,
             "elapsed_sec": elapsed_sec,
             "quota_wait_sec": quota_wait_sec,
+            "transient_wait_sec": transient_wait_sec,
             "quota_polls": quota_polls,
             "call_log_path": str(run_call_path),
             "prompt_log_path": str(run_prompt_path),
@@ -570,7 +558,7 @@ def run_codex_exec(
                 agent_call_id=active_agent_call_id,
                 agent_call_kind=active_agent_call_kind,
                 codex_call_id=active_codex_call_id,
-                codex_session_id=correction_session_id,
+                codex_session_id=correction_session_id or resume_session_id,
                 call_log_path=str(run_call_path),
                 schema_sha256=sha256_bytes(schema_path.read_bytes()),
                 last_failure_stage=last_failure_stage,
@@ -681,24 +669,150 @@ def run_codex_exec(
             schema_path=run_schema_path,
             elapsed_sec=time.perf_counter() - call_started_at,
             quota_wait_sec=quota_wait_sec,
+            transient_wait_sec=transient_wait_sec,
             quota_polls=quota_polls,
         )
 
     output_corrections = 0
-    capacity_attempts = 0
     quota_polls = 0
-    sleep_sec = capacity_initial_sleep_sec
-    capacity_retry_pending = False
     resume_session_id: str | None = None
     correction_session_id: str | None = None
-    quota_probe_agent_call_id: str | None = None
-    quota_probe_capacity_attempts = 0
-    quota_probe_sleep_sec = capacity_initial_sleep_sec
+    recovery_source_call_id: str | None = None
     current_prompt = parameter.prompt
     frozen_artifact_snapshot: WorktreeSnapshot | None = None
     artifact_changed_paths: frozenset[str] = frozenset()
 
+    def _probe_recovery(
+        reason: RecoveryReason, inherited: bool, recovery_id: str
+    ) -> CodexOutcome:
+        # probe は独立した agent call。元の session や output correction を使わない。
+        nonlocal active_agent_call_id, active_agent_call_kind, active_codex_call_id
+        nonlocal quota_polls
+        check_recovery_interruption()
+        probe_parameter = _quota_availability_probe_parameter(parameter)
+        probe_config = deepcopy(config)
+        if inherited:
+            probe_config.codex.agent_calls[probe_parameter.agent_call_kind] = (
+                config.codex.agent_calls[parameter.agent_call_kind]
+            )
+        probe_agent_call_cwd = AgentCallPathContext(
+            probe_parameter.agent_call_cwd
+        ).agent_call_cwd
+        probe_codex_home = codex_home
+        probe_args = prepare_codex_override_args(probe_parameter, probe_config)
+        probe_call_data = _call_data(
+            probe_parameter, probe_codex_home, probe_agent_call_cwd, probe_config
+        )
+        probe_call_data.update(
+            recovery_id=recovery_id,
+            stopped_agent_call_id=agent_call_id,
+            stopped_codex_call_id=recovery_source_call_id or "",
+        )
+        active_agent_call_id = uuid7_prefixed("agc_")
+        active_agent_call_kind = probe_parameter.agent_call_kind
+        active_codex_call_id = uuid7_prefixed("cdc_")
+        probe_ts, probe_prompt, probe_stdout, probe_stderr, probe_output, probe_call = (
+            _new_log_paths()
+        )
+        probe_argv = _base_exec_argv(probe_args, probe_agent_call_cwd)
+        probe_argv.extend(["--json", "--output-last-message", str(probe_output), "-"])
+        probe_purpose = (
+            "quota availability probe"
+            if reason == "quota"
+            else "transient recovery probe"
+        )
+        _write_prompt_log(probe_prompt, probe_parameter.prompt)
+        _write_call_log(
+            probe_call,
+            run_purpose=probe_purpose,
+            run_ts=probe_ts,
+            run_argv=probe_argv,
+            run_prompt_path=probe_prompt,
+            run_stdout_path=probe_stdout,
+            run_stderr_path=probe_stderr,
+            run_output_path=probe_output,
+            run_schema_path=None,
+            run_call_data=probe_call_data,
+        )
+        started_at = time.perf_counter()
+        probe_feedback = begin_feedback_call(
+            agent_call_cwd=probe_agent_call_cwd,
+            agent_call_id=active_agent_call_id,
+            agent_call_kind=active_agent_call_kind,
+            codex_call_id=active_codex_call_id,
+            log_paths=[probe_call, probe_prompt, probe_stdout, probe_stderr],
+        )
+        outcome: CodexOutcome = "failed"
+        returncode = None
+        error = None
+        try:
+            if reason == "quota":
+                quota_polls += 1
+            poll = _run_with_prompt_file(
+                probe_argv,
+                probe_prompt,
+                run_agent_call_cwd=probe_agent_call_cwd,
+                run_codex_env=probe_feedback.subprocess_env(codex_env),
+                timeout=probe_timeout_sec,
+            )
+            probe_stdout.write_text(poll.stdout, encoding="utf-8")
+            probe_stderr.write_text(poll.stderr, encoding="utf-8")
+            returncode = poll.returncode
+            outcome = classify_codex_call(poll.stdout, poll.returncode)
+            if outcome == "succeeded":
+                # builder は固定 literal を指定しないため、短い非空応答を確認する。
+                try:
+                    response = probe_output.read_text(encoding="utf-8")
+                except (FileNotFoundError, UnicodeError):
+                    response = ""
+                if not response.strip() or len(response) > 4096:
+                    outcome = "failed"
+            if outcome != "succeeded":
+                error = (
+                    codex_error_text(poll.stdout, poll.stderr)
+                    or "probe response unavailable"
+                )
+            check_recovery_interruption()
+            return outcome
+        except subprocess.TimeoutExpired as exc:
+            # 部分 stdout の既知 marker だけで、無応答を以前の理由へ分類しない。
+            for path, content in (
+                (probe_stdout, exc.stdout),
+                (probe_stderr, exc.stderr),
+            ):
+                path.write_text(
+                    content.decode("utf-8", errors="replace")
+                    if isinstance(content, bytes)
+                    else content or "",
+                    encoding="utf-8",
+                )
+            error = "recovery probe timed out"
+            return "failed"
+        except BaseException as exc:
+            error = format_codex_call_error(exc)
+            outcome = "failed"
+            raise
+        finally:
+            probe_feedback.close()
+            _emit_codex_call_event(
+                run_purpose=probe_purpose,
+                run_call_path=probe_call,
+                run_prompt_path=probe_prompt,
+                run_stdout_path=probe_stdout,
+                run_stderr_path=probe_stderr,
+                run_output_path=probe_output,
+                run_schema_path=None,
+                started_at=started_at,
+                returncode=returncode,
+                status=f"{outcome}_waiting"
+                if outcome in {"quota", "transient"}
+                else outcome,
+                error=error,
+                run_codex_home=probe_codex_home,
+            )
+
     while True:
+        check_recovery_interruption()
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = (
             _new_log_paths()
         )
@@ -717,6 +831,14 @@ def run_codex_exec(
             run_stderr_path=stderr_path,
             run_output_path=output_path,
             run_schema_path=schema_path,
+            run_call_data={
+                **base_call_data,
+                **(
+                    {"resumed_from_codex_call_id": recovery_source_call_id}
+                    if recovery_source_call_id
+                    else {}
+                ),
+            },
         )
         attempt_started_at = time.perf_counter()
         feedback_call = begin_feedback_call(
@@ -786,19 +908,14 @@ def run_codex_exec(
             returncode=result.returncode,
         )
         error_text = codex_error_text(result.stdout, result.stderr)
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # retry/wait 挙動は JSONL event で決め、既知の event がない場合だけ exit status を
-        # fallback の failure signal とする。
-        capacity_error = is_capacity_error(result.stdout)
-        quota_error = is_quota_error(result.stdout)
-        unexpected_error = is_unexpected_error(result.stdout)
-        if result.returncode != 0 or capacity_error or quota_error or unexpected_error:
-            if (
-                capacity_error
-                and not unexpected_error
-                and capacity_attempts < max_capacity_retries
-            ):
-                capacity_attempts += 1
+        # 最終 outcome を先に確定し、途中の error と回復済みの成功を区別する。
+        check_recovery_interruption()
+        resume_session_id = resume_session_id or _extract_session_id_from_stdout_log(
+            stdout_path
+        )
+        outcome = classify_codex_call(result.stdout, result.returncode)
+        if outcome != "succeeded":
+            if outcome in {"quota", "transient"}:
                 _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
@@ -809,304 +926,40 @@ def run_codex_exec(
                     run_schema_path=schema_path,
                     started_at=attempt_started_at,
                     returncode=result.returncode,
-                    status="capacity_retrying",
+                    status=f"{outcome}_waiting",
                     error=error_text,
                 )
-                time.sleep(sleep_sec)
-                sleep_sec *= 2
-                continue
-            if quota_error and not unexpected_error:
-                global _QUOTA_POLLING, _QUOTA_PROBE_AVAILABLE, _QUOTA_PROBE_ERROR
-                _emit_codex_call_event(
-                    run_purpose=purpose,
-                    run_call_path=call_path,
-                    run_prompt_path=prompt_path,
-                    run_stdout_path=stdout_path,
-                    run_stderr_path=stderr_path,
-                    run_output_path=output_path,
-                    run_schema_path=schema_path,
-                    started_at=attempt_started_at,
-                    returncode=result.returncode,
-                    status="quota_waiting",
-                    error=error_text,
-                )
-                with _QUOTA_CONDITION:
-                    if _QUOTA_POLLING:
-                        wait_started_at = time.perf_counter()
-                        _emit_quota_progress("代表 probe の実行を待機中")
-                        _QUOTA_CONDITION.wait_for(lambda: not _QUOTA_POLLING)
-                        waited_sec = time.perf_counter() - wait_started_at
-                        quota_wait_sec += waited_sec
-                        if logger is not None:
-                            logger.add_quota_wait(waited_sec)
-                        if _QUOTA_PROBE_ERROR is not None:
-                            raise _QUOTA_PROBE_ERROR
-                        if not _QUOTA_PROBE_AVAILABLE:
-                            raise CmocError(
-                                "Codex CLI quota 待機の代表 probe が中断しました。",
-                                [
-                                    "quota 回復後に同じ cmoc コマンドを再実行してください。"
-                                ],
-                                _codex_failure_detail(
-                                    classification="quota wait interrupted",
-                                    returncode=result.returncode,
-                                    call_path=call_path,
-                                    stdout_path=stdout_path,
-                                    stderr_path=stderr_path,
-                                ),
-                            )
-                        resume_session_id = correction_session_id or (
-                            _extract_session_id_from_stdout_log(stdout_path)
-                        )
-                        continue
-                    _QUOTA_PROBE_AVAILABLE = False
-                    _QUOTA_PROBE_ERROR = None
-                    _QUOTA_POLLING = True
+                assert active_codex_call_id is not None
+                recovery_source_call_id = active_codex_call_id
                 try:
-                    _emit_quota_progress("ポーリングを開始")
-                except BaseException as exc:
-                    with _QUOTA_CONDITION:
-                        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                        # polling を開始できない場合は waiter を解放する。
-                        _QUOTA_PROBE_ERROR = exc
-                        _QUOTA_POLLING = False
-                        _QUOTA_CONDITION.notify_all()
+                    waited = wait_for_recovery(
+                        key=(
+                            logger.invocation_id if logger else root.resolve(),
+                            agent_call_cwd.resolve(),
+                            codex_home.resolve(),
+                            tuple(sorted(codex_env.items())),
+                            tuple(override_args),
+                            repr(config.codex),
+                            current_recovery_cancellation(),
+                        ),
+                        reason=outcome,
+                        probe=_probe_recovery,
+                        quota_interval=quota_poll_interval_sec,
+                        transient_interval=transient_poll_interval_sec,
+                        logger=logger,
+                        agent_call_id=agent_call_id,
+                        stopped_codex_call_id=recovery_source_call_id,
+                        call_log_path=str(call_path),
+                    )
+                except Exception:
+                    # probe の失敗でも、正式出力を失った本来の call を記録する。
+                    active_agent_call_id = agent_call_id
+                    active_agent_call_kind = parameter.agent_call_kind
+                    active_codex_call_id = recovery_source_call_id
+                    _emit_structured_output_exhausted("resume_unavailable", call_path)
                     raise
-                probe_available = False
-                probe_error: BaseException | None = None
-                try:
-                    while True:
-                        if (
-                            max_quota_polls is not None
-                            and quota_polls >= max_quota_polls
-                        ):
-                            raise CmocError(
-                                "Codex CLI quota が枯渇しました。",
-                                [
-                                    "quota 回復後に同じ cmoc コマンドを再実行してください。"
-                                ],
-                                _codex_failure_detail(
-                                    classification="quota exhausted",
-                                    returncode=result.returncode,
-                                    call_path=call_path,
-                                    stdout_path=stdout_path,
-                                    stderr_path=stderr_path,
-                                ),
-                            )
-                        quota_polls += 1
-                        capacity_retry = capacity_retry_pending
-                        if capacity_retry_pending:
-                            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                            # capacity retry は自身の backoff をすでに待っているため、通常の
-                            # quota polling interval を追加しない。
-                            capacity_retry_pending = False
-                        else:
-                            if logger is not None:
-                                logger.add_quota_wait(quota_poll_interval_sec)
-                            quota_wait_sec += quota_poll_interval_sec
-                            time.sleep(quota_poll_interval_sec)
-                        quota_probe_parameter = _quota_availability_probe_parameter(
-                            parameter
-                        )
-                        if not capacity_retry:
-                            quota_probe_agent_call_id = uuid7_prefixed("agc_")
-                            quota_probe_capacity_attempts = 0
-                            quota_probe_sleep_sec = capacity_initial_sleep_sec
-                        assert quota_probe_agent_call_id is not None
-                        active_agent_call_id = quota_probe_agent_call_id
-                        active_agent_call_kind = quota_probe_parameter.agent_call_kind
-                        active_codex_call_id = uuid7_prefixed("cdc_")
-                        probe_agent_call_cwd = AgentCallPathContext(
-                            quota_probe_parameter.agent_call_cwd
-                        ).agent_call_cwd
-                        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                        # quota probe は独立した agent call なので、固有の
-                        # AgentCallParameter も argv/cwd/env を駆動しなければならない。
-                        probe_codex_home = resolve_codex_home(probe_agent_call_cwd)
-                        validate_codex_home(probe_codex_home)
-                        probe_codex_env = codex_subprocess_env(probe_codex_home)
-                        probe_override_args = prepare_codex_override_args(
-                            quota_probe_parameter,
-                            config,
-                        )
-                        probe_call_data = _call_data(
-                            quota_probe_parameter,
-                            probe_codex_home,
-                            probe_agent_call_cwd,
-                        )
-                        (
-                            probe_ts,
-                            probe_prompt_path,
-                            probe_stdout_path,
-                            probe_stderr_path,
-                            probe_output_path,
-                            probe_call_path,
-                        ) = _new_log_paths()
-                        probe_argv = _base_exec_argv(
-                            probe_override_args, probe_agent_call_cwd
-                        )
-                        probe_argv.extend(
-                            [
-                                "--json",
-                                "--output-last-message",
-                                str(probe_output_path),
-                                "-",
-                            ]
-                        )
-                        _write_prompt_log(
-                            probe_prompt_path, quota_probe_parameter.prompt
-                        )
-                        _write_call_log(
-                            probe_call_path,
-                            run_purpose="quota availability probe",
-                            run_ts=probe_ts,
-                            run_argv=probe_argv,
-                            run_prompt_path=probe_prompt_path,
-                            run_stdout_path=probe_stdout_path,
-                            run_stderr_path=probe_stderr_path,
-                            run_output_path=probe_output_path,
-                            run_schema_path=None,
-                            run_call_data=probe_call_data,
-                        )
-                        probe_started_at = time.perf_counter()
-                        probe_feedback_call = begin_feedback_call(
-                            agent_call_cwd=probe_agent_call_cwd,
-                            agent_call_id=active_agent_call_id,
-                            agent_call_kind=active_agent_call_kind,
-                            codex_call_id=active_codex_call_id,
-                            log_paths=[
-                                probe_call_path,
-                                probe_prompt_path,
-                                probe_stdout_path,
-                                probe_stderr_path,
-                            ],
-                        )
-                        try:
-                            poll = _run_with_prompt_file(
-                                probe_argv,
-                                probe_prompt_path,
-                                run_agent_call_cwd=probe_agent_call_cwd,
-                                run_codex_env=probe_feedback_call.subprocess_env(
-                                    probe_codex_env
-                                ),
-                            )
-                        except BaseException as exc:
-                            startup_error = format_codex_call_error(exc)
-                            _emit_codex_call_event(
-                                run_purpose="quota availability probe",
-                                run_call_path=probe_call_path,
-                                run_prompt_path=probe_prompt_path,
-                                run_stdout_path=probe_stdout_path,
-                                run_stderr_path=probe_stderr_path,
-                                run_output_path=probe_output_path,
-                                run_schema_path=None,
-                                started_at=probe_started_at,
-                                returncode=None,
-                                status="failed",
-                                error=startup_error,
-                                run_codex_home=probe_codex_home,
-                            )
-                            raise
-                        finally:
-                            probe_feedback_call.close()
-                        probe_stdout_path.write_text(poll.stdout, encoding="utf-8")
-                        probe_stderr_path.write_text(poll.stderr, encoding="utf-8")
-                        probe_error_text = codex_error_text(poll.stdout, poll.stderr)
-                        probe_quota_error = is_quota_error(poll.stdout)
-                        probe_capacity_error = is_capacity_error(poll.stdout)
-                        probe_unexpected_error = is_unexpected_error(poll.stdout)
-                        probe_available = (
-                            poll.returncode == 0
-                            and not probe_quota_error
-                            and not probe_capacity_error
-                            and not probe_unexpected_error
-                        )
-                        if (
-                            probe_capacity_error
-                            and not probe_unexpected_error
-                            and quota_probe_capacity_attempts < max_capacity_retries
-                        ):
-                            quota_probe_capacity_attempts += 1
-                            quota_polls -= 1
-                            _emit_codex_call_event(
-                                run_purpose="quota availability probe",
-                                run_call_path=probe_call_path,
-                                run_prompt_path=probe_prompt_path,
-                                run_stdout_path=probe_stdout_path,
-                                run_stderr_path=probe_stderr_path,
-                                run_output_path=probe_output_path,
-                                run_schema_path=None,
-                                started_at=probe_started_at,
-                                returncode=poll.returncode,
-                                status="capacity_retrying",
-                                error=probe_error_text,
-                                run_codex_home=probe_codex_home,
-                            )
-                            time.sleep(quota_probe_sleep_sec)
-                            quota_probe_sleep_sec *= 2
-                            capacity_retry_pending = True
-                            _emit_quota_progress("待機を継続")
-                            continue
-                        if not probe_available and (
-                            probe_unexpected_error or not probe_quota_error
-                        ):
-                            _emit_codex_call_event(
-                                run_purpose="quota availability probe",
-                                run_call_path=probe_call_path,
-                                run_prompt_path=probe_prompt_path,
-                                run_stdout_path=probe_stdout_path,
-                                run_stderr_path=probe_stderr_path,
-                                run_output_path=probe_output_path,
-                                run_schema_path=None,
-                                started_at=probe_started_at,
-                                returncode=poll.returncode,
-                                status="failed",
-                                error=probe_error_text,
-                                run_codex_home=probe_codex_home,
-                            )
-                            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                            # probe も `codex exec` であり、quota 以外の failure は quota reset
-                            # を待っても回復しない。
-                            raise CmocError(
-                                "Codex CLI quota availability probe が失敗しました。",
-                                [
-                                    "診断用サブコマンドログを確認して原因を解消してください。"
-                                ],
-                                "quota availability probe returned an unexpected failure",
-                            )
-                        _emit_codex_call_event(
-                            run_purpose="quota availability probe",
-                            run_call_path=probe_call_path,
-                            run_prompt_path=probe_prompt_path,
-                            run_stdout_path=probe_stdout_path,
-                            run_stderr_path=probe_stderr_path,
-                            run_output_path=probe_output_path,
-                            run_schema_path=None,
-                            started_at=probe_started_at,
-                            returncode=poll.returncode,
-                            status="succeeded" if probe_available else "quota_waiting",
-                            error=None if probe_available else probe_error_text,
-                            run_codex_home=probe_codex_home,
-                        )
-                        if probe_available:
-                            break
-                        _emit_quota_progress("待機を継続")
-                except BaseException as exc:
-                    probe_error = exc
-                    raise
-                finally:
-                    with _QUOTA_CONDITION:
-                        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                        # waiter は代表 probe が quota availability を証明した後だけ再開できる。
-                        # probe failure は共有する。
-                        _QUOTA_PROBE_AVAILABLE = probe_available
-                        _QUOTA_PROBE_ERROR = probe_error
-                        _QUOTA_POLLING = False
-                        _QUOTA_CONDITION.notify_all()
-                _emit_quota_progress("処理を再開")
-                resume_session_id = correction_session_id or (
-                    _extract_session_id_from_stdout_log(stdout_path)
-                )
+                quota_wait_sec += waited["quota"]
+                transient_wait_sec += waited["transient"]
                 continue
             if schema_path is not None and output_corrections > 0:
                 _emit_structured_output_exhausted("resume_unavailable", call_path)
@@ -1183,9 +1036,7 @@ def run_codex_exec(
                         f"maximum output corrections reached: {_MAX_OUTPUT_CORRECTIONS}"
                     )
                 elif correction_session_id is None:
-                    correction_session_id = _extract_session_id_from_stdout_log(
-                        stdout_path
-                    )
+                    correction_session_id = resume_session_id
                     if correction_session_id is None:
                         failure_reason = "Codex session ID is unavailable"
                 if failure_reason is None:
@@ -1282,6 +1133,7 @@ def run_codex_exec(
             schema_path=schema_path,
             elapsed_sec=exec_result.elapsed_sec,
             quota_wait_sec=quota_wait_sec,
+            transient_wait_sec=transient_wait_sec,
             quota_polls=quota_polls,
         )
         return exec_result

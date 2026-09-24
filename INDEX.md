@@ -89,22 +89,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様ツリー。CLI の利用方法、サブコマンド、セッション・run lifecycle、editor input handoff、feedback、indexing、oracle/realization の関係、エラー処理、ログ・状態管理などの要求を oracle/doc に定める。
-- cmoc の正本実装・設定・データ定義。prompt builder、ACP builder、editor input、feedback、quota、indexing、session、oracle edit、realization apply/refactor など、仕様を具体化する oracle/src のコードと JSON 定義を扱う。
-- 正本仕様に従う開発・テスト規約。環境構築、設計、コーディング、テスト実装、品質検査の選択と実行手順を確認する入口。
+- cmoc の正本仕様を構成する上位ディレクトリで、自然言語仕様と仕様生成に関わる正本ソースへの入口を提供する。
+- oracle/doc はアプリケーション仕様、開発規則、採用しなかった代替案などの正本文書を扱う。
+- oracle/src は仕様に基づくプロンプト・パラメータ・パスモデルなどの正本ソースを扱う。
 
 ## Read this when
-- cmoc の機能仕様、CLI サブコマンドの動作、状態遷移、ファイルアクセス、agent call、prompt 構築、feedback、indexing の正本を確認するとき。
-- oracle file の要求を realization 側へ反映する方法や、oracle/src の builder・設定・補助処理の責務を調べるとき。
-- 開発環境、コーディング規約、テスト要件、品質検査の完了条件を確認するとき。
+- cmoc の正本仕様全体を把握したいとき
+- 仕様文書と、それを具体化する正本ソースの対応を確認したいとき
+- app_spec・dev_rule・considered_alternative の文書群、または oracle/src 以下の生成ロジックへ進む入口を選びたいとき
 
 ## Do not read this when
-- 既存の realization 実装や realization test の具体的なコードだけを調査するときは、src または test の該当対象を直接読みます。
-- 対象となる単一のサブコマンド仕様や単一の oracle/src モジュールが明確な場合は、oracle 配下全体ではなくその正本ファイルを直接読みます。
-- INDEX.md や AGENTS.md などの管理用ファイルだけを確認したいとき。
+- 個別の仕様文書を確認したいときは oracle/doc 以下の該当ファイルを直接読む
+- 正本ソースの具体的な処理を確認したいときは oracle/src 以下の該当ファイルを直接読む
+- 実装結果やテストなど oracle 外の realization を確認したいとき
 
 ## hash
-- 7bc5c9d802468769b64070de45faf89ec723b419d11565e110b78c8dc49e48b6
+- 0925947f042a7bcb4cb002db118869af041e3655a16f3e17a615ce1d35f528a8
 
 # `pyproject.toml`
 
@@ -125,34 +125,41 @@
 # `src`
 
 ## Summary
-- cmoc の実装本体を収めるディレクトリです。CLI のコマンドツリーと起動境界、サブコマンド、共通 runtime、設定、ACP 経由のエージェント処理、INDEX.md 生成など、仕様を具体化する realization implementation への入口を提供します。
-- CLI の入口やコマンド単位の処理は `main.py` と `sub_commands`、横断的な実行ライフサイクル・エラー・ログ・Git・フィードバック・状態管理は `commons`、エージェント起動や作業構築は `acp`、設定定義の公開は `config` に分かれています。
+- cmoc の実装本体。CLI の起動・サブコマンド、共通 runtime、ACP ビルダー、設定、パス・構造化文書など、プロダクトの実行時挙動を構成する realization implementation を収める。
+- 変更や不具合調査では、まず src/main.py と対象サブコマンドを入口にし、共通処理に関わる場合は src/commons、ACP 呼び出しや agent 協調に関わる場合は src/acp、設定や基本型に関わる場合は src/config・src/basic を読む。
+- src/sub_commands は利用者向け CLI 操作、src/commons は複数操作で共有する runtime、src/acp は agent 呼び出しと builder 処理を担うため、担当領域に応じた実装の入口となる。
 
 ## Read this when
-- cmoc の CLI 挙動、サブコマンド、実行ライフサイクル、エラー処理、設定、エージェント連携、作業状態管理、INDEX.md 更新の実装を調査・変更するとき。
-- 対象機能の実装ファイルがまだ特定できず、責務別の下位ディレクトリから調査を始める必要があるとき。
+- cmoc の CLI コマンド、サブコマンド、起動時の引数処理を変更・調査するとき
+- 実行 lifecycle、エラー処理、ログ、設定、Git、feedback、indexing など共有 runtime の挙動を確認するとき
+- ACP builder や oracle・realization・session・review 関連の agent 協調処理を変更・調査するとき
+- 基本データ型、パス解決、設定値、互換 import の実装を確認するとき
 
 ## Do not read this when
-- 正本仕様を確認するときは `oracle` 配下を直接読んでください。
-- テストの期待値や回帰検証を確認するときは `test` 配下を直接読んでください。
-- INDEX.md の生成規則そのものを確認するときは、`src/commons/indexing.py` ではなく対応する正本仕様を先に読んでください。
+- 正本仕様や人間の意図を確認したいときは oracle 配下を直接読む
+- 期待値、回帰条件、fixture、テスト手順を確認したいときは test 配下を直接読む
+- INDEX.md の生成・ルーティング仕様そのものを確認したいときは indexing の仕様や専用実装を直接読む
+- CLI 利用者向けのコマンド単位の処理だけを調べる場合は src 全体ではなく該当する src/sub_commands 配下から読み始める
 
 ## hash
-- c82105aee9b60940333e0ee852bfc53d004dd7e58d3d0736ad34c3938b8a0371
+- c4aac316ab5cb0b1d6c6c5b2d6d56ac08c52a5ee3755b4d71d91e7c56f99ee11
 
 # `test`
 
 ## Summary
-- cmoc の realization 実装を対象に、CLI の各サブコマンド、Codex 実行・TUI、ACP builder、セッション状態、feedback、file inventory、oracle/realization 分類、設定、runtime、wrapper、構造化文書、Windows 通知などの回帰テストと、それらを支える共有 fixture・test helper をまとめたテストスイート。
-- サブコマンド単位の外部挙動、runtime 共通処理、Codex 連携、編集・handoff、indexing、session lifecycle など、変更領域に対応する個別テストファイルへ進むための入口。
+- cmoc の実装に対する回帰テスト群。CLI、セッション、編集・リファクタ実行、インデックス生成、フィードバック報告、Codex 実行管理、エディター入力引き渡し、設定・状態管理などを検証する。
+- 個別機能のテストを支える共通 fixture・CLI 起動補助・Git/Codex subprocess 補助も含み、実行時の異常系、復旧、権限境界、ファイル整合性を広く確認する。
 
 ## Read this when
-- 実装変更が既存の回帰テスト群のどの領域に影響するかを横断的に確認したいとき。
-- CLI・runtime・Codex 連携・ファイル分類・状態管理など、複数のテスト対象をまたいで適切な個別テストを探すとき。
+- 実装変更が CLI やサブコマンドの外部挙動に影響する可能性があるとき
+- セッション状態、実行ライフサイクル、ワークツリー、インデックス更新の回帰を確認するとき
+- Codex subprocess、リトライ・復旧、フィードバック報告、MCP の境界挙動を検証するとき
+- 既存の共通 fixture やテスト補助を使って回帰テストを追加・修正するとき
 
 ## Do not read this when
-- 対象機能や不具合が特定できており、対応する test_*.py または共有 helper を直接読むべきとき。
-- 正本仕様や実装の責務・アルゴリズムを確認したいときは、oracle または src 配下を直接読むべき。
+- 正本仕様や要求の意味を確認したいときは oracle 配下の仕様を直接読む
+- 実装の具体的な挙動や修正箇所を調べるときは src 配下の対応モジュールを直接読む
+- 単一の機能の詳細な期待値だけを確認したいときは、このディレクトリ全体ではなく該当する test_*.py を読む
 
 ## hash
-- 95f7ea52f29056d6e0622ecd7aa240ee99ca8996de7c4e40aaa3feebb3598cf0
+- 6e624f5001d6c13ddfa8ae048b6e0eb5da12aad9e94760cb28cd241930ac085d

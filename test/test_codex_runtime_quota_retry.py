@@ -1,14 +1,4 @@
-"""Codex quota exceeded 後の probe/resume/retry 制御を検証する。
-
-このファイルは 16,000 文字を超えるが、責務境界は quota 待機から復帰する
-Codex exec の外部挙動に閉じている。probe 共有、resume session ID、再実行、call log、
-subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であり、分割すると
-同じ fake Codex 呼び出し列を追う文脈が分散する。現状は quota retry 回帰として
-一箇所に保つ方が凝集性が高い。
-根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-および {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
-「realization file を扱う判断基準」
-"""
+"""quota probe の構築、実行、共有と再開を検証する。"""
 
 import json
 import subprocess
@@ -132,7 +122,6 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         parameter,
         root=root,
         quota_poll_interval_sec=0,
-        max_quota_polls=1,
         config=config,
         subcommand_logger=logger,
     )
@@ -256,99 +245,8 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert str(probe_call_path) not in captured.err
-    assert "Codex CLI の quota 回復待ち: ポーリングを開始" in captured.err
-    assert "Codex CLI の quota 回復待ち: 処理を再開" in captured.err
-
-
-def test_capacity_probe_retry_skips_quota_poll_interval(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """probe の capacity retry は quota polling 間隔を重ねて待たない。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    probe_prompt = quota_probe_prompt(root)
-    sleeps: list[float] = []
-    monkeypatch.setattr(runtime_codex_exec.time, "sleep", sleeps.append)
-    calls: list[str] = []
-    main_count = 0
-    probe_count = 0
-
-    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        """quota failure, capacity probe, recovery probe, resume の列を返す。"""
-        nonlocal main_count, probe_count
-        stdin = cast(TextIO, kwargs["stdin"]).read()
-        if "resume" in argv:
-            kind = "resume"
-        elif stdin == probe_prompt:
-            kind = "probe"
-        else:
-            kind = "initial"
-        calls.append(kind)
-        output = Path(argv[argv.index("--output-last-message") + 1])
-        if kind == "initial":
-            main_count += 1
-            if main_count == 1:
-                return subprocess.CompletedProcess(
-                    argv,
-                    1,
-                    '{"type":"error","message":"Selected model is at capacity"}\n',
-                    "",
-                )
-            return subprocess.CompletedProcess(
-                argv,
-                1,
-                '{"type":"thread.started","thread_id":"sess-1"}\n'
-                '{"type":"error","message":"Quota exceeded"}\n',
-                "",
-            )
-        if kind == "probe":
-            probe_count += 1
-            if probe_count == 1:
-                return subprocess.CompletedProcess(
-                    argv,
-                    1,
-                    '{"type":"error","message":"Selected model is at capacity"}\n',
-                    "",
-                )
-        output.write_text('{"ok":true}')
-        return subprocess.CompletedProcess(argv, 0, '{"type":"turn.completed"}\n', "")
-
-    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
-    result = run_codex_exec(
-        AgentCallParameter(
-            "build_indexing_index_entry_parameter",
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
-            root,
-        ),
-        root=root,
-        quota_poll_interval_sec=1800,
-        capacity_initial_sleep_sec=5,
-        max_quota_polls=1,
-        config=CmocConfig(),
-    )
-
-    assert calls == ["initial", "initial", "probe", "probe", "resume"]
-    assert sleeps == [5, 1800, 5]
-    assert result.quota_wait_sec == 1800
-    assert result.output_json == {"ok": True}
-    call_logs = [
-        json.loads(path.read_text())
-        for path in sorted(
-            (root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json")
-        )
-    ]
-    main_logs = [log for log in call_logs if log["purpose"] == "codex exec"]
-    probe_logs = [
-        log for log in call_logs if log["purpose"] == "quota availability probe"
-    ]
-    assert len({log["agent_call_id"] for log in main_logs}) == 1
-    assert len({log["codex_call_id"] for log in main_logs}) == 3
-    assert len({log["agent_call_id"] for log in probe_logs}) == 1
-    assert len({log["codex_call_id"] for log in probe_logs}) == 2
-    assert probe_logs[0]["agent_call_id"] != main_logs[0]["agent_call_id"]
+    assert "Codex CLI の quota 回復待ち: 待機を継続" in captured.err
+    assert "Codex CLI の quota 回復待ち: 復旧を確認。処理を再開" in captured.err
 
 
 def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
@@ -392,7 +290,6 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
             ),
             root=root,
             quota_poll_interval_sec=0,
-            max_quota_polls=1,
             config=CmocConfig(),
             subcommand_logger=logger,
         )
@@ -400,7 +297,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     assert calls == ["prompt", probe_prompt]
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "Codex CLI の quota 回復待ち: ポーリングを開始" in captured.err
+    assert "Codex CLI の quota 回復待ち: 待機を継続" in captured.err
     assert "quota availability probe" not in captured.err
     assert "KeyboardInterrupt" not in captured.err
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
@@ -519,7 +416,6 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
         parameter,
         root=root,
         quota_poll_interval_sec=0,
-        max_quota_polls=1,
         config=CmocConfig(),
     )
 
@@ -595,7 +491,6 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
         parameter,
         root=root,
         quota_poll_interval_sec=0,
-        max_quota_polls=1,
         config=CmocConfig(),
     )
 
@@ -649,12 +544,11 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     )
     logger = SubcommandLogger(root, "test")
 
-    with pytest.raises(CmocError, match="quota availability probe"):
+    with pytest.raises(CmocError, match="回復確認 probe"):
         run_codex_exec(
             parameter,
             root=root,
             quota_poll_interval_sec=0,
-            max_quota_polls=3,
             config=CmocConfig(),
             subcommand_logger=logger,
         )
@@ -717,12 +611,11 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
             ),
             root=root,
             quota_poll_interval_sec=0,
-            max_quota_polls=1,
             config=CmocConfig(),
             subcommand_logger=logger,
         )
 
-    assert "quota availability probe" in str(exc_info.value)
+    assert "回復確認 probe" in str(exc_info.value)
     assert "malformed JSONL event (invalid JSON): not-json" not in exc_info.value.detail
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
     assert [record["stdin"] for record in call_records] == ["prompt", probe_prompt]
@@ -731,58 +624,6 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
     assert [event["status"] for event in codex_events] == ["quota_waiting", "failed"]
     assert codex_events[1]["returncode"] == 0
     assert "malformed JSONL event (invalid JSON): not-json" in codex_events[1]["error"]
-
-
-def test_quota_poll_limit_stops_before_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """quota poll 上限到達時は代表 probe を起動せず失敗する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "quota_limit_calls.jsonl"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"calls = pathlib.Path({str(calls)!r})",
-            "args = sys.argv[1:]",
-            "stdin = sys.stdin.read()",
-            "with calls.open('a') as f: f.write(json.dumps({'stdin': stdin}) + '\\n')",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if stdin == 'prompt':",
-            "    pathlib.Path('src').mkdir(exist_ok=True)",
-            "    pathlib.Path('src/blocked.py').write_text('blocked\\n')",
-            "    print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
-            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-            "    sys.exit(1)",
-            "raise AssertionError('unexpected extra call')",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        root,
-    )
-
-    with pytest.raises(CmocError, match="quota"):
-        run_codex_exec(
-            parameter,
-            root=root,
-            quota_poll_interval_sec=0,
-            max_quota_polls=0,
-            config=CmocConfig(),
-        )
-
-    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert len(call_records) == 1
-    assert call_records[0]["stdin"] == "prompt"
-    assert (root / "src" / "blocked.py").read_text() == "blocked\n"
 
 
 def test_quota_probe_failure_reports_probe_error(
@@ -827,12 +668,11 @@ def test_quota_probe_failure_reports_probe_error(
         root,
     )
 
-    with pytest.raises(CmocError, match="quota availability probe"):
+    with pytest.raises(CmocError, match="回復確認 probe"):
         run_codex_exec(
             parameter,
             root=root,
             quota_poll_interval_sec=0,
-            max_quota_polls=1,
             config=CmocConfig(),
         )
 
@@ -898,7 +738,6 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
             parameter,
             root=root,
             quota_poll_interval_sec=0.05,
-            max_quota_polls=1,
             config=CmocConfig(),
         )
 
@@ -939,7 +778,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
             "    print(json.dumps({'type': 'turn.completed'}))",
             "    sys.exit(0)",
             "if kind == 'probe':",
-            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "    print(json.dumps({'type':'error','message':'invalid configuration'}))",
             "    sys.exit(1)",
             "deadline = time.time() + 5",
             "while time.time() < deadline:",
@@ -967,7 +806,6 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
             parameter,
             root=root,
             quota_poll_interval_sec=0.05,
-            max_quota_polls=1,
             config=CmocConfig(),
         )
 
@@ -990,52 +828,36 @@ def test_session_id_returns_none_for_invalid_stdout_encoding(tmp_path: Path) -> 
     assert runtime_codex_exec._extract_session_id_from_stdout_log(log_path) is None
 
 
-def test_quota_polling_state_is_cleared_when_progress_output_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """quota 待機開始時の出力失敗でも待機中フラグを解除する。"""
+def test_recovery_group_is_released_when_progress_output_fails(tmp_path, monkeypatch):
+    """通知失敗が次の同条件 call の代表選択を妨げない。"""
+    import commons.runtime_codex_recovery as recovery
+
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
+    calls = []
 
-    def fake_run(
-        argv: list[str], **_kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        """quota 待機へ入る初回呼び出しだけを返す。"""
+    def fake_run(argv, **kwargs):
+        calls.append(kwargs["stdin"].read())
         return subprocess.CompletedProcess(
-            argv,
-            1,
-            '{"type":"error","message":"Quota exceeded"}\n',
-            "",
+            argv, 1, '{"type":"error","message":"Quota exceeded"}\n', ""
         )
 
-    def fail_print(*_args: object, **_kwargs: object) -> None:
-        """quota待機通知の出力をBrokenPipeErrorで失敗させる。"""
+    def fail_print(*args, **kwargs):
         raise BrokenPipeError("closed output")
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
-    monkeypatch.setattr(runtime_codex_exec, "print", fail_print, raising=False)
-    try:
+    monkeypatch.setattr(recovery, "print", fail_print, raising=False)
+    parameter = AgentCallParameter(
+        "build_indexing_index_entry_parameter",
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+        root,
+    )
+    for _ in range(2):
         with pytest.raises(BrokenPipeError, match="closed output"):
             run_codex_exec(
-                AgentCallParameter(
-                    "build_indexing_index_entry_parameter",
-                    FileAccessMode.READONLY,
-                    "prompt",
-                    None,
-                    root,
-                ),
-                root=root,
-                quota_poll_interval_sec=0,
-                max_quota_polls=1,
-                config=CmocConfig(),
+                parameter, root=root, quota_poll_interval_sec=0, config=CmocConfig()
             )
-
-        with runtime_codex_exec._QUOTA_CONDITION:
-            assert not runtime_codex_exec._QUOTA_POLLING
-    finally:
-        with runtime_codex_exec._QUOTA_CONDITION:
-            runtime_codex_exec._QUOTA_POLLING = False
-            runtime_codex_exec._QUOTA_PROBE_AVAILABLE = False
-            runtime_codex_exec._QUOTA_PROBE_ERROR = None
-            runtime_codex_exec._QUOTA_CONDITION.notify_all()
+    assert calls == ["prompt", "prompt"]

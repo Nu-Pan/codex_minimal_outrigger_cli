@@ -52,7 +52,7 @@ def run_fixed_codex_exec(
         result = run_codex_exec(
             codex_parameter(agent_call_cwd=root),
             root=root,
-            capacity_initial_sleep_sec=0,
+            transient_poll_interval_sec=0,
             config=CmocConfig(),
         )
         connection.send(
@@ -202,7 +202,7 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
             agent_call_cwd=agent_call_cwd,
         ),
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
     )
 
@@ -270,7 +270,7 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
     result = run_codex_exec(
         parameter,
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
     )
 
@@ -320,7 +320,7 @@ def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(
             agent_call_cwd=linked,
         ),
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
     )
 
@@ -365,7 +365,7 @@ def test_run_codex_exec_does_not_inject_agents_path_permissions(
     run_codex_exec(
         codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
     )
 

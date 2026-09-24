@@ -81,4 +81,5 @@ class CodexExecResult:
     schema_path: Path | None
     elapsed_sec: float = 0.0
     quota_wait_sec: float = 0.0
+    transient_wait_sec: float = 0.0
     quota_polls: int = 0

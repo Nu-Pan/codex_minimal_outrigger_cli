@@ -40,6 +40,7 @@ class SubcommandLogger:
         self.invocation_id = uuid7_prefixed("sci_")
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
+        self.transient_wait_sec = 0.0
         self.step_timings: list[StepTiming] = []
         self.warning_messages: list[str] = []
         self._event_records: list[dict[str, Any]] = []
@@ -178,10 +179,14 @@ class SubcommandLogger:
         """サブコマンド開始からの経過秒を、完了表示と log 集計用に返す。"""
         return time.perf_counter() - self.started_at
 
-    def add_quota_wait(self, seconds: float) -> None:
-        """Codex quota 待機をサブコマンド全体の待機時間として合算する。"""
+    def add_recovery_wait(self, reason: str, seconds: float) -> None:
+        """理由別に Codex call が保留された実時間を合算する。"""
+        # 並列 call ごとの時間を集計し、各 period は recovery event から追跡する。
         with self._lock:
-            self.quota_wait_sec += seconds
+            if reason == "quota":
+                self.quota_wait_sec += seconds
+            else:
+                self.transient_wait_sec += seconds
 
     def event_records(self) -> tuple[dict[str, Any], ...]:
         """primary report が参照する flush 済み event の snapshot を返す。"""

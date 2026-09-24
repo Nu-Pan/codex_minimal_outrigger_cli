@@ -1,7 +1,9 @@
 import errno
 import os
 import signal
+import subprocess
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -15,6 +17,48 @@ from commons.runtime_codex_profile import (
     run_tracked_codex_subprocess,
 )
 from commons.runtime_errors import CmocError
+
+
+@pytest.mark.parametrize("tracked", [False, True])
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interrupted):
+    """無応答 probe の process を終了させ、tracked child も残さない。"""
+    tracking_path = tmp_path / "run.pid"
+    tracking_path.write_text("111 222\n")
+    pid_path = tmp_path / "probe.pid"
+    argv = [
+        sys.executable,
+        "-c",
+        "import os, pathlib, sys, time; "
+        "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+        "print('partial output', flush=True); time.sleep(30)",
+        str(pid_path),
+    ]
+    cancellation = threading.Event() if interrupted else None
+    timer = threading.Timer(0.3, cancellation.set) if cancellation is not None else None
+    if timer is not None:
+        timer.start()
+    try:
+        expected = KeyboardInterrupt if interrupted else subprocess.TimeoutExpired
+        with pytest.raises(expected):
+            options = dict(
+                text=True,
+                capture_output=True,
+                timeout=2 if interrupted else 0.3,
+                cancellation=cancellation,
+            )
+            if tracked:
+                run_tracked_codex_subprocess(argv, tracking_path, **options)
+            else:
+                run_codex_subprocess(argv, **options)
+    finally:
+        if timer is not None:
+            timer.cancel()
+            timer.join()
+    process_id = int(pid_path.read_text())
+    with pytest.raises(ProcessLookupError):
+        os.kill(process_id, 0)
+    assert tracking_path.read_text() == "111 222\n"
 
 
 def test_open_process_fd_treats_invalid_pidfd_as_unavailable(
