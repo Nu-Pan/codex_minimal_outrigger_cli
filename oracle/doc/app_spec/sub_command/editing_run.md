@@ -88,26 +88,36 @@ merge または no-op join 後の tree 検査、publication、および workload
 
 - `{{cmoc-run-fork-commit}}` から run branch HEAD までの変更 path を検査する。
 - run branch では、active workload の想定内差分だけを許可する。
-- run 開始後の session branch では、oracle file、`memo`、および cmoc が生成する `INDEX.md` の変更を許可する。
-- 通常モードでは想定外差分を report して join を中止する。
-- `--force-resolve` は run branch 上の想定外差分だけを revert して続行する。session branch 上のユーザー成果物を revert してはいけない。
+- run 開始後の session branch の commit 済み変更は、file 種別で制限せず統合対象とする。realization file の変更があることだけを理由に join を拒否しない。
+- 通常モードでは run branch の想定外差分を report して join を中止する。
+- `--force-resolve` は run branch 上の想定外差分だけを revert して続行する。session branch 上のユーザー成果物を revert してはいけない。通常の競合解消にこの option を要求しない。
 
-`feedback_report` の issue 単位差分検査は workload 固有仕様でも行う。join の差分検査は、その検査を省略または緩和するものではない。
+この検査は元の workload の成果物に対する検査であり、merge 開始後の競合解消に伴う付随編集へ元の変更 path 集合を強制するものではない。`feedback_report` の issue 単位差分検査は workload 固有仕様でも行う。join の差分検査は、その検査を省略または緩和するものではない。
 
 ### merge と post-join
 
 1. doctor preprocess を呼び出し、事前条件と差分を検査する。
-2. run branch HEAD が session branch から到達可能で取り込む commit がなければ no-op join とする。それ以外は、`{{cmoc-session-branch}}` 上で `git merge --no-ff {{cmoc-run-branch}}` を実行し、その merge commit を `{{cmoc-run-join-commit}}` とする。
+2. run branch HEAD が session branch から到達可能で取り込む commit がなければ no-op join とする。それ以外は、merge 前の両 HEAD を確定し、`{{cmoc-session-branch}}` 上で `git merge --no-ff {{cmoc-run-branch}}` を実行する。競合時は本書の「競合解消」に従い、成立した merge commit を `{{cmoc-run-join-commit}}` とする。no-op join のために競合解消 agent を呼び出さない。
 3. active workload が定める join 後 hook を実行する。
-4. join 後の session tree に対して refactor state を同期する。
+4. join 後の session tree に対して必要な `INDEX.md` と refactor state を同期する。同期で生じた tracked 差分は cmoc が commit する。
 5. join 結果と hook の結果を保存する。
 6. 明示的な join では、`run.state` を `ready` にし、active run 情報を初期化する。`feedback_report` の自動 join では、この更新を workload 固有の publication と cleanup が確定するまで遅延する。
 
 apply の比較始点の更新条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「join 後 hook」を正本とする。
 
-`INDEX.md` の conflict は、cmoc が生成し直すことで解決してよい。`INDEX.md` 以外が conflict した場合は、merge を中止して開始前の clean な状態へ戻す。そのうえで、`run.state` を `error` にして conflict path を report する。conflict 解消のための agent call は行わない。
-
 refactor state の同期規則は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」を正本とする。
+
+### 競合解消
+
+判断基準、agent と cmoc の責務、受理、および報告は、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「join の競合解消」に従う。
+
+競合解消 agent は、merge target である session worktree で作業する。oracle を判断根拠として読み、realization file を統合に必要な範囲で編集する。oracle file は変更しない。run worktree の issue commit や成果物を書き換えず、進行中の merge 結果へ調整を加える。
+
+call 固有の正確な prompt 文面、builder の引数、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_parameter` へ委譲する。feedback の自動 join でもこの call を用い、封印後の入力・調整範囲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。
+
+競合解消または merge commit 確定前の検証・管理処理に失敗した場合は、cmoc が merge を中止し、merge と競合解消が導入した作業ファイルの差分を除去する。付随する追加・変更・rename・削除と tracked な生成物も含め、session worktree と staging area を merge 開始前の clean な状態へ戻す。そのうえで `run.state=error` とし、run branch と run worktree を保持する。report とログ、および repository-local feedback state はこの作業差分の rollback 対象にせず、それぞれの保持契約に従う。report には未解消理由と復旧結果を残し、復旧自体に失敗した場合も cleanup せず、残存差分と必要な次の操作を示す。
+
+この rollback は、取り込み確定後の hook、report、publication、または cleanup の失敗には適用しない。確定した取り込み結果と未完了処理を report し、資源の削除には本書の cleanup 条件を適用する。自動 join 済み feedback run の recovery は workload 固有契約に従う。
 
 ### feedback run を明示 join した場合
 
@@ -175,6 +185,8 @@ fork report の YAML Front Matter は、少なくとも次の項目を含む。
 確定できない項目は `null` とし、存在しない branch、commit、worktree、または state を作ってはならない。fork report には変更 path と完了理由も含める。保存先と workload 固有項目は、workload 固有仕様で定める。
 
 self-joining workload の primary report は、上記の run identity と state に加えて、自動 join、workload 固有の確定処理、および cleanup の結果を含む。保存先と追加項目は、workload 固有仕様で定める。
+
+join と self-joining workload の report には、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める競合解消の判断・付随編集・検証・未解消理由を含める。競合解消を行わなかった場合は、その旨を示す。
 
 ### join と abandon の report
 

@@ -78,7 +78,7 @@
 
 1. 配置対象ディレクトリは前述のルールで機械的に列挙する
 2. 列挙されたディレクトリを「深い方から」順番に処理する
-3. インデクシングによって発生した git 未コミット差分を自動コミットする
+3. インデクシングによって発生した git 未コミット差分を自動コミットする。ただし、join の merge 進行中は本書の「join 中の管理」に従う
     - インデクシングの呼び出し 1 回につき、1 つのコミットにまとめること
     - コミット対象は `INDEX.md` の差分だけとし、インデクシング開始時点の同ファイルの既存差分も含めてよい
     - 既存差分が存在した場合も処理は続行する
@@ -111,6 +111,12 @@
 - agent call 共通実行経路による自動 preflight は、`AgentCallParameter.run_indexing_preflight == True` の場合だけ、その論理 agent call の初回 Codex call の直前に行う
 - `cmoc oracle edit` が呼び出し元として管理する indexing の順序と回数は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「実行順序」を正本とする
 - ユーザーによる明示実行は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/indexing.md` の「実行手順」に従う
+
+### join 中の管理
+
+join の競合解消 agent は `INDEX.md` を直接編集しない。cmoc は、内容の統合と付随編集を反映した tree から必要な目次情報を生成し直す。merge 進行中は、通常の自動 indexing preflight と独立した indexing commit を行わず、生成差分を merge の staging・commit に含める。取り込み後に追加の同期が必要な場合は、通常の indexing の commit 契約に従う。
+
+競合解消 agent と目次情報生成 agent は同じ worktree の編集と参照が競合しない順序で実行する。join の管理責務は、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」を正本とする。
 
 ## `INDEX.md` が最新に保たれている状態でメンテナンス処理が実行されたら
 

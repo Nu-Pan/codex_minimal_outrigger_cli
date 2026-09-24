@@ -84,7 +84,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 active run の kind が `realization_refactor` または `feedback_report` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。これは、session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
 
-merge 後は kind にかかわらず、最終的な session tree に対して entry 集合を同期する。
+merge 後は kind にかかわらず、競合解消の付随編集も反映した最終的な session tree に対して entry 集合を同期する。merge 進行中に doctor preprocess を再実行して同期・commit を割り込ませない。競合中の管理物の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」に従う。
 
 ## feedback MCP reporter/client の事前検証
 

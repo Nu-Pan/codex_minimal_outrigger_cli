@@ -48,9 +48,9 @@ feedback 全体で使用する用語と issue remediation の結果を次に示�
 
 `cmoc feedback report` は、同一 invocation 内で自己完結する feedback remediation run を使用する。run branch 上で、issue ごとの remediation と commit を逐次実行する。処理中に受理された新しい issue も、immutable な intake wave として可能な限り処理する。
 
-再確認と必要な再修正・判定更新は、同じ invocation 内で report cut の封印と merge の前に完了する。自然完了の条件は、最終 high-watermark までに新しい未処理 issue identity がなく、現在の最終状態に対して再確認が必要な判定も残っていないことである。
+issue の結果分類を確定するための再確認と必要な再修正・判定更新は、同じ invocation 内で report cut の封印前に完了する。wave loop の自然完了の条件は、最終 high-watermark までに新しい未処理 issue identity がなく、run branch の最終状態に対して再確認が必要な判定も残っていないことである。
 
-run branch を session branch へ自動 join した後に、join 後の状態に対して有効な結果だけで publication を確定する。join 後の検証と recovery の適用境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」と「join 後の publication failure」を正本とする。
+封印後の自動 join では、封印済み結果を維持するためのマージ調整と検証を認める。調整の範囲、検証記録、publication の停止条件、および join 後の recovery は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」と「join 後の publication failure」を正本とする。publication は、join 後の状態に対して有効な結果だけで確定する。
 
 ## 正本仕様の分担
 

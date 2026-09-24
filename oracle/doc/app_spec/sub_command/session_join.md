@@ -35,36 +35,15 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/o
 
 ## `git merge` がコンフリクトした場合
 
-### 解決手順
+判断基準、agent と cmoc の責務、受理、および報告は、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「join の競合解消」に従う。merge 前の source は session branch HEAD、target は home branch HEAD とする。
 
-1. cmoc は conflict 対象ファイルを列挙する
-2. conflict marker 解消用の agent call を行う
-3. cmoc は conflict marker が残っていないことを確認する
-4. cmoc は conflict 対象ファイルを `git add` する
-5. unmerged path が残っていないことを確認する
-6. cmoc が merge commit を作成する
+内容の競合を解消できなかった場合は、merge commit の作成、`session.state=joined` への更新、および session branch の削除を行わない。その時点の作業状態を保持して、本書の「その他、コマンドが想定外に失敗した場合」に従い停止する。
 
-## conflict marker 解消用の agent call
+## 競合解消用の agent call
 
-- conflict 解消の意味仕様は、本書の「oracle file 規定と conflict 解消の優先順位」を正本とする
-- call 固有の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_parameter` へ委譲する
-- マージ固有の規定を agent に伝える正確な policy 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py` の `build_conflict_resolution_policy` へ委譲する
-- この agent call は `{{work-root}}` に対する編集操作を伴うため、必ず直列に実行すること
+agent は、home branch への merge が進行中の worktree を cwd として、アクセス境界内の oracle file と realization file を編集する。session join のために新しい editing run は作らない。
 
-### oracle file 規定と conflict 解消の優先順位
-
-session join の conflict 解消結果は、共通の oracle・realization 規定と、本節のマージ固有の成果条件を同時に満たさなければならない。agent は共通規定に従って整理・検証を行い、ファイルアクセス境界の範囲内で付随する編集の要否と範囲を判断する。
-
-共通規定は、次の正本を参照する。
-
-- `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」まで、および「oracle file を扱う判断基準」「realization file を扱う判断基準」：正本責務・優先関係と、oracle・realization file の判断基準。
-- `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」「書き込み主体の責任分界」「SDPolicy の例外」：共通のアクセス境界と、例外の適用範囲。
-
-マージ固有の成果条件は、次のとおりとする。
-
-- conflict の両側と関連する oracle file を確認し、両 branch の両立する意図と挙動を解消結果に保持する
-- 両側の意味を両立できず人間意図の選択が必要な場合は、推測で一方を破棄せず未解消事項として報告する
-- 規定に違反する解消結果を解消完了として扱い、merge を成立させてはいけない
+call 固有の正確な prompt 文面、builder の引数、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_parameter` へ委譲する。共通 policy と prompt 構築の委譲先は、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent への入力と正確な定義の委譲」に従う。
 
 ## その他、コマンドが想定外に失敗した場合
 
@@ -83,4 +62,5 @@ session join の conflict 解消結果は、共通の oracle・realization 規�
 - report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/session/join/{{time-stamp}}.md` に保存する。
 - front matter には、command、生成日時、repo root、terminal result の共通分類、終了コード、session branch、home branch、merge 前の両 branch の HEAD commit、作成した merge commit、および session state の実行前後の値を含める。確定できなかった値は `null` とする。
 - 本文には、事前検証、branch 切替、merge 結果、conflict path、conflict 解消用 agent call と確定した解消結果、state 遷移、session branch の cleanup、warning またはエラー、必要な次の操作、および関連する診断用サブコマンドログと Codex call log を要約する。
+- 競合解消の内容は、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」に従い、採用した判断、付随編集、検証結果、および未解消理由を含める。
 - 実行しなかった merge、conflict 解消、state 更新、または cleanup は未実行として扱う。確定していない解消結果を作ってはならない。

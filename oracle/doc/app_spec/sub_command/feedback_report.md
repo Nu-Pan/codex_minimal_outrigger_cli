@@ -206,9 +206,25 @@ wave loop が自然完了した場合は、`{{cmoc-root}}/oracle/doc/app_spec/fe
 
 自動 join 前に、`fixed` としての publication または observation cleanup を行ってはならない。
 
-merge または no-op join と post-join の後、issue commit の到達可能性、変更 path、必要な機械生成物、および採用する全結果の判定根拠を join 後の session 状態に対して検証する。検証済みの内容の取り込みと、採用結果の有効性および publication の整合性を確認できなければ、join 後検査失敗とする。この段階で issue の再確認・再修正は開始しない。publication と workload 固有 cleanup が完了するまで `run.state=joinable` と隔離資源を維持する。
+### 封印後のマージ調整
 
-merge conflict、差分不整合、または join 後検査失敗では正常 publication を行わない。run を `error` とし、run branch、run worktree、issue commit、raw observation、直前の current pointer、および診断情報を保持する。
+競合解消には、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「join の競合解消」を適用する。競合の発生そのものを publication failure にしてはならない。
+
+競合解消 agent は、封印済みの採用結果を維持するために、session worktree の merge 結果を調整してよい。内容が run branch と異なっても、両側の変更意図と採用結果を維持できる調整を認める。影響を受ける判定を全結果分類から特定し、merge commit 前に必要な検証を行う。issue 処理をやり直すための新しい wave や、別の remediation・レビュー call は開始しない。
+
+cmoc は、merge 対象 commit の参照に加えて、封印済み report cut の path を agent へ渡す。agent は、そこから採用結果、対応する checkpoint、および判定根拠を読み取り専用で参照し、調整と検証の結果を報告する。封印済み artifact や run branch の issue commit は書き換えない。正確な入力と指示文は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_parameter` へ委譲する。
+
+結果分類そのものの変更が必要な場合、または必要な検証で封印済み結果の維持を確認できない場合は、merge commit を作成せず publication を停止する。この停止を新しい issue result、`human_required`、または `incomplete` へ変換しない。merge 開始前への復旧は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「競合解消」に従う。
+
+本節の調整は、本書の「net 差分と機械的受理条件」「issue 単位の commit と rollback」が定める元の issue 処理の受理条件を変更しない。issue の `changed_paths` と issue commit は元の処理単位の記録として保持し、マージ調整に伴う付随編集の記録と区別する。
+
+### join 後の検証と記録
+
+merge または no-op join と post-join の後、issue commit の到達可能性、マージ調整を含む変更 path、必要な機械生成物、および採用する全結果の判定根拠を join 後の session 状態に対して検証する。merge commit 前の検証記録が最終状態に適用できることも確認する。検証済みの修正の効果と採用結果の有効性、および publication の整合性を確認できなければ、join 後検査失敗とする。この段階では新しい Codex call や修正を開始しない。
+
+封印済み artifact の hash 整合性は、その artifact が変わっていないことの検査である。マージ後のファイル内容が run branch と同一であることや、採用結果の意味的な妥当性の証明として扱ってはならない。調整と検証の記録は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「publication completion record」に従って最終取り込み結果と結び付ける。
+
+publication と workload 固有 cleanup が完了するまで `run.state=joinable` と隔離資源を維持する。未解消競合、差分不整合、結果分類変更の必要、または join 後検査失敗では `run.state=error` とし、正常 publication と observation cleanup を行わない。run branch、run worktree、issue commit、raw observation、直前の current pointer、封印済み artifact、および診断情報を保持する。取り込み確定後の停止は本書の「join 後の publication failure」に従う。
 
 ## publication
 
@@ -233,16 +249,16 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 ### join 後の publication failure
 
-自動 join 後の publication または cleanup に失敗した場合は、`run.state=error` とする。merge と publication point を巻き戻さず、raw observation、current pointer、および recovery に必要な run artifact を保持する。
+自動 join 後の検証、publication、または cleanup に失敗した場合は、`run.state=error` とする。merge と publication point を巻き戻さず、raw observation、current pointer、および recovery に必要な run artifact を保持する。
 
 次回の `cmoc feedback report` は、次の条件を両方満たす場合だけ、その publication または cleanup を idempotent に再開する。
 
 - state と immutable artifact から、同じ run の join 成功と未完了処理を一意に特定できる。
-- join 後 tree を再検証できる。
+- join 後 tree を再検証でき、保存済みの判定根拠とマージ調整の検証記録から、封印済み結果をそのまま採用できる。
 
 新しい wave または Codex call は開始しない。安全に再開できない場合は、`run.state=error` と資源を維持する。
 
-封印済みの結果の更新や新たな修正を必要とする停止 run は、この recovery の対象外とする。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
+封印済みの結果分類の変更、新たな意味判断のための agent call、または追加修正を必要とする停止 run は、この recovery の対象外とする。merge commit 前に許されたマージ調整を、join 後にも継続できるとは扱わない。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
 
 ## ユーザー中断
 
@@ -261,7 +277,7 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 自動 join の開始後から cleanup までは、workload 固有の不可分な finalization とし、処理を途中で中断しない。この区間には、次の処理を含む。
 
-1. merge または no-op join
+1. 競合解消と必要な検証を含む merge または no-op join
 2. join 後 tree 検査
 3. publication
 4. cleanup
@@ -281,6 +297,8 @@ quota と一時障害の分類・回復待ち・再開は、`{{cmoc-root}}/oracl
 ## report の保存と表示
 
 primary report の実行記録には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「共通掲載内容」を適用し、以下の issue 一覧とは区別する。
+
+自動 join の競合解消については、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める判断、付随編集、検証、および未解消理由を実行記録に含める。封印済み結果への影響と検証結果、publication completion record との対応、または publication を停止した理由も判別可能にする。自動修正済み issue を人間向け issue 一覧に再掲載するためには用いない。
 
 ### 正常 report
 

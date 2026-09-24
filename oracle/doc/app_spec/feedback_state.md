@@ -63,7 +63,7 @@ state を構成する artifact の役割を次に示す。
 | intake wave | その wave が処理する observation、active issue、正規化済み issue identity、および根拠の immutable な固定入力 |
 | checkpoint | 受理済み normalization または remediation の入力、結果、検証、および commit を hash で結び付ける記録 |
 | report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、採用する有効な結果、および merge 対象を固定する |
-| publication completion record | merge または no-op join 後の session commit、run branch の到達可能性、および最終 tree 検証結果を report cut と結び付ける immutable な記録 |
+| publication completion record | report cut の採用結果と、マージ調整・検証を経た最終取り込み結果を結び付ける immutable な記録 |
 | `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった処理について、確定済み結果と完了を妨げた原因を記載した durable な Markdown report |
 
 timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。
@@ -179,7 +179,23 @@ report cut は、少なくとも次の入力を固定する。
 - issue commit、run branch HEAD、および merge 前の検証結果
 - 正常 publication target、`incomplete` 診断 target、および cleanup target
 
-merge または no-op join 後は、session tree の commit と最終 tree 検証結果を別の immutable な publication completion record として保存し、run manifest から report cut とともに参照する。封印済み report cut、wave input、issue result、最終 high-watermark、または cleanup target を変更してはならない。
+封印後に許す調整・検証と停止条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。調整によって、封印済み report cut、wave input、issue result、最終 high-watermark、または cleanup target を変更してはならない。
+
+### publication completion record
+
+cmoc は、封印後のマージ調整に関する agent の判断と検証結果を、merge commit の作成前に既存の Codex call log へ保存する。記録から report cut と検証対象の内容を特定できるようにし、取り込み後に停止した場合も recovery 用の根拠として保持する。
+
+publication completion record は、merge または no-op join と post-join 後に、最終 session tree に対する検証を完了してから保存する。run manifest は、この record と report cut の path および hash を参照する。少なくとも次の対応を確認できる記録とする。
+
+- 封印済み report cut と採用結果・checkpoint の参照。
+- merge 前の両 commit、成立した merge commit または no-op join、および post-join 後の session commit。
+- run branch と issue commit の到達可能性。
+- マージ調整の対象、採用した判断と理由、影響を受けた判定、および merge commit 前に保存した検証記録との対応。調整しなかった場合はその旨。
+- その検証記録が最終 session tree に適用でき、全採用結果が有効であることを確認した最終検証結果。
+
+この record は、元の issue result の書き換えや新しい結果分類の保存先にはしない。artifact の不変性・hash 整合性と、調整後の内容に対する検証結果は区別して記録する。結果の有効性を確認できず停止した場合は completion を記録せず、診断情報と recovery 用資源を保持する。
+
+保存済み record は immutable とし、recovery 時にも上書きしない。record が未保存の場合は、同じ封印済み入力と保存済み検証記録を使用し、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」の再開条件を満たす場合だけ確定する。
 
 ## `incomplete` 診断 report
 

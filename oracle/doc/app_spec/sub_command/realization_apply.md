@@ -26,6 +26,8 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 
 ## agent call と file access
 
+本節の call 数と補完禁止は fork 内の追従作業に適用する。後続の join の競合解消は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「競合解消」に従い、fork の失敗を追従完了へ変更する処理にはしない。
+
 - 追従要否と適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」を正本とする。
 - 正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py` の `build_realization_apply_fork_launch_exec_parameter` へ委譲する。
 - `{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` を 1 回だけ本命 agent call として実行する。Codex CLI の TUI は起動しない。

@@ -77,6 +77,12 @@ class CmocConfigCodex:
                 model="gpt-6-astra",
                 reasoning_effort="xhigh",
             ),
+            # NOTE run と session の変更意図を統合するため、session join と同じ品質を使う
+            "build_run_join_conflict_resolution_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="xhigh",
+            ),
             # NOTE
             #   oracle file に影響を与えるので品質が重要
             #   TUI で人間とターンを回すので品質・速度が重要

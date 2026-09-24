@@ -28,6 +28,7 @@ read-only の investigation、cmoc 自身による機械的更新、および se
 
 - run の作業は、branch model が定める `{{cmoc-run-worktree}}` 上で行う。
 - agent call の cwd は、個別仕様に別の定めがない限り `{{cmoc-run-worktree}}` とする。
+- run join の競合解消は取り込み先の session worktree で行う。編集範囲と復旧は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「競合解消」を正本とし、そのために別の run は作らない。
 - run 上の agent call の root path は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」に従う。同節が正確な導出先の oracle src を定める。
 - cmoc process の cwd が `{{repo-root}}` であっても、run 上の agent call の path context は `{{cmoc-run-worktree}}` から解決する。
 - 人間が `{{cmoc-run-worktree}}` を直接編集することは想定しない。
