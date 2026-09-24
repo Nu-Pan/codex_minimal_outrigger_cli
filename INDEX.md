@@ -114,39 +114,37 @@
 # `src`
 
 ## Summary
-- cmoc の CLI command tree と、各コマンドの処理への受け渡しを定義する。
-- 複数コマンドが使う runtime を担い、Codex 起動、設定、Git と state、ログとレポート、feedback、INDEX 更新などの共通処理をまとめる。
-- コマンド固有の処理と ACP builder の adapter を含み、一部の旧 import 経路から oracle 側の正本実装や型を公開する。
+- cmoc の CLI command tree と各 command の Python 処理をつなぎ、共有 runtime を含む実装の中心。
+- Codex・ACP の呼び出し処理や、正本側の定義を再公開する互換 import 入口も含む。
 
 ## Read this when
-- CLI の command 構成や、コマンド名から実処理へ至る経路を確認するとき。
-- 変更が複数コマンドにまたがる、または Codex 起動・設定・Git と state・ログ・feedback・INDEX 更新などの共通処理に関わるとき。
-- この領域の import 経路が oracle 側の正本実装や型をどう公開しているか調べるとき。
+- CLI の command 登録と処理のつながりや、複数 command にまたがる runtime の動作を実装から追うとき。
+- ACP 呼び出しや互換 import が、実行処理からどう使われるかを調べるとき。
 
 ## Do not read this when
-- 特定コマンドの処理だけを追う場合は、そのコマンド固有の処理領域から読む。
-- 単一の共通 runtime 処理だけを変更・調査する場合は、その処理を担う領域から直接読む。
-- oracle 側の正本仕様や実装自体を確認・変更する場合は、対応する oracle の文書やソースを直接読む。
+- 調査・変更対象が特定の command、runtime helper、builder、互換 import に絞れているときは、対応する下位項目から読む。
+- 正本の要求や定義を確認するときは正本側を、テストの期待値や fixture を確認するときはテスト側を読む。
 
 ## hash
-- 1824cb2179c104e9b51340753f72ae42ed944cf5d795ea350bfd43b0aec32e2d
+- 39a5c9e34ab974c701131e3dc223519a46304f00e1087d9e55708d09d022b762
 
 # `test`
 
 ## Summary
-- 実装挙動の回帰テストをまとめ、CLI の各種操作、Git・worktree と session/run の状態管理、indexing、feedback report の処理を検証する。
-- Codex の起動設定、出力処理、quota 待機・回復、中断時の subprocess 制御、TUI 通知といった runtime の契約も扱う。
-- prompt と builder、構造化文書、設定、パッケージ import、wrapper を確認するテストに加え、実 CLI を独立プロセスや PTY から検証する受け入れテストがある。共有 helper と fixture は Git repository、外部コマンド、通知 transport などをテスト用に隔離する。
+- pytest の単体・統合テストを集め、CLI と runtime の外部挙動、Git/worktree 操作、状態遷移、ログや報告の契約を検証する。これらの実装変更に対する回帰確認の入口となる。
+- Codex の exec/TUI 起動、prompt とアクセス境界、プロセス管理、再試行・回復、および editor input、handoff、通知の連携を検証する。
+- indexing、ファイル列挙、feedback の判定・処理・公開や、各種 builder の契約を検証する。正本に基づく振る舞いと CLI 経路の適合性を調べる場所である。
+- 本番経路を使う統合テストも含み、実行後の終了状態や報告、Git と state の変化を確認する。外部推論の回答品質を評価する場所ではない。
 
 ## Read this when
-- CLI コマンドや report、indexing、feedback、session/run の挙動を変更し、回帰を確認する場所を探すとき。
-- Codex runtime の設定・出力・回復・中断処理や prompt/builder の変更が、既存の契約に与える影響を調べるとき。
-- 本番経路に近い独立プロセス・実 CLI・PTY の検証や、テスト環境の共有 fixture と隔離方法を確認するとき。
+- CLI、runtime、Git/worktree、state、ログまたは報告の挙動を変更し、既存の回帰検証範囲を調べるとき。
+- Codex 呼び出し、prompt、プロセス管理、editor input/handoff、通知の境界や連携を変更するとき。
+- indexing、ファイル分類、feedback、または builder の契約を変更し、CLI からの統合動作も確認するとき。
 
 ## Do not read this when
-- 期待される仕様だけを確認したいときは、対応する正本仕様や schema を直接読む。
-- 現在の処理実装を追うだけなら、対象機能の実装へ直接進む。
-- 一つの限定された挙動の assertion を調べる場合は、その領域の個別テストへ進み、テスト群全体の責務を読む必要はない。
+- 要件の正本を確認・改訂するときは、テストの期待値ではなく oracle の仕様本文を読む。
+- 単一の機能の実装や不具合の原因を調べるときは、まず該当する実装と正本仕様を確認し、この配下全体を読む必要がない場合。
+- 利用者向けの CLI の使い方や運用手順を調べるとき。ここは主に回帰検証とテスト用共有処理を扱う。
 
 ## hash
-- b870f0c64965e0a8848270bdb6ca23372944797601b0e643b7f309e3f8aeeb64
+- fb2fbd4a22fa7f39d140d0deeaa1a236d42b7357c3f0aeed40821e29adf21118
