@@ -66,22 +66,21 @@ class CmocConfigCodex:
     # `AgentCallParameter.agent_call_kind` --> Codex CLI へ直接渡す設定
     # NOTE
     #   ベンチマークスコア上、GPT-5.6 Astra は xhigh, max に知能差はほとんど無いが、料金差はきっちりある
-    #   個別ベンチスコアで見ても、ほとんど横並び
-    #   よって、この設定ファイル内の選択基準的には GPT-5.6 Astra xhigh を最高品質とみなす
-    #   コスパを重視するなら high に落としても良い
+    #   なので、GPT-5.6 Astra xhigh にして料金をケチりたい所だった。
+    #   現実には xhigh だと取りこぼしがきになるので max で運用している。
     agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
             # NOTE merge 結果を守るため、品質が最優先
             "build_session_join_conflict_resolution_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
             ),
             # NOTE run と session の変更意図を統合するため、session join と同じ品質を使う
             "build_run_join_conflict_resolution_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
             ),
             # NOTE
             #   oracle file に影響を与えるので品質が重要
@@ -89,13 +88,13 @@ class CmocConfigCodex:
             "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
             ),
             # NOTE oracle file に影響を与えるので品質が重要
             "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
             ),
             # oracle --> realization のメインルート
             # NOTE
@@ -106,8 +105,8 @@ class CmocConfigCodex:
             #   よって、結論としては品質が重要
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                model="gpt-6-sol",
+                reasoning_effort="max",
             ),
             # NOTE
             #   報告１つ毎に呼ぶ関係でコストが嵩みやすい
@@ -130,7 +129,7 @@ class CmocConfigCodex:
             "build_tui_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
             ),
             # NOTE
             #   ファイル単位処理なので呼び出し回数が非常に多く、その分コストが掛かる
