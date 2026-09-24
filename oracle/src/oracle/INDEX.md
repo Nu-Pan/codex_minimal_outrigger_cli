@@ -21,22 +21,18 @@
 # `editor_input_handoff`
 
 ## Summary
-- エディター入力の引き渡しガイドを、受信先プロンプト雛形から構築する処理と入力仕様を扱う。
-- 目標・依頼内容・背景・決定事項・未確定事項・oracle参照・送信元情報から、引き渡し本文を生成する正本実装を扱う。
-- 引き渡し本文の上書き入力と、target指定によるガイド取得結果のJSON Schemaを提供する。
+- editor input の handoff を構成する正本群。受信先 prompt から参照ガイドを生成し、項目別依頼内容・oracle参照・送信元識別情報から handoff 本文を構築するほか、入力とガイド取得結果の JSON Schema を定義する。
 
 ## Read this when
-- エディター入力のhandoffガイドや本文の生成・構成を変更または確認するとき。
-- handoff入力の必須項目、空白禁止、oracle参照、target IDの検証条件を確認するとき。
-- 送信元のサブコマンド名・実行ID・Codex call ID・絶対ログパスの扱いを確認するとき。
+- editor input の handoff ガイド生成、handoff 本文の構成、送信元情報の検証、または関連 MCP 入出力のスキーマを確認するとき
+- 自由記述項目や oracle 参照、target ID、実行 ID など handoff データの形式・必須条件を調べるとき
 
 ## Do not read this when
-- 受信先プロンプト雛形そのものの仕様だけを確認したいとき。
-- handoff以外のMCP入力や一般的なJSON Schemaの設計を確認するとき。
-- 生成済みeditor work fileの利用方法や、送信側・受信側の外部処理を直接確認したいとき。
+- handoff 以外の editor input 処理を調べるとき
+- 実際の TUI 呼び出し、MCP の検証・参照変換・ファイル書き込みの実装を確認したいとき。このディレクトリはそれらを呼び出し側の責務として扱う
 
 ## hash
-- 81d54f916ad10b2fde754c477225f9ad30fefa2c05abfe95bc96a49d8e98575b
+- a2a1263148e18bfbd7bc09d014034824d810a0f333b5cb8c958c0676e6ec0ee8
 
 # `feedback`
 
@@ -75,18 +71,17 @@
 # `prompt_builder`
 
 ## Summary
-- agent 向け完全 prompt の構築を担い、基本情報・oracle/realization の責務・ファイルアクセス・routing・INDEX.md 作成・各種作業ポリシーを選択的に組み立てる。
-- 配下の部品は、共通のプレースホルダ型、完全 prompt の統合、エディタ案内、oracle/realization 基礎説明、および個別ポリシー文面の構築を分担する。
+- agent向け完全promptを構築する定義群の入口。タスクやパス文脈からプレースホルダーを統合し、選択された基本規定・各種ポリシー・目的・追加文面を構造化されたpromptへ組み立てる。
+- 共通のプレースホルダー型、エディタ入力案内、oracle/realizationの基本説明、およびファイルアクセス・routing・正本仕様・実装・所見・conflict解消・handoffなどの個別ポリシー構築を扱う。下位のpolicyやpartsは、特定の規定本文や基本説明の構築方法を確認するための入口である。
 
 ## Read this when
-- agent call に渡す prompt の構成、ポリシーの有効化、プレースホルダ定義の統合方法を変更・確認するとき。
-- INDEX.md 用エントリー、routing、oracle/realization、ファイルアクセス、feedback 報告などの指示文面の責務や生成内容を確認するとき。
-- prompt_builder 配下の個別ポリシーや構築部品のどれを起点に読むべきか判断するとき。
+- agent callへ渡す完全promptの構成、規定の有効化、目的や追加文面の配置、プレースホルダー統合の挙動を確認したい場合。
+- prompt_builder配下の共通型、エディタ入力案内、または複数のpromptポリシーがどのように構築されるかを調べたい場合。
+- 個別ポリシーの選択肢を横断して、prompt構築全体の責務や組み立て順を把握したい場合。
 
 ## Do not read this when
-- prompt の意味仕様そのものや人間向けの正本仕様を確認する場合は、参照先の oracle/doc を直接読む。
-- 生成された prompt の実行時挙動や製品側の実装を確認する場合は、対応する realization 実装・テストを直接読む。
-- エディタ入力の内容だけを確認する場合は、prompt_builder 全体ではなく editor_input の構築定義またはその参照仕様を読む。
+- 単一のポリシー本文や基本説明の具体的な要求だけを確認したい場合は、配下の対応するpolicyまたはpartsを直接読む。
+- プロンプト構築ではなく、参照先の意味仕様や実際のagent実行処理を調べる場合は、それぞれのoracle/docまたは呼び出し側実装を直接読む。
 
 ## hash
-- 1a0f39daf96a3386bb5d4bff3dbc311e774ddd3381795ddd4210912264c57d0f
+- 8b52d93dc0305b481c83f78a1dc2d855eafb7d4fd2b5b7526c53bba7fe695609

@@ -74,21 +74,18 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` の仕様を定めるサブコマンド文書。ユーザー指示から共通の prompt と設定を一度構築し、同じ worktree に対して独立した編集 agent call を最大 2 回、所定の前処理・条件検査・報告とともに実行する流れを扱う。
-- 引数、agent への指示境界、oracle file の編集範囲、未コミット差分の扱い、実行順序、終了状態、primary report・ログ・通知、中断および排他制御の規則を確認するための入口。
+- `cmoc oracle edit` の仕様を定め、ユーザー指示から oracle file の目標状態を導出して、同一の prompt・設定で独立した agent call を固定2回直列実行する責務を扱う。実行前条件、編集境界、実行順序、失敗時の扱い、差分維持、primary report・ログ・通知の終了処理を確認するための入口である。
 
 ## Read this when
-- `cmoc oracle edit` の起動条件、2 回の編集 agent call の順序、共通 prompt・設定の確定方法を確認したいとき
-- oracle edit が編集できる対象、禁止される Git/worktree 操作、未コミット差分の扱いを確認したいとき
-- 成功・失敗時の終了状態、差分維持、primary report、console・ログ・通知の責務を確認したいとき
+- `cmoc oracle edit` の引数なし実行、prompt と AgentCallParameter の確定、2回の agent call の構成または実行順序を確認するとき。
+- oracle file のみを編集対象とする agent 境界、未コミット差分の扱い、成功・失敗時の終了状態、report やログの保存規則を確認するとき。
 
 ## Do not read this when
-- oracle file の編集判断基準そのものを確認したい場合は `oracle_and_realization.md` を直接読むとき
-- prompt の共通 editor lifecycle や Codex 実行・Git 差分受け渡しの詳細を確認したい場合は、本文が参照する共通仕様を直接読むとき
-- 実装の具体的な起動処理や設定定義を確認したい場合は、本文が指定する `oracle/src` の builder・設定ファイルを直接読むとき
+- INDEX.md の生成規則やルーティング自体を確認したいだけで、oracle edit の動作仕様を確認する必要がないとき。
+- prompt editor input の共通 lifecycle、Codex exec の共通呼び出し規則、indexing、設定定義、通知形式の詳細を直接確認する必要があるときは、それぞれの参照先仕様を読む。
 
 ## hash
-- 331cdb1c138438ca4393601b2d3e9561affde06dcda5a4f09cee77c99db8f1c6
+- 78c1f11b1bdeec091edb32b1cc541deed2884539ea8e67ca9d03374b9dfcc485
 
 # `oracle_investigation.md`
 
