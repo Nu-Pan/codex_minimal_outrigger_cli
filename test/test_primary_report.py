@@ -29,6 +29,7 @@ import commons.runtime_cli as runtime_cli
 import commons.runtime_primary_report as primary_report_module
 from cmoc_runtime import CmocError, TerminalResult
 from commons.runtime_primary_report import PrimaryReportSaveError
+from commons.runtime_primary_report_render import execution_record_markdown
 
 _EARLY_ERROR_REPORTS = [
     ("doctor", "doctor", ()),
@@ -389,6 +390,151 @@ def test_primary_report_keeps_every_codex_output_and_accepted_observation(
     assert "different workload" in report
 
 
+def test_structured_output_display_preserves_json_values_and_hierarchy(
+    tmp_path: Path,
+) -> None:
+    """report 表示だけを整え、JSON 文字列を二重に解釈しない。"""
+    output = tmp_path / "structured-output.json"
+    source = {
+        "nested": {
+            "text": "日本語\n次の行",
+            "literal": r"\n",
+            "json_text": '{"x":1}',
+            "quoted": 'say "hi" \\ slash',
+            "empty": "",
+            "nothing": None,
+            "items": [True, 0, 1.25, [], {}],
+        }
+    }
+    output.write_text(json.dumps(source, ensure_ascii=True), encoding="utf-8")
+    duplicate_output = tmp_path / "duplicate-keys.json"
+    duplicate_output.write_text(
+        '{"duplicate":"first","duplicate":"second"}', encoding="utf-8"
+    )
+    report = execution_record_markdown(
+        None,
+        saved_events=(
+            {
+                "event": "codex_call",
+                "output_path": str(output),
+                "schema_path": str(tmp_path / "schema.json"),
+                "status": "succeeded",
+            },
+            {
+                "event": "codex_call",
+                "output_path": str(duplicate_output),
+                "schema_path": str(tmp_path / "schema.json"),
+                "status": "succeeded",
+            },
+        ),
+    )
+
+    assert f"出力: `{output.resolve()}`" in report
+    assert '"nested": {\n    "text": "日本語\n次の行"' in report
+    assert r'"literal": "\\n"' in report
+    assert r'"json_text": "{\"x\":1}"' in report
+    assert r'"quoted": "say \"hi\" \\ slash"' in report
+    assert '"empty": ""' in report
+    assert '"nothing": null' in report
+    assert (
+        '"items": [\n      true,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
+        in report
+    )
+    assert '"literal": "\n"' not in report
+    assert '"duplicate": "first",\n  "duplicate": "second"' in report
+    assert "正式な結果ではありません" not in report
+
+
+def test_structured_output_display_marks_unaccepted_and_unparseable_outputs(
+    tmp_path: Path,
+) -> None:
+    """補正前の出力と JSON parse 不能な原文を正式結果と区別する。"""
+    outputs = (
+        b'{"result":"wrong"}',
+        b"{broken JSON\n\n",
+        b"NaN",
+        b'{"text":"\xff"}',
+    )
+    events = []
+    for index, content in enumerate(outputs):
+        output = tmp_path / f"output-{index}.json"
+        output.write_bytes(content)
+        events.append(
+            {
+                "event": "codex_call",
+                "output_path": str(output),
+                "schema_path": str(tmp_path / "schema.json"),
+                "status": (
+                    "output_correction_requested"
+                    if index == 0
+                    else "structured_output_validation_failed"
+                ),
+            }
+        )
+
+    report = execution_record_markdown(None, saved_events=tuple(events))
+
+    assert report.count("検証不合格（正式な結果ではありません）。") == 4
+    assert '"result": "wrong"' in report
+    assert report.count("JSON として解析できません。取得できた原文を示します。") == 3
+    assert "{broken JSON" in report
+    assert "```text\n{broken JSON\n\n\n```" in report
+    assert "\nNaN\n" in report
+    assert r'"text":"\xff"' in report
+
+
+@pytest.mark.parametrize("ending", ("natural_completion", "user_interruption", "error"))
+def test_structured_output_is_formatted_in_every_primary_report_ending(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    ending: str,
+) -> None:
+    """最外側の終了分類に依存せず Structured Output を整形する。"""
+    from commons.runtime_logging import current_subcommand_logger
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+
+    def body() -> TerminalResult:
+        logger = current_subcommand_logger()
+        assert logger is not None
+        output = logger.path.with_name("structured-output.json")
+        output.write_text('{"message":"first\\nsecond"}', encoding="utf-8")
+        logger.event(
+            "codex_call",
+            output_path=str(output),
+            schema_path=str(root / "schema.json"),
+            status="succeeded",
+        )
+        if ending == "user_interruption":
+            runtime_cli.mark_current_subcommand_interrupted()
+        if ending == "error":
+            raise CmocError("after Codex call", [], "error after saved output")
+        return TerminalResult()
+
+    if ending == "error":
+        with pytest.raises(typer.Exit):
+            runtime_cli.run_cli_subcommand(
+                body, command_name="doctor", doctor_preprocess=False
+            )
+    else:
+        runtime_cli.run_cli_subcommand(
+            body,
+            command_name="doctor",
+            doctor_preprocess=False,
+            interruptible=True,
+        )
+
+    captured = capsys.readouterr()
+    report = terminal_primary_report(
+        captured.err if ending == "error" else captured.out
+    ).read_text(encoding="utf-8")
+    assert '"message": "first\nsecond"' in report
+    assert "### Codex 最終出力" in report
+
+
 def test_primary_report_explains_when_codex_output_is_unavailable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -448,9 +594,9 @@ def test_primary_report_delimits_and_escapes_artifact_paths(
     runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
 
     report = terminal_primary_report(capsys.readouterr().out).read_text()
-    expected_output = str(output_path.resolve()).replace("`", "'")
+    expected_output = str(output_path.resolve())
     expected_call_log = str(call_log_path.resolve()).replace("`", "'")
-    assert f"出力: `{expected_output}`" in report
+    assert f"出力: ``{expected_output}``" in report
     assert f"Codex call (unsafe path, succeeded): `{expected_call_log}`" in report
 
 

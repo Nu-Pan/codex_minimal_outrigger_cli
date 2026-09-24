@@ -114,37 +114,33 @@
 # `src`
 
 ## Summary
-- cmoc の CLI command tree と各 command の Python 処理をつなぎ、共有 runtime を含む実装の中心。
-- Codex・ACP の呼び出し処理や、正本側の定義を再公開する互換 import 入口も含む。
+- cmoc の CLI 起動口、サブコマンド処理、共通 runtime を実装するソース群です。
+- Codex の起動、Git と session/run の状態管理、feedback、index 更新、報告などの共通処理を含みます。ACP builder や basic/config には、oracle 側の定義を公開する互換アダプターもあります。
 
 ## Read this when
-- CLI の command 登録と処理のつながりや、複数 command にまたがる runtime の動作を実装から追うとき。
-- ACP 呼び出しや互換 import が、実行処理からどう使われるかを調べるとき。
+- CLI のコマンド選択から処理の流れを追うとき、または複数のコマンドにまたがる挙動を調べるとき。
+- Codex 実行、Git と worktree、session/run、feedback、index 更新など、共通 runtime の境界や連携を調べるとき。
 
 ## Do not read this when
-- 調査・変更対象が特定の command、runtime helper、builder、互換 import に絞れているときは、対応する下位項目から読む。
-- 正本の要求や定義を確認するときは正本側を、テストの期待値や fixture を確認するときはテスト側を読む。
+- 作業が特定のコマンド群や共通処理の一領域に限られる場合は、その下位項目から確認するとき。
+- oracle 側の正本仕様や builder 定義が対象の場合は、互換アダプターを含むこのソース群ではなく、該当する正本から確認するとき。
 
 ## hash
-- 39a5c9e34ab974c701131e3dc223519a46304f00e1087d9e55708d09d022b762
+- cd10fda489523c68120ec4281369ad49419407a4b86e55a0dc08f303e90b691e
 
 # `test`
 
 ## Summary
-- pytest の単体・統合テストを集め、CLI と runtime の外部挙動、Git/worktree 操作、状態遷移、ログや報告の契約を検証する。これらの実装変更に対する回帰確認の入口となる。
-- Codex の exec/TUI 起動、prompt とアクセス境界、プロセス管理、再試行・回復、および editor input、handoff、通知の連携を検証する。
-- indexing、ファイル列挙、feedback の判定・処理・公開や、各種 builder の契約を検証する。正本に基づく振る舞いと CLI 経路の適合性を調べる場所である。
-- 本番経路を使う統合テストも含み、実行後の終了状態や報告、Git と state の変化を確認する。外部推論の回答品質を評価する場所ではない。
+- cmoc の振る舞いを検査する pytest の単体・統合テストと、共有 fixture・補助コードをまとめる。CLI、runtime、Codex 呼び出し、prompt、indexing、feedback、session/run state、filesystem などの回帰確認に使う。
+- 実装の外部挙動や境界条件を実行可能な形で確かめる入口。プロダクト実装は src、規範的な要件の根拠は oracle の該当箇所を参照する。
 
 ## Read this when
-- CLI、runtime、Git/worktree、state、ログまたは報告の挙動を変更し、既存の回帰検証範囲を調べるとき。
-- Codex 呼び出し、prompt、プロセス管理、editor input/handoff、通知の境界や連携を変更するとき。
-- indexing、ファイル分類、feedback、または builder の契約を変更し、CLI からの統合動作も確認するとき。
+- CLI や runtime、Codex 呼び出し、prompt、indexing、feedback、session/run state など、ここで扱う振る舞いを変更・調査し、対応する回帰テストや共有 helper を探すとき。
+- pytest の失敗を調べるとき、または既存のテスト構成に沿って対象の振る舞いを検証するとき。
 
 ## Do not read this when
-- 要件の正本を確認・改訂するときは、テストの期待値ではなく oracle の仕様本文を読む。
-- 単一の機能の実装や不具合の原因を調べるときは、まず該当する実装と正本仕様を確認し、この配下全体を読む必要がない場合。
-- 利用者向けの CLI の使い方や運用手順を調べるとき。ここは主に回帰検証とテスト用共有処理を扱う。
+- 規範的な要求や人間の意図を確認するときは、テストを正本として扱わず、関連する oracle の文書・実装・テストを読む。
+- テストや回帰カバレッジが作業対象でなく、実装の詳細だけを追うときは、該当する src の対象へ進む。
 
 ## hash
-- fb2fbd4a22fa7f39d140d0deeaa1a236d42b7357c3f0aeed40821e29adf21118
+- 2730679763eed478a570b47ccadc270f377ac15fe54347030381e51fb393e0f6

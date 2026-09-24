@@ -645,18 +645,17 @@
 # `test_primary_report.py`
 
 ## Summary
-- 非対話末端サブコマンドの primary report 完了処理を検証するテスト群。早期エラー、中断、fallback 生成、実行記録の反映、保存失敗時の扱いを対象とする。
+- 非対話末端サブコマンドに共通する primary report の完了経路を検証します。開始前エラーや中断時の report 保存、実行記録と Codex 出力の表示、保存・更新失敗時の扱いを横断して確認できます。
 
 ## Read this when
-- 共通の primary report 保存や terminal result 確定処理を変更し、終了経路ごとの report 保存と表示を確認するとき。
-- Codex 出力や受理済み observation の実行記録への反映、report の更新・保存確認時の失敗処理を変更するとき。
+- 共通の report fallback、終了時の確定処理、実行記録や Structured Output の表示、保存失敗時の処理を変更・調査するとき。
+- 開始前エラーや中断の report、Codex 出力や受理済み observation の記録に回帰がないか確認するとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の処理手順や report 項目だけを調べるときは、そのサブコマンドの実装・仕様・専用テストへ進む。
-- primary report に関係しない共通ログや terminal result の挙動を調べるときは、該当する実装・仕様・テストを直接読む。
+- 特定サブコマンド固有の処理手順、report 項目や保存先を確認するときは、そのサブコマンドの正本仕様と専用テストを参照してください。この対象は共通の完了経路を横断しており、個別コマンドの仕様全体は扱いません。
 
 ## hash
-- a672eb69f2cda5f790a344f3cc71d1b9bfa9867daa1b7f42e6e4c5a473f0432e
+- ac067735d0d445fd372647e4c8dc9a2d7e6b3aa4457409b11d089282a6171932
 
 # `test_production_cli.py`
 

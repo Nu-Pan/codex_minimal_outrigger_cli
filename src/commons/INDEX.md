@@ -527,20 +527,20 @@
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済みの実行情報と個別テンプレート設定から、fallback primary report の本文を組み立てる。サブコマンド別の要約に加え、実行段階、終端結果、warning、次の操作、関連ログを描画する。
-- Codex の最終出力や受理済み feedback observation を実行記録として整形し、実行段階・ログ・値の安全な共通描画も提供する。editing run 用 report の描画処理も一部の共通関数を利用する。
+- 確定済みの実行情報から fallback primary report を描画し、共通の YAML 値・実行段階・関連ログ・実行記録の整形も担う。
+- 実行記録は Codex の最終出力と受理済み feedback observation を表示し、別の report や manifest からも利用される。
 
 ## Read this when
-- fallback primary report の本文構成や、確定済み実行情報・ログを Markdown にどう表示するかを調べる、または変更するとき。
-- Codex 最終出力や feedback observation の実行記録、実行段階・関連ログの共通描画を調べる、または変更するとき。
+- fallback primary report の本文や、確定済み情報の Markdown 表示を確認・変更するとき。
+- Codex の最終出力や feedback observation を含む共通の実行記録、または複数の report で使う YAML 値・実行段階・関連ログの整形を変更するとき。
 
 ## Do not read this when
-- fallback 対象コマンド、保存先、テンプレートや front matter 項目の対応づけを調べるときは、個別設定の定義を読む。
-- report の保存先予約、既存 report の再利用、fallback 保存などのライフサイクルを調べるときは、保存処理を担う実装を読む。
-- editing run 固有の本文構成や feedback の publication 処理を調べるときは、それぞれの report 作成処理や publication 処理へ進む。
+- 対応コマンドやテンプレートの定義が対象なら定義元へ、report 項目の収集や保存・fallback の制御が対象なら report 管理元へ進む。このファイルは渡された情報の描画を担う。
+- feedback publication report や remediation manifest の本体が対象なら、それぞれの生成元へ進む。このファイルが描画するのは feedback invocation の fallback 要約と、共有の実行記録である。
+- editing run report 固有の本文や変更パスの表示が対象なら、その report の生成元へ進む。このファイルは共通の値・実行段階・ログ整形を提供する。
 
 ## hash
-- dea8c8a58e0aeb8b8eda9b515d22d7d0e62c62b032844f452b687c81cd999dc5
+- a07333f44f58cb864e181a4adb74a83661069825983aec59bbcc81e01a357217
 
 # `runtime_primary_report_specs.py`
 
