@@ -54,7 +54,7 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 - 処理 file 数や loop 回数による上限は設けない。
 - agent が変更する realization file、cmoc が更新する refactor state、および cmoc が生成する任意階層の `INDEX.md` を想定内差分とする。
 - agent が変更する作業成果物は realization file だけとする。refactor state と `INDEX.md` は cmoc が更新する。
-- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「検証・調査用の一時作業領域」に従う。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
 
 ## full refactor cycle
 

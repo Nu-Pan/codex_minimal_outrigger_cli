@@ -36,7 +36,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 - 本命 agent call 終了後に、別の agent call で作業を補完してはいけない。
 - installed skill の有無によって、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - agent が変更する作業成果物は realization file だけとし、oracle file を変更してはならない。
-- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「検証・調査用の一時作業領域」に従う。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
 
 ## 想定内差分
 

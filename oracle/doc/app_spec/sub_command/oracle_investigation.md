@@ -46,6 +46,6 @@ cmoc は、oracle file に関するユーザーの調査指示をエディタか
 - 調査結果の根拠となる oracle file を、回答から特定できるようにする
 - 調査結果の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい
 - TUI 内の agent は oracle file を変更せず、realization file を読み書きしない
-- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「検証・調査用の一時作業領域」に従う
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う
 - Codex CLI の TUI は oracle file の変更結果を自動 commit しない
 - TUI 起動前の indexing preflight による `INDEX.md` 更新および自動 commit は、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「インデクシングの実行条件・タイミング」と「処理対象」に従って cmoc が行う

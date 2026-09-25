@@ -96,7 +96,7 @@ cmoc は、`AgentCallParameter`、`CmocConfig` などから決まる呼び出し
 
 表にない file access mode を受け取った場合は、sandbox を推測せず Codex CLI 呼び出し前に失敗させる。`AgentCallParameter` を使用しない動作確認用の呼び出しでは `--sandbox read-only` を使う。
 
-`AgentCallParameter.file_access_mode` は、プロンプトで指示する詳細なファイルアクセス制限を選ぶ論理 mode とする。`READONLY` と `PURE_ORACLE_READ` でも検証・調査用の一時作業領域への書き込みを許容し、リポジトリ全体への書き込みを OS sandbox で禁止することは目的としない。
+`AgentCallParameter.file_access_mode` は、プロンプトで指示する詳細なファイルアクセス制限を選ぶ論理 mode とする。`READONLY` と `PURE_ORACLE_READ` でも一時作業領域への書き込みを許容し、リポジトリ全体への書き込みを OS sandbox で禁止することは目的としない。
 
 sandbox mode の選択は専用引数だけで行い、`--config` で `sandbox_mode` を上書きしてはならない。`workspace-write` を使う呼び出しでは、`/tmp` を書き込み対象に含める補助設定として、`sandbox_workspace_write.exclude_slash_tmp=false` を呼び出し単位で明示的に上書きする。この補助設定には、本書の「Codex CLI 引数による設定上書き」に従って `--config` を使う。
 
@@ -140,15 +140,13 @@ agent による `.agents` ツリー内の編集は、file access mode にかか�
 | `PURE_ORACLE_WRITE` | realization file の読み書きを禁止する。 |
 | `REALIZATION_WRITE` | oracle file の書き込みを禁止する。 |
 
-`NO_POLICY` は、共通 file access policy が存在しない有効な特殊 mode とする。本書の「検証・調査用の一時作業領域」の利用規定も共通 prompt からは注入しない。必要な instruction は個別の `AgentCallParameter` builder がすべて構築する。
+`NO_POLICY` は、共通 file access policy が存在しない有効な特殊 mode とする。必要な instruction は個別の `AgentCallParameter` builder がすべて構築する。
 
-#### 検証・調査用の一時作業領域
+#### 一時作業領域
 
-`NO_POLICY` 以外の agent call では、検証・調査用の一時ファイルが必要な場合、agent が `/tmp` 配下に作業専用の一時ディレクトリを作成し、一時作業領域として使用する。一時ファイルはその中に集め、不要になった一時ファイルとディレクトリは agent が削除する。
+`NO_POLICY` 以外の agent call では、共通 file access policy の例外として `/tmp` と `%TMPDIR` のツリー内の読み書きを許可し、一時作業領域として使ってよい。例外の優先関係は、本書の「SDPolicy の例外」に従う。
 
-この作成・利用・後片付けに必要な書き込みだけを、共通制限の「`{{work-root}}` ツリー外への書き込み禁止」の例外とする。他のファイルアクセス禁止は解除しない。一時作業領域へのコピーなどを使って、禁止された読み取りや workload の作業対象・判断材料の制限を迂回してはならない。
-
-workload が限定する編集対象は作業成果物の範囲を表し、この一時作業領域の利用とは区別する。一時作業領域は agent call の cwd、`{{work-root}}`、または Git worktree を置き換えない。固定のディレクトリ名や cmoc による新しい永続管理機構は設けない。
+一時作業領域を、禁止・制限事項の迂回に使ってはならない。
 
 #### 読み取りの範囲
 
@@ -158,7 +156,7 @@ workload が限定する編集対象は作業成果物の範囲を表し、こ�
 
 #### prompt の構築と sandbox との関係
 
-`build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および一時作業領域の利用規定を含む `NO_POLICY` 以外の mode の正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する。一時作業領域への書き込みの例外は、対象の禁止と同じ file access policy 内で表現する。
+`build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および各 mode の正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する。一時作業領域の読み書きの例外は、対象の禁止と同じ file access policy 内で表現する。
 
 `build_complete_prompt` はこの結果に基づいて共通 file access policy の追加可否を決める。完全 prompt への正確な追加条件は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
 
