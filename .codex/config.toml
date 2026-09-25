@@ -47,6 +47,17 @@ features.network_proxy.domains."learn.chatgpt.com" = "allow"
 #   pip 用
 features.network_proxy.domains."pypi.org" = "allow"
 features.network_proxy.domains."files.pythonhosted.org" = "allow"
+# NOTE
+#   huggingface 用
+features.network_proxy.domains."huggingface.co" = "allow"
+features.network_proxy.domains."cas-server.xethub.hf.co" = "allow"
+features.network_proxy.domains."cas-server.xethub-eu.hf.co" = "allow"
+features.network_proxy.domains."transfer.xethub.hf.co" = "allow"
+features.network_proxy.domains."transfer.xethub-eu.hf.co" = "allow"
+features.network_proxy.domains."us.aws.cdn.hf.co" = "allow"
+features.network_proxy.domains."us.gcp.cdn.hf.co" = "allow"
+features.network_proxy.domains."cdn-lfs-us-1.hf.co" = "allow"
+features.network_proxy.domains."cdn-lfs-eu-1.hf.co" = "allow"
 
 # 承認関係
 # NOTE
