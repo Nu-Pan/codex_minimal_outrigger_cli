@@ -23,24 +23,11 @@ def build_file_access_policy(
         sandbox の設定は non-goal である。
     """
     if mode is FileAccessMode.NO_POLICY:
-        # 有効な mode だが、共通 file access policy は存在しない。
+        # NOTE
+        #   NO_POLICY は有効な mode であり、
+        #   共通 file access policy が空であることが正しい。
         return None
 
-    # agent の直接アクセスに対する共通の禁止事項。
-    base_denials = [
-        "`{{work-root}}` ツリー外は書き込み禁止",
-        "`{{work-root}}/.git` ツリー内は書き込み禁止",
-        "Git metadata は配置先によらず変更禁止",
-        "`{{work-root}}/.agents` ツリー内は書き込み禁止",
-        "`{{work-root}}/.codex` ツリー内は書き込み禁止",
-        "`{{work-root}}/.cmoc` ツリー内は書き込み禁止",
-        "`AGENTS.md` は書き込み禁止",
-        "`INDEX.md` は書き込み禁止",
-        # NOTE
-        #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
-        "`{{work-root}}/memo` は読み書き禁止",
-        "一時作業領域へのコピーなどを使い、禁止された読み取りや作業対象・判断材料の制限を迂回してはいけない",
-    ]
     # mode 別の禁止事項
     match mode:
         case FileAccessMode.READONLY:
@@ -49,8 +36,7 @@ def build_file_access_policy(
             #   主要な編集対象である oracle file, realization file を読み取り専用にする
             #   一時作業領域は共通規定に従って利用できる
             #   調査系タスク、cmoc が書き込みを代行するケースで使われる想定
-            denials = [
-                *base_denials,
+            mode_prohibit = [
                 "oracle file は書き込み禁止",
                 "realization file は書き込み禁止",
             ]
@@ -58,8 +44,7 @@ def build_file_access_policy(
             # NOTE
             #   READONLY + realization file アクセス禁止
             #   realization file に釣られずに oracle file から判断してほしい系のタスクで使われる想定
-            denials = [
-                *base_denials,
+            mode_prohibit = [
                 "oracle file は書き込み禁止",
                 "realization file は読み書き禁止",
             ]
@@ -67,8 +52,7 @@ def build_file_access_policy(
             # NOTE
             #   リポジトリ書き込み可能
             #   `cmoc tui` で微妙なタスクを渡された時に使われる想定
-            denials = [
-                *base_denials,
+            mode_prohibit = [
                 # oracle file は書き込み許可
                 # realization file は書き込み許可
             ]
@@ -76,8 +60,7 @@ def build_file_access_policy(
             # NOTE
             #   REPO_WRITE + realization file アクセス禁止
             #   realization file に釣られずに oracle file の修正作業をしてほしい時に使われる想定
-            denials = [
-                *base_denials,
+            mode_prohibit = [
                 # oracle file は書き込み許可
                 "realization file は読み書き禁止",
             ]
@@ -85,8 +68,7 @@ def build_file_access_policy(
             # NOTE
             #   REPO_WRITE + oracle file 書き込み禁止
             #   realization file を oracle file に追従させる作業で使われる想定
-            denials = [
-                *base_denials,
+            mode_prohibit = [
                 "oracle file は書き込み禁止",
                 # realization file は書き込み許可
             ]
@@ -95,26 +77,33 @@ def build_file_access_policy(
     return (
         path_context.root_placeholder_definitions(),
         SDHeader(
-            f"file R/W policy ({mode.value})",
+            f"file access policy ({mode.value})",
             SDPolicy(
-                what_is_this="エージェントの直接ファイルアクセスと一時作業領域の利用に適用する規定、および書き込みの例外を以下に示す",
-                require=(
-                    "検証・調査用の一時ファイルが必要な場合は、`/tmp` 配下に作業専用の一時ディレクトリを作成し、一時作業領域として一時ファイルをその中に集めること",
-                    "不要になった一時ファイルと一時ディレクトリは削除すること",
+                what_is_this="エージェントによる直接ファイルアクセスが満たすべき規定を以下に示す",
+                require=(),
+                prohibit=(
+                    "`{{work-root}}` ツリー外は書き込み禁止",
+                    "`{{work-root}}/.git` ツリー内は書き込み禁止",
+                    "Git metadata は配置先によらず変更禁止",
+                    "`{{work-root}}/.agents` ツリー内は書き込み禁止",
+                    "`{{work-root}}/.codex` ツリー内は書き込み禁止",
+                    "`{{work-root}}/.cmoc` ツリー内は書き込み禁止",
+                    "`AGENTS.md` は書き込み禁止",
+                    "`INDEX.md` は書き込み禁止",
+                    # NOTE
+                    #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
+                    "`{{work-root}}/memo` は読み書き禁止",
+                    "一時作業領域を禁止・制限事項の迂回に使っていはいけない",
+                    *mode_prohibit,
                 ),
-                prohibit=tuple(denials),
                 allow=(),
                 exception=(
-                    "一時作業領域の作成・利用・後片付けに必要な書き込みは、"
-                    "`{{work-root}}` ツリー外への書き込み禁止の例外とする。"
-                    "この例外は、他のファイルアクセス禁止を解除しない",
+                    "`/tmp`, `%TMPDIR` ツリー内は読み書きして良い（一時作業領域として使って良い）"
                     "MCP 経由の外部ツールによるファイル書き込みは、この policy の書き込み制限の対象外とする",
                     "Structured Output を受け取った外部ツールによるファイル書き込みは、この policy の書き込み制限の対象外とする",
                 ),
                 supplemental=(
-                    "作業成果物の編集範囲と、検証・調査用の一時作業領域の利用は区別する",
-                    "一時作業領域は、`{{work-root}}` が示す作業対象リポジトリを置き換えるものではない",
-                    "この policy で禁止されていない読み書きは許容する",
+                    "この policy は deny list で記述しており、禁止されていない読み書きは暗に許容される",
                 ),
             ),
         ),
