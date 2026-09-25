@@ -193,7 +193,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     complete_prompt = tui_calls[0][0].prompt
-    assert "# file R/W policy (repo_write)" in complete_prompt
+    assert "# file access policy (repo_write)" in complete_prompt
     for heading in (
         "# oracle and realization basic",
         "# oracle policy",

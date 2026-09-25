@@ -134,17 +134,19 @@
 # `test`
 
 ## Summary
-- このディレクトリは pytest の回帰・統合テスト群で、共有 fixture とヘルパーを使って CLI、実行環境、Git worktree の挙動を検証します。
-- 設定や診断、ファイル分類と INDEX 生成、Codex の実行・再試行・復旧、セッションと編集 run のライフサイクル、feedback、入力 handoff、レポートなど、複数モジュールにまたがる振る舞いを扱います。
-- パッケージ import、prompt と構造化文書の生成、通知などの補助的な回帰確認も含みます。
+- CLI と runtime の契約を確認する単体テスト・統合テスト群。
+- Codex 実行、設定と状態管理、session と編集 run、indexing、feedback、prompt、editor input handoff などの振る舞いを検証する。
+- 本番経路での CLI・TUI 起動や、共有 fixture・支援関数のテストも含む。
 
 ## Read this when
-- CLI や runtime、indexing、Codex 呼び出し、セッション・編集 run、feedback のテストを追加・変更・調査するとき。
-- 共有 fixture やテスト用ヘルパー、または複数モジュール間の回帰カバレッジを確認するとき。
+- CLI、runtime、session、indexing、feedback などの実装変更に対応する回帰テストや、既存の挙動を確認するとき。
+- コマンドの本番経路、TUI、Codex との連携を横断して確認するとき。
+- テスト共通の fixture や支援関数の役割を調べるとき。
 
 ## Do not read this when
-- 対象の振る舞いに対応する個別のテストや実装が分かっているときは、そちらから確認するとき。
-- 正規の仕様を判断するときは、このテスト群ではなく該当する oracle 仕様を確認するとき。
+- 個別のテストケースを調べたり変更したりする場合は、該当するテスト本文へ直接進むとき。
+- 実装の詳細を調べる場合は、対応する実装本文へ直接進むとき。
+- 正本仕様上の要求や判断根拠を確認する場合は、oracle の仕様文書へ直接進むとき。
 
 ## hash
-- 0d594ae1b864aac98bc382e323de7d463da217a4b74040d7f33aa87dde74289d
+- 35f8d3a401412beab6df8477d15022a680919fa4e5df790141e9b6fc8b24b818
