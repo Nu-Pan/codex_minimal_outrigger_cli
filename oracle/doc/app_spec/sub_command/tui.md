@@ -35,7 +35,6 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
     - oracle file と realization file の責務: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file と realization file の責務」
     - oracle file に対する realization file の適合性: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」
 - installed skill は任意の追加規定として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
-- TUI 起動前の indexing preflight は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「インデクシングの実行条件・タイミング」に従い、git working tree または staging area に既存差分があっても実行する
 - 共通 feedback instruction、TUI process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「feedback observation の収集」に従う
 - このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする
 
@@ -49,3 +48,4 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
     - preflight validation
     - Codex CLI 引数による設定上書き
     - editor input handoff MCP
+    - 文書検索 MCP

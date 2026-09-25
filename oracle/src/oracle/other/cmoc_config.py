@@ -11,6 +11,8 @@
 # std
 from dataclasses import dataclass, field
 
+from .document_search import DocumentSearchConfig
+
 # JSON と TOML の両方で表現できる設定値
 type JsonTomlValue = (
     str | int | float | bool | list[JsonTomlValue] | dict[str, JsonTomlValue]
@@ -50,6 +52,9 @@ class CmocConfig:
 
     # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
+
+    # None は tuning 未設定。検索 call の有効化・閲覧範囲とは区別する。
+    document_search: DocumentSearchConfig | None = None
 
 
 @dataclass(frozen=True)
@@ -144,14 +149,6 @@ class CmocConfigCodex:
                 model_provider="openai",
                 model="gpt-6-luna",
                 reasoning_effort="medium",
-            ),
-            # NOTE
-            #   呼び出し回数が非常に多い単純な要約タスクなので、Luna しか選べない。
-            #   Low だと要約内容の問題が頻発するので high に上げた
-            "build_indexing_index_entry_parameter": CodexCallConfig(
-                model_provider="openai",
-                model="gpt-6-luna",
-                reasoning_effort="max",
             ),
             # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
             "build_quota_availability_probe_parameter": CodexCallConfig(

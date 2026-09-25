@@ -127,7 +127,7 @@ agent による `.agents` ツリー内の編集は、file access mode にかか�
 - `{{work-root}}` ツリー外への書き込みを禁止する。
 - `{{work-root}}/.git`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc` ツリー内の書き込みを禁止する。
 - Git metadata は配置先によらず変更を禁止する。
-- `AGENTS.md` と `INDEX.md` の書き込みを禁止する。
+- `AGENTS.md` の書き込みを禁止する。
 - `{{work-root}}/memo` の読み書きを禁止する。
 
 `NO_POLICY` 以外の各 mode は、共通制限に次の制限を追加する。
@@ -321,8 +321,21 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - handoff instruction の正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
 - `cmoc tui` と `cmoc oracle investigation` では、cmoc の起動・呼び出し管理経路が、送信元 TUI process に対応する実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う
-- TUI process の起動前に、その process の Codex call ID の確保、MCP への送信元情報の供給、および `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」に従う記録と flush を完了する。ログの対応付けと MCP への供給には同じ実際の値を使い、indexing など別の Codex call の ID を代用せず、TUI 起動時に別の ID を再発行しない
+- TUI process の起動前に、その process の Codex call ID の確保、MCP への送信元情報の供給、および `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」に従う記録と flush を完了する。ログの対応付けと MCP への供給には同じ実際の値を使い、別の Codex call の ID を代用せず、TUI 起動時に別の ID を再発行しない
 - この準備を skeleton 構築の前提にはしない。送信元情報は、skeleton と入力確定後の TUI prompt のいずれの builder 引数にも含めず、転記用の情報を prompt へ注入しない
+
+## 文書検索 MCP
+
+検索の対象、信頼境界、同期、結果、失敗、および資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「cmoc 専用文書検索」を正本とする。本節は call と MCP 接続の責務を所有する。
+
+- caller は各 call の実効閲覧範囲を確定して builder へ渡す。正確な検索有効化の表現、範囲の型・既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` と `DocumentSearchScope` へ委譲する。未確定・不正な範囲を暗黙に補完しない。
+- oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の調査・変更要約、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。caller は workload の閲覧制限を反映し、範囲を確定できなければ起動前に失敗させる。短い応答だけで可用性を確認する回復 probe では検索を無効にする。旧 preflight の真偽値は検索要否の根拠にしない。
+- builder は受け取った範囲を完全 prompt と起動パラメータへ同じ値で渡す。通常の検索前同期を使い、call 起動前の索引生成 preflight は行わない。Structured Output の補正・retry・再開でも同じ閲覧境界を維持する。
+- 有効な各 Codex process に local stdio MCP 接続を設ける。検索 server の cwd、実行ファイル、引数、許可 tool、approval behavior、起動・tool 期限、および信頼された context の供給を、呼び出し単位の argv override で管理する。設定の符号化には本書の「Codex CLI 引数による設定上書き」を使う。
+- server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・範囲への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
+- 通常の検索 tool は human approval、auto-review、command escalation を要求せず利用できるよう設定する。これは sandbox、permission profile、network access、file access mode の拡張を意味しない。
+- `$CODEX_HOME/config.toml` を書き換えない。既存 feedback/handoff MCP の設定と接続を保持して共存させ、検索設定の注入で上書き・無効化しない。
+- Codex process の終了時は起動管理側が接続を閉じ、検索側の子 process 回収まで確認する。TUI と `codex exec` のどちらにも同じ接続境界を適用する。
 
 ## Codex CLI 呼び出し情報の保存
 
@@ -406,7 +419,6 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - 初回 Codex call 完了時に、agent call の開始前を基準とする作業成果物の差分を固定する
 - Codex call ごとの prompt、log、および Structured Output schema の保存物は、本節でいう作業成果物の差分に含めない
 - 補正中は、固定した差分を変動させてはいけない。補正 turn が差分を変動させた場合は、初回 Codex call 完了時の状態へ戻し、出力修正だけでは解消できない失敗として扱う
-- 補正 turn では indexing preflight を再実行しない
 - 補正 turn の cwd と Structured Output schema は、元の agent call と整合させる
 
 ### 補正不能時の扱い

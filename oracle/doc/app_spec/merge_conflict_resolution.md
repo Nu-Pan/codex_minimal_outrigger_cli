@@ -25,14 +25,14 @@ agent は、調査、内容の統合、必要な検証、および根拠を伴�
 cmoc は次の管理処理を担当する。
 
 - 各 join の事前条件を検査し、merge 前の両 branch の HEAD と初期の競合状態を把握する。
-- 内容の競合を解消する agent call を直列に実行し、その完了判断、検証結果、および未解消事項を確認する。merge 進行中は自動 indexing preflight を実行しない。
-- `INDEX.md` と refactor state の競合を解消する。これらは agent の直接編集対象にせず、これらの管理物だけが競合した場合は内容解消用 agent call を必要としない。
+- 内容の競合を解消する agent call を直列に実行し、その完了判断、検証結果、および未解消事項を確認する。文書検索の提供は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
+- refactor state の競合を解消する。refactor state は agent の直接編集対象にせず、この管理物だけが競合した場合は内容解消用 agent call を必要としない。
 - 解消後の内容と管理物について、未解消の conflict marker がないことを確認する。初期の競合 path に限定せず、付随する追加・変更・rename・削除も staging し、unmerged entry が残っていないことを確認して merge commit を作成する。
 - 各 join の state 更新、生成物の同期、report、および cleanup を行う。
 
 agent は staging、commit、merge の開始・中止、branch・worktree 操作、または cmoc の管理 state の直接更新を行わない。agent の編集だけでは Git index の unmerged entry は解消されないため、内容の解消完了と cmoc による staging 後の確認を区別する。管理物の競合や staging 待ちの unmerged entry が残ることだけを agent の未解消理由にしない。ただし、それらにより必要な検証ができなければ、その不足を報告する。cmoc が更新する管理物以外のアクセス禁止対象に内容の競合が残る場合は、merge を成立させない。agent を呼び出した場合は、その明示的な解消完了も確認できなければならない。
 
-`INDEX.md` の生成と commit の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「join 中の管理」を正本とする。refactor state の同期内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」を正本とし、cmoc が管理する調査履歴と調査要求の扱いを競合解消 agent に委ねない。run join の同期時点は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」と、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。
+refactor state の同期内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」を正本とし、cmoc が管理する調査履歴と調査要求の扱いを競合解消 agent に委ねない。run join の同期時点は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」と、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。
 
 ## 受理と報告
 

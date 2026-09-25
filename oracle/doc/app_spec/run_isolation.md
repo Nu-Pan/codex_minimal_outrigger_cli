@@ -40,3 +40,4 @@ read-only の investigation、cmoc 自身による機械的更新、および se
 - 実行ログの保存先は `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「サブコマンドログファイル」、session state の保存先は `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「概要」を正本とする。
 - feedback observation と feedback state の保存先および lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「raw observation の保存」と `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
 - run の join または abandon と feedback state の境界は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「スキーマ設計の基本原則」に従う。
+- 文書検索の配置、非公開化、および worktree 終了時の回収は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「identity と保存先」「排他、期限、終了」に従う。

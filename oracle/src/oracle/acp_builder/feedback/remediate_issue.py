@@ -4,7 +4,11 @@
 from pathlib import Path
 
 # cmoc
-from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
+from oracle.acp_builder.basic import (
+    AgentCallParameter,
+    DocumentSearchScope,
+    FileAccessMode,
+)
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDCodeBlock, SDHeader, render_sd_node_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
@@ -13,6 +17,8 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 def build_feedback_remediate_issue_parameter(
     issue_json: str,
     run_worktree: Path,
+    *,
+    document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """正規化済み issue 1 件を確認し、安全な realization 修正と検証を行う。"""
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
@@ -31,6 +37,7 @@ def build_feedback_remediate_issue_parameter(
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
+        document_search_scope=document_search_scope,
         aux_static_prompt=[
             SDHeader(
                 "結果分類の規則",
@@ -78,5 +85,5 @@ def build_feedback_remediate_issue_parameter(
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
-        run_indexing_preflight=False,
+        document_search_scope=document_search_scope,
     )

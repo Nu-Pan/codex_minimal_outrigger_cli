@@ -52,8 +52,8 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 
 - 引数なし。
 - 処理 file 数や loop 回数による上限は設けない。
-- agent が変更する realization file、cmoc が更新する refactor state、および cmoc が生成する任意階層の `INDEX.md` を想定内差分とする。
-- agent が変更する作業成果物は realization file だけとする。refactor state と `INDEX.md` は cmoc が更新する。
+- agent が変更する realization file と cmoc が更新する refactor state を想定内差分とする。
+- agent が変更する作業成果物は realization file だけとする。refactor state は cmoc が更新する。
 - 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
 
 ## full refactor cycle
@@ -76,14 +76,14 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 ### 1 処理単位
 
 1. 調査対象 file の現在の SHA256 を調査時点の hash として取得する。
-2. `build_realization_refactor_fork_file_review_and_fix_parameter` に調査対象 path だけを渡し、所見調査、realization file の修正、および検証を 1 回の agent call で行う。
+2. `build_realization_refactor_fork_file_review_and_fix_parameter` の作業入力には調査対象 path だけを渡し、所見調査、realization file の修正、および検証を 1 回の agent call で行う。
 3. agent call が正常終了した後、本節の「Structured Output の受理と正規化」に従って、機械的検証に合格した Structured Output と、その agent call による realization file の差分から処理結果を決定する。
 4. 調査時点の hash、日時、および正規化後の所見有無を対象 entry に保存する。
     - 所見なし: `last_investigation_result=no_findings`, `investigation_required=false`
     - 所見あり: `last_investigation_result=findings`, `investigation_required=true`
 5. agent call が変更した全 realization file を `investigation_required=true` にする。
 6. 追加、rename、削除後の entry 集合を同じ処理単位で同期する。
-7. realization file の差分、refactor state の更新、および cmoc が生成した `INDEX.md` を同じ処理単位の commit として確定する。
+7. realization file の差分と refactor state の更新を同じ処理単位の commit として確定する。
 8. 正規化後の処理結果に `resolution.status=unresolved` の所見が 1 件以上ある場合は、処理単位の確定後に対象 path を current fork の unresolved target 集合へ追加する。
 9. unresolved target 集合を除いた調査対象が残っていれば、次の対象を選ぶ。
 
@@ -172,7 +172,7 @@ report 生成時点で確定していない項目は `null` または未実行�
 
 `natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は同関数へ委譲する。
 
-要約対象は、`{{cmoc-run-worktree}}` の repository における `{{cmoc-run-fork-commit}}` から、要約対象を確定した時点の run branch HEAD までの tree 差分全体とする。cmoc は両端を commit ID に確定して要約 agent に渡し、後続の preflight や追加 commit を含め、確定後に比較範囲を動かさない。
+要約対象は、`{{cmoc-run-worktree}}` の repository における `{{cmoc-run-fork-commit}}` から、要約対象を確定した時点の run branch HEAD までの tree 差分全体とする。cmoc は両端を commit ID に確定して要約 agent に渡し、後続の追加 commit によって、確定後に比較範囲を動かさない。
 
 Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。要約 agent は、既存の cwd と `{{work-root}}` を用い、指定範囲の差分を Git から取得して人間向けに要約する。この比較入力は、ファイル単位の所見調査・修正 call には追加しない。
 

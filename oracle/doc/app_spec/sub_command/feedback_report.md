@@ -13,18 +13,17 @@
 - 位置引数を受け取らない。
 - サブコマンド固有 option を受け取らない。
 - 正常経路では、利用者に別の fork、join、または remediation 操作を要求しない。
-- session branch 上の既存の git 未コミット差分を、自動 stash、commit、revert、または破棄してはならない。ただし、doctor preprocess と必要な indexing preflight が各仕様に従って作成する commit は許容する。
+- session branch 上の既存の git 未コミット差分を、自動 stash、commit、revert、または破棄してはならない。ただし、doctor preprocess がその仕様に従って作成する commit は許容する。
 
 ## 事前条件と run の開始または再開
 
 共通の開始処理は、次の順序で行う。
 
 1. doctor preprocess を実行する。
-2. main worktree で必要な indexing preflight を完了する。
-3. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を確認する。
-4. session worktree と staging area が clean であることを確認する。
-5. repository-level feedback writer 排他を取得する。
-6. current pointer、pending recovery、および既存 feedback state の schema、path、hash、branch reference の整合性を検証する。
+2. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を確認する。
+3. session worktree と staging area が clean であることを確認する。
+4. repository-level feedback writer 排他を取得する。
+5. current pointer、pending recovery、および既存 feedback state の schema、path、hash、branch reference の整合性を検証する。
 
 その後は、既存 run の状態に応じて分岐する。自動 join 済み feedback run の publication または publication 後 cleanup を再開できる場合は、本書の「join 後の publication failure」に従って recovery を完了する。この経路では、新しい run を開始しない。
 
@@ -42,7 +41,6 @@ run の branch、commit、および worktree の定義は、`{{cmoc-root}}/oracl
 run branch 上の想定内差分を次に示す。
 
 - issue remediation agent が変更した realization file
-- cmoc が変更した、realization file の変更に必要な tracked `INDEX.md`
 - cmoc が同期した tracked refactor state
 - workload 固有仕様が issue 処理単位で必要とするその他の tracked な機械生成物
 
@@ -81,7 +79,7 @@ cmoc が normalization agent に渡す比較用の入力は、次の 2 つとす
 - 検証済みの構造化 observation
 - 機械的に絞り込んだ既存 issue candidate
 
-入力だけでは同一性の判断に必要な情報が得られない場合、normalization agent は処理経路や原因を含む関連情報を、`{{work-root}}` 内の oracle file、realization file などから読み取り専用で参照してよい。参照先の選択には、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「`INDEX.md` による routing」を適用する。候補外の issue は探索しない。
+入力だけでは同一性の判断に必要な情報が得られない場合、normalization agent は処理経路や原因を含む関連情報を、`{{work-root}}` 内の oracle file、realization file などから読み取り専用で参照してよい。参照先の選択には、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「検索と routing」を適用する。候補外の issue は探索しない。
 
 normalization agent は独立した原因診断や、summary、impact、現在性、actionability、remediation result、human action、relation の生成は行わない。問題の現在状態の確認と修正は、本書の「issue remediation agent call」で定める call が担う。
 
@@ -165,7 +163,7 @@ agent が返した `fixed` の自己申告だけを、意味的な正しさの�
 受理済み結果ごとに、cmoc は次の処理を 1 つの整合した issue 単位として行う。
 
 1. agent の realization 差分と verification result を検査する。
-2. 必要な `INDEX.md`、refactor state、および tracked processing state を機械的に同期する。
+2. 必要な refactor state と tracked processing state を機械的に同期する。
 3. 想定内差分と変更禁止対象を再検査し、run branch の 1 commit として確定する。
 4. commit ID と正式な result を feedback checkpoint に durable 保存する。
 

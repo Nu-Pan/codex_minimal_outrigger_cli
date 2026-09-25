@@ -2,7 +2,7 @@
 
 ## 基本
 
-- cmoc は Python で実装する
+- cmoc は Python を基本として実装する。例外として、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「初期方式と推論の失敗」が定める推論専用 worker だけは JavaScript を認める。Python が担う分類・同期・保存・MCP へ例外を広げない
 - Python のコーディングスタイルは PEP 8 を遵守する
 - 命名、責務、入出力を明確に保つ
 - オーバーエンジニアリングを避け、要求を満たすために必要な範囲の変更にとどめる
@@ -13,7 +13,7 @@ cwd を表す内部識別子には、cwd の主体または具体的な役割を
 
 - 呼び出される agent call に設定する cwd は `agent_call_cwd` とする
 - cmoc process 自身の cwd は `cmoc_process_cwd` とする
-- 同じスコープで複数の agent call を扱う場合は、必要に応じて `indexing_agent_call_cwd` のように agent call の役割も含める
+- 同じスコープで複数の agent call を扱う場合は、必要に応じて `probe_agent_call_cwd` のように agent call の役割も含める
 - 値の具体的な役割が分かっている場合は、`run_worktree` や `main_worktree` のような名前を優先する
 - `Path.cwd()` や `subprocess.run(cwd=...)` など、Python または利用ライブラリが定める API 名は変更しない
 

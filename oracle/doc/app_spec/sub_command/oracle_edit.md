@@ -43,7 +43,7 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
     - `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を満たす。
 - git working tree または staging area に未コミット差分が存在しても、起動を拒否しない。
 - 起動前に、既存差分を commit、stash、rollback、または退避して worktree を clean にしない。
-- doctor preprocess と indexing による変更と commit は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」と `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` の「処理対象」に従う。
+- doctor preprocess による変更と commit は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」に従う。
 - 起動可否の判定では、session state の `run` section を読み書きしない。`run.state` を排他条件にしない。
 
 ## agent call の構成
@@ -67,17 +67,16 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
 1. doctor preprocess を呼び出す。
 2. prompt editor input の共通 lifecycle に従って、oracle file の最終状態に関するオリジナルのユーザー指示を確定する。
 3. 本書の「ユーザー指示と prompt の構築」に従って、両回で共用する入力と設定を確定する。
-4. oracle edit が 2 回の編集の外側で indexing を 1 回実行する。共通 builder は、各 agent call での indexing preflight を無効にする起動パラメータを構築する。
-5. agent call 前の条件を検査する。
-6. 1 回目の編集 agent call を実行する。
-7. 1 回目が成功した場合は、追加変更の有無にかかわらず 2 回目の編集 agent call を実行する。2 回目は、1 回目の編集結果が残った同じ worktree の現在状態を読む。1 回目が失敗した場合は、2 回目を開始しない。
-8. 最外側の `cmoc oracle edit` の primary report を保存して終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
+4. agent call 前の条件を検査する。
+5. 1 回目の編集 agent call を実行する。
+6. 1 回目が成功した場合は、追加変更の有無にかかわらず 2 回目の編集 agent call を実行する。2 回目は、1 回目の編集結果が残った同じ worktree の現在状態を読む。1 回目が失敗した場合は、2 回目を開始しない。
+7. 最外側の `cmoc oracle edit` の primary report を保存して終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
 
-- 2 回の編集の間に、indexing、自動 commit、または別の補完用 agent call を挟まない。
+- 2 回の編集の間に、明示的な索引同期、自動 commit、または別の補完用 agent call を挟まない。各回の文書検索 MCP は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
 
 ## agent の編集境界
 
-- agent が編集する作業成果物は oracle file だけとする。realization file、`INDEX.md`、および `AGENTS.md` を編集させてはならない。
+- agent が編集する作業成果物は oracle file だけとする。realization file および `AGENTS.md` を編集させてはならない。
 - 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
 - agent には `git add`、`git commit`、`git stash`、branch 切替、および worktree 操作を禁止する。
 - このサブコマンドの oracle file 編集権限によって、`cmoc oracle investigation` の file access 権限を拡張しない。
@@ -87,7 +86,7 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
 - 2 回の agent call が成功した場合だけ、`natural_completion` とする。いずれかが失敗した場合は `error` とする。
 - 終了状態にかかわらず、それまでに filesystem 上へ残った差分を維持する。
 - 起動前の既存未コミット差分と 2 回の agent call による変更を分離せず、report、console、およびログでも、差分、変更 path、または意味的な変更内容を invocation 固有の成果として認定しない。
-- 終了後に自動 commit、rollback、stash、差分修正、branch または worktree の作成、変更 path の成果物認定、および indexing を行わない。
+- 終了後に自動 commit、rollback、stash、差分修正、branch または worktree の作成、変更 path の成果物認定、および明示的な索引同期を行わない。
 - oracle edit 固有の `result` または `completion_reason` を新設しない。
 
 ## primary report
@@ -113,5 +112,5 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
 ## 中断と排他制御
 
 - このサブコマンドは中断可能サブコマンドに含めない。
-- lock file、process 重複検出、active または running 状態の永続化、および editor input file の排他的 writer 管理を導入しない。
+- 編集 workload 全体に対する lock file、process 重複検出、active または running 状態の永続化、および editor input file の排他的 writer 管理を導入しない。文書検索の索引操作と資源調停は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「排他、期限、終了」に従う。
 - 他の cmoc process またはエディタとの並行操作から生じる競合や不整合は、人間が管理する。

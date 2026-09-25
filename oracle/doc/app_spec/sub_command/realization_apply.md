@@ -19,7 +19,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 - Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
 - cmoc は、始点と終点の commit ID を確定して agent に渡す。agent は既存の cwd と `{{work-root}}` を用い、その repository で指定された両 commit 間の差分を Git から取得する。
 - 対象は、両端のいずれかで oracle file だった path とし、rename を考慮する。追加・削除と oracle 内外をまたぐ rename を含め、現在の oracle 配下だけを候補集合にしてはならない。
-- 上記に該当しない realization file、`INDEX.md`、その他の非 oracle file の変更は追従対象外とする。
+- 上記に該当しない realization file、その他の非 oracle file の変更は追従対象外とする。
 - 差分に現れた file だけを作業範囲としてはいけない。関連する oracle file と realization file を `{{work-root}}` リポジトリ全体から調査する。
 - 差分は今回追従すべき oracle 変更を特定する根拠であり、realization file の変更内容を正本仕様へ逆流させる根拠ではない。
 - apply 実行中に session branch へ追加された oracle 変更は、次回 apply の比較範囲に残す。
@@ -40,7 +40,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 
 ## 想定内差分
 
-想定内差分は、agent が変更する realization file と、cmoc が生成する任意階層の `INDEX.md` とする。`INDEX.md` は agent の変更対象にしない。
+想定内差分は、agent が変更する realization file とする。
 
 ## 実行手順
 
@@ -48,7 +48,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 2. 追従対象差分の始点と終点を commit ID に確定する。
 3. `build_realization_apply_fork_launch_exec_parameter` で AgentCallParameter を構築する。
 4. その AgentCallParameter を変更せず、`{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` で実行する。
-5. agent の realization file 差分と cmoc が生成した `INDEX.md` を検査し、run branch に commit する。
+5. agent の realization file 差分を検査し、run branch に commit する。
 6. `run.state` を `joinable` にして結果を report する。
 
 ## エラー

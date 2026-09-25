@@ -61,7 +61,7 @@ cd "$cmoc_work_root"
 
 - 明示された test failure を再現する場合は、その node ID を focused test とする。
 - repository local skill の metadata を変更した場合は、`test/test_skill_metadata.py` を focused test とする。
-- implementation の変更では、`test/INDEX.md` の routing 情報と `rg` による import・symbol の参照検索から、対応する test file または node ID を選ぶ。
+- implementation の変更では、`rg` による import・symbol の参照検索と test 本文から、対応する test file または node ID を選ぶ。
 - test helper の変更では、helper を直接検証する test と、変更した interface の主要な利用側を選ぶ。
 - test file に実経路統合テストとそれ以外の test が混在する場合は、`real_path_integration` marker で別 command に分ける。
 - Ruff の first-party 対象は `src`、`oracle/src`、`test` とし、変更中は変更 path に絞ってよい。

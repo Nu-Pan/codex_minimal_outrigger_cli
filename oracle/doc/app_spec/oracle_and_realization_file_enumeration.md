@@ -28,8 +28,8 @@ Git ignore 判定の意味は次のとおりとする。
 
 以上の対象外条件と Git ignore 判定を適用した regular file を、次の条件で分類する。
 
-- `{{work-root}}/oracle` ツリー内にあり、ファイル名が `INDEX.md` と `AGENTS.md` のいずれでもない file を oracle file とする
-- `{{work-root}}` ツリー内かつ `{{work-root}}/oracle` ツリー外にあり、ファイル名が `INDEX.md` と `AGENTS.md` のいずれでもない file を realization file とする
+- `{{work-root}}/oracle` ツリー内にあり、ファイル名が `AGENTS.md` ではない file を oracle file とする
+- `{{work-root}}` ツリー内かつ `{{work-root}}/oracle` ツリー外にあり、ファイル名が `AGENTS.md` ではない file を realization file とする
 
 単純な `git ls-files` の結果だけを列挙結果として使用してはならない。
 

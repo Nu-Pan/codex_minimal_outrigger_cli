@@ -89,11 +89,10 @@ def build_file_access_policy(
                     "`{{work-root}}/.codex` ツリー内は書き込み禁止",
                     "`{{work-root}}/.cmoc` ツリー内は書き込み禁止",
                     "`AGENTS.md` は書き込み禁止",
-                    "`INDEX.md` は書き込み禁止",
                     # NOTE
                     #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
                     "`{{work-root}}/memo` は読み書き禁止",
-                    "一時作業領域を禁止・制限事項の迂回に使っていはいけない",
+                    "一時作業領域を禁止・制限事項の迂回に使ってはいけない",
                     *mode_prohibit,
                 ),
                 allow=(),

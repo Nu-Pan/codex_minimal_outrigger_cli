@@ -35,7 +35,7 @@ def build_conflict_resolution_policy() -> tuple[PlaceholderMap, SDHeader]:
                 "管理操作との境界",
                 """
                 - ファイル内容の編集と検証を行い、staging、commit、merge の開始・中止、branch・worktree 操作、および cmoc の管理 state の直接更新は行わないこと
-                - `INDEX.md` と refactor state（`{{work-root}}/.cmoc/gt/realization/refactor/state.json`）は直接編集しないこと。これらに残る管理処理は報告すること
+                - refactor state（`{{work-root}}/.cmoc/gt/realization/refactor/state.json`）は直接編集しないこと。残る管理処理は報告すること
                 - Git index の unmerged entry を消すために staging せず、編集した内容の解消結果を報告すること
                 - 管理物の競合や staging 待ちの unmerged entry が残ることだけを、内容の未解消として扱わないこと。ただし、それらにより必要な検証を実行できない場合は、その不足を報告すること
                 - 管理物以外のアクセス禁止対象に競合がある場合は、その境界を越えて解消せず未解消として報告すること

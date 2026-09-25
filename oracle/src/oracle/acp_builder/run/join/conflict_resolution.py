@@ -2,7 +2,11 @@
 
 from pathlib import Path
 
-from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
+from oracle.acp_builder.basic import (
+    AgentCallParameter,
+    DocumentSearchScope,
+    FileAccessMode,
+)
 from oracle.other.path_model import AgentCallPathContext, resolve_real_path
 from oracle.other.struct_doc import (
     SDCodeBlock,
@@ -20,11 +24,13 @@ def build_run_join_conflict_resolution_parameter(
     session_head_commit: str,
     session_worktree: Path,
     *,
+    document_search_scope: DocumentSearchScope,
     feedback_report_cut_path: Path | None = None,
 ) -> AgentCallParameter:
     """session 上で run の成果を統合し、必要なら封印済み結果を検証する。
 
     Args:
+        document_search_scope: caller が確定した、その call の実効閲覧範囲。
         run_head_commit: 差分検査後、merge 前に確定した run branch の HEAD。
         session_head_commit: merge 前に確定した session branch の HEAD。
         session_worktree: run の merge が進行中の session worktree。
@@ -35,7 +41,7 @@ def build_run_join_conflict_resolution_parameter(
         「競合解消」と、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の
         「封印後のマージ調整」「join 後の検証と記録」を参照。
         元の workload と同様に oracle は変更せず、REALIZATION_WRITE を使う。
-        merge 進行中のため indexing preflight は行わない。
+        進行中の tree の関連文書を検索するため、caller の scope を渡す。
     """
     # merge target を起点とし、封印済み結果がある場合だけ追加指示を組み込む。
     path_context = AgentCallPathContext(agent_call_cwd=session_worktree)
@@ -84,6 +90,7 @@ def build_run_join_conflict_resolution_parameter(
         target_commit=session_head_commit,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
+        document_search_scope=document_search_scope,
         aux_static_prompt=static_prompt,
         aux_dynamic_prompt=dynamic_prompt,
     )
@@ -93,5 +100,5 @@ def build_run_join_conflict_resolution_parameter(
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
-        run_indexing_preflight=False,
+        document_search_scope=document_search_scope,
     )

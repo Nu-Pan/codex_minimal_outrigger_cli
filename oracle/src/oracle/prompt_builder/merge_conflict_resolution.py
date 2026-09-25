@@ -1,6 +1,6 @@
 """run join と session join に共通する競合解消 prompt の構築定義。"""
 
-from oracle.acp_builder.basic import FileAccessMode
+from oracle.acp_builder.basic import DocumentSearchScope, FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDTagBlock
 
@@ -13,6 +13,7 @@ def build_merge_conflict_resolution_prompt(
     target_commit: str,
     file_access_mode: FileAccessMode,
     path_context: AgentCallPathContext,
+    document_search_scope: DocumentSearchScope,
     aux_static_prompt: tuple[SDHeader | SDTagBlock, ...] = (),
     aux_dynamic_prompt: tuple[SDHeader | SDTagBlock, ...] = (),
 ) -> list[SDHeader | SDTagBlock]:
@@ -23,6 +24,7 @@ def build_merge_conflict_resolution_prompt(
         target_commit: merge 前に確定した、取り込み先 branch の HEAD。
         file_access_mode: 呼び出し元の編集範囲に対応するアクセス mode。
         path_context: merge が進行中の worktree から構築した context。
+        document_search_scope: caller が確定した、その call の実効閲覧範囲。
         aux_static_prompt: 呼び出し元固有の追加指示。
         aux_dynamic_prompt: 呼び出し元固有の参照入力。
 
@@ -41,6 +43,7 @@ def build_merge_conflict_resolution_prompt(
         """,
         file_access_mode=file_access_mode,
         path_context=path_context,
+        document_search_scope=document_search_scope,
         aux_static_prompt=[
             SDHeader(
                 "統合対象の取得方法",

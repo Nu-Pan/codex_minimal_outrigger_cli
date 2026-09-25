@@ -8,6 +8,7 @@
 # cmoc
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    DocumentSearchScope,
     FileAccessMode,
 )
 from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
@@ -17,10 +18,13 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 def build_oracle_edit_main_launch_exec_parameter(
     user_instruction: str,
+    *,
+    document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """`cmoc oracle edit` の両回で共用するパラメータを構築する。
 
     Args:
+        document_search_scope: caller が確定した、その call の実効閲覧範囲。
         user_instruction: oracle file の最終状態に関する、入力確定済みのユーザー指示。
             handoff ガイドへ提示する完全 prompt の skeleton を構築する場合は、
             `{{original-prompt-here}}` を渡す。
@@ -43,6 +47,7 @@ def build_oracle_edit_main_launch_exec_parameter(
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         path_context=path_context,
+        document_search_scope=document_search_scope,
         aux_static_prompt=[
             SDHeader(
                 "変更操作の制約",
@@ -80,12 +85,12 @@ def build_oracle_edit_main_launch_exec_parameter(
         oracle_policy=True,
         routing_policy=True,
     )
-    # indexing は呼び出し元が編集の外側で管理するため、自動 preflight を無効にする。
+    # 編集後の検索でも現在の許可本文を参照できるよう、caller の scope を渡す。
     return AgentCallParameter(
         agent_call_kind=build_oracle_edit_main_launch_exec_parameter.__name__,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
-        run_indexing_preflight=False,
+        document_search_scope=document_search_scope,
     )

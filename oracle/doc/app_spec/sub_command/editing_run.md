@@ -44,11 +44,13 @@ workload は、write 権限を持つ本命 agent call の開始前に、次の�
 ## 編集責務と想定内差分
 
 - agent が編集してよい file と cmoc が機械的に更新してよい file は、workload 固有仕様で定義する。
-- agent が変更した file、cmoc が生成した `INDEX.md`、および workload 固有の tracked state 更新は、workload 固有仕様が定める整合した処理単位で `{{cmoc-run-branch}}` に commit する。
+- agent が変更した file と workload 固有の tracked state 更新は、workload 固有仕様が定める整合した処理単位で `{{cmoc-run-branch}}` に commit する。
 - run worktree に未確定差分を残したまま、次の処理単位、join、publication、または cleanup へ進んではならない。
 - ユーザー中断を正常系として扱う workload は、実行中の処理単位を commit まで完了するか rollback してから `run.state` を `joinable` にする。
 - 続行不能な失敗では、未確定の処理単位を commit または rollback により整合させ、`run.state` を `error` にする。
 - editing run と feedback data の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」と `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「スキーマ設計の基本原則」を正本とする。
+
+各 workload と join の call に提供する文書検索は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。検索の管理物は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「identity と保存先」に従って成果差分から分離し、cleanup 時は同節の回収責務を適用する。
 
 ## 明示的な join を待つ workload
 
@@ -99,7 +101,7 @@ merge または no-op join 後の tree 検査、publication、および workload
 1. doctor preprocess を呼び出し、事前条件と差分を検査する。
 2. run branch HEAD が session branch から到達可能で取り込む commit がなければ no-op join とする。それ以外は、merge 前の両 HEAD を確定し、`{{cmoc-session-branch}}` 上で `git merge --no-ff {{cmoc-run-branch}}` を実行する。競合時は本書の「競合解消」に従い、成立した merge commit を `{{cmoc-run-join-commit}}` とする。no-op join のために競合解消 agent を呼び出さない。
 3. active workload が定める join 後 hook を実行する。
-4. join 後の session tree に対して必要な `INDEX.md` と refactor state を同期する。同期で生じた tracked 差分は cmoc が commit する。
+4. join 後の session tree に対して refactor state を同期する。同期で生じた tracked 差分は cmoc が commit する。
 5. join 結果と hook の結果を保存する。
 6. 明示的な join では、`run.state` を `ready` にし、active run 情報を初期化する。`feedback_report` の自動 join では、この更新を workload 固有の publication と cleanup が確定するまで遅延する。
 

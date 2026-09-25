@@ -10,31 +10,35 @@ doctor preprocess は、`{{repo-root}}` で cmoc を正常に実行できるか�
 
 ## 実行手順
 
-1. `{{repo-root}}/.cmoc/gu` が git 追跡対象外であることを保証する
+1. repo-root と、処理に使用する各 work-root の `.cmoc/gu` が git 追跡対象外であることを保証する
 2. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 3. `{{work-root}}/.cmoc/gt/config.json` が git 追跡対象であることを保証する
 4. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema を満たし、entry 集合と調査要求が同期済みであることを保証する
 5. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
 6. ここまでの作業で発生した tracked 差分を git commit する
 
-## `{{repo-root}}/.cmoc/gu` の非追跡保証
+## 管理領域の非追跡保証
+
+doctor は repo-root と処理対象 work-root に適用する。同じ root は重複処理しない。linked worktree も、それ自身の owning repository・index・ignore source で検証し、main worktree の検証成功だけで代替しない。後から作成する run worktree も、管理領域の初回使用前に確認する。merge 中へ doctor の修復・commit を割り込ませず、検証を満たさなければ当該管理処理を失敗させる。
+
+以下の `<対象root>` は、検証・修復する root を表す。共有検索資材の cmoc-root 側への適用は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「文書検索のセットアップ」が所有する。
 
 ### 検証
 
-非追跡保証は、`{{repo-root}}/.cmoc/gu` ツリー全体と、将来作成される全 descendant に適用する。feedback の pending observation、active state、report cut、checkpoint、および Markdown report も含む。
+非追跡保証は、`<対象root>/.cmoc/gu` ツリー全体と、将来作成される全 descendant に適用する。feedback の pending observation、active state、report cut、checkpoint、Markdown report、および検索の索引・cache・lock・資材・常駐枠の調停情報も含む。
 
 完了判定では、次の両方を満たすことを確認する。
 
-- `git ls-files -- {{repo-root}}/.cmoc/gu` の出力が空である。
-- `git check-ignore -q {{repo-root}}/.cmoc/gu/.__cmoc_ignore_probe__` が成功する。
+- `git -C <対象root> ls-files -- .cmoc/gu` の出力が空である。
+- `git -C <対象root> check-ignore -q .cmoc/gu/.__cmoc_ignore_probe__` が成功する。
 
 後者の probe path は、将来作成されるファイルが git ignore 対象になることを確認するために使う。この probe のために実ファイルを作成する必要はない。
 
 ### 修復
 
-- `{{repo-root}}/.gitignore` が存在しなければ作成する
-- `{{repo-root}}/.gitignore` に `/.cmoc/gu/` が無ければ追加する
-- `{{repo-root}}/.cmoc/gu` ツリー内に tracked file があれば、working tree 上の実ファイルを残したまま git index から除外する
+- `<対象root>/.gitignore` が存在しなければ作成する
+- `<対象root>/.gitignore` に `/.cmoc/gu/` が無ければ追加する
+- `<対象root>/.cmoc/gu` ツリー内に tracked file があれば、working tree 上の実ファイルを残したまま対応する git index から除外する
 - 修復後も完了判定を満たさない場合はエラー終了する
 
 ## `{{work-root}}/.agents` の追跡保証

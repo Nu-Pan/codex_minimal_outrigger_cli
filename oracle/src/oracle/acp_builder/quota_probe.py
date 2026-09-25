@@ -25,7 +25,7 @@ def build_quota_availability_probe_parameter(
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
-        # NOTE 利用可否の観測だけが目的なので policy は一切不要
+        # NOTE 利用可否の観測だけが目的なので調査用の policy は含めない
     )
     return AgentCallParameter(
         agent_call_kind=build_quota_availability_probe_parameter.__name__,
@@ -33,6 +33,6 @@ def build_quota_availability_probe_parameter(
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
-        # NOTE quota probe から indexing preflight が再帰するのを避ける。
-        run_indexing_preflight=False,
+        # NOTE 短い応答による可用性確認には文書検索を使わない。
+        document_search_scope=None,
     )
