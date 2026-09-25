@@ -22,19 +22,19 @@
 # `src`
 
 ## Summary
-- cmoc が agent 呼び出しに渡す prompt、共通規定、タスク別の呼び出しパラメータを組み立てるコードと設定を収める。oracle 編集、realization の追従・整理、変更の統合、feedback、索引生成などの呼び出し構築が対象。
-- 呼び出し設定、アクセス区分、root path の解決、構造化文書の Markdown 描画、文書参照を扱う共通モデルも含む。editor input handoff と feedback などで使う入力・出力の検証定義もここにある。
-- ここにあるコードと設定は、agent 呼び出しの正確な構築内容を確認・変更するための参照先。意味仕様を担う文書や、生成された realization の実装とは役割が異なる。
+- 自然言語の仕様から委譲された cmoc の正確な詳細を実装・データ定義として集約し、共通設定、パスと文書参照のモデル、構造化文書のレンダリングを定義する。
+- 共通規定と作業別の指示を組み合わせて agent prompt と呼び出し条件を構築する。TUI、oracle 調査・編集、realization の適用・整理、join の競合解消、feedback、index 生成、quota probe が主な対象となる。
+- editor input の handoff 文面、feedback の入力と処理、agent call の Structured Output 契約も含む。
 
 ## Read this when
-- agent に渡す prompt の組み立て、共通規定の選択、または oracle 編集・realization 追従・統合・feedback・索引生成などの呼び出し構築を変更・追跡するとき。
-- 呼び出し設定、root path の解決、構造化文書の描画、文書参照など、複数の呼び出しで共有される処理を変更・確認するとき。
-- editor input handoff のガイドや本文の生成、または agent 呼び出しの入力・出力検証定義を調べるとき。
+- agent call の設定、root path と worktree の解決、文書参照、構造化文書の生成など、共通モデルの正確な挙動を変更・確認するとき。
+- 共通 prompt の組み立て方や、アクセス制限・routing・oracle/realization などの規定文面を変更するとき。
+- 特定の agent 作業の prompt、実行条件、handoff、feedback 処理、競合解消、または index 生成の入出力契約を変更するとき。
 
 ## Do not read this when
-- 人間意図や製品・サブコマンドの意味仕様を知りたいときは、意味仕様を担う oracle 文書から読む。ここは文書から明示的に委譲された正確な構築詳細が必要な場合に参照する。
-- oracle のテスト上の期待や検証を調べるときは、対応する oracle test を直接読む。
-- 生成物である realization の実装やテストを変更するときは、対応する realization 側の実装・テストを直接読む。
+- 人間意図や cmoc の意味仕様を決める・変更する場合は、意味仕様の所有者である自然言語の oracle doc から確認する。ここは明示的に委譲された詳細の確認に進むときに読む。
+- CLI の実行時処理やテストを変更するときは、実際の realization 実装・テストを確認する。この対象は oracle 側の詳細定義である。
+- 一つの agent 作業だけが対象なら、対象作業の定義と必要な共通部品から確認する。全体を扱わない変更で、この配下すべてを読む必要はない。
 
 ## hash
-- 27518ebbb0868e4ede32c2a05eb9b09a785f2a3cc60d9312dc0875d045e14e46
+- 2d6e5c4cec2e62e55920e86bcd6bf79ee97573076830d74af88e5063ec8e755a

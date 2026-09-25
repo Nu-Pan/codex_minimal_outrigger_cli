@@ -83,16 +83,17 @@
 # `policy`
 
 ## Summary
-- エージェント向けの policy 規定文面を組み立てるソース群。routing、INDEX エントリー生成、oracle・realization、ファイルアクセス、競合解消、handoff、feedback の規定を担う。
-- 規定の文面や生成方法を定義する層であり、意味仕様の正本や、個別の agent call での policy 選択・全体構成を定義する層ではない。
+- agent 向け prompt に組み込む共通規定とタスク別規定の文面を構築する。
+- ファイルアクセス、oracle と realization、適合性所見、競合解消、INDEX の routing と entry、feedback 報告、editor input handoff の規定を扱う。prompt 全体での有効化や配置は別の構築側が担う。
 
 ## Read this when
-- エージェントに渡す policy の具体的な文面や、責務別の生成方法を確認・変更するとき。
-- ファイルアクセス mode による規定の違いや、policy 文面に渡す placeholder を調べるとき。
+- agent に渡す規定文面の内容を探す、または変更するとき。
+- 複数の規定がどの作業領域を扱うかを把握し、個別の構築元を選ぶとき。
 
 ## Do not read this when
-- 規定の意味や人間意図、正本要件を確認・変更するときは、該当する oracle doc の仕様へ進む。
-- 特定の agent call にどの policy が含まれるか、prompt 全体がどう組み立てられるかを調べるときは、呼び出し元や prompt の組立側へ進む。
+- prompt 全体での規定の有効化、配置順、統合方法を調べるときは、prompt 全体の構築側を読む。
+- 規定の正本としての意味や要件を確認するときは、対応する oracle 仕様を読む。
+- 対象の個別規定がすでに特定できているときは、その規定の構築元を直接読む。
 
 ## hash
-- e82b882bb9b68d8ffb662814b97067c153fd3f9786046d129047cc266de5645b
+- 762d1089c50de69424d7b5945ba28825849c963ba92f4189cd43ca88553db4ee
