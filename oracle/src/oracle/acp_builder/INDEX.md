@@ -1,37 +1,39 @@
 # `basic.py`
 
 ## Summary
-- 論理的なファイルアクセスモードと、agent 呼び出しで共有する設定型を定義し、個別の呼び出し builder と共通実行経路をつなぐデータ定義です。
-- アクセス制限の文面や完全 prompt の組み立てではなく、それらに渡される共通パラメーターの契約を確認する入口です。
+- ACP の呼び出し構築器が共有するパラメーターの型とファイルアクセスモードを定義する。
+- 個別の呼び出し内容ではなく、エージェント呼び出し設定の共通契約を変更するときの入口となる。
 
 ## Read this when
-- 共有の agent 呼び出しパラメーターを変更するときや、共通実行経路が受け取る設定を追うとき。
-- 論理的なファイルアクセスモードを追加・変更し、その識別子を使う呼び出しとの整合を確認するとき。
+- 共有パラメーターの構成や既定値、ファイルアクセスモードの区分を変更するとき。
+- 複数の呼び出し構築器で使われる共通パラメーター契約を確認するとき。
 
 ## Do not read this when
-- アクセスモードごとの制限文面だけを調べるときは、その文面を組み立てる policy builder を直接読む。
-- 完全 prompt の構成や policy の注入条件だけを調べるときは、prompt 組み立て側を直接読む。
-- 特定の agent 呼び出しの処理や設定だけを変更するときは、その呼び出し専用の builder を直接読む。
+- 特定の操作で使う prompt や起動条件を変更するときは、その操作の呼び出し構築器を直接読む。
+- モードごとのアクセス制限文面を変更するときは共通 prompt policy の実装を、制限の正式な意味を変更するときはファイルアクセス仕様を読む。
+- インデクシングの実行条件やタイミングを変更するときは、その意味仕様を直接読む。
 
 ## hash
-- 543b7fb62130cc282e6ae2c0cb1534f9fa2f7f24016c73d5013bc00d99a04aaa
+- bc50e3d7e711f8a7610e6219d08be3a62528940ce18b2f9ea98081e34e3d4138
 
 # `feedback`
 
 ## Summary
-- feedback issue の同一性判定と remediation に使う agent call 固有の prompt、起動条件、出力 schema を定義する。feedback の issue 処理に関する call の挙動を調べる入口。
-- 共通の agent call 基盤や feedback report 全体の実行制御ではなく、正規化と remediation の call 固有の判断・制約を確認するときに対象となる。
+- Feedback issue 処理で、構造化 observation と絞り込み済み候補の同一性判断、および正規化済み issue 1 件の確認・修正・検証を行う agent call の定義をまとめる。
+- normalization と remediation の呼び出し境界や判定制約を変更するときの入口であり、feedback report 全体の処理手順を担うものではない。
 
 ## Read this when
-- agent observation を既存 issue candidate と照合する判断や、その call が参照できる情報の境界を確認・変更するとき。
-- feedback issue の現在状態確認、realization file の修正・検証、または remediation call 固有の起動条件を確認・変更するとき。
+- agent observation を既存候補にまとめるか新しい issue とするかの判断基準や、normalization call の参照範囲を変更するとき。
+- 単一 issue の現在状態の確認、realization file の修正可否、検証、結果分類に関する remediation call の制約を変更するとき。
+- この二つの agent call の prompt、起動条件、または結果の受け入れ条件を調べるとき。
 
 ## Do not read this when
-- feedback report 全体の intake、wave、checkpoint、publication、recovery の流れを調べるときは、feedback report の正本仕様から読む。
-- 共通の agent call parameter、prompt 構築、file access policy、provider 設定を調べるときは、それぞれの共通定義から読む。
+- observation の収集・受理検査・raw 保存や、machine observation の検出・集約を変更するときは、それぞれの処理を定める入口へ進む。
+- feedback report の候補形成、処理順、state 更新、commit・publication・cleanup など全体の進行を変更するときは、その orchestration と state を定める入口へ進む。
+- ACP の共通起動規約や agent call の既定設定を変更するときは、共通 framework または設定の入口へ進む。
 
 ## hash
-- 4233d6d48e0e4c6bc63d9fdfbba2e91b914293377ca8a3d4812ec56c032d7723
+- c1c4aac9b5d4b6a653fb7683e7720cc756379d0a4f9ce1acc8e04875a95da050
 
 # `indexing`
 
