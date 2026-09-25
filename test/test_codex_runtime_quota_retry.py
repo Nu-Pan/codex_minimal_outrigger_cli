@@ -138,7 +138,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     ]
     assert argv_calls[1][argv_calls[1].index("exec") + 1] == "--skip-git-repo-check"
     assert codex_arg_value(argv_calls[1], "--model") == probe_call_config.model
-    assert codex_arg_value(argv_calls[1], "--sandbox") == "read-only"
+    assert codex_arg_value(argv_calls[1], "--sandbox") == "workspace-write"
     assert "--approve-for-me" not in argv_calls[1]
     probe_config = codex_override_config(argv_calls[1])
     assert "approval_policy" not in probe_config
@@ -202,8 +202,8 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert resume_log["argv"][1:] == argv_calls[2]
     assert codex_arg_value(probe_logs[0]["argv"], "--model") == probe_call_config.model
     assert codex_arg_value(initial_log["argv"], "--model") == base_call_config.model
-    assert codex_arg_value(initial_log["argv"], "--sandbox") == "read-only"
-    assert codex_arg_value(resume_log["argv"], "--sandbox") == "read-only"
+    assert codex_arg_value(initial_log["argv"], "--sandbox") == "workspace-write"
+    assert codex_arg_value(resume_log["argv"], "--sandbox") == "workspace-write"
     assert "--profile" not in initial_log["argv"]
     assert "profile_name" not in initial_log
     assert "profile_path" not in initial_log

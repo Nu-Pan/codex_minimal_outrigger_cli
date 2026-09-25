@@ -100,7 +100,7 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     assert record["prompt_text"] == "complete prompt\n"
     assert record["handoff_repository"] is None
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
-    assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
+    assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
     override_config = codex_override_config(record["args"])
     assert codex_arg_value(record["args"], "--ask-for-approval") == "on-request"
     assert "--approve-for-me" not in record["args"]
@@ -322,7 +322,7 @@ def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
     )
     assert "permissions" not in override_config
     assert "default_permissions" not in override_config
-    assert "sandbox_workspace_write" not in override_config
+    assert override_config["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
     assert "features" not in override_config
     assert "--profile" not in call_data["argv"]
 

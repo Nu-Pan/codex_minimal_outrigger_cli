@@ -82,7 +82,9 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         "--config",
         'model_reasoning_effort="low"',
         "--sandbox",
-        "read-only",
+        "workspace-write",
+        "--config",
+        "sandbox_workspace_write.exclude_slash_tmp=false",
     ]
 
     def fake_prepare(*_args: object, **_kwargs: object) -> list[str]:

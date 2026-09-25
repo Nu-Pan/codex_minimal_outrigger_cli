@@ -40,8 +40,8 @@ from commons.runtime_feedback import (
 from config.cmoc_config import CmocConfig
 
 _SANDBOX_BY_MODE = {
-    FileAccessMode.READONLY: "read-only",
-    FileAccessMode.PURE_ORACLE_READ: "read-only",
+    FileAccessMode.READONLY: "workspace-write",
+    FileAccessMode.PURE_ORACLE_READ: "workspace-write",
     FileAccessMode.REPO_WRITE: "workspace-write",
     FileAccessMode.PURE_ORACLE_WRITE: "workspace-write",
     FileAccessMode.REALIZATION_WRITE: "workspace-write",
@@ -70,7 +70,9 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert parsed["model_reasoning_effort"] == call_config.reasoning_effort
     assert "permissions" not in parsed
     assert "default_permissions" not in parsed
-    assert "sandbox_workspace_write" not in parsed
+    assert parsed["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
+    assert "sandbox_mode" not in parsed
+    assert "sandbox_workspace_write.exclude_slash_tmp=false" in args
     assert "features" not in parsed
     assert parsed["model_provider"] == call_config.model_provider
     assert "model_providers" not in parsed
@@ -403,7 +405,7 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
     )
 
     parsed = codex_override_config(args)
-    assert codex_arg_value(args, "--sandbox") == "read-only"
+    assert codex_arg_value(args, "--sandbox") == "workspace-write"
     assert codex_arg_value(args, "--model") == "local-model"
     assert parsed["model_provider"] == provider_id
     assert parsed["model_reasoning_effort"] == "provider-defined-effort"

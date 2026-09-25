@@ -152,21 +152,20 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI の共通呼び出し境界として、sandbox・model/provider・MCP 設定と実行環境を組み立て、subprocess の追跡・停止、schema の配置、JSONL 結果の解釈を担う。
-- exec と TUI の両方から使われるため、CLI の起動から結果分類までを調べる入口。
+- Codex CLI subprocess 境界で、呼び出し単位の argv・環境を準備し、プロセス追跡と出力判定を担う。sandbox と設定の引数化、CODEX_HOME、schema の配置、JSONL からの session ID・失敗理由の判定をまとめて扱う。
 
 ## Read this when
-- Codex CLI に渡す引数、sandbox、model/provider、MCP 設定、CODEX_HOME や環境変数の挙動を変更・調査するとき。
-- Codex subprocess の起動、中断・timeout、editing run の process tracking、process group の停止を追うとき。
-- schema の配置や、stdout/JSONL からの error・resume token・成功／回復理由の判定を変更するとき。
+- Codex CLI に渡す呼び出し単位の sandbox・設定・hook・MCP 引数や、CODEX_HOME と subprocess 環境の準備を調べるとき。
+- Codex subprocess の起動、中断、process group の停止、editing run の child tracking を調べるとき。
+- schema の配置や、stdout・stderr・JSONL からの session ID、診断、成功・quota・一時障害の判定を調べるとき。
 
 ## Do not read this when
-- Codex exec の出力検証・補正、回復待ち、probe 後の再開制御を変更するときは、runtime_codex_exec.py と runtime_codex_recovery.py へ進む。
-- TUI 固有の call lifecycle やログ記録を変更するときは runtime_codex_tui.py へ進む。共通の CLI 起動設定や subprocess 管理を変更するときはこのファイルを読む。
-- feedback reporter の処理や editor input handoff の schema・transport を変更するときは、それぞれ runtime_feedback_reporter.py または runtime_editor_input_handoff_mcp.py と runtime_editor_input_handoff_protocol.py へ進む。このファイルは Codex CLI 側の MCP 設定を担う。
+- Codex 呼び出し結果の検証・補正、retry、回復待ちや session 再開の流れを調べるときは、その実行制御を担う箇所を読む。
+- TUI の起動順序、call log や実行結果の保存を調べるときは、TUI の実行・記録を担う箇所を読む。
+- Codex CLI 呼び出しや回復に関する正本仕様を確認・変更するときは、実装ではなく該当する仕様を読む。
 
 ## hash
-- 603fca718389c18e380cf5b33536e21b920c7f58d892de3f1a4dd35b7bb2fe4a
+- 3cda49a5c4fdac8f758e87dcd2d67da995c1e6635430851ee774ece9838fb364
 
 # `runtime_codex_recovery.py`
 

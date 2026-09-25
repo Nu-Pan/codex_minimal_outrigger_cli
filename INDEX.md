@@ -115,33 +115,36 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 起動口、サブコマンド処理、共通 runtime を実装するソース群です。
-- Codex の起動、Git と session/run の状態管理、feedback、index 更新、報告などの共通処理を含みます。ACP builder や basic/config には、oracle 側の定義を公開する互換アダプターもあります。
+- cmoc の Python CLI と実行時実装をまとめ、コマンド入口、作業フロー、共有 runtime の接続を担う層です。
+- コマンド別の処理と共通 runtime を含み、一部の設定・基礎型・ACP builder は正本側定義への互換入口として公開されます。
 
 ## Read this when
-- CLI のコマンド選択から処理の流れを追うとき、または複数のコマンドにまたがる挙動を調べるとき。
-- Codex 実行、Git と worktree、session/run、feedback、index 更新など、共通 runtime の境界や連携を調べるとき。
+- CLI のコマンド登録、起動、引数解析やエラー処理を変更するとき。
+- 複数のコマンドにまたがる Git・Codex 実行、状態管理、ログ、レポート、エディタ引き渡しなどの runtime 境界を調べるとき。
+- コマンド固有処理と共通 runtime、builder adapter のつながりを追う起点が必要なとき。
 
 ## Do not read this when
-- 作業が特定のコマンド群や共通処理の一領域に限られる場合は、その下位項目から確認するとき。
-- oracle 側の正本仕様や builder 定義が対象の場合は、互換アダプターを含むこのソース群ではなく、該当する正本から確認するとき。
+- 特定コマンドの処理だけを変更・調査する場合は、そのコマンド固有の実装から読む。
+- 正本仕様、正本 ACP builder、正本設定や基礎型の定義を確認・変更する場合は、該当する正本を直接読む。
+- 共通 runtime 内の単一機能だけを追う場合は、その機能の実装から読み始める。
 
 ## hash
-- cd10fda489523c68120ec4281369ad49419407a4b86e55a0dc08f303e90b691e
+- 91297b170bdda98ccc703881b9413fdaf121faaf0847d0b8fec74ca2fa55ad0d
 
 # `test`
 
 ## Summary
-- cmoc の振る舞いを検査する pytest の単体・統合テストと、共有 fixture・補助コードをまとめる。CLI、runtime、Codex 呼び出し、prompt、indexing、feedback、session/run state、filesystem などの回帰確認に使う。
-- 実装の外部挙動や境界条件を実行可能な形で確かめる入口。プロダクト実装は src、規範的な要件の根拠は oracle の該当箇所を参照する。
+- このディレクトリは pytest の回帰・統合テスト群で、共有 fixture とヘルパーを使って CLI、実行環境、Git worktree の挙動を検証します。
+- 設定や診断、ファイル分類と INDEX 生成、Codex の実行・再試行・復旧、セッションと編集 run のライフサイクル、feedback、入力 handoff、レポートなど、複数モジュールにまたがる振る舞いを扱います。
+- パッケージ import、prompt と構造化文書の生成、通知などの補助的な回帰確認も含みます。
 
 ## Read this when
-- CLI や runtime、Codex 呼び出し、prompt、indexing、feedback、session/run state など、ここで扱う振る舞いを変更・調査し、対応する回帰テストや共有 helper を探すとき。
-- pytest の失敗を調べるとき、または既存のテスト構成に沿って対象の振る舞いを検証するとき。
+- CLI や runtime、indexing、Codex 呼び出し、セッション・編集 run、feedback のテストを追加・変更・調査するとき。
+- 共有 fixture やテスト用ヘルパー、または複数モジュール間の回帰カバレッジを確認するとき。
 
 ## Do not read this when
-- 規範的な要求や人間の意図を確認するときは、テストを正本として扱わず、関連する oracle の文書・実装・テストを読む。
-- テストや回帰カバレッジが作業対象でなく、実装の詳細だけを追うときは、該当する src の対象へ進む。
+- 対象の振る舞いに対応する個別のテストや実装が分かっているときは、そちらから確認するとき。
+- 正規の仕様を判断するときは、このテスト群ではなく該当する oracle 仕様を確認するとき。
 
 ## hash
-- 2730679763eed478a570b47ccadc270f377ac15fe54347030381e51fb393e0f6
+- 0d594ae1b864aac98bc382e323de7d463da217a4b74040d7f33aa87dde74289d

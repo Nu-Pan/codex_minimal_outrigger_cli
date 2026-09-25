@@ -39,13 +39,13 @@ def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     assert prompt not in args
     assert "--profile" not in args
     assert "-p" not in args
-    assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}
+    assert codex_arg_value(args, "--sandbox") == "workspace-write"
     assert codex_arg_value(args, "--ask-for-approval") == "on-request"
     assert "--approve-for-me" not in args
     override = codex_override_config(args)
     assert "approval_policy" not in override
     assert override["approvals_reviewer"] == "auto_review"
-    assert "sandbox_workspace_write" not in override
+    assert override["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
     assert "features" not in override
 
 
