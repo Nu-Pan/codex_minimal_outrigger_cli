@@ -200,7 +200,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
         assert calls[index]["prompt"] == calls[0]["prompt"]
     for index in (1, 2, 3, 5):
         assert "resume" not in calls[index]["argv"]
-        assert codex_arg_value(calls[index]["argv"], "--sandbox") == "read-only"
+        assert codex_arg_value(calls[index]["argv"], "--sandbox") == "workspace-write"
         assert calls[index]["timeout"] > 0
     logs = [
         json.loads(p.read_text())

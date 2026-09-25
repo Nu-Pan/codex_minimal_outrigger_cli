@@ -1,21 +1,19 @@
 # `acp_builder`
 
 ## Summary
-- AI エージェント呼び出しに共通するパラメータ型とアクセスモードを定義し、機能別に prompt と起動設定を組み立てる builder 群をまとめる。
-- 複数の呼び出し領域に分かれた実装から、変更対象の機能に合う builder を選ぶ入口となる。
+- agent call 共通のパラメータとファイルアクセスモードを定義し、用途別 builder が prompt と起動条件を組み立てる。
+- quota 確認、競合解消、TUI、feedback、oracle 調査・編集、realization の追従・refactor、index entry 生成に関する call 定義への入口となる。
 
 ## Read this when
-- AI エージェント呼び出しに共通するパラメータ型やアクセスモードを変更するとき。
-- 特定機能が生成する prompt、実行設定、構造化出力 schema の参照、または indexing preflight の設定を変更するときに、担当する builder を探す入口として読む。
-- 複数の呼び出し種別に共通する構成や設定を把握するとき。
+- agent call の共通パラメータやアクセスモード、cwd、editor input handoff、自動 indexing の設定を追加・変更するとき。
+- 複数の用途別 call 定義を横断して、prompt の構成や起動条件を確認するとき。
 
 ## Do not read this when
-- 対象の呼び出し種別が特定済みで、その実装だけを調べる場合は、機能別の下位項目へ直接進む。
-- 共通の prompt 合成規則を調べる場合は、共有の prompt builder 実装から読む。
-- コマンドの正本仕様上の要件を確認するときは、その機能を定義する oracle doc から読む。
+- 特定の用途の call 定義だけを変更・調査するときは、該当する下位項目から確認するとき。
+- 複数 call で共有される prompt の共通構成そのものを変更するときは、共通 prompt の定義から確認するとき。
 
 ## hash
-- c71f5671f6889d06ed99c5b574653624091dcae5e63e2ac52793b8292c2bd1fe
+- 32e3ce8b6606dd870c5204976ef7df3a0c38eb6b932f6236835c45d00c4be590
 
 # `editor_input_handoff`
 
@@ -71,19 +69,18 @@
 # `prompt_builder`
 
 ## Summary
-- Agent call に渡す構造化 prompt の共通的な組み立てと、選択して差し込む規定文面・共通知識を構築する層。
-- 競合解消用 prompt と、エディタ起動前に表示する案内の builder も含む。
+- 選択された共通規定、ポリシー、呼び出し元の目的や追加文面、プレースホルダー定義を組み合わせて、agent call 用の prompt を構築する。
+- oracle と realization の基礎説明や、アクセス制限、routing、競合解消などの再利用文面を提供するほか、エディタ起動前の案内文も構築する。
 
 ## Read this when
-- 複数種類の agent call に共通する prompt の構成や、規定文面の選択・配置、placeholder 定義の統合を変更するとき。
-- アクセス制限、feedback 報告、routing、oracle・realization、handoff、競合解消について agent に渡す規定文面を変更するとき。
-- 競合解消用 prompt の組み立てや、エディタ起動前の案内を変更するとき。
+- agent call 用 prompt の共通構成、文面の選択や順序、プレースホルダー定義の統合を変更・調査する時。
+- 複数の呼び出しで再利用する規定文面や基本説明の組み立て方を変更・調査する時。
+- 競合解消用 prompt の構成や、エディタ起動前に表示する案内文を変更・調査する時。
 
 ## Do not read this when
-- agent call ごとの処理手順、固有の入力値、起動・実行経路を調べるときは、ACP builder 側から確認する。
-- 規定の意味や要求そのものを確認・変更するときは、該当テーマの正本仕様から読み始める。
-- path context や構造化文書ノードの定義・レンダリングを調べるときは、それらを所有する共通モデル側から確認する。
-- handoff の MCP 処理や受信側入力の扱いを調べるときは、handoff 機能側から確認する。
+- 単一の規定や基本説明の文面だけが対象なら、その文面を構築する個別の箇所へ進む。
+- 正本仕様の意味や要求を確認・改訂する場合は、該当する正本仕様へ進む。
+- 特定の呼び出し元がどの規定や目的文面を選ぶかだけが対象なら、その呼び出し元を確認する。
 
 ## hash
-- 1854014e850c201f3ca4769bab51e91f3b70526fae4c67a0ffa1c39fb937eeae
+- 57bdc0c3d1c0d06b3c4e06ad54eb0481c90b31879aba2217e0179370ab2e77e4

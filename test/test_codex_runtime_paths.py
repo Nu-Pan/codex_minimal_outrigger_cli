@@ -211,8 +211,8 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     assert record["args"][record["args"].index("--cd") + 1] == str(expected_cwd)
     assert record["cwd"] == str(expected_cwd)
     override_config = codex_override_config(record["args"])
-    assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
-    assert "sandbox_workspace_write" not in override_config
+    assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
+    assert override_config["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
     assert "features" not in override_config
     assert "default_permissions" not in override_config
     assert "permissions" not in override_config
@@ -282,7 +282,7 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
     assert not (linked / ".cmoc" / "gu" / "schema").exists()
 
 
-def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(
+def test_run_codex_exec_uses_workspace_sandbox_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree でも PURE_ORACLE_READ を専用 sandbox 引数へ変換する。
@@ -327,7 +327,7 @@ def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-    assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
+    assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
     override_config = codex_override_config(record["args"])
     assert "permissions" not in override_config
     assert "default_permissions" not in override_config

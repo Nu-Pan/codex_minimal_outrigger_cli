@@ -53,20 +53,20 @@
 # `file_access.py`
 
 ## Summary
-- FileAccessMode に応じて、agent の直接ファイルアクセスに関する共通制限文面と path placeholder を構築する。NO_POLICY では共通制限を返さない。
-- 完全 prompt に組み込まれる file-access policy 断片の構築箇所であり、mode の選択や他の prompt policy の統合は担当しない。
+- FileAccessMode に応じて、エージェントの直接ファイルアクセスに関する共通 prompt policy と path placeholder を組み立てる。共通 policy がない mode では何も返さないため、ファイルアクセス規定の生成内容を調べる入口となる。
 
 ## Read this when
-- 各アクセス mode で agent に伝える読み書き制限の文面を確認・変更するとき。
-- 共通制限を prompt に含める条件や、path placeholder の受け渡しを調べるとき。
+- エージェントに渡す共通のファイルアクセス規定や一時作業領域の利用規定を確認・変更するとき。
+- mode ごとの policy 生成結果や、path context 由来の placeholder がどう渡されるかを追うとき。
 
 ## Do not read this when
-- アクセス mode の意味や Codex CLI sandbox との対応を確認するときは、正本仕様から確認する。
-- 個別の agent call がどの mode を選ぶかを調べるときは、その call の builder から確認する。
-- 完全 prompt の構成や各 policy の統合方法を調べるときは、完全 prompt の構築箇所を直接読む。
+- 各 mode の正本上の意味や sandbox との責務分担を確認するときは、ファイルアクセス制限の正本仕様から読む。
+- 完全 prompt に policy を加える条件を追うときは、prompt 構成側から読む。
+- mode の型定義や AgentCallParameter のフィールドを調べるときは、呼び出しパラメーターの型定義へ進む。
+- Codex CLI の sandbox 設定や実際のアクセス強制を調べるときは、その設定・実行側の対象から確認する。
 
 ## hash
-- 2024227edecd081482ba2bc22f0eace6067cc3c7a3d4df39292d91c4f77837ad
+- c68c64c14f88cefacd78d6d2c4c5d0aeb7a1905386e8e149fc937b6d0c52c0cb
 
 # `index_entry.py`
 

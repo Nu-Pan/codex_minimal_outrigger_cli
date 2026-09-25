@@ -338,7 +338,7 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     assert payload["reasoning_effort"] == call_config.reasoning_effort
     assert codex_arg_value(argv, "--model") == call_config.model
     override = codex_override_config(argv)
-    assert "sandbox_workspace_write" not in override
+    assert override["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
     assert "features" not in override
     if tui:
         assert argv[argv.index("--enable") + 1] == "hooks"

@@ -83,17 +83,16 @@
 # `policy`
 
 ## Summary
-- agent call の完全 prompt に組み込む共有規定文面を構築する。ファイルアクセス、oracle・realization file の扱い、適合性所見、INDEX routing と entry 生成、feedback 報告、editor handoff、競合解消を扱う。
-- 各規定の文面と placeholder を作る層であり、どの規定を有効にするかや完全 prompt 内の配置は上位の組み立て側が担う。
+- エージェント向けの policy 規定文面を組み立てるソース群。routing、INDEX エントリー生成、oracle・realization、ファイルアクセス、競合解消、handoff、feedback の規定を担う。
+- 規定の文面や生成方法を定義する層であり、意味仕様の正本や、個別の agent call での policy 選択・全体構成を定義する層ではない。
 
 ## Read this when
-- agent に渡す共有規定の文面や、その規定用 placeholder の生成を変更するとき。
-- ファイルアクセス、oracle・realization の扱い、適合性所見、INDEX routing・entry 生成、feedback 報告、editor handoff、競合解消のどの規定を確認すべきか判断するとき。
+- エージェントに渡す policy の具体的な文面や、責務別の生成方法を確認・変更するとき。
+- ファイルアクセス mode による規定の違いや、policy 文面に渡す placeholder を調べるとき。
 
 ## Do not read this when
-- 規定の意味や優先関係を変更・判断するときは、人間が所有する正本仕様を起点にする。
-- 完全 prompt で規定を有効化する条件、追加順序、全体の構成や placeholder 統合を変更するときは、prompt 組み立て側を起点にする。
-- sandbox の設定やファイルアクセス制限の実際の強制動作を変更するとき。この対象が定義するのは agent に渡す規定文面。
+- 規定の意味や人間意図、正本要件を確認・変更するときは、該当する oracle doc の仕様へ進む。
+- 特定の agent call にどの policy が含まれるか、prompt 全体がどう組み立てられるかを調べるときは、呼び出し元や prompt の組立側へ進む。
 
 ## hash
-- 3633df97a332c1d5b7f37a3e994ae78804e1727d6022c2c6b313988982972944
+- e82b882bb9b68d8ffb662814b97067c153fd3f9786046d129047cc266de5645b

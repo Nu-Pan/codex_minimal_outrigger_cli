@@ -442,12 +442,12 @@ def stop_process_group(
 
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
-    """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
+    """論理的な file access mode に対応する Codex CLI sandbox を選ぶ。"""
     match mode:
-        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
-            return "read-only"
         case (
-            FileAccessMode.REALIZATION_WRITE
+            FileAccessMode.READONLY
+            | FileAccessMode.PURE_ORACLE_READ
+            | FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.NO_POLICY
@@ -783,6 +783,7 @@ def build_codex_override_args(
         call_config.model,
         "--sandbox",
         sandbox_mode,
+        *_config_override("sandbox_workspace_write.exclude_slash_tmp", "false"),
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override(
             "model_reasoning_effort", _toml_string(call_config.reasoning_effort)

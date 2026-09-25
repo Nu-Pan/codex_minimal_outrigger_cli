@@ -129,7 +129,7 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
         ),
         pytest.param(
             lambda: _build_file_access_policy(FileAccessMode.READONLY, _path_context()),
-            ("**禁止**", "**例外**", "**補足情報**"),
+            ("**必須**", "**禁止**", "**例外**", "**補足情報**"),
             1,
             id="file-access",
         ),
@@ -427,16 +427,26 @@ def test_file_access_policy_titles_and_bodies_match_modes() -> None:
         "`AGENTS.md` は書き込み禁止",
         "`INDEX.md` は書き込み禁止",
         "`{{work-root}}/memo` は読み書き禁止",
+        "一時作業領域へのコピーなどを使い、禁止された読み取りや作業対象・判断材料の制限を迂回してはいけない",
     }
 
     for mode, fragments in mode_specific_denials.items():
         doc = _build_file_access_policy(mode, _path_context())[1]
         rendered = render_sd_node_as_markdown(doc)
         assert doc.title == f"file R/W policy ({mode.value})"
-        assert "deny list" in rendered
+        assert "この policy で禁止されていない読み書きは許容する" in rendered
         assert "ツリー外は読み書き禁止" not in rendered
         assert "Git metadata の読み取り例外" not in rendered
         exceptions = rendered.split("**例外**\n", 1)[1].split("**補足情報**", 1)[0]
+        assert "一時作業領域の作成・利用・後片付けに必要な書き込み" in exceptions
+        assert "`{{work-root}}` ツリー外への書き込み禁止の例外" in exceptions
+        assert "他のファイルアクセス禁止を解除しない" in exceptions
+        requirements = rendered.split("**必須**\n", 1)[1].split("**禁止**", 1)[0]
+        assert "`/tmp` 配下に作業専用の一時ディレクトリを作成" in requirements
+        assert "不要になった一時ファイルと一時ディレクトリは削除" in requirements
+        assert (
+            "作業成果物の編集範囲と、検証・調査用の一時作業領域の利用は区別" in rendered
+        )
         assert "MCP 経由の外部ツールによるファイル書き込み" in exceptions
         assert "Structured Output を受け取った外部ツールによるファイル書き込み" in (
             exceptions
@@ -506,6 +516,7 @@ def test_no_policy_complete_prompt_omits_file_access_policy() -> None:
     rendered = render_sd_node_as_markdown(*prompt)
 
     assert "file R/W policy" not in rendered
+    assert "一時作業領域" not in rendered
 
 
 def test_complete_prompt_preserves_injected_policy_terms() -> None:

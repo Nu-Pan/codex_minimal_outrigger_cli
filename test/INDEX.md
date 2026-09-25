@@ -34,19 +34,18 @@
 # `_codex_support.py`
 
 ## Summary
-- 複数のテストで共用する Codex CLI 用のテストダブル、隔離環境、呼び出しパラメーター、引数検査、実行時オーバーライドをまとめた支援モジュール。
-- Codex 呼び出しを扱うテストで、共通ヘルパーの役割や変更箇所を確認する入口。
+- Codex の runtime・CLI テスト間で共用する test double、隔離環境の準備、parameter 作成、引数検査、Codex override の差し替えをまとめた補助コード。個別のテストケースではなく、複数のテストが共有する準備や検証方法を確認するときの入口。
 
 ## Read this when
-- 複数のテストに共通する Codex CLI 用のテスト環境や引数処理を変更・確認するとき。
-- テストで Codex の実行結果を置き換える方法や、実行時設定を固定する方法を調べるとき。
+- Codex 関連テストの共通環境、偽の構造化出力、引数・config の検査、override のスタブを変更または利用するとき。
+- この共有補助を使う複数のテストで、セットアップや Codex 呼び出しの検証方法を追うとき。
 
 ## Do not read this when
-- 本番の Codex CLI 呼び出しの挙動を調べるときは、実行処理の実装から確認する。
-- 単一テストの期待値や個別の動作を調べるときは、そのテストの記述から確認する。
+- Codex の実際の runtime 挙動や agent call parameter の仕様を調べるときは、該当する実装または正本仕様から確認する。
+- 特定のテストケースだけの期待値や振る舞いを調べるときは、そのテストを直接読む。
 
 ## hash
-- 143fb59f7aea70bdf2acb90fdf4cd24e8d1b4f0481ef54983bbfe88dce60d482
+- a14ef0fb9af4979abd7ca7fa0abd9a033435ab3f292268df5b4192dfc4565571
 
 # `_command_support.py`
 
@@ -266,19 +265,20 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex exec の呼び出しとテスト環境を通した結合テストをまとめる。
-- Codex CLI への prompt の渡し方、実行時の override、出力の扱い、テスト用 home の分離を確認する。
+- Codex exec の通常起動について、CLI 引数と設定上書き、作業ディレクトリ、prompt の stdin 渡し、結果の読込をテストする。
+- 実行環境の分離、汎用 model provider の設定反映、CODEX_HOME に設定ファイルを作らないこと、schema なしの出力に不正 UTF-8 が含まれる場合の扱いも確認する。通常 exec の呼び出し契約を調べる入口となる。
 
 ## Read this when
-- Codex exec の起動引数や prompt の受け渡し、provider 設定の反映、Codex home への設定ファイル生成を変更・調査するとき。
-- schema-less 出力の不正 UTF-8 を含め、Codex exec の呼び出しから結果構築までの結合動作を確認するとき。
+- Codex exec に渡す引数や設定上書き、作業ディレクトリ、prompt の stdin 渡しを確認・変更するとき。
+- model provider の設定反映や、Codex の設定ファイルを生成しない実行環境の扱いを調べるとき。
+- Structured Output schema を使わない場合の出力読込、特に不正 UTF-8 の扱いを確認するとき。
 
 ## Do not read this when
-- sandbox や provider の argv 変換だけを調べるときは、専用の builder テストを読むとき。
-- JSONL エラー、再試行、process 停止、cwd・schema 保存先、CODEX_HOME の preflight が対象なら、それぞれを扱う専用テストを読むとき。
+- Structured Output の検証・補正、postcondition、容量回復や再開を調べるときは、出力補正や回復処理を扱うテストから確認する。
+- Codex 子プロセスの追跡、停止、PID の同一性確認などを調べるときは、プロセス管理を扱うテストから確認する。
 
 ## hash
-- a72672ae97c44047a25bbd6c69f01de61b6b28ff35b4989a7c36bd442d245b28
+- ebc007d7ca7eab3f2ec012970839a4777a728997189f7af2426147b3219e6db8
 
 # `test_codex_runtime_home.py`
 
@@ -298,55 +298,52 @@
 # `test_codex_runtime_paths.py`
 
 ## Summary
-- Codex exec が使う時刻付きログ一式のパス確保、agent-call cwd の実プロセスと `--cd` への反映、file-access mode の sandbox 引数への反映を検証する。
-- リンク済み worktree での schema 保存先と、補助的な指示ファイルの実在 path から個別 permission を追加しない挙動も扱う。
+- Codex exec の実行時パスと sandbox 引数を、並行呼び出しや linked worktree を含む起動経路で確認する。
 
 ## Read this when
-- 同時起動時にログのパスが衝突しないか、関連ログと output が call ごとに分離されるかを調べるとき。
-- agent-call cwd が `--cd` と子プロセス cwd に反映され、PURE_ORACLE_READ が read-only sandbox 引数になる経路を確認するとき。
-- リンク済み worktree での schema 保存場所や、補助的な指示ファイルの path が sandbox permission に変換されないことを確認するとき。
+- Codex のログ path の一意性、呼び出し cwd、linked worktree での schema 保存先を変更・調査するとき。
+- FileAccessMode に応じた sandbox argv と、実在する `.agents` path を個別権限へ注入しない境界を調べるとき。
 
 ## Do not read this when
-- Codex home の解決や環境変数、provider/config override、通常の exec 起動設定だけが論点なら、呼び出し設定を直接扱うテストを読む。
-- Structured Output の JSON/schema parse・validation・補正や出力エラーが論点なら、その処理を直接扱うテストを読む。
-- quota/capacity recovery、session resume、subprocess の追跡・停止・中断が論点なら、回復または subprocess lifecycle を直接扱うテストを読む。
+- model/provider 設定、prompt の受け渡し、Structured Output の検証・補正、retry や recovery の一般動作を調べるときは、それぞれの専用実行・回復テストを読む。
+- file access policy の文面や mode ごとの制限を変更するときは policy 定義と専用テストを、path context の導出規則を変更するときは path model の正本を直接読む。
 
 ## hash
-- 3fce01a93d9cc4f80fa645ab437655c26db9d0e70d501a2fbf1056fe47aa42ef
+- eacd012f2ffec59214a0f1d5f8fb786d292fd49987ca3ba8a64dbe9a2ea663fa
 
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota 切れ後の復帰経路を検証する。保存済みログからの session ID 復元、利用可能性 probe、session の再開または元 prompt の再実行を扱う。
-- probe の構築と実行条件、失敗・中断時の伝播、ログ記録、および並行 call による probe の共有を検証する。
+- Codex exec の quota 枯渇後、代表 probe による回復確認から session の再開または prompt の再実行までを検証する実行時テストです。
+- probe の共有、記録とログ、失敗・中断時の伝播、quota probe adapter の連携も扱います。
 
 ## Read this when
-- Codex の quota 復帰 probe や、復帰後の session 再開・prompt 再実行を変更または調査するとき。
-- probe の実行条件や記録、失敗処理、中断処理、並行待機中の probe 共有を確認するとき。
+- Codex exec の quota 待機・回復判定・再開または再実行の動作を変更するとき。
+- quota probe の実行、並行呼び出しでの共有、ログや失敗処理との連携を変更するとき。
 
 ## Do not read this when
-- quota 復帰ではなく、capacity や一時障害の再試行、Structured Output の補正・schema 検証だけを扱うときは、それらの個別テストから確認する。
-- probe の prompt 内容だけを変更するときは、probe builder とその正本定義を直接確認する。このテストは主に builder と runtime の接続を検証する。
+- quota と無関係な Codex exec の引数構築、権限、パス解決などを変更するときは、その責務を直接扱う対象から確認してください。
+- quota probe の正本プロンプト自体を変更するときは、プロンプトを定義する oracle の対象から確認してください。
 
 ## hash
-- b064e65d5a12c90799165a171fc4fd43a81bc0bb2ddda8ed065f0f4f057a659b
+- 64aab45c5218ca3db49dbe2a8eb30841cf2e9a9d830e47651cee99f8baa742aa
 
 # `test_codex_runtime_recovery.py`
 
 ## Summary
-- Codex CLI の JSONL 結果分類と、quota / transient 障害からの回復フローを検証するテスト群。
-- 回復理由の切替、設定継承、元セッションの再開、Structured Output 修正中の回復、probe 失敗・中断・並行呼び出しの待機共有を扱う。
+- Codex exec の JSONL 終了結果の分類と、回復待ち・確認 probe 後の同一 session 再開を検証するテスト。
+- 回復理由の切替、設定継承、Structured Output 補正中の回復、中断処理、条件が一致する並列 call の probe 共有も扱う。
 
 ## Read this when
-- Codex CLI の失敗分類と、probe 成功後に処理をどう再開するかを調べるとき。
-- 回復中の設定・作業・セッション・修正枠の維持、probe 停止、中断、同条件呼び出しの共有を確認するとき。
+- quota や capacity を含む JSONL 結果の分類、回復待ち・probe・session 再開の動作を変更または調査するとき。
+- 設定継承、補正中の回復、中断の優先、並列 call 間の probe 共有を確認するとき。
 
 ## Do not read this when
-- CLI の起動引数、provider・sandbox 設定、home や subprocess の起動・追跡だけを確認するときは、profile / subprocess の専用テストへ進む。
-- quota probe の prompt や parameter の構築、個別の quota retry 統合を調べるときは、quota probe / retry の専用テストへ進む。
+- 回復後の呼び出しを対象とせず、Codex exec の通常起動時の引数や provider 設定だけを調べるときは、通常起動のテストを直接読む。
+- 対話型 Codex TUI の起動・終了や通知フックを調べるときは、TUI 専用のテストを読む。
 
 ## hash
-- 5c09a5f373424954eac3cb90c0d1d5eda654bfc9fdef346a4e20ece3e4a4f9b5
+- aa87e4c68fe649e580f908cfeec3cb73d9adfb49051926facf48cd412a31d6f7
 
 # `test_codex_runtime_retry.py`
 
@@ -384,21 +381,18 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 呼び出しの動作を検証するテスト群。prompt と実行条件の引き渡し、通知 hook と補完時の分岐、設定検証の順序、linked worktree での editor input handoff を扱う。
-- TUI 呼び出しに伴う成功・失敗ログ、timestamp 衝突、並行呼び出しの対応を確認する。TUI 固有の回帰調査では、共有処理のテストよりこの対象から始める。
+- Codex TUI の起動経路について、prompt と CLI 設定、通知フック、worktree のアクセス境界を検証する回帰テスト。
+- TUI 呼び出しの成功・失敗ログと、並行する editor-input MCP handoff の送信元対応を検証する。
 
 ## Read this when
-- Codex TUI の prompt、CLI 引数、アクセス境界、通知 hook や補完時の挙動を変更・調査するとき。
-- TUI 起動前の agent call/provider 検証や、linked worktree からの editor input handoff を調査するとき。
-- TUI の call log、サブコマンドイベント、異常終了、並行呼び出しの回帰を調べるとき。
+- Codex TUI の起動設定、バージョンに応じた通知フック、設定検証やシェル補完中の挙動を変更・調査するとき。
+- TUI のログ記録、worktree での prompt・handoff、並行呼び出し時の送信元対応を変更・調査するとき。
 
 ## Do not read this when
-- TUI に限らない Codex subprocess の共通実行処理を調べるときは、共有ランタイムの実装・テストへ進む。
-- editor input handoff 自体のプロトコルや overwrite の動作を調べるときは、そのプロトコルの実装・テストへ進む。
-- Codex provider や agent call 設定の定義・読み込みを調べるときは、設定の実装・テストへ進む。
+- Codex exec の prompt stdin、出力処理、結果構築を調べるときは、exec 経路のテストを直接読む。
 
 ## hash
-- 70ce6cd37f686120885539250196367c2908062c63aa3235331336062cde4a4e
+- f8c1590da9efbf22d28178bf61c08701a25070929beb1a1e15c3383032a045b8
 
 # `test_doctor_cli.py`
 
@@ -660,21 +654,20 @@
 # `test_production_cli.py`
 
 ## Summary
-- 全末端サブコマンドの代表的な正常系を、利用者向け CLI の本番経路で確かめる受け入れテスト。
-- 独立プロセスで実 Codex と実推論を使い、CLI 結果、call log、report、session/run state、Git 状態など外部から見える結果を検証する。TUI では PTY、editor handoff、通知も扱い、LLM の回答品質は評価しない。
-- 実推論を含む本番経路全体の挙動を調べる入口。個々のコマンド内部や実行時機能を対象にする focused test とは責務が異なる。
+- 実 Codex CLI と実推論を使い、利用者向け CLI の全末端コマンドを独立 process で実行する本番経路の受け入れテスト。LLM の回答品質ではなく、終了状態や report・state・Git・call log など外部から観測できる cmoc の制御を検証する。
+- 非対話コマンドでは indexing、oracle edit、feedback 修復、run/session の状態遷移を確認し、TUI コマンドでは PTY 上の応答完了、editor input handoff、通知、副作用の境界を確認する。
 
 ## Read this when
-- 全末端コマンドを独立プロセスで実行し、実 Codex を通した代表的な本番経路や、その外部可視な状態変化を確認・変更するとき。
-- TUI の PTY 上の応答完了・終了、通知、editor handoff が実 Codex の実行と連携するかを調べるとき。
+- CLI の公開末端コマンドを追加・削除するとき、全末端を本番経路のシナリオが網羅しているか確認する。
+- 実 Codex CLI の起動、呼び出し設定・ログ、indexing や feedback の実推論を含む制御経路を変更するとき。
+- TUI の PTY 実行、応答完了、editor input handoff、通知、または run/session の状態遷移を変更するとき。
 
 ## Do not read this when
-- 個々のコマンドや runtime の内部ロジック、決定論的な状態遷移を調べるときは、その機能を直接扱う focused test から始める。
-- PTY helper 単体のタイミング挙動だけを調べるときは、その helper を直接検証するテストを読む。
-- LLM の回答品質や agent の判断の正しさを評価するとき。このテストはそれらを判定対象としていない。
+- 個別コマンドの内部ロジックや狭い出力を調べており、対象を絞った単体テストまたはコマンド別テストで確認できるとき。
+- LLM の回答品質やプロンプトの意味的な良し悪しを評価するとき。このテストは回答品質を判定しない。
 
 ## hash
-- 9b68e218cbbd2ee0d24575fc50fd428b1d6e5cdb065bf32cc18daed34fbd5ff5
+- aec02fe416e0f17c5ad5f9d35b9e45518fb5a97a2f63f6712c0ee78233460d8c
 
 # `test_production_cli_support.py`
 
@@ -710,18 +703,19 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 各 prompt policy builder の出力と、完全 prompt の組み立て結果を回帰確認するテスト群です。カテゴリ順や主要文言、policy の注入、objective と追加 prompt の並び、file access mode、root placeholder の統合と競合時の失敗を検証します。
+- prompt part と complete prompt の構造・Markdown 描画を検証するテスト。policy block のカテゴリ順、flag による追加、各 policy の主要な出力、prompt の構成と placeholder の扱いをまとめて確認する。
+- 個別 policy の内容テストではなく、prompt builder 全体の描画結果に関する回帰確認の入口。
 
 ## Read this when
-- 完全 prompt の構成、任意 section や policy flag の反映、placeholder 処理を変更・調査するとき。
-- policy の描画内容やカテゴリ順、file access mode ごとの出力に対する回帰確認が必要なとき。
+- complete prompt や policy block の組み立て・描画を変更し、section の順序や追加条件、file access mode、placeholder の展開への影響を確認するとき。
+- policy builder を変更し、その出力が complete prompt に正しく含まれるか、このテストが確認する主要な描画条件を保つか確かめるとき。
 
 ## Do not read this when
-- 個別 policy の規範や実装の詳細を確認するときは、該当する正本仕様または policy builder を直接参照してください。
-- editor input の保存・確定や handoff 通信の実動作だけを調べるときは、それらの外部動作を扱う専用テストを参照してください。
+- prompt の組み立てや描画に影響しない機能を変更するとき。
+- 個別 policy の正本要件や builder の詳細だけを確認するときは、対応する oracle 文書または policy builder の実装から読む。
 
 ## hash
-- 347074435cc4236f0e03aaf9098fa4c867f1c150e1588d26d2dacefb3d9acf45
+- 089ffb50dbbafc6efc3f6190ee513401f288cd7268de95473d30d5aa8215170a
 
 # `test_runtime_cli.py`
 
@@ -775,20 +769,19 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 呼び出し設定について、sandbox、model/provider、MCP と環境変数、TUI 通知 callback の構成が期待どおりになる契約を検証するテスト。
-- schema の保存時に元の bytes を保つことと、不正な encoding や過剰にネストした JSON output を失敗として扱う境界も確認する。
+- Codex CLI の引数・設定上書きと MCP 環境の分離に関するテスト。sandbox、model/provider、通知 hook、schema 保存、JSON 出力の境界条件を扱います。
+- Codex 起動設定や通知 callback、schema-less 出力の変更時に、既存の契約と失敗時の扱いを確認する入口です。
 
 ## Read this when
-- Codex CLI の argv 構築、provider 設定、file access mode に応じた sandbox、または MCP 設定と環境変数の分離を変更・確認するとき。
-- TUI 通知 callback の設定や、対応する Codex CLI の版を限定する挙動を変更・確認するとき。
-- schema 保存や JSON output 読み取りの境界を変更・確認するとき。
+- agent call の sandbox・model/provider 設定、MCP 注入や call context の環境変数分離を変更するとき。
+- 通知 hook の有効条件、Codex 版確認、schema の保存方法、schema-less JSON 出力の不正値処理を変更するとき。
 
 ## Do not read this when
-- Codex 実行設定の正本ルールを確認するとき。oracle の仕様文書を直接読む。
-- process tracking・終了処理、CODEX_HOME の preflight、または Codex 実行全体の回復挙動を確認するとき。このテストはそれらの動作を網羅しない。
+- process tracking file、PID や process group の検証・停止など、Codex subprocess の追跡と終了処理を調べるとき。これらを扱う実装や専用テストを直接確認してください。
+- Codex 実行結果の recovery や、agent call 全体の実行制御を調べるとき。この対象は起動設定と一部の出力処理に範囲が限られます。
 
 ## hash
-- dc52f560b4025b34db754b946cac5acbe1df364a045d3e95daa3276db01972a3
+- c829e208c603d5ced36943feafc93d74593279486bc541a6af88531bb2d2e4a2
 
 # `test_runtime_config.py`
 
@@ -826,16 +819,19 @@
 # `test_runtime_file_access.py`
 
 ## Summary
-- FileAccessMode の永続化値と、各モードを Codex sandbox mode に変換する対応関係を検証する。これらの契約を変更・確認するときの回帰テストの入口。
+- FileAccessMode の永続化値と、既知の論理モードから Codex sandbox mode への変換契約を検証するテスト。
+- Codex 実行時の sandbox 変換境界を確認する入口。
 
 ## Read this when
-- FileAccessMode の JSON 向け値や、ファイルアクセスモードから sandbox mode への変換を変更・確認するとき。
+- FileAccessMode の永続化値が保たれるか確認するとき。
+- 既知の file access mode と sandbox mode の対応を変更・調査するとき。
 
 ## Do not read this when
-- アクセス制御の意図や適用条件を調べるときは、正本の仕様・ポリシーを参照する。変換処理の実装を変更するときは、実装を直接確認する。
+- mode ごとの詳細なファイルアクセス制限や prompt 文面を調べるときは、policy の構築・適用条件を扱うテストを読む。
+- sandbox を含む Codex argv の組み立てや未知 mode の失敗条件を調べるときは、Codex 実行プロファイルの統合テストを読む。
 
 ## hash
-- cbbb2e829ce17df28aa8f61a44c8978c34f2f90b4d0c24406732cbd6c2843f63
+- da671493f26abe84c50a963e608fef2af59ab84a099bb946321c5c38401ad4a2
 
 # `test_runtime_git_ignore.py`
 

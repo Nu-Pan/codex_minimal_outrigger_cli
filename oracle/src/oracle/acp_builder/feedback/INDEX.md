@@ -49,16 +49,17 @@
 # `remediate_issue.py`
 
 ## Summary
-- 正規化済みの feedback issue 一件について、現状確認、安全な realization file の修正と検証、結果返却を指示する agent call の prompt と起動 parameter を組み立てる。
-- 対象 issue だけを扱い、oracle file や人間意図など変更対象外との境界を定める remediation 呼び出しの入口となる。
+- 正規化済み feedback issue 1 件について、現在状態の確認から realization 修正・検証までを行う agent 向け prompt と起動条件を組み立てる。remediation call 固有の指示、アクセス境界、実行設定を確認・変更するときの入口。
 
 ## Read this when
-- 正規化済み issue の remediation call が何を確認・修正・検証するか、またはその prompt 構築や起動設定を変更するとき。
-- 修正可能性や結果の扱いに関する remediation 指示の定義元を確認するとき。
+- issue remediation call が、現在状態の確認、安全な realization 修正、修正後の検証をどう指示するか確認・変更するとき。
+- 結果分類の判断制約、許可する変更範囲、差分の扱いなど、この call 固有の制約を確認するとき。
+- call の cwd、アクセスモード、schema の指定、indexing preflight など起動 parameter の設定を確認・変更するとき。
 
 ## Do not read this when
-- observation と既存 issue candidate の同一性判定が目的なら、remediation 呼び出しではなく同一性判断を構築する対象へ進む。
-- 返却結果の構造的制約だけを確認・変更する場合は、prompt builder ではなく対応する structured output schema を直接読む。
+- feedback observation と既存候補の同一性判断や issue identity の確定を調べるときは、normalization の実装と仕様を読む。
+- 出力契約の構造や値の形式を調べるときは Structured Output schema を、結果分類の意味を調べるときは feedback の意味仕様を直接読む。
+- wave 処理、再確認の順序、issue 単位の commit、join、publication、recovery など全体の orchestration を調べるときは feedback report の workload 仕様を読む。
 
 ## hash
-- 44e4fd7e602d407b294b2e02359aa70f3841692e262d2b8d4b555cf2537fbc91
+- c0dc67720f11b6e82d2194eae634fa966f761541da56f47dfdcc90c090ac3f31

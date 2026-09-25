@@ -44,19 +44,19 @@
 # `commons`
 
 ## Summary
-- 複数のサブコマンドで共有する runtime 処理を担い、Codex の起動と回復、CLI の終端処理やログ・レポート、設定・Git・session/run 状態、INDEX と doctor の lifecycle、feedback の受付・保存、入力 handoff と通知を扱う。
-- 個別コマンドの手順ではなく、呼び出し元をまたいで共有される実行境界や状態管理を追うときの入口。
+- 複数の実行経路で共有する runtime の実装群で、CLI 終端処理、Codex 実行、Git と worktree、session・editing run、INDEX 更新を扱う。
+- feedback の収集・保存・報告、ログとレポート、editor input handoff、設定・パス・エラー処理など、横断的な共通処理の入口となる。
 
 ## Read this when
-- 複数のコマンドに共通する Codex 実行、CLI 終端処理、設定・パス・Git、session/run 状態、INDEX 更新や doctor の振る舞いを変更するとき。
-- feedback の共通受付・保存・状態管理、実行ログやレポート、入力 handoff、通知の共有処理を変更するとき。
+- 複数のコマンドに関わる runtime の挙動を変更・調査するとき。特に、実行 lifecycle、状態管理、Git/worktree、Codex subprocess、INDEX 更新、feedback、ログ・レポート、editor handoff の責務や連携を確認するとき。
 
 ## Do not read this when
-- 特定のサブコマンド固有の手順や workload だけを追うときは、そのコマンドの実装から読む。
-- 正本仕様の要件を確認または変更するだけのときは、該当する仕様から読む。
+- 変更が特定コマンドの処理に限られる場合は、そのコマンドの実装から読む。
+- 正本仕様の要求や制約を確認する場合は、該当する oracle 文書・実装・テストを直接読む。
+- 単一の共通 helper 内で完結する局所変更では、関係する実装だけを直接読む。
 
 ## hash
-- 820e33f42f46cd39459adf16e0b8329c75a08072782af5651f65766ed58885af
+- b6d83d3d03cf4baddfa1cd03d82377abd7535e98e35f873a372a2dea34f698eb
 
 # `config`
 
