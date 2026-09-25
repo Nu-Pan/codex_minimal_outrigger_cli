@@ -19,18 +19,21 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が agent call を Codex CLI の呼び出しに展開する際の共通規約を定め、実行環境・アクセス制限・prompt と入出力・Structured Output・ログ・並列実行・失敗時の回復を扱う。個別作業の意味上の責務は対応する oracle doc に、正確な構造や builder の処理は該当する oracle src に委譲する。
+- cmoc が管理する Codex CLI 呼び出しの共通規則を定める。起動時の path context、設定と sandbox、ファイルアクセス、prompt と MCP の受け渡し、ログと結果の取得、Structured Output、並列実行、失敗後の待機・再開を扱う。
+- 個々の agent call の目的や判断基準ではなく、複数の workload に共通する呼び出しの境界と実行後の処理を確認する入口。
 
 ## Read this when
-- Codex CLI の起動や再開、call ごとの実行環境・設定・アクセス制限の変更や調査をするとき。
-- 共通 prompt の受け渡し、MCP の提供、出力検証と補正、呼び出し記録、並列実行、失敗後の待機・再開を変更や調査するとき。
+- Codex CLI 呼び出しの共通起動条件、path context、sandbox・ファイルアクセス方針、prompt の受け渡し、結果やログの管理を変更・確認するとき。
+- Structured Output の共通検証・補正条件、または quota・一時障害後の待機と再開の扱いを確認するとき。
+- 管理対象の Codex 呼び出しにおける feedback reporter や、TUI 向け editor input handoff MCP の共通連携条件を確認するとき。
 
 ## Do not read this when
-- 特定の作業で agent に依頼する内容、作業範囲、判断基準を決めるときは、その作業を定める oracle doc を直接読む。
-- 呼び出しパラメーターの正確な構造、path 解決や prompt 構築の正確な処理を確認するときは、それらを定める oracle src を直接読む。
+- 特定 workload の目的、判断基準、入力、完了条件を確認・変更するときは、その workload の仕様を直接読む。
+- AgentCallParameter の正確な構造や既定値、path 導出・prompt 構築の正確な処理を調べるときは、それらを定義する実装仕様を直接読む。
+- model provider の選択・設定の意味や Windows toast 通知の詳細だけを確認するときは、それぞれを扱う専用仕様を直接読む。
 
 ## hash
-- 1320cb5bc5be452676dce8388db7dd704c9a19a850212ae2a79027ca1a49416a
+- 6995c2d58144b268c926fbe8138b43bb6eb0e9fcc4615af2961e2920a9eee7f8
 
 # `codex_model_provider.md`
 
@@ -316,22 +319,18 @@
 # `sub_command`
 
 ## Summary
-- 各サブコマンドの引数、事前条件、実行順序、変更権限、終了処理、primary report の契約を定める仕様群です。
-- TUI、oracle の調査・編集、doctor、indexing、session の fork・join・abandon と、realization apply・refactor、feedback report の各動作を扱います。編集 run を使う workload には共通 lifecycle の規定があり、session の終了操作とは区別されています。
+- cmoc の各サブコマンド固有の契約と、editing run の共通ライフサイクルをまとめた仕様群への入口。引数、事前条件、実行、終了時の扱いを確認できる。
 
 ## Read this when
-- サブコマンド固有の引数、事前条件、処理順序、副作用、権限境界、エラー処理、報告内容を確認または変更するとき。
-- realization apply・refactor・feedback report の作業内容や、編集 run の開始・join・abandon の関係を確認するとき。
-- session の fork・join・abandon のコマンド動作を確認するとき。
-- oracle の調査と編集、または indexing コマンドと他の処理の違いを確認するとき。
+- 特定の cmoc サブコマンドの動作や、session・editing run の開始、終了、join、abandon の扱いを確認するとき。
+- realization apply、realization refactor、feedback report の作業範囲や完了条件を比較するとき。
 
 ## Do not read this when
-- 関心が共通仕様だけにあるときは、session state、branch model、run isolation、feedback、ログ形式などを定める各正本仕様を直接確認してください。
-- indexing の処理方式や routing、doctor preprocess の検査・修復内容だけを確認するときは、それぞれの共通仕様を直接確認してください。
-- 特定コマンドの正確な prompt、起動パラメータ、Structured Output の定義だけが必要なときは、そのコマンド仕様が参照する builder または schema を確認してください。
+- 確認したいのが doctor preprocess、session state、prompt 入力、feedback、indexing など共通仕様だけなら、その仕様を定義する文書へ直接進むとき。
+- builder に委譲された正確な prompt 文面や起動パラメータの構築方法だけを確認するとき。
 
 ## hash
-- 57b0fe6304baed7bbf1b09cc37cd9d9ee69dc5a8e8f9a85e1cc2814e511a836c
+- 50eb3c722cf803d77aa8243c152f6a76c9293ea37b39b1f85af1b2f356681bdf
 
 # `subcommand_interruption.md`
 

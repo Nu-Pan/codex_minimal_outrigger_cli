@@ -185,7 +185,7 @@ def test_oracle_investigation_has_no_session_precondition(
     assert editor_calls[0][0] == input_path
     complete_prompt_skeleton = editor_calls[0][1]
     assert complete_prompt_skeleton == built_parameters[0].prompt
-    assert "# file R/W policy (pure_oracle_read)" in complete_prompt_skeleton
+    assert "# file access policy (pure_oracle_read)" in complete_prompt_skeleton
     objective = complete_prompt_skeleton.split('<cmoc_block id="objective">', 1)[
         1
     ].split("</cmoc_block>", 1)[0]
