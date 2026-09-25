@@ -11,9 +11,10 @@ from pathlib import Path
 class FileAccessMode(StrEnum):
     """cmoc 上の論理的なファイルアクセスモード
 
-    各 mode の意味と Codex CLI sandbox への対応は
-    `oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
-    `build_file_access_policy` は agent に渡す正確な制限文面を構築する。
+    各 mode の意味と sandbox 設定との責務分担は
+    `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+    「ファイルアクセス制限」を正本とする。
+    `build_file_access_policy` は一時作業領域の利用規定を含む正確な文面を構築する。
     """
 
     READONLY = auto()

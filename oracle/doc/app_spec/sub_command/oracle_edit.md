@@ -77,7 +77,8 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
 
 ## agent の編集境界
 
-- agent には oracle file だけを編集させる。realization file、`INDEX.md`、および `AGENTS.md` を編集させてはならない。
+- agent が編集する作業成果物は oracle file だけとする。realization file、`INDEX.md`、および `AGENTS.md` を編集させてはならない。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「検証・調査用の一時作業領域」に従う。
 - agent には `git add`、`git commit`、`git stash`、branch 切替、および worktree 操作を禁止する。
 - このサブコマンドの oracle file 編集権限によって、`cmoc oracle investigation` の file access 権限を拡張しない。
 

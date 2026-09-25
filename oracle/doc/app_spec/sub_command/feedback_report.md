@@ -122,7 +122,8 @@ call の境界を次に示す。
 
 - cwd は `{{cmoc-run-worktree}}` とする。
 - oracle file は読めるが変更できない。
-- realization file だけを agent の変更対象とする。
+- agent が変更する作業成果物は realization file だけとする。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「検証・調査用の一時作業領域」に従う。
 - agent に feedback state file、Git index、branch、commit、または worktree lifecycle を操作させない。
 - candidate 外の issue を remediation 対象として探索させない。
 

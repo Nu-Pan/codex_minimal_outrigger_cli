@@ -88,16 +88,17 @@ cmoc は、`AgentCallParameter`、`CmocConfig` などから決まる呼び出し
 
 ### Codex CLI sandbox
 
-すべての Codex CLI 呼び出しで、専用引数 `--sandbox` を明示する。値は `read-only` または `workspace-write` に限定し、`AgentCallParameter.file_access_mode` に応じて次のように決める。
+すべての Codex CLI 呼び出しで、専用引数 `--sandbox` を明示する。`AgentCallParameter` を使う呼び出しでは、すべての有効な file access mode に `workspace-write` を使う。
 
 | file access mode | sandbox |
 |---|---|
-| `READONLY`, `PURE_ORACLE_READ` | `--sandbox read-only` |
-| `REPO_WRITE`, `PURE_ORACLE_WRITE`, `REALIZATION_WRITE`, `NO_POLICY` | `--sandbox workspace-write` |
+| `READONLY`, `PURE_ORACLE_READ`, `REPO_WRITE`, `PURE_ORACLE_WRITE`, `REALIZATION_WRITE`, `NO_POLICY` | `--sandbox workspace-write` |
 
 表にない file access mode を受け取った場合は、sandbox を推測せず Codex CLI 呼び出し前に失敗させる。`AgentCallParameter` を使用しない動作確認用の呼び出しでは `--sandbox read-only` を使う。
 
-sandbox の指定は専用引数だけで行い、`--config` で上書きしたり、`$CODEX_HOME/config.toml` や project config の sandbox 設定に依存したりしてはならない。
+`AgentCallParameter.file_access_mode` は、プロンプトで指示する詳細なファイルアクセス制限を選ぶ論理 mode とする。`READONLY` と `PURE_ORACLE_READ` でも検証・調査用の一時作業領域への書き込みを許容し、リポジトリ全体への書き込みを OS sandbox で禁止することは目的としない。
+
+sandbox mode の選択は専用引数だけで行い、`--config` で `sandbox_mode` を上書きしてはならない。`workspace-write` を使う呼び出しでは、`/tmp` を書き込み対象に含める補助設定として、`sandbox_workspace_write.exclude_slash_tmp=false` を呼び出し単位で明示的に上書きする。この補助設定には、本書の「Codex CLI 引数による設定上書き」に従って `--config` を使う。
 
 ### command 単位の sandbox 外実行
 
@@ -139,7 +140,15 @@ agent による `.agents` ツリー内の編集は、file access mode にかか�
 | `PURE_ORACLE_WRITE` | realization file の読み書きを禁止する。 |
 | `REALIZATION_WRITE` | oracle file の書き込みを禁止する。 |
 
-`NO_POLICY` は、共通 file access policy が存在しない有効な特殊 mode とする。必要な instruction は個別の `AgentCallParameter` builder がすべて構築する。
+`NO_POLICY` は、共通 file access policy が存在しない有効な特殊 mode とする。本書の「検証・調査用の一時作業領域」の利用規定も共通 prompt からは注入しない。必要な instruction は個別の `AgentCallParameter` builder がすべて構築する。
+
+#### 検証・調査用の一時作業領域
+
+`NO_POLICY` 以外の agent call では、検証・調査用の一時ファイルが必要な場合、agent が `/tmp` 配下に作業専用の一時ディレクトリを作成し、一時作業領域として使用する。一時ファイルはその中に集め、不要になった一時ファイルとディレクトリは agent が削除する。
+
+この作成・利用・後片付けに必要な書き込みだけを、共通制限の「`{{work-root}}` ツリー外への書き込み禁止」の例外とする。他のファイルアクセス禁止は解除しない。一時作業領域へのコピーなどを使って、禁止された読み取りや workload の作業対象・判断材料の制限を迂回してはならない。
+
+workload が限定する編集対象は作業成果物の範囲を表し、この一時作業領域の利用とは区別する。一時作業領域は agent call の cwd、`{{work-root}}`、または Git worktree を置き換えない。固定のディレクトリ名や cmoc による新しい永続管理機構は設けない。
 
 #### 読み取りの範囲
 
@@ -149,11 +158,11 @@ agent による `.agents` ツリー内の編集は、file access mode にかか�
 
 #### prompt の構築と sandbox との関係
 
-`build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および `NO_POLICY` 以外の mode の正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する。
+`build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および一時作業領域の利用規定を含む `NO_POLICY` 以外の mode の正確な prompt 文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する。一時作業領域への書き込みの例外は、対象の禁止と同じ file access policy 内で表現する。
 
 `build_complete_prompt` はこの結果に基づいて共通 file access policy の追加可否を決める。完全 prompt への正確な追加条件は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
 
-path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない。詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する。
+path ごとの読み書き可否などの詳細な制限を sandbox に反映しようとしてはならない。詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する。
 
 ### 書き込み主体の責任分界
 

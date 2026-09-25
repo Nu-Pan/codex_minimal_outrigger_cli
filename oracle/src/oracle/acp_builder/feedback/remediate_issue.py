@@ -27,7 +27,7 @@ def build_feedback_remediate_issue_parameter(
         """,
         non_goals="""
         - 入力 issue 以外の問題を、この call の remediation 対象として修正しないこと
-        - oracle file、人間意図、外部状態、sandbox、または権限境界を変更しないこと
+        - oracle file、人間意図、外部状態、sandbox、または権限境界の変更を、issue の解消手段にしないこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
