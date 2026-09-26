@@ -57,7 +57,7 @@ def run_doctor_preprocess(
             for repair_root in repair_roots:
                 include_config = repair_root == root
                 include_agents = repair_root == root
-                include_gu_ignore = repair_root == main_root
+                include_gu_ignore = True
                 original_index_path = _copy_current_index(repair_root)
                 original_indexes.append((repair_root, original_index_path))
                 preserved_runtime_paths = (
@@ -138,7 +138,8 @@ def run_doctor_preprocess(
                 if restored_index_path is not None:
                     restored_index_path.unlink(missing_ok=True)
                 original_index_path.unlink(missing_ok=True)
-        require_cmoc_ignored(main_root)
+        for repair_root in repair_roots:
+            require_cmoc_ignored(repair_root)
         _validate_tracked_runtime_files(root)
 
 

@@ -2,13 +2,12 @@
 
 import hashlib
 import json
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
 
-from .runtime_codex_preflight import run_codex_exec
+from .runtime_codex import run_codex_exec
 from .runtime_errors import CmocError
 from .runtime_git import (
     is_realization_file_path,
@@ -20,7 +19,6 @@ from .runtime_paths import refactor_state_path, repo_root
 from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state, write_refactor_state
 from .runtime_results import CodexExecCallable
-from .runtime_run_lifecycle import is_generated_index_path
 
 
 def unmerged_paths(root: Path) -> list[str]:
@@ -38,25 +36,15 @@ def resolve_merge_conflicts(
     root: Path,
     parameter: AgentCallParameter | None,
     *,
-    refresh_indexes: Callable[[], object],
     codex_exec: CodexExecCallable | None = None,
     purpose: str,
 ) -> dict[str, Any]:
-    """内容を agent に委ね、管理物を生成し、全変更を merge commit に収める。"""
+    """内容を agent に委ね、refactor state と全変更を merge commit に収める。"""
     conflicts = unmerged_paths(root)
     if not conflicts:
         raise CmocError("merge 失敗時の競合 path を特定できません。", [], "")
     refactor_relative = refactor_state_path(root).relative_to(root).as_posix()
-    managed = {
-        path
-        for path in conflicts
-        if Path(path).name == "INDEX.md"
-        and (
-            is_generated_index_path(root, path, base="HEAD")
-            or is_generated_index_path(root, path, base="MERGE_HEAD")
-        )
-    }
-    managed.update(path for path in conflicts if path == refactor_relative)
+    managed = {path for path in conflicts if path == refactor_relative}
     content_conflicts = sorted(set(conflicts) - managed)
     result: dict[str, Any] = {
         "initial_conflicts": conflicts,
@@ -97,20 +85,11 @@ def resolve_merge_conflicts(
             for path in before.keys() | after.keys()
             if before.get(path) != after.get(path)
         }
-        if any(
-            Path(path).name == "INDEX.md" or path == refactor_relative
-            for path in changed
-        ):
+        if refactor_relative in changed:
             raise CmocError(
                 "競合解消 agent が cmoc 管理物を編集しました。",
                 [],
-                "\n".join(
-                    sorted(
-                        path
-                        for path in changed
-                        if Path(path).name == "INDEX.md" or path == refactor_relative
-                    )
-                ),
+                refactor_relative,
             )
         if parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE:
             forbidden = [
@@ -138,22 +117,6 @@ def resolve_merge_conflicts(
             )
     if refactor_relative in managed:
         _merge_refactor_state(root, refactor_relative)
-    for path in sorted(managed - {refactor_relative}):
-        _take_ours_or_delete(root, path)
-    # INDEX は内容の付随編集を反映してから生成する。独立した indexing commit は作らない。
-    before_indexes = _status_snapshot(root)
-    refresh_indexes()
-    after_indexes = _status_snapshot(root)
-    unexpected = sorted(
-        path
-        for path in before_indexes.keys() | after_indexes.keys()
-        if before_indexes.get(path) != after_indexes.get(path)
-        and Path(path).name != "INDEX.md"
-    )
-    if unexpected:
-        raise CmocError(
-            "INDEX 更新が管理外のファイルを変更しました。", [], "\n".join(unexpected)
-        )
     if refactor_relative in managed:
         sync_refactor_state(root)
     run_git(["add", "-A"], root)
@@ -183,15 +146,6 @@ def _status_snapshot(root: Path) -> dict[str, tuple[str, str | None]]:
             hashlib.sha256(content).hexdigest() if content is not None else None,
         )
     return snapshot
-
-
-def _take_ours_or_delete(root: Path, path: str) -> None:
-    ours = run_git(["show", f":2:{path}"], root, check=False)
-    if ours.returncode == 0:
-        run_git(["checkout", "--ours", "--", literal_pathspec(path)], root)
-        run_git(["add", "--", literal_pathspec(path)], root)
-    else:
-        run_git(["rm", "-f", "--", literal_pathspec(path)], root)
 
 
 def _merge_refactor_state(root: Path, path: str) -> None:

@@ -7,6 +7,8 @@
 """
 
 import hashlib
+import json
+import os
 import shlex
 import subprocess
 import sys
@@ -16,6 +18,7 @@ from typing import cast
 
 import pytest
 from _codex_support import codex_arg_value, codex_override_config, codex_parameter
+from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -80,24 +83,30 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert parsed["tui"] == {"notifications": False}
     assert "hooks" not in parsed
     assert "--enable" not in args
-    assert parsed["mcp_servers"] == {
-        "cmoc_feedback": {
-            "command": sys.executable,
-            "args": ["-m", "commons.runtime_feedback_reporter"],
-            "env_vars": [
-                FEEDBACK_CAPABILITY_ENV,
-                FEEDBACK_COLLECTOR_PORT_ENV,
-                FEEDBACK_PROTOCOL_ENV,
-            ],
-            "enabled": True,
-            "required": False,
-            "enabled_tools": ["submit_observation"],
-            "disabled_tools": [],
-            "startup_timeout_sec": 5,
-            "tool_timeout_sec": 15,
-            "default_tools_approval_mode": "approve",
-            "tools": {"submit_observation": {"approval_mode": "approve"}},
-        }
+    assert parsed["mcp_servers"]["cmoc_feedback"] == {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_feedback_reporter"],
+        "env_vars": [
+            FEEDBACK_CAPABILITY_ENV,
+            FEEDBACK_COLLECTOR_PORT_ENV,
+            FEEDBACK_PROTOCOL_ENV,
+        ],
+        "enabled": True,
+        "required": False,
+        "enabled_tools": ["submit_observation"],
+        "disabled_tools": [],
+        "startup_timeout_sec": 5,
+        "tool_timeout_sec": 15,
+        "default_tools_approval_mode": "approve",
+        "tools": {"submit_observation": {"approval_mode": "approve"}},
+    }
+    assert parsed["mcp_servers"]["cmoc_document_search"] == {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_document_search_mcp", "{}"],
+        "enabled": False,
+        "required": False,
+        "enabled_tools": [],
+        "disabled_tools": ["search"],
     }
     assert parsed["shell_environment_policy"]["filters"] == {
         FEEDBACK_CAPABILITY_ENV: "exclude",
@@ -117,6 +126,45 @@ def test_codex_overrides_reject_unknown_file_access_mode() -> None:
 
     with pytest.raises(CmocError, match="不明な FileAccessMode"):
         build_codex_override_args(parameter, CmocConfig())
+
+
+def test_search_mcp_rejects_external_transport_collision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """user 設定の同名 URL が残った実効 MCP 設定を起動前に拒否する。"""
+    parameter = replace(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+    )
+    argv = ["codex", *build_codex_override_args(parameter, CmocConfig())]
+    server = codex_override_config(argv)["mcp_servers"]["cmoc_document_search"]
+    assert server["env"]["PYTHONPATH"].split(os.pathsep) == [
+        str(Path(__file__).resolve().parents[1] / "src"),
+        str(Path(__file__).resolve().parents[1] / "oracle/src"),
+    ]
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+            [],
+            0,
+            json.dumps(
+                {
+                    "name": "cmoc_document_search",
+                    "enabled": True,
+                    "transport": {
+                        "type": "streamable_http",
+                        "url": "https://example.invalid/search",
+                    },
+                }
+            ),
+            "",
+        ),
+    )
+    with pytest.raises(CmocError, match="実効設定が call 固定値と一致しません"):
+        runtime_codex_profile._verify_document_search_server(
+            argv, cwd=Path.cwd(), env={}
+        )
 
 
 def test_feedback_call_context_values_are_not_written_to_codex_argv(
@@ -305,6 +353,7 @@ def test_codex_overrides_disable_unpaired_notification_callback() -> None:
         (b"codex-cli 0.154.0\n", 0, True),
         (b"codex-cli 0.155.1\n", 0, True),
         (b"codex-cli 0.156.1\n", 0, True),
+        (b"codex-cli 0.157.1\n", 0, True),
         (b"codex-cli 0.152.0\n", 0, False),
         (b"codex-cli 0.153.4.1\n", 0, False),
         (b"codex-cli 0.151.0\n", 1, False),

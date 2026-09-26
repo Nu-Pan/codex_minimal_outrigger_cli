@@ -18,7 +18,6 @@ import hashlib
 import json
 import socket
 import threading
-from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -34,11 +33,9 @@ from oracle.acp_builder.feedback.remediate_issue import (
     build_feedback_remediate_issue_parameter as _build_canonical_remediate_parameter,
 )
 
-import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_feedback as feedback_module
 import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
-import commons.runtime_run_join as run_join_module
 import sub_commands.feedback.decision as decision_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
@@ -48,7 +45,7 @@ from acp.builder.feedback.normalize_issue import (
 from acp.builder.feedback.remediate_issue import (
     build_feedback_remediate_issue_parameter,
 )
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
@@ -85,23 +82,6 @@ from commons.runtime_feedback_store import (
 )
 from commons.runtime_logging import SubcommandLogger
 from main import app
-
-
-@pytest.fixture(autouse=True)
-def reset_indexing_preflight(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """process-global な indexing preflight を case 間で分離する。"""
-    codex_preflight_module.disable_indexing_preflight()
-    monkeypatch.setattr(
-        remediation_module, "run_indexing_preflight", lambda *_args: None
-    )
-    monkeypatch.setattr(
-        remediation_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
-    monkeypatch.setattr(
-        run_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
-    yield
-    codex_preflight_module.disable_indexing_preflight()
 
 
 def _payload(
@@ -594,36 +574,6 @@ def test_reporter_rejects_invalid_collector_result(
     }
 
 
-def test_feedback_report_registers_indexing_preflight_before_cli_runtime(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """feedback report が本命 agent call 用 preflight を invocation 前に登録する。"""
-    events: list[str] = []
-
-    def record_enable_indexing_preflight() -> None:
-        """indexing preflight の登録順を記録する。"""
-        events.append("enable-indexing")
-
-    def record_run_cli_subcommand(*_args: object, **_kwargs: object) -> None:
-        """CLI runtime への委譲順を記録する。"""
-        events.append("run-cli")
-
-    monkeypatch.setattr(
-        feedback_report_module,
-        "enable_indexing_preflight",
-        record_enable_indexing_preflight,
-    )
-    monkeypatch.setattr(
-        feedback_report_module,
-        "run_cli_subcommand",
-        record_run_cli_subcommand,
-    )
-
-    feedback_report_module.cmoc_feedback_report_impl()
-
-    assert events == ["enable-indexing", "run-cli"]
-
-
 def test_feedback_normalize_builder_protects_nested_code_fences(
     tmp_path: Path,
 ) -> None:
@@ -639,6 +589,7 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
         observation_json,
         candidate_json,
         root,
+        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
     )
 
     observation_start = parameter.prompt.index("# 構造化済み observation")
@@ -694,7 +645,7 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     ) -> SimpleNamespace:
         assert parameter.agent_call_cwd == root
         assert parameter.file_access_mode == FileAccessMode.READONLY
-        assert parameter.run_indexing_preflight is False
+        assert parameter.document_search_scope is not None
         assert "# routing policy" in parameter.prompt
         assert "# oracle and realization basic" in parameter.prompt
         captured_prompts.append(parameter.prompt)
@@ -1852,31 +1803,6 @@ def test_empty_report_publishes_current_generation(
     )
 
 
-def test_feedback_report_rechecks_indexing_after_empty_work_cleanup(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """cleanup 後に残る空の work root を recovery 対象と誤認しない。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
-
-    first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert first.exit_code == 0, first.output
-    work_root = feedback_root(root) / "work"
-    assert work_root.is_dir()
-    assert not any(work_root.iterdir())
-
-    calls: list[tuple[Path, object]] = []
-    monkeypatch.setattr(
-        remediation_module,
-        "run_indexing_preflight",
-        lambda repository, codex_exec: calls.append((repository, codex_exec)),
-    )
-    second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-
-    assert second.exit_code == 0, second.output
-    assert calls == [(root, feedback_report_module.run_codex_exec)]
-
-
 @pytest.mark.parametrize("condition", ["dirty_worktree", "dirty_index", "inactive"])
 def test_feedback_preconditions_preserve_existing_changes_and_raw(
     tmp_path: Path,
@@ -2295,8 +2221,10 @@ def test_agent_issue_is_verified_compacted_then_removed_for_terminal_verdict(
     assert len(generation_directories) == 1
 
 
-def test_feedback_basis_ignores_join_generated_files(tmp_path: Path) -> None:
-    """join 後の INDEX と refactor state の同期は採用結果の本文根拠を変えない。"""
+def test_feedback_basis_includes_index_as_oracle_but_ignores_refactor_state(
+    tmp_path: Path,
+) -> None:
+    """oracle INDEX の変更を根拠へ含め、管理 state だけを除外する。"""
     root = make_repo(tmp_path)
     index = root / "oracle/INDEX.md"
     state = root / ".cmoc/gt/realization/refactor/state.json"
@@ -2308,7 +2236,10 @@ def test_feedback_basis_ignores_join_generated_files(tmp_path: Path) -> None:
 
     index.write_text("regenerated index\n")
     state.write_text('{"entry": {}}\n')
-    assert decision_module.worktree_inputs(root) == baseline
+    after_index = decision_module.worktree_inputs(root)
+    assert after_index != baseline
+    state.write_text('{"another": {}}\n')
+    assert decision_module.worktree_inputs(root) == after_index
 
     (root / "oracle/spec.md").write_text("# updated spec\n")
     assert decision_module.worktree_inputs(root) != baseline

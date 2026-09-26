@@ -15,16 +15,15 @@
 # `builder`
 
 ## Summary
-- 既存の `acp.builder.*` import 経路を保つ互換 adapter 群で、parameter builder の実装は oracle 側へ委譲します。旧 import の追跡や移行の入口です。
-- feedback、indexing、oracle、realization、session、TUI の builder 公開経路をまとめ、一部では既存 API の入力を oracle 側の builder に合わせます。
+- `oracle.acp_builder` のビルダーを既存の ACP import 経路から再公開する互換アダプター群。quota probe では既存の引数形式を正本ビルダー向けに変換する。
 
 ## Read this when
-- 既存の `acp.builder.*` 参照を追跡し、互換経路の修正や削除を検討するとき。
-- 各 command 領域の builder adapter がどの oracle builder を公開しているか確認するとき。
+- 既存の ACP ビルダー import 経路の互換性や公開方法を調べる、またはアダプターの追加・変更・削除を検討するとき。
+- quota probe の互換引数から正本ビルダーを呼び出す流れを確認するとき。
 
 ## Do not read this when
-- parameter の正本実装や組み立て内容を調べるときは、対応する oracle builder を直接読む。
-- CLI command の dispatch、実行フロー、表示を調べるときは、command 実装から確認する。
+- ビルダーの正本実装や動作を変更・調査するときは、正本側の実装へ進む。
+- ビルダーを呼び出す側の処理を変更・調査するときは、その呼び出し元を直接確認する。
 
 ## hash
-- 29f5fc681339276305cbb34e003cc06ed4eb507b13dc60f0b579bc3c25a40e0c
+- 56a7f15d3b8ac83772664acb3eaaef91439f04ce5d0f2c4fa4be8196bebdd806

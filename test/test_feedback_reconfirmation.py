@@ -128,7 +128,6 @@ def feedback_run(tmp_path, monkeypatch):
     monkeypatch.setattr(remediation, "unexpected_run_paths", lambda *_args: [])
     monkeypatch.setattr(remediation, "commit_work_unit", commit)
     monkeypatch.setattr(remediation, "sync_refactor_state", lambda *_args: None)
-    monkeypatch.setattr(remediation, "refresh_indexes", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(remediation, "stop_tracked_codex_children", lambda *_args: None)
     monkeypatch.setattr(remediation, "_update_progress", lambda *_args: None)
     monkeypatch.setattr(remediation, "doctor_preprocess_for_join", lambda: set())
@@ -146,7 +145,7 @@ def feedback_run(tmp_path, monkeypatch):
     monkeypatch.setattr(
         remediation,
         "build_feedback_remediate_issue_parameter",
-        lambda text, root: SimpleNamespace(
+        lambda text, root, **_kwargs: SimpleNamespace(
             prompt=text, agent_call_cwd=root, structured_output_schema_path=schema
         ),
     )
@@ -340,31 +339,6 @@ def test_later_dependency_change_rechecks_every_result(
     assert result.result == "ok"
     assert load_active_state(h.context.repo).issues == {}
     assert "remediation_issue_count: 2" in result.primary_report.read_text()
-
-
-def test_mechanical_sync_is_rechecked_before_seal(feedback_run, monkeypatch):
-    h = feedback_run
-    identity = _add_candidate(h, "a")
-
-    def call(issue):
-        status = "already_resolved" if issue["reconfirmation"] else "fixed"
-        result = _remediation_output(identity, status)
-        if status == "fixed":
-            (h.context.run_worktree / "README.md").write_text("fixed\n")
-            result["result"]["changed_paths"] = ["README.md"]
-        return result
-
-    h.handler = call
-    monkeypatch.setattr(
-        remediation,
-        "refresh_indexes",
-        lambda *_args, **_kwargs: (
-            h.context.run_worktree / "generated.json"
-        ).write_text("synchronized\n"),
-    )
-    _run(h)
-    assert len(h.calls) == 2
-    assert h.calls[-1]["reconfirmation"]["changes"]["paths"] == ["generated.json"]
 
 
 @pytest.mark.parametrize("additional_evidence", [False, True])

@@ -7,7 +7,7 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/app_spec/feedback_observation.md
 - {{work-root}}/oracle/doc/app_spec/editor_input_handoff.md
-- {{work-root}}/oracle/doc/app_spec/indexing.md
+- {{work-root}}/oracle/doc/app_spec/document_search.md
 - {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md
 - {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
@@ -18,7 +18,6 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/feedback_reporting.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/index_entry.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py
@@ -50,9 +49,6 @@ from oracle.prompt_builder.policy.feedback_reporting import (
 )
 from oracle.prompt_builder.policy.file_access import (
     build_file_access_policy as _build_file_access_policy,
-)
-from oracle.prompt_builder.policy.index_entry import (
-    build_index_entry_policy as _build_index_entry_policy,
 )
 from oracle.prompt_builder.policy.oracle import (
     build_oracle_policy as _build_oracle_policy,
@@ -133,18 +129,6 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
             1,
             id="file-access",
         ),
-        pytest.param(
-            _build_index_entry_policy,
-            ("**必須**", "**禁止**"),
-            1,
-            id="index-entry",
-        ),
-        pytest.param(
-            lambda: _build_routing_policy(_path_context()),
-            ("**必須**", "**補足情報**"),
-            1,
-            id="routing",
-        ),
     ],
 )
 def test_category_policy_blocks_are_flat_and_keep_category_order(
@@ -180,7 +164,6 @@ _POLICY_FLAG_HEADINGS = (
     ("realization_policy", "# realization policy"),
     ("realization_findings_policy", "# realization findings policy"),
     ("conflict_resolution_policy", "# conflict resolution policy"),
-    ("index_entry_policy", "# index entry policy"),
     ("routing_policy", "# routing policy"),
     ("editor_input_handoff_policy", "# editor input handoff"),
 )
@@ -249,18 +232,17 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
 
 
 def test_build_routing_policy_renders_core_reading_requirements() -> None:
-    """routing policy が INDEX 案内の主要な見出しを render することを検証する。"""
+    """routing policy が原文確認と検索失敗の区別を伝える。"""
     doc = _build_routing_policy(_path_context())[1]
 
     assert isinstance(doc, SDHeader)
     assert doc.title == "routing policy"
 
     rendered = render_sd_node_as_markdown(doc)
-    assert "INDEX.md" in rendered
-    assert "どのファイル・ディレクトリを読むべきか判断・特定" in rendered
-    assert "作業対象に近い階層の `INDEX.md` を起点" in rendered
-    assert "内容が食い違う場合は本文を優先" in rendered
-    assert "本文の代替にせず、必ず本文を判断の根拠" in rendered
+    assert "必要な現在原文を開いて判断" in rendered
+    assert "食い違う場合も原文を優先" in rendered
+    assert "検索失敗と正常ゼロ件を区別" in rendered
+    assert "文書検索 MCP は無効" in rendered
 
 
 def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:
@@ -425,7 +407,6 @@ def test_file_access_policy_titles_and_bodies_match_modes() -> None:
         "`{{work-root}}/.codex` ツリー内は書き込み禁止",
         "`{{work-root}}/.cmoc` ツリー内は書き込み禁止",
         "`AGENTS.md` は書き込み禁止",
-        "`INDEX.md` は書き込み禁止",
         "`{{work-root}}/memo` は読み書き禁止",
         "一時作業領域を禁止・制限事項の迂回に使って",
     }
@@ -528,7 +509,6 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
         realization_policy=True,
         realization_findings_policy=True,
         conflict_resolution_policy=True,
-        index_entry_policy=True,
     )
 
     rendered = render_sd_node_as_markdown(*prompt)
@@ -546,7 +526,6 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
         "realization policy",
         "realization findings policy",
         "conflict resolution policy",
-        "index entry policy",
         "oracle file",
         "realization file",
     ]:
@@ -610,23 +589,3 @@ def test_build_realization_policy_renders_core_conformance_requirements() -> Non
     assert "エージェントから参照可能な文章上で指示されている手順" in rendered
     assert "作業後の状態が検証・テストに合格する状態であること" in rendered
     assert "`{{work-root}}` 固有の指示を根拠に含めず" in rendered
-
-
-def test_build_index_entry_policy_renders_core_output_requirements() -> None:
-    """index entry policyの出力境界がrenderされることを検証する。"""
-    builder_result = _build_index_entry_policy()
-
-    assert isinstance(builder_result[1], SDHeader)
-
-    rendered = _render_policy(builder_result)
-    assert "index entry policy" in rendered
-    assert "INDEX.md エントリーのルーティング情報" in rendered
-    assert "対象の現在内容を根拠とする" in rendered
-    assert "機械的に補える情報" in rendered
-    assert "対象が担う責務と、同階層の他対象ではなくその対象へ進む理由" in rendered
-    assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
-    assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
-    assert "関連しそうという理由だけ" in rendered
-    assert "summary" not in rendered
-    assert "read_this_when" not in rendered
-    assert "do_not_read_this_when" not in rendered

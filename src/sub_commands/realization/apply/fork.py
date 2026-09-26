@@ -16,7 +16,7 @@ from cmoc_runtime import (
     run_git,
     start_subcommand_step,
 )
-from commons.indexing import enable_indexing_preflight
+from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback import accepted_feedback_observations
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
@@ -25,9 +25,7 @@ from commons.runtime_run_lifecycle import (
     GitChange,
     commit_work_unit,
     flattened_change_paths,
-    is_generated_index_path,
     recover_started_run,
-    refresh_indexes,
     rollback_work_unit,
     session_run_was_ready,
     set_run_error_after_joinable_publication,
@@ -43,7 +41,6 @@ from commons.runtime_run_report import write_fork_report
 
 def cmoc_realization_apply_fork_impl() -> None:
     """CLI runtime を通して realization apply fork を実行する。"""
-    enable_indexing_preflight()
     run_cli_subcommand(
         _cmoc_realization_apply_fork_body,
         command_name="realization apply fork",
@@ -59,8 +56,6 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
     diff_base_commit: str | None = None
     agent_head: str | None = None
     agent_commit_check_active = False
-    preflight_head: str | None = None
-    work_unit_committed = False
     joinable_publication_attempted = False
     cleanup_warnings: list[str] = []
     start_attempted = False
@@ -94,7 +89,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
         start_subcommand_step(
             3, "oracle 差分の commit 範囲を確定", "resolve diff range"
         )
-        # state の参照を commit ID に解決し、preflight 後も比較範囲を固定する。
+        # state の参照を commit ID に解決し、agent call 中は比較範囲を固定する。
         diff_base_commit = run_git(
             ["rev-parse", "--verify", f"{diff_base_commit}^{{commit}}"],
             context.run_worktree,
@@ -104,20 +99,15 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             diff_base_commit,
             context.run_fork_commit,
             context.run_worktree,
+            document_search_scope=oracle_doc_scope(),
         )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # INDEX 再生成も run 中の Codex call なので、abandon が停止できるよう
         # agent call から処理単位の commit 検査まで同じ tracking scope に含める。
         run_worktree = context.run_worktree
         with run_process_tracking(context.repo, context.session_id):
-            preflight_head = head_commit(run_worktree)
-
-            def record_agent_head() -> None:
-                """本命 agent の直前の run branch HEAD を記録する。"""
-                nonlocal agent_commit_check_active, agent_head
-                agent_head = head_commit(run_worktree)
-                agent_commit_check_active = True
+            agent_head = head_commit(run_worktree)
+            agent_commit_check_active = True
 
             try:
                 result = run_codex_exec(
@@ -125,16 +115,9 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                     root=context.repo,
                     config=load_config(context.run_worktree),
                     purpose="realization apply fork",
-                    before_agent_call=record_agent_head,
                 )
             except BaseException:
-                if agent_commit_check_active and agent_head is not None:
-                    _ensure_agent_did_not_commit(run_worktree, agent_head)
-                else:
-                    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-                    # callback 前の indexing commit は本命 agent の処理単位に含めず、
-                    # 元の失敗を保ったまま error cleanup へ渡す。
-                    _rollback_preflight_commits(run_worktree, preflight_head)
+                _ensure_agent_did_not_commit(run_worktree, agent_head)
                 raise
             if agent_commit_check_active and agent_head is not None:
                 _ensure_agent_did_not_commit(run_worktree, agent_head)
@@ -157,11 +140,8 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                 5, "realization 差分を検査して commit", "commit changes"
             )
             # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-            # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
-            # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
             # {{work-root}}/oracle/doc/app_spec/run_isolation.md
-            # INDEX refresh 前に tracked Codex child を停止し、agent 終了後の遅延
-            # 書き込みを cmoc の生成差分へ混ぜない。
+            # tracked Codex child を停止し、agent 終了後の遅延書き込みを防ぐ。
             cleanup_warnings.extend(
                 stop_tracked_codex_children(context.repo, context.session_id)
             )
@@ -180,15 +160,6 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             unexpected.sort()
             if unexpected:
                 raise _unexpected_change_error(unexpected)
-            refresh_indexes(context.run_worktree, commit=False)
-            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
-            # 後続 process の遅い書き込みを差分検査・commit に混ぜないよう、最終
-            # snapshot の前に tracked Codex child を停止する。
-            cleanup_warnings.extend(
-                stop_tracked_codex_children(context.repo, context.session_id)
-            )
-            if agent_commit_check_active and agent_head is not None:
-                _ensure_agent_did_not_commit(run_worktree, agent_head)
             # tree_changes は commit 済みの差分だけを返すため、commit 前は status
             # path を同じ path 分類へ渡してから処理単位を確定する。
             pending_paths = worktree_change_paths(
@@ -197,19 +168,10 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             )
             pending_changes = [GitChange("M", (path,)) for path in pending_paths]
             unexpected = unexpected_run_paths(context, pending_changes)
-            # {{work-root}}/oracle/doc/app_spec/indexing.md
-            # indexing は INDEX.md だけを生成するため、agent 検査後に増えた realization
-            # 差分を agent の許可済み差分へ便乗させない。
             unexpected.extend(
                 path
                 for path in pending_paths
-                if path not in changed_agent_paths
-                and not is_generated_index_path(
-                    context.run_worktree,
-                    path,
-                    base=context.run_fork_commit,
-                )
-                and path not in unexpected
+                if path not in changed_agent_paths and path not in unexpected
             )
             unexpected.sort()
             if unexpected:
@@ -220,7 +182,6 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                 "cmoc realization apply fork",
                 allow_empty=True,
             )
-            work_unit_committed = True
             changes = tree_changes(context.run_worktree, context.run_fork_commit)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         joinable_publication_attempted = True
@@ -270,7 +231,6 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             exc,
             cleanup_warnings,
             agent_head=agent_head if agent_commit_check_active else None,
-            preflight_head=preflight_head if not work_unit_committed else None,
             joinable_publication_attempted=joinable_publication_attempted,
         )
         error = CmocError(
@@ -335,23 +295,6 @@ def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
     )
 
 
-def _rollback_preflight_commits(worktree: Path, before_head: str) -> None:
-    """本命 agent 前の indexing commit を処理単位の開始 HEAD へ戻す。"""
-    after_head = head_commit(worktree)
-    if after_head == before_head:
-        return
-    try:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-        run_git(["reset", "--hard", before_head], worktree)
-    except BaseException as reset_error:
-        raise CmocError(
-            "realization apply の preflight commit を差分へ戻せませんでした。",
-            ["run worktree の git history と indexing の状態を確認してください。"],
-            f"before HEAD: {before_head}\nafter HEAD: {after_head}\n"
-            f"reset error: {reset_error!r}",
-        ) from reset_error
-
-
 def _record_error(
     context: EditingRunContext,
     diff_base_commit: str | None,
@@ -360,7 +303,6 @@ def _record_error(
     cleanup_warnings: list[str] | None = None,
     *,
     agent_head: str | None = None,
-    preflight_head: str | None = None,
     joinable_publication_attempted: bool = False,
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
@@ -380,16 +322,6 @@ def _record_error(
         except BaseException as agent_commit_error:
             cleanup_errors.append(
                 f"agent commit cleanup failed: {agent_commit_error!r}"
-            )
-    if preflight_head is not None:
-        try:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-            # 処理単位が確定する前に agent call が失敗した場合、callback 前の
-            # indexing commit も未確定差分として処理単位の開始 HEAD へ戻す。
-            _rollback_preflight_commits(context.run_worktree, preflight_head)
-        except BaseException as preflight_error:
-            cleanup_errors.append(
-                f"preflight commit cleanup failed: {preflight_error!r}"
             )
     try:
         rollback_work_unit(context.run_worktree)

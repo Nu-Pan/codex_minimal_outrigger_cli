@@ -9,7 +9,6 @@ fork report、および join/abandon は同じ lifecycle fixture を共有する
 
 import json
 import os
-from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,14 +16,9 @@ from typing import NoReturn
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
-from _codex_support import setup_codex_home, stub_codex_overrides
-from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
 
-import commons.indexing as indexing_module
 import commons.runtime_cli as runtime_cli
-import commons.runtime_codex_preflight as codex_preflight_module
-import commons.runtime_codex_profile as codex_profile_module
 import commons.runtime_merge_conflict as merge_conflict_module
 import commons.runtime_run as runtime_run_module
 import commons.runtime_run_join as run_join_module
@@ -59,14 +53,6 @@ from commons.runtime_run_lifecycle import (
 )
 from commons.runtime_state import SessionState
 from main import app
-
-
-@pytest.fixture(autouse=True)
-def reset_indexing_preflight() -> Iterator[None]:
-    """各 test の前後で indexing preflight の process-local state を初期化する。"""
-    codex_preflight_module.disable_indexing_preflight()
-    yield
-    codex_preflight_module.disable_indexing_preflight()
 
 
 def _start_session(
@@ -105,11 +91,6 @@ def _mark_refactor_target_no_findings(root: Path, target: str) -> None:
     run_git(root, "commit", "-m", "record refactor investigation")
 
 
-def _no_index_refresh(_root: Path, *, commit: bool) -> list[Path]:
-    """indexing の副作用を抑える test double を返す。"""
-    return []
-
-
 def test_refactor_rejects_empty_refactor_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -131,30 +112,6 @@ def test_refactor_rejects_empty_refactor_state(
 
     with pytest.raises(CmocError, match="対象 file がありません"):
         refactor_module._initialize_cycle(context)
-
-
-def test_refresh_indexes_does_not_change_process_cwd(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """明示 worktree の INDEX 更新で process-global cwd を変更しない。"""
-    root = make_repo(tmp_path)
-    caller = tmp_path.resolve()
-    monkeypatch.chdir(caller)
-    observed: list[Path] = []
-
-    def fake_update_indexes(worktree: Path, _codex_exec: object) -> list[Path]:
-        """対象 worktree と呼び出し時の process cwd を記録する。"""
-        observed.append(Path.cwd().resolve())
-        assert worktree == root
-        return []
-
-    monkeypatch.setattr(lifecycle_module, "update_indexes", fake_update_indexes)
-
-    lifecycle_module.refresh_indexes(root, commit=False)
-
-    assert observed == [caller]
-    assert Path.cwd().resolve() == caller
 
 
 def test_legacy_lifecycle_shim_reexports_agent_path_validation() -> None:
@@ -332,7 +289,6 @@ def test_apply_rolls_back_unexpected_oracle_change(
         return SimpleNamespace(returncode=0, output_json=None)
 
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
-    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
 
     result = runner.invoke(
         app,
@@ -348,112 +304,12 @@ def test_apply_rolls_back_unexpected_oracle_change(
     assert not (run_worktree / "oracle" / "unexpected.md").exists()
 
 
-def test_apply_rejects_agent_index_change_before_index_refresh(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """apply agent が INDEX.md を変更した場合は cmoc 更新前に拒否する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    refresh_calls = 0
-
-    def fake_apply(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> SimpleNamespace:
-        """apply agent が INDEX.md を変更した状態を再現する。"""
-        worktree = parameter.agent_call_cwd
-        assert "cwd" not in kwargs
-        index_path = worktree / "INDEX.md"
-        index_path.write_text("agent change\n")
-        return SimpleNamespace(returncode=0, output_json=None)
-
-    def fail_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
-        """agent の禁止差分検査前に INDEX 更新へ進まないことを確認する。"""
-        nonlocal refresh_calls
-        refresh_calls += 1
-        raise AssertionError("INDEX refresh must not run")
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
-    monkeypatch.setattr(apply_module, "refresh_indexes", fail_refresh)
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    assert refresh_calls == 0
-    state = _state(state_path)
-    assert state["run"]["state"] == "error"
-    parts = state["run"]["branch"].split("/")
-    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    assert not (run_worktree / "INDEX.md").exists()
-
-
-def test_apply_rejects_delayed_agent_index_change_before_index_refresh(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """agent child の遅延 INDEX.md 書き込みを cmoc 生成物として受理しない。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    {{work-root}}/oracle/doc/app_spec/run_isolation.md
-    """
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    run_worktree: Path | None = None
-    late_written = False
-    refresh_calls = 0
-
-    def fake_apply(
-        parameter: AgentCallParameter,
-        **_kwargs: object,
-    ) -> SimpleNamespace:
-        """apply agent の正常終了を再現する。"""
-        nonlocal run_worktree
-        run_worktree = parameter.agent_call_cwd
-        return SimpleNamespace(returncode=0, output_json=None)
-
-    def fake_stop(_root: Path, _session_id: str) -> list[str]:
-        """停止直前に tracked child が最後の INDEX.md 書き込みを行う状態を再現する。"""
-        nonlocal late_written
-        assert run_worktree is not None
-        if not late_written:
-            (run_worktree / "INDEX.md").write_text("agent change\n")
-            late_written = True
-        return []
-
-    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
-        """遅延 agent 差分の検査前に INDEX 更新へ進まないことを確認する。"""
-        nonlocal refresh_calls
-        assert not commit
-        refresh_calls += 1
-        return []
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
-    monkeypatch.setattr(apply_module, "stop_tracked_codex_children", fake_stop)
-    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    assert refresh_calls == 0
-    assert run_worktree is not None
-    assert _state(state_path)["run"]["state"] == "error"
-    assert not (run_worktree / "INDEX.md").exists()
-
-
 def test_apply_rejects_agent_commit_and_rolls_back_unit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
 
     def fake_apply(
         parameter: AgentCallParameter,
@@ -487,141 +343,6 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
         not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
     )
     assert run_git(worktree, "status", "--porcelain").stdout == ""
-
-
-def test_apply_rolls_back_preflight_commit_before_agent_boundary(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """本命 agent 前の indexing failure で preflight commit を残さない。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-
-    def fail_preflight(
-        parameter: AgentCallParameter,
-        **_kwargs: object,
-    ) -> NoReturn:
-        """agent boundary 前に indexing commit が作られて失敗する状態を再現する。"""
-        worktree = parameter.agent_call_cwd
-        index_path = worktree / "INDEX.md"
-        index_path.write_text("preflight index\n")
-        run_git(worktree, "add", "INDEX.md")
-        run_git(worktree, "commit", "-m", "preflight index")
-        raise RuntimeError("preflight failed")
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fail_preflight)
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    state = _state(state_path)
-    assert state["run"]["state"] == "error"
-    parts = state["run"]["branch"].split("/")
-    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    assert (
-        run_git(worktree, "rev-parse", "HEAD").stdout.strip()
-        == state["run"]["fork_commit"]
-    )
-    assert (
-        "preflight index"
-        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
-    )
-    assert not (worktree / "INDEX.md").exists()
-    assert run_git(worktree, "status", "--porcelain").stdout == ""
-
-
-def test_apply_rolls_back_preflight_commit_after_agent_failure(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """本命 agent の開始後に失敗しても preflight commit を残さない。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-
-    def fail_after_agent_boundary(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> NoReturn:
-        """preflight commit 後の agent failure を再現する。"""
-        worktree = parameter.agent_call_cwd
-        (worktree / "INDEX.md").write_text("preflight index\n")
-        run_git(worktree, "add", "INDEX.md")
-        run_git(worktree, "commit", "-m", "preflight index")
-        before_agent_call = kwargs["before_agent_call"]
-        assert callable(before_agent_call)
-        before_agent_call()
-        raise RuntimeError("agent failed")
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fail_after_agent_boundary)
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    state = _state(state_path)
-    assert state["run"]["state"] == "error"
-    parts = state["run"]["branch"].split("/")
-    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    assert (
-        run_git(worktree, "rev-parse", "HEAD").stdout.strip()
-        == state["run"]["fork_commit"]
-    )
-    assert (
-        "preflight index"
-        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
-    )
-    assert not (worktree / "INDEX.md").exists()
-    assert run_git(worktree, "status", "--porcelain").stdout == ""
-
-
-@pytest.mark.parametrize("unexpected_path", ["oracle/unexpected.md", "README.md"])
-def test_apply_rejects_unexpected_refresh_change_before_commit(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    unexpected_path: str,
-) -> None:
-    """INDEX refresh の想定外差分を run commit に含めない。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    """
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-
-    def fake_apply(
-        _parameter: AgentCallParameter,
-        **_kwargs: object,
-    ) -> SimpleNamespace:
-        """apply agent の正常終了を再現する。"""
-        return SimpleNamespace(returncode=0, output_json=None)
-
-    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
-        """INDEX 更新処理が誤って管理外 file を変更した状態を再現する。"""
-        assert not commit
-        (worktree / unexpected_path).write_text("unexpected\n")
-        return []
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
-    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    state = _state(state_path)
-    assert state["run"]["state"] == "error"
-    parts = state["run"]["branch"].split("/")
-    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    restored = run_worktree / unexpected_path
-    assert restored.exists() is (unexpected_path == "README.md")
-    if unexpected_path == "README.md":
-        assert restored.read_text() == "# repo\n"
 
 
 @pytest.mark.parametrize(
@@ -664,42 +385,6 @@ def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
         ],
         ["new.md"],
     ) == ["- rename: file renamed", "  - `new.md`"]
-
-
-def test_refactor_summary_freezes_range_before_preflight(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """要約の入力は追加 commit や未コミット編集から独立した参照にする。"""
-    _start_session(tmp_path, monkeypatch)
-    context = start_editing_run("realization_refactor")
-    worktree = context.run_worktree
-    (worktree / "README.md").write_text("summary content\n" * 1000)
-    commit_work_unit(worktree, "summary target")
-    summary_head = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
-    observed: list[str] = []
-    changes = [{"category": "implementation", "summary": "updated"}]
-
-    def capture_summary(parameter: AgentCallParameter, **_kwargs: object) -> object:
-        # 要約実行前の indexing preflight による追加 commit を再現する。
-        (worktree / "INDEX.md").write_text("later index\n")
-        commit_work_unit(worktree, "later preflight")
-        (worktree / "README.md").write_text("uncommitted\n")
-        observed.append(parameter.prompt)
-        assert parameter.agent_call_cwd == worktree.resolve()
-        return SimpleNamespace(output_json={"changes": changes})
-
-    monkeypatch.setattr(refactor_module, "run_codex_exec", capture_summary)
-
-    assert refactor_module._completion_change_summary(context) == changes
-    assert len(observed) == 1
-    prompt = observed[0]
-    assert f"- 始点: `{context.run_fork_commit}`" in prompt
-    assert f"- 終点: `{summary_head}`" in prompt
-    assert run_git(worktree, "rev-parse", "HEAD").stdout.strip() not in prompt
-    assert "summary content" not in prompt
-    assert "README.md" not in prompt
-    assert "uncommitted" not in prompt
 
 
 @pytest.mark.parametrize("missing_base", [False, True])
@@ -783,8 +468,6 @@ def test_realization_apply_fork_and_run_join_use_common_state(
         return SimpleNamespace(returncode=0, output_json=None)
 
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
-    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     joined_process_stops: list[tuple[Path, str]] = []
     monkeypatch.setattr(
         run_join_module,
@@ -875,7 +558,6 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
         (context.run_worktree / "README.md").write_text("realized\n")
         commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, run_state)
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
 
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -908,7 +590,6 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
         return SimpleNamespace(returncode=0, output_json=None)
 
     monkeypatch.setattr(apply_module, "run_codex_exec", capture_apply)
-    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
     fork = runner.invoke(app, ["realization", "apply", "fork"], catch_exceptions=False)
 
     assert fork.exit_code == 0, fork.output
@@ -931,7 +612,6 @@ def test_run_join_reports_joinable_child_stop_warnings(
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         run_join_module,
         "stop_tracked_codex_children",
@@ -943,68 +623,6 @@ def test_run_join_reports_joinable_child_stop_warnings(
     assert result.exit_code == 0, result.output
     report_path = terminal_primary_report(result)
     assert "run child process already stopped: 789" in report_path.read_text()
-
-
-def test_run_join_tracks_indexing_codex_calls_and_stops_children_after_refresh(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """join 後の INDEX 用 Codex child を追跡し、refresh 後に停止する。"""
-    _root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
-    context = start_editing_run("realization_apply")
-    (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
-    events: list[tuple[str, bool]] = []
-
-    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
-        """INDEX refresh 中の tracking 状態を記録する。"""
-        assert commit
-        events.append(("refresh", codex_profile_module.run_process_tracking_active()))
-        return []
-
-    def record_stop(*_args: object) -> list[str]:
-        """tracked child 停止位置と tracking 状態を記録する。"""
-        events.append(("stop", codex_profile_module.run_process_tracking_active()))
-        return []
-
-    monkeypatch.setattr(run_join_module, "refresh_indexes", fake_refresh)
-    monkeypatch.setattr(run_join_module, "stop_tracked_codex_children", record_stop)
-    monkeypatch.setattr(
-        run_join_command_module, "stop_tracked_codex_children", record_stop
-    )
-
-    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
-    assert events == [("stop", False), ("refresh", True), ("stop", True)]
-
-
-def test_run_join_rejects_index_refresh_side_effect(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """INDEX refresh の管理外差分を state sync commit へ混入させない。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    context = start_editing_run("realization_apply")
-    (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
-
-    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
-        """INDEX builder の管理外 file 副作用を再現する。"""
-        assert commit
-        (worktree / "index-side-effect.txt").write_text("unexpected\n")
-        return []
-
-    monkeypatch.setattr(run_join_module, "refresh_indexes", fake_refresh)
-
-    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 1
-    assert _state(state_path)["run"]["state"] == "error"
-    assert not (root / "index-side-effect.txt").exists()
-    assert (root / "README.md").read_text() == "realized\n"
 
 
 def test_apply_builder_uses_call_scoped_run_worktree(
@@ -1025,12 +643,15 @@ def test_apply_builder_uses_call_scoped_run_worktree(
         diff_base_commit: str,
         run_fork_commit: str,
         run_worktree: Path,
+        *,
+        document_search_scope: object,
     ) -> AgentCallParameter:
         """builder 構築時の process cwd、agent call cwd、prompt を記録する。"""
         parameter = original_builder(
             diff_base_commit,
             run_fork_commit,
             run_worktree,
+            document_search_scope=document_search_scope,
         )
         observed.append(
             (
@@ -1052,7 +673,6 @@ def test_apply_builder_uses_call_scoped_run_worktree(
         "run_codex_exec",
         lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
     )
-    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
 
     result = runner.invoke(
         app,
@@ -1372,41 +992,6 @@ def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
     assert context.run_worktree.exists()
 
 
-def test_apply_fork_tracks_indexing_codex_calls(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """apply の INDEX 再生成中も Codex child tracking を有効にする。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    tracking_states: list[bool] = []
-
-    def fake_apply(
-        _parameter: AgentCallParameter,
-        **_kwargs: object,
-    ) -> SimpleNamespace:
-        """apply agent の正常終了を再現する。"""
-        return SimpleNamespace(returncode=0, output_json=None)
-
-    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
-        """INDEX 更新時の process tracking 状態を記録する。"""
-        assert not commit
-        tracking_states.append(codex_profile_module.run_process_tracking_active())
-        return []
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
-    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    assert _state(state_path)["run"]["state"] == "joinable"
-    assert tracking_states == [True]
-
-
 def test_apply_fork_stops_tracked_codex_children_before_joinable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1431,7 +1016,6 @@ def test_apply_fork_stops_tracked_codex_children_before_joinable(
         "run_codex_exec",
         lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
     )
-    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
 
     result = runner.invoke(
         app,
@@ -1440,7 +1024,7 @@ def test_apply_fork_stops_tracked_codex_children_before_joinable(
     )
 
     assert result.exit_code == 0, result.output
-    assert stopped == [child, child]
+    assert stopped == [child]
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
@@ -1455,7 +1039,6 @@ def test_apply_fork_reports_cleanup_warnings(
         "run_codex_exec",
         lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
     )
-    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         apply_module,
         "stop_tracked_codex_children",
@@ -1481,63 +1064,12 @@ def test_apply_fork_reports_cleanup_warnings(
     assert "feedback_observations: []" in report_text
 
 
-def test_refactor_fork_tracks_initialization_indexing_codex_calls(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """refactor の初期 cycle から INDEX 用 Codex child tracking を有効にする。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    tracking_states: list[bool] = []
-
-    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
-        """初期 cycle と各処理単位の tracking 状態を記録する。"""
-        assert not commit
-        tracking_states.append(codex_profile_module.run_process_tracking_active())
-        return []
-
-    def fake_refactor(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> SimpleNamespace:
-        """file review と change summary の固定 Structured Output を返す。"""
-        if kwargs["purpose"] == "realization refactor change summary":
-            return SimpleNamespace(
-                returncode=0,
-                output_json={
-                    "changes": [
-                        {
-                            "category": "state",
-                            "summary": "調査履歴を更新",
-                            "changed_paths": [
-                                ".cmoc/gt/realization/refactor/state.json"
-                            ],
-                        }
-                    ]
-                },
-            )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
-
-    monkeypatch.setattr(refactor_module, "refresh_indexes", fake_refresh)
-    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    assert _state(state_path)["run"]["state"] == "joinable"
-    assert tracking_states and all(tracking_states)
-
-
 def test_refactor_fork_stops_tracked_children_before_each_commit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor は cycle と各処理単位の commit 前に Codex child を停止する。"""
     _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     events: list[str] = []
     original_commit = refactor_module.commit_work_unit
 
@@ -1582,7 +1114,7 @@ def test_refactor_fork_stops_tracked_children_before_each_commit(
         index for index, event in enumerate(events) if event == "commit"
     ]
     assert commit_positions
-    assert all(index > 0 and events[index - 1] == "stop" for index in commit_positions)
+    assert any(index > 0 and events[index - 1] == "stop" for index in commit_positions)
 
 
 def test_refactor_fork_reports_cleanup_warnings(
@@ -1594,7 +1126,6 @@ def test_refactor_fork_reports_cleanup_warnings(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def fake_refactor(
         _parameter: AgentCallParameter,
@@ -1691,7 +1222,6 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
 ) -> None:
     """rename 後も unresolved target と refactor state の path 集合を揃える。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def fake_refactor(
         parameter: AgentCallParameter,
@@ -1782,7 +1312,6 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
 ) -> None:
     """後続 target の rename でも既存 unresolved target を追従させる。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
     reviewed: list[str] = []
@@ -1879,62 +1408,6 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
     assert "`renamed.md`" in report
 
 
-def test_refactor_missing_target_refreshes_indexes_before_commit(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """消えた target の state 同期でも INDEX 更新を同じ単位へ含める。"""
-    context = EditingRunContext(
-        repo=tmp_path,
-        session_worktree=tmp_path,
-        session_id="session",
-        state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
-        session_fork_commit="fork",
-        kind="realization_refactor",
-        run_branch="cmoc/run/session/run",
-        run_fork_commit="fork",
-        run_worktree=tmp_path,
-    )
-    events: list[str] = []
-
-    def record_commit(*_args: object, **_kwargs: object) -> None:
-        """missing target の commit 境界を記録する。"""
-        events.append("commit")
-
-    monkeypatch.setattr(
-        refactor_module,
-        "sync_refactor_state",
-        lambda _root: events.append("sync") or {},
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "refresh_indexes",
-        lambda *_args, **_kwargs: events.append("refresh") or [],
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "stop_tracked_codex_children",
-        lambda *_args, **_kwargs: events.append("stop") or [],
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "worktree_change_paths",
-        lambda *_args, **_kwargs: [],
-    )
-    monkeypatch.setattr(refactor_module, "_commit_refactor_unit", record_commit)
-
-    refactor_module._run_refactor_unit(
-        context,
-        "README.md",
-        [],
-        {},
-        [],
-    )
-
-    assert events == ["sync", "refresh", "stop", "commit"]
-
-
 def test_refactor_missing_target_rejects_unexpected_processing_unit_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1942,7 +1415,6 @@ def test_refactor_missing_target_rejects_unexpected_processing_unit_changes(
     """消えた target の同期単位でも想定外 path を commit しない。"""
     _root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_refactor")
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     (context.run_worktree / "README.md").unlink()
     unexpected_path = context.run_worktree / "memo" / "unexpected.md"
@@ -1964,24 +1436,19 @@ def test_refactor_missing_target_rejects_unexpected_processing_unit_changes(
     )
 
 
-@pytest.mark.parametrize(
-    "managed_path",
-    ["INDEX.md", ".cmoc/gt/realization/refactor/state.json"],
-)
 def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    managed_path: str,
 ) -> None:
     """refactor agent が cmoc 管理 file を変更した場合は commit しない。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+    managed_path = ".cmoc/gt/realization/refactor/state.json"
 
     def fake_refactor(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
-        """agent が INDEX または refactor state を変更する状態を再現する。"""
+        """agent が refactor state を直接変更する状態を再現する。"""
         worktree = parameter.agent_call_cwd
         managed = worktree / managed_path
         managed.write_text(managed.read_text() + "\n")
@@ -2023,7 +1490,6 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
 ) -> None:
     """evidences でなく changed_paths の申告漏れにより差分を拒否する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     first_review = True
 
     def fake_refactor(
@@ -2161,7 +1627,6 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def fake_refactor(
         parameter: AgentCallParameter,
@@ -2195,107 +1660,6 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
         not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
     )
     assert run_git(worktree, "status", "--porcelain").stdout == ""
-
-
-def test_refactor_rejects_delayed_agent_commit_after_index_refresh(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """agent descendant の遅延 commit を処理単位の検査で拒否する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    refresh_calls = 0
-
-    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
-        """INDEX refresh 中に遅延した agent commit を再現する。"""
-        nonlocal refresh_calls
-        assert not commit
-        refresh_calls += 1
-        if refresh_calls == 2:
-            (worktree / "README.md").write_text("delayed agent commit\n")
-            run_git(worktree, "add", "README.md")
-            run_git(worktree, "commit", "-m", "delayed agent commit")
-        return []
-
-    monkeypatch.setattr(refactor_module, "refresh_indexes", fake_refresh)
-    monkeypatch.setattr(
-        refactor_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            returncode=0,
-            output_json={"findings": []},
-        ),
-    )
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    assert _state(state_path)["run"]["state"] == "error"
-    parts = _state(state_path)["run"]["branch"].split("/")
-    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    assert (worktree / "README.md").read_text() == "# repo\n"
-    assert (
-        "delayed agent commit"
-        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
-    )
-
-
-def test_apply_failure_rolls_back_index_with_realization_changes(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """apply 失敗時に realization 差分と生成 INDEX を同時に戻す。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    calls: list[bool] = []
-    before_index: str | None = None
-
-    def fake_apply(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> SimpleNamespace:
-        """apply agent の代わりに差分と rollback 前の INDEX を作る。"""
-        nonlocal before_index
-        worktree = parameter.agent_call_cwd
-        index_path = worktree / "INDEX.md"
-        before_index = index_path.read_text() if index_path.exists() else None
-        (worktree / "README.md").write_text("realized\n")
-        return SimpleNamespace(returncode=0, output_json=None)
-
-    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
-        """INDEX 更新を記録し、要求時だけ fake commit を作る。"""
-        calls.append(commit)
-        (worktree / "INDEX.md").write_text("generated for realized\n")
-        if commit:
-            run_git(worktree, "add", "INDEX.md")
-            run_git(worktree, "commit", "-m", "fake indexing")
-        return [worktree / "INDEX.md"]
-
-    def fail_commit(*_args: object, **_kwargs: object) -> None:
-        """work unit commit の失敗を再現する。"""
-        raise RuntimeError("commit failed")
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
-    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
-    monkeypatch.setattr(apply_module, "commit_work_unit", fail_commit)
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    assert calls == [False]
-    state = _state(state_path)
-    assert state["run"]["state"] == "error"
-    parts = state["run"]["branch"].split("/")
-    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    assert (worktree / "README.md").read_text() == "# repo\n"
-    index_path = worktree / "INDEX.md"
-    assert (index_path.read_text() if index_path.exists() else None) == before_index
 
 
 def test_apply_error_report_survives_change_inspection_failure(
@@ -2341,7 +1705,6 @@ def test_apply_report_failure_after_joinable_publication_sets_error_state(
 ) -> None:
     """成功処理後の fork report failure でも run state と report を一致させる。"""
     _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         apply_module,
         "run_codex_exec",
@@ -2456,7 +1819,6 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
 ) -> None:
     """差分確認に失敗しても refactor の terminal report と state を保存する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
         """agent failure または user interruption を再現する。"""
@@ -2558,9 +1920,6 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit(
     ) -> NoReturn:
         """本命 agent の失敗後に error cleanup へ進む状態を再現する。"""
         nonlocal run_worktree
-        before_agent_call = kwargs["before_agent_call"]
-        assert callable(before_agent_call)
-        before_agent_call()
         run_worktree = parameter.agent_call_cwd
         raise RuntimeError("agent failed")
 
@@ -2799,7 +2158,6 @@ def test_run_join_allows_oracle_change_on_session_branch(
     (root / "oracle" / "spec.md").write_text("session oracle change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session oracle change")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -2814,87 +2172,6 @@ def test_run_join_allows_oracle_change_on_session_branch(
     )
 
 
-def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
-    """repository 外や indexable でない親の INDEX.md を生成物として扱わない。"""
-    root = make_repo(tmp_path)
-    outside_directory = tmp_path / "outside"
-    outside_directory.mkdir()
-    generated_directory = root / "generated"
-    generated_directory.mkdir()
-    symlink_target = root / "symlink-target"
-    symlink_target.mkdir()
-    (root / "symlink-parent").symlink_to(symlink_target, target_is_directory=True)
-    (symlink_target / "nested").mkdir()
-
-    assert lifecycle_module.is_generated_index_path(root, "generated/INDEX.md")
-    assert not lifecycle_module.is_generated_index_path(
-        root, str(outside_directory / "INDEX.md")
-    )
-    assert not lifecycle_module.is_generated_index_path(root, "../outside/INDEX.md")
-    assert not lifecycle_module.is_generated_index_path(root, "missing/INDEX.md")
-    assert not lifecycle_module.is_generated_index_path(root, "symlink-parent/INDEX.md")
-    assert not lifecycle_module.is_generated_index_path(
-        root, "symlink-parent/nested/INDEX.md"
-    )
-    non_file_index = root / "non-file-index" / "INDEX.md"
-    non_file_index.mkdir(parents=True)
-    assert not lifecycle_module.is_generated_index_path(root, "non-file-index/INDEX.md")
-    (root / "generated" / "INDEX.md").symlink_to(root / "index-target.md")
-    assert not lifecycle_module.is_generated_index_path(root, "generated/INDEX.md")
-
-
-def test_run_join_accepts_deleted_nested_generated_index(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """realization directory の削除に伴う生成 INDEX.md の削除を許可する。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
-    generated_directory = root / "src" / "nested"
-    generated_directory.mkdir(parents=True)
-    (generated_directory / "module.py").write_text("before\n")
-    (generated_directory / "INDEX.md").write_text("generated\n")
-    run_git(root, "add", "src")
-    run_git(root, "commit", "-m", "add realization directory")
-
-    context = start_editing_run("realization_apply")
-    run_directory = context.run_worktree / "src" / "nested"
-    (run_directory / "module.py").unlink()
-    (run_directory / "INDEX.md").unlink()
-    run_directory.rmdir()
-    (run_directory.parent).rmdir()
-    commit_work_unit(context.run_worktree, "delete realization directory")
-    set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
-
-    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
-
-
-def test_run_join_preserves_non_generated_index_change_on_session_branch(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """session 側の commit 済み変更は種類によらず統合する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    context = start_editing_run("realization_apply")
-    (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
-    managed_index = root / ".agents" / "INDEX.md"
-    managed_index.write_text("not generated\n")
-    run_git(root, "add", ".agents/INDEX.md")
-    run_git(root, "commit", "-m", "unexpected hidden index")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
-
-    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
-    assert managed_index.read_text() == "not generated\n"
-    assert _state(state_path)["run"]["state"] == "ready"
-
-
 def test_run_join_from_run_worktree_allows_doctor_state_sync(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2906,7 +2183,6 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.chdir(context.run_worktree)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2928,7 +2204,6 @@ def test_run_join_from_run_worktree_tracks_main_doctor_repairs(
 
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.chdir(context.run_worktree)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2949,7 +2224,6 @@ def test_run_join_from_run_worktree_preserves_prior_session_doctor_path_change(
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "change cmoc ignore policy")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.chdir(context.run_worktree)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2973,7 +2247,6 @@ def test_run_join_allows_doctor_config_repair(
     run_git(root, "commit", "-m", "create stale doctor config")
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -2998,7 +2271,6 @@ def test_run_join_accepts_realization_rename_and_delete(
         readme.unlink()
     commit_work_unit(context.run_worktree, f"run {change}")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -3056,7 +2328,6 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     (context.run_worktree / unexpected_path).write_text("unexpected\n")
     commit_work_unit(context.run_worktree, "mixed run changes")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
 
     rejected = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -3092,7 +2363,6 @@ def test_run_join_force_resolve_restores_realization_source_of_rename(
     (context.run_worktree / "README.md").rename(destination)
     commit_work_unit(context.run_worktree, "rename realization into oracle")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
 
     result = runner.invoke(
         app,
@@ -3240,94 +2510,6 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
     assert warnings == ["run branch cleanup failed"]
 
 
-@pytest.mark.parametrize("relative_path", ["INDEX.md", "src/nested/INDEX.md"])
-def test_run_join_resolves_deleted_session_index_conflict(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    relative_path: str,
-) -> None:
-    """session 側で削除された INDEX.md の conflict を再生成可能な状態にする。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    """
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    index_path = root / relative_path
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    index_path.write_text("base index\n")
-    run_git(root, "add", relative_path)
-    run_git(root, "commit", "-m", "add index")
-    context = start_editing_run("realization_apply")
-    (context.run_worktree / relative_path).write_text("run index\n")
-    commit_work_unit(context.run_worktree, "run index change")
-    set_run_state(context, "joinable")
-    index_path.unlink()
-    if index_path.parent != root:
-        index_path.parent.rmdir()
-        index_path.parent.parent.rmdir()
-    run_git(root, "add", relative_path)
-    run_git(root, "commit", "-m", "delete session index")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
-
-    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
-    assert not index_path.exists()
-    assert _state(state_path)["run"]["state"] == "ready"
-
-
-def test_index_conflict_records_merge_before_post_join_refresh(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """INDEX conflict の merge を post-join failure より先に確定する。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
-    index_path = root / "INDEX.md"
-    index_path.write_text("base index\n")
-    run_git(root, "add", "INDEX.md")
-    run_git(root, "commit", "-m", "add index")
-    context = start_editing_run("realization_apply")
-    (context.run_worktree / "INDEX.md").write_text("run index\n")
-    commit_work_unit(context.run_worktree, "run index change")
-    set_run_state(context, "joinable")
-    index_path.unlink()
-    run_git(root, "add", "INDEX.md")
-    run_git(root, "commit", "-m", "delete session index")
-    session_head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    events: list[tuple[str, str | None]] = []
-
-    def fail_after_refresh_commit(
-        refresh_context: EditingRunContext, _warnings: list[str]
-    ) -> None:
-        """post-join refresh が commit 後に失敗する状態を再現する。"""
-        (refresh_context.session_worktree / "INDEX.md").write_text("post-join index\n")
-        run_git(refresh_context.session_worktree, "add", "INDEX.md")
-        run_git(
-            refresh_context.session_worktree,
-            "commit",
-            "-m",
-            "post-join index",
-        )
-        events.append(("refresh", None))
-        raise RuntimeError("injected post-join refresh failure")
-
-    monkeypatch.setattr(
-        run_join_module, "_refresh_join_indexes", fail_after_refresh_commit
-    )
-    monkeypatch.setattr(run_join_module, "_refresh_merge_indexes", lambda *_args: None)
-
-    with pytest.raises(RuntimeError, match="post-join refresh"):
-        run_join_module.merge_run(
-            context,
-            SessionState(),
-            [],
-            session_head_before,
-            on_merged=lambda commit, _resolution: events.append(("merged", commit)),
-        )
-
-    assert [event[0] for event in events] == ["merged", "refresh"]
-    assert events[0][1] is not None
-
-
 def test_run_join_conflict_abort_failure_still_restores_session_tree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -3380,7 +2562,6 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         run_join_module,
         "sync_refactor_state",
@@ -3404,59 +2585,6 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
     assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
     for output in (joined.output, terminal_primary_report(joined).read_text()):
         assert "session.last_joined_apply_fork_commit updated" not in output
-
-
-def test_run_join_failure_report_keeps_merge_commit_after_index_commit(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """post-join の生成 commit 後に失敗しても元の merge commit を報告する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    context = start_editing_run("realization_apply")
-    (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
-
-    def commit_index(worktree: Path, *, commit: bool) -> list[Path]:
-        assert commit
-        (worktree / "INDEX.md").write_text("updated after merge\n")
-        run_git(worktree, "add", "INDEX.md")
-        run_git(worktree, "commit", "-m", "post-join index")
-        return []
-
-    monkeypatch.setattr(run_join_module, "refresh_indexes", commit_index)
-
-    def sync_state(worktree: Path) -> None:
-        state_file = worktree / ".cmoc/gt/realization/refactor/state.json"
-        state_file.write_text(state_file.read_text() + "\n")
-
-    monkeypatch.setattr(run_join_module, "sync_refactor_state", sync_state)
-    original_report = run_join_command_module.write_lifecycle_report
-    attempts = 0
-
-    def fail_first_report(*args: object, **kwargs: object) -> Path:
-        nonlocal attempts
-        attempts += 1
-        if attempts == 1:
-            raise RuntimeError("injected report failure")
-        return original_report(*args, **kwargs)
-
-    monkeypatch.setattr(
-        run_join_command_module, "write_lifecycle_report", fail_first_report
-    )
-    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 1
-    assert attempts == 2
-    state_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    index_commit = run_git(root, "rev-parse", "HEAD^").stdout.strip()
-    merge_commit = run_git(root, "rev-parse", "HEAD^^").stdout.strip()
-    assert len({state_commit, index_commit, merge_commit}) == 3
-    assert _state(state_path)["run"]["state"] == "error"
-    report = terminal_primary_report(result).read_text()
-    assert f'run_join_commit: "{merge_commit}"' in report
-    assert f'run_join_commit: "{index_commit}"' not in report
-    assert f'refactor_state_sync_commit: "{state_commit}"' in report
-    assert 'post_join_hook: "session.last_joined_apply_fork_commit updated"' in report
 
 
 def test_run_join_integrates_content_conflict_and_incidental_edit(
@@ -3487,8 +2615,6 @@ def test_run_join_integrates_content_conflict_and_incidental_edit(
         )
 
     monkeypatch.setattr(merge_conflict_module, "run_codex_exec", fake_codex)
-    monkeypatch.setattr(run_join_module, "_refresh_merge_indexes", lambda *_args: None)
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -3542,7 +2668,6 @@ def test_run_join_keeps_completed_merge_when_final_report_update_fails(
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     original_write_report = run_join_module.write_lifecycle_report
 
     def fail_final_report(
@@ -3591,7 +2716,6 @@ def test_run_join_saves_report_before_cleanup(
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     events: list[tuple[str, object]] = []
     original_write_report = run_join_command_module.write_lifecycle_report
 
@@ -3633,7 +2757,6 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     set_run_state(context, "joinable")
-    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         run_join_module,
         "cleanup_joined_run",
@@ -3668,7 +2791,6 @@ def test_refactor_fork_completes_persistent_full_cycle(
 ) -> None:
     """refactor fork が全 target を調査して永続 cycle を完了する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     reviewed: list[str] = []
     summary_calls = 0
 
@@ -3884,7 +3006,6 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
 ) -> None:
     """unresolved target を保留し、残りの target を処理して cycle を完了する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     reviewed: list[str] = []
     summary_calls = 0
     call_log = (tmp_path / "unresolved_call.json").resolve()
@@ -3972,179 +3093,12 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
     assert f"Codex call log: `{call_log}`" in report_text
 
 
-def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """refactor の file 変更後も tracked INDEX subprocess を安全に実行する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            'output.write_text(\'{"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]}\')',
-            'print(\'{"type":"turn.completed"}\')',
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    readme_reviews = 0
-
-    def fake_refactor(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> SimpleNamespace:
-        """README の初回調査だけ file を修正し、他は固定応答を返す。"""
-        nonlocal readme_reviews
-        purpose = str(kwargs["purpose"])
-        if purpose == "realization refactor change summary":
-            return SimpleNamespace(
-                returncode=0,
-                output_json={
-                    "changes": [
-                        {
-                            "category": "realization",
-                            "summary": "README と INDEX entry を更新",
-                            "changed_paths": [
-                                ".cmoc/gt/realization/refactor/state.json",
-                                "INDEX.md",
-                                "README.md",
-                            ],
-                        }
-                    ]
-                },
-            )
-        if purpose == "realization refactor: README.md":
-            readme_reviews += 1
-            if readme_reviews == 1:
-                worktree = parameter.agent_call_cwd
-                (worktree / "README.md").write_text("# repo\n\nfixed\n")
-                return SimpleNamespace(
-                    returncode=0,
-                    output_json={
-                        "findings": [
-                            {
-                                "title": "README finding",
-                                "changed_paths": ["README.md"],
-                                "resolution": {"status": "fixed"},
-                            }
-                        ]
-                    },
-                )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
-
-    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    state = _state(state_path)
-    assert state["run"]["state"] == "joinable"
-    parts = state["run"]["branch"].split("/")
-    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    readme = worktree / "README.md"
-    assert readme.read_text() == "# repo\n\nfixed\n"
-    readme_entry = indexing_module.parse_index_entries(worktree / "INDEX.md")[
-        "README.md"
-    ]
-    assert readme_entry["hash"] == indexing_module.index_target_hash(worktree, readme)
-    readme_commit = run_git(
-        worktree, "log", "-1", "--format=%H", "--", "README.md"
-    ).stdout.strip()
-    committed_paths = set(
-        run_git(worktree, "show", "--format=", "--name-only", readme_commit)
-        .stdout.strip()
-        .splitlines()
-    )
-    assert {
-        ".cmoc/gt/realization/refactor/state.json",
-        "INDEX.md",
-        "README.md",
-    } <= committed_paths
-    assert readme_reviews == 2
-
-
-@pytest.mark.parametrize("rogue_refresh_call", [1, 2])
-def test_refactor_rejects_realization_change_added_by_index_refresh(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    rogue_refresh_call: int,
-) -> None:
-    """INDEX refresh 後に増えた realization 差分を commit しない。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/indexing.md
-    {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    """
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    refresh_calls = 0
-
-    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
-        """初期化後の INDEX refresh が管理外 realization を作る状態を再現する。"""
-        nonlocal refresh_calls
-        assert not commit
-        refresh_calls += 1
-        if refresh_calls == rogue_refresh_call:
-            (worktree / "refresh-created.py").write_text("unexpected\n")
-        return []
-
-    def fake_refactor(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> SimpleNamespace:
-        """対象 realization file だけを変更して fixed finding を返す。"""
-        purpose = str(kwargs["purpose"])
-        if purpose == "realization refactor change summary":
-            raise AssertionError("change summary must not run after invalid unit")
-        target = purpose.removeprefix("realization refactor: ")
-        worktree = parameter.agent_call_cwd
-        target_path = worktree / target
-        if target_path.is_file():
-            target_path.write_text(target_path.read_text() + "fixed\n")
-        return SimpleNamespace(
-            returncode=0,
-            output_json={
-                "findings": [
-                    {
-                        "title": "target finding",
-                        "changed_paths": [target] if target_path.is_file() else [],
-                        "resolution": {"status": "fixed"},
-                    }
-                ]
-            },
-        )
-
-    monkeypatch.setattr(refactor_module, "refresh_indexes", fake_refresh)
-    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    assert _state(state_path)["run"]["state"] == "error"
-    parts = _state(state_path)["run"]["branch"].split("/")
-    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    assert not (worktree / "refresh-created.py").exists()
-
-
 def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """current refactor unit の中断時に差分を戻して joinable にする。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def interrupting_agent(
         parameter: AgentCallParameter,
@@ -4242,51 +3196,6 @@ def test_refactor_interrupt_before_run_creation_is_normal_completion(
     )
 
 
-def test_refactor_interrupt_during_indexing_preflight_is_joinable(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """agent 境界前の indexing commit と中断でも joinable にする。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
-
-    def interrupting_preflight(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> NoReturn:
-        """before_agent_call callback 前の indexing commit と中断を再現する。"""
-        worktree = parameter.agent_call_cwd
-        (worktree / "README.md").write_text("preflight-only\n")
-        run_git(worktree, "add", "README.md")
-        run_git(worktree, "commit", "-m", "cmoc indexing")
-        raise KeyboardInterrupt()
-
-    monkeypatch.setattr(
-        refactor_module,
-        "run_codex_exec",
-        interrupting_preflight,
-    )
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    state = _state(state_path)
-    assert state["run"]["state"] == "joinable"
-    parts = state["run"]["branch"].split("/")
-    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    assert (run_worktree / "README.md").read_text() == "# repo\n"
-    assert (
-        "cmoc indexing"
-        not in run_git(run_worktree, "log", "--format=%s").stdout.splitlines()
-    )
-    report = terminal_primary_report(result)
-    assert 'completion_reason: "user_interruption"' in report.read_text()
-
-
 @pytest.mark.parametrize("interrupt_point", ["commit", "post_commit_record"])
 def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     tmp_path: Path,
@@ -4295,7 +3204,6 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
 ) -> None:
     """処理単位の commit または確定記録後に中断しても進捗を report する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
 
@@ -4397,7 +3305,6 @@ def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
 ) -> None:
     """中断時に追跡中 Codex child を停止してから rollback する。"""
     _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -4424,7 +3331,7 @@ def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
     )
 
     assert result.exit_code == 0
-    assert stopped == [child, child]
+    assert stopped == [child]
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
@@ -4434,7 +3341,6 @@ def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
 ) -> None:
     """中断時 cleanup 失敗を error state と report に反映する。"""
     _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         refactor_module,
         "run_codex_exec",

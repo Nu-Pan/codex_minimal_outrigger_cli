@@ -28,7 +28,6 @@ from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import current_branch, make_repo, run_git
 
 import cmoc_runtime
-import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_merge_conflict as merge_conflict_module
 import sub_commands.session.abandon as session_module
 import sub_commands.session.fork as session_fork_module
@@ -38,18 +37,6 @@ from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_override_args
 from config.cmoc_config import CmocConfig
 from main import app
-
-
-@pytest.fixture(autouse=True)
-def reset_indexing_preflight() -> Iterator[None]:
-    """テスト間で process-global な preflight 状態を持ち越さない。
-
-    根拠: {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    """
-
-    codex_preflight_module.disable_indexing_preflight()
-    yield
-    codex_preflight_module.disable_indexing_preflight()
 
 
 def session_state_path(root: Path, session_branch: str) -> Path:
@@ -644,11 +631,9 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
     assert result.exit_code != 0
     assert current_branch(linked) == session_branch
     assert "session home branch が存在しません。" in result.stderr
-    assert "/.cmoc/gu/" not in gitignore.read_text().splitlines()
+    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == [
-        ".cmoc/gu/tracked-probe"
-    ]
+    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == []
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
@@ -1120,9 +1105,6 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(
-        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
@@ -1214,9 +1196,6 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(
-        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
 
     result = runner.invoke(app, ["session", "join"])
 
@@ -1301,9 +1280,6 @@ def test_session_join_accepts_incidental_conflict_file_changes(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(
-        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
 
     result = runner.invoke(app, ["session", "join"])
 
@@ -1364,9 +1340,6 @@ def test_session_join_handles_conflict_path_containing_newline(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(
-        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
@@ -1477,11 +1450,9 @@ def test_session_join_preprocesses_linked_worktree_before_preconditions(
     assert current_branch(linked) == session_branch
     assert "git コマンドが失敗しました。" in result.stderr
     assert "git コマンドが失敗しました。" not in result.stdout
-    assert "/.cmoc/gu/" not in gitignore.read_text().splitlines()
+    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == [
-        ".cmoc/gu/tracked-probe"
-    ]
+    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == []
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
@@ -1521,9 +1492,6 @@ def test_session_join_stages_delete_conflict_resolution(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(
-        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
@@ -1722,9 +1690,6 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(
-        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
 
     result = runner.invoke(app, ["session", "join"])
 
@@ -1831,9 +1796,6 @@ def test_session_join_conflict_uses_merge_target_worktree_context(
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(
-        session_join_module, "refresh_indexes", lambda *_args, **_kwargs: []
-    )
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 

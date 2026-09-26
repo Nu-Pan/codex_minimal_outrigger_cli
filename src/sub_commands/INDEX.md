@@ -32,71 +32,73 @@
 # `feedback`
 
 ## Summary
-- `cmoc feedback report` の観測集約、issue の検証、レポート公開と未完了時の診断を扱う。
-- 修復 run の進行・join と再開後の後処理をまとめ、判定入力の再確認履歴も管理する。
+- Feedback observation を `cmoc feedback report` として処理し、issue の修復と自動 join を経て current report を publication するサブコマンド実装群です。
+- report cut と候補処理、判定根拠の比較、publication 後の復旧が連携するため、サブコマンド全体の挙動を調べる入口になります。
 
 ## Read this when
-- feedback report の固定入力、候補集約・正規化・検証、表示内容や公開結果を変更・調査するとき。
-- feedback report 固有の逐次修復、自動 join、中断後の再開、finalization を追うとき。
-- 修正や証拠の変化が過去の判定に与える影響、再確認や循環診断を調べるとき。
+- `cmoc feedback report` の入力固定、候補生成・集約、再検証、report publication の流れや結果を調べるとき。
+- feedback issue の修復 wave、checkpoint、rollback、自動 join の制御を変更するとき。
+- issue の再確認要否や、修復が同じ判定状態へ戻る場合の扱いを変更するとき。
+- publication 後の cleanup・再開や、feedback run 固有の join／abandon 制約を調べるとき。
 
 ## Do not read this when
-- `submit_observation` の受付、reporter/collector の通信、raw observation の保存だけを変更するときは、受付・保存を担う共通処理から確認する。
-- feedback report 固有ではない共通の状態保存や run/session lifecycle の挙動を変更するときは、それぞれの共通実装から確認する。
+- raw feedback の収集や共通保存形式・artifact 検証だけを変更するときは、収集処理と共通 runtime の責務から確認してください。
+- feedback_report 固有の制約や復旧が関係しない一般的な run の join／abandon や git lifecycle が対象なら、共通 run lifecycle の実装を直接確認してください。
 
 ## hash
-- f2d2912851836f069573712d51956412bf0e83533f2fb1c453ba49d9b7657a20
+- 168c1caef386191dc7f27066e4d357918e97d9c55d414ece27bd70c31a19be9d
 
 # `indexing.py`
 
 ## Summary
-- `indexing` CLI サブコマンドの入口として、Codex 実行前のインデックス更新を登録し、明示実行時は work root の前提条件を検査して更新処理を呼び出す。
-- 更新状況を primary report に記録し、更新された INDEX の commit までを CLI runtime につなぐため、コマンド固有の実行経路を調べる入口となる。
+- `cmoc indexing` の実行フローを組み立て、work-root の `oracle/doc` を対象に文書検索索引を同期します。
+- 同期スコープの識別情報、同期結果、失敗状態を primary report に反映します。
 
 ## Read this when
-- 明示実行する indexing コマンドの起動条件、実行順、work root の扱いを確認・変更するとき。
-- 更新の開始・完了・失敗・中断と commit 結果が primary report にどう反映されるか、また CLI から更新処理がどう呼び出されるかを追うとき。
+- `cmoc indexing` の実行条件や、同期に渡すスコープ・設定を確認または変更するとき。
+- 同期状態や結果が primary report にどう反映され、同期エラーがどう扱われるかを確認するとき。
 
 ## Do not read this when
-- INDEX 対象の列挙、entry の再利用・hash・生成、書き戻し・復元、排他制御や Git commit の内部手順を調べるときは、共通 indexing lifecycle の実装から確認する。
-- CLI runner や worktree 前提チェックなど、共通 runtime の動作を調べるときは、該当する共通 runtime 実装を直接読む。
+- CLI 上のコマンド登録やヘルプ表示だけを確認するときは、CLI 宣言を直接確認してください。
+- 索引の構築・保存・検索処理やスコープの共通定義を確認するときは、それぞれを担う共通検索処理やスコープ定義から確認してください。
 
 ## hash
-- 273cd0aecd7905c02ed812dd0c3aba37321fc748312192759e24f211db0c7dc3
+- a3dae2674a00b244fdb950cb7c7548ce710dc62032e20dbf0951d3bf4cce86e3
 
 # `oracle`
 
 ## Summary
-- oracle 固有の `edit` と `investigation` サブコマンドの実行フローを組み立てる入口。編集では indexing preflight 後に Codex exec を2回実行し、調査では Codex TUI を起動する。
+- `cmoc oracle edit` と `cmoc oracle investigation` の実行フローをまとめる入口です。指示入力を受け付け、編集では Codex exec を2回順に実行し、調査では Codex TUI を起動します。
+- 編集フローは main worktree 上の active な cmoc session branch を確認し、両フローで oracle 文書の検索範囲を使います。
 
 ## Read this when
-- `cmoc oracle edit` の編集指示の受け取り、起動前提、または Codex exec 呼び出しの流れを追う・変更する場合。
-- `cmoc oracle investigation` の調査指示の受け取りや、read-only TUI 起動の流れを追う・変更する場合。
+- oracle コマンドの指示入力から exec／TUI 起動までの流れや、そのステップ・実行状態の管理を調べる、または変更する場合。
+- 編集コマンドの起動条件や2回の exec 実行、調査コマンドの TUI 起動方法を変更する場合。
 
 ## Do not read this when
-- 変更対象が複数コマンドで共有される prompt 入力、indexing preflight、起動パラメータ構築、または Codex 実行処理そのものである場合は、その共通処理の実装から確認する。
-- oracle コマンド以外のサブコマンドの処理を追う場合は、そのコマンドの実装から確認する。
+- agent に渡す prompt の内容や起動パラメータの構築を変更する場合。各コマンドの builder 実装を直接確認してください。
+- 共通の prompt editor、文書検索範囲、CLI 実行基盤の挙動だけを変更する場合。それぞれの共通実装を直接確認してください。
 
 ## hash
-- 1a9e0c51494360d2a9d1b70d5b85eced5b137036aaec5e8584803914f1c38434
+- b775d0d47d85945c03e5fac73092facc10bce994117425dbcbd0e388a60395c1
 
 # `realization`
 
 ## Summary
-- realization workload の実行処理を担い、oracle 差分を realization に追従させる処理と、realization file を巡回して調査・修正する処理の入口となる。
-- 差分追従では run の差分検査と公開を扱い、巡回調査では対象ごとの進捗や未解決所見、完了判定を扱う。
+- `realization apply fork` と `realization refactor fork` の実行処理を担い、run の作成、変更の検査と commit、完了・中断・失敗の報告を管理する。
+- apply は oracle の差分に沿った追従を行い、refactor は分類済みの oracle file と realization file を順に調査・修正して、未解決の所見も記録する。
 
 ## Read this when
-- `realization apply fork` の差分追従や run 公開の挙動を調査・変更するとき。
-- `realization refactor fork` の対象巡回、file 単位の修正、所見や完了判定の挙動を調査・変更するとき。
+- `realization apply fork` が oracle 差分を処理し、変更を run の成果物として公開する流れを調べるとき。
+- `realization refactor fork` の対象巡回、所見の追跡、処理単位の確定、中断時の扱いを調べるとき。
 
 ## Do not read this when
-- 差分追従の処理だけが対象なら、その処理の下位項目から読み始める。
-- file 単位の refactor cycle だけが対象なら、対応する下位項目から読み始める。
-- CLI の引数解析・コマンド登録だけ、または共有 editing-run lifecycle が対象なら、その責務を担う実装を直接読む。
+- refactor の対象分類、state schema、対象選択規則だけを調べる場合は、共有 refactor runtime を直接読む。
+- agent 向け指示や structured output の組み立てだけを調べる場合は、builder 側へ進む。
+- CLI のコマンド登録だけを調べる場合や、全コマンド共通の run lifecycle・report 処理だけを調べる場合は、それぞれの入口・共通 runtime を直接読む。
 
 ## hash
-- 8ed8cb54c41a7f86e43d6ac96becc69e63b1136b99f0fd9304c4bff206f5b3ea
+- 47fa22b3e075f343e7ab769c1d95c4cdc9184eeba113ebd4667da63f94dfc01b
 
 # `review`
 
@@ -115,54 +117,54 @@
 # `run`
 
 ## Summary
-- editing run の join と abandon の lifecycle を担います。join の検査・merge 呼び出し、state と report の更新、失敗時の復旧、資源 cleanup を追う入口です。
-- abandon 時の process 停止、run worktree と branch の削除、state と report の更新を扱います。
-- 旧 import path を保つ互換 shim も含みます。共通 helper と report writer の正規実装は commons にあります。
+- 既存の editing run を join して差分を統合する処理と、abandon して process・worktree・branch を cleanup する処理を扱う。merge 後の状態・report 更新や失敗時の復旧を変更するときの入口。
+- 共通 lifecycle・report helper の旧 import 経路を保つ shim も含む。共通 helper の本体ではなく、この package からの互換 export を変更するときに参照する。
 
 ## Read this when
-- active editing run の join について、merge 前の検査から post-join 処理、state・report 更新、失敗時の復旧や cleanup まで調べるとき。
-- active editing run の abandon に伴う process 停止、worktree・branch 削除、state 更新を調べるとき。
-- 旧 import path の互換性や、ここから公開される共通 helper の利用を調べるとき。
+- active run の join・abandon、merge 失敗時の rollback、cleanup の再試行、状態や report の確定方法を変更するとき。
+- run lifecycle・report helper の互換 export を変更するとき。
 
 ## Do not read this when
-- session 全体の fork・join・abandon の処理を調べるときは、session の lifecycle 処理を参照してください。
-- workload ごとの editing run の fork や実行処理を調べるときは、該当する workload の fork 処理を参照してください。
-- 共通の run lifecycle helper、join 共通処理、report writer の実装を変更するときは、commons にある正規実装を直接参照してください。
+- workload ごとの新規 run 開始や準備の流れだけを変更するときは、その workload の開始処理を直接読む。
+- 共通 lifecycle・report helper の実装や feedback 固有の recovery ルールだけを変更するときは、それぞれの共通 helper または feedback recovery の実装を直接読む。
 
 ## hash
-- 5614640a93310490b428e0ffe253e8270725fe73428f80f614384dae636d314b
+- 02e252fa9d14209ce0fee2cfc66f30aad209c9c8082f8d13a2e823dd5620af21
 
 # `session`
 
 ## Summary
-- session branch を作成し、home branch へ統合するか、統合せず破棄する CLI 処理の実装入口です。
-- 各操作の state 遷移、branch の後始末、失敗時の復旧処理を横断して確認できます。
+- session branch と state のライフサイクルを扱い、現在の local branch からの fork、home branch への join、取り込まずに終了する abandon の処理をまとめる。
+- session 全体の作成・統合・終了を調べる入口であり、個々の編集 run の処理とは責務が異なる。
 
 ## Read this when
-- session の fork・join・abandon の事前条件や処理、state 遷移、失敗時の復旧を調べる・変更する場合。
-- 複数の session 操作にまたがる branch と state の整合を確認する場合。
+- session fork の作成条件、branch と state の保存、失敗時の rollback を確認・変更するとき。
+- session join の merge、競合解消の呼び出し、state 更新、branch cleanup の流れを確認・変更するとき。
+- session abandon の cleanup や、失敗後に session を復元する処理を確認・変更するとき。
 
 ## Do not read this when
-- 単一の session 操作だけを調べる場合は、その操作の実装へ直接進んでください。
-- 共通の state 形式や Git・session runtime の処理自体を調べる・変更する場合は、それらの定義へ直接進んでください。
+- CLI のコマンド登録や利用者に見える入口だけを確認するときは、その登録を担う箇所へ進む。
+- 編集 run の開始・実行・join・abandon が対象なら、run のライフサイクル実装へ進む。
+- join が呼び出す競合解消 agent の入力組み立てだけが対象なら、その専用 builder の実装へ進む。
 
 ## hash
-- 300aee23aa170007f8f71e9386a3ee9d7f75553c7d4dea7d5d8eebebb446f3ea
+- 2c60b7680bab50a72dfcfa7d2440583572fc8ecd56fb34c7f91d91968bfa38a0
 
 # `tui.py`
 
 ## Summary
-- `cmoc tui` の実行を CLI runtime に接続し、インデックス事前処理と prompt editor 保存先の ignore 確認を登録する入口。
-- 依頼文の skeleton を用意し、エディタ入力の予約・編集・確定を経て起動パラメータを作り、Codex TUI へ渡す流れを統括する。
+- `cmoc tui` の CLI 実行フローを調整し、実行前処理、実行段階、リポジトリと worktree の設定読み込みをまとめる。
+- 依頼文の編集用入力とプロンプト骨格を準備し、編集後の依頼文から起動パラメータを構築して Codex TUI に渡す。
 
 ## Read this when
-- `cmoc tui` の起動経路、事前処理、設定の読み込み、またはコマンド実行枠への接続を追う・変更するとき。
-- 利用者の依頼文がエディタ入力から起動パラメータになり、TUI に渡る順序を追う・変更するとき。
+- `cmoc tui` の実行順序や、入力編集からパラメータ構築、Codex TUI 起動までの連携を変更するとき。
+- このコマンド固有の実行前処理、検索範囲、設定選択、実行ステップを調べるとき。
 
 ## Do not read this when
-- 完全 prompt の文面や TUI 起動パラメータの定義を変更するときは、その構築定義を読む。
-- エディタの選択、入力ファイルの保存・検証、handoff の仕組みを変更するときは、共通の prompt editor 入力処理を読む。
-- 共通 CLI runtime のログ、ステップ管理、実行時エラーの扱いを変更するときは、その runtime の実装を読む。
+- 入力ファイルの予約、編集、検証、保存の共通動作を変更するときは、共有プロンプト入力の担当を読む。
+- TUI 用プロンプトの内容や起動パラメータの組み立てを変更するときは、TUI 起動パラメータの担当を読む。
+- Codex TUI プロセスの起動方法を変更するときは、TUI 実行ランタイムの担当を読む。
+- 別の CLI コマンドの処理を調べるときは、そのコマンドの担当から読む。
 
 ## hash
-- 52be00ca2b1f26a3ffa44743eeed684258aed27c06159476b93bf37d9cc4e2d2
+- 173e64179de97c117feb5c3e14dc6413a00d6ed9934883c544228cca674c1c00

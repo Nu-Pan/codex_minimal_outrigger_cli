@@ -63,6 +63,7 @@ def test_config_json_preserves_oracle_member_order() -> None:
     assert list(data) == [
         "num_parallel",
         "codex",
+        "document_search",
     ]
     assert list(data["codex"]) == [
         "model_providers",

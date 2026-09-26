@@ -33,7 +33,7 @@ from acp.builder.realization.refactor.fork.change_summary import (
 from acp.builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_fork_file_review_and_fix_parameter,
 )
-from basic.acp import FileAccessMode
+from basic.acp import DocumentSearchScope, FileAccessMode
 
 
 def _objective_section(prompt: str) -> str:
@@ -83,15 +83,17 @@ def test_realization_apply_builder_passes_commit_references(
 ) -> None:
     """apply builder が commit 参照と取得条件を prompt に含める。"""
     run_worktree = editing_run_worktree
+    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
     parameter = build_realization_apply_fork_launch_exec_parameter(
         "base-commit",
         "fork-commit",
         run_worktree,
+        document_search_scope=scope,
     )
 
     assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert parameter.structured_output_schema_path is None
-    assert parameter.run_indexing_preflight is True
+    assert parameter.document_search_scope == scope
     assert parameter.agent_call_cwd == run_worktree.resolve()
     assert f"- {{{{work-root}}}} = {run_worktree.resolve()}" in parameter.prompt
     assert "base-commit" in parameter.prompt
@@ -120,13 +122,15 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
 ) -> None:
     """refactor builder が canonical schema と要求された実行設定を使うことを確認する。"""
     target_path = editing_run_worktree / "README.md"
+    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
     review = build_realization_refactor_fork_file_review_and_fix_parameter(
-        target_path, editing_run_worktree
+        target_path, editing_run_worktree, document_search_scope=scope
     )
     summary = build_realization_refactor_fork_change_summary_parameter(
         "fork-commit",
         "summary-head-commit",
         editing_run_worktree,
+        document_search_scope=scope,
     )
 
     assert review.file_access_mode == FileAccessMode.REALIZATION_WRITE
@@ -137,7 +141,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert (
         review.structured_output_schema_path.resolve() == review_schema_path.resolve()
     )
-    assert review.run_indexing_preflight is True
+    assert review.document_search_scope == scope
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in review.prompt
     assert str(target_path.resolve()) in review.prompt
     assert "調査開始時点ですでに解消されている問題" in review.prompt
@@ -175,7 +179,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert (
         summary.structured_output_schema_path.resolve() == summary_schema_path.resolve()
     )
-    assert summary.run_indexing_preflight is True
+    assert summary.document_search_scope == scope
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in summary.prompt
     assert "# oracle and realization basic" in summary.prompt
     assert "# routing policy" in summary.prompt

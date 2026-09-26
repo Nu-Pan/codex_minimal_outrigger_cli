@@ -345,17 +345,39 @@ def _indexing_body(
     logger: SubcommandLogger,
     fields: dict[str, object],
 ) -> list[str]:
-    """indexing の実行結果と INDEX 更新結果を fallback report に残す。"""
+    """文書検索索引の同期実績と失敗を fallback report に残す。"""
+    sync = fields.get("sync_result")
+    sync_fields = sync if isinstance(sync, dict) else {}
+    elapsed = sync_fields.get("elapsed_seconds", fields.get("elapsed_seconds"))
     return [
         "# cmoc indexing report",
         _outcome_sentence(classification),
-        "## インデクシング",
+        "## 文書検索索引の同期",
         f"- 実行状態: `{_operation_status(fields.get('indexing_status'), classification)}`",
-        f"- 更新した INDEX.md: `{_field_status(fields.get('updated_indexes'))}`",
-        f"- commit 作成処理: `{_operation_status(fields.get('commit_status'), classification)}`",
-        f"- 作成した commit: `{_field_status(fields.get('commit_id'))}`",
+        f"- 実効閲覧範囲: `{_field_status(fields.get('scope_identity'))}`",
+        f"- 索引 identity: `{_field_status(fields.get('index_identity'))}`",
+        f"- 許可文書数: `{_field_status(sync_fields.get('document_count'))}`",
+        f"- chunk 数: `{_field_status(sync_fields.get('chunk_count'))}`",
+        f"- 追加: `{_field_status(sync_fields.get('added'))}`",
+        f"- 変更: `{_field_status(sync_fields.get('changed'))}`",
+        f"- 削除: `{_field_status(sync_fields.get('deleted'))}`",
+        f"- 空白化: `{_field_status(sync_fields.get('blanked'))}`",
+        f"- 埋め込み再利用: `{_field_status(sync_fields.get('reused_embeddings'))}`",
+        f"- 所要秒数: `{_field_status(elapsed)}`",
+        f"- 失敗 code: `{_field_status(fields.get('failure_code'))}`",
+        f"- 失敗理由: `{_field_status(fields.get('failure_reason'))}`",
+        f"- 次の操作: `{_indexing_next_action(fields)}`",
         *_standard_tail(classification, result, logger),
     ]
+
+
+def _indexing_next_action(fields: dict[str, object]) -> str:
+    """確定した同期状態から、必要な次の操作だけを示す。"""
+    if fields.get("indexing_status") in {"updated", "unchanged"}:
+        return "なし"
+    if fields.get("failure_code") == "NOT_READY":
+        return "文書検索の tuning と固定資材を準備する"
+    return "診断用ログと失敗理由を確認する"
 
 
 def _session_fork_body(

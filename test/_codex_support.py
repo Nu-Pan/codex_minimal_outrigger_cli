@@ -35,7 +35,7 @@ def codex_parameter(
 ) -> AgentCallParameter:
     """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
     return AgentCallParameter(
-        agent_call_kind="build_indexing_index_entry_parameter",
+        agent_call_kind="build_feedback_normalize_issue_parameter",
         file_access_mode=mode,
         prompt="prompt",
         structured_output_schema_path=None,

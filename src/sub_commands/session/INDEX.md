@@ -47,17 +47,16 @@
 # `join.py`
 
 ## Summary
-- 現在の session branch を記録済み home branch に merge し、session の完了と安全な branch cleanup まで行う CLI 処理を担う。
-- join 固有の競合解消呼び出しも含むため、merge、session state 更新、完了後 cleanup の実装を調べる入口となる。
+- `cmoc session join` の実行を調整し、active session の事前条件を確認して home branch へ merge し、session state を joined に更新します。
+- 内容競合時は専用の call builder と共有の競合解消処理を呼び出し、merge 済みと確認できた場合に session branch を削除します。
 
 ## Read this when
-- active session を home branch に取り込んで完了するコマンドの動作や変更箇所を確認するとき。
-- session join 中の競合解消、joined state への更新、条件付き branch cleanup を調べるとき。
+- session join の事前条件、branch 切り替えと merge、state 更新、branch cleanup の動作を変更・調査するとき。
+- join から競合解消 agent call を起動し、その結果を join の処理へ反映する流れを調べるとき。
 
 ## Do not read this when
-- session branch の新規作成と state 初期化を調べるときは、fork の処理へ進む。
-- home branch に merge せず session を破棄する動作を調べるときは、abandon の処理へ進む。
-- session lifecycle を介さない一般的な Git merge の動作を調べるとき。
+- session branch の作成が目的なら fork の処理を、merge せずに session を破棄するのが目的なら abandon の処理を確認するとき。
+- 競合解消用 prompt や call parameter の構築だけが対象なら専用 builder を、Git の競合適用・stage・commit の共通処理だけが対象なら共有の競合解消 runtime を確認するとき。
 
 ## hash
-- 3d6413b6e1023842a5a07d50f4a24357af4c697fa6e2db14f327bdd35546c614
+- 9c7e55d4220160056c190c86b4a451f07bbd6a25add9334510b5543e3d8ee473

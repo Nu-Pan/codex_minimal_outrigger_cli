@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .runtime_cli import start_subcommand_step
 from .runtime_doctor import run_doctor_preprocess
+from .runtime_document_search_scope import oracle_doc_scope
 from .runtime_errors import CmocError
 from .runtime_git import (
     branch_exists,
@@ -22,17 +23,11 @@ from .runtime_paths import repo_root, work_root
 from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
 from .runtime_results import TerminalResult
-from .runtime_run import (
-    delete_run_process_id,
-    run_process_tracking,
-    stop_tracked_codex_children,
-    write_run_process_id,
-)
+from .runtime_run import stop_tracked_codex_children
 from .runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
     commit_work_unit,
-    refresh_indexes,
     tree_changes,
     unexpected_run_paths,
 )
@@ -221,9 +216,9 @@ def _merge_run_body(
                 run_head,
                 session_head_before_join,
                 context.session_worktree,
+                document_search_scope=oracle_doc_scope(),
                 feedback_report_cut_path=feedback_report_cut_path,
             ),
-            refresh_indexes=lambda: _refresh_merge_indexes(context, warnings),
             purpose="run join conflict resolution",
         )
         run_join_commit = head_commit(context.session_worktree)
@@ -246,7 +241,6 @@ def _merge_run_body(
             last_joined_apply_fork_commit = context.run_fork_commit
             hook_result = "session.last_joined_apply_fork_commit updated"
     try:
-        _refresh_join_indexes(context, warnings)
         sync_refactor_state(context.session_worktree)
         state_sync_commit = commit_work_unit(
             context.session_worktree,
@@ -264,42 +258,6 @@ def _merge_run_body(
         last_joined_apply_fork_commit,
         resolution,
     )
-
-
-def _refresh_merge_indexes(context: EditingRunContext, warnings: list[str]) -> None:
-    """merge 進行中の INDEX を更新し、差分を merge commit に含める。"""
-    with run_process_tracking(context.repo, context.session_id):
-        write_run_process_id(context.repo, context.session_id, os.getpid())
-        try:
-            refresh_indexes(context.session_worktree, commit=False)
-        finally:
-            try:
-                warnings.extend(
-                    stop_tracked_codex_children(context.repo, context.session_id) or []
-                )
-            finally:
-                delete_run_process_id(context.repo, context.session_id)
-
-
-def _refresh_join_indexes(
-    context: EditingRunContext,
-    warnings: list[str],
-) -> None:
-    """post-merge の INDEX 生成を追跡し、INDEX 外の副作用を拒否する。"""
-    # join 自身が起動する Codex を run process tracking に登録する。
-    with run_process_tracking(context.repo, context.session_id):
-        write_run_process_id(context.repo, context.session_id, os.getpid())
-        try:
-            refresh_indexes(context.session_worktree, commit=True)
-        finally:
-            try:
-                warnings.extend(
-                    stop_tracked_codex_children(context.repo, context.session_id) or []
-                )
-            finally:
-                delete_run_process_id(context.repo, context.session_id)
-    # INDEX commit が拾わない Codex の副作用を state sync commit へ混入させない。
-    require_clean_worktree(context.session_worktree)
 
 
 def _revert_unexpected_run_paths(
@@ -383,6 +341,13 @@ def cleanup_joined_run(
         except Exception:
             warnings.append("run worktree cleanup failed")
             return "preserved"
+    try:
+        warnings.extend(
+            stop_tracked_codex_children(context.repo, context.session_id) or []
+        )
+    except Exception:
+        warnings.append("run child process cleanup failed")
+        return "preserved"
     try:
         removal = remove_worktree(context.repo, context.run_worktree)
     except Exception:

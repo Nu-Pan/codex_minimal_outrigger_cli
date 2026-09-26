@@ -56,7 +56,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
         )
     )
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         schema,
@@ -78,7 +78,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     call_logs = [json.loads(path.read_text()) for path in call_paths]
     assert len(call_logs) == 2
     assert {log["agent_call_kind"] for log in call_logs} == {
-        "build_indexing_index_entry_parameter"
+        "build_feedback_normalize_issue_parameter"
     }
     assert len({log["agent_call_id"] for log in call_logs}) == 1
     assert len({log["codex_call_id"] for log in call_logs}) == 2
@@ -161,7 +161,7 @@ def test_run_codex_exec_corrects_non_json_numeric_constant(
 
     result = run_codex_exec(
         AgentCallParameter(
-            "build_indexing_index_entry_parameter",
+            "build_feedback_normalize_issue_parameter",
             FileAccessMode.READONLY,
             "prompt",
             schema,
@@ -234,7 +234,7 @@ def test_run_codex_exec_corrects_declared_postcondition(
 
     result = run_codex_exec(
         AgentCallParameter(
-            "build_indexing_index_entry_parameter",
+            "build_feedback_normalize_issue_parameter",
             FileAccessMode.REALIZATION_WRITE,
             "prompt",
             schema,
@@ -289,7 +289,7 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
     with pytest.raises(CmocError, match="Structured Output 検証") as error:
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
@@ -363,7 +363,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
     with pytest.raises(CmocError, match="作業成果物を変更"):
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.REALIZATION_WRITE,
                 "prompt",
                 schema,
@@ -407,7 +407,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     with pytest.raises(KeyboardInterrupt):
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
@@ -480,7 +480,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     schema = tmp_path / f"{name}_schema.json"
     schema.write_text("{}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         schema,
@@ -532,7 +532,7 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
     with pytest.raises(CmocError, match="Structured Output schema"):
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
@@ -589,7 +589,7 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -665,7 +665,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
     with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました") as error:
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
@@ -723,7 +723,7 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
 
     run_codex_exec(
         AgentCallParameter(
-            "build_indexing_index_entry_parameter",
+            "build_feedback_normalize_issue_parameter",
             FileAccessMode.REALIZATION_WRITE,
             "prompt",
             None,
@@ -753,7 +753,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
     fake_codex = bin_dir / "codex"
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -845,7 +845,7 @@ def test_run_codex_exec_stops_after_output_correction_limit(
     with pytest.raises(CmocError, match="Structured Output 検証") as error:
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
@@ -879,7 +879,7 @@ def test_run_codex_exec_stops_after_output_correction_limit(
     [diagnostic] = diagnostics
     call_logs = [json.loads(path.read_text()) for path in call_paths]
     assert diagnostic["event_schema_version"] == 1
-    assert diagnostic["agent_call_kind"] == "build_indexing_index_entry_parameter"
+    assert diagnostic["agent_call_kind"] == "build_feedback_normalize_issue_parameter"
     assert diagnostic["agent_call_id"] == call_logs[-1]["agent_call_id"]
     assert diagnostic["codex_call_id"] == call_logs[-1]["codex_call_id"]
     assert diagnostic["last_failure_stage"] == "schema_validation"

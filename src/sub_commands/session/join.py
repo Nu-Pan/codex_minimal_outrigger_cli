@@ -25,11 +25,10 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
-from commons.indexing import enable_indexing_preflight
+from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_merge_conflict import resolve_merge_conflicts, unmerged_paths
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_results import CodexExecCallable
-from commons.runtime_run_lifecycle import refresh_indexes
 
 _CodexExec = CodexExecCallable
 _GitRun = Callable[..., CommandResult]
@@ -37,7 +36,6 @@ _GitRun = Callable[..., CommandResult]
 
 def cmoc_session_join_impl() -> None:
     """CLI runtime を通して session join を実行する。"""
-    enable_indexing_preflight()
     run_cli_subcommand(
         _cmoc_session_join_body,
         run_codex_exec,
@@ -177,9 +175,11 @@ def resolve_session_join_conflict(
     resolution = resolve_merge_conflicts(
         root,
         build_session_join_conflict_resolution_parameter(
-            session_head_commit, home_head_commit, root
+            session_head_commit,
+            home_head_commit,
+            root,
+            document_search_scope=oracle_doc_scope(),
         ),
-        refresh_indexes=lambda: refresh_indexes(root, commit=False),
         codex_exec=codex_exec,
         purpose="session join conflict resolution",
     )

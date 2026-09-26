@@ -13,7 +13,7 @@ from oracle.acp_builder.tui.launch_tui import (
 
 import acp.builder.tui.launch_tui as tui_launch_module
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
-from basic.acp import FileAccessMode
+from basic.acp import DocumentSearchScope, FileAccessMode
 
 
 @pytest.mark.parametrize(
@@ -33,14 +33,17 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
-    parameter = build_tui_launch_tui_parameter(original_prompt)
+    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
+    parameter = build_tui_launch_tui_parameter(
+        original_prompt, document_search_scope=scope
+    )
 
     assert parameter.agent_call_kind == "build_tui_launch_tui_parameter"
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.enable_editor_input_handoff_mcp is True
-    assert parameter.run_indexing_preflight is True
+    assert parameter.document_search_scope == scope
     complete_prompt = parameter.prompt
     for heading in (
         "# oracle and realization basic",

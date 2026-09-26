@@ -28,7 +28,7 @@ from commons.runtime_refactor import (
 )
 
 _EXCLUDED_ROOTS = {".git", ".agents", ".codex", ".cmoc", "memo"}
-_EXCLUDED_NAMES = {"AGENTS.md", "INDEX.md"}
+_EXCLUDED_NAMES = {"AGENTS.md"}
 
 
 def _make_nested_repo(path: Path) -> Path:
@@ -143,21 +143,21 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (ignored / "tracked.txt").write_text("tracked ignored\n")
     (ignored / "untracked.txt").write_text("untracked ignored\n")
     (root / "visible.txt").write_text("visible\n")
-    excluded_names = (
+    special_names = (
         "AGENTS.md",
         "INDEX.md",
         "oracle/AGENTS.md",
         "oracle/INDEX.md",
     )
-    for relative in excluded_names:
-        (root / relative).write_text("excluded from inventory\n")
+    for relative in special_names:
+        (root / relative).write_text("name classification fixture\n")
     run_git(
         root,
         "add",
         "-f",
         ".gitignore",
         "ignored/tracked.txt",
-        *excluded_names,
+        *special_names,
     )
     run_git(root, "commit", "-m", "add ignored fixture")
 
@@ -177,7 +177,9 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert "visible.txt" in actual[1]
     assert "nested/kept.outer" in actual[1]
     assert "nested/dropped.nested" not in actual[1]
-    assert set(excluded_names).isdisjoint(actual[0] | actual[1])
+    assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
+    assert "INDEX.md" in actual[1]
+    assert "oracle/INDEX.md" in actual[0]
 
     state = sync_refactor_state(root)
     assert set(state) == expected[0] | expected[1]

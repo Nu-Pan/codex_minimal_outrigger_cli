@@ -31,6 +31,7 @@ from typing import Any
 
 import click
 import pytest
+from _cli_support import terminal_primary_report
 from _codex_support import (
     codex_arg_value,
     codex_override_config,
@@ -39,7 +40,6 @@ from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
 from typer.main import get_command
 
-from commons.indexing import commit_index_updates, render_index_entry
 from commons.runtime_config import write_config
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
 from commons.runtime_editor_input_handoff_protocol import (
@@ -187,35 +187,6 @@ explicit prompt exactly.
     run_git(root, "commit", "-m", "add deterministic agent instructions")
 
 
-def _write_fresh_index_fixture(root: Path) -> None:
-    """TUI 本体と無関係な INDEX.md を、実推論なしで最新状態へ準備する。"""
-
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # {{work-root}}/oracle/doc/app_spec/indexing.md
-    # indexing 末端の実推論は非対話 scenario で検証する。TUI case は valid な
-    # INDEX.md を直接用意し、TUI 自身の実推論を Codex callback で置き換えない。
-    entry = {
-        "summary": ["Minimal production-path test fixture."],
-        "read_this_when": ["Testing the isolated production path."],
-        "do_not_read_this_when": ["Working outside this fixture."],
-    }
-    oracle_index = root / "oracle" / "INDEX.md"
-    oracle_index.write_text(
-        render_index_entry(root, root / "oracle" / "spec.md", entry)
-    )
-    root_index = root / "INDEX.md"
-    root_index.write_text(
-        "\n\n".join(
-            [
-                render_index_entry(root, root / "README.md", entry).rstrip(),
-                render_index_entry(root, root / "oracle", entry).rstrip(),
-            ]
-        )
-        + "\n"
-    )
-    commit_index_updates(root, [oracle_index, root_index])
-
-
 def _source_codex_home() -> Path:
     """実経路テスト開始時の Codex 認証情報の配置元を返す。"""
     configured = os.environ.get("CODEX_HOME")
@@ -341,7 +312,8 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     assert override["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
     assert "features" not in override
     if tui:
-        assert argv[argv.index("--enable") + 1] == "hooks"
+        if "--enable" in argv:
+            assert argv[argv.index("--enable") + 1] == "hooks"
     else:
         assert "--enable" not in argv
     assert override["model_reasoning_effort"] == call_config.reasoning_effort
@@ -612,23 +584,23 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         root, "ls-files", ".cmoc/gt/realization/refactor/state.json"
     ).stdout.strip()
 
-    # indexing は実推論 response を INDEX.md と commit に反映する。
+    # tuning 未確定では明示同期が NOT_READY を報告し、Codex call や commit を作らない。
+    executed_commands.add(("indexing",))
     before_indexing_calls = _codex_call_logs(root)
-    run_production("indexing")
-    indexing_calls = _codex_call_logs(root) - before_indexing_calls
-    assert indexing_calls
-    latest_output_by_purpose: dict[str, Path] = {}
-    for path in sorted(indexing_calls):
-        payload = _assert_real_codex_call(path)
-        purpose = str(payload.get("purpose", ""))
-        assert purpose.startswith("indexing index entry for ")
-        latest_output_by_purpose[purpose] = Path(str(payload["output_path"]))
-    # LLM 品質は non-goal。失敗 attempt の log も残るため、retry 後の最終応答を検証する。
-    for output_path in latest_output_by_purpose.values():
-        assert output_path.is_file()
-        assert json.loads(output_path.read_text())
-    assert (root / "INDEX.md").is_file()
-    assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
+    before_indexing_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    indexing_result = subprocess.run(
+        [str(cmoc), "indexing"],
+        cwd=root,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=_PRODUCTION_COMMAND_TIMEOUT,
+        check=False,
+    )
+    assert indexing_result.returncode == 1
+    assert "NOT_READY" in terminal_primary_report(indexing_result.stderr).read_text()
+    assert _codex_call_logs(root) == before_indexing_calls
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == before_indexing_head
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
     # active session 上の各 workload を検証する。
@@ -827,7 +799,6 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     _write_real_path_config(root)
     cmoc, environment, codex_home = _production_environment(tmp_path)
     _run_without_codex_call(cmoc, root, environment, "doctor")
-    _write_fresh_index_fixture(root)
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     status_before = run_git(root, "status", "--short").stdout
     calls_before = _codex_call_logs(root)

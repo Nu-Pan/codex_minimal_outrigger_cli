@@ -2,6 +2,7 @@
 
 import json
 import math
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -10,6 +11,7 @@ from oracle.other.cmoc_config import (
     CodexModelProviderConfig,
     JsonTomlValue,
 )
+from oracle.other.document_search import DocumentSearchConfig
 
 from config.cmoc_config import (
     CmocConfig,
@@ -67,6 +69,47 @@ def _config_int(value: Any) -> int:
     return value
 
 
+def _document_search_config(value: Any) -> DocumentSearchConfig | None:
+    """検索 tuning の全 field を検証し、未設定を None のまま保つ。"""
+    if value is None:
+        return None
+    if isinstance(value, DocumentSearchConfig):
+        data = asdict(value)
+    elif isinstance(value, dict):
+        data = value
+    else:
+        raise TypeError("document_search must be an object or null")
+    names = {field.name for field in fields(DocumentSearchConfig)}
+    if data.keys() != names:
+        raise TypeError("document_search fields are incomplete or unknown")
+    for name in (
+        "chunk_tokens",
+        "candidate_count",
+        "embedding_context_tokens",
+        "reranker_context_tokens",
+        "batch_tokens",
+        "threads",
+    ):
+        if type(data[name]) is not int or data[name] <= 0:
+            raise TypeError(f"document_search.{name} must be a positive integer")
+    overlap = data["chunk_overlap_tokens"]
+    if type(overlap) is not int or not 0 <= overlap < data["chunk_tokens"]:
+        raise TypeError("document_search.chunk_overlap_tokens is invalid")
+    for name in (
+        "startup_timeout_seconds",
+        "request_timeout_seconds",
+        "shutdown_grace_seconds",
+    ):
+        number = data[name]
+        if type(number) not in (int, float) or not math.isfinite(number) or number <= 0:
+            raise TypeError(f"document_search.{name} must be finite and positive")
+    if data["embedding_context_tokens"] < data["chunk_tokens"] + 2:
+        raise TypeError("embedding context must include a chunk and special tokens")
+    if data["reranker_context_tokens"] < data["chunk_tokens"]:
+        raise TypeError("reranker context cannot be smaller than a chunk")
+    return DocumentSearchConfig(**data)
+
+
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     """正本 config 型を、永続化 JSON の object 境界へ変換する。"""
     model_providers: dict[str, dict[str, dict[str, JsonTomlValue]]] = {}
@@ -92,6 +135,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "reasoning_effort": _reasoning_effort_name(call_config.reasoning_effort),
         }
 
+    search_config = _document_search_config(config.document_search)
     return {
         "num_parallel": _config_int(config.num_parallel),
         "codex": {
@@ -99,6 +143,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "agent_calls": agent_calls,
             "num_try_falv_recovery": _config_int(config.codex.num_try_falv_recovery),
         },
+        "document_search": asdict(search_config) if search_config is not None else None,
     }
 
 
@@ -232,6 +277,7 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
 
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
+            document_search=_document_search_config(data.get("document_search")),
             codex=CmocConfigCodex(
                 model_providers=model_providers,
                 agent_calls=agent_calls,

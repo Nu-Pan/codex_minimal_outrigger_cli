@@ -1,102 +1,73 @@
-"""work root の INDEX.md を更新して commit する CLI 入口を提供する。"""
+"""現在の work-root の文書検索索引を明示的に同期する。"""
 
-from pathlib import Path
+import hashlib
+import json
+import time
+from dataclasses import asdict
 
 from cmoc_runtime import (
     TerminalResult,
-    head_commit,
-    require_clean_worktree,
-    require_cmoc_ignored,
+    load_config,
     run_cli_subcommand,
-    run_codex_exec,
     start_subcommand_step,
     work_root,
 )
-from commons.indexing import (
-    CodexExec,
-    commit_index_updates,
-    enable_indexing_preflight,
-    indexing_lock,
-    update_indexes,
-)
+from commons.runtime_document_search import DocumentSearch, SearchError
+from commons.runtime_document_search_scope import oracle_doc_scope
+from commons.runtime_errors import CmocError
 from commons.runtime_primary_report import update_primary_report_fields
 
 
 def cmoc_indexing_impl() -> None:
-    """CLI runtime を通して indexing subcommand を実行する。"""
-    enable_indexing_preflight()
+    """doctor 後、既存差分に触れず文書検索索引を同期する。"""
     run_cli_subcommand(
         _cmoc_indexing_body,
-        codex_exec=run_codex_exec,
-        pre_log_check=require_indexing_cli_preconditions,
         command_name="indexing",
         command_argv=["cmoc", "indexing"],
-        total_steps=3,
-        # `{{work-root}}/oracle/doc/app_spec/sub_command/indexing.md`
-        # main worktree ではなく current worktree が clean であることを求める。
+        total_steps=2,
         use_work_root_runtime=True,
     )
 
 
-def _cmoc_indexing_body(
-    codex_exec: CodexExec | None = None,
-) -> TerminalResult:
-    """現在の work root に対して INDEX.md の maintenance を実行する。"""
+def _cmoc_indexing_body() -> TerminalResult:
+    """共通検索処理の同期結果を primary report に渡す。"""
     root = work_root()
-    with indexing_lock(root):
-        commit_before_indexing = head_commit(root)
-        start_subcommand_step(2, "インデクシングを明示的に実行", "run indexing")
-        update_primary_report_fields(
-            indexing_status="started",
-            updated_indexes=[],
-        )
-        try:
-            updated = update_indexes(root, codex_exec)
-        except KeyboardInterrupt:
-            update_primary_report_fields(indexing_status="interrupted")
-            raise
-        except BaseException:
-            update_primary_report_fields(indexing_status="failed")
-            raise
-        updated_indexes = [str(path.relative_to(root)) for path in updated]
-        update_primary_report_fields(
-            indexing_status="completed",
-            updated_indexes=updated_indexes,
-        )
-        start_subcommand_step(
-            3, "インデクシング差分を commit", "commit indexing changes"
-        )
-        update_primary_report_fields(
-            commit_status="not_needed" if not updated else "started"
-        )
-        try:
-            commit_index_updates(root, updated)
-        except KeyboardInterrupt:
-            update_primary_report_fields(commit_status="interrupted")
-            raise
-        except BaseException:
-            update_primary_report_fields(commit_status="failed")
-            raise
-        commit_after_indexing = head_commit(root)
-    commit_id = (
-        commit_after_indexing
-        if commit_after_indexing != commit_before_indexing
-        else None
-    )
     update_primary_report_fields(
-        commit_id=commit_id,
-        commit_status="completed" if updated else "not_needed",
+        work_root=str(root),
+        indexing_status="not_started",
+        index_identity=None,
+        sync_result=None,
+    )
+    start_subcommand_step(2, "文書検索索引を同期", "synchronize document search")
+    scope = oracle_doc_scope()
+    scope_identity = hashlib.sha256(
+        json.dumps(asdict(scope), sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    update_primary_report_fields(scope_identity=scope_identity)
+    search = DocumentSearch(root, scope, load_config(root).document_search)
+    update_primary_report_fields(indexing_status="started")
+    started = time.monotonic()
+    try:
+        result = search.synchronize()
+    except SearchError as exc:
+        update_primary_report_fields(
+            indexing_status="failed",
+            failure_code=exc.code,
+            failure_reason=str(exc),
+            elapsed_seconds=time.monotonic() - started,
+        )
+        raise CmocError(
+            "文書検索索引の同期に失敗しました。",
+            ["文書検索の設定、資材、許可対象ファイルを確認してください。"],
+            f"code: {exc.code}\nreason: {exc}",
+        ) from exc
+    finally:
+        search.close()
+    update_primary_report_fields(
+        indexing_status=result.status,
+        index_identity=result.identity,
+        sync_result=asdict(result),
     )
     return TerminalResult(
-        details=(
-            ("updated_index_count", len(updated)),
-            ("commit_id", commit_id),
-            ("updated_indexes", updated_indexes),
-        )
+        details=(("index_identity", result.identity), ("sync_result", asdict(result)))
     )
-
-
-def require_indexing_cli_preconditions(root: Path) -> None:
-    """indexing CLI 実行前に worktree の安全条件を検査する。"""
-    require_cmoc_ignored(root)
-    require_clean_worktree(root)

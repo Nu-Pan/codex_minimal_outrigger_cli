@@ -413,8 +413,8 @@ def test_doctor_preserves_preexisting_index_flags(
     assert run_git(root, "ls-files", "-v", "README.md").stdout == before
 
 
-def test_doctor_preserves_preexisting_intent_to_add_index_entry(tmp_path: Path) -> None:
-    """doctor が intent-to-add の index entry を通常の未追跡へ戻さない。"""
+def test_doctor_preserves_preexisting_intent_to_add_index_file(tmp_path: Path) -> None:
+    """doctor が intent-to-add の通常 file を未追跡へ戻さない。"""
 
     root = make_repo(tmp_path)
     path = root / "new.txt"
@@ -517,7 +517,7 @@ def test_doctor_does_not_commit_preexisting_staged_config_change(
 def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`.cmoc/gu` は repo root、tracked runtime は current worktree で修復する。"""
+    """両 worktree の非追跡保証と current の tracked runtime を修復する。"""
 
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-doctor"
@@ -527,7 +527,7 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
     result = run_doctor(linked)
 
     assert result.exit_code == 0
-    assert not (linked / ".gitignore").exists()
+    assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
@@ -537,7 +537,7 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
             cwd=linked,
             check=False,
         ).returncode
-        != 0
+        == 0
     )
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert run_git(root, "ls-files", "--", ".agents").stdout == ""
@@ -608,9 +608,9 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
         "reasoning_effort": "CUSTOM-EFFORT",
     }
     default_call = CmocConfig().codex.agent_calls[
-        "build_indexing_index_entry_parameter"
+        "build_feedback_normalize_issue_parameter"
     ]
-    assert data["codex"]["agent_calls"]["build_indexing_index_entry_parameter"] == {
+    assert data["codex"]["agent_calls"]["build_feedback_normalize_issue_parameter"] == {
         "model_provider": default_call.model_provider,
         "model": default_call.model,
         "reasoning_effort": default_call.reasoning_effort,

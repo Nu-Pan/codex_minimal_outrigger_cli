@@ -15,36 +15,31 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- 共通 runtime API の集約点として、責務別モジュールの関数・型・定数を再公開する。公開面を確認する場合はここが入口で、各機能の処理本体は個別の責務モジュールにある。
+- 複数の実行経路で共有する runtime API の集約窓口で、設定・Git・Codex 実行・状態管理などの機能を再公開する。
 
 ## Read this when
-- 共通 import 経由で利用できる runtime API の公開範囲を確認・変更するとき。
-- 複数の呼び出し元が使う API を集約する公開面を調べるとき。
+- 共有 runtime API の公開範囲や、各実行経路が使う共通機能を確認するとき。
 
 ## Do not read this when
-- 特定の runtime 機能の動作や修正箇所を調べるときは、その処理を実装する責務別モジュールを直接読む。
-- サブコマンド固有のフローや互換 import 経路の維持が論点なら、それぞれの呼び出し元や互換用の入口を直接読む。
+- 特定の機能の内部動作や変更箇所を調べるときは、その機能を実装する下位モジュールを直接読む。
 
 ## hash
-- 1b38a5291744c19cf1b1de0fe1fd56b23c8b5065b5671840691461780d401ec9
+- 1ec72860ce36bfc1b0297b91db09cb85700ed32add3ae7215d7e10387ed46550
 
-# `indexing.py`
+# `document_search_worker`
 
 ## Summary
-- INDEX.md 更新の共通 lifecycle を実装し、対象の列挙、既存 entry の再利用と鮮度判定、必要な entry の生成・書き込みを担う。
-- 深さ順の更新、失敗時の復元、排他制御、自動 preflight と INDEX.md 差分の commit をつなぐ実行経路である。
+- Python が許可した文書や検索語を受け取り、固定された Node 推論環境で文書・クエリの埋め込みと候補文書の再ランキングを行う worker と、その配布依存を担う。
+- 推論要求の検証、トークン上限に基づくチャンク分割、ベクトルとスコアの検査、親プロセス終了の監視を含む。
 
 ## Read this when
-- 共通インデクシング処理の対象列挙、更新順序、entry 生成の並列制御を調べる・変更するとき。
-- entry の再利用と鮮度判定、更新失敗時の復元、排他制御、commit、自動 preflight との接続を調べる・変更するとき。
+- 埋め込みや再ランキングの Node 側処理、チャンク分割、推論要求・応答の検証、worker の依存パッケージを変更・調査するとき。
 
 ## Do not read this when
-- entry 生成 call に渡す prompt 文面や起動パラメータ自体を調べる・変更するときは、それらを構築する専用実装を直接読む。
-- インデクシングの意味要件や実行条件を変更・解釈するときは正本仕様を直接読む。
-- 明示的な indexing コマンドの入力条件や利用手順だけを確認するときは、そのサブコマンド仕様を直接読む。
+- 対象文書の列挙や閲覧範囲、索引同期・検索結果の組み立て、Python 側のプロセス起動・資材検証・キャンセル・期限管理を調べるときは、それらを担う Python 側の文書検索処理から確認する。
 
 ## hash
-- 4ba775165c440665c11e7e25f5005aeb4fd35e013cccda0e900ef6a2893f9c39
+- 6d1cc79a2776a3d21bd8c5a88cf8ef4f2169ab573c57928452c670d786c4941b
 
 # `prompt_editor_input.py`
 
@@ -66,19 +61,19 @@
 # `runtime_cli.py`
 
 ## Summary
-- 最外側の CLI サブコマンドの共通実行ライフサイクルを統括します。起動前の検査や任意の前処理、実装の呼び出し、終了結果の確定、ログ・レポート・通知、エラー処理と実行コンテキストの後始末を扱います。
-- サブコマンド共通の実行順序や終了時の振る舞いを調べる際の入口です。個別処理ではなく、各コマンドを包む実行境界の責務を確認できます。
+- 全 CLI サブコマンド共通の実行開始から終端処理までを統括し、前処理、診断ログ、フィードバック収集、例外・中断の扱い、終端結果の確定と通知を調整する。
+- 個々のサブコマンドの処理内容ではなく、共通の実行ライフサイクルやその終端結果への反映を変更するときの入口。
 
 ## Read this when
-- サブコマンドの起動前処理から終了処理までの順序、戻り値の扱い、成功・中断・失敗時の結果確定や表示を変更・調査するとき。
-- 共通ログや feedback の開始・終了、主レポート保存、TUI の中断扱い、進行表示、作業ディレクトリ検査、終了通知との連携を確認するとき。
+- サブコマンド共通の初期化、実装呼び出し、後処理の順序やコンテキスト管理を変更するとき。
+- 例外やユーザー中断の分類、進行状況の記録、終端結果の統合・表示・通知など、複数コマンドに共通する振る舞いを変更するとき。
 
 ## Do not read this when
-- 特定コマンドの業務処理や実装内容だけを変更・調査するときは、そのコマンドの実装へ直接進んでください。
-- ログ形式、feedback の収集・保存、主レポート生成、doctor 前処理、エラー表現、通知の個別仕様だけを調べるときは、それぞれを担当する専用コンポーネントへ直接進んでください。
+- 特定サブコマンドの処理や設定だけを変更するときは、そのコマンドの実装から確認する。
+- ログ記録、エラー表現、レポート保存、フィードバック収集、TUI 起動後の復旧や通知など、個別の共通機能の内部だけを変更し、この実行ライフサイクルとの連携に影響しないときは、その機能の担当実装から確認する。
 
 ## hash
-- 90502962f77e6933a57773773e9cc1c27634c194964c56afca4406d0faab6fbf
+- 5acdf958750e735c0e4d6cfd32396d12c341d68db7750117edf2ad6cb5f1d3a2
 
 # `runtime_codex.py`
 
@@ -132,40 +127,23 @@
 ## hash
 - dbc22241cdd8af0da9bd7074e31f3617345bcf1035252f3a0ed0d40cce7b117e
 
-# `runtime_codex_preflight.py`
-
-## Summary
-- Codex exec と TUI の呼び出し前に、設定された INDEX 更新 preflight を挟む共通実行境界を提供する。
-- 再入抑止とロックの下で preflight を実行し、exec では本体起動直前の通知を呼び出してから実行処理へ委譲する。
-
-## Read this when
-- Codex exec／TUI 経路で INDEX 更新 preflight が起動する条件や実行 root、再入抑止・直列化の仕組みを調べたり変更したりするとき。
-- preflight の登録・解除や、exec 本体の直前に呼び出し元へ通知する境界を調べたり変更したりするとき。
-
-## Do not read this when
-- INDEX 対象の探索、entry の生成・鮮度確認、更新内容の書き込みや commit を調べたり変更したりするときは、それらを担う indexing lifecycle の実装を読む。
-- Codex subprocess の起動方法や exec／TUI 固有の実行動作を調べたり変更したりするときは、各実行処理の実装を読む。
-
-## hash
-- ea72c61aa6a3ec3477625e6e39c0cc470f0b56a61209f2d456784eea2045ba15
-
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で、呼び出し単位の argv・環境を準備し、プロセス追跡と出力判定を担う。sandbox と設定の引数化、CODEX_HOME、schema の配置、JSONL からの session ID・失敗理由の判定をまとめて扱う。
+- Codex CLI の起動設定と実行結果の解釈を担い、call ごとの argv・環境変数の組み立て、子プロセスの追跡と終了、schema の配置、JSONL 出力の判定をまとめる。
+- 起動時と終了時に共有する subprocess 境界の処理を確認・変更するときの入口。
 
 ## Read this when
-- Codex CLI に渡す呼び出し単位の sandbox・設定・hook・MCP 引数や、CODEX_HOME と subprocess 環境の準備を調べるとき。
-- Codex subprocess の起動、中断、process group の停止、editing run の child tracking を調べるとき。
-- schema の配置や、stdout・stderr・JSONL からの session ID、診断、成功・quota・一時障害の判定を調べるとき。
+- agent call の sandbox、Codex CLI 設定や MCP 接続、CODEX_HOME・環境変数の組み立てを変更するとき。
+- editing run での Codex 子プロセス追跡、process group の停止や後始末を調べるとき。
+- schema の配置、出力 JSON・JSONL の読み取り、resume token や Codex call の成否判定を変更するとき。
 
 ## Do not read this when
-- Codex 呼び出し結果の検証・補正、retry、回復待ちや session 再開の流れを調べるときは、その実行制御を担う箇所を読む。
-- TUI の起動順序、call log や実行結果の保存を調べるときは、TUI の実行・記録を担う箇所を読む。
-- Codex CLI 呼び出しや回復に関する正本仕様を確認・変更するときは、実装ではなく該当する仕様を読む。
+- quota・一時障害の回復待ち、probe の共有、中断や待機時間の制御が対象なら、回復待ちの調整を担う実装から確認するとき。
+- 文書検索・feedback・editor input handoff の MCP サーバー内部の処理が対象で、Codex 起動時の接続設定を変更しないとき。
 
 ## hash
-- 3cda49a5c4fdac8f758e87dcd2d67da995c1e6635430851ee774ece9838fb364
+- 00bb11146fb8fd28740235ac15715210238cec63ae4e371767d881482c0244c3
 
 # `runtime_codex_recovery.py`
 
@@ -204,19 +182,19 @@
 # `runtime_config.py`
 
 ## Summary
-- 設定オブジェクトと永続 JSON の変換、値の検証、不正設定の利用者向けエラー化を担う。
-- 設定 JSON の読み書きと、既定設定の生成・既存設定の同期を調べる入口。
+- cmoc の実行時設定を JSON と設定オブジェクト間で変換し、検証、既定値の補完、読み書き、同期を担う。
+- Codex の provider・agent-call 設定や document-search tuning の永続化と、設定エラーの利用者向け処理を扱う。
 
 ## Read this when
-- 設定の保存・読み込み・同期の流れや、JSON と TOML の双方で扱える値、復元時の型検証を確認するとき。
-- 設定を利用する runtime 処理で、設定 JSON と実行時オブジェクトの受け渡しを調べるとき。
+- 設定 JSON の読み込み・保存・初期化や、不正値の検出と既定値の補完がどこで行われるか調べるとき。
+- Codex 設定や document-search tuning が JSON へ変換される際の値検証を確認するとき。
 
 ## Do not read this when
-- 設定項目の意味・型・既定値だけを確認または変更するときは、正本の設定定義を直接読む。
-- 設定ファイルの保存先や root 解決だけを変更するときは path 解決の実装を、一般的な runtime error の描画だけを変更するときは error 処理の実装を直接読む。
+- 設定項目の正本となる型や既定値そのものを確認するときは、設定定義を直接読む。
+- 設定ファイルの保存先の決まりや、各コマンドでの設定の使われ方を調べるときは、パス解決や呼び出し元の実装から確認する。
 
 ## hash
-- a457e807e76725701f62337ebeeb9a20f81ee490608cef1010c117ed9c3b9609
+- 823c8d3c8388e53ddd9c3348c9a18ad9538105f7d1b758aa51539e2a2662a2c3
 
 # `runtime_content.py`
 
@@ -238,19 +216,107 @@
 # `runtime_doctor.py`
 
 ## Summary
-- doctor preprocess の lifecycle を担い、Git common directory 単位の排他、index の退避・復元、設定と refactor state の同期、修復差分だけの commit をまとめる。
-- Git ignore 規則、.agents の追跡状態、不要な管理対象の除去、runtime state の追跡確認、feedback reporter の利用可否を修復処理に組み込む。
+- 各サブコマンドに共通する doctor preprocess の実行、修復ロック、管理パスの保証、runtime state の同期、reporter の事前検証、修復 commit を担います。複数 root と一時 Git index の退避・合成・復元を含む lifecycle の入口です。
 
 ## Read this when
-- doctor preprocess の並行実行、利用者の staged/unstaged 変更の保全、index の復元、修復 commit の範囲を調べる・変更する。
-- doctor preprocess が行う worktree / Git 修復や、設定・refactor state の同期呼び出し、feedback reporter 利用不可時の扱いを調べる・変更する。
+- doctor preprocess の処理順、複数 root への適用、失敗時の index 復元、修復差分だけを commit する動作を変更・調査するとき。
+- .cmoc/gu の非追跡保証、.agents の追跡保証、config または refactor state の同期、feedback reporter の事前検証が preprocess 全体でどう組み合わさるか確認するとき。
 
 ## Do not read this when
-- doctor コマンドの起動方法、進捗表示、結果や共通 CLI 処理を調べる・変更する場合。コマンド入口や CLI runtime から確認する。
-- 設定や refactor state の書式、読み書き、同期規則そのものを調べる・変更する場合。それぞれの同期実装から確認する。
+- config の検証・読み書き・同期だけを変更するときは runtime_config.py を確認してください。
+- refactor state の schema、entry 集合、同期規則だけを変更するときは runtime_refactor.py を確認してください。
+- 共通 Git 操作や ignore 規則の実装だけを変更するときは runtime_git.py を確認してください。
+- cmoc doctor の CLI 呼び出しやサブコマンド固有の表示・引数処理だけを変更するときは src/sub_commands/doctor.py と src/commons/runtime_cli.py を確認してください。
 
 ## hash
-- 47aa1a6d33f394de15f116746c342bff525e8b83b47332f7c35bf14b27b0498d
+- 02cb5143a64b19fb0db7e9c9e097b4e444c0049bbeaad7d1d198cac774a3babc
+
+# `runtime_document_search.py`
+
+## Summary
+- 許可された oracle/doc Markdown の安全な読取、索引の差分同期、ベクトル検索と再ランキングを担う検索コア。
+- 索引・cache の整合性や排他、期限、検索結果を返す前の原文確認を扱う。
+
+## Read this when
+- 許可文書の読取・同期、索引 identity、cache、候補検索や再ランキングの挙動を変更するとき。
+- 同期や検索中の排他、期限・取消、索引の解放、結果と現在の原文との整合性を調べるとき。
+
+## Do not read this when
+- 閲覧範囲の構築、正規化、許可判定の規則だけを変更するときは、範囲を扱うモジュールを直接読む。
+- stdio MCP の初期化、tool 公開、JSON-RPC、要求の取消・終了だけを変更するときは、MCP server の実装を直接読む。
+- Node worker の起動や推論資材の準備だけを変更するときは、worker・セットアップの実装を直接読む。検索の意味仕様を確認するときは正本仕様を読む。
+
+## hash
+- fcbf47608d06db9e5ff687df5b732fcf5b05250914d5d1df875b5692f1353b74
+
+# `runtime_document_search_mcp.py`
+
+## Summary
+- 固定された起動 context のもとで、文書検索 MCP の JSON-RPC 要求を受け付け、検索処理へ渡して応答する stdio server。要求の検証、結果の変換、取消と終了処理を担う。
+
+## Read this when
+- initialize・ping・tool discovery・tool call の JSON-RPC/MCP 処理や、引数・応答の扱いを変更するとき。
+- 起動引数から work root・閲覧範囲・検索設定を受け取る処理や、検索結果・失敗の MCP 応答への変換を変更するとき。
+- 通知、要求取消、stdin EOF、SIGTERM、stdout の protocol 出力を含む server の要求ライフサイクルを変更するとき。
+
+## Do not read this when
+- 許可文書の列挙・読取、scope 判定、差分同期、索引、候補検索、推論や再ランキングを変更するときは、検索処理本体から確認する。
+- 公開 tool の識別子・入力 schema・設定型・閲覧範囲型の契約を変更するときは、それらを定義する oracle の正本から確認する。
+- Codex 設定への MCP server の注入や call ごとの起動 context の組み立てを変更するときは、その設定を担う実装から確認する。
+
+## hash
+- 5d6841753907294b90cd4bb838a470515da4b8f735a69d67a851b0f4305576ca
+
+# `runtime_document_search_scope.py`
+
+## Summary
+- 信頼された呼び出し元が文書検索に渡す閲覧範囲について、標準範囲の用意、`DocumentSearchScope` の検証・正規化、文書の許可判定を担う共通補助です。
+
+## Read this when
+- 文書検索を呼び出す側の実効閲覧範囲を設定・変更するときや、許可・除外範囲の評価を確認するとき。
+- 追加の閲覧制限がない呼び出し元向けの標準範囲を確認するとき。
+
+## Do not read this when
+- 文書の走査、索引の同期・生成、検索処理が対象なら、それらを担う検索実装から確認してください。
+- `DocumentSearchScope` のデータ型や検索の有効化条件、正本仕様上の受け入れ条件を変更する場合は、それらの定義から確認してください。
+
+## hash
+- 2544c1eb167662bc018a45e94f967e0efca7e552d8714e3e52eb0ccf8877e19a
+
+# `runtime_document_search_setup.py`
+
+## Summary
+- 文書検索用の共有資材を非追跡領域に準備し、固定モデルと実行環境の検証後に利用可能な状態を公開するセットアップ入口です。
+
+## Read this when
+- 共有資材の配置・再構築、モデル取得時のサイズやチェックサム検証、実行環境の版確認、実モデルでの互換性検査、またはセットアップ結果の出力を変更・調査するとき。
+- セットアップ前に共有保存先の非追跡状態を確かめる処理の流れを追うとき。
+
+## Do not read this when
+- 文書の列挙・同期・索引・検索、検索範囲、MCP の要求処理を変更するときは、検索の実行側から確認してください。
+- Node worker の推論処理や配布資材そのものを変更するときは、それらの実装・資材を直接確認してください。
+- 採用するモデルや実行環境の識別情報、検索の意味仕様を変更するときは、それぞれの正本から確認してください。
+
+## hash
+- 1812b1903ea8289c885b4a0de0b36d8448d524471f2eb9c7a815a6650de8bbb5
+
+# `runtime_document_search_worker.py`
+
+## Summary
+- 文書検索用の固定資材と Node 実行環境の整合性を検証し、Python から推論プロセスを起動して、要求・期限・キャンセル・終了処理を扱う。
+- 推論プロセスとの受け渡しや資材検証など、Python 側の実行境界を変更するときの入口。
+
+## Read this when
+- 固定資材のハッシュ・版の照合、推論プロセスへの要求形式、FD 継承、タイムアウト・キャンセル時の停止と回収、応答処理を変更または調査するとき。
+- 検索処理の呼び出し元ではなく、推論プロセスの起動と管理の挙動を確認するとき。
+
+## Do not read this when
+- 文書の列挙・同期、索引や検索結果の処理、検索 API の挙動を調べるときは、検索処理本体から確認する。
+- モデルや Node 資材のダウンロード・配置・互換性プローブを調べるときは、資材準備処理から確認する。
+- チャンク分割、埋め込み、再順位付けなど Node 内の推論内容を変更するときは、Node worker の実装から確認する。
+
+## hash
+- 31890b29e05c7f35a091d5c03ee8ed8889f657080d687ea3b1cf45820f95fb99
 
 # `runtime_editor_input_handoff.py`
 
@@ -433,21 +499,22 @@
 # `runtime_git.py`
 
 ## Summary
-- Git の状態確認、branch・worktree の管理、status path の解析、作業 tree の snapshot と復元を担う共通境界。
-- Git ignore の検証・判定と、nested repository を考慮した oracle・realization file の列挙・分類をまとめ、複数の runtime から共有される。
+- Git コマンド、branch 状態、worktree の安全な作成・削除、作業状態の snapshot を扱う共通境界です。
+- Git ignore の確認と `.cmoc/gu` の除外保証、および nested repository を考慮した oracle/realization file の列挙・分類を担います。
+- コマンドや上位の run・doctor・refactor 処理から呼ばれる低水準の Git 処理を確認する入口です。
 
 ## Read this when
-- Git の共通処理や branch・worktree の安全な作成・削除を調べる、または変更するとき。
-- Git ignore の設定・検証や、未追跡 file の ignore 判定を扱うとき。
-- file の列挙・分類、nested repository の扱い、作業 tree の snapshot と復元を調べるとき。
+- Git コマンドの実行結果、branch や worktree の検証、未コミット差分の判定を変更・調査するとき。
+- worktree の作成・削除や snapshot の取得・復元に関する挙動を確認するとき。
+- ignore 判定、`.cmoc/gu` の除外、または oracle/realization file の列挙・分類を変更・調査するとき。
 
 ## Do not read this when
-- repository・worktree root や cmoc の保存先の解決だけが対象なら、path 解決を担う共通処理を読む。
-- エラー表示やコマンド結果のデータ構造だけが対象なら、それぞれの共通定義を直接読む。
-- サブコマンド固有の処理や復旧判断だけを調べる場合は、その判断を組み立てる処理を読む。
+- repository/work root や cmoc の保存先、cwd 切替などの path 解決が対象なら、runtime_paths の処理から確認するとき。
+- run、doctor、refactor など上位コマンドの処理手順や判断が対象で、Git の低水準処理に関係しないときは、それぞれの担当モジュールから確認するとき。
+- 利用者向けエラーの構造や表示、コマンド結果モデルだけが対象なら、runtime_errors または runtime_results から確認するとき。
 
 ## hash
-- 259518514122fe14c7657e049c409f288381405c4a12e2d72eafa2975b1f19e4
+- 4f9a8ec28d7dd8c79abfa768244ffe15c2ec2ce41879d84503cf893d8c06900d
 
 # `runtime_logging.py`
 
@@ -473,19 +540,18 @@
 # `runtime_merge_conflict.py`
 
 ## Summary
-- session と editing run の join で共有される Git 競合解消処理を担い、内容競合に対する agent call と変更範囲を管理する。
-- 生成 INDEX や refactor state の競合処理から、INDEX 更新、競合 marker の確認、merge commit の確定までを扱う。
+- run と session の join で共有する、Git merge 競合の検出・解消確定処理を担う。内容競合の agent 委譲、refactor 管理 state の競合統合、変更範囲と競合 marker の検証、merge commit までを確認する入口。
 
 ## Read this when
-- merge 失敗後の未統合 path の分類、agent の編集範囲検証、管理物の統合、解消後の commit 処理を追うとき。
-- session join と editing run join で共有される競合解消の挙動を確認するとき。
+- merge 後の未統合 path がどう解消・検証・commit されるかを変更または調査するとき。
+- 内容競合と refactor 管理 state の競合が、共有処理でどう分けて扱われるか確認するとき。
 
 ## Do not read this when
-- join の事前条件、差分検査、branch 切替、後始末など一連の流れを追うときは、該当する join 呼び出し元を読む。
-- 競合解消 agent に渡す指示内容を調べるときは、join 種別ごとの parameter builder を読む。
+- 競合発生前の merge 条件、run/session 固有の手順、agent へ渡す指示を調べるときは、該当する join の流れや指示構築へ進む。
+- refactor state の通常の schema 検証や同期規則を調べるときは、その state 管理処理へ進む。
 
 ## hash
-- 7f449a1e49a259ee89a5d0fcbc993a7b19ce57b7d711b23771c03d169837223a
+- cdf6c156f1e9c632c5d1c4fee1499815414f77f138dae2aba909c3264b93892e
 
 # `runtime_paths.py`
 
@@ -509,55 +575,55 @@
 # `runtime_primary_report.py`
 
 ## Summary
-- 非対話サブコマンドの invocation ごとの report 項目を管理し、個別処理で report が作られなかった終了経路の fallback 保存と、作成済み report の検証・実行記録追記を担う。
-- report の保存・置換と保存失敗の扱いをまとめる実行時層。コマンド別の項目定義や本文描画とは役割が異なる。
+- 非対話サブコマンドの終了時に、一次報告用の invocation 情報を集め、保存済み報告を確認して実行記録を補うか、未作成なら fallback 報告を生成・保存する共通処理を担う。
+- 報告の保存確認と既存報告の安全な更新も扱う。個別コマンドの項目定義や本文描画ではなく、報告の生成・保存ライフサイクルを調べる入口となる。
 
 ## Read this when
-- 非対話サブコマンドの終了経路で primary report がどのように再利用または fallback 保存されるかを調べるとき。
-- report 用の invocation 項目の収集や更新、保存確認、既存 report の安全な置換を変更するとき。
+- サブコマンドの終了経路で、保存済み報告の検証・実行記録の追記や fallback 生成がどう行われるかを確認・変更するとき。
+- invocation 中に確定した項目と終了結果からの値をどう集約するか、または報告の保存失敗がどう扱われるかを調べるとき。
+- 予約済みパスへの保存、保存済み内容の検証、既存報告の置換方法を確認するとき。
 
 ## Do not read this when
-- report の本文構成やテンプレート、コマンドごとの保存先・必須項目を調べるだけなら、描画処理や個別仕様の定義を直接読む。
-- 特定サブコマンドがどの値を確定して report に渡すかを調べるだけなら、そのサブコマンドの処理を直接読む。
+- コマンドごとの報告先・必須項目・テンプレートを決めるときは、個別報告の定義を担当する箇所から確認する。
+- 報告本文の Markdown 構成や実行記録の描画・エスケープを調べるときは、描画を担当する箇所へ進む。
+- ある項目の値が特定コマンドの処理中にどこで決まるかを追うときは、その値を設定するコマンド処理を確認する。
 
 ## hash
-- b9af89f7a318419a73703cefb4869c39e19347779f569cdaaea1fe0d708a5e9c
+- b93e848cca2f1e31b4783371cac8bf5d79ed8e1efc773d878d6ce3f99b5cbdc8
 
 # `runtime_primary_report_render.py`
 
 ## Summary
-- 確定済みの実行情報から fallback primary report を描画し、共通の YAML 値・実行段階・関連ログ・実行記録の整形も担う。
-- 実行記録は Codex の最終出力と受理済み feedback observation を表示し、別の report や manifest からも利用される。
+- 個別の report 定義を受け取り、fallback primary report の本文を Markdown と YAML front matter で描画する。サブコマンド別の結果に、終端状態・warning とエラー・次の操作・関連ログをまとめる。
+- Codex call の保存済み最終出力と受理済み feedback observation を実行記録に整形する。他の report writer が使う実行段階・関連ログ・YAML 値の描画 helper も提供する。
 
 ## Read this when
-- fallback primary report の本文や、確定済み情報の Markdown 表示を確認・変更するとき。
-- Codex の最終出力や feedback observation を含む共通の実行記録、または複数の report で使う YAML 値・実行段階・関連ログの整形を変更するとき。
+- fallback primary report のサブコマンド別本文や、終端結果・warning とエラー・次の操作の表示を変更するとき。
+- 実行記録に載る Codex 出力や受理済み observation の整形、または他の report に共用される実行段階・関連ログ・YAML 値の表示を変更するとき。
 
 ## Do not read this when
-- 対応コマンドやテンプレートの定義が対象なら定義元へ、report 項目の収集や保存・fallback の制御が対象なら report 管理元へ進む。このファイルは渡された情報の描画を担う。
-- feedback publication report や remediation manifest の本体が対象なら、それぞれの生成元へ進む。このファイルが描画するのは feedback invocation の fallback 要約と、共有の実行記録である。
-- editing run report 固有の本文や変更パスの表示が対象なら、その report の生成元へ進む。このファイルは共通の値・実行段階・ログ整形を提供する。
+- どのコマンドに fallback report を適用するか、保存先・項目定義や保存・更新処理を変更するときは、report 定義または保存処理の実装から確認する。
+- editing run の fork・join・abandon report 固有の内容や保存構成を変更するときは、その report writer を直接確認する。共通表示 helper の変更時だけここを確認する。
 
 ## hash
-- a07333f44f58cb864e181a4adb74a83661069825983aec59bbcc81e01a357217
+- 71c2106a9dc594976576a21dc4945dea0d5bfc12ca7024ae3ae9adf771b26bef
 
 # `runtime_primary_report_specs.py`
 
 ## Summary
-- 非対話サブコマンド用 fallback primary report の個別設定をまとめ、コマンド名から適用する設定を引く入口。
-- doctor、indexing、session の fork/join/abandon、oracle edit、realization の apply/refactor fork、run の join/abandon、feedback report を扱う。
+- 非対話サブコマンド向け fallback primary report の個別定義を集約し、コマンド名から各 report の保存先や役割、描画に使う定義を引く入口。保存処理や本文生成そのものではなく、コマンドごとの定義を担う。
+- TUI 通知境界のサブコマンドと oracle investigation は登録対象外。
 
 ## Read this when
-- 非対話サブコマンドが fallback primary report の対象か、どの個別設定を使うか確認・変更するとき。
-- 対象コマンドの fallback report の保存先、役割、見出し、必須情報、描画テンプレートの割当を調べるとき。
+- 非対話サブコマンドの fallback primary report の有無や個別定義を追加・変更し、共通処理が選ぶ定義を確認するとき。
 
 ## Do not read this when
-- 既存 report の再利用・保存確認や、report がまだ作られていない終了経路の処理を調べるときは、fallback report の保存・制御処理へ進む。
-- report 本文の組み立てや個別テンプレートの出力を調べるときは、report 描画処理へ進む。
-- 個別サブコマンドが定める report 内容や終了条件、または TUI の通知境界を確認するときは、該当するサブコマンド仕様や通知仕様へ進む。
+- report の保存・検証や共通情報の組立を調べるときは、その実行処理へ直接進む。
+- 選択済み定義から report 本文を組み立てる方法を調べるときは、描画処理へ直接進む。
+- TUI 通知や oracle investigation の report を調べるときは、それぞれの処理へ直接進む。
 
 ## hash
-- 65ca5fc4c11b5cba1fbf37529e57f05ec073d09bc90569b39c1607b75bbc6ed1
+- 00b9f9f90e771fda23daba3ad22f7298a8c55ee722b50bc244c83d4ef0920192
 
 # `runtime_refactor.py`
 
@@ -616,38 +682,38 @@
 # `runtime_run_join.py`
 
 ## Summary
-- editing run の join で共有される前処理・差分検査・merge 処理を担い、doctor による修復差分を区別し、想定外差分の扱い、競合解決、失敗時の session 復元を行う。
-- merge 後の INDEX 更新と refactor state 同期、join 済み run の worktree・branch cleanup までを扱う。コマンドごとの手順ではなく、明示的な run join と remediation workload の self-join が共有する処理を追う入口。
+- editing run を session に取り込む共通 runtime 処理です。明示的な run join と feedback remediation の自動 join で使われ、doctor の修復差分の識別、差分検査、merge、post-join の refactor state 同期を担います。
+- join 失敗時の session worktree 復元と、merge 済み run の worktree・branch の条件付き cleanup も扱います。active run の選択や workload 固有の完了処理は呼出元が担います。
 
 ## Read this when
-- 明示的な run join や remediation workload の self-join で、clean・差分検査、force-resolve、merge と競合解決、merge 後の同期、失敗時の復元を変更・調査するとき。
-- doctor が追加した差分を join の検査対象からどう区別するか、または join 済み run の worktree・branch cleanup の成否条件を確認するとき。
+- 明示的な run join と feedback remediation の自動 join に共通する差分検査、force-resolve、merge、state 同期の挙動を調べたり変更したりするとき。
+- merge や post-join の失敗からの復元、または merge 済み run 資源の cleanup 条件を確認するとき。
 
 ## Do not read this when
-- editing run の context 作成、state 遷移、lifecycle lock、差分分類の規則を調べる場合は、run lifecycle の共通処理を確認する。
-- worktree の特定、process identity、Codex child の追跡・停止を調べる場合は、run process と worktree 管理の共通処理を確認する。
-- ユーザー向け join コマンドや remediation の引数処理、個別の手順・report 発行を調べる場合は、該当するコマンドの調整処理を確認する。
+- cmoc run join のコマンド固有の処理順、lock、state・report の完了処理を確認するときは、run join のコマンド実装を読む。
+- feedback remediation の wave 処理、manifest、join intent の確定が主題なら、feedback workflow を読む。
+- session join の統合処理、または merge 競合の解消アルゴリズムや agent 向け指示が主題なら、それぞれの専用実装を読む。
 
 ## hash
-- b1a70730bc31ae1448af435040dc48ca62cb445e6e4863a402fc0242df23d538
+- 5fe9ee153680f8ccf773d3a4d0da84d85d9b0078f363b36b52d33d43d3aa20ef
 
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run 共通のライフサイクルを担い、開始条件の検査、run の開始・解決・回復、state 遷移を扱う。
-- work unit の commit／rollback、差分の列挙と許可範囲の判定、run 内の INDEX 更新を呼び出す共通処理も提供する。
+- editing run の開始、active context の解決・復旧、state 公開と、run 作業単位の commit／rollback や差分 path 分類を担う共通処理。
+- 複数の workload や run 処理が共有する lifecycle 基盤であり、個別コマンドの進行や join／merge の実処理は担当しない。
 
 ## Read this when
-- editing run の開始条件、run context の解決・回復、state 遷移の条件を調べる・変更するとき。
-- work unit の差分処理や、agent／run が変更できる path の判定を調べる・変更するとき。
+- editing run の開始・復旧・state 遷移や、session と run の branch／worktree の検証を変更するとき。
+- workload ごとの許可差分や、run branch の想定外差分の判定を変更するとき。
+- 共通の commit／rollback 処理や Git 差分 path の抽出を変更するとき。
 
 ## Do not read this when
-- worktree の探索や追跡 process の停止・cleanup が対象なら、process lifecycle を担う実装から読む。
-- join／abandon の merge、report、cleanup の実行順が対象なら、それらを調整する lifecycle 実装から読む。
-- INDEX.md の探索、entry 生成、鮮度検査、復元、lock、commit が対象なら、indexing lifecycle の実装から読む。
+- join／merge の検査・競合解決・cleanup の処理だけを変更するときは、join 処理を担う共通 helper から確認するとよい。
+- 個別コマンドの引数、表示、実行手順だけを変更するときは、該当する subcommand の実装から確認するとよい。
 
 ## hash
-- 8d81f261e3896261ed4ef33194a55083e3173a3049af31ceaa136a7ca7575947
+- eb394ac87d1a669f27b513bda8b130e6fb7dbe7a17950b5795ec01c857d8de95
 
 # `runtime_run_report.py`
 

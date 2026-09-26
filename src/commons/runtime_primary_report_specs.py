@@ -50,7 +50,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         "indexing",
         "indexing execution report",
         "cmoc indexing report",
-        ("commit_id",),
+        ("work_root", "scope_identity", "index_identity", "sync_result"),
         "indexing",
     ),
     "session fork": PrimaryReportSpec(
