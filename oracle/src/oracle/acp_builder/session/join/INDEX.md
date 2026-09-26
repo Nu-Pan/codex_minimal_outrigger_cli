@@ -1,15 +1,16 @@
 # `conflict_resolution.py`
 
 ## Summary
-- session branch を home branch に統合する際の競合解消用 agent call を構築し、統合先 worktree と編集範囲を設定する。
+- session join の競合解消時に home worktree 上で呼び出す agent の起動定義。取り込む側と取り込み先の merge 前 commit、進行中の worktree、caller が確定した閲覧範囲を使って session join 固有の call parameter を組み立てる。
+- 共通の競合解消 prompt 構築は共有 builder に委譲するため、session join 固有の起動設定と共通処理の接続点を確認する入口。
 
 ## Read this when
-- session join 中に merge conflict が発生し、競合解消 call の起動設定を確認・変更するとき。
-- 競合解消 call が merge 中の作業場所や indexing preflight をどう扱うか調べるとき。
+- session join の競合解消 call がどの commit と worktree を対象にし、どの閲覧範囲で起動するかを調べる、またはその起動設定を変更するとき。
 
 ## Do not read this when
-- run の成果を session に統合する競合解消 call を調べるときは、その処理専用の構築定義へ進む。
-- 競合の判断基準や解消結果の受理・報告に関する意味仕様を確認するときは、共通の merge 競合解消仕様へ進む。
+- session join 全体の手順、state 更新、失敗時の動作を調べるときは、session join の仕様を読む。
+- join 間で共有される競合解消 prompt や policy を調べるときは、共通 prompt builder と関連 policy を読む。
+- run join の競合解消 call 固有の起動設定を調べるときは、その専用 builder へ進む。
 
 ## hash
-- 99dbe0e5be70c445fe13eee24816ab6806de4d3f3124dbe3b3897b19bc642d3c
+- ef0fafa7009a94140fc7ace5794304efe1d29fbef367b22db2498ed350449351

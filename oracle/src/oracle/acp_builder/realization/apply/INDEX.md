@@ -1,15 +1,16 @@
 # `fork`
 
 ## Summary
-- `cmoc realization apply fork` の差分追従 agent call について、oracle file の変更を realization file に反映する prompt と起動パラメータを定義する。
+- realization の差分追従用 agent call の prompt と AgentCallParameter を構築し、指定された commit 範囲、作業用 worktree、文書検索範囲、書き込み条件を反映する。
+- oracle file の変更をリポジトリ全体の realization file に反映するタスクと、追従対象差分の取得・判定方法を agent に指示する。
 
 ## Read this when
-- `realization apply fork` が agent に渡す commit 範囲の扱い、差分の対象判定、作業権限、実行コンテキストや indexing preflight の設定を確認・変更するとき。
+- realization apply fork の agent に渡す作業内容や、commit 範囲・worktree・検索範囲の指定を調べたり変更したりするとき。
+- oracle file の追加・削除、rename、oracle 領域内外の移動を差分追従でどう扱うか確認するとき。
 
 ## Do not read this when
-- CLI の実行開始、commit 範囲の決定、run の join や報告など、コマンドの実行ライフサイクルを調べるときは実行側の実装を読む。
-- `realization refactor fork` の変更要約やファイル単位のレビュー・修正用 agent call を調べるときは、その専用 builder を読む。
-- 共通 prompt 構築や共有ポリシー自体を調べるときは、それぞれの定義を読む。
+- agent call の実際の起動や commit 範囲・worktree の決定を調べるとき。この対象は prompt と起動パラメータの構築を担うため、起動側や範囲決定側を読む。
+- 特定の差分や現在の realization 実装の内容を調べるだけなら、対象となる commit 範囲のファイルを直接読む。
 
 ## hash
-- e3625e501d3af9ba014ed26f875ed628355f29e89c30552980b479f818ff0044
+- fe522fe3ce2e68c68cbdcf51805a70ce642c1cbbb697d232d10b089e4d272593

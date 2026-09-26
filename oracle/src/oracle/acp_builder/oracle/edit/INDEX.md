@@ -15,16 +15,16 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc oracle edit` の agent 向け完全 prompt と、新しい `codex exec` 初回 call に使う共通パラメータを構築する。
-- ユーザー指示を編集目的や判断材料、編集境界とともに prompt へ組み込み、本体実行と handoff 用 skeleton の両方で使う。
+- `cmoc oracle edit` の2回の呼び出しで共有する完全 prompt と起動パラメータを構築する。編集指示、判断材料、oracle 向け規定、ユーザー指示、呼び出し側が決めた文書検索範囲をまとめる。
+- oracle edit 固有の prompt 内容や、両方の呼び出しで使う設定を調べ・変更するときの入口。handoff 用 prompt skeleton もこの構築経路を使う。
 
 ## Read this when
-- `cmoc oracle edit` の agent に渡す指示や、oracle file の編集範囲・判断材料を変更または確認するとき。
-- 本体実行と handoff 用 skeleton で共有する prompt や起動パラメータを調べるとき。
+- oracle edit agent への共通指示、編集時の判断材料、文書検索範囲、または起動パラメータを確認・変更するとき。
+- oracle edit の本体実行と handoff 用 skeleton で共有される prompt 構築を追うとき。
 
 ## Do not read this when
-- エディタ入力、2 回の call の実行順序、設定の取得、終了 report など、サブコマンド全体の流れを変更または確認するとき。サブコマンドの仕様や該当する呼び出し側を確認する。
-- 共通 prompt 構築の仕組みや、別の workload の起動処理を変更するとき。それぞれの共通部品または workload 固有の実装を直接確認する。
+- oracle edit の実行順序、呼び出し回数、終了条件、編集境界など機能全体の意味を確認・変更するときは、サブコマンドの意味仕様へ進む。
+- 完全 prompt に含める共通規定の構築方式を変更するときは共通 prompt builder、handoff ガイドの文面や構成を変更するときはガイド生成処理へ進む。
 
 ## hash
-- 65c9a27bb8749f0674f3f6c599c4f97ed09837bdb509f03d4625e458e2e7d68a
+- e23bf352dcdfb81a2ac24bebce84d2730f194511ba833cacb978320aa65cc5d8

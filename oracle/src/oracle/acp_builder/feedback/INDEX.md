@@ -16,20 +16,20 @@
 # `normalize_issue.py`
 
 ## Summary
-- 構造化 observation と絞り込み済みの既存候補を照合し、同一 issue か新規 issue かを判断させる agent call の prompt と起動 parameter を構築する。
-- 読み取り専用の参照境界と、判断に必要な関連情報への routing を含む。原因診断や remediation は担当しない。
+- agent observation と絞り込み済みの issue 候補の同一性判断を担う normalization call の prompt と起動 parameter を組み立てる。
+- この call の判断範囲、参照境界、読み取り専用の実行条件を確認する入口。
 
 ## Read this when
-- normalization agent の prompt、起動条件や参照境界を変更・確認するとき。
-- 観測と既存候補の同一性判断に渡す情報や、同一 issue の判定条件を確認するとき。
+- feedback observation を既存候補と照合する判断基準、追加参照の範囲、判断対象外を確認または変更するとき。
+- この call の実行場所、文書検索範囲、アクセスモードなど、起動 parameter の構築を追うとき。
 
 ## Do not read this when
-- intake 内の validation、候補形成、処理順序など全体の仕様を確認するときは、feedback intake の仕様を読む。
-- agent call の出力構造を確認・変更するときは、対応する Structured Output schema を読む。
-- issue の現在状態の確認、修正、検証を扱うときは、remediation 用の構築定義を読む。
+- intake 全体の validation、処理順序、wave、checkpoint の意味を確認するときは、feedback の正本仕様へ進む。
+- issue の現在状態の診断、修正、検証結果を扱うときは、remediation call の定義へ進む。
+- 出力の Structured Output schema だけを確認するときは、対応する schema 定義を直接読む。
 
 ## hash
-- a8c3a072f819f3c0c845bb1d0975325ae9dc16163c79355e7c944c5b9aee9217
+- c9ce5cc9e6c570f99c5d809d29eb4982c9693b4c480395e73a3154b679099474
 
 # `remediate_issue.json`
 
@@ -49,17 +49,17 @@
 # `remediate_issue.py`
 
 ## Summary
-- 正規化済み feedback issue 1 件について、現在状態の確認から realization 修正・検証までを行う agent 向け prompt と起動条件を組み立てる。remediation call 固有の指示、アクセス境界、実行設定を確認・変更するときの入口。
+- 正規化済みの単一 feedback issue について、現在状態の確認・安全な realization 修正・検証を指示する agent 向け prompt と起動パラメータを組み立てる。
+- issue 固有の対象範囲、編集権限、結果分類の制約、検索範囲、実行場所を定める call 構築の入口。
 
 ## Read this when
-- issue remediation call が、現在状態の確認、安全な realization 修正、修正後の検証をどう指示するか確認・変更するとき。
-- 結果分類の判断制約、許可する変更範囲、差分の扱いなど、この call 固有の制約を確認するとき。
-- call の cwd、アクセスモード、schema の指定、indexing preflight など起動 parameter の設定を確認・変更するとき。
+- 単一 issue の remediation call の指示内容や対象範囲、編集権限、結果分類上の制約を確認・変更するとき。
+- この call の検索範囲や実行場所など、起動条件を確認・変更するとき。
 
 ## Do not read this when
-- feedback observation と既存候補の同一性判断や issue identity の確定を調べるときは、normalization の実装と仕様を読む。
-- 出力契約の構造や値の形式を調べるときは Structured Output schema を、結果分類の意味を調べるときは feedback の意味仕様を直接読む。
-- wave 処理、再確認の順序、issue 単位の commit、join、publication、recovery など全体の orchestration を調べるときは feedback report の workload 仕様を読む。
+- 構造化出力の契約だけを確認・変更するときは、対応する schema を直接読む。
+- feedback report 全体の issue 正規化、call の順序、commit・merge・結果公開の流れを調べるときは、report の処理仕様から読む。
+- 結果分類の共通の意味や人間向け公開条件を調べるときは、feedback の意味仕様から読む。
 
 ## hash
-- c0dc67720f11b6e82d2194eae634fa966f761541da56f47dfdcc90c090ac3f31
+- 31fcf1b7b9feec2c7f3b7275c77d375842b7af3f277cd9001665d32fcf17130b

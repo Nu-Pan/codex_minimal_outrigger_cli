@@ -1,19 +1,19 @@
 # `cmoc_config.py`
 
 ## Summary
-- リポジトリごとに変わる cmoc 設定のデータ型と既定値を定義し、並列実行数、Codex CLI のプロバイダー設定と呼び出し種別ごとのモデル選択、アクセス規定違反後の再試行回数を扱う。
-- プロバイダー固有の設定値を JSON と TOML の両方で表現する。
+- リポジトリごとに変わりうる cmoc 設定のデータ構造と既定値を定義する。並列数、Codex の provider-local 設定、agent call 種別ごとの provider・model・reasoning effort、文書検索設定を扱う。
+- 人間が調整する設定データの形と既定の Codex call 選択を確認する入口。
 
 ## Read this when
-- リポジトリ固有の設定値や既定値、とくに並列実行数やアクセス規定違反後の再試行回数を確認・変更するとき。
-- Codex CLI のプロバイダー設定や、呼び出し種別ごとのモデルと推論強度の選択を確認・変更するとき。
+- 設定項目の追加・変更や既定値の見直しで、CmocConfig の構成と値を確認するとき。
+- agent call 種別ごとの既定 provider・model・reasoning effort、または provider-local 設定の形を確認するとき。
 
 ## Do not read this when
-- 保存済み設定の読み込み・書き込み、シリアライズ、doctor による生成・同期の処理を調べるときは、その処理を実装する箇所へ進む。
-- 個別の agent call の指示文作成や実行フローを調べており、設定値の選択を確認する必要がないときは、その call の実装箇所へ進む。
+- 設定 JSON の読み書き、構文・値の検証、doctor による生成・同期の処理だけを変更するときは、その処理を担う実装を読む。
+- Codex CLI の argv 構築や agent call の実行方法だけを変更するときは、その呼び出し処理や仕様を直接読む。
 
 ## hash
-- 2dae89b5f70856e073d156dc1f9ae521ff7b2741104498f02efe863f673ffc7f
+- 1bb6c428f273ad7b8dbc1aa00acee4af9cee6e40efc077a6da14b254277f9718
 
 # `doc_ref_model.py`
 
@@ -30,6 +30,23 @@
 
 ## hash
 - 0bff83f413a89dcc2a3f881293a595221ea1012097880bf4661a7af14c949ca5
+
+# `document_search.py`
+
+## Summary
+- 文書検索で共用する推論資材の識別情報、モデル入力条件、再ランキング互換確認の対象を定義する。
+- 検索設定の型と stdio MCP の検索 tool、入力、結果、失敗の実装契約を定義する。
+
+## Read this when
+- 推論資材やモデル入力、raw 採点の互換確認対象を変更・照合するとき。
+- 検索設定の項目や検索 MCP の公開形式を変更・照合するとき。
+
+## Do not read this when
+- 検索の意味仕様、アクセス範囲、同期、cache、排他、期限や取消の動作を確認するときは、正本の文書検索仕様を読む。
+- caller が渡す閲覧範囲、agent 向け routing 文面、MCP の起動・接続規則を確認するときは、それぞれの担当定義を読む。
+
+## hash
+- c85c970a5815d1075e5ee938d52bc931d958d4e01af74897851607c9b10cd555
 
 # `path_model.py`
 

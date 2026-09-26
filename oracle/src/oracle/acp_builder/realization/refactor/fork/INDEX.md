@@ -17,20 +17,19 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の変更要約 agent call を構築し、指定された commit 範囲の tree 差分を Git から取得して要約する prompt と起動パラメータを定める。commit 範囲や prompt、アクセス方式など、この call の組み立てを変更する際の実装上の入口。
-- 同じ fork 配下のファイル単位の所見調査・修正 call は別の builder が扱う。
+- 指定された run fork commit から要約確定時点の HEAD までの tree 差分を Git から取得し、人間向けに要約する read-only 呼び出しを構築する。
+- 呼び出し元が決めた閲覧範囲と linked worktree を引き継ぎ、プロンプトや構造化出力先を含むパラメータを組み立てる。
 
 ## Read this when
-- fork report 向け変更要約 call の prompt や、要約対象の commit 範囲の渡し方を変更するとき。
-- この call のアクセス方式、作業ディレクトリ、preflight などの起動パラメータを変更するとき。
+- refactor fork の変更全体を要約する呼び出しの範囲や、比較対象の commit を固定する条件を確認するとき。
+- 差分を取得できなかった場合の扱いや、この呼び出しの閲覧・書き込み制約を確認するとき。
 
 ## Do not read this when
-- 変更要約を生成する条件や、空差分・中断・エラー時の report 上の扱いだけを確認するとき。refactor fork の正本仕様を読む。
-- ファイル単位の所見調査・修正 call の prompt や動作を変更するとき。同階層の別 builder を読む。
-- この call の出力データ構造だけを変更するときは対応する Structured Output schema を、model provider や reasoning 設定を変更するときは agent call 設定を読む。
+- 個別ファイルの調査や修正の手順を確認するときは、同階層のファイル単位レビュー・修正用定義を読む。
+- 構造化出力の項目や形式を確認するときは、その出力定義を読む。
 
 ## hash
-- 8ce6ede01b04ca8b537c53b595aab7743ffa6d50dec7b009314136714ac4547f
+- 21ce1da8a51622edef86b9676a87f8ff319af5691ac28a2f451d2b6d9a25f3c6
 
 # `file_review_and_fix.json`
 
@@ -51,14 +50,13 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- refactor fork で指定された oracle／realization file を起点に所見を調査し、対応する realization file の修正・検証を行う agent call の prompt と起動パラメータを構築する。
+- refactor fork で、特定ファイルを起点にレビューと修正を行う agent call の prompt と起動パラメータを構築する。
 
 ## Read this when
-- ファイルを起点とする refactor fork の調査・修正で、対象範囲や書き込み方針、完了条件、起動時の振る舞いを確認・変更するとき。
+- ファイル単位の調査、realization file の修正、修正後の確認を一つの agent call で行う処理の prompt や実行条件を変更・調査するとき。
 
 ## Do not read this when
-- 指定 commit 範囲の変更内容を人間向けに要約するだけなら、差分要約用 builder を読む。
-- commit 差分の oracle 変更をリポジトリ全体の realization file に適用する作業なら、差分駆動の追従用 builder を読む。
+- 指定 commit 範囲の差分全体を要約する処理を変更するときは、変更要約用の構築定義を読む。
 
 ## hash
-- 8819b72b73854e978dd9b8ee00639c047de37c61468e1c0fa6c9860977ec2709
+- b79c0910b6d7e77e87c1ffb910367af03ba4be434133b751a6854e387c6ea146

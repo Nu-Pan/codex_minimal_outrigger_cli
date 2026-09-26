@@ -1,152 +1,150 @@
 # `basic.py`
 
 ## Summary
-- ACP の呼び出し構築器が共有するパラメーターの型とファイルアクセスモードを定義する。
-- 個別の呼び出し内容ではなく、エージェント呼び出し設定の共通契約を変更するときの入口となる。
+- エージェント呼び出しで共有するアクセスモード、文書検索範囲、呼び出しパラメータの型を定義する。各 call builder が共通設定を組み立てる際の入口。
 
 ## Read this when
-- 共有パラメーターの構成や既定値、ファイルアクセスモードの区分を変更するとき。
-- 複数の呼び出し構築器で使われる共通パラメーター契約を確認するとき。
+- 複数の call builder に共通するパラメータ項目や任意設定を変更するとき。
+- アクセスモードの区分や、呼び出し元が指定する文書検索範囲の表現を変更するとき。
 
 ## Do not read this when
-- 特定の操作で使う prompt や起動条件を変更するときは、その操作の呼び出し構築器を直接読む。
-- モードごとのアクセス制限文面を変更するときは共通 prompt policy の実装を、制限の正式な意味を変更するときはファイルアクセス仕様を読む。
-- インデクシングの実行条件やタイミングを変更するときは、その意味仕様を直接読む。
+- 特定の call の prompt やアクセスモード、検索範囲などの設定だけを変更するときは、その call の builder を確認する。
+- アクセス制限や検索 routing の prompt 文面だけを変更するときは、該当する prompt builder を確認する。
 
 ## hash
-- bc50e3d7e711f8a7610e6219d08be3a62528940ce18b2f9ea98081e34e3d4138
+- a39697df273e3f9c8effb0f64de20ec98a5d623d6ddb4b17ae6787134efe80a9
 
 # `feedback`
 
 ## Summary
-- Feedback issue 処理で、構造化 observation と絞り込み済み候補の同一性判断、および正規化済み issue 1 件の確認・修正・検証を行う agent call の定義をまとめる。
-- normalization と remediation の呼び出し境界や判定制約を変更するときの入口であり、feedback report 全体の処理手順を担うものではない。
+- feedback issue を扱う二種類の agent call の prompt と起動 parameter を構築する。構造化 observation と絞り込み済み候補の同一性を判定する処理と、正規化済み issue 一件を確認し、realization file の修正と検証を行う処理への入口。
+- 前者は読み取り専用、後者は realization file の編集を許可する呼び出しとして定義されている。issue の同一性判定や修正時の作業範囲・検証結果の扱いを調べる際に参照する。
 
 ## Read this when
-- agent observation を既存候補にまとめるか新しい issue とするかの判断基準や、normalization call の参照範囲を変更するとき。
-- 単一 issue の現在状態の確認、realization file の修正可否、検証、結果分類に関する remediation call の制約を変更するとき。
-- この二つの agent call の prompt、起動条件、または結果の受け入れ条件を調べるとき。
+- 構造化 observation と絞り込み済み既存候補を比較する判定方法や、その呼び出しに渡す指示・参照範囲を変更または確認するとき。
+- 正規化済み issue 一件の現在状態を確認し、安全な realization 修正と検証を依頼する方法を変更または確認するとき。
 
 ## Do not read this when
-- observation の収集・受理検査・raw 保存や、machine observation の検出・集約を変更するときは、それぞれの処理を定める入口へ進む。
-- feedback report の候補形成、処理順、state 更新、commit・publication・cleanup など全体の進行を変更するときは、その orchestration と state を定める入口へ進む。
-- ACP の共通起動規約や agent call の既定設定を変更するときは、共通 framework または設定の入口へ進む。
+- 新しい observation の収集・提出や、既存候補の検索・絞り込みなど、これらの呼び出しに入力が渡る前の feedback 処理を調べるときは、その工程の担当箇所を直接読む。
+- prompt の動作ではなく、feedback の意味仕様や出力形式の制約だけを確認するときは、それぞれの仕様または Structured Output schema を直接読む。
 
 ## hash
-- c1c4aac9b5d4b6a653fb7683e7720cc756379d0a4f9ce1acc8e04875a95da050
+- bf99068d19b6939d934768ef3fe2c795cfaf4ebe36d2d861a51f859da676af79
 
 # `indexing`
 
 ## Summary
-- `cmoc indexing` の INDEX.md エントリー生成 agent call に渡す指示文、起動設定、出力制約を組み立てる。
+- 対象の内容を追加文面として埋め込み、INDEX エントリー生成 agent 用の task と完全 prompt を組み立てる。
+- 対象パスを call 固有の context で解決し、読み取り専用アクセスと構造化出力の設定を含む起動パラメータを作る専用 builder。
 
 ## Read this when
-- INDEX.md エントリー生成の呼び出し設定や、対象パスの解決方法を追跡・変更するとき。
-- この呼び出しに適用される生成結果の制約を確認するとき。
+- INDEX エントリー生成 call に固有の指示、対象内容の渡し方、アクセスモード、構造化出力の設定を変更または調査するとき。
+- この call の cwd と対象パス解決から、返される起動設定までを追うとき。
 
 ## Do not read this when
-- INDEX.md の生成手順や routing 規則そのものを調べるときは、agent call の実装定義ではなく indexing の正本仕様から確認する。
-- 共通の agent call パラメータや prompt 構築の動作を調べるときは、共通定義を読む。別の処理向けの呼び出しを調べるときは、その処理の構築定義へ進む。
+- 他の agent call にも共通する完全 prompt の合成、ファイルアクセス規定、パスモデル自体を変更するときは、それぞれの共通実装を直接読む。
+- インデックス対象そのものの内容や振る舞いだけを確認・変更するときは、対象本文を直接読む。
 
 ## hash
-- 4d4c2433d75dca8bbb16c25f34731f6b7bd567719a957176b6c409d81f98ffc8
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 # `oracle`
 
 ## Summary
-- `cmoc oracle investigation` と `cmoc oracle edit` の agent call 用 prompt と起動パラメータを組み立てる領域です。調査用の読み取り TUI 呼び出しと、編集用の書き込み `codex exec` 呼び出しの設定を見比べる入口になります。
-- 調査用呼び出しは oracle file の読み取り、editor input handoff、indexing preflight を設定し、編集用呼び出しは目標状態と未コミット差分を判断材料にする共通設定を構築します。
+- oracle向け agent call の prompt と起動パラメータを用途別に構築する領域です。編集、調査、レビュー関連の処理へ進む入口になります。
 
 ## Read this when
-- oracle investigation の読み取り境界、TUI 起動、prompt、handoff、または indexing preflight を変更・確認するとき。
-- oracle edit の agent call に渡す共通 prompt、oracle file の編集境界、未コミット差分の参照、または indexing の担当箇所を変更・確認するとき。
+- oracle file の編集 call が使う指示、編集境界、差分確認の扱いを調べるとき。
+- oracle file の調査 call が使う読み取り専用指示や TUI 起動設定を調べるとき。
+- レビュー結果の列挙、検証、判断、統合に関する処理を調べるとき。
 
 ## Do not read this when
-- oracle edit 全体の実行順序や二回実行など、サブコマンドの正本仕様を確認するときは、その仕様を直接参照してください。この領域は共通 agent call の設定を定義します。
-- 調査用呼び出しだけ、または編集用呼び出しだけの詳細を確認するときは、該当する個別フローの項目から読み始めてください。
+- oracle サブコマンドの選択、引数処理、実行の流れを調べるときは、コマンド側の実装から確認するとき。
+- 複数の呼び出しで共有する ACP パラメータ型や prompt 組み立て規則そのものを調べるときは、共通ビルダーから確認するとき。
+- oracle file の規範的な意図や要求を確認するときは、該当する仕様本文から確認するとき。
 
 ## hash
-- 531c5b4f16cd0fe40e11d6852435580547172f4b86d0c93bbfdb9968e61c01e8
+- 1e15ca1ae94e6bbcbdacdb6098d86e3de0efbcdbf16a324790f202c0673be8e5
 
 # `quota_probe.py`
 
 ## Summary
-- quota などの可用性回復 probe 用に、短い応答を一度だけ求める読み取り専用 agent call の prompt と固有の起動設定を組み立てる。
-- 回復確認の目的や成否判定、待機・再開の制御ではなく、probe が受け取る指示と builder 固有設定を調べる入口。
+- Codex CLI の quota 利用可能性確認 probe について、agent call の prompt と builder レベルの起動パラメータを組み立てる。
+- probe の呼び出し構成を変更するときの入口であり、回復処理の判断規則そのものは定義しない。
 
 ## Read this when
-- quota または一時障害の回復 probe が依頼する内容や、読み取り専用設定・preflight の再帰防止などの起動条件を確認・変更するとき。
-- 共通の agent call parameter 定義や他のワークフロー用 builder ではなく、可用性確認 probe 専用の構築箇所を探すとき。
+- quota availability probe の prompt や read-only 実行、作業ディレクトリ、文書検索設定などを変更・確認するとき。
+- quota probe 専用の呼び出しパラメータを調べ、他の agent-call builder と役割を切り分けるとき。
 
 ## Do not read this when
-- 回復確認を始める条件、probe の成功判定、待機間隔、再開や結果共有の仕様を調べるとき。
-- 共通の agent call parameter や完全 prompt の生成規則を変更するときは、それぞれの共通定義を参照し、別ワークフローの呼び出しを変更するときは対応する builder を参照する。
+- probe の実行条件、成功判定、待機・再開など quota や一時障害の回復判断を変更するときは、回復規則の正本を読む。
 
 ## hash
-- 1ac746647bce56257d4ec7e41e2b7113802e8e2926f32e10699b404067da3ad6
+- e7bce49198a9e6d20cffcc3a31c235a4b4e5f0018c9ccbebb34d82f5ba15f291
 
 # `realization`
 
 ## Summary
-- fork型の realization apply と refactor 向け agent-call の prompt と起動 parameter を組み立てる定義を束ねる。commit 範囲の oracle 変更を realization に反映する処理と、refactor における差分要約およびファイル単位のレビュー・修正を扱う。
+- realization の apply と refactor fork に渡す agent call の prompt と起動条件を組み立てる。
+- apply の差分に基づく realization 追従と、refactor の変更要約・ファイル単位の調査修正を扱うため、これらの call の指示や閲覧範囲を調べる入口となる。
 
 ## Read this when
-- 複数の fork 処理の分担を見直し、commit 範囲の変更追従と refactor 作業のどちらに agent-call を振り分けるか確認するとき。
-- apply と refactor をまたいで fork agent-call の prompt 構成や起動条件を変更するとき。
+- commit 範囲で指定した oracle の変更を realization 全体へ反映する call の構築条件を調べるとき。
+- refactor fork の変更要約、または対象ファイルを起点に所見を調査・修正する call の指示や権限を調べるとき。
 
 ## Do not read this when
-- commit 範囲の oracle 変更を realization に反映する処理だけを修正する場合は、その処理の定義へ直接進む。
-- refactor の差分要約またはファイル単位のレビュー・修正の片方だけに関する作業なら、該当する定義へ直接進む。
-- fork 以外の realization agent-call や共通 prompt 構築が対象なら、このまとまりから調査を始める必要はない。
+- oracle の編集・レビュー、feedback の処理、session の統合など別種の agent call を調べるときは、それぞれの call 構築箇所を直接確認する。
+- fork や commit 範囲の準備、call の実行・結果処理を追うときは、これらの builder の呼び出し元を確認する。
 
 ## hash
-- 31b82bb17ffbff96848c92cef4fdbb63127a7fd62e30023fe68f1a68d6bd01ad
+- b2396faac73062045609b90ef95931319ba155f6cfd034a3a29b038c16292fde
 
 # `run`
 
 ## Summary
-- run branch を session branch に統合するときの競合解消用 agent call を構築する。
-- feedback の自動 join では、封印済み report cut の結果を維持するための指示も組み込む。
+- run のマージ競合解消 call を組み立てる入口。進行中の session worktree と呼び出し元が確定した閲覧範囲を使い、封印済み feedback 結果がある自動 join には追加の指示と参照を組み込む。
 
 ## Read this when
-- run join の競合解消 call に渡す入力や実行条件を確認・変更するとき。
-- feedback 自動 join で封印済み結果を参照し、統合後の維持と検証を求める処理を確認するとき。
+- run の成果を session に統合する call の構築や、適用される作業範囲を確認するとき。
+- feedback 自動 join で、封印済み結果を call に渡す方法を確認するとき。
 
 ## Do not read this when
-- session branch を home branch に統合する競合解消を扱うときは、session join 用の builder を読む。
-- 共通の競合解消 prompt の内容を確認するときは、その prompt builder を直接読む。
-- run join や feedback 自動 join の意味仕様だけを確認するときは、該当する oracle doc を直接読む。
+- run と session に共通する競合解消 prompt の構築や統合手順を確認するときは、共通 prompt builder を読む。
+- 封印済み feedback 結果の分類や join 後の扱いに関する正本仕様を確認するときは、該当する oracle 文書を読む。
 
 ## hash
-- b3b8b7437ad2e699724c477d3f9987a835573fe44d120f2f5518ab3c444f88a0
+- 0464020a8c5a13458d30fc56d52a713016fc94f2992049a43a64c27fd9724afc
 
 # `session`
 
 ## Summary
-- session join の merge 競合解消で使う agent call の個別設定を構築し、共通の競合解消 prompt に接続する。
+- session の変更を home branch に統合する際の、競合解消 agent call の構築を担う。
+- home worktree を統合先として、session join 固有の commit、アクセス範囲、共通 prompt を組み合わせる実装への入口。
 
 ## Read this when
-- session join 用 call の起動設定を確認・変更するとき。共通 prompt の定義ではなく session 固有の起動設定を調べる入口。
+- session の変更を home branch に取り込む call の構築条件や、その調整箇所を調べるとき。
 
 ## Do not read this when
-- 共通の競合解消 prompt や policy を変更するときは、共通 prompt 構築の定義へ進む。
-- session join の実行手順、競合解消の判断基準、受理・報告・停止条件を確認するときは、対応する仕様を直接読む。
+- run の成果を session に取り込む処理を調べるときは、run join 側の対象へ進む。
+- 競合解消 prompt の共通内容や共通 policy を調べるときは、それぞれの共通定義を直接読む。
 
 ## hash
-- cfac7ceaa0be71f7986284b1deb359de21dd7764c8f88997f891d31abfcdb5ee
+- 1b7676666d9372bc7e76cb4e102dd4da0d383287ed6e810b08587f7a69b86a58
 
 # `tui`
 
 ## Summary
-- 一般の `cmoc tui` 向けに、ユーザーの指示へ適用する cmoc の基本規定を含む prompt と、Codex CLI TUI の起動パラメータを組み立てる。サブコマンド固有の構築内容を調べる入口であり、共通の呼び出し型定義や oracle 調査専用の TUI 構築とは責務が異なる。
+- 一般の `cmoc tui` 向けに、ユーザー入力と呼び出し側が確定した閲覧範囲から、cmoc の各種方針を含む完全プロンプトと Codex CLI TUI の起動設定を組み立てる。
+- ユーザーの作業指示を受けて起動する TUI 呼び出しの入口であり、oracle file の調査に特化した読み取り専用 TUI 呼び出しとは目的とアクセス境界が異なる。
 
 ## Read this when
-- `cmoc tui` が送る prompt の構成や、ユーザー指示の受け渡しを追う・変更するとき。
-- 一般の `cmoc tui` におけるファイルアクセス方針、indexing preflight、editor input handoff の起動設定を確認するとき。
+- 一般の `cmoc tui` に渡すユーザー入力のプロンプトへの組み込み方や、呼び出し側が選んだ閲覧範囲の反映を確認・変更するとき。
+- 一般の TUI 呼び出しに適用するリポジトリ書き込み方針や、editor input handoff の設定を追うとき。
 
 ## Do not read this when
-- `cmoc oracle investigation` の oracle file 限定調査向け TUI の prompt や起動設定を調べる場合は、その専用 builder へ進む。
-- 共有される呼び出しパラメータ型の項目だけを確認する場合は、共通の型定義へ進む。
+- oracle file に関する調査指示と読み取り専用の境界を持つ専用 TUI 呼び出しを調べる場合は、その調査用 builder へ進む。
+- 呼び出しパラメータやファイルアクセスモードなど共通の型定義を確認する場合は、基礎型定義へ進む。
+- 完全プロンプトの共通組み立てや各方針の文面を調べる場合は、共通 prompt builder や該当する方針定義へ進む。
 
 ## hash
-- f28546aef0423a86dd61a08732f512eec7b68a81bb94a95ff72b3c793e49b0b7
+- c26472d2c2eec14076c44546c8189b6af01f6f555f6f123be4d56e7c71a74c17

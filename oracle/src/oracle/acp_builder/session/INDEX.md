@@ -1,17 +1,16 @@
 # `join`
 
 ## Summary
-- session join 中の merge conflict 解消に使う、join 固有の agent call を組み立てる。
-- source・target commit と home worktree を共通 prompt builder に渡し、この call のアクセス範囲や起動設定を決める。
+- session branch を home branch へ統合する競合解消用 agent call を組み立て、両 branch の merge 前の HEAD、home worktree、閲覧範囲を共通の prompt 構築処理へ渡す。
+- この対象は session join 固有の call 設定を担う。join 間で共通する競合解消の指示や処理方針は、共通 prompt 構築側が担う。
 
 ## Read this when
-- session join の競合解消 call がどの commit と worktree を使うか確認・変更するとき。
-- この call のアクセス範囲、prompt builder への引き渡し、indexing preflight などの起動設定を確認・変更するとき。
+- session join の競合解消 call が、どの commit・worktree・アクセス範囲を使って構築されるかを調べるとき。
+- session join の call 設定を変更するとき。
 
 ## Do not read this when
-- session join 全体の手順、state 遷移、report、失敗時の動作を調べるときは、session join の仕様へ進む。
-- 競合解消の判断基準や共通 prompt の内容を調べるときは、競合解消の仕様または共通 prompt builder へ進む。
-- session join の競合解消 call 以外の session call の起動設定を調べるときは、その call を定義する対象へ進む。
+- 競合の取得方法、共通の解消指示、検証方針を調べたり変更したりするときは、共通 prompt 構築側を読む。
+- run の成果を session に統合する call や、封印済み結果の扱いを調べるときは、run join 固有の call 構築側を読む。
 
 ## hash
-- 80369de4088bc3f5bb5de1ff7d969437a64a6a12c3b3bc7c7bb36cd1d60d9381
+- aa4f32256acce60526d8dc561d08cbd1d917d6e0c73af1f1f174550e15a030f4

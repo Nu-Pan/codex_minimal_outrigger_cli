@@ -1,13 +1,16 @@
 # `launch_exec.py`
 
 ## Summary
-- realization apply fork の本命 agent 呼び出しに渡す prompt と AgentCallParameter を構築する。指定 commit 範囲の追従指示や、run worktree を使う起動条件の入口となる。
+- `cmoc realization apply fork` で agent に渡す完全 prompt と起動パラメータを組み立て、差分追従の指示と実行コンテキストを結び付ける。
+- 指定された commit 範囲、run worktree、呼び出し元が決めた文書検索範囲を使い、oracle の変更を realization に反映する call 固有の指示と共通方針を構成する。
 
 ## Read this when
-- realization apply fork の追従指示、差分の扱い、ファイルアクセス範囲、作業ディレクトリなど、agent call の prompt や起動パラメーターを変更・確認するとき。
+- `realization apply fork` の agent 向け指示、完了条件、差分の取得・扱いを確認または変更するとき。
+- agent call のアクセス権限、作業ディレクトリ、文書検索範囲の受け渡しを確認または変更するとき。
 
 ## Do not read this when
-- 追従対象 commit 範囲の決定、fork/join の lifecycle、report やエラー処理を変更・確認するときは、realization apply と編集 run の仕様を直接読む。
+- 追従対象の選定や run worktree の作成・管理など、agent call 起動前後の処理を確認または変更するときは、呼び出し側の apply orchestration を読む。
+- 共通 prompt 方針や起動パラメータ型の定義だけを確認または変更するときは、それぞれの共通定義を読む。
 
 ## hash
-- 876d609de237c78fee621db6eaff66c92a25dfc2b5c7b820d1010f562adb13c5
+- 4cbd2089f4a4d3b267f5c074c7d6115a7e397258d486befb5dd9bd201b90b392

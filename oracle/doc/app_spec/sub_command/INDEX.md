@@ -17,132 +17,130 @@
 # `editing_run.md`
 
 ## Summary
-- realization apply、realization refactor、feedback report の編集 run に共通する開始条件、状態遷移、同時実行制約、差分確定、join・abandon の lifecycle を扱う。
-- 共通の join 検査、merge と競合解消、後処理、cleanup、report の入口となる。workload 固有の処理や隔離資源・session state の正本定義は、それぞれの仕様に委ねる。
+- realization apply/refactor と feedback report に共通する編集 run のライフサイクルを定め、個別 workload の fork 処理と共通の join・abandon 処理の接点を説明する。
+- 同時実行の制約、共通の開始・commit 規則、feedback report の自動 join、競合解消、report と cleanup を扱う。
 
 ## Read this when
-- 編集 run を開始できる条件や、active run の状態によって許される操作を確認するとき。
-- join・abandon の共通事前条件、差分検査、merge、競合解消、失敗時の復旧、cleanup、report の扱いを確認するとき。
-- realization apply・refactor の明示的 join と feedback report の自動 join に共通する lifecycle の範囲を確認するとき。
+- 複数の編集 workload に共通する run の開始条件・進行中の制約や、join・abandon の事前条件と状態遷移を確認するとき。
+- join 時の差分検査、merge と競合解消の責務、失敗時の rollback、post-join と cleanup の扱いを確認するとき。
+- feedback report が自動 join する共通 lifecycle や、明示的な join・abandon との関係を確認するとき。
 
 ## Do not read this when
-- realization apply の比較範囲、本命 call、fork report、join 後 hook の詳細を確認するときは、その workload 固有仕様を読む。
-- realization refactor の state、調査 loop、処理単位、完了条件を確認するときは、その workload 固有仕様を読む。
-- feedback report の intake、issue remediation、publication、固有 recovery を確認するときは、その workload 固有仕様を読む。
-- run の隔離資源や session state の正本定義を確認するときは、各共通定義を直接読む。session fork・join・abandon、oracle edit・investigation、run を作らない更新、session join の競合解消も、それぞれの専用仕様を読む。
-- workload または競合解消 call の正確な prompt、引数、起動パラメータを確認するときは、該当する builder 実装を読む。
+- realization apply/refactor の個別手順、編集対象、workload 固有 report や hook を調べるときは、それぞれの workload 仕様を読む。
+- feedback report の intake、issue 単位の修正、publication や recovery の詳細を調べるときは、その workload 仕様を読む。
+- run の隔離資源や session・run state の詳細定義が必要なときは、それぞれを正本として定める文書を直接読む。
+- session lifecycle、oracle の編集、read-only investigation、または run を作らない機械的更新を扱うとき。
 
 ## hash
-- 0d7455112605d5b68550bed8daface9bacf931f6288aaee020e7a9cc4ce43570
+- 60e1ab8b01f14b5a8ecab4ddf427dc7288f0097ce272973d2c6837932710d702
 
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の実行を定め、observation の取り込みから issue の処理、intake wave、自動 join、publication と recovery までの流れを扱う。
-- 安全な修正の issue 単位の確定と、人間の対応が必要な issue の報告がどう連携するかを確認する入口。
+- 収集済み observation の検証・整理から、issue の確認と安全な修正、run の join、結果の publication、中断・失敗時の回復までを定めるコマンド仕様です。
 
 ## Read this when
-- `cmoc feedback report` の開始・再開条件、observation の検証や正規化、issue の処理・再確認、wave の完了条件を確認または変更するとき。
-- 自動 join 後の検証、report の公開、中断や失敗からの recovery の動作を確認するとき。
+- `cmoc feedback report` の処理順序や、issue の判定・修正から join・report 公開に至る挙動を理解または変更するとき。
+- このコマンドの再開条件、中断・エラー時の扱い、report の出し分けを確認するとき。
 
 ## Do not read this when
-- observation の収集基準や reporter の入力契約を確認するときは、feedback observation の仕様を直接読む。
-- feedback の用語・結果分類・処理モデルを確認するときは、その定義を扱う仕様を読む。
-- feedback の永続 state や checkpoint の契約、編集 run に共通する join・abandon の lifecycle を確認するときは、それぞれの共通仕様を直接読む。
+- observation の報告基準、MCP 受付、raw 保存だけを調べるときは、収集仕様を直接読んでください。
+- feedback の永続 state や atomic publication の契約だけを調べるときは、state 仕様を直接読んでください。
+- agent に渡す正確な prompt や Structured Output schema だけを調べるときは、それぞれの定義元を直接読んでください。
 
 ## hash
-- 311bf1eeee02e6cf556a695445c41a5c876567d297483dd3dcb7eca60649aea1
+- 7ef0e73f3a4097c6b67a5f4116ecf0c0d71f96c693603dffa86f5d31f398f2a5
 
 # `indexing.md`
 
 ## Summary
-- `cmoc indexing` の引数、未コミット差分がないことを求める事前条件、doctor preprocess からインデクシングを実行する順序を定める。
-- 正常終了とエラー終了の両方で保存する実行要約レポートの扱いを定める。
+- `cmoc indexing` による文書索引の明示同期について、doctor preprocess から同期・資源解放までのコマンド固有の手順を定める。
+- 同期の未開始・更新・無変更・失敗を含む実行要約の報告を定め、索引同期の共通契約へ案内する。
 
 ## Read this when
-- `cmoc indexing` の実行条件、手順、エラー時の挙動を調べる・変更する場合。
-- 実行要約レポートがいつ保存され、何を記録するか確認する場合。
+- 明示的な索引同期を実行するとき、またはその開始条件・処理順序・失敗時の扱いを確認するとき。
+- 同期前に失敗した場合を含む実行要約の内容や、doctor の修復結果と同期結果の区別を確認するとき。
+- 通常検索と明示同期のコマンド上の役割の違いを確認するとき。
 
 ## Do not read this when
-- インデクシング自体の規則や `INDEX.md` エントリーの内容を調べる場合は、一般のインデクシング仕様を直接読む。
-- doctor preprocess の責務や動作を調べる場合は、そのサブコマンドの仕様を直接読む。
+- 検索対象の許可条件、閲覧範囲、同期整合性、cache、排他などの共通仕様を確認・変更するときは、文書検索の共通仕様を直接読む。
+- doctor の検証・修復手順そのものを確認・変更するときは、doctor preprocess の仕様を直接読む。
+- 検索 query の処理や検索結果の扱いを確認するときは、明示同期の手順ではなく文書検索の共通仕様を読む。
 
 ## hash
-- 8a2acc19195064829931578f12875ea420efb5ab64e1889c6c68e9ebfbad5381
+- a394183acb71eb8177bdabbbe60948126723ad9527921d4d28f7dc46bd0c91b3
 
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` の仕様として、入力指示から oracle file の目標状態を整えるための実行順序、事前条件、編集境界を定める。
-- 同じ prompt と設定を使う独立した編集 agent call を 2 回直列に実行し、差分を保持して人間が最終確認する運用を定める。
-- 実行要約の保存と、console・ログ・Windows toast の共通仕様との境界を示す。
+- `cmoc oracle edit` の workload 仕様。ユーザーの指示から oracle file の目標状態を定め、編集 agent call、差分の扱い、実行結果の報告までを説明する。
+- oracle file を編集するこの workload の実行条件や境界を確認する入口。調査専用の処理や realization の編集 run とは責務が異なる。
 
 ## Read this when
-- `cmoc oracle edit` の実行条件、2 回の agent call、oracle file の編集権限、差分の扱いを変更または調査するとき。
-- oracle edit 固有の report や、実行状況の console・ログ・toast 通知を確認するとき。
+- `cmoc oracle edit` の入力確定、実行前提、2 回の agent call、編集権限、終了状態の仕様を確認・変更するとき。
+- 両回で共有する prompt と設定、未コミット差分の扱い、primary report や通知など、この workload 固有の動作を確認するとき。
 
 ## Do not read this when
-- oracle file の調査と回答だけが目的で、編集を伴わないときは `oracle_investigation.md` を読む。
-- エディタ入力や handoff の共通 lifecycle、Codex CLI 呼び出し、indexing、doctor preprocess、共通通知の規則だけを確認するときは、それぞれの共通仕様を直接読む。
+- oracle file の調査や読み取り専用の回答が目的なら、調査 workload の仕様を読む。
+- realization file の apply・refactor や run の join・abandon が目的なら、該当する workload と編集 run 共通仕様を読む。
+- prompt の正確な文面や起動パラメータの構築方法、共通の editor input・Codex 実行・ログ・通知規則を確認するなら、それぞれを定義する builder または共通仕様を直接読む。
 
 ## hash
-- 13e191ee31907d371d5d46e93487996c75c9297fab63c0e0f5bf2c78958b5305
+- 35f31833db093b935f3234c574cd179ae60a72fd025d97c07e52d42ab9b1c840
 
 # `oracle_investigation.md`
 
 ## Summary
-- `cmoc oracle investigation` の責務と実行の流れを定める。oracle file に関する依頼を受けて Codex TUI で調査し、根拠を示して回答する。
-- 調査中の oracle file の扱いと、このサブコマンド固有の境界を定める。エディタ入力、handoff、共通の起動設定や通知、indexing、正確な prompt 構築は各共通仕様や builder に委ねる。
+- oracle file の調査指示を受け、入力から Codex CLI の TUI 起動、回答までを扱う `cmoc oracle investigation` 固有の動作と調査境界を定める。
+- 調査結果の根拠提示、TUI agent の読み書き範囲、共通仕様や起動パラメータ builder への責務委譲を確認する入口。
 
 ## Read this when
-- `cmoc oracle investigation` の調査範囲、TUI 起動、回答時の根拠提示や agent の権限を確認・変更するとき。
-- oracle 調査の入力から回答までの流れを確認し、oracle 編集や汎用 TUI の仕様と区別するとき。
+- oracle file の調査・回答を担当するコマンドの実行手順、根拠提示、TUI agent の調査範囲や書き込み可否を実装・確認するとき。
+- このコマンドで editor input handoff を使う連携や、調査サブコマンド固有の起動条件を確認するとき。
 
 ## Do not read this when
-- oracle file と realization file の共通の分類・判断基準だけを確認するときは、その共通仕様を読む。
-- 共通の editor input lifecycle や handoff、Codex TUI の起動設定・通知、indexing の動作だけを確認するときは、それぞれの共通仕様を読む。
-- 正確な prompt 文面や workload 固有の起動パラメータを確認するときは、その構築を担う builder を読む。
-- oracle file の編集を行う場合や、汎用の `cmoc tui` の挙動を確認する場合は、それぞれのサブコマンド仕様を読む。
+- oracle file の編集作業や編集 lifecycle を調べる場合は、`cmoc oracle edit` の仕様から確認するとき。
+- 共通のエディタ入力 lifecycle だけなら prompt editor input の仕様を、Codex TUI の共通起動規則だけなら `cmoc tui` の仕様を読むとき。
+- 正確な調査 prompt、prompt part の選択、workload 固有の起動パラメータを調べる場合は、builder の定義を直接読むとき。
 
 ## hash
-- d5295b18621f394969c8c60274d0383e734ae5a34427a4e0d7d487fc2863a920
+- ee3a09265429f10dd0e74b5a729a3b236b3fccacf2d187898d88d845b7f6270b
 
 # `realization_apply.md`
 
 ## Summary
-- 直近の oracle file 変更を commit 範囲から特定し、realization file に反映する短周期 workload の適用範囲と完了条件を定める。
-- apply 固有の agent call 制約、変更許可、report、join 後の比較始点更新を確認する入口となる。
+- 直近のコミットに含まれる oracle file の変更を realization file へ追従する apply fork workload の目的と範囲を定める。
+- apply 固有の追従手順と join 後の比較範囲更新を扱い、短い変更追従の入口となる。ファイル単位の網羅的な調査は refactor workload が担う。
 
 ## Read this when
-- realization apply fork がどの commit 範囲の oracle 変更を追従させるかを確認・変更するとき。
-- apply 固有の agent call、変更可能な成果物、エラーや report の扱い、次回の比較始点を更新する条件を確認するとき。
-- apply と、oracle file と realization file をファイル単位で繰り返し調査する workload との責務境界を確認するとき。
+- 直近の oracle 変更を realization file へ反映する apply workload の対象や完了条件を確認するとき。
+- apply とファイル単位で調査を繰り返す refactor のどちらを使うか判断するとき。
 
 ## Do not read this when
-- oracle file と realization file の全体をファイル単位で調査し、未解決項目を追跡する作業では、realization refactor の仕様から読む。
-- fork、join、abandon の共通 lifecycle だけを確認する場合は、編集 run の共通仕様から読む。
-- 適合性の一般的な判断基準だけが必要なら、その判断基準の正本を読む。prompt の正確な文面や builder の選択・引数を確認する場合は、委譲先を直接読む。
+- fork、join、abandon に共通する編集 run の手順だけを確認するときは、編集 run の共通仕様へ進む。
+- oracle file と realization file をファイル単位で網羅的に調査・修正する手順を確認するときは、realization refactor の仕様へ進む。
 
 ## hash
-- b3d6e03203a8dfe1e0af1c0ad00e30f655d71c87c2abcc10f24606eb2e3d567b
+- b945d7be83974c39ec8ab7dcfcc9a6492a6728683b5347d786fa0f81b421c06c
 
 # `realization_refactor.md`
 
 ## Summary
-- oracle file と realization file を起点にファイル単位の調査を繰り返し、所見に応じて realization file を修正する refactor workload の仕様。
-- 調査要求の同期、対象選択、処理単位の確定、unresolved を残した完了、中断・エラー時の扱いと報告を定める。
+- oracle file と realization file を対象に、ファイル単位の調査・修正を繰り返す realization refactor fork の挙動を定める。調査状態の同期と対象選択、処理結果、完了・中断・エラー時の扱い、終了記録を確認する入口。
+- 短い変更ループを担う realization apply や編集 run の共通 lifecycle とは責務が分かれており、refactor 固有の動作を扱う。
 
 ## Read this when
-- oracle と realization 全体を対象とするファイル単位の追従調査や修正、および調査要求 state の同期・選択・更新を実装または変更するとき。
-- refactor workload 固有の完了条件、unresolved の扱い、中断・エラー経路、report 内容を確認するとき。
+- realization refactor fork でどの file が調査対象になるか、調査要求や unresolved target が fork の進行にどう影響するかを確認・変更するとき。
+- 調査結果と実差分の扱い、状態更新、正常完了・中断・エラー時の結果や report を確認・変更するとき。
 
 ## Do not read this when
-- 直近の oracle 差分を短い変更ループで realization に反映する作業では、その apply workload の仕様を読む。
-- 共通の fork・join・abandon lifecycle だけを確認する場合は、編集 run の共通仕様を読む。
-- 適合性の判断基準だけを確認する場合は oracle と realization の責務を定める仕様へ、prompt と起動パラメータの構築を確認する場合は refactor 用 builder の実装へ進む。
+- fork・join・abandon の共通 lifecycle だけを確認・変更するときは、編集 run の共通仕様を参照する。
+- oracle file に対する realization file の適合性や所見判断の基準だけを確認するときは、その正本仕様を直接参照する。
+- 調査 call の正確な prompt、prompt part、起動パラメータを確認・変更するときは、それらを構築する実装を直接参照する。
+- oracle file と realization file の分類・列挙規則だけを確認するときは、file enumeration の仕様を直接参照する。
 
 ## hash
-- 338fd72c0049371a7dba1589e72a39ee54897621e2b6da8ae0e0d93a8b26ff92
+- a9398f5f1df5c675a4d58a974c3016bdc5ecfbb0b9d283b5f3b34189c40a3b41
 
 # `session_abandon.md`
 
@@ -198,18 +196,19 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` の実行順序、未コミット差分がある場合の扱い、AI Agent CLI/TUI 起動に共通する契約と Codex CLI 固有の契約を定める。
-- 起動パラメータの詳細や関連する各 lifecycle の意味仕様への委譲先を示し、TUI 起動全体の責務分担を確認する入口となる。
+- `cmoc tui` がユーザーのプロンプトを受け取り、doctor preprocess 後に cmoc 固有契約を付加して AI Agent CLI/TUI を起動する意味仕様を定める。
+- 実行条件、バックエンド共通の起動契約、Codex CLI 固有の条件を示し、プロンプト入力のライフサイクルや起動パラメータの詳細を別の正本へ委ねる境界を示す。
 
 ## Read this when
-- `cmoc tui` の前処理からプロンプト受領、起動パラメータ構築、TUI 起動までの流れや実行条件を確認するとき。
-- TUI に注入する cmoc 基本規定の適用境界、または Codex CLI 起動時の契約を確認するとき。
+- `cmoc tui` の実行順序や、未コミット差分があっても実行する条件を確認するとき。
+- TUI に適用する cmoc 固有規定や installed skill との優先関係、共通の起動条件を確認するとき。
+- Codex CLI を使う `cmoc tui` で有効にする handoff 機能や Codex 固有の起動条件を確認するとき。
 
 ## Do not read this when
-- エディタ入力の確定手順や editor input handoff の詳細を確認するときは、それぞれの共通仕様を直接読む。
-- TUI の正確な prompt part、文面、workload 固有パラメータ、またはその選択理由を確認するときは、委譲先の builder 定義を読む。
-- 注入される oracle・realization 規定の意味、indexing、feedback observation、Windows toast の詳細を確認するときは、それぞれの正本仕様を直接読む。
-- Codex CLI の環境変数、preflight validation、設定上書き、editor input handoff MCP の詳細を確認するときは、Codex CLI 共通規則を直接読む。
+- エディタ入力ファイルの作成・確定・保存や handoff の共通ライフサイクルを確認するときは、それらを定める仕様を読む。
+- prompt の正確な文面・部品や起動パラメータの構成と選定理由を確認するときは、それらを構築する builder を読む。
+- oracle file の調査や編集など、別サブコマンド固有の目的・権限・実行手順を確認するときは、そのサブコマンドの仕様を読む。
+- feedback observation の収集・保持や Windows toast 通知の共通動作を確認するときは、それぞれの意味仕様を読む。
 
 ## hash
-- bf2c7386391bfad7fdb2fbd081d3d5fda57bf91649fb4f3d12c2862e79fce97c
+- 1aec0b9633a4498180fded849898e627fc5c99e73e263484a466365a3b3e10fe

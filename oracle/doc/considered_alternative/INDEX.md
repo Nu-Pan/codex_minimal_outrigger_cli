@@ -41,20 +41,36 @@
 ## hash
 - 987eb09968e110f446ed1d4ba07c5ed1edec235bc979c1b816138f8ab088b763
 
+# `index_md_routing.md`
+
+## Summary
+- 旧 INDEX routing 方式を廃止した理由と、専用ベクトル検索へ置き換えた判断を記録する。QMD SDK 案を実行時依存にしなかった理由も扱う。
+
+## Read this when
+- 階層別 INDEX routing の廃止経緯や、QMD SDK 案を採用しなかった設計判断を確認するとき。
+
+## Do not read this when
+- 現行の文書検索の動作、同期、失敗時の扱い、資源管理、受入条件を確認するときは、現行の文書検索仕様を直接読む。
+
+## hash
+- c016d7a58a28113bd4a97b665c07141c6a987fb1f581e6f896c75490b89a30c9
+
 # `memory_alternative.md`
 
 ## Summary
-- cmoc が AI 生成の改善案を後続の Codex CLI 呼び出しへ自動注入しない理由を説明する。明示的で追跡可能な情報を重視する設計と、自動注入による誤診断の固定化や古い助言の混入などの懸念を扱う。
+- AI-generated kaizen を後続の Codex CLI 呼び出しへ自動注入しない理由を説明する。追跡可能性、誤診断の固定化、古い対処の混入、memory 機能の運用上の難しさを扱う。
+- 改善案や振り返り自体を否定する文書ではなく、自動的な継続適用のリスクを理解するための説明資料。現行ルールの正本ではない。
 
 ## Read this when
-- cmoc で AI 生成の改善案や記憶を実行間で引き継ぐ設計の判断理由・トレードオフを確認するとき。
+- AI-generated kaizen を後続の呼び出しへ自動注入しない設計理由を確認するとき。
+- 改善案の永続化や memory 型の仕組みを検討し、追跡可能性や陳腐化の懸念を把握するとき。
 
 ## Do not read this when
-- 自動注入の規範的なルールや feedback 全体の共通原則を確認するときは、正本の oracle/doc/app_spec/feedback.md を読む。
-- feedback の収集・状態管理・report の具体的な仕様や、Codex CLI 自体の memory 機能の詳細を調べるとき。
+- feedback report、active issue、observation の現行ルールや処理を確認するときは、正本である oracle/doc/app_spec/feedback.md と同文書が示す担当仕様を読む。
+- Codex CLI の memory 機能の具体的な仕様や実装方法を調べるとき。この文書は機能仕様を定めていない。
 
 ## hash
-- bc32ac25bcf7c60c60e815650fbac349db3b1b4f55f6c615396792c6681fafb5
+- 90bb59fe9ba096835fc798915bd4cfe691d939306d277311ac24f9333ae47e4a
 
 # `oracle_review.md`
 

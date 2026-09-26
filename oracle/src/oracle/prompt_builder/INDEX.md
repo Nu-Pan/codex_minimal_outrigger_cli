@@ -16,19 +16,19 @@
 # `complete_prompt.py`
 
 ## Summary
-- 呼び出し側が選んだ共通規定や追加文面、タスク情報をまとめ、置換定義を統合して agent 向けの完全な prompt を構築する。
-- prompt の構成順や各規定を含める条件、同じ名前の置換定義が競合した場合の扱いを確認する入口。個別の規定文を作る builder 群と、具体的な依頼内容を指定する呼び出し側の間に位置する。
+- 選択された規定と呼び出し固有の入力を組み合わせ、構造化された agent 向け prompt を構築する共通部品です。
+- prompt の構成順と placeholder 定義の統合を担い、個々の規定文や呼び出し固有の目的を定義する箇所への入口になります。
 
 ## Read this when
-- 完全な prompt の共通構成や順序、どの条件で各区画が加わるかを変更・確認するとき。
-- 呼び出し側や追加 prompt から集めた置換定義の統合方法、競合時の挙動を変更・確認するとき。
+- agent 向け prompt 全体の構成、規定の選択や配置、入力の組み込み方を調べる・変更する場合。
+- 複数の prompt 部品から渡される placeholder 定義の統合方法を確認する場合。
 
 ## Do not read this when
-- 個別の規定や方針の文面を変更するときは、その文面を構築する対応 builder を読む。
-- 特定の agent 呼び出しでどの規定や追加文面を選ぶか、どのタスク情報を渡すかを確認するときは、その呼び出し側を読む。
+- 特定の規定文の内容だけを調べる・変更する場合は、その規定を構築する部品へ進んでください。
+- 特定の agent 呼び出しの task や scope だけを調べる・変更する場合は、その呼び出し元へ進んでください。
 
 ## hash
-- 1b0d6941e94d7a3bb70fff393f0b2f4ee0f151d5556d58b6dbf8196677b8ca81
+- e0b2967c10fae513822686200792fabc7a6e5cf20107541e3bd72e265488307f
 
 # `editor_input.py`
 
@@ -48,52 +48,50 @@
 # `merge_conflict_resolution.py`
 
 ## Summary
-- run join・feedback の自動 join・session join で共有する、競合解消 agent 向け prompt を組み立てます。共通の目的と作業範囲、両 commit の参照入力、Git から変更と競合状態を取得する指示、適用する共通 policy をまとめます。
-- 呼び出し元固有の追加指示も共通 prompt に組み込みます。各 join の起動設定や競合解消方針の具体的な文面ではなく、それらを組み合わせる入口です。
+- run join（feedback の自動 join を含む）と session join で共用する、競合解消 agent 向け prompt を構築する。両側の commit の参照入力、統合作業の目的と範囲、共通規定をまとめる。
+- 呼び出し元固有の追加文面と、作業中 worktree の文脈・アクセス範囲・文書検索範囲を共通構築に反映する。
 
 ## Read this when
-- join 間で共通する競合解消 prompt の目的、入力、調査指示、policy の構成を変更・確認するとき。
-- agent に渡す commit 情報や、進行中の競合状態を Git から取得させる指示を変更・確認するとき。
-- 呼び出し元固有の追加指示を共通 prompt に取り込む方法を確認するとき。
+- run join と session join に共通して渡す競合解消 prompt の内容や構成を変更・追跡するとき。
+- merge 前の両 commit をどう prompt に渡すか、また agent に進行中の競合状態をどう調査させるかを確認するとき。
 
 ## Do not read this when
-- 競合解消の判断基準、編集上の制約、完了報告の具体的な文面を変更するときは、競合解消 policy の定義を読む。
-- 個別 join の起動パラメータ、アクセス範囲、追加指示を変更するときは、その join の call 構築を読む。
-- join の状態管理・復旧などの契約や、完全 prompt の汎用的な構成処理を変更するときは、それぞれの仕様または共通構築処理を読む。
+- 競合の判断基準、編集上の責務、検証や報告の方針そのものを変更するときは、その方針を定義する対象を直接読む。
+- run または session の個別の編集範囲、固有の追加入力、起動パラメータを変更するときは、該当する呼び出し元やコマンド仕様を直接読む。
+- 完全 prompt の共通組み立てや、個別ポリシーの文面を変更するときは、それぞれの構築定義を直接読む。
 
 ## hash
-- e1a7317d4ddd169865e0804dcc070a2962827116a4663cb3a51fee42fae7550a
+- fd29d8f94e915805cabb59e4b7d00e08b4169dd958103d6bdda3ce9585052006
 
 # `parts`
 
 ## Summary
-- `oracle file`、`realization file`、`uncategorised file` の役割と分類を agent 向けプロンプトに示す基本説明文を構築する。分類の意味仕様や実際の列挙処理ではなく、その説明文の表現を担う。
+- 完全 prompt に含める基本説明を組み立て、oracle・realization・uncategorised file の役割と分類の枠組みを示す。
 
 ## Read this when
-- 生成プロンプトでの各 file 種別の区別や分類説明を変更・確認するとき。
-- 完成プロンプトにこの基本分類説明が組み込まれるかを確認するとき。
+- agent 向け prompt の基本説明について、これらのファイル区分の役割や境界を変更するとき。
 
 ## Do not read this when
-- 分類の意味仕様や列挙アルゴリズムを変更・検証するときは、分類を定める oracle docs または実際の列挙処理を直接確認する。
-- file を扱う判断基準や caller 固有の制約など、基本分類説明以外の prompt policy を変更するときは、該当する policy を直接確認する。
+- ファイル区分の正本仕様を変更・確認するときは、該当する意味仕様や列挙仕様から確認する。
+- 完全 prompt の構成や各説明の有効化条件を変更するときは、prompt 全体の組み立てを担う対象から確認する。
+- oracle file または realization file を扱う手順を変更するときは、それぞれの扱い方を定める個別の方針から確認する。
 
 ## hash
-- 15ceae959181089e7d69c5cbc8d976b1c3727958999930a3bc56388caacf0f23
+- 4df4f3bd63df35298afcf98f2050c29c802e660f0337f00edbdf0113fc0c4074
 
 # `policy`
 
 ## Summary
-- agent 向け prompt に組み込む共通規定とタスク別規定の文面を構築する。
-- ファイルアクセス、oracle と realization、適合性所見、競合解消、INDEX の routing と entry、feedback 報告、editor input handoff の規定を扱う。prompt 全体での有効化や配置は別の構築側が担う。
+- agent call に組み込む規定文面を、話題ごとの builder として構築する。参照 routing、file access、oracle・realization の扱い、適合性所見、競合解消、feedback 報告、editor input handoff を担う。
+- 各 builder は prompt の構造化要素と必要な placeholder 定義を返す。個別の規定を選択して完全 prompt に組み込む制御は、上位の prompt 構築側が担う。
 
 ## Read this when
-- agent に渡す規定文面の内容を探す、または変更するとき。
-- 複数の規定がどの作業領域を扱うかを把握し、個別の構築元を選ぶとき。
+- 複数の規定文面にまたがる変更や、この規定群の責務の境界を調べるとき。
+- agent call に渡す規定の文面や、path context・file access mode・検索範囲に応じた構築内容を変更するとき。
 
 ## Do not read this when
-- prompt 全体での規定の有効化、配置順、統合方法を調べるときは、prompt 全体の構築側を読む。
-- 規定の正本としての意味や要件を確認するときは、対応する oracle 仕様を読む。
-- 対象の個別規定がすでに特定できているときは、その規定の構築元を直接読む。
+- 単一の規定文面だけを調べる場合は、その規定を構築する箇所から読み始める。
+- 規定の選択・有効化・完全 prompt 内の配置や結合方法を変更するときは、完全 prompt の構築側を直接確認する。正本仕様の意味を確認・改訂するときは、該当分野の oracle doc を直接確認する。
 
 ## hash
-- 762d1089c50de69424d7b5945ba28825849c963ba92f4189cd43ca88553db4ee
+- 8635dc811502a790cae45f75d4490212ee3ad9029551a6daf9d1e8e089ca1a6d

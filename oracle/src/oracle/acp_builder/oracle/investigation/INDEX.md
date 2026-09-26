@@ -1,16 +1,17 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc oracle investigation` の Codex TUI 向けに、ユーザーの調査指示を含む完全プロンプトと、oracle 読み取り専用の起動パラメータを組み立てる。
-- 調査結果で oracle file を根拠として特定させ、editor-input handoff と indexing preflight を有効にする起動設定の入口。
+- `cmoc oracle investigation` のユーザー指示と呼び出し側が確定した閲覧範囲から、完全 prompt と TUI 起動パラメータを構築する。
+- 調査タスクの文面、oracle file を根拠とする範囲、アクセス方針、エディタ入力の受け渡しを、この呼び出し固有の設定としてまとめる。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 呼び出しで、調査指示のプロンプトへの組み込み方、oracle 読み取り制限、handoff、preflight、起動パラメータを変更または追跡するとき。
-- 調査タスクの責務や、agent に渡す調査範囲・根拠提示基準を確認するとき。
+- oracle investigation の指示文や完了条件、ユーザー指示の prompt への組み込み方を変更するとき。
+- この調査呼び出しのファイルアクセス方針、作業ディレクトリ、文書検索範囲やエディタ入力 handoff の設定を変更するとき。
 
 ## Do not read this when
-- 個別の oracle file の内容や仕様自体を調査・改訂するとき。この起動設定を変えないなら対象外。
-- agent 呼び出し全般に共通する prompt 構築や型定義を変更するとき。この対象は oracle investigation 固有の TUI 設定に限られる。
+- 完全 prompt の共通構成や共通ポリシー文面を変更するときは、prompt 構築側や該当ポリシーの定義へ進む。
+- 共通のアクセスモード、検索範囲、agent call parameter の定義を変更するときは、共通型の定義へ進む。
+- 調査対象や文書検索範囲を決める処理が対象なら、その選択を行う呼び出し元を確認する。
 
 ## hash
-- 1a42a8af1276a394d082ff1f55912e556dbf1aefc9bdcebb837c8b93911662a6
+- 7f613562c14718384a60865446a52bbb7484c5b92e71fc692771c815c8c6f691
