@@ -12,6 +12,20 @@
 ## hash
 - 4ca1f0d162961d203941966401a55acccf672c043dd5dc0f51e24487e8cd8322
 
+# `cmoc_branch_hint.md`
+
+## Summary
+- 作業ブランチを agent への参照ヒントとして渡す案と、不採用とした理由を記録する。
+
+## Read this when
+- agent に作業ブランチの参照ヒントを与える案を検討し、広範な確認を避ける利点と、既存の経緯が新しい発見を妨げる懸念を比べるとき。
+
+## Do not read this when
+- 現行のブランチ情報の伝達方法やコマンドの挙動を確認・変更するとき。この文書は不採用案の判断記録であり、現行仕様や実装を示すものではない。
+
+## hash
+- c3e267fe1dc21937d4e20bc8cb62846697a6738124b1167141baaa7c29f040bb
+
 # `file_access_policy_violation_post_validation.md`
 
 ## Summary
@@ -71,6 +85,20 @@
 
 ## hash
 - 90bb59fe9ba096835fc798915bd4cfe691d939306d277311ac24f9333ae47e4a
+
+# `oracle_description_language.md`
+
+## Summary
+- oracle を適度に構造化し、LLM による自然言語解釈を前提とする専用記述言語の構想と、その案をロングショットとして不採用にした判断を記録する。
+
+## Read this when
+- oracle 用の専用記述言語や構造化表現を提案・評価する際に、以前の構想と不採用の判断を確認するとき。
+
+## Do not read this when
+- 現行の oracle と realization の正本責務、分類、優先関係を確認するときは、それらを定める現行仕様を読む。
+
+## hash
+- e6f2f3b49397e88128e75a241495c5ad4a0b0cd43ea6444d9861f935567cac87
 
 # `oracle_review.md`
 
