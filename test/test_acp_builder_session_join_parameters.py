@@ -15,7 +15,7 @@ import acp.builder.session.join.conflict_resolution as session_conflict_resoluti
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
-from basic.acp import FileAccessMode
+from basic.acp import DocumentSearchScope, FileAccessMode
 
 
 @pytest.fixture
@@ -49,8 +49,9 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     """conflict resolution 用パラメータが repo write 権限を使う契約を検証する。"""
 
     source, target = "a" * 40, "b" * 40
+    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
     parameter = build_session_join_conflict_resolution_parameter(
-        source, target, session_join_root
+        source, target, session_join_root, document_search_scope=scope
     )
 
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
@@ -64,7 +65,7 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     )[0]
     assert "# task" in objective
     assert "進行中の merge" in objective
-    assert parameter.run_indexing_preflight is False
+    assert parameter.document_search_scope == scope
     assert "# conflict resolution policy" in parameter.prompt
     assert "# routing policy" in parameter.prompt
     for heading in ("# oracle policy", "# realization policy"):
@@ -77,7 +78,10 @@ def test_session_join_conflict_prompt_passes_commit_references_without_path_list
 ) -> None:
     """差分と競合一覧は agent が Git から取得できる参照だけを渡す。"""
     parameter = build_session_join_conflict_resolution_parameter(
-        "c" * 40, "d" * 40, session_join_root
+        "c" * 40,
+        "d" * 40,
+        session_join_root,
+        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
     )
     assert "共通祖先" in parameter.prompt
     assert "進行中の merge の Git index" in parameter.prompt

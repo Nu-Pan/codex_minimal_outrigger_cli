@@ -50,17 +50,17 @@
 # `lifecycle.py`
 
 ## Summary
-- editing run 共通 helper の旧 import path を保つ薄い互換 shim。共通 lifecycle 実装の型と関数を再公開する。
+- editing run の開始・状態遷移・差分処理などの共通 helper を旧 import 経路から再公開する、実装を持たない互換 shim です。
 
 ## Read this when
-- 旧 import path の互換性や、ここから再公開する helper の範囲を確認・変更するとき。
+- 旧 import 経路の互換性や、そこから利用できる共通 lifecycle helper を確認するとき。
 
 ## Do not read this when
-- editing run の開始、状態遷移、差分処理などの実装を追う・変更するときは、共通 lifecycle の実装を直接読む。
-- join や abandon など個別コマンドの手順を追う・変更するときは、そのコマンドの実装を直接読む。
+- 共通 lifecycle の具体的な挙動を調べたり変更したりするときは、正規実装を直接確認してください。
+- run join や abandon の制御フローを調べるときは、それぞれのサブコマンド処理を確認してください。
 
 ## hash
-- 12aa75149d22d3c200f120d96e5588ad2a8d7bad421838c34a2010ef375244b8
+- 4ce7349f863f1a9083e0bb8ae92f3d8b2d783364feae53a5f2b947dbe5e87145
 
 # `report.py`
 

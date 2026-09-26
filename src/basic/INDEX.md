@@ -16,18 +16,18 @@
 # `acp.py`
 
 ## Summary
-- Oracle 側で定義する `AgentCallParameter` と `FileAccessMode` を再公開し、実行時モジュールにある既存の `basic.acp` 参照を保つ薄い互換層です。ACP 型の定義元ではありません。
+- ACP 呼び出しパラメータと関連型を正本側から再公開し、既存の `basic.acp` インポートを維持する互換入口です。型の定義や ACP の組み立て処理は担いません。
 
 ## Read this when
-- `basic.acp` 経由で公開される型や既存の import 互換性を確認するとき。
-- この再公開層がまだ必要か、参照を撤去できるかを調べるとき。
+- 既存の `basic.acp` インポートの利用箇所や互換性を確認・変更するとき。
+- この互換入口の削除条件を検討するとき。
 
 ## Do not read this when
-- ACP 型の構造やファイルアクセスモードの意味を調べたり変更したりするときは、定義元の `oracle/src/oracle/acp_builder/basic.py` と関連仕様を直接確認してください。
-- Codex の実行や preflight の挙動を調べるときは、該当する `src/commons/runtime_codex_*.py` を直接確認してください。このファイルは型を再公開するだけです。
+- ACP 型の定義や意味を変更するときは、正本の型定義を確認してください。
+- ACP 呼び出しの組み立てや実行時の動作を調べるときは、それを担う builder または runtime の実装を確認してください。
 
 ## hash
-- 53332796af2860b66db15176a77da24eb3dc94d8c7a9cd5ac7c0976c131ceef3
+- 651ae2b3b14ae6f1686a19187d7912ef31b7cd171d1a300030ec7938bdb53141
 
 # `path_model.py`
 

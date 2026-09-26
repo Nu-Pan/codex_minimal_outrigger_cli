@@ -40,7 +40,6 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
         if (
             parts[0] == "memo"
             or parts[:2] == (".cmoc", "gu")
-            or relative.name == "INDEX.md"
             or relative == refactor_state
         ):
             continue

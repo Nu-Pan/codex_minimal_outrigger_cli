@@ -58,7 +58,6 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "session_state_after": ("session_state",),
     "merge_commit": ("run_join_commit",),
     "state_after": ("session_state",),
-    "changed_paths": ("updated_indexes",),
 }
 
 

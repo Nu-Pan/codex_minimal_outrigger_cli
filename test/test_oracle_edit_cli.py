@@ -8,7 +8,6 @@
 """
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -17,9 +16,8 @@ from _codex_support import FakeCodexResult, codex_override_config, setup_codex_h
 from _git_support import current_branch, make_repo, run_git
 
 import commons.runtime_cli as runtime_cli_module
-import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.edit as oracle_edit_module
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_override_args
 from commons.runtime_config import config_path
@@ -31,14 +29,6 @@ from commons.runtime_state import (
     write_state,
 )
 from main import app
-
-
-@pytest.fixture(autouse=True)
-def reset_indexing_preflight() -> Iterator[None]:
-    """各 test の前後で indexing preflight の process-local state を初期化する。"""
-    codex_preflight_module.disable_indexing_preflight()
-    yield
-    codex_preflight_module.disable_indexing_preflight()
 
 
 def _activate_session(
@@ -83,7 +73,7 @@ def _assert_exec_parameter(
     """2 回の exec に共通する起動契約を検証する。"""
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_WRITE
     assert parameter.structured_output_schema_path is None
-    assert parameter.run_indexing_preflight is False
+    assert parameter.document_search_scope is not None
     assert parameter.agent_call_cwd == root.resolve()
 
 
@@ -154,6 +144,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     def record_build_main_parameter(
         user_instruction: str,
+        *,
+        document_search_scope: DocumentSearchScope,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の本命 builder 呼び出しを記録する。"""
         events.append(
@@ -161,7 +153,9 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
             if user_instruction == oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER
             else "build-main"
         )
-        parameter = real_build_main_parameter(user_instruction)
+        parameter = real_build_main_parameter(
+            user_instruction, document_search_scope=document_search_scope
+        )
         built_main_parameters.append(parameter)
         return parameter
 
@@ -215,14 +209,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     )
     calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
-    def fake_indexing_preflight(
-        update_root: Path,
-        _codex_exec: object,
-    ) -> None:
-        """oracle edit 前の indexing preflight 呼び出しを記録する。"""
-        assert update_root == root
-        events.append("indexing")
-
     real_load_config = oracle_edit_module.load_config
     config_file = config_path(root)
     configured = json.loads(config_file.read_text())
@@ -269,7 +255,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
                 (root / "oracle" / "spec.md").write_text("# first edit\n")
 
             # 自己編集に相当する定義・設定の変更後も再構築・再読込を許さない。
-            def reject_rebuild(_instruction):
+            def reject_rebuild(_instruction, **_kwargs):
                 pytest.fail("editor input was rebuilt after the first call")
 
             monkeypatch.setattr(
@@ -295,17 +281,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     monkeypatch.setattr(
         oracle_edit_module,
-        "run_indexing_preflight",
-        fake_indexing_preflight,
-    )
-    monkeypatch.setattr(
-        oracle_edit_module,
         "_require_oracle_edit_launch_preconditions",
         record_launch_preconditions,
     )
     monkeypatch.setattr(
-        codex_preflight_module,
-        "runtime_run_codex_exec",
+        oracle_edit_module,
+        "run_codex_exec",
         fake_runtime_exec,
     )
     monkeypatch.setattr(
@@ -347,7 +328,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         "collect",
         "build-main",
         "config",
-        "indexing",
         "check",
         "first",
     ]
@@ -444,7 +424,9 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
     """skeleton 構築に失敗した場合は editor input file を残さない。"""
     root = _prepared_repo(tmp_path, monkeypatch)
 
-    def fail_build_main_parameter(_user_instruction: str) -> AgentCallParameter:
+    def fail_build_main_parameter(
+        _user_instruction: str, **_kwargs: object
+    ) -> AgentCallParameter:
         """skeleton の構築失敗を再現する。"""
         raise CmocError("builder failed", [], "test failure")
 
@@ -460,7 +442,7 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md"))
 
 
-@pytest.mark.parametrize("failure_stage", ["config", "indexing", "preconditions"])
+@pytest.mark.parametrize("failure_stage", ["config", "preconditions"])
 def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_stage: str
 ) -> None:
@@ -489,11 +471,6 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
     monkeypatch.setattr(oracle_edit_module, "load_config", load_config)
     monkeypatch.setattr(
         oracle_edit_module,
-        "run_indexing_preflight",
-        lambda *_args: record_stage("indexing"),
-    )
-    monkeypatch.setattr(
-        oracle_edit_module,
         "_require_oracle_edit_launch_preconditions",
         lambda *_args: record_stage("preconditions"),
     )
@@ -506,7 +483,7 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == 1
-    stages = ["config", "indexing", "preconditions"]
+    stages = ["config", "preconditions"]
     assert events == stages[: stages.index(failure_stage) + 1]
     report = terminal_primary_report(result).read_text()
     for pass_name in ("first", "second"):
@@ -559,9 +536,12 @@ def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
     instruction = (
         "診断用サブコマンドログ /example/sender.jsonl を参考に oracle を編集する"
     )
-    empty = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter("").prompt
+    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
+    empty = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
+        "", document_search_scope=scope
+    ).prompt
     prompt = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
-        instruction
+        instruction, document_search_scope=scope
     ).prompt
     assert instruction in prompt
     for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):

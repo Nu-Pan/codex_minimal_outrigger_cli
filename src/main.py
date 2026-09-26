@@ -263,7 +263,7 @@ def run_abandon() -> None:
 
 @app.command()
 def indexing() -> None:
-    """work root の INDEX.md を更新する CLI 入口。"""
+    """work root の文書検索索引を同期する CLI 入口。"""
     cmoc_indexing_impl()
 
 

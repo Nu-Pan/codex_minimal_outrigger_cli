@@ -2,12 +2,11 @@
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
-- {{work-root}}/oracle/doc/app_spec/indexing.md
+- {{work-root}}/oracle/doc/app_spec/document_search.md
 - {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
 - {{work-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py
 """
 
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -16,18 +15,9 @@ from _git_support import make_repo
 
 import acp.builder.oracle.investigation.launch_tui as launch_tui_module
 import commons.runtime_cli as runtime_cli_module
-import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.investigation as investigation_module
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
 from main import app
-
-
-@pytest.fixture(autouse=True)
-def reset_indexing_preflight() -> Iterator[None]:
-    """各 test の前後で indexing preflight の process-local state を初期化する。"""
-    codex_preflight_module.disable_indexing_preflight()
-    yield
-    codex_preflight_module.disable_indexing_preflight()
 
 
 def test_oracle_investigation_has_no_session_precondition(
@@ -46,16 +36,6 @@ def test_oracle_investigation_has_no_session_precondition(
     editor_calls: list[tuple[Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
     events: list[str] = []
-    preflight_enable_calls = 0
-
-    real_enable_indexing_preflight = investigation_module.enable_indexing_preflight
-
-    def record_enable_indexing_preflight() -> None:
-        """本命処理より前の indexing preflight 登録を記録する。"""
-        nonlocal preflight_enable_calls
-        preflight_enable_calls += 1
-        real_enable_indexing_preflight()
-
     real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
 
     def record_run_doctor_preprocess(
@@ -84,6 +64,8 @@ def test_oracle_investigation_has_no_session_precondition(
 
     def record_build_parameter(
         user_instruction: str,
+        *,
+        document_search_scope: DocumentSearchScope,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の builder 呼び出しを記録する。"""
         events.append(
@@ -91,7 +73,9 @@ def test_oracle_investigation_has_no_session_precondition(
             if user_instruction == investigation_module.ORIGINAL_PROMPT_PLACEHOLDER
             else "build-parameter"
         )
-        parameter = real_build_parameter(user_instruction)
+        parameter = real_build_parameter(
+            user_instruction, document_search_scope=document_search_scope
+        )
         built_parameters.append(parameter)
         return parameter
 
@@ -124,11 +108,6 @@ def test_oracle_investigation_has_no_session_precondition(
         fake_reserve_prompt_editor_input,
     )
     monkeypatch.setattr(
-        investigation_module,
-        "enable_indexing_preflight",
-        record_enable_indexing_preflight,
-    )
-    monkeypatch.setattr(
         runtime_cli_module,
         "run_doctor_preprocess",
         record_run_doctor_preprocess,
@@ -156,7 +135,6 @@ def test_oracle_investigation_has_no_session_precondition(
     ) -> None:
         """確定後の TUI 起動を記録する。"""
         events.append("tui")
-        assert preflight_enable_calls == 1
         calls.append((parameter, kwargs))
 
     monkeypatch.setattr(
@@ -204,7 +182,9 @@ def test_oracle_investigation_has_no_session_precondition(
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.enable_editor_input_handoff_mcp is True
-    assert parameter.run_indexing_preflight is True
+    assert parameter.document_search_scope == DocumentSearchScope(
+        allowed_subtrees=("oracle/doc",)
+    )
     assert kwargs["notification_command_name"] == "oracle investigation"
     complete_prompt = parameter.prompt
     assert "# oracle investigation policy" not in complete_prompt

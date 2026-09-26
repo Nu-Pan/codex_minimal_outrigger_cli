@@ -260,7 +260,7 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
         )
     )
     parameter = AgentCallParameter(
-        agent_call_kind="build_indexing_index_entry_parameter",
+        agent_call_kind="build_feedback_normalize_issue_parameter",
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt="prompt",
         structured_output_schema_path=schema_source,

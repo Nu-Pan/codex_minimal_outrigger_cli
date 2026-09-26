@@ -46,7 +46,7 @@ _CODEX_SNAPSHOT_EXCLUDED_PREFIXES = (
 _FILE_INVENTORY_EXCLUDED_ROOT_NAMES = frozenset(
     {".git", ".agents", ".codex", ".cmoc", "memo"}
 )
-_FILE_INVENTORY_EXCLUDED_FILE_NAMES = frozenset({"AGENTS.md", "INDEX.md"})
+_FILE_INVENTORY_EXCLUDED_FILE_NAMES = frozenset({"AGENTS.md"})
 _FileClassification = Literal["oracle", "realization"]
 
 

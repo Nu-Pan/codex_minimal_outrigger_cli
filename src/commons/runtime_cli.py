@@ -25,6 +25,7 @@ from .runtime_primary_report import (
     ensure_primary_report,
     reset_primary_report_context,
     start_primary_report_context,
+    update_primary_report_fields,
 )
 from .runtime_results import TerminalResult
 from .runtime_windows_toast import ToastState, notify_terminal_result
@@ -101,6 +102,8 @@ def run_cli_subcommand(
     )
     try:
         current_root = work_root()
+        if name == "indexing":
+            update_primary_report_fields(work_root=str(current_root))
         notification_root = repo_root()
         runtime_root = current_root if use_work_root_runtime else notification_root
         logger = SubcommandLogger(notification_root, name)

@@ -30,36 +30,34 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` の CLI 実行を制御し、編集指示の入力、事前 indexing、active session branch の確認、2 回の Codex exec 起動と状態記録をつなぐ。
-- oracle 調査の TUI 実行経路とは異なり、編集用 exec の実行順序と前提条件を調べる際の入口となる。
+- `cmoc oracle edit` の CLI 実行を制御し、編集指示と起動条件を確定してから、共通の設定と起動パラメータで Codex exec を2回実行する。各呼び出しの成否を primary report に反映する。
 
 ## Read this when
-- `cmoc oracle edit` の指示入力から exec 起動までの手順や順序を変更・確認するとき。
-- main worktree と active session branch の検証、または indexing の事前処理を調べるとき。
-- 2 回の agent call で共有する設定や起動パラメータ、各 call の状態記録を変更・確認するとき。
+- `cmoc oracle edit` の入力から実行までの流れや、2回の編集呼び出しで入力・設定・起動パラメータを共用する制御を調べるとき。
+- 編集起動に必要な main worktree、cmoc session branch、active session の条件を調べるとき。
 
 ## Do not read this when
-- 編集 agent に渡す prompt の契約や内容、exec 起動パラメータの構築を変更するときは、oracle の正本仕様または builder の担当箇所から確認する。
-- prompt editor の予約・編集・保存・抽出の共通動作を変更するときは、その共通処理の担当箇所から確認する。
-- コマンドの登録・振り分け、共通の実行 lifecycle やレポート描画、oracle 調査の TUI 動作を変更するときは、それぞれの担当箇所から確認する。
+- 編集 agent の prompt やアクセス境界を変更するときは、prompt を構築する oracle 側の共通 builder を読む。
+- エディタ用入力の予約、検証、起動、handoff の共通動作を変更するときは、共有 editor-input の実装を読む。
+- read-only の oracle investigation が TUI を起動する流れを調べるときは、そのコマンドの実装を読む。
 
 ## hash
-- 0035f443b392d1e180a728c0465a73fa363d82007faba70ecbac2214cb5b15c5
+- 66ad9c312a541becae6d0e387f2962aa8dea6cd2a5ac7b466ced332ad1a4f143
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` の入力受付から Codex TUI 起動までを組み立てる CLI 実行層です。
-- 調査用プロンプトと起動パラメータの内容は専用 builder に委譲し、editor 入力と runtime の処理をつなぎます。
+- `cmoc oracle investigation` の CLI 実行層として、oracle 文書の検索範囲を設定し、エディタでの指示入力から read-only Codex TUI の起動までをつなぐ。
+- このコマンドの前処理、実行ステップ、worktree 設定の読み込みを担い、調査用の完全な prompt と起動パラメータの内容は専用 builder に委ねる。
 
 ## Read this when
-- `cmoc oracle investigation` の指示入力、起動前処理、または TUI 起動までの流れを確認するとき。
-- 調査用の完全プロンプトを editor に渡し、入力された指示で TUI を起動する連携を追うとき。
+- oracle 調査コマンドの指示入力、実行前処理、検索範囲の指定、または TUI 起動までの流れを追う・変更する場合。
+- このコマンドの runtime 設定や、指示を TUI に渡す統合方法を確認する場合。
 
 ## Do not read this when
-- 調査の意味上の範囲や正確な prompt 文面、起動パラメータの決め方を確認するときは、専用 builder または調査コマンドの正本仕様を直接読む。
-- oracle file の編集フローを確認するときは `cmoc oracle edit` の実装や正本仕様へ進む。
-- 共通の editor 入力処理や CLI runtime の内部動作が目的なら、それぞれの共通実装を直接読む。
+- 完全 prompt の文面、oracle file の参照制約、handoff の指示、または TUI 起動パラメータの選択を変更する場合は、調査用 TUI parameter builder を直接確認する。
+- エディタ入力の予約・編集・回収の共通動作を変更する場合は、prompt-editor 入力の共通実装を直接確認する。
+- 共有 CLI runtime の実行管理や TUI 起動処理そのものを変更する場合は、該当する runtime 実装を直接確認する。
 
 ## hash
-- 3146ae750632ef1edd6f7fc67328141eec9370cc679b8a454be3b0635146690a
+- 768ef39e345a27881f4cce4b0330cb761ef18db3c85a7339215b13796b036755

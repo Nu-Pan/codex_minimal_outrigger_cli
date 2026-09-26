@@ -6,7 +6,6 @@
 - {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
 """
 
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -16,20 +15,11 @@ from _git_support import make_repo, run_git
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli_module
-import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.edit as oracle_edit_module
 import sub_commands.oracle.investigation as investigation_module
 import sub_commands.tui as tui_module
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
 from main import app
-
-
-@pytest.fixture(autouse=True)
-def reset_indexing_preflight() -> Iterator[None]:
-    """各テスト間で indexing preflight の有効状態をリセットする。"""
-    codex_preflight_module.disable_indexing_preflight()
-    yield
-    codex_preflight_module.disable_indexing_preflight()
 
 
 @pytest.mark.parametrize(
@@ -129,6 +119,8 @@ def test_tui_runs_editor_and_launches_codex_directly(
 
     def record_build_parameter(
         original_prompt: str,
+        *,
+        document_search_scope: DocumentSearchScope,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の builder 呼び出しを記録する。"""
         kind = (
@@ -137,7 +129,9 @@ def test_tui_runs_editor_and_launches_codex_directly(
             else "build-parameter"
         )
         events.append(kind)
-        parameter = real_build_parameter(original_prompt)
+        parameter = real_build_parameter(
+            original_prompt, document_search_scope=document_search_scope
+        )
         builder_calls.append((original_prompt, parameter))
         return parameter
 
@@ -151,11 +145,6 @@ def test_tui_runs_editor_and_launches_codex_directly(
         assert parameter.structured_output_schema_path is None
         assert parameter is builder_calls[1][1]
 
-    monkeypatch.setattr(
-        tui_module,
-        "enable_indexing_preflight",
-        lambda: events.append("enable"),
-    )
     monkeypatch.setattr(
         runtime_cli_module,
         "run_doctor_preprocess",
@@ -172,7 +161,6 @@ def test_tui_runs_editor_and_launches_codex_directly(
 
     assert result.exit_code == 0, result.output
     assert events == [
-        "enable",
         "doctor",
         "build-skeleton",
         "build-parameter",
@@ -257,7 +245,6 @@ def test_tui_saves_editor_input_in_main_worktree(
         """linked worktree の TUI 起動 call を記録する。"""
         tui_calls.append((parameter, kwargs))
 
-    monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
@@ -303,7 +290,6 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
     monkeypatch.setattr(tui_module, "run_codex_tui", lambda *_, **__: None)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)

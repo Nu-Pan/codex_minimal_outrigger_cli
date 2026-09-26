@@ -15,33 +15,35 @@
 # `apply`
 
 ## Summary
-- `cmoc realization apply fork` の実行制御を担い、編集 run の開始、差分範囲の確定、agent 実行、変更検査と commit、joinable/error 状態の公開、fork report の保存までを扱う。失敗時は未確定差分を戻して error を記録する。
+- `cmoc realization apply fork` の CLI workload を提供し、apply agent の実行から run の joinable/error 公開、fork report の保存までを統括する。
+- apply 固有の差分処理と agent 変更の検査を扱うため、このコマンドの実行と run lifecycle の挙動を追う入口となる。
 
 ## Read this when
-- apply fork の run lifecycle、agent 差分や生成 INDEX の検査・commit、状態公開、失敗時 cleanup を調べる、または変更するとき。
-- apply report に記録する差分範囲、agent の終了結果、受理済み feedback、cleanup 警告の扱いを調べるとき。
+- `realization apply fork` が agent の変更をどのように検査し、joinable/error run として記録するかを調査・変更するとき。
+- このコマンドの失敗時の処理や fork report の内容を調査・変更するとき。
 
 ## Do not read this when
-- agent に渡す実行 parameter や prompt の組み立てを調べるときは、その生成処理へ進む。この対象は生成結果を使って runtime を制御する。
-- apply の規範的な要件や利用者向け command semantics を確定するときは、正本仕様や command 定義を確認する。この対象は runtime 実装である。
-- 共通の run lifecycle、process tracking、indexing の振る舞い自体を変更・調査するときは、該当する共通 runtime 処理へ進む。この対象は apply fork からそれらを呼び出す。
+- agent に渡す指示や call parameter の組み立てを変更するときは、agent call を構築する担当箇所を直接読む。
+- 複数コマンドで共有する editing run の lifecycle を変更するときは、共通 runtime の担当箇所を読む。
+- realization refactor の対象選択や調査・修正サイクルを変更するときは、refactor workload を直接読む。
 
 ## hash
-- 34f5bd87eebd7912ce893b5903b7f5ad75593ab25165f531e8f24f2407149894
+- d40863185d77516049e19fc6bd849813830a8ac44b6937b71b84fb27e935f1e8
 
 # `refactor`
 
 ## Summary
-- realization file を対象ごとに調査・修正する refactor fork の実行ライフサイクルを担います。対象選択、差分検査、refactor state と unresolved finding の管理、処理単位の commit、完了・中断・エラー時の report までを扱います。
+- `realization refactor fork` の full-cycle workload を統括し、対象の選択、file ごとの調査・修正、state 更新、処理単位の commit、完了・中断・エラー時の run と report の処理を担う。
+- agent の変更と宣言された変更範囲を照合し、再調査対象と current fork 内の未解決所見を管理する。
 
 ## Read this when
-- `realization refactor fork` の処理順序、対象の再調査、finding の扱い、または run の完了条件を調べるとき。
-- refactor fork 固有の差分検査、commit、割り込み・エラー処理、report の生成を変更・調査するとき。
+- `realization refactor fork` の実行、run のライフサイクル、差分検査や commit、未解決所見、完了判定、report の振る舞いを確認するとき。
+- 対象選択から file ごとの agent call、state 同期、変更検証までの連携を追うとき。
 
 ## Do not read this when
-- oracle の差分をもとに realization を追従させる apply fork の動作を調べるときは、`realization apply` の実装へ進んでください。
-- refactor agent に渡す指示文や出力仕様自体を調べるときは、その builder の正本である oracle 側の定義を確認してください。
-- refactor に限らない run の共通 lifecycle を調べるときは、共有 runtime の実装へ進んでください。
+- agent に渡す調査・修正や変更要約の指示文を変更するときは、oracle 側の builder 正本を直接確認する。
+- refactor state の列挙・検証・保存方法を調べるときは、共通 runtime の state 実装を直接確認する。
+- oracle の差分を realization へ反映する処理を調べるときは、`realization apply fork` の実装を確認する。
 
 ## hash
-- 3ce928d565a11c0b77ec274c84a07ee75ebf6e61799aaa1112966ce4aa056db6
+- e2eb497d58ca644f6ff1784000a85f65d9f7ee3b535fad58c2eab768729b74fb

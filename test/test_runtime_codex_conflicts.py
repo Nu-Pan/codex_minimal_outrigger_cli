@@ -15,6 +15,7 @@ from acp.builder.session.join.conflict_resolution import (
 )
 from basic.acp import FileAccessMode
 from commons.runtime_codex_profile import build_codex_override_args
+from commons.runtime_document_search_scope import oracle_doc_scope
 from config.cmoc_config import CmocConfig
 
 
@@ -25,10 +26,10 @@ def test_session_join_commit_inputs_stay_in_prompt_and_not_sandbox_argv(
     root = make_repo(tmp_path)
     first, second = "a" * 40, "b" * 40
     first_parameter = build_session_join_conflict_resolution_parameter(
-        first, second, root
+        first, second, root, document_search_scope=oracle_doc_scope()
     )
     second_parameter = build_session_join_conflict_resolution_parameter(
-        second, first, root
+        second, first, root, document_search_scope=oracle_doc_scope()
     )
     first_args = build_codex_override_args(first_parameter, CmocConfig())
     second_args = build_codex_override_args(second_parameter, CmocConfig())

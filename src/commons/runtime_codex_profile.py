@@ -22,11 +22,15 @@ import subprocess
 import sys
 import threading
 import time
+import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
+from dataclasses import asdict
 from pathlib import Path
 from types import FrameType
 from typing import Any
+
+from oracle.other.document_search import SEARCH_MCP_SERVER, SEARCH_TOOL_NAME
 
 from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig, JsonTomlValue
@@ -34,6 +38,7 @@ from config.cmoc_config import CmocConfig, JsonTomlValue
 from .runtime_codex_recovery import CodexOutcome
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
+from .runtime_document_search_scope import validate_document_search_scope
 from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
@@ -55,6 +60,7 @@ _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS = frozenset(
         b"codex-cli 0.154.0",
         b"codex-cli 0.155.1",
         b"codex-cli 0.156.1",
+        b"codex-cli 0.157.1",
     }
 )
 _CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
@@ -553,6 +559,12 @@ def _codex_session_start_hook_trusted_hash(command: str) -> str:
     # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/hooks/src/engine/discovery.rs#L733-L775
     # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/config/src/fingerprint.rs#L51-L79
     # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/hooks/src/legacy_notify.rs#L11-L38
+    # 0.157.1 も同じ session-flags、hash、turn 完了時の notify 契約を使う。
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/engine/discovery.rs#L402-L431
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/engine/discovery.rs#L764-L790
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/config/src/fingerprint.rs#L50-L81
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/core/src/session/turn.rs#L640-L702
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/legacy_notify.rs#L11-L72
     identity = {
         "event_name": "session_start",
         "hooks": [
@@ -753,6 +765,69 @@ def _editor_input_handoff_mcp_override_args() -> list[str]:
     return args
 
 
+def _document_search_mcp_override_args(
+    parameter: AgentCallParameter, config: CmocConfig
+) -> list[str]:
+    """同名の外部設定を遮断し、call 固定の検索接続だけを注入する。"""
+    scope = parameter.document_search_scope
+    if scope is None:
+        server: dict[str, JsonTomlValue] = {
+            "command": sys.executable,
+            "args": ["-m", "commons.runtime_document_search_mcp", "{}"],
+            "enabled": False,
+            "required": False,
+            "enabled_tools": [],
+            "disabled_tools": [SEARCH_TOOL_NAME],
+        }
+    else:
+        from basic.path_model import AgentCallPathContext
+
+        try:
+            resolved_scope = validate_document_search_scope(scope)
+        except ValueError as exc:
+            raise CmocError("文書検索の閲覧範囲が不正です。", [], str(exc)) from exc
+        context = AgentCallPathContext(parameter.agent_call_cwd)
+        search_config = config.document_search
+        server = {
+            "command": sys.executable,
+            "args": [
+                "-m",
+                "commons.runtime_document_search_mcp",
+                json.dumps(
+                    {
+                        "work_root": str(context.work_root),
+                        "scope": asdict(resolved_scope),
+                        "config": asdict(search_config) if search_config else None,
+                    },
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            ],
+            "cwd": str(context.work_root),
+            "env": {
+                "PYTHONPATH": os.pathsep.join(
+                    (
+                        str(Path(__file__).resolve().parents[1]),
+                        str(Path(__file__).resolve().parents[2] / "oracle/src"),
+                    )
+                )
+            },
+            "enabled": True,
+            "required": True,
+            "enabled_tools": [SEARCH_TOOL_NAME],
+            "disabled_tools": [],
+            "default_tools_approval_mode": "approve",
+            "tools": {SEARCH_TOOL_NAME: {"approval_mode": "approve"}},
+        }
+        if search_config is not None:
+            server["startup_timeout_sec"] = search_config.startup_timeout_seconds
+            server["tool_timeout_sec"] = (
+                search_config.request_timeout_seconds
+                + search_config.shutdown_grace_seconds
+            )
+    return _config_override(f"mcp_servers.{SEARCH_MCP_SERVER}", _toml_value(server))
+
+
 def build_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
@@ -796,6 +871,7 @@ def build_codex_override_args(
             session_start_command if callback_enabled else None
         ),
         *_feedback_mcp_override_args(),
+        *_document_search_mcp_override_args(parameter, config),
         *(
             _editor_input_handoff_mcp_override_args()
             if parameter.enable_editor_input_handoff_mcp
@@ -877,6 +953,68 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     return {**environment, "CODEX_HOME": value}
 
 
+def _verify_document_search_server(
+    argv: list[str], *, cwd: Path | None, env: Mapping[str, str] | None
+) -> None:
+    """CLI の実効 MCP transport が予約済み検索 context と一致するか調べる。"""
+    if argv[:1] != ["codex"]:
+        return
+    overrides: list[str] = []
+    expected: dict[str, Any] | None = None
+    server_key = f"mcp_servers.{SEARCH_MCP_SERVER}"
+    for position, argument in enumerate(argv[:-1]):
+        if argument not in {"-c", "--config"}:
+            continue
+        assignment = argv[position + 1]
+        overrides.extend(("-c", assignment))
+        if assignment.startswith(server_key + "="):
+            expected = tomllib.loads("server = " + assignment.split("=", 1)[1])[
+                "server"
+            ]
+    if expected is None:
+        return
+    if not expected["enabled"]:
+        return
+    try:
+        result = subprocess.run(
+            ["codex", *overrides, "mcp", "get", SEARCH_MCP_SERVER, "--json"],
+            cwd=cwd,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        parsed: object = json.loads(result.stdout) if result.returncode == 0 else None
+        actual = parsed if isinstance(parsed, dict) else {}
+    except FileNotFoundError:
+        raise
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        raise CmocError(
+            "文書検索 MCP の実効設定を確認できません。",
+            ["Codex CLI と文書検索 MCP の設定を確認してください。"],
+            f"server: {SEARCH_MCP_SERVER}",
+        ) from exc
+    transport = actual.get("transport")
+    if not isinstance(transport, dict) or (
+        actual.get("name") != SEARCH_MCP_SERVER
+        or actual.get("enabled") is not expected["enabled"]
+        or transport.get("type") != "stdio"
+        or transport.get("command") != expected["command"]
+        or transport.get("args") != expected["args"]
+        or (transport.get("env") or {}) != expected.get("env", {})
+        or transport.get("env_vars") != expected.get("env_vars", [])
+        or transport.get("cwd") != expected.get("cwd")
+        or actual.get("enabled_tools") != expected["enabled_tools"]
+        or actual.get("disabled_tools") != expected["disabled_tools"]
+    ):
+        raise CmocError(
+            "文書検索 MCP の実効設定が call 固定値と一致しません。",
+            ["user/project の同名 MCP 設定を取り除いてから再実行してください。"],
+            f"server: {SEARCH_MCP_SERVER}",
+        )
+
+
 def run_codex_subprocess(
     argv: list[str],
     *,
@@ -888,6 +1026,9 @@ def run_codex_subprocess(
     if cancellation is not None and cancellation.is_set():
         raise KeyboardInterrupt
     try:
+        _verify_document_search_server(
+            argv, cwd=kwargs.get("cwd"), env=kwargs.get("env")
+        )
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # tracking は editing run の内部 state なので、継承した env var だけで無関係な Codex
         # call を stale または別 process の pid file へ向けてはならない。

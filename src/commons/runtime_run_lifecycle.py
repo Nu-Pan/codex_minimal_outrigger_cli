@@ -4,7 +4,7 @@
 に従っている。
 
 この file は 16,000 文字を超えるが、run の開始・state 遷移・commit、差分分類、
-INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を共有する一つの
+cleanup 判定は同じ EditingRunContext と lifecycle lock を共有する一つの
 責務である。分割すると、run branch の不変条件と差分許可範囲を複数 file で追う必要が
 生じるため、現状は editing run lifecycle として一箇所に保つ。
 
@@ -13,13 +13,10 @@ INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を�
 """
 
 import os
-import stat
 from collections.abc import Collection
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from .indexing import commit_index_updates, indexing_lock, update_indexes
-from .runtime_codex import run_codex_exec as run_indexing_codex_exec
 from .runtime_codex_profile import process_start_time
 from .runtime_errors import CmocError
 from .runtime_git import (
@@ -28,16 +25,14 @@ from .runtime_git import (
     current_branch,
     delete_branch,
     head_commit,
-    is_git_ignored,
     is_realization_file_path,
-    literal_pathspec,
     remove_worktree,
     require_clean_worktree,
+    require_cmoc_ignored,
     run_git,
     status_path_statuses,
 )
 from .runtime_paths import (
-    is_root_memo,
     refactor_state_path,
     repo_root,
     timestamp,
@@ -191,6 +186,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                 start_point=fork_commit,
             )
             created = True
+            require_cmoc_ignored(run_worktree)
             state.run = RunPart(
                 state="running",
                 kind=kind,
@@ -412,18 +408,6 @@ def commit_work_unit(
     return head_commit(worktree)
 
 
-def refresh_indexes(worktree: Path, *, commit: bool) -> list[Path]:
-    """run worktree の INDEX.md を再生成し、必要なら独立 commit にする。"""
-    with indexing_lock(worktree):
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # indexing builder が worktree を AgentCallParameter.agent_call_cwd として
-        # 受け取るため、process-global な cwd 切替は行わない。
-        updated = update_indexes(worktree, run_indexing_codex_exec)
-        if commit:
-            commit_index_updates(worktree, updated)
-        return updated
-
-
 def worktree_change_paths(
     worktree: Path,
     *,
@@ -588,8 +572,6 @@ def _is_run_expected_path(
     fork_commit: str,
 ) -> bool:
     """path が run branch の管理対象差分か判定する。"""
-    if is_generated_index_path(root, path, base=fork_commit):
-        return True
     if kind in {"realization_refactor", "feedback_report"} and _is_refactor_state_path(
         root, path
     ):
@@ -600,76 +582,6 @@ def _is_run_expected_path(
     # rename 元と削除 path は run branch の HEAD から消えるため、fork 時点の tree でも
     # realization file であることを確認して、agent の許可範囲を失わないようにする。
     return _is_agent_expected_path(root, kind, path, fork_commit)
-
-
-def _is_regular_tree_file(worktree: Path, commit: str, path: str) -> bool:
-    """commit tree の path が regular file entry か判定する。"""
-    entries = run_git(
-        [
-            "ls-tree",
-            "-r",
-            "-z",
-            commit,
-            "--",
-            literal_pathspec(path),
-        ],
-        worktree,
-    ).stdout.split("\0")
-    for entry in entries:
-        metadata, separator, entry_path = entry.partition("\t")
-        metadata_fields = metadata.split()
-        if not (
-            separator
-            and entry_path == path
-            and len(metadata_fields) >= 2
-            and metadata_fields[1] == "blob"
-        ):
-            continue
-        try:
-            entry_mode = int(metadata_fields[0], 8)
-        except (IndexError, ValueError):
-            continue
-        if stat.S_ISREG(entry_mode):
-            return True
-    return False
-
-
-def is_generated_index_path(
-    root: Path,
-    path: str,
-    *,
-    base: str | None = None,
-) -> bool:
-    """cmoc が indexable directory に生成する INDEX.md か判定する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # 許可対象は任意の basename ではなく、indexing が実際に配置できる path に
-    # 限定する。hidden directory、symlink、git ignore 対象、root memo は indexable
-    # ではない。
-    relative = Path(path)
-    if relative.is_absolute() or ".." in relative.parts or relative.name != "INDEX.md":
-        return False
-    if any(part.startswith(".") for part in relative.parts[:-1]):
-        return False
-    candidate = root / relative
-    ancestor = root
-    for part in relative.parts[:-1]:
-        ancestor /= part
-        if ancestor.is_symlink():
-            return False
-    if candidate.is_symlink():
-        return False
-    if candidate.exists() and not candidate.is_file():
-        return False
-    parent = candidate.parent
-    if parent.exists() and not parent.is_dir():
-        return False
-    # 削除・rename 元では現在の parent が消えているため、fork tree の regular
-    # INDEX.md を fallback として許可する。{{work-root}}/oracle/doc/app_spec/indexing.md
-    if not parent.exists() and (
-        base is None or not _is_regular_tree_file(root, base, relative.as_posix())
-    ):
-        return False
-    return not is_root_memo(root, parent) and not is_git_ignored(root, parent)
 
 
 def _is_refactor_state_path(root: Path, path: str) -> bool:

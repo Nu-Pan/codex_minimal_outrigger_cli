@@ -38,7 +38,7 @@ from cmoc_runtime import (
     run_cli_subcommand,
     run_codex_exec,
 )
-from commons.indexing import enable_indexing_preflight
+from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback_state import (
     ActiveState,
     agent_canonical_key,
@@ -83,7 +83,6 @@ _MACHINE_DIGEST_LIMIT = 64
 
 def cmoc_feedback_report_impl() -> None:
     """CLI runtime を通して current feedback report を publication する。"""
-    enable_indexing_preflight()
     run_cli_subcommand(
         _cmoc_feedback_report_body,
         command_name="feedback report",
@@ -1045,6 +1044,7 @@ def _normalize_issue_identity(
         json.dumps(normalization_observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
         worktree,
+        document_search_scope=oracle_doc_scope(),
     )
     schema_path = parameter.structured_output_schema_path
     assert schema_path is not None

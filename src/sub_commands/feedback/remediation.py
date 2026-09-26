@@ -34,7 +34,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
-from commons.indexing import run_indexing_preflight
+from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback_intake import capture_high_watermark
 from commons.runtime_feedback_run_state import (
     new_run_record,
@@ -85,7 +85,6 @@ from commons.runtime_run_lifecycle import (
     GitChange,
     commit_work_unit,
     recover_started_run,
-    refresh_indexes,
     resolve_active_run,
     rollback_work_unit,
     set_run_state,
@@ -110,32 +109,8 @@ def run_feedback_report() -> TerminalResult:
     finalizing = False
     starting = False
     try:
-        # doctor と必要な INDEX 更新を完了してから clean を判定する。
+        # doctor の修復を完了してから clean を判定する。
         doctor_preprocess_for_join()
-        feedback_directory = repository / ".cmoc/gu/feedback"
-        feedback_work_root = feedback_directory / "work"
-        # cleanup は空の work root 自体を残すため、root の存在だけでは
-        # recovery 対象の report cut を示さない。空 root の後続 invocation
-        # でも startup の indexing preflight を実行できるよう、実際の
-        # entry がある場合だけ preflight を遅延させる。
-        has_feedback_work = _has_symlink_component(feedback_work_root)
-        if not has_feedback_work and feedback_work_root.exists():
-            if not feedback_work_root.is_dir():
-                has_feedback_work = True
-            else:
-                try:
-                    has_feedback_work = any(feedback_work_root.iterdir())
-                except OSError:
-                    # 後続の state validation に同じ filesystem error を渡し、
-                    # preflight の commit で診断対象を隠さない。
-                    has_feedback_work = True
-        finalization_path = feedback_directory / "finalization.json"
-        if (
-            not has_feedback_work
-            and not _has_symlink_component(finalization_path)
-            and not finalization_path.exists()
-        ):
-            run_indexing_preflight(repository, report.run_codex_exec)
         branch = current_branch(session_worktree)
         update_primary_report_fields(session_branch=branch)
         if not branch.startswith("cmoc/session/"):
@@ -538,7 +513,9 @@ def _remediate_issue(
         if reference["observation_id"] in additional_sources
     ]
     parameter = build_feedback_remediate_issue_parameter(
-        json.dumps(payload, ensure_ascii=False, sort_keys=True), context.run_worktree
+        json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        context.run_worktree,
+        document_search_scope=oracle_doc_scope(),
     )
     schema = parameter.structured_output_schema_path
     assert schema is not None
@@ -613,7 +590,6 @@ def _remediate_issue(
         )
         if actual:
             sync_refactor_state(context.run_worktree)
-            refresh_indexes(context.run_worktree, commit=False)
             stop_tracked_codex_children(context.repo, context.session_id)
         all_paths = worktree_change_paths(
             context.run_worktree, include_rename_sources=True
@@ -924,11 +900,7 @@ def _verified_merge_adjustment(
         return False
     managed = {".cmoc/gt/realization/refactor/state.json"}
     changes = tree_changes(context.session_worktree, merge_commit)
-    return all(
-        path in managed or Path(path).name == "INDEX.md"
-        for change in changes
-        for path in change.paths
-    )
+    return all(path in managed for change in changes for path in change.paths)
 
 
 def _recover_merge_resolution(
@@ -943,6 +915,7 @@ def _recover_merge_resolution(
         seal["run_head"],
         seal["session_head_before"],
         context.session_worktree,
+        document_search_scope=oracle_doc_scope(),
         feedback_report_cut_path=context.repo / manifest["run"]["sealed"]["path"],
     )
     log_root = codex_log_dir(context.repo).resolve()

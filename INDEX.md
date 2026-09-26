@@ -99,55 +99,49 @@
 # `pyproject.toml`
 
 ## Summary
-- Python 配布物のメタデータ、依存関係、CLI 起動点、setuptools のビルド・パッケージ設定を定める。
-- pytest の実行設定と Ruff・mypy の静的検査設定をまとめる。
+- Python パッケージの配布設定、CLI コマンドの登録、依存関係、リソース同梱、および pytest・Ruff・mypy のプロジェクト設定をまとめた入口です。
 
 ## Read this when
-- 依存関係、インストール、配布、CLI の起動点を変更・確認するとき。
-- Python のテスト実行条件や lint・型検査の設定を変更・確認するとき。
+- インストールや配布、利用可能なコマンド、依存関係、パッケージへのファイル同梱、テスト・静的解析の設定を確認または変更するとき。
 
 ## Do not read this when
-- コマンドの実際の動作や実装を調べるときは、該当する実装を直接読む。
-- 製品の規範的な要求を確認するときは、該当する正本仕様を直接読む。
+- CLI の実際の処理や製品要件を調べるときは、該当する実装または oracle の仕様へ直接進んでください。
 
 ## hash
-- 3a783c008041cc5d2791af2abb3cfe1c24d8231f77689b906b36f62158c77455
+- 906a368dbc695aae9b6a59d73f66c0ac1d6bae72b2c6de7f5924b7aed93c9c13
 
 # `src`
 
 ## Summary
-- cmoc の Python CLI と実行時実装をまとめ、コマンド入口、作業フロー、共有 runtime の接続を担う層です。
-- コマンド別の処理と共通 runtime を含み、一部の設定・基礎型・ACP builder は正本側定義への互換入口として公開されます。
+- CLI の起動とコマンドツリーを定義し、各作業処理へ呼び出しを委譲するアプリケーション実装の入口。
+- コマンド固有の処理と、Codex・Git・実行状態・設定・ログ・レポート・feedback・文書検索を支える共通 runtime を含む。
+- 正本側の型や builder への互換 import 層と、文書検索用 Node worker の資材も含む。
 
 ## Read this when
-- CLI のコマンド登録、起動、引数解析やエラー処理を変更するとき。
-- 複数のコマンドにまたがる Git・Codex 実行、状態管理、ログ、レポート、エディタ引き渡しなどの runtime 境界を調べるとき。
-- コマンド固有処理と共通 runtime、builder adapter のつながりを追う起点が必要なとき。
+- CLI の起動境界やコマンド登録、コマンド間の構成を確認・変更するとき。
+- 複数の処理にまたがる共通 runtime の責務配置を把握し、調査の入口を決めるとき。
 
 ## Do not read this when
-- 特定コマンドの処理だけを変更・調査する場合は、そのコマンド固有の実装から読む。
-- 正本仕様、正本 ACP builder、正本設定や基礎型の定義を確認・変更する場合は、該当する正本を直接読む。
-- 共通 runtime 内の単一機能だけを追う場合は、その機能の実装から読み始める。
+- 特定コマンドの処理や共通 runtime の一機能だけを調べるときは、その責務を扱う下位項目へ直接進む。
+- 正本側の要求や型・builder の定義を確認するときは、互換 import 層ではなく対応する正本側の項目へ進む。
 
 ## hash
-- 91297b170bdda98ccc703881b9413fdaf121faaf0847d0b8fec74ca2fa55ad0d
+- eaa6355ab148cad41555f93d09a21404c287c73f236afbfffd7e126da2315792
 
 # `test`
 
 ## Summary
-- CLI と runtime の契約を確認する単体テスト・統合テスト群。
-- Codex 実行、設定と状態管理、session と編集 run、indexing、feedback、prompt、editor input handoff などの振る舞いを検証する。
-- 本番経路での CLI・TUI 起動や、共有 fixture・支援関数のテストも含む。
+- `pytest` による実装側の回帰テストと共有 fixture・helper をまとめ、実行時基盤、Codex 呼び出しと復旧、CLI および作業フローの挙動を検証する。
+- 設定・state・worktree・ファイル分類、doctor・ログ・通知、prompt と editor handoff、session・run・oracle 操作、feedback observation の処理、oracle 文書検索などを対象とする。共有 fixture は一時 Git repository や Codex 環境を用意し、テスト中の toast 通知を隔離する。
+- 実装のテスト入口であり、期待仕様の正本やコマンド・schema 定義の代わりではない。
 
 ## Read this when
-- CLI、runtime、session、indexing、feedback などの実装変更に対応する回帰テストや、既存の挙動を確認するとき。
-- コマンドの本番経路、TUI、Codex との連携を横断して確認するとき。
-- テスト共通の fixture や支援関数の役割を調べるとき。
+- 変更や不具合に対応する回帰テストを探すとき。複数の機能層をまたぐ挙動や、テスト共通の環境設定を調べる場合にも参照する。
+- 一時 repository、Codex の test double、editor handoff、通知隔離など、共有 fixture・helper の使い方を確認するとき。
 
 ## Do not read this when
-- 個別のテストケースを調べたり変更したりする場合は、該当するテスト本文へ直接進むとき。
-- 実装の詳細を調べる場合は、対応する実装本文へ直接進むとき。
-- 正本仕様上の要求や判断根拠を確認する場合は、oracle の仕様文書へ直接進むとき。
+- 要求や公開コマンド、schema の正本を確認するときは、該当する oracle の仕様・定義を直接読む。ここにあるテストは実装の振る舞いを検証するもので、正本仕様ではない。
+- 変更や調査が単一の機能に限られる場合は、その機能に対応するテストと実装から始めればよく、テスト一式を通読する必要はない。
 
 ## hash
-- 35f8d3a401412beab6df8477d15022a680919fa4e5df790141e9b6fc8b24b818
+- 306c109784dc84914430facd67a6940b1e0d911e07d6c6a98d6e2392abd7c6ca

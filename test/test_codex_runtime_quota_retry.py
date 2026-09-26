@@ -282,7 +282,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     with pytest.raises(KeyboardInterrupt):
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
@@ -320,7 +320,6 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> N
         prompt="base",
         structured_output_schema_path=None,
         agent_call_cwd=root,
-        run_indexing_preflight=True,
     )
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     probe = build_quota_availability_probe_parameter(base)
@@ -342,7 +341,7 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> N
     assert "# scope" not in objective
     assert "# completion criteria" not in objective
     assert probe.structured_output_schema_path is None
-    assert probe.run_indexing_preflight is False
+    assert probe.document_search_scope is None
     assert probe.agent_call_cwd == base.agent_call_cwd
 
 
@@ -405,7 +404,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.PURE_ORACLE_READ,
         "prompt",
         None,
@@ -480,7 +479,7 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -536,7 +535,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -603,7 +602,7 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
     with pytest.raises(CmocError) as exc_info:
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
@@ -661,7 +660,7 @@ def test_quota_probe_failure_reports_probe_error(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -725,7 +724,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -793,7 +792,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -849,7 +848,7 @@ def test_recovery_group_is_released_when_progress_output_fails(tmp_path, monkeyp
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     monkeypatch.setattr(recovery, "print", fail_print, raising=False)
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,

@@ -62,7 +62,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -112,7 +112,7 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -165,7 +165,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.PURE_ORACLE_READ,
         "prompt",
         None,
@@ -195,7 +195,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     missing_home = tmp_path / "missing_codex_home"
     monkeypatch.setenv("CODEX_HOME", str(missing_home))
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -230,7 +230,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     codex_home.write_text("not a directory\n")
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
