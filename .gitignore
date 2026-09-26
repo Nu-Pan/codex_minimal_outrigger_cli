@@ -3,6 +3,7 @@
 /.pytest_cache/
 __pycache__/
 *.egg-info/
+/.mypy_cache/
+/.ruff_cache/
 
 /.cmoc/gu/
-
