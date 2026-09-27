@@ -137,6 +137,8 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 対象・逐次反映と再利用・期限・資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「対象と信頼境界」「同期と cache」「identity と保存先」「排他、期限、終了」を正本とする。ここで準備した索引を別の worktree や実効閲覧範囲の索引と取り違えず、後続の検索要求でも同文書に従って現在の許可集合と本文を確認する。
 
+索引同期の開始・終端と、所要時間・結果・処理量・ロック待ちの記録は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従う。
+
 ## refactor state の追跡保証と同期
 
 ### 検証

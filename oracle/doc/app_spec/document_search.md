@@ -44,6 +44,8 @@ query embedding と、query・モデル条件・chunk 内容に対応する再�
 
 file tree 全体の原子的 snapshot や、最後の照合後まで編集を阻止する保証は要求しない。索引操作の排他を編集 workload 全体の排他へ拡張しない。列挙回数、SQLite の table 構造、分割アルゴリズムは固定しないが、分割は採用 tokenizer の上限と原文箇所の対応を守り、長文を黙って切り捨てない。
 
+索引同期のサブコマンドログへの記録範囲、計測区間、および結果・処理量の意味は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」を正本とする。
+
 ## 初期方式と推論の失敗
 
 初期実装は Python が分類、対象制御、本文確認、差分同期、SQLite 保存、排他、および stdio MCP を担当する。候補検索は sqlite-vec による cosine 距離の全件比較とし、候補を実モデルで再ランキングする。
