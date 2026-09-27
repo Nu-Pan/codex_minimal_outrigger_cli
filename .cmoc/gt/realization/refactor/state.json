@@ -1422,7 +1422,7 @@
     "last_investigated_at": null
   },
   "src/sub_commands/doctor.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "1eb417245f2ab7964031bcace08e76c91beda19e6b7c26b38e163f2ec9977c3b",
     "last_investigated_at": "2026-09-23_07-12_55_362044000"
