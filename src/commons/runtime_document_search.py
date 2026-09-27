@@ -120,6 +120,7 @@ def _file_lock(
     cancelled: threading.Event | None = None,
     *,
     shared: bool = False,
+    on_wait: Callable[[float], None] | None = None,
 ) -> Iterator[int]:
     """期限を含めて file lock を保持し、worker へ fd を継承可能にする。"""
     _safe_directory(path.parent)
@@ -130,21 +131,32 @@ def _file_lock(
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             raise SearchError("SYNC_FAILED", "document search lock is not regular")
-        while True:
-            _deadline_check(deadline, cancelled)
-            try:
-                mode = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
-                fcntl.flock(fd, mode | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                wait = (
-                    _LOCK_POLL_SECONDS
-                    if deadline is None
-                    else min(_LOCK_POLL_SECONDS, max(0, deadline - time.monotonic()))
-                )
-                time.sleep(wait)
-            except OSError as exc:
-                raise SearchError("SYNC_FAILED", "document search lock failed") from exc
+        wait_started: float | None = None
+        try:
+            while True:
+                _deadline_check(deadline, cancelled)
+                try:
+                    mode = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
+                    fcntl.flock(fd, mode | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if wait_started is None:
+                        wait_started = time.monotonic()
+                    wait = (
+                        _LOCK_POLL_SECONDS
+                        if deadline is None
+                        else min(
+                            _LOCK_POLL_SECONDS, max(0, deadline - time.monotonic())
+                        )
+                    )
+                    time.sleep(wait)
+                except OSError as exc:
+                    raise SearchError(
+                        "SYNC_FAILED", "document search lock failed"
+                    ) from exc
+        finally:
+            if wait_started is not None and on_wait is not None:
+                on_wait(time.monotonic() - wait_started)
         try:
             yield fd
         finally:
@@ -497,6 +509,11 @@ class DocumentSearch:
         self._lease_fd: int | None = None
         self._lease_lock = threading.Lock()
         self.sync_progress: dict[str, object] | None = None
+        self.sync_lock_wait_seconds = 0.0
+
+    def _record_lock_wait(self, seconds: float) -> None:
+        """同期中に待った各 lock の取得待ちだけを合算する。"""
+        self.sync_lock_wait_seconds += seconds
 
     def close(self) -> None:
         """接続が保持した索引 lease を解放する。"""
@@ -614,7 +631,9 @@ class DocumentSearch:
             from .runtime_document_search_worker import NodeSearchWorker
 
             self.worker = NodeSearchWorker(self.installation_root, self.config)
-        with _file_lock(residency, deadline, self.cancelled) as residency_fd:
+        with _file_lock(
+            residency, deadline, self.cancelled, on_wait=self._record_lock_wait
+        ) as residency_fd:
             try:
                 return self.worker.run(
                     operation,
@@ -645,7 +664,9 @@ class DocumentSearch:
 
             self.worker = NodeSearchWorker(self.installation_root, self.config)
         assert self.config is not None
-        with _file_lock(residency, deadline, self.cancelled) as residency_fd:
+        with _file_lock(
+            residency, deadline, self.cancelled, on_wait=self._record_lock_wait
+        ) as residency_fd:
             self.worker.stream_chunks(
                 documents,
                 resumes,
@@ -663,6 +684,7 @@ class DocumentSearch:
         deadline: float | None,
         identity: str,
         started: float,
+        index_created: bool,
     ) -> SyncResult:
         """有効な chunk を個別確定し、完了文書だけを検索に使える状態にする。"""
         stored = {
@@ -692,6 +714,7 @@ class DocumentSearch:
             "identity": identity,
             "status": "started",
             "document_count": len(documents),
+            "changed_document_count": None,
             "persisted_chunks": 0,
             "reused_embeddings": 0,
         }
@@ -782,6 +805,9 @@ class DocumentSearch:
                 reused_before = self.sync_progress["reused_embeddings"]
                 assert isinstance(reused_before, int)
                 self.sync_progress["reused_embeddings"] = reused_before + len(rows)
+        self.sync_progress["changed_document_count"] = len(
+            deleted_paths | changed_paths | pending_paths | repaired_paths
+        )
         reused_before = self.sync_progress["reused_embeddings"]
         assert isinstance(reused_before, int)
         reused = reused_before
@@ -878,7 +904,11 @@ class DocumentSearch:
         return SyncResult(
             identity=identity,
             status="updated"
-            if changed_paths or deleted_paths or pending_paths or repaired_paths
+            if index_created
+            or changed_paths
+            or deleted_paths
+            or pending_paths
+            or repaired_paths
             else "unchanged",
             document_count=len(documents),
             chunk_count=count,
@@ -929,6 +959,7 @@ class DocumentSearch:
             deadline,
             self.cancelled,
             shared=True,
+            on_wait=self._record_lock_wait,
         ):
             with self._locked_index_inner(unbounded=unbounded) as state:
                 yield state
@@ -955,6 +986,14 @@ class DocumentSearch:
         deadline = None if unbounded else started + self.config.request_timeout_seconds
         self._check(deadline)
         identity, index, lock, residency = self._paths()
+        self.sync_progress = {
+            "identity": identity,
+            "status": "started",
+            "document_count": None,
+            "changed_document_count": None,
+            "persisted_chunks": None,
+            "reused_embeddings": None,
+        }
         try:
             require_cmoc_ignored(self.root)
         except Exception as exc:
@@ -978,21 +1017,37 @@ class DocumentSearch:
             except SearchError as exc:
                 raise SearchError(exc.code, f"{exc}; run cmoc doctor") from exc
         lease = index.parent.parent.parent / "leases" / f"{identity}.lock"
-        with _file_lock(lease, deadline, self.cancelled, shared=True) as lease_fd:
+        with _file_lock(
+            lease,
+            deadline,
+            self.cancelled,
+            shared=True,
+            on_wait=self._record_lock_wait,
+        ) as lease_fd:
             self._retain_lease(lease, lease_fd)
             _reclaim_unused_indexes(
                 index.parent.parent.parent, identity, deadline, self.cancelled
             )
-            with _file_lock(lock, deadline, self.cancelled):
+            with _file_lock(
+                lock, deadline, self.cancelled, on_wait=self._record_lock_wait
+            ):
                 _safe_directory(index.parent)
                 documents = scan_documents(
                     self.root, self.scope, deadline=deadline, cancelled=self.cancelled
                 )
+                self.sync_progress["document_count"] = len(documents)
                 self._check(deadline)
+                index_created = not index.exists()
                 connection = _open_database(index)
                 try:
                     result = self._sync_locked(
-                        connection, documents, residency, deadline, identity, started
+                        connection,
+                        documents,
+                        residency,
+                        deadline,
+                        identity,
+                        started,
+                        index_created,
                     )
                     self._check(deadline)
                     yield connection, documents, result, residency, deadline
@@ -1007,6 +1062,8 @@ class DocumentSearch:
 
     def synchronize(self, *, unbounded: bool = False) -> SyncResult:
         """query 推論を行わず、通常検索と同じ現在本文の同期を実行する。"""
+        self.sync_progress = None
+        self.sync_lock_wait_seconds = 0.0
         with self._locked_index(unbounded=unbounded) as (
             _,
             documents,

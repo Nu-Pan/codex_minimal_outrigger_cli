@@ -1,6 +1,6 @@
-"""共有検索資材の準備と通常起動での検証記録を小さな固定資材で検査する。
+"""共有検索用コンポーネントの準備と通常起動での検証記録を小さな固定資材で検査する。
 
-正本仕様: {{work-root}}/oracle/doc/app_spec/document_search.md の「資材の検証契約」。
+正本仕様: {{work-root}}/oracle/doc/app_spec/document_search.md の「検索用コンポーネントの検証契約」。
 """
 
 import hashlib
