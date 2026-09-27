@@ -239,6 +239,8 @@ async function rerank(request) {
 }
 
 async function main() {
+  // Preserve UTF-8 characters split across stdin buffers before counting offsets.
+  process.stdin.setEncoding("utf8");
   let data = "";
   for await (const chunk of process.stdin) data += chunk;
   const request = requireObject(JSON.parse(data));

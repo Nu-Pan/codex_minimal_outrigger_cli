@@ -10,6 +10,9 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
+from dataclasses import asdict
+from importlib import resources
 from pathlib import Path
 
 import pytest
@@ -348,6 +351,103 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(tmp_path: Path) -> No
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
+@pytest.mark.parametrize("operation", ["chunk_stream", "chunk_embed"])
+@pytest.mark.parametrize("fragment_size", [1, 65536], ids=["bytewise", "whole"])
+def test_worker_preserves_text_across_utf8_input_fragments(
+    tmp_path: Path, operation: str, fragment_size: int
+) -> None:
+    """実 worker が受信境界をまたぐ文字と、その原文上の位置を保つ。"""
+    source = resources.files("commons.document_search_worker").joinpath("worker.mjs")
+    entrypoint = tmp_path / "worker.mjs"
+    entrypoint.write_bytes(source.read_bytes())
+    # 推論だけを置き換え、worker がモデルへ渡した本文をその場で記録する。
+    package = tmp_path / "node_modules/node-llama-cpp"
+    package.mkdir(parents=True)
+    (package / "package.json").write_text(
+        json.dumps({"type": "module", "exports": "./index.mjs"})
+    )
+    (package / "index.mjs").write_text(
+        """import { appendFileSync } from "node:fs";
+export async function getLlama() {
+  return { async loadModel() {
+    return {
+      tokenize: (text) => Array.from(text),
+      async dispose() {},
+      async createEmbeddingContext() {
+        return {
+          async getEmbeddingFor(text) {
+            appendFileSync("embedding-inputs.jsonl", JSON.stringify(text) + "\\n");
+            return { vector: [1, 0] };
+          },
+          async dispose() {},
+        };
+      },
+    };
+  } };
+}
+"""
+    )
+    # OS の pipe 分割や sleep に依存せず、実入力のバイト境界を固定する。
+    preload = tmp_path / "fragmented-stdin.mjs"
+    preload.write_text(
+        """import { readFileSync } from "node:fs";
+import { Readable } from "node:stream";
+const input = readFileSync(0);
+const size = Number(process.env.CMOC_TEST_FRAGMENT_SIZE);
+const fragments = [];
+for (let start = 0; start < input.length; start += size) {
+  fragments.push(input.subarray(start, start + size));
+}
+Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
+"""
+    )
+    text = "# 日本語\néあ😀 と ASCII\n受信境界をまたいでも末尾まで保つ。\n"
+    config = _tuning()
+    request = NodeSearchWorker(tmp_path, config)._request(
+        operation,
+        {
+            "documents": {"doc.md": text},
+            "resume": {"doc.md": 0},
+            "config": asdict(config),
+        },
+    )
+    request["dimensions"] = 2
+    result = subprocess.run(
+        ["node", "--import", str(preload), str(entrypoint)],
+        input=json.dumps(request, ensure_ascii=False).encode("utf-8"),
+        cwd=tmp_path,
+        env={**os.environ, "CMOC_TEST_FRAGMENT_SIZE": str(fragment_size)},
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8")
+    if operation == "chunk_stream":
+        events = [json.loads(line) for line in result.stdout.splitlines()]
+        chunks = [event for event in events if event["kind"] == "chunk"]
+        assert events[-2:] == [
+            {"kind": "document_complete", "path": "doc.md", "chunk_count": len(chunks)},
+            {"kind": "done"},
+        ]
+        assert [chunk["ordinal"] for chunk in chunks] == list(range(len(chunks)))
+        assert all(chunk["path"] == "doc.md" for chunk in chunks)
+    else:
+        response = json.loads(result.stdout)
+        assert response["status"] == "ok"
+        chunks = response["result"]["doc.md"]
+    inputs = [
+        json.loads(line)
+        for line in (tmp_path / "embedding-inputs.jsonl").read_text().splitlines()
+    ]
+    assert "".join(inputs) == text
+    assert len(chunks) == len(inputs)
+    assert chunks[0]["start"] == 0 and chunks[-1]["end"] == len(text)
+    for chunk, excerpt in zip(chunks, inputs, strict=True):
+        assert 0 <= chunk["start"] < chunk["end"] <= len(text)
+        assert text[chunk["start"] : chunk["end"]] == excerpt
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_streaming_worker_delivers_chunk_before_cancellation(tmp_path: Path) -> None:
     """Node の応答完了を待たず chunk を受け取り、取消時は子を回収する。"""
     base = materials_directory(tmp_path)
@@ -557,6 +657,51 @@ def test_unset_tuning_and_mcp_failure_are_distinct_from_zero_hits(
     )
     assert failed is not None and failed["result"]["isError"] is True
     assert failed["result"]["structuredContent"]["code"] == "NOT_READY"
+
+
+def test_worker_change_rebuilds_index_without_reusing_embeddings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """worker 修正前の本文から計算された embedding を新索引へ引き継がない。"""
+    from commons import runtime_document_search as module
+
+    root = _repo_with_docs(tmp_path)
+    package = tmp_path / "worker-source"
+    package.mkdir()
+    original_files = resources.files
+    for name in ("worker.mjs", "package-lock.json"):
+        (package / name).write_bytes(
+            original_files("commons.document_search_worker").joinpath(name).read_bytes()
+        )
+    monkeypatch.setattr(
+        module.resources,
+        "files",
+        lambda anchor: (
+            package
+            if anchor == "commons.document_search_worker"
+            else original_files(anchor)
+        ),
+    )
+    source = (package / "worker.mjs").read_bytes()
+    results = []
+    for revision in (b"", b"\n// Updated input handling.\n"):
+        (package / "worker.mjs").write_bytes(source + revision)
+        with closing(
+            DocumentSearch(
+                root,
+                DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+                _tuning(),
+                worker=_InferenceDouble(),
+                installation_root=tmp_path,
+            )
+        ) as search:
+            result = search.synchronize()
+            assert search.sync_progress["persisted_chunks"] == result.chunk_count
+            results.append(result)
+    first, second = results
+    assert second.identity != first.identity
+    assert second.chunk_count == first.chunk_count > 0
+    assert second.reused_embeddings == 0
 
 
 def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
