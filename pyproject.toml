@@ -22,7 +22,6 @@ dev = [
 
 [project.scripts]
 cmoc = "main:main"
-cmoc-document-search-setup = "commons.runtime_document_search_setup:main"
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -183,7 +183,7 @@
 
 ## Summary
 - cmoc の実行時設定を JSON と設定オブジェクト間で変換し、検証、既定値の補完、読み書き、同期を担う。
-- Codex の provider・agent-call 設定や document-search tuning の永続化と、設定エラーの利用者向け処理を扱う。
+- Codex の provider・agent-call 設定や document-search tuning の永続化と、保存済み必須設定の厳格な検証を扱う。
 
 ## Read this when
 - 設定 JSON の読み込み・保存・初期化や、不正値の検出と既定値の補完がどこで行われるか調べるとき。
@@ -194,7 +194,7 @@
 - 設定ファイルの保存先の決まりや、各コマンドでの設定の使われ方を調べるときは、パス解決や呼び出し元の実装から確認する。
 
 ## hash
-- 823c8d3c8388e53ddd9c3348c9a18ad9538105f7d1b758aa51539e2a2662a2c3
+- 55486e949f3d3043de4888abb7a515dbcfeacb0d6683eaf1514a93f89adac057
 
 # `runtime_content.py`
 
@@ -216,7 +216,7 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 各サブコマンドに共通する doctor preprocess の実行、修復ロック、管理パスの保証、runtime state の同期、reporter の事前検証、修復 commit を担います。複数 root と一時 Git index の退避・合成・復元を含む lifecycle の入口です。
+- 各サブコマンドに共通する doctor preprocess の環境・設定・管理状態・検索資材検証、明示 doctor の準備、修復 commit を担います。複数 root と一時 Git index の退避・合成・復元を含む lifecycle の入口です。
 
 ## Read this when
 - doctor preprocess の処理順、複数 root への適用、失敗時の index 復元、修復差分だけを commit する動作を変更・調査するとき。
@@ -229,13 +229,13 @@
 - cmoc doctor の CLI 呼び出しやサブコマンド固有の表示・引数処理だけを変更するときは src/sub_commands/doctor.py と src/commons/runtime_cli.py を確認してください。
 
 ## hash
-- 02cb5143a64b19fb0db7e9c9e097b4e444c0049bbeaad7d1d198cac774a3babc
+- bd3b983e82fdd396d0576c3f78dd638ed1beeee9cf01059bb22ac1f69e71a8be
 
 # `runtime_document_search.py`
 
 ## Summary
 - 許可された oracle/doc Markdown の安全な読取、索引の差分同期、ベクトル検索と再ランキングを担う検索コア。
-- 索引・cache の整合性や排他、期限、検索結果を返す前の原文確認を扱う。
+- 索引・cache と共有検索資材の排他、期限、検索結果を返す前の原文確認を扱う。
 
 ## Read this when
 - 許可文書の読取・同期、索引 identity、cache、候補検索や再ランキングの挙動を変更するとき。
@@ -247,7 +247,7 @@
 - Node worker の起動や推論資材の準備だけを変更するときは、worker・セットアップの実装を直接読む。検索の意味仕様を確認するときは正本仕様を読む。
 
 ## hash
-- fcbf47608d06db9e5ff687df5b732fcf5b05250914d5d1df875b5692f1353b74
+- 838eadf206791c6ffe5508e214edf712aabbed6a300298ca422e168dee4baef6
 
 # `runtime_document_search_mcp.py`
 
@@ -286,11 +286,11 @@
 # `runtime_document_search_setup.py`
 
 ## Summary
-- 文書検索用の共有資材を非追跡領域に準備し、固定モデルと実行環境の検証後に利用可能な状態を公開するセットアップ入口です。
+- 明示 doctor の共有検索資材の準備・修復と、通常起動の検証済み資材の確認を担う内部処理です。
 
 ## Read this when
-- 共有資材の配置・再構築、モデル取得時のサイズやチェックサム検証、実行環境の版確認、実モデルでの互換性検査、またはセットアップ結果の出力を変更・調査するとき。
-- セットアップ前に共有保存先の非追跡状態を確かめる処理の流れを追うとき。
+- 共有資材の隔離構築・再利用・切替、モデル取得と checksum、実モデル検証、または通常起動の検証経路を変更・調査するとき。
+- doctor が非追跡を保証した共有保存先で、資材の中間状態と失敗後の回復を確認するとき。
 
 ## Do not read this when
 - 文書の列挙・同期・索引・検索、検索範囲、MCP の要求処理を変更するときは、検索の実行側から確認してください。
@@ -298,12 +298,12 @@
 - 採用するモデルや実行環境の識別情報、検索の意味仕様を変更するときは、それぞれの正本から確認してください。
 
 ## hash
-- 1812b1903ea8289c885b4a0de0b36d8448d524471f2eb9c7a815a6650de8bbb5
+- 746cef2cfe323fa13ae7fefd6e00c0ae588310d90fac72c2902f25112ed9d7d8
 
 # `runtime_document_search_worker.py`
 
 ## Summary
-- 文書検索用の固定資材と Node 実行環境の整合性を検証し、Python から推論プロセスを起動して、要求・期限・キャンセル・終了処理を扱う。
+- 文書検索用の固定資材・検証記録と Node／sqlite-vec 実行環境を照合し、Python から推論プロセスを起動して、要求・期限・キャンセル・終了処理を扱う。
 - 推論プロセスとの受け渡しや資材検証など、Python 側の実行境界を変更するときの入口。
 
 ## Read this when
@@ -316,7 +316,7 @@
 - チャンク分割、埋め込み、再順位付けなど Node 内の推論内容を変更するときは、Node worker の実装から確認する。
 
 ## hash
-- 31890b29e05c7f35a091d5c03ee8ed8889f657080d687ea3b1cf45820f95fb99
+- 73cfb8e043a3912d15292d9570ef59a807b5ada5b91bd971701e0f6b126ce862
 
 # `runtime_editor_input_handoff.py`
 
@@ -589,7 +589,7 @@
 - ある項目の値が特定コマンドの処理中にどこで決まるかを追うときは、その値を設定するコマンド処理を確認する。
 
 ## hash
-- b93e848cca2f1e31b4783371cac8bf5d79ed8e1efc773d878d6ce3f99b5cbdc8
+- 2f03d19e8fa24e08255f5cf9b04db6b7fe5ad60fc97a61023c24565cf2be2a9d
 
 # `runtime_primary_report_render.py`
 
@@ -606,7 +606,7 @@
 - editing run の fork・join・abandon report 固有の内容や保存構成を変更するときは、その report writer を直接確認する。共通表示 helper の変更時だけここを確認する。
 
 ## hash
-- 71c2106a9dc594976576a21dc4945dea0d5bfc12ca7024ae3ae9adf771b26bef
+- 17ad4dd1496507848f15c984f126c6eb5f039e81c2d34f6dd9d58f194ef78541
 
 # `runtime_primary_report_specs.py`
 
@@ -623,7 +623,7 @@
 - TUI 通知や oracle investigation の report を調べるときは、それぞれの処理へ直接進む。
 
 ## hash
-- 00b9f9f90e771fda23daba3ad22f7298a8c55ee722b50bc244c83d4ef0920192
+- 9fceba412244c4d5354fb5b01a6b9952ecee2dc4cac0eb0adff496ef79f5ece5
 
 # `runtime_refactor.py`
 

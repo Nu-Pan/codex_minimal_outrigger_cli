@@ -342,12 +342,33 @@ def _doctor_body(
         _outcome_sentence(classification),
         "## doctor preprocess",
         f"- 検査と修復: `{_stage_status(logger, classification)}`",
+        f"- 共通実行環境: `{_field_status(fields.get('common_environment'))}`",
+        f"- 管理領域と保存設定: `{_field_status(fields.get('management_validation'))}`",
         "## 検索設定",
         f"- 対象ファイル: `{_field_status(fields.get('config_path'))}`",
         f"- ファイル: `{_field_status(fields.get('config_generation'))}`",
         *added_lines,
         f"- 検証: `{_field_status(fields.get('config_validation'))}`",
         f"- 保存: `{_field_status(fields.get('config_saved'))}`",
+        f"- 使用した設定条件: `{_inline_text(fields.get('search_config'))}`",
+        "## 検索資材",
+        f"- 所有 cmoc-root: `{_field_status(fields.get('cmoc_root'))}`",
+        f"- 保存先: `{_field_status(fields.get('material_path'))}`",
+        f"- 固定 identity: `{_inline_text(fields.get('material_identity'))}`",
+        f"- 検証条件 identity: `{_field_status(fields.get('material_condition'))}`",
+        f"- 準備・再利用: `{_field_status(fields.get('material_status'))}`",
+        f"- モデル取得・再利用: `{_field_status(fields.get('material_models'))}`",
+        f"- 照合と実モデル検証: `{_field_status(fields.get('material_validation'))}`",
+        f"- 固定 identity・checksum: `{_field_status(fields.get('material_identity_check'))}`",
+        f"- runtime・native 互換: `{_field_status(fields.get('material_runtime_check'))}`",
+        f"- 文書 embedding: `{_field_status(fields.get('material_document_embedding'))}`",
+        f"- query embedding: `{_field_status(fields.get('material_query_embedding'))}`",
+        f"- raw rerank: `{_field_status(fields.get('material_rerank'))}`",
+        f"- 残存状態: `{_field_status(fields.get('material_remaining_state'))}`",
+        f"- 失敗理由: `{_field_status(fields.get('material_failure'))}`",
+        "## 保証範囲",
+        f"- 対象 work-root: `{_field_status(fields.get('work_root'))}`",
+        "- 共通環境・設定・管理状態と共有検索資材の検査時点での利用可能性。索引同期と任意入力の検索は対象外。",
         *_standard_tail(classification, result, logger),
     ]
 
@@ -388,8 +409,8 @@ def _indexing_next_action(fields: dict[str, object]) -> str:
     """確定した同期状態から、必要な次の操作だけを示す。"""
     if fields.get("indexing_status") in {"updated", "unchanged"}:
         return "なし"
-    if fields.get("failure_code") == "NOT_READY":
-        return "文書検索の tuning と固定資材を準備する"
+    if fields.get("failure_code") in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}:
+        return "対象 work-root で cmoc doctor を実行する"
     return "診断用ログと失敗理由を確認する"
 
 

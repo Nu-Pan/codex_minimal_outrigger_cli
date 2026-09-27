@@ -462,6 +462,38 @@ def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchCo
     return config
 
 
+def _validated_codex_data(path: Path, data: dict[str, Any]) -> None:
+    """保存済み agent call 設定を暗黙補完せず、provider 参照まで確認する。"""
+    codex = data.get("codex")
+    if not isinstance(codex, dict):
+        field = "codex"
+    elif not isinstance(codex.get("model_providers"), dict):
+        field = "codex.model_providers"
+    elif not isinstance(codex.get("agent_calls"), dict):
+        field = "codex.agent_calls"
+    else:
+        calls = codex["agent_calls"]
+        providers = codex["model_providers"]
+        missing = set(CmocConfig().codex.agent_calls) - set(calls)
+        if missing:
+            field = f"codex.agent_calls.{sorted(missing)[0]}"
+        else:
+            config = config_from_dict(data)
+            unknown = [
+                kind
+                for kind, call in config.codex.agent_calls.items()
+                if call.model_provider not in providers
+            ]
+            if not unknown:
+                return
+            field = f"codex.agent_calls.{unknown[0]}.model_provider"
+    raise CmocError(
+        "agent call の保存設定が不足または不正です。",
+        [f"{path} の {field} を手動で修正してください。"],
+        f"path: {path}\nitem: {field}\nreason: 必須設定または provider 定義がありません",
+    )
+
+
 def load_config(root: Path) -> CmocConfig:
     """保存済み JSON の検索設定を厳格に検証して config に復元する。"""
     path = config_path(root)
@@ -474,6 +506,7 @@ def load_config(root: Path) -> CmocConfig:
         )
     data = _read_config_data(path)
     _validated_search_data(path, data)
+    _validated_codex_data(path, data)
     return config_from_dict(data)
 
 
@@ -513,6 +546,7 @@ def sync_config(
         on_candidate(False, additions)
     candidate = {**data, "document_search": search}
     _validated_search_data(path, candidate)
+    _validated_codex_data(path, candidate)
     config = config_from_dict(candidate)
     if additions:
         write_config(path, config)

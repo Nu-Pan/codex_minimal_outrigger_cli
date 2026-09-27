@@ -725,6 +725,41 @@ class DocumentSearch:
     ) -> Iterator[
         tuple[sqlite3.Connection, dict[str, SourceDocument], SyncResult, Path, float]
     ]:
+        """資材の切替を防いだまま索引・推論の全要求を完了する。"""
+        from .runtime_document_search_setup import _material_lock
+        from .runtime_document_search_worker import NodeSearchWorker
+
+        self._refresh_saved_config()
+        if self.worker is not None and not isinstance(self.worker, NodeSearchWorker):
+            with self._locked_index_inner() as state:
+                yield state
+            return
+        try:
+            require_cmoc_ignored(self.installation_root)
+        except Exception as exc:
+            raise SearchError(
+                "NOT_READY",
+                "shared document search storage is not ignored; run cmoc doctor",
+            ) from exc
+        started = self.request_started or time.monotonic()
+        if self.config is None:
+            raise SearchError("NOT_READY", "document search tuning is not configured")
+        deadline = started + self.config.request_timeout_seconds
+        with _file_lock(
+            _material_lock(self.installation_root),
+            deadline,
+            self.cancelled,
+            shared=True,
+        ):
+            with self._locked_index_inner() as state:
+                yield state
+
+    @contextmanager
+    def _locked_index_inner(
+        self,
+    ) -> Iterator[
+        tuple[sqlite3.Connection, dict[str, SourceDocument], SyncResult, Path, float]
+    ]:
         """索引 lock 内で現在本文を確認し、整合世代を同期する。"""
         self._refresh_saved_config()
         started = self.request_started or time.monotonic()
@@ -751,7 +786,10 @@ class DocumentSearch:
                 raise SearchError(
                     "SYNC_FAILED", "shared document search storage is not ignored"
                 ) from exc
-            verify_search_materials(self.installation_root)
+            try:
+                verify_search_materials(self.installation_root, self.config)
+            except SearchError as exc:
+                raise SearchError(exc.code, f"{exc}; run cmoc doctor") from exc
         lease = index.parent.parent.parent / "leases" / f"{identity}.lock"
         with _file_lock(lease, deadline, self.cancelled, shared=True) as lease_fd:
             self._retain_lease(lease, lease_fd)

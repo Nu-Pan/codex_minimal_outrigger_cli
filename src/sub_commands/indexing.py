@@ -60,7 +60,11 @@ def _cmoc_indexing_body() -> TerminalResult:
         )
         raise CmocError(
             "文書検索索引の同期に失敗しました。",
-            ["文書検索の設定、資材、許可対象ファイルを確認してください。"],
+            [
+                f"対象 work-root ({root}) で cmoc doctor を実行してください。"
+                if exc.code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}
+                else "文書検索の設定、資材、許可対象ファイルを確認してください。"
+            ],
             f"code: {exc.code}\nreason: {exc}",
         ) from exc
     finally:

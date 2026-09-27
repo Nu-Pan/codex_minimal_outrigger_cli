@@ -53,6 +53,7 @@
 ## Summary
 - `cmoc indexing` の実行フローを組み立て、work-root の `oracle/doc` を対象に文書検索索引を同期します。
 - 同期スコープの識別情報、同期結果、失敗状態を primary report に反映します。
+- 未準備・不一致の共有検索資材は doctor による修復を案内します。
 
 ## Read this when
 - `cmoc indexing` の実行条件や、同期に渡すスコープ・設定を確認または変更するとき。
@@ -63,7 +64,7 @@
 - 索引の構築・保存・検索処理やスコープの共通定義を確認するときは、それぞれを担う共通検索処理やスコープ定義から確認してください。
 
 ## hash
-- a3dae2674a00b244fdb950cb7c7548ce710dc62032e20dbf0951d3bf4cce86e3
+- 62d07e4570d6a6fd3de363c532c3b19a81b4d808b750d245734c9a7f5fbd15a9
 
 # `oracle`
 

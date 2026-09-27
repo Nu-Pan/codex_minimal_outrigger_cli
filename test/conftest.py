@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
+import commons.runtime_doctor as runtime_doctor
+import commons.runtime_document_search as runtime_document_search
 import commons.runtime_windows_toast as runtime_windows_toast
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
 
@@ -29,6 +31,30 @@ def _isolate_windows_toast_transport(
         runtime_windows_toast,
         "_run_windows_toast_transport",
         lambda _title, _message: True,
+    )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_document_search_materials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """一般 CLI test では大容量モデルと installation の共有領域に触れない。"""
+    monkeypatch.setattr(runtime_doctor, "_installation_root", lambda root: root)
+    monkeypatch.setattr(runtime_document_search, "cmoc_root", lambda: tmp_path)
+    monkeypatch.setattr(runtime_doctor, "_check_common_environment", lambda: None)
+    monkeypatch.setattr(
+        runtime_doctor,
+        "prepare_document_search_materials",
+        lambda root, _config: {
+            "status": "validated",
+            "path": str(root / ".cmoc/gu/document_search/materials"),
+            "models": "reused",
+        },
+    )
+    monkeypatch.setattr(
+        runtime_doctor,
+        "require_document_search_materials",
+        lambda root, _config: root / ".cmoc/gu/document_search/materials",
     )
 
 
