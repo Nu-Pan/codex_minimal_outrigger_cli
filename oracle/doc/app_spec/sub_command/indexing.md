@@ -12,11 +12,11 @@
 
 ## 実行手順
 
-1. doctor preprocess を通常起動の検証経路で呼び出す。検索設定と資材の準備状態の検査、および既存の管理ファイルの修復・commit は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索設定の検証と補完」「検索資材の準備と検査」に従う。
-2. work-root と実効閲覧範囲、資材・設定、および保存先の非追跡を確認し、共通の同期処理を実行する。起動後の設定変更も、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」に従って検査する。
+1. doctor preprocess を通常起動の経路で呼び出す。検索設定と資材の準備状態の検査、索引同期、および既存の管理ファイルの修復・commit は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索設定の検証と補完」「検索資材の準備と検査」「検索索引の同期」に従う。
+2. work-root と実効閲覧範囲、資材・設定、および保存先の非追跡を確認し、doctor preprocess で反映済みの結果を再利用して共通の同期処理を実行する。起動後の設定変更も、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」に従って検査する。
 3. 同期結果を保存し、資源を解放して終了する。検索 query の embedding と rerank、および Codex agent による目次生成は行わない。
 
-資材の再確認と未準備時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「資材の検証契約」に従う。索引同期自体は Git commit を作らない。失敗時は完了した同期として報告せず、共通仕様の失敗識別と未完了世代の非公開を維持する。
+資材の再確認と未準備時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「資材の検証契約」に従う。索引同期自体は Git commit を作らない。失敗時の反映済み結果の扱いは同文書の「同期と cache」に従い、同期全体が完了したとは報告しない。
 
 ## primary report
 
@@ -24,4 +24,5 @@
 - report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/indexing/{{time-stamp}}.md` に保存する。
 - front matter は command、生成日時、repo root、work root、実効閲覧範囲の識別情報、索引 identity、terminal result の共通分類、終了コード、および同期結果を含む。同期結果は未開始・更新済み・無変更・失敗を区別する。確定前の identity や件数は `null` とする。
 - 本文には、許可文書・chunk の件数、追加・変更・削除・空白化と埋め込み再利用の実績、所要時間、失敗 code と理由、warning、必要な次の操作、および診断用サブコマンドログを要約する。未測定・未実行の件数をゼロとして報告しない。
-- 生成した INDEX 名や索引生成 commit ID を結果項目にしない。doctor の修復があれば、その結果を索引同期と区別する。
+- 同期結果と実績には doctor preprocess 内の索引同期も含める。後続の同期で無変更だったことだけを理由に、先行する更新や途中まで反映した進捗を報告から除外しない。
+- 生成した INDEX 名や索引生成 commit ID を結果項目にしない。doctor による設定や管理ファイルの修復があれば、その結果を索引同期と区別する。

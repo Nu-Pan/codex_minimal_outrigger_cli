@@ -2,15 +2,15 @@
 
 ## 概要
 
-doctor preprocess は、各サブコマンドに共通する実行環境・設定・管理状態・必須資材の検証を担い、本命処理・agent 起動前に必ず実行する。明示的な `cmoc doctor` は、この共通処理を準備・修復の入口として使用する。CLI 自動補完用プローブには、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md` の「CLI 自動補完規則」が定める境界を適用する。
+doctor preprocess は、各サブコマンドに共通する実行環境・設定・管理状態・必須資材の検証と文書検索索引の同期を担い、本命処理・agent 起動前に必ず実行する。明示的な `cmoc doctor` は、この共通処理を準備・修復の入口として使用する。CLI 自動補完用プローブには、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md` の「CLI 自動補完規則」が定める境界を適用する。
 
 ## 成功条件と保証範囲
 
-正常終了は、対象の repo-root・work-root で使用する共通実行環境・保存設定・管理状態と、使用する cmoc-root の必須資材が、本書の検証をすべて満たし、検査時点で利用可能であることを表す。必須の依存・資材が不足、不一致、未検証、または利用不能のまま、正常終了してはならない。
+正常終了は、対象の repo-root・work-root で使用する共通実行環境・保存設定・管理状態と、使用する cmoc-root の必須資材が、本書の検証をすべて満たし、検査時点で利用可能であることを表す。本書の「検索索引の同期」の完了も含む。必須の依存・資材が不足、不一致、未検証、または利用不能のまま、正常終了してはならない。
 
-各サブコマンド固有の branch、session/run state、git working tree・staging area の clean 状態などの操作条件は、この保証に含めず、doctor preprocess の正常終了後に個別仕様に従って検証する。対象文書の列挙・索引同期、任意の入力での推論成功、検査後の設定・環境変化も保証しない。model provider の稼働・認証などの保証範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「cmoc の責務境界」を維持する。
+各サブコマンド固有の branch、session/run state、git working tree・staging area の clean 状態などの操作条件は、この保証に含めず、doctor preprocess の正常終了後に個別仕様に従って検証する。任意の入力での推論成功や、検査後の文書・設定・環境変化に対する成功も保証しない。model provider の稼働・認証などの保証範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「cmoc の責務境界」を維持する。
 
-検証・必要な修復を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・資材、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を必須の検索資材へ適用してはならない。
+検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・資材または索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を必須の検索資材や索引同期へ適用してはならない。
 
 ## 共通実行環境の検証
 
@@ -30,8 +30,9 @@ cmoc 本体と doctor を起動するための Python 環境・起動用依存�
 4. 処理に使用する各 work-root の `{{work-root}}/.cmoc/gt/config.json` に対し、入口に応じた検索設定の検証・補完、共通設定の検証、および追跡保証を行う
 5. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema を満たし、entry 集合と調査要求が同期済みであることを保証する
 6. 入口に応じた検索資材の準備・検査を行う
-7. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
-8. ここまでの作業で発生した tracked 差分を、それぞれの修復対象 root の owning repository・worktree で git commit する。検索設定の補完差分も含め、差分がなければ commit を作らない
+7. 本書の「検索索引の同期」に従って、処理対象の各 work-root の索引を同期する
+8. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
+9. ここまでの作業で発生した tracked 差分を、それぞれの修復対象 root の owning repository・worktree で git commit する。検索設定の補完差分も含め、差分がなければ commit を作らない
 
 通常起動でも、検索設定・検索資材以外の既存の管理ファイルの修復・同期と、それに伴う commit は本書の各規則に従って行う。検索資材の準備を明示 doctor に集約することを理由に、これらの管理責務を省略しない。
 
@@ -128,7 +129,13 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 明示 doctor が準備・検証を完了できない場合も、必要条件が整ったとは扱わない。取得・構築・照合・互換検査・推論のどこで失敗したかと修復方法を示す。権限や外部依存などに手動対処が必要なら、その対処と doctor の再実行を案内する。これらの想定済み失敗は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー終了の確定」「handled failure の表示」に従う。
 
-準備・検証の途中状態の扱い、使用中資材の保護、および検証 process の停止・解放は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「排他、期限、終了」に従う。doctor は検索索引を同期しない。
+準備・検証の途中状態の扱い、使用中資材の保護、および検証 process の停止・解放は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「排他、期限、終了」に従う。
+
+## 検索索引の同期
+
+通常起動・明示 doctor のどちらも、検索設定と資材の検証後に、処理対象の各 work-root の索引を同期する。信頼された cmoc caller が、その work-root で閲覧可能な oracle/doc 全体を構造化した範囲として渡す。
+
+対象・逐次反映と再利用・期限・資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「対象と信頼境界」「同期と cache」「identity と保存先」「排他、期限、終了」を正本とする。ここで準備した索引を別の worktree や実効閲覧範囲の索引と取り違えず、後続の検索要求でも同文書に従って現在の許可集合と本文を確認する。
 
 ## refactor state の追跡保証と同期
 
