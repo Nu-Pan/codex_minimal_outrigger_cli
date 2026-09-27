@@ -17,10 +17,12 @@ from _git_support import make_repo, run_git
 from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import INITIAL_SEARCH_MATERIALS, DocumentSearchConfig
 
+from cmoc_runtime import write_config
 from commons.runtime_document_search import DocumentSearch, SearchError, scan_documents
 from commons.runtime_document_search_mcp import _response
 from commons.runtime_document_search_worker import NodeSearchWorker, materials_directory
 from commons.runtime_git import ensure_cmoc_ignored
+from config.cmoc_config import CmocConfig
 from main import app
 
 
@@ -320,6 +322,38 @@ def test_unset_tuning_and_mcp_failure_are_distinct_from_zero_hits(
     )
     assert failed is not None and failed["result"]["isError"] is True
     assert failed["result"]["structuredContent"]["code"] == "NOT_READY"
+
+
+def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
+    """起動後の有効な変更は新索引を使い、不備は旧設定へ戻さず拒否する。"""
+    root = _repo_with_docs(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    write_config(path, CmocConfig())
+    search = DocumentSearch(
+        root,
+        DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+        CmocConfig().document_search,
+        worker=_InferenceDouble(),
+        installation_root=tmp_path,
+        use_saved_config=True,
+    )
+    try:
+        first = search.synchronize()
+        data = json.loads(path.read_text())
+        data["document_search"]["chunk_tokens"] = 256
+        path.write_text(json.dumps(data) + "\n")
+
+        second = search.synchronize()
+        assert second.identity != first.identity
+
+        data["document_search"] = None
+        path.write_text(json.dumps(data) + "\n")
+        with pytest.raises(SearchError) as exc_info:
+            search.search("内容")
+        assert exc_info.value.code == "NOT_READY"
+        assert "cmoc doctor" in str(exc_info.value)
+    finally:
+        search.close()
 
 
 def test_stdio_mcp_discovers_only_search_and_reports_not_ready(tmp_path: Path) -> None:

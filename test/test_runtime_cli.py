@@ -873,6 +873,7 @@ def test_cli_handled_failure_is_written_to_stderr(
     """想定済み CLI error は簡潔な terminal result を stderr に返す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    run_doctor(root)
     run_git(root, "switch", "--detach", "HEAD")
 
     result = runner.invoke(app, ["session", "fork"])

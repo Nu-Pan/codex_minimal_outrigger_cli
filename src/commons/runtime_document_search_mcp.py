@@ -155,7 +155,7 @@ def _parse_context(raw: str) -> DocumentSearch:
         if not isinstance(tuning, dict) or set(tuning) != names:
             raise ValueError("invalid document search config")
         tuning = DocumentSearchConfig(**tuning)
-    return DocumentSearch(Path(root), resolved_scope, tuning)
+    return DocumentSearch(Path(root), resolved_scope, tuning, use_saved_config=True)
 
 
 def main() -> None:

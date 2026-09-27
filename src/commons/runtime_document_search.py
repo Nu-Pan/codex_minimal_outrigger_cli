@@ -30,11 +30,12 @@ from oracle.other.document_search import (
     SearchResult,
 )
 
-from .runtime_config import _document_search_config
+from .runtime_config import _document_search_config, load_config
 from .runtime_document_search_scope import (
     scope_allows,
     validate_document_search_scope,
 )
+from .runtime_errors import CmocError
 from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ignored
 from .runtime_paths import cmoc_root
 
@@ -452,6 +453,7 @@ class DocumentSearch:
         *,
         worker: InferenceWorker | None = None,
         installation_root: Path | None = None,
+        use_saved_config: bool = False,
     ) -> None:
         """閲覧範囲を検証して固定する。"""
         self.root = root.absolute()
@@ -465,6 +467,7 @@ class DocumentSearch:
             raise SearchError("NOT_READY", "document search tuning is invalid") from exc
         self.installation_root = installation_root or cmoc_root()
         self.worker = worker
+        self.use_saved_config = use_saved_config
         self.cancelled: threading.Event | None = None
         self.request_started: float | None = None
         self._lease_fd: int | None = None
@@ -528,6 +531,26 @@ class DocumentSearch:
 
     def _check(self, deadline: float) -> None:
         _deadline_check(deadline, self.cancelled)
+
+    def _refresh_saved_config(self) -> None:
+        """要求時の保存済み設定を検証し、変更時は旧索引と worker を離す。"""
+        if not self.use_saved_config:
+            return
+        try:
+            current = load_config(self.root).document_search
+        except CmocError as exc:
+            self.close()
+            raise SearchError(
+                "NOT_READY",
+                f"{exc.summary}\n{exc.detail}\n{' '.join(exc.next_actions)}",
+            ) from exc
+        if current != self.config:
+            self.close()
+            from .runtime_document_search_worker import NodeSearchWorker
+
+            if isinstance(self.worker, NodeSearchWorker):
+                self.worker = None
+            self.config = current
 
     def _check_sources_current(
         self, documents: Mapping[str, SourceDocument], deadline: float
@@ -703,6 +726,7 @@ class DocumentSearch:
         tuple[sqlite3.Connection, dict[str, SourceDocument], SyncResult, Path, float]
     ]:
         """索引 lock 内で現在本文を確認し、整合世代を同期する。"""
+        self._refresh_saved_config()
         started = self.request_started or time.monotonic()
         if self.config is None:
             raise SearchError("NOT_READY", "document search tuning is not configured")

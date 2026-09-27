@@ -34,16 +34,25 @@ from .runtime_git import (
     with_cmoc_ignore_pattern,
 )
 from .runtime_paths import config_path, refactor_state_path, repo_root
+from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
 
 
 def run_doctor_preprocess(
     root: Path,
     *,
+    explicit_doctor: bool = False,
     sync_refactor_entries: bool = True,
 ) -> None:
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
+    update_primary_report_fields(
+        config_path=str(config_path(root)),
+        config_generation="未確認",
+        config_validation="未実行",
+        config_saved=False,
+        config_additions={},
+    )
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # snapshot 作成から修復 commit と元の index 復元までを同じ Git common
     # directory の lock 内で行い、並行 doctor が共有 index を混ぜないようにする。
@@ -87,7 +96,32 @@ def run_doctor_preprocess(
             # ignore と .agents の保証後に、config と refactor state を current
             # work-root だけで同期する。index には直接触れず、後続の一時 index
             # で他の doctor 修復と同じ commit にまとめる。
-            sync_config(root)
+            update_primary_report_fields(config_validation="失敗")
+
+            def report_config_candidate(
+                generated: bool, additions: dict[str, object]
+            ) -> None:
+                """保存前の補完候補も失敗 report へ残す。"""
+                update_primary_report_fields(
+                    config_generation="新規ファイル候補"
+                    if generated
+                    else "既存ファイル",
+                    config_additions=additions,
+                )
+
+            config_result = sync_config(
+                root,
+                repair_missing=explicit_doctor,
+                on_candidate=report_config_candidate if explicit_doctor else None,
+            )
+            update_primary_report_fields(
+                config_generation="新規生成"
+                if config_result.generated
+                else "既存ファイル",
+                config_additions=config_result.additions,
+                config_validation="成功",
+                config_saved=config_result.saved,
+            )
             sync_refactor_state(root, sync_entries=sync_refactor_entries)
             # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
             # reporter 固有の不一致は修復や version command を行わず degraded にする。
