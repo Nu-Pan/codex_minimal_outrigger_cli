@@ -331,7 +331,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 - caller は各 call の実効閲覧範囲を確定して builder へ渡す。正確な検索有効化の表現、範囲の型・既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` と `DocumentSearchScope` へ委譲する。未確定・不正な範囲を暗黙に補完しない。
 - oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の調査・変更要約、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。caller は workload の閲覧制限を反映し、範囲を確定できなければ起動前に失敗させる。短い応答だけで可用性を確認する回復 probe では検索を無効にする。
-- builder は受け取った範囲を完全 prompt と起動パラメータへ同じ値で渡す。各 call では検索要求時の自動同期を使う。起動時の検索設定・資材の検査と索引同期は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索索引の同期」に従う。Structured Output の補正・retry・再開でも同じ閲覧境界を維持する。
+- builder は受け取った範囲を完全 prompt と起動パラメータへ同じ値で渡す。各 call では検索要求時の自動同期を使う。起動時の検索設定・検索用コンポーネントの検査と索引同期は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索索引の同期」に従う。Structured Output の補正・retry・再開でも同じ閲覧境界を維持する。
 - 有効な各 Codex process に local stdio MCP 接続を設ける。検索 server の cwd、実行ファイル、引数、許可 tool、approval behavior、起動・tool 期限、および信頼された context の供給を、呼び出し単位の argv override で管理する。設定の符号化には本書の「Codex CLI 引数による設定上書き」を使う。
 - server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・範囲への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
 - 通常の検索 tool は human approval、auto-review、command escalation を要求せず利用できるよう設定する。これは sandbox、permission profile、network access、file access mode の拡張を意味しない。

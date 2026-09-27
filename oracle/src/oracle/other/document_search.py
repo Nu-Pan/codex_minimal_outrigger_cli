@@ -1,4 +1,4 @@
-"""文書検索の資材識別、設定型、および MCP 入出力の正確な定義。
+"""検索用コンポーネントの識別情報、設定型、および MCP 入出力の正確な定義。
 
 意味仕様の委譲元は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
 「初期方式と推論の失敗」「stdio MCP と失敗の公開」「設定と未確定事項」。
@@ -23,7 +23,7 @@ class ModelArtifact:
 
 @dataclass(frozen=True)
 class SearchMaterials:
-    """初期採用する推論・ベクトル演算資材の組合せ。"""
+    """推論・ベクトル演算のために初期採用する検索用コンポーネントの組合せ。"""
 
     node_version: str
     node_llama_cpp_version: str
@@ -34,7 +34,7 @@ class SearchMaterials:
     embedding_dimensions: int
 
 
-# NOTE 2026-09-25 の PoC の報告表と materials.json を照合した初期採用資材。
+# NOTE 2026-09-25 の PoC の報告表と materials.json を照合した初期採用のコンポーネント。
 # 一時コードや取得元のローカル path は製品の依存にしない。
 INITIAL_SEARCH_MATERIALS = SearchMaterials(
     node_version="22.23.2",

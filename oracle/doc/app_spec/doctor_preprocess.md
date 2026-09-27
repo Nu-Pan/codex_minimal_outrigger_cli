@@ -2,19 +2,19 @@
 
 ## 概要
 
-doctor preprocess は、各サブコマンドに共通する実行環境・設定・管理状態・必須資材の検証と文書検索索引の同期を担い、本命処理・agent 起動前に必ず実行する。明示的な `cmoc doctor` は、この共通処理を準備・修復の入口として使用する。CLI 自動補完用プローブには、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md` の「CLI 自動補完規則」が定める境界を適用する。
+doctor preprocess は、各サブコマンドに共通する実行環境・設定・管理状態・必須の検索用コンポーネントの検証と文書検索索引の同期を担い、本命処理・agent 起動前に必ず実行する。明示的な `cmoc doctor` は、この共通処理を準備・修復の入口として使用する。CLI 自動補完用プローブには、`{{cmoc-root}}/oracle/doc/app_spec/cli_auto_completion.md` の「CLI 自動補完規則」が定める境界を適用する。
 
 ## 成功条件と保証範囲
 
-正常終了は、対象の repo-root・work-root で使用する共通実行環境・保存設定・管理状態と、使用する cmoc-root の必須資材が、本書の検証をすべて満たし、検査時点で利用可能であることを表す。本書の「検索索引の同期」の完了も含む。必須の依存・資材が不足、不一致、未検証、または利用不能のまま、正常終了してはならない。
+正常終了は、対象の repo-root・work-root で使用する共通実行環境・保存設定・管理状態と、使用する cmoc-root の必須のコンポーネントが、本書の検証をすべて満たし、検査時点で利用可能であることを表す。本書の「検索索引の同期」の完了も含む。必須の依存・コンポーネントが不足、不一致、未検証、または利用不能のまま、正常終了してはならない。
 
 各サブコマンド固有の branch、session/run state、git working tree・staging area の clean 状態などの操作条件は、この保証に含めず、doctor preprocess の正常終了後に個別仕様に従って検証する。任意の入力での推論成功や、検査後の文書・設定・環境変化に対する成功も保証しない。model provider の稼働・認証などの保証範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「cmoc の責務境界」を維持する。
 
-検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・資材または索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を必須の検索資材や索引同期へ適用してはならない。
+検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・コンポーネントまたは索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を必須の検索用コンポーネントや索引同期へ適用してはならない。
 
 ## 共通実行環境の検証
 
-cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利用できることを検証する。検索資材として準備する依存は、本書の「検索資材の準備と検査」の経路で扱う。Python 環境の前提は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」に従う。Codex CLI に渡す環境については、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
+cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利用できることを検証する。検索用コンポーネントとして準備する依存は、本書の「検索用コンポーネントの準備と検査」の経路で扱う。Python 環境の前提は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」に従う。Codex CLI に渡す環境については、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
 
 cmoc 本体と doctor を起動するための Python 環境・起動用依存は事前導入の範囲とする。検索用 runtime・モデル等の未準備を、doctor 自身を起動できない理由にしてはならない。doctor は OS、Git、Codex CLI、または model provider の導入・修復を担わず、自動修復しない必須依存の不足も診断してエラーとする。
 
@@ -22,31 +22,31 @@ cmoc 本体と doctor を起動するための Python 環境・起動用依存�
 
 ## 実行手順
 
-通常のサブコマンドと明示的な `cmoc doctor` は、検索設定・検索資材に対して異なる経路を使う。設定は本書の「検索設定の検証と補完」、資材は「検索資材の準備と検査」に従う。明示 doctor の入口で通常起動用の不足検査を先に行い、準備・修復へ到達する前に停止させてはならない。
+通常のサブコマンドと明示的な `cmoc doctor` は、検索設定・検索用コンポーネントに対して異なる経路を使う。設定は本書の「検索設定の検証と補完」、コンポーネントは「検索用コンポーネントの準備と検査」に従う。明示 doctor の入口で通常起動用の不足検査を先に行い、準備・修復へ到達する前に停止させてはならない。
 
-1. 起動基盤と検索資材以外の共通依存を検証し、資材を所有する cmoc-root と、処理対象の repo-root・各 work-root を確定する
+1. 起動基盤と検索用コンポーネント以外の共通依存を検証し、コンポーネントを所有する cmoc-root と、処理対象の repo-root・各 work-root を確定する
 2. 本書の「管理領域の非追跡保証」に従って、それぞれの root の `.cmoc/gu` が git 追跡対象外であることを保証する
 3. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 4. 処理に使用する各 work-root の `{{work-root}}/.cmoc/gt/config.json` に対し、入口に応じた検索設定の検証・補完、共通設定の検証、および追跡保証を行う
 5. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema を満たし、entry 集合と調査要求が同期済みであることを保証する
-6. 入口に応じた検索資材の準備・検査を行う
+6. 入口に応じた検索用コンポーネントの準備・検査を行う
 7. 本書の「検索索引の同期」に従って、処理対象の各 work-root の索引を同期する
 8. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
 9. ここまでの作業で発生した tracked 差分を、それぞれの修復対象 root の owning repository・worktree で git commit する。検索設定の補完差分も含め、差分がなければ commit を作らない
 
-通常起動でも、検索設定・検索資材以外の既存の管理ファイルの修復・同期と、それに伴う commit は本書の各規則に従って行う。検索資材の準備を明示 doctor に集約することを理由に、これらの管理責務を省略しない。
+通常起動でも、検索設定・検索用コンポーネント以外の既存の管理ファイルの修復・同期と、それに伴う commit は本書の各規則に従って行う。検索用コンポーネントの準備を明示 doctor に集約することを理由に、これらの管理責務を省略しない。
 
 ## 管理領域の非追跡保証
 
-doctor は repo-root と処理対象 work-root に適用する。加えて、共有検索資材を所有する cmoc-root の管理領域にも、資材の初回書込みより前に同じ非追跡保証を適用する。共有資材のためだけに扱う cmoc-root の不足は明示 doctor が修復し、通常起動で検出した場合は `cmoc doctor` による修復を案内してエラー終了する。
+doctor は repo-root と処理対象 work-root に適用する。加えて、共有コンポーネントを所有する cmoc-root の管理領域にも、コンポーネントの初回書込みより前に同じ非追跡保証を適用する。共有コンポーネントのためだけに扱う cmoc-root の不足は明示 doctor が修復し、通常起動で検出した場合は `cmoc doctor` による修復を案内してエラー終了する。
 
 同じ root は重複処理しない。linked worktree も、それ自身の owning repository・index・ignore source で検証し、main worktree の検証成功だけで代替しない。後から作成する run worktree も、管理領域の初回使用前に確認する。merge 中へ doctor の修復・commit を割り込ませず、検証を満たさなければ当該管理処理を失敗させる。
 
-以下の `<対象root>` は、検証・修復する root を表す。共有資材のために cmoc-root を扱う場合、repo-root・work-root の設定や refactor state の修復まで cmoc-root へ適用範囲を広げない。cmoc-root 自身が処理対象 work-root でもある場合は、その役割に従う。
+以下の `<対象root>` は、検証・修復する root を表す。共有コンポーネントのために cmoc-root を扱う場合、repo-root・work-root の設定や refactor state の修復まで cmoc-root へ適用範囲を広げない。cmoc-root 自身が処理対象 work-root でもある場合は、その役割に従う。
 
 ### 検証
 
-非追跡保証は、`<対象root>/.cmoc/gu` ツリー全体と、将来作成される全 descendant に適用する。feedback の pending observation、active state、report cut、checkpoint、Markdown report、および検索の索引・cache・lock・資材・常駐枠の調停情報も含む。
+非追跡保証は、`<対象root>/.cmoc/gu` ツリー全体と、将来作成される全 descendant に適用する。feedback の pending observation、active state、report cut、checkpoint、Markdown report、および検索の索引・cache・lock・コンポーネント・常駐枠の調停情報も含む。
 
 完了判定では、次の両方を満たすことを確認する。
 
@@ -83,7 +83,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 ## 検索設定の検証と補完
 
-検索設定は、処理対象 work-root の `.cmoc/gt/config.json` の `document_search` に保存する。通常起動で設定不備を早期に検出し、明示的な doctor で不足を補えることを目的とする。本節の設定検証と、本書の「検索資材の準備と検査」の両方を完了させる。
+検索設定は、処理対象 work-root の `.cmoc/gt/config.json` の `document_search` に保存する。通常起動で設定不備を早期に検出し、明示的な doctor で不足を補えることを目的とする。本節の設定検証と、本書の「検索用コンポーネントの準備と検査」の両方を完了させる。
 
 正確な field、型、数値制約、項目間制約、および補完に使う暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `DocumentSearchConfig` へ委譲する。新規ファイル全体の設定構造と既定状態は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig` へ委譲する。これらの既定値を使う新規生成・明示補完と、保存済み設定の検証を区別する。
 
@@ -115,25 +115,25 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 ### 検査範囲の境界
 
-本節は保存設定の検査・補完を扱い、資材の利用可能性は次節で検証する。call 接続は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
+本節は保存設定の検査・補完を扱い、コンポーネントの利用可能性は次節で検証する。call 接続は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
 
-起動後の設定変更、資材不足・不一致、入力に依存する context 超過、推論失敗の検出は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」「資材の検証契約」「初期方式と推論の失敗」に従い、検索・索引同期の必要な操作時に引き続き行う。
+起動後の設定変更、コンポーネントの不足・不一致、入力に依存する context 超過、推論失敗の検出は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」「検索用コンポーネントの検証契約」「初期方式と推論の失敗」に従い、検索・索引同期の必要な操作時に引き続き行う。
 
-## 検索資材の準備と検査
+## 検索用コンポーネントの準備と検査
 
-資材の配置と共有単位は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「identity と保存先」に従う。使用する cmoc installation の共有資材を扱い、処理対象 repository・worktree ごとに別の資材を準備しない。
+コンポーネントの配置と共有単位は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「identity と保存先」に従う。使用する cmoc installation の共有コンポーネントを扱い、処理対象 repository・worktree ごとに別のコンポーネントを準備しない。
 
-明示 doctor は、推論 runtime、ベクトル演算依存、モデル、tokenizer、およびその推移的依存を照合し、不足・破損・不一致・利用不能があれば取得・必要な構築・修復を行う。正常な準備済み資材は再利用し、再実行だけを理由に再取得・再構築しない。そのうえで、再利用時も含め、同文書の「資材の検証契約」に従う実モデルの検証を完了させる。検証には今回使用する各 work-root の検索設定を用い、同じ適合条件の検証は共有してよい。
+明示 doctor は、推論 runtime、ベクトル演算依存、モデル、tokenizer、およびその推移的依存を照合し、不足・破損・不一致・利用不能があれば取得・必要な構築・修復を行う。正常な準備済みのコンポーネントは再利用し、再実行だけを理由に再取得・再構築しない。そのうえで、再利用時も含め、同文書の「検索用コンポーネントの検証契約」に従う実モデルの検証を完了させる。検証には今回使用する各 work-root の検索設定を用い、同じ適合条件の検証は共有してよい。
 
-通常起動では、保存済み検索設定と共有資材を変更せず、資材の照合と、明示 doctor で完了した検証が現在の資材・runtime・実行環境・設定条件にも適用できることを確認する。資材の取得・構築・置換や実モデルの検証を通常起動の修復として実施しない。資材不足・不一致、検証未完了、または検証結果を現在の条件へ適用できない場合は、理由と処理対象 work-root での `cmoc doctor` を案内して、本命処理の前にエラー終了する。
+通常起動では、保存済み検索設定と共有コンポーネントを変更せず、コンポーネントの照合と、明示 doctor で完了した検証が現在のコンポーネント・runtime・実行環境・設定条件にも適用できることを確認する。コンポーネントの取得・構築・置換や実モデルの検証を通常起動の修復として実施しない。コンポーネントの不足・不一致、検証未完了、または検証結果を現在の条件へ適用できない場合は、理由と処理対象 work-root での `cmoc doctor` を案内して、本命処理の前にエラー終了する。
 
 明示 doctor が準備・検証を完了できない場合も、必要条件が整ったとは扱わない。取得・構築・照合・互換検査・推論のどこで失敗したかと修復方法を示す。権限や外部依存などに手動対処が必要なら、その対処と doctor の再実行を案内する。これらの想定済み失敗は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー終了の確定」「handled failure の表示」に従う。
 
-準備・検証の途中状態の扱い、使用中資材の保護、および検証 process の停止・解放は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「排他、期限、終了」に従う。
+準備・検証の途中状態の扱い、使用中のコンポーネントの保護、および検証 process の停止・解放は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「排他、期限、終了」に従う。
 
 ## 検索索引の同期
 
-通常起動・明示 doctor のどちらも、検索設定と資材の検証後に、処理対象の各 work-root の索引を同期する。信頼された cmoc caller が、その work-root で閲覧可能な oracle/doc 全体を構造化した範囲として渡す。
+通常起動・明示 doctor のどちらも、検索設定とコンポーネントの検証後に、処理対象の各 work-root の索引を同期する。信頼された cmoc caller が、その work-root で閲覧可能な oracle/doc 全体を構造化した範囲として渡す。
 
 対象・逐次反映と再利用・期限・資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「対象と信頼境界」「同期と cache」「identity と保存先」「排他、期限、終了」を正本とする。ここで準備した索引を別の worktree や実効閲覧範囲の索引と取り違えず、後続の検索要求でも同文書に従って現在の許可集合と本文を確認する。
 
