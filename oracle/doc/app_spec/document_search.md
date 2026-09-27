@@ -46,13 +46,26 @@ file tree 全体の原子的 snapshot や、最後の照合後まで編集を阻
 
 初期実装は Python が分類、対象制御、本文確認、差分同期、SQLite 保存、排他、および stdio MCP を担当する。候補検索は sqlite-vec による cosine 距離の全件比較とし、候補を実モデルで再ランキングする。
 
-分割・embedding・rerank は、Python が渡した許可本文だけを処理する推論専用 Node.js 子 process と node-llama-cpp が担当する。worker は検索対象の決定や repository の走査をしない。モデルは Qwen3-Embedding-4B と Qwen3-Reranker-4B の Q4_K_M 配布物を初期採用し、系列・サイズを暗黙に変更しない。取得と準備の責務は `{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「文書検索のセットアップ」に従う。
+分割・embedding・rerank は、Python が渡した許可本文だけを処理する推論専用 Node.js 子 process と node-llama-cpp が担当する。worker は検索対象の決定や repository の走査をしない。モデルは Qwen3-Embedding-4B と Qwen3-Reranker-4B の Q4_K_M 配布物を初期採用し、系列・サイズを暗黙に変更しない。取得・準備と通常起動時の検査の責務は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「検索資材の準備と検査」に従う。
 
 入力ごとに embedding が存在し、所定次元で、有限かつ非ゼロであることを検査する。候補ごとに有効な実採点を得られることを検査し、欠落、NaN、不正次元、モデル・worker の失敗を、正常ゼロ件や cosine だけの成功へ変換しない。context 超過も切捨て成功にしない。
 
-初期 runtime の native 空採点を正常なゼロ score と区別するため、raw 採点を検査する。内部 API を使う場合は、セットアップ・更新時に固定版の存在・入出力・欠落検出の互換検査を通す。通常要求では当該操作前に版と API の適合を確認し、採点ごとの raw 値を検査する。guard が成立しなければ失敗させる。同じ失敗契約を満たす下位 API への置換は許容するが、別 runtime ではモデル入力、tokenizer、pooling、次元、採点、取消・解放を再検証する。内部 API の破損を silent fallback の根拠にしてはならない。
+初期 runtime の native 空採点を正常なゼロ score と区別するため、raw 採点を検査する。内部 API を使う場合は、資材の準備・更新時に固定版の存在・入出力・欠落検出の互換検査を通す。通常要求では当該操作前に版と API の適合を確認し、採点ごとの raw 値を検査する。guard が成立しなければ失敗させる。同じ失敗契約を満たす下位 API への置換は許容するが、別 runtime ではモデル入力、tokenizer、pooling、次元、採点、取消・解放を再検証する。内部 API の破損を silent fallback の根拠にしてはならない。
 
-正確な初期資材識別情報、モデル入力条件、互換検査対象は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `INITIAL_SEARCH_MATERIALS`、`EMBEDDING_QUERY_TEMPLATE`、`RERANKER_INPUT_FORMAT`、`RAW_RANKING_API` へ委譲する。この識別情報はセットアップと再利用可否の照合に共用し、PoC の一時ファイルを実行時の参照先にしない。
+正確な初期資材識別情報、モデル入力条件、互換検査対象は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `INITIAL_SEARCH_MATERIALS`、`EMBEDDING_QUERY_TEMPLATE`、`RERANKER_INPUT_FORMAT`、`RAW_RANKING_API` へ委譲する。この識別情報は準備と再利用可否の照合に共用し、PoC の一時ファイルを実行時の参照先にしない。
+
+## 資材の検証契約
+
+資材を利用可能と判定するには、次のすべてを満たすことを確認する。取得完了、ファイルの存在、設定の構文検証、またはモデルのロード成功だけでは代替しない。
+
+- 本書の「初期方式と推論の失敗」の委譲先が所有する固定資材の識別情報と一致する。モデルの checksum、tokenizer metadata、pooling、次元を含めて照合する。
+- 推移的依存を含む完全な lock と native 配布物の版・integrity を固定し、資材定義と整合させる。初期実装用の CPU native 配布物を固定して再構築できるようにし、実際に使用する runtime とベクトル演算依存をロード・使用できることを確認する。
+- 本書の「初期方式と推論の失敗」が定める runtime の互換検査と raw 採点 guard が成立する。
+- 通常検索と同じ入力整形・tokenizer・推論経路および使用する検索設定で、実モデルによる文書・query の embedding と候補の rerank を実行し、同節の出力検査を満たす。保存済みの embedding・採点 cache を返すだけでは、この検証の実行とみなさない。
+
+実モデルの検証には、repository 本文の列挙や索引を必要としない検証入力を使用する。検証結果は、資材 identity、runtime、実行環境、および検証した設定条件と対応付け、現在の条件への適用可否を確認できるようにする。条件の変更の影響を確認できない場合や、検証未完了の場合は、過去の成功を準備済みの根拠にしない。記録の形式や検証入力の具体的な文面は固定しない。
+
+通常検索・明示同期では download/build を行わず、その操作で使用する資材 identity と適合条件を再確認する。変更検出後の未検証資材を使わず、不足・不一致・利用不能を本書の「stdio MCP と失敗の公開」に従って失敗として返す。資材の修復先は `cmoc doctor` として案内する。検索 worker は取得済み資材を変更しない。
 
 ## identity と保存先
 
@@ -62,8 +75,8 @@ file tree 全体の原子的 snapshot や、最後の照合後まで編集を阻
 |---|---|---|
 | 索引・query cache・採点 cache | `{{work-root}}/.cmoc/gu/document_search/indexes/<identity>/` | 同じ worktree 実体・実効閲覧範囲・互換条件だけ |
 | 索引 lock | `{{work-root}}/.cmoc/gu/document_search/locks/` | 同じ索引を使う全 process。互換性変更時も旧利用者と回収を調停する |
-| モデル・tokenizer と推論 runtime の資材 | `{{cmoc-root}}/.cmoc/gu/document_search/materials/` | 同じ正規化済み cmoc-root を使う全 repository・worktree・process |
-| モデル常駐枠の調停情報 | `{{cmoc-root}}/.cmoc/gu/document_search/residency/` | 上記の共有管理単位に属する全索引と明示同期 |
+| モデル・tokenizer・推論 runtime・ベクトル演算依存の資材と、その検証記録 | `{{cmoc-root}}/.cmoc/gu/document_search/materials/` | 同じ正規化済み cmoc-root を使う全 repository・worktree・process |
+| モデル常駐枠の調停情報 | `{{cmoc-root}}/.cmoc/gu/document_search/residency/` | 上記の共有管理単位に属する全索引・明示同期・doctor の実モデル検証 |
 
 常駐枠を call、worktree、索引ごとに複製しない。別の cmoc installation を含むホスト全体のメモリ上限は、この管理単位では保証しない。これらはすべて非追跡の再生成可能な管理物であり、`.cmoc/gt`、Git commit、workload の成果差分へ含めない。非追跡保証は `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「管理領域の非追跡保証」を正本とする。
 
@@ -73,13 +86,19 @@ worktree 終了時は、終了処理の所有者が対応する接続と要求�
 
 ## 排他、期限、終了
 
-初期構成は共有管理単位全体でモデル常駐枠を 1 とし、embedding と reranker を交互にロードして、要求終了時にモデルを解放する。接続時はモデルをロードせず、必要な操作まで遅延する。Codex call の並列数は別の制御であり、モデルの常駐数へ転用しない。
+初期構成は共有管理単位全体でモデル常駐枠を 1 とし、embedding と reranker を交互にロードして、要求終了時にモデルを解放する。doctor の実モデル検証も同じ常駐枠を使用する。接続時はモデルをロードせず、必要な操作まで遅延する。Codex call の並列数は別の制御であり、モデルの常駐数へ転用しない。
 
-同じ索引への検索・明示同期・回収は整合性を保つよう調停する。索引 lock と常駐枠の取得順序を全経路で整合させ、循環待ちを作らない。期限は要求受付から測り、索引と常駐枠の待機、同期、推論、返却前照合を含む。
+共有資材の準備・切替・回収は、同じ cmoc-root を使用する全 repository・worktree・process 間で調停する。複数の doctor と検索・明示同期が競合しても、使用中の資材を上書き・削除せず、取得・構築・検証の途中状態を利用者へ公開しない。必要な検証を完了した整合する資材だけを利用可能にする。
+
+準備の失敗・取消・異常終了では、未完了の資材を準備済みとして残さず、既存の正常な資材を保護する。再実行時は残存物と利用状態を確認して修復できるようにする。既存資材を保持できても、今回必要な identity や適合条件を満たさなければ、古い資材で成功を代替しない。
+
+同じ索引への検索・明示同期・回収は整合性を保つよう調停する。資材の調停、索引 lock、および常駐枠の取得順序を全経路で整合させ、循環待ちを作らない。検索・明示同期の期限は要求受付から測り、資材・索引・常駐枠の待機、同期、推論、返却前照合を含む。
 
 取消・期限超過・MCP close/EOF では、Python の要求所有者が処理の収束または停止を確認してから索引 lock と常駐枠を解放する。推論が収束しなければ有限の終了猶予後に子 process を停止して回収する。期限到達と停止完了は別の時点であり、応答 deadline のために動作中の worker の保護を先に解放してはならない。
 
 MCP process の終了処理は推論子とその descendant の回収まで責任を持つ。親の強制終了時も子を孤立常駐させず、子の終了まで常駐枠を占有させるか、同等の調停により二重ロードを防ぐ。
+
+doctor の資材検証でも、推論に使用する設定の期限と、動作中の worker を保護したまま停止・回収してから解放する契約を適用する。準備・検証のために起動した子 process は、収束または停止を確認するまで資材の保護を維持し、doctor の終了後にモデルや子 process を残さない。
 
 ## stdio MCP と失敗の公開
 
@@ -106,9 +125,9 @@ Codex process ごとに独立した接続と固定 context を持つ。起動と
 製品化は、仕様改訂 → 中核実装と call 接続 → 残る統合検証 → INDEX 撤去を含む切替の順に進める。後続で次の受入条件を確認する。以下を本書の編集によって実施済みとしてはならない。
 
 - 実際の caller の閲覧範囲と分類を結合し、nested owning repository、root/nested/local/global ignore、tracked ignored directory、pruning 境界・特殊 file、Git 処理回数の不変条件、許可外本文の非流入、scope 縮小、差替え競合を検証する。
-- 固定 runtime の raw 採点 guard の互換性、vector/採点欠落の失敗識別、モデル入力と tokenizer・pooling・次元を検証する。内部 API を置換する場合も同じ契約を検査する。
+- 本書の「資材の検証契約」と、vector/採点欠落の失敗識別を検証する。内部 API を置換する場合も同じ契約を検査する。
 - 正規の cmoc 起動環境で Codex の live discovery/search/deadline/取消/close と、親・子の強制終了後の回収・復旧を検証する。PoC は argv 設定と独立 client までで、CODEX_HOME の installation_id への書込み条件を満たせず live 接続は未検証である。HOME/CODEX_HOME や permission の迂回変更で代替しない。
-- 固定依存・モデル資材から新環境を再構築し、通常検索で追加 download/build がないこと、linked worktree を含む非追跡、採用 MCP 実装の相互運用を確認する。GPU、32K context、別 OS・別 runtime は検証済みとして扱わない。
+- doctor の起動基盤だけを用意した新環境で、`cmoc doctor` により固定依存・モデル資材を再構築して検証できることを確認する。正常資材の再利用、取得・構築・検証の失敗時の非正常終了と再実行、複数 doctor と使用中資材の保護、通常起動の未準備検出と修復案内、通常検索・明示同期で追加 download/build がないことを確認する。linked worktree を含む各所有 root の非追跡と、採用 MCP 実装の相互運用も確認する。GPU、32K context、別 OS・別 runtime は検証済みとして扱わない。
 
 暫定値の後続調整では、許可文書全体で初回・無変更・少数差分・異 query・並列待機の時間とメモリを測る。小集合から全体時間を線形外挿して確定しない。この全体測定と最適値の探索は、暫定値の採用や設定補完の導入の受入条件に含めず、上記の統合検証条件は維持する。
 

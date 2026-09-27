@@ -4,9 +4,9 @@
 
 - `{{cmoc-root}}/bin` を環境変数 `PATH` に追加し、`cmoc` コマンドで呼び出す。
 
-## 最初に 1 回だけ行うこと
+## 初回準備と修復
 
-1. 人間が `cmoc doctor` を呼び出す。
+処理対象の work-root で `cmoc doctor` を呼び出す。通常起動で準備不足を案内された場合も、診断に従って修復する。準備内容、正常終了の意味、および結果の確認先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/doctor.md` の「cmoc doctor」に従う。
 
 ## 想定 workflow
 

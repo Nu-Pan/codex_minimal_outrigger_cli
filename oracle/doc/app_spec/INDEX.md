@@ -83,6 +83,7 @@
 
 ## Read this when
 - サブコマンド共通の事前検証・修復や、そこから生じる tracked 差分の commit を変更するとき。
+- 明示 doctor による検索資材の準備・検証と、通常起動での準備状態の検査、正常終了の保証範囲を確認・変更するとき。
 - repo-root、work-root、linked worktree、run worktree の管理領域に対する非追跡保証を変更するとき。
 - 編集 run の join 前後で行う refactor state 同期の時点や、reporter/client 事前検証の失敗時の扱いを変更するとき。
 
@@ -91,7 +92,7 @@
 - 個別サブコマンド固有の事前条件や clean 状態の検査を調べるときは、そのサブコマンドの仕様へ進む。この文書はそれらを検査しない。
 - refactor state の JSON schema や entry 同期の内容を調べるときは、realization refactor の仕様へ進む。この文書はその検証と同期時点を定める。
 - reporter の agent-facing interface、observation の受け入れ検査、collector transport を調べるときは、feedback observation の仕様へ進む。この文書が定めるのは事前検証と warning の扱いまで。
-- 文書検索用の共有資材のセットアップを調べるときは、環境セットアップの仕様へ進む。この文書は管理領域の適用先を示す。
+- 検索資材の照合、runtime 互換性、実モデルの検証内容を調べるときは、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「資材の検証契約」へ進む。
 
 ## hash
 - c1dd6a37ff7dbcc1685e86fd512b9dbc1828ca632b9484ff47bb0b780d0e2e72
@@ -105,12 +106,13 @@
 ## Read this when
 - 検索対象となる正本文書や caller の閲覧範囲、検索結果の扱いに関する仕様を確認・変更するとき。
 - 本文変更の反映、索引と cache、推論・再ランキングの失敗、保存 identity、排他や終了処理の契約を調べるとき。
+- 固定資材の照合、runtime 互換性、実モデルの検証、および共有資材の保護を確認・変更するとき。
 - 意味検索の製品化状況や受入条件を確認するとき。
 
 ## Do not read this when
 - 検索 MCP を call に接続する規則や、閲覧制限に基づく call 開始判断を調べるときは、agent 実行規則を参照する。
 - 閲覧範囲・設定・tool 入出力・モデル資材の正確な型、既定値、識別情報を調べるときは、それらを所有する実装定義を参照する。
-- 環境構築や検索資材の取得・準備手順を調べるときは、開発環境の手順を参照する。
+- 検索資材の取得・修復と通常起動の役割分担を調べるときは、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「検索資材の準備と検査」を参照する。Python 環境の準備は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」を参照する。
 - 実際の実装挙動、live discovery、性能、製品受入の達成状況を確かめるときは、実装・統合検証の証拠を直接確認する。
 
 ## hash

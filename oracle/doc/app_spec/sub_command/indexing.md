@@ -12,11 +12,11 @@
 
 ## 実行手順
 
-1. doctor preprocess を通常起動の検証経路で呼び出す。検索設定の検証と doctor 固有の修復・commit は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索設定の検証と補完」に従う。
+1. doctor preprocess を通常起動の検証経路で呼び出す。検索設定と資材の準備状態の検査、および既存の管理ファイルの修復・commit は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索設定の検証と補完」「検索資材の準備と検査」に従う。
 2. work-root と実効閲覧範囲、資材・設定、および保存先の非追跡を確認し、共通の同期処理を実行する。起動後の設定変更も、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」に従って検査する。
 3. 同期結果を保存し、資源を解放して終了する。検索 query の embedding と rerank、および Codex agent による目次生成は行わない。
 
-索引同期自体は Git commit を作らない。失敗時は完了した同期として報告せず、共通仕様の失敗識別と未完了世代の非公開を維持する。
+資材の再確認と未準備時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「資材の検証契約」に従う。索引同期自体は Git commit を作らない。失敗時は完了した同期として報告せず、共通仕様の失敗識別と未完了世代の非公開を維持する。
 
 ## primary report
 

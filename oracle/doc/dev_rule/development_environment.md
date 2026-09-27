@@ -2,7 +2,7 @@
 
 ## 責務境界
 
-本書は、Python 環境と文書検索資材の準備、依存関係の追加、および pip の操作に必要な条件を定める。
+本書は、Python 環境の準備、依存関係の追加、および pip の操作に必要な条件を定め、文書検索資材を準備する公開入口へ案内する。
 
 構築済み環境での既存 test と品質検査の選択・実行・完了判定・報告は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「cmoc の test・品質検査実行手順」を正本とする。通常の test 実行だけを理由として、本書を事前に読む必要はない。
 
@@ -60,12 +60,8 @@ cd "{{cmoc-root}}"
 
 ## 文書検索のセットアップ
 
-セットアップは推論 runtime、ベクトル演算依存、モデルと tokenizer を取得・構築し、検証済みの固定資材を通常検索へ提供する責務を持つ。通常の検索・明示同期では download/build を行わず、資材不足・不一致は明示的に失敗させる。
+文書検索資材のセットアップは、処理対象の work-root で `cmoc doctor` を実行して行う。利用者に別途の検索専用セットアップ操作を要求しない。doctor を起動するための事前環境と、doctor が準備・修復する範囲は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「共通実行環境の検証」「検索資材の準備と検査」に従う。
 
-初期採用する Node、node-llama-cpp、llama.cpp、sqlite-vec、およびモデルの repository・revision・filename・checksum・pooling 等の正確な識別情報は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `INITIAL_SEARCH_MATERIALS` を唯一の所有者とする。モデル入力と raw 採点 guard の契約は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「初期方式と推論の失敗」に従う。
+固定資材の正確な定義への委譲、lock・native 配布物・モデルの照合、runtime の互換性、および実モデルの検証は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「初期方式と推論の失敗」「資材の検証契約」を正本とする。開発で runtime を更新する際も、資材定義と lock を整合させ、同じ検証を行う。
 
-セットアップは推移的依存を含む完全な lock と native 配布物の版・integrity を固定し、取得したモデルの checksum を照合する。runtime 更新時は資材定義と lock を整合させ、互換検査を行う。検索開始時も資材 identity を検証し、変更検出後に未検証のモデルを使用しない。取得済み資材は検索 worker から変更させない。
-
-配置と共有単位は、同文書の「identity と保存先」に従う。共有資材を作る前に、セットアップが cmoc-root 側の管理領域へ `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「管理領域の非追跡保証」と同じ検証・修復を適用する。対象 repository の doctor が cmoc installation の設定や依存を構築する責務は持たない。
-
-初期実装用の CPU native 配布物を固定して再構築できるようにする。GPU や別 OS での動作を、CPU の PoC から推定して検証済みとしない。暫定既定値の採用は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」、クリーンな再構築を含む受入条件と後続の性能調整は同文書の「実現性の根拠と製品受入条件」を参照する。
+配置と共有単位は、同文書の「identity と保存先」、クリーンな再構築を含む受入条件と後続の性能調整は「実現性の根拠と製品受入条件」を参照する。暫定既定値の採用は同文書の「設定と未確定事項」に従う。
