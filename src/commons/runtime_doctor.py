@@ -11,15 +11,26 @@ commit 対象の対応を複数 file で追う必要が生じるため、現状�
 """
 
 import fcntl
+import importlib
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from collections.abc import Collection, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
+from dataclasses import asdict
 from pathlib import Path
 
+from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
+
 from .runtime_config import sync_config
+from .runtime_document_search import SearchError
+from .runtime_document_search_setup import (
+    prepare_document_search_materials,
+    require_document_search_materials,
+)
+from .runtime_document_search_worker import verification_condition
 from .runtime_errors import CmocError
 from .runtime_feedback import (
     ReporterAvailabilityError,
@@ -33,9 +44,51 @@ from .runtime_git import (
     run_git,
     with_cmoc_ignore_pattern,
 )
-from .runtime_paths import config_path, refactor_state_path, repo_root
+from .runtime_paths import cmoc_root, config_path, refactor_state_path, repo_root
 from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
+
+
+def _installation_root(_root: Path) -> Path:
+    """現在の cmoc installation を処理対象の work-root と区別して解決する。"""
+    return cmoc_root().resolve()
+
+
+def _check_common_environment() -> None:
+    """doctor 自身を起動できる環境と外部の必須実行ファイルを確認する。"""
+    if sys.version_info < (3, 12, 3):
+        raise CmocError(
+            "cmoc の Python 実行環境が要件を満たしません。",
+            ["Python 3.12.3 以上の仮想環境を準備してください。"],
+            sys.version,
+        )
+    for module in ("click", "typer", "jsonschema"):
+        try:
+            importlib.import_module(module)
+        except ImportError as exc:
+            raise CmocError(
+                "cmoc の起動用依存が不足しています。",
+                ["cmoc の Python 仮想環境へ依存関係を導入してください。"],
+                f"dependency: {module}\nreason: {exc}",
+            ) from exc
+    for executable in ("git", "codex"):
+        path = shutil.which(executable)
+        if path is None:
+            raise CmocError(
+                "必須の外部コマンドが利用できません。",
+                [f"{executable} を導入し、PATH から実行できるようにしてください。"],
+                f"dependency: {executable}\nreason: executable not found",
+            )
+        try:
+            subprocess.run(
+                [path, "--version"], check=True, capture_output=True, timeout=10
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise CmocError(
+                "必須の外部コマンドが利用できません。",
+                [f"{executable} の導入状態を確認してください。"],
+                f"dependency: {executable}\npath: {path}\nreason: {exc}",
+            ) from exc
 
 
 def run_doctor_preprocess(
@@ -47,18 +100,62 @@ def run_doctor_preprocess(
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
     update_primary_report_fields(
+        work_root=str(root),
         config_path=str(config_path(root)),
         config_generation="未確認",
         config_validation="未実行",
         config_saved=False,
         config_additions={},
+        search_config="未確認",
+        material_condition="未確認",
+        common_environment="未実行",
+        management_validation="未実行",
+        material_validation="未実行",
+        material_status="未実行",
+        material_models="未実行",
+        material_failure="なし",
+        material_identity_check="未実行",
+        material_runtime_check="未実行",
+        material_document_embedding="未実行",
+        material_query_embedding="未実行",
+        material_rerank="未実行",
+        material_remaining_state="未確認",
+    )
+    _check_common_environment()
+    update_primary_report_fields(common_environment="成功")
+    installation_root = _installation_root(root)
+    update_primary_report_fields(
+        cmoc_root=str(installation_root),
+        material_path=str(installation_root / ".cmoc/gu/document_search/materials"),
+        material_identity={
+            "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
+            "reranker_sha256": INITIAL_SEARCH_MATERIALS.reranker.sha256,
+            "node_llama_cpp": INITIAL_SEARCH_MATERIALS.node_llama_cpp_version,
+            "sqlite_vec": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
+        },
     )
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # snapshot 作成から修復 commit と元の index 復元までを同じ Git common
     # directory の lock 内で行い、並行 doctor が共有 index を混ぜないようにする。
-    with doctor_lock(root):
+    lock_roots = {doctor_lock_path(root): root}
+    if explicit_doctor:
+        lock_roots[doctor_lock_path(installation_root)] = installation_root
+    with ExitStack() as locks:
+        for lock_path in sorted(lock_roots):
+            locks.enter_context(doctor_lock(lock_roots[lock_path]))
         main_root = repo_root(root)
         repair_roots = [main_root] if main_root == root else [main_root, root]
+        if explicit_doctor and installation_root not in repair_roots:
+            repair_roots.append(installation_root)
+        if not explicit_doctor and installation_root not in repair_roots:
+            try:
+                require_cmoc_ignored(installation_root)
+            except CmocError as exc:
+                raise CmocError(
+                    "共有文書検索資材の管理領域が非追跡ではありません。",
+                    [f"対象 work-root ({root}) で cmoc doctor を実行してください。"],
+                    f"cmoc-root: {installation_root}\nreason: {exc.detail}",
+                ) from exc
 
         repairs: list[tuple[Path, Path, bool, bool, bool, set[str]]] = []
         original_indexes: list[tuple[Path, Path]] = []
@@ -121,8 +218,67 @@ def run_doctor_preprocess(
                 config_additions=config_result.additions,
                 config_validation="成功",
                 config_saved=config_result.saved,
+                search_config=asdict(config_result.config.document_search),
+                material_condition=verification_condition(
+                    config_result.config.document_search
+                ),
             )
             sync_refactor_state(root, sync_entries=sync_refactor_entries)
+            update_primary_report_fields(management_validation="成功")
+            try:
+                assert config_result.config.document_search is not None
+                if explicit_doctor:
+                    material_result = prepare_document_search_materials(
+                        installation_root, config_result.config.document_search
+                    )
+                else:
+                    material_path = require_document_search_materials(
+                        installation_root, config_result.config.document_search
+                    )
+                    material_result = {
+                        "status": "verified",
+                        "path": str(material_path),
+                        "models": "reused",
+                    }
+            except (
+                SearchError,
+                OSError,
+                ValueError,
+                subprocess.SubprocessError,
+            ) as exc:
+                update_primary_report_fields(
+                    material_validation="失敗",
+                    material_status="失敗",
+                    material_models="未完了",
+                    material_failure=str(exc),
+                    material_identity_check="未完了",
+                    material_runtime_check="未完了",
+                    material_document_embedding="未完了",
+                    material_query_embedding="未完了",
+                    material_rerank="未完了",
+                    material_remaining_state="現在の条件では準備済みと扱わず、再実行時に照合する",
+                )
+                action = (
+                    "依存・権限・ネットワークを確認して cmoc doctor を再実行してください。"
+                    if explicit_doctor
+                    else f"対象 work-root ({root}) で cmoc doctor を実行してください。"
+                )
+                raise CmocError(
+                    "文書検索資材の準備状態を確認できません。",
+                    [action],
+                    f"cmoc-root: {installation_root}\npath: {installation_root / '.cmoc/gu/document_search/materials'}\nreason: {exc}",
+                ) from exc
+            update_primary_report_fields(
+                material_validation="成功",
+                material_status=material_result["status"],
+                material_models=material_result["models"],
+                material_identity_check="成功",
+                material_runtime_check="成功",
+                material_document_embedding="成功",
+                material_query_embedding="成功",
+                material_rerank="成功",
+                material_remaining_state="検査時点で利用可能",
+            )
             # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
             # reporter 固有の不一致は修復や version command を行わず degraded にする。
             try:

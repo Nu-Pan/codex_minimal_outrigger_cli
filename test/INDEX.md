@@ -112,7 +112,7 @@
 # `conftest.py`
 
 ## Summary
-- pytest 全体で使う Windows toast の外部副作用隔離と、editor input handoff 用 MCP context を準備する共有 fixture を定義する。
+- pytest 全体で使う Windows toast・共有検索資材の外部副作用隔離と、editor input handoff 用 MCP context を準備する共有 fixture を定義する。
 - テスト共通の隔離設定や handoff 用 context の準備を変更するときの入口。
 
 ## Read this when
@@ -123,7 +123,7 @@
 - Windows toast の個別動作や handoff protocol の詳細を調べるときは、対応する実装・仕様・個別テストから確認を始める場合。
 
 ## hash
-- 89282cf36f1b504ac55859e2268d465bac3bfaa45fff87a0b807fa3532ca791f
+- c4a2b071f3b6877248ffc1bd697e5458a41dd791b015633105f2850f6d2f1808
 
 # `test_acp_builder_editing_run_parameters.py`
 
@@ -387,7 +387,7 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の CLI と直接呼び出しを通じ、Git ignore、`.agents`、config、refactor state の修復と reporter 利用不能時の挙動を統合的に検証する。
+- doctor preprocess の CLI と直接呼び出しを通じ、Git ignore、`.agents`、config、refactor state の修復、共有検索資材の検証と reporter 利用不能時の挙動を統合的に検証する。
 - repository と linked worktree にまたがる排他 lock、修復 commit の範囲、既存の staged・unmerged 変更や index 状態の保持を確認する。
 
 ## Read this when
@@ -400,7 +400,7 @@
 - Git ignore の低水準な判定・パス検証、reporter の MCP protocol や probe 内部、doctor 以外の CLI 共通報告を調べるときは、それぞれの機能を直接検証するテストから読む。
 
 ## hash
-- 8cf2da3ddbdce7f27a2236c4217f5f447279f31cade736c3ccf1f270189f15d9
+- e4bc6ac04b1a5c8fd4e3b42e263ebd8cd73e211d670884f2583ab26a3cd672c9
 
 # `test_document_search.py`
 
@@ -418,6 +418,22 @@
 
 ## hash
 - ac591650ecc50ed5920f39e6d3fbe5edfd01770d510154ebd775394642908f27
+
+# `test_document_search_materials.py`
+
+## Summary
+- 明示 doctor による固定検索資材の構築・再利用・修復と、通常起動での検証条件の照合を小さな資材で確認する。
+- 実モデル検証に使う入力経路と、検証失敗時に中間資材を公開しない契約を確認する。
+
+## Read this when
+- 検索資材の固定 identity、検証記録、途中失敗・異常終了後の回復を変更するとき。
+- doctor の文書・query embedding と rerank 検証経路を変更するとき。
+
+## Do not read this when
+- 許可本文の走査、索引・cache の同期、MCP tool の応答を調べるときは、検索本体のテストを確認する。
+
+## hash
+- 04c77271d55bf896cb96e98080a9a0710e09a4c52ab3bf5523a5aa67f6ee9544
 
 # `test_editing_run_cli.py`
 
@@ -610,6 +626,7 @@
 
 ## Summary
 - 利用者向け CLI の末端コマンドを、独立プロセス・実 Codex CLI・実推論で通す統合受け入れ試験。TUI 経路では PTY も使う。
+- 隔離した新規 installation で明示 doctor が検索モデルを準備・実検証し、再実行時に再利用できることを確認する。
 - 回答品質ではなく、応答後の制御と外部から観測できる report・state・Git・call log、および TUI の editor handoff や通知を検証する。
 
 ## Read this when
@@ -622,7 +639,7 @@
 - Codex の回答内容や推論品質、生成結果が正本仕様を満たすかを調べるとき。この試験は回答後の cmoc の制御を対象とする。
 
 ## hash
-- c3a17c41ce375ae83ac094acba13f9acefc8a8f14500ea582ee5f659f56fe6aa
+- 20410c04e594cfdc126b56a009a7d258cc58c86b25a3bb02a4ec8d69422e53ba
 
 # `test_production_cli_support.py`
 
@@ -741,7 +758,7 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値と Codex の agent call・model provider 設定について、JSON 変換とファイル経由の保存・復元を確認する回帰テスト。
+- CmocConfig の既定値と Codex の agent call・model provider 設定について、JSON 変換、保存・復元、必須設定の厳格な検証を確認する回帰テスト。
 - 設定入力の検証、壊れた JSON や扱えないパスの拒否、利用者向けエラー出力も扱う。
 
 ## Read this when
@@ -753,7 +770,7 @@
 - 設定項目の意味や要求を確定・変更する場合は、正本仕様を先に確認するとよい。
 
 ## hash
-- c5d71fd28b760c4ad4a59f5e1b5dcec2fc0c9d0a54288ac93dc0a4835a08002c
+- d68d502a6515295c930a38fed38c22114716d699aaa4a5cba76658beeec4dde4
 
 # `test_runtime_content.py`
 

@@ -33,6 +33,8 @@ from _git_support import make_repo, run_git
 
 import commons.runtime_doctor as doctor_module
 import commons.runtime_feedback_store as feedback_store_module
+from commons.runtime_config import config_to_dict
+from commons.runtime_document_search import SearchError
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import ReporterAvailabilityError
 from commons.runtime_refactor import RefactorState
@@ -620,27 +622,17 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
-    config_path.write_text(
-        json.dumps(
-            {
-                "num_parallel": 3,
-                "codex": {
-                    "model_providers": {"custom": {"settings": {}}},
-                    "num_try_falv_recovery": 4,
-                    "agent_calls": {
-                        "build_tui_launch_tui_parameter": {
-                            "model_provider": "custom",
-                            "model": "CUSTOM",
-                            "reasoning_effort": "CUSTOM-EFFORT",
-                        }
-                    },
-                    "model": {"minimum": {"model": "LEGACY"}},
-                    "reasoning_effort": {"low": "LEGACY"},
-                },
-            }
-        )
-        + "\n"
-    )
+    data = config_to_dict(CmocConfig())
+    data["num_parallel"] = 3
+    data["codex"]["model_providers"]["custom"] = {"settings": {}}
+    data["codex"]["num_try_falv_recovery"] = 4
+    data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"] = {
+        "model_provider": "custom",
+        "model": "CUSTOM",
+        "reasoning_effort": "CUSTOM-EFFORT",
+    }
+    data.pop("document_search")
+    config_path.write_text(json.dumps(data) + "\n")
     monkeypatch.chdir(root)
 
     run_doctor(root)
@@ -912,3 +904,75 @@ def test_doctor_preserves_preexisting_staged_gitignore_deletion(
 
     assert run_git(root, "diff", "--cached", "--name-status").stdout == before
     assert run_git(root, "ls-files", "--stage", "--", ".gitignore").stdout == ""
+
+
+def test_doctor_fails_when_real_model_validation_does_not_complete(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """資材が取得済みでも実モデル検証失敗を正常終了として報告しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def fail_materials(_root: Path, _config: object) -> dict[str, str]:
+        raise SearchError("MODEL_FAILURE", "rerank validation failed")
+
+    monkeypatch.setattr(
+        doctor_module, "prepare_document_search_materials", fail_materials
+    )
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code != 0
+    report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert 'terminal_classification: "error"' in report
+    assert "照合と実モデル検証: `失敗`" in report
+    assert "rerank validation failed" in report
+    assert "cmoc doctor を再実行" in report
+
+
+def test_normal_preprocess_requires_validated_materials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """通常起動は資材未検証なら本命処理前に doctor を案内する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    run_doctor(root)
+
+    def missing_materials(_root: Path, _config: object) -> Path:
+        raise SearchError("NOT_READY", "validation record is missing")
+
+    monkeypatch.setattr(
+        doctor_module, "require_document_search_materials", missing_materials
+    )
+    with pytest.raises(CmocError) as exc_info:
+        doctor_module.run_doctor_preprocess(root)
+
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert "validation record is missing" in exc_info.value.detail
+
+
+def test_doctor_repairs_shared_cmoc_root_in_its_own_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """別 installation の共有資材書込み前に、その所有 repository の非追跡を修復する。"""
+    root = make_repo(tmp_path)
+    installation_parent = tmp_path / "installation"
+    installation_parent.mkdir()
+    installation = make_repo(installation_parent)
+    monkeypatch.setattr(doctor_module, "_installation_root", lambda _root: installation)
+    monkeypatch.chdir(root)
+
+    result = run_doctor(root)
+
+    assert (
+        run_git(installation, "ls-files", ".gitignore").stdout.strip() == ".gitignore"
+    )
+    assert "/.cmoc/gu/" in (installation / ".gitignore").read_text()
+    assert f'cmoc_root: "{installation}"' in terminal_primary_report(result).read_text()
+
+    run_git(installation, "rm", ".gitignore")
+    run_git(installation, "commit", "-m", "remove shared ignore")
+    with pytest.raises(CmocError) as exc_info:
+        doctor_module.run_doctor_preprocess(root)
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert str(installation) in exc_info.value.detail
+    assert not (installation / ".gitignore").exists()

@@ -44,6 +44,7 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         "doctor",
         "doctor execution report",
         "cmoc doctor report",
+        ("cmoc_root", "work_root"),
         template="doctor",
     ),
     "indexing": PrimaryReportSpec(

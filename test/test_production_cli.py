@@ -60,8 +60,8 @@ _CMOC_CONSOLE = Path(sys.executable).with_name("cmoc")
 _REAL_CODEX = shutil.which("codex")
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # 外部 provider の応答待ちを個別 command と test case の両方で局所化する。
-_PRODUCTION_COMMAND_TIMEOUT = 300
-_PRODUCTION_CASE_TIMEOUT = 600
+_PRODUCTION_COMMAND_TIMEOUT = 1800
+_PRODUCTION_CASE_TIMEOUT = 3600
 pytestmark = [
     pytest.mark.real_path_integration,
     pytest.mark.skipif(
@@ -194,8 +194,34 @@ def _source_codex_home() -> Path:
     return path if path.is_absolute() else (_WORK_ROOT / path).resolve()
 
 
+@pytest.fixture(scope="module")
+def isolated_cmoc_installation(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """実経路の共有資材を他の cmoc installation から隔離する。"""
+    existing = os.environ.get("CMOC_REAL_PATH_INSTALLATION")
+    if existing is not None:
+        installation = Path(existing).resolve()
+        if (
+            not installation.is_relative_to(Path("/tmp"))
+            or not (installation / ".git").is_dir()
+        ):
+            raise ValueError("real-path installation must be a Git repository in /tmp")
+        return installation
+    parent = tmp_path_factory.mktemp("cmoc-installation")
+    installation = make_repo(parent)
+    for directory in ("src", "oracle", "bin"):
+        shutil.copytree(
+            _WORK_ROOT / directory, installation / directory, dirs_exist_ok=True
+        )
+    shutil.copy2(_WORK_ROOT / "pyproject.toml", installation / "pyproject.toml")
+    (installation / ".venv").symlink_to(Path(sys.executable).parents[1])
+    run_git(installation, "add", "src", "oracle", "bin", "pyproject.toml")
+    run_git(installation, "commit", "-m", "isolated cmoc installation")
+    return installation
+
+
 def _production_environment(
     tmp_path: Path,
+    installation: Path,
 ) -> tuple[Path, dict[str, str], Path]:
     """実 CLI と隔離済み Codex home を使う subprocess 環境を準備する。"""
     assert _CMOC_CONSOLE.is_file()
@@ -233,8 +259,8 @@ def _production_environment(
         # {{work-root}}/oracle/doc/dev_rule/test_rule.md
         "PYTHONPATH": os.pathsep.join(
             [
-                str(_WORK_ROOT / "src"),
-                str(_WORK_ROOT / "oracle" / "src"),
+                str(installation / "src"),
+                str(installation / "oracle" / "src"),
                 *([os.environ["PYTHONPATH"]] if os.environ.get("PYTHONPATH") else []),
             ]
         ),
@@ -554,8 +580,40 @@ def _run_cmoc_tui(
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # 複数の実推論と外部 provider の応答時間を case timeout に含める。
 @pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
+def test_doctor_prepares_real_search_materials_in_isolated_installation(
+    tmp_path: Path, isolated_cmoc_installation: Path
+) -> None:
+    """起動基盤だけの installation で実モデル検証し、再実行と通常同期で再利用する。"""
+    root = make_repo(tmp_path)
+    cmoc, environment, _codex_home = _production_environment(
+        tmp_path, isolated_cmoc_installation
+    )
+
+    first = _run_without_codex_call(cmoc, root, environment, "doctor")
+    first_report = terminal_primary_report(first.stdout).read_text(encoding="utf-8")
+    assert "照合と実モデル検証: `成功`" in first_report
+    assert "文書 embedding: `成功`" in first_report
+    assert "query embedding: `成功`" in first_report
+    assert "raw rerank: `成功`" in first_report
+
+    repeated = _run_without_codex_call(cmoc, root, environment, "doctor")
+    repeated_report = terminal_primary_report(repeated.stdout).read_text(
+        encoding="utf-8"
+    )
+    assert "準備・再利用: `reused`" in repeated_report
+
+    indexed = _run_without_codex_call(cmoc, root, environment, "indexing")
+    assert (
+        "実行状態: `unchanged`" in terminal_primary_report(indexed.stdout).read_text()
+    )
+
+
+# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# 複数の実推論と外部 provider の応答時間を case timeout に含める。
+@pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_all_noninteractive_leaf_commands_use_production_process_paths(
     tmp_path: Path,
+    isolated_cmoc_installation: Path,
 ) -> None:
     """非対話の全末端を独立 process の代表正常系で完了させる。"""
     # CLI 登録と固定シナリオを比較し、新しい末端 command の追加漏れを検出する。
@@ -563,7 +621,9 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     root = make_repo(tmp_path)
     _write_noninteractive_fixture_instructions(root)
     _write_real_path_config(root)
-    cmoc, environment, _codex_home = _production_environment(tmp_path)
+    cmoc, environment, _codex_home = _production_environment(
+        tmp_path, isolated_cmoc_installation
+    )
     executed_commands: set[tuple[str, ...]] = set()
 
     def run_production(*args: str) -> subprocess.CompletedProcess[str]:
@@ -585,21 +645,14 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         root, "ls-files", ".cmoc/gt/realization/refactor/state.json"
     ).stdout.strip()
 
-    # 検索資材が未設置なら明示同期は NOT_READY とし、Codex call や commit を作らない。
-    executed_commands.add(("indexing",))
+    # doctor が検証済み資材を準備した後は、明示同期が同じ資材を再利用する。
     before_indexing_calls = _codex_call_logs(root)
     before_indexing_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    indexing_result = subprocess.run(
-        [str(cmoc), "indexing"],
-        cwd=root,
-        env=environment,
-        text=True,
-        capture_output=True,
-        timeout=_PRODUCTION_COMMAND_TIMEOUT,
-        check=False,
-    )
-    assert indexing_result.returncode == 1
-    assert "NOT_READY" in terminal_primary_report(indexing_result.stderr).read_text()
+    indexing_result = run_without_codex("indexing")
+    assert indexing_result.returncode == 0
+    indexing_report = terminal_primary_report(indexing_result.stdout).read_text()
+    assert "文書検索索引の同期" in indexing_report
+    assert "実行状態: `unchanged`" in indexing_report
     assert _codex_call_logs(root) == before_indexing_calls
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == before_indexing_head
     assert run_git(root, "status", "--short").stdout.strip() == ""
@@ -792,13 +845,16 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 @pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     tmp_path: Path,
+    isolated_cmoc_installation: Path,
     command: tuple[str, ...],
     tui_purpose: str,
 ) -> None:
     """全 TUI 末端を実 Codex response 後まで本番経路で完了する。"""
     root = make_repo(tmp_path)
     _write_real_path_config(root)
-    cmoc, environment, codex_home = _production_environment(tmp_path)
+    cmoc, environment, codex_home = _production_environment(
+        tmp_path, isolated_cmoc_installation
+    )
     _run_without_codex_call(cmoc, root, environment, "doctor")
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     status_before = run_git(root, "status", "--short").stdout

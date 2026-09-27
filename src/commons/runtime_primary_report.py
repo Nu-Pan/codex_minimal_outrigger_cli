@@ -80,6 +80,8 @@ def start_primary_report_context(
             "feedback_observation_count": 0,
             "feedback_observations": [],
         }
+    elif command_name == "doctor":
+        fields = {"cmoc_root": "未確定", "work_root": "未確定"}
     context = PrimaryReportContext(spec, fields) if spec is not None else None
     return _PRIMARY_REPORT_CONTEXT.set(context)
 

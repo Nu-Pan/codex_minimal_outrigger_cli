@@ -164,7 +164,10 @@ def test_explicit_doctor_fills_only_missing_search_fields(tmp_path: Path) -> Non
     root = make_repo(tmp_path)
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
-    path.write_text('{"num_parallel": 3, "document_search": {"chunk_tokens": 256}}\n')
+    data = config_to_dict(CmocConfig())
+    data["num_parallel"] = 3
+    data["document_search"] = {"chunk_tokens": 256}
+    path.write_text(json.dumps(data) + "\n")
 
     repaired = sync_config(root, repair_missing=True)
 
@@ -185,6 +188,37 @@ def test_explicit_doctor_fills_only_missing_search_fields(tmp_path: Path) -> Non
     assert repeated.additions == {}
     assert path.read_bytes() == saved
     assert path.stat().st_mtime_ns == mtime
+
+
+def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitions(
+    tmp_path: Path,
+) -> None:
+    """通常起動と明示 doctor は既存の agent call 設定を暗黙補完しない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    data = config_to_dict(CmocConfig())
+    data["codex"]["agent_calls"].pop("build_tui_launch_tui_parameter")
+    path.write_text(json.dumps(data) + "\n")
+
+    for repair_missing in (False, True):
+        with pytest.raises(CmocError) as exc_info:
+            sync_config(root, repair_missing=repair_missing)
+        assert (
+            "codex.agent_calls.build_tui_launch_tui_parameter" in exc_info.value.detail
+        )
+
+    data = config_to_dict(CmocConfig())
+    data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"]["model_provider"] = (
+        "missing"
+    )
+    path.write_text(json.dumps(data) + "\n")
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+    assert (
+        "codex.agent_calls.build_tui_launch_tui_parameter.model_provider"
+        in exc_info.value.detail
+    )
 
 
 @pytest.mark.parametrize(

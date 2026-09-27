@@ -1,18 +1,26 @@
 """固定資材を検査し、許可済み本文を一時的な Node 推論へ渡す。"""
 
 import hashlib
+import importlib
 import json
 import os
+import platform
 import signal
+import sqlite3
 import stat
 import subprocess
+import sys
 import threading
 import time
+from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
 
 from oracle.other.document_search import (
+    EMBEDDING_QUERY_TEMPLATE,
     INITIAL_SEARCH_MATERIALS,
+    RAW_RANKING_API,
+    RERANKER_INPUT_FORMAT,
     DocumentSearchConfig,
 )
 
@@ -55,9 +63,70 @@ def _runtime_tree_hash(base: Path) -> str:
     return digest.hexdigest()
 
 
-def verify_search_materials(installation_root: Path) -> Path:
-    """推論起動前に配布物と設置済み資材の identity を照合する。"""
+def verification_condition(config: DocumentSearchConfig) -> str:
+    """実モデル検証を再利用できる実行環境と設定を識別する。"""
+    condition = {
+        "config": asdict(config),
+        "python": sys.version,
+        "executable": str(Path(sys.executable).resolve()),
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "query_template": EMBEDDING_QUERY_TEMPLATE,
+        "reranker_input_format": RERANKER_INPUT_FORMAT,
+        "raw_ranking_api": RAW_RANKING_API,
+    }
+    return hashlib.sha256(json.dumps(condition, sort_keys=True).encode()).hexdigest()
+
+
+def _verify_vector_dependency() -> None:
+    """宣言した sqlite-vec の native extension を実際にロードして使用する。"""
+    sqlite_vec = importlib.import_module("sqlite_vec")
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.enable_load_extension(True)
+        sqlite_vec.load(connection)
+        connection.enable_load_extension(False)
+        version = connection.execute("select vec_version()").fetchone()[0]
+        connection.execute("create virtual table probe using vec0(embedding float[2])")
+        connection.execute("insert into probe(rowid, embedding) values(1, '[1,0]')")
+        connection.execute(
+            "select distance from probe where embedding match '[1,0]' and k = 1"
+        ).fetchone()
+    finally:
+        connection.close()
+    if version.removeprefix("v") != INITIAL_SEARCH_MATERIALS.sqlite_vec_version:
+        raise ValueError("sqlite-vec version mismatch")
+
+
+def _verify_lock(base: Path) -> None:
+    """npm lock の推移的依存と CPU native 配布物が固定されていることを確認する。"""
+    lock = json.loads((base / "package-lock.json").read_text(encoding="utf-8"))
+    packages = lock["packages"]
+    if lock.get("lockfileVersion") != 3 or not isinstance(packages, dict):
+        raise ValueError("npm lock is incomplete")
+    for name, package in packages.items():
+        if not name or package.get("link"):
+            continue
+        if not package.get("version") or not package.get("integrity"):
+            raise ValueError(f"npm dependency is not pinned: {name}")
+    native = packages.get("node_modules/@node-llama-cpp/linux-x64", {})
+    if (
+        native.get("version") != INITIAL_SEARCH_MATERIALS.node_llama_cpp_version
+        or not native.get("integrity")
+        or not (base / "node_modules/@node-llama-cpp/linux-x64").is_dir()
+    ):
+        raise ValueError("CPU native runtime is unavailable")
+
+
+def verify_search_materials(
+    installation_root: Path, config: DocumentSearchConfig | None = None
+) -> Path:
+    """資材 identity と、指定設定で完了済みの実モデル検証を照合する。"""
     base = materials_directory(installation_root)
+    if base.is_symlink() or not base.is_dir():
+        raise SearchError(
+            "NOT_READY", "document search material directory is unavailable"
+        )
     manifest = base / "manifest.json"
     if not manifest.is_file() or manifest.is_symlink():
         raise SearchError("NOT_READY", "document search materials are not installed")
@@ -83,7 +152,7 @@ def verify_search_materials(installation_root: Path) -> Path:
             raise SearchError(
                 "MODEL_IDENTITY_MISMATCH", "node runtime is incompatible"
             ) from exc
-        if data != {
+        expected = {
             "worker_sha256": expected_worker_hash,
             "package_sha256": expected_package_hash,
             "lock_sha256": expected_lock_hash,
@@ -95,8 +164,16 @@ def verify_search_materials(installation_root: Path) -> Path:
                 "sqlite_vec_version": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
                 "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
                 "reranker_sha256": INITIAL_SEARCH_MATERIALS.reranker.sha256,
+                "embedding_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
+                "reranker_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.reranker.tokenizer_metadata_sha256,
+                "embedding_pooling": INITIAL_SEARCH_MATERIALS.embedding.pooling,
+                "reranker_pooling": INITIAL_SEARCH_MATERIALS.reranker.pooling,
+                "embedding_dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
             },
-        }:
+        }
+        if not isinstance(data, dict) or any(
+            data.get(key) != value for key, value in expected.items()
+        ):
             raise SearchError("MODEL_IDENTITY_MISMATCH", "material manifest mismatch")
         for filename, expected_hash, expected_size in (
             (
@@ -152,9 +229,29 @@ def verify_search_materials(installation_root: Path) -> Path:
         )
         if node_version != INITIAL_SEARCH_MATERIALS.node_version:
             raise SearchError("MODEL_IDENTITY_MISMATCH", "Node version mismatch")
+        _verify_lock(base)
+        _verify_vector_dependency()
+        if config is not None:
+            verified = data.get("verified_conditions")
+            if (
+                not isinstance(verified, dict)
+                or verified.get(verification_condition(config))
+                != "document-query-rerank"
+            ):
+                raise SearchError(
+                    "NOT_READY",
+                    "real-model validation is missing for current conditions",
+                )
     except SearchError:
         raise
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        ImportError,
+        sqlite3.Error,
+        subprocess.SubprocessError,
+    ) as exc:
         raise SearchError(
             "NOT_READY", "document search materials are incomplete"
         ) from exc
@@ -165,10 +262,14 @@ class NodeSearchWorker:
     """モデルを要求単位でロードし、終了まで常駐枠の fd を保持する。"""
 
     def __init__(
-        self, installation_root: Path, config: DocumentSearchConfig | None
+        self,
+        installation_root: Path,
+        config: DocumentSearchConfig | None,
+        *,
+        material_base: Path | None = None,
     ) -> None:
         """固定資材の配置を記録する。"""
-        self.base = materials_directory(installation_root)
+        self.base = material_base or materials_directory(installation_root)
         self.config = config
 
     def run(
