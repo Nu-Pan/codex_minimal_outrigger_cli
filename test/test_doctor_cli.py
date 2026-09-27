@@ -125,6 +125,41 @@ def test_doctor_preprocess_repairs_git_state(
     )
 
 
+def test_doctor_syncs_document_edits_and_deletions_without_committing_them(
+    tmp_path: Path,
+) -> None:
+    """手動同期が保存済みの編集・削除を反映し、利用者の差分を commit しない。"""
+    root = make_repo(tmp_path)
+    document = root / "oracle/doc/source.md"
+    document.parent.mkdir()
+    original = "# original document\n"
+    document.write_text(original)
+    run_git(root, "add", "oracle/doc/source.md")
+    run_git(root, "commit", "-m", "add search document")
+    run_doctor(root)
+
+    document.write_text("# updated document\n")
+    updated = terminal_primary_report(run_doctor(root)).read_text()
+
+    assert 'doctor_sync_status: "updated"' in updated
+    assert '"changed": 1' in updated
+    assert document.read_text() == "# updated document\n"
+    assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
+
+    unchanged = terminal_primary_report(run_doctor(root)).read_text()
+    assert 'doctor_sync_status: "unchanged"' in unchanged
+
+    document.unlink()
+    deleted = terminal_primary_report(run_doctor(root)).read_text()
+    state = json.loads((root / ".cmoc/gt/realization/refactor/state.json").read_text())
+
+    assert 'doctor_sync_status: "updated"' in deleted
+    assert '"deleted": 1' in deleted
+    assert "oracle/doc/source.md" not in state
+    assert not document.exists()
+    assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
+
+
 def test_doctor_preprocess_follows_repair_order(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

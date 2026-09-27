@@ -13,7 +13,6 @@ from cmoc_runtime import (
     render_error,
 )
 from sub_commands.doctor import cmoc_doctor_impl
-from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.oracle.edit import cmoc_oracle_edit_impl
 from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
 from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
@@ -259,12 +258,6 @@ def run_join(force_resolve: bool = typer.Option(False, "--force-resolve")) -> No
 def run_abandon() -> None:
     """active editing run を破棄する CLI 入口。"""
     cmoc_run_abandon_impl()
-
-
-@app.command()
-def indexing() -> None:
-    """work root の文書検索索引を同期する CLI 入口。"""
-    cmoc_indexing_impl()
 
 
 @feedback_app.command("report")

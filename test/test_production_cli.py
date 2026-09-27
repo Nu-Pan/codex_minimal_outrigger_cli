@@ -73,7 +73,6 @@ pytestmark = [
 NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("doctor",),
     ("feedback", "report"),
-    ("indexing",),
     ("oracle", "edit"),
     ("realization", "apply", "fork"),
     ("realization", "refactor", "fork"),
@@ -601,11 +600,7 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
         encoding="utf-8"
     )
     assert "準備・再利用: `reused`" in repeated_report
-
-    indexed = _run_without_codex_call(cmoc, root, environment, "indexing")
-    assert (
-        "実行状態: `unchanged`" in terminal_primary_report(indexed.stdout).read_text()
-    )
+    assert "実行状態: `unchanged`" in repeated_report
 
 
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
@@ -644,18 +639,6 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert run_git(
         root, "ls-files", ".cmoc/gt/realization/refactor/state.json"
     ).stdout.strip()
-
-    # doctor が検証済み資材を準備した後は、明示同期が同じ資材を再利用する。
-    before_indexing_calls = _codex_call_logs(root)
-    before_indexing_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    indexing_result = run_without_codex("indexing")
-    assert indexing_result.returncode == 0
-    indexing_report = terminal_primary_report(indexing_result.stdout).read_text()
-    assert "文書検索索引の同期" in indexing_report
-    assert "実行状態: `unchanged`" in indexing_report
-    assert _codex_call_logs(root) == before_indexing_calls
-    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == before_indexing_head
-    assert run_git(root, "status", "--short").stdout.strip() == ""
 
     # active session 上の各 workload を検証する。
     home_branch = current_branch(root)

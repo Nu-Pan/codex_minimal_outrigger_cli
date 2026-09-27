@@ -45,7 +45,6 @@ from .runtime_config import (
 )
 from .runtime_content import (
     file_sha256,
-    is_binary,
     text_sha256,
     write_hashed_file,
 )
@@ -82,7 +81,6 @@ from .runtime_paths import (
     config_path,
     console_timestamp,
     format_duration,
-    is_root_memo,
     logs_dir,
     pushd,
     refactor_state_path,
@@ -146,11 +144,9 @@ __all__ = (
     "file_sha256",
     "format_duration",
     "head_commit",
-    "is_binary",
     "is_git_ignored",
     "is_managed_branch",
     "is_oracle_file_path",
-    "is_root_memo",
     "is_untracked_git_ignored",
     "load_config",
     "load_state_for_branch",

@@ -117,7 +117,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 本節は保存設定の検査・補完を扱い、資材の利用可能性は次節で検証する。call 接続は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
 
-起動後の設定変更、資材不足・不一致、入力に依存する context 超過、推論失敗の検出は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」「資材の検証契約」「初期方式と推論の失敗」に従い、検索・明示同期の必要な操作時に引き続き行う。
+起動後の設定変更、資材不足・不一致、入力に依存する context 超過、推論失敗の検出は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」「資材の検証契約」「初期方式と推論の失敗」に従い、検索・索引同期の必要な操作時に引き続き行う。
 
 ## 検索資材の準備と検査
 

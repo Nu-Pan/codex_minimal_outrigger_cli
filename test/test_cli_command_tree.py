@@ -2,7 +2,6 @@
 
 正本仕様:
 - {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/indexing.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
@@ -54,7 +53,6 @@ def test_public_cli_leaf_commands_match_oracle() -> None:
     assert _leaves(get_command(app)) == {
         ("doctor",),
         ("feedback", "report"),
-        ("indexing",),
         ("oracle", "edit"),
         ("oracle", "investigation"),
         ("realization", "apply", "fork"),

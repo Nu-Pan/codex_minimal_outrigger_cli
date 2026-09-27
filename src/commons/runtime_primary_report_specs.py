@@ -11,7 +11,6 @@ from typing import Literal
 ReportTemplate = Literal[
     "summary",
     "doctor",
-    "indexing",
     "session_fork",
     "session_join",
     "session_abandon",
@@ -46,13 +45,6 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         "cmoc doctor report",
         ("cmoc_root", "work_root"),
         template="doctor",
-    ),
-    "indexing": PrimaryReportSpec(
-        "indexing",
-        "indexing execution report",
-        "cmoc indexing report",
-        ("work_root", "scope_identity", "index_identity", "sync_result"),
-        "indexing",
     ),
     "session fork": PrimaryReportSpec(
         "session/fork",

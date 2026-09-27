@@ -2221,25 +2221,25 @@ def test_agent_issue_is_verified_compacted_then_removed_for_terminal_verdict(
     assert len(generation_directories) == 1
 
 
-def test_feedback_basis_includes_index_as_oracle_but_ignores_refactor_state(
+def test_feedback_basis_includes_oracle_changes_but_ignores_refactor_state(
     tmp_path: Path,
 ) -> None:
-    """oracle INDEX の変更を根拠へ含め、管理 state だけを除外する。"""
+    """oracle file の変更を根拠へ含め、管理 state だけを除外する。"""
     root = make_repo(tmp_path)
-    index = root / "oracle/INDEX.md"
+    document = root / "oracle/notes.md"
     state = root / ".cmoc/gt/realization/refactor/state.json"
     state.parent.mkdir(parents=True)
-    index.write_text("first index\n")
+    document.write_text("first document\n")
     state.write_text("{}\n")
-    run_git(root, "add", "oracle/INDEX.md", ".cmoc/gt/realization/refactor/state.json")
+    run_git(root, "add", "oracle/notes.md", ".cmoc/gt/realization/refactor/state.json")
     baseline = decision_module.worktree_inputs(root)
 
-    index.write_text("regenerated index\n")
+    document.write_text("updated document\n")
     state.write_text('{"entry": {}}\n')
-    after_index = decision_module.worktree_inputs(root)
-    assert after_index != baseline
+    after_document = decision_module.worktree_inputs(root)
+    assert after_document != baseline
     state.write_text('{"another": {}}\n')
-    assert decision_module.worktree_inputs(root) == after_index
+    assert decision_module.worktree_inputs(root) == after_document
 
     (root / "oracle/spec.md").write_text("# updated spec\n")
     assert decision_module.worktree_inputs(root) != baseline

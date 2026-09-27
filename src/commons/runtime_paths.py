@@ -5,7 +5,6 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
@@ -14,9 +13,6 @@ from basic.path_model import RootPathPlaceHolder, resolve_real_path
 from .runtime_errors import CmocError
 
 _CMOC_PROCESS_CWD_LOCK = threading.RLock()
-_CMOC_PROCESS_CWD_OVERRIDE_DEPTH: ContextVar[int] = ContextVar(
-    "CMOC_PROCESS_CWD_OVERRIDE_DEPTH", default=0
-)
 
 
 def repo_root(root_anchor: Path | None = None) -> Path:
@@ -206,22 +202,6 @@ def _tracked_data_dir(root: Path) -> Path:
     return root / ".cmoc" / "gt"
 
 
-def is_root_memo(root: Path, path: Path) -> bool:
-    """`{{work-root}}/memo` 自体またはその配下か判定する。"""
-    # {{work-root}}/oracle/doc/app_spec/indexing.md
-    # memo の判定は repository 上の path 境界で行い、symlink の実体へ追跡しない。
-    # abspath は symlink を解決せずに `.`/`..` だけを正規化するため、memo/../path
-    # を memo 配下と誤認しない。
-    memo = Path(os.path.abspath(root / "memo"))
-    candidate = Path(os.path.abspath(path))
-    return candidate == memo or memo in candidate.parents
-
-
-def cmoc_process_cwd_override_active() -> bool:
-    """現在の context が ``pushd`` による cwd 切替区間内かを返す。"""
-    return _CMOC_PROCESS_CWD_OVERRIDE_DEPTH.get() > 0
-
-
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
     """外部 API が cwd 前提を持つ区間を process-wide に直列化する。"""
@@ -229,13 +209,9 @@ def pushd(path: Path) -> Iterator[None]:
     with _CMOC_PROCESS_CWD_LOCK:
         previous_cmoc_process_cwd = Path.cwd()
         os.chdir(path)
-        token = _CMOC_PROCESS_CWD_OVERRIDE_DEPTH.set(
-            _CMOC_PROCESS_CWD_OVERRIDE_DEPTH.get() + 1
-        )
         try:
             yield
         finally:
-            _CMOC_PROCESS_CWD_OVERRIDE_DEPTH.reset(token)
             os.chdir(previous_cmoc_process_cwd)
 
 

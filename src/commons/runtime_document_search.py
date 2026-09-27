@@ -63,7 +63,7 @@ class SourceDocument:
 
 @dataclass(frozen=True)
 class SyncResult:
-    """doctor・明示同期・検索前同期に共通の機械的結果。"""
+    """doctor と検索前同期に共通の機械的結果。"""
 
     identity: str
     status: str

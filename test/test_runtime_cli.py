@@ -132,7 +132,7 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     tmp_path: Path,
 ) -> None:
     """共有 logger へ並列 worker が記録しても event と待機時間を失わない。"""
-    logger = SubcommandLogger(tmp_path, "indexing")
+    logger = SubcommandLogger(tmp_path, "parallel_logging")
     worker_count = 8
     barrier = threading.Barrier(worker_count)
 
@@ -992,14 +992,21 @@ def test_pre_log_check_failure_writes_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """pre-log check の失敗時にもサブコマンドログを生成する。"""
+    import sub_commands.session.fork as session_fork
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     log_paths_before = set(log_dir.glob("*.jsonl"))
-    (root / "README.md").write_text("dirty\n")
 
-    result = runner.invoke(app, ["indexing"])
+    def fail_pre_log_check(_root: Path) -> None:
+        raise CmocError("pre-log check failed", ["修復して再実行してください。"], "")
+
+    monkeypatch.setattr(
+        session_fork, "ensure_cmoc_ignored_in_exclude", fail_pre_log_check
+    )
+    result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code == 1
     new_logs = set(log_dir.glob("*.jsonl")) - log_paths_before
@@ -1014,7 +1021,8 @@ def test_pre_log_check_failure_writes_subcommand_log(
     assert any(event["event"] == "step_started" for event in events)
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["returncode"] == 1
-    assert "indexing" in json.dumps(events[0], ensure_ascii=False)
+    assert "pre-log check failed" in result.stderr
+    assert events[0]["argv"] == ["cmoc", "session", "fork"]
 
 
 def test_cli_wrapper_doctor_preprocess_uses_current_worktree(

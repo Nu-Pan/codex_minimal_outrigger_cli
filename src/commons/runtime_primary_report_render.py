@@ -47,8 +47,6 @@ def render_primary_report(
         )
     elif spec.template == "doctor":
         body = _doctor_body(spec.title, classification, result, logger, field_values)
-    elif spec.template == "indexing":
-        body = _indexing_body(classification, result, logger, field_values)
     elif spec.template == "session_fork":
         body = _session_fork_body(classification, result, logger, field_values)
     elif spec.template == "refactor_fork":
@@ -380,56 +378,6 @@ def _doctor_body(
         "- 共通環境・設定・管理状態と共有検索資材の検査時点での利用可能性、および検索索引の同期完了。任意入力の検索は対象外。",
         *_standard_tail(classification, result, logger),
     ]
-
-
-def _indexing_body(
-    classification: TerminalClassification,
-    result: TerminalResult,
-    logger: SubcommandLogger,
-    fields: dict[str, object],
-) -> list[str]:
-    """文書検索索引の同期実績と失敗を fallback report に残す。"""
-    sync = fields.get("sync_result")
-    sync_fields = sync if isinstance(sync, dict) else {}
-    elapsed = sync_fields.get("elapsed_seconds", fields.get("elapsed_seconds"))
-    status = fields.get("indexing_status", fields.get("doctor_sync_status"))
-    failure_code = fields.get("failure_code", fields.get("doctor_sync_failure_code"))
-    failure_reason = fields.get(
-        "failure_reason", fields.get("doctor_sync_failure_reason")
-    )
-    return [
-        "# cmoc indexing report",
-        _outcome_sentence(classification),
-        "## 文書検索索引の同期",
-        f"- 実行状態: `{_operation_status(status, classification)}`",
-        f"- 実効閲覧範囲: `{_field_status(fields.get('scope_identity'))}`",
-        f"- 索引 identity: `{_field_status(fields.get('index_identity'))}`",
-        f"- 許可文書数: `{_field_status(sync_fields.get('document_count'))}`",
-        f"- chunk 数: `{_field_status(sync_fields.get('chunk_count'))}`",
-        f"- 追加: `{_field_status(sync_fields.get('added'))}`",
-        f"- 変更: `{_field_status(sync_fields.get('changed'))}`",
-        f"- 削除: `{_field_status(sync_fields.get('deleted'))}`",
-        f"- 空白化: `{_field_status(sync_fields.get('blanked'))}`",
-        f"- 埋め込み再利用: `{_field_status(sync_fields.get('reused_embeddings'))}`",
-        f"- 所要秒数: `{_field_status(elapsed)}`",
-        f"- doctor 前同期: `{_field_status(fields.get('doctor_sync_status'))}`",
-        f"- doctor 逐次反映と再利用: `{_inline_text(fields.get('doctor_sync_progress'))}`",
-        f"- 後続同期の逐次反映と再利用: `{_inline_text(fields.get('indexing_sync_progress'))}`",
-        f"- 失敗 code: `{_field_status(failure_code)}`",
-        f"- 失敗理由: `{_field_status(failure_reason)}`",
-        f"- 次の操作: `{_indexing_next_action(fields)}`",
-        *_standard_tail(classification, result, logger),
-    ]
-
-
-def _indexing_next_action(fields: dict[str, object]) -> str:
-    """確定した同期状態から、必要な次の操作だけを示す。"""
-    if fields.get("indexing_status") in {"updated", "unchanged"}:
-        return "なし"
-    failure_code = fields.get("failure_code", fields.get("doctor_sync_failure_code"))
-    if failure_code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}:
-        return "対象 work-root で cmoc doctor を実行する"
-    return "診断用ログと失敗理由を確認する"
 
 
 def _session_fork_body(

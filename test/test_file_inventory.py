@@ -143,13 +143,13 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (ignored / "tracked.txt").write_text("tracked ignored\n")
     (ignored / "untracked.txt").write_text("untracked ignored\n")
     (root / "visible.txt").write_text("visible\n")
-    special_names = (
+    classification_names = (
         "AGENTS.md",
-        "INDEX.md",
+        "notes.md",
         "oracle/AGENTS.md",
-        "oracle/INDEX.md",
+        "oracle/notes.md",
     )
-    for relative in special_names:
+    for relative in classification_names:
         (root / relative).write_text("name classification fixture\n")
     run_git(
         root,
@@ -157,7 +157,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
         "-f",
         ".gitignore",
         "ignored/tracked.txt",
-        *special_names,
+        *classification_names,
     )
     run_git(root, "commit", "-m", "add ignored fixture")
 
@@ -178,8 +178,8 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert "nested/kept.outer" in actual[1]
     assert "nested/dropped.nested" not in actual[1]
     assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
-    assert "INDEX.md" in actual[1]
-    assert "oracle/INDEX.md" in actual[0]
+    assert "notes.md" in actual[1]
+    assert "oracle/notes.md" in actual[0]
 
     state = sync_refactor_state(root)
     assert set(state) == expected[0] | expected[1]

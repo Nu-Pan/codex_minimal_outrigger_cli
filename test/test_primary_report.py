@@ -5,7 +5,6 @@
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 - {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/indexing.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
@@ -33,11 +32,6 @@ from commons.runtime_primary_report_render import execution_record_markdown
 
 _EARLY_ERROR_REPORTS = [
     ("doctor", "doctor", ()),
-    (
-        "indexing",
-        "indexing",
-        ("work_root", "scope_identity", "index_identity", "sync_result"),
-    ),
     (
         "session fork",
         "session/fork",
@@ -169,7 +163,6 @@ _EARLY_ERROR_REPORTS = [
 
 _EARLY_ERROR_SECTIONS = {
     "doctor": ("## doctor preprocess",),
-    "indexing": ("## 文書検索索引の同期", "- 実行状態: `"),
     "session fork": (
         "## branch の作成と checkout",
         "## session state file と状態遷移",
@@ -273,8 +266,6 @@ def test_early_error_saves_command_specific_primary_report(
     assert isinstance(metadata, dict)
     assert metadata["terminal_classification"] == "error"
     assert metadata["exit_code"] == 1
-    if command_name == "indexing":
-        assert metadata["work_root"] == str(root)
     assert 'terminal_classification: "error"' in front_matter
     assert "exit_code: 1" in front_matter
     assert f'repo_root: "{root.resolve()}"' in front_matter

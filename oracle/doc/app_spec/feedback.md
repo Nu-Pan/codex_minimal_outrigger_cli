@@ -71,7 +71,6 @@ feedback の仕様は、責務ごとに次の正本へ分ける。同じ schema�
 自動変換しない成果物には、次のものが含まれる。
 
 - realization refactor の finding、resolution、および unresolved target
-- indexing の結果
 - agent call 固有の Structured Output
 - run、session、および TUI の完了結果
 - feedback remediation run 自身の agent、tool、validation、差分検査、commit、merge、publication、または orchestration の失敗

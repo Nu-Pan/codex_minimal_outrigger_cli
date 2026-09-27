@@ -554,7 +554,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
         assert {key: event[key] for key in source} == source
         call = json.loads(Path(event["call_log_path"]).read_text())
         assert call["codex_call_id"] == source["codex_call_id"]
-        assert source["codex_call_id"] != "cdc_indexing"
+        assert source["codex_call_id"] != "cdc_previous"
         assert argv[-1] == "unchanged prompt"
         assert all(
             source[key] not in argv[-1]
@@ -619,7 +619,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
         logger = loggers[name]
         token = set_current_subcommand_logger(logger)
         try:
-            logger.event("codex_call", codex_call_id="cdc_indexing")
+            logger.event("codex_call", codex_call_id="cdc_previous")
             return run_codex_tui(
                 replace(
                     codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),

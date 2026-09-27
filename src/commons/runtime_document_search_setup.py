@@ -225,7 +225,7 @@ def _compatibility_probe(base: Path, root: Path, config: DocumentSearchConfig) -
 
 
 def _material_lock(root: Path) -> Path:
-    """検索・明示同期・doctor が共有する資材切替 lock。"""
+    """検索と doctor が共有する資材切替 lock。"""
     return materials_directory(root).parent / "materials.lock"
 
 

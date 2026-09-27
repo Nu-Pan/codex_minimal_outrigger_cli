@@ -16,7 +16,6 @@ from importlib import resources
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import make_repo, run_git
 from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import INITIAL_SEARCH_MATERIALS, DocumentSearchConfig
@@ -27,7 +26,6 @@ from commons.runtime_document_search_mcp import _response
 from commons.runtime_document_search_worker import NodeSearchWorker, materials_directory
 from commons.runtime_git import ensure_cmoc_ignored
 from config.cmoc_config import CmocConfig
-from main import app
 
 
 def _tuning() -> DocumentSearchConfig:
@@ -845,51 +843,3 @@ def test_worker_cancellation_reaps_process_before_releasing_owner(
                 os.kill(process_id, 0)
     finally:
         os.close(descriptor)
-
-
-def test_indexing_accepts_dirty_tree_and_reports_not_ready(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """明示同期は既存差分を commit せず、未設定を機械的に報告する。"""
-    root = _repo_with_docs(tmp_path)
-    monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
-    before_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    (root / "README.md").write_text("# dirty\n")
-    outcome = runner.invoke(app, ["indexing"], catch_exceptions=False)
-    assert outcome.exit_code == 1
-    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == before_head
-    assert (root / "README.md").read_text() == "# dirty\n"
-    report = terminal_primary_report(outcome).read_text()
-    assert 'failure_code: "NOT_READY"' in report
-    assert "updated_indexes" not in report
-
-
-def test_indexing_report_includes_preprocess_updates(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """doctor 側で更新し後続が無変更でも、同期実績を更新済みとして示す。"""
-    import sub_commands.indexing as indexing_module
-
-    root = _repo_with_docs(tmp_path)
-    monkeypatch.chdir(root)
-    run_doctor(root)
-    (root / "oracle/doc/allowed.md").write_text("# doctor が更新する本文\n")
-
-    def fake_search(root, scope, config, *, use_saved_config):
-        return DocumentSearch(
-            root,
-            scope,
-            config,
-            worker=_InferenceDouble(),
-            installation_root=tmp_path,
-            use_saved_config=use_saved_config,
-        )
-
-    monkeypatch.setattr(indexing_module, "DocumentSearch", fake_search)
-    outcome = runner.invoke(app, ["indexing"], catch_exceptions=False)
-    assert outcome.exit_code == 0, outcome.output
-    report = terminal_primary_report(outcome).read_text()
-    assert 'indexing_status: "updated"' in report
-    assert "変更: `1`" in report
-    assert "doctor 前同期: `updated`" in report

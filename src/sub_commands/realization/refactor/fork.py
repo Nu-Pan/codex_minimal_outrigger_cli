@@ -130,8 +130,8 @@ def _cmoc_realization_refactor_fork_body() -> TerminalResult:
             refactor_state_path=refactor_state_path(context.run_worktree),
         )
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # 初期化時の INDEX 更新も Codex call を起こすため、fork 全体を同じ
-        # process tracking scope に置き、interrupt/abandon から停止可能にする。
+        # fork 内の Codex call を同じ process tracking scope に置き、
+        # interrupt/abandon から停止可能にする。
         with run_process_tracking(context.repo, context.session_id):
             start_subcommand_step(3, "full refactor cycle を初期化", "initialize cycle")
             cleanup_warnings.extend(_initialize_cycle(context) or [])
@@ -856,7 +856,7 @@ def _completion_change_summary(
     context: EditingRunContext,
 ) -> list[_ChangeSummary] | None:
     """正常完了した refactor fork の tree 差分を要約する。"""
-    # preflight が追加 commit を作っても、空差分判定と要約の比較範囲を揃える。
+    # 空差分判定と要約に同じ終了 commit を使う。
     summary_head_commit = head_commit(context.run_worktree)
     diff = run_git(
         ["diff", "--quiet", context.run_fork_commit, summary_head_commit, "--"],

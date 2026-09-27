@@ -61,11 +61,6 @@
         "model_provider": "openai",
         "model": "gpt-6-luna",
         "reasoning_effort": "low"
-      },
-      "build_indexing_index_entry_parameter": {
-        "model_provider": "openai",
-        "model": "gpt-6-luna",
-        "reasoning_effort": "max"
       }
     },
     "num_try_falv_recovery": 1
