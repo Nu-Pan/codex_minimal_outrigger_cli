@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from importlib import resources
 from pathlib import Path
-from typing import Protocol
+from typing import Callable, Protocol
 
 from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import (
@@ -39,7 +39,7 @@ from .runtime_errors import CmocError
 from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ignored
 from .runtime_paths import cmoc_root
 
-_INDEX_FORMAT = 1
+_INDEX_FORMAT = 2
 _CLASSIFICATION_CONTRACT = "oracle-file-inventory-v2"
 _LOCK_POLL_SECONDS = 0.05
 
@@ -63,7 +63,7 @@ class SourceDocument:
 
 @dataclass(frozen=True)
 class SyncResult:
-    """明示同期と検索前同期に共通の機械的結果。"""
+    """doctor・明示同期・検索前同期に共通の機械的結果。"""
 
     identity: str
     status: str
@@ -85,24 +85,38 @@ class InferenceWorker(Protocol):
         operation: str,
         payload: dict[str, object],
         *,
-        deadline: float,
+        deadline: float | None,
         residency_fd: int,
         cancelled: threading.Event | None = None,
     ) -> object:
         """単一操作を収束させて返す。"""
 
+    def stream_chunks(
+        self,
+        documents: dict[str, str],
+        resumes: dict[str, int],
+        on_event: Callable[[object], None],
+        *,
+        deadline: float | None,
+        residency_fd: int,
+        cancelled: threading.Event | None = None,
+    ) -> None:
+        """文書の chunk を計算順に渡す。"""
 
-def _deadline_check(deadline: float, cancelled: threading.Event | None = None) -> None:
+
+def _deadline_check(
+    deadline: float | None, cancelled: threading.Event | None = None
+) -> None:
     if cancelled is not None and cancelled.is_set():
         raise SearchError("CANCELLED", "document search was cancelled")
-    if time.monotonic() >= deadline:
+    if deadline is not None and time.monotonic() >= deadline:
         raise SearchError("DEADLINE_EXCEEDED", "document search deadline exceeded")
 
 
 @contextmanager
 def _file_lock(
     path: Path,
-    deadline: float,
+    deadline: float | None,
     cancelled: threading.Event | None = None,
     *,
     shared: bool = False,
@@ -123,7 +137,12 @@ def _file_lock(
                 fcntl.flock(fd, mode | fcntl.LOCK_NB)
                 break
             except BlockingIOError:
-                time.sleep(min(_LOCK_POLL_SECONDS, max(0, deadline - time.monotonic())))
+                wait = (
+                    _LOCK_POLL_SECONDS
+                    if deadline is None
+                    else min(_LOCK_POLL_SECONDS, max(0, deadline - time.monotonic()))
+                )
+                time.sleep(wait)
             except OSError as exc:
                 raise SearchError("SYNC_FAILED", "document search lock failed") from exc
         try:
@@ -355,16 +374,21 @@ def _open_database(path: Path) -> sqlite3.Connection:
         connection.executescript(
             """
             create table if not exists documents(
-                path text primary key, sha256 text not null
+                path text primary key, sha256 text not null,
+                complete integer not null check(complete in (0, 1))
             );
             create table if not exists chunks(
                 id integer primary key,
                 path text not null references documents(path) on delete cascade,
+                ordinal integer not null,
+                start_offset integer not null,
+                end_offset integer not null,
                 start_line integer not null,
                 end_line integer not null,
                 excerpt text not null,
                 excerpt_sha256 text not null,
-                embedding blob not null
+                embedding blob not null,
+                unique(path, ordinal)
             );
             create table if not exists query_cache(
                 query text primary key, embedding blob not null
@@ -391,7 +415,7 @@ def _open_database(path: Path) -> sqlite3.Connection:
 def _reclaim_unused_indexes(
     base: Path,
     identity: str,
-    deadline: float,
+    deadline: float | None,
     cancelled: threading.Event | None,
 ) -> None:
     """要求中の接続が使わない旧索引だけを lease と調停して回収する。"""
@@ -472,6 +496,7 @@ class DocumentSearch:
         self.request_started: float | None = None
         self._lease_fd: int | None = None
         self._lease_lock = threading.Lock()
+        self.sync_progress: dict[str, object] | None = None
 
     def close(self) -> None:
         """接続が保持した索引 lease を解放する。"""
@@ -529,7 +554,7 @@ class DocumentSearch:
                 os.close(fd)
                 raise
 
-    def _check(self, deadline: float) -> None:
+    def _check(self, deadline: float | None) -> None:
         _deadline_check(deadline, self.cancelled)
 
     def _refresh_saved_config(self) -> None:
@@ -553,7 +578,7 @@ class DocumentSearch:
             self.config = current
 
     def _check_sources_current(
-        self, documents: Mapping[str, SourceDocument], deadline: float
+        self, documents: Mapping[str, SourceDocument], deadline: float | None
     ) -> None:
         """結果を返す直前に、同期後の保存済み本文を照合する。"""
         self._check(deadline)
@@ -582,7 +607,7 @@ class DocumentSearch:
         operation: str,
         payload: dict[str, object],
         residency: Path,
-        deadline: float,
+        deadline: float | None,
     ) -> object:
         self._check(deadline)
         if self.worker is None:
@@ -605,125 +630,279 @@ class DocumentSearch:
                     "MODEL_FAILURE", "document search inference failed"
                 ) from exc
 
+    def _stream_inference(
+        self,
+        documents: dict[str, str],
+        resumes: dict[str, int],
+        residency: Path,
+        deadline: float | None,
+        on_event: Callable[[object], None],
+    ) -> None:
+        """chunk の到着時に Python の検証・保存 callback を実行する。"""
+        self._check(deadline)
+        if self.worker is None:
+            from .runtime_document_search_worker import NodeSearchWorker
+
+            self.worker = NodeSearchWorker(self.installation_root, self.config)
+        assert self.config is not None
+        with _file_lock(residency, deadline, self.cancelled) as residency_fd:
+            self.worker.stream_chunks(
+                documents,
+                resumes,
+                on_event,
+                deadline=deadline,
+                residency_fd=residency_fd,
+                cancelled=self.cancelled,
+            )
+
     def _sync_locked(
         self,
         connection: sqlite3.Connection,
         documents: Mapping[str, SourceDocument],
         residency: Path,
-        deadline: float,
+        deadline: float | None,
         identity: str,
         started: float,
     ) -> SyncResult:
-        """全変更を一 transaction に確定し、途中世代を公開しない。"""
-        assert self.config is not None
-        stored = dict(connection.execute("select path, sha256 from documents"))
-        stored_chunks = dict(
-            connection.execute("select path, count(*) from chunks group by path")
-        )
+        """有効な chunk を個別確定し、完了文書だけを検索に使える状態にする。"""
+        stored = {
+            path: (sha, bool(complete))
+            for path, sha, complete in connection.execute(
+                "select path, sha256, complete from documents"
+            )
+        }
         deleted_paths = set(stored) - set(documents)
         changed_paths = {
             path
             for path, source in documents.items()
-            if stored.get(path) != source.sha256
+            if path not in stored or stored[path][0] != source.sha256
         }
-        added = len(changed_paths - set(stored))
-        changed = len(changed_paths & set(stored))
+        pending_paths = {
+            path
+            for path, (_, complete) in stored.items()
+            if path in documents and path not in changed_paths and not complete
+        }
         blanked = sum(1 for path in changed_paths if not documents[path].text.strip())
         fresh = {
             path: documents[path].text
-            for path in changed_paths
+            for path in sorted(changed_paths | pending_paths)
             if documents[path].text.strip()
         }
-        generated: object = {}
-        if fresh:
-            generated = self._inference(
-                "chunk_embed",
-                {"documents": fresh, "config": asdict(self.config)},
-                residency,
-                deadline,
-            )
-        if not isinstance(generated, dict) or set(generated) != set(fresh):
-            raise SearchError("MODEL_FAILURE", "inference chunks are incomplete")
-        try:
-            connection.execute("begin immediate")
+        self.sync_progress = {
+            "identity": identity,
+            "status": "started",
+            "document_count": len(documents),
+            "persisted_chunks": 0,
+            "reused_embeddings": 0,
+        }
+
+        # 旧本文の結果を先に外し、未完了文書を明示してから推論を開始する。
+        with connection:
             for path in deleted_paths | changed_paths:
                 connection.execute("delete from documents where path = ?", (path,))
-            for path in sorted(changed_paths):
-                self._check(deadline)
+            for path in changed_paths:
                 source = documents[path]
                 connection.execute(
-                    "insert into documents(path, sha256) values(?, ?)",
-                    (path, source.sha256),
+                    "insert into documents(path, sha256, complete) values(?, ?, ?)",
+                    (path, source.sha256, int(not source.text.strip())),
                 )
-                if path not in fresh:
-                    continue
-                chunks = generated[path]
-                if not isinstance(chunks, list) or not chunks:
-                    raise SearchError("MODEL_FAILURE", "document chunks are missing")
-                for chunk in chunks:
-                    if not isinstance(chunk, dict):
-                        raise SearchError("MODEL_FAILURE", "document chunk is invalid")
-                    start = chunk.get("start")
-                    end = chunk.get("end")
-                    if (
-                        type(start) is not int
-                        or type(end) is not int
-                        or not 0 <= start < end <= len(source.text)
-                    ):
-                        raise SearchError(
-                            "MODEL_FAILURE", "document chunk offsets are invalid"
-                        )
-                    excerpt = source.text[start:end]
-                    if not excerpt.strip():
-                        raise SearchError("MODEL_FAILURE", "document chunk is blank")
-                    start_line = source.text.count("\n", 0, start) + 1
-                    end_line = source.text.count("\n", 0, end - 1) + 1
-                    excerpt_sha = hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
-                    connection.execute(
-                        "insert into chunks(path, start_line, end_line, excerpt, "
-                        "excerpt_sha256, embedding) values(?, ?, ?, ?, ?, ?)",
-                        (
-                            path,
-                            start_line,
-                            end_line,
-                            excerpt,
-                            excerpt_sha,
-                            _vector_blob(chunk.get("embedding")),
-                        ),
-                    )
             connection.execute(
                 "delete from score_cache where excerpt_sha256 not in "
                 "(select excerpt_sha256 from chunks)"
             )
-            connection.execute("commit")
-        except BaseException:
-            if connection.in_transaction:
-                connection.execute("rollback")
-            raise
+
+        resumes: dict[str, int] = {}
+        repaired_paths: set[str] = set()
+        for path in sorted(documents):
+            source = documents[path]
+            rows = connection.execute(
+                "select ordinal, start_offset, end_offset, start_line, end_line, "
+                "excerpt, excerpt_sha256, embedding "
+                "from chunks where path = ? order by ordinal",
+                (path,),
+            ).fetchall()
+            valid = True
+            for ordinal, row in enumerate(rows):
+                (
+                    saved_ordinal,
+                    start,
+                    end,
+                    start_line,
+                    end_line,
+                    excerpt,
+                    excerpt_sha,
+                    embedding,
+                ) = row
+                if (
+                    saved_ordinal != ordinal
+                    or type(start) is not int
+                    or type(end) is not int
+                    or not 0 <= start < end <= len(source.text)
+                    or start_line != source.text.count("\n", 0, start) + 1
+                    or end_line != source.text.count("\n", 0, end - 1) + 1
+                    or excerpt != source.text[start:end]
+                    or not excerpt.strip()
+                    or excerpt_sha
+                    != hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
+                ):
+                    valid = False
+                    break
+                try:
+                    _checked_cached_vector(embedding)
+                except SearchError:
+                    valid = False
+                    break
+            if (
+                path in stored
+                and stored[path][1]
+                and (
+                    (source.text.strip() and not rows)
+                    or (not source.text.strip() and rows)
+                )
+            ):
+                valid = False
+            if not valid:
+                with connection:
+                    connection.execute("delete from chunks where path = ?", (path,))
+                    connection.execute(
+                        "update documents set complete = ? where path = ?",
+                        (int(not source.text.strip()), path),
+                    )
+                rows = []
+                repaired_paths.add(path)
+                if source.text.strip():
+                    fresh[path] = source.text
+            if path in pending_paths and not source.text.strip():
+                with connection:
+                    connection.execute(
+                        "update documents set complete = 1 where path = ?", (path,)
+                    )
+            if path in fresh:
+                resumes[path] = len(rows)
+                reused_before = self.sync_progress["reused_embeddings"]
+                assert isinstance(reused_before, int)
+                self.sync_progress["reused_embeddings"] = reused_before + len(rows)
+        reused_before = self.sync_progress["reused_embeddings"]
+        assert isinstance(reused_before, int)
+        reused = reused_before
+        reused += connection.execute(
+            "select count(*) from chunks join documents using(path) "
+            "where documents.complete = 1"
+        ).fetchone()[0]
+        self.sync_progress["reused_embeddings"] = reused
+        next_ordinal = dict(resumes)
+        completed: set[str] = set()
+
+        def current_source(path: str) -> SourceDocument:
+            """確定直前に権限分類と本文が元の入力に一致するか確認する。"""
+            self._check(deadline)
+            current = scan_documents(
+                self.root, self.scope, deadline=deadline, cancelled=self.cancelled
+            ).get(path)
+            if current != documents[path]:
+                raise SearchError(
+                    "SOURCE_CHANGED", "documents changed during synchronization"
+                )
+            return documents[path]
+
+        def on_event(event: object) -> None:
+            """worker 出力を検証し、各 chunk または文書完了を個別確定する。"""
+            if not isinstance(event, dict):
+                raise SearchError("MODEL_FAILURE", "inference event is invalid")
+            kind = event.get("kind")
+            path = event.get("path")
+            if not isinstance(path, str) or path not in fresh or path in completed:
+                raise SearchError("MODEL_FAILURE", "inference path is invalid")
+            if kind == "document_complete":
+                if (
+                    type(event.get("chunk_count")) is not int
+                    or event["chunk_count"] != next_ordinal[path]
+                    or next_ordinal[path] == 0
+                ):
+                    raise SearchError("MODEL_FAILURE", "document chunks are incomplete")
+                current_source(path)
+                with connection:
+                    connection.execute(
+                        "update documents set complete = 1 where path = ?", (path,)
+                    )
+                completed.add(path)
+                return
+            if kind != "chunk" or event.get("ordinal") != next_ordinal[path]:
+                raise SearchError("MODEL_FAILURE", "inference chunk order is invalid")
+            source = current_source(path)
+            start, end = event.get("start"), event.get("end")
+            if (
+                type(start) is not int
+                or type(end) is not int
+                or not 0 <= start < end <= len(source.text)
+            ):
+                raise SearchError("MODEL_FAILURE", "document chunk offsets are invalid")
+            excerpt = source.text[start:end]
+            if not excerpt.strip():
+                raise SearchError("MODEL_FAILURE", "document chunk is blank")
+            vector = _vector_blob(event.get("embedding"))
+            excerpt_sha = hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
+            with connection:
+                connection.execute(
+                    "insert into chunks(path, ordinal, start_offset, end_offset, "
+                    "start_line, end_line, excerpt, excerpt_sha256, embedding) "
+                    "values(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        path,
+                        next_ordinal[path],
+                        start,
+                        end,
+                        source.text.count("\n", 0, start) + 1,
+                        source.text.count("\n", 0, end - 1) + 1,
+                        excerpt,
+                        excerpt_sha,
+                        vector,
+                    ),
+                )
+            next_ordinal[path] += 1
+            assert self.sync_progress is not None
+            persisted_before = self.sync_progress["persisted_chunks"]
+            assert isinstance(persisted_before, int)
+            self.sync_progress["persisted_chunks"] = persisted_before + 1
+
+        if fresh:
+            self._stream_inference(fresh, resumes, residency, deadline, on_event)
+        if (
+            completed != set(fresh)
+            or connection.execute(
+                "select 1 from documents where complete = 0 limit 1"
+            ).fetchone()
+        ):
+            raise SearchError("MODEL_FAILURE", "inference chunks are incomplete")
         count = connection.execute("select count(*) from chunks").fetchone()[0]
-        reusable = sum(
-            chunk_count
-            for path, chunk_count in stored_chunks.items()
-            if path not in deleted_paths and path not in changed_paths
-        )
         return SyncResult(
             identity=identity,
-            status="updated" if changed_paths or deleted_paths else "unchanged",
+            status="updated"
+            if changed_paths or deleted_paths or pending_paths or repaired_paths
+            else "unchanged",
             document_count=len(documents),
             chunk_count=count,
-            added=added,
-            changed=changed,
+            added=len(changed_paths - set(stored)),
+            changed=len(changed_paths & set(stored)),
             deleted=len(deleted_paths),
             blanked=blanked,
-            reused_embeddings=reusable,
+            reused_embeddings=reused,
             elapsed_seconds=time.monotonic() - started,
         )
 
     @contextmanager
     def _locked_index(
         self,
+        *,
+        unbounded: bool = False,
     ) -> Iterator[
-        tuple[sqlite3.Connection, dict[str, SourceDocument], SyncResult, Path, float]
+        tuple[
+            sqlite3.Connection,
+            dict[str, SourceDocument],
+            SyncResult,
+            Path,
+            float | None,
+        ]
     ]:
         """資材の切替を防いだまま索引・推論の全要求を完了する。"""
         from .runtime_document_search_setup import _material_lock
@@ -731,7 +910,7 @@ class DocumentSearch:
 
         self._refresh_saved_config()
         if self.worker is not None and not isinstance(self.worker, NodeSearchWorker):
-            with self._locked_index_inner() as state:
+            with self._locked_index_inner(unbounded=unbounded) as state:
                 yield state
             return
         try:
@@ -744,28 +923,36 @@ class DocumentSearch:
         started = self.request_started or time.monotonic()
         if self.config is None:
             raise SearchError("NOT_READY", "document search tuning is not configured")
-        deadline = started + self.config.request_timeout_seconds
+        deadline = None if unbounded else started + self.config.request_timeout_seconds
         with _file_lock(
             _material_lock(self.installation_root),
             deadline,
             self.cancelled,
             shared=True,
         ):
-            with self._locked_index_inner() as state:
+            with self._locked_index_inner(unbounded=unbounded) as state:
                 yield state
 
     @contextmanager
     def _locked_index_inner(
         self,
+        *,
+        unbounded: bool = False,
     ) -> Iterator[
-        tuple[sqlite3.Connection, dict[str, SourceDocument], SyncResult, Path, float]
+        tuple[
+            sqlite3.Connection,
+            dict[str, SourceDocument],
+            SyncResult,
+            Path,
+            float | None,
+        ]
     ]:
         """索引 lock 内で現在本文を確認し、整合世代を同期する。"""
         self._refresh_saved_config()
         started = self.request_started or time.monotonic()
         if self.config is None:
             raise SearchError("NOT_READY", "document search tuning is not configured")
-        deadline = started + self.config.request_timeout_seconds
+        deadline = None if unbounded else started + self.config.request_timeout_seconds
         self._check(deadline)
         identity, index, lock, residency = self._paths()
         try:
@@ -818,10 +1005,18 @@ class DocumentSearch:
                 finally:
                     connection.close()
 
-    def synchronize(self) -> SyncResult:
+    def synchronize(self, *, unbounded: bool = False) -> SyncResult:
         """query 推論を行わず、通常検索と同じ現在本文の同期を実行する。"""
-        with self._locked_index() as (_, documents, result, _, deadline):
+        with self._locked_index(unbounded=unbounded) as (
+            _,
+            documents,
+            result,
+            _,
+            deadline,
+        ):
             self._check_sources_current(documents, deadline)
+            if self.sync_progress is not None:
+                self.sync_progress["status"] = result.status
             return result
 
     def search(self, query: str, limit: int | None = None) -> SearchResult:

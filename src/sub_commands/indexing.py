@@ -1,7 +1,5 @@
 """現在の work-root の文書検索索引を明示的に同期する。"""
 
-import hashlib
-import json
 import time
 from dataclasses import asdict
 
@@ -13,9 +11,12 @@ from cmoc_runtime import (
     work_root,
 )
 from commons.runtime_document_search import DocumentSearch, SearchError
-from commons.runtime_document_search_scope import oracle_doc_scope
+from commons.runtime_document_search_scope import oracle_doc_scope, scope_identity
 from commons.runtime_errors import CmocError
-from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_primary_report import (
+    current_primary_report_fields,
+    update_primary_report_fields,
+)
 
 
 def cmoc_indexing_impl() -> None:
@@ -32,18 +33,17 @@ def cmoc_indexing_impl() -> None:
 def _cmoc_indexing_body() -> TerminalResult:
     """共通検索処理の同期結果を primary report に渡す。"""
     root = work_root()
+    doctor_fields = current_primary_report_fields()
+    doctor_result = doctor_fields.get("doctor_sync_result")
     update_primary_report_fields(
         work_root=str(root),
-        indexing_status="not_started",
-        index_identity=None,
-        sync_result=None,
+        indexing_status="not_started" if doctor_result is None else "started",
+        index_identity=doctor_fields.get("doctor_index_identity"),
+        sync_result=doctor_result,
     )
     start_subcommand_step(2, "文書検索索引を同期", "synchronize document search")
     scope = oracle_doc_scope()
-    scope_identity = hashlib.sha256(
-        json.dumps(asdict(scope), sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    update_primary_report_fields(scope_identity=scope_identity)
+    update_primary_report_fields(scope_identity=scope_identity(scope))
     search = DocumentSearch(
         root, scope, load_config(root).document_search, use_saved_config=True
     )
@@ -57,6 +57,7 @@ def _cmoc_indexing_body() -> TerminalResult:
             failure_code=exc.code,
             failure_reason=str(exc),
             elapsed_seconds=time.monotonic() - started,
+            indexing_sync_progress=search.sync_progress,
         )
         raise CmocError(
             "文書検索索引の同期に失敗しました。",
@@ -69,11 +70,22 @@ def _cmoc_indexing_body() -> TerminalResult:
         ) from exc
     finally:
         search.close()
+    combined = asdict(result)
+    if (
+        isinstance(doctor_result, dict)
+        and doctor_result.get("identity") == result.identity
+    ):
+        for key in ("added", "changed", "deleted", "blanked", "reused_embeddings"):
+            combined[key] += doctor_result[key]
+        combined["elapsed_seconds"] += doctor_result["elapsed_seconds"]
+        if doctor_result["status"] == "updated":
+            combined["status"] = "updated"
     update_primary_report_fields(
-        indexing_status=result.status,
+        indexing_status=combined["status"],
         index_identity=result.identity,
-        sync_result=asdict(result),
+        sync_result=combined,
+        indexing_sync_progress=search.sync_progress,
     )
     return TerminalResult(
-        details=(("index_identity", result.identity), ("sync_result", asdict(result)))
+        details=(("index_identity", result.identity), ("sync_result", combined))
     )

@@ -30,11 +30,12 @@ from pathlib import Path
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import make_repo, run_git
+from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 
 import commons.runtime_doctor as doctor_module
 import commons.runtime_feedback_store as feedback_store_module
 from commons.runtime_config import config_to_dict
-from commons.runtime_document_search import SearchError
+from commons.runtime_document_search import DocumentSearch, SearchError
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import ReporterAvailabilityError
 from commons.runtime_refactor import RefactorState
@@ -72,6 +73,9 @@ def test_doctor_preprocess_repairs_git_state(
     assert 'terminal_classification: "natural_completion"' in rendered_report
     assert "exit_code: 0" in rendered_report
     assert "doctor preprocess" in rendered_report
+    assert "## 検索索引の同期" in rendered_report
+    assert "実効閲覧範囲" in rendered_report
+    assert "逐次反映と再利用" in rendered_report
     assert "診断用サブコマンドログ" in rendered_report
 
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
@@ -927,6 +931,57 @@ def test_doctor_fails_when_real_model_validation_does_not_complete(
     assert "照合と実モデル検証: `失敗`" in report
     assert "rerank validation failed" in report
     assert "cmoc doctor を再実行" in report
+
+
+def test_doctor_reports_persisted_chunks_when_sync_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """doctor の同期失敗は未完了とし、保存済み chunk の進捗を示す。"""
+    root = make_repo(tmp_path)
+    docs = root / "oracle/doc"
+    docs.mkdir()
+    (docs / "sample.md").write_text("# 検索用の原文\n")
+    run_git(root, "add", "oracle/doc")
+    run_git(root, "commit", "-m", "add document")
+    monkeypatch.chdir(root)
+    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+
+    class StoppingWorker:
+        def stream_chunks(
+            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+        ):
+            assert deadline is None
+            path, source = next(iter(documents.items()))
+            on_event(
+                {
+                    "kind": "chunk",
+                    "path": path,
+                    "ordinal": 0,
+                    "start": 0,
+                    "end": len(source),
+                    "embedding": vector,
+                }
+            )
+            raise SearchError("MODEL_FAILURE", "stopped after first chunk")
+
+    def failing_search(root, scope, config, *, installation_root, use_saved_config):
+        return DocumentSearch(
+            root,
+            scope,
+            config,
+            worker=StoppingWorker(),
+            installation_root=installation_root,
+            use_saved_config=use_saved_config,
+        )
+
+    monkeypatch.setattr(doctor_module, "DocumentSearch", failing_search)
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+    assert result.exit_code != 0
+    report = terminal_primary_report(result).read_text()
+    assert 'doctor_sync_status: "failed"' in report
+    assert "persisted_chunks" in report
+    assert "stopped after first chunk" in report
+    assert "実行状態: `failed`" in report
 
 
 def test_normal_preprocess_requires_validated_materials(

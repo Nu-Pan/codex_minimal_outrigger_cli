@@ -5,6 +5,7 @@ import importlib
 import json
 import os
 import platform
+import select
 import signal
 import sqlite3
 import stat
@@ -15,6 +16,7 @@ import time
 from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
+from typing import Callable
 
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
@@ -272,18 +274,8 @@ class NodeSearchWorker:
         self.base = material_base or materials_directory(installation_root)
         self.config = config
 
-    def run(
-        self,
-        operation: str,
-        payload: dict[str, object],
-        *,
-        deadline: float,
-        residency_fd: int,
-        cancelled: threading.Event | None = None,
-    ) -> object:
-        """子 process を同期実行し、期限時も停止・回収してから返す。"""
-        if self.config is None:
-            raise SearchError("NOT_READY", "document search tuning is not configured")
+    def _request(self, operation: str, payload: dict[str, object]) -> dict[str, object]:
+        """生存監視に使う親 process の identity を付ける。"""
         try:
             parent_start_time = (
                 Path(f"/proc/{os.getpid()}/stat")
@@ -295,7 +287,7 @@ class NodeSearchWorker:
             raise SearchError(
                 "MODEL_FAILURE", "parent identity is unavailable"
             ) from exc
-        request = {
+        return {
             "operation": operation,
             "payload": payload,
             "embedding_model": str(
@@ -308,6 +300,43 @@ class NodeSearchWorker:
             "parent_pid": os.getpid(),
             "parent_start_time": parent_start_time,
         }
+
+    def _stop_process(
+        self, process: subprocess.Popen[str] | subprocess.Popen[bytes]
+    ) -> None:
+        """子 process group を有限猶予で止め、fd を解放する。"""
+        assert self.config is not None
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            process.wait(timeout=self.config.shutdown_grace_seconds)
+        except subprocess.TimeoutExpired:
+            pass
+        # 親が先に終了しても同じ process group の descendant を残さない。
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+        for pipe in (process.stdin, process.stdout, process.stderr):
+            if pipe is not None:
+                pipe.close()
+
+    def run(
+        self,
+        operation: str,
+        payload: dict[str, object],
+        *,
+        deadline: float | None,
+        residency_fd: int,
+        cancelled: threading.Event | None = None,
+    ) -> object:
+        """子 process を同期実行し、期限時も停止・回収してから返す。"""
+        if self.config is None:
+            raise SearchError("NOT_READY", "document search tuning is not configured")
+        request = self._request(operation, payload)
         try:
             process = subprocess.Popen(
                 ["node", str(self.base / "worker.mjs")],
@@ -330,31 +359,24 @@ class NodeSearchWorker:
             while True:
                 if cancelled is not None and cancelled.is_set():
                     raise SearchError("CANCELLED", "document search was cancelled")
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
+                remaining = None if deadline is None else deadline - time.monotonic()
+                if remaining is not None and remaining <= 0:
                     raise SearchError(
                         "DEADLINE_EXCEEDED", "inference deadline exceeded"
                     )
                 try:
                     stdout, _ = process.communicate(
-                        pending_input, timeout=min(0.2, remaining)
+                        pending_input,
+                        timeout=0.2 if remaining is None else min(0.2, remaining),
                     )
                     break
                 except subprocess.TimeoutExpired:
                     pending_input = None
+        except OSError as exc:
+            self._stop_process(process)
+            raise SearchError("MODEL_FAILURE", "inference worker I/O failed") from exc
         except BaseException as exc:
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            try:
-                process.communicate(timeout=self.config.shutdown_grace_seconds)
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                process.communicate()
+            self._stop_process(process)
             if isinstance(exc, KeyboardInterrupt):
                 raise SearchError("CANCELLED", "document search was cancelled") from exc
             raise
@@ -371,3 +393,122 @@ class NodeSearchWorker:
         if not isinstance(response, dict) or response.get("status") != "ok":
             raise SearchError("MODEL_FAILURE", "inference worker rejected the request")
         return response.get("result")
+
+    def stream_chunks(
+        self,
+        documents: dict[str, str],
+        resumes: dict[str, int],
+        on_event: Callable[[object], None],
+        *,
+        deadline: float | None,
+        residency_fd: int,
+        cancelled: threading.Event | None = None,
+    ) -> None:
+        """worker の chunk 行を到着順に caller へ渡し、失敗時は子を回収する。"""
+        if self.config is None:
+            raise SearchError("NOT_READY", "document search tuning is not configured")
+        request = self._request(
+            "chunk_stream",
+            {"documents": documents, "resume": resumes, "config": asdict(self.config)},
+        )
+        try:
+            process = subprocess.Popen(
+                ["node", str(self.base / "worker.mjs")],
+                cwd=self.base,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                pass_fds=(residency_fd,),
+                start_new_session=True,
+                env={**os.environ, "NODE_LLAMA_CPP_SKIP_DOWNLOAD": "true"},
+            )
+        except OSError as exc:
+            raise SearchError(
+                "MODEL_FAILURE", "inference worker could not start"
+            ) from exc
+        assert process.stdin is not None and process.stdout is not None
+        input_data = json.dumps(request, ensure_ascii=False).encode("utf-8")
+        input_offset = 0
+        output_buffer = b""
+        done = False
+        try:
+            os.set_blocking(process.stdin.fileno(), False)
+            while True:
+                if cancelled is not None and cancelled.is_set():
+                    raise SearchError("CANCELLED", "document search was cancelled")
+                remaining = None if deadline is None else deadline - time.monotonic()
+                if remaining is not None and remaining <= 0:
+                    raise SearchError(
+                        "DEADLINE_EXCEEDED", "inference deadline exceeded"
+                    )
+                if input_offset == len(input_data) and not process.stdin.closed:
+                    process.stdin.close()
+                readers, writers, _ = select.select(
+                    [process.stdout],
+                    [process.stdin] if not process.stdin.closed else [],
+                    [],
+                    0.2 if remaining is None else min(0.2, remaining),
+                )
+                if writers:
+                    try:
+                        written = os.write(
+                            process.stdin.fileno(), input_data[input_offset:]
+                        )
+                    except BlockingIOError:
+                        written = 0
+                    input_offset += written
+                if readers:
+                    fragment = os.read(process.stdout.fileno(), 65536)
+                    if not fragment:
+                        break
+                    output_buffer += fragment
+                    if len(output_buffer) > 2_000_000:
+                        raise SearchError(
+                            "MODEL_FAILURE", "inference worker output is too large"
+                        )
+                    while b"\n" in output_buffer:
+                        line, output_buffer = output_buffer.split(b"\n", 1)
+                        try:
+                            event = json.loads(line)
+                        except (ValueError, UnicodeError) as exc:
+                            raise SearchError(
+                                "MODEL_FAILURE", "inference event is invalid"
+                            ) from exc
+                        if isinstance(event, dict) and event.get("kind") == "done":
+                            if done or set(event) != {"kind"}:
+                                raise SearchError(
+                                    "MODEL_FAILURE", "inference completion is invalid"
+                                )
+                            done = True
+                        elif done:
+                            raise SearchError(
+                                "MODEL_FAILURE", "inference event after completion"
+                            )
+                        else:
+                            on_event(event)
+            if output_buffer or not done:
+                raise SearchError(
+                    "MODEL_FAILURE", "inference worker output is incomplete"
+                )
+            while process.poll() is None:
+                if cancelled is not None and cancelled.is_set():
+                    raise SearchError("CANCELLED", "document search was cancelled")
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise SearchError(
+                        "DEADLINE_EXCEEDED", "inference deadline exceeded"
+                    )
+                time.sleep(0.05)
+            if process.returncode != 0:
+                raise SearchError("MODEL_FAILURE", "inference worker failed")
+        except OSError as exc:
+            self._stop_process(process)
+            raise SearchError("MODEL_FAILURE", "inference worker I/O failed") from exc
+        except BaseException as exc:
+            self._stop_process(process)
+            if isinstance(exc, KeyboardInterrupt):
+                raise SearchError("CANCELLED", "document search was cancelled") from exc
+            raise
+        finally:
+            for pipe in (process.stdin, process.stdout):
+                if pipe is not None and not pipe.closed:
+                    pipe.close()

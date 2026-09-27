@@ -1,5 +1,7 @@
 """信頼された workload が文書検索へ渡す閲覧範囲を構築する。"""
 
+import hashlib
+import json
 from dataclasses import asdict
 from pathlib import PurePosixPath
 
@@ -13,6 +15,12 @@ def oracle_doc_scope() -> DocumentSearchScope:
     確認したうえで使用する。個別制限がある call は明示的な狭い範囲を作る。
     """
     return DocumentSearchScope(allowed_subtrees=("oracle/doc",))
+
+
+def scope_identity(scope: DocumentSearchScope) -> str:
+    """report に示す構造化済み閲覧範囲の識別子を返す。"""
+    payload = json.dumps(asdict(validate_document_search_scope(scope)), sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def validate_document_search_scope(scope: DocumentSearchScope) -> DocumentSearchScope:

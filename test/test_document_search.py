@@ -4,6 +4,7 @@ import json
 import os
 import select
 import shutil
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -43,21 +44,13 @@ class _InferenceDouble:
         operation: str,
         payload: dict[str, object],
         *,
-        deadline: float,
+        deadline: float | None,
         residency_fd: int,
         cancelled: threading.Event | None = None,
     ) -> object:
         """実モデル以外の同期・cache 境界に対する確定的な応答。"""
         self.operations.append(operation)
         vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
-        if operation == "chunk_embed":
-            documents = payload["documents"]
-            assert isinstance(documents, dict)
-            self.texts.extend(documents.values())
-            return {
-                path: [{"start": 0, "end": len(text), "embedding": vector}]
-                for path, text in documents.items()
-            }
         if operation == "embed_query":
             return vector
         assert operation == "rerank"
@@ -65,6 +58,26 @@ class _InferenceDouble:
         assert isinstance(documents, list)
         self.texts.extend(documents)
         return [0.8 for _ in documents]
+
+    def stream_chunks(
+        self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+    ):
+        self.operations.append("chunk_embed")
+        vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+        self.texts.extend(documents.values())
+        for path, source in documents.items():
+            if resumes[path] == 0:
+                on_event(
+                    {
+                        "kind": "chunk",
+                        "path": path,
+                        "ordinal": 0,
+                        "start": 0,
+                        "end": len(source),
+                        "embedding": vector,
+                    }
+                )
+            on_event({"kind": "document_complete", "path": path, "chunk_count": 1})
 
 
 def _repo_with_docs(tmp_path: Path) -> Path:
@@ -142,6 +155,234 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> N
     assert "非公開の本文" not in str(worker.texts)
 
 
+@pytest.mark.parametrize(
+    "failure_code", ["MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"]
+)
+def test_incomplete_stream_keeps_verified_chunks_and_resumes(
+    tmp_path: Path, failure_code: str
+) -> None:
+    """途中失敗を成功扱いせず、保存済み chunk の再計算を避ける。"""
+    pytest.importorskip("sqlite_vec")
+    root = _repo_with_docs(tmp_path)
+    document = root / "oracle/doc/allowed.md"
+    document.write_text("# 前半の原文\n後半の原文\n")
+    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+
+    class StreamingWorker(_InferenceDouble):
+        def __init__(self) -> None:
+            super().__init__()
+            self.fail = True
+            self.resumes: list[dict[str, int]] = []
+
+        def stream_chunks(
+            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+        ):
+            self.resumes.append(dict(resumes))
+            for path, text in documents.items():
+                split = text.index("\n") + 1
+                chunks = [(0, split), (split, len(text))]
+                for ordinal in range(resumes[path], len(chunks)):
+                    start, end = chunks[ordinal]
+                    on_event(
+                        {
+                            "kind": "chunk",
+                            "path": path,
+                            "ordinal": ordinal,
+                            "start": start,
+                            "end": end,
+                            "embedding": vector,
+                        }
+                    )
+                    if self.fail:
+                        raise SearchError(failure_code, "stopped after one chunk")
+                on_event({"kind": "document_complete", "path": path, "chunk_count": 2})
+
+    worker = StreamingWorker()
+    search = DocumentSearch(
+        root,
+        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
+        _tuning(),
+        worker=worker,
+        installation_root=tmp_path,
+    )
+    with pytest.raises(SearchError, match="stopped after one chunk") as failure:
+        search.search("原文")
+    assert failure.value.code == failure_code
+    assert search.sync_progress["persisted_chunks"] == 1
+    _, index, _, _ = search._paths()
+    with sqlite3.connect(index) as database:
+        assert database.execute("select count(*) from chunks").fetchone()[0] == 1
+        assert database.execute("select complete from documents").fetchone()[0] == 0
+
+    worker.fail = False
+    resumed = search.synchronize()
+    assert worker.resumes == [
+        {"oracle/doc/allowed.md": 0},
+        {"oracle/doc/allowed.md": 1},
+    ]
+    assert resumed.chunk_count == 2
+    assert resumed.reused_embeddings == 1
+    assert search.search("原文")["status"] == "ok"
+
+
+def test_unbounded_sync_outlasts_search_deadline(tmp_path: Path) -> None:
+    """doctor 用同期は検索期限を超えて完了し、通常検索は期限を守る。"""
+    pytest.importorskip("sqlite_vec")
+    root = _repo_with_docs(tmp_path)
+    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+
+    class SlowWorker(_InferenceDouble):
+        def stream_chunks(
+            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+        ):
+            assert len(documents) == 1
+            assert deadline is None
+            time.sleep(0.15)
+            for path, source in documents.items():
+                on_event(
+                    {
+                        "kind": "chunk",
+                        "path": path,
+                        "ordinal": 0,
+                        "start": 0,
+                        "end": len(source),
+                        "embedding": vector,
+                    }
+                )
+                on_event(
+                    {
+                        "kind": "document_complete",
+                        "path": path,
+                        "chunk_count": 1,
+                    }
+                )
+
+    tuning = _tuning()
+    tuning = DocumentSearchConfig(
+        tuning.chunk_tokens,
+        tuning.chunk_overlap_tokens,
+        tuning.candidate_count,
+        tuning.embedding_context_tokens,
+        tuning.reranker_context_tokens,
+        tuning.batch_tokens,
+        tuning.threads,
+        tuning.startup_timeout_seconds,
+        0.05,
+        tuning.shutdown_grace_seconds,
+    )
+    search = DocumentSearch(
+        root,
+        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
+        tuning,
+        worker=SlowWorker(),
+        installation_root=tmp_path,
+    )
+    assert search.synchronize(unbounded=True).chunk_count == 1
+
+
+def test_deadline_after_first_chunk_preserves_it_for_retry(tmp_path: Path) -> None:
+    """期限超過後の検索を失敗にし、有効な途中 chunk を再利用する。"""
+    pytest.importorskip("sqlite_vec")
+    root = _repo_with_docs(tmp_path)
+    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+
+    class PausingWorker(_InferenceDouble):
+        def __init__(self) -> None:
+            super().__init__()
+            self.pause = True
+            self.resumes: list[int] = []
+
+        def stream_chunks(
+            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+        ):
+            path, source = next(iter(documents.items()))
+            self.resumes.append(resumes[path])
+            middle = source.index("\n") + 1
+            for ordinal, (start, end) in enumerate(
+                ((0, middle), (middle, len(source)))
+            ):
+                if ordinal < resumes[path]:
+                    continue
+                on_event(
+                    {
+                        "kind": "chunk",
+                        "path": path,
+                        "ordinal": ordinal,
+                        "start": start,
+                        "end": end,
+                        "embedding": vector,
+                    }
+                )
+                if ordinal == 0 and self.pause:
+                    time.sleep(0.25)
+            on_event({"kind": "document_complete", "path": path, "chunk_count": 2})
+
+    tuning = _tuning()
+    tuning = DocumentSearchConfig(
+        tuning.chunk_tokens,
+        tuning.chunk_overlap_tokens,
+        tuning.candidate_count,
+        tuning.embedding_context_tokens,
+        tuning.reranker_context_tokens,
+        tuning.batch_tokens,
+        tuning.threads,
+        tuning.startup_timeout_seconds,
+        0.15,
+        tuning.shutdown_grace_seconds,
+    )
+    worker = PausingWorker()
+    search = DocumentSearch(
+        root,
+        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
+        tuning,
+        worker=worker,
+        installation_root=tmp_path,
+    )
+    with pytest.raises(SearchError) as failure:
+        search.search("内容")
+    assert failure.value.code == "DEADLINE_EXCEEDED"
+    assert search.sync_progress["persisted_chunks"] == 1
+    worker.pause = False
+    assert search.synchronize().reused_embeddings == 1
+    assert worker.resumes == [0, 1]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
+def test_streaming_worker_delivers_chunk_before_cancellation(tmp_path: Path) -> None:
+    """Node の応答完了を待たず chunk を受け取り、取消時は子を回収する。"""
+    base = materials_directory(tmp_path)
+    base.mkdir(parents=True)
+    (base / "worker.mjs").write_text(
+        'import fs from "node:fs"; '
+        "for await (const _part of process.stdin) {} "
+        'fs.writeFileSync("started.pid", String(process.pid)); '
+        'process.stdout.write(JSON.stringify({kind:"chunk",path:"doc.md",'
+        'ordinal:0,start:0,end:1,embedding:[1]})+"\\n"); '
+        "setInterval(() => {}, 1000);\n"
+    )
+    worker = NodeSearchWorker(tmp_path, _tuning())
+    cancelled = threading.Event()
+    descriptor = os.open(tmp_path / "lock", os.O_CREAT | os.O_RDWR, 0o600)
+    received: list[object] = []
+    try:
+        with pytest.raises(SearchError) as failure:
+            worker.stream_chunks(
+                {"doc.md": "x"},
+                {"doc.md": 0},
+                lambda event: (received.append(event), cancelled.set()),
+                deadline=None,
+                residency_fd=descriptor,
+                cancelled=cancelled,
+            )
+        assert failure.value.code == "CANCELLED"
+        assert len(received) == 1
+        process_id = int((base / "started.pid").read_text())
+        with pytest.raises(ProcessLookupError):
+            os.kill(process_id, 0)
+    finally:
+        os.close(descriptor)
+
+
 def test_database_symlink_cannot_redirect_index_writes(tmp_path: Path) -> None:
     """管理 DB の symlink を拒否し、対象外 path に書き込まない。"""
     pytest.importorskip("sqlite_vec")
@@ -214,21 +455,15 @@ def test_scope_change_preserves_index_while_request_uses_it(tmp_path: Path) -> N
     normal_worker = _InferenceDouble()
 
     class _WaitingWorker(_InferenceDouble):
-        def run(
-            self,
-            operation: str,
-            payload: dict[str, object],
-            *,
-            deadline: float,
-            residency_fd: int,
-            cancelled: threading.Event | None = None,
-        ) -> object:
-            if operation == "chunk_embed":
-                started.set()
-                assert release.wait(5)
-            return normal_worker.run(
-                operation,
-                payload,
+        def stream_chunks(
+            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+        ):
+            started.set()
+            assert release.wait(5)
+            normal_worker.stream_chunks(
+                documents,
+                resumes,
+                on_event,
                 deadline=deadline,
                 residency_fd=residency_fd,
                 cancelled=cancelled,
@@ -483,3 +718,33 @@ def test_indexing_accepts_dirty_tree_and_reports_not_ready(
     report = terminal_primary_report(outcome).read_text()
     assert 'failure_code: "NOT_READY"' in report
     assert "updated_indexes" not in report
+
+
+def test_indexing_report_includes_preprocess_updates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """doctor 側で更新し後続が無変更でも、同期実績を更新済みとして示す。"""
+    import sub_commands.indexing as indexing_module
+
+    root = _repo_with_docs(tmp_path)
+    monkeypatch.chdir(root)
+    run_doctor(root)
+    (root / "oracle/doc/allowed.md").write_text("# doctor が更新する本文\n")
+
+    def fake_search(root, scope, config, *, use_saved_config):
+        return DocumentSearch(
+            root,
+            scope,
+            config,
+            worker=_InferenceDouble(),
+            installation_root=tmp_path,
+            use_saved_config=use_saved_config,
+        )
+
+    monkeypatch.setattr(indexing_module, "DocumentSearch", fake_search)
+    outcome = runner.invoke(app, ["indexing"], catch_exceptions=False)
+    assert outcome.exit_code == 0, outcome.output
+    report = terminal_primary_report(outcome).read_text()
+    assert 'indexing_status: "updated"' in report
+    assert "変更: `1`" in report
+    assert "doctor 前同期: `updated`" in report

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
+from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
@@ -56,6 +57,39 @@ def _isolate_document_search_materials(
         "require_document_search_materials",
         lambda root, _config: root / ".cmoc/gu/document_search/materials",
     )
+
+    class _DoctorInference:
+        """doctor 経路では実モデルを使わず、索引同期自体は実行する。"""
+
+        def stream_chunks(
+            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+        ):
+            vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+            for path, source in documents.items():
+                if resumes[path] == 0:
+                    on_event(
+                        {
+                            "kind": "chunk",
+                            "path": path,
+                            "ordinal": 0,
+                            "start": 0,
+                            "end": len(source),
+                            "embedding": vector,
+                        }
+                    )
+                on_event({"kind": "document_complete", "path": path, "chunk_count": 1})
+
+    def doctor_search(root, scope, config, *, installation_root, use_saved_config):
+        return runtime_document_search.DocumentSearch(
+            root,
+            scope,
+            config,
+            worker=_DoctorInference(),
+            installation_root=installation_root,
+            use_saved_config=use_saved_config,
+        )
+
+    monkeypatch.setattr(runtime_doctor, "DocumentSearch", doctor_search)
 
 
 @pytest.fixture

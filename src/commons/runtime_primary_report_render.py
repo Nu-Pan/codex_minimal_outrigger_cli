@@ -366,9 +366,18 @@ def _doctor_body(
         f"- raw rerank: `{_field_status(fields.get('material_rerank'))}`",
         f"- 残存状態: `{_field_status(fields.get('material_remaining_state'))}`",
         f"- 失敗理由: `{_field_status(fields.get('material_failure'))}`",
+        "## 検索索引の同期",
+        f"- 対象 work-root: `{_field_status(fields.get('doctor_sync_work_root'))}`",
+        f"- 実効閲覧範囲: `{_field_status(fields.get('doctor_scope_identity'))}`",
+        f"- 実行状態: `{_field_status(fields.get('doctor_sync_status'))}`",
+        f"- 索引 identity: `{_field_status(fields.get('doctor_index_identity'))}`",
+        f"- 同期結果: `{_inline_text(fields.get('doctor_sync_result'))}`",
+        f"- 逐次反映と再利用: `{_inline_text(fields.get('doctor_sync_progress'))}`",
+        f"- 失敗 code: `{_field_status(fields.get('doctor_sync_failure_code'))}`",
+        f"- 失敗理由: `{_field_status(fields.get('doctor_sync_failure_reason'))}`",
         "## 保証範囲",
         f"- 対象 work-root: `{_field_status(fields.get('work_root'))}`",
-        "- 共通環境・設定・管理状態と共有検索資材の検査時点での利用可能性。索引同期と任意入力の検索は対象外。",
+        "- 共通環境・設定・管理状態と共有検索資材の検査時点での利用可能性、および検索索引の同期完了。任意入力の検索は対象外。",
         *_standard_tail(classification, result, logger),
     ]
 
@@ -383,11 +392,16 @@ def _indexing_body(
     sync = fields.get("sync_result")
     sync_fields = sync if isinstance(sync, dict) else {}
     elapsed = sync_fields.get("elapsed_seconds", fields.get("elapsed_seconds"))
+    status = fields.get("indexing_status", fields.get("doctor_sync_status"))
+    failure_code = fields.get("failure_code", fields.get("doctor_sync_failure_code"))
+    failure_reason = fields.get(
+        "failure_reason", fields.get("doctor_sync_failure_reason")
+    )
     return [
         "# cmoc indexing report",
         _outcome_sentence(classification),
         "## 文書検索索引の同期",
-        f"- 実行状態: `{_operation_status(fields.get('indexing_status'), classification)}`",
+        f"- 実行状態: `{_operation_status(status, classification)}`",
         f"- 実効閲覧範囲: `{_field_status(fields.get('scope_identity'))}`",
         f"- 索引 identity: `{_field_status(fields.get('index_identity'))}`",
         f"- 許可文書数: `{_field_status(sync_fields.get('document_count'))}`",
@@ -398,8 +412,11 @@ def _indexing_body(
         f"- 空白化: `{_field_status(sync_fields.get('blanked'))}`",
         f"- 埋め込み再利用: `{_field_status(sync_fields.get('reused_embeddings'))}`",
         f"- 所要秒数: `{_field_status(elapsed)}`",
-        f"- 失敗 code: `{_field_status(fields.get('failure_code'))}`",
-        f"- 失敗理由: `{_field_status(fields.get('failure_reason'))}`",
+        f"- doctor 前同期: `{_field_status(fields.get('doctor_sync_status'))}`",
+        f"- doctor 逐次反映と再利用: `{_inline_text(fields.get('doctor_sync_progress'))}`",
+        f"- 後続同期の逐次反映と再利用: `{_inline_text(fields.get('indexing_sync_progress'))}`",
+        f"- 失敗 code: `{_field_status(failure_code)}`",
+        f"- 失敗理由: `{_field_status(failure_reason)}`",
         f"- 次の操作: `{_indexing_next_action(fields)}`",
         *_standard_tail(classification, result, logger),
     ]
@@ -409,7 +426,8 @@ def _indexing_next_action(fields: dict[str, object]) -> str:
     """確定した同期状態から、必要な次の操作だけを示す。"""
     if fields.get("indexing_status") in {"updated", "unchanged"}:
         return "なし"
-    if fields.get("failure_code") in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}:
+    failure_code = fields.get("failure_code", fields.get("doctor_sync_failure_code"))
+    if failure_code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}:
         return "対象 work-root で cmoc doctor を実行する"
     return "診断用ログと失敗理由を確認する"
 
