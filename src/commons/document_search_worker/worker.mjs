@@ -1,6 +1,6 @@
 // The worker receives only text already authorized by Python. Stdout is JSON only.
 import { getLlama } from "node-llama-cpp";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeSync } from "node:fs";
 
 function parentIsAlive(pid, expectedStartTime) {
   try {
@@ -98,39 +98,74 @@ async function withModel(modelPath, callback) {
   }
 }
 
-async function embedDocuments(request) {
+async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete) {
   const { payload, embedding_model: modelPath, dimensions } = request;
   const { documents, config } = requireObject(payload);
   requireObject(documents);
   requireObject(config);
-  return withModel(modelPath, async (model) => {
+  requireObject(resume);
+  await withModel(modelPath, async (model) => {
     const context = await model.createEmbeddingContext({
       contextSize: config.embedding_context_tokens,
       batchSize: config.batch_tokens,
       threads: config.threads,
     });
     try {
-      const result = {};
       for (const [path, text] of Object.entries(documents)) {
-        if (typeof text !== "string" || !text.trim()) fail("invalid document text");
-        result[path] = [];
-        for (const range of chunkRanges(
+        const skip = resume[path] ?? 0;
+        if (typeof text !== "string" || !text.trim() ||
+            !Number.isInteger(skip) || skip < 0) fail("invalid document text");
+        const ranges = chunkRanges(
           text, model, config.chunk_tokens, config.chunk_overlap_tokens
-        )) {
-          const vector = checkedVector(
+        );
+        if (ranges.length === 0 || skip > ranges.length) {
+          fail("invalid document resume point");
+        }
+        for (let ordinal = skip; ordinal < ranges.length; ordinal++) {
+          const range = ranges[ordinal];
+          const embedding = checkedVector(
             await context.getEmbeddingFor(
               checkedEmbeddingInput(model, range.excerpt, config.embedding_context_tokens)
             ), dimensions
           );
-          result[path].push({ start: range.start, end: range.end, embedding: vector });
+          onChunk(path, ordinal, range, embedding);
         }
-        if (result[path].length === 0) fail("document has no chunks");
+        onDocumentComplete(path, ranges.length);
       }
-      return result;
     } finally {
       await context.dispose();
     }
   });
+}
+
+async function embedDocuments(request) {
+  const result = {};
+  await forEachDocumentChunk(
+    request, {},
+    (path, _ordinal, range, embedding) => {
+      (result[path] ??= []).push({ start: range.start, end: range.end, embedding });
+    },
+    (path) => { if (!result[path]) fail("document has no chunks"); }
+  );
+  return result;
+}
+
+async function streamDocuments(request) {
+  const { resume } = requireObject(request.payload);
+  await forEachDocumentChunk(
+    request, resume,
+    (path, ordinal, range, embedding) => {
+      writeSync(1, JSON.stringify({
+        kind: "chunk", path, ordinal, start: range.start, end: range.end, embedding,
+      }) + "\n");
+    },
+    (path, chunk_count) => {
+      writeSync(1, JSON.stringify({
+        kind: "document_complete", path, chunk_count,
+      }) + "\n");
+    }
+  );
+  writeSync(1, JSON.stringify({ kind: "done" }) + "\n");
 }
 
 async function embedQuery(request) {
@@ -216,6 +251,10 @@ async function main() {
     if (!parentIsAlive(request.parent_pid, request.parent_start_time)) process.exit(1);
   }, 250);
   parentWatcher.unref();
+  if (request.operation === "chunk_stream") {
+    await streamDocuments(request);
+    return;
+  }
   const result = request.operation === "chunk_embed"
     ? await embedDocuments(request)
     : request.operation === "embed_query"

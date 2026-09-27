@@ -22,10 +22,11 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import asdict
 from pathlib import Path
 
-from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
+from oracle.other.document_search import INITIAL_SEARCH_MATERIALS, DocumentSearchConfig
 
 from .runtime_config import sync_config
-from .runtime_document_search import SearchError
+from .runtime_document_search import DocumentSearch, SearchError, SyncResult
+from .runtime_document_search_scope import oracle_doc_scope, scope_identity
 from .runtime_document_search_setup import (
     prepare_document_search_materials,
     require_document_search_materials,
@@ -71,6 +72,7 @@ def _check_common_environment() -> None:
                 ["cmoc の Python 仮想環境へ依存関係を導入してください。"],
                 f"dependency: {module}\nreason: {exc}",
             ) from exc
+
     for executable in ("git", "codex"):
         path = shutil.which(executable)
         if path is None:
@@ -89,6 +91,50 @@ def _check_common_environment() -> None:
                 [f"{executable} の導入状態を確認してください。"],
                 f"dependency: {executable}\npath: {path}\nreason: {exc}",
             ) from exc
+
+
+def _synchronize_document_search_index(
+    root: Path, installation_root: Path, config: DocumentSearchConfig
+) -> SyncResult:
+    """doctor の全 oracle/doc 範囲を期限なしで同期し、途中実績も記録する。"""
+    scope = oracle_doc_scope()
+    update_primary_report_fields(
+        doctor_sync_status="started",
+        doctor_scope_identity=scope_identity(scope),
+        doctor_sync_work_root=str(root),
+    )
+    search = DocumentSearch(
+        root, scope, config, installation_root=installation_root, use_saved_config=True
+    )
+    try:
+        result = search.synchronize(unbounded=True)
+    except BaseException as exc:
+        progress = search.sync_progress
+        identity = progress.get("identity") if progress is not None else None
+        update_primary_report_fields(
+            doctor_sync_status="failed",
+            doctor_index_identity=identity,
+            doctor_sync_result={
+                "status": "failed",
+                "identity": identity,
+                "progress": progress,
+            },
+            doctor_sync_progress=progress,
+            doctor_sync_failure_code=(
+                exc.code if isinstance(exc, SearchError) else type(exc).__name__
+            ),
+            doctor_sync_failure_reason=str(exc),
+        )
+        raise
+    finally:
+        search.close()
+    update_primary_report_fields(
+        doctor_sync_status=result.status,
+        doctor_index_identity=result.identity,
+        doctor_sync_result=asdict(result),
+        doctor_sync_progress=search.sync_progress,
+    )
+    return result
 
 
 def run_doctor_preprocess(
@@ -120,6 +166,11 @@ def run_doctor_preprocess(
         material_query_embedding="未実行",
         material_rerank="未実行",
         material_remaining_state="未確認",
+        doctor_sync_status="not_started",
+        doctor_scope_identity=None,
+        doctor_index_identity=None,
+        doctor_sync_result=None,
+        doctor_sync_progress=None,
     )
     _check_common_environment()
     update_primary_report_fields(common_environment="成功")
@@ -279,6 +330,20 @@ def run_doctor_preprocess(
                 material_rerank="成功",
                 material_remaining_state="検査時点で利用可能",
             )
+            try:
+                _synchronize_document_search_index(
+                    root, installation_root, config_result.config.document_search
+                )
+            except SearchError as exc:
+                raise CmocError(
+                    "文書検索索引の同期に失敗しました。",
+                    [
+                        f"対象 work-root ({root}) で cmoc doctor を実行してください。"
+                        if exc.code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}
+                        else "文書検索の設定、資材、許可対象ファイルを確認してください。"
+                    ],
+                    f"work-root: {root}\ncode: {exc.code}\nreason: {exc}",
+                ) from exc
             # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
             # reporter 固有の不一致は修復や version command を行わず degraded にする。
             try:

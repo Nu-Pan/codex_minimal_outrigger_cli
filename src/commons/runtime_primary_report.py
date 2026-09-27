@@ -58,6 +58,9 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "session_state_after": ("session_state",),
     "merge_commit": ("run_join_commit",),
     "state_after": ("session_state",),
+    "scope_identity": ("doctor_scope_identity",),
+    "index_identity": ("doctor_index_identity",),
+    "sync_result": ("doctor_sync_result",),
 }
 
 
@@ -96,6 +99,12 @@ def update_primary_report_fields(**fields: object) -> None:
     context = _PRIMARY_REPORT_CONTEXT.get()
     if context is not None:
         context.fields.update(fields)
+
+
+def current_primary_report_fields() -> dict[str, object]:
+    """同じ invocation の先行 preprocess が確定した項目を参照する。"""
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    return dict(context.fields) if context is not None else {}
 
 
 def ensure_primary_report(
