@@ -63,6 +63,7 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     args = build_codex_override_args(parameter, config)
 
     assert args.count("--sandbox") == 1
+    assert args.count("--no-daemon") == 1
     assert codex_arg_value(args, "--sandbox") == sandbox
     assert codex_arg_value(args, "--ask-for-approval") == "on-request"
     assert "--approve-for-me" not in args
@@ -142,10 +143,13 @@ def test_search_mcp_rejects_external_transport_collision(
         str(Path(__file__).resolve().parents[1] / "src"),
         str(Path(__file__).resolve().parents[1] / "oracle/src"),
     ]
-    monkeypatch.setattr(
-        runtime_codex_profile.subprocess,
-        "run",
-        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+    calls: list[list[str]] = []
+
+    def fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return subprocess.CompletedProcess(
             [],
             0,
             json.dumps(
@@ -159,12 +163,16 @@ def test_search_mcp_rejects_external_transport_collision(
                 }
             ),
             "",
-        ),
-    )
+        )
+
+    monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fake_run)
     with pytest.raises(CmocError, match="実効設定が call 固定値と一致しません"):
         runtime_codex_profile._verify_document_search_server(
             argv, cwd=Path.cwd(), env={}
         )
+    assert len(calls) == 1
+    assert calls[0][:2] == ["codex", "--no-daemon"]
+    assert calls[0][-4:] == ["mcp", "get", "cmoc_document_search", "--json"]
 
 
 def test_feedback_call_context_values_are_not_written_to_codex_argv(
@@ -388,7 +396,7 @@ def test_tui_notification_requires_exact_verified_codex_version(
     )
     assert calls == [
         (
-            ["codex", "--sandbox", "read-only", "--version"],
+            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"],
             {
                 "cwd": tmp_path,
                 "env": environment,
@@ -411,7 +419,7 @@ def test_tui_notification_version_probe_failure_is_nonfatal(
     def fail_run(*_args: object, **_kwargs: object) -> object:
         """有限時間を超えた version probe を再現する。"""
         raise subprocess.TimeoutExpired(
-            ["codex", "--sandbox", "read-only", "--version"], 2
+            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"], 2
         )
 
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fail_run)

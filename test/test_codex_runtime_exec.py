@@ -39,6 +39,7 @@ def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     assert prompt not in args
     assert "--profile" not in args
     assert "-p" not in args
+    assert args.count("--no-daemon") == 1
     assert codex_arg_value(args, "--sandbox") == "workspace-write"
     assert codex_arg_value(args, "--ask-for-approval") == "on-request"
     assert "--approve-for-me" not in args

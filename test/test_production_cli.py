@@ -299,6 +299,7 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     argv: list[str] = raw_argv
 
     assert argv[0] == "codex"
+    assert argv.count("--no-daemon") == 1
     assert ("exec" in argv) is not tui
     agent_call_kind = payload["agent_call_kind"]
     assert isinstance(agent_call_kind, str)

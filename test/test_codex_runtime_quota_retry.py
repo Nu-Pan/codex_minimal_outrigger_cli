@@ -128,6 +128,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
 
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
     argv_calls = [record["args"] for record in call_records]
+    assert all(args.count("--no-daemon") == 1 for args in argv_calls)
     assert argv_calls[0][-1] == "-"
     assert all(record["codex_home"] == str(codex_home) for record in call_records)
     assert call_records[1]["stdin"] == probe_prompt
