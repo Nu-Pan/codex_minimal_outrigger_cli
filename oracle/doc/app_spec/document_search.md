@@ -91,24 +91,29 @@ Codex process ごとに独立した接続と固定 context を持つ。起動と
 
 ## 設定と未確定事項
 
-必要な tuning 設定の field・型・既定状態は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `DocumentSearchConfig` と、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig.document_search` へ委譲する。資材 identity と caller の閲覧範囲を、自由な repository 設定や MCP 入力によって置換しない。
+必要な tuning 設定の field・型・数値制約・項目間制約・暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `DocumentSearchConfig` へ、新規生成時の検索設定の状態は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig.document_search` へ委譲する。資材 identity と caller の閲覧範囲を、自由な repository 設定や MCP 入力によって置換しない。検索設定と call ごとの検索有効化・閲覧範囲は区別する。
 
-chunk、overlap、候補数、batch、context、threads、起動・要求期限、終了猶予の製品初期値は、許可された実文書全体と並列待機の測定後に確定する。現時点では tuning 未設定を表現し、必要な検索・明示同期には検索未準備として通知する。未設定を無期限待機や仮の PoC 値へ変換しない。メモリ上限・応答時間の人間指定合格値はない。
+設定の保存先、通常起動時の厳格な検証、明示的な `cmoc doctor` での不足補完・保存・診断は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「検索設定の検証と補完」を正本とする。
+
+暫定既定値は、固定した初期資材での利用を開始するための値として採用する。chunk に対して context に余地を持たせ、候補数と threads を抑え、起動・要求・終了に有限の時間を設ける。最適値、全体負荷での応答時間・メモリ特性、環境別 tuning は後続の調整事項であり、メモリ上限・応答時間の人間指定合格値はない。
+
+検索・明示同期では、その要求で使う保存済み設定を共通の検証にかけ、起動後の削除・不足・不正化も検出する。不備を暗黙に補完したり、以前の正常な設定へ戻したりせず、検索未準備として理由と修復方法を返す。有効な変更を使う場合も、本書の「identity と保存先」に従って索引・cache の互換性を判定する。資材不足・不一致と入力ごとの context 超過・推論失敗は、本書の「初期方式と推論の失敗」「stdio MCP と失敗の公開」に従って引き続き区別する。doctor の検証成功をこれらの検査の代替にしない。
 
 ## 実現性の根拠と製品受入条件
 
 2026-09-25 の PoC は、Python 制御、独立 stdio MCP client、指定 4B + 4B の CPU 推論、日本語検索、実再ランキング、保存済み追加・変更・削除・空白化、取消と終了後の復旧について条件付きの実現性を示した。CPU・4 文書 6 chunks の単発比較では、両モデル保持の観測 peak RSS 約 9.71 GiB／差分検索約 1.92 秒、交互ロード約 5.10 GiB／約 8.57 秒だった。query・採点 cache と常駐枠 1・要求終了時解放にも実測がある。これらは観測条件付きの判断材料であり、合格閾値・一般性能保証・製品採用完了を表さない。一時報告や PoC コードは正本所有者・永続参照先にしない。
 
-製品化は、仕様改訂 → 中核実装と call 接続 → 残る統合検証 → INDEX 撤去を含む切替の順に進める。後続で次を確認する。以下を本書の編集によって実施済みとしてはならない。
+製品化は、仕様改訂 → 中核実装と call 接続 → 残る統合検証 → INDEX 撤去を含む切替の順に進める。後続で次の受入条件を確認する。以下を本書の編集によって実施済みとしてはならない。
 
 - 実際の caller の閲覧範囲と分類を結合し、nested owning repository、root/nested/local/global ignore、tracked ignored directory、pruning 境界・特殊 file、Git 処理回数の不変条件、許可外本文の非流入、scope 縮小、差替え競合を検証する。
 - 固定 runtime の raw 採点 guard の互換性、vector/採点欠落の失敗識別、モデル入力と tokenizer・pooling・次元を検証する。内部 API を置換する場合も同じ契約を検査する。
 - 正規の cmoc 起動環境で Codex の live discovery/search/deadline/取消/close と、親・子の強制終了後の回収・復旧を検証する。PoC は argv 設定と独立 client までで、CODEX_HOME の installation_id への書込み条件を満たせず live 接続は未検証である。HOME/CODEX_HOME や permission の迂回変更で代替しない。
-- 許可文書全体で初回・無変更・少数差分・異 query・並列待機の時間とメモリを測り、tuning の初期値を確定する。小集合から全体時間を線形外挿して確定しない。
 - 固定依存・モデル資材から新環境を再構築し、通常検索で追加 download/build がないこと、linked worktree を含む非追跡、採用 MCP 実装の相互運用を確認する。GPU、32K context、別 OS・別 runtime は検証済みとして扱わない。
+
+暫定値の後続調整では、許可文書全体で初回・無変更・少数差分・異 query・並列待機の時間とメモリを測る。小集合から全体時間を線形外挿して確定しない。この全体測定と最適値の探索は、暫定値の採用や設定補完の導入の受入条件に含めず、上記の統合検証条件は維持する。
 
 ## 旧方式の廃止
 
-INDEX 生成 agent・schema・モデル設定、生成 preflight、自動 commit、merge・許容差分の特例、専用分類・書込禁止・テスト選択規定は廃止し、後方互換経路を設けない。明示同期の入口は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/indexing.md` の「cmoc indexing」に従う。doctor など検索と無関係な管理責務は維持する。
+INDEX 生成 agent・schema・モデル設定、生成 preflight、自動 commit、merge・許容差分の特例、専用分類・書込禁止・テスト選択規定は廃止し、後方互換経路を設けない。明示同期の入口は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/indexing.md` の「cmoc indexing」に従う。doctor による設定検証・管理領域の修復など、索引生成以外の管理責務は維持する。
 
 廃止の経緯は `{{cmoc-root}}/oracle/doc/considered_alternative/index_md_routing.md` の「廃止した INDEX routing」に記録する。生成済み INDEX の撤去は製品切替の作業であり、この仕様を編集するセッションに別途与えられた routing・アクセス制限を変更する根拠にはならない。

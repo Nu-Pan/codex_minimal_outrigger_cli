@@ -68,4 +68,4 @@ cd "{{cmoc-root}}"
 
 配置と共有単位は、同文書の「identity と保存先」に従う。共有資材を作る前に、セットアップが cmoc-root 側の管理領域へ `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「管理領域の非追跡保証」と同じ検証・修復を適用する。対象 repository の doctor が cmoc installation の設定や依存を構築する責務は持たない。
 
-初期実装用の CPU native 配布物を固定して再構築できるようにする。GPU や別 OS での動作を、CPU の PoC から推定して検証済みとしない。tuning の初期値確定とクリーンな再構築を含む受入条件は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「実現性の根拠と製品受入条件」を参照する。
+初期実装用の CPU native 配布物を固定して再構築できるようにする。GPU や別 OS での動作を、CPU の PoC から推定して検証済みとしない。暫定既定値の採用は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」、クリーンな再構築を含む受入条件と後続の性能調整は同文書の「実現性の根拠と製品受入条件」を参照する。

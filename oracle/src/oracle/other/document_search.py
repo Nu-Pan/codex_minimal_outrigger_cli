@@ -82,24 +82,28 @@ RAW_RANKING_API = (
 
 @dataclass(frozen=True)
 class DocumentSearchConfig:
-    """全体測定で確定する tuning 値。PoC の数値を既定値にしない。
+    """検索 tuning の型・制約と、生成・補完に使う暫定既定値。
 
     NOTE
-        個数・token 上限・threads は正整数、期限・猶予は有限の正数。
-        overlap は 0 以上 chunk_tokens 未満。context は入力整形と特殊 token を
-        含む入力を収容できることを検証する。bool を数値として受理しない。
+        int の項目は JSON 整数、float の項目は有限の JSON 数値とする。
+        bool を数値として受理しない。chunk_overlap_tokens 以外は正数、
+        chunk_overlap_tokens は 0 以上 chunk_tokens 未満。
+        chunk_tokens は embedding_context_tokens と reranker_context_tokens の
+        両方より小さくし、本文以外の入力の余地を残す。
+        この大小関係だけで入力全体の収容を保証せず、入力整形・特殊 token・query
+        を含む実入力が各 tokenizer の context 上限内に収まることも検証する。
     """
 
-    chunk_tokens: int
-    chunk_overlap_tokens: int
-    candidate_count: int
-    embedding_context_tokens: int
-    reranker_context_tokens: int
-    batch_tokens: int
-    threads: int
-    startup_timeout_seconds: float
-    request_timeout_seconds: float
-    shutdown_grace_seconds: float
+    chunk_tokens: int = 512
+    chunk_overlap_tokens: int = 64
+    candidate_count: int = 8
+    embedding_context_tokens: int = 2048
+    reranker_context_tokens: int = 4096
+    batch_tokens: int = 512
+    threads: int = 4
+    startup_timeout_seconds: float = 120.0
+    request_timeout_seconds: float = 600.0
+    shutdown_grace_seconds: float = 5.0
 
 
 SEARCH_MCP_SERVER = "cmoc_document_search"

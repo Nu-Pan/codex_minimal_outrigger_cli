@@ -4,7 +4,9 @@
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
 - `CmocConfig` は `{{work-root}}/.cmoc/gt/config.json` として永続化される
 - `CmocConfig` を json にシリアライズする際、メンバーの順序は保持される
-- `{{work-root}}/.cmoc/gt/config.json` は `cmoc doctor` によって生成・同期される
+- 設定の生成・検索設定の補完・保存済み設定の検証は、
+  `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の
+  「検索設定の検証と補完」に従う（旧 `document_search: null` 入力の扱いを含む）
 - `{{work-root}}/.cmoc/gt/config.json` は人間によって編集・調整される
 """
 
@@ -53,8 +55,8 @@ class CmocConfig:
     # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
-    # None は tuning 未設定。検索 call の有効化・閲覧範囲とは区別する。
-    document_search: DocumentSearchConfig | None = None
+    # 新規生成用の既定状態。保存済み入力の検証規則はモジュール docstring の参照先に従う。
+    document_search: DocumentSearchConfig = field(default_factory=DocumentSearchConfig)
 
 
 @dataclass(frozen=True)
