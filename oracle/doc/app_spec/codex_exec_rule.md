@@ -72,6 +72,7 @@ cmoc は Codex CLI 呼び出し前に、Codex CLI が実際に参照する `$COD
 
 cmoc は、`AgentCallParameter`、`CmocConfig` などから決まる呼び出し単位の設定を、Codex CLI の argv で明示的に上書きする。cmoc が上書きする設定については、`$CODEX_HOME/config.toml` や project config の値に依存してはならない。
 
+- すべての Codex CLI 呼び出しで、専用引数 `--no-daemon` を必ず指定する
 - cmoc は Codex CLI 呼び出しに `--profile` (`-p`) を指定してはならない
 - cmoc は Codex CLI 呼び出しのために `$CODEX_HOME/{{name}}.config.toml` を生成してはならない
 - 上書き対象に専用引数が存在する場合は専用引数を使う
