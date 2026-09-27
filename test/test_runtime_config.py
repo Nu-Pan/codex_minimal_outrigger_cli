@@ -10,6 +10,7 @@
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 """
 
+import json
 import os
 import sys
 from dataclasses import asdict
@@ -23,6 +24,7 @@ from oracle.other.cmoc_config import (
     CodexModelProviderConfig,
     JsonTomlValue,
 )
+from oracle.other.document_search import DocumentSearchConfig
 
 from cmoc_runtime import (
     CmocError,
@@ -30,6 +32,7 @@ from cmoc_runtime import (
     config_to_dict,
     load_config,
     render_error,
+    sync_config,
     write_config,
 )
 from config.cmoc_config import CmocConfig
@@ -85,10 +88,10 @@ def test_load_config_missing_points_to_doctor(
     with pytest.raises(CmocError) as exc_info:
         load_config(root)
 
-    assert exc_info.value.summary == "cmoc config が存在しません。"
-    assert exc_info.value.next_actions == [
-        "cmoc doctor を実行して {{work-root}}/.cmoc/gt/config.json を生成してください。"
-    ]
+    assert exc_info.value.summary == "文書検索の設定が不足または不正です。"
+    assert str(root / ".cmoc/gt/config.json") in exc_info.value.detail
+    assert "document_search" in exc_info.value.detail
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
     assert not (root / ".cmoc/gt/config.json").exists()
 
 
@@ -117,6 +120,121 @@ def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
     write_config(config_path, config)
 
     assert config_to_dict(load_config(root)) == config_to_dict(config)
+
+
+def test_saved_search_config_is_not_filled_by_deserialization_defaults(
+    tmp_path: Path,
+) -> None:
+    """通常起動はメモリ内既定値で保存済み設定の不足を隠さない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    path.write_text('{"num_parallel": 3}\n')
+
+    assert (
+        config_from_dict({"num_parallel": 3}).document_search == DocumentSearchConfig()
+    )
+    with pytest.raises(CmocError) as exc_info:
+        sync_config(root)
+
+    assert str(path) in exc_info.value.detail
+    assert "document_search" in exc_info.value.detail
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert path.read_text() == '{"num_parallel": 3}\n'
+
+
+def test_normal_startup_rejects_partial_saved_search_config(tmp_path: Path) -> None:
+    """検索 object の一部だけがある場合も通常起動では補完しない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = '{"document_search": {"chunk_tokens": 256}}\n'
+    path.write_text(original)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert "document_search.batch_tokens" in exc_info.value.detail
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert path.read_text() == original
+
+
+def test_explicit_doctor_fills_only_missing_search_fields(tmp_path: Path) -> None:
+    """人間が指定した値を保ち、不足項目だけを補完して再実行で書き換えない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    path.write_text('{"num_parallel": 3, "document_search": {"chunk_tokens": 256}}\n')
+
+    repaired = sync_config(root, repair_missing=True)
+
+    assert repaired.generated is False
+    assert repaired.saved is True
+    assert repaired.additions == {
+        name: value
+        for name, value in asdict(DocumentSearchConfig()).items()
+        if name != "chunk_tokens"
+    }
+    assert repaired.config.num_parallel == 3
+    assert repaired.config.document_search.chunk_tokens == 256
+    saved = path.read_bytes()
+    mtime = path.stat().st_mtime_ns
+
+    repeated = sync_config(root, repair_missing=True)
+    assert repeated.saved is False
+    assert repeated.additions == {}
+    assert path.read_bytes() == saved
+    assert path.stat().st_mtime_ns == mtime
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("chunk_tokens", None),
+        ("chunk_tokens", True),
+        ("startup_timeout_seconds", 0),
+        ("chunk_overlap_tokens", 512),
+        ("reranker_context_tokens", 512),
+    ],
+)
+def test_saved_search_config_rejects_invalid_explicit_values(
+    tmp_path: Path, field: str, value: object
+) -> None:
+    """null・bool・値域外・項目間不整合を黙って既定値に置換しない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    search = asdict(DocumentSearchConfig())
+    search[field] = value
+    path.write_text(json.dumps({"document_search": search}) + "\n")
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert str(path) in exc_info.value.detail
+    assert f"document_search.{field}" in exc_info.value.detail
+    assert "手動で修正" in exc_info.value.next_actions[0]
+    original = path.read_text()
+    with pytest.raises(CmocError):
+        sync_config(root, repair_missing=True)
+    assert path.read_text() == original
+
+
+def test_explicit_doctor_does_not_save_inconsistent_candidate(tmp_path: Path) -> None:
+    """既存 context と暫定 chunk が衝突しても候補を保存しない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = '{"document_search": {"embedding_context_tokens": 256}}\n'
+    path.write_text(original)
+
+    with pytest.raises(CmocError) as exc_info:
+        sync_config(root, repair_missing=True)
+
+    assert "chunk_tokens=512" in exc_info.value.detail
+    assert "embedding_context_tokens=256" in exc_info.value.detail
+    assert "手動で修正" in exc_info.value.next_actions[0]
+    assert path.read_text() == original
 
 
 @pytest.mark.parametrize(

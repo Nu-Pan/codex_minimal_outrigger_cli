@@ -585,7 +585,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         root, "ls-files", ".cmoc/gt/realization/refactor/state.json"
     ).stdout.strip()
 
-    # tuning 未確定では明示同期が NOT_READY を報告し、Codex call や commit を作らない。
+    # 検索資材が未設置なら明示同期は NOT_READY とし、Codex call や commit を作らない。
     executed_commands.add(("indexing",))
     before_indexing_calls = _codex_call_logs(root)
     before_indexing_head = run_git(root, "rev-parse", "HEAD").stdout.strip()

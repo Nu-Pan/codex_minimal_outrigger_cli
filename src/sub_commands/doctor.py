@@ -30,5 +30,5 @@ def _doctor_body() -> TerminalResult:
     current_repo_root = repo_root()
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
-    run_doctor_preprocess(current_work_root)
+    run_doctor_preprocess(current_work_root, explicit_doctor=True)
     return TerminalResult(details=(("repo_root", current_repo_root),))

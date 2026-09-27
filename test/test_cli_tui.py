@@ -19,6 +19,8 @@ import sub_commands.oracle.edit as oracle_edit_module
 import sub_commands.oracle.investigation as investigation_module
 import sub_commands.tui as tui_module
 from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from cmoc_runtime import write_config
+from config.cmoc_config import CmocConfig
 from main import app
 
 
@@ -277,6 +279,7 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-tui-ignore", str(linked), "HEAD")
+    write_config(linked / ".cmoc/gt/config.json", CmocConfig())
     monkeypatch.chdir(linked)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

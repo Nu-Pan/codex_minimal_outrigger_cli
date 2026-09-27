@@ -2233,11 +2233,11 @@ def test_run_join_from_run_worktree_preserves_prior_session_doctor_path_change(
     assert _state(state_path)["run"]["state"] == "ready"
 
 
-def test_run_join_allows_doctor_config_repair(
+def test_run_join_preserves_existing_non_search_config_shape(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """join 前 doctor の config 修復を session の想定外差分と判定しない。"""
+    """通常起動の doctor は検索以外の不足を理由に config を書き換えない。"""
     root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
     config = root / ".cmoc" / "gt" / "config.json"
     config_data = json.loads(config.read_text())
@@ -2252,7 +2252,7 @@ def test_run_join_allows_doctor_config_repair(
 
     assert result.exit_code == 0, result.output
     assert config.is_file()
-    assert "num_parallel" in json.loads(config.read_text())
+    assert "num_parallel" not in json.loads(config.read_text())
 
 
 @pytest.mark.parametrize("change", ["rename", "delete"])

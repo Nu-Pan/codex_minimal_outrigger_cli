@@ -44,7 +44,9 @@ def _cmoc_indexing_body() -> TerminalResult:
         json.dumps(asdict(scope), sort_keys=True).encode("utf-8")
     ).hexdigest()
     update_primary_report_fields(scope_identity=scope_identity)
-    search = DocumentSearch(root, scope, load_config(root).document_search)
+    search = DocumentSearch(
+        root, scope, load_config(root).document_search, use_saved_config=True
+    )
     update_primary_report_fields(indexing_status="started")
     started = time.monotonic()
     try:

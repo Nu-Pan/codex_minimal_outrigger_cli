@@ -46,7 +46,7 @@ def render_primary_report(
             field_values,
         )
     elif spec.template == "doctor":
-        body = _doctor_body(spec.title, classification, result, logger)
+        body = _doctor_body(spec.title, classification, result, logger, field_values)
     elif spec.template == "indexing":
         body = _indexing_body(classification, result, logger, field_values)
     elif spec.template == "session_fork":
@@ -328,13 +328,26 @@ def _doctor_body(
     classification: TerminalClassification,
     result: TerminalResult,
     logger: SubcommandLogger,
+    fields: dict[str, object],
 ) -> list[str]:
     """doctor preprocess の実行有無と結果を fallback report に残す。"""
+    additions = fields.get("config_additions")
+    added = additions if isinstance(additions, dict) else {}
+    added_lines = [
+        f"- document_search.{name}: `{_inline_text(value)}`"
+        for name, value in added.items()
+    ] or ["- 補完した項目: なし"]
     return [
         f"# {title}",
         _outcome_sentence(classification),
         "## doctor preprocess",
         f"- 検査と修復: `{_stage_status(logger, classification)}`",
+        "## 検索設定",
+        f"- 対象ファイル: `{_field_status(fields.get('config_path'))}`",
+        f"- ファイル: `{_field_status(fields.get('config_generation'))}`",
+        *added_lines,
+        f"- 検証: `{_field_status(fields.get('config_validation'))}`",
+        f"- 保存: `{_field_status(fields.get('config_saved'))}`",
         *_standard_tail(classification, result, logger),
     ]
 

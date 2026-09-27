@@ -39,6 +39,11 @@ from config.cmoc_config import CmocConfig
 from main import app
 
 
+def seed_search_config(root: Path) -> None:
+    """通常起動の前提となる検索設定だけを用意し、他の doctor 修復は試験対象に残す。"""
+    cmoc_runtime.write_config(root / ".cmoc/gt/config.json", CmocConfig())
+
+
 def session_state_path(root: Path, session_branch: str) -> Path:
     """managed session branch に対応する永続 state file の path を求める。
 
@@ -243,6 +248,7 @@ def test_session_fork_rolls_back_when_state_save_fails(
 
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    seed_search_config(root)
     home_branch = current_branch(root)
     session_id = "2026-06-27_01-02_03_000000000"
     session_branch = f"cmoc/session/{session_id}"
@@ -349,6 +355,7 @@ def test_session_fork_does_not_delete_branch_from_id_collision_race(
     """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    seed_search_config(root)
     home_branch = current_branch(root)
     session_id = "2026-06-27_01-02_03-000000000"
     session_branch = f"cmoc/session/{session_id}"
@@ -380,6 +387,7 @@ def test_session_fork_does_not_overwrite_state_from_id_collision_race(
     """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    seed_search_config(root)
     session_id = "2026-06-27_01-02_03-000000000"
     session_branch = f"cmoc/session/{session_id}"
     path = write_abandoned_state(root, session_id)
@@ -409,6 +417,7 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     """session id衝突時に既存abandoned stateを上書きしないことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    seed_search_config(root)
     session_id = "2026-06-27_01-02_03_000000000"
     path = write_abandoned_state(root, session_id)
     original = path.read_text()
@@ -437,6 +446,7 @@ def test_session_fork_retries_session_id_collision(
     """session id衝突後に次のtimestampでforkを再試行することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    seed_search_config(root)
     collision_id = "2026-06-27_01-02_03_000000000"
     next_id = "2026-06-27_01-02_03_000000001"
     old_path = write_abandoned_state(root, collision_id)
@@ -459,6 +469,7 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     """壊れたstateをactive session未存在として誤報しないことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    seed_search_config(root)
     home_branch = current_branch(root)
     path = root / ".cmoc" / "gu" / "session" / "broken.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -480,6 +491,7 @@ def test_session_fork_initializes_cmoc_ignore_and_writes_log(
     """session forkがcmoc ignoreを初期化し、サブコマンドlogを保存する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    seed_search_config(root)
     home_branch = current_branch(root)
 
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
