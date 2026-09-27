@@ -83,6 +83,7 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         'model_reasoning_effort="low"',
         "--sandbox",
         "workspace-write",
+        "--no-daemon",
         "--config",
         "sandbox_workspace_write.exclude_slash_tmp=false",
     ]

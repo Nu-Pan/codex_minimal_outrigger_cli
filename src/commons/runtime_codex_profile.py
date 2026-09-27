@@ -517,7 +517,7 @@ def codex_cli_supports_tui_notification_hooks(
     """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
     try:
         result = subprocess.run(
-            ["codex", "--sandbox", "read-only", "--version"],
+            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"],
             cwd=codex_process_cwd,
             env=environment,
             stdin=subprocess.DEVNULL,
@@ -858,6 +858,7 @@ def build_codex_override_args(
         call_config.model,
         "--sandbox",
         sandbox_mode,
+        "--no-daemon",
         *_config_override("sandbox_workspace_write.exclude_slash_tmp", "false"),
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override(
@@ -977,7 +978,15 @@ def _verify_document_search_server(
         return
     try:
         result = subprocess.run(
-            ["codex", *overrides, "mcp", "get", SEARCH_MCP_SERVER, "--json"],
+            [
+                "codex",
+                "--no-daemon",
+                *overrides,
+                "mcp",
+                "get",
+                SEARCH_MCP_SERVER,
+                "--json",
+            ],
             cwd=cwd,
             env=env,
             capture_output=True,

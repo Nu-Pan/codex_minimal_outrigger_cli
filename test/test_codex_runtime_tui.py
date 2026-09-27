@@ -101,6 +101,7 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     assert record["handoff_repository"] is None
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
+    assert record["args"].count("--no-daemon") == 1
     override_config = codex_override_config(record["args"])
     assert codex_arg_value(record["args"], "--ask-for-approval") == "on-request"
     assert "--approve-for-me" not in record["args"]
