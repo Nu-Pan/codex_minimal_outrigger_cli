@@ -352,7 +352,17 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
             providers[provider_id] == config.codex.model_providers[provider_id].settings
         )
     feedback_server = override["mcp_servers"]["cmoc_feedback"]
-    assert feedback_server["enabled_tools"] == ["submit_observation"]
+    feedback_reporting_enabled = agent_call_kind not in {
+        "build_feedback_normalize_issue_parameter",
+        "build_feedback_remediate_issue_parameter",
+    }
+    assert feedback_server["enabled"] is feedback_reporting_enabled
+    assert feedback_server["enabled_tools"] == (
+        ["submit_observation"] if feedback_reporting_enabled else []
+    )
+    assert feedback_server["disabled_tools"] == (
+        [] if feedback_reporting_enabled else ["submit_observation"]
+    )
     assert feedback_server["required"] is False
     assert feedback_server["default_tools_approval_mode"] == "approve"
     assert feedback_server["env_vars"] == [
@@ -700,14 +710,23 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert "- completion_reason:" not in oracle_edit_result.stdout
 
     feedback_report_dir = root / ".cmoc" / "gu" / "report" / "feedback"
-    feedback_reports = set(feedback_report_dir.glob("*.md"))
+    feedback_reports = set(feedback_report_dir.rglob("*.md"))
     # 先行する実推論が受理した pending observation があれば remediation call が
     # 発生するため、feedback report 自身も Codex を許可する production 経路で実行する。
-    run_production("feedback", "report")
-    feedback_report = next(
-        iter(set(feedback_report_dir.glob("*.md")) - feedback_reports)
+    feedback_report_result = run_production("feedback", "report")
+    feedback_report = terminal_primary_report(feedback_report_result.stdout)
+    assert feedback_report not in feedback_reports
+    feedback_report_text = feedback_report.read_text(encoding="utf-8")
+    # 実推論の分類は固定せず、仕様が許す正常 publication または incomplete を確認する。
+    assert any(
+        line
+        in {
+            'result: "ok"',
+            'result: "attention"',
+            'result: "incomplete"',
+        }
+        for line in feedback_report_text.splitlines()
     )
-    assert 'result: "ok"' in feedback_report.read_text()
     # feedback の修復 call も実 Codex で実行し、終端分類後の自動 join を検査する。
     # observation は現在性を再確認する入力であり、モデルの結論そのものは固定しない。
     store_agent_observation(
