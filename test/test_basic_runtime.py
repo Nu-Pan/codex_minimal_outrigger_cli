@@ -309,9 +309,12 @@ def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
 def test_run_root_placeholder_rejects_main_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """main worktree は run root として扱わない。"""
+    """linked worktree 内の nested main repository は run root として扱わない。"""
     root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-parent", str(linked), "HEAD")
+    nested_main = make_repo(linked)
+    monkeypatch.chdir(nested_main)
 
     with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
         resolve_real_path(RootPathPlaceHolder.RUN)
