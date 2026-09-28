@@ -168,6 +168,7 @@ def _run_codex_tui_process(
         agent_call_kind=parameter.agent_call_kind,
         codex_call_id=codex_call_id,
         log_paths=[call_path],
+        enable_feedback_reporting=parameter.enable_feedback_reporting,
     )
     try:
         environment = dict(codex_environment)
