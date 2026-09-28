@@ -56,6 +56,7 @@ def build_complete_prompt(
     routing_policy: bool = False,
     document_search_scope: DocumentSearchScope | None = None,
     editor_input_handoff_policy: bool = False,
+    enable_feedback_reporting: bool = True,
 ) -> list[SDHeader | SDTagBlock]:
     """選択された agent 向け文面を完全 prompt として構築する。
 
@@ -67,6 +68,7 @@ def build_complete_prompt(
         routing_policy: repository 内の参照先を選ぶ routing 文面を含めるか。
         document_search_scope: caller が確定した閲覧範囲。None は検索 MCP 無効。
         editor_input_handoff_policy: editor input handoff 文面を含めるか。
+        enable_feedback_reporting: reporter の提供判断と同じ値。報告規定を含めるか。
 
     Returns:
         agent call へ渡す構造化済み prompt。
@@ -110,10 +112,11 @@ def build_complete_prompt(
     #   無視されると困るような、全ての作業の基礎となるような作業規定
     #   重要な指示なので StructBlock で囲って「プロンプト内地図」から参照する
     fundamental_policy_prompt: list[SDHeader | SDTagBlock] = list()
-    _append(
-        fundamental_policy_prompt,
-        build_feedback_reporting_policy(path_context),
-    )
+    if enable_feedback_reporting:
+        _append(
+            fundamental_policy_prompt,
+            build_feedback_reporting_policy(path_context),
+        )
     if editor_input_handoff_policy:
         _append(
             fundamental_policy_prompt,

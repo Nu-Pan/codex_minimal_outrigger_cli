@@ -48,6 +48,16 @@ repository-local feedback state、subcommand log、および Codex call log は 
 
 正常完了時の自動 join、ユーザー中断またはエラー後の `cmoc run join` と `cmoc run abandon`、想定内差分、および recovery の共通境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
 
+## issue 処理 call の observation 報告
+
+normalization と issue remediation では、調査対象の再報告が追加 evidence として同じ issue の再確認を誘発する経路を止めるため、feedback reporter の提供を無効にする。対象は、本書の「agent observation と normalization」「issue remediation agent call」で委譲する `build_feedback_*_issue_parameter` 系とし、現在は `build_feedback_normalize_issue_parameter` と `build_feedback_remediate_issue_parameter` の 2 種類である。判定根拠の変化に伴う再確認 call も対象に含む。
+
+対象 call では、同じ issue の再報告と、作業中に見つかった別の問題の追加報告をともに行えなくてよい。MCP の非提供と報告規定の非注入、および同じ論理 call の補正・retry・再開での維持は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。これは feedback report invocation 全体の無効化ではなく、別の call kind である回復確認 probe、join の競合解消、および他の workload の報告契約を変更しない。
+
+入力 observation の同一性判断と、入力 issue の確認・修正・検証および `human_required` を含む結果は、既存の Structured Output で返す。追加報告ができないことを結果分類の理由にしてはならない。別 issue の追加報告用 field、代替 tool、または log からの自動 issue 化など、非提供を補う収集経路は設けない。
+
+他の作業から受理された observation の取り込みと、実際の判定根拠の変化に伴う再確認は、本書の「intake wave loop」に従って継続する。
+
 ## intake の validation と normalization
 
 ### validation
@@ -182,7 +192,7 @@ intake wave と high-watermark の state 契約は、`{{cmoc-root}}/oracle/doc/a
 各 wave の終了時は、次の順序で停止判定を行う。
 
 1. wave に含まれる全 issue identity を終端結果まで処理する。
-2. wave の remediation agent call に対応する reporter context を close し、受付済み submission を drain する。
+2. wave の remediation agent call について、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「call の終了」に従い、作成済み reporter context の受付停止と受付済み submission の保存完了を確定する。
 3. collector が durable に受理済みの observation に対する high-watermark を atomic に確定する。
 4. 前回境界より後、今回の high-watermark 以前にある observation を validation、normalization、および deduplication する。
 5. 後続の修正、機械的同期、および追加 evidence による判定根拠の変化を、全結果分類について確認する。

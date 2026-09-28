@@ -32,6 +32,8 @@ def build_feedback_normalize_issue_parameter(
         「agent observation と normalization」に従い、関連ファイルを判断材料にできる。
         読み取り専用の境界を伝える分類説明と、参照先を選ぶ routing を含める。
     """
+    # 同一性判断中の追加報告を無効にし、MCP と prompt の選択をそろえる。
+    enable_feedback_reporting = False
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
         task="""
@@ -47,6 +49,7 @@ def build_feedback_normalize_issue_parameter(
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         document_search_scope=document_search_scope,
+        enable_feedback_reporting=enable_feedback_reporting,
         aux_static_prompt=[
             SDHeader(
                 "同一性判断の基準",
@@ -82,4 +85,5 @@ def build_feedback_normalize_issue_parameter(
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         document_search_scope=document_search_scope,
+        enable_feedback_reporting=enable_feedback_reporting,
     )

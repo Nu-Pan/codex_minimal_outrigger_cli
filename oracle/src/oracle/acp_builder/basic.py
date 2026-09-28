@@ -72,3 +72,8 @@ class AgentCallParameter:
     # None は検索 MCP 無効。明示された scope は空集合でも検索 MCP 有効。
     # `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」を参照。
     document_search_scope: DocumentSearchScope | None = None
+
+    # feedback reporter の提供判断。完全 prompt の構築にも同じ値を渡す。
+    # `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+    # 「feedback reporter と collector context」を参照。
+    enable_feedback_reporting: bool = True

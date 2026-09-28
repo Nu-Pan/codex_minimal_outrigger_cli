@@ -302,15 +302,20 @@ prompt の確定前後に行う処理は、次のように区別する。
 ## feedback reporter と collector context
 
 - reporting の意味は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「agent による報告」を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
-- cmoc は Codex call の開始前に、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「collector と transport」が定める call context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする
-- cmoc は call-scoped な Codex CLI `--config` override により、MCP server namespace `cmoc_feedback`、公開 tool `submit_observation`、同 tool の approval behavior、および MCP process に必要な起動情報を設定する
-- cmoc は、`cmoc_feedback` の effective configuration 全体を呼び出し単位で管理する。user config、`$CODEX_HOME/config.toml`、または project config にある次の情報には依存してはならない。また、これらの設定によって、別 tool の公開または reporter の置換を許してはならない
+- `AgentCallParameter` は、reporter の提供を有効にするかを agent call 単位で保持する。正確な field 名、型、および既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
+- builder は、reporter の提供判断と同じ値を完全 prompt の構築へ渡す。有効な call には報告規定を注入し、無効な call には注入しない。正確な選択引数と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
+- 提供を無効にする call は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「issue 処理 call の observation 報告」に従う。対象外の builder は、reporter と報告規定をともに有効にする既定の契約を維持する
+- 初回、Structured Output の補正、retry、および回復待ち後の再開を含む同一 agent call の全 Codex call で、この提供判断を維持する。無効な call の補正・再開 prompt に報告規定を追加してはならない
+- 提供が有効な場合、cmoc は Codex call の開始前に、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「collector と transport」が定める call context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする。無効な場合は、その call 用の reporter/client を起動せず、reporter context と capability を登録しない
+- cmoc は call-scoped な Codex CLI の argv override により提供判断を反映する。有効な場合の MCP server namespace `cmoc_feedback`、公開 tool `submit_observation`、同 tool の approval behavior、および MCP process に必要な起動情報の設定には、本書の「Codex CLI 引数による設定上書き」を適用する
+- cmoc は、提供の有効・無効のどちらでも `cmoc_feedback` の effective configuration 全体を呼び出し単位で管理する。user config、`$CODEX_HOME/config.toml`、または project config にある次の情報には依存してはならない。また、これらの設定によって、別 tool の公開または reporter の置換を許してはならない
     - server 定義
     - tool 設定
     - approval behavior
     - 起動情報
+- 無効な call では、同名の外部 server 設定を含めて `cmoc_feedback` を無効にし、その namespace の tool を提供しない。cmoc による有効化の省略だけで済ませてはならない。永続的な user/project 設定を書き換えず、呼び出し単位の実効設定でこの非提供を成立させる
 - 通常の `cmoc_feedback.submit_observation` は、human approval、auto-review、または command sandbox escalation を要求せずに実行できるよう設定する
-- reporter と collector の残りの lifecycle は、同仕様の「collector と transport」を正本とする。初回 prompt で注入済みの reporting instruction は、correction schema または correction prompt へ重複させない
+- reporter と collector の残りの lifecycle、および意図的な非提供と利用不能な障害の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「agent による報告」「collector と transport」「rule registry」を正本とする。初回 prompt で注入済みの reporting instruction は、correction schema または correction prompt へ重複させない
 
 ## editor input handoff MCP
 

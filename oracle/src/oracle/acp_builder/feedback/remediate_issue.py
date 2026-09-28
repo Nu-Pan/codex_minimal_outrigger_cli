@@ -21,6 +21,8 @@ def build_feedback_remediate_issue_parameter(
     document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """正規化済み issue 1 件を確認し、安全な realization 修正と検証を行う。"""
+    # 入力 issue の処理結果は維持し、追加報告の MCP と prompt をともに無効にする。
+    enable_feedback_reporting = False
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
     prompt = build_complete_prompt(
         task="""
@@ -38,13 +40,16 @@ def build_feedback_remediate_issue_parameter(
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
         document_search_scope=document_search_scope,
+        enable_feedback_reporting=enable_feedback_reporting,
         aux_static_prompt=[
             SDHeader(
                 "結果分類の規則",
                 """
-                - result は feedback の意味仕様と Structured Output schema が定める分類に従う
-                - `human_required` は、realization file の編集だけでは満たせない具体的な対応を確認できた場合だけ使用する
-                - 許可された情報では判定できない場合は `inconclusive` とし、`human_required` へ変換しない
+                - 入力 issue の報告基準への適合は、観測元の workload の規定範囲内では解決できない、具体的な根拠のある明確な問題であるかで判断する。仕様どおりの制約は報告対象の問題に含めない
+                - 報告対象の問題は、後続の対応で再発防止、反復的な浪費の削減、または外部挙動を左右する人間意図の確定が可能になるものに限る
+                - この call で追加 observation を報告できないことを、入力 issue の結果分類の理由にしない
+                - `human_required` は、問題が現在も存在し、realization file の編集だけでは満たせない具体的な対応を確認できた場合だけ使用する
+                - 許可された情報では判定できない場合、または再確認・再修正が同じ状態を往復して収束できないことが確認された場合は `inconclusive` とし、`human_required` へ変換しない
                 - agent call、tool、validation、または作業の失敗だけを理由に `human_required` としてはならない
                 """,
             ),
@@ -86,4 +91,5 @@ def build_feedback_remediate_issue_parameter(
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
         document_search_scope=document_search_scope,
+        enable_feedback_reporting=enable_feedback_reporting,
     )

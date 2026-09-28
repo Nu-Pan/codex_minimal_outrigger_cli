@@ -144,7 +144,7 @@ wave input は durable 保存後に変更しない。追加 evidence は後続 w
 
 high-watermark の意味は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」に従う。collector の durable な受理順序に対する単調増加境界として管理し、directory の列挙順、timestamp、quiet period、または observation 件数から推測してはならない。
 
-wave 終了時は、対応する全 remediation reporter context の受付停止と drain を完了した後に high-watermark を atomic に確定する。前回境界より後、今回境界以前の observation を validation、normalization、および deduplication する。新規受理がなければ前回と同じ high-watermark を使用してよい。
+wave 終了時の確定順序と境界間の observation の処理は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「intake wave loop」に従う。新規受理がなければ前回と同じ high-watermark を使用してよい。
 
 `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「処理モデル」が定める条件で wave loop を自然完了したとき、最後の境界を最終 high-watermark とする。最終 high-watermark より後に受理された observation は、次回 invocation の pending input として残す。
 
