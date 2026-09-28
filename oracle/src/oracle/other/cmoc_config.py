@@ -118,10 +118,11 @@ class CmocConfigCodex:
             # NOTE
             #   報告１つ毎に呼ぶ関係でコストが嵩みやすい
             #   調査結果の正しさを機械的検証出来ないので、調査の網羅性は大事
-            #   Luna max しか選べない
+            #   意外と難しいタスクっぽいので、一度 astra で様子見
+            #   状況を見てもうちょっと安いモデルに下げたい
             "build_feedback_remediate_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-6-luna",
+                model="gpt-6-astra",
                 reasoning_effort="max",
             ),
             # NOTE
@@ -129,7 +130,7 @@ class CmocConfigCodex:
             #   実際の feedback report が冗長気味なら Astra に上げる
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-6-luna",
+                model="gpt-6-astra",
                 reasoning_effort="max",
             ),
             # NOTE TUI で人間とターンを回すので品質が重要

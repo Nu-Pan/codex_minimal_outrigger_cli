@@ -34,12 +34,12 @@
       },
       "build_feedback_remediate_issue_parameter": {
         "model_provider": "openai",
-        "model": "gpt-6-luna",
+        "model": "gpt-6-astra",
         "reasoning_effort": "max"
       },
       "build_feedback_normalize_issue_parameter": {
         "model_provider": "openai",
-        "model": "gpt-6-luna",
+        "model": "gpt-6-astra",
         "reasoning_effort": "max"
       },
       "build_tui_launch_tui_parameter": {
