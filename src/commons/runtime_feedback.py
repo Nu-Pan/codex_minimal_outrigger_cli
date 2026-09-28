@@ -688,8 +688,11 @@ def begin_feedback_call(
     codex_session_id: str | None = None,
     log_paths: list[Path],
     agent_call_cwd: Path | None = None,
+    enable_feedback_reporting: bool = True,
 ) -> FeedbackCall:
     """Codex call context を登録し、利用不能なら nonfatal degraded call を返す。"""
+    if not enable_feedback_reporting:
+        return FeedbackCall(None, None)
     invocation = current_feedback_invocation()
     if invocation is None:
         # managed CLI invocation では collector start または doctor がすでに warning/event

@@ -741,6 +741,7 @@ def run_codex_exec(
             agent_call_kind=active_agent_call_kind,
             codex_call_id=active_codex_call_id,
             log_paths=[probe_call, probe_prompt, probe_stdout, probe_stderr],
+            enable_feedback_reporting=probe_parameter.enable_feedback_reporting,
         )
         outcome: CodexOutcome = "failed"
         returncode = None
@@ -853,6 +854,7 @@ def run_codex_exec(
                 stdout_path,
                 stderr_path,
             ],
+            enable_feedback_reporting=parameter.enable_feedback_reporting,
         )
         try:
             result = _run_with_prompt_file(

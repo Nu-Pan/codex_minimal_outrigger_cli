@@ -118,6 +118,27 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert "-p" not in args
 
 
+def test_codex_overrides_disable_feedback_reporter_for_selected_call() -> None:
+    """無効な call では外部設定にかかわらず reporter namespace を閉じる。"""
+    parameter = replace(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        enable_feedback_reporting=False,
+    )
+
+    parsed = codex_override_config(build_codex_override_args(parameter, CmocConfig()))
+    server = parsed["mcp_servers"]["cmoc_feedback"]
+
+    assert server["enabled"] is False
+    assert server["required"] is False
+    assert server["enabled_tools"] == []
+    assert server["disabled_tools"] == ["submit_observation"]
+    assert parsed["shell_environment_policy"]["filters"] == {
+        FEEDBACK_CAPABILITY_ENV: "exclude",
+        FEEDBACK_COLLECTOR_PORT_ENV: "exclude",
+        FEEDBACK_PROTOCOL_ENV: "exclude",
+    }
+
+
 def test_codex_overrides_reject_unknown_file_access_mode() -> None:
     """未知 mode では sandbox を推測せず、Codex 起動前の構築段階で失敗する。"""
     parameter = replace(

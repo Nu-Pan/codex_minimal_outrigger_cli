@@ -39,7 +39,7 @@ def test_session_join_compatibility_module_exports_only_builder() -> None:
     } == {"build_session_join_conflict_resolution_parameter"}
     assert (
         build_session_join_conflict_resolution_parameter
-        is build_canonical_conflict_parameter
+        is not build_canonical_conflict_parameter
     )
 
 
@@ -67,6 +67,12 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert "進行中の merge" in objective
     assert parameter.document_search_scope == scope
     assert "# conflict resolution policy" in parameter.prompt
+    assert "# session join 固有の編集範囲" in parameter.prompt
+    assert "競合を解消するために必要な編集と検証だけ" in parameter.prompt
+    assert (
+        "conflict marker の解消に不要な仕様変更、実装改善、または別 file の変更"
+        "を行ってはならない"
+    ) in parameter.prompt
     assert "# routing policy" in parameter.prompt
     for heading in ("# oracle policy", "# realization policy"):
         assert heading in parameter.prompt

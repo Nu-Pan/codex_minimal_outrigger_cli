@@ -689,7 +689,7 @@ def _model_provider_override_args(
     return args
 
 
-def _feedback_mcp_override_args() -> list[str]:
+def _feedback_mcp_override_args(enable_feedback_reporting: bool) -> list[str]:
     """cmoc_feedback server の effective configuration 全体を支配する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # capability value は argv に載せず、Codex process の local environment から
@@ -702,10 +702,10 @@ def _feedback_mcp_override_args() -> list[str]:
             FEEDBACK_COLLECTOR_PORT_ENV,
             FEEDBACK_PROTOCOL_ENV,
         ],
-        "enabled": True,
+        "enabled": enable_feedback_reporting,
         "required": False,
-        "enabled_tools": ["submit_observation"],
-        "disabled_tools": [],
+        "enabled_tools": (["submit_observation"] if enable_feedback_reporting else []),
+        "disabled_tools": ([] if enable_feedback_reporting else ["submit_observation"]),
         "startup_timeout_sec": 5,
         "tool_timeout_sec": 15,
         "default_tools_approval_mode": "approve",
@@ -871,7 +871,7 @@ def build_codex_override_args(
         *_tui_session_start_hook_override_args(
             session_start_command if callback_enabled else None
         ),
-        *_feedback_mcp_override_args(),
+        *_feedback_mcp_override_args(parameter.enable_feedback_reporting),
         *_document_search_mcp_override_args(parameter, config),
         *(
             _editor_input_handoff_mcp_override_args()

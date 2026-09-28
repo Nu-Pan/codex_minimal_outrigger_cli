@@ -1,5 +1,6 @@
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ from _command_support import write_python_executable
 from _git_support import make_repo
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
+import commons.runtime_codex_exec as exec_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
@@ -87,8 +89,21 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     config = CmocConfig()
-    parameter = codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root)
+    parameter = replace(
+        codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
+        enable_feedback_reporting=False,
+    )
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
+    feedback_flags: list[bool] = []
+    original_begin_feedback_call = exec_module.begin_feedback_call
+
+    def observe_feedback_setting(**kwargs: object) -> object:
+        value = kwargs.get("enable_feedback_reporting")
+        assert isinstance(value, bool)
+        feedback_flags.append(value)
+        return original_begin_feedback_call(**kwargs)
+
+    monkeypatch.setattr(exec_module, "begin_feedback_call", observe_feedback_setting)
 
     result = run_codex_exec(
         parameter,
@@ -113,6 +128,11 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert result.prompt_log_path.name.endswith("_prompt.md")
     assert codex_arg_value(record["args"], "--sandbox") == "workspace-write"
     override_config = codex_override_config(record["args"])
+    feedback_server = override_config["mcp_servers"]["cmoc_feedback"]
+    assert feedback_server["enabled"] is False
+    assert feedback_server["enabled_tools"] == []
+    assert feedback_server["disabled_tools"] == ["submit_observation"]
+    assert feedback_flags == [False]
     assert override_config["model_reasoning_effort"] == call_config.reasoning_effort
     assert "default_permissions" not in override_config
     assert "permissions" not in override_config

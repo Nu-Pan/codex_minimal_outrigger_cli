@@ -677,6 +677,28 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     assert "候補検索だけに使う文字列" not in captured_prompts[0]
 
 
+def test_feedback_issue_builders_disable_reporting(tmp_path: Path) -> None:
+    """normalization と remediation は同じ追加報告を prompt から外す。"""
+    root = make_repo(tmp_path)
+    search_scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
+    parameters = (
+        build_feedback_normalize_issue_parameter(
+            "{}", "[]", root, document_search_scope=search_scope
+        ),
+        build_feedback_remediate_issue_parameter(
+            json.dumps({"issue_id": "fbi_" + "a" * 26}),
+            root,
+            document_search_scope=search_scope,
+        ),
+    )
+
+    assert all(not parameter.enable_feedback_reporting for parameter in parameters)
+    assert all(
+        "cmoc_feedback.submit_observation" not in parameter.prompt
+        for parameter in parameters
+    )
+
+
 def test_feedback_processing_versions_hash_canonical_builders() -> None:
     """checkpoint version は prompt 構築 builder とその依存を識別する。"""
     normalize_path = feedback_report_module._builder_source_path(
@@ -936,6 +958,33 @@ def test_collector_validates_context_rate_and_durable_observation(
         assert reporter_module._submit(_payload())["code"] == "collector_unavailable"
     finally:
         invocation.stop()
+
+
+def test_disabled_feedback_call_does_not_register_capability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """明示的に無効な call は collector context や capability を作らない。"""
+
+    class Invocation:
+        """登録経路へ誤って進んだ場合に失敗する collector double。"""
+
+        def register_call(self, **_kwargs: object) -> object:
+            raise AssertionError("disabled feedback call registered a context")
+
+    monkeypatch.setattr(
+        feedback_module, "current_feedback_invocation", lambda: Invocation()
+    )
+    feedback_call = begin_feedback_call(
+        agent_call_id="agc_disabled",
+        agent_call_kind="build_disabled",
+        codex_call_id="cdc_disabled",
+        log_paths=[],
+        enable_feedback_reporting=False,
+    )
+
+    assert feedback_call.codex_call_id is None
+    assert feedback_call.subprocess_env({}) == {}
+    feedback_call.close()
 
 
 def test_collector_protocol_probe_does_not_report_expected_degradation(
