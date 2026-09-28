@@ -39,7 +39,7 @@ def build_realization_policy(
                     "シンプル化によって、正本仕様断片上必要とされる要素 (e.g. 意味、可読性、失敗時挙動、検証) を損なってはいけない",
                     "`{{work-root}}` 固有の指示を根拠に含めずに `{{work-root}}/.agents/skills` だけを根拠に作業方法を断定してはいけない",
                 ),
-                allow=(
+                exception=(
                     "どうしても oracle file をそのまま使用出来ない場合のみ、同等の機能を realization file に最小限の範囲内で実装しても良い",
                 ),
             ),

@@ -97,7 +97,7 @@ def build_file_access_policy(
                 ),
                 allow=(),
                 exception=(
-                    "`/tmp`, `%TMPDIR` ツリー内は読み書きして良い（一時作業領域として使って良い）"
+                    "`/tmp`, `%TMPDIR` ツリー内は読み書きして良い（一時作業領域として使って良い）",
                     "MCP 経由の外部ツールによるファイル書き込みは、この policy の書き込み制限の対象外とする",
                     "Structured Output を受け取った外部ツールによるファイル書き込みは、この policy の書き込み制限の対象外とする",
                 ),

@@ -42,7 +42,7 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
                     "合わせて読む必要がある oracle file への参照に行番号を含めてはいけない",
                     "誤字・脱字・文法誤りを残してはいけない",
                 ),
-                allow=(
+                exception=(
                     "oracle file の問題 (矛盾・実現不能な仕様) を調べる場合に限り、実装上の制約を修正プランの判断材料にしてよい",
                 ),
                 supplemental=(
