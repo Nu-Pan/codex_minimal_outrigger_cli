@@ -43,6 +43,13 @@ from config.cmoc_config import CmocConfig
 from main import app
 
 
+def _new_subcommand_events(root: Path, previous: set[Path]) -> list[dict[str, object]]:
+    """直前の CLI 呼び出しが保存した 1 本の診断ログを読む。"""
+    log_dir = root / ".cmoc/gu/log/sub_command"
+    [log_path] = set(log_dir.glob("*.jsonl")) - previous
+    return [json.loads(line) for line in log_path.read_text().splitlines()]
+
+
 def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
     """別プロセスで共有 doctor lock を保持し、解放通知まで待機する。"""
 
@@ -158,6 +165,53 @@ def test_doctor_syncs_document_edits_and_deletions_without_committing_them(
     assert "oracle/doc/source.md" not in state
     assert not document.exists()
     assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
+
+
+def test_doctor_sync_log_records_each_run_and_current_work(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """初回・無変更・削除の件数と結果を、同じ実行の開始/終端に対応付ける。"""
+    root = make_repo(tmp_path)
+    document = root / "oracle/doc/source.md"
+    document.parent.mkdir()
+    document.write_text("# source\n")
+    run_git(root, "add", "oracle/doc/source.md")
+    run_git(root, "commit", "-m", "add search document")
+    monkeypatch.chdir(root)
+    log_dir = root / ".cmoc/gu/log/sub_command"
+
+    for expected, edit in (
+        (("updated", 1, 1, 1, 0), None),
+        (("unchanged", 1, 0, 0, 1), None),
+        (("updated", 0, 1, 0, 0), document.unlink),
+    ):
+        if edit is not None:
+            edit()
+        previous = set(log_dir.glob("*.jsonl"))
+        result = run_doctor(root)
+        events = _new_subcommand_events(root, previous)
+        starts = [e for e in events if e["event"] == "document_search_sync_started"]
+        finishes = [e for e in events if e["event"] == "document_search_sync_finished"]
+        assert len(starts) == len(finishes) == 1
+        start, finish = starts[0], finishes[0]
+        assert events.index(start) < events.index(finish) < len(events) - 1
+        assert start["sync_id"] == finish["sync_id"]
+        assert start["invocation_id"] == finish["invocation_id"]
+        assert start["command"] == finish["command"] == "doctor"
+        assert start["work_root"] == finish["work_root"] == str(root)
+        assert start["index_identity"] is None
+        assert isinstance(finish["index_identity"], str)
+        assert finish["counts_complete"] is True
+        assert (
+            finish["status"],
+            finish["document_count"],
+            finish["changed_document_count"],
+            finish["persisted_chunk_count"],
+            finish["reused_chunk_count"],
+        ) == expected
+        assert 0 <= finish["lock_wait_seconds"] <= finish["elapsed_seconds"]
+        report = terminal_primary_report(result).read_text()
+        assert f"診断ログ内の同期 ID: `{start['sync_id']}`" in report
 
 
 def test_doctor_preprocess_follows_repair_order(
@@ -966,10 +1020,21 @@ def test_doctor_fails_when_real_model_validation_does_not_complete(
     assert "照合と実モデル検証: `失敗`" in report
     assert "rerank validation failed" in report
     assert "cmoc doctor を再実行" in report
+    events = _new_subcommand_events(root, set())
+    assert not any(
+        event["event"].startswith("document_search_sync_") for event in events
+    )
 
 
+@pytest.mark.parametrize(
+    ("failure_code", "expected_status"),
+    [("MODEL_FAILURE", "failed"), ("CANCELLED", "cancelled")],
+)
 def test_doctor_reports_persisted_chunks_when_sync_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_code: str,
+    expected_status: str,
 ) -> None:
     """doctor の同期失敗は未完了とし、保存済み chunk の進捗を示す。"""
     root = make_repo(tmp_path)
@@ -997,7 +1062,7 @@ def test_doctor_reports_persisted_chunks_when_sync_fails(
                     "embedding": vector,
                 }
             )
-            raise SearchError("MODEL_FAILURE", "stopped after first chunk")
+            raise SearchError(failure_code, "stopped after first chunk")
 
     def failing_search(root, scope, config, *, installation_root, use_saved_config):
         return DocumentSearch(
@@ -1013,10 +1078,21 @@ def test_doctor_reports_persisted_chunks_when_sync_fails(
     result = runner.invoke(app, ["doctor"], catch_exceptions=False)
     assert result.exit_code != 0
     report = terminal_primary_report(result).read_text()
-    assert 'doctor_sync_status: "failed"' in report
+    assert f'doctor_sync_status: "{expected_status}"' in report
     assert "persisted_chunks" in report
     assert "stopped after first chunk" in report
-    assert "実行状態: `failed`" in report
+    assert f"実行状態: `{expected_status}`" in report
+    events = _new_subcommand_events(root, set())
+    start = next(e for e in events if e["event"] == "document_search_sync_started")
+    finish = next(e for e in events if e["event"] == "document_search_sync_finished")
+    assert start["sync_id"] == finish["sync_id"]
+    assert finish["status"] == expected_status
+    assert finish["failure_code"] == failure_code
+    assert finish["counts_complete"] is False
+    assert finish["document_count"] == 1
+    assert finish["changed_document_count"] == 1
+    assert finish["persisted_chunk_count"] == 1
+    assert finish["reused_chunk_count"] == 0
 
 
 def test_normal_preprocess_requires_validated_materials(

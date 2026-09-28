@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Collection, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import asdict
@@ -38,6 +39,7 @@ from .runtime_feedback import (
     emit_reporter_unavailable,
     validate_feedback_reporter_availability,
 )
+from .runtime_feedback_store import uuid7_prefixed
 from .runtime_git import (
     ensure_cmoc_ignored,
     git_common_dir,
@@ -45,9 +47,21 @@ from .runtime_git import (
     run_git,
     with_cmoc_ignore_pattern,
 )
+from .runtime_logging import current_subcommand_logger
 from .runtime_paths import cmoc_root, config_path, refactor_state_path, repo_root
 from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
+
+
+def _sync_status(result: SyncResult | None, failure: BaseException | None) -> str:
+    """終了処理も含めた索引同期の結果を分類する。"""
+    if failure is None:
+        return result.status if result is not None else "failed"
+    if isinstance(failure, KeyboardInterrupt) or (
+        isinstance(failure, SearchError) and failure.code == "CANCELLED"
+    ):
+        return "cancelled"
+    return "failed"
 
 
 def _installation_root(_root: Path) -> Path:
@@ -98,24 +112,49 @@ def _synchronize_document_search_index(
 ) -> SyncResult:
     """doctor の全 oracle/doc 範囲を期限なしで同期し、途中実績も記録する。"""
     scope = oracle_doc_scope()
+    sync_id = uuid7_prefixed("dsi_")
+    logger = current_subcommand_logger()
+    started = time.monotonic()
+    if logger is not None:
+        logger.event(
+            "document_search_sync_started",
+            invocation_id=logger.invocation_id,
+            sync_id=sync_id,
+            work_root=str(root),
+            scope_identity=scope_identity(scope),
+            index_identity=None,
+        )
     update_primary_report_fields(
         doctor_sync_status="started",
+        doctor_sync_id=sync_id,
         doctor_scope_identity=scope_identity(scope),
         doctor_sync_work_root=str(root),
     )
-    search = DocumentSearch(
-        root, scope, config, installation_root=installation_root, use_saved_config=True
-    )
+    search: DocumentSearch | None = None
+    result: SyncResult | None = None
+    failure: BaseException | None = None
     try:
-        result = search.synchronize(unbounded=True)
+        search = DocumentSearch(
+            root,
+            scope,
+            config,
+            installation_root=installation_root,
+            use_saved_config=True,
+        )
+        try:
+            result = search.synchronize(unbounded=True)
+        finally:
+            search.close()
     except BaseException as exc:
-        progress = search.sync_progress
+        failure = exc
+        progress = search.sync_progress if search is not None else None
         identity = progress.get("identity") if progress is not None else None
+        status = _sync_status(result, failure)
         update_primary_report_fields(
-            doctor_sync_status="failed",
+            doctor_sync_status=status,
             doctor_index_identity=identity,
             doctor_sync_result={
-                "status": "failed",
+                "status": status,
                 "identity": identity,
                 "progress": progress,
             },
@@ -126,15 +165,49 @@ def _synchronize_document_search_index(
             doctor_sync_failure_reason=str(exc),
         )
         raise
+    else:
+        assert result is not None and search is not None
+        update_primary_report_fields(
+            doctor_sync_status=result.status,
+            doctor_index_identity=result.identity,
+            doctor_sync_result=asdict(result),
+            doctor_sync_progress=search.sync_progress,
+        )
+        return result
     finally:
-        search.close()
-    update_primary_report_fields(
-        doctor_sync_status=result.status,
-        doctor_index_identity=result.identity,
-        doctor_sync_result=asdict(result),
-        doctor_sync_progress=search.sync_progress,
-    )
-    return result
+        if logger is not None:
+            progress = search.sync_progress if search is not None else None
+            logger.event(
+                "document_search_sync_finished",
+                invocation_id=logger.invocation_id,
+                sync_id=sync_id,
+                work_root=str(root),
+                index_identity=progress.get("identity") if progress else None,
+                status=_sync_status(result, failure),
+                elapsed_seconds=time.monotonic() - started,
+                lock_wait_seconds=(
+                    search.sync_lock_wait_seconds if search is not None else 0.0
+                ),
+                document_count=progress.get("document_count") if progress else None,
+                changed_document_count=(
+                    progress.get("changed_document_count") if progress else None
+                ),
+                persisted_chunk_count=(
+                    progress.get("persisted_chunks") if progress else None
+                ),
+                reused_chunk_count=(
+                    progress.get("reused_embeddings") if progress else None
+                ),
+                counts_complete=failure is None,
+                failure_code=(
+                    failure.code
+                    if isinstance(failure, SearchError)
+                    else type(failure).__name__
+                    if failure is not None
+                    else None
+                ),
+                failure_reason=str(failure) if failure is not None else None,
+            )
 
 
 def run_doctor_preprocess(
@@ -167,6 +240,7 @@ def run_doctor_preprocess(
         material_rerank="未実行",
         material_remaining_state="未確認",
         doctor_sync_status="not_started",
+        doctor_sync_id=None,
         doctor_scope_identity=None,
         doctor_index_identity=None,
         doctor_sync_result=None,
@@ -203,7 +277,7 @@ def run_doctor_preprocess(
                 require_cmoc_ignored(installation_root)
             except CmocError as exc:
                 raise CmocError(
-                    "共有文書検索資材の管理領域が非追跡ではありません。",
+                    "共有検索用コンポーネントの管理領域が非追跡ではありません。",
                     [f"対象 work-root ({root}) で cmoc doctor を実行してください。"],
                     f"cmoc-root: {installation_root}\nreason: {exc.detail}",
                 ) from exc
@@ -315,7 +389,7 @@ def run_doctor_preprocess(
                     else f"対象 work-root ({root}) で cmoc doctor を実行してください。"
                 )
                 raise CmocError(
-                    "文書検索資材の準備状態を確認できません。",
+                    "検索用コンポーネントの準備状態を確認できません。",
                     [action],
                     f"cmoc-root: {installation_root}\npath: {installation_root / '.cmoc/gu/document_search/materials'}\nreason: {exc}",
                 ) from exc

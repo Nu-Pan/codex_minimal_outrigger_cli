@@ -349,7 +349,7 @@ def _doctor_body(
         f"- 検証: `{_field_status(fields.get('config_validation'))}`",
         f"- 保存: `{_field_status(fields.get('config_saved'))}`",
         f"- 使用した設定条件: `{_inline_text(fields.get('search_config'))}`",
-        "## 検索資材",
+        "## 検索用コンポーネント",
         f"- 所有 cmoc-root: `{_field_status(fields.get('cmoc_root'))}`",
         f"- 保存先: `{_field_status(fields.get('material_path'))}`",
         f"- 固定 identity: `{_inline_text(fields.get('material_identity'))}`",
@@ -367,6 +367,7 @@ def _doctor_body(
         "## 検索索引の同期",
         f"- 対象 work-root: `{_field_status(fields.get('doctor_sync_work_root'))}`",
         f"- 実効閲覧範囲: `{_field_status(fields.get('doctor_scope_identity'))}`",
+        f"- 診断ログ内の同期 ID: `{_field_status(fields.get('doctor_sync_id'))}`",
         f"- 実行状態: `{_field_status(fields.get('doctor_sync_status'))}`",
         f"- 索引 identity: `{_field_status(fields.get('doctor_index_identity'))}`",
         f"- 同期結果: `{_inline_text(fields.get('doctor_sync_result'))}`",
@@ -375,7 +376,7 @@ def _doctor_body(
         f"- 失敗理由: `{_field_status(fields.get('doctor_sync_failure_reason'))}`",
         "## 保証範囲",
         f"- 対象 work-root: `{_field_status(fields.get('work_root'))}`",
-        "- 共通環境・設定・管理状態と共有検索資材の検査時点での利用可能性、および検索索引の同期完了。任意入力の検索は対象外。",
+        "- 共通環境・設定・管理状態と共有検索用コンポーネントの検査時点での利用可能性、および検索索引の同期完了。任意入力の検索は対象外。",
         *_standard_tail(classification, result, logger),
     ]
 

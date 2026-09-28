@@ -1,4 +1,4 @@
-"""固定文書検索資材を cmoc installation の非追跡領域へ準備する。"""
+"""固定した検索用コンポーネントを cmoc installation の非追跡領域へ準備する。"""
 
 import hashlib
 import json

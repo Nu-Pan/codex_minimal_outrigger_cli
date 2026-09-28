@@ -6,6 +6,7 @@
 - {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -159,9 +160,26 @@ def test_tui_runs_editor_and_launches_codex_directly(
     )
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
+    log_dir = root / ".cmoc/gu/log/sub_command"
+    previous_logs = set(log_dir.glob("*.jsonl"))
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
+    [tui_log] = set(log_dir.glob("*.jsonl")) - previous_logs
+    log_events = [json.loads(line) for line in tui_log.read_text().splitlines()]
+    sync_events = [
+        event
+        for event in log_events
+        if event["event"].startswith("document_search_sync_")
+    ]
+    assert [event["event"] for event in sync_events] == [
+        "document_search_sync_started",
+        "document_search_sync_finished",
+    ]
+    assert sync_events[0]["sync_id"] == sync_events[1]["sync_id"]
+    assert sync_events[1]["command"] == "tui"
+    assert sync_events[1]["work_root"] == str(root)
+    assert sync_events[1]["status"] == "unchanged"
     assert events == [
         "doctor",
         "build-skeleton",

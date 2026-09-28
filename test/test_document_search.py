@@ -21,7 +21,12 @@ from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import INITIAL_SEARCH_MATERIALS, DocumentSearchConfig
 
 from cmoc_runtime import write_config
-from commons.runtime_document_search import DocumentSearch, SearchError, scan_documents
+from commons.runtime_document_search import (
+    DocumentSearch,
+    SearchError,
+    _file_lock,
+    scan_documents,
+)
 from commons.runtime_document_search_mcp import _response
 from commons.runtime_document_search_worker import NodeSearchWorker, materials_directory
 from commons.runtime_git import ensure_cmoc_ignored
@@ -31,6 +36,43 @@ from config.cmoc_config import CmocConfig
 def _tuning() -> DocumentSearchConfig:
     """推論 double にだけ使う、製品既定値ではない test 設定。"""
     return DocumentSearchConfig(32, 0, 3, 128, 128, 128, 1, 10.0, 30.0, 1.0)
+
+
+@pytest.mark.parametrize("cancel_wait", [False, True])
+def test_file_lock_measures_contended_wait(tmp_path: Path, cancel_wait: bool) -> None:
+    """取得成功と取消のどちらでも、保持時間を含めず取得待ちを計測する。"""
+    lock_path = tmp_path / "index.lock"
+    held = threading.Event()
+    release = threading.Event()
+    cancelled = threading.Event()
+    waits: list[float] = []
+
+    def hold_lock() -> None:
+        with _file_lock(lock_path, None):
+            held.set()
+            release.wait(3)
+
+    holder = threading.Thread(target=hold_lock)
+    holder.start()
+    timer = threading.Timer(0.15, cancelled.set if cancel_wait else release.set)
+    try:
+        assert held.wait(2)
+        timer.start()
+        if cancel_wait:
+            with pytest.raises(SearchError, match="cancelled"):
+                with _file_lock(lock_path, None, cancelled, on_wait=waits.append):
+                    pytest.fail("cancelled acquisition unexpectedly succeeded")
+        else:
+            with _file_lock(lock_path, None, on_wait=waits.append):
+                pass
+        assert len(waits) == 1
+        assert 0.1 <= waits[0] < 2
+    finally:
+        release.set()
+        holder.join(2)
+        if timer.is_alive():
+            timer.join(2)
+    assert not holder.is_alive()
 
 
 class _InferenceDouble:
