@@ -23,6 +23,7 @@ from .runtime_paths import console_timestamp, format_duration, repo_root, work_r
 from .runtime_primary_report import (
     PrimaryReportSaveError,
     ensure_primary_report,
+    open_primary_report_in_editor,
     reset_primary_report_context,
     start_primary_report_context,
 )
@@ -384,6 +385,15 @@ def _finalize_subcommand(
         returncode = 1
         error = report_error
         terminal_result = _error_terminal_result(TerminalResult(), report_error)
+    if terminal_result.primary_report is not None:
+        try:
+            open_primary_report_in_editor(terminal_result.primary_report)
+        except Exception as exc:
+            # 表示失敗は保存済み report と元の終了結果を変更しない。
+            logger.record_warning(
+                f"primary report editor launch failed: {type(exc).__name__}: {exc}",
+                emit=False,
+            )
     elapsed = logger.elapsed()
     terminal_record = _terminal_result_record(
         terminal_result,

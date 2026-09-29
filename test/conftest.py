@@ -8,6 +8,7 @@ import pytest
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 
+import commons.runtime_cli as runtime_cli
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_windows_toast as runtime_windows_toast
@@ -26,12 +27,24 @@ def _isolate_windows_toast_transport(
     executable.parent.mkdir()
     executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     executable.chmod(0o755)
+    # 独立 process の一般 test も実際の editor window を開かない。
+    editor = executable.parent / "code"
+    editor.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    editor.chmod(0o755)
     monkeypatch.setenv("PATH", f"{executable.parent}:{os.environ.get('PATH', '')}")
     monkeypatch.setattr(runtime_windows_toast, "_WINDOWS_POWERSHELL", executable)
     monkeypatch.setattr(
         runtime_windows_toast,
         "_run_windows_toast_transport",
         lambda _title, _message: True,
+    )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_primary_report_editor(monkeypatch: pytest.MonkeyPatch) -> None:
+    """通常の in-process test は保存した report の外部表示を起動しない。"""
+    monkeypatch.setattr(
+        runtime_cli, "open_primary_report_in_editor", lambda _path: None
     )
 
 

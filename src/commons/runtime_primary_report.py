@@ -1,4 +1,4 @@
-"""非対話サブコマンドの fallback primary report を保存する。
+"""非対話サブコマンドの primary report を保存してエディタで開く。
 
 個別処理が正常な primary report を既に保存した場合は、その report を再利用する。
 doctor preprocess や事前条件など、個別処理が report を作る前の終了経路だけを
@@ -10,11 +10,15 @@ doctor preprocess や事前条件など、個別処理が report を作る前の
 """
 
 import os
+import shutil
+import subprocess
 import tempfile
+import threading
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from .runtime_editor import select_editor
 from .runtime_logging import SubcommandLogger
 from .runtime_paths import _reserve_timestamped_path, reports_dir, timestamp
 from .runtime_primary_report_render import (
@@ -178,6 +182,44 @@ def ensure_primary_report(
         primary_report=target.resolve(),
         primary_report_role=spec.role,
     )
+
+
+def open_primary_report_in_editor(path: Path) -> None:
+    """保存済み report を独立した editor process で表示し、終了は待たない。"""
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # code は単独でファイルを開ける。端末用 editor は別の端末を用意し、cmoc の
+    # stdio と process session から分離して終了後も閲覧できるようにする。
+    command, executable = select_editor()
+    if command == "code":
+        argv = [executable, str(path.resolve())]
+    else:
+        argv = _terminal_editor_argv(executable, path.resolve())
+
+    process = subprocess.Popen(
+        argv,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+        close_fds=True,
+    )
+    # 親の CLI は editor を待たない。存続中の Python process では wait 専用の
+    # daemon thread が終了済み子 process を回収する。
+    threading.Thread(target=process.wait, daemon=True).start()
+
+
+def _terminal_editor_argv(executable: str, path: Path) -> list[str]:
+    """端末用 editor を独立した terminal window で実行する argv を選ぶ。"""
+    for terminal, separator in (
+        ("x-terminal-emulator", "-e"),
+        ("xterm", "-e"),
+        ("gnome-terminal", "--"),
+        ("konsole", "-e"),
+    ):
+        launcher = shutil.which(terminal)
+        if launcher is not None:
+            return [launcher, separator, executable, str(path)]
+    raise OSError("terminal emulator is unavailable for the selected editor")
 
 
 def write_reserved_primary_report(path: Path, content: str) -> None:
