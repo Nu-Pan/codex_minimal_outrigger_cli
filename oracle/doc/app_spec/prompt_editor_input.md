@@ -30,10 +30,13 @@ editor input 1 回につき、`{{repo-root}}/.cmoc/gu/log/editor_input/{{time-st
 - 保存記録は編集対象から独立していない。確定後に人間が同じパスを再編集すれば、残した記録も変わり得るため、本文ファイル自体の不変性は保証しない。
 - agent による直接編集の禁止と書き込み主体の責任分界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
 
+## エディタの選択
+
+起動するエディタは、利用可能なものを優先度が高い順に `code`、`nano`、`vim`、`vi` から選ぶ。
+
 ## エディタの起動
 
 - エディタの起動前に、人間向けの console 案内を stderr に表示する。出力先と TUI への通知境界は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「出力先の責務」と「TUI と自動補完の境界」に従う。
-- 起動するエディタは、優先度が高い順に `code`、`nano`、`vim`、`vi` とする。
 - `code` で起動する場合は、必ず `--wait` を付ける。
 - エディタの編集対象は、editor input file とする。
 - エディタから cmoc に処理が戻った時点で、ユーザー入力が完了したとみなす。

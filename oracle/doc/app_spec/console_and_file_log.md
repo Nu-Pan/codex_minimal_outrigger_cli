@@ -55,6 +55,15 @@ primary report は、その invocation で確定した作業内容と終端結�
 
 primary report の保存に失敗し、完了契約を確定できない場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー終了の確定」に従って internal failure とする。この場合は、保存済みでない primary report の path を terminal result に表示しない。
 
+### 完了時のエディタ表示
+
+サブコマンド完了時に人間が結果を読めるよう、本書が primary report の対象とするすべての終了経路で、保存済みの primary report をエディタで自動的に 1 回開く。保存を確認できない report は開かない。
+
+- エディタの選択は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「エディタの選択」に従う。
+- 表示が目的であるため、エディタの終了やユーザーによるファイルのクローズを待たずに cmoc を終了する。`code` には `--wait` を付けない。
+- cmoc の終了後も report を閲覧できるように起動する。エディタの表示や診断出力を cmoc の stdout または stderr へ混入させない。これらを満たす具体的な起動方法は実装に委ねる。
+- エディタの選択または起動に失敗しても、サブコマンドの終端結果、終了コード、および成果物は変更しない。失敗は warning として、本書の「出力先の責務」「確定と表示の順序」「診断記録」に従って知らせる。
+
 ### 共通掲載内容
 
 primary report には、内部処理を含むその invocation の実行記録として、次の内容を一覧で掲載する。
@@ -101,7 +110,8 @@ terminal result は、次の処理をすべて完了した後に確定して表�
 1. state、成果物、および終端結果に必要な情報を確定する
 2. 並列処理、非同期処理、回復待ち・probe・再開の処理、および console へ出力し得る通知処理を停止または drain する
 3. 非対話サブコマンドでは、確定した作業内容と終端結果を primary report に保存する
-4. terminal result を含むサブコマンド終了イベントをサブコマンドログへ書き込み、flush する
+4. 非対話サブコマンドでは、本書の「完了時のエディタ表示」に従って表示用エディタの起動を試みる
+5. terminal result を含むサブコマンド終了イベントをサブコマンドログへ書き込み、flush する
 
 terminal result の表示後は、同じサブコマンドの stdout または stderr へ追加出力してはならない。
 
