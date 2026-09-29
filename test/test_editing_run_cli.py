@@ -214,26 +214,39 @@ def test_fork_report_escapes_special_changed_paths(tmp_path: Path) -> None:
     assert "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>" in report.read_text()
 
 
-def test_new_run_target_skips_dangling_worktree_symlink(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("occupied", ["branch", "worktree", "dangling_symlink"])
+def test_new_run_target_preserves_occupied_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, occupied: str
 ) -> None:
-    """dangling symlink を空き run worktree として再利用しない。"""
+    """発行 ID の保存先が占有されていたら既存資源を保って停止する。"""
     root = make_repo(tmp_path)
-    collision_id = "run_000000_2026-06-27_10-00"
-    free_id = "run_000001_2026-06-27_10-00"
-    collision = root / ".cmoc" / "gu" / "worktree" / "session" / collision_id
-    collision.parent.mkdir(parents=True)
-    collision.symlink_to(tmp_path / "missing-run-worktree", target_is_directory=True)
-    target_ids = iter([collision_id, free_id])
-    monkeypatch.setattr(
-        lifecycle_module, "new_id", lambda _root, _prefix: next(target_ids)
-    )
+    session_id = "sess_000000_2026-06-27_10-00"
+    run_id = "run_000000_2026-06-27_10-00"
+    branch = f"cmoc/run/{session_id}/{run_id}"
+    collision = root / ".cmoc" / "gu" / "worktree" / session_id / run_id
+    if occupied == "branch":
+        run_git(root, "branch", branch)
+        protected_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    else:
+        collision.parent.mkdir(parents=True)
+        if occupied == "worktree":
+            collision.mkdir()
+            (collision / "keep.txt").write_text("protected")
+        else:
+            collision.symlink_to(
+                tmp_path / "missing-run-worktree", target_is_directory=True
+            )
+    monkeypatch.setattr(lifecycle_module, "new_id", lambda _root, _prefix: run_id)
 
-    branch, worktree = lifecycle_module.new_run_target(root, "session")
+    with pytest.raises(CmocError, match="発行した run ID の保存先が既に存在します。"):
+        lifecycle_module.new_run_target(root, session_id)
 
-    assert branch == f"cmoc/run/session/{free_id}"
-    assert worktree == root / ".cmoc" / "gu" / "worktree" / "session" / free_id
-    assert collision.is_symlink()
+    if occupied == "branch":
+        assert run_git(root, "rev-parse", branch).stdout.strip() == protected_commit
+    elif occupied == "worktree":
+        assert (collision / "keep.txt").read_text() == "protected"
+    else:
+        assert collision.is_symlink()
 
 
 def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> None:
@@ -853,8 +866,8 @@ def test_apply_report_fields_include_accepted_feedback_paths(
     """apply report が invocation 内で accepted になった raw 参照だけを含む。"""
     observations = [
         {
-            "observation_id": "fbo_feedback",
-            "path": "/repo/.cmoc/gu/feedback/observation/fbo_feedback.json",
+            "observation_id": "fbo_000000_2026-09-29_15-04",
+            "path": "/repo/.cmoc/gu/feedback/observation/v1/2026/09/29/fbo_000000_2026-09-29_15-04.json",
         }
     ]
     monkeypatch.setattr(
@@ -888,11 +901,7 @@ def test_apply_report_fields_include_accepted_feedback_paths(
     assert result.primary_report is not None
     front_matter = result.primary_report.read_text(encoding="utf-8").split("---", 2)[1]
     assert "feedback_observation_count: 1" in front_matter
-    assert (
-        'feedback_observations: [{"observation_id": "fbo_feedback", '
-        '"path": "/repo/.cmoc/gu/feedback/observation/fbo_feedback.json"}]'
-        in front_matter
-    )
+    assert f"feedback_observations: {json.dumps(observations)}" in front_matter
 
 
 def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(

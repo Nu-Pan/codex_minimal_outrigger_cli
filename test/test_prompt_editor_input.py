@@ -250,7 +250,7 @@ def test_editor_input_closes_handoff_when_target_id_display_fails(
     class FakeTarget:
         """target close の呼び出しだけを記録する。"""
 
-        target_id = "eit_test"
+        target_id = "eit_000000_2026-09-29_15-04"
 
         def close(self) -> None:
             nonlocal closed

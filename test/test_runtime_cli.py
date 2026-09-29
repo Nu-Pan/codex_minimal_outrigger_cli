@@ -404,7 +404,7 @@ def test_detector_does_not_swallow_keyboard_interrupt(
             event_id="evt_keyboard_interrupt",
             event_type="feedback.reporter_unavailable",
             occurred_at="2026-08-09T00:00:00Z",
-            subcommand_invocation_id=logger.invocation_id,
+            subcommand_invocation_id=logger.execution_id,
             component="collector",
             failure_code="protocol_error",
         )

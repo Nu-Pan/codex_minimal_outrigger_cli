@@ -21,6 +21,7 @@ from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_override_args
 from commons.runtime_config import config_path
+from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_state import (
     RunPart,
     SessionPart,
@@ -105,11 +106,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     readme_path.write_text("# unstaged change\n")
     staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
     unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
-    time_stamp = "2026-07-20_00-00-00_000000000"
-    input_path = (
-        root / ".cmoc" / "gu" / "log" / "editor_input" / f"{time_stamp}_orig.md"
-    )
-    input_path.parent.mkdir(parents=True, exist_ok=True)
+    input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_main_parameters: list[AgentCallParameter] = []
     events: list[str] = []
@@ -129,14 +126,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
             target_root,
             sync_refactor_entries=sync_refactor_entries,
         )
-
-    def fake_reserve_prompt_editor_input(
-        target_root: Path,
-    ) -> Path:
-        """決定論的な editor path を返す。"""
-        assert target_root == root
-        input_path.touch()
-        return input_path
 
     real_build_main_parameter = (
         oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
@@ -165,6 +154,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         complete_prompt_skeleton: str,
     ) -> None:
         """エディタへ渡す path と完全 prompt skeleton を記録する。"""
+        nonlocal input_path
+        input_path = work_path
+        logger = current_subcommand_logger()
+        assert logger is not None
+        assert work_path.name == f"{logger.execution_id}_orig.md"
         events.append("editor")
         assert target_root == root
         editor_calls.append((work_path, complete_prompt_skeleton))
@@ -182,11 +176,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         assert work_path == input_path
         return real_collect_prompt_editor_input(target_root, work_path)
 
-    monkeypatch.setattr(
-        oracle_edit_module,
-        "reserve_prompt_editor_input",
-        fake_reserve_prompt_editor_input,
-    )
     monkeypatch.setattr(
         runtime_cli_module,
         "run_doctor_preprocess",

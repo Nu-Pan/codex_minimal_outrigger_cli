@@ -117,7 +117,10 @@ def _isolate_document_search_materials(
 def handoff_source(tmp_path, monkeypatch):
     """実行中の送信側 TUI に結び付いた MCP context を用意する。"""
     source = EditorInputHandoffSource(
-        "oracle investigation", "sci_sender", "cdc_sender", tmp_path / "sender.jsonl"
+        "oracle investigation",
+        "exec_000002_2026-09-29_15-04",
+        "cc_000011_2026-09-29_15-04",
+        tmp_path / "sender.jsonl",
     )
     monkeypatch.setenv(
         EDITOR_INPUT_SOURCE_ENV,

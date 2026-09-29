@@ -17,6 +17,7 @@ import acp.builder.oracle.investigation.launch_tui as launch_tui_module
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.investigation as investigation_module
 from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from commons.runtime_logging import current_subcommand_logger
 from main import app
 
 
@@ -28,11 +29,7 @@ def test_oracle_investigation_has_no_session_precondition(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
-    time_stamp = "2026-08-03_00-00-00_000000000"
-    input_path = (
-        root / ".cmoc" / "gu" / "log" / "editor_input" / f"{time_stamp}_orig.md"
-    )
-    input_path.parent.mkdir(parents=True, exist_ok=True)
+    input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
     events: list[str] = []
@@ -49,14 +46,6 @@ def test_oracle_investigation_has_no_session_precondition(
             target_root,
             sync_refactor_entries=sync_refactor_entries,
         )
-
-    def fake_reserve_prompt_editor_input(
-        target_root: Path,
-    ) -> Path:
-        """決定論的な editor path を返す。"""
-        assert target_root == root
-        input_path.touch()
-        return input_path
 
     real_build_parameter = (
         investigation_module.build_oracle_investigation_launch_tui_parameter
@@ -85,6 +74,11 @@ def test_oracle_investigation_has_no_session_precondition(
         complete_prompt_skeleton: str,
     ) -> None:
         """エディタへ渡す path と完全 prompt skeleton を記録する。"""
+        nonlocal input_path
+        input_path = work_path
+        logger = current_subcommand_logger()
+        assert logger is not None
+        assert work_path.name == f"{logger.execution_id}_orig.md"
         events.append("editor")
         assert target_root == root
         editor_calls.append((work_path, complete_prompt_skeleton))
@@ -102,11 +96,6 @@ def test_oracle_investigation_has_no_session_precondition(
         assert work_path == input_path
         return real_collect_prompt_editor_input(target_root, work_path)
 
-    monkeypatch.setattr(
-        investigation_module,
-        "reserve_prompt_editor_input",
-        fake_reserve_prompt_editor_input,
-    )
     monkeypatch.setattr(
         runtime_cli_module,
         "run_doctor_preprocess",

@@ -529,7 +529,7 @@ def run_codex_exec(
                 event_id=uuid7_prefixed("evt_"),
                 event_type="codex.structured_output_validation_exhausted",
                 occurred_at=rfc3339_now(),
-                subcommand_invocation_id=logger.invocation_id,
+                subcommand_invocation_id=logger.execution_id,
                 agent_call_id=active_agent_call_id,
                 agent_call_kind=active_agent_call_kind,
                 codex_call_id=active_codex_call_id,
@@ -911,7 +911,7 @@ def run_codex_exec(
                 try:
                     waited = wait_for_recovery(
                         key=(
-                            logger.invocation_id if logger else root.resolve(),
+                            logger.execution_id if logger else root.resolve(),
                             agent_call_cwd.resolve(),
                             codex_home.resolve(),
                             tuple(sorted(codex_env.items())),

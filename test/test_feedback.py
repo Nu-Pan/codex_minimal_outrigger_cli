@@ -117,12 +117,18 @@ def _context(root: Path, *, session_id: str | None = None) -> dict[str, object]:
         "run_id": None,
         "run_kind": None,
         "subcommand": "feedback test",
-        "subcommand_invocation_id": "sci_feedback_test",
-        "agent_call_id": "agc_feedback_test",
+        "subcommand_invocation_id": "exec_000000_2026-09-29_15-04",
+        "agent_call_id": "ac_000002_2026-09-29_15-04",
         "agent_call_kind": "build_feedback_test_parameter",
-        "codex_call_id": "cdc_feedback_test",
+        "codex_call_id": "cc_000002_2026-09-29_15-04",
         "codex_session_id": None,
-        "log_paths": [str((root / ".cmoc/gu/log/test.jsonl").resolve())],
+        "log_paths": [
+            str(
+                (
+                    root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
+                ).resolve()
+            )
+        ],
     }
 
 
@@ -532,7 +538,7 @@ def test_reporter_probe_rejects_non_object_mcp_response(
     "response",
     [
         b'{"status":"accepted"}\n',
-        b'{"status":"accepted","observation_id":"fbo_test","redaction_count":0}\n',
+        b'{"status":"accepted","observation_id":"invalid-observation-id","redaction_count":0}\n',
         b'{"status":"rejected","code":"schema_invalid","message":"invalid","retryable":true}\n',
         b'{"status":"rejected","code":[],"message":"invalid","retryable":false}\n',
     ],
@@ -871,7 +877,7 @@ def test_issue_id_collision_stops_candidate_building(
 def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> None:
     """遅れて到着した古い observation が latest fingerprint を巻き戻さない。"""
     newer = {
-        "observation_id": "fbo_new",
+        "observation_id": "fbo_000001_2026-08-02_00-00",
         "source": "agent_report",
         "observed_at": "2026-08-02T00:00:00Z",
         "context": {"cmoc_session_id": "session"},
@@ -892,7 +898,7 @@ def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> N
     }
     older = {
         **newer,
-        "observation_id": "fbo_old",
+        "observation_id": "fbo_000000_2026-08-01_00-00",
         "observed_at": "2026-08-01T00:00:00Z",
         "payload": {
             **newer["payload"],
@@ -908,7 +914,9 @@ def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> N
             }
         ],
     }
-    candidate = feedback_report_module._new_candidate(newer, "agent\0fbo_new")
+    candidate = feedback_report_module._new_candidate(
+        newer, "agent\0fbo_000001_2026-08-02_00-00"
+    )
     feedback_report_module._merge_observation(Path("/repo"), candidate, newer)
     feedback_report_module._merge_observation(Path("/repo"), candidate, older)
 
@@ -926,11 +934,14 @@ def test_collector_validates_context_rate_and_durable_observation(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_one",
+            agent_call_id="ac_000005_2026-09-29_15-04",
             agent_call_kind="build_one",
-            codex_call_id="cdc_one",
+            codex_call_id="cc_000005_2026-09-29_15-04",
             codex_session_id="session_one",
-            log_paths=[root / ".cmoc/gu/log/codex/call.json"],
+            log_paths=[
+                root
+                / f".cmoc/gu/log/codex/{logger.execution_id}/cc_000005_2026-09-29_15-04_call.json"
+            ],
         )
         assert invocation.collector_port is not None
         assert invocation._listener is not None
@@ -950,7 +961,8 @@ def test_collector_validates_context_rate_and_durable_observation(
         assert len(paths) == 3
         envelope = read_json_object(paths[0])
         assert validate_observation_envelope(envelope) == []
-        assert envelope["context"]["agent_call_id"] == "agc_one"
+        assert envelope["context"]["subcommand_invocation_id"] == logger.execution_id
+        assert envelope["context"]["agent_call_id"] == "ac_000005_2026-09-29_15-04"
         assert reporter_module._submit(_payload())["code"] == "rate_limited"
         feedback_call.close()
         assert reporter_module._submit(_payload())["code"] == "context_invalid"
@@ -975,9 +987,9 @@ def test_disabled_feedback_call_does_not_register_capability(
         feedback_module, "current_feedback_invocation", lambda: Invocation()
     )
     feedback_call = begin_feedback_call(
-        agent_call_id="agc_disabled",
+        agent_call_id="ac_000000_2026-09-29_15-04",
         agent_call_kind="build_disabled",
-        codex_call_id="cdc_disabled",
+        codex_call_id="cc_000000_2026-09-29_15-04",
         log_paths=[],
         enable_feedback_reporting=False,
     )
@@ -1013,9 +1025,9 @@ def test_collector_records_rejected_submission_as_degraded_warning(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_rejected_warning",
+            agent_call_id="ac_000009_2026-09-29_15-04",
             agent_call_kind="build_rejected_warning",
-            codex_call_id="cdc_rejected_warning",
+            codex_call_id="cc_000010_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1105,9 +1117,9 @@ def test_collector_accepts_utf8_payload_at_wire_size_over_64_kib(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_utf8_wire_size",
+            agent_call_id="ac_000012_2026-09-29_15-04",
             agent_call_kind="build_utf8_wire_size",
-            codex_call_id="cdc_utf8_wire_size",
+            codex_call_id="cc_000014_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1150,9 +1162,9 @@ def test_collector_rejects_surrogate_payload_with_protocol_safe_response(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_surrogate_response",
+            agent_call_id="ac_000010_2026-09-29_15-04",
             agent_call_kind="build_surrogate_response",
-            codex_call_id="cdc_surrogate_response",
+            codex_call_id="cc_000012_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1205,9 +1217,9 @@ def test_feedback_call_close_drains_accepted_tcp_request(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_drain",
+            agent_call_id="ac_000001_2026-09-29_15-04",
             agent_call_kind="build_drain",
-            codex_call_id="cdc_drain",
+            codex_call_id="cc_000001_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1276,15 +1288,15 @@ def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
     invocation.start()
     try:
         first = invocation.register_call(
-            agent_call_id="agc_parallel_one",
+            agent_call_id="ac_000006_2026-09-29_15-04",
             agent_call_kind="build_parallel_one",
-            codex_call_id="cdc_parallel_one",
+            codex_call_id="cc_000006_2026-09-29_15-04",
             log_paths=[],
         )
         second = invocation.register_call(
-            agent_call_id="agc_parallel_two",
+            agent_call_id="ac_000007_2026-09-29_15-04",
             agent_call_kind="build_parallel_two",
-            codex_call_id="cdc_parallel_two",
+            codex_call_id="cc_000007_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1340,7 +1352,7 @@ def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
         contexts = {
             read_json_object(path)["context"]["agent_call_id"] for path in paths
         }
-        assert contexts == {"agc_parallel_one", "agc_parallel_two"}
+        assert contexts == {"ac_000006_2026-09-29_15-04", "ac_000007_2026-09-29_15-04"}
         invocation.close_call(second)
     finally:
         invocation.stop()
@@ -1382,9 +1394,9 @@ def test_collector_rejects_observation_without_current_head(
     monkeypatch.setattr(feedback_module, "head_commit", fail_head_commit)
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     call = invocation.register_call(
-        agent_call_id="agc_head_failure",
+        agent_call_id="ac_000003_2026-09-29_15-04",
         agent_call_kind="build_head_failure",
-        codex_call_id="cdc_head_failure",
+        codex_call_id="cc_000003_2026-09-29_15-04",
         log_paths=[],
     )
 
@@ -1429,9 +1441,9 @@ def test_feedback_degradation_preserves_keyboard_interrupt(
 
     with pytest.raises(KeyboardInterrupt):
         begin_feedback_call(
-            agent_call_id="agc_interrupt",
+            agent_call_id="ac_000004_2026-09-29_15-04",
             agent_call_kind="build_interrupt",
-            codex_call_id="cdc_interrupt",
+            codex_call_id="cc_000004_2026-09-29_15-04",
             log_paths=[],
         )
 
@@ -1565,7 +1577,7 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
         "event_id": "evt_reporter_unavailable",
         "event_type": "feedback.reporter_unavailable",
         "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.invocation_id,
+        "subcommand_invocation_id": logger.execution_id,
         "component": "collector",
         "failure_code": "protocol_error",
     }
@@ -1590,7 +1602,7 @@ def test_machine_detector_masks_secret_in_event_fields(tmp_path: Path) -> None:
         "event_id": "evt_machine_secret",
         "event_type": "feedback.reporter_unavailable",
         "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.invocation_id,
+        "subcommand_invocation_id": logger.execution_id,
         "component": "collector",
         "failure_code": "protocol_error",
         "diagnostic": {"header": secret},
@@ -1620,7 +1632,7 @@ def test_machine_detector_masks_secret_in_event_field_keys(tmp_path: Path) -> No
         "event_id": "evt_machine_secret_key",
         "event_type": "feedback.reporter_unavailable",
         "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.invocation_id,
+        "subcommand_invocation_id": logger.execution_id,
         "component": "collector",
         "failure_code": "protocol_error",
         "diagnostic": {secret_key: "value"},
@@ -1912,9 +1924,9 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
             output["result"]["changed_paths"] = ["README.md"]
             payload = _payload(kind="other", path=None, text="別の issue")
             with begin_feedback_call(
-                agent_call_id="agc_wave",
+                agent_call_id="ac_000011_2026-09-29_15-04",
                 agent_call_kind=parameter.agent_call_kind,
-                codex_call_id="cdc_wave",
+                codex_call_id="cc_000013_2026-09-29_15-04",
                 log_paths=[],
                 agent_call_cwd=worktree,
             ) as feedback_call:
@@ -2300,7 +2312,7 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
     """threshold 未満は bounded aggregate、到達後は remediation candidate にする。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/log/test.jsonl"
+    log_path = root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
     canonical_key: str | None = None
@@ -2375,7 +2387,7 @@ def test_active_machine_issue_keeps_threshold_state_after_window_expires(
     """window 外で threshold 未満になった active machine issue を最後の state で再検証する。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/log/test.jsonl"
+    log_path = root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
     canonical_key: str | None = None

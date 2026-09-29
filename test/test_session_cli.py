@@ -361,7 +361,7 @@ def test_session_fork_does_not_delete_branch_from_id_collision_race(
     monkeypatch.chdir(root)
     seed_search_config(root)
     home_branch = current_branch(root)
-    session_id = "2026-06-27_01-02_03-000000000"
+    session_id = "sess_000000_2026-06-27_01-02"
     session_branch = f"cmoc/session/{session_id}"
     protected_commit = ""
 
@@ -392,7 +392,7 @@ def test_session_fork_does_not_overwrite_state_from_id_collision_race(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     seed_search_config(root)
-    session_id = "2026-06-27_01-02_03-000000000"
+    session_id = "sess_000000_2026-06-27_01-02"
     session_branch = f"cmoc/session/{session_id}"
     path = write_abandoned_state(root, session_id)
     original = path.read_text()
@@ -429,12 +429,11 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     monkeypatch.setattr(
         session_fork_module, "new_id", lambda _root, _prefix: session_id
     )
-    monkeypatch.setattr(session_fork_module, "MAX_SESSION_ID_ATTEMPTS", 2)
 
     result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code != 0
-    assert "一意な session-id を生成できませんでした。" in result.stderr
+    assert "発行した session ID の保存先が既に存在します。" in result.stderr
     assert path.read_text() == original
     assert current_branch(root) == home_branch
     assert (
@@ -444,29 +443,6 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
         ).returncode
         != 0
     )
-
-
-def test_session_fork_retries_session_id_collision(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """session ID 衝突後に次の採番で fork を再試行することを検証する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    seed_search_config(root)
-    collision_id = "sess_000000_2026-06-27_01-02"
-    next_id = "sess_000001_2026-06-27_01-02"
-    old_path = write_abandoned_state(root, collision_id)
-    original = old_path.read_text()
-    ids = iter([collision_id, next_id])
-    monkeypatch.setattr(session_fork_module, "new_id", lambda _root, _prefix: next(ids))
-
-    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
-
-    assert result.exit_code == 0
-    assert current_branch(root) == f"cmoc/session/{next_id}"
-    assert old_path.read_text() == original
-    assert (root / ".cmoc" / "gu" / "session" / f"{next_id}.json").is_file()
-    assert f"- session_branch: `cmoc/session/{next_id}`" in result.output
 
 
 def test_session_fork_rejects_corrupt_state_without_active_session_message(

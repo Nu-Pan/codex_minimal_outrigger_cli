@@ -25,8 +25,8 @@ def test_basis_captures_tracked_configuration_and_nested_inputs(
         "nested/source.py",
     ]
     runtime_paths = [
-        ".cmoc/gu/log/codex/call.json",
-        ".cmoc/gu/editor_input/input.md",
+        ".cmoc/gu/log/codex/exec_000000_2026-09-29_15-04/cc_000000_2026-09-29_15-04_call.json",
+        ".cmoc/gu/log/editor_input/exec_000000_2026-09-29_15-04_orig.md",
         ".cmoc/gu/feedback/active/current.json",
         ".cmoc/gu/state/run_processes/session.pid",
     ]

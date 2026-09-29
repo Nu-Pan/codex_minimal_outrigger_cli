@@ -118,7 +118,6 @@ def _synchronize_document_search_index(
     if logger is not None:
         logger.event(
             "document_search_sync_started",
-            invocation_id=logger.invocation_id,
             sync_id=sync_id,
             work_root=str(root),
             scope_identity=scope_identity(scope),
@@ -179,7 +178,6 @@ def _synchronize_document_search_index(
             progress = search.sync_progress if search is not None else None
             logger.event(
                 "document_search_sync_finished",
-                invocation_id=logger.invocation_id,
                 sync_id=sync_id,
                 work_root=str(root),
                 index_identity=progress.get("identity") if progress else None,

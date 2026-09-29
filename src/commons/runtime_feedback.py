@@ -162,7 +162,7 @@ class FeedbackInvocation:
         self.worktree = worktree.resolve()
         self.command = command
         self.logger = logger
-        self.invocation_id = logger.invocation_id
+        self.execution_id = logger.execution_id
         self.collector_port: int | None = None
         self._condition = threading.Condition()
         self._calls: dict[str, _CallContext] = {}
@@ -210,7 +210,7 @@ class FeedbackInvocation:
             "run_id": run_id,
             "run_kind": run_kind,
             "subcommand": self.command,
-            "subcommand_invocation_id": self.invocation_id,
+            "subcommand_invocation_id": self.execution_id,
         }
 
     def start(self) -> None:
@@ -238,7 +238,7 @@ class FeedbackInvocation:
         self._listener = listener
         self._server_thread = threading.Thread(
             target=self._serve,
-            name=f"cmoc-feedback-{self.invocation_id}",
+            name=f"cmoc-feedback-{self.execution_id}",
             daemon=True,
         )
         self._server_thread.start()
@@ -512,16 +512,16 @@ class FeedbackInvocation:
         version = event.get("event_schema_version")
         event_id = event.get("event_id")
         occurred_at = event.get("occurred_at")
-        invocation_id = event.get("subcommand_invocation_id")
+        execution_id = event.get("subcommand_invocation_id")
         if (
             type(version) is not int
             or version != 1
             or not isinstance(event_id, str)
             or not event_id
             or not isinstance(occurred_at, str)
-            or not isinstance(invocation_id, str)
-            or not invocation_id
-            or invocation_id != self.invocation_id
+            or not isinstance(execution_id, str)
+            or not execution_id
+            or execution_id != self.execution_id
         ):
             return
         try:
@@ -869,7 +869,7 @@ def emit_reporter_unavailable(
                 event_id=uuid7_prefixed("evt_"),
                 event_type="feedback.reporter_unavailable",
                 occurred_at=rfc3339_now(),
-                subcommand_invocation_id=logger.invocation_id,
+                subcommand_invocation_id=logger.execution_id,
                 component=component,
                 failure_code=failure_code,
             )

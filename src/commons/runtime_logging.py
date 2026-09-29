@@ -38,7 +38,6 @@ class SubcommandLogger:
         self.root = root
         self.command = command
         self.execution_id = new_id(root, "exec")
-        self.invocation_id = self.execution_id
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
         self.transient_wait_sec = 0.0

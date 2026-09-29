@@ -99,8 +99,6 @@ Markdown 解析ライブラリ、SQLite の物理的な table 構造、照合用
 
 索引 identity は、正規化した worktree の実体、実効閲覧範囲、分類契約、および推論・保存条件を区別する。推論・保存条件にはモデルの配布物、tokenizer、入力整形、分割、pooling、次元、context、runtime、および保存形式の互換性を含める。同じ path の別 worktree 実体を取り違えず、互換性のない索引や cache を暗黙に流用しない。正規化や hash の具体的アルゴリズムは、この区別を満たす範囲で選べる。
 
-見出し分割と同一入力再利用への方式切替では、人間が既存の索引情報を手動で削除し、新方式で最初から構築する。旧索引・cache の後方互換性、移行、旧形式読込み、旧 identity からの結果救済や fallback は要件にしない。この切替方針は、新方式の通常運用で必要な上記の互換性判定を免除しない。
-
 | 管理物 | 所有 root と保存先 | 共有範囲 |
 |---|---|---|
 | 索引・query cache・採点 cache | `{{work-root}}/.cmoc/gu/document_search/indexes/<identity>/` | 同じ worktree 実体・実効閲覧範囲・互換条件だけ |

@@ -49,5 +49,3 @@ ID は `<プレフィックス>_<6桁の36進通番>_YYYY-MM-DD_HH-mm` 形式と
 Codex が返す session ID、Git commit ID、hash から決定する issue ID、および event から決定する machine observation ID は、それぞれの生成契約に従う。共通 ID に置き換えない。
 
 プレフィックスや通番から、親子関係、target の有効性、処理成功、または現在有効な publication を推定してはならない。対応記録、登録状態、current pointer など、各機能の判断契約を使用する。collector の受理順序は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「high-watermark」に従う。
-
-本書の ID と `{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` の「タイムスタンプのフォーマット」への変更に、旧 ID・旧日時形式の読み取り、旧形式での出力、自動変換、改名、移動、または旧データの一括 cleanup は要求しない。旧データの廃棄はユーザーの手動操作に委ねる。この非互換変更は ID・日時形式に限り、別の schema や protocol の互換契約、および新仕様での通常の再開・封印済み artifact の保護を変更しない。

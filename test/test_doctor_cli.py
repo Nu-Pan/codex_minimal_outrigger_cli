@@ -196,7 +196,7 @@ def test_doctor_sync_log_records_each_run_and_current_work(
         start, finish = starts[0], finishes[0]
         assert events.index(start) < events.index(finish) < len(events) - 1
         assert start["sync_id"] == finish["sync_id"]
-        assert start["invocation_id"] == finish["invocation_id"]
+        assert start["execution_id"] == finish["execution_id"]
         assert start["command"] == finish["command"] == "doctor"
         assert start["work_root"] == finish["work_root"] == str(root)
         assert start["index_identity"] is None
