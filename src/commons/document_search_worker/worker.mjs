@@ -1,7 +1,24 @@
 // The worker receives only text already authorized by Python. Stdout is JSON only.
 import { getLlama } from "node-llama-cpp";
 import { createHash } from "node:crypto";
-import { readFileSync, writeSync } from "node:fs";
+import { readFileSync } from "node:fs";
+
+function writeOutput(text) {
+  // pipe の部分書込みは stream に任せ、全データの送信完了を待つ。
+  // https://nodejs.org/docs/latest-v22.x/api/stream.html#writablewritechunk-encoding-callback
+  return new Promise((resolve, reject) => {
+    process.stdout.once("error", reject);
+    process.stdout.write(text, (error) => {
+      if (error) {
+        // write callback の後に発火する error event も同じ失敗として受け取る。
+        reject(error);
+      } else {
+        process.stdout.off("error", reject);
+        resolve();
+      }
+    });
+  });
+}
 
 function parentIsAlive(pid, expectedStartTime) {
   try {
@@ -148,7 +165,7 @@ async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete
           const range = ranges[ordinal];
           const digest = createHash("sha256").update(range.excerpt).digest("hex");
           if (request.operation === "chunk_stream" && reusable.has(digest)) {
-            onChunk(path, ordinal, range, undefined, true);
+            await onChunk(path, ordinal, range, undefined, true);
             continue;
           }
           context ??= await model.createEmbeddingContext({
@@ -161,10 +178,10 @@ async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete
               checkedEmbeddingInput(model, range.excerpt, config.embedding_context_tokens)
             ), dimensions
           );
-          onChunk(path, ordinal, range, embedding, false);
+          await onChunk(path, ordinal, range, embedding, false);
           reusable.add(digest);
         }
-        onDocumentComplete(path, ranges.length);
+        await onDocumentComplete(path, ranges.length);
       }
     } finally {
       if (context) await context.dispose();
@@ -188,19 +205,15 @@ async function streamDocuments(request) {
   const { resume } = requireObject(request.payload);
   await forEachDocumentChunk(
     request, resume,
-    (path, ordinal, range, embedding, reused) => {
-      writeSync(1, JSON.stringify({
-        kind: reused ? "reuse" : "chunk", path, ordinal,
-        start: range.start, end: range.end, embedding,
-      }) + "\n");
-    },
-    (path, chunk_count) => {
-      writeSync(1, JSON.stringify({
-        kind: "document_complete", path, chunk_count,
-      }) + "\n");
-    }
+    (path, ordinal, range, embedding, reused) => writeOutput(JSON.stringify({
+      kind: reused ? "reuse" : "chunk", path, ordinal,
+      start: range.start, end: range.end, embedding,
+    }) + "\n"),
+    (path, chunk_count) => writeOutput(JSON.stringify({
+      kind: "document_complete", path, chunk_count,
+    }) + "\n")
   );
-  writeSync(1, JSON.stringify({ kind: "done" }) + "\n");
+  await writeOutput(JSON.stringify({ kind: "done" }) + "\n");
 }
 
 async function embedQuery(request) {
@@ -299,7 +312,7 @@ async function main() {
       : request.operation === "rerank"
         ? await rerank(request)
         : fail("unknown operation");
-  process.stdout.write(JSON.stringify({ status: "ok", result }));
+  await writeOutput(JSON.stringify({ status: "ok", result }));
 }
 
 main().catch((error) => {

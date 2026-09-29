@@ -169,7 +169,7 @@ export async function getLlama() {
           async getEmbeddingFor(text) {
             appendFileSync("embedding-inputs.jsonl", JSON.stringify(text) + "\\n");
             const dimensions = Number(process.env.CMOC_TEST_DIMENSIONS || 2);
-            return { vector: [1, ...Array(dimensions - 1).fill(0)] };
+            return { vector: [1, ...Array(dimensions - 1).fill(0.125)] };
           },
           async dispose() {},
         };
@@ -549,6 +549,90 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
     for chunk, excerpt in zip(chunks, inputs, strict=True):
         assert 0 <= chunk["start"] < chunk["end"] <= len(text)
         assert text[chunk["start"] : chunk["end"]] == excerpt
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
+def test_worker_streams_complete_events_through_small_pipe(tmp_path: Path) -> None:
+    """pipe より大きい embedding と再利用・完了イベントを欠落なく順送する。"""
+    _fake_node_model(tmp_path)
+    # 実 runtime と同様に stdout を初期化し、非同期 pipe の部分書込みを再現する。
+    preload = tmp_path / "initialize-stdout.mjs"
+    preload.write_text("void process.stdout;\n")
+    config = _tuning()
+    documents = {
+        "日本語.md": "最初の本文",
+        "next.md": "別の本文",
+        "reuse.md": "最初の本文",
+    }
+    request = NodeSearchWorker(tmp_path, config)._request(
+        "chunk_stream",
+        {
+            "documents": documents,
+            "resume": dict.fromkeys(documents, 0),
+            "config": asdict(config),
+        },
+    )
+    dimensions = INITIAL_SEARCH_MATERIALS.embedding_dimensions
+    result = subprocess.run(
+        ["node", "--import", str(preload), str(tmp_path / "worker.mjs")],
+        input=json.dumps(request, ensure_ascii=False).encode("utf-8"),
+        cwd=tmp_path,
+        env={**os.environ, "CMOC_TEST_DIMENSIONS": str(dimensions)},
+        capture_output=True,
+        pipesize=4096,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8")
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    expected = []
+    for path, body in documents.items():
+        event = {
+            "kind": "reuse" if path == "reuse.md" else "chunk",
+            "path": path,
+            "ordinal": 0,
+            "start": 0,
+            "end": len(body),
+        }
+        if event["kind"] == "chunk":
+            event["embedding"] = [1] + [0.125] * (dimensions - 1)
+            assert len(json.dumps(event).encode("utf-8")) > 4096
+        expected.extend(
+            [event, {"kind": "document_complete", "path": path, "chunk_count": 1}]
+        )
+    assert events == [*expected, {"kind": "done"}]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
+@pytest.mark.parametrize("operation", ["chunk_stream", "chunk_embed"])
+def test_worker_reports_closed_output_pipe(tmp_path: Path, operation: str) -> None:
+    """受信側の切断を送信失敗として終了し、完了待ちで停止し続けない。"""
+    _fake_node_model(tmp_path)
+    config = _tuning()
+    request = NodeSearchWorker(tmp_path, config)._request(
+        operation,
+        {
+            "documents": {"doc.md": "本文"},
+            "resume": {"doc.md": 0},
+            "config": asdict(config),
+        },
+    )
+    request["dimensions"] = 2
+    read_fd, write_fd = os.pipe()
+    os.close(read_fd)
+    with os.fdopen(write_fd, "wb") as output:
+        result = subprocess.run(
+            ["node", str(tmp_path / "worker.mjs")],
+            input=json.dumps(request).encode(),
+            cwd=tmp_path,
+            stdout=output,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+    assert result.returncode != 0
+    assert b"document search worker failed:" in result.stderr
+    assert b"EPIPE" in result.stderr
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
