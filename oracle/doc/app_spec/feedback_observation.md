@@ -201,7 +201,7 @@ raw observation は、1 observation 1 file で次へ保存する。
 {{repo-root}}/.cmoc/gu/feedback/observation/v1/YYYY/MM/DD/{{observation-id}}.json
 ```
 
-agent submission の ID は `fbo_` と UUIDv7 の組み合わせとする。machine observation の ID は `rule_id` と event ID から決定論的に生成し、同じ event の再検出で同じ ID にする。
+cmoc は、新しい agent submission の observation ID を、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従って発行する。同じ observation の再送では発行済み ID を保持する。machine observation の ID は `rule_id` と event ID から決定論的に生成し、同じ event の再検出で同じ ID にする。
 
 同じ ID と同じ canonical hash の再送は idempotent とする。同じ ID で内容が異なる場合は corruption として拒否する。
 

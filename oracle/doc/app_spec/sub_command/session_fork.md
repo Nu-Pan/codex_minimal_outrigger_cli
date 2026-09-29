@@ -26,7 +26,7 @@
 1. doctor preprocess を呼び出す
 2. 現在 checkout している `{{local-branch}}` 名を `{{cmoc-session-home-branch}}` として取得する
 3. 現在の HEAD commit を `{{cmoc-session-fork-commit}}` として取得する
-4. 一意な `{{session-id}}` を生成する
+4. 本書の「`{{cmoc-session-branch}}` の命名規則」に従って、新しい session の `{{session-id}}` を発行する
 5. `{{cmoc-session-branch}}` を作成して checkout する
 6. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「概要」「スキーマ定義」「session field」「run field」に従って、session 情報と初期状態を保存する
 7. terminal result のサブコマンド固有結果に、作成した `{{cmoc-session-branch}}` 名と `{{cmoc-session-home-branch}}` 名を含める
@@ -34,7 +34,8 @@
 ## `{{cmoc-session-branch}}` の命名規則
 
 - branch 名は、`{{cmoc-root}}/oracle/doc/branch_model.md` の `{{cmoc-session-branch}}` を正本とする。
-- `{{session-id}}` には、`{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` の「タイムスタンプのフォーマット」が定める `{{time-stamp}}` を使用する。
+- `{{session-id}}` の書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。
+- session fork で発行した ID を、同じ session の存続期間を通して保持する。その session 上で別のサブコマンドや編集 run を開始しても、session ID を新規発行しない。
 
 ## 任意 start point の扱い
 

@@ -34,10 +34,13 @@ workload 固有仕様が preflight 後の staging area も clean とする場合
 
 ## 共通開始処理
 
+`{{run-id}}` は、隔離して作業する 1 つの編集 run を識別する。書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。同じ run の作業、workload が許可する再開、join、および abandon では、発行済みの run ID を保持する。
+
 workload は、write 権限を持つ本命 agent call の開始前に、次の準備を完了しなければならない。
 
-1. run isolation 仕様に従って、`{{cmoc-run-fork-commit}}`、`{{cmoc-run-branch}}`、および `{{cmoc-run-worktree}}` を確定する。
-2. session state の `run.state` を `running` にし、`kind`、`branch`、`fork_commit` を保存する。
+1. 新しい編集 run の run ID を発行する。
+2. run isolation 仕様に従って、`{{cmoc-run-fork-commit}}`、`{{cmoc-run-branch}}`、および `{{cmoc-run-worktree}}` を確定する。
+3. session state の `run.state` を `running` にし、`kind`、`branch`、`fork_commit` を保存する。
 
 準備後、workload の編集作業を `{{cmoc-run-worktree}}` 上で行う。
 
@@ -142,7 +145,7 @@ feedback work state には join 結果と publication 未実施を記録する�
 ### active workload の解決と引数
 
 - abandon 対象の workload と branch は session state から解決する。
-- worktree は branch に含まれる run ID から決定する。
+- worktree は branch に含まれる session ID と run ID から、`{{cmoc-root}}/oracle/doc/branch_model.md` の「`{{cmoc-run-worktree}}`」に従って決定する。
 - 引数は受け取らない。
 
 ### 事前条件

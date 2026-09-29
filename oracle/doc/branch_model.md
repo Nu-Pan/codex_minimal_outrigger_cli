@@ -37,6 +37,7 @@ cmoc は、人間が作業する session と、そこから隔離して成果物
 
 - `cmoc session fork` が `{{local-branch}}` から作成する `{{cmoc-managed-branch}}` である。
 - 命名規則は `cmoc/session/{{session-id}}` とする。
+- `{{session-id}}` の発行と保持は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/session_fork.md` の「実行手順」と「`{{cmoc-session-branch}}` の命名規則」に従う。
 - ユーザーはこの branch 上で oracle の変更を確認し、各種サブコマンドを呼び出す。
 
 ### `{{cmoc-session-home-branch}}`
@@ -48,6 +49,7 @@ cmoc は、人間が作業する session と、そこから隔離して成果物
 
 - `{{cmoc-session-branch}}` から作成し、run の作業を隔離するための `{{cmoc-managed-branch}}` である。
 - 命名規則は workload にかかわらず `cmoc/run/{{session-id}}/{{run-id}}` とする。
+- `{{session-id}}` は所属する session の ID、`{{run-id}}` はこの編集 run の ID とする。run ID の書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」、発行と保持は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「共通開始処理」に従う。
 - run の差分を git commit として積み上げ、ユーザーが直接作業する branch にはしない。
 - 1 つの branch は 1 つの run instance だけに対応する。
 
@@ -80,4 +82,5 @@ join 時点ですでに run branch HEAD が session branch から到達可能で
 
 - run を `{{repo-root}}` から隔離するための git linked worktree である。
 - `{{run-root}}` は `{{repo-root}}/.cmoc/gu/worktree/{{session-id}}/{{run-id}}` とする。
+- path の session ID と run ID は、対応する `{{cmoc-run-branch}}` 名と同じ値を使う。
 - `{{cmoc-run-branch}}` を checkout し、run の workload を実行する。

@@ -43,7 +43,7 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
 └── invocation/{{execution-id}}.md
 ```
 
-実行 ID と新規実行への適用境界は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「既存データの扱い」に従う。正常 report と `incomplete` 診断 report の保存先に使う実行は、本書の「report cut」で固定する。invocation report は、それを作成する実行の ID を使う。
+実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。正常 report と `incomplete` 診断 report の保存先に使う実行は、本書の「report cut」で固定する。invocation report は、それを作成する実行の ID を使う。
 
 `observation/v1` の `v1` は、raw observation の保存 layout の version を表す。保存する reporter input schema の version とは独立している。reporter input version 2 の導入だけを理由に、既存 raw observation の path を移動しない。
 
@@ -84,7 +84,15 @@ active state を変更する `cmoc feedback report` は、`{{repo-root}}` ごと
 
 lock の方式は実装裁量とする。所有者を安全に判定できない lock を暗黙に破棄してはならない。排他保持中も collector は新しい observation を durable 保存できなければならない。
 
+## feedback run
+
+`{{feedback-run-id}}` は、1 回の feedback remediation run を識別する。書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。新しい feedback run の開始時に発行し、別のサブコマンド実行からの recovery を含む同じ処理を通して保持する。
+
+feedback run manifest は、feedback run ID と、隔離作業を担う編集 run の識別情報を対応付ける。編集 run ID の発行と保持は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「共通開始処理」に従う。新規開始と recovery の条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「事前条件と run の開始または再開」を正本とする。
+
 ## active generation
+
+`{{generation-id}}` は、1 つの active generation を識別する。書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。新しい generation ごとに発行し、同じ generation の保存、検証、および publication の再開では保持する。
 
 active generation には、次の record だけを含める。
 
@@ -144,7 +152,7 @@ wave input は durable 保存後に変更しない。追加 evidence は後続 w
 
 ### high-watermark
 
-high-watermark の意味は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」に従う。collector の durable な受理順序に対する単調増加境界として管理し、directory の列挙順、timestamp、quiet period、または observation 件数から推測してはならない。
+high-watermark の意味は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」に従う。collector の durable な受理順序に対する単調増加境界として管理し、directory の列挙順、timestamp、quiet period、observation 件数、または observation ID の通番から推測してはならない。
 
 wave 終了時の確定順序と境界間の observation の処理は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「intake wave loop」に従う。新規受理がなければ前回と同じ high-watermark を使用してよい。
 
@@ -181,9 +189,7 @@ report cut は、少なくとも次の入力を固定する。
 - issue commit、run branch HEAD、および merge 前の検証結果
 - 正常 publication target、`incomplete` 診断 target、それぞれの report 保存先を固定した実行 ID、および cleanup target
 
-新規に固定する正常 report と `incomplete` 診断 report の保存先には、固定した時点の実行 ID を `{{execution-id}}` として使用し、最終 path とともに封印する。同じ publication を別のサブコマンド実行から再開する場合も、この target を引き継ぐ。保存先や帰属を再開した実行の ID に合わせて変更してはならない。
-
-既存の封印済み参照と hash は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「既存データの扱い」に従う。実行 ID が未記録であることだけを理由に既存 report cut を不正として扱わず、実行 ID の追記や再封印を要求しない。
+正常 report と `incomplete` 診断 report の保存先には、固定した時点の実行 ID を `{{execution-id}}` として使用し、最終 path とともに封印する。同じ publication を別のサブコマンド実行から再開する場合も、この target を引き継ぐ。保存先や帰属を再開した実行の ID に合わせて変更してはならない。
 
 封印後に許す調整・検証と停止条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。調整によって、封印済み report cut、wave input、issue result、最終 high-watermark、または cleanup target を変更してはならない。
 
@@ -207,7 +213,7 @@ publication completion record は、merge または no-op join と post-join 後
 
 診断 report の保存条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「`incomplete`」を正本とする。
 
-`incomplete` 診断 report は、本書の「report cut」で固定した診断 target へ durable に保存する。新規に固定する保存先は次のとおりとする。
+`incomplete` 診断 report は、本書の「report cut」で固定した診断 target へ durable に保存する。保存先は次のとおりとする。
 
 ```text
 {{repo-root}}/.cmoc/gu/report/feedback/incomplete/{{execution-id}}.md

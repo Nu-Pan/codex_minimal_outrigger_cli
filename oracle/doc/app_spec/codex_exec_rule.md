@@ -9,7 +9,9 @@ cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行�
 | agent call | 1 個の `AgentCallParameter` を入力とする論理的な実行。初回実行、Structured Output の補正、retry、および回復待ち後の再開を合わせて 1 回と数える。回復確認 probe は別の agent call とする。 | 対応する builder を表す安定した低カーディナリティの `agent_call_kind` と、一意な agent call ID |
 | Codex call | 初回実行、補正、retry、回復待ち後の再開、および probe を含む個々の Codex CLI 呼び出し。 | 各 CLI 呼び出し、および TUI process ごとに一意な Codex call ID |
 
-`{{execution-id}}` は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。`{{codex-call-id}}` は上表の Codex call ID を表す。既存の保存記録には、同文書の「既存データの扱い」を適用する。
+agent call ID と Codex call ID の書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。cmoc は、論理 agent call の開始前に agent call ID を発行し、上表の同じ論理 call を通して保持する。Codex call ID は、個々の CLI 呼び出しまたは TUI process の開始前に発行する。同じ TUI process の各 turn では同じ Codex call ID を使う。
+
+`{{execution-id}}` は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。`{{codex-call-id}}` は上表の Codex call ID を表す。
 
 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする。AgentCallParameter builder は、その oracle doc から明示的に委譲された範囲で、正確な prompt 文面と workload 固有の起動パラメータを構築する。ただし、model provider、Model、および Reasoning Effort は構築対象から除く。
 
@@ -361,6 +363,8 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - stdout, stderr をコンソールに出力しないこと
 
 ## Codex session ID
+
+Codex session ID は、Codex が返す外部の識別子をそのまま使用する。cmoc の session ID、agent call ID、および Codex call ID とは区別する。
 
 - Codex call の session ID は、対応する `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_stdout.jsonl` から読み取る
 - `type == thread.started` である要素の `thread_id` field を session ID とする

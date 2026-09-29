@@ -29,7 +29,7 @@
 
 recovery 対象がない場合は、session state の `run.state` が `ready` であることを確認し、次の順序で新しい run を開始する。
 
-1. `run.kind=feedback_report` として `{{cmoc-run-branch}}` と `{{cmoc-run-worktree}}` を作成し、`run.state=running` とする。
+1. `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「共通開始処理」に従い、`run.kind=feedback_report` の編集 run を開始する。`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback run」に従って feedback run ID を発行し、その編集 run と対応付ける。
 2. collector の最初の high-watermark を確定し、最初の intake wave を固定する。
 
 recovery 対象ではない active run が残っている場合、または事前条件に違反した場合は、新しい run を作らない。既存の worktree、staging area、raw observation、および current pointer を変更しない。
@@ -267,9 +267,9 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 新しい wave または Codex call は開始しない。安全に再開できない場合は、`run.state=error` と資源を維持する。
 
-再開したサブコマンドには、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う新しい実行 ID を付与する。引き継ぐ正常 report と `incomplete` 診断 report の target は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従う。
+再開したサブコマンドには、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う新しい実行 ID を付与する。feedback run の識別情報と、引き継ぐ正常 report と `incomplete` 診断 report の target は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback run」「report cut」に従う。
 
-再開した実行のサブコマンドログには、その実行 ID、report 保存先を固定した実行 ID、feedback run と report cut の識別情報、および引き継ぐ report の path と保存状況を対応付けて記録する。既存データの実行 ID を保存済み記録から特定できない場合は、未記録であることを示し、保存済みの run、report cut、および report への参照で対応付ける。ファイル名から実行 ID を推定したり、識別情報の補完のために封印済み artifact を変更したりしてはならない。
+再開した実行のサブコマンドログには、その実行 ID、report 保存先を固定した実行 ID、feedback run と report cut の識別情報、および引き継ぐ report の path と保存状況を対応付けて記録する。対応付けには、report cut に封印した実行 ID と参照を使用する。
 
 封印済みの結果分類の変更、新たな意味判断のための agent call、または追加修正を必要とする停止 run は、この recovery の対象外とする。merge commit 前に許されたマージ調整を、join 後にも継続できるとは扱わない。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
 
@@ -309,7 +309,7 @@ quota と一時障害の分類・回復待ち・再開は、`{{cmoc-root}}/oracl
 
 ## report の保存と表示
 
-実行 ID と既存データの扱いは、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「既存データの扱い」に従う。
+実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。
 
 primary report の実行記録には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「共通掲載内容」を適用し、以下の issue 一覧とは区別する。
 
@@ -322,8 +322,6 @@ publication または cleanup の再開で引き継ぐ正常 report と `incompl
 report の保存段階では、未保存なら固定済み target へ保存し、保存済みなら path と hash を検証して再利用する。recovery を正常に完了した場合は、その report を primary report とし、保存済み report の再利用も primary report の保存要件を満たすものとして扱う。
 
 再開した実行の作業内容、終端結果、および共通掲載対象の本文を含む実行記録は、再開した実行のサブコマンドログへ残す。引き継ぐ report にその実行記録を追記してはならない。再開した実行が `error` で終わる場合は、本書の「中断・エラー時の invocation report」に従って今回の primary report を保存し、今回の実行 ID と共通掲載内容を載せる。
-
-既存 report に実行 ID が記録されていない場合も、追記によって本文や hash を変更しない。帰属を特定できる範囲とログからの対応付けは、本書の「join 後の publication failure」に従う。
 
 ### 正常 report
 

@@ -11,24 +11,18 @@
 
 ### 実行 ID の開始表示
 
-実行 ID `{{execution-id}}` は、ユーザーが起動した最外側の末端サブコマンドの invocation を識別する。console と保存記録を同じ値で対応付け、editor input のファイル名から対応するターミナル上の実行を直接照合できるようにする。
+実行 ID `{{execution-id}}` は、ユーザーが起動した最外側の末端サブコマンドの invocation を識別する。console と保存記録を同じ値で対応付け、editor input のファイル名から対応するターミナル上の実行を直接照合できるようにする。書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。
 
-- 最外側のサブコマンド起動時に一度確定し、doctor preprocess や editor input を含む処理の開始前から終了まで維持する。
+- 最外側のサブコマンド開始処理で、doctor preprocess や editor input より前に一度確定し、終了まで維持する。この発行確定順を実行開始順とし、並行開始も同じ基準で順序を定める。
 - 内部から呼び出すサブコマンド、処理関数、agent call、Codex call、retry、および回復待ちには、同じ実行 ID を引き継ぐ。
 - 別の最外側のサブコマンド実行には別の値を割り当てる。同じ session や run を扱う場合も、複数ターミナルで並行実行する場合も重複させない。
-- ファイル名の一部またはディレクトリ名として使用できる値とし、同じ実行を表す console 表示、保存先の `{{execution-id}}`、および記録内の実行情報には同じ文字列を使う。具体的な文字形式と生成アルゴリズムは実装裁量とする。
+- 同じ実行を表す console 表示、保存先の `{{execution-id}}`、および記録内の実行情報には同じ文字列を使う。
 
-日時は既存の日時項目として記録する。実行 ID の文字列から日時を読み取れることは要求しない。
+記録系の日時項目は維持し、実行 ID で置き換えない。
 
 agent call、Codex call、session、run、および handoff target の識別子は、それぞれの識別対象を維持する。これらの識別情報を使う記録には、関連する実行 ID との対応を残し、実行 ID で各識別子を置き換えない。
 
 cmoc は、人間向け console ログの最初の出力として、確定した実行 ID を stderr に表示する。TUI と自動補完への適用は、本書の「TUI と自動補完の境界」に従う。
-
-### 既存データの扱い
-
-実行 ID を用いる保存先の命名規則は、新規のサブコマンド実行から適用する。既存のログ、editor input、report、および再開に必要な保存済み参照は維持し、命名規則への移行を理由とする改名、移動、削除、識別情報の付け替え、または hash の変更を行わない。
-
-新しい実行から既存の feedback publication を再開する場合も、固定済みの保存先をその実行の ID で置き換えない。固定済み target の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」、再開時の対応付けは、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」に従う。
 
 ### 時間表示のフォーマット
 

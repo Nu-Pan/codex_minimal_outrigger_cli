@@ -17,7 +17,7 @@ skeleton 構築時と実行時のパラメータについて、全 field の比�
 
 ## ファイルの役割
 
-editor input 1 回につき、`{{repo-root}}/.cmoc/gu/log/editor_input/{{execution-id}}_orig.md` を本文ファイルとして 1 つ使用し、編集開始から入力確定後の保存まで同じパスを共用する。`{{execution-id}}` は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。編集対象と保存記録を別ファイルに分けない。
+editor input 1 回につき、`{{repo-root}}/.cmoc/gu/log/editor_input/{{execution-id}}_orig.md` を本文ファイルとして 1 つ使用し、編集開始から入力確定後の保存まで同じパスを共用する。`{{execution-id}}` は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」で確定した値を引き継ぐ。編集対象と保存記録を別ファイルに分けない。
 
 | 段階 | 本文ファイルの役割 | 書き込み主体 |
 | --- | --- | --- |
@@ -57,7 +57,3 @@ editor input 1 回につき、`{{repo-root}}/.cmoc/gu/log/editor_input/{{executi
 9. 呼び出し元は、サブコマンド固有仕様に従ってオリジナルプロンプトを反映し、完全プロンプトを確定する。
 
 cmoc は、この確定手順が成功した場合も editor input file を削除せず、記録として残す。失敗した場合は後続の実行へ進まず、作成済みの本文ファイルを復旧用に残す。確定保存の失敗によって入力を失わず、復旧できる状態を保つことを要求する。保存原文と固定した最終読み取り結果の一致、および失敗時の入力保持を満たす具体的な保存方式は、実装に委ねる。
-
-## 既存データの扱い
-
-命名規則の適用境界は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「既存データの扱い」に従う。旧 `{{repo-root}}/.cmoc/gu/editor_input` に残る復旧用ファイルも自動移動・削除しない。

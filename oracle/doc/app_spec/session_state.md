@@ -4,6 +4,8 @@
 
 `{{cmoc-session-state-file}}` は、cmoc workflow 上の session と編集 run の lifecycle を一意に定める JSON file である。編集 run は、明示的な join・abandon または同一 invocation 内の自動 join で終了する。保存先は `{{repo-root}}/.cmoc/gu/session/{{session-id}}.json` とする。
 
+保存先の session ID は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/session_fork.md` の「`{{cmoc-session-branch}}` の命名規則」で定める、同じ session の ID とする。
+
 ## スキーマ設計の基本原則
 
 永続化する情報は必要最小限にとどめ、その場で確実に解決できる情報は state に持たせない。
@@ -91,7 +93,7 @@ active な編集 run の workload を表し、join と abandon はこの値か�
 
 ### `run.branch`
 
-- active run の `{{cmoc-run-branch}}` 名である。
+- active run の `{{cmoc-run-branch}}` 名である。session ID と run ID を含む命名は、`{{cmoc-root}}/oracle/doc/branch_model.md` の「`{{cmoc-run-branch}}`」に従う。
 
 ### `run.fork_commit`
 

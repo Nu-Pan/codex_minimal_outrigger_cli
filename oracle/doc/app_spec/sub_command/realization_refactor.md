@@ -23,6 +23,8 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 | `last_investigated_sha256` | 調査時点の file 内容に対する SHA256 文字列、または `null` |
 | `last_investigated_at` | `{{time-stamp}}`、または `null` |
 
+`last_investigated_at` は調査日時であり、`{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` の「タイムスタンプのフォーマット」に従って保存する。ID は使用しない。
+
 - `not_investigated` の entry は hash と日時をともに `null` とする。
 - absolute path と `..` による `{{work-root}}` 外参照を禁止する。
 - JSON object の記載順に意味を持たせない。
@@ -71,7 +73,7 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 
 - `investigation_required=true` であり、かつ path が current fork の unresolved target 集合に含まれない entry だけを調査対象とする。
 - `last_investigation_result=not_investigated` の entry を先に選ぶ。
-- その後は `last_investigated_at` の古い順に選び、同値なら path の昇順とする。
+- その後は `last_investigated_at` の古い順に選び、同値なら path の昇順とする。比較には保存したミリ秒精度の値を使い、同一ミリ秒は同値として扱う。
 
 ### 1 処理単位
 

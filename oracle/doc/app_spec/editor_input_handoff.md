@@ -43,8 +43,8 @@ handoff instruction は、利用条件、ガイド取得から送信までの手
 
 ## handoff target
 
-- prompt editor input は、editor input file と handoff ガイドファイルの生成後かつ editor の起動前に、opaque な target ID を持つ target を登録し、その ID を人間へ表示する。
-- target は登録から無効化まで active とし、受信先の実行 ID、editor input file、および本書の「handoff ガイド」で定めるファイルを対応付けて保持する。実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。
+- prompt editor input は、editor input file と handoff ガイドファイルの生成後かつ editor の起動前に、新しい target ID を発行して target を登録し、その ID を人間へ表示する。書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。
+- target は登録から無効化まで同じ target ID を保持して active とし、受信先の実行 ID、editor input file、および本書の「handoff ガイド」で定めるファイルを対応付けて保持する。実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。
 - target は editor の待機中だけ submission を受け付ける。
 - editor から処理が戻った後は、次の順に処理する。
     1. submission の新規受付を停止する。
