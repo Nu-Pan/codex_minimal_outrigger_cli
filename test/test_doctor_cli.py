@@ -1048,7 +1048,15 @@ def test_doctor_reports_persisted_chunks_when_sync_fails(
 
     class StoppingWorker:
         def stream_chunks(
-            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+            self,
+            documents,
+            resumes,
+            on_event,
+            *,
+            reusable_hashes,
+            deadline,
+            residency_fd,
+            cancelled,
         ):
             assert deadline is None
             path, source = next(iter(documents.items()))

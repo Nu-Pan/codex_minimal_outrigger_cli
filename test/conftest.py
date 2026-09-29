@@ -75,7 +75,15 @@ def _isolate_document_search_materials(
         """doctor 経路では実モデルを使わず、索引同期自体は実行する。"""
 
         def stream_chunks(
-            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+            self,
+            documents,
+            resumes,
+            on_event,
+            *,
+            reusable_hashes,
+            deadline,
+            residency_fd,
+            cancelled,
         ):
             vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
             for path, source in documents.items():

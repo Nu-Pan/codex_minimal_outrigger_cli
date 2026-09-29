@@ -1,5 +1,6 @@
 // The worker receives only text already authorized by Python. Stdout is JSON only.
 import { getLlama } from "node-llama-cpp";
+import { createHash } from "node:crypto";
 import { readFileSync, writeSync } from "node:fs";
 
 function parentIsAlive(pid, expectedStartTime) {
@@ -100,40 +101,73 @@ async function withModel(modelPath, callback) {
 
 async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete) {
   const { payload, embedding_model: modelPath, dimensions } = request;
-  const { documents, config } = requireObject(payload);
+  const { documents, sections, config, reusable_hashes: reusableHashes = [] } = requireObject(payload);
   requireObject(documents);
+  requireObject(sections);
   requireObject(config);
   requireObject(resume);
+  if (!Array.isArray(reusableHashes) ||
+      !reusableHashes.every((hash) => typeof hash === "string" && /^[0-9a-f]{64}$/.test(hash))) {
+    fail("invalid reusable embeddings");
+  }
+  const reusable = new Set(reusableHashes);
   await withModel(modelPath, async (model) => {
-    const context = await model.createEmbeddingContext({
-      contextSize: config.embedding_context_tokens,
-      batchSize: config.batch_tokens,
-      threads: config.threads,
-    });
+    let context;
     try {
       for (const [path, text] of Object.entries(documents)) {
         const skip = resume[path] ?? 0;
         if (typeof text !== "string" || !text.trim() ||
             !Number.isInteger(skip) || skip < 0) fail("invalid document text");
-        const ranges = chunkRanges(
-          text, model, config.chunk_tokens, config.chunk_overlap_tokens
-        );
+        const chars = Array.from(text);
+        const boundaries = sections[path];
+        if (!Array.isArray(boundaries)) fail("invalid document sections");
+        const ranges = [];
+        let previousEnd = 0;
+        for (const boundary of boundaries) {
+          if (!Array.isArray(boundary) || boundary.length !== 2 ||
+              !Number.isInteger(boundary[0]) || !Number.isInteger(boundary[1]) ||
+              boundary[0] !== previousEnd || boundary[1] <= boundary[0] ||
+              boundary[1] > chars.length) fail("invalid document sections");
+          for (const range of chunkRanges(
+            chars.slice(boundary[0], boundary[1]).join(""), model,
+            config.chunk_tokens, config.chunk_overlap_tokens
+          )) {
+            ranges.push({
+              start: boundary[0] + range.start,
+              end: boundary[0] + range.end,
+              excerpt: range.excerpt,
+            });
+          }
+          previousEnd = boundary[1];
+        }
+        if (previousEnd !== chars.length) fail("incomplete document sections");
         if (ranges.length === 0 || skip > ranges.length) {
           fail("invalid document resume point");
         }
         for (let ordinal = skip; ordinal < ranges.length; ordinal++) {
           const range = ranges[ordinal];
+          const digest = createHash("sha256").update(range.excerpt).digest("hex");
+          if (request.operation === "chunk_stream" && reusable.has(digest)) {
+            onChunk(path, ordinal, range, undefined, true);
+            continue;
+          }
+          context ??= await model.createEmbeddingContext({
+            contextSize: config.embedding_context_tokens,
+            batchSize: config.batch_tokens,
+            threads: config.threads,
+          });
           const embedding = checkedVector(
             await context.getEmbeddingFor(
               checkedEmbeddingInput(model, range.excerpt, config.embedding_context_tokens)
             ), dimensions
           );
-          onChunk(path, ordinal, range, embedding);
+          onChunk(path, ordinal, range, embedding, false);
+          reusable.add(digest);
         }
         onDocumentComplete(path, ranges.length);
       }
     } finally {
-      await context.dispose();
+      if (context) await context.dispose();
     }
   });
 }
@@ -154,9 +188,10 @@ async function streamDocuments(request) {
   const { resume } = requireObject(request.payload);
   await forEachDocumentChunk(
     request, resume,
-    (path, ordinal, range, embedding) => {
+    (path, ordinal, range, embedding, reused) => {
       writeSync(1, JSON.stringify({
-        kind: "chunk", path, ordinal, start: range.start, end: range.end, embedding,
+        kind: reused ? "reuse" : "chunk", path, ordinal,
+        start: range.start, end: range.end, embedding,
       }) + "\n");
     },
     (path, chunk_count) => {
