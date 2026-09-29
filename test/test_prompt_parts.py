@@ -85,7 +85,7 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
             (
                 "**必須**",
                 "**禁止**",
-                "**許容**",
+                "**例外**",
                 "**補足情報**",
                 "**必須**",
                 "**禁止**",
@@ -95,7 +95,7 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
         ),
         pytest.param(
             lambda: _build_realization_policy(_path_context()),
-            ("**必須**", "**禁止**", "**許容**"),
+            ("**必須**", "**禁止**", "**例外**"),
             1,
             id="realization",
         ),

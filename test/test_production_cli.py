@@ -241,11 +241,16 @@ def _production_environment(
         shutil.copy2(source_auth, codex_home / "auth.json")
     editor_dir = tmp_path / "editor-bin"
     editor_dir.mkdir()
+    report_open_log = editor_dir / "report-open.log"
     write_python_executable(
         editor_dir / "code",
         [
             "import pathlib, sys",
-            f"pathlib.Path(sys.argv[-1]).write_text({EDITOR_PROMPT!r})",
+            "if '--wait' in sys.argv:",
+            f"    pathlib.Path(sys.argv[-1]).write_text({EDITOR_PROMPT!r})",
+            "else:",
+            f"    with pathlib.Path({str(report_open_log)!r}).open('a', encoding='utf-8') as log:",
+            "        log.write(sys.argv[-1] + '\\n')",
         ],
     )
     environment = {
@@ -599,11 +604,20 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
     )
 
     first = _run_without_codex_call(cmoc, root, environment, "doctor")
-    first_report = terminal_primary_report(first.stdout).read_text(encoding="utf-8")
+    first_report_path = terminal_primary_report(first.stdout)
+    first_report = first_report_path.read_text(encoding="utf-8")
     assert "照合と実モデル検証: `成功`" in first_report
     assert "文書 embedding: `成功`" in first_report
     assert "query embedding: `成功`" in first_report
     assert "raw rerank: `成功`" in first_report
+    report_open_log = tmp_path / "editor-bin/report-open.log"
+    for _ in range(100):
+        if report_open_log.is_file():
+            break
+        time.sleep(0.01)
+    assert report_open_log.read_text(encoding="utf-8").splitlines() == [
+        str(first_report_path)
+    ]
 
     repeated = _run_without_codex_call(cmoc, root, environment, "doctor")
     repeated_report = terminal_primary_report(repeated.stdout).read_text(

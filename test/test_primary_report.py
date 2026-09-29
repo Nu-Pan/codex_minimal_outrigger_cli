@@ -16,6 +16,8 @@
 """
 
 import json
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -29,6 +31,155 @@ import commons.runtime_primary_report as primary_report_module
 from cmoc_runtime import CmocError, TerminalResult
 from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
+
+
+@pytest.mark.parametrize(
+    ("editor", "expected_argv"),
+    [
+        ("code", ["/fake/code"]),
+        ("nano", ["/fake/xterm", "-e", "/fake/nano"]),
+    ],
+)
+def test_primary_report_editor_launch_is_detached_without_console_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    editor: str,
+    expected_argv: list[str],
+) -> None:
+    """report 表示は保存済み file を開き、editor の終了を待たずに戻る。"""
+    report = tmp_path / "report.md"
+    report.write_text("# report\n", encoding="utf-8")
+    monkeypatch.setattr(
+        primary_report_module,
+        "select_editor",
+        lambda: (editor, f"/fake/{editor}"),
+    )
+    monkeypatch.setattr(
+        primary_report_module.shutil,
+        "which",
+        lambda name: "/fake/xterm" if name == "xterm" else None,
+    )
+    calls: list[tuple[list[str], dict[str, object]]] = []
+    release_editor = threading.Event()
+
+    class FakeProcess:
+        def wait(self) -> int:
+            release_editor.wait(timeout=5)
+            return 0
+
+    def fake_popen(argv: list[str], **kwargs: object) -> FakeProcess:
+        calls.append((argv, kwargs))
+        return FakeProcess()
+
+    monkeypatch.setattr(primary_report_module.subprocess, "Popen", fake_popen)
+    started = time.monotonic()
+    try:
+        primary_report_module.open_primary_report_in_editor(report)
+        assert time.monotonic() - started < 1
+    finally:
+        release_editor.set()
+
+    assert len(calls) == 1
+    argv, kwargs = calls[0]
+    assert argv == [*expected_argv, str(report.resolve())]
+    assert "--wait" not in argv
+    assert kwargs == {
+        "stdin": primary_report_module.subprocess.DEVNULL,
+        "stdout": primary_report_module.subprocess.DEVNULL,
+        "stderr": primary_report_module.subprocess.DEVNULL,
+        "start_new_session": True,
+        "close_fds": True,
+    }
+
+
+@pytest.mark.parametrize("ending", ["success", "interruption", "error"])
+def test_saved_primary_report_is_opened_once_before_terminal_event(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    ending: str,
+) -> None:
+    """全終了分類で保存を確認した report だけを終了 event より先に開く。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+    opened: list[Path] = []
+
+    def observe_open(path: Path) -> None:
+        logger = runtime_cli.current_subcommand_logger()
+        assert logger is not None
+        assert path.is_file()
+        assert "# cmoc doctor report" in path.read_text(encoding="utf-8")
+        assert not any(
+            event["event"] == "command_finished" for event in logger.event_records()
+        )
+        opened.append(path)
+
+    monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", observe_open)
+
+    def finish() -> None:
+        if ending == "error":
+            raise CmocError("failed", [], "injected failure")
+        if ending == "interruption":
+            runtime_cli.mark_current_subcommand_interrupted()
+
+    if ending == "error":
+        with pytest.raises(typer.Exit) as exit_info:
+            runtime_cli.run_cli_subcommand(
+                finish, command_name="doctor", doctor_preprocess=False
+            )
+        assert exit_info.value.exit_code == 1
+    else:
+        runtime_cli.run_cli_subcommand(
+            finish, command_name="doctor", doctor_preprocess=False
+        )
+
+    output = capsys.readouterr()
+    report = terminal_primary_report(output.err if ending == "error" else output.out)
+    assert opened == [report]
+    [log_path] = (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
+    assert (
+        events[-1]["classification"]
+        == {
+            "success": "natural_completion",
+            "interruption": "user_interruption",
+            "error": "error",
+        }[ending]
+    )
+
+
+def test_primary_report_editor_failure_is_warning_without_result_change(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """editor 起動失敗は report・終了 code を保ち、診断記録へ残す。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    _disable_external_completion(monkeypatch)
+
+    def fail_open(_path: Path) -> None:
+        raise OSError("editor unavailable")
+
+    monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", fail_open)
+    runtime_cli.run_cli_subcommand(
+        lambda: None, command_name="doctor", doctor_preprocess=False
+    )
+
+    output = capsys.readouterr()
+    report = terminal_primary_report(output.out)
+    assert report.is_file()
+    assert "# 完了: cmoc doctor" in output.out
+    assert "primary report editor launch failed" in output.out
+    [log_path] = (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-2]["event"] == "warning"
+    assert "editor unavailable" in events[-2]["message"]
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 0
+
 
 _EARLY_ERROR_REPORTS = [
     ("doctor", "doctor", ()),
@@ -658,6 +809,8 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     monkeypatch.chdir(root)
     _disable_external_completion(monkeypatch)
     unsaved_path = root / "must-not-be-displayed.md"
+    opened: list[Path] = []
+    monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", opened.append)
 
     def return_unsaved_report() -> TerminalResult:
         return TerminalResult(
@@ -680,6 +833,7 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     assert str(unsaved_path) not in captured.err
     assert "- primary report (" not in captured.err
     assert not unsaved_path.exists()
+    assert opened == []
     log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
     [log_path] = log_directory.glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]

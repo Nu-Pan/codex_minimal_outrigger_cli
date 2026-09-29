@@ -1,7 +1,6 @@
 """AI Agent 用 prompt をエディタから受け取る共通境界。"""
 
 import os
-import shutil
 import stat
 import subprocess
 import sys
@@ -12,6 +11,7 @@ from oracle.prompt_builder.editor_input import (
     build_prompt_editor_input_console_guidance,
 )
 
+from .runtime_editor import select_editor
 from .runtime_editor_input_handoff import (
     start_editor_input_handoff,
     validate_editor_input_file,
@@ -125,16 +125,8 @@ def ensure_prompt_editor_roots_ignored(root: Path) -> None:
 
 def _select_editor() -> list[str]:
     """仕様の優先順で PATH 上の editor command を選ぶ。"""
-    for command in ("code", "nano", "vim", "vi"):
-        executable = shutil.which(command)
-        if executable is None:
-            continue
-        return [executable, "--wait"] if command == "code" else [executable]
-    raise CmocError(
-        "利用可能なエディタが見つかりません。",
-        ["code, nano, vim, vi のいずれかを PATH から起動できるようにしてください。"],
-        "searched: code, nano, vim, vi",
-    )
+    command, executable = select_editor()
+    return [executable, "--wait"] if command == "code" else [executable]
 
 
 def _validate_editor_storage_path(

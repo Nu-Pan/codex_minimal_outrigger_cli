@@ -15,6 +15,7 @@ from oracle.prompt_builder.editor_input import (
 )
 
 import commons.prompt_editor_input as prompt_editor_input_module
+import commons.runtime_editor as runtime_editor_module
 from cmoc_runtime import CmocError
 
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
@@ -141,7 +142,7 @@ def test_editor_input_selects_editor_in_specified_priority(
     calls: list[list[str]] = []
 
     monkeypatch.setattr(
-        prompt_editor_input_module.shutil,
+        runtime_editor_module.shutil,
         "which",
         lambda command: f"/fake/{command}" if command in available_editors else None,
     )
