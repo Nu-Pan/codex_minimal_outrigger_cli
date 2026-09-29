@@ -39,7 +39,7 @@ from .runtime_errors import CmocError
 from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ignored
 from .runtime_paths import cmoc_root
 
-_INDEX_FORMAT = 2
+_INDEX_FORMAT = 3
 _CLASSIFICATION_CONTRACT = "oracle-file-inventory-v2"
 _LOCK_POLL_SECONDS = 0.05
 
@@ -97,6 +97,7 @@ class InferenceWorker(Protocol):
         resumes: dict[str, int],
         on_event: Callable[[object], None],
         *,
+        reusable_hashes: set[str],
         deadline: float | None,
         residency_fd: int,
         cancelled: threading.Event | None = None,
@@ -402,6 +403,9 @@ def _open_database(path: Path) -> sqlite3.Connection:
                 embedding blob not null,
                 unique(path, ordinal)
             );
+            create table if not exists embedding_cache(
+                excerpt_sha256 text primary key, embedding blob not null
+            );
             create table if not exists query_cache(
                 query text primary key, embedding blob not null
             );
@@ -653,6 +657,7 @@ class DocumentSearch:
         self,
         documents: dict[str, str],
         resumes: dict[str, int],
+        reusable_hashes: set[str],
         residency: Path,
         deadline: float | None,
         on_event: Callable[[object], None],
@@ -671,6 +676,7 @@ class DocumentSearch:
                 documents,
                 resumes,
                 on_event,
+                reusable_hashes=reusable_hashes,
                 deadline=deadline,
                 residency_fd=residency_fd,
                 cancelled=self.cancelled,
@@ -719,7 +725,7 @@ class DocumentSearch:
             "reused_embeddings": 0,
         }
 
-        # 旧本文の結果を先に外し、未完了文書を明示してから推論を開始する。
+        # 出現位置だけを外し、同一入力の embedding は同期完了まで保持する。
         with connection:
             for path in deleted_paths | changed_paths:
                 connection.execute("delete from documents where path = ?", (path,))
@@ -729,10 +735,6 @@ class DocumentSearch:
                     "insert into documents(path, sha256, complete) values(?, ?, ?)",
                     (path, source.sha256, int(not source.text.strip())),
                 )
-            connection.execute(
-                "delete from score_cache where excerpt_sha256 not in "
-                "(select excerpt_sha256 from chunks)"
-            )
 
         resumes: dict[str, int] = {}
         repaired_paths: set[str] = set()
@@ -816,6 +818,21 @@ class DocumentSearch:
             "where documents.complete = 1"
         ).fetchone()[0]
         self.sync_progress["reused_embeddings"] = reused
+        reusable_hashes: set[str] = set()
+        if fresh:
+            for excerpt_sha, embedding in connection.execute(
+                "select excerpt_sha256, embedding from embedding_cache"
+            ):
+                try:
+                    _checked_cached_vector(embedding)
+                except SearchError:
+                    with connection:
+                        connection.execute(
+                            "delete from embedding_cache where excerpt_sha256 = ?",
+                            (excerpt_sha,),
+                        )
+                else:
+                    reusable_hashes.add(excerpt_sha)
         next_ordinal = dict(resumes)
         completed: set[str] = set()
 
@@ -853,7 +870,10 @@ class DocumentSearch:
                     )
                 completed.add(path)
                 return
-            if kind != "chunk" or event.get("ordinal") != next_ordinal[path]:
+            if (
+                kind not in ("chunk", "reuse")
+                or event.get("ordinal") != next_ordinal[path]
+            ):
                 raise SearchError("MODEL_FAILURE", "inference chunk order is invalid")
             source = current_source(path)
             start, end = event.get("start"), event.get("end")
@@ -866,9 +886,26 @@ class DocumentSearch:
             excerpt = source.text[start:end]
             if not excerpt.strip():
                 raise SearchError("MODEL_FAILURE", "document chunk is blank")
-            vector = _vector_blob(event.get("embedding"))
             excerpt_sha = hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
+            if kind == "reuse":
+                cached = connection.execute(
+                    "select embedding from embedding_cache where excerpt_sha256 = ?",
+                    (excerpt_sha,),
+                ).fetchone()
+                if cached is None:
+                    raise SearchError(
+                        "MODEL_FAILURE", "reused embedding is unavailable"
+                    )
+                vector = _checked_cached_vector(cached[0])
+            else:
+                vector = _vector_blob(event.get("embedding"))
             with connection:
+                if kind == "chunk":
+                    connection.execute(
+                        "insert or replace into embedding_cache(excerpt_sha256, embedding) "
+                        "values(?, ?)",
+                        (excerpt_sha, vector),
+                    )
                 connection.execute(
                     "insert into chunks(path, ordinal, start_offset, end_offset, "
                     "start_line, end_line, excerpt, excerpt_sha256, embedding) "
@@ -887,12 +924,15 @@ class DocumentSearch:
                 )
             next_ordinal[path] += 1
             assert self.sync_progress is not None
-            persisted_before = self.sync_progress["persisted_chunks"]
-            assert isinstance(persisted_before, int)
-            self.sync_progress["persisted_chunks"] = persisted_before + 1
+            field = "persisted_chunks" if kind == "chunk" else "reused_embeddings"
+            before = self.sync_progress[field]
+            assert isinstance(before, int)
+            self.sync_progress[field] = before + 1
 
         if fresh:
-            self._stream_inference(fresh, resumes, residency, deadline, on_event)
+            self._stream_inference(
+                fresh, resumes, reusable_hashes, residency, deadline, on_event
+            )
         if (
             completed != set(fresh)
             or connection.execute(
@@ -900,6 +940,17 @@ class DocumentSearch:
             ).fetchone()
         ):
             raise SearchError("MODEL_FAILURE", "inference chunks are incomplete")
+        with connection:
+            connection.execute(
+                "delete from embedding_cache where excerpt_sha256 not in "
+                "(select excerpt_sha256 from chunks)"
+            )
+            connection.execute(
+                "delete from score_cache where excerpt_sha256 not in "
+                "(select excerpt_sha256 from chunks)"
+            )
+        final_reused = self.sync_progress["reused_embeddings"]
+        assert isinstance(final_reused, int)
         count = connection.execute("select count(*) from chunks").fetchone()[0]
         return SyncResult(
             identity=identity,
@@ -916,7 +967,7 @@ class DocumentSearch:
             changed=len(changed_paths & set(stored)),
             deleted=len(deleted_paths),
             blanked=blanked,
-            reused_embeddings=reused,
+            reused_embeddings=final_reused,
             elapsed_seconds=time.monotonic() - started,
         )
 

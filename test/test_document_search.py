@@ -28,7 +28,11 @@ from commons.runtime_document_search import (
     scan_documents,
 )
 from commons.runtime_document_search_mcp import _response
-from commons.runtime_document_search_worker import NodeSearchWorker, materials_directory
+from commons.runtime_document_search_worker import (
+    NodeSearchWorker,
+    _heading_ranges,
+    materials_directory,
+)
 from commons.runtime_git import ensure_cmoc_ignored
 from config.cmoc_config import CmocConfig
 
@@ -103,7 +107,15 @@ class _InferenceDouble:
         return [0.8 for _ in documents]
 
     def stream_chunks(
-        self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+        self,
+        documents,
+        resumes,
+        on_event,
+        *,
+        reusable_hashes,
+        deadline,
+        residency_fd,
+        cancelled,
     ):
         self.operations.append("chunk_embed")
         vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
@@ -134,6 +146,62 @@ def _repo_with_docs(tmp_path: Path) -> Path:
     run_git(root, "commit", "-m", "add docs")
     ensure_cmoc_ignored(root)
     return root
+
+
+def _fake_node_model(base: Path) -> None:
+    """実 chunker に文字単位 tokenizer と記録可能な推論を与える。"""
+    source = resources.files("commons.document_search_worker").joinpath("worker.mjs")
+    (base / "worker.mjs").write_bytes(source.read_bytes())
+    package = base / "node_modules/node-llama-cpp"
+    package.mkdir(parents=True)
+    (package / "package.json").write_text(
+        json.dumps({"type": "module", "exports": "./index.mjs"})
+    )
+    (package / "index.mjs").write_text(
+        """import { appendFileSync } from "node:fs";
+export async function getLlama() {
+  return { async loadModel() {
+    return {
+      tokenize: (text) => Array.from(text),
+      async dispose() {},
+      async createEmbeddingContext() {
+        return {
+          async getEmbeddingFor(text) {
+            appendFileSync("embedding-inputs.jsonl", JSON.stringify(text) + "\\n");
+            const dimensions = Number(process.env.CMOC_TEST_DIMENSIONS || 2);
+            return { vector: [1, ...Array(dimensions - 1).fill(0)] };
+          },
+          async dispose() {},
+        };
+      },
+    };
+  } };
+}
+"""
+    )
+
+
+@pytest.mark.parametrize(
+    ("body", "parts"),
+    [
+        (
+            "冒頭\n# 第一\n本文\n### 下位\n続き\n",
+            ["冒頭\n", "# 第一\n本文\n", "### 下位\n続き\n"],
+        ),
+        (
+            "冒頭\n\n見出し\n=======\n本文\n\n次の見出し\n---\n末尾",
+            ["冒頭\n\n", "見出し\n=======\n本文\n\n", "次の見出し\n---\n末尾"],
+        ),
+        (
+            "```md\n# 偽見出し\n````\n# 本物\n本文\n",
+            ["```md\n# 偽見出し\n````\n", "# 本物\n本文\n"],
+        ),
+        ("見出しなし\n本文\n", ["見出しなし\n本文\n"]),
+    ],
+)
+def test_heading_ranges_follow_markdown_structure(body: str, parts: list[str]) -> None:
+    """階層・Setext・冒頭・コード fence を原文 offset で区切る。"""
+    assert [body[start:end] for start, end in _heading_ranges(body)] == parts
 
 
 def test_scope_only_reads_allowed_oracle_docs(
@@ -218,7 +286,15 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
             self.resumes: list[dict[str, int]] = []
 
         def stream_chunks(
-            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+            self,
+            documents,
+            resumes,
+            on_event,
+            *,
+            reusable_hashes,
+            deadline,
+            residency_fd,
+            cancelled,
         ):
             self.resumes.append(dict(resumes))
             for path, text in documents.items():
@@ -276,7 +352,15 @@ def test_unbounded_sync_outlasts_search_deadline(tmp_path: Path) -> None:
 
     class SlowWorker(_InferenceDouble):
         def stream_chunks(
-            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+            self,
+            documents,
+            resumes,
+            on_event,
+            *,
+            reusable_hashes,
+            deadline,
+            residency_fd,
+            cancelled,
         ):
             assert len(documents) == 1
             assert deadline is None
@@ -336,7 +420,15 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(tmp_path: Path) -> No
             self.resumes: list[int] = []
 
         def stream_chunks(
-            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+            self,
+            documents,
+            resumes,
+            on_event,
+            *,
+            reusable_hashes,
+            deadline,
+            residency_fd,
+            cancelled,
         ):
             path, source = next(iter(documents.items()))
             self.resumes.append(resumes[path])
@@ -397,36 +489,8 @@ def test_worker_preserves_text_across_utf8_input_fragments(
     tmp_path: Path, operation: str, fragment_size: int
 ) -> None:
     """実 worker が受信境界をまたぐ文字と、その原文上の位置を保つ。"""
-    source = resources.files("commons.document_search_worker").joinpath("worker.mjs")
+    _fake_node_model(tmp_path)
     entrypoint = tmp_path / "worker.mjs"
-    entrypoint.write_bytes(source.read_bytes())
-    # 推論だけを置き換え、worker がモデルへ渡した本文をその場で記録する。
-    package = tmp_path / "node_modules/node-llama-cpp"
-    package.mkdir(parents=True)
-    (package / "package.json").write_text(
-        json.dumps({"type": "module", "exports": "./index.mjs"})
-    )
-    (package / "index.mjs").write_text(
-        """import { appendFileSync } from "node:fs";
-export async function getLlama() {
-  return { async loadModel() {
-    return {
-      tokenize: (text) => Array.from(text),
-      async dispose() {},
-      async createEmbeddingContext() {
-        return {
-          async getEmbeddingFor(text) {
-            appendFileSync("embedding-inputs.jsonl", JSON.stringify(text) + "\\n");
-            return { vector: [1, 0] };
-          },
-          async dispose() {},
-        };
-      },
-    };
-  } };
-}
-"""
-    )
     # OS の pipe 分割や sleep に依存せず、実入力のバイト境界を固定する。
     preload = tmp_path / "fragmented-stdin.mjs"
     preload.write_text(
@@ -488,6 +552,149 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
+def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
+    """長い節の overlap が次の短い節へ越境せず、本文を落とさない。"""
+    _fake_node_model(tmp_path)
+    body = "冒頭\n# A\n" + "長い本文" * 8 + "\n## B\n短い本文\n"
+    tuning = DocumentSearchConfig(12, 3, 3, 128, 128, 128, 1, 10.0, 30.0, 1.0)
+    request = NodeSearchWorker(tmp_path, tuning)._request(
+        "chunk_embed", {"documents": {"doc.md": body}, "config": asdict(tuning)}
+    )
+    request["dimensions"] = 2
+    process = subprocess.run(
+        ["node", str(tmp_path / "worker.mjs")],
+        input=json.dumps(request, ensure_ascii=False),
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    assert process.returncode == 0, process.stderr
+    chunks = json.loads(process.stdout)["result"]["doc.md"]
+    sections = _heading_ranges(body)
+    for chunk in chunks:
+        assert any(
+            start <= chunk["start"] < chunk["end"] <= end for start, end in sections
+        )
+    assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文\n"
+    covered = {
+        index for chunk in chunks for index in range(chunk["start"], chunk["end"])
+    }
+    assert all(
+        index in covered for index, char in enumerate(body) if not char.isspace()
+    )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
+def test_changed_sections_and_moved_files_reuse_saved_embeddings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """実 chunker で変更節だけを再推論し、現在位置と採点 cache を保つ。"""
+    pytest.importorskip("sqlite_vec")
+    from commons import runtime_document_search_worker as worker_module
+
+    root = make_repo(tmp_path)
+    document = root / "oracle/doc/sections.md"
+    document.parent.mkdir()
+    a, b, c = "# A\nalpha\n", "# B\nbravo\n", "# C\ncharlie\n"
+    document.write_text(a + b + c)
+    run_git(root, "add", "oracle/doc")
+    run_git(root, "commit", "-m", "add sections")
+    ensure_cmoc_ignored(root)
+    runtime = tmp_path / "fake-worker"
+    runtime.mkdir()
+    _fake_node_model(runtime)
+    monkeypatch.setenv(
+        "CMOC_TEST_DIMENSIONS", str(INITIAL_SEARCH_MATERIALS.embedding_dimensions)
+    )
+    monkeypatch.setattr(worker_module, "verify_search_materials", lambda *_: runtime)
+    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+
+    class QueryWorker(NodeSearchWorker):
+        def __init__(self) -> None:
+            super().__init__(root, _tuning(), material_base=runtime)
+            self.operations: list[str] = []
+
+        def run(self, operation, payload, *, deadline, residency_fd, cancelled=None):
+            self.operations.append(operation)
+            if operation == "embed_query":
+                return vector
+            assert operation == "rerank"
+            return [0.5] * len(payload["documents"])
+
+    worker = QueryWorker()
+    search = DocumentSearch(
+        root,
+        DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+        _tuning(),
+        worker=worker,
+        installation_root=root,
+    )
+
+    def model_inputs() -> list[str]:
+        return [
+            json.loads(line)
+            for line in (runtime / "embedding-inputs.jsonl").read_text().splitlines()
+        ]
+
+    def hit_lines() -> dict[str, int]:
+        return {
+            hit["excerpt"]: hit["start_line"]
+            for hit in search.search("sections", limit=3)["hits"]
+        }
+
+    with closing(search):
+        first = search.synchronize()
+        assert first.chunk_count == 3
+        assert search.sync_progress["persisted_chunks"] == 3
+        assert model_inputs() == [a, b, c]
+        assert hit_lines() == {a: 1, b: 3, c: 5}
+
+        edited_a = "# A\nalpha edited\nextra\n"
+        document.write_text(edited_a + b + c)
+        changed = search.synchronize()
+        assert changed.status == "updated"
+        assert changed.reused_embeddings == 2
+        assert search.sync_progress["persisted_chunks"] == 1
+        assert search.sync_progress["changed_document_count"] == 1
+        assert model_inputs() == [a, b, c, edited_a]
+        assert hit_lines() == {edited_a: 1, b: 4, c: 6}
+
+        revised_heading = "## A revised\nalpha edited\nextra\n"
+        document.write_text(revised_heading + b + c)
+        heading_change = search.synchronize()
+        assert heading_change.reused_embeddings == 2
+        assert search.sync_progress["persisted_chunks"] == 1
+        assert model_inputs() == [a, b, c, edited_a, revised_heading]
+        assert hit_lines() == {revised_heading: 1, b: 4, c: 6}
+
+        document.write_text(b + c + revised_heading)
+        moved_sections = search.synchronize()
+        assert moved_sections.status == "updated"
+        assert moved_sections.reused_embeddings == 3
+        assert search.sync_progress["persisted_chunks"] == 0
+        assert model_inputs() == [a, b, c, edited_a, revised_heading]
+        assert hit_lines() == {b: 1, c: 3, revised_heading: 5}
+
+        moved_file = document.with_name("moved.md")
+        document.rename(moved_file)
+        moved_document = search.synchronize()
+        assert moved_document.status == "updated"
+        assert moved_document.reused_embeddings == 3
+        assert search.sync_progress["persisted_chunks"] == 0
+        assert model_inputs() == [a, b, c, edited_a, revised_heading]
+        hits = search.search("sections", limit=3)["hits"]
+        assert {hit["path"] for hit in hits} == {"oracle/doc/moved.md"}
+        assert {hit["excerpt"]: hit["start_line"] for hit in hits} == {
+            b: 1,
+            c: 3,
+            revised_heading: 5,
+        }
+        assert worker.operations == ["embed_query", "rerank", "rerank", "rerank"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_streaming_worker_delivers_chunk_before_cancellation(tmp_path: Path) -> None:
     """Node の応答完了を待たず chunk を受け取り、取消時は子を回収する。"""
     base = materials_directory(tmp_path)
@@ -510,6 +717,7 @@ def test_streaming_worker_delivers_chunk_before_cancellation(tmp_path: Path) -> 
                 {"doc.md": "x"},
                 {"doc.md": 0},
                 lambda event: (received.append(event), cancelled.set()),
+                reusable_hashes=set(),
                 deadline=None,
                 residency_fd=descriptor,
                 cancelled=cancelled,
@@ -596,7 +804,15 @@ def test_scope_change_preserves_index_while_request_uses_it(tmp_path: Path) -> N
 
     class _WaitingWorker(_InferenceDouble):
         def stream_chunks(
-            self, documents, resumes, on_event, *, deadline, residency_fd, cancelled
+            self,
+            documents,
+            resumes,
+            on_event,
+            *,
+            reusable_hashes,
+            deadline,
+            residency_fd,
+            cancelled,
         ):
             started.set()
             assert release.wait(5)
@@ -604,6 +820,7 @@ def test_scope_change_preserves_index_while_request_uses_it(tmp_path: Path) -> N
                 documents,
                 resumes,
                 on_event,
+                reusable_hashes=reusable_hashes,
                 deadline=deadline,
                 residency_fd=residency_fd,
                 cancelled=cancelled,

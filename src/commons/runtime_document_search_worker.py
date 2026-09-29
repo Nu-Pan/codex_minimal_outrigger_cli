@@ -5,6 +5,7 @@ import importlib
 import json
 import os
 import platform
+import re
 import select
 import signal
 import sqlite3
@@ -18,6 +19,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Callable
 
+from markdown_it import MarkdownIt
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
     INITIAL_SEARCH_MATERIALS,
@@ -32,6 +34,20 @@ from .runtime_document_search import SearchError
 def materials_directory(installation_root: Path) -> Path:
     """共有モデルと runtime の固定資材を収める場所。"""
     return installation_root / ".cmoc/gu/document_search/materials"
+
+
+def _heading_ranges(text: str) -> list[tuple[int, int]]:
+    """Markdown の見出し行で区切り、原文の文字 offset を保つ。"""
+    line_starts = [0]
+    line_starts.extend(match.end() for match in re.finditer(r"\r\n|\n|\r", text))
+    boundaries = [0]
+    for token in MarkdownIt("commonmark").parse(text):
+        if token.type == "heading_open" and token.map is not None:
+            offset = line_starts[token.map[0]]
+            if offset != boundaries[-1]:
+                boundaries.append(offset)
+    boundaries.append(len(text))
+    return list(zip(boundaries, boundaries[1:]))
 
 
 def _sha256(path: Path) -> str:
@@ -276,6 +292,19 @@ class NodeSearchWorker:
 
     def _request(self, operation: str, payload: dict[str, object]) -> dict[str, object]:
         """生存監視に使う親 process の identity を付ける。"""
+        if operation in ("chunk_embed", "chunk_stream"):
+            documents = payload.get("documents")
+            if not isinstance(documents, dict) or not all(
+                isinstance(path, str) and isinstance(body, str)
+                for path, body in documents.items()
+            ):
+                raise SearchError("MODEL_FAILURE", "invalid document text")
+            payload = {
+                **payload,
+                "sections": {
+                    path: _heading_ranges(body) for path, body in documents.items()
+                },
+            }
         try:
             parent_start_time = (
                 Path(f"/proc/{os.getpid()}/stat")
@@ -400,6 +429,7 @@ class NodeSearchWorker:
         resumes: dict[str, int],
         on_event: Callable[[object], None],
         *,
+        reusable_hashes: set[str],
         deadline: float | None,
         residency_fd: int,
         cancelled: threading.Event | None = None,
@@ -409,7 +439,12 @@ class NodeSearchWorker:
             raise SearchError("NOT_READY", "document search tuning is not configured")
         request = self._request(
             "chunk_stream",
-            {"documents": documents, "resume": resumes, "config": asdict(self.config)},
+            {
+                "documents": documents,
+                "resume": resumes,
+                "reusable_hashes": sorted(reusable_hashes),
+                "config": asdict(self.config),
+            },
         )
         try:
             process = subprocess.Popen(
