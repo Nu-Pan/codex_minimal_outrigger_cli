@@ -45,6 +45,7 @@ from .runtime_feedback_store import (
     write_immutable_bytes,
     write_immutable_json,
 )
+from .runtime_ids import is_common_id, new_id
 
 _JsonObject = dict[str, Any]
 
@@ -98,8 +99,8 @@ def generation_root(repo: Path) -> Path:
 
 
 def generation_directory(repo: Path, generation_id: str) -> Path:
-    """UUIDv7 generation ID に対応する directory を返す。"""
-    if not is_uuid7_prefixed(generation_id, "fbg_"):
+    """generation ID に対応する directory を返す。"""
+    if not is_common_id(generation_id, "fbg"):
         raise ValueError(f"invalid feedback generation ID: {generation_id!r}")
     return generation_root(repo) / generation_id
 
@@ -152,9 +153,9 @@ def new_report_cut_id() -> str:
     return uuid7_prefixed("fbc_")
 
 
-def new_generation_id() -> str:
-    """新しい active generation 用 UUIDv7 ID を返す。"""
-    return uuid7_prefixed("fbg_")
+def new_generation_id(repo: Path) -> str:
+    """新しい active generation ID を返す。"""
+    return new_id(repo, "fbg")
 
 
 def issue_id(canonical_key: str) -> str:
@@ -279,8 +280,8 @@ def validate_observation_envelope(
     elif observation.get("source") == "machine_rule":
         errors.extend(_validate_machine_observation(observation))
     elif observation.get("source") == "agent_report":
-        if not is_uuid7_prefixed(observation_id_value, "fbo_"):
-            errors.append("/observation_id: agent report requires UUIDv7")
+        if not is_common_id(observation_id_value, "fbo"):
+            errors.append("/observation_id: agent report requires common fbo ID")
         if observation.get("source_event") is not None:
             errors.append("/source_event: agent observation requires null")
         if isinstance(context, dict):
@@ -885,7 +886,7 @@ def _validate_active_issue(
         raise _corruption("active issue origin が不正です。", path)
     if record.get("origin") == "agent_report" and (
         not canonical_key.startswith("agent\0")
-        or not is_uuid7_prefixed(canonical_key.removeprefix("agent\0"), "fbo_")
+        or not is_common_id(canonical_key.removeprefix("agent\0"), "fbo")
     ):
         raise _corruption("agent active issue canonical key が不正です。", path)
     if record.get("origin") == "machine_rule" and not _is_machine_canonical_key(
@@ -1353,7 +1354,7 @@ def _load_generation(
     generation_id_value = manifest.get("generation_id")
     if (
         not _is_version_one(manifest.get("schema_version"))
-        or not is_uuid7_prefixed(generation_id_value, "fbg_")
+        or not is_common_id(generation_id_value, "fbg")
         or (
             expected_generation_id is not None
             and generation_id_value != expected_generation_id
@@ -1512,7 +1513,7 @@ def load_active_state(repo: Path) -> ActiveState:
         )
     generation_id_value = pointer.get("generation_id")
     report_cut_id_value = pointer.get("report_cut_id")
-    if not is_uuid7_prefixed(generation_id_value, "fbg_") or not is_uuid7_prefixed(
+    if not is_common_id(generation_id_value, "fbg") or not is_uuid7_prefixed(
         report_cut_id_value, "fbc_"
     ):
         raise _corruption("feedback current pointer の ID が不正です。", pointer_path)
@@ -1891,6 +1892,24 @@ def _validate_report_cut_manifest(
     validate_run_artifacts(
         repo, manifest, path, allow_missing=allow_missing_cleanup_targets
     )
+    targets = manifest["run"]["targets"]
+    if publication is not None and (
+        targets is None
+        or publication["generation_id"] != targets["generation_id"]
+        or publication["generated_at"] != targets["generated_at"]
+        or publication["report"]["path"] != targets["report"]
+    ):
+        raise _corruption(
+            "publication target が封印済み report cut と一致しません。", path
+        )
+    if diagnostic is not None and (
+        targets is None
+        or diagnostic["generated_at"] != targets["generated_at"]
+        or diagnostic["report"]["path"] != targets["incomplete_report"]
+    ):
+        raise _corruption(
+            "diagnostic target が封印済み report cut と一致しません。", path
+        )
     status = processing.get("status")
     if status in {"diagnostic_staging", "incomplete"} and diagnostic is None:
         raise _corruption(
@@ -2031,7 +2050,7 @@ def _validate_report_cut_current_input(
     generation_id_value = pointer_value.get("generation_id")
     if (
         not _is_version_one(pointer_value.get("schema_version"))
-        or not is_uuid7_prefixed(generation_id_value, "fbg_")
+        or not is_common_id(generation_id_value, "fbg")
         or not is_uuid7_prefixed(pointer_value.get("report_cut_id"), "fbc_")
         or pointer_value.get("result") not in {"ok", "attention"}
     ):
@@ -2433,7 +2452,7 @@ def _validate_publication_section(
         path,
         "report cut publication",
     )
-    if not is_uuid7_prefixed(publication.get("generation_id"), "fbg_"):
+    if not is_common_id(publication.get("generation_id"), "fbg"):
         raise _corruption("publication generation ID が不正です。", path)
     _require_timestamp(
         publication.get("generated_at"), path, "publication generated_at"

@@ -1,11 +1,11 @@
 """editor input handoff の共有 schema・routing・transport 定義。"""
 
-import hashlib
 import hmac
 import json
 import os
 import secrets
 import socket
+import stat
 import time
 from functools import lru_cache
 from importlib import resources
@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
+
+from .runtime_ids import is_common_id, new_id
+from .runtime_logging import current_execution_id
+from .runtime_paths import untracked_data_dir
 
 if TYPE_CHECKING:
     from jsonschema.validators import Draft202012Validator
@@ -25,7 +29,7 @@ EDITOR_INPUT_HANDOFF_TOKEN_BYTES = 16
 EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS = 1.0
 EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS = 10.0
 _HANDOFF_NONCE_BYTES = 32
-_HANDOFF_PROOF_BYTES = hashlib.sha256().digest_size
+_HANDOFF_PROOF_BYTES = 32
 _HANDOFF_RESPONSE_LIMIT = 64 * 1024
 _CLIENT_PROOF_CONTEXT = b"cmoc-editor-input-handoff-v2/client\0"
 _SERVER_PROOF_CONTEXT = b"cmoc-editor-input-handoff-v2/server\0"
@@ -104,56 +108,85 @@ def editor_input_handoff_source_from_env() -> EditorInputHandoffSource:
     )
 
 
-def _repository_fingerprint(repository: Path) -> str:
-    """canonical repository path の固定長 fingerprint を返す。"""
-    repository_bytes = os.fsencode(str(repository.resolve()))
-    return hashlib.sha256(repository_bytes).hexdigest()[:32]
+def _route_directory(repository: Path) -> Path:
+    """active target の一時 route だけを保持する directory を返す。"""
+    return untracked_data_dir(repository) / "state" / "editor_input_handoff"
 
 
 def build_editor_input_handoff_target_id(
     repository: Path,
     port: int,
     token: bytes,
+    *,
+    execution_id: str | None = None,
 ) -> str:
-    """repository route と capability を opaque target ID に符号化する。"""
+    """target ID を発行し、同じ repository の一時 route へ登録する。"""
     if type(port) is not int or not 1 <= port <= 65535:
         raise ValueError("editor input handoff port is invalid")
     if len(token) != EDITOR_INPUT_HANDOFF_TOKEN_BYTES:
         raise ValueError("editor input handoff token is invalid")
-    return f"eit_2_{_repository_fingerprint(repository)}_{port:04x}_{token.hex()}"
+    owner = execution_id or current_execution_id(repository)
+    if not is_common_id(owner, "exec"):
+        raise ValueError("editor input handoff execution ID is invalid")
+    target_id = new_id(repository, "eit")
+    directory = _route_directory(repository)
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    route_path = directory / f"{target_id}.json"
+    descriptor = os.open(route_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as route_file:
+            json.dump(
+                {"port": port, "token": token.hex(), "execution_id": owner},
+                route_file,
+            )
+            route_file.flush()
+    except BaseException:
+        route_path.unlink(missing_ok=True)
+        raise
+    return target_id
+
+
+def remove_editor_input_handoff_target_route(repository: Path, target_id: str) -> None:
+    """無効化済み target の route を削除する。"""
+    if is_common_id(target_id, "eit"):
+        (_route_directory(repository) / f"{target_id}.json").unlink(missing_ok=True)
 
 
 def parse_editor_input_handoff_target_id(
     repository: Path,
     target_id: str,
 ) -> tuple[tuple[str, int], bytes] | None:
-    """同じ repository 用 target ID から loopback route と capability を得る。"""
+    """同じ repository の active target から loopback route を得る。"""
     target_id.encode("utf-8")
-    parts = target_id.split("_")
-    if len(parts) != 5 or parts[:2] != ["eit", "2"]:
+    if not is_common_id(target_id, "eit"):
         return None
-    repository_fingerprint, port_hex, token_hex = parts[2:]
-    if (
-        len(repository_fingerprint) != 32
-        or len(port_hex) != 4
-        or len(token_hex) != EDITOR_INPUT_HANDOFF_TOKEN_BYTES * 2
-    ):
+    path = _route_directory(repository) / f"{target_id}.json"
+    try:
+        if not stat.S_ISREG(path.lstat().st_mode):
+            return None
+        route = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError):
         return None
-    if not hmac.compare_digest(
-        repository_fingerprint,
-        _repository_fingerprint(repository),
-    ):
+    if not isinstance(route, dict) or set(route) != {
+        "port",
+        "token",
+        "execution_id",
+    }:
         return None
     try:
-        port = int(port_hex, 16)
+        port = route["port"]
+        token_hex = route["token"]
+        if not isinstance(token_hex, str):
+            return None
         token = bytes.fromhex(token_hex)
-    except ValueError:
+    except (TypeError, ValueError):
         return None
     if (
-        not 1 <= port <= 65535
-        or port_hex != f"{port:04x}"
+        type(port) is not int
+        or not 1 <= port <= 65535
         or len(token) != EDITOR_INPUT_HANDOFF_TOKEN_BYTES
         or token_hex != token.hex()
+        or not is_common_id(route["execution_id"], "exec")
     ):
         return None
     return (EDITOR_INPUT_HANDOFF_HOST, port), token

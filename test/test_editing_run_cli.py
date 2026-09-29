@@ -32,6 +32,7 @@ import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
+from commons.runtime_ids import is_common_id
 from commons.runtime_logging import SubcommandLogger
 from commons.runtime_paths import timestamp
 from commons.runtime_primary_report import (
@@ -134,10 +135,10 @@ def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None
     ) == ["modified.md", "new.md"]
 
 
-def test_run_reports_keep_distinct_files_on_timestamp_collision(
+def test_run_reports_use_execution_ids_and_keep_generated_time(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """同一 timestamp の fork/lifecycle report を相互に上書きしない。"""
+    """同一生成時刻でも report は別実行 ID で保存する。"""
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path,
@@ -150,17 +151,8 @@ def test_run_reports_keep_distinct_files_on_timestamp_collision(
         run_fork_commit="run-fork",
         run_worktree=tmp_path,
     )
-    timestamps = iter(
-        [
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000002000",
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000002000",
-        ]
-    )
-    monkeypatch.setattr(run_report_module, "timestamp", lambda: next(timestamps))
+    generated_at = "2026-06-27_10-00-00_000"
+    monkeypatch.setattr(run_report_module, "timestamp", lambda: generated_at)
 
     fork_paths = [
         run_report_module.write_fork_report(
@@ -183,16 +175,12 @@ def test_run_reports_keep_distinct_files_on_timestamp_collision(
         for _ in range(2)
     ]
 
-    assert [path.stem for path in fork_paths] == [
-        "2026-06-27_10-00_00_000001000",
-        "2026-06-27_10-00_00_000002000",
-    ]
-    assert [path.stem for path in lifecycle_paths] == [
-        "2026-06-27_10-00_00_000001000",
-        "2026-06-27_10-00_00_000002000",
-    ]
     assert all(
-        f'generated_at: "{path.stem}"' in path.read_text()
+        is_common_id(path.stem, "exec") for path in [*fork_paths, *lifecycle_paths]
+    )
+    assert len({path.stem for path in [*fork_paths, *lifecycle_paths]}) == 4
+    assert all(
+        f'generated_at: "{generated_at}"' in path.read_text()
         for path in [*fork_paths, *lifecycle_paths]
     )
 
@@ -231,13 +219,15 @@ def test_new_run_target_skips_dangling_worktree_symlink(
 ) -> None:
     """dangling symlink を空き run worktree として再利用しない。"""
     root = make_repo(tmp_path)
-    collision_id = "2026-06-27_10-00_00_000001000"
-    free_id = "2026-06-27_10-00_00_000002000"
+    collision_id = "run_000000_2026-06-27_10-00"
+    free_id = "run_000001_2026-06-27_10-00"
     collision = root / ".cmoc" / "gu" / "worktree" / "session" / collision_id
     collision.parent.mkdir(parents=True)
     collision.symlink_to(tmp_path / "missing-run-worktree", target_is_directory=True)
     target_ids = iter([collision_id, free_id])
-    monkeypatch.setattr(lifecycle_module, "timestamp", lambda: next(target_ids))
+    monkeypatch.setattr(
+        lifecycle_module, "new_id", lambda _root, _prefix: next(target_ids)
+    )
 
     branch, worktree = lifecycle_module.new_run_target(root, "session")
 

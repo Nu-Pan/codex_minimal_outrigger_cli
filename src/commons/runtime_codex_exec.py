@@ -2,10 +2,8 @@
 
 import json
 import subprocess
-import threading
 import time
 from copy import deepcopy
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -44,9 +42,13 @@ from .runtime_git import (
     capture_worktree_snapshot,
     restore_worktree_snapshot,
 )
-from .runtime_logging import SubcommandLogger, current_subcommand_logger
+from .runtime_ids import new_id
+from .runtime_logging import (
+    SubcommandLogger,
+    current_execution_id,
+    current_subcommand_logger,
+)
 from .runtime_paths import (
-    _reserve_timestamped_path,
     codex_log_dir,
     timestamp,
 )
@@ -57,8 +59,6 @@ from .runtime_results import (
 )
 
 _MAX_OUTPUT_CORRECTIONS = 2
-_CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
-_LAST_CODEX_LOG_TIMESTAMPS: dict[Path, str] = {}
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -268,29 +268,6 @@ def _codex_failure_detail(
     )
 
 
-def _next_codex_log_timestamp(log_dir: Path) -> str:
-    """log directory ごとに Codex exec log 名を単調増加させる。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # quota retry の時系列は同じ log directory 内だけで保ち、別 repository の
-    # 呼び出し履歴で新しい log 名を進めない。
-    log_dir = log_dir.resolve()
-    with _CODEX_LOG_TIMESTAMP_LOCK:
-        current = timestamp()
-        last = _LAST_CODEX_LOG_TIMESTAMPS.get(log_dir)
-        if last is not None and current <= last:
-            try:
-                current_dt = datetime.strptime(last[:-3], "%Y-%m-%d_%H-%M_%S_%f")
-            except ValueError:
-                # canonical timestamp でない値は、path reservation の衝突解消へ委ねる。
-                pass
-            else:
-                current = (current_dt + timedelta(microseconds=1)).strftime(
-                    "%Y-%m-%d_%H-%M_%S_%f000"
-                )
-        _LAST_CODEX_LOG_TIMESTAMPS[log_dir] = current
-        return current
-
-
 def run_codex_exec(
     parameter: AgentCallParameter,
     *,
@@ -310,7 +287,11 @@ def run_codex_exec(
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = deepcopy(config or load_config(path_context.work_root))
-    log_dir = codex_log_dir(root)
+    logger = subcommand_logger or current_subcommand_logger()
+    execution_id = (
+        logger.execution_id if logger is not None else current_execution_id(root)
+    )
+    log_dir = codex_log_dir(root) / execution_id
     log_dir.mkdir(parents=True, exist_ok=True)
     agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -371,7 +352,7 @@ def run_codex_exec(
         else None
     )
     # Structured Output correction 全体で共有する論理 agent call ID を先に固定する。
-    agent_call_id = uuid7_prefixed("agc_")
+    agent_call_id = new_id(root, "ac")
     active_agent_call_id = agent_call_id
     active_agent_call_kind = parameter.agent_call_kind
     active_codex_call_id: str | None = None
@@ -396,22 +377,16 @@ def run_codex_exec(
 
     base_call_data = _call_data(parameter, codex_home, agent_call_cwd)
 
-    def _new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
-        """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # sibling path を導出する前に O_EXCL で call path を予約する。process-local の
-        # timestamp lock だけでは並列 cmoc process を保護できない。
-        run_ts, run_call_path = _reserve_timestamped_path(
-            log_dir,
-            "_call.json",
-            lambda: _next_codex_log_timestamp(log_dir),
-        )
+    def _new_log_paths(codex_call_id: str) -> tuple[str, Path, Path, Path, Path, Path]:
+        """発行済み Codex call ID の log path 群を予約する。"""
+        run_call_path = log_dir / f"{codex_call_id}_call.json"
+        run_call_path.open("x").close()
         return (
-            run_ts,
-            log_dir / f"{run_ts}_prompt.md",
-            log_dir / f"{run_ts}_stdout.jsonl",
-            log_dir / f"{run_ts}_stderr.log",
-            log_dir / f"{run_ts}_output.json",
+            timestamp(),
+            log_dir / f"{codex_call_id}_prompt.md",
+            log_dir / f"{codex_call_id}_stdout.jsonl",
+            log_dir / f"{codex_call_id}_stderr.log",
+            log_dir / f"{codex_call_id}_output.json",
             run_call_path,
         )
 
@@ -471,6 +446,7 @@ def run_codex_exec(
             json.dumps(
                 {
                     "purpose": run_purpose,
+                    "execution_id": execution_id,
                     "timestamp": run_ts,
                     "argv": run_argv,
                     "agent_call_id": run_agent_call_id or active_agent_call_id,
@@ -492,7 +468,6 @@ def run_codex_exec(
     call_started_at = time.perf_counter()
     quota_wait_sec = 0.0
     transient_wait_sec = 0.0
-    logger = subcommand_logger or current_subcommand_logger()
 
     def _emit_codex_call_event(
         *,
@@ -708,11 +683,11 @@ def run_codex_exec(
             stopped_agent_call_id=agent_call_id,
             stopped_codex_call_id=recovery_source_call_id or "",
         )
-        active_agent_call_id = uuid7_prefixed("agc_")
+        active_agent_call_id = new_id(root, "ac")
         active_agent_call_kind = probe_parameter.agent_call_kind
-        active_codex_call_id = uuid7_prefixed("cdc_")
+        active_codex_call_id = new_id(root, "cc")
         probe_ts, probe_prompt, probe_stdout, probe_stderr, probe_output, probe_call = (
-            _new_log_paths()
+            _new_log_paths(active_codex_call_id)
         )
         probe_argv = _base_exec_argv(probe_args, probe_agent_call_cwd)
         probe_argv.extend(["--json", "--output-last-message", str(probe_output), "-"])
@@ -814,12 +789,12 @@ def run_codex_exec(
 
     while True:
         check_recovery_interruption()
+        active_codex_call_id = new_id(root, "cc")
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = (
-            _new_log_paths()
+            _new_log_paths(active_codex_call_id)
         )
         active_agent_call_id = agent_call_id
         active_agent_call_kind = parameter.agent_call_kind
-        active_codex_call_id = uuid7_prefixed("cdc_")
         current_argv = _build_argv(output_path, resume_session_id)
         _write_prompt_log(prompt_path, current_prompt)
         _write_call_log(

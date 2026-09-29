@@ -406,7 +406,7 @@ def test_early_error_saves_command_specific_primary_report(
     captured = capsys.readouterr()
     assert exc_info.value.exit_code == 1
     assert captured.out == ""
-    assert "実行 ID: sci_" in captured.err.splitlines()[0]
+    assert "実行 ID: exec_" in captured.err.splitlines()[0]
     report_path = terminal_primary_report(captured.err)
     assert report_path.parent == (root / ".cmoc" / "gu" / "report" / report_directory)
     assert report_path.is_file()
@@ -415,6 +415,10 @@ def test_early_error_saves_command_specific_primary_report(
     front_matter = rendered.split("---", 2)[1]
     metadata = yaml.safe_load(front_matter)
     assert isinstance(metadata, dict)
+    assert metadata["execution_id"] == report_path.stem
+    assert metadata["subcommand_log_path"] == str(
+        root / ".cmoc/gu/log/sub_command" / f"{report_path.stem}.jsonl"
+    )
     assert metadata["terminal_classification"] == "error"
     assert metadata["exit_code"] == 1
     assert 'terminal_classification: "error"' in front_matter

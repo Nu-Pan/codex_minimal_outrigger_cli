@@ -37,6 +37,7 @@ from cmoc_runtime import (
 from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback_intake import capture_high_watermark
 from commons.runtime_feedback_run_state import (
+    new_run_identity,
     new_run_record,
     read_run_artifact,
     save_run_artifact,
@@ -63,7 +64,7 @@ from commons.runtime_feedback_store import (
     sha256_bytes,
     write_immutable_json,
 )
-from commons.runtime_logging import current_subcommand_logger
+from commons.runtime_logging import current_execution_id, current_subcommand_logger
 from commons.runtime_paths import codex_log_dir
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_primary_report_render import execution_record_markdown
@@ -129,6 +130,26 @@ def run_feedback_report() -> TerminalResult:
             existing = load_report_cut(repository)
             if existing is not None:
                 manifest, manifest_path = existing
+                logger = current_subcommand_logger()
+                if logger is not None:
+                    targets = manifest["run"]["targets"]
+                    logger.event(
+                        "feedback_recovery_started",
+                        feedback_run_id=manifest["run"]["feedback_run_id"],
+                        report_cut_id=manifest["report_cut_id"],
+                        report_execution_id=targets["execution_id"]
+                        if targets is not None
+                        else None,
+                        report_path=str(repository / targets["report"])
+                        if targets is not None
+                        else None,
+                        incomplete_report_path=str(
+                            repository / targets["incomplete_report"]
+                        )
+                        if targets is not None
+                        else None,
+                        publication_status=manifest["processing"]["status"],
+                    )
                 candidate_context, _ = resolve_active_run({"error", "joinable"})
                 _validate_context(candidate_context, manifest)
                 if manifest["run"]["join_intent"] is None:
@@ -715,13 +736,17 @@ def _seal(
     selected = selected_remediation_checkpoints(manifest)
     files = decision.worktree_inputs(context.run_worktree)
     _validate_selected_basis(context, selected, candidates, files)
+    owner_execution_id = current_execution_id(context.repo)
     manifest["run"]["targets"] = {
         "generated_at": rfc3339_now(),
-        "generation_id": new_generation_id(),
-        "report": report._new_report_path(context.repo)
+        "generation_id": new_generation_id(context.repo),
+        "execution_id": owner_execution_id,
+        "report": report._new_report_path(context.repo, execution_id=owner_execution_id)
         .relative_to(context.repo)
         .as_posix(),
-        "incomplete_report": report._new_report_path(context.repo, incomplete=True)
+        "incomplete_report": report._new_report_path(
+            context.repo, execution_id=owner_execution_id, incomplete=True
+        )
         .relative_to(context.repo)
         .as_posix(),
     }
@@ -869,14 +894,17 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
     if manifest["run"]["execution_record"] is None:
         logger = current_subcommand_logger()
         original_log = context.repo / manifest["run"]["invocation_log"]
+        inherited = logger is None or original_log != logger.path
         saved_events = (
             tuple(json.loads(line) for line in original_log.read_text().splitlines())
-            if logger is None or original_log != logger.path
+            if inherited
             else ()
         )
         manifest["run"]["execution_record"] = execution_record_markdown(
-            logger,
+            None if inherited else logger,
             saved_events=saved_events,
+            execution_id=manifest["run"]["targets"]["execution_id"],
+            subcommand_log_path=original_log,
         )
         write_report_cut_manifest(context.repo, manifest)
 
@@ -1132,7 +1160,7 @@ def _publish(
 def _validate_context(context: EditingRunContext, manifest: dict[str, Any]) -> None:
     """別 run の成果物を recovery へ流用しない。"""
     identity = manifest["run"]["identity"]
-    expected = new_run_record(context)["identity"]
+    expected = new_run_identity(context)
     if any(
         identity[key] != value
         for key, value in expected.items()

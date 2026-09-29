@@ -69,9 +69,9 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     timestamps = iter(
         [
-            "2099-01-01_00-00_30_000000000",
-            "2099-01-01_00-00_20_000000000",
-            "2099-01-01_00-00_10_000000000",
+            "2099-01-01_00-00-30_000",
+            "2099-01-01_00-00-20_000",
+            "2099-01-01_00-00-10_000",
         ]
     )
     monkeypatch.setattr(runtime_codex_exec, "timestamp", lambda: next(timestamps))
@@ -155,7 +155,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     call_entries = [
         (path, json.loads(path.read_text()))
         for path in sorted(
-            (root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json")
+            (root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json")
         )
     ]
     call_logs = [log for _path, log in call_entries]

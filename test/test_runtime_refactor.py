@@ -224,7 +224,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
             "investigation_required": False,
             "last_investigation_result": "no_findings",
             "last_investigated_sha256": previous_digest,
-            "last_investigated_at": "2026-07-19_00-00_00_000000000",
+            "last_investigated_at": "2026-07-19_00-00-00_000",
         }
     )
     write_refactor_state(root, state)
@@ -235,7 +235,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     changed = synchronized["README.md"]
     assert changed["investigation_required"] is True
     assert changed["last_investigation_result"] == "no_findings"
-    assert changed["last_investigated_at"] == "2026-07-19_00-00_00_000000000"
+    assert changed["last_investigated_at"] == "2026-07-19_00-00-00_000"
     assert changed["last_investigated_sha256"] == previous_digest
 
 
@@ -343,7 +343,7 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
         {
             "last_investigation_result": "findings",
             "last_investigated_sha256": file_sha256(root / "README.md"),
-            "last_investigated_at": "2026-01-01_00-00_00_000000000",
+            "last_investigated_at": "2026-01-01_00-00-00_000",
         }
     )
 
@@ -353,7 +353,7 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
         {
             "last_investigation_result": "no_findings",
             "last_investigated_sha256": file_sha256(root / "oracle" / "spec.md"),
-            "last_investigated_at": "2026-02-01_00-00_00_000000000",
+            "last_investigated_at": "2026-02-01_00-00-00_000",
         }
     )
     assert select_refactor_target(state) == "README.md"
@@ -400,7 +400,7 @@ def test_refactor_state_rejects_non_string_result(
                     "investigation_required": False,
                     "last_investigation_result": result,
                     "last_investigated_sha256": "0" * 64,
-                    "last_investigated_at": "2026-07-19_00-00_00_000000000",
+                    "last_investigated_at": "2026-07-19_00-00-00_000",
                 }
             }
         )
@@ -448,7 +448,7 @@ def test_refactor_state_rejects_nul_in_path_key(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("key", "investigated_at"),
     [
-        ("./README.md", "2026-07-19_00-00_00_000000000"),
+        ("./README.md", "2026-07-19_00-00-00_000"),
         ("README.md", "invalid"),
         ("README.md", "２０２６-０７-１９_００-００_００_０００００００００"),
     ],
@@ -492,7 +492,7 @@ def test_refactor_state_sync_treats_uppercase_digest_as_same_content(
             "investigation_required": False,
             "last_investigation_result": "no_findings",
             "last_investigated_sha256": digest.upper(),
-            "last_investigated_at": "2026-07-19_00-00_00_000000000",
+            "last_investigated_at": "2026-07-19_00-00-00_000",
         }
     )
     state_path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"

@@ -17,7 +17,7 @@ from cmoc_runtime import (
     run_git,
     write_state,
 )
-from commons.runtime_feedback_run_state import new_run_record, read_run_artifact
+from commons.runtime_feedback_run_state import new_run_identity, read_run_artifact
 from commons.runtime_feedback_state import (
     _durable_unlink,
     _read_canonical_object,
@@ -32,6 +32,7 @@ from commons.runtime_feedback_state import (
     validate_feedback_state,
 )
 from commons.runtime_feedback_store import feedback_root, write_immutable_json
+from commons.runtime_ids import is_common_id
 from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import (
@@ -57,6 +58,8 @@ def finish_feedback_run(
     path = feedback_root(context.repo) / "finalization.json"
     journal = {
         "schema_version": 1,
+        "feedback_run_id": manifest["run"]["feedback_run_id"],
+        "report_execution_id": manifest["run"]["targets"]["execution_id"],
         "identity": manifest["run"]["identity"],
         "report_cut_id": manifest["report_cut_id"],
         "report": artifact_reference(context.repo, result.primary_report),
@@ -88,6 +91,16 @@ def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | No
     from .remediation import _indivisible_finalization
 
     with _indivisible_finalization():
+        logger = current_subcommand_logger()
+        if logger is not None:
+            logger.event(
+                "feedback_recovery_started",
+                feedback_run_id=journal["feedback_run_id"],
+                report_cut_id=journal["report_cut_id"],
+                report_execution_id=journal["report_execution_id"],
+                report_path=str(repo / journal["report"]["path"]),
+                publication_status="cleanup",
+            )
         return _finish_from_journal(repo, journal, path)
 
 
@@ -100,6 +113,8 @@ def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
         journal,
         {
             "schema_version",
+            "feedback_run_id",
+            "report_execution_id",
             "identity",
             "report_cut_id",
             "report",
@@ -114,6 +129,8 @@ def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
     if (
         type(journal["schema_version"]) is not int
         or journal["schema_version"] != 1
+        or not is_common_id(journal["feedback_run_id"], "fbr")
+        or not is_common_id(journal["report_execution_id"], "exec")
         or journal["result"] not in {"ok", "attention", "incomplete"}
     ):
         raise _failure("feedback finalization journal の version/result が不正です。")
@@ -181,7 +198,8 @@ def _finish_from_journal(
         raise _failure("feedback finalization report の path が不正です。")
     report_path = repo / report_reference["path"]
     if (
-        report_path.resolve(strict=False).parent
+        report_path.stem != journal["report_execution_id"]
+        or report_path.resolve(strict=False).parent
         != expected_report_root.resolve(strict=False)
         or report_path.suffix != ".md"
         or artifact_reference(repo, report_path) != report_reference
@@ -363,7 +381,7 @@ def finish_manual_feedback_run(context: EditingRunContext, operation: str) -> No
             logger.event(
                 "feedback_run_manual_completion",
                 operation=operation,
-                run_identity=new_run_record(context)["identity"],
+                run_identity=new_run_identity(context),
                 session_commit=head_commit(context.session_worktree),
                 publication=False,
                 checkpoints=[

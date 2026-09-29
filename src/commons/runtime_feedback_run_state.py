@@ -26,21 +26,28 @@ from .runtime_feedback_store import (
     sha256_bytes,
     write_immutable_json,
 )
+from .runtime_ids import is_common_id, new_id
 from .runtime_logging import current_subcommand_logger
 from .runtime_run_lifecycle import EditingRunContext
 
 
+def new_run_identity(context: EditingRunContext) -> dict[str, Any]:
+    """隔離編集 run の確定 identity を JSON 表現へ変換する。"""
+    return {
+        key: str(value) if isinstance(value, Path) else value
+        for key, value in asdict(context).items()
+    }
+
+
 def new_run_record(context: EditingRunContext) -> dict[str, Any]:
-    """run identity と未処理の artifact reference を作る。"""
+    """新しい feedback run ID と編集 run identity を対応付ける。"""
     logger = current_subcommand_logger()
     return {
+        "feedback_run_id": new_id(context.repo, "fbr"),
         "invocation_log": str(logger.path.relative_to(context.repo))
         if logger
         else None,
-        "identity": {
-            key: str(value) if isinstance(value, Path) else value
-            for key, value in asdict(context).items()
-        },
+        "identity": new_run_identity(context),
         "waves": [],
         "high_watermark": 0,
         "sealed": None,
@@ -219,7 +226,8 @@ def validate_manifest_update(
     old_run, new_run = previous["run"], current["run"]
     old_inputs, new_inputs = previous["inputs"], current["inputs"]
     if (
-        old_run["identity"] != new_run["identity"]
+        old_run["feedback_run_id"] != new_run["feedback_run_id"]
+        or old_run["identity"] != new_run["identity"]
         or old_run["invocation_log"] != new_run["invocation_log"]
         or previous["cut_at"] != current["cut_at"]
     ):
@@ -272,6 +280,7 @@ def validate_run_artifacts(
     run = _require_exact_fields(
         manifest.get("run"),
         {
+            "feedback_run_id",
             "identity",
             "invocation_log",
             "waves",
@@ -286,6 +295,8 @@ def validate_run_artifacts(
         path,
         "feedback run",
     )
+    if not is_common_id(run["feedback_run_id"], "fbr"):
+        raise _corruption("feedback run ID が不正です。", path)
     identity = _require_exact_fields(
         run["identity"],
         set(EditingRunContext.__dataclass_fields__),
@@ -309,6 +320,29 @@ def validate_run_artifacts(
         run["execution_record"], str
     ):
         raise _corruption("feedback 実行記録が不正です。", path)
+    targets = run["targets"]
+    if targets is not None:
+        targets = _require_exact_fields(
+            targets,
+            {
+                "generated_at",
+                "generation_id",
+                "execution_id",
+                "report",
+                "incomplete_report",
+            },
+            path,
+            "feedback report targets",
+        )
+        owner = targets["execution_id"]
+        if (
+            not is_common_id(owner, "exec")
+            or not is_common_id(targets["generation_id"], "fbg")
+            or targets["report"] != f".cmoc/gu/report/feedback/{owner}.md"
+            or targets["incomplete_report"]
+            != f".cmoc/gu/report/feedback/incomplete/{owner}.md"
+        ):
+            raise _corruption("feedback report target の ID/path が不正です。", path)
     expected_paths = {
         "sealed": path.parent / "report_cut.json",
         "join_intent": path.parent / "join_intent.json",

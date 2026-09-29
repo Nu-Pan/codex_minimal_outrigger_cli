@@ -17,6 +17,7 @@ from oracle.prompt_builder.editor_input import (
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor as runtime_editor_module
 from cmoc_runtime import CmocError
+from commons.runtime_ids import is_common_id
 
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
 
@@ -26,23 +27,13 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """同じ本文 path を保存まで使い、timestamp 衝突と旧データの変更を避ける。"""
-    timestamps = iter(
-        [
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000002000",
-        ]
-    )
+    """同じ本文 path を保存まで使い、別実行と旧データの変更を避ける。"""
     old_recovery = tmp_path / ".cmoc/gu/editor_input/old_orig.md"
     old_log = tmp_path / ".cmoc/gu/log/editor_input/old_orig.md"
     for existing in (old_recovery, old_log):
         existing.parent.mkdir(parents=True, exist_ok=True)
         existing.write_bytes(b"old input\r\n")
     opened: list[Path] = []
-    monkeypatch.setattr(
-        prompt_editor_input_module, "timestamp", lambda: next(timestamps)
-    )
     monkeypatch.setattr(
         prompt_editor_input_module, "_select_editor", lambda: ["fake-editor"]
     )
@@ -72,10 +63,9 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
         assert input_path.read_text(encoding="utf-8") == original_prompt + "\n"
 
     assert opened == paths
-    assert [path.name for path in paths] == [
-        "2026-06-27_10-00_00_000001000_orig.md",
-        "2026-06-27_10-00_00_000002000_orig.md",
-    ]
+    execution_ids = [path.name.removesuffix("_orig.md") for path in paths]
+    assert all(is_common_id(value, "exec") for value in execution_ids)
+    assert execution_ids[0] < execution_ids[1]
     assert paths[0].read_text(encoding="utf-8") == "<!-- editor note -->\ninput-1\n"
     assert set(old_log.parent.iterdir()) == {old_log, *paths}
     assert list(old_recovery.parent.iterdir()) == [old_recovery]

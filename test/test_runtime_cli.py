@@ -46,6 +46,7 @@ from cmoc_runtime import (
     format_duration,
     render_error,
 )
+from commons.runtime_ids import is_common_id
 from config.cmoc_config import CmocConfig
 from main import app
 
@@ -92,7 +93,7 @@ def test_format_duration_rejects_unrepresentable_values() -> None:
 def test_timestamp_zero_pads_year_and_fraction(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """timestamp の年と 9 桁の小数部を仕様どおり固定幅で生成する。"""
+    """timestamp の年とミリ秒部分を仕様どおり固定幅で生成する。"""
 
     class FixedDateTime:
         @classmethod
@@ -101,29 +102,24 @@ def test_timestamp_zero_pads_year_and_fraction(
 
     monkeypatch.setattr(runtime_paths, "datetime", FixedDateTime)
 
-    assert runtime_paths.timestamp() == "0001-02-03_04-05_06_000007000"
+    assert runtime_paths.timestamp() == "0001-02-03_04-05-06_000"
 
 
-def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_subcommand_logger_keeps_one_file_per_execution(
+    tmp_path: Path,
 ) -> None:
-    """同一 timestamp でもサブコマンドごとに固有のログファイルを保持する。"""
-    timestamps = iter(
-        [
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000002000",
-        ]
-    )
-    monkeypatch.setattr(runtime_logging, "timestamp", lambda: next(timestamps))
+    """実行ごとの ID と診断ログ path が一致して重複しない。"""
 
     first = SubcommandLogger(tmp_path, "first")
     second = SubcommandLogger(tmp_path, "second")
     first.event("marker")
     second.event("marker")
 
-    assert first.path.name == "2026-06-27_10-00_00_000001000.jsonl"
-    assert second.path.name == "2026-06-27_10-00_00_000002000.jsonl"
+    assert is_common_id(first.execution_id, "exec")
+    assert is_common_id(second.execution_id, "exec")
+    assert first.execution_id < second.execution_id
+    assert first.path.name == f"{first.execution_id}.jsonl"
+    assert second.path.name == f"{second.execution_id}.jsonl"
     assert [line for line in first.path.read_text().splitlines() if line]
     assert [line for line in second.path.read_text().splitlines() if line]
 

@@ -21,10 +21,10 @@ from cmoc_runtime import (
     session_fork_lock,
     start_subcommand_step,
     state_path,
-    timestamp,
     work_root,
     write_state,
 )
+from commons.runtime_ids import new_id
 from commons.runtime_primary_report import update_primary_report_fields
 
 MAX_SESSION_ID_ATTEMPTS = 32
@@ -187,7 +187,7 @@ def _new_session_id(root: Path) -> str:
     # 根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
     # state file が残った joined/abandoned session との衝突も session-id 衝突として扱う。
     for _ in range(MAX_SESSION_ID_ATTEMPTS):
-        session_id = timestamp()
+        session_id = new_id(root, "sess")
         if (
             not branch_exists(root, f"cmoc/session/{session_id}")
             and not state_path(root, session_id).exists()

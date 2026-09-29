@@ -9,9 +9,8 @@ import json
 import re
 from pathlib import Path
 
-from .runtime_logging import current_subcommand_logger
+from .runtime_logging import current_execution_id, current_subcommand_logger
 from .runtime_paths import (
-    _reserve_timestamped_path,
     reports_dir,
     timestamp,
 )
@@ -42,10 +41,10 @@ def write_fork_report(
     """workload 共通項目を持つ fork report を保存する。"""
     directory = reports_dir(context.repo, command_path)
     directory.mkdir(parents=True, exist_ok=True)
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # report を書き始める前に path を予約し、同一 timestamp の run report を
-    # 別 run が上書きしないようにする。
-    generated_at, path = _reserve_timestamped_path(directory, ".md", timestamp)
+    generated_at = timestamp()
+    execution_id = current_execution_id(context.repo)
+    path = directory / f"{execution_id}.md"
+    path.open("x").close()
     terminal_classification: TerminalClassification = (
         "error"
         if completion_reason == "error"
@@ -57,6 +56,7 @@ def write_fork_report(
     )
     fields: list[tuple[str, object]] = [
         ("command", f"cmoc {command_path.replace('/', ' ')}"),
+        ("execution_id", execution_id),
         ("repo_root", context.repo.resolve()),
         ("terminal_classification", terminal_classification),
         ("exit_code", 1 if completion_reason == "error" else 0),
@@ -75,6 +75,8 @@ def write_fork_report(
     fields.extend((extra_fields or {}).items())
     changed = [_render_changed_path(item) for item in changed_paths] or ["- none"]
     logger = current_subcommand_logger()
+    if logger is not None:
+        fields.append(("subcommand_log_path", str(logger.path.resolve())))
     execution = (
         execution_step_lines(logger, terminal_classification)
         if logger is not None
@@ -118,19 +120,19 @@ def write_lifecycle_report(
     if report_path is None:
         directory = reports_dir(context.repo, f"run/{operation}")
         directory.mkdir(parents=True, exist_ok=True)
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-        # report を書き始める前に path を予約し、同一 timestamp の run report を
-        # 別 run が上書きしないようにする。
-        generated_at, target_path = _reserve_timestamped_path(
-            directory, ".md", timestamp
-        )
+        generated_at = timestamp()
+        execution_id = current_execution_id(context.repo)
+        target_path = directory / f"{execution_id}.md"
+        target_path.open("x").close()
         new_report = True
     else:
         generated_at = timestamp()
         target_path = report_path
+        execution_id = current_execution_id(context.repo)
         new_report = False
     fields: list[tuple[str, object]] = [
         ("command", f"cmoc run {operation}"),
+        ("execution_id", execution_id),
         ("repo_root", context.repo.resolve()),
         ("terminal_classification", terminal_classification),
         ("exit_code", exit_code),
@@ -147,6 +149,8 @@ def write_lifecycle_report(
         *details.items(),
     ]
     logger = current_subcommand_logger()
+    if logger is not None:
+        fields.append(("subcommand_log_path", str(logger.path.resolve())))
     execution = (
         execution_step_lines(logger, terminal_classification)
         if logger is not None

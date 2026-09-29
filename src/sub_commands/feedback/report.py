@@ -71,7 +71,7 @@ from commons.runtime_feedback_store import (
     write_immutable_bytes,
 )
 from commons.runtime_logging import current_subcommand_logger
-from commons.runtime_paths import reports_dir, timestamp
+from commons.runtime_paths import reports_dir
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_results import StructuredOutputValidationIssue
 
@@ -1947,6 +1947,8 @@ def _render_feedback_report(
     """正常 publication 用の current unresolved issue 一覧だけを描画する。"""
     fields = (
         ("command", "cmoc feedback report"),
+        ("execution_id", manifest["run"]["targets"]["execution_id"]),
+        ("subcommand_log_path", str(repo / manifest["run"]["invocation_log"])),
         ("generated_at", generated_at),
         ("repo_root", str(repo)),
         ("session_branch", current_branch(worktree)),
@@ -2037,6 +2039,8 @@ def _render_incomplete_report(
     )
     fields = (
         ("command", "cmoc feedback report"),
+        ("execution_id", manifest["run"]["targets"]["execution_id"]),
+        ("subcommand_log_path", str(repo / manifest["run"]["invocation_log"])),
         ("generated_at", generated_at),
         ("repo_root", str(repo)),
         ("session_branch", current_branch(worktree)),
@@ -2161,15 +2165,17 @@ def _remediation_candidate_count(manifest: _JsonObject) -> int:
     return len({item["candidate_id"] for item in checkpoints})
 
 
-def _new_report_path(repo: Path, *, incomplete: bool = False) -> Path:
-    """正常／診断 report の既存 artifact を上書きしない path を選ぶ。"""
+def _new_report_path(
+    repo: Path, *, execution_id: str, incomplete: bool = False
+) -> Path:
+    """report cut で封印する実行 ID 由来の保存先を返す。"""
     directory = reports_dir(repo, "feedback")
     if incomplete:
         directory /= "incomplete"
-    while True:
-        path = directory / f"{timestamp()}.md"
-        if not path.exists() and not path.is_symlink():
-            return path
+    path = directory / f"{execution_id}.md"
+    if path.exists() or path.is_symlink():
+        raise FileExistsError(path)
+    return path
 
 
 def _yaml_scalar(value: object) -> str:
@@ -2281,6 +2287,8 @@ def _record_publication_event(
     if logger is not None:
         logger.event(
             "feedback_report_published",
+            report_execution_id=manifest["run"]["targets"]["execution_id"],
+            feedback_run_id=manifest["run"]["feedback_run_id"],
             report_cut_id=manifest.get("report_cut_id"),
             active_generation_id=manifest.get("publication", {}).get("generation_id"),
             generation_manifest_path=_full_log_path(
@@ -2304,6 +2312,8 @@ def _record_incomplete_event(
     if logger is not None:
         logger.event(
             "feedback_report_incomplete",
+            report_execution_id=manifest["run"]["targets"]["execution_id"],
+            feedback_run_id=manifest["run"]["feedback_run_id"],
             report_cut_id=manifest.get("report_cut_id"),
             report_path=_full_log_path(repo, report_reference.get("path")),
             result="incomplete",
@@ -2422,7 +2432,7 @@ def _run_report_fields(manifest: _JsonObject) -> tuple[tuple[str, object], ...]:
 
     merged = read_run_artifact(Path(identity["repo"]), run["merged"])
     return (
-        ("feedback_run_id", identity["run_branch"].rsplit("/", 1)[-1]),
+        ("feedback_run_id", run["feedback_run_id"]),
         ("run_kind", identity["kind"]),
         ("run_branch", identity["run_branch"]),
         ("run_fork_commit", identity["run_fork_commit"]),
