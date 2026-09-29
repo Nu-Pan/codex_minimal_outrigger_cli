@@ -113,6 +113,8 @@ collector は、call-scoped capability から次の context を確定する。ag
 - reporter、protocol、observation schema、および detector rule の version
 - evidence path の正規化結果、fingerprint、および fingerprint を取得できなかった理由
 
+subcommand の識別情報には、サブコマンド名と、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」で定める `{{execution-id}}` を使用する。他の識別情報と log は、その観測を受理した実行 ID に対応付ける。
+
 reporter の提供が有効な call では、初回 call と Structured Output の correction call は、同じ agent call ID を使用する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
 
 ### 保存経路

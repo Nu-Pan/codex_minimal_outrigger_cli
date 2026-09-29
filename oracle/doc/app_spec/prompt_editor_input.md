@@ -17,7 +17,7 @@ skeleton 構築時と実行時のパラメータについて、全 field の比�
 
 ## ファイルの役割
 
-editor input 1 回につき、`{{repo-root}}/.cmoc/gu/log/editor_input/{{time-stamp}}_orig.md` を本文ファイルとして 1 つ使用し、編集開始から入力確定後の保存まで共用する。編集対象と保存記録を別ファイルに分けない。
+editor input 1 回につき、`{{repo-root}}/.cmoc/gu/log/editor_input/{{execution-id}}_orig.md` を本文ファイルとして 1 つ使用し、編集開始から入力確定後の保存まで同じパスを共用する。`{{execution-id}}` は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。編集対象と保存記録を別ファイルに分けない。
 
 | 段階 | 本文ファイルの役割 | 書き込み主体 |
 | --- | --- | --- |
@@ -60,4 +60,4 @@ cmoc は、この確定手順が成功した場合も editor input file を削�
 
 ## 既存データの扱い
 
-この配置は新規入力から適用する。既存の保存ログはそのまま残し、旧 `{{repo-root}}/.cmoc/gu/editor_input` に残る復旧用ファイルを自動移動・削除しない。
+命名規則の適用境界は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「既存データの扱い」に従う。旧 `{{repo-root}}/.cmoc/gu/editor_input` に残る復旧用ファイルも自動移動・削除しない。

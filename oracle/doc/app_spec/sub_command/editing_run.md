@@ -170,6 +170,8 @@ self-joining 経路の join がすでに成功した `feedback_report` は、`cm
 
 ## report と terminal result
 
+実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+
 ### 共通内容
 
 fork、self-joining workload、join、および abandon の report は Markdown と YAML Front Matter で構成する。report から、run kind、branch、worktree、fork commit、実行前後の state、warning、および cleanup 結果を判別可能にする。同じ commit を workload 固有の別名でも重複掲載してはいけない。
@@ -188,6 +190,8 @@ fork report の YAML Front Matter は、少なくとも次の項目を含む。
 
 self-joining workload の primary report は、上記の run identity と state に加えて、自動 join、workload 固有の確定処理、および cleanup の結果を含む。保存先と追加項目は、workload 固有仕様で定める。
 
+feedback の publication または cleanup の再開では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「再開時の report と実行記録」に従って、引き継ぐ report と再開した実行の記録を対応付ける。
+
 join と self-joining workload の report には、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める競合解消の判断・付随編集・検証・未解消理由を含める。競合解消を行わなかった場合は、その旨を示す。
 
 ### join と abandon の report
@@ -204,8 +208,8 @@ join report の YAML Front Matter には `{{cmoc-run-join-commit}}` も含め、
 
 | report | 保存先と役割 | 本文で要約する内容 |
 |---|---|---|
-| join report | `{{repo-root}}/.cmoc/gu/report/run/join/{{time-stamp}}.md` に保存し、`cmoc run join` の primary report とする。 | 差分検査、想定外差分の扱い、merge と merge commit または no-op join、post-join hook、refactor state 同期、state 遷移、cleanup、エラー、および関連ログ。 |
-| abandon report | `{{repo-root}}/.cmoc/gu/report/run/abandon/{{time-stamp}}.md` に保存し、`cmoc run abandon` の primary report とする。 | 停止した process、破棄対象、state 遷移、cleanup、残存資源、エラー、および関連ログ。 |
+| join report | `{{repo-root}}/.cmoc/gu/report/run/join/{{execution-id}}.md` に保存し、`cmoc run join` の primary report とする。 | 差分検査、想定外差分の扱い、merge と merge commit または no-op join、post-join hook、refactor state 同期、state 遷移、cleanup、エラー、および関連ログ。 |
+| abandon report | `{{repo-root}}/.cmoc/gu/report/run/abandon/{{execution-id}}.md` に保存し、`cmoc run abandon` の primary report とする。 | 停止した process、破棄対象、state 遷移、cleanup、残存資源、エラー、および関連ログ。 |
 
 join または abandon を開始できなかった場合は、確定できた active workload と state、事前条件違反、および未実行の処理を report する。実行していない merge、hook、破棄、または cleanup の結果を作ってはならない。
 

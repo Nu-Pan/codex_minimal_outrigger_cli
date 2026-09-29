@@ -9,7 +9,7 @@ cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行�
 | agent call | 1 個の `AgentCallParameter` を入力とする論理的な実行。初回実行、Structured Output の補正、retry、および回復待ち後の再開を合わせて 1 回と数える。回復確認 probe は別の agent call とする。 | 対応する builder を表す安定した低カーディナリティの `agent_call_kind` と、一意な agent call ID |
 | Codex call | 初回実行、補正、retry、回復待ち後の再開、および probe を含む個々の Codex CLI 呼び出し。 | 各 CLI 呼び出し、および TUI process ごとに一意な Codex call ID |
 
-最外側の末端サブコマンドの invocation を識別する実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。agent call ID および Codex call ID とは識別対象を区別する。
+`{{execution-id}}` は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。`{{codex-call-id}}` は上表の Codex call ID を表す。既存の保存記録には、同文書の「既存データの扱い」を適用する。
 
 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする。AgentCallParameter builder は、その oracle doc から明示的に委譲された範囲で、正確な prompt 文面と workload 固有の起動パラメータを構築する。ただし、model provider、Model、および Reasoning Effort は構築対象から除く。
 
@@ -295,7 +295,7 @@ prompt の確定前後に行う処理は、次のように区別する。
 - Structured Output の補正 prompt は、本書の「同じ session での出力補正」に従い、次の turn の入力として構築する。初回 prompt は加工しない。
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する。
 
-`AgentCallParameter.prompt` は、`{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_prompt.md` に保存する。初回 Codex call のコマンド末尾に `-` を付け、このファイルを stdin へリダイレクト入力する。
+`AgentCallParameter.prompt` は、初回 Codex call の ID を用いた `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_prompt.md` に保存する。初回 Codex call のコマンド末尾に `-` を付け、このファイルを stdin へリダイレクト入力する。
 
 プロンプト本文を argv に載せてはならない。argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする。
 
@@ -345,23 +345,24 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 ## Codex CLI 呼び出し情報の保存
 
-- Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_call.json` に保存すること
-- `{{time-stamp}}_stdout.jsonl`, `{{time-stamp}}_stderr.log`, `{{time-stamp}}_output.json` に残らない情報だけを `{{time-stamp}}_call.json` に書くこと
-- 同一の Codex CLI 呼び出しでは、`{{time-stamp}}` を一致させる
-- 初回、補正、retry、回復待ち後の再開、および各 probe の Codex call ごとに、別の `{{time-stamp}}` と log 一式を作成する
+- Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_call.json` に保存すること
+- `{{codex-call-id}}_stdout.jsonl`, `{{codex-call-id}}_stderr.log`, `{{codex-call-id}}_output.json` に残らない情報だけを、同じディレクトリの `{{codex-call-id}}_call.json` に書くこと
+- 同一の Codex call について保存する prompt、call、stdout、stderr、output の一式は、同じ `{{execution-id}}` ディレクトリ内で同じ `{{codex-call-id}}` にそろえる
+- 初回、補正、retry、回復待ち後の再開、および各 probe の Codex call ごとに、別の Codex call ID と log 一式を作成する
+- 呼び出し記録から、親の実行 ID、agent call ID、および個々の Codex call ID の対応を追跡可能にする
 - 後続の Codex call は、先行する Codex call の log または出力を上書きしてはならない
 - 停止した呼び出しと probe・再開の対応、および各確認結果は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「診断記録」に従ってサブコマンドログから追跡可能にする
 
 ## stdout, stderr の扱い
 
 - `--json` を必ず指定すること
-- stdout は `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_stdout.jsonl` に出力すること
-- stderr は `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_stderr.log` に出力すること
+- stdout は `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_stdout.jsonl` に出力すること
+- stderr は `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_stderr.log` に出力すること
 - stdout, stderr をコンソールに出力しないこと
 
 ## Codex session ID
 
-- Codex call の session ID は、対応する `{{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_stdout.jsonl` から読み取る
+- Codex call の session ID は、対応する `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_stdout.jsonl` から読み取る
 - `type == thread.started` である要素の `thread_id` field を session ID とする
 
     ```json
@@ -370,8 +371,8 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 ## `--output-last-message`
 
-- `--output-last-message {{repo-root}}/.cmoc/gu/log/codex/{{time-stamp}}_output.json` を必ず指定すること
-- cmoc が Codex CLI の作業結果を取り出す必要がある場合、`{{time-stamp}}_output.json` から読み出すこと
+- `--output-last-message {{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_output.json` を必ず指定すること
+- cmoc が Codex CLI の作業結果を取り出す必要がある場合、その Codex call に対応する `{{codex-call-id}}_output.json` から読み出すこと
 
 ## Structured Output
 

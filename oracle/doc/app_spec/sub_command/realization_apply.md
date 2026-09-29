@@ -61,6 +61,8 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 
 ## fork report と終了コード
 
+実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+
 - `natural_completion` と `error` のすべての終了経路で report を保存する。共通 fork 事前条件違反など、run branch、run worktree、または本命 agent call の開始前に確定したエラーも対象とする。
 - 共通 run 項目に加え、terminal result の共通分類、差分の始点 commit、Codex CLI の終了結果、変更 path、エラー、および関連ログを含める。
 - YAML Front Matter には、この invocation で reporter が受理した feedback の情報を含める。
@@ -68,7 +70,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
     - `feedback_observations` は、`observation_id` と raw observation file の full `path` を持つ object の配列とする。0 件の場合は空配列とする。
 - 差分の終点は共通項目の `{{cmoc-run-fork-commit}}` で表し、同じ commit を別項目として重複掲載しない。
 - AI による意味的な変更要約は生成しない。
-- `{{repo-root}}/.cmoc/gu/report/realization/apply/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。
+- `{{repo-root}}/.cmoc/gu/report/realization/apply/fork/{{execution-id}}.md` に保存し、この report を primary report とする。
 - report 生成時点で確定していない共通 run 項目、差分の始点 commit、Codex CLI の終了結果、または変更 path は、`null` または未実行として記録する。
 - `joinable` での終了は終了コード 0、`error` での終了は非 0 とする。
 

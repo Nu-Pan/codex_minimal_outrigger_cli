@@ -1,6 +1,6 @@
 # コンソール・ファイル、ログ出力規則
 
-本書は、非対話サブコマンドの console、primary report、サブコマンドログ、および terminal result に関する共通契約の正本とする。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、primary report の形式・保存先・追加項目・要約方法、次の操作、および終了コードを定義する。
+本書は、最外側のサブコマンド実行の識別、および非対話サブコマンドの console、primary report、サブコマンドログ、terminal result に関する共通契約の正本とする。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、primary report の形式・保存先・追加項目・要約方法、次の操作、および終了コードを定義する。
 
 ## 共通規則
 
@@ -11,7 +11,24 @@
 
 ### 実行 ID の開始表示
 
-cmoc は、人間向け console ログの最初の出力として、実行 ID を stderr に表示する。この ID は、ユーザーが起動した最外側の末端サブコマンドの invocation を識別する。TUI と自動補完への適用は、本書の「TUI と自動補完の境界」に従う。
+実行 ID `{{execution-id}}` は、ユーザーが起動した最外側の末端サブコマンドの invocation を識別する。console と保存記録を同じ値で対応付け、editor input のファイル名から対応するターミナル上の実行を直接照合できるようにする。
+
+- 最外側のサブコマンド起動時に一度確定し、doctor preprocess や editor input を含む処理の開始前から終了まで維持する。
+- 内部から呼び出すサブコマンド、処理関数、agent call、Codex call、retry、および回復待ちには、同じ実行 ID を引き継ぐ。
+- 別の最外側のサブコマンド実行には別の値を割り当てる。同じ session や run を扱う場合も、複数ターミナルで並行実行する場合も重複させない。
+- ファイル名の一部またはディレクトリ名として使用できる値とし、同じ実行を表す console 表示、保存先の `{{execution-id}}`、および記録内の実行情報には同じ文字列を使う。具体的な文字形式と生成アルゴリズムは実装裁量とする。
+
+日時は既存の日時項目として記録する。実行 ID の文字列から日時を読み取れることは要求しない。
+
+agent call、Codex call、session、run、および handoff target の識別子は、それぞれの識別対象を維持する。これらの識別情報を使う記録には、関連する実行 ID との対応を残し、実行 ID で各識別子を置き換えない。
+
+cmoc は、人間向け console ログの最初の出力として、確定した実行 ID を stderr に表示する。TUI と自動補完への適用は、本書の「TUI と自動補完の境界」に従う。
+
+### 既存データの扱い
+
+実行 ID を用いる保存先の命名規則は、新規のサブコマンド実行から適用する。既存のログ、editor input、report、および再開に必要な保存済み参照は維持し、命名規則への移行を理由とする改名、移動、削除、識別情報の付け替え、または hash の変更を行わない。
+
+新しい実行から既存の feedback publication を再開する場合も、固定済みの保存先をその実行の ID で置き換えない。固定済み target の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」、再開時の対応付けは、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」に従う。
 
 ### 時間表示のフォーマット
 
@@ -49,6 +66,8 @@ cmoc は、人間向け console ログの最初の出力として、実行 ID �
 
 primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
 
+ただし、feedback の publication または cleanup の再開で引き継ぐ正常 report と `incomplete` 診断 report の保存確認、掲載対象、および実行情報の帰属は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「再開時の report と実行記録」に従う。
+
 - `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
 - primary report 作成専用の追加 agent call は、個別仕様が report 生成手順として明示する場合に限る。
 - cmoc 内部から呼び出したサブコマンド、処理関数、agent call、および Codex call は、独立した primary report を保存しない。
@@ -68,6 +87,7 @@ primary report の保存に失敗し、完了契約を確定できない場合�
 
 primary report には、内部処理を含むその invocation の実行記録として、次の内容を一覧で掲載する。
 
+- 本書の「実行 ID の開始表示」で定める実行 ID と、対応する診断用サブコマンドログへの参照。
 - 各 `codex exec`（`codex exec resume` による再開・補正を含む）で取得できた最終出力の本文と、元の出力ファイルへの参照。取得・保存先は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `--output-last-message` を正本とする。
 - 実行中に新規受理された feedback observation の問題内容。掲載対象は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」における observation とする。
 
@@ -139,9 +159,9 @@ Windows toast の対象、発火順序、通知内容、および失敗時の扱
 
 ### 基本要件
 
-- ログファイルは、サブコマンドの呼び出しと 1:1 で対応させること
+- ログファイルは、本書の「実行 ID の開始表示」で定める最外側のサブコマンド実行と 1:1 で対応させ、内部処理もそのログへ記録すること
 - ログファイルは JSON Lines 形式であること
-- ログファイルは `{{repo-root}}/.cmoc/gu/log/sub_command/{{time-stamp}}.jsonl` に出力すること
+- ログファイルは `{{repo-root}}/.cmoc/gu/log/sub_command/{{execution-id}}.jsonl` に出力すること
 - ログファイルは `{{run-root}}` 側に出力してはいけない
 - サブコマンド中に発生したイベント 1 つを、ログファイルの 1 行に記録すること
 - イベントの追記はバッファリングせずに即時 flush すること
@@ -150,7 +170,8 @@ Windows toast の対象、発火順序、通知内容、および失敗時の扱
 
 サブコマンドログは、サブコマンド呼び出しから terminal result までを追跡できる完全な診断記録とする。少なくとも次の情報を記録する。
 
-- サブコマンド呼び出し
+- サブコマンド呼び出しと、その実行 ID
+- 作成した editor input と primary report の保存先、および関連する agent call、Codex call、session、run の識別情報との対応。agent call の開始前や入力中の失敗も含め、作成済み記録の所属実行を追跡可能にする
 - 階層化されたサブステップを含む全ステップと、その時間
 - 全 Codex call と、対応する Codex call ログ、経過時間、および戻り値
 - 回復待ちの開始・継続、理由とその変更、個別 probe の結果、復旧、再開と再発、および待機終了の理由。停止した呼び出しと probe・再開を対応付け、確認した呼び出し条件と結果の適用範囲を追跡可能にする

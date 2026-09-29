@@ -152,9 +152,11 @@ realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/orac
 
 ### 保存と掲載内容
 
+実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+
 すべての終了経路で report を保存する。共通 fork 事前条件違反など、run branch、run worktree、refactor state、または通常の report 生成処理より前に確定したエラーも対象とする。
 
-report は `{{repo-root}}/.cmoc/gu/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、primary report とする。共通 run 項目に加え、refactor state のフル path と `completion_reason` を含める。`completion_reason` は `natural_completion | completed_with_unresolved | user_interruption | error` とする。
+report は `{{repo-root}}/.cmoc/gu/report/realization/refactor/fork/{{execution-id}}.md` に保存し、primary report とする。共通 run 項目に加え、refactor state のフル path と `completion_reason` を含める。`completion_reason` は `natural_completion | completed_with_unresolved | user_interruption | error` とする。
 
 本文には次の内容を含める。
 

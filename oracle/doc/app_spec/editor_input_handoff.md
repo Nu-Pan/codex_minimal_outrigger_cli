@@ -44,7 +44,7 @@ handoff instruction は、利用条件、ガイド取得から送信までの手
 ## handoff target
 
 - prompt editor input は、editor input file と handoff ガイドファイルの生成後かつ editor の起動前に、opaque な target ID を持つ target を登録し、その ID を人間へ表示する。
-- target は登録から無効化まで active とし、本書の「handoff ガイド」で定めるファイルを対応付けて保持する。
+- target は登録から無効化まで active とし、受信先の実行 ID、editor input file、および本書の「handoff ガイド」で定めるファイルを対応付けて保持する。実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。
 - target は editor の待機中だけ submission を受け付ける。
 - editor から処理が戻った後は、次の順に処理する。
     1. submission の新規受付を停止する。
@@ -128,7 +128,7 @@ MCP は入力のパス文字列を `Path` に変換し、参照箇所ととも�
 送信元情報は、handoff を行う TUI process と、それを起動した cmoc の実行を識別する次の値とする。
 
 - 送信元のサブコマンド名
-- その invocation を識別する既存の実行 ID
+- `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」で定める、送信元の `{{execution-id}}`
 - 送信元 TUI process に対応する既存の Codex call ID
 - 対応する診断用サブコマンドログのフルパス
 

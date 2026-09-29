@@ -49,7 +49,7 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
 ## agent call の構成
 
 - 各回は、別の新しい Codex session に対する `codex exec` の初回 call とする。2 回目を、1 回目の session に対する `codex exec resume` として起動してはならない。
-- 各実行を独立して識別・管理するため、agent call ID、Codex call ID、session ID、ログ保存先、および call-scoped な管理情報を実行ごとに分ける。識別とログの共通規約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」「Codex CLI 呼び出し情報の保存」「Codex session ID」を参照する。
+- 2 回の agent call は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従い、同じ親の実行 ID に対応付ける。各回を独立して識別・管理するため、agent call ID、Codex call ID、session ID、ログ保存先、および call-scoped な管理情報を分ける。識別とログの共通規約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」「Codex CLI 呼び出し情報の保存」「Codex session ID」を参照する。
 - 各 agent call 内の retry、quota または一時障害の回復待ち後の再開、および失敗処理には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」を適用し、正常系の 2 回実行とは区別する。
 - 実行パラメータを決めるための追加 agent call は行わない。
 
@@ -91,8 +91,10 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
 
 ## primary report
 
+実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+
 - agent call 開始前を含むすべての終了経路で、oracle edit 実行要約を primary report として保存する。
-- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/oracle_edit/{{time-stamp}}.md` に保存する。
+- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/oracle_edit/{{execution-id}}.md` に保存する。
 - front matter には、次の実行情報を含める。
     - command
     - 生成日時

@@ -267,6 +267,10 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 新しい wave または Codex call は開始しない。安全に再開できない場合は、`run.state=error` と資源を維持する。
 
+再開したサブコマンドには、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う新しい実行 ID を付与する。引き継ぐ正常 report と `incomplete` 診断 report の target は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従う。
+
+再開した実行のサブコマンドログには、その実行 ID、report 保存先を固定した実行 ID、feedback run と report cut の識別情報、および引き継ぐ report の path と保存状況を対応付けて記録する。既存データの実行 ID を保存済み記録から特定できない場合は、未記録であることを示し、保存済みの run、report cut、および report への参照で対応付ける。ファイル名から実行 ID を推定したり、識別情報の補完のために封印済み artifact を変更したりしてはならない。
+
 封印済みの結果分類の変更、新たな意味判断のための agent call、または追加修正を必要とする停止 run は、この recovery の対象外とする。merge commit 前に許されたマージ調整を、join 後にも継続できるとは扱わない。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
 
 ## ユーザー中断
@@ -305,16 +309,28 @@ quota と一時障害の分類・回復待ち・再開は、`{{cmoc-root}}/oracl
 
 ## report の保存と表示
 
+実行 ID と既存データの扱いは、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「既存データの扱い」に従う。
+
 primary report の実行記録には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「共通掲載内容」を適用し、以下の issue 一覧とは区別する。
 
 自動 join の競合解消については、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める判断、付随編集、検証、および未解消理由を実行記録に含める。封印済み結果への影響と検証結果、publication completion record との対応、または publication を停止した理由も判別可能にする。自動修正済み issue を人間向け issue 一覧に再掲載するためには用いない。
 
+### 再開時の report と実行記録
+
+publication または cleanup の再開で引き継ぐ正常 report と `incomplete` 診断 report の実行情報は、report cut で保存先を固定した実行に帰属させる。再開した実行の ID に付け替えず、掲載する個々の呼び出しや observation も実際に属する実行に対応付ける。
+
+report の保存段階では、未保存なら固定済み target へ保存し、保存済みなら path と hash を検証して再利用する。recovery を正常に完了した場合は、その report を primary report とし、保存済み report の再利用も primary report の保存要件を満たすものとして扱う。
+
+再開した実行の作業内容、終端結果、および共通掲載対象の本文を含む実行記録は、再開した実行のサブコマンドログへ残す。引き継ぐ report にその実行記録を追記してはならない。再開した実行が `error` で終わる場合は、本書の「中断・エラー時の invocation report」に従って今回の primary report を保存し、今回の実行 ID と共通掲載内容を載せる。
+
+既存 report に実行 ID が記録されていない場合も、追記によって本文や hash を変更しない。帰属を特定できる範囲とログからの対応付けは、本書の「join 後の publication failure」に従う。
+
 ### 正常 report
 
-正常 report は Markdown と YAML Front Matter で構成し、次へ保存する。
+正常 report は Markdown と YAML Front Matter で構成する。`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って固定する保存先は次のとおりとする。
 
 ```text
-{{repo-root}}/.cmoc/gu/report/feedback/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/report/feedback/{{execution-id}}.md
 ```
 
 保存した正常 report を primary report とする。front matter には、少なくとも次の情報を含める。
@@ -357,7 +373,7 @@ front matter には、run と report cut の情報、各終端結果の件数、
 `user_interruption` と `error` では、今回の invocation report を primary report として次へ保存する。
 
 ```text
-{{repo-root}}/.cmoc/gu/report/feedback/invocation/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/report/feedback/invocation/{{execution-id}}.md
 ```
 
 front matter と本文から、少なくとも次の情報を判別可能にする。
