@@ -22,9 +22,10 @@ from _git_support import make_repo, run_git
 
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_ids import is_common_id
 from config.cmoc_config import CmocConfig
 
-_FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00_00_000000000"
+_FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00-00_000"
 
 
 def run_fixed_codex_exec(
@@ -36,13 +37,13 @@ def run_fixed_codex_exec(
     attempts = 0
 
     def timestamp_factory() -> str:
-        """初回は共有 timestamp を返し、再試行では一意な suffix を付けて返す。"""
+        """両 process に同じ生成時刻を与えて path の独立性を確かめる。"""
         nonlocal attempts
         attempts += 1
         if attempts == 1:
             barrier.wait(timeout=5)
             return _FIXED_CODEX_TIMESTAMP
-        return f"{_FIXED_CODEX_TIMESTAMP}_retry_{attempts}"
+        return _FIXED_CODEX_TIMESTAMP
 
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # reservation が run_codex_exec boundary で検証されるよう、両 production call の
@@ -70,10 +71,10 @@ def run_fixed_codex_exec(
         connection.close()
 
 
-def test_timestamped_path_reservation_is_process_safe(
+def test_codex_call_ids_are_process_safe_on_same_timestamp(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """並列 run_codex_exec が同一 timestamp でもログ path を共有しない。"""
+    """並列 run_codex_exec が同一生成時刻でも call ID とログを共有しない。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -117,9 +118,12 @@ def test_timestamped_path_reservation_is_process_safe(
         for record in records:
             call_path = Path(record["call_log_path"])
             call_log = json.loads(call_path.read_text())
-            timestamp = call_log["timestamp"]
-            assert timestamp.startswith(_FIXED_CODEX_TIMESTAMP)
-            assert call_path.name == f"{timestamp}_call.json"
+            assert call_log["timestamp"] == _FIXED_CODEX_TIMESTAMP
+            codex_call_id = call_log["codex_call_id"]
+            assert is_common_id(codex_call_id, "cc")
+            assert is_common_id(call_log["execution_id"], "exec")
+            assert call_path.parent.name == call_log["execution_id"]
+            assert call_path.name == f"{codex_call_id}_call.json"
             related_paths = [
                 call_path,
                 *(
@@ -133,7 +137,10 @@ def test_timestamped_path_reservation_is_process_safe(
                 ),
             ]
             assert all(path.is_file() for path in related_paths)
-            assert all(path.name.startswith(f"{timestamp}_") for path in related_paths)
+            assert all(path.parent == call_path.parent for path in related_paths)
+            assert all(
+                path.name.startswith(f"{codex_call_id}_") for path in related_paths
+            )
             assert {
                 Path(record[key])
                 for key in (

@@ -72,9 +72,21 @@ def execution_record_markdown(
     logger: SubcommandLogger | None,
     *,
     saved_events: tuple[dict[str, Any], ...] = (),
+    execution_id: str | None = None,
+    subcommand_log_path: Path | None = None,
 ) -> str:
     """各 Codex call の最終出力と新規 observation を実行記録として掲載する。"""
-    lines = ["## 実行記録", "", "### Codex 最終出力", ""]
+    owner_id = execution_id or (logger.execution_id if logger is not None else None)
+    owner_log = subcommand_log_path or (logger.path if logger is not None else None)
+    lines = [
+        "## 実行記録",
+        "",
+        f"実行 ID: {owner_id or 'unavailable'}",
+        f"診断ログ: {_path_code_span(owner_log) if owner_log else 'unavailable'}",
+        "",
+        "### Codex 最終出力",
+        "",
+    ]
     events = (*saved_events, *(logger.event_records() if logger else ()))
     calls = (event for event in events if event.get("event") == "codex_call")
     seen: set[str] = set()

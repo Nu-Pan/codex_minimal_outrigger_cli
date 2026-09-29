@@ -204,7 +204,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
         assert calls[index]["timeout"] > 0
     logs = [
         json.loads(p.read_text())
-        for p in sorted((root / ".cmoc/gu/log/codex").glob("*_call.json"))
+        for p in sorted((root / ".cmoc/gu/log/codex").glob("*/*_call.json"))
     ]
     assert (
         len({log["agent_call_id"] for log in logs if log["purpose"] == "codex exec"})

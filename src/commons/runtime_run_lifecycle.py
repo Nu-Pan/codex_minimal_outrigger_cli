@@ -32,10 +32,10 @@ from .runtime_git import (
     run_git,
     status_path_statuses,
 )
+from .runtime_ids import new_id
 from .runtime_paths import (
     refactor_state_path,
     repo_root,
-    timestamp,
     work_root,
 )
 from .runtime_run import (
@@ -533,7 +533,7 @@ def unexpected_run_paths(
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
     """衝突しない run branch と管理 worktree path を予約候補として選ぶ。"""
     for _ in range(MAX_RUN_ID_ATTEMPTS):
-        run_id = timestamp()
+        run_id = new_id(repository, "run")
         branch = f"cmoc/run/{session_id}/{run_id}"
         worktree = expected_run_worktree(repository, branch)
         # {{work-root}}/oracle/doc/branch_model.md

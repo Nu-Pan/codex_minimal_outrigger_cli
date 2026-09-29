@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .runtime_feedback_store import uuid7_prefixed
-from .runtime_paths import _reserve_timestamped_path, logs_dir, timestamp
+from .runtime_ids import new_id
+from .runtime_paths import logs_dir
 
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
     "CURRENT_SUBCOMMAND_LOGGER",
@@ -37,7 +37,8 @@ class SubcommandLogger:
         """実行中のサブコマンドが追記する log file を初期化する。"""
         self.root = root
         self.command = command
-        self.invocation_id = uuid7_prefixed("sci_")
+        self.execution_id = new_id(root, "exec")
+        self.invocation_id = self.execution_id
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
         self.transient_wait_sec = 0.0
@@ -51,7 +52,8 @@ class SubcommandLogger:
         log_dir = logs_dir(root)
         log_dir.mkdir(parents=True, exist_ok=True)
         # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-        _, self.path = _reserve_timestamped_path(log_dir, ".jsonl", timestamp)
+        self.path = log_dir / f"{self.execution_id}.jsonl"
+        self.path.open("x").close()
 
     def event(self, kind: str, **payload: Any) -> None:
         """実行時に後から検査したい event を安定した JSON record として残す。"""
@@ -88,6 +90,7 @@ class SubcommandLogger:
         return {
             "event": kind,
             "command": self.command,
+            "execution_id": self.execution_id,
             "timestamp": datetime.now().isoformat(),
             **payload,
         }
@@ -108,6 +111,7 @@ class SubcommandLogger:
         record = {
             "event": "feedback.detector_failed",
             "command": self.command,
+            "execution_id": self.execution_id,
             "timestamp": datetime.now().isoformat(),
             "error": repr(error),
         }
@@ -218,3 +222,11 @@ def reset_current_subcommand_logger(token: Token[SubcommandLogger | None]) -> No
 def current_subcommand_logger() -> SubcommandLogger | None:
     """深い runtime helper からサブコマンド logger を任意利用できるようにする。"""
     return _CURRENT_SUBCOMMAND_LOGGER.get()
+
+
+def current_execution_id(repository: Path) -> str:
+    """現在の最外側実行 ID を返し、単独 runtime 利用時は新規発行する。"""
+    logger = current_subcommand_logger()
+    if logger is not None and logger.root.resolve() == repository.resolve():
+        return logger.execution_id
+    return new_id(repository, "exec")

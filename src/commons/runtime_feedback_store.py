@@ -32,6 +32,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from .runtime_ids import is_common_id, new_id
+
 OBSERVATION_SCHEMA_VERSION = 1
 REPORTER_PROTOCOL_VERSION = "1"
 REPORTER_VERSION = "1"
@@ -92,8 +94,8 @@ def is_uuid7_prefixed(value: object, prefix: str) -> bool:
 
 
 def is_observation_id(value: object) -> bool:
-    """reporter UUIDv7 または machine rule hash の observation ID かを返す。"""
-    return is_uuid7_prefixed(value, "fbo_") or (
+    """agent の共通 ID または machine rule hash の observation ID かを返す。"""
+    return is_common_id(value, "fbo") or (
         isinstance(value, str) and re.fullmatch(r"fbo_[0-9a-f]{32}", value) is not None
     )
 
@@ -693,7 +695,7 @@ def store_agent_observation(
     """検証済み agent observation を raw immutable record として保存する。"""
     masked, fingerprints, redaction_count = validate_agent_payload(payload, repo)
     observed_at = observed_at or rfc3339_now()
-    observation_id = observation_id or uuid7_prefixed("fbo_")
+    observation_id = observation_id or new_id(repo, "fbo")
     envelope: dict[str, Any] = {
         "schema_version": OBSERVATION_SCHEMA_VERSION,
         "observation_id": observation_id,

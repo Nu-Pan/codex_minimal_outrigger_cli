@@ -271,7 +271,7 @@ def test_reporter_exposes_only_canonical_submission_tool(
             sent.append(value)
 
         def recv(self, _size: int) -> bytes:
-            return b'{"status":"accepted","observation_id":"fbo_00000000-0000-7000-8000-000000000001","redaction_count":0}\n'
+            return b'{"status":"accepted","observation_id":"fbo_000001_2026-08-01_00-00","redaction_count":0}\n'
 
     monkeypatch.setattr(reporter_module.socket, "socket", lambda *_args: FakeSocket())
     monkeypatch.setenv(FEEDBACK_COLLECTOR_PORT_ENV, "43210")
@@ -615,7 +615,7 @@ def test_feedback_normalization_excludes_candidate_search_hint(
 ) -> None:
     """候補検索専用 hint を normalization agent の入力へ渡さない。"""
     root = make_repo(tmp_path)
-    observation_id = "fbo_00000000-0000-7000-8000-000000000001"
+    observation_id = "fbo_000001_2026-08-01_00-00"
     candidate_id = "fbi_" + "a" * 26
     observation = {
         "observation_id": observation_id,
@@ -779,7 +779,7 @@ def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
 def test_agent_candidate_exact_match_requires_report_cut_fingerprint() -> None:
     """observation 時点と異なる cut fingerprint では exact merge しない。"""
     observation = {
-        "observation_id": "fbo_00000000-0000-7000-8000-000000000001",
+        "observation_id": "fbo_000001_2026-08-01_00-00",
         "context": {"repo_root": "/repo"},
         "payload": {
             "category": "tooling",
@@ -850,8 +850,8 @@ def test_issue_id_collision_stops_candidate_building(
             "evidence_fingerprints": [],
         }
         for observation_id, observed_at in (
-            ("fbo_00000000-0000-7000-8000-000000000001", "2026-08-01T00:00:00Z"),
-            ("fbo_00000000-0000-7000-8000-000000000002", "2026-08-02T00:00:00Z"),
+            ("fbo_000001_2026-08-01_00-00", "2026-08-01T00:00:00Z"),
+            ("fbo_000002_2026-08-01_00-00", "2026-08-02T00:00:00Z"),
         )
     }
     monkeypatch.setattr(
@@ -2520,7 +2520,7 @@ def test_invalid_raw_observation_blocks_publication(
     """validation 不通過 raw を処理済みにせず、正常 report を publication しない。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
-    observation_id = "fbo_00000000-0000-7000-8000-000000000099"
+    observation_id = "fbo_000099_2026-08-01_00-00"
     raw_path = observation_path(root, observation_id, "2030-01-02T00:00:00Z")
     raw_path.parent.mkdir(parents=True, exist_ok=True)
     raw_path.write_text(raw_content)

@@ -17,9 +17,9 @@ from .runtime_feedback import (
 )
 from .runtime_feedback_store import (
     REPORTER_PROTOCOL_VERSION,
-    is_uuid7_prefixed,
     reporter_input_schema,
 )
+from .runtime_ids import is_common_id
 
 MCP_PROTOCOL_VERSION = "2025-06-18"
 _SERVER_NAME = "cmoc-feedback-reporter"
@@ -108,7 +108,7 @@ def _validated_collector_result(value: object) -> dict[str, object] | None:
         redaction_count = value.get("redaction_count")
         if (
             not isinstance(observation_id, str)
-            or not is_uuid7_prefixed(observation_id, "fbo_")
+            or not is_common_id(observation_id, "fbo")
             or type(redaction_count) is not int
             or redaction_count < 0
         ):

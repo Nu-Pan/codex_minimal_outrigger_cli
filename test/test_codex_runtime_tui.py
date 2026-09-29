@@ -41,7 +41,7 @@ from config.cmoc_config import CmocConfig
 def _tui_call_logs(root: Path) -> list[Path]:
     """repository に書き込まれた TUI call log を返す。"""
     directory = root / ".cmoc" / "gu" / "log" / "codex"
-    return list(directory.glob("*_call.json"))
+    return list(directory.glob("*/*_call.json"))
 
 
 # 根拠: TUI の prompt、アクセス境界、Codex 呼び出し、ログ出力を検証する。
@@ -362,10 +362,10 @@ def test_run_codex_tui_logs_successful_call(
     assert codex_events[0]["call_log_path"] == str(call_logs[0])
 
 
-def test_run_codex_tui_keeps_call_logs_on_timestamp_collision(
+def test_run_codex_tui_keeps_call_logs_on_same_timestamp(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """同一 timestamp の TUI 呼び出しでも call log を上書きしない。"""
+    """同一 timestamp の TUI 呼び出しでも別 ID の call log を残す。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -373,26 +373,20 @@ def test_run_codex_tui_keeps_call_logs_on_timestamp_collision(
     bin_dir.mkdir()
     write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(0)"])
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    timestamps = iter(
-        [
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000002000",
-        ]
+    monkeypatch.setattr(
+        runtime_codex_tui, "timestamp", lambda: "2026-06-27_10-00-00_000"
     )
-    monkeypatch.setattr(runtime_codex_tui, "timestamp", lambda: next(timestamps))
 
     run_codex_tui(codex_parameter(agent_call_cwd=root), root=root, config=CmocConfig())
     run_codex_tui(codex_parameter(agent_call_cwd=root), root=root, config=CmocConfig())
 
     call_logs = sorted(_tui_call_logs(root))
-    assert [path.name for path in call_logs] == [
-        "2026-06-27_10-00_00_000001000_call.json",
-        "2026-06-27_10-00_00_000002000_call.json",
-    ]
+    assert len(call_logs) == 2
+    assert [path.stem.removesuffix("_call")[:3] for path in call_logs] == ["cc_", "cc_"]
+    assert call_logs[0].parent != call_logs[1].parent
     assert [json.loads(path.read_text())["timestamp"] for path in call_logs] == [
-        "2026-06-27_10-00_00_000001000",
-        "2026-06-27_10-00_00_000002000",
+        "2026-06-27_10-00-00_000",
+        "2026-06-27_10-00-00_000",
     ]
 
 

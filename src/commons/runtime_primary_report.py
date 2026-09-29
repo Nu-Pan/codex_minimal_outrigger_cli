@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .runtime_editor import select_editor
 from .runtime_logging import SubcommandLogger
-from .runtime_paths import _reserve_timestamped_path, reports_dir, timestamp
+from .runtime_paths import reports_dir, timestamp
 from .runtime_primary_report_render import (
     execution_record_markdown,
     feedback_statuses,
@@ -150,10 +150,14 @@ def ensure_primary_report(
         return result
 
     target: Path | None = None
+    reserved = False
     try:
         directory = reports_dir(repository, spec.directory)
         directory.mkdir(parents=True, exist_ok=True)
-        generated_at, target = _reserve_timestamped_path(directory, ".md", timestamp)
+        generated_at = timestamp()
+        target = directory / f"{logger.execution_id}.md"
+        target.open("x").close()
+        reserved = True
         fields = _report_fields(
             repository,
             command_name,
@@ -169,7 +173,7 @@ def ensure_primary_report(
         content = render_primary_report(spec, fields, classification, result, logger)
         write_reserved_primary_report(target, content)
     except BaseException as exc:
-        if target is not None:
+        if reserved and target is not None:
             try:
                 target.unlink(missing_ok=True)
             except OSError:
@@ -313,6 +317,8 @@ def _report_fields(
 
     fields: list[tuple[str, object]] = [
         ("command", " ".join(command_argv)),
+        ("execution_id", logger.execution_id),
+        ("subcommand_log_path", str(logger.path.resolve())),
         ("generated_at", generated_at),
         ("repo_root", repository.resolve()),
         ("terminal_classification", classification),

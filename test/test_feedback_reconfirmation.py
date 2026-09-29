@@ -158,10 +158,10 @@ def _add_candidate(harness, letter):
         "payload": _payload(),
         "observed_at": rfc3339_now(),
     }
-    # この二つの UUID は issue ID の辞書順も a、b の順になる。
-    suffix = {"a": "1", "b": "2"}[letter]
+    # 二つの observation ID は issue ID の辞書順も a、b の順になる。
+    suffix = {"a": "0", "b": "1"}[letter]
     candidate = report._new_candidate(
-        observation, "agent\0fbo_00000000-0000-7000-8000-00000000000" + suffix
+        observation, "agent\0fbo_00000" + suffix + "_2026-08-01_00-00"
     )
     identity = candidate["candidate_id"]
     candidate["occurrence_count"] = 1
@@ -206,7 +206,7 @@ def test_report_cut_rejects_duplicate_observation_entries(feedback_run):
     """同じ raw observation を report cut の処理対象へ二重計上しない。"""
     harness = feedback_run
     observed_at = rfc3339_now()
-    observation_id = "fbo_00000000-0000-7000-8000-000000000001"
+    observation_id = "fbo_000001_2026-08-01_00-00"
     raw_path = observation_path(harness.context.repo, observation_id, observed_at)
     write_immutable_json(
         raw_path, {"observation_id": observation_id, "observed_at": observed_at}
@@ -233,7 +233,7 @@ def test_normalization_checkpoint_rejects_schema_invalid_output(tmp_path):
         "schema_version": 1,
         "kind": "normalization",
         "report_cut_id": "fbc_00000000-0000-7000-8000-000000000001",
-        "candidate_id": "fbo_00000000-0000-7000-8000-000000000001",
+        "candidate_id": "fbo_000001_2026-08-01_00-00",
         "input_sha256": "0" * 64,
         "builder_sha256": "1" * 64,
         "schema_sha256": "2" * 64,

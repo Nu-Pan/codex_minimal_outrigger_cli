@@ -255,11 +255,11 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
         # 同じ digest として扱い、変更なしの file を再調査へ戻さない。
         digest = digest.lower()
     # {{work-root}}/oracle/doc/app_spec/timestamp.md
-    # state の履歴時刻は、file name と同じ固定幅の {{time-stamp}} にそろえる。
+    # state の履歴時刻はミリ秒精度の {{time-stamp}} として保存する。
     if investigated_at is not None and (
         not isinstance(investigated_at, str)
         or re.fullmatch(
-            r"[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}_[0-9]{2}_[0-9]{9}",
+            r"[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{3}",
             investigated_at,
         )
         is None

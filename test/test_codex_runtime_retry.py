@@ -74,7 +74,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
 
     assert result.output_json == {"ok": True}
     assert counter.read_text() == "2"
-    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     call_logs = [json.loads(path.read_text()) for path in call_paths]
     assert len(call_logs) == 2
     assert {log["agent_call_kind"] for log in call_logs} == {
@@ -421,7 +421,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == ""
-    call_logs = list((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
+    call_logs = list((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
     assert len(call_logs) == 1
@@ -606,7 +606,7 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
     )
 
     assert result.output_json == {"ok": True}
-    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [
@@ -859,7 +859,7 @@ def test_run_codex_exec_stops_after_output_correction_limit(
     assert counter.read_text() == "3"
     assert sleep_calls == []
     assert "`additionalProperties`" in error.value.detail
-    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     assert len(call_paths) == 3
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]

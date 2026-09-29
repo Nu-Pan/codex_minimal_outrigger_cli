@@ -28,10 +28,9 @@ from .runtime_editor_input_handoff_protocol import (
 )
 from .runtime_errors import CmocError
 from .runtime_feedback import begin_feedback_call
-from .runtime_feedback_store import uuid7_prefixed
-from .runtime_logging import current_subcommand_logger
+from .runtime_ids import new_id
+from .runtime_logging import current_execution_id, current_subcommand_logger
 from .runtime_paths import (
-    _reserve_timestamped_path,
     codex_log_dir,
     timestamp,
 )
@@ -51,7 +50,7 @@ def run_codex_tui(
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = config or load_config(path_context.work_root)
-    log_dir = codex_log_dir(root)
+    log_dir = codex_log_dir(root) / current_execution_id(root)
     log_dir.mkdir(parents=True, exist_ok=True)
     agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -133,13 +132,17 @@ def _run_codex_tui_process(
         parameter.prompt,
     ]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    ts, call_path = _reserve_timestamped_path(log_dir, "_call.json", timestamp)
-    agent_call_id = uuid7_prefixed("agc_")
-    codex_call_id = uuid7_prefixed("cdc_")
+    ts = timestamp()
+    agent_call_id = new_id(root, "ac")
+    codex_call_id = new_id(root, "cc")
+    call_path = log_dir / f"{codex_call_id}_call.json"
+    call_path.open("x").close()
+    execution_id = log_dir.name
     call_path.write_text(
         json.dumps(
             {
                 "purpose": purpose,
+                "execution_id": execution_id,
                 "timestamp": ts,
                 "argv": argv,
                 "agent_call_id": agent_call_id,
@@ -179,7 +182,7 @@ def _run_codex_tui_process(
             if logger is not None:
                 source = EditorInputHandoffSource(
                     subcommand=logger.command,
-                    execution_id=logger.invocation_id,
+                    execution_id=logger.execution_id,
                     codex_call_id=codex_call_id,
                     sub_command_log_path=logger.path.resolve(),
                 )

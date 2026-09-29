@@ -250,9 +250,11 @@ def test_session_fork_rolls_back_when_state_save_fails(
     monkeypatch.chdir(root)
     seed_search_config(root)
     home_branch = current_branch(root)
-    session_id = "2026-06-27_01-02_03_000000000"
+    session_id = "sess_000000_2026-06-27_01-02"
     session_branch = f"cmoc/session/{session_id}"
-    monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
+    monkeypatch.setattr(
+        session_fork_module, "new_id", lambda _root, _prefix: session_id
+    )
 
     def fail_write_state(_path: Path, _state: cmoc_runtime.SessionState) -> None:
         """state保存を失敗させ、fork rollback経路を検証する。"""
@@ -303,9 +305,11 @@ def test_session_fork_rollback_does_not_guess_remote_home_branch(
     run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
     run_git(root, "config", "checkout.defaultRemote", "origin")
 
-    session_id = "2026-06-27_01-02_03_000000000"
+    session_id = "sess_000000_2026-06-27_01-02"
     session_branch = f"cmoc/session/{session_id}"
-    monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
+    monkeypatch.setattr(
+        session_fork_module, "new_id", lambda _root, _prefix: session_id
+    )
 
     def fail_write_state(_path: Path, _state: cmoc_runtime.SessionState) -> None:
         """rollback 中の remote branch 推測を再現するため local ref を消す。"""
@@ -418,11 +422,13 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     seed_search_config(root)
-    session_id = "2026-06-27_01-02_03_000000000"
+    session_id = "sess_000000_2026-06-27_01-02"
     path = write_abandoned_state(root, session_id)
     original = path.read_text()
     home_branch = current_branch(root)
-    monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
+    monkeypatch.setattr(
+        session_fork_module, "new_id", lambda _root, _prefix: session_id
+    )
     monkeypatch.setattr(session_fork_module, "MAX_SESSION_ID_ATTEMPTS", 2)
 
     result = runner.invoke(app, ["session", "fork"])
@@ -443,16 +449,16 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
 def test_session_fork_retries_session_id_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """session id衝突後に次のtimestampでforkを再試行することを検証する。"""
+    """session ID 衝突後に次の採番で fork を再試行することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     seed_search_config(root)
-    collision_id = "2026-06-27_01-02_03_000000000"
-    next_id = "2026-06-27_01-02_03_000000001"
+    collision_id = "sess_000000_2026-06-27_01-02"
+    next_id = "sess_000001_2026-06-27_01-02"
     old_path = write_abandoned_state(root, collision_id)
     original = old_path.read_text()
     ids = iter([collision_id, next_id])
-    monkeypatch.setattr(session_fork_module, "timestamp", lambda: next(ids))
+    monkeypatch.setattr(session_fork_module, "new_id", lambda _root, _prefix: next(ids))
 
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
 

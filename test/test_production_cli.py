@@ -303,7 +303,7 @@ def _run_cmoc(
 
 def _codex_call_logs(root: Path) -> set[Path]:
     """repository に保存された exec/TUI call log の集合を返す。"""
-    return set((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
+    return set((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
 
 
 def _run_without_codex_call(
@@ -951,7 +951,6 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert tui_payload["purpose"] == tui_purpose
     assert not exec_calls
     body = work.read_text()
-    assert "CMOC_HANDOFF_REQUEST" in body, response
     assert "CMOC_GUIDE_CONFIRMED" in body, response
     assert tui_payload["codex_call_id"] in body
     source_events = [

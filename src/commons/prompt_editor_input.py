@@ -18,10 +18,9 @@ from .runtime_editor_input_handoff import (
 )
 from .runtime_errors import CmocError
 from .runtime_git import ensure_cmoc_ignored
+from .runtime_logging import current_execution_id, current_subcommand_logger
 from .runtime_paths import (
-    _reserve_timestamped_path,
     editor_input_log_dir,
-    timestamp,
     work_root,
 )
 
@@ -36,7 +35,11 @@ def reserve_prompt_editor_input(root: Path) -> Path:
     _validate_editor_storage_path(directory, require_directory=True)
     directory.mkdir(parents=True, exist_ok=True)
     _validate_editor_storage_path(directory, require_directory=True)
-    _, input_path = _reserve_timestamped_path(directory, "_orig.md", timestamp)
+    input_path = directory / f"{current_execution_id(root)}_orig.md"
+    input_path.open("x").close()
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event("editor_input_created", input_path=str(input_path.resolve()))
     return input_path
 
 

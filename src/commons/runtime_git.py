@@ -42,6 +42,7 @@ CMOC_IGNORE_PROBE = ".cmoc/gu/.__cmoc_ignore_probe__"
 _CODEX_SNAPSHOT_EXCLUDED_PREFIXES = (
     Path(".cmoc/gu/log"),
     Path(".cmoc/gu/schema"),
+    Path(".cmoc/gu/state"),
 )
 _FILE_INVENTORY_EXCLUDED_ROOT_NAMES = frozenset(
     {".git", ".agents", ".codex", ".cmoc", "memo"}
@@ -82,7 +83,7 @@ class WorktreeSnapshot:
 def capture_worktree_snapshot(root: Path) -> WorktreeSnapshot:
     """追跡済みまたは非 ignore の作業成果物を復元可能な形で取得する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Codex call の log と schema store は Git ignore 対象なので snapshot へ含めず、
+    # Codex call log、schema store、ID 採番を含む管理 state は snapshot へ含めず、
     # agent が扱う非 ignore の作業成果物だけを固定する。
     root = root.absolute()
     entries: dict[str, WorktreeArtifact] = {}

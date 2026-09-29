@@ -189,7 +189,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
                 "investigation_required": False,
                 "last_investigation_result": "no_findings",
                 "last_investigated_sha256": file_sha256(root / relative),
-                "last_investigated_at": "2026-08-08_00-00_00_000000000",
+                "last_investigated_at": "2026-08-08_00-00-00_000",
             }
         )
     previous_readme_digest = state["README.md"]["last_investigated_sha256"]

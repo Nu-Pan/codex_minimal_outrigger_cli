@@ -19,8 +19,10 @@ from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
     authenticate_editor_input_handoff_server,
     build_editor_input_handoff_target_id,
+    remove_editor_input_handoff_target_route,
 )
 from .runtime_errors import CmocError
+from .runtime_logging import current_execution_id, current_subcommand_logger
 from .runtime_paths import editor_input_log_dir
 
 
@@ -95,6 +97,7 @@ class EditorInputHandoffTarget:
         self._guide_created = False
         self._token = secrets.token_bytes(EDITOR_INPUT_HANDOFF_TOKEN_BYTES)
         self._target_id: str | None = None
+        self.execution_id: str | None = None
         self._state_lock = threading.Lock()
         self._listener: socket.socket | None = None
         self._server_thread: threading.Thread | None = None
@@ -106,7 +109,7 @@ class EditorInputHandoffTarget:
 
     @property
     def target_id(self) -> str:
-        """active target の opaque capability-bearing ID を返す。"""
+        """active target の共通 ID を返す。"""
         if self._target_id is None:
             raise RuntimeError("editor input handoff target is not active")
         return self._target_id
@@ -134,10 +137,12 @@ class EditorInputHandoffTarget:
             assert isinstance(bound_address, tuple)
             port = bound_address[1]
             assert isinstance(port, int)
+            execution_id = current_execution_id(self.repository)
             target_id = build_editor_input_handoff_target_id(
                 self.repository,
                 port,
                 self._token,
+                execution_id=execution_id,
             )
         except BaseException:
             listener.close()
@@ -145,7 +150,17 @@ class EditorInputHandoffTarget:
         with self._state_lock:
             self._listener = listener
             self._target_id = target_id
+            self.execution_id = execution_id
             self._accepting = True
+        logger = current_subcommand_logger()
+        if logger is not None:
+            logger.event(
+                "editor_input_handoff_target_registered",
+                target_id=target_id,
+                target_execution_id=self.execution_id,
+                input_path=str(self.input_path.resolve()),
+                guide_path=str(self.handoff_guide_path.resolve()),
+            )
         self._server_thread = threading.Thread(
             target=self._serve,
             name=f"cmoc-editor-input-loopback-{port}",
@@ -183,6 +198,8 @@ class EditorInputHandoffTarget:
                 pass
         if self._server_thread is not None:
             self._server_thread.join()
+        if self._target_id is not None:
+            remove_editor_input_handoff_target_route(self.repository, self._target_id)
         # 受付済み取得・上書きを完了してから、target 固有のガイドを破棄する。
         if self._guide_created:
             self._remove_handoff_guide()
