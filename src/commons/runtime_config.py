@@ -2,14 +2,17 @@
 
 import json
 import math
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from oracle.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
     JsonTomlValue,
 )
+from oracle.other.document_search import DocumentSearchConfig
 
 from config.cmoc_config import (
     CmocConfig,
@@ -18,6 +21,11 @@ from config.cmoc_config import (
 
 from .runtime_errors import CmocError
 from .runtime_paths import config_path
+
+
+def _reject_non_json_constant(value: str) -> NoReturn:
+    """JSON 仕様外の非有限数リテラルを設定 JSON から拒否する。"""
+    raise ValueError(f"non-standard JSON constant: {value}")
 
 
 def _model_name(value: Any) -> str:
@@ -62,6 +70,91 @@ def _config_int(value: Any) -> int:
     return value
 
 
+class SearchConfigIssue(ValueError):
+    """検索設定のどの項目を修正するべきか保持する。"""
+
+    def __init__(self, field: str, reason: str, *, missing: bool = False) -> None:
+        super().__init__(reason)
+        self.field = field
+        self.missing = missing
+
+
+@dataclass(frozen=True)
+class ConfigSyncResult:
+    """doctor preprocess が報告する検索設定の検証・保存結果。"""
+
+    config: CmocConfig
+    generated: bool
+    additions: dict[str, object]
+    saved: bool
+
+
+def _document_search_config(value: Any) -> DocumentSearchConfig | None:
+    """正本の tuning 型・値域・項目間制約を検証する。"""
+    if value is None:
+        return None
+    if isinstance(value, DocumentSearchConfig):
+        data = asdict(value)
+    elif isinstance(value, dict):
+        data = value
+    else:
+        raise SearchConfigIssue("document_search", "object が必要です")
+    names = {field.name for field in fields(DocumentSearchConfig)}
+    unknown = sorted(data.keys() - names)
+    if unknown:
+        raise SearchConfigIssue(f"document_search.{unknown[0]}", "未知の項目です")
+    missing = sorted(names - data.keys())
+    if missing:
+        raise SearchConfigIssue(
+            f"document_search.{missing[0]}",
+            f"必要な項目が不足しています: {', '.join(missing)}",
+            missing=True,
+        )
+    for name in (
+        "chunk_tokens",
+        "candidate_count",
+        "embedding_context_tokens",
+        "reranker_context_tokens",
+        "batch_tokens",
+        "threads",
+    ):
+        if type(data[name]) is not int or data[name] <= 0:
+            raise SearchConfigIssue(
+                f"document_search.{name}", "正の JSON 整数が必要です"
+            )
+    overlap = data["chunk_overlap_tokens"]
+    if type(overlap) is not int or overlap < 0:
+        raise SearchConfigIssue(
+            "document_search.chunk_overlap_tokens", "0 以上の JSON 整数が必要です"
+        )
+    if overlap >= data["chunk_tokens"]:
+        raise SearchConfigIssue(
+            "document_search.chunk_overlap_tokens, document_search.chunk_tokens",
+            f"overlap {overlap} は chunk {data['chunk_tokens']} より小さくしてください",
+        )
+    for name in (
+        "startup_timeout_seconds",
+        "request_timeout_seconds",
+        "shutdown_grace_seconds",
+    ):
+        number = data[name]
+        try:
+            finite = math.isfinite(number) if type(number) in (int, float) else False
+        except OverflowError:
+            finite = False
+        if not finite or number <= 0:
+            raise SearchConfigIssue(
+                f"document_search.{name}", "有限の正の JSON 数値が必要です"
+            )
+    for name in ("embedding_context_tokens", "reranker_context_tokens"):
+        if data["chunk_tokens"] >= data[name]:
+            raise SearchConfigIssue(
+                f"document_search.chunk_tokens, document_search.{name}",
+                f"chunk_tokens={data['chunk_tokens']} は {name}={data[name]} より小さくしてください",
+            )
+    return DocumentSearchConfig(**data)
+
+
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     """正本 config 型を、永続化 JSON の object 境界へ変換する。"""
     model_providers: dict[str, dict[str, dict[str, JsonTomlValue]]] = {}
@@ -87,12 +180,17 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "reasoning_effort": _reasoning_effort_name(call_config.reasoning_effort),
         }
 
+    search_config = _document_search_config(config.document_search)
+    if search_config is None:
+        raise TypeError("document_search must be configured")
     return {
         "num_parallel": _config_int(config.num_parallel),
         "codex": {
             "model_providers": model_providers,
             "agent_calls": agent_calls,
+            "num_try_falv_recovery": _config_int(config.codex.num_try_falv_recovery),
         },
+        "document_search": asdict(search_config),
     }
 
 
@@ -224,11 +322,22 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             codex_data.get("agent_calls", {}),
         )
 
+        search_config = _document_search_config(
+            data.get("document_search", default.document_search)
+        )
+        if search_config is None:
+            raise SearchConfigIssue("document_search", "object が必要です")
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
+            document_search=search_config,
             codex=CmocConfigCodex(
                 model_providers=model_providers,
                 agent_calls=agent_calls,
+                num_try_falv_recovery=_int_value(
+                    codex_data,
+                    "num_try_falv_recovery",
+                    default.codex.num_try_falv_recovery,
+                ),
             ),
         )
     except (RecursionError, TypeError, ValueError) as exc:
@@ -289,18 +398,25 @@ def write_config(path: Path, config: CmocConfig) -> None:
     )
 
 
-def load_config(root: Path) -> CmocConfig:
-    """既存 config JSON を読み、利用者向け error 境界で config に復元する。"""
-    path = config_path(root)
+def _search_config_failure(
+    path: Path, issue: SearchConfigIssue, *, missing: bool = False
+) -> CmocError:
+    """設定 path、項目、理由、修復方法を持つ handled failure を作る。"""
+    action = (
+        f"対象 work-root ({path.parents[2]}) で cmoc doctor を実行してください。"
+        if missing
+        else f"{path} の {issue.field} を手動で修正してください。"
+    )
+    return CmocError(
+        "文書検索の設定が不足または不正です。",
+        [action],
+        f"path: {path}\nitem: {issue.field}\nreason: {issue}",
+    )
+
+
+def _read_config_data(path: Path) -> dict[str, Any]:
+    """既存 JSON を構造を保ったまま読む。"""
     _reject_symlinked_config_path(path)
-    if not path.exists():
-        raise CmocError(
-            "cmoc config が存在しません。",
-            [
-                "cmoc doctor を実行して {{work-root}}/.cmoc/gt/config.json を生成してください。"
-            ],
-            str(path),
-        )
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
     # 特殊 file を read_text する前に拒否し、設定読み込みを即時に失敗させる。
     if not path.is_file():
@@ -310,28 +426,128 @@ def load_config(root: Path) -> CmocConfig:
             str(path),
         )
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
+        data = json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=_reject_non_json_constant,
+        )
+    except (OSError, UnicodeError, ValueError, RecursionError) as exc:
         raise CmocError(
             "cmoc config JSON を読み込めません。",
-            ["{{work-root}}/.cmoc/gt/config.json の JSON 構文を確認してください。"],
-            str(path),
+            [f"{path} の JSON 構文と文字エンコーディングを手動で修正してください。"],
+            f"path: {path}\nreason: {exc}",
         ) from exc
     if not isinstance(data, dict):
         raise CmocError(
             "cmoc config の top-level は object である必要があります。",
-            ["{{work-root}}/.cmoc/gt/config.json を object に修正してください。"],
-            str(path),
+            [f"{path} の top-level を object に手動で修正してください。"],
+            f"path: {path}\nitem: <file>\nreason: top-level が object ではありません",
         )
+    return data
+
+
+def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchConfig:
+    """保存された検索設定を既定値の注入なしで検証する。"""
+    value = data.get("document_search")
+    if value is None:
+        raise _search_config_failure(
+            path,
+            SearchConfigIssue("document_search", "検索設定がありません"),
+            missing=True,
+        )
+    try:
+        config = _document_search_config(value)
+    except SearchConfigIssue as exc:
+        raise _search_config_failure(path, exc, missing=exc.missing) from exc
+    assert config is not None
+    return config
+
+
+def _validated_codex_data(path: Path, data: dict[str, Any]) -> None:
+    """保存済み agent call 設定を暗黙補完せず、provider 参照まで確認する。"""
+    codex = data.get("codex")
+    if not isinstance(codex, dict):
+        field = "codex"
+    elif not isinstance(codex.get("model_providers"), dict):
+        field = "codex.model_providers"
+    elif not isinstance(codex.get("agent_calls"), dict):
+        field = "codex.agent_calls"
+    else:
+        calls = codex["agent_calls"]
+        providers = codex["model_providers"]
+        missing = set(CmocConfig().codex.agent_calls) - set(calls)
+        if missing:
+            field = f"codex.agent_calls.{sorted(missing)[0]}"
+        else:
+            config = config_from_dict(data)
+            unknown = [
+                kind
+                for kind, call in config.codex.agent_calls.items()
+                if call.model_provider not in providers
+            ]
+            if not unknown:
+                return
+            field = f"codex.agent_calls.{unknown[0]}.model_provider"
+    raise CmocError(
+        "agent call の保存設定が不足または不正です。",
+        [f"{path} の {field} を手動で修正してください。"],
+        f"path: {path}\nitem: {field}\nreason: 必須設定または provider 定義がありません",
+    )
+
+
+def load_config(root: Path) -> CmocConfig:
+    """保存済み JSON の検索設定を厳格に検証して config に復元する。"""
+    path = config_path(root)
+    _reject_symlinked_config_path(path)
+    if not path.exists():
+        raise _search_config_failure(
+            path,
+            SearchConfigIssue("document_search", "設定ファイルが存在しません"),
+            missing=True,
+        )
+    data = _read_config_data(path)
+    _validated_search_data(path, data)
+    _validated_codex_data(path, data)
     return config_from_dict(data)
 
 
-def sync_config(root: Path) -> CmocConfig:
-    """未作成なら既定 config を生成し、既存 config も現在の形へ書き戻す。"""
+def sync_config(
+    root: Path,
+    *,
+    repair_missing: bool = False,
+    on_candidate: Callable[[bool, dict[str, object]], None] | None = None,
+) -> ConfigSyncResult:
+    """通常起動では検証だけ、明示 doctor では不足だけを補完する。"""
     path = config_path(root)
-    if path.exists():
-        config = load_config(root)
-    else:
+    if not repair_missing:
+        return ConfigSyncResult(load_config(root), False, {}, False)
+    defaults = asdict(DocumentSearchConfig())
+    if not path.exists():
         config = CmocConfig()
-    write_config(path, config)
-    return config
+        if on_candidate is not None:
+            on_candidate(True, defaults)
+        write_config(path, config)
+        return ConfigSyncResult(config, True, defaults, True)
+
+    data = _read_config_data(path)
+    search = data.get("document_search")
+    if search is None:
+        additions = defaults
+        search = defaults
+    elif isinstance(search, dict):
+        additions = {
+            name: value for name, value in defaults.items() if name not in search
+        }
+        search = {**search, **additions}
+    else:
+        raise _search_config_failure(
+            path, SearchConfigIssue("document_search", "object が必要です")
+        )
+    if on_candidate is not None:
+        on_candidate(False, additions)
+    candidate = {**data, "document_search": search}
+    _validated_search_data(path, candidate)
+    _validated_codex_data(path, candidate)
+    config = config_from_dict(candidate)
+    if additions:
+        write_config(path, config)
+    return ConfigSyncResult(config, False, additions, bool(additions))

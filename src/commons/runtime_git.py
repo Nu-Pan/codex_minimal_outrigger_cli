@@ -42,11 +42,12 @@ CMOC_IGNORE_PROBE = ".cmoc/gu/.__cmoc_ignore_probe__"
 _CODEX_SNAPSHOT_EXCLUDED_PREFIXES = (
     Path(".cmoc/gu/log"),
     Path(".cmoc/gu/schema"),
+    Path(".cmoc/gu/state"),
 )
 _FILE_INVENTORY_EXCLUDED_ROOT_NAMES = frozenset(
     {".git", ".agents", ".codex", ".cmoc", "memo"}
 )
-_FILE_INVENTORY_EXCLUDED_FILE_NAMES = frozenset({"AGENTS.md", "INDEX.md"})
+_FILE_INVENTORY_EXCLUDED_FILE_NAMES = frozenset({"AGENTS.md"})
 _FileClassification = Literal["oracle", "realization"]
 
 
@@ -82,32 +83,63 @@ class WorktreeSnapshot:
 def capture_worktree_snapshot(root: Path) -> WorktreeSnapshot:
     """追跡済みまたは非 ignore の作業成果物を復元可能な形で取得する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Codex call の log と schema store は Git ignore 対象なので snapshot へ含めず、
+    # Codex call log、schema store、ID 採番を含む管理 state は snapshot へ含めず、
     # agent が扱う非 ignore の作業成果物だけを固定する。
     root = root.absolute()
-    fields = run_git(
-        ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], root
-    ).stdout.split("\0")
     entries: dict[str, WorktreeArtifact] = {}
-    for field in fields:
-        if not field:
-            continue
-        relative = Path(field)
-        if relative.is_absolute() or ".." in relative.parts:
-            raise CmocError(
-                "作業成果物の snapshot を取得できません。",
-                ["repository の Git index と path を確認してください。"],
-                f"invalid path: {field!r}",
-            )
-        if any(
-            relative == prefix or prefix in relative.parents
-            for prefix in _CODEX_SNAPSHOT_EXCLUDED_PREFIXES
-        ):
-            continue
-        artifact_path, artifact = _read_worktree_artifact(root, relative)
-        if artifact is not None:
-            entries[artifact_path] = artifact
+    for repository in _snapshot_repositories(root):
+        repository_root = repository.relative_to(root)
+        fields = run_git(
+            ["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            repository,
+        ).stdout.split("\0")
+        for field in fields:
+            if not field:
+                continue
+            repository_relative = Path(field)
+            if repository_relative.is_absolute() or ".." in repository_relative.parts:
+                raise CmocError(
+                    "作業成果物の snapshot を取得できません。",
+                    ["repository の Git index と path を確認してください。"],
+                    f"invalid path: {field!r}",
+                )
+            relative = repository_root / repository_relative
+            if any(
+                relative == prefix or prefix in relative.parents
+                for prefix in _CODEX_SNAPSHOT_EXCLUDED_PREFIXES
+            ):
+                continue
+            artifact_path, artifact = _read_worktree_artifact(root, relative)
+            if artifact is not None:
+                entries[artifact_path] = artifact
     return WorktreeSnapshot(root, tuple(sorted(entries.items())))
+
+
+def _snapshot_repositories(root: Path) -> tuple[Path, ...]:
+    """root と配下の検証済み nested Git working tree を返す。"""
+    repositories = [root]
+    _collect_snapshot_repositories(root, root, repositories)
+    return tuple(repositories)
+
+
+def _collect_snapshot_repositories(
+    work_root: Path, directory: Path, repositories: list[Path]
+) -> None:
+    """nested repository を symlink 非追跡で探索する。"""
+    entries = _lstat_directory_entries(directory)
+    nested_git_metadata: Path | None = None
+    nested_git = _verified_nested_git_worktree(work_root, directory, entries)
+    if nested_git is not None:
+        nested_repository, nested_git_metadata = nested_git
+        repositories.append(nested_repository)
+
+    for path, mode in entries:
+        if directory == work_root and path.name in _FILE_INVENTORY_EXCLUDED_ROOT_NAMES:
+            continue
+        if path == nested_git_metadata:
+            continue
+        if stat.S_ISDIR(mode):
+            _collect_snapshot_repositories(work_root, path, repositories)
 
 
 def restore_worktree_snapshot(snapshot: WorktreeSnapshot) -> None:
@@ -851,16 +883,9 @@ def _collect_file_inventory_candidates(
     entries = _lstat_directory_entries(directory)
     current_repository = owning_repository
     nested_git_metadata: Path | None = None
-    if directory != work_root:
-        git_entry = next(
-            ((path, mode) for path, mode in entries if path.name == ".git"), None
-        )
-        if git_entry is not None:
-            git_path, git_mode = git_entry
-            _require_inventory_entry_kind(git_path, git_mode)
-            if _is_git_worktree_root(directory):
-                current_repository = directory
-                nested_git_metadata = git_path
+    nested_git = _verified_nested_git_worktree(work_root, directory, entries)
+    if nested_git is not None:
+        current_repository, nested_git_metadata = nested_git
 
     for path, mode in entries:
         is_root_exclusion = (
@@ -883,6 +908,26 @@ def _collect_file_inventory_candidates(
             raise _file_inventory_error(
                 path, "directory、regular file、または symlink ではありません。"
             )
+
+
+def _verified_nested_git_worktree(
+    work_root: Path,
+    directory: Path,
+    entries: list[tuple[Path, int]],
+) -> tuple[Path, Path] | None:
+    """directory の nested Git metadata と worktree を検証して返す。"""
+    if directory == work_root:
+        return None
+    git_entry = next(
+        ((path, mode) for path, mode in entries if path.name == ".git"), None
+    )
+    if git_entry is None:
+        return None
+    git_path, git_mode = git_entry
+    _require_inventory_entry_kind(git_path, git_mode)
+    if not _is_git_worktree_root(directory):
+        return None
+    return directory, git_path
 
 
 def _lstat_directory_entries(directory: Path) -> list[tuple[Path, int]]:
@@ -1090,12 +1135,16 @@ def is_realization_file_path(
         # branch の blob は削除された path の追跡状態を補うが、現在の directory や
         # FIFO などの特殊 file を file として扱う根拠にはならない。
         branch_relative = candidate.absolute().relative_to(repository.absolute())
+        # nested repository は outer worktree の branch namespace を共有しないため、
+        # outer の run branch をそのまま ls-tree へ渡さず、nested repository 自身の
+        # checked-out tree を参照する。
+        tree_reference = branch if repository == root.absolute() else "HEAD"
         branch_entries = run_git(
             [
                 "ls-tree",
                 "-r",
                 "-z",
-                branch,
+                tree_reference,
                 "--",
                 literal_pathspec(branch_relative.as_posix()),
             ],

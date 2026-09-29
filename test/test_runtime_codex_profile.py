@@ -7,6 +7,8 @@
 """
 
 import hashlib
+import json
+import os
 import shlex
 import subprocess
 import sys
@@ -16,6 +18,7 @@ from typing import cast
 
 import pytest
 from _codex_support import codex_arg_value, codex_override_config, codex_parameter
+from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -28,7 +31,10 @@ from commons.runtime_codex_profile import (
     prepare_schema,
     read_output_json,
 )
-from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
+from commons.runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_REPOSITORY_ENV,
+    EDITOR_INPUT_SOURCE_ENV,
+)
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
@@ -37,8 +43,8 @@ from commons.runtime_feedback import (
 from config.cmoc_config import CmocConfig
 
 _SANDBOX_BY_MODE = {
-    FileAccessMode.READONLY: "read-only",
-    FileAccessMode.PURE_ORACLE_READ: "read-only",
+    FileAccessMode.READONLY: "workspace-write",
+    FileAccessMode.PURE_ORACLE_READ: "workspace-write",
     FileAccessMode.REPO_WRITE: "workspace-write",
     FileAccessMode.PURE_ORACLE_WRITE: "workspace-write",
     FileAccessMode.REALIZATION_WRITE: "workspace-write",
@@ -57,6 +63,7 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     args = build_codex_override_args(parameter, config)
 
     assert args.count("--sandbox") == 1
+    assert args.count("--no-daemon") == 1
     assert codex_arg_value(args, "--sandbox") == sandbox
     assert codex_arg_value(args, "--ask-for-approval") == "on-request"
     assert "--approve-for-me" not in args
@@ -67,31 +74,40 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert parsed["model_reasoning_effort"] == call_config.reasoning_effort
     assert "permissions" not in parsed
     assert "default_permissions" not in parsed
-    assert "sandbox_workspace_write" not in parsed
+    assert parsed["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
+    assert "sandbox_mode" not in parsed
+    assert "sandbox_workspace_write.exclude_slash_tmp=false" in args
     assert "features" not in parsed
     assert parsed["model_provider"] == call_config.model_provider
     assert "model_providers" not in parsed
     assert parsed["notify"] == []
     assert parsed["tui"] == {"notifications": False}
     assert "hooks" not in parsed
-    assert parsed["mcp_servers"] == {
-        "cmoc_feedback": {
-            "command": sys.executable,
-            "args": ["-m", "commons.runtime_feedback_reporter"],
-            "env_vars": [
-                FEEDBACK_CAPABILITY_ENV,
-                FEEDBACK_COLLECTOR_PORT_ENV,
-                FEEDBACK_PROTOCOL_ENV,
-            ],
-            "enabled": True,
-            "required": False,
-            "enabled_tools": ["submit_observation"],
-            "disabled_tools": [],
-            "startup_timeout_sec": 5,
-            "tool_timeout_sec": 15,
-            "default_tools_approval_mode": "approve",
-            "tools": {"submit_observation": {"approval_mode": "approve"}},
-        }
+    assert "--enable" not in args
+    assert parsed["mcp_servers"]["cmoc_feedback"] == {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_feedback_reporter"],
+        "env_vars": [
+            FEEDBACK_CAPABILITY_ENV,
+            FEEDBACK_COLLECTOR_PORT_ENV,
+            FEEDBACK_PROTOCOL_ENV,
+        ],
+        "enabled": True,
+        "required": False,
+        "enabled_tools": ["submit_observation"],
+        "disabled_tools": [],
+        "startup_timeout_sec": 5,
+        "tool_timeout_sec": 15,
+        "default_tools_approval_mode": "approve",
+        "tools": {"submit_observation": {"approval_mode": "approve"}},
+    }
+    assert parsed["mcp_servers"]["cmoc_document_search"] == {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_document_search_mcp", "{}"],
+        "enabled": False,
+        "required": False,
+        "enabled_tools": [],
+        "disabled_tools": ["search"],
     }
     assert parsed["shell_environment_policy"]["filters"] == {
         FEEDBACK_CAPABILITY_ENV: "exclude",
@@ -100,6 +116,27 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     }
     assert "--profile" not in args
     assert "-p" not in args
+
+
+def test_codex_overrides_disable_feedback_reporter_for_selected_call() -> None:
+    """無効な call では外部設定にかかわらず reporter namespace を閉じる。"""
+    parameter = replace(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        enable_feedback_reporting=False,
+    )
+
+    parsed = codex_override_config(build_codex_override_args(parameter, CmocConfig()))
+    server = parsed["mcp_servers"]["cmoc_feedback"]
+
+    assert server["enabled"] is False
+    assert server["required"] is False
+    assert server["enabled_tools"] == []
+    assert server["disabled_tools"] == ["submit_observation"]
+    assert parsed["shell_environment_policy"]["filters"] == {
+        FEEDBACK_CAPABILITY_ENV: "exclude",
+        FEEDBACK_COLLECTOR_PORT_ENV: "exclude",
+        FEEDBACK_PROTOCOL_ENV: "exclude",
+    }
 
 
 def test_codex_overrides_reject_unknown_file_access_mode() -> None:
@@ -111,6 +148,52 @@ def test_codex_overrides_reject_unknown_file_access_mode() -> None:
 
     with pytest.raises(CmocError, match="不明な FileAccessMode"):
         build_codex_override_args(parameter, CmocConfig())
+
+
+def test_search_mcp_rejects_external_transport_collision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """user 設定の同名 URL が残った実効 MCP 設定を起動前に拒否する。"""
+    parameter = replace(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+    )
+    argv = ["codex", *build_codex_override_args(parameter, CmocConfig())]
+    server = codex_override_config(argv)["mcp_servers"]["cmoc_document_search"]
+    assert server["env"]["PYTHONPATH"].split(os.pathsep) == [
+        str(Path(__file__).resolve().parents[1] / "src"),
+        str(Path(__file__).resolve().parents[1] / "oracle/src"),
+    ]
+    calls: list[list[str]] = []
+
+    def fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return subprocess.CompletedProcess(
+            [],
+            0,
+            json.dumps(
+                {
+                    "name": "cmoc_document_search",
+                    "enabled": True,
+                    "transport": {
+                        "type": "streamable_http",
+                        "url": "https://example.invalid/search",
+                    },
+                }
+            ),
+            "",
+        )
+
+    monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fake_run)
+    with pytest.raises(CmocError, match="実効設定が call 固定値と一致しません"):
+        runtime_codex_profile._verify_document_search_server(
+            argv, cwd=Path.cwd(), env={}
+        )
+    assert len(calls) == 1
+    assert calls[0][:2] == ["codex", "--no-daemon"]
+    assert calls[0][-4:] == ["mcp", "get", "cmoc_document_search", "--json"]
 
 
 def test_feedback_call_context_values_are_not_written_to_codex_argv(
@@ -144,7 +227,7 @@ def test_feedback_call_context_values_are_not_written_to_codex_argv(
 
 
 def test_codex_overrides_enable_editor_input_handoff_only_when_selected() -> None:
-    """選択済み call だけに overwrite 一つの optional MCP を注入する。"""
+    """選択済み call だけに ガイド取得と上書きの optional MCP を注入する。"""
     parameter = replace(
         codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=Path.cwd()),
         enable_editor_input_handoff_mcp=True,
@@ -156,15 +239,19 @@ def test_codex_overrides_enable_editor_input_handoff_only_when_selected() -> Non
     assert editor_server == {
         "command": sys.executable,
         "args": ["-m", "commons.runtime_editor_input_handoff_mcp"],
-        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV],
+        "env": {"PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")},
+        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV],
         "enabled": True,
         "required": False,
-        "enabled_tools": ["overwrite"],
+        "enabled_tools": ["get_handoff_guide", "overwrite"],
         "disabled_tools": [],
         "startup_timeout_sec": 5,
         "tool_timeout_sec": 15,
         "default_tools_approval_mode": "approve",
-        "tools": {"overwrite": {"approval_mode": "approve"}},
+        "tools": {
+            "get_handoff_guide": {"approval_mode": "approve"},
+            "overwrite": {"approval_mode": "approve"},
+        },
     }
     assert (
         parsed["shell_environment_policy"]["filters"][EDITOR_INPUT_REPOSITORY_ENV]
@@ -181,6 +268,7 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
         (FEEDBACK_COLLECTOR_PORT_ENV, "43210"),
         (FEEDBACK_PROTOCOL_ENV, "stale-protocol"),
         (EDITOR_INPUT_REPOSITORY_ENV, "/tmp/stale-repository"),
+        (EDITOR_INPUT_SOURCE_ENV, "stale-source"),
     ):
         monkeypatch.setenv(name, value)
 
@@ -193,6 +281,7 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
             FEEDBACK_COLLECTOR_PORT_ENV,
             FEEDBACK_PROTOCOL_ENV,
             EDITOR_INPUT_REPOSITORY_ENV,
+            EDITOR_INPUT_SOURCE_ENV,
         )
     )
 
@@ -235,6 +324,7 @@ def test_codex_overrides_pair_root_capture_with_legacy_notification() -> None:
     assert parsed["notify"] == notification_command
     assert parsed["tui"] == {"notifications": False}
     assert "features" not in parsed
+    assert args[args.index("--enable") + 1] == "hooks"
     hook_command = shlex.join(session_start_command)
     hooks = parsed["hooks"]
     assert isinstance(hooks, dict)
@@ -281,13 +371,21 @@ def test_codex_overrides_disable_unpaired_notification_callback() -> None:
     parsed = codex_override_config(args)
     assert parsed["notify"] == []
     assert "hooks" not in parsed
+    assert "--enable" not in args
 
 
 @pytest.mark.parametrize(
     ("version_output", "returncode", "expected"),
     [
         (b"codex-cli 0.151.0\n", 0, True),
+        (b"codex-cli 0.153.4\n", 0, True),
+        (b"codex-cli 0.154.0\n", 0, True),
+        (b"codex-cli 0.155.1\n", 0, True),
+        (b"codex-cli 0.156.1\n", 0, True),
+        (b"codex-cli 0.157.1\n", 0, True),
+        (b"codex-cli 0.158.0\n", 0, True),
         (b"codex-cli 0.152.0\n", 0, False),
+        (b"codex-cli 0.153.4.1\n", 0, False),
         (b"codex-cli 0.151.0\n", 1, False),
     ],
 )
@@ -298,7 +396,7 @@ def test_tui_notification_requires_exact_verified_codex_version(
     returncode: int,
     expected: bool,
 ) -> None:
-    """未検証版では無絞り込み callback へ戻さず fail-closed にする。"""
+    """検証済み版だけを callback 対応として扱い、他は fail-closed にする。"""
     calls: list[tuple[list[str], dict[str, object]]] = []
 
     def fake_run(
@@ -320,7 +418,7 @@ def test_tui_notification_requires_exact_verified_codex_version(
     )
     assert calls == [
         (
-            ["codex", "--version"],
+            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"],
             {
                 "cwd": tmp_path,
                 "env": environment,
@@ -342,7 +440,9 @@ def test_tui_notification_version_probe_failure_is_nonfatal(
 
     def fail_run(*_args: object, **_kwargs: object) -> object:
         """有限時間を超えた version probe を再現する。"""
-        raise subprocess.TimeoutExpired(["codex", "--version"], 2)
+        raise subprocess.TimeoutExpired(
+            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"], 2
+        )
 
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fail_run)
 
@@ -384,7 +484,7 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
     )
 
     parsed = codex_override_config(args)
-    assert codex_arg_value(args, "--sandbox") == "read-only"
+    assert codex_arg_value(args, "--sandbox") == "workspace-write"
     assert codex_arg_value(args, "--model") == "local-model"
     assert parsed["model_provider"] == provider_id
     assert parsed["model_reasoning_effort"] == "provider-defined-effort"
@@ -482,5 +582,15 @@ def test_read_output_json_returns_none_for_invalid_utf8(
     """不正 encoding の schema-less output を JSON failure として扱う。"""
     output = tmp_path / "output.json"
     output.write_bytes(b"\xff")
+
+    assert read_output_json(output) is None
+
+
+def test_read_output_json_returns_none_for_excessively_nested_json(
+    tmp_path: Path,
+) -> None:
+    """JSON decoder の recursion failure を schema-less output failure として扱う。"""
+    output = tmp_path / "output.json"
+    output.write_text("[" * 10_000 + "0" + "]" * 10_000)
 
     assert read_output_json(output) is None

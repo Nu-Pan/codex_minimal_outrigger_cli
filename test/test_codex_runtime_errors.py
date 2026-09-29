@@ -18,9 +18,9 @@ import cmoc_runtime
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import (
+    classify_codex_call,
     codex_error_text,
     extract_resume_token,
-    is_unexpected_error,
 )
 from commons.runtime_logging import (
     SubcommandLogger,
@@ -35,13 +35,13 @@ def test_codex_jsonl_non_object_events_are_unexpected(line: str) -> None:
     """非 object event を parser 境界で安全に malformed error として扱う。"""
     assert "malformed JSONL event" in codex_error_text(line, "")
     assert extract_resume_token(line) is None
-    assert is_unexpected_error(line)
+    assert classify_codex_call(line, 0) == "failed"
 
 
 @pytest.mark.parametrize("stdout_text", ["not-json", "{}\n\n"])
 def test_codex_jsonl_invalid_lines_are_unexpected(stdout_text: str) -> None:
     """不正 JSON と空行を JSONL protocol failure として分類する。"""
-    assert is_unexpected_error(stdout_text)
+    assert classify_codex_call(stdout_text, 0) == "failed"
     assert "malformed JSONL event (invalid JSON):" in codex_error_text(stdout_text, "")
 
 
@@ -65,7 +65,7 @@ def test_codex_runtime_rejects_non_object_jsonl_event(
         run_codex_exec(
             codex_parameter(agent_call_cwd=root),
             root=root,
-            capacity_initial_sleep_sec=0,
+            transient_poll_interval_sec=0,
             config=CmocConfig(),
         )
 
@@ -100,7 +100,7 @@ def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_outp
         run_codex_exec(
             codex_parameter(agent_call_cwd=root),
             root=root,
-            capacity_initial_sleep_sec=0,
+            transient_poll_interval_sec=0,
             config=CmocConfig(),
         )
 
@@ -135,7 +135,7 @@ def test_codex_runtime_reports_missing_codex_cli(
             run_codex_exec(
                 codex_parameter(agent_call_cwd=root),
                 root=root,
-                capacity_initial_sleep_sec=0,
+                transient_poll_interval_sec=0,
                 config=CmocConfig(),
             )
     finally:

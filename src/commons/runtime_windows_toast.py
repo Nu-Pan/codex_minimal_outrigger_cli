@@ -10,15 +10,20 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkstemp
 from typing import Literal
 
 ToastState = Literal["completed", "failed", "interrupted", "waiting"]
 
 _POWERSHELL_TIMEOUT_SEC = 5.0
+_TUI_CALLBACK_STARTUP_GRACE_SEC = 0.25
+_TUI_CALLBACK_DRAIN_TIMEOUT_SEC = _POWERSHELL_TIMEOUT_SEC + 1.0
+_TUI_CALLBACK_DRAIN_POLL_SEC = 0.01
+_TUI_CALLBACK_MARKER_PREFIX = ".cmoc-tui-callback-"
 _WINDOWS_POWERSHELL = Path(
     "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
 )
@@ -60,6 +65,11 @@ _ENCODED_POWERSHELL_SCRIPT = base64.b64encode(
 ).decode("ascii")
 
 
+def _completion_probe_active() -> bool:
+    """shell completion probe 中は notification boundary を無効にする。"""
+    return "_CMOC_COMPLETE" in os.environ
+
+
 @dataclass
 class TuiNotificationCallback:
     """1 回の Codex TUI process に閉じた callback と重複排除領域。"""
@@ -67,9 +77,19 @@ class TuiNotificationCallback:
     command: list[str]
     session_start_command: list[str]
     _state_directory: TemporaryDirectory[str]
+    _closed: bool = field(default=False, init=False, repr=False)
 
     def close(self) -> None:
         """通知用の一時 state を、本命処理へ失敗を返さず破棄する。"""
+        if self._closed:
+            return
+        self._closed = True
+        # Codex legacy notify は callback process の終了を待たずに戻るため、
+        # state を消す前に起動済み callback の marker が消えるまで待つ。
+        try:
+            _wait_for_tui_callback_drain(Path(self._state_directory.name))
+        except BaseException:
+            pass
         # 通知 state の cleanup failure は TUI の terminal result を変更しない。
         try:
             self._state_directory.cleanup()
@@ -82,7 +102,7 @@ def create_tui_notification_callback(
     repository_root: Path,
 ) -> TuiNotificationCallback | None:
     """root session を記録して turn 完了を絞り込む callback 群を作る。"""
-    if not sys.executable:
+    if _completion_probe_active() or not sys.executable:
         return None
 
     # callback ごとの process 間重複排除にだけ使う一時 directory を用意する。
@@ -119,6 +139,8 @@ def notify_terminal_result(
     state: ToastState,
 ) -> None:
     """最外側サブコマンドの確定済み terminal result を通知する。"""
+    if _completion_probe_active():
+        return
     _notify_fields(command_name, repository_label(repository_root), state)
 
 
@@ -152,6 +174,8 @@ def _powershell_executable() -> Path | None:
 
 def _run_windows_toast_transport(title: str, message: str) -> bool:
     """JSON stdin と固定 PowerShell script で WinRT toast を有限時間だけ試行する。"""
+    if _completion_probe_active():
+        return False
     executable = _powershell_executable()
     if executable is None:
         return False
@@ -187,6 +211,78 @@ def _resolved_state_root(state_root: Path) -> Path | None:
     except OSError:
         return None
     return resolved_root if resolved_root.is_dir() else None
+
+
+def _begin_tui_callback_lease(state_root: Path) -> Path | None:
+    """callback の実行中 marker を作り、終了時に消す path を返す。"""
+    resolved_root = _resolved_state_root(state_root)
+    if resolved_root is None:
+        return None
+    try:
+        descriptor, marker_name = mkstemp(
+            prefix=_TUI_CALLBACK_MARKER_PREFIX,
+            suffix=".active",
+            dir=resolved_root,
+        )
+    except OSError:
+        return None
+    try:
+        os.close(descriptor)
+    except OSError:
+        try:
+            os.unlink(marker_name)
+        except OSError:
+            pass
+        return None
+    return Path(marker_name)
+
+
+def _end_tui_callback_lease(marker: Path | None) -> None:
+    """callback の実行中 marker を非致命的に削除する。"""
+    if marker is None:
+        return
+    try:
+        marker.unlink()
+    except OSError:
+        pass
+
+
+def _has_active_tui_callback(state_root: Path) -> bool:
+    """state root に callback の実行中 marker が残っているか返す。"""
+    resolved_root = _resolved_state_root(state_root)
+    if resolved_root is None:
+        return False
+    try:
+        return any(resolved_root.glob(f"{_TUI_CALLBACK_MARKER_PREFIX}*.active"))
+    except OSError:
+        # state を安全に drain できない場合は timeout まで保持する。
+        return True
+
+
+def _wait_for_tui_callback_drain(state_root: Path) -> None:
+    """遅れて起動する callback を含め、有限時間だけ state を保持する。"""
+    started_at = time.monotonic()
+    deadline = started_at + _TUI_CALLBACK_DRAIN_TIMEOUT_SEC
+    quiet_until = started_at + _TUI_CALLBACK_STARTUP_GRACE_SEC
+    while True:
+        now = time.monotonic()
+        if _has_active_tui_callback(state_root):
+            # callback 完了後にも短い quiet period を置き、spawn 済みだが
+            # まだ marker を作っていない process の起動を許容する。
+            quiet_until = min(
+                deadline,
+                now + _TUI_CALLBACK_STARTUP_GRACE_SEC,
+            )
+        elif now >= quiet_until:
+            return
+        if now >= deadline:
+            return
+        time.sleep(
+            min(
+                _TUI_CALLBACK_DRAIN_POLL_SEC,
+                deadline - now,
+            )
+        )
 
 
 def _valid_identity(value: str) -> bool:
@@ -274,6 +370,8 @@ def _run_codex_tui_session_start_hook(
     payload: object,
 ) -> int:
     """Codex の root SessionStart payload から session ID だけを記録する。"""
+    if _completion_probe_active():
+        return 0
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/schema.rs#L496-L542
     if len(arguments) != 2 or arguments[0] != "codex-tui-session-start-hook":
         return 0
@@ -291,6 +389,21 @@ def _run_codex_tui_session_start_hook(
 
 def _run_codex_tui_callback(arguments: Sequence[str]) -> int:
     """最終 turn callback のうち記録済み root session だけを受理する。"""
+    if _completion_probe_active():
+        return 0
+    callback_lease = None
+    if len(arguments) >= 2 and arguments[0] == "codex-tui-callback":
+        callback_lease = _begin_tui_callback_lease(Path(arguments[1]))
+    try:
+        return _run_codex_tui_callback_body(arguments)
+    finally:
+        _end_tui_callback_lease(callback_lease)
+
+
+def _run_codex_tui_callback_body(arguments: Sequence[str]) -> int:
+    """callback payload を検証し、記録済み root session だけを通知する。"""
+    if _completion_probe_active():
+        return 0
     # legacy callback は Stop continuation が終わった後にだけ起動される。
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/core/src/session/turn.rs#L503-L562
     if len(arguments) != 5 or arguments[0] != "codex-tui-callback":
@@ -322,6 +435,8 @@ def _run_codex_tui_callback(arguments: Sequence[str]) -> int:
 def main(arguments: Sequence[str] | None = None) -> int:
     """Codex TUI notification callback 群の常に非致命的な入口。"""
     try:
+        if _completion_probe_active():
+            return 0
         resolved_arguments = list(sys.argv[1:] if arguments is None else arguments)
         if (
             len(resolved_arguments) == 2

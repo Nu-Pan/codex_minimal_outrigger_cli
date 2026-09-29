@@ -20,7 +20,7 @@ from config.cmoc_config import CmocConfig
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
-        agent_call_kind="build_indexing_index_entry_parameter",
+        agent_call_kind="build_feedback_normalize_issue_parameter",
         file_access_mode=mode,
         prompt="prompt",
         structured_output_schema_path=None,

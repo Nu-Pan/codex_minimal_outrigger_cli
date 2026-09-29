@@ -2,6 +2,7 @@
 
 import json
 import re
+import stat
 import string
 from collections.abc import Collection
 from pathlib import Path
@@ -156,9 +157,26 @@ def _reject_symlinked_state_path(path: Path) -> None:
 
 
 def _reject_non_file_state_path(path: Path) -> None:
-    """state path が通常 file でない場合の block と raw exception を防ぐ。"""
+    """state path と既存の親を通常の file/directory に限定する。"""
     if path.exists() and not path.is_file():
         raise _invalid_refactor_state(path, "state path は通常ファイルではありません。")
+    parent = path.parent
+    while True:
+        try:
+            mode = parent.lstat().st_mode
+        except FileNotFoundError:
+            mode = None
+        except OSError as exc:
+            raise _invalid_refactor_state(
+                path, "state path の親 directory を検証できません。"
+            ) from exc
+        if mode is not None and not stat.S_ISDIR(mode):
+            raise _invalid_refactor_state(
+                path, "state path の親が通常の directory ではありません。"
+            )
+        if parent == parent.parent:
+            return
+        parent = parent.parent
 
 
 def _validated_state(path: Path, value: object) -> RefactorState:
@@ -226,17 +244,24 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
     ):
         raise _invalid_refactor_state(path, f"entry value が不正です: {key}")
     validated_result = cast(_InvestigationResult, result)
-    if digest is not None and (
-        not isinstance(digest, str)
-        or len(digest) != 64
-        or any(character not in string.hexdigits for character in digest)
-    ):
-        raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
+    if digest is not None:
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in string.hexdigits for character in digest)
+        ):
+            raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
+        # file_sha256 は小文字を返すため、既存 state の大文字 hex も
+        # 同じ digest として扱い、変更なしの file を再調査へ戻さない。
+        digest = digest.lower()
     # {{work-root}}/oracle/doc/app_spec/timestamp.md
-    # state の履歴時刻は、file name と同じ固定幅の {{time-stamp}} にそろえる。
+    # state の履歴時刻はミリ秒精度の {{time-stamp}} として保存する。
     if investigated_at is not None and (
         not isinstance(investigated_at, str)
-        or re.fullmatch(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_\d{2}_\d{9}", investigated_at)
+        or re.fullmatch(
+            r"[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{3}",
+            investigated_at,
+        )
         is None
     ):
         raise _invalid_refactor_state(path, f"調査日時が不正です: {key}")

@@ -7,8 +7,7 @@
 	"settings": {
 		"files.exclude": {
 			"**/__pycache__": true,
-			"**/*.egg-info": true,
-            "**/INDEX.md": true
+			"**/*.egg-info": true
 		},
 		"[python]": {
 			"editor.defaultFormatter": "ms-python.black-formatter",

@@ -1,20 +1,4 @@
-"""Codex exec の再試行と失敗時ログを検証する。
-
-Structured Output の出力補正、capacity retry、JSONL error、中断、差分保持を
-外部挙動として確認する。根拠は次の正本仕様断片にある。
-
-このファイルは `run_codex_exec` の retry 状態、subprocess の呼び出し回数、call log、
-subcommand event を同時に確認する一つの責務を持つ。出力契約違反、capacity failure、
-未知の JSONL error、中断は同じ状態機械の分岐であり、各テストは fake の応答から最終結果と
-ログ列までを一続きの外部挙動として検証する。したがって、16,000 文字を超えても異常系を
-別ファイルへ分けず、retry 状態と共有ログ schema を同じ読み取り文脈に保つ。
-
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-- {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-- {{work-root}}/oracle/doc/dev_rule/coding_rule.md
-- {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
-  「realization file を扱う判断基準」
-"""
+"""出力補正、CLI failure、中断と作業差分の保持を検証する。"""
 
 import json
 from pathlib import Path
@@ -22,7 +6,7 @@ from pathlib import Path
 import pytest
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
-from _git_support import make_repo
+from _git_support import make_repo, run_git
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
@@ -72,7 +56,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
         )
     )
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         schema,
@@ -83,18 +67,18 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     result = run_codex_exec(
         parameter,
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
         subcommand_logger=logger,
     )
 
     assert result.output_json == {"ok": True}
     assert counter.read_text() == "2"
-    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     call_logs = [json.loads(path.read_text()) for path in call_paths]
     assert len(call_logs) == 2
     assert {log["agent_call_kind"] for log in call_logs} == {
-        "build_indexing_index_entry_parameter"
+        "build_feedback_normalize_issue_parameter"
     }
     assert len({log["agent_call_id"] for log in call_logs}) == 1
     assert len({log["codex_call_id"] for log in call_logs}) == 2
@@ -102,6 +86,13 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
         '{"bad": true}',
         '{"ok": true}',
     ]
+    for option in ("--cd", "--output-schema"):
+        initial_option_index = call_logs[0]["argv"].index(option)
+        correction_option_index = call_logs[1]["argv"].index(option)
+        assert (
+            call_logs[1]["argv"][correction_option_index + 1]
+            == call_logs[0]["argv"][initial_option_index + 1]
+        )
     prompts = [Path(log["prompt_log_path"]).read_text() for log in call_logs]
     assert prompts[0] == "prompt"
     assert prompts[1].startswith("# Structured Output の出力補正\n")
@@ -170,14 +161,14 @@ def test_run_codex_exec_corrects_non_json_numeric_constant(
 
     result = run_codex_exec(
         AgentCallParameter(
-            "build_indexing_index_entry_parameter",
+            "build_feedback_normalize_issue_parameter",
             FileAccessMode.READONLY,
             "prompt",
             schema,
             root,
         ),
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
     )
 
@@ -243,7 +234,7 @@ def test_run_codex_exec_corrects_declared_postcondition(
 
     result = run_codex_exec(
         AgentCallParameter(
-            "build_indexing_index_entry_parameter",
+            "build_feedback_normalize_issue_parameter",
             FileAccessMode.REALIZATION_WRITE,
             "prompt",
             schema,
@@ -298,7 +289,7 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
     with pytest.raises(CmocError, match="Structured Output 検証") as error:
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
@@ -317,6 +308,18 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
 ) -> None:
     """補正 turn が変動させた成果物を初回 call 完了時へ戻して失敗する。"""
     root = make_repo(tmp_path)
+    nested = root / "nested"
+    nested.mkdir()
+    run_git(nested, "init", "--template=/dev/null")
+    run_git(nested, "config", "user.email", "cmoc@example.invalid")
+    run_git(nested, "config", "user.name", "cmoc test")
+    run_git(nested, "config", "commit.gpgsign", "false")
+    run_git(nested, "config", "core.hooksPath", "/dev/null")
+    run_git(nested, "config", "core.excludesFile", "/dev/null")
+    nested_file = nested / "tracked.txt"
+    nested_file.write_text("nested initial\n")
+    run_git(nested, "add", "tracked.txt")
+    run_git(nested, "commit", "-m", "initial nested")
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "artifact_change_bin"
@@ -334,6 +337,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
             "readme = pathlib.Path('README.md')",
             "readme.write_text('correction change\\n' if count else 'first call change\\n')",
             "if count:",
+            "    pathlib.Path('nested/tracked.txt').write_text('correction-only\\n')",
             "    pathlib.Path('extra.py').write_text('correction-only\\n')",
             "    pathlib.Path('oracle/spec.md').unlink()",
             "payload = {'ok': True} if count else {'bad': True}",
@@ -359,7 +363,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
     with pytest.raises(CmocError, match="作業成果物を変更"):
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.REALIZATION_WRITE,
                 "prompt",
                 schema,
@@ -372,6 +376,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
 
     assert counter.read_text() == "2"
     assert (root / "README.md").read_text() == "first call change\n"
+    assert nested_file.read_text() == "nested initial\n"
     assert not (root / "extra.py").exists()
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
@@ -402,7 +407,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     with pytest.raises(KeyboardInterrupt):
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
@@ -416,7 +421,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == ""
-    call_logs = list((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
+    call_logs = list((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
     assert len(call_logs) == 1
@@ -432,6 +437,11 @@ def test_run_codex_exec_logs_keyboard_interrupt(
         ("missing", [], "does not exist"),
         ("empty", ["output.write_text('')"], "is empty"),
         ("malformed", ["output.write_text('{')"], "is not valid JSON"),
+        (
+            "deeply_nested",
+            ["output.write_text('[' * 10000 + '0' + ']' * 10000)"],
+            "is not valid JSON",
+        ),
     ],
 )
 def test_run_codex_exec_corrects_structured_output_parse_failure(
@@ -470,7 +480,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     schema = tmp_path / f"{name}_schema.json"
     schema.write_text("{}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         schema,
@@ -481,7 +491,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     result = run_codex_exec(
         parameter,
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
         subcommand_logger=logger,
     )
@@ -522,7 +532,7 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
     with pytest.raises(CmocError, match="Structured Output schema"):
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
@@ -535,9 +545,22 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
     assert calls == 0
 
 
+@pytest.mark.parametrize(
+    "failure_event",
+    [
+        {"type": "error", "message": "Selected model is at capacity"},
+        {
+            "type": "turn.failed",
+            "error": {"message": "Selected model is at capacity"},
+        },
+    ],
+)
 @pytest.mark.parametrize("failure_returncode", [0, 1])
-def test_run_codex_exec_logs_capacity_retrying_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_returncode: int
+def test_run_codex_exec_logs_capacity_recovery_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_event: dict[str, object],
+    failure_returncode: int,
 ) -> None:
     """capacity error を再試行し、戻り値に依存せず retry event を記録する。"""
     root = make_repo(tmp_path)
@@ -558,10 +581,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "if count == 0:",
-            (
-                "    print(json.dumps({'type': 'error', "
-                "'message': 'Selected model is at capacity'}))"
-            ),
+            f"    print(json.dumps({failure_event!r}))",
             f"    sys.exit({failure_returncode})",
             "output.write_text(json.dumps({'ok': True}))",
             "print(json.dumps({'type': 'turn.completed'}))",
@@ -569,7 +589,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -580,17 +600,18 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     result = run_codex_exec(
         parameter,
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
         subcommand_logger=logger,
     )
 
     assert result.output_json == {"ok": True}
-    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [
-        "capacity_retrying",
+        "transient_waiting",
+        "succeeded",
         "succeeded",
     ]
     assert codex_events[0]["returncode"] == failure_returncode
@@ -644,7 +665,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
     with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました") as error:
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
@@ -664,10 +685,10 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
     assert "unexpected failure" in codex_events[0]["error"]
 
 
-def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
+def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """capacity retry を挟んでも Codex が作った agent diff を保持する。"""
+    """capacity 回復待ち を挟んでも Codex が作った agent diff を保持する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -702,18 +723,18 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
 
     run_codex_exec(
         AgentCallParameter(
-            "build_indexing_index_entry_parameter",
+            "build_feedback_normalize_issue_parameter",
             FileAccessMode.REALIZATION_WRITE,
             "prompt",
             None,
             root,
         ),
         root=root,
-        capacity_initial_sleep_sec=0,
+        transient_poll_interval_sec=0,
         config=CmocConfig(),
     )
 
-    assert counter.read_text() == "2"
+    assert counter.read_text() == "3"
     assert (root / "src" / "blocked.py").read_text() == "blocked\n"
 
 
@@ -732,7 +753,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
     fake_codex = bin_dir / "codex"
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        "build_indexing_index_entry_parameter",
+        "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -742,13 +763,13 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         (
             "capacity",
             ["print('Selected model is at capacity', file=sys.stderr)"],
-            {"capacity_initial_sleep_sec": 0, "max_capacity_retries": 1},
+            {"transient_poll_interval_sec": 0},
             "Selected model is at capacity",
         ),
         (
             "quota",
             ["print('Quota exceeded')", "print('Quota exceeded', file=sys.stderr)"],
-            {"quota_poll_interval_sec": 0, "max_quota_polls": 1},
+            {"quota_poll_interval_sec": 0},
             "Quota exceeded",
         ),
     ]
@@ -778,46 +799,10 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         assert counter.read_text() == "1"
 
 
-@pytest.mark.parametrize(
-    (
-        "failure",
-        "expected_calls",
-        "expected_statuses",
-        "expected_sleeps",
-        "summary",
-        "error_fragment",
-    ),
-    [
-        (
-            "output_contract",
-            3,
-            ["output_correction_requested"] * 2
-            + ["structured_output_validation_failed"],
-            [],
-            "Codex CLI の Structured Output 検証に失敗しました。",
-            "`additionalProperties`",
-        ),
-        (
-            "capacity",
-            9,
-            ["capacity_retrying"] * 8 + ["failed"],
-            [5 * 2**attempt for attempt in range(8)],
-            "Codex CLI 呼び出しが失敗しました。",
-            "Selected model is at capacity",
-        ),
-    ],
-)
-def test_run_codex_exec_stops_after_retry_limit(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    failure: str,
-    expected_calls: int,
-    expected_statuses: list[str],
-    expected_sleeps: list[int],
-    summary: str,
-    error_fragment: str,
+def test_run_codex_exec_stops_after_output_correction_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """永続失敗が retry 上限、backoff、最終 failure event を越えて続かない。"""
+    """補正を 2 回で終え、正式出力の受理失敗を元の call と対応付ける。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -825,9 +810,9 @@ def test_run_codex_exec_stops_after_retry_limit(
     monkeypatch.setattr(
         runtime_codex_exec.time, "sleep", lambda seconds: sleep_calls.append(seconds)
     )
-    bin_dir = tmp_path / f"{failure}_bin"
+    bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    counter = tmp_path / f"{failure}_counter"
+    counter = tmp_path / "counter"
     fake_codex = bin_dir / "codex"
     write_python_executable(
         fake_codex,
@@ -838,39 +823,29 @@ def test_run_codex_exec_stops_after_retry_limit(
             "counter.write_text(str(count + 1))",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            f"failure = {failure!r}",
-            "if failure == 'output_contract':",
-            "    output.write_text(json.dumps({'bad': True}))",
-            "    print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "else:",
-            (
-                "    print(json.dumps({'type': 'error', "
-                "'message': 'Selected model is at capacity'}))"
-            ),
-            "    sys.exit(1)",
+            "output.write_text(json.dumps({'bad': True}))",
+            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    schema: Path | None = None
-    if failure == "output_contract":
-        schema = tmp_path / "schema.json"
-        schema.write_text(
-            json.dumps(
-                {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["ok"],
-                    "properties": {"ok": {"type": "boolean"}},
-                }
-            )
+    schema = tmp_path / "schema.json"
+    schema.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["ok"],
+                "properties": {"ok": {"type": "boolean"}},
+            }
         )
+    )
     logger = SubcommandLogger(root, "test")
 
-    with pytest.raises(CmocError, match=summary) as error:
+    with pytest.raises(CmocError, match="Structured Output 検証") as error:
         run_codex_exec(
             AgentCallParameter(
-                "build_indexing_index_entry_parameter",
+                "build_feedback_normalize_issue_parameter",
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
@@ -881,18 +856,18 @@ def test_run_codex_exec_stops_after_retry_limit(
             subcommand_logger=logger,
         )
 
-    assert counter.read_text() == str(expected_calls)
-    assert sleep_calls == expected_sleeps
-    assert error.value.summary == summary
-    if failure == "output_contract":
-        assert error_fragment in error.value.detail
-    else:
-        assert error_fragment not in error.value.detail
-    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*_call.json"))
-    assert len(call_paths) == expected_calls
+    assert counter.read_text() == "3"
+    assert sleep_calls == []
+    assert "`additionalProperties`" in error.value.detail
+    call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
+    assert len(call_paths) == 3
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
-    assert [event["status"] for event in codex_events] == expected_statuses
+    assert [event["status"] for event in codex_events] == [
+        "output_correction_requested",
+        "output_correction_requested",
+        "structured_output_validation_failed",
+    ]
     assert [event["call_log_path"] for event in codex_events] == [
         str(path) for path in call_paths
     ]
@@ -901,14 +876,11 @@ def test_run_codex_exec_stops_after_retry_limit(
         for event in log_events
         if event.get("event_type") == "codex.structured_output_validation_exhausted"
     ]
-    if failure == "output_contract":
-        [diagnostic] = diagnostics
-        call_logs = [json.loads(path.read_text()) for path in call_paths]
-        assert diagnostic["event_schema_version"] == 1
-        assert diagnostic["agent_call_kind"] == "build_indexing_index_entry_parameter"
-        assert diagnostic["agent_call_id"] == call_logs[-1]["agent_call_id"]
-        assert diagnostic["codex_call_id"] == call_logs[-1]["codex_call_id"]
-        assert diagnostic["last_failure_stage"] == "schema_validation"
-        assert diagnostic["schema_sha256"]
-    else:
-        assert diagnostics == []
+    [diagnostic] = diagnostics
+    call_logs = [json.loads(path.read_text()) for path in call_paths]
+    assert diagnostic["event_schema_version"] == 1
+    assert diagnostic["agent_call_kind"] == "build_feedback_normalize_issue_parameter"
+    assert diagnostic["agent_call_id"] == call_logs[-1]["agent_call_id"]
+    assert diagnostic["codex_call_id"] == call_logs[-1]["codex_call_id"]
+    assert diagnostic["last_failure_stage"] == "schema_validation"
+    assert diagnostic["schema_sha256"]

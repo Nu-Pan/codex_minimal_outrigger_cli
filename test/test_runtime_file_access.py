@@ -20,10 +20,13 @@ def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.NO_POLICY.value == "no_policy"
 
 
-def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
-    """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
-    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
-    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
+def test_file_access_to_sandbox_mode_uses_workspace_write_for_valid_modes() -> None:
+    """論理 mode の違いによらず agent call の sandbox を選ぶ。"""
+    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "workspace-write"
+    assert (
+        file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ)
+        == "workspace-write"
+    )
     assert (
         file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE)
         == "workspace-write"

@@ -3,6 +3,7 @@
 # cmoc
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    DocumentSearchScope,
     FileAccessMode,
 )
 from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
@@ -12,18 +13,22 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 def build_tui_launch_tui_parameter(
     original_prompt: str,
+    *,
+    document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """`cmoc tui` サブコマンドの TUI 起動パラメータを構築する。
 
     Args:
+        document_search_scope: caller が確定した、その call の実効閲覧範囲。
         original_prompt: ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す
-            オリジナルプロンプト。コメント除去と strip は呼び出し側で完了している
-            想定。エディタへ提示する完全プロンプトの skeleton を構築する場合は、
+            オリジナルプロンプト。前後空白の strip は呼び出し側で完了している
+            想定。handoff ガイドへ提示する完全プロンプトの skeleton を構築する場合は、
             `{{original-prompt-here}}` を渡す。
 
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
+    # ユーザー入力と選択した policy から完全 prompt を構築する。
     path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
     original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
     complete_prompt = build_complete_prompt(
@@ -35,6 +40,7 @@ def build_tui_launch_tui_parameter(
         """,
         file_access_mode=FileAccessMode.REPO_WRITE,
         path_context=path_context,
+        document_search_scope=document_search_scope,
         aux_dynamic_prompt=[
             SDTagBlock(
                 "original_prompt",
@@ -58,5 +64,5 @@ def build_tui_launch_tui_parameter(
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         enable_editor_input_handoff_mcp=True,
-        run_indexing_preflight=True,
+        document_search_scope=document_search_scope,
     )

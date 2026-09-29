@@ -4,7 +4,7 @@
 に従っている。
 
 この file は 16,000 文字を超えるが、run の開始・state 遷移・commit、差分分類、
-INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を共有する一つの
+cleanup 判定は同じ EditingRunContext と lifecycle lock を共有する一つの
 責務である。分割すると、run branch の不変条件と差分許可範囲を複数 file で追う必要が
 生じるため、現状は editing run lifecycle として一箇所に保つ。
 
@@ -13,13 +13,10 @@ INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を�
 """
 
 import os
-import stat
 from collections.abc import Collection
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from .indexing import commit_index_updates, indexing_lock, update_indexes
-from .runtime_codex import run_codex_exec as run_indexing_codex_exec
 from .runtime_codex_profile import process_start_time
 from .runtime_errors import CmocError
 from .runtime_git import (
@@ -28,20 +25,17 @@ from .runtime_git import (
     current_branch,
     delete_branch,
     head_commit,
-    is_git_ignored,
-    is_oracle_file_path,
     is_realization_file_path,
-    literal_pathspec,
     remove_worktree,
     require_clean_worktree,
+    require_cmoc_ignored,
     run_git,
     status_path_statuses,
 )
+from .runtime_ids import new_id
 from .runtime_paths import (
-    is_root_memo,
     refactor_state_path,
     repo_root,
-    timestamp,
     work_root,
 )
 from .runtime_run import (
@@ -192,6 +186,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                 start_point=fork_commit,
             )
             created = True
+            require_cmoc_ignored(run_worktree)
             state.run = RunPart(
                 state="running",
                 kind=kind,
@@ -332,6 +327,31 @@ def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
     """同じ active run であることを確認して joinable/error を保存する。"""
     if run_state not in {"joinable", "error"}:
         raise ValueError(f"unsupported terminal run state: {run_state}")
+    return _set_run_state(
+        context,
+        run_state,
+        allowed_previous_states={"running", run_state},
+    )
+
+
+def set_run_error_after_joinable_publication(
+    context: EditingRunContext,
+) -> SessionState:
+    """joinable 公開後の同じ fork の失敗を error state として保存する。"""
+    return _set_run_state(
+        context,
+        "error",
+        allowed_previous_states={"joinable"},
+    )
+
+
+def _set_run_state(
+    context: EditingRunContext,
+    run_state: str,
+    *,
+    allowed_previous_states: set[str],
+) -> SessionState:
+    """active run の identity と許可済み遷移を検査して state を保存する。"""
     with run_lifecycle_lock(context.repo, context.session_id):
         _, _, state = load_state_for_branch(context.repo, context.session_branch)
         if (
@@ -339,12 +359,14 @@ def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
             or state.run.kind != context.kind
             or state.run.branch != context.run_branch
             or state.run.fork_commit != context.run_fork_commit
-            or state.run.state not in {"running", run_state}
+            or state.run.state not in allowed_previous_states
         ):
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
             # terminal state の公開後に遅延した cleanup が別の terminal state を
             # 上書きしないよう、running からの一方向遷移として検査する。同じ
-            # state の再適用だけは、state write 直後の中断からの recovery に許可する。
+            # state の再適用だけは、state write 直後の中断からの recovery に許可
+            # する。joinable 公開後の fork 自身の後処理 failure だけは専用の
+            # 遷移で error へ戻す。
             raise CmocError(
                 "editing run の state が実行中に変更されました。",
                 ["session state と run branch を確認してください。"],
@@ -386,18 +408,6 @@ def commit_work_unit(
     return head_commit(worktree)
 
 
-def refresh_indexes(worktree: Path, *, commit: bool) -> list[Path]:
-    """run worktree の INDEX.md を再生成し、必要なら独立 commit にする。"""
-    with indexing_lock(worktree):
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # indexing builder が worktree を AgentCallParameter.agent_call_cwd として
-        # 受け取るため、process-global な cwd 切替は行わない。
-        updated = update_indexes(worktree, run_indexing_codex_exec)
-        if commit:
-            commit_index_updates(worktree, updated)
-        return updated
-
-
 def worktree_change_paths(
     worktree: Path,
     *,
@@ -414,7 +424,10 @@ def worktree_change_paths(
         include_rename_sources=include_rename_sources,
     )
     return sorted(
-        {str(path.absolute().relative_to(worktree.absolute())) for _, path in paths}
+        {
+            path.absolute().relative_to(worktree.absolute()).as_posix()
+            for _, path in paths
+        }
     )
 
 
@@ -517,34 +530,10 @@ def unexpected_run_paths(
     )
 
 
-def unexpected_session_paths(
-    session_worktree: Path,
-    changes: list[GitChange],
-    *,
-    base: str,
-    ignored_paths: Collection[str] = (),
-) -> list[str]:
-    """run 開始後の session branch にある想定外 path を返す。"""
-    ignored = set(ignored_paths)
-    return sorted(
-        {
-            path
-            for change in changes
-            for path in change.paths
-            if path not in ignored
-            and not (
-                _is_oracle_change_path(session_worktree, base, path)
-                or is_generated_index_path(session_worktree, path, base=base)
-                or is_root_memo(session_worktree, session_worktree / path)
-            )
-        }
-    )
-
-
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
     """衝突しない run branch と管理 worktree path を予約候補として選ぶ。"""
     for _ in range(MAX_RUN_ID_ATTEMPTS):
-        run_id = timestamp()
+        run_id = new_id(repository, "run")
         branch = f"cmoc/run/{session_id}/{run_id}"
         worktree = expected_run_worktree(repository, branch)
         # {{work-root}}/oracle/doc/branch_model.md
@@ -583,8 +572,6 @@ def _is_run_expected_path(
     fork_commit: str,
 ) -> bool:
     """path が run branch の管理対象差分か判定する。"""
-    if is_generated_index_path(root, path, base=fork_commit):
-        return True
     if kind in {"realization_refactor", "feedback_report"} and _is_refactor_state_path(
         root, path
     ):
@@ -595,107 +582,6 @@ def _is_run_expected_path(
     # rename 元と削除 path は run branch の HEAD から消えるため、fork 時点の tree でも
     # realization file であることを確認して、agent の許可範囲を失わないようにする。
     return _is_agent_expected_path(root, kind, path, fork_commit)
-
-
-def _is_oracle_path(path: str) -> bool:
-    """repository 相対 path が oracle file 候補の場所か判定する。"""
-    parts = Path(path).parts
-    return (
-        bool(parts)
-        and parts[0] == "oracle"
-        and Path(path).name
-        not in {
-            "AGENTS.md",
-            "INDEX.md",
-        }
-    )
-
-
-def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
-    """commit tree の path が oracle の regular-file entry か判定する。"""
-    if not _is_oracle_path(path):
-        return False
-    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md
-    # 削除・移動前の oracle 判定でも directory や Gitlink は file と扱わない。
-    return _is_regular_tree_file(worktree, commit, path)
-
-
-def _is_regular_tree_file(worktree: Path, commit: str, path: str) -> bool:
-    """commit tree の path が regular file entry か判定する。"""
-    entries = run_git(
-        [
-            "ls-tree",
-            "-r",
-            "-z",
-            commit,
-            "--",
-            literal_pathspec(path),
-        ],
-        worktree,
-    ).stdout.split("\0")
-    for entry in entries:
-        metadata, separator, entry_path = entry.partition("\t")
-        metadata_fields = metadata.split()
-        if not (
-            separator
-            and entry_path == path
-            and len(metadata_fields) >= 2
-            and metadata_fields[1] == "blob"
-        ):
-            continue
-        try:
-            entry_mode = int(metadata_fields[0], 8)
-        except (IndexError, ValueError):
-            continue
-        if stat.S_ISREG(entry_mode):
-            return True
-    return False
-
-
-def _is_oracle_change_path(worktree: Path, base: str, path: str) -> bool:
-    """change path が現在または fork 時点の oracle regular file か判定する。"""
-    candidate = worktree / path
-    if candidate.exists() or candidate.is_symlink():
-        return is_oracle_file_path(worktree, candidate)
-    return _is_oracle_tree_file(worktree, base, path)
-
-
-def is_generated_index_path(
-    root: Path,
-    path: str,
-    *,
-    base: str | None = None,
-) -> bool:
-    """cmoc が indexable directory に生成する INDEX.md か判定する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # 許可対象は任意の basename ではなく、indexing が実際に配置できる path に
-    # 限定する。hidden directory、symlink、git ignore 対象、root memo は indexable
-    # ではない。
-    relative = Path(path)
-    if relative.name != "INDEX.md":
-        return False
-    if any(part.startswith(".") for part in relative.parts[:-1]):
-        return False
-    candidate = root / relative
-    ancestor = root
-    for part in relative.parts[:-1]:
-        ancestor /= part
-        if ancestor.is_symlink():
-            return False
-    if candidate.is_symlink():
-        return False
-    if candidate.exists() and not candidate.is_file():
-        return False
-    parent = candidate.parent
-    if parent.exists() and not parent.is_dir():
-        return False
-    # 削除・rename 元では現在の parent が消えているため、fork tree の regular
-    # INDEX.md を fallback として許可する。{{work-root}}/oracle/doc/app_spec/indexing.md
-    if not parent.exists() and (
-        base is None or not _is_regular_tree_file(root, base, relative.as_posix())
-    ):
-        return False
-    return not is_root_memo(root, parent) and not is_git_ignored(root, parent)
 
 
 def _is_refactor_state_path(root: Path, path: str) -> bool:

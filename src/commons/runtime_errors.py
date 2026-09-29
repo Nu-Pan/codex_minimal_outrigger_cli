@@ -9,6 +9,11 @@ DEFAULT_NEXT_ACTION = (
 )
 
 
+def safe_text(value: object) -> str:
+    """任意の診断値を UTF-8 で表示・保存できる文字列へ変換する。"""
+    return str(value).encode("utf-8", "backslashreplace").decode("utf-8")
+
+
 class CmocError(RuntimeError):
     """利用者向けエラーレポートに必要な情報を持つ cmoc の実行時例外。"""
 
@@ -37,13 +42,15 @@ class CmocError(RuntimeError):
 def render_error(exc: BaseException) -> str:
     """ログを初期化できない境界向けの簡潔な handled failure を描画する。"""
     if isinstance(exc, CmocError):
-        summary = exc.summary
-        actions = list(exc.next_actions) or [DEFAULT_NEXT_ACTION]
-        detail = exc.detail
+        summary = safe_text(exc.summary)
+        actions = [safe_text(action) for action in exc.next_actions] or [
+            DEFAULT_NEXT_ACTION
+        ]
+        detail = safe_text(exc.detail)
     else:
-        summary = str(exc) or exc.__class__.__name__
+        summary = safe_text(str(exc) or exc.__class__.__name__)
         actions = [DEFAULT_NEXT_ACTION]
-        detail = repr(exc)
+        detail = safe_text(repr(exc))
     return "\n".join(
         [
             "# 失敗: cmoc",

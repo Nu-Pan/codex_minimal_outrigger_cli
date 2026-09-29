@@ -18,6 +18,7 @@ subcommand event を共有する一つの外部契約として一箇所で検証
 """
 
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -45,6 +46,7 @@ from cmoc_runtime import (
     format_duration,
     render_error,
 )
+from commons.runtime_ids import is_common_id
 from config.cmoc_config import CmocConfig
 from main import app
 
@@ -91,7 +93,7 @@ def test_format_duration_rejects_unrepresentable_values() -> None:
 def test_timestamp_zero_pads_year_and_fraction(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """timestamp の年と 9 桁の小数部を仕様どおり固定幅で生成する。"""
+    """timestamp の年とミリ秒部分を仕様どおり固定幅で生成する。"""
 
     class FixedDateTime:
         @classmethod
@@ -100,29 +102,24 @@ def test_timestamp_zero_pads_year_and_fraction(
 
     monkeypatch.setattr(runtime_paths, "datetime", FixedDateTime)
 
-    assert runtime_paths.timestamp() == "0001-02-03_04-05_06_000007000"
+    assert runtime_paths.timestamp() == "0001-02-03_04-05-06_000"
 
 
-def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_subcommand_logger_keeps_one_file_per_execution(
+    tmp_path: Path,
 ) -> None:
-    """同一 timestamp でもサブコマンドごとに固有のログファイルを保持する。"""
-    timestamps = iter(
-        [
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000001000",
-            "2026-06-27_10-00_00_000002000",
-        ]
-    )
-    monkeypatch.setattr(runtime_logging, "timestamp", lambda: next(timestamps))
+    """実行ごとの ID と診断ログ path が一致して重複しない。"""
 
     first = SubcommandLogger(tmp_path, "first")
     second = SubcommandLogger(tmp_path, "second")
     first.event("marker")
     second.event("marker")
 
-    assert first.path.name == "2026-06-27_10-00_00_000001000.jsonl"
-    assert second.path.name == "2026-06-27_10-00_00_000002000.jsonl"
+    assert is_common_id(first.execution_id, "exec")
+    assert is_common_id(second.execution_id, "exec")
+    assert first.execution_id < second.execution_id
+    assert first.path.name == f"{first.execution_id}.jsonl"
+    assert second.path.name == f"{second.execution_id}.jsonl"
     assert [line for line in first.path.read_text().splitlines() if line]
     assert [line for line in second.path.read_text().splitlines() if line]
 
@@ -131,14 +128,14 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     tmp_path: Path,
 ) -> None:
     """共有 logger へ並列 worker が記録しても event と待機時間を失わない。"""
-    logger = SubcommandLogger(tmp_path, "indexing")
+    logger = SubcommandLogger(tmp_path, "parallel_logging")
     worker_count = 8
     barrier = threading.Barrier(worker_count)
 
     def record_worker_event(index: int) -> None:
         """共有 logger への並列書き込みを再現する。"""
         barrier.wait()
-        logger.add_quota_wait(0.25)
+        logger.add_recovery_wait("quota", 0.25)
         logger.event("worker", index=index)
 
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
@@ -149,6 +146,48 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     assert all(event["event"] == "worker" for event in events)
     assert sorted(event["index"] for event in events) == list(range(worker_count))
     assert logger.quota_wait_sec == pytest.approx(worker_count * 0.25)
+
+
+def test_subcommand_logger_writes_utf8_without_locale_dependency(
+    tmp_path: Path,
+) -> None:
+    """ASCII locale でも日本語を含む JSON Lines event を保存する。"""
+    source_root = Path(__file__).resolve().parents[1]
+    script = r"""
+import json
+import tempfile
+from pathlib import Path
+
+from commons.runtime_logging import SubcommandLogger
+
+root = Path(tempfile.mkdtemp())
+logger = SubcommandLogger(root, "probe")
+logger.event("warning", message="\u65e5\u672c\u8a9e warning")
+events = [
+    json.loads(line)
+    for line in logger.path.read_text(encoding="utf-8").splitlines()
+]
+assert events[0]["message"] == "\u65e5\u672c\u8a9e warning"
+print("ok")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "LC_ALL": "C",
+            "PYTHONCOERCECLOCALE": "0",
+            "PYTHONUTF8": "0",
+            "PYTHONPATH": os.pathsep.join(
+                [str(source_root / "src"), str(source_root / "oracle" / "src")]
+            ),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "ok"
 
 
 def test_noninteractive_success_emits_one_terminal_result_after_progress(
@@ -171,7 +210,9 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     def succeed() -> TerminalResult:
         """トップレベルと内部 step を含む成功結果を返す。"""
         runtime_cli.start_subcommand_step(1, "top level", "top level")
-        runtime_cli.start_subcommand_step("1/1, 1/1", "nested", "nested")
+        runtime_cli.start_subcommand_step(
+            "1/1, 1/1", "nested", "nested log description"
+        )
         return TerminalResult(
             primary_report=report_path,
             primary_report_role="probe report",
@@ -205,7 +246,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["classification"] == "natural_completion"
     assert events[-1]["terminal_result"]["result"] == "attention"
-    assert any(event.get("step") == "nested" for event in events)
+    nested_steps = [
+        event["step"]
+        for event in events
+        if event.get("event") in {"step_started", "step_finished"}
+        and event.get("step_index") == "1/1, 1/1"
+    ]
+    assert nested_steps == ["nested log description", "nested log description"]
 
 
 def test_internal_failure_traceback_is_logged_but_not_printed(
@@ -245,6 +292,43 @@ def test_internal_failure_traceback_is_logged_but_not_printed(
     assert failure["classification"] == "internal_failure"
     assert "Traceback" in failure["traceback"]
     assert "ValueError: unexpected failure" in failure["traceback"]
+
+
+def test_internal_failure_with_surrogate_message_still_finishes_log(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """異常メッセージの surrogate で terminal event を失わない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    monkeypatch.setattr(
+        runtime_cli,
+        "start_feedback_invocation",
+        lambda *_args: (None, None),
+    )
+
+    def fail() -> None:
+        """UTF-8 の scalar value でない例外メッセージを再現する。"""
+        raise ValueError("unexpected failure\ud800")
+
+    with pytest.raises(typer.Exit):
+        runtime_cli.run_cli_subcommand(
+            fail,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "# 失敗: cmoc probe" in captured.err
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
+    failure = events[-1]["failure"]
+    assert failure["classification"] == "internal_failure"
+    assert "unexpected failure\\ud800" in failure["traceback"]
 
 
 def test_error_terminal_result_does_not_repeat_primary_report_path(
@@ -434,6 +518,9 @@ def test_cli_error_report_survives_failed_error_log_flush(
     assert "# 失敗: cmoc probe" in captured.err
     assert "callback failed" in captured.err
     assert "Traceback" not in captured.err
+    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
 
 
 def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
@@ -782,6 +869,7 @@ def test_cli_handled_failure_is_written_to_stderr(
     """想定済み CLI error は簡潔な terminal result を stderr に返す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    run_doctor(root)
     run_git(root, "switch", "--detach", "HEAD")
 
     result = runner.invoke(app, ["session", "fork"])
@@ -900,14 +988,21 @@ def test_pre_log_check_failure_writes_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """pre-log check の失敗時にもサブコマンドログを生成する。"""
+    import sub_commands.session.fork as session_fork
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     log_paths_before = set(log_dir.glob("*.jsonl"))
-    (root / "README.md").write_text("dirty\n")
 
-    result = runner.invoke(app, ["indexing"])
+    def fail_pre_log_check(_root: Path) -> None:
+        raise CmocError("pre-log check failed", ["修復して再実行してください。"], "")
+
+    monkeypatch.setattr(
+        session_fork, "ensure_cmoc_ignored_in_exclude", fail_pre_log_check
+    )
+    result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code == 1
     new_logs = set(log_dir.glob("*.jsonl")) - log_paths_before
@@ -922,7 +1017,8 @@ def test_pre_log_check_failure_writes_subcommand_log(
     assert any(event["event"] == "step_started" for event in events)
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["returncode"] == 1
-    assert "indexing" in json.dumps(events[0], ensure_ascii=False)
+    assert "pre-log check failed" in result.stderr
+    assert events[0]["argv"] == ["cmoc", "session", "fork"]
 
 
 def test_cli_wrapper_doctor_preprocess_uses_current_worktree(

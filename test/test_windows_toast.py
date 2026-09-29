@@ -10,6 +10,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Event
 
 import pytest
 from _command_support import write_python_executable
@@ -122,6 +123,31 @@ def test_notification_failure_does_not_escape(
 
     runtime_windows_toast.notify_terminal_result("doctor", tmp_path, "failed")
     assert calls == [("cmoc doctor", f"{tmp_path.name} — エラー終了")]
+
+
+def test_completion_marker_disables_notification_initialization_and_transport(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """completion probe では callback state と transport を初期化しない。"""
+    monkeypatch.setenv("_CMOC_COMPLETE", "")
+    transport_checks: list[str] = []
+    monkeypatch.setattr(
+        runtime_windows_toast,
+        "_powershell_executable",
+        lambda: transport_checks.append("checked") or Path("powershell.exe"),
+    )
+
+    assert (
+        runtime_windows_toast.create_tui_notification_callback(
+            "doctor",
+            tmp_path,
+        )
+        is None
+    )
+    runtime_windows_toast.notify_terminal_result("doctor", tmp_path, "completed")
+    assert _REAL_WINDOWS_TOAST_TRANSPORT("title", "message") is False
+    assert transport_checks == []
 
 
 def test_codex_callback_notifies_only_recorded_root_turn_once(
@@ -255,6 +281,76 @@ def test_tui_callback_state_is_invocation_local(tmp_path: Path) -> None:
     callback.close()
 
     assert not state_root.exists()
+
+
+def test_tui_callback_close_drains_running_callback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Codex process 終了後も実行中 callback の通知完了を待って cleanup する。"""
+    callback = runtime_windows_toast.create_tui_notification_callback(
+        "tui",
+        tmp_path / "repository",
+    )
+    assert callback is not None
+    state_root = Path(callback.command[3])
+    session_arguments = ["codex-tui-session-start-hook", str(state_root)]
+    assert (
+        runtime_windows_toast._run_codex_tui_session_start_hook(
+            session_arguments,
+            {
+                "hook_event_name": "SessionStart",
+                "session_id": "root-session",
+            },
+        )
+        == 0
+    )
+    payload = json.dumps(
+        {
+            "type": "agent-turn-complete",
+            "thread-id": "root-session",
+            "turn-id": "turn-1",
+        }
+    )
+    arguments = [
+        "codex-tui-callback",
+        str(state_root),
+        "tui",
+        "repository",
+        payload,
+    ]
+    callback_started = Event()
+    release_callback = Event()
+
+    def block_notification(title: str, message: str) -> bool:
+        """通知処理中の callback を再現する。"""
+        del title, message
+        callback_started.set()
+        assert release_callback.wait(timeout=5)
+        return True
+
+    monkeypatch.setattr(
+        runtime_windows_toast,
+        "_run_windows_toast_transport",
+        block_notification,
+    )
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            callback_future = executor.submit(
+                runtime_windows_toast._run_codex_tui_callback,
+                arguments,
+            )
+            assert callback_started.wait(timeout=2)
+            close_future = executor.submit(callback.close)
+            assert not close_future.done()
+            release_callback.set()
+            assert callback_future.result(timeout=5) == 0
+            close_future.result(timeout=5)
+        assert not state_root.exists()
+    finally:
+        release_callback.set()
+        callback.close()
 
 
 def test_tui_callback_commands_run_as_standalone_scripts(

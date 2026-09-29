@@ -2,10 +2,8 @@
 
 import os
 import threading
-import time
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from contextlib import contextmanager
-from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
@@ -13,8 +11,7 @@ from basic.path_model import RootPathPlaceHolder, resolve_real_path
 
 from .runtime_errors import CmocError
 
-_CWD_LOCK = threading.RLock()
-_CWD_OVERRIDE_DEPTH: ContextVar[int] = ContextVar("CWD_OVERRIDE_DEPTH", default=0)
+_CMOC_PROCESS_CWD_LOCK = threading.RLock()
 
 
 def repo_root(root_anchor: Path | None = None) -> Path:
@@ -51,7 +48,7 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
     Returns:
         placeholder が示す絶対 root path。
     """
-    with _CWD_LOCK:
+    with _CMOC_PROCESS_CWD_LOCK:
         if root_anchor is None:
             return resolve_real_path(placeholder)
         # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
@@ -78,30 +75,13 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
 
 
 def timestamp() -> str:
-    """file name に使う衝突しにくい実行時刻表記を返す。"""
+    """ローカル日時をミリ秒精度の共通 timestamp として返す。"""
     now = datetime.now()
     return (
         f"{now.year:04d}-{now.month:02d}-{now.day:02d}_"
-        f"{now.hour:02d}-{now.minute:02d}_{now.second:02d}_"
-        f"{now.microsecond * 1000:09d}"
+        f"{now.hour:02d}-{now.minute:02d}-{now.second:02d}_"
+        f"{now.microsecond // 1000:03d}"
     )
-
-
-def _reserve_timestamped_path(
-    directory: Path, suffix: str, timestamp_factory: Callable[[], str]
-) -> tuple[str, Path]:
-    """timestamp 付き path を排他的に予約し、timestamp と path を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    # 壁時計 timestamp が衝突しても、内容を書き始める前に別 path を予約する。
-    while True:
-        value = timestamp_factory()
-        path = directory / f"{value}{suffix}"
-        try:
-            path.open("x").close()
-            return value, path
-        except FileExistsError:
-            time.sleep(0.000001)
 
 
 def console_timestamp() -> str:
@@ -160,14 +140,8 @@ def logs_dir(root: Path) -> Path:
     return untracked_data_dir(root) / "log" / "sub_command"
 
 
-def editor_work_dir(root: Path) -> Path:
-    """未信頼かつ可変な editor work file の directory を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    return untracked_data_dir(root) / "editor_input"
-
-
 def editor_input_log_dir(root: Path) -> Path:
-    """入力結果の保存コピーの directory を返す。"""
+    """編集から確定保存まで使う editor input file の directory を返す。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     return untracked_data_dir(root) / "log" / "editor_input"
 
@@ -210,35 +184,17 @@ def _tracked_data_dir(root: Path) -> Path:
     return root / ".cmoc" / "gt"
 
 
-def is_root_memo(root: Path, path: Path) -> bool:
-    """`{{work-root}}/memo` 自体またはその配下か判定する。"""
-    # {{work-root}}/oracle/doc/app_spec/indexing.md
-    # memo の判定は repository 上の path 境界で行い、symlink の実体へ追跡しない。
-    # abspath は symlink を解決せずに `.`/`..` だけを正規化するため、memo/../path
-    # を memo 配下と誤認しない。
-    memo = Path(os.path.abspath(root / "memo"))
-    candidate = Path(os.path.abspath(path))
-    return candidate == memo or memo in candidate.parents
-
-
-def cwd_override_active() -> bool:
-    """現在の context が ``pushd`` による cwd 切替区間内かを返す。"""
-    return _CWD_OVERRIDE_DEPTH.get() > 0
-
-
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
     """外部 API が cwd 前提を持つ区間を process-wide に直列化する。"""
     # os.chdir は process-global なので、切替から復元まで lock を保持する。
-    with _CWD_LOCK:
-        previous = Path.cwd()
+    with _CMOC_PROCESS_CWD_LOCK:
+        previous_cmoc_process_cwd = Path.cwd()
         os.chdir(path)
-        token = _CWD_OVERRIDE_DEPTH.set(_CWD_OVERRIDE_DEPTH.get() + 1)
         try:
             yield
         finally:
-            _CWD_OVERRIDE_DEPTH.reset(token)
-            os.chdir(previous)
+            os.chdir(previous_cmoc_process_cwd)
 
 
 def cmoc_root() -> Path:

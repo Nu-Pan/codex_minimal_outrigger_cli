@@ -10,6 +10,7 @@
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 """
 
+import json
 import os
 import sys
 from dataclasses import asdict
@@ -23,6 +24,7 @@ from oracle.other.cmoc_config import (
     CodexModelProviderConfig,
     JsonTomlValue,
 )
+from oracle.other.document_search import DocumentSearchConfig
 
 from cmoc_runtime import (
     CmocError,
@@ -30,6 +32,7 @@ from cmoc_runtime import (
     config_to_dict,
     load_config,
     render_error,
+    sync_config,
     write_config,
 )
 from config.cmoc_config import CmocConfig
@@ -63,10 +66,12 @@ def test_config_json_preserves_oracle_member_order() -> None:
     assert list(data) == [
         "num_parallel",
         "codex",
+        "document_search",
     ]
     assert list(data["codex"]) == [
         "model_providers",
         "agent_calls",
+        "num_try_falv_recovery",
     ]
     assert list(data["codex"]["agent_calls"]) == list(config.codex.agent_calls)
 
@@ -83,10 +88,10 @@ def test_load_config_missing_points_to_doctor(
     with pytest.raises(CmocError) as exc_info:
         load_config(root)
 
-    assert exc_info.value.summary == "cmoc config が存在しません。"
-    assert exc_info.value.next_actions == [
-        "cmoc doctor を実行して {{work-root}}/.cmoc/gt/config.json を生成してください。"
-    ]
+    assert exc_info.value.summary == "文書検索の設定が不足または不正です。"
+    assert str(root / ".cmoc/gt/config.json") in exc_info.value.detail
+    assert "document_search" in exc_info.value.detail
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
     assert not (root / ".cmoc/gt/config.json").exists()
 
 
@@ -117,9 +122,167 @@ def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
     assert config_to_dict(load_config(root)) == config_to_dict(config)
 
 
-@pytest.mark.parametrize("payload", [b"{", b"\xff"])
+def test_saved_search_config_is_not_filled_by_deserialization_defaults(
+    tmp_path: Path,
+) -> None:
+    """通常起動はメモリ内既定値で保存済み設定の不足を隠さない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    path.write_text('{"num_parallel": 3}\n')
+
+    assert (
+        config_from_dict({"num_parallel": 3}).document_search == DocumentSearchConfig()
+    )
+    with pytest.raises(CmocError) as exc_info:
+        sync_config(root)
+
+    assert str(path) in exc_info.value.detail
+    assert "document_search" in exc_info.value.detail
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert path.read_text() == '{"num_parallel": 3}\n'
+
+
+def test_normal_startup_rejects_partial_saved_search_config(tmp_path: Path) -> None:
+    """検索 object の一部だけがある場合も通常起動では補完しない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = '{"document_search": {"chunk_tokens": 256}}\n'
+    path.write_text(original)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert "document_search.batch_tokens" in exc_info.value.detail
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert path.read_text() == original
+
+
+def test_explicit_doctor_fills_only_missing_search_fields(tmp_path: Path) -> None:
+    """人間が指定した値を保ち、不足項目だけを補完して再実行で書き換えない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    data = config_to_dict(CmocConfig())
+    data["num_parallel"] = 3
+    data["document_search"] = {"chunk_tokens": 256}
+    path.write_text(json.dumps(data) + "\n")
+
+    repaired = sync_config(root, repair_missing=True)
+
+    assert repaired.generated is False
+    assert repaired.saved is True
+    assert repaired.additions == {
+        name: value
+        for name, value in asdict(DocumentSearchConfig()).items()
+        if name != "chunk_tokens"
+    }
+    assert repaired.config.num_parallel == 3
+    assert repaired.config.document_search.chunk_tokens == 256
+    saved = path.read_bytes()
+    mtime = path.stat().st_mtime_ns
+
+    repeated = sync_config(root, repair_missing=True)
+    assert repeated.saved is False
+    assert repeated.additions == {}
+    assert path.read_bytes() == saved
+    assert path.stat().st_mtime_ns == mtime
+
+
+def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitions(
+    tmp_path: Path,
+) -> None:
+    """通常起動と明示 doctor は既存の agent call 設定を暗黙補完しない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    data = config_to_dict(CmocConfig())
+    data["codex"]["agent_calls"].pop("build_tui_launch_tui_parameter")
+    path.write_text(json.dumps(data) + "\n")
+
+    for repair_missing in (False, True):
+        with pytest.raises(CmocError) as exc_info:
+            sync_config(root, repair_missing=repair_missing)
+        assert (
+            "codex.agent_calls.build_tui_launch_tui_parameter" in exc_info.value.detail
+        )
+
+    data = config_to_dict(CmocConfig())
+    data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"]["model_provider"] = (
+        "missing"
+    )
+    path.write_text(json.dumps(data) + "\n")
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+    assert (
+        "codex.agent_calls.build_tui_launch_tui_parameter.model_provider"
+        in exc_info.value.detail
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("chunk_tokens", None),
+        ("chunk_tokens", True),
+        ("startup_timeout_seconds", 0),
+        ("chunk_overlap_tokens", 512),
+        ("reranker_context_tokens", 512),
+    ],
+)
+def test_saved_search_config_rejects_invalid_explicit_values(
+    tmp_path: Path, field: str, value: object
+) -> None:
+    """null・bool・値域外・項目間不整合を黙って既定値に置換しない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    search = asdict(DocumentSearchConfig())
+    search[field] = value
+    path.write_text(json.dumps({"document_search": search}) + "\n")
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert str(path) in exc_info.value.detail
+    assert f"document_search.{field}" in exc_info.value.detail
+    assert "手動で修正" in exc_info.value.next_actions[0]
+    original = path.read_text()
+    with pytest.raises(CmocError):
+        sync_config(root, repair_missing=True)
+    assert path.read_text() == original
+
+
+def test_explicit_doctor_does_not_save_inconsistent_candidate(tmp_path: Path) -> None:
+    """既存 context と暫定 chunk が衝突しても候補を保存しない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = '{"document_search": {"embedding_context_tokens": 256}}\n'
+    path.write_text(original)
+
+    with pytest.raises(CmocError) as exc_info:
+        sync_config(root, repair_missing=True)
+
+    assert "chunk_tokens=512" in exc_info.value.detail
+    assert "embedding_context_tokens=256" in exc_info.value.detail
+    assert "手動で修正" in exc_info.value.next_actions[0]
+    assert path.read_text() == original
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"{",
+        b"\xff",
+        b'{"unused": NaN}',
+        b'{"unused": Infinity}',
+        b'{"unused": -Infinity}',
+    ],
+)
 def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
-    """JSON 構文または UTF-8 が壊れた config を利用者向けエラーへ変換する。"""
+    """壊れた JSON または UTF-8 の config を利用者向けエラーへ変換する。"""
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
@@ -438,9 +601,18 @@ def test_config_drops_legacy_codex_model_class_maps() -> None:
     assert "reasoning_effort" not in codex_data
 
 
-@pytest.mark.parametrize("value", [4, True, "1", None])
-def test_config_drops_legacy_codex_falv_recovery_try_count(value: object) -> None:
-    """廃止済みの recovery 試行回数を config JSON の公開面から除外する。"""
-    config = config_from_dict({"codex": {"num_try_falv_recovery": value}})
+def test_config_preserves_codex_falv_recovery_try_count() -> None:
+    """codex の recovery 試行回数を読み込みと JSON 化の両方で保持する。"""
+    config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
 
-    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]
+    assert config.codex.num_try_falv_recovery == 4
+    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 4
+
+
+@pytest.mark.parametrize("value", [True, "1", None])
+def test_config_rejects_invalid_codex_falv_recovery_try_count(value: object) -> None:
+    """recovery 試行回数へ int 以外を指定した config を拒否する。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"codex": {"num_try_falv_recovery": value}})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"

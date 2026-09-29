@@ -3,9 +3,7 @@
 
 ## 概要
 
-- ユーザーから与えられたプロンプトへ cmoc 固有の契約を注入し、AI Agent CLI/TUI を起動する
-- 適用条件を伴う固定の cmoc 基本規定を注入する。この規定は、installed skill の有無にかかわらず解釈できるものとする
-- 実行パラメータまたは注入規定を選定するための agent call は行わない
+cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契約を注入し、AI Agent CLI/TUI を起動する。注入する cmoc 基本規定は、適用条件を伴う固定の内容とし、installed skill の有無にかかわらず解釈できるものにする。実行パラメータまたは注入規定を選定するための agent call は行わない。
 
 ## 引数
 
@@ -22,7 +20,7 @@
 3. `build_tui_launch_tui_parameter` で起動パラメータを構築する
 4. 構築した起動パラメータで AI Agent CLI/TUI を起動する
 
-## 「オリジナルプロンプトをユーザーからエディタ入力」の詳細
+## ユーザー指示の入力
 
 - エディタ入力の仕組みは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」を正本とする
 
@@ -30,23 +28,24 @@
 
 ### 全バックエンド共通
 
-- ユーザーのプロンプト入力後、`build_tui_launch_tui_parameter` でパラメータを構築する。そのパラメータを変更せずに使い、TUI を直接起動する
+- `build_tui_launch_tui_parameter` が返したパラメータを変更せずに使い、TUI を直接起動する
 - TUI の意味上の責務と起動条件は本書を正本とする。正確な prompt part の選択、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter` へ委譲する
 - cmoc の基本規定は、各規定が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
 - TUI へ注入する基本規定の意味仕様は、次の文書を正本とする
     - oracle file と realization file の責務: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file と realization file の責務」
     - oracle file に対する realization file の適合性: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」
 - installed skill は任意の追加規定として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
-- TUI 起動前の indexing preflight は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従い、git working tree または staging area に既存差分があっても実行する
-- 共通 feedback instruction、TUI process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従う
+- 共通 feedback instruction、TUI process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「feedback observation の収集」に従う
 - このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする
 
 ### Codex CLI の場合
 
 - 起動コマンドは `codex` とする (`codex exec` ではない)
-- editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` を正本とする
+- editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
+- 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う
 - `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
     - 環境変数 `$CODEX_HOME`
     - preflight validation
     - Codex CLI 引数による設定上書き
     - editor input handoff MCP
+    - 文書検索 MCP

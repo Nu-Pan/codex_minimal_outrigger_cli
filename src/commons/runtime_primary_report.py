@@ -1,4 +1,4 @@
-"""非対話サブコマンドの fallback primary report を保存する。
+"""非対話サブコマンドの primary report を保存してエディタで開く。
 
 個別処理が正常な primary report を既に保存した場合は、その report を再利用する。
 doctor preprocess や事前条件など、個別処理が report を作る前の終了経路だけを
@@ -9,12 +9,18 @@ doctor preprocess や事前条件など、個別処理が report を作る前の
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 """
 
+import os
+import shutil
+import subprocess
+import tempfile
+import threading
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from .runtime_editor import select_editor
 from .runtime_logging import SubcommandLogger
-from .runtime_paths import _reserve_timestamped_path, reports_dir, timestamp
+from .runtime_paths import reports_dir, timestamp
 from .runtime_primary_report_render import (
     execution_record_markdown,
     feedback_statuses,
@@ -56,7 +62,9 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "session_state_after": ("session_state",),
     "merge_commit": ("run_join_commit",),
     "state_after": ("session_state",),
-    "changed_paths": ("updated_indexes",),
+    "scope_identity": ("doctor_scope_identity",),
+    "index_identity": ("doctor_index_identity",),
+    "sync_result": ("doctor_sync_result",),
 }
 
 
@@ -68,8 +76,8 @@ def start_primary_report_context(
     fields: dict[str, object] = {}
     if command_name == "oracle edit":
         fields = {
-            "main_agent_call_status": "not_started",
-            "reduction_agent_call_status": "not_started",
+            "first_agent_call_status": "not_started",
+            "second_agent_call_status": "not_started",
         }
     elif command_name == "realization apply fork":
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
@@ -79,6 +87,8 @@ def start_primary_report_context(
             "feedback_observation_count": 0,
             "feedback_observations": [],
         }
+    elif command_name == "doctor":
+        fields = {"cmoc_root": "未確定", "work_root": "未確定"}
     context = PrimaryReportContext(spec, fields) if spec is not None else None
     return _PRIMARY_REPORT_CONTEXT.set(context)
 
@@ -95,6 +105,12 @@ def update_primary_report_fields(**fields: object) -> None:
         context.fields.update(fields)
 
 
+def current_primary_report_fields() -> dict[str, object]:
+    """同じ invocation の先行 preprocess が確定した項目を参照する。"""
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    return dict(context.fields) if context is not None else {}
+
+
 def ensure_primary_report(
     repository: Path,
     command_name: str,
@@ -106,18 +122,26 @@ def ensure_primary_report(
 ) -> TerminalResult:
     """保存済み report を検証し、未作成の終了経路へ fallback を保存する。"""
     if result.primary_report is not None:
-        _require_saved_report(result.primary_report)
-        # feedback publication は hash 確定前に実行記録を描画する。
-        # その他の個別 report は最外側 invocation の終了時に記録を追加する。
-        content = result.primary_report.read_text(encoding="utf-8")
-        if command_name == "feedback report":
-            if "\n## 実行記録\n" not in content:
-                raise PrimaryReportSaveError(result.primary_report)
-        else:
-            write_reserved_primary_report(
-                result.primary_report,
-                content.rstrip() + "\n\n" + execution_record_markdown(logger),
-            )
+        report_path = result.primary_report
+        try:
+            _require_saved_report(report_path)
+            # feedback publication は hash 確定前に実行記録を描画する。
+            # その他の個別 report は最外側 invocation の終了時に記録を追加する。
+            content = report_path.read_text(encoding="utf-8")
+            if command_name == "feedback report":
+                if "\n## 実行記録\n" not in content:
+                    raise PrimaryReportSaveError(report_path)
+            else:
+                rewrite_primary_report(
+                    report_path,
+                    content.rstrip() + "\n\n" + execution_record_markdown(logger),
+                )
+        except PrimaryReportSaveError:
+            raise
+        except BaseException as exc:
+            # 保存済み path の読み取りや execution record の追記も、完了契約を
+            # 確定するための report 保存処理に含める。
+            raise PrimaryReportSaveError(report_path) from exc
         return result
 
     context = _PRIMARY_REPORT_CONTEXT.get()
@@ -126,10 +150,14 @@ def ensure_primary_report(
         return result
 
     target: Path | None = None
+    reserved = False
     try:
         directory = reports_dir(repository, spec.directory)
         directory.mkdir(parents=True, exist_ok=True)
-        generated_at, target = _reserve_timestamped_path(directory, ".md", timestamp)
+        generated_at = timestamp()
+        target = directory / f"{logger.execution_id}.md"
+        target.open("x").close()
+        reserved = True
         fields = _report_fields(
             repository,
             command_name,
@@ -145,7 +173,7 @@ def ensure_primary_report(
         content = render_primary_report(spec, fields, classification, result, logger)
         write_reserved_primary_report(target, content)
     except BaseException as exc:
-        if target is not None:
+        if reserved and target is not None:
             try:
                 target.unlink(missing_ok=True)
             except OSError:
@@ -158,6 +186,44 @@ def ensure_primary_report(
         primary_report=target.resolve(),
         primary_report_role=spec.role,
     )
+
+
+def open_primary_report_in_editor(path: Path) -> None:
+    """保存済み report を独立した editor process で表示し、終了は待たない。"""
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # code は単独でファイルを開ける。端末用 editor は別の端末を用意し、cmoc の
+    # stdio と process session から分離して終了後も閲覧できるようにする。
+    command, executable = select_editor()
+    if command == "code":
+        argv = [executable, str(path.resolve())]
+    else:
+        argv = _terminal_editor_argv(executable, path.resolve())
+
+    process = subprocess.Popen(
+        argv,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+        close_fds=True,
+    )
+    # 親の CLI は editor を待たない。存続中の Python process では wait 専用の
+    # daemon thread が終了済み子 process を回収する。
+    threading.Thread(target=process.wait, daemon=True).start()
+
+
+def _terminal_editor_argv(executable: str, path: Path) -> list[str]:
+    """端末用 editor を独立した terminal window で実行する argv を選ぶ。"""
+    for terminal, separator in (
+        ("x-terminal-emulator", "-e"),
+        ("xterm", "-e"),
+        ("gnome-terminal", "--"),
+        ("konsole", "-e"),
+    ):
+        launcher = shutil.which(terminal)
+        if launcher is not None:
+            return [launcher, separator, executable, str(path)]
+    raise OSError("terminal emulator is unavailable for the selected editor")
 
 
 def write_reserved_primary_report(path: Path, content: str) -> None:
@@ -173,6 +239,32 @@ def write_reserved_primary_report(path: Path, content: str) -> None:
         if isinstance(exc, PrimaryReportSaveError):
             raise
         raise PrimaryReportSaveError(path) from exc
+
+
+def rewrite_primary_report(path: Path, content: str) -> None:
+    """既存の primary report を更新し、失敗時も保存済み内容を保持する。"""
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            temporary_file.write(content)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        os.replace(temporary_path, path)
+        _require_saved_report(path)
+    except BaseException as exc:
+        if isinstance(exc, PrimaryReportSaveError):
+            raise
+        raise PrimaryReportSaveError(path) from exc
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _require_saved_report(path: Path) -> None:
@@ -225,6 +317,8 @@ def _report_fields(
 
     fields: list[tuple[str, object]] = [
         ("command", " ".join(command_argv)),
+        ("execution_id", logger.execution_id),
+        ("subcommand_log_path", str(logger.path.resolve())),
         ("generated_at", generated_at),
         ("repo_root", repository.resolve()),
         ("terminal_classification", classification),

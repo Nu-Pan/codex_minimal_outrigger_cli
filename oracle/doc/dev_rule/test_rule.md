@@ -2,9 +2,20 @@
 
 ## 責務境界
 
-- この文書は、realization test が満たすべき意味上の要件を定める
-- 構築済み環境での test と品質検査の手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする。対象は、検査の選択・実行・完了判定・報告とする
-- 開発環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` を正本とする
+本書は、realization test が満たすべき意味上の要件を定める。検査の実行手順と環境構築は、次の正本に従う。
+
+- 構築済み環境での test と品質検査の選択・実行・完了判定・報告は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「cmoc の test・品質検査実行手順」を正本とする
+- 開発環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「cmoc 開発環境」を正本とする
+
+## goal
+
+- cmoc の決定論的な制御ロジックが仕様どおりに動作することを検証する。例えば、git 状態の検査、作業ディレクトリの決定、対象ファイルの列挙、設定生成、ログ保存、状態更新、エラー処理などを対象とする。
+- Codex CLI 呼び出しを伴う経路では、cmoc が責任を持つ結合動作を検証する。例えば、prompt 渡し、argv による設定、出力保存、schema 指定、response 後の処理などを対象とする。実行経路の要件は、本書の「実経路統合テスト」で定める。
+
+## non-goal
+
+- LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
+- Codex CLI 自体または model provider の正しさや安定性を保証することは目的としない
 
 ## 基本
 
@@ -12,20 +23,9 @@
 - realization test は `{{cmoc-root}}/test` に実装する
 - pytest の `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
 
-## goal
-
-- cmoc の決定論的な制御ロジックが仕様どおりに動作することを検証する
-    - 例：git 状態の検査、作業ディレクトリの決定、対象ファイルの列挙、設定生成、ログ保存、状態更新、エラー処理、…
-- Codex CLI 呼び出しを伴う経路では、cmoc が責任を持つ結合動作を検証する
-    - 例：prompt 渡し、argv による設定、出力保存、schema 指定、response 後の処理、…
-    - 実行経路の要件は、本書の「実経路統合テスト」で定める
-
-## non-goal
-
-- LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
-- Codex CLI 自体または model provider の正しさや安定性を保証することは目的としない
-
 ## 実経路統合テスト
+
+実経路統合テストは、利用者向け CLI entrypoint を独立 process で実行する realization test である。本番と同じ code path、実在の外部 executable、および必要な実推論を使い、response 後の処理と外部から観測可能な結果まで検証する。
 
 ### 用語と選択
 
@@ -36,18 +36,13 @@
 
 ### 検証要件
 
-- 実経路統合テストは、利用者向け CLI entrypoint を独立 process で実行する realization test である
-    - 本番と同じ code path、実在の外部 executable、および必要な実推論を使う
-    - response 後の処理と、外部から観測可能な結果まで検証する
-- 実行時点で公開されている全末端サブコマンドを対象とする
-- 各実経路統合テストケースは、終了 code とコマンド固有の外部から観測可能な結果を検証する
-- 公開末端サブコマンドと実経路統合テストケースの対応は、機械的に比較可能にする
-- 公開末端サブコマンドの追加または rename に対して、対応する実経路統合テストケースがなければ test を失敗させる
-- Codex CLI 呼び出しには、実在の Codex CLI executable と実推論を使用する
-- Fake、mock、stub、記録済み response、または起動確認だけでは実経路統合テストを代替できない
-- 本番との差は、`{{test-root}}` による隔離、決定論的な入力、対話操作の自動化、および本書が定めるテスト用 `CmocConfig` の直接設定に必要な範囲だけ許容する
-- `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、実経路統合テストとはみなさない
-- 新規の公開末端サブコマンドには、同じ変更で対応する実経路統合テストケースを追加する
+実行時点で公開されている全末端サブコマンドを対象とし、各実経路統合テストケースで終了 code とコマンド固有の外部から観測可能な結果を検証する。
+
+公開末端サブコマンドと実経路統合テストケースの対応は、機械的に比較可能にする。サブコマンドの追加または rename に対して、対応する実経路統合テストケースがなければ test を失敗させる。新規の公開末端サブコマンドには、同じ変更で対応する実経路統合テストケースを追加する。
+
+Codex CLI 呼び出しには、実在の Codex CLI executable と実推論を使用する。Fake、mock、stub、記録済み response、または起動確認だけでは代替できない。本番との差は、`{{test-root}}` による隔離、決定論的な入力、対話操作の自動化、および本書が定めるテスト用 `CmocConfig` の直接設定に必要な範囲だけ許容する。
+
+`--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、実経路統合テストとはみなさない。
 
 ### Model provider、Model、Reasoning Effort、および quota
 
@@ -57,8 +52,8 @@
 - 実経路統合テスト専用の cmoc 固有なモデル分類または推論強度分類を導入してはならない
 - 自動テストによる quota 消費を一律には禁止せず、テスト用 `CmocConfig` で選択される model provider の quota 消費を許容する
 - 実経路統合テストの仕様または pytest command へ、具体的な model provider または Model 名を固定してはならない
-- model provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` を正本とし、実経路統合テストのために広げてはならない
-- quota 枯渇時の待機と再開を含む通常の Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする
+- model provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「cmoc の責務境界」を正本とし、実経路統合テストのために広げてはならない
+- quota 枯渇時の待機と再開を含む通常の Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` 呼び出し規約」を正本とする
 
 ## Fake Codex CLI
 

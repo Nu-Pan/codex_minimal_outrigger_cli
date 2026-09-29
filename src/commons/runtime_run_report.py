@@ -5,15 +5,19 @@
 """
 
 import html
+import json
+import re
 from pathlib import Path
 
-from .runtime_logging import current_subcommand_logger
+from .runtime_logging import current_execution_id, current_subcommand_logger
 from .runtime_paths import (
-    _reserve_timestamped_path,
     reports_dir,
     timestamp,
 )
-from .runtime_primary_report import write_reserved_primary_report
+from .runtime_primary_report import (
+    rewrite_primary_report,
+    write_reserved_primary_report,
+)
 from .runtime_primary_report_render import (
     execution_step_lines,
     related_log_lines,
@@ -37,10 +41,10 @@ def write_fork_report(
     """workload 共通項目を持つ fork report を保存する。"""
     directory = reports_dir(context.repo, command_path)
     directory.mkdir(parents=True, exist_ok=True)
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # report を書き始める前に path を予約し、同一 timestamp の run report を
-    # 別 run が上書きしないようにする。
-    generated_at, path = _reserve_timestamped_path(directory, ".md", timestamp)
+    generated_at = timestamp()
+    execution_id = current_execution_id(context.repo)
+    path = directory / f"{execution_id}.md"
+    path.open("x").close()
     terminal_classification: TerminalClassification = (
         "error"
         if completion_reason == "error"
@@ -52,6 +56,7 @@ def write_fork_report(
     )
     fields: list[tuple[str, object]] = [
         ("command", f"cmoc {command_path.replace('/', ' ')}"),
+        ("execution_id", execution_id),
         ("repo_root", context.repo.resolve()),
         ("terminal_classification", terminal_classification),
         ("exit_code", 1 if completion_reason == "error" else 0),
@@ -70,6 +75,8 @@ def write_fork_report(
     fields.extend((extra_fields or {}).items())
     changed = [_render_changed_path(item) for item in changed_paths] or ["- none"]
     logger = current_subcommand_logger()
+    if logger is not None:
+        fields.append(("subcommand_log_path", str(logger.path.resolve())))
     execution = (
         execution_step_lines(logger, terminal_classification)
         if logger is not None
@@ -107,16 +114,25 @@ def write_lifecycle_report(
     details: dict[str, object],
     terminal_classification: TerminalClassification = "natural_completion",
     exit_code: int = 0,
+    report_path: Path | None = None,
 ) -> Path:
     """run join/abandon の共通情報と cleanup 結果を保存する。"""
-    directory = reports_dir(context.repo, f"run/{operation}")
-    directory.mkdir(parents=True, exist_ok=True)
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # report を書き始める前に path を予約し、同一 timestamp の run report を
-    # 別 run が上書きしないようにする。
-    generated_at, report_path = _reserve_timestamped_path(directory, ".md", timestamp)
+    if report_path is None:
+        directory = reports_dir(context.repo, f"run/{operation}")
+        directory.mkdir(parents=True, exist_ok=True)
+        generated_at = timestamp()
+        execution_id = current_execution_id(context.repo)
+        target_path = directory / f"{execution_id}.md"
+        target_path.open("x").close()
+        new_report = True
+    else:
+        generated_at = timestamp()
+        target_path = report_path
+        execution_id = current_execution_id(context.repo)
+        new_report = False
     fields: list[tuple[str, object]] = [
         ("command", f"cmoc run {operation}"),
+        ("execution_id", execution_id),
         ("repo_root", context.repo.resolve()),
         ("terminal_classification", terminal_classification),
         ("exit_code", exit_code),
@@ -133,6 +149,8 @@ def write_lifecycle_report(
         *details.items(),
     ]
     logger = current_subcommand_logger()
+    if logger is not None:
+        fields.append(("subcommand_log_path", str(logger.path.resolve())))
     execution = (
         execution_step_lines(logger, terminal_classification)
         if logger is not None
@@ -141,6 +159,17 @@ def write_lifecycle_report(
     related_logs = (
         related_log_lines(logger) if logger is not None else ["- unavailable"]
     )
+    resolution = details.get("conflict_resolution")
+    if operation == "join":
+        serialized = json.dumps(
+            resolution or {"agent_status": "not_needed"}, ensure_ascii=False, indent=2
+        )
+        fence = "`" * max(
+            3, 1 + max((len(run) for run in re.findall(r"`+", serialized)), default=0)
+        )
+        resolution_lines = ["## Conflict resolution", fence + "json", serialized, fence]
+    else:
+        resolution_lines = []
     content = "\n".join(
         [
             "---",
@@ -156,6 +185,7 @@ def write_lifecycle_report(
             ),
             "## Warnings",
             *([f"- {warning}" for warning in warnings] or ["- none"]),
+            *resolution_lines,
             "## Execution stages",
             *execution,
             "## Related logs",
@@ -163,8 +193,11 @@ def write_lifecycle_report(
             "",
         ]
     )
-    write_reserved_primary_report(report_path, content)
-    return report_path.resolve()
+    if new_report:
+        write_reserved_primary_report(target_path, content)
+    else:
+        rewrite_primary_report(target_path, content)
+    return target_path.resolve()
 
 
 def _render_changed_path(path: str, indent: str = "", label: str = "") -> str:

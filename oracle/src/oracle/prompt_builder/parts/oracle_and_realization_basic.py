@@ -12,9 +12,9 @@ def build_oracle_and_realization_basic(
     """oracle, realization についての基本知識の説明文章を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md` の
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の
         「oracle file と realization file の責務」と
-        `oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の
+        `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の
         「分類結果」を参照。
     """
     root_definitions = path_context.root_placeholder_definitions()
@@ -118,7 +118,6 @@ def build_oracle_and_realization_basic(
 
                         以下の名前を持つファイルはすべて uncategorised file とする。
 
-                        - `INDEX.md`
                         - `AGENTS.md`
                         """,
                     ),

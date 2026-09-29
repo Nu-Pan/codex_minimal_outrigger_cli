@@ -15,6 +15,7 @@ from commons.runtime_state import (
     RunPart,
     SessionPart,
     SessionState,
+    active_session_for_home,
     branch_session_id,
     load_session_part_for_branch,
     load_state_for_branch,
@@ -47,6 +48,7 @@ def _valid_state() -> SessionState:
         "cmoc/session/id/extra",
         "cmoc/session/.",
         "cmoc/session/..",
+        "cmoc/session/id\x00",
         "cmoc/run/id/run",
     ],
 )
@@ -64,6 +66,7 @@ def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
         "cmoc/run/session/run/extra",
         "cmoc/run/../run",
         "cmoc/run/session/.",
+        "cmoc/run/session/run\x00",
     ],
 )
 def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
@@ -88,8 +91,15 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert loaded == state
 
 
+@pytest.mark.parametrize("branch", [None, 1])
+def test_load_state_rejects_non_string_branch(tmp_path: Path, branch: object) -> None:
+    """branch の型異常を raw AttributeError として漏らさない。"""
+    with pytest.raises(CmocError, match="cmoc 管理 branch"):
+        load_state_for_branch(tmp_path, branch)  # type: ignore[arg-type]
+
+
 @pytest.mark.parametrize(
-    "session_id", ["../outside", "/outside", "nested/id", ".", ".."]
+    "session_id", ["../outside", "/outside", "nested/id", ".", "..", "bad\ud800"]
 )
 def test_state_path_rejects_path_like_session_id(
     tmp_path: Path, session_id: str
@@ -110,6 +120,28 @@ def test_load_state_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> N
         load_state_for_branch(tmp_path, "cmoc/session/session")
 
     assert "session state file が不正です。" == exc_info.value.summary
+
+
+def test_load_state_rejects_excessively_nested_json(tmp_path: Path) -> None:
+    """JSON parser の recursion error を state error へ変換する。"""
+    path = state_path(tmp_path, "session")
+    path.parent.mkdir(parents=True)
+    depth = 10_000
+    payload = (
+        b'{"session":{"state":"active","session_home_branch":"main",'
+        b'"session_fork_commit":"abc","last_joined_apply_fork_commit":null},'
+        b'"run":{"state":"ready","kind":null,"branch":null,"fork_commit":'
+        + b"[" * depth
+        + b"0"
+        + b"]" * depth
+        + b"}}"
+    )
+    path.write_bytes(payload)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_state_for_branch(tmp_path, "cmoc/session/session")
+
+    assert exc_info.value.summary == "session state file が不正です。"
 
 
 @pytest.mark.parametrize("part", ["session", "run"])
@@ -274,6 +306,18 @@ def test_session_state_rejects_empty_payload(part: str, field: str) -> None:
     assert f"`{part}.{field}`" in exc_info.value.detail
 
 
+@pytest.mark.parametrize("value", ["main\x00branch", "main\ud800"])
+def test_session_state_rejects_unrepresentable_payload(value: str) -> None:
+    """state payload に process/file 境界で扱えない文字を保存しない。"""
+    data = _valid_state().to_dict()
+    data["session"]["session_home_branch"] = value
+
+    with pytest.raises(CmocError) as exc_info:
+        SessionState.from_dict(data)
+
+    assert "保存できない文字" in exc_info.value.detail
+
+
 def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
     """不完全な session state を file へ書き込まない。"""
     path = state_path(tmp_path, "session")
@@ -311,6 +355,20 @@ def test_state_operations_reject_non_regular_path(tmp_path: Path) -> None:
         write_state(path, _valid_state())
     with pytest.raises(CmocError, match="通常の file"):
         load_state_for_branch(tmp_path, "cmoc/session/session")
+
+
+def test_state_operations_reject_non_directory_parent(tmp_path: Path) -> None:
+    """state directory の親が通常 file の場合に raw exception を漏らさない。"""
+    path = state_path(tmp_path, "session")
+    path.parent.parent.mkdir(parents=True)
+    path.parent.write_text("not a directory")
+
+    with pytest.raises(CmocError, match="通常の directory"):
+        write_state(path, _valid_state())
+    with pytest.raises(CmocError, match="通常の directory"):
+        load_state_for_branch(tmp_path, "cmoc/session/session")
+    with pytest.raises(CmocError, match="通常の directory"):
+        active_session_for_home(tmp_path, "main")
 
 
 @pytest.mark.parametrize("state", ["running", "joinable", "error"])

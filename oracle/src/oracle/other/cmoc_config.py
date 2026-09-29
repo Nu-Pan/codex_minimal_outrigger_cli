@@ -4,12 +4,16 @@
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
 - `CmocConfig` は `{{work-root}}/.cmoc/gt/config.json` として永続化される
 - `CmocConfig` を json にシリアライズする際、メンバーの順序は保持される
-- `{{work-root}}/.cmoc/gt/config.json` は `cmoc doctor` によって生成・同期される
+- 設定の生成・検索設定の補完・保存済み設定の検証は、
+  `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の
+  「検索設定の検証と補完」に従う（旧 `document_search: null` 入力の扱いを含む）
 - `{{work-root}}/.cmoc/gt/config.json` は人間によって編集・調整される
 """
 
 # std
 from dataclasses import dataclass, field
+
+from .document_search import DocumentSearchConfig
 
 # JSON と TOML の両方で表現できる設定値
 type JsonTomlValue = (
@@ -51,6 +55,9 @@ class CmocConfig:
     # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
+    # 新規生成用の既定状態。保存済み入力の検証規則はモジュール docstring の参照先に従う。
+    document_search: DocumentSearchConfig = field(default_factory=DocumentSearchConfig)
+
 
 @dataclass(frozen=True)
 class CmocConfigCodex:
@@ -66,16 +73,21 @@ class CmocConfigCodex:
     # `AgentCallParameter.agent_call_kind` --> Codex CLI へ直接渡す設定
     # NOTE
     #   ベンチマークスコア上、GPT-5.6 Astra は xhigh, max に知能差はほとんど無いが、料金差はきっちりある
-    #   個別ベンチスコアで見ても、ほとんど横並び
-    #   よって、この設定ファイル内の選択基準的には GPT-5.6 Astra xhigh を最高品質とみなす
-    #   コスパを重視るすなら high に落としても良い
+    #   なので、GPT-5.6 Astra xhigh にして料金をケチりたい所だった。
+    #   現実には xhigh だと取りこぼしがきになるので max で運用している。
     agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
             # NOTE merge 結果を守るため、品質が最優先
             "build_session_join_conflict_resolution_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
+            ),
+            # NOTE run と session の変更意図を統合するため、session join と同じ品質を使う
+            "build_run_join_conflict_resolution_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="max",
             ),
             # NOTE
             #   oracle file に影響を与えるので品質が重要
@@ -83,19 +95,13 @@ class CmocConfigCodex:
             "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
             ),
             # NOTE oracle file に影響を与えるので品質が重要
             "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
-            ),
-            # NOTE oracle file に影響を与えるので品質が重要
-            "build_oracle_edit_reduction_launch_exec_parameter": CodexCallConfig(
-                model_provider="openai",
-                model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
             ),
             # oracle --> realization のメインルート
             # NOTE
@@ -106,16 +112,17 @@ class CmocConfigCodex:
             #   よって、結論としては品質が重要
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                model="gpt-6-sol",
+                reasoning_effort="max",
             ),
             # NOTE
             #   報告１つ毎に呼ぶ関係でコストが嵩みやすい
             #   調査結果の正しさを機械的検証出来ないので、調査の網羅性は大事
-            #   Luna max しか選べない
+            #   意外と難しいタスクっぽいので、一度 astra で様子見
+            #   状況を見てもうちょっと安いモデルに下げたい
             "build_feedback_remediate_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-astra",
                 reasoning_effort="max",
             ),
             # NOTE
@@ -123,39 +130,33 @@ class CmocConfigCodex:
             #   実際の feedback report が冗長気味なら Astra に上げる
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-astra",
                 reasoning_effort="max",
             ),
             # NOTE TUI で人間とターンを回すので品質が重要
             "build_tui_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
-                reasoning_effort="xhigh",
+                reasoning_effort="max",
             ),
             # NOTE
             #   ファイル単位処理なので呼び出し回数が非常に多く、その分コストが掛かる
             #   よって、コスパに優れる Luna しか選べない
             "build_realization_refactor_fork_file_review_and_fix_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="max",
             ),
             # NOTE 単純な要約タスクなので Luna で良い
             "build_realization_refactor_fork_change_summary_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="medium",
-            ),
-            # NOTE 呼び出し回数が非常に多い単純な要約タスクなので、Luna しか選べない。
-            "build_indexing_index_entry_parameter": CodexCallConfig(
-                model_provider="openai",
-                model="gpt-5.6-luna",
-                reasoning_effort="low",
             ),
             # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
             "build_quota_availability_probe_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-5.6-luna",
+                model="gpt-6-luna",
                 reasoning_effort="low",
             ),
         }

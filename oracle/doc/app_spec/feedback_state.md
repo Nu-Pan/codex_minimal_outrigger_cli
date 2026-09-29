@@ -11,7 +11,7 @@ feedback state は、現在の `human_required` issue と、進行中の feedbac
 - active state へ未反映の pending observation
 - 直近の正常 publication で `human_required` と確定した issue の compact record
 - recurrence threshold 未満の machine observation の bounded aggregate
-- 中断、失敗、join 後の publication failure、または再検証から回復するための run manifest、intake wave、report cut、および正式な checkpoint
+- 中断・失敗後の明示 join または abandon と、join 後の publication・cleanup の recovery に必要な run manifest、intake wave、report cut、および正式な checkpoint
 - publication 済み report と、現在の正常 publication を選ぶ current pointer
 
 `fixed`、`already_resolved`、`not_actionable`、処理済み observation、および完了済み checkpoint を active state の履歴として残してはならない。issue commit、変更 path、および検証結果の監査情報は、feedback issue 一覧ではなく run report、invocation report、または subcommand log に保持してよい。
@@ -38,16 +38,18 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
     └── publication_completion.json
 
 {{repo-root}}/.cmoc/gu/report/feedback/
-├── {{time-stamp}}.md
-├── incomplete/{{time-stamp}}.md
-└── invocation/{{time-stamp}}.md
+├── {{execution-id}}.md
+├── incomplete/{{execution-id}}.md
+└── invocation/{{execution-id}}.md
 ```
+
+実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。正常 report と `incomplete` 診断 report の保存先に使う実行は、本書の「report cut」で固定する。invocation report は、それを作成する実行の ID を使う。
 
 `observation/v1` の `v1` は、raw observation の保存 layout の version を表す。保存する reporter input schema の version とは独立している。reporter input version 2 の導入だけを理由に、既存 raw observation の path を移動しない。
 
 `{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session と run の join または abandon は、feedback state を暗黙に取り込み、巻き戻し、複製、または削除してはならない。
 
-`invocation/{{time-stamp}}.md` は `cmoc feedback report` の中断またはエラーを要約する primary report であり、feedback state または publication artifact ではない。current pointer の参照先にしない。内容と生成条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` を正本とする。
+`invocation/{{execution-id}}.md` は `cmoc feedback report` の中断またはエラーを要約する primary report であり、feedback state または publication artifact ではない。current pointer の参照先にしない。内容と生成条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「中断・エラー時の invocation report」を正本とする。
 
 state root または current pointer が存在しない状態は、有効な初期状態とする。空 directory や `.gitkeep` は作らない。
 
@@ -59,20 +61,14 @@ state を構成する artifact の役割を次に示す。
 |---|---|
 | active generation | 同じ正常 publication で確定した `human_required` issue と threshold 未満 aggregate の immutable な集合 |
 | current pointer | 現在の正常な active generation と Markdown report を一意に選ぶ publication point |
-| feedback run manifest | 1 invocation の入力、run identity、wave、join、publication、および cleanup の状態を結び付ける記録 |
+| feedback run manifest | 1 feedback remediation run の入力、run identity、wave、join、publication、および cleanup の状態を結び付ける記録 |
 | intake wave | その wave が処理する observation、active issue、正規化済み issue identity、および根拠の immutable な固定入力 |
-| high-watermark | collector が durable に受理済みである observation の atomic な上限境界 |
 | checkpoint | 受理済み normalization または remediation の入力、結果、検証、および commit を hash で結び付ける記録 |
 | report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、採用する有効な結果、および merge 対象を固定する |
-| publication completion record | merge または no-op join 後の session commit、run branch の到達可能性、および最終 tree 検証結果を report cut と結び付ける immutable な記録 |
-| `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった処理の確定済み結果と blocker を materialize した durable な Markdown report |
+| publication completion record | report cut の採用結果と、マージ調整・検証を経た最終取り込み結果を結び付ける immutable な記録 |
+| `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった処理について、確定済み結果と完了を妨げた原因を記載した durable な Markdown report |
 
-次の情報から current state を推測してはならない。
-
-- timestamp
-- Git commit
-- branch reachability
-- directory の列挙順
+timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。
 
 最新の正常 publication は、current pointer が参照する generation manifest と正常 Markdown report の組とする。ただし、両方の path と hash を検証できる場合に限る。current pointer は `incomplete` 診断 report を参照しない。
 
@@ -88,7 +84,15 @@ active state を変更する `cmoc feedback report` は、`{{repo-root}}` ごと
 
 lock の方式は実装裁量とする。所有者を安全に判定できない lock を暗黙に破棄してはならない。排他保持中も collector は新しい observation を durable 保存できなければならない。
 
+## feedback run
+
+`{{feedback-run-id}}` は、1 回の feedback remediation run を識別する。書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。新しい feedback run の開始時に発行し、別のサブコマンド実行からの recovery を含む同じ処理を通して保持する。
+
+feedback run manifest は、feedback run ID と、隔離作業を担う編集 run の識別情報を対応付ける。編集 run ID の発行と保持は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「共通開始処理」に従う。新規開始と recovery の条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「事前条件と run の開始または再開」を正本とする。
+
 ## active generation
+
+`{{generation-id}}` は、1 つの active generation を識別する。書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。新しい generation ごとに発行し、同じ generation の保存、検証、および publication の再開では保持する。
 
 active generation には、次の record だけを含める。
 
@@ -117,11 +121,11 @@ active issue record は、次回の候補絞り込み、remediation、および�
 - 最新の `human_required` result の reason、current evidence、判定根拠、および human action
 - machine issue の場合だけ、recurrence window を評価できる bounded summary
 
-evidence は、削除予定の raw observation、intake wave、または report cut だけを参照してはならない。次回 report で再確認できる安定した subject と、人間が確認できる compact な説明を materialize する。secret を複製してはならない。
+evidence は、削除予定の raw observation、intake wave、または report cut だけを参照してはならない。次回 report で再確認できるよう、安定した subject と、人間が確認できる簡潔な説明を record に保存する。secret を複製してはならない。
 
 保持件数と集計情報は schema-fixed な上限を持つ。上限超過時の選択は、固定済み wave 入力に対して決定論的に行う。AI に保持対象を選ばせない。
 
-`fixed`、`already_resolved`、および `not_actionable` の issue は、新しい generation に含めない。`inconclusive` が 1 件でもある場合は、新しい generation 自体を publication しない。
+`inconclusive` が 1 件でもある場合は、新しい generation 自体を publication しない。
 
 ### threshold 未満の machine aggregate
 
@@ -142,15 +146,15 @@ threshold を満たした aggregate は issue candidate へ昇格させる。同
 - normalization 後の未処理 issue identity、再確認対象の issue identity、および bounded evidence
 - 再確認対象の場合は、先行 checkpoint、判定根拠の変化、および関連する再確認履歴への参照
 
-wave input は durable 保存後に変更しない。追加 evidence は後続 wave の入力として同じ issue identity へ関連付けてよいが、先行 wave を書き換えてはならない。
+wave input は durable 保存後に変更しない。追加 evidence は後続 wave の入力として同じ issue identity へ関連付けてよい。
 
 処理対象と再試行の条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「call 回数と順序」と「intake wave loop」を正本とする。
 
 ### high-watermark
 
-high-watermark は、collector の durable な受理順序に対する単調増加境界とする。directory の列挙順、timestamp、quiet period、または observation 件数から推測してはならない。
+high-watermark の意味は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」に従う。collector の durable な受理順序に対する単調増加境界として管理し、directory の列挙順、timestamp、quiet period、observation 件数、または observation ID の通番から推測してはならない。
 
-wave 終了時は、対応する全 remediation reporter context の受付停止と drain を完了した後に high-watermark を atomic に確定する。前回境界より後、今回境界以前の observation を validation、normalization、および deduplication する。新規受理がなければ前回と同じ high-watermark を使用してよい。
+wave 終了時の確定順序と境界間の observation の処理は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「intake wave loop」に従う。新規受理がなければ前回と同じ high-watermark を使用してよい。
 
 `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「処理モデル」が定める条件で wave loop を自然完了したとき、最後の境界を最終 high-watermark とする。最終 high-watermark より後に受理された observation は、次回 invocation の pending input として残す。
 
@@ -171,11 +175,11 @@ issue remediation checkpoint は、少なくとも次の情報を hash で結び
 
 不適合 output、correction の途中結果、失敗した agent call、差分検査失敗、commit 失敗、および rollback 前の差分を正式な issue result checkpoint にしてはならない。これらは invocation error の診断情報として分離する。
 
-正式な remediation checkpoint は論理 agent call ごとに高々 1 件とする。同じ run と同じ issue identity の再確認結果は、新しい checkpoint として追加する。Structured Output correction、retry、および quota 待機後の resume は同じ論理 agent call の checkpoint に含める。
+正式な remediation checkpoint は論理 agent call ごとに高々 1 件とする。同じ run と同じ issue identity の再確認結果は、新しい checkpoint として追加する。Structured Output correction、retry、および quota または一時障害の回復待ち後の再開は同じ論理 agent call の checkpoint に含める。
 
 ### report cut
 
-単一の可変 report cut を intake に使用してはならない。report cut は、wave loop が自然完了した後に一度だけ封印する。
+report cut は、wave loop が自然完了した後に一度だけ封印する。intake に単一の可変 report cut を使用してはならない。
 
 report cut は、少なくとも次の入力を固定する。
 
@@ -183,18 +187,36 @@ report cut は、少なくとも次の入力を固定する。
 - run 開始時の current pointer、active generation、および最終 high-watermark
 - 処理した issue identity ごとに採用する有効な結果と、対応する checkpoint の path と hash
 - issue commit、run branch HEAD、および merge 前の検証結果
-- 正常 publication target、`incomplete` 診断 target、および cleanup target
+- 正常 publication target、`incomplete` 診断 target、それぞれの report 保存先を固定した実行 ID、および cleanup target
 
-merge または no-op join 後は、session tree の commit と最終 tree 検証結果を別の immutable な publication completion record として保存し、run manifest から report cut とともに参照する。封印済み report cut、wave input、issue result、最終 high-watermark、または cleanup target を変更してはならない。
+正常 report と `incomplete` 診断 report の保存先には、固定した時点の実行 ID を `{{execution-id}}` として使用し、最終 path とともに封印する。同じ publication を別のサブコマンド実行から再開する場合も、この target を引き継ぐ。保存先や帰属を再開した実行の ID に合わせて変更してはならない。
+
+封印後に許す調整・検証と停止条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。調整によって、封印済み report cut、wave input、issue result、最終 high-watermark、または cleanup target を変更してはならない。
+
+### publication completion record
+
+cmoc は、封印後のマージ調整に関する agent の判断と検証結果を、merge commit の作成前に既存の Codex call log へ保存する。記録から report cut と検証対象の内容を特定できるようにし、取り込み後に停止した場合も recovery 用の根拠として保持する。
+
+publication completion record は、merge または no-op join と post-join 後に、最終 session tree に対する検証を完了してから保存する。run manifest は、この record と report cut の path および hash を参照する。少なくとも次の対応を確認できる記録とする。
+
+- 封印済み report cut と採用結果・checkpoint の参照。
+- merge 前の両 commit、成立した merge commit または no-op join、および post-join 後の session commit。
+- run branch と issue commit の到達可能性。
+- マージ調整の対象、採用した判断と理由、影響を受けた判定、および merge commit 前に保存した検証記録との対応。調整しなかった場合はその旨。
+- その検証記録が最終 session tree に適用でき、全採用結果が有効であることを確認した最終検証結果。
+
+この record は、元の issue result の書き換えや新しい結果分類の保存先にはしない。artifact の不変性・hash 整合性と、調整後の内容に対する検証結果は区別して記録する。結果の有効性を確認できず停止した場合は completion を記録せず、診断情報と recovery 用資源を保持する。
+
+保存済み record は immutable とし、recovery 時にも上書きしない。record が未保存の場合は、同じ封印済み入力と保存済み検証記録を使用し、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」の再開条件を満たす場合だけ確定する。
 
 ## `incomplete` 診断 report
 
 診断 report の保存条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「`incomplete`」を正本とする。
 
-`incomplete` 診断 report は、次へ durable に保存する。
+`incomplete` 診断 report は、本書の「report cut」で固定した診断 target へ durable に保存する。保存先は次のとおりとする。
 
 ```text
-{{repo-root}}/.cmoc/gu/report/feedback/incomplete/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/report/feedback/incomplete/{{execution-id}}.md
 ```
 
 診断 report は、次の artifact を削除しても単独で読める内容にする。
@@ -217,17 +239,17 @@ report を durable 保存した後、path と hash を再検証する。
 
 新しい正常 report は、次の順序で publication する。
 
-1. `human_required` issue だけを含む新しい active generation の record と manifest を durable 保存する。
-2. Markdown report を最終 path へ durable 保存する。
+1. 本書の「active generation」が定める record と manifest を、新しい generation として durable 保存する。
+2. Markdown report を、本書の「report cut」で固定した正常 publication target の最終 path へ durable 保存する。
 3. generation manifest と Markdown report の path および hash を再検証する。
 4. 両方を参照する current pointer を atomic に切り替える。
 5. current pointer の切替後にだけ、最終 high-watermark 以前の処理済み observation、切替前の generation、および完了済み work artifact を cleanup する。
 
 current pointer の切替だけを publication point とする。切替前に異常終了した場合は、直前の pointer が引き続き current となる。staged artifact、run branch 上の結果、issue commit、または自動 join の成功だけを正常 report として扱ってはならない。
 
-自動 join 後に publication point より前の処理が失敗した場合は、raw observation、直前の current pointer、および recovery に必要な run artifact を維持する。次の invocation は join 後 tree を再検証して同じ publication を idempotent に再開する。
+自動 join 後に publication point より前の処理が失敗した場合は、raw observation、直前の current pointer、および recovery に必要な run artifact を維持する。次の invocation は join 後 tree を再検証して同じ publication を idempotent に再開する。report の保存確認と実行情報の帰属は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「再開時の report と実行記録」に従う。
 
-cleanup は、current pointer と hash で結び付いた report cut を使用して idempotent に行う。cleanup が途中で失敗しても current pointer を巻き戻さない。次回の report は cleanup を完了してから新しい run を開始する。
+cleanup は、current pointer と hash で結び付いた report cut を使用して idempotent に行う。cleanup が途中で失敗しても current pointer を巻き戻さない。新しい run の開始と recovery の分岐は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「事前条件と run の開始または再開」に従う。
 
 処理済み observation と完了済み work artifact の cleanup を確定した後にだけ、feedback run の state と隔離資源を正常終了状態へ戻す。publication または cleanup の失敗中は `run.state=error` と隔離資源を維持する。
 

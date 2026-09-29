@@ -28,15 +28,26 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, terminal_primary_report
+from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import make_repo, run_git
+from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 
 import commons.runtime_doctor as doctor_module
 import commons.runtime_feedback_store as feedback_store_module
+from commons.runtime_config import config_to_dict
+from commons.runtime_document_search import DocumentSearch, SearchError
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import ReporterAvailabilityError
 from commons.runtime_refactor import RefactorState
 from config.cmoc_config import CmocConfig
+from main import app
+
+
+def _new_subcommand_events(root: Path, previous: set[Path]) -> list[dict[str, object]]:
+    """直前の CLI 呼び出しが保存した 1 本の診断ログを読む。"""
+    log_dir = root / ".cmoc/gu/log/sub_command"
+    [log_path] = set(log_dir.glob("*.jsonl")) - previous
+    return [json.loads(line) for line in log_path.read_text().splitlines()]
 
 
 def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -69,6 +80,9 @@ def test_doctor_preprocess_repairs_git_state(
     assert 'terminal_classification: "natural_completion"' in rendered_report
     assert "exit_code: 0" in rendered_report
     assert "doctor preprocess" in rendered_report
+    assert "## 検索索引の同期" in rendered_report
+    assert "実効閲覧範囲" in rendered_report
+    assert "逐次反映と再利用" in rendered_report
     assert "診断用サブコマンドログ" in rendered_report
 
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
@@ -118,6 +132,88 @@ def test_doctor_preprocess_repairs_git_state(
     )
 
 
+def test_doctor_syncs_document_edits_and_deletions_without_committing_them(
+    tmp_path: Path,
+) -> None:
+    """手動同期が保存済みの編集・削除を反映し、利用者の差分を commit しない。"""
+    root = make_repo(tmp_path)
+    document = root / "oracle/doc/source.md"
+    document.parent.mkdir()
+    original = "# original document\n"
+    document.write_text(original)
+    run_git(root, "add", "oracle/doc/source.md")
+    run_git(root, "commit", "-m", "add search document")
+    run_doctor(root)
+
+    document.write_text("# updated document\n")
+    updated = terminal_primary_report(run_doctor(root)).read_text()
+
+    assert 'doctor_sync_status: "updated"' in updated
+    assert '"changed": 1' in updated
+    assert document.read_text() == "# updated document\n"
+    assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
+
+    unchanged = terminal_primary_report(run_doctor(root)).read_text()
+    assert 'doctor_sync_status: "unchanged"' in unchanged
+
+    document.unlink()
+    deleted = terminal_primary_report(run_doctor(root)).read_text()
+    state = json.loads((root / ".cmoc/gt/realization/refactor/state.json").read_text())
+
+    assert 'doctor_sync_status: "updated"' in deleted
+    assert '"deleted": 1' in deleted
+    assert "oracle/doc/source.md" not in state
+    assert not document.exists()
+    assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
+
+
+def test_doctor_sync_log_records_each_run_and_current_work(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """初回・無変更・削除の件数と結果を、同じ実行の開始/終端に対応付ける。"""
+    root = make_repo(tmp_path)
+    document = root / "oracle/doc/source.md"
+    document.parent.mkdir()
+    document.write_text("# source\n")
+    run_git(root, "add", "oracle/doc/source.md")
+    run_git(root, "commit", "-m", "add search document")
+    monkeypatch.chdir(root)
+    log_dir = root / ".cmoc/gu/log/sub_command"
+
+    for expected, edit in (
+        (("updated", 1, 1, 1, 0), None),
+        (("unchanged", 1, 0, 0, 1), None),
+        (("updated", 0, 1, 0, 0), document.unlink),
+    ):
+        if edit is not None:
+            edit()
+        previous = set(log_dir.glob("*.jsonl"))
+        result = run_doctor(root)
+        events = _new_subcommand_events(root, previous)
+        starts = [e for e in events if e["event"] == "document_search_sync_started"]
+        finishes = [e for e in events if e["event"] == "document_search_sync_finished"]
+        assert len(starts) == len(finishes) == 1
+        start, finish = starts[0], finishes[0]
+        assert events.index(start) < events.index(finish) < len(events) - 1
+        assert start["sync_id"] == finish["sync_id"]
+        assert start["invocation_id"] == finish["invocation_id"]
+        assert start["command"] == finish["command"] == "doctor"
+        assert start["work_root"] == finish["work_root"] == str(root)
+        assert start["index_identity"] is None
+        assert isinstance(finish["index_identity"], str)
+        assert finish["counts_complete"] is True
+        assert (
+            finish["status"],
+            finish["document_count"],
+            finish["changed_document_count"],
+            finish["persisted_chunk_count"],
+            finish["reused_chunk_count"],
+        ) == expected
+        assert 0 <= finish["lock_wait_seconds"] <= finish["elapsed_seconds"]
+        report = terminal_primary_report(result).read_text()
+        assert f"診断ログ内の同期 ID: `{start['sync_id']}`" in report
+
+
 def test_doctor_preprocess_follows_repair_order(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -140,10 +236,10 @@ def test_doctor_preprocess_follows_repair_order(
         events.append("agents")
         return original_agents(path)
 
-    def observe_config(path: Path) -> None:
+    def observe_config(path: Path, **kwargs):
         """config 修復の呼び出し順を記録する。"""
         events.append("config")
-        original_config(path)
+        return original_config(path, **kwargs)
 
     def observe_state(path: Path, *, sync_entries: bool = True) -> RefactorState:
         """refactor state 修復の呼び出し順を記録する。"""
@@ -164,7 +260,7 @@ def test_doctor_preprocess_follows_repair_order(
         observe_reporter,
     )
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     assert events == ["ignore", "agents", "config", "state", "reporter"]
 
@@ -227,7 +323,7 @@ def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
     )
 
     with pytest.raises(KeyboardInterrupt):
-        doctor_module.run_doctor_preprocess(root)
+        doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
 
 def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
@@ -247,7 +343,7 @@ def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
     )
 
     with pytest.raises(RuntimeError, match="unexpected reporter probe failure"):
-        doctor_module.run_doctor_preprocess(root)
+        doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
 
 def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
@@ -263,7 +359,7 @@ def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
     monkeypatch.setattr(feedback_store_module, "reporter_input_schema", interrupt)
 
     with pytest.raises(KeyboardInterrupt):
-        doctor_module.run_doctor_preprocess(root)
+        doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
 
 def test_doctor_preprocess_waits_for_common_repository_lock(
@@ -302,6 +398,7 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
             future = executor.submit(
                 doctor_module.run_doctor_preprocess,
                 linked,
+                explicit_doctor=True,
             )
             assert lock_attempted.wait(timeout=3)
             assert not future.done()
@@ -344,12 +441,42 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
     monkeypatch.setattr(doctor_module, "_commit_doctor_repairs_from_head", fail_commit)
 
     with pytest.raises(RuntimeError, match="repair commit failure"):
-        doctor_module.run_doctor_preprocess(root)
+        doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     assert run_git(root, "write-tree").stdout.strip() == expected_index_tree
     assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
         "staged.txt"
     ]
+
+
+def test_doctor_preserves_preexisting_unmerged_index(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor が既存の unmerged index を検査・解消せず保持する。"""
+
+    root = make_repo(tmp_path)
+    base_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    run_git(root, "checkout", "-b", "doctor-conflict-side")
+    (root / "README.md").write_text("# side\n")
+    run_git(root, "commit", "-am", "side change")
+    run_git(root, "checkout", base_branch)
+    (root / "README.md").write_text("# main\n")
+    run_git(root, "commit", "-am", "main change")
+    merge = subprocess.run(
+        ["git", "merge", "doctor-conflict-side"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert merge.returncode != 0
+    assert run_git(root, "ls-files", "--unmerged", "--", "README.md").stdout
+
+    monkeypatch.chdir(root)
+    run_doctor(root)
+
+    assert run_git(root, "ls-files", "--unmerged", "--", "README.md").stdout
 
 
 def test_doctor_repairs_missing_index_without_dropping_tracked_files(
@@ -360,7 +487,7 @@ def test_doctor_repairs_missing_index_without_dropping_tracked_files(
     root = make_repo(tmp_path)
     (root / ".git" / "index").unlink()
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     tracked = set(run_git(root, "ls-files").stdout.splitlines())
     assert {"README.md", "oracle/spec.md"} <= tracked
@@ -378,13 +505,13 @@ def test_doctor_preserves_preexisting_index_flags(
     run_git(root, "update-index", index_flag, "README.md")
     before = run_git(root, "ls-files", "-v", "README.md").stdout
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     assert run_git(root, "ls-files", "-v", "README.md").stdout == before
 
 
-def test_doctor_preserves_preexisting_intent_to_add_index_entry(tmp_path: Path) -> None:
-    """doctor が intent-to-add の index entry を通常の未追跡へ戻さない。"""
+def test_doctor_preserves_preexisting_intent_to_add_index_file(tmp_path: Path) -> None:
+    """doctor が intent-to-add の通常 file を未追跡へ戻さない。"""
 
     root = make_repo(tmp_path)
     path = root / "new.txt"
@@ -393,7 +520,7 @@ def test_doctor_preserves_preexisting_intent_to_add_index_entry(tmp_path: Path) 
     before_entry = run_git(root, "ls-files", "--stage", "new.txt").stdout
     before_status = run_git(root, "status", "--short").stdout
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     assert run_git(root, "ls-files", "--stage", "new.txt").stdout == before_entry
     assert run_git(root, "status", "--short").stdout == before_status
@@ -408,14 +535,14 @@ def test_doctor_generates_and_tracks_config(
     config_path = root / ".cmoc" / "gt" / "config.json"
     monkeypatch.chdir(root)
 
-    run_doctor(root)
+    result = run_doctor(root)
 
     assert config_path.is_file()
     assert (
         run_git(root, "ls-files", "--", ".cmoc/gt/config.json").stdout.strip()
         == ".cmoc/gt/config.json"
     )
-    assert "num_try_falv_recovery" not in json.loads(config_path.read_text())["codex"]
+    assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
     assert json.loads(config_path.read_text())["codex"]["model_providers"] == {
         "openai": {"settings": {}}
     }
@@ -423,6 +550,52 @@ def test_doctor_generates_and_tracks_config(
         ".cmoc/gt/config.json"
         in run_git(root, "show", "--name-only", "--format=", "HEAD").stdout.splitlines()
     )
+    report = terminal_primary_report(result).read_text()
+    assert str(config_path) in report
+    assert "document_search.chunk_tokens: `512`" in report
+    assert "- 検証: `成功`" in report
+    assert "- 保存: `True`" in report
+
+
+def test_normal_preprocess_rejects_unset_search_without_rewriting_config(
+    tmp_path: Path,
+) -> None:
+    """通常起動では不足した設定を補完せず、仕事の開始前に診断する。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = '{"num_parallel": 3, "document_search": null}\n'
+    path.write_text(original)
+
+    with pytest.raises(CmocError) as exc_info:
+        doctor_module.run_doctor_preprocess(root)
+
+    assert str(path) in exc_info.value.detail
+    assert "document_search" in exc_info.value.detail
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert path.read_text() == original
+
+
+def test_doctor_reports_unsaved_inconsistent_search_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """補完候補が衝突した場合、doctor report に値と非保存を残す。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = '{"document_search": {"embedding_context_tokens": 256}}\n'
+    path.write_text(original)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code != 0
+    report = terminal_primary_report(result).read_text()
+    assert str(path) in report
+    assert "document_search.chunk_tokens: `512`" in report
+    assert "embedding_context_tokens=256" in report
+    assert "- 保存: `False`" in report
+    assert path.read_text() == original
 
 
 def test_doctor_generates_config_under_broad_cmoc_ignore(
@@ -456,7 +629,7 @@ def test_doctor_does_not_commit_preexisting_staged_config_change(
     """doctor が事前に stage された人間の config 変更を修復 commit に混ぜない。"""
 
     root = make_repo(tmp_path)
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
     config_path = root / ".cmoc" / "gt" / "config.json"
     data = json.loads(config_path.read_text())
     data["num_parallel"] = 99
@@ -464,7 +637,7 @@ def test_doctor_does_not_commit_preexisting_staged_config_change(
     run_git(root, "add", ".cmoc/gt/config.json")
     before_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == before_head
     assert (
@@ -487,7 +660,7 @@ def test_doctor_does_not_commit_preexisting_staged_config_change(
 def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`.cmoc/gu` は repo root、tracked runtime は current worktree で修復する。"""
+    """両 worktree の非追跡保証と current の tracked runtime を修復する。"""
 
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-doctor"
@@ -497,7 +670,7 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
     result = run_doctor(linked)
 
     assert result.exit_code == 0
-    assert not (linked / ".gitignore").exists()
+    assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
@@ -507,7 +680,7 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
             cwd=linked,
             check=False,
         ).returncode
-        != 0
+        == 0
     )
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert run_git(root, "ls-files", "--", ".agents").stdout == ""
@@ -542,27 +715,17 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
-    config_path.write_text(
-        json.dumps(
-            {
-                "num_parallel": 3,
-                "codex": {
-                    "model_providers": {"custom": {"settings": {}}},
-                    "num_try_falv_recovery": 4,
-                    "agent_calls": {
-                        "build_tui_launch_tui_parameter": {
-                            "model_provider": "custom",
-                            "model": "CUSTOM",
-                            "reasoning_effort": "CUSTOM-EFFORT",
-                        }
-                    },
-                    "model": {"minimum": {"model": "LEGACY"}},
-                    "reasoning_effort": {"low": "LEGACY"},
-                },
-            }
-        )
-        + "\n"
-    )
+    data = config_to_dict(CmocConfig())
+    data["num_parallel"] = 3
+    data["codex"]["model_providers"]["custom"] = {"settings": {}}
+    data["codex"]["num_try_falv_recovery"] = 4
+    data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"] = {
+        "model_provider": "custom",
+        "model": "CUSTOM",
+        "reasoning_effort": "CUSTOM-EFFORT",
+    }
+    data.pop("document_search")
+    config_path.write_text(json.dumps(data) + "\n")
     monkeypatch.chdir(root)
 
     run_doctor(root)
@@ -578,14 +741,14 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
         "reasoning_effort": "CUSTOM-EFFORT",
     }
     default_call = CmocConfig().codex.agent_calls[
-        "build_indexing_index_entry_parameter"
+        "build_feedback_normalize_issue_parameter"
     ]
-    assert data["codex"]["agent_calls"]["build_indexing_index_entry_parameter"] == {
+    assert data["codex"]["agent_calls"]["build_feedback_normalize_issue_parameter"] == {
         "model_provider": default_call.model_provider,
         "model": default_call.model,
         "reasoning_effort": default_call.reasoning_effort,
     }
-    assert "num_try_falv_recovery" not in data["codex"]
+    assert data["codex"]["num_try_falv_recovery"] == 4
     assert "model" not in data["codex"]
     assert "reasoning_effort" not in data["codex"]
     assert "apply_fork" not in data
@@ -650,7 +813,7 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
     run_git(root, "add", "-u", ".agents")
     monkeypatch.chdir(root)
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     gitkeep = root / ".agents" / ".gitkeep"
     assert gitkeep.is_file()
@@ -674,25 +837,33 @@ def test_doctor_preserves_existing_untracked_gitkeep_content(
     gitkeep.parent.mkdir()
     gitkeep.write_text("human content\n")
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     assert run_git(root, "show", "HEAD:.agents/.gitkeep").stdout == "human content\n"
     assert gitkeep.read_text() == "human content\n"
     assert run_git(root, "status", "--short").stdout == ""
 
 
-def test_doctor_restores_missing_tracked_gitkeep(tmp_path: Path) -> None:
+@pytest.mark.parametrize("index_flag", [None, "--skip-worktree"])
+def test_doctor_restores_missing_tracked_gitkeep(
+    tmp_path: Path,
+    index_flag: str | None,
+) -> None:
     """tracked な `.agents/.gitkeep` の unstaged deletion を復元する。"""
 
     root = make_repo(tmp_path)
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
     gitkeep = root / ".agents" / ".gitkeep"
+    if index_flag is not None:
+        run_git(root, "update-index", index_flag, ".agents/.gitkeep")
+    before_flags = run_git(root, "ls-files", "-v", ".agents/.gitkeep").stdout
     gitkeep.unlink()
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     assert gitkeep.read_text() == ""
     assert run_git(root, "status", "--short").stdout == ""
+    assert run_git(root, "ls-files", "-v", ".agents/.gitkeep").stdout == before_flags
 
 
 @pytest.mark.parametrize("symlinked_path", ["agents", "gitkeep"])
@@ -714,7 +885,7 @@ def test_doctor_rejects_symlinked_agents_paths(
         outside_content = outside.read_text()
 
     with pytest.raises(CmocError):
-        doctor_module.run_doctor_preprocess(root)
+        doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
     assert not (outside / ".gitkeep").exists()
     if outside_content is not None:
@@ -826,3 +997,156 @@ def test_doctor_preserves_preexisting_staged_gitignore_deletion(
 
     assert run_git(root, "diff", "--cached", "--name-status").stdout == before
     assert run_git(root, "ls-files", "--stage", "--", ".gitignore").stdout == ""
+
+
+def test_doctor_fails_when_real_model_validation_does_not_complete(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """資材が取得済みでも実モデル検証失敗を正常終了として報告しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def fail_materials(_root: Path, _config: object) -> dict[str, str]:
+        raise SearchError("MODEL_FAILURE", "rerank validation failed")
+
+    monkeypatch.setattr(
+        doctor_module, "prepare_document_search_materials", fail_materials
+    )
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code != 0
+    report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert 'terminal_classification: "error"' in report
+    assert "照合と実モデル検証: `失敗`" in report
+    assert "rerank validation failed" in report
+    assert "cmoc doctor を再実行" in report
+    events = _new_subcommand_events(root, set())
+    assert not any(
+        event["event"].startswith("document_search_sync_") for event in events
+    )
+
+
+@pytest.mark.parametrize(
+    ("failure_code", "expected_status"),
+    [("MODEL_FAILURE", "failed"), ("CANCELLED", "cancelled")],
+)
+def test_doctor_reports_persisted_chunks_when_sync_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_code: str,
+    expected_status: str,
+) -> None:
+    """doctor の同期失敗は未完了とし、保存済み chunk の進捗を示す。"""
+    root = make_repo(tmp_path)
+    docs = root / "oracle/doc"
+    docs.mkdir()
+    (docs / "sample.md").write_text("# 検索用の原文\n")
+    run_git(root, "add", "oracle/doc")
+    run_git(root, "commit", "-m", "add document")
+    monkeypatch.chdir(root)
+    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+
+    class StoppingWorker:
+        def stream_chunks(
+            self,
+            documents,
+            resumes,
+            on_event,
+            *,
+            reusable_hashes,
+            deadline,
+            residency_fd,
+            cancelled,
+        ):
+            assert deadline is None
+            path, source = next(iter(documents.items()))
+            on_event(
+                {
+                    "kind": "chunk",
+                    "path": path,
+                    "ordinal": 0,
+                    "start": 0,
+                    "end": len(source),
+                    "embedding": vector,
+                }
+            )
+            raise SearchError(failure_code, "stopped after first chunk")
+
+    def failing_search(root, scope, config, *, installation_root, use_saved_config):
+        return DocumentSearch(
+            root,
+            scope,
+            config,
+            worker=StoppingWorker(),
+            installation_root=installation_root,
+            use_saved_config=use_saved_config,
+        )
+
+    monkeypatch.setattr(doctor_module, "DocumentSearch", failing_search)
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+    assert result.exit_code != 0
+    report = terminal_primary_report(result).read_text()
+    assert f'doctor_sync_status: "{expected_status}"' in report
+    assert "persisted_chunks" in report
+    assert "stopped after first chunk" in report
+    assert f"実行状態: `{expected_status}`" in report
+    events = _new_subcommand_events(root, set())
+    start = next(e for e in events if e["event"] == "document_search_sync_started")
+    finish = next(e for e in events if e["event"] == "document_search_sync_finished")
+    assert start["sync_id"] == finish["sync_id"]
+    assert finish["status"] == expected_status
+    assert finish["failure_code"] == failure_code
+    assert finish["counts_complete"] is False
+    assert finish["document_count"] == 1
+    assert finish["changed_document_count"] == 1
+    assert finish["persisted_chunk_count"] == 1
+    assert finish["reused_chunk_count"] == 0
+
+
+def test_normal_preprocess_requires_validated_materials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """通常起動は資材未検証なら本命処理前に doctor を案内する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    run_doctor(root)
+
+    def missing_materials(_root: Path, _config: object) -> Path:
+        raise SearchError("NOT_READY", "validation record is missing")
+
+    monkeypatch.setattr(
+        doctor_module, "require_document_search_materials", missing_materials
+    )
+    with pytest.raises(CmocError) as exc_info:
+        doctor_module.run_doctor_preprocess(root)
+
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert "validation record is missing" in exc_info.value.detail
+
+
+def test_doctor_repairs_shared_cmoc_root_in_its_own_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """別 installation の共有資材書込み前に、その所有 repository の非追跡を修復する。"""
+    root = make_repo(tmp_path)
+    installation_parent = tmp_path / "installation"
+    installation_parent.mkdir()
+    installation = make_repo(installation_parent)
+    monkeypatch.setattr(doctor_module, "_installation_root", lambda _root: installation)
+    monkeypatch.chdir(root)
+
+    result = run_doctor(root)
+
+    assert (
+        run_git(installation, "ls-files", ".gitignore").stdout.strip() == ".gitignore"
+    )
+    assert "/.cmoc/gu/" in (installation / ".gitignore").read_text()
+    assert f'cmoc_root: "{installation}"' in terminal_primary_report(result).read_text()
+
+    run_git(installation, "rm", ".gitignore")
+    run_git(installation, "commit", "-m", "remove shared ignore")
+    with pytest.raises(CmocError) as exc_info:
+        doctor_module.run_doctor_preprocess(root)
+    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert str(installation) in exc_info.value.detail
+    assert not (installation / ".gitignore").exists()

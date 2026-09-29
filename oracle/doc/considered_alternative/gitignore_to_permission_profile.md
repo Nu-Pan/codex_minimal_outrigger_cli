@@ -2,25 +2,17 @@
 
 ## 採用結果
 
-- `.gitignore` または他の情報から permission profile を動的に生成する案は採用しない
-- 現行のファイルアクセス制限は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とし、この不採用案を例外や追加規則として扱わない
-- permission profile との記法互換性が将来改善した場合も、この変換を実行時の分岐や fallback として使用しない
+`.gitignore` から permission profile を動的に生成する案は採用しなかった。現行の制限は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「permission profile の不使用と動的生成禁止」を正本とする。
 
 ## やりたかったこと
 
-- .gitignore 対象のファイルを、通常の読み書き規則の例外として、自由に読み書きできるようにしたかった
-    - 厳密には、`git check-ignore` によって git 追跡対象から除外されていると判定されたファイルを指す
-- 想定していた状況の例：
-    - agent が oracle への書き込みを禁止された作業をしている
-    - 作業中に `{{work-root}}/oracle/**/__pycache__` が発生した
-    - 作業完了前に agent はこの `__pycache__` を掃除したい
-    - しかし、読み書き規則上は `__pycache__` の削除が禁止されているため、残さざるを得ない
-    - `__pycache__` は git 追跡対象外なので、agent が自分の判断で削除して構わないと考えていた
-- この例外を含む厳密な規則を permission profile に変換し、Codex CLI に渡したかった
+`git check-ignore` で無視対象と判定された未追跡ファイルを、通常の読み書き規則の例外として自由に読み書きできるようにしたかった。この例外を含む厳密な規則を permission profile に変換し、Codex CLI に渡す案だった。
+
+例えば、oracle への書き込みを禁止された作業中に `{{work-root}}/oracle/**/__pycache__` が生成され、agent が作業完了前に削除したい場面を想定していた。当時の規則では削除も禁止されるため残さざるを得なかったが、未追跡かつ無視対象の `__pycache__` なら agent の判断で削除して構わないと考えていた。
 
 ## 断念した理由
 
-- `.gitignore` と permission profile の記法に互換性がなく、正しく変換できなかった
-- 互換性がない記法の例：
-    - .gitignore では `{{dir-name}}/` によって、`{{dir-name}}` とマッチするディレクトリだけを除外できる。permission profile には、ディレクトリだけを対象とする記法がない
-    - .gitignore では `?` や `[0-9]` のような柔軟な記法が可能だが、これは permission profile にはない
+当時の `.gitignore` と permission profile の記法には互換性がなく、正しく変換できなかった。例えば、次の指定を表現できなかった。
+
+- `.gitignore` の `{{dir-name}}/` は、`{{dir-name}}` とマッチするディレクトリだけを除外できたが、permission profile にはディレクトリだけを対象とする記法がなかった。
+- `.gitignore` の `?` や `[0-9]` のようなパターンを、permission profile では表現できなかった。

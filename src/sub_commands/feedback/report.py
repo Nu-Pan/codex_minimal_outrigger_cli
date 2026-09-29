@@ -38,7 +38,7 @@ from cmoc_runtime import (
     run_cli_subcommand,
     run_codex_exec,
 )
-from commons.indexing import enable_indexing_preflight
+from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback_state import (
     ActiveState,
     agent_canonical_key,
@@ -71,7 +71,7 @@ from commons.runtime_feedback_store import (
     write_immutable_bytes,
 )
 from commons.runtime_logging import current_subcommand_logger
-from commons.runtime_paths import reports_dir, timestamp
+from commons.runtime_paths import reports_dir
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_results import StructuredOutputValidationIssue
 
@@ -83,7 +83,6 @@ _MACHINE_DIGEST_LIMIT = 64
 
 def cmoc_feedback_report_impl() -> None:
     """CLI runtime を通して current feedback report を publication する。"""
-    enable_indexing_preflight()
     run_cli_subcommand(
         _cmoc_feedback_report_body,
         command_name="feedback report",
@@ -779,13 +778,22 @@ def _observation_reference_targets(
     """次回 cut で再取得できる stable repository target を抽出する。"""
     targets: list[_JsonObject] = []
     payload = observation.get("payload")
+    fingerprints: dict[int, str] = {}
+    for item in observation.get("evidence_fingerprints", []):
+        if not isinstance(item, dict):
+            continue
+        evidence_index = item.get("evidence_index")
+        normalized_path = item.get("normalized_path")
+        if type(evidence_index) is int and isinstance(normalized_path, str):
+            fingerprints[evidence_index] = normalized_path
     if isinstance(payload, dict) and isinstance(payload.get("evidence"), list):
-        for evidence in payload["evidence"]:
-            if not isinstance(evidence, dict) or not isinstance(
-                evidence.get("path"), str
-            ):
+        for index, evidence in enumerate(payload["evidence"]):
+            if not isinstance(evidence, dict):
                 continue
-            candidate = _repository_path(repo, evidence["path"])
+            evidence_path = evidence.get("path")
+            if not isinstance(evidence_path, str):
+                continue
+            candidate = _repository_path(repo, fingerprints.get(index, evidence_path))
             if candidate is not None:
                 targets.append(
                     {
@@ -1036,6 +1044,7 @@ def _normalize_issue_identity(
         json.dumps(normalization_observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
         worktree,
+        document_search_scope=oracle_doc_scope(),
     )
     schema_path = parameter.structured_output_schema_path
     assert schema_path is not None
@@ -1938,6 +1947,8 @@ def _render_feedback_report(
     """正常 publication 用の current unresolved issue 一覧だけを描画する。"""
     fields = (
         ("command", "cmoc feedback report"),
+        ("execution_id", manifest["run"]["targets"]["execution_id"]),
+        ("subcommand_log_path", str(repo / manifest["run"]["invocation_log"])),
         ("generated_at", generated_at),
         ("repo_root", str(repo)),
         ("session_branch", current_branch(worktree)),
@@ -2028,6 +2039,8 @@ def _render_incomplete_report(
     )
     fields = (
         ("command", "cmoc feedback report"),
+        ("execution_id", manifest["run"]["targets"]["execution_id"]),
+        ("subcommand_log_path", str(repo / manifest["run"]["invocation_log"])),
         ("generated_at", generated_at),
         ("repo_root", str(repo)),
         ("session_branch", current_branch(worktree)),
@@ -2152,15 +2165,17 @@ def _remediation_candidate_count(manifest: _JsonObject) -> int:
     return len({item["candidate_id"] for item in checkpoints})
 
 
-def _new_report_path(repo: Path, *, incomplete: bool = False) -> Path:
-    """正常／診断 report の既存 artifact を上書きしない path を選ぶ。"""
+def _new_report_path(
+    repo: Path, *, execution_id: str, incomplete: bool = False
+) -> Path:
+    """report cut で封印する実行 ID 由来の保存先を返す。"""
     directory = reports_dir(repo, "feedback")
     if incomplete:
         directory /= "incomplete"
-    while True:
-        path = directory / f"{timestamp()}.md"
-        if not path.exists() and not path.is_symlink():
-            return path
+    path = directory / f"{execution_id}.md"
+    if path.exists() or path.is_symlink():
+        raise FileExistsError(path)
+    return path
 
 
 def _yaml_scalar(value: object) -> str:
@@ -2272,6 +2287,8 @@ def _record_publication_event(
     if logger is not None:
         logger.event(
             "feedback_report_published",
+            report_execution_id=manifest["run"]["targets"]["execution_id"],
+            feedback_run_id=manifest["run"]["feedback_run_id"],
             report_cut_id=manifest.get("report_cut_id"),
             active_generation_id=manifest.get("publication", {}).get("generation_id"),
             generation_manifest_path=_full_log_path(
@@ -2295,6 +2312,8 @@ def _record_incomplete_event(
     if logger is not None:
         logger.event(
             "feedback_report_incomplete",
+            report_execution_id=manifest["run"]["targets"]["execution_id"],
+            feedback_run_id=manifest["run"]["feedback_run_id"],
             report_cut_id=manifest.get("report_cut_id"),
             report_path=_full_log_path(repo, report_reference.get("path")),
             result="incomplete",
@@ -2318,7 +2337,10 @@ def _set_processing_state(
 
 
 def _record_feedback_interruption(
-    manifest: _JsonObject | None, manifest_path: Path | None
+    manifest: _JsonObject | None,
+    manifest_path: Path | None,
+    *,
+    retained_run_path: Path | None = None,
 ) -> TerminalResult:
     """中断を正常系として subcommand state と log へ記録する。"""
     _update_feedback_progress_fields(manifest)
@@ -2332,8 +2354,13 @@ def _record_feedback_interruption(
         )
     details: tuple[tuple[str, object], ...] = ()
     next_actions: tuple[str, ...] = ()
-    if manifest_path is not None:
-        details = (("保持した feedback run", manifest_path),)
+    if manifest_path is not None or retained_run_path is not None:
+        details = (
+            (
+                "保持した feedback run",
+                manifest_path if manifest_path is not None else retained_run_path,
+            ),
+        )
         next_actions = (
             "`cmoc run join` で確定済み修正を取り込むか、`cmoc run abandon` で破棄してください。",
         )
@@ -2405,7 +2432,7 @@ def _run_report_fields(manifest: _JsonObject) -> tuple[tuple[str, object], ...]:
 
     merged = read_run_artifact(Path(identity["repo"]), run["merged"])
     return (
-        ("feedback_run_id", identity["run_branch"].rsplit("/", 1)[-1]),
+        ("feedback_run_id", run["feedback_run_id"]),
         ("run_kind", identity["kind"]),
         ("run_branch", identity["run_branch"]),
         ("run_fork_commit", identity["run_fork_commit"]),

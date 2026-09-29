@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "cmoc editor input handoff guide tool result",
+  "type": "object",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "guide_text"
+      ],
+      "properties": {
+        "status": {
+          "const": "ok"
+        },
+        "guide_text": {
+          "type": "string",
+          "description": "target に対応する handoff ガイドファイルの文面。"
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "message"
+      ],
+      "properties": {
+        "status": {
+          "const": "error"
+        },
+        "message": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "handoff ガイドを取得できなかった理由。"
+        }
+      }
+    }
+  ]
+}

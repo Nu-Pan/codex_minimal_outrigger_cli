@@ -1,74 +1,76 @@
 """AI Agent 用 prompt をエディタから受け取る共通境界。"""
 
-import re
-import shutil
+import os
+import stat
 import subprocess
-import time
+import sys
+import tempfile
 from pathlib import Path
 
-from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
+from oracle.prompt_builder.editor_input import (
+    build_prompt_editor_input_console_guidance,
+)
 
+from .runtime_editor import select_editor
 from .runtime_editor_input_handoff import (
     start_editor_input_handoff,
-    validate_editor_work_file,
+    validate_editor_input_file,
 )
 from .runtime_errors import CmocError
 from .runtime_git import ensure_cmoc_ignored
+from .runtime_logging import current_execution_id, current_subcommand_logger
 from .runtime_paths import (
-    _reserve_timestamped_path,
     editor_input_log_dir,
-    editor_work_dir,
-    timestamp,
     work_root,
 )
 
 ORIGINAL_PROMPT_PLACEHOLDER = "{{original-prompt-here}}"
 
 
-def reserve_prompt_editor_input(root: Path) -> tuple[Path, Path]:
-    """同じ timestamp を持つ作業 path と入力結果の保存 path を準備する。"""
+def reserve_prompt_editor_input(root: Path) -> Path:
+    """編集から確定保存まで共用する空の本文 file を予約する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    # 可変な作業 file と cmoc だけが書く保存記録を別 directory に置く。
-    work_dir = editor_work_dir(root)
-    log_dir = editor_input_log_dir(root)
-    work_dir.mkdir(parents=True, exist_ok=True)
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    # 削除済み work file と同じ timestamp の保存記録も上書きしない。
-    while True:
-        time_stamp, editor_work_path = _reserve_timestamped_path(
-            work_dir,
-            "_orig.md",
-            timestamp,
-        )
-        input_copy_path = log_dir / f"{time_stamp}_orig.md"
-        if not (input_copy_path.exists() or input_copy_path.is_symlink()):
-            return editor_work_path, input_copy_path
-        editor_work_path.unlink()
-        time.sleep(0.000001)
+    # 保存済み入力も編集中の入力も、排他的な予約で上書きを避ける。
+    directory = editor_input_log_dir(root)
+    _validate_editor_storage_path(directory, require_directory=True)
+    directory.mkdir(parents=True, exist_ok=True)
+    _validate_editor_storage_path(directory, require_directory=True)
+    input_path = directory / f"{current_execution_id(root)}_orig.md"
+    input_path.open("x").close()
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event("editor_input_created", input_path=str(input_path.resolve()))
+    return input_path
 
 
 def edit_prompt_editor_input(
     root: Path,
-    editor_work_path: Path,
+    input_path: Path,
     complete_prompt_skeleton: str,
 ) -> None:
-    """完全 prompt の skeleton を初期値としてエディタを起動する。"""
+    """空の入力 file と独立した handoff ガイドを準備し、エディタを起動する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    _require_single_original_prompt_placeholder(complete_prompt_skeleton)
-    validate_editor_work_file(root, editor_work_path)
+    validate_editor_input_file(root, input_path)
 
-    # 正本が構築する案内と完全 prompt の skeleton を作業 file へ保存する。
-    # {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
-    editor_work_path.write_text(
-        build_prompt_editor_input_initial_text(complete_prompt_skeleton),
-        encoding="utf-8",
-    )
+    # 人間向け案内や受信側の雛形を依頼本文へ混入させない。
+    input_path.write_text("", encoding="utf-8")
 
-    argv = [*_select_editor(), str(editor_work_path)]
-    target = start_editor_input_handoff(root, editor_work_path)
-    print(f"editor input handoff target ID: {target.target_id}", flush=True)
+    argv = [*_select_editor(), str(input_path)]
+    target = start_editor_input_handoff(root, input_path, complete_prompt_skeleton)
     try:
+        # 非対話サブコマンドの stdout は terminal result 用なので、editor の
+        # 待機中に人間へ渡す target ID は stderr へ表示する。
+        print(
+            f"editor input handoff target ID: {target.target_id}",
+            file=sys.stderr,
+            flush=True,
+        )
+        print(
+            build_prompt_editor_input_console_guidance(),
+            end="",
+            file=sys.stderr,
+            flush=True,
+        )
         # エディタが戻った後は target を drain・無効化してから処理を進める。
         result = subprocess.run(argv)
     finally:
@@ -83,23 +85,37 @@ def edit_prompt_editor_input(
 
 def collect_prompt_editor_input(
     root: Path,
-    editor_work_path: Path,
-    input_copy_path: Path,
+    input_path: Path,
 ) -> str:
-    """作業 file を一度だけ最終読み取りし、入力を保存して返す。"""
+    """本文を一度だけ読み、同じ path へ確定保存して入力を返す。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     # 最終時点の通常 file を一度だけ読み、同じ結果を保存と入力抽出に使う。
-    validate_editor_work_file(root, editor_work_path)
-    final_read_result = editor_work_path.read_bytes()
-    with input_copy_path.open("xb") as file:
-        file.write(final_read_result)
-    return _extract_original_prompt(final_read_result.decode("utf-8"))
+    validate_editor_input_file(root, input_path)
+    final_read_result = input_path.read_bytes()
+    _save_editor_input(root, input_path, final_read_result)
+    return final_read_result.decode("utf-8").strip()
 
 
-def finalize_prompt_editor_input(editor_work_path: Path) -> None:
-    """完全 prompt の構築成功後に editor work file を削除する。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    editor_work_path.unlink()
+def _save_editor_input(root: Path, input_path: Path, content: bytes) -> None:
+    """書き込み完了までは元の入力を保持し、確定原文へ置換する。"""
+    # 同じ filesystem 内で置換し、書き込み・flush・置換の失敗で本文を壊さない。
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=input_path.parent,
+            prefix=f".{input_path.name}.",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            temporary_file.write(content)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        validate_editor_input_file(root, input_path)
+        os.replace(temporary_path, input_path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def ensure_prompt_editor_roots_ignored(root: Path) -> None:
@@ -112,37 +128,56 @@ def ensure_prompt_editor_roots_ignored(root: Path) -> None:
 
 def _select_editor() -> list[str]:
     """仕様の優先順で PATH 上の editor command を選ぶ。"""
-    for command in ("code", "nano", "vim", "vi"):
-        executable = shutil.which(command)
-        if executable is None:
-            continue
-        return [executable, "--wait"] if command == "code" else [executable]
-    raise CmocError(
-        "利用可能なエディタが見つかりません。",
-        ["code, nano, vim, vi のいずれかを PATH から起動できるようにしてください。"],
-        "searched: code, nano, vim, vi",
-    )
+    command, executable = select_editor()
+    return [executable, "--wait"] if command == "code" else [executable]
 
 
-def _extract_original_prompt(final_read_result: str) -> str:
-    """同じ最終読み取り結果から HTML comment と前後空白を除去する。"""
-    return re.sub(
-        r"<!--.*?-->",
-        "",
-        final_read_result,
-        flags=re.DOTALL,
-    ).strip()
-
-
-def _require_single_original_prompt_placeholder(
-    complete_prompt_skeleton: str,
+def _validate_editor_storage_path(
+    path: Path,
+    *,
+    require_directory: bool = False,
 ) -> None:
-    """完全 prompt の未確定位置が唯一であることを検証する。"""
-    count = complete_prompt_skeleton.count(ORIGINAL_PROMPT_PLACEHOLDER)
-    if count == 1:
-        return
-    raise CmocError(
-        "完全プロンプトの skeleton が不正です。",
-        ["cmoc の prompt builder と oracle file の整合性を確認してください。"],
-        f"placeholder: {ORIGINAL_PROMPT_PLACEHOLDER}\ncount: {count}",
-    )
+    """editor input の保存 path が symlink 経由でないことを検証する。"""
+    absolute = path.absolute()
+    current = absolute
+    while True:
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            mode = None
+        except OSError as exc:
+            raise CmocError(
+                "editor input の保存先を検証できません。",
+                [
+                    "editor input の保存先と親 directory を確認してから再実行してください。"
+                ],
+                f"path: {path}\nreason: {exc}",
+            ) from exc
+        if mode is not None:
+            if stat.S_ISLNK(mode):
+                raise CmocError(
+                    "editor input の保存先は symlink 経由で扱えません。",
+                    [
+                        "editor input の保存先と親 directory を通常の file/directory に戻してから再実行してください。"
+                    ],
+                    f"path: {path}\nsymlink: {current}",
+                )
+            if current != absolute and not stat.S_ISDIR(mode):
+                raise CmocError(
+                    "editor input の保存先の親が directory ではありません。",
+                    [
+                        "editor input の保存先と親 directory を通常の file/directory に戻してから再実行してください。"
+                    ],
+                    f"path: {path}\nnon-directory: {current}",
+                )
+            if require_directory and current == absolute and not stat.S_ISDIR(mode):
+                raise CmocError(
+                    "editor input の保存先 directory が通常の directory ではありません。",
+                    [
+                        "editor input の保存先と親 directory を通常の directory に戻してから再実行してください。"
+                    ],
+                    f"path: {path}",
+                )
+        if current == current.parent:
+            return
+        current = current.parent

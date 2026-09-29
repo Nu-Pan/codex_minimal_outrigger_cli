@@ -26,7 +26,6 @@ from basic.path_model import (
 from cmoc_runtime import (
     CmocError,
     create_run_worktree,
-    is_root_memo,
     pushd,
     remove_worktree,
     repo_root,
@@ -263,26 +262,6 @@ def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     assert work_root(missing_anchor) == original
 
 
-def test_root_memo_classification_uses_repository_path_for_symlinks(
-    tmp_path: Path,
-) -> None:
-    """memo 判定は symlink の link 先ではなく repository path で行う。"""
-    root = make_repo(tmp_path)
-    memo = root / "memo"
-    memo.mkdir()
-    (memo / "target.md").write_text("memo\n")
-    outside = tmp_path / "outside.md"
-    outside.write_text("outside\n")
-    memo_link = memo / "outside-link.md"
-    memo_link.symlink_to(outside)
-    outside_link = root / "outside-link.md"
-    outside_link.symlink_to(memo / "target.md")
-
-    assert is_root_memo(root, memo_link)
-    assert not is_root_memo(root, outside_link)
-    assert not is_root_memo(root, memo / ".." / outside_link.name)
-
-
 def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
     """並列する pushd が process-global な cwd を混線させない。"""
     first = tmp_path / "first"
@@ -330,9 +309,12 @@ def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
 def test_run_root_placeholder_rejects_main_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """main worktree は run root として扱わない。"""
+    """linked worktree 内の nested main repository は run root として扱わない。"""
     root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-parent", str(linked), "HEAD")
+    nested_main = make_repo(linked)
+    monkeypatch.chdir(nested_main)
 
     with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
         resolve_real_path(RootPathPlaceHolder.RUN)
@@ -431,6 +413,31 @@ def test_run_worktree_lookup_rejects_replaced_registered_path(
     target.mkdir(parents=True)
 
     assert worktree_for_branch_optional(root, "cmoc/run/session/run") is None
+
+
+@pytest.mark.parametrize("replacement", ["missing", "file", "directory"])
+def test_session_worktree_lookup_rejects_invalid_registered_path(
+    tmp_path: Path, replacement: str
+) -> None:
+    """session branch も stale な Git 登録先を worktree として扱わない。"""
+    root = make_repo(tmp_path)
+    target = tmp_path / "session-worktree"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        "cmoc/session/session",
+        str(target),
+        "HEAD",
+    )
+    target.rename(tmp_path / "moved-session-worktree")
+    if replacement == "file":
+        target.write_text("not a worktree\n")
+    elif replacement == "directory":
+        target.mkdir()
+
+    assert worktree_for_branch_optional(root, "cmoc/session/session") is None
 
 
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])

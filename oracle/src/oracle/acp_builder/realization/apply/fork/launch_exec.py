@@ -6,6 +6,7 @@ from pathlib import Path
 # cmoc
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    DocumentSearchScope,
     FileAccessMode,
 )
 from oracle.other.path_model import AgentCallPathContext
@@ -21,10 +22,13 @@ def build_realization_apply_fork_launch_exec_parameter(
     diff_base_commit: str,
     run_fork_commit: str,
     run_worktree: Path,
+    *,
+    document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """差分駆動の realization 追従用 AgentCallParameter を構築する。
 
     Args:
+        document_search_scope: caller が確定した、その call の実効閲覧範囲。
         diff_base_commit: 追従対象差分の始点 commit。
         run_fork_commit: 追従対象差分の終点である run fork commit。
         run_worktree: AgentCallParameter.agent_call_cwd とする linked worktree。
@@ -44,13 +48,14 @@ def build_realization_apply_fork_launch_exec_parameter(
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
+        document_search_scope=document_search_scope,
         aux_static_prompt=[
             SDHeader(
                 "追従対象差分の取得方法",
                 """
                 - cwd と `{{work-root}}` が示す repository で、指定された始点・終点の commit 間の差分を Git から取得すること
                 - 両端のいずれかで oracle file だった path を対象に rename を考慮すること。追加・削除と oracle 内外の移動を含め、現在の oracle 配下だけに候補を限定しないこと
-                - realization file、`INDEX.md`、その他の非 oracle file の変更だけを理由に追従対象としないこと。ただし、両端での判定と rename の扱いを優先し、oracle 内外の移動を除外しないこと
+                - realization file、その他の非 oracle file の変更だけを理由に追従対象としないこと。ただし、両端での判定と rename の扱いを優先し、oracle 内外の移動を除外しないこと
                 - 差分を取得できない場合は失敗として報告し、正常に取得できた空差分として扱わないこと
                 """,
             ),
@@ -78,5 +83,5 @@ def build_realization_apply_fork_launch_exec_parameter(
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
-        run_indexing_preflight=True,
+        document_search_scope=document_search_scope,
     )

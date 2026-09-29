@@ -1,14 +1,14 @@
 # `cmoc oracle review` を採用しない理由
 
-## `cmoc oracle review` とは
-
-`cmoc oracle review` は、通常の workload とは独立して oracle file のスナップショットを網羅的に検査し、潜在的な問題を人間向けの Markdown レポートへまとめる専用サブコマンドだった。oracle file 自体は変更しない。
-
-`cmoc oracle review` の不採用とは、この独立した網羅検査とレポート作成の仕組みを提供しないことを指す。通常の workload に必要な oracle file の調査や、そこで解消できない問題の feedback observation としての報告は禁止しない。
-
 ## 判断
 
 `cmoc oracle review` は提供しない。oracle file だけを網羅的に検査すると、意図的な未定義部分と問題の境界が曖昧になる。根拠の薄い所見に基づく修正の反復は、oracle file の過剰な詳細化と肥大化を招く。
+
+## `cmoc oracle review` とは
+
+`cmoc oracle review` は、通常の workload とは独立して oracle file のスナップショットを網羅的に検査し、潜在的な問題を人間向けの Markdown レポートへまとめる専用サブコマンドだった。oracle file 自体は変更しない設計だった。
+
+不採用の対象は、この独立した網羅検査とレポート作成の仕組みである。通常の workload に必要な oracle file の調査や、そこで解消できない問題の feedback observation としての報告は禁止しない。
 
 ## 代替
 

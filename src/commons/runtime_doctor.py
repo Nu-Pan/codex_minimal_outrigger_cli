@@ -11,21 +11,35 @@ commit 対象の対応を複数 file で追う必要が生じるため、現状�
 """
 
 import fcntl
+import importlib
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
+import time
 from collections.abc import Collection, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
+from dataclasses import asdict
 from pathlib import Path
 
+from oracle.other.document_search import INITIAL_SEARCH_MATERIALS, DocumentSearchConfig
+
 from .runtime_config import sync_config
+from .runtime_document_search import DocumentSearch, SearchError, SyncResult
+from .runtime_document_search_scope import oracle_doc_scope, scope_identity
+from .runtime_document_search_setup import (
+    prepare_document_search_materials,
+    require_document_search_materials,
+)
+from .runtime_document_search_worker import verification_condition
 from .runtime_errors import CmocError
 from .runtime_feedback import (
     ReporterAvailabilityError,
     emit_reporter_unavailable,
     validate_feedback_reporter_availability,
 )
+from .runtime_feedback_store import uuid7_prefixed
 from .runtime_git import (
     ensure_cmoc_ignored,
     git_common_dir,
@@ -33,23 +47,240 @@ from .runtime_git import (
     run_git,
     with_cmoc_ignore_pattern,
 )
-from .runtime_paths import config_path, refactor_state_path, repo_root
+from .runtime_logging import current_subcommand_logger
+from .runtime_paths import cmoc_root, config_path, refactor_state_path, repo_root
+from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
+
+
+def _sync_status(result: SyncResult | None, failure: BaseException | None) -> str:
+    """終了処理も含めた索引同期の結果を分類する。"""
+    if failure is None:
+        return result.status if result is not None else "failed"
+    if isinstance(failure, KeyboardInterrupt) or (
+        isinstance(failure, SearchError) and failure.code == "CANCELLED"
+    ):
+        return "cancelled"
+    return "failed"
+
+
+def _installation_root(_root: Path) -> Path:
+    """現在の cmoc installation を処理対象の work-root と区別して解決する。"""
+    return cmoc_root().resolve()
+
+
+def _check_common_environment() -> None:
+    """doctor 自身を起動できる環境と外部の必須実行ファイルを確認する。"""
+    if sys.version_info < (3, 12, 3):
+        raise CmocError(
+            "cmoc の Python 実行環境が要件を満たしません。",
+            ["Python 3.12.3 以上の仮想環境を準備してください。"],
+            sys.version,
+        )
+    for module in ("click", "typer", "jsonschema"):
+        try:
+            importlib.import_module(module)
+        except ImportError as exc:
+            raise CmocError(
+                "cmoc の起動用依存が不足しています。",
+                ["cmoc の Python 仮想環境へ依存関係を導入してください。"],
+                f"dependency: {module}\nreason: {exc}",
+            ) from exc
+
+    for executable in ("git", "codex"):
+        path = shutil.which(executable)
+        if path is None:
+            raise CmocError(
+                "必須の外部コマンドが利用できません。",
+                [f"{executable} を導入し、PATH から実行できるようにしてください。"],
+                f"dependency: {executable}\nreason: executable not found",
+            )
+        try:
+            subprocess.run(
+                [path, "--version"], check=True, capture_output=True, timeout=10
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise CmocError(
+                "必須の外部コマンドが利用できません。",
+                [f"{executable} の導入状態を確認してください。"],
+                f"dependency: {executable}\npath: {path}\nreason: {exc}",
+            ) from exc
+
+
+def _synchronize_document_search_index(
+    root: Path, installation_root: Path, config: DocumentSearchConfig
+) -> SyncResult:
+    """doctor の全 oracle/doc 範囲を期限なしで同期し、途中実績も記録する。"""
+    scope = oracle_doc_scope()
+    sync_id = uuid7_prefixed("dsi_")
+    logger = current_subcommand_logger()
+    started = time.monotonic()
+    if logger is not None:
+        logger.event(
+            "document_search_sync_started",
+            invocation_id=logger.invocation_id,
+            sync_id=sync_id,
+            work_root=str(root),
+            scope_identity=scope_identity(scope),
+            index_identity=None,
+        )
+    update_primary_report_fields(
+        doctor_sync_status="started",
+        doctor_sync_id=sync_id,
+        doctor_scope_identity=scope_identity(scope),
+        doctor_sync_work_root=str(root),
+    )
+    search: DocumentSearch | None = None
+    result: SyncResult | None = None
+    failure: BaseException | None = None
+    try:
+        search = DocumentSearch(
+            root,
+            scope,
+            config,
+            installation_root=installation_root,
+            use_saved_config=True,
+        )
+        try:
+            result = search.synchronize(unbounded=True)
+        finally:
+            search.close()
+    except BaseException as exc:
+        failure = exc
+        progress = search.sync_progress if search is not None else None
+        identity = progress.get("identity") if progress is not None else None
+        status = _sync_status(result, failure)
+        update_primary_report_fields(
+            doctor_sync_status=status,
+            doctor_index_identity=identity,
+            doctor_sync_result={
+                "status": status,
+                "identity": identity,
+                "progress": progress,
+            },
+            doctor_sync_progress=progress,
+            doctor_sync_failure_code=(
+                exc.code if isinstance(exc, SearchError) else type(exc).__name__
+            ),
+            doctor_sync_failure_reason=str(exc),
+        )
+        raise
+    else:
+        assert result is not None and search is not None
+        update_primary_report_fields(
+            doctor_sync_status=result.status,
+            doctor_index_identity=result.identity,
+            doctor_sync_result=asdict(result),
+            doctor_sync_progress=search.sync_progress,
+        )
+        return result
+    finally:
+        if logger is not None:
+            progress = search.sync_progress if search is not None else None
+            logger.event(
+                "document_search_sync_finished",
+                invocation_id=logger.invocation_id,
+                sync_id=sync_id,
+                work_root=str(root),
+                index_identity=progress.get("identity") if progress else None,
+                status=_sync_status(result, failure),
+                elapsed_seconds=time.monotonic() - started,
+                lock_wait_seconds=(
+                    search.sync_lock_wait_seconds if search is not None else 0.0
+                ),
+                document_count=progress.get("document_count") if progress else None,
+                changed_document_count=(
+                    progress.get("changed_document_count") if progress else None
+                ),
+                persisted_chunk_count=(
+                    progress.get("persisted_chunks") if progress else None
+                ),
+                reused_chunk_count=(
+                    progress.get("reused_embeddings") if progress else None
+                ),
+                counts_complete=failure is None,
+                failure_code=(
+                    failure.code
+                    if isinstance(failure, SearchError)
+                    else type(failure).__name__
+                    if failure is not None
+                    else None
+                ),
+                failure_reason=str(failure) if failure is not None else None,
+            )
 
 
 def run_doctor_preprocess(
     root: Path,
     *,
+    explicit_doctor: bool = False,
     sync_refactor_entries: bool = True,
 ) -> None:
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
+    update_primary_report_fields(
+        work_root=str(root),
+        config_path=str(config_path(root)),
+        config_generation="未確認",
+        config_validation="未実行",
+        config_saved=False,
+        config_additions={},
+        search_config="未確認",
+        material_condition="未確認",
+        common_environment="未実行",
+        management_validation="未実行",
+        material_validation="未実行",
+        material_status="未実行",
+        material_models="未実行",
+        material_failure="なし",
+        material_identity_check="未実行",
+        material_runtime_check="未実行",
+        material_document_embedding="未実行",
+        material_query_embedding="未実行",
+        material_rerank="未実行",
+        material_remaining_state="未確認",
+        doctor_sync_status="not_started",
+        doctor_sync_id=None,
+        doctor_scope_identity=None,
+        doctor_index_identity=None,
+        doctor_sync_result=None,
+        doctor_sync_progress=None,
+    )
+    _check_common_environment()
+    update_primary_report_fields(common_environment="成功")
+    installation_root = _installation_root(root)
+    update_primary_report_fields(
+        cmoc_root=str(installation_root),
+        material_path=str(installation_root / ".cmoc/gu/document_search/materials"),
+        material_identity={
+            "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
+            "reranker_sha256": INITIAL_SEARCH_MATERIALS.reranker.sha256,
+            "node_llama_cpp": INITIAL_SEARCH_MATERIALS.node_llama_cpp_version,
+            "sqlite_vec": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
+        },
+    )
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # snapshot 作成から修復 commit と元の index 復元までを同じ Git common
     # directory の lock 内で行い、並行 doctor が共有 index を混ぜないようにする。
-    with doctor_lock(root):
+    lock_roots = {doctor_lock_path(root): root}
+    if explicit_doctor:
+        lock_roots[doctor_lock_path(installation_root)] = installation_root
+    with ExitStack() as locks:
+        for lock_path in sorted(lock_roots):
+            locks.enter_context(doctor_lock(lock_roots[lock_path]))
         main_root = repo_root(root)
         repair_roots = [main_root] if main_root == root else [main_root, root]
+        if explicit_doctor and installation_root not in repair_roots:
+            repair_roots.append(installation_root)
+        if not explicit_doctor and installation_root not in repair_roots:
+            try:
+                require_cmoc_ignored(installation_root)
+            except CmocError as exc:
+                raise CmocError(
+                    "共有検索用コンポーネントの管理領域が非追跡ではありません。",
+                    [f"対象 work-root ({root}) で cmoc doctor を実行してください。"],
+                    f"cmoc-root: {installation_root}\nreason: {exc.detail}",
+                ) from exc
 
         repairs: list[tuple[Path, Path, bool, bool, bool, set[str]]] = []
         original_indexes: list[tuple[Path, Path]] = []
@@ -57,7 +288,7 @@ def run_doctor_preprocess(
             for repair_root in repair_roots:
                 include_config = repair_root == root
                 include_agents = repair_root == root
-                include_gu_ignore = repair_root == main_root
+                include_gu_ignore = True
                 original_index_path = _copy_current_index(repair_root)
                 original_indexes.append((repair_root, original_index_path))
                 preserved_runtime_paths = (
@@ -87,8 +318,106 @@ def run_doctor_preprocess(
             # ignore と .agents の保証後に、config と refactor state を current
             # work-root だけで同期する。index には直接触れず、後続の一時 index
             # で他の doctor 修復と同じ commit にまとめる。
-            sync_config(root)
+            update_primary_report_fields(config_validation="失敗")
+
+            def report_config_candidate(
+                generated: bool, additions: dict[str, object]
+            ) -> None:
+                """保存前の補完候補も失敗 report へ残す。"""
+                update_primary_report_fields(
+                    config_generation="新規ファイル候補"
+                    if generated
+                    else "既存ファイル",
+                    config_additions=additions,
+                )
+
+            config_result = sync_config(
+                root,
+                repair_missing=explicit_doctor,
+                on_candidate=report_config_candidate if explicit_doctor else None,
+            )
+            update_primary_report_fields(
+                config_generation="新規生成"
+                if config_result.generated
+                else "既存ファイル",
+                config_additions=config_result.additions,
+                config_validation="成功",
+                config_saved=config_result.saved,
+                search_config=asdict(config_result.config.document_search),
+                material_condition=verification_condition(
+                    config_result.config.document_search
+                ),
+            )
             sync_refactor_state(root, sync_entries=sync_refactor_entries)
+            update_primary_report_fields(management_validation="成功")
+            try:
+                assert config_result.config.document_search is not None
+                if explicit_doctor:
+                    material_result = prepare_document_search_materials(
+                        installation_root, config_result.config.document_search
+                    )
+                else:
+                    material_path = require_document_search_materials(
+                        installation_root, config_result.config.document_search
+                    )
+                    material_result = {
+                        "status": "verified",
+                        "path": str(material_path),
+                        "models": "reused",
+                    }
+            except (
+                SearchError,
+                OSError,
+                ValueError,
+                subprocess.SubprocessError,
+            ) as exc:
+                update_primary_report_fields(
+                    material_validation="失敗",
+                    material_status="失敗",
+                    material_models="未完了",
+                    material_failure=str(exc),
+                    material_identity_check="未完了",
+                    material_runtime_check="未完了",
+                    material_document_embedding="未完了",
+                    material_query_embedding="未完了",
+                    material_rerank="未完了",
+                    material_remaining_state="現在の条件では準備済みと扱わず、再実行時に照合する",
+                )
+                action = (
+                    "依存・権限・ネットワークを確認して cmoc doctor を再実行してください。"
+                    if explicit_doctor
+                    else f"対象 work-root ({root}) で cmoc doctor を実行してください。"
+                )
+                raise CmocError(
+                    "検索用コンポーネントの準備状態を確認できません。",
+                    [action],
+                    f"cmoc-root: {installation_root}\npath: {installation_root / '.cmoc/gu/document_search/materials'}\nreason: {exc}",
+                ) from exc
+            update_primary_report_fields(
+                material_validation="成功",
+                material_status=material_result["status"],
+                material_models=material_result["models"],
+                material_identity_check="成功",
+                material_runtime_check="成功",
+                material_document_embedding="成功",
+                material_query_embedding="成功",
+                material_rerank="成功",
+                material_remaining_state="検査時点で利用可能",
+            )
+            try:
+                _synchronize_document_search_index(
+                    root, installation_root, config_result.config.document_search
+                )
+            except SearchError as exc:
+                raise CmocError(
+                    "文書検索索引の同期に失敗しました。",
+                    [
+                        f"対象 work-root ({root}) で cmoc doctor を実行してください。"
+                        if exc.code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}
+                        else "文書検索の設定、資材、許可対象ファイルを確認してください。"
+                    ],
+                    f"work-root: {root}\ncode: {exc.code}\nreason: {exc}",
+                ) from exc
             # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
             # reporter 固有の不一致は修復や version command を行わず degraded にする。
             try:
@@ -138,7 +467,8 @@ def run_doctor_preprocess(
                 if restored_index_path is not None:
                     restored_index_path.unlink(missing_ok=True)
                 original_index_path.unlink(missing_ok=True)
-        require_cmoc_ignored(main_root)
+        for repair_root in repair_roots:
+            require_cmoc_ignored(repair_root)
         _validate_tracked_runtime_files(root)
 
 
@@ -173,12 +503,27 @@ def _ensure_agents_tracked(root: Path) -> bool:
     if tracked:
         # tracked な .gitkeep の unstaged deletion でも、.agents を空のまま残さない。
         if not gitkeep.exists():
-            restored = run_git(
+            run_git(
                 ["restore", "--worktree", "--", ".agents/.gitkeep"],
                 root,
                 check=False,
             )
-            if restored.returncode != 0 and _head_entry(root, ".agents/.gitkeep"):
+            if not gitkeep.exists():
+                # git restore は skip-worktree entry を欠落した worktree へ
+                # 戻せないため、現在 index の blob を flag を保ったまま checkout
+                # する。通常 entry では最初の restore が成功するので実行しない。
+                run_git(
+                    [
+                        "checkout-index",
+                        "--force",
+                        "--ignore-skip-worktree-bits",
+                        "--",
+                        ".agents/.gitkeep",
+                    ],
+                    root,
+                    check=False,
+                )
+            if not gitkeep.exists() and _head_entry(root, ".agents/.gitkeep"):
                 run_git(
                     [
                         "restore",
@@ -427,7 +772,6 @@ def _restored_index(
                 root,
                 index_path,
             )
-        _run_git_with_index(["write-tree"], root, index_path)
         return index_path
     except BaseException:
         index_path.unlink(missing_ok=True)

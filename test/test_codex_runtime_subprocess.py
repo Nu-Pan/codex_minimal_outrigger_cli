@@ -1,7 +1,9 @@
 import errno
 import os
 import signal
+import subprocess
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -15,6 +17,48 @@ from commons.runtime_codex_profile import (
     run_tracked_codex_subprocess,
 )
 from commons.runtime_errors import CmocError
+
+
+@pytest.mark.parametrize("tracked", [False, True])
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interrupted):
+    """無応答 probe の process を終了させ、tracked child も残さない。"""
+    tracking_path = tmp_path / "run.pid"
+    tracking_path.write_text("111 222\n")
+    pid_path = tmp_path / "probe.pid"
+    argv = [
+        sys.executable,
+        "-c",
+        "import os, pathlib, sys, time; "
+        "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+        "print('partial output', flush=True); time.sleep(30)",
+        str(pid_path),
+    ]
+    cancellation = threading.Event() if interrupted else None
+    timer = threading.Timer(0.3, cancellation.set) if cancellation is not None else None
+    if timer is not None:
+        timer.start()
+    try:
+        expected = KeyboardInterrupt if interrupted else subprocess.TimeoutExpired
+        with pytest.raises(expected):
+            options = dict(
+                text=True,
+                capture_output=True,
+                timeout=2 if interrupted else 0.3,
+                cancellation=cancellation,
+            )
+            if tracked:
+                run_tracked_codex_subprocess(argv, tracking_path, **options)
+            else:
+                run_codex_subprocess(argv, **options)
+    finally:
+        if timer is not None:
+            timer.cancel()
+            timer.join()
+    process_id = int(pid_path.read_text())
+    with pytest.raises(ProcessLookupError):
+        os.kill(process_id, 0)
+    assert tracking_path.read_text() == "111 222\n"
 
 
 def test_open_process_fd_treats_invalid_pidfd_as_unavailable(
@@ -622,8 +666,144 @@ def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
             ["codex"], tracking_path, text=True, capture_output=True
         )
 
-    assert stopped == [(4321, (4321, 333), ())]
+    assert stopped == [(4321, (4321, 333), ((4321, 333),))]
     assert process.returncode == 0
+
+
+def test_tracked_codex_subprocess_stops_group_when_started_callback_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """起動 callback の失敗でも process group を停止して child を reap する。"""
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+    stopped: list[
+        tuple[
+            int,
+            tuple[int, int] | None,
+            tuple[tuple[int, int], ...] | None,
+        ]
+    ] = []
+
+    class RunningProcess:
+        """started callback の失敗後も生存している fake process。"""
+
+        pid = 4321
+        returncode: int | None = None
+        waited = False
+
+        def poll(self) -> int | None:
+            """fake process が cleanup 前は生存していることを返す。"""
+            return self.returncode
+
+        def kill(self) -> None:
+            """group cleanup 不能時の最終 fallback を許容する。"""
+            self.returncode = -signal.SIGKILL
+
+        def wait(self) -> int:
+            """group cleanup 後に process を reap したことを記録する。"""
+            self.waited = True
+            self.returncode = 0
+            return 0
+
+    process = RunningProcess()
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: process,
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((4321, 333), (4322, 444)),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "stop_process_group",
+        lambda process_group_id, expected_leader=None, expected_members=None: (
+            stopped.append((process_group_id, expected_leader, expected_members))
+        ),
+    )
+
+    def fail_started_callback() -> None:
+        """起動通知側の失敗を再現する。"""
+        raise RuntimeError("started callback failed")
+
+    with pytest.raises(RuntimeError, match="started callback failed"):
+        run_tracked_codex_subprocess(
+            ["codex"],
+            tracking_path,
+            process_started_callback=fail_started_callback,
+            text=True,
+            capture_output=True,
+        )
+
+    assert stopped == [(4321, (4321, 333), ((4321, 333), (4322, 444)))]
+    assert process.waited
+    assert process.returncode == 0
+
+
+def test_tracked_codex_subprocess_stops_descendant_when_leader_exits_before_tracking(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """leader 終了後も残る descendant を tracking 失敗時に停止する。"""
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+    snapshots = iter([((222, 20),), ((222, 20),), ()])
+    stopped: list[tuple[tuple[int, int], ...]] = []
+
+    class ExitedLeader:
+        """tracking 登録前に終了した leader の最小 double。"""
+
+        pid = 4321
+        returncode = 0
+
+        def poll(self) -> int:
+            """leader が終了済みであることを返す。"""
+            return self.returncode
+
+        def wait(self) -> int:
+            """cleanup 後の reap を完了する。"""
+            return self.returncode
+
+        def kill(self) -> None:
+            """fallback が leader を直接停止したことを記録する。"""
+            self.returncode = -signal.SIGKILL
+
+    process = ExitedLeader()
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: process,
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: next(snapshots),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda members, _sig: stopped.append(members),
+    )
+
+    def fail_record(*_args: object, **_kwargs: object) -> None:
+        """leader 終了後の tracking 更新失敗を再現する。"""
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
+
+    monkeypatch.setattr(
+        runtime_codex_profile, "_record_tracked_child_process", fail_record
+    )
+
+    with pytest.raises(UnicodeDecodeError):
+        run_tracked_codex_subprocess(
+            ["codex"], tracking_path, text=True, capture_output=True
+        )
+
+    assert stopped == [((222, 20),)]
 
 
 @pytest.mark.parametrize("group_members", [None, ()])

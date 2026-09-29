@@ -9,6 +9,8 @@ import threading
 import time
 from pathlib import Path
 
+from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
+
 from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
     EDITOR_INPUT_HANDOFF_HOST,
@@ -17,22 +19,23 @@ from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
     authenticate_editor_input_handoff_server,
     build_editor_input_handoff_target_id,
-    overwrite_input_is_valid,
+    remove_editor_input_handoff_target_route,
 )
 from .runtime_errors import CmocError
-from .runtime_paths import editor_work_dir
+from .runtime_logging import current_execution_id, current_subcommand_logger
+from .runtime_paths import editor_input_log_dir
 
 
-def validate_editor_work_file(root: Path, path: Path) -> None:
-    """対象を所定 editor work directory 内の regular non-symlink file に限る。"""
-    expected_dir = editor_work_dir(root)
+def validate_editor_input_file(root: Path, path: Path) -> None:
+    """対象を所定 editor input directory 内の regular non-symlink file に限る。"""
+    expected_dir = editor_input_log_dir(root)
     try:
         resolved_dir = expected_dir.resolve(strict=True)
         mode = path.lstat().st_mode
         current = path.absolute()
         while True:
             if stat.S_ISLNK(current.lstat().st_mode):
-                raise _invalid_editor_work_file(
+                raise _invalid_editor_input_file(
                     path,
                     "path uses a symlink component",
                 )
@@ -40,24 +43,24 @@ def validate_editor_work_file(root: Path, path: Path) -> None:
                 break
             current = current.parent
     except (OSError, RuntimeError) as exc:
-        raise _invalid_editor_work_file(path, "path is not readable") from exc
+        raise _invalid_editor_input_file(path, "path is not readable") from exc
     if not stat.S_ISREG(mode):
-        raise _invalid_editor_work_file(path, "path is not a regular file")
+        raise _invalid_editor_input_file(path, "path is not a regular file")
     try:
         resolved_path = path.resolve(strict=True)
         resolved_path.relative_to(resolved_dir)
     except (OSError, RuntimeError, ValueError) as exc:
-        raise _invalid_editor_work_file(
+        raise _invalid_editor_input_file(
             path,
-            f"path is outside editor work directory: {expected_dir}",
+            f"path is outside editor input directory: {expected_dir}",
         ) from exc
 
 
-def _invalid_editor_work_file(path: Path, reason: str) -> CmocError:
-    """不正な editor work file 用の利用者向けエラーを構築する。"""
+def _invalid_editor_input_file(path: Path, reason: str) -> CmocError:
+    """不正な editor input file 用の利用者向けエラーを構築する。"""
     return CmocError(
-        "editor work file を読み取れません。",
-        ["復旧用に残った editor work file を確認してから再実行してください。"],
+        "editor input file を読み取れません。",
+        ["復旧用に残った editor input file を確認してから再実行してください。"],
         f"path: {path}\nreason: {reason}",
     )
 
@@ -78,14 +81,23 @@ def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
 
 
 class EditorInputHandoffTarget:
-    """一つの editor work file だけを editor 待機中に公開する target。"""
+    """一つの editor input file だけを editor 待機中に公開する target。"""
 
-    def __init__(self, repository: Path, editor_work_path: Path) -> None:
+    def __init__(
+        self,
+        repository: Path,
+        input_path: Path,
+        complete_prompt_skeleton: str,
+    ) -> None:
         """target identity と一時 transport state を初期化する。"""
         self.repository = repository.resolve()
-        self.editor_work_path = editor_work_path
+        self.input_path = input_path
+        self.handoff_guide_path = input_path.with_suffix(".guide.md")
+        self._complete_prompt_skeleton = complete_prompt_skeleton
+        self._guide_created = False
         self._token = secrets.token_bytes(EDITOR_INPUT_HANDOFF_TOKEN_BYTES)
         self._target_id: str | None = None
+        self.execution_id: str | None = None
         self._state_lock = threading.Lock()
         self._listener: socket.socket | None = None
         self._server_thread: threading.Thread | None = None
@@ -93,17 +105,26 @@ class EditorInputHandoffTarget:
         self._current_submission_accepted = False
         self._accepting = False
         self._closed = False
+        self._handoff_guide_directory_fd: int | None = None
 
     @property
     def target_id(self) -> str:
-        """active target の opaque capability-bearing ID を返す。"""
+        """active target の共通 ID を返す。"""
         if self._target_id is None:
             raise RuntimeError("editor input handoff target is not active")
         return self._target_id
 
     def start(self) -> None:
         """認証付き loopback TCP で active target を開始する。"""
-        validate_editor_work_file(self.repository, self.editor_work_path)
+        validate_editor_input_file(self.repository, self.input_path)
+        # 登録前に受信先の雛形を独立した file へ保存し、既存 file は上書きしない。
+        guide_text = build_editor_input_handoff_guide(self._complete_prompt_skeleton)
+        with self.handoff_guide_path.open("x", encoding="utf-8", newline="") as guide:
+            self._guide_created = True
+            guide.write(guide_text)
+        self._handoff_guide_directory_fd = _open_directory_for_unlink(
+            self.handoff_guide_path.parent
+        )
         # Codex CLI 0.151.0 の ProxyRouted sandbox は AF_INET を許可し、
         # AF_UNIX socket の生成を拒否する。
         # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/linux-sandbox/src/landlock.rs#L170-L248
@@ -116,10 +137,12 @@ class EditorInputHandoffTarget:
             assert isinstance(bound_address, tuple)
             port = bound_address[1]
             assert isinstance(port, int)
+            execution_id = current_execution_id(self.repository)
             target_id = build_editor_input_handoff_target_id(
                 self.repository,
                 port,
                 self._token,
+                execution_id=execution_id,
             )
         except BaseException:
             listener.close()
@@ -127,7 +150,17 @@ class EditorInputHandoffTarget:
         with self._state_lock:
             self._listener = listener
             self._target_id = target_id
+            self.execution_id = execution_id
             self._accepting = True
+        logger = current_subcommand_logger()
+        if logger is not None:
+            logger.event(
+                "editor_input_handoff_target_registered",
+                target_id=target_id,
+                target_execution_id=self.execution_id,
+                input_path=str(self.input_path.resolve()),
+                guide_path=str(self.handoff_guide_path.resolve()),
+            )
         self._server_thread = threading.Thread(
             target=self._serve,
             name=f"cmoc-editor-input-loopback-{port}",
@@ -165,6 +198,13 @@ class EditorInputHandoffTarget:
                 pass
         if self._server_thread is not None:
             self._server_thread.join()
+        if self._target_id is not None:
+            remove_editor_input_handoff_target_route(self.repository, self._target_id)
+        # 受付済み取得・上書きを完了してから、target 固有のガイドを破棄する。
+        if self._guide_created:
+            self._remove_handoff_guide()
+        else:
+            _close_directory_fd(self._take_handoff_guide_directory_fd())
 
     def _serve(self) -> None:
         """submission を一接続ずつ処理して同一 target の上書きを直列化する。"""
@@ -247,15 +287,28 @@ class EditorInputHandoffTarget:
                 False,
             )
         payload = request.get("payload")
-        if not overwrite_input_is_valid(payload):
-            return _rejected("invalid_input", "tool input does not match schema", False)
-        assert isinstance(payload, dict)
+        # agent-facing schema は MCP が検査済み。取得と上書きの IPC 形状だけを検査する。
+        if (
+            not isinstance(payload, dict)
+            or payload.keys() not in ({"target_id"}, {"target_id", "content"})
+            or not isinstance(payload["target_id"], str)
+            or ("content" in payload and not isinstance(payload["content"], str))
+        ):
+            return _rejected("invalid_input", "invalid handoff body request", False)
         if payload["target_id"] != self.target_id:
             return _rejected("target_unavailable", "target is not active", False)
         with self._state_lock:
             if not self._accepting:
                 return _rejected("target_unavailable", "target is not active", False)
             self._current_submission_accepted = True
+        if "content" not in payload:
+            # 編集中の本文を代用せず、保持済みガイドの文面をそのまま返す。
+            try:
+                validate_editor_input_file(self.repository, self.handoff_guide_path)
+                guide_text = self.handoff_guide_path.read_bytes().decode("utf-8")
+            except (CmocError, OSError, UnicodeError):
+                return {"status": "error", "message": "handoff guide is unavailable"}
+            return {"status": "ok", "guide_text": guide_text}
         content = payload["content"]
         assert isinstance(content, str)
         try:
@@ -267,11 +320,11 @@ class EditorInputHandoffTarget:
     def _overwrite(self, content: str) -> None:
         """target を再検証し、同じ regular file 全体を UTF-8 content で置換する。"""
         content_bytes = content.encode("utf-8")
-        validate_editor_work_file(self.repository, self.editor_work_path)
+        validate_editor_input_file(self.repository, self.input_path)
         flags = (
             os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
         )
-        descriptor = os.open(self.editor_work_path, flags)
+        descriptor = os.open(self.input_path, flags)
         try:
             if not stat.S_ISREG(os.fstat(descriptor).st_mode):
                 raise OSError("editor input target is not a regular file")
@@ -285,13 +338,36 @@ class EditorInputHandoffTarget:
         finally:
             os.close(descriptor)
 
+    def _take_handoff_guide_directory_fd(self) -> int | None:
+        """handoff guide の cleanup 用 directory descriptor を一度だけ取り出す。"""
+        directory_fd = self._handoff_guide_directory_fd
+        self._handoff_guide_directory_fd = None
+        return directory_fd
+
+    def _remove_handoff_guide(self) -> None:
+        """保持した directory から guide を削除し、親 path の差し替えを追従しない。"""
+        directory_fd = self._take_handoff_guide_directory_fd()
+        if directory_fd is None:
+            _unlink_handoff_guide_if_parent_is_safe(
+                self.repository, self.handoff_guide_path
+            )
+            return
+        try:
+            try:
+                os.unlink(self.handoff_guide_path.name, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
+        finally:
+            _close_directory_fd(directory_fd)
+
 
 def start_editor_input_handoff(
     repository: Path,
-    editor_work_path: Path,
+    input_path: Path,
+    complete_prompt_skeleton: str,
 ) -> EditorInputHandoffTarget:
     """editor 待機期間に使う一時 handoff target を開始する。"""
-    target = EditorInputHandoffTarget(repository, editor_work_path)
+    target = EditorInputHandoffTarget(repository, input_path, complete_prompt_skeleton)
     try:
         target.start()
     except Exception as exc:
@@ -304,3 +380,38 @@ def start_editor_input_handoff(
             f"transport: {EDITOR_INPUT_HANDOFF_HOST} の一時 port",
         ) from exc
     return target
+
+
+def _open_directory_for_unlink(path: Path) -> int | None:
+    """directory fd が使える環境で、cleanup 対象の親 directory を保持する。"""
+    if os.unlink not in os.supports_dir_fd:
+        return None
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        return os.open(path, flags)
+    except OSError:
+        return None
+
+
+def _close_directory_fd(directory_fd: int | None) -> None:
+    """保持した cleanup 用 directory fd を閉じる。"""
+    if directory_fd is not None:
+        os.close(directory_fd)
+
+
+def _unlink_handoff_guide_if_parent_is_safe(root: Path, path: Path) -> None:
+    """directory fd 非対応環境でも symlink 親を追従せず guide を削除する。"""
+    expected_dir = editor_input_log_dir(root)
+    try:
+        resolved_dir = expected_dir.resolve(strict=True)
+        current = path.parent.absolute()
+        while True:
+            if stat.S_ISLNK(current.lstat().st_mode):
+                return
+            if current == current.parent:
+                break
+            current = current.parent
+        path.parent.resolve(strict=True).relative_to(resolved_dir)
+        path.unlink(missing_ok=True)
+    except (OSError, RuntimeError, ValueError):
+        return

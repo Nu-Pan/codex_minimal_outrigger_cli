@@ -20,19 +20,29 @@ import shlex
 import signal
 import subprocess
 import sys
+import threading
 import time
+import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
+from dataclasses import asdict
 from pathlib import Path
 from types import FrameType
 from typing import Any
 
+from oracle.other.document_search import SEARCH_MCP_SERVER, SEARCH_TOOL_NAME
+
 from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig, JsonTomlValue
 
+from .runtime_codex_recovery import CodexOutcome
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
-from .runtime_editor_input_handoff_protocol import EDITOR_INPUT_REPOSITORY_ENV
+from .runtime_document_search_scope import validate_document_search_scope
+from .runtime_editor_input_handoff_protocol import (
+    EDITOR_INPUT_REPOSITORY_ENV,
+    EDITOR_INPUT_SOURCE_ENV,
+)
 from .runtime_errors import CmocError
 from .runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
@@ -43,7 +53,17 @@ from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
-_CODEX_TUI_NOTIFICATION_SUPPORTED_VERSION = b"codex-cli 0.151.0"
+_CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS = frozenset(
+    {
+        b"codex-cli 0.151.0",
+        b"codex-cli 0.153.4",
+        b"codex-cli 0.154.0",
+        b"codex-cli 0.155.1",
+        b"codex-cli 0.156.1",
+        b"codex-cli 0.157.1",
+        b"codex-cli 0.158.0",
+    }
+)
 _CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
 _TUI_SESSION_START_HOOK_KEY = "/<session-flags>/config.toml:session_start:0:0"
 _TUI_SESSION_START_HOOK_TIMEOUT_SEC = 10
@@ -429,12 +449,12 @@ def stop_process_group(
 
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
-    """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
+    """論理的な file access mode に対応する Codex CLI sandbox を選ぶ。"""
     match mode:
-        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
-            return "read-only"
         case (
-            FileAccessMode.REALIZATION_WRITE
+            FileAccessMode.READONLY
+            | FileAccessMode.PURE_ORACLE_READ
+            | FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.NO_POLICY
@@ -492,14 +512,14 @@ def _config_override(key: str, toml_value: str) -> list[str]:
 
 
 def codex_cli_supports_tui_notification_hooks(
-    cwd: Path,
+    codex_process_cwd: Path,
     environment: Mapping[str, str],
 ) -> bool:
     """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
     try:
         result = subprocess.run(
-            ["codex", "--version"],
-            cwd=cwd,
+            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"],
+            cwd=codex_process_cwd,
             env=environment,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
@@ -511,17 +531,47 @@ def codex_cli_supports_tui_notification_hooks(
         return False
     return (
         result.returncode == 0
-        and result.stdout.strip() == _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSION
+        and result.stdout.strip() in _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS
     )
 
 
 def _codex_session_start_hook_trusted_hash(command: str) -> str:
-    """Codex 0.151.0 の SessionStart command identity を fingerprint 化する。"""
-    # Codex 0.151.0 / 78c290807ce710180111df227df3b7a4fe845452 の
-    # hook discovery と canonical JSON fingerprint に合わせる。interface が変わる
-    # version は呼び出し側の probe で無効化し、legacy notify へは戻さない。
+    """検証済み Codex の SessionStart command identity を fingerprint 化する。"""
+    # Codex 0.151.0 / 78c290807ce710180111df227df3b7a4fe845452 と
+    # 0.153.4 / 3d2ee51ca2d5db578f328aa75e20aa22c0197c9a、
+    # 0.154.0 / 6b9826e3aa83b1a5947db50f4332cb9c65f1b340 の hook discovery と
+    # canonical JSON fingerprint に合わせる。interface が変わる version は
+    # 呼び出し側の probe で無効化し、legacy notify へは戻さない。
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/engine/discovery.rs#L633-L778
+    # https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/hooks/src/engine/discovery.rs#L733-L779
     # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/config/src/fingerprint.rs#L47-L75
+    # 0.154.0 も同じ正規化、root SessionStart、turn 完了後の notify を使う。
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/hooks/src/engine/discovery.rs#L766-L809
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/config/src/fingerprint.rs#L50-L79
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/hook_runtime.rs#L124-L166
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/session/turn.rs#L571-L611
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/hooks/src/legacy_notify.rs#L13-L69
+    # 0.155.1 も同じ hash と root SessionStart、turn 完了時の callback を使う。
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/hooks/src/engine/discovery.rs#L734-L758
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/core/src/hook_runtime.rs#L126-L161
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/core/src/session/turn.rs#L638-L679
+    # 0.156.1 の session-flags、hash と legacy notify payload も同じ契約。
+    # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/hooks/src/engine/discovery.rs#L378-L410
+    # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/hooks/src/engine/discovery.rs#L733-L775
+    # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/config/src/fingerprint.rs#L51-L79
+    # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/hooks/src/legacy_notify.rs#L11-L38
+    # 0.157.1 も同じ session-flags、hash、turn 完了時の notify 契約を使う。
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/engine/discovery.rs#L402-L431
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/engine/discovery.rs#L764-L790
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/config/src/fingerprint.rs#L50-L81
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/core/src/session/turn.rs#L640-L702
+    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/legacy_notify.rs#L11-L72
+    # 0.158.0 も同じ SessionFlags と hash、root SessionStart、turn 完了時の notify を使う。
+    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/hooks/src/engine/discovery.rs#L389-L397
+    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/hooks/src/engine/discovery.rs#L733-L757
+    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/core/src/hook_runtime.rs#L121-L164
+    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/core/src/session/turn.rs#L615-L674
+    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/hooks/src/legacy_notify.rs#L26-L64
     identity = {
         "event_name": "session_start",
         "hooks": [
@@ -545,12 +595,14 @@ def _codex_session_start_hook_trusted_hash(command: str) -> str:
 def _tui_session_start_hook_override_args(
     session_start_command: Sequence[str] | None,
 ) -> list[str]:
-    """root session ID を記録する invocation-local hook 設定を返す。"""
+    """hooks を有効化し、root session ID を記録する設定を返す。"""
     if not session_start_command:
         return []
     command = shlex.join(session_start_command)
     # root は SessionStart、thread-spawned child は SubagentStart に分離される。
-    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/core/src/hook_runtime.rs#L109-L160
+    # user/managed config の features.hooks=false に依存せず、callback と同じ
+    # invocation で hooks feature を有効化する。--enable は対象版の専用引数。
+    # https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/core/src/hook_runtime.rs#L109-L160
     handler: dict[str, JsonTomlValue] = {
         "type": "command",
         "command": command,
@@ -566,9 +618,11 @@ def _tui_session_start_hook_override_args(
             }
         },
     }
-    # hooks feature は対象版の stable default に任せる。user/managed policy で無効なら
-    # callback なしへ fail-closed にし、TUI 本体の config load failure を起こさない。
-    return _config_override("hooks", _toml_value(hooks))
+    return [
+        "--enable",
+        "hooks",
+        *_config_override("hooks", _toml_value(hooks)),
+    ]
 
 
 def _model_provider_override_args(
@@ -642,7 +696,7 @@ def _model_provider_override_args(
     return args
 
 
-def _feedback_mcp_override_args() -> list[str]:
+def _feedback_mcp_override_args(enable_feedback_reporting: bool) -> list[str]:
     """cmoc_feedback server の effective configuration 全体を支配する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # capability value は argv に載せず、Codex process の local environment から
@@ -655,10 +709,10 @@ def _feedback_mcp_override_args() -> list[str]:
             FEEDBACK_COLLECTOR_PORT_ENV,
             FEEDBACK_PROTOCOL_ENV,
         ],
-        "enabled": True,
+        "enabled": enable_feedback_reporting,
         "required": False,
-        "enabled_tools": ["submit_observation"],
-        "disabled_tools": [],
+        "enabled_tools": (["submit_observation"] if enable_feedback_reporting else []),
+        "disabled_tools": ([] if enable_feedback_reporting else ["submit_observation"]),
         "startup_timeout_sec": 5,
         "tool_timeout_sec": 15,
         "default_tools_approval_mode": "approve",
@@ -682,29 +736,103 @@ def _feedback_mcp_override_args() -> list[str]:
 
 
 def _editor_input_handoff_mcp_override_args() -> list[str]:
-    """cmoc_editor_input server を overwrite 一つへ呼び出し単位で固定する。"""
+    """cmoc_editor_input server をガイド取得と上書きへ呼び出し単位で固定する。"""
+    # Codex 0.154.0 は env_vars の値を起動元の環境から MCP child へ渡す。
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/rmcp-client/src/utils.rs#L14-L24
+    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/rmcp-client/src/stdio_server_launcher.rs#L236-L260
+    # 0.155.1 でも enabled_tools は tool の元の名前で filter される。
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/codex-mcp/src/tools.rs#L59-L97
     server: dict[str, JsonTomlValue] = {
         "command": sys.executable,
         "args": ["-m", "commons.runtime_editor_input_handoff_mcp"],
-        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV],
+        # 共有 venv の editable install が別 checkout を指していても起動元と揃える。
+        "env": {"PYTHONPATH": str(Path(__file__).resolve().parents[1])},
+        "env_vars": [EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV],
         "enabled": True,
         # handoff の利用可否は TUI agent call 自体の成功条件を変更しない。
         "required": False,
-        "enabled_tools": ["overwrite"],
+        "enabled_tools": ["get_handoff_guide", "overwrite"],
         "disabled_tools": [],
         "startup_timeout_sec": 5,
         "tool_timeout_sec": 15,
         "default_tools_approval_mode": "approve",
-        "tools": {"overwrite": {"approval_mode": "approve"}},
+        "tools": {
+            "get_handoff_guide": {"approval_mode": "approve"},
+            "overwrite": {"approval_mode": "approve"},
+        },
     }
     args = _config_override("mcp_servers.cmoc_editor_input", _toml_value(server))
-    args.extend(
-        _config_override(
-            f"shell_environment_policy.filters.{EDITOR_INPUT_REPOSITORY_ENV}",
-            _toml_string("exclude"),
+    for name in (EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV):
+        args.extend(
+            _config_override(
+                f"shell_environment_policy.filters.{name}",
+                _toml_string("exclude"),
+            )
         )
-    )
     return args
+
+
+def _document_search_mcp_override_args(
+    parameter: AgentCallParameter, config: CmocConfig
+) -> list[str]:
+    """同名の外部設定を遮断し、call 固定の検索接続だけを注入する。"""
+    scope = parameter.document_search_scope
+    if scope is None:
+        server: dict[str, JsonTomlValue] = {
+            "command": sys.executable,
+            "args": ["-m", "commons.runtime_document_search_mcp", "{}"],
+            "enabled": False,
+            "required": False,
+            "enabled_tools": [],
+            "disabled_tools": [SEARCH_TOOL_NAME],
+        }
+    else:
+        from basic.path_model import AgentCallPathContext
+
+        try:
+            resolved_scope = validate_document_search_scope(scope)
+        except ValueError as exc:
+            raise CmocError("文書検索の閲覧範囲が不正です。", [], str(exc)) from exc
+        context = AgentCallPathContext(parameter.agent_call_cwd)
+        search_config = config.document_search
+        server = {
+            "command": sys.executable,
+            "args": [
+                "-m",
+                "commons.runtime_document_search_mcp",
+                json.dumps(
+                    {
+                        "work_root": str(context.work_root),
+                        "scope": asdict(resolved_scope),
+                        "config": asdict(search_config) if search_config else None,
+                    },
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            ],
+            "cwd": str(context.work_root),
+            "env": {
+                "PYTHONPATH": os.pathsep.join(
+                    (
+                        str(Path(__file__).resolve().parents[1]),
+                        str(Path(__file__).resolve().parents[2] / "oracle/src"),
+                    )
+                )
+            },
+            "enabled": True,
+            "required": True,
+            "enabled_tools": [SEARCH_TOOL_NAME],
+            "disabled_tools": [],
+            "default_tools_approval_mode": "approve",
+            "tools": {SEARCH_TOOL_NAME: {"approval_mode": "approve"}},
+        }
+        if search_config is not None:
+            server["startup_timeout_sec"] = search_config.startup_timeout_seconds
+            server["tool_timeout_sec"] = (
+                search_config.request_timeout_seconds
+                + search_config.shutdown_grace_seconds
+            )
+    return _config_override(f"mcp_servers.{SEARCH_MCP_SERVER}", _toml_value(server))
 
 
 def build_codex_override_args(
@@ -737,6 +865,8 @@ def build_codex_override_args(
         call_config.model,
         "--sandbox",
         sandbox_mode,
+        "--no-daemon",
+        *_config_override("sandbox_workspace_write.exclude_slash_tmp", "false"),
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override(
             "model_reasoning_effort", _toml_string(call_config.reasoning_effort)
@@ -748,7 +878,8 @@ def build_codex_override_args(
         *_tui_session_start_hook_override_args(
             session_start_command if callback_enabled else None
         ),
-        *_feedback_mcp_override_args(),
+        *_feedback_mcp_override_args(parameter.enable_feedback_reporting),
+        *_document_search_mcp_override_args(parameter, config),
         *(
             _editor_input_handoff_mcp_override_args()
             if parameter.enable_editor_input_handoff_mcp
@@ -820,6 +951,7 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
         FEEDBACK_COLLECTOR_PORT_ENV,
         FEEDBACK_PROTOCOL_ENV,
         EDITOR_INPUT_REPOSITORY_ENV,
+        EDITOR_INPUT_SOURCE_ENV,
     }
     environment = {
         name: environment_value
@@ -829,6 +961,76 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     return {**environment, "CODEX_HOME": value}
 
 
+def _verify_document_search_server(
+    argv: list[str], *, cwd: Path | None, env: Mapping[str, str] | None
+) -> None:
+    """CLI の実効 MCP transport が予約済み検索 context と一致するか調べる。"""
+    if argv[:1] != ["codex"]:
+        return
+    overrides: list[str] = []
+    expected: dict[str, Any] | None = None
+    server_key = f"mcp_servers.{SEARCH_MCP_SERVER}"
+    for position, argument in enumerate(argv[:-1]):
+        if argument not in {"-c", "--config"}:
+            continue
+        assignment = argv[position + 1]
+        overrides.extend(("-c", assignment))
+        if assignment.startswith(server_key + "="):
+            expected = tomllib.loads("server = " + assignment.split("=", 1)[1])[
+                "server"
+            ]
+    if expected is None:
+        return
+    if not expected["enabled"]:
+        return
+    try:
+        result = subprocess.run(
+            [
+                "codex",
+                "--no-daemon",
+                *overrides,
+                "mcp",
+                "get",
+                SEARCH_MCP_SERVER,
+                "--json",
+            ],
+            cwd=cwd,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        parsed: object = json.loads(result.stdout) if result.returncode == 0 else None
+        actual = parsed if isinstance(parsed, dict) else {}
+    except FileNotFoundError:
+        raise
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        raise CmocError(
+            "文書検索 MCP の実効設定を確認できません。",
+            ["Codex CLI と文書検索 MCP の設定を確認してください。"],
+            f"server: {SEARCH_MCP_SERVER}",
+        ) from exc
+    transport = actual.get("transport")
+    if not isinstance(transport, dict) or (
+        actual.get("name") != SEARCH_MCP_SERVER
+        or actual.get("enabled") is not expected["enabled"]
+        or transport.get("type") != "stdio"
+        or transport.get("command") != expected["command"]
+        or transport.get("args") != expected["args"]
+        or (transport.get("env") or {}) != expected.get("env", {})
+        or transport.get("env_vars") != expected.get("env_vars", [])
+        or transport.get("cwd") != expected.get("cwd")
+        or actual.get("enabled_tools") != expected["enabled_tools"]
+        or actual.get("disabled_tools") != expected["disabled_tools"]
+    ):
+        raise CmocError(
+            "文書検索 MCP の実効設定が call 固定値と一致しません。",
+            ["user/project の同名 MCP 設定を取り除いてから再実行してください。"],
+            f"server: {SEARCH_MCP_SERVER}",
+        )
+
+
 def run_codex_subprocess(
     argv: list[str],
     *,
@@ -836,7 +1038,13 @@ def run_codex_subprocess(
     **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
+    cancellation = kwargs.pop("cancellation", None)
+    if cancellation is not None and cancellation.is_set():
+        raise KeyboardInterrupt
     try:
+        _verify_document_search_server(
+            argv, cwd=kwargs.get("cwd"), env=kwargs.get("env")
+        )
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # tracking は editing run の内部 state なので、継承した env var だけで無関係な Codex
         # call を stale または別 process の pid file へ向けてはならない。
@@ -845,11 +1053,16 @@ def run_codex_subprocess(
                 argv,
                 _active_run_process_tracking_path,
                 process_started_callback=process_started_callback,
+                cancellation=cancellation,
                 **kwargs,
             )
-        if process_started_callback is not None:
+        if (
+            process_started_callback is not None
+            or cancellation is not None
+            or kwargs.get("timeout") is not None
+        ):
             return _run_subprocess_with_started_callback(
-                argv, process_started_callback, **kwargs
+                argv, process_started_callback, cancellation=cancellation, **kwargs
             )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
@@ -866,7 +1079,9 @@ def run_codex_subprocess(
 
 def _run_subprocess_with_started_callback(
     argv: list[str],
-    process_started_callback: Callable[[], None],
+    process_started_callback: Callable[[], None] | None,
+    *,
+    cancellation: threading.Event | None = None,
     **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """Popen 後に TUI の process 起動境界を通知してから Codex を待つ。"""
@@ -886,15 +1101,24 @@ def _run_subprocess_with_started_callback(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
 
+    if cancellation is not None or timeout is not None:
+        kwargs["start_new_session"] = True
     with subprocess.Popen(argv, **kwargs) as process:
         try:
             # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
             # Popen が成功した後だけ TUI process 起動済みとして扱い、起動前の
             # KeyboardInterrupt を terminal failure notification の対象に残す。
-            process_started_callback()
-            stdout, stderr = process.communicate(input_data, timeout=timeout)
+            if process_started_callback is not None:
+                process_started_callback()
+            stdout, stderr = _communicate_codex_process(
+                process, input_data, timeout, cancellation
+            )
         except BaseException:
-            process.kill()
+            if kwargs.get("start_new_session"):
+                _kill_codex_process_group(process)
+            else:
+                process.kill()
+            process.communicate()
             raise
 
         returncode = process.wait()
@@ -906,6 +1130,48 @@ def _run_subprocess_with_started_callback(
                 stderr=stderr,
             )
     return subprocess.CompletedProcess(argv, returncode, stdout, stderr)
+
+
+def _kill_codex_process_group(process: subprocess.Popen[Any]) -> None:
+    # communicate は KeyboardInterrupt の配送前に child を reap し得る。
+    # 終了済み leader の PGID を再利用された group へ送ってはいけない。
+    if process.poll() is not None:
+        if process_group_has_running_member(process.pid):
+            raise _unverified_process_group_error(process.pid)
+        return
+    # 生きた専用 session leader は、この thread が reap するまで PID を保持する。
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
+def _communicate_codex_process(
+    process: subprocess.Popen[Any],
+    input_data: Any,
+    timeout: float | None,
+    cancellation: threading.Event | None,
+) -> tuple[Any, Any]:
+    # timeout は probe 一回の期限であり、回復待ち全体の期限ではない。
+    if timeout is None and cancellation is None:
+        return process.communicate(input_data)
+    deadline = time.monotonic() + timeout if timeout is not None else None
+    while True:
+        if cancellation is not None and cancellation.is_set():
+            raise KeyboardInterrupt
+        remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+        interval = remaining
+        if cancellation is not None:
+            interval = min(remaining, 0.1) if remaining is not None else 0.1
+        try:
+            result = process.communicate(input_data, timeout=interval)
+            # 終了済み child は reap 済みなので group signal を送らない。
+            # 呼び出し側が結果を受理する前に、再度中断状態を確認する。
+            return result
+        except subprocess.TimeoutExpired:
+            if deadline is not None and time.monotonic() >= deadline:
+                raise
+            input_data = None
 
 
 def _is_missing_codex_executable(
@@ -937,19 +1203,16 @@ def set_run_process_tracking_path(path: Path | None) -> Path | None:
     return old_path
 
 
-def run_process_tracking_active() -> bool:
-    """editing run の Codex subprocess tracking が有効か返す。"""
-    return _active_run_process_tracking_path is not None
-
-
 def run_tracked_codex_subprocess(
     argv: list[str],
     tracking_path: Path,
     *,
     process_started_callback: Callable[[], None] | None = None,
+    cancellation: threading.Event | None = None,
     **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """run abandon が止められるよう Codex subprocess group を記録する。"""
+    timeout = kwargs.pop("timeout", None)
     input_data = kwargs.pop("input", None)
     capture_output = kwargs.pop("capture_output", False)
     check = kwargs.pop("check", False)
@@ -989,11 +1252,6 @@ def run_tracked_codex_subprocess(
             with run_process_id_file_lock(tracking_path):
                 _validate_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
-                if process_started_callback is not None:
-                    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-                    # Popen 成功直後に起動境界を通知し、tracking 更新中の中断も
-                    # すでに起動した TUI の終了として区別する。
-                    process_started_callback()
                 # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
                 # tracking 更新に失敗しても、後から PGID を再探索して別 group を停止しない
                 # よう、Popen 直後の identity snapshot を cleanup に引き継ぐ。
@@ -1001,6 +1259,24 @@ def run_tracked_codex_subprocess(
                 if cleanup_start_time is not None:
                     cleanup_expected_leader = (process.pid, cleanup_start_time)
                 cleanup_expected_members = process_group_members(process.pid)
+                if (
+                    cleanup_expected_members is not None
+                    and cleanup_expected_leader is not None
+                    and cleanup_expected_leader not in cleanup_expected_members
+                ):
+                    # process_group_members は zombie leader を snapshot から除く。
+                    # leader 終了後も descendant が残る場合に、既知の leader identity
+                    # を落とすと stop_process_group が安全な group 停止を拒否する。
+                    cleanup_expected_members = (
+                        *cleanup_expected_members,
+                        cleanup_expected_leader,
+                    )
+                if process_started_callback is not None:
+                    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+                    # Popen 成功直後に起動境界を通知し、tracking 更新中の中断も
+                    # すでに起動した TUI の終了として区別する。cleanup 用 identity は
+                    # callback 自体が失敗しても利用できるよう先に確保する。
+                    process_started_callback()
                 tracked_start_time = _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
                 )
@@ -1061,7 +1337,17 @@ def run_tracked_codex_subprocess(
     finally:
         _restore_sigterm_handler()
     try:
-        stdout, stderr = process.communicate(input_data)
+        try:
+            stdout, stderr = _communicate_codex_process(
+                process, input_data, timeout, cancellation
+            )
+        except (subprocess.TimeoutExpired, KeyboardInterrupt):
+            if timeout is None and cancellation is None:
+                # 通常の tracked call の終了処理は workload の責務に保つ。
+                raise
+            _kill_codex_process_group(process)
+            process.communicate()
+            raise
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
         if check and result.returncode:
             raise subprocess.CalledProcessError(
@@ -1170,7 +1456,7 @@ def read_output_json(path: Path) -> Any:
         return None
     try:
         return json.loads(output_text)
-    except (json.JSONDecodeError, UnicodeError):
+    except (RecursionError, json.JSONDecodeError, UnicodeError):
         return None
 
 
@@ -1220,33 +1506,6 @@ def extract_resume_token(stdout_text: str) -> str | None:
     return None
 
 
-def _codex_jsonl_error_messages(stdout_text: str) -> list[str | None]:
-    """Codex JSONL の error event message を retry 判定用に抽出する。"""
-    messages: list[str | None] = []
-    for line in stdout_text.splitlines():
-        try:
-            item = json.loads(line)
-        except json.JSONDecodeError:
-            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # process が zero を返し output-last-message file が有効でも、JSONL protocol
-            # violation は unexpected error である。
-            messages.append(None)
-            continue
-        if not isinstance(item, dict):
-            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # malformed event は unexpected error であり、retry signal にはならない。
-            messages.append(None)
-            continue
-        if item.get("type") == "error":
-            message = item.get("message")
-            messages.append(message if isinstance(message, str) else None)
-        elif item.get("type") == "turn.failed":
-            error = item.get("error")
-            message = error.get("message") if isinstance(error, dict) else None
-            messages.append(message if isinstance(message, str) else None)
-    return messages
-
-
 _CAPACITY_ERROR_MARKER = "Selected model is at capacity"
 _QUOTA_ERROR_MARKERS = (
     "Quota exceeded",
@@ -1256,33 +1515,58 @@ _QUOTA_ERROR_MARKERS = (
 )
 
 
-def is_capacity_error(stdout_text: str) -> bool:
-    """Codex JSONL 上の model capacity error だけを retry 対象として判定する。"""
-    return any(
-        isinstance(message, str) and _CAPACITY_ERROR_MARKER in message
-        for message in _codex_jsonl_error_messages(stdout_text)
-    )
+def _failure_outcome(message: object) -> CodexOutcome:
+    # top-level CLI error 診断だけを分類し、tool/command の本文には適用しない。
+    if not isinstance(message, str):
+        return "failed"
+    quota = any(marker in message for marker in _QUOTA_ERROR_MARKERS)
+    capacity = _CAPACITY_ERROR_MARKER in message
+    if quota and not capacity:
+        return "quota"
+    if capacity and not quota:
+        return "transient"
+    return "failed"
 
 
-def is_quota_error(stdout_text: str) -> bool:
-    """usage limit 系の Codex JSONL error を quota 待機対象として判定する。"""
-    return any(
-        isinstance(message, str) and marker in message
-        for message in _codex_jsonl_error_messages(stdout_text)
-        for marker in _QUOTA_ERROR_MARKERS
-    )
-
-
-def is_unexpected_error(stdout_text: str) -> bool:
-    """既知の capacity/quota 以外の Codex JSONL error を検出する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # recovery path があるのは capacity と quota event だけである。malformed またはその他の
-    # error event を subprocess の zero return code で隠してはならない。
-    return any(
-        not isinstance(message, str)
-        or (
-            _CAPACITY_ERROR_MARKER not in message
-            and not any(marker in message for marker in _QUOTA_ERROR_MARKERS)
-        )
-        for message in _codex_jsonl_error_messages(stdout_text)
-    )
+def classify_codex_call(stdout_text: str, returncode: int) -> CodexOutcome:
+    """CLI 終了状態と最後の turn 診断から、成功または回復待ちの理由を返す。"""
+    # oracle/doc/app_spec/codex_exec_rule.md の最終的な成功と失敗の判断。
+    # Codex 0.155.1: JSONL terminal と exit status の両方を確認する。
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/exec/src/event_processor_with_jsonl_output.rs#L506-L556
+    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/exec/src/lib.rs#L1243-L1264
+    # event stream を解釈できない場合は回復を推定しない。
+    errors: list[CodexOutcome] = []
+    terminal: str | None = None
+    final_failure: CodexOutcome = "failed"
+    for line in stdout_text.splitlines():
+        try:
+            item = json.loads(line)
+        except (ValueError, RecursionError):
+            return "failed"
+        if not isinstance(item, dict):
+            return "failed"
+        event_type = item.get("type")
+        if not isinstance(event_type, str):
+            return "failed"
+        if event_type in {"turn.completed", "turn.failed"}:
+            if terminal is not None:
+                return "failed"
+            terminal = event_type
+            if event_type == "turn.failed":
+                error = item.get("error")
+                final_failure = _failure_outcome(
+                    error.get("message") if isinstance(error, dict) else None
+                )
+        elif event_type == "error":
+            if terminal is not None:
+                return "failed"
+            errors.append(_failure_outcome(item.get("message")))
+        elif terminal is not None and event_type == "turn.started":
+            return "failed"
+    if terminal == "turn.completed":
+        return "succeeded" if returncode == 0 else "failed"
+    if terminal == "turn.failed":
+        return final_failure
+    if errors and len(set(errors)) == 1:
+        return errors[-1]
+    return "failed"

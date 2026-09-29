@@ -2,7 +2,7 @@
 
 ## 概要
 
-- oracle file に関するユーザーの調査指示をエディタから受け取り、Codex CLI の TUI を起動する。TUI は oracle file を根拠に調査し、その結果を回答する
+cmoc は、oracle file に関するユーザーの調査指示をエディタから受け取り、Codex CLI の TUI を起動する。TUI 内の agent は、oracle file を根拠に調査し、その結果を回答する。
 
 ## 引数
 
@@ -10,7 +10,7 @@
 
 ## 事前条件
 
-- なし
+- このサブコマンド固有の事前条件はない
 
 ## 実行手順
 
@@ -26,10 +26,11 @@
 ## TUI 起動パラメータ
 
 - TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
-- この TUI では editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` を正本とする
+- この TUI では editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
+- 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う
 - `build_oracle_investigation_launch_tui_parameter` が返したパラメータを変更せずに TUI 起動へ渡す
 - oracle file を扱う判断基準は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」を正本とする。正確な agent 向け文面は前述の builder を参照する
-- `cmoc tui` のような実行パラメータ決定用 agent call は行わない
+- 実行パラメータ決定用の agent call は行わない
 
 ## Codex CLI の起動
 
@@ -41,8 +42,10 @@
 ## 調査結果と変更の扱い
 
 - 調査結果は Codex CLI の TUI でユーザーへ回答する
+- 人間が editor input handoff を要求した場合の本文と回答の責務は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」に従う
 - 調査結果の根拠となる oracle file を、回答から特定できるようにする
 - 調査結果の自然言語部分は原則として日本語とする。識別子、path、command、log 原文、および引用は元の表記を維持してよい
-- Codex CLI の TUI は oracle file を変更せず、realization file を読み書きしない
+- TUI 内の agent は oracle file を変更せず、realization file を読み書きしない
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う
 - Codex CLI の TUI は oracle file の変更結果を自動 commit しない
-- TUI 起動前の indexing preflight による `INDEX.md` 更新および自動 commit は、前項の禁止対象に含めない
+- 文書検索の提供は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う

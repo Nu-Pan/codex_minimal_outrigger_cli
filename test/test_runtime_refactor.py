@@ -224,7 +224,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
             "investigation_required": False,
             "last_investigation_result": "no_findings",
             "last_investigated_sha256": previous_digest,
-            "last_investigated_at": "2026-07-19_00-00_00_000000000",
+            "last_investigated_at": "2026-07-19_00-00-00_000",
         }
     )
     write_refactor_state(root, state)
@@ -235,7 +235,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     changed = synchronized["README.md"]
     assert changed["investigation_required"] is True
     assert changed["last_investigation_result"] == "no_findings"
-    assert changed["last_investigated_at"] == "2026-07-19_00-00_00_000000000"
+    assert changed["last_investigated_at"] == "2026-07-19_00-00-00_000"
     assert changed["last_investigated_sha256"] == previous_digest
 
 
@@ -303,6 +303,36 @@ def test_refactor_state_rejects_non_file_path(tmp_path: Path, path_kind: str) ->
         write_refactor_state(root, {})
 
 
+@pytest.mark.parametrize(
+    "parent_kind",
+    [
+        "file",
+        pytest.param(
+            "fifo",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+    ],
+)
+def test_refactor_state_rejects_non_directory_parent(
+    tmp_path: Path, parent_kind: str
+) -> None:
+    """state の親が通常 directory でない場合に read/write を block させない。"""
+    root = make_repo(tmp_path)
+    parent = root / ".cmoc" / "gt" / "realization" / "refactor"
+    parent.parent.mkdir(parents=True)
+    if parent_kind == "file":
+        parent.write_text("not a directory\n")
+    else:
+        os.mkfifo(parent)
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+    with pytest.raises(CmocError, match="refactor state"):
+        write_refactor_state(root, {})
+
+
 def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
     tmp_path: Path,
 ) -> None:
@@ -313,7 +343,7 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
         {
             "last_investigation_result": "findings",
             "last_investigated_sha256": file_sha256(root / "README.md"),
-            "last_investigated_at": "2026-01-01_00-00_00_000000000",
+            "last_investigated_at": "2026-01-01_00-00-00_000",
         }
     )
 
@@ -323,7 +353,7 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
         {
             "last_investigation_result": "no_findings",
             "last_investigated_sha256": file_sha256(root / "oracle" / "spec.md"),
-            "last_investigated_at": "2026-02-01_00-00_00_000000000",
+            "last_investigated_at": "2026-02-01_00-00-00_000",
         }
     )
     assert select_refactor_target(state) == "README.md"
@@ -370,7 +400,7 @@ def test_refactor_state_rejects_non_string_result(
                     "investigation_required": False,
                     "last_investigation_result": result,
                     "last_investigated_sha256": "0" * 64,
-                    "last_investigated_at": "2026-07-19_00-00_00_000000000",
+                    "last_investigated_at": "2026-07-19_00-00-00_000",
                 }
             }
         )
@@ -417,7 +447,11 @@ def test_refactor_state_rejects_nul_in_path_key(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("key", "investigated_at"),
-    [("./README.md", "2026-07-19_00-00_00_000000000"), ("README.md", "invalid")],
+    [
+        ("./README.md", "2026-07-19_00-00-00_000"),
+        ("README.md", "invalid"),
+        ("README.md", "２０２６-０７-１９_００-００_００_０００００００００"),
+    ],
 )
 def test_refactor_state_rejects_noncanonical_path_or_timestamp(
     tmp_path: Path,
@@ -444,3 +478,27 @@ def test_refactor_state_rejects_noncanonical_path_or_timestamp(
 
     with pytest.raises(CmocError, match="refactor state"):
         load_refactor_state(root)
+
+
+def test_refactor_state_sync_treats_uppercase_digest_as_same_content(
+    tmp_path: Path,
+) -> None:
+    """大文字 hex の既存履歴を同じ SHA256 として同期する。"""
+    root = make_repo(tmp_path)
+    state = sync_refactor_state(root)
+    digest = file_sha256(root / "README.md")
+    state["README.md"].update(
+        {
+            "investigation_required": False,
+            "last_investigation_result": "no_findings",
+            "last_investigated_sha256": digest.upper(),
+            "last_investigated_at": "2026-07-19_00-00-00_000",
+        }
+    )
+    state_path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
+    state_path.write_text(json.dumps(state) + "\n")
+
+    synchronized = sync_refactor_state(root)
+
+    assert synchronized["README.md"]["investigation_required"] is False
+    assert synchronized["README.md"]["last_investigated_sha256"] == digest

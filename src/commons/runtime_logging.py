@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .runtime_feedback_store import uuid7_prefixed
-from .runtime_paths import _reserve_timestamped_path, logs_dir, timestamp
+from .runtime_ids import new_id
+from .runtime_paths import logs_dir
 
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
     "CURRENT_SUBCOMMAND_LOGGER",
@@ -27,6 +27,7 @@ class StepTiming:
     description: str
     started_at: float
     elapsed_sec: float | None = None
+    log_description: str | None = None
 
 
 class SubcommandLogger:
@@ -36,9 +37,11 @@ class SubcommandLogger:
         """実行中のサブコマンドが追記する log file を初期化する。"""
         self.root = root
         self.command = command
-        self.invocation_id = uuid7_prefixed("sci_")
+        self.execution_id = new_id(root, "exec")
+        self.invocation_id = self.execution_id
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
+        self.transient_wait_sec = 0.0
         self.step_timings: list[StepTiming] = []
         self.warning_messages: list[str] = []
         self._event_records: list[dict[str, Any]] = []
@@ -49,21 +52,13 @@ class SubcommandLogger:
         log_dir = logs_dir(root)
         log_dir.mkdir(parents=True, exist_ok=True)
         # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-        _, self.path = _reserve_timestamped_path(log_dir, ".jsonl", timestamp)
+        self.path = log_dir / f"{self.execution_id}.jsonl"
+        self.path.open("x").close()
 
     def event(self, kind: str, **payload: Any) -> None:
         """実行時に後から検査したい event を安定した JSON record として残す。"""
-        record = {
-            "event": kind,
-            "command": self.command,
-            "timestamp": datetime.now().isoformat(),
-            **payload,
-        }
-        with self._lock:
-            with self.path.open("a") as f:
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
-                f.flush()
-            self._event_records.append(record.copy())
+        record = self._new_event_record(kind, payload)
+        self._append_event_record(record)
         # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
         # detector は event が flush された後だけ評価し、失敗を本命 logger へ返さない。
         if {
@@ -80,18 +75,50 @@ class SubcommandLogger:
                 # KeyboardInterrupt などのユーザー中断は detector failure として握り潰さない。
                 self._record_detector_failure(exc)
 
+    def write_terminal_event(self, **payload: Any) -> None:
+        """terminal event を共通 event dispatch の失敗から回復して追記する。"""
+        with self._lock:
+            if (
+                self._event_records
+                and self._event_records[-1].get("event") == "command_finished"
+            ):
+                return
+        self._append_event_record(self._new_event_record("command_finished", payload))
+
+    def _new_event_record(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """event の共通 envelope を構築する。"""
+        return {
+            "event": kind,
+            "command": self.command,
+            "execution_id": self.execution_id,
+            "timestamp": datetime.now().isoformat(),
+            **payload,
+        }
+
+    def _append_event_record(self, record: dict[str, Any]) -> None:
+        """event record を即時 flush し、同じ順序で in-memory snapshot へ保存する。"""
+        with self._lock:
+            with self.path.open("a", encoding="utf-8") as f:
+                # 例外メッセージや path には Unicode surrogate が含まれ得る。
+                # internal failure の traceback を必ずログへ残せるよう、JSON の
+                # escape 表現で UTF-8 へ安全に保存する。
+                f.write(json.dumps(record, ensure_ascii=True) + "\n")
+                f.flush()
+            self._event_records.append(record.copy())
+
     def _record_detector_failure(self, error: Exception) -> None:
         """detector failure を nonfatal な自由 event と warning に留める。"""
         record = {
             "event": "feedback.detector_failed",
             "command": self.command,
+            "execution_id": self.execution_id,
             "timestamp": datetime.now().isoformat(),
             "error": repr(error),
         }
         try:
             with self._lock:
-                with self.path.open("a") as log_file:
-                    log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+                with self.path.open("a", encoding="utf-8") as log_file:
+                    log_file.write(json.dumps(record, ensure_ascii=True) + "\n")
                     log_file.flush()
         except Exception:
             pass
@@ -126,7 +153,14 @@ class SubcommandLogger:
         限るため、console 表示名と JSON Lines の step 名は分けられる。
         """
         self.finish_current_step()
-        self.step_timings.append(StepTiming(index, description, time.perf_counter()))
+        self.step_timings.append(
+            StepTiming(
+                index=index,
+                description=description,
+                started_at=time.perf_counter(),
+                log_description=log_description or description,
+            )
+        )
         self.event(
             "step_started",
             step=log_description or description,
@@ -140,7 +174,7 @@ class SubcommandLogger:
             step.elapsed_sec = time.perf_counter() - step.started_at
             self.event(
                 "step_finished",
-                step=step.description,
+                step=step.log_description or step.description,
                 step_index=step.index,
                 elapsed_sec=step.elapsed_sec,
             )
@@ -149,10 +183,14 @@ class SubcommandLogger:
         """サブコマンド開始からの経過秒を、完了表示と log 集計用に返す。"""
         return time.perf_counter() - self.started_at
 
-    def add_quota_wait(self, seconds: float) -> None:
-        """Codex quota 待機をサブコマンド全体の待機時間として合算する。"""
+    def add_recovery_wait(self, reason: str, seconds: float) -> None:
+        """理由別に Codex call が保留された実時間を合算する。"""
+        # 並列 call ごとの時間を集計し、各 period は recovery event から追跡する。
         with self._lock:
-            self.quota_wait_sec += seconds
+            if reason == "quota":
+                self.quota_wait_sec += seconds
+            else:
+                self.transient_wait_sec += seconds
 
     def event_records(self) -> tuple[dict[str, Any], ...]:
         """primary report が参照する flush 済み event の snapshot を返す。"""
@@ -184,3 +222,11 @@ def reset_current_subcommand_logger(token: Token[SubcommandLogger | None]) -> No
 def current_subcommand_logger() -> SubcommandLogger | None:
     """深い runtime helper からサブコマンド logger を任意利用できるようにする。"""
     return _CURRENT_SUBCOMMAND_LOGGER.get()
+
+
+def current_execution_id(repository: Path) -> str:
+    """現在の最外側実行 ID を返し、単独 runtime 利用時は新規発行する。"""
+    logger = current_subcommand_logger()
+    if logger is not None and logger.root.resolve() == repository.resolve():
+        return logger.execution_id
+    return new_id(repository, "exec")

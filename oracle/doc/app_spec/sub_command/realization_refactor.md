@@ -2,36 +2,29 @@
 
 ## 目的
 
-- realization refactor は、oracle file と realization file を起点に、ファイル単位の追従調査を繰り返す workload である。current fork で保留した unresolved target 以外の調査要求がなくなるまで続ける。
-- 所見調査・修正を行う agent call には commit 差分や変更要約を渡さず、oracle file と realization file を調査対象として渡す。
-- 所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」を正本とする。
-- 所見調査・修正 call の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。
-- installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
-- 短い変更ループを担う realization apply とは workload を分ける。
-- fork, join, abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
+realization refactor は、oracle file と realization file を起点に、ファイル単位の追従調査を繰り返す workload である。current fork で保留した unresolved target 以外の調査要求がなくなるまで続ける。短い変更ループを担う realization apply とは workload を分ける。
+
+所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」を正本とする。installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
+
+所見調査・修正 call の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。fork、join、abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
 
 ## refactor state
 
 ### 保存先と JSON schema
 
-- 正本の保存先は `{{work-root}}/.cmoc/gt/realization/refactor/state.json` とする。
-- JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、次の object を value とする object である。
+refactor state の保存先は `{{work-root}}/.cmoc/gt/realization/refactor/state.json` とする。
 
-    ```json
-    {
-      "oracle/doc/example.md": {
-        "investigation_required": true,
-        "last_investigation_result": "not_investigated",
-        "last_investigated_sha256": null,
-        "last_investigated_at": null
-      }
-    }
-    ```
+JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、各 file の調査状態を value とする object である。調査状態は、次の field を持つ object とする。
 
-- `investigation_required` は boolean とする。
-- `last_investigation_result` は `not_investigated | no_findings | findings` とする。
-- `last_investigated_sha256` は調査時点の file 内容に対する SHA256 文字列または `null` とする。
-- `last_investigated_at` は `{{time-stamp}}` または `null` とする。
+| field | 型・値 |
+|---|---|
+| `investigation_required` | boolean |
+| `last_investigation_result` | `not_investigated`、`no_findings`、`findings` のいずれか |
+| `last_investigated_sha256` | 調査時点の file 内容に対する SHA256 文字列、または `null` |
+| `last_investigated_at` | `{{time-stamp}}`、または `null` |
+
+`last_investigated_at` は調査日時であり、`{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` の「タイムスタンプのフォーマット」に従って保存する。ID は使用しない。
+
 - `not_investigated` の entry は hash と日時をともに `null` とする。
 - absolute path と `..` による `{{work-root}}` 外参照を禁止する。
 - JSON object の記載順に意味を持たせない。
@@ -40,8 +33,7 @@
 ### entry 集合の同期
 
 - entry の対象は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
-- state 同期の完了時には、対象 file と entry に過不足があってはいけない。
-- 対象 file と entry の一致は、cmoc が同期を完了した時点の不変条件とする。同期時点には、doctor preprocess、refactor の各処理単位、run join 後などがある。人間の編集直後を含め、常時一致することは要求しない。
+- 対象 file と entry の過不足のない一致は、cmoc が同期を完了した時点の不変条件とする。同期時点には、doctor preprocess、refactor の各処理単位、run join 後などがある。人間の編集直後を含め、常時一致することは要求しない。
 - 新規 file には次の entry を作成する。
     - `investigation_required=true`
     - `last_investigation_result=not_investigated`
@@ -53,18 +45,18 @@
 
 ## current fork の unresolved target 集合
 
-- unresolved target 集合は current fork だけで使用する。
+- unresolved target 集合は current fork だけで使用し、新しい fork へ引き継がない。
 - 集合の要素は、正規化済みの `{{work-root}}` 相対 target path とする。
-- unresolved target 集合を refactor state に永続化してはいけない。この集合のために refactor state の schema を変更してはいけない。
-- unresolved target 集合を、次回 fork の選択を制御する skip または checkpoint として永続化してはいけない。
-- 前回の fork の unresolved target 集合を新しい fork へ引き継いではいけない。前回の fork で unresolved になった entry は、`last_investigation_result=findings` と `investigation_required=true` により再び調査対象になり得る。
+- refactor state または次回 fork の選択用 skip・checkpoint として永続化せず、この集合のために refactor state の schema を変更してはいけない。
+- 前回の fork で unresolved になった entry は、`last_investigation_result=findings` と `investigation_required=true` により再び調査対象になり得る。
 
 ## 引数と想定内差分
 
 - 引数なし。
 - 処理 file 数や loop 回数による上限は設けない。
-- agent が変更する realization file、cmoc が更新する refactor state、および cmoc が生成する任意階層の `INDEX.md` を想定内差分とする。
-- agent は realization file だけを変更する。refactor state と `INDEX.md` は cmoc が更新する。
+- agent が変更する realization file と cmoc が更新する refactor state を想定内差分とする。
+- agent が変更する作業成果物は realization file だけとする。refactor state は cmoc が更新する。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
 
 ## full refactor cycle
 
@@ -80,64 +72,68 @@
 ### 調査対象の選択
 
 - `investigation_required=true` であり、かつ path が current fork の unresolved target 集合に含まれない entry だけを調査対象とする。
-- current fork の unresolved target 集合に含まれる path を、同じ fork で再選択してはいけない。
 - `last_investigation_result=not_investigated` の entry を先に選ぶ。
-- その後は `last_investigated_at` の古い順に選び、同値なら path の昇順とする。
-- JSON object の記載順を選択順として使用してはいけない。
+- その後は `last_investigated_at` の古い順に選び、同値なら path の昇順とする。比較には保存したミリ秒精度の値を使い、同一ミリ秒は同値として扱う。
 
 ### 1 処理単位
 
 1. 調査対象 file の現在の SHA256 を調査時点の hash として取得する。
-2. `build_realization_refactor_fork_file_review_and_fix_parameter` に調査対象 path だけを渡し、所見調査、realization file の修正、および検証を 1 回の agent call で行う。
-3. agent call が正常終了した後、機械的検証に合格した Structured Output と、その agent call による realization file の差分から処理結果を決定する。
-    - 実際の変更 path 集合は、agent call の開始時点を基準として出力時点に残る realization file の net 差分を、schema の `changed_paths` と同じ path 表現へ正規化した集合とする。
-    - 申告された変更 path 集合は、全所見の `changed_paths` の和集合とする。同じ path を複数の所見が申告してよいが、`evidences[].path` はこの集合に含めない。
-    - Structured Output は、申告された変更 path 集合と実際の変更 path 集合が一致する場合だけ受理する。
-    - cmoc は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「機械的検証と正式な結果」に従って同事後条件を検証する。
-    - 以下で実際の変更 path 集合という場合は、同事後条件の検証で算出した集合を指す。
-    - `findings` が空の場合は、所見なしとする。
-    - 次の条件をすべて満たす場合は、処理結果を所見なしへ正規化する。
-        - `findings` が 1 件以上ある。
-        - 全所見の `resolution.status` が `fixed` である。
-        - 実際の変更 path 集合が空である。
-    - それ以外の場合は、返された所見を処理結果の所見とする。
+2. `build_realization_refactor_fork_file_review_and_fix_parameter` の作業入力には調査対象 path だけを渡し、所見調査、realization file の修正、および検証を 1 回の agent call で行う。
+3. agent call が正常終了した後、本節の「Structured Output の受理と正規化」に従って、機械的検証に合格した Structured Output と、その agent call による realization file の差分から処理結果を決定する。
 4. 調査時点の hash、日時、および正規化後の所見有無を対象 entry に保存する。
     - 所見なし: `last_investigation_result=no_findings`, `investigation_required=false`
     - 所見あり: `last_investigation_result=findings`, `investigation_required=true`
-    - `resolution.status=unresolved` の所見が 1 件以上ある場合も所見ありとして扱い、`investigation_required=true` を維持する。
 5. agent call が変更した全 realization file を `investigation_required=true` にする。
 6. 追加、rename、削除後の entry 集合を同じ処理単位で同期する。
-7. realization file の差分、refactor state の更新、および cmoc が生成した `INDEX.md` を同じ処理単位の commit として確定する。
+7. realization file の差分と refactor state の更新を同じ処理単位の commit として確定する。
 8. 正規化後の処理結果に `resolution.status=unresolved` の所見が 1 件以上ある場合は、処理単位の確定後に対象 path を current fork の unresolved target 集合へ追加する。
 9. unresolved target 集合を除いた調査対象が残っていれば、次の対象を選ぶ。
 
-- 処理単位の commit 受理条件として、cmoc は想定外 path の変更と変更禁止対象への書き込みを、`changed_paths` の照合とは別に検査する。
-- 差分検証の共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」を正本とする。
-- agent call には commit 差分、変更 commit の列、または変更要約を注入してはいけない。
-- `resolution.status=fixed` は agent の自己申告である。その申告だけで、修正の意味的な正しさが証明されたと扱ってはいけない。
-- 所見なしへの正規化は cmoc の処理判定だけに適用する。agent が返した元の Structured Output と Codex call log は破棄または改変せず、調査可能な実行記録として保持する。
-- 所見なしへ正規化した所見を current fork の unresolved target 集合へ追加してはいけない。synthetic `unresolved` への変換や、人間による判断、手動修正、手動承認を要求する workflow の追加も行わない。
-- 所見なしへの正規化を理由に run を error state にしてはいけない。処理単位を確定し、残りの target の処理を継続する。
-- 所見なしへの正規化は、`changed_paths` の照合、想定外 path と変更禁止対象の検査、または処理単位の commit・rollback 失敗に対する検査を緩和しない。
-- unresolved を含むことだけを理由に、処理単位を rollback したり refactor loop を停止したりしてはいけない。
-- unresolved を含む処理単位でも、realization file の差分、refactor state、および `INDEX.md` を整合した単位として確定する。
+#### Structured Output の受理と正規化
+
+cmoc は、申告された変更 path 集合と実際の変更 path 集合が一致する場合だけ Structured Output を受理する。両集合は次のように定め、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「機械的検証と正式な結果」に従って照合する。
+
+| 集合 | 定義 |
+|---|---|
+| 実際の変更 path 集合 | agent call の開始時点を基準として出力時点に残る realization file の net 差分を、schema の `changed_paths` と同じ path 表現へ正規化した集合。 |
+| 申告された変更 path 集合 | 全所見の `changed_paths` の和集合。同じ path を複数の所見が申告してよいが、`evidences[].path` は含めない。 |
+
+受理した Structured Output から、次の条件で処理結果を決定する。
+
+| 条件 | 処理結果 |
+|---|---|
+| `findings` が空である。 | 所見なしとする。 |
+| `findings` が 1 件以上あり、全所見の `resolution.status` が `fixed` で、実際の変更 path 集合が空である。 | 所見なしへ正規化する。 |
+| それ以外。 | 返された所見を処理結果の所見とする。 |
+
+`resolution.status=fixed` は agent の自己申告であり、その申告だけで修正の意味的な正しさが証明されたと扱ってはいけない。所見なしへの正規化は cmoc の処理判定だけに適用し、agent が返した元の Structured Output と Codex call log は、破棄または改変せず調査可能な実行記録として保持する。
+
+所見なしへ正規化した処理単位にも、agent が空の `findings` を返した場合と同じ処理と完了判定を適用する。synthetic `unresolved` への変換や、人間による判断、手動修正、手動承認を要求する workflow の追加は行わない。
+
+#### 処理単位の境界
+
+処理単位の commit 受理条件として、cmoc は想定外 path の変更と変更禁止対象への書き込みを、`changed_paths` の照合とは別に検査する。差分検証の共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」を正本とする。
+
+所見なしへの正規化によって、`changed_paths` の照合、想定外 path と変更禁止対象の検査、または処理単位の commit・rollback 失敗に対する検査を緩和しない。また、unresolved を含むことだけを理由に、処理単位を rollback したり refactor loop を停止したりしてはいけない。
+
+agent call には commit 差分、変更 commit の列、または変更要約を注入してはいけない。
 
 ## 完了
 
-- path が current fork の unresolved target 集合に含まれない `investigation_required=true` の entry がなくなった時点で、refactor loop を完了する。
-- unresolved target 集合が空の場合は `natural_completion` とする。このとき、全 entry が `investigation_required=false` でなければならない。
-- unresolved target 集合が 1 件以上ある場合は `completed_with_unresolved` とする。このとき、`investigation_required=true` の entry の path 集合は current fork の unresolved target 集合と一致しなければならない。
-- `natural_completion` と `completed_with_unresolved` では、`run.state` を `joinable` にする。
-- `completed_with_unresolved` は正常系とする。Python 例外、エラー用 call stack、または `run.state=error` を使用してはいけない。
-- state object は空にせず、各 file の調査履歴を保持する。
-- 所見なしへ正規化した処理単位は、agent が空の `findings` を返した処理単位と同じく、所見なしとして完了条件を判定する。
-- `natural_completion` は、全 oracle file と realization file に調査要求が残っていないことを表す。
-- `completed_with_unresolved` は、current fork で調査可能な target をすべて処理し、未解決の調査要求だけを次回 fork へ残したことを表す。
-- いずれの完了も、ファイル単位調査で全問題を発見できること、LLM の回答品質、または agent の申告や作業内容の意味的な正しさを保証しない。
+path が current fork の unresolved target 集合に含まれない `investigation_required=true` の entry がなくなった時点で、refactor loop を完了する。完了理由は次の条件で決定する。
+
+| 完了理由 | 条件と残る調査要求 |
+|---|---|
+| `natural_completion` | unresolved target 集合が空であり、全 oracle file と realization file の entry が `investigation_required=false` である。 |
+| `completed_with_unresolved` | unresolved target 集合が 1 件以上あり、`investigation_required=true` の entry の path 集合がその集合と一致する。 |
+
+どちらも正常系として `run.state` を `joinable` にし、各 file の調査履歴を state object に保持する。`completed_with_unresolved` を Python 例外、エラー用 call stack、または `run.state=error` で扱ってはならない。
+
+いずれの完了も、ファイル単位調査で全問題を発見できること、LLM の回答品質、または agent の申告や作業内容の意味的な正しさを保証しない。
 
 ## ユーザー中断
 
-- この fork は中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする。
+- この fork は中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」を正本とする。
 - `Ctrl+C` は agent call 中を含む任意のタイミングで受け付ける。
 - 実行中の処理単位を commit まで完了するか、その処理単位全体を rollback する。realization file と refactor state の片方だけを確定してはいけない。
 - 中断後は `run.state` を `joinable` にする。
@@ -156,31 +152,41 @@ realization refactor の成果物と feedback の境界は、`{{cmoc-root}}/orac
 
 ## fork report、終了 log、および終了コード
 
-- すべての終了経路で report を保存する。対象の終了結果は、`natural_completion`、`completed_with_unresolved`、`user_interruption`、および `error` とする。
-    - 共通 fork 事前条件違反など、run branch、run worktree、refactor state、または通常の report 生成処理より前に確定したエラーも対象とする。
-- 共通 run 項目に加え、refactor state のフル path と `completion_reason` を含める。
-- `completion_reason` は `natural_completion | completed_with_unresolved | user_interruption | error` とする。
-- 本文には以下を含める。
-    - unresolved target の件数と path。
-    - `resolution.status=unresolved` の所見ごとの title、`resolution.summary` による未解決理由、および対応する Codex call log または Structured Output のフル path。
-    - current fork で処理した target の件数。1 回以上処理単位を確定した target path を重複なく数える。
-    - 未調査 target の件数。`investigation_required=true` であり、current fork の unresolved target 集合に含まれない entry を数える。
-    - 正規化後の処理結果に基づく処理単位ごとの所見数。所見なしへ正規化した処理単位は 0 件とする。
-    - entry 総数、調査要求あり件数、および各 `last_investigation_result` の件数。
-    - run branch 上の変更内容の要約。
-- `completed_with_unresolved` の report では、未調査 target の件数を 0 とする。調査要求あり件数は unresolved target の件数と一致しなければならない。
-- `natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は同関数へ委譲する。
-- Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
-- 要約対象は、`{{cmoc-run-worktree}}` の repository における `{{cmoc-run-fork-commit}}` から、要約対象を確定した時点の run branch HEAD までの tree 差分全体とする。
-- cmoc は両端を commit ID に確定して要約 agent に渡す。後続の preflight や追加 commit を含め、確定後に比較範囲を動かさない。
-- 要約 agent は、既存の cwd と `{{work-root}}` を用い、指定範囲の差分を Git から取得して人間向けに要約する。この比較入力は、ファイル単位の所見調査・修正 call には追加しない。
-- 指定範囲の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。
-- ユーザー中断後またはエラー後は新しい agent call を行わず、確定済みの変更 path と所見情報から要約する。
-- `{{repo-root}}/.cmoc/gu/report/realization/refactor/fork/{{time-stamp}}.md` に保存し、この report を primary report とする。
-- report 生成時点で確定していない項目は `null` または未実行とする。エラーになった処理段階、確定済みの部分作業、エラー、および関連ログは記録する。
-- サブコマンド終了イベントには `completion_reason`、unresolved target の件数、および report のフル path を含める。
-- `natural_completion`、`completed_with_unresolved`、および `user_interruption` は正常系の終了コードとし、`error` は非 0 とする。
-- report、terminal result、およびサブコマンド終了イベントの `completion_reason` から、完全な自然完了、unresolved 付き完了、ユーザー中断、およびエラーを判別可能にする。
+### 保存と掲載内容
+
+実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+
+すべての終了経路で report を保存する。共通 fork 事前条件違反など、run branch、run worktree、refactor state、または通常の report 生成処理より前に確定したエラーも対象とする。
+
+report は `{{repo-root}}/.cmoc/gu/report/realization/refactor/fork/{{execution-id}}.md` に保存し、primary report とする。共通 run 項目に加え、refactor state のフル path と `completion_reason` を含める。`completion_reason` は `natural_completion | completed_with_unresolved | user_interruption | error` とする。
+
+本文には次の内容を含める。
+
+- unresolved target の件数と path。
+- `resolution.status=unresolved` の所見ごとの title、`resolution.summary` による未解決理由、および対応する Codex call log または Structured Output のフル path。
+- current fork で処理した target の件数。1 回以上処理単位を確定した target path を重複なく数える。
+- 未調査 target の件数。`investigation_required=true` であり、current fork の unresolved target 集合に含まれない entry を数える。
+- 正規化後の処理結果に基づく処理単位ごとの所見数。所見なしへ正規化した処理単位は 0 件とする。
+- entry 総数、調査要求あり件数、および各 `last_investigation_result` の件数。
+- run branch 上の変更内容の要約。
+
+report 生成時点で確定していない項目は `null` または未実行とする。エラーになった処理段階、確定済みの部分作業、エラー、および関連ログは記録する。
+
+### 変更要約
+
+`natural_completion` と `completed_with_unresolved` の変更要約は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py` の `build_realization_refactor_fork_change_summary_parameter` で生成する。正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は同関数へ委譲する。
+
+要約対象は、`{{cmoc-run-worktree}}` の repository における `{{cmoc-run-fork-commit}}` から、要約対象を確定した時点の run branch HEAD までの tree 差分全体とする。cmoc は両端を commit ID に確定して要約 agent に渡し、後続の追加 commit によって、確定後に比較範囲を動かさない。
+
+Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。要約 agent は、既存の cwd と `{{work-root}}` を用い、指定範囲の差分を Git から取得して人間向けに要約する。この比較入力は、ファイル単位の所見調査・修正 call には追加しない。
+
+指定範囲の tree 差分が空の場合は要約用 agent call を行わず、変更なしと記録する。ユーザー中断後またはエラー後も新しい agent call は行わず、確定済みの変更 path と所見情報から要約する。
+
+### 終了 log と終了コード
+
+サブコマンド終了イベントには `completion_reason`、unresolved target の件数、および report のフル path を含める。report、terminal result、およびサブコマンド終了イベントの `completion_reason` から、完全な自然完了、unresolved 付き完了、ユーザー中断、およびエラーを判別可能にする。
+
+`natural_completion`、`completed_with_unresolved`、および `user_interruption` は正常系の終了コードとし、`error` は非 0 とする。
 
 ## join 後 hook
 

@@ -1,6 +1,6 @@
 # `cmoc feedback report`
 
-`cmoc feedback report` は、同一 invocation 内で feedback remediation run を作成する。安全な realization file の修正を issue 単位で commit した後、session branch へ自動 join する。正常 publication には、join 後も `human_required` である issue だけを掲載する。
+`cmoc feedback report` は、同一 invocation 内で feedback remediation run を作成する。安全な realization file の修正を issue 単位で commit した後、session branch へ自動 join する。正常 publication で公開する issue 一覧には、join 後も `human_required` である issue だけを掲載する。
 
 関連する仕様の正本を次に示す。
 
@@ -12,27 +12,25 @@
 
 - 位置引数を受け取らない。
 - サブコマンド固有 option を受け取らない。
-- 公開 CLI は `cmoc feedback report` のままとする。
 - 正常経路では、利用者に別の fork、join、または remediation 操作を要求しない。
-- doctor preprocess と必要な indexing preflight が作成する commit 以外に、session branch 上の既存差分を自動 commit してはならない。
-- git 未コミット差分を自動 stash、commit、revert、または破棄してはならない。
+- session branch 上の既存の git 未コミット差分を、自動 stash、commit、revert、または破棄してはならない。ただし、doctor preprocess がその仕様に従って作成する commit は許容する。
 
 ## 事前条件と run の開始または再開
 
 共通の開始処理は、次の順序で行う。
 
 1. doctor preprocess を実行する。
-2. main worktree で必要な indexing preflight を完了する。
-3. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を確認する。
-4. session worktree と staging area が clean であることを確認する。
-5. repository-level feedback writer 排他を取得する。
-6. current pointer、pending recovery、および既存 feedback state の schema、path、hash、branch reference の整合性を検証する。
-7. 自動 join 済み feedback run の publication または publication 後 cleanup を再開できる場合は、後述する recovery を先に完了する。
-8. recovery 対象がない場合は、session state の `run.state` が `ready` であることを確認する。
-9. `run.kind=feedback_report` として `{{cmoc-run-branch}}` と `{{cmoc-run-worktree}}` を作成し、`run.state=running` とする。
-10. collector の最初の high-watermark を確定し、最初の intake wave を固定する。
+2. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を確認する。
+3. session worktree と staging area が clean であることを確認する。
+4. repository-level feedback writer 排他を取得する。
+5. current pointer、pending recovery、および既存 feedback state の schema、path、hash、branch reference の整合性を検証する。
 
-clean 検査は、doctor preprocess と indexing preflight の完了後に行う。新しい run を開始する場合は、`run.state=ready` を必須とする。後述する join 後 recovery は新しい run を開始しないため、この事前条件の例外とする。
+その後は、既存 run の状態に応じて分岐する。自動 join 済み feedback run の publication または publication 後 cleanup を再開できる場合は、本書の「join 後の publication failure」に従って recovery を完了する。この経路では、新しい run を開始しない。
+
+recovery 対象がない場合は、session state の `run.state` が `ready` であることを確認し、次の順序で新しい run を開始する。
+
+1. `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「共通開始処理」に従い、`run.kind=feedback_report` の編集 run を開始する。`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback run」に従って feedback run ID を発行し、その編集 run と対応付ける。
+2. collector の最初の high-watermark を確定し、最初の intake wave を固定する。
 
 recovery 対象ではない active run が残っている場合、または事前条件に違反した場合は、新しい run を作らない。既存の worktree、staging area、raw observation、および current pointer を変更しない。
 
@@ -40,12 +38,9 @@ run の branch、commit、および worktree の定義は、`{{cmoc-root}}/oracl
 
 ## feedback remediation run
 
-feedback remediation run は、1 回の `cmoc feedback report` invocation に対応する self-joining 編集 run とする。正常な wave loop の完了後は、同 invocation 内で run branch を session branch へ自動 join する。
-
 run branch 上の想定内差分を次に示す。
 
 - issue remediation agent が変更した realization file
-- cmoc が変更した、realization file の変更に必要な tracked `INDEX.md`
 - cmoc が同期した tracked refactor state
 - workload 固有仕様が issue 処理単位で必要とするその他の tracked な機械生成物
 
@@ -53,13 +48,23 @@ repository-local feedback state、subcommand log、および Codex call log は 
 
 正常完了時の自動 join、ユーザー中断またはエラー後の `cmoc run join` と `cmoc run abandon`、想定内差分、および recovery の共通境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
 
+## issue 処理 call の observation 報告
+
+normalization と issue remediation では、調査対象の再報告が追加 evidence として同じ issue の再確認を誘発する経路を止めるため、feedback reporter の提供を無効にする。対象は、本書の「agent observation と normalization」「issue remediation agent call」で委譲する `build_feedback_*_issue_parameter` 系とし、現在は `build_feedback_normalize_issue_parameter` と `build_feedback_remediate_issue_parameter` の 2 種類である。判定根拠の変化に伴う再確認 call も対象に含む。
+
+対象 call では、同じ issue の再報告と、作業中に見つかった別の問題の追加報告をともに行えなくてよい。MCP の非提供と報告規定の非注入、および同じ論理 call の補正・retry・再開での維持は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。これは feedback report invocation 全体の無効化ではなく、別の call kind である回復確認 probe、join の競合解消、および他の workload の報告契約を変更しない。
+
+入力 observation の同一性判断と、入力 issue の確認・修正・検証および `human_required` を含む結果は、既存の Structured Output で返す。追加報告ができないことを結果分類の理由にしてはならない。別 issue の追加報告用 field、代替 tool、または log からの自動 issue 化など、非提供を補う収集経路は設けない。
+
+他の作業から受理された observation の取り込みと、実際の判定根拠の変化に伴う再確認は、本書の「intake wave loop」に従って継続する。
+
 ## intake の validation と normalization
 
 ### validation
 
 各 raw observation の schema、path、および canonical hash は、対応する intake wave と一致しなければならない。同じ observation ID で hash が異なる場合は corruption とする。
 
-schema version 1 の pending observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「reporter input v1 の互換処理」に従って扱う。raw record を移行のために書き換えてはならない。
+schema version 1 の pending observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「reporter input v1 の互換処理」に従って扱う。
 
 1 件でも validation を通過できない input がある場合は、正常 publication を行わない。invalid input を処理済みとして削除せず、path と理由を invocation report と subcommand log に示す。
 
@@ -79,14 +84,20 @@ normalization agent は、入力した observation が既存 candidate と同じ
 
 正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py` の `build_feedback_normalize_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
-normalization agent へ渡す情報を次に限定する。
+cmoc が normalization agent に渡す比較用の入力は、次の 2 つとする。
 
 - 検証済みの構造化 observation
 - 機械的に絞り込んだ既存 issue candidate
 
-normalization agent は、summary、impact、原因、現在性、actionability、remediation result、human action、または relation を生成しない。候補外の issue を探索しない。
+入力だけでは同一性の判断に必要な情報が得られない場合、normalization agent は処理経路や原因を含む関連情報を、`{{work-root}}` 内の oracle file、realization file などから読み取り専用で参照してよい。参照先の選択には、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「検索と routing」を適用する。候補外の issue は探索しない。
+
+normalization agent は独立した原因診断や、summary、impact、現在性、actionability、remediation result、human action、relation の生成は行わない。問題の現在状態の確認と修正は、本書の「issue remediation agent call」で定める call が担う。
+
+同一性の判断では、観測当時の evidence と現在のファイル状態を区別する。ファイルの変化や問題の解消だけを理由に、別 issue と判断してはならない。
 
 既存 issue を選ぶ output の issue ID は、入力候補の issue ID と一致しなければならない。schema と宣言済みの決定論的事後条件に適合する output を受理できなければ、invocation error とする。
+
+判定の記録は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「checkpoint」に従う。
 
 ## 1 issue identity の処理単位
 
@@ -96,9 +107,8 @@ normalization agent は、summary、impact、原因、現在性、actionability�
 
 - remediation call は feedback 固有の安定した `agent_call_kind` を使用する。
 - issue ID は runtime input とし、`agent_call_kind` に含めない。
-- Structured Output correction、retry、および quota 待機後の resume は、同じ論理 agent call として数える。
+- Structured Output correction、retry、および quota または一時障害の回復待ち後の再開は、同じ論理 agent call として数える。回復確認 probe は issue remediation call に数えない。
 - issue remediation call は、同じ run branch の最新状態を順に参照できるよう逐次実行する。
-- write 権限を持つ issue remediation call を並列実行しない。
 
 各 wave 内の issue identity は、安定した issue ID 順で処理する。
 
@@ -112,25 +122,24 @@ issue remediation agent call は、1 issue について次の処理を同じ cal
 
 再確認 call には、現在の入力に加えて、先行判定とその判定根拠、再確認を必要とした変化、および関連する再確認履歴を渡す。
 
-収束不能を示す `inconclusive` は、その診断根拠が変わらない同じ状態の往復だけで再試行し続けてはならない。
+収束不能を理由に `inconclusive` と判定した issue について、cmoc は、その診断根拠が変わらないまま同じ状態を往復する再試行を続けてはならない。
 
 正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.py` の `build_feedback_remediate_issue_parameter` へ委譲する。Structured Output schema は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
 call の境界を次に示す。
 
-- `FileAccessMode.REALIZATION_WRITE` を使用する。
 - cwd は `{{cmoc-run-worktree}}` とする。
 - oracle file は読めるが変更できない。
-- realization file だけを agent の変更対象とする。
+- agent が変更する作業成果物は realization file だけとする。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
 - agent に feedback state file、Git index、branch、commit、または worktree lifecycle を操作させない。
-- agent に `git add` または `git commit` を実行させない。
 - candidate 外の issue を remediation 対象として探索させない。
 
-issue remediation call の既定は OpenAI の GPT-5.6 Luna、Reasoning Effort Max とする。provider、model、および reasoning effort の正確な設定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` が所有する。設定値を prompt 文面へ注入してはならない。
+issue remediation call の provider、model、および reasoning effort の既定値を含む正確な設定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` へ委譲する。設定値を prompt 文面へ注入してはならない。
 
 ### Structured Output と結果分類
 
-agent は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」が定める issue remediation result を 1 つ返す。`human_required` は、realization file の編集だけでは満たせない対応を具体的な evidence で確認できた場合だけ使用する。処理の失敗は result に変換せず、invocation error とする。
+agent は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」に従って issue remediation result を 1 つ返す。
 
 `inconclusive` があっても、残りの issue は可能な限り処理する。
 
@@ -164,7 +173,7 @@ agent が返した `fixed` の自己申告だけを、意味的な正しさの�
 受理済み結果ごとに、cmoc は次の処理を 1 つの整合した issue 単位として行う。
 
 1. agent の realization 差分と verification result を検査する。
-2. 必要な `INDEX.md`、refactor state、および tracked processing state を機械的に同期する。
+2. 必要な refactor state と tracked processing state を機械的に同期する。
 3. 想定内差分と変更禁止対象を再検査し、run branch の 1 commit として確定する。
 4. commit ID と正式な result を feedback checkpoint に durable 保存する。
 
@@ -178,12 +187,12 @@ commit が成功する前に `fixed` として publication、active state から
 
 ## intake wave loop
 
-単一の可変 report cut は作らない。intake wave と high-watermark の state 契約は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「intake wave と high-watermark」を正本とする。
+intake wave と high-watermark の state 契約は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「intake wave と high-watermark」、report cut の封印条件は同文書の「report cut」を正本とする。
 
 各 wave の終了時は、次の順序で停止判定を行う。
 
 1. wave に含まれる全 issue identity を終端結果まで処理する。
-2. wave の remediation agent call に対応する reporter context を close し、受付済み submission を drain する。
+2. wave の remediation agent call について、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「call の終了」に従い、作成済み reporter context の受付停止と受付済み submission の保存完了を確定する。
 3. collector が durable に受理済みの observation に対する high-watermark を atomic に確定する。
 4. 前回境界より後、今回の high-watermark 以前にある observation を validation、normalization、および deduplication する。
 5. 後続の修正、機械的同期、および追加 evidence による判定根拠の変化を、全結果分類について確認する。
@@ -196,27 +205,41 @@ commit が成功する前に `fixed` として publication、active state から
 - 判定根拠に影響しない occurrence 集計の更新
 - 判定根拠が変わっていない処理済み issue への理由のない再試行
 
-最終 high-watermark より後に受理された observation は、次回の `cmoc feedback report` に pending として残す。quiet period、directory の列挙タイミング、または一定時間 observation がなかったことを停止条件にしてはならない。
+quiet period、directory の列挙タイミング、または一定時間 observation がなかったことを停止条件にしてはならない。
 
 新しい異なる issue が継続的に発生する限り自然完了しない。issue 数、wave 数、または実行時間による任意の上限を設けない。ユーザー中断と続行不能な失敗だけを別の停止経路とする。
 
 ## 自動 join と join 後の確定
 
-wave loop が自然完了した場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って封印し、`run.state=joinable` とする。その後、同じ invocation 内で `cmoc run join` と同じ差分検査および merge 契約を使用して自動 join する。
+wave loop が自然完了した場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って report cut を封印し、`run.state=joinable` とする。その後、同じ invocation 内で `cmoc run join` と同じ差分検査および merge 契約を使用して自動 join する。
 
 自動 join 前に、`fixed` としての publication または observation cleanup を行ってはならない。
 
-merge または no-op join と post-join の後、issue commit の到達可能性、変更 path、必要な機械生成物、および採用する全結果の判定根拠を join 後の session 状態に対して検証する。検証済みの内容の取り込みと、採用結果の有効性および publication の整合性を確認できなければ、join 後検査失敗とする。この段階で issue の再確認・再修正は開始しない。publication と workload 固有 cleanup が完了するまで `run.state=joinable` と隔離資源を維持する。
+### 封印後のマージ調整
 
-merge conflict、差分不整合、または join 後検査失敗では正常 publication を行わない。run を `error` とし、run branch、run worktree、issue commit、raw observation、直前の current pointer、および診断情報を保持する。
+競合解消には、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「join の競合解消」を適用する。競合の発生そのものを publication failure にしてはならない。
+
+競合解消 agent は、封印済みの採用結果を維持するために、session worktree の merge 結果を調整してよい。内容が run branch と異なっても、両側の変更意図と採用結果を維持できる調整を認める。影響を受ける判定を全結果分類から特定し、merge commit 前に必要な検証を行う。issue 処理をやり直すための新しい wave や、別の remediation・レビュー call は開始しない。
+
+cmoc は、merge 対象 commit の参照に加えて、封印済み report cut の path を agent へ渡す。agent は、そこから採用結果、対応する checkpoint、および判定根拠を読み取り専用で参照し、調整と検証の結果を報告する。封印済み artifact や run branch の issue commit は書き換えない。正確な入力と指示文は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_parameter` へ委譲する。
+
+結果分類そのものの変更が必要な場合、または必要な検証で封印済み結果の維持を確認できない場合は、merge commit を作成せず publication を停止する。この停止を新しい issue result、`human_required`、または `incomplete` へ変換しない。merge 開始前への復旧は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「競合解消」に従う。
+
+本節の調整は、本書の「net 差分と機械的受理条件」「issue 単位の commit と rollback」が定める元の issue 処理の受理条件を変更しない。issue の `changed_paths` と issue commit は元の処理単位の記録として保持し、マージ調整に伴う付随編集の記録と区別する。
+
+### join 後の検証と記録
+
+merge または no-op join と post-join の後、issue commit の到達可能性、マージ調整を含む変更 path、必要な機械生成物、および採用する全結果の判定根拠を join 後の session 状態に対して検証する。merge commit 前の検証記録が最終状態に適用できることも確認する。検証済みの修正の効果と採用結果の有効性、および publication の整合性を確認できなければ、join 後検査失敗とする。この段階では新しい Codex call や修正を開始しない。
+
+封印済み artifact の hash 整合性は、その artifact が変わっていないことの検査である。マージ後のファイル内容が run branch と同一であることや、採用結果の意味的な妥当性の証明として扱ってはならない。調整と検証の記録は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「publication completion record」に従って最終取り込み結果と結び付ける。
+
+publication と workload 固有 cleanup が完了するまで `run.state=joinable` と隔離資源を維持する。未解消競合、差分不整合、結果分類変更の必要、または join 後検査失敗では `run.state=error` とし、正常 publication と observation cleanup を行わない。run branch、run worktree、issue commit、raw observation、直前の current pointer、封印済み artifact、および診断情報を保持する。取り込み確定後の停止は本書の「join 後の publication failure」に従う。
 
 ## publication
 
 ### 正常 publication
 
 全 issue の採用する有効な結果が `fixed | already_resolved | not_actionable | human_required` のいずれかであり、自動 join と join 後検査が成功した場合だけ正常 publication を行う。
-
-新しい active generation と正常 Markdown report の issue 一覧には、`human_required` だけを含める。
 
 正常 result は、次の 2 種類とする。
 
@@ -231,22 +254,24 @@ issue commit ID、変更 path、agent verification、および cmoc の機械検
 
 採用する有効な結果に `inconclusive` が 1 件以上ある場合も、残りの issue の処理と必要な再確認を経て wave loop を自然完了し、安全な issue commit を自動 join する。自動 join と join 後検査が成功した後に、正常 publication の代わりとして `incomplete` 診断 report を durable 保存する。
 
-`incomplete` では、新しい active generation を作らず、current pointer と raw observation を維持する。`inconclusive` を `human_required` へ変換しない。
-
 validation 失敗、agent call failure、Structured Output 受理失敗、差分検査失敗、commit 失敗、state corruption、merge 失敗、または durable report 保存失敗を `incomplete` として扱ってはならない。
 
 ### join 後の publication failure
 
-自動 join 後の publication または cleanup に失敗した場合は、`run.state=error` とする。merge と publication point を巻き戻さず、raw observation、current pointer、および recovery に必要な run artifact を保持する。
+自動 join 後の検証、publication、または cleanup に失敗した場合は、`run.state=error` とする。merge と publication point を巻き戻さず、raw observation、current pointer、および recovery に必要な run artifact を保持する。
 
 次回の `cmoc feedback report` は、次の条件を両方満たす場合だけ、その publication または cleanup を idempotent に再開する。
 
 - state と immutable artifact から、同じ run の join 成功と未完了処理を一意に特定できる。
-- join 後 tree を再検証できる。
+- join 後 tree を再検証でき、保存済みの判定根拠とマージ調整の検証記録から、封印済み結果をそのまま採用できる。
 
 新しい wave または Codex call は開始しない。安全に再開できない場合は、`run.state=error` と資源を維持する。
 
-封印済みの結果の更新や新たな修正を必要とする停止 run は、この recovery の対象外とする。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
+再開したサブコマンドには、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う新しい実行 ID を付与する。feedback run の識別情報と、引き継ぐ正常 report と `incomplete` 診断 report の target は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback run」「report cut」に従う。
+
+再開した実行のサブコマンドログには、その実行 ID、report 保存先を固定した実行 ID、feedback run と report cut の識別情報、および引き継ぐ report の path と保存状況を対応付けて記録する。対応付けには、report cut に封印した実行 ID と参照を使用する。
+
+封印済みの結果分類の変更、新たな意味判断のための agent call、または追加修正を必要とする停止 run は、この recovery の対象外とする。merge commit 前に許されたマージ調整を、join 後にも継続できるとは扱わない。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
 
 ## ユーザー中断
 
@@ -263,9 +288,9 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 中断後は、`cmoc run join` で確定済み issue commit を session branch へ取り込むか、`cmoc run abandon` で run を破棄する。どちらの場合も feedback publication は行わず、次の `cmoc feedback report` が現在の session tree と pending observation を再確認する。
 
-自動 join の開始後から cleanup までは、処理を途中で中断しないため、workload 固有の不可分な finalization とする。この区間には、次の処理を含む。
+自動 join の開始後から cleanup までは、workload 固有の不可分な finalization とし、処理を途中で中断しない。この区間には、次の処理を含む。
 
-1. merge または no-op join
+1. 競合解消と必要な検証を含む merge または no-op join
 2. join 後 tree 検査
 3. publication
 4. cleanup
@@ -280,18 +305,30 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 agent call failure、tool 失敗、validation 失敗、差分検査失敗、commit 失敗、および orchestration 失敗を feedback issue または `human_required` に変換してはならない。
 
-quota 枯渇、retry、Structured Output correction、および resume の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `codex exec` 呼び出し規約を正本とする。
+quota と一時障害の分類・回復待ち・再開は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」に従う。Structured Output の補正と受理条件は、同文書の「Structured Output」に従う。これらの処理でも続行できない場合に、本節の終了処理へ移る。
 
 ## report の保存と表示
 
+実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。
+
 primary report の実行記録には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「共通掲載内容」を適用し、以下の issue 一覧とは区別する。
+
+自動 join の競合解消については、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める判断、付随編集、検証、および未解消理由を実行記録に含める。封印済み結果への影響と検証結果、publication completion record との対応、または publication を停止した理由も判別可能にする。自動修正済み issue を人間向け issue 一覧に再掲載するためには用いない。
+
+### 再開時の report と実行記録
+
+publication または cleanup の再開で引き継ぐ正常 report と `incomplete` 診断 report の実行情報は、report cut で保存先を固定した実行に帰属させる。再開した実行の ID に付け替えず、掲載する個々の呼び出しや observation も実際に属する実行に対応付ける。
+
+report の保存段階では、未保存なら固定済み target へ保存し、保存済みなら path と hash を検証して再利用する。recovery を正常に完了した場合は、その report を primary report とし、保存済み report の再利用も primary report の保存要件を満たすものとして扱う。
+
+再開した実行の作業内容、終端結果、および共通掲載対象の本文を含む実行記録は、再開した実行のサブコマンドログへ残す。引き継ぐ report にその実行記録を追記してはならない。再開した実行が `error` で終わる場合は、本書の「中断・エラー時の invocation report」に従って今回の primary report を保存し、今回の実行 ID と共通掲載内容を載せる。
 
 ### 正常 report
 
-正常 report は Markdown と YAML Front Matter で構成し、次へ保存する。
+正常 report は Markdown と YAML Front Matter で構成する。`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って固定する保存先は次のとおりとする。
 
 ```text
-{{repo-root}}/.cmoc/gu/report/feedback/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/report/feedback/{{execution-id}}.md
 ```
 
 保存した正常 report を primary report とする。front matter には、少なくとも次の情報を含める。
@@ -314,7 +351,7 @@ issue 一覧には、`human_required` だけを安定した issue ID 順で表�
 - 観測期間
 - bounded representative evidence
 
-current evidence は、削除予定の wave または checkpoint だけを指す link にしない。人間が report から確認できる path、subject、probe、location、fingerprint、または finding を materialize する。
+current evidence には、人間が report から確認できる path、subject、probe、location、fingerprint、または finding を記載する。削除予定の wave または checkpoint への link だけで済ませてはならない。
 
 ### `incomplete` 診断 report
 
@@ -334,7 +371,7 @@ front matter には、run と report cut の情報、各終端結果の件数、
 `user_interruption` と `error` では、今回の invocation report を primary report として次へ保存する。
 
 ```text
-{{repo-root}}/.cmoc/gu/report/feedback/invocation/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/report/feedback/invocation/{{execution-id}}.md
 ```
 
 front matter と本文から、少なくとも次の情報を判別可能にする。

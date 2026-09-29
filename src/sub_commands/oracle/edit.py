@@ -4,7 +4,6 @@ from pathlib import Path
 
 from acp.builder.oracle.edit.launch_exec import (
     build_oracle_edit_main_launch_exec_parameter,
-    build_oracle_edit_reduction_launch_exec_parameter,
 )
 from cmoc_runtime import (
     CmocError,
@@ -15,15 +14,14 @@ from cmoc_runtime import (
     start_subcommand_step,
     work_root,
 )
-from commons.indexing import enable_indexing_preflight
 from commons.prompt_editor_input import (
     ORIGINAL_PROMPT_PLACEHOLDER,
     collect_prompt_editor_input,
     edit_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
-    finalize_prompt_editor_input,
     reserve_prompt_editor_input,
 )
+from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_git import current_branch
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_state import load_session_part_for_branch
@@ -31,13 +29,12 @@ from commons.runtime_state import load_session_part_for_branch
 
 def cmoc_oracle_edit_impl() -> None:
     """CLI runtime を通して 2 回の oracle edit agent call を実行する。"""
-    enable_indexing_preflight()
     run_cli_subcommand(
         _cmoc_oracle_edit_body,
         pre_log_check=ensure_prompt_editor_roots_ignored,
         command_name="oracle edit",
         command_argv=["cmoc", "oracle", "edit"],
-        total_steps=10,
+        total_steps=9,
     )
 
 
@@ -45,78 +42,60 @@ def _cmoc_oracle_edit_body() -> None:
     """入力された oracle 編集指示から 2 回の Codex exec を起動する。"""
     repository = repo_root()
     current_root = work_root()
-    main_started = False
+    search_scope = oracle_doc_scope()
 
-    # oracle 編集契約を含む完全 prompt の skeleton を初期表示に使う。
+    # oracle 編集契約を含む完全 prompt の skeleton を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-    start_subcommand_step(2, "本命 prompt の skeleton を構築", "build main skeleton")
+    start_subcommand_step(2, "編集 prompt の skeleton を構築", "build edit skeleton")
     complete_prompt_skeleton = build_oracle_edit_main_launch_exec_parameter(
-        ORIGINAL_PROMPT_PLACEHOLDER
+        ORIGINAL_PROMPT_PLACEHOLDER,
+        document_search_scope=search_scope,
     ).prompt
-    # skeleton の構築に成功した後でだけ editor work file を予約する。
-    editor_work_path, input_copy_path = reserve_prompt_editor_input(repository)
+    # skeleton の構築に成功した後でだけ editor input file を予約する。
+    input_path = reserve_prompt_editor_input(repository)
 
     start_subcommand_step(3, "oracle 最終状態の指示を入力", "edit instruction")
     edit_prompt_editor_input(
         repository,
-        editor_work_path,
+        input_path,
         complete_prompt_skeleton,
     )
 
     start_subcommand_step(4, "入力結果を保存・抽出", "save and extract input")
     instruction = collect_prompt_editor_input(
         repository,
-        editor_work_path,
-        input_copy_path,
+        input_path,
     )
 
-    start_subcommand_step(5, "本命起動パラメータを構築", "build main parameter")
-    main_parameter = build_oracle_edit_main_launch_exec_parameter(instruction)
-    finalize_prompt_editor_input(editor_work_path)
-    start_subcommand_step(6, "本命起動前 indexing", "indexing preflight")
-
-    def _validate_and_start_main_step() -> None:
-        """indexing 後に起動前提を検証し、本命 agent call を開始する。"""
-        nonlocal main_started
-        start_subcommand_step(7, "本命起動の事前条件を確認", "validate main launch")
-        _require_oracle_edit_launch_preconditions(repository, current_root)
-        start_subcommand_step(8, "本命 agent call を実行", "run main agent call")
-        main_started = True
-        update_primary_report_fields(main_agent_call_status="started")
-
-    # 本命 parameter の indexing flag により、callback は preflight 後かつ
-    # subprocess 起動直前に呼ばれる。
+    start_subcommand_step(5, "共用する入力と設定を確定", "prepare edit calls")
+    parameter = build_oracle_edit_main_launch_exec_parameter(
+        instruction, document_search_scope=search_scope
+    )
+    # JSON から復元した設定を両回で共用し、自己編集後の定義・設定を再取得しない。
     config = load_config(current_root)
-    try:
-        run_codex_exec(
-            main_parameter,
-            root=repository,
-            config=config,
-            purpose="oracle edit main",
-            before_agent_call=_validate_and_start_main_step,
-        )
-    except BaseException:
-        if main_started:
-            update_primary_report_fields(main_agent_call_status="failed")
-        raise
-    update_primary_report_fields(main_agent_call_status="succeeded")
+    start_subcommand_step(6, "編集起動の事前条件を確認", "validate edit launch")
+    _require_oracle_edit_launch_preconditions(repository, current_root)
 
-    # 本命の正常終了後だけ、独立した新規 exec session で仕様削減を行う。
-    start_subcommand_step(9, "仕様削減 agent call を実行", "run reduction agent call")
-    reduction_parameter = build_oracle_edit_reduction_launch_exec_parameter(instruction)
-    update_primary_report_fields(reduction_agent_call_status="started")
-    try:
-        run_codex_exec(
-            reduction_parameter,
-            root=repository,
-            config=config,
-            purpose="oracle edit reduction",
+    for pass_number, pass_name in enumerate(("first", "second"), start=1):
+        start_subcommand_step(
+            6 + pass_number,
+            f"{pass_number} 回目の編集 agent call を実行",
+            f"run edit agent call {pass_number}",
         )
-    except BaseException:
-        update_primary_report_fields(reduction_agent_call_status="failed")
-        raise
-    update_primary_report_fields(reduction_agent_call_status="succeeded")
-    start_subcommand_step(10, "終了状態を確定", "finalize oracle edit")
+        status_field = f"{pass_name}_agent_call_status"
+        update_primary_report_fields(**{status_field: "started"})
+        try:
+            run_codex_exec(
+                parameter,
+                root=repository,
+                config=config,
+                purpose=f"oracle edit {pass_name}",
+            )
+        except BaseException:
+            update_primary_report_fields(**{status_field: "failed"})
+            raise
+        update_primary_report_fields(**{status_field: "succeeded"})
+    start_subcommand_step(9, "終了状態を確定", "finalize oracle edit")
 
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md

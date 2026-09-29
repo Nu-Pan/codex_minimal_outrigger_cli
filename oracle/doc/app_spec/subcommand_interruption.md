@@ -7,11 +7,12 @@
 
 ## 対象
 
-- 現在の中断可能サブコマンドは以下とする。
-    - `cmoc realization refactor fork`
-    - `cmoc feedback report`
-- 中断可能サブコマンドとして追加できるのは、長時間実行され、かつ処理済みの範囲だけでも一貫した結果として確定できるサブコマンドに限る。
-- この条件を満たすだけでは中断可能サブコマンドとみなさず、個別仕様への明記を必須とする。
+現在の中断可能サブコマンドは、次の 2 つとする。
+
+- `cmoc realization refactor fork`
+- `cmoc feedback report`
+
+追加できるのは、長時間実行され、かつ処理済みの範囲だけでも一貫した結果として確定できるサブコマンドに限る。ただし、この条件を満たすだけでは中断可能サブコマンドとみなさず、個別仕様への明記を必須とする。
 
 ## 中断要求の通知
 
@@ -22,19 +23,27 @@
 
 ## 共通動作
 
-- ユーザー中断要求を受け付けた cmoc は、新しい処理単位の開始を止める。
-- 実行中だった処理単位を完了させるか rollback するかは個別仕様または実装裁量とする。ただし、破損した部分結果や未確定の部分結果を完了済みとして残してはいけない。
-- 確定済みの部分結果を保持したまま、個別仕様が定める state 更新と後処理を行う。
-- 確定済みの部分作業と中断による終端結果を要約した primary report を、個別仕様が定める形式と保存先へ保存する。その後に `user_interruption` の terminal result をサブコマンドログと console へ出力する。共通の保存・出力規則は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` を正本とする。
-- ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。
-- primary report、個別仕様が保存を認める再開 state、および terminal result を含むサブコマンド終了イベントから、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
-- ユーザー中断要求を受け付けた後は、そのサブコマンドのための新しい Codex CLI 呼び出し、retry、quota 回復待ち、および Codex CLI session の再開を行わない。この指示は `codex_exec_rule.md` の待機・再開規則より優先する。
-- primary report の保存を含む完了処理自体に失敗した場合は、ユーザー中断要求による正常系ではなく、個別仕様と error handling 規則に従う。
-- ユーザー中断要求による terminal result の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
+ユーザー中断要求を受け付けた cmoc は、新しい処理単位の開始を止める。実行中だった処理単位を完了させるか rollback するかは個別仕様または実装裁量とする。ただし、破損した部分結果や未確定の部分結果を完了済みとして残してはいけない。
+
+中断要求は、quota または一時障害による待機中と、回復確認 probe の実行中にも受け付ける。受け付けた後は待機を終了し、実行中の probe も終了処理へ移す。そのサブコマンドのための新しい Codex CLI 呼び出し、probe、retry、回復待ち、および Codex CLI session の再開を行わない。probe の成功と競合した場合も、中断要求を優先する。
+
+この優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「回復待ちと再開」に優先する。ただし、本書の「中断要求の通知」が定める不可分な finalization 区間の扱いは維持する。待機中の中断を理由に、個別 workload が要求する処理単位の commit・rollback または確定済み部分結果の保持を省略してはならない。
+
+確定済みの部分結果を保持したまま、次の順序で完了処理を行う。
+
+1. 個別仕様が定める state 更新と後処理を行う。
+2. 確定済みの部分作業と中断による終端結果を要約した primary report を、個別仕様が定める形式と保存先へ保存する。
+3. `user_interruption` の terminal result をサブコマンドログと console へ出力する。
+
+共通の保存・出力規則は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。primary report、個別仕様が保存を認める再開 state、および terminal result を含むサブコマンド終了イベントから、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
+
+ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。ただし、primary report の保存を含む完了処理自体に失敗した場合は、個別仕様と、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従ってエラー処理を行う。
+
+Windows toast による terminal result の通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする。
 
 ## 中断後の扱い
 
 - 中断後の refactor run の state と次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「ユーザー中断」を正本とする。
 - feedback report の issue 処理単位、run state、publication 禁止、observation retention、および次の操作は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「ユーザー中断」を正本とする。
 - 編集 run の中断位置を同じ run で再開する checkpoint を保存してはいけない。
-- feedback report は確定済み成果物を保持して `joinable` とするが、正常 publication と observation cleanup は行わない。利用者は `cmoc run join` または `cmoc run abandon` を選ぶ。
+- Codex CLI の障害からの自動再開は、ユーザー中断後に同じ編集 run の作業を再開する権限を与えない。

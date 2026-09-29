@@ -6,7 +6,7 @@
 - {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
 """
 
-from collections.abc import Iterator
+import json
 from pathlib import Path
 
 import pytest
@@ -16,18 +16,59 @@ from _git_support import make_repo, run_git
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli_module
-import commons.runtime_codex_preflight as codex_preflight_module
+import sub_commands.oracle.edit as oracle_edit_module
+import sub_commands.oracle.investigation as investigation_module
 import sub_commands.tui as tui_module
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from cmoc_runtime import write_config
+from config.cmoc_config import CmocConfig
 from main import app
 
 
-@pytest.fixture(autouse=True)
-def reset_indexing_preflight() -> Iterator[None]:
-    """各テスト間で indexing preflight の有効状態をリセットする。"""
-    codex_preflight_module.disable_indexing_preflight()
-    yield
-    codex_preflight_module.disable_indexing_preflight()
+@pytest.mark.parametrize(
+    "command", [["tui"], ["oracle", "investigation"], ["oracle", "edit"]]
+)
+def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    command: list[str],
+) -> None:
+    """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "code",
+        [
+            "import pathlib, sys",
+            "pathlib.Path(sys.argv[-1]).write_bytes(b'recoverable input\\r\\n')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
+    real_replace = prompt_editor_input_module.os.replace
+
+    def fail_input_save(source, destination):
+        if Path(destination).parent == root / ".cmoc/gu/log/editor_input":
+            raise OSError("input save failed")
+        return real_replace(source, destination)
+
+    def unexpected_agent_call(*_args, **_kwargs):
+        pytest.fail("input save failure must prevent agent calls")
+
+    monkeypatch.setattr(prompt_editor_input_module.os, "replace", fail_input_save)
+    monkeypatch.setattr(tui_module, "run_codex_tui", unexpected_agent_call)
+    monkeypatch.setattr(investigation_module, "run_codex_tui", unexpected_agent_call)
+    monkeypatch.setattr(oracle_edit_module, "run_codex_exec", unexpected_agent_call)
+
+    result = runner.invoke(app, command, catch_exceptions=False)
+
+    assert result.exit_code == 1
+    files = list((root / ".cmoc/gu/log/editor_input").iterdir())
+    assert len(files) == 1
+    assert files[0].name.endswith("_orig.md")
+    assert files[0].read_bytes() == b"recoverable input\r\n"
 
 
 def test_tui_runs_editor_and_launches_codex_directly(
@@ -81,6 +122,8 @@ def test_tui_runs_editor_and_launches_codex_directly(
 
     def record_build_parameter(
         original_prompt: str,
+        *,
+        document_search_scope: DocumentSearchScope,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の builder 呼び出しを記録する。"""
         kind = (
@@ -89,7 +132,9 @@ def test_tui_runs_editor_and_launches_codex_directly(
             else "build-parameter"
         )
         events.append(kind)
-        parameter = real_build_parameter(original_prompt)
+        parameter = real_build_parameter(
+            original_prompt, document_search_scope=document_search_scope
+        )
         builder_calls.append((original_prompt, parameter))
         return parameter
 
@@ -104,11 +149,6 @@ def test_tui_runs_editor_and_launches_codex_directly(
         assert parameter is builder_calls[1][1]
 
     monkeypatch.setattr(
-        tui_module,
-        "enable_indexing_preflight",
-        lambda: events.append("enable"),
-    )
-    monkeypatch.setattr(
         runtime_cli_module,
         "run_doctor_preprocess",
         record_run_doctor_preprocess,
@@ -120,11 +160,27 @@ def test_tui_runs_editor_and_launches_codex_directly(
     )
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
+    log_dir = root / ".cmoc/gu/log/sub_command"
+    previous_logs = set(log_dir.glob("*.jsonl"))
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
+    [tui_log] = set(log_dir.glob("*.jsonl")) - previous_logs
+    log_events = [json.loads(line) for line in tui_log.read_text().splitlines()]
+    sync_events = [
+        event
+        for event in log_events
+        if event["event"].startswith("document_search_sync_")
+    ]
+    assert [event["event"] for event in sync_events] == [
+        "document_search_sync_started",
+        "document_search_sync_finished",
+    ]
+    assert sync_events[0]["sync_id"] == sync_events[1]["sync_id"]
+    assert sync_events[1]["command"] == "tui"
+    assert sync_events[1]["work_root"] == str(root)
+    assert sync_events[1]["status"] == "unchanged"
     assert events == [
-        "enable",
         "doctor",
         "build-skeleton",
         "build-parameter",
@@ -132,28 +188,20 @@ def test_tui_runs_editor_and_launches_codex_directly(
     ]
     assert len(builder_calls) == 2
     assert builder_calls[0][0] == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
-    complete_prompt_skeleton = builder_calls[0][1].prompt
-    assert (
-        complete_prompt_skeleton.count(
-            prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
-        )
-        == 1
-    )
     assert len(tui_calls) == 1
     orig_files = list(
         (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
     )
     assert len(orig_files) == 1
     editor_contents = orig_files[0].read_text()
-    assert editor_contents.startswith("<!--\n# このファイルの使い方")
-    assert '<cmoc_block id="prompt template">' in editor_contents
-    assert "# file R/W policy (repo_write)" in editor_contents
-    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
-    assert "remove me" in editor_contents
+    assert (
+        editor_contents
+        == "\n<!-- remove me -->\n# 依頼\n\nsrc を確認して必要なら直す\n"
+    )
     assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     complete_prompt = tui_calls[0][0].prompt
-    assert "# file R/W policy (repo_write)" in complete_prompt
+    assert "# file access policy (repo_write)" in complete_prompt
     for heading in (
         "# oracle and realization basic",
         "# oracle policy",
@@ -171,9 +219,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert '<cmoc_ref target="original_prompt"/>' in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt
-    assert "remove me" not in complete_prompt
-    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
-    assert builder_calls[1][0] == "# 依頼\n\nsrc を確認して必要なら直す"
+    assert "<!-- remove me -->" in complete_prompt
+    assert (
+        builder_calls[1][0]
+        == "<!-- remove me -->\n# 依頼\n\nsrc を確認して必要なら直す"
+    )
     assert readme_path.read_text() == "# unstaged change\n"
     assert (
         run_git(root, "diff", "--cached", "--", "README.md").stdout
@@ -215,12 +265,11 @@ def test_tui_saves_editor_input_in_main_worktree(
         """linked worktree の TUI 起動 call を記録する。"""
         tui_calls.append((parameter, kwargs))
 
-    monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
@@ -236,7 +285,6 @@ def test_tui_saves_editor_input_in_main_worktree(
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
     complete_prompt = parameter.prompt
     assert "linked worktree task" in complete_prompt
-    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert not list((linked / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
 
@@ -249,6 +297,7 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-tui-ignore", str(linked), "HEAD")
+    write_config(linked / ".cmoc/gt/config.json", CmocConfig())
     monkeypatch.chdir(linked)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -262,12 +311,11 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
     monkeypatch.setattr(tui_module, "run_codex_tui", lambda *_, **__: None)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
     assert (

@@ -1,9 +1,12 @@
 """Codex TUI の起動と call log・実行結果の記録を担う。"""
 
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
+
+from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
@@ -25,10 +28,9 @@ from .runtime_editor_input_handoff_protocol import (
 )
 from .runtime_errors import CmocError
 from .runtime_feedback import begin_feedback_call
-from .runtime_feedback_store import uuid7_prefixed
-from .runtime_logging import current_subcommand_logger
+from .runtime_ids import new_id
+from .runtime_logging import current_execution_id, current_subcommand_logger
 from .runtime_paths import (
-    _reserve_timestamped_path,
     codex_log_dir,
     timestamp,
 )
@@ -48,7 +50,7 @@ def run_codex_tui(
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = config or load_config(path_context.work_root)
-    log_dir = codex_log_dir(root)
+    log_dir = codex_log_dir(root) / current_execution_id(root)
     log_dir.mkdir(parents=True, exist_ok=True)
     agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -63,17 +65,15 @@ def run_codex_tui(
     prepare_codex_override_args(parameter, config)
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     # callback state はこの TUI process invocation の期間だけ保持する。
-    notification_callback = (
-        create_tui_notification_callback(
+    notification_callback = None
+    if "_CMOC_COMPLETE" not in os.environ and codex_cli_supports_tui_notification_hooks(
+        agent_call_cwd,
+        codex_environment,
+    ):
+        notification_callback = create_tui_notification_callback(
             notification_command_name or purpose,
             root,
         )
-        if codex_cli_supports_tui_notification_hooks(
-            agent_call_cwd,
-            codex_environment,
-        )
-        else None
-    )
     try:
         return _run_codex_tui_process(
             parameter,
@@ -132,13 +132,17 @@ def _run_codex_tui_process(
         parameter.prompt,
     ]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    ts, call_path = _reserve_timestamped_path(log_dir, "_call.json", timestamp)
-    agent_call_id = uuid7_prefixed("agc_")
-    codex_call_id = uuid7_prefixed("cdc_")
+    ts = timestamp()
+    agent_call_id = new_id(root, "ac")
+    codex_call_id = new_id(root, "cc")
+    call_path = log_dir / f"{codex_call_id}_call.json"
+    call_path.open("x").close()
+    execution_id = log_dir.name
     call_path.write_text(
         json.dumps(
             {
                 "purpose": purpose,
+                "execution_id": execution_id,
                 "timestamp": ts,
                 "argv": argv,
                 "agent_call_id": agent_call_id,
@@ -167,13 +171,33 @@ def _run_codex_tui_process(
         agent_call_kind=parameter.agent_call_kind,
         codex_call_id=codex_call_id,
         log_paths=[call_path],
+        enable_feedback_reporting=parameter.enable_feedback_reporting,
     )
     try:
         environment = dict(codex_environment)
         if parameter.enable_editor_input_handoff_mcp:
+            # call log と同じ ID を起動前に記録・flush し、MCP にも同じ値を供給する。
+            logger = current_subcommand_logger()
+            source = None
+            if logger is not None:
+                source = EditorInputHandoffSource(
+                    subcommand=logger.command,
+                    execution_id=logger.execution_id,
+                    codex_call_id=codex_call_id,
+                    sub_command_log_path=logger.path.resolve(),
+                )
+                logger.event(
+                    "editor_input_handoff_source",
+                    subcommand=source.subcommand,
+                    execution_id=source.execution_id,
+                    codex_call_id=source.codex_call_id,
+                    sub_command_log_path=str(source.sub_command_log_path),
+                    call_log_path=str(call_path.resolve()),
+                )
             environment = editor_input_handoff_subprocess_env(
                 environment,
                 repository,
+                source,
             )
         environment = feedback_call.subprocess_env(environment)
         result = run_codex_subprocess(

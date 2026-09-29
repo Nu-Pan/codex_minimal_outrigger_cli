@@ -14,6 +14,7 @@
 import base64
 import fcntl
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -21,8 +22,13 @@ import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 from typing import Any
+
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
 
 from .runtime_errors import CmocError
 from .runtime_feedback_store import (
@@ -39,6 +45,7 @@ from .runtime_feedback_store import (
     write_immutable_bytes,
     write_immutable_json,
 )
+from .runtime_ids import is_common_id, new_id
 
 _JsonObject = dict[str, Any]
 
@@ -92,8 +99,8 @@ def generation_root(repo: Path) -> Path:
 
 
 def generation_directory(repo: Path, generation_id: str) -> Path:
-    """UUIDv7 generation ID に対応する directory を返す。"""
-    if not is_uuid7_prefixed(generation_id, "fbg_"):
+    """generation ID に対応する directory を返す。"""
+    if not is_common_id(generation_id, "fbg"):
         raise ValueError(f"invalid feedback generation ID: {generation_id!r}")
     return generation_root(repo) / generation_id
 
@@ -146,9 +153,9 @@ def new_report_cut_id() -> str:
     return uuid7_prefixed("fbc_")
 
 
-def new_generation_id() -> str:
-    """新しい active generation 用 UUIDv7 ID を返す。"""
-    return uuid7_prefixed("fbg_")
+def new_generation_id(repo: Path) -> str:
+    """新しい active generation ID を返す。"""
+    return new_id(repo, "fbg")
 
 
 def issue_id(canonical_key: str) -> str:
@@ -273,8 +280,8 @@ def validate_observation_envelope(
     elif observation.get("source") == "machine_rule":
         errors.extend(_validate_machine_observation(observation))
     elif observation.get("source") == "agent_report":
-        if not is_uuid7_prefixed(observation_id_value, "fbo_"):
-            errors.append("/observation_id: agent report requires UUIDv7")
+        if not is_common_id(observation_id_value, "fbo"):
+            errors.append("/observation_id: agent report requires common fbo ID")
         if observation.get("source_event") is not None:
             errors.append("/source_event: agent observation requires null")
         if isinstance(context, dict):
@@ -691,7 +698,13 @@ def _read_canonical_object(path: Path, description: str) -> _JsonObject:
         raise _corruption(
             f"{description} を canonical JSON として読めません。", path
         ) from exc
-    if not isinstance(value, dict) or canonical_json_bytes(value) != content:
+    try:
+        canonical = canonical_json_bytes(value)
+    except (TypeError, UnicodeError, ValueError) as exc:
+        raise _corruption(
+            f"{description} が canonical JSON object ではありません。", path
+        ) from exc
+    if not isinstance(value, dict) or canonical != content:
         raise _corruption(
             f"{description} が canonical JSON object ではありません。", path
         )
@@ -749,7 +762,12 @@ def _resolve_reference_path(
             f"{description} path が不正です。", expected_root, repr(raw_path)
         )
     repository = repo.resolve(strict=False)
-    candidate = (repository / raw_path).resolve(strict=False)
+    lexical_candidate = repository / raw_path
+    if _has_symlink_component(lexical_candidate):
+        raise _corruption(
+            f"{description} path が symlink を含みます。", lexical_candidate
+        )
+    candidate = lexical_candidate.resolve(strict=False)
     expected = expected_root.resolve(strict=False)
     if candidate != expected and expected not in candidate.parents:
         raise _corruption(f"{description} path が期待 root 外です。", candidate)
@@ -868,7 +886,7 @@ def _validate_active_issue(
         raise _corruption("active issue origin が不正です。", path)
     if record.get("origin") == "agent_report" and (
         not canonical_key.startswith("agent\0")
-        or not is_uuid7_prefixed(canonical_key.removeprefix("agent\0"), "fbo_")
+        or not is_common_id(canonical_key.removeprefix("agent\0"), "fbo")
     ):
         raise _corruption("agent active issue canonical key が不正です。", path)
     if record.get("origin") == "machine_rule" and not _is_machine_canonical_key(
@@ -1336,7 +1354,7 @@ def _load_generation(
     generation_id_value = manifest.get("generation_id")
     if (
         not _is_version_one(manifest.get("schema_version"))
-        or not is_uuid7_prefixed(generation_id_value, "fbg_")
+        or not is_common_id(generation_id_value, "fbg")
         or (
             expected_generation_id is not None
             and generation_id_value != expected_generation_id
@@ -1495,7 +1513,7 @@ def load_active_state(repo: Path) -> ActiveState:
         )
     generation_id_value = pointer.get("generation_id")
     report_cut_id_value = pointer.get("report_cut_id")
-    if not is_uuid7_prefixed(generation_id_value, "fbg_") or not is_uuid7_prefixed(
+    if not is_common_id(generation_id_value, "fbg") or not is_uuid7_prefixed(
         report_cut_id_value, "fbc_"
     ):
         raise _corruption("feedback current pointer の ID が不正です。", pointer_path)
@@ -1701,13 +1719,16 @@ def _validate_report_cut_manifest(
                 )
         observation_path_value = str(item.get("path"))
         observation_hash = str(item.get("sha256"))
-        previous_hash = hashes_by_id.setdefault(
-            str(observation_id_value), observation_hash
-        )
-        if previous_hash != observation_hash:
-            raise _corruption("同じ observation ID に異なる hash があります。", path)
+        observation_id_string = str(observation_id_value)
+        if observation_id_string in hashes_by_id:
+            if hashes_by_id[observation_id_string] != observation_hash:
+                raise _corruption(
+                    "同じ observation ID に異なる hash があります。", path
+                )
+            raise _corruption("report cut observations に重複があります。", path)
+        hashes_by_id[observation_id_string] = observation_hash
         observed_entries.append(
-            (str(observation_id_value), observation_path_value, observation_hash)
+            (observation_id_string, observation_path_value, observation_hash)
         )
     if observed_entries != sorted(observed_entries):
         raise _corruption("report cut observations が ID/path 順ではありません。", path)
@@ -1871,6 +1892,24 @@ def _validate_report_cut_manifest(
     validate_run_artifacts(
         repo, manifest, path, allow_missing=allow_missing_cleanup_targets
     )
+    targets = manifest["run"]["targets"]
+    if publication is not None and (
+        targets is None
+        or publication["generation_id"] != targets["generation_id"]
+        or publication["generated_at"] != targets["generated_at"]
+        or publication["report"]["path"] != targets["report"]
+    ):
+        raise _corruption(
+            "publication target が封印済み report cut と一致しません。", path
+        )
+    if diagnostic is not None and (
+        targets is None
+        or diagnostic["generated_at"] != targets["generated_at"]
+        or diagnostic["report"]["path"] != targets["incomplete_report"]
+    ):
+        raise _corruption(
+            "diagnostic target が封印済み report cut と一致しません。", path
+        )
     status = processing.get("status")
     if status in {"diagnostic_staging", "incomplete"} and diagnostic is None:
         raise _corruption(
@@ -2011,7 +2050,7 @@ def _validate_report_cut_current_input(
     generation_id_value = pointer_value.get("generation_id")
     if (
         not _is_version_one(pointer_value.get("schema_version"))
-        or not is_uuid7_prefixed(generation_id_value, "fbg_")
+        or not is_common_id(generation_id_value, "fbg")
         or not is_uuid7_prefixed(pointer_value.get("report_cut_id"), "fbc_")
         or pointer_value.get("result") not in {"ok", "attention"}
     ):
@@ -2285,12 +2324,68 @@ def _validate_report_cut_checkpoint(
         from .runtime_feedback_run_state import validate_remediation_checkpoint
 
         validate_remediation_checkpoint(checkpoint, path)
+    else:
+        try:
+            valid_output = _normalization_output_matches_schema(output)
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            SchemaError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise _corruption(
+                "normalization checkpoint schema を検証できません。", path
+            ) from exc
+        if not valid_output:
+            raise _corruption(
+                "normalization checkpoint output が schema に適合しません。", path
+            )
     for name in ("input_sha256", "builder_sha256", "schema_sha256", "output_sha256"):
         value = checkpoint.get(name)
         if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
             raise _corruption(f"report cut checkpoint {name} が不正です。", path)
     if sha256_bytes(canonical_json_bytes(output)) != checkpoint["output_sha256"]:
         raise _corruption("report cut checkpoint output hash が一致しません。", path)
+
+
+@lru_cache(maxsize=1)
+def _normalization_schema() -> dict[str, Any]:
+    """oracle package resource から normalization schema を読む。"""
+    try:
+        schema_text = (
+            resources.files("oracle.acp_builder.feedback")
+            .joinpath("normalize_issue.json")
+            .read_text(encoding="utf-8")
+        )
+    except NotADirectoryError:
+        # `oracle.acp_builder.feedback` is a namespace package in editable
+        # installations, where importlib.resources cannot merge duplicate
+        # package search locations into one resource directory.
+        spec = importlib.util.find_spec("oracle.acp_builder.feedback")
+        locations = (
+            spec.submodule_search_locations
+            if spec is not None and spec.submodule_search_locations is not None
+            else ()
+        )
+        for location in locations:
+            candidate = Path(location) / "normalize_issue.json"
+            if candidate.is_file():
+                schema_text = candidate.read_text(encoding="utf-8")
+                break
+        else:
+            raise
+    schema = json.loads(schema_text)
+    if not isinstance(schema, dict):
+        raise TypeError("normalization schema must be an object")
+    Draft202012Validator.check_schema(schema)
+    return schema
+
+
+def _normalization_output_matches_schema(output: dict[str, Any]) -> bool:
+    """normalization output が oracle schema に適合するかを返す。"""
+    return Draft202012Validator(_normalization_schema()).is_valid(output)
 
 
 def _artifact_reference_shape(
@@ -2357,7 +2452,7 @@ def _validate_publication_section(
         path,
         "report cut publication",
     )
-    if not is_uuid7_prefixed(publication.get("generation_id"), "fbg_"):
+    if not is_common_id(publication.get("generation_id"), "fbg"):
         raise _corruption("publication generation ID が不正です。", path)
     _require_timestamp(
         publication.get("generated_at"), path, "publication generated_at"

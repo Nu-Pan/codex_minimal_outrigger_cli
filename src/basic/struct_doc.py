@@ -15,20 +15,22 @@ from oracle.other.struct_doc import (
 )
 from oracle.other.struct_doc import (
     ntqs,
-    render_sd_node_as_markdown,
+)
+from oracle.other.struct_doc import (
+    render_sd_node_as_markdown as _render_sd_node_as_markdown,
 )
 
 
 def render_as_markdown(
-    struct_node: StructDoc | StructBlock | list[StructDoc | StructBlock],
+    struct_doc: StructDoc | StructBlock | list[StructDoc | StructBlock],
 ) -> str:
     """旧 API の単一 root または root list を canonical renderer で描画する。"""
     # 旧 list input を新しい variadic interface へ変換する
-    if isinstance(struct_node, list):
-        return render_sd_node_as_markdown(*struct_node)
+    if isinstance(struct_doc, list):
+        return _render_sd_node_as_markdown(*struct_doc)
 
     # 単一 root は一要素の variadic input として渡す
-    return render_sd_node_as_markdown(struct_node)
+    return _render_sd_node_as_markdown(struct_doc)
 
 
 __all__ = [

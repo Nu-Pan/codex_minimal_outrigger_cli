@@ -4,7 +4,11 @@
 from pathlib import Path
 
 # cmoc
-from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
+from oracle.acp_builder.basic import (
+    AgentCallParameter,
+    DocumentSearchScope,
+    FileAccessMode,
+)
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDCodeBlock, SDHeader, render_sd_node_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
@@ -13,8 +17,12 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 def build_feedback_remediate_issue_parameter(
     issue_json: str,
     run_worktree: Path,
+    *,
+    document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """正規化済み issue 1 件を確認し、安全な realization 修正と検証を行う。"""
+    # 入力 issue の処理結果は維持し、追加報告の MCP と prompt をともに無効にする。
+    enable_feedback_reporting = False
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
     prompt = build_complete_prompt(
         task="""
@@ -27,17 +35,21 @@ def build_feedback_remediate_issue_parameter(
         """,
         non_goals="""
         - 入力 issue 以外の問題を、この call の remediation 対象として修正しないこと
-        - oracle file、人間意図、外部状態、sandbox、または権限境界を変更しないこと
+        - oracle file、人間意図、外部状態、sandbox、または権限境界の変更を、issue の解消手段にしないこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
+        document_search_scope=document_search_scope,
+        enable_feedback_reporting=enable_feedback_reporting,
         aux_static_prompt=[
             SDHeader(
                 "結果分類の規則",
                 """
-                - result は feedback の意味仕様と Structured Output schema が定める分類に従う
-                - `human_required` は、realization file の編集だけでは満たせない具体的な対応を確認できた場合だけ使用する
-                - 許可された情報では判定できない場合は `inconclusive` とし、`human_required` へ変換しない
+                - 入力 issue の報告基準への適合は、観測元の workload の規定範囲内では解決できない、具体的な根拠のある明確な問題であるかで判断する。仕様どおりの制約は報告対象の問題に含めない
+                - 報告対象の問題は、後続の対応で再発防止、反復的な浪費の削減、または外部挙動を左右する人間意図の確定が可能になるものに限る
+                - この call で追加 observation を報告できないことを、入力 issue の結果分類の理由にしない
+                - `human_required` は、問題が現在も存在し、realization file の編集だけでは満たせない具体的な対応を確認できた場合だけ使用する
+                - 許可された情報では判定できない場合、または再確認・再修正が同じ状態を往復して収束できないことが確認された場合は `inconclusive` とし、`human_required` へ変換しない
                 - agent call、tool、validation、または作業の失敗だけを理由に `human_required` としてはならない
                 """,
             ),
@@ -78,5 +90,6 @@ def build_feedback_remediate_issue_parameter(
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
-        run_indexing_preflight=False,
+        document_search_scope=document_search_scope,
+        enable_feedback_reporting=enable_feedback_reporting,
     )

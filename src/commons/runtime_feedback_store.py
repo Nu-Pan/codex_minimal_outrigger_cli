@@ -32,6 +32,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from .runtime_ids import is_common_id, new_id
+
 OBSERVATION_SCHEMA_VERSION = 1
 REPORTER_PROTOCOL_VERSION = "1"
 REPORTER_VERSION = "1"
@@ -92,8 +94,8 @@ def is_uuid7_prefixed(value: object, prefix: str) -> bool:
 
 
 def is_observation_id(value: object) -> bool:
-    """reporter UUIDv7 または machine rule hash の observation ID かを返す。"""
-    return is_uuid7_prefixed(value, "fbo_") or (
+    """agent の共通 ID または machine rule hash の observation ID かを返す。"""
+    return is_common_id(value, "fbo") or (
         isinstance(value, str) and re.fullmatch(r"fbo_[0-9a-f]{32}", value) is not None
     )
 
@@ -433,38 +435,43 @@ def _store_observation(
             "context_invalid", f"feedback observation root is unavailable: {root}"
         ) from exc
 
-    with observation_publication_lock(repo):
-        directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            fcntl.flock(directory_fd, fcntl.LOCK_EX)
-            for existing in root.rglob(path.name):
-                if existing == path:
-                    continue
-                if _has_symlink_component(existing) or not existing.is_file():
-                    raise FeedbackRejected(
-                        "context_invalid",
-                        f"observation ID path is not a regular file: {existing}",
-                    )
-                try:
-                    existing_content = existing.read_bytes()
-                except OSError as exc:
-                    raise FeedbackRejected(
-                        "context_invalid",
-                        f"existing observation cannot be read: {existing}",
-                    ) from exc
-                if sha256_bytes(existing_content) != digest:
-                    raise FeedbackRejected(
-                        "context_invalid",
-                        f"observation ID collision or corruption: {existing}",
-                    )
-                record_observation_receipt(repo, existing)
-                return existing.resolve()
-            write_immutable_json(path, envelope)
-            record_observation_receipt(repo, path)
-            return path.resolve()
-        finally:
-            fcntl.flock(directory_fd, fcntl.LOCK_UN)
-            os.close(directory_fd)
+    try:
+        with observation_publication_lock(repo):
+            directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                fcntl.flock(directory_fd, fcntl.LOCK_EX)
+                for existing in root.rglob(path.name):
+                    if existing == path:
+                        continue
+                    if _has_symlink_component(existing) or not existing.is_file():
+                        raise FeedbackRejected(
+                            "context_invalid",
+                            f"observation ID path is not a regular file: {existing}",
+                        )
+                    try:
+                        existing_content = existing.read_bytes()
+                    except OSError as exc:
+                        raise FeedbackRejected(
+                            "context_invalid",
+                            f"existing observation cannot be read: {existing}",
+                        ) from exc
+                    if sha256_bytes(existing_content) != digest:
+                        raise FeedbackRejected(
+                            "context_invalid",
+                            f"observation ID collision or corruption: {existing}",
+                        )
+                    record_observation_receipt(repo, existing)
+                    return existing.resolve()
+                write_immutable_json(path, envelope)
+                record_observation_receipt(repo, path)
+                return path.resolve()
+            finally:
+                fcntl.flock(directory_fd, fcntl.LOCK_UN)
+                os.close(directory_fd)
+    except OSError as exc:
+        raise FeedbackRejected(
+            "context_invalid", f"feedback observation storage is unavailable: {root}"
+        ) from exc
 
 
 _SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -507,7 +514,7 @@ def mask_feedback_text(value: str) -> str:
 
 
 def _mask_payload(value: Any) -> tuple[Any, int]:
-    """JSON value 内の文字列を再帰的に secret masking する。"""
+    """JSON object の key と value 内の文字列を再帰的に secret masking する。"""
     if isinstance(value, str):
         return _mask_text(value)
     if isinstance(value, list):
@@ -522,9 +529,18 @@ def _mask_payload(value: Any) -> tuple[Any, int]:
         masked_object: dict[str, Any] = {}
         total = 0
         for key, item in value.items():
+            masked_key: Any = key
+            key_count = 0
+            if isinstance(key, str):
+                masked_key, key_count = _mask_text(key)
+            if masked_key in masked_object:
+                raise FeedbackRejected(
+                    "suspected_secret",
+                    "payload keys collide after secret redaction",
+                )
             masked, count = _mask_payload(item)
-            masked_object[key] = masked
-            total += count
+            masked_object[masked_key] = masked
+            total += key_count + count
         return masked_object, total
     return value, 0
 
@@ -679,7 +695,7 @@ def store_agent_observation(
     """検証済み agent observation を raw immutable record として保存する。"""
     masked, fingerprints, redaction_count = validate_agent_payload(payload, repo)
     observed_at = observed_at or rfc3339_now()
-    observation_id = observation_id or uuid7_prefixed("fbo_")
+    observation_id = observation_id or new_id(repo, "fbo")
     envelope: dict[str, Any] = {
         "schema_version": OBSERVATION_SCHEMA_VERSION,
         "observation_id": observation_id,

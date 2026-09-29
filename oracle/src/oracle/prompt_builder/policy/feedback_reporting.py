@@ -1,4 +1,4 @@
-"""全 agent call に共通する feedback observation 報告規定文面の構築定義。"""
+"""reporter を有効にする agent call 向けの feedback observation 報告規定文面。"""
 
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
@@ -9,11 +9,11 @@ from oracle.prompt_builder.basic import PlaceholderMap
 def build_feedback_reporting_policy(
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, SDHeader]:
-    """全 agent call に共通する feedback observation の報告規定を構築する。
+    """reporter を有効にする agent call の報告規定を構築する。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/feedback_observation.md` の
-        「報告基準」を参照。
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の
+        「報告の適用範囲」と「報告基準」を参照。
     """
     return (
         {},

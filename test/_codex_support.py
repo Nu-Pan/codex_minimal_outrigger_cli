@@ -9,7 +9,7 @@ from basic.acp import AgentCallParameter, FileAccessMode
 
 
 class FakeCodexResult:
-    """INDEX entry test 用の最小 Structured Codex result double。"""
+    """Structured Codex result を置き換える最小の共有 test double。"""
 
     def __init__(self, output_json: object | None = None) -> None:
         """structured outputの検証対象を初期化する。"""
@@ -35,7 +35,7 @@ def codex_parameter(
 ) -> AgentCallParameter:
     """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
     return AgentCallParameter(
-        agent_call_kind="build_indexing_index_entry_parameter",
+        agent_call_kind="build_feedback_normalize_issue_parameter",
         file_access_mode=mode,
         prompt="prompt",
         structured_output_schema_path=None,
@@ -82,7 +82,10 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         "--config",
         'model_reasoning_effort="low"',
         "--sandbox",
-        "read-only",
+        "workspace-write",
+        "--no-daemon",
+        "--config",
+        "sandbox_workspace_write.exclude_slash_tmp=false",
     ]
 
     def fake_prepare(*_args: object, **_kwargs: object) -> list[str]:

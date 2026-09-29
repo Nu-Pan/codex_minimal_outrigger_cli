@@ -1,14 +1,20 @@
 # feedback observation の収集
 
-本書は、observation の報告基準、収集経路、受け入れ検査、機械的検出、および raw 保存を定める。issue identity、remediation の可否、および現在状態は判断しない。
+本書は、observation の報告基準、収集経路、受け入れ検査、機械的検出、および raw 保存を定める。収集時には、issue identity、remediation の可否、および問題の現在状態を判断しない。
 
 ## agent による報告
+
+### 報告の適用範囲
+
+本節の報告義務は、reporter の提供を有効にした agent call に適用する。意図的な非提供は、提供が有効な call で reporter を利用できない障害とは区別する。
+
+提供判断と prompt 注入の整合、および実効設定の管理は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。無効化する call とその目的は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「issue 処理 call の observation 報告」を正本とする。
 
 ### 報告基準
 
 agent は、次の条件をすべて満たす問題だけを報告する。
 
-- 現在の workload の規定範囲内では、agent のセッション内で解決できない
+- 未解決であり、現在の workload の規定範囲内では agent のセッション内で解決できない
 - 明確な問題であると断言できる具体的な根拠がある
 - agent のセッション外で行う automatic remediation または人間対応の候補となる
 
@@ -18,7 +24,7 @@ agent は、次の条件をすべて満たす問題だけを報告する。
 - 反復的な浪費を減らす
 - 外部挙動を左右する人間意図を確定する
 
-セッション内で解決済みの問題と仕様どおりの制約は報告しない。報告対象を発見した時点で reporter を使用し、その後も可能な限り本命 workload を継続する。報告対象がなければ、feedback 用の出力や reporter call を行わない。
+仕様どおりの制約は報告しない。報告対象を発見した時点で reporter を使用し、その後も可能な限り本命 workload を継続する。報告対象がなければ、feedback 用の出力や reporter call を行わない。
 
 報告の成功・失敗を、セッションの中断・続行の判断根拠にしてはならない。reporter の利用不能または submission の拒否は、本命 workload の成功条件を変更しない。
 
@@ -28,21 +34,15 @@ agent は、次の条件をすべて満たす問題だけを報告する。
 
 ### MCP interface
 
-agent-facing interface は、Codex call ごとに起動する local stdio MCP reporter/client とする。MCP namespace は `cmoc_feedback` とし、`submit_observation` だけを公開する。MCP resource、prompt、任意の file access、command execution、または collector 管理機能を公開してはならない。
+reporter の提供が有効な call の agent-facing interface は、Codex call ごとに起動する local stdio MCP reporter/client とする。MCP namespace は `cmoc_feedback` とし、`submit_observation` だけを公開する。MCP resource、prompt、任意の file access、command execution、または collector 管理機能を公開してはならない。
 
 新しい submission の input は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json` の root schema（JSON Pointer `#`）に適合する JSON object とする。同 schema を tool discovery と受け入れ検査の両方に使用する。repository、call ID、保存先、または capability を agent input に追加してはならない。
 
 同 schema の version は 2 とする。version 2 の `workload_limitation` は、現在の workload の規定範囲内で問題を解消できない理由を表し、`human_required` の判定を表さない。
 
-### reporter input v1 の互換処理
+### tool result
 
-新しい reporter submission は version 2 だけを使用する。durable 保存済みの version 1 observation は失わず、raw record を書き換えずに validation 対象とする。
-
-version 1 は、`schema_version=1` と `human_action_reason` を検査する。その他の field には version 2 と同じ規則を適用する。
-
-normalization 時に限り、transient な version 2 view へ変換する。この view では、`human_action_reason` の文字列をそのまま `workload_limitation` として扱う。元の version と変換規則は追跡可能にする。変換後の値も観測時の assertion であり、`human_required` の判定へ自動変換してはならない。
-
-tool result は、次のいずれかとする。
+tool result は、次のいずれかの形式とする。`status` 以外の値は例示である。
 
 ```json
 {"status":"accepted","observation_id":"fbo_...","redaction_count":0}
@@ -68,6 +68,14 @@ rejection code は、次の値に限定する。
 - `transport_unavailable`
 
 `retryable=true` を許容するのは、`rate_limited`、`collector_unavailable`、`transport_unavailable` だけとする。retryable は、本命 workload の retry を要求する意味ではない。
+
+### reporter input v1 の互換処理
+
+durable 保存済みの version 1 observation は失わず、raw record を書き換えずに validation 対象とする。
+
+version 1 は、`schema_version=1` と `human_action_reason` を検査する。その他の field には version 2 と同じ規則を適用する。
+
+normalization 時に限り、transient な version 2 view へ変換する。この view では、`human_action_reason` の文字列をそのまま `workload_limitation` として扱う。元の version と変換規則は追跡可能にする。変換後の値も観測時の assertion であり、`human_required` の判定へ自動変換してはならない。
 
 ### 受け入れ検査
 
@@ -97,7 +105,7 @@ reporter と collector は、安全に保存できるかだけを検査する。
 
 ### context の確定
 
-agent に実行 context を入力させてはならない。collector は、call-scoped capability から次の context を確定する。
+collector は、call-scoped capability から次の context を確定する。agent には実行 context を入力させない。
 
 - observation、session、run、subcommand、agent call、および Codex call の識別情報
 - `{{repo-root}}`、`{{work-root}}`、観測時の HEAD commit
@@ -105,11 +113,13 @@ agent に実行 context を入力させてはならない。collector は、call
 - reporter、protocol、observation schema、および detector rule の version
 - evidence path の正規化結果、fingerprint、および fingerprint を取得できなかった理由
 
-agent call ID は Structured Output の correction call と共有する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
+subcommand の識別情報には、サブコマンド名と、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」で定める `{{execution-id}}` を使用する。他の識別情報と log は、その観測を受理した実行 ID に対応付ける。
+
+reporter の提供が有効な call では、初回 call と Structured Output の correction call は、同じ agent call ID を使用する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
 
 ### 保存経路
 
-raw observation は、次の経路だけで保存する。
+agent が報告した observation は、次の経路だけで raw observation として保存する。
 
 ```text
 Codex MCP tool
@@ -119,7 +129,7 @@ Codex MCP tool
   -> repository-local raw observation
 ```
 
-collector だけが `.cmoc/gu` へ書き込む。reporter/client と agent は feedback file を直接操作しない。machine observation は reporter/client を経由せず、detector から collector へ渡す。
+この収集経路では、collector だけが raw observation を `.cmoc/gu` へ書き込む。reporter/client と agent は feedback file を直接操作しない。machine observation は reporter/client を経由せず、detector から collector へ渡す。
 
 capability は Codex call ごとに一意とし、対象 repository、work-root、agent call、および Codex call へ拘束する。capability value を prompt、Codex argv、Codex call log、または submission payload に含めてはならない。agent や agent が実行する command から collector IPC へ直接接続させてはならない。
 
@@ -127,17 +137,17 @@ capability は Codex call ごとに一意とし、対象 repository、work-root�
 
 ### call の終了
 
-Codex call の終了時は、その call について次の順序で処理する。
+Codex call の終了時は、その call の作成済み reporter context について次の順序で処理する。reporter context がない call では、この終了処理は不要である。
 
 1. 新しい request の受付を止める。
 2. 受付済み request を処理し、accepted observation の保存を完了する。
 3. capability と MCP context を無効化する。
 
-feedback remediation の intake wave を閉じる場合は、その wave の remediation agent call に対応する全 context で、上記の終了処理を完了する。その後に collector の high-watermark を確定する。受付済み request の保存完了前に high-watermark を進めてはならない。
+feedback remediation の intake wave を閉じる際の終了処理と high-watermark 確定の順序は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「intake wave loop」に従う。
 
 parallel call の lifecycle は互いに分離する。TUI では、1 process の全 turn で同じ Codex call context を使用し、process 終了時に無効化する。
 
-reporter または collector の起動失敗、transport failure、および `rejected` result は、feedback の degradation として warning または構造化 event に記録する。本命 Codex workload を失敗または中断させない。
+reporter の提供が有効な call における reporter または collector の起動失敗、transport failure、および `rejected` result は、feedback の degradation として warning または構造化 event に記録する。本命 Codex workload を失敗または中断させない。意図的な非提供は、この degradation に含めない。
 
 ## 機械的な log 検出
 
@@ -174,7 +184,7 @@ timestamp、session ID、run ID、call ID、自由文、一時 path、および 
 
 | `rule_id` | 対象 | threshold | 除外する状態 |
 |---|---|---|---|
-| `feedback.reporter_unavailable.v1` | reporter、collector、または transport の利用不能 | 30 日以内に異なる recurrence scope で 2 回 | payload 拒否、rate limit、agent が reporter を呼ばなかった場合、`cmoc feedback report` invocation 内の失敗 |
+| `feedback.reporter_unavailable.v1` | reporter、collector、または transport の利用不能 | 30 日以内に異なる recurrence scope で 2 回 | 意図的な非提供、payload 拒否、rate limit、agent が reporter を呼ばなかった場合、`cmoc feedback report` invocation 内の失敗 |
 | `codex.structured_output_validation_exhausted.v1` | 同じ agent call kind での Structured Output 受理失敗 | 30 日以内に異なる agent call かつ異なる recurrence scope で 2 回 | 補正成功、Structured Output を使わない call、ユーザー中断、`cmoc feedback report` invocation 内の失敗 |
 
 最初の rule は、`component` と `failure_code` を subject に使用する。2 番目の rule は、低カーディナリティの `agent_call_kind` を subject に使用し、schema hash と最後の failure stage を evidence として保持する。
@@ -191,7 +201,7 @@ raw observation は、1 observation 1 file で次へ保存する。
 {{repo-root}}/.cmoc/gu/feedback/observation/v1/YYYY/MM/DD/{{observation-id}}.json
 ```
 
-agent submission の ID は `fbo_` と UUIDv7 の組み合わせとする。machine observation の ID は `rule_id` と event ID から決定論的に生成し、同じ event の再検出で同じ ID にする。
+cmoc は、新しい agent submission の observation ID を、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従って発行する。同じ observation の再送では発行済み ID を保持する。machine observation の ID は `rule_id` と event ID から決定論的に生成し、同じ event の再検出で同じ ID にする。
 
 同じ ID と同じ canonical hash の再送は idempotent とする。同じ ID で内容が異なる場合は corruption として拒否する。
 

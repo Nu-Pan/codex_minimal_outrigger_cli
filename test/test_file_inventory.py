@@ -28,7 +28,7 @@ from commons.runtime_refactor import (
 )
 
 _EXCLUDED_ROOTS = {".git", ".agents", ".codex", ".cmoc", "memo"}
-_EXCLUDED_NAMES = {"AGENTS.md", "INDEX.md"}
+_EXCLUDED_NAMES = {"AGENTS.md"}
 
 
 def _make_nested_repo(path: Path) -> Path:
@@ -143,21 +143,21 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (ignored / "tracked.txt").write_text("tracked ignored\n")
     (ignored / "untracked.txt").write_text("untracked ignored\n")
     (root / "visible.txt").write_text("visible\n")
-    excluded_names = (
+    classification_names = (
         "AGENTS.md",
-        "INDEX.md",
+        "notes.md",
         "oracle/AGENTS.md",
-        "oracle/INDEX.md",
+        "oracle/notes.md",
     )
-    for relative in excluded_names:
-        (root / relative).write_text("excluded from inventory\n")
+    for relative in classification_names:
+        (root / relative).write_text("name classification fixture\n")
     run_git(
         root,
         "add",
         "-f",
         ".gitignore",
         "ignored/tracked.txt",
-        *excluded_names,
+        *classification_names,
     )
     run_git(root, "commit", "-m", "add ignored fixture")
 
@@ -177,7 +177,9 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert "visible.txt" in actual[1]
     assert "nested/kept.outer" in actual[1]
     assert "nested/dropped.nested" not in actual[1]
-    assert set(excluded_names).isdisjoint(actual[0] | actual[1])
+    assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
+    assert "notes.md" in actual[1]
+    assert "oracle/notes.md" in actual[0]
 
     state = sync_refactor_state(root)
     assert set(state) == expected[0] | expected[1]
@@ -187,7 +189,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
                 "investigation_required": False,
                 "last_investigation_result": "no_findings",
                 "last_investigated_sha256": file_sha256(root / relative),
-                "last_investigated_at": "2026-08-08_00-00_00_000000000",
+                "last_investigated_at": "2026-08-08_00-00-00_000",
             }
         )
     previous_readme_digest = state["README.md"]["last_investigated_sha256"]
@@ -218,6 +220,22 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
         synchronized["README.md"]["last_investigated_sha256"] == previous_readme_digest
     )
     assert synchronized["oracle/spec.md"]["investigation_required"] is False
+
+
+def test_realization_classifier_uses_nested_head_for_deleted_file(
+    tmp_path: Path,
+) -> None:
+    """nested repository の削除 path を outer run branch で分類しない。"""
+    root = make_repo(tmp_path)
+    nested = _make_nested_repo(root / "nested")
+    target = nested / "nested.txt"
+    target.unlink()
+
+    assert is_realization_file_path(
+        root,
+        target,
+        branch="cmoc/run/session/run",
+    )
 
 
 def test_refactor_state_sync_round_trips_non_utf8_filename(tmp_path: Path) -> None:

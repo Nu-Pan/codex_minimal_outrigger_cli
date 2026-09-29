@@ -1,6 +1,6 @@
 """完全 prompt の構築定義。"""
 
-from oracle.acp_builder.basic import FileAccessMode
+from oracle.acp_builder.basic import DocumentSearchScope, FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDTagBlock
 
@@ -12,7 +12,6 @@ from .policy.conflict_resolution import build_conflict_resolution_policy
 from .policy.editor_input_handoff import build_editor_input_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
 from .policy.file_access import build_file_access_policy
-from .policy.index_entry import build_index_entry_policy
 from .policy.oracle import build_oracle_policy
 from .policy.realization import build_realization_policy
 from .policy.realization_findings import build_realization_findings_policy
@@ -54,9 +53,10 @@ def build_complete_prompt(
     realization_policy: bool = False,
     realization_findings_policy: bool = False,
     conflict_resolution_policy: bool = False,
-    index_entry_policy: bool = False,
     routing_policy: bool = False,
+    document_search_scope: DocumentSearchScope | None = None,
     editor_input_handoff_policy: bool = False,
+    enable_feedback_reporting: bool = True,
 ) -> list[SDHeader | SDTagBlock]:
     """選択された agent 向け文面を完全 prompt として構築する。
 
@@ -66,7 +66,9 @@ def build_complete_prompt(
         completion_criteria: agent call 終了後に検証可能な call 固有の状態。
         non_goals: 逸脱が予想される隣接作業のうち call 固有の対象外。
         routing_policy: repository 内の参照先を選ぶ routing 文面を含めるか。
+        document_search_scope: caller が確定した閲覧範囲。None は検索 MCP 無効。
         editor_input_handoff_policy: editor input handoff 文面を含めるか。
+        enable_feedback_reporting: reporter の提供判断と同じ値。報告規定を含めるか。
 
     Returns:
         agent call へ渡す構造化済み prompt。
@@ -110,10 +112,11 @@ def build_complete_prompt(
     #   無視されると困るような、全ての作業の基礎となるような作業規定
     #   重要な指示なので StructBlock で囲って「プロンプト内地図」から参照する
     fundamental_policy_prompt: list[SDHeader | SDTagBlock] = list()
-    _append(
-        fundamental_policy_prompt,
-        build_feedback_reporting_policy(path_context),
-    )
+    if enable_feedback_reporting:
+        _append(
+            fundamental_policy_prompt,
+            build_feedback_reporting_policy(path_context),
+        )
     if editor_input_handoff_policy:
         _append(
             fundamental_policy_prompt,
@@ -131,7 +134,7 @@ def build_complete_prompt(
     if routing_policy:
         _append(
             fundamental_policy_prompt,
-            build_routing_policy(path_context),
+            build_routing_policy(path_context, document_search_scope),
         )
     if oracle_and_realization_basic:
         _append(
@@ -166,12 +169,6 @@ def build_complete_prompt(
             full_prompt,
             build_conflict_resolution_policy(),
         )
-    if index_entry_policy:
-        _append(
-            full_prompt,
-            build_index_entry_policy(),
-        )
-
     # caller 指定の追加プロンプト (static)
     if aux_static_prompt:
         full_prompt.extend(aux_static_prompt)

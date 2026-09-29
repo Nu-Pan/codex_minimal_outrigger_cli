@@ -121,6 +121,8 @@ class SchemaValidator:
         self._property_count = 0
         self._total_string_length = 0
         self._enum_value_count = 0
+        self._acyclic_depths: dict[int, int] = {}
+        self._depth_targets: dict[int, dict[str, Any] | None] = {}
 
     def validate(self) -> list[Diagnostic]:
         if not isinstance(self.document, dict):
@@ -146,7 +148,7 @@ class SchemaValidator:
                 "The root schema must not use anyOf.",
             )
 
-        self._visit(self.document, "/")
+        self._visit(self.document, "")
         self._validate_references()
         self._validate_limits()
         return self._sorted_diagnostics()
@@ -365,7 +367,7 @@ class SchemaValidator:
             else:
                 try:
                     re.compile(pattern)
-                except re.error as error:
+                except (re.error, OverflowError, RecursionError) as error:
                     self._add(
                         "INVALID_PATTERN",
                         pointer,
@@ -472,6 +474,10 @@ class SchemaValidator:
                 continue
             target, reason, is_external = self._resolve_reference(reference)
             if target is not None:
+                # A reference can reach a schema outside the usual schema keywords.
+                # Visiting it also queues its references; visited nodes stop cycles.
+                target_pointer = unquote_to_bytes(reference[1:]).decode("utf-8")
+                self._visit(target, target_pointer)
                 continue
             code = (
                 "EXTERNAL_REFERENCE_UNSUPPORTED"
@@ -512,10 +518,12 @@ class SchemaValidator:
             if isinstance(current, dict) and token in current:
                 current = current[token]
             elif isinstance(current, list):
-                if not token.isdigit() or (
-                    len(token) > 1 and token.startswith("0")
-                ):
+                if re.fullmatch(r"0|[1-9][0-9]*", token) is None:
                     return None, "The reference contains an invalid array index.", False
+                # Compare lengths before int() so an oversized index is a
+                # reference error rather than Python's integer-conversion error.
+                if len(token) > len(str(len(current))):
+                    return None, "The reference points outside an array.", False
                 index = int(token)
                 if index >= len(current):
                     return None, "The reference points outside an array.", False
@@ -567,51 +575,88 @@ class SchemaValidator:
             entries.append(self.document)
         entries.extend(self._definition_entries)
         return max(
-            (self._depth_from(entry, 0, frozenset()) for entry in entries),
+            (self._depth_from(entry, frozenset())[0] for entry in entries),
             default=0,
         )
 
     def _depth_from(
         self,
         node: Any,
-        current_depth: int,
         active: frozenset[int],
-    ) -> int:
-        if not isinstance(node, dict) or id(node) in active:
-            return current_depth
-        active = active | {id(node)}
+    ) -> tuple[int, bool]:
+        node = self._depth_target(node)
+        if node is None:
+            return 0, False
+        node_id = id(node)
+        if node_id in active:
+            return 0, True
+        if node_id in self._acyclic_depths:
+            return self._acyclic_depths[node_id], False
+        active = active | {node_id}
         raw_types = _raw_valid_types(node.get("type"))
-        next_depth = current_depth + int("object" in raw_types)
-        maximum = next_depth
+        own_depth = int("object" in raw_types)
+        children: list[Any] = []
 
         reference = node.get("$ref")
         if isinstance(reference, str):
             target, _, _ = self._resolve_reference(reference)
             if target is not None:
-                maximum = max(
-                    maximum,
-                    self._depth_from(target, next_depth, active),
-                )
+                children.append(target)
 
         properties = node.get("properties")
         if isinstance(properties, dict):
-            for child in properties.values():
-                maximum = max(
-                    maximum,
-                    self._depth_from(child, next_depth, active),
-                )
+            children.extend(properties.values())
         if isinstance(node.get("items"), dict):
-            maximum = max(
-                maximum,
-                self._depth_from(node["items"], next_depth, active),
-            )
+            children.append(node["items"])
         if isinstance(node.get("anyOf"), list):
-            for child in node["anyOf"]:
-                maximum = max(
-                    maximum,
-                    self._depth_from(child, next_depth, active),
-                )
-        return maximum
+            children.extend(node["anyOf"])
+
+        maximum = 0
+        cyclic = False
+        visited_children: set[int] = set()
+        for child in children:
+            child = self._depth_target(child)
+            if child is None or id(child) in visited_children:
+                continue
+            visited_children.add(id(child))
+            depth, child_cyclic = self._depth_from(child, active)
+            maximum = max(maximum, depth)
+            cyclic |= child_cyclic
+        maximum += own_depth
+        # Only acyclic subgraphs have a depth independent of the active path.
+        # Caching a cycle truncated on one path would undercount another path.
+        if not cyclic:
+            self._acyclic_depths[node_id] = maximum
+        return maximum, cyclic
+
+    def _depth_target(self, node: Any) -> dict[str, Any] | None:
+        """Collapse reference-only paths without changing object depth.
+
+        Definitions are checked separately as entry points. A loop consisting
+        only of references adds no object level. Sharing the resolved target
+        also lets depth traversal merge duplicate branches into that target.
+        """
+        trail: set[int] = set()
+        while isinstance(node, dict):
+            node_id = id(node)
+            if node_id in self._depth_targets:
+                node = self._depth_targets[node_id]
+                break
+            if node_id in trail:
+                node = None
+                break
+            trail.add(node_id)
+            reference = node.get("$ref")
+            if not (
+                isinstance(reference, str)
+                and node.keys() <= {"$ref", "description", "$defs"}
+            ):
+                break
+            node, _, _ = self._resolve_reference(reference)
+        target = node if isinstance(node, dict) else None
+        for node_id in trail:
+            self._depth_targets[node_id] = target
+        return target
 
     def _invalid_value(
         self,
@@ -634,18 +679,13 @@ class SchemaValidator:
         details: dict[str, Any] | None = None,
     ) -> None:
         self.diagnostics.append(
-            Diagnostic(code, pointer, message, details or {})
+            Diagnostic(code, pointer or "/", message, details or {})
         )
 
     def _sorted_diagnostics(self) -> list[Diagnostic]:
         unique: dict[tuple[str, str, str, str], Diagnostic] = {}
         for diagnostic in self.diagnostics:
-            details_key = json.dumps(
-                diagnostic.details,
-                ensure_ascii=False,
-                sort_keys=True,
-                separators=(",", ":"),
-            )
+            details_key = _json_dumps(diagnostic.details, sort_keys=True)
             key = (
                 diagnostic.schema_pointer,
                 diagnostic.code,
@@ -657,9 +697,11 @@ class SchemaValidator:
 
 
 def _pointer_join(base: str, *tokens: str) -> str:
-    prefix = "" if base == "/" else base
+    # Keep the RFC 6901 root empty internally: '/' names an empty object key.
+    # Only the diagnostic boundary renders the root as '/'.
+    # https://www.rfc-editor.org/rfc/rfc6901#section-5
     encoded = [token.replace("~", "~0").replace("/", "~1") for token in tokens]
-    return prefix + "/" + "/".join(encoded)
+    return base + "/" + "/".join(encoded)
 
 
 def _json_type_name(value: Any) -> str:
@@ -675,7 +717,7 @@ def _json_type_name(value: Any) -> str:
         return "object"
     if isinstance(value, int):
         return "integer"
-    if isinstance(value, float):
+    if isinstance(value, (float, Decimal)):
         return "number"
     return type(value).__name__
 
@@ -685,7 +727,7 @@ def _json_identity(value: Any) -> tuple[Any, ...]:
         return ("null",)
     if isinstance(value, bool):
         return ("boolean", value)
-    if isinstance(value, (int, float)):
+    if isinstance(value, (int, float, Decimal)):
         return ("number", Decimal(str(value)))
     if isinstance(value, str):
         return ("string", value)
@@ -704,14 +746,19 @@ def _json_identity(value: Any) -> tuple[Any, ...]:
 
 def _is_json_number(value: Any) -> bool:
     return (
-        isinstance(value, (int, float))
+        isinstance(value, (int, float, Decimal))
         and not isinstance(value, bool)
         and (not isinstance(value, float) or math.isfinite(value))
+        and (not isinstance(value, Decimal) or value.is_finite())
     )
 
 
 def _is_non_negative_integer(value: Any) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+    if not _is_json_number(value) or value < 0:
+        return False
+    if isinstance(value, Decimal):
+        return value == value.to_integral_value()
+    return isinstance(value, int) or value.is_integer()
 
 
 def _raw_valid_types(value: Any) -> set[str]:
@@ -751,6 +798,8 @@ def _parse_document(raw: bytes) -> tuple[Any | None, Diagnostic | None]:
             text,
             object_pairs_hook=_reject_duplicate_keys,
             parse_constant=_reject_constant,
+            parse_int=Decimal,
+            parse_float=Decimal,
         )
     except json.JSONDecodeError as error:
         return None, Diagnostic(
@@ -767,6 +816,32 @@ def _parse_document(raw: bytes) -> tuple[Any | None, Diagnostic | None]:
             {"error": str(error)},
         )
     return document, None
+
+
+def _json_dumps(value: Any, *, sort_keys: bool = False) -> str:
+    """Encode diagnostics without rounding decoded decimal JSON numbers.
+
+    The standard encoder handles escaping and scalar syntax; only container
+    traversal and Decimal emission are added because json.dumps lacks Decimal
+    support. The CLI remains usable with the Python standard library alone.
+    ASCII escaping preserves lone surrogate escapes on UTF-8 stdout as well.
+    """
+    if isinstance(value, Decimal):
+        if not value.is_finite():
+            raise ValueError("Non-finite numbers cannot be emitted as JSON")
+        return str(value)
+    if isinstance(value, dict):
+        keys = sorted(value) if sort_keys else value.keys()
+        return "{" + ",".join(
+            json.dumps(key) + ":"
+            + _json_dumps(value[key], sort_keys=sort_keys)
+            for key in keys
+        ) + "}"
+    if isinstance(value, list):
+        return "[" + ",".join(
+            _json_dumps(item, sort_keys=sort_keys) for item in value
+        ) + "]"
+    return json.dumps(value, allow_nan=False, separators=(",", ":"))
 
 
 def _result(
@@ -787,15 +862,15 @@ def _print_result(
     output_format: str,
 ) -> None:
     if output_format == "json":
-        print(json.dumps(_result(path, diagnostics), ensure_ascii=False, indent=2))
+        print(_json_dumps(_result(path, diagnostics)))
         return
     if not diagnostics:
-        print(f"OK: {path} ({PROFILE})")
+        print(f"OK: {path!r} ({PROFILE})")
         return
     for diagnostic in diagnostics:
         print(
-            f"{path}:{diagnostic.schema_pointer}: "
-            f"{diagnostic.code}: {diagnostic.message}"
+            f"{path!r}:{diagnostic.schema_pointer!r}: "
+            f"{diagnostic.code}: {diagnostic.message!r}"
         )
 
 

@@ -10,63 +10,71 @@
       "build_session_join_conflict_resolution_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "xhigh"
+        "reasoning_effort": "max"
+      },
+      "build_run_join_conflict_resolution_parameter": {
+        "model_provider": "openai",
+        "model": "gpt-6-astra",
+        "reasoning_effort": "max"
       },
       "build_oracle_investigation_launch_tui_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "xhigh"
+        "reasoning_effort": "max"
       },
       "build_oracle_edit_main_launch_exec_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "xhigh"
-      },
-      "build_oracle_edit_reduction_launch_exec_parameter": {
-        "model_provider": "openai",
-        "model": "gpt-6-astra",
-        "reasoning_effort": "xhigh"
+        "reasoning_effort": "max"
       },
       "build_realization_apply_fork_launch_exec_parameter": {
         "model_provider": "openai",
-        "model": "gpt-6-astra",
-        "reasoning_effort": "xhigh"
+        "model": "gpt-6-sol",
+        "reasoning_effort": "max"
       },
       "build_feedback_remediate_issue_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-astra",
         "reasoning_effort": "max"
       },
       "build_feedback_normalize_issue_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-astra",
         "reasoning_effort": "max"
       },
       "build_tui_launch_tui_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "xhigh"
+        "reasoning_effort": "max"
       },
       "build_realization_refactor_fork_file_review_and_fix_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "max"
       },
       "build_realization_refactor_fork_change_summary_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "medium"
-      },
-      "build_indexing_index_entry_parameter": {
-        "model_provider": "openai",
-        "model": "gpt-5.6-luna",
-        "reasoning_effort": "low"
       },
       "build_quota_availability_probe_parameter": {
         "model_provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "reasoning_effort": "low"
       }
-    }
+    },
+    "num_try_falv_recovery": 1
+  },
+  "document_search": {
+    "chunk_tokens": 512,
+    "chunk_overlap_tokens": 64,
+    "candidate_count": 8,
+    "embedding_context_tokens": 2048,
+    "reranker_context_tokens": 4096,
+    "batch_tokens": 512,
+    "threads": 4,
+    "startup_timeout_seconds": 120.0,
+    "request_timeout_seconds": 600.0,
+    "shutdown_grace_seconds": 5.0
   }
 }

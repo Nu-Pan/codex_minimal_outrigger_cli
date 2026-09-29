@@ -12,15 +12,14 @@ from cmoc_runtime import (
     start_subcommand_step,
     work_root,
 )
-from commons.indexing import enable_indexing_preflight
 from commons.prompt_editor_input import (
     ORIGINAL_PROMPT_PLACEHOLDER,
     collect_prompt_editor_input,
     edit_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
-    finalize_prompt_editor_input,
     reserve_prompt_editor_input,
 )
+from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_results import CommandResult
 from config.cmoc_config import CmocConfig
 
@@ -29,7 +28,6 @@ _CodexTui = Callable[..., CommandResult]
 
 def cmoc_tui_impl() -> None:
     """CLI runtime を通して tui を実行する。"""
-    enable_indexing_preflight()
     run_cli_subcommand(
         _cmoc_tui_from_current_context,
         pre_log_check=ensure_prompt_editor_roots_ignored,
@@ -47,34 +45,36 @@ def _cmoc_tui_body(
     config: CmocConfig,
 ) -> None:
     """依頼文を編集し、構築したパラメータで Codex TUI を起動する。"""
-    # オリジナル prompt だけ未確定の完全 prompt を初期表示に使う。
+    search_scope = oracle_doc_scope()
+    # オリジナル prompt だけ未確定の完全 prompt を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"
     )
-    editor_work_path, input_copy_path = reserve_prompt_editor_input(root)
+    input_path = reserve_prompt_editor_input(root)
     complete_prompt_skeleton = build_tui_launch_tui_parameter(
-        ORIGINAL_PROMPT_PLACEHOLDER
+        ORIGINAL_PROMPT_PLACEHOLDER,
+        document_search_scope=search_scope,
     ).prompt
 
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     start_subcommand_step(3, "オリジナルプロンプトを入力", "edit original prompt")
     edit_prompt_editor_input(
         root,
-        editor_work_path,
+        input_path,
         complete_prompt_skeleton,
     )
     original_prompt = collect_prompt_editor_input(
         root,
-        editor_work_path,
-        input_copy_path,
+        input_path,
     )
 
     # 抽出した入力から担当固有の完全 prompt と起動パラメータを構築する。
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
-    parameter = build_tui_launch_tui_parameter(original_prompt)
-    finalize_prompt_editor_input(editor_work_path)
+    parameter = build_tui_launch_tui_parameter(
+        original_prompt, document_search_scope=search_scope
+    )
 
     start_subcommand_step(5, "AI Agent TUI を起動", "launch agent TUI")
     run_codex_tui(

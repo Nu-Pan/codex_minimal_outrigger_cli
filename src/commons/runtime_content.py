@@ -1,4 +1,4 @@
-"""内容ハッシュの計算・保存と binary file の粗い判定を提供する。"""
+"""内容ハッシュの計算と、hash を名前に含む file の保存を提供する。"""
 
 import hashlib
 import os
@@ -48,13 +48,3 @@ def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
     return path
-
-
-def is_binary(path: Path) -> bool:
-    """先頭 chunk の NUL byte と読み取り可否で binary file を粗く判定する。"""
-    try:
-        with path.open("rb") as file:
-            chunk = file.read(4096)
-    except OSError:
-        return True
-    return b"\0" in chunk
