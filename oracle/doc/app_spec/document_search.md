@@ -26,11 +26,13 @@ Python は本文を読む前に許可と種類を確認する。親 directory �
 
 ## 検索と routing
 
-agent はベクトル検索、既存のキーワード検索、原文への直接参照を、目的に応じて単独でも組み合わせても使える。選択と順序を固定しない。ベクトル検索は許可された oracle/doc の候補を探す手段とし、oracle/src と oracle/test は直接参照または既存の文字列検索で確認する。
+agent が oracle/doc 上の仕様文章を検索するときは、既存のキーワード検索に加えて、文書検索 MCP によるベクトル検索も併用する。文書検索 MCP が無効な call では、許可された原文への直接参照や既存のキーワード検索を使える。
 
-結果には元ファイルの work-root 相対 path、該当箇所、および抜粋を含める。agent は必要な現在原文を開いて判断し、食い違う場合も原文を優先する。ゼロ件は仕様の不存在や調査の網羅性を証明しない。失敗をゼロ件と解釈せず、別の許可された手段で調査を続ける場合も失敗した検索を成功として扱わない。
+agent に課されたファイルアクセス制限は、検索結果にも適用する。結果には元ファイルの work-root 相対 path、該当箇所、および抜粋を含める。
 
-正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/routing.py` の `build_routing_policy` へ委譲する。文面だけで利用可能な手段、原文確認、範囲制限が分かるようにする。モデル常駐、SQLite、排他アルゴリズム、仕様文書の構成など、agent の判断に不要な内部説明は含めない。完全 prompt への組込みは、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲し、検索の有効状態を実際の call と一致させる。
+agent は検索失敗と、検索が成功したうえでヒットがゼロ件となることを区別する。ヒットがゼロ件であることだけを根拠に、仕様の不存在や調査完了と判断してはならない。何らかの理由で検索に失敗した場合は、検索の併用要件の例外として、許可された手段で調査を続けてよい。
+
+正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/routing.py` の `build_routing_policy` へ委譲する。文面だけで利用可能な手段、検索の併用、ファイルアクセス制限、検索失敗とヒットゼロ件の扱いが分かるようにする。モデル常駐、SQLite、排他アルゴリズム、仕様文書の構成など、agent の判断に不要な内部説明は含めない。完全 prompt への組込みは、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲し、検索の有効状態を実際の call と一致させる。
 
 ## 同期と cache
 
