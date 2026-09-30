@@ -14,7 +14,7 @@ def build_routing_policy(
     path_context: AgentCallPathContext,
     document_search_scope: DocumentSearchScope | None = None,
 ) -> tuple[PlaceholderMap, SDHeader]:
-    """利用できる検索手段と、原文確認・閲覧範囲の指示を構築する。
+    """検索の併用条件と、原文確認・閲覧範囲の指示を構築する。
 
     NOTE
         意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
@@ -47,7 +47,6 @@ def build_routing_policy(
             )
         )
 
-    # 検索方式の選択を固定せず、どの手段でも同じ原文・閲覧境界を伝える。
     root_definitions = path_context.root_placeholder_definitions()
     return (
         {"work-root": root_definitions["work-root"]},
@@ -56,11 +55,15 @@ def build_routing_policy(
             SDPolicy(
                 what_is_this="必要な原文へ到達し、判断するための規定を以下に示す",
                 require=(
-                    "利用可能なベクトル検索、既存のキーワード検索、原文への直接参照から、目的に合う手段を選ぶこと。単独でも組み合わせてもよく、利用順序は固定しない",
-                    "検索結果の path・該当箇所・抜粋は参照先を選ぶために使い、必要な現在原文を開いて判断すること。食い違う場合も原文を優先すること",
-                    "`{{work-root}}/oracle/src` と `{{work-root}}/oracle/test` は直接参照または既存の文字列検索で確認すること",
-                    "検索でも直接参照でも、この call の閲覧制限を守ること。検索結果を使って閲覧権限を広げないこと",
-                    "検索失敗と正常ゼロ件を区別し、ゼロ件だけで仕様の不存在や調査完了を判断しないこと",
+                    "oracle doc 上の仕様文章を検索するときは、標準的なキーワード検索に加えて、MCP tool によるベクトル検索も併用すること",
+                    "このセッションに課せられているファイルアクセス制限は、検索結果についても適用される",
+                    "「検索失敗」と「検索成功の上でヒットゼロ件」は区別すること",
+                ),
+                prohibit=(
+                    "検索ヒットゼロ件だけを根拠に「仕様の不存在」「調査完了」と判断してはいけない",
+                ),
+                exception=(
+                    "何らかの理由で検索に失敗した場合は、許可された手段で調査を続けて良い",
                 ),
             ),
             *search_instructions,
