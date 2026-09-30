@@ -17,7 +17,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 from collections.abc import Collection, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import asdict
@@ -47,7 +46,6 @@ from .runtime_git import (
     run_git,
     with_cmoc_ignore_pattern,
 )
-from .runtime_logging import current_subcommand_logger
 from .runtime_paths import cmoc_root, config_path, refactor_state_path, repo_root
 from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
@@ -113,16 +111,6 @@ def _synchronize_document_search_index(
     """doctor の全 oracle/doc 範囲を期限なしで同期し、途中実績も記録する。"""
     scope = oracle_doc_scope()
     sync_id = uuid7_prefixed("dsi_")
-    logger = current_subcommand_logger()
-    started = time.monotonic()
-    if logger is not None:
-        logger.event(
-            "document_search_sync_started",
-            sync_id=sync_id,
-            work_root=str(root),
-            scope_identity=scope_identity(scope),
-            index_identity=None,
-        )
     update_primary_report_fields(
         doctor_sync_status="started",
         doctor_sync_id=sync_id,
@@ -131,7 +119,6 @@ def _synchronize_document_search_index(
     )
     search: DocumentSearch | None = None
     result: SyncResult | None = None
-    failure: BaseException | None = None
     try:
         search = DocumentSearch(
             root,
@@ -140,15 +127,11 @@ def _synchronize_document_search_index(
             installation_root=installation_root,
             use_saved_config=True,
         )
-        try:
-            result = search.synchronize(unbounded=True)
-        finally:
-            search.close()
+        result = search.synchronize(unbounded=True, sync_id=sync_id)
     except BaseException as exc:
-        failure = exc
         progress = search.sync_progress if search is not None else None
         identity = progress.get("identity") if progress is not None else None
-        status = _sync_status(result, failure)
+        status = _sync_status(result, exc)
         update_primary_report_fields(
             doctor_sync_status=status,
             doctor_index_identity=identity,
@@ -173,39 +156,6 @@ def _synchronize_document_search_index(
             doctor_sync_progress=search.sync_progress,
         )
         return result
-    finally:
-        if logger is not None:
-            progress = search.sync_progress if search is not None else None
-            logger.event(
-                "document_search_sync_finished",
-                sync_id=sync_id,
-                work_root=str(root),
-                index_identity=progress.get("identity") if progress else None,
-                status=_sync_status(result, failure),
-                elapsed_seconds=time.monotonic() - started,
-                lock_wait_seconds=(
-                    search.sync_lock_wait_seconds if search is not None else 0.0
-                ),
-                document_count=progress.get("document_count") if progress else None,
-                changed_document_count=(
-                    progress.get("changed_document_count") if progress else None
-                ),
-                persisted_chunk_count=(
-                    progress.get("persisted_chunks") if progress else None
-                ),
-                reused_chunk_count=(
-                    progress.get("reused_embeddings") if progress else None
-                ),
-                counts_complete=failure is None,
-                failure_code=(
-                    failure.code
-                    if isinstance(failure, SearchError)
-                    else type(failure).__name__
-                    if failure is not None
-                    else None
-                ),
-                failure_reason=str(failure) if failure is not None else None,
-            )
 
 
 def run_doctor_preprocess(

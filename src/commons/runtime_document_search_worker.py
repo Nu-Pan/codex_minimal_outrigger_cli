@@ -29,6 +29,7 @@ from oracle.other.document_search import (
 )
 
 from .runtime_document_search import SearchError
+from .runtime_document_search_observation import inference_config
 
 
 def materials_directory(installation_root: Path) -> Path:
@@ -84,7 +85,7 @@ def _runtime_tree_hash(base: Path) -> str:
 def verification_condition(config: DocumentSearchConfig) -> str:
     """実モデル検証を再利用できる実行環境と設定を識別する。"""
     condition = {
-        "config": asdict(config),
+        "config": inference_config(config),
         "python": sys.version,
         "executable": str(Path(sys.executable).resolve()),
         "platform": platform.platform(),
@@ -285,10 +286,14 @@ class NodeSearchWorker:
         config: DocumentSearchConfig | None,
         *,
         material_base: Path | None = None,
+        check: Callable[[], None] | None = None,
+        on_failure: Callable[[BaseException], None] | None = None,
     ) -> None:
         """固定資材の配置を記録する。"""
         self.base = material_base or materials_directory(installation_root)
         self.config = config
+        self.check = check
+        self.on_failure = on_failure
 
     def _request(self, operation: str, payload: dict[str, object]) -> dict[str, object]:
         """生存監視に使う親 process の identity を付ける。"""
@@ -386,6 +391,8 @@ class NodeSearchWorker:
         pending_input: str | None = json.dumps(request, ensure_ascii=False)
         try:
             while True:
+                if self.check is not None:
+                    self.check()
                 if cancelled is not None and cancelled.is_set():
                     raise SearchError("CANCELLED", "document search was cancelled")
                 remaining = None if deadline is None else deadline - time.monotonic()
@@ -402,12 +409,22 @@ class NodeSearchWorker:
                 except subprocess.TimeoutExpired:
                     pending_input = None
         except OSError as exc:
+            failure = SearchError("MODEL_FAILURE", "inference worker I/O failed")
+            if self.on_failure is not None:
+                self.on_failure(failure)
             self._stop_process(process)
-            raise SearchError("MODEL_FAILURE", "inference worker I/O failed") from exc
+            raise failure from exc
         except BaseException as exc:
+            interruption = (
+                SearchError("CANCELLED", "document search was cancelled")
+                if isinstance(exc, KeyboardInterrupt)
+                else exc
+            )
+            if self.on_failure is not None:
+                self.on_failure(interruption)
             self._stop_process(process)
             if isinstance(exc, KeyboardInterrupt):
-                raise SearchError("CANCELLED", "document search was cancelled") from exc
+                raise interruption from exc
             raise
         if cancelled is not None and cancelled.is_set():
             raise SearchError("CANCELLED", "document search was cancelled")
@@ -469,6 +486,8 @@ class NodeSearchWorker:
         try:
             os.set_blocking(process.stdin.fileno(), False)
             while True:
+                if self.check is not None:
+                    self.check()
                 if cancelled is not None and cancelled.is_set():
                     raise SearchError("CANCELLED", "document search was cancelled")
                 remaining = None if deadline is None else deadline - time.monotonic()
@@ -526,6 +545,8 @@ class NodeSearchWorker:
                     "MODEL_FAILURE", "inference worker output is incomplete"
                 )
             while process.poll() is None:
+                if self.check is not None:
+                    self.check()
                 if cancelled is not None and cancelled.is_set():
                     raise SearchError("CANCELLED", "document search was cancelled")
                 if deadline is not None and time.monotonic() >= deadline:
@@ -536,12 +557,22 @@ class NodeSearchWorker:
             if process.returncode != 0:
                 raise SearchError("MODEL_FAILURE", "inference worker failed")
         except OSError as exc:
+            failure = SearchError("MODEL_FAILURE", "inference worker I/O failed")
+            if self.on_failure is not None:
+                self.on_failure(failure)
             self._stop_process(process)
-            raise SearchError("MODEL_FAILURE", "inference worker I/O failed") from exc
+            raise failure from exc
         except BaseException as exc:
+            interruption = (
+                SearchError("CANCELLED", "document search was cancelled")
+                if isinstance(exc, KeyboardInterrupt)
+                else exc
+            )
+            if self.on_failure is not None:
+                self.on_failure(interruption)
             self._stop_process(process)
             if isinstance(exc, KeyboardInterrupt):
-                raise SearchError("CANCELLED", "document search was cancelled") from exc
+                raise interruption from exc
             raise
         finally:
             for pipe in (process.stdin, process.stdout):

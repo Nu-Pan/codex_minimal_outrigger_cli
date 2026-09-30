@@ -17,6 +17,7 @@ from .runtime_codex_logging import format_codex_call_error
 from .runtime_codex_profile import (
     codex_cli_supports_tui_notification_hooks,
     codex_subprocess_env,
+    document_search_mcp_override_args,
     prepare_codex_override_args,
     resolve_codex_home,
     run_codex_subprocess,
@@ -124,17 +125,20 @@ def _run_codex_tui_process(
         session_start_command=session_start_command,
     )
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
-    argv = [
-        "codex",
-        *override_args,
-        "--cd",
-        str(agent_call_cwd),
-        parameter.prompt,
-    ]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     ts = timestamp()
     agent_call_id = new_id(root, "ac")
     codex_call_id = new_id(root, "cc")
+    argv = [
+        "codex",
+        *override_args,
+        *document_search_mcp_override_args(
+            parameter, config, codex_call_id=codex_call_id
+        ),
+        "--cd",
+        str(agent_call_cwd),
+        parameter.prompt,
+    ]
     call_path = log_dir / f"{codex_call_id}_call.json"
     call_path.open("x").close()
     execution_id = log_dir.name

@@ -14,7 +14,7 @@ import threading
 import time
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from importlib import resources
 from pathlib import Path
 from typing import Callable, Protocol
@@ -31,26 +31,26 @@ from oracle.other.document_search import (
 )
 
 from .runtime_config import _document_search_config, load_config
+from .runtime_document_search_observation import (
+    SearchError,
+    SearchEventSink,
+    SearchObservation,
+    inference_config,
+    mcp_tool_timeout_seconds,
+)
 from .runtime_document_search_scope import (
     scope_allows,
+    scope_identity,
     validate_document_search_scope,
 )
 from .runtime_errors import CmocError
 from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ignored
+from .runtime_logging import current_subcommand_logger
 from .runtime_paths import cmoc_root
 
 _INDEX_FORMAT = 3
 _CLASSIFICATION_CONTRACT = "oracle-file-inventory-v2"
 _LOCK_POLL_SECONDS = 0.05
-
-
-class SearchError(Exception):
-    """検索失敗 code と、原文を含めない説明を保持する。"""
-
-    def __init__(self, code: str, message: str) -> None:
-        """公開する failure の分類を固定する。"""
-        super().__init__(message)
-        self.code = code
 
 
 @dataclass(frozen=True)
@@ -122,6 +122,7 @@ def _file_lock(
     *,
     shared: bool = False,
     on_wait: Callable[[float], None] | None = None,
+    observation: SearchObservation | None = None,
 ) -> Iterator[int]:
     """期限を含めて file lock を保持し、worker へ fd を継承可能にする。"""
     _safe_directory(path.parent)
@@ -135,6 +136,8 @@ def _file_lock(
         wait_started: float | None = None
         try:
             while True:
+                if observation is not None:
+                    observation.check(cancelled is not None and cancelled.is_set())
                 _deadline_check(deadline, cancelled)
                 try:
                     mode = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
@@ -143,6 +146,8 @@ def _file_lock(
                 except BlockingIOError:
                     if wait_started is None:
                         wait_started = time.monotonic()
+                        if observation is not None:
+                            observation.start_wait()
                     wait = (
                         _LOCK_POLL_SECONDS
                         if deadline is None
@@ -156,10 +161,16 @@ def _file_lock(
                         "SYNC_FAILED", "document search lock failed"
                     ) from exc
         finally:
+            if wait_started is not None and observation is not None:
+                observation.end_wait()
             if wait_started is not None and on_wait is not None:
                 on_wait(time.monotonic() - wait_started)
         try:
             yield fd
+        except BaseException as exc:
+            if observation is not None:
+                observation.fail(exc)
+            raise
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)
     finally:
@@ -176,7 +187,7 @@ def _safe_directory(path: Path) -> None:
             info = current.lstat()
         except FileNotFoundError:
             try:
-                current.mkdir()
+                current.mkdir(exist_ok=True)
                 info = current.lstat()
             except OSError as exc:
                 raise SearchError(
@@ -265,11 +276,14 @@ def scan_documents(
     *,
     deadline: float | None = None,
     cancelled: threading.Event | None = None,
+    check: Callable[[], None] | None = None,
 ) -> dict[str, SourceDocument]:
     """既存分類器を使い、許可された oracle/doc Markdown だけを開く。"""
     scope = validate_document_search_scope(scope)
     root = root.absolute()
     initial_root = _root_identity(root)
+    if check is not None:
+        check()
     if deadline is not None:
         _deadline_check(deadline, cancelled)
     if not scope.allowed_files and not scope.allowed_subtrees:
@@ -280,6 +294,8 @@ def scan_documents(
         raise SearchError("ENUMERATION_FAILED", "document enumeration failed") from exc
     documents: dict[str, SourceDocument] = {}
     for candidate in oracle_files:
+        if check is not None:
+            check()
         if deadline is not None:
             _deadline_check(deadline, cancelled)
         relative = candidate.relative_to(root).as_posix()
@@ -297,6 +313,8 @@ def scan_documents(
         documents[relative] = SourceDocument(text, hashlib.sha256(content).hexdigest())
     if _root_identity(root) != initial_root:
         raise SearchError("ROOT_UNAVAILABLE", "work root changed during enumeration")
+    if check is not None:
+        check()
     if deadline is not None:
         _deadline_check(deadline, cancelled)
     return documents
@@ -324,7 +342,7 @@ def search_identity(
         "query_template": EMBEDDING_QUERY_TEMPLATE,
         "reranker_input_format": RERANKER_INPUT_FORMAT,
         "raw_ranking_api": RAW_RANKING_API,
-        "config": asdict(config),
+        "config": inference_config(config),
         "format": _INDEX_FORMAT,
     }
     return hashlib.sha256(
@@ -433,6 +451,8 @@ def _reclaim_unused_indexes(
     identity: str,
     deadline: float | None,
     cancelled: threading.Event | None,
+    *,
+    check: Callable[[], None] | None = None,
 ) -> None:
     """要求中の接続が使わない旧索引だけを lease と調停して回収する。"""
     indexes = base / "indexes"
@@ -444,6 +464,8 @@ def _reclaim_unused_indexes(
             "SYNC_FAILED", "document search indexes are unavailable"
         ) from exc
     for entry in entries:
+        if check is not None:
+            check()
         _deadline_check(deadline, cancelled)
         if (
             entry.name == identity
@@ -494,6 +516,8 @@ class DocumentSearch:
         worker: InferenceWorker | None = None,
         installation_root: Path | None = None,
         use_saved_config: bool = False,
+        event_sink: SearchEventSink | None = None,
+        tool_timeout_seconds: float | None = None,
     ) -> None:
         """閲覧範囲を検証して固定する。"""
         self.root = root.absolute()
@@ -508,16 +532,16 @@ class DocumentSearch:
         self.installation_root = installation_root or cmoc_root()
         self.worker = worker
         self.use_saved_config = use_saved_config
+        self.tool_timeout_seconds = tool_timeout_seconds
+        logger = current_subcommand_logger()
+        self.event_sink = event_sink
+        if event_sink is None and logger is not None:
+            self.event_sink = lambda kind, payload: logger.event(kind, **payload)
+        self._observation: SearchObservation | None = None
         self.cancelled: threading.Event | None = None
-        self.request_started: float | None = None
         self._lease_fd: int | None = None
         self._lease_lock = threading.Lock()
         self.sync_progress: dict[str, object] | None = None
-        self.sync_lock_wait_seconds = 0.0
-
-    def _record_lock_wait(self, seconds: float) -> None:
-        """同期中に待った各 lock の取得待ちだけを合算する。"""
-        self.sync_lock_wait_seconds += seconds
 
     def close(self) -> None:
         """接続が保持した索引 lease を解放する。"""
@@ -576,6 +600,10 @@ class DocumentSearch:
                 raise
 
     def _check(self, deadline: float | None) -> None:
+        if self._observation is not None:
+            self._observation.check(
+                self.cancelled is not None and self.cancelled.is_set()
+            )
         _deadline_check(deadline, self.cancelled)
 
     def _refresh_saved_config(self) -> None:
@@ -590,6 +618,16 @@ class DocumentSearch:
                 "NOT_READY",
                 f"{exc.summary}\n{exc.detail}\n{' '.join(exc.next_actions)}",
             ) from exc
+        if (
+            self.tool_timeout_seconds is not None
+            and current is not None
+            and mcp_tool_timeout_seconds(current) > self.tool_timeout_seconds
+        ):
+            raise SearchError(
+                "NOT_READY",
+                "increased document search request or shutdown timeout requires a new Codex call; "
+                "restart the command to refresh the MCP tool timeout",
+            )
         if current != self.config:
             self.close()
             from .runtime_document_search_worker import NodeSearchWorker
@@ -605,7 +643,11 @@ class DocumentSearch:
         self._check(deadline)
         if (
             scan_documents(
-                self.root, self.scope, deadline=deadline, cancelled=self.cancelled
+                self.root,
+                self.scope,
+                deadline=deadline,
+                cancelled=self.cancelled,
+                check=lambda: self._check(deadline),
             )
             != documents
         ):
@@ -630,13 +672,24 @@ class DocumentSearch:
         residency: Path,
         deadline: float | None,
     ) -> object:
+        from .runtime_document_search_worker import NodeSearchWorker
+
         self._check(deadline)
         if self.worker is None:
-            from .runtime_document_search_worker import NodeSearchWorker
-
-            self.worker = NodeSearchWorker(self.installation_root, self.config)
+            self.worker = NodeSearchWorker(
+                self.installation_root,
+                self.config,
+                check=lambda: self._check(None),
+                on_failure=self._inference_failure,
+            )
+        if isinstance(self.worker, NodeSearchWorker):
+            self.worker.check = lambda: self._check(None)
+            self.worker.on_failure = self._inference_failure
         with _file_lock(
-            residency, deadline, self.cancelled, on_wait=self._record_lock_wait
+            residency,
+            deadline,
+            self.cancelled,
+            observation=self._observation,
         ) as residency_fd:
             try:
                 return self.worker.run(
@@ -663,14 +716,25 @@ class DocumentSearch:
         on_event: Callable[[object], None],
     ) -> None:
         """chunk の到着時に Python の検証・保存 callback を実行する。"""
+        from .runtime_document_search_worker import NodeSearchWorker
+
         self._check(deadline)
         if self.worker is None:
-            from .runtime_document_search_worker import NodeSearchWorker
-
-            self.worker = NodeSearchWorker(self.installation_root, self.config)
+            self.worker = NodeSearchWorker(
+                self.installation_root,
+                self.config,
+                check=lambda: self._check(None),
+                on_failure=self._inference_failure,
+            )
+        if isinstance(self.worker, NodeSearchWorker):
+            self.worker.check = lambda: self._check(None)
+            self.worker.on_failure = self._inference_failure
         assert self.config is not None
         with _file_lock(
-            residency, deadline, self.cancelled, on_wait=self._record_lock_wait
+            residency,
+            deadline,
+            self.cancelled,
+            observation=self._observation,
         ) as residency_fd:
             self.worker.stream_chunks(
                 documents,
@@ -681,6 +745,11 @@ class DocumentSearch:
                 residency_fd=residency_fd,
                 cancelled=self.cancelled,
             )
+
+    def _inference_failure(self, failure: BaseException) -> None:
+        # worker の停止・回収より前に、打切り時点を固定する。
+        if self._observation is not None:
+            self._observation.fail(failure)
 
     def _sync_locked(
         self,
@@ -716,14 +785,30 @@ class DocumentSearch:
             for path in sorted(changed_paths | pending_paths)
             if documents[path].text.strip()
         }
-        self.sync_progress = {
-            "identity": identity,
-            "status": "started",
-            "document_count": len(documents),
-            "changed_document_count": None,
-            "persisted_chunks": 0,
-            "reused_embeddings": 0,
-        }
+        assert self.sync_progress is not None
+        self.sync_progress.update(
+            identity=identity,
+            document_count=len(documents),
+            checked_document_count=0,
+            changed_document_count=len(deleted_paths | changed_paths | pending_paths),
+            persisted_chunks=0,
+            reused_embeddings=0,
+            document_states={path: "unprocessed" for path in documents},
+        )
+
+        def checked_document(path: str) -> None:
+            # 必要な分割まで確認済みの文書を、embedding 完了とは別に数える。
+            assert self.sync_progress is not None
+            states = self.sync_progress["document_states"]
+            assert isinstance(states, dict)
+            if states[path] == "checked":
+                return
+            states[path] = "checked"
+            count = self.sync_progress["checked_document_count"]
+            assert isinstance(count, int)
+            self.sync_progress["checked_document_count"] = count + 1
+            assert self._observation is not None
+            self._observation.progress("document_checked", path)
 
         # 出現位置だけを外し、同一入力の embedding は同期完了まで保持する。
         with connection:
@@ -739,6 +824,10 @@ class DocumentSearch:
         resumes: dict[str, int] = {}
         repaired_paths: set[str] = set()
         for path in sorted(documents):
+            self._check(deadline)
+            states = self.sync_progress["document_states"]
+            assert isinstance(states, dict)
+            states[path] = "processing"
             source = documents[path]
             rows = connection.execute(
                 "select ordinal, start_offset, end_offset, start_line, end_line, "
@@ -748,6 +837,7 @@ class DocumentSearch:
             ).fetchall()
             valid = True
             for ordinal, row in enumerate(rows):
+                self._check(deadline)
                 (
                     saved_ordinal,
                     start,
@@ -777,6 +867,8 @@ class DocumentSearch:
                 except SearchError:
                     valid = False
                     break
+                assert self._observation is not None
+                self._observation.progress("cached_chunk_checked", f"{path}:{ordinal}")
             if (
                 path in stored
                 and stored[path][1]
@@ -795,6 +887,9 @@ class DocumentSearch:
                     )
                 rows = []
                 repaired_paths.add(path)
+                self.sync_progress["changed_document_count"] = len(
+                    deleted_paths | changed_paths | pending_paths | repaired_paths
+                )
                 if source.text.strip():
                     fresh[path] = source.text
             if path in pending_paths and not source.text.strip():
@@ -802,27 +897,22 @@ class DocumentSearch:
                     connection.execute(
                         "update documents set complete = 1 where path = ?", (path,)
                     )
+            reused_before = self.sync_progress["reused_embeddings"]
+            assert isinstance(reused_before, int)
+            self.sync_progress["reused_embeddings"] = reused_before + len(rows)
             if path in fresh:
                 resumes[path] = len(rows)
-                reused_before = self.sync_progress["reused_embeddings"]
-                assert isinstance(reused_before, int)
-                self.sync_progress["reused_embeddings"] = reused_before + len(rows)
-        self.sync_progress["changed_document_count"] = len(
-            deleted_paths | changed_paths | pending_paths | repaired_paths
-        )
-        reused_before = self.sync_progress["reused_embeddings"]
-        assert isinstance(reused_before, int)
-        reused = reused_before
-        reused += connection.execute(
-            "select count(*) from chunks join documents using(path) "
-            "where documents.complete = 1"
-        ).fetchone()[0]
-        self.sync_progress["reused_embeddings"] = reused
+            else:
+                checked_document(path)
+            if rows:
+                assert self._observation is not None
+                self._observation.progress("embedding_reused", path)
         reusable_hashes: set[str] = set()
         if fresh:
             for excerpt_sha, embedding in connection.execute(
                 "select excerpt_sha256, embedding from embedding_cache"
             ):
+                self._check(deadline)
                 try:
                     _checked_cached_vector(embedding)
                 except SearchError:
@@ -840,7 +930,11 @@ class DocumentSearch:
             """確定直前に権限分類と本文が元の入力に一致するか確認する。"""
             self._check(deadline)
             current = scan_documents(
-                self.root, self.scope, deadline=deadline, cancelled=self.cancelled
+                self.root,
+                self.scope,
+                deadline=deadline,
+                cancelled=self.cancelled,
+                check=lambda: self._check(deadline),
             ).get(path)
             if current != documents[path]:
                 raise SearchError(
@@ -850,12 +944,21 @@ class DocumentSearch:
 
         def on_event(event: object) -> None:
             """worker 出力を検証し、各 chunk または文書完了を個別確定する。"""
+            self._check(deadline)
             if not isinstance(event, dict):
                 raise SearchError("MODEL_FAILURE", "inference event is invalid")
             kind = event.get("kind")
             path = event.get("path")
             if not isinstance(path, str) or path not in fresh or path in completed:
                 raise SearchError("MODEL_FAILURE", "inference path is invalid")
+            if kind == "document_prepared":
+                if type(event.get("chunk_count")) is not int or event[
+                    "chunk_count"
+                ] < max(1, resumes[path]):
+                    raise SearchError("MODEL_FAILURE", "document partition is invalid")
+                current_source(path)
+                checked_document(path)
+                return
             if kind == "document_complete":
                 if (
                     type(event.get("chunk_count")) is not int
@@ -869,6 +972,7 @@ class DocumentSearch:
                         "update documents set complete = 1 where path = ?", (path,)
                     )
                 completed.add(path)
+                checked_document(path)
                 return
             if (
                 kind not in ("chunk", "reuse")
@@ -928,6 +1032,11 @@ class DocumentSearch:
             before = self.sync_progress[field]
             assert isinstance(before, int)
             self.sync_progress[field] = before + 1
+            assert self._observation is not None
+            self._observation.progress(
+                "embedding_saved" if kind == "chunk" else "embedding_reused",
+                f"{path}:{next_ordinal[path] - 1}",
+            )
 
         if fresh:
             self._stream_inference(
@@ -975,7 +1084,7 @@ class DocumentSearch:
     def _locked_index(
         self,
         *,
-        unbounded: bool = False,
+        synchronizing_only: bool = False,
     ) -> Iterator[
         tuple[
             sqlite3.Connection,
@@ -989,37 +1098,48 @@ class DocumentSearch:
         from .runtime_document_search_setup import _material_lock
         from .runtime_document_search_worker import NodeSearchWorker
 
-        self._refresh_saved_config()
-        if self.worker is not None and not isinstance(self.worker, NodeSearchWorker):
-            with self._locked_index_inner(unbounded=unbounded) as state:
-                yield state
-            return
+        assert self._observation is not None
+        if self.sync_progress is None:
+            self.sync_progress = self._observation.begin_sync()
         try:
-            require_cmoc_ignored(self.installation_root)
-        except Exception as exc:
-            raise SearchError(
-                "NOT_READY",
-                "shared document search storage is not ignored; run cmoc doctor",
-            ) from exc
-        started = self.request_started or time.monotonic()
-        if self.config is None:
-            raise SearchError("NOT_READY", "document search tuning is not configured")
-        deadline = None if unbounded else started + self.config.request_timeout_seconds
-        with _file_lock(
-            _material_lock(self.installation_root),
-            deadline,
-            self.cancelled,
-            shared=True,
-            on_wait=self._record_lock_wait,
-        ):
-            with self._locked_index_inner(unbounded=unbounded) as state:
-                yield state
+            if self.worker is not None and not isinstance(
+                self.worker, NodeSearchWorker
+            ):
+                with self._locked_index_inner(
+                    synchronizing_only=synchronizing_only
+                ) as state:
+                    yield state
+                return
+            try:
+                require_cmoc_ignored(self.installation_root)
+            except Exception as exc:
+                raise SearchError(
+                    "NOT_READY",
+                    "shared document search storage is not ignored; run cmoc doctor",
+                ) from exc
+            with _file_lock(
+                _material_lock(self.installation_root),
+                None,
+                self.cancelled,
+                shared=True,
+                observation=self._observation,
+            ):
+                with self._locked_index_inner(
+                    synchronizing_only=synchronizing_only
+                ) as state:
+                    yield state
+        except BaseException as exc:
+            self._observation.fail(exc)
+            raise
+        finally:
+            if not synchronizing_only:
+                self._observation.finish_sync()
 
     @contextmanager
     def _locked_index_inner(
         self,
         *,
-        unbounded: bool = False,
+        synchronizing_only: bool = False,
     ) -> Iterator[
         tuple[
             sqlite3.Connection,
@@ -1030,21 +1150,15 @@ class DocumentSearch:
         ]
     ]:
         """索引 lock 内で現在本文を確認し、整合世代を同期する。"""
-        self._refresh_saved_config()
-        started = self.request_started or time.monotonic()
+        assert self._observation is not None and self.sync_progress is not None
+        started = time.monotonic()
         if self.config is None:
             raise SearchError("NOT_READY", "document search tuning is not configured")
-        deadline = None if unbounded else started + self.config.request_timeout_seconds
+        # 四種類の期限は observation が判定する。doctor は同じ経路を期限なしで使う。
+        deadline = None
         self._check(deadline)
         identity, index, lock, residency = self._paths()
-        self.sync_progress = {
-            "identity": identity,
-            "status": "started",
-            "document_count": None,
-            "changed_document_count": None,
-            "persisted_chunks": None,
-            "reused_embeddings": None,
-        }
+        self.sync_progress["identity"] = identity
         try:
             require_cmoc_ignored(self.root)
         except Exception as exc:
@@ -1073,18 +1187,29 @@ class DocumentSearch:
             deadline,
             self.cancelled,
             shared=True,
-            on_wait=self._record_lock_wait,
+            observation=self._observation,
         ) as lease_fd:
             self._retain_lease(lease, lease_fd)
             _reclaim_unused_indexes(
-                index.parent.parent.parent, identity, deadline, self.cancelled
+                index.parent.parent.parent,
+                identity,
+                deadline,
+                self.cancelled,
+                check=lambda: self._check(deadline),
             )
             with _file_lock(
-                lock, deadline, self.cancelled, on_wait=self._record_lock_wait
+                lock,
+                deadline,
+                self.cancelled,
+                observation=self._observation,
             ):
                 _safe_directory(index.parent)
                 documents = scan_documents(
-                    self.root, self.scope, deadline=deadline, cancelled=self.cancelled
+                    self.root,
+                    self.scope,
+                    deadline=deadline,
+                    cancelled=self.cancelled,
+                    check=lambda: self._check(deadline),
                 )
                 self.sync_progress["document_count"] = len(documents)
                 self._check(deadline)
@@ -1101,120 +1226,204 @@ class DocumentSearch:
                         index_created,
                     )
                     self._check(deadline)
+                    self._check_sources_current(documents, deadline)
+                    self.sync_progress["status"] = result.status
+                    if not synchronizing_only:
+                        self._observation.finish_sync(result.status)
+                        self._observation.start_post_sync()
                     yield connection, documents, result, residency, deadline
-                except SearchError:
-                    raise
                 except (OSError, sqlite3.Error) as exc:
-                    raise SearchError(
+                    failure = SearchError(
                         "SYNC_FAILED", "document search synchronization failed"
-                    ) from exc
+                    )
+                    self._observation.fail(failure)
+                    raise failure from exc
+                except BaseException as exc:
+                    self._observation.fail(exc)
+                    raise
                 finally:
                     connection.close()
 
-    def synchronize(self, *, unbounded: bool = False) -> SyncResult:
+    def synchronize(
+        self, *, unbounded: bool = False, sync_id: str | None = None
+    ) -> SyncResult:
         """query 推論を行わず、通常検索と同じ現在本文の同期を実行する。"""
+        observation = SearchObservation(
+            self.root, scope_identity(self.scope), self.event_sink, request=False
+        )
+        self._observation = observation
         self.sync_progress = None
-        self.sync_lock_wait_seconds = 0.0
-        with self._locked_index(unbounded=unbounded) as (
-            _,
-            documents,
-            result,
-            _,
-            deadline,
-        ):
-            self._check_sources_current(documents, deadline)
-            if self.sync_progress is not None:
-                self.sync_progress["status"] = result.status
-            return result
+        result: SyncResult | None = None
+        try:
+            self._refresh_saved_config()
+            observation.configure(self.config, bounded=not unbounded)
+            self.sync_progress = observation.begin_sync(sync_id)
+            with self._locked_index(synchronizing_only=True) as (
+                _,
+                _,
+                result,
+                _,
+                deadline,
+            ):
+                self._check(deadline)
+                observation.decide_sync(result.status)
+        except BaseException as exc:
+            observation.fail(exc)
+            raise
+        finally:
+            try:
+                if unbounded:
+                    self.close()
+            except BaseException as exc:
+                observation.fail(exc)
+                raise
+            finally:
+                observation.finish_sync(result.status if result is not None else None)
+                self._observation = None
+        assert result is not None and observation.last_sync is not None
+        return replace(
+            result, elapsed_seconds=time.monotonic() - observation.last_sync.started
+        )
 
-    def search(self, query: str, limit: int | None = None) -> SearchResult:
+    def begin_request(
+        self, *, started: float | None = None, request_id: str | int | None = None
+    ) -> SearchObservation:
+        """MCP の受付時に、queue の待機より前の開始記録を作る。"""
+        # 各受付に独立した時計を持たせ、並行要求の識別を保つ。
+        return SearchObservation(
+            self.root,
+            scope_identity(self.scope),
+            self.event_sink,
+            request=True,
+            started=started,
+            request_id=request_id,
+        )
+
+    def search(
+        self,
+        query: str,
+        limit: int | None = None,
+        *,
+        observation: SearchObservation | None = None,
+    ) -> SearchResult:
         """現在本文を同期し、cosine 候補を実モデルで再ランキングする。"""
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query must be non-blank")
         if limit is not None and (type(limit) is not int or limit < 1):
             raise ValueError("limit must be a positive integer")
-        with self._locked_index() as (connection, documents, _, residency, deadline):
-            assert self.config is not None
-            count = min(
-                limit or self.config.candidate_count, self.config.candidate_count
-            )
-            if not connection.execute("select 1 from chunks limit 1").fetchone():
-                self._check_sources_current(documents, deadline)
-                return {"status": "ok", "hits": []}
-            cached = connection.execute(
-                "select embedding from query_cache where query = ?", (query,)
-            ).fetchone()
-            if cached is None:
-                embedding = self._inference(
-                    "embed_query",
-                    {
-                        "text": EMBEDDING_QUERY_TEMPLATE.format(query=query),
-                        "config": asdict(self.config),
-                    },
-                    residency,
-                    deadline,
+        observation = observation or self.begin_request()
+        self._observation = observation
+        self.sync_progress = None
+        try:
+            self._refresh_saved_config()
+            observation.configure(self.config, bounded=True)
+            self._check(None)
+            with self._locked_index() as (
+                connection,
+                documents,
+                _,
+                residency,
+                deadline,
+            ):
+                found = self._search_locked(
+                    query, limit, connection, documents, residency, deadline
                 )
-                vector = _vector_blob(embedding)
-                connection.execute(
-                    "insert or replace into query_cache(query, embedding) values(?, ?)",
-                    (query, vector),
-                )
-                connection.commit()
-            else:
-                vector = _checked_cached_vector(cached[0])
-            self._check(deadline)
-            candidates = connection.execute(
-                "select path, start_line, end_line, excerpt, excerpt_sha256 "
-                "from chunks order by vec_distance_cosine(embedding, ?) limit ?",
-                (vector, count),
-            ).fetchall()
-            missing = []
-            scores: dict[str, float] = {}
-            for _, _, _, excerpt, excerpt_sha in candidates:
-                row = connection.execute(
-                    "select score from score_cache where query = ? and excerpt_sha256 = ?",
-                    (query, excerpt_sha),
-                ).fetchone()
-                if row is None:
-                    missing.append((excerpt_sha, excerpt))
-                else:
-                    score = row[0]
-                    if type(score) not in (int, float) or not math.isfinite(score):
-                        raise SearchError(
-                            "SYNC_FAILED", "cached reranking score is invalid"
-                        )
-                    scores[excerpt_sha] = score
-            if missing:
-                ranking = self._inference(
-                    "rerank",
-                    {
-                        "query": query,
-                        "documents": [text for _, text in missing],
-                        "config": asdict(self.config),
-                        "input_format": RERANKER_INPUT_FORMAT,
-                    },
-                    residency,
-                    deadline,
-                )
-                if not isinstance(ranking, list) or len(ranking) != len(missing):
-                    raise SearchError(
-                        "MODEL_FAILURE", "reranking scores are incomplete"
-                    )
-                for (excerpt_sha, _), score in zip(missing, ranking, strict=True):
-                    if type(score) not in (int, float) or not math.isfinite(score):
-                        raise SearchError("MODEL_FAILURE", "reranking score is invalid")
-                    scores[excerpt_sha] = score
-                    connection.execute(
-                        "insert or replace into score_cache(query, excerpt_sha256, score) "
-                        "values(?, ?, ?)",
-                        (query, excerpt_sha, score),
-                    )
-                connection.commit()
-            hits: list[SearchHit] = [
-                {"path": path, "start_line": start, "end_line": end, "excerpt": excerpt}
-                for path, start, end, excerpt, excerpt_sha in sorted(
-                    candidates, key=lambda row: scores[row[4]], reverse=True
-                )
-            ]
+                observation.decide_success()
+            return found
+        except BaseException as exc:
+            observation.fail(exc)
+            raise
+        finally:
+            observation.finish_request()
+            self._observation = None
+
+    def _search_locked(
+        self,
+        query: str,
+        limit: int | None,
+        connection: sqlite3.Connection,
+        documents: Mapping[str, SourceDocument],
+        residency: Path,
+        deadline: float | None,
+    ) -> SearchResult:
+        # 同期済みの索引で query・候補・採点 cache を照合する。
+        assert self.config is not None
+        count = min(limit or self.config.candidate_count, self.config.candidate_count)
+        if not connection.execute("select 1 from chunks limit 1").fetchone():
             self._check_sources_current(documents, deadline)
-            return {"status": "ok", "hits": hits}
+            return {"status": "ok", "hits": []}
+        cached = connection.execute(
+            "select embedding from query_cache where query = ?", (query,)
+        ).fetchone()
+        if cached is None:
+            embedding = self._inference(
+                "embed_query",
+                {
+                    "text": EMBEDDING_QUERY_TEMPLATE.format(query=query),
+                    "config": asdict(self.config),
+                },
+                residency,
+                deadline,
+            )
+            vector = _vector_blob(embedding)
+            connection.execute(
+                "insert or replace into query_cache(query, embedding) values(?, ?)",
+                (query, vector),
+            )
+            connection.commit()
+        else:
+            vector = _checked_cached_vector(cached[0])
+        self._check(deadline)
+        candidates = connection.execute(
+            "select path, start_line, end_line, excerpt, excerpt_sha256 "
+            "from chunks order by vec_distance_cosine(embedding, ?) limit ?",
+            (vector, count),
+        ).fetchall()
+        missing = []
+        scores: dict[str, float] = {}
+        for _, _, _, excerpt, excerpt_sha in candidates:
+            row = connection.execute(
+                "select score from score_cache where query = ? and excerpt_sha256 = ?",
+                (query, excerpt_sha),
+            ).fetchone()
+            if row is None:
+                missing.append((excerpt_sha, excerpt))
+            else:
+                score = row[0]
+                if type(score) not in (int, float) or not math.isfinite(score):
+                    raise SearchError(
+                        "SYNC_FAILED", "cached reranking score is invalid"
+                    )
+                scores[excerpt_sha] = score
+        if missing:
+            ranking = self._inference(
+                "rerank",
+                {
+                    "query": query,
+                    "documents": [text for _, text in missing],
+                    "config": asdict(self.config),
+                    "input_format": RERANKER_INPUT_FORMAT,
+                },
+                residency,
+                deadline,
+            )
+            if not isinstance(ranking, list) or len(ranking) != len(missing):
+                raise SearchError("MODEL_FAILURE", "reranking scores are incomplete")
+            for (excerpt_sha, _), score in zip(missing, ranking, strict=True):
+                if type(score) not in (int, float) or not math.isfinite(score):
+                    raise SearchError("MODEL_FAILURE", "reranking score is invalid")
+                scores[excerpt_sha] = score
+                connection.execute(
+                    "insert or replace into score_cache(query, excerpt_sha256, score) "
+                    "values(?, ?, ?)",
+                    (query, excerpt_sha, score),
+                )
+            connection.commit()
+        hits: list[SearchHit] = [
+            {"path": path, "start_line": start, "end_line": end, "excerpt": excerpt}
+            for path, start, end, excerpt, excerpt_sha in sorted(
+                candidates, key=lambda row: scores[row[4]], reverse=True
+            )
+        ]
+        self._check_sources_current(documents, deadline)
+        return {"status": "ok", "hits": hits}

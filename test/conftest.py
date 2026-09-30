@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
@@ -11,8 +12,26 @@ from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 import commons.runtime_cli as runtime_cli
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
+import commons.runtime_document_search_observation as observation_module
 import commons.runtime_windows_toast as runtime_windows_toast
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+
+
+@pytest.fixture
+def document_search_clock(monkeypatch):
+    """検索の時計だけを操作し、process の停止待ちには実時間を使う。"""
+
+    class Clock:
+        now = 0.0
+
+        def advance(self, seconds):
+            self.now += seconds
+
+    clock = Clock()
+    monkeypatch.setattr(
+        observation_module, "time", SimpleNamespace(monotonic=lambda: clock.now)
+    )
+    return clock
 
 
 @pytest.fixture(autouse=True)
