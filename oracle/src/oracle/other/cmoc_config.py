@@ -77,27 +77,28 @@ class CmocConfigCodex:
     #   現実には xhigh だと取りこぼしがきになるので max で運用している。
     agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
-            # NOTE merge 結果を守るため、品質が最優先
+            # NOTE
+            #   ここでミスるとブランチ上の作業結果がぶち壊しになる
+            #   リスクを鑑みて、品質が至上命題
             "build_session_join_conflict_resolution_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",
             ),
-            # NOTE run と session の変更意図を統合するため、session join と同じ品質を使う
             "build_run_join_conflict_resolution_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",
             ),
             # NOTE
-            #   oracle file に影響を与えるので品質が重要
-            #   TUI で人間とターンを回すので品質・速度が重要
+            #   oracle file に影響を与えるので品質が至上命題
+            #   TUI で人間とターンを回すので品質が至上命題
             "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",
             ),
-            # NOTE oracle file に影響を与えるので品質が重要
+            # NOTE oracle file に影響を与えるので品質が至上命題
             "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
@@ -108,11 +109,14 @@ class CmocConfigCodex:
             #   大規模な修正になる可能性に備えて ultra にしたら、一生収束しない大事故が発生した
             #   GPT の事故調査報告によれば、修正が別の修正を呼ぶループに入ったっぽい
             #   元々存在する実装や修正のプランの筋が良くなくて、AIがメンテ出来る汚さの限界付近に居るのかも
+            #   あるいは、サブエージェントどうしてコンディションレースしたか
+            # NOTE
             #   実装タスクはテストによる機械的検証が可能だが、機械的検証は「今回の実装が将来に禍根を残す可能性」までは見てくれない
-            #   よって、結論としては品質が重要
+            #   品質はあまり犠牲に出来ない
+            #   gpt-6.1-sol で様子を見る
             "build_realization_apply_fork_launch_exec_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-6-sol",
+                model="gpt-6.1-sol",
                 reasoning_effort="max",
             ),
             # NOTE
@@ -126,14 +130,14 @@ class CmocConfigCodex:
                 reasoning_effort="max",
             ),
             # NOTE
-            #   issue の意味論的一致判定は比較的難易度が低いと予想して、まずは Luna で様子を見る
-            #   実際の feedback report が冗長気味なら Astra に上げる
+            #   feedback report の整理作業が反復的かつ機械的検証不能なので、モデルがアホだと暴走しやすい
+            #   怖すぎるので Astra しか選べない
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",
             ),
-            # NOTE TUI で人間とターンを回すので品質が重要
+            # NOTE TUI で人間とターンを回すので品質が至上命題
             "build_tui_launch_tui_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
@@ -141,10 +145,11 @@ class CmocConfigCodex:
             ),
             # NOTE
             #   ファイル単位処理なので呼び出し回数が非常に多く、その分コストが掛かる
-            #   よって、コスパに優れる Luna しか選べない
+            #   しかし refactor を呼ぶ時というのは、リミットを燃やし尽くしたい時
+            #   よって、バランスの良い gpt-6.1-sol を選ぶ
             "build_realization_refactor_fork_file_review_and_fix_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-6-luna",
+                model="gpt-6.1-sol",
                 reasoning_effort="max",
             ),
             # NOTE 単純な要約タスクなので Luna で良い
