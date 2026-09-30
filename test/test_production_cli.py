@@ -40,7 +40,7 @@ from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
 from typer.main import get_command
 
-from commons.runtime_config import write_config
+from commons.runtime_config import load_config, write_config
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
@@ -348,6 +348,21 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     else:
         assert "--enable" not in argv
     assert override["model_reasoning_effort"] == call_config.reasoning_effort
+    search_server = override["mcp_servers"]["cmoc_document_search"]
+    assert search_server["enabled"] is True
+    search_context = json.loads(search_server["args"][-1])
+    caller_log = path.parents[2] / "sub_command" / f"{payload['execution_id']}.jsonl"
+    caller = json.loads(caller_log.read_text().splitlines()[0])
+    assert search_context["log_context"] == {
+        "path": str(caller_log.resolve()),
+        "command": caller["command"],
+        "execution_id": payload["execution_id"],
+        "codex_call_id": payload["codex_call_id"],
+    }
+    tuning = search_context["config"]
+    assert search_server["tool_timeout_sec"] > (
+        tuning["search_request_timeout_seconds"] + tuning["shutdown_grace_seconds"]
+    )
     provider_id = call_config.model_provider
     assert override["model_provider"] == provider_id
     providers = override.get("model_providers", {})
@@ -872,6 +887,20 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         tmp_path, isolated_cmoc_installation
     )
     _run_without_codex_call(cmoc, root, environment, "doctor")
+    # component 検証と doctor 同期の期限は維持し、MCP 全体期限だけを短くする。
+    config = load_config(root)
+    assert config.document_search is not None
+    write_config(
+        root / ".cmoc/gt/config.json",
+        replace(
+            config,
+            document_search=replace(
+                config.document_search, search_request_timeout_seconds=0.000001
+            ),
+        ),
+    )
+    run_git(root, "add", ".cmoc/gt/config.json")
+    run_git(root, "commit", "-m", "exercise MCP deadline over live TUI connection")
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     status_before = run_git(root, "status", "--short").stdout
     calls_before = _codex_call_logs(root)
@@ -913,6 +942,8 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         "goal と instructions は CMOC_HANDOFF_REQUEST、background は受け渡しの動作確認、"
         "decisions と open_questions は該当なし、oracle_references は空配列です。\n"
         "instructions にはガイドが指定する受信側の識別子も含めてください。\n"
+        "handoff 後に cmoc_document_search.search を query『期限の動作確認』で一度呼び、"
+        "期限超過の結果も短く報告してください。\n"
         "リポジトリのファイルは変更せず、tool の結果を短く報告してください。"
     )
     write_python_executable(
@@ -968,6 +999,27 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert source["execution_id"] in body
     assert str(log_path.resolve()) in body
     assert source["execution_id"] in transcript
+    search_events = [
+        event
+        for line in log_path.read_text().splitlines()
+        if (event := json.loads(line))["event"].startswith("document_search_request_")
+    ]
+    assert len(search_events) == 3
+    assert all(
+        event["codex_call_id"] == tui_payload["codex_call_id"]
+        and event["execution_id"] == source["execution_id"]
+        and event["command"] == " ".join(command)
+        for event in search_events
+    )
+    assert len({event["request_id"] for event in search_events}) == 1
+    assert search_events[-1]["failure_code"] == "DEADLINE_EXCEEDED"
+    deadline = next(
+        event
+        for line in log_path.read_text().splitlines()
+        if (event := json.loads(line))["event"] == "document_search_deadline_exceeded"
+    )
+    assert deadline["request_id"] == search_events[-1]["request_id"]
+    assert deadline["deadline_kinds"] == ["search_request"]
     notifications = [json.loads(line) for line in toast_path.read_text().splitlines()]
     assert notifications == [
         {"title": f"cmoc {' '.join(command)}", "message": f"{root.name} — 入力待ち"}

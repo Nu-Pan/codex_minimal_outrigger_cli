@@ -227,6 +227,10 @@ def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitio
         ("chunk_tokens", None),
         ("chunk_tokens", True),
         ("startup_timeout_seconds", 0),
+        ("resource_wait_timeout_seconds", True),
+        ("sync_no_progress_timeout_seconds", 0),
+        ("post_sync_search_timeout_seconds", -1),
+        ("search_request_timeout_seconds", "3600"),
         ("chunk_overlap_tokens", 512),
         ("reranker_context_tokens", 512),
     ],
@@ -252,6 +256,37 @@ def test_saved_search_config_rejects_invalid_explicit_values(
     with pytest.raises(CmocError):
         sync_config(root, repair_missing=True)
     assert path.read_text() == original
+
+
+def test_explicit_doctor_adds_request_deadlines_without_replacing_validation_timeout(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    data = config_to_dict(CmocConfig())
+    names = (
+        "resource_wait_timeout_seconds",
+        "sync_no_progress_timeout_seconds",
+        "post_sync_search_timeout_seconds",
+        "search_request_timeout_seconds",
+    )
+    for name in names:
+        data["document_search"].pop(name)
+    data["document_search"]["request_timeout_seconds"] = 37
+    original = json.dumps(data) + "\n"
+    path.write_text(original)
+    with pytest.raises(CmocError):
+        load_config(root)
+    with pytest.raises(CmocError):
+        sync_config(root, repair_missing=False)
+    assert path.read_text() == original
+    repaired = sync_config(root, repair_missing=True)
+    saved = json.loads(path.read_text())
+    assert repaired.config.document_search.request_timeout_seconds == 37
+    defaults = asdict(DocumentSearchConfig())
+    assert all(saved["document_search"][name] == defaults[name] for name in names)
+    assert repaired.additions == {name: defaults[name] for name in names}
 
 
 def test_explicit_doctor_does_not_save_inconsistent_candidate(tmp_path: Path) -> None:

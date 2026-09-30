@@ -136,6 +136,10 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
         "startup_timeout_seconds",
         "request_timeout_seconds",
         "shutdown_grace_seconds",
+        "resource_wait_timeout_seconds",
+        "sync_no_progress_timeout_seconds",
+        "post_sync_search_timeout_seconds",
+        "search_request_timeout_seconds",
     ):
         number = data[name]
         try:

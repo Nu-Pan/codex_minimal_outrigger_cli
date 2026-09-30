@@ -18,6 +18,7 @@ from .runtime_codex_profile import (
     classify_codex_call,
     codex_error_text,
     codex_subprocess_env,
+    document_search_mcp_override_args,
     extract_resume_token,
     prepare_codex_override_args,
     prepare_schema,
@@ -392,7 +393,15 @@ def run_codex_exec(
 
     def _build_argv(output_path: Path, resume_session_id: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
-        run_argv = _base_exec_argv(override_args, agent_call_cwd)
+        run_argv = _base_exec_argv(
+            [
+                *override_args,
+                *document_search_mcp_override_args(
+                    parameter, config, codex_call_id=active_codex_call_id, logger=logger
+                ),
+            ],
+            agent_call_cwd,
+        )
         run_argv.extend(["--json", "--output-last-message", str(output_path)])
         if schema_path is not None:
             run_argv.extend(["--output-schema", str(schema_path)])

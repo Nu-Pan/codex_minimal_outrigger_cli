@@ -116,7 +116,8 @@ async function withModel(modelPath, callback) {
   }
 }
 
-async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete) {
+async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete,
+                                    onDocumentPrepared = () => {}) {
   const { payload, embedding_model: modelPath, dimensions } = request;
   const { documents, sections, config, reusable_hashes: reusableHashes = [] } = requireObject(payload);
   requireObject(documents);
@@ -161,6 +162,7 @@ async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete
         if (ranges.length === 0 || skip > ranges.length) {
           fail("invalid document resume point");
         }
+        await onDocumentPrepared(path, ranges.length);
         for (let ordinal = skip; ordinal < ranges.length; ordinal++) {
           const range = ranges[ordinal];
           const digest = createHash("sha256").update(range.excerpt).digest("hex");
@@ -211,6 +213,9 @@ async function streamDocuments(request) {
     }) + "\n"),
     (path, chunk_count) => writeOutput(JSON.stringify({
       kind: "document_complete", path, chunk_count,
+    }) + "\n"),
+    (path, chunk_count) => writeOutput(JSON.stringify({
+      kind: "document_prepared", path, chunk_count,
     }) + "\n")
   );
   await writeOutput(JSON.stringify({ kind: "done" }) + "\n");

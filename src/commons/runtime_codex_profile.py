@@ -38,6 +38,7 @@ from config.cmoc_config import CmocConfig, JsonTomlValue
 from .runtime_codex_recovery import CodexOutcome
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
+from .runtime_document_search_observation import mcp_tool_timeout_seconds
 from .runtime_document_search_scope import validate_document_search_scope
 from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
@@ -49,6 +50,7 @@ from .runtime_feedback import (
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
+from .runtime_logging import SubcommandLogger, current_subcommand_logger
 from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
@@ -62,6 +64,7 @@ _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS = frozenset(
         b"codex-cli 0.156.1",
         b"codex-cli 0.157.1",
         b"codex-cli 0.158.0",
+        b"codex-cli 0.159.2",
     }
 )
 _CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
@@ -572,6 +575,12 @@ def _codex_session_start_hook_trusted_hash(command: str) -> str:
     # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/core/src/hook_runtime.rs#L121-L164
     # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/core/src/session/turn.rs#L615-L674
     # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/hooks/src/legacy_notify.rs#L26-L64
+    # 0.159.2 も同じ trust identity、root SessionStart、turn 完了後の notify を使う。
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/hooks/src/engine/discovery.rs#L775-L791
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/config/src/fingerprint.rs#L54-L81
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/core/src/hook_runtime.rs#L126-L164
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/core/src/session/turn.rs#L692-L706
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/hooks/src/legacy_notify.rs#L13-L71
     identity = {
         "event_name": "session_start",
         "hooks": [
@@ -772,8 +781,12 @@ def _editor_input_handoff_mcp_override_args() -> list[str]:
     return args
 
 
-def _document_search_mcp_override_args(
-    parameter: AgentCallParameter, config: CmocConfig
+def document_search_mcp_override_args(
+    parameter: AgentCallParameter,
+    config: CmocConfig,
+    *,
+    codex_call_id: str | None = None,
+    logger: SubcommandLogger | None = None,
 ) -> list[str]:
     """同名の外部設定を遮断し、call 固定の検索接続だけを注入する。"""
     scope = parameter.document_search_scope
@@ -795,6 +808,17 @@ def _document_search_mcp_override_args(
             raise CmocError("文書検索の閲覧範囲が不正です。", [], str(exc)) from exc
         context = AgentCallPathContext(parameter.agent_call_cwd)
         search_config = config.document_search
+        caller = logger or current_subcommand_logger()
+        log_context = (
+            {
+                "path": str(caller.path.resolve()),
+                "command": caller.command,
+                "execution_id": caller.execution_id,
+                "codex_call_id": codex_call_id,
+            }
+            if caller is not None and codex_call_id is not None
+            else None
+        )
         server = {
             "command": sys.executable,
             "args": [
@@ -805,6 +829,7 @@ def _document_search_mcp_override_args(
                         "work_root": str(context.work_root),
                         "scope": asdict(resolved_scope),
                         "config": asdict(search_config) if search_config else None,
+                        "log_context": log_context,
                     },
                     ensure_ascii=False,
                     separators=(",", ":"),
@@ -828,10 +853,11 @@ def _document_search_mcp_override_args(
         }
         if search_config is not None:
             server["startup_timeout_sec"] = search_config.startup_timeout_seconds
-            server["tool_timeout_sec"] = (
-                search_config.request_timeout_seconds
-                + search_config.shutdown_grace_seconds
-            )
+            # 0.159.2 は接続設定の期限を call_tool へ渡し、要求側の期限があれば短い方を使う。
+            # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/codex-mcp/src/connection_manager.rs#L1014-L1028
+            # 実際の待機は同版 rmcp-client の active_time_timeout で計測する。
+            # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/rmcp-client/src/rmcp_client.rs#L1470-L1492
+            server["tool_timeout_sec"] = mcp_tool_timeout_seconds(search_config)
     return _config_override(f"mcp_servers.{SEARCH_MCP_SERVER}", _toml_value(server))
 
 
@@ -879,7 +905,7 @@ def build_codex_override_args(
             session_start_command if callback_enabled else None
         ),
         *_feedback_mcp_override_args(parameter.enable_feedback_reporting),
-        *_document_search_mcp_override_args(parameter, config),
+        *document_search_mcp_override_args(parameter, config),
         *(
             _editor_input_handoff_mcp_override_args()
             if parameter.enable_editor_input_handoff_mcp
@@ -1023,6 +1049,11 @@ def _verify_document_search_server(
         or transport.get("cwd") != expected.get("cwd")
         or actual.get("enabled_tools") != expected["enabled_tools"]
         or actual.get("disabled_tools") != expected["disabled_tools"]
+        or any(
+            actual.get(name) != expected[name]
+            for name in ("startup_timeout_sec", "tool_timeout_sec")
+            if name in expected
+        )
     ):
         raise CmocError(
             "文書検索 MCP の実効設定が call 固定値と一致しません。",

@@ -11,7 +11,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from importlib import resources
 from pathlib import Path
 
@@ -384,19 +384,7 @@ def test_unbounded_sync_outlasts_search_deadline(tmp_path: Path) -> None:
                     }
                 )
 
-    tuning = _tuning()
-    tuning = DocumentSearchConfig(
-        tuning.chunk_tokens,
-        tuning.chunk_overlap_tokens,
-        tuning.candidate_count,
-        tuning.embedding_context_tokens,
-        tuning.reranker_context_tokens,
-        tuning.batch_tokens,
-        tuning.threads,
-        tuning.startup_timeout_seconds,
-        0.05,
-        tuning.shutdown_grace_seconds,
-    )
+    tuning = replace(_tuning(), sync_no_progress_timeout_seconds=0.05)
     search = DocumentSearch(
         root,
         DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
@@ -407,7 +395,9 @@ def test_unbounded_sync_outlasts_search_deadline(tmp_path: Path) -> None:
     assert search.synchronize(unbounded=True).chunk_count == 1
 
 
-def test_deadline_after_first_chunk_preserves_it_for_retry(tmp_path: Path) -> None:
+def test_deadline_after_first_chunk_preserves_it_for_retry(
+    tmp_path: Path, document_search_clock
+) -> None:
     """期限超過後の検索を失敗にし、有効な途中 chunk を再利用する。"""
     pytest.importorskip("sqlite_vec")
     root = _repo_with_docs(tmp_path)
@@ -449,22 +439,10 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(tmp_path: Path) -> No
                     }
                 )
                 if ordinal == 0 and self.pause:
-                    time.sleep(0.25)
+                    document_search_clock.advance(0.25)
             on_event({"kind": "document_complete", "path": path, "chunk_count": 2})
 
-    tuning = _tuning()
-    tuning = DocumentSearchConfig(
-        tuning.chunk_tokens,
-        tuning.chunk_overlap_tokens,
-        tuning.candidate_count,
-        tuning.embedding_context_tokens,
-        tuning.reranker_context_tokens,
-        tuning.batch_tokens,
-        tuning.threads,
-        tuning.startup_timeout_seconds,
-        0.15,
-        tuning.shutdown_grace_seconds,
-    )
+    tuning = replace(_tuning(), sync_no_progress_timeout_seconds=0.15)
     worker = PausingWorker()
     search = DocumentSearch(
         root,
@@ -598,7 +576,11 @@ def test_worker_streams_complete_events_through_small_pipe(tmp_path: Path) -> No
             event["embedding"] = [1] + [0.125] * (dimensions - 1)
             assert len(json.dumps(event).encode("utf-8")) > 4096
         expected.extend(
-            [event, {"kind": "document_complete", "path": path, "chunk_count": 1}]
+            [
+                {"kind": "document_prepared", "path": path, "chunk_count": 1},
+                event,
+                {"kind": "document_complete", "path": path, "chunk_count": 1},
+            ]
         )
     assert events == [*expected, {"kind": "done"}]
 
@@ -1080,6 +1062,8 @@ def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
 def test_stdio_mcp_discovers_only_search_and_reports_not_ready(tmp_path: Path) -> None:
     """実 stdio 境界で discovery と機械的な失敗を読める。"""
     root = _repo_with_docs(tmp_path)
+    log_path = tmp_path / "caller.jsonl"
+    log_path.touch()
     context = {
         "work_root": str(root),
         "scope": {
@@ -1089,6 +1073,12 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(tmp_path: Path) -
             "excluded_subtrees": [],
         },
         "config": None,
+        "log_context": {
+            "path": str(log_path),
+            "command": "oracle investigation",
+            "execution_id": "exec_test",
+            "codex_call_id": "cc_test",
+        },
     }
     project = Path(__file__).resolve().parents[1]
     environment = {
@@ -1143,6 +1133,16 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(tmp_path: Path) -
         assert failed["result"]["structuredContent"]["code"] == "NOT_READY"
         process.stdin.close()
         assert process.wait(timeout=5) == 0
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert [event["event"] for event in events] == [
+        "document_search_request_started",
+        "document_search_request_finished",
+    ]
+    assert events[0]["request_id"] == events[-1]["request_id"]
+    assert events[-1]["failure_code"] == "NOT_READY"
+    assert events[-1]["decision_seconds"]["post_sync_search"] is None
+    assert all(event["codex_call_id"] == "cc_test" for event in events)
+    assert all(event["command"] == "oracle investigation" for event in events)
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")

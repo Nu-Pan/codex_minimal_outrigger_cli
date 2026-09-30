@@ -4,9 +4,11 @@ import json
 from pathlib import Path
 
 import pytest
-from _codex_support import setup_codex_home, stub_codex_overrides
+from _codex_support import codex_override_config, setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
+from oracle.acp_builder.basic import DocumentSearchScope
+from oracle.other.document_search import DocumentSearchConfig
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
@@ -31,7 +33,15 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     write_python_executable(
         fake_codex,
         [
-            "import json, pathlib, sys",
+            "import json, pathlib, sys, tomllib",
+            "args = sys.argv[1:]",
+            "if 'mcp' in args:",
+            "    for arg in args:",
+            "        if arg.startswith('mcp_servers.cmoc_document_search='):",
+            "            server = tomllib.loads(arg)['mcp_servers']['cmoc_document_search']",
+            "    transport = {'type': 'stdio', 'env_vars': [], **{key: server[key] for key in ('command', 'args', 'cwd', 'env')}}",
+            "    print(json.dumps({'name': 'cmoc_document_search', 'transport': transport, **{key: server[key] for key in ('enabled', 'enabled_tools', 'disabled_tools', 'startup_timeout_sec', 'tool_timeout_sec')}}))",
+            "    raise SystemExit(0)",
             f"counter = pathlib.Path({str(counter)!r})",
             "count = int(counter.read_text()) if counter.exists() else 0",
             "counter.write_text(str(count + 1))",
@@ -61,6 +71,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
         "prompt",
         schema,
         root,
+        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
     )
     logger = SubcommandLogger(root, "test")
 
@@ -68,7 +79,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
         parameter,
         root=root,
         transient_poll_interval_sec=0,
-        config=CmocConfig(),
+        config=CmocConfig(document_search=DocumentSearchConfig()),
         subcommand_logger=logger,
     )
 
@@ -82,6 +93,22 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     }
     assert len({log["agent_call_id"] for log in call_logs}) == 1
     assert len({log["codex_call_id"] for log in call_logs}) == 2
+    for call in call_logs:
+        server = codex_override_config(call["argv"])["mcp_servers"][
+            "cmoc_document_search"
+        ]
+        context = json.loads(server["args"][-1])
+        assert context["log_context"] == {
+            "path": str(logger.path.resolve()),
+            "command": logger.command,
+            "execution_id": logger.execution_id,
+            "codex_call_id": call["codex_call_id"],
+        }
+        assert context["work_root"] == str(root)
+        tuning = DocumentSearchConfig()
+        assert server["tool_timeout_sec"] > (
+            tuning.search_request_timeout_seconds + tuning.shutdown_grace_seconds
+        )
     assert [Path(log["output_path"]).read_text() for log in call_logs] == [
         '{"bad": true}',
         '{"ok": true}',
