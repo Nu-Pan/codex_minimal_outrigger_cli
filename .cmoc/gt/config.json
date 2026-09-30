@@ -29,7 +29,7 @@
       },
       "build_realization_apply_fork_launch_exec_parameter": {
         "model_provider": "openai",
-        "model": "gpt-6-sol",
+        "model": "gpt-6.1-sol",
         "reasoning_effort": "max"
       },
       "build_feedback_remediate_issue_parameter": {
@@ -49,7 +49,7 @@
       },
       "build_realization_refactor_fork_file_review_and_fix_parameter": {
         "model_provider": "openai",
-        "model": "gpt-6-luna",
+        "model": "gpt-6.1-sol",
         "reasoning_effort": "max"
       },
       "build_realization_refactor_fork_change_summary_parameter": {
