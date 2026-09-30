@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Callable, Literal
 
 from .runtime_errors import CmocError
+from .runtime_ids import is_common_id
 from .runtime_paths import repo_root, worktrees_dir
 from .runtime_results import CommandResult
 
@@ -413,26 +414,33 @@ def delete_branch(root: Path, branch: str, force: bool = False) -> CommandResult
     return run_git(["branch", "-D" if force else "-d", branch], root, check=False)
 
 
-def expected_run_worktree(root: Path, branch: str) -> Path:
-    """run branch 名から許可された run worktree path を求める。"""
-    parts = branch.split("/")
+def parse_run_branch_ids(branch: str) -> tuple[str, str] | None:
+    """現行 run branch の session ID と run ID を取り出す。"""
     # {{work-root}}/oracle/doc/branch_model.md
-    # dot component は run-root の2階層配置を崩すため、path component として許可しない。
+    if not isinstance(branch, str):
+        return None
+    parts = branch.split("/")
     if (
         len(parts) != 4
-        or parts[0] != "cmoc"
-        or parts[1] != "run"
-        or not parts[2]
-        or not parts[3]
-        or parts[2] in {".", ".."}
-        or parts[3] in {".", ".."}
+        or parts[:2] != ["cmoc", "run"]
+        or not is_common_id(parts[2], "sess")
+        or not is_common_id(parts[3], "run")
     ):
+        return None
+    return parts[2], parts[3]
+
+
+def expected_run_worktree(root: Path, branch: str) -> Path:
+    """run branch 名から許可された run worktree path を求める。"""
+    # state の読み取りと同じ ID 検証を通して保存先を決める。
+    ids = parse_run_branch_ids(branch)
+    if ids is None:
         raise CmocError(
             "run worktree を作成できない branch 名です。",
             ["cmoc run branch 名を確認してください。"],
             f"branch: {branch}",
         )
-    return worktrees_dir(_main_worktree_root(root)) / parts[2] / parts[3]
+    return worktrees_dir(_main_worktree_root(root)) / ids[0] / ids[1]
 
 
 def _require_managed_worktree(root: Path, worktree: Path) -> Path:
@@ -447,15 +455,18 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
         relative = resolved.relative_to(base)
     except ValueError as exc:
         raise _unmanaged_worktree_error(worktree, base) from exc
-    # {{work-root}}/oracle/src/oracle/other/path_model.py
-    # work-root の削除は .cmoc/gu/worktree/{{parent-run-id}}/{{run-id}} に限定する。
+    # {{work-root}}/oracle/doc/branch_model.md
+    # work-root の削除は .cmoc/gu/worktree/{{session-id}}/{{run-id}} に限定する。
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
     # {{work-root}}/oracle/doc/branch_model.md
     # 命名規則だけでは不十分であり、削除は対応する Git linked worktree に限定する。
     expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
     registered_branch = _registered_worktree_branches(root).get(resolved)
-    if registered_branch != expected_branch:
+    if (
+        parse_run_branch_ids(expected_branch) is None
+        or registered_branch != expected_branch
+    ):
         raise _unmanaged_worktree_error(worktree, base)
     if candidate.exists() and not _has_linked_worktree_metadata(root, candidate):
         raise _unmanaged_worktree_error(worktree, base)

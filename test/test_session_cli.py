@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
-from _git_support import current_branch, make_repo, run_git
+from _git_support import RUN_ID, SESSION_ID, current_branch, make_repo, run_git
 
 import cmoc_runtime
 import commons.runtime_merge_conflict as merge_conflict_module
@@ -453,7 +453,7 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     monkeypatch.chdir(root)
     seed_search_config(root)
     home_branch = current_branch(root)
-    path = root / ".cmoc" / "gu" / "session" / "broken.json"
+    path = root / ".cmoc" / "gu" / "session" / f"{SESSION_ID}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps({"session": {"session_home_branch": home_branch}, "run": {}}) + "\n"
@@ -702,7 +702,7 @@ def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
     state["run"] = {
         "state": "joinable",
         "kind": "realization_refactor",
-        "branch": f"cmoc/run/{session_id}/run-id",
+        "branch": f"cmoc/run/{session_id}/{RUN_ID}",
         "fork_commit": state["session"]["session_fork_commit"],
     }
     path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")

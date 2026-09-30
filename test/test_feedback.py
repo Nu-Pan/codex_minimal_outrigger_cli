@@ -25,7 +25,7 @@ from typing import Any, NoReturn
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
-from _git_support import current_branch, make_repo, run_git
+from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from oracle.acp_builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter as _build_canonical_normalize_parameter,
 )
@@ -880,7 +880,7 @@ def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> N
         "observation_id": "fbo_000001_2026-08-02_00-00",
         "source": "agent_report",
         "observed_at": "2026-08-02T00:00:00Z",
-        "context": {"cmoc_session_id": "session"},
+        "context": {"cmoc_session_id": SESSION_ID},
         "payload": {
             "category": "tooling",
             "summary": "new",
@@ -2329,12 +2329,12 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
             "event_id": f"evt_{index}",
             "event_type": "feedback.reporter_unavailable",
             "occurred_at": observed_at,
-            "subcommand_invocation_id": f"scope_{index}",
+            "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
             "component": "reporter",
             "failure_code": "missing",
         }
-        context = _context(root, session_id=f"session_{index}")
-        context["subcommand_invocation_id"] = f"scope_{index}"
+        context = _context(root, session_id=f"sess_{index:06d}_2026-09-29_15-04")
+        context["subcommand_invocation_id"] = event["subcommand_invocation_id"]
         _observation_id, raw_path = store_machine_observation(
             root,
             context,
@@ -2402,12 +2402,12 @@ def test_active_machine_issue_keeps_threshold_state_after_window_expires(
             "occurred_at": occurred_at.isoformat(timespec="seconds").replace(
                 "+00:00", "Z"
             ),
-            "subcommand_invocation_id": f"scope_expiry_{index}",
+            "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
             "component": "reporter",
             "failure_code": "missing",
         }
-        context = _context(root, session_id=f"session_expiry_{index}")
-        context["subcommand_invocation_id"] = f"scope_expiry_{index}"
+        context = _context(root, session_id=f"sess_{index:06d}_2026-09-29_15-04")
+        context["subcommand_invocation_id"] = event["subcommand_invocation_id"]
         _observation_id, raw_path = store_machine_observation(
             root,
             context,

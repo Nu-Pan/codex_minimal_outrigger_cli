@@ -946,7 +946,9 @@ def _recover_merge_resolution(
         document_search_scope=oracle_doc_scope(),
         feedback_report_cut_path=context.repo / manifest["run"]["sealed"]["path"],
     )
-    log_root = codex_log_dir(context.repo).resolve()
+    log_root = (
+        codex_log_dir(context.repo) / manifest["run"]["targets"]["execution_id"]
+    ).resolve()
 
     def log_file(value: object) -> Path | None:
         if not isinstance(value, str):
@@ -954,7 +956,7 @@ def _recover_merge_resolution(
         path = Path(value)
         if (
             not path.is_absolute()
-            or not path.resolve().is_relative_to(log_root)
+            or path.resolve().parent != log_root
             or _has_symlink_component(path)
             or not path.is_file()
         ):

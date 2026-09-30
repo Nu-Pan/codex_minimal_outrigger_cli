@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
 from _codex_support import FakeCodexResult, codex_override_config, setup_codex_home
-from _git_support import current_branch, make_repo, run_git
+from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_git
 
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
@@ -41,7 +41,7 @@ def _activate_session(
     """隔離 repository に oracle edit 用の session state を作成する。"""
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    session_id = "oracle-edit-test"
+    session_id = SESSION_ID
     session_branch = f"cmoc/session/{session_id}"
     run_git(root, "checkout", "-b", session_branch)
     path = state_path(root, session_id)
@@ -95,7 +95,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     active_run = RunPart(
         "running",
         "realization_apply",
-        "cmoc/run/oracle-edit-test/active-run",
+        RUN_BRANCH,
         "abc",
     )
     _session_branch, session_state_path = _activate_session(root, run=active_run)

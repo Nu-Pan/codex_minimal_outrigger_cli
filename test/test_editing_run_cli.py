@@ -16,7 +16,15 @@ from typing import NoReturn
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
-from _git_support import current_branch, make_repo, run_git
+from _git_support import (
+    RUN_BRANCH,
+    RUN_ID,
+    SESSION_BRANCH,
+    SESSION_ID,
+    current_branch,
+    make_repo,
+    run_git,
+)
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_merge_conflict as merge_conflict_module
@@ -100,12 +108,12 @@ def test_refactor_rejects_empty_refactor_state(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path,
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="fork",
         kind="realization_refactor",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="fork",
         run_worktree=tmp_path,
     )
@@ -142,12 +150,12 @@ def test_run_reports_use_execution_ids_and_keep_generated_time(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path,
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path,
     )
@@ -193,12 +201,12 @@ def test_fork_report_escapes_special_changed_paths(tmp_path: Path) -> None:
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path,
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path,
     )
@@ -912,12 +920,12 @@ def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
     )
@@ -2288,7 +2296,7 @@ def test_resolve_active_run_rejects_run_branch_from_another_session(
     state["run"] = {
         "state": "running",
         "kind": "realization_apply",
-        "branch": "cmoc/run/another-session/run-id",
+        "branch": f"cmoc/run/sess_000001_2026-09-29_15-04/{RUN_ID}",
         "fork_commit": state["session"]["session_fork_commit"],
     }
     state_path.write_text(json.dumps(state, indent=2) + "\n")
@@ -2384,12 +2392,12 @@ def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=run_worktree,
     )
@@ -2424,12 +2432,12 @@ def test_run_join_cleanup_warns_when_worktree_removal_raises(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
     )
@@ -2469,12 +2477,12 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=session_worktree,
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=run_worktree,
     )
@@ -2517,12 +2525,12 @@ def test_run_join_conflict_abort_failure_still_restores_session_tree(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
     )
