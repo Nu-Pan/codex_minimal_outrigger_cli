@@ -59,11 +59,8 @@ from oracle.prompt_builder.policy.realization import (
 from oracle.prompt_builder.policy.realization_findings import (
     build_realization_findings_policy as _build_realization_findings_policy,
 )
-from oracle.prompt_builder.policy.routing import (
-    build_routing_policy as _build_routing_policy,
-)
 
-from basic.acp import FileAccessMode
+from basic.acp import DocumentSearchScope, FileAccessMode
 from basic.path_model import AgentCallPathContext
 
 
@@ -231,18 +228,49 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     assert "初期の競合一覧にない関連ファイル" in rendered_doc
 
 
-def test_build_routing_policy_renders_core_reading_requirements() -> None:
-    """routing policy が原文確認と検索失敗の区別を伝える。"""
-    doc = _build_routing_policy(_path_context())[1]
+@pytest.mark.parametrize(
+    "document_search_scope",
+    [
+        pytest.param(None, id="disabled"),
+        pytest.param(
+            DocumentSearchScope(allowed_subtrees=("oracle/doc",)), id="enabled"
+        ),
+    ],
+)
+def test_complete_prompt_renders_search_routing_for_call_scope(
+    document_search_scope: DocumentSearchScope | None,
+) -> None:
+    """完全 prompt が検索の併用条件と call の検索有効状態を伝える。"""
+    prompt = build_complete_prompt(
+        task="- task",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
+        routing_policy=True,
+        document_search_scope=document_search_scope,
+    )
+    rendered = render_sd_node_as_markdown(*prompt)
+    routing = rendered.split("# routing policy\n", 1)[1].split("</cmoc_block>", 1)[0]
+    required = routing.split("\n**必須**\n", 1)[1].split("\n**禁止**\n", 1)[0]
+    prohibited = routing.split("\n**禁止**\n", 1)[1].split("\n**例外**\n", 1)[0]
+    exceptions = routing.split("\n**例外**\n", 1)[1].split("\n## ", 1)[0]
 
-    assert isinstance(doc, SDHeader)
-    assert doc.title == "routing policy"
+    assert "キーワード検索に加えて" in required
+    assert "MCP tool によるベクトル検索も併用" in required
+    assert "ファイルアクセス制限は、検索結果についても適用" in required
+    assert "「検索失敗」と「検索成功の上でヒットゼロ件」は区別" in required
+    assert "検索ヒットゼロ件だけを根拠" in prohibited
+    assert "「仕様の不存在」「調査完了」と判断してはいけない" in prohibited
+    assert "検索に失敗した場合は、許可された手段で調査を続けて良い" in exceptions
 
-    rendered = render_sd_node_as_markdown(doc)
-    assert "必要な現在原文を開いて判断" in rendered
-    assert "食い違う場合も原文を優先" in rendered
-    assert "検索失敗と正常ゼロ件を区別" in rendered
-    assert "文書検索 MCP は無効" in rendered
+    if document_search_scope is None:
+        assert "文書検索 MCP は無効" in routing
+        assert "許可された原文への直接参照や既存のキーワード検索を使える" in routing
+        assert "cmoc_document_search.search" not in routing
+    else:
+        assert "cmoc_document_search.search" in routing
+        assert "`query`" in routing and "`limit`" in routing
+        assert "root や閲覧範囲を tool 引数で変更することはできない" in routing
+        assert "文書検索 MCP は無効" not in routing
 
 
 def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:
