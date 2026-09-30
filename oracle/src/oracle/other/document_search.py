@@ -104,6 +104,10 @@ class DocumentSearchConfig:
     startup_timeout_seconds: float = 120.0
     request_timeout_seconds: float = 600.0
     shutdown_grace_seconds: float = 5.0
+    resource_wait_timeout_seconds: float = 600.0
+    sync_no_progress_timeout_seconds: float = 600.0
+    post_sync_search_timeout_seconds: float = 600.0
+    search_request_timeout_seconds: float = 3600.0
 
 
 SEARCH_MCP_SERVER = "cmoc_document_search"

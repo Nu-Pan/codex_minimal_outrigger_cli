@@ -87,6 +87,8 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 正確な field、型、数値制約、項目間制約、および補完に使う暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `DocumentSearchConfig` へ委譲する。新規ファイル全体の設定構造と既定状態は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig` へ委譲する。これらの既定値を使う新規生成・明示補完と、保存済み設定の検証を区別する。
 
+MCP 検索要求用の四種類の期限設定も、以下の必須項目の検証と不足補完に含める。既存の `request_timeout_seconds` が保存されていても、追加された項目が存在することの代わりにはせず、その値から新しい項目を推定しない。各設定の適用先は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」に従う。
+
 ### 共通の検証
 
 - 既存の設定ファイルが読み取れ、正しい JSON の object であることを検証する。通常起動でファイルが存在しない場合は、未設定として扱う。
@@ -137,7 +139,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 対象・逐次反映と再利用・期限・資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「対象と信頼境界」「同期と cache」「identity と保存先」「排他、期限、終了」を正本とする。ここで準備した索引を別の worktree や実効閲覧範囲の索引と取り違えず、後続の検索要求でも同文書に従って現在の許可集合と本文を確認する。
 
-索引同期の開始・終端と、所要時間・結果・処理量・ロック待ちの記録は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従う。
+索引同期の開始・終端と、所要時間・結果・処理量・資源待ちの記録は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従う。
 
 ## refactor state の追跡保証と同期
 
