@@ -851,6 +851,12 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "src/commons/runtime_document_search_observation.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_document_search_scope.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -1338,6 +1344,12 @@
     "last_investigated_at": null
   },
   "test/test_document_search.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_document_search_deadlines.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
