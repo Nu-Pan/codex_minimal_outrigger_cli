@@ -43,6 +43,8 @@ from commons.runtime_refactor import RefactorState
 from config.cmoc_config import CmocConfig
 from main import app
 
+_WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
+
 
 def _new_subcommand_events(root: Path, previous: set[Path]) -> list[dict[str, object]]:
     """直前の CLI 呼び出しが保存した 1 本の診断ログを読む。"""
@@ -131,6 +133,144 @@ def test_doctor_preprocess_repairs_git_state(
         }
         for entry in state.values()
     )
+    assert all((root / relative).is_dir() for relative in _WORK_DIRECTORIES)
+    assert all(not list((root / relative).iterdir()) for relative in _WORK_DIRECTORIES)
+
+
+@pytest.mark.parametrize("explicit_doctor", [False, True])
+def test_doctor_preprocess_restores_empty_work_directories(tmp_path, explicit_doctor):
+    """親ごとの不足を補完し、既存の内容を保って再実行時の差分を増やさない。"""
+    root = make_repo(tmp_path)
+    run_git(root, "rm", "oracle/spec.md")
+    preserved = root / "src/kept.txt"
+    preserved.parent.mkdir()
+    preserved.write_text("kept content\n")
+    run_git(root, "add", "src/kept.txt")
+    run_git(root, "commit", "-m", "keep realization content without oracle files")
+    run_doctor(root)
+    for relative in _WORK_DIRECTORIES:
+        if relative != "src":
+            (root / relative).rmdir()
+    (root / "oracle").rmdir()
+    head_before = run_git(root, "rev-parse", "HEAD").stdout
+    preserved_before = (preserved.stat().st_ino, preserved.stat().st_mtime_ns)
+
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit_doctor)
+
+    assert all((root / relative).is_dir() for relative in _WORK_DIRECTORIES)
+    assert all(
+        not list((root / relative).iterdir())
+        for relative in _WORK_DIRECTORIES
+        if relative != "src"
+    )
+    assert preserved.read_text() == "kept content\n"
+    assert (preserved.stat().st_ino, preserved.stat().st_mtime_ns) == preserved_before
+    directory_states = {
+        relative: (
+            (root / relative).stat().st_ino,
+            (root / relative).stat().st_mtime_ns,
+        )
+        for relative in _WORK_DIRECTORIES
+    }
+
+    doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit_doctor)
+
+    assert directory_states == {
+        relative: (
+            (root / relative).stat().st_ino,
+            (root / relative).stat().st_mtime_ns,
+        )
+        for relative in _WORK_DIRECTORIES
+    }
+    assert run_git(root, "rev-parse", "HEAD").stdout == head_before
+    assert run_git(root, "status", "--short").stdout == ""
+    assert run_git(root, "ls-files", "--", *_WORK_DIRECTORIES).stdout.splitlines() == [
+        "src/kept.txt"
+    ]
+
+
+@pytest.mark.parametrize("command", [("doctor",), ("session", "fork")])
+@pytest.mark.parametrize("relative", ["oracle", *_WORK_DIRECTORIES])
+def test_preprocess_rejects_work_directory_collisions(
+    tmp_path, monkeypatch, command, relative
+):
+    """通常起動と明示 doctor は配置先・親の衝突を保持し、本命処理へ進まない。"""
+    root = make_repo(tmp_path)
+    run_git(root, "rm", "oracle/spec.md")
+    run_git(root, "commit", "-m", "remove oracle files")
+    run_doctor(root)
+    collision = root / relative
+    if relative == "oracle":
+        for child in ("doc", "src", "test"):
+            (collision / child).rmdir()
+    collision.rmdir()
+    collision.write_text("keep collision\n")
+    head_before = run_git(root, "rev-parse", "HEAD").stdout
+    branch_before = run_git(root, "branch", "--show-current").stdout
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, list(command), catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert collision.read_text() == "keep collision\n"
+    assert run_git(root, "rev-parse", "HEAD").stdout == head_before
+    assert run_git(root, "branch", "--show-current").stdout == branch_before
+    report = terminal_primary_report(result).read_text()
+    assert "作業用配置先" in report
+    assert f"work-root: {root}" in report
+    assert (
+        f"path: {root / ('oracle/doc' if relative == 'oracle' else relative)}" in report
+    )
+    assert "reason:" in report
+    assert "退避" in report
+
+
+def test_preprocess_reports_work_directory_permission_failure(tmp_path, monkeypatch):
+    """作成できない配置先を具体的に診断し、必須条件の失敗を伝える。"""
+    root = make_repo(tmp_path)
+    run_doctor(root)
+    blocked = root / "oracle/test"
+    blocked.rmdir()
+    original_mkdir = Path.mkdir
+
+    def deny_target(path, *args, **kwargs):
+        if path == blocked:
+            raise PermissionError("directory creation denied")
+        return original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", deny_target)
+    with pytest.raises(CmocError) as exc_info:
+        doctor_module.run_doctor_preprocess(root)
+
+    assert not blocked.exists()
+    assert f"work-root: {root}" in exc_info.value.detail
+    assert f"path: {blocked}" in exc_info.value.detail
+    assert "directory creation denied" in exc_info.value.detail
+    assert "権限" in exc_info.value.next_actions[0]
+
+
+def test_doctor_rechecks_work_directories_after_repair_commit(tmp_path, monkeypatch):
+    """修復 commit の hook が配置先をファイルに替えた場合、正常終了しない。"""
+    root = make_repo(tmp_path)
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    hook = hooks / "pre-commit"
+    hook.write_text(
+        "#!/bin/sh\nset -eu\nrmdir oracle/test\n"
+        "printf 'late collision\\n' > oracle/test\n"
+    )
+    hook.chmod(0o755)
+    run_git(root, "config", "core.hooksPath", str(hooks))
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert (root / "oracle/test").read_text() == "late collision\n"
+    report = terminal_primary_report(result).read_text()
+    assert "作業用配置先" in report
+    assert f"work-root: {root}" in report
+    assert f"path: {root / 'oracle/test'}" in report
 
 
 def test_doctor_syncs_document_edits_and_deletions_without_committing_them(
@@ -229,6 +369,7 @@ def test_doctor_preprocess_follows_repair_order(
 
     def observe_ignore(path: Path) -> None:
         """ignore 修復の呼び出し順を記録する。"""
+        assert all((path / relative).is_dir() for relative in _WORK_DIRECTORIES)
         events.append("ignore")
         original_ignore(path)
 
@@ -783,6 +924,8 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert (linked / ".cmoc" / "gt" / "config.json").exists()
     assert f"- repo_root: `{root}`" in result.stdout
+    assert all((linked / relative).is_dir() for relative in _WORK_DIRECTORIES)
+    assert all(not (root / relative).exists() for relative in _WORK_DIRECTORIES)
 
 
 def test_doctor_syncs_default_config_without_overwriting_human_values(
@@ -1220,6 +1363,8 @@ def test_doctor_repairs_shared_cmoc_root_in_its_own_repository(
     )
     assert "/.cmoc/gu/" in (installation / ".gitignore").read_text()
     assert f'cmoc_root: "{installation}"' in terminal_primary_report(result).read_text()
+    assert all((root / relative).is_dir() for relative in _WORK_DIRECTORIES)
+    assert all(not (installation / relative).exists() for relative in _WORK_DIRECTORIES)
 
     run_git(installation, "rm", ".gitignore")
     run_git(installation, "commit", "-m", "remove shared ignore")
