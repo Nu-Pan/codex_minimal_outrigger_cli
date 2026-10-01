@@ -39,7 +39,7 @@ workload 固有仕様が preflight 後の staging area も clean とする場合
 workload は、write 権限を持つ本命 agent call の開始前に、次の準備を完了しなければならない。
 
 1. 新しい編集 run の run ID を発行する。
-2. run isolation 仕様に従って、`{{cmoc-run-fork-commit}}`、`{{cmoc-run-branch}}`、および `{{cmoc-run-worktree}}` を確定する。
+2. `{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md` の「git branch」「git worktree」に従って、`{{cmoc-run-fork-commit}}`、`{{cmoc-run-branch}}`、および `{{cmoc-run-worktree}}` を確定し、作成した worktree の初回利用に必要な配置先の準備を完了する。
 3. session state の `run.state` を `running` にし、`kind`、`branch`、`fork_commit` を保存する。
 
 準備後、workload の編集作業を `{{cmoc-run-worktree}}` 上で行う。

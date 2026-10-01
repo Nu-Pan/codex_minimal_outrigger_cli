@@ -6,11 +6,11 @@ doctor preprocess は、各サブコマンドに共通する実行環境・設�
 
 ## 成功条件と保証範囲
 
-正常終了は、対象の repo-root・work-root で使用する共通実行環境・保存設定・管理状態と、使用する cmoc-root の必須のコンポーネントが、本書の検証をすべて満たし、検査時点で利用可能であることを表す。本書の「検索索引の同期」の完了も含む。必須の依存・コンポーネントが不足、不一致、未検証、または利用不能のまま、正常終了してはならない。
+正常終了は、対象の repo-root・work-root で使用する共通実行環境・保存設定・管理状態と、使用する cmoc-root の必須のコンポーネントが、本書の検証をすべて満たし、検査時点で利用可能であることを表す。本書の「作業用配置先の存在保証」の成立と「検索索引の同期」の完了も含む。必須の依存・コンポーネントが不足、不一致、未検証、または利用不能のまま、正常終了してはならない。
 
 各サブコマンド固有の branch、session/run state、git working tree・staging area の clean 状態などの操作条件は、この保証に含めず、doctor preprocess の正常終了後に個別仕様に従って検証する。任意の入力での推論成功や、検査後の文書・設定・環境変化に対する成功も保証しない。model provider の稼働・認証などの保証範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「cmoc の責務境界」を維持する。
 
-検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・コンポーネントまたは索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を必須の検索用コンポーネントや索引同期へ適用してはならない。
+検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・作業用配置先・コンポーネントまたは索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を作業用配置先の存在保証、必須の検索用コンポーネント、または索引同期へ適用してはならない。
 
 ## 共通実行環境の検証
 
@@ -25,16 +25,47 @@ cmoc 本体と doctor を起動するための Python 環境・起動用依存�
 通常のサブコマンドと明示的な `cmoc doctor` は、検索設定・検索用コンポーネントに対して異なる経路を使う。設定は本書の「検索設定の検証と補完」、コンポーネントは「検索用コンポーネントの準備と検査」に従う。明示 doctor の入口で通常起動用の不足検査を先に行い、準備・修復へ到達する前に停止させてはならない。
 
 1. 起動基盤と検索用コンポーネント以外の共通依存を検証し、コンポーネントを所有する cmoc-root と、処理対象の repo-root・各 work-root を確定する
-2. 本書の「管理領域の非追跡保証」に従って、それぞれの root の `.cmoc/gu` が git 追跡対象外であることを保証する
-3. `{{work-root}}/.agents` が git 追跡対象であることを保証する
-4. 処理に使用する各 work-root の `{{work-root}}/.cmoc/gt/config.json` に対し、入口に応じた検索設定の検証・補完、共通設定の検証、および追跡保証を行う
-5. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema を満たし、entry 集合と調査要求が同期済みであることを保証する
-6. 入口に応じた検索用コンポーネントの準備・検査を行う
-7. 本書の「検索索引の同期」に従って、処理対象の各 work-root の索引を同期する
-8. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
-9. ここまでの作業で発生した tracked 差分を、それぞれの修復対象 root の owning repository・worktree で git commit する。検索設定の補完差分も含め、差分がなければ commit を作らない
+2. 本書の「作業用配置先の存在保証」に従って、処理に使用する各 work-root の配置先を補完・検証する
+3. 本書の「管理領域の非追跡保証」に従って、それぞれの root の `.cmoc/gu` が git 追跡対象外であることを保証する
+4. `{{work-root}}/.agents` が git 追跡対象であることを保証する
+5. 処理に使用する各 work-root の `{{work-root}}/.cmoc/gt/config.json` に対し、入口に応じた検索設定の検証・補完、共通設定の検証、および追跡保証を行う
+6. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema を満たし、entry 集合と調査要求が同期済みであることを保証する
+7. 入口に応じた検索用コンポーネントの準備・検査を行う
+8. 本書の「検索索引の同期」に従って、処理対象の各 work-root の索引を同期する
+9. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
+10. ここまでの作業で発生した tracked 差分を、それぞれの修復対象 root の owning repository・worktree で git commit する。検索設定の補完差分も含め、差分がなければ commit を作らない
 
 通常起動でも、検索設定・検索用コンポーネント以外の既存の管理ファイルの修復・同期と、それに伴う commit は本書の各規則に従って行う。検索用コンポーネントの準備を明示 doctor に集約することを理由に、これらの管理責務を省略しない。
+
+## 作業用配置先の存在保証
+
+cmoc が固定の作業用配置先として案内するディレクトリを、空でも利用できるようにする。存在保証の対象集合は次の五つとし、配置先の意味は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」「realization file の責務」に従う。
+
+- `{{work-root}}/oracle/doc`
+- `{{work-root}}/oracle/src`
+- `{{work-root}}/oracle/test`
+- `{{work-root}}/src`
+- `{{work-root}}/test`
+
+この集合は、その回の prompt の組込み選択や path 文字列の出現に依存しない。prompt 本文やコマンドに現れる全 path の自動作成へ一般化しない。
+
+### 対象 root と成立時点
+
+処理に使用する各 `{{work-root}}` に適用する。agent call では、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」が定める cwd 起点の worktree root を対象とし、repo-root や cmoc-root で代替しない。管理領域のためだけに扱う cmoc-root や、処理に使用しない worktree へ適用範囲を広げない。
+
+通常サブコマンドと明示的な `cmoc doctor` の双方で、不足する対象と必要な親ディレクトリを作成し、正常終了を判定する検証時点で対象のすべてがディレクトリとして存在することを保証する。作成・検証は、その work-root の前処理で対象を使うファイル列挙・索引同期より前に完了する。
+
+doctor preprocess の後に作成する run worktree にも、その worktree の初回利用・agent 起動前に同じ保証を成立させる。main worktree での前処理成功だけで代替しない。この適用のために doctor preprocess 全体を再実行する方式は要求しない。
+
+検証後の checkout・merge 等による変化への継続保証は、本節では定めない。merge 中の doctor 修復・commit の制限は、本書の「管理領域の非追跡保証」「editing run の join での同期時点」に従う。
+
+### 補完・検証と失敗時の扱い
+
+空のディレクトリも保証を満たす。既存のディレクトリと内容を保持し、同じ状態への再実行で不要な変更を生じさせない。この保証のために `.gitkeep` 等のファイルを追加したり、Git 追跡を要求したりしない。本書が別に定める `.agents`・設定・refactor state の追跡保証、`.cmoc/gu` の非追跡保証、および tracked 差分の commit 責務は維持する。
+
+対象または必要な親ディレクトリに同名ファイルその他の衝突がある場合、自動で置換・削除しない。必要な作成・検証を完了できなければ、対象 work-root と path、理由、および実際に取り得る修復方法を示し、本書の「成功条件と保証範囲」の失敗契約に従う。
+
+ディレクトリの存在とファイル列挙の成功は別に判定し、内部のファイル件数・検索ヒット件数や、任意の検索コマンドの終了コード 0 は保証しない。正常に列挙・確認できた空集合と検索失敗の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「検索と routing」「逐次反映と同期完了」に従う。
 
 ## 管理領域の非追跡保証
 
