@@ -917,6 +917,12 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "src/commons/runtime_feedback_protocol.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_feedback_reporter.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -1398,6 +1404,12 @@
     "last_investigated_at": null
   },
   "test/test_file_inventory.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_git_query_reuse.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
