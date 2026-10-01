@@ -29,6 +29,7 @@ from pathlib import Path
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
+from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 
@@ -260,9 +261,86 @@ def test_doctor_preprocess_follows_repair_order(
         observe_reporter,
     )
 
-    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
+    # 明示 doctor と通常の事前処理を繰り返しても、reporter 検証を省略しない。
+    for explicit in (True, False, True, False):
+        events.clear()
+        doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit)
+        assert events == ["ignore", "agents", "config", "state", "reporter"]
 
-    assert events == ["ignore", "agents", "config", "state", "reporter"]
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
+    tmp_path, monkeypatch, object_format
+):
+    """同じ blob の再登録を省き、更新時も mode と保存対象外の entry を保つ。"""
+    monkeypatch.setenv("GIT_DEFAULT_HASH", object_format)
+    root = make_repo(tmp_path)
+    assert (
+        run_git(root, "rev-parse", "--show-object-format").stdout.strip()
+        == object_format
+    )
+    config = doctor_module.config_path(root)
+    state = doctor_module.refactor_state_path(root)
+    original = '{"label": "共通"}\n'
+    for path in (config, state):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(original)
+    run_git(root, "add", "-f", ".cmoc/gt")
+    config_relative = str(config.relative_to(root))
+    state_relative = str(state.relative_to(root))
+    run_git(root, "update-index", "--chmod=+x", config_relative)
+    run_git(root, "update-index", "--skip-worktree", state_relative)
+
+    index_path = doctor_module._copy_current_index(root)
+    try:
+        before = index_path.read_bytes()
+        doctor_module._stage_tracked_runtime_repair(root, index_path)
+        assert index_path.read_bytes() == before
+
+        changed = '{"label": "変更"}\r\n'
+        config.write_bytes(changed.encode("utf-8"))
+        state.write_text("preserved staged entry\n")
+        doctor_module._stage_tracked_runtime_repair(
+            root, index_path, skip_paths={state_relative}
+        )
+        staged_config = doctor_module._run_git_with_index(
+            ["show", f":{config_relative}"], root, index_path
+        ).stdout
+        staged_state = doctor_module._run_git_with_index(
+            ["show", f":{state_relative}"], root, index_path
+        ).stdout
+        assert staged_config == changed.replace("\r\n", "\n")
+        assert staged_state == original
+        entries = doctor_module._run_git_with_index(
+            ["ls-files", "--stage", "-v", "--", ".cmoc/gt"], root, index_path
+        ).stdout.splitlines()
+        assert any(line.startswith("H 100755 ") for line in entries)
+        assert any(line.startswith("S 100644 ") for line in entries)
+    finally:
+        index_path.unlink(missing_ok=True)
+
+
+def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(tmp_path):
+    """hook が excludesFile を変えても、最終検証は新しい ignore source を検査する。"""
+    root = make_repo(tmp_path)
+    invalid_source = tmp_path / "ignore-directory"
+    invalid_source.mkdir()
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    command = ["git", "config", "core.excludesFile", str(invalid_source)]
+    write_python_executable(
+        hooks / "post-commit",
+        ["import subprocess", f"subprocess.run({command!r}, check=True)"],
+    )
+    run_git(root, "config", "core.hooksPath", str(hooks))
+
+    with pytest.raises(CmocError) as caught:
+        doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
+
+    assert str(invalid_source) in caught.value.detail
+    assert run_git(root, "config", "core.excludesFile").stdout.strip() == str(
+        invalid_source
+    )
 
 
 def test_doctor_preprocess_continues_with_degraded_reporter(

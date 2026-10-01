@@ -48,14 +48,16 @@ from acp.builder.feedback.remediate_issue import (
 from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_feedback import (
-    FEEDBACK_CAPABILITY_ENV,
-    FEEDBACK_COLLECTOR_HOST,
-    FEEDBACK_COLLECTOR_PORT_ENV,
-    FEEDBACK_PROTOCOL_ENV,
     FeedbackInvocation,
     ReporterAvailabilityError,
     begin_feedback_call,
     start_feedback_invocation,
+)
+from commons.runtime_feedback_protocol import (
+    FEEDBACK_CAPABILITY_ENV,
+    FEEDBACK_COLLECTOR_HOST,
+    FEEDBACK_COLLECTOR_PORT_ENV,
+    FEEDBACK_PROTOCOL_ENV,
 )
 from commons.runtime_feedback_state import (
     feedback_writer_lock,

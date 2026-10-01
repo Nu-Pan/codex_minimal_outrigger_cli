@@ -35,7 +35,7 @@ from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
 )
-from commons.runtime_feedback import (
+from commons.runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,

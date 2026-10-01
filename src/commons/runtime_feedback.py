@@ -25,6 +25,12 @@ from typing import Any
 
 import typer
 
+from .runtime_feedback_protocol import (
+    FEEDBACK_CAPABILITY_ENV,
+    FEEDBACK_COLLECTOR_HOST,
+    FEEDBACK_COLLECTOR_PORT_ENV,
+    FEEDBACK_PROTOCOL_ENV,
+)
 from .runtime_feedback_store import (
     REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
@@ -38,10 +44,6 @@ from .runtime_feedback_store import (
 from .runtime_git import current_branch, head_commit
 from .runtime_logging import SubcommandLogger, current_subcommand_logger
 
-FEEDBACK_CAPABILITY_ENV = "CMOC_FEEDBACK_CAPABILITY"
-FEEDBACK_COLLECTOR_HOST = "127.0.0.1"
-FEEDBACK_COLLECTOR_PORT_ENV = "CMOC_FEEDBACK_COLLECTOR_PORT"
-FEEDBACK_PROTOCOL_ENV = "CMOC_FEEDBACK_PROTOCOL_VERSION"
 # reporter は不正な UTF-8 文字列も安全に collector へ届けるため JSON wire 上で
 # ensure_ascii=True を使う。入力 payload の UTF-8 上限 32 KiB が wire escape によって
 # 偽陽性拒否されないよう、最大 3 倍と capability/envelope の余白を確保する。

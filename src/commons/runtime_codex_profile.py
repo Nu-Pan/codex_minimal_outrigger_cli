@@ -45,7 +45,7 @@ from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_SOURCE_ENV,
 )
 from .runtime_errors import CmocError
-from .runtime_feedback import (
+from .runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,

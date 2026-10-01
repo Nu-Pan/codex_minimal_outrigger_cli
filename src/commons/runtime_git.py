@@ -13,13 +13,16 @@ import os
 import shutil
 import stat
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal
 
 from .runtime_errors import CmocError
 from .runtime_ids import is_common_id
-from .runtime_paths import repo_root, worktrees_dir
+from .runtime_paths import repo_root, reuse_root_queries, worktrees_dir
 from .runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/run/")
@@ -50,6 +53,31 @@ _FILE_INVENTORY_EXCLUDED_ROOT_NAMES = frozenset(
 )
 _FILE_INVENTORY_EXCLUDED_FILE_NAMES = frozenset({"AGENTS.md"})
 _FileClassification = Literal["oracle", "realization"]
+_GIT_PATH_QUERY_ARGS = frozenset(
+    {
+        ("rev-parse", "--path-format=absolute", "--git-common-dir"),
+        ("rev-parse", "--git-path", "info/exclude"),
+        ("rev-parse", "--git-path", "index"),
+        ("config", "--path", "--get-all", "core.excludesFile"),
+    }
+)
+_GitPathQueryKey = tuple[Path, tuple[str, ...], tuple[tuple[str, str], ...]]
+_GIT_PATH_QUERIES: ContextVar[dict[_GitPathQueryKey, CommandResult] | None] = (
+    ContextVar("cmoc_git_path_queries", default=None)
+)
+
+
+@contextmanager
+def reuse_git_path_queries() -> Iterator[None]:
+    """Git の配置と設定を変えない処理内で、path の問い合わせを再利用する。"""
+    # doctor が修復する index・HEAD・ignore 内容や判定結果は保存しない。
+    # 設定変更を次の doctor へ持ち越さず、例外時にも必ず破棄する。
+    token = _GIT_PATH_QUERIES.set({})
+    try:
+        with reuse_root_queries():
+            yield
+    finally:
+        _GIT_PATH_QUERIES.reset(token)
 
 
 @dataclass(frozen=True)
@@ -266,6 +294,12 @@ def run_git(args: list[str], git_cwd: Path, check: bool = True) -> CommandResult
     """git subprocess の失敗を cmoc の利用者向けエラーへそろえる境界。"""
     # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     # Git の実行場所は subprocess API の cwd とは異なる内部役割名で扱う。
+    queries = _GIT_PATH_QUERIES.get()
+    key = None
+    if queries is not None and tuple(args) in _GIT_PATH_QUERY_ARGS:
+        key = (git_cwd.resolve(), tuple(args), tuple(sorted(os.environ.items())))
+        if key in queries:
+            return queries[key]
     result = subprocess.run(
         ["git", *args],
         cwd=git_cwd,
@@ -273,6 +307,8 @@ def run_git(args: list[str], git_cwd: Path, check: bool = True) -> CommandResult
         capture_output=True,
     )
     command_result = CommandResult(result.returncode, result.stdout, result.stderr)
+    if queries is not None and key is not None and result.returncode == 0:
+        queries[key] = command_result
     if check and result.returncode != 0:
         raise CmocError(
             "git コマンドが失敗しました。",

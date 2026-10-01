@@ -11,7 +11,9 @@ commit 対象の対応を複数 file で追う必要が生じるため、現状�
 """
 
 import fcntl
+import hashlib
 import importlib
+import locale
 import os
 import shutil
 import subprocess
@@ -43,6 +45,7 @@ from .runtime_git import (
     ensure_cmoc_ignored,
     git_common_dir,
     require_cmoc_ignored,
+    reuse_git_path_queries,
     run_git,
     with_cmoc_ignore_pattern,
 )
@@ -210,10 +213,11 @@ def run_doctor_preprocess(
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # snapshot 作成から修復 commit と元の index 復元までを同じ Git common
     # directory の lock 内で行い、並行 doctor が共有 index を混ぜないようにする。
-    lock_roots = {doctor_lock_path(root): root}
-    if explicit_doctor:
-        lock_roots[doctor_lock_path(installation_root)] = installation_root
-    with ExitStack() as locks:
+    with ExitStack() as locks, ExitStack() as path_queries:
+        path_queries.enter_context(reuse_git_path_queries())
+        lock_roots = {doctor_lock_path(root): root}
+        if explicit_doctor:
+            lock_roots[doctor_lock_path(installation_root)] = installation_root
         for lock_path in sorted(lock_roots):
             locks.enter_context(doctor_lock(lock_roots[lock_path]))
         main_root = repo_root(root)
@@ -380,6 +384,9 @@ def run_doctor_preprocess(
                     original_index_path.unlink(missing_ok=True)
             raise
 
+        # commit hook は Git 設定を変更できるため、修復 commit へ進む前に
+        # 問い合わせの再利用を終える。復元と最終検証は最新の配置・設定を読む。
+        path_queries.close()
         for (
             repair_root,
             original_index_path,
@@ -808,11 +815,45 @@ def _stage_tracked_runtime_repair(
     skip_paths: Collection[str] = (),
 ) -> None:
     """同期済み config/state を ignore 規則に左右されず一時 index へ載せる。"""
-    for path in (config_path(root), refactor_state_path(root)):
-        relative = str(path.relative_to(root))
-        if relative in skip_paths:
-            continue
-        _stage_text(root, index_path, relative, path.read_text())
+    # 同じ一時 index の対象 entry をまとめて読み、既存の stage と mode を保つ。
+    paths = {
+        str(path.relative_to(root)): path
+        for path in (config_path(root), refactor_state_path(root))
+        if str(path.relative_to(root)) not in skip_paths
+    }
+    if not paths:
+        return
+    entries = _run_git_with_index(
+        ["ls-files", "--stage", "-z", "--", *paths], root, index_path
+    )
+    metadata: dict[str, tuple[str, str, str]] = {}
+    for record in entries.stdout.split("\0"):
+        if record:
+            fields, relative = record.split("\t", 1)
+            mode, blob, stage = fields.split()
+            metadata.setdefault(relative, (mode, blob, stage))
+
+    # hash-object --stdin の text input と同じ encoding で比較する。
+    # Git 自身が返した object ID の長さから SHA-1 / SHA-256 を区別する。
+    encoding = "utf-8" if sys.flags.utf8_mode else locale.getencoding()
+    for relative, path in paths.items():
+        content = path.read_text()
+        existing = metadata.get(relative)
+        if existing is not None and existing[2] == "0":
+            blob = existing[1]
+            if len(blob) in {40, 64}:
+                encoded = content.encode(encoding)
+                header = b"blob " + str(len(encoded)).encode("ascii") + b"\0"
+                algorithm = "sha1" if len(blob) == 40 else "sha256"
+                if hashlib.new(algorithm, header + encoded).hexdigest() == blob:
+                    continue
+        _stage_text(
+            root,
+            index_path,
+            relative,
+            content,
+            mode=existing[0] if existing is not None else None,
+        )
 
 
 def _is_staged_deletion_of_head_entry(
@@ -838,12 +879,20 @@ def _index_text(root: Path, index_path: Path, path: str) -> str | None:
     return result.stdout
 
 
-def _stage_text(root: Path, index_path: Path, path: str, content: str) -> None:
+def _stage_text(
+    root: Path,
+    index_path: Path,
+    path: str,
+    content: str,
+    *,
+    mode: str | None = None,
+) -> None:
     """テキスト内容をblob化して一時indexへ登録する。"""
     blob = _run_git_with_index(
         ["hash-object", "-w", "--stdin"], root, index_path, input_text=content
     ).stdout.strip()
-    mode = _index_mode(root, index_path, path)
+    if mode is None:
+        mode = _index_mode(root, index_path, path)
     if mode is None:
         entry = _head_entry(root, path)
         mode = entry[0] if entry else "100644"
