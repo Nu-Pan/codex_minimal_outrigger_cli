@@ -34,6 +34,7 @@ from .runtime_git import (
 )
 from .runtime_ids import new_id
 from .runtime_paths import (
+    ensure_work_directories,
     refactor_state_path,
     repo_root,
     work_root,
@@ -184,6 +185,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                 start_point=fork_commit,
             )
             created = True
+            ensure_work_directories(run_worktree)
             require_cmoc_ignored(run_worktree)
             state.run = RunPart(
                 state="running",

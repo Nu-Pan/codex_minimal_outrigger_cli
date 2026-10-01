@@ -49,7 +49,13 @@ from .runtime_git import (
     run_git,
     with_cmoc_ignore_pattern,
 )
-from .runtime_paths import cmoc_root, config_path, refactor_state_path, repo_root
+from .runtime_paths import (
+    cmoc_root,
+    config_path,
+    ensure_work_directories,
+    refactor_state_path,
+    repo_root,
+)
 from .runtime_primary_report import update_primary_report_fields
 from .runtime_refactor import sync_refactor_state
 
@@ -221,6 +227,7 @@ def run_doctor_preprocess(
         for lock_path in sorted(lock_roots):
             locks.enter_context(doctor_lock(lock_roots[lock_path]))
         main_root = repo_root(root)
+        ensure_work_directories(root)
         repair_roots = [main_root] if main_root == root else [main_root, root]
         if explicit_doctor and installation_root not in repair_roots:
             repair_roots.append(installation_root)
@@ -425,6 +432,7 @@ def run_doctor_preprocess(
         for repair_root in repair_roots:
             require_cmoc_ignored(repair_root)
         _validate_tracked_runtime_files(root)
+        ensure_work_directories(root, create_missing=False)
 
 
 @contextmanager

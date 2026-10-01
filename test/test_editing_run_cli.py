@@ -63,6 +63,8 @@ from commons.runtime_run_lifecycle import (
 from commons.runtime_state import SessionState
 from main import app
 
+_WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
+
 
 def _start_session(
     tmp_path: Path,
@@ -474,6 +476,7 @@ def test_realization_apply_fork_and_run_join_use_common_state(
         """apply agent の代わりに run worktree の realization file を変更する。"""
         worktree = parameter.agent_call_cwd
         assert "cwd" not in kwargs
+        assert all((worktree / relative).is_dir() for relative in _WORK_DIRECTORIES)
         calls.append((parameter, worktree))
         (worktree / "README.md").write_text("# repo\n\nrealized\n")
         return SimpleNamespace(returncode=0, output_json=None)
@@ -2908,6 +2911,80 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
     report = terminal_primary_report(result)
     assert 'completion_reason: "user_interruption"' in report.read_text()
     assert notifications == [("realization refactor fork", "interrupted")]
+
+
+@pytest.mark.parametrize(
+    "kind", ["realization_apply", "realization_refactor", "feedback_report"]
+)
+def test_start_run_prepares_work_directories_before_publishing_state(
+    tmp_path, monkeypatch, kind
+):
+    """全 editing workload の新 worktree を running state の公開前に補完する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_write = lifecycle_module.write_state
+    observed = []
+
+    def observe_running(path, state):
+        if state.run.state == "running":
+            run_worktree = lifecycle_module.worktree_for_branch(root, state.run.branch)
+            assert all(
+                (run_worktree / relative).is_dir() for relative in _WORK_DIRECTORIES
+            )
+            assert run_git(run_worktree, "status", "--short").stdout == ""
+            observed.append(run_worktree)
+        original_write(path, state)
+
+    monkeypatch.setattr(lifecycle_module, "write_state", observe_running)
+
+    context = start_editing_run(kind)
+
+    assert observed == [context.run_worktree]
+    assert context.run_worktree != root
+    assert all(
+        not list((context.run_worktree / relative).iterdir())
+        for relative in _WORK_DIRECTORIES
+    )
+    assert _state(state_path)["run"]["state"] == "running"
+
+
+@pytest.mark.parametrize(
+    "kind", ["realization_apply", "realization_refactor", "feedback_report"]
+)
+def test_start_run_directory_conflict_cleans_unpublished_resources(
+    tmp_path, monkeypatch, kind
+):
+    """配置先の衝突で開始に失敗した場合、session の内容と ready state を保つ。"""
+    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    collision = root / "src"
+    collision.rmdir()
+    collision.write_text("kept tracked collision\n")
+    run_git(root, "add", "src")
+    run_git(root, "commit", "-m", "track conflicting placement")
+    state_before = state_path.read_bytes()
+    original_target = lifecycle_module.new_run_target
+    targets = []
+
+    def record_target(*args):
+        target = original_target(*args)
+        targets.append(target)
+        return target
+
+    monkeypatch.setattr(lifecycle_module, "new_run_target", record_target)
+
+    with pytest.raises(CmocError) as exc_info:
+        start_editing_run(kind)
+
+    [(run_branch, run_worktree)] = targets
+    assert "作業用配置先" in exc_info.value.summary
+    assert f"work-root: {run_worktree}" in exc_info.value.detail
+    assert f"path: {run_worktree / 'src'}" in exc_info.value.detail
+    assert state_path.read_bytes() == state_before
+    assert collision.read_text() == "kept tracked collision\n"
+    assert not run_worktree.exists()
+    assert not lifecycle_module.branch_exists(root, run_branch)
+    assert not run_process_id_path(
+        root, session_branch.removeprefix("cmoc/session/")
+    ).exists()
 
 
 def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(

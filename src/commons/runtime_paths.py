@@ -1,6 +1,7 @@
-"""cmoc の root・保存先解決、時刻整形、cwd 切替を提供する。"""
+"""cmoc の root・保存先解決、配置先補完、時刻整形、cwd 切替を提供する。"""
 
 import os
+import stat
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -204,6 +205,33 @@ def _tracked_data_dir(root: Path) -> Path:
     """git 追跡する cmoc 管理 directory を返す。"""
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     return root / ".cmoc" / "gt"
+
+
+def ensure_work_directories(root: Path, *, create_missing: bool = True) -> None:
+    """処理対象 work-root の固定配置先を補完・検証する。
+
+    Args:
+        root: 配置先を使用する worktree の root。
+        create_missing: 不足を補完するか。False は修復後の状態の検証に使う。
+    """
+    # {{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md の
+    # 「作業用配置先の存在保証」
+    for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
+        path = root / relative
+        try:
+            if create_missing:
+                path.mkdir(parents=True, exist_ok=True)
+            if not stat.S_ISDIR(path.stat().st_mode):
+                raise NotADirectoryError(f"not a directory: {path}")
+        except OSError as exc:
+            raise CmocError(
+                "作業用配置先を準備・検証できません。",
+                [
+                    f"配置先 ({path}) と親ディレクトリを確認し、衝突するファイルの退避"
+                    "またはディレクトリの作成・参照権限の修正後に再実行してください。"
+                ],
+                f"work-root: {root}\npath: {path}\nreason: {exc}",
+            ) from exc
 
 
 @contextmanager
