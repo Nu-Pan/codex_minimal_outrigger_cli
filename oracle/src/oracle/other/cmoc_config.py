@@ -126,7 +126,7 @@ class CmocConfigCodex:
             #   状況を見てもうちょっと安いモデルに下げたい
             "build_feedback_remediate_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-6-astra",
+                model="gpt-6.1-sol",
                 reasoning_effort="max",
             ),
             # NOTE
@@ -134,7 +134,7 @@ class CmocConfigCodex:
             #   怖すぎるので Astra しか選べない
             "build_feedback_normalize_issue_parameter": CodexCallConfig(
                 model_provider="openai",
-                model="gpt-6-astra",
+                model="gpt-6.1-sol",
                 reasoning_effort="max",
             ),
             # NOTE TUI で人間とターンを回すので品質が至上命題
