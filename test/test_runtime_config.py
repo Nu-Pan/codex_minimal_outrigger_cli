@@ -24,7 +24,11 @@ from oracle.other.cmoc_config import (
     CodexModelProviderConfig,
     JsonTomlValue,
 )
-from oracle.other.document_search import DocumentSearchConfig
+from oracle.other.document_search import (
+    SEARCH_CANDIDATE_COUNT_MAX,
+    SEARCH_CANDIDATE_COUNT_MIN,
+    DocumentSearchConfig,
+)
 
 from cmoc_runtime import (
     CmocError,
@@ -234,6 +238,8 @@ def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitio
         ("chunk_overlap_tokens", 512),
         ("embedding_context_tokens", 512),
         ("reranker_context_tokens", 512),
+        ("candidate_count", 0),
+        ("candidate_count", -1),
         ("candidate_count", 8),
         ("candidate_count", 19),
         ("candidate_count", 51),
@@ -252,16 +258,19 @@ def test_saved_search_config_rejects_invalid_explicit_values(
     search[field] = value
     path.write_text(json.dumps({"document_search": search}) + "\n")
 
-    with pytest.raises(CmocError) as exc_info:
-        load_config(root)
-
-    assert str(path) in exc_info.value.detail
-    assert f"document_search.{field}" in exc_info.value.detail
-    assert "手動で修正" in exc_info.value.next_actions[0]
     original = path.read_text()
-    with pytest.raises(CmocError):
-        sync_config(root, repair_missing=True)
-    assert path.read_text() == original
+    for repair_missing in (False, True):
+        with pytest.raises(CmocError) as exc_info:
+            sync_config(root, repair_missing=repair_missing)
+
+        assert str(path) in exc_info.value.detail
+        assert f"document_search.{field}" in exc_info.value.detail
+        assert "手動で修正" in exc_info.value.next_actions[0]
+        if field == "candidate_count":
+            reason = exc_info.value.detail.split("\nreason:", 1)[1]
+            assert str(SEARCH_CANDIDATE_COUNT_MIN) in reason
+            assert str(SEARCH_CANDIDATE_COUNT_MAX) in reason
+        assert path.read_text() == original
 
 
 def test_explicit_doctor_adds_request_deadlines_without_replacing_validation_timeout(

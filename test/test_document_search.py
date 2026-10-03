@@ -24,6 +24,7 @@ from oracle.other.document_search import (
     SEARCH_TOOL_OUTPUT_SCHEMA,
     DocumentSearchConfig,
     SearchErrorCode,
+    build_search_tool_description,
 )
 
 from cmoc_runtime import write_config
@@ -1318,7 +1319,7 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
         description = tool["description"]
         assert str(root) in description
         assert "{{" not in description
-        assert "work-root は tool 引数から変更できない" in description
+        assert description == build_search_tool_description(root)
         for schema_detail in ("hits", "ranges", "candidate_count", "isError"):
             assert schema_detail not in description
         assert (
