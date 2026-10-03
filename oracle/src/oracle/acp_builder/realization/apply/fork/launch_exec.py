@@ -6,7 +6,6 @@ from pathlib import Path
 # cmoc
 from oracle.acp_builder.basic import (
     AgentCallParameter,
-    DocumentSearchScope,
     FileAccessMode,
 )
 from oracle.other.path_model import AgentCallPathContext
@@ -22,13 +21,10 @@ def build_realization_apply_fork_launch_exec_parameter(
     diff_base_commit: str,
     run_fork_commit: str,
     run_worktree: Path,
-    *,
-    document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """差分駆動の realization 追従用 AgentCallParameter を構築する。
 
     Args:
-        document_search_scope: caller が確定した、その call の実効閲覧範囲。
         diff_base_commit: 追従対象差分の始点 commit。
         run_fork_commit: 追従対象差分の終点である run fork commit。
         run_worktree: AgentCallParameter.agent_call_cwd とする linked worktree。
@@ -48,7 +44,7 @@ def build_realization_apply_fork_launch_exec_parameter(
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
-        document_search_scope=document_search_scope,
+        enable_document_search_mcp=True,
         aux_static_prompt=[
             SDHeader(
                 "追従対象差分の取得方法",
@@ -83,5 +79,5 @@ def build_realization_apply_fork_launch_exec_parameter(
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
-        document_search_scope=document_search_scope,
+        enable_document_search_mcp=True,
     )

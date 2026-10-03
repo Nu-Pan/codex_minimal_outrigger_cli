@@ -45,7 +45,7 @@ from acp.builder.feedback.normalize_issue import (
 from acp.builder.feedback.remediate_issue import (
     build_feedback_remediate_issue_parameter,
 )
-from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_feedback import (
     FeedbackInvocation,
@@ -597,7 +597,6 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
         observation_json,
         candidate_json,
         root,
-        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
     )
 
     observation_start = parameter.prompt.index("# 構造化済み observation")
@@ -653,7 +652,7 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     ) -> SimpleNamespace:
         assert parameter.agent_call_cwd == root
         assert parameter.file_access_mode == FileAccessMode.READONLY
-        assert parameter.document_search_scope is not None
+        assert parameter.enable_document_search_mcp is True
         assert "# routing policy" in parameter.prompt
         assert "# oracle and realization basic" in parameter.prompt
         captured_prompts.append(parameter.prompt)
@@ -688,15 +687,11 @@ def test_feedback_normalization_excludes_candidate_search_hint(
 def test_feedback_issue_builders_disable_reporting(tmp_path: Path) -> None:
     """normalization と remediation は同じ追加報告を prompt から外す。"""
     root = make_repo(tmp_path)
-    search_scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
     parameters = (
-        build_feedback_normalize_issue_parameter(
-            "{}", "[]", root, document_search_scope=search_scope
-        ),
+        build_feedback_normalize_issue_parameter("{}", "[]", root),
         build_feedback_remediate_issue_parameter(
             json.dumps({"issue_id": "fbi_" + "a" * 26}),
             root,
-            document_search_scope=search_scope,
         ),
     )
 

@@ -19,9 +19,7 @@ from typing import get_args
 import pytest
 from _git_support import make_repo, run_git
 from jsonschema.validators import Draft202012Validator
-from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import (
-    INITIAL_SEARCH_MATERIALS,
     SEARCH_TOOL_INPUT_SCHEMA,
     SEARCH_TOOL_OUTPUT_SCHEMA,
     DocumentSearchConfig,
@@ -36,6 +34,7 @@ from commons.runtime_document_search import (
     scan_documents,
 )
 from commons.runtime_document_search_mcp import _response
+from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_document_search_worker import (
     NodeSearchWorker,
     _heading_ranges,
@@ -114,7 +113,7 @@ class _InferenceDouble:
     ) -> object:
         """実モデル以外の同期・cache 境界に対する確定的な応答。"""
         self.operations.append(operation)
-        vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+        vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
         assert operation == "embed_query"
         return vector
 
@@ -130,7 +129,7 @@ class _InferenceDouble:
         cancelled,
     ):
         self.operations.append("chunk_embed")
-        vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+        vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
         self.texts.extend(documents.values())
         for path, source in documents.items():
             if resumes[path] == 0:
@@ -153,8 +152,11 @@ def _repo_with_docs(tmp_path: Path) -> Path:
     docs = root / "oracle/doc"
     docs.mkdir()
     (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
-    (docs / "secret.md").write_text("# 非公開の本文\n")
-    run_git(root, "add", "oracle/doc")
+    ignore_path = root / ".gitignore"
+    existing = ignore_path.read_text() if ignore_path.exists() else ""
+    ignore_path.write_text(existing + "\noracle/doc/ignored.md\n")
+    (docs / "ignored.md").write_text("# 非公開の本文\n")
+    run_git(root, "add", ".gitignore", "oracle/doc")
     run_git(root, "commit", "-m", "add docs")
     ensure_cmoc_ignored(root)
     return root
@@ -216,11 +218,21 @@ def test_heading_ranges_follow_markdown_structure(body: str, parts: list[str]) -
     assert [body[start:end] for start, end in _heading_ranges(body)] == parts
 
 
-def test_scope_only_reads_allowed_oracle_docs(
+def test_search_only_reads_oracle_doc_markdown(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """除外と component 境界を本文の open より前に適用する。"""
+    """分類と oracle/doc・拡張子の条件を本文の open より前に適用する。"""
     root = _repo_with_docs(tmp_path)
+    for relative in (
+        "oracle/doc/AGENTS.md",
+        "oracle/doc/note.txt",
+        "oracle/src/code.md",
+        "oracle/document/other.md",
+        "realization.md",
+    ):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("対象外の本文\n")
     from commons import runtime_document_search as module
 
     original = module._secure_read
@@ -231,18 +243,9 @@ def test_scope_only_reads_allowed_oracle_docs(
         return original(work_root, relative)
 
     monkeypatch.setattr(module, "_secure_read", tracked_read)
-    scope = DocumentSearchScope(
-        allowed_subtrees=("oracle/doc",), excluded_files=("oracle/doc/secret.md",)
-    )
-    result = scan_documents(root, scope)
+    result = scan_documents(root)
     assert set(result) == {"oracle/doc/allowed.md"}
     assert opened == ["oracle/doc/allowed.md"]
-    assert scan_documents(root, DocumentSearchScope()) == {}
-    with pytest.raises(SearchError, match="scope") as error:
-        DocumentSearch(
-            root, DocumentSearchScope(allowed_files=("../secret",)), _tuning()
-        )
-    assert error.value.code == "INVALID_SCOPE"
 
 
 def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> None:
@@ -250,10 +253,7 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> N
     pytest.importorskip("sqlite_vec")
     root = _repo_with_docs(tmp_path)
     worker = _InferenceDouble()
-    scope = DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",))
-    search = DocumentSearch(
-        root, scope, _tuning(), worker=worker, installation_root=tmp_path
-    )
+    search = DocumentSearch(root, _tuning(), worker=worker, installation_root=tmp_path)
     first = search.search("内容")
     assert first["status"] == "ok"
     assert [hit["path"] for hit in first["hits"]] == ["oracle/doc/allowed.md"]
@@ -289,7 +289,7 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
     root = _repo_with_docs(tmp_path)
     document = root / "oracle/doc/allowed.md"
     document.write_text("# 前半の原文\n後半の原文\n")
-    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+    vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
 
     class StreamingWorker(_InferenceDouble):
         def __init__(self) -> None:
@@ -331,7 +331,6 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
     worker = StreamingWorker()
     search = DocumentSearch(
         root,
-        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
         _tuning(),
         worker=worker,
         installation_root=tmp_path,
@@ -360,7 +359,7 @@ def test_unbounded_sync_outlasts_search_deadline(tmp_path: Path) -> None:
     """doctor 用同期は検索期限を超えて完了し、通常検索は期限を守る。"""
     pytest.importorskip("sqlite_vec")
     root = _repo_with_docs(tmp_path)
-    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+    vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
 
     class SlowWorker(_InferenceDouble):
         def stream_chunks(
@@ -399,7 +398,6 @@ def test_unbounded_sync_outlasts_search_deadline(tmp_path: Path) -> None:
     tuning = replace(_tuning(), sync_no_progress_timeout_seconds=0.05)
     search = DocumentSearch(
         root,
-        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
         tuning,
         worker=SlowWorker(),
         installation_root=tmp_path,
@@ -413,7 +411,7 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(
     """期限超過後の検索を失敗にし、有効な途中 chunk を再利用する。"""
     pytest.importorskip("sqlite_vec")
     root = _repo_with_docs(tmp_path)
-    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+    vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
 
     class PausingWorker(_InferenceDouble):
         def __init__(self) -> None:
@@ -458,7 +456,6 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(
     worker = PausingWorker()
     search = DocumentSearch(
         root,
-        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
         tuning,
         worker=worker,
         installation_root=tmp_path,
@@ -562,7 +559,7 @@ def test_worker_streams_complete_events_through_small_pipe(tmp_path: Path) -> No
             "config": asdict(config),
         },
     )
-    dimensions = INITIAL_SEARCH_MATERIALS.embedding_dimensions
+    dimensions = SEARCH_MATERIALS.embedding_dimensions
     result = subprocess.run(
         ["node", "--import", str(preload), str(tmp_path / "worker.mjs")],
         input=json.dumps(request, ensure_ascii=False).encode("utf-8"),
@@ -684,10 +681,10 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
     runtime.mkdir()
     _fake_node_model(runtime)
     monkeypatch.setenv(
-        "CMOC_TEST_DIMENSIONS", str(INITIAL_SEARCH_MATERIALS.embedding_dimensions)
+        "CMOC_TEST_DIMENSIONS", str(SEARCH_MATERIALS.embedding_dimensions)
     )
     monkeypatch.setattr(worker_module, "verify_search_materials", lambda *_: runtime)
-    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+    vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
 
     class QueryWorker(NodeSearchWorker):
         def __init__(self) -> None:
@@ -702,7 +699,6 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
     worker = QueryWorker()
     search = DocumentSearch(
         root,
-        DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
         _tuning(),
         worker=worker,
         installation_root=root,
@@ -812,7 +808,6 @@ def test_database_symlink_cannot_redirect_index_writes(tmp_path: Path) -> None:
     root = _repo_with_docs(tmp_path)
     search = DocumentSearch(
         root,
-        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
         _tuning(),
         worker=_InferenceDouble(),
         installation_root=tmp_path,
@@ -828,101 +823,88 @@ def test_database_symlink_cannot_redirect_index_writes(tmp_path: Path) -> None:
     assert not outside.exists()
 
 
-def test_scope_change_reclaims_only_inactive_index(tmp_path: Path) -> None:
-    """範囲が狭くなった後は旧索引を再利用せず、未参照なら回収する。"""
+def test_config_change_reclaims_only_inactive_index(tmp_path: Path) -> None:
+    """互換条件の変更後は旧索引を再利用せず、未参照なら回収する。"""
     pytest.importorskip("sqlite_vec")
     root = _repo_with_docs(tmp_path)
-    worker = _InferenceDouble()
-    broad = DocumentSearch(
-        root,
-        DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
-        _tuning(),
-        worker=worker,
-        installation_root=tmp_path,
-    )
-    assert len(broad.search("内容")["hits"]) == 2
-    _, old_index, _, _ = broad._paths()
-    assert old_index.is_file()
+    with (
+        closing(
+            DocumentSearch(
+                root,
+                _tuning(),
+                worker=_InferenceDouble(),
+                installation_root=tmp_path,
+            )
+        ) as previous,
+        closing(
+            DocumentSearch(
+                root,
+                replace(_tuning(), chunk_tokens=16),
+                worker=_InferenceDouble(),
+                installation_root=tmp_path,
+            )
+        ) as current,
+    ):
+        previous.search("内容")
+        _, old_index, _, _ = previous._paths()
+        assert old_index.is_file()
+        result = current.search("内容")
+        assert [hit["path"] for hit in result["hits"]] == ["oracle/doc/allowed.md"]
+        assert current._paths()[1] != old_index
+        assert old_index.is_file()
+        previous.close()
+        current.search("内容")
+        assert not old_index.exists()
 
-    narrow = DocumentSearch(
-        root,
-        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
-        _tuning(),
-        worker=worker,
-        installation_root=tmp_path,
-    )
-    result = narrow.search("内容")
-    assert [hit["path"] for hit in result["hits"]] == ["oracle/doc/allowed.md"]
-    assert old_index.is_file()
-    broad.close()
-    narrow.search("内容")
-    assert not old_index.exists()
-    assert "非公開の本文" not in str(result)
 
-
-def test_scope_change_preserves_index_while_request_uses_it(tmp_path: Path) -> None:
-    """旧範囲の要求が推論待機中なら、新範囲はその索引を回収しない。"""
+def test_config_change_preserves_index_while_request_uses_it(tmp_path: Path) -> None:
+    """旧設定の要求が推論中なら、接続を閉じてもその索引を回収しない。"""
     pytest.importorskip("sqlite_vec")
     root = _repo_with_docs(tmp_path)
-    broad = DocumentSearch(
-        root,
-        DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
-        _tuning(),
-        worker=_InferenceDouble(),
-        installation_root=tmp_path,
-    )
-    broad.search("内容")
-    _, old_index, _, _ = broad._paths()
     started = threading.Event()
     release = threading.Event()
-    normal_worker = _InferenceDouble()
 
-    class _WaitingWorker(_InferenceDouble):
-        def stream_chunks(
-            self,
-            documents,
-            resumes,
-            on_event,
-            *,
-            reusable_hashes,
-            deadline,
-            residency_fd,
-            cancelled,
-        ):
+    class WaitingWorker(_InferenceDouble):
+        def run(self, *args, **kwargs):
             started.set()
             assert release.wait(5)
-            normal_worker.stream_chunks(
-                documents,
-                resumes,
-                on_event,
-                reusable_hashes=reusable_hashes,
-                deadline=deadline,
-                residency_fd=residency_fd,
-                cancelled=cancelled,
-            )
+            return super().run(*args, **kwargs)
 
-    broad.worker = _WaitingWorker()
-    (root / "oracle/doc/secret.md").write_text("# 変更された本文\n")
-    narrow = DocumentSearch(
-        root,
-        DocumentSearchScope(),
-        _tuning(),
-        worker=_InferenceDouble(),
-        installation_root=tmp_path,
-    )
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(broad.search, "内容")
-        try:
-            assert started.wait(5)
-            assert narrow.search("内容")["status"] == "ok"
-            assert old_index.is_file()
-            broad.close()
-            assert old_index.is_file()
-        finally:
-            release.set()
-        assert future.result(timeout=5)["status"] == "ok"
-    narrow.search("内容")
-    assert not old_index.exists()
+    with (
+        closing(
+            DocumentSearch(
+                root,
+                _tuning(),
+                worker=_InferenceDouble(),
+                installation_root=tmp_path,
+            )
+        ) as previous,
+        closing(
+            DocumentSearch(
+                root,
+                replace(_tuning(), chunk_tokens=16),
+                worker=_InferenceDouble(),
+                installation_root=tmp_path,
+            )
+        ) as current,
+    ):
+        previous.search("内容")
+        current.search("内容")
+        _, old_index, _, _ = previous._paths()
+        previous.worker = WaitingWorker()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(previous.search, "未計算の query")
+            try:
+                assert started.wait(5)
+                assert current.search("内容")["status"] == "ok"
+                previous.close()
+                current.search("内容")
+                assert old_index.is_file()
+            finally:
+                release.set()
+            assert future.result(timeout=5)["status"] == "ok"
+        current.search("内容")
+        assert not old_index.exists()
 
 
 def test_zero_hit_search_rechecks_source_before_return(
@@ -935,7 +917,6 @@ def test_zero_hit_search_rechecks_source_before_return(
     document.write_text(" \n")
     search = DocumentSearch(
         root,
-        DocumentSearchScope(allowed_files=("oracle/doc/allowed.md",)),
         _tuning(),
         worker=_InferenceDouble(),
         installation_root=tmp_path,
@@ -983,13 +964,13 @@ def _assert_search_result(response, schema, *, error):
         {"query": " \n\t"},
         {"query": None},
         {"query": "内容", "work_root": "/elsewhere"},
-        {"query": "内容", "scope": {}},
+        {"query": "内容", "path": "oracle/doc/allowed.md"},
         *({"query": "内容", "limit": limit} for limit in (None, True, 19, 51, 20.5)),
     ],
 )
 def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, arguments):
     """公開引数 schema に違反する入力は検索せず protocol error にする。"""
-    search = DocumentSearch(tmp_path, DocumentSearchScope(), None)
+    search = DocumentSearch(tmp_path, None)
     tool = _listed_search_tool(search)
     assert not Draft202012Validator(tool["inputSchema"]).is_valid(arguments)
     monkeypatch.setattr(search, "search", lambda *a, **kw: pytest.fail("search called"))
@@ -1014,7 +995,7 @@ class _CandidateWorker(_InferenceDouble):
         self.ranges = ranges
 
     def stream_chunks(self, documents, resumes, on_event, **kwargs):
-        vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+        vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
         for path, source in documents.items():
             lines = source.splitlines(keepends=True)
             ranges = self.ranges[path]
@@ -1058,7 +1039,6 @@ def test_mcp_success_schema_and_candidate_limits(
     with closing(
         DocumentSearch(
             root,
-            DocumentSearchScope(allowed_files=(path,)),
             replace(_tuning(), candidate_count=candidate_count),
             worker=worker,
             installation_root=tmp_path,
@@ -1095,7 +1075,8 @@ def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
     """ファイルごとに重複・重なりだけを統合し、先頭行と単一行の意味を保つ。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
-    other = "oracle/doc/secret.md"
+    other = "oracle/doc/second.md"
+    (root / other).write_text("別の原文\n")
     (root / path).write_text("".join(f"原文 {i}\n" for i in range(81)))
     worker = _CandidateWorker(
         {
@@ -1106,7 +1087,6 @@ def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
     with closing(
         DocumentSearch(
             root,
-            DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
             _tuning(),
             worker=worker,
             installation_root=tmp_path,
@@ -1133,7 +1113,7 @@ def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
 @pytest.mark.parametrize("code", [*get_args(SearchErrorCode.__value__), None])
 def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
     """定義済みの検索失敗と予期しない例外は、成功を併記しない構造化結果にする。"""
-    search = DocumentSearch(tmp_path, DocumentSearchScope(), None)
+    search = DocumentSearch(tmp_path, None)
     tool = _listed_search_tool(search)
 
     def fail(*args, **kwargs):
@@ -1187,7 +1167,7 @@ def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
 )
 def test_output_schema_rejects_malformed_results(tmp_path, value):
     """旧形式や成功・失敗の混在、行範囲の型違いを公開 schema で検出する。"""
-    search = DocumentSearch(tmp_path, DocumentSearchScope(), None)
+    search = DocumentSearch(tmp_path, None)
     schema = _listed_search_tool(search)["outputSchema"]
     assert not Draft202012Validator(schema).is_valid(value)
 
@@ -1222,7 +1202,6 @@ def test_worker_change_rebuilds_index_without_reusing_embeddings(
         with closing(
             DocumentSearch(
                 root,
-                DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
                 _tuning(),
                 worker=_InferenceDouble(),
                 installation_root=tmp_path,
@@ -1244,7 +1223,6 @@ def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
     write_config(path, CmocConfig())
     search = DocumentSearch(
         root,
-        DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
         CmocConfig().document_search,
         worker=_InferenceDouble(),
         installation_root=tmp_path,
@@ -1269,39 +1247,15 @@ def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
         search.close()
 
 
-@pytest.mark.parametrize(
-    "scope",
-    [
-        pytest.param(
-            {
-                "allowed_files": ["oracle/doc/概要.md"],
-                "allowed_subtrees": ["oracle/doc/app_spec"],
-                "excluded_files": ["oracle/doc/app_spec/非公開.md"],
-                "excluded_subtrees": ["oracle/doc/app_spec/private"],
-            },
-            id="restricted",
-        ),
-        pytest.param(
-            {
-                "allowed_files": [],
-                "allowed_subtrees": [],
-                "excluded_files": [],
-                "excluded_subtrees": [],
-            },
-            id="empty",
-        ),
-    ],
-)
 def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
-    tmp_path: Path, scope: dict[str, list[str]]
+    tmp_path: Path,
 ) -> None:
-    """実 stdio 境界で使い方と固定した閲覧範囲を公開し、未準備を識別できる。"""
+    """実 stdio 境界で使い方と work-root を公開し、未準備を識別できる。"""
     root = _repo_with_docs(tmp_path)
     log_path = tmp_path / "caller.jsonl"
     log_path.touch()
     context = {
         "work_root": str(root),
-        "scope": scope,
         "config": None,
         "log_context": {
             "path": str(log_path),
@@ -1363,11 +1317,8 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
             Draft202012Validator.check_schema(schema)
         description = tool["description"]
         assert str(root) in description
-        displayed_scope = description.split("```json\n", 1)[1].split("\n```", 1)[0]
-        assert json.loads(displayed_scope) == scope
         assert "{{" not in description
-        assert "root や閲覧範囲は tool 引数から変更できない" in description
-        assert "許可の両配列が空なら対象なし" in description
+        assert "work-root は tool 引数から変更できない" in description
         for schema_detail in ("hits", "ranges", "candidate_count", "isError"):
             assert schema_detail not in description
         assert (

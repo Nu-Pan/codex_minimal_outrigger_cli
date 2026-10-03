@@ -9,9 +9,6 @@ from pathlib import Path as _Path
 from oracle.acp_builder.basic import (
     AgentCallParameter as _AgentCallParameter,
 )
-from oracle.acp_builder.basic import (
-    DocumentSearchScope as _DocumentSearchScope,
-)
 from oracle.acp_builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter as _build_canonical_parameter,
 )
@@ -25,15 +22,12 @@ def build_session_join_conflict_resolution_parameter(
     session_head_commit: str,
     home_head_commit: str,
     home_worktree: _Path,
-    *,
-    document_search_scope: _DocumentSearchScope,
 ) -> _AgentCallParameter:
     """oracle が構築した共通 prompt に session join 固有の境界を加える。"""
     parameter = _build_canonical_parameter(
         session_head_commit,
         home_head_commit,
         home_worktree,
-        document_search_scope=document_search_scope,
     )
     session_scope = _render_sd_node_as_markdown(
         _SDHeader(

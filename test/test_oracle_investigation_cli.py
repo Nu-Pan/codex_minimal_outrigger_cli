@@ -16,7 +16,7 @@ from _git_support import make_repo
 import acp.builder.oracle.investigation.launch_tui as launch_tui_module
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.investigation as investigation_module
-from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_logging import current_subcommand_logger
 from main import app
 
@@ -53,8 +53,6 @@ def test_oracle_investigation_has_no_session_precondition(
 
     def record_build_parameter(
         user_instruction: str,
-        *,
-        document_search_scope: DocumentSearchScope,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の builder 呼び出しを記録する。"""
         events.append(
@@ -62,9 +60,7 @@ def test_oracle_investigation_has_no_session_precondition(
             if user_instruction == investigation_module.ORIGINAL_PROMPT_PLACEHOLDER
             else "build-parameter"
         )
-        parameter = real_build_parameter(
-            user_instruction, document_search_scope=document_search_scope
-        )
+        parameter = real_build_parameter(user_instruction)
         built_parameters.append(parameter)
         return parameter
 
@@ -171,9 +167,7 @@ def test_oracle_investigation_has_no_session_precondition(
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.enable_editor_input_handoff_mcp is True
-    assert parameter.document_search_scope == DocumentSearchScope(
-        allowed_subtrees=("oracle/doc",)
-    )
+    assert parameter.enable_document_search_mcp is True
     assert kwargs["notification_command_name"] == "oracle investigation"
     complete_prompt = parameter.prompt
     assert "# oracle investigation policy" not in complete_prompt

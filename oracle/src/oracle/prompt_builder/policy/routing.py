@@ -9,7 +9,7 @@ from oracle.prompt_builder.basic import PlaceholderMap
 
 
 def build_routing_policy(
-    search_mcp_tool_available: bool,
+    enable_document_search_mcp: bool,
 ) -> tuple[PlaceholderMap, SDHeader]:
     """文章ルーティングについての規定を構築する。
 
@@ -33,7 +33,7 @@ def build_routing_policy(
                 require=(
                     (
                         f"oracle doc 内の仕様文章を検索するときは、標準的なキーワード検索に加えて、MCP tool `{SEARCH_MCP_SERVER}.{SEARCH_TOOL_NAME}` によるベクトル検索も併用すること"
-                        if search_mcp_tool_available
+                        if enable_document_search_mcp
                         else "任意の方法で関係文章を検索すること"
                     ),
                     "検索の結果得られた位置情報を手がかりに、原文を読んで確認すること。",

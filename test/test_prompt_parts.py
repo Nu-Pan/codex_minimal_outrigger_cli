@@ -60,7 +60,7 @@ from oracle.prompt_builder.policy.realization_findings import (
     build_realization_findings_policy as _build_realization_findings_policy,
 )
 
-from basic.acp import DocumentSearchScope, FileAccessMode
+from basic.acp import FileAccessMode
 from basic.path_model import AgentCallPathContext
 
 
@@ -228,18 +228,9 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     assert "初期の競合一覧にない関連ファイル" in rendered_doc
 
 
-@pytest.mark.parametrize(
-    "document_search_scope",
-    [
-        pytest.param(None, id="disabled"),
-        pytest.param(DocumentSearchScope(), id="enabled-empty-scope"),
-        pytest.param(
-            DocumentSearchScope(allowed_subtrees=("oracle/doc",)), id="enabled"
-        ),
-    ],
-)
-def test_complete_prompt_renders_search_routing_for_call_scope(
-    document_search_scope: DocumentSearchScope | None,
+@pytest.mark.parametrize("enable_document_search_mcp", [False, True])
+def test_complete_prompt_renders_search_routing_for_call_availability(
+    enable_document_search_mcp: bool,
 ) -> None:
     """完全 prompt が検索の併用条件と call の検索有効状態を伝える。"""
     prompt = build_complete_prompt(
@@ -247,7 +238,7 @@ def test_complete_prompt_renders_search_routing_for_call_scope(
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         routing_policy=True,
-        document_search_scope=document_search_scope,
+        enable_document_search_mcp=enable_document_search_mcp,
     )
     rendered = render_sd_node_as_markdown(*prompt)
     routing = rendered.split("# routing policy\n", 1)[1].split("</cmoc_block>", 1)[0]
@@ -266,7 +257,6 @@ def test_complete_prompt_renders_search_routing_for_call_scope(
         "limit",
         "hits",
         "ranges",
-        "allowed_files",
         "candidate_count",
         "structuredContent",
         "isError",
@@ -275,7 +265,7 @@ def test_complete_prompt_renders_search_routing_for_call_scope(
     ):
         assert tool_detail not in routing
 
-    if document_search_scope is None:
+    if not enable_document_search_mcp:
         assert "任意の方法で関係文章を検索すること" in required
         assert "cmoc_document_search.search" not in routing
         assert "ベクトル検索も併用" not in required

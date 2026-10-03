@@ -34,5 +34,5 @@ def build_quota_availability_probe_parameter(
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         # NOTE 短い応答による可用性確認には文書検索を使わない。
-        document_search_scope=None,
+        enable_document_search_mcp=False,
     )

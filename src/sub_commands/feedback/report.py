@@ -38,7 +38,6 @@ from cmoc_runtime import (
     run_cli_subcommand,
     run_codex_exec,
 )
-from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback_state import (
     ActiveState,
     agent_canonical_key,
@@ -1044,7 +1043,6 @@ def _normalize_issue_identity(
         json.dumps(normalization_observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
         worktree,
-        document_search_scope=oracle_doc_scope(),
     )
     schema_path = parameter.structured_output_schema_path
     assert schema_path is not None

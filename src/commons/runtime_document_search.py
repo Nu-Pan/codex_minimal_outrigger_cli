@@ -19,15 +19,11 @@ from importlib import resources
 from pathlib import Path
 from typing import Callable, Protocol
 
-from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
-    INITIAL_SEARCH_MATERIALS,
     SEARCH_CANDIDATE_COUNT_MAX,
     SEARCH_CANDIDATE_COUNT_MIN,
     DocumentSearchConfig,
-    SearchHit,
-    SearchResult,
 )
 
 from .runtime_config import _document_search_config, load_config
@@ -38,11 +34,7 @@ from .runtime_document_search_observation import (
     inference_config,
     mcp_tool_timeout_seconds,
 )
-from .runtime_document_search_scope import (
-    scope_allows,
-    scope_identity,
-    validate_document_search_scope,
-)
+from .runtime_document_search_types import SEARCH_MATERIALS, SearchHit, SearchResult
 from .runtime_errors import CmocError
 from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ignored
 from .runtime_logging import current_subcommand_logger
@@ -272,22 +264,18 @@ def _secure_read(root: Path, relative: str) -> bytes:
 
 def scan_documents(
     root: Path,
-    scope: DocumentSearchScope,
     *,
     deadline: float | None = None,
     cancelled: threading.Event | None = None,
     check: Callable[[], None] | None = None,
 ) -> dict[str, SourceDocument]:
-    """既存分類器を使い、許可された oracle/doc Markdown だけを開く。"""
-    scope = validate_document_search_scope(scope)
+    """既存分類器を使い、oracle/doc の Markdown だけを開く。"""
     root = root.absolute()
     initial_root = _root_identity(root)
     if check is not None:
         check()
     if deadline is not None:
         _deadline_check(deadline, cancelled)
-    if not scope.allowed_files and not scope.allowed_subtrees:
-        return {}
     try:
         oracle_files, _ = enumerate_oracle_and_realization_files(root)
     except Exception as exc:
@@ -299,11 +287,7 @@ def scan_documents(
         if deadline is not None:
             _deadline_check(deadline, cancelled)
         relative = candidate.relative_to(root).as_posix()
-        if not (
-            relative.startswith("oracle/doc/")
-            and relative.endswith(".md")
-            and scope_allows(scope, relative)
-        ):
+        if not (relative.startswith("oracle/doc/") and relative.endswith(".md")):
             continue
         content = _secure_read(root, relative)
         try:
@@ -320,19 +304,16 @@ def scan_documents(
     return documents
 
 
-def search_identity(
-    root: Path, scope: DocumentSearchScope, config: DocumentSearchConfig
-) -> str:
-    """worktree 実体、閲覧範囲、分類と推論条件を索引 identity に含める。"""
+def search_identity(root: Path, config: DocumentSearchConfig) -> str:
+    """worktree 実体、分類と推論条件を索引 identity に含める。"""
     device, inode = _root_identity(root)
     worker_files = resources.files("commons.document_search_worker")
     payload = {
         "root": str(root.resolve()),
         "device": device,
         "inode": inode,
-        "scope": asdict(validate_document_search_scope(scope)),
         "classification": _CLASSIFICATION_CONTRACT,
-        "materials": asdict(INITIAL_SEARCH_MATERIALS),
+        "materials": asdict(SEARCH_MATERIALS),
         "worker_sha256": hashlib.sha256(
             worker_files.joinpath("worker.mjs").read_bytes()
         ).hexdigest(),
@@ -350,7 +331,7 @@ def search_identity(
 
 def _vector_blob(value: object) -> bytes:
     """embedding の次元、有限性、非ゼロ性を保存前に検査する。"""
-    dimensions = INITIAL_SEARCH_MATERIALS.embedding_dimensions
+    dimensions = SEARCH_MATERIALS.embedding_dimensions
     if not isinstance(value, list) or len(value) != dimensions:
         raise SearchError("MODEL_FAILURE", "embedding dimension is invalid")
     if any(
@@ -371,7 +352,7 @@ def _vector_blob(value: object) -> bytes:
 
 def _checked_cached_vector(value: object) -> bytes:
     """破損した query cache を cosine 計算へ渡さない。"""
-    dimensions = INITIAL_SEARCH_MATERIALS.embedding_dimensions
+    dimensions = SEARCH_MATERIALS.embedding_dimensions
     if not isinstance(value, bytes) or len(value) != 4 * dimensions:
         raise SearchError("SYNC_FAILED", "cached query embedding is invalid")
     numbers = struct.unpack("<" + "f" * dimensions, value)
@@ -397,7 +378,7 @@ def _open_database(path: Path) -> sqlite3.Connection:
         sqlite_vec.load(connection)
         connection.enable_load_extension(False)
         version = connection.execute("select vec_version()").fetchone()[0]
-        if version.removeprefix("v") != INITIAL_SEARCH_MATERIALS.sqlite_vec_version:
+        if version.removeprefix("v") != SEARCH_MATERIALS.sqlite_vec_version:
             raise SearchError("MODEL_IDENTITY_MISMATCH", "sqlite-vec version mismatch")
         connection.execute("pragma foreign_keys = on")
         connection.executescript(
@@ -502,7 +483,6 @@ class DocumentSearch:
     def __init__(
         self,
         root: Path,
-        scope: DocumentSearchScope,
         config: DocumentSearchConfig | None,
         *,
         worker: InferenceWorker | None = None,
@@ -511,12 +491,8 @@ class DocumentSearch:
         event_sink: SearchEventSink | None = None,
         tool_timeout_seconds: float | None = None,
     ) -> None:
-        """閲覧範囲を検証して固定する。"""
+        """work-root と検索設定を接続に結び付ける。"""
         self.root = root.absolute()
-        try:
-            self.scope = validate_document_search_scope(scope)
-        except ValueError as exc:
-            raise SearchError("INVALID_SCOPE", str(exc)) from exc
         try:
             self.config = _document_search_config(config)
         except (TypeError, ValueError) as exc:
@@ -636,7 +612,6 @@ class DocumentSearch:
         if (
             scan_documents(
                 self.root,
-                self.scope,
                 deadline=deadline,
                 cancelled=self.cancelled,
                 check=lambda: self._check(deadline),
@@ -648,7 +623,7 @@ class DocumentSearch:
     def _paths(self) -> tuple[str, Path, Path, Path]:
         if self.config is None:
             raise SearchError("NOT_READY", "document search tuning is not configured")
-        identity = search_identity(self.root, self.scope, self.config)
+        identity = search_identity(self.root, self.config)
         base = self.root / ".cmoc/gu/document_search"
         index = base / "indexes" / identity / "index.sqlite3"
         lock = base / "locks" / f"{identity}.lock"
@@ -923,7 +898,6 @@ class DocumentSearch:
             self._check(deadline)
             current = scan_documents(
                 self.root,
-                self.scope,
                 deadline=deadline,
                 cancelled=self.cancelled,
                 check=lambda: self._check(deadline),
@@ -1194,7 +1168,6 @@ class DocumentSearch:
                 _safe_directory(index.parent)
                 documents = scan_documents(
                     self.root,
-                    self.scope,
                     deadline=deadline,
                     cancelled=self.cancelled,
                     check=lambda: self._check(deadline),
@@ -1236,9 +1209,7 @@ class DocumentSearch:
         self, *, unbounded: bool = False, sync_id: str | None = None
     ) -> SyncResult:
         """query 推論を行わず、通常検索と同じ現在本文の同期を実行する。"""
-        observation = SearchObservation(
-            self.root, scope_identity(self.scope), self.event_sink, request=False
-        )
+        observation = SearchObservation(self.root, self.event_sink, request=False)
         self._observation = observation
         self.sync_progress = None
         result: SyncResult | None = None
@@ -1280,7 +1251,6 @@ class DocumentSearch:
         # 各受付に独立した時計を持たせ、並行要求の識別を保つ。
         return SearchObservation(
             self.root,
-            scope_identity(self.scope),
             self.event_sink,
             request=True,
             started=started,

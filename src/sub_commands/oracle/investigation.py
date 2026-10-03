@@ -18,7 +18,6 @@ from commons.prompt_editor_input import (
     ensure_prompt_editor_roots_ignored,
     reserve_prompt_editor_input,
 )
-from commons.runtime_document_search_scope import oracle_doc_scope
 
 
 def cmoc_oracle_investigation_impl() -> None:
@@ -37,7 +36,6 @@ def _cmoc_oracle_investigation_body() -> None:
     """入力された oracle 調査指示から Codex TUI を起動する。"""
     root = repo_root()
     current_root = work_root()
-    search_scope = oracle_doc_scope()
 
     # oracle 調査契約を含む完全 prompt の skeleton を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
@@ -47,7 +45,6 @@ def _cmoc_oracle_investigation_body() -> None:
     input_path = reserve_prompt_editor_input(root)
     complete_prompt_skeleton = build_oracle_investigation_launch_tui_parameter(
         ORIGINAL_PROMPT_PLACEHOLDER,
-        document_search_scope=search_scope,
     ).prompt
 
     start_subcommand_step(3, "oracle 調査指示を入力", "edit investigation")
@@ -62,9 +59,7 @@ def _cmoc_oracle_investigation_body() -> None:
     )
 
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
-    parameter = build_oracle_investigation_launch_tui_parameter(
-        instruction, document_search_scope=search_scope
-    )
+    parameter = build_oracle_investigation_launch_tui_parameter(instruction)
     start_subcommand_step(5, "Codex TUI を起動", "launch Codex TUI")
     run_codex_tui(
         parameter,

@@ -19,7 +19,7 @@ import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
 import sub_commands.oracle.investigation as investigation_module
 import sub_commands.tui as tui_module
-from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import write_config
 from config.cmoc_config import CmocConfig
 from main import app
@@ -122,8 +122,6 @@ def test_tui_runs_editor_and_launches_codex_directly(
 
     def record_build_parameter(
         original_prompt: str,
-        *,
-        document_search_scope: DocumentSearchScope,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の builder 呼び出しを記録する。"""
         kind = (
@@ -132,9 +130,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
             else "build-parameter"
         )
         events.append(kind)
-        parameter = real_build_parameter(
-            original_prompt, document_search_scope=document_search_scope
-        )
+        parameter = real_build_parameter(original_prompt)
         builder_calls.append((original_prompt, parameter))
         return parameter
 

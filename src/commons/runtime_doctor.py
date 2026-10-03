@@ -24,15 +24,15 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import asdict
 from pathlib import Path
 
-from oracle.other.document_search import INITIAL_SEARCH_MATERIALS, DocumentSearchConfig
+from oracle.other.document_search import DocumentSearchConfig
 
 from .runtime_config import sync_config
 from .runtime_document_search import DocumentSearch, SearchError, SyncResult
-from .runtime_document_search_scope import oracle_doc_scope, scope_identity
 from .runtime_document_search_setup import (
     prepare_document_search_materials,
     require_document_search_materials,
 )
+from .runtime_document_search_types import SEARCH_MATERIALS
 from .runtime_document_search_worker import verification_condition
 from .runtime_errors import CmocError
 from .runtime_feedback import (
@@ -117,13 +117,11 @@ def _check_common_environment() -> None:
 def _synchronize_document_search_index(
     root: Path, installation_root: Path, config: DocumentSearchConfig
 ) -> SyncResult:
-    """doctor の全 oracle/doc 範囲を期限なしで同期し、途中実績も記録する。"""
-    scope = oracle_doc_scope()
+    """doctor の oracle doc を期限なしで同期し、途中実績も記録する。"""
     sync_id = uuid7_prefixed("dsi_")
     update_primary_report_fields(
         doctor_sync_status="started",
         doctor_sync_id=sync_id,
-        doctor_scope_identity=scope_identity(scope),
         doctor_sync_work_root=str(root),
     )
     search: DocumentSearch | None = None
@@ -131,7 +129,6 @@ def _synchronize_document_search_index(
     try:
         search = DocumentSearch(
             root,
-            scope,
             config,
             installation_root=installation_root,
             use_saved_config=True,
@@ -197,7 +194,6 @@ def run_doctor_preprocess(
         material_remaining_state="未確認",
         doctor_sync_status="not_started",
         doctor_sync_id=None,
-        doctor_scope_identity=None,
         doctor_index_identity=None,
         doctor_sync_result=None,
         doctor_sync_progress=None,
@@ -209,9 +205,9 @@ def run_doctor_preprocess(
         cmoc_root=str(installation_root),
         material_path=str(installation_root / ".cmoc/gu/document_search/materials"),
         material_identity={
-            "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
-            "node_llama_cpp": INITIAL_SEARCH_MATERIALS.node_llama_cpp_version,
-            "sqlite_vec": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
+            "embedding_sha256": SEARCH_MATERIALS.embedding.sha256,
+            "node_llama_cpp": SEARCH_MATERIALS.node_llama_cpp_version,
+            "sqlite_vec": SEARCH_MATERIALS.sqlite_vec_version,
         },
     )
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md

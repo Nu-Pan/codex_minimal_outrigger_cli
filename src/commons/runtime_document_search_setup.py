@@ -17,12 +17,11 @@ from urllib.parse import quote
 
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
-    INITIAL_SEARCH_MATERIALS,
     DocumentSearchConfig,
-    ModelArtifact,
 )
 
 from .runtime_document_search import SearchError, _file_lock, _safe_directory
+from .runtime_document_search_types import SEARCH_MATERIALS, ModelArtifact
 from .runtime_document_search_worker import (
     NodeSearchWorker,
     _runtime_tree_hash,
@@ -93,13 +92,13 @@ def _runtime_versions(base: Path) -> None:
         .stdout.strip()
         .removeprefix("v")
     )
-    if node != INITIAL_SEARCH_MATERIALS.node_version:
+    if node != SEARCH_MATERIALS.node_version:
         raise ValueError("Node version does not match fixed materials")
     _verify_vector_dependency()
     package = json.loads(
         (base / "node_modules/node-llama-cpp/package.json").read_text(encoding="utf-8")
     )
-    if package.get("version") != INITIAL_SEARCH_MATERIALS.node_llama_cpp_version:
+    if package.get("version") != SEARCH_MATERIALS.node_llama_cpp_version:
         raise ValueError("node-llama-cpp version does not match fixed materials")
     _verify_lock(base)
 
@@ -150,7 +149,7 @@ def _valid_vector(value: object) -> bool:
     """実モデルが返した固定次元の有限・非ゼロ embedding を確認する。"""
     return (
         isinstance(value, list)
-        and len(value) == INITIAL_SEARCH_MATERIALS.embedding_dimensions
+        and len(value) == SEARCH_MATERIALS.embedding_dimensions
         and all(type(item) in (int, float) and math.isfinite(item) for item in value)
         and any(value)
     )
@@ -247,14 +246,14 @@ def _manifest(
         "lock_sha256": hashes["package-lock.json"],
         "runtime_tree_sha256": _runtime_tree_hash(base),
         "materials": {
-            "node_version": INITIAL_SEARCH_MATERIALS.node_version,
-            "node_llama_cpp_version": INITIAL_SEARCH_MATERIALS.node_llama_cpp_version,
-            "llama_cpp_revision": INITIAL_SEARCH_MATERIALS.llama_cpp_revision,
-            "sqlite_vec_version": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
-            "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
-            "embedding_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
-            "embedding_pooling": INITIAL_SEARCH_MATERIALS.embedding.pooling,
-            "embedding_dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
+            "node_version": SEARCH_MATERIALS.node_version,
+            "node_llama_cpp_version": SEARCH_MATERIALS.node_llama_cpp_version,
+            "llama_cpp_revision": SEARCH_MATERIALS.llama_cpp_revision,
+            "sqlite_vec_version": SEARCH_MATERIALS.sqlite_vec_version,
+            "embedding_sha256": SEARCH_MATERIALS.embedding.sha256,
+            "embedding_tokenizer_sha256": SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
+            "embedding_pooling": SEARCH_MATERIALS.embedding.pooling,
+            "embedding_dimensions": SEARCH_MATERIALS.embedding_dimensions,
         },
         "verified_conditions": {
             verification_condition(config): "document-query-embedding"
@@ -360,9 +359,7 @@ def prepare_document_search_materials(
             phase = "runtime and vector dependency check"
             _runtime_versions(staging)
             phase = "model download and checksum check"
-            model_action = _reuse_or_download(
-                base, staging, INITIAL_SEARCH_MATERIALS.embedding
-            )
+            model_action = _reuse_or_download(base, staging, SEARCH_MATERIALS.embedding)
             phase = "real-model embedding validation"
             _compatibility_probe(staging, root, config)
             phase = "verified material publication"

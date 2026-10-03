@@ -2,27 +2,22 @@
 
 ## 目的と責務
 
-agent が必要な正本の原文へ到達するため、cmoc は日本語を含む embedding による意味検索を提供し、必要な原文の選択を agent へ委ねる。待ち時間と応答量を抑えるため、候補の再ランキングは行わず、候補位置をまとめて返す。Markdown の部分編集に伴う無関係な本文の再推論を抑えながら、検索結果を現在の許可原文と正しい位置へ対応付けることを目標とする。検索対象の厳密な限定、保存済み編集の反映、失敗の識別を、速度やメモリ削減のために緩めない。検索結果は参照先を選ぶ情報であり、正本や現在の原文の代わりにはならない。
+agent が必要な正本の原文へ到達するため、cmoc は日本語を含む embedding による意味検索を提供し、必要な原文の選択を agent へ委ねる。待ち時間と応答量を抑えるため、候補の再ランキングは行わず、候補位置をまとめて返す。Markdown の部分編集に伴う無関係な本文の再推論を抑えながら、検索結果を現在の検索対象の原文と正しい位置へ対応付けることを目標とする。検索対象の厳密な限定、保存済み編集の反映、失敗の識別を、速度やメモリ削減のために緩めない。検索結果は参照先を選ぶ情報であり、正本や現在の原文の代わりにはならない。
 
 本書は検索の意味仕様を所有する。初期方式と、方式にかかわらず維持する契約を分けて定める。QMD 本体・SDK・CLI・QMD MCP は実行時依存に含めない。HTTP 待受、共有推論サーバー、独立した query expansion model、QMD 全機能との互換性、および推論エンジンやベクトル演算の自作は non-goal とする。既存のキーワード検索をこの機能へ再実装することも必須ではない。
 
 ## 対象と信頼境界
 
-検索の許可集合は、次の三条件の積集合とする。
+検索対象は、次の二条件を満たす文書とする。
 
 - call の work-root において、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」「traversal と事前 pruning」に従って oracle file と分類される。
 - `{{work-root}}/oracle/doc` 内の Markdown（拡張子 `.md`）である。
-- 信頼された cmoc caller が確定した、その call の実効閲覧範囲に含まれる。
 
 分類は owning repository、tracked/ignored、全 ignore source、nested repository、symlink、非通常ファイル、および pruning 境界の既存契約を維持する。検索用 glob を分類器の代替にしてはならない。列挙時の Git 処理回数には、同文書の「Git ignore 判定の性能不変条件」を適用する。
 
-caller は file access mode と workload 固有の閲覧制限を合わせて実効閲覧範囲を確定し、構造化した値を起動管理経路から渡す。prompt、query、モデル出力から権限を推測しない。追加の閲覧禁止を構造化できない場合の call 開始判断は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。mode 名だけを理由に全文書の閲覧を許可してはならない。
+work-root と repo-root は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」に従う。MCP 引数から root、任意 path、索引 identity を指定・変更できないようにする。
 
-範囲は work-root 相対の正規化済み path による許可 file・許可 subtree と除外 file・除外 subtree で表し、除外を優先する。subtree は path component 境界で判定する。絶対 path、親参照、空 path、不正な型、または未確定の範囲を受理せず、全体への fallback を行わない。明示された空の範囲は有効な空集合であり、未指定とは区別する。
-
-work-root と repo-root は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」に従う。閲覧範囲の正確な field・型・既定値と検索有効化の表現は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `DocumentSearchScope` と `AgentCallParameter` へ委譲する。call の途中で scope を変更する必要がある場合は、信頼された caller が旧接続を停止して新しい context を作る。MCP 引数から root、任意 path、scope、索引 identity を指定・変更できないようにする。
-
-Python は本文を読む前に許可と種類を確認する。親 directory や leaf の symlink 差替えを含め、確認した対象と安全に開けた regular file の一致を検証し、境界を確認できなければ失敗させる。許可外の本文は tokenizer、embedding、保存物、cache、結果へ流入させない。検索用の読み取り権限は、agent の直接参照の権限を拡張しない。
+Python は本文を読む前に検索対象であることと種類を確認する。親 directory や leaf の symlink 差替えを含め、確認した対象と安全に開けた regular file の一致を検証し、境界を確認できなければ失敗させる。対象外の本文は tokenizer、embedding、保存物、cache、結果へ流入させない。検索用の読み取り権限は、agent の直接参照の権限を拡張しない。
 
 ## 検索と routing
 
@@ -38,7 +33,7 @@ agent は検索失敗と、検索が成功したうえでヒットがゼロ件�
 
 ## 同期と cache
 
-検索要求ごとに現在の許可集合と本文を確認し、追加・変更・移動・削除・空白化を反映してから検索する。未作成の索引は構築し、削除・許可対象外化・空白化した旧箇所は検索に使わない。編集・移動の結果は、同じ process の次の検索にも反映する。
+検索要求ごとに現在の検索対象と本文を確認し、追加・変更・移動・削除・空白化を反映してから検索する。未作成の索引は構築し、削除・検索対象外化・空白化した旧箇所は検索に使わない。編集・移動の結果は、同じ process の次の検索にも反映する。
 
 本節の分割・再利用・逐次反映は、検索要求時の自動同期と、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「検索索引の同期」が定める通常起動・明示 doctor の同期に共通して適用する。
 
@@ -54,21 +49,21 @@ agent は検索失敗と、検索が成功したうえでヒットがゼロ件�
 
 ### embedding の再利用と現在位置
 
-再利用は、本書の「identity と保存先」に従う同じ索引 identity 内を基準とする。未変更文書に加え、変更文書内や移動後の chunk でも、完全なモデル入力と互換条件が同じで、現在の許可原文へ対応付けられる有効な保存済み embedding は、再推論せずに再利用する。意味の近さを入力の一致の代わりにせず、文書全体の hash、path、行番号、chunk の出現順だけの変化を無効化の理由にしない。文書変更時の一括破棄によって、再利用可能な保存済み結果を失わせてはならない。
+再利用は、本書の「identity と保存先」に従う同じ索引 identity 内を基準とする。未変更文書に加え、変更文書内や移動後の chunk でも、完全なモデル入力と互換条件が同じで、現在の検索対象の原文へ対応付けられる有効な保存済み embedding は、再推論せずに再利用する。意味の近さを入力の一致の代わりにせず、文書全体の hash、path、行番号、chunk の出現順だけの変化を無効化の理由にしない。文書変更時の一括破棄によって、再利用可能な保存済み結果を失わせてはならない。
 
-embedding と、現在の path・行範囲による出現位置は論理的に分離する。同じ worktree 実体と実効閲覧範囲内で移動し、現在も許可される箇所は、同一入力の embedding を現在位置へ対応付ける。本文の再確認、境界の再解析、位置の更新と、embedding の再推論を区別する。
+embedding と、現在の path・行範囲による出現位置は論理的に分離する。同じ worktree 実体の oracle doc 内で移動し、現在も検索対象となる箇所は、同一入力の embedding を現在位置へ対応付ける。本文の再確認、境界の再解析、位置の更新と、embedding の再推論を区別する。
 
 ### 逐次反映と同期完了
 
-chunk の embedding は、計算できたものから推論出力の妥当性と現在の許可・本文との対応を確認し、都度索引へ永続化する。全対象の計算完了を待って一括で検証・反映してはならない。途中の失敗・取消・期限超過でも反映済みの有効な結果を保持し、次回の同期で現在の許可・本文・互換条件を再確認して再利用する。未計算・検証未完了・不正な結果を反映済みとして扱わない。
+chunk の embedding は、計算できたものから推論出力の妥当性と現在の検索対象・本文との対応を確認し、都度索引へ永続化する。全対象の計算完了を待って一括で検証・反映してはならない。途中の失敗・取消・期限超過でも反映済みの有効な結果を保持し、次回の同期で現在の検索対象・本文・互換条件を再確認して再利用する。未計算・検証未完了・不正な結果を反映済みとして扱わない。
 
-索引への逐次反映と同期全体の完了を区別し、検索に必要な同期を完了できなければ、その要求は失敗として返す。反映済みの一部だけを使った検索結果や旧結果を、現在の許可集合に対する正常な検索結果として返してはならない。正常に列挙・確認できた空集合や、すべての文書が空白である状態は成功ゼロ件とする。root 消失・差替え、列挙失敗、読取不能を空集合として扱わない。
+索引への逐次反映と同期全体の完了を区別し、検索に必要な同期を完了できなければ、その要求は失敗として返す。反映済みの一部だけを使った検索結果や旧結果を、現在の検索対象に対する正常な検索結果として返してはならない。正常に列挙・確認できた空集合や、すべての文書が空白である状態は成功ゼロ件とする。root 消失・差替え、列挙失敗、読取不能を空集合として扱わない。
 
 ### cache と返却前照合
 
-query embedding を cache する。cache の再利用は、完全な入力・互換条件と現在の許可原文を確認したうえで判定する。保存済み query embedding が有効でも、旧候補一覧や旧位置を無条件に返してはならない。
+query embedding を cache する。cache の再利用は、完全な入力・互換条件と現在の検索対象の原文を確認したうえで判定する。保存済み query embedding が有効でも、旧候補一覧や旧位置を無条件に返してはならない。
 
-検索に使った索引・cache と返却する path・行範囲が現在確認した本文に対応することを返却前に検証する。編集や scope 変更で不一致となった場合は、本書の「排他、期限、終了」に従う期限内に再同期してやり直すか、変更競合として失敗させる。期限到達後は再同期や正常返却へ進まない。file tree 全体の原子的 snapshot や、最後の照合後まで編集を阻止する保証は要求しない。索引操作の排他を編集 workload 全体の排他へ拡張しない。
+検索に使った索引・cache と返却する path・行範囲が現在確認した本文に対応することを返却前に検証する。編集などで不一致となった場合は、本書の「排他、期限、終了」に従う期限内に再同期してやり直すか、変更競合として失敗させる。期限到達後は再同期や正常返却へ進まない。file tree 全体の原子的 snapshot や、最後の照合後まで編集を阻止する保証は要求しない。索引操作の排他を編集 workload 全体の排他へ拡張しない。
 
 Markdown 解析ライブラリ、SQLite の物理的な table 構造、照合用 hash、保存済み embedding の探索方法、列挙回数、および範囲内の具体的な分割アルゴリズムは、上記の契約を満たす範囲で実装裁量とする。段落等による範囲内の追加の安定化も、この独立性を守る範囲で選べる。
 
@@ -78,13 +73,13 @@ Markdown 解析ライブラリ、SQLite の物理的な table 構造、照合用
 
 初期実装は Python が分類、対象制御、本文確認、差分同期、SQLite 保存、排他、および stdio MCP を担当する。候補選択は文書と query の embedding を用いた sqlite-vec による cosine 距離の全件比較で完結させる。距離の小さい順に、本書の「検索と routing」が定める採用上限までの候補箇所を選ぶ。
 
-分割・embedding は、Python が渡した許可本文だけを処理する推論専用 Node.js 子 process と node-llama-cpp が担当する。worker は検索対象の決定や repository の走査をしない。採用するモデルの系列・サイズを暗黙に変更しない。取得・準備と通常起動時の検査の責務は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「検索用コンポーネントの準備と検査」に従う。
+分割・embedding は、Python が渡した対象本文だけを処理する推論専用 Node.js 子 process と node-llama-cpp が担当する。worker は検索対象の決定や repository の走査をしない。採用するモデルの系列・サイズを暗黙に変更しない。取得・準備と通常起動時の検査の責務は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「検索用コンポーネントの準備と検査」に従う。
 
 入力ごとに embedding が存在し、所定次元で、有限かつ非ゼロであることを検査する。欠落、NaN、不正次元、モデル・worker の失敗を、正常ゼロ件や旧結果による成功へ変換しない。context 超過も切捨て成功にしない。
 
 runtime を変更する場合は、モデル入力、tokenizer、pooling、次元、取消・解放を再検証する。
 
-初期採用する検索用コンポーネントの正確な型・識別情報とモデル入力条件は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `ModelArtifact`、`SearchMaterials`、`INITIAL_SEARCH_MATERIALS`、`EMBEDDING_QUERY_TEMPLATE` へ委譲する。この識別情報は準備と再利用可否の照合に共用し、PoC の一時ファイルを実行時の参照先にしない。
+初期採用する検索用コンポーネントの正確な識別情報とモデル入力条件は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `INITIAL_SEARCH_MATERIALS`、`EMBEDDING_QUERY_TEMPLATE` へ委譲する。この識別情報は準備と再利用可否の照合に共用し、PoC の一時ファイルを実行時の参照先にしない。
 
 ## 検索用コンポーネントの検証契約
 
@@ -100,18 +95,18 @@ runtime を変更する場合は、モデル入力、tokenizer、pooling、次�
 
 ## identity と保存先
 
-索引 identity は、正規化した worktree の実体、実効閲覧範囲、分類契約、および推論・保存条件を区別する。推論・保存条件にはモデルの配布物、tokenizer、入力整形、分割、pooling、次元、context、runtime、および保存形式の互換性を含める。同じ path の別 worktree 実体を取り違えず、互換性のない索引や cache を暗黙に流用しない。正規化や hash の具体的アルゴリズムは、この区別を満たす範囲で選べる。
+索引 identity は、正規化した worktree の実体、分類契約、および推論・保存条件を区別する。推論・保存条件にはモデルの配布物、tokenizer、入力整形、分割、pooling、次元、context、runtime、および保存形式の互換性を含める。同じ path の別 worktree 実体を取り違えず、互換性のない索引や cache を暗黙に流用しない。正規化や hash の具体的アルゴリズムは、この区別を満たす範囲で選べる。
 
 | 管理物 | 所有 root と保存先 | 共有範囲 |
 |---|---|---|
-| 索引・query embedding cache | `{{work-root}}/.cmoc/gu/document_search/indexes/<identity>/` | 同じ worktree 実体・実効閲覧範囲・互換条件だけ |
+| 索引・query embedding cache | `{{work-root}}/.cmoc/gu/document_search/indexes/<identity>/` | 同じ worktree 実体・互換条件だけ |
 | 索引 lock | `{{work-root}}/.cmoc/gu/document_search/locks/` | 同じ索引を使う全 process。互換性変更時も旧利用者と回収を調停する |
 | 検索用コンポーネント（モデル・tokenizer・推論 runtime・ベクトル演算依存）と、その検証記録 | `{{cmoc-root}}/.cmoc/gu/document_search/materials/` | 同じ正規化済み cmoc-root を使う全 repository・worktree・process |
 | モデル常駐枠の調停情報 | `{{cmoc-root}}/.cmoc/gu/document_search/residency/` | 上記の共有管理単位に属する全索引の検索・同期と doctor の実モデル検証 |
 
 常駐枠を call、worktree、索引ごとに複製しない。別の cmoc installation を含むホスト全体のメモリ上限は、この管理単位では保証しない。これらはすべて非追跡の再生成可能な管理物であり、`.cmoc/gt`、Git commit、workload の成果差分へ含めない。非追跡保証は `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「管理領域の非追跡保証」を正本とする。
 
-scope 縮小・互換性変更後は旧 identity を新接続から公開しない。ディスク上の旧管理物を残すことと公開することを区別する。Python の管理処理が利用中・待機中の接続を確認し、参照されない旧索引・cache と廃止コンポーネントを、それぞれの管理単位で回収する。旧方式の再ランキングモデルと採点 cache にも適用し、使用中の資源は削除しない。保持期間と回収頻度は固定せず、secure erase は要求しない。
+互換性変更後は旧 identity を新接続から公開しない。ディスク上の旧管理物を残すことと公開することを区別する。Python の管理処理が利用中・待機中の接続を確認し、参照されない旧索引・cache と廃止コンポーネントを、それぞれの管理単位で回収する。旧方式の再ランキングモデルと採点 cache にも適用し、使用中の資源は削除しない。保持期間と回収頻度は固定せず、secure erase は要求しない。
 
 worktree 終了時は、終了処理の所有者が対応する接続と要求を停止・回収した後に、その worktree の索引・cache・lock を削除する。共有コンポーネントや他の worktree の索引は削除しない。異常終了で残った管理物は次の利用・回収時に実体と利用状態を検査し、反映済み結果の扱いは本書の「同期と cache」に従う。
 
@@ -160,25 +155,25 @@ doctor によるコンポーネントの検証でも、推論に使用する設�
 
 ## stdio MCP と失敗の公開
 
-公開 tool は検索だけとし、任意ファイル get/resource は必要構成にしない。query と任意の候補箇所数の上限 `limit` だけを受け取り、件数の制御と集約は本書の「検索と routing」に従う。tool 名と結果・失敗の正確な型は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER`、`SEARCH_TOOL_NAME`、`SearchResult`、`SearchFailure`、`SearchHit`、`SearchErrorCode` へ委譲する。
+公開 tool は検索だけとし、任意ファイル get/resource は必要構成にしない。query と任意の候補箇所数の上限 `limit` だけを受け取り、件数の制御と集約は本書の「検索と routing」に従う。server namespace・tool 名と失敗 code の正確な値は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER`、`SEARCH_TOOL_NAME`、`SearchErrorCode` へ委譲する。
 
 `tools/list` で公開する description、inputSchema、outputSchema だけで、別途の補足 prompt や仕様文書を読まずに tool を利用できるようにする。公開定義の責務と正確な詳細の委譲先は、次のとおりとする。委譲先はいずれも `{{cmoc-root}}/oracle/src/oracle/other/document_search.py` 内にある。
 
 | 公開定義 | 伝える内容 | 委譲先 |
 | --- | --- | --- |
-| description | tool の機能と利用条件、検索対象、その接続の work-root・閲覧範囲・除外。検索に使う固定 context と一致させる。 | `build_search_tool_description` の説明文 |
+| description | tool の機能と利用条件、検索対象、その接続の work-root。検索に使う固定 context と一致させる。 | `build_search_tool_description` の説明文 |
 | inputSchema | 引数の意味・制約・省略時の扱い。件数の単位・指定範囲・設定上限・候補不足と、引数不正の扱いを含む。 | `SEARCH_TOOL_INPUT_SCHEMA` の引数 schema と説明 |
 | outputSchema | 構造化された成功結果と検索失敗の型・各要素の意味。集約された候補位置の読み方と、成功ゼロ件・失敗の識別を含む。 | `SEARCH_TOOL_OUTPUT_SCHEMA` の結果 schema と説明 |
 
 モデル常駐、SQLite、排他アルゴリズム、仕様文書の構成など、agent の判断に不要な内部説明は含めない。公開定義と routing policy の分担は、本書の「検索と routing」に従う。
 
-成功結果と検索失敗は機械的に識別可能にする。どちらも outputSchema に適合する `structuredContent` として返し、同じ値を JSON 化した text content を併記する。引数不正は JSON-RPC の入力エラーとして返し、tool の構造化された結果とは区別する。検索中の失敗は `isError=true` と失敗 code・説明で返す。範囲不正、root/列挙/読取失敗、同期・保存失敗、本文変更競合、検索未準備、コンポーネントの不一致、推論失敗、期限超過、取消を区別する。stdio の stdout は MCP protocol 専用とし、診断や native 出力を混入させない。
+成功結果と検索失敗は機械的に識別可能にする。どちらも outputSchema に適合する `structuredContent` として返し、同じ値を JSON 化した text content を併記する。引数不正は JSON-RPC の入力エラーとして返し、tool の構造化された結果とは区別する。検索中の失敗は `isError=true` と失敗 code・説明で返す。root/列挙/読取失敗、同期・保存失敗、本文変更競合、検索未準備、コンポーネントの不一致、推論失敗、期限超過、取消を区別する。stdio の stdout は MCP protocol 専用とし、診断や native 出力を混入させない。
 
 Codex process ごとに独立した接続と固定 context を持つ。起動と argv 注入は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。PoC の自作 protocol 実装を製品の固定要件にせず、採用する SDK または実装で相互運用を検証する。
 
 ## 設定と未確定事項
 
-必要な tuning 設定の field・型・数値制約・項目間制約・暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `DocumentSearchConfig` へ委譲する。同ファイルの `SEARCH_CANDIDATE_COUNT_MIN` と `SEARCH_CANDIDATE_COUNT_MAX` は、`candidate_count` と MCP 引数 `limit` に共通する指定可能な件数の範囲を所有する。新規生成時の検索設定の状態は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig.document_search` へ委譲する。コンポーネントの identity と caller の閲覧範囲を、自由な repository 設定や MCP 入力によって置換しない。検索設定と call ごとの検索有効化・閲覧範囲は区別する。
+必要な tuning 設定の field・型・数値制約・項目間制約・暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `DocumentSearchConfig` へ委譲する。同ファイルの `SEARCH_CANDIDATE_COUNT_MIN` と `SEARCH_CANDIDATE_COUNT_MAX` は、`candidate_count` と MCP 引数 `limit` に共通する指定可能な件数の範囲を所有する。新規生成時の検索設定の状態は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig.document_search` へ委譲する。コンポーネントの identity を、自由な repository 設定や MCP 入力によって置換しない。検索設定と call ごとの検索有効化は区別する。
 
 `DocumentSearchConfig` の期限設定は、本書の「排他、期限、終了」の意味仕様に次のように対応する。正確な値と制約は委譲先だけで定める。
 
@@ -209,23 +204,23 @@ Codex process ごとに独立した接続と固定 context を持つ。起動と
 
 - `candidate_count` と `limit` は境界値の 20・50 を受理し、19・51、整数でない数値、bool を受理しない。範囲外の設定値を丸めず、不正な `limit` は MCP の入力エラーとして返す。
 - 十分な候補がある状態で、委譲先の既定設定と `limit` 省略による採用上限が 50 箇所となることを確認する。`candidate_count=20` で `limit=50` または省略なら 20 箇所、`candidate_count=50` で `limit=20` なら 20 箇所、両方 50 なら 50 箇所となり、引数によって設定上限を拡張しないことを確認する。
-- 現在の許可原文に候補が 7 箇所しかない場合は、その 7 箇所を集約して正常に返す。候補ゼロ件も成功として識別し、件数を埋めるために旧箇所や許可外の箇所を使わない。
+- 現在の検索対象の原文に候補が 7 箇所しかない場合は、その 7 箇所を集約して正常に返す。候補ゼロ件も成功として識別し、件数を埋めるために旧箇所や検索対象外の箇所を使わない。
 - 集約前に選んだ 20 箇所がすべて同一パスに属する場合、`hits` はそのファイル一つとなる。集約後のファイル数・行範囲数を `limit` や `candidate_count` の件数と取り違えて、追加の候補を採用しないことを確認する。
 - 同一パスの範囲 `[10,24]`、`[20,30]`、`[10,24]`、`[70,81]` は、重複・重なりを統合した `[10,30]` と `[70,81]` になることを確認する。別パスの範囲を混ぜず、先頭行と一行だけの範囲も委譲先の行番号条件に従うこと、候補情報が `path` と `ranges` だけで本文・抜粋・見出し文・スコアを含まないことを確認する。
 - 必要な embedding 用コンポーネントと有効な設定がそろえば、再ランキング用モデルが存在しなくても doctor の準備・検証と検索が成立することを確認する。再ランキングの推論・採点 cache を要求せず、cosine 距離で選んだ候補が集約結果に対応することを確認する。旧方式の資源が残る場合の回収は、本書の「identity と保存先」「排他、期限、終了」に従い、使用中の資源を保護する。
 - 新規 `CmocConfig` の検索設定と、明示 doctor による欠落した `candidate_count` の補完に、委譲先の既定値 50 が使われることを確認する。保存済みの `candidate_count: 8` は通常起動・明示 doctor の双方で不正とし、20〜50 の整数への手動修正を案内する。廃止項目 `reranker_context_tokens` が残る場合は除去を案内する。既存の明示値を自動置換・削除せず、不正が残る補完候補を保存しないことも確認する。
 - 検索が有効な call と無効な call の完全 prompt を確認し、本書の「検索と routing」に従う判断規則が実際の検索有効状態と一致すること、tool の利用説明を routing 文面へ重複させないことを確認する。
-- 有効な call の `tools/list` が公開する description・inputSchema・outputSchema だけで件数・結果・成功と失敗を解釈でき、work-root・閲覧範囲・除外の案内が実際の接続の固定 context と一致することを確認する。成功結果・成功ゼロ件・構造化された検索失敗が公開 outputSchema に適合し、text content と一致すること、引数不正の protocol error をこれらの結果と混同しないことも確認する。
+- 有効な call の `tools/list` が公開する description・inputSchema・outputSchema だけで件数・結果・成功と失敗を解釈でき、work-root の案内が実際の接続の固定 context と一致することを確認する。成功結果・成功ゼロ件・構造化された検索失敗が公開 outputSchema に適合し、text content と一致すること、引数不正の protocol error をこれらの結果と混同しないことも確認する。
 
 ### 現在原文・閲覧境界・コンポーネント
 
 分割・再利用の検証では、集計件数に加え、完全なモデル入力ごとの embedding 推論呼出しと、返却結果の現在原文への対応を観測する。同期の処理量の意味は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」配下の「結果と処理量」に従い、上記の候補箇所数・集約後の件数とは区別する。
 
 - 同じ文書の互いに異なる短い独立節 A・B・C が、それぞれ一つの chunk となる状態を同期しておく。境界構造を保ち、A だけを一つの chunk に収まる新しい本文へ変更して保存する。変更後の A の完全なモデル入力に対応する保存済み embedding が同じ索引 identity 内にない状態で同期し、A の新規計算・保存が 1、B・C の再利用が 2 となり、B・C への embedding 推論呼出しが 0 であることを確認する。
-- 索引 identity と完全な入力を保った行移動・節移動・実効閲覧範囲内のファイル移動では、保存済み embedding を再利用し、移動した入力への embedding 推論呼出しがないことを確認する。query embedding cache がある場合も含め、同じ process の次の検索で、集約後の path・行範囲が現在の許可原文に対応し、旧位置を返さないことを確認する。
+- 索引 identity と完全な入力を保った行移動・節移動・oracle doc 内のファイル移動では、保存済み embedding を再利用し、移動した入力への embedding 推論呼出しがないことを確認する。query embedding cache がある場合も含め、同じ process の次の検索で、集約後の path・行範囲が現在の検索対象の原文に対応し、旧位置を返さないことを確認する。
 - 全階層の見出し、その文面・階層の変更と追加・削除、長い節の前半編集、見出し前の冒頭部分、見出しのない文書、overlap に含まれる箇所の編集、コードブロック中の見出し風文字列を扱う。本文の切捨てや範囲をまたぐ overlap がなく、境界構造が保たれる独立した未変更節の入力へ編集が波及しないことを確認する。見出しの変更は原文中のその位置の入力に反映され、祖先見出しとして別 chunk へ合成されないことも確認する。
-- 削除・空白化・許可対象外化した旧箇所を、保存済み embedding や query embedding cache が残っていても検索に使わないことを確認する。入力または互換条件を変えた場合に旧結果を誤用しないこと、返却前の変更競合を再同期または失敗として扱うことも確認する。
-- 実際の caller の閲覧範囲と分類を結合し、nested owning repository、root/nested/local/global ignore、tracked ignored directory、pruning 境界・特殊 file、Git 処理回数の不変条件、許可外本文の非流入、scope 縮小、差替え競合を検証する。
+- 削除・空白化・検索対象外化した旧箇所を、保存済み embedding や query embedding cache が残っていても検索に使わないことを確認する。入力または互換条件を変えた場合に旧結果を誤用しないこと、返却前の変更競合を再同期または失敗として扱うことも確認する。
+- 分類に従った検索対象の選択について、nested owning repository、root/nested/local/global ignore、tracked ignored directory、pruning 境界・特殊 file、Git 処理回数の不変条件、対象外本文の非流入、差替え競合を検証する。
 - 本書の「検索用コンポーネントの検証契約」と、embedding の欠落・不正次元・非有限値・ゼロ vector、context 超過、およびモデル・worker の失敗の識別を検証する。正常ゼロ件と取り違えないことを確認する。
 - doctor preprocess の通常起動・明示 doctor の両経路で、検索用の期限を超える索引構築をタイムアウトなしで完了できることを検証する。各同期経路で上記の分割・再利用の条件を確認し、全対象の完了前に計算済み chunk が検証・永続化され、途中の失敗・取消後も有効な反映済み結果を再利用できることを確認する。失敗・取消では worker の収束または停止・回収を確認した後に lock と常駐枠を解放することも検証する。
 - 正規の cmoc 起動環境で Codex の live discovery/search/deadline/取消/close と、親・子の強制終了後の回収・復旧を検証する。`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う外側の tool 期限と終了余裕を、採用する CLI 版と呼出し経路で検証し、内側の全体上限による停止・回収・返送より前に外側が打ち切らないことを確認する。動的延長なしでこの関係を満たし、有効な設定変更時も維持することを含める。余裕の具体値を、この検証に先立って性能保証として確定しない。PoC は argv 設定と独立 client までで、CODEX_HOME の installation_id への書込み条件を満たせず live 接続は未検証である。HOME/CODEX_HOME や permission の迂回変更で代替しない。
@@ -252,9 +247,9 @@ Codex process ごとに独立した接続と固定 context を持つ。起動と
 
 ### 後続の測定
 
-現行方式の検証計画として、代表的な検索質問と同じ許可原文・実行条件を用い、旧方式との所要時間・応答サイズ・候補品質の比較を行う。候補数の設定と集約前後の件数を区別して記録し、必要な原文の位置が集約結果に残るかを確認する。見出し分割による候補品質の変化も比較できる結果を残す。時間の比較では、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」配下の「計測区間と重複」を参照し、検索要求全体・同期・同期後の検索・待機・終了処理を取り違えない。応答サイズは比較時の文字数またはバイト数として単位を明示する。速度改善量・応答サイズの削減量・現行方式の候補品質は未測定であり、数値の合格基準や改善保証は定めない。
+現行方式の検証計画として、代表的な検索質問と同じ検索対象の原文・実行条件を用い、旧方式との所要時間・応答サイズ・候補品質の比較を行う。候補数の設定と集約前後の件数を区別して記録し、必要な原文の位置が集約結果に残るかを確認する。見出し分割による候補品質の変化も比較できる結果を残す。時間の比較では、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」配下の「計測区間と重複」を参照し、検索要求全体・同期・同期後の検索・待機・終了処理を取り違えない。応答サイズは比較時の文字数またはバイト数として単位を明示する。速度改善量・応答サイズの削減量・現行方式の候補品質は未測定であり、数値の合格基準や改善保証は定めない。
 
-暫定値の後続調整では、許可文書全体で初回・無変更・少数差分・異 query・並列待機の時間とメモリを測る。小集合から全体時間を線形外挿して確定しない。この全体測定と最適値の探索は、暫定値の採用や設定補完の導入の受入条件に含めず、上記の統合検証条件は維持する。
+暫定値の後続調整では、検索対象の全体で初回・無変更・少数差分・異 query・並列待機の時間とメモリを測る。小集合から全体時間を線形外挿して確定しない。この全体測定と最適値の探索は、暫定値の採用や設定補完の導入の受入条件に含めず、上記の統合検証条件は維持する。
 
 見出し分割と同一入力再利用による更新時間・メモリ・再利用率、chunk 数と検索品質への影響、工程別の寄与は未測定であり、検索品質の人間指定の数値合格値もない。再計算を減らした件数に比例する時間短縮は保証しない。長い範囲内で段落等による追加の安定化が必要かは、後続の測定で判断する。
 

@@ -31,12 +31,12 @@ import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
-from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 
 import commons.runtime_doctor as doctor_module
 import commons.runtime_feedback_store as feedback_store_module
 from commons.runtime_config import config_to_dict
 from commons.runtime_document_search import DocumentSearch, SearchError
+from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import ReporterAvailabilityError
 from commons.runtime_refactor import RefactorState
@@ -84,7 +84,7 @@ def test_doctor_preprocess_repairs_git_state(
     assert "exit_code: 0" in rendered_report
     assert "doctor preprocess" in rendered_report
     assert "## 検索索引の同期" in rendered_report
-    assert "実効閲覧範囲" in rendered_report
+    assert "対象 work-root" in rendered_report
     assert "逐次反映と再利用" in rendered_report
     assert "診断用サブコマンドログ" in rendered_report
 
@@ -1265,7 +1265,7 @@ def test_doctor_reports_persisted_chunks_when_sync_fails(
     run_git(root, "add", "oracle/doc")
     run_git(root, "commit", "-m", "add document")
     monkeypatch.chdir(root)
-    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+    vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
 
     class StoppingWorker:
         def stream_chunks(
@@ -1293,10 +1293,9 @@ def test_doctor_reports_persisted_chunks_when_sync_fails(
             )
             raise SearchError(failure_code, "stopped after first chunk")
 
-    def failing_search(root, scope, config, *, installation_root, use_saved_config):
+    def failing_search(root, config, *, installation_root, use_saved_config):
         return DocumentSearch(
             root,
-            scope,
             config,
             worker=StoppingWorker(),
             installation_root=installation_root,

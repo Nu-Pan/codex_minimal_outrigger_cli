@@ -39,7 +39,6 @@ from .runtime_codex_recovery import CodexOutcome
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
 from .runtime_document_search_observation import mcp_tool_timeout_seconds
-from .runtime_document_search_scope import validate_document_search_scope
 from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
@@ -789,8 +788,7 @@ def document_search_mcp_override_args(
     logger: SubcommandLogger | None = None,
 ) -> list[str]:
     """同名の外部設定を遮断し、call 固定の検索接続だけを注入する。"""
-    scope = parameter.document_search_scope
-    if scope is None:
+    if not parameter.enable_document_search_mcp:
         server: dict[str, JsonTomlValue] = {
             "command": sys.executable,
             "args": ["-m", "commons.runtime_document_search_mcp", "{}"],
@@ -802,10 +800,6 @@ def document_search_mcp_override_args(
     else:
         from basic.path_model import AgentCallPathContext
 
-        try:
-            resolved_scope = validate_document_search_scope(scope)
-        except ValueError as exc:
-            raise CmocError("文書検索の閲覧範囲が不正です。", [], str(exc)) from exc
         context = AgentCallPathContext(parameter.agent_call_cwd)
         search_config = config.document_search
         caller = logger or current_subcommand_logger()
@@ -827,7 +821,6 @@ def document_search_mcp_override_args(
                 json.dumps(
                     {
                         "work_root": str(context.work_root),
-                        "scope": asdict(resolved_scope),
                         "config": asdict(search_config) if search_config else None,
                         "log_context": log_context,
                     },

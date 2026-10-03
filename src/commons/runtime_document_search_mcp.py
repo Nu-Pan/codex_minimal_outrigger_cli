@@ -6,12 +6,10 @@ import signal
 import sys
 import threading
 import time
-from collections.abc import Mapping
 from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
-from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import (
     SEARCH_CANDIDATE_COUNT_MAX,
     SEARCH_CANDIDATE_COUNT_MIN,
@@ -29,6 +27,7 @@ from .runtime_document_search_observation import (
     SearchObservation,
     mcp_tool_timeout_seconds,
 )
+from .runtime_document_search_types import SearchFailure, SearchResult
 
 MCP_PROTOCOL_VERSION = "2025-06-18"
 
@@ -41,7 +40,9 @@ def _invalid_params(request_id: object) -> dict[str, object]:
     }
 
 
-def _tool_result(value: Mapping[str, object], *, error: bool) -> dict[str, object]:
+def _tool_result(
+    value: SearchResult | SearchFailure, *, error: bool
+) -> dict[str, object]:
     return {
         "content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False)}],
         "structuredContent": value,
@@ -113,9 +114,7 @@ def _response(
             "tools": [
                 {
                     "name": SEARCH_TOOL_NAME,
-                    "description": build_search_tool_description(
-                        search.root, search.scope
-                    ),
+                    "description": build_search_tool_description(search.root),
                     "inputSchema": SEARCH_TOOL_INPUT_SCHEMA,
                     "outputSchema": SEARCH_TOOL_OUTPUT_SCHEMA,
                     "annotations": {
@@ -160,32 +159,18 @@ def _response(
 
 
 def _parse_context(raw: str) -> DocumentSearch:
-    """信頼された起動引数以外から root と範囲を受け取らない。"""
+    """信頼された起動引数から work-root と検索設定を受け取る。"""
     value: Any = json.loads(raw)
     if not isinstance(value, dict) or set(value) != {
         "work_root",
-        "scope",
         "config",
         "log_context",
     }:
         raise ValueError("invalid search context")
     root = value["work_root"]
-    scope = value["scope"]
     tuning = value["config"]
     if not isinstance(root, str) or not Path(root).is_absolute():
         raise ValueError("invalid work root")
-    if not isinstance(scope, dict) or set(scope) != {
-        "allowed_files",
-        "allowed_subtrees",
-        "excluded_files",
-        "excluded_subtrees",
-    }:
-        raise ValueError("invalid search scope")
-    if any(not isinstance(items, list) for items in scope.values()):
-        raise ValueError("invalid search scope")
-    resolved_scope = DocumentSearchScope(
-        **{name: tuple(items) for name, items in scope.items()}
-    )
     if tuning is not None:
         names = {field.name for field in fields(DocumentSearchConfig)}
         if not isinstance(tuning, dict) or set(tuning) != names:
@@ -212,7 +197,6 @@ def _parse_context(raw: str) -> DocumentSearch:
         ).event
     return DocumentSearch(
         Path(root),
-        resolved_scope,
         tuning,
         use_saved_config=True,
         event_sink=sink,

@@ -13,13 +13,13 @@ from typing import Any
 import pytest
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
-    INITIAL_SEARCH_MATERIALS,
     DocumentSearchConfig,
 )
 
 import commons.runtime_document_search_setup as setup
 import commons.runtime_document_search_worker as worker
 from commons.runtime_document_search import SearchError
+from commons.runtime_document_search_types import SEARCH_MATERIALS
 
 
 @pytest.fixture
@@ -27,15 +27,15 @@ def small_materials(monkeypatch: pytest.MonkeyPatch) -> dict[str, bytes]:
     """実モデルを取得せず checksum と固定 identity の境界を保つ。"""
     contents = {"embedding": b"embedding model"}
     materials = replace(
-        INITIAL_SEARCH_MATERIALS,
+        SEARCH_MATERIALS,
         embedding=replace(
-            INITIAL_SEARCH_MATERIALS.embedding,
+            SEARCH_MATERIALS.embedding,
             size_bytes=len(contents["embedding"]),
             sha256=hashlib.sha256(contents["embedding"]).hexdigest(),
         ),
     )
-    monkeypatch.setattr(setup, "INITIAL_SEARCH_MATERIALS", materials)
-    monkeypatch.setattr(worker, "INITIAL_SEARCH_MATERIALS", materials)
+    monkeypatch.setattr(setup, "SEARCH_MATERIALS", materials)
+    monkeypatch.setattr(worker, "SEARCH_MATERIALS", materials)
     monkeypatch.setattr(setup, "require_cmoc_ignored", lambda _root: None)
     return contents
 
@@ -68,7 +68,7 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
 
     def fake_download(base: Path, artifact: object) -> None:
         name = getattr(artifact, "filename")
-        assert name == setup.INITIAL_SEARCH_MATERIALS.embedding.filename
+        assert name == setup.SEARCH_MATERIALS.embedding.filename
         (base / name).write_bytes(small_materials["embedding"])
 
     probes: list[DocumentSearchConfig] = []
@@ -116,8 +116,7 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
             setup.require_document_search_materials(tmp_path, config)
 
     model = (
-        setup.materials_directory(tmp_path)
-        / setup.INITIAL_SEARCH_MATERIALS.embedding.filename
+        setup.materials_directory(tmp_path) / setup.SEARCH_MATERIALS.embedding.filename
     )
     model.write_bytes(b"corrupted")
     with pytest.raises(SearchError, match="model checksum mismatch"):
@@ -140,7 +139,7 @@ def test_failed_real_model_probe_never_publishes_materials(
 
     def fake_download(base: Path, artifact: object) -> None:
         name = getattr(artifact, "filename")
-        assert name == setup.INITIAL_SEARCH_MATERIALS.embedding.filename
+        assert name == setup.SEARCH_MATERIALS.embedding.filename
         (base / name).write_bytes(small_materials["embedding"])
 
     monkeypatch.setattr(
@@ -168,8 +167,8 @@ def test_failed_real_model_probe_never_publishes_materials(
     "bad_vector",
     [
         [],
-        [0.0] * INITIAL_SEARCH_MATERIALS.embedding_dimensions,
-        [float("nan")] * INITIAL_SEARCH_MATERIALS.embedding_dimensions,
+        [0.0] * SEARCH_MATERIALS.embedding_dimensions,
+        [float("nan")] * SEARCH_MATERIALS.embedding_dimensions,
     ],
 )
 def test_probe_uses_search_inputs_and_rejects_invalid_embedding(
@@ -181,7 +180,7 @@ def test_probe_uses_search_inputs_and_rejects_invalid_embedding(
     """doctor 検証が通常検索と同じ文書/query 入力を通し、不正 embedding を拒否する。"""
     config = DocumentSearchConfig()
     calls: list[tuple[str, dict[str, object]]] = []
-    vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+    vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
 
     def fake_run(
         _worker: worker.NodeSearchWorker,

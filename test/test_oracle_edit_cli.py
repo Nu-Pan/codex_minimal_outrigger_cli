@@ -17,7 +17,7 @@ from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_
 
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
-from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_override_args
 from commons.runtime_config import config_path
@@ -74,7 +74,7 @@ def _assert_exec_parameter(
     """2 回の exec に共通する起動契約を検証する。"""
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_WRITE
     assert parameter.structured_output_schema_path is None
-    assert parameter.document_search_scope is not None
+    assert parameter.enable_document_search_mcp is True
     assert parameter.agent_call_cwd == root.resolve()
 
 
@@ -133,8 +133,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     def record_build_main_parameter(
         user_instruction: str,
-        *,
-        document_search_scope: DocumentSearchScope,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の本命 builder 呼び出しを記録する。"""
         events.append(
@@ -142,9 +140,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
             if user_instruction == oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER
             else "build-main"
         )
-        parameter = real_build_main_parameter(
-            user_instruction, document_search_scope=document_search_scope
-        )
+        parameter = real_build_main_parameter(user_instruction)
         built_main_parameters.append(parameter)
         return parameter
 
@@ -525,12 +521,9 @@ def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
     instruction = (
         "診断用サブコマンドログ /example/sender.jsonl を参考に oracle を編集する"
     )
-    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
-    empty = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
-        "", document_search_scope=scope
-    ).prompt
+    empty = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter("").prompt
     prompt = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
-        instruction, document_search_scope=scope
+        instruction
     ).prompt
     assert instruction in prompt
     for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):

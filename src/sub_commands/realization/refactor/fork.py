@@ -31,7 +31,6 @@ from cmoc_runtime import (
     start_subcommand_step,
     timestamp,
 )
-from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_refactor import (
     RefactorState,
@@ -477,7 +476,6 @@ def _run_refactor_unit(
         parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
             target_path,
             context.run_worktree,
-            document_search_scope=oracle_doc_scope(),
         )
         result = run_codex_exec(
             parameter,
@@ -876,7 +874,6 @@ def _completion_change_summary(
             context.run_fork_commit,
             summary_head_commit,
             context.run_worktree,
-            document_search_scope=oracle_doc_scope(),
         ),
         root=context.repo,
         config=load_config(context.run_worktree),

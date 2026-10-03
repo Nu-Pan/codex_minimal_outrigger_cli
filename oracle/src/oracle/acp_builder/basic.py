@@ -26,22 +26,6 @@ class FileAccessMode(StrEnum):
 
 
 @dataclass(frozen=True)
-class DocumentSearchScope:
-    """caller が確定した文書検索の閲覧範囲。
-
-    NOTE
-        `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
-        「対象と信頼境界」が path の受理条件と集合の意味を所有する。
-        各 tuple は work-root 相対の POSIX path。空の許可集合は全拒否を表す。
-    """
-
-    allowed_files: tuple[str, ...] = ()
-    allowed_subtrees: tuple[str, ...] = ()
-    excluded_files: tuple[str, ...] = ()
-    excluded_subtrees: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
 class AgentCallParameter:
     """
     AI コーディングエージェント (e.g. Codex CLI) の呼び出しパラメータをまとめたクラス
@@ -69,9 +53,9 @@ class AgentCallParameter:
     # cmoc_editor_input MCP server を呼び出し単位で有効化する
     enable_editor_input_handoff_mcp: bool = False
 
-    # None は検索 MCP 無効。明示された scope は空集合でも検索 MCP 有効。
+    # cmoc_document_search MCP server を呼び出し単位で有効化する。
     # `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」を参照。
-    document_search_scope: DocumentSearchScope | None = None
+    enable_document_search_mcp: bool = False
 
     # feedback reporter の提供判断。完全 prompt の構築にも同じ値を渡す。
     # `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の

@@ -342,7 +342,7 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> N
     assert "# scope" not in objective
     assert "# completion criteria" not in objective
     assert probe.structured_output_schema_path is None
-    assert probe.document_search_scope is None
+    assert probe.enable_document_search_mcp is False
     assert probe.agent_call_cwd == base.agent_call_cwd
 
 

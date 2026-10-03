@@ -336,13 +336,13 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 検索の対象、信頼境界、同期、結果、失敗、および資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「cmoc 専用文書検索」を正本とする。本節は call と MCP 接続の責務を所有する。
 
-- caller は各 call の実効閲覧範囲を確定して builder へ渡す。正確な検索有効化の表現、範囲の型・既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` と `DocumentSearchScope` へ委譲する。未確定・不正な範囲を暗黙に補完しない。
-- oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の調査・変更要約、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。caller は workload の閲覧制限を反映し、範囲を確定できなければ起動前に失敗させる。短い応答だけで可用性を確認する回復 probe では検索を無効にする。
-- builder は受け取った範囲を起動パラメータへ渡し、同じ範囲の有無から完全 prompt の検索有効状態を決める。各 call では検索要求時の自動同期を使う。起動時の検索設定・検索用コンポーネントの検査と索引同期は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索索引の同期」に従う。Structured Output の補正・retry・再開でも同じ閲覧境界を維持する。
+- 検索 MCP の有効化を呼び出し単位で指定する。正確な field・型・既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。builder は起動パラメータと完全 prompt の検索有効状態を一致させる。
+- oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の調査・変更要約、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。短い応答だけで可用性を確認する回復 probe では検索を無効にする。
+- 各 call では検索要求時の自動同期を使う。起動時の検索設定・検索用コンポーネントの検査と索引同期は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索索引の同期」に従う。Structured Output の補正・retry・再開でも検索の有効状態と work-root を維持する。
 - 有効な各 Codex process に local stdio MCP 接続を設ける。検索 server の cwd、実行ファイル、引数、許可 tool、approval behavior、起動・tool 期限、および信頼された context の供給を、呼び出し単位の argv override で管理する。設定の符号化には本書の「Codex CLI 引数による設定上書き」を使う。
 - 起動管理側は、外側の MCP tool 期限を、その接続の検索要求で使う内側の全体上限に停止・回収・返送の余裕を加えて設定する。内側の期限と停止の意味は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「排他、期限、終了」に従う。有効な検索設定の変更を適用する場合もこの関係を保ち、実行途中に Codex 側の期限を動的延長できることには依存しない。余裕には応答返送までを含め、worker の終了猶予だけで代替しない。余裕の具体値と採用する Codex CLI 版での挙動は未確定・未検証とし、同文書の「実現性の根拠と製品受入条件」で連携検証を行う。
 - 起動管理側は、検索側の記録を呼出し元の最外側のサブコマンドログへ届ける経路と、その実行 ID・Codex call・対象 work-root を対応付ける信頼された context を供給する。検索要求と各同期の識別情報をこの context に結び付け、並行要求や再同期の記録も同じ呼出し元へ帰属させる。記録の時点・内容・保存と相関の意味は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従う。context を MCP tool 引数や agent の申告から決めず、診断の搬送に MCP stdout を使わない。
-- server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・範囲への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
+- server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・work-root への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
 - 通常の検索 tool は human approval、auto-review、command escalation を要求せず利用できるよう設定する。これは sandbox、permission profile、network access、file access mode の拡張を意味しない。
 - `$CODEX_HOME/config.toml` を書き換えない。既存 feedback/handoff MCP の設定と接続を保持して共存させ、検索設定の注入で上書き・無効化しない。
 - Codex process の終了時は起動管理側が接続を閉じ、検索側の子 process 回収まで確認する。TUI と `codex exec` のどちらにも同じ接続境界を適用する。

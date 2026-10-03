@@ -3,7 +3,6 @@
 # cmoc
 from oracle.acp_builder.basic import (
     AgentCallParameter,
-    DocumentSearchScope,
     FileAccessMode,
 )
 from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
@@ -13,13 +12,10 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 def build_oracle_investigation_launch_tui_parameter(
     user_instruction: str,
-    *,
-    document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """`cmoc oracle investigation` の TUI 起動パラメータを構築する。
 
     Args:
-        document_search_scope: caller が確定した、その call の実効閲覧範囲。
         user_instruction: ユーザーがエディタ入力した、oracle file に関する調査指示。
             前後空白の strip は呼び出し側で完了している想定。handoff ガイドへ提示する
             完全プロンプトの skeleton を構築する場合は、
@@ -43,7 +39,7 @@ def build_oracle_investigation_launch_tui_parameter(
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,
-        document_search_scope=document_search_scope,
+        enable_document_search_mcp=True,
         aux_dynamic_prompt=[
             SDTagBlock(
                 "original_user_instruction",
@@ -65,5 +61,5 @@ def build_oracle_investigation_launch_tui_parameter(
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         enable_editor_input_handoff_mcp=True,
-        document_search_scope=document_search_scope,
+        enable_document_search_mcp=True,
     )

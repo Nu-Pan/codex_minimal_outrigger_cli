@@ -11,7 +11,6 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import DocumentSearchConfig
 from test_document_search import _InferenceDouble, _repo_with_docs, _tuning
 
@@ -34,7 +33,7 @@ def _observation(tmp_path, *, request=True):
     def record(kind, payload):
         events.append(json.loads(json.dumps({"event": kind, **payload})))
 
-    observation = SearchObservation(tmp_path, "test-scope", record, request=request)
+    observation = SearchObservation(tmp_path, record, request=request)
     return observation, events
 
 
@@ -196,6 +195,7 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
     tmp_path, document_search_clock
 ):
     root = _repo_with_docs(tmp_path)
+    (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     observation, events = _observation(root)
 
     class ProgressingWorker(_InferenceDouble):
@@ -210,7 +210,6 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
     with closing(
         DocumentSearch(
             root,
-            DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
             config,
             worker=ProgressingWorker(),
             installation_root=tmp_path,
@@ -229,6 +228,7 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
 
 def test_doctor_sync_has_no_search_deadlines(tmp_path, document_search_clock):
     root = _repo_with_docs(tmp_path)
+    (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     events = []
 
     class SlowWorker(_InferenceDouble):
@@ -240,7 +240,6 @@ def test_doctor_sync_has_no_search_deadlines(tmp_path, document_search_clock):
     with closing(
         DocumentSearch(
             root,
-            DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
             _tuning(),
             worker=SlowWorker(),
             installation_root=tmp_path,
@@ -267,7 +266,6 @@ def test_saved_deadline_growth_requires_a_new_codex_connection(tmp_path, setting
     with closing(
         DocumentSearch(
             root,
-            DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
             initial,
             worker=_InferenceDouble(),
             use_saved_config=True,
@@ -311,7 +309,6 @@ def test_parallel_requests_log_to_their_own_codex_calls(tmp_path):
         with closing(
             DocumentSearch(
                 root,
-                DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
                 _tuning(),
                 worker=SlowWorker(),
                 installation_root=tmp_path,
@@ -344,6 +341,7 @@ def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
     tmp_path, document_search_clock, monkeypatch
 ):
     root = _repo_with_docs(tmp_path)
+    (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     events = []
 
     def record(kind, payload):
@@ -352,7 +350,6 @@ def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
     with closing(
         DocumentSearch(
             root,
-            DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
             _tuning(),
             worker=_InferenceDouble(),
             event_sink=record,
@@ -384,7 +381,7 @@ def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
     assert progress["changed_document_count"] == 0
     assert progress["document_states"] == {
         "oracle/doc/allowed.md": "checked",
-        "oracle/doc/secret.md": "processing",
+        "oracle/doc/second.md": "processing",
     }
     assert events[-2]["reused_chunk_count"] == 1
     assert events[-2]["counts_complete"] is False

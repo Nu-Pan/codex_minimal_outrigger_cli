@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from oracle.other.document_search import DocumentSearchConfig
+from oracle.other.document_search import DocumentSearchConfig, SearchErrorCode
 
 from .runtime_logging import append_log_record
 
@@ -48,7 +48,7 @@ def inference_config(config: DocumentSearchConfig) -> dict[str, object]:
 class SearchError(Exception):
     """検索失敗 code と、原文を含めない説明を保持する。"""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: SearchErrorCode, message: str) -> None:
         """公開する failure の分類を固定する。"""
         # MCP の失敗表現と診断記録で同じ code を使う。
         super().__init__(message)
@@ -133,7 +133,6 @@ class SearchObservation:
     def __init__(
         self,
         work_root: Path,
-        scope_identity: str,
         sink: SearchEventSink | None,
         *,
         request: bool,
@@ -148,7 +147,6 @@ class SearchObservation:
         self.sink = sink
         self.context: dict[str, object] = {
             "work_root": str(work_root),
-            "scope_identity": scope_identity,
             "request_id": self.request_id,
             "mcp_request_id": request_id,
         }

@@ -22,12 +22,12 @@ from typing import Callable
 from markdown_it import MarkdownIt
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
-    INITIAL_SEARCH_MATERIALS,
     DocumentSearchConfig,
 )
 
 from .runtime_document_search import SearchError
 from .runtime_document_search_observation import inference_config
+from .runtime_document_search_types import SEARCH_MATERIALS
 
 
 def materials_directory(installation_root: Path) -> Path:
@@ -109,7 +109,7 @@ def _verify_vector_dependency() -> None:
         ).fetchone()
     finally:
         connection.close()
-    if version.removeprefix("v") != INITIAL_SEARCH_MATERIALS.sqlite_vec_version:
+    if version.removeprefix("v") != SEARCH_MATERIALS.sqlite_vec_version:
         raise ValueError("sqlite-vec version mismatch")
 
 
@@ -126,7 +126,7 @@ def _verify_lock(base: Path) -> None:
             raise ValueError(f"npm dependency is not pinned: {name}")
     native = packages.get("node_modules/@node-llama-cpp/linux-x64", {})
     if (
-        native.get("version") != INITIAL_SEARCH_MATERIALS.node_llama_cpp_version
+        native.get("version") != SEARCH_MATERIALS.node_llama_cpp_version
         or not native.get("integrity")
         or not (base / "node_modules/@node-llama-cpp/linux-x64").is_dir()
     ):
@@ -173,21 +173,21 @@ def verify_search_materials(
             "lock_sha256": expected_lock_hash,
             "runtime_tree_sha256": runtime_tree_hash,
             "materials": {
-                "node_version": INITIAL_SEARCH_MATERIALS.node_version,
-                "node_llama_cpp_version": INITIAL_SEARCH_MATERIALS.node_llama_cpp_version,
-                "llama_cpp_revision": INITIAL_SEARCH_MATERIALS.llama_cpp_revision,
-                "sqlite_vec_version": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
-                "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
-                "embedding_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
-                "embedding_pooling": INITIAL_SEARCH_MATERIALS.embedding.pooling,
-                "embedding_dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
+                "node_version": SEARCH_MATERIALS.node_version,
+                "node_llama_cpp_version": SEARCH_MATERIALS.node_llama_cpp_version,
+                "llama_cpp_revision": SEARCH_MATERIALS.llama_cpp_revision,
+                "sqlite_vec_version": SEARCH_MATERIALS.sqlite_vec_version,
+                "embedding_sha256": SEARCH_MATERIALS.embedding.sha256,
+                "embedding_tokenizer_sha256": SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
+                "embedding_pooling": SEARCH_MATERIALS.embedding.pooling,
+                "embedding_dimensions": SEARCH_MATERIALS.embedding_dimensions,
             },
         }
         if not isinstance(data, dict) or any(
             data.get(key) != value for key, value in expected.items()
         ):
             raise SearchError("MODEL_IDENTITY_MISMATCH", "material manifest mismatch")
-        model = INITIAL_SEARCH_MATERIALS.embedding
+        model = SEARCH_MATERIALS.embedding
         path = base / model.filename
         if path.is_symlink() or not path.is_file():
             raise SearchError("NOT_READY", "document search model is unavailable")
@@ -210,10 +210,7 @@ def verify_search_materials(
                 encoding="utf-8"
             )
         )
-        if (
-            installed_package.get("version")
-            != INITIAL_SEARCH_MATERIALS.node_llama_cpp_version
-        ):
+        if installed_package.get("version") != SEARCH_MATERIALS.node_llama_cpp_version:
             raise SearchError(
                 "MODEL_IDENTITY_MISMATCH", "node-llama-cpp version mismatch"
             )
@@ -228,7 +225,7 @@ def verify_search_materials(
             .stdout.strip()
             .removeprefix("v")
         )
-        if node_version != INITIAL_SEARCH_MATERIALS.node_version:
+        if node_version != SEARCH_MATERIALS.node_version:
             raise SearchError("MODEL_IDENTITY_MISMATCH", "Node version mismatch")
         _verify_lock(base)
         _verify_vector_dependency()
@@ -306,10 +303,8 @@ class NodeSearchWorker:
         return {
             "operation": operation,
             "payload": payload,
-            "embedding_model": str(
-                self.base / INITIAL_SEARCH_MATERIALS.embedding.filename
-            ),
-            "dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
+            "embedding_model": str(self.base / SEARCH_MATERIALS.embedding.filename),
+            "dimensions": SEARCH_MATERIALS.embedding_dimensions,
             "parent_pid": os.getpid(),
             "parent_start_time": parent_start_time,
         }

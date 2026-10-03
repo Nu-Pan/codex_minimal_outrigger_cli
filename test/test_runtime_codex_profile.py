@@ -18,7 +18,6 @@ from typing import cast
 
 import pytest
 from _codex_support import codex_arg_value, codex_override_config, codex_parameter
-from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -156,7 +155,7 @@ def test_search_mcp_rejects_external_transport_collision(
     """user 設定の同名 URL が残った実効 MCP 設定を起動前に拒否する。"""
     parameter = replace(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
-        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+        enable_document_search_mcp=True,
     )
     argv = ["codex", *build_codex_override_args(parameter, CmocConfig())]
     server = codex_override_config(argv)["mcp_servers"]["cmoc_document_search"]

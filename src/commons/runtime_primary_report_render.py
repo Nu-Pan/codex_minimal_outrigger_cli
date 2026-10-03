@@ -377,7 +377,6 @@ def _doctor_body(
         f"- 失敗理由: `{_field_status(fields.get('material_failure'))}`",
         "## 検索索引の同期",
         f"- 対象 work-root: `{_field_status(fields.get('doctor_sync_work_root'))}`",
-        f"- 実効閲覧範囲: `{_field_status(fields.get('doctor_scope_identity'))}`",
         f"- 診断ログ内の同期 ID: `{_field_status(fields.get('doctor_sync_id'))}`",
         f"- 実行状態: `{_field_status(fields.get('doctor_sync_status'))}`",
         f"- 索引 identity: `{_field_status(fields.get('doctor_index_identity'))}`",

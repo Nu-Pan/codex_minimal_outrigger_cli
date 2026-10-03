@@ -7,13 +7,13 @@ from types import SimpleNamespace
 
 import pytest
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
-from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
 import commons.runtime_windows_toast as runtime_windows_toast
+from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
 
 
@@ -104,7 +104,7 @@ def _isolate_document_search_materials(
             residency_fd,
             cancelled,
         ):
-            vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+            vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
             for path, source in documents.items():
                 if resumes[path] == 0:
                     on_event(
@@ -119,10 +119,9 @@ def _isolate_document_search_materials(
                     )
                 on_event({"kind": "document_complete", "path": path, "chunk_count": 1})
 
-    def doctor_search(root, scope, config, *, installation_root, use_saved_config):
+    def doctor_search(root, config, *, installation_root, use_saved_config):
         return runtime_document_search.DocumentSearch(
             root,
-            scope,
             config,
             worker=_DoctorInference(),
             installation_root=installation_root,

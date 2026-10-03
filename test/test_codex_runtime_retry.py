@@ -7,7 +7,6 @@ import pytest
 from _codex_support import codex_override_config, setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
-from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import DocumentSearchConfig
 
 import cmoc_runtime
@@ -71,7 +70,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
         "prompt",
         schema,
         root,
-        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+        enable_document_search_mcp=True,
     )
     logger = SubcommandLogger(root, "test")
 

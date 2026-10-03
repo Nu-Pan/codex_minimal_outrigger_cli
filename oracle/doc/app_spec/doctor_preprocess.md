@@ -169,9 +169,9 @@ MCP 検索要求用の四種類の期限設定も、以下の必須項目の検�
 
 ## 検索索引の同期
 
-通常起動・明示 doctor のどちらも、検索設定とコンポーネントの検証後に、処理対象の各 work-root の索引を同期する。信頼された cmoc caller が、その work-root で閲覧可能な oracle/doc 全体を構造化した範囲として渡す。
+通常起動・明示 doctor のどちらも、検索設定とコンポーネントの検証後に、処理対象の各 work-root の索引を同期する。
 
-対象・逐次反映と再利用・期限・資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「対象と信頼境界」「同期と cache」「identity と保存先」「排他、期限、終了」を正本とする。ここで準備した索引を別の worktree や実効閲覧範囲の索引と取り違えず、後続の検索要求でも同文書に従って現在の許可集合と本文を確認する。
+対象・逐次反映と再利用・期限・資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「対象と信頼境界」「同期と cache」「identity と保存先」「排他、期限、終了」を正本とする。ここで準備した索引を別の worktree の索引と取り違えず、後続の検索要求でも同文書に従って現在の検索対象と本文を確認する。
 
 索引同期の開始・終端と、所要時間・結果・処理量・資源待ちの記録は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従う。
 

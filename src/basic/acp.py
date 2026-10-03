@@ -6,12 +6,10 @@
 
 from oracle.acp_builder.basic import (
     AgentCallParameter,
-    DocumentSearchScope,
     FileAccessMode,
 )
 
 __all__ = [
     "AgentCallParameter",
-    "DocumentSearchScope",
     "FileAccessMode",
 ]

@@ -657,15 +657,12 @@ def test_apply_builder_uses_call_scoped_run_worktree(
         diff_base_commit: str,
         run_fork_commit: str,
         run_worktree: Path,
-        *,
-        document_search_scope: object,
     ) -> AgentCallParameter:
         """builder 構築時の process cwd、agent call cwd、prompt を記録する。"""
         parameter = original_builder(
             diff_base_commit,
             run_fork_commit,
             run_worktree,
-            document_search_scope=document_search_scope,
         )
         observed.append(
             (

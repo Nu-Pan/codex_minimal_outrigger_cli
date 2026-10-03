@@ -34,7 +34,6 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
-from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback_intake import capture_high_watermark
 from commons.runtime_feedback_run_state import (
     new_run_identity,
@@ -536,7 +535,6 @@ def _remediate_issue(
     parameter = build_feedback_remediate_issue_parameter(
         json.dumps(payload, ensure_ascii=False, sort_keys=True),
         context.run_worktree,
-        document_search_scope=oracle_doc_scope(),
     )
     schema = parameter.structured_output_schema_path
     assert schema is not None
@@ -943,7 +941,6 @@ def _recover_merge_resolution(
         seal["run_head"],
         seal["session_head_before"],
         context.session_worktree,
-        document_search_scope=oracle_doc_scope(),
         feedback_report_cut_path=context.repo / manifest["run"]["sealed"]["path"],
     )
     log_root = (

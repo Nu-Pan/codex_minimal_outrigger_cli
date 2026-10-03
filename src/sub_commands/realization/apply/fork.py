@@ -16,7 +16,6 @@ from cmoc_runtime import (
     run_git,
     start_subcommand_step,
 )
-from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback import accepted_feedback_observations
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
@@ -99,7 +98,6 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             diff_base_commit,
             context.run_fork_commit,
             context.run_worktree,
-            document_search_scope=oracle_doc_scope(),
         )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
