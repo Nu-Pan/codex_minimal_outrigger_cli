@@ -1228,7 +1228,7 @@ def test_doctor_fails_when_real_model_validation_does_not_complete(
     monkeypatch.chdir(root)
 
     def fail_materials(_root: Path, _config: object) -> dict[str, str]:
-        raise SearchError("MODEL_FAILURE", "rerank validation failed")
+        raise SearchError("MODEL_FAILURE", "embedding validation failed")
 
     monkeypatch.setattr(
         doctor_module, "prepare_document_search_materials", fail_materials
@@ -1239,7 +1239,7 @@ def test_doctor_fails_when_real_model_validation_does_not_complete(
     report = terminal_primary_report(result).read_text(encoding="utf-8")
     assert 'terminal_classification: "error"' in report
     assert "照合と実モデル検証: `失敗`" in report
-    assert "rerank validation failed" in report
+    assert "embedding validation failed" in report
     assert "cmoc doctor を再実行" in report
     events = _new_subcommand_events(root, set())
     assert not any(

@@ -232,7 +232,13 @@ def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitio
         ("post_sync_search_timeout_seconds", -1),
         ("search_request_timeout_seconds", "3600"),
         ("chunk_overlap_tokens", 512),
+        ("embedding_context_tokens", 512),
         ("reranker_context_tokens", 512),
+        ("candidate_count", 8),
+        ("candidate_count", 19),
+        ("candidate_count", 51),
+        ("candidate_count", 20.5),
+        ("candidate_count", True),
     ],
 )
 def test_saved_search_config_rejects_invalid_explicit_values(

@@ -261,7 +261,18 @@ def test_complete_prompt_renders_search_routing_for_call_scope(
     assert "検索ヒットゼロ件だけを根拠" in prohibited
     assert "「仕様の不存在」「調査完了」と判断してはいけない" in prohibited
     assert "検索に失敗した場合は、許可された手段で調査を続けて良い" in exceptions
-    for tool_detail in ("query", "limit", "ranges", "allowed_files", "candidate_count"):
+    for tool_detail in (
+        "query",
+        "limit",
+        "hits",
+        "ranges",
+        "allowed_files",
+        "candidate_count",
+        "structuredContent",
+        "isError",
+        "inputSchema",
+        "outputSchema",
+    ):
         assert tool_detail not in routing
 
     if document_search_scope is None:

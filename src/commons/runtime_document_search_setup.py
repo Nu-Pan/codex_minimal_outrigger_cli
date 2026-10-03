@@ -18,7 +18,6 @@ from urllib.parse import quote
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
     INITIAL_SEARCH_MATERIALS,
-    RERANKER_INPUT_FORMAT,
     DocumentSearchConfig,
     ModelArtifact,
 )
@@ -158,7 +157,7 @@ def _valid_vector(value: object) -> bool:
 
 
 def _compatibility_probe(base: Path, root: Path, config: DocumentSearchConfig) -> None:
-    """通常検索と同じ worker・設定で文書、query、raw rerank を検証する。"""
+    """通常検索と同じ worker・設定で文書と query の embedding を検証する。"""
     worker = NodeSearchWorker(root, config, material_base=base)
     query = "日本語の検索"
     document = "関連する日本語の文書です。"
@@ -172,15 +171,6 @@ def _compatibility_probe(base: Path, root: Path, config: DocumentSearchConfig) -
                 {
                     "text": EMBEDDING_QUERY_TEMPLATE.format(query=query),
                     "config": settings,
-                },
-            ),
-            (
-                "rerank",
-                {
-                    "query": query,
-                    "documents": [document],
-                    "config": settings,
-                    "input_format": RERANKER_INPUT_FORMAT,
                 },
             ),
         )
@@ -210,16 +200,8 @@ def _compatibility_probe(base: Path, root: Path, config: DocumentSearchConfig) -
                         for chunk in chunks
                     )
                 )
-            elif operation == "embed_query":
-                valid = _valid_vector(value)
             else:
-                valid = (
-                    isinstance(value, list)
-                    and len(value) == 1
-                    and type(value[0]) in (int, float)
-                    and math.isfinite(value[0])
-                    and 0 <= value[0] <= 1
-                )
+                valid = _valid_vector(value)
             if not valid:
                 raise ValueError(f"real-model validation returned invalid {operation}")
 
@@ -270,15 +252,12 @@ def _manifest(
             "llama_cpp_revision": INITIAL_SEARCH_MATERIALS.llama_cpp_revision,
             "sqlite_vec_version": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
             "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
-            "reranker_sha256": INITIAL_SEARCH_MATERIALS.reranker.sha256,
             "embedding_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
-            "reranker_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.reranker.tokenizer_metadata_sha256,
             "embedding_pooling": INITIAL_SEARCH_MATERIALS.embedding.pooling,
-            "reranker_pooling": INITIAL_SEARCH_MATERIALS.reranker.pooling,
             "embedding_dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
         },
         "verified_conditions": {
-            verification_condition(config): "document-query-rerank"
+            verification_condition(config): "document-query-embedding"
         },
     }
 
@@ -353,12 +332,12 @@ def prepare_document_search_materials(
             condition = verification_condition(config)
             if (
                 not isinstance(verified, dict)
-                or verified.get(condition) != "document-query-rerank"
+                or verified.get(condition) != "document-query-embedding"
             ):
                 _compatibility_probe(base, root, config)
                 manifest["verified_conditions"] = {
                     **(verified if isinstance(verified, dict) else {}),
-                    condition: "document-query-rerank",
+                    condition: "document-query-embedding",
                 }
                 _write_manifest(base, manifest)
                 status = "validated"
@@ -381,14 +360,10 @@ def prepare_document_search_materials(
             phase = "runtime and vector dependency check"
             _runtime_versions(staging)
             phase = "model download and checksum check"
-            model_actions = [
-                _reuse_or_download(base, staging, artifact)
-                for artifact in (
-                    INITIAL_SEARCH_MATERIALS.embedding,
-                    INITIAL_SEARCH_MATERIALS.reranker,
-                )
-            ]
-            phase = "real-model embedding and rerank validation"
+            model_action = _reuse_or_download(
+                base, staging, INITIAL_SEARCH_MATERIALS.embedding
+            )
+            phase = "real-model embedding validation"
             _compatibility_probe(staging, root, config)
             phase = "verified material publication"
             _write_manifest(staging, _manifest(staging, hashes, config))
@@ -402,7 +377,7 @@ def prepare_document_search_materials(
             return {
                 "status": "repaired" if backup else "built",
                 "path": str(base),
-                "models": ",".join(model_actions),
+                "models": model_action,
             }
         except BaseException as exc:
             if published:

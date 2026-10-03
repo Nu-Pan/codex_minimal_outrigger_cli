@@ -13,9 +13,12 @@ from typing import Any
 
 from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import (
+    SEARCH_CANDIDATE_COUNT_MAX,
+    SEARCH_CANDIDATE_COUNT_MIN,
     SEARCH_MCP_SERVER,
     SEARCH_TOOL_INPUT_SCHEMA,
     SEARCH_TOOL_NAME,
+    SEARCH_TOOL_OUTPUT_SCHEMA,
     DocumentSearchConfig,
     build_search_tool_description,
 )
@@ -63,7 +66,10 @@ def _search_arguments(request: object) -> tuple[str, int | None] | None:
     query, limit = arguments.get("query"), arguments.get("limit")
     if not isinstance(query, str) or not query.strip():
         return None
-    if "limit" in arguments and (type(limit) is not int or limit < 1):
+    if "limit" in arguments and (
+        type(limit) is not int
+        or not SEARCH_CANDIDATE_COUNT_MIN <= limit <= SEARCH_CANDIDATE_COUNT_MAX
+    ):
         return None
     return query, limit
 
@@ -111,6 +117,7 @@ def _response(
                         search.root, search.scope
                     ),
                     "inputSchema": SEARCH_TOOL_INPUT_SCHEMA,
+                    "outputSchema": SEARCH_TOOL_OUTPUT_SCHEMA,
                     "annotations": {
                         "readOnlyHint": True,
                         "destructiveHint": False,

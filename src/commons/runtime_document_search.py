@@ -23,8 +23,8 @@ from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
     INITIAL_SEARCH_MATERIALS,
-    RAW_RANKING_API,
-    RERANKER_INPUT_FORMAT,
+    SEARCH_CANDIDATE_COUNT_MAX,
+    SEARCH_CANDIDATE_COUNT_MIN,
     DocumentSearchConfig,
     SearchHit,
     SearchResult,
@@ -48,7 +48,7 @@ from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ig
 from .runtime_logging import current_subcommand_logger
 from .runtime_paths import cmoc_root
 
-_INDEX_FORMAT = 3
+_INDEX_FORMAT = 4
 _CLASSIFICATION_CONTRACT = "oracle-file-inventory-v2"
 _LOCK_POLL_SECONDS = 0.05
 
@@ -340,8 +340,6 @@ def search_identity(
             worker_files.joinpath("package-lock.json").read_bytes()
         ).hexdigest(),
         "query_template": EMBEDDING_QUERY_TEMPLATE,
-        "reranker_input_format": RERANKER_INPUT_FORMAT,
-        "raw_ranking_api": RAW_RANKING_API,
         "config": inference_config(config),
         "format": _INDEX_FORMAT,
     }
@@ -426,12 +424,6 @@ def _open_database(path: Path) -> sqlite3.Connection:
             );
             create table if not exists query_cache(
                 query text primary key, embedding blob not null
-            );
-            create table if not exists score_cache(
-                query text not null,
-                excerpt_sha256 text not null,
-                score real not null,
-                primary key(query, excerpt_sha256)
             );
             """
         )
@@ -1054,10 +1046,6 @@ class DocumentSearch:
                 "delete from embedding_cache where excerpt_sha256 not in "
                 "(select excerpt_sha256 from chunks)"
             )
-            connection.execute(
-                "delete from score_cache where excerpt_sha256 not in "
-                "(select excerpt_sha256 from chunks)"
-            )
         final_reused = self.sync_progress["reused_embeddings"]
         assert isinstance(final_reused, int)
         count = connection.execute("select count(*) from chunks").fetchone()[0]
@@ -1306,11 +1294,18 @@ class DocumentSearch:
         *,
         observation: SearchObservation | None = None,
     ) -> SearchResult:
-        """現在本文を同期し、cosine 候補を実モデルで再ランキングする。"""
+        """現在本文を同期し、cosine 候補の位置をファイルごとに集約する。"""
+        # MCP と直接呼出しで同じ候補数の境界を維持する。
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query must be non-blank")
-        if limit is not None and (type(limit) is not int or limit < 1):
-            raise ValueError("limit must be a positive integer")
+        if limit is not None and (
+            type(limit) is not int
+            or not SEARCH_CANDIDATE_COUNT_MIN <= limit <= SEARCH_CANDIDATE_COUNT_MAX
+        ):
+            raise ValueError(
+                f"limit must be an integer from {SEARCH_CANDIDATE_COUNT_MIN} "
+                f"to {SEARCH_CANDIDATE_COUNT_MAX}"
+            )
         observation = observation or self.begin_request()
         self._observation = observation
         self.sync_progress = None
@@ -1346,7 +1341,7 @@ class DocumentSearch:
         residency: Path,
         deadline: float | None,
     ) -> SearchResult:
-        # 同期済みの索引で query・候補・採点 cache を照合する。
+        # 集約前の候補箇所数に設定と引数の上限を適用する。
         assert self.config is not None
         count = min(limit or self.config.candidate_count, self.config.candidate_count)
         if not connection.execute("select 1 from chunks limit 1").fetchone():
@@ -1375,55 +1370,22 @@ class DocumentSearch:
             vector = _checked_cached_vector(cached[0])
         self._check(deadline)
         candidates = connection.execute(
-            "select path, start_line, end_line, excerpt, excerpt_sha256 "
+            "select path, start_line, end_line "
             "from chunks order by vec_distance_cosine(embedding, ?) limit ?",
             (vector, count),
         ).fetchall()
-        missing = []
-        scores: dict[str, float] = {}
-        for _, _, _, excerpt, excerpt_sha in candidates:
-            row = connection.execute(
-                "select score from score_cache where query = ? and excerpt_sha256 = ?",
-                (query, excerpt_sha),
-            ).fetchone()
-            if row is None:
-                missing.append((excerpt_sha, excerpt))
-            else:
-                score = row[0]
-                if type(score) not in (int, float) or not math.isfinite(score):
-                    raise SearchError(
-                        "SYNC_FAILED", "cached reranking score is invalid"
-                    )
-                scores[excerpt_sha] = score
-        if missing:
-            ranking = self._inference(
-                "rerank",
-                {
-                    "query": query,
-                    "documents": [text for _, text in missing],
-                    "config": asdict(self.config),
-                    "input_format": RERANKER_INPUT_FORMAT,
-                },
-                residency,
-                deadline,
-            )
-            if not isinstance(ranking, list) or len(ranking) != len(missing):
-                raise SearchError("MODEL_FAILURE", "reranking scores are incomplete")
-            for (excerpt_sha, _), score in zip(missing, ranking, strict=True):
-                if type(score) not in (int, float) or not math.isfinite(score):
-                    raise SearchError("MODEL_FAILURE", "reranking score is invalid")
-                scores[excerpt_sha] = score
-                connection.execute(
-                    "insert or replace into score_cache(query, excerpt_sha256, score) "
-                    "values(?, ?, ?)",
-                    (query, excerpt_sha, score),
-                )
-            connection.commit()
-        hits: list[SearchHit] = [
-            {"path": path, "start_line": start, "end_line": end, "excerpt": excerpt}
-            for path, start, end, excerpt, excerpt_sha in sorted(
-                candidates, key=lambda row: scores[row[4]], reverse=True
-            )
-        ]
+        # 同一ファイルを一度だけ返し、重複・重なりを統合して原文位置だけを公開する。
+        by_path: dict[str, list[tuple[int, int]]] = {}
+        for path, start, end in candidates:
+            by_path.setdefault(path, []).append((start, end))
+        hits: list[SearchHit] = []
+        for path, ranges in by_path.items():
+            merged: list[tuple[int, int]] = []
+            for start, end in sorted(ranges):
+                if merged and start <= merged[-1][1]:
+                    merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+                else:
+                    merged.append((start, end))
+            hits.append({"path": path, "ranges": merged})
         self._check_sources_current(documents, deadline)
         return {"status": "ok", "hits": hits}

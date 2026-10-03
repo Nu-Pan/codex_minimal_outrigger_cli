@@ -14,14 +14,18 @@ from contextlib import closing
 from dataclasses import asdict, replace
 from importlib import resources
 from pathlib import Path
+from typing import get_args
 
 import pytest
 from _git_support import make_repo, run_git
+from jsonschema.validators import Draft202012Validator
 from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.document_search import (
     INITIAL_SEARCH_MATERIALS,
     SEARCH_TOOL_INPUT_SCHEMA,
+    SEARCH_TOOL_OUTPUT_SCHEMA,
     DocumentSearchConfig,
+    SearchErrorCode,
 )
 
 from cmoc_runtime import write_config
@@ -43,7 +47,16 @@ from config.cmoc_config import CmocConfig
 
 def _tuning() -> DocumentSearchConfig:
     """推論 double にだけ使う、製品既定値ではない test 設定。"""
-    return DocumentSearchConfig(32, 0, 3, 128, 128, 128, 1, 10.0, 30.0, 1.0)
+    return DocumentSearchConfig(
+        chunk_tokens=32,
+        chunk_overlap_tokens=0,
+        embedding_context_tokens=128,
+        batch_tokens=128,
+        threads=1,
+        startup_timeout_seconds=10.0,
+        request_timeout_seconds=30.0,
+        shutdown_grace_seconds=1.0,
+    )
 
 
 @pytest.mark.parametrize("cancel_wait", [False, True])
@@ -102,13 +115,8 @@ class _InferenceDouble:
         """実モデル以外の同期・cache 境界に対する確定的な応答。"""
         self.operations.append(operation)
         vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
-        if operation == "embed_query":
-            return vector
-        assert operation == "rerank"
-        documents = payload["documents"]
-        assert isinstance(documents, list)
-        self.texts.extend(documents)
-        return [0.8 for _ in documents]
+        assert operation == "embed_query"
+        return vector
 
     def stream_chunks(
         self,
@@ -249,16 +257,16 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> N
     first = search.search("内容")
     assert first["status"] == "ok"
     assert [hit["path"] for hit in first["hits"]] == ["oracle/doc/allowed.md"]
-    assert "最初の内容" in first["hits"][0]["excerpt"]
-    assert worker.operations == ["chunk_embed", "embed_query", "rerank"]
+    assert first["hits"][0]["ranges"] == [(1, 2)]
+    assert worker.operations == ["chunk_embed", "embed_query"]
 
     unchanged = search.search("内容")
     assert unchanged == first
-    assert len(worker.operations) == 3
-    (root / "oracle/doc/allowed.md").write_text("# 変更後\n次の内容\n")
+    assert len(worker.operations) == 2
+    (root / "oracle/doc/allowed.md").write_text("# 変更後\n次の内容\n追加の行\n")
     changed = search.search("内容")
-    assert changed["hits"] and "次の内容" in changed["hits"][0]["excerpt"]
-    assert "最初の内容" not in str(changed)
+    assert changed["hits"] == [{"path": "oracle/doc/allowed.md", "ranges": [(1, 3)]}]
+    assert worker.texts[-1] == "# 変更後\n次の内容\n追加の行\n"
     assert worker.operations.count("chunk_embed") == 2
     assert worker.operations.count("embed_query") == 1
 
@@ -626,7 +634,7 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
     """長い節の overlap が次の短い節へ越境せず、本文を落とさない。"""
     _fake_node_model(tmp_path)
     body = "冒頭\n# A\n" + "長い本文" * 8 + "\n## B\n短い本文\n"
-    tuning = DocumentSearchConfig(12, 3, 3, 128, 128, 128, 1, 10.0, 30.0, 1.0)
+    tuning = replace(_tuning(), chunk_tokens=12, chunk_overlap_tokens=3)
     request = NodeSearchWorker(tmp_path, tuning)._request(
         "chunk_embed", {"documents": {"doc.md": body}, "config": asdict(tuning)}
     )
@@ -660,7 +668,7 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
 def test_changed_sections_and_moved_files_reuse_saved_embeddings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """実 chunker で変更節だけを再推論し、現在位置と採点 cache を保つ。"""
+    """実 chunker で変更節だけを再推論し、現在位置と query cache を保つ。"""
     pytest.importorskip("sqlite_vec")
     from commons import runtime_document_search_worker as worker_module
 
@@ -688,10 +696,8 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
 
         def run(self, operation, payload, *, deadline, residency_fd, cancelled=None):
             self.operations.append(operation)
-            if operation == "embed_query":
-                return vector
-            assert operation == "rerank"
-            return [0.5] * len(payload["documents"])
+            assert operation == "embed_query"
+            return vector
 
     worker = QueryWorker()
     search = DocumentSearch(
@@ -709,10 +715,13 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
         ]
 
     def hit_lines() -> dict[str, int]:
-        return {
-            hit["excerpt"]: hit["start_line"]
-            for hit in search.search("sections", limit=3)["hits"]
-        }
+        # 公開位置から現在原文を読み、移動前の位置や抜粋に依存しない。
+        locations = {}
+        for hit in search.search("sections")["hits"]:
+            lines = (root / hit["path"]).read_text().splitlines(keepends=True)
+            for start, end in hit["ranges"]:
+                locations["".join(lines[start - 1 : end])] = start
+        return locations
 
     with closing(search):
         first = search.synchronize()
@@ -754,14 +763,10 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
         assert moved_document.reused_embeddings == 3
         assert search.sync_progress["persisted_chunks"] == 0
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
-        hits = search.search("sections", limit=3)["hits"]
+        hits = search.search("sections")["hits"]
         assert {hit["path"] for hit in hits} == {"oracle/doc/moved.md"}
-        assert {hit["excerpt"]: hit["start_line"] for hit in hits} == {
-            b: 1,
-            c: 3,
-            revised_heading: 5,
-        }
-        assert worker.operations == ["embed_query", "rerank", "rerank", "rerank"]
+        assert hit_lines() == {b: 1, c: 3, revised_heading: 5}
+        assert worker.operations == ["embed_query"]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
@@ -954,26 +959,190 @@ def test_zero_hit_search_rechecks_source_before_return(
     assert failure.value.code == "SOURCE_CHANGED"
 
 
-def test_unset_tuning_and_mcp_failure_are_distinct_from_zero_hits(
-    tmp_path: Path,
-) -> None:
-    """未設定は NOT_READY、MCP 引数 null は入力エラーにする。"""
-    root = _repo_with_docs(tmp_path)
-    search = DocumentSearch(root, DocumentSearchScope(), None)
-    with pytest.raises(SearchError) as error:
-        search.search("内容")
-    assert error.value.code == "NOT_READY"
-    invalid = _response(
+def _listed_search_tool(search):
+    response = _response({"jsonrpc": "2.0", "id": 0, "method": "tools/list"}, search)
+    return response["result"]["tools"][0]
+
+
+def _assert_search_result(response, schema, *, error):
+    # stdio で送信する JSON を検査し、text と構造化結果の相違も検出する。
+    result = json.loads(json.dumps(response))["result"]
+    structured = result["structuredContent"]
+    Draft202012Validator(schema).validate(structured)
+    assert result["isError"] is error
+    assert result["content"][0]["type"] == "text"
+    assert json.loads(result["content"][0]["text"]) == structured
+    return structured
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {},
+        {"query": ""},
+        {"query": " \n\t"},
+        {"query": None},
+        {"query": "内容", "work_root": "/elsewhere"},
+        {"query": "内容", "scope": {}},
+        *({"query": "内容", "limit": limit} for limit in (None, True, 19, 51, 20.5)),
+    ],
+)
+def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, arguments):
+    """公開引数 schema に違反する入力は検索せず protocol error にする。"""
+    search = DocumentSearch(tmp_path, DocumentSearchScope(), None)
+    tool = _listed_search_tool(search)
+    assert not Draft202012Validator(tool["inputSchema"]).is_valid(arguments)
+    monkeypatch.setattr(search, "search", lambda *a, **kw: pytest.fail("search called"))
+    response = _response(
         {
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {"name": "search", "arguments": {"query": "内容", "limit": None}},
+            "params": {"name": "search", "arguments": arguments},
         },
         search,
     )
-    assert invalid is not None and invalid["error"]["code"] == -32602
-    failed = _response(
+    assert response["error"]["code"] == -32602
+    assert "result" not in response
+
+
+class _CandidateWorker(_InferenceDouble):
+    """集約前の候補位置を制御し、検索・同期・返却は製品経路で検証する。"""
+
+    def __init__(self, ranges):
+        super().__init__()
+        self.ranges = ranges
+
+    def stream_chunks(self, documents, resumes, on_event, **kwargs):
+        vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+        for path, source in documents.items():
+            lines = source.splitlines(keepends=True)
+            ranges = self.ranges[path]
+            for ordinal in range(resumes[path], len(ranges)):
+                start, end = ranges[ordinal]
+                on_event(
+                    {
+                        "kind": "chunk",
+                        "path": path,
+                        "ordinal": ordinal,
+                        "start": len("".join(lines[: start - 1])),
+                        "end": len("".join(lines[:end])),
+                        "embedding": vector,
+                    }
+                )
+            on_event(
+                {"kind": "document_complete", "path": path, "chunk_count": len(ranges)}
+            )
+
+
+@pytest.mark.parametrize(
+    "candidate_count,limit,available,expected",
+    [
+        (50, None, 60, 50),
+        (20, None, 60, 20),
+        (20, 50, 60, 20),
+        (50, 20, 60, 20),
+        (50, 50, 60, 50),
+        (50, None, 7, 7),
+        (50, None, 0, 0),
+    ],
+)
+def test_mcp_success_schema_and_candidate_limits(
+    tmp_path, candidate_count, limit, available, expected
+):
+    """既定・設定上限・引数・候補不足を、ファイル集約前の件数で扱う。"""
+    root = _repo_with_docs(tmp_path)
+    path = "oracle/doc/allowed.md"
+    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
+    worker = _CandidateWorker({path: [(i + 1, i + 1) for i in range(available)]})
+    with closing(
+        DocumentSearch(
+            root,
+            DocumentSearchScope(allowed_files=(path,)),
+            replace(_tuning(), candidate_count=candidate_count),
+            worker=worker,
+            installation_root=tmp_path,
+        )
+    ) as search:
+        tool = _listed_search_tool(search)
+        arguments = {"query": "候補"}
+        if limit is not None:
+            arguments["limit"] = limit
+        Draft202012Validator(tool["inputSchema"]).validate(arguments)
+        response = _response(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "search", "arguments": arguments},
+            },
+            search,
+        )
+        result = _assert_search_result(response, tool["outputSchema"], error=False)
+        assert result["status"] == "ok"
+        if expected:
+            assert len(result["hits"]) == 1
+            assert result["hits"][0]["path"] == path
+            ranges = result["hits"][0]["ranges"]
+            assert len(ranges) == expected
+            assert all(1 <= start == end <= available for start, end in ranges)
+        else:
+            assert result["hits"] == []
+        assert worker.operations == (["embed_query"] if expected else [])
+
+
+def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
+    """ファイルごとに重複・重なりだけを統合し、先頭行と単一行の意味を保つ。"""
+    root = _repo_with_docs(tmp_path)
+    path = "oracle/doc/allowed.md"
+    other = "oracle/doc/secret.md"
+    (root / path).write_text("".join(f"原文 {i}\n" for i in range(81)))
+    worker = _CandidateWorker(
+        {
+            path: [(10, 24), (20, 30), (10, 24), (70, 81), (1, 1)],
+            other: [(1, 1)],
+        }
+    )
+    with closing(
+        DocumentSearch(
+            root,
+            DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+            _tuning(),
+            worker=worker,
+            installation_root=tmp_path,
+        )
+    ) as search:
+        tool = _listed_search_tool(search)
+        response = _response(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "search", "arguments": {"query": "原文"}},
+            },
+            search,
+        )
+        result = _assert_search_result(response, tool["outputSchema"], error=False)
+    assert len(result["hits"]) == 2
+    assert {hit["path"]: hit["ranges"] for hit in result["hits"]} == {
+        path: [[1, 1], [10, 30], [70, 81]],
+        other: [[1, 1]],
+    }
+
+
+@pytest.mark.parametrize("code", [*get_args(SearchErrorCode.__value__), None])
+def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
+    """定義済みの検索失敗と予期しない例外は、成功を併記しない構造化結果にする。"""
+    search = DocumentSearch(tmp_path, DocumentSearchScope(), None)
+    tool = _listed_search_tool(search)
+
+    def fail(*args, **kwargs):
+        if code is None:
+            raise RuntimeError("unexpected failure")
+        raise SearchError(code, "search failed")
+
+    monkeypatch.setattr(search, "search", fail)
+    response = _response(
         {
             "jsonrpc": "2.0",
             "id": 2,
@@ -982,8 +1151,45 @@ def test_unset_tuning_and_mcp_failure_are_distinct_from_zero_hits(
         },
         search,
     )
-    assert failed is not None and failed["result"]["isError"] is True
-    assert failed["result"]["structuredContent"]["code"] == "NOT_READY"
+    result = _assert_search_result(response, tool["outputSchema"], error=True)
+    assert result == {
+        "status": "error",
+        "code": code or "SYNC_FAILED",
+        "message": "search failed" if code else "document search failed",
+    }
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        {"status": "ok"},
+        {"status": "ok", "hits": [], "code": "SYNC_FAILED"},
+        {"status": "error", "code": "UNKNOWN", "message": "failed"},
+        {"status": "error", "code": "SYNC_FAILED"},
+        *(
+            {"status": "ok", "hits": [hit]}
+            for hit in [
+                {
+                    "path": "oracle/doc/a.md",
+                    "start_line": 1,
+                    "end_line": 2,
+                    "excerpt": "old",
+                },
+                {"path": "oracle/doc/a.md", "ranges": []},
+                {"path": "oracle/doc/a.md", "ranges": [[0, 1]]},
+                {"path": "oracle/doc/a.md", "ranges": [[True, 1]]},
+                {"path": "oracle/doc/a.md", "ranges": [[1]]},
+                {"path": "oracle/doc/a.md", "ranges": [[1, 2, 3]]},
+                {"path": "oracle/doc/a.md", "ranges": [[1, 2]], "excerpt": "extra"},
+            ]
+        ),
+    ],
+)
+def test_output_schema_rejects_malformed_results(tmp_path, value):
+    """旧形式や成功・失敗の混在、行範囲の型違いを公開 schema で検出する。"""
+    search = DocumentSearch(tmp_path, DocumentSearchScope(), None)
+    schema = _listed_search_tool(search)["outputSchema"]
+    assert not Draft202012Validator(schema).is_valid(value)
 
 
 def test_worker_change_rebuilds_index_without_reusing_embeddings(
@@ -1152,28 +1358,38 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
         assert [tool["name"] for tool in listed["result"]["tools"]] == ["search"]
         tool = listed["result"]["tools"][0]
         assert tool["inputSchema"] == SEARCH_TOOL_INPUT_SCHEMA
+        assert tool["outputSchema"] == SEARCH_TOOL_OUTPUT_SCHEMA
+        for schema in (tool["inputSchema"], tool["outputSchema"]):
+            Draft202012Validator.check_schema(schema)
         description = tool["description"]
         assert str(root) in description
         displayed_scope = description.split("```json\n", 1)[1].split("\n```", 1)[0]
         assert json.loads(displayed_scope) == scope
         assert "{{" not in description
-        for result_detail in (
-            '`status: "ok"`',
-            "`hits`",
-            "`path`",
-            "`ranges`",
-            "1 起点で両端を含む",
-            "`isError=true`",
-            '`status: "error"`',
-            "`code`",
-            "`message`",
-        ):
-            assert result_detail in description
+        assert "root や閲覧範囲は tool 引数から変更できない" in description
+        assert "許可の両配列が空なら対象なし" in description
+        for schema_detail in ("hits", "ranges", "candidate_count", "isError"):
+            assert schema_detail not in description
+        assert (
+            "原文候補を探す検索文"
+            in tool["inputSchema"]["properties"]["query"]["description"]
+        )
+        assert (
+            "集約・行範囲統合前"
+            in tool["inputSchema"]["properties"]["limit"]["description"]
+        )
         failed = request(
             3, "tools/call", {"name": "search", "arguments": {"query": "内容"}}
         )
-        assert failed["result"]["isError"] is True
-        assert failed["result"]["structuredContent"]["code"] == "NOT_READY"
+        failure = _assert_search_result(failed, tool["outputSchema"], error=True)
+        assert failure["code"] == "NOT_READY"
+        invalid = request(
+            4,
+            "tools/call",
+            {"name": "search", "arguments": {"query": "内容", "limit": 19}},
+        )
+        assert invalid["error"]["code"] == -32602
+        assert "result" not in invalid
         process.stdin.close()
         assert process.wait(timeout=5) == 0
     events = [json.loads(line) for line in log_path.read_text().splitlines()]

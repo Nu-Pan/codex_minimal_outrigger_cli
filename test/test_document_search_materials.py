@@ -14,7 +14,6 @@ import pytest
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
     INITIAL_SEARCH_MATERIALS,
-    RERANKER_INPUT_FORMAT,
     DocumentSearchConfig,
 )
 
@@ -26,18 +25,13 @@ from commons.runtime_document_search import SearchError
 @pytest.fixture
 def small_materials(monkeypatch: pytest.MonkeyPatch) -> dict[str, bytes]:
     """実モデルを取得せず checksum と固定 identity の境界を保つ。"""
-    contents = {"embedding": b"embedding model", "reranker": b"reranker model"}
+    contents = {"embedding": b"embedding model"}
     materials = replace(
         INITIAL_SEARCH_MATERIALS,
         embedding=replace(
             INITIAL_SEARCH_MATERIALS.embedding,
             size_bytes=len(contents["embedding"]),
             sha256=hashlib.sha256(contents["embedding"]).hexdigest(),
-        ),
-        reranker=replace(
-            INITIAL_SEARCH_MATERIALS.reranker,
-            size_bytes=len(contents["reranker"]),
-            sha256=hashlib.sha256(contents["reranker"]).hexdigest(),
         ),
     )
     monkeypatch.setattr(setup, "INITIAL_SEARCH_MATERIALS", materials)
@@ -74,12 +68,8 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
 
     def fake_download(base: Path, artifact: object) -> None:
         name = getattr(artifact, "filename")
-        content = (
-            small_materials["embedding"]
-            if name == setup.INITIAL_SEARCH_MATERIALS.embedding.filename
-            else small_materials["reranker"]
-        )
-        (base / name).write_bytes(content)
+        assert name == setup.INITIAL_SEARCH_MATERIALS.embedding.filename
+        (base / name).write_bytes(small_materials["embedding"])
 
     probes: list[DocumentSearchConfig] = []
     monkeypatch.setattr(setup, "_install_node_runtime", fake_install)
@@ -149,13 +139,9 @@ def test_failed_real_model_probe_never_publishes_materials(
         return SimpleNamespace(stdout="v22.23.2")
 
     def fake_download(base: Path, artifact: object) -> None:
-        content = (
-            small_materials["embedding"]
-            if getattr(artifact, "filename")
-            == setup.INITIAL_SEARCH_MATERIALS.embedding.filename
-            else small_materials["reranker"]
-        )
-        (base / getattr(artifact, "filename")).write_bytes(content)
+        name = getattr(artifact, "filename")
+        assert name == setup.INITIAL_SEARCH_MATERIALS.embedding.filename
+        (base / name).write_bytes(small_materials["embedding"])
 
     monkeypatch.setattr(
         setup, "_install_node_runtime", lambda base, _fd: _installed_runtime(base)
@@ -166,10 +152,10 @@ def test_failed_real_model_probe_never_publishes_materials(
     monkeypatch.setattr(
         setup,
         "_compatibility_probe",
-        lambda *_args: (_ for _ in ()).throw(ValueError("rerank probe failed")),
+        lambda *_args: (_ for _ in ()).throw(ValueError("embedding probe failed")),
     )
 
-    with pytest.raises(ValueError, match="rerank probe failed"):
+    with pytest.raises(ValueError, match="embedding probe failed"):
         setup.prepare_document_search_materials(tmp_path, DocumentSearchConfig())
     assert not setup.materials_directory(tmp_path).exists()
     with pytest.raises(SearchError) as exc_info:
@@ -177,10 +163,22 @@ def test_failed_real_model_probe_never_publishes_materials(
     assert exc_info.value.code == "NOT_READY"
 
 
-def test_probe_uses_search_inputs_and_rejects_invalid_rerank(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("operation", ["chunk_embed", "embed_query"])
+@pytest.mark.parametrize(
+    "bad_vector",
+    [
+        [],
+        [0.0] * INITIAL_SEARCH_MATERIALS.embedding_dimensions,
+        [float("nan")] * INITIAL_SEARCH_MATERIALS.embedding_dimensions,
+    ],
+)
+def test_probe_uses_search_inputs_and_rejects_invalid_embedding(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+    bad_vector: list[float],
 ) -> None:
-    """doctor 検証が通常検索と同じ文書/query 入力を通し、欠落採点を拒否する。"""
+    """doctor 検証が通常検索と同じ文書/query 入力を通し、不正 embedding を拒否する。"""
     config = DocumentSearchConfig()
     calls: list[tuple[str, dict[str, object]]] = []
     vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
@@ -197,30 +195,31 @@ def test_probe_uses_search_inputs_and_rejects_invalid_rerank(
             return {
                 "probe.md": [{"start": 0, "end": len(document), "embedding": vector}]
             }
-        if operation == "embed_query":
-            return vector
-        return [0.5]
+        assert operation == "embed_query"
+        return vector
 
     monkeypatch.setattr(worker.NodeSearchWorker, "run", fake_run)
     setup._compatibility_probe(tmp_path / "staging", tmp_path, config)
     assert [operation for operation, _payload in calls] == [
         "chunk_embed",
         "embed_query",
-        "rerank",
     ]
     assert calls[1][1]["text"] == EMBEDDING_QUERY_TEMPLATE.format(query="日本語の検索")
-    assert calls[2][1]["input_format"] == RERANKER_INPUT_FORMAT
 
-    def invalid_rerank(
+    def invalid_embedding(
         _worker: worker.NodeSearchWorker,
-        operation: str,
+        current_operation: str,
         payload: dict[str, object],
         **kwargs: object,
     ) -> object:
-        if operation == "rerank":
-            return []
-        return fake_run(_worker, operation, payload, **kwargs)
+        result = fake_run(_worker, current_operation, payload, **kwargs)
+        if current_operation == operation:
+            if operation == "chunk_embed":
+                result["probe.md"][0]["embedding"] = bad_vector
+            else:
+                result = bad_vector
+        return result
 
-    monkeypatch.setattr(worker.NodeSearchWorker, "run", invalid_rerank)
-    with pytest.raises(ValueError, match="invalid rerank"):
+    monkeypatch.setattr(worker.NodeSearchWorker, "run", invalid_embedding)
+    with pytest.raises(ValueError, match=f"invalid {operation}"):
         setup._compatibility_probe(tmp_path / "staging", tmp_path, config)

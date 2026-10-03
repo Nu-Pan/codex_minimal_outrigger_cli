@@ -26,7 +26,7 @@ Python は本文を読む前に許可と種類を確認する。親 directory �
 
 ## 検索と routing
 
-agent が oracle/doc 上の仕様文章を検索するときは、既存のキーワード検索に加えて、文書検索 MCP によるベクトル検索も併用する。文書検索 MCP が無効な call では、許可された原文への直接参照や既存のキーワード検索を使える。
+agent が oracle/doc 上の仕様文章を検索するときは、既存のキーワード検索に加えて、文書検索 MCP によるベクトル検索も併用する。文書検索 MCP が無効な call では、許可された任意の方法で関連原文を検索する。
 
 agent に課されたファイルアクセス制限は、検索結果にも適用する。候補箇所は chunk と現在原文の位置との対応を単位とし、採用上限は設定 `candidate_count` と MCP 引数 `limit` の小さい方とする。`limit` の省略時は `candidate_count` を使う。件数はファイル集約・行範囲統合前の候補箇所数で数え、候補不足なら指定可能な件数の下限未満でも返す。件数の正確な範囲と既定値は本書の「設定と未確定事項」、引数と返却形式の正確な定義は「stdio MCP と失敗の公開」の委譲先に従う。
 
@@ -160,11 +160,19 @@ doctor によるコンポーネントの検証でも、推論に使用する設�
 
 ## stdio MCP と失敗の公開
 
-公開 tool は検索だけとし、任意ファイル get/resource は必要構成にしない。query と任意の候補箇所数の上限 `limit` だけを受け取り、件数の制御と集約は本書の「検索と routing」に従う。tool 名、引数 schema、結果・失敗の正確な型は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER`、`SEARCH_TOOL_NAME`、`SEARCH_TOOL_INPUT_SCHEMA`、`SearchResult`、`SearchFailure`、`SearchHit`、`SearchErrorCode` へ委譲する。
+公開 tool は検索だけとし、任意ファイル get/resource は必要構成にしない。query と任意の候補箇所数の上限 `limit` だけを受け取り、件数の制御と集約は本書の「検索と routing」に従う。tool 名と結果・失敗の正確な型は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER`、`SEARCH_TOOL_NAME`、`SearchResult`、`SearchFailure`、`SearchHit`、`SearchErrorCode` へ委譲する。
 
-tool の説明と引数 schema の説明から、検索対象とその call の work-root・閲覧範囲、件数の単位・指定範囲・省略時の扱い・設定上限・候補不足、集約された結果の読み方、および成功・失敗の識別方法が分かるようにする。説明は検索に用いる固定 context と一致させ、agent が仕様文書を別途読まずに利用できる内容にする。正確な tool の説明文は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `build_search_tool_description` へ委譲する。モデル常駐、SQLite、排他アルゴリズム、仕様文書の構成など、agent の判断に不要な内部説明は含めない。
+`tools/list` で公開する description、inputSchema、outputSchema だけで、別途の補足 prompt や仕様文書を読まずに tool を利用できるようにする。公開定義の責務と正確な詳細の委譲先は、次のとおりとする。委譲先はいずれも `{{cmoc-root}}/oracle/src/oracle/other/document_search.py` 内にある。
 
-成功結果と検索失敗は機械的に識別可能にする。引数不正は MCP の入力エラー、検索中の失敗は `isError=true` と失敗 code・説明で返す。範囲不正、root/列挙/読取失敗、同期・保存失敗、本文変更競合、検索未準備、コンポーネントの不一致、推論失敗、期限超過、取消を区別する。stdio の stdout は MCP protocol 専用とし、診断や native 出力を混入させない。
+| 公開定義 | 伝える内容 | 委譲先 |
+| --- | --- | --- |
+| description | tool の機能と利用条件、検索対象、その接続の work-root・閲覧範囲・除外。検索に使う固定 context と一致させる。 | `build_search_tool_description` の説明文 |
+| inputSchema | 引数の意味・制約・省略時の扱い。件数の単位・指定範囲・設定上限・候補不足と、引数不正の扱いを含む。 | `SEARCH_TOOL_INPUT_SCHEMA` の引数 schema と説明 |
+| outputSchema | 構造化された成功結果と検索失敗の型・各要素の意味。集約された候補位置の読み方と、成功ゼロ件・失敗の識別を含む。 | `SEARCH_TOOL_OUTPUT_SCHEMA` の結果 schema と説明 |
+
+モデル常駐、SQLite、排他アルゴリズム、仕様文書の構成など、agent の判断に不要な内部説明は含めない。公開定義と routing policy の分担は、本書の「検索と routing」に従う。
+
+成功結果と検索失敗は機械的に識別可能にする。どちらも outputSchema に適合する `structuredContent` として返し、同じ値を JSON 化した text content を併記する。引数不正は JSON-RPC の入力エラーとして返し、tool の構造化された結果とは区別する。検索中の失敗は `isError=true` と失敗 code・説明で返す。範囲不正、root/列挙/読取失敗、同期・保存失敗、本文変更競合、検索未準備、コンポーネントの不一致、推論失敗、期限超過、取消を区別する。stdio の stdout は MCP protocol 専用とし、診断や native 出力を混入させない。
 
 Codex process ごとに独立した接続と固定 context を持つ。起動と argv 注入は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。PoC の自作 protocol 実装を製品の固定要件にせず、採用する SDK または実装で相互運用を検証する。
 
@@ -206,7 +214,8 @@ Codex process ごとに独立した接続と固定 context を持つ。起動と
 - 同一パスの範囲 `[10,24]`、`[20,30]`、`[10,24]`、`[70,81]` は、重複・重なりを統合した `[10,30]` と `[70,81]` になることを確認する。別パスの範囲を混ぜず、先頭行と一行だけの範囲も委譲先の行番号条件に従うこと、候補情報が `path` と `ranges` だけで本文・抜粋・見出し文・スコアを含まないことを確認する。
 - 必要な embedding 用コンポーネントと有効な設定がそろえば、再ランキング用モデルが存在しなくても doctor の準備・検証と検索が成立することを確認する。再ランキングの推論・採点 cache を要求せず、cosine 距離で選んだ候補が集約結果に対応することを確認する。旧方式の資源が残る場合の回収は、本書の「identity と保存先」「排他、期限、終了」に従い、使用中の資源を保護する。
 - 新規 `CmocConfig` の検索設定と、明示 doctor による欠落した `candidate_count` の補完に、委譲先の既定値 50 が使われることを確認する。保存済みの `candidate_count: 8` は通常起動・明示 doctor の双方で不正とし、20〜50 の整数への手動修正を案内する。廃止項目 `reranker_context_tokens` が残る場合は除去を案内する。既存の明示値を自動置換・削除せず、不正が残る補完候補を保存しないことも確認する。
-- 生成された routing 文面だけで件数と結果を理解し、返された位置から必要な現在原文を選んで読めることを確認する。検索無効の call には利用可能な参照手段を案内し、有効な call の範囲・除外と失敗識別の案内が実際の接続条件に一致することを確認する。
+- 検索が有効な call と無効な call の完全 prompt を確認し、本書の「検索と routing」に従う判断規則が実際の検索有効状態と一致すること、tool の利用説明を routing 文面へ重複させないことを確認する。
+- 有効な call の `tools/list` が公開する description・inputSchema・outputSchema だけで件数・結果・成功と失敗を解釈でき、work-root・閲覧範囲・除外の案内が実際の接続の固定 context と一致することを確認する。成功結果・成功ゼロ件・構造化された検索失敗が公開 outputSchema に適合し、text content と一致すること、引数不正の protocol error をこれらの結果と混同しないことも確認する。
 
 ### 現在原文・閲覧境界・コンポーネント
 

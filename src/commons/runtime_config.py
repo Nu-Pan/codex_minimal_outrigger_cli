@@ -12,7 +12,11 @@ from oracle.other.cmoc_config import (
     CodexModelProviderConfig,
     JsonTomlValue,
 )
-from oracle.other.document_search import DocumentSearchConfig
+from oracle.other.document_search import (
+    SEARCH_CANDIDATE_COUNT_MAX,
+    SEARCH_CANDIDATE_COUNT_MIN,
+    DocumentSearchConfig,
+)
 
 from config.cmoc_config import (
     CmocConfig,
@@ -102,7 +106,9 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
     names = {field.name for field in fields(DocumentSearchConfig)}
     unknown = sorted(data.keys() - names)
     if unknown:
-        raise SearchConfigIssue(f"document_search.{unknown[0]}", "未知の項目です")
+        raise SearchConfigIssue(
+            f"document_search.{unknown[0]}", "未知の項目です。手動で除去してください"
+        )
     missing = sorted(names - data.keys())
     if missing:
         raise SearchConfigIssue(
@@ -114,7 +120,6 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
         "chunk_tokens",
         "candidate_count",
         "embedding_context_tokens",
-        "reranker_context_tokens",
         "batch_tokens",
         "threads",
     ):
@@ -122,6 +127,15 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
             raise SearchConfigIssue(
                 f"document_search.{name}", "正の JSON 整数が必要です"
             )
+    if (
+        not SEARCH_CANDIDATE_COUNT_MIN
+        <= data["candidate_count"]
+        <= SEARCH_CANDIDATE_COUNT_MAX
+    ):
+        raise SearchConfigIssue(
+            "document_search.candidate_count",
+            f"{SEARCH_CANDIDATE_COUNT_MIN}〜{SEARCH_CANDIDATE_COUNT_MAX} の JSON 整数へ手動で修正してください",
+        )
     overlap = data["chunk_overlap_tokens"]
     if type(overlap) is not int or overlap < 0:
         raise SearchConfigIssue(
@@ -150,12 +164,11 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
             raise SearchConfigIssue(
                 f"document_search.{name}", "有限の正の JSON 数値が必要です"
             )
-    for name in ("embedding_context_tokens", "reranker_context_tokens"):
-        if data["chunk_tokens"] >= data[name]:
-            raise SearchConfigIssue(
-                f"document_search.chunk_tokens, document_search.{name}",
-                f"chunk_tokens={data['chunk_tokens']} は {name}={data[name]} より小さくしてください",
-            )
+    if data["chunk_tokens"] >= data["embedding_context_tokens"]:
+        raise SearchConfigIssue(
+            "document_search.chunk_tokens, document_search.embedding_context_tokens",
+            f"chunk_tokens={data['chunk_tokens']} は embedding_context_tokens={data['embedding_context_tokens']} より小さくしてください",
+        )
     return DocumentSearchConfig(**data)
 
 

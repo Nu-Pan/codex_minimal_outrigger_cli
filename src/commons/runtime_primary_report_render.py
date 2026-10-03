@@ -373,7 +373,6 @@ def _doctor_body(
         f"- runtime・native 互換: `{_field_status(fields.get('material_runtime_check'))}`",
         f"- 文書 embedding: `{_field_status(fields.get('material_document_embedding'))}`",
         f"- query embedding: `{_field_status(fields.get('material_query_embedding'))}`",
-        f"- raw rerank: `{_field_status(fields.get('material_rerank'))}`",
         f"- 残存状態: `{_field_status(fields.get('material_remaining_state'))}`",
         f"- 失敗理由: `{_field_status(fields.get('material_failure'))}`",
         "## 検索索引の同期",

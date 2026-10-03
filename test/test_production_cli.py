@@ -624,7 +624,6 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
     assert "照合と実モデル検証: `成功`" in first_report
     assert "文書 embedding: `成功`" in first_report
     assert "query embedding: `成功`" in first_report
-    assert "raw rerank: `成功`" in first_report
     report_open_log = tmp_path / "editor-bin/report-open.log"
     for _ in range(100):
         if report_open_log.is_file():

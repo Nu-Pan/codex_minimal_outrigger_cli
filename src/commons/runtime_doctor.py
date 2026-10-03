@@ -194,7 +194,6 @@ def run_doctor_preprocess(
         material_runtime_check="未実行",
         material_document_embedding="未実行",
         material_query_embedding="未実行",
-        material_rerank="未実行",
         material_remaining_state="未確認",
         doctor_sync_status="not_started",
         doctor_sync_id=None,
@@ -211,7 +210,6 @@ def run_doctor_preprocess(
         material_path=str(installation_root / ".cmoc/gu/document_search/materials"),
         material_identity={
             "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
-            "reranker_sha256": INITIAL_SEARCH_MATERIALS.reranker.sha256,
             "node_llama_cpp": INITIAL_SEARCH_MATERIALS.node_llama_cpp_version,
             "sqlite_vec": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
         },
@@ -339,7 +337,6 @@ def run_doctor_preprocess(
                     material_runtime_check="未完了",
                     material_document_embedding="未完了",
                     material_query_embedding="未完了",
-                    material_rerank="未完了",
                     material_remaining_state="現在の条件では準備済みと扱わず、再実行時に照合する",
                 )
                 action = (
@@ -360,7 +357,6 @@ def run_doctor_preprocess(
                 material_runtime_check="成功",
                 material_document_embedding="成功",
                 material_query_embedding="成功",
-                material_rerank="成功",
                 material_remaining_state="検査時点で利用可能",
             )
             try:

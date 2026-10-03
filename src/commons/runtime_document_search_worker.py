@@ -23,8 +23,6 @@ from markdown_it import MarkdownIt
 from oracle.other.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
     INITIAL_SEARCH_MATERIALS,
-    RAW_RANKING_API,
-    RERANKER_INPUT_FORMAT,
     DocumentSearchConfig,
 )
 
@@ -91,8 +89,6 @@ def verification_condition(config: DocumentSearchConfig) -> str:
         "platform": platform.platform(),
         "machine": platform.machine(),
         "query_template": EMBEDDING_QUERY_TEMPLATE,
-        "reranker_input_format": RERANKER_INPUT_FORMAT,
-        "raw_ranking_api": RAW_RANKING_API,
     }
     return hashlib.sha256(json.dumps(condition, sort_keys=True).encode()).hexdigest()
 
@@ -182,11 +178,8 @@ def verify_search_materials(
                 "llama_cpp_revision": INITIAL_SEARCH_MATERIALS.llama_cpp_revision,
                 "sqlite_vec_version": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
                 "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
-                "reranker_sha256": INITIAL_SEARCH_MATERIALS.reranker.sha256,
                 "embedding_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
-                "reranker_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.reranker.tokenizer_metadata_sha256,
                 "embedding_pooling": INITIAL_SEARCH_MATERIALS.embedding.pooling,
-                "reranker_pooling": INITIAL_SEARCH_MATERIALS.reranker.pooling,
                 "embedding_dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
             },
         }
@@ -194,23 +187,12 @@ def verify_search_materials(
             data.get(key) != value for key, value in expected.items()
         ):
             raise SearchError("MODEL_IDENTITY_MISMATCH", "material manifest mismatch")
-        for filename, expected_hash, expected_size in (
-            (
-                INITIAL_SEARCH_MATERIALS.embedding.filename,
-                INITIAL_SEARCH_MATERIALS.embedding.sha256,
-                INITIAL_SEARCH_MATERIALS.embedding.size_bytes,
-            ),
-            (
-                INITIAL_SEARCH_MATERIALS.reranker.filename,
-                INITIAL_SEARCH_MATERIALS.reranker.sha256,
-                INITIAL_SEARCH_MATERIALS.reranker.size_bytes,
-            ),
-        ):
-            path = base / filename
-            if path.is_symlink() or not path.is_file():
-                raise SearchError("NOT_READY", "document search model is unavailable")
-            if path.stat().st_size != expected_size or _sha256(path) != expected_hash:
-                raise SearchError("MODEL_IDENTITY_MISMATCH", "model checksum mismatch")
+        model = INITIAL_SEARCH_MATERIALS.embedding
+        path = base / model.filename
+        if path.is_symlink() or not path.is_file():
+            raise SearchError("NOT_READY", "document search model is unavailable")
+        if path.stat().st_size != model.size_bytes or _sha256(path) != model.sha256:
+            raise SearchError("MODEL_IDENTITY_MISMATCH", "model checksum mismatch")
         for filename, expected_hash in (
             ("worker.mjs", expected_worker_hash),
             ("package.json", expected_package_hash),
@@ -255,7 +237,7 @@ def verify_search_materials(
             if (
                 not isinstance(verified, dict)
                 or verified.get(verification_condition(config))
-                != "document-query-rerank"
+                != "document-query-embedding"
             ):
                 raise SearchError(
                     "NOT_READY",
@@ -326,9 +308,6 @@ class NodeSearchWorker:
             "payload": payload,
             "embedding_model": str(
                 self.base / INITIAL_SEARCH_MATERIALS.embedding.filename
-            ),
-            "reranker_model": str(
-                self.base / INITIAL_SEARCH_MATERIALS.reranker.filename
             ),
             "dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
             "parent_pid": os.getpid(),
