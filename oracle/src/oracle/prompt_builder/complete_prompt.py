@@ -134,7 +134,9 @@ def build_complete_prompt(
     if routing_policy:
         _append(
             fundamental_policy_prompt,
-            build_routing_policy(path_context, document_search_scope),
+            build_routing_policy(
+                search_mcp_tool_available=document_search_scope is not None,
+            ),
         )
     if oracle_and_realization_basic:
         _append(

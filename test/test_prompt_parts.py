@@ -232,6 +232,7 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     "document_search_scope",
     [
         pytest.param(None, id="disabled"),
+        pytest.param(DocumentSearchScope(), id="enabled-empty-scope"),
         pytest.param(
             DocumentSearchScope(allowed_subtrees=("oracle/doc",)), id="enabled"
         ),
@@ -254,23 +255,25 @@ def test_complete_prompt_renders_search_routing_for_call_scope(
     prohibited = routing.split("\n**禁止**\n", 1)[1].split("\n**例外**\n", 1)[0]
     exceptions = routing.split("\n**例外**\n", 1)[1].split("\n## ", 1)[0]
 
-    assert "キーワード検索に加えて" in required
-    assert "MCP tool によるベクトル検索も併用" in required
+    assert "原文を読んで確認" in required
     assert "ファイルアクセス制限は、検索結果についても適用" in required
     assert "「検索失敗」と「検索成功の上でヒットゼロ件」は区別" in required
     assert "検索ヒットゼロ件だけを根拠" in prohibited
     assert "「仕様の不存在」「調査完了」と判断してはいけない" in prohibited
     assert "検索に失敗した場合は、許可された手段で調査を続けて良い" in exceptions
+    for tool_detail in ("query", "limit", "ranges", "allowed_files", "candidate_count"):
+        assert tool_detail not in routing
 
     if document_search_scope is None:
-        assert "文書検索 MCP は無効" in routing
-        assert "許可された原文への直接参照や既存のキーワード検索を使える" in routing
+        assert "任意の方法で関係文章を検索すること" in required
         assert "cmoc_document_search.search" not in routing
+        assert "ベクトル検索も併用" not in required
     else:
-        assert "cmoc_document_search.search" in routing
-        assert "`query`" in routing and "`limit`" in routing
-        assert "root や閲覧範囲を tool 引数で変更することはできない" in routing
-        assert "文書検索 MCP は無効" not in routing
+        assert "キーワード検索に加えて" in required
+        assert (
+            "MCP tool `cmoc_document_search.search` によるベクトル検索も併用"
+            in required
+        )
 
 
 def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:

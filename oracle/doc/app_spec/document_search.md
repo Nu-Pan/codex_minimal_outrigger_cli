@@ -34,7 +34,7 @@ agent に課されたファイルアクセス制限は、検索結果にも適�
 
 agent は検索失敗と、検索が成功したうえでヒットがゼロ件となることを区別する。ヒットがゼロ件であることだけを根拠に、仕様の不存在や調査完了と判断してはならない。何らかの理由で検索に失敗した場合は、検索の併用要件の例外として、許可された手段で調査を続けてよい。
 
-正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/routing.py` の `build_routing_policy` へ委譲する。文面だけで利用可能な手段、検索の併用、件数の単位・指定範囲・省略時の扱い・設定上限・候補不足、集約された結果の読み方、現在原文の確認、ファイルアクセス制限、および検索失敗とヒットゼロ件の扱いが分かるようにする。モデル常駐、SQLite、排他アルゴリズム、仕様文書の構成など、agent の判断に不要な内部説明は含めない。完全 prompt への組込みは、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲し、検索の有効状態を実際の call と一致させる。
+検索の併用、現在原文の確認、ファイルアクセス制限、および検索失敗とヒットゼロ件についての判断規則は routing policy で伝える。その正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/routing.py` の `build_routing_policy` へ委譲する。検索 tool の利用方法は本書の「stdio MCP と失敗の公開」に従って tool 定義で伝え、routing policy へ重複させない。完全 prompt への組込みは、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲し、検索の有効状態を実際の call と一致させる。
 
 ## 同期と cache
 
@@ -161,6 +161,8 @@ doctor によるコンポーネントの検証でも、推論に使用する設�
 ## stdio MCP と失敗の公開
 
 公開 tool は検索だけとし、任意ファイル get/resource は必要構成にしない。query と任意の候補箇所数の上限 `limit` だけを受け取り、件数の制御と集約は本書の「検索と routing」に従う。tool 名、引数 schema、結果・失敗の正確な型は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER`、`SEARCH_TOOL_NAME`、`SEARCH_TOOL_INPUT_SCHEMA`、`SearchResult`、`SearchFailure`、`SearchHit`、`SearchErrorCode` へ委譲する。
+
+tool の説明と引数 schema の説明から、検索対象とその call の work-root・閲覧範囲、件数の単位・指定範囲・省略時の扱い・設定上限・候補不足、集約された結果の読み方、および成功・失敗の識別方法が分かるようにする。説明は検索に用いる固定 context と一致させ、agent が仕様文書を別途読まずに利用できる内容にする。正確な tool の説明文は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `build_search_tool_description` へ委譲する。モデル常駐、SQLite、排他アルゴリズム、仕様文書の構成など、agent の判断に不要な内部説明は含めない。
 
 成功結果と検索失敗は機械的に識別可能にする。引数不正は MCP の入力エラー、検索中の失敗は `isError=true` と失敗 code・説明で返す。範囲不正、root/列挙/読取失敗、同期・保存失敗、本文変更競合、検索未準備、コンポーネントの不一致、推論失敗、期限超過、取消を区別する。stdio の stdout は MCP protocol 専用とし、診断や native 出力を混入させない。
 

@@ -17,6 +17,7 @@ from oracle.other.document_search import (
     SEARCH_TOOL_INPUT_SCHEMA,
     SEARCH_TOOL_NAME,
     DocumentSearchConfig,
+    build_search_tool_description,
 )
 
 from .runtime_document_search import DocumentSearch, SearchError
@@ -106,7 +107,9 @@ def _response(
             "tools": [
                 {
                     "name": SEARCH_TOOL_NAME,
-                    "description": "許可された oracle/doc Markdown の現在原文を意味検索する。",
+                    "description": build_search_tool_description(
+                        search.root, search.scope
+                    ),
                     "inputSchema": SEARCH_TOOL_INPUT_SCHEMA,
                     "annotations": {
                         "readOnlyHint": True,

@@ -1,11 +1,15 @@
-"""検索用コンポーネントの識別情報、設定型、および MCP 入出力の正確な定義。
+"""検索用コンポーネントの識別情報、設定型、および MCP の入出力と利用説明。
 
 意味仕様の委譲元は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
 「初期方式と推論の失敗」「stdio MCP と失敗の公開」「設定と未確定事項」。
 """
 
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Literal, TypedDict
+
+from oracle.acp_builder.basic import DocumentSearchScope
 
 
 @dataclass(frozen=True)
@@ -114,12 +118,52 @@ SEARCH_TOOL_INPUT_SCHEMA: dict[str, object] = {
             "minimum": SEARCH_CANDIDATE_COUNT_MIN,
             "maximum": SEARCH_CANDIDATE_COUNT_MAX,
             "description": (
-                "集約前の候補箇所数の上限。省略時は設定された candidate_count を使い、"
-                "指定時もその設定上限を超えない。"
+                "ファイル集約・行範囲統合前の候補箇所数の上限。"
+                f"{SEARCH_CANDIDATE_COUNT_MIN}〜{SEARCH_CANDIDATE_COUNT_MAX} の整数。"
+                "省略時は設定された candidate_count を使い、"
+                "指定時は limit と candidate_count の小さい方を採用する。"
             ),
         },
     },
 }
+
+
+def build_search_tool_description(
+    work_root: Path,
+    scope: DocumentSearchScope,
+) -> str:
+    """検索接続の固定 context を含む、agent 向けの tool 利用説明を構築する。
+
+    Args:
+        work_root: 検索接続に設定された work-root の絶対パス。
+        scope: 同じ接続に設定された閲覧範囲。
+
+    Returns:
+        MCP の tool description として公開する文面。
+
+    NOTE
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
+        「検索と routing」「対象と信頼境界」「stdio MCP と失敗の公開」を参照。
+    """
+    # 引数説明と併せて、仕様文書を参照せず結果と検索範囲を解釈できるようにする。
+    return (
+        "許可された oracle/doc 内の Markdown を意味検索し、現在原文の候補位置を返す。\n\n"
+        '- 成功結果は `status: "ok"` と `hits`。各 hit は work-root 相対の '
+        "`path` と、`[開始行, 終了行]` の配列 `ranges` を持つ。"
+        "行番号は 1 起点で両端を含む。同一パスは一度だけ掲載し、"
+        "重複・重なりのある行範囲は統合する。本文・抜粋・見出し文・スコアは含まない。\n"
+        f"- 候補不足なら {SEARCH_CANDIDATE_COUNT_MIN} 件未満でも返る。"
+        "ファイル集約・行範囲統合後のファイル数や行範囲数は、候補箇所数より少なくなり得る。\n"
+        "- `hits` が空なら成功ゼロ件。検索中の失敗は `isError=true` と "
+        '`status: "error"`・`code`・`message` で返す。引数不正は MCP の入力エラー。\n'
+        f"- この検索接続の work-root は `{work_root}`。"
+        "対象はその配下の oracle/doc 内で閲覧を許可された Markdown のみ。"
+        "root や閲覧範囲は tool 引数から変更できない。\n"
+        "- 以下は work-root 相対 path による閲覧範囲。allowed_files は個別 file、"
+        "allowed_subtrees は配下、excluded_files/excluded_subtrees は優先する除外。"
+        "許可の両配列が空なら対象なし。oracle file の分類と、この call の閲覧制限も適用される。\n"
+        f"```json\n{json.dumps(asdict(scope), ensure_ascii=False)}\n```"
+    )
 
 
 class SearchHit(TypedDict):

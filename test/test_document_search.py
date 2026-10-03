@@ -18,7 +18,11 @@ from pathlib import Path
 import pytest
 from _git_support import make_repo, run_git
 from oracle.acp_builder.basic import DocumentSearchScope
-from oracle.other.document_search import INITIAL_SEARCH_MATERIALS, DocumentSearchConfig
+from oracle.other.document_search import (
+    INITIAL_SEARCH_MATERIALS,
+    SEARCH_TOOL_INPUT_SCHEMA,
+    DocumentSearchConfig,
+)
 
 from cmoc_runtime import write_config
 from commons.runtime_document_search import (
@@ -1059,19 +1063,39 @@ def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
         search.close()
 
 
-def test_stdio_mcp_discovers_only_search_and_reports_not_ready(tmp_path: Path) -> None:
-    """実 stdio 境界で discovery と機械的な失敗を読める。"""
+@pytest.mark.parametrize(
+    "scope",
+    [
+        pytest.param(
+            {
+                "allowed_files": ["oracle/doc/概要.md"],
+                "allowed_subtrees": ["oracle/doc/app_spec"],
+                "excluded_files": ["oracle/doc/app_spec/非公開.md"],
+                "excluded_subtrees": ["oracle/doc/app_spec/private"],
+            },
+            id="restricted",
+        ),
+        pytest.param(
+            {
+                "allowed_files": [],
+                "allowed_subtrees": [],
+                "excluded_files": [],
+                "excluded_subtrees": [],
+            },
+            id="empty",
+        ),
+    ],
+)
+def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
+    tmp_path: Path, scope: dict[str, list[str]]
+) -> None:
+    """実 stdio 境界で使い方と固定した閲覧範囲を公開し、未準備を識別できる。"""
     root = _repo_with_docs(tmp_path)
     log_path = tmp_path / "caller.jsonl"
     log_path.touch()
     context = {
         "work_root": str(root),
-        "scope": {
-            "allowed_files": [],
-            "allowed_subtrees": ["oracle/doc"],
-            "excluded_files": [],
-            "excluded_subtrees": [],
-        },
+        "scope": scope,
         "config": None,
         "log_context": {
             "path": str(log_path),
@@ -1126,6 +1150,25 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(tmp_path: Path) -
         }
         listed = request(2, "tools/list", {})
         assert [tool["name"] for tool in listed["result"]["tools"]] == ["search"]
+        tool = listed["result"]["tools"][0]
+        assert tool["inputSchema"] == SEARCH_TOOL_INPUT_SCHEMA
+        description = tool["description"]
+        assert str(root) in description
+        displayed_scope = description.split("```json\n", 1)[1].split("\n```", 1)[0]
+        assert json.loads(displayed_scope) == scope
+        assert "{{" not in description
+        for result_detail in (
+            '`status: "ok"`',
+            "`hits`",
+            "`path`",
+            "`ranges`",
+            "1 起点で両端を含む",
+            "`isError=true`",
+            '`status: "error"`',
+            "`code`",
+            "`message`",
+        ):
+            assert result_detail in description
         failed = request(
             3, "tools/call", {"name": "search", "arguments": {"query": "内容"}}
         )
