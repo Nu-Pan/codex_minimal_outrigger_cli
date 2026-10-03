@@ -118,7 +118,6 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
         )
     for name in (
         "chunk_tokens",
-        "candidate_count",
         "embedding_context_tokens",
         "batch_tokens",
         "threads",
@@ -128,7 +127,8 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
                 f"document_search.{name}", "正の JSON 整数が必要です"
             )
     if (
-        not SEARCH_CANDIDATE_COUNT_MIN
+        type(data["candidate_count"]) is not int
+        or not SEARCH_CANDIDATE_COUNT_MIN
         <= data["candidate_count"]
         <= SEARCH_CANDIDATE_COUNT_MAX
     ):
