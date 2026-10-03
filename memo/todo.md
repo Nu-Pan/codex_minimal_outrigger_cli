@@ -11,17 +11,22 @@
 - 時間計測のログを仕込んであるので、それに基づいて妥当な長さに調整する
 - 他のパラメータも設定雑すぎなので見直したい
 
+## 入手するモデルのバージョンを固定しすぎかも
+
+- `oracle/src/oracle/other/document_search.py` の設定のこと
+
 ## ベクトル検索に時間かかってない？
 
 - 索引生成は doctor preprocess でやってるのだら、検索自体は一瞬で返ってくるはずでは？
 - あと、もしかしてキャッシュ効いてない？
-     -再ランキングを削除した
-- 現在作業中
-    - `DocumentSearchScope` と `search_mcp_tool_available` の整合性を考える必要がある
-    - `oracle/src/oracle/other/document_search.py` に無意味に長い説明が残っている？
+- 再ランキングを削除した
 - TODO 実装を追従させる
 
-## MCP tool の description がおぞましいことに鳴っているかもしれない
+## oracle src, oracle doc の優先関係を明示したほうが良いかも
+
+- oracle doc で言ってることが oracle src に持ち込まれてしまうケースが多いように思う
+
+## MCP tool の description がおぞましいことになっているかもしれない
 
 - ベクトル検索の MCP tool がひどいものだったので、他もひどいに違いない
 
