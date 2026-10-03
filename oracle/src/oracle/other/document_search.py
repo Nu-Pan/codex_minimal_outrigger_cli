@@ -18,7 +18,7 @@ class ModelArtifact:
     size_bytes: int
     sha256: str
     tokenizer_metadata_sha256: str
-    pooling: Literal["LAST", "RANK"]
+    pooling: Literal["LAST"]
 
 
 @dataclass(frozen=True)
@@ -30,7 +30,6 @@ class SearchMaterials:
     llama_cpp_revision: str
     sqlite_vec_version: str
     embedding: ModelArtifact
-    reranker: ModelArtifact
     embedding_dimensions: int
 
 
@@ -52,17 +51,6 @@ INITIAL_SEARCH_MATERIALS = SearchMaterials(
         ),
         pooling="LAST",
     ),
-    reranker=ModelArtifact(
-        repository="giladgd/Qwen3-Reranker-4B-GGUF",
-        revision="618ca919a196583806708d695f64dc002bd229a3",
-        filename="Qwen3-Reranker-4B.Q4_K_M.gguf",
-        size_bytes=2496717472,
-        sha256="941f7d1d1524251c026a797b803ac9575545c5d7aa19b26e0e49661d7720af49",
-        tokenizer_metadata_sha256=(
-            "6971da22c3bb7eeef0ef7d05ff8936f7a2403ad33387988dc2ac5c5655229d26"
-        ),
-        pooling="RANK",
-    ),
     embedding_dimensions=2560,
 )
 
@@ -71,13 +59,10 @@ EMBEDDING_QUERY_TEMPLATE = (
     "Instruct: Given a web search query, retrieve relevant passages that answer the query"
     "\nQuery:{query}"
 )
-# reranker は固定 GGUF 内の template と yes/no classifier を使う。
-RERANKER_INPUT_FORMAT = "gguf_template_yes_no"
-# 内部 API を採用する場合の互換検査対象。実際の raw 採点の欠落を検査する。
-RAW_RANKING_API = (
-    "LlamaRankingContext._getEvaluationInput",
-    "LlamaRankingContext._llamaContext._ctx.getEmbedding",
-)
+
+# candidate_count と MCP 引数 limit に共通する、指定可能な件数の範囲。
+SEARCH_CANDIDATE_COUNT_MIN = 20
+SEARCH_CANDIDATE_COUNT_MAX = 50
 
 
 @dataclass(frozen=True)
@@ -88,17 +73,18 @@ class DocumentSearchConfig:
         int の項目は JSON 整数、float の項目は有限の JSON 数値とする。
         bool を数値として受理しない。chunk_overlap_tokens 以外は正数、
         chunk_overlap_tokens は 0 以上 chunk_tokens 未満。
-        chunk_tokens は embedding_context_tokens と reranker_context_tokens の
-        両方より小さくし、本文以外の入力の余地を残す。
-        この大小関係だけで入力全体の収容を保証せず、入力整形・特殊 token・query
-        を含む実入力が各 tokenizer の context 上限内に収まることも検証する。
+        candidate_count は SEARCH_CANDIDATE_COUNT_MIN 以上
+        SEARCH_CANDIDATE_COUNT_MAX 以下。
+        chunk_tokens は embedding_context_tokens より小さくし、
+        本文以外の入力の余地を残す。この大小関係だけで入力全体の収容を保証せず、
+        文書・query それぞれに入力整形・特殊 token を加えた実入力が
+        embedding tokenizer の context 上限内に収まることも検証する。
     """
 
     chunk_tokens: int = 512
     chunk_overlap_tokens: int = 64
-    candidate_count: int = 8
+    candidate_count: int = 50
     embedding_context_tokens: int = 2048
-    reranker_context_tokens: int = 4096
     batch_tokens: int = 512
     threads: int = 4
     startup_timeout_seconds: float = 120.0
@@ -125,24 +111,31 @@ SEARCH_TOOL_INPUT_SCHEMA: dict[str, object] = {
         },
         "limit": {
             "type": "integer",
-            "minimum": 1,
-            "description": "返す候補の最大件数。省略時は設定された候補数。",
+            "minimum": SEARCH_CANDIDATE_COUNT_MIN,
+            "maximum": SEARCH_CANDIDATE_COUNT_MAX,
+            "description": (
+                "集約前の候補箇所数の上限。省略時は設定された candidate_count を使い、"
+                "指定時もその設定上限を超えない。"
+            ),
         },
     },
 }
 
 
 class SearchHit(TypedDict):
-    """現在確認した原文の箇所。行番号は 1 起点で両端を含む。"""
+    """一つのファイルに集約された候補位置の形式。
+
+    ranges は空でない配列で、各 tuple は JSON では [開始行, 終了行] とする。
+    行番号は bool を除く JSON 整数で、1 <= 開始行 <= 終了行、両端を含む。
+    候補情報の field は path と ranges に限る。
+    """
 
     path: str  # work-root 相対の POSIX path
-    start_line: int
-    end_line: int
-    excerpt: str
+    ranges: list[tuple[int, int]]
 
 
 class SearchResult(TypedDict):
-    """正常完了した検索結果。hits の空配列も成功を表す。"""
+    """正常完了した検索結果。hits はファイル単位で、空配列も成功を表す。"""
 
     status: Literal["ok"]
     hits: list[SearchHit]
