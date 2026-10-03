@@ -857,12 +857,6 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "src/commons/runtime_document_search_scope.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
   "src/commons/runtime_document_search_setup.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
