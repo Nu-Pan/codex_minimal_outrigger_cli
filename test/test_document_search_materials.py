@@ -4,7 +4,10 @@
 """
 
 import hashlib
+import io
 import json
+import shutil
+import urllib.request
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,6 +19,7 @@ from oracle.other.document_search import EMBEDDING_QUERY_TEMPLATE
 
 import commons.runtime_document_search_setup as setup
 import commons.runtime_document_search_worker as worker
+import commons.runtime_download_asset_cache as cache_module
 from commons.runtime_document_search import SearchError
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 
@@ -35,6 +39,11 @@ def small_materials(monkeypatch: pytest.MonkeyPatch) -> dict[str, bytes]:
     monkeypatch.setattr(setup, "SEARCH_MATERIALS", materials)
     monkeypatch.setattr(worker, "SEARCH_MATERIALS", materials)
     monkeypatch.setattr(setup, "require_cmoc_ignored", lambda _root: None)
+    monkeypatch.setattr(
+        urllib.request.OpenerDirector,
+        "open",
+        lambda *_args, **_kwargs: io.BytesIO(contents["embedding"]),
+    )
     return contents
 
 
@@ -60,20 +69,14 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
     def fake_version(_args: list[str], **_kwargs: Any) -> SimpleNamespace:
         return SimpleNamespace(stdout="v22.23.2")
 
-    def fake_install(base: Path, _fd: int) -> None:
+    def fake_install(_root: Path, base: Path, _fd: int) -> None:
         npm_calls.append(base)
         _installed_runtime(base)
-
-    def fake_download(base: Path, artifact: object) -> None:
-        name = getattr(artifact, "filename")
-        assert name == setup.SEARCH_MATERIALS.embedding.filename
-        (base / name).write_bytes(small_materials["embedding"])
 
     probes: list[DocumentSearchConfig] = []
     monkeypatch.setattr(setup, "_install_node_runtime", fake_install)
     monkeypatch.setattr(worker.subprocess, "run", fake_version)
     monkeypatch.setattr(setup, "_runtime_versions", lambda _base: None)
-    monkeypatch.setattr(setup, "_download_model", fake_download)
     monkeypatch.setattr(
         setup,
         "_compatibility_probe",
@@ -89,6 +92,14 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
     assert second["status"] == "reused"
     assert len(npm_calls) == 1
     assert probes == [config]
+
+    # 導入前の component と、cache 回収後の通常起動・doctor を共に維持する。
+    shutil.rmtree(cache_module.asset_cache_directory())
+    assert setup.require_document_search_materials(tmp_path, config).is_dir()
+    assert (
+        setup.prepare_document_search_materials(tmp_path, config)["status"] == "reused"
+    )
+    assert not cache_module.asset_cache_directory().exists()
 
     base = setup.materials_directory(tmp_path)
     previous = base.parent / ".previous-interrupted"
@@ -121,7 +132,25 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
         setup.require_document_search_materials(tmp_path, config)
     repaired = setup.prepare_document_search_materials(tmp_path, config)
     assert repaired["status"] == "repaired"
+    assert len(npm_calls) == 1
+    assert setup.require_document_search_materials(tmp_path, config).is_dir()
+
+    # runtime 自体の破損時は再構築し、正常モデルの取得を省く。
+    (base / "node_modules/@node-llama-cpp/linux-x64/binding.node").write_bytes(
+        b"bad runtime"
+    )
+    repaired = setup.prepare_document_search_materials(tmp_path, config)
+    assert repaired["models"] == "reused"
     assert len(npm_calls) == 2
+
+    # 現在の条件への検証失敗は、別条件で正常な既存 component を壊さない。
+    monkeypatch.setattr(
+        setup,
+        "_compatibility_probe",
+        lambda *_args: (_ for _ in ()).throw(ValueError("probe failed")),
+    )
+    with pytest.raises(ValueError, match="probe failed"):
+        setup.prepare_document_search_materials(tmp_path, changed)
     assert setup.require_document_search_materials(tmp_path, config).is_dir()
 
 
@@ -135,17 +164,13 @@ def test_failed_real_model_probe_never_publishes_materials(
     def fake_version(_args: list[str], **_kwargs: Any) -> SimpleNamespace:
         return SimpleNamespace(stdout="v22.23.2")
 
-    def fake_download(base: Path, artifact: object) -> None:
-        name = getattr(artifact, "filename")
-        assert name == setup.SEARCH_MATERIALS.embedding.filename
-        (base / name).write_bytes(small_materials["embedding"])
-
     monkeypatch.setattr(
-        setup, "_install_node_runtime", lambda base, _fd: _installed_runtime(base)
+        setup,
+        "_install_node_runtime",
+        lambda _root, base, _fd: _installed_runtime(base),
     )
     monkeypatch.setattr(worker.subprocess, "run", fake_version)
     monkeypatch.setattr(setup, "_runtime_versions", lambda _base: None)
-    monkeypatch.setattr(setup, "_download_model", fake_download)
     monkeypatch.setattr(
         setup,
         "_compatibility_probe",
