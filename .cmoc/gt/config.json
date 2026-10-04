@@ -68,9 +68,8 @@
   "document_search": {
     "chunk_tokens": 512,
     "chunk_overlap_tokens": 64,
-    "candidate_count": 8,
+    "candidate_count": 50,
     "embedding_context_tokens": 2048,
-    "reranker_context_tokens": 4096,
     "batch_tokens": 512,
     "threads": 4,
     "startup_timeout_seconds": 120.0,
