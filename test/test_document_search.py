@@ -2,10 +2,12 @@
 
 import hashlib
 import json
+import math
 import os
 import select
 import shutil
 import sqlite3
+import struct
 import subprocess
 import sys
 import threading
@@ -261,7 +263,9 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> N
     first = search.search("内容")
     assert first["status"] == "ok"
     assert [hit["path"] for hit in first["hits"]] == ["oracle/doc/allowed.md"]
-    assert first["hits"][0]["ranges"] == [(1, 2)]
+    assert first["hits"][0]["ranges"] == [
+        {"start_line": 1, "end_line": 2, "max_similarity": 1.0}
+    ]
     assert worker.operations == ["chunk_embed", "embed_query"]
 
     unchanged = search.search("内容")
@@ -269,7 +273,12 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> N
     assert len(worker.operations) == 2
     (root / "oracle/doc/allowed.md").write_text("# 変更後\n次の内容\n追加の行\n")
     changed = search.search("内容")
-    assert changed["hits"] == [{"path": "oracle/doc/allowed.md", "ranges": [(1, 3)]}]
+    assert changed["hits"] == [
+        {
+            "path": "oracle/doc/allowed.md",
+            "ranges": [{"start_line": 1, "end_line": 3, "max_similarity": 1.0}],
+        }
+    ]
     assert worker.texts[-1] == "# 変更後\n次の内容\n追加の行\n"
     assert worker.operations.count("chunk_embed") == 2
     assert worker.operations.count("embed_query") == 1
@@ -719,7 +728,8 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
         locations = {}
         for hit in search.search("sections")["hits"]:
             lines = (root / hit["path"]).read_text().splitlines(keepends=True)
-            for start, end in hit["ranges"]:
+            for location in hit["ranges"]:
+                start, end = location["start_line"], location["end_line"]
                 locations["".join(lines[start - 1 : end])] = start
         return locations
 
@@ -951,12 +961,18 @@ def _listed_search_tool(search):
 
 def _assert_search_result(response, schema, *, error):
     # stdio で送信する JSON を検査し、text と構造化結果の相違も検出する。
-    result = json.loads(json.dumps(response))["result"]
+    result = json.loads(json.dumps(response, allow_nan=False))["result"]
     structured = result["structuredContent"]
     Draft202012Validator(schema).validate(structured)
     assert result["isError"] is error
     assert result["content"][0]["type"] == "text"
     assert json.loads(result["content"][0]["text"]) == structured
+    if structured["status"] == "ok":
+        assert all(
+            location["start_line"] <= location["end_line"]
+            for hit in structured["hits"]
+            for location in hit["ranges"]
+        )
     return structured
 
 
@@ -994,9 +1010,10 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
 class _CandidateWorker(_InferenceDouble):
     """集約前の候補位置を制御し、検索・同期・返却は製品経路で検証する。"""
 
-    def __init__(self, ranges):
+    def __init__(self, ranges, *, vectors=None):
         super().__init__()
         self.ranges = ranges
+        self.vectors = vectors
 
     def stream_chunks(self, documents, resumes, on_event, **kwargs):
         vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
@@ -1005,6 +1022,12 @@ class _CandidateWorker(_InferenceDouble):
             ranges = self.ranges[path]
             for ordinal in range(resumes[path], len(ranges)):
                 start, end = ranges[ordinal]
+                embedding = vector
+                if self.vectors is not None:
+                    components = self.vectors[path][ordinal]
+                    embedding = [*components] + [0.0] * (
+                        SEARCH_MATERIALS.embedding_dimensions - len(components)
+                    )
                 on_event(
                     {
                         "kind": "chunk",
@@ -1012,7 +1035,7 @@ class _CandidateWorker(_InferenceDouble):
                         "ordinal": ordinal,
                         "start": len("".join(lines[: start - 1])),
                         "end": len("".join(lines[:end])),
-                        "embedding": vector,
+                        "embedding": embedding,
                     }
                 )
             on_event(
@@ -1020,6 +1043,10 @@ class _CandidateWorker(_InferenceDouble):
             )
 
 
+@pytest.mark.parametrize(
+    "vector,similarity",
+    [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0), ((-3, 4), -0.6)],
+)
 @pytest.mark.parametrize(
     "candidate_count,limit,available,expected",
     [
@@ -1033,13 +1060,16 @@ class _CandidateWorker(_InferenceDouble):
     ],
 )
 def test_mcp_success_schema_and_candidate_limits(
-    tmp_path, candidate_count, limit, available, expected
+    tmp_path, candidate_count, limit, available, expected, vector, similarity
 ):
-    """既定・設定上限・引数・候補不足を、ファイル集約前の件数で扱う。"""
+    """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
     (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
-    worker = _CandidateWorker({path: [(i + 1, i + 1) for i in range(available)]})
+    worker = _CandidateWorker(
+        {path: [(i + 1, i + 1) for i in range(available)]},
+        vectors={path: [vector] * available},
+    )
     with closing(
         DocumentSearch(
             root,
@@ -1069,14 +1099,18 @@ def test_mcp_success_schema_and_candidate_limits(
             assert result["hits"][0]["path"] == path
             ranges = result["hits"][0]["ranges"]
             assert len(ranges) == expected
-            assert all(1 <= start == end <= available for start, end in ranges)
+            assert all(
+                1 <= location["start_line"] == location["end_line"] <= available
+                and location["max_similarity"] == pytest.approx(similarity)
+                for location in ranges
+            )
         else:
             assert result["hits"] == []
         assert worker.operations == (["embed_query"] if expected else [])
 
 
 def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
-    """ファイルごとに重複・重なりだけを統合し、先頭行と単一行の意味を保つ。"""
+    """重複・入れ子・連鎖する重なりの最大値を保ち、ファイルと範囲を類似度順に返す。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
     other = "oracle/doc/second.md"
@@ -1084,9 +1118,13 @@ def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
     (root / path).write_text("".join(f"原文 {i}\n" for i in range(81)))
     worker = _CandidateWorker(
         {
-            path: [(10, 24), (20, 30), (10, 24), (70, 81), (1, 1)],
+            path: [(10, 24), (20, 30), (10, 24), (70, 81), (1, 1), (29, 40), (12, 12)],
             other: [(1, 1)],
-        }
+        },
+        vectors={
+            path: [(3, 4), (-3, 4), (3, 4), (4, 3), (-4, 3), (0, 1), (0, 1)],
+            other: [(1, 0)],
+        },
     )
     with closing(
         DocumentSearch(
@@ -1107,11 +1145,28 @@ def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
             search,
         )
         result = _assert_search_result(response, tool["outputSchema"], error=False)
-    assert len(result["hits"]) == 2
-    assert {hit["path"]: hit["ranges"] for hit in result["hits"]} == {
-        path: [[1, 1], [10, 30], [70, 81]],
-        other: [[1, 1]],
-    }
+    assert result["hits"] == [
+        {
+            "path": other,
+            "ranges": [{"start_line": 1, "end_line": 1, "max_similarity": 1.0}],
+        },
+        {
+            "path": path,
+            "ranges": [
+                {
+                    "start_line": 70,
+                    "end_line": 81,
+                    "max_similarity": pytest.approx(0.8),
+                },
+                {
+                    "start_line": 10,
+                    "end_line": 40,
+                    "max_similarity": pytest.approx(0.6),
+                },
+                {"start_line": 1, "end_line": 1, "max_similarity": pytest.approx(-0.8)},
+            ],
+        },
+    ]
 
 
 @pytest.mark.parametrize("code", [*get_args(SearchErrorCode.__value__), None])
@@ -1143,6 +1198,174 @@ def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
     }
 
 
+def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
+    """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
+    root = _repo_with_docs(tmp_path)
+    path = "oracle/doc/allowed.md"
+    (root / path).write_text("".join(f"候補 {i}\n" for i in range(60)))
+    vectors = [(i - 30, 20) for i in range(60)]
+    worker = _CandidateWorker(
+        {path: [(i + 1, i + 1) for i in range(60)]}, vectors={path: vectors}
+    )
+    expected = {i + 1: x / math.hypot(x, y) for i, (x, y) in enumerate(vectors)}
+    results = []
+    with closing(
+        DocumentSearch(
+            root,
+            replace(_tuning(), candidate_count=50),
+            worker=worker,
+            installation_root=tmp_path,
+        )
+    ) as search:
+        tool = _listed_search_tool(search)
+        for limit, count in ((None, 50), (20, 20), (50, 50)):
+            arguments = {"query": "候補"}
+            if limit is not None:
+                arguments["limit"] = limit
+            response = _response(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {"name": "search", "arguments": arguments},
+                },
+                search,
+            )
+            result = _assert_search_result(response, tool["outputSchema"], error=False)
+            assert [hit["path"] for hit in result["hits"]] == [path]
+            ranges = result["hits"][0]["ranges"]
+            assert [location["start_line"] for location in ranges] == list(
+                range(60, 60 - count, -1)
+            )
+            assert all(
+                location["start_line"] == location["end_line"]
+                and location["max_similarity"]
+                == pytest.approx(expected[location["start_line"]], abs=1e-7)
+                for location in ranges
+            )
+            results.append(
+                {
+                    location["start_line"]: location["max_similarity"]
+                    for location in ranges
+                }
+            )
+    default, limited, expanded = results
+    assert default == expanded
+    assert all(value == expanded[line] for line, value in limited.items())
+
+
+@pytest.mark.parametrize("limit,start_line", [(20, 41), (50, 11)])
+def test_mcp_candidate_limit_applies_before_range_merging(tmp_path, limit, start_line):
+    """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
+    root = _repo_with_docs(tmp_path)
+    path = "oracle/doc/allowed.md"
+    (root / path).write_text("".join(f"候補 {i}\n" for i in range(60)))
+    worker = _CandidateWorker(
+        {path: [(i + 1, 60) for i in range(60)]},
+        vectors={path: [(i + 1, 1) for i in range(60)]},
+    )
+    with closing(
+        DocumentSearch(
+            root,
+            replace(_tuning(), candidate_count=50),
+            worker=worker,
+            installation_root=tmp_path,
+        )
+    ) as search:
+        tool = _listed_search_tool(search)
+        response = _response(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "search",
+                    "arguments": {"query": "候補", "limit": limit},
+                },
+            },
+            search,
+        )
+        result = _assert_search_result(response, tool["outputSchema"], error=False)
+    assert result["hits"] == [
+        {
+            "path": path,
+            "ranges": [
+                {
+                    "start_line": start_line,
+                    "end_line": 60,
+                    "max_similarity": pytest.approx(60 / math.hypot(60, 1)),
+                }
+            ],
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    "distance",
+    [
+        None,
+        "invalid",
+        "0.25",
+        b"bad",
+        math.nan,
+        math.inf,
+        -math.inf,
+        -0.001,
+        2.001,
+        RuntimeError("cosine calculation failed"),
+    ],
+)
+def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
+    tmp_path, monkeypatch, distance
+):
+    """採用上限外へ隠れる異常値や演算失敗も、成功を併記せず MODEL_FAILURE にする。"""
+    from commons import runtime_document_search as module
+
+    root = _repo_with_docs(tmp_path)
+    path = "oracle/doc/allowed.md"
+    (root / path).write_text("".join(f"候補 {i}\n" for i in range(61)))
+    worker = _CandidateWorker(
+        {path: [(i + 1, i + 1) for i in range(61)]},
+        vectors={path: [(0, 1)] + [(1, 0)] * 60},
+    )
+    original_open = module._open_database
+
+    def cosine_distance(embedding, query):
+        if struct.unpack_from("<f", embedding)[0] != 0:
+            return 0.0
+        if isinstance(distance, Exception):
+            raise distance
+        return distance
+
+    def open_with_invalid_distance(database):
+        connection = original_open(database)
+        connection.create_function("vec_distance_cosine", 2, cosine_distance)
+        return connection
+
+    monkeypatch.setattr(module, "_open_database", open_with_invalid_distance)
+    with closing(
+        DocumentSearch(
+            root,
+            replace(_tuning(), candidate_count=20),
+            worker=worker,
+            installation_root=tmp_path,
+        )
+    ) as search:
+        tool = _listed_search_tool(search)
+        response = _response(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "search", "arguments": {"query": "候補"}},
+            },
+            search,
+        )
+        result = _assert_search_result(response, tool["outputSchema"], error=True)
+    assert result["status"] == "error"
+    assert result["code"] == "MODEL_FAILURE"
+
+
 @pytest.mark.parametrize(
     "value",
     [
@@ -1160,11 +1383,32 @@ def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
                     "excerpt": "old",
                 },
                 {"path": "oracle/doc/a.md", "ranges": []},
-                {"path": "oracle/doc/a.md", "ranges": [[0, 1]]},
-                {"path": "oracle/doc/a.md", "ranges": [[True, 1]]},
-                {"path": "oracle/doc/a.md", "ranges": [[1]]},
-                {"path": "oracle/doc/a.md", "ranges": [[1, 2, 3]]},
-                {"path": "oracle/doc/a.md", "ranges": [[1, 2]], "excerpt": "extra"},
+                {"path": "oracle/doc/a.md", "ranges": [[1, 2]]},
+                *(
+                    {"path": "oracle/doc/a.md", "ranges": [location]}
+                    for location in [
+                        {"start_line": 1, "end_line": 2},
+                        {"start_line": 0, "end_line": 2, "max_similarity": 0.5},
+                        {"start_line": True, "end_line": 2, "max_similarity": 0.5},
+                        {"start_line": 1, "end_line": 0, "max_similarity": 0.5},
+                        {"start_line": 1, "end_line": False, "max_similarity": 0.5},
+                        {
+                            "start_line": 1,
+                            "end_line": 2,
+                            "max_similarity": 0.5,
+                            "excerpt": "extra",
+                        },
+                        *(
+                            {"start_line": 1, "end_line": 2, "max_similarity": value}
+                            for value in (True, "0.5", None, -1.001, 1.001)
+                        ),
+                    ]
+                ),
+                {
+                    "path": "oracle/doc/a.md",
+                    "ranges": [{"start_line": 1, "end_line": 2, "max_similarity": 0.5}],
+                    "excerpt": "extra",
+                },
             ]
         ),
     ],
