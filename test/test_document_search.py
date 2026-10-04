@@ -1,5 +1,6 @@
 """文書検索の範囲、現在本文との同期、失敗公開を検証する。"""
 
+import hashlib
 import json
 import os
 import select
@@ -134,9 +135,10 @@ class _InferenceDouble:
         self.texts.extend(documents.values())
         for path, source in documents.items():
             if resumes[path] == 0:
+                digest = hashlib.sha256(source.encode()).hexdigest()
                 on_event(
                     {
-                        "kind": "chunk",
+                        "kind": "reuse" if digest in reusable_hashes else "chunk",
                         "path": path,
                         "ordinal": 0,
                         "start": 0,
@@ -144,6 +146,7 @@ class _InferenceDouble:
                         "embedding": vector,
                     }
                 )
+                reusable_hashes.add(digest)
             on_event({"kind": "document_complete", "path": path, "chunk_count": 1})
 
 
@@ -1173,10 +1176,10 @@ def test_output_schema_rejects_malformed_results(tmp_path, value):
     assert not Draft202012Validator(schema).is_valid(value)
 
 
-def test_worker_change_rebuilds_index_without_reusing_embeddings(
+def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """worker 修正前の本文から計算された embedding を新索引へ引き継がない。"""
+    """分割実装の変更では索引を再構築し、互換な同一入力片を引き継ぐ。"""
     from commons import runtime_document_search as module
 
     root = _repo_with_docs(tmp_path)
@@ -1209,12 +1212,11 @@ def test_worker_change_rebuilds_index_without_reusing_embeddings(
             )
         ) as search:
             result = search.synchronize()
-            assert search.sync_progress["persisted_chunks"] == result.chunk_count
             results.append(result)
     first, second = results
     assert second.identity != first.identity
     assert second.chunk_count == first.chunk_count > 0
-    assert second.reused_embeddings == 0
+    assert second.reused_embeddings == second.chunk_count
 
 
 def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
