@@ -173,7 +173,7 @@ Codex process ごとに独立した接続と固定 context を持つ。起動と
 
 ## 設定と未確定事項
 
-必要な tuning 設定の field・型・数値制約・項目間制約・暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `DocumentSearchConfig` へ委譲する。同ファイルの `SEARCH_CANDIDATE_COUNT_MIN` と `SEARCH_CANDIDATE_COUNT_MAX` は、`candidate_count` と MCP 引数 `limit` に共通する指定可能な件数の範囲を所有する。新規生成時の検索設定の状態は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig.document_search` へ委譲する。コンポーネントの identity を、自由な repository 設定や MCP 入力によって置換しない。検索設定と call ごとの検索有効化は区別する。
+必要な tuning 設定の field・型・数値制約・項目間制約・暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `DocumentSearchConfig` へ委譲する。新規生成時の検索設定の状態は、同ファイルの `CmocConfig.document_search` へ委譲する。`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_CANDIDATE_COUNT_MIN` と `SEARCH_CANDIDATE_COUNT_MAX` は、`candidate_count` と MCP 引数 `limit` に共通する指定可能な件数の範囲を所有する。コンポーネントの identity を、自由な repository 設定や MCP 入力によって置換しない。検索設定と call ごとの検索有効化は区別する。
 
 `DocumentSearchConfig` の期限設定は、本書の「排他、期限、終了」の意味仕様に次のように対応する。正確な値と制約は委譲先だけで定める。
 

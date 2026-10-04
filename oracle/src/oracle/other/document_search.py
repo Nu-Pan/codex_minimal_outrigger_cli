@@ -1,10 +1,9 @@
-"""検索用コンポーネントの識別情報、設定型、および MCP の入出力と利用説明。
+"""検索用コンポーネントの識別情報、および MCP の入出力と利用説明。
 
 意味仕様の委譲元は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
 「初期方式と推論の失敗」「stdio MCP と失敗の公開」「設定と未確定事項」。
 """
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, get_args
 
@@ -38,37 +37,6 @@ EMBEDDING_QUERY_TEMPLATE = (
 # candidate_count と MCP 引数 limit に共通する、指定可能な件数の範囲。
 SEARCH_CANDIDATE_COUNT_MIN = 20
 SEARCH_CANDIDATE_COUNT_MAX = 50
-
-
-@dataclass(frozen=True)
-class DocumentSearchConfig:
-    """検索 tuning の型・制約と、生成・補完に使う暫定既定値。
-
-    NOTE
-        int の項目は JSON 整数、float の項目は有限の JSON 数値とする。
-        bool を数値として受理しない。chunk_overlap_tokens 以外は正数、
-        chunk_overlap_tokens は 0 以上 chunk_tokens 未満。
-        candidate_count は SEARCH_CANDIDATE_COUNT_MIN 以上
-        SEARCH_CANDIDATE_COUNT_MAX 以下。
-        chunk_tokens は embedding_context_tokens より小さくし、
-        本文以外の入力の余地を残す。この大小関係だけで入力全体の収容を保証せず、
-        文書・query それぞれに入力整形・特殊 token を加えた実入力が
-        embedding tokenizer の context 上限内に収まることも検証する。
-    """
-
-    chunk_tokens: int = 512
-    chunk_overlap_tokens: int = 64
-    candidate_count: int = 50
-    embedding_context_tokens: int = 2048
-    batch_tokens: int = 512
-    threads: int = 4
-    startup_timeout_seconds: float = 120.0
-    request_timeout_seconds: float = 600.0
-    shutdown_grace_seconds: float = 5.0
-    resource_wait_timeout_seconds: float = 600.0
-    sync_no_progress_timeout_seconds: float = 600.0
-    post_sync_search_timeout_seconds: float = 600.0
-    search_request_timeout_seconds: float = 3600.0
 
 
 SEARCH_MCP_SERVER = "cmoc_document_search"

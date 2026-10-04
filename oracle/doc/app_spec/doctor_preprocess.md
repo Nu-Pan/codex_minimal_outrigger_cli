@@ -116,7 +116,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 検索設定は、処理対象 work-root の `.cmoc/gt/config.json` の `document_search` に保存する。通常起動で設定不備を早期に検出し、明示的な doctor で不足を補えることを目的とする。本節の設定検証と、本書の「検索用コンポーネントの準備と検査」の両方を完了させる。
 
-正確な field、型、数値制約、項目間制約、および補完に使う暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `DocumentSearchConfig` へ委譲する。新規ファイル全体の設定構造と既定状態は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig` へ委譲する。これらの既定値を使う新規生成・明示補完と、保存済み設定の検証を区別する。
+正確な field、型、数値制約、項目間制約、および補完に使う暫定既定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `DocumentSearchConfig` へ委譲する。新規ファイル全体の設定構造と既定状態は、同ファイルの `CmocConfig` へ委譲する。これらの既定値を使う新規生成・明示補完と、保存済み設定の検証を区別する。
 
 MCP 検索要求用の四種類の期限設定も、以下の必須項目の検証と不足補完に含める。既存の `request_timeout_seconds` が保存されていても、追加された項目が存在することの代わりにはせず、その値から新しい項目を推定しない。各設定の適用先は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「設定と未確定事項」に従う。
 

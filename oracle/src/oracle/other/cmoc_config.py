@@ -4,6 +4,8 @@
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
 - `CmocConfig` は `{{work-root}}/.cmoc/gt/config.json` として永続化される
 - `CmocConfig` を json にシリアライズする際、メンバーの順序は保持される
+- 検索 tuning の意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
+  「設定と未確定事項」に従う
 - 設定の生成・検索設定の補完・保存済み設定の検証は、
   `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の
   「検索設定の検証と補完」に従う（旧 `document_search: null` 入力の扱いを含む）
@@ -13,12 +15,41 @@
 # std
 from dataclasses import dataclass, field
 
-from .document_search import DocumentSearchConfig
-
 # JSON と TOML の両方で表現できる設定値
 type JsonTomlValue = (
     str | int | float | bool | list[JsonTomlValue] | dict[str, JsonTomlValue]
 )
+
+
+@dataclass(frozen=True)
+class DocumentSearchConfig:
+    """検索 tuning の型・制約と、生成・補完に使う暫定既定値。
+
+    NOTE
+        int の項目は JSON 整数、float の項目は有限の JSON 数値とする。
+        bool を数値として受理しない。chunk_overlap_tokens 以外は正数、
+        chunk_overlap_tokens は 0 以上 chunk_tokens 未満。
+        candidate_count は `{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の
+        SEARCH_CANDIDATE_COUNT_MIN 以上 SEARCH_CANDIDATE_COUNT_MAX 以下。
+        chunk_tokens は embedding_context_tokens より小さくし、
+        本文以外の入力の余地を残す。この大小関係だけで入力全体の収容を保証せず、
+        文書・query それぞれに入力整形・特殊 token を加えた実入力が
+        embedding tokenizer の context 上限内に収まることも検証する。
+    """
+
+    chunk_tokens: int = 512
+    chunk_overlap_tokens: int = 64
+    candidate_count: int = 50
+    embedding_context_tokens: int = 2048
+    batch_tokens: int = 512
+    threads: int = 4
+    startup_timeout_seconds: float = 120.0
+    request_timeout_seconds: float = 600.0
+    shutdown_grace_seconds: float = 5.0
+    resource_wait_timeout_seconds: float = 600.0
+    sync_no_progress_timeout_seconds: float = 600.0
+    post_sync_search_timeout_seconds: float = 600.0
+    search_request_timeout_seconds: float = 3600.0
 
 
 @dataclass(frozen=True)
