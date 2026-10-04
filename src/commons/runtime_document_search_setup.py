@@ -1,6 +1,5 @@
 """固定した検索用コンポーネントを cmoc installation の非追跡領域へ準備する。"""
 
-import hashlib
 import json
 import math
 import os
@@ -9,17 +8,16 @@ import signal
 import subprocess
 import tempfile
 import time
-import urllib.request
 from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
-from urllib.parse import quote
 
 from oracle.other.cmoc_config import DocumentSearchConfig
 from oracle.other.document_search import EMBEDDING_QUERY_TEMPLATE
 
 from .runtime_document_search import SearchError, _file_lock, _safe_directory
-from .runtime_document_search_types import SEARCH_MATERIALS, ModelArtifact
+from .runtime_document_search_assets import node_runtime_assets, prepare_model
+from .runtime_document_search_types import SEARCH_MATERIALS
 from .runtime_document_search_worker import (
     NodeSearchWorker,
     _runtime_tree_hash,
@@ -30,44 +28,8 @@ from .runtime_document_search_worker import (
     verification_condition,
     verify_search_materials,
 )
+from .runtime_download_asset_cache import record_asset_event
 from .runtime_git import require_cmoc_ignored
-
-
-def _download_model(base: Path, artifact: ModelArtifact) -> None:
-    """固定 revision の GGUF をサイズと SHA-256 で確認して公開する。"""
-    destination = base / artifact.filename
-    if destination.is_file() and not destination.is_symlink():
-        if (
-            destination.stat().st_size == artifact.size_bytes
-            and _sha256(destination) == artifact.sha256
-        ):
-            return
-    url = (
-        f"https://huggingface.co/{artifact.repository}/resolve/"
-        f"{artifact.revision}/{quote(artifact.filename)}"
-    )
-    descriptor, temporary = tempfile.mkstemp(prefix=f".{artifact.filename}.", dir=base)
-    temporary_path = Path(temporary)
-    digest = hashlib.sha256()
-    size = 0
-    try:
-        with (
-            os.fdopen(descriptor, "wb") as output,
-            urllib.request.urlopen(url, timeout=60) as source,
-        ):
-            while block := source.read(1024 * 1024):
-                output.write(block)
-                digest.update(block)
-                size += len(block)
-                if size > artifact.size_bytes:
-                    raise ValueError("downloaded model exceeds fixed size")
-            output.flush()
-            os.fsync(output.fileno())
-        if size != artifact.size_bytes or digest.hexdigest() != artifact.sha256:
-            raise ValueError(f"model checksum mismatch: {artifact.filename}")
-        os.replace(temporary_path, destination)
-    finally:
-        temporary_path.unlink(missing_ok=True)
 
 
 def _copy_worker_source(base: Path, filename: str) -> str:
@@ -101,8 +63,15 @@ def _runtime_versions(base: Path) -> None:
     _verify_lock(base)
 
 
-def _install_node_runtime(base: Path, materials_fd: int) -> None:
+def _install_node_runtime(root: Path, base: Path, materials_fd: int) -> None:
     """npm とその子 process を収束させてから資材 lock を解放できるようにする。"""
+    # 全依存物の公開・コピーを済ませ、npm はローカル構築だけを行う。
+    with node_runtime_assets(root, base):
+        _run_npm_offline(base, materials_fd)
+
+
+def _run_npm_offline(base: Path, materials_fd: int) -> None:
+    # https://docs.npmjs.com/cli/v12/using-npm/config/#offline
     command = [
         "npm",
         "ci",
@@ -110,11 +79,15 @@ def _install_node_runtime(base: Path, materials_fd: int) -> None:
         "--include=optional",
         "--no-audit",
         "--no-fund",
+        "--offline",
+        "--update-notifier=false",
+        "--userconfig=/dev/null",
+        f"--globalconfig={base / '.npm-global.npmrc'}",
     ]
     process = subprocess.Popen(
         command,
         cwd=base,
-        env={**os.environ, "npm_config_cache": str(base.parent / "npm-cache")},
+        env={**os.environ, "npm_config_cache": str(base / ".npm-cache")},
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -259,22 +232,31 @@ def _manifest(
     }
 
 
-def _reuse_or_download(base: Path, staging: Path, artifact: ModelArtifact) -> str:
-    """既存モデルが正しければ再利用し、不一致だけ固定 revision から取得する。"""
-    source = base / artifact.filename
-    if (
-        source.is_file()
-        and not source.is_symlink()
-        and source.stat().st_size == artifact.size_bytes
-        and _sha256(source) == artifact.sha256
-    ):
-        try:
-            os.link(source, staging / artifact.filename)
-        except OSError:
-            shutil.copyfile(source, staging / artifact.filename)
-        return "reused"
-    _download_model(staging, artifact)
-    return "downloaded"
+def _reuse_node_runtime(root: Path, base: Path, staging: Path) -> bool:
+    # モデルや worker の修復だけなら、正常 runtime の再インストールを省く。
+    try:
+        manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
+        if any(
+            _sha256(base / name) != _sha256(staging / name)
+            for name in ("package.json", "package-lock.json")
+        ) or manifest.get("runtime_tree_sha256") != _runtime_tree_hash(base):
+            return False
+        _runtime_versions(base)
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        return False
+    shutil.copytree(base / "node_modules", staging / "node_modules", symlinks=True)
+    record_asset_event(
+        "asset.component_reused",
+        root,
+        part="node_runtime",
+        path=str(base),
+        cache_status="not_checked_prepared_component",
+        identity={
+            "runtime_tree_sha256": manifest["runtime_tree_sha256"],
+            "lock_sha256": _sha256(base / "package-lock.json"),
+        },
+    )
+    return True
 
 
 def _recover_previous_materials(base: Path) -> bool:
@@ -325,6 +307,15 @@ def prepare_document_search_materials(
             reusable = True
         if reusable:
             manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
+            record_asset_event(
+                "asset.component_reused",
+                root,
+                part="all",
+                path=str(base),
+                cache_status="not_checked_prepared_component",
+                identity=manifest["materials"],
+                lock_sha256=manifest["lock_sha256"],
+            )
             verified = manifest.get("verified_conditions")
             condition = verification_condition(config)
             if (
@@ -353,11 +344,14 @@ def prepare_document_search_materials(
                 for name in ("worker.mjs", "package.json", "package-lock.json")
             }
             phase = "npm runtime build"
-            _install_node_runtime(staging, materials_fd)
+            if not _reuse_node_runtime(root, base, staging):
+                _install_node_runtime(root, staging, materials_fd)
             phase = "runtime and vector dependency check"
             _runtime_versions(staging)
             phase = "model download and checksum check"
-            model_action = _reuse_or_download(base, staging, SEARCH_MATERIALS.embedding)
+            model_action = prepare_model(
+                root, base, staging, SEARCH_MATERIALS.embedding
+            )
             phase = "real-model embedding validation"
             _compatibility_probe(staging, root, config)
             phase = "verified material publication"

@@ -12,9 +12,18 @@ import commons.runtime_cli as runtime_cli
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
+import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_windows_toast as runtime_windows_toast
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+
+
+@pytest.fixture(autouse=True)
+def _isolate_download_asset_cache(tmp_path, monkeypatch):
+    """固定 cache パスをテスト内に置換し、実ユーザーの保存物に触れない。"""
+    monkeypatch.setattr(
+        asset_cache_module, "asset_cache_directory", lambda: tmp_path / "asset-cache"
+    )
 
 
 @pytest.fixture

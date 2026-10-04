@@ -375,6 +375,7 @@ def _doctor_body(
         f"- query embedding: `{_field_status(fields.get('material_query_embedding'))}`",
         f"- 残存状態: `{_field_status(fields.get('material_remaining_state'))}`",
         f"- 失敗理由: `{_field_status(fields.get('material_failure'))}`",
+        *_download_asset_lines(logger),
         "## 検索索引の同期",
         f"- 対象 work-root: `{_field_status(fields.get('doctor_sync_work_root'))}`",
         f"- 診断ログ内の同期 ID: `{_field_status(fields.get('doctor_sync_id'))}`",
@@ -389,6 +390,63 @@ def _doctor_body(
         "- 共通環境・設定・管理状態と共有検索用コンポーネントの検査時点での利用可能性、および検索索引の同期完了。任意入力の検索は対象外。",
         *_standard_tail(classification, result, logger),
     ]
+
+
+def _download_asset_lines(logger: SubcommandLogger) -> list[str]:
+    # 逐次記録の最終 snapshot を集計し、未完了も実績と区別して表示する。
+    states: dict[str, dict[str, object]] = {}
+    components: list[dict[str, object]] = []
+    for event in logger.event_records():
+        if event.get("event") == "asset.state":
+            states[str(event["use_id"])] = event
+        elif event.get("event") == "asset.component_reused":
+            components.append(event)
+    lines = ["## ダウンロードアセット", f"- 診断記録: `{logger.path}`（`asset.*`）"]
+    for component in components:
+        lines.append(
+            f"- 準備済みコンポーネントの再利用: `{component['part']}` / `{component['path']}`。"
+            "取得キャッシュは確認不要・未確認。"
+        )
+    if not states:
+        lines.append(
+            "- 資材の取得・通信: 0。" if components else "- 資材準備: 未開始。"
+        )
+        return lines
+    sources: dict[str, int] = {}
+    reasons: dict[str, int] = {}
+    communications: dict[str, int] = {}
+    downloads = 0
+    published = 0
+    for event in states.values():
+        source = str(event.get("source", "未完了"))
+        sources[source] = sources.get(source, 0) + 1
+        reason = str(event.get("cache_status", "not_checked"))
+        reasons[reason] = reasons.get(reason, 0) + 1
+        count = event.get("download_count")
+        if isinstance(count, int):
+            downloads += count
+        attempts = event.get("communications")
+        if isinstance(attempts, list):
+            for attempt in attempts:
+                if isinstance(attempt, dict):
+                    status = str(attempt.get("status", "未確定"))
+                    communications[status] = communications.get(status, 0) + 1
+        published += event.get("publication") == "succeeded"
+        if event.get("status") != "completed":
+            lines.append(
+                f"- 未完了資材: `{event.get('asset_key')}` / `{event.get('status')}` / "
+                f"`{event.get('failure', '終端未確認')}`"
+            )
+    lines.extend(
+        [
+            f"- 資材の使用元: `{_inline_text(sources)}`",
+            f"- キャッシュの照合結果・不使用理由: `{_inline_text(reasons)}`",
+            f"- 資材取得の試行数: {downloads}（失敗・途中終了を含む）。",
+            f"- 取得通信の実績: `{_inline_text(communications)}`（空なら試行なし）。",
+            f"- 有効キャッシュの公開数: {published}。コンポーネントの動作検証は別に判定。",
+        ]
+    )
+    return lines
 
 
 def _session_fork_body(
