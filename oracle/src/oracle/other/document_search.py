@@ -1,7 +1,7 @@
 """検索用コンポーネントの識別情報、および MCP の入出力と利用説明。
 
 意味仕様の委譲元は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
-「初期方式と推論の失敗」「stdio MCP と失敗の公開」「設定と未確定事項」。
+「検索と routing」「初期方式と推論の失敗」「stdio MCP と失敗の公開」「設定と未確定事項」。
 """
 
 from pathlib import Path
@@ -90,8 +90,8 @@ def build_search_tool_description(work_root: Path) -> str:
         意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
         「検索と routing」「対象と信頼境界」「stdio MCP と失敗の公開」を参照。
     """
-    # 入出力の詳細は schema に置き、ここでは機能と検索対象を伝える。
-    return f"`{work_root}` の oracle doc 内の `.md` を意味検索し、ヒットした候補の位置情報を返す。"
+    # 構造や値の定義は schema に置き、ここでは検索対象と読取り判断への使い方を伝える。
+    return f"oracle doc を意味検索し、候補の位置情報と類似度を返す。"
 
 
 type SearchErrorCode = Literal[
@@ -130,10 +130,12 @@ SEARCH_TOOL_OUTPUT_SCHEMA: dict[str, object] = {
                 "hits": {
                     "type": "array",
                     "description": (
-                        "採用した候補箇所をファイルごとに集約した位置情報。"
-                        "同一パスは一度だけ掲載する。ファイル数や行範囲数は、"
+                        "類似度の降順で採用した候補箇所をファイルごとに集約した位置情報と類似度。"
+                        "同一パスは一度だけ掲載し、ファイル内の max_similarity の最大値の降順。"
+                        "候補の採用順・ファイル順・行範囲順とも、同点内の順序は定めない。"
+                        "ファイル数や行範囲数は、"
                         "limit・candidate_count が数える集約前の候補箇所数より少なくなり得る。"
-                        "本文・抜粋・見出し文・スコアは含まない。"
+                        "本文・抜粋・見出し文は含まない。"
                     ),
                     "items": {
                         "type": "object",
@@ -153,16 +155,46 @@ SEARCH_TOOL_OUTPUT_SCHEMA: dict[str, object] = {
                                 "minItems": 1,
                                 "description": (
                                     "ファイル内の候補行範囲。重複・重なりのある範囲は統合済み。"
+                                    "max_similarity の降順。"
                                 ),
                                 "items": {
-                                    "type": "array",
-                                    "minItems": 2,
-                                    "maxItems": 2,
-                                    "items": {"type": "integer", "minimum": 1},
+                                    "type": "object",
+                                    "additionalProperties": False,
+                                    "required": [
+                                        "start_line",
+                                        "end_line",
+                                        "max_similarity",
+                                    ],
                                     "description": (
-                                        "[開始行, 終了行]。行番号は 1 起点で両端を含み、"
-                                        "開始行 <= 終了行。同じ行番号二つは一行だけの範囲。"
+                                        "行番号は 1 起点で両端を含み、start_line <= end_line。"
+                                        "両者が同じなら一行だけの範囲。"
                                     ),
+                                    "properties": {
+                                        "start_line": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "description": "範囲に含む開始行。",
+                                        },
+                                        "end_line": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "description": "範囲に含む終了行。",
+                                        },
+                                        "max_similarity": {
+                                            "type": "number",
+                                            "minimum": -1,
+                                            "maximum": 1,
+                                            "description": (
+                                                "この範囲へ統合された採用候補の類似度の最大値。"
+                                                "未統合なら候補自身の値。"
+                                                "文書入力片は、文書からモデルへ渡す一つの入力。"
+                                                "類似度は query と文書入力片の embedding のコサイン類似度で、"
+                                                "候補の採用にも同じ尺度を使う。"
+                                                "有限の数値で値域は [-1, 1]、高いほど類似し、負値も有効。"
+                                                "返却件数に応じた値の再調整は行わない。"
+                                            ),
+                                        },
+                                    },
                                 },
                             },
                         },
@@ -191,7 +223,8 @@ SEARCH_TOOL_OUTPUT_SCHEMA: dict[str, object] = {
                         "ENUMERATION_FAILED: 列挙失敗、READ_FAILED: 読取失敗、"
                         "SYNC_FAILED: 同期・保存失敗、SOURCE_CHANGED: 本文変更競合、"
                         "NOT_READY: 検索未準備、MODEL_IDENTITY_MISMATCH: コンポーネント不一致、"
-                        "MODEL_FAILURE: 推論失敗、DEADLINE_EXCEEDED: 期限超過、CANCELLED: 取消。"
+                        "MODEL_FAILURE: 推論失敗（不正な類似度を含む）、"
+                        "DEADLINE_EXCEEDED: 期限超過、CANCELLED: 取消。"
                     ),
                 },
                 "message": {
