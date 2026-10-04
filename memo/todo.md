@@ -6,13 +6,6 @@
 - 検索結果として一致率も要るかも
     - ファイルごとに最大値だけ出せばよいか
 
-## ベクトル検索導入時に slop 汚染が広がってるかも
-
-- しかしそれが昔過ぎてもうわからない
-- ベクトル検索が関係する oracle src を列挙させて、全部レビューしなおすしかなさそう
-- `oracle/src/oracle/other/document_search.py` の内容がヤバすぎる。実装の転写みたいになってる箇所がある。
-- `DocumentSearchConfig` は `cmoc_config.py` へ移す？　他の設定値系どうしてたっけ？
-
 ## oracle src, oracle doc の優先関係を明示したほうが良いかも
 
 - oracle doc で言ってることが oracle src に持ち込まれてしまうケースが多いように思う
