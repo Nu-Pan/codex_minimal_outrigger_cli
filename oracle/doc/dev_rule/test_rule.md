@@ -23,6 +23,7 @@
 - pytest を使用する
 - realization test は `{{cmoc-root}}/test` に実装する
 - pytest の `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
+- `{{cmoc-root}}/oracle/doc/app_spec/download_asset_cache.md` の「保存先と共有範囲」が定める固定キャッシュパスも、テスト時は `{{test-root}}` 内へ置き換え、実ユーザーのキャッシュを読み書きしない。共有を検証する複数の cmoc 配置・process は、同じテスト内の置換先を使用する
 
 ## 実経路統合テスト
 
