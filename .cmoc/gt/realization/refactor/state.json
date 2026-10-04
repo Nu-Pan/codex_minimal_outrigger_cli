@@ -65,6 +65,12 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "oracle/doc/app_spec/download_asset_cache.md": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "oracle/doc/app_spec/editor_input_handoff.md": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
