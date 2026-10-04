@@ -165,6 +165,8 @@ class SearchObservation:
         self._cleanup_failure: BaseException | None = None
         self._last_progress: dict[str, object] | None = None
         self._finished = False
+        self.query_inference_calls = 0
+        self.query_generated_embeddings = 0
         if request:
             self._event("document_search_request_started", index_identity=None)
 
@@ -202,6 +204,10 @@ class SearchObservation:
             "changed_document_count": None,
             "persisted_chunks": None,
             "reused_embeddings": None,
+            "generated_embeddings": None,
+            "persisted_embeddings": None,
+            "reused_same_worktree": None,
+            "reused_other_worktree": None,
             "document_states": None,
         }
         self.sync = _SyncTiming(
@@ -405,6 +411,15 @@ class SearchObservation:
             changed_document_count=progress["changed_document_count"],
             persisted_chunk_count=progress["persisted_chunks"],
             reused_chunk_count=progress["reused_embeddings"],
+            generated_embedding_count=progress["generated_embeddings"],
+            persisted_embedding_count=progress["persisted_embeddings"],
+            reused_same_worktree_count=progress["reused_same_worktree"],
+            reused_other_worktree_count=progress["reused_other_worktree"],
+            generated_embedding_unit="document_input_piece",
+            reuse_count_unit="chunk_occurrence",
+            # 現行 worker は一呼出しで一入力片を返す。未受信の実績は未確定。
+            document_inference_call_count=progress["generated_embeddings"],
+            inference_count_basis="confirmed_document_chunk_events",
             document_states=progress["document_states"],
             counts_complete=status in {"updated", "unchanged"},
             cleanup_failure=str(sync.cleanup_failure)
@@ -456,6 +471,8 @@ class SearchObservation:
             sync_ids=self.sync_ids,
             progress=self.last_sync.progress if self.last_sync else None,
             progress_sync_id=self.last_sync.sync_id if self.last_sync else None,
+            query_inference_call_count=self.query_inference_calls,
+            query_generated_embedding_count=self.query_generated_embeddings,
             index_identity=(
                 self.last_sync.progress["identity"] if self.last_sync else None
             ),

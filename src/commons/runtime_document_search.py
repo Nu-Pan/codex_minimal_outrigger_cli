@@ -38,9 +38,9 @@ from .runtime_document_search_types import SEARCH_MATERIALS, SearchHit, SearchRe
 from .runtime_errors import CmocError
 from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ignored
 from .runtime_logging import current_subcommand_logger
-from .runtime_paths import cmoc_root
+from .runtime_paths import cmoc_root, repo_root
 
-_INDEX_FORMAT = 4
+_INDEX_FORMAT = 5
 _CLASSIFICATION_CONTRACT = "oracle-file-inventory-v2"
 _LOCK_POLL_SECONDS = 0.05
 
@@ -304,7 +304,9 @@ def scan_documents(
     return documents
 
 
-def search_identity(root: Path, config: DocumentSearchConfig) -> str:
+def search_identity(
+    root: Path, config: DocumentSearchConfig, *, index_format: int | None = None
+) -> str:
     """worktree 実体、分類と推論条件を索引 identity に含める。"""
     device, inode = _root_identity(root)
     worker_files = resources.files("commons.document_search_worker")
@@ -322,7 +324,7 @@ def search_identity(root: Path, config: DocumentSearchConfig) -> str:
         ).hexdigest(),
         "query_template": EMBEDDING_QUERY_TEMPLATE,
         "config": inference_config(config),
-        "format": _INDEX_FORMAT,
+        "format": _INDEX_FORMAT if index_format is None else index_format,
     }
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
@@ -351,16 +353,125 @@ def _vector_blob(value: object) -> bytes:
 
 
 def _checked_cached_vector(value: object) -> bytes:
-    """破損した query cache を cosine 計算へ渡さない。"""
+    """破損した保存済み embedding を cosine 計算へ渡さない。"""
     dimensions = SEARCH_MATERIALS.embedding_dimensions
     if not isinstance(value, bytes) or len(value) != 4 * dimensions:
-        raise SearchError("SYNC_FAILED", "cached query embedding is invalid")
+        raise SearchError("SYNC_FAILED", "cached embedding is invalid")
     numbers = struct.unpack("<" + "f" * dimensions, value)
     if not all(math.isfinite(number) for number in numbers) or not any(
         number != 0 for number in numbers
     ):
-        raise SearchError("SYNC_FAILED", "cached query embedding is invalid")
+        raise SearchError("SYNC_FAILED", "cached embedding is invalid")
     return value
+
+
+def _worktree_identity(root: Path) -> str:
+    # 同じ path を再作成した worktree も生成元と区別する。
+    device, inode = _root_identity(root)
+    return hashlib.sha256(f"{root.resolve()}:{device}:{inode}".encode()).hexdigest()
+
+
+def _embedding_identity(config: DocumentSearchConfig) -> str:
+    # 分割・索引形式・query・期限は文書入力片の推論条件ではない。
+    materials = asdict(SEARCH_MATERIALS)
+    materials.pop("sqlite_vec_version")
+    payload = {
+        "materials": materials,
+        # 文書入力の整形や pooling を変える場合はこの契約も更新する。
+        "input_contract": "raw-document-text-last-v1",
+        "context_tokens": config.embedding_context_tokens,
+        "batch_tokens": config.batch_tokens,
+        "threads": config.threads,
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+class _EmbeddingCache:
+    """repository の互換な入力片と生成元を、索引の寿命から分離して保持する。"""
+
+    def __init__(self, path: Path) -> None:
+        # caller の cache lock 内だけで開き、保存を入力片ごとに確定する。
+        _safe_directory(path.parent)
+        if path.is_symlink() or (path.exists() and not path.is_file()):
+            raise SearchError("SYNC_FAILED", "embedding cache is not regular")
+        self.connection = sqlite3.connect(path, timeout=0)
+        try:
+            self.connection.execute(
+                "create table if not exists embeddings("
+                "excerpt_sha256 text primary key, embedding blob not null, "
+                "producer_worktree text not null)"
+            )
+            self.connection.commit()
+        except BaseException:
+            self.connection.close()
+            raise
+
+    def close(self) -> None:
+        # 索引 connection とは独立に lock の解放前に閉じる。
+        self.connection.close()
+
+    def get(self, digest: str) -> tuple[bytes, str] | None:
+        # 不正な保存結果は公開・再利用せず、不足分として再生成する。
+        row = self.connection.execute(
+            "select embedding, producer_worktree from embeddings where excerpt_sha256 = ?",
+            (digest,),
+        ).fetchone()
+        if row is None:
+            return None
+        try:
+            vector = _checked_cached_vector(row[0])
+            if not isinstance(row[1], str) or len(row[1]) != 64:
+                raise SearchError("SYNC_FAILED", "embedding producer is invalid")
+        except SearchError:
+            with self.connection:
+                self.connection.execute(
+                    "delete from embeddings where excerpt_sha256 = ?", (digest,)
+                )
+            return None
+        return vector, row[1]
+
+    def save(self, digest: str, vector: bytes, producer: str) -> bool:
+        # 先行処理の生成元は後続 worktree での保存・再利用によって置き換えない。
+        with self.connection:
+            saved = self.connection.execute(
+                "insert or ignore into embeddings values(?, ?, ?)",
+                (digest, vector, producer),
+            )
+        return saved.rowcount == 1
+
+    def hashes(self, check: Callable[[], None]) -> set[str]:
+        # ロック取得後の保存結果を確認し、待機前の不足判定を使わない。
+        hashes = set()
+        for (digest,) in self.connection.execute(
+            "select excerpt_sha256 from embeddings"
+        ):
+            check()
+            if self.get(digest) is not None:
+                hashes.add(digest)
+        return hashes
+
+    def import_legacy_index(
+        self, index: Path, producer: str, check: Callable[[], None]
+    ) -> None:
+        # 旧版の互換 identity が示す保存結果だけを読み、元の索引を同期しない。
+        if not index.exists() and not index.is_symlink():
+            return
+        _safe_directory(index.parent)
+        if index.is_symlink() or not index.is_file():
+            raise SearchError("SYNC_FAILED", "reuse source index is not regular")
+        connection = sqlite3.connect(index.as_uri() + "?mode=ro", uri=True, timeout=0)
+        try:
+            for digest, embedding in connection.execute(
+                "select excerpt_sha256, embedding from embedding_cache"
+            ):
+                check()
+                try:
+                    vector = _checked_cached_vector(embedding)
+                except SearchError:
+                    continue
+                self.save(digest, vector, producer)
+        finally:
+            connection.close()
 
 
 def _open_database(path: Path) -> sqlite3.Connection:
@@ -398,10 +509,8 @@ def _open_database(path: Path) -> sqlite3.Connection:
                 excerpt text not null,
                 excerpt_sha256 text not null,
                 embedding blob not null,
+                producer_worktree text not null,
                 unique(path, ordinal)
-            );
-            create table if not exists embedding_cache(
-                excerpt_sha256 text primary key, embedding blob not null
             );
             create table if not exists query_cache(
                 query text primary key, embedding blob not null
@@ -659,6 +768,8 @@ class DocumentSearch:
             observation=self._observation,
         ) as residency_fd:
             try:
+                if self._observation is not None and operation == "embed_query":
+                    self._observation.query_inference_calls += 1
                 return self.worker.run(
                     operation,
                     payload,
@@ -721,6 +832,7 @@ class DocumentSearch:
     def _sync_locked(
         self,
         connection: sqlite3.Connection,
+        cache: _EmbeddingCache,
         documents: Mapping[str, SourceDocument],
         residency: Path,
         deadline: float | None,
@@ -760,8 +872,27 @@ class DocumentSearch:
             changed_document_count=len(deleted_paths | changed_paths | pending_paths),
             persisted_chunks=0,
             reused_embeddings=0,
+            generated_embeddings=0,
+            persisted_embeddings=0,
+            reused_same_worktree=0,
+            reused_other_worktree=0,
             document_states={path: "unprocessed" for path in documents},
         )
+        producer = _worktree_identity(self.root)
+
+        def increment(field: str, count: int = 1) -> None:
+            assert self.sync_progress is not None
+            before = self.sync_progress[field]
+            assert isinstance(before, int)
+            self.sync_progress[field] = before + count
+
+        def reused(origin: str) -> None:
+            increment("reused_embeddings")
+            increment(
+                "reused_same_worktree"
+                if origin == producer
+                else "reused_other_worktree"
+            )
 
         def checked_document(path: str) -> None:
             # 必要な分割まで確認済みの文書を、embedding 完了とは別に数える。
@@ -777,7 +908,7 @@ class DocumentSearch:
             assert self._observation is not None
             self._observation.progress("document_checked", path)
 
-        # 出現位置だけを外し、同一入力の embedding は同期完了まで保持する。
+        # 出現位置だけを外し、repository の cache は保持する。
         with connection:
             for path in deleted_paths | changed_paths:
                 connection.execute("delete from documents where path = ?", (path,))
@@ -798,7 +929,7 @@ class DocumentSearch:
             source = documents[path]
             rows = connection.execute(
                 "select ordinal, start_offset, end_offset, start_line, end_line, "
-                "excerpt, excerpt_sha256, embedding "
+                "excerpt, excerpt_sha256, embedding, producer_worktree "
                 "from chunks where path = ? order by ordinal",
                 (path,),
             ).fetchall()
@@ -814,6 +945,7 @@ class DocumentSearch:
                     excerpt,
                     excerpt_sha,
                     embedding,
+                    origin,
                 ) = row
                 if (
                     saved_ordinal != ordinal
@@ -826,6 +958,8 @@ class DocumentSearch:
                     or not excerpt.strip()
                     or excerpt_sha
                     != hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
+                    or not isinstance(origin, str)
+                    or len(origin) != 64
                 ):
                     valid = False
                     break
@@ -864,9 +998,9 @@ class DocumentSearch:
                     connection.execute(
                         "update documents set complete = 1 where path = ?", (path,)
                     )
-            reused_before = self.sync_progress["reused_embeddings"]
-            assert isinstance(reused_before, int)
-            self.sync_progress["reused_embeddings"] = reused_before + len(rows)
+            for row in rows:
+                reused(row[-1])
+                cache.save(row[-3], row[-2], row[-1])
             if path in fresh:
                 resumes[path] = len(rows)
             else:
@@ -874,22 +1008,9 @@ class DocumentSearch:
             if rows:
                 assert self._observation is not None
                 self._observation.progress("embedding_reused", path)
-        reusable_hashes: set[str] = set()
-        if fresh:
-            for excerpt_sha, embedding in connection.execute(
-                "select excerpt_sha256, embedding from embedding_cache"
-            ):
-                self._check(deadline)
-                try:
-                    _checked_cached_vector(embedding)
-                except SearchError:
-                    with connection:
-                        connection.execute(
-                            "delete from embedding_cache where excerpt_sha256 = ?",
-                            (excerpt_sha,),
-                        )
-                else:
-                    reusable_hashes.add(excerpt_sha)
+        reusable_hashes = (
+            cache.hashes(lambda: self._check(deadline)) if fresh else set()
+        )
         next_ordinal = dict(resumes)
         completed: set[str] = set()
 
@@ -910,6 +1031,9 @@ class DocumentSearch:
 
         def on_event(event: object) -> None:
             """worker 出力を検証し、各 chunk または文書完了を個別確定する。"""
+            # 届いた生成実績は、直後の期限・編集競合・保存失敗でも残す。
+            if isinstance(event, dict) and event.get("kind") == "chunk":
+                increment("generated_embeddings")
             self._check(deadline)
             if not isinstance(event, dict):
                 raise SearchError("MODEL_FAILURE", "inference event is invalid")
@@ -958,28 +1082,22 @@ class DocumentSearch:
                 raise SearchError("MODEL_FAILURE", "document chunk is blank")
             excerpt_sha = hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
             if kind == "reuse":
-                cached = connection.execute(
-                    "select embedding from embedding_cache where excerpt_sha256 = ?",
-                    (excerpt_sha,),
-                ).fetchone()
+                cached = cache.get(excerpt_sha)
                 if cached is None:
                     raise SearchError(
                         "MODEL_FAILURE", "reused embedding is unavailable"
                     )
-                vector = _checked_cached_vector(cached[0])
+                vector, origin = cached
             else:
                 vector = _vector_blob(event.get("embedding"))
+                origin = producer
+                if cache.save(excerpt_sha, vector, origin):
+                    increment("persisted_embeddings")
             with connection:
-                if kind == "chunk":
-                    connection.execute(
-                        "insert or replace into embedding_cache(excerpt_sha256, embedding) "
-                        "values(?, ?)",
-                        (excerpt_sha, vector),
-                    )
                 connection.execute(
                     "insert into chunks(path, ordinal, start_offset, end_offset, "
-                    "start_line, end_line, excerpt, excerpt_sha256, embedding) "
-                    "values(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "start_line, end_line, excerpt, excerpt_sha256, embedding, producer_worktree) "
+                    "values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         path,
                         next_ordinal[path],
@@ -990,14 +1108,15 @@ class DocumentSearch:
                         excerpt,
                         excerpt_sha,
                         vector,
+                        origin,
                     ),
                 )
             next_ordinal[path] += 1
             assert self.sync_progress is not None
-            field = "persisted_chunks" if kind == "chunk" else "reused_embeddings"
-            before = self.sync_progress[field]
-            assert isinstance(before, int)
-            self.sync_progress[field] = before + 1
+            if kind == "chunk":
+                increment("persisted_chunks")
+            else:
+                reused(origin)
             assert self._observation is not None
             self._observation.progress(
                 "embedding_saved" if kind == "chunk" else "embedding_reused",
@@ -1015,11 +1134,6 @@ class DocumentSearch:
             ).fetchone()
         ):
             raise SearchError("MODEL_FAILURE", "inference chunks are incomplete")
-        with connection:
-            connection.execute(
-                "delete from embedding_cache where excerpt_sha256 not in "
-                "(select excerpt_sha256 from chunks)"
-            )
         final_reused = self.sync_progress["reused_embeddings"]
         assert isinstance(final_reused, int)
         count = connection.execute("select count(*) from chunks").fetchone()[0]
@@ -1123,10 +1237,15 @@ class DocumentSearch:
         self.sync_progress["identity"] = identity
         try:
             require_cmoc_ignored(self.root)
+            repository = repo_root(self.root)
+            if repository != self.root:
+                require_cmoc_ignored(repository)
         except Exception as exc:
             raise SearchError(
                 "SYNC_FAILED", "document search storage is not ignored"
             ) from exc
+        cache_base = repository / ".cmoc/gu/document_search/cache"
+        condition = _embedding_identity(self.config)
         from .runtime_document_search_worker import (
             NodeSearchWorker,
             verify_search_materials,
@@ -1152,13 +1271,6 @@ class DocumentSearch:
             observation=self._observation,
         ) as lease_fd:
             self._retain_lease(lease, lease_fd)
-            _reclaim_unused_indexes(
-                index.parent.parent.parent,
-                identity,
-                deadline,
-                self.cancelled,
-                check=lambda: self._check(deadline),
-            )
             with _file_lock(
                 lock,
                 deadline,
@@ -1175,17 +1287,50 @@ class DocumentSearch:
                 self.sync_progress["document_count"] = len(documents)
                 self._check(deadline)
                 index_created = not index.exists()
-                connection = _open_database(index)
+                connection: sqlite3.Connection | None = None
                 try:
-                    result = self._sync_locked(
-                        connection,
-                        documents,
-                        residency,
+                    # 同じ互換条件の不足判定・生成・保存を repository 内で直列化する。
+                    # 元の索引 lock は取らず、旧版 DB の確定済み snapshot だけを読む。
+                    with _file_lock(
+                        cache_base / f"{condition}.lock",
                         deadline,
-                        identity,
-                        started,
-                        index_created,
-                    )
+                        self.cancelled,
+                        observation=self._observation,
+                    ):
+                        cache = _EmbeddingCache(cache_base / f"{condition}.sqlite3")
+                        try:
+                            for source_root in dict.fromkeys((self.root, repository)):
+                                legacy_identity = search_identity(
+                                    source_root, self.config, index_format=4
+                                )
+                                cache.import_legacy_index(
+                                    source_root
+                                    / ".cmoc/gu/document_search/indexes"
+                                    / legacy_identity
+                                    / "index.sqlite3",
+                                    _worktree_identity(source_root),
+                                    lambda: self._check(deadline),
+                                )
+                            _reclaim_unused_indexes(
+                                index.parent.parent.parent,
+                                identity,
+                                deadline,
+                                self.cancelled,
+                                check=lambda: self._check(deadline),
+                            )
+                            connection = _open_database(index)
+                            result = self._sync_locked(
+                                connection,
+                                cache,
+                                documents,
+                                residency,
+                                deadline,
+                                identity,
+                                started,
+                                index_created,
+                            )
+                        finally:
+                            cache.close()
                     self._check(deadline)
                     self._check_sources_current(documents, deadline)
                     self.sync_progress["status"] = result.status
@@ -1203,7 +1348,8 @@ class DocumentSearch:
                     self._observation.fail(exc)
                     raise
                 finally:
-                    connection.close()
+                    if connection is not None:
+                        connection.close()
 
     def synchronize(
         self, *, unbounded: bool = False, sync_id: str | None = None
@@ -1331,6 +1477,8 @@ class DocumentSearch:
                 deadline,
             )
             vector = _vector_blob(embedding)
+            assert self._observation is not None
+            self._observation.query_generated_embeddings += 1
             connection.execute(
                 "insert or replace into query_cache(query, embedding) values(?, ?)",
                 (query, vector),
