@@ -22,12 +22,12 @@ from _git_support import make_repo
 from oracle.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
+    DocumentSearchConfig,
     JsonTomlValue,
 )
 from oracle.other.document_search import (
     SEARCH_CANDIDATE_COUNT_MAX,
     SEARCH_CANDIDATE_COUNT_MIN,
-    DocumentSearchConfig,
 )
 
 from cmoc_runtime import (

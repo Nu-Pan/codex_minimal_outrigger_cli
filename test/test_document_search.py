@@ -19,10 +19,10 @@ from typing import get_args
 import pytest
 from _git_support import make_repo, run_git
 from jsonschema.validators import Draft202012Validator
+from oracle.other.cmoc_config import DocumentSearchConfig
 from oracle.other.document_search import (
     SEARCH_TOOL_INPUT_SCHEMA,
     SEARCH_TOOL_OUTPUT_SCHEMA,
-    DocumentSearchConfig,
     SearchErrorCode,
     build_search_tool_description,
 )

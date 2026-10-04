@@ -7,7 +7,7 @@ import pytest
 from _codex_support import codex_override_config, setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
-from oracle.other.document_search import DocumentSearchConfig
+from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec

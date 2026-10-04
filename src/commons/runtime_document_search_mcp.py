@@ -10,6 +10,7 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
+from oracle.other.cmoc_config import DocumentSearchConfig
 from oracle.other.document_search import (
     SEARCH_CANDIDATE_COUNT_MAX,
     SEARCH_CANDIDATE_COUNT_MIN,
@@ -17,7 +18,6 @@ from oracle.other.document_search import (
     SEARCH_TOOL_INPUT_SCHEMA,
     SEARCH_TOOL_NAME,
     SEARCH_TOOL_OUTPUT_SCHEMA,
-    DocumentSearchConfig,
     build_search_tool_description,
 )
 
