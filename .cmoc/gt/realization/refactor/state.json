@@ -1367,6 +1367,12 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "test/test_document_search_reuse.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "test/test_editing_run_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
