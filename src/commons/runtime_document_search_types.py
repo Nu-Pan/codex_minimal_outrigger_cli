@@ -41,11 +41,19 @@ def _initial_materials() -> SearchMaterials:
 SEARCH_MATERIALS = _initial_materials()
 
 
+class SearchRange(TypedDict):
+    """統合した候補位置と最大類似度を MCP 返却へ渡す。"""
+
+    start_line: int
+    end_line: int
+    max_similarity: float
+
+
 class SearchHit(TypedDict):
-    """ファイルごとに集約した候補位置を MCP 返却へ渡す。"""
+    """ファイルごとに集約した候補位置と類似度を MCP 返却へ渡す。"""
 
     path: str
-    ranges: list[tuple[int, int]]
+    ranges: list[SearchRange]
 
 
 class SearchResult(TypedDict):

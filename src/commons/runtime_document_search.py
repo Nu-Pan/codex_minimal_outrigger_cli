@@ -15,6 +15,7 @@ import time
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, replace
+from heapq import nlargest
 from importlib import resources
 from pathlib import Path
 from typing import Callable, Protocol
@@ -34,7 +35,12 @@ from .runtime_document_search_observation import (
     inference_config,
     mcp_tool_timeout_seconds,
 )
-from .runtime_document_search_types import SEARCH_MATERIALS, SearchHit, SearchResult
+from .runtime_document_search_types import (
+    SEARCH_MATERIALS,
+    SearchHit,
+    SearchRange,
+    SearchResult,
+)
 from .runtime_errors import CmocError
 from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ignored
 from .runtime_logging import current_subcommand_logger
@@ -1410,7 +1416,7 @@ class DocumentSearch:
         *,
         observation: SearchObservation | None = None,
     ) -> SearchResult:
-        """現在本文を同期し、cosine 候補の位置をファイルごとに集約する。"""
+        """現在本文を同期し、候補位置と cosine 類似度をファイルごとに集約する。"""
         # MCP と直接呼出しで同じ候補数の境界を維持する。
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query must be non-blank")
@@ -1487,23 +1493,56 @@ class DocumentSearch:
         else:
             vector = _checked_cached_vector(cached[0])
         self._check(deadline)
-        candidates = connection.execute(
-            "select path, start_line, end_line "
-            "from chunks order by vec_distance_cosine(embedding, ?) limit ?",
-            (vector, count),
-        ).fetchall()
-        # 同一ファイルを一度だけ返し、重複・重なりを統合して原文位置だけを公開する。
-        by_path: dict[str, list[tuple[int, int]]] = {}
-        for path, start, end in candidates:
-            by_path.setdefault(path, []).append((start, end))
+
+        def scored_candidates() -> Iterator[tuple[str, int, int, float]]:
+            # 全候補を検査し、不正な値が採用上限の外へ隠れることを防ぐ。
+            try:
+                for path, start, end, distance in connection.execute(
+                    "select path, start_line, end_line, "
+                    "vec_distance_cosine(embedding, ?) from chunks",
+                    (vector,),
+                ):
+                    self._check(deadline)
+                    if (
+                        type(distance) not in (int, float)
+                        or not math.isfinite(distance)
+                        or not 0 <= distance <= 2
+                    ):
+                        raise SearchError(
+                            "MODEL_FAILURE", "cosine similarity is invalid"
+                        )
+                    yield path, start, end, 1.0 - distance
+            except sqlite3.Error as exc:
+                raise SearchError(
+                    "MODEL_FAILURE", "cosine similarity calculation failed"
+                ) from exc
+
+        candidates = nlargest(
+            count, scored_candidates(), key=lambda candidate: candidate[3]
+        )
+        # 重複・重なりを位置順に統合し、採用候補の最大類似度を保持する。
+        by_path: dict[str, list[SearchRange]] = {}
+        for path, start, end, similarity in candidates:
+            by_path.setdefault(path, []).append(
+                {"start_line": start, "end_line": end, "max_similarity": similarity}
+            )
         hits: list[SearchHit] = []
         for path, ranges in by_path.items():
-            merged: list[tuple[int, int]] = []
-            for start, end in sorted(ranges):
-                if merged and start <= merged[-1][1]:
-                    merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+            merged: list[SearchRange] = []
+            for candidate in sorted(
+                ranges, key=lambda item: (item["start_line"], item["end_line"])
+            ):
+                if merged and candidate["start_line"] <= merged[-1]["end_line"]:
+                    merged[-1]["end_line"] = max(
+                        merged[-1]["end_line"], candidate["end_line"]
+                    )
+                    merged[-1]["max_similarity"] = max(
+                        merged[-1]["max_similarity"], candidate["max_similarity"]
+                    )
                 else:
-                    merged.append((start, end))
+                    merged.append(candidate)
+            merged.sort(key=lambda item: item["max_similarity"], reverse=True)
             hits.append({"path": path, "ranges": merged})
+        hits.sort(key=lambda hit: hit["ranges"][0]["max_similarity"], reverse=True)
         self._check_sources_current(documents, deadline)
         return {"status": "ok", "hits": hits}
