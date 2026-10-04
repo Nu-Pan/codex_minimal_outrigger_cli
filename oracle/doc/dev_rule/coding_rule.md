@@ -2,7 +2,7 @@
 
 ## 基本
 
-- cmoc は Python を基本として実装する。例外として、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「初期方式と推論の失敗」が定める推論専用 worker だけは JavaScript を認める。Python が担う分類・同期・保存・MCP へ例外を広げない
+- cmoc は Python を基本として実装する。例外として、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「初期方式と推論の失敗」が定める推論処理には JavaScript を認める。分類・同期・保存・MCP へ例外を広げない
 - Python のコーディングスタイルは PEP 8 を遵守する
 - 命名、責務、入出力を明確に保つ
 - オーバーエンジニアリングを避け、要求を満たすために必要な範囲の変更にとどめる
