@@ -142,6 +142,8 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 通常起動・明示 doctor のどちらも、設定とコンポーネントの検証後に、処理対象の各 work-root の索引を同期する。対象、保存と再利用、共有範囲、期限と回収は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「対象と信頼境界」「同期と cache」「identity と保存先」「排他、期限、終了」に従う。
 
+doctor preprocess の後に作成する run worktree の初回同期にも、同じ再利用規則を適用する。同期に先立つ配置先の準備と管理領域の確認は、本書の「作業用配置先の存在保証」「管理領域の非追跡保証」に従う。
+
 同期結果と処理実績は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従って記録する。
 
 ## refactor state の追跡保証と同期
