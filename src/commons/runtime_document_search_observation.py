@@ -8,7 +8,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from oracle.other.document_search import DocumentSearchConfig, SearchErrorCode
+from oracle.other.cmoc_config import DocumentSearchConfig
+from oracle.other.document_search import SearchErrorCode
 
 from .runtime_logging import append_log_record
 

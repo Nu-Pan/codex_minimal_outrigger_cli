@@ -24,7 +24,7 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import asdict
 from pathlib import Path
 
-from oracle.other.document_search import DocumentSearchConfig
+from oracle.other.cmoc_config import DocumentSearchConfig
 
 from .runtime_config import sync_config
 from .runtime_document_search import DocumentSearch, SearchError, SyncResult

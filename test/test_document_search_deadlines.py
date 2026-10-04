@@ -11,7 +11,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from oracle.other.document_search import DocumentSearchConfig
+from oracle.other.cmoc_config import DocumentSearchConfig
 from test_document_search import _InferenceDouble, _repo_with_docs, _tuning
 
 from commons import runtime_document_search as search_module

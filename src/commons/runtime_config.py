@@ -10,12 +10,12 @@ from typing import Any, NoReturn
 from oracle.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
+    DocumentSearchConfig,
     JsonTomlValue,
 )
 from oracle.other.document_search import (
     SEARCH_CANDIDATE_COUNT_MAX,
     SEARCH_CANDIDATE_COUNT_MIN,
-    DocumentSearchConfig,
 )
 
 from config.cmoc_config import (
