@@ -851,6 +851,12 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "src/commons/runtime_document_search_assets.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_document_search_mcp.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -876,6 +882,12 @@
     "last_investigated_at": null
   },
   "src/commons/runtime_document_search_worker.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_download_asset_cache.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -1374,6 +1386,12 @@
     "last_investigated_at": null
   },
   "test/test_document_search_reuse.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_download_asset_cache.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
