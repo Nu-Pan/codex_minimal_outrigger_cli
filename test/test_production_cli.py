@@ -147,7 +147,7 @@ def _real_path_config() -> CmocConfig:
     # の直接設定を全 agent call 種別へ適用する。
     config = CmocConfig(num_parallel=1)
     quota_saving_call = config.codex.agent_calls[
-        "build_realization_refactor_fork_change_summary_parameter"
+        "build_quota_availability_probe_parameter"
     ]
     return replace(
         config,
@@ -175,8 +175,9 @@ def _write_noninteractive_fixture_instructions(root: Path) -> None:
         """# Production-path test fixture
 
 This is an intentionally minimal and internally consistent test repository.
-For a realization-refactor file review, report `findings` as an empty array and
-do not modify files. For feedback remediation of an observation about the
+For a realization-refactor file review, report `findings` as an empty array,
+`verification.status` as `not_required`, and do not modify files.
+For feedback remediation of an observation about the
 existence of `README.md`, inspect the file, return `already_resolved` with no
 changes, and do not report another issue. For every other call, follow its
 explicit prompt exactly.
@@ -285,20 +286,73 @@ def _run_cmoc(
 ) -> subprocess.CompletedProcess[str]:
     """利用者向け console script を独立 process で正常完了まで実行する。"""
     # 個々の command hang は pytest 全体の timeout より早く局所化する。
-    result = subprocess.run(
-        [str(cmoc), *args],
-        cwd=root,
-        env=environment,
-        text=True,
-        capture_output=True,
-        timeout=_PRODUCTION_COMMAND_TIMEOUT,
-        check=False,
-    )
+    if args == ("realization", "refactor", "fork"):
+        result = _run_refactor_until_confirmed([str(cmoc), *args], root, environment)
+    else:
+        result = subprocess.run(
+            [str(cmoc), *args],
+            cwd=root,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=_PRODUCTION_COMMAND_TIMEOUT,
+            check=False,
+        )
     assert result.returncode == 0, (
         f"cmoc {' '.join(args)} failed with {result.returncode}\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     return result
+
+
+def _run_refactor_until_confirmed(
+    argv: list[str], root: Path, environment: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    """確定実績を観測して SIGINT を送り、継続 workload の通常終了を検証する。"""
+    directory = root / ".cmoc/gu/log/sub_command"
+    previous = set(directory.glob("*.jsonl"))
+    deadline = time.monotonic() + _PRODUCTION_COMMAND_TIMEOUT
+    interrupted = False
+    with subprocess.Popen(
+        argv,
+        cwd=root,
+        env=environment,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+    ) as process:
+        try:
+            while True:
+                if time.monotonic() >= deadline:
+                    raise subprocess.TimeoutExpired(argv, _PRODUCTION_COMMAND_TIMEOUT)
+                if not interrupted:
+                    for log in set(directory.glob("*.jsonl")) - previous:
+                        for line in log.read_text().splitlines():
+                            try:
+                                event = json.loads(line)
+                            except json.JSONDecodeError:
+                                continue
+                            if (
+                                event.get("event") == "refactor_progress"
+                                and event.get("confirmed", 0) > 0
+                            ):
+                                process.send_signal(signal.SIGINT)
+                                interrupted = True
+                                break
+                        if interrupted:
+                            break
+                try:
+                    stdout, stderr = process.communicate(timeout=0.1)
+                    break
+                except subprocess.TimeoutExpired:
+                    continue
+        except BaseException:
+            _stop_tui_process_group(process)
+            process.communicate()
+            raise
+    assert interrupted, "refactor ended before a confirmed unit and user interruption"
+    return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
 
 
 def _codex_call_logs(root: Path) -> set[Path]:

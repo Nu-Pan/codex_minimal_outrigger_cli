@@ -2,13 +2,17 @@
 
 import traceback
 from collections.abc import Callable, Sequence
+from contextlib import nullcontext
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Literal
 
 import typer
 
-from .runtime_codex_recovery import install_recovery_interruption
+from .runtime_codex_recovery import (
+    defer_recovery_interruption,
+    install_recovery_interruption,
+)
 from .runtime_doctor import run_doctor_preprocess
 from .runtime_errors import DEFAULT_NEXT_ACTION, CmocError, render_error, safe_text
 from .runtime_feedback import start_feedback_invocation, stop_feedback_invocation
@@ -146,27 +150,35 @@ def run_cli_subcommand(
                 terminal_result=specific_result,
             )
 
-        stop_feedback()
-        classification: TerminalClassification = (
-            "user_interruption"
-            if _CURRENT_USER_INTERRUPTION.get()
-            else "natural_completion"
-        )
-        finalized_returncode = _finalize_subcommand(
-            logger,
-            name,
-            argv,
-            classification,
-            specific_result,
-            returncode=0,
-            emit_console=not tui_process,
-        )
-        if finalized_returncode != 0:
-            raise _FinalizedSubcommandExit(finalized_returncode)
-        if not tui_process:
-            terminal_state = (
-                "interrupted" if classification == "user_interruption" else "completed"
+        # refactor の停止後は、report・終端表示中の再中断も同じ正常な終了へ集約する。
+        with (
+            defer_recovery_interruption(check_pending=False, propagate=False)
+            if name == "realization refactor fork" and _CURRENT_USER_INTERRUPTION.get()
+            else nullcontext()
+        ):
+            stop_feedback()
+            classification: TerminalClassification = (
+                "user_interruption"
+                if _CURRENT_USER_INTERRUPTION.get()
+                else "natural_completion"
             )
+            finalized_returncode = _finalize_subcommand(
+                logger,
+                name,
+                argv,
+                classification,
+                specific_result,
+                returncode=0,
+                emit_console=not tui_process,
+            )
+            if finalized_returncode != 0:
+                raise _FinalizedSubcommandExit(finalized_returncode)
+            if not tui_process:
+                terminal_state = (
+                    "interrupted"
+                    if classification == "user_interruption"
+                    else "completed"
+                )
     except _FinalizedSubcommandExit as exc:
         terminal_state = "failed"
         raise typer.Exit(exc.returncode) from exc

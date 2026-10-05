@@ -4,7 +4,6 @@ import json
 import re
 import stat
 import string
-from collections.abc import Collection
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 
@@ -113,30 +112,21 @@ def new_refactor_entry() -> RefactorEntry:
     }
 
 
-def select_refactor_target(
-    state: RefactorState,
-    excluded_paths: Collection[str] = (),
-) -> str | None:
-    """正本の優先順位で次の investigation target を選ぶ。"""
-    candidates = [
-        (path, entry)
-        for path, entry in state.items()
-        if entry["investigation_required"] and path not in excluded_paths
-    ]
-    if not candidates:
-        return None
-    return min(
-        candidates,
-        key=lambda item: (
-            item[1]["last_investigation_result"] != "not_investigated",
-            item[1]["last_investigated_at"] or "",
-            item[0],
+def refactor_cycle_targets(state: RefactorState) -> list[str]:
+    """引継ぎ要求、未調査、保存日時、path の順で全対象の巡回順を固定する。"""
+    return sorted(
+        state,
+        key=lambda path: (
+            not state[path]["investigation_required"],
+            state[path]["last_investigation_result"] != "not_investigated",
+            state[path]["last_investigated_at"] or "",
+            path,
         ),
-    )[0]
+    )
 
 
 def mark_all_refactor_targets_required(state: RefactorState) -> None:
-    """完了済み state から新しい full refactor cycle を開始する。"""
+    """調査履歴を保持したまま全 entry に次巡の調査要求を設定する。"""
     for entry in state.values():
         entry["investigation_required"] = True
 

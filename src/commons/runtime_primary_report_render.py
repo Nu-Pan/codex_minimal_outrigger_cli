@@ -50,7 +50,7 @@ def render_primary_report(
     elif spec.template == "session_fork":
         body = _session_fork_body(classification, result, logger, field_values)
     elif spec.template == "refactor_fork":
-        body = _refactor_fork_body(classification, result, logger)
+        body = _refactor_fork_body(classification, result, logger, field_values)
     elif spec.template == "session_join":
         body = _session_join_body(classification, result, logger, field_values)
     elif spec.template == "session_abandon":
@@ -533,6 +533,7 @@ def _refactor_fork_body(
     classification: TerminalClassification,
     result: TerminalResult,
     logger: SubcommandLogger,
+    fields: dict[str, object],
 ) -> list[str]:
     """refactor 固有 report の未確定項目を fallback でも明示する。"""
     not_fixed = "not_fixed"
@@ -540,6 +541,8 @@ def _refactor_fork_body(
         "# cmoc realization refactor fork report",
         _outcome_sentence(classification),
         "## Current fork",
+        f"- stage: {_field_status(fields.get('refactor_stage'))}",
+        f"- completed cycles / current cycle / cycle counts: {not_fixed}",
         f"- processed targets: {not_fixed}",
         f"- uninvestigated targets: {not_fixed}",
         "## Processing units",
@@ -558,6 +561,10 @@ def _refactor_fork_body(
         f"- findings: {not_fixed}",
         "## Change summary",
         f"- {not_fixed}",
+        "## Test timing",
+        "- baseline / full test duration / reduction: not measured",
+        "## Startup and rollback",
+        f"- {_field_status(fields.get('rollback_status'))}",
         "## 終端結果",
         *_terminal_lines(classification, result),
         "## warning とエラー",

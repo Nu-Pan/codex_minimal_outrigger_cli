@@ -213,7 +213,10 @@ def test_build_realization_findings_policy_renders_core_review_aspects() -> None
     assert "oracle file の具体的な要求と realization file の具体的な挙動" in rendered
     assert "realization file 上に明確に存在する致命的な問題" in rendered
     assert "oracle file 自体の問題" in rendered
-    assert "規定上必須とされていない事" in rendered
+    assert "明示要求のない事項を、仕様への不適合の根拠にしてはいけない" in rendered
+    assert "この call の目的として明示された改善" in rendered
+    assert "その目的に対応する対象箇所と具体的な改善根拠" in rendered
+    assert "この call の目的に含まれない一般的な品質改善" in rendered
     assert "調査開始時点ですでに解消されている問題" in rendered
 
 

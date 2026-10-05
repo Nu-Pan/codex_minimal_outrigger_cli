@@ -20,7 +20,7 @@ from commons.runtime_refactor import (
     RefactorState,
     is_normalized_relative_path,
     load_refactor_state,
-    select_refactor_target,
+    refactor_cycle_targets,
     sync_refactor_state,
     write_refactor_state,
 )
@@ -333,10 +333,10 @@ def test_refactor_state_rejects_non_directory_parent(
         write_refactor_state(root, {})
 
 
-def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
+def test_refactor_cycle_preserves_request_and_millisecond_priority(
     tmp_path: Path,
 ) -> None:
-    """target 選択が未調査 entry と古い調査時刻を優先する。"""
+    """引継ぎ要求を優先し、各群で未調査・保存されたミリ秒・path の順に並べる。"""
     root = make_repo(tmp_path)
     state = sync_refactor_state(root)
     state["README.md"].update(
@@ -347,18 +347,23 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
         }
     )
 
-    assert select_refactor_target(state) == "oracle/spec.md"
+    assert refactor_cycle_targets(state) == ["oracle/spec.md", "README.md"]
 
     state["oracle/spec.md"].update(
         {
             "last_investigation_result": "no_findings",
             "last_investigated_sha256": file_sha256(root / "oracle" / "spec.md"),
-            "last_investigated_at": "2026-02-01_00-00-00_000",
+            "last_investigated_at": "2026-01-01_00-00-00_001",
         }
     )
-    assert select_refactor_target(state) == "README.md"
-    assert select_refactor_target(state, {"README.md"}) == "oracle/spec.md"
-    assert select_refactor_target(state, set(state)) is None
+    assert refactor_cycle_targets(state) == ["README.md", "oracle/spec.md"]
+    state["README.md"]["last_investigated_at"] = "2026-01-01_00-00-00_002"
+    assert refactor_cycle_targets(state) == ["oracle/spec.md", "README.md"]
+    state["oracle/spec.md"]["last_investigated_at"] = "2026-01-01_00-00-00_002"
+    assert refactor_cycle_targets(state) == ["README.md", "oracle/spec.md"]
+    state["README.md"]["investigation_required"] = False
+    assert refactor_cycle_targets(state) == ["oracle/spec.md", "README.md"]
+    assert refactor_cycle_targets({}) == []
 
 
 def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:

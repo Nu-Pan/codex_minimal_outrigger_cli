@@ -1,9 +1,12 @@
 """回復の分類、理由変更、設定継承、再発と中断を観測する。"""
 
 import json
+import os
 import signal
 import subprocess
+import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
 from dataclasses import replace
@@ -446,6 +449,55 @@ def test_signal_cancellation_is_shared_with_workers():
         restore()
     assert signal.getsignal(signal.SIGINT) is previous
     assert recovery.current_recovery_cancellation() is None
+
+
+def test_deferred_commit_finishes_when_foreground_group_receives_sigint(tmp_path):
+    """Ctrl+C が親と commit 子 process に届いても、確定記録を終えてから中断する。"""
+    script = """
+import pathlib, subprocess, sys
+from commons.runtime_codex_recovery import defer_recovery_interruption
+try:
+    with defer_recovery_interruption():
+        subprocess.run([sys.executable, '-c',
+            "import pathlib, time; pathlib.Path('ready').touch(); "
+            "time.sleep(0.3); pathlib.Path('artifact').write_text('committed')"],
+            check=True)
+        pathlib.Path('record').write_text('confirmed')
+except KeyboardInterrupt:
+    print('stopped after commit')
+"""
+    repository = Path(__file__).resolve().parents[1]
+    environment = {
+        **os.environ,
+        "PYTHONPATH": os.pathsep.join(
+            str(repository / path) for path in ("src", "oracle/src")
+        ),
+    }
+    with subprocess.Popen(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        env=environment,
+        start_new_session=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ) as process:
+        try:
+            deadline = time.monotonic() + 5
+            while not (tmp_path / "ready").exists():
+                assert process.poll() is None
+                assert time.monotonic() < deadline
+                time.sleep(0.01)
+            os.killpg(process.pid, signal.SIGINT)
+            stdout, stderr = process.communicate(timeout=5)
+        finally:
+            if process.poll() is None:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.communicate(timeout=5)
+    assert process.returncode == 0, stderr
+    assert stdout == "stopped after commit\n"
+    assert (tmp_path / "artifact").read_text() == "committed"
+    assert (tmp_path / "record").read_text() == "confirmed"
 
 
 @pytest.mark.parametrize("different_model", [False, True])

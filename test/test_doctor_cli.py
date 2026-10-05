@@ -21,6 +21,7 @@ lock・CLI/config・Git index はテスト観点としては分かれるが、�
 
 import json
 import multiprocessing
+import signal
 import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -44,6 +45,121 @@ from config.cmoc_config import CmocConfig
 from main import app
 
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
+
+
+def test_refactor_preprocess_interruption_preserves_user_changes(tmp_path, monkeypatch):
+    """前処理中の停止は未確定修復だけを戻し、既存の index・作業差分を保持する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    run_doctor(root)
+    ignore = root / ".gitignore"
+    ignore.write_text(ignore.read_text() + "# staged by user\n")
+    run_git(root, "add", ".gitignore")
+    ignore.write_text(ignore.read_text() + "# unstaged by user\n")
+    (root / ".agents/.gitkeep").unlink()
+    for relative in ("oracle/test", "src", "test"):
+        (root / relative).rmdir()
+    before = run_git(root, "diff", "--binary").stdout
+    staged = run_git(root, "diff", "--cached", "--binary").stdout
+    head = run_git(root, "rev-parse", "HEAD").stdout
+
+    def interrupt_sync(*_args):
+        signal.raise_signal(signal.SIGINT)
+
+    monkeypatch.setattr(
+        doctor_module, "_synchronize_document_search_index", interrupt_sync
+    )
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert run_git(root, "rev-parse", "HEAD").stdout == head
+    assert run_git(root, "diff", "--binary").stdout == before
+    assert run_git(root, "diff", "--cached", "--binary").stdout == staged
+    assert all(
+        not (root / relative).exists() for relative in ("oracle/test", "src", "test")
+    )
+    report = terminal_primary_report(result).read_text()
+    assert 'completion_reason: "user_interruption"' in report
+    assert "run not established" in report
+    assert "cmoc run join" not in result.output
+
+
+def test_refactor_preprocess_interruption_keeps_committed_repairs(
+    tmp_path, monkeypatch
+):
+    """短い確定区間中の SIGINT は commit と index 復元を一体として完了する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    run_doctor(root)
+    (root / "src/new.py").write_text("VALUE = 1\n")
+    run_git(root, "add", "src/new.py")
+    run_git(root, "commit", "-m", "add refactor target")
+    head = run_git(root, "rev-parse", "HEAD").stdout
+    commit = doctor_module._commit_doctor_repairs
+
+    def commit_then_interrupt(*args, **kwargs):
+        commit(*args, **kwargs)
+        signal.raise_signal(signal.SIGINT)
+
+    monkeypatch.setattr(doctor_module, "_commit_doctor_repairs", commit_then_interrupt)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert run_git(root, "rev-parse", "HEAD").stdout != head
+    assert run_git(root, "status", "--short").stdout == ""
+    assert run_git(root, "ls-files", ".cmoc/gt/config.json").stdout.strip()
+    assert run_git(
+        root, "ls-files", ".cmoc/gt/realization/refactor/state.json"
+    ).stdout.strip()
+    assert "run not established" in terminal_primary_report(result).read_text()
+
+
+def test_refactor_preprocess_stop_restores_pending_linked_worktree_index(
+    tmp_path, monkeypatch
+):
+    """main の修復確定後に停止しても、後続 worktree の準備中 index を戻す。"""
+    root = make_repo(tmp_path)
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-refactor", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    run_doctor(linked)
+    (root / ".gitignore").write_text("")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "require main ignore repair")
+    (root / "README.md").write_text("staged by user\n")
+    run_git(root, "add", "README.md")
+    (root / "README.md").write_text("unstaged by user\n")
+    run_git(linked, "rm", ".agents/.gitkeep")
+    before = {
+        worktree: (
+            run_git(worktree, "diff", "--binary").stdout,
+            run_git(worktree, "diff", "--cached", "--binary").stdout,
+        )
+        for worktree in (root, linked)
+    }
+    head = run_git(root, "rev-parse", "HEAD").stdout
+    commit = doctor_module._commit_doctor_repairs
+
+    def interrupt_after_main_commit(*args, **kwargs):
+        assert args[0] == root
+        commit(*args, **kwargs)
+        signal.raise_signal(signal.SIGINT)
+
+    monkeypatch.setattr(
+        doctor_module, "_commit_doctor_repairs", interrupt_after_main_commit
+    )
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert run_git(root, "rev-parse", "HEAD").stdout != head
+    for worktree, (unstaged, staged) in before.items():
+        assert run_git(worktree, "diff", "--binary").stdout == unstaged
+        assert run_git(worktree, "diff", "--cached", "--binary").stdout == staged
+    assert not (linked / ".agents/.gitkeep").exists()
+    assert "run not established" in terminal_primary_report(result).read_text()
 
 
 def _new_subcommand_events(root: Path, previous: set[Path]) -> list[dict[str, object]]:

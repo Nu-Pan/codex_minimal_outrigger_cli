@@ -131,6 +131,8 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
             "state_before",
             "state_after",
             "refactor_state_path",
+            "refactor_stage",
+            "rollback_status",
             "completion_reason",
         ),
         "refactor_fork",

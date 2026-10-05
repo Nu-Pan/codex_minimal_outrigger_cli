@@ -61,6 +61,61 @@ def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interru
     assert tracking_path.read_text() == "111 222\n"
 
 
+@pytest.mark.parametrize("tracked", [False, True])
+def test_interruption_stops_tool_in_another_session(tmp_path, tracked):
+    """Native CLI の別 session の test/tool も止め、書込み process を残さない。"""
+    tracking_path = tmp_path / "run.pid"
+    tracking_path.write_text("111 222\n")
+    writer_pid = tmp_path / "writer.pid"
+    writer_script = (
+        "import os, pathlib, signal, sys, time; "
+        "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+        "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+        "time.sleep(30); pathlib.Path(sys.argv[2]).write_text('late write')"
+    )
+    parent_script = (
+        "import subprocess, sys; "
+        "child = subprocess.Popen([sys.executable, '-c', sys.argv[1], *sys.argv[2:]], "
+        "start_new_session=True); child.wait()"
+    )
+    argv = [
+        sys.executable,
+        "-c",
+        parent_script,
+        writer_script,
+        str(writer_pid),
+        str(tmp_path / "late.txt"),
+    ]
+    cancellation = threading.Event()
+
+    def cancel_when_ready():
+        for _ in range(300):
+            if writer_pid.exists():
+                cancellation.set()
+                return
+            threading.Event().wait(0.01)
+
+    cancel_thread = threading.Thread(target=cancel_when_ready)
+    cancel_thread.start()
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            options = dict(
+                text=True, capture_output=True, timeout=5, cancellation=cancellation
+            )
+            if tracked:
+                run_tracked_codex_subprocess(argv, tracking_path, **options)
+            else:
+                run_codex_subprocess(argv, **options)
+    finally:
+        cancel_thread.join(timeout=5)
+    assert not cancel_thread.is_alive()
+    assert not runtime_codex_profile.process_group_has_running_member(
+        int(writer_pid.read_text())
+    )
+    assert not (tmp_path / "late.txt").exists()
+    assert tracking_path.read_text() == "111 222\n"
+
+
 def test_open_process_fd_treats_invalid_pidfd_as_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -200,6 +255,45 @@ def test_stop_process_group_rejects_reused_group_before_signal(
         runtime_codex_profile.stop_process_group(111, expected_members=((111, 10),))
 
     assert sent == []
+
+
+def test_stop_process_group_preserves_resources_when_tool_identity_is_unreadable(
+    monkeypatch,
+):
+    """子の確認失敗を停止済みとせず、親の終了前に回収失敗を返す。"""
+    sent = []
+    closed = []
+    snapshots = iter([((222, 20),), ()])
+    monkeypatch.setattr(
+        runtime_codex_profile, "process_group_members", lambda _group: ((111, 10),)
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile, "_descendant_processes", lambda _parents: next(snapshots)
+    )
+    monkeypatch.setattr(runtime_codex_profile, "open_process_fd", lambda pid, *_: pid)
+    monkeypatch.setattr(
+        runtime_codex_profile, "process_start_time", lambda pid: {111: 10, 222: 20}[pid]
+    )
+    monkeypatch.setattr(runtime_codex_profile, "wait_process_fd_exit", lambda *_: False)
+
+    def fields(pid):
+        if pid == 222:
+            return None
+        result = ["0"] * 20
+        result[0], result[19] = "T", "10"
+        return result
+
+    monkeypatch.setattr(runtime_codex_profile, "_process_stat", fields)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "send_process_signal",
+        lambda _fd, pid, sig, *_: sent.append((pid, sig)),
+    )
+    monkeypatch.setattr(runtime_codex_profile.os, "close", closed.append)
+    with pytest.raises(CmocError, match="子 process を確認できません"):
+        runtime_codex_profile.stop_process_group(111)
+    assert sent == [(111, signal.SIGSTOP), (222, signal.SIGSTOP)]
+    assert set(closed) == {111, 222}
 
 
 def test_stop_process_group_rejects_snapshot_without_expected_leader(
