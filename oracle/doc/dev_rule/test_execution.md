@@ -134,6 +134,8 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 - 追加検証を指示されている場合は、その検証も最後の変更後に fresh に実行する。
 - Ruff check、Ruff format check、mypy、および全 pytest command は repository 所定の sandbox 内で実行する。
 
+realization refactor で変更を確定する時点は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「確定前の検証」に従う。反復する workload であることを理由に、本節の完了ゲートを複数の変更単位や一巡の終了まで先送りしない。停止要求で検査を打ち切った場合は、その結果を未完了とし、停止・rollback のためにゲートを追加実行しない。
+
 ## 実経路統合テストを実行する
 
 本書の「通常検証と追加検証を選択する」に従って追加検証の対象となった実経路統合テストを、次の別 command で実行する。変更中の focused test では `test` を対応する test paths または node ID に置き換え、fresh な完了ゲートでは実経路統合テストの全件を対象とする。

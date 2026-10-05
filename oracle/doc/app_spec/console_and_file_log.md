@@ -56,6 +56,8 @@ cmoc は、人間向け console ログの最初の出力として、確定した
 - Codex CLI の回復待ちでは、現在の待機理由、待機の継続、次回確認の目安、理由変更、復旧後の再開、および待機終了の理由を簡潔に示す。待機・再開の判断は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「回復待ちと再開」を正本とする
 - 個別 probe の呼び出し情報や結果は、本書の「診断記録」に残す。probe ごとの詳細を進行通知へ列挙せず、probe の成功をサブコマンドの完了として表示しない
 
+realization refactor の巡回・確定成果・比較可能なテスト時間は、人間が停止を判断するための進捗として表示する。項目と未完了結果の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「実行中の進捗」に従い、個別サブステップの経過時間とは区別する。
+
 ## primary report
 
 primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。

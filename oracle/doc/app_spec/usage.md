@@ -20,10 +20,11 @@
     3. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
     4. 人間が `cmoc realization apply fork` を呼び出す。
     5. 人間が `cmoc run join` で apply run を取り込むか、`cmoc run abandon` で破棄する。
-4. 必要に応じて、ファイル単位の網羅的な追従を行う。
+4. 必要に応じて、仕様への適合と必要な回帰検出能力を保ち、テストと実装のムダを網羅的に削減する。
     1. 人間が `cmoc realization refactor fork` を呼び出す。
-    2. 人間が `cmoc run join` で確定済み成果物を取り込むか、`cmoc run abandon` で破棄する。
-    3. 調査要求が残っている場合は、join 後に新しい `cmoc realization refactor fork` を開始する。
+    2. 巡回の進捗、確定済み変更、測定済みのテスト時間を見て、人間が適当な時点で `Ctrl+C` を押す。変更なしの巡も反復し、全件処理や数値目標の達成では自動終了しない。
+    3. 正常終了後、人間が `cmoc run join` で確定済み成果物と調査状態を取り込むか、`cmoc run abandon` で破棄する。
+    4. 続ける場合は、join 後に新しい `cmoc realization refactor fork` を開始する。同じ run の実行途中は復元しない。
 5. 必要に応じて、人間が `cmoc feedback report` を呼び出す。
     - session worktree と staging area は clean にする。
     - cmoc は run 上で安全な realization file の修正を issue ごとに commit し、処理中の新しい issue も intake wave で可能な限り処理する。

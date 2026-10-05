@@ -25,6 +25,12 @@
 - pytest の `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
 - `{{cmoc-root}}/oracle/doc/app_spec/download_asset_cache.md` の「保存先と共有範囲」が定める固定キャッシュパスも、テスト時は `{{test-root}}` 内へ置き換え、実ユーザーのキャッシュを読み書きしない。共有を検証する複数の cmoc 配置・process は、同じテスト内の置換先を使用する
 
+## テストの削除・統合
+
+検出能力を維持する判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「realization refactor の改善判断」に従う。cmoc で維持すべき検証範囲は、本書の goal と個別仕様の検証要件から特定する。境界条件、失敗時挙動、外部から観測可能な結果に加え、実経路統合テストについては本書の「検証要件」が定める公開末端サブコマンドとの対応を維持する。
+
+通常検証で実経路統合テストを実行しないことは、そのケースを不要とする根拠にはならない。実行の選択は `{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」に従い、Fake Codex CLI と Real Codex CLI の役割の違いを維持する。
+
 ## 実経路統合テスト
 
 実経路統合テストは、利用者向け CLI entrypoint を独立 process で実行する realization test である。本番と同じ code path、実在の外部 executable、および必要な実推論を使い、response 後の処理と外部から観測可能な結果まで検証する。

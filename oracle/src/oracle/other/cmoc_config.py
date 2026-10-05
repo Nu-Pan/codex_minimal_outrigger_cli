@@ -176,18 +176,11 @@ class CmocConfigCodex:
             ),
             # NOTE
             #   ファイル単位処理なので呼び出し回数が非常に多く、その分コストが掛かる
-            #   しかし refactor を呼ぶ時というのは、リミットを燃やし尽くしたい時
-            #   よって、バランスの良い gpt-6.1-sol を選ぶ
+            #   仕様適合と検出能力を保つ改善の判断には品質も必要なので、バランスの良い gpt-6.1-sol を選ぶ
             "build_realization_refactor_fork_file_review_and_fix_parameter": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6.1-sol",
                 reasoning_effort="max",
-            ),
-            # NOTE 単純な要約タスクなので Luna で良い
-            "build_realization_refactor_fork_change_summary_parameter": CodexCallConfig(
-                model_provider="openai",
-                model="gpt-6-luna",
-                reasoning_effort="medium",
             ),
             # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
             "build_quota_availability_probe_parameter": CodexCallConfig(

@@ -1,14 +1,15 @@
 {
   "type": "object",
-  "description": "realization refactor のファイル単位レビュー・修正 agent call の出力。",
+  "description": "ファイルを起点とする、仕様適合と必要な回帰検出能力を保ったテスト・実装の改善結果。",
   "additionalProperties": false,
   "required": [
-    "findings"
+    "findings",
+    "verification"
   ],
   "properties": {
     "findings": {
       "type": "array",
-      "description": "この agent call が返す所見と対応結果のリスト。所見がない場合は空配列。",
+      "description": "この agent call で発見した仕様不適合、致命的な問題、または具体的な根拠のあるムダの削減に関する所見と対応結果。この call で変更して解消した所見も含む。所見がない場合は空配列。",
       "items": {
         "type": "object",
         "description": "この agent call で発見した所見 1 件と、その対応結果。",
@@ -77,15 +78,15 @@
           },
           "oracle_requirement": {
             "type": "string",
-            "description": "所見に関係する oracle file の要求、または対応する明示要求がない旨。"
+            "description": "維持・回復すべき oracle file の要求。対応する明示要求がない場合はその旨を示す。適合する実装への改善を、仕様不適合と偽って説明しない。"
           },
           "observed_implementation": {
             "type": "string",
-            "description": "調査時点の実装が実際にどうなっていたか。"
+            "description": "調査時点の実装・テスト・準備処理などの具体的な状態。"
           },
           "reason": {
             "type": "string",
-            "description": "所見を要修正とする理由。"
+            "description": "修正・改善の具体的な根拠。ムダの削減では不要・重複・過剰と判断した理由と、テストの負担を減らす関係を示す。テスト削除・統合では、検出する回帰と残る検証による検出能力の維持、または現行仕様上不要な根拠を説明する。件数・行数の減少だけを理由にしない。"
           },
           "resolution": {
             "type": "object",
@@ -103,18 +104,43 @@
                   "fixed",
                   "unresolved"
                 ],
-                "description": "所見の対応状態。fixed は修正済みとして報告し、unresolved は未解消として報告する。"
+                "description": "fixed は、この call 内で対応する realization file を実際に変更し、必要な検証を完了して解消した場合だけ使用する。unresolved は未解消の場合に使用する。"
               },
               "summary": {
                 "type": "string",
-                "description": "実施した修正、または未解消となった理由の要約。"
+                "description": "実施した修正・改善、または未解消となった理由の要約。期待効果と実測した効果を区別する。"
               },
               "verification": {
                 "type": "string",
-                "description": "修正後に実施した検証と、その結果の要約。"
+                "description": "この所見に対応する検証と結果の要約。処理単位全体に共通する品質検証はトップレベルの verification に記載する。未実行・途中・失敗を成功としない。時間を測った場合は条件を示し、full test 1 回の時間と検査の実行回数による作業全体の時間を区別する。"
               }
             }
           }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "description": "この call の出力時点に残る差分全体について、最後の変更後に行った品質検証の結果。",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "not_required",
+            "failed",
+            "incomplete"
+          ],
+          "description": "passed は所定の品質検証を最後の変更後にすべて成功した場合。not_required は realization file の net 差分がなく、変更のための検証が不要な場合。failed は必要な検証に失敗が残る場合、incomplete は必要な検証に未実行・途中・判定不能が残る場合。full test が必要なら focused test の成功だけで passed にしない。"
+        },
+        "summary": {
+          "type": "string",
+          "description": "必要な検証範囲、実際の command と結果、skip や不足の理由、および参照できる検証記録を記す。通常検証と、明示指示により追加した Real Codex CLI を使う test を区別する。明示指示がない test は実行対象外として扱う。not_required では差分がないことを示す。"
         }
       }
     }

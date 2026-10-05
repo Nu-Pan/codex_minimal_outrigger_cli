@@ -12,6 +12,8 @@ doctor preprocess は、各サブコマンドに共通する実行環境・設�
 
 検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・作業用配置先・コンポーネントまたは索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を作業用配置先の存在保証、必須の検索用コンポーネント、または索引同期へ適用してはならない。
 
+realization refactor fork の開始前処理をユーザー中断で打ち切る場合は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「ユーザー中断」に従い、前処理の未完了だけを理由に fork をエラー終了させない。未検証の前処理を成功扱いにして本命処理へ進むのではなく、未完了の段階を記録して fork の中断処理へ移る。
+
 ## 共通実行環境の検証
 
 cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利用できることを検証する。検索用コンポーネントとして準備する依存は、本書の「検索用コンポーネントの準備と検査」の経路で扱う。Python 環境の前提は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」に従う。Codex CLI に渡す環境については、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
@@ -165,6 +167,8 @@ doctor preprocess の後に作成する run worktree の初回同期にも、同
 - file を git 追跡対象に追加する
 - 同文書の「entry 集合の同期」に従って entry 集合と調査要求を同期する
 - file が存在するものの schema を満たさない場合は、既存の調査履歴を破棄せずエラー終了する
+
+既存履歴と新しい改善目的の調査実績の区別は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「調査履歴と巡回の区別」に従う。doctor preprocess は履歴を保持して同期し、refactor の一巡を開始したり、旧履歴を新目的の調査済み実績へ変換したりしない。
 
 ### editing run の join での同期時点
 
