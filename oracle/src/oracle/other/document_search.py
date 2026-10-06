@@ -77,10 +77,10 @@ SEARCH_TOOL_INPUT_SCHEMA: dict[str, object] = {
 
 
 def build_search_tool_description(work_root: Path) -> str:
-    """検索接続の固定 context を含む、agent 向けの tool 利用説明を構築する。
+    """検索機能の概要を伝える短い tool 説明文を返す。
 
     Args:
-        work_root: 検索接続に設定された work-root の絶対パス。
+        work_root: 検索接続に設定された work-root の絶対パス。文面には使用しない。
 
     Returns:
         MCP の tool description として公開する文面。
@@ -88,9 +88,9 @@ def build_search_tool_description(work_root: Path) -> str:
 
     NOTE
         意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
-        「検索と routing」「対象と信頼境界」「stdio MCP と失敗の公開」を参照。
+        「stdio MCP と失敗の公開」を参照。
     """
-    # 構造や値の定義は schema に置き、ここでは検索対象と読取り判断への使い方を伝える。
+    # 引数・結果の構造や値の意味は入出力 schema に置き、ここでは検索機能の概要を伝える。
     return f"oracle doc を意味検索し、候補の位置情報と類似度を返す。"
 
 

@@ -23,7 +23,7 @@ def build_routing_policy(
         意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
         「検索と routing」「対象と信頼境界」を参照。
     """
-    # 利用可否に応じた検索方針だけを示し、使い方は tool 自体の説明に委ねる。
+    # 検索・原文確認・判断の規則を伝え、tool の機能概要と入出力の詳細は公開定義に委ねる。
     return (
         {},
         SDHeader(

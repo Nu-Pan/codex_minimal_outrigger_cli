@@ -26,7 +26,7 @@ agent が oracle doc の仕様文章を検索するときは、キーワード�
 
 類似度は同じ検索内で原文の読取り優先度を判断する材料であり、`max_similarity` は範囲全体の関連度や関連確率を保証しない。共通の必読閾値や、類似度の閾値による候補の自動除外は対象に含めない。
 
-agent の検索・原文確認・判断規則を伝える routing policy の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/routing.py` の `build_routing_policy` へ委譲する。完全 prompt への組込みは、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲し、検索の有効状態を実際の call と一致させる。tool の使い方は公開 tool 定義で伝え、routing policy へ重複させない。
+agent の検索・原文確認・判断規則を伝える routing policy の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/routing.py` の `build_routing_policy` へ委譲する。完全 prompt への組込みは、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲し、検索の有効状態を実際の call と一致させる。公開 tool 定義との分担は、本書の「stdio MCP と失敗の公開」に従い、その内容を routing policy へ重複させない。
 
 ## 同期と cache
 
@@ -107,12 +107,14 @@ doctor preprocess の索引同期には、初回構築や大量の差分を処�
 
 ## stdio MCP と失敗の公開
 
-公開 tool は検索だけとし、query と任意の候補数上限 `limit` を受け取る。`tools/list` の公開定義だけで、補足 prompt や仕様文書を読まずに利用し、類似度の意味と読取り優先度への使い方を判断できるようにする。正確な詳細は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の次の定義へ委譲する。
+公開 tool は検索だけとし、query と任意の候補数上限 `limit` を受け取る。`tools/list` の公開定義では、説明文が検索機能の概要を、入出力 schema が引数・結果の構造や値の意味を伝える。agent の検索・原文確認・判断規則は、本書の「検索と routing」に従う。
+
+公開定義の正確な詳細は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の次の定義へ委譲する。
 
 | 委譲先 | 所有する詳細 |
 | --- | --- |
 | `SEARCH_MCP_SERVER`、`SEARCH_TOOL_NAME`、`SearchErrorCode` | 公開名と失敗 code。 |
-| `build_search_tool_description` | 機能・検索対象・接続の work-root、および類似度の利用目的と判断上の限界を伝える説明文。 |
+| `build_search_tool_description` | 検索機能の概要を伝える説明文。 |
 | `SEARCH_TOOL_INPUT_SCHEMA` | 引数の構造・制約・意味と省略時の扱い。 |
 | `SEARCH_TOOL_OUTPUT_SCHEMA` | 成功・成功ゼロ件・検索失敗の構造、field・型・数値制約、および値と順序の説明。 |
 
@@ -144,7 +146,7 @@ tuning 設定の field・型・数値制約・項目間制約・暫定既定値�
 | 件数上限 | `limit` の省略時・指定時と候補不足を含め、集約・統合前の採用候補数に上限を適用する。集約・統合後の件数が減っても、その分を追加採用して上限を超えない。 |
 | 成功ゼロ件と失敗 | 正常に確認できた空集合・全対象が空白の状態を成功ゼロ件とし、検索失敗と区別する。非数値・非有限値・値域外の類似度は `MODEL_FAILURE` とし、成功結果を返さない。 |
 | 公開出力 | 成功・成功ゼロ件・失敗が公開 schema に適合し、`structuredContent` と JSON text が同じ値を表す。返却処理と結果の利用側が schema の行範囲 object と行番号の制約に対応する。 |
-| 公開利用説明 | 公開 tool 定義だけで、類似度の尺度・統合時の意味・順序・利用目的と限界を解釈でき、現在の原文を読んで判断する責務が分かる。 |
+| 公開利用説明 | `tools/list` の説明文と入出力 schema が「stdio MCP と失敗の公開」の委譲先と一致し、同節の役割分担を満たす。 |
 
 検索用のモデル・runtime・ライブラリと準備に必要な依存物について、`{{cmoc-root}}/oracle/doc/app_spec/download_asset_cache.md` の「診断と受入条件」を満たすことを確認する。そこでの取得関連の通信・取得回数と、本書の動作検証・文書埋め込み生成数は別に判定する。
 
