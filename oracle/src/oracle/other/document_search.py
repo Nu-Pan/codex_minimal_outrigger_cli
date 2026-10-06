@@ -91,7 +91,7 @@ def build_search_tool_description(work_root: Path) -> str:
         「stdio MCP と失敗の公開」を参照。
     """
     # 引数・結果の構造や値の意味は入出力 schema に置き、ここでは検索機能の概要を伝える。
-    return f"oracle doc を意味検索し、候補の位置情報と類似度を返す。"
+    return "oracle doc を意味検索し、候補の位置情報と類似度を返す。"
 
 
 type SearchErrorCode = Literal[
