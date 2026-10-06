@@ -13,7 +13,7 @@ import os
 import shutil
 import stat
 import subprocess
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -95,6 +95,7 @@ class WorktreeSnapshot:
 
     root: Path
     entries: tuple[tuple[str, WorktreeArtifact], ...]
+    paths: tuple[str, ...] | None = None
 
     def changed_paths(self, other: "WorktreeSnapshot") -> frozenset[str]:
         """2 snapshot 間で filesystem 状態が異なる repository 相対 path を返す。"""
@@ -109,13 +110,22 @@ class WorktreeSnapshot:
         )
 
 
-def capture_worktree_snapshot(root: Path) -> WorktreeSnapshot:
+def capture_worktree_snapshot(
+    root: Path, *, paths: Collection[str] | None = None
+) -> WorktreeSnapshot:
     """追跡済みまたは非 ignore の作業成果物を復元可能な形で取得する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Codex call log、schema store、ID 採番を含む管理 state は snapshot へ含めず、
     # agent が扱う非 ignore の作業成果物だけを固定する。
     root = root.absolute()
     entries: dict[str, WorktreeArtifact] = {}
+    if paths is not None:
+        # 前処理の rollback は、所有する path だけを保存し、人間の差分を触らない。
+        for selected_path in paths:
+            artifact_path, artifact = _read_worktree_artifact(root, Path(selected_path))
+            if artifact is not None:
+                entries[artifact_path] = artifact
+        return WorktreeSnapshot(root, tuple(sorted(entries.items())), tuple(paths))
     for repository in _snapshot_repositories(root):
         repository_root = repository.relative_to(root)
         fields = run_git(
@@ -178,7 +188,7 @@ def restore_worktree_snapshot(snapshot: WorktreeSnapshot) -> None:
     frozen = dict(snapshot.entries)
     seen: set[frozenset[str]] = set()
     while True:
-        current = capture_worktree_snapshot(snapshot.root)
+        current = capture_worktree_snapshot(snapshot.root, paths=snapshot.paths)
         changed = snapshot.changed_paths(current)
         if not changed:
             return

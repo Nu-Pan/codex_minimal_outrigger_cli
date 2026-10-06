@@ -374,7 +374,7 @@ def stop_process_group(
     expected_leader: tuple[int, int] | None = None,
     expected_members: tuple[tuple[int, int], ...] | None = None,
 ) -> None:
-    """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
+    """Codex と tool の process tree を同一性を固定して停止・回収する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
     # 初回 snapshot と同じ group identity が消えた後の PGID 再利用へ signal を送らない。
@@ -426,6 +426,18 @@ def stop_process_group(
             f"pid: {expected_leader[0]}\npgid: {process_group_id}",
         )
     known_members = set(initial_members)
+    # CLI の tool/test は別 session に配置されるため、CLI group だけでは止まらない。
+    # Codex 0.160.0 の実装で確認した境界:
+    # https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/spawn.rs#L87-L105
+    # https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/utils/pty/src/process_group.rs#L43-L54
+    if _stop_codex_process_tree(initial_members):
+        if _wait_tracked_process_group_exit(process_group_id, known_members, 5.0):
+            return
+        raise CmocError(
+            "実行中 Codex subprocess の process group を停止確認できません。",
+            ["残存 process を確認して停止してください。"],
+            f"pgid: {process_group_id}",
+        )
     _signal_process_members(initial_members, signal.SIGTERM)
     if _wait_tracked_process_group_exit(process_group_id, known_members, 5.0):
         return
@@ -447,6 +459,106 @@ def stop_process_group(
         "実行中 Codex subprocess を停止できません。",
         ["Codex subprocess を確認して停止後に再実行してください。"],
         f"pgid: {process_group_id}",
+    )
+
+
+def _descendant_processes(
+    parents: set[tuple[int, int]],
+) -> tuple[tuple[int, int], ...]:
+    # parent の starttime を再確認し、別 process の子を取り込まない。
+    parent_ids = {pid for pid, start in parents if process_start_time(pid) == start}
+    descendants: list[tuple[int, int]] = []
+    for path in Path("/proc").iterdir():
+        if not path.name.isdigit():
+            continue
+        fields = _process_stat(int(path.name))
+        if fields is not None and fields[0] != "Z" and int(fields[1]) in parent_ids:
+            descendants.append((int(path.name), int(fields[19])))
+    return tuple(descendants)
+
+
+def _stop_codex_process_tree(members: tuple[tuple[int, int], ...]) -> bool:
+    # 親を先に凍結し、子 session も pidfd で固定してから停止を確認する。
+    # /proc の読取失敗を process の終了として扱わない。
+    process_fds: dict[tuple[int, int], int] = {}
+    deadline = time.monotonic() + 2.0
+    known: set[tuple[int, int]] = set()
+    pending = set(members)
+    try:
+        while pending:
+            for identity in pending:
+                pid, start = identity
+                process_fd = _open_codex_member_fd(pid, start)
+                if process_fd is not None:
+                    process_fds[identity] = process_fd
+                    send_process_signal(process_fd, pid, signal.SIGSTOP, "Codex tool")
+            known.update(pending)
+            # STOP の配送を確認してから子を列挙し、worker 生成との競合を閉じる。
+            for (pid, start), process_fd in process_fds.items():
+                while not wait_process_fd_exit(process_fd, 0):
+                    fields = _process_stat(pid)
+                    if fields is None or int(fields[19]) != start:
+                        raise CmocError(
+                            "Codex tool の子 process を確認できません。",
+                            ["残存 process を確認して停止してください。"],
+                            f"pid: {pid}",
+                        )
+                    if fields[0] in {"T", "t", "Z"}:
+                        break
+                    if time.monotonic() >= deadline:
+                        raise CmocError(
+                            "Codex tool の子 process を停止確認できません。",
+                            [
+                                "残存 process を停止してから join または abandon してください。"
+                            ],
+                            f"process identities: {sorted(known)}",
+                        )
+                    time.sleep(0.01)
+            pending = set(_descendant_processes(known)) - known
+        # 子の列挙を終えたら親も再開せず終了させ、worker の追加を防ぐ。
+        for pid, start in process_fds:
+            send_process_signal(
+                process_fds[(pid, start)], pid, signal.SIGKILL, "Codex tool"
+            )
+        for pid, start in process_fds:
+            if not wait_process_fd_exit(
+                process_fds[(pid, start)], max(0, deadline - time.monotonic())
+            ):
+                raise CmocError(
+                    "Codex tool の子 process を回収できません。",
+                    ["残存 process を停止してから join または abandon してください。"],
+                    f"process identities: {sorted(process_fds)}",
+                )
+        return bool(process_fds)
+    finally:
+        for process_fd in process_fds.values():
+            os.close(process_fd)
+
+
+def _open_codex_member_fd(pid: int, expected_start: int) -> int | None:
+    """終了・PID 再利用と確認不能を分けて、停止対象の pidfd を固定する。"""
+    process_fd = open_process_fd(pid, "Codex tool")
+    if process_fd is None:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return None
+    current_start = process_start_time(pid)
+    if current_start is not None and current_start != expected_start:
+        if process_fd is not None:
+            os.close(process_fd)
+        return None
+    if process_fd is not None and current_start == expected_start:
+        return process_fd
+    exited = process_fd is not None and wait_process_fd_exit(process_fd, 0)
+    if process_fd is not None:
+        os.close(process_fd)
+    if exited:
+        return None
+    raise CmocError(
+        "Codex tool の子 process を安全に確認・停止できません。",
+        ["残存 process を確認して停止してください。"],
+        f"pid: {pid}",
     )
 
 
@@ -1163,11 +1275,15 @@ def _kill_codex_process_group(process: subprocess.Popen[Any]) -> None:
         if process_group_has_running_member(process.pid):
             raise _unverified_process_group_error(process.pid)
         return
-    # 生きた専用 session leader は、この thread が reap するまで PID を保持する。
-    try:
-        os.killpg(process.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
+    # Native CLI の test/tool は別 group なので、親を壊す前に子も停止・確認する。
+    start = process_start_time(process.pid)
+    if start is None:
+        raise _unverified_process_group_error(process.pid)
+    stop_process_group(
+        process.pid,
+        expected_leader=(process.pid, start),
+        expected_members=((process.pid, start),),
+    )
 
 
 def _communicate_codex_process(

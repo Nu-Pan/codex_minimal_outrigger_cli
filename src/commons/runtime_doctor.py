@@ -20,12 +20,16 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Collection, Iterator
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager, nullcontext
 from dataclasses import asdict
 from pathlib import Path
 
 from oracle.other.cmoc_config import DocumentSearchConfig
 
+from .runtime_codex_recovery import (
+    check_recovery_interruption,
+    defer_recovery_interruption,
+)
 from .runtime_config import sync_config
 from .runtime_document_search import DocumentSearch, SearchError, SyncResult
 from .runtime_document_search_setup import (
@@ -42,9 +46,11 @@ from .runtime_feedback import (
 )
 from .runtime_feedback_store import uuid7_prefixed
 from .runtime_git import (
+    capture_worktree_snapshot,
     ensure_cmoc_ignored,
     git_common_dir,
     require_cmoc_ignored,
+    restore_worktree_snapshot,
     reuse_git_path_queries,
     run_git,
     with_cmoc_ignore_pattern,
@@ -169,6 +175,7 @@ def run_doctor_preprocess(
     *,
     explicit_doctor: bool = False,
     sync_refactor_entries: bool = True,
+    rollback_on_interruption: bool = False,
 ) -> None:
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
@@ -221,7 +228,6 @@ def run_doctor_preprocess(
         for lock_path in sorted(lock_roots):
             locks.enter_context(doctor_lock(lock_roots[lock_path]))
         main_root = repo_root(root)
-        ensure_work_directories(root)
         repair_roots = [main_root] if main_root == root else [main_root, root]
         if explicit_doctor and installation_root not in repair_roots:
             repair_roots.append(installation_root)
@@ -235,196 +241,293 @@ def run_doctor_preprocess(
                     f"cmoc-root: {installation_root}\nreason: {exc.detail}",
                 ) from exc
 
-        repairs: list[tuple[Path, Path, bool, bool, bool, set[str]]] = []
-        original_indexes: list[tuple[Path, Path]] = []
-        try:
+        # refactor 開始準備が所有する file と不足 directory だけを記録する。
+        preparation_snapshots = {}
+        missing_directories: set[Path] = set()
+        if rollback_on_interruption:
             for repair_root in repair_roots:
-                include_config = repair_root == root
-                include_agents = repair_root == root
-                include_gu_ignore = True
-                original_index_path = _copy_current_index(repair_root)
-                original_indexes.append((repair_root, original_index_path))
-                preserved_runtime_paths = (
-                    _preexisting_runtime_paths(repair_root, original_index_path)
-                    if include_config
-                    else set()
-                )
-                # ensure_cmoc_ignored と _ensure_agents_tracked は通常 index を
-                # 変更するため、後続処理の失敗時も元の staged 状態へ戻せるようにする。
-                if include_gu_ignore:
-                    ensure_cmoc_ignored(repair_root)
-                agents_gitkeep_added = (
-                    _ensure_agents_tracked(repair_root) if include_agents else False
-                )
-                repairs.append(
-                    (
-                        repair_root,
-                        original_index_path,
-                        agents_gitkeep_added,
-                        include_config,
-                        include_gu_ignore,
-                        preserved_runtime_paths,
+                paths = [".gitignore"]
+                if repair_root == root:
+                    paths.extend(
+                        [
+                            ".agents/.gitkeep",
+                            str(config_path(root).relative_to(root)),
+                            str(refactor_state_path(root).relative_to(root)),
+                        ]
                     )
+                preparation_snapshots[repair_root] = capture_worktree_snapshot(
+                    repair_root,
+                    paths=paths,
                 )
+                directories = [repair_root / path for path in paths]
+                if repair_root == root:
+                    directories.extend(
+                        root / path / ".placeholder"
+                        for path in (
+                            "oracle/doc",
+                            "oracle/src",
+                            "oracle/test",
+                            "src",
+                            "test",
+                        )
+                    )
+                for path in directories:
+                    for parent in path.parents:
+                        if parent == repair_root:
+                            break
+                        if not parent.exists() and not parent.is_symlink():
+                            missing_directories.add(parent)
+        try:
+            ensure_work_directories(root)
+            repairs: list[tuple[Path, Path, bool, bool, bool, set[str]]] = []
+            original_indexes: list[tuple[Path, Path]] = []
+            try:
+                for repair_root in repair_roots:
+                    include_config = repair_root == root
+                    include_agents = repair_root == root
+                    include_gu_ignore = True
+                    original_index_path = _copy_current_index(repair_root)
+                    original_indexes.append((repair_root, original_index_path))
+                    preserved_runtime_paths = (
+                        _preexisting_runtime_paths(repair_root, original_index_path)
+                        if include_config
+                        else set()
+                    )
+                    # ensure_cmoc_ignored と _ensure_agents_tracked は通常 index を
+                    # 変更するため、後続処理の失敗時も元の staged 状態へ戻せるようにする。
+                    if include_gu_ignore:
+                        ensure_cmoc_ignored(repair_root)
+                    agents_gitkeep_added = (
+                        _ensure_agents_tracked(repair_root) if include_agents else False
+                    )
+                    repairs.append(
+                        (
+                            repair_root,
+                            original_index_path,
+                            agents_gitkeep_added,
+                            include_config,
+                            include_gu_ignore,
+                            preserved_runtime_paths,
+                        )
+                    )
 
-            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-            # ignore と .agents の保証後に、config と refactor state を current
-            # work-root だけで同期する。index には直接触れず、後続の一時 index
-            # で他の doctor 修復と同じ commit にまとめる。
-            update_primary_report_fields(config_validation="失敗")
+                # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+                # ignore と .agents の保証後に、config と refactor state を current
+                # work-root だけで同期する。index には直接触れず、後続の一時 index
+                # で他の doctor 修復と同じ commit にまとめる。
+                update_primary_report_fields(config_validation="失敗")
 
-            def report_config_candidate(
-                generated: bool, additions: dict[str, object]
-            ) -> None:
-                """保存前の補完候補も失敗 report へ残す。"""
+                def report_config_candidate(
+                    generated: bool, additions: dict[str, object]
+                ) -> None:
+                    """保存前の補完候補も失敗 report へ残す。"""
+                    update_primary_report_fields(
+                        config_generation="新規ファイル候補"
+                        if generated
+                        else "既存ファイル",
+                        config_additions=additions,
+                    )
+
+                config_result = sync_config(
+                    root,
+                    repair_missing=explicit_doctor,
+                    on_candidate=report_config_candidate if explicit_doctor else None,
+                )
                 update_primary_report_fields(
-                    config_generation="新規ファイル候補"
-                    if generated
+                    config_generation="新規生成"
+                    if config_result.generated
                     else "既存ファイル",
-                    config_additions=additions,
+                    config_additions=config_result.additions,
+                    config_validation="成功",
+                    config_saved=config_result.saved,
+                    search_config=asdict(config_result.config.document_search),
+                    material_condition=verification_condition(
+                        config_result.config.document_search
+                    ),
                 )
-
-            config_result = sync_config(
-                root,
-                repair_missing=explicit_doctor,
-                on_candidate=report_config_candidate if explicit_doctor else None,
-            )
-            update_primary_report_fields(
-                config_generation="新規生成"
-                if config_result.generated
-                else "既存ファイル",
-                config_additions=config_result.additions,
-                config_validation="成功",
-                config_saved=config_result.saved,
-                search_config=asdict(config_result.config.document_search),
-                material_condition=verification_condition(
-                    config_result.config.document_search
-                ),
-            )
-            sync_refactor_state(root, sync_entries=sync_refactor_entries)
-            update_primary_report_fields(management_validation="成功")
-            try:
-                assert config_result.config.document_search is not None
-                if explicit_doctor:
-                    material_result = prepare_document_search_materials(
-                        installation_root, config_result.config.document_search
-                    )
-                else:
-                    material_path = require_document_search_materials(
-                        installation_root, config_result.config.document_search
-                    )
-                    material_result = {
-                        "status": "verified",
-                        "path": str(material_path),
-                        "models": "reused",
-                    }
-            except (
-                SearchError,
-                OSError,
-                ValueError,
-                subprocess.SubprocessError,
-            ) as exc:
-                update_primary_report_fields(
-                    material_validation="失敗",
-                    material_status="失敗",
-                    material_models="未完了",
-                    material_failure=str(exc),
-                    material_identity_check="未完了",
-                    material_runtime_check="未完了",
-                    material_document_embedding="未完了",
-                    material_query_embedding="未完了",
-                    material_remaining_state="現在の条件では準備済みと扱わず、再実行時に照合する",
-                )
-                action = (
-                    "依存・権限・ネットワークを確認して cmoc doctor を再実行してください。"
-                    if explicit_doctor
-                    else f"対象 work-root ({root}) で cmoc doctor を実行してください。"
-                )
-                raise CmocError(
-                    "検索用コンポーネントの準備状態を確認できません。",
-                    [action],
-                    f"cmoc-root: {installation_root}\npath: {installation_root / '.cmoc/gu/document_search/materials'}\nreason: {exc}",
-                ) from exc
-            update_primary_report_fields(
-                material_validation="成功",
-                material_status=material_result["status"],
-                material_models=material_result["models"],
-                material_identity_check="成功",
-                material_runtime_check="成功",
-                material_document_embedding="成功",
-                material_query_embedding="成功",
-                material_remaining_state="検査時点で利用可能",
-            )
-            try:
-                _synchronize_document_search_index(
-                    root, installation_root, config_result.config.document_search
-                )
-            except SearchError as exc:
-                raise CmocError(
-                    "文書検索索引の同期に失敗しました。",
-                    [
-                        f"対象 work-root ({root}) で cmoc doctor を実行してください。"
-                        if exc.code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}
-                        else "文書検索の設定、資材、許可対象ファイルを確認してください。"
-                    ],
-                    f"work-root: {root}\ncode: {exc.code}\nreason: {exc}",
-                ) from exc
-            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-            # reporter 固有の不一致は修復や version command を行わず degraded にする。
-            try:
-                validate_feedback_reporter_availability()
-            except ReporterAvailabilityError as exc:
-                emit_reporter_unavailable(exc.component, exc.failure_code)
-        except BaseException:
-            for repair_root, original_index_path in original_indexes:
+                sync_refactor_state(root, sync_entries=sync_refactor_entries)
+                update_primary_report_fields(management_validation="成功")
                 try:
-                    _restore_index(repair_root, original_index_path)
-                finally:
-                    original_index_path.unlink(missing_ok=True)
-            raise
-
-        # commit hook は Git 設定を変更できるため、修復 commit へ進む前に
-        # 問い合わせの再利用を終える。復元と最終検証は最新の配置・設定を読む。
-        path_queries.close()
-        for (
-            repair_root,
-            original_index_path,
-            agents_gitkeep_added,
-            include_config,
-            include_gu_ignore,
-            preserved_runtime_paths,
-        ) in repairs:
-            restored_index_path: Path | None = None
-            try:
-                restored_index_path = _restored_index(
-                    repair_root,
-                    original_index_path=original_index_path,
-                    include_config=include_config,
-                    include_agents=repair_root == root,
-                    include_gu_ignore=include_gu_ignore,
-                    preserved_runtime_paths=preserved_runtime_paths,
+                    assert config_result.config.document_search is not None
+                    if explicit_doctor:
+                        material_result = prepare_document_search_materials(
+                            installation_root, config_result.config.document_search
+                        )
+                    else:
+                        material_path = require_document_search_materials(
+                            installation_root, config_result.config.document_search
+                        )
+                        material_result = {
+                            "status": "verified",
+                            "path": str(material_path),
+                            "models": "reused",
+                        }
+                except (
+                    SearchError,
+                    OSError,
+                    ValueError,
+                    subprocess.SubprocessError,
+                ) as exc:
+                    update_primary_report_fields(
+                        material_validation="失敗",
+                        material_status="失敗",
+                        material_models="未完了",
+                        material_failure=str(exc),
+                        material_identity_check="未完了",
+                        material_runtime_check="未完了",
+                        material_document_embedding="未完了",
+                        material_query_embedding="未完了",
+                        material_remaining_state="現在の条件では準備済みと扱わず、再実行時に照合する",
+                    )
+                    action = (
+                        "依存・権限・ネットワークを確認して cmoc doctor を再実行してください。"
+                        if explicit_doctor
+                        else f"対象 work-root ({root}) で cmoc doctor を実行してください。"
+                    )
+                    raise CmocError(
+                        "検索用コンポーネントの準備状態を確認できません。",
+                        [action],
+                        f"cmoc-root: {installation_root}\npath: {installation_root / '.cmoc/gu/document_search/materials'}\nreason: {exc}",
+                    ) from exc
+                update_primary_report_fields(
+                    material_validation="成功",
+                    material_status=material_result["status"],
+                    material_models=material_result["models"],
+                    material_identity_check="成功",
+                    material_runtime_check="成功",
+                    material_document_embedding="成功",
+                    material_query_embedding="成功",
+                    material_remaining_state="検査時点で利用可能",
                 )
-                _commit_doctor_repairs(
-                    repair_root,
-                    restored_index_path,
-                    original_index_path,
-                    agents_gitkeep_added,
-                    include_config=include_config,
-                    include_gu_ignore=include_gu_ignore,
-                    preserved_runtime_paths=preserved_runtime_paths,
-                )
+                try:
+                    _synchronize_document_search_index(
+                        root, installation_root, config_result.config.document_search
+                    )
+                except SearchError as exc:
+                    check_recovery_interruption()
+                    raise CmocError(
+                        "文書検索索引の同期に失敗しました。",
+                        [
+                            f"対象 work-root ({root}) で cmoc doctor を実行してください。"
+                            if exc.code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}
+                            else "文書検索の設定、資材、許可対象ファイルを確認してください。"
+                        ],
+                        f"work-root: {root}\ncode: {exc.code}\nreason: {exc}",
+                    ) from exc
+                # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+                # reporter 固有の不一致は修復や version command を行わず degraded にする。
+                try:
+                    validate_feedback_reporter_availability()
+                except ReporterAvailabilityError as exc:
+                    emit_reporter_unavailable(exc.component, exc.failure_code)
             except BaseException:
-                if restored_index_path is None:
-                    _restore_index(repair_root, original_index_path)
+                with (
+                    defer_recovery_interruption(check_pending=False, propagate=False)
+                    if rollback_on_interruption
+                    else nullcontext()
+                ):
+                    for repair_root, original_index_path in original_indexes:
+                        try:
+                            _restore_index(repair_root, original_index_path)
+                        finally:
+                            original_index_path.unlink(missing_ok=True)
                 raise
-            finally:
-                if restored_index_path is not None:
-                    restored_index_path.unlink(missing_ok=True)
-                original_index_path.unlink(missing_ok=True)
-        for repair_root in repair_roots:
-            require_cmoc_ignored(repair_root)
-        _validate_tracked_runtime_files(root)
-        ensure_work_directories(root, create_missing=False)
+
+            # commit hook は Git 設定を変更できるため、修復 commit へ進む前に
+            # 問い合わせの再利用を終える。復元と最終検証は最新の配置・設定を読む。
+            path_queries.close()
+            for (
+                repair_root,
+                original_index_path,
+                agents_gitkeep_added,
+                include_config,
+                include_gu_ignore,
+                preserved_runtime_paths,
+            ) in repairs:
+                restored_index_path: Path | None = None
+                try:
+                    restored_index_path = _restored_index(
+                        repair_root,
+                        original_index_path=original_index_path,
+                        include_config=include_config,
+                        include_agents=repair_root == root,
+                        include_gu_ignore=include_gu_ignore,
+                        preserved_runtime_paths=preserved_runtime_paths,
+                    )
+                    with (
+                        defer_recovery_interruption()
+                        if rollback_on_interruption
+                        else nullcontext()
+                    ):
+                        _commit_doctor_repairs(
+                            repair_root,
+                            restored_index_path,
+                            original_index_path,
+                            agents_gitkeep_added,
+                            include_config=include_config,
+                            include_gu_ignore=include_gu_ignore,
+                            preserved_runtime_paths=preserved_runtime_paths,
+                        )
+                        # commit と index 復元の成功後を、次の rollback 境界とする。
+                        if repair_root in preparation_snapshots:
+                            previous = preparation_snapshots[repair_root]
+                            preparation_snapshots[repair_root] = (
+                                capture_worktree_snapshot(
+                                    repair_root,
+                                    paths=previous.paths,
+                                )
+                            )
+                except BaseException:
+                    with (
+                        defer_recovery_interruption(
+                            check_pending=False, propagate=False
+                        )
+                        if rollback_on_interruption
+                        else nullcontext()
+                    ):
+                        if restored_index_path is None:
+                            _restore_index(repair_root, original_index_path)
+                        # 先の root が確定した段階で停止しても、後続 root の
+                        # 準備中 index を元に戻す。確定済み root の index は触らない。
+                        for pending_root, pending_index in original_indexes:
+                            if pending_root != repair_root and pending_index.exists():
+                                try:
+                                    _restore_index(pending_root, pending_index)
+                                finally:
+                                    pending_index.unlink(missing_ok=True)
+                    raise
+                finally:
+                    if restored_index_path is not None:
+                        restored_index_path.unlink(missing_ok=True)
+                    original_index_path.unlink(missing_ok=True)
+            for repair_root in repair_roots:
+                require_cmoc_ignored(repair_root)
+            _validate_tracked_runtime_files(root)
+            ensure_work_directories(root, create_missing=False)
+        except KeyboardInterrupt:
+            if rollback_on_interruption:
+                with defer_recovery_interruption(check_pending=False, propagate=False):
+                    try:
+                        for snapshot in preparation_snapshots.values():
+                            restore_worktree_snapshot(snapshot)
+                        for directory in sorted(
+                            missing_directories,
+                            key=lambda p: len(p.parts),
+                            reverse=True,
+                        ):
+                            if directory.is_dir():
+                                # 診断ログや元からの資源がある directory は残す。
+                                try:
+                                    directory.rmdir()
+                                except OSError:
+                                    pass
+                    except BaseException as exc:
+                        raise CmocError(
+                            "refactor の開始前処理を rollback できません。",
+                            ["前処理の診断ログと未確定差分を確認してください。"],
+                            repr(exc),
+                        ) from exc
+            raise
 
 
 @contextmanager
