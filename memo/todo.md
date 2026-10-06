@@ -2,19 +2,16 @@
 
 - 時間計測のログを仕込んであるので、それに基づいてタイムアウトを妥当な長さに調整する
 - `oracle/src/oracle/other/document_search.py` で、入手するモデルのバージョンを過剰に固定しすぎてるかも
-- 検索結果として一致率も要るかも
-    - ファイルごとに最大値だけ出せばよいか
 
 ## MCP tool の description がおぞましいことになっているかもしれない
 
 - ベクトル検索の MCP tool がひどいものだったので、他もひどいに違いない
 - ベクトル検索の MCP tool と同様に、数値定義と自然言語的な説明は oracle file に引き上げたい
 
-## テストが長過ぎる
+## 動的構築プロンプトの精査
 
-- 通常テストの全件実行に 7 分くらいかかってる
-- シンプルに件数が多すぎるという話はありそう
-    - テスト専用の refactor が要るかも
+- `oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
+- `oracle/src/oracle/prompt_builder/policy/realization_findings.py`
 
 ## 後方互換性を不要と明記する
 
@@ -26,17 +23,6 @@
 - 今は `0-9a-z` にしてるけど、実際の並び順は `a-z0-9`
 - シンプルな ABC 順ソートだと順序が逆になる
 - やっぱり、`0-9` を使える文字から除外して `a-z` にしたほうが良いだろうか？
-
-## cmoc realization refactor を見直す
-
-- テストがあまりにも長いのでダイエットがしたい
-    - ムダなテストを消して件数を減らしたい
-    - ムダな実装を減らして、間接的にテストを減らしたい
-    - が、それに対応する機能が cmoc にはない
-- cmoc realization refactor が、実質死に機能になっている
-    - 元々は「仕様と実装の差をファイル個別単位で網羅的にチェックして、問題を潰す」という役割だった
-    - が、今は `cmoc realizatino apply` が十分良い作業品質なので、その役割はもはや不要
-    - `cmoc realization optimize` みたいな名前で、実行時間短縮を命じるのが良いだろうか
 
 ## inconclusive issue を閉じる方法がない？
 
