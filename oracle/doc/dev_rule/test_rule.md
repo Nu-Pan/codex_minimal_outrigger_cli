@@ -48,7 +48,15 @@
 
 公開末端サブコマンドと実経路統合テストケースの対応は、機械的に比較可能にする。サブコマンドの追加または rename に対して、対応する実経路統合テストケースがなければ test を失敗させる。新規の公開末端サブコマンドには、同じ変更で対応する実経路統合テストケースを追加する。
 
-Codex CLI 呼び出しには、実在の Codex CLI executable（Real Codex CLI）と実推論を使用する。Fake、mock、stub、記録済み response、または起動確認だけでは代替できない。本番との差は、`{{test-root}}` による隔離、決定論的な入力、対話操作の自動化、および本書が定めるテスト用 `CmocConfig` の直接設定に必要な範囲だけ許容する。
+Codex CLI 呼び出しには、実在の Codex CLI executable（Real Codex CLI）と実推論を使用する。Fake、mock、stub、記録済み response、または起動確認だけでは代替できない。
+
+本番との差は、次のために必要な範囲だけ許容する。
+
+- `{{test-root}}` による隔離
+- 決定論的な入力
+- 対話操作の自動化
+- 本書が定めるテスト用 `CmocConfig` の直接設定
+- `{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「Real Codex CLI を使う追加検証を起動する」が定めるテスト runner の command の起動場所
 
 `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、実経路統合テストとはみなさない。
 

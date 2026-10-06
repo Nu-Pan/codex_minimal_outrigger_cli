@@ -2,13 +2,14 @@
 
 ## 責務境界
 
-この文書は、構築済みの cmoc 開発環境における test と品質検査の選択・実行・完了判定・報告を定める。関連する要件は、次の正本に従う。
+この文書は、構築済みの cmoc 開発環境における test と品質検査の選択・起動場所・実行・完了判定・報告を定める。関連する要件は、次の正本に従う。
 
 - realization test が満たすべき意味上の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「cmoc テスト実装規約」を正本とする。
+- Codex CLI の sandbox・承認設定と command 単位 sandbox escalation の共通契約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Codex CLI 引数による設定上書き」「Codex CLI sandbox」「command 単位の sandbox 外実行」を正本とする。
 - 型注釈と docstring の意味上の品質要件は、`{{cmoc-root}}/oracle/doc/dev_rule/coding_rule.md` の「型ヒント」と「docstring」が所有する。
 - Python 環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「cmoc 開発環境」を正本とする。
 
-この手順の実行中に環境を新規構築したり、依存関係を追加したり、pip を実行したりしてはいけない。また、この手順を根拠に、agent call の file access mode、作業範囲、または sandbox の書き込み先を広げてはいけない。
+この手順の実行中に環境を新規構築したり、依存関係を追加したり、pip を実行したりしてはいけない。また、この手順を根拠に、agent call の file access mode、作業範囲、または既定 sandbox の書き込み先を広げてはいけない。追加検証の command の起動場所に限り、本書の「Real Codex CLI を使う追加検証を起動する」で定める例外を適用する。
 
 ## 通常検証と追加検証を選択する
 
@@ -17,6 +18,8 @@
 通常検証は、Real Codex CLI を使わない test と所定の品質検査から成る。Codex CLI 呼び出しを伴う制御の検証には Fake Codex CLI を使用する。通常検証に属する test の全件検証を、本書では full test と呼ぶ。
 
 実経路統合テストを含む Real Codex CLI を使う test は、その実行をユーザーが明示的に指示した場合に限り、通常検証へ追加する。一般的なテスト・検証の依頼や agent 独自の判断は、この明示指示に含めない。通常検証の失敗や Codex CLI の更新を理由に、自動で Real Codex CLI を使う test を実行してはいけない。
+
+選択した追加検証は通常検証と別 command に分け、本書の「Real Codex CLI を使う追加検証を起動する」に従う。
 
 ## repository root と Python interpreter を決定する
 
@@ -131,14 +134,32 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 ```
 
 - 過去の実行結果、focused test、または一部 command の成功だけで完了扱いにしてはいけない。
-- 追加検証を指示されている場合は、その検証も最後の変更後に fresh に実行する。
-- Ruff check、Ruff format check、mypy、および全 pytest command は repository 所定の sandbox 内で実行する。
+- 追加検証を指示されている場合は、その検証も最後の変更後に、本書の「Real Codex CLI を使う追加検証を起動する」に従って fresh に実行する。
+- Ruff check、Ruff format check、mypy、および通常検証の全 pytest command は repository 所定の sandbox 内で実行する。
 
 realization refactor で変更を確定する時点は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「確定前の検証」に従う。反復する workload であることを理由に、本節の完了ゲートを複数の変更単位や一巡の終了まで先送りしない。停止要求で検査を打ち切った場合は、その結果を未完了とし、停止・rollback のためにゲートを追加実行しない。
 
+## Real Codex CLI を使う追加検証を起動する
+
+本書で親 sandbox は開発作業を行う agent の shell command を囲む境界、子 sandbox は被テスト cmoc が起動する Codex の shell command を囲む境界を指す。
+
+本書の「通常検証と追加検証を選択する」に従って選択された追加検証では、テスト runner を起動する command を親 sandbox 外で実行することを必要条件とする。これは、固定 socket path の保護と内側の Codex による directory 検査が衝突する、入れ子の sandbox 構成を避けるための条件である。
+
+1. 選択した追加検証だけを起動する command を用意する。cwd と Python interpreter は本書の「repository root と Python interpreter を決定する」に従う。Python の実行設定には、本書の「Python development mode と ResourceWarning 検査を適用する」を適用する。
+2. 対象 command と入れ子を避ける理由を限定して、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「command 単位の sandbox 外実行」に従う escalation を要求する。承認された command を親 sandbox 外で実行する。
+3. 承認が得られない場合は追加検証を未実行とし、本書の「完了を判定する」「実行結果を報告する」に従う。
+
+被テスト cmoc の隔離は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「基本」に従う。子 Codex には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Codex CLI 引数による設定上書き」「Codex CLI sandbox」が定める通常の呼び出し規約を適用する。
+
+承認が得られない場合も含め、この回避手順を `TMPDIR` の変更、予約 socket directory などの保護ディレクトリの権限変更、子 sandbox の無効化、または CLI の旧 sandbox への切り替えで代替してはいけない。
+
+### 未実測事項
+
+親 sandbox 外での起動方針は採用済みだが、2026-10-07 時点では、その環境で子 Codex の shell が正常に動作することは未実測である。後続の明示指示による検証で子 shell の実行結果まで確認し、Codex CLI 自体の終了コード 0 だけで正常動作と判定してはいけない。仕様変更だけを、issue 解消や性能改善の実証として扱わない。
+
 ## 実経路統合テストを実行する
 
-本書の「通常検証と追加検証を選択する」に従って追加検証の対象となった実経路統合テストを、次の別 command で実行する。変更中の focused test では `test` を対応する test paths または node ID に置き換え、fresh な完了ゲートでは実経路統合テストの全件を対象とする。
+本書の「通常検証と追加検証を選択する」に従って追加検証の対象となった実経路統合テストには、次の command を用意し、「Real Codex CLI を使う追加検証を起動する」の手順を適用する。変更中の focused test では `test` を対応する test paths または node ID に置き換え、fresh な完了ゲートでは実経路統合テストの全件を対象とする。
 
 ```bash
 PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
@@ -169,7 +190,7 @@ fresh な完了ゲートの対象となる変更は、通常検証の全 command
 - Ruff check、Ruff format check、および mypy の結果
 - 通常検証の focused test と full test の結果
 - Real Codex CLI を使う test に対する明示指示の有無と、指示された追加検証の範囲
-- 追加検証の実行有無と結果。実経路統合テストでは focused test と full pytest の結果を区別する
+- 追加検証の実行有無と結果、親 sandbox 外での command 実行の承認状況、および実際の起動場所。実経路統合テストでは focused test と full pytest の結果を区別する
 - test 数、skip 数、および skip reason
 - model provider、quota、timeout など、出力から確認できた実行上の原因
 - 通常検証と追加検証それぞれが fresh に完了したか、および作業の完了判定。未完了ならその理由
