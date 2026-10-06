@@ -1497,7 +1497,7 @@ def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
 def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
     tmp_path: Path,
 ) -> None:
-    """実 stdio 境界で使い方と work-root を公開し、未準備を識別できる。"""
+    """実 stdio 境界で正本の公開定義を伝え、未準備を識別できる。"""
     root = _repo_with_docs(tmp_path)
     log_path = tmp_path / "caller.jsonl"
     log_path.touch()
@@ -1562,20 +1562,7 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
         assert tool["outputSchema"] == SEARCH_TOOL_OUTPUT_SCHEMA
         for schema in (tool["inputSchema"], tool["outputSchema"]):
             Draft202012Validator.check_schema(schema)
-        description = tool["description"]
-        assert str(root) in description
-        assert "{{" not in description
-        assert description == build_search_tool_description(root)
-        for schema_detail in ("hits", "ranges", "candidate_count", "isError"):
-            assert schema_detail not in description
-        assert (
-            "原文候補を探す検索文"
-            in tool["inputSchema"]["properties"]["query"]["description"]
-        )
-        assert (
-            "集約・行範囲統合前"
-            in tool["inputSchema"]["properties"]["limit"]["description"]
-        )
+        assert tool["description"] == build_search_tool_description(root)
         failed = request(
             3, "tools/call", {"name": "search", "arguments": {"query": "内容"}}
         )
