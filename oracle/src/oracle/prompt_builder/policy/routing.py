@@ -14,7 +14,7 @@ def build_routing_policy(
     """文章ルーティングについての規定を構築する。
 
     Args:
-        search_mcp_tool_available: そのセッションでベクトル検索 MCP tool が利用可能であるなら True
+        enable_document_search_mcp: そのセッションでベクトル検索 MCP tool が利用可能であるなら True
 
     Returns:
         文章ルーティングについての構造化された規定
