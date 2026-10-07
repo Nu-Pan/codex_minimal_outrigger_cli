@@ -1489,7 +1489,7 @@ def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
         with pytest.raises(SearchError) as exc_info:
             search.search("内容")
         assert exc_info.value.code == "NOT_READY"
-        assert "cmoc doctor" in str(exc_info.value)
+        assert "手動" in str(exc_info.value)
     finally:
         search.close()
 

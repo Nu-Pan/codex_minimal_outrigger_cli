@@ -261,13 +261,26 @@ def feedback_statuses(logger: SubcommandLogger) -> dict[str, object]:
     """publication point の log event だけから feedback の実行状況を返す。"""
     events = logger.event_records()
     published = any(
-        event.get("event") == "feedback_report_published" for event in events
+        event.get("event") == "feedback_report_published"
+        or (
+            event.get("event") == "feedback_state_retained"
+            and event.get("publication_established") is True
+        )
+        for event in events
     )
     incomplete = any(
-        event.get("event") == "feedback_report_incomplete" for event in events
+        event.get("event") in {"feedback_report_published", "feedback_state_retained"}
+        and (
+            event.get("event") != "feedback_state_retained"
+            or event.get("publication_established") is True
+        )
+        and event.get("result") == "incomplete"
+        for event in events
     )
     return {
-        "normal_publication_status": "completed" if published else "not_completed",
+        "normal_publication_status": "completed"
+        if published and not incomplete
+        else "not_completed",
         "incomplete_diagnostic_status": "completed" if incomplete else "not_completed",
         "current_pointer_update_status": "completed" if published else "not_completed",
     }
@@ -513,6 +526,8 @@ def _feedback_invocation_body(
         f"`{_field_status(fields.get('remediation_checkpoint_count'))}`",
         f"- 確定済み部分結果: `{_field_status(fields.get('partial_result_count'))}`",
         "## 維持した state と未実行処理",
+        f"- 最後に確定した generation/report: `{_field_status(fields.get('last_confirmed_generation'))}`",
+        f"- 今回の publication 成立: `{_field_status(fields.get('publication_established'))}`",
         f"- processing status: `{_field_status(fields.get('processing_status'))}`",
         f"- cleanup: `{_feedback_cleanup_status(logger, fields)}`",
         "- publication 完了 event がない処理は、完了済みとして扱っていません。",

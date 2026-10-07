@@ -907,8 +907,24 @@ def test_normal_preprocess_rejects_unset_search_without_rewriting_config(
 
     assert str(path) in exc_info.value.detail
     assert "document_search" in exc_info.value.detail
-    assert "cmoc doctor" in exc_info.value.next_actions[0]
+    assert "手動" in exc_info.value.next_actions[0]
     assert path.read_text() == original
+
+
+def test_doctor_rejects_null_search_without_filling_or_saving(tmp_path, monkeypatch):
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = '{"document_search": null}\n'
+    path.write_text(original)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 1, result.output
+    assert "document_search" in result.output
+    assert path.read_text() == original
+    assert "- 保存: `False`" in terminal_primary_report(result).read_text()
 
 
 def test_doctor_reports_unsaved_inconsistent_search_candidate(

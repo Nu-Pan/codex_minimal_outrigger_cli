@@ -2,6 +2,7 @@
 
 import inspect
 import os
+import sys
 from collections.abc import Callable, Sequence
 from typing import Any, cast
 
@@ -13,6 +14,10 @@ from cmoc_runtime import (
     render_error,
 )
 from sub_commands.doctor import cmoc_doctor_impl
+from sub_commands.feedback.close import (
+    cmoc_feedback_close_impl,
+    cmoc_feedback_close_parse_error_impl,
+)
 from sub_commands.oracle.edit import cmoc_oracle_edit_impl
 from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
 from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
@@ -147,6 +152,18 @@ class _CmocTyperGroup(typer.core.TyperGroup):
         # 依存しない error-handling contract のため両方の exception class に対応する。
         except _CLICK_EXCEPTION_TYPES as exc:
             click_exception = cast(click.ClickException, exc)
+            # Close の未受理入力にも invocation report と終了コード 1 を確定する。
+            invocation_arguments = list(args) if args is not None else sys.argv[1:]
+            if invocation_arguments[:2] == ["feedback", "close"]:
+                try:
+                    cmoc_feedback_close_parse_error_impl(
+                        invocation_arguments, click_exception.format_message()
+                    )
+                except typer.Exit as close_exit:
+                    if standalone_mode:
+                        raise SystemExit(close_exit.exit_code) from exc
+                    return close_exit.exit_code
+                return 1
             # {{work-root}}/oracle/doc/app_spec/error_handling.md
             # 未 raise の例外を render_error すると Call stack が概要だけになるため、
             # parser error を cause にした report exception を raise してから描画する。
@@ -269,6 +286,17 @@ def feedback_report() -> None:
     from sub_commands.feedback.report import cmoc_feedback_report_impl
 
     cmoc_feedback_report_impl()
+
+
+@feedback_app.command("close")
+def feedback_close(
+    case_id: str | None = typer.Argument(None, help="終了する案件 ID（必須）"),
+    reason: str | None = typer.Option(
+        None, "--reason", help="人間が外部解決を確認した理由（必須）"
+    ),
+) -> None:
+    """外部解決済みの inconclusive 案件を終了する。"""
+    cmoc_feedback_close_impl(case_id, reason)
 
 
 def main() -> None:

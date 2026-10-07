@@ -160,19 +160,8 @@ def _reporter_validator() -> Draft202012Validator:
     return Draft202012Validator(reporter_input_schema())
 
 
-def reporter_input_validation_errors(
-    payload: object, *, stored: bool = False
-) -> list[str]:
+def reporter_input_validation_errors(payload: object) -> list[str]:
     """正本 reporter schema に対する違反を JSON pointer 付きで返す。"""
-    if (
-        stored
-        and isinstance(payload, dict)
-        and type(payload.get("schema_version")) is int
-        and payload["schema_version"] == 1
-    ):
-        if "workload_limitation" in payload or "human_action_reason" not in payload:
-            return ["/payload: version 1 requires human_action_reason only"]
-        payload = reporter_payload_view(payload)
     errors = sorted(
         _reporter_validator().iter_errors(payload),
         key=lambda item: tuple(str(part) for part in item.path),
@@ -181,19 +170,6 @@ def reporter_input_validation_errors(
         f"/{'/'.join(str(part) for part in error.path)}: {error.message}"
         for error in errors
     ]
-
-
-def reporter_payload_view(payload: dict[str, Any]) -> dict[str, Any]:
-    """保存済み v1 assertion を raw を変更せず normalization 用 v2 view にする。"""
-    if payload.get("schema_version") != 1:
-        return dict(payload)
-    return {
-        **{
-            key: value for key, value in payload.items() if key != "human_action_reason"
-        },
-        "schema_version": 2,
-        "workload_limitation": payload.get("human_action_reason"),
-    }
 
 
 def feedback_root(repo: Path) -> Path:

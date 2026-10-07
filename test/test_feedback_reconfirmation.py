@@ -447,7 +447,9 @@ def test_repeated_repair_cycle_stops_or_accepts_a_new_repair(
     ] + ([] if diagnostic else [second])
     result = _join_and_publish(h, monkeypatch)
     assert result.result == ("incomplete" if diagnostic else "ok")
-    assert (load_active_state(h.context.repo).current is None) == diagnostic
+    state = load_active_state(h.context.repo)
+    assert state.current is not None
+    assert (first in state.issues) == diagnostic
     if diagnostic:
         assert "non-converging cycle" in result.primary_report.read_text()
         assert "fixed_issue_count: 1" in result.primary_report.read_text()

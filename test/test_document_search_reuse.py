@@ -1,6 +1,5 @@
 """文書入力片の repository 内再利用と、生成・再利用元の診断を検証する。"""
 
-import hashlib
 import json
 import shutil
 import sqlite3
@@ -20,8 +19,6 @@ from test_document_search import (
 from commons.runtime_document_search import (
     DocumentSearch,
     SearchError,
-    _vector_blob,
-    search_identity,
 )
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_document_search_worker import NodeSearchWorker
@@ -185,11 +182,10 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, model_s
     assert inputs() == [original]
 
 
-@pytest.mark.parametrize("change", ["partition", "index", "inference"])
-def test_reuse_compatibility_is_independent_of_index_and_partition(
-    tmp_path, model_search, monkeypatch, change
+@pytest.mark.parametrize("change", ["partition", "inference"])
+def test_reuse_compatibility_is_independent_of_partition(
+    tmp_path, model_search, change
 ):
-    from commons import runtime_document_search as module
 
     create, inputs = model_search
     root = _repo_with_docs(tmp_path)
@@ -198,8 +194,6 @@ def test_reuse_compatibility_is_independent_of_index_and_partition(
     config = _tuning()
     if change == "partition":
         config = replace(config, chunk_tokens=64, chunk_overlap_tokens=1)
-    elif change == "index":
-        monkeypatch.setattr(module, "_INDEX_FORMAT", module._INDEX_FORMAT + 1)
     else:
         config = replace(config, embedding_context_tokens=256)
     with closing(create(root, config)) as search:
@@ -240,43 +234,6 @@ def test_failed_sync_saved_results_are_reusable_in_another_worktree(
         assert search.synchronize().reused_embeddings == 1
         assert search.sync_progress["generated_embeddings"] == 0
     assert inputs() == []
-
-
-def test_first_run_imports_compatible_legacy_index_without_refreshing_it(
-    tmp_path, model_search
-):
-    create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
-    original = (root / "oracle/doc/allowed.md").read_text()
-    legacy = (
-        root
-        / ".cmoc/gu/document_search/indexes"
-        / search_identity(root, _tuning(), index_format=4)
-        / "index.sqlite3"
-    )
-    legacy.parent.mkdir(parents=True)
-    vector = _vector_blob([1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1))
-    with closing(sqlite3.connect(legacy)) as database:
-        database.execute(
-            "create table embedding_cache(excerpt_sha256 text primary key, embedding blob)"
-        )
-        for text in (original, "# 再利用元だけの削除済み文書\n"):
-            database.execute(
-                "insert into embedding_cache values(?, ?)",
-                (hashlib.sha256(text.encode()).hexdigest(), vector),
-            )
-        database.commit()
-    saved = legacy.read_bytes()
-    (root / "oracle/doc/allowed.md").write_text("# 未同期の変更\n")
-    run = _worktree(root, tmp_path / "run")
-    with closing(create(run)) as search:
-        assert search.synchronize().reused_embeddings == 1
-        assert search.sync_progress["reused_other_worktree"] == 1
-        assert inputs() == []
-        assert [hit["path"] for hit in search.search("原文")["hits"]] == [
-            "oracle/doc/allowed.md"
-        ]
-    assert legacy.read_bytes() == saved
 
 
 def test_identical_inputs_in_different_repositories_are_not_shared(

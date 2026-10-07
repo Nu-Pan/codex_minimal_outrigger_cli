@@ -1675,39 +1675,22 @@ def test_agent_store_rejects_non_directory_observation_parent(
     assert rejected.value.code == "context_invalid"
 
 
-def test_legacy_raw_is_read_without_rewriting_but_new_v1_submission_is_rejected(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """導入前の v1 raw は assertion として扱い、新しい受付には v2 を要求する。"""
-    from commons.runtime_feedback_store import reporter_payload_view
-
+def test_stored_invalid_reporter_schema_is_rejected_without_rewriting(
+    tmp_path, monkeypatch
+):
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
-    _, raw, identity = _store_agent_issue(root, session_id)
-    legacy = read_json_object(raw)
-    legacy["payload"]["schema_version"] = 1
-    legacy["payload"]["human_action_reason"] = legacy["payload"].pop(
-        "workload_limitation"
-    )
-    content = canonical_json_bytes(legacy)
+    _, raw, _ = _store_agent_issue(root, session_id)
+    invalid = read_json_object(raw)
+    invalid["payload"]["schema_version"] = 1
+    content = canonical_json_bytes(invalid)
     raw.write_bytes(content)
     (feedback_root(root) / "intake.json").unlink()
-    assert validate_observation_envelope(legacy) == []
-    view = reporter_payload_view(legacy["payload"])
-    assert view["schema_version"] == 2
-    assert view["workload_limitation"] == legacy["payload"]["human_action_reason"]
-    with pytest.raises(FeedbackRejected, match="human_action_reason"):
-        store_agent_observation(root, _context(root), legacy["payload"])
-
-    def fake_call(*_args: Any, **_kwargs: Any) -> SimpleNamespace:
-        assert raw.read_bytes() == content
-        return _fake_result(root, _remediation_output(identity, "already_resolved"))
-
-    monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_call)
+    assert validate_observation_envelope(invalid)
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-    assert load_active_state(root).issues == {}
-    assert not raw.exists()
+    assert result.exit_code == 1
+    assert raw.read_bytes() == content
+    assert load_active_state(root).current is None
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
@@ -1984,12 +1967,9 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
     assert load_report_cut(root) is None
     assert all(path.exists() for path in late_paths)
     state = load_active_state(root)
-    if last_status == "human_required":
-        assert set(state.issues) == {later_id}
-        assert all(not path.exists() for path in raw_paths)
-    else:
-        assert state.current is None
-        assert all(path.exists() for path in raw_paths)
+    assert set(state.issues) == {later_id}
+    assert state.issues[later_id]["verification"]["status"] == last_status
+    assert all(not path.exists() for path in raw_paths)
 
 
 @pytest.mark.parametrize(
@@ -2150,7 +2130,14 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
 
 
 @pytest.mark.parametrize(
-    "fault", ["publication", "cleanup", "merge_reference", "completion_reference"]
+    "fault",
+    [
+        "publication",
+        "raw_cleanup",
+        "cleanup",
+        "merge_reference",
+        "completion_reference",
+    ],
 )
 def test_feedback_recovers_after_auto_join_without_new_calls(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str
@@ -2171,6 +2158,9 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
 
     target = feedback_report_module if fault == "publication" else recovery_module
     name = "publish_current_pointer" if fault == "publication" else "cleanup_joined_run"
+    if fault == "raw_cleanup":
+        target = feedback_state_module
+        name = "_unlink_artifact_reference"
     if fault.endswith("_reference"):
         target = run_state_module
         name = "write_report_cut_manifest"
@@ -2189,6 +2179,18 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     assert result.exit_code == 1, result.output
     assert (root / "README.md").read_text() == "joined repair\n"
     joined_head = run_git(root, "rev-parse", "HEAD").stdout
+    saved_report = None
+    if fault in {"raw_cleanup", "cleanup"}:
+        published = load_active_state(root)
+        assert published.current is not None
+        saved_report = root / published.current["report_path"]
+        saved_content = saved_report.read_bytes()
+        (root / "README.md").write_text("changed after publication\n")
+        assert feedback_completion_counts(root)[0] == 0
+        if fault == "raw_cleanup":
+            assert raw.exists()
+        report_text = terminal_primary_report(result).read_text()
+        assert "publication_established: true" in report_text
     for operation in ("join", "abandon"):
         rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
         assert rejected.exit_code == 1, rejected.output
@@ -2209,6 +2211,9 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     assert load_report_cut(root) is None
     assert not (feedback_root(root) / "finalization.json").exists()
     assert load_active_state(root).current["result"] == "ok"
+    if saved_report is not None:
+        assert saved_report.read_bytes() == saved_content
+        assert (root / "README.md").read_text() == "changed after publication\n"
 
 
 def test_current_pointer_rejects_non_markdown_report_path(
