@@ -8,7 +8,7 @@
   「設定と未確定事項」に従う
 - 設定の生成・検索設定の補完・保存済み設定の検証は、
   `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の
-  「検索設定の検証と補完」に従う（旧 `document_search: null` 入力の扱いを含む）
+  「検索設定の検証と補完」に従う
 - `{{work-root}}/.cmoc/gt/config.json` は人間によって編集・調整される
 """
 

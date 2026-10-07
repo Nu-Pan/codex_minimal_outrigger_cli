@@ -123,10 +123,10 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 明示的な `cmoc doctor` は、確認入力を求めず、次の不足だけを補う。
 
 - 設定ファイルがなければ、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig` が定める既定状態から生成する。
-- `document_search` 全体の欠落または `null` には検索設定の暫定既定値を補う。
+- `document_search` 全体の欠落には検索設定の暫定既定値を補う。
 - 検索設定の object 内で項目が欠落していれば、その項目の暫定既定値を補う。
 
-既存の明示値と検索以外の設定は保持し、不正な構造や値を不足として扱わない。個々の項目の `null` と、廃止項目 `reranker_context_tokens` も不正とする。補完候補全体が検証に成功した場合だけ保存し、部分的な補完や既存値に合わせた補完値の調整はしない。補完が不要なら書き換えない。保存した差分の追跡・commit は本書の「実行手順」に従う。
+既存の明示値と検索以外の設定は保持し、不正な構造や値を不足として扱わない。`document_search` 全体または個々の項目の `null` と、廃止項目 `reranker_context_tokens` も不正とする。補完候補全体が検証に成功した場合だけ保存し、部分的な補完や既存値に合わせた補完値の調整はしない。補完が不要なら書き換えない。保存した差分の追跡・commit は本書の「実行手順」に従う。
 
 不備の診断には、設定ファイル、該当項目または問題の位置、理由、修復方法を示す。不足には対象 work-root での `cmoc doctor`、不正な明示値には許容条件と手動修正、廃止項目には手動除去を案内する。補完値と既存値が衝突する場合は、その組合せを示す。失敗時の終了・表示は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー終了の確定」「handled failure の表示」に従う。
 
@@ -168,7 +168,7 @@ doctor preprocess の後に作成する run worktree の初回同期にも、同
 - 同文書の「entry 集合の同期」に従って entry 集合と調査要求を同期する
 - file が存在するものの schema を満たさない場合は、既存の調査履歴を破棄せずエラー終了する
 
-既存履歴と新しい改善目的の調査実績の区別は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「調査履歴と巡回の区別」に従う。doctor preprocess は履歴を保持して同期し、refactor の一巡を開始したり、旧履歴を新目的の調査済み実績へ変換したりしない。
+調査履歴と一巡内の調査実績の区別は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「調査履歴と巡回の区別」に従う。
 
 ### editing run の join での同期時点
 

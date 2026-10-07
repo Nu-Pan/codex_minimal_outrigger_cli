@@ -51,7 +51,7 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
 
 実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。正常 report と `incomplete` 診断 report の保存先に使う実行は、本書の「report cut」で固定する。close report は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」に従う。invocation report は、それを作成する実行の ID を使う。
 
-`observation/v1` の `v1` は、raw observation の保存 layout の version を表す。保存する reporter input schema の version とは独立している。reporter input version 2 の導入だけを理由に、既存 raw observation の path を移動しない。
+`observation/v1` の `v1` は、raw observation の保存 layout の version を表す。保存する reporter input schema の version とは独立している。
 
 `{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session と run の join または abandon は、feedback state を暗黙に取り込み、巻き戻し、複製、または削除してはならない。
 
@@ -78,9 +78,11 @@ state を構成する artifact の役割を次に示す。
 
 timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。
 
-current pointer が参照する generation manifest、Markdown report、および確定済み記録は、各 path と hash を検証できなければならない。最新状態の確認・操作には、検証した generation と構造化された記録を使用する。`incomplete` や close による publication にも同じ条件を適用し、Markdown report から active や入力の消費状態を逆算してはならない。
+current pointer が参照する generation manifest、Markdown report、および確定済み記録は、各 path と hash を検証できなければならない。必要な対応付けと保持を確認できない state はエラーとする。最新状態の確認・操作には、検証した generation と構造化された記録を使用する。`incomplete` や close による publication にも同じ条件を適用し、Markdown report から active や入力の消費状態を逆算してはならない。
 
 ## JSON と排他制御
+
+保存 record の詳細 schema は、本書では定めない。
 
 state の JSON は、UTF-8、object key の辞書順、末尾改行ありの canonical form で保存する。hash は canonical byte 列の SHA256 とする。
 
@@ -181,7 +183,7 @@ threshold を満たした aggregate は issue candidate へ昇格させる。同
 
 - 今回の high-watermark 以前の pending observation。最初の wave は未消費の入力全体を対象とし、後続 wave は直前の境界より後の入力を追加する
 - 最初の wave の場合だけ、run 開始時の current pointer、全 active issue、および threshold 未満 aggregate
-- observation schema と互換 view の version
+- observation schema の version
 - validation、normalization、deduplication、detector rule、および集約規則の version
 - normalization 後の未処理 issue identity、再確認対象の issue identity、既存の案件 ID との対応、および bounded evidence
 - 再確認対象の場合は、先行 checkpoint、判定根拠の変化、および関連する再確認履歴への参照
@@ -296,10 +298,6 @@ publication point 後の失敗では、確定済み state を巻き戻さない�
 recovery は同じ target と固定入力を再利用し、案件の登録・終了、履歴追加、入力消費を重複適用しない。report では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」「再開時の report と実行記録」、close では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「保存失敗と recovery」に従う。異なる base、hash 不一致、または確定状況の不明を上書きで解消しない。
 
 処理済み入力と完了済み work artifact の cleanup を確定した後にだけ、feedback run の state と隔離資源を正常終了状態へ戻す。report の publication または cleanup の失敗中は `run.state=error` と隔離資源を維持する。close は編集 run を作らず、その未完了処理を close の作業記録で管理する。
-
-## 既存データと未定義事項
-
-既存データの移行手順と保存 record の詳細 schema は、本書では定めない。旧形式の raw observation、active record、保存済み report、および recovery artifact を、この変更を理由に黙って破棄してはならない。必要な対応付けと保持を確認できない state はエラーとし、過去の Markdown report から現在状態を逆算して補わない。
 
 ## run lifecycle との整合
 

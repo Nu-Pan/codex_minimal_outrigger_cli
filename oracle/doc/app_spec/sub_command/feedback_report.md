@@ -66,8 +66,6 @@ normalization と issue remediation では、調査対象の再報告が追加 e
 
 各 raw observation の schema、path、および canonical hash は、対応する intake wave または wave 終了時の追加入力記録と一致しなければならない。同じ observation ID で hash が異なる場合は corruption とする。
 
-schema version 1 の pending observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「reporter input v1 の互換処理」に従って扱う。
-
 1 件でも validation を通過できない input がある場合は、publication を行わない。invalid input を処理済みとして削除せず、path と理由を invocation report と subcommand log に示す。
 
 ### machine observation

@@ -69,14 +69,6 @@ rejection code は、次の値に限定する。
 
 `retryable=true` を許容するのは、`rate_limited`、`collector_unavailable`、`transport_unavailable` だけとする。retryable は、本命 workload の retry を要求する意味ではない。
 
-### reporter input v1 の互換処理
-
-durable 保存済みの version 1 observation は失わず、raw record を書き換えずに validation 対象とする。
-
-version 1 は、`schema_version=1` と `human_action_reason` を検査する。その他の field には version 2 と同じ規則を適用する。
-
-normalization 時に限り、transient な version 2 view へ変換する。この view では、`human_action_reason` の文字列をそのまま `workload_limitation` として扱う。元の version と変換規則は追跡可能にする。変換後の値も観測時の assertion であり、`human_required` の判定へ自動変換してはならない。
-
 ### 受け入れ検査
 
 reporter と collector は、安全に保存できるかだけを検査する。次の事項は判断しない。
