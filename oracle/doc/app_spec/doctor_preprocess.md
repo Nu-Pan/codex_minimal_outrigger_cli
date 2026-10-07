@@ -79,7 +79,7 @@ doctor は repo-root と処理対象 work-root に適用する。加えて、共
 
 ### 検証
 
-非追跡保証は、`<対象root>/.cmoc/gu` ツリー全体と、将来作成される全 descendant に適用する。feedback の pending observation、active state、report cut、checkpoint、Markdown report、および検索の管理物も含む。
+非追跡保証は、`<対象root>/.cmoc/gu` ツリー全体と、将来作成される全 descendant に適用する。feedback の pending observation、active、history、report と close の作業記録、checkpoint、Markdown report、および検索の管理物も含む。
 
 完了判定では、次の両方を満たすことを確認する。
 

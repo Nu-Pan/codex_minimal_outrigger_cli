@@ -224,9 +224,9 @@ accepted を返す前に、次の保存処理を完了する。
 
 accepted は local filesystem 上の保存だけを保証する。別 clone、別 machine、または hardware failure に対する backup は保証しない。
 
-raw observation は、新しい current pointer への正常 publication が完了するまで pending として保持する。intake wave、report cut、checkpoint、run commit、merge、または staged report を作成しただけでは削除しない。
+raw observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「入力の消費と cleanup」「最新状態の atomic publication」に従って消費が確定するまで pending として保持する。`incomplete` の publication も対象とする。intake wave、report cut、checkpoint、run commit、merge、staged report、または close の作業記録を作成しただけでは削除しない。
 
-publication 後は、同 report cut が参照する intake wave で処理済みとなり、かつ最終 high-watermark 以前に durable 保存された raw observation だけを idempotent に cleanup する。最終 high-watermark より後に受理された observation、別の未完了処理が参照する observation、および validation を通過できなかった observation を削除してはならない。
+publication 後の raw cleanup と、未取り込み・後着・不適合入力の保持範囲も、同文書の「入力の消費と cleanup」に従う。消費の確定と raw file の削除は区別し、cleanup 待ちの消費済み file を pending 件数や新しい intake に含めない。未解決案件の再確認に必要な内容は active record から引き継ぐ。
 
 通常の非対話サブコマンドの terminal result には、pending observation 数だけを表示する。次のいずれかを満たす場合は、`cmoc feedback report` の実行を促す warning を加える。
 

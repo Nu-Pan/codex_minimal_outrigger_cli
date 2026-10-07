@@ -62,7 +62,7 @@ realization refactor の巡回・確定成果・比較可能なテスト時間�
 
 primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
 
-ただし、feedback の publication または cleanup の再開で引き継ぐ正常 report と `incomplete` 診断 report の保存確認、掲載対象、および実行情報の帰属は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「再開時の report と実行記録」に従う。
+ただし、feedback の publication で確定する report の掲載時点と、保存後に確定する処理結果の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。再開で引き継ぐ report の保存確認、掲載対象、および実行情報の帰属は、同文書の「再開時の report と実行記録」または `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」に従う。
 
 - `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
 - primary report 作成専用の追加 agent call は、個別仕様が report 生成手順として明示する場合に限る。

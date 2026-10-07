@@ -16,6 +16,8 @@ feedback report が自動 join 前のユーザー中断または続行不能な�
 
 `cmoc oracle edit`、read-only の investigation、run を作らない cmoc 自身の機械的更新、および session join の conflict 解消は、この editing run lifecycle の対象ではない。
 
+`cmoc feedback close` も編集 run を作らない。未終了の feedback run との排他は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「事前条件」に従う。
+
 run の隔離資源と一般 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md` の「run 作業隔離規則」を正本とする。session と run の永続 state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の `{{cmoc-session-state-file}}` を正本とする。
 
 ## 同時実行の境界
@@ -68,6 +70,8 @@ realization refactor の通常の終了はユーザー中断による。joinable
 自動 join は、後述する `cmoc run join` と同じ事前検証、差分検査、merge、および post-join を使用する。公開 CLI を再帰的に起動する必要はない。
 
 merge または no-op join 後の tree 検査、publication、および workload 固有 cleanup が完了するまで、`run.state` を `ready` へ初期化せず、run branch と worktree を保持する。失敗時は `run.state=error` とし、join 済み run の recovery は workload 固有仕様に従う。
+
+`incomplete` を含む publication の成立条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication」に従う。report の結果分類だけを理由に、上記の lifecycle を省略しない。
 
 ## join と abandon の共通事前条件
 
@@ -130,9 +134,9 @@ call 固有の正確な prompt 文面、builder の引数、prompt part の選�
 
 ### feedback run を明示 join した場合
 
-ユーザー中断またはエラー後の `feedback_report` を `cmoc run join` した場合は、確定済み issue commit を session branch へ取り込む。正常 feedback publication、`incomplete` 診断 report、active generation の更新、および observation cleanup は行わない。
+ユーザー中断またはエラー後の `feedback_report` を `cmoc run join` した場合は、確定済み issue commit を session branch へ取り込む。feedback の publication、`incomplete` 診断 report の生成、active・history の更新、および observation の消費・cleanup は行わない。
 
-feedback work state には join 結果と publication 未実施を記録する。次回の `cmoc feedback report` は join 後の tree と pending observation を再検証する。self-joining 経路ですでに join 済みの run は再度 join せず、workload 固有 recovery だけで再開する。
+feedback work state には join 結果と publication 未実施を記録する。次回の `cmoc feedback report` は join 後の tree、pending observation、および最新の active record を再検証する。self-joining 経路ですでに join 済みの run は再度 join せず、workload 固有 recovery だけで再開する。
 
 ### 使用済み branch と worktree の cleanup
 
@@ -195,7 +199,7 @@ fork report の YAML Front Matter は、少なくとも次の項目を含む。
 
 確定できない項目は `null` とし、存在しない branch、commit、worktree、または state を作ってはならない。fork report には変更 path と完了理由も含める。保存先と workload 固有項目は、workload 固有仕様で定める。
 
-self-joining workload の primary report は、上記の run identity と state に加えて、自動 join、workload 固有の確定処理、および cleanup の結果を含む。保存先と追加項目は、workload 固有仕様で定める。
+self-joining workload の primary report は、上記の run identity と state に加えて、自動 join、workload 固有の確定処理、および cleanup の結果を含む。保存先と追加項目は、workload 固有仕様で定める。ただし、feedback の report 保存後に確定する処理結果の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。
 
 feedback の publication または cleanup の再開では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「再開時の report と実行記録」に従って、引き継ぐ report と再開した実行の記録を対応付ける。
 
