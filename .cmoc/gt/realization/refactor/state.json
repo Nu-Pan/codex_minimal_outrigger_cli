@@ -155,6 +155,12 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "oracle/doc/app_spec/sub_command/feedback_close.md": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "oracle/doc/app_spec/sub_command/feedback_report.md": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
