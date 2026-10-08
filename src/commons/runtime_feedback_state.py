@@ -21,7 +21,7 @@ import re
 import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from importlib import resources
 from pathlib import Path
@@ -81,6 +81,7 @@ class ActiveState:
     machine_aggregates: dict[str, _JsonObject]
     cleanup_manifest: _JsonObject | None
     cleanup_manifest_path: Path | None
+    history: list[_JsonObject] = field(default_factory=list)
 
 
 def active_root(repo: Path) -> Path:
@@ -292,7 +293,7 @@ def validate_observation_envelope(
         if not isinstance(payload, dict):
             errors.append("/payload: expected object")
         else:
-            errors.extend(reporter_input_validation_errors(payload, stored=True))
+            errors.extend(reporter_input_validation_errors(payload))
             if isinstance(fingerprints, list):
                 expected_indexes = {
                     index
@@ -848,6 +849,7 @@ def _validate_active_issue(
         {
             "schema_version",
             "issue_id",
+            "case_id",
             "origin",
             "canonical_key",
             "category",
@@ -869,6 +871,8 @@ def _validate_active_issue(
     )
     if not _is_version_one(record.get("schema_version")):
         raise _corruption("active issue schema version が不正です。", path)
+    if not is_common_id(record.get("case_id"), "fbc"):
+        raise _corruption("active issue case ID が不正です。", path)
     current_issue_id = record.get("issue_id")
     canonical_key = record.get("canonical_key")
     if (
@@ -981,6 +985,7 @@ def _validate_active_issue(
         {
             "report_cut_id",
             "verified_at",
+            "status",
             "reason",
             "current_evidence",
             "human_action",
@@ -989,6 +994,8 @@ def _validate_active_issue(
         path,
         "active issue verification",
     )
+    if verification.get("status") not in {"human_required", "inconclusive"}:
+        raise _corruption("active issue agent result が不正です。", path)
     if not is_uuid7_prefixed(verification.get("report_cut_id"), "fbc_"):
         raise _corruption(
             "active issue verification の report cut ID が不正です。", path
@@ -1009,10 +1016,15 @@ def _validate_active_issue(
     from .runtime_feedback_run_state import validate_decision_basis
 
     validate_decision_basis(verification["decision_basis"], path, compact=True)
+    if (
+        verification["status"] == "human_required"
+        and verification["decision_basis"]["cycle_states"]
+    ):
+        raise _corruption("human_required に循環診断を転用できません。", path)
     evidence = verification.get("current_evidence")
     if (
         not isinstance(evidence, list)
-        or not evidence
+        or (not evidence and verification["status"] == "human_required")
         or len(evidence) > 5
         or not all(isinstance(item, dict) for item in evidence)
     ):
@@ -1036,11 +1048,18 @@ def _validate_active_issue(
             or "content" in item
         ):
             raise _corruption("active issue current evidence entry が不正です。", path)
-    if (
+    if verification["status"] == "human_required" and (
         not isinstance(verification.get("human_action"), str)
         or not verification["human_action"]
     ):
         raise _corruption("active issue human action が空です。", path)
+    if (
+        verification["status"] == "inconclusive"
+        and verification["human_action"] is not None
+    ):
+        raise _corruption(
+            "inconclusive human action は null である必要があります。", path
+        )
     machine_state = record.get("machine_state")
     if record.get("origin") == "machine_rule":
         if not isinstance(machine_state, dict):
@@ -1057,11 +1076,6 @@ def _validate_active_issue(
         if machine_state.get("canonical_key") != canonical_key:
             raise _corruption(
                 "machine active issue aggregate identity が一致しません。", path
-            )
-        if not _machine_aggregate_reaches_threshold(machine_state):
-            raise _corruption(
-                "machine active issue aggregate が recurrence threshold 未満です。",
-                path,
             )
     if record.get("origin") == "agent_report" and machine_state is not None:
         raise _corruption(
@@ -1347,6 +1361,10 @@ def _load_generation(
             "session_commit",
             "issues",
             "machine_aggregates",
+            "source",
+            "base_current",
+            "input_boundary",
+            "history",
         },
         manifest_path,
         "active generation manifest",
@@ -1382,6 +1400,34 @@ def _load_generation(
         raise _corruption(
             "active generation の session commit が不正です。", manifest_path
         )
+    source = _require_exact_fields(
+        manifest["source"],
+        {"kind", "id", "execution_id"},
+        manifest_path,
+        "generation source",
+    )
+    if (
+        source["kind"] not in {"report", "close"}
+        or source["id"] != manifest["report_cut_id"]
+        or not is_common_id(source["execution_id"], "exec")
+    ):
+        raise _corruption("generation source が不正です。", manifest_path)
+    if manifest["base_current"] is not None and not isinstance(
+        manifest["base_current"], dict
+    ):
+        raise _corruption("generation base pointer が不正です。", manifest_path)
+    _require_nonnegative_integer(
+        manifest["input_boundary"], manifest_path, "generation input boundary"
+    )
+    from .runtime_feedback_history import load_history
+
+    history = load_history(repo, manifest["history"])
+    if (
+        not history
+        or history[-1]["generation_id"] != generation_id_value
+        or history[-1]["source"] != source
+    ):
+        raise _corruption("generation と history の対応が不正です。", manifest_path)
     issue_refs = manifest.get("issues")
     aggregate_refs = manifest.get("machine_aggregates")
     if not isinstance(issue_refs, list) or not isinstance(aggregate_refs, list):
@@ -1416,7 +1462,9 @@ def _load_generation(
         _validate_active_issue(
             record,
             path,
-            expected_report_cut_id=str(manifest.get("report_cut_id")),
+            expected_report_cut_id=str(manifest["report_cut_id"])
+            if source["kind"] == "report"
+            else None,
         )
         if record.get("issue_id") != current_issue_id or current_issue_id in issues:
             raise _corruption("active issue reference identity が一致しません。", path)
@@ -1426,6 +1474,10 @@ def _load_generation(
         raise _corruption(
             "active issue references が issue ID 順ではありません。", manifest_path
         )
+
+    case_ids = [issue["case_id"] for issue in issues.values()]
+    if len(case_ids) != len(set(case_ids)):
+        raise _corruption("active case ID が重複しています。", manifest_path)
 
     aggregates: dict[str, _JsonObject] = {}
     aggregate_keys: list[str] = []
@@ -1472,6 +1524,8 @@ def _load_generation(
 
 def load_active_state(repo: Path) -> ActiveState:
     """current pointer が選ぶ正常な active state と cleanup state を読む。"""
+    from .runtime_feedback_history import load_history
+
     active_directory = active_root(repo)
     if _has_symlink_component(active_directory) or (
         active_directory.exists() and not active_directory.is_dir()
@@ -1517,7 +1571,7 @@ def load_active_state(repo: Path) -> ActiveState:
         report_cut_id_value, "fbc_"
     ):
         raise _corruption("feedback current pointer の ID が不正です。", pointer_path)
-    if pointer.get("result") not in {"ok", "attention"}:
+    if pointer.get("result") not in {"ok", "attention", "incomplete"}:
         raise _corruption("feedback current pointer result が不正です。", pointer_path)
     report_cut_manifest_hash = pointer.get("report_cut_manifest_sha256")
     if (
@@ -1548,7 +1602,9 @@ def load_active_state(repo: Path) -> ActiveState:
         raise _corruption(
             "current generation と report cut が一致しません。", generation_path
         )
-    expected_result = "attention" if issues else "ok"
+    from .runtime_feedback_history import state_summary
+
+    expected_result = state_summary(issues)
     if pointer.get("result") != expected_result:
         raise _corruption(
             "feedback current pointer result が generation の issue 数と一致しません。",
@@ -1562,7 +1618,12 @@ def load_active_state(repo: Path) -> ActiveState:
         description="current feedback Markdown report",
     )
     if (
-        report_path.parent != report_root.resolve(strict=False)
+        report_path.parent
+        not in {
+            report_root.resolve(strict=False),
+            (report_root / "incomplete").resolve(strict=False),
+            (report_root / "close").resolve(strict=False),
+        }
         or report_path.suffix != ".md"
     ):
         raise _corruption(
@@ -1573,7 +1634,9 @@ def load_active_state(repo: Path) -> ActiveState:
     cut_path = report_cut_manifest_path(repo, str(report_cut_id_value))
     cleanup_manifest: _JsonObject | None = None
     cleanup_path: Path | None = None
-    if cut_path.exists() or cut_path.is_symlink():
+    if generation_manifest["source"]["kind"] == "report" and (
+        cut_path.exists() or cut_path.is_symlink()
+    ):
         cleanup_manifest = _read_canonical_object(
             cut_path, "published report cut manifest"
         )
@@ -1628,7 +1691,13 @@ def load_active_state(repo: Path) -> ActiveState:
             )
         cleanup_path = cut_path
     return ActiveState(
-        pointer, generation_manifest, issues, aggregates, cleanup_manifest, cleanup_path
+        pointer,
+        generation_manifest,
+        issues,
+        aggregates,
+        cleanup_manifest,
+        cleanup_path,
+        load_history(repo, generation_manifest["history"]),
     )
 
 
@@ -1649,7 +1718,6 @@ def _validate_report_cut_manifest(
             "inputs",
             "processing",
             "publication",
-            "diagnostic",
             "run",
         },
         path,
@@ -1791,8 +1859,6 @@ def _validate_report_cut_manifest(
         "processing",
         "interrupted",
         "failed",
-        "diagnostic_staging",
-        "incomplete",
         "staging",
         "publication_ready",
     }:
@@ -1879,14 +1945,6 @@ def _validate_report_cut_manifest(
             inputs=inputs,
             processing=processing,
         )
-    diagnostic = manifest.get("diagnostic")
-    if diagnostic is not None:
-        _validate_diagnostic_section(
-            repo,
-            diagnostic,
-            path,
-            processing=processing,
-        )
     from .runtime_feedback_run_state import validate_run_artifacts
 
     validate_run_artifacts(
@@ -1897,109 +1955,19 @@ def _validate_report_cut_manifest(
         targets is None
         or publication["generation_id"] != targets["generation_id"]
         or publication["generated_at"] != targets["generated_at"]
-        or publication["report"]["path"] != targets["report"]
+        or publication["report"]["path"]
+        != targets[
+            "incomplete_report" if publication["result"] == "incomplete" else "report"
+        ]
     ):
         raise _corruption(
             "publication target が封印済み report cut と一致しません。", path
         )
-    if diagnostic is not None and (
-        targets is None
-        or diagnostic["generated_at"] != targets["generated_at"]
-        or diagnostic["report"]["path"] != targets["incomplete_report"]
-    ):
-        raise _corruption(
-            "diagnostic target が封印済み report cut と一致しません。", path
-        )
     status = processing.get("status")
-    if status in {"diagnostic_staging", "incomplete"} and diagnostic is None:
-        raise _corruption(
-            "incomplete 段階の report cut に診断 report 参照がありません。", path
-        )
-    if diagnostic is not None and status not in {
-        "diagnostic_staging",
-        "incomplete",
-    }:
-        raise _corruption("診断 report 参照を持つ report cut status が不正です。", path)
-    if publication is not None and diagnostic is not None:
-        raise _corruption(
-            "正常 publication と incomplete 診断を同じ cut に併存できません。", path
-        )
     if status in {"staging", "publication_ready"} and publication is None:
         raise _corruption(
             "publication 段階の report cut に成果物参照がありません。", path
         )
-
-
-def _validate_diagnostic_section(
-    repo: Path,
-    value: object,
-    path: Path,
-    *,
-    processing: _JsonObject,
-) -> None:
-    """`incomplete` 診断 report と正式 checkpoint の対応を検証する。"""
-    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
-    diagnostic = _require_exact_fields(
-        value,
-        {
-            "report",
-            "generated_at",
-            "result",
-        },
-        path,
-        "report cut diagnostic",
-    )
-    _require_timestamp(diagnostic.get("generated_at"), path, "diagnostic generated_at")
-    if diagnostic.get("result") != "incomplete":
-        raise _corruption("diagnostic result が不正です。", path)
-
-    checkpoint_references = processing.get("remediation_checkpoints")
-    if not isinstance(checkpoint_references, list):
-        raise _corruption("diagnostic remediation checkpoint が不正です。", path)
-    has_inconclusive = False
-    checkpoint_root = (
-        report_cut_directory(repo, path.parent.name) / "checkpoint" / "remediation"
-    )
-    from .runtime_feedback_run_state import selected_remediation_checkpoints
-
-    for reference in selected_remediation_checkpoints({"processing": processing}):
-        if not isinstance(reference, dict):
-            raise _corruption(
-                "diagnostic remediation checkpoint reference が不正です。", path
-            )
-        checkpoint = read_checkpoint(
-            repo,
-            {"path": reference.get("path"), "sha256": reference.get("sha256")},
-            checkpoint_root,
-            "diagnostic remediation checkpoint",
-        )
-        output = checkpoint.get("structured_output")
-        result = output.get("result") if isinstance(output, dict) else None
-        verdict = result.get("status") if isinstance(result, dict) else None
-        has_inconclusive = has_inconclusive or verdict == "inconclusive"
-    if not has_inconclusive:
-        raise _corruption("diagnostic に inconclusive checkpoint がありません。", path)
-
-    report_reference = _artifact_reference_shape(
-        diagnostic.get("report"), path, "incomplete diagnostic report"
-    )
-    report_root = repo / ".cmoc" / "gu" / "report" / "feedback" / "incomplete"
-    report_path = _validate_report_cut_artifact_reference(
-        repo,
-        report_reference,
-        expected_root=report_root,
-        description="incomplete diagnostic Markdown report",
-        allow_missing=processing.get("status") == "diagnostic_staging",
-    )
-    if (
-        report_path.parent != report_root.resolve(strict=False)
-        or report_path.suffix != ".md"
-    ):
-        raise _corruption(
-            "incomplete diagnostic Markdown report path が不正です。", report_path
-        )
-    if processing.get("failure") is not None:
-        raise _corruption("incomplete diagnostic processing failure が不正です。", path)
 
 
 def _validate_report_cut_current_input(
@@ -2052,7 +2020,7 @@ def _validate_report_cut_current_input(
         not _is_version_one(pointer_value.get("schema_version"))
         or not is_common_id(generation_id_value, "fbg")
         or not is_uuid7_prefixed(pointer_value.get("report_cut_id"), "fbc_")
-        or pointer_value.get("result") not in {"ok", "attention"}
+        or pointer_value.get("result") not in {"ok", "attention", "incomplete"}
     ):
         raise _corruption("report cut current pointer value が不正です。", path)
     _require_timestamp(
@@ -2129,7 +2097,12 @@ def _validate_report_cut_current_input(
         allow_missing=False,
     )
     if (
-        report_path.parent != report_root.resolve(strict=False)
+        report_path.parent
+        not in {
+            report_root.resolve(strict=False),
+            (report_root / "incomplete").resolve(strict=False),
+            (report_root / "close").resolve(strict=False),
+        }
         or report_path.suffix != ".md"
     ):
         raise _corruption(
@@ -2444,6 +2417,7 @@ def _validate_publication_section(
             "generation_id",
             "generation_manifest",
             "generation_artifacts",
+            "history_artifacts",
             "report",
             "generated_at",
             "result",
@@ -2457,7 +2431,7 @@ def _validate_publication_section(
     _require_timestamp(
         publication.get("generated_at"), path, "publication generated_at"
     )
-    if publication.get("result") not in {"ok", "attention"}:
+    if publication.get("result") not in {"ok", "attention", "incomplete"}:
         raise _corruption("publication result が不正です。", path)
     generation_id_value = str(publication["generation_id"])
     generation_reference = _artifact_reference_shape(
@@ -2486,6 +2460,17 @@ def _validate_publication_section(
             "publication generation artifact 一覧が canonical ではありません。", path
         )
     staged_missing = processing.get("status") != "publication_ready"
+    history_artifacts = publication["history_artifacts"]
+    if not isinstance(history_artifacts, list) or len(history_artifacts) != 1:
+        raise _corruption("publication history artifacts が不正です。", path)
+    for reference in history_artifacts:
+        _validate_report_cut_artifact_reference(
+            repo,
+            reference,
+            expected_root=feedback_root(repo) / "history",
+            description="staged history",
+            allow_missing=staged_missing,
+        )
     expected_generation_root = generation_directory(repo, generation_id_value)
     generation_manifest_path = _resolve_reference_path(
         repo,
@@ -2544,7 +2529,12 @@ def _validate_publication_section(
         allow_missing=staged_missing,
     )
     if (
-        report_path.parent != report_root.resolve(strict=False)
+        report_path.parent
+        not in {
+            report_root.resolve(strict=False),
+            (report_root / "incomplete").resolve(strict=False),
+            (report_root / "close").resolve(strict=False),
+        }
         or report_path.suffix != ".md"
     ):
         raise _corruption("publication Markdown report path が不正です。", report_path)
@@ -2650,8 +2640,26 @@ def _validate_publication_section(
         run_artifact_references(_read_canonical_object(path, "feedback manifest"))
     )
     expected_work.sort(key=lambda item: str(item["path"]))
+    if any(
+        reference not in expected_observations
+        for reference in cleanup_lists["observations"]
+    ):
+        raise _corruption("cleanup input が固定した observation に含まれません。", path)
+    from .runtime_feedback_history import load_history
+
+    if not staged_missing:
+        if loaded["history"][-1] != history_artifacts[0]:
+            raise _corruption(
+                "publication history と generation の対応が不正です。", path
+            )
+        consumed = [
+            {key: entry[key] for key in ("path", "sha256")}
+            for entry in load_history(repo, history_artifacts)[0]["observations"]
+        ]
+        if consumed != cleanup_lists["observations"]:
+            raise _corruption("cleanup input が確定した消費記録と一致しません。", path)
     expected_cleanup = {
-        "observations": expected_observations,
+        "observations": cleanup_lists["observations"],
         "old_generation": expected_old_generation,
         "work_artifacts": expected_work,
     }
@@ -2672,9 +2680,15 @@ def load_report_cut(repo: Path) -> tuple[_JsonObject, Path] | None:
             "feedback report work root が通常 directory ではありません。", root
         )
     directories = sorted(
-        path for path in root.iterdir() if path.is_dir() and not path.is_symlink()
+        path
+        for path in root.iterdir()
+        if path.name != "close" and path.is_dir() and not path.is_symlink()
     )
-    unexpected = [path for path in root.iterdir() if path not in directories]
+    unexpected = [
+        path
+        for path in root.iterdir()
+        if path not in directories and path.name != "close"
+    ]
     if unexpected:
         raise _corruption(
             "feedback report work root に未定義 artifact があります。", unexpected[0]
@@ -2748,10 +2762,7 @@ def _validate_report_cut_artifact_inventory(
             ),
         ),
     )
-    result_staged = (
-        manifest.get("publication") is not None
-        or manifest.get("diagnostic") is not None
-    )
+    result_staged = manifest.get("publication") is not None
     report_cut_id_value = str(manifest.get("report_cut_id"))
     for artifact in manifest_path.parent.rglob("*"):
         if artifact.is_dir() and not artifact.is_symlink():
@@ -2919,10 +2930,7 @@ def recover_report_cut_checkpoint_references(
                         checkpoint_path_value,
                     )
                 continue
-            if (
-                manifest.get("publication") is not None
-                or manifest.get("diagnostic") is not None
-            ):
+            if manifest.get("publication") is not None:
                 raise _corruption(
                     "staged report result に未列挙 checkpoint があります。",
                     checkpoint_path_value,
@@ -2953,7 +2961,6 @@ def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -
         "inputs",
         "processing",
         "publication",
-        "diagnostic",
         "run",
     }:
         raise _corruption("report cut manifest の top-level field が不正です。", path)
@@ -3006,9 +3013,10 @@ def _validate_active_artifact_inventory(
 ) -> None:
     """current／staged／cleanup 対象以外の active artifact を拒否する。"""
     root = active_root(repo)
-    if not root.exists() and not root.is_symlink():
-        return
     allowed: set[Path] = set()
+    history_references = (
+        list(state.generation_manifest["history"]) if state.generation_manifest else []
+    )
     pointer_path = current_pointer_path(repo)
     if pointer_path.exists() or pointer_path.is_symlink():
         allowed.add(pointer_path.resolve(strict=False))
@@ -3023,6 +3031,7 @@ def _validate_active_artifact_inventory(
     if work is not None:
         publication = work[0].get("publication")
         if isinstance(publication, dict):
+            history_references.extend(publication["history_artifacts"])
             generation_references = publication.get("generation_artifacts")
             if not isinstance(generation_references, list):
                 raise _corruption(
@@ -3061,34 +3070,46 @@ def _validate_active_artifact_inventory(
                     "old generation inventory",
                 )
                 allowed.add(target.resolve(strict=False))
+    from .runtime_feedback_close_state import load_close_work
+
+    close = load_close_work(repo)
+    if close is not None:
+        history_references.append(close["history"])
+        for reference in [*close["artifacts"], *close["old_generation"]]:
+            target = _resolve_reference_path(
+                repo,
+                reference.get("path"),
+                generation_root(repo),
+                "close generation inventory",
+            )
+            allowed.add(target.resolve(strict=False))
     _require_only_expected_files(root, allowed, "feedback active state")
+    _require_only_expected_files(
+        feedback_root(repo) / "history",
+        {
+            (repo / reference["path"]).resolve(strict=False)
+            for reference in history_references
+        },
+        "feedback history",
+    )
 
 
 def published_cleanup_observation_ids(repo: Path) -> set[str]:
-    """切替済み cleanup manifest が処理済みと列挙する observation ID を返す。"""
+    """確定済み消費記録を検証し、work cleanup 後も処理済み ID を返す。"""
     state = load_active_state(repo)
-    manifest = state.cleanup_manifest
-    if manifest is None:
-        return set()
-    publication = manifest.get("publication")
-    if not isinstance(publication, dict):
-        raise _corruption(
-            "published report cut に publication section がありません。",
-            state.cleanup_manifest_path or feedback_root(repo),
-        )
-    cleanup = publication.get("cleanup")
-    if not isinstance(cleanup, dict) or not isinstance(
-        cleanup.get("observations"), list
-    ):
-        raise _corruption(
-            "published report cut cleanup が不正です。",
-            state.cleanup_manifest_path or feedback_root(repo),
-        )
-    return {
-        Path(str(reference["path"])).stem
-        for reference in cleanup["observations"]
-        if isinstance(reference, dict) and isinstance(reference.get("path"), str)
-    }
+    identities = set()
+    for record in state.history:
+        for entry in record["observations"]:
+            target = repo / entry["path"]
+            if target.exists() or target.is_symlink():
+                _validate_artifact_reference(
+                    repo,
+                    {key: entry[key] for key in ("path", "sha256")},
+                    expected_root=feedback_root(repo) / "observation/v1",
+                    description="consumed observation",
+                )
+            identities.add(entry["observation_id"])
+    return identities
 
 
 def generation_artifacts(
@@ -3100,6 +3121,10 @@ def generation_artifacts(
     session_commit: str,
     issues: dict[str, _JsonObject],
     machine_aggregates: dict[str, _JsonObject],
+    source: _JsonObject,
+    base_current: _JsonObject | None,
+    input_boundary: int,
+    history: list[_JsonObject],
 ) -> tuple[_JsonObject, tuple[tuple[Path, bytes], ...], _JsonObject]:
     """新 generation の全 immutable byte 列と manifest reference を構築する。"""
     directory = generation_directory(repo, generation_id)
@@ -3115,7 +3140,9 @@ def generation_artifacts(
         _validate_active_issue(
             record,
             path,
-            expected_report_cut_id=report_cut_id,
+            expected_report_cut_id=report_cut_id
+            if source["kind"] == "report"
+            else None,
         )
         content = canonical_json_bytes(record)
         artifacts.append((path, content))
@@ -3152,6 +3179,10 @@ def generation_artifacts(
         "report_cut_id": report_cut_id,
         "created_at": created_at,
         "session_commit": session_commit,
+        "source": source,
+        "base_current": base_current,
+        "input_boundary": input_boundary,
+        "history": history,
         "issues": issue_references,
         "machine_aggregates": aggregate_references,
     }
@@ -3234,7 +3265,7 @@ def publish_current_pointer(
     result: str,
 ) -> _JsonObject:
     """generation と Markdown report の検証後に current pointer を切り替える。"""
-    if result not in {"ok", "attention"}:
+    if result not in {"ok", "attention", "incomplete"}:
         raise ValueError(f"invalid normal feedback result: {result!r}")
     _require_timestamp(published_at, current_pointer_path(repo), "feedback publication")
     generation_path = _validate_artifact_reference(
@@ -3250,7 +3281,9 @@ def publish_current_pointer(
         raise _corruption(
             "new generation の report cut ID が一致しません。", generation_path
         )
-    expected_result = "attention" if _issues else "ok"
+    from .runtime_feedback_history import state_summary
+
+    expected_result = state_summary(_issues)
     if result != expected_result:
         raise _corruption(
             "new feedback result が generation の issue 数と一致しません。",
@@ -3264,7 +3297,12 @@ def publish_current_pointer(
         description="new feedback Markdown report",
     )
     if (
-        report_path.parent != report_root.resolve(strict=False)
+        report_path.parent
+        not in {
+            report_root.resolve(strict=False),
+            (report_root / "incomplete").resolve(strict=False),
+            (report_root / "close").resolve(strict=False),
+        }
         or report_path.suffix != ".md"
     ):
         raise _corruption("new feedback Markdown report path が不正です。", report_path)
@@ -3282,6 +3320,57 @@ def publish_current_pointer(
         "published_at": published_at,
         "result": result,
     }
+    base = load_active_state(repo)
+    if base.current != loaded_manifest["base_current"]:
+        raise _corruption(
+            "feedback publication の base current が変化しています。",
+            current_pointer_path(repo),
+        )
+    inherited_history = (
+        base.generation_manifest["history"] if base.generation_manifest else []
+    )
+    if loaded_manifest["history"][:-1] != inherited_history:
+        raise _corruption(
+            "feedback publication が確定済み history を引き継いでいません。",
+            generation_path,
+        )
+    from .runtime_feedback_history import load_history
+
+    events = load_history(repo, loaded_manifest["history"][-1:])[0]["events"]
+    event_map = {event["issue_id"]: event for event in events}
+    for identity, event in event_map.items():
+        if event["before"] != base.issues.get(identity) or event[
+            "after"
+        ] != _issues.get(identity):
+            raise _corruption(
+                "feedback publication の案件遷移が base/新 generation と一致しません。",
+                generation_path,
+            )
+    for identity, issue in _issues.items():
+        if identity not in event_map and (
+            loaded_manifest["source"]["kind"] != "close"
+            or base.issues.get(identity) != issue
+        ):
+            raise _corruption(
+                "feedback publication に履歴未記録の案件更新があります。",
+                generation_path,
+            )
+    if any(
+        identity not in event_map and identity not in _issues
+        for identity in base.issues
+    ):
+        raise _corruption(
+            "feedback publication に履歴未記録の案件終了があります。", generation_path
+        )
+    if loaded_manifest["source"]["kind"] == "close" and (
+        base.machine_aggregates != _aggregates
+        or base.generation_manifest is None
+        or loaded_manifest["input_boundary"]
+        != base.generation_manifest["input_boundary"]
+    ):
+        raise _corruption(
+            "feedback close が集計または消費境界を変更しています。", generation_path
+        )
     _atomic_write_json(current_pointer_path(repo), pointer)
     # publication point の再読みにより pointer と両成果物をまとめて検証する。
     loaded_state = load_active_state(repo)
@@ -3531,28 +3620,14 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
                     description="staged feedback report",
                 )
 
-    diagnostic = manifest.get("diagnostic")
-    if isinstance(diagnostic, dict) and processing.get("status") != "incomplete":
-        report_reference = diagnostic.get("report")
-        if not isinstance(report_reference, dict):
-            raise _corruption(
-                "staged diagnostic report reference が不正です。", manifest_path
+    if isinstance(publication, dict):
+        for reference in publication["history_artifacts"]:
+            _unlink_artifact_reference(
+                repo,
+                reference,
+                expected_root=feedback_root(repo) / "history",
+                description="discard staged history",
             )
-        report_root = repo / ".cmoc" / "gu" / "report" / "feedback" / "incomplete"
-        report_path = _resolve_reference_path(
-            repo,
-            report_reference.get("path"),
-            report_root,
-            "staged incomplete diagnostic report",
-        )
-        _unlink_artifact_reference(
-            repo,
-            report_reference,
-            expected_root=report_root,
-            description="staged incomplete diagnostic report",
-        )
-        _prune_empty_directories(report_path.parent, report_root.parent)
-
     # work directory 内に manifest が列挙していない file があれば推測削除しない。
     _require_only_expected_files(
         manifest_path.parent,

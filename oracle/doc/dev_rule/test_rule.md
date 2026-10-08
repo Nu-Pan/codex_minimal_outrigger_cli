@@ -10,18 +10,26 @@
 ## goal
 
 - cmoc の決定論的な制御ロジックが仕様どおりに動作することを検証する。例えば、git 状態の検査、作業ディレクトリの決定、対象ファイルの列挙、設定生成、ログ保存、状態更新、エラー処理などを対象とする。
-- Codex CLI 呼び出しを伴う経路では、cmoc が責任を持つ結合動作を検証する。例えば、prompt 渡し、argv による設定、出力保存、schema 指定、response 後の処理などを対象とする。実行経路の要件は、本書の「実経路統合テスト」で定める。
+- Codex CLI 呼び出しを伴う経路では、cmoc が責任を持つ結合動作を検証する。例えば、prompt 渡し、argv による設定、出力保存、schema 指定、response 後の処理などを対象とする。決定論的な検証の範囲は本書の「Fake Codex CLI」、実 CLI との結合を検証する成立条件は本書の「実経路統合テスト」で定める。
 
 ## non-goal
 
 - LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
 - Codex CLI 自体または model provider の正しさや安定性を保証することは目的としない
+- Fake Codex CLI の成功によって Real Codex CLI との互換性を保証することは目的としない。実 CLI の引数・設定解釈、実際の応答形式、MCP 接続、TUI・通知 hook、認証・sandbox などとの結合は、Fake Codex CLI では検証できない。
 
 ## 基本
 
 - pytest を使用する
 - realization test は `{{cmoc-root}}/test` に実装する
 - pytest の `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
+- `{{cmoc-root}}/oracle/doc/app_spec/download_asset_cache.md` の「保存先と共有範囲」が定める固定キャッシュパスも、テスト時は `{{test-root}}` 内へ置き換え、実ユーザーのキャッシュを読み書きしない。共有を検証する複数の cmoc 配置・process は、同じテスト内の置換先を使用する
+
+## テストの削除・統合
+
+検出能力を維持する判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「realization refactor の改善判断」に従う。cmoc で維持すべき検証範囲は、本書の goal と個別仕様の検証要件から特定する。境界条件、失敗時挙動、外部から観測可能な結果に加え、実経路統合テストについては本書の「検証要件」が定める公開末端サブコマンドとの対応を維持する。
+
+通常検証で実経路統合テストを実行しないことは、そのケースを不要とする根拠にはならない。実行の選択は `{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」に従い、Fake Codex CLI と Real Codex CLI の役割の違いを維持する。
 
 ## 実経路統合テスト
 
@@ -40,7 +48,15 @@
 
 公開末端サブコマンドと実経路統合テストケースの対応は、機械的に比較可能にする。サブコマンドの追加または rename に対して、対応する実経路統合テストケースがなければ test を失敗させる。新規の公開末端サブコマンドには、同じ変更で対応する実経路統合テストケースを追加する。
 
-Codex CLI 呼び出しには、実在の Codex CLI executable と実推論を使用する。Fake、mock、stub、記録済み response、または起動確認だけでは代替できない。本番との差は、`{{test-root}}` による隔離、決定論的な入力、対話操作の自動化、および本書が定めるテスト用 `CmocConfig` の直接設定に必要な範囲だけ許容する。
+Codex CLI 呼び出しには、実在の Codex CLI executable（Real Codex CLI）と実推論を使用する。Fake、mock、stub、記録済み response、または起動確認だけでは代替できない。
+
+本番との差は、次のために必要な範囲だけ許容する。
+
+- `{{test-root}}` による隔離
+- 決定論的な入力
+- 対話操作の自動化
+- 本書が定めるテスト用 `CmocConfig` の直接設定
+- `{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「Real Codex CLI を使う追加検証を起動する」が定めるテスト runner の command の起動場所
 
 `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、実経路統合テストとはみなさない。
 
@@ -57,4 +73,4 @@ Codex CLI 呼び出しには、実在の Codex CLI executable と実推論を使
 
 ## Fake Codex CLI
 
-- Fake Codex CLI は、実経路統合テスト以外で Real Codex CLI が不要な場合に限り、決定論的な制御ロジックの検証に使用してよい
+Fake Codex CLI は、Real Codex CLI の代わりに決定論的な応答を返し、cmoc の制御ロジックと Codex CLI 呼び出しの前後処理を検証するために使用する。

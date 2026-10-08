@@ -33,7 +33,7 @@ def write_fork_report(
     *,
     state_after: str,
     completion_reason: str,
-    changed_paths: list[str],
+    changed_paths: list[str] | None,
     codex_returncode: int | None = None,
     extra_fields: dict[str, object] | None = None,
     body_lines: list[str] | None = None,
@@ -73,7 +73,11 @@ def write_fork_report(
         ("codex_returncode", codex_returncode),
     ]
     fields.extend((extra_fields or {}).items())
-    changed = [_render_changed_path(item) for item in changed_paths] or ["- none"]
+    changed = (
+        [_render_changed_path(item) for item in changed_paths] or ["- none"]
+        if changed_paths is not None
+        else ["- unavailable"]
+    )
     logger = current_subcommand_logger()
     if logger is not None:
         fields.append(("subcommand_log_path", str(logger.path.resolve())))

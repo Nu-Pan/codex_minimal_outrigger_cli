@@ -25,6 +25,7 @@ ID は `<プレフィックス>_<6桁の36進通番>_YYYY-MM-DD_HH-mm` 形式と
 | `eit` | editor input の handoff target | `{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「handoff target」 |
 | `fbr` | feedback run | `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback run」 |
 | `fbg` | feedback の active generation | `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「active generation」 |
+| `fbc` | feedback の案件 | `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「案件 ID と状態遷移」 |
 | `fbo` | agent が提出した observation | `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「保存単位」 |
 
 ## 採番と順序保証
@@ -48,6 +49,6 @@ ID は `<プレフィックス>_<6桁の36進通番>_YYYY-MM-DD_HH-mm` 形式と
 
 Codex が返す session ID、Git commit ID、hash から決定する issue ID、および event から決定する machine observation ID は、それぞれの生成契約に従う。共通 ID に置き換えない。
 
-プレフィックスや通番から、親子関係、target の有効性、処理成功、または現在有効な publication を推定してはならない。対応記録、登録状態、current pointer など、各機能の判断契約を使用する。collector の受理順序は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「high-watermark」に従う。
+feedback の案件 ID には共通 ID を使い、issue identity を表す既存の issue ID とは別に採番する。案件と issue identity の対応・発行時点・再開時の引継ぎは、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「案件 ID と状態遷移」に従う。
 
-本書の ID と `{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` の「タイムスタンプのフォーマット」への変更に、旧 ID・旧日時形式の読み取り、旧形式での出力、自動変換、改名、移動、または旧データの一括 cleanup は要求しない。旧データの廃棄はユーザーの手動操作に委ねる。この非互換変更は ID・日時形式に限り、別の schema や protocol の互換契約、および新仕様での通常の再開・封印済み artifact の保護を変更しない。
+プレフィックスや通番から、親子関係、target の有効性、処理成功、または現在有効な publication を推定してはならない。対応記録、登録状態、current pointer など、各機能の判断契約を使用する。collector の受理順序は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「high-watermark」に従う。

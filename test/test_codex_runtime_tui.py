@@ -539,7 +539,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
     def run_process(argv, **kwargs):
         source = json.loads(kwargs["env"][EDITOR_INPUT_SOURCE_ENV])
         logger = loggers[source["subcommand"]]
-        assert source["execution_id"] == logger.invocation_id
+        assert source["execution_id"] == logger.execution_id
         assert source["sub_command_log_path"] == str(logger.path.resolve())
         events = [json.loads(line) for line in logger.path.read_text().splitlines()]
         event = next(
@@ -548,7 +548,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
         assert {key: event[key] for key in source} == source
         call = json.loads(Path(event["call_log_path"]).read_text())
         assert call["codex_call_id"] == source["codex_call_id"]
-        assert source["codex_call_id"] != "cdc_previous"
+        assert source["codex_call_id"] != "cc_000008_2026-09-29_15-04"
         assert argv[-1] == "unchanged prompt"
         assert all(
             source[key] not in argv[-1]
@@ -613,7 +613,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
         logger = loggers[name]
         token = set_current_subcommand_logger(logger)
         try:
-            logger.event("codex_call", codex_call_id="cdc_previous")
+            logger.event("codex_call", codex_call_id="cc_000008_2026-09-29_15-04")
             return run_codex_tui(
                 replace(
                     codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),

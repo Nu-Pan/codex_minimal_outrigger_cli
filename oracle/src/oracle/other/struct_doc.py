@@ -194,7 +194,7 @@ def render_sd_node_as_markdown(
     *sd_nodes: SDNode,
 ) -> str:
     """
-    sd_node を markdown としてレンダリングする
+    sd_nodes を markdown としてレンダリングする
     """
     return _collapse_blank_lines(_render_sd_node_as_markdown(*sd_nodes))
 
@@ -203,7 +203,7 @@ def _render_sd_node_as_markdown(
     *sd_nodes: SDNode,
     depth: int = 0,
 ) -> str:
-    """sd_node を markdown としてレンダリングする
+    """sd_nodes を markdown としてレンダリングする
 
     内部実装の入口・再帰呼び出しの入口として使う
     """

@@ -18,7 +18,6 @@ from typing import cast
 
 import pytest
 from _codex_support import codex_arg_value, codex_override_config, codex_parameter
-from oracle.acp_builder.basic import DocumentSearchScope
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -35,7 +34,7 @@ from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
 )
-from commons.runtime_feedback import (
+from commons.runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
@@ -156,7 +155,7 @@ def test_search_mcp_rejects_external_transport_collision(
     """user 設定の同名 URL が残った実効 MCP 設定を起動前に拒否する。"""
     parameter = replace(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
-        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
+        enable_document_search_mcp=True,
     )
     argv = ["codex", *build_codex_override_args(parameter, CmocConfig())]
     server = codex_override_config(argv)["mcp_servers"]["cmoc_document_search"]
@@ -384,6 +383,7 @@ def test_codex_overrides_disable_unpaired_notification_callback() -> None:
         (b"codex-cli 0.156.1\n", 0, True),
         (b"codex-cli 0.157.1\n", 0, True),
         (b"codex-cli 0.158.0\n", 0, True),
+        (b"codex-cli 0.159.2\n", 0, True),
         (b"codex-cli 0.152.0\n", 0, False),
         (b"codex-cli 0.153.4.1\n", 0, False),
         (b"codex-cli 0.151.0\n", 1, False),

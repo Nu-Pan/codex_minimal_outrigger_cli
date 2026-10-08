@@ -31,25 +31,18 @@ _FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00-00_000"
 def run_fixed_codex_exec(
     root: Path, barrier: BarrierType, connection: Connection
 ) -> None:
-    """同じ初回 timestamp の実運用 Codex 呼び出しを別 process で実行する。"""
+    """同時刻の Codex 呼び出しを別 process で実行する。"""
     import commons.runtime_codex_exec as exec_module
-
-    attempts = 0
 
     def timestamp_factory() -> str:
         """両 process に同じ生成時刻を与えて path の独立性を確かめる。"""
-        nonlocal attempts
-        attempts += 1
-        if attempts == 1:
-            barrier.wait(timeout=5)
-            return _FIXED_CODEX_TIMESTAMP
         return _FIXED_CODEX_TIMESTAMP
 
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # reservation が run_codex_exec boundary で検証されるよう、両 production call の
-    # 初期 timestamp を同じに固定する。
+    # 発行処理を始める前に同期し、記録日時が一致しても各 log が分離されることを調べる。
     exec_module.timestamp = timestamp_factory
     try:
+        barrier.wait(timeout=5)
         result = run_codex_exec(
             codex_parameter(agent_call_cwd=root),
             root=root,

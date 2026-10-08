@@ -59,9 +59,6 @@ from oracle.prompt_builder.policy.realization import (
 from oracle.prompt_builder.policy.realization_findings import (
     build_realization_findings_policy as _build_realization_findings_policy,
 )
-from oracle.prompt_builder.policy.routing import (
-    build_routing_policy as _build_routing_policy,
-)
 
 from basic.acp import FileAccessMode
 from basic.path_model import AgentCallPathContext
@@ -216,7 +213,10 @@ def test_build_realization_findings_policy_renders_core_review_aspects() -> None
     assert "oracle file の具体的な要求と realization file の具体的な挙動" in rendered
     assert "realization file 上に明確に存在する致命的な問題" in rendered
     assert "oracle file 自体の問題" in rendered
-    assert "規定上必須とされていない事" in rendered
+    assert "明示要求のない事項を、仕様への不適合の根拠にしてはいけない" in rendered
+    assert "この call の目的として明示された改善" in rendered
+    assert "その目的に対応する対象箇所と具体的な改善根拠" in rendered
+    assert "この call の目的に含まれない一般的な品質改善" in rendered
     assert "調査開始時点ですでに解消されている問題" in rendered
 
 
@@ -231,18 +231,53 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     assert "初期の競合一覧にない関連ファイル" in rendered_doc
 
 
-def test_build_routing_policy_renders_core_reading_requirements() -> None:
-    """routing policy が原文確認と検索失敗の区別を伝える。"""
-    doc = _build_routing_policy(_path_context())[1]
+@pytest.mark.parametrize("enable_document_search_mcp", [False, True])
+def test_complete_prompt_renders_search_routing_for_call_availability(
+    enable_document_search_mcp: bool,
+) -> None:
+    """完全 prompt が検索の併用条件と call の検索有効状態を伝える。"""
+    prompt = build_complete_prompt(
+        task="- task",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
+        routing_policy=True,
+        enable_document_search_mcp=enable_document_search_mcp,
+    )
+    rendered = render_sd_node_as_markdown(*prompt)
+    routing = rendered.split("# routing policy\n", 1)[1].split("</cmoc_block>", 1)[0]
+    required = routing.split("\n**必須**\n", 1)[1].split("\n**禁止**\n", 1)[0]
+    prohibited = routing.split("\n**禁止**\n", 1)[1].split("\n**例外**\n", 1)[0]
+    exceptions = routing.split("\n**例外**\n", 1)[1].split("\n## ", 1)[0]
 
-    assert isinstance(doc, SDHeader)
-    assert doc.title == "routing policy"
+    assert "原文を読んで確認" in required
+    assert "ファイルアクセス制限は、検索結果についても適用" in required
+    assert "「検索失敗」と「検索成功の上でヒットゼロ件」は区別" in required
+    assert "検索ヒットゼロ件だけを根拠" in prohibited
+    assert "「仕様の不存在」「調査完了」と判断してはいけない" in prohibited
+    assert "検索に失敗した場合は、許可された手段で調査を続けて良い" in exceptions
+    for tool_detail in (
+        "query",
+        "limit",
+        "hits",
+        "ranges",
+        "candidate_count",
+        "structuredContent",
+        "isError",
+        "inputSchema",
+        "outputSchema",
+    ):
+        assert tool_detail not in routing
 
-    rendered = render_sd_node_as_markdown(doc)
-    assert "必要な現在原文を開いて判断" in rendered
-    assert "食い違う場合も原文を優先" in rendered
-    assert "検索失敗と正常ゼロ件を区別" in rendered
-    assert "文書検索 MCP は無効" in rendered
+    if not enable_document_search_mcp:
+        assert "任意の方法で関係文章を検索すること" in required
+        assert "cmoc_document_search.search" not in routing
+        assert "ベクトル検索も併用" not in required
+    else:
+        assert "キーワード検索に加えて" in required
+        assert (
+            "MCP tool `cmoc_document_search.search` によるベクトル検索も併用"
+            in required
+        )
 
 
 def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:

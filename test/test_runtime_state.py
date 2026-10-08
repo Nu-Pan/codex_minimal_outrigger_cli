@@ -7,7 +7,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _git_support import make_repo
+from _git_support import RUN_BRANCH, RUN_ID, SESSION_BRANCH, SESSION_ID, make_repo
 
 import commons.runtime_state as runtime_state_module
 from cmoc_runtime import CmocError
@@ -49,6 +49,8 @@ def _valid_state() -> SessionState:
         "cmoc/session/.",
         "cmoc/session/..",
         "cmoc/session/id\x00",
+        "cmoc/session/2026-09-29_15-04_07_123456789",
+        f"cmoc/session/{RUN_ID}",
         "cmoc/run/id/run",
     ],
 )
@@ -63,10 +65,13 @@ def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
     [
         "cmoc/run/",
         "cmoc/run/session",
-        "cmoc/run/session/run/extra",
-        "cmoc/run/../run",
-        "cmoc/run/session/.",
-        "cmoc/run/session/run\x00",
+        f"{RUN_BRANCH}/extra",
+        f"cmoc/run/../{RUN_ID}",
+        f"cmoc/run/{SESSION_ID}/.",
+        f"{RUN_BRANCH}\x00",
+        f"cmoc/run/2026-09-29_15-04_07_123456789/{RUN_ID}",
+        f"cmoc/run/{SESSION_ID}/2026-09-29_15-04_07_123456789",
+        f"cmoc/run/{RUN_ID}/{SESSION_ID}",
     ],
 )
 def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
@@ -77,16 +82,14 @@ def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
 
 def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> None:
     """run branch の session component から state file を解決する。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     state = _valid_state()
-    state.run = RunPart("joinable", "realization_apply", "cmoc/run/session/run", "abc")
+    state.run = RunPart("joinable", "realization_apply", RUN_BRANCH, "abc")
     write_state(path, state)
 
-    session_id, loaded_path, loaded = load_state_for_branch(
-        tmp_path, "cmoc/run/session/run"
-    )
+    session_id, loaded_path, loaded = load_state_for_branch(tmp_path, RUN_BRANCH)
 
-    assert session_id == "session"
+    assert session_id == SESSION_ID
     assert loaded_path == path
     assert loaded == state
 
@@ -99,32 +102,58 @@ def test_load_state_rejects_non_string_branch(tmp_path: Path, branch: object) ->
 
 
 @pytest.mark.parametrize(
-    "session_id", ["../outside", "/outside", "nested/id", ".", "..", "bad\ud800"]
+    "session_id",
+    [
+        "../outside",
+        "/outside",
+        "nested/id",
+        ".",
+        "..",
+        "bad\ud800",
+        "2026-09-29_15-04_07_123456789",
+        RUN_ID,
+    ],
 )
-def test_state_path_rejects_path_like_session_id(
+def test_state_path_rejects_noncanonical_session_id(
     tmp_path: Path, session_id: str
 ) -> None:
-    """session-id を state directory 外へ解決する path として扱わない。"""
+    """現行 session ID 以外を state の保存先に使わない。"""
     with pytest.raises(CmocError, match="session-id"):
         state_path(tmp_path, session_id)
+
+
+def test_state_io_rejects_noncanonical_filename(tmp_path: Path) -> None:
+    """直接指定や一覧読み取りでも旧 ID の state を受理・上書きしない。"""
+    directory = state_path(tmp_path, SESSION_ID).parent
+    directory.mkdir(parents=True)
+    path = directory / "2026-09-29_15-04_07_123456789.json"
+    content = json.dumps(_valid_state().to_dict())
+    path.write_text(content)
+
+    with pytest.raises(CmocError, match="session-id"):
+        write_state(path, _valid_state())
+    with pytest.raises(CmocError, match="session-id"):
+        active_session_for_home(tmp_path, "main")
+
+    assert path.read_text() == content
 
 
 @pytest.mark.parametrize("payload", [b"{", b"\xff"])
 def test_load_state_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
     """壊れた JSON または UTF-8 の state file を利用者向けエラーへ変換する。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     path.parent.mkdir(parents=True)
     path.write_bytes(payload)
 
     with pytest.raises(CmocError) as exc_info:
-        load_state_for_branch(tmp_path, "cmoc/session/session")
+        load_state_for_branch(tmp_path, SESSION_BRANCH)
 
     assert "session state file が不正です。" == exc_info.value.summary
 
 
 def test_load_state_rejects_excessively_nested_json(tmp_path: Path) -> None:
     """JSON parser の recursion error を state error へ変換する。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     path.parent.mkdir(parents=True)
     depth = 10_000
     payload = (
@@ -139,7 +168,7 @@ def test_load_state_rejects_excessively_nested_json(tmp_path: Path) -> None:
     path.write_bytes(payload)
 
     with pytest.raises(CmocError) as exc_info:
-        load_state_for_branch(tmp_path, "cmoc/session/session")
+        load_state_for_branch(tmp_path, SESSION_BRANCH)
 
     assert exc_info.value.summary == "session state file が不正です。"
 
@@ -197,7 +226,7 @@ def test_oracle_edit_is_not_a_run_kind() -> None:
     data["run"] = {
         "state": "running",
         "kind": "oracle_edit",
-        "branch": "cmoc/run/session/run",
+        "branch": RUN_BRANCH,
         "fork_commit": "abc",
     }
 
@@ -207,7 +236,7 @@ def test_oracle_edit_is_not_a_run_kind() -> None:
 
 def test_load_session_part_does_not_validate_run_section(tmp_path: Path) -> None:
     """session 部分の読み込みが未検証の run 部分に依存しない。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     path.parent.mkdir(parents=True)
     session = SessionPart("active", "main", "abc", None)
     path.write_text(
@@ -225,10 +254,10 @@ def test_load_session_part_does_not_validate_run_section(tmp_path: Path) -> None
     )
 
     session_id, loaded_path, loaded = load_session_part_for_branch(
-        tmp_path, "cmoc/session/session"
+        tmp_path, SESSION_BRANCH
     )
 
-    assert session_id == "session"
+    assert session_id == SESSION_ID
     assert loaded_path == path
     assert loaded == session
 
@@ -238,7 +267,7 @@ def test_load_session_part_rejects_invalid_top_level(
     tmp_path: Path, mutation: str
 ) -> None:
     """session 部分だけを読む場合も state の top-level schema を守る。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     path.parent.mkdir(parents=True)
     data = _valid_state().to_dict()
     data["run"] = {"not_inspected": True}
@@ -249,7 +278,7 @@ def test_load_session_part_rejects_invalid_top_level(
     path.write_text(json.dumps(data))
 
     with pytest.raises(CmocError) as exc_info:
-        load_session_part_for_branch(tmp_path, "cmoc/session/session")
+        load_session_part_for_branch(tmp_path, SESSION_BRANCH)
 
     assert "top-level" in exc_info.value.detail
 
@@ -271,7 +300,7 @@ def test_load_session_part_requires_session_identity(
     tmp_path: Path, field: str
 ) -> None:
     """session 部分の読み込みでも session identity を要求する。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     path.parent.mkdir(parents=True)
     data = _valid_state().to_dict()
     data["session"][field] = None
@@ -279,7 +308,7 @@ def test_load_session_part_requires_session_identity(
     path.write_text(json.dumps(data))
 
     with pytest.raises(CmocError) as exc_info:
-        load_session_part_for_branch(tmp_path, "cmoc/session/session")
+        load_session_part_for_branch(tmp_path, SESSION_BRANCH)
 
     assert f"`session.{field}` は string" in exc_info.value.detail
 
@@ -320,7 +349,7 @@ def test_session_state_rejects_unrepresentable_payload(value: str) -> None:
 
 def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
     """不完全な session state を file へ書き込まない。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
 
     with pytest.raises(CmocError):
         write_state(path, SessionState())
@@ -334,39 +363,39 @@ def test_session_state_rejects_symlinked_path_without_writing_target(
     """session state の symlink 経由 read/write で link 先を扱わない。"""
     outside = tmp_path / "outside-state.json"
     outside.write_text("original\n")
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     path.parent.mkdir(parents=True)
     path.symlink_to(outside)
 
     with pytest.raises(CmocError, match="session state path"):
         write_state(path, _valid_state())
     with pytest.raises(CmocError, match="session state path"):
-        load_state_for_branch(tmp_path, "cmoc/session/session")
+        load_state_for_branch(tmp_path, SESSION_BRANCH)
 
     assert outside.read_text() == "original\n"
 
 
 def test_state_operations_reject_non_regular_path(tmp_path: Path) -> None:
     """state path が directory の場合に raw open error や停止を起こさない。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     path.mkdir(parents=True)
 
     with pytest.raises(CmocError, match="通常の file"):
         write_state(path, _valid_state())
     with pytest.raises(CmocError, match="通常の file"):
-        load_state_for_branch(tmp_path, "cmoc/session/session")
+        load_state_for_branch(tmp_path, SESSION_BRANCH)
 
 
 def test_state_operations_reject_non_directory_parent(tmp_path: Path) -> None:
     """state directory の親が通常 file の場合に raw exception を漏らさない。"""
-    path = state_path(tmp_path, "session")
+    path = state_path(tmp_path, SESSION_ID)
     path.parent.parent.mkdir(parents=True)
     path.parent.write_text("not a directory")
 
     with pytest.raises(CmocError, match="通常の directory"):
         write_state(path, _valid_state())
     with pytest.raises(CmocError, match="通常の directory"):
-        load_state_for_branch(tmp_path, "cmoc/session/session")
+        load_state_for_branch(tmp_path, SESSION_BRANCH)
     with pytest.raises(CmocError, match="通常の directory"):
         active_session_for_home(tmp_path, "main")
 
@@ -385,10 +414,12 @@ def test_active_run_requires_kind_branch_and_fork_commit(state: str) -> None:
     "branch",
     [
         "not-a-run-branch",
-        "cmoc/session/session",
+        SESSION_BRANCH,
         "cmoc/run/session",
-        "cmoc/run/session/run/extra",
-        "cmoc/run/../run",
+        f"{RUN_BRANCH}/extra",
+        f"cmoc/run/../{RUN_ID}",
+        f"cmoc/run/2026-09-29_15-04_07_123456789/{RUN_ID}",
+        f"cmoc/run/{SESSION_ID}/2026-09-29_15-04_07_123456789",
     ],
 )
 def test_active_run_rejects_noncanonical_branch(branch: str) -> None:

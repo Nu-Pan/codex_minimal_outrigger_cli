@@ -3,16 +3,44 @@
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
-from oracle.other.document_search import INITIAL_SEARCH_MATERIALS
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
+import commons.runtime_document_search_observation as observation_module
+import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_windows_toast as runtime_windows_toast
+from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+
+
+@pytest.fixture(autouse=True)
+def _isolate_download_asset_cache(tmp_path, monkeypatch):
+    """固定 cache パスをテスト内に置換し、実ユーザーの保存物に触れない。"""
+    monkeypatch.setattr(
+        asset_cache_module, "asset_cache_directory", lambda: tmp_path / "asset-cache"
+    )
+
+
+@pytest.fixture
+def document_search_clock(monkeypatch):
+    """検索の時計だけを操作し、process の停止待ちには実時間を使う。"""
+
+    class Clock:
+        now = 0.0
+
+        def advance(self, seconds):
+            self.now += seconds
+
+    clock = Clock()
+    monkeypatch.setattr(
+        observation_module, "time", SimpleNamespace(monotonic=lambda: clock.now)
+    )
+    return clock
 
 
 @pytest.fixture(autouse=True)
@@ -85,7 +113,7 @@ def _isolate_document_search_materials(
             residency_fd,
             cancelled,
         ):
-            vector = [1.0] + [0.0] * (INITIAL_SEARCH_MATERIALS.embedding_dimensions - 1)
+            vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
             for path, source in documents.items():
                 if resumes[path] == 0:
                     on_event(
@@ -100,10 +128,9 @@ def _isolate_document_search_materials(
                     )
                 on_event({"kind": "document_complete", "path": path, "chunk_count": 1})
 
-    def doctor_search(root, scope, config, *, installation_root, use_saved_config):
+    def doctor_search(root, config, *, installation_root, use_saved_config):
         return runtime_document_search.DocumentSearch(
             root,
-            scope,
             config,
             worker=_DoctorInference(),
             installation_root=installation_root,
@@ -117,7 +144,10 @@ def _isolate_document_search_materials(
 def handoff_source(tmp_path, monkeypatch):
     """実行中の送信側 TUI に結び付いた MCP context を用意する。"""
     source = EditorInputHandoffSource(
-        "oracle investigation", "sci_sender", "cdc_sender", tmp_path / "sender.jsonl"
+        "oracle investigation",
+        "exec_000002_2026-09-29_15-04",
+        "cc_000011_2026-09-29_15-04",
+        tmp_path / "sender.jsonl",
     )
     monkeypatch.setenv(
         EDITOR_INPUT_SOURCE_ENV,

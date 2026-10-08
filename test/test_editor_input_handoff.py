@@ -34,6 +34,7 @@ from commons.runtime_editor_input_handoff_protocol import (
     parse_editor_input_handoff_target_id,
     read_handoff_response,
 )
+from commons.runtime_ids import is_common_id
 
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
 
@@ -129,7 +130,7 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     )
 
     target_id = displayed[0].removeprefix("editor input handoff target ID: ")
-    assert target_id.startswith("eit_")
+    assert is_common_id(target_id, "eit")
     assert not list(input_path.parent.glob("*.guide.md"))
     assert handoff_mcp._get_handoff_guide({"target_id": target_id})["status"] == "error"
     assert results[0]["status"] == "rejected"

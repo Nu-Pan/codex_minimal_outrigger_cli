@@ -1,9 +1,12 @@
+# バイナリ・パッケージ系
 /.venv/
 /build/
-/.pytest_cache/
-__pycache__/
+
+# 任意階層に出現しうるキャッシュ系
 *.egg-info/
-/.mypy_cache/
-/.ruff_cache/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
 
 /.cmoc/gu/

@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from .runtime_errors import CmocError
-from .runtime_git import git_common_dir
+from .runtime_git import git_common_dir, parse_run_branch_ids
+from .runtime_ids import is_common_id
 from .runtime_paths import sessions_dir
 
 SESSION_STATES = {"active", "joined", "abandoned", "error"}
@@ -102,17 +103,9 @@ def _reject_symlinked_state_path(path: Path) -> None:
 
 
 def _validate_session_id(session_id: str) -> None:
-    """session-id を一つの通常の file name component に限定する。"""
-    # {{work-root}}/oracle/doc/app_spec/session_state.md
-    # state file は session-id を一つの file name component として保存するため、
-    # separator や NUL を含む値を path に連結して保存先を外へ出さない。
-    if (
-        not isinstance(session_id, str)
-        or not session_id
-        or session_id in {".", ".."}
-        or Path(session_id).name != session_id
-        or _contains_unrepresentable_characters(session_id)
-    ):
+    """state の保存先に使用する共通 session ID を検証する。"""
+    # {{work-root}}/oracle/doc/app_spec/id.md
+    if not is_common_id(session_id, "sess"):
         raise CmocError(
             "session-id が不正です。",
             ["session state file の保存先と branch 名を確認してください。"],
@@ -176,9 +169,7 @@ def branch_session_id(branch: str) -> str:
     if (
         not branch.startswith(prefix)
         or len(parts) != 3
-        or not parts[2]
-        or parts[2] in {".", ".."}
-        or _contains_unrepresentable_characters(parts[2])
+        or not is_common_id(parts[2], "sess")
     ):
         raise CmocError(
             "session branch 名から session-id を特定できません。",
@@ -190,29 +181,15 @@ def branch_session_id(branch: str) -> str:
 
 def run_branch_session_id(branch: str) -> str:
     """`cmoc/run/{{session-id}}/{{run-id}}` から session-id を取り出す。"""
-    if not isinstance(branch, str):
+    # worktree の解決と同じ branch 命名規則を適用する。
+    ids = parse_run_branch_ids(branch)
+    if ids is None:
         raise CmocError(
             "run branch 名から session-id を特定できません。",
             ["branch 名と session state file を確認してください。"],
             f"branch: {branch!r}",
         )
-    parts = branch.split("/")
-    if (
-        len(parts) != 4
-        or parts[:2] != ["cmoc", "run"]
-        or not parts[2]
-        or not parts[3]
-        or parts[2] in {".", ".."}
-        or parts[3] in {".", ".."}
-        or _contains_unrepresentable_characters(parts[2])
-        or _contains_unrepresentable_characters(parts[3])
-    ):
-        raise CmocError(
-            "run branch 名から session-id を特定できません。",
-            ["branch 名と session state file を確認してください。"],
-            f"branch: {branch!r}",
-        )
-    return parts[2]
+    return ids[0]
 
 
 def load_state_for_branch(root: Path, branch: str) -> tuple[str, Path, SessionState]:
@@ -258,6 +235,7 @@ def load_session_part_for_branch(
 
 def _read_state_data(path: Path) -> dict[str, Any]:
     """session state file を JSON object として読み込む。"""
+    _validate_session_id(path.stem)
     _reject_symlinked_state_path(path)
     _reject_non_file_state_path(path)
     if not path.is_file():
@@ -281,6 +259,7 @@ def _read_state_data(path: Path) -> dict[str, Any]:
 
 def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
+    _validate_session_id(path.stem)
     _reject_symlinked_state_path(path)
     _reject_non_file_state_path(path)
     validated = SessionState.from_dict(state.to_dict(), path)
@@ -426,12 +405,7 @@ def _validate_run_fields(run: dict[str, Any], source: Path | None) -> None:
         )
     # {{work-root}}/oracle/doc/branch_model.md
     # state に保存する run branch は、worktree 解決と同じ canonical namespace に限定する。
-    parts = run["branch"].split("/")
-    if (
-        len(parts) != 4
-        or parts[:2] != ["cmoc", "run"]
-        or any(not parts[index] or parts[index] in {".", ".."} for index in (2, 3))
-    ):
+    if parse_run_branch_ids(run["branch"]) is None:
         raise _invalid_state(
             source,
             "`run.branch` は cmoc/run/{{session-id}}/{{run-id}} 形式である必要があります。",

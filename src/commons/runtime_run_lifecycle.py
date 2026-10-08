@@ -34,6 +34,7 @@ from .runtime_git import (
 )
 from .runtime_ids import new_id
 from .runtime_paths import (
+    ensure_work_directories,
     refactor_state_path,
     repo_root,
     work_root,
@@ -55,8 +56,6 @@ from .runtime_state import (
     run_branch_session_id,
     write_state,
 )
-
-MAX_RUN_ID_ATTEMPTS = 32
 
 
 @dataclass(frozen=True)
@@ -186,6 +185,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                 start_point=fork_commit,
             )
             created = True
+            ensure_work_directories(run_worktree)
             require_cmoc_ignored(run_worktree)
             state.run = RunPart(
                 state="running",
@@ -531,25 +531,20 @@ def unexpected_run_paths(
 
 
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
-    """衝突しない run branch と管理 worktree path を予約候補として選ぶ。"""
-    for _ in range(MAX_RUN_ID_ATTEMPTS):
-        run_id = new_id(repository, "run")
-        branch = f"cmoc/run/{session_id}/{run_id}"
-        worktree = expected_run_worktree(repository, branch)
-        # {{work-root}}/oracle/doc/branch_model.md
-        # Path.exists() は dangling symlink に false を返すため、symlink を空き
-        # target として create_run_worktree へ渡さない。
-        if (
-            not branch_exists(repository, branch)
-            and not worktree.exists()
-            and not worktree.is_symlink()
-        ):
-            return branch, worktree
-    raise CmocError(
-        "一意な run-id を生成できませんでした。",
-        ["時間を置いてから editing run を再実行してください。"],
-        f"attempts: {MAX_RUN_ID_ATTEMPTS}",
-    )
+    """run ID を発行し、branch と管理 worktree の保存先を確認する。"""
+    # 共通採番で一意性を確定し、保存先の既存資源を上書きしない。
+    run_id = new_id(repository, "run")
+    branch = f"cmoc/run/{session_id}/{run_id}"
+    worktree = expected_run_worktree(repository, branch)
+    # {{work-root}}/oracle/doc/branch_model.md
+    # dangling symlink も占有済みの保存先として扱う。
+    if branch_exists(repository, branch) or worktree.exists() or worktree.is_symlink():
+        raise CmocError(
+            "発行した run ID の保存先が既に存在します。",
+            ["run branch と worktree の対応を確認してください。"],
+            f"run_branch: {branch}\nrun_worktree: {worktree}",
+        )
+    return branch, worktree
 
 
 def _is_agent_expected_path(

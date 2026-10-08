@@ -38,7 +38,8 @@ from cmoc_runtime import (
     run_cli_subcommand,
     run_codex_exec,
 )
-from commons.runtime_document_search_scope import oracle_doc_scope
+from commons.runtime_feedback_history import history_artifact
+from commons.runtime_feedback_render import publication_notice, render_current_cases
 from commons.runtime_feedback_state import (
     ActiveState,
     agent_canonical_key,
@@ -61,13 +62,13 @@ from commons.runtime_feedback_store import (
     _has_symlink_component,
     canonical_json_bytes,
     feedback_root,
-    iter_observation_paths,
     mask_feedback_text,
     observation_path,
     parse_rfc3339,
     read_json_object,
     rfc3339_now,
     sha256_bytes,
+    unprocessed_observation_paths,
     write_immutable_bytes,
 )
 from commons.runtime_logging import current_subcommand_logger
@@ -135,7 +136,7 @@ def _pending_observations(
     observations: dict[str, _JsonObject] = {}
     hashes_by_id: dict[str, str] = {}
     validation_errors: list[str] = []
-    for path in iter_observation_paths(repo):
+    for path in unprocessed_observation_paths(repo):
         try:
             content = path.read_bytes()
             observation = read_json_object(path)
@@ -621,6 +622,7 @@ def _candidate_from_active(issue: _JsonObject) -> _JsonObject:
         "deduplication_hints": [],
         "reference_ids": [],
         "previous_verification": issue["verification"],
+        "case_id": issue["case_id"],
     }
 
 
@@ -1023,20 +1025,11 @@ def _normalize_issue_identity(
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
     # deduplication hint は候補検索だけで使い、issue identity の根拠として
     # normalization agent へ渡さない。
-    from commons.runtime_feedback_store import reporter_payload_view
-
     normalization_observation = {
         **observation,
-        "compatibility": {
-            "source_schema_version": observation["payload"]["schema_version"],
-            "view_schema_version": 2,
-            "rule": "reporter-input-v1-to-v2"
-            if observation["payload"]["schema_version"] == 1
-            else "identity",
-        },
         "payload": {
             key: value
-            for key, value in reporter_payload_view(observation["payload"]).items()
+            for key, value in observation["payload"].items()
             if key != "deduplication_hint"
         },
     }
@@ -1044,7 +1037,6 @@ def _normalize_issue_identity(
         json.dumps(normalization_observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
         worktree,
-        document_search_scope=oracle_doc_scope(),
     )
     schema_path = parameter.structured_output_schema_path
     assert schema_path is not None
@@ -1530,15 +1522,23 @@ def _publish_report(
     unresolved_ids = sorted(
         candidate_id_value
         for candidate_id_value, verdict in verdicts.items()
-        if verdict.get("status") == "human_required"
+        if verdict.get("status") in {"human_required", "inconclusive"}
     )
-    result = "attention" if unresolved_ids else "ok"
+    result = (
+        "incomplete"
+        if any(verdict["status"] == "inconclusive" for verdict in verdicts.values())
+        else "attention"
+        if unresolved_ids
+        else "ok"
+    )
     publication = manifest.get("publication")
     if publication is None:
         targets = manifest["run"]["targets"]
         generated_at = targets["generated_at"]
         generation_id_value = targets["generation_id"]
-        report_path = repo / targets["report"]
+        report_path = (
+            repo / targets["incomplete_report" if result == "incomplete" else "report"]
+        )
     elif isinstance(publication, dict):
         generated_at = str(publication["generated_at"])
         generation_id_value = str(publication["generation_id"])
@@ -1569,6 +1569,32 @@ def _publish_report(
         )
         for candidate_id_value in unresolved_ids
     }
+    source = {
+        "kind": "report",
+        "id": manifest["report_cut_id"],
+        "execution_id": manifest["run"]["targets"]["execution_id"],
+    }
+    history_path, history_content, history_reference = _publication_history(
+        repo,
+        manifest,
+        current_state,
+        candidates,
+        verdicts,
+        active_issues,
+        machine_aggregates,
+        source,
+        generation_id_value,
+        generated_at,
+        report_path,
+    )
+    history_references = [
+        *(
+            current_state.generation_manifest["history"]
+            if current_state.generation_manifest
+            else []
+        ),
+        history_reference,
+    ]
     generation_manifest, generation_files, generation_reference = generation_artifacts(
         repo,
         generation_id=generation_id_value,
@@ -1577,6 +1603,10 @@ def _publish_report(
         session_commit=_joined_session_commit(repo, manifest),
         issues=active_issues,
         machine_aggregates=machine_aggregates,
+        source=source,
+        base_current=current_state.current,
+        input_boundary=manifest["run"]["high_watermark"],
+        history=history_references,
     )
     generation_references = [
         {
@@ -1595,6 +1625,8 @@ def _publish_report(
         generated_at,
         result,
         active_issues,
+        verdicts,
+        history_references,
     ).encode("utf-8")
     report_reference = {
         "path": report_path.resolve(strict=False)
@@ -1603,7 +1635,10 @@ def _publish_report(
         "sha256": sha256_bytes(report_content),
     }
     cleanup = {
-        "observations": _observation_cleanup_references(manifest),
+        "observations": [
+            {key: entry[key] for key in ("path", "sha256")}
+            for entry in json.loads(history_content)["observations"]
+        ],
         "old_generation": current_generation_artifacts(repo, current_state),
         "work_artifacts": _checkpoint_cleanup_references(manifest),
     }
@@ -1611,6 +1646,7 @@ def _publish_report(
         "generation_id": generation_id_value,
         "generation_manifest": generation_reference,
         "generation_artifacts": generation_references,
+        "history_artifacts": [history_reference],
         "report": report_reference,
         "generated_at": generated_at,
         "result": result,
@@ -1625,6 +1661,7 @@ def _publish_report(
 
     manifest["publication"] = expected_publication
     _set_processing_state(repo, manifest, "staging", None)
+    write_immutable_bytes(history_path, history_content)
     publish_generation_artifacts(repo, generation_manifest, generation_files)
     write_immutable_bytes(report_path, report_content)
     if artifact_reference(repo, report_path) != report_reference:
@@ -1664,104 +1701,6 @@ def _publish_report(
     )
 
 
-def _publish_incomplete_report(
-    repo: Path,
-    worktree: Path,
-    manifest: _JsonObject,
-    manifest_path: Path,
-    candidates: dict[str, _JsonObject],
-    verdicts: dict[str, _JsonObject],
-) -> TerminalResult:
-    """全 verdict を materialize し、正常 publication と独立して保存する。"""
-    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
-    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-    unresolved_count = sum(
-        verdict.get("status") == "human_required" for verdict in verdicts.values()
-    )
-    inconclusive_count = sum(
-        verdict.get("status") == "inconclusive" for verdict in verdicts.values()
-    )
-    if inconclusive_count == 0:
-        raise ValueError("incomplete report requires an inconclusive verdict")
-
-    diagnostic = manifest.get("diagnostic")
-    if diagnostic is None:
-        targets = manifest["run"]["targets"]
-        generated_at = targets["generated_at"]
-        report_path = repo / targets["incomplete_report"]
-    elif isinstance(diagnostic, dict):
-        generated_at = str(diagnostic["generated_at"])
-        report_reference = diagnostic.get("report")
-        if not isinstance(report_reference, dict):
-            raise ValueError("staged diagnostic report reference must be an object")
-        report_path = repo / str(report_reference["path"])
-    else:
-        raise ValueError("report cut diagnostic must be an object or null")
-
-    report_content = _render_incomplete_report(
-        repo,
-        worktree,
-        manifest,
-        generated_at,
-        candidates,
-        verdicts,
-    ).encode("utf-8")
-    report_reference = {
-        "path": report_path.resolve(strict=False)
-        .relative_to(repo.resolve(strict=False))
-        .as_posix(),
-        "sha256": sha256_bytes(report_content),
-    }
-    expected_diagnostic: _JsonObject = {
-        "report": report_reference,
-        "generated_at": generated_at,
-        "result": "incomplete",
-    }
-    if diagnostic is not None and diagnostic != expected_diagnostic:
-        raise CmocError(
-            "staged incomplete 診断が正式 checkpoint の再計算結果と一致しません。",
-            ["report cut manifest と正式 checkpoint を人間が確認してください。"],
-            str(manifest_path),
-        )
-    if manifest.get("publication") is not None:
-        raise CmocError(
-            "正常 publication と incomplete 診断を同じ report cut に保存できません。",
-            ["report cut manifest を人間が確認してください。"],
-            str(manifest_path),
-        )
-
-    manifest["diagnostic"] = expected_diagnostic
-    _set_processing_state(repo, manifest, "diagnostic_staging", None)
-    write_immutable_bytes(report_path, report_content)
-    if artifact_reference(repo, report_path) != report_reference:
-        raise CmocError(
-            "incomplete 診断 report の保存後 hash が一致しません。",
-            ["診断 report artifact を人間が確認してください。"],
-            str(report_path),
-        )
-
-    processing = manifest["processing"]
-    assert isinstance(processing, dict)
-    processing["status"] = "incomplete"
-    processing["failure"] = None
-    write_report_cut_manifest(repo, manifest)
-    _record_incomplete_event(
-        repo,
-        manifest,
-        report_reference,
-        unresolved_count,
-        inconclusive_count,
-    )
-    return TerminalResult(
-        primary_report=report_path,
-        primary_report_role="incomplete feedback diagnostic report",
-        result="incomplete",
-        next_actions=(
-            "`inconclusive` の原因を修正した後に `cmoc feedback report` を再実行してください。",
-        ),
-    )
-
-
 def _next_machine_aggregates(
     candidates: dict[str, _JsonObject],
     verdicts: dict[str, _JsonObject],
@@ -1776,7 +1715,7 @@ def _next_machine_aggregates(
             candidate.get("origin") != "machine_rule"
             or not isinstance(machine_state, dict)
             or not isinstance(verdict, dict)
-            or verdict.get("status") == "human_required"
+            or verdict.get("status") in {"human_required", "inconclusive"}
             or _machine_threshold_met(machine_state)
         ):
             continue
@@ -1844,7 +1783,7 @@ def _active_issue_record(
     verified_at: str,
 ) -> _JsonObject:
     """unresolved candidate と最新 verification を compact active record にする。"""
-    if verdict.get("status") != "human_required":
+    if verdict.get("status") not in {"human_required", "inconclusive"}:
         raise ValueError("only unresolved candidates can become active issues")
     evidence = verdict.get("current_evidence")
     if not isinstance(evidence, list):
@@ -1866,6 +1805,7 @@ def _active_issue_record(
     return {
         "schema_version": 1,
         "issue_id": candidate["candidate_id"],
+        "case_id": manifest["run"]["targets"]["case_ids"][candidate["candidate_id"]],
         "origin": candidate["origin"],
         "canonical_key": candidate["canonical_key"],
         "category": mask_feedback_text(str(candidate["category"])),
@@ -1895,9 +1835,12 @@ def _active_issue_record(
         "verification": {
             "report_cut_id": manifest["report_cut_id"],
             "verified_at": verified_at,
+            "status": verdict["status"],
             "reason": mask_feedback_text(str(verdict["reason"])),
             "current_evidence": materialized,
-            "human_action": mask_feedback_text(str(verdict["human_action"])),
+            "human_action": mask_feedback_text(str(verdict["human_action"]))
+            if verdict["human_action"] is not None
+            else None,
             "decision_basis": _masked_json_object(verdict["decision_basis"]),
         },
         "machine_state": (
@@ -1943,8 +1886,10 @@ def _render_feedback_report(
     generated_at: str,
     result: str,
     issues: dict[str, _JsonObject],
+    verdicts: dict[str, _JsonObject],
+    history: list[_JsonObject],
 ) -> str:
-    """正常 publication 用の current unresolved issue 一覧だけを描画する。"""
+    """Generation の最新一覧と保存までに確定した実行情報を描画する。"""
     fields = (
         ("command", "cmoc feedback report"),
         ("execution_id", manifest["run"]["targets"]["execution_id"]),
@@ -1956,200 +1901,131 @@ def _render_feedback_report(
         ("report_cut_id", manifest["report_cut_id"]),
         ("report_cut_at", manifest["cut_at"]),
         ("active_generation_id", generation_id_value),
-        ("remediation_issue_count", _remediation_candidate_count(manifest)),
-        ("human_required_issue_count", len(issues)),
+        ("remediation_issue_count", len(verdicts)),
+        *(
+            (
+                f"{status}_issue_count",
+                sum(verdict["status"] == status for verdict in verdicts.values()),
+            )
+            for status in (
+                "human_required",
+                "inconclusive",
+                "fixed",
+                "already_resolved",
+                "not_actionable",
+            )
+        ),
         ("result", result),
     )
     lines = [
         "---",
         *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
         "---",
+        "# cmoc feedback report",
+        "",
     ]
-    lines.extend(["# cmoc feedback report", "", "## Issues", ""])
-    if not issues:
-        lines.extend(["人間対応が必要な issue はありません。", ""])
-        return "\n".join([*lines, manifest["run"]["execution_record"] or ""])
-    for issue_id_value, issue in sorted(issues.items()):
-        verification = issue["verification"]
-        assert isinstance(verification, dict)
-        session_count = str(issue["affected_session_count"])
-        session_digest = issue.get("session_digest")
-        if isinstance(session_digest, dict) and session_digest.get("saturated") is True:
-            session_count += "+"
+    if result == "incomplete":
         lines.extend(
-            [
-                f"### {_markdown_text(issue_id_value)}",
-                "",
-                f"- Category: {_markdown_text(issue['category'])}",
-                f"- Summary: {_markdown_text(issue['summary'])}",
-                f"- Impact: {_markdown_text(issue['impact'])}",
-                f"- Human action: {_markdown_text(verification['human_action'])}",
-                f"- Occurrences: {issue['occurrence_count']}",
-                f"- Affected sessions: {session_count}",
-                f"- First observed: {_markdown_text(issue['first_observed_at'])}",
-                f"- Last observed: {_markdown_text(issue['last_observed_at'])}",
-                "- Current evidence:",
-            ]
+            ["この generation には判定不能の案件が含まれ、要約は incomplete です。", ""]
         )
-        for current_evidence in verification["current_evidence"]:
-            assert isinstance(current_evidence, dict)
-            target = (
-                current_evidence.get("path")
-                or current_evidence.get("probe_id")
-                or current_evidence.get("observation_id", "unknown")
-            )
-            lines.append(
-                "  - "
-                f"{_markdown_text(target)} / "
-                f"{_markdown_text(current_evidence.get('location', ''))}: "
-                f"{_markdown_text(current_evidence.get('finding', ''))}"
-            )
-        lines.append("- Representative evidence:")
-        representative = issue.get("representative_evidence")
-        if isinstance(representative, list) and representative:
-            for evidence in representative:
-                lines.append(
-                    f"  - {_markdown_text(json.dumps(evidence, ensure_ascii=False, sort_keys=True))}"
-                )
-        else:
-            lines.append("  - none")
-        lines.append("")
-    return "\n".join([*lines, manifest["run"]["execution_record"] or ""])
+    lines.extend(
+        [
+            publication_notice(str(repo / manifest["run"]["invocation_log"])),
+            "",
+            f"作成元: report cut `{manifest['report_cut_id']}`。入力確認境界: `{manifest['run']['high_watermark']}`。",
+            "",
+            f"History: `{feedback_root(repo) / 'history'}`。今回の履歴: `{repo / history[-1]['path']}`。",
+            "",
+            render_current_cases(issues),
+            "",
+            manifest["run"]["execution_record"] or "",
+        ]
+    )
+    return "\n".join(lines)
 
 
-def _render_incomplete_report(
+def _publication_history(
     repo: Path,
-    worktree: Path,
     manifest: _JsonObject,
-    generated_at: str,
+    state: ActiveState,
     candidates: dict[str, _JsonObject],
     verdicts: dict[str, _JsonObject],
-) -> str:
-    """未 publication の確定 verdict と判定不能理由を単独で読める形にする。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-    unresolved_ids = sorted(
-        candidate_id_value
-        for candidate_id_value, verdict in verdicts.items()
-        if verdict.get("status") == "human_required"
-    )
-    inconclusive_ids = sorted(
-        candidate_id_value
-        for candidate_id_value, verdict in verdicts.items()
-        if verdict.get("status") == "inconclusive"
-    )
-    fields = (
-        ("command", "cmoc feedback report"),
-        ("execution_id", manifest["run"]["targets"]["execution_id"]),
-        ("subcommand_log_path", str(repo / manifest["run"]["invocation_log"])),
-        ("generated_at", generated_at),
-        ("repo_root", str(repo)),
-        ("session_branch", current_branch(worktree)),
-        *_run_report_fields(manifest),
-        ("report_cut_id", manifest["report_cut_id"]),
-        ("report_cut_at", manifest["cut_at"]),
-        ("remediation_issue_count", len(verdicts)),
-        ("human_required_issue_count", len(unresolved_ids)),
-        ("inconclusive_candidate_count", len(inconclusive_ids)),
-        *(
-            (
-                f"{status}_issue_count",
-                sum(verdict.get("status") == status for verdict in verdicts.values()),
+    active: dict[str, _JsonObject],
+    aggregates: dict[str, _JsonObject],
+    source: _JsonObject,
+    generation_id: str,
+    generated_at: str,
+    report_path: Path,
+) -> tuple[Path, bytes, _JsonObject]:
+    """旧判定、終了結果、検証済み入力の採用先を削除に依存しない記録へ固定する。"""
+    references = _report_cut_references_by_id(manifest)
+    events = []
+    for identity, verdict in sorted(verdicts.items()):
+        before, after = state.issues.get(identity), active.get(identity)
+        events.append(
+            {
+                "kind": "updated"
+                if before and after
+                else "created"
+                if after
+                else "resolved"
+                if before
+                else "result",
+                "case_id": manifest["run"]["targets"]["case_ids"][identity],
+                "issue_id": identity,
+                "before": before,
+                "after": after,
+                "human_reason": None,
+                "agent_result": _masked_json_object(
+                    {
+                        **verdict,
+                        "summary": candidates[identity]["summary"],
+                        "current_evidence": [
+                            _materialize_current_evidence(item, references)
+                            for item in verdict["current_evidence"]
+                        ],
+                    }
+                ),
+            }
+        )
+    observations = []
+    for identity, observation in _read_cut_observations(repo, manifest).items():
+        selected = sorted(
+            key
+            for key, candidate in candidates.items()
+            if identity in candidate["source_observation_ids"]
+            or (
+                observation["source"] == "machine_rule"
+                and candidate["canonical_key"] == machine_canonical_key(observation)
             )
-            for status in ("fixed", "already_resolved", "not_actionable")
-        ),
-        ("result", "incomplete"),
-    )
-    lines = [
-        "---",
-        *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
-        "---",
-        "# cmoc feedback report: incomplete",
-        "",
-        "この診断 report は正常 publication ではありません。",
-        "新しい active generation と current pointer は publication されていません。",
-        "直前の正常 publication が存在する場合は、その publication が current のままです。",
-        "",
-        "## 確定済みだが今回未 publication の human_required issue",
-        "",
-        "以下の verdict は診断情報であり、今回の active generation へ publication されていません。",
-        "直前の正常 active generation に同じ issue が含まれる可能性とは区別してください。",
-        "",
-    ]
-    references_by_id = _report_cut_references_by_id(manifest)
-    if not unresolved_ids:
-        lines.extend(["該当 candidate はありません。", ""])
-    for candidate_id_value in unresolved_ids:
-        candidate = candidates[candidate_id_value]
-        verdict = verdicts[candidate_id_value]
-        lines.extend(
-            [
-                f"### {_markdown_text(candidate_id_value)}",
-                "",
-                f"- Origin: {_markdown_text(mask_feedback_text(str(candidate['origin'])))}",
-                f"- Category: {_markdown_text(mask_feedback_text(str(candidate['category'])))}",
-                f"- Summary: {_markdown_text(mask_feedback_text(str(candidate['summary'])))}",
-                f"- Impact: {_markdown_text(mask_feedback_text(str(candidate['impact'])))}",
-                f"- Verification reason: {_markdown_text(mask_feedback_text(str(verdict['reason'])))}",
-                f"- Human action: {_markdown_text(mask_feedback_text(str(verdict['human_action'])))}",
-                "- Current evidence:",
-            ]
         )
-        _append_diagnostic_current_evidence(
-            lines,
-            verdict.get("current_evidence"),
-            references_by_id,
+        keys = (
+            [machine_canonical_key(observation)]
+            if observation["source"] == "machine_rule"
+            and machine_canonical_key(observation) in aggregates
+            and not selected
+            else []
         )
-        lines.append("")
-
-    lines.extend(["## inconclusive issue", ""])
-    for candidate_id_value in inconclusive_ids:
-        candidate = candidates[candidate_id_value]
-        verdict = verdicts[candidate_id_value]
-        lines.extend(
-            [
-                f"### {_markdown_text(candidate_id_value)}",
-                "",
-                f"- Summary: {_markdown_text(mask_feedback_text(str(candidate['summary'])))}",
-                f"- Reason: {_markdown_text(mask_feedback_text(str(verdict['reason'])))}",
-                "- Current evidence:",
-            ]
-        )
-        _append_diagnostic_current_evidence(
-            lines,
-            verdict.get("current_evidence"),
-            references_by_id,
-        )
-        lines.append("")
-    return "\n".join([*lines, manifest["run"]["execution_record"] or ""])
-
-
-def _append_diagnostic_current_evidence(
-    lines: list[str],
-    evidence: object,
-    references_by_id: dict[str, _JsonObject],
-) -> None:
-    """cut reference を診断 report 内の自己完結した current evidence にする。"""
-    values = evidence if isinstance(evidence, list) else []
-    materialized = [
-        _materialize_current_evidence(item, references_by_id)
-        for item in values
-        if isinstance(item, dict)
-    ]
-    if not materialized:
-        lines.append("  - 確認できた current evidence はありません。")
-        return
-    for item in materialized:
-        target = (
-            item.get("path")
-            or item.get("probe_id")
-            or item.get("observation_id", "unknown")
-        )
-        lines.append(
-            "  - "
-            f"{_markdown_text(target)} / "
-            f"{_markdown_text(item.get('location', ''))}: "
-            f"{_markdown_text(item.get('finding', ''))}"
-        )
+        if selected or keys:
+            reference = next(
+                entry
+                for entry in manifest["inputs"]["observations"]
+                if entry["observation_id"] == identity
+            )
+            observations.append(
+                {**reference, "issue_ids": selected, "aggregate_keys": keys}
+            )
+    record = {
+        "schema_version": 1,
+        "generation_id": generation_id,
+        "source": source,
+        "created_at": generated_at,
+        "report": report_path.relative_to(repo).as_posix(),
+        "log": manifest["run"]["invocation_log"],
+        "events": events,
+        "observations": sorted(observations, key=lambda entry: entry["observation_id"]),
+    }
+    return history_artifact(repo, record)
 
 
 def _remediation_candidate_count(manifest: _JsonObject) -> int:
@@ -2222,19 +2098,6 @@ def _masked_object_list(value: object, limit: int) -> list[_JsonObject]:
     return result[:limit]
 
 
-def _observation_cleanup_references(manifest: _JsonObject) -> list[_JsonObject]:
-    """cut に含まれる全 raw file を publication 後 cleanup target にする。"""
-    inputs = manifest.get("inputs")
-    entries = inputs.get("observations") if isinstance(inputs, dict) else None
-    if not isinstance(entries, list):
-        raise ValueError("report cut observations must be an array")
-    return [
-        {"path": entry["path"], "sha256": entry["sha256"]}
-        for entry in entries
-        if isinstance(entry, dict)
-    ]
-
-
 def _checkpoint_cleanup_references(manifest: _JsonObject) -> list[_JsonObject]:
     """正式 checkpoint file を manifest 自体より先に削除する一覧へまとめる。"""
     processing = manifest.get("processing")
@@ -2297,30 +2160,6 @@ def _record_publication_event(
             report_path=_full_log_path(repo, report_reference.get("path")),
             result=result,
             unresolved_issue_count=unresolved_count,
-        )
-
-
-def _record_incomplete_event(
-    repo: Path,
-    manifest: _JsonObject,
-    report_reference: _JsonObject,
-    unresolved_count: int,
-    inconclusive_count: int,
-) -> None:
-    """正常 publication 不成立と durable な診断 report を log に記録する。"""
-    logger = current_subcommand_logger()
-    if logger is not None:
-        logger.event(
-            "feedback_report_incomplete",
-            report_execution_id=manifest["run"]["targets"]["execution_id"],
-            feedback_run_id=manifest["run"]["feedback_run_id"],
-            report_cut_id=manifest.get("report_cut_id"),
-            report_path=_full_log_path(repo, report_reference.get("path")),
-            result="incomplete",
-            verification_candidate_count=_remediation_candidate_count(manifest),
-            unresolved_candidate_count=unresolved_count,
-            inconclusive_candidate_count=inconclusive_count,
-            normal_publication=False,
         )
 
 
@@ -2412,7 +2251,9 @@ def _published_terminal_result(report_path: Path, result: str) -> TerminalResult
     """確定済み publication を run finalization へ渡す。"""
     return TerminalResult(
         primary_report=report_path,
-        primary_report_role="feedback report",
+        primary_report_role="incomplete feedback diagnostic report"
+        if result == "incomplete"
+        else "feedback report",
         result=result,
     )
 

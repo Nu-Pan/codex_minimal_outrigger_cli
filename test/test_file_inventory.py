@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _git_support import make_repo, run_git
+from _git_support import RUN_BRANCH, make_repo, run_git
 
 import commons.runtime_git as runtime_git
 from cmoc_runtime import CmocError, file_sha256
@@ -234,7 +234,7 @@ def test_realization_classifier_uses_nested_head_for_deleted_file(
     assert is_realization_file_path(
         root,
         target,
-        branch="cmoc/run/session/run",
+        branch=RUN_BRANCH,
     )
 
 

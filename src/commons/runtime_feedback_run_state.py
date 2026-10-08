@@ -176,7 +176,7 @@ def validate_decision_basis(
         )
         for field, definition in (
             ("verification", "verifications"),
-            ("current_evidence", "current_evidence_required"),
+            ("current_evidence", "current_evidence_optional"),
         ):
             if not Draft202012Validator(
                 {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
@@ -184,18 +184,13 @@ def validate_decision_basis(
                 raise _corruption(
                     "active issue の判定根拠が検査記録 schema に適合しません。", path
                 )
-        if basis["cycle_states"]:
-            raise _corruption("循環診断を active issue に変換できません。", path)
 
 
 def recover_run_artifact_references(
     repo: Path, manifest: dict[str, Any], path: Path
 ) -> None:
     """artifact 保存と manifest 更新の間の停止を、固定 path から読み取り回復する。"""
-    if (
-        manifest.get("publication") is not None
-        or manifest.get("diagnostic") is not None
-    ):
+    if manifest.get("publication") is not None:
         return
     run = manifest.get("run")
     if not isinstance(run, dict) or not isinstance(run.get("waves"), list):
@@ -327,6 +322,7 @@ def validate_run_artifacts(
             {
                 "generated_at",
                 "generation_id",
+                "case_ids",
                 "execution_id",
                 "report",
                 "incomplete_report",
@@ -334,6 +330,17 @@ def validate_run_artifacts(
             path,
             "feedback report targets",
         )
+        cases = targets["case_ids"]
+        if not isinstance(cases, dict) or not all(
+            isinstance(key, str)
+            and re.fullmatch(r"fbi_[a-z2-7]{26}", key)
+            and (value is None or is_common_id(value, "fbc"))
+            for key, value in cases.items()
+        ):
+            raise _corruption("feedback report case ID mapping が不正です。", path)
+        allocated = [value for value in cases.values() if value is not None]
+        if len(allocated) != len(set(allocated)):
+            raise _corruption("feedback report case ID が重複しています。", path)
         owner = targets["execution_id"]
         if (
             not is_common_id(owner, "exec")
@@ -429,9 +436,7 @@ def validate_run_artifacts(
         run["merged"] is not None and run["sealed"] is None
     ):
         raise _corruption("feedback join の先行 artifact がありません。", path)
-    if (
-        manifest["publication"] is not None or manifest["diagnostic"] is not None
-    ) and run["completion"] is None:
+    if (manifest["publication"] is not None) and run["completion"] is None:
         raise _corruption(
             "join 後検査前に feedback publication を開始できません。", path
         )

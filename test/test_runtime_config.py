@@ -22,9 +22,13 @@ from _git_support import make_repo
 from oracle.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
+    DocumentSearchConfig,
     JsonTomlValue,
 )
-from oracle.other.document_search import DocumentSearchConfig
+from oracle.other.document_search import (
+    SEARCH_CANDIDATE_COUNT_MAX,
+    SEARCH_CANDIDATE_COUNT_MIN,
+)
 
 from cmoc_runtime import (
     CmocError,
@@ -227,8 +231,20 @@ def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitio
         ("chunk_tokens", None),
         ("chunk_tokens", True),
         ("startup_timeout_seconds", 0),
+        ("resource_wait_timeout_seconds", True),
+        ("sync_no_progress_timeout_seconds", 0),
+        ("post_sync_search_timeout_seconds", -1),
+        ("search_request_timeout_seconds", "3600"),
         ("chunk_overlap_tokens", 512),
+        ("embedding_context_tokens", 512),
         ("reranker_context_tokens", 512),
+        ("candidate_count", 0),
+        ("candidate_count", -1),
+        ("candidate_count", 8),
+        ("candidate_count", 19),
+        ("candidate_count", 51),
+        ("candidate_count", 20.5),
+        ("candidate_count", True),
     ],
 )
 def test_saved_search_config_rejects_invalid_explicit_values(
@@ -242,16 +258,50 @@ def test_saved_search_config_rejects_invalid_explicit_values(
     search[field] = value
     path.write_text(json.dumps({"document_search": search}) + "\n")
 
-    with pytest.raises(CmocError) as exc_info:
-        load_config(root)
-
-    assert str(path) in exc_info.value.detail
-    assert f"document_search.{field}" in exc_info.value.detail
-    assert "手動で修正" in exc_info.value.next_actions[0]
     original = path.read_text()
+    for repair_missing in (False, True):
+        with pytest.raises(CmocError) as exc_info:
+            sync_config(root, repair_missing=repair_missing)
+
+        assert str(path) in exc_info.value.detail
+        assert f"document_search.{field}" in exc_info.value.detail
+        assert "手動で修正" in exc_info.value.next_actions[0]
+        if field == "candidate_count":
+            reason = exc_info.value.detail.split("\nreason:", 1)[1]
+            assert str(SEARCH_CANDIDATE_COUNT_MIN) in reason
+            assert str(SEARCH_CANDIDATE_COUNT_MAX) in reason
+        assert path.read_text() == original
+
+
+def test_explicit_doctor_adds_request_deadlines_without_replacing_validation_timeout(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    path = root / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    data = config_to_dict(CmocConfig())
+    names = (
+        "resource_wait_timeout_seconds",
+        "sync_no_progress_timeout_seconds",
+        "post_sync_search_timeout_seconds",
+        "search_request_timeout_seconds",
+    )
+    for name in names:
+        data["document_search"].pop(name)
+    data["document_search"]["request_timeout_seconds"] = 37
+    original = json.dumps(data) + "\n"
+    path.write_text(original)
     with pytest.raises(CmocError):
-        sync_config(root, repair_missing=True)
+        load_config(root)
+    with pytest.raises(CmocError):
+        sync_config(root, repair_missing=False)
     assert path.read_text() == original
+    repaired = sync_config(root, repair_missing=True)
+    saved = json.loads(path.read_text())
+    assert repaired.config.document_search.request_timeout_seconds == 37
+    defaults = asdict(DocumentSearchConfig())
+    assert all(saved["document_search"][name] == defaults[name] for name in names)
+    assert repaired.additions == {name: defaults[name] for name in names}
 
 
 def test_explicit_doctor_does_not_save_inconsistent_candidate(tmp_path: Path) -> None:

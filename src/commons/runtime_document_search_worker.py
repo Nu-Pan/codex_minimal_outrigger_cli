@@ -20,15 +20,12 @@ from pathlib import Path
 from typing import Callable
 
 from markdown_it import MarkdownIt
-from oracle.other.document_search import (
-    EMBEDDING_QUERY_TEMPLATE,
-    INITIAL_SEARCH_MATERIALS,
-    RAW_RANKING_API,
-    RERANKER_INPUT_FORMAT,
-    DocumentSearchConfig,
-)
+from oracle.other.cmoc_config import DocumentSearchConfig
+from oracle.other.document_search import EMBEDDING_QUERY_TEMPLATE
 
 from .runtime_document_search import SearchError
+from .runtime_document_search_observation import inference_config
+from .runtime_document_search_types import SEARCH_MATERIALS
 
 
 def materials_directory(installation_root: Path) -> Path:
@@ -84,14 +81,12 @@ def _runtime_tree_hash(base: Path) -> str:
 def verification_condition(config: DocumentSearchConfig) -> str:
     """実モデル検証を再利用できる実行環境と設定を識別する。"""
     condition = {
-        "config": asdict(config),
+        "config": inference_config(config),
         "python": sys.version,
         "executable": str(Path(sys.executable).resolve()),
         "platform": platform.platform(),
         "machine": platform.machine(),
         "query_template": EMBEDDING_QUERY_TEMPLATE,
-        "reranker_input_format": RERANKER_INPUT_FORMAT,
-        "raw_ranking_api": RAW_RANKING_API,
     }
     return hashlib.sha256(json.dumps(condition, sort_keys=True).encode()).hexdigest()
 
@@ -112,7 +107,7 @@ def _verify_vector_dependency() -> None:
         ).fetchone()
     finally:
         connection.close()
-    if version.removeprefix("v") != INITIAL_SEARCH_MATERIALS.sqlite_vec_version:
+    if version.removeprefix("v") != SEARCH_MATERIALS.sqlite_vec_version:
         raise ValueError("sqlite-vec version mismatch")
 
 
@@ -129,7 +124,7 @@ def _verify_lock(base: Path) -> None:
             raise ValueError(f"npm dependency is not pinned: {name}")
     native = packages.get("node_modules/@node-llama-cpp/linux-x64", {})
     if (
-        native.get("version") != INITIAL_SEARCH_MATERIALS.node_llama_cpp_version
+        native.get("version") != SEARCH_MATERIALS.node_llama_cpp_version
         or not native.get("integrity")
         or not (base / "node_modules/@node-llama-cpp/linux-x64").is_dir()
     ):
@@ -176,40 +171,26 @@ def verify_search_materials(
             "lock_sha256": expected_lock_hash,
             "runtime_tree_sha256": runtime_tree_hash,
             "materials": {
-                "node_version": INITIAL_SEARCH_MATERIALS.node_version,
-                "node_llama_cpp_version": INITIAL_SEARCH_MATERIALS.node_llama_cpp_version,
-                "llama_cpp_revision": INITIAL_SEARCH_MATERIALS.llama_cpp_revision,
-                "sqlite_vec_version": INITIAL_SEARCH_MATERIALS.sqlite_vec_version,
-                "embedding_sha256": INITIAL_SEARCH_MATERIALS.embedding.sha256,
-                "reranker_sha256": INITIAL_SEARCH_MATERIALS.reranker.sha256,
-                "embedding_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
-                "reranker_tokenizer_sha256": INITIAL_SEARCH_MATERIALS.reranker.tokenizer_metadata_sha256,
-                "embedding_pooling": INITIAL_SEARCH_MATERIALS.embedding.pooling,
-                "reranker_pooling": INITIAL_SEARCH_MATERIALS.reranker.pooling,
-                "embedding_dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
+                "node_version": SEARCH_MATERIALS.node_version,
+                "node_llama_cpp_version": SEARCH_MATERIALS.node_llama_cpp_version,
+                "llama_cpp_revision": SEARCH_MATERIALS.llama_cpp_revision,
+                "sqlite_vec_version": SEARCH_MATERIALS.sqlite_vec_version,
+                "embedding_sha256": SEARCH_MATERIALS.embedding.sha256,
+                "embedding_tokenizer_sha256": SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
+                "embedding_pooling": SEARCH_MATERIALS.embedding.pooling,
+                "embedding_dimensions": SEARCH_MATERIALS.embedding_dimensions,
             },
         }
         if not isinstance(data, dict) or any(
             data.get(key) != value for key, value in expected.items()
         ):
             raise SearchError("MODEL_IDENTITY_MISMATCH", "material manifest mismatch")
-        for filename, expected_hash, expected_size in (
-            (
-                INITIAL_SEARCH_MATERIALS.embedding.filename,
-                INITIAL_SEARCH_MATERIALS.embedding.sha256,
-                INITIAL_SEARCH_MATERIALS.embedding.size_bytes,
-            ),
-            (
-                INITIAL_SEARCH_MATERIALS.reranker.filename,
-                INITIAL_SEARCH_MATERIALS.reranker.sha256,
-                INITIAL_SEARCH_MATERIALS.reranker.size_bytes,
-            ),
-        ):
-            path = base / filename
-            if path.is_symlink() or not path.is_file():
-                raise SearchError("NOT_READY", "document search model is unavailable")
-            if path.stat().st_size != expected_size or _sha256(path) != expected_hash:
-                raise SearchError("MODEL_IDENTITY_MISMATCH", "model checksum mismatch")
+        model = SEARCH_MATERIALS.embedding
+        path = base / model.filename
+        if path.is_symlink() or not path.is_file():
+            raise SearchError("NOT_READY", "document search model is unavailable")
+        if path.stat().st_size != model.size_bytes or _sha256(path) != model.sha256:
+            raise SearchError("MODEL_IDENTITY_MISMATCH", "model checksum mismatch")
         for filename, expected_hash in (
             ("worker.mjs", expected_worker_hash),
             ("package.json", expected_package_hash),
@@ -227,10 +208,7 @@ def verify_search_materials(
                 encoding="utf-8"
             )
         )
-        if (
-            installed_package.get("version")
-            != INITIAL_SEARCH_MATERIALS.node_llama_cpp_version
-        ):
+        if installed_package.get("version") != SEARCH_MATERIALS.node_llama_cpp_version:
             raise SearchError(
                 "MODEL_IDENTITY_MISMATCH", "node-llama-cpp version mismatch"
             )
@@ -245,7 +223,7 @@ def verify_search_materials(
             .stdout.strip()
             .removeprefix("v")
         )
-        if node_version != INITIAL_SEARCH_MATERIALS.node_version:
+        if node_version != SEARCH_MATERIALS.node_version:
             raise SearchError("MODEL_IDENTITY_MISMATCH", "Node version mismatch")
         _verify_lock(base)
         _verify_vector_dependency()
@@ -254,7 +232,7 @@ def verify_search_materials(
             if (
                 not isinstance(verified, dict)
                 or verified.get(verification_condition(config))
-                != "document-query-rerank"
+                != "document-query-embedding"
             ):
                 raise SearchError(
                     "NOT_READY",
@@ -285,10 +263,14 @@ class NodeSearchWorker:
         config: DocumentSearchConfig | None,
         *,
         material_base: Path | None = None,
+        check: Callable[[], None] | None = None,
+        on_failure: Callable[[BaseException], None] | None = None,
     ) -> None:
         """固定資材の配置を記録する。"""
         self.base = material_base or materials_directory(installation_root)
         self.config = config
+        self.check = check
+        self.on_failure = on_failure
 
     def _request(self, operation: str, payload: dict[str, object]) -> dict[str, object]:
         """生存監視に使う親 process の identity を付ける。"""
@@ -319,13 +301,8 @@ class NodeSearchWorker:
         return {
             "operation": operation,
             "payload": payload,
-            "embedding_model": str(
-                self.base / INITIAL_SEARCH_MATERIALS.embedding.filename
-            ),
-            "reranker_model": str(
-                self.base / INITIAL_SEARCH_MATERIALS.reranker.filename
-            ),
-            "dimensions": INITIAL_SEARCH_MATERIALS.embedding_dimensions,
+            "embedding_model": str(self.base / SEARCH_MATERIALS.embedding.filename),
+            "dimensions": SEARCH_MATERIALS.embedding_dimensions,
             "parent_pid": os.getpid(),
             "parent_start_time": parent_start_time,
         }
@@ -386,6 +363,8 @@ class NodeSearchWorker:
         pending_input: str | None = json.dumps(request, ensure_ascii=False)
         try:
             while True:
+                if self.check is not None:
+                    self.check()
                 if cancelled is not None and cancelled.is_set():
                     raise SearchError("CANCELLED", "document search was cancelled")
                 remaining = None if deadline is None else deadline - time.monotonic()
@@ -402,12 +381,22 @@ class NodeSearchWorker:
                 except subprocess.TimeoutExpired:
                     pending_input = None
         except OSError as exc:
+            failure = SearchError("MODEL_FAILURE", "inference worker I/O failed")
+            if self.on_failure is not None:
+                self.on_failure(failure)
             self._stop_process(process)
-            raise SearchError("MODEL_FAILURE", "inference worker I/O failed") from exc
+            raise failure from exc
         except BaseException as exc:
+            interruption = (
+                SearchError("CANCELLED", "document search was cancelled")
+                if isinstance(exc, KeyboardInterrupt)
+                else exc
+            )
+            if self.on_failure is not None:
+                self.on_failure(interruption)
             self._stop_process(process)
             if isinstance(exc, KeyboardInterrupt):
-                raise SearchError("CANCELLED", "document search was cancelled") from exc
+                raise interruption from exc
             raise
         if cancelled is not None and cancelled.is_set():
             raise SearchError("CANCELLED", "document search was cancelled")
@@ -469,6 +458,8 @@ class NodeSearchWorker:
         try:
             os.set_blocking(process.stdin.fileno(), False)
             while True:
+                if self.check is not None:
+                    self.check()
                 if cancelled is not None and cancelled.is_set():
                     raise SearchError("CANCELLED", "document search was cancelled")
                 remaining = None if deadline is None else deadline - time.monotonic()
@@ -526,6 +517,8 @@ class NodeSearchWorker:
                     "MODEL_FAILURE", "inference worker output is incomplete"
                 )
             while process.poll() is None:
+                if self.check is not None:
+                    self.check()
                 if cancelled is not None and cancelled.is_set():
                     raise SearchError("CANCELLED", "document search was cancelled")
                 if deadline is not None and time.monotonic() >= deadline:
@@ -536,12 +529,22 @@ class NodeSearchWorker:
             if process.returncode != 0:
                 raise SearchError("MODEL_FAILURE", "inference worker failed")
         except OSError as exc:
+            failure = SearchError("MODEL_FAILURE", "inference worker I/O failed")
+            if self.on_failure is not None:
+                self.on_failure(failure)
             self._stop_process(process)
-            raise SearchError("MODEL_FAILURE", "inference worker I/O failed") from exc
+            raise failure from exc
         except BaseException as exc:
+            interruption = (
+                SearchError("CANCELLED", "document search was cancelled")
+                if isinstance(exc, KeyboardInterrupt)
+                else exc
+            )
+            if self.on_failure is not None:
+                self.on_failure(interruption)
             self._stop_process(process)
             if isinstance(exc, KeyboardInterrupt):
-                raise SearchError("CANCELLED", "document search was cancelled") from exc
+                raise interruption from exc
             raise
         finally:
             for pipe in (process.stdin, process.stdout):

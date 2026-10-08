@@ -521,7 +521,7 @@ def test_primary_report_keeps_every_codex_output_and_accepted_observation(
             logger.event("codex_call", output_path=str(output))
         logger.event(
             "feedback_observation_accepted",
-            observation_id="fbo_test",
+            observation_id="fbo_000000_2026-09-29_15-04",
             payload=observation,
         )
         if supplied_report:

@@ -38,17 +38,18 @@ from config.cmoc_config import CmocConfig, JsonTomlValue
 from .runtime_codex_recovery import CodexOutcome
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
-from .runtime_document_search_scope import validate_document_search_scope
+from .runtime_document_search_observation import mcp_tool_timeout_seconds
 from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
 )
 from .runtime_errors import CmocError
-from .runtime_feedback import (
+from .runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
+from .runtime_logging import SubcommandLogger, current_subcommand_logger
 from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
@@ -62,6 +63,7 @@ _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS = frozenset(
         b"codex-cli 0.156.1",
         b"codex-cli 0.157.1",
         b"codex-cli 0.158.0",
+        b"codex-cli 0.159.2",
     }
 )
 _CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
@@ -372,7 +374,7 @@ def stop_process_group(
     expected_leader: tuple[int, int] | None = None,
     expected_members: tuple[tuple[int, int], ...] | None = None,
 ) -> None:
-    """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
+    """Codex と tool の process tree を同一性を固定して停止・回収する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
     # 初回 snapshot と同じ group identity が消えた後の PGID 再利用へ signal を送らない。
@@ -424,6 +426,18 @@ def stop_process_group(
             f"pid: {expected_leader[0]}\npgid: {process_group_id}",
         )
     known_members = set(initial_members)
+    # CLI の tool/test は別 session に配置されるため、CLI group だけでは止まらない。
+    # Codex 0.160.0 の実装で確認した境界:
+    # https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/spawn.rs#L87-L105
+    # https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/utils/pty/src/process_group.rs#L43-L54
+    if _stop_codex_process_tree(initial_members):
+        if _wait_tracked_process_group_exit(process_group_id, known_members, 5.0):
+            return
+        raise CmocError(
+            "実行中 Codex subprocess の process group を停止確認できません。",
+            ["残存 process を確認して停止してください。"],
+            f"pgid: {process_group_id}",
+        )
     _signal_process_members(initial_members, signal.SIGTERM)
     if _wait_tracked_process_group_exit(process_group_id, known_members, 5.0):
         return
@@ -445,6 +459,106 @@ def stop_process_group(
         "実行中 Codex subprocess を停止できません。",
         ["Codex subprocess を確認して停止後に再実行してください。"],
         f"pgid: {process_group_id}",
+    )
+
+
+def _descendant_processes(
+    parents: set[tuple[int, int]],
+) -> tuple[tuple[int, int], ...]:
+    # parent の starttime を再確認し、別 process の子を取り込まない。
+    parent_ids = {pid for pid, start in parents if process_start_time(pid) == start}
+    descendants: list[tuple[int, int]] = []
+    for path in Path("/proc").iterdir():
+        if not path.name.isdigit():
+            continue
+        fields = _process_stat(int(path.name))
+        if fields is not None and fields[0] != "Z" and int(fields[1]) in parent_ids:
+            descendants.append((int(path.name), int(fields[19])))
+    return tuple(descendants)
+
+
+def _stop_codex_process_tree(members: tuple[tuple[int, int], ...]) -> bool:
+    # 親を先に凍結し、子 session も pidfd で固定してから停止を確認する。
+    # /proc の読取失敗を process の終了として扱わない。
+    process_fds: dict[tuple[int, int], int] = {}
+    deadline = time.monotonic() + 2.0
+    known: set[tuple[int, int]] = set()
+    pending = set(members)
+    try:
+        while pending:
+            for identity in pending:
+                pid, start = identity
+                process_fd = _open_codex_member_fd(pid, start)
+                if process_fd is not None:
+                    process_fds[identity] = process_fd
+                    send_process_signal(process_fd, pid, signal.SIGSTOP, "Codex tool")
+            known.update(pending)
+            # STOP の配送を確認してから子を列挙し、worker 生成との競合を閉じる。
+            for (pid, start), process_fd in process_fds.items():
+                while not wait_process_fd_exit(process_fd, 0):
+                    fields = _process_stat(pid)
+                    if fields is None or int(fields[19]) != start:
+                        raise CmocError(
+                            "Codex tool の子 process を確認できません。",
+                            ["残存 process を確認して停止してください。"],
+                            f"pid: {pid}",
+                        )
+                    if fields[0] in {"T", "t", "Z"}:
+                        break
+                    if time.monotonic() >= deadline:
+                        raise CmocError(
+                            "Codex tool の子 process を停止確認できません。",
+                            [
+                                "残存 process を停止してから join または abandon してください。"
+                            ],
+                            f"process identities: {sorted(known)}",
+                        )
+                    time.sleep(0.01)
+            pending = set(_descendant_processes(known)) - known
+        # 子の列挙を終えたら親も再開せず終了させ、worker の追加を防ぐ。
+        for pid, start in process_fds:
+            send_process_signal(
+                process_fds[(pid, start)], pid, signal.SIGKILL, "Codex tool"
+            )
+        for pid, start in process_fds:
+            if not wait_process_fd_exit(
+                process_fds[(pid, start)], max(0, deadline - time.monotonic())
+            ):
+                raise CmocError(
+                    "Codex tool の子 process を回収できません。",
+                    ["残存 process を停止してから join または abandon してください。"],
+                    f"process identities: {sorted(process_fds)}",
+                )
+        return bool(process_fds)
+    finally:
+        for process_fd in process_fds.values():
+            os.close(process_fd)
+
+
+def _open_codex_member_fd(pid: int, expected_start: int) -> int | None:
+    """終了・PID 再利用と確認不能を分けて、停止対象の pidfd を固定する。"""
+    process_fd = open_process_fd(pid, "Codex tool")
+    if process_fd is None:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return None
+    current_start = process_start_time(pid)
+    if current_start is not None and current_start != expected_start:
+        if process_fd is not None:
+            os.close(process_fd)
+        return None
+    if process_fd is not None and current_start == expected_start:
+        return process_fd
+    exited = process_fd is not None and wait_process_fd_exit(process_fd, 0)
+    if process_fd is not None:
+        os.close(process_fd)
+    if exited:
+        return None
+    raise CmocError(
+        "Codex tool の子 process を安全に確認・停止できません。",
+        ["残存 process を確認して停止してください。"],
+        f"pid: {pid}",
     )
 
 
@@ -572,6 +686,12 @@ def _codex_session_start_hook_trusted_hash(command: str) -> str:
     # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/core/src/hook_runtime.rs#L121-L164
     # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/core/src/session/turn.rs#L615-L674
     # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/hooks/src/legacy_notify.rs#L26-L64
+    # 0.159.2 も同じ trust identity、root SessionStart、turn 完了後の notify を使う。
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/hooks/src/engine/discovery.rs#L775-L791
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/config/src/fingerprint.rs#L54-L81
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/core/src/hook_runtime.rs#L126-L164
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/core/src/session/turn.rs#L692-L706
+    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/hooks/src/legacy_notify.rs#L13-L71
     identity = {
         "event_name": "session_start",
         "hooks": [
@@ -772,12 +892,15 @@ def _editor_input_handoff_mcp_override_args() -> list[str]:
     return args
 
 
-def _document_search_mcp_override_args(
-    parameter: AgentCallParameter, config: CmocConfig
+def document_search_mcp_override_args(
+    parameter: AgentCallParameter,
+    config: CmocConfig,
+    *,
+    codex_call_id: str | None = None,
+    logger: SubcommandLogger | None = None,
 ) -> list[str]:
     """同名の外部設定を遮断し、call 固定の検索接続だけを注入する。"""
-    scope = parameter.document_search_scope
-    if scope is None:
+    if not parameter.enable_document_search_mcp:
         server: dict[str, JsonTomlValue] = {
             "command": sys.executable,
             "args": ["-m", "commons.runtime_document_search_mcp", "{}"],
@@ -789,12 +912,19 @@ def _document_search_mcp_override_args(
     else:
         from basic.path_model import AgentCallPathContext
 
-        try:
-            resolved_scope = validate_document_search_scope(scope)
-        except ValueError as exc:
-            raise CmocError("文書検索の閲覧範囲が不正です。", [], str(exc)) from exc
         context = AgentCallPathContext(parameter.agent_call_cwd)
         search_config = config.document_search
+        caller = logger or current_subcommand_logger()
+        log_context = (
+            {
+                "path": str(caller.path.resolve()),
+                "command": caller.command,
+                "execution_id": caller.execution_id,
+                "codex_call_id": codex_call_id,
+            }
+            if caller is not None and codex_call_id is not None
+            else None
+        )
         server = {
             "command": sys.executable,
             "args": [
@@ -803,8 +933,8 @@ def _document_search_mcp_override_args(
                 json.dumps(
                     {
                         "work_root": str(context.work_root),
-                        "scope": asdict(resolved_scope),
                         "config": asdict(search_config) if search_config else None,
+                        "log_context": log_context,
                     },
                     ensure_ascii=False,
                     separators=(",", ":"),
@@ -828,10 +958,11 @@ def _document_search_mcp_override_args(
         }
         if search_config is not None:
             server["startup_timeout_sec"] = search_config.startup_timeout_seconds
-            server["tool_timeout_sec"] = (
-                search_config.request_timeout_seconds
-                + search_config.shutdown_grace_seconds
-            )
+            # 0.159.2 は接続設定の期限を call_tool へ渡し、要求側の期限があれば短い方を使う。
+            # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/codex-mcp/src/connection_manager.rs#L1014-L1028
+            # 実際の待機は同版 rmcp-client の active_time_timeout で計測する。
+            # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/rmcp-client/src/rmcp_client.rs#L1470-L1492
+            server["tool_timeout_sec"] = mcp_tool_timeout_seconds(search_config)
     return _config_override(f"mcp_servers.{SEARCH_MCP_SERVER}", _toml_value(server))
 
 
@@ -879,7 +1010,7 @@ def build_codex_override_args(
             session_start_command if callback_enabled else None
         ),
         *_feedback_mcp_override_args(parameter.enable_feedback_reporting),
-        *_document_search_mcp_override_args(parameter, config),
+        *document_search_mcp_override_args(parameter, config),
         *(
             _editor_input_handoff_mcp_override_args()
             if parameter.enable_editor_input_handoff_mcp
@@ -1023,6 +1154,11 @@ def _verify_document_search_server(
         or transport.get("cwd") != expected.get("cwd")
         or actual.get("enabled_tools") != expected["enabled_tools"]
         or actual.get("disabled_tools") != expected["disabled_tools"]
+        or any(
+            actual.get(name) != expected[name]
+            for name in ("startup_timeout_sec", "tool_timeout_sec")
+            if name in expected
+        )
     ):
         raise CmocError(
             "文書検索 MCP の実効設定が call 固定値と一致しません。",
@@ -1139,11 +1275,15 @@ def _kill_codex_process_group(process: subprocess.Popen[Any]) -> None:
         if process_group_has_running_member(process.pid):
             raise _unverified_process_group_error(process.pid)
         return
-    # 生きた専用 session leader は、この thread が reap するまで PID を保持する。
-    try:
-        os.killpg(process.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
+    # Native CLI の test/tool は別 group なので、親を壊す前に子も停止・確認する。
+    start = process_start_time(process.pid)
+    if start is None:
+        raise _unverified_process_group_error(process.pid)
+    stop_process_group(
+        process.pid,
+        expected_leader=(process.pid, start),
+        expected_members=((process.pid, start),),
+    )
 
 
 def _communicate_codex_process(

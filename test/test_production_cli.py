@@ -40,18 +40,34 @@ from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
 from typer.main import get_command
 
-from commons.runtime_config import write_config
+from commons.runtime_config import load_config, write_config
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
 )
-from commons.runtime_feedback import (
+from commons.runtime_feedback_history import history_artifact
+from commons.runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
-from commons.runtime_feedback_store import store_agent_observation
+from commons.runtime_feedback_state import (
+    generation_artifacts,
+    issue_id,
+    load_active_state,
+    new_generation_id,
+    new_report_cut_id,
+    publish_generation_artifacts,
+)
+from commons.runtime_feedback_store import (
+    rfc3339_now,
+    sha256_bytes,
+    store_agent_observation,
+    write_immutable_bytes,
+    write_immutable_json,
+)
+from commons.runtime_ids import new_id
 from config.cmoc_config import CmocConfig
 from main import app
 
@@ -73,6 +89,7 @@ pytestmark = [
 NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("doctor",),
     ("feedback", "report"),
+    ("feedback", "close"),
     ("oracle", "edit"),
     ("realization", "apply", "fork"),
     ("realization", "refactor", "fork"),
@@ -140,6 +157,109 @@ def _registered_leaf_commands(
     return {prefix}
 
 
+def _write_close_fixture(root: Path, decision_basis: dict[str, Any]) -> str:
+    """推論結果を固定せず、close に必要な確定済み state を決定論的入力として作る。"""
+    timestamp = rfc3339_now()
+    execution = new_id(root, "exec")
+    case = new_id(root, "fbc")
+    cut, generation = new_report_cut_id(), new_generation_id(root)
+    canonical = f"agent\0{new_id(root, 'fbo')}"
+    identity = issue_id(canonical)
+    reason = "外部環境の確認が必要である。"
+    issue = {
+        "schema_version": 1,
+        "issue_id": identity,
+        "case_id": case,
+        "origin": "agent_report",
+        "canonical_key": canonical,
+        "category": "configuration",
+        "summary": "外部設定の確認待ち",
+        "impact": "設定確認を完了できない。",
+        "occurrence_count": 1,
+        "affected_session_count": 0,
+        "session_digest": {"values": [], "saturated": False},
+        "first_observed_at": timestamp,
+        "last_observed_at": timestamp,
+        "representative_evidence": [],
+        "reference_targets": [
+            {"path": "README.md", "kind": "file", "location": "README.md:1"}
+        ],
+        "latest_fingerprints": [],
+        "verification": {
+            "report_cut_id": cut,
+            "verified_at": timestamp,
+            "status": "inconclusive",
+            "reason": reason,
+            "current_evidence": [],
+            "human_action": None,
+            "decision_basis": decision_basis,
+        },
+        "machine_state": None,
+    }
+    source = {"kind": "report", "id": cut, "execution_id": execution}
+    report = root / f".cmoc/gu/report/feedback/incomplete/{execution}.md"
+    log = root / f".cmoc/gu/log/sub_command/{execution}.jsonl"
+    log.write_text("{}\n")
+    history_path, content, reference = history_artifact(
+        root,
+        {
+            "schema_version": 1,
+            "generation_id": generation,
+            "source": source,
+            "created_at": timestamp,
+            "report": report.relative_to(root).as_posix(),
+            "log": log.relative_to(root).as_posix(),
+            "events": [
+                {
+                    "kind": "created",
+                    "case_id": case,
+                    "issue_id": identity,
+                    "before": None,
+                    "after": issue,
+                    "human_reason": None,
+                    "agent_result": {"status": "inconclusive", "reason": reason},
+                }
+            ],
+            "observations": [],
+        },
+    )
+    write_immutable_bytes(history_path, content)
+    manifest, artifacts, generation_reference = generation_artifacts(
+        root,
+        generation_id=generation,
+        report_cut_id=cut,
+        created_at=timestamp,
+        session_commit=run_git(root, "rev-parse", "HEAD").stdout.strip(),
+        issues={identity: issue},
+        machine_aggregates={},
+        source=source,
+        base_current=None,
+        input_boundary=0,
+        history=[reference],
+    )
+    publish_generation_artifacts(root, manifest, artifacts)
+    write_immutable_bytes(
+        report, f"# 確定済み fixture\n\n{case}: inconclusive\n".encode()
+    )
+    write_immutable_json(
+        root / ".cmoc/gu/feedback/active/current.json",
+        {
+            "schema_version": 1,
+            "generation_id": generation,
+            "generation_manifest_path": generation_reference["path"],
+            "generation_manifest_sha256": generation_reference["sha256"],
+            "report_cut_id": cut,
+            "report_cut_manifest_sha256": sha256_bytes(b"close fixture"),
+            "report_path": report.relative_to(root).as_posix(),
+            "report_sha256": sha256_bytes(report.read_bytes()),
+            "published_at": timestamp,
+            "result": "incomplete",
+        },
+    )
+    load_active_state(root)
+    return case
+
+
 def _real_path_config() -> CmocConfig:
     """全 agent call 種別を直接テスト用設定へ対応付ける。"""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
@@ -147,7 +267,7 @@ def _real_path_config() -> CmocConfig:
     # の直接設定を全 agent call 種別へ適用する。
     config = CmocConfig(num_parallel=1)
     quota_saving_call = config.codex.agent_calls[
-        "build_realization_refactor_fork_change_summary_parameter"
+        "build_quota_availability_probe_parameter"
     ]
     return replace(
         config,
@@ -175,8 +295,9 @@ def _write_noninteractive_fixture_instructions(root: Path) -> None:
         """# Production-path test fixture
 
 This is an intentionally minimal and internally consistent test repository.
-For a realization-refactor file review, report `findings` as an empty array and
-do not modify files. For feedback remediation of an observation about the
+For a realization-refactor file review, report `findings` as an empty array,
+`verification.status` as `not_required`, and do not modify files.
+For feedback remediation of an observation about the
 existence of `README.md`, inspect the file, return `already_resolved` with no
 changes, and do not report another issue. For every other call, follow its
 explicit prompt exactly.
@@ -285,20 +406,73 @@ def _run_cmoc(
 ) -> subprocess.CompletedProcess[str]:
     """利用者向け console script を独立 process で正常完了まで実行する。"""
     # 個々の command hang は pytest 全体の timeout より早く局所化する。
-    result = subprocess.run(
-        [str(cmoc), *args],
-        cwd=root,
-        env=environment,
-        text=True,
-        capture_output=True,
-        timeout=_PRODUCTION_COMMAND_TIMEOUT,
-        check=False,
-    )
+    if args == ("realization", "refactor", "fork"):
+        result = _run_refactor_until_confirmed([str(cmoc), *args], root, environment)
+    else:
+        result = subprocess.run(
+            [str(cmoc), *args],
+            cwd=root,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=_PRODUCTION_COMMAND_TIMEOUT,
+            check=False,
+        )
     assert result.returncode == 0, (
         f"cmoc {' '.join(args)} failed with {result.returncode}\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     return result
+
+
+def _run_refactor_until_confirmed(
+    argv: list[str], root: Path, environment: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    """確定実績を観測して SIGINT を送り、継続 workload の通常終了を検証する。"""
+    directory = root / ".cmoc/gu/log/sub_command"
+    previous = set(directory.glob("*.jsonl"))
+    deadline = time.monotonic() + _PRODUCTION_COMMAND_TIMEOUT
+    interrupted = False
+    with subprocess.Popen(
+        argv,
+        cwd=root,
+        env=environment,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+    ) as process:
+        try:
+            while True:
+                if time.monotonic() >= deadline:
+                    raise subprocess.TimeoutExpired(argv, _PRODUCTION_COMMAND_TIMEOUT)
+                if not interrupted:
+                    for log in set(directory.glob("*.jsonl")) - previous:
+                        for line in log.read_text().splitlines():
+                            try:
+                                event = json.loads(line)
+                            except json.JSONDecodeError:
+                                continue
+                            if (
+                                event.get("event") == "refactor_progress"
+                                and event.get("confirmed", 0) > 0
+                            ):
+                                process.send_signal(signal.SIGINT)
+                                interrupted = True
+                                break
+                        if interrupted:
+                            break
+                try:
+                    stdout, stderr = process.communicate(timeout=0.1)
+                    break
+                except subprocess.TimeoutExpired:
+                    continue
+        except BaseException:
+            _stop_tui_process_group(process)
+            process.communicate()
+            raise
+    assert interrupted, "refactor ended before a confirmed unit and user interruption"
+    return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
 
 
 def _codex_call_logs(root: Path) -> set[Path]:
@@ -348,6 +522,21 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     else:
         assert "--enable" not in argv
     assert override["model_reasoning_effort"] == call_config.reasoning_effort
+    search_server = override["mcp_servers"]["cmoc_document_search"]
+    assert search_server["enabled"] is True
+    search_context = json.loads(search_server["args"][-1])
+    caller_log = path.parents[2] / "sub_command" / f"{payload['execution_id']}.jsonl"
+    caller = json.loads(caller_log.read_text().splitlines()[0])
+    assert search_context["log_context"] == {
+        "path": str(caller_log.resolve()),
+        "command": caller["command"],
+        "execution_id": payload["execution_id"],
+        "codex_call_id": payload["codex_call_id"],
+    }
+    tuning = search_context["config"]
+    assert search_server["tool_timeout_sec"] > (
+        tuning["search_request_timeout_seconds"] + tuning["shutdown_grace_seconds"]
+    )
     provider_id = call_config.model_provider
     assert override["model_provider"] == provider_id
     providers = override.get("model_providers", {})
@@ -609,7 +798,6 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
     assert "照合と実モデル検証: `成功`" in first_report
     assert "文書 embedding: `成功`" in first_report
     assert "query embedding: `成功`" in first_report
-    assert "raw rerank: `成功`" in first_report
     report_open_log = tmp_path / "editor-bin/report-open.log"
     for _ in range(100):
         if report_open_log.is_file():
@@ -753,10 +941,10 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
             "run_id": None,
             "run_kind": None,
             "subcommand": "production fixture",
-            "subcommand_invocation_id": "sci_production_fixture",
-            "agent_call_id": "agc_production_fixture",
+            "subcommand_invocation_id": "exec_000001_2026-09-29_15-04",
+            "agent_call_id": "ac_000008_2026-09-29_15-04",
             "agent_call_kind": "production_fixture",
-            "codex_call_id": "cdc_production_fixture",
+            "codex_call_id": "cc_000009_2026-09-29_15-04",
             "codex_session_id": None,
             "log_paths": [],
         },
@@ -799,6 +987,35 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     _state_path, feedback_state = _load_session_state(root, session_branch)
     assert feedback_state["run"]["state"] == "ready"
     assert run_git(root, "status", "--short").stdout.strip() == ""
+    # Close は agent を呼ばない。確定済み入力を別 repository に用意し、
+    # 本番 entrypoint の state 更新・report・終了 code を観測する。
+    close_root = make_repo(tmp_path / "close-scenario")
+    _run_without_codex_call(cmoc, close_root, environment, "doctor")
+    history = load_active_state(root).history
+    basis = next(
+        event["agent_result"]["decision_basis"]
+        for record in reversed(history)
+        for event in record["events"]
+        if event["agent_result"] is not None
+    )
+    case = _write_close_fixture(close_root, basis)
+    executed_commands.add(("feedback", "close"))
+    closed = _run_without_codex_call(
+        cmoc,
+        close_root,
+        environment,
+        "feedback",
+        "close",
+        case,
+        "--reason",
+        "外部設定を修正し、解決を確認した。",
+    )
+    state = load_active_state(close_root)
+    assert state.issues == {}
+    assert state.current is not None and state.current["result"] == "ok"
+    assert state.history[-1]["events"][0]["kind"] == "manual_close"
+    assert case in terminal_primary_report(closed.stdout).read_text()
+    assert "- result: `closed`" in closed.stdout
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # 2 workload と共通 join/abandon を本番 Codex 経路で観測する。
     for command, kind in [
@@ -872,6 +1089,20 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         tmp_path, isolated_cmoc_installation
     )
     _run_without_codex_call(cmoc, root, environment, "doctor")
+    # component 検証と doctor 同期の期限は維持し、MCP 全体期限だけを短くする。
+    config = load_config(root)
+    assert config.document_search is not None
+    write_config(
+        root / ".cmoc/gt/config.json",
+        replace(
+            config,
+            document_search=replace(
+                config.document_search, search_request_timeout_seconds=0.000001
+            ),
+        ),
+    )
+    run_git(root, "add", ".cmoc/gt/config.json")
+    run_git(root, "commit", "-m", "exercise MCP deadline over live TUI connection")
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     status_before = run_git(root, "status", "--short").stdout
     calls_before = _codex_call_logs(root)
@@ -913,6 +1144,8 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         "goal と instructions は CMOC_HANDOFF_REQUEST、background は受け渡しの動作確認、"
         "decisions と open_questions は該当なし、oracle_references は空配列です。\n"
         "instructions にはガイドが指定する受信側の識別子も含めてください。\n"
+        "handoff 後に cmoc_document_search.search を query『期限の動作確認』で一度呼び、"
+        "期限超過の結果も短く報告してください。\n"
         "リポジトリのファイルは変更せず、tool の結果を短く報告してください。"
     )
     write_python_executable(
@@ -968,6 +1201,27 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert source["execution_id"] in body
     assert str(log_path.resolve()) in body
     assert source["execution_id"] in transcript
+    search_events = [
+        event
+        for line in log_path.read_text().splitlines()
+        if (event := json.loads(line))["event"].startswith("document_search_request_")
+    ]
+    assert len(search_events) == 3
+    assert all(
+        event["codex_call_id"] == tui_payload["codex_call_id"]
+        and event["execution_id"] == source["execution_id"]
+        and event["command"] == " ".join(command)
+        for event in search_events
+    )
+    assert len({event["request_id"] for event in search_events}) == 1
+    assert search_events[-1]["failure_code"] == "DEADLINE_EXCEEDED"
+    deadline = next(
+        event
+        for line in log_path.read_text().splitlines()
+        if (event := json.loads(line))["event"] == "document_search_deadline_exceeded"
+    )
+    assert deadline["request_id"] == search_events[-1]["request_id"]
+    assert deadline["deadline_kinds"] == ["search_request"]
     notifications = [json.loads(line) for line in toast_path.read_text().splitlines()]
     assert notifications == [
         {"title": f"cmoc {' '.join(command)}", "message": f"{root.name} — 入力待ち"}

@@ -6,20 +6,28 @@ import signal
 import sys
 import threading
 import time
-from collections.abc import Mapping
 from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
-from oracle.acp_builder.basic import DocumentSearchScope
+from oracle.other.cmoc_config import DocumentSearchConfig
 from oracle.other.document_search import (
+    SEARCH_CANDIDATE_COUNT_MAX,
+    SEARCH_CANDIDATE_COUNT_MIN,
     SEARCH_MCP_SERVER,
     SEARCH_TOOL_INPUT_SCHEMA,
     SEARCH_TOOL_NAME,
-    DocumentSearchConfig,
+    SEARCH_TOOL_OUTPUT_SCHEMA,
+    build_search_tool_description,
 )
 
 from .runtime_document_search import DocumentSearch, SearchError
+from .runtime_document_search_observation import (
+    SearchLogContext,
+    SearchObservation,
+    mcp_tool_timeout_seconds,
+)
+from .runtime_document_search_types import SearchFailure, SearchResult
 
 MCP_PROTOCOL_VERSION = "2025-06-18"
 
@@ -32,7 +40,9 @@ def _invalid_params(request_id: object) -> dict[str, object]:
     }
 
 
-def _tool_result(value: Mapping[str, object], *, error: bool) -> dict[str, object]:
+def _tool_result(
+    value: SearchResult | SearchFailure, *, error: bool
+) -> dict[str, object]:
     return {
         "content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False)}],
         "structuredContent": value,
@@ -40,7 +50,36 @@ def _tool_result(value: Mapping[str, object], *, error: bool) -> dict[str, objec
     }
 
 
-def _response(request: object, search: DocumentSearch) -> dict[str, object] | None:
+def _search_arguments(request: object) -> tuple[str, int | None] | None:
+    # 受付時の記録と処理時の入力検証で同じ境界を使う。
+    if not isinstance(request, dict) or request.get("method") != "tools/call":
+        return None
+    if request.get("jsonrpc") != "2.0" or not (
+        isinstance(request.get("id"), str) or type(request.get("id")) is int
+    ):
+        return None
+    params = request.get("params")
+    if not isinstance(params, dict) or params.get("name") != SEARCH_TOOL_NAME:
+        return None
+    arguments = params.get("arguments")
+    if not isinstance(arguments, dict) or set(arguments) - {"query", "limit"}:
+        return None
+    query, limit = arguments.get("query"), arguments.get("limit")
+    if not isinstance(query, str) or not query.strip():
+        return None
+    if "limit" in arguments and (
+        type(limit) is not int
+        or not SEARCH_CANDIDATE_COUNT_MIN <= limit <= SEARCH_CANDIDATE_COUNT_MAX
+    ):
+        return None
+    return query, limit
+
+
+def _response(
+    request: object,
+    search: DocumentSearch,
+    observation: SearchObservation | None = None,
+) -> dict[str, object] | None:
     """単一の JSON-RPC request を処理し、notification には応答しない。"""
     if isinstance(request, dict) and "id" not in request:
         return None
@@ -75,8 +114,9 @@ def _response(request: object, search: DocumentSearch) -> dict[str, object] | No
             "tools": [
                 {
                     "name": SEARCH_TOOL_NAME,
-                    "description": "許可された oracle/doc Markdown の現在原文を意味検索する。",
+                    "description": build_search_tool_description(search.root),
                     "inputSchema": SEARCH_TOOL_INPUT_SCHEMA,
+                    "outputSchema": SEARCH_TOOL_OUTPUT_SCHEMA,
                     "annotations": {
                         "readOnlyHint": True,
                         "destructiveHint": False,
@@ -87,22 +127,12 @@ def _response(request: object, search: DocumentSearch) -> dict[str, object] | No
             ]
         }
     elif method == "tools/call":
-        params = request.get("params")
-        if not isinstance(params, dict) or params.get("name") != SEARCH_TOOL_NAME:
+        arguments = _search_arguments(request)
+        if arguments is None:
             return _invalid_params(request_id)
-        arguments = params.get("arguments")
-        if not isinstance(arguments, dict) or set(arguments) - {"query", "limit"}:
-            return _invalid_params(request_id)
-        query = arguments.get("query")
-        limit = arguments.get("limit")
-        if (
-            not isinstance(query, str)
-            or not query.strip()
-            or ("limit" in arguments and (type(limit) is not int or limit < 1))
-        ):
-            return _invalid_params(request_id)
+        query, limit = arguments
         try:
-            found = search.search(query, limit)
+            found = search.search(query, limit, observation=observation)
         except SearchError as exc:
             result = _tool_result(
                 {"status": "error", "code": exc.code, "message": str(exc)},
@@ -129,33 +159,49 @@ def _response(request: object, search: DocumentSearch) -> dict[str, object] | No
 
 
 def _parse_context(raw: str) -> DocumentSearch:
-    """信頼された起動引数以外から root と範囲を受け取らない。"""
+    """信頼された起動引数から work-root と検索設定を受け取る。"""
     value: Any = json.loads(raw)
-    if not isinstance(value, dict) or set(value) != {"work_root", "scope", "config"}:
+    if not isinstance(value, dict) or set(value) != {
+        "work_root",
+        "config",
+        "log_context",
+    }:
         raise ValueError("invalid search context")
     root = value["work_root"]
-    scope = value["scope"]
     tuning = value["config"]
     if not isinstance(root, str) or not Path(root).is_absolute():
         raise ValueError("invalid work root")
-    if not isinstance(scope, dict) or set(scope) != {
-        "allowed_files",
-        "allowed_subtrees",
-        "excluded_files",
-        "excluded_subtrees",
-    }:
-        raise ValueError("invalid search scope")
-    if any(not isinstance(items, list) for items in scope.values()):
-        raise ValueError("invalid search scope")
-    resolved_scope = DocumentSearchScope(
-        **{name: tuple(items) for name, items in scope.items()}
-    )
     if tuning is not None:
         names = {field.name for field in fields(DocumentSearchConfig)}
         if not isinstance(tuning, dict) or set(tuning) != names:
             raise ValueError("invalid document search config")
         tuning = DocumentSearchConfig(**tuning)
-    return DocumentSearch(Path(root), resolved_scope, tuning, use_saved_config=True)
+    log_context = value["log_context"]
+    sink = None
+    if log_context is not None:
+        if (
+            not isinstance(log_context, dict)
+            or set(log_context) != {"path", "command", "execution_id", "codex_call_id"}
+            or any(
+                not isinstance(item, str) or not item for item in log_context.values()
+            )
+        ):
+            raise ValueError("invalid search log context")
+        if not Path(log_context["path"]).is_absolute():
+            raise ValueError("invalid search log path")
+        sink = SearchLogContext(
+            Path(log_context["path"]),
+            log_context["command"],
+            log_context["execution_id"],
+            log_context["codex_call_id"],
+        ).event
+    return DocumentSearch(
+        Path(root),
+        tuning,
+        use_saved_config=True,
+        event_sink=sink,
+        tool_timeout_seconds=mcp_tool_timeout_seconds(tuning) if tuning else None,
+    )
 
 
 def main() -> None:
@@ -166,7 +212,9 @@ def main() -> None:
         search = _parse_context(sys.argv[1])
     except (TypeError, ValueError, SearchError):
         raise SystemExit(2) from None
-    pending: queue.Queue[tuple[bool, object, float] | None] = queue.Queue()
+    pending: queue.Queue[tuple[bool, object, SearchObservation | None] | None] = (
+        queue.Queue()
+    )
     state_lock = threading.RLock()
     closed = threading.Event()
     cancelled_ids: set[str | int] = set()
@@ -174,11 +222,14 @@ def main() -> None:
     active: tuple[str | int, threading.Event] | None = None
 
     def close() -> None:
-        closed.set()
+        # 受付と同じ lock で終端を置き、開始記録だけの要求を後に積まない。
         with state_lock:
+            if closed.is_set():
+                return
+            closed.set()
             if active is not None:
                 active[1].set()
-        pending.put(None)
+            pending.put(None)
 
     def receive() -> None:
         try:
@@ -187,7 +238,10 @@ def main() -> None:
                 try:
                     request = json.loads(line)
                 except ValueError:
-                    pending.put((False, None, received_at))
+                    with state_lock:
+                        if closed.is_set():
+                            break
+                        pending.put((False, None, None))
                     continue
                 if (
                     isinstance(request, dict)
@@ -206,36 +260,52 @@ def main() -> None:
                             elif request_id in queued_ids:
                                 cancelled_ids.add(request_id)
                     continue
-                if isinstance(request, dict):
-                    request_id = request.get("id")
-                    if isinstance(request_id, (str, int)) and not isinstance(
-                        request_id, bool
-                    ):
-                        with state_lock:
+                with state_lock:
+                    if closed.is_set():
+                        break
+                    if isinstance(request, dict):
+                        request_id = request.get("id")
+                        if isinstance(request_id, (str, int)) and not isinstance(
+                            request_id, bool
+                        ):
                             queued_ids.add(request_id)
-                pending.put((True, request, received_at))
+                    observation = (
+                        search.begin_request(
+                            started=received_at, request_id=request["id"]
+                        )
+                        if _search_arguments(request) is not None
+                        else None
+                    )
+                    pending.put((True, request, observation))
         finally:
             close()
 
     signal.signal(signal.SIGTERM, lambda *_args: close())
+    signal.signal(signal.SIGINT, lambda *_args: close())
     reader = threading.Thread(target=receive, daemon=True)
     reader.start()
     while True:
         item = pending.get()
-        if item is None or closed.is_set():
+        if item is None:
             break
-        parsed, request, received_at = item
+        parsed, request, observation = item
+        if closed.is_set():
+            if observation is not None:
+                observation.fail(
+                    SearchError("CANCELLED", "document search connection closed")
+                )
+                observation.finish_request()
+            continue
         request_id = request.get("id") if isinstance(request, dict) else None
         cancellation = threading.Event()
         if isinstance(request_id, (str, int)) and not isinstance(request_id, bool):
             with state_lock:
                 queued_ids.discard(request_id)
                 active = (request_id, cancellation)
-                if request_id in cancelled_ids:
+                if request_id in cancelled_ids or closed.is_set():
                     cancellation.set()
                     cancelled_ids.discard(request_id)
         search.cancelled = cancellation
-        search.request_started = received_at
         try:
             if not parsed:
                 response: dict[str, object] | None = {
@@ -244,10 +314,9 @@ def main() -> None:
                     "error": {"code": -32700, "message": "Parse error"},
                 }
             else:
-                response = _response(request, search)
+                response = _response(request, search, observation)
         finally:
             search.cancelled = None
-            search.request_started = None
             with state_lock:
                 active = None
         if response is not None and not closed.is_set():

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from .runtime_cli import start_subcommand_step
 from .runtime_doctor import run_doctor_preprocess
-from .runtime_document_search_scope import oracle_doc_scope
 from .runtime_errors import CmocError
 from .runtime_git import (
     branch_exists,
@@ -216,7 +215,6 @@ def _merge_run_body(
                 run_head,
                 session_head_before_join,
                 context.session_worktree,
-                document_search_scope=oracle_doc_scope(),
                 feedback_report_cut_path=feedback_report_cut_path,
             ),
             purpose="run join conflict resolution",

@@ -8,7 +8,7 @@ def build_realization_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
     """realization file に対する所見が満たすべき規定。
 
     NOTE
-        意味仕様は `oracle/doc/app_spec/oracle_and_realization.md` の
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の
         「oracle file に対する realization file の適合性」を参照。
     """
     return (
@@ -22,10 +22,12 @@ def build_realization_findings_policy() -> tuple[PlaceholderMap, SDHeader]:
                     "oracle file の具体的な要求と realization file の具体的な挙動が明確に不整合する場合は修正対象とする",
                     "realization file 上に明確に存在する致命的な問題は修正対象とする",
                     "所見に対して適用する基準は常に一貫していること",
+                    "この call の目的として明示された改善を扱う場合は、その目的に対応する対象箇所と具体的な改善根拠を持つこと",
                 ),
                 prohibit=(
                     "oracle file 自体の問題 (e.g 仕様の定義の不足) は所見の対象としてはいけない",
-                    "規定上必須とされていない事を所見の根拠にしてはいけない",
+                    "明示要求のない事項を、仕様への不適合の根拠にしてはいけない",
+                    "この call の目的に含まれない一般的な品質改善を、所見の対象としてはいけない",
                     "調査開始時点ですでに解消されている問題を新しい所見として重複させてはいけない",
                 ),
             ),

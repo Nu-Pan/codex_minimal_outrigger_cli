@@ -50,7 +50,7 @@ def render_primary_report(
     elif spec.template == "session_fork":
         body = _session_fork_body(classification, result, logger, field_values)
     elif spec.template == "refactor_fork":
-        body = _refactor_fork_body(classification, result, logger)
+        body = _refactor_fork_body(classification, result, logger, field_values)
     elif spec.template == "session_join":
         body = _session_join_body(classification, result, logger, field_values)
     elif spec.template == "session_abandon":
@@ -261,13 +261,26 @@ def feedback_statuses(logger: SubcommandLogger) -> dict[str, object]:
     """publication point の log event だけから feedback の実行状況を返す。"""
     events = logger.event_records()
     published = any(
-        event.get("event") == "feedback_report_published" for event in events
+        event.get("event") == "feedback_report_published"
+        or (
+            event.get("event") == "feedback_state_retained"
+            and event.get("publication_established") is True
+        )
+        for event in events
     )
     incomplete = any(
-        event.get("event") == "feedback_report_incomplete" for event in events
+        event.get("event") in {"feedback_report_published", "feedback_state_retained"}
+        and (
+            event.get("event") != "feedback_state_retained"
+            or event.get("publication_established") is True
+        )
+        and event.get("result") == "incomplete"
+        for event in events
     )
     return {
-        "normal_publication_status": "completed" if published else "not_completed",
+        "normal_publication_status": "completed"
+        if published and not incomplete
+        else "not_completed",
         "incomplete_diagnostic_status": "completed" if incomplete else "not_completed",
         "current_pointer_update_status": "completed" if published else "not_completed",
     }
@@ -373,12 +386,11 @@ def _doctor_body(
         f"- runtime・native 互換: `{_field_status(fields.get('material_runtime_check'))}`",
         f"- 文書 embedding: `{_field_status(fields.get('material_document_embedding'))}`",
         f"- query embedding: `{_field_status(fields.get('material_query_embedding'))}`",
-        f"- raw rerank: `{_field_status(fields.get('material_rerank'))}`",
         f"- 残存状態: `{_field_status(fields.get('material_remaining_state'))}`",
         f"- 失敗理由: `{_field_status(fields.get('material_failure'))}`",
+        *_download_asset_lines(logger),
         "## 検索索引の同期",
         f"- 対象 work-root: `{_field_status(fields.get('doctor_sync_work_root'))}`",
-        f"- 実効閲覧範囲: `{_field_status(fields.get('doctor_scope_identity'))}`",
         f"- 診断ログ内の同期 ID: `{_field_status(fields.get('doctor_sync_id'))}`",
         f"- 実行状態: `{_field_status(fields.get('doctor_sync_status'))}`",
         f"- 索引 identity: `{_field_status(fields.get('doctor_index_identity'))}`",
@@ -391,6 +403,63 @@ def _doctor_body(
         "- 共通環境・設定・管理状態と共有検索用コンポーネントの検査時点での利用可能性、および検索索引の同期完了。任意入力の検索は対象外。",
         *_standard_tail(classification, result, logger),
     ]
+
+
+def _download_asset_lines(logger: SubcommandLogger) -> list[str]:
+    # 逐次記録の最終 snapshot を集計し、未完了も実績と区別して表示する。
+    states: dict[str, dict[str, object]] = {}
+    components: list[dict[str, object]] = []
+    for event in logger.event_records():
+        if event.get("event") == "asset.state":
+            states[str(event["use_id"])] = event
+        elif event.get("event") == "asset.component_reused":
+            components.append(event)
+    lines = ["## ダウンロードアセット", f"- 診断記録: `{logger.path}`（`asset.*`）"]
+    for component in components:
+        lines.append(
+            f"- 準備済みコンポーネントの再利用: `{component['part']}` / `{component['path']}`。"
+            "取得キャッシュは確認不要・未確認。"
+        )
+    if not states:
+        lines.append(
+            "- 資材の取得・通信: 0。" if components else "- 資材準備: 未開始。"
+        )
+        return lines
+    sources: dict[str, int] = {}
+    reasons: dict[str, int] = {}
+    communications: dict[str, int] = {}
+    downloads = 0
+    published = 0
+    for event in states.values():
+        source = str(event.get("source", "未完了"))
+        sources[source] = sources.get(source, 0) + 1
+        reason = str(event.get("cache_status", "not_checked"))
+        reasons[reason] = reasons.get(reason, 0) + 1
+        count = event.get("download_count")
+        if isinstance(count, int):
+            downloads += count
+        attempts = event.get("communications")
+        if isinstance(attempts, list):
+            for attempt in attempts:
+                if isinstance(attempt, dict):
+                    status = str(attempt.get("status", "未確定"))
+                    communications[status] = communications.get(status, 0) + 1
+        published += event.get("publication") == "succeeded"
+        if event.get("status") != "completed":
+            lines.append(
+                f"- 未完了資材: `{event.get('asset_key')}` / `{event.get('status')}` / "
+                f"`{event.get('failure', '終端未確認')}`"
+            )
+    lines.extend(
+        [
+            f"- 資材の使用元: `{_inline_text(sources)}`",
+            f"- キャッシュの照合結果・不使用理由: `{_inline_text(reasons)}`",
+            f"- 資材取得の試行数: {downloads}（失敗・途中終了を含む）。",
+            f"- 取得通信の実績: `{_inline_text(communications)}`（空なら試行なし）。",
+            f"- 有効キャッシュの公開数: {published}。コンポーネントの動作検証は別に判定。",
+        ]
+    )
+    return lines
 
 
 def _session_fork_body(
@@ -457,6 +526,8 @@ def _feedback_invocation_body(
         f"`{_field_status(fields.get('remediation_checkpoint_count'))}`",
         f"- 確定済み部分結果: `{_field_status(fields.get('partial_result_count'))}`",
         "## 維持した state と未実行処理",
+        f"- 最後に確定した generation/report: `{_field_status(fields.get('last_confirmed_generation'))}`",
+        f"- 今回の publication 成立: `{_field_status(fields.get('publication_established'))}`",
         f"- processing status: `{_field_status(fields.get('processing_status'))}`",
         f"- cleanup: `{_feedback_cleanup_status(logger, fields)}`",
         "- publication 完了 event がない処理は、完了済みとして扱っていません。",
@@ -477,6 +548,7 @@ def _refactor_fork_body(
     classification: TerminalClassification,
     result: TerminalResult,
     logger: SubcommandLogger,
+    fields: dict[str, object],
 ) -> list[str]:
     """refactor 固有 report の未確定項目を fallback でも明示する。"""
     not_fixed = "not_fixed"
@@ -484,6 +556,8 @@ def _refactor_fork_body(
         "# cmoc realization refactor fork report",
         _outcome_sentence(classification),
         "## Current fork",
+        f"- stage: {_field_status(fields.get('refactor_stage'))}",
+        f"- completed cycles / current cycle / cycle counts: {not_fixed}",
         f"- processed targets: {not_fixed}",
         f"- uninvestigated targets: {not_fixed}",
         "## Processing units",
@@ -502,6 +576,10 @@ def _refactor_fork_body(
         f"- findings: {not_fixed}",
         "## Change summary",
         f"- {not_fixed}",
+        "## Test timing",
+        "- baseline / full test duration / reduction: not measured",
+        "## Startup and rollback",
+        f"- {_field_status(fields.get('rollback_status'))}",
         "## 終端結果",
         *_terminal_lines(classification, result),
         "## warning とエラー",

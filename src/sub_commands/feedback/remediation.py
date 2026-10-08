@@ -34,7 +34,6 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
-from commons.runtime_document_search_scope import oracle_doc_scope
 from commons.runtime_feedback_intake import capture_high_watermark
 from commons.runtime_feedback_run_state import (
     new_run_identity,
@@ -64,6 +63,7 @@ from commons.runtime_feedback_store import (
     sha256_bytes,
     write_immutable_json,
 )
+from commons.runtime_ids import new_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
 from commons.runtime_paths import codex_log_dir
 from commons.runtime_primary_report import update_primary_report_fields
@@ -121,8 +121,10 @@ def run_feedback_report() -> TerminalResult:
         _, _, session = load_state_for_branch(repository, branch)
         if session.session.state != "active":
             raise _failure("feedback report の session は active ではありません。")
-        require_clean_worktree(session_worktree)
         with feedback_writer_lock(repository):
+            from commons.runtime_feedback_close_state import require_no_pending_close
+
+            require_no_pending_close(repository)
             recovered = recover_finalization(repository, branch)
             if recovered is not None:
                 return recovered
@@ -163,9 +165,15 @@ def run_feedback_report() -> TerminalResult:
                 context = candidate_context
                 finalizing = True
                 with _indivisible_finalization():
-                    _recover_join(context, manifest)
+                    if (
+                        state.current is None
+                        or state.current["report_cut_id"] != manifest["report_cut_id"]
+                    ):
+                        require_clean_worktree(session_worktree)
+                        _recover_join(context, manifest)
                     result = _publish(context, manifest, manifest_path, state)
                     return finish_feedback_run(context, manifest, result)
+            require_clean_worktree(session_worktree)
             if session.run.state != "ready":
                 raise _failure(
                     "active editing run があるため feedback run を開始できません。",
@@ -280,7 +288,6 @@ def _new_manifest(context: EditingRunContext, state: ActiveState) -> dict[str, A
             "failure": None,
         },
         "publication": None,
-        "diagnostic": None,
         "run": new_run_record(context),
     }
 
@@ -536,7 +543,6 @@ def _remediate_issue(
     parameter = build_feedback_remediate_issue_parameter(
         json.dumps(payload, ensure_ascii=False, sort_keys=True),
         context.run_worktree,
-        document_search_scope=oracle_doc_scope(),
     )
     schema = parameter.structured_output_schema_path
     assert schema is not None
@@ -737,9 +743,25 @@ def _seal(
     files = decision.worktree_inputs(context.run_worktree)
     _validate_selected_basis(context, selected, candidates, files)
     owner_execution_id = current_execution_id(context.repo)
+    statuses = {
+        item["candidate_id"]: read_run_artifact(
+            context.repo, {key: item[key] for key in ("path", "sha256")}
+        )["structured_output"]["result"]["status"]
+        for item in selected
+    }
+    case_ids = {
+        identity: candidate.get("case_id")
+        or (
+            new_id(context.repo, "fbc")
+            if statuses[identity] in {"human_required", "inconclusive"}
+            else None
+        )
+        for identity, candidate in sorted(candidates.items())
+    }
     manifest["run"]["targets"] = {
         "generated_at": rfc3339_now(),
         "generation_id": new_generation_id(context.repo),
+        "case_ids": case_ids,
         "execution_id": owner_execution_id,
         "report": report._new_report_path(context.repo, execution_id=owner_execution_id)
         .relative_to(context.repo)
@@ -943,10 +965,11 @@ def _recover_merge_resolution(
         seal["run_head"],
         seal["session_head_before"],
         context.session_worktree,
-        document_search_scope=oracle_doc_scope(),
         feedback_report_cut_path=context.repo / manifest["run"]["sealed"]["path"],
     )
-    log_root = codex_log_dir(context.repo).resolve()
+    log_root = (
+        codex_log_dir(context.repo) / manifest["run"]["targets"]["execution_id"]
+    ).resolve()
 
     def log_file(value: object) -> Path | None:
         if not isinstance(value, str):
@@ -954,7 +977,7 @@ def _recover_merge_resolution(
         path = Path(value)
         if (
             not path.is_absolute()
-            or not path.resolve().is_relative_to(log_root)
+            or path.resolve().parent != log_root
             or _has_symlink_component(path)
             or not path.is_file()
         ):
@@ -1120,6 +1143,8 @@ def _publish(
     state: ActiveState,
 ) -> TerminalResult:
     """join 後の封印済み候補と正式 checkpoint だけを publication に渡す。"""
+    if manifest["processing"]["status"] == "publication_ready":
+        return report._resume_publication(context.repo, manifest, manifest_path)
     seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
     verdicts = {}
     for reference in seal["selected_checkpoints"]:
@@ -1134,17 +1159,6 @@ def _publish(
         }
     if set(verdicts) != set(seal["candidates"]):
         raise _failure("feedback report cut に未処理の issue があります。")
-    if manifest["processing"]["status"] == "publication_ready":
-        return report._resume_publication(context.repo, manifest, manifest_path)
-    if any(value["status"] == "inconclusive" for value in verdicts.values()):
-        return report._publish_incomplete_report(
-            context.repo,
-            context.session_worktree,
-            manifest,
-            manifest_path,
-            seal["candidates"],
-            verdicts,
-        )
     return report._publish_report(
         context.repo,
         context.session_worktree,
@@ -1350,7 +1364,7 @@ def _set_feedback_error_state(
     if (
         manifest is not None
         and update_processing
-        and all(manifest.get(name) is None for name in ("publication", "diagnostic"))
+        and manifest.get("publication") is None
     ):
         try:
             report._set_processing_state(
@@ -1367,6 +1381,24 @@ def _set_feedback_error_state(
         _update_context_progress(context, "error")
         if manifest is not None:
             _update_progress(context, manifest, "error")
+        current = validate_feedback_state(context.repo)
+        established = (
+            manifest is not None
+            and current.current is not None
+            and current.current["report_cut_id"] == manifest["report_cut_id"]
+        )
+        update_primary_report_fields(
+            last_confirmed_generation=current.current,
+            publication_established=established,
+        )
+        logger = current_subcommand_logger()
+        if logger is not None:
+            logger.event(
+                "feedback_state_retained",
+                current=current.current,
+                publication_established=established,
+                result=current.current["result"] if current.current else None,
+            )
     except BaseException as progress_error:
         failures.append(f"error report progress failed: {progress_error!r}")
     if failures:

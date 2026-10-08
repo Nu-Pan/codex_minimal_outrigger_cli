@@ -105,13 +105,20 @@ def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, 
         changed = False
         # 導入前の raw と、raw 保存直後に停止した submission をこの境界で受理する。
         # 既存 raw の時刻を元の受理順序とみなさず、ledger への登録順を新規確定する。
+        from .runtime_feedback_state import published_cleanup_observation_ids
+
+        consumed = published_cleanup_observation_ids(repo)
         for path in iter_observation_paths(repo):
+            if path.stem in consumed:
+                continue
             changed = _register(repo, ledger, path) or changed
         if changed:
             _atomic_write_json(feedback_root(repo) / "intake.json", ledger)
         watermark = ledger["high_watermark"]
         entries = []
         for identity, receipt in ledger["pending"].items():
+            if identity in consumed:
+                continue
             reference = {key: receipt[key] for key in ("path", "sha256")}
             if artifact_reference(repo, repo / receipt["path"]) != reference:
                 raise _corruption(

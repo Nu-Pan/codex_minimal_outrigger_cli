@@ -9,7 +9,7 @@ import os
 import socket
 import sys
 
-from .runtime_feedback import (
+from .runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_HOST,
     FEEDBACK_COLLECTOR_PORT_ENV,

@@ -6,7 +6,6 @@ from pathlib import Path
 # cmoc
 from oracle.acp_builder.basic import (
     AgentCallParameter,
-    DocumentSearchScope,
     FileAccessMode,
 )
 from oracle.other.path_model import AgentCallPathContext
@@ -22,8 +21,6 @@ def build_feedback_normalize_issue_parameter(
     observation_json: str,
     candidate_issues_json: str,
     agent_call_cwd: Path,
-    *,
-    document_search_scope: DocumentSearchScope,
 ) -> AgentCallParameter:
     """構造化 observation と絞り込み済み候補の同一性判断用 parameter を構築する。
 
@@ -48,7 +45,7 @@ def build_feedback_normalize_issue_parameter(
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
-        document_search_scope=document_search_scope,
+        enable_document_search_mcp=True,
         enable_feedback_reporting=enable_feedback_reporting,
         aux_static_prompt=[
             SDHeader(
@@ -84,6 +81,6 @@ def build_feedback_normalize_issue_parameter(
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
         agent_call_cwd=path_context.agent_call_cwd,
-        document_search_scope=document_search_scope,
+        enable_document_search_mcp=True,
         enable_feedback_reporting=enable_feedback_reporting,
     )

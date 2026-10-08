@@ -2,8 +2,29 @@
 
 import os
 import select
+import sys
 
-from test_production_cli import _advance_trust_confirmation
+from test_production_cli import (
+    _advance_trust_confirmation,
+    _run_refactor_until_confirmed,
+)
+
+
+def test_refactor_driver_interrupts_after_a_confirmed_unit(tmp_path) -> None:
+    """Real CLI 用 driver の停止条件を Fake process で検証する。"""
+    script = (
+        "import json, pathlib, signal, sys, time; "
+        "signal.signal(signal.SIGINT, lambda *_: sys.exit(0)); "
+        "path = pathlib.Path('.cmoc/gu/log/sub_command/fake.jsonl'); "
+        "path.parent.mkdir(parents=True); "
+        "path.write_text(json.dumps({'event':'refactor_progress','confirmed':1})); "
+        "print('confirmed', flush=True); time.sleep(30)"
+    )
+    result = _run_refactor_until_confirmed(
+        [sys.executable, "-c", script], tmp_path, dict(os.environ)
+    )
+    assert result.returncode == 0
+    assert result.stdout == "confirmed\n"
 
 
 def test_trust_confirmation_waits_until_the_poll_after_prompt_detection() -> None:

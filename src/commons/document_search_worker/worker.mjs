@@ -116,7 +116,8 @@ async function withModel(modelPath, callback) {
   }
 }
 
-async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete) {
+async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete,
+                                    onDocumentPrepared = () => {}) {
   const { payload, embedding_model: modelPath, dimensions } = request;
   const { documents, sections, config, reusable_hashes: reusableHashes = [] } = requireObject(payload);
   requireObject(documents);
@@ -161,6 +162,7 @@ async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete
         if (ranges.length === 0 || skip > ranges.length) {
           fail("invalid document resume point");
         }
+        await onDocumentPrepared(path, ranges.length);
         for (let ordinal = skip; ordinal < ranges.length; ordinal++) {
           const range = ranges[ordinal];
           const digest = createHash("sha256").update(range.excerpt).digest("hex");
@@ -211,6 +213,9 @@ async function streamDocuments(request) {
     }) + "\n"),
     (path, chunk_count) => writeOutput(JSON.stringify({
       kind: "document_complete", path, chunk_count,
+    }) + "\n"),
+    (path, chunk_count) => writeOutput(JSON.stringify({
+      kind: "document_prepared", path, chunk_count,
     }) + "\n")
   );
   await writeOutput(JSON.stringify({ kind: "done" }) + "\n");
@@ -232,54 +237,6 @@ async function embedQuery(request) {
           checkedEmbeddingInput(model, text, config.embedding_context_tokens)
         ), dimensions
       );
-    } finally {
-      await context.dispose();
-    }
-  });
-}
-
-async function rerank(request) {
-  const { payload, reranker_model: modelPath } = request;
-  const { query, documents, config, input_format: inputFormat } = requireObject(payload);
-  if (typeof query !== "string" || !query.trim() || !Array.isArray(documents) ||
-      inputFormat !== "gguf_template_yes_no") fail("invalid reranking input");
-  return withModel(modelPath, async (model) => {
-    const context = await model.createRankingContext({
-      contextSize: config.reranker_context_tokens,
-      batchSize: config.batch_tokens,
-      threads: config.threads,
-    });
-    try {
-      if (typeof context._getEvaluationInput !== "function" ||
-          typeof context._llamaContext?._ctx?.getEmbedding !== "function" ||
-          typeof context._sequence?.eraseContextTokenRanges !== "function") {
-        fail("raw ranking API is incompatible");
-      }
-      const scores = [];
-      for (const document of documents) {
-        if (typeof document !== "string" || !document.trim()) fail("invalid candidate");
-        const input = context._getEvaluationInput(query, document);
-        if (!Array.isArray(input) || input.length === 0 ||
-            input.length > context._llamaContext.contextSize) {
-          fail("reranking context is insufficient");
-        }
-        await context._sequence.eraseContextTokenRanges([{
-          start: 0, end: context._sequence.nextTokenIndex,
-        }]);
-        const evaluation = context._sequence.evaluate(input, { _noSampling: true });
-        for await (const _token of evaluation) break;
-        // 3.20.0 rank() maps an empty native array to score zero. Reject it here.
-        const raw = context._llamaContext._ctx.getEmbedding(input.length, 1);
-        if (raw?.length !== 1 || typeof raw[0] !== "number" ||
-            !Number.isFinite(raw[0])) fail("native ranking score is missing");
-        const score = context._currentArchRankingAlreadyNormalized
-          ? raw[0] : 1 / (1 + Math.exp(-raw[0]));
-        if (!Number.isFinite(score) || score < 0 || score > 1) {
-          fail("native ranking score is invalid");
-        }
-        scores.push(score);
-      }
-      return scores;
     } finally {
       await context.dispose();
     }
@@ -309,9 +266,7 @@ async function main() {
     ? await embedDocuments(request)
     : request.operation === "embed_query"
       ? await embedQuery(request)
-      : request.operation === "rerank"
-        ? await rerank(request)
-        : fail("unknown operation");
+      : fail("unknown operation");
   await writeOutput(JSON.stringify({ status: "ok", result }));
 }
 

@@ -25,7 +25,7 @@ from typing import Any, NoReturn
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
-from _git_support import current_branch, make_repo, run_git
+from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from oracle.acp_builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter as _build_canonical_normalize_parameter,
 )
@@ -45,17 +45,19 @@ from acp.builder.feedback.normalize_issue import (
 from acp.builder.feedback.remediate_issue import (
     build_feedback_remediate_issue_parameter,
 )
-from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_feedback import (
-    FEEDBACK_CAPABILITY_ENV,
-    FEEDBACK_COLLECTOR_HOST,
-    FEEDBACK_COLLECTOR_PORT_ENV,
-    FEEDBACK_PROTOCOL_ENV,
     FeedbackInvocation,
     ReporterAvailabilityError,
     begin_feedback_call,
     start_feedback_invocation,
+)
+from commons.runtime_feedback_protocol import (
+    FEEDBACK_CAPABILITY_ENV,
+    FEEDBACK_COLLECTOR_HOST,
+    FEEDBACK_COLLECTOR_PORT_ENV,
+    FEEDBACK_PROTOCOL_ENV,
 )
 from commons.runtime_feedback_state import (
     feedback_writer_lock,
@@ -117,12 +119,18 @@ def _context(root: Path, *, session_id: str | None = None) -> dict[str, object]:
         "run_id": None,
         "run_kind": None,
         "subcommand": "feedback test",
-        "subcommand_invocation_id": "sci_feedback_test",
-        "agent_call_id": "agc_feedback_test",
+        "subcommand_invocation_id": "exec_000000_2026-09-29_15-04",
+        "agent_call_id": "ac_000002_2026-09-29_15-04",
         "agent_call_kind": "build_feedback_test_parameter",
-        "codex_call_id": "cdc_feedback_test",
+        "codex_call_id": "cc_000002_2026-09-29_15-04",
         "codex_session_id": None,
-        "log_paths": [str((root / ".cmoc/gu/log/test.jsonl").resolve())],
+        "log_paths": [
+            str(
+                (
+                    root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
+                ).resolve()
+            )
+        ],
     }
 
 
@@ -532,7 +540,7 @@ def test_reporter_probe_rejects_non_object_mcp_response(
     "response",
     [
         b'{"status":"accepted"}\n',
-        b'{"status":"accepted","observation_id":"fbo_test","redaction_count":0}\n',
+        b'{"status":"accepted","observation_id":"invalid-observation-id","redaction_count":0}\n',
         b'{"status":"rejected","code":"schema_invalid","message":"invalid","retryable":true}\n',
         b'{"status":"rejected","code":[],"message":"invalid","retryable":false}\n',
     ],
@@ -589,7 +597,6 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
         observation_json,
         candidate_json,
         root,
-        document_search_scope=DocumentSearchScope(allowed_subtrees=("oracle/doc",)),
     )
 
     observation_start = parameter.prompt.index("# 構造化済み observation")
@@ -645,7 +652,7 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     ) -> SimpleNamespace:
         assert parameter.agent_call_cwd == root
         assert parameter.file_access_mode == FileAccessMode.READONLY
-        assert parameter.document_search_scope is not None
+        assert parameter.enable_document_search_mcp is True
         assert "# routing policy" in parameter.prompt
         assert "# oracle and realization basic" in parameter.prompt
         captured_prompts.append(parameter.prompt)
@@ -680,15 +687,11 @@ def test_feedback_normalization_excludes_candidate_search_hint(
 def test_feedback_issue_builders_disable_reporting(tmp_path: Path) -> None:
     """normalization と remediation は同じ追加報告を prompt から外す。"""
     root = make_repo(tmp_path)
-    search_scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
     parameters = (
-        build_feedback_normalize_issue_parameter(
-            "{}", "[]", root, document_search_scope=search_scope
-        ),
+        build_feedback_normalize_issue_parameter("{}", "[]", root),
         build_feedback_remediate_issue_parameter(
             json.dumps({"issue_id": "fbi_" + "a" * 26}),
             root,
-            document_search_scope=search_scope,
         ),
     )
 
@@ -871,10 +874,10 @@ def test_issue_id_collision_stops_candidate_building(
 def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> None:
     """遅れて到着した古い observation が latest fingerprint を巻き戻さない。"""
     newer = {
-        "observation_id": "fbo_new",
+        "observation_id": "fbo_000001_2026-08-02_00-00",
         "source": "agent_report",
         "observed_at": "2026-08-02T00:00:00Z",
-        "context": {"cmoc_session_id": "session"},
+        "context": {"cmoc_session_id": SESSION_ID},
         "payload": {
             "category": "tooling",
             "summary": "new",
@@ -892,7 +895,7 @@ def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> N
     }
     older = {
         **newer,
-        "observation_id": "fbo_old",
+        "observation_id": "fbo_000000_2026-08-01_00-00",
         "observed_at": "2026-08-01T00:00:00Z",
         "payload": {
             **newer["payload"],
@@ -908,7 +911,9 @@ def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> N
             }
         ],
     }
-    candidate = feedback_report_module._new_candidate(newer, "agent\0fbo_new")
+    candidate = feedback_report_module._new_candidate(
+        newer, "agent\0fbo_000001_2026-08-02_00-00"
+    )
     feedback_report_module._merge_observation(Path("/repo"), candidate, newer)
     feedback_report_module._merge_observation(Path("/repo"), candidate, older)
 
@@ -926,11 +931,14 @@ def test_collector_validates_context_rate_and_durable_observation(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_one",
+            agent_call_id="ac_000005_2026-09-29_15-04",
             agent_call_kind="build_one",
-            codex_call_id="cdc_one",
+            codex_call_id="cc_000005_2026-09-29_15-04",
             codex_session_id="session_one",
-            log_paths=[root / ".cmoc/gu/log/codex/call.json"],
+            log_paths=[
+                root
+                / f".cmoc/gu/log/codex/{logger.execution_id}/cc_000005_2026-09-29_15-04_call.json"
+            ],
         )
         assert invocation.collector_port is not None
         assert invocation._listener is not None
@@ -950,7 +958,8 @@ def test_collector_validates_context_rate_and_durable_observation(
         assert len(paths) == 3
         envelope = read_json_object(paths[0])
         assert validate_observation_envelope(envelope) == []
-        assert envelope["context"]["agent_call_id"] == "agc_one"
+        assert envelope["context"]["subcommand_invocation_id"] == logger.execution_id
+        assert envelope["context"]["agent_call_id"] == "ac_000005_2026-09-29_15-04"
         assert reporter_module._submit(_payload())["code"] == "rate_limited"
         feedback_call.close()
         assert reporter_module._submit(_payload())["code"] == "context_invalid"
@@ -975,9 +984,9 @@ def test_disabled_feedback_call_does_not_register_capability(
         feedback_module, "current_feedback_invocation", lambda: Invocation()
     )
     feedback_call = begin_feedback_call(
-        agent_call_id="agc_disabled",
+        agent_call_id="ac_000000_2026-09-29_15-04",
         agent_call_kind="build_disabled",
-        codex_call_id="cdc_disabled",
+        codex_call_id="cc_000000_2026-09-29_15-04",
         log_paths=[],
         enable_feedback_reporting=False,
     )
@@ -1013,9 +1022,9 @@ def test_collector_records_rejected_submission_as_degraded_warning(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_rejected_warning",
+            agent_call_id="ac_000009_2026-09-29_15-04",
             agent_call_kind="build_rejected_warning",
-            codex_call_id="cdc_rejected_warning",
+            codex_call_id="cc_000010_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1105,9 +1114,9 @@ def test_collector_accepts_utf8_payload_at_wire_size_over_64_kib(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_utf8_wire_size",
+            agent_call_id="ac_000012_2026-09-29_15-04",
             agent_call_kind="build_utf8_wire_size",
-            codex_call_id="cdc_utf8_wire_size",
+            codex_call_id="cc_000014_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1150,9 +1159,9 @@ def test_collector_rejects_surrogate_payload_with_protocol_safe_response(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_surrogate_response",
+            agent_call_id="ac_000010_2026-09-29_15-04",
             agent_call_kind="build_surrogate_response",
-            codex_call_id="cdc_surrogate_response",
+            codex_call_id="cc_000012_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1205,9 +1214,9 @@ def test_feedback_call_close_drains_accepted_tcp_request(
     invocation.start()
     try:
         call = invocation.register_call(
-            agent_call_id="agc_drain",
+            agent_call_id="ac_000001_2026-09-29_15-04",
             agent_call_kind="build_drain",
-            codex_call_id="cdc_drain",
+            codex_call_id="cc_000001_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1276,15 +1285,15 @@ def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
     invocation.start()
     try:
         first = invocation.register_call(
-            agent_call_id="agc_parallel_one",
+            agent_call_id="ac_000006_2026-09-29_15-04",
             agent_call_kind="build_parallel_one",
-            codex_call_id="cdc_parallel_one",
+            codex_call_id="cc_000006_2026-09-29_15-04",
             log_paths=[],
         )
         second = invocation.register_call(
-            agent_call_id="agc_parallel_two",
+            agent_call_id="ac_000007_2026-09-29_15-04",
             agent_call_kind="build_parallel_two",
-            codex_call_id="cdc_parallel_two",
+            codex_call_id="cc_000007_2026-09-29_15-04",
             log_paths=[],
         )
         assert invocation.collector_port is not None
@@ -1340,7 +1349,7 @@ def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
         contexts = {
             read_json_object(path)["context"]["agent_call_id"] for path in paths
         }
-        assert contexts == {"agc_parallel_one", "agc_parallel_two"}
+        assert contexts == {"ac_000006_2026-09-29_15-04", "ac_000007_2026-09-29_15-04"}
         invocation.close_call(second)
     finally:
         invocation.stop()
@@ -1382,9 +1391,9 @@ def test_collector_rejects_observation_without_current_head(
     monkeypatch.setattr(feedback_module, "head_commit", fail_head_commit)
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     call = invocation.register_call(
-        agent_call_id="agc_head_failure",
+        agent_call_id="ac_000003_2026-09-29_15-04",
         agent_call_kind="build_head_failure",
-        codex_call_id="cdc_head_failure",
+        codex_call_id="cc_000003_2026-09-29_15-04",
         log_paths=[],
     )
 
@@ -1429,9 +1438,9 @@ def test_feedback_degradation_preserves_keyboard_interrupt(
 
     with pytest.raises(KeyboardInterrupt):
         begin_feedback_call(
-            agent_call_id="agc_interrupt",
+            agent_call_id="ac_000004_2026-09-29_15-04",
             agent_call_kind="build_interrupt",
-            codex_call_id="cdc_interrupt",
+            codex_call_id="cc_000004_2026-09-29_15-04",
             log_paths=[],
         )
 
@@ -1565,7 +1574,7 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
         "event_id": "evt_reporter_unavailable",
         "event_type": "feedback.reporter_unavailable",
         "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.invocation_id,
+        "subcommand_invocation_id": logger.execution_id,
         "component": "collector",
         "failure_code": "protocol_error",
     }
@@ -1590,7 +1599,7 @@ def test_machine_detector_masks_secret_in_event_fields(tmp_path: Path) -> None:
         "event_id": "evt_machine_secret",
         "event_type": "feedback.reporter_unavailable",
         "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.invocation_id,
+        "subcommand_invocation_id": logger.execution_id,
         "component": "collector",
         "failure_code": "protocol_error",
         "diagnostic": {"header": secret},
@@ -1620,7 +1629,7 @@ def test_machine_detector_masks_secret_in_event_field_keys(tmp_path: Path) -> No
         "event_id": "evt_machine_secret_key",
         "event_type": "feedback.reporter_unavailable",
         "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.invocation_id,
+        "subcommand_invocation_id": logger.execution_id,
         "component": "collector",
         "failure_code": "protocol_error",
         "diagnostic": {secret_key: "value"},
@@ -1666,39 +1675,22 @@ def test_agent_store_rejects_non_directory_observation_parent(
     assert rejected.value.code == "context_invalid"
 
 
-def test_legacy_raw_is_read_without_rewriting_but_new_v1_submission_is_rejected(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """導入前の v1 raw は assertion として扱い、新しい受付には v2 を要求する。"""
-    from commons.runtime_feedback_store import reporter_payload_view
-
+def test_stored_invalid_reporter_schema_is_rejected_without_rewriting(
+    tmp_path, monkeypatch
+):
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
-    _, raw, identity = _store_agent_issue(root, session_id)
-    legacy = read_json_object(raw)
-    legacy["payload"]["schema_version"] = 1
-    legacy["payload"]["human_action_reason"] = legacy["payload"].pop(
-        "workload_limitation"
-    )
-    content = canonical_json_bytes(legacy)
+    _, raw, _ = _store_agent_issue(root, session_id)
+    invalid = read_json_object(raw)
+    invalid["payload"]["schema_version"] = 1
+    content = canonical_json_bytes(invalid)
     raw.write_bytes(content)
     (feedback_root(root) / "intake.json").unlink()
-    assert validate_observation_envelope(legacy) == []
-    view = reporter_payload_view(legacy["payload"])
-    assert view["schema_version"] == 2
-    assert view["workload_limitation"] == legacy["payload"]["human_action_reason"]
-    with pytest.raises(FeedbackRejected, match="human_action_reason"):
-        store_agent_observation(root, _context(root), legacy["payload"])
-
-    def fake_call(*_args: Any, **_kwargs: Any) -> SimpleNamespace:
-        assert raw.read_bytes() == content
-        return _fake_result(root, _remediation_output(identity, "already_resolved"))
-
-    monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_call)
+    assert validate_observation_envelope(invalid)
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-    assert load_active_state(root).issues == {}
-    assert not raw.exists()
+    assert result.exit_code == 1
+    assert raw.read_bytes() == content
+    assert load_active_state(root).current is None
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
@@ -1912,9 +1904,9 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
             output["result"]["changed_paths"] = ["README.md"]
             payload = _payload(kind="other", path=None, text="別の issue")
             with begin_feedback_call(
-                agent_call_id="agc_wave",
+                agent_call_id="ac_000011_2026-09-29_15-04",
                 agent_call_kind=parameter.agent_call_kind,
-                codex_call_id="cdc_wave",
+                codex_call_id="cc_000013_2026-09-29_15-04",
                 log_paths=[],
                 agent_call_cwd=worktree,
             ) as feedback_call:
@@ -1975,12 +1967,9 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
     assert load_report_cut(root) is None
     assert all(path.exists() for path in late_paths)
     state = load_active_state(root)
-    if last_status == "human_required":
-        assert set(state.issues) == {later_id}
-        assert all(not path.exists() for path in raw_paths)
-    else:
-        assert state.current is None
-        assert all(path.exists() for path in raw_paths)
+    assert set(state.issues) == {later_id}
+    assert state.issues[later_id]["verification"]["status"] == last_status
+    assert all(not path.exists() for path in raw_paths)
 
 
 @pytest.mark.parametrize(
@@ -2141,7 +2130,14 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
 
 
 @pytest.mark.parametrize(
-    "fault", ["publication", "cleanup", "merge_reference", "completion_reference"]
+    "fault",
+    [
+        "publication",
+        "raw_cleanup",
+        "cleanup",
+        "merge_reference",
+        "completion_reference",
+    ],
 )
 def test_feedback_recovers_after_auto_join_without_new_calls(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str
@@ -2162,6 +2158,9 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
 
     target = feedback_report_module if fault == "publication" else recovery_module
     name = "publish_current_pointer" if fault == "publication" else "cleanup_joined_run"
+    if fault == "raw_cleanup":
+        target = feedback_state_module
+        name = "_unlink_artifact_reference"
     if fault.endswith("_reference"):
         target = run_state_module
         name = "write_report_cut_manifest"
@@ -2180,6 +2179,18 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     assert result.exit_code == 1, result.output
     assert (root / "README.md").read_text() == "joined repair\n"
     joined_head = run_git(root, "rev-parse", "HEAD").stdout
+    saved_report = None
+    if fault in {"raw_cleanup", "cleanup"}:
+        published = load_active_state(root)
+        assert published.current is not None
+        saved_report = root / published.current["report_path"]
+        saved_content = saved_report.read_bytes()
+        (root / "README.md").write_text("changed after publication\n")
+        assert feedback_completion_counts(root)[0] == 0
+        if fault == "raw_cleanup":
+            assert raw.exists()
+        report_text = terminal_primary_report(result).read_text()
+        assert "publication_established: true" in report_text
     for operation in ("join", "abandon"):
         rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
         assert rejected.exit_code == 1, rejected.output
@@ -2200,6 +2211,9 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     assert load_report_cut(root) is None
     assert not (feedback_root(root) / "finalization.json").exists()
     assert load_active_state(root).current["result"] == "ok"
+    if saved_report is not None:
+        assert saved_report.read_bytes() == saved_content
+        assert (root / "README.md").read_text() == "changed after publication\n"
 
 
 def test_current_pointer_rejects_non_markdown_report_path(
@@ -2300,7 +2314,7 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
     """threshold 未満は bounded aggregate、到達後は remediation candidate にする。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/log/test.jsonl"
+    log_path = root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
     canonical_key: str | None = None
@@ -2317,12 +2331,12 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
             "event_id": f"evt_{index}",
             "event_type": "feedback.reporter_unavailable",
             "occurred_at": observed_at,
-            "subcommand_invocation_id": f"scope_{index}",
+            "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
             "component": "reporter",
             "failure_code": "missing",
         }
-        context = _context(root, session_id=f"session_{index}")
-        context["subcommand_invocation_id"] = f"scope_{index}"
+        context = _context(root, session_id=f"sess_{index:06d}_2026-09-29_15-04")
+        context["subcommand_invocation_id"] = event["subcommand_invocation_id"]
         _observation_id, raw_path = store_machine_observation(
             root,
             context,
@@ -2375,7 +2389,7 @@ def test_active_machine_issue_keeps_threshold_state_after_window_expires(
     """window 外で threshold 未満になった active machine issue を最後の state で再検証する。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/log/test.jsonl"
+    log_path = root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
     canonical_key: str | None = None
@@ -2390,12 +2404,12 @@ def test_active_machine_issue_keeps_threshold_state_after_window_expires(
             "occurred_at": occurred_at.isoformat(timespec="seconds").replace(
                 "+00:00", "Z"
             ),
-            "subcommand_invocation_id": f"scope_expiry_{index}",
+            "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
             "component": "reporter",
             "failure_code": "missing",
         }
-        context = _context(root, session_id=f"session_expiry_{index}")
-        context["subcommand_invocation_id"] = f"scope_expiry_{index}"
+        context = _context(root, session_id=f"sess_{index:06d}_2026-09-29_15-04")
+        context["subcommand_invocation_id"] = event["subcommand_invocation_id"]
         _observation_id, raw_path = store_machine_observation(
             root,
             context,

@@ -2,8 +2,6 @@
 
 対応する oracle file:
 - `{{work-root}}/oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py`
-- `{{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py`
-- `{{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json`
 - `{{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
 - `{{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json`
 """
@@ -17,9 +15,6 @@ from _git_support import make_repo, run_git
 from oracle.acp_builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter as build_canonical_apply_parameter,
 )
-from oracle.acp_builder.realization.refactor.fork.change_summary import (
-    build_realization_refactor_fork_change_summary_parameter as build_canonical_summary_parameter,
-)
 from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_fork_file_review_and_fix_parameter as build_canonical_review_parameter,
 )
@@ -27,13 +22,10 @@ from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
 from acp.builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter,
 )
-from acp.builder.realization.refactor.fork.change_summary import (
-    build_realization_refactor_fork_change_summary_parameter,
-)
 from acp.builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_fork_file_review_and_fix_parameter,
 )
-from basic.acp import DocumentSearchScope, FileAccessMode
+from basic.acp import FileAccessMode
 
 
 def _objective_section(prompt: str) -> str:
@@ -69,10 +61,6 @@ def test_editing_run_compatibility_builders_reexport_canonical_functions() -> No
         is build_canonical_apply_parameter
     )
     assert (
-        build_realization_refactor_fork_change_summary_parameter
-        is build_canonical_summary_parameter
-    )
-    assert (
         build_realization_refactor_fork_file_review_and_fix_parameter
         is build_canonical_review_parameter
     )
@@ -83,17 +71,15 @@ def test_realization_apply_builder_passes_commit_references(
 ) -> None:
     """apply builder が commit 参照と取得条件を prompt に含める。"""
     run_worktree = editing_run_worktree
-    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
     parameter = build_realization_apply_fork_launch_exec_parameter(
         "base-commit",
         "fork-commit",
         run_worktree,
-        document_search_scope=scope,
     )
 
     assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert parameter.structured_output_schema_path is None
-    assert parameter.document_search_scope == scope
+    assert parameter.enable_document_search_mcp is True
     assert parameter.agent_call_cwd == run_worktree.resolve()
     assert f"- {{{{work-root}}}} = {run_worktree.resolve()}" in parameter.prompt
     assert "base-commit" in parameter.prompt
@@ -122,15 +108,8 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
 ) -> None:
     """refactor builder が canonical schema と要求された実行設定を使うことを確認する。"""
     target_path = editing_run_worktree / "README.md"
-    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
     review = build_realization_refactor_fork_file_review_and_fix_parameter(
-        target_path, editing_run_worktree, document_search_scope=scope
-    )
-    summary = build_realization_refactor_fork_change_summary_parameter(
-        "fork-commit",
-        "summary-head-commit",
-        editing_run_worktree,
-        document_search_scope=scope,
+        target_path, editing_run_worktree
     )
 
     assert review.file_access_mode == FileAccessMode.REALIZATION_WRITE
@@ -141,11 +120,10 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert (
         review.structured_output_schema_path.resolve() == review_schema_path.resolve()
     )
-    assert review.document_search_scope == scope
+    assert review.enable_document_search_mcp is True
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in review.prompt
     assert str(target_path.resolve()) in review.prompt
     assert "調査開始時点ですでに解消されている問題" in review.prompt
-    assert "`resolution.status=fixed` は、この agent call 内で" in review.prompt
     assert "# Structured Output の決定論的事後条件" in review.prompt
     assert "全所見の `changed_paths` の和集合" in review.prompt
     assert (
@@ -155,7 +133,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert "# task" in review_objective
     assert "# scope" in review_objective
     assert "# completion criteria" in review_objective
-    assert "修正した file の再調査後に対応可能な所見を残していない" in (
+    assert "この agent call 内で修正後の再調査と所定の検証を終えている" in (
         review_objective
     )
     assert "# realization oracle reference policy" not in review.prompt
@@ -171,26 +149,16 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     finding_schema = review_schema["properties"]["findings"]["items"]
     assert "changed_paths" in finding_schema["required"]
     assert finding_schema["properties"]["changed_paths"]["type"] == "array"
-    assert summary.file_access_mode == FileAccessMode.READONLY
-    assert summary.structured_output_schema_path is not None
-    summary_schema_path = oracle_schema_path(
-        "realization", "refactor", "fork", "change_summary.json"
-    )
-    assert (
-        summary.structured_output_schema_path.resolve() == summary_schema_path.resolve()
-    )
-    assert summary.document_search_scope == scope
-    assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in summary.prompt
-    assert "# oracle and realization basic" in summary.prompt
-    assert "# routing policy" in summary.prompt
-    summary_objective = _objective_section(summary.prompt)
-    assert "# task\n\n- 指定された commit 範囲の tree 差分全体" in summary_objective
-    for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
-        assert omitted_heading not in summary_objective
-    summary_schema = json.loads(summary.structured_output_schema_path.read_text())
-    assert summary_schema["properties"]["changes"]["minItems"] == 1
-    assert "- 始点: `fork-commit`" in summary.prompt
-    assert "- 終点: `summary-head-commit`" in summary.prompt
-    assert "diff --git" not in summary.prompt
-    assert "未コミット編集によって比較範囲を動かさない" in summary.prompt
-    assert "差分を取得できない場合は失敗として報告" in summary.prompt
+    assert "verification" in review_schema["required"]
+    assert review_schema["properties"]["verification"]["properties"]["status"][
+        "enum"
+    ] == [
+        "passed",
+        "not_required",
+        "failed",
+        "incomplete",
+    ]
+    assert "テストと実装のムダ" in review_objective
+    assert "必要な回帰検出能力" in review_objective
+    assert "focused test だけで済ませたり" in review.prompt
+    assert "Real Codex CLI を使う test" in review.prompt

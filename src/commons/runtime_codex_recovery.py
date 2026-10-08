@@ -4,7 +4,8 @@ import signal
 import sys
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from types import FrameType
@@ -70,6 +71,38 @@ def check_recovery_interruption() -> None:
     # KeyboardInterrupt は workload 固有の commit/rollback 処理へ返す。
     cancellation = current_recovery_cancellation()
     if cancellation is not None and cancellation.is_set():
+        raise KeyboardInterrupt
+
+
+@contextmanager
+def defer_recovery_interruption(
+    *, check_pending: bool = True, propagate: bool = True
+) -> Iterator[None]:
+    """短い確定区間、または中断後の整合化だけを SIGINT から保護する。"""
+    # 長い agent 作業・同期・検証は保護せず、入口で未処理要求を優先する。
+    if check_pending:
+        check_recovery_interruption()
+    previous = signal.getsignal(signal.SIGINT)
+    pending = False
+
+    def interrupt(_signum: int, _frame: FrameType | None) -> None:
+        # worker にも停止を伝えるが、確定記録の途中では例外を配送しない。
+        nonlocal pending
+        pending = True
+        cancellation = current_recovery_cancellation()
+        if cancellation is not None:
+            cancellation.set()
+
+    signal.signal(signal.SIGINT, interrupt)
+    # 確定区間の Git と hook にも mask を継承させる。handler の遅延だけでは
+    # foreground group に届く SIGINT が commit 子 process を途中で終了させる。
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT})
+    try:
+        yield
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+        signal.signal(signal.SIGINT, previous)
+    if pending and propagate:
         raise KeyboardInterrupt
 
 

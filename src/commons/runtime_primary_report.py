@@ -62,7 +62,6 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "session_state_after": ("session_state",),
     "merge_commit": ("run_join_commit",),
     "state_after": ("session_state",),
-    "scope_identity": ("doctor_scope_identity",),
     "index_identity": ("doctor_index_identity",),
     "sync_result": ("doctor_sync_result",),
 }
@@ -128,7 +127,7 @@ def ensure_primary_report(
             # feedback publication は hash 確定前に実行記録を描画する。
             # その他の個別 report は最外側 invocation の終了時に記録を追加する。
             content = report_path.read_text(encoding="utf-8")
-            if command_name == "feedback report":
+            if command_name in {"feedback report", "feedback close"}:
                 if "\n## 実行記録\n" not in content:
                     raise PrimaryReportSaveError(report_path)
             else:

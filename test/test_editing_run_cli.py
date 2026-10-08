@@ -9,14 +9,22 @@ fork report、および join/abandon は同じ lifecycle fixture を共有する
 
 import json
 import os
-from dataclasses import replace
+import signal
 from pathlib import Path
 from types import SimpleNamespace
 from typing import NoReturn
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
-from _git_support import current_branch, make_repo, run_git
+from _git_support import (
+    RUN_BRANCH,
+    RUN_ID,
+    SESSION_BRANCH,
+    SESSION_ID,
+    current_branch,
+    make_repo,
+    run_git,
+)
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_merge_conflict as merge_conflict_module
@@ -55,6 +63,8 @@ from commons.runtime_run_lifecycle import (
 from commons.runtime_state import SessionState
 from main import app
 
+_WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
+
 
 def _start_session(
     tmp_path: Path,
@@ -92,27 +102,19 @@ def _mark_refactor_target_no_findings(root: Path, target: str) -> None:
     run_git(root, "commit", "-m", "record refactor investigation")
 
 
-def test_refactor_rejects_empty_refactor_state(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """対象 file のない cycle を natural completion にしない。"""
-    context = EditingRunContext(
-        repo=tmp_path,
-        session_worktree=tmp_path,
-        session_id="session",
-        state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
-        session_fork_commit="fork",
-        kind="realization_refactor",
-        run_branch="cmoc/run/session/run",
-        run_fork_commit="fork",
-        run_worktree=tmp_path,
-    )
-    monkeypatch.setattr(refactor_module, "sync_refactor_state", lambda _root: {})
+def _stop_after_cycles(monkeypatch: pytest.MonkeyPatch, cycles: int = 1) -> None:
+    """指定巡数の次の開始要求でユーザー中断を発生させる。"""
+    initialize = refactor_module._initialize_cycle
+    started = 0
 
-    with pytest.raises(CmocError, match="対象 file がありません"):
-        refactor_module._initialize_cycle(context)
+    def initialize_or_interrupt(context, **kwargs):
+        nonlocal started
+        if started == cycles:
+            raise KeyboardInterrupt
+        started += 1
+        return initialize(context, **kwargs)
+
+    monkeypatch.setattr(refactor_module, "_initialize_cycle", initialize_or_interrupt)
 
 
 def test_legacy_lifecycle_shim_reexports_agent_path_validation() -> None:
@@ -142,12 +144,12 @@ def test_run_reports_use_execution_ids_and_keep_generated_time(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path,
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path,
     )
@@ -193,12 +195,12 @@ def test_fork_report_escapes_special_changed_paths(tmp_path: Path) -> None:
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path,
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path,
     )
@@ -214,26 +216,39 @@ def test_fork_report_escapes_special_changed_paths(tmp_path: Path) -> None:
     assert "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>" in report.read_text()
 
 
-def test_new_run_target_skips_dangling_worktree_symlink(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("occupied", ["branch", "worktree", "dangling_symlink"])
+def test_new_run_target_preserves_occupied_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, occupied: str
 ) -> None:
-    """dangling symlink を空き run worktree として再利用しない。"""
+    """発行 ID の保存先が占有されていたら既存資源を保って停止する。"""
     root = make_repo(tmp_path)
-    collision_id = "run_000000_2026-06-27_10-00"
-    free_id = "run_000001_2026-06-27_10-00"
-    collision = root / ".cmoc" / "gu" / "worktree" / "session" / collision_id
-    collision.parent.mkdir(parents=True)
-    collision.symlink_to(tmp_path / "missing-run-worktree", target_is_directory=True)
-    target_ids = iter([collision_id, free_id])
-    monkeypatch.setattr(
-        lifecycle_module, "new_id", lambda _root, _prefix: next(target_ids)
-    )
+    session_id = "sess_000000_2026-06-27_10-00"
+    run_id = "run_000000_2026-06-27_10-00"
+    branch = f"cmoc/run/{session_id}/{run_id}"
+    collision = root / ".cmoc" / "gu" / "worktree" / session_id / run_id
+    if occupied == "branch":
+        run_git(root, "branch", branch)
+        protected_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    else:
+        collision.parent.mkdir(parents=True)
+        if occupied == "worktree":
+            collision.mkdir()
+            (collision / "keep.txt").write_text("protected")
+        else:
+            collision.symlink_to(
+                tmp_path / "missing-run-worktree", target_is_directory=True
+            )
+    monkeypatch.setattr(lifecycle_module, "new_id", lambda _root, _prefix: run_id)
 
-    branch, worktree = lifecycle_module.new_run_target(root, "session")
+    with pytest.raises(CmocError, match="発行した run ID の保存先が既に存在します。"):
+        lifecycle_module.new_run_target(root, session_id)
 
-    assert branch == f"cmoc/run/session/{free_id}"
-    assert worktree == root / ".cmoc" / "gu" / "worktree" / "session" / free_id
-    assert collision.is_symlink()
+    if occupied == "branch":
+        assert run_git(root, "rev-parse", branch).stdout.strip() == protected_commit
+    elif occupied == "worktree":
+        assert (collision / "keep.txt").read_text() == "protected"
+    else:
+        assert collision.is_symlink()
 
 
 def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> None:
@@ -377,31 +392,6 @@ def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
     ) == ["- rename: file renamed", "  - `new.md`"]
 
 
-@pytest.mark.parametrize("missing_base", [False, True])
-def test_refactor_summary_distinguishes_empty_tree_and_git_failure(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    missing_base: bool,
-) -> None:
-    """空 tree 差分では call を省略し、参照不正では既存の失敗処理へ渡す。"""
-    _start_session(tmp_path, monkeypatch)
-    context = start_editing_run("realization_refactor")
-    run_git(context.run_worktree, "commit", "--allow-empty", "-m", "empty tree")
-    if missing_base:
-        context = replace(context, run_fork_commit="0" * 40)
-
-    def reject_call(*_args: object, **_kwargs: object) -> NoReturn:
-        raise AssertionError("summary agent must not run")
-
-    monkeypatch.setattr(refactor_module, "run_codex_exec", reject_call)
-
-    if missing_base:
-        with pytest.raises(CmocError, match="差分を取得できません"):
-            refactor_module._completion_change_summary(context)
-    else:
-        assert refactor_module._completion_change_summary(context) is None
-
-
 def test_refactor_change_summary_escapes_special_changed_paths() -> None:
     """change summary の path が Markdown の構造を壊さない。"""
     assert refactor_module._render_summary(
@@ -453,6 +443,7 @@ def test_realization_apply_fork_and_run_join_use_common_state(
         """apply agent の代わりに run worktree の realization file を変更する。"""
         worktree = parameter.agent_call_cwd
         assert "cwd" not in kwargs
+        assert all((worktree / relative).is_dir() for relative in _WORK_DIRECTORIES)
         calls.append((parameter, worktree))
         (worktree / "README.md").write_text("# repo\n\nrealized\n")
         return SimpleNamespace(returncode=0, output_json=None)
@@ -633,15 +624,12 @@ def test_apply_builder_uses_call_scoped_run_worktree(
         diff_base_commit: str,
         run_fork_commit: str,
         run_worktree: Path,
-        *,
-        document_search_scope: object,
     ) -> AgentCallParameter:
         """builder 構築時の process cwd、agent call cwd、prompt を記録する。"""
         parameter = original_builder(
             diff_base_commit,
             run_fork_commit,
             run_worktree,
-            document_search_scope=document_search_scope,
         )
         observed.append(
             (
@@ -853,8 +841,8 @@ def test_apply_report_fields_include_accepted_feedback_paths(
     """apply report が invocation 内で accepted になった raw 参照だけを含む。"""
     observations = [
         {
-            "observation_id": "fbo_feedback",
-            "path": "/repo/.cmoc/gu/feedback/observation/fbo_feedback.json",
+            "observation_id": "fbo_000000_2026-09-29_15-04",
+            "path": "/repo/.cmoc/gu/feedback/observation/v1/2026/09/29/fbo_000000_2026-09-29_15-04.json",
         }
     ]
     monkeypatch.setattr(
@@ -888,11 +876,7 @@ def test_apply_report_fields_include_accepted_feedback_paths(
     assert result.primary_report is not None
     front_matter = result.primary_report.read_text(encoding="utf-8").split("---", 2)[1]
     assert "feedback_observation_count: 1" in front_matter
-    assert (
-        'feedback_observations: [{"observation_id": "fbo_feedback", '
-        '"path": "/repo/.cmoc/gu/feedback/observation/fbo_feedback.json"}]'
-        in front_matter
-    )
+    assert f"feedback_observations: {json.dumps(observations)}" in front_matter
 
 
 def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
@@ -903,12 +887,12 @@ def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
     )
@@ -1080,17 +1064,22 @@ def test_refactor_fork_stops_tracked_children_before_each_commit(
         _parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
-        """file review と change summary の固定 Structured Output を返す。"""
-        if kwargs["purpose"] == "realization refactor change summary":
-            return SimpleNamespace(
-                returncode=0,
-                output_json={"changes": [{"category": "state", "summary": "更新"}]},
-            )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
+        """file review の固定 Structured Output を返す。"""
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
+        )
 
     monkeypatch.setattr(refactor_module, "stop_tracked_codex_children", record_stop)
     monkeypatch.setattr(refactor_module, "commit_work_unit", record_commit)
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
 
     result = runner.invoke(
         app,
@@ -1121,15 +1110,20 @@ def test_refactor_fork_reports_cleanup_warnings(
         _parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
-        """file review と change summary の固定 Structured Output を返す。"""
-        if kwargs["purpose"] == "realization refactor change summary":
-            return SimpleNamespace(
-                returncode=0,
-                output_json={"changes": [{"category": "state", "summary": "更新"}]},
-            )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
+        """file review の固定 Structured Output を返す。"""
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
+        )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
     monkeypatch.setattr(
         refactor_module,
         "stop_tracked_codex_children",
@@ -1172,21 +1166,10 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
         "stop_child_process_group",
         lambda process: stopped.append(process),
     )
-    monkeypatch.setattr(refactor_module, "_initialize_cycle", lambda _context: None)
     monkeypatch.setattr(
         refactor_module,
-        "select_refactor_target",
-        lambda *_args: None,
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "_completion_reason",
-        lambda *_args: "natural_completion",
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "_completion_change_summary",
-        lambda *_args: None,
+        "_initialize_cycle",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
     )
 
     result = runner.invoke(
@@ -1250,23 +1233,29 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
                 )
             return SimpleNamespace(
                 returncode=0,
-                output_json={"findings": findings},
-                call_log_path=worktree / "README-call.json",
-            )
-        if kwargs["purpose"] == "realization refactor change summary":
-            return SimpleNamespace(
-                returncode=0,
                 output_json={
-                    "changes": [{"category": "rename", "summary": "README renamed"}]
+                    "findings": findings,
+                    "verification": {
+                        "status": "passed",
+                        "summary": "fake full quality gate passed",
+                    },
                 },
+                call_log_path=worktree / "README-call.json",
             )
         return SimpleNamespace(
             returncode=0,
-            output_json={"findings": []},
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
             call_log_path=worktree / "call.json",
         )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
 
     result = runner.invoke(
         app,
@@ -1292,7 +1281,7 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     )
     assert len(reports) == 1
     report = reports[0].read_text()
-    assert "## Completion\ncompleted_with_unresolved" in report
+    assert "## Completion\nuser_interruption" in report
     assert "## Unresolved targets\n- count: 1\n- paths:\n  - `renamed.md`" in report
 
 
@@ -1314,19 +1303,6 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
         """README の unresolved 後、別 target で README を rename する。"""
         nonlocal oracle_reviews
         purpose = str(kwargs["purpose"])
-        if purpose == "realization refactor change summary":
-            return SimpleNamespace(
-                returncode=0,
-                output_json={
-                    "changes": [
-                        {
-                            "category": "rename",
-                            "summary": "README renamed",
-                            "changed_paths": ["README.md", "renamed.md"],
-                        }
-                    ]
-                },
-            )
         target = purpose.removeprefix("realization refactor: ")
         reviewed.append(target)
         if target == "README.md":
@@ -1343,7 +1319,11 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
                                 "summary": "人間の判断が必要",
                             },
                         }
-                    ]
+                    ],
+                    "verification": {
+                        "status": "passed",
+                        "summary": "fake full quality gate passed",
+                    },
                 },
             )
         if target == "oracle/spec.md":
@@ -1351,7 +1331,13 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
             if oracle_reviews > 1:
                 return SimpleNamespace(
                     returncode=0,
-                    output_json={"findings": []},
+                    output_json={
+                        "findings": [],
+                        "verification": {
+                            "status": "passed",
+                            "summary": "fake full quality gate passed",
+                        },
+                    },
                 )
             worktree = parameter.agent_call_cwd
             (worktree / "README.md").rename(worktree / "renamed.md")
@@ -1368,12 +1354,26 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
                                 "summary": "rename completed",
                             },
                         }
-                    ]
+                    ],
+                    "verification": {
+                        "status": "passed",
+                        "summary": "fake full quality gate passed",
+                    },
                 },
             )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
+        )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
 
     result = runner.invoke(
         app,
@@ -1390,10 +1390,10 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
     assert "README.md" not in refactor_state
     assert refactor_state["renamed.md"]["investigation_required"] is True
     assert reviewed.count("README.md") == 1
-    assert reviewed.count("oracle/spec.md") == 2
+    assert reviewed.count("oracle/spec.md") == 1
     assert "renamed.md" not in reviewed
     report = terminal_primary_report(result).read_text()
-    assert 'completion_reason: "completed_with_unresolved"' in report
+    assert 'completion_reason: "user_interruption"' in report
     assert "- count: 1" in report
     assert "`renamed.md`" in report
 
@@ -1451,11 +1451,16 @@ def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
                         "changed_paths": [],
                         "resolution": {"status": "fixed"},
                     }
-                ]
+                ],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
             },
         )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
 
     result = runner.invoke(
         app,
@@ -1489,11 +1494,6 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
         """evidences には全差分を載せ、changed_paths では一部だけ申告する。"""
         nonlocal first_review
         purpose = str(kwargs["purpose"])
-        if purpose == "realization refactor change summary":
-            return SimpleNamespace(
-                returncode=0,
-                output_json={"changes": [{"category": "state", "summary": "更新"}]},
-            )
         target = purpose.removeprefix("realization refactor: ")
         if target == "README.md" and first_review:
             first_review = False
@@ -1528,7 +1528,11 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
                             "verification": "確認済み",
                         },
                     }
-                ]
+                ],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
             }
             postcondition = kwargs["structured_output_postcondition"]
             assert callable(postcondition)
@@ -1543,9 +1547,19 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
                 returncode=0,
                 output_json=output,
             )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
+        )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
 
     result = runner.invoke(
         app,
@@ -1574,7 +1588,13 @@ def test_refactor_changed_path_postcondition_reports_mismatch(
 
     issues = refactor_module._changed_path_postcondition(
         SimpleNamespace(),
-        {"findings": [{"changed_paths": ["README.md"]}]},
+        {
+            "findings": [{"changed_paths": ["README.md"]}],
+            "verification": {
+                "status": "passed",
+                "summary": "fake full quality gate passed",
+            },
+        },
         frozenset({"README.md", "added.py"}),
     )
 
@@ -1600,7 +1620,11 @@ def test_refactor_changed_path_postcondition_uses_deduplicated_union(
             "findings": [
                 {"changed_paths": ["README.md"]},
                 {"changed_paths": ["README.md", "added.py"]},
-            ]
+            ],
+            "verification": {
+                "status": "passed",
+                "summary": "fake full quality gate passed",
+            },
         },
         frozenset({"README.md", "added.py"}),
     )
@@ -1630,9 +1654,19 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
         (worktree / "README.md").write_text("agent commit\n")
         run_git(worktree, "add", "README.md")
         run_git(worktree, "commit", "-m", "agent commit")
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
+        )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
 
     result = runner.invoke(
         app,
@@ -1732,21 +1766,10 @@ def test_refactor_report_failure_after_joinable_publication_sets_error_state(
 ) -> None:
     """refactor の fork report failure でも run state と report を一致させる。"""
     _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "_initialize_cycle", lambda _context: None)
     monkeypatch.setattr(
         refactor_module,
-        "select_refactor_target",
-        lambda *_args: None,
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "_completion_reason",
-        lambda *_args: "natural_completion",
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "_completion_change_summary",
-        lambda *_args: None,
+        "_initialize_cycle",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
     )
     original_write_report = refactor_module.write_fork_report
     calls = 0
@@ -1802,16 +1825,21 @@ def test_apply_error_preserves_unreadable_process_tracking(
 
 
 @pytest.mark.parametrize("interrupted", [False, True])
+@pytest.mark.parametrize("inspection", ["changes", "state"])
 def test_refactor_terminal_report_survives_change_inspection_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     interrupted: bool,
+    inspection: str,
 ) -> None:
-    """差分確認に失敗しても refactor の terminal report と state を保存する。"""
+    """確認不能な差分・履歴を空として扱わず terminal report と state を保存する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    agent_failed = False
 
     def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
         """agent failure または user interruption を再現する。"""
+        nonlocal agent_failed
+        agent_failed = True
         if interrupted:
             raise KeyboardInterrupt()
         raise RuntimeError("agent failed")
@@ -1821,13 +1849,25 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
         "run_codex_exec",
         fail_agent,
     )
-    monkeypatch.setattr(
-        refactor_module,
-        "tree_changes",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            RuntimeError("git diff unavailable")
-        ),
-    )
+    if inspection == "changes":
+        monkeypatch.setattr(
+            refactor_module,
+            "tree_changes",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                RuntimeError("git diff unavailable")
+            ),
+        )
+    else:
+        load = refactor_module.load_refactor_state
+
+        def unreadable_after_agent(root):
+            if agent_failed:
+                raise RuntimeError("state unavailable")
+            return load(root)
+
+        monkeypatch.setattr(
+            refactor_module, "load_refactor_state", unreadable_after_agent
+        )
 
     result = runner.invoke(
         app,
@@ -1846,7 +1886,12 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
     )
     assert len(reports) == 1
     report_text = reports[0].read_text()
-    assert "change inspection failed" in report_text
+    if inspection == "changes":
+        assert "change inspection failed" in report_text
+        assert "## Changed paths\n- unavailable" in report_text
+    else:
+        assert "state inspection failed" in report_text
+        assert "- entries: null" in report_text
     assert f'completion_reason: "{expected_reason}"' in report_text
 
 
@@ -2068,17 +2113,22 @@ def test_start_run_rechecks_session_branch_under_lock(
     assert not list((root / ".cmoc" / "gu" / "worktree").glob("*/*"))
 
 
-def test_refactor_cmoc_start_error_does_not_recover_competing_run(
+@pytest.mark.parametrize("interrupted_before_tracking", [False, True])
+def test_refactor_start_error_does_not_recover_competing_run(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    interrupted_before_tracking: bool,
 ) -> None:
-    """並行 start の CmocError で別 invocation の run を error にしない。"""
+    """開始失敗や中断で別 invocation の run を回収しない。"""
     root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
     original_start = refactor_module.start_editing_run
 
     def competing_start(kind: str) -> EditingRunContext:
         """別 invocation が lock 内で run を公開した後の競合を再現する。"""
-        original_start(kind)
+        context = original_start(kind)
+        if interrupted_before_tracking:
+            run_process_id_path(context.repo, context.session_id).unlink()
+            raise KeyboardInterrupt
         raise CmocError(
             "別の editing run が先に開始されました。",
             [],
@@ -2093,7 +2143,7 @@ def test_refactor_cmoc_start_error_does_not_recover_competing_run(
         catch_exceptions=False,
     )
 
-    assert result.exit_code == 1
+    assert result.exit_code == (0 if interrupted_before_tracking else 1)
     assert _state(state_path)["run"]["state"] == "running"
     assert current_branch(root) == session_branch
 
@@ -2279,7 +2329,7 @@ def test_resolve_active_run_rejects_run_branch_from_another_session(
     state["run"] = {
         "state": "running",
         "kind": "realization_apply",
-        "branch": "cmoc/run/another-session/run-id",
+        "branch": f"cmoc/run/sess_000001_2026-09-29_15-04/{RUN_ID}",
         "fork_commit": state["session"]["session_fork_commit"],
     }
     state_path.write_text(json.dumps(state, indent=2) + "\n")
@@ -2375,12 +2425,12 @@ def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=run_worktree,
     )
@@ -2415,12 +2465,12 @@ def test_run_join_cleanup_warns_when_worktree_removal_raises(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
     )
@@ -2460,12 +2510,12 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=session_worktree,
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=run_worktree,
     )
@@ -2508,12 +2558,12 @@ def test_run_join_conflict_abort_failure_still_restores_session_tree(
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
-        session_id="session",
+        session_id=SESSION_ID,
         state_path=tmp_path / "state.json",
-        session_branch="cmoc/session/session",
+        session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
         kind="realization_apply",
-        run_branch="cmoc/run/session/run",
+        run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
     )
@@ -2775,38 +2825,20 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
     assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
 
-def test_refactor_fork_completes_persistent_full_cycle(
+def test_refactor_fork_commits_cycle_until_user_interruption(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """refactor fork が全 target を調査して永続 cycle を完了する。"""
+    """一巡の確定実績を保持し、ユーザー停止で joinable にする。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     reviewed: list[str] = []
-    summary_calls = 0
 
     def fake_refactor(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
-        """refactor agent と change-summary agent の deterministic response を返す。"""
-        nonlocal summary_calls
+        """refactor agent の deterministic response を返す。"""
         purpose = str(kwargs["purpose"])
-        if purpose == "realization refactor change summary":
-            summary_calls += 1
-            return SimpleNamespace(
-                returncode=0,
-                output_json={
-                    "changes": [
-                        {
-                            "category": "state",
-                            "summary": "調査履歴を更新",
-                            "changed_paths": [
-                                ".cmoc/gt/realization/refactor/state.json"
-                            ],
-                        }
-                    ]
-                },
-            )
         target = purpose.removeprefix("realization refactor: ")
         reviewed.append(target)
         if target == "README.md":
@@ -2822,12 +2854,26 @@ def test_refactor_fork_completes_persistent_full_cycle(
                                 "summary": "agent は修正済みと申告した",
                             },
                         }
-                    ]
+                    ],
+                    "verification": {
+                        "status": "passed",
+                        "summary": "fake full quality gate passed",
+                    },
                 },
             )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
+        )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
 
     result = runner.invoke(
         app,
@@ -2847,14 +2893,13 @@ def test_refactor_fork_completes_persistent_full_cycle(
         entry["last_investigation_result"] == "no_findings"
         for entry in refactor_state.values()
     )
-    assert summary_calls == 1
-    assert "- completion_reason: `natural_completion`" in result.output
+    assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `0`" in result.output
     report = terminal_primary_report(result)
     report_text = report.read_text()
     assert "- `README.md`: 0 finding(s)" in report_text
     assert 'command: "cmoc realization refactor fork"' in report_text
-    assert 'terminal_classification: "natural_completion"' in report_text
+    assert 'terminal_classification: "user_interruption"' in report_text
     assert "exit_code: 0" in report_text
     assert "## Related logs" in report_text
 
@@ -2891,6 +2936,80 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
     report = terminal_primary_report(result)
     assert 'completion_reason: "user_interruption"' in report.read_text()
     assert notifications == [("realization refactor fork", "interrupted")]
+
+
+@pytest.mark.parametrize(
+    "kind", ["realization_apply", "realization_refactor", "feedback_report"]
+)
+def test_start_run_prepares_work_directories_before_publishing_state(
+    tmp_path, monkeypatch, kind
+):
+    """全 editing workload の新 worktree を running state の公開前に補完する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_write = lifecycle_module.write_state
+    observed = []
+
+    def observe_running(path, state):
+        if state.run.state == "running":
+            run_worktree = lifecycle_module.worktree_for_branch(root, state.run.branch)
+            assert all(
+                (run_worktree / relative).is_dir() for relative in _WORK_DIRECTORIES
+            )
+            assert run_git(run_worktree, "status", "--short").stdout == ""
+            observed.append(run_worktree)
+        original_write(path, state)
+
+    monkeypatch.setattr(lifecycle_module, "write_state", observe_running)
+
+    context = start_editing_run(kind)
+
+    assert observed == [context.run_worktree]
+    assert context.run_worktree != root
+    assert all(
+        not list((context.run_worktree / relative).iterdir())
+        for relative in _WORK_DIRECTORIES
+    )
+    assert _state(state_path)["run"]["state"] == "running"
+
+
+@pytest.mark.parametrize(
+    "kind", ["realization_apply", "realization_refactor", "feedback_report"]
+)
+def test_start_run_directory_conflict_cleans_unpublished_resources(
+    tmp_path, monkeypatch, kind
+):
+    """配置先の衝突で開始に失敗した場合、session の内容と ready state を保つ。"""
+    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    collision = root / "src"
+    collision.rmdir()
+    collision.write_text("kept tracked collision\n")
+    run_git(root, "add", "src")
+    run_git(root, "commit", "-m", "track conflicting placement")
+    state_before = state_path.read_bytes()
+    original_target = lifecycle_module.new_run_target
+    targets = []
+
+    def record_target(*args):
+        target = original_target(*args)
+        targets.append(target)
+        return target
+
+    monkeypatch.setattr(lifecycle_module, "new_run_target", record_target)
+
+    with pytest.raises(CmocError) as exc_info:
+        start_editing_run(kind)
+
+    [(run_branch, run_worktree)] = targets
+    assert "作業用配置先" in exc_info.value.summary
+    assert f"work-root: {run_worktree}" in exc_info.value.detail
+    assert f"path: {run_worktree / 'src'}" in exc_info.value.detail
+    assert state_path.read_bytes() == state_before
+    assert collision.read_text() == "kept tracked collision\n"
+    assert not run_worktree.exists()
+    assert not lifecycle_module.branch_exists(root, run_branch)
+    assert not run_process_id_path(
+        root, session_branch.removeprefix("cmoc/session/")
+    ).exists()
 
 
 def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(
@@ -2990,6 +3109,35 @@ def test_refactor_start_failure_after_run_publish_is_reported(
     assert 'state_before: "ready"' in report.read_text()
 
 
+def test_refactor_start_interruption_with_broken_tracking_reports_existing_run(
+    tmp_path, monkeypatch
+):
+    """成立済み run の追跡失敗を「run 未成立」とせず、資源を残して error にする。"""
+    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    session_id = session_branch.removeprefix("cmoc/session/")
+    tracking = run_process_id_path(root, session_id)
+
+    def interrupted_tracking(*_args):
+        tracking.parent.mkdir(parents=True, exist_ok=True)
+        tracking.write_bytes(b"\xff")
+        signal.raise_signal(signal.SIGINT)
+
+    monkeypatch.setattr(lifecycle_module, "write_run_process_id", interrupted_tracking)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 1, result.output
+    run = _state(state_path)["run"]
+    assert run["state"] == "error"
+    worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
+    assert worktree.is_dir()
+    assert tracking.read_bytes() == b"\xff"
+    report = terminal_primary_report(result).read_text()
+    assert "run not established" not in report
+    assert "Codex child stop failed" in report
+    assert "rollback not attempted" in report
+
+
 def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2997,7 +3145,6 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
     """unresolved target を保留し、残りの target を処理して cycle を完了する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     reviewed: list[str] = []
-    summary_calls = 0
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
 
@@ -3006,24 +3153,7 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
         **kwargs: object,
     ) -> SimpleNamespace:
         """unresolved target を返し、他の target は処理済みとして返す。"""
-        nonlocal summary_calls
         purpose = str(kwargs["purpose"])
-        if purpose == "realization refactor change summary":
-            summary_calls += 1
-            return SimpleNamespace(
-                returncode=0,
-                output_json={
-                    "changes": [
-                        {
-                            "category": "state",
-                            "summary": "調査履歴を更新",
-                            "changed_paths": [
-                                ".cmoc/gt/realization/refactor/state.json"
-                            ],
-                        }
-                    ]
-                },
-            )
         target = purpose.removeprefix("realization refactor: ")
         reviewed.append(target)
         if target == "README.md":
@@ -3040,12 +3170,26 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
                                 "summary": "人間の判断が必要",
                             },
                         }
-                    ]
+                    ],
+                    "verification": {
+                        "status": "passed",
+                        "summary": "fake full quality gate passed",
+                    },
                 },
             )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
+        )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
 
     result = runner.invoke(
         app,
@@ -3068,12 +3212,11 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
         if entry["investigation_required"]
     } == {"README.md"}
     assert refactor_state["README.md"]["last_investigation_result"] == "findings"
-    assert summary_calls == 1
-    assert "- completion_reason: `completed_with_unresolved`" in result.output
+    assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `1`" in result.output
     report = terminal_primary_report(result)
     report_text = report.read_text()
-    assert 'completion_reason: "completed_with_unresolved"' in report_text
+    assert 'completion_reason: "user_interruption"' in report_text
     assert f"- processed targets: {len(refactor_state)}" in report_text
     assert "- uninvestigated targets: 0" in report_text
     assert "- count: 1" in report_text
@@ -3219,10 +3362,23 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
                                 "summary": "人間の判断が必要",
                             },
                         }
-                    ]
+                    ],
+                    "verification": {
+                        "status": "passed",
+                        "summary": "fake full quality gate passed",
+                    },
                 },
             )
-        return SimpleNamespace(returncode=0, output_json={"findings": []})
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {
+                    "status": "passed",
+                    "summary": "fake full quality gate passed",
+                },
+            },
+        )
 
     original_commit = refactor_module.commit_work_unit
     original_tree_changes = refactor_module.tree_changes
@@ -3260,6 +3416,7 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
         return changes
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    _stop_after_cycles(monkeypatch)
     monkeypatch.setattr(refactor_module, "commit_work_unit", commit_then_interrupt)
     monkeypatch.setattr(refactor_module, "tree_changes", interrupt_during_recording)
 
@@ -3362,21 +3519,10 @@ def test_refactor_interrupt_during_completion_is_joinable(
 ) -> None:
     """completion 中の中断を joinable state と user interruption report にする。"""
     _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    monkeypatch.setattr(refactor_module, "_initialize_cycle", lambda _context: None)
     monkeypatch.setattr(
         refactor_module,
-        "select_refactor_target",
-        lambda _state, _excluded: None,
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "_completion_reason",
-        lambda _root, _unresolved: "natural_completion",
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "_completion_change_summary",
-        lambda _context: None,
+        "_initialize_cycle",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
     )
     original_set_run_state = refactor_module.set_run_state
     interrupted = False
@@ -3387,10 +3533,11 @@ def test_refactor_interrupt_during_completion_is_joinable(
     ) -> SessionState:
         """最初の state 公開だけを中断し、再試行では本来の処理へ戻す。"""
         nonlocal interrupted
+        result = original_set_run_state(context, run_state)
         if not interrupted:
             interrupted = True
-            raise KeyboardInterrupt()
-        return original_set_run_state(context, run_state)
+            signal.raise_signal(signal.SIGINT)
+        return result
 
     monkeypatch.setattr(refactor_module, "set_run_state", interrupt_once)
 
@@ -3403,3 +3550,426 @@ def test_refactor_interrupt_during_completion_is_joinable(
     assert result.exit_code == 0
     assert _state(state_path)["run"]["state"] == "joinable"
     assert "- completion_reason: `user_interruption`" in result.output
+
+
+def test_refactor_with_no_targets_keeps_synchronizing(tmp_path, monkeypatch):
+    """空対象でも巡を継続し、ユーザー停止だけで終了する。"""
+    _root, _, state_path = _start_session(tmp_path, monkeypatch)
+    synchronized = []
+
+    def empty_state(root):
+        synchronized.append(root)
+        refactor_module.write_refactor_state(root, {})
+        return {}
+
+    monkeypatch.setattr(refactor_module, "sync_refactor_state", empty_state)
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: pytest.fail("agent call without a target"),
+    )
+    _stop_after_cycles(monkeypatch, cycles=2)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert len(synchronized) == 2
+    assert _state(state_path)["run"]["state"] == "joinable"
+    report = terminal_primary_report(result).read_text()
+    assert "- completed cycles: 2" in report
+    assert "- cycle targets: 0" in report
+    assert "- committed processing units: 0" in report
+
+
+@pytest.mark.parametrize("change_kind", ["delete", "revert"])
+def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
+    tmp_path, monkeypatch, change_kind
+):
+    """削除は成果に含め、後の巡で戻した変更は net 成果へ数えない。"""
+    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    reviewed = 0
+
+    def review(parameter, **kwargs):
+        nonlocal reviewed
+        findings = []
+        if kwargs["purpose"] == "realization refactor: README.md":
+            reviewed += 1
+            path = parameter.agent_call_cwd / "README.md"
+            if change_kind == "delete":
+                path.unlink()
+            else:
+                path.write_text("changed\n" if reviewed == 1 else "# repo\n")
+            findings = [
+                {
+                    "title": change_kind,
+                    "changed_paths": ["README.md"],
+                    "resolution": {"status": "fixed", "summary": "confirmed change"},
+                }
+            ]
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": findings,
+                "verification": {"status": "passed", "summary": "full gate passed"},
+            },
+        )
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", review)
+    _stop_after_cycles(monkeypatch, cycles=1 if change_kind == "delete" else 2)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    run = _state(state_path)["run"]
+    worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
+    report = terminal_primary_report(result).read_text()
+    summary = report.split("## Change summary\n", 1)[1].split("## Test timing", 1)[0]
+    if change_kind == "delete":
+        assert not (worktree / "README.md").exists()
+        assert "- confirmed: delete: fixed: confirmed change" in summary
+        assert "`README.md`" in summary
+    else:
+        assert (worktree / "README.md").read_text() == "# repo\n"
+        assert summary.strip() == "- none"
+        assert reviewed == 2
+    assert "- resolutions:" in report
+    assert "full gate passed" in report
+
+
+@pytest.mark.parametrize("during_commit", [False, True])
+def test_refactor_cycle_interruption_respects_state_commit_boundary(
+    tmp_path, monkeypatch, during_commit
+):
+    """巡開始の state 準備は rollback、確定区間の停止要求は記録まで完了する。"""
+    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    _mark_refactor_target_no_findings(root, "README.md")
+    if during_commit:
+        commit = refactor_module.commit_work_unit
+
+        def commit_then_interrupt(*args, **kwargs):
+            result = commit(*args, **kwargs)
+            signal.raise_signal(signal.SIGINT)
+            return result
+
+        monkeypatch.setattr(refactor_module, "commit_work_unit", commit_then_interrupt)
+    else:
+        write = refactor_module.write_refactor_state
+
+        def prepare_then_interrupt(*args):
+            write(*args)
+            signal.raise_signal(signal.SIGINT)
+
+        monkeypatch.setattr(
+            refactor_module, "write_refactor_state", prepare_then_interrupt
+        )
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: pytest.fail("new call after interruption"),
+    )
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    run = _state(state_path)["run"]
+    worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
+    state = load_refactor_state(worktree)
+    assert state["README.md"]["investigation_required"] is during_commit
+    assert state["README.md"]["last_investigation_result"] == "no_findings"
+    assert not worktree_change_paths(worktree)
+    report = terminal_primary_report(result).read_text()
+    assert f"- current cycle: {int(during_commit)}" in report
+    assert "- cycle confirmed investigations: 0" in report
+
+
+@pytest.mark.parametrize("interrupt_next_cycle_start", [False, True])
+def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
+    tmp_path, monkeypatch, interrupt_next_cycle_start
+):
+    """旧履歴を調査機会にせず、未解決を次巡で再検討して全対象を公平に処理する。"""
+    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    _mark_refactor_target_no_findings(root, "README.md")
+    reviewed = []
+    if interrupt_next_cycle_start:
+        commit = refactor_module.commit_work_unit
+        cycles = 0
+
+        def interrupt_second_cycle(root, message):
+            nonlocal cycles
+            result = commit(root, message)
+            if message == "cmoc realization refactor cycle":
+                cycles += 1
+                if cycles == 2:
+                    signal.raise_signal(signal.SIGINT)
+            return result
+
+        monkeypatch.setattr(refactor_module, "commit_work_unit", interrupt_second_cycle)
+    else:
+        _stop_after_cycles(monkeypatch, cycles=2)
+
+    def review(parameter, **kwargs):
+        purpose = kwargs["purpose"]
+        assert purpose.startswith("realization refactor: ")
+        target = purpose.removeprefix("realization refactor: ")
+        reviewed.append(target)
+        findings = []
+        if target == "README.md" and reviewed.count(target) == 1:
+            findings = [
+                {
+                    "title": "deferred",
+                    "changed_paths": [],
+                    "resolution": {"status": "unresolved", "summary": "try next cycle"},
+                }
+            ]
+        return SimpleNamespace(
+            returncode=0,
+            call_log_path=parameter.agent_call_cwd / "call.json",
+            output_json={
+                "findings": findings,
+                "verification": {
+                    "status": "not_required",
+                    "summary": "no net changes",
+                },
+            },
+        )
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", review)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    run = _state(state_path)["run"]
+    worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
+    state = load_refactor_state(worktree)
+    count = len(state)
+    report = terminal_primary_report(result).read_text()
+    if interrupt_next_cycle_start:
+        assert len(reviewed) == count
+        assert "- completed cycles: 1" in report
+        assert "- current cycle: 2" in report
+        assert "- cycle confirmed investigations: 0" in report
+        assert "- cycle deferred targets: 0" in report
+        assert "## Unresolved findings\n- `README.md`: deferred" in report
+        assert "try next cycle" in report
+        return
+    assert len(reviewed) == count * 2
+    assert set(reviewed[:count]) == set(state) == set(reviewed[count:])
+    assert reviewed[count - 1] == reviewed[count] == "README.md"
+    assert all(reviewed.count(target) == 2 for target in state)
+    assert "- completed cycles: 2" in report
+    assert "## Unresolved findings\n- none" in report
+    assert "test timing: unavailable" in result.output
+
+
+def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
+    tmp_path, monkeypatch
+):
+    """関連 file の変更を調査実績へ数えず、追加 file は次巡に公平に処理する。"""
+    _root, _, _state_path = _start_session(tmp_path, monkeypatch)
+    reviewed = []
+
+    def review(parameter, **kwargs):
+        target = kwargs["purpose"].removeprefix("realization refactor: ")
+        reviewed.append(target)
+        findings = []
+        if len(reviewed) == 1:
+            assert target == ".gitignore"
+            (parameter.agent_call_cwd / "src/new.py").write_text("VALUE = 1\n")
+            (parameter.agent_call_cwd / "README.md").write_text("related edit\n")
+            findings = [
+                {
+                    "title": "related changes",
+                    "changed_paths": ["src/new.py", "README.md"],
+                    "resolution": {"status": "fixed", "summary": "verified edits"},
+                }
+            ]
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": findings,
+                "verification": {"status": "passed", "summary": "full gate passed"},
+            },
+        )
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", review)
+    _stop_after_cycles(monkeypatch, cycles=2)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert reviewed == [
+        ".gitignore",
+        "README.md",
+        "oracle/spec.md",
+        "src/new.py",
+        ".gitignore",
+        "README.md",
+        "oracle/spec.md",
+    ]
+    report = terminal_primary_report(result).read_text()
+    assert "- processed targets: 4" in report
+    assert "- committed processing units: 7" in report
+
+
+def test_refactor_latest_resolution_survives_commit_inspection_failure(
+    tmp_path, monkeypatch
+):
+    """確定後の差分確認が失敗しても、最新結果で解消した過去の未解決を復活させない。"""
+    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    reviewed = 0
+    inspect = refactor_module.tree_changes
+
+    def review(parameter, **kwargs):
+        nonlocal reviewed
+        findings = []
+        if kwargs["purpose"] == "realization refactor: README.md":
+            reviewed += 1
+            if reviewed == 1:
+                findings = [
+                    {
+                        "title": "old unresolved finding",
+                        "changed_paths": [],
+                        "resolution": {"status": "unresolved", "summary": "defer"},
+                    }
+                ]
+        return SimpleNamespace(
+            returncode=0,
+            call_log_path=parameter.agent_call_cwd / "call.json",
+            output_json={
+                "findings": findings,
+                "verification": {"status": "not_required", "summary": "no edits"},
+            },
+        )
+
+    def failed_unit_inspection(*args):
+        if reviewed == 2 and len(args) == 3:
+            raise RuntimeError("committed unit inspection failed")
+        return inspect(*args)
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", review)
+    monkeypatch.setattr(refactor_module, "tree_changes", failed_unit_inspection)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 1, result.output
+    run = _state(state_path)["run"]
+    worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
+    assert (
+        load_refactor_state(worktree)["README.md"]["last_investigation_result"]
+        == "no_findings"
+    )
+    assert not worktree_change_paths(worktree)
+    report = terminal_primary_report(result).read_text()
+    assert "## Unresolved findings\n- none" in report
+    assert "committed unit inspection failed" in report
+
+
+@pytest.mark.parametrize(
+    "verification_status", ["failed", "incomplete", "not_required"]
+)
+def test_refactor_rejects_unverified_changes(
+    tmp_path, monkeypatch, verification_status
+):
+    """構文上は妥当な出力でも品質検証が成功していない変更を確定しない。"""
+    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    calls = []
+
+    def review(parameter, **kwargs):
+        calls.append(kwargs["purpose"])
+        (parameter.agent_call_cwd / "README.md").write_text("unverified change\n")
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [
+                    {
+                        "title": "change",
+                        "changed_paths": ["README.md"],
+                        "resolution": {"status": "fixed", "summary": "changed"},
+                    }
+                ],
+                "verification": {
+                    "status": verification_status,
+                    "summary": "gate not passed",
+                },
+            },
+        )
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", review)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 1
+    run = _state(state_path)["run"]
+    assert run["state"] == "error"
+    worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
+    assert (worktree / "README.md").read_text() == "# repo\n"
+    assert not worktree_change_paths(worktree)
+    assert len(calls) == 1
+    assert "品質検証が完了していません" in terminal_primary_report(result).read_text()
+
+
+def test_refactor_stop_failure_preserves_uncommitted_work(tmp_path, monkeypatch):
+    """子の停止を確認できなければ rollback と joinable 公開を行わない。"""
+    root, _, state_path = _start_session(tmp_path, monkeypatch)
+
+    def interrupted_review(parameter, **kwargs):
+        (parameter.agent_call_cwd / "README.md").write_text("still owned by child\n")
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", interrupted_review)
+    monkeypatch.setattr(
+        refactor_module,
+        "stop_tracked_codex_children",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("stop unavailable")),
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "rollback_work_unit",
+        lambda *_args: pytest.fail("rollback before stop confirmation"),
+    )
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 1
+    run = _state(state_path)["run"]
+    assert run["state"] == "error"
+    worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
+    assert (worktree / "README.md").read_text() == "still owned by child\n"
+    report = terminal_primary_report(result).read_text()
+    assert "rollback not attempted" in report
+    assert "observed uncommitted paths" in report
+    assert "  - `README.md`" in report
+    assert "停止と未確定差分の解消を確認してから" in result.output
+
+
+def test_refactor_interrupted_agent_commit_rolls_back_remaining_untracked_files(
+    tmp_path, monkeypatch
+):
+    """agent の禁止 commit を除去した後も、未確定の追加 file を残さない。"""
+    root, _, state_path = _start_session(tmp_path, monkeypatch)
+
+    def interrupted_review(parameter, **_kwargs):
+        worktree = parameter.agent_call_cwd
+        (worktree / "README.md").write_text("forbidden commit\n")
+        run_git(worktree, "add", "README.md")
+        run_git(worktree, "commit", "-m", "forbidden agent commit")
+        (worktree / "src/untracked.py").write_text("VALUE = 1\n")
+        signal.raise_signal(signal.SIGINT)
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", interrupted_review)
+    result = runner.invoke(
+        app, ["realization", "refactor", "fork"], catch_exceptions=False
+    )
+    assert result.exit_code == 1, result.output
+    run = _state(state_path)["run"]
+    assert run["state"] == "error"
+    worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
+    assert (worktree / "README.md").read_text() == "# repo\n"
+    assert not (worktree / "src/untracked.py").exists()
+    assert not worktree_change_paths(worktree)
+    assert (
+        "forbidden agent commit" not in run_git(worktree, "log", "--format=%s").stdout
+    )
+    report = terminal_primary_report(result).read_text()
+    assert "- committed processing units: 0" in report
+    assert "uncommitted work rolled back" in report

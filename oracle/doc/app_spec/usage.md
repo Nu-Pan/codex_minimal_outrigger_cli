@@ -20,14 +20,18 @@
     3. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
     4. 人間が `cmoc realization apply fork` を呼び出す。
     5. 人間が `cmoc run join` で apply run を取り込むか、`cmoc run abandon` で破棄する。
-4. 必要に応じて、ファイル単位の網羅的な追従を行う。
+4. 必要に応じて、仕様への適合と必要な回帰検出能力を保ち、テストと実装のムダを網羅的に削減する。
     1. 人間が `cmoc realization refactor fork` を呼び出す。
-    2. 人間が `cmoc run join` で確定済み成果物を取り込むか、`cmoc run abandon` で破棄する。
-    3. 調査要求が残っている場合は、join 後に新しい `cmoc realization refactor fork` を開始する。
+    2. 巡回の進捗、確定済み変更、測定済みのテスト時間を見て、人間が適当な時点で `Ctrl+C` を押す。変更なしの巡も反復し、全件処理や数値目標の達成では自動終了しない。
+    3. 正常終了後、人間が `cmoc run join` で確定済み成果物と調査状態を取り込むか、`cmoc run abandon` で破棄する。
+    4. 続ける場合は、join 後に新しい `cmoc realization refactor fork` を開始する。同じ run の実行途中は復元しない。
 5. 必要に応じて、人間が `cmoc feedback report` を呼び出す。
     - session worktree と staging area は clean にする。
     - cmoc は run 上で安全な realization file の修正を issue ごとに commit し、処理中の新しい issue も intake wave で可能な限り処理する。
-    - 正常経路では run を自動 join し、`human_required` issue だけを report する。`inconclusive` があれば `incomplete` 診断 report を保存する。
+    - 自動 join と必要な検証の成功後、最新状態と report を確定する。現在の案件一覧には `human_required` と `inconclusive` を区別して示し、過去の経緯は history から確認する。
+    - `inconclusive` があれば結果は `incomplete` となるが、案件 ID と判定根拠は active に保存される。以後の確認・操作には最新状態の案件 ID を使う。
+    - 人間が外部で解決を確認した `inconclusive` 案件は、`cmoc feedback close <案件ID> --reason "外部で修正し、人間が解決を確認した"` で閉じる。成功直後の最新一覧から対象が除かれ、理由と経緯は history に残る。
+    - 後から同じ問題が観測された場合も、通常の検出・判定を経て新しい案件として現れる。以前の案件 ID に対する close の再実行は再発分へ作用しない。
     - 自動 join 前に run が残った場合は `cmoc run join` または `cmoc run abandon` を使用する。自動 join 後の publication または cleanup は、次の `cmoc feedback report` が再開する。
 6. 人間が `{{cmoc-session-branch}}` 上で `cmoc session join` を呼び出す。
     - cmoc は `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
@@ -40,5 +44,6 @@
 - realization refactor: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「目的」
 - oracle edit: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「目的」
 - feedback report: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の `cmoc feedback report`
+- feedback close: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の `cmoc feedback close`
 
 editing run に共通する lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を参照する。

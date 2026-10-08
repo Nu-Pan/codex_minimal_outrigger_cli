@@ -13,14 +13,15 @@ from pathlib import Path
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
 from _codex_support import FakeCodexResult, codex_override_config, setup_codex_home
-from _git_support import current_branch, make_repo, run_git
+from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_git
 
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
-from basic.acp import AgentCallParameter, DocumentSearchScope, FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_override_args
 from commons.runtime_config import config_path
+from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_state import (
     RunPart,
     SessionPart,
@@ -40,7 +41,7 @@ def _activate_session(
     """隔離 repository に oracle edit 用の session state を作成する。"""
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    session_id = "oracle-edit-test"
+    session_id = SESSION_ID
     session_branch = f"cmoc/session/{session_id}"
     run_git(root, "checkout", "-b", session_branch)
     path = state_path(root, session_id)
@@ -73,7 +74,7 @@ def _assert_exec_parameter(
     """2 回の exec に共通する起動契約を検証する。"""
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_WRITE
     assert parameter.structured_output_schema_path is None
-    assert parameter.document_search_scope is not None
+    assert parameter.enable_document_search_mcp is True
     assert parameter.agent_call_cwd == root.resolve()
 
 
@@ -94,7 +95,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     active_run = RunPart(
         "running",
         "realization_apply",
-        "cmoc/run/oracle-edit-test/active-run",
+        RUN_BRANCH,
         "abc",
     )
     _session_branch, session_state_path = _activate_session(root, run=active_run)
@@ -105,11 +106,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     readme_path.write_text("# unstaged change\n")
     staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
     unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
-    time_stamp = "2026-07-20_00-00-00_000000000"
-    input_path = (
-        root / ".cmoc" / "gu" / "log" / "editor_input" / f"{time_stamp}_orig.md"
-    )
-    input_path.parent.mkdir(parents=True, exist_ok=True)
+    input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_main_parameters: list[AgentCallParameter] = []
     events: list[str] = []
@@ -130,22 +127,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
             sync_refactor_entries=sync_refactor_entries,
         )
 
-    def fake_reserve_prompt_editor_input(
-        target_root: Path,
-    ) -> Path:
-        """決定論的な editor path を返す。"""
-        assert target_root == root
-        input_path.touch()
-        return input_path
-
     real_build_main_parameter = (
         oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
     )
 
     def record_build_main_parameter(
         user_instruction: str,
-        *,
-        document_search_scope: DocumentSearchScope,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の本命 builder 呼び出しを記録する。"""
         events.append(
@@ -153,9 +140,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
             if user_instruction == oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER
             else "build-main"
         )
-        parameter = real_build_main_parameter(
-            user_instruction, document_search_scope=document_search_scope
-        )
+        parameter = real_build_main_parameter(user_instruction)
         built_main_parameters.append(parameter)
         return parameter
 
@@ -165,6 +150,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         complete_prompt_skeleton: str,
     ) -> None:
         """エディタへ渡す path と完全 prompt skeleton を記録する。"""
+        nonlocal input_path
+        input_path = work_path
+        logger = current_subcommand_logger()
+        assert logger is not None
+        assert work_path.name == f"{logger.execution_id}_orig.md"
         events.append("editor")
         assert target_root == root
         editor_calls.append((work_path, complete_prompt_skeleton))
@@ -182,11 +172,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         assert work_path == input_path
         return real_collect_prompt_editor_input(target_root, work_path)
 
-    monkeypatch.setattr(
-        oracle_edit_module,
-        "reserve_prompt_editor_input",
-        fake_reserve_prompt_editor_input,
-    )
     monkeypatch.setattr(
         runtime_cli_module,
         "run_doctor_preprocess",
@@ -536,12 +521,9 @@ def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
     instruction = (
         "診断用サブコマンドログ /example/sender.jsonl を参考に oracle を編集する"
     )
-    scope = DocumentSearchScope(allowed_subtrees=("oracle/doc",))
-    empty = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
-        "", document_search_scope=scope
-    ).prompt
+    empty = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter("").prompt
     prompt = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
-        instruction, document_search_scope=scope
+        instruction
     ).prompt
     assert instruction in prompt
     for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):

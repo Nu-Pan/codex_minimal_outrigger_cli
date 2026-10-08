@@ -10,9 +10,13 @@ from typing import Any, NoReturn
 from oracle.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
+    DocumentSearchConfig,
     JsonTomlValue,
 )
-from oracle.other.document_search import DocumentSearchConfig
+from oracle.other.document_search import (
+    SEARCH_CANDIDATE_COUNT_MAX,
+    SEARCH_CANDIDATE_COUNT_MIN,
+)
 
 from config.cmoc_config import (
     CmocConfig,
@@ -89,10 +93,8 @@ class ConfigSyncResult:
     saved: bool
 
 
-def _document_search_config(value: Any) -> DocumentSearchConfig | None:
+def _document_search_config(value: Any) -> DocumentSearchConfig:
     """正本の tuning 型・値域・項目間制約を検証する。"""
-    if value is None:
-        return None
     if isinstance(value, DocumentSearchConfig):
         data = asdict(value)
     elif isinstance(value, dict):
@@ -102,7 +104,9 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
     names = {field.name for field in fields(DocumentSearchConfig)}
     unknown = sorted(data.keys() - names)
     if unknown:
-        raise SearchConfigIssue(f"document_search.{unknown[0]}", "未知の項目です")
+        raise SearchConfigIssue(
+            f"document_search.{unknown[0]}", "未知の項目です。手動で除去してください"
+        )
     missing = sorted(names - data.keys())
     if missing:
         raise SearchConfigIssue(
@@ -112,9 +116,7 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
         )
     for name in (
         "chunk_tokens",
-        "candidate_count",
         "embedding_context_tokens",
-        "reranker_context_tokens",
         "batch_tokens",
         "threads",
     ):
@@ -122,6 +124,16 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
             raise SearchConfigIssue(
                 f"document_search.{name}", "正の JSON 整数が必要です"
             )
+    if (
+        type(data["candidate_count"]) is not int
+        or not SEARCH_CANDIDATE_COUNT_MIN
+        <= data["candidate_count"]
+        <= SEARCH_CANDIDATE_COUNT_MAX
+    ):
+        raise SearchConfigIssue(
+            "document_search.candidate_count",
+            f"{SEARCH_CANDIDATE_COUNT_MIN}〜{SEARCH_CANDIDATE_COUNT_MAX} の JSON 整数へ手動で修正してください",
+        )
     overlap = data["chunk_overlap_tokens"]
     if type(overlap) is not int or overlap < 0:
         raise SearchConfigIssue(
@@ -136,6 +148,10 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
         "startup_timeout_seconds",
         "request_timeout_seconds",
         "shutdown_grace_seconds",
+        "resource_wait_timeout_seconds",
+        "sync_no_progress_timeout_seconds",
+        "post_sync_search_timeout_seconds",
+        "search_request_timeout_seconds",
     ):
         number = data[name]
         try:
@@ -146,12 +162,11 @@ def _document_search_config(value: Any) -> DocumentSearchConfig | None:
             raise SearchConfigIssue(
                 f"document_search.{name}", "有限の正の JSON 数値が必要です"
             )
-    for name in ("embedding_context_tokens", "reranker_context_tokens"):
-        if data["chunk_tokens"] >= data[name]:
-            raise SearchConfigIssue(
-                f"document_search.chunk_tokens, document_search.{name}",
-                f"chunk_tokens={data['chunk_tokens']} は {name}={data[name]} より小さくしてください",
-            )
+    if data["chunk_tokens"] >= data["embedding_context_tokens"]:
+        raise SearchConfigIssue(
+            "document_search.chunk_tokens, document_search.embedding_context_tokens",
+            f"chunk_tokens={data['chunk_tokens']} は embedding_context_tokens={data['embedding_context_tokens']} より小さくしてください",
+        )
     return DocumentSearchConfig(**data)
 
 
@@ -181,8 +196,6 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         }
 
     search_config = _document_search_config(config.document_search)
-    if search_config is None:
-        raise TypeError("document_search must be configured")
     return {
         "num_parallel": _config_int(config.num_parallel),
         "codex": {
@@ -325,8 +338,6 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         search_config = _document_search_config(
             data.get("document_search", default.document_search)
         )
-        if search_config is None:
-            raise SearchConfigIssue("document_search", "object が必要です")
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
             document_search=search_config,
@@ -447,18 +458,16 @@ def _read_config_data(path: Path) -> dict[str, Any]:
 
 def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchConfig:
     """保存された検索設定を既定値の注入なしで検証する。"""
-    value = data.get("document_search")
-    if value is None:
+    if "document_search" not in data:
         raise _search_config_failure(
             path,
             SearchConfigIssue("document_search", "検索設定がありません"),
             missing=True,
         )
     try:
-        config = _document_search_config(value)
+        config = _document_search_config(data["document_search"])
     except SearchConfigIssue as exc:
         raise _search_config_failure(path, exc, missing=exc.missing) from exc
-    assert config is not None
     return config
 
 
@@ -530,7 +539,7 @@ def sync_config(
 
     data = _read_config_data(path)
     search = data.get("document_search")
-    if search is None:
+    if "document_search" not in data:
         additions = defaults
         search = defaults
     elif isinstance(search, dict):

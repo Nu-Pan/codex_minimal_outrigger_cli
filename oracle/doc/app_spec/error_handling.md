@@ -47,7 +47,7 @@ primary report 自体を保存できない場合は、元の失敗結果に代�
 
 ## エラーとして扱わない結果
 
-個別仕様が正常な処理結果として定義する状態は、internal failure として扱わない。これには、`attention`、`incomplete`、および `completed_with_unresolved` を含む。
+個別仕様が正常な処理結果として定義する状態は、internal failure として扱わない。これには、`attention` および `incomplete` を含む。
 
 中断可能サブコマンドのユーザー中断要求は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」に従って正常系として扱う。ユーザー中断要求では、stdout と stderr のどちらにもスタックトレースまたはコールスタックを表示しない。
 

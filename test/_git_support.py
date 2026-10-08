@@ -1,6 +1,11 @@
 import subprocess
 from pathlib import Path
 
+SESSION_ID = "sess_000000_2026-09-29_15-04"
+RUN_ID = "run_000000_2026-09-29_15-04"
+SESSION_BRANCH = f"cmoc/session/{SESSION_ID}"
+RUN_BRANCH = f"cmoc/run/{SESSION_ID}/{RUN_ID}"
+
 
 def run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     """テスト repository で git command を実行し、command error なら失敗させる。"""

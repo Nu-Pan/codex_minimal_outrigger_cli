@@ -1,7 +1,7 @@
 """Feedback publication 後の cleanup と明示 join/abandon の境界を扱う。
 
 根拠: {{work-root}}/oracle/doc/app_spec/feedback_state.md の
-「正常 report の atomic publication」と「run lifecycle との整合」。
+「最新状態の atomic publication」と「run lifecycle との整合」。
 """
 
 from pathlib import Path
@@ -14,7 +14,6 @@ from cmoc_runtime import (
     head_commit,
     load_state_for_branch,
     require_clean_worktree,
-    run_git,
     write_state,
 )
 from commons.runtime_feedback_run_state import new_run_identity, read_run_artifact
@@ -218,32 +217,6 @@ def _finish_from_journal(
         # 直前に同じ lifecycle lock 内でも確認する。
         context = _journal_context(repo, journal)
         try:
-            require_clean_worktree(context.session_worktree)
-            if head_commit(context.session_worktree) != completion["session_commit"]:
-                raise _failure(
-                    "feedback finalization の session tree が変更されています。"
-                )
-            from .decision import state_hash, worktree_inputs
-
-            if state_hash(worktree_inputs(context.session_worktree)) != completion.get(
-                "final_decision_inputs_sha256",
-                completion.get("decision_inputs_sha256"),
-            ):
-                raise _failure("feedback finalization の判定条件が変更されています。")
-            if (
-                run_git(
-                    [
-                        "merge-base",
-                        "--is-ancestor",
-                        completion["run_head"],
-                        context.session_branch,
-                    ],
-                    repo,
-                    check=False,
-                ).returncode
-                != 0
-            ):
-                raise _failure("feedback finalization の run commit が到達不能です。")
             if load_active_state(repo).current != journal["current"]:
                 raise _failure(
                     "feedback finalization 中に current pointer が変更されました。"
@@ -255,7 +228,7 @@ def _finish_from_journal(
                         "feedback finalization の run tree が変更されています。"
                     )
             state = validate_feedback_state(repo)
-            if journal["result"] != "incomplete" and (
+            if (
                 state.current is None
                 or state.current["report_cut_id"] != journal["report_cut_id"]
                 or state.current["report_path"] != report_reference["path"]
@@ -272,17 +245,7 @@ def _finish_from_journal(
                     raise _failure(
                         "feedback finalization の cleanup 対象が一致しません。"
                     )
-                if journal["result"] == "incomplete":
-                    if (
-                        manifest["processing"]["status"] != "incomplete"
-                        or manifest["diagnostic"]["report"] != report_reference
-                    ):
-                        raise _failure(
-                            "feedback incomplete report の確定状態が不正です。"
-                        )
-                    discard_report_cut(repo, manifest, manifest_path)
-                else:
-                    cleanup_published_report(repo)
+                cleanup_published_report(repo)
             # work artifact の cleanup が完了してから state と隔離資源を回収する。
             _, _, session = load_state_for_branch(repo, context.session_branch)
             session.run = RunPart()
@@ -316,6 +279,18 @@ def _finish_from_journal(
         cleanup="completed",
         run_join_commit=journal["merged"]["run_join_commit"],
     )
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "feedback_finalization_completed",
+            feedback_run_id=journal["feedback_run_id"],
+            report_cut_id=journal["report_cut_id"],
+            report_execution_id=journal["report_execution_id"],
+            report_path=str(report_path),
+            state_after="ready",
+            cleanup="completed",
+            result=journal["result"],
+        )
     return TerminalResult(
         primary_report=report_path,
         primary_report_role="incomplete feedback diagnostic report"

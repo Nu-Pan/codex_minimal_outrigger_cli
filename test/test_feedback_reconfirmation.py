@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from _git_support import RUN_BRANCH, SESSION_BRANCH, SESSION_ID
 from test_feedback import _context, _fake_result, _payload, _remediation_output
 
 from cmoc_runtime import CmocError
@@ -49,18 +50,20 @@ def feedback_run(tmp_path, monkeypatch):
     context = EditingRunContext(
         repo,
         session,
-        "session",
+        SESSION_ID,
         repo / "state.json",
-        "cmoc/session/session",
+        SESSION_BRANCH,
         "a" * 40,
         "feedback_report",
-        "cmoc/run/session/run",
+        RUN_BRANCH,
         "a" * 40,
         worktree,
     )
     state = load_active_state(repo)
     manifest = remediation._new_manifest(context, state)
-    manifest["run"]["invocation_log"] = ".cmoc/gu/log/sub_command/invocation.jsonl"
+    manifest["run"]["invocation_log"] = (
+        ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
+    )
     invocation_log = repo / manifest["run"]["invocation_log"]
     invocation_log.parent.mkdir(parents=True)
     invocation_log.write_text("")
@@ -444,7 +447,9 @@ def test_repeated_repair_cycle_stops_or_accepts_a_new_repair(
     ] + ([] if diagnostic else [second])
     result = _join_and_publish(h, monkeypatch)
     assert result.result == ("incomplete" if diagnostic else "ok")
-    assert (load_active_state(h.context.repo).current is None) == diagnostic
+    state = load_active_state(h.context.repo)
+    assert state.current is not None
+    assert (first in state.issues) == diagnostic
     if diagnostic:
         assert "non-converging cycle" in result.primary_report.read_text()
         assert "fixed_issue_count: 1" in result.primary_report.read_text()
@@ -562,8 +567,11 @@ def test_verified_merge_adjustment_keeps_sealed_result_without_run_tree_equality
         remediation._complete_join(h.context, h.manifest)
 
 
-def test_recovery_uses_saved_merge_verification_after_commit(feedback_run, monkeypatch):
-    """merge commit 後の停止では同じ封印入力の call log を再利用する。"""
+@pytest.mark.parametrize("log_layout", ["current", "flat", "other_execution"])
+def test_recovery_uses_saved_merge_verification_after_commit(
+    feedback_run, monkeypatch, log_layout
+):
+    """merge commit 後は封印済み実行の directory 内の call log だけを再利用する。"""
     h = feedback_run
     identity = _add_candidate(h, "a")
     h.handler = lambda _issue: _remediation_output(identity, "already_resolved")
@@ -581,10 +589,15 @@ def test_recovery_uses_saved_merge_verification_after_commit(feedback_run, monke
         lambda *_args, **_kwargs: parameter,
     )
     log_dir = h.context.repo / ".cmoc/gu/log/codex"
+    if log_layout == "current":
+        log_dir /= h.manifest["run"]["targets"]["execution_id"]
+    elif log_layout == "other_execution":
+        log_dir /= "exec_zzzzzz_2026-09-29_15-04"
     log_dir.mkdir(parents=True)
-    call_path = log_dir / "join_call.json"
-    prompt_path = log_dir / "join_prompt.md"
-    output_path = log_dir / "join_output.json"
+    call_id = "cc_000000_2026-09-29_15-04"
+    call_path = log_dir / f"{call_id}_call.json"
+    prompt_path = log_dir / f"{call_id}_prompt.md"
+    output_path = log_dir / f"{call_id}_output.json"
     prompt_path.write_text(parameter.prompt)
     output_path.write_text(
         "merge_resolution: resolved\n採用結果を維持する調整と検証を実施。\n"
@@ -636,6 +649,12 @@ def test_recovery_uses_saved_merge_verification_after_commit(feedback_run, monke
     monkeypatch.setattr(remediation.decision, "state_hash", lambda _files: "changed")
     monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
     monkeypatch.setattr(remediation, "_complete_join", lambda *_args: None)
+
+    if log_layout != "current":
+        with pytest.raises(CmocError, match="検証を一意に確認"):
+            remediation._recover_join(h.context, h.manifest)
+        assert h.manifest["run"]["merged"] is None
+        return
 
     remediation._recover_join(h.context, h.manifest)
     merged = read_json_object(h.context.repo / h.manifest["run"]["merged"]["path"])

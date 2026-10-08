@@ -65,6 +65,12 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "oracle/doc/app_spec/download_asset_cache.md": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "oracle/doc/app_spec/editor_input_handoff.md": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -144,6 +150,12 @@
     "last_investigated_at": null
   },
   "oracle/doc/app_spec/sub_command/editing_run.md": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/doc/app_spec/sub_command/feedback_close.md": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -366,18 +378,6 @@
     "last_investigated_at": null
   },
   "oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -665,12 +665,6 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "src/acp/builder/realization/refactor/fork/change_summary.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
   "src/acp/builder/realization/refactor/fork/file_review_and_fix.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -845,13 +839,19 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "src/commons/runtime_document_search_assets.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_document_search_mcp.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "src/commons/runtime_document_search_scope.py": {
+  "src/commons/runtime_document_search_observation.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -863,7 +863,19 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "src/commons/runtime_document_search_types.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_document_search_worker.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_download_asset_cache.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -905,7 +917,31 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "src/commons/runtime_feedback_close_state.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_feedback_history.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_feedback_intake.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_feedback_protocol.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_feedback_render.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -1062,6 +1098,12 @@
     "last_investigated_at": null
   },
   "src/sub_commands/feedback/__init__.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/sub_commands/feedback/close.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -1343,7 +1385,25 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "test/test_document_search_deadlines.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "test/test_document_search_materials.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_document_search_reuse.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_download_asset_cache.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -1373,6 +1433,12 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "test/test_feedback_close.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "test/test_feedback_decision.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -1386,6 +1452,12 @@
     "last_investigated_at": null
   },
   "test/test_file_inventory.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_git_query_reuse.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,

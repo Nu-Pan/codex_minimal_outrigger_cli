@@ -1,9 +1,11 @@
-"""cmoc の root・保存先解決、時刻整形、cwd 切替を提供する。"""
+"""cmoc の root・保存先解決、配置先補完、時刻整形、cwd 切替を提供する。"""
 
 import os
+import stat
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
@@ -12,6 +14,21 @@ from basic.path_model import RootPathPlaceHolder, resolve_real_path
 from .runtime_errors import CmocError
 
 _CMOC_PROCESS_CWD_LOCK = threading.RLock()
+_RootQueryKey = tuple[RootPathPlaceHolder, Path, tuple[tuple[str, str], ...]]
+_ROOT_QUERIES: ContextVar[dict[_RootQueryKey, Path] | None] = ContextVar(
+    "cmoc_root_queries", default=None
+)
+
+
+@contextmanager
+def reuse_root_queries() -> Iterator[None]:
+    """repository 構成を変えない処理内で、成功した root 解決を再利用する。"""
+    # 呼び出し間や並行する別 context に root の探索結果を持ち越さない。
+    token = _ROOT_QUERIES.set({})
+    try:
+        yield
+    finally:
+        _ROOT_QUERIES.reset(token)
 
 
 def repo_root(root_anchor: Path | None = None) -> Path:
@@ -49,13 +66,11 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
         placeholder が示す絶対 root path。
     """
     with _CMOC_PROCESS_CWD_LOCK:
-        if root_anchor is None:
-            return resolve_real_path(placeholder)
         # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
         # root 探索の起点は file または directory なので、process の cwd と区別する。
         # relative path の解決から root resolver の完了まで process-global cwd を
         # 固定し、別 thread の pushd と起点 path が混線しないようにする。
-        resolved_root_anchor = root_anchor.resolve()
+        resolved_root_anchor = (root_anchor or Path.cwd()).resolve()
         start_dir = (
             resolved_root_anchor
             if resolved_root_anchor.is_dir()
@@ -67,11 +82,19 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
             if parent == start_dir:
                 break
             start_dir = parent
+        # doctor 内でも起点や環境の異なる探索は共有せず、失敗は記憶しない。
+        queries = _ROOT_QUERIES.get()
+        key = (placeholder, start_dir, tuple(sorted(os.environ.items())))
+        if queries is not None and key in queries:
+            return queries[key]
         # {{work-root}}/oracle/src/oracle/other/path_model.py
         # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
         # runtime 契約は一時的な cwd 切替で公開 API へ寄せる。
         with pushd(start_dir):
-            return resolve_real_path(placeholder)
+            resolved = resolve_real_path(placeholder)
+        if queries is not None:
+            queries[key] = resolved
+        return resolved
 
 
 def timestamp() -> str:
@@ -182,6 +205,33 @@ def _tracked_data_dir(root: Path) -> Path:
     """git 追跡する cmoc 管理 directory を返す。"""
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     return root / ".cmoc" / "gt"
+
+
+def ensure_work_directories(root: Path, *, create_missing: bool = True) -> None:
+    """処理対象 work-root の固定配置先を補完・検証する。
+
+    Args:
+        root: 配置先を使用する worktree の root。
+        create_missing: 不足を補完するか。False は修復後の状態の検証に使う。
+    """
+    # {{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md の
+    # 「作業用配置先の存在保証」
+    for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
+        path = root / relative
+        try:
+            if create_missing:
+                path.mkdir(parents=True, exist_ok=True)
+            if not stat.S_ISDIR(path.stat().st_mode):
+                raise NotADirectoryError(f"not a directory: {path}")
+        except OSError as exc:
+            raise CmocError(
+                "作業用配置先を準備・検証できません。",
+                [
+                    f"配置先 ({path}) と親ディレクトリを確認し、衝突するファイルの退避"
+                    "またはディレクトリの作成・参照権限の修正後に再実行してください。"
+                ],
+                f"work-root: {root}\npath: {path}\nreason: {exc}",
+            ) from exc
 
 
 @contextmanager

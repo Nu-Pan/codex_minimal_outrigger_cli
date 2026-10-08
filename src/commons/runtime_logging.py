@@ -1,5 +1,6 @@
 """サブコマンド単位の実行イベントと計測値を記録・集約する。"""
 
+import fcntl
 import json
 import sys
 import threading
@@ -17,6 +18,18 @@ _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
     "CURRENT_SUBCOMMAND_LOGGER",
     default=None,
 )
+
+
+def append_log_record(path: Path, record: dict[str, Any]) -> None:
+    """親と MCP process の JSON Lines 追記を調停して即時 flush する。"""
+    # process 間でも一つの record を分断せず、既存ログだけへ追記する。
+    with path.open("a", encoding="utf-8") as stream:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+        try:
+            stream.write(json.dumps(record, ensure_ascii=True) + "\n")
+            stream.flush()
+        finally:
+            fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 @dataclass
@@ -38,7 +51,6 @@ class SubcommandLogger:
         self.root = root
         self.command = command
         self.execution_id = new_id(root, "exec")
-        self.invocation_id = self.execution_id
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
         self.transient_wait_sec = 0.0
@@ -98,12 +110,7 @@ class SubcommandLogger:
     def _append_event_record(self, record: dict[str, Any]) -> None:
         """event record を即時 flush し、同じ順序で in-memory snapshot へ保存する。"""
         with self._lock:
-            with self.path.open("a", encoding="utf-8") as f:
-                # 例外メッセージや path には Unicode surrogate が含まれ得る。
-                # internal failure の traceback を必ずログへ残せるよう、JSON の
-                # escape 表現で UTF-8 へ安全に保存する。
-                f.write(json.dumps(record, ensure_ascii=True) + "\n")
-                f.flush()
+            append_log_record(self.path, record)
             self._event_records.append(record.copy())
 
     def _record_detector_failure(self, error: Exception) -> None:
@@ -117,9 +124,7 @@ class SubcommandLogger:
         }
         try:
             with self._lock:
-                with self.path.open("a", encoding="utf-8") as log_file:
-                    log_file.write(json.dumps(record, ensure_ascii=True) + "\n")
-                    log_file.flush()
+                append_log_record(self.path, record)
         except Exception:
             pass
         self.record_warning("feedback detector failed")

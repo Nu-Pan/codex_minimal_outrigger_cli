@@ -27,8 +27,6 @@ from cmoc_runtime import (
 from commons.runtime_ids import new_id
 from commons.runtime_primary_report import update_primary_report_fields
 
-MAX_SESSION_ID_ATTEMPTS = 32
-
 
 def cmoc_session_fork_impl() -> None:
     """CLI runtime を通して session fork を実行する。"""
@@ -182,19 +180,14 @@ def _cmoc_session_fork_body() -> TerminalResult:
 
 
 def _new_session_id(root: Path) -> str:
-    """既存stateとbranchに衝突しないsession idを生成する。"""
-    # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-    # 根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
-    # state file が残った joined/abandoned session との衝突も session-id 衝突として扱う。
-    for _ in range(MAX_SESSION_ID_ATTEMPTS):
-        session_id = new_id(root, "sess")
-        if (
-            not branch_exists(root, f"cmoc/session/{session_id}")
-            and not state_path(root, session_id).exists()
-        ):
-            return session_id
-    raise CmocError(
-        "一意な session-id を生成できませんでした。",
-        ["時間を置いてから `cmoc session fork` を再実行してください。"],
-        f"attempts: {MAX_SESSION_ID_ATTEMPTS}",
-    )
+    """session ID を発行し、保存先の既存資源を保護する。"""
+    # 共通採番で一意性を確定する。発行した ID の保存先が占有されていれば停止する。
+    session_id = new_id(root, "sess")
+    path = state_path(root, session_id)
+    if branch_exists(root, f"cmoc/session/{session_id}") or path.exists():
+        raise CmocError(
+            "発行した session ID の保存先が既に存在します。",
+            ["session branch と state file の対応を確認してください。"],
+            f"session_id: {session_id}\nstate_path: {path}",
+        )
+    return session_id

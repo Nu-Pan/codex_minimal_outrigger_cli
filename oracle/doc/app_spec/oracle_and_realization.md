@@ -21,7 +21,7 @@ oracle file の下位概念は、正本として所有する事項で区別す�
 | oracle file、realization file、および uncategorised file の役割・分類。本書と `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」を意味仕様の正本とする | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` の `build_oracle_and_realization_basic` |
 | 本書の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までと「oracle file を扱う判断基準」 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py` の `build_oracle_policy` |
 | realization file を扱う判断基準 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization.py` の `build_realization_policy` |
-| oracle file に対する realization file の適合性 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py` の `build_realization_findings_policy` |
+| oracle file に対する realization file の適合性の共通基準 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py` の `build_realization_findings_policy` |
 
 prompt literal に固有の役割、制限、および call 固有の実行時指示の優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt literal の役割と制限」以降を参照する。
 
@@ -82,11 +82,23 @@ realization file の下位概念は、次の責務で区別する。
 
 ## oracle file に対する realization file の適合性
 
-realization apply と realization refactor は、oracle file への適合を回復する追従作業であり、一般的な品質改善の列挙を目的としない。追従要否と所見は、次の基準で判断する。
+realization apply は oracle file の変更への追従を目的とし、一般的な品質改善の列挙を目的としない。realization refactor は、次の共通基準による適合性の維持・回復に加え、「realization refactor の改善判断」に従う改善を目的とする。共通の所見 policy を使用するだけで、他 workload の目的や作業範囲を拡張してはならない。
+
+仕様への不適合と致命的な問題は、次の基準で判断する。
 
 - oracle file の具体的な要求と realization file の具体的な挙動が明確に不整合な場合は、修正対象とする。
 - realization file だけから説明できる実行不能または明白な致命的バグは、修正対象とする。
 - 修正対象は、根拠となる oracle file と realization file、または致命的な実装箇所を特定できなければならない。
-- oracle file に記述がないこと、複数の妥当解、好み、推測、または一般的なベストプラクティスだけを根拠に修正対象を作らない。
+- oracle file に記述がないこと、複数の妥当解、好み、推測、または一般的なベストプラクティスだけを根拠に、不適合や致命的な問題と判断しない。
 - 調査開始時点ですでに解消されている問題を所見として扱わない。
 - 修正後も関連する oracle file の明示要求を満たし、realization file の既存挙動を正本仕様へ逆流させない。
+
+## realization refactor の改善判断
+
+realization refactor では、適合する実装にも、テストと実装のムダを減らしてテスト実行時間の短縮につなげる具体的な改善を認める。例えば、重複テスト、過剰な準備処理、不要な待機・process 起動、同じ責務の重複、旧仕様の実装などを調査する。所見には、対象箇所、不要・重複・過剰と判断した根拠、および改善がテストの負担を減らす理由を必要とする。
+
+仕様への適合、必要な回帰検出能力、可読性、および失敗時の挙動を維持する。テストの削除・統合では、維持すべき要求と検出する回帰を特定し、残る検証でその能力を保てること、または現行仕様ではその検証が不要であることを説明できなければならない。件数・行数の減少や、単に test が成功したことだけを根拠にしない。cmoc 自身の検証能力は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「goal」「non-goal」「テストの削除・統合」を参照する。
+
+根拠のある改善が見つからなければ変更なしを認める。好みや一般論による変更、無関係な機能の再設計、将来用の汎用化、数値目標のための検証能力低下は目的に含めない。期待する効果と実測した効果は区別し、計測の契約は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「改善の計測」に従う。
+
+この改善基準の agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。
