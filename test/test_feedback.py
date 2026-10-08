@@ -2312,28 +2312,6 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert (root / "README.md").read_text() == "changed after publication\n"
 
 
-def test_current_pointer_rejects_non_markdown_report_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """current pointer が Markdown 以外の report artifact を選べない。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-
-    pointer_path = feedback_root(root) / "active" / "current.json"
-    pointer = read_json_object(pointer_path)
-    current_report = root / str(pointer["report_path"])
-    invalid_report = current_report.with_suffix(".json")
-    invalid_report.write_bytes(current_report.read_bytes())
-    pointer["report_path"] = invalid_report.relative_to(root).as_posix()
-    pointer["report_sha256"] = hashlib.sha256(invalid_report.read_bytes()).hexdigest()
-    pointer_path.write_bytes(canonical_json_bytes(pointer))
-
-    with pytest.raises(CmocError, match="Markdown report path"):
-        load_active_state(root)
-
-
 @pytest.mark.parametrize("terminal_verdict", ["already_resolved", "not_actionable"])
 def test_agent_issue_is_verified_compacted_then_removed_for_terminal_verdict(
     tmp_path: Path,
@@ -2690,49 +2668,3 @@ def test_cleanup_corruption_is_a_required_recovery_failure(
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.cleanup_manifest is not None
-
-
-def test_active_generation_hash_mismatch_is_corruption(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """current pointer が列挙する active record の改変を無視して続行しない。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(candidate_id, "human_required")
-    )
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-    state = load_active_state(root)
-    assert state.generation_manifest is not None
-    [reference] = state.generation_manifest["issues"]
-    issue_path = root / reference["path"]
-    issue = read_json_object(issue_path)
-    issue["summary"] = "改変済み"
-    issue_path.write_bytes(canonical_json_bytes(issue))
-
-    with pytest.raises(CmocError, match="SHA256"):
-        load_active_state(root)
-
-
-def test_unlisted_active_generation_artifact_is_corruption(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """manifest が列挙しない active generation file を無視しない。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(candidate_id, "human_required")
-    )
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-    state = load_active_state(root)
-    assert state.current is not None
-    manifest_path = root / str(state.current["generation_manifest_path"])
-    unexpected = manifest_path.parent / "unexpected.json"
-    unexpected.write_text("{}\n")
-
-    with pytest.raises(CmocError, match="未定義 artifact"):
-        validate_feedback_state(root)

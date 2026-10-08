@@ -1,4 +1,4 @@
-"""feedback.md と feedback_state.md の根拠変更・再確認・封印の制御を検証する。
+"""feedback の根拠変更・再確認・封印と publication artifact の整合性を検証する。
 
 Git と Codex の境界だけを置き換え、wave、checkpoint、根拠検査には実装を使う。
 """
@@ -22,13 +22,16 @@ from commons.runtime_feedback_state import (
     _validate_report_cut_checkpoint,
     _validate_report_cut_manifest,
     artifact_reference,
+    cleanup_published_report,
     load_active_state,
     load_report_cut,
     recover_report_cut_checkpoint_references,
+    validate_feedback_state,
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
     canonical_json_bytes,
+    feedback_root,
     observation_path,
     read_json_object,
     rfc3339_now,
@@ -299,6 +302,23 @@ def _join_and_publish(harness, monkeypatch):
     remediation._record_merge(h.context, h.manifest, None)
     remediation._complete_join(h.context, h.manifest)
     return remediation._publish(h.context, h.manifest, h.path, h.state)
+
+
+@pytest.fixture
+def published_feedback(feedback_run, monkeypatch):
+    """実際の checkpoint・publication・cleanup から一件の active state を作る。"""
+    h = feedback_run
+    identity = _add_candidate(h, "a")
+    h.handler = lambda _issue: _remediation_output(identity, "human_required")
+    _run(h)
+    result = _join_and_publish(h, monkeypatch)
+    assert result.result == "attention"
+    root = h.context.repo
+    assert cleanup_published_report(root)
+    assert load_report_cut(root) is None
+    state = validate_feedback_state(root)
+    assert set(state.issues) == {identity}
+    return root, state
 
 
 @pytest.mark.parametrize(
@@ -673,15 +693,11 @@ def test_recovery_uses_saved_merge_verification_after_commit(
 
 
 def test_active_issue_materializes_basis_without_checkpoint_dependency(
-    feedback_run, monkeypatch
+    published_feedback,
 ):
-    h = feedback_run
-    identity = _add_candidate(h, "a")
-    h.handler = lambda _issue: _remediation_output(identity, "human_required")
-    _run(h)
-    result = _join_and_publish(h, monkeypatch)
-    assert result.result == "attention"
-    active = load_active_state(h.context.repo).issues[identity]
+    _, state = published_feedback
+    [identity] = state.issues
+    active = state.issues[identity]
     basis = active["verification"]["decision_basis"]
     assert basis["scope"] == "repository-inputs-v1"
     assert len(basis["state_sha256"]) == 64
@@ -695,3 +711,53 @@ def test_active_issue_materializes_basis_without_checkpoint_dependency(
         report._remediation_candidate_payload(candidate)["previous_verification"]
         == active["verification"]
     )
+
+
+def test_current_pointer_rejects_non_markdown_report_path(feedback_run, monkeypatch):
+    """current pointer が Markdown 以外の report artifact を選べない。"""
+    h = feedback_run
+    _run(h)
+    result = _join_and_publish(h, monkeypatch)
+    assert result.result == "ok"
+    root = h.context.repo
+    assert cleanup_published_report(root)
+    assert load_report_cut(root) is None
+    assert validate_feedback_state(root).issues == {}
+
+    pointer_path = feedback_root(root) / "active" / "current.json"
+    pointer = read_json_object(pointer_path)
+    current_report = root / str(pointer["report_path"])
+    invalid_report = current_report.with_suffix(".json")
+    invalid_report.write_bytes(current_report.read_bytes())
+    pointer["report_path"] = invalid_report.relative_to(root).as_posix()
+    pointer["report_sha256"] = sha256_bytes(invalid_report.read_bytes())
+    pointer_path.write_bytes(canonical_json_bytes(pointer))
+
+    with pytest.raises(CmocError, match="Markdown report path"):
+        load_active_state(root)
+
+
+def test_active_generation_hash_mismatch_is_corruption(published_feedback):
+    """current pointer が列挙する active record の改変を無視して続行しない。"""
+    root, state = published_feedback
+    assert state.generation_manifest is not None
+    [reference] = state.generation_manifest["issues"]
+    issue_path = root / reference["path"]
+    issue = read_json_object(issue_path)
+    issue["summary"] = "改変済み"
+    issue_path.write_bytes(canonical_json_bytes(issue))
+
+    with pytest.raises(CmocError, match="SHA256"):
+        load_active_state(root)
+
+
+def test_unlisted_active_generation_artifact_is_corruption(published_feedback):
+    """manifest が列挙しない active generation file を無視しない。"""
+    root, state = published_feedback
+    assert state.current is not None
+    manifest_path = root / str(state.current["generation_manifest_path"])
+    unexpected = manifest_path.parent / "unexpected.json"
+    unexpected.write_text("{}\n")
+
+    with pytest.raises(CmocError, match="未定義 artifact"):
+        validate_feedback_state(root)
