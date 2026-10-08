@@ -166,10 +166,8 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (nested / "dropped.nested").write_text("ignored by nested\n")
     run_git(nested, "add", ".gitignore")
 
-    expected = _full_glob_reference(root, (nested,))
     actual = _relative_sets(root, enumerate_oracle_and_realization_files(root))
 
-    assert actual == expected
     assert "ignored/tracked.txt" in actual[1]
     assert "ignored/untracked.txt" not in actual[1]
     assert "visible.txt" in actual[1]
@@ -180,7 +178,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert "oracle/notes.md" in actual[0]
 
     state = sync_refactor_state(root)
-    assert set(state) == expected[0] | expected[1]
+    assert set(state) == actual[0] | actual[1]
     for relative, entry in state.items():
         entry.update(
             {
@@ -197,20 +195,23 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     venv_bin = root / ".venv" / "bin"
     venv_bin.mkdir(parents=True)
     (venv_bin / "python").symlink_to(root / "missing-python")
-    expected_with_symlink = _full_glob_reference(root, (nested,))
 
-    assert _relative_sets(root, enumerate_oracle_and_realization_files(root)) == (
-        expected_with_symlink
+    # full glob の基準集合は、ignored symlink の追加前後で共有できる。
+    expected = _full_glob_reference(root, (nested,))
+    assert actual == expected
+    assert (
+        _relative_sets(root, enumerate_oracle_and_realization_files(root)) == expected
     )
     assert sync_refactor_state(root) == state
 
     (root / "README.md").write_text("changed\n")
     (root / "visible.txt").unlink()
     (root / "added.txt").write_text("added\n")
-    expected_after = _full_glob_reference(root, (nested,))
+    # ignore 規則と index は不変なので、基準集合へ既知の追加・削除だけ反映する。
+    expected_after = (expected[0] | expected[1] | {"added.txt"}) - {"visible.txt"}
     synchronized = sync_refactor_state(root)
 
-    assert set(synchronized) == expected_after[0] | expected_after[1]
+    assert set(synchronized) == expected_after
     assert "visible.txt" not in synchronized
     assert synchronized["added.txt"]["last_investigated_sha256"] is None
     assert synchronized["README.md"]["investigation_required"] is True
