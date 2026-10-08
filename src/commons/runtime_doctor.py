@@ -666,25 +666,26 @@ def _preexisting_runtime_paths(root: Path, index_path: Path) -> set[str]:
         str(config_path(root).relative_to(root)),
         str(refactor_state_path(root).relative_to(root)),
     ]
-    # path ごとの問い合わせをまとめ、rename の元も独立した差分として扱う。
-    staged = _run_git_with_index(
-        ["diff", "--cached", "--no-renames", "--name-only", "-z", "HEAD", "--", *paths],
+    # staged/unstaged を同時に調べ、退避 index の stat refresh は保存しない。
+    # rename の元は独立した削除として扱い、未追跡ファイルは列挙しない。
+    records = _run_git_with_index(
+        [
+            "--no-optional-locks",
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=no",
+            "--no-renames",
+            "--",
+            *paths,
+        ],
         root,
         index_path,
     ).stdout.split("\0")
-    unstaged = _run_git_with_index(
-        ["diff", "--no-renames", "--name-only", "-z", "--", *paths],
-        root,
-        index_path,
-    ).stdout.split("\0")
-    changed = set(paths).intersection(staged + unstaged)
-    if not changed:
-        return set()
-    # staged deletion と未追跡の内容は、元 index に保存すべき entry がない。
-    tracked = _run_git_with_index(
-        ["ls-files", "-z", "--", *sorted(changed)], root, index_path
-    ).stdout.split("\0")
-    return changed.intersection(tracked)
+    # 通常の staged deletion (D ) だけは entry がない。DD/DU は conflict entry を保つ。
+    return {
+        record[3:] for record in records if record[:2] != "D " and record[3:] in paths
+    }
 
 
 def _commit_doctor_repairs(
