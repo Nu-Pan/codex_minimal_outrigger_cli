@@ -1,5 +1,7 @@
 """CmocConfig の既定値・永続化・入力検証を検証する。
 
+設定 I/O は通常の directory で検証し、Git 追跡は test_doctor_cli.py で扱う。
+
 この file は 16,000 文字を超えるが、既定値、JSON 変換、merge、および入力拒否は
 同じ config schema と round-trip 契約を共有する。分割すると、設定 field ごとの
 受理条件と永続化結果が複数 file に分散するため、一つの config 回帰として保つ。
@@ -18,7 +20,6 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from _git_support import make_repo
 from oracle.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
@@ -101,7 +102,7 @@ def test_load_config_missing_points_to_doctor(
 
 def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
     """設定を config.json へ保存しても全 section の値を復元できる。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     config = config_from_dict(
         {
             "num_parallel": 3,
@@ -130,7 +131,7 @@ def test_saved_search_config_is_not_filled_by_deserialization_defaults(
     tmp_path: Path,
 ) -> None:
     """通常起動はメモリ内既定値で保存済み設定の不足を隠さない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     path.write_text('{"num_parallel": 3}\n')
@@ -149,7 +150,7 @@ def test_saved_search_config_is_not_filled_by_deserialization_defaults(
 
 def test_normal_startup_rejects_partial_saved_search_config(tmp_path: Path) -> None:
     """検索 object の一部だけがある場合も通常起動では補完しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"document_search": {"chunk_tokens": 256}}\n'
@@ -165,7 +166,7 @@ def test_normal_startup_rejects_partial_saved_search_config(tmp_path: Path) -> N
 
 def test_explicit_doctor_fills_only_missing_search_fields(tmp_path: Path) -> None:
     """人間が指定した値を保ち、不足項目だけを補完して再実行で書き換えない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     data = config_to_dict(CmocConfig())
@@ -198,7 +199,7 @@ def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitio
     tmp_path: Path,
 ) -> None:
     """通常起動と明示 doctor は既存の agent call 設定を暗黙補完しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     data = config_to_dict(CmocConfig())
@@ -251,7 +252,7 @@ def test_saved_search_config_rejects_invalid_explicit_values(
     tmp_path: Path, field: str, value: object
 ) -> None:
     """null・bool・値域外・項目間不整合を黙って既定値に置換しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     search = asdict(DocumentSearchConfig())
@@ -276,7 +277,7 @@ def test_saved_search_config_rejects_invalid_explicit_values(
 def test_explicit_doctor_adds_request_deadlines_without_replacing_validation_timeout(
     tmp_path: Path,
 ) -> None:
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     data = config_to_dict(CmocConfig())
@@ -306,7 +307,7 @@ def test_explicit_doctor_adds_request_deadlines_without_replacing_validation_tim
 
 def test_explicit_doctor_does_not_save_inconsistent_candidate(tmp_path: Path) -> None:
     """既存 context と暫定 chunk が衝突しても候補を保存しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"document_search": {"embedding_context_tokens": 256}}\n'
@@ -333,7 +334,7 @@ def test_explicit_doctor_does_not_save_inconsistent_candidate(tmp_path: Path) ->
 )
 def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
     """壊れた JSON または UTF-8 の config を利用者向けエラーへ変換する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     config_path.write_bytes(payload)
@@ -346,7 +347,7 @@ def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> 
 
 def test_load_config_rejects_excessively_nested_json(tmp_path: Path) -> None:
     """JSON parser の recursion error を利用者向け設定エラーへ変換する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     depth = sys.getrecursionlimit() * 20
@@ -360,7 +361,7 @@ def test_load_config_rejects_excessively_nested_json(tmp_path: Path) -> None:
 
 def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
     """config path が通常ファイルでない場合も読み込みエラーへ変換する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     (root / ".cmoc" / "gt" / "config.json").mkdir(parents=True)
 
     with pytest.raises(CmocError) as exc_info:
@@ -381,7 +382,7 @@ def test_config_rejects_non_object_top_level(data: object) -> None:
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_config_rejects_named_pipe_config_path(tmp_path: Path) -> None:
     """config path が named pipe の場合に read/write で block しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     os.mkfifo(config_path)
@@ -396,7 +397,7 @@ def test_config_rejects_symlinked_path_without_touching_link_target(
     tmp_path: Path,
 ) -> None:
     """tracked config の symlink 経由 read/write で link 先を扱わない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     outside = tmp_path / "outside-config.json"
     outside.write_text("original\n")
     config_path = root / ".cmoc" / "gt" / "config.json"
