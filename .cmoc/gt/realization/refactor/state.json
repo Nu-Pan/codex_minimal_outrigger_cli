@@ -91,9 +91,9 @@
   },
   "oracle/doc/app_spec/feedback_observation.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "abf31cc5eee1807c00725f85b2e74e532a63d7c7746cd5066fa8bd5c23314968",
+    "last_investigated_at": "2026-10-09_05-36-14_988"
   },
   "oracle/doc/app_spec/feedback_state.md": {
     "investigation_required": true,

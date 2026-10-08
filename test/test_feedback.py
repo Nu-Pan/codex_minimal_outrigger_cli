@@ -1047,10 +1047,12 @@ def test_collector_stop_wakes_blocked_listener(
 
 @pytest.mark.parametrize("shutdown_unavailable", [False, True])
 def test_collector_protocol_probe_does_not_report_expected_degradation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shutdown_unavailable: bool
+    feedback_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    shutdown_unavailable: bool,
 ) -> None:
     """transport probe と通常・shutdown 不可の停止で warning を追加しない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     if shutdown_unavailable:
@@ -1108,10 +1110,10 @@ def test_collector_records_rejected_submission_as_degraded_warning(
 
 
 def test_collector_records_unexpected_listener_failure_as_degraded_warning(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """停止処理以外の listener failure を黙って collector 終了にしない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
 
@@ -1138,10 +1140,10 @@ def test_collector_records_unexpected_listener_failure_as_degraded_warning(
 
 
 def test_collector_handles_response_timeout_failure_as_degraded_warning(
-    tmp_path: Path,
+    feedback_directory: Path,
 ) -> None:
     """response 送信時の timeout 設定失敗を worker 例外へ漏らさない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
 
@@ -1425,10 +1427,10 @@ def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
 
 
 def test_collector_limits_unauthenticated_request_read_time(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """改行前で停止した未認証接続を短い絶対 deadline で終了する。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     monkeypatch.setattr(feedback_module, "_COLLECTOR_IO_TIMEOUT_SECONDS", 0.05)
@@ -1477,10 +1479,10 @@ def test_collector_rejects_observation_without_current_head(
 
 
 def test_feedback_degradation_preserves_keyboard_interrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """collector の degraded fallback はユーザー中断を握り潰さない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
 
     def interrupt_start(_self: FeedbackInvocation) -> None:
