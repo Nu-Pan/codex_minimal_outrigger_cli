@@ -1047,7 +1047,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1153,7 +1153,7 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
         run_git(root, "commit", "-m", "add related implementation")
     moved = extra.with_name("moved.py")
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1231,7 +1231,7 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1303,7 +1303,7 @@ def test_session_join_handles_conflict_path_containing_newline(
     run_git(root, "add", "src/line\nbreak.txt")
     run_git(root, "commit", "-m", "add newline path")
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1347,7 +1347,7 @@ def test_session_join_reads_unmerged_paths_with_newlines(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Git index の path は NUL 区切りで読み、改行を保持する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
 
     def fake_git(args: list[str], _root: Path) -> cmoc_runtime.CommandResult:
         assert args == ["diff", "--name-only", "-z", "--diff-filter=U"]
@@ -1459,7 +1459,7 @@ def test_session_join_stages_delete_conflict_resolution(
     """Codexが解決した削除をstageしてsession joinできることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1657,7 +1657,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     root = make_repo(tmp_path)
     target = root / "README.md"
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1702,7 +1702,7 @@ def test_session_join_codex_failure_reports_unresolved_merge(
     root = make_repo(tmp_path)
     target = root / "README.md"
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
