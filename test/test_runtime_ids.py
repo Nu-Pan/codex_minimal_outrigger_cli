@@ -1,9 +1,11 @@
 """Repository 共通 ID の発行順と種類別採番を検証する。"""
 
 import os
+import sqlite3
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 
@@ -62,10 +64,31 @@ def test_sequence_survives_artifact_removal(tmp_path: Path) -> None:
     assert first.startswith("sess_000000_")
     assert second.startswith("sess_000001_")
     assert runtime_ids.is_common_id(second, "sess")
-    for _ in range(34):
-        last = runtime_ids.new_id(tmp_path, "sess")
-    assert last.startswith("sess_00000z_")
-    assert runtime_ids.new_id(tmp_path, "sess").startswith("sess_000010_")
+
+
+@pytest.mark.parametrize(
+    ("sequence", "before", "after"),
+    [(9, "000009", "00000a"), (35, "00000z", "000010")],
+)
+def test_sequence_crosses_base36_boundaries(
+    tmp_path: Path, sequence: int, before: str, after: str
+) -> None:
+    """数字から英字への遷移と桁上がりでも、固定幅と辞書順を保つ。"""
+    runtime_ids.new_id(tmp_path, "sess")
+    # 途中の通番を発行せず、永続状態を境界直前へ進める。
+    database = tmp_path / ".cmoc/gu/state/id_sequences.sqlite3"
+    with closing(sqlite3.connect(database)) as connection:
+        connection.execute(
+            "UPDATE sequence SET next_value = ? WHERE prefix = ?", (sequence, "sess")
+        )
+        connection.commit()
+
+    first = runtime_ids.new_id(tmp_path, "sess")
+    second = runtime_ids.new_id(tmp_path, "sess")
+
+    assert first.startswith(f"sess_{before}_")
+    assert second.startswith(f"sess_{after}_")
+    assert first < second
 
 
 def test_parallel_processes_share_one_sequence(tmp_path: Path) -> None:
