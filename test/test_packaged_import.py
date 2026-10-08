@@ -15,24 +15,23 @@ from _git_support import make_repo
 
 
 def _run_from_packaged_layout(
-    target: Path, code: str, tmp_path: Path
+    target: Path, code: str, tmp_path: Path, *, cmoc_process_cwd: Path
 ) -> subprocess.CompletedProcess[str]:
     """隔離した packaged layout で Python コードを実行する。
 
     `-S`、`-P`、および `PYTHONNOUSERSITE` で外部 site-packages と実行ディレクトリの
     影響を除き、
-    `PYTHONPATH` でコピーした tree だけを import 対象にする。実在する Git
-    repository を作業ルートにする。HOME も一時
+    `PYTHONPATH` でコピーした tree だけを import 対象にする。Git repository が
+    必要なケースだけ呼び出し側で用意する。HOME も一時
     ディレクトリ内へ向け、実行者の設定や認証情報を持ち込まない。
     根拠: {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
-    work = make_repo(tmp_path)
     home = tmp_path / "home"
     home.mkdir()
     return subprocess.run(
         [sys.executable, "-S", "-P", "-c", code],
-        cwd=work,
+        cwd=cmoc_process_cwd,
         env={
             **os.environ,
             "HOME": str(home),
@@ -96,6 +95,7 @@ def test_quota_probe_imports_from_packaged_layout(
             "assert '# routing policy' not in probe.prompt"
         ),
         tmp_path,
+        cmoc_process_cwd=make_repo(tmp_path),
     )
 
     assert result.returncode == 0, result.stderr
@@ -163,6 +163,7 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "assert p.agent_call_cwd == Path.cwd(); "
         ),
         tmp_path,
+        cmoc_process_cwd=make_repo(tmp_path),
     )
 
     assert result.returncode == 0, result.stderr
@@ -194,6 +195,7 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
             "assert FileAccessMode.READONLY.value == 'readonly'"
         ),
         tmp_path,
+        cmoc_process_cwd=tmp_path,
     )
 
     assert result.returncode == 0, result.stderr
@@ -222,6 +224,7 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),
         tmp_path,
+        cmoc_process_cwd=tmp_path,
     )
 
     assert result.returncode == 0, result.stderr

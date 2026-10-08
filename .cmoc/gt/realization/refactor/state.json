@@ -7,9 +7,9 @@
   },
   "LICENSE": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "a894f2547af0349f234986eb4661f0146f37b7d82f8b22a27a674d5c1236f08f",
+    "last_investigated_at": "2026-10-09_01-30-56_202"
   },
   "README.md": {
     "investigation_required": true,
