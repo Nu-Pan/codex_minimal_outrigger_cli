@@ -10,14 +10,13 @@
 
 ## 動的構築プロンプトの精査
 
-- `oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
-- `oracle/src/oracle/prompt_builder/policy/realization_findings.py`
-
-## 後方互換性を不要と明記する
-
-- https://x.com/sesere115/status/2106265918145978753
-- 少なくとも、今の cmoc については、正式リリースなんてしてないので、後方互換性が不要であるのはそのとおり。真面目に継続的メンテナンスなので、これは cmoc 動的構築プロンプトではなくて `AGENTS.md` に書くべきだろうか
-- いや、スキルかも
+- 対象
+    - `oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
+    - `oracle/src/oracle/prompt_builder/policy/realization_findings.py`
+- 所見
+    - まず、日本語が怪しい
+    - policy と動的構築プロンプトとで役割被ってない？
+    - 人間が読めなくて冗長なだけで、要件自体は満たせてそう
 
 ## ログの並び順が逆
 
