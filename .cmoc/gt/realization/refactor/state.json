@@ -37,9 +37,9 @@
   },
   "oracle/doc/app_spec/codex_exec_rule.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "3333993d63e208c456566c5d3aa93688f7f1cf00a1fd127c94e7e90545d22d69",
+    "last_investigated_at": "2026-10-09_03-11-02_049"
   },
   "oracle/doc/app_spec/codex_model_provider.md": {
     "investigation_required": true,

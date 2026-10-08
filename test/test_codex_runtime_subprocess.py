@@ -19,6 +19,14 @@ from commons.runtime_codex_profile import (
 from commons.runtime_errors import CmocError
 
 
+def _cancel_when_process_is_ready(pid_path, cancellation):
+    """PID の書込み完了で中断し、テスト終了時には監視も止める。"""
+    while not cancellation.wait(0.01):
+        if pid_path.exists() and pid_path.read_text():
+            cancellation.set()
+            return
+
+
 @pytest.mark.parametrize("tracked", [False, True])
 @pytest.mark.parametrize("interrupted", [False, True])
 def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interrupted):
@@ -30,20 +38,29 @@ def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interru
         sys.executable,
         "-c",
         "import os, pathlib, sys, time; "
+        "sys.stdin.read(); "
         "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
         "print('partial output', flush=True); time.sleep(30)",
         str(pid_path),
     ]
     cancellation = threading.Event() if interrupted else None
-    timer = threading.Timer(0.3, cancellation.set) if cancellation is not None else None
-    if timer is not None:
-        timer.start()
+    cancel_thread = (
+        threading.Thread(
+            target=_cancel_when_process_is_ready, args=(pid_path, cancellation)
+        )
+        if cancellation is not None
+        else None
+    )
+    if cancel_thread is not None:
+        cancel_thread.start()
     try:
         expected = KeyboardInterrupt if interrupted else subprocess.TimeoutExpired
         with pytest.raises(expected):
             options = dict(
                 text=True,
                 capture_output=True,
+                # communicate の開始後に子 process が準備完了を通知する。
+                input="start",
                 timeout=2 if interrupted else 0.3,
                 cancellation=cancellation,
             )
@@ -52,9 +69,10 @@ def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interru
             else:
                 run_codex_subprocess(argv, **options)
     finally:
-        if timer is not None:
-            timer.cancel()
-            timer.join()
+        if cancel_thread is not None:
+            cancellation.set()
+            cancel_thread.join(timeout=5)
+            assert not cancel_thread.is_alive()
     process_id = int(pid_path.read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(process_id, 0)
@@ -87,15 +105,9 @@ def test_interruption_stops_tool_in_another_session(tmp_path, tracked):
         str(tmp_path / "late.txt"),
     ]
     cancellation = threading.Event()
-
-    def cancel_when_ready():
-        for _ in range(300):
-            if writer_pid.exists():
-                cancellation.set()
-                return
-            threading.Event().wait(0.01)
-
-    cancel_thread = threading.Thread(target=cancel_when_ready)
+    cancel_thread = threading.Thread(
+        target=_cancel_when_process_is_ready, args=(writer_pid, cancellation)
+    )
     cancel_thread.start()
     try:
         with pytest.raises(KeyboardInterrupt):
@@ -107,6 +119,7 @@ def test_interruption_stops_tool_in_another_session(tmp_path, tracked):
             else:
                 run_codex_subprocess(argv, **options)
     finally:
+        cancellation.set()
         cancel_thread.join(timeout=5)
     assert not cancel_thread.is_alive()
     assert not runtime_codex_profile.process_group_has_running_member(
