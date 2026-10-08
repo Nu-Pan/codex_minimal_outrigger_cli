@@ -127,8 +127,7 @@ def test_session_fork_creates_session_branch_and_state(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
-    doctor_result = run_doctor(root)
-    assert doctor_result.exit_code == 0
+    seed_search_config(root)
 
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
 
@@ -291,7 +290,7 @@ def test_session_fork_rollback_does_not_guess_remote_home_branch(
     """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     home_branch = current_branch(root)
     home_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     remote = tmp_path / "remote.git"
@@ -530,7 +529,7 @@ def test_session_abandon_switches_home_and_marks_state(
     """session abandonがhome branchへ戻りstateをabandonedにすることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -640,7 +639,7 @@ def test_session_abandon_requires_existing_home_branch(
     """home branchが存在しないsession abandonを拒否することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -691,7 +690,7 @@ def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
     """未joinのrunがある場合に先行するcleanup操作を案内する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -720,7 +719,7 @@ def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
     """dirty worktree拒否でも既知のsession report fieldを保持する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -750,7 +749,7 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -831,7 +830,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     """cleanup失敗時にsession branchとactive stateを復元することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -886,7 +885,7 @@ def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_eff
     """branch削除後の中断でも元のsession branchとstateを復元する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -920,7 +919,7 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
     """rollback中に消えたlocal session branchをremoteから推測しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1015,7 +1014,7 @@ def test_session_completion_rejects_missing_state_fields(
     """session completionが必須state field欠落を拒否することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1120,7 +1119,7 @@ def test_session_join_preserves_repository_local_feedback_state(
     """session join が repository-local feedback state を merge や rollback しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     fork = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert fork.exit_code == 0, fork.output
     relative = ".cmoc/gu/feedback/normalization_checkpoint/sentinel.json"
@@ -1501,7 +1500,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     """session branch削除失敗をwarningとしてjoin成功に含めることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1538,7 +1537,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
     """local session branchのreachability確認失敗時に削除しないことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1584,7 +1583,7 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
     """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1630,7 +1629,7 @@ def test_session_join_handled_failure_is_written_to_stderr(
     """事前条件 error terminal result を stderr へ出力する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
