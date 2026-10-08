@@ -310,9 +310,7 @@ def scan_documents(
     return documents
 
 
-def search_identity(
-    root: Path, config: DocumentSearchConfig, *, index_format: int | None = None
-) -> str:
+def search_identity(root: Path, config: DocumentSearchConfig) -> str:
     """worktree 実体、分類と推論条件を索引 identity に含める。"""
     device, inode = _root_identity(root)
     worker_files = resources.files("commons.document_search_worker")
@@ -330,7 +328,7 @@ def search_identity(
         ).hexdigest(),
         "query_template": EMBEDDING_QUERY_TEMPLATE,
         "config": inference_config(config),
-        "format": _INDEX_FORMAT if index_format is None else index_format,
+        "format": _INDEX_FORMAT,
     }
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
@@ -455,29 +453,6 @@ class _EmbeddingCache:
             if self.get(digest) is not None:
                 hashes.add(digest)
         return hashes
-
-    def import_legacy_index(
-        self, index: Path, producer: str, check: Callable[[], None]
-    ) -> None:
-        # 旧版の互換 identity が示す保存結果だけを読み、元の索引を同期しない。
-        if not index.exists() and not index.is_symlink():
-            return
-        _safe_directory(index.parent)
-        if index.is_symlink() or not index.is_file():
-            raise SearchError("SYNC_FAILED", "reuse source index is not regular")
-        connection = sqlite3.connect(index.as_uri() + "?mode=ro", uri=True, timeout=0)
-        try:
-            for digest, embedding in connection.execute(
-                "select excerpt_sha256, embedding from embedding_cache"
-            ):
-                check()
-                try:
-                    vector = _checked_cached_vector(embedding)
-                except SearchError:
-                    continue
-                self.save(digest, vector, producer)
-        finally:
-            connection.close()
 
 
 def _open_database(path: Path) -> sqlite3.Connection:
@@ -609,7 +584,8 @@ class DocumentSearch:
         """work-root と検索設定を接続に結び付ける。"""
         self.root = root.absolute()
         try:
-            self.config = _document_search_config(config)
+            # None は接続の未準備を表す。保存済み設定の null は load_config が拒否する。
+            self.config = None if config is None else _document_search_config(config)
         except (TypeError, ValueError) as exc:
             raise SearchError("NOT_READY", "document search tuning is invalid") from exc
         self.installation_root = installation_root or cmoc_root()
@@ -1296,7 +1272,6 @@ class DocumentSearch:
                 connection: sqlite3.Connection | None = None
                 try:
                     # 同じ互換条件の不足判定・生成・保存を repository 内で直列化する。
-                    # 元の索引 lock は取らず、旧版 DB の確定済み snapshot だけを読む。
                     with _file_lock(
                         cache_base / f"{condition}.lock",
                         deadline,
@@ -1305,18 +1280,6 @@ class DocumentSearch:
                     ):
                         cache = _EmbeddingCache(cache_base / f"{condition}.sqlite3")
                         try:
-                            for source_root in dict.fromkeys((self.root, repository)):
-                                legacy_identity = search_identity(
-                                    source_root, self.config, index_format=4
-                                )
-                                cache.import_legacy_index(
-                                    source_root
-                                    / ".cmoc/gu/document_search/indexes"
-                                    / legacy_identity
-                                    / "index.sqlite3",
-                                    _worktree_identity(source_root),
-                                    lambda: self._check(deadline),
-                                )
                             _reclaim_unused_indexes(
                                 index.parent.parent.parent,
                                 identity,

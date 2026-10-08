@@ -53,6 +53,7 @@ def test_public_cli_leaf_commands_match_oracle() -> None:
     assert _leaves(get_command(app)) == {
         ("doctor",),
         ("feedback", "report"),
+        ("feedback", "close"),
         ("oracle", "edit"),
         ("oracle", "investigation"),
         ("realization", "apply", "fork"),

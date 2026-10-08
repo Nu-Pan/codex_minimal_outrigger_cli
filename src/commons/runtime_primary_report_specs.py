@@ -168,6 +168,22 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         ),
         "run_abandon",
     ),
+    "feedback close": PrimaryReportSpec(
+        "feedback/invocation",
+        "feedback close invocation report",
+        "cmoc feedback close invocation summary",
+        (
+            "case_id",
+            "human_reason",
+            "publication_status",
+            "current_generation",
+            "latest_state_summary",
+            "remaining_cases",
+            "cleanup",
+            "next_operation",
+        ),
+        "summary",
+    ),
     "feedback report": PrimaryReportSpec(
         "feedback/invocation",
         "feedback invocation summary report",

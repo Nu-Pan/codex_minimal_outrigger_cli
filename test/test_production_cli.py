@@ -46,12 +46,28 @@ from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
 )
+from commons.runtime_feedback_history import history_artifact
 from commons.runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
-from commons.runtime_feedback_store import store_agent_observation
+from commons.runtime_feedback_state import (
+    generation_artifacts,
+    issue_id,
+    load_active_state,
+    new_generation_id,
+    new_report_cut_id,
+    publish_generation_artifacts,
+)
+from commons.runtime_feedback_store import (
+    rfc3339_now,
+    sha256_bytes,
+    store_agent_observation,
+    write_immutable_bytes,
+    write_immutable_json,
+)
+from commons.runtime_ids import new_id
 from config.cmoc_config import CmocConfig
 from main import app
 
@@ -73,6 +89,7 @@ pytestmark = [
 NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("doctor",),
     ("feedback", "report"),
+    ("feedback", "close"),
     ("oracle", "edit"),
     ("realization", "apply", "fork"),
     ("realization", "refactor", "fork"),
@@ -138,6 +155,109 @@ def _registered_leaf_commands(
             leaves.update(_registered_leaf_commands(child, (*prefix, name)))
         return leaves
     return {prefix}
+
+
+def _write_close_fixture(root: Path, decision_basis: dict[str, Any]) -> str:
+    """推論結果を固定せず、close に必要な確定済み state を決定論的入力として作る。"""
+    timestamp = rfc3339_now()
+    execution = new_id(root, "exec")
+    case = new_id(root, "fbc")
+    cut, generation = new_report_cut_id(), new_generation_id(root)
+    canonical = f"agent\0{new_id(root, 'fbo')}"
+    identity = issue_id(canonical)
+    reason = "外部環境の確認が必要である。"
+    issue = {
+        "schema_version": 1,
+        "issue_id": identity,
+        "case_id": case,
+        "origin": "agent_report",
+        "canonical_key": canonical,
+        "category": "configuration",
+        "summary": "外部設定の確認待ち",
+        "impact": "設定確認を完了できない。",
+        "occurrence_count": 1,
+        "affected_session_count": 0,
+        "session_digest": {"values": [], "saturated": False},
+        "first_observed_at": timestamp,
+        "last_observed_at": timestamp,
+        "representative_evidence": [],
+        "reference_targets": [
+            {"path": "README.md", "kind": "file", "location": "README.md:1"}
+        ],
+        "latest_fingerprints": [],
+        "verification": {
+            "report_cut_id": cut,
+            "verified_at": timestamp,
+            "status": "inconclusive",
+            "reason": reason,
+            "current_evidence": [],
+            "human_action": None,
+            "decision_basis": decision_basis,
+        },
+        "machine_state": None,
+    }
+    source = {"kind": "report", "id": cut, "execution_id": execution}
+    report = root / f".cmoc/gu/report/feedback/incomplete/{execution}.md"
+    log = root / f".cmoc/gu/log/sub_command/{execution}.jsonl"
+    log.write_text("{}\n")
+    history_path, content, reference = history_artifact(
+        root,
+        {
+            "schema_version": 1,
+            "generation_id": generation,
+            "source": source,
+            "created_at": timestamp,
+            "report": report.relative_to(root).as_posix(),
+            "log": log.relative_to(root).as_posix(),
+            "events": [
+                {
+                    "kind": "created",
+                    "case_id": case,
+                    "issue_id": identity,
+                    "before": None,
+                    "after": issue,
+                    "human_reason": None,
+                    "agent_result": {"status": "inconclusive", "reason": reason},
+                }
+            ],
+            "observations": [],
+        },
+    )
+    write_immutable_bytes(history_path, content)
+    manifest, artifacts, generation_reference = generation_artifacts(
+        root,
+        generation_id=generation,
+        report_cut_id=cut,
+        created_at=timestamp,
+        session_commit=run_git(root, "rev-parse", "HEAD").stdout.strip(),
+        issues={identity: issue},
+        machine_aggregates={},
+        source=source,
+        base_current=None,
+        input_boundary=0,
+        history=[reference],
+    )
+    publish_generation_artifacts(root, manifest, artifacts)
+    write_immutable_bytes(
+        report, f"# 確定済み fixture\n\n{case}: inconclusive\n".encode()
+    )
+    write_immutable_json(
+        root / ".cmoc/gu/feedback/active/current.json",
+        {
+            "schema_version": 1,
+            "generation_id": generation,
+            "generation_manifest_path": generation_reference["path"],
+            "generation_manifest_sha256": generation_reference["sha256"],
+            "report_cut_id": cut,
+            "report_cut_manifest_sha256": sha256_bytes(b"close fixture"),
+            "report_path": report.relative_to(root).as_posix(),
+            "report_sha256": sha256_bytes(report.read_bytes()),
+            "published_at": timestamp,
+            "result": "incomplete",
+        },
+    )
+    load_active_state(root)
+    return case
 
 
 def _real_path_config() -> CmocConfig:
@@ -867,6 +987,35 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     _state_path, feedback_state = _load_session_state(root, session_branch)
     assert feedback_state["run"]["state"] == "ready"
     assert run_git(root, "status", "--short").stdout.strip() == ""
+    # Close は agent を呼ばない。確定済み入力を別 repository に用意し、
+    # 本番 entrypoint の state 更新・report・終了 code を観測する。
+    close_root = make_repo(tmp_path / "close-scenario")
+    _run_without_codex_call(cmoc, close_root, environment, "doctor")
+    history = load_active_state(root).history
+    basis = next(
+        event["agent_result"]["decision_basis"]
+        for record in reversed(history)
+        for event in record["events"]
+        if event["agent_result"] is not None
+    )
+    case = _write_close_fixture(close_root, basis)
+    executed_commands.add(("feedback", "close"))
+    closed = _run_without_codex_call(
+        cmoc,
+        close_root,
+        environment,
+        "feedback",
+        "close",
+        case,
+        "--reason",
+        "外部設定を修正し、解決を確認した。",
+    )
+    state = load_active_state(close_root)
+    assert state.issues == {}
+    assert state.current is not None and state.current["result"] == "ok"
+    assert state.history[-1]["events"][0]["kind"] == "manual_close"
+    assert case in terminal_primary_report(closed.stdout).read_text()
+    assert "- result: `closed`" in closed.stdout
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # 2 workload と共通 join/abandon を本番 Codex 経路で観測する。
     for command, kind in [

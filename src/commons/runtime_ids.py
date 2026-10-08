@@ -10,9 +10,11 @@ from .runtime_paths import untracked_data_dir
 
 _ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 _LIMIT = 36**6
-_PREFIXES = frozenset({"exec", "sess", "run", "ac", "cc", "eit", "fbr", "fbg", "fbo"})
+_PREFIXES = frozenset(
+    {"exec", "sess", "run", "ac", "cc", "eit", "fbr", "fbg", "fbc", "fbo"}
+)
 _ID_PATTERN = re.compile(
-    r"(?P<prefix>exec|sess|run|ac|cc|eit|fbr|fbg|fbo)_"
+    r"(?P<prefix>exec|sess|run|ac|cc|eit|fbr|fbg|fbc|fbo)_"
     r"(?P<sequence>[0-9a-z]{6})_"
     r"(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})_"
     r"(?P<time>[0-9]{2}-[0-9]{2})"

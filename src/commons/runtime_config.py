@@ -93,10 +93,8 @@ class ConfigSyncResult:
     saved: bool
 
 
-def _document_search_config(value: Any) -> DocumentSearchConfig | None:
+def _document_search_config(value: Any) -> DocumentSearchConfig:
     """正本の tuning 型・値域・項目間制約を検証する。"""
-    if value is None:
-        return None
     if isinstance(value, DocumentSearchConfig):
         data = asdict(value)
     elif isinstance(value, dict):
@@ -198,8 +196,6 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         }
 
     search_config = _document_search_config(config.document_search)
-    if search_config is None:
-        raise TypeError("document_search must be configured")
     return {
         "num_parallel": _config_int(config.num_parallel),
         "codex": {
@@ -342,8 +338,6 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         search_config = _document_search_config(
             data.get("document_search", default.document_search)
         )
-        if search_config is None:
-            raise SearchConfigIssue("document_search", "object が必要です")
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
             document_search=search_config,
@@ -464,18 +458,16 @@ def _read_config_data(path: Path) -> dict[str, Any]:
 
 def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchConfig:
     """保存された検索設定を既定値の注入なしで検証する。"""
-    value = data.get("document_search")
-    if value is None:
+    if "document_search" not in data:
         raise _search_config_failure(
             path,
             SearchConfigIssue("document_search", "検索設定がありません"),
             missing=True,
         )
     try:
-        config = _document_search_config(value)
+        config = _document_search_config(data["document_search"])
     except SearchConfigIssue as exc:
         raise _search_config_failure(path, exc, missing=exc.missing) from exc
-    assert config is not None
     return config
 
 
@@ -547,7 +539,7 @@ def sync_config(
 
     data = _read_config_data(path)
     search = data.get("document_search")
-    if search is None:
+    if "document_search" not in data:
         additions = defaults
         search = defaults
     elif isinstance(search, dict):
