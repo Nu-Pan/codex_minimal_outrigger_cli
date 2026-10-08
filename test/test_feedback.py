@@ -86,6 +86,14 @@ from commons.runtime_logging import SubcommandLogger
 from main import app
 
 
+@pytest.fixture
+def feedback_directory(tmp_path: Path) -> Path:
+    """Git を参照しない保存・path・lock 検査には通常 directory だけを用意する。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    return root
+
+
 def _payload(
     *,
     text: str = "README の内容から反復する問題を確認した。",
@@ -583,10 +591,10 @@ def test_reporter_rejects_invalid_collector_result(
 
 
 def test_feedback_normalize_builder_protects_nested_code_fences(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """normalization の動的 JSON が prompt section の境界を閉じないことを検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     nested = "before\n```\ninside\n```\nafter"
     observation_json = json.dumps({"payload": {"summary": nested}})
     candidate_json = json.dumps(
@@ -618,10 +626,10 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
 
 
 def test_feedback_normalization_excludes_candidate_search_hint(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """候補検索専用 hint を normalization agent の入力へ渡さない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     observation_id = "fbo_000001_2026-08-01_00-00"
     candidate_id = "fbi_" + "a" * 26
     observation = {
@@ -684,9 +692,9 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     assert "候補検索だけに使う文字列" not in captured_prompts[0]
 
 
-def test_feedback_issue_builders_disable_reporting(tmp_path: Path) -> None:
+def test_feedback_issue_builders_disable_reporting(cli_repository: Path) -> None:
     """normalization と remediation は同じ追加報告を prompt から外す。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     parameters = (
         build_feedback_normalize_issue_parameter("{}", "[]", root),
         build_feedback_remediate_issue_parameter(
@@ -733,9 +741,11 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
     assert versions["remediation_builder"] == verification_version
 
 
-def test_pending_observations_rejects_symlinked_root(tmp_path: Path) -> None:
+def test_pending_observations_rejects_symlinked_root(
+    tmp_path: Path, feedback_directory: Path
+) -> None:
     """symlink 化された raw root を空の初期 state として扱わない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     observation_parent = feedback_root(root) / "observation"
     observation_parent.mkdir(parents=True)
     (observation_parent / "v1").symlink_to(
@@ -1550,9 +1560,11 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
     assert "abcdefghijklmnopqrstuvwxyz" not in path.read_text()
 
 
-def test_report_reference_rejects_symlinked_parent_outside(tmp_path: Path) -> None:
+def test_report_reference_rejects_symlinked_parent_outside(
+    tmp_path: Path, feedback_directory: Path
+) -> None:
     """report cut reference が symlink 親経由の repository 外 path を読まない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     outside = tmp_path / "outside"
     outside.mkdir()
     (outside / "secret.txt").write_text("SECRET\n")
@@ -1596,9 +1608,11 @@ def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> 
     assert comparison == [candidate]
 
 
-def test_report_reference_masks_secret_across_content_limit(tmp_path: Path) -> None:
+def test_report_reference_masks_secret_across_content_limit(
+    feedback_directory: Path,
+) -> None:
     """capture 上限をまたぐ private key block の断片を保存しない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     path = root / "secret.txt"
     private_key = (
         "-----BEGIN PRIVATE KEY-----\n" + "A" * 256 + "\n-----END PRIVATE KEY-----"
@@ -1792,9 +1806,11 @@ def test_normalization_schema_supports_editable_namespace_package(
     )
 
 
-def test_state_reference_rejects_in_repository_symlink_alias(tmp_path: Path) -> None:
+def test_state_reference_rejects_in_repository_symlink_alias(
+    feedback_directory: Path,
+) -> None:
     """artifact reference が同じ root 内の symlink を通常 file として扱わない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     expected_root = root / ".cmoc/gu/feedback/active/generation"
     expected_root.mkdir(parents=True)
     target = expected_root / "manifest.json"
@@ -1816,10 +1832,10 @@ def test_state_reference_rejects_in_repository_symlink_alias(tmp_path: Path) -> 
 
 
 def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(
-    tmp_path: Path,
+    feedback_directory: Path,
 ) -> None:
     """raw store inventory が不正なら件数を推測せず unavailable warning を返す。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     invalid = feedback_root(root) / "observation" / "v1" / "unexpected.tmp"
     invalid.parent.mkdir(parents=True, exist_ok=True)
     invalid.write_text("partial")
@@ -1835,10 +1851,11 @@ def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(
 @pytest.mark.parametrize("invalid_parent", ["dangling_symlink", "file"])
 def test_completion_count_rejects_invalid_observation_parent(
     tmp_path: Path,
+    feedback_directory: Path,
     invalid_parent: str,
 ) -> None:
     """不正な observation 親を空の初期 state として扱わない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     observation_parent = feedback_root(root) / "observation"
     observation_parent.parent.mkdir(parents=True)
     if invalid_parent == "dangling_symlink":
@@ -1854,9 +1871,11 @@ def test_completion_count_rejects_invalid_observation_parent(
     assert warnings
 
 
-def test_feedback_writer_lock_rejects_concurrent_writer(tmp_path: Path) -> None:
+def test_feedback_writer_lock_rejects_concurrent_writer(
+    feedback_directory: Path,
+) -> None:
     """同じ repository で二つ目の report writer を開始しない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     with feedback_writer_lock(root):
         with pytest.raises(CmocError, match="別の feedback writer"):
             with feedback_writer_lock(root):
