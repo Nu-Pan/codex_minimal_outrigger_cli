@@ -917,6 +917,18 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
+  "src/commons/runtime_feedback_close_state.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_feedback_history.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_feedback_intake.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -924,6 +936,12 @@
     "last_investigated_at": null
   },
   "src/commons/runtime_feedback_protocol.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_feedback_render.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -1080,6 +1098,12 @@
     "last_investigated_at": null
   },
   "src/sub_commands/feedback/__init__.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/sub_commands/feedback/close.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -1404,6 +1428,12 @@
     "last_investigated_at": null
   },
   "test/test_feedback.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_feedback_close.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
