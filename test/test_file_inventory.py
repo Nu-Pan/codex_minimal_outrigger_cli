@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _git_support import RUN_BRANCH, make_repo, run_git
+from _git_support import RUN_BRANCH, init_repo, make_repo, run_git
 
 import commons.runtime_git as runtime_git
 from cmoc_runtime import CmocError, file_sha256
@@ -34,12 +34,7 @@ _EXCLUDED_NAMES = {"AGENTS.md"}
 def _make_nested_repo(path: Path) -> Path:
     """outer repository 内に独立した最小 Git working tree を作る。"""
     path.mkdir(parents=True)
-    run_git(path, "init", "--template=/dev/null")
-    run_git(path, "config", "user.email", "cmoc@example.invalid")
-    run_git(path, "config", "user.name", "cmoc test")
-    run_git(path, "config", "commit.gpgsign", "false")
-    run_git(path, "config", "core.hooksPath", "/dev/null")
-    run_git(path, "config", "core.excludesFile", "/dev/null")
+    init_repo(path)
     (path / "nested.txt").write_text("nested\n")
     run_git(path, "add", "nested.txt")
     run_git(path, "commit", "-m", "initial nested")

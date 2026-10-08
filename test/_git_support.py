@@ -19,18 +19,29 @@ def current_branch(root: Path) -> str:
     return run_git(root, "branch", "--show-current").stdout.strip()
 
 
+def init_repo(root: Path) -> None:
+    """既存 directory に user Git 設定から隔離した test repository を初期化する。"""
+    # 利用者の Git template に含まれる hook・設定を持ち込まない。
+    run_git(root, "init", "--template=/dev/null")
+    # Git が生成した配置設定は保ち、fixture の固定設定だけを一度に追記する。
+    with (root / ".git" / "config").open("a", encoding="utf-8") as config:
+        config.write(
+            "\n[user]\n"
+            "\temail = cmoc@example.invalid\n"
+            "\tname = cmoc test\n"
+            "[commit]\n"
+            "\tgpgsign = false\n"
+            "[core]\n"
+            "\thooksPath = /dev/null\n"
+            "\texcludesFile = /dev/null\n"
+        )
+
+
 def make_repo(tmp_path: Path) -> Path:
     """cmoc CLI test が対象にできる最小の commit 済み repository を作る。"""
     root = tmp_path / "repo"
     root.mkdir()
-    run_git(root, "init", "--template=/dev/null")
-    run_git(root, "config", "user.email", "cmoc@example.invalid")
-    run_git(root, "config", "user.name", "cmoc test")
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md: cmoc の制御ロジック実行前に、
-    # テスト repository が user Git の template、signing、hook、ignore 設定へ依存しないようにする。
-    run_git(root, "config", "commit.gpgsign", "false")
-    run_git(root, "config", "core.hooksPath", "/dev/null")
-    run_git(root, "config", "core.excludesFile", "/dev/null")
+    init_repo(root)
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
     (root / "oracle" / "spec.md").write_text("# spec\n")

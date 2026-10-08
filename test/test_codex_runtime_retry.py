@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from _codex_support import codex_override_config, setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
-from _git_support import make_repo, run_git
+from _git_support import init_repo, make_repo, run_git
 from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime
@@ -336,12 +336,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
     root = make_repo(tmp_path)
     nested = root / "nested"
     nested.mkdir()
-    run_git(nested, "init", "--template=/dev/null")
-    run_git(nested, "config", "user.email", "cmoc@example.invalid")
-    run_git(nested, "config", "user.name", "cmoc test")
-    run_git(nested, "config", "commit.gpgsign", "false")
-    run_git(nested, "config", "core.hooksPath", "/dev/null")
-    run_git(nested, "config", "core.excludesFile", "/dev/null")
+    init_repo(nested)
     nested_file = nested / "tracked.txt"
     nested_file.write_text("nested initial\n")
     run_git(nested, "add", "tracked.txt")
