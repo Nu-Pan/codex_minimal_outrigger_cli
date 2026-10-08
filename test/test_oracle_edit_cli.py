@@ -485,12 +485,12 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
 )
 def test_oracle_edit_launch_preconditions(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     case: str,
     message: str,
 ) -> None:
     """oracle edit の各起動前提違反を利用者向け例外として検証する。"""
-    root = _prepared_repo(tmp_path, monkeypatch)
+    # 起動条件の検査は doctor の設定・検索索引を使わない。
+    root = make_repo(tmp_path)
     current_root = root
     if case != "non_session":
         _activate_session(
@@ -515,9 +515,9 @@ def test_oracle_edit_launch_preconditions(
         )
 
 
-def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
+def test_oracle_edit_prompt_preserves_user_log_reference(cli_repository, monkeypatch):
+    # prompt の path 解決だけなので、履歴や追跡ファイルは不要。
+    monkeypatch.chdir(cli_repository)
     instruction = (
         "診断用サブコマンドログ /example/sender.jsonl を参考に oracle を編集する"
     )
