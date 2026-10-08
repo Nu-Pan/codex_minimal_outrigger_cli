@@ -996,20 +996,68 @@ def test_disabled_feedback_call_does_not_register_capability(
     feedback_call.close()
 
 
-def test_collector_protocol_probe_does_not_report_expected_degradation(
-    tmp_path: Path,
+def test_collector_stop_wakes_blocked_listener(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """doctor の transport probe が正常 invocation に warning を追加しない。"""
+    """timeout に頼らず接続待ちを解除し、停止を障害として記録しない。"""
+    logger = SubcommandLogger(tmp_path, "feedback test")
+    invocation = FeedbackInvocation(tmp_path, tmp_path, "feedback test", logger)
+    accept_started = threading.Event()
+    accepting_sockets: list[socket.socket] = []
+    original_accept = socket.socket.accept
+
+    def blocking_accept(listener: socket.socket) -> tuple[socket.socket, object]:
+        # 元の FD の close だけでは解除できない接続待ちを、同じ socket に保持する。
+        with listener.dup() as accepting_socket:
+            accepting_socket.settimeout(None)
+            accepting_sockets.append(accepting_socket)
+            accept_started.set()
+            return original_accept(accepting_socket)
+
+    monkeypatch.setattr(socket.socket, "accept", blocking_accept)
+    invocation.start()
+    try:
+        assert accept_started.wait(timeout=2)
+        invocation.stop()
+
+        assert invocation._server_thread is not None
+        assert not invocation._server_thread.is_alive()
+        assert invocation._listener is None
+        assert invocation.collector_port is None
+        assert logger.warning_messages == []
+    finally:
+        # 回帰時にも blocking accept を解除し、test の thread を残さない。
+        for accepting_socket in accepting_sockets:
+            try:
+                accepting_socket.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+        invocation.stop()
+
+
+@pytest.mark.parametrize("shutdown_unavailable", [False, True])
+def test_collector_protocol_probe_does_not_report_expected_degradation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shutdown_unavailable: bool
+) -> None:
+    """transport probe と通常・shutdown 不可の停止で warning を追加しない。"""
     root = make_repo(tmp_path)
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    if shutdown_unavailable:
+
+        def fail_shutdown(_listener: socket.socket, _how: int) -> None:
+            raise OSError("injected shutdown failure")
+
+        monkeypatch.setattr(socket.socket, "shutdown", fail_shutdown)
     invocation.start()
     try:
         assert invocation.collector_port is not None
         feedback_module._validate_collector_protocol(invocation.collector_port)
-        assert logger.warning_messages == []
     finally:
         invocation.stop()
+    assert invocation._server_thread is not None
+    assert not invocation._server_thread.is_alive()
+    assert logger.warning_messages == []
 
 
 def test_collector_records_rejected_submission_as_degraded_warning(
@@ -1181,10 +1229,11 @@ def test_collector_rejects_surrogate_payload_with_protocol_safe_response(
         invocation.stop()
 
 
-def test_feedback_call_close_drains_accepted_tcp_request(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("stop_invocation", [False, True], ids=["call", "invocation"])
+def test_feedback_shutdown_drains_accepted_tcp_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stop_invocation: bool
 ) -> None:
-    """受付済み request の保存完了後にだけ capability を失効する。"""
+    """call 終了と collector 停止は、受付済み request の保存後にだけ完了する。"""
     root = make_repo(tmp_path)
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
@@ -1234,11 +1283,14 @@ def test_feedback_call_close_drains_accepted_tcp_request(
             except BaseException as exc:
                 submission_errors.append(exc)
 
-        def close_call() -> None:
-            """対象 call の drain 完了を親 thread へ通知する。"""
+        def close_context() -> None:
+            """call 終了または invocation 停止の完了を親 thread へ通知する。"""
             close_started.set()
             try:
-                invocation.close_call(call)
+                if stop_invocation:
+                    invocation.stop()
+                else:
+                    invocation.close_call(call)
             except BaseException as exc:
                 close_errors.append(exc)
             finally:
@@ -1247,7 +1299,7 @@ def test_feedback_call_close_drains_accepted_tcp_request(
         submission_thread = threading.Thread(target=submit)
         submission_thread.start()
         assert storage_started.wait(timeout=2)
-        close_thread = threading.Thread(target=close_call)
+        close_thread = threading.Thread(target=close_context)
         close_thread.start()
         assert close_started.wait(timeout=2)
         assert not close_finished.wait(timeout=0.05)
@@ -1262,12 +1314,19 @@ def test_feedback_call_close_drains_accepted_tcp_request(
         assert close_errors == []
         assert submission_result["status"] == "accepted"
         assert len(iter_observation_paths(root)) == 1
-        rejected = _submit_to_feedback_collector(
-            invocation.collector_port,
-            call.capability,
-            _payload(),
-        )
-        assert rejected["code"] == "context_invalid"
+        if stop_invocation:
+            assert invocation.collector_port is None
+            assert call.capability not in invocation._calls
+            assert invocation._server_thread is not None
+            assert not invocation._server_thread.is_alive()
+            assert not invocation._worker_threads
+        else:
+            rejected = _submit_to_feedback_collector(
+                invocation.collector_port,
+                call.capability,
+                _payload(),
+            )
+            assert rejected["code"] == "context_invalid"
     finally:
         release_storage.set()
         if submission_thread is not None:
