@@ -244,32 +244,41 @@ def test_run_codex_tui_skips_notification_probe_during_completion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """シェル補完中は通知設定の Codex version probe を実行しない。"""
+    # probe の呼び出し境界を観測し、TUI 本体の起動は process を作らずに代替する。
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    probe_marker = tmp_path / "notification-probe-called"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import pathlib, sys",
-            f"probe_marker = pathlib.Path({str(probe_marker)!r})",
-            "if '--version' in sys.argv[1:]:",
-            "    probe_marker.write_text('called')",
-            "    raise SystemExit(0)",
-            "raise SystemExit(0)",
-        ],
+    probe_calls: list[tuple[object, object]] = []
+    tui_calls: list[list[str]] = []
+
+    def record_version_probe(*args: object, **kwargs: object) -> bool:
+        """補完 marker に反して version probe が呼ばれた場合を記録する。"""
+        probe_calls.append((args, kwargs))
+        return False
+
+    def record_tui(
+        argv: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """TUI 本体へ到達したことを記録し、通常の終了結果を返す。"""
+        tui_calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        record_version_probe,
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", record_tui)
     monkeypatch.setenv("_CMOC_COMPLETE", "")
 
-    run_codex_tui(
+    result = run_codex_tui(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
         root=root,
         config=CmocConfig(),
     )
 
-    assert not probe_marker.exists()
+    assert result.returncode == 0
+    assert len(tui_calls) == 1
+    assert probe_calls == []
 
 
 def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(

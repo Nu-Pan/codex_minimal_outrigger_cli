@@ -30,7 +30,7 @@ import pytest
 import typer
 from _cli_support import run_doctor, runner
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
-from _git_support import make_repo, run_git
+from _git_support import init_repo, make_repo, run_git
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_tui as runtime_codex_tui
@@ -928,7 +928,10 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     tmp_path: Path,
 ) -> None:
     """shell completion probe は cmoc preflight と初期化副作用を起こさない。"""
-    root = make_repo(tmp_path)
+    # Git work root からの起動を保ち、補完で参照しない追跡ファイル・commit は作らない。
+    root = tmp_path / "repo"
+    root.mkdir()
+    init_repo(root)
     isolated_home = tmp_path / "home"
     isolated_home.mkdir()
     main_path = Path(main_module.__file__).resolve()
