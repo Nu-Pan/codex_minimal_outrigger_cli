@@ -25,9 +25,9 @@
   },
   "codex_minimal_outrigger_cli.code-workspace": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "df9413aa969863c6e2bd6f8db41570832d29f337e36c4f9e97bae0178dc224ba",
+    "last_investigated_at": "2026-10-09_02-41-56_295"
   },
   "oracle/doc/app_spec/cli_auto_completion.md": {
     "investigation_required": true,

@@ -55,10 +55,8 @@ def _isolate_windows_toast_transport(
     executable.parent.mkdir()
     executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     executable.chmod(0o755)
-    # 独立 process の一般 test も実際の editor window を開かない。
-    editor = executable.parent / "code"
-    editor.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    editor.chmod(0o755)
+    # 子 process の editor も同じ no-op を使い、書き込みと chmod を一度にする。
+    (executable.parent / "code").hardlink_to(executable)
     monkeypatch.setenv("PATH", f"{executable.parent}:{os.environ.get('PATH', '')}")
     monkeypatch.setattr(runtime_windows_toast, "_WINDOWS_POWERSHELL", executable)
     monkeypatch.setattr(
