@@ -60,7 +60,8 @@ from commons.runtime_run_lifecycle import (
     start_editing_run,
     worktree_change_paths,
 )
-from commons.runtime_state import SessionState
+from commons.runtime_state import SessionPart, SessionState, write_state
+from commons.runtime_state import state_path as session_state_path
 from main import app
 
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
@@ -80,6 +81,34 @@ def _start_session(
     session_id = branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
     return root, branch, state_path
+
+
+@pytest.fixture
+def ready_run_session(
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """run 開始処理の検査に必要な clean session と保存済み state を用意する。"""
+    # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
+    root = cli_repository
+    monkeypatch.chdir(root)
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    for relative in _WORK_DIRECTORIES:
+        (root / relative).mkdir(parents=True, exist_ok=True)
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "session seed")
+    home_branch = current_branch(root)
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
+    path = session_state_path(root, SESSION_ID)
+    write_state(
+        path,
+        SessionState(
+            session=SessionPart(
+                session_home_branch=home_branch, session_fork_commit=fork_commit
+            )
+        ),
+    )
+    return root, SESSION_BRANCH, path
 
 
 def _state(path: Path) -> dict:
@@ -2083,11 +2112,11 @@ def test_refactor_start_failure_does_not_recover_existing_error_run(
 
 
 def test_start_run_rechecks_session_branch_under_lock(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """fork lock 待機中の branch 変更で別 session の run を作成しない。"""
-    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, session_branch, state_path = ready_run_session
     original_current_branch = lifecycle_module.current_branch
     calls = 0
 
@@ -2942,10 +2971,10 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
     "kind", ["realization_apply", "realization_refactor", "feedback_report"]
 )
 def test_start_run_prepares_work_directories_before_publishing_state(
-    tmp_path, monkeypatch, kind
+    ready_run_session, monkeypatch, kind
 ):
     """全 editing workload の新 worktree を running state の公開前に補完する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     original_write = lifecycle_module.write_state
     observed = []
 
@@ -2976,10 +3005,10 @@ def test_start_run_prepares_work_directories_before_publishing_state(
     "kind", ["realization_apply", "realization_refactor", "feedback_report"]
 )
 def test_start_run_directory_conflict_cleans_unpublished_resources(
-    tmp_path, monkeypatch, kind
+    ready_run_session, monkeypatch, kind
 ):
     """配置先の衝突で開始に失敗した場合、session の内容と ready state を保つ。"""
-    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, session_branch, state_path = ready_run_session
     collision = root / "src"
     collision.rmdir()
     collision.write_text("kept tracked collision\n")
@@ -3013,11 +3042,11 @@ def test_start_run_directory_conflict_cleans_unpublished_resources(
 
 
 def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run worktree の作成途中で中断しても未公開 resource を残さない。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     original_create = lifecycle_module.create_run_worktree
     created_target: dict[str, Path | str] = {}
 
@@ -3049,11 +3078,11 @@ def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(
 
 
 def test_start_run_interrupt_after_state_write_restores_ready_state(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """state 公開直後の中断で resource と running state を残さない。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     original_write_state = lifecycle_module.write_state
     write_count = 0
 
