@@ -312,14 +312,13 @@ def test_preprocess_rejects_work_directory_collisions(
 ):
     """通常起動と明示 doctor は配置先・親の衝突を保持し、本命処理へ進まない。"""
     root = make_repo(tmp_path)
-    run_git(root, "rm", "oracle/spec.md")
-    run_git(root, "commit", "-m", "remove oracle files")
-    run_doctor(root)
+    # 配置先の検証は config・索引同期より前なので、事前の doctor は不要。
     collision = root / relative
     if relative == "oracle":
-        for child in ("doc", "src", "test"):
-            (collision / child).rmdir()
-    collision.rmdir()
+        (collision / "spec.md").unlink()
+        collision.rmdir()
+    else:
+        collision.parent.mkdir(parents=True, exist_ok=True)
     collision.write_text("keep collision\n")
     head_before = run_git(root, "rev-parse", "HEAD").stdout
     branch_before = run_git(root, "branch", "--show-current").stdout
@@ -344,9 +343,7 @@ def test_preprocess_rejects_work_directory_collisions(
 def test_preprocess_reports_work_directory_permission_failure(tmp_path, monkeypatch):
     """作成できない配置先を具体的に診断し、必須条件の失敗を伝える。"""
     root = make_repo(tmp_path)
-    run_doctor(root)
     blocked = root / "oracle/test"
-    blocked.rmdir()
     original_mkdir = Path.mkdir
 
     def deny_target(path, *args, **kwargs):
@@ -972,6 +969,57 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         check=False,
     )
     assert check_ignore.returncode == 1
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "clean",
+        "staged",
+        "unstaged",
+        "mixed",
+        "staged_deletion",
+        "unstaged_deletion",
+        "untracked",
+    ],
+)
+def test_preexisting_runtime_paths_use_original_index(tmp_path, change):
+    """対象の先行差分だけを元 index から選び、未追跡・staged deletion を除く。"""
+    root = make_repo(tmp_path)
+    config = doctor_module.config_path(root)
+    state = doctor_module.refactor_state_path(root)
+    paths = [str(path.relative_to(root)) for path in (config, state)]
+    for path in (config, state):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n")
+    if change != "untracked":
+        run_git(root, "add", "-f", *paths)
+        run_git(root, "commit", "-m", "track runtime files")
+
+    expected = set()
+    if change in {"staged", "mixed"}:
+        config.write_text('{"num_parallel": 99}\n')
+        run_git(root, "add", "-f", paths[0])
+        expected.add(paths[0])
+    if change == "mixed":
+        config.write_text('{"num_parallel": 100}\n')
+    if change in {"unstaged", "mixed", "staged_deletion"}:
+        state.write_text('{"prior": {}}\n')
+        expected.add(paths[1])
+    if change == "staged_deletion":
+        run_git(root, "rm", "--cached", paths[0])
+    if change == "unstaged_deletion":
+        state.unlink()
+        expected.add(paths[1])
+    (root / "README.md").write_text("unrelated user change\n")
+
+    index_path = doctor_module._copy_current_index(root)
+    try:
+        # 現在 index が変わっても、前処理開始時の退避内容を使う。
+        run_git(root, "rm", "--cached", "-f", "--ignore-unmatch", "--", *paths)
+        assert doctor_module._preexisting_runtime_paths(root, index_path) == expected
+    finally:
+        index_path.unlink(missing_ok=True)
 
 
 def test_doctor_does_not_commit_preexisting_staged_config_change(

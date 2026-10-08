@@ -662,43 +662,29 @@ def _preexisting_runtime_paths(root: Path, index_path: Path) -> set[str]:
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     # config は人間が編集するため、既存の staged/unstaged 変更を doctor の
     # repair commit に混ぜない。state も同じ一時 index で扱うため同じ境界にする。
-    paths = {
+    paths = [
         str(config_path(root).relative_to(root)),
         str(refactor_state_path(root).relative_to(root)),
-    }
-    return {
-        path
-        for path in paths
-        if _path_changed_before_doctor(root, index_path, path)
-        and _index_has_entry(root, index_path, path)
-    }
-
-
-def _path_changed_before_doctor(root: Path, index_path: Path, path: str) -> bool:
-    """元 index と worktree のどちらかに doctor 前の差分があるか返す。"""
+    ]
+    # path ごとの問い合わせをまとめ、rename の元も独立した差分として扱う。
     staged = _run_git_with_index(
-        ["diff", "--cached", "--name-only", "HEAD", "--", path],
+        ["diff", "--cached", "--no-renames", "--name-only", "-z", "HEAD", "--", *paths],
         root,
         index_path,
-    ).stdout
+    ).stdout.split("\0")
     unstaged = _run_git_with_index(
-        ["diff", "--name-only", "--", path],
+        ["diff", "--no-renames", "--name-only", "-z", "--", *paths],
         root,
         index_path,
-    ).stdout
-    return bool(staged.strip() or unstaged.strip())
-
-
-def _index_has_entry(root: Path, index_path: Path, path: str) -> bool:
-    """一時 index に path の entry があるか返す。"""
-    return bool(
-        _run_git_with_index(
-            ["ls-files", "--stage", "--", path],
-            root,
-            index_path,
-            check=False,
-        ).stdout.strip()
-    )
+    ).stdout.split("\0")
+    changed = set(paths).intersection(staged + unstaged)
+    if not changed:
+        return set()
+    # staged deletion と未追跡の内容は、元 index に保存すべき entry がない。
+    tracked = _run_git_with_index(
+        ["ls-files", "-z", "--", *sorted(changed)], root, index_path
+    ).stdout.split("\0")
+    return changed.intersection(tracked)
 
 
 def _commit_doctor_repairs(
