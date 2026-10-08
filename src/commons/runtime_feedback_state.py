@@ -1348,8 +1348,10 @@ def _machine_aggregate_reaches_threshold(record: _JsonObject) -> bool:
 
 def _load_generation(
     repo: Path, manifest_path: Path, expected_generation_id: str | None = None
-) -> tuple[_JsonObject, dict[str, _JsonObject], dict[str, _JsonObject]]:
-    """generation manifest と列挙 record を hash 付きで読み込む。"""
+) -> tuple[
+    _JsonObject, dict[str, _JsonObject], dict[str, _JsonObject], list[_JsonObject]
+]:
+    """generation manifest と列挙 record・履歴を hash 検証して読み込む。"""
     manifest = _read_canonical_object(manifest_path, "active generation manifest")
     _require_exact_fields(
         manifest,
@@ -1519,13 +1521,11 @@ def _load_generation(
             "machine aggregate references が canonical key 順ではありません。",
             manifest_path,
         )
-    return manifest, issues, aggregates
+    return manifest, issues, aggregates, history
 
 
 def load_active_state(repo: Path) -> ActiveState:
     """current pointer が選ぶ正常な active state と cleanup state を読む。"""
-    from .runtime_feedback_history import load_history
-
     active_directory = active_root(repo)
     if _has_symlink_component(active_directory) or (
         active_directory.exists() and not active_directory.is_dir()
@@ -1595,7 +1595,7 @@ def load_active_state(repo: Path) -> ActiveState:
         expected_root=generation_directory(repo, str(generation_id_value)),
         description="current generation manifest",
     )
-    generation_manifest, issues, aggregates = _load_generation(
+    generation_manifest, issues, aggregates, history = _load_generation(
         repo, generation_path, str(generation_id_value)
     )
     if generation_manifest.get("report_cut_id") != report_cut_id_value:
@@ -1697,7 +1697,7 @@ def load_active_state(repo: Path) -> ActiveState:
         aggregates,
         cleanup_manifest,
         cleanup_path,
-        load_history(repo, generation_manifest["history"]),
+        history,
     )
 
 
@@ -2169,7 +2169,7 @@ def _validate_report_cut_current_input(
             )
         reference_groups[name] = references
     if not allow_missing:
-        generation_manifest, _issues, _aggregates = _load_generation(
+        generation_manifest, _issues, _aggregates, _history = _load_generation(
             repo, generation_path, str(generation_id_value)
         )
         if (
@@ -2547,7 +2547,7 @@ def _validate_publication_section(
             },
             "publication generation",
         )
-        loaded, _issues, _aggregates = _load_generation(
+        loaded, _issues, _aggregates, history = _load_generation(
             repo, generation_manifest_path, generation_id_value
         )
         if loaded.get("report_cut_id") != path.parent.name:
@@ -2645,8 +2645,6 @@ def _validate_publication_section(
         for reference in cleanup_lists["observations"]
     ):
         raise _corruption("cleanup input が固定した observation に含まれません。", path)
-    from .runtime_feedback_history import load_history
-
     if not staged_missing:
         if loaded["history"][-1] != history_artifacts[0]:
             raise _corruption(
@@ -2654,7 +2652,7 @@ def _validate_publication_section(
             )
         consumed = [
             {key: entry[key] for key in ("path", "sha256")}
-            for entry in load_history(repo, history_artifacts)[0]["observations"]
+            for entry in history[-1]["observations"]
         ]
         if consumed != cleanup_lists["observations"]:
             raise _corruption("cleanup input が確定した消費記録と一致しません。", path)
@@ -3216,7 +3214,7 @@ def publish_generation_artifacts(
         {path.resolve(strict=False) for path, _content in artifacts},
         "new active generation",
     )
-    loaded, _issues, _aggregates = _load_generation(
+    loaded, _issues, _aggregates, _history = _load_generation(
         repo, manifest_path, str(manifest.get("generation_id"))
     )
     if loaded != manifest:
@@ -3274,7 +3272,7 @@ def publish_current_pointer(
         expected_root=generation_directory(repo, generation_id),
         description="new generation manifest",
     )
-    loaded_manifest, _issues, _aggregates = _load_generation(
+    loaded_manifest, _issues, _aggregates, history = _load_generation(
         repo, generation_path, generation_id
     )
     if loaded_manifest.get("report_cut_id") != report_cut_id:
@@ -3334,9 +3332,7 @@ def publish_current_pointer(
             "feedback publication が確定済み history を引き継いでいません。",
             generation_path,
         )
-    from .runtime_feedback_history import load_history
-
-    events = load_history(repo, loaded_manifest["history"][-1:])[0]["events"]
+    events = history[-1]["events"]
     event_map = {event["issue_id"]: event for event in events}
     for identity, event in event_map.items():
         if event["before"] != base.issues.get(identity) or event[

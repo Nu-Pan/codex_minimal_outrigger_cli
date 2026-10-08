@@ -34,6 +34,7 @@ from oracle.acp_builder.feedback.remediate_issue import (
 )
 
 import commons.runtime_feedback as feedback_module
+import commons.runtime_feedback_history as feedback_history_module
 import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
 import sub_commands.feedback.decision as decision_module
@@ -1908,7 +1909,22 @@ def test_empty_report_publishes_current_generation(
     ]
     assert Path(publication_event["generation_manifest_path"]).is_absolute()
     assert Path(publication_event["report_path"]).is_absolute()
+
+    # 履歴の再走査は publication のたびに増えるので、一回の state 読込では一巡に抑える。
+    history_loads = []
+    original_load_history = feedback_history_module.load_history
+
+    def observed_load_history(repo, references):
+        history_loads.append(references)
+        return original_load_history(repo, references)
+
+    monkeypatch.setattr(feedback_history_module, "load_history", observed_load_history)
     state = validate_feedback_state(root)
+    assert len(history_loads) <= 1
+    assert state.history == [
+        read_json_object(root / reference["path"])
+        for reference in state.generation_manifest["history"]
+    ]
     assert state.current is not None
     assert state.current["result"] == "ok"
     assert state.issues == {}
