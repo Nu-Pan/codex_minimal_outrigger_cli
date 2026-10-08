@@ -200,9 +200,11 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     assert late.exists()
 
 
-@pytest.mark.parametrize(
-    "arguments",
-    [
+def test_close_input_failures_save_invocation_reports(open_case):
+    root, _, _ = open_case
+    before = feedback_state.load_active_state(root)
+    # 高価な session/report の準備を共有し、各拒否後に次の入力の前提を確認する。
+    for arguments in [
         [],
         ["not-a-case"],
         ["fbc_zzzzzz_2026-10-08_00-00"],
@@ -212,17 +214,15 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
         ["fbc_zzzzzz_2026-10-08_00-00", "--reason"],
         ["fbc_zzzzzz_2026-10-08_00-00", "--report", "output.md"],
         ["fbc_zzzzzz_2026-10-08_00-00", "extra", "--reason", "fixed"],
-    ],
-)
-def test_close_input_failures_save_invocation_reports(open_case, arguments):
-    root, _, _ = open_case
-    before = feedback_state.load_active_state(root)
-    result = runner.invoke(
-        app, ["feedback", "close", *arguments], catch_exceptions=False
-    )
-    assert result.exit_code == 1, result.output
-    assert "feedback/invocation" in str(terminal_primary_report(result))
-    assert feedback_state.load_active_state(root).current == before.current
+    ]:
+        result = runner.invoke(
+            app, ["feedback", "close", *arguments], catch_exceptions=False
+        )
+        assert result.exit_code == 1, (arguments, result.output)
+        assert "feedback/invocation" in str(terminal_primary_report(result)), arguments
+        assert feedback_state.load_active_state(root) == before, arguments
+        assert close_state.load_close_work(root) is None, arguments
+        assert feedback_state.load_report_cut(root) is None, arguments
 
 
 def test_close_preserves_other_cases_and_subthreshold_aggregates(
