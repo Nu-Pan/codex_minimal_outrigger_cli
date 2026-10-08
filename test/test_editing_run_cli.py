@@ -38,6 +38,7 @@ import sub_commands.run.abandon as run_abandon_module
 import sub_commands.run.join as run_join_command_module
 import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
+from commons.runtime_config import write_config
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
 from commons.runtime_ids import is_common_id
@@ -62,6 +63,7 @@ from commons.runtime_run_lifecycle import (
 )
 from commons.runtime_state import SessionPart, SessionState, write_state
 from commons.runtime_state import state_path as session_state_path
+from config.cmoc_config import CmocConfig
 from main import app
 
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
@@ -87,14 +89,16 @@ def _start_session(
 def ready_run_session(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, str, Path]:
-    """run 開始処理の検査に必要な clean session と保存済み state を用意する。"""
+    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
     # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
     root = cli_repository
     monkeypatch.chdir(root)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     for relative in _WORK_DIRECTORIES:
         (root / relative).mkdir(parents=True, exist_ok=True)
-    run_git(root, "add", ".gitignore")
+    # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
     run_git(root, "commit", "-m", "session seed")
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -702,12 +706,12 @@ def test_apply_builder_uses_call_scoped_run_worktree(
 
 
 def test_run_abandon_accepts_already_removed_run_worktree(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """既に削除された run worktree を warning 扱いで cleanup できる。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
     process_stops: list[tuple[Path, str]] = []
@@ -735,14 +739,14 @@ def test_run_abandon_accepts_already_removed_run_worktree(
 
 
 def test_run_abandon_prunes_missing_registered_run_worktree(
+    ready_run_session: tuple[Path, str, Path],
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """実体だけが欠損した run worktree の Git 登録も cleanup する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
     moved_worktree = tmp_path / "moved-run-worktree"
@@ -762,12 +766,11 @@ def test_run_abandon_prunes_missing_registered_run_worktree(
 
 
 def test_run_abandon_requires_process_stop_confirmation(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_run_session: tuple[Path, str, Path],
 ) -> None:
     """running run の process tracking がない場合は cleanup を開始しない。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_apply")
     run_process_id_path(root, context.session_id).unlink()
 
@@ -781,14 +784,14 @@ def test_run_abandon_requires_process_stop_confirmation(
 
 
 def test_run_abandon_stops_tracked_process_for_error_run(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """error run cleanup が残存 process を停止してから資源を破棄する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_apply")
     set_run_state(context, "error")
     tracked = SimpleNamespace(process_id=123, start_time=456, child_processes=())
@@ -816,12 +819,11 @@ def test_run_abandon_stops_tracked_process_for_error_run(
 
 @pytest.mark.parametrize("run_state", ["joinable", "error"])
 def test_run_abandon_rejects_unreadable_process_tracking(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_run_session: tuple[Path, str, Path],
     run_state: str,
 ) -> None:
     """破損した process tracking を無視して run 資源を削除しない。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_apply")
     set_run_state(context, run_state)
     tracking_path = run_process_id_path(root, context.session_id)
@@ -838,11 +840,11 @@ def test_run_abandon_rejects_unreadable_process_tracking(
 
 
 def test_run_abandon_reports_stale_child_stop_warning(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """joinable run の child 停止 warning を lifecycle report に残す。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
     run_process_id_path(root, context.session_id).write_text(
@@ -938,11 +940,11 @@ def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
 
 
 def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """worktree cleanup失敗時に再試行用のrun branchを保持する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
     branch_calls: list[str] = []
@@ -967,11 +969,11 @@ def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
 
 
 def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """停止済み process を、その後の cleanup 失敗 report にも残す。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
     monkeypatch.setattr(
