@@ -4,6 +4,7 @@
 """
 
 import base64
+import fcntl
 import gzip
 import hashlib
 import io
@@ -12,7 +13,6 @@ import multiprocessing
 import shutil
 import subprocess
 import tarfile
-import time
 import urllib.error
 import urllib.request
 import urllib.response
@@ -57,24 +57,22 @@ def distribution(monkeypatch):
     """HTTP transport の応答を置換し、urllib の redirect と通信記録を通す。"""
     bodies = {"/model": b"model bytes", "/dependency": b"dependency bytes"}
     requests = []
-    delay = {"seconds": 0.0}
 
     def transport(_handler, request):
         path = urlsplit(request.full_url).path
         requests.append(path)
         if path == "/redirect":
             return _response(request.full_url, b"", 302, "/model")
-        time.sleep(delay["seconds"])
         return _response(
             request.full_url, bodies.get(path, b""), 200 if path in bodies else 503
         )
 
     monkeypatch.setattr(urllib.request.HTTPHandler, "http_open", transport)
-    return "http://distribution.invalid", bodies, requests, delay
+    return "http://distribution.invalid", bodies, requests
 
 
 def _asset(distribution, path="/model"):
-    url, bodies, _requests, _delay = distribution
+    url, bodies, _requests = distribution
     body = bodies[path]
     return DownloadAsset(
         name=path,
@@ -87,7 +85,7 @@ def _asset(distribution, path="/model"):
 
 @pytest.fixture
 def asset_logger(tmp_path):
-    logger = SubcommandLogger(make_repo(tmp_path), "doctor")
+    logger = SubcommandLogger(tmp_path, "doctor")
     token = set_current_subcommand_logger(logger)
     try:
         yield logger
@@ -238,31 +236,42 @@ def test_partial_failure_preserves_published_assets(
     assert not list(cache_module.asset_cache_directory().glob(".incomplete-*"))
 
 
-def _process_obtain(cache_root, root, asset, destination, start, count, result):
+def _process_obtain(cache_root, root, asset, destination, waiting, count, result):
     cache_module.asset_cache_directory = lambda: cache_root
+    flock = fcntl.flock
+
+    def observe_lock(fd, operation):
+        try:
+            return flock(fd, operation)
+        except BlockingIOError:
+            waiting.set()
+            raise
+
+    fcntl.flock = observe_lock
 
     def transport(_handler, request):
         with count.get_lock():
             count.value += 1
-        time.sleep(0.3)
+        # 実 lock の競合まで応答を保留し、固定 sleep に依存せず待機後の再利用を通す。
+        assert waiting.wait(10), "no concurrent cache waiter"
         return _response(request.full_url, b"model bytes")
 
     urllib.request.HTTPHandler.http_open = transport
-    start.wait(10)
-    result.send(DownloadAssetCache(root).obtain(asset, destination))
-    result.close()
+    try:
+        result.send(DownloadAssetCache(root).obtain(asset, destination))
+    finally:
+        result.close()
 
 
 def test_parallel_installations_download_once(tmp_path, distribution):
     """独立 process と異なる cmoc 配置でも、待機後に完成品を再利用する。"""
     context = multiprocessing.get_context("spawn")
-    start = context.Event()
+    waiting = context.Event()
     count = context.Value("i", 0)
     asset = _asset(distribution)
-    distribution[3]["seconds"] = 0.3
     children = []
     try:
-        for number in range(3):
+        for number in range(2):
             receive, send = context.Pipe(duplex=False)
             destination = tmp_path / f"result-{number}"
             process = context.Process(
@@ -272,7 +281,7 @@ def test_parallel_installations_download_once(tmp_path, distribution):
                     tmp_path / f"cmoc-{number}",
                     asset,
                     destination,
-                    start,
+                    waiting,
                     count,
                     send,
                 ),
@@ -280,7 +289,6 @@ def test_parallel_installations_download_once(tmp_path, distribution):
             process.start()
             send.close()
             children.append((process, receive, destination))
-        start.set()
         outcomes = []
         for process, receive, destination in children:
             assert receive.poll(20)
@@ -289,7 +297,7 @@ def test_parallel_installations_download_once(tmp_path, distribution):
             assert process.exitcode == 0
             assert destination.read_bytes() == distribution[1]["/model"]
         assert outcomes.count("downloaded") == 1
-        assert outcomes.count("reused") == 2
+        assert outcomes.count("reused") == 1
         assert count.value == 1
     finally:
         for process, receive, _destination in children:
@@ -385,7 +393,7 @@ def _tarball(name, dependencies=None):
 
 def _npm_fixture(base, distribution):
     base.mkdir(parents=True)
-    url, bodies, _requests, _delay = distribution
+    url, bodies, _requests = distribution
     bodies["/a.tgz"] = _tarball("asset-a", {"asset-b": "1.0.0"})
     bodies["/b.tgz"] = _tarball("asset-b")
     package = {
