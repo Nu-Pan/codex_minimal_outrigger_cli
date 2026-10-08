@@ -60,6 +60,16 @@ def _clear_completion_probe_environment(
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
 
 
+@pytest.fixture
+def cli_repository(tmp_path: Path) -> Path:
+    """履歴を参照しない CLI lifecycle test に実 Git root を用意する。"""
+    # root 解決とログ保存は実経路を通し、不要な追跡ファイルと初期 commit は作らない。
+    root = tmp_path / "repo"
+    root.mkdir()
+    init_repo(root)
+    return root
+
+
 @pytest.mark.parametrize(
     ("seconds", "expected"),
     [
@@ -191,13 +201,13 @@ print("ok")
 
 
 def test_noninteractive_success_emits_one_terminal_result_after_progress(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout を成功 terminal result だけにし、詳細 step はログへ閉じる。"""
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     monkeypatch.setattr(
         runtime_cli,
@@ -256,13 +266,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
 
 
 def test_internal_failure_traceback_is_logged_but_not_printed(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """想定外障害の stack は診断ログだけに保存する。"""
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     monkeypatch.setattr(
         runtime_cli,
@@ -295,12 +305,12 @@ def test_internal_failure_traceback_is_logged_but_not_printed(
 
 
 def test_internal_failure_with_surrogate_message_still_finishes_log(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """異常メッセージの surrogate で terminal event を失わない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     monkeypatch.setattr(
         runtime_cli,
@@ -332,12 +342,12 @@ def test_internal_failure_with_surrogate_message_still_finishes_log(
 
 
 def test_error_terminal_result_does_not_repeat_primary_report_path(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """error detail 内の primary report path は console で重複させない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     monkeypatch.setattr(
         runtime_cli,
@@ -423,10 +433,10 @@ def test_detector_does_not_swallow_keyboard_interrupt(
 
 
 def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """doctor preprocess の失敗を終了コードとサブコマンドログに記録する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
 
     def fail_doctor(_root: Path) -> None:
@@ -459,10 +469,12 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
 
 
 def test_cli_nonzero_impl_result_is_reported(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """callback の非0 returnも共通error reportと終了コードへ変換する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
 
     with pytest.raises(typer.Exit) as exc_info:
@@ -483,10 +495,12 @@ def test_cli_nonzero_impl_result_is_reported(
 
 
 def test_cli_error_report_survives_failed_error_log_flush(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """終了ログの失敗が元の error report を隠さないことを検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     original_event = runtime_cli.SubcommandLogger.event
 
@@ -524,10 +538,12 @@ def test_cli_error_report_survives_failed_error_log_flush(
 
 
 def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex CLI へ委ねる Ctrl+C を cmoc の error report に変換しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
 
     def interrupt() -> None:
@@ -552,10 +568,10 @@ def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
 
 
 def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """TUI の Ctrl+C は Codex CLI に委ね、終了 toast を追加しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     notifications: list[str] = []
     monkeypatch.setattr(
@@ -582,12 +598,12 @@ def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
 
 
 def test_cli_tui_startup_keyboard_interrupt_emits_failure_notification(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """TUI process 起動前の Ctrl+C は失敗結果として通知する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     notifications: list[str] = []
     monkeypatch.setattr(
@@ -667,14 +683,14 @@ def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
     [(False, "completed"), (True, None)],
 )
 def test_cli_terminal_notification_boundary_on_success(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tui_process: bool,
     expected_state: str | None,
 ) -> None:
     """非対話成功だけを終了 log と cleanup の後に terminal 通知する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     calls: list[tuple[str, Path, str]] = []
 
@@ -708,12 +724,12 @@ def test_cli_terminal_notification_boundary_on_success(
 
 @pytest.mark.parametrize("tui_process", [False, True])
 def test_cli_terminal_notification_reports_error_for_all_command_kinds(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     tui_process: bool,
 ) -> None:
     """非対話と TUI の確定済み失敗をどちらも 1 回だけ通知する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     calls: list[tuple[str, Path, str]] = []
     monkeypatch.setattr(
@@ -736,11 +752,11 @@ def test_cli_terminal_notification_reports_error_for_all_command_kinds(
 
 
 def test_cli_terminal_notification_distinguishes_user_interruption(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """正常に確定したユーザー中断を自然完了やエラーとして通知しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     calls: list[str] = []
     monkeypatch.setattr(
@@ -764,11 +780,11 @@ def test_cli_terminal_notification_distinguishes_user_interruption(
 
 
 def test_interruptible_cli_handles_common_preprocess_interrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """interruptible command の common preprocess 中断を正常完了として扱う。"""
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     calls: list[str] = []
     monkeypatch.setattr(
@@ -800,11 +816,11 @@ def test_interruptible_cli_handles_common_preprocess_interrupt(
 
 
 def test_cli_notification_failure_does_not_change_terminal_result(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """通知 callback 自体の失敗を成功したサブコマンドへ逆流させない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
 
     def fail_notification(*_args: object) -> None:
@@ -926,12 +942,10 @@ def test_cli_requires_current_directory_to_be_work_root(
 
 def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """shell completion probe は cmoc preflight と初期化副作用を起こさない。"""
-    # Git work root からの起動を保ち、補完で参照しない追跡ファイル・commit は作らない。
-    root = tmp_path / "repo"
-    root.mkdir()
-    init_repo(root)
+    root = cli_repository
     isolated_home = tmp_path / "home"
     isolated_home.mkdir()
     main_path = Path(main_module.__file__).resolve()
