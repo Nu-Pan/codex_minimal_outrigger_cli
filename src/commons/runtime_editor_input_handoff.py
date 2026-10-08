@@ -190,6 +190,12 @@ class EditorInputHandoffTarget:
                 else None
             )
         if listener is not None:
+            # close だけでは別 thread の accept が timeout まで残るため、先に解除する。
+            try:
+                listener.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                # shutdown 不可の listener は既存の accept timeout で回収する。
+                pass
             listener.close()
         if pending_connection is not None:
             try:
