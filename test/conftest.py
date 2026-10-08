@@ -1,4 +1,4 @@
-"""pytest process と子 process の Windows toast 外部副作用を隔離する。"""
+"""共通 fixture で CLI repository と外部副作用を隔離する。"""
 
 import json
 import os
@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from _git_support import init_repo
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.runtime_cli as runtime_cli
@@ -16,6 +17,16 @@ import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_windows_toast as runtime_windows_toast
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+
+
+@pytest.fixture
+def cli_repository(tmp_path: Path) -> Path:
+    """履歴を参照しない CLI lifecycle test に実 Git root を用意する。"""
+    # root 解決とログ・report 保存は実経路を通し、追跡ファイルと初期 commit は作らない。
+    root = tmp_path / "repo"
+    root.mkdir()
+    init_repo(root)
+    return root
 
 
 @pytest.fixture(autouse=True)

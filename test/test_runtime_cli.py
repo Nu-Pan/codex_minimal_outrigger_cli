@@ -30,7 +30,7 @@ import pytest
 import typer
 from _cli_support import run_doctor, runner
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
-from _git_support import init_repo, make_repo, run_git
+from _git_support import make_repo, run_git
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_tui as runtime_codex_tui
@@ -58,16 +58,6 @@ def _clear_completion_probe_environment(
     """通常の in-process CLI test を外部の completion probe 環境から分離する。"""
     # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
-
-
-@pytest.fixture
-def cli_repository(tmp_path: Path) -> Path:
-    """履歴を参照しない CLI lifecycle test に実 Git root を用意する。"""
-    # root 解決とログ保存は実経路を通し、不要な追跡ファイルと初期 commit は作らない。
-    root = tmp_path / "repo"
-    root.mkdir()
-    init_repo(root)
-    return root
 
 
 @pytest.mark.parametrize(
