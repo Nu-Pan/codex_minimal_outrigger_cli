@@ -1048,19 +1048,16 @@ class _CandidateWorker(_InferenceDouble):
     [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0), ((-3, 4), -0.6)],
 )
 @pytest.mark.parametrize(
-    "candidate_count,limit,available,expected",
+    "candidate_count,available,limit_cases",
     [
-        (50, None, 60, 50),
-        (20, None, 60, 20),
-        (20, 50, 60, 20),
-        (50, 20, 60, 20),
-        (50, 50, 60, 50),
-        (50, None, 7, 7),
-        (50, None, 0, 0),
+        (50, 60, [(None, 50), (20, 20), (50, 50)]),
+        (20, 60, [(None, 20), (50, 20)]),
+        (50, 7, [(None, 7)]),
+        (50, 0, [(None, 0)]),
     ],
 )
 def test_mcp_success_schema_and_candidate_limits(
-    tmp_path, candidate_count, limit, available, expected, vector, similarity
+    tmp_path, candidate_count, available, limit_cases, vector, similarity
 ):
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
     root = _repo_with_docs(tmp_path)
@@ -1079,34 +1076,37 @@ def test_mcp_success_schema_and_candidate_limits(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        arguments = {"query": "候補"}
-        if limit is not None:
-            arguments["limit"] = limit
-        Draft202012Validator(tool["inputSchema"]).validate(arguments)
-        response = _response(
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": "search", "arguments": arguments},
-            },
-            search,
-        )
-        result = _assert_search_result(response, tool["outputSchema"], error=False)
-        assert result["status"] == "ok"
-        if expected:
-            assert len(result["hits"]) == 1
-            assert result["hits"][0]["path"] == path
-            ranges = result["hits"][0]["ranges"]
-            assert len(ranges) == expected
-            assert all(
-                1 <= location["start_line"] == location["end_line"] <= available
-                and location["max_similarity"] == pytest.approx(similarity)
-                for location in ranges
+        # 同じ索引を共用し、query は変えて各ケースの推論経路を残す。
+        for request_id, (limit, expected) in enumerate(limit_cases, start=1):
+            worker.operations.clear()
+            arguments = {"query": f"候補 {request_id}"}
+            if limit is not None:
+                arguments["limit"] = limit
+            Draft202012Validator(tool["inputSchema"]).validate(arguments)
+            response = _response(
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": "tools/call",
+                    "params": {"name": "search", "arguments": arguments},
+                },
+                search,
             )
-        else:
-            assert result["hits"] == []
-        assert worker.operations == (["embed_query"] if expected else [])
+            result = _assert_search_result(response, tool["outputSchema"], error=False)
+            assert result["status"] == "ok"
+            if expected:
+                assert len(result["hits"]) == 1
+                assert result["hits"][0]["path"] == path
+                ranges = result["hits"][0]["ranges"]
+                assert len(ranges) == expected
+                assert all(
+                    1 <= location["start_line"] == location["end_line"] <= available
+                    and location["max_similarity"] == pytest.approx(similarity)
+                    for location in ranges
+                )
+            else:
+                assert result["hits"] == []
+            assert worker.operations == (["embed_query"] if expected else [])
 
 
 def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
