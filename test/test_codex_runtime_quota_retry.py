@@ -4,6 +4,7 @@ import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Event, Lock
 from typing import TextIO, cast
 
 import pytest
@@ -689,117 +690,70 @@ def test_quota_probe_failure_reports_probe_error(
     assert (root / "src" / "probe.py").read_text() == "blocked\n"
 
 
-def test_run_codex_exec_uses_single_representative_quota_probe(
-    tmp_path: Path, cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("probe_fails", [False, True], ids=["success", "failure"])
+def test_parallel_quota_calls_share_probe_result(
+    tmp_path: Path,
+    cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    probe_fails: bool,
 ) -> None:
-    """並行 quota 待機を一つの代表 probe に集約する。"""
+    """代表 probe の成功・失敗を共有し、成功時だけ全 call を再開する。"""
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     probe_prompt = quota_probe_prompt(root)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "parallel_calls.jsonl"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys, time",
-            f"calls = pathlib.Path({str(calls)!r})",
-            "args = sys.argv[1:]",
-            "stdin = sys.stdin.read()",
-            f"kind = 'resume' if 'resume' in args else 'probe' if stdin == {probe_prompt!r} else 'initial'",
-            "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
-            "if kind == 'resume':",
-            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "    output.write_text(json.dumps({'ok': True}))",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "    sys.exit(0)",
-            "if kind == 'probe':",
-            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "    output.write_text(json.dumps({'probe': True}))",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "    sys.exit(0)",
-            "deadline = time.time() + 5",
-            "while time.time() < deadline:",
-            "    lines = calls.read_text().splitlines() if calls.exists() else []",
-            "    if sum(1 for line in lines if json.loads(line)['kind'] == 'initial') >= 2:",
-            "        break",
-            "    time.sleep(0.01)",
-            "print(json.dumps({'type':'thread.started','thread_id':'sess-parallel'}))",
-            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-            "sys.exit(1)",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        root,
-    )
+    calls: list[tuple[str, list[str]]] = []
+    calls_lock = Lock()
+    joined = Event()
+    logger = SubcommandLogger(root, "test")
+    log_event = logger.event
 
-    def call_codex() -> object:
-        """並行呼び出し一件分の quota 復帰処理を実行する。"""
-        return run_codex_exec(
-            parameter,
-            root=root,
-            quota_poll_interval_sec=0.05,
-            config=CmocConfig(),
+    def observe_recovery(kind: str, **fields: object) -> None:
+        """待機側が代表と同じ回復 group に参加したことを通知する。"""
+        log_event(kind, **fields)
+        if kind == "codex_recovery" and fields.get("status") == "joined":
+            joined.set()
+
+    monkeypatch.setattr(logger, "event", observe_recovery)
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        """CLI 入出力だけを代替し、並行する回復・再開処理は実行する。"""
+        prompt = cast(TextIO, kwargs["stdin"]).read()
+        assert prompt in {"prompt", probe_prompt}
+        kind = (
+            "resume"
+            if "resume" in argv
+            else "probe"
+            if prompt == probe_prompt
+            else "initial"
         )
+        with calls_lock:
+            calls.append((kind, argv))
+        if kind == "initial":
+            return subprocess.CompletedProcess(
+                argv,
+                1,
+                '{"type":"thread.started","thread_id":"sess-parallel"}\n'
+                '{"type":"error","message":"Quota exceeded"}\n',
+                "",
+            )
+        if kind == "probe":
+            # 固定 sleep ではなく、実際の参加を待ってから代表の結果を返す。
+            assert joined.wait(timeout=5), "quota waiter did not join the probe"
+            if probe_fails:
+                return subprocess.CompletedProcess(
+                    argv,
+                    1,
+                    '{"type":"error","message":"invalid configuration"}\n',
+                    "",
+                )
+        output = Path(argv[argv.index("--output-last-message") + 1])
+        output.write_text(
+            json.dumps({"probe": True} if kind == "probe" else {"ok": True})
+        )
+        return subprocess.CompletedProcess(argv, 0, '{"type":"turn.completed"}\n', "")
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        results = list(executor.map(lambda _index: call_codex(), range(2)))
-
-    events = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert [event["kind"] for event in events].count("initial") == 2
-    assert [event["kind"] for event in events].count("probe") == 1
-    assert [event["kind"] for event in events].count("resume") == 2
-    assert [result.output_json for result in results] == [{"ok": True}, {"ok": True}]
-
-
-def test_waiting_quota_calls_fail_when_representative_probe_fails(
-    tmp_path: Path, cli_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """代表 probe の失敗を待機中の全呼び出しへ伝播する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    probe_prompt = quota_probe_prompt(root)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "parallel_failed_probe_calls.jsonl"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys, time",
-            f"calls = pathlib.Path({str(calls)!r})",
-            "args = sys.argv[1:]",
-            "stdin = sys.stdin.read()",
-            f"kind = 'resume' if 'resume' in args else 'probe' if stdin == {probe_prompt!r} else 'initial'",
-            "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
-            "if kind == 'resume':",
-            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "    output.write_text(json.dumps({'unexpected': 'resume'}))",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "    sys.exit(0)",
-            "if kind == 'probe':",
-            "    print(json.dumps({'type':'error','message':'invalid configuration'}))",
-            "    sys.exit(1)",
-            "deadline = time.time() + 5",
-            "while time.time() < deadline:",
-            "    lines = calls.read_text().splitlines() if calls.exists() else []",
-            "    if sum(1 for line in lines if json.loads(line)['kind'] == 'initial') >= 2:",
-            "        break",
-            "    time.sleep(0.01)",
-            "print(json.dumps({'type':'thread.started','thread_id':'sess-parallel'}))",
-            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-            "sys.exit(1)",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
@@ -809,23 +763,39 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     )
 
     def call_codex() -> object:
-        """代表 probe 失敗を受ける並行呼び出し一件を実行する。"""
+        """同じ条件の call を並行して quota 回復処理へ渡す。"""
         return run_codex_exec(
             parameter,
             root=root,
-            quota_poll_interval_sec=0.05,
+            quota_poll_interval_sec=0,
             config=CmocConfig(),
+            subcommand_logger=logger,
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = [executor.submit(call_codex) for _index in range(2)]
-        errors = [future.exception() for future in futures]
+        errors = [future.exception(timeout=5) for future in futures]
 
-    events = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert [event["kind"] for event in events].count("initial") == 2
-    assert [event["kind"] for event in events].count("probe") == 1
-    assert [event["kind"] for event in events].count("resume") == 0
-    assert all(isinstance(error, CmocError) for error in errors)
+    kinds = [kind for kind, _argv in calls]
+    assert kinds.count("initial") == 2
+    assert kinds.count("probe") == 1
+    assert kinds.count("resume") == (0 if probe_fails else 2)
+    recovery_events = [
+        event for event in logger.event_records() if event["event"] == "codex_recovery"
+    ]
+    assert sum(event["status"] == "started" for event in recovery_events) == 1
+    assert sum(event["status"] == "joined" for event in recovery_events) == 1
+    assert len({event["recovery_id"] for event in recovery_events}) == 1
+    if probe_fails:
+        assert all(isinstance(error, CmocError) for error in errors)
+    else:
+        assert errors == [None, None]
+        assert [future.result().output_json for future in futures] == [{"ok": True}] * 2
+        assert all(
+            codex_arg_value(argv, "resume") == "sess-parallel"
+            for kind, argv in calls
+            if kind == "resume"
+        )
 
 
 def test_session_id_returns_none_for_invalid_stdout_encoding(tmp_path: Path) -> None:
