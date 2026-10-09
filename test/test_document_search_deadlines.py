@@ -4,7 +4,7 @@ import fcntl
 import json
 import os
 import shutil
-import time
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import replace
@@ -295,24 +295,27 @@ def test_saved_deadline_growth_requires_a_new_codex_connection(tmp_path, setting
 
 
 def test_parallel_requests_log_to_their_own_codex_calls(tmp_path):
+    # 開始記録で両要求を揃え、固定待機なしで同時実行を確実にする。
     root = _repo_with_docs(tmp_path)
     path = tmp_path / "caller.jsonl"
     path.touch()
-
-    class SlowWorker(_InferenceDouble):
-        def stream_chunks(self, *args, **kwargs):
-            time.sleep(0.1)
-            super().stream_chunks(*args, **kwargs)
+    requests_started = threading.Barrier(2)
 
     def search_call(call_id):
         sink = SearchLogContext(path, "tui", "exec_test", call_id)
+
+        def record(kind, payload):
+            sink.event(kind, payload)
+            if kind == "document_search_request_started":
+                requests_started.wait(timeout=5)
+
         with closing(
             DocumentSearch(
                 root,
                 _tuning(),
-                worker=SlowWorker(),
+                worker=_InferenceDouble(),
                 installation_root=tmp_path,
-                event_sink=sink.event,
+                event_sink=record,
             )
         ) as search:
             return search.search("原文")
@@ -326,6 +329,11 @@ def test_parallel_requests_log_to_their_own_codex_calls(tmp_path):
     assert len(events) == 10
     starts = [e for e in events if e["event"] == "document_search_request_started"]
     assert len({e["request_id"] for e in starts}) == 2
+    assert {e["codex_call_id"] for e in starts} == {"cc_a", "cc_b"}
+    assert [e["event"] for e in events[:2]] == [
+        "document_search_request_started",
+        "document_search_request_started",
+    ]
     identities = set()
     for start in starts:
         records = [e for e in events if e["request_id"] == start["request_id"]]

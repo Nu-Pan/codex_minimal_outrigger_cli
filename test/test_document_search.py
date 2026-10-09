@@ -13,10 +13,11 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import ExitStack, closing
 from dataclasses import asdict, replace
 from importlib import resources
 from pathlib import Path
+from types import SimpleNamespace
 from typing import get_args
 
 import pytest
@@ -63,40 +64,43 @@ def _tuning() -> DocumentSearchConfig:
 
 
 @pytest.mark.parametrize("cancel_wait", [False, True])
-def test_file_lock_measures_contended_wait(tmp_path: Path, cancel_wait: bool) -> None:
+def test_file_lock_measures_contended_wait(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cancel_wait: bool
+) -> None:
     """取得成功と取消のどちらでも、保持時間を含めず取得待ちを計測する。"""
+    from commons import runtime_document_search as module
+
+    # 実 file lock を競合させ、時計と所有者の解放だけを制御する。
     lock_path = tmp_path / "index.lock"
-    held = threading.Event()
-    release = threading.Event()
     cancelled = threading.Event()
     waits: list[float] = []
+    clock = SimpleNamespace(now=0.0)
 
-    def hold_lock() -> None:
-        with _file_lock(lock_path, None):
-            held.set()
-            release.wait(3)
+    def advance_wait(_seconds: float) -> None:
+        clock.now += 1.0
+        if clock.now == 3.0:
+            if cancel_wait:
+                cancelled.set()
+            else:
+                holder.close()
 
-    holder = threading.Thread(target=hold_lock)
-    holder.start()
-    timer = threading.Timer(0.15, cancelled.set if cancel_wait else release.set)
-    try:
-        assert held.wait(2)
-        timer.start()
+    monkeypatch.setattr(
+        module,
+        "time",
+        SimpleNamespace(monotonic=lambda: clock.now, sleep=advance_wait),
+    )
+    with ExitStack() as holder:
+        holder.enter_context(_file_lock(lock_path, None))
         if cancel_wait:
-            with pytest.raises(SearchError, match="cancelled"):
+            with pytest.raises(SearchError, match="cancelled") as failure:
                 with _file_lock(lock_path, None, cancelled, on_wait=waits.append):
                     pytest.fail("cancelled acquisition unexpectedly succeeded")
+            assert failure.value.code == "CANCELLED"
         else:
             with _file_lock(lock_path, None, on_wait=waits.append):
-                pass
-        assert len(waits) == 1
-        assert 0.1 <= waits[0] < 2
-    finally:
-        release.set()
-        holder.join(2)
-        if timer.is_alive():
-            timer.join(2)
-    assert not holder.is_alive()
+                # 取得後の保持時間が待ち時間へ混ざる回帰も検出する。
+                clock.now += 7.0
+    assert waits == [3.0]
 
 
 class _InferenceDouble:
