@@ -36,7 +36,8 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    # 既定設定だけを用意し、doctor preprocess は検証対象の CLI 内で実行する。
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     write_python_executable(

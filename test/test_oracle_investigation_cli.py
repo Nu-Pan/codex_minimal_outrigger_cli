@@ -10,14 +10,16 @@
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import runner
 from _git_support import make_repo
 
 import acp.builder.oracle.investigation.launch_tui as launch_tui_module
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.investigation as investigation_module
 from basic.acp import AgentCallParameter, FileAccessMode
+from cmoc_runtime import write_config
 from commons.runtime_logging import current_subcommand_logger
+from config.cmoc_config import CmocConfig
 from main import app
 
 
@@ -28,7 +30,8 @@ def test_oracle_investigation_has_no_session_precondition(
     """oracle investigation が session なしの main worktree でも起動できる。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    # 既定設定だけを用意し、doctor preprocess は検証対象の CLI 内で実行する。
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
