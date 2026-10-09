@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import get_args
 
 import pytest
-from _git_support import init_repo, make_repo, run_git
+from _git_support import init_repo, run_git
 from jsonschema.validators import Draft202012Validator
 from oracle.other.cmoc_config import DocumentSearchConfig
 from oracle.other.document_search import (
@@ -628,19 +628,18 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_changed_sections_and_moved_files_reuse_saved_embeddings(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cli_repository: Path
 ) -> None:
     """実 chunker で変更節だけを再推論し、現在位置と query cache を保つ。"""
     pytest.importorskip("sqlite_vec")
     from commons import runtime_document_search_worker as worker_module
 
-    root = make_repo(tmp_path)
+    # 履歴を参照しないため、未追跡の検索対象と実 Git root だけを用意する。
+    root = cli_repository
     document = root / "oracle/doc/sections.md"
-    document.parent.mkdir()
+    document.parent.mkdir(parents=True)
     a, b, c = "# A\nalpha\n", "# B\nbravo\n", "# C\ncharlie\n"
     document.write_text(a + b + c)
-    run_git(root, "add", "oracle/doc")
-    run_git(root, "commit", "-m", "add sections")
     ensure_cmoc_ignored(root)
     runtime = tmp_path / "fake-worker"
     runtime.mkdir()
@@ -675,10 +674,11 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
             for line in (runtime / "embedding-inputs.jsonl").read_text().splitlines()
         ]
 
-    def hit_lines() -> dict[str, int]:
+    def hit_lines(expected_document: Path = document) -> dict[str, int]:
         # 公開位置から現在原文を読み、移動前の位置や抜粋に依存しない。
         locations = {}
         for hit in search.search("sections")["hits"]:
+            assert hit["path"] == expected_document.relative_to(root).as_posix()
             lines = (root / hit["path"]).read_text().splitlines(keepends=True)
             for location in hit["ranges"]:
                 start, end = location["start_line"], location["end_line"]
@@ -694,40 +694,35 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
 
         edited_a = "# A\nalpha edited\nextra\n"
         document.write_text(edited_a + b + c)
-        changed = search.synchronize()
-        assert changed.status == "updated"
-        assert changed.reused_embeddings == 2
+        # 検索の自動同期で位置と推論数を一緒に検査し、直前の明示同期を重ねない。
+        assert hit_lines() == {edited_a: 1, b: 4, c: 6}
+        assert search.sync_progress["status"] == "updated"
+        assert search.sync_progress["reused_embeddings"] == 2
         assert search.sync_progress["persisted_chunks"] == 1
         assert search.sync_progress["changed_document_count"] == 1
         assert model_inputs() == [a, b, c, edited_a]
-        assert hit_lines() == {edited_a: 1, b: 4, c: 6}
 
         revised_heading = "## A revised\nalpha edited\nextra\n"
         document.write_text(revised_heading + b + c)
-        heading_change = search.synchronize()
-        assert heading_change.reused_embeddings == 2
+        assert hit_lines() == {revised_heading: 1, b: 4, c: 6}
+        assert search.sync_progress["reused_embeddings"] == 2
         assert search.sync_progress["persisted_chunks"] == 1
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
-        assert hit_lines() == {revised_heading: 1, b: 4, c: 6}
 
         document.write_text(b + c + revised_heading)
-        moved_sections = search.synchronize()
-        assert moved_sections.status == "updated"
-        assert moved_sections.reused_embeddings == 3
+        assert hit_lines() == {b: 1, c: 3, revised_heading: 5}
+        assert search.sync_progress["status"] == "updated"
+        assert search.sync_progress["reused_embeddings"] == 3
         assert search.sync_progress["persisted_chunks"] == 0
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
-        assert hit_lines() == {b: 1, c: 3, revised_heading: 5}
 
         moved_file = document.with_name("moved.md")
         document.rename(moved_file)
-        moved_document = search.synchronize()
-        assert moved_document.status == "updated"
-        assert moved_document.reused_embeddings == 3
+        assert hit_lines(moved_file) == {b: 1, c: 3, revised_heading: 5}
+        assert search.sync_progress["status"] == "updated"
+        assert search.sync_progress["reused_embeddings"] == 3
         assert search.sync_progress["persisted_chunks"] == 0
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
-        hits = search.search("sections")["hits"]
-        assert {hit["path"] for hit in hits} == {"oracle/doc/moved.md"}
-        assert hit_lines() == {b: 1, c: 3, revised_heading: 5}
         assert worker.operations == ["embed_query"]
 
 

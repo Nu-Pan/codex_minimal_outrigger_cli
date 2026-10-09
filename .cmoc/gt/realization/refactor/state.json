@@ -733,9 +733,9 @@
   },
   "src/commons/document_search_worker/package-lock.json": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "7486ee5717110a8e2d7b7ef955f72070b75ce88a5a9718d9f96d66434848efa3",
+    "last_investigated_at": "2026-10-10_06-17-05_395"
   },
   "src/commons/document_search_worker/package.json": {
     "investigation_required": true,
