@@ -25,7 +25,14 @@ from pathlib import Path
 
 import pytest
 from _cli_support import run_doctor, runner, terminal_primary_report
-from _git_support import RUN_ID, SESSION_ID, current_branch, make_repo, run_git
+from _git_support import (
+    RUN_ID,
+    SESSION_BRANCH,
+    SESSION_ID,
+    current_branch,
+    make_repo,
+    run_git,
+)
 
 import cmoc_runtime
 import commons.runtime_merge_conflict as merge_conflict_module
@@ -70,6 +77,24 @@ def session_home_branch(root: Path, session_branch: str) -> str:
 
     state = json.loads(session_state_path(root, session_branch).read_text())
     return state["session"]["session_home_branch"]
+
+
+def _seed_join_session(root: Path) -> tuple[str, str]:
+    """競合解消の検査に必要な clean session を、fork CLI を実行せず用意する。"""
+    # fork の branch/state 作成と linked worktree での fork→join は専用 test に残す。
+    # join 自身の doctor は置換せず、管理物の準備・修復を実経路で検証する。
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    seed_search_config(root)
+    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
+    run_git(root, "commit", "-m", "join session seed")
+    home_branch = current_branch(root)
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
+    state = cmoc_runtime.SessionState()
+    state.session.session_home_branch = home_branch
+    state.session.session_fork_commit = fork_commit
+    cmoc_runtime.write_state(session_state_path(root, SESSION_BRANCH), state)
+    return SESSION_BRANCH, home_branch
 
 
 def write_abandoned_state(root: Path, session_id: str) -> Path:
@@ -1009,12 +1034,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_join_session(root)
     target.write_text("session change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session change")
@@ -1115,12 +1135,7 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
         run_git(root, "commit", "-m", "add related implementation")
     moved = extra.with_name("moved.py")
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_join_session(root)
     target.write_text("session change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session change")
@@ -1193,12 +1208,7 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_join_session(root)
     session_content = (
         "session change\n"
         if change_kind == "delete"
@@ -1265,12 +1275,7 @@ def test_session_join_handles_conflict_path_containing_newline(
     run_git(root, "add", "src/line\nbreak.txt")
     run_git(root, "commit", "-m", "add newline path")
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_join_session(root)
     target.write_text("session change\n")
     run_git(root, "add", "src/line\nbreak.txt")
     run_git(root, "commit", "-m", "session change")
@@ -1421,12 +1426,7 @@ def test_session_join_stages_delete_conflict_resolution(
     """Codexが解決した削除をstageしてsession joinできることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_join_session(root)
     (root / "README.md").unlink()
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "session deletes readme")
@@ -1610,12 +1610,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     root = make_repo(tmp_path)
     target = root / "README.md"
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_join_session(root)
     target.write_text("session change\n")
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "session change")
@@ -1655,12 +1650,7 @@ def test_session_join_codex_failure_reports_unresolved_merge(
     root = make_repo(tmp_path)
     target = root / "README.md"
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_join_session(root)
     target.write_text("session change\n")
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "session change")
