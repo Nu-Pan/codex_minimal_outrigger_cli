@@ -745,9 +745,9 @@
   },
   "src/commons/document_search_worker/worker.mjs": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "47a60f5a552b12a51ec4a989cc8e2f6325e711b601697fa69e5e7c089c60105f",
+    "last_investigated_at": "2026-10-10_06-36-23_608"
   },
   "src/commons/prompt_editor_input.py": {
     "investigation_required": true,

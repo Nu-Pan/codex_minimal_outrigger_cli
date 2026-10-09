@@ -1167,23 +1167,30 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
     """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
-    (root / path).write_text("".join(f"候補 {i}\n" for i in range(60)))
-    vectors = [(i - 30, 20) for i in range(60)]
+    # 上限を一件超えれば切捨てと順位を検査でき、余分な一意 embedding は不要。
+    candidate_count = 50
+    available = candidate_count + 1
+    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
+    vectors = [(i - available // 2, 20) for i in range(available)]
     worker = _CandidateWorker(
-        {path: [(i + 1, i + 1) for i in range(60)]}, vectors={path: vectors}
+        {path: [(i + 1, i + 1) for i in range(available)]}, vectors={path: vectors}
     )
     expected = {i + 1: x / math.hypot(x, y) for i, (x, y) in enumerate(vectors)}
     results = []
     with closing(
         DocumentSearch(
             root,
-            replace(_tuning(), candidate_count=50),
+            replace(_tuning(), candidate_count=candidate_count),
             worker=worker,
             installation_root=tmp_path,
         )
     ) as search:
         tool = _listed_search_tool(search)
-        for limit, count in ((None, 50), (20, 20), (50, 50)):
+        for limit, count in (
+            (None, candidate_count),
+            (20, 20),
+            (candidate_count, candidate_count),
+        ):
             arguments = {"query": "候補"}
             if limit is not None:
                 arguments["limit"] = limit
@@ -1200,7 +1207,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
             assert [hit["path"] for hit in result["hits"]] == [path]
             ranges = result["hits"][0]["ranges"]
             assert [location["start_line"] for location in ranges] == list(
-                range(60, 60 - count, -1)
+                range(available, available - count, -1)
             )
             assert all(
                 location["start_line"] == location["end_line"]
@@ -1223,22 +1230,25 @@ def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
-    (root / path).write_text("".join(f"候補 {i}\n" for i in range(60)))
+    # 50 件の採用でも未採用候補を一件残し、統合前の上限違反を検出する。
+    candidate_count = 50
+    available = candidate_count + 1
+    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
     worker = _CandidateWorker(
-        {path: [(i + 1, 60) for i in range(60)]},
-        vectors={path: [(i + 1, 1) for i in range(60)]},
+        {path: [(i + 1, available) for i in range(available)]},
+        vectors={path: [(i + 1, 1) for i in range(available)]},
     )
     with closing(
         DocumentSearch(
             root,
-            replace(_tuning(), candidate_count=50),
+            replace(_tuning(), candidate_count=candidate_count),
             worker=worker,
             installation_root=tmp_path,
         )
     ) as search:
         tool = _listed_search_tool(search)
         # 上限だけを変える検査は同じ索引を使い、各要求では query 推論も通す。
-        for limit, start_line in [(20, 41), (50, 11)]:
+        for limit in (20, candidate_count):
             response = _response(
                 {
                     "jsonrpc": "2.0",
@@ -1257,9 +1267,11 @@ def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
                     "path": path,
                     "ranges": [
                         {
-                            "start_line": start_line,
-                            "end_line": 60,
-                            "max_similarity": pytest.approx(60 / math.hypot(60, 1)),
+                            "start_line": available - limit + 1,
+                            "end_line": available,
+                            "max_similarity": pytest.approx(
+                                available / math.hypot(available, 1)
+                            ),
                         }
                     ],
                 }
