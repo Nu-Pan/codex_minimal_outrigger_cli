@@ -8,6 +8,7 @@
 """
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 import oracle.other.path_model as path_model_module
@@ -405,14 +406,31 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "診断用サブコマンドログ" in report
 
 
+@pytest.fixture
+def oracle_edit_failure_repository(
+    cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[Path]:
+    """準備失敗の検証に必要な Git root・設定・doctor 呼び出し記録を用意する。"""
+    root = cli_repository
+    monkeypatch.chdir(root)
+    write_config(config_path(root), CmocConfig())
+    # doctor の修復・索引同期との結合と順序は、上の exec 制御テストで検証する。
+    # 準備失敗には履歴・session は不要で、doctor の呼び出しだけを確認する。
+    doctor_roots: list[Path] = []
+    monkeypatch.setattr(
+        runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
+    )
+    yield root
+    assert doctor_roots == [root]
+
+
 def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
-    tmp_path: Path,
+    oracle_edit_failure_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """skeleton 構築に失敗した場合は editor input file を残さない。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    write_config(config_path(root), CmocConfig())
+    root = oracle_edit_failure_repository
 
     def fail_build_main_parameter(
         _user_instruction: str, **_kwargs: object
@@ -435,13 +453,12 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
 
 @pytest.mark.parametrize("failure_stage", ["config", "preconditions"])
 def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_stage: str
+    oracle_edit_failure_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_stage: str,
 ) -> None:
     """共用入力確定後の準備失敗では、どちらの編集も開始済みにしない。"""
     # 起動前提は失敗境界の double へ置き換えるため、session は不要。
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    write_config(config_path(root), CmocConfig())
     monkeypatch.setattr(
         oracle_edit_module, "edit_prompt_editor_input", lambda *_args: None
     )
