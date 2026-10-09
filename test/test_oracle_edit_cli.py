@@ -11,14 +11,14 @@ import json
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner, terminal_primary_report
+from _cli_support import runner, terminal_primary_report
 from _codex_support import FakeCodexResult, codex_override_config, setup_codex_home
 from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_git
 
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
 from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import CmocError
+from cmoc_runtime import CmocError, write_config
 from commons.runtime_codex_profile import build_codex_override_args
 from commons.runtime_config import config_path
 from commons.runtime_logging import current_subcommand_logger
@@ -29,6 +29,7 @@ from commons.runtime_state import (
     state_path,
     write_state,
 )
+from config.cmoc_config import CmocConfig
 from main import app
 
 
@@ -59,11 +60,12 @@ def _prepared_repo(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
-    """doctor 済みの隔離 repository を準備する。"""
+    """履歴・Codex HOME・既定設定を持つ隔離 repository を準備する。"""
     setup_codex_home(tmp_path, monkeypatch)
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    run_doctor(root)
+    # doctor preprocess は検証対象の invocation 内で一度だけ実行する。
+    write_config(config_path(root), CmocConfig())
     return root
 
 
@@ -407,7 +409,9 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """skeleton 構築に失敗した場合は editor input file を残さない。"""
-    root = _prepared_repo(tmp_path, monkeypatch)
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    write_config(config_path(root), CmocConfig())
 
     def fail_build_main_parameter(
         _user_instruction: str, **_kwargs: object
@@ -424,6 +428,7 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == 1
+    assert "builder failed" in result.output
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md"))
 
 
@@ -432,8 +437,10 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_stage: str
 ) -> None:
     """共用入力確定後の準備失敗では、どちらの編集も開始済みにしない。"""
-    root = _prepared_repo(tmp_path, monkeypatch)
-    _activate_session(root)
+    # 起動前提は失敗境界の double へ置き換えるため、session は不要。
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    write_config(config_path(root), CmocConfig())
     monkeypatch.setattr(
         oracle_edit_module, "edit_prompt_editor_input", lambda *_args: None
     )
