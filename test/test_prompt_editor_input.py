@@ -8,6 +8,7 @@
 import os
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from oracle.prompt_builder.editor_input import (
@@ -128,7 +129,17 @@ def test_editor_input_selects_editor_in_specified_priority(
     wait_for_editor: bool,
 ) -> None:
     """仕様の優先順と code 専用の --wait を editor 起動 argv で検証する。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    # 実 handoff lifecycle は test_editor_input_handoff.py で検証する。
+    # editor 選択には採番・guide 生成・TCP 受付が不要なので境界を置き換える。
+    input_path = tmp_path / ".cmoc/gu/log/editor_input/input.md"
+    input_path.parent.mkdir(parents=True)
+    input_path.touch()
+    target = SimpleNamespace(target_id="eit_000000_2026-09-29_15-04", close=Mock())
+    monkeypatch.setattr(
+        prompt_editor_input_module,
+        "start_editor_input_handoff",
+        lambda *_args, **_kwargs: target,
+    )
     calls: list[list[str]] = []
 
     monkeypatch.setattr(
@@ -139,6 +150,7 @@ def test_editor_input_selects_editor_in_specified_priority(
 
     def fake_run(argv: list[str]) -> SimpleNamespace:
         """選択された editor の argv を記録して正常終了する。"""
+        target.close.assert_not_called()
         calls.append(argv)
         return SimpleNamespace(returncode=0)
 
@@ -154,6 +166,7 @@ def test_editor_input_selects_editor_in_specified_priority(
     if wait_for_editor:
         expected_argv.append("--wait")
     assert calls == [[*expected_argv, str(input_path)]]
+    target.close.assert_called_once_with()
 
 
 @pytest.mark.parametrize("replacement", ["symlink", "directory", "missing", "fifo"])
