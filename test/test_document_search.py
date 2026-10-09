@@ -960,12 +960,18 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
 
 
 class _CandidateWorker(_InferenceDouble):
-    """集約前の候補位置を制御し、検索・同期・返却は製品経路で検証する。"""
+    """候補位置と文書・query の embedding を制御し、製品経路で検証する。"""
 
     def __init__(self, ranges, *, vectors=None):
         super().__init__()
         self.ranges = ranges
         self.vectors = vectors
+        self.query_vector = (1, 0)
+
+    def run(self, operation, payload, **kwargs):
+        vector = super().run(operation, payload, **kwargs)
+        vector[: len(self.query_vector)] = self.query_vector
+        return vector
 
     def stream_chunks(self, documents, resumes, on_event, **kwargs):
         vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
@@ -996,10 +1002,6 @@ class _CandidateWorker(_InferenceDouble):
 
 
 @pytest.mark.parametrize(
-    "vector,similarity",
-    [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0), ((-3, 4), -0.6)],
-)
-@pytest.mark.parametrize(
     "candidate_count,available,limit_cases",
     [
         # 上限を一件超える候補で切捨てを検出し、同じ検証のための余分な保存を省く。
@@ -1010,17 +1012,24 @@ class _CandidateWorker(_InferenceDouble):
     ],
 )
 def test_mcp_success_schema_and_candidate_limits(
-    tmp_path, candidate_count, available, limit_cases, vector, similarity
+    tmp_path, candidate_count, available, limit_cases
 ):
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
     # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     (root / path).write_text("候補\n" * available)
-    worker = _CandidateWorker(
-        {path: [(i + 1, i + 1) for i in range(available)]},
-        vectors={path: [vector] * available},
-    )
+    worker = _CandidateWorker({path: [(i + 1, i + 1) for i in range(available)]})
+    # cosine の対称性で query 側を変え、同じ文書索引を類似度ごとに構築しない。
+    similarities = [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0), ((-3, 4), -0.6)]
+    # 空集合は embedding を使わないため、類似度違いの重複検査は不要。
+    if available == 0:
+        similarities = similarities[:1]
+    cases = [
+        (vector, similarity, limit, expected)
+        for vector, similarity in similarities
+        for limit, expected in limit_cases
+    ]
     with closing(
         DocumentSearch(
             root,
@@ -1030,8 +1039,11 @@ def test_mcp_success_schema_and_candidate_limits(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        # 同じ索引を共用し、query は変えて各ケースの推論経路を残す。
-        for request_id, (limit, expected) in enumerate(limit_cases, start=1):
+        # query を変え、各類似度・上限の組合せで推論経路を残す。
+        for request_id, (vector, similarity, limit, expected) in enumerate(
+            cases, start=1
+        ):
+            worker.query_vector = vector
             worker.operations.clear()
             arguments = {"query": f"候補 {request_id}"}
             if limit is not None:
