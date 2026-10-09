@@ -50,7 +50,7 @@ from acp.builder.feedback.remediate_issue import (
     build_feedback_remediate_issue_parameter,
 )
 from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import CmocError
+from cmoc_runtime import CmocError, load_state_for_branch
 from commons.runtime_feedback import (
     FeedbackInvocation,
     ReporterAvailabilityError,
@@ -2333,17 +2333,20 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
     assert all(not path.exists() for path in raw_paths)
 
 
+# rollback 済み error の手動終了は、障害原因によらず同じ入力状態を扱う。
+# 各障害を検査し、error（rollback 済み／checkpoint 保存済み）と joinable で両操作を残す。
 @pytest.mark.parametrize(
-    "fault",
+    ("fault", "operation"),
     [
-        "unreported_change",
-        "forbidden_change",
-        "checkpoint",
-        "checkpoint_reference",
-        "interrupt",
+        ("unreported_change", "join"),
+        ("forbidden_change", "abandon"),
+        ("checkpoint", "join"),
+        ("checkpoint_reference", "join"),
+        ("checkpoint_reference", "abandon"),
+        ("interrupt", "join"),
+        ("interrupt", "abandon"),
     ],
 )
-@pytest.mark.parametrize("operation", ["join", "abandon"])
 def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str, operation: str
 ) -> None:
@@ -2379,6 +2382,13 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
     assert result.exit_code == (0 if fault == "interrupt" else 1), result.output
     manifest, _ = load_report_cut(root)
+    _, _, session = load_state_for_branch(
+        root, manifest["run"]["identity"]["session_branch"]
+    )
+    assert session.run.state == ("joinable" if fault == "interrupt" else "error")
+    assert manifest["processing"]["status"] == (
+        "interrupted" if fault == "interrupt" else "failed"
+    )
     run_worktree = Path(manifest["run"]["identity"]["run_worktree"])
     assert (run_worktree / "README.md").read_text() == (
         "unconfirmed change\n" if fault == "checkpoint_reference" else initial
