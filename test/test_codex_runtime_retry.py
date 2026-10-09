@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from _codex_support import codex_override_config, setup_codex_home, stub_codex_overrides
@@ -154,53 +155,50 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     assert len({event["codex_call_id"] for event in codex_events}) == 2
 
 
-@pytest.mark.parametrize("non_json_constant", ["NaN", "Infinity", "-Infinity"])
-def test_run_codex_exec_corrects_non_json_numeric_constant(
-    cli_repository: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    non_json_constant: str,
-) -> None:
-    """JSON 仕様外の非有限数を Structured Output の parse failure として補正する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "non_json_constant_bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "non_json_constant_counter"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            f"output.write_text({non_json_constant!r} if count == 0 else '1')",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    schema = tmp_path / "non_json_constant_schema.json"
-    schema.write_text(json.dumps({"type": "number"}))
-
-    result = run_codex_exec(
-        AgentCallParameter(
-            "build_feedback_normalize_issue_parameter",
-            FileAccessMode.READONLY,
-            "prompt",
-            schema,
-            root,
+@pytest.mark.parametrize(
+    ("output_bytes", "expected_error"),
+    [
+        pytest.param(None, "does not exist", id="missing"),
+        pytest.param(b"", "is empty", id="empty"),
+        pytest.param(b"{", "is not valid JSON", id="malformed"),
+        pytest.param(
+            b"[" * 10000 + b"0" + b"]" * 10000,
+            "is not valid JSON",
+            id="deeply_nested",
         ),
-        root=root,
-        transient_poll_interval_sec=0,
-        config=CmocConfig(),
+        pytest.param(b"NaN", "non-standard JSON constant", id="NaN"),
+        pytest.param(b"Infinity", "non-standard JSON constant", id="Infinity"),
+        pytest.param(
+            b"-Infinity", "non-standard JSON constant", id="negative_Infinity"
+        ),
+        pytest.param(b"\xff", "decode", id="invalid_utf8"),
+    ],
+)
+def test_structured_output_parse_failure_stops_before_schema_and_postcondition(
+    tmp_path: Path,
+    output_bytes: bytes | None,
+    expected_error: str,
+) -> None:
+    """不正 JSON の境界値は、CLI を起動せず補正用の診断まで検証する。"""
+    # parse failure の session 再開と log 保存は結合テストに残す。
+    output_path = tmp_path / "output.json"
+    if output_bytes is not None:
+        output_path.write_bytes(output_bytes)
+    schema_validator = Mock()
+    postcondition = Mock()
+
+    output, issues = runtime_codex_exec._validate_structured_output(
+        output_path, schema_validator, postcondition, frozenset()
     )
 
-    assert result.output_json == 1
-    assert counter.read_text() == "2"
+    assert output is None
+    [issue] = issues
+    assert issue.condition == "JSON parse"
+    assert issue.location
+    assert issue.expected
+    assert expected_error in issue.observed
+    schema_validator.iter_errors.assert_not_called()
+    postcondition.assert_not_called()
 
 
 def test_run_codex_exec_corrects_declared_postcondition(
@@ -454,34 +452,18 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     assert codex_events[0]["error"] == "KeyboardInterrupt()"
 
 
-@pytest.mark.parametrize(
-    ("name", "first_output_lines", "expected_error"),
-    [
-        ("missing", [], "does not exist"),
-        ("empty", ["output.write_text('')"], "is empty"),
-        ("malformed", ["output.write_text('{')"], "is not valid JSON"),
-        (
-            "deeply_nested",
-            ["output.write_text('[' * 10000 + '0' + ']' * 10000)"],
-            "is not valid JSON",
-        ),
-    ],
-)
 def test_run_codex_exec_corrects_structured_output_parse_failure(
     cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    name: str,
-    first_output_lines: list[str],
-    expected_error: str,
 ) -> None:
-    """Structured Output の欠落・空・不正 JSON を補正し、失敗理由を記録する。"""
+    """parse failure を同じ session で補正し、元の出力と診断を保持する。"""
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / f"{name}_bin"
+    bin_dir = tmp_path / "parse_failure_bin"
     bin_dir.mkdir()
-    counter = tmp_path / f"{name}_counter"
+    counter = tmp_path / "parse_failure_counter"
     fake_codex = bin_dir / "codex"
     write_python_executable(
         fake_codex,
@@ -492,17 +474,14 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
             "counter.write_text(str(count + 1))",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if count == 0:",
-            *([f"    {line}" for line in first_output_lines] or ["    pass"]),
-            "else:",
-            "    output.write_text(json.dumps({'ok': True}))",
+            "output.write_text('NaN' if count == 0 else '1')",
             "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    schema = tmp_path / f"{name}_schema.json"
-    schema.write_text("{}")
+    schema = tmp_path / "parse_failure_schema.json"
+    schema.write_text(json.dumps({"type": "number"}))
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
@@ -520,15 +499,27 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
         subcommand_logger=logger,
     )
 
-    assert result.output_json == {"ok": True}
+    assert result.output_json == 1
+    assert result.output_text == "1"
     assert counter.read_text() == "2"
+    call_logs = [
+        json.loads(path.read_text())
+        for path in sorted(result.call_log_path.parent.glob("*_call.json"))
+    ]
+    assert "resume" not in call_logs[0]["argv"]
+    resume_index = call_logs[1]["argv"].index("resume")
+    assert call_logs[1]["argv"][resume_index + 1] == "session-1"
+    assert [Path(log["output_path"]).read_text() for log in call_logs] == [
+        "NaN",
+        "1",
+    ]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [
         "output_correction_requested",
         "succeeded",
     ]
-    assert expected_error in codex_events[0]["error"]
+    assert "non-standard JSON constant" in codex_events[0]["error"]
 
 
 @pytest.mark.parametrize(
