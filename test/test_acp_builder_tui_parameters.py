@@ -5,6 +5,7 @@
 
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
 from oracle.acp_builder.tui.launch_tui import (
     build_tui_launch_tui_parameter as build_canonical_tui_launch_tui_parameter,
@@ -24,13 +25,24 @@ from basic.acp import FileAccessMode
     ],
 )
 def test_tui_launch_builder_uses_fixed_parameter_and_policies(
-    cli_repository: Path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     original_prompt: str,
 ) -> None:
     """オリジナル prompt によらず固定の規定と実行設定を使用する。"""
-    root = cli_repository
+    # Git metadata の導出は test_basic_runtime.py と test_cli_tui.py に残す。
+    # 文面・parameter の検査では root 探索結果だけを置換する。
+    root = tmp_path / "repo"
+    root.mkdir()
     monkeypatch.chdir(root)
+
+    def resolve_test_roots(start_path: Path | None = None) -> tuple[Path, Path]:
+        assert (Path.cwd() if start_path is None else start_path).resolve() == root
+        return root, root
+
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
+    )
 
     parameter = build_tui_launch_tui_parameter(original_prompt)
 
@@ -41,6 +53,8 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     assert parameter.enable_editor_input_handoff_mcp is True
     assert parameter.enable_document_search_mcp is True
     complete_prompt = parameter.prompt
+    assert f"- {{{{repo-root}}}} = {root}" in complete_prompt
+    assert f"- {{{{work-root}}}} = {root}" in complete_prompt
     for heading in (
         "# oracle and realization basic",
         "# oracle policy",
