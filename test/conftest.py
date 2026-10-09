@@ -67,6 +67,21 @@ def document_search_clock(monkeypatch):
     return clock
 
 
+@pytest.fixture
+def toast_clock(monkeypatch):
+    """callback drain の時計だけを進め、process と thread の待機は実時間に保つ。"""
+    clock = SimpleNamespace(now=100.0)
+
+    def advance(seconds):
+        clock.now += seconds
+
+    clock.monotonic = lambda: clock.now
+    clock.sleep = advance
+    # 共有 time module を変更せず、通知 module 内の時計だけを置き換える。
+    monkeypatch.setattr(runtime_windows_toast, "time", clock)
+    return clock
+
+
 @pytest.fixture(scope="session")
 def _noop_external_commands(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """書き換えない外部コマンドの no-op をテストセッション内で共有する。"""

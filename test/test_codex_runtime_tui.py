@@ -52,9 +52,13 @@ def _tui_call_logs(root: Path) -> list[Path]:
 # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
 def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    toast_clock,
 ) -> None:
     """PURE_ORACLE_READ の完全 prompt 本文と CLI 引数を変更せず渡す。"""
+    # Fake CLI は callback を起動しない。drain の待機契約は test_windows_toast.py で検証する。
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"

@@ -11,7 +11,6 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
-from types import SimpleNamespace
 
 import pytest
 from _command_support import write_python_executable
@@ -19,21 +18,6 @@ from _command_support import write_python_executable
 import commons.runtime_windows_toast as runtime_windows_toast
 
 _REAL_WINDOWS_TOAST_TRANSPORT = runtime_windows_toast._run_windows_toast_transport
-
-
-@pytest.fixture
-def toast_clock(monkeypatch):
-    """callback drain の時計だけを進め、process と thread の待機は実時間に保つ。"""
-    clock = SimpleNamespace(now=100.0)
-
-    def advance(seconds):
-        clock.now += seconds
-
-    clock.monotonic = lambda: clock.now
-    clock.sleep = advance
-    # 共有 time module を変更せず、通知 module 内の時計だけを置き換える。
-    monkeypatch.setattr(runtime_windows_toast, "time", clock)
-    return clock
 
 
 @pytest.mark.parametrize(
