@@ -12,7 +12,6 @@ from _codex_support import (
     stub_codex_overrides,
 )
 from _command_support import write_python_executable
-from _git_support import make_repo
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_exec as exec_module
@@ -59,10 +58,12 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
 
 
 def test_run_codex_exec_injects_overrides_and_starts_codex(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Codex CLI の override とリポジトリ書き込み結果を検証する。"""
-    root = make_repo(tmp_path)
+    # schema-less exec は履歴を参照しない。root 探索と Fake CLI の書き込み先だけ用意する。
+    root = cli_repository
+    (root / "oracle").mkdir()
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -144,10 +145,10 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
 
 
 def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """schema-less output の不正 UTF-8 で結果構築を中断しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -177,10 +178,10 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
 
 # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """汎用 provider override と組み込み local provider フラグ不使用を検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     config = CmocConfig()
     config.codex.model_providers["local.provider"] = CodexModelProviderConfig(
