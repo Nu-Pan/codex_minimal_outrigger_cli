@@ -241,7 +241,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
 
 def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
     """state writer が schema 不正値を保存しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
     state = cast(
         RefactorState,
         {
@@ -262,7 +262,8 @@ def test_refactor_state_rejects_symlinked_path_without_writing_target(
     tmp_path: Path,
 ) -> None:
     """state path の symlink 経由更新が work-root 外へ到達しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
+    root.mkdir()
     outside = tmp_path / "outside-state.json"
     outside.write_text("original\n")
     state_path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
@@ -289,7 +290,7 @@ def test_refactor_state_rejects_symlinked_path_without_writing_target(
 )
 def test_refactor_state_rejects_non_file_path(tmp_path: Path, path_kind: str) -> None:
     """state path が通常 file でない場合に read/write を block させない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
     path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     if path_kind == "directory":
@@ -319,7 +320,7 @@ def test_refactor_state_rejects_non_directory_parent(
     tmp_path: Path, parent_kind: str
 ) -> None:
     """state の親が通常 directory でない場合に read/write を block させない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
     parent = root / ".cmoc" / "gt" / "realization" / "refactor"
     parent.parent.mkdir(parents=True)
     if parent_kind == "file":
@@ -333,16 +334,21 @@ def test_refactor_state_rejects_non_directory_parent(
         write_refactor_state(root, {})
 
 
-def test_refactor_cycle_preserves_request_and_millisecond_priority(
-    tmp_path: Path,
-) -> None:
+def test_refactor_cycle_preserves_request_and_millisecond_priority() -> None:
     """引継ぎ要求を優先し、各群で未調査・保存されたミリ秒・path の順に並べる。"""
-    root = make_repo(tmp_path)
-    state = sync_refactor_state(root)
+    state: RefactorState = {
+        path: {
+            "investigation_required": True,
+            "last_investigation_result": "not_investigated",
+            "last_investigated_sha256": None,
+            "last_investigated_at": None,
+        }
+        for path in ("README.md", "oracle/spec.md")
+    }
     state["README.md"].update(
         {
             "last_investigation_result": "findings",
-            "last_investigated_sha256": file_sha256(root / "README.md"),
+            "last_investigated_sha256": "0" * 64,
             "last_investigated_at": "2026-01-01_00-00-00_000",
         }
     )
@@ -352,7 +358,7 @@ def test_refactor_cycle_preserves_request_and_millisecond_priority(
     state["oracle/spec.md"].update(
         {
             "last_investigation_result": "no_findings",
-            "last_investigated_sha256": file_sha256(root / "oracle" / "spec.md"),
+            "last_investigated_sha256": "0" * 64,
             "last_investigated_at": "2026-01-01_00-00-00_001",
         }
     )
@@ -368,7 +374,7 @@ def test_refactor_cycle_preserves_request_and_millisecond_priority(
 
 def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
     """refactor state の親 path escape を拒否する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
     path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(
@@ -395,7 +401,7 @@ def test_refactor_state_rejects_non_string_result(
     result: object,
 ) -> None:
     """entry の調査結果が JSON string 以外なら schema error にする。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
     path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(
@@ -418,7 +424,7 @@ def test_refactor_state_rejects_non_string_result(
 
 def test_refactor_state_rejects_non_utf8_content(tmp_path: Path) -> None:
     """UTF-8 として読めない state は schema error にする。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
     path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(b'{"README.md": \xff}\n')
@@ -429,7 +435,7 @@ def test_refactor_state_rejects_non_utf8_content(tmp_path: Path) -> None:
 
 def test_refactor_state_rejects_nul_in_path_key(tmp_path: Path) -> None:
     """NUL を含む path key は file path として拒否する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
     path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(
@@ -464,7 +470,7 @@ def test_refactor_state_rejects_noncanonical_path_or_timestamp(
     investigated_at: str,
 ) -> None:
     """正規化されていない path と timestamp を state schema で拒否する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
     path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(
