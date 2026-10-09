@@ -679,9 +679,8 @@ def run_codex_exec(
             probe_config.codex.agent_calls[probe_parameter.agent_call_kind] = (
                 config.codex.agent_calls[parameter.agent_call_kind]
             )
-        probe_agent_call_cwd = AgentCallPathContext(
-            probe_parameter.agent_call_cwd
-        ).agent_call_cwd
+        # 正本 builder が cwd と Git context を検証済みなので、その結果を再利用する。
+        probe_agent_call_cwd = probe_parameter.agent_call_cwd
         probe_codex_home = codex_home
         probe_args = prepare_codex_override_args(probe_parameter, probe_config)
         probe_call_data = _call_data(

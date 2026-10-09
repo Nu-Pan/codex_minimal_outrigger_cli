@@ -108,6 +108,29 @@ def recovery_case(cli_repository, tmp_path, monkeypatch):
     )
 
 
+@pytest.fixture
+def parallel_recovery_case(recovery_case, monkeypatch):
+    """両 worker の回復開始を通知し、Fake probe 側で完了を待てるようにする。"""
+    _, _, _, logger = recovery_case
+    registered = threading.Event()
+    original_event = logger.event
+
+    def observe_registration(event, **fields):
+        original_event(event, **fields)
+        if event == "codex_recovery" and fields["status"] in {"started", "joined"}:
+            registrations = [
+                record
+                for record in logger.event_records()
+                if record["event"] == "codex_recovery"
+                and record["status"] in {"started", "joined"}
+            ]
+            if len(registrations) == 2:
+                registered.set()
+
+    monkeypatch.setattr(logger, "event", observe_registration)
+    return (*recovery_case, registered)
+
+
 def script_calls(monkeypatch, responses, *, on_call=None):
     calls = []
     replies = iter(responses)
@@ -504,24 +527,23 @@ except KeyboardInterrupt:
 
 @pytest.mark.parametrize("different_model", [False, True])
 def test_parallel_capacity_checks_share_only_matching_conditions(
-    recovery_case, monkeypatch, different_model
+    parallel_recovery_case, monkeypatch, different_model
 ):
-    root, parameter, config, logger = recovery_case
+    root, parameter, config, logger, registered = parallel_recovery_case
     other = CmocConfig()
     if different_model:
         original = other.codex.agent_calls[parameter.agent_call_kind]
         other.codex.agent_calls[parameter.agent_call_kind] = replace(
             original, model="other-model"
         )
-    barrier = threading.Barrier(2)
     probes = []
 
     def run(argv, **kwargs):
         prompt = kwargs["stdin"].read()
         if prompt == "prompt" and "resume" not in argv:
-            barrier.wait(timeout=5)
             return subprocess.CompletedProcess(argv, 1, jsonl(SESSION, CAPACITY), "")
         if prompt != "prompt":
+            assert registered.wait(5)
             probes.append(codex_arg_value(argv, "--model"))
         Path(codex_arg_value(argv, "--output-last-message")).write_text("ready")
         return subprocess.CompletedProcess(argv, 0, jsonl(COMPLETED), "")
@@ -534,7 +556,7 @@ def test_parallel_capacity_checks_share_only_matching_conditions(
             root=root,
             config=call_config,
             subcommand_logger=logger,
-            transient_poll_interval_sec=0.1,
+            transient_poll_interval_sec=0,
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -544,21 +566,20 @@ def test_parallel_capacity_checks_share_only_matching_conditions(
 
 
 def test_interruption_stops_representative_and_waiting_workers(
-    recovery_case, monkeypatch
+    parallel_recovery_case, monkeypatch
 ):
-    root, parameter, config, logger = recovery_case
+    root, parameter, config, logger, registered = parallel_recovery_case
     restore = recovery.install_recovery_interruption()
     cancellation = recovery.current_recovery_cancellation()
     probe_started = threading.Event()
-    barrier = threading.Barrier(2)
     prompts = []
 
     def run(argv, **kwargs):
         prompt = kwargs["stdin"].read()
         prompts.append(prompt)
         if prompt == "prompt":
-            barrier.wait(timeout=5)
             return subprocess.CompletedProcess(argv, 1, jsonl(SESSION, CAPACITY), "")
+        assert registered.wait(5)
         probe_started.set()
         assert cancellation.wait(5)
         raise KeyboardInterrupt
@@ -574,7 +595,7 @@ def test_interruption_stops_representative_and_waiting_workers(
                     root=root,
                     config=config,
                     subcommand_logger=logger,
-                    transient_poll_interval_sec=0.1,
+                    transient_poll_interval_sec=0,
                 )
                 for _ in range(2)
             ]
