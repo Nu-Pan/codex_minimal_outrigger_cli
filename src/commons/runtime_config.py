@@ -471,8 +471,8 @@ def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchCo
     return config
 
 
-def _validated_codex_data(path: Path, data: dict[str, Any]) -> None:
-    """保存済み agent call 設定を暗黙補完せず、provider 参照まで確認する。"""
+def _validated_codex_data(path: Path, data: dict[str, Any]) -> CmocConfig:
+    """保存済み agent call 設定と provider 参照を確認し、復元した設定を返す。"""
     codex = data.get("codex")
     if not isinstance(codex, dict):
         field = "codex"
@@ -494,7 +494,7 @@ def _validated_codex_data(path: Path, data: dict[str, Any]) -> None:
                 if call.model_provider not in providers
             ]
             if not unknown:
-                return
+                return config
             field = f"codex.agent_calls.{unknown[0]}.model_provider"
     raise CmocError(
         "agent call の保存設定が不足または不正です。",
@@ -515,8 +515,7 @@ def load_config(root: Path) -> CmocConfig:
         )
     data = _read_config_data(path)
     _validated_search_data(path, data)
-    _validated_codex_data(path, data)
-    return config_from_dict(data)
+    return _validated_codex_data(path, data)
 
 
 def sync_config(
@@ -555,8 +554,7 @@ def sync_config(
         on_candidate(False, additions)
     candidate = {**data, "document_search": search}
     _validated_search_data(path, candidate)
-    _validated_codex_data(path, candidate)
-    config = config_from_dict(candidate)
+    config = _validated_codex_data(path, candidate)
     if additions:
         write_config(path, config)
     return ConfigSyncResult(config, False, additions, bool(additions))
