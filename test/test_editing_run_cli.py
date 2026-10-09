@@ -116,10 +116,10 @@ def ready_run_session(
 
 
 @pytest.fixture
-def ready_apply_session(
+def ready_content_session(
     ready_run_session: tuple[Path, str, Path],
 ) -> tuple[Path, str, Path]:
-    """apply の履歴検査に使う oracle と realization の初期内容を用意する。"""
+    """apply と refactor の検査に使う oracle と realization の初期内容を用意する。"""
     root, _session_branch, _state_path = ready_run_session
     (root / "README.md").write_text("# repo\n")
     (root / "oracle" / "spec.md").write_text("# spec\n")
@@ -561,7 +561,7 @@ def test_realization_apply_fork_and_run_join_use_common_state(
 @pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
 @pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
 def test_apply_join_updates_diff_base_only_for_joinable_run(
-    ready_apply_session: tuple[Path, str, Path],
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     run_state: str,
     has_run_change: bool,
@@ -569,7 +569,7 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
 ) -> None:
     """join 開始時の state に応じた比較始点を、次回 apply へ渡す。"""
     # realization_apply.md の「join 後 hook」を state、report、次回 prompt で検査する。
-    root, _session_branch, state_path = ready_apply_session
+    root, _session_branch, state_path = ready_content_session
     state = _state(state_path)
     session_fork_commit = state["session"]["session_fork_commit"]
     previous_base = (
@@ -1016,12 +1016,12 @@ def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
 
 @pytest.mark.parametrize("late_path", [None, "late-realization.md", "oracle/spec.md"])
 def test_apply_fork_checks_stopped_children_before_commit(
-    ready_apply_session: tuple[Path, str, Path],
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     late_path: str | None,
 ) -> None:
     """停止後の変更を検査し、遅延 path があれば commit せず全体を戻す。"""
-    _root, _session_branch, state_path = ready_apply_session
+    _root, _session_branch, state_path = ready_content_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -2974,11 +2974,11 @@ def test_refactor_fork_commits_cycle_until_user_interruption(
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 公開直後の中断を joinable state として report する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_content_session
     original_start = refactor_module.start_editing_run
 
     def interrupt_after_start(kind: str) -> EditingRunContext:
@@ -3151,11 +3151,11 @@ def test_start_run_interrupt_after_state_write_restores_ready_state(
 
 
 def test_refactor_start_failure_after_run_publish_is_reported(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 公開後の初期化失敗を error report として保存する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_content_session
     original_start = refactor_module.start_editing_run
 
     def fail_after_start(kind: str) -> EditingRunContext:
@@ -3179,10 +3179,10 @@ def test_refactor_start_failure_after_run_publish_is_reported(
 
 
 def test_refactor_start_interruption_with_broken_tracking_reports_existing_run(
-    tmp_path, monkeypatch
+    ready_content_session, monkeypatch
 ):
     """成立済み run の追跡失敗を「run 未成立」とせず、資源を残して error にする。"""
-    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, session_branch, state_path = ready_content_session
     session_id = session_branch.removeprefix("cmoc/session/")
     tracking = run_process_id_path(root, session_id)
 
@@ -3208,11 +3208,12 @@ def test_refactor_start_interruption_with_broken_tracking_reports_existing_run(
 
 
 def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
+    ready_content_session: tuple[Path, str, Path],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """unresolved target を保留し、残りの target を処理して cycle を完了する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     reviewed: list[str] = []
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
@@ -3296,11 +3297,11 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
 
 
 def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """current refactor unit の中断時に差分を戻して joinable にする。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
 
     def interrupting_agent(
         parameter: AgentCallParameter,
@@ -3353,12 +3354,12 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
 
 
 def test_refactor_interrupt_before_run_creation_is_normal_completion(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 作成前の fork lifecycle 中断も正常終了として記録する。"""
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     original_step = refactor_module.start_subcommand_step
 
     def interrupt_before_run(
@@ -3400,12 +3401,13 @@ def test_refactor_interrupt_before_run_creation_is_normal_completion(
 
 @pytest.mark.parametrize("interrupt_point", ["commit", "post_commit_record"])
 def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
+    ready_content_session: tuple[Path, str, Path],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     interrupt_point: str,
 ) -> None:
     """処理単位の commit または確定記録後に中断しても進捗を report する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
 
@@ -3516,11 +3518,11 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
 
 
 def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断時に追跡中 Codex child を停止してから rollback する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_content_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -3552,11 +3554,11 @@ def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
 
 
 def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断時 cleanup 失敗を error state と report に反映する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_content_session
     monkeypatch.setattr(
         refactor_module,
         "run_codex_exec",
@@ -3583,11 +3585,11 @@ def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
 
 
 def test_refactor_interrupt_during_completion_is_joinable(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """completion 中の中断を joinable state と user interruption report にする。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_content_session
     monkeypatch.setattr(
         refactor_module,
         "_initialize_cycle",
@@ -3621,9 +3623,11 @@ def test_refactor_interrupt_during_completion_is_joinable(
     assert "- completion_reason: `user_interruption`" in result.output
 
 
-def test_refactor_with_no_targets_keeps_synchronizing(tmp_path, monkeypatch):
+def test_refactor_with_no_targets_keeps_synchronizing(
+    ready_content_session, monkeypatch
+):
     """空対象でも巡を継続し、ユーザー停止だけで終了する。"""
-    _root, _, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _, state_path = ready_content_session
     synchronized = []
 
     def empty_state(root):
@@ -3652,10 +3656,10 @@ def test_refactor_with_no_targets_keeps_synchronizing(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("change_kind", ["delete", "revert"])
 def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
-    tmp_path, monkeypatch, change_kind
+    ready_content_session, monkeypatch, change_kind
 ):
     """削除は成果に含め、後の巡で戻した変更は net 成果へ数えない。"""
-    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    root, _, state_path = ready_content_session
     reviewed = 0
 
     def review(parameter, **kwargs):
@@ -3831,10 +3835,10 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
 
 
 def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
-    tmp_path, monkeypatch
+    ready_content_session, monkeypatch
 ):
     """関連 file の変更を調査実績へ数えず、追加 file は次巡に公平に処理する。"""
-    _root, _, _state_path = _start_session(tmp_path, monkeypatch)
+    _root, _, _state_path = ready_content_session
     reviewed = []
 
     def review(parameter, **kwargs):
@@ -3881,10 +3885,10 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
 
 
 def test_refactor_latest_resolution_survives_commit_inspection_failure(
-    tmp_path, monkeypatch
+    ready_content_session, monkeypatch
 ):
     """確定後の差分確認が失敗しても、最新結果で解消した過去の未解決を復活させない。"""
-    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    root, _, state_path = ready_content_session
     reviewed = 0
     inspect = refactor_module.tree_changes
 
@@ -3937,10 +3941,10 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
     "verification_status", ["failed", "incomplete", "not_required"]
 )
 def test_refactor_rejects_unverified_changes(
-    tmp_path, monkeypatch, verification_status
+    ready_content_session, monkeypatch, verification_status
 ):
     """構文上は妥当な出力でも品質検証が成功していない変更を確定しない。"""
-    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    root, _, state_path = ready_content_session
     calls = []
 
     def review(parameter, **kwargs):
@@ -3977,9 +3981,11 @@ def test_refactor_rejects_unverified_changes(
     assert "品質検証が完了していません" in terminal_primary_report(result).read_text()
 
 
-def test_refactor_stop_failure_preserves_uncommitted_work(tmp_path, monkeypatch):
+def test_refactor_stop_failure_preserves_uncommitted_work(
+    ready_content_session, monkeypatch
+):
     """子の停止を確認できなければ rollback と joinable 公開を行わない。"""
-    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    root, _, state_path = ready_content_session
 
     def interrupted_review(parameter, **kwargs):
         (parameter.agent_call_cwd / "README.md").write_text("still owned by child\n")
@@ -4012,10 +4018,10 @@ def test_refactor_stop_failure_preserves_uncommitted_work(tmp_path, monkeypatch)
 
 
 def test_refactor_interrupted_agent_commit_rolls_back_remaining_untracked_files(
-    tmp_path, monkeypatch
+    ready_content_session, monkeypatch
 ):
     """agent の禁止 commit を除去した後も、未確定の追加 file を残さない。"""
-    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    root, _, state_path = ready_content_session
 
     def interrupted_review(parameter, **_kwargs):
         worktree = parameter.agent_call_cwd
