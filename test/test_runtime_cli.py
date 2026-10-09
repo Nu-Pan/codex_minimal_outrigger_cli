@@ -61,6 +61,22 @@ def _clear_completion_probe_environment(
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
 
 
+@pytest.fixture
+def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """表示・通知の検査では Git 探索と collector 起動を準備から外す。"""
+    # 実 Git の root 境界はこの file の cwd・linked worktree ケースで検証する。
+    # collector の TCP 受付・保存・drain は test_feedback.py に残す。
+    root = tmp_path / "repo"
+    root.mkdir()
+    monkeypatch.chdir(root)
+    monkeypatch.setattr(runtime_cli, "work_root", lambda: root)
+    monkeypatch.setattr(runtime_cli, "repo_root", lambda: root)
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    return root
+
+
 @pytest.mark.parametrize(
     ("seconds", "expected"),
     [
@@ -192,19 +208,12 @@ print("ok")
 
 
 def test_noninteractive_success_emits_one_terminal_result_after_progress(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    cli_terminal_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout を成功 terminal result だけにし、詳細 step はログへ閉じる。"""
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    root = cli_repository
-    monkeypatch.chdir(root)
-    monkeypatch.setattr(
-        runtime_cli,
-        "start_feedback_invocation",
-        lambda *_args: (None, None),
-    )
+    root = cli_terminal_directory
     report_path = root / "report.md"
     report_path.write_text("# report\n")
 
@@ -257,19 +266,12 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
 
 
 def test_internal_failure_traceback_is_logged_but_not_printed(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    cli_terminal_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """想定外障害の stack は診断ログだけに保存する。"""
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
-    root = cli_repository
-    monkeypatch.chdir(root)
-    monkeypatch.setattr(
-        runtime_cli,
-        "start_feedback_invocation",
-        lambda *_args: (None, None),
-    )
+    root = cli_terminal_directory
 
     def fail() -> None:
         raise ValueError("unexpected failure")
@@ -296,18 +298,11 @@ def test_internal_failure_traceback_is_logged_but_not_printed(
 
 
 def test_internal_failure_with_surrogate_message_still_finishes_log(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    cli_terminal_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """異常メッセージの surrogate で terminal event を失わない。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    monkeypatch.setattr(
-        runtime_cli,
-        "start_feedback_invocation",
-        lambda *_args: (None, None),
-    )
+    root = cli_terminal_directory
 
     def fail() -> None:
         """UTF-8 の scalar value でない例外メッセージを再現する。"""
@@ -333,18 +328,11 @@ def test_internal_failure_with_surrogate_message_still_finishes_log(
 
 
 def test_error_terminal_result_does_not_repeat_primary_report_path(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    cli_terminal_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """error detail 内の primary report path は console で重複させない。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    monkeypatch.setattr(
-        runtime_cli,
-        "start_feedback_invocation",
-        lambda *_args: (None, None),
-    )
+    root = cli_terminal_directory
     report_path = root / "error-report.md"
     report_path.write_text("# error report\n")
 
@@ -460,14 +448,10 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
 
 
 def test_cli_nonzero_impl_result_is_reported(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    cli_terminal_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """callback の非0 returnも共通error reportと終了コードへ変換する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
             lambda: 7,
@@ -486,13 +470,12 @@ def test_cli_nonzero_impl_result_is_reported(
 
 
 def test_cli_error_report_survives_failed_error_log_flush(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """終了ログの失敗が元の error report を隠さないことを検証する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
     original_event = runtime_cli.SubcommandLogger.event
 
     def fail_finish_event(
@@ -529,13 +512,11 @@ def test_cli_error_report_survives_failed_error_log_flush(
 
 
 def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    cli_terminal_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex CLI へ委ねる Ctrl+C を cmoc の error report に変換しない。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
 
     def interrupt() -> None:
         """子 process から伝播した Ctrl+C を再現する。"""
@@ -559,11 +540,9 @@ def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
 
 
 def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """TUI の Ctrl+C は Codex CLI に委ね、終了 toast を追加しない。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
     notifications: list[str] = []
     monkeypatch.setattr(
         runtime_cli,
@@ -589,13 +568,11 @@ def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
 
 
 def test_cli_tui_startup_keyboard_interrupt_emits_failure_notification(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """TUI process 起動前の Ctrl+C は失敗結果として通知する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
     notifications: list[str] = []
     monkeypatch.setattr(
         runtime_cli,
@@ -675,15 +652,14 @@ def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
     [(False, "completed"), (True, None)],
 )
 def test_cli_terminal_notification_boundary_on_success(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tui_process: bool,
     expected_state: str | None,
 ) -> None:
     """非対話成功だけを終了 log と cleanup の後に terminal 通知する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
     calls: list[tuple[str, Path, str]] = []
 
     def record_notification(command: str, repository: Path, state: str) -> None:
@@ -716,13 +692,12 @@ def test_cli_terminal_notification_boundary_on_success(
 
 @pytest.mark.parametrize("tui_process", [False, True])
 def test_cli_terminal_notification_reports_error_for_all_command_kinds(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     tui_process: bool,
 ) -> None:
     """非対話と TUI の確定済み失敗をどちらも 1 回だけ通知する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
     calls: list[tuple[str, Path, str]] = []
     monkeypatch.setattr(
         runtime_cli,
@@ -744,12 +719,10 @@ def test_cli_terminal_notification_reports_error_for_all_command_kinds(
 
 
 def test_cli_terminal_notification_distinguishes_user_interruption(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """正常に確定したユーザー中断を自然完了やエラーとして通知しない。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
     calls: list[str] = []
     monkeypatch.setattr(
         runtime_cli,
@@ -808,12 +781,10 @@ def test_interruptible_cli_handles_common_preprocess_interrupt(
 
 
 def test_cli_notification_failure_does_not_change_terminal_result(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """通知 callback 自体の失敗を成功したサブコマンドへ逆流させない。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
 
     def fail_notification(*_args: object) -> None:
         """通知境界からの想定外例外を再現する。"""
