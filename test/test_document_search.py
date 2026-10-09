@@ -1207,8 +1207,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
     assert all(value == expanded[line] for line, value in limited.items())
 
 
-@pytest.mark.parametrize("limit,start_line", [(20, 41), (50, 11)])
-def test_mcp_candidate_limit_applies_before_range_merging(tmp_path, limit, start_line):
+def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
@@ -1226,50 +1225,37 @@ def test_mcp_candidate_limit_applies_before_range_merging(tmp_path, limit, start
         )
     ) as search:
         tool = _listed_search_tool(search)
-        response = _response(
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/call",
-                "params": {
-                    "name": "search",
-                    "arguments": {"query": "候補", "limit": limit},
-                },
-            },
-            search,
-        )
-        result = _assert_search_result(response, tool["outputSchema"], error=False)
-    assert result["hits"] == [
-        {
-            "path": path,
-            "ranges": [
+        # 上限だけを変える検査は同じ索引を使い、各要求では query 推論も通す。
+        for limit, start_line in [(20, 41), (50, 11)]:
+            response = _response(
                 {
-                    "start_line": start_line,
-                    "end_line": 60,
-                    "max_similarity": pytest.approx(60 / math.hypot(60, 1)),
+                    "jsonrpc": "2.0",
+                    "id": limit,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "search",
+                        "arguments": {"query": f"候補 {limit}", "limit": limit},
+                    },
+                },
+                search,
+            )
+            result = _assert_search_result(response, tool["outputSchema"], error=False)
+            assert result["hits"] == [
+                {
+                    "path": path,
+                    "ranges": [
+                        {
+                            "start_line": start_line,
+                            "end_line": 60,
+                            "max_similarity": pytest.approx(60 / math.hypot(60, 1)),
+                        }
+                    ],
                 }
-            ],
-        }
-    ]
+            ], limit
 
 
-@pytest.mark.parametrize(
-    "distance",
-    [
-        None,
-        "invalid",
-        "0.25",
-        b"bad",
-        math.nan,
-        math.inf,
-        -math.inf,
-        -0.001,
-        2.001,
-        RuntimeError("cosine calculation failed"),
-    ],
-)
 def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
-    tmp_path, monkeypatch, distance
+    tmp_path, monkeypatch
 ):
     """採用上限外へ隠れる異常値や演算失敗も、成功を併記せず MODEL_FAILURE にする。"""
     from commons import runtime_document_search as module
@@ -1308,18 +1294,37 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        response = _response(
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": "search", "arguments": {"query": "候補"}},
-            },
-            search,
-        )
-        result = _assert_search_result(response, tool["outputSchema"], error=True)
-    assert result["status"] == "error"
-    assert result["code"] == "MODEL_FAILURE"
+        # 演算の失敗は保存済みの文書を変えないため、索引構築を繰り返さない。
+        for request_id, distance in enumerate(
+            [
+                None,
+                "invalid",
+                "0.25",
+                b"bad",
+                math.nan,
+                math.inf,
+                -math.inf,
+                -0.001,
+                2.001,
+                RuntimeError("cosine calculation failed"),
+            ],
+            start=1,
+        ):
+            response = _response(
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "search",
+                        "arguments": {"query": f"候補 {request_id}"},
+                    },
+                },
+                search,
+            )
+            result = _assert_search_result(response, tool["outputSchema"], error=True)
+            assert result["status"] == "error", repr(distance)
+            assert result["code"] == "MODEL_FAILURE", repr(distance)
 
 
 @pytest.mark.parametrize(
