@@ -1178,33 +1178,32 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
         )
 
 
-@pytest.mark.parametrize("change_kind", ["context", "mode", "delete"])
 def test_session_join_accepts_incidental_conflict_file_changes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change_kind: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """marker 外の整理、mode 変更、削除を含む解消結果を merge する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md の
-    「oracle file 規定と conflict 解消の優先順位」
-    """
+    """marker 外の整理、mode 変更、削除を含む解消結果を merge する。"""
+    # 同じ成功経路の Git 準備を共有し、別々の競合ファイルで各結果を検証する。
+    # {{work-root}}/oracle/doc/app_spec/merge_conflict_resolution.md
     root = make_repo(tmp_path)
-    target = root / "oracle" / "spec.md"
+    context_target = root / "oracle" / "spec.md"
+    mode_target = root / "oracle" / "mode.md"
+    deleted_target = root / "oracle" / "deleted.md"
+    for target in (mode_target, deleted_target):
+        target.write_text("# spec\n")
+    run_git(root, "add", "oracle")
+    run_git(root, "commit", "-m", "add conflict targets")
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_active_session(root)
-    session_content = (
-        "session change\n"
-        if change_kind == "delete"
-        else "prefix\nsession change\nsuffix\n"
-    )
-    home_content = (
-        "home change\n" if change_kind == "delete" else "prefix\nhome change\nsuffix\n"
-    )
-    target.write_text(session_content)
-    run_git(root, "add", "oracle/spec.md")
+    for target in (context_target, mode_target):
+        target.write_text("prefix\nsession change\nsuffix\n")
+    deleted_target.write_text("session change\n")
+    run_git(root, "add", "oracle")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
-    target.write_text(home_content)
-    run_git(root, "add", "oracle/spec.md")
+    for target in (context_target, mode_target):
+        target.write_text("prefix\nhome change\nsuffix\n")
+    deleted_target.write_text("home change\n")
+    run_git(root, "add", "oracle")
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
 
@@ -1215,16 +1214,16 @@ def test_session_join_accepts_incidental_conflict_file_changes(
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
-        """conflict marker 外の変更、file mode 変更、または file 削除を再現する。"""
-        if change_kind == "delete":
-            target.unlink()
-            return FakeCodexResult()
-        target.write_text(
-            "prefix\nresolved change\n"
-            + ("changed suffix\n" if change_kind == "context" else "suffix\n")
-        )
-        if change_kind == "mode":
-            target.chmod(target.stat().st_mode | stat.S_IXUSR)
+        """各競合に独立した編集を行い、解消済み結果を返す。"""
+        assert set(merge_conflict_module.unmerged_paths(root)) == {
+            "oracle/spec.md",
+            "oracle/mode.md",
+            "oracle/deleted.md",
+        }
+        context_target.write_text("prefix\nresolved change\nchanged suffix\n")
+        mode_target.write_text("prefix\nresolved change\nsuffix\n")
+        mode_target.chmod(mode_target.stat().st_mode | stat.S_IXUSR)
+        deleted_target.unlink()
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
@@ -1234,16 +1233,17 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     assert result.exit_code == 0, result.output
     assert current_branch(root) == home_branch
     assert run_git(root, "status", "--porcelain").stdout == ""
-    if change_kind == "delete":
-        assert run_git(root, "ls-files", "--", "oracle/spec.md").stdout == ""
-    else:
-        assert run_git(root, "show", "HEAD:oracle/spec.md").stdout == target.read_text()
-        if change_kind == "context":
-            assert target.read_text().endswith("changed suffix\n")
-        else:
-            assert run_git(
-                root, "ls-files", "--stage", "oracle/spec.md"
-            ).stdout.startswith("100755 ")
+    assert run_git(root, "show", "HEAD:oracle/spec.md").stdout == (
+        "prefix\nresolved change\nchanged suffix\n"
+    )
+    assert run_git(root, "show", "HEAD:oracle/mode.md").stdout == (
+        "prefix\nresolved change\nsuffix\n"
+    )
+    assert run_git(root, "ls-files", "--stage", "oracle/mode.md").stdout.startswith(
+        "100755 "
+    )
+    assert run_git(root, "ls-files", "--", "oracle/deleted.md").stdout == ""
+    assert not deleted_target.exists()
 
 
 def test_session_join_handles_conflict_path_containing_newline(
