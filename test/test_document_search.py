@@ -297,6 +297,95 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> N
     assert "非公開の本文" not in str(worker.texts)
 
 
+@pytest.mark.parametrize("edit_after_stream", [False, True])
+def test_sync_rechecks_event_source_without_rereading_other_documents(
+    cli_repository, monkeypatch, edit_after_stream
+):
+    """各確定時は対象本文だけを読み、同期完了時には全本文の一致を確認する。"""
+    from commons import runtime_document_search as module
+
+    root = cli_repository
+    (root / ".gitignore").write_text(".cmoc/gu/\n")
+    docs = root / "oracle/doc"
+    docs.mkdir(parents=True)
+    for name in ("first", "second"):
+        (docs / f"{name}.md").write_text(f"# {name}\n本文\n")
+    opened = []
+    secure_read = module._secure_read
+
+    def tracked_read(work_root, relative):
+        opened.append(relative)
+        return secure_read(work_root, relative)
+
+    monkeypatch.setattr(module, "_secure_read", tracked_read)
+
+    class ObservedWorker(_InferenceDouble):
+        def stream_chunks(self, documents, resumes, on_event, **kwargs):
+            def observe(event):
+                opened.clear()
+                on_event(event)
+                # 文書数によって各 event の本文読取り回数が増える回帰を検出する。
+                assert opened == [event["path"]]
+
+            for path in documents:
+                observe({"kind": "document_prepared", "path": path, "chunk_count": 1})
+            super().stream_chunks(documents, resumes, observe, **kwargs)
+            if edit_after_stream:
+                (docs / "first.md").write_text("# 同期終了前に変更された本文\n")
+
+    with closing(DocumentSearch(root, _tuning(), worker=ObservedWorker())) as search:
+        if edit_after_stream:
+            with pytest.raises(SearchError) as failure:
+                search.synchronize()
+            assert failure.value.code == "SOURCE_CHANGED"
+        else:
+            result = search.synchronize()
+            assert result.document_count == result.chunk_count == 2
+
+
+@pytest.mark.parametrize(
+    "change,code",
+    [
+        ("edit", "SOURCE_CHANGED"),
+        ("ignore", "SOURCE_CHANGED"),
+        ("invalid_utf8", "READ_FAILED"),
+        ("unsafe_tree", "ENUMERATION_FAILED"),
+    ],
+)
+def test_sync_rejects_changed_or_unreadable_source_before_saving(
+    cli_repository, change, code
+):
+    """現在の分類・本文・安全性を確認できない生成結果は保存しない。"""
+    root = cli_repository
+    ignore = root / ".gitignore"
+    ignore.write_text(".cmoc/gu/\n")
+    document = root / "oracle/doc/fresh.md"
+    document.parent.mkdir(parents=True)
+    document.write_text("# 生成に使用した本文\n")
+
+    class ChangingWorker(_InferenceDouble):
+        def stream_chunks(self, documents, resumes, on_event, **kwargs):
+            if change == "edit":
+                document.write_text("# 生成後に編集された本文\n")
+            elif change == "ignore":
+                ignore.write_text(ignore.read_text() + "oracle/doc/fresh.md\n")
+            elif change == "invalid_utf8":
+                document.write_bytes(b"\xff")
+            else:
+                (root / "unsafe").symlink_to(root / "missing")
+            super().stream_chunks(documents, resumes, on_event, **kwargs)
+
+    with closing(DocumentSearch(root, _tuning(), worker=ChangingWorker())) as search:
+        with pytest.raises(SearchError) as failure:
+            search.synchronize()
+        assert failure.value.code == code
+        assert search.sync_progress["persisted_embeddings"] == 0
+        assert search.sync_progress["persisted_chunks"] == 0
+        _, index, _, _ = search._paths()
+        with closing(sqlite3.connect(index)) as database:
+            assert database.execute("select count(*) from chunks").fetchone()[0] == 0
+
+
 @pytest.mark.parametrize(
     "failure_code", ["MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"]
 )
