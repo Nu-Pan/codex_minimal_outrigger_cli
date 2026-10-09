@@ -131,7 +131,7 @@ def break_preprocess_invariants(work: Path) -> Path:
 def test_session_fork_creates_session_branch_and_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """session forkがbranchとactive stateを作ることを検証する。"""
+    """同じ fork 成功経路で branch/state/report と ignore/log/clean 状態を検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
@@ -153,6 +153,18 @@ def test_session_fork_creates_session_branch_and_state(
         "branch": None,
         "fork_commit": None,
     }
+    assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/gu/.__cmoc_ignore_probe__"],
+            cwd=root,
+        ).returncode
+        == 0
+    )
+    assert (
+        len(list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    )
+    assert run_git(root, "status", "--short").stdout.strip() == ""
     report = terminal_primary_report(result)
     rendered_report = report.read_text(encoding="utf-8")
     assert report.parent == root / ".cmoc" / "gu" / "report" / "session" / "fork"
@@ -463,35 +475,6 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     assert "session state file が不正です。" in result.stderr
     assert "active session が既に存在します。" not in result.stderr
     assert current_branch(root) == home_branch
-
-
-def test_session_fork_initializes_cmoc_ignore_and_writes_log(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """session forkがcmoc ignoreを初期化し、サブコマンドlogを保存する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    seed_search_config(root)
-    home_branch = current_branch(root)
-
-    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
-
-    assert result.exit_code == 0
-    branch = current_branch(root)
-    assert branch.startswith("cmoc/session/")
-    assert session_home_branch(root, branch) == home_branch
-    assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
-    assert (
-        subprocess.run(
-            ["git", "check-ignore", "-q", ".cmoc/gu/.__cmoc_ignore_probe__"],
-            cwd=root,
-        ).returncode
-        == 0
-    )
-    assert (
-        len(list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))) == 1
-    )
-    assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
 def test_session_fork_uses_linked_worktree_branch_and_head(
