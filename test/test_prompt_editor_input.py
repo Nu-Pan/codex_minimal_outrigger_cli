@@ -23,10 +23,30 @@ from commons.runtime_ids import is_common_id
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
 
 
+@pytest.fixture
+def input_path(tmp_path: Path) -> Path:
+    """予約・採番を検査しないケースには、所定 directory の通常 file だけ用意する。"""
+    path = tmp_path / ".cmoc/gu/log/editor_input/input.md"
+    path.parent.mkdir(parents=True)
+    path.touch()
+    return path
+
+
+@pytest.fixture
+def handoff_start(monkeypatch: pytest.MonkeyPatch) -> Mock:
+    """保存・editor 制御の検査では TCP lifecycle を専用の結合テストへ委ねる。"""
+    # 実 target の登録・guide・無効化は test_editor_input_handoff.py に残す。
+    target = SimpleNamespace(target_id="eit_000000_2026-09-29_15-04", close=Mock())
+    start = Mock(return_value=target)
+    monkeypatch.setattr(prompt_editor_input_module, "start_editor_input_handoff", start)
+    return start
+
+
 def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    handoff_start: Mock,
 ) -> None:
     """同じ本文 path を保存まで使い、別実行と旧データの変更を避ける。"""
     old_recovery = tmp_path / ".cmoc/gu/editor_input/old_orig.md"
@@ -41,6 +61,7 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
 
     def fake_run(argv: list[str]) -> SimpleNamespace:
         path = Path(argv[-1])
+        assert handoff_start.return_value.close.call_count == len(opened)
         opened.append(path)
         assert path.read_bytes() == b""
         path.write_text(
@@ -57,6 +78,9 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
         prompt_editor_input_module.edit_prompt_editor_input(
             tmp_path, input_path, _SKELETON
         )
+        handoff_start.assert_called_with(tmp_path, input_path, _SKELETON)
+        assert handoff_start.call_count == number
+        assert handoff_start.return_value.close.call_count == number
         original_prompt = prompt_editor_input_module.collect_prompt_editor_input(
             tmp_path, input_path
         )
@@ -76,19 +100,18 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     guidance = build_prompt_editor_input_console_guidance()
     assert captured.err.count(guidance) == 2
     handoff_lines = captured.err.replace(guidance, "").splitlines()
-    assert len(handoff_lines) == 2
-    assert all(
-        line.startswith("editor input handoff target ID: eit_")
-        for line in handoff_lines
+    expected_handoff_line = (
+        f"editor input handoff target ID: {handoff_start.return_value.target_id}"
     )
+    assert handoff_lines == [expected_handoff_line] * 2
 
 
 def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    input_path: Path,
 ) -> None:
     """最終読み取り後の再編集にかかわらず、保存と抽出に固定した原文を使う。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     raw_input = "  <!-- note -->\r\n確定した入力\r\n".encode("utf-8")
     input_path.write_bytes(raw_input)
     original_read_bytes = Path.read_bytes
@@ -124,22 +147,14 @@ def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
 def test_editor_input_selects_editor_in_specified_priority(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    input_path: Path,
+    handoff_start: Mock,
     available_editors: tuple[str, ...],
     expected_editor: str,
     wait_for_editor: bool,
 ) -> None:
     """仕様の優先順と code 専用の --wait を editor 起動 argv で検証する。"""
-    # 実 handoff lifecycle は test_editor_input_handoff.py で検証する。
-    # editor 選択には採番・guide 生成・TCP 受付が不要なので境界を置き換える。
-    input_path = tmp_path / ".cmoc/gu/log/editor_input/input.md"
-    input_path.parent.mkdir(parents=True)
-    input_path.touch()
-    target = SimpleNamespace(target_id="eit_000000_2026-09-29_15-04", close=Mock())
-    monkeypatch.setattr(
-        prompt_editor_input_module,
-        "start_editor_input_handoff",
-        lambda *_args, **_kwargs: target,
-    )
+    target = handoff_start.return_value
     calls: list[list[str]] = []
 
     monkeypatch.setattr(
@@ -166,6 +181,7 @@ def test_editor_input_selects_editor_in_specified_priority(
     if wait_for_editor:
         expected_argv.append("--wait")
     assert calls == [[*expected_argv, str(input_path)]]
+    handoff_start.assert_called_once_with(tmp_path, input_path, _SKELETON)
     target.close.assert_called_once_with()
 
 
@@ -173,10 +189,10 @@ def test_editor_input_selects_editor_in_specified_priority(
 def test_editor_input_rejects_invalid_final_file_without_reading(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    input_path: Path,
     replacement: str,
 ) -> None:
     """通常 file 以外の入力は読み取りも上書きも行わない。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     outside = tmp_path / "outside.md"
     outside.write_text("must remain", encoding="utf-8")
     input_path.unlink()
@@ -203,11 +219,11 @@ def test_editor_input_rejects_invalid_final_file_without_reading(
 def test_editor_input_rejects_path_outside_input_directory(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    input_path: Path,
     relative_path: str,
     operation: str,
 ) -> None:
     """旧復旧先を含む所定 directory 外の file を編集・確定しない。"""
-    reserved = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     outside = tmp_path / relative_path
     outside.parent.mkdir(parents=True, exist_ok=True)
     outside.write_text("do not overwrite\n", encoding="utf-8")
@@ -224,7 +240,7 @@ def test_editor_input_rejects_path_outside_input_directory(
         else:
             prompt_editor_input_module.collect_prompt_editor_input(tmp_path, outside)
     assert outside.read_text(encoding="utf-8") == "do not overwrite\n"
-    assert reserved.exists()
+    assert input_path.read_bytes() == b""
 
 
 @pytest.mark.parametrize("symlinked_directory", ["gu", "log"])
@@ -255,29 +271,14 @@ def test_editor_input_rejects_symlinked_storage_directory(
 def test_editor_input_closes_handoff_when_target_id_display_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    input_path: Path,
+    handoff_start: Mock,
 ) -> None:
     """target ID の表示失敗でも一時 handoff target を残さない。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
-    closed = False
-
-    class FakeTarget:
-        """target close の呼び出しだけを記録する。"""
-
-        target_id = "eit_000000_2026-09-29_15-04"
-
-        def close(self) -> None:
-            nonlocal closed
-            closed = True
-
     monkeypatch.setattr(
         prompt_editor_input_module,
         "_select_editor",
         lambda: ["fake-editor"],
-    )
-    monkeypatch.setattr(
-        prompt_editor_input_module,
-        "start_editor_input_handoff",
-        lambda _root, _path, _skeleton: FakeTarget(),
     )
 
     def fail_print(*_args: object, **_kwargs: object) -> None:
@@ -298,7 +299,8 @@ def test_editor_input_closes_handoff_when_target_id_display_fails(
             _SKELETON,
         )
 
-    assert closed
+    handoff_start.assert_called_once_with(tmp_path, input_path, _SKELETON)
+    handoff_start.return_value.close.assert_called_once_with()
     assert input_path.exists()
 
 
@@ -329,10 +331,10 @@ def test_editor_input_keeps_input_when_editor_fails(
 def test_editor_input_preserves_input_when_final_save_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    input_path: Path,
     failure_stage: str,
 ) -> None:
     """保存途中の書き込み・flush・置換の失敗で、本文を失わない。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     raw_input = b"recoverable input\r\n"
     input_path.write_bytes(raw_input)
     real_temporary_file = prompt_editor_input_module.tempfile.NamedTemporaryFile
