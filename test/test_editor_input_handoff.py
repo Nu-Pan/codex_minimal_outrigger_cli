@@ -32,7 +32,7 @@ from commons.runtime_editor_input_handoff_protocol import (
     authenticate_editor_input_handoff_server,
     build_editor_input_handoff_target_id,
     parse_editor_input_handoff_target_id,
-    read_handoff_response,
+    read_handoff_message,
 )
 from commons.runtime_ids import is_common_id
 
@@ -187,7 +187,7 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
             connection.connect(address)
             assert authenticate_editor_input_handoff_client(connection, token, 2)
             connection.sendall(json.dumps(request).encode("utf-8") + b"\n")
-            mismatch = read_handoff_response(connection, 2)
+            mismatch = read_handoff_message(connection, 2)
         assert mismatch is not None
         assert mismatch["code"] == "repository_mismatch"
         assert input_path.read_text(encoding="utf-8") == "initial"

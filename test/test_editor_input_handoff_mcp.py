@@ -50,7 +50,7 @@ def handoff_transport(tmp_path, monkeypatch):
         lambda *_args: True,
     )
     monkeypatch.setattr(
-        handoff_mcp, "read_handoff_response", lambda *_args: {"status": "accepted"}
+        handoff_mcp, "read_handoff_message", lambda *_args: {"status": "accepted"}
     )
     return target_id, connection
 
@@ -172,7 +172,7 @@ def test_handoff_guide_rejects_invalid_target_result_without_input_leak(
     target_id, connection = handoff_transport
     monkeypatch.setattr(
         handoff_mcp,
-        "read_handoff_response",
+        "read_handoff_message",
         lambda *_args, **_kwargs: target_result,
     )
     result = _get_guide_result({"target_id": target_id})
@@ -370,7 +370,7 @@ def test_handoff_response_loss_reports_unknown_while_write_completes(
     entered = threading.Event()
     release = threading.Event()
     overwrite = target._overwrite
-    read_response = handoff_mcp.read_handoff_response
+    read_response = handoff_mcp.read_handoff_message
 
     def delayed_overwrite(content: str) -> None:
         entered.set()
@@ -384,7 +384,7 @@ def test_handoff_response_loss_reports_unknown_while_write_completes(
         return read_response(connection, 0.05)
 
     monkeypatch.setattr(target, "_overwrite", delayed_overwrite)
-    monkeypatch.setattr(handoff_mcp, "read_handoff_response", lose_response)
+    monkeypatch.setattr(handoff_mcp, "read_handoff_message", lose_response)
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     try:
         response = handoff_mcp._response(
@@ -456,7 +456,7 @@ def test_handoff_mcp_strips_unexpected_target_result_fields(
     target_id, _connection = handoff_transport
     monkeypatch.setattr(
         handoff_mcp,
-        "read_handoff_response",
+        "read_handoff_message",
         lambda *_args: {
             "status": "rejected",
             "code": "write_failed",

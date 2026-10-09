@@ -19,7 +19,7 @@ from .runtime_editor_input_handoff_protocol import (
     handoff_payload_is_valid,
     handoff_schema,
     parse_editor_input_handoff_target_id,
-    read_handoff_response,
+    read_handoff_message,
 )
 
 MCP_PROTOCOL_VERSION = "2025-06-18"
@@ -224,13 +224,13 @@ def _call_target(payload: object, *, tool_name: str) -> dict[str, object]:
             connection.sendall(request_data)
             if guide:
                 # 完全 prompt を含むガイドは、小さな上書き結果の上限で切り詰めない。
-                value = read_handoff_response(
+                value = read_handoff_message(
                     connection,
                     EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
                     max_bytes=None,
                 )
             else:
-                value = read_handoff_response(
+                value = read_handoff_message(
                     connection,
                     EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,
                 )

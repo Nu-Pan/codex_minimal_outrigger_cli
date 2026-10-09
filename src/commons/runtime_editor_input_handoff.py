@@ -6,7 +6,6 @@ import secrets
 import socket
 import stat
 import threading
-import time
 from pathlib import Path
 
 from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
@@ -19,6 +18,7 @@ from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS,
     authenticate_editor_input_handoff_server,
     build_editor_input_handoff_target_id,
+    read_handoff_message,
     remove_editor_input_handoff_target_route,
 )
 from .runtime_errors import CmocError
@@ -267,22 +267,12 @@ class EditorInputHandoffTarget:
         timeout_seconds: float,
     ) -> dict[str, object]:
         """一つの IPC request を検証し、active target へ適用する。"""
+        # frame の読み取りと absolute deadline は応答側と同じ経路で扱う。
         try:
-            deadline = time.monotonic() + timeout_seconds
-            request_data = b""
-            while b"\n" not in request_data:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    raise TimeoutError("editor input handoff deadline exceeded")
-                connection.settimeout(remaining)
-                chunk = connection.recv(8192)
-                if not chunk:
-                    break
-                request_data += chunk
-            request = json.loads(request_data.split(b"\n", 1)[0])
-        except (OSError, UnicodeError, json.JSONDecodeError):
+            request = read_handoff_message(connection, timeout_seconds, max_bytes=None)
+        except OSError:
             return _rejected("protocol_mismatch", "invalid handoff request", False)
-        if not isinstance(request, dict):
+        if request is None:
             return _rejected("protocol_mismatch", "invalid handoff request", False)
         if request.get("protocol") != EDITOR_INPUT_HANDOFF_PROTOCOL_VERSION:
             return _rejected("protocol_mismatch", "handoff protocol mismatch", False)
