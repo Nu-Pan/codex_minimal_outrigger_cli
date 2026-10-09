@@ -12,7 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from _cli_support import run_doctor, runner
+from _cli_support import runner
 from _git_support import make_repo, run_git
 
 import commons.prompt_editor_input as prompt_editor_input_module
@@ -124,7 +124,9 @@ def test_tui_runs_editor_and_launches_codex_directly(
     """既存差分を保ち、編集済み prompt から Codex TUI を直接起動する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    # 設定だけ用意し、doctor の実処理は検証対象の TUI invocation で一度だけ通す。
+    # 無変更時の索引再利用は test_doctor_cli.py で検証する。
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
     readme_path = root / "README.md"
     readme_path.write_text("# staged change\n")
     run_git(root, "add", "README.md")
@@ -192,11 +194,10 @@ def test_tui_runs_editor_and_launches_codex_directly(
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     log_dir = root / ".cmoc/gu/log/sub_command"
-    previous_logs = set(log_dir.glob("*.jsonl"))
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    [tui_log] = set(log_dir.glob("*.jsonl")) - previous_logs
+    [tui_log] = log_dir.glob("*.jsonl")
     log_events = [json.loads(line) for line in tui_log.read_text().splitlines()]
     sync_events = [
         event
@@ -210,7 +211,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert sync_events[0]["sync_id"] == sync_events[1]["sync_id"]
     assert sync_events[1]["command"] == "tui"
     assert sync_events[1]["work_root"] == str(root)
-    assert sync_events[1]["status"] == "unchanged"
+    assert sync_events[1]["status"] == "updated"
     assert events == [
         "doctor",
         "build-skeleton",
