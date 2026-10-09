@@ -126,15 +126,16 @@ def test_quota_probe_imports_from_packaged_layout(
     assert result.returncode == 0, result.stderr
 
 
-def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
+def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
     tmp_path: Path,
     cli_repository: Path,
     packaged_sources: Path,
 ) -> None:
-    """oracle edit と editor 入力境界が packaged layout で正本を参照する。
+    """oracle の builder と editor 入力境界が packaged layout で正本を参照する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     {{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
+    {{work-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py
     """
     target = _packaged_layout(
         packaged_sources, tmp_path, "acp", "basic", "commons", "oracle"
@@ -150,6 +151,14 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "from types import SimpleNamespace; "
             "from acp.builder.oracle.edit.launch_exec import "
             "build_oracle_edit_main_launch_exec_parameter as build_main; "
+            "from oracle.acp_builder.oracle.investigation.launch_tui import "
+            "build_oracle_investigation_launch_tui_parameter as build_investigation; "
+            "investigation = build_investigation('investigate oracle'); "
+            "assert investigation.file_access_mode.value == 'pure_oracle_read'; "
+            "assert investigation.agent_call_cwd == Path.cwd(); "
+            "assert investigation.enable_document_search_mcp is True; "
+            "assert investigation.enable_editor_input_handoff_mcp is True; "
+            "assert 'investigate oracle' in investigation.prompt; "
             "assert edit_module.__all__ == "
             "['build_oracle_edit_main_launch_exec_parameter']; "
             "assert sorted(n for n in vars(edit_module) if not n.startswith('_')) "

@@ -1,8 +1,5 @@
 """`cmoc oracle investigation` の read-only TUI workload。"""
 
-from acp.builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_launch_tui_parameter,
-)
 from cmoc_runtime import (
     load_config,
     repo_root,
@@ -17,6 +14,9 @@ from commons.prompt_editor_input import (
     edit_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
     reserve_prompt_editor_input,
+)
+from oracle.acp_builder.oracle.investigation.launch_tui import (
+    build_oracle_investigation_launch_tui_parameter,
 )
 
 

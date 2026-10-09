@@ -11,9 +11,7 @@ from pathlib import Path
 
 import pytest
 from _cli_support import runner
-from _git_support import make_repo
 
-import acp.builder.oracle.investigation.launch_tui as launch_tui_module
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.investigation as investigation_module
 from basic.acp import AgentCallParameter, FileAccessMode
@@ -24,31 +22,24 @@ from main import app
 
 
 def test_oracle_investigation_has_no_session_precondition(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """oracle investigation が session なしの main worktree でも起動できる。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
-    # 既定設定だけを用意し、doctor preprocess は検証対象の CLI 内で実行する。
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
     events: list[str] = []
-    real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
 
-    def record_run_doctor_preprocess(
-        target_root: Path,
-        *,
-        sync_refactor_entries: bool = True,
-    ) -> None:
-        """CLI invocation 内の doctor preprocess を記録して本来の処理へ委譲する。"""
+    # 修復・索引同期は test_doctor_cli.py、共通 CLI との結合は test_cli_tui.py に残す。
+    # ここでは investigation 固有の呼び出し先・順序を検証し、履歴作成を省く。
+    def record_run_doctor_preprocess(target_root: Path) -> None:
+        """CLI invocation 内の doctor 呼び出し先と順序を記録する。"""
+        assert target_root == root
         events.append("doctor")
-        real_run_doctor_preprocess(
-            target_root,
-            sync_refactor_entries=sync_refactor_entries,
-        )
 
     real_build_parameter = (
         investigation_module.build_oracle_investigation_launch_tui_parameter
@@ -180,13 +171,3 @@ def test_oracle_investigation_has_no_session_precondition(
     assert "oracle の根拠を調査する" in complete_prompt
     assert input_path.read_text(encoding="utf-8") == "oracle の根拠を調査する"
     assert not list(input_path.parent.glob("*_cmpl.md"))
-
-
-def test_oracle_investigation_builder_exports_only_the_builder() -> None:
-    """investigation の realization adapter が補助名を公開しない。"""
-    expected = ["build_oracle_investigation_launch_tui_parameter"]
-    assert launch_tui_module.__all__ == expected
-    assert (
-        sorted(name for name in vars(launch_tui_module) if not name.startswith("_"))
-        == expected
-    )
