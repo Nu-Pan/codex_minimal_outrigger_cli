@@ -16,8 +16,8 @@ from acp.builder.session.join.conflict_resolution import (
 from basic.acp import FileAccessMode
 
 
-def test_session_join_compatibility_module_exports_only_builder() -> None:
-    """公開モジュールが conflict resolution builder だけを export することを検証する。"""
+def test_session_join_compatibility_module_reexports_canonical_builder() -> None:
+    """公開モジュールが正本 builder だけを加工せず再公開する。"""
 
     assert session_conflict_resolution_module.__all__ == [
         "build_session_join_conflict_resolution_parameter"
@@ -29,16 +29,16 @@ def test_session_join_compatibility_module_exports_only_builder() -> None:
     } == {"build_session_join_conflict_resolution_parameter"}
     assert (
         build_session_join_conflict_resolution_parameter
-        is not build_canonical_conflict_parameter
+        is build_canonical_conflict_parameter
     )
 
 
-def test_session_join_conflict_resolution_uses_repo_write_mode(
+def test_session_join_conflict_resolution_preserves_parameters_and_git_inputs(
     cli_repository: Path,
 ) -> None:
-    """conflict resolution 用パラメータが repo write 権限を使う契約を検証する。"""
+    """起動設定・編集範囲と、agent が Git から取得するための入力を検証する。"""
 
-    source, target = "a" * 40, "b" * 40
+    source, target = "c" * 40, "d" * 40
     parameter = build_session_join_conflict_resolution_parameter(
         source, target, cli_repository
     )
@@ -46,8 +46,10 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == cli_repository.resolve()
-    assert source in parameter.prompt
-    assert target in parameter.prompt
+    assert f"`{source}`" in parameter.prompt
+    assert f"`{target}`" in parameter.prompt
+    assert "共通祖先" in parameter.prompt
+    assert "進行中の merge の Git index" in parameter.prompt
     assert "conflict 対象ファイル" not in parameter.prompt
     objective = parameter.prompt.split('<cmoc_block id="objective">', 1)[1].split(
         "</cmoc_block>", 1
@@ -56,28 +58,7 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert "進行中の merge" in objective
     assert parameter.enable_document_search_mcp is True
     assert "# conflict resolution policy" in parameter.prompt
-    assert "# session join 固有の編集範囲" in parameter.prompt
-    assert "競合を解消するために必要な編集と検証だけ" in parameter.prompt
-    assert (
-        "conflict marker の解消に不要な仕様変更、実装改善、または別 file の変更"
-        "を行ってはならない"
-    ) in parameter.prompt
     assert "# routing policy" in parameter.prompt
     for heading in ("# oracle policy", "# realization policy"):
         assert heading in parameter.prompt
     assert "# realization findings policy" not in parameter.prompt
-
-
-def test_session_join_conflict_prompt_passes_commit_references_without_path_list(
-    cli_repository: Path,
-) -> None:
-    """差分と競合一覧は agent が Git から取得できる参照だけを渡す。"""
-    parameter = build_session_join_conflict_resolution_parameter(
-        "c" * 40,
-        "d" * 40,
-        cli_repository,
-    )
-    assert "共通祖先" in parameter.prompt
-    assert "進行中の merge の Git index" in parameter.prompt
-    assert "`" + "c" * 40 + "`" in parameter.prompt
-    assert "`" + "d" * 40 + "`" in parameter.prompt

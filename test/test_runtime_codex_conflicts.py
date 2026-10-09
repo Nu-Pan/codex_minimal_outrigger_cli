@@ -8,7 +8,6 @@
 from pathlib import Path
 
 from _codex_support import codex_arg_value, codex_override_config
-from _git_support import make_repo
 
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
@@ -19,16 +18,16 @@ from config.cmoc_config import CmocConfig
 
 
 def test_session_join_commit_inputs_stay_in_prompt_and_not_sandbox_argv(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """commit 参照は prompt に渡し、sandbox 設定は path に依存しない。"""
-    root = make_repo(tmp_path)
+    # commit 内容と履歴は参照しないため、初期化だけの Git root を使う。
     first, second = "a" * 40, "b" * 40
     first_parameter = build_session_join_conflict_resolution_parameter(
-        first, second, root
+        first, second, cli_repository
     )
     second_parameter = build_session_join_conflict_resolution_parameter(
-        second, first, root
+        second, first, cli_repository
     )
     first_args = build_codex_override_args(first_parameter, CmocConfig())
     second_args = build_codex_override_args(second_parameter, CmocConfig())
