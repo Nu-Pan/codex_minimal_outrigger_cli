@@ -12,7 +12,6 @@ from pathlib import Path
 import pytest
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
-from _git_support import make_repo
 
 import cmoc_runtime
 from cmoc_runtime import CmocError
@@ -46,10 +45,10 @@ def test_codex_jsonl_invalid_lines_are_unexpected(stdout_text: str) -> None:
 
 
 def test_codex_runtime_rejects_non_object_jsonl_event(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """非 object JSONL でも AttributeError ではなく CmocError にする。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -73,12 +72,13 @@ def test_codex_runtime_rejects_non_object_jsonl_event(
 
 
 def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """returncode 0 と valid output があっても不正 stdout は失敗にする。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -112,10 +112,10 @@ def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_outp
 
 
 def test_codex_runtime_reports_missing_codex_cli(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Codex CLI 不在時の例外と失敗ログを検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     real_run = subprocess.run

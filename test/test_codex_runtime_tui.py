@@ -382,10 +382,12 @@ def test_run_codex_tui_keeps_call_logs_on_same_timestamp(
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(0)"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    # 実 process の成功・失敗は隣接ケースで検証し、ここではログの独立性を調べる。
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "run_codex_subprocess",
+        lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0),
+    )
     monkeypatch.setattr(
         runtime_codex_tui, "timestamp", lambda: "2026-06-27_10-00-00_000"
     )
