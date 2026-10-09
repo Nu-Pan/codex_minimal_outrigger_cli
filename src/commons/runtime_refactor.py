@@ -69,7 +69,6 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
     if sync_entries:
         synchronized: RefactorState = {}
         for relative in enumerate_refactor_targets(root):
-            digest = file_sha256(root / relative)
             entry = state.get(relative)
             if entry is None:
                 entry = new_refactor_entry()
@@ -80,7 +79,12 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
                     "last_investigated_sha256": entry["last_investigated_sha256"],
                     "last_investigated_at": entry["last_investigated_at"],
                 }
-                if entry["last_investigated_sha256"] != digest:
+                # 新規・要求済み file は内容比較で state が変わらない。比較先が null
+                # の entry も必ず再調査になるため、必要な hash だけを読み取る。
+                if not entry["investigation_required"] and (
+                    entry["last_investigated_sha256"] is None
+                    or entry["last_investigated_sha256"] != file_sha256(root / relative)
+                ):
                     entry["investigation_required"] = True
             synchronized[relative] = entry
         state = synchronized

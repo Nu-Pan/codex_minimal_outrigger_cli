@@ -14,6 +14,7 @@ from typing import cast
 import pytest
 from _git_support import make_repo, run_git
 
+import commons.runtime_refactor as refactor_module
 from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (
@@ -37,10 +38,15 @@ def refactor_repository(cli_repository: Path) -> Path:
 
 
 def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
-    tmp_path: Path,
+    refactor_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """refactor state が oracle と realization の正確な file 集合を追跡する。"""
-    root = make_repo(tmp_path)
+    """新規・未調査 file の正確な entry 集合を、不要な内容読み取りなしで同期する。"""
+    root = refactor_repository
+
+    def unexpected_hash(_path: Path) -> str:
+        pytest.fail("uninvestigated files do not need a content hash comparison")
+
+    monkeypatch.setattr(refactor_module, "file_sha256", unexpected_hash)
 
     state = sync_refactor_state(root)
 
@@ -56,6 +62,16 @@ def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
         for entry in state.values()
     )
     assert load_refactor_state(root) == state
+
+    # 比較先が null の既存 entry も、内容にかかわらず再調査へ戻す。
+    for entry in state.values():
+        entry["investigation_required"] = False
+    write_refactor_state(root, state)
+    synchronized = sync_refactor_state(root)
+    assert synchronized == {
+        relative: {**entry, "investigation_required": True}
+        for relative, entry in state.items()
+    }
 
 
 def test_refactor_state_sync_globs_nested_repository_files(
@@ -224,10 +240,12 @@ def test_refactor_state_sync_rejects_oracle_symlink(
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
-    refactor_repository: Path,
+    refactor_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """state 同期が調査履歴を保持し、変更 file を再調査対象へ戻す。"""
+    """変更検出と要求済み file の履歴保持を、必要な内容比較だけで行う。"""
     root = refactor_repository
+    requested_path = root / "requested.py"
+    requested_path.write_text("before\n")
     state = sync_refactor_state(root)
     entry = state["README.md"]
     previous_digest = file_sha256(root / "README.md")
@@ -239,11 +257,29 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
             "last_investigated_at": "2026-07-19_00-00-00_000",
         }
     )
+    requested_entry = {
+        **entry,
+        "investigation_required": True,
+        "last_investigation_result": "findings",
+        "last_investigated_sha256": file_sha256(requested_path),
+    }
+    state[requested_path.name].update(requested_entry)
     write_refactor_state(root, state)
     (root / "README.md").write_text("changed\n")
+    requested_path.write_text("changed too\n")
+    hashed_paths: list[Path] = []
+
+    def record_hash(path: Path) -> str:
+        hashed_paths.append(path)
+        return file_sha256(path)
+
+    monkeypatch.setattr(refactor_module, "file_sha256", record_hash)
 
     synchronized = sync_refactor_state(root)
 
+    assert hashed_paths == [root / "README.md"]
+    assert synchronized[requested_path.name] == requested_entry
+    assert synchronized["oracle/spec.md"] == state["oracle/spec.md"]
     changed = synchronized["README.md"]
     assert changed["investigation_required"] is True
     assert changed["last_investigation_result"] == "no_findings"
