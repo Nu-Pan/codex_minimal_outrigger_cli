@@ -7,6 +7,7 @@
 import json
 import re
 from dataclasses import asdict
+from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -117,6 +118,18 @@ def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str,
     return [selected[identity] for identity in sorted(selected)]
 
 
+@lru_cache(maxsize=16)
+def _remediation_schema_matches(
+    schema_text: str, value_json: bytes, definition: str | None = None
+) -> bool:
+    """同じ schema と JSON 内容に対する検証結果を上限付きで再利用する。"""
+    # schema の読取と artifact の hash・audit 検査は caller が毎回行う。
+    schema = json.loads(schema_text)
+    if definition is not None:
+        schema = {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
+    return Draft202012Validator(schema).is_valid(json.loads(value_json))
+
+
 def validate_decision_basis(
     value: object, path: Path, *, compact: bool = False
 ) -> None:
@@ -169,18 +182,22 @@ def validate_decision_basis(
             "feedback 循環診断の状態が一意な hash 順ではありません。", path
         )
     if compact:
-        schema = json.loads(
+        schema_text = (
             resources.files("oracle.acp_builder.feedback")
             .joinpath("remediate_issue.json")
-            .read_text()
+            .read_text(encoding="utf-8")
         )
         for field, definition in (
             ("verification", "verifications"),
             ("current_evidence", "current_evidence_optional"),
         ):
-            if not Draft202012Validator(
-                {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
-            ).is_valid(basis[field]):
+            try:
+                value_json = canonical_json_bytes(basis[field])
+            except (TypeError, ValueError) as exc:
+                raise _corruption(
+                    "active issue の判定根拠が検査記録 schema に適合しません。", path
+                ) from exc
+            if not _remediation_schema_matches(schema_text, value_json, definition):
                 raise _corruption(
                     "active issue の判定根拠が検査記録 schema に適合しません。", path
                 )
@@ -487,16 +504,22 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
     if not isinstance(input_value["issue"], dict):
         raise _corruption("remediation issue input が不正です。", path)
     output = checkpoint["structured_output"]
-    schema = json.loads(
+    schema_text = (
         resources.files("oracle.acp_builder.feedback")
         .joinpath("remediate_issue.json")
-        .read_text()
+        .read_text(encoding="utf-8")
     )
-    if not Draft202012Validator(schema).is_valid(output):
+    try:
+        output_json = canonical_json_bytes(output)
+    except (TypeError, ValueError) as exc:
+        raise _corruption(
+            "remediation checkpoint output が schema に適合しません。", path
+        ) from exc
+    if not _remediation_schema_matches(schema_text, output_json):
         raise _corruption(
             "remediation checkpoint output が schema に適合しません。", path
         )
-    if sha256_bytes(canonical_json_bytes(output)) != checkpoint["output_sha256"]:
+    if sha256_bytes(output_json) != checkpoint["output_sha256"]:
         raise _corruption("remediation checkpoint output hash が一致しません。", path)
     result = output["result"]
     audit = _require_exact_fields(

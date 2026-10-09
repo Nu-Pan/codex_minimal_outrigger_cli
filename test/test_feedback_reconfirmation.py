@@ -9,12 +9,15 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from _acp_builder_support import oracle_schema_path
 from _git_support import RUN_BRANCH, SESSION_BRANCH, SESSION_ID
 from test_feedback import _context, _fake_result, _payload, _remediation_output
 
 from cmoc_runtime import CmocError
+from commons import runtime_feedback_run_state as run_state
 from commons.runtime_feedback_run_state import (
     selected_remediation_checkpoints,
+    validate_decision_basis,
     validate_remediation_checkpoint,
     validate_run_artifacts,
 )
@@ -287,6 +290,93 @@ def test_remediation_checkpoint_rejects_malformed_audit_reference(feedback_run):
         validate_remediation_checkpoint(
             checkpoint, harness.context.repo / reference["path"]
         )
+
+
+@pytest.mark.parametrize("target", ["checkpoint", "verification", "current_evidence"])
+def test_remediation_state_validation_rechecks_schema_and_value(
+    feedback_run, tmp_path, monkeypatch, target
+):
+    """同じ内容の再検証後も、入力・schema の変化と artifact の破損を拒否する。"""
+    h = feedback_run
+    identity = _add_candidate(h, "a")
+    h.handler = lambda _issue: _remediation_output(identity, "human_required")
+    _run(h)
+    manifest, _ = load_report_cut(h.context.repo)
+    [reference] = manifest["processing"]["remediation_checkpoints"]
+    path = h.context.repo / reference["path"]
+    checkpoint = read_json_object(path)
+    if target == "checkpoint":
+        value = checkpoint
+
+        def validate(value):
+            validate_remediation_checkpoint(value, path)
+
+    else:
+        value = copy.deepcopy(checkpoint["audit"]["decision_basis"])
+        value["state_sha256"] = sha256_bytes(canonical_json_bytes(value.pop("state")))
+
+        def validate(value):
+            validate_decision_basis(value, path, compact=True)
+
+    schema_directory = tmp_path / "schema"
+    schema_directory.mkdir()
+    schema_path = schema_directory / "remediate_issue.json"
+    schema_text = oracle_schema_path("feedback", "remediate_issue.json").read_text(
+        encoding="utf-8"
+    )
+    schema_path.write_text(schema_text, encoding="utf-8")
+    original_files = run_state.resources.files
+    monkeypatch.setattr(
+        run_state.resources,
+        "files",
+        lambda package: (
+            schema_directory
+            if package == "oracle.acp_builder.feedback"
+            else original_files(package)
+        ),
+    )
+
+    validate(value)
+    validate(value)
+    if target == "checkpoint":
+        bad_hash = copy.deepcopy(value)
+        bad_hash["output_sha256"] = "0" * 64
+        with pytest.raises(CmocError, match="output hash"):
+            validate(bad_hash)
+    for invalid_entries in ([{}], [{"summary": float("nan")}]):
+        invalid = copy.deepcopy(value)
+        if target == "checkpoint":
+            invalid["structured_output"]["result"]["verification"] = invalid_entries
+            if invalid_entries == [{}]:
+                invalid["output_sha256"] = sha256_bytes(
+                    canonical_json_bytes(invalid["structured_output"])
+                )
+        else:
+            invalid[target] = invalid_entries
+        with pytest.raises(CmocError, match="schema"):
+            validate(invalid)
+    validate(value)
+
+    schema = json.loads(schema_text)
+    if target == "checkpoint":
+        schema["properties"]["extra"] = {"type": "null"}
+        schema["required"].append("extra")
+    elif target == "verification":
+        schema["$defs"]["verifications"]["minItems"] = 2
+    else:
+        schema["$defs"]["current_evidence_optional"]["maxItems"] = 0
+    schema_path.write_text(json.dumps(schema), encoding="utf-8")
+    with pytest.raises(CmocError, match="schema"):
+        validate(value)
+    schema_path.write_text(schema_text, encoding="utf-8")
+    validate(value)
+
+    schema_path.write_text("{", encoding="utf-8")
+    with pytest.raises(json.JSONDecodeError):
+        validate(value)
+    schema_path.unlink()
+    with pytest.raises(FileNotFoundError):
+        validate(value)
 
 
 def _join_and_publish(harness, monkeypatch):
