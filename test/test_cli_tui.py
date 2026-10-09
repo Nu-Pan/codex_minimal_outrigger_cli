@@ -232,16 +232,16 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
-def test_tui_saves_editor_input_in_main_worktree(
+def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """linked worktree 起動でも editor 記録と agent call context は main 側に置く。"""
+    """linked 起動で両 root を ignore し、入力記録と agent context を main に置く。"""
     root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
+    # 事前 doctor で ignore を済ませず、検証対象の TUI invocation で両 root を準備する。
+    write_config(linked / ".cmoc/gt/config.json", CmocConfig())
     monkeypatch.chdir(linked)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -272,10 +272,8 @@ def test_tui_saves_editor_input_in_main_worktree(
     assert tui_kwargs["root"] == root.resolve()
     assert tui_kwargs["notification_command_name"] == "tui"
     assert parameter.agent_call_cwd == root.resolve()
-    assert (
-        len(list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")))
-        == 1
-    )
+    [saved_input] = (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
+    assert saved_input.read_text() == "\nlinked worktree task\n"
     assert not list(
         (linked / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md")
     )
@@ -284,48 +282,10 @@ def test_tui_saves_editor_input_in_main_worktree(
     assert "linked worktree task" in complete_prompt
     assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert not list((linked / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
-
-
-def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """repository と linked worktree の両方で `.cmoc` ignore を保証する。"""
-    root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
-    run_git(root, "worktree", "add", "-b", "linked-tui-ignore", str(linked), "HEAD")
-    write_config(linked / ".cmoc/gt/config.json", CmocConfig())
-    monkeypatch.chdir(linked)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    fake_code = bin_dir / "code"
-    write_python_executable(
-        fake_code,
-        [
-            "import sys",
-            "assert sys.argv[1:-1] == ['--wait']",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    monkeypatch.setattr(tui_module, "run_codex_tui", lambda *_, **__: None)
-
-    result = runner.invoke(app, ["tui"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
     assert (
         len(list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))) == 1
     )
-    assert (
-        len(list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")))
-        == 1
-    )
-    assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md"))
-    assert not list(
-        (linked / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md")
-    )
-    assert not list((root / ".cmoc" / "gu" / "editor_input").glob("*_orig.md"))
     assert run_git(root, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""

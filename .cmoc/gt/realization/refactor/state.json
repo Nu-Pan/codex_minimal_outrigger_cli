@@ -211,9 +211,9 @@
   },
   "oracle/doc/app_spec/sub_command/tui.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "1aec0b9633a4498180fded849898e627fc5c99e73e263484a466365a3b3e10fe",
+    "last_investigated_at": "2026-10-09_10-15-25_760"
   },
   "oracle/doc/app_spec/subcommand_interruption.md": {
     "investigation_required": true,
