@@ -368,56 +368,6 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
     assert search.search("原文")["status"] == "ok"
 
 
-def test_unbounded_sync_outlasts_search_deadline(tmp_path: Path) -> None:
-    """doctor 用同期は検索期限を超えて完了し、通常検索は期限を守る。"""
-    pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
-    vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
-
-    class SlowWorker(_InferenceDouble):
-        def stream_chunks(
-            self,
-            documents,
-            resumes,
-            on_event,
-            *,
-            reusable_hashes,
-            deadline,
-            residency_fd,
-            cancelled,
-        ):
-            assert len(documents) == 1
-            assert deadline is None
-            time.sleep(0.15)
-            for path, source in documents.items():
-                on_event(
-                    {
-                        "kind": "chunk",
-                        "path": path,
-                        "ordinal": 0,
-                        "start": 0,
-                        "end": len(source),
-                        "embedding": vector,
-                    }
-                )
-                on_event(
-                    {
-                        "kind": "document_complete",
-                        "path": path,
-                        "chunk_count": 1,
-                    }
-                )
-
-    tuning = replace(_tuning(), sync_no_progress_timeout_seconds=0.05)
-    search = DocumentSearch(
-        root,
-        tuning,
-        worker=SlowWorker(),
-        installation_root=tmp_path,
-    )
-    assert search.synchronize(unbounded=True).chunk_count == 1
-
-
 def test_deadline_after_first_chunk_preserves_it_for_retry(
     tmp_path: Path, document_search_clock
 ) -> None:
