@@ -6,7 +6,6 @@
 from pathlib import Path
 
 import pytest
-from _git_support import make_repo
 from oracle.acp_builder.tui.launch_tui import (
     build_tui_launch_tui_parameter as build_canonical_tui_launch_tui_parameter,
 )
@@ -25,12 +24,12 @@ from basic.acp import FileAccessMode
     ],
 )
 def test_tui_launch_builder_uses_fixed_parameter_and_policies(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     original_prompt: str,
 ) -> None:
     """オリジナル prompt によらず固定の規定と実行設定を使用する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
 
     parameter = build_tui_launch_tui_parameter(original_prompt)

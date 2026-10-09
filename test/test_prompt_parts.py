@@ -568,10 +568,10 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
 
 
 def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """complete promptが入力root tokenを保持し、実pathの定義行を追加することを検証する。"""
-    repo_root = make_repo(tmp_path)
+    repo_root = cli_repository
     monkeypatch.chdir(repo_root)
 
     prompt = build_complete_prompt(
