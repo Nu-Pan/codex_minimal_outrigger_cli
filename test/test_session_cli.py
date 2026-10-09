@@ -1445,12 +1445,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     """session branch削除失敗をwarningとしてjoin成功に含めることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_active_session(root)
     original_run_git = session_join_module.run_git
 
     # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
@@ -1482,12 +1477,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
     """local session branchのreachability確認失敗時に削除しないことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_active_session(root)
     original_run_git = session_join_module.run_git
     delete_calls = 0
 
@@ -1565,12 +1555,7 @@ def test_session_join_handled_failure_is_written_to_stderr(
     """事前条件 error terminal result を stderr へ出力する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    _, home_branch = _seed_active_session(root)
     (root / "README.md").write_text("dirty\n")
 
     result = runner.invoke(app, ["session", "join"])
