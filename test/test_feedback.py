@@ -161,6 +161,23 @@ def stored_feedback_context(feedback_directory: Path) -> dict[str, object]:
     return _context(feedback_directory, head_commit="a" * 40)
 
 
+@pytest.fixture
+def collector_directory(
+    feedback_directory: Path,
+    stored_feedback_context: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    """transport・保存・call lifecycle の検査には Git 読み取り結果だけを渡す。"""
+    # 実 Git の context 取得は context/rate test と linked worktree の wave test で検証する。
+    monkeypatch.setattr(feedback_module, "current_branch", lambda _root: "main")
+    monkeypatch.setattr(
+        feedback_module,
+        "head_commit",
+        lambda _root: stored_feedback_context["head_commit"],
+    )
+    return feedback_directory
+
+
 def _submit_to_feedback_collector(
     port: int,
     capability: str,
@@ -1018,6 +1035,12 @@ def test_collector_validates_context_rate_and_durable_observation(
         assert len(paths) == 3
         envelope = read_json_object(paths[0])
         assert validate_observation_envelope(envelope) == []
+        assert envelope["context"]["repo_root"] == str(root)
+        assert envelope["context"]["work_root"] == str(root)
+        assert (
+            envelope["context"]["head_commit"]
+            == run_git(root, "rev-parse", "HEAD").stdout.strip()
+        )
         assert envelope["context"]["subcommand_invocation_id"] == logger.execution_id
         assert envelope["context"]["agent_call_id"] == "ac_000005_2026-09-29_15-04"
         assert reporter_module._submit(_payload())["code"] == "rate_limited"
@@ -1123,10 +1146,10 @@ def test_collector_protocol_probe_does_not_report_expected_degradation(
 
 
 def test_collector_records_rejected_submission_as_degraded_warning(
-    tmp_path: Path,
+    collector_directory: Path,
 ) -> None:
     """collector の rejected result を本命 workload と分離した warning に残す。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -1215,10 +1238,10 @@ def test_collector_handles_response_timeout_failure_as_degraded_warning(
 
 
 def test_collector_accepts_utf8_payload_at_wire_size_over_64_kib(
-    tmp_path: Path,
+    collector_directory: Path,
 ) -> None:
     """UTF-8 payload の制限を JSON ASCII escape の wire size で狭めない。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -1260,10 +1283,10 @@ def test_collector_accepts_utf8_payload_at_wire_size_over_64_kib(
 
 
 def test_collector_rejects_surrogate_payload_with_protocol_safe_response(
-    tmp_path: Path,
+    collector_directory: Path,
 ) -> None:
     """不正な Unicode payload の rejected result を response として返せる。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -1293,10 +1316,10 @@ def test_collector_rejects_surrogate_payload_with_protocol_safe_response(
 
 @pytest.mark.parametrize("stop_invocation", [False, True], ids=["call", "invocation"])
 def test_feedback_shutdown_drains_accepted_tcp_request(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stop_invocation: bool
+    collector_directory: Path, monkeypatch: pytest.MonkeyPatch, stop_invocation: bool
 ) -> None:
     """call 終了と collector 停止は、受付済み request の保存後にだけ完了する。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     storage_started = threading.Event()
@@ -1398,9 +1421,11 @@ def test_feedback_shutdown_drains_accepted_tcp_request(
         invocation.stop()
 
 
-def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
+def test_parallel_feedback_call_lifecycles_are_isolated(
+    collector_directory: Path,
+) -> None:
     """並行 call の片方を閉じても他方の request を継続受理する。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
