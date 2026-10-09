@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import get_args
 
 import pytest
-from _git_support import make_repo, run_git
+from _git_support import init_repo, make_repo, run_git
 from jsonschema.validators import Draft202012Validator
 from oracle.other.cmoc_config import DocumentSearchConfig
 from oracle.other.document_search import (
@@ -154,13 +154,14 @@ class _InferenceDouble:
 
 def _repo_with_docs(tmp_path: Path) -> Path:
     """索引を Git 非追跡にした隔離 repository を作る。"""
-    root = make_repo(tmp_path)
+    # worktree 複製に必要な文書入りの HEAD だけを作り、先行する初期 commit は省く。
+    root = tmp_path / "repo"
+    root.mkdir()
+    init_repo(root)
     docs = root / "oracle/doc"
-    docs.mkdir()
+    docs.mkdir(parents=True)
     (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
-    ignore_path = root / ".gitignore"
-    existing = ignore_path.read_text() if ignore_path.exists() else ""
-    ignore_path.write_text(existing + "\noracle/doc/ignored.md\n")
+    (root / ".gitignore").write_text("oracle/doc/ignored.md\n")
     (docs / "ignored.md").write_text("# 非公開の本文\n")
     run_git(root, "add", ".gitignore", "oracle/doc")
     run_git(root, "commit", "-m", "add docs")
@@ -1273,10 +1274,13 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
 
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
-    (root / path).write_text("".join(f"候補 {i}\n" for i in range(61)))
+    # 採用上限を満たす正常候補と、上限外にある異常候補一つを用意する。
+    candidate_count = 20
+    available = candidate_count + 1
+    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
     worker = _CandidateWorker(
-        {path: [(i + 1, i + 1) for i in range(61)]},
-        vectors={path: [(0, 1)] + [(1, 0)] * 60},
+        {path: [(i + 1, i + 1) for i in range(available)]},
+        vectors={path: [(0, 1)] + [(1, 0)] * candidate_count},
     )
     original_open = module._open_database
 
@@ -1296,7 +1300,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
     with closing(
         DocumentSearch(
             root,
-            replace(_tuning(), candidate_count=20),
+            replace(_tuning(), candidate_count=candidate_count),
             worker=worker,
             installation_root=tmp_path,
         )
