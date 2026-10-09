@@ -1,6 +1,7 @@
 """出力補正、CLI failure、中断と作業差分の保持を検証する。"""
 
 import json
+import subprocess
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -581,32 +582,24 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
     failure_event: dict[str, object],
     failure_returncode: int,
 ) -> None:
-    """capacity error を再試行し、戻り値に依存せず retry event を記録する。"""
+    """capacity 診断と終了 code の組合せごとに、待機・probe・再実行を記録する。"""
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if count == 0:",
-            f"    print(json.dumps({failure_event!r}))",
-            f"    sys.exit({failure_returncode})",
-            "output.write_text(json.dumps({'ok': True}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    # JSONL 分類と log は実処理し、process 受け渡しは既存の結合テストへ委ねる。
+    prompts = []
+
+    def fake_run(argv, **kwargs):
+        prompts.append(kwargs["stdin"].read())
+        if len(prompts) == 1:
+            return subprocess.CompletedProcess(
+                argv, failure_returncode, json.dumps(failure_event) + "\n", ""
+            )
+        output = Path(argv[argv.index("--output-last-message") + 1])
+        output.write_text(json.dumps({"ok": True}), encoding="utf-8")
+        return subprocess.CompletedProcess(argv, 0, '{"type":"turn.completed"}\n', "")
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
@@ -625,6 +618,9 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
     )
 
     assert result.output_json == {"ok": True}
+    assert len(prompts) == 3
+    assert prompts[0] == prompts[2] == parameter.prompt
+    assert prompts[1] != parameter.prompt
     call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
