@@ -10,6 +10,7 @@
 import json
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _cli_support import runner, terminal_primary_report
 from _codex_support import FakeCodexResult, codex_override_config, setup_codex_home
@@ -516,9 +517,16 @@ def test_oracle_edit_launch_preconditions(
         )
 
 
-def test_oracle_edit_prompt_preserves_user_log_reference(cli_repository, monkeypatch):
-    # prompt の path 解決だけなので、履歴や追跡ファイルは不要。
-    monkeypatch.chdir(cli_repository)
+def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
+    """ユーザーのログ参照は保持し、自動生成の過去会話参照は含めない。"""
+    # 実 Git の root 解決は test_basic_runtime.py と上の CLI 結合 test に残す。
+    # 文面の検査では探索結果だけを置換し、builder と renderer は実物を使う。
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _start_path=None: (tmp_path, tmp_path),
+    )
     instruction = (
         "診断用サブコマンドログ /example/sender.jsonl を参考に oracle を編集する"
     )
