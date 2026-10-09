@@ -156,6 +156,31 @@ def test_handoff_guide_rejects_invalid_or_unknown_target_without_input_leak(
     assert "private input" not in json.dumps(result)
 
 
+@pytest.mark.parametrize(
+    "target_result",
+    [
+        None,
+        {"status": "ok"},
+        {"status": "error", "message": " "},
+        {"status": "ok", "guide_text": "public guide", "content": "private input"},
+    ],
+)
+def test_handoff_guide_rejects_invalid_target_result_without_input_leak(
+    monkeypatch, handoff_transport, target_result
+):
+    """欠落・不正・余分な本文を含む受信応答はガイドとして返さない。"""
+    target_id, connection = handoff_transport
+    monkeypatch.setattr(
+        handoff_mcp,
+        "read_handoff_response",
+        lambda *_args, **_kwargs: target_result,
+    )
+    result = _get_guide_result({"target_id": target_id})
+    assert result["status"] == "error"
+    assert "private input" not in json.dumps(result)
+    connection.sendall.assert_called_once()
+
+
 def test_handoff_mcp_exposes_only_guide_and_overwrite_with_canonical_schemas() -> None:
     """取得と上書きだけを公開し、正本 schema を複製せず返す。"""
     initialized = handoff_mcp._response(

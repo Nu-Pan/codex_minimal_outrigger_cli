@@ -129,11 +129,11 @@ def _submit(payload: object) -> dict[str, object]:
 
 def _get_handoff_guide(payload: object) -> dict[str, object]:
     """指定された active target の保持済みガイドだけを取得する。"""
-    # 共通 transport の失敗も、正本が定める取得結果の形へ収める。
+    # target 応答は受信境界で検証済みなので、共通経路の失敗形式だけ変換する。
     result = _call_target(payload, tool_name="get_handoff_guide")
-    if handoff_payload_is_valid("get_handoff_guide_result", result):
-        return result
-    return {"status": "error", "message": result["message"]}
+    if result["status"] == "rejected":
+        return {"status": "error", "message": result["message"]}
+    return result
 
 
 def _call_target(payload: object, *, tool_name: str) -> dict[str, object]:
