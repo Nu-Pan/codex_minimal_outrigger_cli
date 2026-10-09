@@ -34,8 +34,8 @@ def test_git_query_reuse_keeps_worktrees_and_environment_separate(
         assert git_module.run_git(index_query, root).stdout.strip() == ".git/index"
 
 
-def test_git_query_reuse_observes_ignore_content_and_index_changes(tmp_path):
-    root = make_repo(tmp_path)
+def test_git_query_reuse_observes_ignore_content_and_index_changes(cli_repository):
+    root = cli_repository
     candidate = root / "candidate.txt"
     candidate.write_text("content\n")
     gitignore = root / ".gitignore"
@@ -52,8 +52,10 @@ def test_git_query_reuse_observes_ignore_content_and_index_changes(tmp_path):
 
 
 @pytest.mark.parametrize("interrupt", [False, True])
-def test_git_query_reuse_expires_after_completion_or_failure(tmp_path, interrupt):
-    root = make_repo(tmp_path)
+def test_git_query_reuse_expires_after_completion_or_failure(
+    tmp_path, cli_repository, interrupt
+):
+    root = cli_repository
     nested = root / "nested"
     nested.mkdir()
     query = ["config", "--path", "--get-all", "core.excludesFile"]
