@@ -328,10 +328,12 @@ def test_run_root_placeholder_rejects_main_worktree(
 
 
 def test_create_run_worktree_rejects_path_outside_managed_worktrees(
+    cli_repository: Path,
     tmp_path: Path,
 ) -> None:
     """管理領域外のpathでrun worktreeを作成しないことを検証する。"""
-    root = make_repo(tmp_path)
+    # path の拒否に履歴は不要だが、root 解決には実 Git repository を使う。
+    root = cli_repository
     target = tmp_path / "unrelated"
     target.mkdir()
     (target / "keep.txt").write_text("keep\n")
@@ -343,10 +345,10 @@ def test_create_run_worktree_rejects_path_outside_managed_worktrees(
 
 
 def test_create_run_worktree_rejects_path_not_matching_branch(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """branchと一致しないmanaged pathをrun worktreeとして作成しないことを検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / "other-run"
     target.mkdir(parents=True)
     (target / "keep.txt").write_text("keep\n")
@@ -366,9 +368,11 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
         f"cmoc/run/{SESSION_ID}/2026-09-29_15-04_07_123456789",
     ],
 )
-def test_run_worktree_rejects_noncanonical_branch(tmp_path: Path, branch: str) -> None:
+def test_run_worktree_rejects_noncanonical_branch(
+    cli_repository: Path, branch: str
+) -> None:
     """現行 ID を持たない branch を worktree の保存先へ解決しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
 
     with pytest.raises(CmocError, match="run worktree"):
         expected_run_worktree(root, branch)
@@ -455,10 +459,10 @@ def test_session_worktree_lookup_rejects_invalid_registered_path(
 
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
 def test_create_run_worktree_rejects_symlink_components(
-    tmp_path: Path, symlink_component: str
+    cli_repository: Path, tmp_path: Path, symlink_component: str
 ) -> None:
     """symlink componentを経由したrun worktree作成を拒否することを検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     managed = root / ".cmoc" / "gu" / "worktree"
     external = tmp_path / "external"
     external.mkdir()
@@ -489,10 +493,10 @@ def test_create_run_worktree_rejects_symlink_components(
 
 
 def test_create_run_worktree_rejects_unregistered_managed_path(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """Git未登録のmanaged pathをrun worktreeとして扱わないことを検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     target.mkdir(parents=True)
     (target / "keep.txt").write_text("keep\n")
@@ -504,10 +508,11 @@ def test_create_run_worktree_rejects_unregistered_managed_path(
 
 
 def test_remove_worktree_rejects_path_outside_managed_worktrees(
+    cli_repository: Path,
     tmp_path: Path,
 ) -> None:
     """管理領域外のpathをworktree削除対象にしないことを検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     target = tmp_path / "unrelated"
     target.mkdir()
     (target / "keep.txt").write_text("keep\n")
@@ -562,10 +567,10 @@ def test_remove_worktree_rejects_symlink_components(
 
 
 def test_remove_worktree_rejects_unregistered_managed_path(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """Git未登録のmanaged pathをworktree削除対象にしないことを検証する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     target.mkdir(parents=True)
     (target / "keep.txt").write_text("keep\n")
