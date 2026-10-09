@@ -470,15 +470,19 @@ def test_session_fork_lock_is_shared_across_processes(
         args=(root, ready_child, release_child),
     )
     process.start()
-    lock_attempted = threading.Event()
+    lock_contended = threading.Event()
     acquired = threading.Event()
 
     original_flock = runtime_state_module.fcntl.flock
 
     def observe_lock_attempt(fd: int, operation: int) -> None:
-        """worker が排他 lock を試行したことを通知する。"""
+        """実 flock の競合を通知してから、通常の blocking 取得へ進む。"""
+        # 子 process が保持する lock への競合を、時間経過に頼らず確かめる。
         if operation & runtime_state_module.fcntl.LOCK_EX:
-            lock_attempted.set()
+            try:
+                original_flock(fd, operation | runtime_state_module.fcntl.LOCK_NB)
+            except BlockingIOError:
+                lock_contended.set()
         original_flock(fd, operation)
 
     monkeypatch.setattr(runtime_state_module.fcntl, "flock", observe_lock_attempt)
@@ -487,8 +491,8 @@ def test_session_fork_lock_is_shared_across_processes(
     try:
         assert ready_parent.recv()
         worker.start()
-        assert lock_attempted.wait(timeout=3)
-        assert not acquired.wait(timeout=0.2)
+        assert lock_contended.wait(timeout=3)
+        assert not acquired.is_set()
         release_parent.send(True)
         released = True
         assert acquired.wait(timeout=3)

@@ -25,6 +25,7 @@ from _git_support import (
     run_git,
 )
 
+import commons.runtime_paths as runtime_paths
 from basic.path_model import (
     AgentCallPathContext,
     RootPathPlaceHolder,
@@ -40,6 +41,28 @@ from cmoc_runtime import (
     work_root,
 )
 from commons.runtime_run import expected_run_worktree, worktree_for_branch_optional
+
+
+@pytest.fixture
+def _cwd_lock_contention(monkeypatch: pytest.MonkeyPatch) -> threading.Event:
+    """実 RLock の競合を通知し、固定時間の待機なしで排他を検証する。"""
+    # 既存の lock をそのまま使い、待つ理由だけを観測する。
+    lock = runtime_paths._CMOC_PROCESS_CWD_LOCK
+    contended = threading.Event()
+
+    class _ObservedLock:
+        def __enter__(self) -> None:
+            # 再入は許し、別 thread との競合だけを通知する。
+            if not lock.acquire(blocking=False):
+                contended.set()
+                lock.acquire()
+
+        def __exit__(self, *_args: object) -> None:
+            # 次の呼び出しも同じ実 lock を使えるよう、取得と解放を対応させる。
+            lock.release()
+
+    monkeypatch.setattr(runtime_paths, "_CMOC_PROCESS_CWD_LOCK", _ObservedLock())
+    return contended
 
 
 def test_path_model_resolves_token_path_inside_repo() -> None:
@@ -221,7 +244,10 @@ def test_agent_call_path_contexts_are_parallel_and_call_scoped(
 
 
 def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    _cwd_lock_contention: threading.Event,
 ) -> None:
     """relativeな起点の解決をcwd切替と直列化し、未作成の祖先も受理する。"""
     # cwd の混線を検出するための二つの Git root だけを準備する。
@@ -233,7 +259,6 @@ def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     monkeypatch.chdir(original)
     first_ready = threading.Event()
     release_first = threading.Event()
-    worker_started = threading.Event()
     worker_finished = threading.Event()
     observed: list[Path] = []
 
@@ -246,7 +271,6 @@ def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     def resolve_relative_cwd() -> None:
         """相対cwdを解決し、呼び出し結果を記録する。"""
         first_ready.wait(5)
-        worker_started.set()
         observed.append(repo_root(Path(".")))
         worker_finished.set()
 
@@ -256,8 +280,8 @@ def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     assert first_ready.wait(5)
     worker.start()
     try:
-        assert worker_started.wait(5)
-        assert not worker_finished.wait(0.1)
+        assert _cwd_lock_contention.wait(5)
+        assert not worker_finished.is_set()
     finally:
         release_first.set()
         holder.join(5)
@@ -272,7 +296,9 @@ def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     assert work_root(missing_anchor) == original
 
 
-def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
+def test_pushd_serializes_process_global_cwd_changes(
+    tmp_path: Path, _cwd_lock_contention: threading.Event
+) -> None:
     """並列する pushd が process-global な cwd を混線させない。"""
     first = tmp_path / "first"
     second = tmp_path / "second"
@@ -280,7 +306,6 @@ def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
     second.mkdir()
     original = Path.cwd()
     first_ready = threading.Event()
-    second_started = threading.Event()
     second_entered = threading.Event()
     release_first = threading.Event()
 
@@ -293,8 +318,8 @@ def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
     def enter_second_directory() -> None:
         """二つ目のpushdへ入り、lock解放後に進めることを記録する。"""
         first_ready.wait(5)
-        second_started.set()
         with pushd(second):
+            assert Path.cwd() == second
             second_entered.set()
 
     first_thread = threading.Thread(target=hold_first_directory)
@@ -303,8 +328,9 @@ def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
     second_thread.start()
     try:
         assert first_ready.wait(5)
-        assert second_started.wait(5)
-        assert not second_entered.wait(0.1)
+        assert _cwd_lock_contention.wait(5)
+        assert not second_entered.is_set()
+        assert Path.cwd() == first
     finally:
         release_first.set()
         first_thread.join(5)
