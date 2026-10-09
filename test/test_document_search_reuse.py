@@ -81,7 +81,7 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
     tmp_path, model_search
 ):
     create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
+    root = _repo_with_docs(tmp_path, committed=True)
     original = (root / "oracle/doc/allowed.md").read_text()
     events = []
     with closing(create(root)) as search:
@@ -147,7 +147,7 @@ def test_partial_edit_generates_unique_missing_inputs_and_retains_unreferenced_c
 
 def test_parallel_worktrees_generate_one_embedding_in_total(tmp_path, model_search):
     create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
+    root = _repo_with_docs(tmp_path, committed=True)
     runs = [_worktree(root, tmp_path / f"run-{index}") for index in range(2)]
 
     def synchronize(run):
@@ -165,7 +165,7 @@ def test_parallel_worktrees_generate_one_embedding_in_total(tmp_path, model_sear
 
 def test_run_removal_preserves_embedding_and_original_producer(tmp_path, model_search):
     create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
+    root = _repo_with_docs(tmp_path, committed=True)
     run = _worktree(root, root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID, RUN_BRANCH)
     original = (run / "oracle/doc/allowed.md").read_text()
     with closing(create(run)) as search:
@@ -212,7 +212,7 @@ def test_failed_sync_saved_results_are_reusable_in_another_worktree(
     tmp_path, model_search, failure_code
 ):
     create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
+    root = _repo_with_docs(tmp_path, committed=True)
     run = _worktree(root, tmp_path / "run")
 
     class FailingWorker(_InferenceDouble):

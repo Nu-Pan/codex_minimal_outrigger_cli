@@ -152,9 +152,9 @@ class _InferenceDouble:
             on_event({"kind": "document_complete", "path": path, "chunk_count": 1})
 
 
-def _repo_with_docs(tmp_path: Path) -> Path:
+def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     """索引を Git 非追跡にした隔離 repository を作る。"""
-    # worktree 複製に必要な文書入りの HEAD だけを作り、先行する初期 commit は省く。
+    # 分類検査には実 index を使い、worktree 複製が必要なケースだけ HEAD を作る。
     root = tmp_path / "repo"
     root.mkdir()
     init_repo(root)
@@ -164,7 +164,8 @@ def _repo_with_docs(tmp_path: Path) -> Path:
     (root / ".gitignore").write_text("oracle/doc/ignored.md\n")
     (docs / "ignored.md").write_text("# 非公開の本文\n")
     run_git(root, "add", ".gitignore", "oracle/doc")
-    run_git(root, "commit", "-m", "add docs")
+    if committed:
+        run_git(root, "commit", "-m", "add docs")
     ensure_cmoc_ignored(root)
     return root
 
@@ -1001,8 +1002,9 @@ class _CandidateWorker(_InferenceDouble):
 @pytest.mark.parametrize(
     "candidate_count,available,limit_cases",
     [
-        (50, 60, [(None, 50), (20, 20), (50, 50)]),
-        (20, 60, [(None, 20), (50, 20)]),
+        # 上限を一件超える候補で切捨てを検出し、同じ検証のための余分な保存を省く。
+        (50, 51, [(None, 50), (20, 20), (50, 50)]),
+        (20, 21, [(None, 20), (50, 20)]),
         (50, 7, [(None, 7)]),
         (50, 0, [(None, 0)]),
     ],
