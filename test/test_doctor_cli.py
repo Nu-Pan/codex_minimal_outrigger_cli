@@ -398,58 +398,26 @@ def test_doctor_rechecks_work_directories_after_repair_commit(tmp_path, monkeypa
     assert f"path: {root / 'oracle/test'}" in report
 
 
-def test_doctor_syncs_document_edits_and_deletions_without_committing_them(
-    tmp_path: Path,
+def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """手動同期が保存済みの編集・削除を反映し、利用者の差分を commit しない。"""
+    """初回・編集・無変更・削除の同期を、保存内容・Git・ログ・report から確認する。"""
     root = make_repo(tmp_path)
     document = root / "oracle/doc/source.md"
     document.parent.mkdir()
     original = "# original document\n"
+    updated = "# updated document\n"
     document.write_text(original)
-    run_git(root, "add", "oracle/doc/source.md")
-    run_git(root, "commit", "-m", "add search document")
-    run_doctor(root)
-
-    document.write_text("# updated document\n")
-    updated = terminal_primary_report(run_doctor(root)).read_text()
-
-    assert 'doctor_sync_status: "updated"' in updated
-    assert '"changed": 1' in updated
-    assert document.read_text() == "# updated document\n"
-    assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
-
-    unchanged = terminal_primary_report(run_doctor(root)).read_text()
-    assert 'doctor_sync_status: "unchanged"' in unchanged
-
-    document.unlink()
-    deleted = terminal_primary_report(run_doctor(root)).read_text()
-    state = json.loads((root / ".cmoc/gt/realization/refactor/state.json").read_text())
-
-    assert 'doctor_sync_status: "updated"' in deleted
-    assert '"deleted": 1' in deleted
-    assert "oracle/doc/source.md" not in state
-    assert not document.exists()
-    assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
-
-
-def test_doctor_sync_log_records_each_run_and_current_work(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """初回・無変更・削除の件数と結果を、同じ実行の開始/終端に対応付ける。"""
-    root = make_repo(tmp_path)
-    document = root / "oracle/doc/source.md"
-    document.parent.mkdir()
-    document.write_text("# source\n")
     run_git(root, "add", "oracle/doc/source.md")
     run_git(root, "commit", "-m", "add search document")
     monkeypatch.chdir(root)
     log_dir = root / ".cmoc/gu/log/sub_command"
 
-    for expected, edit in (
-        (("updated", 1, 1, 1, 0), None),
-        (("unchanged", 1, 0, 0, 1), None),
-        (("updated", 0, 1, 0, 0), document.unlink),
+    for contents, expected, edit in (
+        (original, ("updated", 1, 1, 1, 0), None),
+        (updated, ("updated", 1, 1, 1, 0), lambda: document.write_text(updated)),
+        (updated, ("unchanged", 1, 0, 0, 1), None),
+        (None, ("updated", 0, 1, 0, 0), document.unlink),
     ):
         if edit is not None:
             edit()
@@ -478,6 +446,20 @@ def test_doctor_sync_log_records_each_run_and_current_work(
         assert 0 <= finish["lock_wait_seconds"] <= finish["elapsed_seconds"]
         report = terminal_primary_report(result).read_text()
         assert f"診断ログ内の同期 ID: `{start['sync_id']}`" in report
+        assert f'doctor_sync_status: "{expected[0]}"' in report
+        assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
+        state = json.loads(
+            (root / ".cmoc/gt/realization/refactor/state.json").read_text()
+        )
+        if contents is None:
+            assert '"deleted": 1' in report
+            assert not document.exists()
+            assert "oracle/doc/source.md" not in state
+        else:
+            if edit is not None:
+                assert '"changed": 1' in report
+            assert document.read_text() == contents
+            assert "oracle/doc/source.md" in state
 
 
 def test_doctor_preprocess_follows_repair_order(
