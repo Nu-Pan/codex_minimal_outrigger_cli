@@ -55,20 +55,27 @@ def document_search_clock(monkeypatch):
     return clock
 
 
+@pytest.fixture(scope="session")
+def _noop_external_commands(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """書き換えない外部コマンドの no-op をテストセッション内で共有する。"""
+    # 被テスト cmoc の成果物は各 tmp_path に隔離し、固定の補助実行ファイルだけ共有する。
+    executable = tmp_path_factory.mktemp("noop-commands") / "powershell.exe"
+    executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    executable.chmod(0o555)
+    # 子 process の editor も同じ no-op を使い、書き込みと chmod を一度にする。
+    (executable.parent / "code").hardlink_to(executable)
+    return executable.parent
+
+
 @pytest.fixture(autouse=True)
 def _isolate_windows_toast_transport(
-    tmp_path: Path,
+    _noop_external_commands: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """test が利用者の Windows 通知履歴へ toast を残さないようにする。"""
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     # subprocess callback も同じ隔離先を使えるよう、PATH に fake transport を置く。
-    executable = tmp_path / "toast-bin" / "powershell.exe"
-    executable.parent.mkdir()
-    executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    executable.chmod(0o755)
-    # 子 process の editor も同じ no-op を使い、書き込みと chmod を一度にする。
-    (executable.parent / "code").hardlink_to(executable)
+    executable = _noop_external_commands / "powershell.exe"
     monkeypatch.setenv("PATH", f"{executable.parent}:{os.environ.get('PATH', '')}")
     monkeypatch.setattr(runtime_windows_toast, "_WINDOWS_POWERSHELL", executable)
     monkeypatch.setattr(
