@@ -214,7 +214,10 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
         """循環 container も拒否しながら再帰的な値を検証する。"""
         if isinstance(item, str):
             # TOML string は Unicode scalar value だけを受理する。
-            if any(0xD800 <= ord(character) <= 0xDFFF for character in item):
+            # ASCII には surrogate がないので、文字単位の走査を省ける。
+            if not item.isascii() and any(
+                0xD800 <= ord(character) <= 0xDFFF for character in item
+            ):
                 raise TypeError
             return item
         if isinstance(item, bool):
@@ -431,6 +434,12 @@ def _read_config_data(path: Path) -> dict[str, Any]:
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
     # 特殊 file を read_text する前に拒否し、設定読み込みを即時に失敗させる。
     if not path.is_file():
+        if not path.exists():
+            raise _search_config_failure(
+                path,
+                SearchConfigIssue("document_search", "設定ファイルが存在しません"),
+                missing=True,
+            )
         raise CmocError(
             "cmoc config JSON を読み込めません。",
             ["{{work-root}}/.cmoc/gt/config.json を通常の file に修正してください。"],
@@ -506,13 +515,6 @@ def _validated_codex_data(path: Path, data: dict[str, Any]) -> CmocConfig:
 def load_config(root: Path) -> CmocConfig:
     """保存済み JSON の検索設定を厳格に検証して config に復元する。"""
     path = config_path(root)
-    _reject_symlinked_config_path(path)
-    if not path.exists():
-        raise _search_config_failure(
-            path,
-            SearchConfigIssue("document_search", "設定ファイルが存在しません"),
-            missing=True,
-        )
     data = _read_config_data(path)
     _validated_search_data(path, data)
     return _validated_codex_data(path, data)

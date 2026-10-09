@@ -393,23 +393,34 @@ def test_config_rejects_named_pipe_config_path(tmp_path: Path) -> None:
         write_config(config_path, CmocConfig())
 
 
+@pytest.mark.parametrize("link_kind", ["file", "parent"])
+@pytest.mark.parametrize("target_exists", [False, True])
 def test_config_rejects_symlinked_path_without_touching_link_target(
     tmp_path: Path,
+    link_kind: str,
+    target_exists: bool,
 ) -> None:
-    """tracked config の symlink 経由 read/write で link 先を扱わない。"""
+    """file・親 directory の symlink は link 先がなくても読み書きしない。"""
     root = tmp_path / "repo"
-    outside = tmp_path / "outside-config.json"
-    outside.write_text("original\n")
     config_path = root / ".cmoc" / "gt" / "config.json"
-    config_path.parent.mkdir(parents=True)
-    config_path.symlink_to(outside)
+    link = config_path if link_kind == "file" else config_path.parent
+    target = tmp_path / "outside"
+    outside_config = target if link_kind == "file" else target / "config.json"
+    if target_exists:
+        outside_config.parent.mkdir(parents=True, exist_ok=True)
+        outside_config.write_text("original\n")
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target, target_is_directory=link_kind == "parent")
 
     with pytest.raises(CmocError, match="cmoc config path"):
         load_config(root)
     with pytest.raises(CmocError, match="cmoc config path"):
         write_config(config_path, CmocConfig())
 
-    assert outside.read_text() == "original\n"
+    if target_exists:
+        assert outside_config.read_text() == "original\n"
+    else:
+        assert not target.exists()
 
 
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])
@@ -543,6 +554,7 @@ def test_config_preserves_generic_model_provider_settings() -> None:
         "retries": 2,
         "ratio": 0.5,
         "nested": ["value", {"answer": 42}],
+        "unicode": "\ud7ff\ue000\U0010ffff",
     }
     config = config_from_dict(
         {
@@ -579,7 +591,7 @@ def test_config_preserves_generic_model_provider_settings() -> None:
 
 @pytest.mark.parametrize(
     "setting",
-    [None, float("nan"), float("inf"), 2**63, object()],
+    [None, float("nan"), float("inf"), 2**63, object(), "\udfff", {"\ud800": "value"}],
 )
 def test_config_rejects_values_without_unique_json_toml_encoding(
     setting: object,
