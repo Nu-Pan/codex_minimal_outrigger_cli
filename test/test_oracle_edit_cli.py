@@ -66,7 +66,7 @@ def _prepared_repo(
     setup_codex_home(tmp_path, monkeypatch)
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    # doctor preprocess は検証対象の invocation 内で一度だけ実行する。
+    # 初期設定だけ用意し、doctor の呼び出しは検証対象の invocation に任せる。
     write_config(config_path(root), CmocConfig())
     return root
 
@@ -123,13 +123,16 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         *,
         sync_refactor_entries: bool = True,
     ) -> None:
-        """対象 invocation の doctor preprocess を記録して本来の処理へ委譲する。"""
+        """doctor の呼び出しを記録し、代表ケースだけ実処理へ委譲する。"""
         assert target_root == root
         events.append("doctor")
-        real_run_doctor_preprocess(
-            target_root,
-            sync_refactor_entries=sync_refactor_entries,
-        )
+        # 同じ入力での修復・索引同期との結合は edit-success に集約する。
+        # 詳細は test_doctor_cli.py、呼び出し順序と編集結果は全6ケースで検証する。
+        if failure_stage is None and first_changes:
+            real_run_doctor_preprocess(
+                target_root,
+                sync_refactor_entries=sync_refactor_entries,
+            )
 
     real_build_main_parameter = (
         oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
