@@ -55,8 +55,10 @@ def _relative_sets(
 def _full_glob_reference(
     root: Path, nested_repositories: tuple[Path, ...] = ()
 ) -> tuple[set[str], set[str]]:
-    """fixture 全体を物理 glob し、候補ごとの Git 判定で基準集合を作る。"""
+    """fixture 全体を物理 glob し、repository ごとの Git 判定で基準集合を作る。"""
+    # 製品の pruning・分類処理は使わず、Git への問い合わせだけをまとめる。
     metadata_roots = tuple(repository / ".git" for repository in nested_repositories)
+    candidates_by_repository: dict[Path, list[tuple[Path, int]]] = {}
     oracle_files: set[str] = set()
     realization_files: set[str] = set()
     for path in root.rglob("*"):
@@ -93,25 +95,42 @@ def _full_glob_reference(
             ),
             key=lambda repository: len(repository.parts),
         )
-        owning_relative = path.relative_to(owning_repository).as_posix()
+        candidates_by_repository.setdefault(owning_repository, []).append((path, mode))
+
+    for repository, candidates in candidates_by_repository.items():
+        payload = b"".join(
+            os.fsencode(f"./{path.relative_to(repository).as_posix()}") + b"\0"
+            for path, _ in candidates
+        )
         ignored = subprocess.run(
-            ["git", "check-ignore", "-q", "--", f"./{owning_relative}"],
-            cwd=owning_repository,
+            ["git", "check-ignore", "--stdin", "-z"],
+            cwd=repository,
+            input=payload,
+            capture_output=True,
             check=False,
         )
-        if ignored.returncode == 0:
-            continue
-        if ignored.returncode != 1:
-            raise AssertionError(f"reference check-ignore failed for {path}")
-        if stat.S_ISLNK(mode):
-            raise AssertionError(f"reference fixture contains a special file: {path}")
-        if path.name in _EXCLUDED_NAMES:
-            continue
+        if ignored.returncode not in {0, 1}:
+            raise AssertionError(f"reference check-ignore failed for {repository}")
+        ignored_paths = {
+            repository / os.fsdecode(relative)
+            for relative in ignored.stdout.split(b"\0")
+            if relative
+        }
+        for path, mode in candidates:
+            if path in ignored_paths:
+                continue
+            if stat.S_ISLNK(mode):
+                raise AssertionError(
+                    f"reference fixture contains a special file: {path}"
+                )
+            if path.name in _EXCLUDED_NAMES:
+                continue
 
-        if relative.parts[0] == "oracle":
-            oracle_files.add(relative.as_posix())
-        else:
-            realization_files.add(relative.as_posix())
+            relative = path.relative_to(root)
+            if relative.parts[0] == "oracle":
+                oracle_files.add(relative.as_posix())
+            else:
+                realization_files.add(relative.as_posix())
     return oracle_files, realization_files
 
 
