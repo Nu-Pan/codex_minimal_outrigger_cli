@@ -1015,7 +1015,8 @@ def test_mcp_success_schema_and_candidate_limits(
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
-    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
+    # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
+    (root / path).write_text("候補\n" * available)
     worker = _CandidateWorker(
         {path: [(i + 1, i + 1) for i in range(available)]},
         vectors={path: [vector] * available},
