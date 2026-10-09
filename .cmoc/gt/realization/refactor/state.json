@@ -655,9 +655,9 @@
   },
   "src/acp/builder/realization/refactor/fork/file_review_and_fix.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "a051f806eb19e9b73542f4bde735c17f507b6f008cf69e3c9c6a6b7e8c9d02b3",
+    "last_investigated_at": "2026-10-10_03-34-26_093"
   },
   "src/acp/builder/session/__init__.py": {
     "investigation_required": true,

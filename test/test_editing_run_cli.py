@@ -1506,11 +1506,10 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
 
 
 def test_refactor_missing_target_rejects_unexpected_processing_unit_changes(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_join_session: tuple[Path, str, Path],
 ) -> None:
     """消えた target の同期単位でも想定外 path を commit しない。"""
-    _root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    # target 消失前の state 同期まで準備し、session 作成の CLI は重複させない。
     context = start_editing_run("realization_refactor")
 
     (context.run_worktree / "README.md").unlink()
@@ -1740,14 +1739,14 @@ def test_refactor_changed_path_postcondition_uses_deduplicated_union(
 
 
 def test_refactor_rejects_agent_commit_and_rolls_back_unit(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
 
     def fake_refactor(
         parameter: AgentCallParameter,
