@@ -673,9 +673,9 @@
   },
   "src/acp/builder/session/join/conflict_resolution.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "8b953a82e3c2f04d6875c3e19e5edc13ec4ebdc639e698af3442775851bf8983",
+    "last_investigated_at": "2026-10-10_04-06-17_060"
   },
   "src/acp/builder/tui/__init__.py": {
     "investigation_required": true,

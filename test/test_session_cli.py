@@ -1002,80 +1002,6 @@ def test_session_completion_rejects_missing_state_fields(
     assert current_branch(root) == session_branch
 
 
-def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """oracle conflict 解消時の REPO_WRITE sandbox と prompt 境界を検証する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-    {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    {{work-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
-    """
-
-    root = make_repo(tmp_path)
-    target = root / "oracle" / "spec.md"
-    monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
-    target.write_text("session change\n")
-    run_git(root, "add", "oracle/spec.md")
-    run_git(root, "commit", "-m", "session change")
-    run_git(root, "switch", home_branch)
-    target.write_text("home change\n")
-    run_git(root, "add", "oracle/spec.md")
-    run_git(root, "commit", "-m", "home change")
-    run_git(root, "switch", session_branch)
-    calls: list[str] = []
-    modes: list[FileAccessMode] = []
-
-    class FakeCodexResult:
-        """conflict resolution の成功を表す最小 fake result。
-
-        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-        """
-
-        output_text = "merge_resolution: resolved\n"
-        output_json = None
-
-    def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
-        """Codex 呼び出しを置換し、path 別 override がないことを検証する。
-
-        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-        {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        """
-
-        calls.append(kwargs["purpose"])
-        modes.append(parameter.file_access_mode)
-        assert set(kwargs) == {"root", "purpose"}
-        assert parameter.agent_call_cwd == root
-        assert "統合対象" in parameter.prompt
-        assert str(target) not in parameter.prompt
-        override_args = build_codex_override_args(
-            parameter,
-            CmocConfig(),
-        )
-        assert override_args[override_args.index("--sandbox") + 1] == (
-            "workspace-write"
-        )
-        assert all("permissions" not in arg for arg in override_args)
-        assert all(str(target) not in arg for arg in override_args)
-        target.write_text("resolved change\nTitle\n=======\n")
-        return FakeCodexResult()
-
-    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-
-    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
-    assert current_branch(root) == home_branch
-    assert target.read_text() == "resolved change\nTitle\n=======\n"
-    assert calls == ["session join conflict resolution"]
-    assert modes == [FileAccessMode.REPO_WRITE]
-    rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
-    assert f"- `{target}`" in rendered_report
-    assert "- conflict 解消用 agent call: `resolved`" in rendered_report
-    assert "- 確定した解消結果: `confirmed`" in rendered_report
-
-
 def test_session_join_preserves_repository_local_feedback_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1646,13 +1572,16 @@ def test_session_join_codex_failure_reports_unresolved_merge(
 def test_session_join_conflict_uses_merge_target_worktree_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree の conflict 解消は merge target の cwd を使用する。
+    """linked worktree の oracle 競合で cwd・sandbox・prompt・report を検証する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
     {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    {{work-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
     {{work-root}}/oracle/src/oracle/other/path_model.py
     """
 
+    # oracle 競合の成功経路を共有し、sandbox・report 専用の Git 準備を繰り返さない。
+    # 通常 worktree の内容解消は付随編集と改行 path のケースにも残す。
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -1673,7 +1602,7 @@ def test_session_join_conflict_uses_merge_target_worktree_context(
     run_git(linked, "add", "oracle/spec.md")
     run_git(linked, "commit", "-m", "linked home change")
     run_git(linked, "switch", session_branch)
-    seen: dict[str, Path] = {}
+    calls: list[str] = []
 
     class FakeCodexResult:
         """conflict resolution の成功を表す最小 fake result。
@@ -1685,15 +1614,27 @@ def test_session_join_conflict_uses_merge_target_worktree_context(
         output_json = None
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
-        """Codex wrapper に渡された repo root と agent call cwd を記録する。
+        """Codex wrapper に渡す root・cwd と、path に依存しない sandbox を確認する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         """
 
-        seen["root"] = kwargs["root"]
-        seen["agent_call_cwd"] = parameter.agent_call_cwd
-        assert "cwd" not in kwargs
+        calls.append(kwargs["purpose"])
+        assert set(kwargs) == {"root", "purpose"}
+        assert kwargs["root"] == root
+        assert parameter.agent_call_cwd == linked
+        assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
+        assert f"- {{{{repo-root}}}} = {root}" in parameter.prompt
+        assert f"- {{{{work-root}}}} = {linked}" in parameter.prompt
+        assert "統合対象" in parameter.prompt
+        assert str(target) not in parameter.prompt
+        override_args = build_codex_override_args(parameter, CmocConfig())
+        assert override_args[override_args.index("--sandbox") + 1] == (
+            "workspace-write"
+        )
+        assert all("permissions" not in arg for arg in override_args)
+        assert all(str(target) not in arg for arg in override_args)
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
 
@@ -1702,6 +1643,10 @@ def test_session_join_conflict_uses_merge_target_worktree_context(
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    assert seen == {"root": root, "agent_call_cwd": linked}
+    assert calls == ["session join conflict resolution"]
     assert current_branch(linked) == home_branch
     assert target.read_text() == "resolved change\nTitle\n=======\n"
+    rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert f"- `{target}`" in rendered_report
+    assert "- conflict 解消用 agent call: `resolved`" in rendered_report
+    assert "- 確定した解消結果: `confirmed`" in rendered_report
