@@ -1498,11 +1498,11 @@ def test_refactor_missing_target_rejects_unexpected_processing_unit_changes(
 
 
 def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor agent が cmoc 管理 file を変更した場合は commit しない。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     managed_path = ".cmoc/gt/realization/refactor/state.json"
 
     def fake_refactor(
@@ -1551,11 +1551,11 @@ def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
 
 
 def test_refactor_rejects_unreported_changed_paths_despite_evidences(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """evidences でなく changed_paths の申告漏れにより差分を拒否する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     first_review = True
 
     def fake_refactor(
@@ -2894,11 +2894,11 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
 
 
 def test_refactor_fork_commits_cycle_until_user_interruption(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """一巡の確定実績を保持し、ユーザー停止で joinable にする。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     reviewed: list[str] = []
 
     def fake_refactor(
