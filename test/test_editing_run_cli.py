@@ -115,6 +115,19 @@ def ready_run_session(
     return root, SESSION_BRANCH, path
 
 
+@pytest.fixture
+def ready_apply_session(
+    ready_run_session: tuple[Path, str, Path],
+) -> tuple[Path, str, Path]:
+    """apply の履歴検査に使う oracle と realization の初期内容を用意する。"""
+    root, _session_branch, _state_path = ready_run_session
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    run_git(root, "add", "README.md", "oracle/spec.md")
+    run_git(root, "commit", "-m", "apply input")
+    return ready_run_session
+
+
 def _state(path: Path) -> dict:
     """session state JSON をテスト用 dict として読み込む。"""
     return json.loads(path.read_text())
@@ -351,12 +364,9 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
 
     def fake_apply(
         parameter: AgentCallParameter,
-        **kwargs: object,
+        **_kwargs: object,
     ) -> SimpleNamespace:
         """agent が realization file を直接 commit する状態を再現する。"""
-        before_agent_call = kwargs["before_agent_call"]
-        assert callable(before_agent_call)
-        before_agent_call()
         worktree = parameter.agent_call_cwd
         (worktree / "README.md").write_text("agent commit\n")
         run_git(worktree, "add", "README.md")
@@ -372,6 +382,7 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
     )
 
     assert result.exit_code == 1
+    assert "realization apply agent が git commit を実行しました。" in result.output
     assert _state(state_path)["run"]["state"] == "error"
     parts = _state(state_path)["run"]["branch"].split("/")
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
@@ -550,7 +561,7 @@ def test_realization_apply_fork_and_run_join_use_common_state(
 @pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
 @pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
 def test_apply_join_updates_diff_base_only_for_joinable_run(
-    tmp_path: Path,
+    ready_apply_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     run_state: str,
     has_run_change: bool,
@@ -558,10 +569,14 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
 ) -> None:
     """join 開始時の state に応じた比較始点を、次回 apply へ渡す。"""
     # realization_apply.md の「join 後 hook」を state、report、次回 prompt で検査する。
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_apply_session
     state = _state(state_path)
     session_fork_commit = state["session"]["session_fork_commit"]
-    previous_base = session_fork_commit if has_previous_apply else None
+    previous_base = (
+        run_git(root, "rev-parse", "HEAD").stdout.strip()
+        if has_previous_apply
+        else None
+    )
     state["session"]["last_joined_apply_fork_commit"] = previous_base
     state_path.write_text(json.dumps(state))
     (root / "oracle" / "spec.md").write_text("pending oracle change\n")
@@ -614,6 +629,8 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
     assert f"- 終点: `{next_fork_commit}`" in prompts[0]
     oracle_diff = run_git(root, "diff", diff_base, next_fork_commit, "--", "oracle")
     assert bool(oracle_diff.stdout) is (run_state == "error")
+    if run_state == "error":
+        assert "pending oracle change" in oracle_diff.stdout
 
 
 def test_run_join_reports_joinable_child_stop_warnings(
@@ -997,15 +1014,30 @@ def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
     assert context.run_worktree.exists()
 
 
-def test_apply_fork_stops_tracked_codex_children_before_joinable(
-    tmp_path: Path,
+@pytest.mark.parametrize("late_path", [None, "late-realization.md", "oracle/spec.md"])
+def test_apply_fork_checks_stopped_children_before_commit(
+    ready_apply_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
+    late_path: str | None,
 ) -> None:
-    """apply は joinable 公開前に残存 Codex child を停止する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    """停止後の変更を検査し、遅延 path があれば commit せず全体を戻す。"""
+    _root, _session_branch, state_path = ready_apply_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
+    run_worktrees: list[Path] = []
+
+    def fake_apply(parameter: AgentCallParameter, **_kwargs: object) -> SimpleNamespace:
+        worktree = parameter.agent_call_cwd
+        run_worktrees.append(worktree)
+        (worktree / "README.md").write_text("realized\n")
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    def stop_child(process: object) -> None:
+        stopped.append(process)
+        if late_path is not None:
+            (run_worktrees[0] / late_path).write_text("late child edit\n")
+
     monkeypatch.setattr(
         runtime_run_module,
         "read_run_process_id",
@@ -1014,13 +1046,9 @@ def test_apply_fork_stops_tracked_codex_children_before_joinable(
     monkeypatch.setattr(
         runtime_run_module,
         "stop_child_process_group",
-        lambda process: stopped.append(process),
+        stop_child,
     )
-    monkeypatch.setattr(
-        apply_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
-    )
+    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
 
     result = runner.invoke(
         app,
@@ -1028,9 +1056,21 @@ def test_apply_fork_stops_tracked_codex_children_before_joinable(
         catch_exceptions=False,
     )
 
-    assert result.exit_code == 0, result.output
-    assert stopped == [child]
-    assert _state(state_path)["run"]["state"] == "joinable"
+    assert len(run_worktrees) == 1
+    worktree = run_worktrees[0]
+    if late_path is None:
+        assert result.exit_code == 0, result.output
+        assert stopped == [child]
+        assert _state(state_path)["run"]["state"] == "joinable"
+        assert (worktree / "README.md").read_text() == "realized\n"
+    else:
+        assert result.exit_code == 1, result.output
+        assert stopped and all(process == child for process in stopped)
+        assert _state(state_path)["run"]["state"] == "error"
+        assert (worktree / "README.md").read_text() == "# repo\n"
+        assert (worktree / "oracle" / "spec.md").read_text() == "# spec\n"
+        assert not (worktree / "late-realization.md").exists()
+    assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
 def test_apply_fork_reports_cleanup_warnings(
@@ -1675,12 +1715,9 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
 
     def fake_refactor(
         parameter: AgentCallParameter,
-        **kwargs: object,
+        **_kwargs: object,
     ) -> SimpleNamespace:
         """agent が realization file を直接 commit する状態を再現する。"""
-        before_agent_call = kwargs["before_agent_call"]
-        assert callable(before_agent_call)
-        before_agent_call()
         worktree = parameter.agent_call_cwd
         (worktree / "README.md").write_text("agent commit\n")
         run_git(worktree, "add", "README.md")
@@ -1706,6 +1743,7 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     )
 
     assert result.exit_code == 1
+    assert "refactor agent が git commit を実行しました。" in result.output
     assert _state(state_path)["run"]["state"] == "error"
     parts = _state(state_path)["run"]["branch"].split("/")
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
