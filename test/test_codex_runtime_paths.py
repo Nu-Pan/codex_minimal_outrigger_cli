@@ -65,10 +65,10 @@ def run_fixed_codex_exec(
 
 
 def test_codex_call_ids_are_process_safe_on_same_timestamp(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """並列 run_codex_exec が同一生成時刻でも call ID とログを共有しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

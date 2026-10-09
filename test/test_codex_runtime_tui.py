@@ -372,10 +372,10 @@ def test_run_codex_tui_logs_successful_call(
 
 
 def test_run_codex_tui_keeps_call_logs_on_same_timestamp(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """同一 timestamp の TUI 呼び出しでも別 ID の call log を残す。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
