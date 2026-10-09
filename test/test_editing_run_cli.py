@@ -1271,13 +1271,13 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     [(False, False), (True, False), (True, True)],
 )
 def test_refactor_fork_moves_unresolved_target_after_rename(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     replace_content: bool,
     add_unrelated_file: bool,
 ) -> None:
     """rename 後も unresolved target と refactor state の path 集合を揃える。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
 
     def fake_refactor(
         parameter: AgentCallParameter,
@@ -1369,11 +1369,12 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
 
 
 def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
+    ready_content_session: tuple[Path, str, Path],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """後続 target の rename でも既存 unresolved target を追従させる。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
     reviewed: list[str] = []
