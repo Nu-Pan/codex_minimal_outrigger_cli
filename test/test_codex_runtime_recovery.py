@@ -459,8 +459,8 @@ from commons.runtime_codex_recovery import defer_recovery_interruption
 try:
     with defer_recovery_interruption():
         subprocess.run([sys.executable, '-c',
-            "import pathlib, time; pathlib.Path('ready').touch(); "
-            "time.sleep(0.3); pathlib.Path('artifact').write_text('committed')"],
+            "import pathlib, sys; pathlib.Path('ready').touch(); "
+            "sys.stdin.read(); pathlib.Path('artifact').write_text('committed')"],
             check=True)
         pathlib.Path('record').write_text('confirmed')
 except KeyboardInterrupt:
@@ -479,6 +479,7 @@ except KeyboardInterrupt:
         env=environment,
         start_new_session=True,
         text=True,
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as process:
@@ -489,7 +490,8 @@ except KeyboardInterrupt:
                 assert time.monotonic() < deadline
                 time.sleep(0.01)
             os.killpg(process.pid, signal.SIGINT)
-            stdout, stderr = process.communicate(timeout=5)
+            # SIGINT を送ってから子を解放し、固定待機なしで確定中の中断を保証する。
+            stdout, stderr = process.communicate(input="commit\n", timeout=5)
         finally:
             if process.poll() is None:
                 os.killpg(process.pid, signal.SIGKILL)
