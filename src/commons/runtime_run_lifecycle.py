@@ -29,6 +29,7 @@ from .runtime_git import (
     remove_worktree,
     require_clean_worktree,
     require_cmoc_ignored,
+    reuse_git_path_queries,
     run_git,
     status_path_statuses,
 )
@@ -440,26 +441,28 @@ def unexpected_agent_paths(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
     {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
-    return sorted(
-        {
-            path
-            for path in changed_paths
-            if not (
-                _is_agent_expected_path(
-                    context.run_worktree,
-                    context.kind,
-                    path,
-                    context.run_branch,
+    # Git の配置・設定だけを検査内で共有し、child 停止後の再検査へ持ち越さない。
+    with reuse_git_path_queries():
+        return sorted(
+            {
+                path
+                for path in changed_paths
+                if not (
+                    _is_agent_expected_path(
+                        context.run_worktree,
+                        context.kind,
+                        path,
+                        context.run_branch,
+                    )
+                    or _is_agent_expected_path(
+                        context.run_worktree,
+                        context.kind,
+                        path,
+                        context.run_fork_commit,
+                    )
                 )
-                or _is_agent_expected_path(
-                    context.run_worktree,
-                    context.kind,
-                    path,
-                    context.run_fork_commit,
-                )
-            )
-        }
-    )
+            }
+        )
 
 
 def tree_changes(worktree: Path, base: str, end: str = "HEAD") -> list[GitChange]:
@@ -512,22 +515,24 @@ def unexpected_run_paths(
     ignored_paths: Collection[str] = (),
 ) -> list[str]:
     """run branch の workload 想定外 path を返す。"""
+    # commit・rollback の間をまたがず、一つの差分検査内だけ問い合わせを共有する。
     ignored = set(ignored_paths)
-    return sorted(
-        {
-            path
-            for change in changes
-            for path in change.paths
-            if path not in ignored
-            and not _is_run_expected_path(
-                context.run_worktree,
-                context.kind,
-                path,
-                context.run_branch,
-                context.run_fork_commit,
-            )
-        }
-    )
+    with reuse_git_path_queries():
+        return sorted(
+            {
+                path
+                for change in changes
+                for path in change.paths
+                if path not in ignored
+                and not _is_run_expected_path(
+                    context.run_worktree,
+                    context.kind,
+                    path,
+                    context.run_branch,
+                    context.run_fork_commit,
+                )
+            }
+        )
 
 
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:

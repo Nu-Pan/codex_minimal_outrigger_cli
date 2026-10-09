@@ -1,12 +1,20 @@
-"""doctor 内の Git path 再利用が変更可能な状態や次の呼び出しを隠さないことを検証する。"""
+"""doctor と run 差分検査の Git path 再利用が状態変更を隠さないことを検証する。"""
 
+from collections import Counter
 from contextlib import nullcontext
 
 import pytest
 from _git_support import make_repo, run_git
 
 import commons.runtime_git as git_module
+from commons.runtime_errors import CmocError
 from commons.runtime_paths import repo_root, work_root
+from commons.runtime_run_lifecycle import (
+    EditingRunContext,
+    GitChange,
+    unexpected_agent_paths,
+    unexpected_run_paths,
+)
 
 
 def test_git_query_reuse_keeps_worktrees_and_environment_separate(
@@ -79,3 +87,64 @@ def test_git_query_reuse_expires_after_completion_or_failure(
     with git_module.reuse_git_path_queries():
         assert git_module.run_git(query, root).stdout.strip() == str(ignore_path)
         assert repo_root(nested) == nested
+
+
+@pytest.mark.parametrize("inspection", ["agent", "run"])
+def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
+    cli_repository, monkeypatch, inspection
+):
+    """検査内の配置問い合わせを重複させず、次の検査で状態と失敗を再確認する。"""
+    root = cli_repository
+    paths = ["first.txt", "second.txt"]
+    for path in paths:
+        (root / path).write_text("content\n")
+    context = EditingRunContext(
+        repo=root,
+        session_worktree=root,
+        session_id="session",
+        state_path=root / "state.json",
+        session_branch="session",
+        session_fork_commit="fork",
+        kind="realization_apply",
+        run_branch="run",
+        run_fork_commit="fork",
+        run_worktree=root,
+    )
+
+    def validate():
+        if inspection == "agent":
+            return unexpected_agent_paths(context, paths)
+        return unexpected_run_paths(
+            context, [GitChange("M", (path,)) for path in paths]
+        )
+
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git" and argv[1] in {"rev-parse", "config"}:
+            queries[tuple(argv)] += 1
+        return original_run(argv, *args, **kwargs)
+
+    with monkeypatch.context() as probe:
+        probe.setattr(git_module.subprocess, "run", record_query)
+        assert validate() == []
+    assert max(queries.values(), default=0) <= 1
+
+    # 判定結果や index は再利用せず、tracked な ignored file は許可範囲に残す。
+    (root / ".gitignore").write_text("first.txt\n")
+    assert validate() == ["first.txt"]
+    run_git(root, "add", "-f", "first.txt")
+    assert validate() == []
+
+    # 設定と ignore source の検証は、成功・失敗いずれの検査後も取り直す。
+    global_ignore = root / "global-ignore"
+    global_ignore.write_text("second.txt\n")
+    run_git(root, "config", "core.excludesFile", str(global_ignore))
+    assert validate() == ["second.txt"]
+    global_ignore.unlink()
+    global_ignore.mkdir()
+    with pytest.raises(CmocError, match="global excludes"):
+        validate()
+    run_git(root, "config", "core.excludesFile", "/dev/null")
+    assert validate() == []
