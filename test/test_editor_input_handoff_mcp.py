@@ -21,6 +21,7 @@ from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
 import commons.runtime_editor_input_handoff_mcp as handoff_mcp
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
 from commons.runtime_editor_input_handoff_protocol import (
+    _HANDOFF_RESPONSE_LIMIT,
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
 )
@@ -81,14 +82,19 @@ def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkey
     work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("private editor content")
-    skeleton = "受信先の制約\r\n" * 10000 + "{{original-prompt-here}}"
+    # 上書き応答の上限を超える境界を、過剰な本文量なしで検証する。
+    line = "受信先の制約"
+    repeat_count = _HANDOFF_RESPONSE_LIMIT // len(line.encode("utf-8")) + 1
+    skeleton = f"{line}\r\n" * repeat_count + "{{original-prompt-here}}"
+    expected_guide = build_editor_input_handoff_guide(skeleton)
+    assert len(expected_guide.encode("utf-8")) > _HANDOFF_RESPONSE_LIMIT
     target = start_editor_input_handoff(tmp_path, work, skeleton)
     monkeypatch.delenv(EDITOR_INPUT_SOURCE_ENV)
     try:
         result = _get_guide_result({"target_id": target.target_id})
         assert result == {
             "status": "ok",
-            "guide_text": build_editor_input_handoff_guide(skeleton),
+            "guide_text": expected_guide,
         }
         assert "private editor content" not in json.dumps(result)
         assert work.read_text() == "private editor content"
