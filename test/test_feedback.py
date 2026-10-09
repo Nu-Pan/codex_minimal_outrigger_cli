@@ -24,6 +24,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, NoReturn
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
 from _cli_support import run_doctor, runner, terminal_primary_report
@@ -96,6 +97,23 @@ def feedback_directory(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
     return root
+
+
+@pytest.fixture
+def feedback_prompt_directory(
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """prompt 検査では Git 探索結果だけを置換し、builder と renderer を実行する。"""
+
+    # 実 Git metadata の解決は test_basic_runtime.py と feedback wave 統合 test に残す。
+    def resolve_worktree_roots(agent_call_cwd: Path) -> tuple[Path, Path]:
+        assert agent_call_cwd == feedback_directory.resolve()
+        return agent_call_cwd, agent_call_cwd
+
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", resolve_worktree_roots
+    )
+    return feedback_directory
 
 
 def _payload(
@@ -658,10 +676,10 @@ def test_reporter_rejects_invalid_collector_result(
 
 
 def test_feedback_normalize_builder_protects_nested_code_fences(
-    cli_repository: Path,
+    feedback_prompt_directory: Path,
 ) -> None:
     """normalization の動的 JSON が prompt section の境界を閉じないことを検証する。"""
-    root = cli_repository
+    root = feedback_prompt_directory
     nested = "before\n```\ninside\n```\nafter"
     observation_json = json.dumps({"payload": {"summary": nested}})
     candidate_json = json.dumps(
@@ -693,10 +711,10 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
 
 
 def test_feedback_normalization_excludes_candidate_search_hint(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_prompt_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """候補検索専用 hint を normalization agent の入力へ渡さない。"""
-    root = cli_repository
+    root = feedback_prompt_directory
     observation_id = "fbo_000001_2026-08-01_00-00"
     candidate_id = "fbi_" + "a" * 26
     observation = {
@@ -759,9 +777,11 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     assert "候補検索だけに使う文字列" not in captured_prompts[0]
 
 
-def test_feedback_issue_builders_disable_reporting(cli_repository: Path) -> None:
+def test_feedback_issue_builders_disable_reporting(
+    feedback_prompt_directory: Path,
+) -> None:
     """normalization と remediation は同じ追加報告を prompt から外す。"""
-    root = cli_repository
+    root = feedback_prompt_directory
     parameters = (
         build_feedback_normalize_issue_parameter("{}", "[]", root),
         build_feedback_remediate_issue_parameter(

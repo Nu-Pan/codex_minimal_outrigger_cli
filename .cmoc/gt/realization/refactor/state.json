@@ -577,9 +577,9 @@
   },
   "src/acp/builder/feedback/__init__.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "28770e46bfdfbe5d96dcfd77ca52a041aa67413166a532dc6aeebdce14f8e03c",
+    "last_investigated_at": "2026-10-10_00-51-20_750"
   },
   "src/acp/builder/feedback/normalize_issue.py": {
     "investigation_required": true,
