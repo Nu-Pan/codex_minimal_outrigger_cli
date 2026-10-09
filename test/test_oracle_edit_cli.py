@@ -496,25 +496,19 @@ def test_oracle_edit_launch_preconditions(
     message: str,
 ) -> None:
     """oracle edit の各起動前提違反を利用者向け例外として検証する。"""
-    # 起動条件の検査は doctor の設定・検索索引を使わない。
-    root = make_repo(tmp_path)
-    current_root = root
-    if case != "non_session":
-        _activate_session(
-            root,
-            session_state="joined" if case == "inactive" else "active",
-        )
     if case == "linked":
-        current_root = root / ".cmoc" / "gu" / "worktree" / "linked"
-        run_git(
-            root,
-            "worktree",
-            "add",
-            "-b",
-            "linked-oracle-edit-test",
-            str(current_root),
-            "HEAD",
-        )
+        # 異なる root の拒否だけを検証し、履歴・session・worktree は作らない。
+        # 実 linked worktree の root 解決は test_basic_runtime.py で検証する。
+        root = tmp_path / "repo"
+        root.mkdir()
+        current_root = tmp_path / "linked"
+        current_root.mkdir()
+    else:
+        # branch と session state を読むケースだけ、履歴を持つ Git root を用意する。
+        root = make_repo(tmp_path)
+        current_root = root
+        if case == "inactive":
+            _activate_session(root, session_state="joined")
     with pytest.raises(CmocError, match=message):
         oracle_edit_module._require_oracle_edit_launch_preconditions(
             root,

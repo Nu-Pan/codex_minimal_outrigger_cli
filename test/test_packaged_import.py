@@ -103,6 +103,7 @@ def test_quota_probe_imports_from_packaged_layout(
 
 def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
     tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """oracle edit と editor 入力境界が packaged layout で正本を参照する。
 
@@ -163,7 +164,7 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "assert p.agent_call_cwd == Path.cwd(); "
         ),
         tmp_path,
-        cmoc_process_cwd=make_repo(tmp_path),
+        cmoc_process_cwd=cli_repository,
     )
 
     assert result.returncode == 0, result.stderr
