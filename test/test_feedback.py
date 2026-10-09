@@ -84,6 +84,7 @@ from commons.runtime_feedback_store import (
     rfc3339_now,
     store_agent_observation,
     store_machine_observation,
+    validate_agent_payload,
 )
 from commons.runtime_logging import SubcommandLogger
 from main import app
@@ -1805,20 +1806,92 @@ def test_agent_store_rejects_non_directory_observation_parent(
     assert rejected.value.code == "context_invalid"
 
 
+@pytest.mark.parametrize("redacted", [False, True], ids=["plain", "redacted"])
+@pytest.mark.parametrize("exceeds_limit", [False, True], ids=["at-limit", "over-limit"])
+def test_agent_payload_summary_limit_after_redaction(
+    feedback_directory: Path, redacted: bool, exceeds_limit: bool
+) -> None:
+    """未置換と置換後の summary で、文字数上限を同じように適用する。"""
+    payload = _payload(kind="error", path=None)
+    limit = reporter_input_schema()["properties"]["summary"]["maxLength"]
+    marker = "[REDACTED:authorization]"
+    suffix = " Authorization:x" if redacted else ""
+    masked_suffix = " " + marker if redacted else ""
+    prefix = "s" * (limit + int(exceeds_limit) - len(masked_suffix))
+    payload["summary"] = prefix + suffix
+    original = canonical_json_bytes(payload)
+
+    if exceeds_limit:
+        with pytest.raises(FeedbackRejected) as error:
+            validate_agent_payload(payload, feedback_directory)
+        assert error.value.code == "schema_invalid"
+        assert "/summary" in error.value.message
+    else:
+        masked, _, count = validate_agent_payload(payload, feedback_directory)
+        assert masked["summary"] == prefix + masked_suffix
+        assert count == int(redacted)
+    assert canonical_json_bytes(payload) == original
+
+
+@pytest.mark.parametrize("redacted", [False, True], ids=["plain", "redacted"])
+@pytest.mark.parametrize("exceeds_limit", [False, True], ids=["at-limit", "over-limit"])
+def test_agent_payload_utf8_size_limit_after_redaction(
+    feedback_directory: Path, redacted: bool, exceeds_limit: bool
+) -> None:
+    """各 field が schema 内でも、UTF-8 合計の 32 KiB 上限を置換後まで守る。"""
+    payload = _payload(kind="error", path=None)
+    payload["evidence"] = [{"kind": "error", "text": "é" * 1950} for _ in range(8)]
+    if redacted:
+        payload["summary"] = "failure Authorization:x"
+    growth = len("[REDACTED:authorization]") - len("Authorization:x") if redacted else 0
+    size = len(canonical_json_bytes(payload)) - 1
+    payload["impact"] = str(payload["impact"]) + "x" * (
+        32 * 1024 + int(exceeds_limit) - size - growth
+    )
+    original = canonical_json_bytes(payload)
+    assert len(original) - 1 + growth == 32 * 1024 + int(exceeds_limit)
+
+    if exceeds_limit:
+        with pytest.raises(FeedbackRejected) as error:
+            validate_agent_payload(payload, feedback_directory)
+        assert error.value.code == "payload_too_large"
+        if redacted:
+            assert error.value.message == "redacted payload exceeds 32 KiB"
+    else:
+        masked, _, count = validate_agent_payload(payload, feedback_directory)
+        assert len(canonical_json_bytes(masked)) - 1 == 32 * 1024
+        assert count == int(redacted)
+    assert canonical_json_bytes(payload) == original
+
+
+@pytest.mark.parametrize("text", ["Authorization:x", "[REDACTED:authorization]", " "])
+def test_agent_payload_requires_meaningful_evidence(
+    feedback_directory: Path, text: str
+) -> None:
+    """置換の有無にかかわらず、marker や空白だけの evidence を受理しない。"""
+    with pytest.raises(FeedbackRejected) as error:
+        validate_agent_payload(
+            _payload(text=text, kind="error", path=None), feedback_directory
+        )
+    assert error.value.code == "suspected_secret"
+
+
 def test_stored_invalid_reporter_schema_is_rejected_without_rewriting(
-    tmp_path, monkeypatch
-):
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _, raw, _ = _store_agent_issue(root, session_id)
+    feedback_directory: Path, stored_feedback_context: dict[str, object]
+) -> None:
+    """旧 input version の raw を intake で拒否し、元の byte 列を保持する。"""
+    # CLI の publication 阻止・エラー report は invalid raw のケースで検証する。
+    root = feedback_directory
+    _, raw = store_agent_observation(root, stored_feedback_context, _payload())
     invalid = read_json_object(raw)
     invalid["payload"]["schema_version"] = 1
     content = canonical_json_bytes(invalid)
     raw.write_bytes(content)
     (feedback_root(root) / "intake.json").unlink()
-    assert validate_observation_envelope(invalid)
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 1
+    with pytest.raises(CmocError, match="raw observation validation") as error:
+        feedback_report_module._pending_observations(root)
+    assert str(raw) in error.value.detail
+    assert "/schema_version" in error.value.detail
     assert raw.read_bytes() == content
     assert load_active_state(root).current is None
 
