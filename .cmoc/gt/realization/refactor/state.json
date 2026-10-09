@@ -541,9 +541,9 @@
   },
   "oracle/src/oracle/prompt_builder/policy/realization.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "b780ed2eff7d1fc3cd90969b20576266457e99eff6b77691d51b3c25beefd198",
+    "last_investigated_at": "2026-10-09_23-27-49_301"
   },
   "oracle/src/oracle/prompt_builder/policy/realization_findings.py": {
     "investigation_required": true,

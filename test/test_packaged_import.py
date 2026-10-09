@@ -11,8 +11,6 @@ import sys
 import tomllib
 from pathlib import Path
 
-from _git_support import make_repo
-
 
 def _run_from_packaged_layout(
     target: Path, code: str, tmp_path: Path, *, cmoc_process_cwd: Path
@@ -57,6 +55,7 @@ def _copy_source_tree(source: Path, target: Path) -> None:
 
 def test_quota_probe_imports_from_packaged_layout(
     tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """quota probe の canonical builder を packaged layout で検証する。
 
@@ -95,7 +94,8 @@ def test_quota_probe_imports_from_packaged_layout(
             "assert '# routing policy' not in probe.prompt"
         ),
         tmp_path,
-        cmoc_process_cwd=make_repo(tmp_path),
+        # probe の path context は Git root だけを使い、追跡 file・commit は不要。
+        cmoc_process_cwd=cli_repository,
     )
 
     assert result.returncode == 0, result.stderr
