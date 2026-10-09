@@ -1083,9 +1083,7 @@ def test_session_join_preserves_repository_local_feedback_state(
     """session join が repository-local feedback state を merge や rollback しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    fork = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
-    assert fork.exit_code == 0, fork.output
+    _seed_active_session(root)
     relative = ".cmoc/gu/feedback/normalization_checkpoint/sentinel.json"
     path = root / relative
     path.parent.mkdir(parents=True)
