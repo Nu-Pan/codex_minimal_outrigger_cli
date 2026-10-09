@@ -52,10 +52,10 @@ def _tui_call_logs(root: Path) -> list[Path]:
 # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
 def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """PURE_ORACLE_READ の完全 prompt 本文と CLI 引数を変更せず渡す。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -146,11 +146,12 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
 
 
 def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """未検証 Codex では root filter なしの legacy callback を渡さない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -179,10 +180,10 @@ def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
 
 
 def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """未定義 call の TUI では Codex version probe より先に設定エラーにする。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     probe_calls: list[tuple[object, object]] = []
 
@@ -208,10 +209,10 @@ def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
 
 
 def test_run_codex_tui_rejects_missing_provider_before_version_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """未定義 provider の TUI でも Codex version probe より先に失敗する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     probe_calls: list[tuple[object, object]] = []
 
@@ -241,11 +242,11 @@ def test_run_codex_tui_rejects_missing_provider_before_version_probe(
 
 
 def test_run_codex_tui_skips_notification_probe_during_completion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """シェル補完中は通知設定の Codex version probe を実行しない。"""
     # probe の呼び出し境界を観測し、TUI 本体の起動は process を作らずに代替する。
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     probe_calls: list[tuple[object, object]] = []
     tui_calls: list[list[str]] = []
@@ -338,10 +339,13 @@ def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
 
 
 def test_run_codex_tui_logs_successful_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """正常終了時に call log とサブコマンドイベントだけを残す。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -400,10 +404,13 @@ def test_run_codex_tui_keeps_call_logs_on_same_timestamp(
 
 
 def test_run_codex_tui_logs_missing_cli_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex CLI 不在時に未起動の失敗として各ログへ記録し、エラーを返すことを確認する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     real_popen: Callable[..., object] = subprocess.Popen
@@ -443,10 +450,13 @@ def test_run_codex_tui_logs_missing_cli_failure(
 
 
 def test_run_codex_tui_logs_keyboard_interrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """KeyboardInterrupt を再送出しつつ、未起動扱いの call log とイベントを残すことを確認する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
 
@@ -482,10 +492,13 @@ def test_run_codex_tui_logs_keyboard_interrupt(
 
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex の非 0 終了を TUI 呼び出し失敗として報告し、call log を保存することを確認する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -528,10 +541,10 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
 
 
 def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
-    tmp_path, monkeypatch
+    cli_repository, tmp_path, monkeypatch
 ):
     """並行する TUI の MCP が自身の起動前ログと一致する送信元を保持する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     monkeypatch.setenv(EDITOR_INPUT_SOURCE_ENV, "stale-parent-source")
     monkeypatch.setattr(
