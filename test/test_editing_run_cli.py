@@ -40,6 +40,7 @@ import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_config import write_config
 from commons.runtime_content import file_sha256
+from commons.runtime_doctor import run_doctor_preprocess
 from commons.runtime_errors import CmocError
 from commons.runtime_ids import is_common_id
 from commons.runtime_logging import SubcommandLogger
@@ -126,6 +127,17 @@ def ready_content_session(
     run_git(root, "add", "README.md", "oracle/spec.md")
     run_git(root, "commit", "-m", "apply input")
     return ready_run_session
+
+
+@pytest.fixture
+def ready_join_session(
+    ready_content_session: tuple[Path, str, Path],
+) -> tuple[Path, str, Path]:
+    """commit 参照と rollback を検査する前に、doctor の修復を完了させる。"""
+    # join 中の前処理で HEAD が進まないようにし、merge 前後の比較条件を保つ。
+    root, _session_branch, _state_path = ready_content_session
+    run_doctor_preprocess(root)
+    return ready_content_session
 
 
 def _state(path: Path) -> dict:
@@ -2696,10 +2708,11 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
 
 
 def test_run_join_integrates_content_conflict_and_incidental_edit(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_join_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """run と session の変更を agent が統合し、付随編集も merge へ含める。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    # session 作成の CLI 結合は別の統合 test に残し、ここでは実 Git の競合を作る。
+    root, _session_branch, state_path = ready_join_session
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("run change\n")
     commit_work_unit(context.run_worktree, "run change")
@@ -2734,10 +2747,10 @@ def test_run_join_integrates_content_conflict_and_incidental_edit(
 
 
 def test_run_join_rolls_back_unresolved_content_conflict(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_join_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """agent が未解消と報告した merge は付随編集ごと開始前へ戻す。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_join_session
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("run change\n")
     commit_work_unit(context.run_worktree, "run change")
@@ -2746,8 +2759,10 @@ def test_run_join_rolls_back_unresolved_content_conflict(
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "session change")
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    calls: list[AgentCallParameter] = []
 
-    def fake_codex(_parameter: AgentCallParameter, **_kwargs: object) -> object:
+    def fake_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
+        calls.append(parameter)
         (root / "src" / "incidental.py").parent.mkdir(exist_ok=True)
         (root / "src" / "incidental.py").write_text("value = 1\n")
         return SimpleNamespace(
@@ -2757,6 +2772,7 @@ def test_run_join_rolls_back_unresolved_content_conflict(
     monkeypatch.setattr(merge_conflict_module, "run_codex_exec", fake_codex)
     failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
+    assert calls
     assert failed.exit_code == 1
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
     assert (root / "README.md").read_text() == "session change\n"
