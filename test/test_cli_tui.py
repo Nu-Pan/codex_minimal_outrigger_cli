@@ -30,22 +30,28 @@ from main import app
     "command", [["tui"], ["oracle", "investigation"], ["oracle", "edit"]]
 )
 def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     command: list[str],
 ) -> None:
     """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
-    # 既定設定だけを用意し、doctor preprocess は検証対象の CLI 内で実行する。
+    # doctor の実処理との結合は、各 CLI の成功ケースで検証する。
+    # 保存失敗の検査では呼び出しを記録し、修復 commit・索引同期を繰り返さない。
+    doctor_roots: list[Path] = []
+    monkeypatch.setattr(
+        runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
+    )
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
 
     def edit_input(argv: list[str]) -> SimpleNamespace:
+        assert doctor_roots == [root]
         Path(argv[-1]).write_bytes(b"recoverable input\r\n")
         return SimpleNamespace(returncode=0)
 
     # editor の起動・引数は専用 test が検証する。ここでは保存失敗後の CLI 制御を扱う。
-    # module 内の境界だけを置換し、doctor などが使う subprocess.run は実行する。
+    # module 内の境界だけを置換し、他の subprocess.run は実行する。
     monkeypatch.setattr(
         prompt_editor_input_module, "subprocess", SimpleNamespace(run=edit_input)
     )
@@ -54,9 +60,11 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     )
     monkeypatch.setenv("PATH", "/usr/bin")
     real_replace = prompt_editor_input_module.os.replace
+    save_destinations: list[Path] = []
 
     def fail_input_save(source, destination):
         if Path(destination).parent == root / ".cmoc/gu/log/editor_input":
+            save_destinations.append(Path(destination))
             raise OSError("input save failed")
         return real_replace(source, destination)
 
@@ -73,6 +81,7 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     assert result.exit_code == 1
     files = list((root / ".cmoc/gu/log/editor_input").iterdir())
     assert len(files) == 1
+    assert save_destinations == files
     assert files[0].name.endswith("_orig.md")
     assert files[0].read_bytes() == b"recoverable input\r\n"
 
