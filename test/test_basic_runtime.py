@@ -20,6 +20,7 @@ from _git_support import (
     RUN_ID,
     SESSION_BRANCH,
     SESSION_ID,
+    init_repo,
     make_repo,
     run_git,
 )
@@ -96,11 +97,12 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
 
 @pytest.mark.parametrize("marker_kind", ["file", "directory"])
 def test_root_resolution_ignores_dot_git_names_without_repository_metadata(
-    tmp_path: Path,
+    cli_repository: Path,
     marker_kind: str,
 ) -> None:
     """通常の `.git` 名を内側の worktree metadata として扱わない。"""
-    root = make_repo(tmp_path)
+    # root の導出に履歴は不要だが、偽 marker の外側には実 Git metadata を残す。
+    root = cli_repository
     nested = root / "nested"
     nested.mkdir()
     marker = nested / ".git"
@@ -166,16 +168,16 @@ def test_agent_call_path_context_resolves_separate_git_directory(
 
 
 def test_agent_call_path_context_ignores_repository_selection_environment(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Git の repository 選択環境変数で agent call の cwd 起点を上書きしない。"""
-    target_parent = tmp_path / "target"
-    override_parent = tmp_path / "override"
-    target_parent.mkdir()
-    override_parent.mkdir()
-    target = make_repo(target_parent)
-    override = make_repo(override_parent)
+    # 両方を実 repository にする。環境変数による誤選択の検出に履歴は不要。
+    target = cli_repository
+    override = tmp_path / "override"
+    override.mkdir()
+    init_repo(override)
     monkeypatch.setenv("GIT_DIR", str(override / ".git"))
     monkeypatch.setenv("GIT_WORK_TREE", str(override))
     monkeypatch.setenv("GIT_COMMON_DIR", str(override / ".git"))
@@ -219,13 +221,14 @@ def test_agent_call_path_contexts_are_parallel_and_call_scoped(
 
 
 def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """relativeな起点の解決をcwd切替と直列化し、未作成の祖先も受理する。"""
-    (tmp_path / "first").mkdir()
-    (tmp_path / "second").mkdir()
-    first = make_repo(tmp_path / "first")
-    second = make_repo(tmp_path / "second")
+    # cwd の混線を検出するための二つの Git root だけを準備する。
+    first = cli_repository
+    second = tmp_path / "second"
+    second.mkdir()
+    init_repo(second)
     original = first.resolve()
     monkeypatch.chdir(original)
     first_ready = threading.Event()
@@ -320,7 +323,10 @@ def test_run_root_placeholder_rejects_main_worktree(
     root = make_repo(tmp_path)
     linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked-parent", str(linked), "HEAD")
-    nested_main = make_repo(linked)
+    # 外側の linked worktree は HEAD が必要だが、内側の main repository は履歴不要。
+    nested_main = linked / "repo"
+    nested_main.mkdir()
+    init_repo(nested_main)
     monkeypatch.chdir(nested_main)
 
     with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
