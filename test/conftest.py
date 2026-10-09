@@ -4,11 +4,13 @@ import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from _git_support import init_repo
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
+import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
@@ -28,6 +30,16 @@ def cli_repository(tmp_path: Path) -> Path:
     root.mkdir()
     init_repo(root)
     return root
+
+
+@pytest.fixture
+def handoff_start(monkeypatch: pytest.MonkeyPatch) -> Mock:
+    """保存・editor 制御の検査では TCP lifecycle を専用の結合テストへ委ねる。"""
+    # 実 target の登録・guide・無効化は test_editor_input_handoff.py に残す。
+    target = SimpleNamespace(target_id="eit_000000_2026-09-29_15-04", close=Mock())
+    start = Mock(return_value=target)
+    monkeypatch.setattr(prompt_editor_input_module, "start_editor_input_handoff", start)
+    return start
 
 
 @pytest.fixture(autouse=True)

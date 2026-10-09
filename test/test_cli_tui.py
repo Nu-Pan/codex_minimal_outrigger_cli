@@ -10,6 +10,7 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from _cli_support import runner
@@ -62,6 +63,7 @@ def editor_input(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], list[Path]]
 def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
+    handoff_start: Mock,
     command: list[str],
 ) -> None:
     """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
@@ -75,8 +77,11 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     )
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
 
+    # TCP・guide の cleanup は専用 test と editor 失敗 test が実経路で検証する。
+    # ここでは target を閉じてから確定保存へ進む CLI の制御だけを観測する。
     def edit_input(argv: list[str]) -> SimpleNamespace:
         assert doctor_roots == [root]
+        handoff_start.return_value.close.assert_not_called()
         Path(argv[-1]).write_bytes(b"recoverable input\r\n")
         return SimpleNamespace(returncode=0)
 
@@ -94,6 +99,7 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
 
     def fail_input_save(source, destination):
         if Path(destination).parent == root / ".cmoc/gu/log/editor_input":
+            handoff_start.return_value.close.assert_called_once_with()
             save_destinations.append(Path(destination))
             raise OSError("input save failed")
         return real_replace(source, destination)
@@ -111,6 +117,8 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     assert result.exit_code == 1
     files = list((root / ".cmoc/gu/log/editor_input").iterdir())
     assert len(files) == 1
+    handoff_start.assert_called_once()
+    assert handoff_start.call_args.args[:2] == (root, files[0])
     assert save_destinations == files
     assert files[0].name.endswith("_orig.md")
     assert files[0].read_bytes() == b"recoverable input\r\n"

@@ -32,16 +32,6 @@ def input_path(tmp_path: Path) -> Path:
     return path
 
 
-@pytest.fixture
-def handoff_start(monkeypatch: pytest.MonkeyPatch) -> Mock:
-    """保存・editor 制御の検査では TCP lifecycle を専用の結合テストへ委ねる。"""
-    # 実 target の登録・guide・無効化は test_editor_input_handoff.py に残す。
-    target = SimpleNamespace(target_id="eit_000000_2026-09-29_15-04", close=Mock())
-    start = Mock(return_value=target)
-    monkeypatch.setattr(prompt_editor_input_module, "start_editor_input_handoff", start)
-    return start
-
-
 def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
