@@ -28,8 +28,8 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 from collections.abc import Callable
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
-from _git_support import make_repo, run_git
 from oracle.other.struct_doc import (
     SDCodeBlock,
     SDHeader,
@@ -488,16 +488,28 @@ def test_file_access_policy_titles_and_bodies_match_modes(
 
 def test_file_access_policy_keeps_same_boundaries_in_linked_worktree(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """main と linked worktree に同じ直接アクセス境界を伝える。"""
-    root = make_repo(tmp_path)
+    """main と linked の path context に同じ直接アクセス境界を伝える。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
+    linked.mkdir(parents=True)
+
+    # 実 Git metadata から両 root を導く検証は test_basic_runtime.py に残す。
+    # 文面比較ではその探索結果だけを置換し、context と renderer は実物を使う。
+    def resolve_test_roots(agent_call_cwd: Path) -> tuple[Path, Path]:
+        assert agent_call_cwd in (root, linked)
+        return agent_call_cwd, root
+
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
+    )
     main_context = AgentCallPathContext(agent_call_cwd=root)
     main_rendered = render_sd_node_as_markdown(
         _build_file_access_policy(FileAccessMode.REPO_WRITE, main_context)[1]
     )
 
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
-    run_git(root, "worktree", "add", "-b", "prompt-parts-linked", str(linked), "HEAD")
     linked_context = AgentCallPathContext(agent_call_cwd=linked)
     linked_rendered = render_sd_node_as_markdown(
         _build_file_access_policy(FileAccessMode.REPO_WRITE, linked_context)[1]
@@ -588,15 +600,13 @@ def test_complete_prompt_preserves_injected_policy_terms(
 
 
 def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
-    cli_repository: Path,
+    path_context: AgentCallPathContext,
 ) -> None:
     """complete promptが入力root tokenを保持し、実pathの定義行を追加することを検証する。"""
-    repo_root = cli_repository
-
     prompt = build_complete_prompt(
         task="- {{repo-root}} ツリー内の realization file を修正すること",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=AgentCallPathContext(agent_call_cwd=repo_root),
+        path_context=path_context,
         aux_dynamic_prompt=[
             SDHeader(
                 "aux realization file",
@@ -620,8 +630,8 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     assert (
         '"summary": "realization file and {{repo-root}} stay in code block"' in rendered
     )
-    assert f"- {{{{repo-root}}}} = {repo_root}" in rendered
-    assert f"- {{{{work-root}}}} = {repo_root}" in rendered
+    assert f"- {{{{repo-root}}}} = {path_context.repo_root}" in rendered
+    assert f"- {{{{work-root}}}} = {path_context.work_root}" in rendered
 
 
 def test_build_realization_policy_renders_core_conformance_requirements(
