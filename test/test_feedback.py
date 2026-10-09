@@ -1902,18 +1902,27 @@ def test_normalization_schema_supports_editable_namespace_package(
     )
 
 
+@pytest.mark.parametrize("allow_missing", [False, True])
+@pytest.mark.parametrize("link_kind", ["file", "parent", "dangling"])
 def test_state_reference_rejects_in_repository_symlink_alias(
     feedback_directory: Path,
+    allow_missing: bool,
+    link_kind: str,
 ) -> None:
-    """artifact reference が同じ root 内の symlink を通常 file として扱わない。"""
+    """cleanup でも file・親 directory・dangling symlink を受理しない。"""
     root = feedback_directory
     expected_root = root / ".cmoc/gu/feedback/active/generation"
     expected_root.mkdir(parents=True)
     target = expected_root / "manifest.json"
     content = b"artifact\n"
     target.write_bytes(content)
-    alias = expected_root / "alias.json"
-    alias.symlink_to(target)
+    if link_kind == "parent":
+        alias_parent = expected_root / "alias"
+        alias_parent.symlink_to(expected_root, target_is_directory=True)
+        alias = alias_parent / target.name
+    else:
+        alias = expected_root / "alias.json"
+        alias.symlink_to(target if link_kind == "file" else expected_root / "missing")
 
     with pytest.raises(CmocError, match="symlink"):
         feedback_state_module._validate_artifact_reference(
@@ -1924,7 +1933,52 @@ def test_state_reference_rejects_in_repository_symlink_alias(
             },
             expected_root=expected_root,
             description="state artifact",
+            allow_missing=allow_missing,
         )
+
+
+@pytest.mark.parametrize("allow_missing", [False, True])
+def test_state_reference_cleanup_relaxes_only_file_existence(
+    feedback_directory: Path, allow_missing: bool
+) -> None:
+    """削除済みの許容は path・hash 検証と、現存する通常 file の条件を変えない。"""
+    root = feedback_directory
+    directory = root / "artifacts"
+    directory.mkdir()
+    target = directory / "record.json"
+    content = b"artifact\n"
+    target.write_bytes(content)
+    reference = {
+        "path": target.relative_to(root).as_posix(),
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
+
+    def validate(value):
+        return feedback_state_module._validate_artifact_reference(
+            root,
+            value,
+            expected_root=directory,
+            description="state artifact",
+            allow_missing=allow_missing,
+        )
+
+    assert validate(reference) == target
+    target.write_bytes(b"changed\n")
+    with pytest.raises(CmocError, match="SHA256"):
+        validate(reference)
+    target.unlink()
+    if allow_missing:
+        assert validate(reference) == target
+    else:
+        with pytest.raises(CmocError, match="通常 file"):
+            validate(reference)
+    with pytest.raises(CmocError, match="SHA256"):
+        validate({**reference, "sha256": "invalid"})
+    with pytest.raises(CmocError, match="期待 root 外"):
+        validate({**reference, "path": "outside.json"})
+    target.mkdir()
+    with pytest.raises(CmocError, match="通常 file"):
+        validate(reference)
 
 
 def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(

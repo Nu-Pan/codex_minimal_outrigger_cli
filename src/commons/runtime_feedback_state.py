@@ -791,8 +791,9 @@ def _validate_artifact_reference(
     *,
     expected_root: Path,
     description: str,
+    allow_missing: bool = False,
 ) -> Path:
-    """artifact reference の field、path、および hash を検証する。"""
+    """artifact の path・hash を検証し、cleanup では削除済みだけを許す。"""
     if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
         raise _corruption(f"{description} reference が不正です。", expected_root)
     path = _resolve_reference_path(
@@ -801,6 +802,8 @@ def _validate_artifact_reference(
     digest = reference.get("sha256")
     if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
         raise _corruption(f"{description} SHA256 が不正です。", path)
+    if allow_missing and not path.exists() and not path.is_symlink():
+        return path
     if _has_symlink_component(path) or not path.is_file():
         raise _corruption(f"{description} が存在する通常 file ではありません。", path)
     if sha256_bytes(path.read_bytes()) != digest:
@@ -1749,7 +1752,7 @@ def _validate_report_cut_manifest(
         observation_id_value = item.get("observation_id")
         if not is_observation_id(observation_id_value):
             raise _corruption("report cut observation ID が不正です。", path)
-        observation_target = _validate_report_cut_artifact_reference(
+        observation_target = _validate_artifact_reference(
             repo,
             {"path": item.get("path"), "sha256": item.get("sha256")},
             expected_root=feedback_root(repo) / "observation" / "v1",
@@ -1899,7 +1902,7 @@ def _validate_report_cut_manifest(
             identifier = item.get(id_name)
             if not identity_validator(identifier):
                 raise _corruption(f"report cut {name} identity が不正です。", path)
-            checkpoint_path = _validate_report_cut_artifact_reference(
+            checkpoint_path = _validate_artifact_reference(
                 repo,
                 {"path": item.get("path"), "sha256": item.get("sha256")},
                 expected_root=expected_root,
@@ -2073,7 +2076,7 @@ def _validate_report_cut_current_input(
         raise _corruption(
             "report cut current generation と pointer snapshot が一致しません。", path
         )
-    generation_path = _validate_report_cut_artifact_reference(
+    generation_path = _validate_artifact_reference(
         repo,
         shaped_generation_reference,
         expected_root=expected_generation_directory,
@@ -2086,7 +2089,7 @@ def _validate_report_cut_current_input(
     ):
         raise _corruption("report cut current generation path が不正です。", path)
     report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
-    report_path = _validate_report_cut_artifact_reference(
+    report_path = _validate_artifact_reference(
         repo,
         {
             "path": pointer_value.get("report_path"),
@@ -2143,7 +2146,7 @@ def _validate_report_cut_current_input(
                 raise _corruption(
                     f"report cut current {name} identity が不正です。", path
                 )
-            record_path = _validate_report_cut_artifact_reference(
+            record_path = _validate_artifact_reference(
                 repo,
                 {"path": item.get("path"), "sha256": item.get("sha256")},
                 expected_root=expected_generation_directory,
@@ -2375,33 +2378,6 @@ def _artifact_reference_shape(
     return reference
 
 
-def _validate_report_cut_artifact_reference(
-    repo: Path,
-    reference: _JsonObject,
-    *,
-    expected_root: Path,
-    description: str,
-    allow_missing: bool,
-) -> Path:
-    """publication 後 cleanup では missing を完了済みとして許す artifact 検証。"""
-    if set(reference) != {"path", "sha256"}:
-        raise _corruption(f"{description} reference が不正です。", expected_root)
-    target = _resolve_reference_path(
-        repo, reference.get("path"), expected_root, description
-    )
-    digest = reference.get("sha256")
-    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
-        raise _corruption(f"{description} SHA256 が不正です。", target)
-    if not target.exists() and not target.is_symlink() and allow_missing:
-        return target
-    return _validate_artifact_reference(
-        repo,
-        reference,
-        expected_root=expected_root,
-        description=description,
-    )
-
-
 def _validate_publication_section(
     repo: Path,
     value: object,
@@ -2464,7 +2440,7 @@ def _validate_publication_section(
     if not isinstance(history_artifacts, list) or len(history_artifacts) != 1:
         raise _corruption("publication history artifacts が不正です。", path)
     for reference in history_artifacts:
-        _validate_report_cut_artifact_reference(
+        _validate_artifact_reference(
             repo,
             reference,
             expected_root=feedback_root(repo) / "history",
@@ -2485,7 +2461,7 @@ def _validate_publication_section(
     ):
         raise _corruption("publication generation manifest path が不正です。", path)
     for reference in generation_artifacts:
-        artifact_path = _validate_report_cut_artifact_reference(
+        artifact_path = _validate_artifact_reference(
             repo,
             reference,
             expected_root=expected_generation_root,
@@ -2521,7 +2497,7 @@ def _validate_publication_section(
         ):
             raise _corruption("publication generation artifact path が不正です。", path)
     report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
-    report_path = _validate_report_cut_artifact_reference(
+    report_path = _validate_artifact_reference(
         repo,
         report_reference,
         expected_root=report_root,

@@ -17,7 +17,7 @@ from .runtime_feedback_state import (
     _corruption,
     _read_canonical_object,
     _require_exact_fields,
-    _validate_report_cut_artifact_reference,
+    _validate_artifact_reference,
     artifact_reference,
     write_report_cut_manifest,
 )
@@ -96,7 +96,7 @@ def save_run_artifact(
 
 def read_run_artifact(repo: Path, reference: dict[str, Any]) -> dict[str, Any]:
     """run 内の reference と canonical hash を検証して artifact を読む。"""
-    path = _validate_report_cut_artifact_reference(
+    path = _validate_artifact_reference(
         repo,
         reference,
         expected_root=repo / ".cmoc/gu/feedback/work",
@@ -359,7 +359,7 @@ def validate_run_artifacts(
     last_watermark = 0
     missing_wave_artifact = False
     for sequence, reference in enumerate(run["waves"], 1):
-        target = _validate_report_cut_artifact_reference(
+        target = _validate_artifact_reference(
             repo,
             reference,
             expected_root=path.parent / "wave",
@@ -403,7 +403,7 @@ def validate_run_artifacts(
         reference = run[name]
         if reference is None:
             continue
-        target = _validate_report_cut_artifact_reference(
+        target = _validate_artifact_reference(
             repo,
             reference,
             expected_root=path.parent,
