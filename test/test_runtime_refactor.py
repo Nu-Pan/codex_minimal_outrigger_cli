@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from _git_support import make_repo, run_git
+from _git_support import init_repo, make_repo, run_git
 
 import commons.runtime_refactor as refactor_module
 from cmoc_runtime import CmocError, file_sha256
@@ -28,20 +28,35 @@ from commons.runtime_refactor import (
 
 
 @pytest.fixture
-def refactor_repository(cli_repository: Path) -> Path:
-    """履歴不要の state test と、必要な HEAD を自分で作る classifier test の root。"""
-    # ignore 判定は実 Git を使い、branch を参照する case だけ必要な file を commit する。
-    (cli_repository / "README.md").write_text("# repo\n")
-    (cli_repository / "oracle").mkdir()
-    (cli_repository / "oracle" / "spec.md").write_text("# spec\n")
-    return cli_repository
+def refactor_files(tmp_path: Path) -> Path:
+    """state 同期で実際に読み書きする file を、Git 準備から分ける。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle").mkdir()
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    return root
 
 
-def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
-    refactor_repository: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.fixture
+def refactor_repository(refactor_files: Path) -> Path:
+    """実 Git の分類・列挙と state 同期の結合を検証する root。"""
+    # branch を参照する case だけ必要な file を commit する。
+    init_repo(refactor_files)
+    return refactor_files
+
+
+def test_refactor_state_sync_tracks_enumerated_files(
+    refactor_files: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """新規・未調査 file の正確な entry 集合を、不要な内容読み取りなしで同期する。"""
-    root = refactor_repository
+    """列挙された新規・未調査 file を、不要な内容読み取りなしで同期する。"""
+    root = refactor_files
+    # 実列挙との結合は test_file_inventory.py に残し、state 更新だけを分離する。
+    monkeypatch.setattr(
+        refactor_module,
+        "enumerate_refactor_targets",
+        lambda _root: ["README.md", "oracle/spec.md"],
+    )
 
     def unexpected_hash(_path: Path) -> str:
         pytest.fail("uninvestigated files do not need a content hash comparison")
@@ -240,12 +255,17 @@ def test_refactor_state_sync_rejects_oracle_symlink(
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
-    refactor_repository: Path, monkeypatch: pytest.MonkeyPatch
+    refactor_files: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """変更検出と要求済み file の履歴保持を、必要な内容比較だけで行う。"""
-    root = refactor_repository
+    root = refactor_files
     requested_path = root / "requested.py"
     requested_path.write_text("before\n")
+    monkeypatch.setattr(
+        refactor_module,
+        "enumerate_refactor_targets",
+        lambda _root: ["README.md", "oracle/spec.md", "requested.py"],
+    )
     state = sync_refactor_state(root)
     entry = state["README.md"]
     previous_digest = file_sha256(root / "README.md")
@@ -540,10 +560,15 @@ def test_refactor_state_rejects_noncanonical_path_or_timestamp(
 
 
 def test_refactor_state_sync_treats_uppercase_digest_as_same_content(
-    refactor_repository: Path,
+    refactor_files: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """大文字 hex の既存履歴を同じ SHA256 として同期する。"""
-    root = refactor_repository
+    root = refactor_files
+    monkeypatch.setattr(
+        refactor_module,
+        "enumerate_refactor_targets",
+        lambda _root: ["README.md", "oracle/spec.md"],
+    )
     state = sync_refactor_state(root)
     digest = file_sha256(root / "README.md")
     state["README.md"].update(
