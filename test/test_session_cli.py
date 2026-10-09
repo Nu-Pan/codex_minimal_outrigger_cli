@@ -1099,22 +1099,25 @@ def test_session_join_preserves_repository_local_feedback_state(
     assert run_git(root, "ls-files", "--", relative).stdout == ""
 
 
-@pytest.mark.parametrize(
-    "extra_change", ["add", "modify", "delete", "rename", "marker"]
-)
+@pytest.mark.parametrize("remaining_marker", [False, True], ids=["resolved", "marker"])
 def test_session_join_includes_incidental_conflict_resolution_changes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra_change: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, remaining_marker: bool
 ) -> None:
-    """付随する編集を merge に含め、移動先などの未解消 marker は拒否する。"""
+    """付随する全編集種別を merge に含め、追加先の未解消 marker は拒否する。"""
+    # 独立した付随編集を一度の merge で検証し、失敗経路は別ケースで保つ。
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
-    extra = root / "src" / "extra.py"
-    if extra_change in {"modify", "delete", "rename"}:
-        extra.parent.mkdir()
-        extra.write_text("previous implementation\n")
-        run_git(root, "add", "src/extra.py")
-        run_git(root, "commit", "-m", "add related implementation")
-    moved = extra.with_name("moved.py")
+    related = root / "src"
+    related.mkdir()
+    added = related / "added.py"
+    modified = related / "modified.py"
+    deleted = related / "deleted.py"
+    renamed = related / "renamed.py"
+    moved = related / "moved.py"
+    for path in (modified, deleted, renamed):
+        path.write_text("previous implementation\n")
+    run_git(root, "add", "src")
+    run_git(root, "commit", "-m", "add related implementations")
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_active_session(root)
     target.write_text("session change\n")
@@ -1136,15 +1139,14 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         """両側の仕様を保持し、関連実装を整理する agent の結果を再現する。"""
         target.write_text("home change\nsession change\n")
-        extra.parent.mkdir(exist_ok=True)
-        if extra_change == "delete":
-            extra.unlink()
-        elif extra_change == "rename":
-            extra.rename(moved)
-        elif extra_change == "marker":
-            extra.write_text("<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n")
-        else:
-            extra.write_text("related implementation\n")
+        modified.write_text("related implementation\n")
+        deleted.unlink()
+        renamed.rename(moved)
+        added.write_text(
+            "<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n"
+            if remaining_marker
+            else "related implementation\n"
+        )
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
@@ -1152,10 +1154,10 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
     result = runner.invoke(app, ["session", "join"])
 
     assert current_branch(root) == home_branch
-    if extra_change == "marker":
+    if remaining_marker:
         assert result.exit_code != 0
         assert "conflict marker が残っています。" in result.stderr
-        assert "src/extra.py" in result.stderr
+        assert "src/added.py" in result.stderr
         assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
         return
     assert result.exit_code == 0, result.output
@@ -1163,16 +1165,15 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
     assert run_git(root, "show", "HEAD:oracle/spec.md").stdout == (
         "home change\nsession change\n"
     )
-    if extra_change in {"delete", "rename"}:
-        assert run_git(root, "ls-files", "--", "src/extra.py").stdout == ""
-    if extra_change == "rename":
+    assert (
+        run_git(root, "ls-files", "--", "src/deleted.py", "src/renamed.py").stdout == ""
+    )
+    assert (
+        run_git(root, "show", "HEAD:src/moved.py").stdout == "previous implementation\n"
+    )
+    for relative in ("src/added.py", "src/modified.py"):
         assert (
-            run_git(root, "show", "HEAD:src/moved.py").stdout
-            == "previous implementation\n"
-        )
-    elif extra_change != "delete":
-        assert (
-            run_git(root, "show", "HEAD:src/extra.py").stdout
+            run_git(root, "show", f"HEAD:{relative}").stdout
             == "related implementation\n"
         )
 
