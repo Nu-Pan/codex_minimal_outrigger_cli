@@ -103,23 +103,33 @@ def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkey
     assert not target.handoff_guide_path.exists()
 
 
-@pytest.mark.parametrize("damage", ["missing", "invalid_utf8", "symlink"])
-def test_unavailable_guide_never_returns_editor_content(tmp_path, monkeypatch, damage):
+def test_unavailable_guide_never_returns_editor_content(tmp_path, monkeypatch):
+    """同じ active target で各取得失敗と復帰を検証し、登録・受信 thread を共用する。"""
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
     work.write_text("private editor content")
     target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
     try:
-        target.handoff_guide_path.unlink()
-        if damage == "invalid_utf8":
-            target.handoff_guide_path.write_bytes(b"\xff")
-        elif damage == "symlink":
-            target.handoff_guide_path.symlink_to(work)
-        result = _get_guide_result({"target_id": target.target_id})
-        assert result["status"] == "error"
-        assert "private editor content" not in json.dumps(result)
-        assert work.read_text() == "private editor content"
+        guide_bytes = target.handoff_guide_path.read_bytes()
+        for damage in ("missing", "invalid_utf8", "symlink"):
+            target.handoff_guide_path.unlink()
+            if damage == "invalid_utf8":
+                target.handoff_guide_path.write_bytes(b"\xff")
+            elif damage == "symlink":
+                target.handoff_guide_path.symlink_to(work)
+            result = _get_guide_result({"target_id": target.target_id})
+            assert result["status"] == "error", damage
+            assert "private editor content" not in json.dumps(result), damage
+            assert work.read_text() == "private editor content", damage
+
+            # 正常取得へ戻し、前の失敗結果の使い回しが次の故障を隠さないようにする。
+            target.handoff_guide_path.unlink(missing_ok=True)
+            target.handoff_guide_path.write_bytes(guide_bytes)
+            assert _get_guide_result({"target_id": target.target_id}) == {
+                "status": "ok",
+                "guide_text": guide_bytes.decode("utf-8"),
+            }, damage
     finally:
         target.close()
 
