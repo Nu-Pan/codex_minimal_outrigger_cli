@@ -25,6 +25,7 @@ from types import SimpleNamespace
 from typing import Any, NoReturn
 
 import pytest
+from _acp_builder_support import oracle_schema_path
 from _cli_support import run_doctor, runner, terminal_primary_report
 from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from oracle.acp_builder.feedback.normalize_issue import (
@@ -1839,6 +1840,45 @@ def test_state_reader_wraps_noncanonical_json_values(
 
     with pytest.raises(CmocError, match="canonical JSON object"):
         feedback_state_module._read_canonical_object(path, "feedback state")
+
+
+@pytest.mark.parametrize("schema_name", ["normalize_issue", "remediate_issue"])
+@pytest.mark.parametrize("change", ["contract", "json", "schema", "missing"])
+def test_feedback_output_validation_uses_current_schema_file(
+    tmp_path: Path, schema_name: str, change: str
+) -> None:
+    """再利用時も各 output と現在の schema を検査し、更新・破損・消失を拒否する。"""
+    schema_text = oracle_schema_path("feedback", f"{schema_name}.json").read_text(
+        encoding="utf-8"
+    )
+    schema_path = tmp_path / f"{schema_name}.json"
+    schema_path.write_text(schema_text, encoding="utf-8")
+    output = (
+        {"result": {"decision": "existing", "existing_issue_id": "fbi_" + "a" * 26}}
+        if schema_name == "normalize_issue"
+        else _remediation_output("fbi_" + "a" * 26, "not_actionable")
+    )
+    validate = feedback_report_module._structured_output_matches_schema
+
+    assert validate(output, schema_path)
+    assert not validate({}, schema_path)
+
+    if change == "contract":
+        schema = json.loads(schema_text)
+        schema["properties"]["new_field"] = {"type": "null"}
+        schema["required"].append("new_field")
+        schema_path.write_text(json.dumps(schema), encoding="utf-8")
+    elif change == "json":
+        schema_path.write_text("{", encoding="utf-8")
+    elif change == "schema":
+        schema_path.write_text('{"type": "invalid"}', encoding="utf-8")
+    else:
+        schema_path.unlink()
+
+    assert not validate(output, schema_path)
+
+    schema_path.write_text(schema_text, encoding="utf-8")
+    assert validate(output, schema_path)
 
 
 def test_normalization_schema_supports_editable_namespace_package(

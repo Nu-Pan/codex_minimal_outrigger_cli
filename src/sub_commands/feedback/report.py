@@ -16,6 +16,7 @@ import json
 import os
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from inspect import getsourcefile
 from pathlib import Path
 from typing import Any
@@ -1150,13 +1151,22 @@ def _record_checkpoint(
 
 def _structured_output_matches_schema(output: _JsonObject, schema_path: Path) -> bool:
     """checkpoint output を正本 Structured Output schema で再検証する。"""
+    # 現在の内容を毎回読み、schema の変更・破損・削除を cache で隠さない。
     try:
-        schema = json.loads(schema_path.read_text(encoding="utf-8"))
-        validator_class = validators.validator_for(schema)
-        validator_class.check_schema(schema)
-        return not tuple(validator_class(schema).iter_errors(output))
+        validate = _structured_output_validator(schema_path.read_text(encoding="utf-8"))
+        return validate(output)
     except (OSError, UnicodeError, json.JSONDecodeError, SchemaError, TypeError):
         return False
+
+
+@lru_cache(maxsize=2)
+def _structured_output_validator(schema_text: str) -> Callable[[_JsonObject], bool]:
+    """schema の内容が同じ間は検証済み validator を再利用する。"""
+    # normalization と remediation の 2 schema を保持し、内容の変化で再構築する。
+    schema = json.loads(schema_text)
+    validator_class = validators.validator_for(schema)
+    validator_class.check_schema(schema)
+    return validator_class(schema).is_valid
 
 
 def _process_machine_observations(
