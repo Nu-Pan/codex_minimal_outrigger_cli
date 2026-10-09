@@ -118,15 +118,15 @@ def test_root_resolution_ignores_dot_git_names_without_repository_metadata(
 
 
 def test_agent_call_path_context_resolves_submodule_repository(
+    cli_repository: Path,
     tmp_path: Path,
 ) -> None:
     """submodule の Git metadata から submodule 自身の両 root を解決する。"""
     source_parent = tmp_path / "source"
-    parent_parent = tmp_path / "parent"
     source_parent.mkdir()
-    parent_parent.mkdir()
     source = make_repo(source_parent)
-    parent = make_repo(parent_parent)
+    # clone 元は HEAD が必要だが、submodule を登録する親には履歴・追跡 file が不要。
+    parent = cli_repository
     submodule = parent / "nested"
     run_git(
         parent,

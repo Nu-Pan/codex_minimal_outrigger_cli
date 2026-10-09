@@ -703,9 +703,9 @@
   },
   "src/basic/path_model.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "514a5234c503ba63db588e8e0ab8b943f0778ba0092ca55d466aa5d5c4cb9d29",
+    "last_investigated_at": "2026-10-10_05-01-45_207"
   },
   "src/cmoc_runtime.py": {
     "investigation_required": true,
