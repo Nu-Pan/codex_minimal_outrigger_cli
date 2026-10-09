@@ -3,7 +3,7 @@
 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
 {{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
 
-成功時と各失敗時で同じ editor、Git 差分、session state、および通知境界を比較する。
+変更あり・なしの成功時と各回の失敗時で、editor、Git 差分、session state、通知境界を比較する。
 分割すると同じ invocation の前提と不変条件が重複するため、一つの制御テストに保つ。
 """
 
@@ -83,11 +83,14 @@ def _assert_exec_parameter(
 
 
 @pytest.mark.parametrize(
-    "failure_stage",
-    [None, "first", "second"],
-    ids=["success", "first-failure", "second-failure"],
+    ("first_changes", "failure_stage"),
+    [
+        pytest.param(True, None, id="edit-success"),
+        pytest.param(False, None, id="no-change-success"),
+        pytest.param(True, "first", id="edit-first-failure"),
+        pytest.param(True, "second", id="edit-second-failure"),
+    ],
 )
-@pytest.mark.parametrize("first_changes", [True, False], ids=["edit", "no-change"])
 def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -95,6 +98,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     first_changes: bool,
 ) -> None:
     """既存差分を保ち、初回成功時は変更の有無によらず同じ入力で再実行する。"""
+    # 変更なしでも二回目へ進む条件は成功ケースで検証する。
+    # 失敗処理は差分に分岐しないため、各回の編集後の失敗で差分保持も検証する。
     root = _prepared_repo(tmp_path, monkeypatch)
     active_run = RunPart(
         "running",
@@ -127,7 +132,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         assert target_root == root
         events.append("doctor")
         # 同じ入力での修復・索引同期との結合は edit-success に集約する。
-        # 詳細は test_doctor_cli.py、呼び出し順序と編集結果は全6ケースで検証する。
+        # 詳細は test_doctor_cli.py、呼び出し順序と編集結果は全ケースで検証する。
         if failure_stage is None and first_changes:
             real_run_doctor_preprocess(
                 target_root,
@@ -363,9 +368,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     assert input_path.read_text(encoding="utf-8") == "later human edit"
     assert not list(input_path.parent.glob("*_cmpl.md"))
-    expected_spec = "# second edit\n"
-    if failure_stage == "first":
-        expected_spec = "# first edit\n" if first_changes else spec_before
+    expected_spec = "# first edit\n" if failure_stage == "first" else "# second edit\n"
     assert (root / "oracle" / "spec.md").read_text() == expected_spec
     assert json.loads(session_state_path.read_text()) == state_before
     assert readme_path.read_text() == "# unstaged change\n"
@@ -374,8 +377,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         == staged_diff_before
     )
     assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
-    if failure_stage != "first" or first_changes:
-        assert run_git(root, "status", "--short", "oracle/spec.md").stdout.strip()
+    assert run_git(root, "status", "--short", "oracle/spec.md").stdout.strip()
     assert not (root / ".cmoc" / "gu" / "report" / "oracle" / "edit" / "fork").exists()
     terminal_output = result.stdout + result.stderr
     if failure_stage is None:
