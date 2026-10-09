@@ -450,7 +450,6 @@ def run_doctor_preprocess(
                         repair_root,
                         original_index_path=original_index_path,
                         include_config=include_config,
-                        include_agents=repair_root == root,
                         include_gu_ignore=include_gu_ignore,
                         preserved_runtime_paths=preserved_runtime_paths,
                     )
@@ -789,13 +788,14 @@ def _restored_index(
     *,
     original_index_path: Path,
     include_config: bool,
-    include_agents: bool,
     include_gu_ignore: bool,
     preserved_runtime_paths: set[str],
 ) -> Path:
     """doctor 修復を合成した一時 index file を作る。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # 復元対象は path 列挙ではなく index 全体で扱い、rename や unstaged hunk を保つ。
+    # 通常 index は ensure_cmoc_ignored と _ensure_agents_tracked で修復済みなので、
+    # コピー後に .cmoc/gu の除外と .agents の追跡処理を繰り返す必要はない。
     index_path = _copy_current_index(root)
     try:
         # 修復 commit は HEAD を更新するが、復元 index では利用者の staged deletion を保つ。
@@ -803,19 +803,11 @@ def _restored_index(
             root, original_index_path, ".gitignore"
         ):
             _stage_gitignore_repair_from_index(root, index_path)
-        if include_agents:
-            _stage_agents_gitkeep_repair_from_index(root, index_path)
         if include_config:
             _stage_tracked_runtime_repair(
                 root,
                 index_path,
                 skip_paths=preserved_runtime_paths,
-            )
-        if include_gu_ignore:
-            _run_git_with_index(
-                ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
-                root,
-                index_path,
             )
         return index_path
     except BaseException:
@@ -857,15 +849,6 @@ def _stage_gitignore_repair_from_index(root: Path, index_path: Path) -> None:
     repaired = with_cmoc_ignore_pattern(current or "")
     if repaired != (current or ""):
         _stage_text(root, index_path, ".gitignore", repaired)
-
-
-def _stage_agents_gitkeep_repair_from_index(root: Path, index_path: Path) -> None:
-    """.agentsがindexにない場合にplaceholderをindexへ追加する。"""
-    agents = _run_git_with_index(
-        ["ls-files", "--", ".agents"], root, index_path
-    ).stdout.strip()
-    if not agents:
-        _stage_agents_gitkeep(root, index_path)
 
 
 def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
