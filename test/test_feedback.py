@@ -16,6 +16,7 @@ agent-facing reporter から raw store、intake wave、remediation、current poi
 
 import hashlib
 import json
+import os
 import socket
 import threading
 from datetime import datetime, timedelta, timezone
@@ -85,6 +86,18 @@ from commons.runtime_feedback_store import (
 )
 from commons.runtime_logging import SubcommandLogger
 from main import app
+
+
+@pytest.fixture(autouse=True)
+def real_stdio_reporter_probe(monkeypatch):
+    """stdio process の検証を専用ケースへ集約し、実際の検査関数を渡す。"""
+    # CLI の schema・collector protocol 検査は実行し、同じ reporter の起動だけを省く。
+    # 正常起動と不正応答のケースでは、保存した実関数を使う。
+    probe = feedback_module._validate_stdio_reporter
+    monkeypatch.setattr(
+        feedback_module, "_validate_stdio_reporter", lambda _schema, _root: None
+    )
+    return probe
 
 
 @pytest.fixture
@@ -539,8 +552,34 @@ def test_reporter_rejects_malformed_collector_port(
     }
 
 
+def test_reporter_availability_probe_checks_stdio_process_and_collector(
+    feedback_directory, monkeypatch, real_stdio_reporter_probe
+) -> None:
+    """実 stdio process と TCP collector の事前検証が raw を保存せず成功する。"""
+    # 子 process も現在の worktree の実装を読み、利用者の HOME は使わない。
+    root = feedback_directory
+    source_root = Path(__file__).parents[1]
+    monkeypatch.setenv("HOME", str(root))
+    monkeypatch.setenv(
+        "PYTHONPATH",
+        os.pathsep.join(str(source_root / path) for path in ("src", "oracle/src")),
+    )
+    monkeypatch.setattr(
+        feedback_module, "_validate_stdio_reporter", real_stdio_reporter_probe
+    )
+    logger = SubcommandLogger(root, "feedback test")
+    invocation, token = start_feedback_invocation(root, root, "feedback test", logger)
+    try:
+        assert invocation is not None
+        feedback_module.validate_feedback_reporter_availability()
+        assert logger.warning_messages == []
+        assert iter_observation_paths(root) == []
+    finally:
+        feedback_module.stop_feedback_invocation(invocation, token)
+
+
 def test_reporter_probe_rejects_non_object_mcp_response(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, real_stdio_reporter_probe
 ) -> None:
     """不正な JSON object 形状を reporter protocol error として扱う。"""
     monkeypatch.setattr(
@@ -554,7 +593,7 @@ def test_reporter_probe_rejects_non_object_mcp_response(
     )
 
     with pytest.raises(ReporterAvailabilityError, match="invalid MCP data") as error:
-        feedback_module._validate_stdio_reporter({}, tmp_path)
+        real_stdio_reporter_probe({}, tmp_path)
 
     assert error.value.component == "reporter"
     assert error.value.failure_code == "protocol_error"
