@@ -164,6 +164,7 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
     ids=["work_root", "nested_directory"],
 )
 def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     agent_call_cwd_relative: str,
@@ -174,7 +175,11 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
-    root = make_repo(tmp_path)
+    # oracle の存在による cwd の自動変更を検出し、Git 履歴の準備だけを省く。
+    root = cli_repository
+    (root / "oracle").mkdir()
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    agent_call_cwd = root / agent_call_cwd_relative
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -195,7 +200,6 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    agent_call_cwd = root / agent_call_cwd_relative
     run_codex_exec(
         codex_parameter(
             FileAccessMode.PURE_ORACLE_READ,
@@ -334,14 +338,15 @@ def test_run_codex_exec_uses_workspace_sandbox_from_linked_worktree(
 
 
 def test_run_codex_exec_does_not_inject_agents_path_permissions(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`.agents` の実在 path を sandbox の個別設定へ変換しないことを検証する。
 
     正本仕様:
         {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
-    root = make_repo(tmp_path)
+    # 実 Git root と .agents の存在だけが必要で、履歴は参照しない。
+    root = cli_repository
     agents_file = root / ".agents" / "nested" / "instructions.md"
     agents_file.parent.mkdir(parents=True)
     agents_file.write_text("agent instructions\n")
