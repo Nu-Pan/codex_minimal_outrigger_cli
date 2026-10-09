@@ -7,12 +7,12 @@
 """
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from _cli_support import run_doctor, runner
-from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
 import commons.prompt_editor_input as prompt_editor_input_module
@@ -24,6 +24,36 @@ from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import write_config
 from config.cmoc_config import CmocConfig
 from main import app
+
+
+@pytest.fixture
+def editor_input(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], list[Path]]:
+    """CLI の editor 起動時に指定本文を書き、実際に渡された入力 path を記録する。"""
+
+    # editor 選択と --wait は test_prompt_editor_input.py で検証する。
+    # handoff・確定保存は実経路を通し、本文を書くためだけの process 起動を省く。
+    def supply_input(content: str) -> list[Path]:
+        opened: list[Path] = []
+
+        def edit_input(argv: list[str]) -> SimpleNamespace:
+            path = Path(argv[-1])
+            assert path.read_bytes() == b""
+            opened.append(path)
+            path.write_text(content, encoding="utf-8")
+            return SimpleNamespace(returncode=0)
+
+        monkeypatch.setattr(
+            prompt_editor_input_module, "_select_editor", lambda: ["fake-editor"]
+        )
+        # 他 module の subprocess.run は置換せず、実 Git・doctor の検証を保つ。
+        monkeypatch.setattr(
+            prompt_editor_input_module, "subprocess", SimpleNamespace(run=edit_input)
+        )
+        # 実行可能な外部 command は system tools に限定する。
+        monkeypatch.setenv("PATH", "/usr/bin")
+        return opened
+
+    return supply_input
 
 
 @pytest.mark.parametrize(
@@ -89,6 +119,7 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
 def test_tui_runs_editor_and_launches_codex_directly(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    editor_input: Callable[[str], list[Path]],
 ) -> None:
     """既存差分を保ち、編集済み prompt から Codex TUI を直接起動する。"""
     root = make_repo(tmp_path)
@@ -116,20 +147,9 @@ def test_tui_runs_editor_and_launches_codex_directly(
             sync_refactor_entries=sync_refactor_entries,
         )
 
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    fake_code = bin_dir / "code"
-    write_python_executable(
-        fake_code,
-        [
-            "import pathlib, sys",
-            "assert sys.argv[1:-1] == ['--wait']",
-            "path = pathlib.Path(sys.argv[-1])",
-            "text = path.read_text()",
-            "path.write_text(text + '\\n<!-- remove me -->\\n# 依頼\\n\\nsrc を確認して必要なら直す\\n')",
-        ],
+    opened_inputs = editor_input(
+        "\n<!-- remove me -->\n# 依頼\n\nsrc を確認して必要なら直す\n"
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     builder_calls: list[tuple[str, AgentCallParameter]] = []
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
@@ -204,6 +224,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
     )
     assert len(orig_files) == 1
+    assert opened_inputs == orig_files
     editor_contents = orig_files[0].read_text()
     assert (
         editor_contents
@@ -249,6 +270,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
 def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    editor_input: Callable[[str], list[Path]],
 ) -> None:
     """linked 起動で両 root を ignore し、入力記録と agent context を main に置く。"""
     root = make_repo(tmp_path)
@@ -257,19 +279,7 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     # 事前 doctor で ignore を済ませず、検証対象の TUI invocation で両 root を準備する。
     write_config(linked / ".cmoc/gt/config.json", CmocConfig())
     monkeypatch.chdir(linked)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    fake_code = bin_dir / "code"
-    write_python_executable(
-        fake_code,
-        [
-            "import pathlib, sys",
-            "assert sys.argv[1:-1] == ['--wait']",
-            "path = pathlib.Path(sys.argv[-1])",
-            "path.write_text(path.read_text() + '\\nlinked worktree task\\n')",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    opened_inputs = editor_input("\nlinked worktree task\n")
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
@@ -287,6 +297,7 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     assert tui_kwargs["notification_command_name"] == "tui"
     assert parameter.agent_call_cwd == root.resolve()
     [saved_input] = (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
+    assert opened_inputs == [saved_input]
     assert saved_input.read_text() == "\nlinked worktree task\n"
     assert not list(
         (linked / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md")
