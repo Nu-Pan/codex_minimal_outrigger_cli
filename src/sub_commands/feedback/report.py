@@ -847,20 +847,24 @@ def _agent_comparison_candidates(
         == current_fingerprints
     )
     current_subjects = _observation_evidence_subjects(observation)
+    # observation 全体の条件を満たす場合だけ、候補ごとの fingerprint を比較する。
+    can_match_exactly = (
+        current_cut_matches_observation
+        and bool(current_fingerprints)
+        and all(digest is not None for _path, digest in current_fingerprints)
+        and bool(current_subjects)
+    )
     exact: list[_JsonObject] = []
     comparison: list[_JsonObject] = []
     for candidate in candidates.values():
         if candidate.get("category") != category:
             continue
-        previous_fingerprints = _fingerprint_pairs(candidate.get("latest_fingerprints"))
         previous_subjects = _candidate_evidence_subjects(candidate)
         exact_match = (
-            bool(current_fingerprints)
-            and all(digest is not None for _path, digest in current_fingerprints)
-            and current_fingerprints == previous_fingerprints
-            and current_cut_matches_observation
-            and bool(current_subjects)
+            can_match_exactly
             and current_subjects.issubset(previous_subjects)
+            and current_fingerprints
+            == _fingerprint_pairs(candidate.get("latest_fingerprints"))
         )
         hint_match = isinstance(hint, str) and hint in candidate.get(
             "deduplication_hints", []
