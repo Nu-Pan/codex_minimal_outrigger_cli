@@ -118,12 +118,19 @@ def _payload(
     }
 
 
-def _context(root: Path, *, session_id: str | None = None) -> dict[str, object]:
+def _context(
+    root: Path,
+    *,
+    session_id: str | None = None,
+    head_commit: str | None = None,
+) -> dict[str, object]:
     """collector が付与する version 1 context と同形の fixture を返す。"""
     return {
         "repo_root": str(root.resolve()),
         "work_root": str(root.resolve()),
-        "head_commit": run_git(root, "rev-parse", "HEAD").stdout.strip(),
+        "head_commit": head_commit
+        if head_commit is not None
+        else run_git(root, "rev-parse", "HEAD").stdout.strip(),
         "cmoc_session_id": session_id,
         "run_id": None,
         "run_kind": None,
@@ -141,6 +148,14 @@ def _context(root: Path, *, session_id: str | None = None) -> dict[str, object]:
             )
         ],
     }
+
+
+@pytest.fixture
+def stored_feedback_context(feedback_directory: Path) -> dict[str, object]:
+    """保存検査には、collector 確定済みの context と実 evidence file を渡す。"""
+    # HEAD の取得は collector test、Git lifecycle は CLI test で検証する。
+    (feedback_directory / "README.md").write_text("# repo\n")
+    return _context(feedback_directory, head_commit="a" * 40)
 
 
 def _submit_to_feedback_collector(
@@ -1450,10 +1465,10 @@ def test_collector_limits_unauthenticated_request_read_time(
 
 
 def test_collector_rejects_observation_without_current_head(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """current HEAD を取得できない場合は invalid context を保存しない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
 
     def fail_head_commit(_root: Path) -> str:
@@ -1517,20 +1532,22 @@ def test_feedback_degradation_preserves_keyboard_interrupt(
         )
 
 
-def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> None:
+def test_agent_store_rejects_outside_path_and_masks_secret(
+    tmp_path: Path, feedback_directory: Path, stored_feedback_context: dict[str, object]
+) -> None:
     """repository path boundary と secret masking を raw publication 前に適用する。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     with pytest.raises(FeedbackRejected) as outside:
         store_agent_observation(
             root,
-            _context(root),
+            stored_feedback_context,
             _payload(path=str(tmp_path / "outside.txt")),
         )
     assert outside.value.code == "path_outside_repo"
     with pytest.raises(FeedbackRejected) as masked_outside:
         store_agent_observation(
             root,
-            _context(root),
+            stored_feedback_context,
             _payload(
                 path="Authorization: Bearer abcdefghijklmnopqrstuvwxyz/../../outside.txt"
             ),
@@ -1539,7 +1556,7 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
 
     (root / "loop").symlink_to("loop")
     with pytest.raises(FeedbackRejected) as malformed:
-        store_agent_observation(root, _context(root), _payload(path="loop"))
+        store_agent_observation(root, stored_feedback_context, _payload(path="loop"))
     assert malformed.value.code == "path_outside_repo"
 
     outside = tmp_path / "outside"
@@ -1547,7 +1564,7 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
     (root / "outside-link").symlink_to(outside, target_is_directory=True)
     with pytest.raises(FeedbackRejected) as missing_outside:
         store_agent_observation(
-            root, _context(root), _payload(path="outside-link/missing.txt")
+            root, stored_feedback_context, _payload(path="outside-link/missing.txt")
         )
     assert missing_outside.value.code == "path_outside_repo"
 
@@ -1556,7 +1573,7 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
         kind="error",
         path=None,
     )
-    result, path = store_agent_observation(root, _context(root), redacted)
+    result, path = store_agent_observation(root, stored_feedback_context, redacted)
 
     assert result["redaction_count"] == 1
     assert "[REDACTED:authorization]" in path.read_text()
@@ -1576,9 +1593,11 @@ def test_report_reference_rejects_symlinked_parent_outside(
     assert feedback_report_module._repository_path(root, "link/secret.txt") is None
 
 
-def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> None:
+def test_report_reference_targets_use_resolved_evidence_path(
+    feedback_directory: Path, stored_feedback_context: dict[str, object]
+) -> None:
     """同じ file への symlink alias と実体 path を同じ issue subject にする。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     target_directory = root / "nested"
     target_directory.mkdir()
     target = target_directory / "README.md"
@@ -1586,7 +1605,7 @@ def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> 
     (root / "alias").symlink_to(target_directory, target_is_directory=True)
 
     _, first_path = store_agent_observation(
-        root, _context(root), _payload(path="alias/README.md")
+        root, stored_feedback_context, _payload(path="alias/README.md")
     )
     first = read_json_object(first_path)
     candidate = feedback_report_module._new_candidate(
@@ -1595,7 +1614,7 @@ def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> 
     feedback_report_module._merge_observation(root, candidate, first)
 
     _, second_path = store_agent_observation(
-        root, _context(root), _payload(path="nested/README.md")
+        root, stored_feedback_context, _payload(path="nested/README.md")
     )
     second = read_json_object(second_path)
     fingerprint = second["evidence_fingerprints"][0]
@@ -1723,19 +1742,21 @@ def test_machine_detector_masks_secret_in_event_field_keys(tmp_path: Path) -> No
     assert validate_observation_envelope(observation) == []
 
 
-def test_completion_count_reports_only_pending_raw_observations(tmp_path: Path) -> None:
+def test_completion_count_reports_only_pending_raw_observations(
+    feedback_directory: Path, stored_feedback_context: dict[str, object]
+) -> None:
     """正常 report 前は raw store の pending 件数一値だけを返す。"""
-    root = make_repo(tmp_path)
-    store_agent_observation(root, _context(root), _payload())
+    root = feedback_directory
+    store_agent_observation(root, stored_feedback_context, _payload())
 
     assert feedback_completion_counts(root) == (1, [])
 
 
 def test_agent_store_rejects_non_directory_observation_parent(
-    tmp_path: Path,
+    feedback_directory: Path, stored_feedback_context: dict[str, object]
 ) -> None:
     """raw storage の非 directory parent を domain rejection として返す。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     invalid_parent = feedback_root(root) / "observation" / "v1" / "2030"
     invalid_parent.parent.mkdir(parents=True)
     invalid_parent.write_text("not a directory")
@@ -1743,7 +1764,7 @@ def test_agent_store_rejects_non_directory_observation_parent(
     with pytest.raises(FeedbackRejected) as rejected:
         store_agent_observation(
             root,
-            _context(root),
+            stored_feedback_context,
             _payload(),
             observed_at="2030-01-02T00:00:00Z",
         )
