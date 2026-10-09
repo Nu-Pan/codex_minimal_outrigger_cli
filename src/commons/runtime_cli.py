@@ -23,7 +23,13 @@ from .runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
-from .runtime_paths import console_timestamp, format_duration, repo_root, work_root
+from .runtime_paths import (
+    console_timestamp,
+    format_duration,
+    repo_root,
+    reuse_root_queries,
+    work_root,
+)
 from .runtime_primary_report import (
     PrimaryReportSaveError,
     ensure_primary_report,
@@ -105,8 +111,10 @@ def run_cli_subcommand(
         install_recovery_interruption() if interruptible else None
     )
     try:
-        current_root = work_root()
-        notification_root = repo_root()
+        # 開始時の両 root だけを共有し、doctor や本命処理へ探索結果を持ち越さない。
+        with reuse_root_queries():
+            current_root = work_root()
+            notification_root = repo_root()
         runtime_root = current_root if use_work_root_runtime else notification_root
         logger = SubcommandLogger(notification_root, name)
         logger_token = set_current_subcommand_logger(logger)

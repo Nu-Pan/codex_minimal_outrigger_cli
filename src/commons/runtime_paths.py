@@ -9,14 +9,18 @@ from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
-from basic.path_model import RootPathPlaceHolder, resolve_real_path
+from basic.path_model import (
+    AgentCallPathContext,
+    RootPathPlaceHolder,
+    resolve_real_path,
+)
 
 from .runtime_errors import CmocError
 
 _CMOC_PROCESS_CWD_LOCK = threading.RLock()
-_RootQueryKey = tuple[RootPathPlaceHolder, Path, tuple[tuple[str, str], ...]]
-_ROOT_QUERIES: ContextVar[dict[_RootQueryKey, Path] | None] = ContextVar(
-    "cmoc_root_queries", default=None
+_RootQueryKey = tuple[Path, tuple[tuple[str, str], ...]]
+_ROOT_QUERIES: ContextVar[dict[_RootQueryKey, AgentCallPathContext] | None] = (
+    ContextVar("cmoc_root_queries", default=None)
 )
 
 
@@ -84,17 +88,18 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
             start_dir = parent
         # doctor 内でも起点や環境の異なる探索は共有せず、失敗は記憶しない。
         queries = _ROOT_QUERIES.get()
-        key = (placeholder, start_dir, tuple(sorted(os.environ.items())))
-        if queries is not None and key in queries:
-            return queries[key]
+        key = (start_dir, tuple(sorted(os.environ.items())))
+        context = queries.get(key) if queries is not None else None
         # {{work-root}}/oracle/src/oracle/other/path_model.py
-        # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
-        # runtime 契約は一時的な cwd 切替で公開 API へ寄せる。
-        with pushd(start_dir):
-            resolved = resolve_real_path(placeholder)
-        if queries is not None:
-            queries[key] = resolved
-        return resolved
+        # 正本 context が同じ metadata から導出した両 root を再利用する。
+        if context is None:
+            try:
+                context = AgentCallPathContext(start_dir)
+            except ValueError:
+                raise ValueError(f"`{placeholder}` was not found") from None
+            if queries is not None:
+                queries[key] = context
+        return resolve_real_path(placeholder, context)
 
 
 def timestamp() -> str:

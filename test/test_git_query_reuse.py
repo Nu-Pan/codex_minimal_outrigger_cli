@@ -4,7 +4,7 @@ from collections import Counter
 from contextlib import nullcontext
 
 import pytest
-from _git_support import make_repo, run_git
+from _git_support import init_repo, make_repo, run_git
 
 import commons.runtime_git as git_module
 from commons.runtime_errors import CmocError
@@ -20,16 +20,30 @@ from commons.runtime_run_lifecycle import (
 def test_git_query_reuse_keeps_worktrees_and_environment_separate(
     tmp_path, monkeypatch
 ):
+    """両 root の導出を共有し、異なる起点・環境では取り直す。"""
     root = make_repo(tmp_path)
     linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked-query", str(linked), "HEAD")
     index_query = ["rev-parse", "--git-path", "index"]
+    git_calls = 0
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        nonlocal git_calls
+        if argv[0] == "git":
+            git_calls += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
 
     with git_module.reuse_git_path_queries():
         for anchor in (root, linked, root, linked):
             monkeypatch.chdir(anchor)
             assert repo_root() == root
+            calls_after_repo_root = git_calls
             assert work_root() == anchor
+            assert repo_root() == root
+            assert git_calls == calls_after_repo_root
             assert git_module.git_common_dir(anchor) == root / ".git"
         assert git_module.run_git(index_query, root).stdout.strip() == ".git/index"
         assert git_module.run_git(index_query, linked).stdout.strip() != ".git/index"
@@ -39,6 +53,12 @@ def test_git_query_reuse_keeps_worktrees_and_environment_separate(
             assert git_module.run_git(index_query, root).stdout.strip() == str(
                 alternate_index
             )
+            calls_before_root = git_calls
+            assert repo_root(root) == root
+            assert git_calls > calls_before_root
+            calls_after_repo_root = git_calls
+            assert work_root(root) == root
+            assert git_calls == calls_after_repo_root
         assert git_module.run_git(index_query, root).stdout.strip() == ".git/index"
 
 
@@ -75,6 +95,7 @@ def test_git_query_reuse_expires_after_completion_or_failure(
         with git_module.reuse_git_path_queries():
             assert git_module.run_git(query, root).stdout.strip() == "/dev/null"
             assert repo_root(nested) == root
+            assert work_root(nested) == root
             if interrupt:
                 raise RuntimeError("interrupted")
 
@@ -84,9 +105,28 @@ def test_git_query_reuse_expires_after_completion_or_failure(
     run_git(nested, "init", "--template=/dev/null")
     assert git_module.run_git(query, root).stdout.strip() == str(ignore_path)
     assert repo_root(nested) == nested
+    assert work_root(nested) == nested
     with git_module.reuse_git_path_queries():
         assert git_module.run_git(query, root).stdout.strip() == str(ignore_path)
         assert repo_root(nested) == nested
+        assert work_root(nested) == nested
+
+
+@pytest.mark.parametrize(
+    ("resolver", "placeholder"),
+    [(repo_root, "repo-root"), (work_root, "work-root")],
+)
+def test_root_query_reuse_retries_failed_discovery(tmp_path, resolver, placeholder):
+    """root を発見できない失敗を保存せず、同じ区間でも再試行する。"""
+    root = tmp_path / "not-yet-a-repository"
+    root.mkdir()
+
+    with git_module.reuse_git_path_queries():
+        with pytest.raises(CmocError, match=placeholder):
+            resolver(root)
+        init_repo(root)
+        assert repo_root(root) == root
+        assert work_root(root) == root
 
 
 @pytest.mark.parametrize("inspection", ["agent", "run"])

@@ -1041,7 +1041,16 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
     monkeypatch.chdir(linked)
     doctor_roots: list[Path] = []
     pre_log_roots: list[Path] = []
+    root_queries = 0
+    original_run = subprocess.run
 
+    def record_root_query(argv, *args, **kwargs):
+        nonlocal root_queries
+        if argv[0] == "git" and "--show-toplevel" in argv:
+            root_queries += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", record_root_query)
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", doctor_roots.append)
 
     runtime_cli.run_cli_subcommand(
@@ -1053,6 +1062,8 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
 
     assert doctor_roots == [linked.resolve()]
     assert pre_log_roots == [root.resolve()]
+    # 開始時の work root と通知先 repo root は同じ metadata 問い合わせから導出する。
+    assert root_queries == 1
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     assert len(list(log_dir.glob("*.jsonl"))) == 1
