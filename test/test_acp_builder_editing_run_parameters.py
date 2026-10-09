@@ -9,9 +9,9 @@
 import json
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
-from _git_support import make_repo, run_git
 from oracle.acp_builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter as build_canonical_apply_parameter,
 )
@@ -36,22 +36,26 @@ def _objective_section(prompt: str) -> str:
 
 
 @pytest.fixture
-def editing_run_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """editing run builder が参照する linked worktree を test 内に隔離する。"""
-    root = make_repo(tmp_path)
-    run_worktree = root / ".cmoc" / "gu" / "worktree" / "test" / "run"
-    run_worktree.parent.mkdir(parents=True)
-    run_git(
-        root,
-        "worktree",
-        "add",
-        "-b",
-        "cmoc/test-editing-run",
-        str(run_worktree),
-        "HEAD",
+def editing_run_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    """builder の cwd と root の受け渡しを、Git 探索結果だけ置換して検証する。"""
+    # Git metadata の解決は test_basic_runtime.py と fork 統合 test に残す。
+    root = tmp_path / "repo"
+    run_worktree = tmp_path / "run"
+    root.mkdir()
+    run_worktree.mkdir()
+
+    def _resolve_worktree_roots(agent_call_cwd: Path) -> tuple[Path, Path]:
+        # process cwd ではなく、builder が指定した run cwd の探索を検査する。
+        assert agent_call_cwd == run_worktree.resolve()
+        return run_worktree.resolve(), root.resolve()
+
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", _resolve_worktree_roots
     )
     monkeypatch.chdir(root)
-    return run_worktree
+    return root, run_worktree
 
 
 def test_editing_run_compatibility_builders_reexport_canonical_functions() -> None:
@@ -67,10 +71,10 @@ def test_editing_run_compatibility_builders_reexport_canonical_functions() -> No
 
 
 def test_realization_apply_builder_passes_commit_references(
-    editing_run_worktree: Path,
+    editing_run_paths: tuple[Path, Path],
 ) -> None:
     """apply builder が commit 参照と取得条件を prompt に含める。"""
-    run_worktree = editing_run_worktree
+    root, run_worktree = editing_run_paths
     parameter = build_realization_apply_fork_launch_exec_parameter(
         "base-commit",
         "fork-commit",
@@ -81,6 +85,7 @@ def test_realization_apply_builder_passes_commit_references(
     assert parameter.structured_output_schema_path is None
     assert parameter.enable_document_search_mcp is True
     assert parameter.agent_call_cwd == run_worktree.resolve()
+    assert f"- {{{{repo-root}}}} = {root.resolve()}" in parameter.prompt
     assert f"- {{{{work-root}}}} = {run_worktree.resolve()}" in parameter.prompt
     assert "base-commit" in parameter.prompt
     assert "fork-commit" in parameter.prompt
@@ -104,12 +109,13 @@ def test_realization_apply_builder_passes_commit_references(
 
 
 def test_refactor_builders_use_canonical_structured_output_schemas(
-    editing_run_worktree: Path,
+    editing_run_paths: tuple[Path, Path],
 ) -> None:
     """refactor builder が canonical schema と要求された実行設定を使うことを確認する。"""
-    target_path = editing_run_worktree / "README.md"
+    root, run_worktree = editing_run_paths
+    target_path = run_worktree / "README.md"
     review = build_realization_refactor_fork_file_review_and_fix_parameter(
-        target_path, editing_run_worktree
+        target_path, run_worktree
     )
 
     assert review.file_access_mode == FileAccessMode.REALIZATION_WRITE
@@ -121,7 +127,9 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
         review.structured_output_schema_path.resolve() == review_schema_path.resolve()
     )
     assert review.enable_document_search_mcp is True
-    assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in review.prompt
+    assert review.agent_call_cwd == run_worktree.resolve()
+    assert f"- {{{{repo-root}}}} = {root.resolve()}" in review.prompt
+    assert f"- {{{{work-root}}}} = {run_worktree.resolve()}" in review.prompt
     assert str(target_path.resolve()) in review.prompt
     assert "調査開始時点ですでに解消されている問題" in review.prompt
     assert "# Structured Output の決定論的事後条件" in review.prompt
