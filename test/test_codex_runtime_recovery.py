@@ -19,7 +19,6 @@ from _codex_support import (
     codex_parameter,
     setup_codex_home,
 )
-from _git_support import make_repo
 
 from commons import runtime_codex_exec as runtime
 from commons import runtime_codex_recovery as recovery
@@ -97,8 +96,9 @@ def test_final_cli_outcome(events, returncode, expected):
 
 
 @pytest.fixture
-def recovery_case(tmp_path, monkeypatch):
-    root = make_repo(tmp_path)
+def recovery_case(cli_repository, tmp_path, monkeypatch):
+    # 回復・補正は各ケースの成果物を使うため、初期 commit と追跡 file は不要。
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     return (
         root,

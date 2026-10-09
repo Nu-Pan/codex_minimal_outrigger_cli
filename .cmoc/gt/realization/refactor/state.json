@@ -709,9 +709,9 @@
   },
   "src/cmoc_runtime.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "43fb961149b599635a1abdceb8611969195b689f50ec716e0231e113d978fded",
+    "last_investigated_at": "2026-10-10_05-14-59_296"
   },
   "src/commons/__init__.py": {
     "investigation_required": true,

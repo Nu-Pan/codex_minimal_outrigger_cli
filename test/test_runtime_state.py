@@ -7,7 +7,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _git_support import RUN_BRANCH, RUN_ID, SESSION_BRANCH, SESSION_ID, make_repo
+from _git_support import RUN_BRANCH, RUN_ID, SESSION_BRANCH, SESSION_ID
 
 import commons.runtime_state as runtime_state_module
 from cmoc_runtime import CmocError
@@ -459,10 +459,10 @@ def test_session_state_rejects_unknown_top_level_fields() -> None:
 
 
 def test_session_fork_lock_is_shared_across_processes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """session fork lock が process 間で共有されることを確認する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(

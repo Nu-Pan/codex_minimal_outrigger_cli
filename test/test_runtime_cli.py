@@ -383,10 +383,10 @@ def test_error_terminal_result_does_not_repeat_primary_report_path(
 
 
 def test_detector_does_not_swallow_keyboard_interrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """detector 中の Ctrl+C を本命サブコマンドの中断として扱う。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
 
     def interrupt_detector(_event: dict[str, object], _log_path: Path) -> None:
@@ -624,11 +624,12 @@ def test_cli_tui_startup_keyboard_interrupt_emits_failure_notification(
 
 
 def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Codex subprocess の起動前中断を TUI 終了後の中断と混同しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
