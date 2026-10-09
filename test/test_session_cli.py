@@ -44,6 +44,14 @@ def seed_search_config(root: Path) -> None:
     cmoc_runtime.write_config(root / ".cmoc/gt/config.json", CmocConfig())
 
 
+def _seed_remote_tracking_branch(root: Path, branch: str, commit: str) -> None:
+    """checkout の推測候補になる remote 設定と追跡 ref を用意する。"""
+    # 推測は local の fetch refspec と追跡 ref を使うため、remote の実体は不要。
+    run_git(root, "remote", "add", "origin", str(root.parent / "remote.git"))
+    run_git(root, "update-ref", f"refs/remotes/origin/{branch}", commit)
+    run_git(root, "config", "checkout.defaultRemote", "origin")
+
+
 def session_state_path(root: Path, session_branch: str) -> Path:
     """managed session branch に対応する永続 state file の path を求める。
 
@@ -293,16 +301,7 @@ def test_session_fork_rollback_does_not_guess_remote_home_branch(
     seed_search_config(root)
     home_branch = current_branch(root)
     home_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    remote = tmp_path / "remote.git"
-    subprocess.run(
-        ["git", "init", "--bare", str(remote)],
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    run_git(root, "remote", "add", "origin", str(remote))
-    run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
-    run_git(root, "config", "checkout.defaultRemote", "origin")
+    _seed_remote_tracking_branch(root, home_branch, home_commit)
 
     session_id = "sess_000000_2026-06-27_01-02"
     session_branch = f"cmoc/session/{session_id}"
@@ -758,16 +757,7 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     home_branch = session_home_branch(root, session_branch)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
 
-    remote = tmp_path / "remote.git"
-    subprocess.run(
-        ["git", "init", "--bare", str(remote)],
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    run_git(root, "remote", "add", "origin", str(remote))
-    run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
-    run_git(root, "config", "checkout.defaultRemote", "origin")
+    _seed_remote_tracking_branch(root, home_branch, home_commit)
 
     original_branch_exists = session_module.branch_exists
     home_deleted = False
@@ -928,22 +918,12 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
     home_branch = session_home_branch(root, session_branch)
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
-    remote = tmp_path / "remote.git"
-    subprocess.run(
-        ["git", "init", "--bare", str(remote)],
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    run_git(root, "remote", "add", "origin", str(remote))
     run_git(root, "switch", home_branch)
     (root / "README.md").write_text("remote target\n")
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "advance remote branch target")
     remote_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    run_git(root, "push", "origin", f"{remote_commit}:refs/heads/{session_branch}")
-    run_git(root, "fetch", "origin")
-    run_git(root, "config", "checkout.defaultRemote", "origin")
+    _seed_remote_tracking_branch(root, session_branch, remote_commit)
     run_git(root, "switch", session_branch)
 
     original_run_git = session_module.run_git
@@ -1592,16 +1572,7 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
     run_git(root, "branch", "-D", home_branch)
 
-    remote = tmp_path / "remote.git"
-    subprocess.run(
-        ["git", "init", "--bare", str(remote)],
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    run_git(root, "remote", "add", "origin", str(remote))
-    run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
-    run_git(root, "config", "checkout.defaultRemote", "origin")
+    _seed_remote_tracking_branch(root, home_branch, home_commit)
 
     result = runner.invoke(app, ["session", "join"])
 
