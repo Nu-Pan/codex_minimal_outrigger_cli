@@ -19,10 +19,10 @@ from config.cmoc_config import CmocConfig
 
 
 def test_run_codex_exec_corrects_schema_output_in_same_session(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """schema 不合格を同じ session で補正し、Codex call ごとの log を保存する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -156,12 +156,13 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
 
 @pytest.mark.parametrize("non_json_constant", ["NaN", "Infinity", "-Infinity"])
 def test_run_codex_exec_corrects_non_json_numeric_constant(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     non_json_constant: str,
 ) -> None:
     """JSON 仕様外の非有限数を Structured Output の parse failure として補正する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "non_json_constant_bin"
@@ -277,10 +278,10 @@ def test_run_codex_exec_corrects_declared_postcondition(
 
 
 def test_run_codex_exec_does_not_replace_missing_correction_session(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """session ID を取得できない出力契約違反を新しい session で代替しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "missing_session_bin"
@@ -409,12 +410,13 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
 
 
 def test_run_codex_exec_logs_keyboard_interrupt(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """KeyboardInterrupt を failed call event として記録し、例外を伝播する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
 
@@ -466,6 +468,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     ],
 )
 def test_run_codex_exec_corrects_structured_output_parse_failure(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     name: str,
@@ -473,7 +476,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     expected_error: str,
 ) -> None:
     """Structured Output の欠落・空・不正 JSON を補正し、失敗理由を記録する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / f"{name}_bin"
@@ -532,10 +535,13 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     "schema_bytes", [b"{", b'{"$schema": 1}', b'{"minimum": NaN}', b"\xff"]
 )
 def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema_bytes: bytes
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    schema_bytes: bytes,
 ) -> None:
     """不正な Structured Output schema は Codex 呼び出し前に失敗させる。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     schema = tmp_path / "invalid_schema.json"
@@ -578,13 +584,14 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
 )
 @pytest.mark.parametrize("failure_returncode", [0, 1])
 def test_run_codex_exec_logs_capacity_recovery_calls(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     failure_event: dict[str, object],
     failure_returncode: int,
 ) -> None:
     """capacity error を再試行し、戻り値に依存せず retry event を記録する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
@@ -649,13 +656,14 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
 )
 @pytest.mark.parametrize("structured_output", [False, True])
 def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     event: dict[str, object],
     structured_output: bool,
 ) -> None:
     """未知の JSONL error は終了コード 0 でも即時失敗させ、再試行しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -760,12 +768,13 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout JSONL 外の error marker を retry 判定に使わず、直接失敗させる。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
@@ -821,10 +830,10 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
 
 
 def test_run_codex_exec_stops_after_output_correction_limit(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """補正を 2 回で終え、正式出力の受理失敗を元の call と対応付ける。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     sleep_calls: list[float] = []
