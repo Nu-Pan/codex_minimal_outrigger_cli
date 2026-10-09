@@ -609,19 +609,33 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert "診断用サブコマンドログ" in report_text
     assert current_branch(root) == session_branch
 
+    # join が保存した比較始点を次回 fork が使う結合は、この一続きの経路で検査する。
+    next_fork = runner.invoke(
+        app, ["realization", "apply", "fork"], catch_exceptions=False
+    )
+
+    assert next_fork.exit_code == 0, next_fork.output
+    assert len(calls) == len(built_parameters) == 2
+    next_parameter, next_worktree = calls[1]
+    assert next_parameter is built_parameters[1]
+    assert next_worktree != run_worktree
+    next_state = _state(state_path)
+    assert next_state["run"]["state"] == "joinable"
+    assert f"- 始点: `{run_fork_commit}`" in next_parameter.prompt
+    assert f"- 終点: `{next_state['run']['fork_commit']}`" in next_parameter.prompt
+
 
 @pytest.mark.parametrize("run_state", ["joinable", "error"])
 @pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
 @pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
 def test_apply_join_updates_diff_base_only_for_joinable_run(
     ready_content_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
     run_state: str,
     has_run_change: bool,
     has_previous_apply: bool,
 ) -> None:
-    """join 開始時の state に応じた比較始点を、次回 apply へ渡す。"""
-    # realization_apply.md の「join 後 hook」を state、report、次回 prompt で検査する。
+    """join 開始時の state に応じて比較始点を保存し、未追従の変更を残す。"""
+    # realization_apply.md の「join 後 hook」を全条件で検査する。
     root, _session_branch, state_path = ready_content_session
     state = _state(state_path)
     session_fork_commit = state["session"]["session_fork_commit"]
@@ -661,29 +675,64 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
             assert "session.last_joined_apply_fork_commit updated" not in output
     assert ("run_join_commit: null" in report) is (not has_run_change)
 
-    # 成果物の取り込み後も、未追従の oracle change を次回の比較範囲に残す。
-    prompts: list[str] = []
+    # 次回 fork の始点選択は独立した test に任せ、ここでは保存した範囲を検査する。
+    diff_base = expected_base if expected_base is not None else session_fork_commit
+    joined_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    oracle_diff = run_git(root, "diff", diff_base, joined_head, "--", "oracle")
+    assert bool(oracle_diff.stdout) is (run_state == "error")
+    if run_state == "error":
+        assert "pending oracle change" in oracle_diff.stdout
+
+
+@pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
+def test_apply_fork_passes_saved_diff_base_to_agent(
+    ready_content_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    has_previous_apply: bool,
+) -> None:
+    """保存した比較始点の有無に応じ、次回 apply の commit 範囲を確定する。"""
+    # fork が読むのは保存済み state だけなので、join の全条件を再実行しない。
+    root, _session_branch, state_path = ready_content_session
+    state = _state(state_path)
+    previous_base = (
+        run_git(root, "rev-parse", "HEAD").stdout.strip()
+        if has_previous_apply
+        else None
+    )
+    state["session"]["last_joined_apply_fork_commit"] = previous_base
+    state_path.write_text(json.dumps(state))
+    expected_base = (
+        previous_base
+        if previous_base is not None
+        else state["session"]["session_fork_commit"]
+    )
+    (root / "oracle" / "spec.md").write_text("pending oracle change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "pending oracle change")
+    parameters: list[AgentCallParameter] = []
 
     def capture_apply(
         parameter: AgentCallParameter, **_kwargs: object
     ) -> SimpleNamespace:
         """次回 apply が受け取る commit 範囲を記録する。"""
-        prompts.append(parameter.prompt)
+        parameters.append(parameter)
         return SimpleNamespace(returncode=0, output_json=None)
 
     monkeypatch.setattr(apply_module, "run_codex_exec", capture_apply)
     fork = runner.invoke(app, ["realization", "apply", "fork"], catch_exceptions=False)
 
     assert fork.exit_code == 0, fork.output
-    assert len(prompts) == 1
-    diff_base = expected_base if expected_base is not None else session_fork_commit
-    next_fork_commit = _state(state_path)["run"]["fork_commit"]
-    assert f"- 始点: `{diff_base}`" in prompts[0]
-    assert f"- 終点: `{next_fork_commit}`" in prompts[0]
-    oracle_diff = run_git(root, "diff", diff_base, next_fork_commit, "--", "oracle")
-    assert bool(oracle_diff.stdout) is (run_state == "error")
-    if run_state == "error":
-        assert "pending oracle change" in oracle_diff.stdout
+    assert len(parameters) == 1
+    run_state = _state(state_path)["run"]
+    assert run_state["state"] == "joinable"
+    parameter = parameters[0]
+    assert parameter.agent_call_cwd != root
+    assert f"- 始点: `{expected_base}`" in parameter.prompt
+    assert f"- 終点: `{run_state['fork_commit']}`" in parameter.prompt
+    oracle_diff = run_git(
+        root, "diff", expected_base, run_state["fork_commit"], "--", "oracle"
+    )
+    assert "pending oracle change" in oracle_diff.stdout
 
 
 def test_run_join_reports_joinable_child_stop_warnings(
