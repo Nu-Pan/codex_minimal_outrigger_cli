@@ -488,9 +488,32 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """apply fork と run join が共通 state を使って成果物を merge する。"""
+    """apply の call-scoped prompt と fork→join の成果物・state を検証する。"""
     root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    expected_base = _state(state_path)["session"]["session_fork_commit"]
+    # prompt への差分混入の検査も同じ fork で行い、run 作成を重複させない。
+    (root / "oracle" / "reference_only.md").write_text("oracle payload\n" * 1000)
+    run_git(root, "add", "oracle/reference_only.md")
+    run_git(root, "commit", "-m", "oracle change")
+    original_builder = apply_module.build_realization_apply_fork_launch_exec_parameter
+    built_parameters: list[AgentCallParameter] = []
     calls: list[tuple[AgentCallParameter, Path]] = []
+
+    def capture_builder(
+        diff_base_commit: str,
+        run_fork_commit: str,
+        run_worktree: Path,
+    ) -> AgentCallParameter:
+        """process cwd を変えずに run の path context を構築することを確認する。"""
+        parameter = original_builder(
+            diff_base_commit,
+            run_fork_commit,
+            run_worktree,
+        )
+        assert Path.cwd().resolve() == root
+        assert parameter.agent_call_cwd == run_worktree.resolve()
+        built_parameters.append(parameter)
+        return parameter
 
     def fake_apply(
         parameter: AgentCallParameter,
@@ -504,6 +527,11 @@ def test_realization_apply_fork_and_run_join_use_common_state(
         (worktree / "README.md").write_text("# repo\n\nrealized\n")
         return SimpleNamespace(returncode=0, output_json=None)
 
+    monkeypatch.setattr(
+        apply_module,
+        "build_realization_apply_fork_launch_exec_parameter",
+        capture_builder,
+    )
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
     joined_process_stops: list[tuple[Path, str]] = []
     monkeypatch.setattr(
@@ -530,8 +558,16 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     run_branch = state["run"]["branch"]
     run_fork_commit = state["run"]["fork_commit"]
     assert isinstance(run_branch, str) and run_branch.startswith("cmoc/run/")
-    assert calls[0][0].file_access_mode == FileAccessMode.REALIZATION_WRITE
-    assert calls[0][1] != root
+    assert len(calls) == len(built_parameters) == 1
+    parameter, run_worktree = calls[0]
+    assert parameter is built_parameters[0]
+    assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
+    assert run_worktree != root
+    assert f"- {{{{work-root}}}} = {run_worktree}" in parameter.prompt
+    assert f"- 始点: `{expected_base}`" in parameter.prompt
+    assert f"- 終点: `{run_fork_commit}`" in parameter.prompt
+    assert "reference_only.md" not in parameter.prompt
+    assert "oracle payload" not in parameter.prompt
     assert (root / "README.md").read_text() == "# repo\n"
 
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -666,72 +702,6 @@ def test_run_join_reports_joinable_child_stop_warnings(
     assert result.exit_code == 0, result.output
     report_path = terminal_primary_report(result)
     assert "run child process already stopped: 789" in report_path.read_text()
-
-
-def test_apply_builder_uses_call_scoped_run_worktree(
-    ready_run_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """process cwd を変えずに parameter と prompt が run worktree を共有する。"""
-    root, _session_branch, state_path = ready_run_session
-    # 入力差分の本文・path 一覧が prompt に混ざらないことも確認する。
-    (root / "oracle" / "reference_only.md").write_text("oracle payload\n" * 1000)
-    run_git(root, "add", "oracle/reference_only.md")
-    run_git(root, "commit", "-m", "oracle change")
-    expected_base = _state(state_path)["session"]["session_fork_commit"]
-    original_builder = apply_module.build_realization_apply_fork_launch_exec_parameter
-    observed: list[tuple[Path, Path, Path, str]] = []
-
-    def capture_builder(
-        diff_base_commit: str,
-        run_fork_commit: str,
-        run_worktree: Path,
-    ) -> AgentCallParameter:
-        """builder 構築時の process cwd、agent call cwd、prompt を記録する。"""
-        parameter = original_builder(
-            diff_base_commit,
-            run_fork_commit,
-            run_worktree,
-        )
-        observed.append(
-            (
-                Path.cwd().resolve(),
-                run_worktree.resolve(),
-                parameter.agent_call_cwd,
-                parameter.prompt,
-            )
-        )
-        return parameter
-
-    monkeypatch.setattr(
-        apply_module,
-        "build_realization_apply_fork_launch_exec_parameter",
-        capture_builder,
-    )
-    monkeypatch.setattr(
-        apply_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
-    )
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    assert _state(state_path)["run"]["state"] == "joinable"
-    assert len(observed) == 1
-    cmoc_process_cwd, run_worktree, agent_call_cwd, prompt = observed[0]
-    assert cmoc_process_cwd == root
-    assert agent_call_cwd == run_worktree
-    assert f"- {{{{work-root}}}} = {run_worktree}" in prompt
-    expected_end = _state(state_path)["run"]["fork_commit"]
-    assert f"- 始点: `{expected_base}`" in prompt
-    assert f"- 終点: `{expected_end}`" in prompt
-    assert "reference_only.md" not in prompt
-    assert "oracle payload" not in prompt
 
 
 def test_run_abandon_accepts_already_removed_run_worktree(
