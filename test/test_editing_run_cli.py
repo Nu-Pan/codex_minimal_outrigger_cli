@@ -323,11 +323,11 @@ def test_worktree_change_paths_returns_normalized_relative_paths(
 
 
 def test_apply_rolls_back_unexpected_oracle_change(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run branch の想定外差分を commit 後に rollback する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
 
     def fake_apply(
         parameter: AgentCallParameter,
@@ -356,11 +356,11 @@ def test_apply_rolls_back_unexpected_oracle_change(
 
 
 def test_apply_rejects_agent_commit_and_rolls_back_unit(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
 
     def fake_apply(
         parameter: AgentCallParameter,
@@ -657,11 +657,11 @@ def test_run_join_reports_joinable_child_stop_warnings(
 
 
 def test_apply_builder_uses_call_scoped_run_worktree(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """process cwd を変えずに parameter と prompt が run worktree を共有する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     # 入力差分の本文・path 一覧が prompt に混ざらないことも確認する。
     (root / "oracle" / "reference_only.md").write_text("oracle payload\n" * 1000)
     run_git(root, "add", "oracle/reference_only.md")
@@ -1074,11 +1074,11 @@ def test_apply_fork_checks_stopped_children_before_commit(
 
 
 def test_apply_fork_reports_cleanup_warnings(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply fork の cleanup warning を fork report に保存する。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     monkeypatch.setattr(
         apply_module,
         "run_codex_exec",
@@ -1756,11 +1756,11 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
 
 
 def test_apply_error_report_survives_change_inspection_failure(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """差分確認に失敗しても apply error report と state を保存する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
 
     monkeypatch.setattr(
         apply_module,
@@ -1793,11 +1793,11 @@ def test_apply_error_report_survives_change_inspection_failure(
 
 
 def test_apply_report_failure_after_joinable_publication_sets_error_state(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """成功処理後の fork report failure でも run state と report を一致させる。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_run_session
     monkeypatch.setattr(
         apply_module,
         "run_codex_exec",
@@ -1867,11 +1867,11 @@ def test_refactor_report_failure_after_joinable_publication_sets_error_state(
 
 
 def test_apply_error_preserves_unreadable_process_tracking(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply error cleanup が検証不能な process tracking を削除しない。"""
-    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, session_branch, state_path = ready_run_session
     session_id = session_branch.removeprefix("cmoc/session/")
     tracking_path = run_process_id_path(root, session_id)
 
@@ -1965,11 +1965,11 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
 
 
 def test_apply_failure_stops_tracked_codex_children_before_rollback(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply error cleanup が追跡中 Codex child を rollback 前に停止する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_run_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     events: list[str] = []
@@ -2010,12 +2010,12 @@ def test_apply_failure_stops_tracked_codex_children_before_rollback(
 
 
 def test_apply_error_cleanup_rejects_delayed_agent_commit(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """error cleanup の停止後検査で遅延 agent commit を run に残さない。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     run_worktree: Path | None = None
 
     def fail_apply(
@@ -2068,7 +2068,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit(
     ],
 )
 def test_apply_start_failure_after_run_publish_is_reported(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     failure: BaseException,
 ) -> None:
@@ -2077,7 +2077,7 @@ def test_apply_start_failure_after_run_publish_is_reported(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
     """
 
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
 
     def fail_process_tracking(*_args: object, **_kwargs: object) -> None:
         """process tracking 初期化の失敗を再現する。"""
@@ -2108,11 +2108,10 @@ def test_apply_start_failure_after_run_publish_is_reported(
 
 
 def test_apply_start_failure_does_not_recover_existing_error_run(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_content_session: tuple[Path, str, Path],
 ) -> None:
     """新しい apply fork の事前条件失敗で既存 error run を変更しない。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     context = start_editing_run("realization_apply")
     set_run_state(context, "error")
     (context.run_worktree / "README.md").write_text("existing error run\n")
