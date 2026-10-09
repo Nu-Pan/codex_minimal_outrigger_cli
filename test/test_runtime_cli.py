@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 import typer
-from _cli_support import run_doctor, runner
+from _cli_support import runner
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
 from _git_support import make_repo, run_git
 
@@ -45,6 +45,7 @@ from cmoc_runtime import (
     TerminalResult,
     format_duration,
     render_error,
+    write_config,
 )
 from commons.runtime_ids import is_common_id
 from config.cmoc_config import CmocConfig
@@ -875,7 +876,8 @@ def test_cli_handled_failure_is_written_to_stderr(
     """想定済み CLI error は簡潔な terminal result を stderr に返す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    run_doctor(root)
+    # 通常起動に必要な設定だけを用意し、doctor は session fork 内で実行する。
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
     run_git(root, "switch", "--detach", "HEAD")
 
     result = runner.invoke(app, ["session", "fork"])
@@ -913,10 +915,11 @@ def test_unknown_subcommand_option_is_rejected_by_cli_parser() -> None:
 
 
 def test_cli_requires_current_directory_to_be_work_root(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """work root 以外からの CLI 実行では副作用を出す前に拒否する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
+    (root / "oracle").mkdir()
     monkeypatch.chdir(root / "oracle")
 
     result = runner.invoke(app, ["doctor"])
@@ -992,18 +995,20 @@ def test_cli_completion_marker_skips_normal_command(
 
 
 def test_pre_log_check_failure_writes_subcommand_log(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """pre-log check の失敗時にもサブコマンドログを生成する。"""
     import sub_commands.session.fork as session_fork
 
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
-    log_paths_before = set(log_dir.glob("*.jsonl"))
+    doctor_roots: list[Path] = []
+    # doctor 修復は専用 test で検証し、ここでは CLI dispatch と失敗時のログを通す。
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", doctor_roots.append)
 
-    def fail_pre_log_check(_root: Path) -> None:
+    def fail_pre_log_check(checked_root: Path) -> None:
+        assert checked_root == root
         raise CmocError("pre-log check failed", ["修復して再実行してください。"], "")
 
     monkeypatch.setattr(
@@ -1012,14 +1017,12 @@ def test_pre_log_check_failure_writes_subcommand_log(
     result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code == 1
-    new_logs = set(log_dir.glob("*.jsonl")) - log_paths_before
-    assert len(new_logs) == 1
+    assert doctor_roots == [root]
+    [log_path] = log_dir.glob("*.jsonl")
     assert result.stdout == ""
     assert "- 診断用サブコマンドログ:" in result.stderr
     assert "- 終了コード: `1`" in result.stderr
-    events = [
-        json.loads(line) for line in next(iter(new_logs)).read_text().splitlines()
-    ]
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[0]["event"] == "command_invoked"
     assert any(event["event"] == "step_started" for event in events)
     assert events[-1]["event"] == "command_finished"
