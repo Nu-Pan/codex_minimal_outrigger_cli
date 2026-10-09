@@ -2327,8 +2327,9 @@ def _validate_report_cut_checkpoint(
 
 
 @lru_cache(maxsize=1)
-def _normalization_schema() -> dict[str, Any]:
-    """oracle package resource から normalization schema を読む。"""
+def _normalization_validator() -> Draft202012Validator:
+    """oracle schema から normalization output 検査用 validator を構築する。"""
+    # schema と validator を一緒に再利用し、checkpoint ごとの再構築を避ける。
     try:
         schema_text = (
             resources.files("oracle.acp_builder.feedback")
@@ -2356,12 +2357,12 @@ def _normalization_schema() -> dict[str, Any]:
     if not isinstance(schema, dict):
         raise TypeError("normalization schema must be an object")
     Draft202012Validator.check_schema(schema)
-    return schema
+    return Draft202012Validator(schema)
 
 
 def _normalization_output_matches_schema(output: dict[str, Any]) -> bool:
     """normalization output が oracle schema に適合するかを返す。"""
-    return Draft202012Validator(_normalization_schema()).is_valid(output)
+    return _normalization_validator().is_valid(output)
 
 
 def _artifact_reference_shape(

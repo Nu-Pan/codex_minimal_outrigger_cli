@@ -2013,7 +2013,7 @@ def test_normalization_schema_supports_editable_namespace_package(
     monkeypatch.setattr(
         feedback_state_module.resources, "files", raise_namespace_resource_error
     )
-    feedback_state_module._normalization_schema.cache_clear()
+    feedback_state_module._normalization_validator.cache_clear()
 
     assert feedback_state_module._normalization_output_matches_schema(
         {"result": {"decision": "new", "existing_issue_id": None}}
