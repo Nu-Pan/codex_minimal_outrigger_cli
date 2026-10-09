@@ -370,10 +370,10 @@ def test_doctor_reports_asset_success_separately_from_validation_failure(
     ).read_bytes() == distribution[1]["/model"]
 
 
-def _tarball(name, dependencies=None):
+def _tarball(name, dependencies=None, version="1.0.0"):
     package = {
         "name": name,
-        "version": "1.0.0",
+        "version": version,
         "dependencies": dependencies or {},
         "scripts": {
             "preinstall": "node -e 'throw Error(\"scripts must be disabled\")'"
@@ -461,16 +461,34 @@ def test_npm_build_reuses_all_dependencies_without_network(
     assert all(event["source"] == "cache" for event in _states(asset_logger)[-2:])
 
 
+@pytest.mark.parametrize("nested_version", ["1.0.0", "2.0.0"])
 def test_npm_uses_preexisting_cache_and_platform_pins(
-    tmp_path, distribution, monkeypatch
+    tmp_path, distribution, monkeypatch, asset_logger, nested_version
 ):
-    """旧配置内の npm cache を再利用し、異なる OS/CPU の optional 資材を取得しない。"""
+    """同一資材を共有し、同名の別版と異なる OS/CPU の optional 資材を区別する。"""
+    # platform の実取得と npm への受け渡しは、通信禁止の実 npm test で通す。
+    monkeypatch.setattr(
+        assets, "_npm_platform", lambda: {"os": "linux", "cpu": "x64", "libc": "glibc"}
+    )
     root = tmp_path / "cmoc"
     base = root / "build"
     _npm_fixture(base, distribution)
     lock = json.loads((base / "package-lock.json").read_text())
+    nested_name = "node_modules/asset-a/node_modules/asset-b"
+    # 実 lock 同様、同じ tarball を複数の依存階層から参照する。
+    lock["packages"][nested_name] = dict(lock["packages"]["node_modules/asset-b"])
+    if nested_version != "1.0.0":
+        body = _tarball("asset-b", version=nested_version)
+        distribution[1]["/b-2.tgz"] = body
+        lock["packages"][nested_name] = {
+            "version": nested_version,
+            "resolved": distribution[0] + "/b-2.tgz",
+            "integrity": "sha512-"
+            + base64.b64encode(hashlib.sha512(body).digest()).decode(),
+        }
+    seeded = set()
     for package in lock["packages"].values():
-        if "integrity" in package:
+        if "integrity" in package and package["integrity"] not in seeded:
             local = assets._npm_local_source(
                 base.parent / "npm-cache", package["integrity"]
             )
@@ -478,6 +496,7 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
             local.write_bytes(
                 distribution[1][package["resolved"].removeprefix(distribution[0])]
             )
+            seeded.add(package["integrity"])
     lock["packages"]["node_modules/alien"] = {
         "version": "1.0.0",
         "integrity": "sha512-unused",
@@ -487,6 +506,7 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
         "optional": True,
     }
     (base / "package-lock.json").write_text(json.dumps(lock))
+    original = (base / "package-lock.json").read_bytes()
     monkeypatch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
     with assets.node_runtime_assets(root, base):
         local_lock = json.loads((base / "package-lock.json").read_text())
@@ -496,4 +516,25 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
         assert local_lock["packages"]["node_modules/alien"]["resolved"].endswith(
             "/alien"
         )
+        direct = local_lock["packages"]["node_modules/asset-b"]["resolved"]
+        nested = local_lock["packages"][nested_name]["resolved"]
+        assert (direct == nested) == (nested_version == "1.0.0")
+    # 一度検証・コピーした tarball の準備を、lock の参照数だけ繰り返さない。
+    states = _states(asset_logger)
+    assert len(states) == len(seeded)
+    assert all(event["source"] == "local" for event in states)
+    assert (base / "package-lock.json").read_bytes() == original
+    assert not (base / ".assets").exists()
+
+    # 前回の成功を次の準備へ持ち越さず、破損時も lock と一時資材を回収する。
+    local = assets._npm_local_source(
+        base.parent / "npm-cache",
+        lock["packages"]["node_modules/asset-b"]["integrity"],
+    )
+    local.write_bytes(b"corrupted")
+    with pytest.raises(AssertionError, match="must not attempt external communication"):
+        with assets.node_runtime_assets(root, base):
+            pytest.fail("a corrupted tarball was accepted")
+    assert (base / "package-lock.json").read_bytes() == original
+    assert not (base / ".assets").exists()
     assert distribution[2] == []

@@ -96,6 +96,7 @@ def node_runtime_assets(root: Path, base: Path) -> Iterator[None]:
     asset_dir = base / ".assets"
     asset_dir.mkdir()
     cache = DownloadAssetCache(root)
+    prepared: set[str] = set()
     try:
         for name, package in packages.items():
             if not name or package.get("link") or package.get("inBundle"):
@@ -130,10 +131,14 @@ def node_runtime_assets(root: Path, base: Path) -> Iterator[None]:
                     },
                 },
             )
-            destination = asset_dir / f"{asset.key}.tgz"
-            # キャッシュ導入前の配置内 npm cache も SRI で確認して再利用する。
-            local = _npm_local_source(base.parent / "npm-cache", asset.integrity)
-            cache.obtain(asset, destination, local_sources=(local,))
+            key = asset.key
+            destination = asset_dir / f"{key}.tgz"
+            if key not in prepared:
+                # 同じ準備内で検証済みの tarball は、依存階層が違っても共有する。
+                # 既存配置の npm cache も SRI で確認して再利用する。
+                local = _npm_local_source(base.parent / "npm-cache", asset.integrity)
+                cache.obtain(asset, destination, local_sources=(local,))
+                prepared.add(key)
             package["resolved"] = destination.as_uri()
         lock_path.write_text(json.dumps(lock), encoding="utf-8")
         yield
