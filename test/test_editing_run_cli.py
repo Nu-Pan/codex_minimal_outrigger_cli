@@ -3976,35 +3976,69 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
     assert "committed unit inspection failed" in report
 
 
-@pytest.mark.parametrize(
-    "verification_status", ["failed", "incomplete", "not_required"]
-)
-def test_refactor_rejects_unverified_changes(
-    ready_content_session, monkeypatch, verification_status
+def _unverified_refactor_review(parameter, verification_status):
+    (parameter.agent_call_cwd / "README.md").write_text("unverified change\n")
+    return SimpleNamespace(
+        returncode=0,
+        output_json={
+            "findings": [
+                {
+                    "title": "change",
+                    "changed_paths": ["README.md"],
+                    "resolution": {"status": "fixed", "summary": "changed"},
+                }
+            ],
+            "verification": {
+                "status": verification_status,
+                "summary": "gate not passed",
+            },
+        },
+    )
+
+
+def test_refactor_rejects_unverified_changes_before_state_update(
+    ready_join_session, monkeypatch
 ):
-    """構文上は妥当な出力でも品質検証が成功していない変更を確定しない。"""
+    """未検証の各 status で成果物と調査 state を確定しない。"""
+    context = start_editing_run("realization_refactor")
+    worktree = context.run_worktree
+    before_head = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+    before_state = load_refactor_state(worktree)
+    target = worktree / "README.md"
+    original = target.read_text()
+    units = []
+    unresolved = {}
+
+    # 同じ品質ゲートで拒否される値は run を共有し、CLI の rollback は次の test に残す。
+    for verification_status in ("failed", "incomplete", "not_required"):
+
+        def review(parameter, **_kwargs):
+            return _unverified_refactor_review(parameter, verification_status)
+
+        monkeypatch.setattr(refactor_module, "run_codex_exec", review)
+        with pytest.raises(CmocError, match="品質検証が完了していません"):
+            refactor_module._run_refactor_unit(
+                context, "README.md", units, unresolved, []
+            )
+
+        assert run_git(worktree, "rev-parse", "HEAD").stdout.strip() == before_head
+        assert load_refactor_state(worktree) == before_state
+        assert not units
+        assert not unresolved
+        target.write_text(original)
+        assert not worktree_change_paths(worktree)
+
+
+def test_refactor_rejects_unverified_changes_and_rolls_back(
+    ready_content_session, monkeypatch
+):
+    """品質検証の未完了で CLI が停止し、rollback・error state・report を残す。"""
     root, _, state_path = ready_content_session
     calls = []
 
     def review(parameter, **kwargs):
         calls.append(kwargs["purpose"])
-        (parameter.agent_call_cwd / "README.md").write_text("unverified change\n")
-        return SimpleNamespace(
-            returncode=0,
-            output_json={
-                "findings": [
-                    {
-                        "title": "change",
-                        "changed_paths": ["README.md"],
-                        "resolution": {"status": "fixed", "summary": "changed"},
-                    }
-                ],
-                "verification": {
-                    "status": verification_status,
-                    "summary": "gate not passed",
-                },
-            },
-        )
+        return _unverified_refactor_review(parameter, "incomplete")
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", review)
     result = runner.invoke(
