@@ -276,15 +276,20 @@ def test_fork_report_escapes_special_changed_paths(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("occupied", ["branch", "worktree", "dangling_symlink"])
 def test_new_run_target_preserves_occupied_target(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, occupied: str
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    occupied: str,
 ) -> None:
     """発行 ID の保存先が占有されていたら既存資源を保って停止する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     session_id = "sess_000000_2026-06-27_10-00"
     run_id = "run_000000_2026-06-27_10-00"
     branch = f"cmoc/run/{session_id}/{run_id}"
     collision = root / ".cmoc" / "gu" / "worktree" / session_id / run_id
     if occupied == "branch":
+        # branch の作成だけに commit が必要で、worktree path の衝突には不要。
+        run_git(root, "commit", "--allow-empty", "-m", "branch seed")
         run_git(root, "branch", branch)
         protected_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     else:
@@ -323,10 +328,11 @@ def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> N
 
 
 def test_worktree_change_paths_returns_normalized_relative_paths(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """変更 path を refactor schema と同じ slash 区切りで返す。"""
-    root = make_repo(tmp_path)
+    # untracked path の列挙には履歴や追跡ファイルを必要としない。
+    root = cli_repository
     nested = root / "nested" / "README.md"
     nested.parent.mkdir()
     nested.write_text("nested\n")
@@ -414,13 +420,12 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
     ],
 )
 def test_run_join_doctor_sync_depends_on_active_run_kind(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     kind: str,
     expected_sync: bool,
 ) -> None:
     """run kind に応じて join 前 doctor の refactor state 同期を切り替える。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
     start_editing_run(kind)
     calls: list[bool] = []
     monkeypatch.setattr(
@@ -682,11 +687,10 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
 
 
 def test_run_join_reports_joinable_child_stop_warnings(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """joinable run の descendant 停止 warning を join report に残す。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
