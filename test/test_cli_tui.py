@@ -8,6 +8,7 @@
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from _cli_support import run_doctor, runner
@@ -38,16 +39,20 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     monkeypatch.chdir(root)
     # 既定設定だけを用意し、doctor preprocess は検証対象の CLI 内で実行する。
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "code",
-        [
-            "import pathlib, sys",
-            "pathlib.Path(sys.argv[-1]).write_bytes(b'recoverable input\\r\\n')",
-        ],
+
+    def edit_input(argv: list[str]) -> SimpleNamespace:
+        Path(argv[-1]).write_bytes(b"recoverable input\r\n")
+        return SimpleNamespace(returncode=0)
+
+    # editor の起動・引数は専用 test が検証する。ここでは保存失敗後の CLI 制御を扱う。
+    # module 内の境界だけを置換し、doctor などが使う subprocess.run は実行する。
+    monkeypatch.setattr(
+        prompt_editor_input_module, "subprocess", SimpleNamespace(run=edit_input)
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
+    monkeypatch.setattr(
+        prompt_editor_input_module, "_select_editor", lambda: ["fake-editor"]
+    )
+    monkeypatch.setenv("PATH", "/usr/bin")
     real_replace = prompt_editor_input_module.os.replace
 
     def fail_input_save(source, destination):
