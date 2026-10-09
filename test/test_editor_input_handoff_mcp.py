@@ -8,9 +8,10 @@
 import json
 import socket
 import threading
+from contextlib import nullcontext
 from importlib import resources
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import Mock
 
 import pytest
 from _handoff_support import handoff_body, handoff_input
@@ -22,7 +23,6 @@ from commons.runtime_editor_input_handoff import start_editor_input_handoff
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
-    build_editor_input_handoff_target_id,
 )
 
 pytestmark = pytest.mark.usefixtures("handoff_source")
@@ -31,11 +31,18 @@ pytestmark = pytest.mark.usefixtures("handoff_source")
 @pytest.fixture
 def handoff_transport(tmp_path, monkeypatch):
     """MCP 側の検証では受信 thread を起動せず、上書き要求の送信を観測する。"""
-    target_id = build_editor_input_handoff_target_id(tmp_path, 1234, b"x" * 16)
-    connection = MagicMock()
-    connection.__enter__.return_value = connection
+    # 採番・route 登録は lifecycle test で検証し、ここでは解決結果だけを使う。
+    target_id = "eit_000000_2026-09-29_15-04"
+    connection = Mock()
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-    monkeypatch.setattr(handoff_mcp.socket, "socket", lambda *_args: connection)
+    monkeypatch.setattr(
+        handoff_mcp,
+        "parse_editor_input_handoff_target_id",
+        lambda *_args: (("127.0.0.1", 1234), b"x" * 16),
+    )
+    monkeypatch.setattr(
+        handoff_mcp.socket, "socket", lambda *_args: nullcontext(connection)
+    )
     monkeypatch.setattr(
         handoff_mcp,
         "authenticate_editor_input_handoff_client",
@@ -384,7 +391,7 @@ def test_handoff_transport_errors_distinguish_submission_uncertainty(
 ) -> None:
     """送信前の失敗と、部分送信もあり得る送信中の失敗を区別する。"""
     target_id, connection = handoff_transport
-    authenticate = MagicMock(return_value=True)
+    authenticate = Mock(return_value=True)
     if stage == "authenticate":
         authenticate.side_effect = error
     else:
@@ -491,18 +498,15 @@ def test_missing_or_invalid_source_refuses_handoff(
 
 
 def test_handoff_uses_canonical_body_and_typed_references(
-    tmp_path, monkeypatch, handoff_source
+    tmp_path, handoff_transport, handoff_source
 ):
+    """本文・参照の構築を送信境界で検証し、実書き込みは lifecycle test に委ねる。"""
     from oracle.editor_input_handoff.body import build_editor_input_handoff_body
     from oracle.other.doc_ref_model import DocRef
 
-    work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
-    work.parent.mkdir(parents=True)
-    work.write_text("initial")
-    target = start_editor_input_handoff(tmp_path, work, "{{original-prompt-here}}")
-    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+    target_id, connection = handoff_transport
     reference_path = tmp_path / "oracle/doc/spec.md"
-    fields = handoff_input(target.target_id, "本文を保持する <!-- コメント -->\n続き")
+    fields = handoff_input(target_id, "本文を保持する <!-- コメント -->\n続き")
     fields["oracle_references"] = [
         {"file_path": str(reference_path), "loc_desc": None},
         {"file_path": str(reference_path), "loc_desc": "対象の見出し"},
@@ -519,16 +523,16 @@ def test_handoff_uses_canonical_body_and_typed_references(
         ],
         source=handoff_source,
     )
-    try:
-        for _ in range(2):
-            assert handoff_mcp._submit(fields) == {"status": "accepted"}
-            assert work.read_text() == expected
-        assert "<!-- コメント -->" in expected
-        assert str(reference_path) in expected
-        assert handoff_source.codex_call_id in expected
-        assert target.target_id not in expected
-    finally:
-        target.close()
+    for _ in range(2):
+        connection.sendall.reset_mock()
+        assert handoff_mcp._submit(fields) == {"status": "accepted"}
+        sent = b"".join(call.args[0] for call in connection.sendall.call_args_list)
+        request = json.loads(sent)
+        assert request["payload"] == {"target_id": target_id, "content": expected}
+    assert "<!-- コメント -->" in expected
+    assert str(reference_path) in expected
+    assert handoff_source.codex_call_id in expected
+    assert target_id not in expected
 
 
 def test_handoff_builder_failure_does_not_leak_input_or_write(
