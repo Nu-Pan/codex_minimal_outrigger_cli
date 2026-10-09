@@ -14,6 +14,7 @@ import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
 import commons.runtime_download_asset_cache as asset_cache_module
+import commons.runtime_feedback as runtime_feedback
 import commons.runtime_windows_toast as runtime_windows_toast
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
@@ -147,6 +148,18 @@ def _isolate_document_search_materials(
         )
 
     monkeypatch.setattr(runtime_doctor, "DocumentSearch", doctor_search)
+
+
+@pytest.fixture(autouse=True)
+def real_stdio_reporter_probe(monkeypatch):
+    """stdio 起動の検証を専用ケースへ集約し、実際の検査関数を渡す。"""
+    # schema・TCP collector の検査は各 CLI test でも実行する。
+    # test_feedback.py の正常起動・不正応答のケースだけが実 stdio 検査を使う。
+    probe = runtime_feedback._validate_stdio_reporter
+    monkeypatch.setattr(
+        runtime_feedback, "_validate_stdio_reporter", lambda _schema, _root: None
+    )
+    return probe
 
 
 @pytest.fixture

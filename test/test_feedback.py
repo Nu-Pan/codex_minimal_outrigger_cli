@@ -88,18 +88,6 @@ from commons.runtime_logging import SubcommandLogger
 from main import app
 
 
-@pytest.fixture(autouse=True)
-def real_stdio_reporter_probe(monkeypatch):
-    """stdio process の検証を専用ケースへ集約し、実際の検査関数を渡す。"""
-    # CLI の schema・collector protocol 検査は実行し、同じ reporter の起動だけを省く。
-    # 正常起動と不正応答のケースでは、保存した実関数を使う。
-    probe = feedback_module._validate_stdio_reporter
-    monkeypatch.setattr(
-        feedback_module, "_validate_stdio_reporter", lambda _schema, _root: None
-    )
-    return probe
-
-
 @pytest.fixture
 def feedback_directory(tmp_path: Path) -> Path:
     """Git を参照しない保存・path・lock 検査には通常 directory だけを用意する。"""
@@ -564,14 +552,19 @@ def test_reporter_availability_probe_checks_stdio_process_and_collector(
         "PYTHONPATH",
         os.pathsep.join(str(source_root / path) for path in ("src", "oracle/src")),
     )
-    monkeypatch.setattr(
-        feedback_module, "_validate_stdio_reporter", real_stdio_reporter_probe
-    )
+    probed_roots: list[Path] = []
+
+    def check_stdio(schema, reporter_cwd):
+        real_stdio_reporter_probe(schema, reporter_cwd)
+        probed_roots.append(reporter_cwd)
+
+    monkeypatch.setattr(feedback_module, "_validate_stdio_reporter", check_stdio)
     logger = SubcommandLogger(root, "feedback test")
     invocation, token = start_feedback_invocation(root, root, "feedback test", logger)
     try:
         assert invocation is not None
         feedback_module.validate_feedback_reporter_availability()
+        assert root in probed_roots
         assert logger.warning_messages == []
         assert iter_observation_paths(root) == []
     finally:
