@@ -377,7 +377,7 @@ def _disable_external_completion(
 )
 @pytest.mark.parametrize("failure_stage", ("doctor_preprocess", "precondition"))
 def test_early_error_saves_command_specific_primary_report(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     command_name: str,
@@ -386,9 +386,9 @@ def test_early_error_saves_command_specific_primary_report(
     failure_stage: str,
 ) -> None:
     """処理開始前の error でも固有の保存先と必須 front matter を保つ。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    # root 探索は専用 CLI test に任せ、保存・描画・終了処理は実経路を通す。
+    root = cli_terminal_directory
+    monkeypatch.setattr(runtime_cli, "notify_terminal_result", lambda *_args: None)
 
     def fail_precondition(_runtime_root: Path) -> None:
         """report 保存前の処理開始エラーを再現する。"""

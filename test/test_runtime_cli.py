@@ -60,22 +60,6 @@ def _clear_completion_probe_environment(
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
 
 
-@pytest.fixture
-def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """表示・通知・前処理失敗の検査では Git 探索と collector 起動を外す。"""
-    # 実 Git の root 境界はこの file の cwd・linked worktree ケースで検証する。
-    # collector の TCP 受付・保存・drain は test_feedback.py に残す。
-    root = tmp_path / "repo"
-    root.mkdir()
-    monkeypatch.chdir(root)
-    monkeypatch.setattr(runtime_cli, "work_root", lambda: root)
-    monkeypatch.setattr(runtime_cli, "repo_root", lambda: root)
-    monkeypatch.setattr(
-        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
-    )
-    return root
-
-
 @pytest.mark.parametrize(
     ("seconds", "expected"),
     [
