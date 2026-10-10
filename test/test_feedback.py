@@ -194,7 +194,7 @@ def collector_directory(
     stored_feedback_context: dict[str, object],
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
-    """transport・保存・call lifecycle の検査には Git 読み取り結果だけを渡す。"""
+    """collector の検査には Git 読み取り結果だけを渡す。"""
     # 実 Git の context 取得は context/rate test と linked worktree の wave test で検証する。
     monkeypatch.setattr(feedback_module, "current_branch", lambda _root: "main")
     monkeypatch.setattr(
@@ -1943,9 +1943,11 @@ def test_machine_detector_observation_id_is_idempotent(
     assert observation["context"]["subcommand_invocation_id"] == logger.execution_id
 
 
-def test_machine_detector_masks_secret_in_event_fields(tmp_path: Path) -> None:
+def test_machine_detector_masks_secret_in_event_fields(
+    collector_directory: Path,
+) -> None:
     """detector payload の追加 field も raw publication 前に secret masking する。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     secret = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
@@ -1973,9 +1975,11 @@ def test_machine_detector_masks_secret_in_event_fields(tmp_path: Path) -> None:
     assert validate_observation_envelope(observation) == []
 
 
-def test_machine_detector_masks_secret_in_event_field_keys(tmp_path: Path) -> None:
+def test_machine_detector_masks_secret_in_event_field_keys(
+    collector_directory: Path,
+) -> None:
     """detector payload の object key に含まれる secret も raw に残さない。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     secret_key = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
