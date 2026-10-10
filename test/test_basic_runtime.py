@@ -367,11 +367,11 @@ def test_run_root_placeholder_rejects_main_worktree(
         resolve_real_path(RootPathPlaceHolder.RUN)
 
 
-def test_create_run_worktree_rejects_path_outside_managed_worktrees(
+def test_run_worktree_operations_reject_path_outside_managed_worktrees(
     cli_repository: Path,
     tmp_path: Path,
 ) -> None:
-    """管理領域外のpathでrun worktreeを作成しないことを検証する。"""
+    """管理領域外の同じ path を、作成でも削除でも保護する。"""
     # path の拒否に履歴は不要だが、root 解決には実 Git repository を使う。
     root = cli_repository
     target = tmp_path / "unrelated"
@@ -380,6 +380,11 @@ def test_create_run_worktree_rejects_path_outside_managed_worktrees(
 
     with pytest.raises(CmocError, match="run worktree path"):
         create_run_worktree(root, RUN_BRANCH, target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
+
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        remove_worktree(root, target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
 
@@ -450,10 +455,10 @@ def test_run_worktree_lookup_rejects_symlink_components(
     assert worktree_for_branch_optional(root, RUN_BRANCH) is None
 
 
-def test_run_worktree_lookup_rejects_replaced_registered_path(
+def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
     worktree_repository: Path, tmp_path: Path
 ) -> None:
-    """Git 登録が残っていても linked worktree でない置換先を扱わない。"""
+    """stale な Git 登録先を作業 root として使わず、置換した内容も削除しない。"""
     root = worktree_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     run_git(
@@ -470,6 +475,12 @@ def test_run_worktree_lookup_rejects_replaced_registered_path(
     target.mkdir(parents=True)
 
     assert worktree_for_branch_optional(root, RUN_BRANCH) is None
+
+    (target / "keep.txt").write_text("keep\n")
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        remove_worktree(root, target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
 
 
 def test_session_worktree_lookup_rejects_invalid_registered_path(
@@ -536,10 +547,10 @@ def test_create_run_worktree_rejects_symlink_components(
     assert not (external / SESSION_ID / RUN_ID).exists()
 
 
-def test_create_run_worktree_rejects_unregistered_managed_path(
+def test_run_worktree_operations_reject_unregistered_managed_path(
     cli_repository: Path,
 ) -> None:
-    """Git未登録のmanaged pathをrun worktreeとして扱わないことを検証する。"""
+    """Git 未登録の同じ managed path を、作成でも削除でも保護する。"""
     root = cli_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     target.mkdir(parents=True)
@@ -549,17 +560,6 @@ def test_create_run_worktree_rejects_unregistered_managed_path(
         create_run_worktree(root, RUN_BRANCH, target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
-
-
-def test_remove_worktree_rejects_path_outside_managed_worktrees(
-    cli_repository: Path,
-    tmp_path: Path,
-) -> None:
-    """管理領域外のpathをworktree削除対象にしないことを検証する。"""
-    root = cli_repository
-    target = tmp_path / "unrelated"
-    target.mkdir()
-    (target / "keep.txt").write_text("keep\n")
 
     with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
         remove_worktree(root, target)
@@ -610,21 +610,6 @@ def test_remove_worktree_rejects_symlink_components(
     assert actual.exists()
 
 
-def test_remove_worktree_rejects_unregistered_managed_path(
-    cli_repository: Path,
-) -> None:
-    """Git未登録のmanaged pathをworktree削除対象にしないことを検証する。"""
-    root = cli_repository
-    target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
-    target.mkdir(parents=True)
-    (target / "keep.txt").write_text("keep\n")
-
-    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
-        remove_worktree(root, target)
-
-    assert (target / "keep.txt").read_text() == "keep\n"
-
-
 def test_remove_worktree_rejects_non_run_branch_at_managed_path(
     worktree_repository: Path,
 ) -> None:
@@ -633,12 +618,10 @@ def test_remove_worktree_rejects_non_run_branch_at_managed_path(
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     run_git(root, "worktree", "add", "-b", "ordinary", str(target), "HEAD")
 
-    try:
-        with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
-            remove_worktree(root, target)
-        assert target.exists()
-    finally:
-        run_git(root, "worktree", "remove", "--force", str(target))
+    # repository と linked metadata は tmp_path 内で完結し、Git による後処理は不要。
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        remove_worktree(root, target)
+    assert target.exists()
 
 
 def test_remove_worktree_rejects_noncanonical_run_ids(
@@ -650,35 +633,6 @@ def test_remove_worktree_rejects_noncanonical_run_ids(
     target = root / ".cmoc/gu/worktree" / old_id / old_id
     run_git(root, "worktree", "add", "-b", f"cmoc/run/{old_id}/{old_id}", str(target))
 
-    try:
-        with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
-            remove_worktree(root, target)
-        assert target.is_dir()
-    finally:
-        run_git(root, "worktree", "remove", "--force", str(target))
-
-
-def test_remove_worktree_rejects_replaced_registered_path(
-    worktree_repository: Path, tmp_path: Path
-) -> None:
-    """staleなGit登録だけを根拠に通常directoryを削除しないことを検証する。"""
-    root = worktree_repository
-    target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
-    run_git(
-        root,
-        "worktree",
-        "add",
-        "-b",
-        RUN_BRANCH,
-        str(target),
-        "HEAD",
-    )
-    moved = tmp_path / "moved-worktree"
-    target.rename(moved)
-    target.mkdir(parents=True)
-    (target / "keep.txt").write_text("keep\n")
-
     with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
         remove_worktree(root, target)
-
-    assert (target / "keep.txt").read_text() == "keep\n"
+    assert target.is_dir()
