@@ -24,6 +24,7 @@ from commons.runtime_editor_input_handoff_protocol import (
     _HANDOFF_RESPONSE_LIMIT,
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
+    read_handoff_message,
 )
 
 pytestmark = pytest.mark.usefixtures("handoff_source")
@@ -355,11 +356,9 @@ def test_handoff_mcp_rejects_invalid_input_without_returning_content(
         assert "private content" not in rendered
 
 
-@pytest.mark.parametrize("failure", ["timeout", "eof"])
 def test_handoff_response_loss_reports_unknown_while_write_completes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    failure: str,
     handoff_source,
 ) -> None:
     """受付済み上書きの応答を失っても、非 active や未反映とは報告しない。"""
@@ -377,11 +376,11 @@ def test_handoff_response_loss_reports_unknown_while_write_completes(
         assert release.wait(5)
         overwrite(content)
 
-    def lose_response(connection: socket.socket, _timeout: float) -> object:
+    def lose_response(connection: socket.socket, timeout: float) -> object:
         assert entered.wait(2)
-        if failure == "eof":
-            connection.shutdown(socket.SHUT_RD)
-        return read_response(connection, 0.05)
+        # EOF で応答だけを失わせる。timeout の結果判定は transport 境界で検証する。
+        connection.shutdown(socket.SHUT_RD)
+        return read_response(connection, timeout)
 
     monkeypatch.setattr(target, "_overwrite", delayed_overwrite)
     monkeypatch.setattr(handoff_mcp, "read_handoff_message", lose_response)
@@ -420,6 +419,7 @@ def test_handoff_response_loss_reports_unknown_while_write_completes(
         ("connect", PermissionError(), "rejected", True),
         ("authenticate", TimeoutError(), "rejected", True),
         ("sendall", BrokenPipeError(), "unknown", False),
+        ("recv", TimeoutError(), "unknown", False),
     ],
 )
 def test_handoff_transport_errors_distinguish_submission_uncertainty(
@@ -430,13 +430,16 @@ def test_handoff_transport_errors_distinguish_submission_uncertainty(
     status: str,
     retryable: bool,
 ) -> None:
-    """送信前の失敗と、部分送信もあり得る送信中の失敗を区別する。"""
+    """送信前の失敗と、送信中・応答喪失による結果不明を区別する。"""
     target_id, connection = handoff_transport
     authenticate = Mock(return_value=True)
     if stage == "authenticate":
         authenticate.side_effect = error
     else:
         getattr(connection, stage).side_effect = error
+    if stage == "recv":
+        # 受信器を通した timeout を待機なしで起こし、応答喪失の unknown 判定を守る。
+        monkeypatch.setattr(handoff_mcp, "read_handoff_message", read_handoff_message)
     monkeypatch.setattr(
         handoff_mcp, "authenticate_editor_input_handoff_client", authenticate
     )
@@ -446,6 +449,8 @@ def test_handoff_transport_errors_distinguish_submission_uncertainty(
     assert result["retryable"] is retryable
     assert "not active" not in result["message"]
     assert "private content" not in json.dumps(result)
+    if stage == "recv":
+        connection.sendall.assert_called_once()
 
 
 def test_handoff_mcp_strips_unexpected_target_result_fields(
