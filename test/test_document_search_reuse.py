@@ -22,7 +22,7 @@ from commons.runtime_document_search import (
 )
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_document_search_worker import NodeSearchWorker
-from commons.runtime_git import ensure_cmoc_ignored, remove_worktree
+from commons.runtime_git import remove_worktree
 from commons.runtime_paths import repo_root
 
 
@@ -72,8 +72,8 @@ def model_search(tmp_path, monkeypatch):
 def _worktree(repository, path, branch=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     args = ("-b", branch) if branch else ("--detach",)
+    # _repo_with_docs の commit 済み ignore 規則を使い、修復を重ねない。
     run_git(repository, "worktree", "add", *args, str(path), "HEAD")
-    ensure_cmoc_ignored(path)
     return path
 
 

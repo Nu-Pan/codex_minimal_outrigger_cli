@@ -45,7 +45,6 @@ from commons.runtime_document_search_worker import (
     _heading_ranges,
     materials_directory,
 )
-from commons.runtime_git import ensure_cmoc_ignored
 from config.cmoc_config import CmocConfig
 
 
@@ -159,18 +158,18 @@ class _InferenceDouble:
 def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     """索引を Git 非追跡にした隔離 repository を作る。"""
     # 分類検査には実 index を使い、worktree 複製が必要なケースだけ HEAD を作る。
+    # ignore 修復は test_runtime_git_ignore.py に委ね、複製先にも規則を引き継ぐ。
     root = tmp_path / "repo"
     root.mkdir()
     init_repo(root)
     docs = root / "oracle/doc"
     docs.mkdir(parents=True)
     (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
-    (root / ".gitignore").write_text("oracle/doc/ignored.md\n")
+    (root / ".gitignore").write_text("oracle/doc/ignored.md\n/.cmoc/gu/\n")
     (docs / "ignored.md").write_text("# 非公開の本文\n")
     run_git(root, "add", ".gitignore", "oracle/doc")
     if committed:
         run_git(root, "commit", "-m", "add docs")
-    ensure_cmoc_ignored(root)
     return root
 
 
@@ -733,7 +732,7 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
     document.parent.mkdir(parents=True)
     a, b, c = "# A\nalpha\n", "# B\nbravo\n", "# C\ncharlie\n"
     document.write_text(a + b + c)
-    ensure_cmoc_ignored(root)
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
     runtime = tmp_path / "fake-worker"
     runtime.mkdir()
     _fake_node_model(runtime)
