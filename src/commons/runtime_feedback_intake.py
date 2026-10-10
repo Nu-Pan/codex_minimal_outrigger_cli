@@ -68,9 +68,7 @@ def _register(repo: Path, ledger: dict[str, Any], path: Path) -> bool:
     identity = path.stem
     if not is_observation_id(identity) or path.name != f"{identity}.json":
         raise _corruption("intake observation ID が不正です。", path)
-    _resolve_reference_path(
-        repo, reference["path"], observation_root(repo), "intake receipt"
-    )
+    # _read_ledger で path を検証済みの receipt は、同じ参照を再解決しない。
     previous = ledger["pending"].get(identity)
     if previous is not None:
         if {key: previous[key] for key in ("path", "sha256")} != reference:
@@ -78,6 +76,9 @@ def _register(repo: Path, ledger: dict[str, Any], path: Path) -> bool:
                 "intake receipt と raw observation が一致しません。", path
             )
         return False
+    _resolve_reference_path(
+        repo, reference["path"], observation_root(repo), "intake receipt"
+    )
     ledger["high_watermark"] += 1
     ledger["pending"][identity] = {"sequence": ledger["high_watermark"], **reference}
     return True

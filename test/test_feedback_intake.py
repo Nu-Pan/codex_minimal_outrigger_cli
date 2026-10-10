@@ -69,13 +69,14 @@ def test_capture_reads_each_raw_once_and_preserves_receipt_order(
     assert reads == {received: 2, orphan: 2}
 
 
-@pytest.mark.parametrize("fault", ["hash", "missing", "symlink", "duplicate_path"])
+@pytest.mark.parametrize(
+    "fault", ["hash", "missing", "symlink", "duplicate_path", "receipt_root"]
+)
 def test_capture_rejects_corrupt_receipt_even_before_requested_boundary(
     pending_receipt, fault
 ):
     root, raw, _ = pending_receipt
     ledger_path = feedback_root(root) / "intake.json"
-    original_ledger = ledger_path.read_bytes()
     content = raw.read_bytes()
     if fault == "hash":
         raw.write_bytes(canonical_json_bytes({"changed": True}))
@@ -86,10 +87,29 @@ def test_capture_rejects_corrupt_receipt_even_before_requested_boundary(
         target.write_bytes(content)
         raw.unlink()
         raw.symlink_to(target)
+    elif fault == "receipt_root":
+        outside = root / raw.name
+        raw.rename(outside)
+        ledger = read_json_object(ledger_path)
+        ledger["pending"][raw.stem]["path"] = outside.relative_to(root).as_posix()
+        ledger_path.write_bytes(canonical_json_bytes(ledger))
     else:
         duplicate, _ = _raw_input(root, raw.stem, "2026-10-09T00:00:00Z")
         assert duplicate.read_bytes() == content
 
+    original_ledger = ledger_path.read_bytes()
     with pytest.raises(CmocError):
         capture_high_watermark(root, 1)
     assert ledger_path.read_bytes() == original_ledger
+
+
+def test_new_receipt_rejects_raw_outside_observation_store(tmp_path):
+    raw, _ = _raw_input(tmp_path, "fbo_" + "1" * 32)
+    outside = tmp_path / raw.name
+    raw.rename(outside)
+
+    with observation_publication_lock(tmp_path):
+        with pytest.raises(CmocError, match="期待 root 外"):
+            record_observation_receipt(tmp_path, outside)
+    assert outside.is_file()
+    assert not (feedback_root(tmp_path) / "intake.json").exists()
