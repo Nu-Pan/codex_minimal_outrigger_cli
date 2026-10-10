@@ -418,8 +418,8 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monke
     assert 'latest_state_summary: "attention"' in text
 
 
-def test_close_rejects_writer_lock_and_pending_feedback_run(reported_case, monkeypatch):
-    root, _, issue = reported_case
+def test_close_rejects_writer_lock_and_pending_feedback_run(open_case, monkeypatch):
+    root, _, issue = open_case
     before = feedback_state.load_active_state(root)
     with feedback_state.feedback_writer_lock(root):
         result = _close(issue)
@@ -466,9 +466,9 @@ def test_close_completion_log_failure_reports_published_state(open_case, monkeyp
 
 
 def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
-    reported_case, monkeypatch
+    open_case, monkeypatch
 ):
-    root, _, issue = reported_case
+    root, _, issue = open_case
     _install_codex_outputs(
         monkeypatch, _remediation_output(issue["issue_id"], "human_required")
     )

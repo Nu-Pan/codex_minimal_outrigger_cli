@@ -1411,9 +1411,9 @@
   },
   "test/test_feedback_close.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "066672064fbd9e296918208bf21b6936f0fdfafc5651baca05c5c3485fd53f32",
+    "last_investigated_at": "2026-10-11_03-08-34_400"
   },
   "test/test_feedback_decision.py": {
     "investigation_required": true,
