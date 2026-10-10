@@ -432,31 +432,34 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
 @pytest.fixture
 def oracle_edit_failure_repository(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[Path]:
-    """準備失敗の検証に必要な Git root・設定・doctor 呼び出し記録を用意する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    """準備失敗の検証に必要な root・設定・前処理の呼び出し記録を用意する。"""
+    # 準備失敗には Git state は不要。共通 fixture で CLI root と collector を隔離する。
+    root = cli_terminal_directory
     write_config(config_path(root), CmocConfig())
-    # 保存先の ignore 検査だけ実 Git を使い、反復する探索と未使用の TCP 起動を外す。
-    # root 境界は test_basic_runtime.py、collector の受付・drain は test_feedback.py に残す。
+    # builder も同じ root を使う。実 Git の探索は edit-success と test_basic_runtime.py に残す。
     monkeypatch.setattr(
         path_model_module,
         "_resolve_git_worktree_roots",
         lambda _start_path=None: (root, root),
     )
+    # doctor・ignore の実処理は edit-success と専用 test に残し、呼び出し先と順序を検証する。
+    # ignore の境界・失敗は test_runtime_git_ignore.py、doctor の修復は test_doctor_cli.py にある。
+    preparation_calls: list[tuple[str, Path]] = []
     monkeypatch.setattr(
-        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+        runtime_cli_module,
+        "run_doctor_preprocess",
+        lambda target_root: preparation_calls.append(("doctor", target_root)),
     )
-    # doctor の修復・索引同期との結合と順序は、上の exec 制御テストで検証する。
-    # 準備失敗には履歴・session は不要で、doctor の呼び出しだけを確認する。
-    doctor_roots: list[Path] = []
     monkeypatch.setattr(
-        runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
+        oracle_edit_module,
+        "ensure_prompt_editor_roots_ignored",
+        lambda target_root: preparation_calls.append(("ignore", target_root)),
     )
     yield root
-    assert doctor_roots == [root]
+    assert preparation_calls == [("doctor", root), ("ignore", root)]
 
 
 def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
