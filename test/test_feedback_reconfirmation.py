@@ -91,6 +91,7 @@ def feedback_run(tmp_path, monkeypatch):
         head="a" * 40,
         committed={},
         commits=[],
+        commit_attempts=[],
         handler=lambda issue: _remediation_output(issue["issue_id"], "not_actionable"),
     )
 
@@ -113,7 +114,9 @@ def feedback_run(tmp_path, monkeypatch):
         )
 
     def commit(*_args):
-        if not changed():
+        paths = changed()
+        harness.commit_attempts.append(paths)
+        if not paths:
             return None
         harness.head = f"{len(harness.commits) + 1:040x}"
         harness.committed = contents()
@@ -547,6 +550,11 @@ def test_later_dependency_change_rechecks_every_result(
 
     h.handler = call
     _run(h)
+    assert h.commit_attempts == (
+        [["README.md"], ["dependency.conf"]]
+        if status == "fixed"
+        else [["dependency.conf"]]
+    )
     assert [item["issue_id"] for item in h.calls] == [first, second, first]
     assert len(h.manifest["run"]["waves"]) == 2
     assert h.manifest["run"]["high_watermark"] == 0
@@ -555,10 +563,51 @@ def test_later_dependency_change_rechecks_every_result(
     selected = selected_remediation_checkpoints(loaded)
     assert len(selected) == report._remediation_candidate_count(loaded) == 2
     assert selected[0]["path"].endswith(".00000002.json")
+    checkpoint = run_state.read_run_artifact(
+        h.context.repo, {key: selected[0][key] for key in ("path", "sha256")}
+    )
+    audit = checkpoint["audit"]
+    assert audit["commit"] is None
+    assert audit["before_commit"] == audit["after_commit"] == h.head
+    assert audit["changed_paths"] == []
     result = _join_and_publish(h, monkeypatch)
     assert result.result == "ok"
     assert load_active_state(h.context.repo).issues == {}
     assert "remediation_issue_count: 2" in result.primary_report.read_text()
+
+
+@pytest.mark.parametrize("fault", ["head", "forbidden_path"])
+def test_unchanged_issue_still_checks_the_whole_work_unit(
+    feedback_run, monkeypatch, fault
+):
+    """agent 差分が空でも、確定前の HEAD と全差分の検査を省略しない。"""
+    h = feedback_run
+    _add_candidate(h, "a")
+    inspections = 0
+
+    def changed(*_args, **_kwargs):
+        nonlocal inspections
+        inspections += 1
+        if inspections == 1:
+            return []
+        if fault == "head":
+            h.head = "b" * 40
+            return []
+        return ["AGENTS.md"]
+
+    monkeypatch.setattr(remediation, "worktree_change_paths", changed)
+    monkeypatch.setattr(
+        remediation,
+        "unexpected_run_paths",
+        lambda _context, changes: [path for change in changes for path in change.paths],
+    )
+
+    with pytest.raises(CmocError, match="想定外差分"):
+        _run(h)
+
+    assert inspections == 2
+    assert h.commit_attempts == []
+    assert h.manifest["processing"]["remediation_checkpoints"] == []
 
 
 @pytest.mark.parametrize("additional_evidence", [False, True])
