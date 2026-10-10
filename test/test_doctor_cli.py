@@ -1222,8 +1222,12 @@ def test_doctor_restores_missing_tracked_gitkeep(
     """tracked な `.agents/.gitkeep` の unstaged deletion を復元する。"""
 
     root = make_repo(tmp_path)
-    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
+    # 必要な追跡 entry だけを準備し、doctor の全修復を setup で重ねない。
     gitkeep = root / ".agents" / ".gitkeep"
+    gitkeep.parent.mkdir()
+    gitkeep.write_text("")
+    run_git(root, "add", ".agents/.gitkeep")
+    run_git(root, "commit", "-m", "track agents placeholder")
     if index_flag is not None:
         run_git(root, "update-index", index_flag, ".agents/.gitkeep")
     before_flags = run_git(root, "ls-files", "-v", ".agents/.gitkeep").stdout
@@ -1358,7 +1362,10 @@ def test_doctor_preserves_preexisting_staged_gitignore_deletion(
 
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    run_doctor(root)
+    # staged deletion の前提には追跡済み ignore file があれば足りる。
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "track cmoc ignore rule")
 
     run_git(root, "rm", "--cached", "-f", "--", ".gitignore")
     before = run_git(root, "diff", "--cached", "--name-status").stdout
@@ -1478,7 +1485,10 @@ def test_normal_preprocess_requires_validated_materials(
     """通常起動は資材未検証なら本命処理前に doctor を案内する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    run_doctor(root)
+    # 保存済み設定だけを用意し、失敗点より後の索引同期・reporter を先行実行しない。
+    config_path = doctor_module.config_path(root)
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(json.dumps(config_to_dict(CmocConfig())) + "\n")
 
     def missing_materials(_root: Path, _config: object) -> Path:
         raise SearchError("NOT_READY", "validation record is missing")
