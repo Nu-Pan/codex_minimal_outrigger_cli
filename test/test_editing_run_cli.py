@@ -38,7 +38,6 @@ import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.abandon as run_abandon_module
 import sub_commands.run.join as run_join_command_module
-import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_config import write_config
 from commons.runtime_content import file_sha256
@@ -220,15 +219,6 @@ def _stop_after_cycles(monkeypatch: pytest.MonkeyPatch, cycles: int = 1) -> None
         return initialize(context, **kwargs)
 
     monkeypatch.setattr(refactor_module, "_initialize_cycle", initialize_or_interrupt)
-
-
-def test_legacy_lifecycle_shim_reexports_agent_path_validation() -> None:
-    """旧 run lifecycle import path が canonical helper を再公開する。"""
-    assert (
-        legacy_lifecycle_module.unexpected_agent_paths
-        is lifecycle_module.unexpected_agent_paths
-    )
-    assert "unexpected_agent_paths" in legacy_lifecycle_module.__all__
 
 
 def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:
@@ -2173,11 +2163,10 @@ def test_apply_start_failure_does_not_recover_existing_error_run(
 
 
 def test_refactor_start_failure_does_not_recover_existing_error_run(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_content_session: tuple[Path, str, Path],
 ) -> None:
     """新しい refactor fork の事前条件失敗で既存 error run を変更しない。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
     context = start_editing_run("realization_refactor")
     set_run_state(context, "error")
     (context.run_worktree / "README.md").write_text("existing error run\n")
@@ -2227,12 +2216,12 @@ def test_start_run_rechecks_session_branch_under_lock(
 
 @pytest.mark.parametrize("interrupted_before_tracking", [False, True])
 def test_refactor_start_error_does_not_recover_competing_run(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     interrupted_before_tracking: bool,
 ) -> None:
     """開始失敗や中断で別 invocation の run を回収しない。"""
-    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, session_branch, state_path = ready_run_session
     original_start = refactor_module.start_editing_run
 
     def competing_start(kind: str) -> EditingRunContext:
@@ -2261,11 +2250,11 @@ def test_refactor_start_error_does_not_recover_competing_run(
 
 
 def test_recover_started_run_rejects_run_owned_by_other_process(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """別 process の tracking を持つ active run を recovery 対象にしない。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_refactor")
     tracked = SimpleNamespace(
         process_id=os.getpid() + 1,
@@ -2280,11 +2269,10 @@ def test_recover_started_run_rejects_run_owned_by_other_process(
 
 
 def test_recover_started_run_rejects_unreadable_process_tracking(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_run_session: tuple[Path, str, Path],
 ) -> None:
     """壊れた tracking を未作成として別 process の run recovery に使わない。"""
-    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, session_branch, state_path = ready_run_session
     context = start_editing_run("realization_refactor")
     tracking_path = run_process_id_path(
         root, session_branch.removeprefix("cmoc/session/")
