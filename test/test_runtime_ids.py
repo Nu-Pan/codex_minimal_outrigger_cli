@@ -14,6 +14,29 @@ import pytest
 import commons.runtime_ids as runtime_ids
 
 
+@pytest.mark.parametrize(
+    ("issued_at", "valid"),
+    [
+        ("0001-01-01_00-00", True),
+        ("2000-02-29_23-59", True),
+        ("9999-12-31_23-59", True),
+        ("0000-01-01_00-00", False),
+        ("1900-02-29_00-00", False),
+        ("2026-02-29_00-00", False),
+        ("2026-04-31_00-00", False),
+        ("2026-00-01_00-00", False),
+        ("2026-13-01_00-00", False),
+        ("2026-01-00_00-00", False),
+        ("2026-01-32_00-00", False),
+        ("2026-01-01_24-00", False),
+        ("2026-01-01_00-60", False),
+    ],
+)
+def test_common_id_requires_real_calendar_datetime(issued_at: str, valid: bool) -> None:
+    """固定書式に一致しても、実在しない暦日や時刻は受理しない。"""
+    assert runtime_ids.is_common_id(f"exec_000000_{issued_at}", "exec") is valid
+
+
 def test_ids_keep_issue_order_when_clock_moves_backward(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -27,14 +50,10 @@ def test_ids_keep_issue_order_when_clock_moves_backward(
         ]
     )
 
-    class Clock:
+    class Clock(datetime):
         @staticmethod
         def now() -> datetime:
             return next(times)
-
-        @staticmethod
-        def strptime(value: str, format_string: str) -> datetime:
-            return datetime.strptime(value, format_string)
 
     monkeypatch.setattr(runtime_ids, "datetime", Clock)
     first = runtime_ids.new_id(tmp_path, "exec")

@@ -25,8 +25,9 @@ def is_common_id(value: object, prefix: str) -> bool:
     if match is None or match.group("prefix") != prefix:
         return False
     try:
-        datetime.strptime(
-            f"{match.group('date')}_{match.group('time')}", "%Y-%m-%d_%H-%M"
+        # 固定書式は検査済みなので、汎用書式解析を介さず暦と時刻を検査する。
+        datetime.fromisoformat(
+            f"{match.group('date')}T{match.group('time').replace('-', ':')}"
         )
     except ValueError:
         return False
