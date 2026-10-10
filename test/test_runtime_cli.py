@@ -45,7 +45,6 @@ from cmoc_runtime import (
     TerminalResult,
     format_duration,
     render_error,
-    write_config,
 )
 from commons.runtime_ids import is_common_id
 from config.cmoc_config import CmocConfig
@@ -63,7 +62,7 @@ def _clear_completion_probe_environment(
 
 @pytest.fixture
 def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """表示・通知の検査では Git 探索と collector 起動を準備から外す。"""
+    """表示・通知・前処理失敗の検査では Git 探索と collector 起動を外す。"""
     # 実 Git の root 境界はこの file の cwd・linked worktree ケースで検証する。
     # collector の TCP 受付・保存・drain は test_feedback.py に残す。
     root = tmp_path / "repo"
@@ -412,11 +411,10 @@ def test_detector_does_not_swallow_keyboard_interrupt(
 
 
 def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """doctor preprocess の失敗を終了コードとサブコマンドログに記録する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
 
     def fail_doctor(_root: Path) -> None:
         """doctor preprocess の失敗を再現する fake。
@@ -429,7 +427,7 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
 
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
-            lambda: 0,
+            lambda: pytest.fail("implementation must not start after doctor failure"),
             command_name="probe",
             command_argv=["cmoc", "probe"],
         )
@@ -745,12 +743,11 @@ def test_cli_terminal_notification_distinguishes_user_interruption(
 
 
 def test_interruptible_cli_handles_common_preprocess_interrupt(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """interruptible command の common preprocess 中断を正常完了として扱う。"""
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
     calls: list[str] = []
     monkeypatch.setattr(
         runtime_cli,
@@ -848,13 +845,19 @@ def test_cli_handled_failure_is_written_to_stderr(
     """想定済み CLI error は簡潔な terminal result を stderr に返す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    # 通常起動に必要な設定だけを用意し、doctor は session fork 内で実行する。
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    # doctor 修復と collector の TCP lifecycle は専用 test に残し、
+    # 実 Git の detached HEAD 検出から CLI の stderr・終了コードまでを通す。
+    doctor_roots: list[Path] = []
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", doctor_roots.append)
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
     run_git(root, "switch", "--detach", "HEAD")
 
     result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code != 0
+    assert doctor_roots == [root]
     assert result.stdout == ""
     assert "# 失敗: cmoc session fork" in result.stderr
     assert "detached HEAD 上では実行できません。" in result.stderr
@@ -967,13 +970,12 @@ def test_cli_completion_marker_skips_normal_command(
 
 
 def test_pre_log_check_failure_writes_subcommand_log(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """pre-log check の失敗時にもサブコマンドログを生成する。"""
     import sub_commands.session.fork as session_fork
 
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     doctor_roots: list[Path] = []
     # doctor 修復は専用 test で検証し、ここでは CLI dispatch と失敗時のログを通す。
