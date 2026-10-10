@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from oracle.other.cmoc_config import DocumentSearchConfig
-from test_document_search import _InferenceDouble, _repo_with_docs, _tuning
+from test_document_search import _InferenceDouble, _tuning
 
 from commons import runtime_document_search as search_module
 from commons.runtime_config import write_config
@@ -25,6 +25,17 @@ from commons.runtime_document_search_observation import (
 from commons.runtime_document_search_worker import NodeSearchWorker
 from commons.runtime_paths import config_path
 from config.cmoc_config import CmocConfig
+
+
+@pytest.fixture
+def search_repository(cli_repository: Path) -> Path:
+    """期限・診断の検証に必要な文書と ignore 規則だけを用意する。"""
+    # 文書の分類と ignore 修復は専用テストで検証し、ここでは staging・修復を重ねない。
+    (cli_repository / ".gitignore").write_text("/.cmoc/gu/\n")
+    docs = cli_repository / "oracle/doc"
+    docs.mkdir(parents=True)
+    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
+    return cli_repository
 
 
 def _observation(tmp_path, *, request=True):
@@ -192,9 +203,9 @@ def test_simultaneous_deadlines_and_cleanup_failure_preserve_original_reason(
 
 
 def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
-    tmp_path, document_search_clock
+    tmp_path, search_repository, document_search_clock
 ):
-    root = _repo_with_docs(tmp_path)
+    root = search_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     observation, events = _observation(root)
 
@@ -226,8 +237,10 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
     assert sync["longest_no_progress_seconds"] == 400
 
 
-def test_doctor_sync_has_no_search_deadlines(tmp_path, document_search_clock):
-    root = _repo_with_docs(tmp_path)
+def test_doctor_sync_has_no_search_deadlines(
+    tmp_path, search_repository, document_search_clock
+):
+    root = search_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     events = []
 
@@ -258,8 +271,10 @@ def test_doctor_sync_has_no_search_deadlines(tmp_path, document_search_clock):
 @pytest.mark.parametrize(
     "setting", ["search_request_timeout_seconds", "shutdown_grace_seconds"]
 )
-def test_saved_deadline_growth_requires_a_new_codex_connection(tmp_path, setting):
-    root = _repo_with_docs(tmp_path)
+def test_saved_deadline_growth_requires_a_new_codex_connection(
+    search_repository, setting
+):
+    root = search_repository
     initial = _tuning()
     write_config(config_path(root), CmocConfig(document_search=initial))
     events = []
@@ -294,9 +309,9 @@ def test_saved_deadline_growth_requires_a_new_codex_connection(tmp_path, setting
         assert events[-1]["status"] == "failed"
 
 
-def test_parallel_requests_log_to_their_own_codex_calls(tmp_path):
+def test_parallel_requests_log_to_their_own_codex_calls(tmp_path, search_repository):
     # 開始記録で両要求を揃え、固定待機なしで同時実行を確実にする。
-    root = _repo_with_docs(tmp_path)
+    root = search_repository
     path = tmp_path / "caller.jsonl"
     path.touch()
     requests_started = threading.Barrier(2)
@@ -346,9 +361,9 @@ def test_parallel_requests_log_to_their_own_codex_calls(tmp_path):
 
 
 def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
-    tmp_path, document_search_clock, monkeypatch
+    search_repository, document_search_clock, monkeypatch
 ):
-    root = _repo_with_docs(tmp_path)
+    root = search_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     events = []
 

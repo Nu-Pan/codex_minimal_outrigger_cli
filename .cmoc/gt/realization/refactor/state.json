@@ -835,9 +835,9 @@
   },
   "src/commons/runtime_document_search_observation.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "e7014c1891609b5cdc492c44206294f8d5e178df44df9f9612044da0cfebfc3f",
+    "last_investigated_at": "2026-10-10_09-09-34_244"
   },
   "src/commons/runtime_document_search_setup.py": {
     "investigation_required": true,
