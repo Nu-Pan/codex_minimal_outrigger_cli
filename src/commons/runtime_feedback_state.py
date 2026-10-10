@@ -688,12 +688,17 @@ def _has_symlink_component(path: Path) -> bool:
     return False
 
 
-def _read_canonical_object(path: Path, description: str) -> _JsonObject:
+def _read_canonical_object(
+    path: Path, description: str, *, expected_sha256: str | None = None
+) -> _JsonObject:
     """通常 file の canonical JSON object を読む。"""
     if _has_symlink_component(path) or not path.is_file():
         raise _corruption(f"{description} が通常 file ではありません。", path)
     try:
         content = path.read_bytes()
+        # 参照がある場合は、parse する同じ byte 列の hash を検証する。
+        if expected_sha256 is not None and sha256_bytes(content) != expected_sha256:
+            raise _corruption(f"{description} の SHA256 が一致しません。", path)
         value = json.loads(content)
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise _corruption(
@@ -785,6 +790,26 @@ def artifact_reference(repo: Path, path: Path) -> _JsonObject:
     }
 
 
+def _resolve_artifact_reference(
+    repo: Path,
+    reference: object,
+    *,
+    expected_root: Path,
+    description: str,
+) -> tuple[Path, str]:
+    """reference の field・path・hash 書式を検証し、読込先を確定する。"""
+    # 存在や内容の検査は、解決した参照を読む側で行う。
+    if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
+        raise _corruption(f"{description} reference が不正です。", expected_root)
+    path = _resolve_reference_path(
+        repo, reference.get("path"), expected_root, description
+    )
+    digest = reference.get("sha256")
+    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise _corruption(f"{description} SHA256 が不正です。", path)
+    return path, digest
+
+
 def _validate_artifact_reference(
     repo: Path,
     reference: object,
@@ -794,14 +819,10 @@ def _validate_artifact_reference(
     allow_missing: bool = False,
 ) -> Path:
     """artifact の path・hash を検証し、cleanup では削除済みだけを許す。"""
-    if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
-        raise _corruption(f"{description} reference が不正です。", expected_root)
-    path = _resolve_reference_path(
-        repo, reference.get("path"), expected_root, description
+    # JSON の読込と cleanup で reference の検査を共有する。
+    path, digest = _resolve_artifact_reference(
+        repo, reference, expected_root=expected_root, description=description
     )
-    digest = reference.get("sha256")
-    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
-        raise _corruption(f"{description} SHA256 が不正です。", path)
     if allow_missing and not path.exists() and not path.is_symlink():
         return path
     if _has_symlink_component(path) or not path.is_file():
