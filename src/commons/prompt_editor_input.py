@@ -48,12 +48,9 @@ def edit_prompt_editor_input(
     input_path: Path,
     complete_prompt_skeleton: str,
 ) -> None:
-    """空の入力 file と独立した handoff ガイドを準備し、エディタを起動する。"""
+    """予約済みの入力 file と独立した handoff ガイドで、エディタを起動する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     validate_editor_input_file(root, input_path)
-
-    # 人間向け案内や受信側の雛形を依頼本文へ混入させない。
-    input_path.write_text("", encoding="utf-8")
 
     argv = [*_select_editor(), str(input_path)]
     target = start_editor_input_handoff(root, input_path, complete_prompt_skeleton)
