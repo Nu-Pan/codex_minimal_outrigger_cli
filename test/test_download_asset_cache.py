@@ -23,6 +23,7 @@ from _cli_support import runner, terminal_primary_report
 from _download_asset_support import download_response, process_obtain
 from _git_support import make_repo
 
+import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
 import commons.runtime_document_search_assets as assets
 import commons.runtime_document_search_setup as setup
@@ -311,6 +312,10 @@ def test_doctor_reports_asset_success_separately_from_validation_failure(
     """取得・公開成功を保持し、後続の動作検証失敗を doctor 成功にしない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    # 資材準備から失敗 report までを通し、TCP 受付は test_feedback.py に残す。
+    monkeypatch.setattr(
+        cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+    )
     asset = _asset(distribution)
 
     def prepare_and_fail(cmoc_root, _config):
