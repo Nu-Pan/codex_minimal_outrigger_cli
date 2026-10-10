@@ -842,6 +842,8 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
                 f"feedback observation root is not a regular directory: {root}"
             )
         current = os.path.dirname(current)
+    # 検査した inventory をそのまま使い、再列挙と同じ path の再検査を避ける。
+    validated_paths: list[Path] = []
     if root.exists():
         for path in root.rglob("*"):
             if path.is_dir() and not path.is_symlink():
@@ -855,10 +857,9 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
                 raise ValueError(
                     f"feedback observation store has an invalid artifact: {path}"
                 )
+            validated_paths.append(path)
     processed_ids = published_cleanup_observation_ids(repo)
-    return [
-        path for path in iter_observation_paths(repo) if path.stem not in processed_ids
-    ]
+    return sorted(path for path in validated_paths if path.stem not in processed_ids)
 
 
 def feedback_completion_counts(
@@ -878,23 +879,23 @@ def feedback_completion_counts(
         )
     warnings: list[str] = []
     # notification threshold は詳細を展開せず report 実行だけを促す。
-    oldest_age_days: float | None = None
-    for path in pending:
-        try:
-            observation = read_json_object(path)
-            observed_at = observation.get("observed_at")
-            if not isinstance(observed_at, str):
+    # 件数または古い一件で通知が確定した後は、残りの本文を読む必要がない。
+    threshold_reached = len(pending) >= 100
+    if not threshold_reached:
+        now = datetime.now(timezone.utc)
+        for path in pending:
+            try:
+                observation = read_json_object(path)
+                observed_at = observation.get("observed_at")
+                if not isinstance(observed_at, str):
+                    continue
+                age = now - parse_rfc3339(observed_at).astimezone(timezone.utc)
+                if age.total_seconds() >= 7 * 86400:
+                    threshold_reached = True
+                    break
+            except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
                 continue
-            age = datetime.now(timezone.utc) - parse_rfc3339(observed_at).astimezone(
-                timezone.utc
-            )
-            days = age.total_seconds() / 86400
-            oldest_age_days = (
-                days if oldest_age_days is None else max(oldest_age_days, days)
-            )
-        except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
-            continue
-    if len(pending) >= 100 or (oldest_age_days is not None and oldest_age_days >= 7):
+    if threshold_reached:
         warnings.append(
             "pending feedback が蓄積しています。`cmoc feedback report` を実行してください。"
         )
