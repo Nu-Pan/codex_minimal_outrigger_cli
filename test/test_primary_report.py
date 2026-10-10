@@ -483,15 +483,28 @@ def test_user_interruption_saves_feedback_invocation_summary(
 
 
 @pytest.mark.parametrize("supplied_report", [False, True])
-def test_primary_report_keeps_every_codex_output_and_accepted_observation(
+def test_primary_report_keeps_outputs_observations_and_artifact_paths(
     primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
     supplied_report: bool,
 ) -> None:
-    """初回 exec と resume の出力本文を、個別 report と fallback の両方へ残す。"""
+    """初回・resume の本文、区切り付き path、observation を両 report 経路へ残す。"""
     from commons.runtime_logging import current_subcommand_logger
 
-    outputs = ("first final output\n```embedded fence```\n", "resume final output\n")
+    root = primary_report_directory
+    # path の境界条件も同じ保存経路で検証し、別の CLI invocation を準備しない。
+    artifacts = (
+        (
+            root / "output`first.txt",
+            root / "call`first.json",
+            "first final output\n```embedded fence```\n",
+        ),
+        (
+            root / "output`resume.txt",
+            root / "call`resume.json",
+            "resume final output\n",
+        ),
+    )
     observation = {
         "summary": "accepted issue",
         "workload_limitation": "different workload",
@@ -499,10 +512,16 @@ def test_primary_report_keeps_every_codex_output_and_accepted_observation(
 
     def body() -> TerminalResult:
         logger = current_subcommand_logger()
-        for number, content in enumerate(outputs):
-            output = logger.path.with_name(f"output-{number}.txt")
+        assert logger is not None
+        for output, call_log, content in artifacts:
             output.write_text(content)
-            logger.event("codex_call", output_path=str(output))
+            logger.event(
+                "codex_call",
+                output_path=str(output),
+                call_log_path=str(call_log),
+                purpose="unsafe path",
+                status="succeeded",
+            )
         logger.event(
             "feedback_observation_accepted",
             observation_id="fbo_000000_2026-09-29_15-04",
@@ -521,7 +540,14 @@ def test_primary_report_keeps_every_codex_output_and_accepted_observation(
     runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
     captured = capsys.readouterr()
     report = terminal_primary_report(captured.out).read_text()
-    assert all(content in report for content in outputs)
+    for output, call_log, content in artifacts:
+        assert content in report
+        assert f"出力: ``{output.resolve()}``" in report
+        if not supplied_report:
+            expected_call_log = str(call_log.resolve()).replace("`", "'")
+            assert (
+                f"Codex call (unsafe path, succeeded): `{expected_call_log}`" in report
+            )
     assert "accepted issue" in report
     assert "different workload" in report
 
@@ -636,39 +662,6 @@ def test_primary_report_explains_when_codex_output_is_unavailable(
 
     assert "### Codex 最終出力" in report
     assert "取得済みの最終出力はありません。" in report
-
-
-def test_primary_report_delimits_and_escapes_artifact_paths(
-    primary_report_directory: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """Codex artifact path の Markdown delimiter を壊さずに report へ載せる。"""
-    from commons.runtime_logging import current_subcommand_logger
-
-    root = primary_report_directory
-    output_path = root / "output`file.txt"
-    call_log_path = root / "call`file.json"
-
-    def body() -> TerminalResult:
-        logger = current_subcommand_logger()
-        assert logger is not None
-        output_path.write_text("final output\n")
-        logger.event(
-            "codex_call",
-            output_path=str(output_path),
-            call_log_path=str(call_log_path),
-            purpose="unsafe path",
-            status="succeeded",
-        )
-        return TerminalResult()
-
-    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
-
-    report = terminal_primary_report(capsys.readouterr().out).read_text()
-    expected_output = str(output_path.resolve())
-    expected_call_log = str(call_log_path.resolve()).replace("`", "'")
-    assert f"出力: ``{expected_output}``" in report
-    assert f"Codex call (unsafe path, succeeded): `{expected_call_log}`" in report
 
 
 def test_refactor_fallback_records_user_interruption_reason(

@@ -186,22 +186,14 @@ def test_subcommand_logger_writes_utf8_without_locale_dependency(
 ) -> None:
     """ASCII locale でも日本語を含む JSON Lines event を保存する。"""
     source_root = Path(__file__).resolve().parents[1]
+    # 子 process の cwd を test root とし、別の一時 directory を作らない。
     script = r"""
-import json
-import tempfile
 from pathlib import Path
 
 from commons.runtime_logging import SubcommandLogger
 
-root = Path(tempfile.mkdtemp())
-logger = SubcommandLogger(root, "probe")
+logger = SubcommandLogger(Path.cwd(), "probe")
 logger.event("warning", message="\u65e5\u672c\u8a9e warning")
-events = [
-    json.loads(line)
-    for line in logger.path.read_text(encoding="utf-8").splitlines()
-]
-assert events[0]["message"] == "\u65e5\u672c\u8a9e warning"
-print("ok")
 """
     result = subprocess.run(
         [sys.executable, "-c", script],
@@ -220,7 +212,11 @@ print("ok")
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "ok"
+    [log_path] = (tmp_path / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    events = [
+        json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert events[0]["message"] == "日本語 warning"
 
 
 def test_noninteractive_success_emits_one_terminal_result_after_progress(
