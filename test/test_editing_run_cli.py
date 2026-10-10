@@ -441,7 +441,16 @@ def test_run_join_doctor_sync_depends_on_active_run_kind(
     expected_sync: bool,
 ) -> None:
     """run kind に応じて join 前 doctor の refactor state 同期を切り替える。"""
-    start_editing_run(kind)
+    _root, _session_branch, state_path = ready_run_session
+    # 同期の選択は保存済み kind だけを読み、run branch/worktree の作成は不要。
+    state = SessionState.from_dict(_state(state_path))
+    state.run = RunPart(
+        state="running",
+        kind=kind,
+        branch=RUN_BRANCH,
+        fork_commit=state.session.session_fork_commit,
+    )
+    write_state(state_path, state)
     calls: list[bool] = []
     monkeypatch.setattr(
         run_join_module,
@@ -2503,11 +2512,10 @@ def test_resolve_active_run_reuses_placement_queries_but_refreshes_state_and_wor
 
 
 def test_resolve_active_run_rejects_run_branch_from_another_session(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_run_session: tuple[Path, str, Path],
 ) -> None:
     """active run の branch が state の session と異なる場合は拒否する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_run_session
     state = _state(state_path)
     state["run"] = {
         "state": "running",
@@ -2522,11 +2530,10 @@ def test_resolve_active_run_rejects_run_branch_from_another_session(
 
 
 def test_set_run_state_rejects_overwriting_terminal_state(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_run_session: tuple[Path, str, Path],
 ) -> None:
     """公開済み terminal state を遅延 cleanup が別 state へ変更しない。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_run_session
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
 
