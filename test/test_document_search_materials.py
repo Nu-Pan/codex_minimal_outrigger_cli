@@ -39,11 +39,14 @@ def small_materials(monkeypatch: pytest.MonkeyPatch) -> dict[str, bytes]:
     monkeypatch.setattr(setup, "SEARCH_MATERIALS", materials)
     monkeypatch.setattr(worker, "SEARCH_MATERIALS", materials)
     monkeypatch.setattr(setup, "require_cmoc_ignored", lambda _root: None)
-    monkeypatch.setattr(
-        urllib.request.OpenerDirector,
-        "open",
-        lambda *_args, **_kwargs: io.BytesIO(contents["embedding"]),
-    )
+
+    # 通信経路は test_download_asset_cache.py で検査し、ここでは TLS 初期化も省く。
+    def fake_opener(*_handlers: object) -> SimpleNamespace:
+        return SimpleNamespace(
+            open=lambda *_args, **_kwargs: io.BytesIO(contents["embedding"])
+        )
+
+    monkeypatch.setattr(urllib.request, "build_opener", fake_opener)
     return contents
 
 

@@ -1369,9 +1369,9 @@
   },
   "test/test_document_search_materials.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "42740a70a885bd0d0814afca63abbce59dadac8fc13431c604be74259305ebc7",
+    "last_investigated_at": "2026-10-11_02-04-44_921"
   },
   "test/test_document_search_reuse.py": {
     "investigation_required": true,
