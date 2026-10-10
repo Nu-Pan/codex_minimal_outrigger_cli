@@ -1531,9 +1531,9 @@
   },
   "test/test_runtime_file_access.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "da671493f26abe84c50a963e608fef2af59ab84a099bb946321c5c38401ad4a2",
+    "last_investigated_at": "2026-10-11_05-53-25_822"
   },
   "test/test_runtime_git_ignore.py": {
     "investigation_required": true,

@@ -1,13 +1,12 @@
-"""FileAccessMode の Codex sandbox 変換契約を検証する。
+"""FileAccessMode の永続化値を検証する。
 
 根拠:
 - {{work-root}}/oracle/src/oracle/acp_builder/basic.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+
+sandbox の全 mode 変換と未知 mode の拒否は test_runtime_codex_profile.py で検証する。
 """
 
 from basic.acp import FileAccessMode
-from cmoc_runtime import file_access_to_sandbox_mode
 
 
 def test_file_access_mode_values_are_json_ready() -> None:
@@ -18,22 +17,3 @@ def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.PURE_ORACLE_WRITE.value == "pure_oracle_write"
     assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
     assert FileAccessMode.NO_POLICY.value == "no_policy"
-
-
-def test_file_access_to_sandbox_mode_uses_workspace_write_for_valid_modes() -> None:
-    """論理 mode の違いによらず agent call の sandbox を選ぶ。"""
-    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "workspace-write"
-    assert (
-        file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ)
-        == "workspace-write"
-    )
-    assert (
-        file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE)
-        == "workspace-write"
-    )
-    assert (
-        file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE)
-        == "workspace-write"
-    )
-    assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
-    assert file_access_to_sandbox_mode(FileAccessMode.NO_POLICY) == "workspace-write"
