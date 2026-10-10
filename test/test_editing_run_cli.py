@@ -441,6 +441,59 @@ def test_run_join_doctor_sync_depends_on_active_run_kind(
     assert calls == [expected_sync]
 
 
+@pytest.mark.parametrize("has_repair_record", [False, True], ids=["absent", "empty"])
+def test_doctor_paths_for_join_skips_diff_without_repairs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    has_repair_record: bool,
+) -> None:
+    """対象 worktree の修復がなければ先行差分を Git に照会しない。"""
+    run_worktree = tmp_path / "run"
+    changes = {tmp_path: ("session-before-doctor", {"session-only.md"})}
+    if has_repair_record:
+        changes[run_worktree] = ("run-before-doctor", set())
+    monkeypatch.setattr(
+        run_join_module,
+        "tree_changes",
+        lambda *_args: pytest.fail("no repair paths need a history query"),
+    )
+
+    assert (
+        run_join_module.doctor_paths_for_join(changes, run_worktree, "run-fork")
+        == set()
+    )
+
+
+def test_doctor_paths_for_join_preserves_preexisting_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """修復と重なる先行変更は rename 両端と削除を含めて差分検査に残す。"""
+    run_worktree = tmp_path / "run"
+    repair_paths = {"new-repair.md", "shared.md", "old.md", "renamed.md", "deleted.md"}
+    changes = {
+        tmp_path: ("session-before-doctor", {"session-only.md"}),
+        run_worktree: ("run-before-doctor", repair_paths),
+    }
+
+    def preexisting_changes(worktree, base, end):
+        assert (worktree, base, end) == (
+            run_worktree,
+            "run-fork",
+            "run-before-doctor",
+        )
+        return [
+            GitChange("M", ("shared.md",)),
+            GitChange("R100", ("old.md", "renamed.md")),
+            GitChange("D", ("deleted.md",)),
+        ]
+
+    monkeypatch.setattr(run_join_module, "tree_changes", preexisting_changes)
+
+    assert run_join_module.doctor_paths_for_join(changes, run_worktree, "run-fork") == {
+        "new-repair.md"
+    }
+
+
 def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
     """change summaryのpathを実際の変更対象へ制限する。"""
     assert refactor_module._render_summary(
@@ -2290,11 +2343,10 @@ def test_recover_started_run_rejects_unreadable_process_tracking(
 
 
 def test_run_join_allows_oracle_change_on_session_branch(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_join_session: tuple[Path, str, Path],
 ) -> None:
     """session branch の oracle change を run join が保持する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "oracle/spec.md")
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
@@ -2318,11 +2370,11 @@ def test_run_join_allows_oracle_change_on_session_branch(
 
 
 def test_run_join_from_run_worktree_allows_doctor_state_sync(
-    tmp_path: Path,
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run worktree からの join でも doctor state 同期を許可する。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "README.md")
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
@@ -2358,11 +2410,11 @@ def test_run_join_from_run_worktree_tracks_main_doctor_repairs(
 
 
 def test_run_join_from_run_worktree_preserves_prior_session_doctor_path_change(
-    tmp_path: Path,
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """doctor と同じ path の先行 session 差分も統合する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_join_session
     context = start_editing_run("realization_apply")
     gitignore = root / ".gitignore"
     gitignore.write_text("user session change\n")
@@ -2402,12 +2454,11 @@ def test_run_join_preserves_existing_non_search_config_shape(
 
 @pytest.mark.parametrize("change", ["rename", "delete"])
 def test_run_join_accepts_realization_rename_and_delete(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_join_session: tuple[Path, str, Path],
     change: str,
 ) -> None:
     """run join が fork 時点の realization path の rename と削除を許可する。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_join_session
     context = start_editing_run("realization_apply")
     readme = context.run_worktree / "README.md"
     if change == "rename":
@@ -2462,12 +2513,11 @@ def test_set_run_state_rejects_overwriting_terminal_state(
     "unexpected_path", ["oracle/unexpected.md", "oracle/unexpected[1].md"]
 )
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_join_session: tuple[Path, str, Path],
     unexpected_path: str,
 ) -> None:
     """force-resolve が run branch の想定外 path だけを戻すことを確認する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_join_session
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("allowed\n")
     (context.run_worktree / unexpected_path).write_text("unexpected\n")
@@ -2496,12 +2546,11 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
 
 
 def test_run_join_force_resolve_restores_realization_source_of_rename(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_join_session: tuple[Path, str, Path],
 ) -> None:
     """force-resolve が想定外 rename の realization 側を失わせないことを確認する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_join_session
     context = start_editing_run("realization_apply")
     destination = context.run_worktree / "oracle" / "unexpected.md"
     destination.parent.mkdir(exist_ok=True)
@@ -2697,11 +2746,11 @@ def test_run_join_conflict_abort_failure_still_restores_session_tree(
 
 
 def test_run_join_keeps_merge_when_post_join_sync_fails(
-    tmp_path: Path,
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """post-join 同期失敗時は確定済み merge と run 資源を保持する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_join_session
     context = start_editing_run("realization_apply")
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (context.run_worktree / "README.md").write_text("realized\n")
@@ -2828,11 +2877,11 @@ def test_run_join_rolls_back_unresolved_content_conflict(
 
 
 def test_run_join_keeps_completed_merge_when_final_report_update_fails(
-    tmp_path: Path,
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 後の report 更新失敗でも保存済み report と merge を保持する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_join_session
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
@@ -2876,11 +2925,11 @@ def test_run_join_keeps_completed_merge_when_final_report_update_fails(
 
 
 def test_run_join_saves_report_before_cleanup(
-    tmp_path: Path,
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run resource を削除する前に pending report を保存する。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_join_session
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
@@ -2917,11 +2966,11 @@ def test_run_join_saves_report_before_cleanup(
 
 
 def test_run_join_preserves_active_state_when_cleanup_fails(
-    tmp_path: Path,
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 失敗時も残存 resource を abandon で回収できる状態を保つ。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_join_session
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")

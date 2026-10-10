@@ -80,8 +80,9 @@ def doctor_paths_for_join(
     base: str,
 ) -> set[str]:
     """doctor が追加した path だけを join の差分除外対象へ取り出す。"""
+    # 修復 path がなければ除外対象もなく、先行差分の Git 照会は不要。
     repair = changes.get(worktree.resolve())
-    if repair is None:
+    if repair is None or not repair[1]:
         return set()
     before_commit, doctor_paths = repair
     preexisting_paths = {
