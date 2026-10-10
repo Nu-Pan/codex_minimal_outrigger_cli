@@ -5,6 +5,7 @@ Git と Codex の境界だけを置き換え、wave、checkpoint、根拠検査�
 
 import copy
 import json
+from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -180,6 +181,106 @@ def _add_candidate(harness, letter):
 
 def _run(harness):
     return remediation._wave_loop(harness.context, harness.manifest, harness.state)
+
+
+def test_run_artifact_reader_uses_one_snapshot(tmp_path, monkeypatch):
+    """hash を確認した byte 列を返し、次の呼出しでは変更を再検査する。"""
+    path = tmp_path / ".cmoc/gu/feedback/work/cut/record.json"
+    value = {"report_cut_id": "cut"}
+    write_immutable_json(path, value)
+    reference = artifact_reference(tmp_path, path)
+    reads = []
+    original_read = Path.read_bytes
+
+    def changing_read(target):
+        content = original_read(target)
+        if target == path:
+            reads.append(target)
+            if len(reads) == 1:
+                target.write_bytes(canonical_json_bytes({"changed": True}))
+        return content
+
+    monkeypatch.setattr(Path, "read_bytes", changing_read)
+
+    assert run_state.read_run_artifact(tmp_path, reference) == value
+    assert reads == [path]
+    with pytest.raises(CmocError, match="SHA256"):
+        run_state.read_run_artifact(tmp_path, reference)
+    assert reads == [path, path]
+
+
+def test_run_artifact_validation_reads_once_and_checks_cleanup(
+    feedback_run, monkeypatch
+):
+    """wave と join 記録を一度ずつ読み、cleanup の欠落後も現存 hash を検査する。"""
+    h = feedback_run
+    for sequence in (1, 2):
+        wave_path = h.path.parent / "wave" / str(sequence) / "input.json"
+        write_immutable_json(
+            wave_path,
+            {
+                "sequence": sequence,
+                "after": sequence - 1,
+                "high_watermark": sequence,
+                "inputs": {},
+                "candidates": {},
+            },
+        )
+        h.manifest["run"]["waves"].append(artifact_reference(h.context.repo, wave_path))
+    h.manifest["run"]["high_watermark"] = 2
+    remediation._seal(h.context, h.manifest, {}, {})
+    for source in h.context.run_worktree.iterdir():
+        (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
+    monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
+    monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
+    remediation._record_merge(h.context, h.manifest, None)
+    remediation._complete_join(h.context, h.manifest)
+    paths = {
+        h.context.repo / item["path"]
+        for item in run_state.run_artifact_references(h.manifest)
+    }
+    reads = Counter()
+    original_read = Path.read_bytes
+
+    def counted_read(path):
+        if path in paths:
+            reads[path] += 1
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", counted_read)
+
+    def validate(allow_missing):
+        validate_run_artifacts(
+            h.context.repo, h.manifest, h.path, allow_missing=allow_missing
+        )
+
+    for allow_missing in (False, True):
+        reads.clear()
+        validate(allow_missing)
+        assert reads == {path: 1 for path in paths}
+    first, second = (
+        h.context.repo / item["path"] for item in h.manifest["run"]["waves"]
+    )
+    second_content = original_read(second)
+    second.write_bytes(canonical_json_bytes({"changed": True}))
+    with pytest.raises(CmocError, match="SHA256"):
+        validate(False)
+    second.write_bytes(second_content)
+    first.unlink()
+    with pytest.raises(CmocError, match="通常 file"):
+        validate(False)
+    validate(True)
+    second.write_bytes(canonical_json_bytes({"changed": True}))
+    with pytest.raises(CmocError, match="SHA256"):
+        validate(True)
+    second.unlink()
+    validate(True)
+    sealed = h.context.repo / h.manifest["run"]["sealed"]["path"]
+    sealed.write_bytes(canonical_json_bytes({"changed": True}))
+    with pytest.raises(CmocError, match="SHA256"):
+        validate(True)
+    sealed.unlink()
+    validate(True)
 
 
 def test_run_artifacts_reject_noncontiguous_wave_boundaries(feedback_run):

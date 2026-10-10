@@ -18,6 +18,7 @@ from .runtime_feedback_state import (
     _corruption,
     _read_canonical_object,
     _require_exact_fields,
+    _resolve_artifact_reference,
     _validate_artifact_reference,
     artifact_reference,
     write_report_cut_manifest,
@@ -97,14 +98,14 @@ def save_run_artifact(
 
 def read_run_artifact(repo: Path, reference: dict[str, Any]) -> dict[str, Any]:
     """run 内の reference と canonical hash を検証して artifact を読む。"""
-    path = _validate_artifact_reference(
+    # 参照を解決し、hash と JSON を同じ読込 byte 列から検査する。
+    path, digest = _resolve_artifact_reference(
         repo,
         reference,
         expected_root=repo / ".cmoc/gu/feedback/work",
         description="feedback run artifact",
-        allow_missing=False,
     )
-    return _read_canonical_object(path, "feedback run artifact")
+    return _read_canonical_object(path, "feedback run artifact", expected_sha256=digest)
 
 
 def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str, Any]]:
@@ -376,28 +377,33 @@ def validate_run_artifacts(
     last_watermark = 0
     missing_wave_artifact = False
     for sequence, reference in enumerate(run["waves"], 1):
-        target = _validate_artifact_reference(
-            repo,
-            reference,
-            expected_root=path.parent / "wave",
-            description="feedback intake wave",
-            allow_missing=allow_missing,
-        )
+        if missing_wave_artifact:
+            # cleanup の欠落以降は wave の連続性を判定できない。
+            # 現存 artifact の通常 file・hash 検査は保つ。
+            target = _validate_artifact_reference(
+                repo,
+                reference,
+                expected_root=path.parent / "wave",
+                description="feedback intake wave",
+                allow_missing=True,
+            )
+        else:
+            target, digest = _resolve_artifact_reference(
+                repo,
+                reference,
+                expected_root=path.parent / "wave",
+                description="feedback intake wave",
+            )
         if target != path.parent / "wave" / str(sequence) / "input.json":
             raise _corruption("feedback wave の順序または path が不正です。", path)
-        if not target.exists():
-            # Cleanup removes work artifacts in manifest order and may stop
-            # after an earlier wave.  Once that happens, a later wave's
-            # `after` value cannot be checked because the preceding boundary
-            # is no longer available.  The current-pointer path explicitly
-            # opts into this missing-artifact state; retain structural/path
-            # validation while deferring cross-wave continuity until the
-            # manifest itself is removed.
+        if allow_missing and not target.exists():
             missing_wave_artifact = True
             continue
-        if missing_wave_artifact and allow_missing:
+        if missing_wave_artifact:
             continue
-        wave = _read_canonical_object(target, "feedback intake wave")
+        wave = _read_canonical_object(
+            target, "feedback intake wave", expected_sha256=digest
+        )
         _require_exact_fields(
             wave,
             {"sequence", "after", "high_watermark", "inputs", "candidates"},
@@ -420,18 +426,19 @@ def validate_run_artifacts(
         reference = run[name]
         if reference is None:
             continue
-        target = _validate_artifact_reference(
+        target, digest = _resolve_artifact_reference(
             repo,
             reference,
             expected_root=path.parent,
             description=f"feedback {name}",
-            allow_missing=allow_missing,
         )
         if target != expected:
             raise _corruption("feedback run artifact の path が不正です。", target)
-        if not target.exists():
+        if allow_missing and not target.exists():
             continue
-        value = _read_canonical_object(target, f"feedback {name}")
+        value = _read_canonical_object(
+            target, f"feedback {name}", expected_sha256=digest
+        )
         if value.get("report_cut_id") != manifest["report_cut_id"]:
             raise _corruption("feedback run artifact の identity が不正です。", target)
         if name == "sealed":
