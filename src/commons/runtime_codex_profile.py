@@ -578,13 +578,6 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
 
 
-def _toml_string(value: str) -> str:
-    """TOML string として安全な JSON 互換 quote へ寄せる。"""
-    validate_json_toml_value(value)
-    # JSON が raw のまま残す DEL は TOML basic string では escape が必要になる。
-    return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007F")
-
-
 def _is_bare_toml_key_segment(value: str) -> bool:
     """Codex CLI の dotted override path で bare に渡せる key か判定する。"""
     return re.fullmatch(r"[A-Za-z0-9_-]+", value) is not None
@@ -596,24 +589,30 @@ def _toml_key_segment(value: str) -> str:
     # Codex CLI の dotted override path は bare key を引用せず渡す必要がある。
     if _is_bare_toml_key_segment(value):
         return value
-    return _toml_string(value)
+    return _toml_value(value)
 
 
 def _toml_value(value: JsonTomlValue) -> str:
     """null 以外の JSON value を一意な TOML value へ変換する。"""
-    value = validate_json_toml_value(value)
+    # 入れ子全体を一度だけ検証し、子の符号化で同じ部分木を再検証しない。
+    return _encode_toml_value(validate_json_toml_value(value))
+
+
+def _encode_toml_value(value: JsonTomlValue) -> str:
+    """検証・正規化済みの値を再検証せず TOML に符号化する。"""
+    # JSON が raw のまま残す DEL は TOML basic string では escape が必要になる。
     if isinstance(value, str):
-        return _toml_string(value)
+        return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007F")
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (int, float)):
         return repr(value)
     if isinstance(value, list):
-        return "[" + ", ".join(_toml_value(item) for item in value) + "]"
+        return "[" + ", ".join(_encode_toml_value(item) for item in value) + "]"
     return (
         "{"
         + ", ".join(
-            f"{_toml_key_segment(key)} = {_toml_value(item)}"
+            f"{_toml_key_segment(key)} = {_encode_toml_value(item)}"
             for key, item in value.items()
         )
         + "}"
@@ -762,7 +761,7 @@ def _model_provider_override_args(
         ) from exc
     try:
         provider_key = f"model_providers.{_toml_key_segment(provider_id)}"
-        provider_value = _toml_string(provider_id)
+        provider_value = _toml_value(provider_id)
     except TypeError as exc:
         raise CmocError(
             "Codex model provider ID が不正です。",
@@ -774,7 +773,6 @@ def _model_provider_override_args(
     args = _config_override("model_provider", provider_value)
     normalized_settings: dict[str, JsonTomlValue] = {}
     has_non_bare_segment = not _is_bare_toml_key_segment(provider_id)
-    encoded_settings: list[tuple[str, str]] = []
     for key, value in provider.settings.items():
         if not isinstance(key, str):
             raise CmocError(
@@ -785,9 +783,8 @@ def _model_provider_override_args(
                 f"model provider ID: {provider_id!r}\nkey: {key!r}",
             )
         try:
-            key_segment = _toml_key_segment(key)
+            validate_json_toml_value(key)
             normalized_value = validate_json_toml_value(value)
-            toml_value = _toml_value(normalized_value)
         except TypeError as exc:
             raise CmocError(
                 "Codex model provider 設定が不正です。",
@@ -797,9 +794,8 @@ def _model_provider_override_args(
                 f"model provider ID: {provider_id!r}\nkey: {key!r}",
             ) from exc
         normalized_settings[key] = normalized_value
-        encoded_settings.append((key_segment, toml_value))
         has_non_bare_segment |= not _is_bare_toml_key_segment(key)
-    if has_non_bare_segment and encoded_settings:
+    if has_non_bare_segment and normalized_settings:
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # Codex CLI の dotted override parser は quoted key segment を path として解釈せず、
         # provider ID/key に dot を含む設定を壊す。inline TOML table なら同じ
@@ -807,12 +803,14 @@ def _model_provider_override_args(
         args.extend(
             _config_override(
                 "model_providers",
-                _toml_value({provider_id: normalized_settings}),
+                _encode_toml_value({provider_id: normalized_settings}),
             )
         )
         return args
-    for key_segment, toml_value in encoded_settings:
-        args.extend(_config_override(f"{provider_key}.{key_segment}", toml_value))
+    for key, value in normalized_settings.items():
+        args.extend(
+            _config_override(f"{provider_key}.{key}", _encode_toml_value(value))
+        )
     return args
 
 
@@ -849,7 +847,7 @@ def _feedback_mcp_override_args(enable_feedback_reporting: bool) -> list[str]:
         args.extend(
             _config_override(
                 f"shell_environment_policy.filters.{name}",
-                _toml_string("exclude"),
+                _toml_value("exclude"),
             )
         )
     return args
@@ -886,7 +884,7 @@ def _editor_input_handoff_mcp_override_args() -> list[str]:
         args.extend(
             _config_override(
                 f"shell_environment_policy.filters.{name}",
-                _toml_string("exclude"),
+                _toml_value("exclude"),
             )
         )
     return args
@@ -998,9 +996,9 @@ def build_codex_override_args(
         sandbox_mode,
         "--no-daemon",
         *_config_override("sandbox_workspace_write.exclude_slash_tmp", "false"),
-        *_config_override("approvals_reviewer", _toml_string("auto_review")),
+        *_config_override("approvals_reviewer", _toml_value("auto_review")),
         *_config_override(
-            "model_reasoning_effort", _toml_string(call_config.reasoning_effort)
+            "model_reasoning_effort", _toml_value(call_config.reasoning_effort)
         ),
         # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
         # legacy callback は root SessionStart が記録した session ID で絞り込む。

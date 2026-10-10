@@ -39,7 +39,7 @@ from commons.runtime_feedback_protocol import (
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
-from config.cmoc_config import CmocConfig
+from config.cmoc_config import CmocConfig, JsonTomlValue
 
 _SANDBOX_BY_MODE = {
     FileAccessMode.READONLY: "workspace-write",
@@ -463,6 +463,8 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
             "count": 2,
             "ratio": 0.5,
             "nested": ["value", {"answer": 42}],
+            'text."日本語': 'quote"\\\n\t\x7f日本語',
+            "empty": {"array": [], "table": {}},
         }
     )
     config.codex.model_providers["unused"] = CodexModelProviderConfig(
@@ -495,6 +497,8 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
             "count": 2,
             "ratio": 0.5,
             "nested": ["value", {"answer": 42}],
+            'text."日本語': 'quote"\\\n\t\x7f日本語',
+            "empty": {"array": [], "table": {}},
         }
     }
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -505,6 +509,24 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
         for argument in args
     )
     assert "permissions" not in parsed
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [[None], {"nested": float("nan")}, {"nested": 2**63}],
+)
+def test_codex_overrides_reject_invalid_in_memory_provider_settings(
+    setting: object,
+) -> None:
+    """設定読み込みを経由しない値も、argv 構築時に検証して拒否する。"""
+    config = CmocConfig()
+    config.codex.model_providers["openai"] = CodexModelProviderConfig(
+        {"setting": cast(JsonTomlValue, setting)}
+    )
+    parameter = codex_parameter(agent_call_cwd=Path.cwd())
+
+    with pytest.raises(CmocError, match="Codex model provider 設定が不正"):
+        build_codex_override_args(parameter, config)
 
 
 def test_codex_overrides_leave_bare_toml_key_segments_unquoted() -> None:
