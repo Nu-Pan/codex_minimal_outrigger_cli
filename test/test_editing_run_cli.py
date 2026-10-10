@@ -3667,6 +3667,10 @@ def test_refactor_with_no_targets_keeps_synchronizing(
         "run_codex_exec",
         lambda *_args, **_kwargs: pytest.fail("agent call without a target"),
     )
+    # 空巡の継続・同期・停止を検証し、負荷抑制のための実待機だけを省く。
+    monkeypatch.setattr(
+        refactor_module, "time", SimpleNamespace(sleep=lambda _seconds: None)
+    )
     _stop_after_cycles(monkeypatch, cycles=2)
     result = runner.invoke(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
@@ -3737,10 +3741,11 @@ def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
 
 @pytest.mark.parametrize("during_commit", [False, True])
 def test_refactor_cycle_interruption_respects_state_commit_boundary(
-    tmp_path, monkeypatch, during_commit
+    ready_join_session, monkeypatch, during_commit
 ):
     """巡開始の state 準備は rollback、確定区間の停止要求は記録まで完了する。"""
-    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    # session 作成の公開 CLI は統合 test に残し、巡開始前の clean な履歴だけ用意する。
+    root, _, state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "README.md")
     if during_commit:
         commit = refactor_module.commit_work_unit
@@ -3783,10 +3788,10 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
 
 @pytest.mark.parametrize("interrupt_next_cycle_start", [False, True])
 def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
-    tmp_path, monkeypatch, interrupt_next_cycle_start
+    ready_join_session, monkeypatch, interrupt_next_cycle_start
 ):
     """旧履歴を調査機会にせず、未解決を次巡で再検討して全対象を公平に処理する。"""
-    root, _, state_path = _start_session(tmp_path, monkeypatch)
+    root, _, state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "README.md")
     reviewed = []
     if interrupt_next_cycle_start:
