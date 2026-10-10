@@ -627,6 +627,9 @@ def test_config_rejects_excessively_nested_provider_setting() -> None:
         )
 
     assert exc_info.value.summary == "cmoc config が不正です。"
+    assert "provider" in exc_info.value.detail
+    assert "nested" in exc_info.value.detail
+    render_error(exc_info.value).encode("utf-8")
 
 
 def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:

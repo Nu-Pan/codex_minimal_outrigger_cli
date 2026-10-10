@@ -366,9 +366,16 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             # {{work-root}}/oracle/doc/app_spec/error_handling.md
             # 不正 JSON には surrogate も含まれうるため、error report を UTF-8 で出力
             # できる ASCII escape へ変換する。
-            detail = json.dumps(data, ensure_ascii=True, indent=2, default=repr)
+            if isinstance(exc, RecursionError) or isinstance(
+                exc.__cause__, RecursionError
+            ):
+                # JSON 診断も再帰処理なので、深さエラー後の再走査を省く。
+                detail = repr(data)
+            else:
+                detail = json.dumps(data, ensure_ascii=True, indent=2, default=repr)
         except (RecursionError, TypeError, ValueError):
-            detail = repr(data).encode("utf-8", "backslashreplace").decode("utf-8")
+            detail = repr(data)
+        detail = detail.encode("utf-8", "backslashreplace").decode("utf-8")
         raise CmocError(
             "cmoc config が不正です。",
             ["{{work-root}}/.cmoc/gt/config.json を確認してから再実行してください。"],
