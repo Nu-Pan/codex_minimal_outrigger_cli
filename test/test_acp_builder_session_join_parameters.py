@@ -58,10 +58,10 @@ def test_session_join_compatibility_module_reexports_canonical_builder() -> None
     )
 
 
-def test_session_join_conflict_resolution_preserves_parameters_and_git_inputs(
+def test_session_join_conflict_resolution_preserves_prompt_and_launch_parameters(
     home_worktree: Path,
 ) -> None:
-    """起動設定・編集範囲と、agent が Git から取得するための入力を検証する。"""
+    """Git 入力を prompt のみに渡し、起動設定・編集範囲を維持する。"""
 
     source, target = "c" * 40, "d" * 40
     parameter = build_session_join_conflict_resolution_parameter(
@@ -73,8 +73,8 @@ def test_session_join_conflict_resolution_preserves_parameters_and_git_inputs(
     assert parameter.agent_call_cwd == home_worktree.resolve()
     assert f"- {{{{repo-root}}}} = {home_worktree.resolve()}" in parameter.prompt
     assert f"- {{{{work-root}}}} = {home_worktree.resolve()}" in parameter.prompt
-    assert f"`{source}`" in parameter.prompt
-    assert f"`{target}`" in parameter.prompt
+    assert f"- source（取り込む側）: `{source}`" in parameter.prompt
+    assert f"- target（取り込み先の merge 前）: `{target}`" in parameter.prompt
     assert "共通祖先" in parameter.prompt
     assert "進行中の merge の Git index" in parameter.prompt
     assert "conflict 対象ファイル" not in parameter.prompt
@@ -89,29 +89,20 @@ def test_session_join_conflict_resolution_preserves_parameters_and_git_inputs(
     for heading in ("# oracle policy", "# realization policy"):
         assert heading in parameter.prompt
     assert "# realization findings policy" not in parameter.prompt
-
-
-def test_session_join_commit_inputs_stay_in_prompt_and_not_sandbox_argv(
-    home_worktree: Path,
-) -> None:
-    """commit 参照は prompt に渡し、sandbox 設定は path に依存しない。"""
-    first, second = "a" * 40, "b" * 40
-    first_parameter = build_session_join_conflict_resolution_parameter(
-        first, second, home_worktree
+    # prompt 契約を検査した parameter を argv の検査にも使い、再構築しない。
+    swapped_parameter = build_session_join_conflict_resolution_parameter(
+        target, source, home_worktree
     )
-    second_parameter = build_session_join_conflict_resolution_parameter(
-        second, first, home_worktree
-    )
-    first_args = build_codex_override_args(first_parameter, CmocConfig())
-    second_args = build_codex_override_args(second_parameter, CmocConfig())
+    assert swapped_parameter.file_access_mode == FileAccessMode.REPO_WRITE
+    assert f"- source（取り込む側）: `{target}`" in swapped_parameter.prompt
+    assert f"- target（取り込み先の merge 前）: `{source}`" in swapped_parameter.prompt
+    config = CmocConfig()
+    args = build_codex_override_args(parameter, config)
+    swapped_args = build_codex_override_args(swapped_parameter, config)
 
-    assert first_parameter.file_access_mode == FileAccessMode.REPO_WRITE
-    assert second_parameter.file_access_mode == FileAccessMode.REPO_WRITE
-    assert first in first_parameter.prompt
-    assert second in second_parameter.prompt
-    assert first_args == second_args
-    assert codex_arg_value(first_args, "--sandbox") == "workspace-write"
-    assert all(first not in arg and second not in arg for arg in first_args)
-    parsed = codex_override_config(first_args)
+    assert args == swapped_args
+    assert codex_arg_value(args, "--sandbox") == "workspace-write"
+    assert all(source not in arg and target not in arg for arg in args)
+    parsed = codex_override_config(args)
     assert "permissions" not in parsed
     assert "default_permissions" not in parsed
