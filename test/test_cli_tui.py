@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _cli_support import runner
 from _git_support import make_repo, run_git
@@ -69,6 +70,18 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
     root = cli_repository
     monkeypatch.chdir(root)
+    # root 解決は test_basic_runtime.py と下の main/linked 成功ケースに残す。
+    # 保存先の ignore 検査は実 Git を使い、反復する root 探索だけを外す。
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _start_path=None: (root, root),
+    )
+    # agent を起動しないケースでは collector を利用しない。
+    # TCP 受付・停止・drain は test_feedback.py が実経路で検証する。
+    monkeypatch.setattr(
+        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+    )
     # doctor の実処理との結合は、各 CLI の成功ケースで検証する。
     # 保存失敗の検査では呼び出しを記録し、修復 commit・索引同期を繰り返さない。
     doctor_roots: list[Path] = []
@@ -104,16 +117,16 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
             raise OSError("input save failed")
         return real_replace(source, destination)
 
-    def unexpected_agent_call(*_args, **_kwargs):
-        pytest.fail("input save failure must prevent agent calls")
-
+    agent_call = Mock()
     monkeypatch.setattr(prompt_editor_input_module.os, "replace", fail_input_save)
-    monkeypatch.setattr(tui_module, "run_codex_tui", unexpected_agent_call)
-    monkeypatch.setattr(investigation_module, "run_codex_tui", unexpected_agent_call)
-    monkeypatch.setattr(oracle_edit_module, "run_codex_exec", unexpected_agent_call)
+    monkeypatch.setattr(tui_module, "run_codex_tui", agent_call)
+    monkeypatch.setattr(investigation_module, "run_codex_tui", agent_call)
+    monkeypatch.setattr(oracle_edit_module, "run_codex_exec", agent_call)
 
     result = runner.invoke(app, command, catch_exceptions=False)
 
+    # CLI は BaseException も終了 code へ変換するため、call の有無を外から検査する。
+    agent_call.assert_not_called()
     assert result.exit_code == 1
     files = list((root / ".cmoc/gu/log/editor_input").iterdir())
     assert len(files) == 1
