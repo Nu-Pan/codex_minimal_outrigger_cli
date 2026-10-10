@@ -955,9 +955,9 @@
   },
   "src/commons/runtime_git.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "4999061e7a79d0308d4d623d4aa686623fbfc6fec38eb95b0239b65cdc8de5f0",
+    "last_investigated_at": "2026-10-10_12-55-47_574"
   },
   "src/commons/runtime_ids.py": {
     "investigation_required": true,

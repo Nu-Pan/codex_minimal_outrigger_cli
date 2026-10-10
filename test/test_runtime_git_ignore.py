@@ -12,7 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
-from _git_support import make_repo, run_git
+from _git_support import run_git
 
 import commons.runtime_git as runtime_git
 from cmoc_runtime import (
@@ -262,10 +262,10 @@ def test_ensure_cmoc_ignored_in_exclude_rejects_symlinked_exclude(
 
 
 def test_ensure_cmoc_ignored_preserves_existing_pattern_and_runtime_state(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """既存 pattern を保ち、cmoc 管理 state の ignore 例外を維持する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     (root / ".gitignore").write_text(".cmoc/\n")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "ignore cmoc")
