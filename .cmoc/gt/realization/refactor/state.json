@@ -1051,9 +1051,9 @@
   },
   "src/config/__init__.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "2df099916bfadae1547b9bb803be4606e032bc2d738c77e453dddf5756e2dece",
+    "last_investigated_at": "2026-10-10_16-04-14_148"
   },
   "src/config/cmoc_config.py": {
     "investigation_required": true,

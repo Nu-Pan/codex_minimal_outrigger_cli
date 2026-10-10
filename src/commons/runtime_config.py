@@ -93,15 +93,17 @@ class ConfigSyncResult:
     saved: bool
 
 
-def _document_search_config(value: Any) -> DocumentSearchConfig:
-    """正本の tuning 型・値域・項目間制約を検証する。"""
+def _document_search_data(value: Any) -> dict[str, Any]:
+    """正本の tuning 制約を検証し、定義順の数値 object を返す。"""
+    # 全項目を数値として検証するため、dataclass の再帰コピーは不要。
     if isinstance(value, DocumentSearchConfig):
-        data = asdict(value)
+        data = {field.name: getattr(value, field.name) for field in fields(value)}
     elif isinstance(value, dict):
         data = value
     else:
         raise SearchConfigIssue("document_search", "object が必要です")
-    names = {field.name for field in fields(DocumentSearchConfig)}
+    schema_fields = fields(DocumentSearchConfig)
+    names = {field.name for field in schema_fields}
     unknown = sorted(data.keys() - names)
     if unknown:
         raise SearchConfigIssue(
@@ -167,7 +169,12 @@ def _document_search_config(value: Any) -> DocumentSearchConfig:
             "document_search.chunk_tokens, document_search.embedding_context_tokens",
             f"chunk_tokens={data['chunk_tokens']} は embedding_context_tokens={data['embedding_context_tokens']} より小さくしてください",
         )
-    return DocumentSearchConfig(**data)
+    return {field.name: data[field.name] for field in schema_fields}
+
+
+def _document_search_config(value: Any) -> DocumentSearchConfig:
+    """検索設定を検証して正本の dataclass へ復元する。"""
+    return DocumentSearchConfig(**_document_search_data(value))
 
 
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
@@ -195,7 +202,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "reasoning_effort": _reasoning_effort_name(call_config.reasoning_effort),
         }
 
-    search_config = _document_search_config(config.document_search)
+    search_data = _document_search_data(config.document_search)
     return {
         "num_parallel": _config_int(config.num_parallel),
         "codex": {
@@ -203,7 +210,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "agent_calls": agent_calls,
             "num_try_falv_recovery": _config_int(config.codex.num_try_falv_recovery),
         },
-        "document_search": asdict(search_config),
+        "document_search": search_data,
     }
 
 
@@ -465,7 +472,7 @@ def _read_config_data(path: Path) -> dict[str, Any]:
     return data
 
 
-def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchConfig:
+def _validate_saved_search_data(path: Path, data: dict[str, Any]) -> None:
     """保存された検索設定を既定値の注入なしで検証する。"""
     if "document_search" not in data:
         raise _search_config_failure(
@@ -474,10 +481,9 @@ def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchCo
             missing=True,
         )
     try:
-        config = _document_search_config(data["document_search"])
+        _document_search_data(data["document_search"])
     except SearchConfigIssue as exc:
         raise _search_config_failure(path, exc, missing=exc.missing) from exc
-    return config
 
 
 def _validated_codex_data(path: Path, data: dict[str, Any]) -> CmocConfig:
@@ -516,7 +522,7 @@ def load_config(root: Path) -> CmocConfig:
     """保存済み JSON の検索設定を厳格に検証して config に復元する。"""
     path = config_path(root)
     data = _read_config_data(path)
-    _validated_search_data(path, data)
+    _validate_saved_search_data(path, data)
     return _validated_codex_data(path, data)
 
 
@@ -555,7 +561,7 @@ def sync_config(
     if on_candidate is not None:
         on_candidate(False, additions)
     candidate = {**data, "document_search": search}
-    _validated_search_data(path, candidate)
+    _validate_saved_search_data(path, candidate)
     config = _validated_codex_data(path, candidate)
     if additions:
         write_config(path, config)

@@ -40,6 +40,7 @@ from cmoc_runtime import (
     sync_config,
     write_config,
 )
+from commons.runtime_config import SearchConfigIssue
 from config.cmoc_config import CmocConfig
 
 
@@ -79,6 +80,7 @@ def test_config_json_preserves_oracle_member_order() -> None:
         "num_try_falv_recovery",
     ]
     assert list(data["codex"]["agent_calls"]) == list(config.codex.agent_calls)
+    assert list(data["document_search"]) == list(asdict(config.document_search))
 
 
 @pytest.mark.parametrize("legacy_config", [False, True])
@@ -636,6 +638,24 @@ def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:
 
     with pytest.raises(TypeError):
         config_to_dict(config)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("chunk_tokens", True),
+        ("startup_timeout_seconds", float("nan")),
+        ("chunk_overlap_tokens", 512),
+    ],
+)
+def test_config_to_dict_rejects_invalid_in_memory_search_config(field, value) -> None:
+    """検索 dataclass も JSON 化の前に型・有限性・項目間制約を検証する。"""
+    config = CmocConfig(document_search=DocumentSearchConfig(**{field: value}))
+
+    with pytest.raises(SearchConfigIssue) as exc_info:
+        config_to_dict(config)
+
+    assert f"document_search.{field}" in exc_info.value.field
 
 
 @pytest.mark.parametrize("model", ["\x00", "\ud800"])
