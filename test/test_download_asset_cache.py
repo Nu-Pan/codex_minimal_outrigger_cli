@@ -4,6 +4,7 @@
 """
 
 import base64
+import fcntl
 import gzip
 import hashlib
 import io
@@ -225,50 +226,65 @@ def test_partial_failure_preserves_published_assets(
     assert not list(cache_module.asset_cache_directory().glob(".incomplete-*"))
 
 
-def test_parallel_installations_download_once(tmp_path, distribution):
+def test_parallel_installations_download_once(tmp_path, distribution, monkeypatch):
     """独立 process と異なる cmoc 配置でも、待機後に完成品を再利用する。"""
     context = multiprocessing.get_context("spawn")
+    downloading = context.Event()
     waiting = context.Event()
-    count = context.Value("i", 0)
     asset = _asset(distribution)
-    children = []
+    receive, send = context.Pipe(duplex=False)
+    destination = tmp_path / "child-result"
+    process = context.Process(
+        # spawn がテスト全体と CLI を再 import しない、小さな worker を使う。
+        target=process_obtain,
+        args=(
+            cache_module.asset_cache_directory(),
+            tmp_path / "cmoc-child",
+            asset,
+            destination,
+            downloading,
+            waiting,
+            send,
+        ),
+    )
+    flock = fcntl.flock
+
+    def observe_lock(fd, operation):
+        try:
+            return flock(fd, operation)
+        except BlockingIOError:
+            waiting.set()
+            raise
+
     try:
-        for number in range(2):
-            receive, send = context.Pipe(duplex=False)
-            destination = tmp_path / f"result-{number}"
-            process = context.Process(
-                # spawn がテスト全体と CLI を再 import しない、小さな worker を使う。
-                target=process_obtain,
-                args=(
-                    cache_module.asset_cache_directory(),
-                    tmp_path / f"cmoc-{number}",
-                    asset,
-                    destination,
-                    waiting,
-                    count,
-                    send,
-                ),
-            )
-            process.start()
-            send.close()
-            children.append((process, receive, destination))
-        outcomes = []
-        for process, receive, destination in children:
-            assert receive.poll(20)
-            outcomes.append(receive.recv())
-            process.join(20)
-            assert process.exitcode == 0
-            assert destination.read_bytes() == distribution[1]["/model"]
-        assert outcomes.count("downloaded") == 1
-        assert outcomes.count("reused") == 1
-        assert count.value == 1
+        process.start()
+        send.close()
+        assert downloading.wait(10), "child download did not start"
+        # 親を二つ目の取得 process とし、実 lock の競合を観測する。
+        monkeypatch.setattr(fcntl, "flock", observe_lock)
+        parent_destination = tmp_path / "parent-result"
+        action = DownloadAssetCache(tmp_path / "cmoc-parent").obtain(
+            asset, parent_destination
+        )
+        assert waiting.is_set()
+        assert action == "reused"
+        assert distribution[2] == []
+        assert receive.poll(20)
+        assert receive.recv() == ("downloaded", 1)
+        process.join(20)
+        assert process.exitcode == 0
+        assert (
+            parent_destination.read_bytes()
+            == destination.read_bytes()
+            == distribution[1]["/model"]
+        )
     finally:
-        for process, receive, _destination in children:
-            if process.is_alive():
-                process.kill()
-                process.join()
-            receive.close()
-            process.close()
+        if process.is_alive():
+            process.kill()
+            process.join()
+        receive.close()
+        send.close()
+        process.close()
 
 
 def test_redirect_failure_and_report_preserve_observed_counts(

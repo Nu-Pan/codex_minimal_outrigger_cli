@@ -1,6 +1,5 @@
 """並行取得の子 process を、CLI と pytest の初期化から分離する。"""
 
-import fcntl
 import io
 import urllib.request
 import urllib.response
@@ -21,29 +20,22 @@ def download_response(url, body, code=200, location=None):
     return response
 
 
-def process_obtain(cache_root, root, asset, destination, waiting, count, result):
-    """実 lock の競合を待って取得し、独立 process の結果と取得回数を返す。"""
+def process_obtain(cache_root, root, asset, destination, downloading, waiting, result):
+    """取得開始を親へ知らせ、実 lock の競合後に結果と取得回数を返す。"""
     cache_module.asset_cache_directory = lambda: cache_root
-    flock = fcntl.flock
-
-    def observe_lock(fd, operation):
-        try:
-            return flock(fd, operation)
-        except BlockingIOError:
-            waiting.set()
-            raise
-
-    fcntl.flock = observe_lock
+    count = 0
 
     def transport(_handler, request):
-        with count.get_lock():
-            count.value += 1
+        nonlocal count
+        count += 1
+        downloading.set()
         # 実 lock の競合まで応答を保留し、固定 sleep に依存せず待機後の再利用を通す。
         assert waiting.wait(10), "no concurrent cache waiter"
         return download_response(request.full_url, b"model bytes")
 
     urllib.request.HTTPHandler.http_open = transport
     try:
-        result.send(DownloadAssetCache(root).obtain(asset, destination))
+        action = DownloadAssetCache(root).obtain(asset, destination)
+        result.send((action, count))
     finally:
         result.close()
