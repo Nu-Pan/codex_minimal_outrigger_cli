@@ -456,7 +456,7 @@
     "last_investigated_at": "2026-10-09_20-22-44_293"
   },
   "oracle/src/oracle/other/doc_ref_model.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "0bff83f413a89dcc2a3f881293a595221ea1012097880bf4661a7af14c949ca5",
     "last_investigated_at": "2026-10-09_20-26-12_766"
@@ -1068,7 +1068,7 @@
     "last_investigated_at": "2026-10-10_16-28-20_761"
   },
   "src/oracle.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "e476648f073484004b64741d40d6d373fab223e001be01ac8051f9c5ab15e095",
     "last_investigated_at": "2026-10-10_16-30-42_681"
@@ -1260,7 +1260,7 @@
     "last_investigated_at": "2026-10-10_22-42-43_786"
   },
   "test/test_acp_builder_editing_run_parameters.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f857f213e70d2ede7c3c6fdb514b86b6657e4f905405fc65305f65e7f2be9e09",
     "last_investigated_at": "2026-10-10_22-45-36_342"
@@ -1272,7 +1272,7 @@
     "last_investigated_at": "2026-10-10_22-55-32_735"
   },
   "test/test_acp_builder_tui_parameters.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "5a3d7eca8c06ae164e065292b001fe017e95bfddac72995560d9414c545acaca",
     "last_investigated_at": "2026-10-10_22-57-52_002"
@@ -1572,13 +1572,13 @@
     "last_investigated_at": "2026-10-11_06-51-28_831"
   },
   "test/test_skill_metadata.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "bf735875997b038795c375af2a689094f308e7a286145efe3996c3ce9cd796d8",
     "last_investigated_at": "2026-10-11_06-53-03_408"
   },
   "test/test_struct_doc_rendering.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "1bc1a97525caab2a8ec994881b49da3ad26482d82ed777022968c513df6242fa",
     "last_investigated_at": "2026-10-11_06-55-02_431"
