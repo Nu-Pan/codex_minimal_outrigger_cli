@@ -91,6 +91,11 @@ def test_oracle_investigation_has_no_session_precondition(
         "run_doctor_preprocess",
         record_run_doctor_preprocess,
     )
+    # TUI は呼び出しを記録するだけで reporter を使わないため、collector は起動しない。
+    # TCP 受付・失効・停止・drain は test_feedback.py の実 transport 検証に残す。
+    monkeypatch.setattr(
+        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+    )
     monkeypatch.setattr(
         investigation_module,
         "build_oracle_investigation_launch_tui_parameter",
