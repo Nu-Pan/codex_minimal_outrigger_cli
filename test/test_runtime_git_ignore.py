@@ -94,10 +94,11 @@ def test_ignore_checks_respect_tracked_and_untracked_states(
     ],
 )
 def test_ensure_cmoc_ignored_rejects_non_file_gitignore(
-    cli_repository: Path, path_kind: str
+    tmp_path: Path, path_kind: str
 ) -> None:
     """.gitignore が特殊 file でも read_text で停止せずエラーにする。"""
-    root = cli_repository
+    # Git 問い合わせ前の種類検証なので、repository と index は用意しない。
+    root = tmp_path
     gitignore = root / ".gitignore"
     if path_kind == "directory":
         gitignore.mkdir()
@@ -194,11 +195,10 @@ def test_ignore_checks_do_not_inspect_ignored_symlink_target(
         assert checker(root, link)
 
 
-def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(
-    tmp_path: Path, cli_repository: Path
-) -> None:
+def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None:
     """.gitignore の symlink 先を cmoc が書き換えないことを検証する。"""
-    root = cli_repository
+    root = tmp_path / "repo"
+    root.mkdir()
     external = tmp_path / "external.gitignore"
     external.write_text("existing\n")
     (root / ".gitignore").symlink_to(external)
