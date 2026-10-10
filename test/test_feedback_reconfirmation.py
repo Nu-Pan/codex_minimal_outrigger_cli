@@ -974,19 +974,20 @@ def test_current_pointer_rejects_non_markdown_report_path(feedback_run, monkeypa
         load_active_state(root)
 
 
-@pytest.mark.parametrize("artifact_kind", ["manifest", "issue"])
 def test_active_generation_load_uses_hash_verified_bytes(
-    published_feedback, monkeypatch, artifact_kind
+    published_feedback, monkeypatch
 ):
     """generation の hash 検証と解析を一回の読込に揃え、毎回検証する。"""
     root, state = published_feedback
+    assert state.current is not None
     assert state.generation_manifest is not None
-    if artifact_kind == "manifest":
-        path = root / state.current["generation_manifest_path"]
-    else:
-        [reference] = state.generation_manifest["issues"]
-        path = root / reference["path"]
-    _assert_hash_verified_state_snapshot(root, state, path, monkeypatch)
+    [reference] = state.generation_manifest["issues"]
+    # helper が改変と patch を毎回戻すため、同じ publication で独立に検査できる。
+    for path in (
+        root / state.current["generation_manifest_path"],
+        root / reference["path"],
+    ):
+        _assert_hash_verified_state_snapshot(root, state, path, monkeypatch)
 
 
 def test_unlisted_active_generation_artifact_is_corruption(published_feedback):
