@@ -47,6 +47,7 @@ import sub_commands.session.join as session_join_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_override_args
+from commons.runtime_refactor import sync_refactor_state, write_refactor_state
 from config.cmoc_config import CmocConfig
 from main import app
 
@@ -82,10 +83,24 @@ def session_home_branch(root: Path, session_branch: str) -> str:
 def _seed_active_session(root: Path) -> tuple[str, str]:
     """session 終了の検査に必要な clean session を、fork CLI を実行せず用意する。"""
     # fork の branch/state 作成と fork→join/abandon の連携は専用 test に残す。
-    # 終了コマンド自身の doctor は置換せず、管理物の準備・修復を実経路で検証する。
+    # 終了コマンド自身の doctor は実経路に保ち、管理物の修復は専用ケースに任せる。
+    # tracked 管理物も揃え、前処理の修復 commit で検査対象の HEAD を進めない。
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     seed_search_config(root)
-    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
+    agents = root / ".agents"
+    agents.mkdir()
+    (agents / ".gitkeep").touch()
+    # state 自身も列挙対象なので、空 state を置いてから entry を同期する。
+    write_refactor_state(root, {})
+    sync_refactor_state(root)
+    run_git(
+        root,
+        "add",
+        ".gitignore",
+        ".agents/.gitkeep",
+        ".cmoc/gt/config.json",
+        ".cmoc/gt/realization/refactor/state.json",
+    )
     run_git(root, "commit", "-m", "session seed")
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -719,12 +734,7 @@ def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
     """dirty worktree拒否でも既知のsession report fieldを保持する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    _, home_branch = _seed_active_session(root)
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (root / "README.md").write_text("dirty\n")
 
@@ -749,13 +759,8 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
+    session_branch, home_branch = _seed_active_session(root)
     state_path = session_state_path(root, session_branch)
-    home_branch = session_home_branch(root, session_branch)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
 
     _seed_remote_tracking_branch(root, home_branch, home_commit)
@@ -861,11 +866,7 @@ def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_eff
     """branch削除後の中断でも元のsession branchとstateを復元する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
+    session_branch, _ = _seed_active_session(root)
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     state_path = session_state_path(root, session_branch)
     original_delete_branch = session_module.delete_branch
@@ -895,13 +896,8 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
     """rollback中に消えたlocal session branchをremoteから推測しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
+    session_branch, home_branch = _seed_active_session(root)
     state_path = session_state_path(root, session_branch)
-    home_branch = session_home_branch(root, session_branch)
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     run_git(root, "switch", home_branch)
@@ -1373,12 +1369,7 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
     """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_active_session(root)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
     run_git(root, "branch", "-D", home_branch)
 
