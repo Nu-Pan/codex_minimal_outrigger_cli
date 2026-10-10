@@ -150,11 +150,16 @@ def write_lifecycle_report(
         ("state_before", context.state_before),
         ("state_after", state_after),
         ("generated_at", generated_at),
-        *details.items(),
     ]
+    # detail の YAML 表現は front matter と本文で共有する。
+    detail_fields = [f"{name}: {yaml_scalar(value)}" for name, value in details.items()]
+    front_matter = [f"{name}: {yaml_scalar(value)}" for name, value in fields]
+    front_matter.extend(detail_fields)
     logger = current_subcommand_logger()
     if logger is not None:
-        fields.append(("subcommand_log_path", str(logger.path.resolve())))
+        front_matter.append(
+            f"subcommand_log_path: {yaml_scalar(str(logger.path.resolve()))}"
+        )
     execution = (
         execution_step_lines(logger, terminal_classification)
         if logger is not None
@@ -177,16 +182,13 @@ def write_lifecycle_report(
     content = "\n".join(
         [
             "---",
-            *[f"{name}: {yaml_scalar(value)}" for name, value in fields],
+            *front_matter,
             "---",
             f"# cmoc run {operation} report",
             "## Outcome",
             terminal_classification,
             "## Details",
-            *(
-                [f"- {name}: {yaml_scalar(value)}" for name, value in details.items()]
-                or ["- none"]
-            ),
+            *([f"- {field}" for field in detail_fields] or ["- none"]),
             "## Warnings",
             *([f"- {warning}" for warning in warnings] or ["- none"]),
             *resolution_lines,

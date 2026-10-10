@@ -197,10 +197,10 @@ def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None
     ) == ["modified.md", "new.md"]
 
 
-def test_run_reports_use_execution_ids_and_keep_generated_time(
+def test_run_reports_keep_execution_ids_generated_time_and_content(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """同一生成時刻でも report は別実行 ID で保存する。"""
+    """同一生成時刻でも別実行 ID で保存し、変更 path を安全に掲載する。"""
     context = EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path,
@@ -222,9 +222,9 @@ def test_run_reports_use_execution_ids_and_keep_generated_time(
             "realization/apply/fork",
             state_after="joinable",
             completion_reason="completed",
-            changed_paths=[],
+            changed_paths=changed_paths,
         )
-        for _ in range(2)
+        for changed_paths in ([], ["plain.md", "line\nbreak`|<&.md"])
     ]
     lifecycle_paths = [
         run_report_module.write_lifecycle_report(
@@ -237,43 +237,20 @@ def test_run_reports_use_execution_ids_and_keep_generated_time(
         for _ in range(2)
     ]
 
+    contents = {path: path.read_text() for path in [*fork_paths, *lifecycle_paths]}
+    assert all(is_common_id(path.stem, "exec") for path in contents)
+    assert len({path.stem for path in contents}) == 4
     assert all(
-        is_common_id(path.stem, "exec") for path in [*fork_paths, *lifecycle_paths]
-    )
-    assert len({path.stem for path in [*fork_paths, *lifecycle_paths]}) == 4
-    assert all(
-        f'generated_at: "{generated_at}"' in path.read_text()
-        for path in [*fork_paths, *lifecycle_paths]
+        f'generated_at: "{generated_at}"' in content for content in contents.values()
     )
 
-
-def test_fork_report_escapes_special_changed_paths(tmp_path: Path) -> None:
-    """変更 path の Markdown code span と行構造を壊さない。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    """
-    context = EditingRunContext(
-        repo=tmp_path,
-        session_worktree=tmp_path,
-        session_id=SESSION_ID,
-        state_path=tmp_path / "state.json",
-        session_branch=SESSION_BRANCH,
-        session_fork_commit="session-fork",
-        kind="realization_apply",
-        run_branch=RUN_BRANCH,
-        run_fork_commit="run-fork",
-        run_worktree=tmp_path,
+    # 既に保存する fork report で空・通常・特殊文字の path を検証する。
+    assert "## Changed paths\n- none\n" in contents[fork_paths[0]]
+    assert "- `plain.md`" in contents[fork_paths[1]]
+    assert (
+        "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>"
+        in contents[fork_paths[1]]
     )
-
-    report = run_report_module.write_fork_report(
-        context,
-        "realization/apply/fork",
-        state_after="joinable",
-        completion_reason="completed",
-        changed_paths=["line\nbreak`|<&.md"],
-    )
-
-    assert "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>" in report.read_text()
 
 
 @pytest.mark.parametrize("occupied", ["branch", "worktree", "dangling_symlink"])
