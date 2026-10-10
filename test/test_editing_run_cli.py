@@ -605,6 +605,10 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert f"- 終点: `{run_fork_commit}`" in parameter.prompt
     assert "reference_only.md" not in parameter.prompt
     assert "oracle payload" not in parameter.prompt
+    initial_diff = run_git(
+        root, "diff", expected_base, run_fork_commit, "--", "oracle"
+    ).stdout
+    assert "oracle payload" in initial_diff
     assert (root / "README.md").read_text() == "# repo\n"
 
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -641,7 +645,10 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert "診断用サブコマンドログ" in report_text
     assert current_branch(root) == session_branch
 
-    # join が保存した比較始点を次回 fork が使う結合は、この一続きの経路で検査する。
+    # 初回と保存済み始点の選択を同じ経路で検査し、次回の未追従変更だけを残す。
+    (root / "oracle" / "spec.md").write_text("pending oracle change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "pending oracle change")
     next_fork = runner.invoke(
         app, ["realization", "apply", "fork"], catch_exceptions=False
     )
@@ -655,6 +662,11 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert next_state["run"]["state"] == "joinable"
     assert f"- 始点: `{run_fork_commit}`" in next_parameter.prompt
     assert f"- 終点: `{next_state['run']['fork_commit']}`" in next_parameter.prompt
+    next_diff = run_git(
+        root, "diff", run_fork_commit, next_state["run"]["fork_commit"], "--", "oracle"
+    ).stdout
+    assert "pending oracle change" in next_diff
+    assert "oracle payload" not in next_diff
 
 
 @pytest.mark.parametrize("run_state", ["joinable", "error"])
@@ -707,64 +719,13 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
             assert "session.last_joined_apply_fork_commit updated" not in output
     assert ("run_join_commit: null" in report) is (not has_run_change)
 
-    # 次回 fork の始点選択は独立した test に任せ、ここでは保存した範囲を検査する。
+    # 次回 fork の始点選択は fork→join 統合 test に任せ、ここでは保存した範囲を検査する。
     diff_base = expected_base if expected_base is not None else session_fork_commit
     joined_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     oracle_diff = run_git(root, "diff", diff_base, joined_head, "--", "oracle")
     assert bool(oracle_diff.stdout) is (run_state == "error")
     if run_state == "error":
         assert "pending oracle change" in oracle_diff.stdout
-
-
-@pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
-def test_apply_fork_passes_saved_diff_base_to_agent(
-    ready_content_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-    has_previous_apply: bool,
-) -> None:
-    """保存した比較始点の有無に応じ、次回 apply の commit 範囲を確定する。"""
-    # fork が読むのは保存済み state だけなので、join の全条件を再実行しない。
-    root, _session_branch, state_path = ready_content_session
-    state = _state(state_path)
-    previous_base = (
-        run_git(root, "rev-parse", "HEAD").stdout.strip()
-        if has_previous_apply
-        else None
-    )
-    state["session"]["last_joined_apply_fork_commit"] = previous_base
-    state_path.write_text(json.dumps(state))
-    expected_base = (
-        previous_base
-        if previous_base is not None
-        else state["session"]["session_fork_commit"]
-    )
-    (root / "oracle" / "spec.md").write_text("pending oracle change\n")
-    run_git(root, "add", "oracle/spec.md")
-    run_git(root, "commit", "-m", "pending oracle change")
-    parameters: list[AgentCallParameter] = []
-
-    def capture_apply(
-        parameter: AgentCallParameter, **_kwargs: object
-    ) -> SimpleNamespace:
-        """次回 apply が受け取る commit 範囲を記録する。"""
-        parameters.append(parameter)
-        return SimpleNamespace(returncode=0, output_json=None)
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", capture_apply)
-    fork = runner.invoke(app, ["realization", "apply", "fork"], catch_exceptions=False)
-
-    assert fork.exit_code == 0, fork.output
-    assert len(parameters) == 1
-    run_state = _state(state_path)["run"]
-    assert run_state["state"] == "joinable"
-    parameter = parameters[0]
-    assert parameter.agent_call_cwd != root
-    assert f"- 始点: `{expected_base}`" in parameter.prompt
-    assert f"- 終点: `{run_state['fork_commit']}`" in parameter.prompt
-    oracle_diff = run_git(
-        root, "diff", expected_base, run_state["fork_commit"], "--", "oracle"
-    )
-    assert "pending oracle change" in oracle_diff.stdout
 
 
 def test_run_join_reports_joinable_child_stop_warnings(
@@ -1087,8 +1048,8 @@ def test_apply_fork_checks_stopped_children_before_commit(
     monkeypatch: pytest.MonkeyPatch,
     late_path: str | None,
 ) -> None:
-    """停止後の変更を検査し、遅延 path があれば commit せず全体を戻す。"""
-    _root, _session_branch, state_path = ready_content_session
+    """停止後の差分・warning を検査し、遅延 path があれば全体を戻す。"""
+    root, _session_branch, state_path = ready_content_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -1100,10 +1061,12 @@ def test_apply_fork_checks_stopped_children_before_commit(
         (worktree / "README.md").write_text("realized\n")
         return SimpleNamespace(returncode=0, output_json=None)
 
-    def stop_child(process: object) -> None:
+    def stop_child(process: object) -> str | None:
         stopped.append(process)
         if late_path is not None:
             (run_worktrees[0] / late_path).write_text("late child edit\n")
+            return None
+        return "run child process already stopped: 123"
 
     monkeypatch.setattr(
         runtime_run_module,
@@ -1130,6 +1093,18 @@ def test_apply_fork_checks_stopped_children_before_commit(
         assert stopped == [child]
         assert _state(state_path)["run"]["state"] == "joinable"
         assert (worktree / "README.md").read_text() == "realized\n"
+        # warning の保存も同じ成功 fork で検査し、run 作成を重複させない。
+        reports = list(
+            (root / ".cmoc" / "gu" / "report" / "realization" / "apply" / "fork").glob(
+                "*.md"
+            )
+        )
+        assert len(reports) == 1
+        assert terminal_primary_report(result) == reports[0]
+        report_text = reports[0].read_text()
+        assert "run child process already stopped: 123" in report_text
+        assert "feedback_observation_count: 0" in report_text
+        assert "feedback_observations: []" in report_text
     else:
         assert result.exit_code == 1, result.output
         assert stopped and all(process == child for process in stopped)
@@ -1138,42 +1113,6 @@ def test_apply_fork_checks_stopped_children_before_commit(
         assert (worktree / "oracle" / "spec.md").read_text() == "# spec\n"
         assert not (worktree / "late-realization.md").exists()
     assert run_git(worktree, "status", "--porcelain").stdout == ""
-
-
-def test_apply_fork_reports_cleanup_warnings(
-    ready_run_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """apply fork の cleanup warning を fork report に保存する。"""
-    root, _session_branch, _state_path = ready_run_session
-    monkeypatch.setattr(
-        apply_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
-    )
-    monkeypatch.setattr(
-        apply_module,
-        "stop_tracked_codex_children",
-        lambda *_args: ["run child process already stopped: 789"],
-    )
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0, result.output
-    reports = list(
-        (root / ".cmoc" / "gu" / "report" / "realization" / "apply" / "fork").glob(
-            "*.md"
-        )
-    )
-    assert len(reports) == 1
-    report_text = reports[0].read_text()
-    assert "run child process already stopped: 789" in report_text
-    assert "feedback_observation_count: 0" in report_text
-    assert "feedback_observations: []" in report_text
 
 
 def test_refactor_fork_stops_tracked_children_before_each_commit(
