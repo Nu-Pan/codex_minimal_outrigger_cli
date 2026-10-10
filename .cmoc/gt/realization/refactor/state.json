@@ -1345,9 +1345,9 @@
   },
   "test/test_codex_runtime_tui.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "43299f7345570b9d42777717d3d1ea12029cdef610a589c393e96600e6cbc6c8",
+    "last_investigated_at": "2026-10-11_01-05-57_514"
   },
   "test/test_doctor_cli.py": {
     "investigation_required": true,
