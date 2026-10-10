@@ -285,7 +285,12 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
-    # 事前 doctor で ignore を済ませず、検証対象の TUI invocation で両 root を準備する。
+    # doctor との実結合は main 起動ケース、linked 修復は test_doctor_cli.py に残す。
+    # ここでは呼び出し先・順序を検査し、両 root の ignore は実 pre-log check に任せる。
+    doctor_roots: list[Path] = []
+    monkeypatch.setattr(
+        runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
+    )
     write_config(linked / ".cmoc/gt/config.json", CmocConfig())
     monkeypatch.chdir(linked)
     opened_inputs = editor_input("\nlinked worktree task\n")
@@ -293,6 +298,7 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         """linked worktree の TUI 起動 call を記録する。"""
+        assert doctor_roots == [linked.resolve()]
         tui_calls.append((parameter, kwargs))
 
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
@@ -300,6 +306,7 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
+    assert doctor_roots == [linked.resolve()]
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
@@ -322,4 +329,4 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
         len(list((root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl"))) == 1
     )
     assert run_git(root, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
-    assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""
+    assert run_git(linked, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
