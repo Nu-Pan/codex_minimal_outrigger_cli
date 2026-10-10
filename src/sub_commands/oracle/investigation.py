@@ -15,6 +15,7 @@ from commons.prompt_editor_input import (
     ensure_prompt_editor_roots_ignored,
     reserve_prompt_editor_input,
 )
+from commons.runtime_paths import reuse_root_queries
 from oracle.acp_builder.oracle.investigation.launch_tui import (
     build_oracle_investigation_launch_tui_parameter,
 )
@@ -34,8 +35,10 @@ def cmoc_oracle_investigation_impl() -> None:
 
 def _cmoc_oracle_investigation_body() -> None:
     """入力された oracle 調査指示から Codex TUI を起動する。"""
-    root = repo_root()
-    current_root = work_root()
+    # 両 root だけを同じ探索から導出し、editor・agent 呼び出しへ結果を持ち越さない。
+    with reuse_root_queries():
+        root = repo_root()
+        current_root = work_root()
 
     # oracle 調査契約を含む完全 prompt の skeleton を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
