@@ -1225,9 +1225,9 @@
   },
   "test/_codex_support.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "825f1114d765a6ebd39dbe2f0684f813400af1973b1d1da284cef936ce7ad27c",
+    "last_investigated_at": "2026-10-10_22-01-34_518"
   },
   "test/_command_support.py": {
     "investigation_required": true,

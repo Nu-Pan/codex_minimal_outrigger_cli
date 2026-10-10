@@ -6,6 +6,7 @@
 """
 
 import json
+from dataclasses import replace
 from multiprocessing import Barrier, Pipe, Process
 from multiprocessing.connection import Connection
 from multiprocessing.synchronize import Barrier as BarrierType
@@ -20,7 +21,7 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_ids import is_common_id
 from config.cmoc_config import CmocConfig
@@ -222,14 +223,15 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     assert "permissions" not in override_config
 
 
-def test_run_codex_exec_stores_schema_state_under_repo_root(
+def test_run_codex_exec_uses_linked_worktree_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """リンク済み worktree の出力 schema を repo root 配下へ保存することを検証する。
+    """linked worktree の cwd・sandbox と main repository の schema 保存先を検証する。
 
     正本仕様:
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
+    # 同じ linked worktree の一回の呼び出しで cwd・sandbox・schema の境界を調べる。
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
@@ -263,12 +265,9 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
             }
         )
     )
-    parameter = AgentCallParameter(
-        agent_call_kind="build_feedback_normalize_issue_parameter",
-        file_access_mode=FileAccessMode.REPO_WRITE,
-        prompt="prompt",
+    parameter = replace(
+        codex_parameter(FileAccessMode.PURE_ORACLE_READ, agent_call_cwd=linked),
         structured_output_schema_path=schema_source,
-        agent_call_cwd=linked,
     )
 
     result = run_codex_exec(
@@ -281,60 +280,14 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
     record = json.loads(recorder.read_text())
     schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
     assert record["cwd"] == str(linked.resolve())
-    assert result.schema_path == schema_arg
-    assert schema_arg.parent == root / ".cmoc" / "gu" / "schema"
-    assert not (linked / ".cmoc" / "gu" / "schema").exists()
-
-
-def test_run_codex_exec_uses_workspace_sandbox_from_linked_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree でも PURE_ORACLE_READ を専用 sandbox 引数へ変換する。
-
-    正本仕様:
-        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
-    """
-    root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked-exec-log"
-    linked.parent.mkdir(parents=True)
-    run_git(root, "worktree", "add", "-b", "linked-exec-log", str(linked), "HEAD")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, os, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
-            "    'args': args,",
-            "    'cwd': os.getcwd(),",
-            "}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        codex_parameter(
-            FileAccessMode.PURE_ORACLE_READ,
-            agent_call_cwd=linked,
-        ),
-        root=root,
-        transient_poll_interval_sec=0,
-        config=CmocConfig(),
-    )
-
-    record = json.loads(recorder.read_text())
-    assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
     assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
     override_config = codex_override_config(record["args"])
     assert "permissions" not in override_config
     assert "default_permissions" not in override_config
+    assert result.schema_path == schema_arg
+    assert schema_arg.parent == root / ".cmoc" / "gu" / "schema"
+    assert not (linked / ".cmoc" / "gu" / "schema").exists()
 
 
 def test_run_codex_exec_does_not_inject_agents_path_permissions(
