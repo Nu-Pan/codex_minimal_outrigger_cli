@@ -69,6 +69,27 @@ def model_search(tmp_path, monkeypatch):
     return create, inputs
 
 
+@pytest.fixture
+def cache_search():
+    """cache の寿命・共有境界には一文書一入力の double を使う。"""
+    generated_inputs = []
+
+    class CacheWorker(_InferenceDouble):
+        def stream_chunks(self, documents, resumes, on_event, **kwargs):
+            def record_input(event):
+                if event["kind"] == "chunk":
+                    source = documents[event["path"]]
+                    generated_inputs.append(source[event["start"] : event["end"]])
+                on_event(event)
+
+            super().stream_chunks(documents, resumes, record_input, **kwargs)
+
+    def create(root):
+        return DocumentSearch(root, _tuning(), worker=CacheWorker())
+
+    return create, lambda: list(generated_inputs)
+
+
 def _worktree(repository, path, branch=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     args = ("-b", branch) if branch else ("--detach",)
@@ -163,8 +184,8 @@ def test_parallel_worktrees_generate_one_embedding_in_total(tmp_path, model_sear
     assert sum(item["persisted_embeddings"] for item in progress) == 1
 
 
-def test_run_removal_preserves_embedding_and_original_producer(tmp_path, model_search):
-    create, inputs = model_search
+def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_search):
+    create, inputs = cache_search
     root = _repo_with_docs(tmp_path, committed=True)
     run = _worktree(root, root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID, RUN_BRANCH)
     original = (run / "oracle/doc/allowed.md").read_text()
@@ -209,9 +230,9 @@ def test_reuse_compatibility_is_independent_of_partition(
     "failure_code", ["MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"]
 )
 def test_failed_sync_saved_results_are_reusable_in_another_worktree(
-    tmp_path, model_search, failure_code
+    tmp_path, cache_search, failure_code
 ):
-    create, inputs = model_search
+    create, inputs = cache_search
     root = _repo_with_docs(tmp_path, committed=True)
     run = _worktree(root, tmp_path / "run")
 
@@ -237,9 +258,9 @@ def test_failed_sync_saved_results_are_reusable_in_another_worktree(
 
 
 def test_identical_inputs_in_different_repositories_are_not_shared(
-    tmp_path, model_search
+    tmp_path, cache_search
 ):
-    create, inputs = model_search
+    create, inputs = cache_search
     for name in ("first", "second"):
         directory = tmp_path / name
         directory.mkdir()
