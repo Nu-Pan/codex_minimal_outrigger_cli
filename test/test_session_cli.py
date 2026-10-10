@@ -1096,13 +1096,14 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
 def test_session_join_accepts_incidental_conflict_file_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """marker 外の整理、mode 変更、削除と改行 path の解消結果を merge する。"""
+    """内容の整理、mode・改行 path と modify/modify・delete/modify の削除を merge する。"""
     # 同じ成功経路の Git 準備を共有し、各編集と NUL framing を別ファイルで検証する。
     # {{work-root}}/oracle/doc/app_spec/merge_conflict_resolution.md
     root = make_repo(tmp_path)
     context_target = root / "oracle" / "spec.md"
     mode_target = root / "oracle" / "mode.md"
     deleted_target = root / "oracle" / "deleted.md"
+    delete_modify_target = root / "README.md"
     newline_target = root / "src" / "line\nbreak.txt"
     newline_target.parent.mkdir()
     newline_target.write_text("base\n")
@@ -1115,15 +1116,17 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     for target in (context_target, mode_target):
         target.write_text("prefix\nsession change\nsuffix\n")
     deleted_target.write_text("session change\n")
+    delete_modify_target.unlink()
     newline_target.write_text("session change\n")
-    run_git(root, "add", "oracle", "src")
+    run_git(root, "add", "oracle", "src", "README.md")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
     for target in (context_target, mode_target):
         target.write_text("prefix\nhome change\nsuffix\n")
     deleted_target.write_text("home change\n")
+    delete_modify_target.write_text("home change\n")
     newline_target.write_text("home change\n")
-    run_git(root, "add", "oracle", "src")
+    run_git(root, "add", "oracle", "src", "README.md")
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
 
@@ -1140,6 +1143,7 @@ def test_session_join_accepts_incidental_conflict_file_changes(
         assert "統合対象" in parameter.prompt
         assert str(newline_target) not in parameter.prompt
         assert set(merge_conflict_module.unmerged_paths(root)) == {
+            "README.md",
             "oracle/spec.md",
             "oracle/mode.md",
             "oracle/deleted.md",
@@ -1149,6 +1153,7 @@ def test_session_join_accepts_incidental_conflict_file_changes(
         mode_target.write_text("prefix\nresolved change\nsuffix\n")
         mode_target.chmod(mode_target.stat().st_mode | stat.S_IXUSR)
         deleted_target.unlink()
+        delete_modify_target.unlink()
         newline_target.write_text("resolved change\n")
         return FakeCodexResult()
 
@@ -1168,8 +1173,11 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     assert run_git(root, "ls-files", "--stage", "oracle/mode.md").stdout.startswith(
         "100755 "
     )
-    assert run_git(root, "ls-files", "--", "oracle/deleted.md").stdout == ""
+    assert (
+        run_git(root, "ls-files", "--", "oracle/deleted.md", "README.md").stdout == ""
+    )
     assert not deleted_target.exists()
+    assert not delete_modify_target.exists()
     assert newline_target.read_text() == "resolved change\n"
     assert (
         run_git(root, "show", "HEAD:src/line\nbreak.txt").stdout == "resolved change\n"
@@ -1284,43 +1292,6 @@ def test_session_join_preprocesses_linked_worktree_before_preconditions(
         ".agents/.gitkeep"
     ]
     assert run_git(linked, "status", "--short").stdout.strip() == ""
-
-
-def test_session_join_stages_delete_conflict_resolution(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Codexが解決した削除をstageしてsession joinできることを検証する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
-    (root / "README.md").unlink()
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "session deletes readme")
-    run_git(root, "switch", home_branch)
-    (root / "README.md").write_text("home change\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "home changes readme")
-    run_git(root, "switch", session_branch)
-
-    class FakeCodexResult:
-        """conflict resolution成功を表す最小結果double。"""
-
-        output_text = "merge_resolution: resolved\n"
-        output_json = None
-
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
-        """conflict対象を削除して解消済み結果を返す。"""
-        (root / "README.md").unlink()
-        return FakeCodexResult()
-
-    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-
-    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 0
-    assert current_branch(root) == home_branch
-    assert not (root / "README.md").exists()
-    assert run_git(root, "diff", "--name-only", "--diff-filter=U").stdout == ""
 
 
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
@@ -1527,6 +1498,9 @@ def test_session_join_codex_failure_reports_unresolved_merge(
     assert current_branch(root) == home_branch
     assert "Codex CLI 呼び出しが失敗しました。" in result.stderr
     assert "stderr/stdout log を確認して原因を解消してください。" in result.stderr
+    rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert f"- `{target}`" in rendered_report
+    assert "- 確定した解消結果: `未確認`" in rendered_report
 
 
 def test_session_join_conflict_uses_merge_target_worktree_context(

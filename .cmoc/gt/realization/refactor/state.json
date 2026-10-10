@@ -1201,9 +1201,9 @@
   },
   "src/sub_commands/session/join.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "8ee7d0e96a5e471d70caab84f24bf0049bbaeae3cf7944ba6286c2b72d775cf4",
+    "last_investigated_at": "2026-10-10_21-17-41_015"
   },
   "src/sub_commands/tui.py": {
     "investigation_required": true,

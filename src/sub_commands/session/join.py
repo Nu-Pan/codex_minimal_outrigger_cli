@@ -166,8 +166,10 @@ def resolve_session_join_conflict(
 ) -> None:
     """両 HEAD を渡して内容解消を依頼し、管理物と merge commit を確定する。"""
     start_subcommand_step("3/4", "競合を統合", "resolve merge conflicts")
+    # report と解消処理で merge 開始時の競合一覧を共有する。
+    initial_conflicts = unmerged_paths(root)
     update_primary_report_fields(
-        conflict_paths=[str(root / path) for path in unmerged_paths(root)],
+        conflict_paths=[str(root / path) for path in initial_conflicts],
         conflict_resolution_status="started",
         conflict_resolution_result="not_confirmed",
     )
@@ -180,9 +182,9 @@ def resolve_session_join_conflict(
         ),
         codex_exec=codex_exec,
         purpose="session join conflict resolution",
+        initial_conflicts=initial_conflicts,
     )
     update_primary_report_fields(
-        conflict_paths=[str(root / path) for path in resolution["initial_conflicts"]],
         conflict_resolution_status=resolution["agent_status"],
         conflict_resolution_result="confirmed",
         conflict_agent_report=resolution["agent_report"],

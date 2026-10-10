@@ -39,9 +39,11 @@ def resolve_merge_conflicts(
     *,
     codex_exec: CodexExecCallable | None = None,
     purpose: str,
+    initial_conflicts: list[str] | None = None,
 ) -> dict[str, Any]:
     """内容を agent に委ね、refactor state と全変更を merge commit に収める。"""
-    conflicts = unmerged_paths(root)
+    # report 用の初期一覧を受け取った場合は、同じ index を再照会しない。
+    conflicts = unmerged_paths(root) if initial_conflicts is None else initial_conflicts
     if not conflicts:
         raise CmocError("merge 失敗時の競合 path を特定できません。", [], "")
     refactor_relative = refactor_state_path(root).relative_to(root).as_posix()
