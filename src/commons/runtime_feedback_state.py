@@ -1371,12 +1371,18 @@ def _machine_aggregate_reaches_threshold(record: _JsonObject) -> bool:
 
 
 def _load_generation(
-    repo: Path, manifest_path: Path, expected_generation_id: str | None = None
+    repo: Path,
+    manifest_path: Path,
+    expected_generation_id: str | None = None,
+    *,
+    expected_sha256: str | None = None,
 ) -> tuple[
     _JsonObject, dict[str, _JsonObject], dict[str, _JsonObject], list[_JsonObject]
 ]:
     """generation manifest と列挙 record・履歴を hash 検証して読み込む。"""
-    manifest = _read_canonical_object(manifest_path, "active generation manifest")
+    manifest = _read_canonical_object(
+        manifest_path, "active generation manifest", expected_sha256=expected_sha256
+    )
     _require_exact_fields(
         manifest,
         {
@@ -1478,13 +1484,15 @@ def _load_generation(
             raise _corruption(
                 "active issue reference ID が string ではありません。", manifest_path
             )
-        path = _validate_artifact_reference(
+        path, digest = _resolve_artifact_reference(
             repo,
             {"path": item.get("path"), "sha256": item.get("sha256")},
             expected_root=expected_issue_root,
             description="active issue",
         )
-        record = _read_canonical_object(path, "active issue record")
+        record = _read_canonical_object(
+            path, "active issue record", expected_sha256=digest
+        )
         _validate_active_issue(
             record,
             path,
@@ -1521,13 +1529,15 @@ def _load_generation(
                 "machine aggregate canonical key が string ではありません。",
                 manifest_path,
             )
-        path = _validate_artifact_reference(
+        path, digest = _resolve_artifact_reference(
             repo,
             {"path": item.get("path"), "sha256": item.get("sha256")},
             expected_root=expected_aggregate_root,
             description="machine aggregate",
         )
-        record = _read_canonical_object(path, "machine aggregate record")
+        record = _read_canonical_object(
+            path, "machine aggregate record", expected_sha256=digest
+        )
         _validate_machine_aggregate(record, path)
         if _machine_aggregate_reaches_threshold(record):
             raise _corruption(
@@ -1610,7 +1620,7 @@ def load_active_state(repo: Path) -> ActiveState:
     )
 
     # pointer が参照する generation と Markdown report を両方検証する。
-    generation_path = _validate_artifact_reference(
+    generation_path, generation_hash = _resolve_artifact_reference(
         repo,
         {
             "path": pointer.get("generation_manifest_path"),
@@ -1620,7 +1630,10 @@ def load_active_state(repo: Path) -> ActiveState:
         description="current generation manifest",
     )
     generation_manifest, issues, aggregates, history = _load_generation(
-        repo, generation_path, str(generation_id_value)
+        repo,
+        generation_path,
+        str(generation_id_value),
+        expected_sha256=generation_hash,
     )
     if generation_manifest.get("report_cut_id") != report_cut_id_value:
         raise _corruption(
@@ -1662,15 +1675,10 @@ def load_active_state(repo: Path) -> ActiveState:
         cut_path.exists() or cut_path.is_symlink()
     ):
         cleanup_manifest = _read_canonical_object(
-            cut_path, "published report cut manifest"
+            cut_path,
+            "published report cut manifest",
+            expected_sha256=report_cut_manifest_hash,
         )
-        if sha256_bytes(cut_path.read_bytes()) != pointer.get(
-            "report_cut_manifest_sha256"
-        ):
-            raise _corruption(
-                "published report cut manifest hash が current pointer と一致しません。",
-                cut_path,
-            )
         _validate_report_cut_manifest(
             repo,
             cleanup_manifest,
@@ -3264,14 +3272,14 @@ def publish_current_pointer(
     if result not in {"ok", "attention", "incomplete"}:
         raise ValueError(f"invalid normal feedback result: {result!r}")
     _require_timestamp(published_at, current_pointer_path(repo), "feedback publication")
-    generation_path = _validate_artifact_reference(
+    generation_path, generation_hash = _resolve_artifact_reference(
         repo,
         generation_manifest,
         expected_root=generation_directory(repo, generation_id),
         description="new generation manifest",
     )
     loaded_manifest, _issues, _aggregates, history = _load_generation(
-        repo, generation_path, generation_id
+        repo, generation_path, generation_id, expected_sha256=generation_hash
     )
     if loaded_manifest.get("report_cut_id") != report_cut_id:
         raise _corruption(

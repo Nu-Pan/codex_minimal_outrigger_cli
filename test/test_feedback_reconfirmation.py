@@ -12,7 +12,13 @@ from types import SimpleNamespace
 import pytest
 from _acp_builder_support import oracle_schema_path
 from _git_support import RUN_BRANCH, SESSION_BRANCH, SESSION_ID
-from test_feedback import _context, _fake_result, _payload, _remediation_output
+from test_feedback import (
+    _assert_hash_verified_state_snapshot,
+    _context,
+    _fake_result,
+    _payload,
+    _remediation_output,
+)
 
 from cmoc_runtime import CmocError
 from commons import runtime_feedback_run_state as run_state
@@ -928,18 +934,19 @@ def test_current_pointer_rejects_non_markdown_report_path(feedback_run, monkeypa
         load_active_state(root)
 
 
-def test_active_generation_hash_mismatch_is_corruption(published_feedback):
-    """current pointer が列挙する active record の改変を無視して続行しない。"""
+@pytest.mark.parametrize("artifact_kind", ["manifest", "issue"])
+def test_active_generation_load_uses_hash_verified_bytes(
+    published_feedback, monkeypatch, artifact_kind
+):
+    """generation の hash 検証と解析を一回の読込に揃え、毎回検証する。"""
     root, state = published_feedback
     assert state.generation_manifest is not None
-    [reference] = state.generation_manifest["issues"]
-    issue_path = root / reference["path"]
-    issue = read_json_object(issue_path)
-    issue["summary"] = "改変済み"
-    issue_path.write_bytes(canonical_json_bytes(issue))
-
-    with pytest.raises(CmocError, match="SHA256"):
-        load_active_state(root)
+    if artifact_kind == "manifest":
+        path = root / state.current["generation_manifest_path"]
+    else:
+        [reference] = state.generation_manifest["issues"]
+        path = root / reference["path"]
+    _assert_hash_verified_state_snapshot(root, state, path, monkeypatch)
 
 
 def test_unlisted_active_generation_artifact_is_corruption(published_feedback):

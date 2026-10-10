@@ -303,6 +303,31 @@ def _store_agent_issue(root: Path, session_id: str) -> tuple[str, Path, str]:
     return observation_id, raw_path, issue_id(f"agent\0{observation_id}")
 
 
+def _assert_hash_verified_state_snapshot(root, state, path, monkeypatch):
+    """一度読んだ artifact の hash と内容を使い、次回は改変を検出する。"""
+    original_read = Path.read_bytes
+    original_content = original_read(path)
+    reads = []
+
+    def replace_after_read(target):
+        content = original_read(target)
+        if target == path:
+            reads.append(target)
+            target.write_bytes(b"{}\n")
+        return content
+
+    try:
+        with monkeypatch.context() as snapshot_patch:
+            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+            assert load_active_state(root) == state
+            assert reads == [path]
+            with pytest.raises(CmocError, match="SHA256"):
+                load_active_state(root)
+            assert reads == [path, path]
+    finally:
+        path.write_bytes(original_content)
+
+
 def test_reporter_exposes_only_canonical_submission_tool(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2843,6 +2868,10 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
         if index == 0:
             assert set(state.machine_aggregates) == {canonical_key}
             assert state.issues == {}
+            [reference] = state.generation_manifest["machine_aggregates"]
+            _assert_hash_verified_state_snapshot(
+                root, state, root / reference["path"], monkeypatch
+            )
         else:
             assert state.machine_aggregates == {}
             assert set(state.issues) == {issue_id(str(canonical_key))}
@@ -3060,3 +3089,9 @@ def test_cleanup_corruption_is_a_required_recovery_failure(
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.cleanup_manifest is not None
+    cut_path = state.cleanup_manifest_path
+    assert cut_path is not None
+    changed = {**state.cleanup_manifest, "created_at": "2026-01-01T00:00:00Z"}
+    cut_path.write_bytes(canonical_json_bytes(changed))
+    with pytest.raises(CmocError, match="SHA256"):
+        load_active_state(root)
