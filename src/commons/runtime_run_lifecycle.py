@@ -226,12 +226,14 @@ def start_editing_run(kind: str) -> EditingRunContext:
     return published_context
 
 
+@reuse_git_path_queries()
 def resolve_active_run(
     allowed_states: set[str],
     *,
     allow_missing_run_worktree: bool = False,
 ) -> tuple[EditingRunContext, SessionState]:
     """現在の branch と state から active run および session worktree を解決する。"""
+    # 配置照会だけを同じ解決内で共有し、lock 前後の state・branch・worktree は再検査する。
     repository = repo_root()
     current_worktree = work_root()
     branch = current_branch(current_worktree)

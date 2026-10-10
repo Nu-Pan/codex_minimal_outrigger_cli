@@ -2392,6 +2392,56 @@ def test_run_join_accepts_realization_rename_and_delete(
     assert (root / "renamed.md").exists() is (change == "rename")
 
 
+def test_resolve_active_run_reuses_placement_queries_but_refreshes_state_and_worktrees(
+    ready_run_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """配置の重複照会を避け、解決ごとの state と worktree の再検査を保つ。"""
+    root, _session_branch, state_path = ready_run_session
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[:2] == ["git", "rev-parse"]:
+            queries[(kwargs.get("cwd"), tuple(argv[1:]))] += 1
+        return original_run(argv, *args, **kwargs)
+
+    def inspect(anchor, expected_state):
+        queries.clear()
+        with monkeypatch.context() as probe:
+            probe.chdir(anchor)
+            probe.setattr(git_module.subprocess, "run", record_query)
+            active, state = lifecycle_module.resolve_active_run({"joinable", "error"})
+        assert active.repo == active.session_worktree == root
+        assert active.run_worktree == context.run_worktree
+        assert active.run_branch == state.run.branch == context.run_branch
+        assert active.state_before == state.run.state == expected_state
+        # 時間閾値を使わず、同じ配置照会の process 起動と呼び出し間の持ち越しを検出する。
+        assert queries and max(queries.values()) == 1
+
+    for anchor in (root, context.run_worktree):
+        inspect(anchor, "joinable")
+
+    state = _state(state_path)
+    state["run"]["state"] = "error"
+    state_path.write_text(json.dumps(state))
+    inspect(root, "error")
+
+    # 登録先の欠損・directory 置換を成功済みの解決結果で隠さず、復旧後も再検査する。
+    moved = context.run_worktree.with_name(f"{context.run_worktree.name}-moved")
+    context.run_worktree.rename(moved)
+    with pytest.raises(CmocError, match="worktree が管理 path と一致しません"):
+        inspect(root, "error")
+    context.run_worktree.mkdir()
+    with pytest.raises(CmocError, match="worktree が管理 path と一致しません"):
+        inspect(root, "error")
+    context.run_worktree.rmdir()
+    moved.rename(context.run_worktree)
+    inspect(root, "error")
+
+
 def test_resolve_active_run_rejects_run_branch_from_another_session(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
