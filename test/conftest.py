@@ -59,10 +59,13 @@ def handoff_start(monkeypatch: pytest.MonkeyPatch) -> Mock:
 
 
 @pytest.fixture(autouse=True)
-def _isolate_download_asset_cache(tmp_path, monkeypatch):
+def _isolate_download_asset_cache(request, monkeypatch):
     """固定 cache パスをテスト内に置換し、実ユーザーの保存物に触れない。"""
+    # 保存先を使うまで tmp_path を作らず、ファイルを使わない test の準備を省く。
     monkeypatch.setattr(
-        asset_cache_module, "asset_cache_directory", lambda: tmp_path / "asset-cache"
+        asset_cache_module,
+        "asset_cache_directory",
+        lambda: request.getfixturevalue("tmp_path") / "asset-cache",
     )
 
 
@@ -138,11 +141,15 @@ def _isolate_primary_report_editor(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _isolate_document_search_materials(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """一般 CLI test では大容量モデルと installation の共有領域に触れない。"""
     monkeypatch.setattr(runtime_doctor, "_installation_root", lambda root: root)
-    monkeypatch.setattr(runtime_document_search, "cmoc_root", lambda: tmp_path)
+    monkeypatch.setattr(
+        runtime_document_search,
+        "cmoc_root",
+        lambda: request.getfixturevalue("tmp_path"),
+    )
     monkeypatch.setattr(runtime_doctor, "_check_common_environment", lambda: None)
     monkeypatch.setattr(
         runtime_doctor,
