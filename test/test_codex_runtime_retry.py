@@ -6,7 +6,12 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-from _codex_support import codex_override_config, setup_codex_home, stub_codex_overrides
+from _codex_support import (
+    codex_override_config,
+    script_codex_calls,
+    setup_codex_home,
+    stub_codex_overrides,
+)
 from _command_support import write_python_executable
 from _git_support import init_repo, make_repo, run_git
 from oracle.other.cmoc_config import DocumentSearchConfig
@@ -283,23 +288,10 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "missing_session_bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "missing_session_counter"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'bad': True}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+    # process の入出力は corrects_schema_output_in_same_session に残す。
+    calls = script_codex_calls(
+        monkeypatch, [(0, '{"type":"turn.completed"}\n', '{"bad": true}')]
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "missing_session_schema.json"
     schema.write_text(
         json.dumps(
@@ -325,7 +317,7 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
             config=CmocConfig(),
         )
 
-    assert counter.read_text() == "1"
+    assert len(calls) == 1
     assert "session ID is unavailable" in error.value.detail
 
 
@@ -653,25 +645,10 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    event_text = json.dumps(event)
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            f"print({event_text!r})",
-        ],
+    # JSONL の読み取り・分類と log は実処理し、process 起動は結合テストに残す。
+    calls = script_codex_calls(
+        monkeypatch, [(0, json.dumps(event) + "\n", '{"ok": true}')]
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema: Path | None = None
     if structured_output:
         schema = tmp_path / "schema.json"
@@ -693,7 +670,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
         )
 
     assert "unexpected failure" not in error.value.detail
-    assert counter.read_text() == "1"
+    assert len(calls) == 1
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == ["failed"]
@@ -828,25 +805,19 @@ def test_run_codex_exec_stops_after_output_correction_limit(
     monkeypatch.setattr(
         runtime_codex_exec.time, "sleep", lambda seconds: sleep_calls.append(seconds)
     )
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
+    # 補正回数の制御と診断を検証し、process の受け渡しは成功系に残す。
+    calls = script_codex_calls(
+        monkeypatch,
         [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'bad': True}))",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+            (
+                0,
+                '{"type":"thread.started","thread_id":"session-1"}\n'
+                '{"type":"turn.completed"}\n',
+                '{"bad": true}',
+            )
+        ]
+        * 3,
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "schema.json"
     schema.write_text(
         json.dumps(
@@ -874,7 +845,11 @@ def test_run_codex_exec_stops_after_output_correction_limit(
             subcommand_logger=logger,
         )
 
-    assert counter.read_text() == "3"
+    assert len(calls) == 3
+    assert "resume" not in calls[0]["argv"]
+    for call in calls[1:]:
+        resume_index = call["argv"].index("resume")
+        assert call["argv"][resume_index + 1] == "session-1"
     assert sleep_calls == []
     assert "`additionalProperties`" in error.value.detail
     call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
