@@ -326,22 +326,42 @@ def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
         write_refactor_state(root, state)
 
 
-def test_refactor_state_rejects_symlinked_path_without_writing_target(
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    "link_relative",
+    [
+        ".cmoc/gt/realization/refactor/state.json",
+        ".cmoc/gt/realization/refactor",
+        ".cmoc",
+        ".",
+    ],
+)
+@pytest.mark.parametrize("target_exists", [True, False])
+def test_refactor_state_rejects_symlink_without_accessing_target(
+    tmp_path: Path, link_relative: str, target_exists: bool
 ) -> None:
-    """state path の symlink 経由更新が work-root 外へ到達しない。"""
+    """state・親・root の symlink は、参照先の有無にかかわらず読み書きしない。"""
     root = tmp_path / "repo"
-    root.mkdir()
-    outside = tmp_path / "outside-state.json"
-    outside.write_text("original\n")
-    state_path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
-    state_path.parent.mkdir(parents=True)
-    state_path.symlink_to(outside)
+    outside = tmp_path / "outside"
+    outside_state = outside / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
+    if target_exists:
+        outside_state.parent.mkdir(parents=True)
+        outside_state.write_text("original\n")
+    link = root / link_relative
+    target = outside / link_relative
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(target, target_is_directory=not link.name.endswith(".json"))
 
-    with pytest.raises(CmocError, match="refactor state"):
+    with pytest.raises(CmocError, match="refactor state") as read_error:
+        load_refactor_state(root)
+    assert "symlink" in read_error.value.detail
+    with pytest.raises(CmocError, match="refactor state") as write_error:
         write_refactor_state(root, {})
+    assert "symlink" in write_error.value.detail
 
-    assert outside.read_text() == "original\n"
+    if target_exists:
+        assert outside_state.read_text() == "original\n"
+    else:
+        assert not outside.exists()
 
 
 @pytest.mark.parametrize(
