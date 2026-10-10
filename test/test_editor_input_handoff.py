@@ -147,9 +147,9 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_source,
+    input_path: Path,
 ) -> None:
     """repository 不一致と symlink 化を拒否し、リンク先へ書き込まない。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     input_path.write_text("initial", encoding="utf-8")
     target = start_editor_input_handoff(
         tmp_path, input_path, "{{original-prompt-here}}"
@@ -239,9 +239,9 @@ def test_target_close_drains_an_accepted_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_source,
+    input_path: Path,
 ) -> None:
     """受付済み上書きが完了するまで close が target を破棄しない。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     input_path.write_text("initial", encoding="utf-8")
     entered = threading.Event()
     release = threading.Event()
@@ -398,10 +398,10 @@ def test_target_deadline_releases_connection_and_accepts_next_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_source,
+    input_path: Path,
     phase: str,
 ) -> None:
     """認証前・認証後の期限切れで実接続を解放し、次の submission を処理する。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     target = start_editor_input_handoff(
         tmp_path, input_path, "{{original-prompt-here}}"
     )

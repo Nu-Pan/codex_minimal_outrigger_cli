@@ -23,15 +23,6 @@ from commons.runtime_ids import is_common_id
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
 
 
-@pytest.fixture
-def input_path(tmp_path: Path) -> Path:
-    """予約・採番を検査しないケースには、所定 directory の通常 file だけ用意する。"""
-    path = tmp_path / ".cmoc/gu/log/editor_input/input.md"
-    path.parent.mkdir(parents=True)
-    path.touch()
-    return path
-
-
 def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
