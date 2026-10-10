@@ -64,7 +64,7 @@ from commons.runtime_run_lifecycle import (
     start_editing_run,
     worktree_change_paths,
 )
-from commons.runtime_state import SessionPart, SessionState, write_state
+from commons.runtime_state import RunPart, SessionPart, SessionState, write_state
 from commons.runtime_state import state_path as session_state_path
 from config.cmoc_config import CmocConfig
 from main import app
@@ -116,6 +116,41 @@ def ready_run_session(
         ),
     )
     return root, SESSION_BRANCH, path
+
+
+@pytest.fixture
+def ready_abandon_run(
+    ready_run_session: tuple[Path, str, Path],
+    request: pytest.FixtureRequest,
+) -> EditingRunContext:
+    """abandon 用に実 Git の資源と保存済み active run state を用意する。"""
+    # fork と state 遷移は専用 test に任せ、abandon が読む前提だけ直接構築する。
+    root, session_branch, path = ready_run_session
+    state = SessionState.from_dict(_state(path))
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_worktree = git_module.expected_run_worktree(root, RUN_BRANCH)
+    run_git(root, "worktree", "add", "-b", RUN_BRANCH, str(run_worktree), fork_commit)
+    run_state = getattr(request, "param", "joinable")
+    state.run = RunPart(
+        state=run_state,
+        kind="realization_apply",
+        branch=RUN_BRANCH,
+        fork_commit=fork_commit,
+    )
+    write_state(path, state)
+    return EditingRunContext(
+        repo=root,
+        session_worktree=root,
+        session_id=SESSION_ID,
+        state_path=path,
+        session_branch=session_branch,
+        session_fork_commit=state.session.session_fork_commit,
+        kind="realization_apply",
+        run_branch=RUN_BRANCH,
+        run_fork_commit=fork_commit,
+        run_worktree=run_worktree,
+        state_before=run_state,
+    )
 
 
 @pytest.fixture
@@ -751,14 +786,13 @@ def test_run_join_reports_joinable_child_stop_warnings(
 
 
 def test_run_abandon_accepts_already_removed_run_worktree(
-    ready_run_session: tuple[Path, str, Path],
+    ready_abandon_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """既に削除された run worktree を warning 扱いで cleanup できる。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
+    context = ready_abandon_run
+    root, state_path = context.repo, context.state_path
     process_stops: list[tuple[Path, str]] = []
     monkeypatch.setattr(
         run_abandon_module,
@@ -784,16 +818,15 @@ def test_run_abandon_accepts_already_removed_run_worktree(
 
 
 def test_run_abandon_prunes_missing_registered_run_worktree(
-    ready_run_session: tuple[Path, str, Path],
+    ready_abandon_run: EditingRunContext,
     tmp_path: Path,
 ) -> None:
     """実体だけが欠損した run worktree の Git 登録も cleanup する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
-    root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
+    context = ready_abandon_run
+    root, state_path = context.repo, context.state_path
     moved_worktree = tmp_path / "moved-run-worktree"
     context.run_worktree.rename(moved_worktree)
 
@@ -810,14 +843,14 @@ def test_run_abandon_prunes_missing_registered_run_worktree(
     assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
 
 
+@pytest.mark.parametrize("ready_abandon_run", ["running"], indirect=True)
 def test_run_abandon_requires_process_stop_confirmation(
-    ready_run_session: tuple[Path, str, Path],
+    ready_abandon_run: EditingRunContext,
 ) -> None:
     """running run の process tracking がない場合は cleanup を開始しない。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    run_process_id_path(root, context.session_id).unlink()
+    context = ready_abandon_run
+    root, state_path = context.repo, context.state_path
 
     result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
 
@@ -828,17 +861,17 @@ def test_run_abandon_requires_process_stop_confirmation(
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
 
+@pytest.mark.parametrize("ready_abandon_run", ["error"], indirect=True)
 def test_run_abandon_stops_tracked_process_for_error_run(
-    ready_run_session: tuple[Path, str, Path],
+    ready_abandon_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """error run cleanup が残存 process を停止してから資源を破棄する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
-    root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "error")
+    context = ready_abandon_run
+    root, state_path = context.repo, context.state_path
     tracked = SimpleNamespace(process_id=123, start_time=456, child_processes=())
     events: list[str] = []
 
@@ -862,39 +895,37 @@ def test_run_abandon_stops_tracked_process_for_error_run(
     assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
 
 
-@pytest.mark.parametrize("run_state", ["joinable", "error"])
+@pytest.mark.parametrize("ready_abandon_run", ["joinable", "error"], indirect=True)
 def test_run_abandon_rejects_unreadable_process_tracking(
-    ready_run_session: tuple[Path, str, Path],
-    run_state: str,
+    ready_abandon_run: EditingRunContext,
 ) -> None:
     """破損した process tracking を無視して run 資源を削除しない。"""
-    root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, run_state)
+    context = ready_abandon_run
+    root, state_path = context.repo, context.state_path
     tracking_path = run_process_id_path(root, context.session_id)
+    tracking_path.parent.mkdir(parents=True)
     tracking_path.write_bytes(b"\xff")
 
     result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 1
     assert "process tracking を検証できません" in result.output
-    assert _state(state_path)["run"]["state"] == run_state
+    assert _state(state_path)["run"]["state"] == context.state_before
     assert context.run_worktree.exists()
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
     assert tracking_path.read_bytes() == b"\xff"
 
 
 def test_run_abandon_reports_stale_child_stop_warning(
-    ready_run_session: tuple[Path, str, Path],
+    ready_abandon_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """joinable run の child 停止 warning を lifecycle report に残す。"""
-    root, _session_branch, _state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
-    run_process_id_path(root, context.session_id).write_text(
-        "123 456\nchild 789 1011 789\n"
-    )
+    context = ready_abandon_run
+    root = context.repo
+    tracking_path = run_process_id_path(root, context.session_id)
+    tracking_path.parent.mkdir(parents=True)
+    tracking_path.write_text("123 456\nchild 789 1011 789\n")
     monkeypatch.setattr(
         runtime_run_module,
         "stop_child_process_group",
@@ -985,13 +1016,12 @@ def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
 
 
 def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
-    ready_run_session: tuple[Path, str, Path],
+    ready_abandon_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """worktree cleanup失敗時に再試行用のrun branchを保持する。"""
-    root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
+    context = ready_abandon_run
+    root, state_path = context.repo, context.state_path
     branch_calls: list[str] = []
     monkeypatch.setattr(
         run_abandon_module,
@@ -1014,13 +1044,12 @@ def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
 
 
 def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
-    ready_run_session: tuple[Path, str, Path],
+    ready_abandon_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """停止済み process を、その後の cleanup 失敗 report にも残す。"""
-    root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
+    context = ready_abandon_run
+    state_path = context.state_path
     monkeypatch.setattr(
         run_abandon_module, "_stop_joinable_run", lambda *_args: "stopped"
     )
