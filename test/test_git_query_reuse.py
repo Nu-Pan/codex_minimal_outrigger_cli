@@ -151,25 +151,37 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
         run_worktree=root,
     )
 
-    def validate():
-        if inspection == "agent":
-            return unexpected_agent_paths(context, paths)
-        return unexpected_run_paths(
-            context, [GitChange("M", (path,)) for path in paths]
-        )
-
     queries = Counter()
     original_run = git_module.subprocess.run
 
     def record_query(argv, *args, **kwargs):
-        if argv[0] == "git" and argv[1] in {"rev-parse", "config"}:
+        if argv[0] == "git":
             queries[tuple(argv)] += 1
         return original_run(argv, *args, **kwargs)
 
-    with monkeypatch.context() as probe:
-        probe.setattr(git_module.subprocess, "run", record_query)
-        assert validate() == []
-    assert max(queries.values(), default=0) <= 1
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+
+    def validate():
+        queries.clear()
+        if inspection == "agent":
+            unexpected = unexpected_agent_paths(context, paths)
+        else:
+            unexpected = unexpected_run_paths(
+                context, [GitChange("M", (path,)) for path in paths]
+            )
+        placement_queries = [
+            count
+            for argv, count in queries.items()
+            if argv[1] in {"rev-parse", "config"}
+        ]
+        assert max(placement_queries, default=0) <= 1
+        # 存在する ignored file も、branch/fork ごとに同じ判定を繰り返さない。
+        assert sum(
+            count for argv, count in queries.items() if argv[1] == "check-ignore"
+        ) <= len(paths)
+        return unexpected
+
+    assert validate() == []
 
     # 判定結果や index は再利用せず、tracked な ignored file は許可範囲に残す。
     (root / ".gitignore").write_text("first.txt\n")

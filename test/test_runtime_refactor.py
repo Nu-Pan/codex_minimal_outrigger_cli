@@ -208,7 +208,9 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     else:
         os.mkfifo(path)
 
-    assert not is_realization_file_path(root, path, branch="HEAD")
+    assert not is_realization_file_path(
+        root, path, branch="HEAD", fallback_branch="unused-invalid-ref"
+    )
 
 
 def test_refactor_target_classifier_rejects_gitlink_directory(

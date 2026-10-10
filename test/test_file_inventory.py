@@ -254,6 +254,13 @@ def test_realization_classifier_uses_nested_head_for_deleted_file(
         root,
         target,
         branch=RUN_BRANCH,
+        fallback_branch="outer-fork",
+    )
+    assert not is_realization_file_path(
+        root,
+        nested / "missing.txt",
+        branch=RUN_BRANCH,
+        fallback_branch="outer-fork",
     )
 
 

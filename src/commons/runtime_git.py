@@ -1173,10 +1173,12 @@ def is_realization_file_path(
     path: Path,
     *,
     branch: str | None = None,
+    fallback_branch: str | None = None,
 ) -> bool:
     """repository path と Git 状態から realization file か判定する。
 
     apply worktree が無い復旧経路では branch の tree を追跡状態の正本にする。
+    欠落 path だけは fallback_branch も確認し、存在する path の分類は一度で済ませる。
     根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
     の「分類結果」
     """
@@ -1197,28 +1199,33 @@ def is_realization_file_path(
         # nested repository は outer worktree の branch namespace を共有しないため、
         # outer の run branch をそのまま ls-tree へ渡さず、nested repository 自身の
         # checked-out tree を参照する。
-        tree_reference = branch if repository == root.absolute() else "HEAD"
-        branch_entries = run_git(
-            [
-                "ls-tree",
-                "-r",
-                "-z",
-                tree_reference,
-                "--",
-                literal_pathspec(branch_relative.as_posix()),
-            ],
-            repository,
-        ).stdout.split("\0")
-        for entry in branch_entries:
-            metadata, separator, entry_path = entry.partition("\t")
-            metadata_fields = metadata.split()
-            if separator and entry_path == branch_relative.as_posix():
-                try:
-                    entry_mode = int(metadata_fields[0], 8)
-                except (IndexError, ValueError):
-                    continue
-                if stat.S_ISREG(entry_mode):
-                    return True
+        tree_references = (
+            (branch, fallback_branch) if repository == root.absolute() else ("HEAD",)
+        )
+        for tree_reference in dict.fromkeys(tree_references):
+            if not tree_reference:
+                continue
+            branch_entries = run_git(
+                [
+                    "ls-tree",
+                    "-r",
+                    "-z",
+                    tree_reference,
+                    "--",
+                    literal_pathspec(branch_relative.as_posix()),
+                ],
+                repository,
+            ).stdout.split("\0")
+            for entry in branch_entries:
+                metadata, separator, entry_path = entry.partition("\t")
+                metadata_fields = metadata.split()
+                if separator and entry_path == branch_relative.as_posix():
+                    try:
+                        entry_mode = int(metadata_fields[0], 8)
+                    except (IndexError, ValueError):
+                        continue
+                    if stat.S_ISREG(entry_mode):
+                        return True
         return False
     if not _is_regular_file(candidate):
         return False

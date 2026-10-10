@@ -98,11 +98,8 @@ def resolve_merge_conflicts(
                 forbidden = [
                     path
                     for path in sorted(changed)
-                    if not (
-                        is_realization_file_path(root, root / path, branch="HEAD")
-                        or is_realization_file_path(
-                            root, root / path, branch="MERGE_HEAD"
-                        )
+                    if not is_realization_file_path(
+                        root, root / path, branch="HEAD", fallback_branch="MERGE_HEAD"
                     )
                 ]
             if forbidden:

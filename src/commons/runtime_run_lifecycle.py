@@ -447,19 +447,12 @@ def unexpected_agent_paths(
             {
                 path
                 for path in changed_paths
-                if not (
-                    _is_agent_expected_path(
-                        context.run_worktree,
-                        context.kind,
-                        path,
-                        context.run_branch,
-                    )
-                    or _is_agent_expected_path(
-                        context.run_worktree,
-                        context.kind,
-                        path,
-                        context.run_fork_commit,
-                    )
+                if not _is_agent_expected_path(
+                    context.run_worktree,
+                    context.kind,
+                    path,
+                    context.run_branch,
+                    context.run_fork_commit,
                 )
             }
         )
@@ -557,11 +550,16 @@ def _is_agent_expected_path(
     kind: str,
     path: str,
     branch: str,
+    fork_commit: str,
 ) -> bool:
     """path が workload agent に許可された realization file か判定する。"""
-    if kind in {"realization_apply", "realization_refactor", "feedback_report"}:
-        return is_realization_file_path(root, root / path, branch=branch)
-    return False
+    if kind not in {"realization_apply", "realization_refactor", "feedback_report"}:
+        return False
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # rename 元と削除 path は HEAD から消えるため、fork 時点の tree でも確認する。
+    return is_realization_file_path(
+        root, root / path, branch=branch, fallback_branch=fork_commit
+    )
 
 
 def _is_run_expected_path(
@@ -576,12 +574,7 @@ def _is_run_expected_path(
         root, path
     ):
         return True
-    if _is_agent_expected_path(root, kind, path, branch):
-        return True
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # rename 元と削除 path は run branch の HEAD から消えるため、fork 時点の tree でも
-    # realization file であることを確認して、agent の許可範囲を失わないようにする。
-    return _is_agent_expected_path(root, kind, path, fork_commit)
+    return _is_agent_expected_path(root, kind, path, branch, fork_commit)
 
 
 def _is_refactor_state_path(root: Path, path: str) -> bool:
