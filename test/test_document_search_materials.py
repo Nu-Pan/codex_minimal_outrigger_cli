@@ -65,6 +65,15 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
     """初回構築、同条件での再利用、変更後の未検証拒否を確認する。"""
     config = DocumentSearchConfig()
     npm_calls: list[Path] = []
+    base = setup.materials_directory(tmp_path)
+    model = base / setup.SEARCH_MATERIALS.embedding.filename
+    model_reads: list[Path] = []
+    sha256 = worker._sha256
+
+    def checksum(path: Path) -> str:
+        if path == model:
+            model_reads.append(path)
+        return sha256(path)
 
     def fake_version(_args: list[str], **_kwargs: Any) -> SimpleNamespace:
         return SimpleNamespace(stdout="v22.23.2")
@@ -82,16 +91,20 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
         "_compatibility_probe",
         lambda _base, _root, tuning: probes.append(tuning),
     )
+    monkeypatch.setattr(worker, "_sha256", checksum)
     first = setup.prepare_document_search_materials(tmp_path, config)
     assert first["status"] == "built"
     assert len(npm_calls) == 1
     assert probes == [config]
     assert setup.require_document_search_materials(tmp_path, config).is_dir()
 
+    model_reads.clear()
     second = setup.prepare_document_search_materials(tmp_path, config)
     assert second["status"] == "reused"
     assert len(npm_calls) == 1
     assert probes == [config]
+    # 変更のない再利用では、大容量モデルの checksum を一度だけ読む。
+    assert len(model_reads) == 1
 
     # 導入前の component と、cache 回収後の通常起動・doctor を共に維持する。
     shutil.rmtree(cache_module.asset_cache_directory())
@@ -101,7 +114,6 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
     )
     assert not cache_module.asset_cache_directory().exists()
 
-    base = setup.materials_directory(tmp_path)
     previous = base.parent / ".previous-interrupted"
     base.rename(previous)
     recovered = setup.prepare_document_search_materials(tmp_path, config)
@@ -112,10 +124,13 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
     changed = replace(config, threads=config.threads + 1)
     with pytest.raises(SearchError, match="real-model validation is missing"):
         setup.require_document_search_materials(tmp_path, changed)
+    model_reads.clear()
     validated = setup.prepare_document_search_materials(tmp_path, changed)
     assert validated["status"] == "validated"
     assert probes == [config, changed]
     assert len(npm_calls) == 1
+    # 実モデルを動かした後の再検査は保ち、probe による資材変更も検出する。
+    assert len(model_reads) == 2
 
     with monkeypatch.context() as changed_input:
         changed_input.setattr(
@@ -124,9 +139,6 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
         with pytest.raises(SearchError, match="real-model validation is missing"):
             setup.require_document_search_materials(tmp_path, config)
 
-    model = (
-        setup.materials_directory(tmp_path) / setup.SEARCH_MATERIALS.embedding.filename
-    )
     model.write_bytes(b"corrupted")
     with pytest.raises(SearchError, match="model checksum mismatch"):
         setup.require_document_search_materials(tmp_path, config)
@@ -185,20 +197,33 @@ def test_failed_real_model_probe_never_publishes_materials(
     assert exc_info.value.code == "NOT_READY"
 
 
-@pytest.mark.parametrize("operation", ["chunk_embed", "embed_query"])
 @pytest.mark.parametrize(
-    "bad_vector",
-    [
-        [],
-        [0.0] * SEARCH_MATERIALS.embedding_dimensions,
-        [float("nan")] * SEARCH_MATERIALS.embedding_dimensions,
+    ("operation", "bad_vector"),
+    [(None, None)]
+    + [
+        (operation, vector)
+        for operation in ("chunk_embed", "embed_query")
+        for vector in (
+            [],
+            [0.0] * SEARCH_MATERIALS.embedding_dimensions,
+            [float("nan")] * SEARCH_MATERIALS.embedding_dimensions,
+        )
     ],
+    ids=(
+        "valid",
+        "document-empty",
+        "document-zero",
+        "document-nan",
+        "query-empty",
+        "query-zero",
+        "query-nan",
+    ),
 )
 def test_probe_uses_search_inputs_and_rejects_invalid_embedding(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    operation: str,
-    bad_vector: list[float],
+    operation: str | None,
+    bad_vector: list[float] | None,
 ) -> None:
     """doctor 検証が通常検索と同じ文書/query 入力を通し、不正 embedding を拒否する。"""
     config = DocumentSearchConfig()
@@ -207,41 +232,28 @@ def test_probe_uses_search_inputs_and_rejects_invalid_embedding(
 
     def fake_run(
         _worker: worker.NodeSearchWorker,
-        operation: str,
+        current_operation: str,
         payload: dict[str, object],
         **_kwargs: object,
     ) -> object:
-        calls.append((operation, payload))
-        if operation == "chunk_embed":
+        calls.append((current_operation, payload))
+        embedding = bad_vector if current_operation == operation else vector
+        if current_operation == "chunk_embed":
             document = payload["documents"]["probe.md"]
             return {
-                "probe.md": [{"start": 0, "end": len(document), "embedding": vector}]
+                "probe.md": [{"start": 0, "end": len(document), "embedding": embedding}]
             }
-        assert operation == "embed_query"
-        return vector
+        assert current_operation == "embed_query"
+        return embedding
 
     monkeypatch.setattr(worker.NodeSearchWorker, "run", fake_run)
-    setup._compatibility_probe(tmp_path / "staging", tmp_path, config)
-    assert [operation for operation, _payload in calls] == [
-        "chunk_embed",
-        "embed_query",
-    ]
-    assert calls[1][1]["text"] == EMBEDDING_QUERY_TEMPLATE.format(query="日本語の検索")
-
-    def invalid_embedding(
-        _worker: worker.NodeSearchWorker,
-        current_operation: str,
-        payload: dict[str, object],
-        **kwargs: object,
-    ) -> object:
-        result = fake_run(_worker, current_operation, payload, **kwargs)
-        if current_operation == operation:
-            if operation == "chunk_embed":
-                result["probe.md"][0]["embedding"] = bad_vector
-            else:
-                result = bad_vector
-        return result
-
-    monkeypatch.setattr(worker.NodeSearchWorker, "run", invalid_embedding)
-    with pytest.raises(ValueError, match=f"invalid {operation}"):
+    if operation is None:
         setup._compatibility_probe(tmp_path / "staging", tmp_path, config)
+        assert [name for name, _payload in calls] == ["chunk_embed", "embed_query"]
+        assert calls[0][1]["documents"] == {"probe.md": "関連する日本語の文書です。"}
+        assert calls[1][1]["text"] == EMBEDDING_QUERY_TEMPLATE.format(
+            query="日本語の検索"
+        )
+    else:
+        with pytest.raises(ValueError, match=f"invalid {operation}"):
+            setup._compatibility_probe(tmp_path / "staging", tmp_path, config)

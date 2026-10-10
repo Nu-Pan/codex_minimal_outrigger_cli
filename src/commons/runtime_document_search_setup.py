@@ -328,10 +328,11 @@ def prepare_document_search_materials(
                     condition: "document-query-embedding",
                 }
                 _write_manifest(base, manifest)
+                verify_search_materials(root, config)
                 status = "validated"
             else:
+                # 同じ条件の再利用は、lock 内で確認済みの資材を再走査しない。
                 status = "recovered" if recovered else "reused"
-            verify_search_materials(root, config)
             return {"status": status, "path": str(base), "models": "reused"}
 
         staging = Path(tempfile.mkdtemp(prefix=".building-", dir=base.parent))
