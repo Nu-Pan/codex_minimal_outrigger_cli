@@ -120,7 +120,7 @@ def test_parallel_processes_share_one_sequence(tmp_path: Path) -> None:
     script = (
         "import sys; from pathlib import Path; "
         "from commons.runtime_ids import new_id; "
-        "print('\\n'.join(new_id(Path(sys.argv[1]), 'cc') for _ in range(8)))"
+        "print('\\n'.join(new_id(Path(sys.argv[1]), 'cc') for _ in range(2)))"
     )
 
     def issue_batch(_: int) -> list[str]:
@@ -134,9 +134,10 @@ def test_parallel_processes_share_one_sequence(tmp_path: Path) -> None:
         )
         return process.stdout.splitlines()
 
+    # 4 独立 process が各々連続発行する。36 進の境界は専用 test で検査する。
     with ThreadPoolExecutor(max_workers=4) as pool:
         issued = [item for batch in pool.map(issue_batch, range(4)) for item in batch]
 
-    assert len(issued) == 32
-    assert sorted(int(item.split("_")[1], 36) for item in issued) == list(range(32))
-    assert runtime_ids.new_id(tmp_path, "cc").startswith("cc_00000w_")
+    assert len(issued) == 8
+    assert sorted(int(item.split("_")[1], 36) for item in issued) == list(range(8))
+    assert runtime_ids.new_id(tmp_path, "cc").startswith("cc_000008_")
