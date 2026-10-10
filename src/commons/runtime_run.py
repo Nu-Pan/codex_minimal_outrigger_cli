@@ -77,19 +77,15 @@ def worktree_for_branch_optional(
     """branch の安全な worktree を返し、無ければ None を返す。"""
     output = run_git(["worktree", "list", "--porcelain"], root).stdout
     registered_path: Path | None = None
-    resolved_path: Path | None = None
     for line in output.splitlines():
         if line.startswith("worktree "):
             registered_path = Path(line.removeprefix("worktree ")).absolute()
+        elif line == f"branch refs/heads/{branch}" and registered_path is not None:
+            # 対象 branch の登録先だけを filesystem 上で検証する。
             try:
                 resolved_path = registered_path.resolve()
             except (OSError, RuntimeError):
-                registered_path = resolved_path = None
-        elif (
-            line == f"branch refs/heads/{branch}"
-            and registered_path is not None
-            and resolved_path is not None
-        ):
+                continue
             if branch.startswith("cmoc/run/"):
                 # {{work-root}}/oracle/doc/branch_model.md
                 expected = expected_run_worktree(root, branch)

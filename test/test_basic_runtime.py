@@ -464,9 +464,8 @@ def test_run_worktree_lookup_rejects_replaced_registered_path(
     assert worktree_for_branch_optional(root, RUN_BRANCH) is None
 
 
-@pytest.mark.parametrize("replacement", ["missing", "file", "directory"])
 def test_session_worktree_lookup_rejects_invalid_registered_path(
-    tmp_path: Path, replacement: str
+    tmp_path: Path,
 ) -> None:
     """session branch も stale な Git 登録先を worktree として扱わない。"""
     root = make_repo(tmp_path)
@@ -481,10 +480,15 @@ def test_session_worktree_lookup_rejects_invalid_registered_path(
         "HEAD",
     )
     target.rename(tmp_path / "moved-session-worktree")
-    if replacement == "file":
-        target.write_text("not a worktree\n")
-    elif replacement == "directory":
-        target.mkdir()
+
+    # Git 登録は不変なので、欠損・file・directory 置換に同じ準備を使う。
+    assert worktree_for_branch_optional(root, SESSION_BRANCH) is None
+
+    target.write_text("not a worktree\n")
+    assert worktree_for_branch_optional(root, SESSION_BRANCH) is None
+
+    target.unlink()
+    target.mkdir()
 
     assert worktree_for_branch_optional(root, SESSION_BRANCH) is None
 
