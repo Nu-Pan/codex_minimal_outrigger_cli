@@ -370,41 +370,28 @@ def test_normalization_checkpoint_rejects_schema_invalid_output(tmp_path):
         )
 
 
-def test_remediation_checkpoint_rejects_missing_top_level_hash(feedback_run):
-    """欠落した checkpoint hash を KeyError ではなく corruption として扱う。"""
+def test_remediation_checkpoint_rejects_malformed_fields(feedback_run):
+    """hash 欠落と不正な audit 参照を、型由来の例外ではなく corruption として扱う。"""
     harness = feedback_run
     _add_candidate(harness, "a")
     _run(harness)
     loaded, _ = load_report_cut(harness.context.repo)
     [reference] = loaded["processing"]["remediation_checkpoints"]
     checkpoint = read_json_object(harness.context.repo / reference["path"])
-    checkpoint.pop("input_sha256")
-
-    with pytest.raises(CmocError, match="field set"):
-        validate_remediation_checkpoint(
-            checkpoint, harness.context.repo / reference["path"]
-        )
-
-
-def test_remediation_checkpoint_rejects_malformed_audit_reference(feedback_run):
-    """不正な audit reference を Path の例外ではなく corruption として扱う。"""
-    harness = feedback_run
-    _add_candidate(harness, "a")
-    _run(harness)
-    loaded, _ = load_report_cut(harness.context.repo)
-    [reference] = loaded["processing"]["remediation_checkpoints"]
-    checkpoint = read_json_object(harness.context.repo / reference["path"])
-    checkpoint["audit"]["wave"] = None
-
-    with pytest.raises(CmocError, match="wave"):
-        validate_remediation_checkpoint(
-            checkpoint, harness.context.repo / reference["path"]
-        )
+    path = harness.context.repo / reference["path"]
+    validate_remediation_checkpoint(checkpoint, path)
+    # 同じ正式 checkpoint の準備を共有し、各破損は独立した copy へ加える。
+    missing_hash = copy.deepcopy(checkpoint)
+    missing_hash.pop("input_sha256")
+    invalid_wave = copy.deepcopy(checkpoint)
+    invalid_wave["audit"]["wave"] = None
+    for invalid, reason in ((missing_hash, "field set"), (invalid_wave, "wave")):
+        with pytest.raises(CmocError, match=reason):
+            validate_remediation_checkpoint(invalid, path)
 
 
-@pytest.mark.parametrize("target", ["checkpoint", "verification", "current_evidence"])
 def test_remediation_state_validation_rechecks_schema_and_value(
-    feedback_run, tmp_path, monkeypatch, target
+    feedback_run, tmp_path, monkeypatch
 ):
     """同じ内容の再検証後も、入力・schema の変化と artifact の破損を拒否する。"""
     h = feedback_run
@@ -415,26 +402,12 @@ def test_remediation_state_validation_rechecks_schema_and_value(
     [reference] = manifest["processing"]["remediation_checkpoints"]
     path = h.context.repo / reference["path"]
     checkpoint = read_json_object(path)
-    if target == "checkpoint":
-        value = checkpoint
-
-        def validate(value):
-            validate_remediation_checkpoint(value, path)
-
-    else:
-        value = copy.deepcopy(checkpoint["audit"]["decision_basis"])
-        value["state_sha256"] = sha256_bytes(canonical_json_bytes(value.pop("state")))
-
-        def validate(value):
-            validate_decision_basis(value, path, compact=True)
-
     schema_directory = tmp_path / "schema"
     schema_directory.mkdir()
     schema_path = schema_directory / "remediate_issue.json"
     schema_text = oracle_schema_path("feedback", "remediate_issue.json").read_text(
         encoding="utf-8"
     )
-    schema_path.write_text(schema_text, encoding="utf-8")
     original_files = run_state.resources.files
     monkeypatch.setattr(
         run_state.resources,
@@ -446,47 +419,65 @@ def test_remediation_state_validation_rechecks_schema_and_value(
         ),
     )
 
-    validate(value)
-    validate(value)
-    if target == "checkpoint":
-        bad_hash = copy.deepcopy(value)
-        bad_hash["output_sha256"] = "0" * 64
-        with pytest.raises(CmocError, match="output hash"):
-            validate(bad_hash)
-    for invalid_entries in ([{}], [{"summary": float("nan")}]):
-        invalid = copy.deepcopy(value)
+    # wave の生成は一度だけ行い、schema と検査対象を各ケースで初期化する。
+    for target in ("checkpoint", "verification", "current_evidence"):
+        schema_path.write_text(schema_text, encoding="utf-8")
         if target == "checkpoint":
-            invalid["structured_output"]["result"]["verification"] = invalid_entries
-            if invalid_entries == [{}]:
-                invalid["output_sha256"] = sha256_bytes(
-                    canonical_json_bytes(invalid["structured_output"])
-                )
+            value = copy.deepcopy(checkpoint)
+
+            def validate(value):
+                validate_remediation_checkpoint(value, path)
+
         else:
-            invalid[target] = invalid_entries
+            value = copy.deepcopy(checkpoint["audit"]["decision_basis"])
+            value["state_sha256"] = sha256_bytes(
+                canonical_json_bytes(value.pop("state"))
+            )
+
+            def validate(value):
+                validate_decision_basis(value, path, compact=True)
+
+        validate(value)
+        validate(value)
+        if target == "checkpoint":
+            bad_hash = copy.deepcopy(value)
+            bad_hash["output_sha256"] = "0" * 64
+            with pytest.raises(CmocError, match="output hash"):
+                validate(bad_hash)
+        for invalid_entries in ([{}], [{"summary": float("nan")}]):
+            invalid = copy.deepcopy(value)
+            if target == "checkpoint":
+                invalid["structured_output"]["result"]["verification"] = invalid_entries
+                if invalid_entries == [{}]:
+                    invalid["output_sha256"] = sha256_bytes(
+                        canonical_json_bytes(invalid["structured_output"])
+                    )
+            else:
+                invalid[target] = invalid_entries
+            with pytest.raises(CmocError, match="schema"):
+                validate(invalid)
+        validate(value)
+
+        schema = json.loads(schema_text)
+        if target == "checkpoint":
+            schema["properties"]["extra"] = {"type": "null"}
+            schema["required"].append("extra")
+        elif target == "verification":
+            schema["$defs"]["verifications"]["minItems"] = 2
+        else:
+            schema["$defs"]["current_evidence_optional"]["maxItems"] = 0
+        schema_path.write_text(json.dumps(schema), encoding="utf-8")
         with pytest.raises(CmocError, match="schema"):
-            validate(invalid)
-    validate(value)
+            validate(value)
+        schema_path.write_text(schema_text, encoding="utf-8")
+        validate(value)
 
-    schema = json.loads(schema_text)
-    if target == "checkpoint":
-        schema["properties"]["extra"] = {"type": "null"}
-        schema["required"].append("extra")
-    elif target == "verification":
-        schema["$defs"]["verifications"]["minItems"] = 2
-    else:
-        schema["$defs"]["current_evidence_optional"]["maxItems"] = 0
-    schema_path.write_text(json.dumps(schema), encoding="utf-8")
-    with pytest.raises(CmocError, match="schema"):
-        validate(value)
-    schema_path.write_text(schema_text, encoding="utf-8")
-    validate(value)
-
-    schema_path.write_text("{", encoding="utf-8")
-    with pytest.raises(json.JSONDecodeError):
-        validate(value)
-    schema_path.unlink()
-    with pytest.raises(FileNotFoundError):
-        validate(value)
+        schema_path.write_text("{", encoding="utf-8")
+        with pytest.raises(json.JSONDecodeError):
+            validate(value)
+        schema_path.unlink()
+        with pytest.raises(FileNotFoundError):
+            validate(value)
 
 
 def _join_and_publish(harness, monkeypatch):
