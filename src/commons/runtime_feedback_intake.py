@@ -108,10 +108,12 @@ def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, 
         from .runtime_feedback_state import published_cleanup_observation_ids
 
         consumed = published_cleanup_observation_ids(repo)
+        validated: set[str] = set()
         for path in iter_observation_paths(repo):
             if path.stem in consumed:
                 continue
             changed = _register(repo, ledger, path) or changed
+            validated.add(path.stem)
         if changed:
             _atomic_write_json(feedback_root(repo) / "intake.json", ledger)
         watermark = ledger["high_watermark"]
@@ -120,7 +122,12 @@ def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, 
             if identity in consumed:
                 continue
             reference = {key: receipt[key] for key in ("path", "sha256")}
-            if artifact_reference(repo, repo / receipt["path"]) != reference:
+            # 同じ排他内で検証した immutable raw は再読込しない。
+            # 列挙から欠けた receipt は、欠落・不正な file を引き続き検出する。
+            if (
+                identity not in validated
+                and artifact_reference(repo, repo / receipt["path"]) != reference
+            ):
                 raise _corruption(
                     "intake receipt の raw hash が一致しません。",
                     repo / receipt["path"],
