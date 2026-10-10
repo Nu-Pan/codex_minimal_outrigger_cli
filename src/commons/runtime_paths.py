@@ -74,12 +74,7 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
         # root 探索の起点は file または directory なので、process の cwd と区別する。
         # relative path の解決から root resolver の完了まで process-global cwd を
         # 固定し、別 thread の pushd と起点 path が混線しないようにする。
-        resolved_root_anchor = (root_anchor or Path.cwd()).resolve()
-        start_dir = (
-            resolved_root_anchor
-            if resolved_root_anchor.is_dir()
-            else resolved_root_anchor.parent
-        )
+        start_dir = (root_anchor or Path.cwd()).resolve()
         # 存在しない file/directory を起点にしても、既存の祖先から root を探索できる。
         while not start_dir.is_dir():
             parent = start_dir.parent
@@ -88,8 +83,11 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
             start_dir = parent
         # doctor 内でも起点や環境の異なる探索は共有せず、失敗は記憶しない。
         queries = _ROOT_QUERIES.get()
-        key = (start_dir, tuple(sorted(os.environ.items())))
-        context = queries.get(key) if queries is not None else None
+        key = None
+        context = None
+        if queries is not None:
+            key = (start_dir, tuple(sorted(os.environ.items())))
+            context = queries.get(key)
         # {{work-root}}/oracle/src/oracle/other/path_model.py
         # 正本 context が同じ metadata から導出した両 root を再利用する。
         if context is None:
@@ -97,7 +95,7 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
                 context = AgentCallPathContext(start_dir)
             except ValueError:
                 raise ValueError(f"`{placeholder}` was not found") from None
-            if queries is not None:
+            if queries is not None and key is not None:
                 queries[key] = context
         return resolve_real_path(placeholder, context)
 
