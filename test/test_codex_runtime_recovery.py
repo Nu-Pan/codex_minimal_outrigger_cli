@@ -17,6 +17,7 @@ from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
+    script_codex_calls,
     setup_codex_home,
 )
 
@@ -131,34 +132,6 @@ def parallel_recovery_case(recovery_case, monkeypatch):
     return (*recovery_case, registered)
 
 
-def script_calls(monkeypatch, responses, *, on_call=None):
-    calls = []
-    replies = iter(responses)
-
-    def run(argv, **kwargs):
-        prompt = kwargs["stdin"].read()
-        calls.append(
-            {
-                "argv": argv,
-                "prompt": prompt,
-                "env": kwargs["env"],
-                "timeout": kwargs["timeout"],
-            }
-        )
-        if on_call is not None:
-            on_call(len(calls), calls[-1])
-        response = next(replies)
-        if isinstance(response, BaseException):
-            raise response
-        returncode, stdout, output = response
-        if output is not None:
-            Path(codex_arg_value(argv, "--output-last-message")).write_text(output)
-        return subprocess.CompletedProcess(argv, returncode, stdout, "")
-
-    monkeypatch.setattr(runtime, "run_codex_subprocess", run)
-    return calls
-
-
 def execute(case, **kwargs):
     root, parameter, config, logger = case
     return runtime.run_codex_exec(
@@ -195,7 +168,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
                 "https://changed.invalid"
             )
 
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (1, jsonl(SESSION, CAPACITY), None),
@@ -264,7 +237,7 @@ def test_quota_to_capacity_inherits_before_accepting_recovery(
     config.codex.agent_calls["build_quota_availability_probe_parameter"] = (
         CodexCallConfig("openai", "probe", "low")
     )
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (1, jsonl(SESSION, QUOTA), None),
@@ -296,7 +269,7 @@ def test_quota_to_capacity_inherits_before_accepting_recovery(
 
 @pytest.mark.parametrize("reason", [QUOTA, CAPACITY])
 def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, reason):
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (1, jsonl(SESSION, reason), None),
@@ -326,14 +299,14 @@ def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, 
 def test_unconfirmed_or_unrecoverable_probe_stops(
     recovery_case, monkeypatch, probe_reply
 ):
-    calls = script_calls(monkeypatch, [(1, jsonl(CAPACITY), None), probe_reply])
+    calls = script_codex_calls(monkeypatch, [(1, jsonl(CAPACITY), None), probe_reply])
     with pytest.raises(CmocError, match="回復確認 probe"):
         execute(recovery_case)
     assert len(calls) == 2
 
 
 def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (1, jsonl(SESSION, CAPACITY), None),
@@ -373,7 +346,7 @@ def test_recovery_during_correction_preserves_turn_budget(
     structured_recovery_case, monkeypatch
 ):
     root, parameter, config, logger = structured_recovery_case
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (0, jsonl(SESSION, COMPLETED), "{}"),
@@ -406,7 +379,7 @@ def test_probe_failure_during_correction_records_original_call(
     structured_recovery_case, monkeypatch
 ):
     _, parameter, _, logger = structured_recovery_case
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (0, jsonl(SESSION, COMPLETED), "{}"),
@@ -446,7 +419,7 @@ def test_interruption_wins_over_probe_success(recovery_case, monkeypatch, point)
                 return True
 
             monkeypatch.setattr(cancellation, "wait", cancel_wait)
-        calls = script_calls(
+        calls = script_codex_calls(
             monkeypatch,
             [
                 (1, jsonl(CAPACITY), None),

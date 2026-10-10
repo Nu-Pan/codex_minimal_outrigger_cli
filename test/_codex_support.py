@@ -1,3 +1,4 @@
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -100,3 +101,34 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         lambda *_args: False,
     )
     return override_args
+
+
+def script_codex_calls(monkeypatch, responses, *, on_call=None):
+    """CLI 入出力だけを応答列で置換し、回復・再開とログ保存は実行する。"""
+    import commons.runtime_codex_exec as exec_module
+
+    calls = []
+    replies = iter(responses)
+
+    def run(argv, **kwargs):
+        prompt = kwargs["stdin"].read()
+        calls.append(
+            {
+                "argv": argv,
+                "prompt": prompt,
+                "env": kwargs["env"],
+                "timeout": kwargs["timeout"],
+            }
+        )
+        if on_call is not None:
+            on_call(len(calls), calls[-1])
+        response = next(replies)
+        if isinstance(response, BaseException):
+            raise response
+        returncode, stdout, output = response
+        if output is not None:
+            Path(codex_arg_value(argv, "--output-last-message")).write_text(output)
+        return subprocess.CompletedProcess(argv, returncode, stdout, "")
+
+    monkeypatch.setattr(exec_module, "run_codex_subprocess", run)
+    return calls

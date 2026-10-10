@@ -11,6 +11,7 @@ import pytest
 from _codex_support import (
     codex_arg_value,
     codex_override_config,
+    script_codex_calls,
     setup_codex_home,
     stub_codex_overrides,
 )
@@ -457,34 +458,15 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     probe_prompt = quota_probe_prompt(root)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "calls.jsonl"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
+    # 実 process の stdin・argv・出力保存は polls_and_resumes の代表ケースに残す。
+    calls = script_codex_calls(
+        monkeypatch,
         [
-            "import json, pathlib, sys",
-            f"calls = pathlib.Path({str(calls)!r})",
-            "args = sys.argv[1:]",
-            "stdin = sys.stdin.read()",
-            "records = calls.read_text().splitlines() if calls.exists() else []",
-            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
-            f"if stdin == {probe_prompt!r}:",
-            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "    output.write_text(json.dumps({'probe': True}))",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "    sys.exit(0)",
-            "if records:",
-            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "    output.write_text(json.dumps({'ok': True}))",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "    sys.exit(0)",
-            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-            "sys.exit(1)",
+            (1, '{"type":"error","message":"Quota exceeded"}\n', None),
+            (0, '{"type":"turn.completed"}\n', '{"probe": true}'),
+            (0, '{"type":"turn.completed"}\n', '{"ok": true}'),
         ],
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
@@ -500,13 +482,12 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
         config=CmocConfig(),
     )
 
-    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert [record["stdin"] for record in call_records] == [
+    assert [record["prompt"] for record in calls] == [
         "prompt",
         probe_prompt,
         "prompt",
     ]
-    assert all("resume" not in record["args"] for record in call_records)
+    assert all("resume" not in record["argv"] for record in calls)
     assert result.output_json == {"ok": True}
 
 
@@ -517,33 +498,36 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     monkeypatch: pytest.MonkeyPatch,
     probe_returncode: int,
 ) -> None:
-    """代表 probe の quota 以外の失敗を即時に伝播する。"""
+    """代表 probe の quota 以外の失敗を伝播し、作業中の成果物を保持する。"""
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     probe_prompt = quota_probe_prompt(root)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "failed_probe_calls.jsonl"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
+    artifact = root / "src" / "probe.py"
+
+    def during_probe(index, _call):
+        if index == 2:
+            artifact.parent.mkdir()
+            artifact.write_text("blocked\n")
+
+    calls = script_codex_calls(
+        monkeypatch,
         [
-            "import json, pathlib, sys",
-            f"calls = pathlib.Path({str(calls)!r})",
-            "args = sys.argv[1:]",
-            "stdin = sys.stdin.read()",
-            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
-            f"if stdin == {probe_prompt!r}:",
-            "    print(json.dumps({'type':'error','message':'override is broken'}))",
-            f"    sys.exit({probe_returncode})",
-            "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
-            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-            "sys.exit(1)",
+            (
+                1,
+                '{"type":"thread.started","thread_id":"sess-1"}\n'
+                '{"type":"error","message":"Quota exceeded"}\n',
+                None,
+            ),
+            (
+                probe_returncode,
+                '{"type":"error","message":"override is broken"}\n',
+                None,
+            ),
         ],
+        on_call=during_probe,
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
@@ -562,8 +546,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
             subcommand_logger=logger,
         )
 
-    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert [record["stdin"] for record in call_records] == [
+    assert [record["prompt"] for record in calls] == [
         "prompt",
         probe_prompt,
     ]
@@ -573,6 +556,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     assert codex_events[1]["purpose"] == "quota availability probe"
     assert codex_events[1]["returncode"] == probe_returncode
     assert "override is broken" in codex_events[1]["error"]
+    assert artifact.read_text() == "blocked\n"
 
 
 def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
@@ -584,29 +568,13 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     probe_prompt = quota_probe_prompt(root)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "calls.jsonl"
-    write_python_executable(
-        bin_dir / "codex",
+    calls = script_codex_calls(
+        monkeypatch,
         [
-            "import json, pathlib, sys",
-            f"calls = pathlib.Path({str(calls)!r})",
-            "args = sys.argv[1:]",
-            "stdin = sys.stdin.read()",
-            "with calls.open('a') as f: f.write(json.dumps({'stdin': stdin}) + '\\n')",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if stdin == 'prompt':",
-            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-            "    sys.exit(1)",
-            f"if stdin == {probe_prompt!r}:",
-            "    output.write_text(json.dumps({'probe': True}))",
-            "    print('not-json')",
-            "    sys.exit(0)",
-            "raise AssertionError('unexpected extra call')",
+            (1, '{"type":"error","message":"Quota exceeded"}\n', None),
+            (0, "not-json\n", '{"probe": true}'),
         ],
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     logger = SubcommandLogger(root, "test")
 
     with pytest.raises(CmocError) as exc_info:
@@ -626,68 +594,12 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
 
     assert "回復確認 probe" in str(exc_info.value)
     assert "malformed JSONL event (invalid JSON): not-json" not in exc_info.value.detail
-    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert [record["stdin"] for record in call_records] == ["prompt", probe_prompt]
+    assert [record["prompt"] for record in calls] == ["prompt", probe_prompt]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == ["quota_waiting", "failed"]
     assert codex_events[1]["returncode"] == 0
     assert "malformed JSONL event (invalid JSON): not-json" in codex_events[1]["error"]
-
-
-def test_quota_probe_failure_reports_probe_error(
-    tmp_path: Path, cli_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """代表 probe の失敗を quota 復帰失敗として報告する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = quota_probe_prompt(root)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "probe_failure_calls.jsonl"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"calls = pathlib.Path({str(calls)!r})",
-            "args = sys.argv[1:]",
-            "stdin = sys.stdin.read()",
-            "with calls.open('a') as f: f.write(json.dumps({'stdin': stdin}) + '\\n')",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if stdin == 'prompt':",
-            "    print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
-            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-            "    sys.exit(1)",
-            f"if stdin == {probe_prompt!r}:",
-            "    pathlib.Path('src').mkdir(exist_ok=True)",
-            "    pathlib.Path('src/probe.py').write_text('blocked\\n')",
-            "    print(json.dumps({'type':'error','message':'override is broken'}))",
-            "    sys.exit(2)",
-            "raise AssertionError('unexpected extra call')",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        root,
-    )
-
-    with pytest.raises(CmocError, match="回復確認 probe"):
-        run_codex_exec(
-            parameter,
-            root=root,
-            quota_poll_interval_sec=0,
-            config=CmocConfig(),
-        )
-
-    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert [record["stdin"] for record in call_records] == ["prompt", probe_prompt]
-    assert (root / "src" / "probe.py").read_text() == "blocked\n"
 
 
 @pytest.mark.parametrize("probe_fails", [False, True], ids=["success", "failure"])
