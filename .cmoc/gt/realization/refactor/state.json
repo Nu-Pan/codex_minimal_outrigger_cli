@@ -6,10 +6,10 @@
     "last_investigated_at": "2026-10-11_07-36-20_260"
   },
   "LICENSE": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "a894f2547af0349f234986eb4661f0146f37b7d82f8b22a27a674d5c1236f08f",
-    "last_investigated_at": "2026-10-09_01-30-56_202"
+    "last_investigated_at": "2026-10-11_07-38-00_981"
   },
   "README.md": {
     "investigation_required": true,
