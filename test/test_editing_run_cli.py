@@ -118,19 +118,18 @@ def ready_run_session(
     return root, SESSION_BRANCH, path
 
 
-@pytest.fixture
-def ready_abandon_run(
-    ready_run_session: tuple[Path, str, Path],
-    request: pytest.FixtureRequest,
+def _prepare_apply_run(
+    session: tuple[Path, str, Path],
+    *,
+    run_state: str = "joinable",
 ) -> EditingRunContext:
-    """abandon 用に実 Git の資源と保存済み active run state を用意する。"""
-    # fork と state 遷移は専用 test に任せ、abandon が読む前提だけ直接構築する。
-    root, session_branch, path = ready_run_session
+    """join/abandon 用に実 Git の資源と保存済み active run state を用意する。"""
+    # fork と state 遷移は専用 test に任せ、lifecycle が読む前提だけ直接構築する。
+    root, session_branch, path = session
     state = SessionState.from_dict(_state(path))
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_worktree = git_module.expected_run_worktree(root, RUN_BRANCH)
     run_git(root, "worktree", "add", "-b", RUN_BRANCH, str(run_worktree), fork_commit)
-    run_state = getattr(request, "param", "joinable")
     state.run = RunPart(
         state=run_state,
         kind="realization_apply",
@@ -150,6 +149,17 @@ def ready_abandon_run(
         run_fork_commit=fork_commit,
         run_worktree=run_worktree,
         state_before=run_state,
+    )
+
+
+@pytest.fixture
+def ready_abandon_run(
+    ready_run_session: tuple[Path, str, Path],
+    request: pytest.FixtureRequest,
+) -> EditingRunContext:
+    """abandon の検査で使う run state を param から選ぶ。"""
+    return _prepare_apply_run(
+        ready_run_session, run_state=getattr(request, "param", "joinable")
     )
 
 
@@ -728,11 +738,10 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
     (root / "oracle" / "spec.md").write_text("pending oracle change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "pending oracle change")
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_content_session, run_state=run_state)
     if has_run_change:
         (context.run_worktree / "README.md").write_text("realized\n")
         commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, run_state)
 
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -768,10 +777,9 @@ def test_run_join_reports_joinable_child_stop_warnings(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """joinable run の descendant 停止 warning を join report に残す。"""
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_content_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     monkeypatch.setattr(
         run_join_module,
         "stop_tracked_codex_children",
@@ -2294,10 +2302,9 @@ def test_run_join_allows_oracle_change_on_session_branch(
     """session branch の oracle change を run join が保持する。"""
     root, _session_branch, state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "oracle/spec.md")
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     (root / "oracle" / "spec.md").write_text("session oracle change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session oracle change")
@@ -2322,10 +2329,9 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
     """run worktree からの join でも doctor state 同期を許可する。"""
     root, _session_branch, _state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "README.md")
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     monkeypatch.chdir(context.run_worktree)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2361,12 +2367,11 @@ def test_run_join_from_run_worktree_preserves_prior_session_doctor_path_change(
 ) -> None:
     """doctor と同じ path の先行 session 差分も統合する。"""
     root, _session_branch, state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     gitignore = root / ".gitignore"
     gitignore.write_text("user session change\n")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "change cmoc ignore policy")
-    set_run_state(context, "joinable")
     monkeypatch.chdir(context.run_worktree)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2405,14 +2410,13 @@ def test_run_join_accepts_realization_rename_and_delete(
 ) -> None:
     """run join が fork 時点の realization path の rename と削除を許可する。"""
     root, _session_branch, _state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     readme = context.run_worktree / "README.md"
     if change == "rename":
         readme.rename(context.run_worktree / "renamed.md")
     else:
         readme.unlink()
     commit_work_unit(context.run_worktree, f"run {change}")
-    set_run_state(context, "joinable")
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -2514,11 +2518,10 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
 ) -> None:
     """force-resolve が run branch の想定外 path だけを戻すことを確認する。"""
     root, _session_branch, state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("allowed\n")
     (context.run_worktree / unexpected_path).write_text("unexpected\n")
     commit_work_unit(context.run_worktree, "mixed run changes")
-    set_run_state(context, "joinable")
 
     rejected = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -2547,12 +2550,11 @@ def test_run_join_force_resolve_restores_realization_source_of_rename(
     """force-resolve が想定外 rename の realization 側を失わせないことを確認する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     root, _session_branch, _state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     destination = context.run_worktree / "oracle" / "unexpected.md"
     destination.parent.mkdir(exist_ok=True)
     (context.run_worktree / "README.md").rename(destination)
     commit_work_unit(context.run_worktree, "rename realization into oracle")
-    set_run_state(context, "joinable")
 
     result = runner.invoke(
         app,
@@ -2747,11 +2749,10 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
 ) -> None:
     """post-join 同期失敗時は確定済み merge と run 資源を保持する。"""
     root, _session_branch, state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     monkeypatch.setattr(
         run_join_module,
         "sync_refactor_state",
@@ -2783,10 +2784,9 @@ def test_run_join_integrates_content_conflict_and_incidental_edit(
     """run と session の変更を agent が統合し、付随編集も merge へ含める。"""
     # session 作成の CLI 結合は別の統合 test に残し、ここでは実 Git の競合を作る。
     root, _session_branch, state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("run change\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     (root / "README.md").write_text("session change\n")
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "session change")
@@ -2841,10 +2841,9 @@ def test_run_join_rolls_back_unresolved_content_conflict(
 ) -> None:
     """agent が未解消と報告した merge は付随編集ごと開始前へ戻す。"""
     root, _session_branch, state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("run change\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     (root / "README.md").write_text("session change\n")
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "session change")
@@ -2878,10 +2877,9 @@ def test_run_join_keeps_completed_merge_when_final_report_update_fails(
 ) -> None:
     """cleanup 後の report 更新失敗でも保存済み report と merge を保持する。"""
     root, _session_branch, state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     original_write_report = run_join_module.write_lifecycle_report
 
     def fail_final_report(
@@ -2926,10 +2924,9 @@ def test_run_join_saves_report_before_cleanup(
 ) -> None:
     """run resource を削除する前に pending report を保存する。"""
     root, _session_branch, _state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     events: list[tuple[str, object]] = []
     original_write_report = run_join_command_module.write_lifecycle_report
 
@@ -2967,10 +2964,9 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
 ) -> None:
     """cleanup 失敗時も残存 resource を abandon で回収できる状態を保つ。"""
     root, _session_branch, state_path = ready_join_session
-    context = start_editing_run("realization_apply")
+    context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
-    set_run_state(context, "joinable")
     monkeypatch.setattr(
         run_join_module,
         "cleanup_joined_run",
