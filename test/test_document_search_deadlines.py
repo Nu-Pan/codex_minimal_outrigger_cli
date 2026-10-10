@@ -496,7 +496,8 @@ setInterval(() => {}, 1000);
         while True:
             try:
                 state = descendant_stat.read_text().rsplit(") ", 1)[1].split()[0]
-            except FileNotFoundError:
+            except (FileNotFoundError, ProcessLookupError):
+                # /proc entry を開いた後に process が消えた場合も停止済みと扱う。
                 state = None
             if state in {None, "Z", "X", "x"}:
                 break

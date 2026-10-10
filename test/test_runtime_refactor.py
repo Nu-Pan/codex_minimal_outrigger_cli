@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from _git_support import init_repo, make_repo, run_git
+from _git_support import make_repo, run_git
 
 import commons.runtime_refactor as refactor_module
 from cmoc_runtime import CmocError, file_sha256
@@ -36,14 +36,6 @@ def refactor_files(tmp_path: Path) -> Path:
     (root / "oracle").mkdir()
     (root / "oracle" / "spec.md").write_text("# spec\n")
     return root
-
-
-@pytest.fixture
-def refactor_repository(refactor_files: Path) -> Path:
-    """実 Git の分類・列挙と state 同期の結合を検証する root。"""
-    # branch を参照する case だけ必要な file を commit する。
-    init_repo(refactor_files)
-    return refactor_files
 
 
 def test_refactor_state_sync_tracks_enumerated_files(
@@ -90,10 +82,10 @@ def test_refactor_state_sync_tracks_enumerated_files(
 
 
 def test_refactor_state_sync_globs_nested_repository_files(
-    refactor_repository: Path, tmp_path: Path
+    cli_repository: Path, tmp_path: Path
 ) -> None:
     """work-root 配下の nested repository 内 file も対象へ含める。"""
-    root = refactor_repository
+    root = cli_repository
     nested = root / "nested"
     nested.mkdir()
     run_git(
@@ -116,13 +108,14 @@ def test_refactor_state_sync_globs_nested_repository_files(
     "relative", ["nested/../../outside.md", "oracle/../../outside.md"]
 )
 def test_refactor_target_classifiers_reject_parent_path_escape(
-    refactor_repository: Path, tmp_path: Path, relative: str
+    cli_repository: Path, tmp_path: Path, relative: str
 ) -> None:
     """oracle/realization file classifier が work-root 外の path を拒否する。"""
     # 根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
     # の「分類結果」
-    root = refactor_repository
+    root = cli_repository
     (root / "nested").mkdir()
+    (root / "oracle").mkdir()
     (tmp_path / "outside.md").write_text("outside\n")
 
     path = root / relative
@@ -132,10 +125,11 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
 
 
 def test_refactor_target_classifiers_require_file_entries(
-    refactor_repository: Path,
+    cli_repository: Path,
 ) -> None:
     """oracle/realization file classifier が directory と欠落 path を拒否する。"""
-    root = refactor_repository
+    root = cli_repository
+    (root / "oracle").mkdir()
     realization_directory = root / "src"
     realization_directory.mkdir()
     realization_file = realization_directory / "module.py"
@@ -152,10 +146,10 @@ def test_refactor_target_classifiers_require_file_entries(
 
 
 def test_refactor_target_classifiers_reject_symlinked_parent(
-    refactor_repository: Path, tmp_path: Path
+    cli_repository: Path, tmp_path: Path
 ) -> None:
     """classifier が symlink 親を通じて work-root 外の file を扱わない。"""
-    root = refactor_repository
+    root = cli_repository
     outside = tmp_path / "outside"
     outside.mkdir()
     source = root / "src"
@@ -169,6 +163,7 @@ def test_refactor_target_classifiers_reject_symlinked_parent(
     (source / "deleted.py").unlink()
     source.rmdir()
     source.symlink_to(outside, target_is_directory=True)
+    (root / "oracle").mkdir()
     (root / "oracle" / "linked").symlink_to(outside, target_is_directory=True)
 
     assert not is_realization_file_path(root, root / "src" / "module.py", branch="HEAD")
@@ -192,10 +187,10 @@ def test_refactor_target_classifiers_reject_symlinked_parent(
     ],
 )
 def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
-    refactor_repository: Path, replacement: str
+    cli_repository: Path, replacement: str
 ) -> None:
     """branch の blob fallback が既存の非通常 file を file として扱わない。"""
-    root = refactor_repository
+    root = cli_repository
     path = root / "module.py"
     path.write_text("VALUE = 1\n")
     run_git(root, "add", "module.py")
@@ -229,10 +224,10 @@ def test_refactor_target_classifier_rejects_gitlink_directory(
 
 
 def test_refactor_target_classifier_accepts_special_path_from_branch(
-    refactor_repository: Path,
+    cli_repository: Path,
 ) -> None:
     """削除された特殊文字 path も branch tree の realization と判定する。"""
-    root = refactor_repository
+    root = cli_repository
     realization_file = root / "module[1].py"
     realization_file.write_text("VALUE = 1\n")
     run_git(root, "add", "module[1].py")
@@ -243,10 +238,11 @@ def test_refactor_target_classifier_accepts_special_path_from_branch(
 
 
 def test_refactor_state_sync_rejects_oracle_symlink(
-    refactor_repository: Path,
+    cli_repository: Path,
 ) -> None:
     """state 同期が regular file ではない oracle symlink を拒否する。"""
-    root = refactor_repository
+    root = cli_repository
+    (root / "oracle").mkdir()
     link = root / "oracle" / "dangling.md"
     link.symlink_to("../missing.md")
     run_git(root, "add", "oracle/dangling.md")
