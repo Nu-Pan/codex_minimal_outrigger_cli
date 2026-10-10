@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from _codex_support import stub_codex_overrides
 from _command_support import write_python_executable
-from _git_support import init_repo
+from oracle.other import path_model as path_model_module
 
 import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode
@@ -15,11 +15,16 @@ from config.cmoc_config import CmocConfig
 
 
 @pytest.fixture
-def codex_repo(tmp_path: Path) -> Path:
-    """home 検証用に、Git discovery だけに必要な空 repository を用意する。"""
+def codex_call_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """home 検証では Git discovery を解決済みとして扱う。"""
+    # Git/cwd の結合は test_codex_runtime_paths.py と test_basic_runtime.py に残す。
     root = tmp_path / "repo"
     root.mkdir()
-    init_repo(root)
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _start_path=None: (root, root),
+    )
     return root
 
 
@@ -39,10 +44,10 @@ def _spy_codex_subprocess(
 
 
 def test_run_codex_exec_uses_default_codex_home_when_env_unset(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_repo: Path
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
 ) -> None:
     """既定 home を使い、それを Codex subprocess へ渡す。"""
-    root = codex_repo
+    root = codex_call_directory
     home = tmp_path / "home"
     codex_home = home / ".codex"
     codex_home.mkdir(parents=True)
@@ -88,10 +93,10 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
 
 
 def test_run_codex_exec_preserves_relative_codex_home_and_records_resolved_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_repo: Path
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
 ) -> None:
     """相対 home の値・cwd 基準の解決・解決済み path の記録を検証する。"""
-    root = codex_repo
+    root = codex_call_directory
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
@@ -143,10 +148,10 @@ def test_run_codex_exec_preserves_relative_codex_home_and_records_resolved_path(
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_repo: Path
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
 ) -> None:
     """Codex subprocess の起動前に欠落した home を拒否する。"""
-    root = codex_repo
+    root = codex_call_directory
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
@@ -177,10 +182,10 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_repo: Path
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
 ) -> None:
     """Codex subprocess の起動前に file を指す home を拒否する。"""
-    root = codex_repo
+    root = codex_call_directory
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
