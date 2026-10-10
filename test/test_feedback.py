@@ -2660,46 +2660,90 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert (root / "README.md").read_text() == "changed after publication\n"
 
 
-@pytest.mark.parametrize("terminal_verdict", ["already_resolved", "not_actionable"])
-def test_agent_issue_is_verified_compacted_then_removed_for_terminal_verdict(
+def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    terminal_verdict: str,
 ) -> None:
-    """pending raw を active issue へ集約し、terminal verdict なら active から除く。"""
+    """両方の終了判定で active と一覧から除き、各案件の履歴を残す。"""
+    # 異なる subject の案件を同時に用意し、Git/session と二回の publication を共有する。
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
-    _observation_id, raw_path, candidate_id = _store_agent_issue(root, session_id)
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(candidate_id, "human_required")
-    )
+    cases = {}
+    for terminal_verdict, kind, reference_path in (
+        ("already_resolved", "file", "README.md"),
+        ("not_actionable", "oracle", "oracle/spec.md"),
+    ):
+        accepted, raw_path = store_agent_observation(
+            root,
+            _context(root, session_id=session_id),
+            _payload(kind=kind, path=reference_path),
+        )
+        identity = issue_id(f"agent\0{accepted['observation_id']}")
+        cases[identity] = {
+            "raw_path": raw_path,
+            "reference_path": reference_path,
+            "terminal_verdict": terminal_verdict,
+        }
+    verdicts = {identity: "human_required" for identity in cases}
+
+    def fake_call(*_args: Any, **kwargs: Any) -> SimpleNamespace:
+        identity = (
+            kwargs["purpose"]
+            .removeprefix("feedback issue remediation (")
+            .removesuffix(")")
+        )
+        return _fake_result(
+            root,
+            _remediation_output(
+                identity,
+                verdicts[identity],
+                reference_path=cases[identity]["reference_path"],
+            ),
+        )
+
+    monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_call)
 
     first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert first.exit_code == 0, first.output
-    assert not raw_path.exists()
     first_state = load_active_state(root)
-    assert set(first_state.issues) == {candidate_id}
-    issue = first_state.issues[candidate_id]
-    assert issue["occurrence_count"] == 1
-    assert issue["verification"]["human_action"] == "README の設定を修正する。"
-    assert "reference_id" not in json.dumps(issue["verification"], ensure_ascii=False)
+    assert set(first_state.issues) == set(cases)
+    first_text = terminal_primary_report(first).read_text()
+    for identity, case in cases.items():
+        assert not case["raw_path"].exists()
+        issue = first_state.issues[identity]
+        assert issue["occurrence_count"] == 1
+        assert issue["verification"]["human_action"] == "README の設定を修正する。"
+        assert "reference_id" not in json.dumps(
+            issue["verification"], ensure_ascii=False
+        )
+        assert identity in first_text
     assert feedback_completion_counts(root) == (0, [])
 
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(candidate_id, terminal_verdict)
+    verdicts.update(
+        {identity: case["terminal_verdict"] for identity, case in cases.items()}
     )
     second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert second.exit_code == 0, second.output
     second_state = load_active_state(root)
     assert second_state.issues == {}
+    events = {event["issue_id"]: event for event in second_state.history[-1]["events"]}
+    assert set(events) == set(cases)
+    for identity, case in cases.items():
+        event = events[identity]
+        assert event["kind"] == "resolved"
+        assert event["before"] == first_state.issues[identity]
+        assert event["after"] is None
+        assert event["agent_result"]["status"] == case["terminal_verdict"]
     reports = list((root / ".cmoc/gu/report/feedback").glob("*.md"))
     assert len(reports) == 2
     assert second_state.current is not None
     current_report = root / str(second_state.current["report_path"])
-    assert candidate_id not in current_report.read_text()
-    assert "human_required_issue_count: 0" in current_report.read_text()
+    current_text = current_report.read_text()
+    assert all(identity not in current_text for identity in cases)
+    assert "human_required_issue_count: 0" in current_text
+    assert "未終了の案件はありません。" in current_text
     generation_directories = list(
         (feedback_root(root) / "active" / "generation").iterdir()
     )
