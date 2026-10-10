@@ -1256,8 +1256,8 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
     """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
-    # 上限を一件超えれば切捨てと順位を検査でき、余分な一意 embedding は不要。
-    candidate_count = 50
+    # 異なる合法上限 20・21 と未採用候補一件で順位と値を検査する。50 の境界は別ケースで保つ。
+    candidate_count = 21
     available = candidate_count + 1
     (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
     vectors = [(i - available // 2, 20) for i in range(available)]
@@ -1319,8 +1319,8 @@ def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
     root = _repo_with_docs(tmp_path)
     path = "oracle/doc/allowed.md"
-    # 50 件の採用でも未採用候補を一件残し、統合前の上限違反を検出する。
-    candidate_count = 50
+    # 20・21 件の採用で統合前の上限違反を検出する。50 の境界は別ケースで保つ。
+    candidate_count = 21
     available = candidate_count + 1
     (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
     worker = _CandidateWorker(
