@@ -10,6 +10,7 @@ fork report、および join/abandon は同じ lifecycle fixture を共有する
 import json
 import os
 import signal
+from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
 from typing import NoReturn
@@ -27,6 +28,7 @@ from _git_support import (
 )
 
 import commons.runtime_cli as runtime_cli
+import commons.runtime_git as git_module
 import commons.runtime_merge_conflict as merge_conflict_module
 import commons.runtime_run as runtime_run_module
 import commons.runtime_run_join as run_join_module
@@ -2760,6 +2762,25 @@ def test_run_join_integrates_content_conflict_and_incidental_edit(
 
     monkeypatch.setattr(merge_conflict_module, "run_codex_exec", fake_codex)
 
+    # 付随編集の検査中に、同じ Git 配置・設定の問い合わせを繰り返さない。
+    queries = Counter()
+    original_run = git_module.subprocess.run
+    original_classifier = merge_conflict_module.is_realization_file_path
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git" and argv[1] in {"rev-parse", "config"}:
+            queries[tuple(argv)] += 1
+        return original_run(argv, *args, **kwargs)
+
+    def classify_path(*args, **kwargs):
+        with monkeypatch.context() as probe:
+            probe.setattr(git_module.subprocess, "run", record_query)
+            return original_classifier(*args, **kwargs)
+
+    monkeypatch.setattr(
+        merge_conflict_module, "is_realization_file_path", classify_path
+    )
+
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
@@ -2767,6 +2788,7 @@ def test_run_join_integrates_content_conflict_and_incidental_edit(
     assert (root / "src" / "related.py").read_text() == "value = 1\n"
     assert _state(state_path)["run"]["state"] == "ready"
     assert "src/related.py" in terminal_primary_report(result).read_text()
+    assert max(queries.values(), default=0) <= 1
 
 
 def test_run_join_rolls_back_unresolved_content_conflict(

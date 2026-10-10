@@ -12,6 +12,7 @@ from .runtime_errors import CmocError
 from .runtime_git import (
     is_realization_file_path,
     literal_pathspec,
+    reuse_git_path_queries,
     run_git,
     status_path_statuses,
 )
@@ -92,14 +93,18 @@ def resolve_merge_conflicts(
                 refactor_relative,
             )
         if parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE:
-            forbidden = [
-                path
-                for path in sorted(changed)
-                if not (
-                    is_realization_file_path(root, root / path, branch="HEAD")
-                    or is_realization_file_path(root, root / path, branch="MERGE_HEAD")
-                )
-            ]
+            # agent の編集後、staging 前の検査内だけ Git 配置・設定を共有する。
+            with reuse_git_path_queries():
+                forbidden = [
+                    path
+                    for path in sorted(changed)
+                    if not (
+                        is_realization_file_path(root, root / path, branch="HEAD")
+                        or is_realization_file_path(
+                            root, root / path, branch="MERGE_HEAD"
+                        )
+                    )
+                ]
             if forbidden:
                 raise CmocError(
                     "競合解消 agent が編集範囲外を変更しました。",
