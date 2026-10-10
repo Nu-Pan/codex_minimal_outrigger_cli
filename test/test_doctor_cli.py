@@ -401,8 +401,24 @@ def test_doctor_rechecks_work_directories_after_repair_commit(tmp_path, monkeypa
 def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """初回・編集・無変更・削除の同期を、保存内容・Git・ログ・report から確認する。"""
+    """設定を保持し、初回・編集・無変更・削除の索引同期と報告を確認する。"""
     root = make_repo(tmp_path)
+    # 設定保持も同じ CLI 起動で確認し、専用 repository と doctor 起動を重ねない。
+    expected_config = config_to_dict(CmocConfig())
+    expected_config["num_parallel"] = 3
+    expected_config["codex"]["model_providers"]["custom"] = {"settings": {}}
+    expected_config["codex"]["num_try_falv_recovery"] = 4
+    expected_config["codex"]["agent_calls"]["build_tui_launch_tui_parameter"] = {
+        "model_provider": "custom",
+        "model": "CUSTOM",
+        "reasoning_effort": "CUSTOM-EFFORT",
+    }
+    incomplete_config = dict(expected_config)
+    incomplete_config.pop("document_search")
+    config_path = root / ".cmoc/gt/config.json"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(json.dumps(incomplete_config) + "\n")
+
     document = root / "oracle/doc/source.md"
     document.parent.mkdir()
     original = "# original document\n"
@@ -423,6 +439,13 @@ def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
             edit()
         previous = set(log_dir.glob("*.jsonl"))
         result = run_doctor(root)
+        # 初回の補完と再利用のいずれでも、明示値と残りの既定 call を保つ。
+        saved_config = json.loads(config_path.read_text())
+        assert saved_config == expected_config
+        assert "model" not in saved_config["codex"]
+        assert "reasoning_effort" not in saved_config["codex"]
+        assert "apply_fork" not in saved_config
+
         events = _new_subcommand_events(root, previous)
         starts = [e for e in events if e["event"] == "document_search_sync_started"]
         finishes = [e for e in events if e["event"] == "document_search_sync_finished"]
@@ -1099,53 +1122,6 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
     assert f"- repo_root: `{root}`" in result.stdout
     assert all((linked / relative).is_dir() for relative in _WORK_DIRECTORIES)
     assert all(not (root / relative).exists() for relative in _WORK_DIRECTORIES)
-
-
-def test_doctor_syncs_default_config_without_overwriting_human_values(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """既存 config の人間による値を保ったまま不足する既定値を同期することを検証する。"""
-
-    root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "gt" / "config.json"
-    config_path.parent.mkdir(parents=True)
-    data = config_to_dict(CmocConfig())
-    data["num_parallel"] = 3
-    data["codex"]["model_providers"]["custom"] = {"settings": {}}
-    data["codex"]["num_try_falv_recovery"] = 4
-    data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"] = {
-        "model_provider": "custom",
-        "model": "CUSTOM",
-        "reasoning_effort": "CUSTOM-EFFORT",
-    }
-    data.pop("document_search")
-    config_path.write_text(json.dumps(data) + "\n")
-    monkeypatch.chdir(root)
-
-    run_doctor(root)
-    data = json.loads(config_path.read_text())
-    assert data["num_parallel"] == 3
-    assert data["codex"]["model_providers"] == {
-        "openai": {"settings": {}},
-        "custom": {"settings": {}},
-    }
-    assert data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"] == {
-        "model_provider": "custom",
-        "model": "CUSTOM",
-        "reasoning_effort": "CUSTOM-EFFORT",
-    }
-    default_call = CmocConfig().codex.agent_calls[
-        "build_feedback_normalize_issue_parameter"
-    ]
-    assert data["codex"]["agent_calls"]["build_feedback_normalize_issue_parameter"] == {
-        "model_provider": default_call.model_provider,
-        "model": default_call.model,
-        "reasoning_effort": default_call.reasoning_effort,
-    }
-    assert data["codex"]["num_try_falv_recovery"] == 4
-    assert "model" not in data["codex"]
-    assert "reasoning_effort" not in data["codex"]
-    assert "apply_fork" not in data
 
 
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
