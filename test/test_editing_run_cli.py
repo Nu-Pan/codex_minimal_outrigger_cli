@@ -1897,11 +1897,11 @@ def test_apply_report_failure_after_joinable_publication_sets_error_state(
 
 
 def test_refactor_report_failure_after_joinable_publication_sets_error_state(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor の fork report failure でも run state と report を一致させる。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_run_session
     monkeypatch.setattr(
         refactor_module,
         "_initialize_cycle",
@@ -1963,13 +1963,13 @@ def test_apply_error_preserves_unreadable_process_tracking(
 @pytest.mark.parametrize("interrupted", [False, True])
 @pytest.mark.parametrize("inspection", ["changes", "state"])
 def test_refactor_terminal_report_survives_change_inspection_failure(
-    tmp_path: Path,
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     interrupted: bool,
     inspection: str,
 ) -> None:
     """確認不能な差分・履歴を空として扱わず terminal report と state を保存する。"""
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_run_session
     agent_failed = False
 
     def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
