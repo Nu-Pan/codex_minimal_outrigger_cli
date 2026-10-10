@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from io import StringIO
 from pathlib import Path
 from threading import Event
 
@@ -504,28 +505,21 @@ def test_tui_callback_commands_run_as_standalone_scripts(
 
 
 def test_tui_session_start_hook_malformed_json_is_nonfatal(
-    tmp_path: Path, toast_clock
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """壊れた JSON stdin では記録せず、standalone hook を正常終了する。"""
-    callback = runtime_windows_toast.create_tui_notification_callback(
-        "tui",
-        tmp_path / "repository",
+    """壊れた JSON stdin では記録せず、hook の入口から非致命的に戻る。"""
+    # standalone の stdin/argv 境界は正常系に残し、JSON 例外の処理を直接検証する。
+    state_root = tmp_path / "callback-state"
+    state_root.mkdir()
+    monkeypatch.setattr(sys, "stdin", StringIO("{"))
+
+    assert (
+        runtime_windows_toast.main(["codex-tui-session-start-hook", str(state_root)])
+        == 0
     )
-    assert callback is not None
-    state_root = Path(callback.session_start_command[3])
-    try:
-        result = subprocess.run(
-            callback.session_start_command,
-            input="{",
-            env=os.environ,
-            text=True,
-            capture_output=True,
-            timeout=10,
-            check=False,
-        )
-        assert result.returncode == 0
-        assert result.stdout == ""
-        assert result.stderr == ""
-        assert list(state_root.iterdir()) == []
-    finally:
-        callback.close()
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+    assert list(state_root.iterdir()) == []
