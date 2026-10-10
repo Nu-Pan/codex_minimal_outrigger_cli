@@ -39,8 +39,10 @@ from oracle.acp_builder.feedback.remediate_issue import (
 
 import commons.runtime_feedback as feedback_module
 import commons.runtime_feedback_history as feedback_history_module
+import commons.runtime_feedback_protocol as feedback_protocol_module
 import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
+import commons.runtime_feedback_store as feedback_store_module
 import sub_commands.feedback.decision as decision_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
@@ -63,6 +65,7 @@ from commons.runtime_feedback_protocol import (
     FEEDBACK_COLLECTOR_HOST,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
+    REPORTER_PROTOCOL_VERSION,
 )
 from commons.runtime_feedback_state import (
     feedback_writer_lock,
@@ -74,7 +77,6 @@ from commons.runtime_feedback_state import (
     validate_observation_envelope,
 )
 from commons.runtime_feedback_store import (
-    REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
     canonical_json_bytes,
     feedback_completion_counts,
@@ -358,6 +360,32 @@ def test_reporter_exposes_only_canonical_submission_tool(
     assert request["payload"] == _payload()
 
 
+def test_reporter_discovery_supports_editable_namespace_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """editable namespace package でも discovery に正本 schema を渡す。"""
+    expected_schema = reporter_input_schema()
+    original_files = feedback_protocol_module.resources.files
+
+    def raise_namespace_resource_error(package: str):
+        if package == "oracle.feedback":
+            raise NotADirectoryError(package)
+        return original_files(package)
+
+    monkeypatch.setattr(
+        feedback_protocol_module.resources, "files", raise_namespace_resource_error
+    )
+    feedback_protocol_module.load_reporter_input_schema.cache_clear()
+    try:
+        response = reporter_module._response(
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+        )
+        assert response is not None
+        assert response["result"]["tools"][0]["inputSchema"] == expected_schema
+    finally:
+        feedback_protocol_module.load_reporter_input_schema.cache_clear()
+
+
 @pytest.mark.parametrize(
     "message",
     [
@@ -607,6 +635,29 @@ def test_reporter_availability_probe_checks_stdio_process_and_collector(
         assert iter_observation_paths(root) == []
     finally:
         feedback_module.stop_feedback_invocation(invocation, token)
+
+
+@pytest.mark.parametrize("schema", [[], {"type": "invalid"}])
+def test_reporter_availability_rejects_invalid_input_schema(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema: object
+) -> None:
+    """読み取りと discovery を分離しても doctor は不正な schema を検出する。"""
+    (tmp_path / "reporter_input.json").write_text(json.dumps(schema), encoding="utf-8")
+    monkeypatch.setattr(
+        feedback_protocol_module.resources, "files", lambda _pkg: tmp_path
+    )
+    feedback_protocol_module.load_reporter_input_schema.cache_clear()
+    feedback_store_module.reporter_input_schema.cache_clear()
+    try:
+        with pytest.raises(
+            ReporterAvailabilityError, match="schema is invalid"
+        ) as error:
+            feedback_module.validate_feedback_reporter_availability()
+        assert error.value.component == "reporter"
+        assert error.value.failure_code == "version_mismatch"
+    finally:
+        feedback_protocol_module.load_reporter_input_schema.cache_clear()
+        feedback_store_module.reporter_input_schema.cache_clear()
 
 
 def test_reporter_probe_rejects_non_object_mcp_response(

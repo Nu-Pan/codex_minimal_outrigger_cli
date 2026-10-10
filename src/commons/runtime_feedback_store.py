@@ -14,7 +14,6 @@ record の同一性判定が重複するため、raw observation store の境界
 
 import fcntl
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -26,16 +25,18 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import lru_cache
-from importlib import resources
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from .runtime_feedback_protocol import (
+    REPORTER_PROTOCOL_VERSION,
+    load_reporter_input_schema,
+)
 from .runtime_ids import is_common_id, new_id
 
 OBSERVATION_SCHEMA_VERSION = 1
-REPORTER_PROTOCOL_VERSION = "1"
 REPORTER_VERSION = "1"
 _MAX_PAYLOAD_BYTES = 32 * 1024
 _PATH_EVIDENCE_KINDS = {"file", "oracle", "log"}
@@ -121,35 +122,9 @@ def sha256_bytes(value: bytes) -> str:
 
 @lru_cache(maxsize=1)
 def reporter_input_schema() -> dict[str, Any]:
-    """oracle package resource から reporter input schema を読む。"""
-    # schema field を realization へ複製しない。
-    try:
-        schema_text = (
-            resources.files("oracle.feedback")
-            .joinpath("reporter_input.json")
-            .read_text(encoding="utf-8")
-        )
-    except NotADirectoryError:
-        # `oracle.feedback` is a namespace package in the source and editable
-        # installations.  importlib.resources cannot represent its merged
-        # resource directory, so resolve the canonical file from the concrete
-        # package search locations instead.
-        spec = importlib.util.find_spec("oracle.feedback")
-        locations = (
-            spec.submodule_search_locations
-            if spec is not None and spec.submodule_search_locations is not None
-            else ()
-        )
-        for location in locations:
-            candidate = Path(location) / "reporter_input.json"
-            if candidate.is_file():
-                schema_text = candidate.read_text(encoding="utf-8")
-                break
-        else:
-            raise
-    loaded = json.loads(schema_text)
-    if not isinstance(loaded, dict):
-        raise TypeError("feedback reporter schema must be a JSON object")
+    """collector と doctor が使う正本 schema を読み、schema 自体も検査する。"""
+    # reporter の discovery と同じ resource を、受け入れ前に検査する。
+    loaded = load_reporter_input_schema()
     Draft202012Validator.check_schema(loaded)
     return loaded
 

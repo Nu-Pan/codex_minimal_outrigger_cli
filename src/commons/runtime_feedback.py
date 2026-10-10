@@ -30,9 +30,9 @@ from .runtime_feedback_protocol import (
     FEEDBACK_COLLECTOR_HOST,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
+    REPORTER_PROTOCOL_VERSION,
 )
 from .runtime_feedback_store import (
-    REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
     parse_rfc3339,
     read_json_object,
