@@ -12,7 +12,6 @@ import subprocess
 import sys
 import time
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
 from typing import Literal
@@ -70,14 +69,26 @@ def _completion_probe_active() -> bool:
     return "_CMOC_COMPLETE" in os.environ
 
 
-@dataclass
 class TuiNotificationCallback:
-    """1 回の Codex TUI process に閉じた callback と重複排除領域。"""
+    """1 回の Codex TUI process に閉じた callback と重複排除領域。
 
-    command: list[str]
-    session_start_command: list[str]
-    _state_directory: TemporaryDirectory[str]
-    _closed: bool = field(default=False, init=False, repr=False)
+    NOTE:
+        この所有者を生成しない standalone callback でも module が読み込まれるため、
+        dataclasses による import と class 構築の負担を避ける。
+    """
+
+    def __init__(
+        self,
+        command: list[str],
+        session_start_command: list[str],
+        state_directory: TemporaryDirectory[str],
+    ) -> None:
+        """TUI 起動元が一時 state の cleanup を引き受ける。"""
+        # command 群と破棄済みかどうかを invocation ごとに保持する。
+        self.command = command
+        self.session_start_command = session_start_command
+        self._state_directory = state_directory
+        self._closed = False
 
     def close(self) -> None:
         """通知用の一時 state を、本命処理へ失敗を返さず破棄する。"""
