@@ -1,12 +1,8 @@
 """Repository ごとに共有する、種類別の単調増加 ID を発行する。"""
 
 import re
-import sqlite3
-from contextlib import closing
 from datetime import datetime
 from pathlib import Path
-
-from .runtime_paths import untracked_data_dir
 
 _ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 _LIMIT = 36**6
@@ -39,6 +35,12 @@ def is_common_id(value: object, prefix: str) -> bool:
 
 def new_id(repository: Path, prefix: str) -> str:
     """SQLite の排他 transaction で通番を確定し、ローカル発行時刻を付ける。"""
+    # ID 検査だけを使う reporter では、採番用の DB・path 解決を読み込まない。
+    import sqlite3
+    from contextlib import closing
+
+    from .runtime_paths import untracked_data_dir
+
     if prefix not in _PREFIXES:
         raise ValueError(f"unknown ID prefix: {prefix}")
     state_dir = untracked_data_dir(repository) / "state"
