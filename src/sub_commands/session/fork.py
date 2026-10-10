@@ -25,6 +25,7 @@ from cmoc_runtime import (
     write_state,
 )
 from commons.runtime_ids import new_id
+from commons.runtime_paths import reuse_root_queries
 from commons.runtime_primary_report import update_primary_report_fields
 
 
@@ -42,8 +43,10 @@ def cmoc_session_fork_impl() -> None:
 
 def _cmoc_session_fork_body() -> TerminalResult:
     """現在の local branch から cmoc session branch を作成する。"""
-    root = repo_root()
-    work = work_root()
+    # 同じ起点の両 root の探索だけを共有し、lock 待ち前に再利用の区間を閉じる。
+    with reuse_root_queries():
+        root = repo_root()
+        work = work_root()
     with session_fork_lock(root):
         start_subcommand_step(2, "現在の local branch を取得", "get current branch")
         branch = current_branch(work)

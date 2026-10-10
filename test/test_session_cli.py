@@ -207,17 +207,19 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
     """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    seed_search_config(root)
     original_run_git = session_fork_module.run_git
-    captured_head = original_run_git(["rev-parse", "HEAD"], root).stdout.strip()
+    captured_head = ""
     advanced = False
 
     def advance_home_before_switch(
         args: list[str], work: Path, check: bool = True
     ) -> cmoc_runtime.CommandResult:
         """session branch作成直前のhome branch更新を再現する。"""
-        nonlocal advanced
+        nonlocal advanced, captured_head
         if not advanced and args[:2] == ["switch", "-c"]:
+            # fork 自身の doctor 後の HEAD を観測し、準備用 doctor の再実行を省く。
+            captured_head = original_run_git(["rev-parse", "HEAD"], work).stdout.strip()
             (work / "README.md").write_text("advanced home\n")
             original_run_git(["add", "README.md"], work)
             original_run_git(["commit", "-m", "advance home branch"], work)
