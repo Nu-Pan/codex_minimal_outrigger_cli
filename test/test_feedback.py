@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, NoReturn
+from unittest.mock import Mock
 
 import oracle.other.path_model as path_model_module
 import pytest
@@ -1738,10 +1739,17 @@ def test_report_reference_masks_secret_across_content_limit(
     assert "A" * 50 not in reference["content"]
 
 
-def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
-    """同じ stable event の再検出を同じ raw observation 一件へ収束させる。"""
+def test_machine_detector_observation_id_is_idempotent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """対象 event でだけ context を取得し、再検出を同じ raw 一件へ収束させる。"""
     root = make_repo(tmp_path)
     logger = SubcommandLogger(root, "feedback test")
+    original_head = feedback_module.head_commit
+    branch_query = Mock(wraps=feedback_module.current_branch)
+    head_query = Mock(wraps=original_head)
+    monkeypatch.setattr(feedback_module, "current_branch", branch_query)
+    monkeypatch.setattr(feedback_module, "head_commit", head_query)
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     event = {
         "event_schema_version": 1,
@@ -1753,6 +1761,18 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
         "failure_code": "protocol_error",
     }
 
+    for excluded_fields in (
+        {"event_type": "unregistered.event"},
+        {"subcommand_invocation_id": "other-invocation"},
+        {"component": "unknown"},
+    ):
+        invocation.detect_event({**event, **excluded_fields}, logger.path)
+    FeedbackInvocation(root, root, "feedback report", logger).detect_event(
+        event, logger.path
+    )
+    branch_query.assert_not_called()
+    head_query.assert_not_called()
+
     invocation.detect_event(event, logger.path)
     invocation.detect_event(event, logger.path)
 
@@ -1760,6 +1780,8 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
     observation = read_json_object(path)
     assert validate_observation_envelope(observation) == []
     assert observation["source_event"]["event_id"] == event["event_id"]
+    assert observation["context"]["head_commit"] == original_head(root)
+    assert observation["context"]["subcommand_invocation_id"] == logger.execution_id
 
 
 def test_machine_detector_masks_secret_in_event_fields(tmp_path: Path) -> None:
