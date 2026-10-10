@@ -762,14 +762,46 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
         assert "pending oracle change" in oracle_diff.stdout
 
 
-def test_run_join_reports_joinable_child_stop_warnings(
+def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """joinable run の descendant 停止 warning を join report に残す。"""
+    """cleanup 前に report を保存し、実 cleanup の停止 warning と結果で更新する。"""
     context = _prepare_apply_run(ready_content_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
+    events: list[str] = []
+    saved_reports: list[Path] = []
+    original_write_report = run_join_command_module.write_lifecycle_report
+    original_cleanup = run_join_module.cleanup_joined_run
+
+    def record_report(
+        report_context: EditingRunContext,
+        operation: str,
+        **kwargs: object,
+    ) -> Path:
+        """保存完了を記録し、cleanup と最終更新の順序を観測する。"""
+        report = original_write_report(report_context, operation, **kwargs)
+        saved_reports.append(report)
+        events.append("report")
+        return report
+
+    def cleanup_after_saved_report(
+        run_context: EditingRunContext, warnings: list[str]
+    ) -> str:
+        """資源削除前の保存内容を確認して、実際の cleanup を実行する。"""
+        assert len(saved_reports) == 1
+        assert 'cleanup: "pending"' in saved_reports[0].read_text()
+        assert run_context.run_worktree.is_dir()
+        events.append("cleanup")
+        return original_cleanup(run_context, warnings)
+
+    monkeypatch.setattr(
+        run_join_command_module, "write_lifecycle_report", record_report
+    )
+    monkeypatch.setattr(
+        run_join_module, "cleanup_joined_run", cleanup_after_saved_report
+    )
     monkeypatch.setattr(
         run_join_module,
         "stop_tracked_codex_children",
@@ -780,7 +812,13 @@ def test_run_join_reports_joinable_child_stop_warnings(
 
     assert result.exit_code == 0, result.output
     report_path = terminal_primary_report(result)
-    assert "run child process already stopped: 789" in report_path.read_text()
+    assert events == ["report", "cleanup", "report"]
+    assert saved_reports == [report_path, report_path]
+    rendered = report_path.read_text()
+    assert 'cleanup: "completed"' in rendered
+    assert "run child process already stopped: 789" in rendered
+    assert (context.repo / "README.md").read_text() == "realized\n"
+    assert not context.run_worktree.exists()
 
 
 def test_run_abandon_accepts_already_removed_run_worktree(
@@ -2904,46 +2942,6 @@ def test_run_join_keeps_completed_merge_when_final_report_update_fails(
     assert 'state_after: "ready"' in rendered
     assert 'cleanup: "pending"' in rendered
     assert "cleanup pending" in rendered
-
-
-def test_run_join_saves_report_before_cleanup(
-    ready_join_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """run resource を削除する前に pending report を保存する。"""
-    root, _session_branch, _state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
-    (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
-    events: list[tuple[str, object]] = []
-    original_write_report = run_join_command_module.write_lifecycle_report
-
-    def record_report(
-        report_context: EditingRunContext,
-        operation: str,
-        **kwargs: object,
-    ) -> Path:
-        """report 保存の cleanup 前後の順序を記録する。"""
-        details = kwargs["details"]
-        assert isinstance(details, dict)
-        events.append(("report", details["cleanup"]))
-        return original_write_report(report_context, operation, **kwargs)
-
-    def record_cleanup(_context: EditingRunContext, _warnings: list[str]) -> str:
-        """cleanup の開始を記録して成功を返す。"""
-        events.append(("cleanup", None))
-        return "completed"
-
-    monkeypatch.setattr(
-        run_join_command_module, "write_lifecycle_report", record_report
-    )
-    monkeypatch.setattr(run_join_module, "cleanup_joined_run", record_cleanup)
-
-    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
-    assert events == [("report", "pending"), ("cleanup", None), ("report", "completed")]
-    assert (root / "README.md").read_text() == "realized\n"
 
 
 def test_run_join_preserves_active_state_when_cleanup_fails(
