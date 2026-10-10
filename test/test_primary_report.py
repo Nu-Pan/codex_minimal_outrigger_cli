@@ -32,6 +32,17 @@ from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
 
 
+@pytest.fixture
+def primary_report_directory(
+    cli_terminal_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    """Git 探索と外部通知を省き、report の保存・描画・終了処理を検証する。"""
+    # 実 Git の cwd・linked worktree 境界は test_runtime_cli.py に残す。
+    monkeypatch.setattr(runtime_cli, "notify_terminal_result", lambda *_args: None)
+    return cli_terminal_directory
+
+
 @pytest.mark.parametrize(
     ("editor", "expected_argv"),
     [
@@ -93,15 +104,13 @@ def test_primary_report_editor_launch_is_detached_without_console_output(
 
 @pytest.mark.parametrize("ending", ["success", "interruption", "error"])
 def test_formatted_primary_report_is_opened_once_before_terminal_event(
-    cli_repository: Path,
+    primary_report_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     ending: str,
 ) -> None:
     """全終了分類で最終出力を整形保存し、終了 event より先に一度だけ開く。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    root = primary_report_directory
     opened: list[Path] = []
 
     def observe_open(path: Path) -> None:
@@ -163,14 +172,12 @@ def test_formatted_primary_report_is_opened_once_before_terminal_event(
 
 
 def test_primary_report_editor_failure_is_warning_without_result_change(
-    cli_repository: Path,
+    primary_report_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """editor 起動失敗は report・終了 code を保ち、診断記録へ残す。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    root = primary_report_directory
 
     def fail_open(_path: Path) -> None:
         raise OSError("editor unavailable")
@@ -355,29 +362,13 @@ _EARLY_ERROR_SECTIONS = {
 }
 
 
-def _disable_external_completion(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """test 対象を report と terminal result の確定処理へ限定する。"""
-    monkeypatch.setattr(
-        runtime_cli,
-        "start_feedback_invocation",
-        lambda *_args: (None, None),
-    )
-    monkeypatch.setattr(
-        runtime_cli,
-        "notify_terminal_result",
-        lambda *_args: None,
-    )
-
-
 @pytest.mark.parametrize(
     ("command_name", "report_directory", "required_fields"),
     _EARLY_ERROR_REPORTS,
 )
 @pytest.mark.parametrize("failure_stage", ("doctor_preprocess", "precondition"))
 def test_early_error_saves_command_specific_primary_report(
-    cli_terminal_directory: Path,
+    primary_report_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     command_name: str,
@@ -386,9 +377,7 @@ def test_early_error_saves_command_specific_primary_report(
     failure_stage: str,
 ) -> None:
     """処理開始前の error でも固有の保存先と必須 front matter を保つ。"""
-    # root 探索は専用 CLI test に任せ、保存・描画・終了処理は実経路を通す。
-    root = cli_terminal_directory
-    monkeypatch.setattr(runtime_cli, "notify_terminal_result", lambda *_args: None)
+    root = primary_report_directory
 
     def fail_precondition(_runtime_root: Path) -> None:
         """report 保存前の処理開始エラーを再現する。"""
@@ -467,14 +456,10 @@ def test_early_error_saves_command_specific_primary_report(
 
 
 def test_user_interruption_saves_feedback_invocation_summary(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """feedback 中断は publication ではない invocation summary を保存する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
 
     def interrupt() -> TerminalResult:
         runtime_cli.mark_current_subcommand_interrupted()
@@ -508,17 +493,13 @@ def test_user_interruption_saves_feedback_invocation_summary(
 
 @pytest.mark.parametrize("supplied_report", [False, True])
 def test_primary_report_keeps_every_codex_output_and_accepted_observation(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
     supplied_report: bool,
 ) -> None:
     """初回 exec と resume の出力本文を、個別 report と fallback の両方へ残す。"""
     from commons.runtime_logging import current_subcommand_logger
 
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
     outputs = ("first final output\n```embedded fence```\n", "resume final output\n")
     observation = {
         "summary": "accepted issue",
@@ -667,16 +648,13 @@ def test_primary_report_explains_when_codex_output_is_unavailable(
 
 
 def test_primary_report_delimits_and_escapes_artifact_paths(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex artifact path の Markdown delimiter を壊さずに report へ載せる。"""
     from commons.runtime_logging import current_subcommand_logger
 
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    root = primary_report_directory
     output_path = root / "output`file.txt"
     call_log_path = root / "call`file.json"
 
@@ -703,14 +681,10 @@ def test_primary_report_delimits_and_escapes_artifact_paths(
 
 
 def test_refactor_fallback_records_user_interruption_reason(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """fallback report でも refactor の中断理由を確定する。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
 
     def interrupt_without_report() -> TerminalResult:
         """処理本体が中断だけを確定し、report 保存を共通 fallback に委ねる。"""
@@ -754,14 +728,12 @@ def test_existing_primary_report_survives_update_failure(
 
 
 def test_unsaved_report_path_becomes_internal_failure_without_path_display(
-    cli_repository: Path,
+    primary_report_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """保存を確認できない path を隠し、report 基盤の internal failure にする。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    root = primary_report_directory
     unsaved_path = root / "must-not-be-displayed.md"
     opened: list[Path] = []
     monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", opened.append)
@@ -799,14 +771,11 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
 
 
 def test_unreadable_existing_report_becomes_internal_failure_without_path_display(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """既存 report の読み取り失敗も report 基盤の internal failure にする。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    root = primary_report_directory
     unreadable_path = root / "unreadable-report.md"
     unreadable_path.write_bytes(b"\xff")
 
