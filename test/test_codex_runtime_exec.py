@@ -61,10 +61,14 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
 def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """汎用 provider を含む CLI override とリポジトリ書き込み結果を検証する。"""
+    """provider と path policy の argv 境界および書き込み結果を検証する。"""
     # schema-less exec は履歴を参照しない。root 探索と Fake CLI の書き込み先だけ用意する。
     root = cli_repository
     (root / "oracle").mkdir()
+    # .agents の実在 path を権限設定へ注入しない検証も同じ REPO_WRITE の起動で行う。
+    agents_file = root / ".agents" / "nested" / "instructions.md"
+    agents_file.parent.mkdir(parents=True)
+    agents_file.write_text("agent instructions\n")
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -162,6 +166,7 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     }
     assert "default_permissions" not in override_config
     assert "permissions" not in override_config
+    assert all(str(agents_file.resolve()) not in arg for arg in record["args"])
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
