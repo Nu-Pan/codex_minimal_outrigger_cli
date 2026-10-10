@@ -44,14 +44,6 @@ from commons.runtime_run import expected_run_worktree, worktree_for_branch_optio
 
 
 @pytest.fixture
-def worktree_repository(cli_repository: Path) -> Path:
-    """file 内容を参照しない worktree 境界テストに HEAD を用意する。"""
-    # 実 Git の commit・linked metadata は保ち、追跡 file と git add は準備しない。
-    run_git(cli_repository, "commit", "--allow-empty", "-m", "initial")
-    return cli_repository
-
-
-@pytest.fixture
 def _cwd_lock_contention(monkeypatch: pytest.MonkeyPatch) -> threading.Event:
     """実 RLock の競合を通知し、固定時間の待機なしで排他を検証する。"""
     # 既存の lock をそのまま使い、待つ理由だけを観測する。
@@ -113,10 +105,10 @@ def test_make_repo_ignores_global_git_config(
 
 
 def test_runtime_distinguishes_repo_root_from_linked_worktree(
-    worktree_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree では repo root と run/work root を分けて扱う。"""
-    root = worktree_repository
+    root = committed_repository
     linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
 
@@ -220,10 +212,10 @@ def test_agent_call_path_context_ignores_repository_selection_environment(
 
 
 def test_agent_call_path_contexts_are_parallel_and_call_scoped(
-    worktree_repository: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """並列 call が process cwd を変えず、互いに異なる work root を保持する。"""
-    root = worktree_repository
+    root = committed_repository
     worktrees = [root / "first-worktree", root / "second-worktree"]
     for index, worktree in enumerate(worktrees):
         run_git(
@@ -351,10 +343,10 @@ def test_pushd_serializes_process_global_cwd_changes(
 
 
 def test_run_root_placeholder_rejects_main_worktree(
-    worktree_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree 内の nested main repository は run root として扱わない。"""
-    root = worktree_repository
+    root = committed_repository
     linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked-parent", str(linked), "HEAD")
     # 外側の linked worktree は HEAD が必要だが、内側の main repository は履歴不要。
@@ -429,10 +421,10 @@ def test_run_worktree_rejects_noncanonical_branch(
 
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
 def test_run_worktree_lookup_rejects_symlink_components(
-    worktree_repository: Path, tmp_path: Path, symlink_component: str
+    committed_repository: Path, tmp_path: Path, symlink_component: str
 ) -> None:
     """登録後に symlink 化された run worktree を作業 root として扱わない。"""
-    root = worktree_repository
+    root = committed_repository
     managed = root / ".cmoc" / "gu" / "worktree"
     expected = managed / SESSION_ID / RUN_ID
     run_git(root, "worktree", "add", "-b", RUN_BRANCH, str(expected), "HEAD")
@@ -456,10 +448,10 @@ def test_run_worktree_lookup_rejects_symlink_components(
 
 
 def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
-    worktree_repository: Path, tmp_path: Path
+    committed_repository: Path, tmp_path: Path
 ) -> None:
     """stale な Git 登録先を作業 root として使わず、置換した内容も削除しない。"""
-    root = worktree_repository
+    root = committed_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     run_git(
         root,
@@ -484,10 +476,10 @@ def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
 
 
 def test_session_worktree_lookup_rejects_invalid_registered_path(
-    worktree_repository: Path, tmp_path: Path
+    committed_repository: Path, tmp_path: Path
 ) -> None:
     """session branch も stale な Git 登録先を worktree として扱わない。"""
-    root = worktree_repository
+    root = committed_repository
     target = tmp_path / "session-worktree"
     run_git(
         root,
@@ -569,10 +561,10 @@ def test_run_worktree_operations_reject_unregistered_managed_path(
 
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
 def test_remove_worktree_rejects_symlink_components(
-    worktree_repository: Path, tmp_path: Path, symlink_component: str
+    committed_repository: Path, tmp_path: Path, symlink_component: str
 ) -> None:
     """symlink componentを経由したworktree削除を拒否することを検証する。"""
-    root = worktree_repository
+    root = committed_repository
     managed = root / ".cmoc" / "gu" / "worktree"
     external = tmp_path / "external"
     actual = external / SESSION_ID / RUN_ID
@@ -611,10 +603,10 @@ def test_remove_worktree_rejects_symlink_components(
 
 
 def test_remove_worktree_rejects_non_run_branch_at_managed_path(
-    worktree_repository: Path,
+    committed_repository: Path,
 ) -> None:
     """管理領域内でもrun branchと対応しないworktreeを削除しない。"""
-    root = worktree_repository
+    root = committed_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     run_git(root, "worktree", "add", "-b", "ordinary", str(target), "HEAD")
 
@@ -625,10 +617,10 @@ def test_remove_worktree_rejects_non_run_branch_at_managed_path(
 
 
 def test_remove_worktree_rejects_noncanonical_run_ids(
-    worktree_repository: Path,
+    committed_repository: Path,
 ) -> None:
     """旧 ID の branch と登録先が一致しても削除対象にしない。"""
-    root = worktree_repository
+    root = committed_repository
     old_id = "2026-09-29_15-04_07_123456789"
     target = root / ".cmoc/gu/worktree" / old_id / old_id
     run_git(root, "worktree", "add", "-b", f"cmoc/run/{old_id}/{old_id}", str(target))

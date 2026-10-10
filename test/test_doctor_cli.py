@@ -326,17 +326,13 @@ def test_doctor_preprocess_restores_empty_work_directories(tmp_path, explicit_do
 @pytest.mark.parametrize("command", [("doctor",), ("session", "fork")])
 @pytest.mark.parametrize("relative", ["oracle", *_WORK_DIRECTORIES])
 def test_preprocess_rejects_work_directory_collisions(
-    tmp_path, monkeypatch, command, relative
+    committed_repository, monkeypatch, command, relative
 ):
     """通常起動と明示 doctor は配置先・親の衝突を保持し、本命処理へ進まない。"""
-    root = make_repo(tmp_path)
-    # 配置先の検証は config・索引同期より前なので、事前の doctor は不要。
+    # HEAD の保持は確認するが、配置先検証は履歴内容・config・索引同期を使わない。
+    root = committed_repository
     collision = root / relative
-    if relative == "oracle":
-        (collision / "spec.md").unlink()
-        collision.rmdir()
-    else:
-        collision.parent.mkdir(parents=True, exist_ok=True)
+    collision.parent.mkdir(parents=True, exist_ok=True)
     collision.write_text("keep collision\n")
     head_before = run_git(root, "rev-parse", "HEAD").stdout
     branch_before = run_git(root, "branch", "--show-current").stdout
@@ -358,9 +354,12 @@ def test_preprocess_rejects_work_directory_collisions(
     assert "退避" in report
 
 
-def test_preprocess_reports_work_directory_permission_failure(tmp_path, monkeypatch):
+def test_preprocess_reports_work_directory_permission_failure(
+    cli_repository, monkeypatch
+):
     """作成できない配置先を具体的に診断し、必須条件の失敗を伝える。"""
-    root = make_repo(tmp_path)
+    # 作成失敗は index 修復より前に発生するため、Git root だけを用意する。
+    root = cli_repository
     blocked = root / "oracle/test"
     original_mkdir = Path.mkdir
 

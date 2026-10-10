@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from _git_support import init_repo
+from _git_support import init_repo, run_git
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.prompt_editor_input as prompt_editor_input_module
@@ -30,6 +30,14 @@ def cli_repository(tmp_path: Path) -> Path:
     root.mkdir()
     init_repo(root)
     return root
+
+
+@pytest.fixture
+def committed_repository(cli_repository: Path) -> Path:
+    """履歴内容を参照せず HEAD が必要な test に空 commit を用意する。"""
+    # root・branch・linked metadata は実 Git を使い、追跡 file と git add は準備しない。
+    run_git(cli_repository, "commit", "--allow-empty", "-m", "initial")
+    return cli_repository
 
 
 @pytest.fixture
