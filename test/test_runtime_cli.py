@@ -917,15 +917,30 @@ def test_cli_requires_current_directory_to_be_work_root(
 
 def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     tmp_path: Path,
-    cli_repository: Path,
 ) -> None:
-    """shell completion probe は cmoc preflight と初期化副作用を起こさない。"""
-    root = cli_repository
+    """補完は Git のない cwd でも command runtime を読み込まず動作する。"""
+    root = tmp_path / "repo"
+    root.mkdir()
     isolated_home = tmp_path / "home"
     isolated_home.mkdir()
     main_path = Path(main_module.__file__).resolve()
+    # 独立 process で import の遅延を検証し、pytest の読み込み済み module に依存しない。
+    script = """
+import runpy
+import sys
+
+def reject_command_runtime(event, arguments):
+    if event == "import" and arguments[0].split(".", 1)[0] in {
+        "cmoc_runtime", "sub_commands", "acp", "oracle"
+    }:
+        raise AssertionError(f"completion loaded command runtime: {arguments[0]}")
+
+sys.addaudithook(reject_command_runtime)
+sys.argv = sys.argv[1:]
+runpy.run_path(sys.argv[0], run_name="__main__")
+"""
     result = subprocess.run(
-        [sys.executable, str(main_path), "doctor"],
+        [sys.executable, "-c", script, str(main_path), "doctor"],
         cwd=root,
         env={
             "PYTHONPATH": str(main_path.parent),
@@ -933,6 +948,9 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
             "COMP_WORDS": "cmoc doctor",
             "COMP_CWORD": "1",
             "HOME": str(isolated_home),
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONDEVMODE": "1",
+            "PYTHONWARNINGS": "error::ResourceWarning",
         },
         text=True,
         capture_output=True,
@@ -941,7 +959,8 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
 
     completion_output = result.stdout + result.stderr
     # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
-    assert result.returncode == 0
+    assert result.returncode == 0, completion_output
+    assert "doctor" in result.stdout
     assert "# 失敗" not in completion_output
     assert "サブコマンドログ" not in completion_output
     assert "開始 doctor" not in completion_output
@@ -955,12 +974,16 @@ def test_cli_completion_marker_skips_normal_command(
     monkeypatch: pytest.MonkeyPatch, marker: str
 ) -> None:
     """補完 marker の値によらず通常の command callback を実行しない。"""
+    import sub_commands.doctor as doctor_module
+
     calls: list[str] = []
     transport_checks: list[str] = []
     monkeypatch.setenv("_CMOC_COMPLETE", marker)
     monkeypatch.setenv("COMP_WORDS", "cmoc doctor")
     monkeypatch.setenv("COMP_CWORD", "1")
-    monkeypatch.setattr(main_module, "cmoc_doctor_impl", lambda: calls.append("doctor"))
+    monkeypatch.setattr(
+        doctor_module, "cmoc_doctor_impl", lambda: calls.append("doctor")
+    )
     monkeypatch.setattr(
         runtime_windows_toast,
         "_powershell_executable",
