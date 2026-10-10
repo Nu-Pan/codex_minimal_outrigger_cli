@@ -16,7 +16,7 @@ from types import SimpleNamespace
 from typing import NoReturn
 
 import pytest
-from _cli_support import run_doctor, runner, terminal_primary_report
+from _cli_support import runner, seed_search_config, terminal_primary_report
 from _git_support import (
     RUN_BRANCH,
     RUN_ID,
@@ -78,7 +78,8 @@ def _start_session(
     """隔離 repository で session を開始し、root・branch・state path を返す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    # 管理物の修復・索引同期は session fork 自身の doctor preprocess で行う。
+    seed_search_config(root)
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert result.exit_code == 0
     branch = current_branch(root)

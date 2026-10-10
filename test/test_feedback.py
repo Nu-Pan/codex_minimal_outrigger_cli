@@ -28,7 +28,12 @@ from unittest.mock import Mock
 import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
-from _cli_support import run_doctor, runner, terminal_primary_report
+from _cli_support import (
+    run_doctor,
+    runner,
+    seed_search_config,
+    terminal_primary_report,
+)
 from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from oracle.acp_builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter as _build_canonical_normalize_parameter,
@@ -232,9 +237,10 @@ def _submit_to_feedback_collector(
 
 
 def _active_session(root: Path, monkeypatch: pytest.MonkeyPatch) -> str:
-    """doctor 済み repository を active session の ready 状態にする。"""
+    """repository を active session の ready 状態にする。"""
     monkeypatch.chdir(root)
-    run_doctor(root)
+    # 管理物の修復・索引同期は session fork 自身の doctor preprocess で行う。
+    seed_search_config(root)
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     branch = current_branch(root)

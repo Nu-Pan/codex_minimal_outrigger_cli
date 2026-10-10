@@ -24,7 +24,12 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner, terminal_primary_report
+from _cli_support import (
+    run_doctor,
+    runner,
+    seed_search_config,
+    terminal_primary_report,
+)
 from _git_support import (
     RUN_ID,
     SESSION_BRANCH,
@@ -44,11 +49,6 @@ from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_override_args
 from config.cmoc_config import CmocConfig
 from main import app
-
-
-def seed_search_config(root: Path) -> None:
-    """通常起動の前提となる検索設定だけを用意し、他の doctor 修復は試験対象に残す。"""
-    cmoc_runtime.write_config(root / ".cmoc/gt/config.json", CmocConfig())
 
 
 def _seed_remote_tracking_branch(root: Path, branch: str, commit: str) -> None:
