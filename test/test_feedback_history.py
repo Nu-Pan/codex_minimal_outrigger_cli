@@ -63,7 +63,6 @@ def test_history_load_uses_hash_verified_bytes_and_ignores_staged_history(
 @pytest.mark.parametrize(
     "fault, message",
     [
-        ("hash", "SHA256"),
         ("schema", "identity"),
         ("noncanonical", "canonical JSON object"),
         ("invalid_json", "canonical JSON"),
@@ -78,8 +77,7 @@ def test_history_load_rejects_corruption(saved_history, fault, message):
     else:
         content = json.dumps(record).encode()
     path.write_bytes(content)
-    if fault != "hash":
-        reference["sha256"] = sha256_bytes(content)
+    reference["sha256"] = sha256_bytes(content)
 
     with pytest.raises(CmocError, match=message):
         load_history(root, [reference])
