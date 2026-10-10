@@ -54,29 +54,40 @@ def handoff_transport(tmp_path, monkeypatch):
     return target_id, connection
 
 
-def _get_guide_result(arguments):
-    response = handoff_mcp._response(
-        {
-            "jsonrpc": "2.0",
-            "id": "guide",
-            "method": "tools/call",
-            "params": {"name": "get_handoff_guide", "arguments": arguments},
-        }
-    )
-    result = response["result"]
-    value = result["structuredContent"]
+@pytest.fixture(scope="module")
+def get_guide_result():
+    """正本 schema を一度読み、各取得結果と MCP 表現を検査する。"""
+    # MCP 実装とは独立に、不変の正本 resource から validator を用意する。
     schema = json.loads(
         resources.files("oracle.editor_input_handoff")
         .joinpath("get_handoff_guide_result.json")
         .read_text(encoding="utf-8")
     )
-    Draft202012Validator(schema).validate(value)
-    assert json.loads(result["content"][0]["text"]) == value
-    assert result["isError"] is (value["status"] == "error")
-    return value
+    validator = Draft202012Validator(schema)
+
+    def get_result(arguments):
+        # 応答は毎回取得し、共有するのは検査の準備だけに限る。
+        response = handoff_mcp._response(
+            {
+                "jsonrpc": "2.0",
+                "id": "guide",
+                "method": "tools/call",
+                "params": {"name": "get_handoff_guide", "arguments": arguments},
+            }
+        )
+        result = response["result"]
+        value = result["structuredContent"]
+        validator.validate(value)
+        assert json.loads(result["content"][0]["text"]) == value
+        assert result["isError"] is (value["status"] == "error")
+        return value
+
+    return get_result
 
 
-def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkeypatch):
+def test_handoff_guide_returns_complete_large_receiver_template(
+    tmp_path, monkeypatch, get_guide_result
+):
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
     work.parent.mkdir(parents=True)
@@ -90,7 +101,7 @@ def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkey
     target = start_editor_input_handoff(tmp_path, work, skeleton)
     monkeypatch.delenv(EDITOR_INPUT_SOURCE_ENV, raising=False)
     try:
-        result = _get_guide_result({"target_id": target.target_id})
+        result = get_guide_result({"target_id": target.target_id})
         assert result == {
             "status": "ok",
             "guide_text": expected_guide,
@@ -102,7 +113,9 @@ def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkey
     assert not target.handoff_guide_path.exists()
 
 
-def test_unavailable_guide_never_returns_editor_content(tmp_path, monkeypatch):
+def test_unavailable_guide_never_returns_editor_content(
+    tmp_path, monkeypatch, get_guide_result
+):
     """同じ active target で各取得失敗と復帰を検証し、登録・受信 thread を共用する。"""
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     work = tmp_path / ".cmoc/gu/log/editor_input/input.md"
@@ -117,7 +130,7 @@ def test_unavailable_guide_never_returns_editor_content(tmp_path, monkeypatch):
                 target.handoff_guide_path.write_bytes(b"\xff")
             elif damage == "symlink":
                 target.handoff_guide_path.symlink_to(work)
-            result = _get_guide_result({"target_id": target.target_id})
+            result = get_guide_result({"target_id": target.target_id})
             assert result["status"] == "error", damage
             assert "private editor content" not in json.dumps(result), damage
             assert work.read_text() == "private editor content", damage
@@ -125,7 +138,7 @@ def test_unavailable_guide_never_returns_editor_content(tmp_path, monkeypatch):
             # 正常取得へ戻し、前の失敗結果の使い回しが次の故障を隠さないようにする。
             target.handoff_guide_path.unlink(missing_ok=True)
             target.handoff_guide_path.write_bytes(guide_bytes)
-            assert _get_guide_result({"target_id": target.target_id}) == {
+            assert get_guide_result({"target_id": target.target_id}) == {
                 "status": "ok",
                 "guide_text": guide_bytes.decode("utf-8"),
             }, damage
@@ -147,10 +160,10 @@ def test_unavailable_guide_never_returns_editor_content(tmp_path, monkeypatch):
     ],
 )
 def test_handoff_guide_rejects_invalid_or_unknown_target_without_input_leak(
-    tmp_path, monkeypatch, arguments
+    tmp_path, monkeypatch, get_guide_result, arguments
 ):
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-    result = _get_guide_result(arguments)
+    result = get_guide_result(arguments)
     assert result["status"] == "error"
     assert "private input" not in json.dumps(result)
 
@@ -165,7 +178,7 @@ def test_handoff_guide_rejects_invalid_or_unknown_target_without_input_leak(
     ],
 )
 def test_handoff_guide_rejects_invalid_target_result_without_input_leak(
-    monkeypatch, handoff_transport, target_result
+    monkeypatch, handoff_transport, get_guide_result, target_result
 ):
     """欠落・不正・余分な本文を含む受信応答はガイドとして返さない。"""
     target_id, connection = handoff_transport
@@ -174,7 +187,7 @@ def test_handoff_guide_rejects_invalid_target_result_without_input_leak(
         "read_handoff_message",
         lambda *_args, **_kwargs: target_result,
     )
-    result = _get_guide_result({"target_id": target_id})
+    result = get_guide_result({"target_id": target_id})
     assert result["status"] == "error"
     assert "private input" not in json.dumps(result)
     connection.sendall.assert_called_once()
