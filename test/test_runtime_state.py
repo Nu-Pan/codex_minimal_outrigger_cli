@@ -27,11 +27,18 @@ from commons.runtime_state import (
 )
 
 
-def _hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
+def _hold_session_fork_lock(
+    root: Path, common_dir: Path, ready: Connection, release: Connection
+) -> None:
     """別 process で session fork lock を保持し、解放指示を待つ。"""
-    with session_fork_lock(root):
-        ready.send(True)
-        release.recv()
+    # spawn でも親の monkeypatch に依存せず、同じ共有 directory を使う。
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            runtime_state_module, "git_common_dir", lambda _root: common_dir
+        )
+        with session_fork_lock(root):
+            ready.send(True)
+            release.recv()
 
 
 def _valid_state() -> SessionState:
@@ -517,17 +524,23 @@ def test_session_state_rejects_unknown_top_level_fields() -> None:
 
 
 def test_session_fork_lock_is_shared_across_processes(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """session fork lock が process 間で共有されることを確認する。"""
-    root = cli_repository
+    root = tmp_path
+    common_dir = tmp_path / "common"
+    # Git common directory の実解決は test_git_query_reuse.py に残し、
+    # ここでは異なる起点からの実 flock の競合・解放後の取得だけを検証する。
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
         target=_hold_session_fork_lock,
-        args=(root, ready_child, release_child),
+        args=(root / "linked", common_dir, ready_child, release_child),
     )
     process.start()
+    monkeypatch.setattr(
+        runtime_state_module, "git_common_dir", lambda _root: common_dir
+    )
     lock_contended = threading.Event()
     acquired = threading.Event()
 
