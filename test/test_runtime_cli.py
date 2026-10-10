@@ -25,6 +25,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import typer
@@ -58,6 +59,15 @@ def _clear_completion_probe_environment(
     """通常の in-process CLI test を外部の completion probe 環境から分離する。"""
     # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
+
+
+@pytest.fixture
+def _without_feedback_collector(monkeypatch: pytest.MonkeyPatch) -> None:
+    """実 Git を使う CLI 境界の検査でも、観測しない collector を起動しない。"""
+    # collector の TCP 受付・保存・drain は test_feedback.py に残す。
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
 
 
 @pytest.mark.parametrize(
@@ -472,28 +482,6 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
     assert "traceback" not in events[-1]["failure"]
 
 
-def test_cli_nonzero_impl_result_is_reported(
-    cli_terminal_directory: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """callback の非0 returnも共通error reportと終了コードへ変換する。"""
-    with pytest.raises(typer.Exit) as exc_info:
-        runtime_cli.run_cli_subcommand(
-            lambda: 7,
-            command_name="probe",
-            command_argv=["cmoc", "probe"],
-            doctor_preprocess=False,
-        )
-
-    captured = capsys.readouterr()
-    assert exc_info.value.exit_code == 7
-    assert captured.out == ""
-    assert "# 失敗: cmoc probe" in captured.err
-    assert "returncode: 7" in captured.err
-    assert "Traceback" not in captured.err
-    assert "- 終了コード: `7`" in captured.err
-
-
 def test_cli_error_report_survives_failed_error_log_flush(
     cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -626,13 +614,20 @@ def test_cli_tui_startup_keyboard_interrupt_emits_failure_notification(
 
 
 def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Codex subprocess の起動前中断を TUI 終了後の中断と混同しない。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
+    # 実 Git の TUI root 解決は test_codex_runtime_tui.py の prompt 起動ケースに残す。
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "AgentCallPathContext",
+        lambda agent_call_cwd: SimpleNamespace(
+            agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
+        ),
+    )
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     notifications: list[str] = []
@@ -716,12 +711,13 @@ def test_cli_terminal_notification_boundary_on_success(
 
 
 @pytest.mark.parametrize("tui_process", [False, True])
-def test_cli_terminal_notification_reports_error_for_all_command_kinds(
+def test_cli_nonzero_impl_result_is_reported_and_notified(
     cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
     tui_process: bool,
 ) -> None:
-    """非対話と TUI の確定済み失敗をどちらも 1 回だけ通知する。"""
+    """非0 return の失敗表示・終了コードと、非対話/TUI の単発通知を検証する。"""
     root = cli_terminal_directory
     calls: list[tuple[str, Path, str]] = []
     monkeypatch.setattr(
@@ -739,7 +735,13 @@ def test_cli_terminal_notification_reports_error_for_all_command_kinds(
             tui_process=tui_process,
         )
 
+    captured = capsys.readouterr()
     assert exc_info.value.exit_code == 7
+    assert captured.out == ""
+    assert "# 失敗: cmoc probe" in captured.err
+    assert "returncode: 7" in captured.err
+    assert "Traceback" not in captured.err
+    assert "- 終了コード: `7`" in captured.err
     assert calls == [("probe", root, "failed")]
 
 
@@ -867,7 +869,9 @@ def test_render_error_does_not_expose_internal_traceback() -> None:
 
 
 def test_cli_handled_failure_is_written_to_stderr(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    _without_feedback_collector: None,
 ) -> None:
     """想定済み CLI error は簡潔な terminal result を stderr に返す。"""
     root = make_repo(tmp_path)
@@ -876,9 +880,6 @@ def test_cli_handled_failure_is_written_to_stderr(
     # 実 Git の detached HEAD 検出から CLI の stderr・終了コードまでを通す。
     doctor_roots: list[Path] = []
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", doctor_roots.append)
-    monkeypatch.setattr(
-        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
-    )
     run_git(root, "switch", "--detach", "HEAD")
 
     result = runner.invoke(app, ["session", "fork"])
@@ -917,7 +918,9 @@ def test_unknown_subcommand_option_is_rejected_by_cli_parser() -> None:
 
 
 def test_cli_requires_current_directory_to_be_work_root(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    _without_feedback_collector: None,
 ) -> None:
     """work root 以外からの CLI 実行では副作用を出す前に拒否する。"""
     root = cli_repository
@@ -1056,7 +1059,9 @@ def test_pre_log_check_failure_writes_subcommand_log(
 
 
 def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    _without_feedback_collector: None,
 ) -> None:
     """doctor preprocess は runtime state 保存先ではなく current work root を修復する。"""
     root = make_repo(tmp_path)
