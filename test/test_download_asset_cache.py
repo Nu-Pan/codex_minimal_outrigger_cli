@@ -4,7 +4,6 @@
 """
 
 import base64
-import fcntl
 import gzip
 import hashlib
 import io
@@ -15,14 +14,13 @@ import subprocess
 import tarfile
 import urllib.error
 import urllib.request
-import urllib.response
 from dataclasses import replace
-from email.message import Message
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
 from _cli_support import runner, terminal_primary_report
+from _download_asset_support import download_response, process_obtain
 from _git_support import make_repo
 
 import commons.runtime_doctor as doctor_module
@@ -42,16 +40,6 @@ from commons.runtime_results import TerminalResult
 from main import app
 
 
-def _response(url, body, code=200, location=None):
-    headers = Message()
-    headers["Content-Length"] = str(len(body))
-    if location:
-        headers["Location"] = location
-    response = urllib.response.addinfourl(io.BytesIO(body), headers, url, code)
-    response.msg = "fixture response"
-    return response
-
-
 @pytest.fixture
 def distribution(monkeypatch):
     """HTTP transport の応答を置換し、urllib の redirect と通信記録を通す。"""
@@ -62,8 +50,8 @@ def distribution(monkeypatch):
         path = urlsplit(request.full_url).path
         requests.append(path)
         if path == "/redirect":
-            return _response(request.full_url, b"", 302, "/model")
-        return _response(
+            return download_response(request.full_url, b"", 302, "/model")
+        return download_response(
             request.full_url, bodies.get(path, b""), 200 if path in bodies else 503
         )
 
@@ -236,33 +224,6 @@ def test_partial_failure_preserves_published_assets(
     assert not list(cache_module.asset_cache_directory().glob(".incomplete-*"))
 
 
-def _process_obtain(cache_root, root, asset, destination, waiting, count, result):
-    cache_module.asset_cache_directory = lambda: cache_root
-    flock = fcntl.flock
-
-    def observe_lock(fd, operation):
-        try:
-            return flock(fd, operation)
-        except BlockingIOError:
-            waiting.set()
-            raise
-
-    fcntl.flock = observe_lock
-
-    def transport(_handler, request):
-        with count.get_lock():
-            count.value += 1
-        # 実 lock の競合まで応答を保留し、固定 sleep に依存せず待機後の再利用を通す。
-        assert waiting.wait(10), "no concurrent cache waiter"
-        return _response(request.full_url, b"model bytes")
-
-    urllib.request.HTTPHandler.http_open = transport
-    try:
-        result.send(DownloadAssetCache(root).obtain(asset, destination))
-    finally:
-        result.close()
-
-
 def test_parallel_installations_download_once(tmp_path, distribution):
     """独立 process と異なる cmoc 配置でも、待機後に完成品を再利用する。"""
     context = multiprocessing.get_context("spawn")
@@ -275,7 +236,8 @@ def test_parallel_installations_download_once(tmp_path, distribution):
             receive, send = context.Pipe(duplex=False)
             destination = tmp_path / f"result-{number}"
             process = context.Process(
-                target=_process_obtain,
+                # spawn がテスト全体と CLI を再 import しない、小さな worker を使う。
+                target=process_obtain,
                 args=(
                     cache_module.asset_cache_directory(),
                     tmp_path / f"cmoc-{number}",
