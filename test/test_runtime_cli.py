@@ -31,7 +31,7 @@ import pytest
 import typer
 from _cli_support import runner, terminal_primary_report
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
-from _git_support import make_repo, run_git
+from _git_support import run_git
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_tui as runtime_codex_tui
@@ -869,12 +869,12 @@ def test_render_error_does_not_expose_internal_traceback() -> None:
 
 
 def test_cli_handled_failure_is_written_to_stderr(
-    tmp_path: Path,
+    committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
 ) -> None:
     """想定済み CLI error は簡潔な terminal result を stderr に返す。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     monkeypatch.chdir(root)
     # doctor 修復と collector の TCP lifecycle は専用 test に残し、
     # 実 Git の detached HEAD 検出から CLI の stderr・終了コードまでを通す。
@@ -1059,12 +1059,12 @@ def test_pre_log_check_failure_writes_subcommand_log(
 
 
 def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
-    tmp_path: Path,
+    committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
 ) -> None:
     """doctor preprocess は runtime state 保存先ではなく current work root を修復する。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
     monkeypatch.chdir(linked)
