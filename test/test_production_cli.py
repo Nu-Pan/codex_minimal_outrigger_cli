@@ -605,10 +605,16 @@ def _run_worktree_from_state(root: Path, state: dict[str, Any]) -> Path:
     return root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
 
 
-def _completed_tui_message(codex_home: Path) -> str | None:
+def _completed_tui_message(
+    codex_home: Path, scanned_versions: dict[Path, tuple[int, int]]
+) -> str | None:
     """Codex TUI session が保存した完了済み assistant response を探す。"""
     # session file の originator で resolver の `codex exec` と TUI を区別する。
     for path in codex_home.glob("sessions/**/rollout-*.jsonl"):
+        stat = path.stat()
+        version = (stat.st_mtime_ns, stat.st_size)
+        if scanned_versions.get(path) == version:
+            continue
         originator: str | None = None
         completed_message: str | None = None
         # TUI は polling 中にこの file を追記するため、最後の chunk が partial UTF-8
@@ -631,6 +637,8 @@ def _completed_tui_message(codex_home: Path) -> str | None:
                 completed_message = value
         if originator == "codex-tui" and completed_message is not None:
             return completed_message
+        # 完了待ちの同じ本文を poll ごとに読み直さず、追記後は全文を再確認する。
+        scanned_versions[path] = version
     return None
 
 
@@ -720,6 +728,7 @@ def _run_cmoc_tui(
     slave_open = True
     transcript = bytearray()
     message: str | None = None
+    scanned_versions: dict[Path, tuple[int, int]] = {}
     probe_buffer = b""
     answered_queries: set[bytes] = set()
     trust_confirmation_ready = False
@@ -756,7 +765,7 @@ def _run_cmoc_tui(
                     transcript,
                     trust_confirmation_ready,
                 )
-            message = _completed_tui_message(codex_home)
+            message = _completed_tui_message(codex_home, scanned_versions)
             if message is not None:
                 break
             if process.poll() is not None:
@@ -989,7 +998,9 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert run_git(root, "status", "--short").stdout.strip() == ""
     # Close は agent を呼ばない。確定済み入力を別 repository に用意し、
     # 本番 entrypoint の state 更新・report・終了 code を観測する。
-    close_root = make_repo(tmp_path / "close-scenario")
+    close_parent = tmp_path / "close-scenario"
+    close_parent.mkdir()
+    close_root = make_repo(close_parent)
     _run_without_codex_call(cmoc, close_root, environment, "doctor")
     history = load_active_state(root).history
     basis = next(
