@@ -44,16 +44,11 @@ def _run_from_packaged_layout(
     )
 
 
-def _copy_source_tree(source: Path, target: Path) -> None:
-    """bytecode cache を除いた source tree を packaged layout へコピーする。
-
-    根拠: {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    """
-    shutil.copytree(
-        source,
-        target,
-        ignore=shutil.ignore_patterns("__pycache__", "*.py[cod]"),
-    )
+def _copy_readonly_source(source: str, target: str) -> str:
+    """import が使わない file metadata をコピーせず、共有 source を読み取り専用にする。"""
+    shutil.copyfile(source, target)
+    Path(target).chmod(0o444)
+    return target
 
 
 @pytest.fixture(scope="module")
@@ -61,12 +56,20 @@ def packaged_sources(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """独立 process が読む不変な source のコピーだけを module 内で共有する。"""
     root = Path(__file__).parents[1]
     sources = tmp_path_factory.mktemp("packaged-sources")
-    for package in ("acp", "basic", "commons", "config"):
-        _copy_source_tree(root / "src" / package, sources / package)
-    _copy_source_tree(root / "oracle" / "src" / "oracle", sources / "oracle")
-    for path in sources.rglob("*"):
-        if path.is_file():
-            path.chmod(0o444)
+    for relative_path in (
+        "src/acp",
+        "src/basic",
+        "src/commons",
+        "src/config",
+        "oracle/src/oracle",
+    ):
+        source = root / relative_path
+        shutil.copytree(
+            source,
+            sources / source.name,
+            copy_function=_copy_readonly_source,
+            ignore=shutil.ignore_patterns("__pycache__", "*.py[cod]"),
+        )
     return sources
 
 
