@@ -555,20 +555,14 @@ def _ensure_agents_tracked(root: Path) -> bool:
     agents = root / ".agents"
     _validate_agents_paths(root)
     agents.mkdir(exist_ok=True)
-    tracked = bool(run_git(["ls-files", "--", ".agents"], root).stdout.strip())
+    tracked = set(run_git(["ls-files", "--", ".agents"], root).stdout.splitlines())
     gitkeep = agents / ".gitkeep"
     if tracked:
         # tracked な .gitkeep の unstaged deletion でも、.agents を空のまま残さない。
         if not gitkeep.exists():
-            run_git(
-                ["restore", "--worktree", "--", ".agents/.gitkeep"],
-                root,
-                check=False,
-            )
-            if not gitkeep.exists():
-                # git restore は skip-worktree entry を欠落した worktree へ
-                # 戻せないため、現在 index の blob を flag を保ったまま checkout
-                # する。通常 entry では最初の restore が成功するので実行しない。
+            if ".agents/.gitkeep" in tracked:
+                # 通常 entry と skip-worktree のどちらも、index の flag を保って
+                # 一度で復元する。未登録の placeholder には復元を試みない。
                 run_git(
                     [
                         "checkout-index",

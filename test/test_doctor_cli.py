@@ -1219,6 +1219,52 @@ def test_doctor_preserves_existing_untracked_gitkeep_content(
     assert run_git(root, "status", "--short").stdout == ""
 
 
+@pytest.mark.parametrize("staged_gitkeep_deletion", [False, True])
+def test_agents_tracking_preserves_existing_files_and_index(
+    committed_repository, monkeypatch, staged_gitkeep_deletion
+):
+    """別の追跡 file があれば placeholder を追加せず、既存の削除 stage も保つ。"""
+    # 追跡保証だけを検査するため、config・索引同期・doctor 全体の準備は要らない。
+    root = committed_repository
+    kept = root / ".agents/kept.txt"
+    kept.parent.mkdir()
+    kept.write_text("tracked agent content\n")
+    gitkeep = kept.parent / ".gitkeep"
+    if staged_gitkeep_deletion:
+        gitkeep.write_text("existing placeholder content\n")
+    run_git(root, "add", ".agents")
+    run_git(root, "commit", "-m", "track agent files")
+    if staged_gitkeep_deletion:
+        run_git(root, "rm", ".agents/.gitkeep")
+    kept.write_text("unstaged agent content\n")
+    kept_before = kept.stat().st_mtime_ns
+    index = root / ".git/index"
+    index_before = index.read_bytes()
+
+    git_calls = 0
+    original_run = doctor_module.subprocess.run
+
+    def count_git_calls(argv, *args, **kwargs):
+        nonlocal git_calls
+        if argv[0] == "git":
+            git_calls += 1
+        return original_run(argv, *args, **kwargs)
+
+    with monkeypatch.context() as observed:
+        observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+        assert doctor_module._ensure_agents_tracked(root) is False
+
+    # 列挙と HEAD の確認で足り、既存 placeholder の復元だけはもう一回必要。
+    assert git_calls <= (3 if staged_gitkeep_deletion else 2)
+    assert kept.read_text() == "unstaged agent content\n"
+    assert kept.stat().st_mtime_ns == kept_before
+    assert index.read_bytes() == index_before
+    if staged_gitkeep_deletion:
+        assert gitkeep.read_text() == "existing placeholder content\n"
+    else:
+        assert not gitkeep.exists()
+
+
 @pytest.mark.parametrize("index_flag", [None, "--skip-worktree"])
 def test_doctor_restores_missing_tracked_gitkeep(
     tmp_path: Path,
