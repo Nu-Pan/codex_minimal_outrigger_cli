@@ -4,17 +4,21 @@ import fcntl
 import json
 import os
 import shutil
+import signal
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from oracle.other.cmoc_config import DocumentSearchConfig
 from test_document_search import _InferenceDouble, _tuning
 
 from commons import runtime_document_search as search_module
+from commons import runtime_document_search_observation as observation_module
 from commons.runtime_config import write_config
 from commons.runtime_document_search import DocumentSearch, SearchError, _file_lock
 from commons.runtime_document_search_observation import (
@@ -411,31 +415,51 @@ def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-def test_deadline_keeps_locks_until_worker_and_descendant_stop(tmp_path):
+def test_deadline_keeps_locks_until_worker_and_descendant_stop(tmp_path, monkeypatch):
     base = tmp_path / "worker"
     base.mkdir()
     (base / "worker.mjs").write_text(
-        'import fs from "node:fs"; import { spawn } from "node:child_process";\n'
-        'process.on("SIGTERM", () => {});\n'
-        'const child = spawn(process.execPath, ["-e", '
-        "'process.on(\"SIGTERM\", () => {}); setInterval(() => {}, 1000);'"
-        '], {stdio: "ignore"});\n'
-        'fs.writeFileSync("pids.json", JSON.stringify([process.pid, child.pid]));\n'
-        "setInterval(() => {}, 1000);\n"
+        r"""
+import { spawn } from "node:child_process";
+process.on("SIGTERM", () => {});
+const child = spawn(process.execPath, ["-e", String.raw`
+    process.on("SIGTERM", () => {});
+    process.stdout.write("ready\n");
+    setInterval(() => {}, 1000);
+`], {stdio: ["ignore", "pipe", "ignore"]});
+child.stdout.once("data", () => {
+    process.stdout.write(JSON.stringify({kind: "ready", pids: [process.pid, child.pid]}) + "\n");
+});
+setInterval(() => {}, 1000);
+"""
+    )
+    # 両 process の SIGTERM handler が準備できたら期限まで進め、回収は実時間で測る。
+    clock_offset = 0.0
+    monkeypatch.setattr(
+        observation_module,
+        "time",
+        SimpleNamespace(monotonic=lambda: time.monotonic() + clock_offset),
     )
     observation, events = _observation(tmp_path)
     config = replace(
-        _tuning(), sync_no_progress_timeout_seconds=0.4, shutdown_grace_seconds=0.15
+        _tuning(), sync_no_progress_timeout_seconds=10, shutdown_grace_seconds=0.15
     )
     observation.configure(config, bounded=True)
     observation.begin_sync()
     locks = [tmp_path / "index.lock", tmp_path / "model.lock"]
+    pids = []
+
+    def expire_after_ready(event):
+        nonlocal clock_offset
+        assert event["kind"] == "ready"
+        pids.extend(event["pids"])
+        clock_offset += config.sync_no_progress_timeout_seconds
 
     def before_stop(failure):
         observation.fail(failure)
         assert events[-1]["event"] == "document_search_deadline_exceeded"
-        parent, _ = json.loads((base / "pids.json").read_text())
-        os.kill(parent, 0)
+        for pid in pids:
+            os.kill(pid, 0)
         for path in locks:
             with path.open("rb") as stream:
                 with pytest.raises(BlockingIOError):
@@ -448,31 +472,46 @@ def test_deadline_keeps_locks_until_worker_and_descendant_stop(tmp_path):
         check=observation.check,
         on_failure=before_stop,
     )
-    with pytest.raises(SearchError) as failure:
-        with _file_lock(locks[0], None, observation=observation):
-            with _file_lock(locks[1], None, observation=observation) as descriptor:
-                worker.stream_chunks(
-                    {"doc.md": "text"},
-                    {"doc.md": 0},
-                    lambda _: None,
-                    reusable_hashes=set(),
-                    deadline=None,
-                    residency_fd=descriptor,
-                )
-    assert failure.value.code == "DEADLINE_EXCEEDED"
-    observation.finish_sync()
-    observation.finish_request()
-    parent, descendant = json.loads((base / "pids.json").read_text())
-    with pytest.raises(ProcessLookupError):
-        os.kill(parent, 0)
-    descendant_stat = Path(f"/proc/{descendant}/stat")
     try:
-        state = descendant_stat.read_text().rsplit(") ", 1)[1].split()[0]
-    except FileNotFoundError:
-        state = None
-    assert state in {None, "Z", "X", "x"}
-    assert events[-1]["cleanup_seconds"] >= 0.1
-    assert events[-1]["decision_seconds"]["post_sync_search"] is None
-    assert (
-        events[-1]["elapsed_seconds"] > events[-1]["decision_seconds"]["search_request"]
-    )
+        with pytest.raises(SearchError) as failure:
+            with _file_lock(locks[0], None, observation=observation):
+                with _file_lock(locks[1], None, observation=observation) as descriptor:
+                    worker.stream_chunks(
+                        {"doc.md": "text"},
+                        {"doc.md": 0},
+                        expire_after_ready,
+                        reusable_hashes=set(),
+                        deadline=None,
+                        residency_fd=descriptor,
+                    )
+        assert failure.value.code == "DEADLINE_EXCEEDED"
+        observation.finish_sync()
+        observation.finish_request()
+        parent, descendant = pids
+        with pytest.raises(ProcessLookupError):
+            os.kill(parent, 0)
+        descendant_stat = Path(f"/proc/{descendant}/stat")
+        # SIGKILL の配送と /proc の状態遷移は非同期なので、有限時間で停止を確認する。
+        until = time.monotonic() + 1
+        while True:
+            try:
+                state = descendant_stat.read_text().rsplit(") ", 1)[1].split()[0]
+            except FileNotFoundError:
+                state = None
+            if state in {None, "Z", "X", "x"}:
+                break
+            assert time.monotonic() < until, f"descendant is still running: {state}"
+            time.sleep(0.001)
+        assert events[-1]["cleanup_seconds"] >= 0.1
+        assert events[-1]["decision_seconds"]["post_sync_search"] is None
+        assert (
+            events[-1]["elapsed_seconds"]
+            > events[-1]["decision_seconds"]["search_request"]
+        )
+    finally:
+        # 回収の回帰を検出した場合も、検証後に test が起動した process を残さない。
+        if pids:
+            try:
+                os.killpg(pids[0], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
