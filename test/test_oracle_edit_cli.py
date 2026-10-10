@@ -15,7 +15,15 @@ import oracle.other.path_model as path_model_module
 import pytest
 from _cli_support import runner, terminal_primary_report
 from _codex_support import FakeCodexResult, codex_override_config, setup_codex_home
-from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_git
+from _git_support import (
+    RUN_BRANCH,
+    SESSION_BRANCH,
+    SESSION_ID,
+    current_branch,
+    init_repo,
+    make_repo,
+    run_git,
+)
 
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
@@ -38,9 +46,8 @@ from main import app
 def _activate_session(
     root: Path,
     *,
-    session_state: str = "active",
-    run: RunPart | None = None,
-) -> tuple[str, Path]:
+    run: RunPart,
+) -> Path:
     """隔離 repository に oracle edit 用の session state を作成する。"""
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -51,11 +58,11 @@ def _activate_session(
     write_state(
         path,
         SessionState(
-            SessionPart(session_state, home_branch, fork_commit, None),
-            run or RunPart(),
+            SessionPart("active", home_branch, fork_commit, None),
+            run,
         ),
     )
-    return session_branch, path
+    return path
 
 
 def _prepared_repo(
@@ -101,13 +108,25 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     # 変更なしでも二回目へ進む条件は成功ケースで検証する。
     # 失敗処理は差分に分岐しないため、各回の編集後の失敗で差分保持も検証する。
     root = _prepared_repo(tmp_path, monkeypatch)
+    integrated_case = failure_stage is None and first_changes
+    if not integrated_case:
+        # root 探索と collector の結合は edit-success と専用テストに残す。
+        # ここでも実 Git の staged/unstaged 差分、branch、session state は検証する。
+        monkeypatch.setattr(
+            path_model_module,
+            "_resolve_git_worktree_roots",
+            lambda _start_path=None: (root, root),
+        )
+        monkeypatch.setattr(
+            runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+        )
     active_run = RunPart(
         "running",
         "realization_apply",
         RUN_BRANCH,
         "abc",
     )
-    _session_branch, session_state_path = _activate_session(root, run=active_run)
+    session_state_path = _activate_session(root, run=active_run)
     state_before = json.loads(session_state_path.read_text())
     readme_path = root / "README.md"
     readme_path.write_text("# staged change\n")
@@ -133,7 +152,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         events.append("doctor")
         # 同じ入力での修復・索引同期との結合は edit-success に集約する。
         # 詳細は test_doctor_cli.py、呼び出し順序と編集結果は全ケースで検証する。
-        if failure_stage is None and first_changes:
+        if integrated_case:
             real_run_doctor_preprocess(
                 target_root,
                 sync_refactor_entries=sync_refactor_entries,
@@ -420,6 +439,16 @@ def oracle_edit_failure_repository(
     root = cli_repository
     monkeypatch.chdir(root)
     write_config(config_path(root), CmocConfig())
+    # 保存先の ignore 検査だけ実 Git を使い、反復する探索と未使用の TCP 起動を外す。
+    # root 境界は test_basic_runtime.py、collector の受付・drain は test_feedback.py に残す。
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _start_path=None: (root, root),
+    )
+    monkeypatch.setattr(
+        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+    )
     # doctor の修復・索引同期との結合と順序は、上の exec 制御テストで検証する。
     # 準備失敗には履歴・session は不要で、doctor の呼び出しだけを確認する。
     doctor_roots: list[Path] = []
@@ -519,19 +548,22 @@ def test_oracle_edit_launch_preconditions(
     message: str,
 ) -> None:
     """oracle edit の各起動前提違反を利用者向け例外として検証する。"""
+    # 判定に不要な commit・追跡ファイルを作らず、必要な branch と state だけ用意する。
+    root = tmp_path / "repo"
+    root.mkdir()
+    current_root = root
     if case == "linked":
-        # 異なる root の拒否だけを検証し、履歴・session・worktree は作らない。
-        # 実 linked worktree の root 解決は test_basic_runtime.py で検証する。
-        root = tmp_path / "repo"
-        root.mkdir()
         current_root = tmp_path / "linked"
         current_root.mkdir()
     else:
-        # branch と session state を読むケースだけ、履歴を持つ Git root を用意する。
-        root = make_repo(tmp_path)
-        current_root = root
+        init_repo(root)
         if case == "inactive":
-            _activate_session(root, session_state="joined")
+            home_branch = current_branch(root)
+            run_git(root, "checkout", "-b", SESSION_BRANCH)
+            write_state(
+                state_path(root, SESSION_ID),
+                SessionState(SessionPart("joined", home_branch, "abc", None)),
+            )
     with pytest.raises(CmocError, match=message):
         oracle_edit_module._require_oracle_edit_launch_preconditions(
             root,
