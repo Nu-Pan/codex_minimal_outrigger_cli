@@ -702,10 +702,11 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
 
 
 def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """capacity 回復待ち を挟んでも Codex が作った agent diff を保持する。"""
-    root = make_repo(tmp_path)
+    # 初回 call が作る未追跡 file の保持を検証するため、初期 commit は不要。
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
