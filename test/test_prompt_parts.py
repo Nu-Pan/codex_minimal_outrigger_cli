@@ -65,10 +65,20 @@ from basic.path_model import AgentCallPathContext
 
 
 @pytest.fixture(scope="module")
-def path_context() -> AgentCallPathContext:
-    """文面検査用の不変 context を共有し、同じ Git root の再探索を省く。"""
-    # root 解決を検査するケースは各テストの repository から別途構築する。
-    return AgentCallPathContext(agent_call_cwd=Path.cwd())
+def path_context(tmp_path_factory: pytest.TempPathFactory) -> AgentCallPathContext:
+    """文面検査用の異なる両 root を共有し、Git process の起動を省く。"""
+    root = tmp_path_factory.mktemp("prompt-roots")
+    linked = root / "linked"
+    linked.mkdir()
+    # 実 Git metadata からの導出は test_basic_runtime.py で検査する。
+    # 構築時だけ探索結果を置換し、不変 context と renderer は実物を使う。
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            path_model_module,
+            "_resolve_git_worktree_roots",
+            lambda _agent_call_cwd: (linked, root),
+        )
+        return AgentCallPathContext(agent_call_cwd=linked)
 
 
 def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
@@ -487,14 +497,12 @@ def test_file_access_policy_titles_and_bodies_match_modes(
 
 
 def test_file_access_policy_keeps_same_boundaries_in_linked_worktree(
-    tmp_path: Path,
+    path_context: AgentCallPathContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """main と linked の path context に同じ直接アクセス境界を伝える。"""
-    root = tmp_path / "repo"
-    root.mkdir()
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
-    linked.mkdir(parents=True)
+    root = path_context.repo_root
+    linked = path_context.work_root
 
     # 実 Git metadata から両 root を導く検証は test_basic_runtime.py に残す。
     # 文面比較ではその探索結果だけを置換し、context と renderer は実物を使う。
