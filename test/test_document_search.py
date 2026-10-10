@@ -1093,17 +1093,20 @@ class _CandidateWorker(_InferenceDouble):
 
 
 @pytest.mark.parametrize(
-    "candidate_count,available,limit_cases",
+    "candidate_count,available,similarities,limit_cases",
     [
         # 上限を一件超える候補で切捨てを検出し、同じ検証のための余分な保存を省く。
-        (50, 51, [(None, 50), (20, 20), (50, 50)]),
-        (20, 21, [(None, 20), (50, 20)]),
-        (50, 7, [(None, 7)]),
-        (50, 0, [(None, 0)]),
+        # 件数条件は負の同点候補で通し、類似度の境界を全上限と直積にしない。
+        (50, 51, [((-3, 4), -0.6)], [(None, 50), (20, 20), (50, 50)]),
+        (20, 21, [((-3, 4), -0.6)], [(None, 20), (50, 20)]),
+        # -1・0・1 は候補不足時に検査する。順位と件数による値の不変性は専用ケースで保つ。
+        (50, 7, [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0)], [(None, 7)]),
+        (50, 0, [((1, 0), 1.0)], [(None, 0)]),
     ],
+    ids=["candidate-cap", "configured-cap", "similarity-boundaries", "empty"],
 )
 def test_mcp_success_schema_and_candidate_limits(
-    tmp_path, candidate_count, available, limit_cases
+    tmp_path, candidate_count, available, similarities, limit_cases
 ):
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
     root = _repo_with_docs(tmp_path)
@@ -1111,11 +1114,6 @@ def test_mcp_success_schema_and_candidate_limits(
     # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     (root / path).write_text("候補\n" * available)
     worker = _CandidateWorker({path: [(i + 1, i + 1) for i in range(available)]})
-    # cosine の対称性で query 側を変え、同じ文書索引を類似度ごとに構築しない。
-    similarities = [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0), ((-3, 4), -0.6)]
-    # 空集合は embedding を使わないため、類似度違いの重複検査は不要。
-    if available == 0:
-        similarities = similarities[:1]
     cases = [
         (vector, similarity, limit, expected)
         for vector, similarity in similarities
