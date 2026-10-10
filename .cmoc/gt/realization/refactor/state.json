@@ -1351,9 +1351,9 @@
   },
   "test/test_doctor_cli.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "4dcff424af2ff918b25386e59df98ef66fd9b784aca694cbd27c2b4f4134c468",
+    "last_investigated_at": "2026-10-11_01-31-19_992"
   },
   "test/test_document_search.py": {
     "investigation_required": true,

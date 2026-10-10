@@ -29,7 +29,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _cli_support import run_doctor, runner, terminal_primary_report
+from _cli_support import run_doctor, runner, seed_search_config, terminal_primary_report
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
@@ -91,9 +91,12 @@ def test_refactor_preprocess_interruption_keeps_committed_repairs(
     """短い確定区間中の SIGINT は commit と index 復元を一体として完了する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    run_doctor(root)
+    # 設定と既存 state だけを用意し、state 更新の修復 commit は前処理に任せる。
+    seed_search_config(root)
+    doctor_module.sync_refactor_state(root)
+    (root / "src").mkdir()
     (root / "src/new.py").write_text("VALUE = 1\n")
-    run_git(root, "add", "src/new.py")
+    run_git(root, "add", "src/new.py", ".cmoc/gt")
     run_git(root, "commit", "-m", "add refactor target")
     head = run_git(root, "rev-parse", "HEAD").stdout
     commit = doctor_module._commit_doctor_repairs
@@ -113,6 +116,9 @@ def test_refactor_preprocess_interruption_keeps_committed_repairs(
     assert run_git(
         root, "ls-files", ".cmoc/gt/realization/refactor/state.json"
     ).stdout.strip()
+    assert "src/new.py" in json.loads(
+        doctor_module.refactor_state_path(root).read_text()
+    )
     assert "run not established" in terminal_primary_report(result).read_text()
 
 
@@ -1266,26 +1272,6 @@ def test_doctor_rejects_symlinked_agents_paths(
         assert outside.read_text() == outside_content
 
 
-def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """doctor の修復 commit が事前に stage された利用者変更を取り込まないことを検証する。"""
-
-    root = make_repo(tmp_path)
-    user_file = root / "user.txt"
-    user_file.write_text("user change\n")
-    run_git(root, "add", "user.txt")
-    monkeypatch.chdir(root)
-
-    run_doctor(root)
-
-    committed_paths = run_git(root, "show", "--name-only", "--format=", "HEAD").stdout
-    assert "user.txt" not in committed_paths
-    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
-        "user.txt"
-    ]
-
-
 def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1331,10 +1317,10 @@ def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
     assert gitignore.read_text() == "staged-rule\nunstaged-rule\n\n/.cmoc/gu/\n"
 
 
-def test_doctor_preprocess_preserves_preexisting_staged_rename(
+def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """doctor が事前に stage された rename の index 表現を保つことを検証する。"""
+    """利用者の追加・rename を修復 commit に混ぜず、元の staged 内容を保つ。"""
 
     root = make_repo(tmp_path)
     old_path = root / "old.txt"
@@ -1343,14 +1329,21 @@ def test_doctor_preprocess_preserves_preexisting_staged_rename(
     run_git(root, "add", "old.txt")
     run_git(root, "commit", "-m", "add old file")
     old_path.rename(new_path)
-    run_git(root, "add", "-A", "old.txt", "new.txt")
+    (root / "user.txt").write_text("user change\n")
+    run_git(root, "add", "-A", "old.txt", "new.txt", "user.txt")
     monkeypatch.chdir(root)
 
     run_doctor(root)
 
+    committed_paths = set(
+        run_git(root, "show", "--name-only", "--format=", "HEAD").stdout.splitlines()
+    )
+    assert not {"old.txt", "new.txt", "user.txt"} & committed_paths
     assert run_git(root, "diff", "--cached", "--name-status").stdout.splitlines() == [
-        "R100\told.txt\tnew.txt"
+        "R100\told.txt\tnew.txt",
+        "A\tuser.txt",
     ]
+    assert run_git(root, "show", ":user.txt").stdout == "user change\n"
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
 
 
