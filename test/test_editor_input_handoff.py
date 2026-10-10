@@ -10,6 +10,7 @@ import socket
 import threading
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from _handoff_support import handoff_body, handoff_input
@@ -18,6 +19,7 @@ from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor_input_handoff as handoff_module
 import commons.runtime_editor_input_handoff_mcp as handoff_mcp
+import commons.runtime_editor_input_handoff_protocol as handoff_protocol
 from cmoc_runtime import CmocError
 from commons.runtime_editor_input_handoff import (
     EditorInputHandoffTarget,
@@ -37,27 +39,6 @@ from commons.runtime_editor_input_handoff_protocol import (
 from commons.runtime_ids import is_common_id
 
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
-
-
-def _start_slow_trickle(
-    connection: socket.socket,
-    byte: bytes,
-    interval_seconds: float,
-) -> tuple[threading.Event, threading.Thread]:
-    """socket timeout より短い間隔で一 byte ずつ送り続ける。"""
-    stopped = threading.Event()
-
-    def send_slowly() -> None:
-        while not stopped.wait(interval_seconds):
-            try:
-                connection.sendall(byte)
-            except OSError:
-                return
-
-    connection.sendall(byte)
-    thread = threading.Thread(target=send_slowly)
-    thread.start()
-    return stopped, thread
 
 
 def _wait_for_peer_close(connection: socket.socket) -> None:
@@ -382,59 +363,45 @@ def test_client_does_not_send_content_to_unauthenticated_listener(
     assert "private content" not in json.dumps(result)
 
 
-def test_target_deadline_releases_unauthenticated_slow_trickle(
+@pytest.mark.parametrize("phase", ["authentication", "request"])
+def test_handoff_readers_keep_absolute_deadline_during_progress(
+    monkeypatch: pytest.MonkeyPatch,
+    phase: str,
+) -> None:
+    """断片受信に進捗があっても、残り時間を減らし絶対期限で打ち切る。"""
+    elapsed = 0.0
+    connection = Mock(spec=socket.socket)
+
+    def receive_partial(_size: int) -> bytes:
+        nonlocal elapsed
+        elapsed += 0.125
+        # 期限の更新に退行しても、EOF で失敗させて test 自体は停止しない。
+        return b"x" if elapsed <= 0.5 else b""
+
+    connection.recv.side_effect = receive_partial
+    # process 全体の時計を変えず、protocol の時間だけを受信ごとに進める。
+    monkeypatch.setattr(
+        handoff_protocol, "time", SimpleNamespace(monotonic=lambda: elapsed)
+    )
+    with pytest.raises(TimeoutError, match="deadline exceeded"):
+        if phase == "authentication":
+            authenticate_editor_input_handoff_server(connection, b"x" * 16, 0.5)
+        else:
+            read_handoff_message(connection, 0.5)
+    assert connection.recv.call_count == 4
+    timeouts = [call.args[0] for call in connection.settimeout.call_args_list]
+    assert timeouts[-4:] == [0.5, 0.375, 0.25, 0.125]
+
+
+@pytest.mark.parametrize("phase", ["authentication", "request"])
+def test_target_deadline_releases_connection_and_accepts_next_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_source,
+    phase: str,
 ) -> None:
-    """proof の slow-trickle を絶対期限で切り、次の submission を処理する。"""
+    """認証前・認証後の期限切れで実接続を解放し、次の submission を処理する。"""
     input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
-    monkeypatch.setattr(
-        handoff_module,
-        "EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS",
-        0.2,
-    )
-    target = start_editor_input_handoff(
-        tmp_path, input_path, "{{original-prompt-here}}"
-    )
-    route = parse_editor_input_handoff_target_id(tmp_path, target.target_id)
-    assert route is not None
-    address, _token = route
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as stalled:
-            stalled.settimeout(2)
-            stalled.connect(address)
-            assert stalled.recv(1)
-            stopped, trickler = _start_slow_trickle(stalled, b"x", 0.05)
-            try:
-                _wait_for_peer_close(stalled)
-                monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-                result = handoff_mcp._submit(
-                    handoff_input(target.target_id, "after deadline")
-                )
-            finally:
-                stopped.set()
-                trickler.join(timeout=2)
-        assert result == {"status": "accepted"}
-        assert input_path.read_text(encoding="utf-8") == handoff_body(
-            "after deadline", handoff_source
-        )
-    finally:
-        target.close()
-
-
-def test_target_deadline_releases_authenticated_request_slow_trickle(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    handoff_source,
-) -> None:
-    """認証後 request の slow-trickle を切り、次の submission を処理する。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
-    monkeypatch.setattr(
-        handoff_module,
-        "EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS",
-        0.2,
-    )
     target = start_editor_input_handoff(
         tmp_path, input_path, "{{original-prompt-here}}"
     )
@@ -442,20 +409,23 @@ def test_target_deadline_releases_authenticated_request_slow_trickle(
     assert route is not None
     address, token = route
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as stalled:
-            stalled.settimeout(2)
-            stalled.connect(address)
-            assert authenticate_editor_input_handoff_client(stalled, token, 2)
-            stopped, trickler = _start_slow_trickle(stalled, b"x", 0.05)
-            try:
+        # 期限の維持は reader test に委ね、ここでは実接続の終了と復帰を確かめる。
+        timeout_name = (
+            "EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS"
+            if phase == "authentication"
+            else "EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS"
+        )
+        with monkeypatch.context() as deadline_patch:
+            deadline_patch.setattr(handoff_module, timeout_name, 0.0)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as stalled:
+                stalled.settimeout(2)
+                stalled.connect(address)
+                if phase == "request":
+                    assert authenticate_editor_input_handoff_client(stalled, token, 2)
                 _wait_for_peer_close(stalled)
-                monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-                result = handoff_mcp._submit(
-                    handoff_input(target.target_id, "after deadline")
-                )
-            finally:
-                stopped.set()
-                trickler.join(timeout=2)
+        assert input_path.read_bytes() == b""
+        monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+        result = handoff_mcp._submit(handoff_input(target.target_id, "after deadline"))
         assert result == {"status": "accepted"}
         assert input_path.read_text(encoding="utf-8") == handoff_body(
             "after deadline", handoff_source
