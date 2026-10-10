@@ -1513,9 +1513,9 @@
   },
   "test/test_runtime_codex_profile.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "7450a324fb0466d988801a508ee0922cfa2ec9da18dd8abeb51acabe74731346",
+    "last_investigated_at": "2026-10-11_05-30-48_926"
   },
   "test/test_runtime_config.py": {
     "investigation_required": true,
