@@ -819,21 +819,10 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     """cleanup失敗時にsession branchとactive stateを復元することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    # ignore/tracking の修復は home branch 不在・linked worktree のケースで検証する。
     session_branch, _ = _seed_active_session(root)
     state_path = session_state_path(root, session_branch)
     gitignore = root / ".gitignore"
-    gitignore.write_text(
-        "\n".join(
-            line for line in gitignore.read_text().splitlines() if line != "/.cmoc/gu/"
-        )
-        + "\n"
-    )
-    tracked_probe = root / ".cmoc" / "gu" / "tracked-probe"
-    tracked_probe.parent.mkdir(parents=True, exist_ok=True)
-    tracked_probe.write_text("tracked\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "add", "-f", ".cmoc/gu/tracked-probe")
-    run_git(root, "commit", "-m", "track cmoc probe on session")
     original_delete_branch = session_module.delete_branch
 
     def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
