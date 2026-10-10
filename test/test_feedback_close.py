@@ -18,11 +18,13 @@ from test_feedback import (
 import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
 import sub_commands.feedback.report as report_module
+from commons.runtime_errors import CmocError
 from commons.runtime_feedback_store import (
     canonical_json_bytes,
     feedback_completion_counts,
     read_json_object,
     rfc3339_now,
+    sha256_bytes,
     store_agent_observation,
     store_machine_observation,
 )
@@ -225,14 +227,15 @@ def test_close_input_failures_save_invocation_reports(open_case):
         assert feedback_state.load_report_cut(root) is None, arguments
 
 
-def test_close_preserves_other_cases_and_subthreshold_aggregates(
-    open_case, monkeypatch
-):
-    root, session_id, issue = open_case
+def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monkeypatch):
+    # close の保持対象は同じ report で揃え、準備用の report/run を重ねない。
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _, issue_raw, identity = _store_agent_issue(root, session_id)
     payload = _payload(kind="other", path=None, text="独立した構成の問題")
     payload["category"] = "configuration"
     payload["summary"] = "人間による設定確認が必要"
-    accepted, _ = store_agent_observation(
+    accepted, other_raw = store_agent_observation(
         root, _context(root, session_id=session_id), payload
     )
     other_id = feedback_state.issue_id(f"agent\0{accepted['observation_id']}")
@@ -274,8 +277,13 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     before = feedback_state.validate_feedback_state(root)
-    assert set(before.issues) == {issue["issue_id"], other_id}
+    assert set(before.issues) == {identity, other_id}
+    assert before.current["result"] == "incomplete"
+    issue = before.issues[identity]
+    assert issue["verification"]["status"] == "inconclusive"
     assert len(before.machine_aggregates) == 1
+    assert not issue_raw.exists()
+    assert not other_raw.exists()
     assert not raw.exists()
     monkeypatch.setattr(
         report_module,
@@ -432,3 +440,31 @@ def test_confirmed_history_corruption_blocks_close(open_case):
     result = _close(issue)
     assert result.exit_code == 1
     assert close_state.load_close_work(root) is None
+
+
+def test_close_saved_artifact_validates_fixed_and_existing_bytes(tmp_path):
+    # 未保存の許容によって、固定 byte 列や現存 artifact の破損を見逃さない。
+    directory = tmp_path / "artifacts"
+    directory.mkdir()
+    target = directory / "report.md"
+    content = "saved close report\n"
+    artifact = {
+        "path": "artifacts/report.md",
+        "sha256": sha256_bytes(content.encode()),
+        "content": content,
+    }
+    reference = {key: artifact[key] for key in ("path", "sha256")}
+
+    def validate(value):
+        return close_state._validate_saved_bytes(
+            tmp_path, value, directory, tmp_path / "operation.json"
+        )
+
+    assert validate(artifact) == reference
+    target.write_text(content)
+    assert validate(artifact) == reference
+    with pytest.raises(CmocError, match="bytes/hash"):
+        validate({**artifact, "content": "changed fixed input\n"})
+    target.write_text("changed artifact\n")
+    with pytest.raises(CmocError, match="SHA256"):
+        validate(artifact)

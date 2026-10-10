@@ -901,9 +901,9 @@
   },
   "src/commons/runtime_feedback_close_state.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "0f6358517fffdda79426842a69e71b010234c510e21c4c2dd073eb95e5057dec",
+    "last_investigated_at": "2026-10-10_11-08-42_123"
   },
   "src/commons/runtime_feedback_history.py": {
     "investigation_required": true,
