@@ -126,7 +126,10 @@ def state_hash(value: dict[str, Any]) -> str:
 
 def basis_is_valid(basis: dict[str, Any], current: dict[str, Any]) -> bool:
     """通常の判定と、同じ入力状態の循環を根拠にした診断を区別する。"""
-    return basis["state"] == current or state_hash(current) in basis["cycle_states"]
+    # 循環履歴がなければ、入力全体の hash は判定に使わない。
+    return basis["state"] == current or (
+        bool(basis["cycle_states"]) and state_hash(current) in basis["cycle_states"]
+    )
 
 
 def issue_history(
