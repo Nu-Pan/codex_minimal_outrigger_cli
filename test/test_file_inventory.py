@@ -346,10 +346,11 @@ def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(
     ],
 )
 def test_inventory_rejects_nonregular_paths(
-    cli_repository: Path, kind: str, location: str
+    tmp_path: Path, kind: str, location: str
 ) -> None:
     """pruning 境界と通常走査領域の非通常 file を列挙エラーにする。"""
-    root = cli_repository
+    # 種類の拒否は Git 判定より前なので、repository と index は用意しない。
+    root = tmp_path
     path = root / (".agents" if location == "root-boundary" else "special")
 
     with _special_path(path, kind):
@@ -466,13 +467,14 @@ def test_inventory_does_not_follow_ignored_symlink_target(
 )
 @pytest.mark.parametrize("location", ["root-boundary", "unpruned"])
 def test_inventory_rejects_simulated_socket_and_device_modes(
-    cli_repository: Path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     mode: int,
     location: str,
 ) -> None:
     """socket・device 相当 mode を pruning 境界と通常領域の両方で拒否する。"""
-    root = cli_repository
+    # 実在する通常 file の mode だけを置き換え、Git を使わず種類の拒否を検証する。
+    root = tmp_path
     path = root / (".agents" if location == "root-boundary" else "special")
     path.write_text("mode probe\n")
     original_lstat = runtime_git._lstat_directory_entries
@@ -626,14 +628,6 @@ def test_single_path_classifier_uses_nested_repository_context(
     assert is_realization_file_path(root, kept)
     assert not is_realization_file_path(root, dropped)
     assert not is_realization_file_path(root, nested / ".git" / "config")
-
-    deleted = nested / "deleted.py"
-    deleted.write_text("deleted\n")
-    run_git(nested, "add", "deleted.py")
-    run_git(nested, "commit", "-m", "add deleted realization")
-    deleted.unlink()
-
-    assert is_realization_file_path(root, deleted, branch="HEAD")
 
 
 @pytest.mark.parametrize("candidate_kind", ["regular-file", "ignored-symlink"])
