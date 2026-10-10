@@ -27,8 +27,6 @@ from commons.runtime_editor_input_handoff_protocol import (
     read_handoff_message,
 )
 
-pytestmark = pytest.mark.usefixtures("handoff_source")
-
 
 @pytest.fixture
 def handoff_transport(tmp_path, monkeypatch):
@@ -90,7 +88,7 @@ def test_handoff_guide_returns_complete_large_receiver_template(tmp_path, monkey
     expected_guide = build_editor_input_handoff_guide(skeleton)
     assert len(expected_guide.encode("utf-8")) > _HANDOFF_RESPONSE_LIMIT
     target = start_editor_input_handoff(tmp_path, work, skeleton)
-    monkeypatch.delenv(EDITOR_INPUT_SOURCE_ENV)
+    monkeypatch.delenv(EDITOR_INPUT_SOURCE_ENV, raising=False)
     try:
         result = _get_guide_result({"target_id": target.target_id})
         assert result == {
@@ -413,6 +411,7 @@ def test_handoff_response_loss_reports_unknown_while_write_completes(
     )
 
 
+@pytest.mark.usefixtures("handoff_source")
 @pytest.mark.parametrize(
     ("stage", "error", "status", "retryable"),
     [
@@ -453,6 +452,7 @@ def test_handoff_transport_errors_distinguish_submission_uncertainty(
         connection.sendall.assert_called_once()
 
 
+@pytest.mark.usefixtures("handoff_source")
 def test_handoff_mcp_strips_unexpected_target_result_fields(
     monkeypatch: pytest.MonkeyPatch,
     handoff_transport,
@@ -481,6 +481,7 @@ def test_handoff_mcp_strips_unexpected_target_result_fields(
     assert "private content" not in json.dumps(result)
 
 
+@pytest.mark.usefixtures("handoff_source")
 @pytest.mark.parametrize(
     "change",
     [
@@ -509,6 +510,7 @@ def test_invalid_handoff_fields_leave_target_untouched(handoff_transport, change
     connection.sendall.assert_not_called()
 
 
+@pytest.mark.usefixtures("handoff_source")
 @pytest.mark.parametrize(
     "source_change",
     [
@@ -581,6 +583,7 @@ def test_handoff_uses_canonical_body_and_typed_references(
     assert target_id not in expected
 
 
+@pytest.mark.usefixtures("handoff_source")
 def test_handoff_builder_failure_does_not_leak_input_or_write(
     monkeypatch, handoff_transport
 ):
