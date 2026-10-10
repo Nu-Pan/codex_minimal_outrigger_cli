@@ -154,18 +154,19 @@ def test_git_query_reuse_expires_after_completion_or_failure(
         assert work_root(nested) == nested
 
 
-@pytest.mark.parametrize(
-    ("resolver", "placeholder"),
-    [(repo_root, "repo-root"), (work_root, "work-root")],
-)
-def test_root_query_reuse_retries_failed_discovery(tmp_path, resolver, placeholder):
+def test_root_query_reuse_retries_failed_discovery(tmp_path):
     """root を発見できない失敗を保存せず、同じ区間でも再試行する。"""
     root = tmp_path / "not-yet-a-repository"
     root.mkdir()
 
     with git_module.reuse_git_path_queries():
-        with pytest.raises(CmocError, match=placeholder):
-            resolver(root)
+        # 両 resolver の失敗を確かめ、共有する root 探索の再試行は一度だけ準備する。
+        for resolver, placeholder in (
+            (repo_root, "repo-root"),
+            (work_root, "work-root"),
+        ):
+            with pytest.raises(CmocError, match=placeholder):
+                resolver(root)
         init_repo(root)
         assert repo_root(root) == root
         assert work_root(root) == root
