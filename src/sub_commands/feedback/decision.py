@@ -45,11 +45,7 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
             continue
         path = worktree / relative
         # symlink の参照先や nested worktree を暗黙に読むことはしない。
-        if any(
-            parent.is_symlink()
-            for parent in path.parents
-            if parent != worktree and parent.is_relative_to(worktree)
-        ):
+        if any(parent.is_symlink() for parent in path.parents[: len(parts) - 1]):
             raise ValueError(f"feedback basis has a symlinked parent: {name}")
         try:
             mode = path.lstat().st_mode
