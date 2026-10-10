@@ -46,11 +46,14 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
         existing.write_bytes(b"old input\r\n")
     opened: list[Path] = []
     monkeypatch.setattr(
-        prompt_editor_input_module, "_select_editor", lambda: ["fake-editor"]
+        runtime_editor_module.shutil,
+        "which",
+        lambda command: "/fake/code" if command == "code" else None,
     )
 
     def fake_run(argv: list[str]) -> SimpleNamespace:
         path = Path(argv[-1])
+        assert argv == ["/fake/code", "--wait", str(path)]
         assert handoff_start.return_value.close.call_count == len(opened)
         opened.append(path)
         assert path.read_bytes() == b""
@@ -135,44 +138,22 @@ def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
     ],
 )
 def test_editor_input_selects_editor_in_specified_priority(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    input_path: Path,
-    handoff_start: Mock,
     available_editors: tuple[str, ...],
     expected_editor: str,
     wait_for_editor: bool,
 ) -> None:
-    """仕様の優先順と code 専用の --wait を editor 起動 argv で検証する。"""
-    target = handoff_start.return_value
-    calls: list[list[str]] = []
-
+    """優先順と code 専用の --wait は入力 file・handoff の準備なしで検証する。"""
     monkeypatch.setattr(
         runtime_editor_module.shutil,
         "which",
         lambda command: f"/fake/{command}" if command in available_editors else None,
     )
 
-    def fake_run(argv: list[str]) -> SimpleNamespace:
-        """選択された editor の argv を記録して正常終了する。"""
-        target.close.assert_not_called()
-        calls.append(argv)
-        return SimpleNamespace(returncode=0)
-
-    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
-
-    prompt_editor_input_module.edit_prompt_editor_input(
-        tmp_path,
-        input_path,
-        _SKELETON,
-    )
-
     expected_argv = [f"/fake/{expected_editor}"]
     if wait_for_editor:
         expected_argv.append("--wait")
-    assert calls == [[*expected_argv, str(input_path)]]
-    handoff_start.assert_called_once_with(tmp_path, input_path, _SKELETON)
-    target.close.assert_called_once_with()
+    assert prompt_editor_input_module._select_editor() == expected_argv
 
 
 @pytest.mark.parametrize("replacement", ["symlink", "directory", "missing", "fifo"])
@@ -297,14 +278,16 @@ def test_editor_input_closes_handoff_when_target_id_display_fails(
 def test_editor_input_keeps_input_when_editor_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    input_path: Path,
+    handoff_start: Mock,
 ) -> None:
-    """エディタ失敗時は入力を復旧用に残し、handoff guide は削除する。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    """異常終了でも入力は復旧用に残し、handoff の終了処理を呼ぶ。"""
     monkeypatch.setattr(
         prompt_editor_input_module, "_select_editor", lambda: ["fake-editor"]
     )
 
     def failed_editor(argv: list[str]) -> SimpleNamespace:
+        handoff_start.return_value.close.assert_not_called()
         Path(argv[-1]).write_text("recoverable input\n", encoding="utf-8")
         return SimpleNamespace(returncode=7)
 
@@ -314,7 +297,8 @@ def test_editor_input_keeps_input_when_editor_fails(
             tmp_path, input_path, _SKELETON
         )
     assert input_path.read_text(encoding="utf-8") == "recoverable input\n"
-    assert list(input_path.parent.iterdir()) == [input_path]
+    handoff_start.assert_called_once_with(tmp_path, input_path, _SKELETON)
+    handoff_start.return_value.close.assert_called_once_with()
 
 
 @pytest.mark.parametrize("failure_stage", ["write", "flush", "replace"])
