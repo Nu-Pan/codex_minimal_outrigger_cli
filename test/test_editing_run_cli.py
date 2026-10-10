@@ -1116,11 +1116,12 @@ def test_apply_fork_checks_stopped_children_before_commit(
 
 
 def test_refactor_fork_stops_tracked_children_before_each_commit(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor は cycle と各処理単位の commit 前に Codex child を停止する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    # session 作成の CLI 結合は test_session_cli.py に残し、run の停止順序を検証する。
+    _root, _session_branch, state_path = ready_content_session
     events: list[str] = []
     original_commit = refactor_module.commit_work_unit
 
@@ -1174,14 +1175,14 @@ def test_refactor_fork_stops_tracked_children_before_each_commit(
 
 
 def test_refactor_fork_reports_cleanup_warnings(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor fork の child 停止 warning を fork report に保存する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = ready_content_session
 
     def fake_refactor(
         _parameter: AgentCallParameter,
@@ -1225,11 +1226,11 @@ def test_refactor_fork_reports_cleanup_warnings(
 
 
 def test_refactor_fork_stops_tracked_codex_children_before_joinable(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor は joinable 公開前に残存 Codex child を停止する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    _root, _session_branch, state_path = ready_content_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
