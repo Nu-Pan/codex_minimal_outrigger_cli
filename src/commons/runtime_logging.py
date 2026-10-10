@@ -205,11 +205,13 @@ class SubcommandLogger:
 
     def codex_call_records(self) -> tuple[dict[str, Any], ...]:
         """実行済み Codex call event だけを保存順で返す。"""
-        return tuple(
-            record
-            for record in self.event_records()
-            if record.get("event") == "codex_call"
-        )
+        # 同じ排他区間で抽出・コピーし、除外する診断 event のコピーを省く。
+        with self._lock:
+            return tuple(
+                record.copy()
+                for record in self._event_records
+                if record.get("event") == "codex_call"
+            )
 
 
 def set_current_subcommand_logger(

@@ -143,25 +143,48 @@ def test_subcommand_logger_keeps_one_file_per_execution(
 def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     tmp_path: Path,
 ) -> None:
-    """共有 logger へ並列 worker が記録しても event と待機時間を失わない。"""
+    """並列記録の保存順・待機時間と、呼び出し別 snapshot の独立性を保つ。"""
     logger = SubcommandLogger(tmp_path, "parallel_logging")
     worker_count = 8
     barrier = threading.Barrier(worker_count)
+    assert logger.event_records() == ()
+    assert logger.codex_call_records() == ()
 
     def record_worker_event(index: int) -> None:
         """共有 logger への並列書き込みを再現する。"""
         barrier.wait()
         logger.add_recovery_wait("quota", 0.25)
-        logger.event("worker", index=index)
+        logger.event("codex_call" if index % 2 else "worker", index=index)
 
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         list(executor.map(record_worker_event, range(worker_count)))
 
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     assert len(events) == worker_count
-    assert all(event["event"] == "worker" for event in events)
+    assert all(
+        event["event"] == ("codex_call" if event["index"] % 2 else "worker")
+        for event in events
+    )
     assert sorted(event["index"] for event in events) == list(range(worker_count))
     assert logger.quota_wait_sec == pytest.approx(worker_count * 0.25)
+
+    snapshot = logger.event_records()
+    calls = logger.codex_call_records()
+    expected_calls = tuple(event for event in events if event["event"] == "codex_call")
+    assert snapshot == tuple(events)
+    assert calls == expected_calls
+
+    snapshot[0]["index"] = -1
+    calls[0]["index"] = -1
+    assert logger.event_records() == tuple(events)
+    assert logger.codex_call_records() == expected_calls
+
+    logger.event("codex_call", index=worker_count)
+    assert len(calls) == worker_count // 2
+    assert logger.codex_call_records() == (
+        *expected_calls,
+        logger.event_records()[-1],
+    )
 
 
 def test_subcommand_logger_writes_utf8_without_locale_dependency(
@@ -370,11 +393,11 @@ def test_error_terminal_result_does_not_repeat_primary_report_path(
 
 
 def test_detector_does_not_swallow_keyboard_interrupt(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """detector 中の Ctrl+C を本命サブコマンドの中断として扱う。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    # detector を差し替えるため、実 Git と TCP collector は準備しない。
+    root = cli_terminal_directory
 
     def interrupt_detector(_event: dict[str, object], _log_path: Path) -> None:
         """detector 中のユーザー中断を再現する。"""
