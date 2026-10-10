@@ -92,13 +92,13 @@ def test_primary_report_editor_launch_is_detached_without_console_output(
 
 
 @pytest.mark.parametrize("ending", ["success", "interruption", "error"])
-def test_saved_primary_report_is_opened_once_before_terminal_event(
+def test_formatted_primary_report_is_opened_once_before_terminal_event(
     cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     ending: str,
 ) -> None:
-    """全終了分類で保存を確認した report だけを終了 event より先に開く。"""
+    """全終了分類で最終出力を整形保存し、終了 event より先に一度だけ開く。"""
     root = cli_repository
     monkeypatch.chdir(root)
     _disable_external_completion(monkeypatch)
@@ -108,7 +108,10 @@ def test_saved_primary_report_is_opened_once_before_terminal_event(
         logger = runtime_cli.current_subcommand_logger()
         assert logger is not None
         assert path.is_file()
-        assert "# cmoc doctor report" in path.read_text(encoding="utf-8")
+        rendered = path.read_text(encoding="utf-8")
+        assert "# cmoc doctor report" in rendered
+        assert '"message": "first\nsecond"' in rendered
+        assert "### Codex 最終出力" in rendered
         assert not any(
             event["event"] == "command_finished" for event in logger.event_records()
         )
@@ -117,6 +120,16 @@ def test_saved_primary_report_is_opened_once_before_terminal_event(
     monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", observe_open)
 
     def finish() -> None:
+        logger = runtime_cli.current_subcommand_logger()
+        assert logger is not None
+        output = logger.path.with_name("structured-output.json")
+        output.write_text('{"message":"first\\nsecond"}', encoding="utf-8")
+        logger.event(
+            "codex_call",
+            output_path=str(output),
+            schema_path=str(root / "schema.json"),
+            status="succeeded",
+        )
         if ending == "error":
             raise CmocError("failed", [], "injected failure")
         if ending == "interruption":
@@ -130,7 +143,7 @@ def test_saved_primary_report_is_opened_once_before_terminal_event(
         assert exit_info.value.exit_code == 1
     else:
         runtime_cli.run_cli_subcommand(
-            finish, command_name="doctor", doctor_preprocess=False
+            finish, command_name="doctor", doctor_preprocess=False, interruptible=True
         )
 
     output = capsys.readouterr()
@@ -634,83 +647,21 @@ def test_structured_output_display_marks_unaccepted_and_unparseable_outputs(
     assert r'"text":"\xff"' in report
 
 
-@pytest.mark.parametrize("ending", ("natural_completion", "user_interruption", "error"))
-def test_structured_output_is_formatted_in_every_primary_report_ending(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    ending: str,
-) -> None:
-    """最外側の終了分類に依存せず Structured Output を整形する。"""
-    from commons.runtime_logging import current_subcommand_logger
-
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
-
-    def body() -> TerminalResult:
-        logger = current_subcommand_logger()
-        assert logger is not None
-        output = logger.path.with_name("structured-output.json")
-        output.write_text('{"message":"first\\nsecond"}', encoding="utf-8")
-        logger.event(
-            "codex_call",
-            output_path=str(output),
-            schema_path=str(root / "schema.json"),
-            status="succeeded",
-        )
-        if ending == "user_interruption":
-            runtime_cli.mark_current_subcommand_interrupted()
-        if ending == "error":
-            raise CmocError("after Codex call", [], "error after saved output")
-        return TerminalResult()
-
-    if ending == "error":
-        with pytest.raises(typer.Exit):
-            runtime_cli.run_cli_subcommand(
-                body, command_name="doctor", doctor_preprocess=False
-            )
-    else:
-        runtime_cli.run_cli_subcommand(
-            body,
-            command_name="doctor",
-            doctor_preprocess=False,
-            interruptible=True,
-        )
-
-    captured = capsys.readouterr()
-    report = terminal_primary_report(
-        captured.err if ending == "error" else captured.out
-    ).read_text(encoding="utf-8")
-    assert '"message": "first\nsecond"' in report
-    assert "### Codex 最終出力" in report
-
-
 def test_primary_report_explains_when_codex_output_is_unavailable(
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
 ) -> None:
     """最終出力 artifact が無い失敗でも、未取得状態を report に残す。"""
-    from commons.runtime_logging import current_subcommand_logger
+    report = execution_record_markdown(
+        None,
+        saved_events=(
+            {
+                "event": "codex_call",
+                "output_path": str(tmp_path / "missing-output.txt"),
+                "status": "failed",
+            },
+        ),
+    )
 
-    root = cli_repository
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
-
-    def body() -> TerminalResult:
-        logger = current_subcommand_logger()
-        assert logger is not None
-        logger.event(
-            "codex_call",
-            output_path=str(root / "missing-output.txt"),
-            status="failed",
-        )
-        return TerminalResult()
-
-    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
-
-    report = terminal_primary_report(capsys.readouterr().out).read_text()
     assert "### Codex 最終出力" in report
     assert "取得済みの最終出力はありません。" in report
 

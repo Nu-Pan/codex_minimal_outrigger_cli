@@ -985,9 +985,9 @@
   },
   "src/commons/runtime_primary_report.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "609055d0afc766b57702eeefaeafcb217d46e386dcf1fc51dcc5938d27fab049",
+    "last_investigated_at": "2026-10-10_13-47-03_169"
   },
   "src/commons/runtime_primary_report_render.py": {
     "investigation_required": true,
