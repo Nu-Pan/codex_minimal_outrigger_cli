@@ -1578,10 +1578,10 @@
     "last_investigated_at": "2026-10-11_06-53-03_408"
   },
   "test/test_struct_doc_rendering.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "1bc1a97525caab2a8ec994881b49da3ad26482d82ed777022968c513df6242fa",
+    "last_investigated_at": "2026-10-11_06-55-02_431"
   },
   "test/test_windows_toast.py": {
     "investigation_required": true,
