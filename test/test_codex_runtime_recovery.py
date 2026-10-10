@@ -12,6 +12,7 @@ from contextvars import copy_context
 from dataclasses import replace
 from itertools import count
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from _codex_support import (
@@ -21,6 +22,7 @@ from _codex_support import (
     script_codex_calls,
     setup_codex_home,
 )
+from _git_support import init_repo
 
 from commons import runtime_codex_exec as runtime
 from commons import runtime_codex_recovery as recovery
@@ -98,10 +100,30 @@ def test_final_cli_outcome(events, returncode, expected):
 
 
 @pytest.fixture
-def recovery_case(cli_repository, tmp_path, monkeypatch):
-    # 回復・補正は各ケースの成果物を使うため、初期 commit と追跡 file は不要。
-    root = cli_repository
+def recovery_case(tmp_path, monkeypatch):
+    # 設定継承・回復制御は解決済みの path context で検証する。
+    # 実 Git の cwd・linked worktree 境界は test_codex_runtime_paths.py に残す。
+    root = tmp_path / "repo"
+    root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        runtime,
+        "AgentCallPathContext",
+        lambda agent_call_cwd: SimpleNamespace(
+            agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
+        ),
+    )
+    # 完全 prompt と probe の起動契約は test_codex_runtime_quota_retry.py に残す。
+    # ここでは各 probe の生成時に cwd と固有の設定 key を持つ parameter を返す。
+    monkeypatch.setattr(
+        runtime,
+        "_quota_availability_probe_parameter",
+        lambda base: replace(
+            codex_parameter(agent_call_cwd=base.agent_call_cwd),
+            agent_call_kind="build_quota_availability_probe_parameter",
+            prompt="recovery probe",
+        ),
+    )
     # ID の区別・引継ぎは観測し、永続採番の検証は test_runtime_ids.py と
     # 実採番を使う test_codex_runtime_quota_retry.py に残す。
     ids = count()
@@ -332,6 +354,8 @@ def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
 @pytest.fixture
 def structured_recovery_case(recovery_case):
     root, parameter, config, logger = recovery_case
+    # 補正前後の成果物 snapshot は実 Git の列挙を使う。
+    init_repo(root)
     schema = root / "schema.json"
     schema.write_text(
         json.dumps(
