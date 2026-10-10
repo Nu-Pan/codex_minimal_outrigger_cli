@@ -201,11 +201,8 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                     context = recover_started_run("realization_apply")
             if context is None:
                 raise
-        if agent_commit_check_active and agent_head is not None:
-            try:
-                _ensure_agent_did_not_commit(context.run_worktree, agent_head)
-            except BaseException as agent_commit_error:
-                exc = agent_commit_error
+        # agent 終了時の HEAD 検査は tracking scope 内で済ませている。
+        # error cleanup での再検査は、遅延書き込みを止めた後に行う。
         report = _record_error(
             context,
             diff_base_commit,
