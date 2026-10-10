@@ -264,18 +264,28 @@ def test_target_close_drains_an_accepted_submission(
     input_path.write_text("initial", encoding="utf-8")
     entered = threading.Event()
     release = threading.Event()
+    draining = threading.Event()
     original_overwrite = EditorInputHandoffTarget._overwrite
 
     def delayed_overwrite(self: EditorInputHandoffTarget, content: str) -> None:
         """accepted 状態を保持したまま test が許可するまで write を待つ。"""
         entered.set()
-        assert release.wait(2)
+        assert release.wait(5)
         original_overwrite(self, content)
 
     monkeypatch.setattr(EditorInputHandoffTarget, "_overwrite", delayed_overwrite)
     target = start_editor_input_handoff(
         tmp_path, input_path, "{{original-prompt-here}}"
     )
+    assert target._server_thread is not None
+    join_server = target._server_thread.join
+
+    def observe_drain(timeout: float | None = None) -> None:
+        """close が受付済み処理の完了待ちへ到達したことだけを通知する。"""
+        draining.set()
+        join_server(timeout)
+
+    monkeypatch.setattr(target._server_thread, "join", observe_drain)
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     submission_result: list[dict[str, object]] = []
     submitter = threading.Thread(
@@ -283,9 +293,6 @@ def test_target_close_drains_an_accepted_submission(
             handoff_mcp._submit(handoff_input(target.target_id, "drained"))
         )
     )
-    submitter.start()
-    assert entered.wait(2)
-
     closed = threading.Event()
 
     def close_target() -> None:
@@ -294,13 +301,28 @@ def test_target_close_drains_an_accepted_submission(
         closed.set()
 
     closer = threading.Thread(target=close_target)
-    closer.start()
-    assert not closed.wait(0.05)
-    release.set()
-    submitter.join(timeout=2)
-    closer.join(timeout=2)
+    submitter.start()
+    try:
+        assert entered.wait(2)
+        closer.start()
+        # 固定時間の経過ではなく、実際の drain 到達を待って無効化の順序を確かめる。
+        assert draining.wait(2)
+        assert not closed.is_set()
+        assert target.handoff_guide_path.exists()
+        assert (
+            parse_editor_input_handoff_target_id(tmp_path, target.target_id) is not None
+        )
+    finally:
+        release.set()
+        submitter.join(timeout=2)
+        if closer.ident is not None:
+            closer.join(timeout=2)
+        target.close()
 
+    assert not submitter.is_alive()
+    assert not closer.is_alive()
     assert closed.is_set()
+    assert not target.handoff_guide_path.exists()
     assert submission_result == [{"status": "accepted"}]
     assert input_path.read_text(encoding="utf-8") == handoff_body(
         "drained", handoff_source
