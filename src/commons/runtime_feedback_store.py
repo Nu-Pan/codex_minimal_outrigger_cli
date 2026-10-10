@@ -810,9 +810,13 @@ def iter_observation_paths(repo: Path) -> list[Path]:
     )
 
 
-def read_json_object(path: Path) -> dict[str, Any]:
-    """UTF-8 JSON file を object として読む。"""
-    value = json.loads(path.read_text(encoding="utf-8"))
+def read_json_object(path: Path, *, content: bytes | None = None) -> dict[str, Any]:
+    """UTF-8 JSON file または取得済み byte 列を object として読む。"""
+    # hash 検査済みの byte 列がある場合は file を読み直さない。
+    text = (
+        path.read_text(encoding="utf-8") if content is None else content.decode("utf-8")
+    )
+    value = json.loads(text)
     if not isinstance(value, dict):
         raise ValueError(f"JSON top-level must be an object: {path}")
     return value

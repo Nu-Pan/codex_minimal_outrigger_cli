@@ -86,6 +86,7 @@ from commons.runtime_feedback_store import (
     read_json_object,
     reporter_input_schema,
     rfc3339_now,
+    sha256_bytes,
     store_agent_observation,
     store_machine_observation,
     validate_agent_payload,
@@ -918,6 +919,82 @@ def test_pending_observations_rejects_symlinked_root(
 
     with pytest.raises(CmocError, match="observation root"):
         feedback_report_module._pending_observations(root)
+
+
+@pytest.mark.parametrize("reader", ["pending", "cut"])
+def test_raw_observation_reader_uses_one_snapshot(
+    feedback_directory, stored_feedback_context, monkeypatch, reader
+):
+    root = feedback_directory
+    accepted, raw = store_agent_observation(root, stored_feedback_context, _payload())
+    original = read_json_object(raw)
+    content = canonical_json_bytes(original)
+    changed = {
+        **original,
+        "payload": {**original["payload"], "summary": "置換後の観測"},
+    }
+    entry = {
+        "observation_id": accepted["observation_id"],
+        "path": raw.relative_to(root).as_posix(),
+        "sha256": sha256_bytes(content),
+    }
+    original_read = Path.read_bytes
+    original_inventory = Path.rglob
+    reads = []
+    inventories = []
+
+    def replace_after_read(path):
+        value = original_read(path)
+        if path == raw:
+            reads.append(path)
+            path.write_bytes(canonical_json_bytes(changed))
+        return value
+
+    def inventory(path, pattern):
+        if path == feedback_root(root) / "observation/v1":
+            inventories.append(path)
+        return original_inventory(path, pattern)
+
+    def load():
+        if reader == "pending":
+            entries, observations = feedback_report_module._pending_observations(root)
+            assert entries == [entry]
+            return observations
+        return feedback_report_module._read_cut_observations(
+            root, {"inputs": {"observations": [entry]}}
+        )
+
+    monkeypatch.setattr(Path, "read_bytes", replace_after_read)
+    monkeypatch.setattr(Path, "rglob", inventory)
+
+    # hash・canonical・schema を検査した byte 列を使い、読込後の置換を混ぜない。
+    assert load() == {raw.stem: original}
+    assert reads == [raw]
+    assert len(inventories) == (1 if reader == "pending" else 0)
+    if reader == "cut":
+        # 同じ参照の次回読込では置換を検出し、呼び出し間の cache は持たない。
+        with pytest.raises(CmocError, match="raw observation hash"):
+            load()
+        assert reads == [raw, raw]
+    else:
+        entry["sha256"] = sha256_bytes(canonical_json_bytes(changed))
+        assert load() == {raw.stem: changed}
+        assert reads == [raw, raw]
+        assert len(inventories) == 2
+
+
+@pytest.mark.parametrize("raw_content", [b"not-json\n", b'{"x": NaN}\n'])
+def test_pending_observations_rejects_invalid_json(feedback_directory, raw_content):
+    # publication の阻止と invocation report は CLI の一ケースで確認する。
+    root = feedback_directory
+    raw = observation_path(root, "fbo_000099_2026-08-01_00-00", "2030-01-02T00:00:00Z")
+    raw.parent.mkdir(parents=True)
+    raw.write_bytes(raw_content)
+
+    with pytest.raises(CmocError, match="raw observation validation") as error:
+        feedback_report_module._pending_observations(root)
+    assert str(raw) in error.value.detail
+    assert raw.read_bytes() == raw_content
 
 
 def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
@@ -3081,9 +3158,8 @@ def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
     assert aggregate is None
 
 
-@pytest.mark.parametrize("raw_content", ["not-json\n", '{"x": NaN}\n'])
 def test_invalid_raw_observation_blocks_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, raw_content: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """validation 不通過 raw を処理済みにせず、正常 report を publication しない。"""
     root = make_repo(tmp_path)
@@ -3091,6 +3167,7 @@ def test_invalid_raw_observation_blocks_publication(
     observation_id = "fbo_000099_2026-08-01_00-00"
     raw_path = observation_path(root, observation_id, "2030-01-02T00:00:00Z")
     raw_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_content = "not-json\n"
     raw_path.write_text(raw_content)
 
     result = runner.invoke(app, ["feedback", "report"])

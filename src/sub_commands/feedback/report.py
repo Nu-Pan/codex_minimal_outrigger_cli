@@ -117,30 +117,24 @@ def _pending_observations(
             ["raw observation store を人間が確認してください。"],
             str(root),
         )
-    if root.is_dir():
-        for path in root.rglob("*"):
-            if path.is_dir() and not path.is_symlink():
-                continue
-            if (
-                path.is_symlink()
-                or not path.is_file()
-                or path.suffix != ".json"
-                or not path.name.startswith("fbo_")
-            ):
-                raise CmocError(
-                    "feedback raw store に未定義 artifact があります。",
-                    ["raw observation path を人間が確認してください。"],
-                    str(path),
-                )
+    # 未定義 artifact も検査する既存 inventory を、そのまま読込に使う。
+    try:
+        pending_paths = unprocessed_observation_paths(repo)
+    except (OSError, ValueError) as exc:
+        raise CmocError(
+            "feedback raw store の検査に失敗しました。",
+            ["raw observation path を人間が確認してください。"],
+            str(exc),
+        ) from exc
 
     entries: list[_JsonObject] = []
     observations: dict[str, _JsonObject] = {}
     hashes_by_id: dict[str, str] = {}
     validation_errors: list[str] = []
-    for path in unprocessed_observation_paths(repo):
+    for path in pending_paths:
         try:
             content = path.read_bytes()
-            observation = read_json_object(path)
+            observation = read_json_object(path, content=content)
         except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
             validation_errors.append(f"{path}: {exc}")
             continue
@@ -473,7 +467,7 @@ def _read_cut_observations(repo: Path, manifest: _JsonObject) -> dict[str, _Json
                 ["raw observation と report cut manifest を人間が確認してください。"],
                 str(path),
             )
-        observation = read_json_object(path)
+        observation = read_json_object(path, content=content)
         if canonical_json_bytes(observation) != content:
             raise CmocError(
                 "feedback report cut の raw observation が canonical JSON ではありません。",
