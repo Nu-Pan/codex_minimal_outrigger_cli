@@ -527,8 +527,12 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-@pytest.mark.parametrize("operation", ["chunk_stream", "chunk_embed"])
-@pytest.mark.parametrize("fragment_size", [1, 65536], ids=["bytewise", "whole"])
+# stdin の復号と chunker は共通なので、受信条件ごとに一方の出力形式を検査する。
+@pytest.mark.parametrize(
+    ("operation", "fragment_size"),
+    [("chunk_stream", 1), ("chunk_embed", 65536)],
+    ids=["stream-bytewise", "batch-whole"],
+)
 def test_worker_preserves_text_across_utf8_input_fragments(
     tmp_path: Path, operation: str, fragment_size: int
 ) -> None:
