@@ -366,17 +366,16 @@ _EARLY_ERROR_SECTIONS = {
     ("command_name", "report_directory", "required_fields"),
     _EARLY_ERROR_REPORTS,
 )
-@pytest.mark.parametrize("failure_stage", ("doctor_preprocess", "precondition"))
 def test_early_error_saves_command_specific_primary_report(
     primary_report_directory: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     command_name: str,
     report_directory: str,
     required_fields: tuple[str, ...],
-    failure_stage: str,
 ) -> None:
     """処理開始前の error でも固有の保存先と必須 front matter を保つ。"""
+    # doctor preprocess から共通 report 保存へ到達する経路は、
+    # test_runtime_cli.py の前処理失敗ケースで検証し、個別 report を重複生成しない。
     root = primary_report_directory
 
     def fail_precondition(_runtime_root: Path) -> None:
@@ -387,21 +386,13 @@ def test_early_error_saves_command_specific_primary_report(
         """事前条件の失敗後にサブコマンド本体を開始しないことを検証する。"""
         pytest.fail("command body started after precondition failure")
 
-    if failure_stage == "doctor_preprocess":
-        monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", fail_precondition)
-        pre_log_check = None
-        doctor_preprocess = True
-    else:
-        pre_log_check = fail_precondition
-        doctor_preprocess = False
-
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
             command_body_must_not_start,
             command_name=command_name,
             command_argv=("cmoc", *command_name.split(), "--scope", "all"),
-            pre_log_check=pre_log_check,
-            doctor_preprocess=doctor_preprocess,
+            pre_log_check=fail_precondition,
+            doctor_preprocess=False,
         )
 
     captured = capsys.readouterr()

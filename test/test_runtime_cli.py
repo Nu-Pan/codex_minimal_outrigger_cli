@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 import typer
-from _cli_support import runner
+from _cli_support import runner, terminal_primary_report
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
 from _git_support import make_repo, run_git
 
@@ -418,9 +418,11 @@ def test_detector_does_not_swallow_keyboard_interrupt(
 
 
 def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
-    cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
+    cli_terminal_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """doctor preprocess の失敗を終了コードとサブコマンドログに記録する。"""
+    """doctor preprocess の失敗でも report を保存し、終了結果を確定する。"""
     root = cli_terminal_directory
 
     def fail_doctor(_root: Path) -> None:
@@ -432,21 +434,39 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
 
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", fail_doctor)
 
+    def precondition_must_not_start(_root: Path) -> None:
+        pytest.fail("precondition must not start after doctor failure")
+
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
             lambda: pytest.fail("implementation must not start after doctor failure"),
-            command_name="probe",
-            command_argv=["cmoc", "probe"],
+            pre_log_check=precondition_must_not_start,
+            command_name="doctor",
+            command_argv=["cmoc", "doctor"],
         )
 
     assert exc_info.value.exit_code == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    report_path = terminal_primary_report(captured.err)
+    assert report_path.parent == root / ".cmoc/gu/report/doctor"
+    assert captured.err.count(str(report_path)) == 1
+    rendered = report_path.read_text(encoding="utf-8")
+    assert 'terminal_classification: "error"' in rendered
+    assert "exit_code: 1" in rendered
+    assert "- 検査と修復: `error`" in rendered
+    assert "doctor failed" in rendered
+    assert "doctor detail" in rendered
     [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
+    assert report_path.stem == log_path.stem
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[0]["event"] == "command_invoked"
     assert any(event["event"] == "step_started" for event in events)
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["returncode"] == 1
-    assert "probe" in json.dumps(events[0], ensure_ascii=False)
+    assert events[-1]["classification"] == "error"
+    assert events[-1]["primary_report_path"] == str(report_path)
+    assert events[0]["argv"] == ["cmoc", "doctor"]
     assert "doctor failed" in json.dumps(events[-1], ensure_ascii=False)
     assert events[-1]["failure"]["classification"] == "handled_failure"
     assert "traceback" not in events[-1]["failure"]
