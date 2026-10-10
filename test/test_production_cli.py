@@ -431,6 +431,7 @@ def _run_refactor_until_confirmed(
     """確定実績を観測して SIGINT を送り、継続 workload の通常終了を検証する。"""
     directory = root / ".cmoc/gu/log/sub_command"
     previous = set(directory.glob("*.jsonl"))
+    scanned_versions: dict[Path, tuple[int, int]] = {}
     deadline = time.monotonic() + _PRODUCTION_COMMAND_TIMEOUT
     interrupted = False
     with subprocess.Popen(
@@ -448,6 +449,10 @@ def _run_refactor_until_confirmed(
                     raise subprocess.TimeoutExpired(argv, _PRODUCTION_COMMAND_TIMEOUT)
                 if not interrupted:
                     for log in set(directory.glob("*.jsonl")) - previous:
+                        stat = log.stat()
+                        version = (stat.st_mtime_ns, stat.st_size)
+                        if scanned_versions.get(log) == version:
+                            continue
                         for line in log.read_text().splitlines():
                             try:
                                 event = json.loads(line)
@@ -460,6 +465,8 @@ def _run_refactor_until_confirmed(
                                 process.send_signal(signal.SIGINT)
                                 interrupted = True
                                 break
+                        # 変更のない履歴を解析し直さず、partial JSON の追記は再確認する。
+                        scanned_versions[log] = version
                         if interrupted:
                             break
                 try:
