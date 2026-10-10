@@ -10,6 +10,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
 from dataclasses import replace
+from itertools import count
 from pathlib import Path
 
 import pytest
@@ -101,6 +102,14 @@ def recovery_case(cli_repository, tmp_path, monkeypatch):
     # 回復・補正は各ケースの成果物を使うため、初期 commit と追跡 file は不要。
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
+    # ID の区別・引継ぎは観測し、永続採番の検証は test_runtime_ids.py と
+    # 実採番を使う test_codex_runtime_quota_retry.py に残す。
+    ids = count()
+    monkeypatch.setattr(
+        runtime,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+    )
     return (
         root,
         codex_parameter(agent_call_cwd=root),
