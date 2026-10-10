@@ -17,7 +17,7 @@ from .runtime_editor_input_handoff import (
     validate_editor_input_file,
 )
 from .runtime_errors import CmocError
-from .runtime_git import ensure_cmoc_ignored
+from .runtime_git import ensure_cmoc_ignored, reuse_git_path_queries
 from .runtime_logging import current_execution_id, current_subcommand_logger
 from .runtime_paths import (
     editor_input_log_dir,
@@ -120,10 +120,13 @@ def _save_editor_input(root: Path, input_path: Path, content: bytes) -> None:
 
 def ensure_prompt_editor_roots_ignored(root: Path) -> None:
     """editor/TUI が使う repository と現在 worktree の `.cmoc` ignore を保証する。"""
-    current_root = work_root()
-    ensure_cmoc_ignored(current_root)
-    if current_root.resolve() != root.resolve():
-        ensure_cmoc_ignored(root)
+    # 修復前後の Git 配置だけを共有し、ignore 内容・index は検査ごとに取り直す。
+    # editor が起動する前に破棄し、後続の入力や agent 呼び出しへ持ち越さない。
+    with reuse_git_path_queries():
+        current_root = work_root()
+        ensure_cmoc_ignored(current_root)
+        if current_root.resolve() != root.resolve():
+            ensure_cmoc_ignored(root)
 
 
 def _select_editor() -> list[str]:

@@ -7,6 +7,7 @@ import pytest
 from _git_support import init_repo, make_repo, run_git
 
 import commons.runtime_git as git_module
+from commons.prompt_editor_input import ensure_prompt_editor_roots_ignored
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import repo_root, work_root
 from commons.runtime_run_lifecycle import (
@@ -77,6 +78,47 @@ def test_git_query_reuse_observes_ignore_content_and_index_changes(cli_repositor
         run_git(root, "add", "-f", candidate.name)
         assert git_module.is_git_ignored(root, candidate)
         assert not git_module.is_untracked_git_ignored(root, candidate)
+
+
+def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
+    cli_repository, monkeypatch
+):
+    """入力前処理は配置を再利用し、修復した index と次回の設定変更を検査する。"""
+    root = cli_repository
+    monkeypatch.chdir(root)
+    tracked = root / ".cmoc/gu/input.txt"
+    tracked.parent.mkdir(parents=True)
+    tracked.write_text("preserve input\n")
+    run_git(root, "add", "-f", str(tracked.relative_to(root)))
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git":
+            queries[tuple(argv[1:])] += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+
+    ensure_prompt_editor_roots_ignored(root)
+
+    assert queries[("rev-parse", "--git-path", "info/exclude")] == 1
+    assert queries[("config", "--path", "--get-all", "core.excludesFile")] == 1
+    assert queries[("ls-files", "--", ".cmoc/gu")] == 2
+    assert queries[("check-ignore", "-q", git_module.CMOC_IGNORE_PROBE)] == 2
+    assert tracked.read_text() == "preserve input\n"
+    assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
+    assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
+
+    # 起動間や失敗後へ配置・安全性の判定を持ち越さない。
+    global_ignore = root / "new-ignore"
+    global_ignore.mkdir()
+    run_git(root, "config", "core.excludesFile", str(global_ignore))
+    with pytest.raises(CmocError, match="global excludes"):
+        ensure_prompt_editor_roots_ignored(root)
+    global_ignore.rmdir()
+    global_ignore.write_text("*.unused\n")
+    ensure_prompt_editor_roots_ignored(root)
 
 
 @pytest.mark.parametrize("interrupt", [False, True])
