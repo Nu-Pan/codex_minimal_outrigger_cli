@@ -1053,15 +1053,12 @@ def test_session_join_preserves_repository_local_feedback_state(
     assert run_git(root, "ls-files", "--", relative).stdout == ""
 
 
-@pytest.mark.parametrize("remaining_marker", [False, True], ids=["resolved", "marker"])
-def test_session_join_includes_incidental_conflict_resolution_changes(
+def test_session_join_preserves_work_on_incidental_conflict_marker(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
-    remaining_marker: bool,
 ) -> None:
-    """付随編集の取り込みと、未解消 marker による停止・stderr 出力を検証する。"""
-    # 同じ marker 拒否経路で失敗表示と作業状態も検査し、Git 競合の準備を重ねない。
+    """付随編集先の未解消 marker で停止し、stderr と保持した作業状態を検査する。"""
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     related = root / "src"
@@ -1099,11 +1096,7 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
         modified.write_text("related implementation\n")
         deleted.unlink()
         renamed.rename(moved)
-        added.write_text(
-            "<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n"
-            if remaining_marker
-            else "related implementation\n"
-        )
+        added.write_text("<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n")
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
@@ -1112,48 +1105,31 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
 
     assert session_preprocess == [root]
     assert current_branch(root) == home_branch
-    if remaining_marker:
-        assert result.exit_code != 0
-        assert result.stdout == ""
-        assert "# 失敗: cmoc session join" in result.stderr
-        assert "conflict marker が残っています。" in result.stderr
-        assert "src/added.py" in result.stderr
-        assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
-        assert run_git(root, "branch", "--list", session_branch).stdout.strip()
-        state = json.loads(session_state_path(root, session_branch).read_text())
-        assert state["session"]["state"] == "active"
-        assert target.read_text() == "home change\nsession change\n"
-        assert modified.read_text() == "related implementation\n"
-        assert not deleted.exists()
-        assert not renamed.exists()
-        assert moved.read_text() == "previous implementation\n"
-        assert added.read_text().startswith("<<<<<<< HEAD\n")
-        return
-    assert result.exit_code == 0, result.output
-    assert run_git(root, "status", "--porcelain").stdout == ""
-    assert run_git(root, "show", "HEAD:oracle/spec.md").stdout == (
-        "home change\nsession change\n"
-    )
-    assert (
-        run_git(root, "ls-files", "--", "src/deleted.py", "src/renamed.py").stdout == ""
-    )
-    assert (
-        run_git(root, "show", "HEAD:src/moved.py").stdout == "previous implementation\n"
-    )
-    for relative in ("src/added.py", "src/modified.py"):
-        assert (
-            run_git(root, "show", f"HEAD:{relative}").stdout
-            == "related implementation\n"
-        )
+    assert result.exit_code != 0
+    assert result.stdout == ""
+    assert "# 失敗: cmoc session join" in result.stderr
+    assert "conflict marker が残っています。" in result.stderr
+    assert "src/added.py" in result.stderr
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
+    assert run_git(root, "branch", "--list", session_branch).stdout.strip()
+    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert state["session"]["state"] == "active"
+    assert target.read_text() == "home change\nsession change\n"
+    assert modified.read_text() == "related implementation\n"
+    assert not deleted.exists()
+    assert not renamed.exists()
+    assert moved.read_text() == "previous implementation\n"
+    assert added.read_text().startswith("<<<<<<< HEAD\n")
 
 
-def test_session_join_accepts_incidental_conflict_file_changes(
+def test_session_join_merges_conflict_and_incidental_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
-    """内容の整理、mode・改行 path と modify/modify・delete/modify の削除を merge する。"""
-    # 同じ成功経路の Git 準備を共有し、各編集と NUL framing を別ファイルで検証する。
+    """競合の内容・mode・削除・改行 path と、一覧外の追加・変更・rename・削除を取り込む。"""
+    # 一つの成功経路を共有し、各編集と NUL framing を独立したファイルで検証する。
+    # marker が残る失敗時の作業保持は専用ケースで検査する。
     # {{work-root}}/oracle/doc/app_spec/merge_conflict_resolution.md
     root = make_repo(tmp_path)
     context_target = root / "oracle" / "spec.md"
@@ -1163,6 +1139,13 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     newline_target = root / "src" / "line\nbreak.txt"
     newline_target.parent.mkdir()
     newline_target.write_text("base\n")
+    added = root / "src" / "added.py"
+    modified = root / "src" / "modified.py"
+    deleted = root / "src" / "deleted.py"
+    renamed = root / "src" / "renamed.py"
+    moved = root / "src" / "moved.py"
+    for target in (modified, deleted, renamed):
+        target.write_text("previous implementation\n")
     for target in (mode_target, deleted_target):
         target.write_text("# spec\n")
     run_git(root, "add", "oracle", "src")
@@ -1205,12 +1188,18 @@ def test_session_join_accepts_incidental_conflict_file_changes(
             "oracle/deleted.md",
             "src/line\nbreak.txt",
         }
-        context_target.write_text("prefix\nresolved change\nchanged suffix\n")
+        context_target.write_text(
+            "prefix\nhome change\nsession change\nchanged suffix\n"
+        )
         mode_target.write_text("prefix\nresolved change\nsuffix\n")
         mode_target.chmod(mode_target.stat().st_mode | stat.S_IXUSR)
         deleted_target.unlink()
         delete_modify_target.unlink()
         newline_target.write_text("resolved change\n")
+        added.write_text("related implementation\n")
+        modified.write_text("related implementation\n")
+        deleted.unlink()
+        renamed.rename(moved)
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
@@ -1222,7 +1211,7 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     assert current_branch(root) == home_branch
     assert run_git(root, "status", "--porcelain").stdout == ""
     assert run_git(root, "show", "HEAD:oracle/spec.md").stdout == (
-        "prefix\nresolved change\nchanged suffix\n"
+        "prefix\nhome change\nsession change\nchanged suffix\n"
     )
     assert run_git(root, "show", "HEAD:oracle/mode.md").stdout == (
         "prefix\nresolved change\nsuffix\n"
@@ -1231,7 +1220,16 @@ def test_session_join_accepts_incidental_conflict_file_changes(
         "100755 "
     )
     assert (
-        run_git(root, "ls-files", "--", "oracle/deleted.md", "README.md").stdout == ""
+        run_git(
+            root,
+            "ls-files",
+            "--",
+            "oracle/deleted.md",
+            "README.md",
+            "src/deleted.py",
+            "src/renamed.py",
+        ).stdout
+        == ""
     )
     assert not deleted_target.exists()
     assert not delete_modify_target.exists()
@@ -1239,6 +1237,13 @@ def test_session_join_accepts_incidental_conflict_file_changes(
     assert (
         run_git(root, "show", "HEAD:src/line\nbreak.txt").stdout == "resolved change\n"
     )
+    assert run_git(root, "show", "HEAD:src/moved.py").stdout == (
+        "previous implementation\n"
+    )
+    for relative in ("src/added.py", "src/modified.py"):
+        assert run_git(root, "show", f"HEAD:{relative}").stdout == (
+            "related implementation\n"
+        )
 
 
 def test_session_join_reads_unmerged_paths_with_newlines(
