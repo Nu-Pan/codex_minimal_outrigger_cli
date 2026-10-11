@@ -2922,11 +2922,13 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
         assert "session.last_joined_apply_fork_commit updated" not in output
 
 
-def test_run_join_integrates_content_conflict_and_incidental_edit(
+def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     ready_join_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """run と session の変更を agent が統合し、付随編集も merge へ含める。"""
-    # session 作成の CLI 結合は別の統合 test に残し、ここでは実 Git の競合を作る。
+    """未解消時は付随編集も戻し、同じ run の再実行で統合と付随編集を確定する。"""
+    # rollback 後の clean tree を成功経路にも使い、Git 競合の準備を重ねない。
+    # joinable/error による hook の違いは test_apply_join_hook_selects_diff_base と
+    # 公開 CLI の代表例で検査する。
     root, _session_branch, state_path = ready_join_session
     context = _prepare_apply_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("run change\n")
@@ -2936,8 +2938,32 @@ def test_run_join_integrates_content_conflict_and_incidental_edit(
     run_git(root, "commit", "-m", "session change")
     run_head = run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip()
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    calls: list[AgentCallParameter] = []
 
-    def fake_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
+    def unresolved_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
+        calls.append(parameter)
+        (root / "src" / "incidental.py").parent.mkdir(exist_ok=True)
+        (root / "src" / "incidental.py").write_text("value = 1\n")
+        return SimpleNamespace(
+            output_text="merge_resolution: unresolved\n検証不足: 人間意図を確認できません。\n"
+        )
+
+    monkeypatch.setattr(merge_conflict_module, "run_codex_exec", unresolved_codex)
+    failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert len(calls) == 1
+    assert failed.exit_code == 1
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
+    assert (root / "README.md").read_text() == "session change\n"
+    assert not (root / "src" / "incidental.py").exists()
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert _state(state_path)["run"]["state"] == "error"
+    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+    assert context.run_worktree.is_dir()
+
+    # 保持された run の競合を再び解消し、成功時の cwd・commit 参照も確かめる。
+    def resolved_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
+        calls.append(parameter)
         assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
         assert parameter.agent_call_cwd == root
         assert run_head in parameter.prompt
@@ -2949,7 +2975,7 @@ def test_run_join_integrates_content_conflict_and_incidental_edit(
             output_text="merge_resolution: resolved\n検証: 両側の内容を確認しました。\n"
         )
 
-    monkeypatch.setattr(merge_conflict_module, "run_codex_exec", fake_codex)
+    monkeypatch.setattr(merge_conflict_module, "run_codex_exec", resolved_codex)
 
     # 付随編集の検査中に、同じ Git 配置・設定の問い合わせを繰り返さない。
     queries = Counter()
@@ -2972,47 +2998,13 @@ def test_run_join_integrates_content_conflict_and_incidental_edit(
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
+    assert len(calls) == 2
     assert result.exit_code == 0, result.output
     assert (root / "README.md").read_text() == "session change\nrun change\n"
     assert (root / "src" / "related.py").read_text() == "value = 1\n"
     assert _state(state_path)["run"]["state"] == "ready"
     assert "src/related.py" in terminal_primary_report(result).read_text()
     assert max(queries.values(), default=0) <= 1
-
-
-def test_run_join_rolls_back_unresolved_content_conflict(
-    ready_join_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """agent が未解消と報告した merge は付随編集ごと開始前へ戻す。"""
-    root, _session_branch, state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
-    (context.run_worktree / "README.md").write_text("run change\n")
-    commit_work_unit(context.run_worktree, "run change")
-    (root / "README.md").write_text("session change\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "session change")
-    session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    calls: list[AgentCallParameter] = []
-
-    def fake_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
-        calls.append(parameter)
-        (root / "src" / "incidental.py").parent.mkdir(exist_ok=True)
-        (root / "src" / "incidental.py").write_text("value = 1\n")
-        return SimpleNamespace(
-            output_text="merge_resolution: unresolved\n検証不足: 人間意図を確認できません。\n"
-        )
-
-    monkeypatch.setattr(merge_conflict_module, "run_codex_exec", fake_codex)
-    failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert calls
-    assert failed.exit_code == 1
-    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
-    assert (root / "README.md").read_text() == "session change\n"
-    assert not (root / "src" / "incidental.py").exists()
-    assert run_git(root, "status", "--porcelain").stdout == ""
-    assert _state(state_path)["run"]["state"] == "error"
-    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
 
 def test_run_join_keeps_completed_merge_when_final_report_update_fails(
