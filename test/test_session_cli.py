@@ -21,6 +21,7 @@ import stat
 import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -1225,12 +1226,6 @@ def test_session_join_merges_conflict_and_incidental_changes(
     assert result.exit_code == 0, result.output
     assert current_branch(root) == home_branch
     assert run_git(root, "status", "--porcelain").stdout == ""
-    assert run_git(root, "show", "HEAD:oracle/spec.md").stdout == (
-        "prefix\nhome change\nsession change\nchanged suffix\n"
-    )
-    assert run_git(root, "show", "HEAD:oracle/mode.md").stdout == (
-        "prefix\nresolved change\nsuffix\n"
-    )
     assert run_git(root, "ls-files", "--stage", "oracle/mode.md").stdout.startswith(
         "100755 "
     )
@@ -1249,16 +1244,31 @@ def test_session_join_merges_conflict_and_incidental_changes(
     assert not deleted_target.exists()
     assert not delete_modify_target.exists()
     assert newline_target.read_text() == "resolved change\n"
-    assert (
-        run_git(root, "show", "HEAD:src/line\nbreak.txt").stdout == "resolved change\n"
+    expected_contents = {
+        "oracle/spec.md": "prefix\nhome change\nsession change\nchanged suffix\n",
+        "oracle/mode.md": "prefix\nresolved change\nsuffix\n",
+        "src/line\nbreak.txt": "resolved change\n",
+        "src/moved.py": "previous implementation\n",
+        "src/added.py": "related implementation\n",
+        "src/modified.py": "related implementation\n",
+    }
+    # HEAD の内容を一括取得し、改行 path は NUL、各本文は byte 長で区切る。
+    objects = subprocess.run(
+        ["git", "cat-file", "--batch", "-z"],
+        cwd=root,
+        input=b"".join(
+            f"HEAD:{relative}\0".encode("utf-8") for relative in expected_contents
+        ),
+        capture_output=True,
+        check=True,
     )
-    assert run_git(root, "show", "HEAD:src/moved.py").stdout == (
-        "previous implementation\n"
-    )
-    for relative in ("src/added.py", "src/modified.py"):
-        assert run_git(root, "show", f"HEAD:{relative}").stdout == (
-            "related implementation\n"
-        )
+    with BytesIO(objects.stdout) as contents:
+        for relative, expected in expected_contents.items():
+            header = contents.readline().split()
+            assert header[1:2] == [b"blob"], relative
+            assert contents.read(int(header[2])) == expected.encode("utf-8"), relative
+            assert contents.read(1) == b"\n"
+        assert contents.read() == b""
 
 
 def test_session_join_reads_unmerged_paths_with_newlines(
