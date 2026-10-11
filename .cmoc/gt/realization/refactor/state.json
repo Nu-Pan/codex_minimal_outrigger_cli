@@ -141,7 +141,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "8202d16d89be6fea4713da8e0018fc589c934686fbb31a6dc74d52ea2dc78044",
-    "last_investigated_at": "2026-10-09_07-42-21_891"
+    "last_investigated_at": "2026-10-11_10-42-33_236"
   },
   "oracle/doc/app_spec/sub_command/doctor.md": {
     "investigation_required": true,

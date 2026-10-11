@@ -81,10 +81,9 @@ def session_home_branch(root: Path, session_branch: str) -> str:
     return state["session"]["session_home_branch"]
 
 
-def _seed_active_session(root: Path) -> tuple[str, str]:
-    """session 終了の検査に必要な clean session を、fork CLI を実行せず用意する。"""
-    # fork の branch/state 作成と fork→join/abandon の連携は専用 test に残す。
-    # 終了コマンド自身の doctor は実経路に保ち、管理物の修復は専用ケースに任せる。
+def _seed_session_management_files(root: Path) -> None:
+    """session test の clean な管理ファイルを、doctor CLI を実行せず用意する。"""
+    # 管理物の検証・修復は各 command 自身の doctor と専用ケースに残す。
     # tracked 管理物も揃え、前処理の修復 commit で検査対象の HEAD を進めない。
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     seed_search_config(root)
@@ -103,6 +102,12 @@ def _seed_active_session(root: Path) -> tuple[str, str]:
         ".cmoc/gt/realization/refactor/state.json",
     )
     run_git(root, "commit", "-m", "session seed")
+
+
+def _seed_active_session(root: Path) -> tuple[str, str]:
+    """session 終了の検査に必要な clean session を、fork CLI を実行せず用意する。"""
+    # fork の branch/state 作成と fork→join/abandon の連携は専用 test に残す。
+    _seed_session_management_files(root)
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
@@ -591,7 +596,7 @@ def test_session_abandon_uses_linked_worktree_branch(
     """linked worktree上のsession abandonが対応home branchを使うことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    _seed_session_management_files(root)
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
@@ -632,7 +637,7 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
 
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    _seed_session_management_files(root)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
@@ -1228,7 +1233,7 @@ def test_session_join_uses_linked_worktree_branch(
     """linked worktree上のsession joinが対応home branchを使うことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    _seed_session_management_files(root)
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
@@ -1275,7 +1280,7 @@ def test_session_join_preprocesses_linked_worktree_before_preconditions(
 
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    _seed_session_management_files(root)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
