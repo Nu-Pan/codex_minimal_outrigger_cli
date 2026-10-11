@@ -782,11 +782,10 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
         return locations
 
     with closing(search):
-        first = search.synchronize()
-        assert first.chunk_count == 3
+        # 初回も検索の自動同期で生成数と現在位置を一緒に検査する。
+        assert hit_lines() == {a: 1, b: 3, c: 5}
         assert search.sync_progress["persisted_chunks"] == 3
         assert model_inputs() == [a, b, c]
-        assert hit_lines() == {a: 1, b: 3, c: 5}
 
         edited_a = "# A\nalpha edited\nextra\n"
         document.write_text(edited_a + b + c)

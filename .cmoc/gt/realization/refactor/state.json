@@ -465,7 +465,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "3726caafdfaeee751bc4e6dde3ff7ae5d04c29f90b3b8268e4f8e8a8c91d6735",
-    "last_investigated_at": "2026-10-09_20-38-30_701"
+    "last_investigated_at": "2026-10-11_19-04-21_713"
   },
   "oracle/src/oracle/other/path_model.py": {
     "investigation_required": true,
