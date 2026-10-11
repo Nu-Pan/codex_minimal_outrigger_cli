@@ -195,7 +195,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c492d5a60fab9428ac84360c520632d14964f569f2a77a81103cbf0ed06ab1ec",
-    "last_investigated_at": "2026-10-09_09-43-37_936"
+    "last_investigated_at": "2026-10-11_12-12-59_506"
   },
   "oracle/doc/app_spec/sub_command/session_fork.md": {
     "investigation_required": true,

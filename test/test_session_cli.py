@@ -108,9 +108,14 @@ def _seed_active_session(root: Path) -> tuple[str, str]:
     """session 終了の検査に必要な clean session を、fork CLI を実行せず用意する。"""
     # fork の branch/state 作成と fork→join/abandon の連携は専用 test に残す。
     _seed_session_management_files(root)
-    home_branch = current_branch(root)
-    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
+    return _seed_session_in_worktree(root, root)
+
+
+def _seed_session_in_worktree(root: Path, work: Path) -> tuple[str, str]:
+    """管理物を準備済みの worktree に session を作り、repo-root に state を保存する。"""
+    home_branch = current_branch(work)
+    fork_commit = run_git(work, "rev-parse", "HEAD").stdout.strip()
+    run_git(work, "switch", "-c", SESSION_BRANCH, fork_commit)
     state = cmoc_runtime.SessionState()
     state.session.session_home_branch = home_branch
     state.session.session_fork_commit = fork_commit
@@ -641,11 +646,7 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(linked)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_session_in_worktree(root, linked)
     gitignore = break_preprocess_invariants(linked)
     run_git(root, "branch", "-D", home_branch)
 
@@ -671,19 +672,8 @@ def test_session_abandon_requires_existing_home_branch(
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_active_session(root)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
-    gitignore = root / ".gitignore"
-    gitignore.write_text(
-        "\n".join(
-            line for line in gitignore.read_text().splitlines() if line != "/.cmoc/gu/"
-        )
-        + "\n"
-    )
-    tracked_probe = root / ".cmoc" / "gu" / "tracked-probe"
-    tracked_probe.parent.mkdir(parents=True, exist_ok=True)
-    tracked_probe.write_text("tracked\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "add", "-f", ".cmoc/gu/tracked-probe")
-    run_git(root, "commit", "-m", "track cmoc probe on session")
+    # 前処理の修復と事前条件の順序は linked worktree の専用ケースで検証する。
+    # このケースでは local branch と同名 tag を区別する境界を保つ。
     run_git(root, "branch", "-D", home_branch)
     run_git(root, "tag", home_branch, home_commit)
 
@@ -705,8 +695,6 @@ def test_session_abandon_requires_existing_home_branch(
         ).returncode
         == 0
     )
-    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
-    assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
 
 
 def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
