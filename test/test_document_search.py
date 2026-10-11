@@ -1044,22 +1044,27 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
 
 
 @pytest.fixture
-def candidate_repository(cli_repository, monkeypatch):
-    """候補選択の検査では既知の文書集合を渡し、反復する Git 列挙を省く。"""
+def candidate_repository(tmp_path, monkeypatch):
+    """候補選択には検証済みの root・文書集合を渡し、Git 起動を省く。"""
     from commons import runtime_document_search as module
 
-    root = cli_repository
+    root = tmp_path / "repo"
     docs = root / "oracle/doc"
     docs.mkdir(parents=True)
     (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
-    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+
+    def repository_root(work_root):
+        assert work_root == root
+        return root
 
     def enumerate_documents(work_root):
         assert work_root == root
         return sorted(docs.glob("*.md")), []
 
-    # Git 分類・安全性は対象範囲と変更競合の専用 test に残す。
+    # Git 分類・root 解決・非追跡検査は実 repository の同期・再利用 test に残す。
     # 本文・位置の再確認、embedding の保存、検索と MCP 応答は製品経路を通す。
+    monkeypatch.setattr(module, "repo_root", repository_root)
+    monkeypatch.setattr(module, "require_cmoc_ignored", lambda _root: None)
     monkeypatch.setattr(
         module, "enumerate_oracle_and_realization_files", enumerate_documents
     )
