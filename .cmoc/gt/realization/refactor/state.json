@@ -627,7 +627,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "8ac1b4ff7590d29ce880b9d540f7fcace726de341416b79123260b174c415a65",
-    "last_investigated_at": "2026-10-10_02-52-44_363"
+    "last_investigated_at": "2026-10-11_22-37-28_154"
   },
   "src/acp/builder/realization/apply/fork/launch_exec.py": {
     "investigation_required": true,

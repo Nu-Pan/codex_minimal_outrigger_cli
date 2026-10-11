@@ -123,7 +123,7 @@ def _prepare_apply_run(
     *,
     run_state: str = "joinable",
 ) -> EditingRunContext:
-    """join/abandon 用に実 Git の資源と保存済み active run state を用意する。"""
+    """terminal 処理用に実 Git の資源と保存済み active run state を用意する。"""
     # fork と state 遷移は専用 test に任せ、lifecycle が読む前提だけ直接構築する。
     root, session_branch, path = session
     state = SessionState.from_dict(_state(path))
@@ -1938,12 +1938,9 @@ def test_apply_error_report_survives_change_inspection_failure(
 ) -> None:
     """差分確認に失敗しても apply error report と state を保存する。"""
     root, _session_branch, state_path = ready_run_session
-
-    monkeypatch.setattr(
-        apply_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("agent failed")),
-    )
+    # CLI の error cleanup 呼び出しは child 停止・遅延 commit の test に残す。
+    # ここでは fork を繰り返さず、差分確認失敗後の state・report 保存を検査する。
+    context = _prepare_apply_run(ready_run_session, run_state="running")
     monkeypatch.setattr(
         apply_module,
         "tree_changes",
@@ -1952,21 +1949,27 @@ def test_apply_error_report_survives_change_inspection_failure(
         ),
     )
 
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
+    report = apply_module._record_error(
+        context,
+        context.session_fork_commit,
+        None,
+        RuntimeError("agent failed"),
     )
 
-    assert result.exit_code == 1
     assert _state(state_path)["run"]["state"] == "error"
     reports = list(
         (root / ".cmoc" / "gu" / "report" / "realization" / "apply" / "fork").glob(
             "*.md"
         )
     )
-    assert len(reports) == 1
-    assert "change inspection failed" in reports[0].read_text()
+    assert reports == [report]
+    report_text = report.read_text()
+    assert 'state_after: "error"' in report_text
+    assert 'completion_reason: "error"' in report_text
+    assert "exit_code: 1" in report_text
+    assert "agent failed" in report_text
+    assert "change inspection failed" in report_text
+    assert "git diff unavailable" in report_text
 
 
 def test_apply_report_failure_after_joinable_publication_sets_error_state(
