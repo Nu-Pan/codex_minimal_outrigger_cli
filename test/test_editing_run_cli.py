@@ -3099,46 +3099,55 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
     assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
 
-def test_refactor_fork_commits_cycle_until_user_interruption(
+def test_refactor_fork_commits_mixed_results_until_user_interruption(
     ready_content_session: tuple[Path, str, Path],
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """一巡の確定実績を保持し、ユーザー停止で joinable にする。"""
+    """所見なしへの正規化と unresolved の保留を、一巡の確定結果で検証する。"""
+    # target ごとの結果を同じ巡に混在させ、session/run 作成と全対象巡回を共有する。
     root, _session_branch, state_path = ready_content_session
     reviewed: list[str] = []
+    call_log = (tmp_path / "unresolved_call.json").resolve()
+    call_log.write_text("{}\n")
 
     def fake_refactor(
-        parameter: AgentCallParameter,
+        _parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
-        """refactor agent の deterministic response を返す。"""
+        """差分のない fixed、unresolved、所見なしを別 target へ返す。"""
         purpose = str(kwargs["purpose"])
         target = purpose.removeprefix("realization refactor: ")
         reviewed.append(target)
-        if target == "README.md":
-            return SimpleNamespace(
-                returncode=0,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "差分のない fixed 自己申告",
-                            "changed_paths": [],
-                            "resolution": {
-                                "status": "fixed",
-                                "summary": "agent は修正済みと申告した",
-                            },
-                        }
-                    ],
-                    "verification": {
-                        "status": "passed",
-                        "summary": "fake full quality gate passed",
+        if target == ".gitignore":
+            findings = [
+                {
+                    "title": "差分のない fixed 自己申告",
+                    "changed_paths": [],
+                    "resolution": {
+                        "status": "fixed",
+                        "summary": "agent は修正済みと申告した",
+                    },
+                }
+            ]
+        elif target == "README.md":
+            findings = [
+                {
+                    "title": "README unresolved finding",
+                    "changed_paths": [],
+                    "resolution": {
+                        "status": "unresolved",
+                        "summary": "人間の判断が必要",
                     },
                 },
-            )
+            ]
+        else:
+            findings = []
         return SimpleNamespace(
             returncode=0,
+            call_log_path=call_log,
             output_json={
-                "findings": [],
+                "findings": findings,
                 "verification": {
                     "status": "passed",
                     "summary": "fake full quality gate passed",
@@ -3162,20 +3171,37 @@ def test_refactor_fork_commits_cycle_until_user_interruption(
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     refactor_state = load_refactor_state(worktree)
     assert reviewed == sorted(refactor_state)
-    assert all(not entry["investigation_required"] for entry in refactor_state.values())
+    assert reviewed.count("README.md") == 1
+    assert reviewed.index("oracle/spec.md") > reviewed.index("README.md")
+    assert {
+        path
+        for path, entry in refactor_state.items()
+        if entry["investigation_required"]
+    } == {"README.md"}
+    assert refactor_state["README.md"]["last_investigation_result"] == "findings"
     assert all(
         entry["last_investigation_result"] == "no_findings"
-        for entry in refactor_state.values()
+        for path, entry in refactor_state.items()
+        if path != "README.md"
     )
     assert "- completion_reason: `user_interruption`" in result.output
-    assert "- unresolved targets: `0`" in result.output
+    assert "- unresolved targets: `1`" in result.output
     report = terminal_primary_report(result)
     report_text = report.read_text()
-    assert "- `README.md`: 0 finding(s)" in report_text
+    assert "- `.gitignore`: 0 finding(s)" in report_text
+    assert "- `oracle/spec.md`: 0 finding(s)" in report_text
+    assert "- `README.md`: 1 finding(s)" in report_text
     assert 'command: "cmoc realization refactor fork"' in report_text
     assert 'terminal_classification: "user_interruption"' in report_text
+    assert 'completion_reason: "user_interruption"' in report_text
     assert "exit_code: 0" in report_text
     assert "## Related logs" in report_text
+    assert f"- processed targets: {len(refactor_state)}" in report_text
+    assert "- uninvestigated targets: 0" in report_text
+    assert "- count: 1" in report_text
+    assert "README unresolved finding" in report_text
+    assert "resolution.summary: 人間の判断が必要" in report_text
+    assert f"Codex call log: `{call_log}`" in report_text
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(
@@ -3412,95 +3438,6 @@ def test_refactor_start_interruption_with_broken_tracking_reports_existing_run(
     assert "run not established" not in report
     assert "Codex child stop failed" in report
     assert "rollback not attempted" in report
-
-
-def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
-    ready_content_session: tuple[Path, str, Path],
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """unresolved target を保留し、残りの target を処理して cycle を完了する。"""
-    root, _session_branch, state_path = ready_content_session
-    reviewed: list[str] = []
-    call_log = (tmp_path / "unresolved_call.json").resolve()
-    call_log.write_text("{}\n")
-
-    def fake_refactor(
-        _parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> SimpleNamespace:
-        """unresolved target を返し、他の target は処理済みとして返す。"""
-        purpose = str(kwargs["purpose"])
-        target = purpose.removeprefix("realization refactor: ")
-        reviewed.append(target)
-        if target == "README.md":
-            return SimpleNamespace(
-                returncode=0,
-                call_log_path=call_log,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "README unresolved finding",
-                            "changed_paths": [],
-                            "resolution": {
-                                "status": "unresolved",
-                                "summary": "人間の判断が必要",
-                            },
-                        }
-                    ],
-                    "verification": {
-                        "status": "passed",
-                        "summary": "fake full quality gate passed",
-                    },
-                },
-            )
-        return SimpleNamespace(
-            returncode=0,
-            output_json={
-                "findings": [],
-                "verification": {
-                    "status": "passed",
-                    "summary": "fake full quality gate passed",
-                },
-            },
-        )
-
-    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
-    _stop_after_cycles(monkeypatch)
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    state = _state(state_path)
-    assert state["run"]["state"] == "joinable"
-    parts = state["run"]["branch"].split("/")
-    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    refactor_state = load_refactor_state(worktree)
-    assert reviewed == sorted(refactor_state)
-    assert reviewed.count("README.md") == 1
-    assert reviewed.index("oracle/spec.md") > reviewed.index("README.md")
-    assert {
-        path
-        for path, entry in refactor_state.items()
-        if entry["investigation_required"]
-    } == {"README.md"}
-    assert refactor_state["README.md"]["last_investigation_result"] == "findings"
-    assert "- completion_reason: `user_interruption`" in result.output
-    assert "- unresolved targets: `1`" in result.output
-    report = terminal_primary_report(result)
-    report_text = report.read_text()
-    assert 'completion_reason: "user_interruption"' in report_text
-    assert f"- processed targets: {len(refactor_state)}" in report_text
-    assert "- uninvestigated targets: 0" in report_text
-    assert "- count: 1" in report_text
-    assert "`README.md`" in report_text
-    assert "README unresolved finding" in report_text
-    assert "resolution.summary: 人間の判断が必要" in report_text
-    assert f"Codex call log: `{call_log}`" in report_text
 
 
 def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
