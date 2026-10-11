@@ -1379,7 +1379,8 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
     # 採用上限を満たす正常候補と、上限外にある異常候補一つを用意する。
     candidate_count = 20
     available = candidate_count + 1
-    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
+    # 同じ正常ベクトルの本文も共有し、位置・件数を保って余分な cache 保存を省く。
+    (root / path).write_text("異常候補\n" + "正常候補\n" * candidate_count)
     worker = _CandidateWorker(
         {path: [(i + 1, i + 1) for i in range(available)]},
         vectors={path: [(0, 1)] + [(1, 0)] * candidate_count},
@@ -1387,8 +1388,10 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
     original_open = module._open_database
 
     def cosine_distance(embedding, query):
+        nonlocal invalid_distance_evaluated
         if struct.unpack_from("<f", embedding)[0] != 0:
             return 0.0
+        invalid_distance_evaluated = True
         if isinstance(distance, Exception):
             raise distance
         return distance
@@ -1408,7 +1411,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        # 演算の失敗は保存済みの文書を変えないため、索引構築を繰り返さない。
+        # 変えるのは距離演算だけなので、索引と query embedding を再利用する。
         for request_id, distance in enumerate(
             [
                 None,
@@ -1424,6 +1427,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
             ],
             start=1,
         ):
+            invalid_distance_evaluated = False
             response = _response(
                 {
                     "jsonrpc": "2.0",
@@ -1431,12 +1435,14 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
                     "method": "tools/call",
                     "params": {
                         "name": "search",
-                        "arguments": {"query": f"候補 {request_id}"},
+                        "arguments": {"query": "候補"},
                     },
                 },
                 search,
             )
             result = _assert_search_result(response, tool["outputSchema"], error=True)
+            # 同じ query の失敗を再利用して、後続の異常条件を素通りさせない。
+            assert invalid_distance_evaluated, repr(distance)
             assert result["status"] == "error", repr(distance)
             assert result["code"] == "MODEL_FAILURE", repr(distance)
 
