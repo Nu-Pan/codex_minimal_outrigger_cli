@@ -231,7 +231,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "ad340b907cefa05be7cc7f294ce33978d3dc072b77892dbe0a067f2e6c73bffc",
-    "last_investigated_at": "2026-10-09_10-57-20_655"
+    "last_investigated_at": "2026-10-11_13-06-27_772"
   },
   "oracle/doc/app_spec/windows_toast_notification.md": {
     "investigation_required": true,

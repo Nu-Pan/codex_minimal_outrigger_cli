@@ -663,7 +663,9 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
 
 
 def test_session_abandon_requires_existing_home_branch(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_completion_preprocess: list[Path],
 ) -> None:
     """home branchが存在しないsession abandonを拒否することを検証する。"""
     root = make_repo(tmp_path)
@@ -677,6 +679,7 @@ def test_session_abandon_requires_existing_home_branch(
 
     result = runner.invoke(app, ["session", "abandon"])
 
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert result.stdout == ""
     assert "# 失敗: cmoc session abandon" in result.stderr
@@ -696,7 +699,9 @@ def test_session_abandon_requires_existing_home_branch(
 
 
 def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_completion_preprocess: list[Path],
 ) -> None:
     """未joinのrunがある場合に先行するcleanup操作を案内する。"""
     root = make_repo(tmp_path)
@@ -715,13 +720,16 @@ def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
 
     result = runner.invoke(app, ["session", "abandon"])
 
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert "先に `cmoc run abandon`" in result.stderr
     assert current_branch(root) == session_branch
 
 
 def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_completion_preprocess: list[Path],
 ) -> None:
     """dirty worktree拒否でも既知のsession report fieldを保持する。"""
     root = make_repo(tmp_path)
@@ -732,6 +740,7 @@ def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
 
     result = runner.invoke(app, ["session", "abandon"])
 
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
     assert f'home_branch: "{home_branch}"' in rendered_report
@@ -741,7 +750,9 @@ def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
 
 
 def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_completion_preprocess: list[Path],
 ) -> None:
     """home branch の検証後に local ref が消えても remote branch へ切り替えない。
 
@@ -774,6 +785,7 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
 
     result = runner.invoke(app, ["session", "abandon"])
 
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert current_branch(root) == session_branch
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == home_commit
@@ -813,7 +825,10 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     ],
 )
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cleanup_error: BaseException
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    cleanup_error: BaseException,
+    session_completion_preprocess: list[Path],
 ) -> None:
     """cleanup失敗時にsession branchとactive stateを復元することを検証する。"""
     root = make_repo(tmp_path)
@@ -834,6 +849,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
 
     result = runner.invoke(app, ["session", "abandon"])
 
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert result.stdout == ""
     assert "session abandon の cleanup に失敗しました。" in result.stderr
@@ -853,7 +869,9 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
 
 
 def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_effect(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_completion_preprocess: list[Path],
 ) -> None:
     """branch削除後の中断でも元のsession branchとstateを復元する。"""
     root = make_repo(tmp_path)
@@ -875,6 +893,7 @@ def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_eff
 
     result = runner.invoke(app, ["session", "abandon"])
 
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert current_branch(root) == session_branch
     assert run_git(root, "rev-parse", session_branch).stdout.strip() == session_commit
@@ -883,7 +902,9 @@ def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_eff
 
 
 def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_race(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_completion_preprocess: list[Path],
 ) -> None:
     """rollback中に消えたlocal session branchをremoteから推測しない。"""
     root = make_repo(tmp_path)
@@ -939,6 +960,7 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
 
     result = runner.invoke(app, ["session", "abandon"])
 
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert raced
     assert current_branch(root) == home_branch
@@ -963,7 +985,10 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
 
 @pytest.mark.parametrize("command", ["abandon", "join"])
 def test_session_completion_rejects_missing_state_fields(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    command: str,
+    session_completion_preprocess: list[Path],
 ) -> None:
     """session completionが必須state field欠落を拒否することを検証する。"""
     root = make_repo(tmp_path)
@@ -975,6 +1000,7 @@ def test_session_completion_rejects_missing_state_fields(
 
     result = runner.invoke(app, ["session", command])
 
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert "session state file が不正です。" in result.stderr
     assert "必須 field" in result.stderr
@@ -982,9 +1008,9 @@ def test_session_completion_rejects_missing_state_fields(
 
 
 @pytest.fixture
-def session_join_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
-    """join 固有の検査では共通サービスの起動を省き、doctor 呼び出しを記録する。"""
-    # doctor の修復・順序と完全な join 経路は linked worktree のケースと
+def session_completion_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    """session 終了固有の検査では共通サービスを省き、doctor 呼び出しを記録する。"""
+    # fork→abandon/join の結合と doctor の修復・順序は正常系・linked worktree と
     # test_doctor_cli.py、collector の受付・保存・drain は test_feedback.py に残す。
     roots: list[Path] = []
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", roots.append)
@@ -1019,7 +1045,7 @@ def test_session_join_preserves_repository_local_feedback_state(
 def test_session_join_includes_incidental_conflict_resolution_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_join_preprocess: list[Path],
+    session_completion_preprocess: list[Path],
     remaining_marker: bool,
 ) -> None:
     """付随編集の取り込みと、未解消 marker による停止・stderr 出力を検証する。"""
@@ -1072,7 +1098,7 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert session_join_preprocess == [root]
+    assert session_completion_preprocess == [root]
     assert current_branch(root) == home_branch
     if remaining_marker:
         assert result.exit_code != 0
@@ -1112,7 +1138,7 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
 def test_session_join_accepts_incidental_conflict_file_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_join_preprocess: list[Path],
+    session_completion_preprocess: list[Path],
 ) -> None:
     """内容の整理、mode・改行 path と modify/modify・delete/modify の削除を merge する。"""
     # 同じ成功経路の Git 準備を共有し、各編集と NUL framing を別ファイルで検証する。
@@ -1179,7 +1205,7 @@ def test_session_join_accepts_incidental_conflict_file_changes(
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert session_join_preprocess == [root]
+    assert session_completion_preprocess == [root]
     assert result.exit_code == 0, result.output
     assert current_branch(root) == home_branch
     assert run_git(root, "status", "--porcelain").stdout == ""
@@ -1316,7 +1342,7 @@ def test_session_join_preprocesses_linked_worktree_before_preconditions(
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_join_preprocess: list[Path],
+    session_completion_preprocess: list[Path],
 ) -> None:
     """session branch削除失敗をwarningとしてjoin成功に含めることを検証する。"""
     root = make_repo(tmp_path)
@@ -1335,7 +1361,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
-    assert session_join_preprocess == [root]
+    assert session_completion_preprocess == [root]
     assert result.exit_code == 0
     assert current_branch(root) == home_branch
     assert (
@@ -1351,7 +1377,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
 def test_session_join_does_not_delete_when_local_branch_reachability_check_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_join_preprocess: list[Path],
+    session_completion_preprocess: list[Path],
 ) -> None:
     """local session branchのreachability確認失敗時に削除しないことを検証する。"""
     root = make_repo(tmp_path)
@@ -1374,7 +1400,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
-    assert session_join_preprocess == [root]
+    assert session_completion_preprocess == [root]
     assert result.exit_code == 0
     assert current_branch(root) == home_branch
     assert delete_calls == 0
@@ -1391,7 +1417,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
 def test_session_join_rejects_missing_home_branch_before_remote_guess(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_join_preprocess: list[Path],
+    session_completion_preprocess: list[Path],
 ) -> None:
     """local home branch がない場合に同名 remote branch へ join しない。
 
@@ -1408,7 +1434,7 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert session_join_preprocess == [root]
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert current_branch(root) == session_branch
     assert "git コマンドが失敗しました。" in result.stderr
@@ -1430,7 +1456,7 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
 def test_session_join_handled_failure_is_written_to_stderr(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_join_preprocess: list[Path],
+    session_completion_preprocess: list[Path],
 ) -> None:
     """事前条件 error terminal result を stderr へ出力する。"""
     root = make_repo(tmp_path)
@@ -1440,7 +1466,7 @@ def test_session_join_handled_failure_is_written_to_stderr(
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert session_join_preprocess == [root]
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert result.stdout == ""
     assert "# 失敗: cmoc session join" in result.stderr
@@ -1454,7 +1480,7 @@ def test_session_join_handled_failure_is_written_to_stderr(
 def test_session_join_codex_failure_reports_unresolved_merge(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_join_preprocess: list[Path],
+    session_completion_preprocess: list[Path],
 ) -> None:
     """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
     root = make_repo(tmp_path)
@@ -1482,7 +1508,7 @@ def test_session_join_codex_failure_reports_unresolved_merge(
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert session_join_preprocess == [root]
+    assert session_completion_preprocess == [root]
     assert result.exit_code != 0
     assert current_branch(root) == home_branch
     assert "Codex CLI 呼び出しが失敗しました。" in result.stderr
