@@ -15,8 +15,11 @@ from test_feedback import (
     _store_agent_issue,
 )
 
+import commons.runtime_cli as runtime_cli
+import commons.runtime_doctor as runtime_doctor
 import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
+import sub_commands.feedback.close as close_module
 import sub_commands.feedback.decision as decision
 import sub_commands.feedback.report as report_module
 from commons.runtime_errors import CmocError
@@ -73,6 +76,17 @@ def reported_case(tmp_path, monkeypatch):
 def open_case(tmp_path, monkeypatch):
     # close 固有の検査には session を作らず、report を実行するケースだけで準備する。
     # report から close への結合と入力消費は reported_case の検査に残す。
+    # この fixture の入力は直接保存するため、TCP collector と接続 probe は不要。
+    # 受付・保存・drain は test_feedback.py、実 collector との結合は reported_case に残す。
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    monkeypatch.setattr(
+        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
+    )
+    # doctor 内部の修復・索引同期は専用 test と reported_case で検証する。
+    # close が前処理の失敗を越えて更新しないことは、この file の失敗 test に残す。
+    monkeypatch.setattr(close_module, "run_doctor_preprocess", lambda _root: None)
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     seed_search_config(root)
@@ -350,6 +364,29 @@ def test_close_input_failures_save_invocation_reports(open_case):
         assert feedback_state.load_active_state(root) == before, arguments
         assert close_state.load_close_work(root) is None, arguments
         assert feedback_state.load_report_cut(root) is None, arguments
+
+
+def test_close_doctor_failure_preserves_state_and_saves_invocation_report(
+    open_case, monkeypatch
+):
+    root, issue = open_case
+    before = feedback_state.load_active_state(root)
+
+    def failed_preprocess(worktree):
+        assert worktree == root
+        raise CmocError(
+            "injected doctor failure",
+            ["cmoc doctor を再実行してください。"],
+            str(worktree),
+        )
+
+    monkeypatch.setattr(close_module, "run_doctor_preprocess", failed_preprocess)
+    result = _close(issue)
+    assert result.exit_code == 1, result.output
+    assert "injected doctor failure" in result.output
+    assert "feedback/invocation" in str(terminal_primary_report(result))
+    assert feedback_state.load_active_state(root) == before
+    assert close_state.load_close_work(root) is None
 
 
 def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monkeypatch):
