@@ -33,7 +33,8 @@ def editor_input(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], list[Path]]
     """CLI の editor 起動時に指定本文を書き、実際に渡された入力 path を記録する。"""
 
     # editor 選択と --wait は test_prompt_editor_input.py で検証する。
-    # handoff・確定保存は実経路を通し、本文を書くためだけの process 起動を省く。
+    # main 起動の handoff と各ケースの確定保存は実経路を通す。
+    # 本文を書くためだけの process 起動は省く。
     def supply_input(content: str) -> list[Path]:
         opened: list[Path] = []
 
@@ -290,12 +291,14 @@ def test_tui_runs_editor_and_launches_codex_directly(
 
 
 def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
-    tmp_path: Path,
+    committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     editor_input: Callable[[str], list[Path]],
+    handoff_start: Mock,
 ) -> None:
     """linked 起動で両 root を ignore し、入力記録と agent context を main に置く。"""
-    root = make_repo(tmp_path)
+    # HEAD と linked metadata だけが必要なので、追跡 file・index の準備は省く。
+    root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
     # doctor との実結合は main 起動ケース、linked 修復は test_doctor_cli.py に残す。
@@ -303,6 +306,12 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     doctor_roots: list[Path] = []
     monkeypatch.setattr(
         runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
+    )
+    # doctor と TUI は観測用のダブルなので、使わない collector は起動しない。
+    # handoff の実結合は main 起動、TCP lifecycle は専用 test に残し、
+    # linked 起動では main root への引き渡しと終了順序を観測する。
+    monkeypatch.setattr(
+        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
     )
     write_config(linked / ".cmoc/gt/config.json", CmocConfig())
     monkeypatch.chdir(linked)
@@ -312,6 +321,7 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         """linked worktree の TUI 起動 call を記録する。"""
         assert doctor_roots == [linked.resolve()]
+        handoff_start.return_value.close.assert_called_once_with()
         tui_calls.append((parameter, kwargs))
 
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
@@ -327,6 +337,12 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     assert parameter.agent_call_cwd == root.resolve()
     [saved_input] = (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
     assert opened_inputs == [saved_input]
+    handoff_start.assert_called_once()
+    assert handoff_start.call_args.args[:2] == (root.resolve(), saved_input)
+    assert (
+        prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+        in handoff_start.call_args.args[2]
+    )
     assert saved_input.read_text() == "\nlinked worktree task\n"
     assert not list(
         (linked / ".cmoc" / "gu" / "log" / "editor_input").glob("*_cmpl.md")
