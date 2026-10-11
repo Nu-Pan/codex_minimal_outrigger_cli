@@ -1415,6 +1415,62 @@ def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
 
 
+def test_staged_deletion_check_preserves_saved_index_with_one_git_query(
+    committed_repository, tmp_path, monkeypatch
+):
+    """退避 index の削除だけを一度の問い合わせで判定し、index 自体は変更しない。"""
+    root = committed_repository
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "track ignore rule")
+    blob = run_git(root, "rev-parse", "HEAD:.gitignore").stdout.strip()
+    original_index = (root / ".git/index").read_bytes()
+    # 通常 index は退避 index と区別し、判定が渡された index を読むことも確認する。
+    run_git(root, "update-index", "--force-remove", ".gitignore")
+    original_run = doctor_module.subprocess.run
+
+    # HEAD と repository の準備は一度にし、各ケースでは退避 index だけを作り替える。
+    for change in ("clean", "delete", "rename", "intent", "unmerged"):
+        index_path = tmp_path / f"{change}.index"
+        index_path.write_bytes(original_index)
+        if change != "clean":
+            doctor_module._run_git_with_index(
+                ["update-index", "--force-remove", ".gitignore"], root, index_path
+            )
+        if change == "rename":
+            doctor_module._stage_blob(
+                root, index_path, "renamed-ignore", "100644", blob
+            )
+        elif change == "intent":
+            doctor_module._run_git_with_index(
+                ["add", "-N", ".gitignore"], root, index_path
+            )
+        elif change == "unmerged":
+            doctor_module._run_git_with_index(
+                ["update-index", "--index-info"],
+                root,
+                index_path,
+                input_text=f"100644 {blob} 1\t.gitignore\n100644 {blob} 3\t.gitignore\n",
+            )
+        before = index_path.read_bytes()
+        git_calls = 0
+
+        def count_git_calls(argv, *args, **kwargs):
+            nonlocal git_calls
+            if argv[0] == "git":
+                git_calls += 1
+            return original_run(argv, *args, **kwargs)
+
+        with monkeypatch.context() as observed:
+            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+            assert doctor_module._is_staged_deletion_of_head_entry(
+                root, index_path, ".gitignore"
+            ) is (change in {"delete", "rename"}), change
+
+        assert git_calls <= 1, change
+        assert index_path.read_bytes() == before, change
+
+
 def test_doctor_preserves_preexisting_staged_gitignore_deletion(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

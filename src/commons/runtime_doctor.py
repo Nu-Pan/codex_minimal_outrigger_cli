@@ -929,13 +929,24 @@ def _is_staged_deletion_of_head_entry(
     path: str,
 ) -> bool:
     """元 index が HEAD の tracked path を staged deletion にしているか返す。"""
-    if _head_entry(root, path) is None:
-        return False
-    return not _run_git_with_index(
-        ["ls-files", "--stage", "--", path],
-        root,
-        index_path,
-    ).stdout.strip()
+    # HEAD と退避 index の削除差分を一度に調べる。rename の元は削除とし、
+    # intent-to-add や conflict の entry が残る path は削除扱いにしない。
+    return bool(
+        _run_git_with_index(
+            [
+                "diff",
+                "--cached",
+                "--no-renames",
+                "--ita-visible-in-index",
+                "--diff-filter=D",
+                "--name-only",
+                "--",
+                path,
+            ],
+            root,
+            index_path,
+        ).stdout.strip()
+    )
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:
