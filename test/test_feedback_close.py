@@ -44,6 +44,19 @@ from commons.runtime_logging import SubcommandLogger
 from main import app
 
 
+@pytest.fixture(autouse=True)
+def _isolate_feedback_transport(monkeypatch):
+    """直接保存した観測と fake 応答を使う close 検査では transport を起動しない。"""
+    # stdio・TCP の接続、受理・拒否・drain は test_feedback.py で検証する。
+    # ここでは report から close への状態・履歴・入力消費の結合を実装で確かめる。
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    monkeypatch.setattr(
+        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
+    )
+
+
 @pytest.fixture
 def reported_case(tmp_path, monkeypatch):
     root = make_repo(tmp_path)
@@ -76,14 +89,6 @@ def reported_case(tmp_path, monkeypatch):
 def open_case(tmp_path, monkeypatch):
     # close 固有の検査には session を作らず、report を実行するケースだけで準備する。
     # report から close への結合と入力消費は reported_case の検査に残す。
-    # この fixture の入力は直接保存するため、TCP collector と接続 probe は不要。
-    # 受付・保存・drain は test_feedback.py、実 collector との結合は reported_case に残す。
-    monkeypatch.setattr(
-        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
-    )
-    monkeypatch.setattr(
-        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
-    )
     # doctor 内部の修復・索引同期は専用 test と reported_case で検証する。
     # close が前処理の失敗を越えて更新しないことは、この file の失敗 test に残す。
     monkeypatch.setattr(close_module, "run_doctor_preprocess", lambda _root: None)
