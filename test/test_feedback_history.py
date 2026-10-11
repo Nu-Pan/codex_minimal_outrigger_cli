@@ -95,3 +95,59 @@ def test_history_load_rejects_duplicate_or_nested_paths(saved_history, fault):
 
     with pytest.raises(CmocError, match="path が重複または不正"):
         load_history(root, references)
+
+
+@pytest.mark.parametrize("root_kind", ["relative", "symlink"])
+def test_history_load_preserves_reference_order_with_repository_aliases(
+    saved_history, monkeypatch, root_kind
+):
+    root, path, record, reference = saved_history
+    next_record = {
+        **record,
+        "generation_id": "fbg_000002_2026-10-08_00-00",
+        "created_at": "2026-10-09T00:00:00Z",
+    }
+    next_path = path.with_name(f"{next_record['generation_id']}.json")
+    content = canonical_json_bytes(next_record)
+    next_path.write_bytes(content)
+    next_reference = {
+        "path": next_path.relative_to(root).as_posix(),
+        "sha256": sha256_bytes(content),
+    }
+    if root_kind == "relative":
+        monkeypatch.chdir(root)
+        repository = Path(".")
+    else:
+        repository = root / "repository-alias"
+        repository.symlink_to(root, target_is_directory=True)
+
+    # timestamp や directory 順ではなく、確定済み参照の順に採用する。
+    assert load_history(repository, [next_reference, reference]) == [
+        next_record,
+        record,
+    ]
+    assert load_history(repository, [reference, next_reference]) == [
+        record,
+        next_record,
+    ]
+
+
+@pytest.mark.parametrize("link_kind", ["file", "directory"])
+def test_history_load_rejects_symlink_before_reading(
+    saved_history, monkeypatch, link_kind
+):
+    root, path, _, reference = saved_history
+    if link_kind == "file":
+        alias = path.with_name("alias.json")
+        alias.symlink_to(path)
+        reference["path"] = alias.relative_to(root).as_posix()
+    else:
+        saved = path.parent.with_name("saved-history")
+        path.parent.rename(saved)
+        path.parent.symlink_to(saved, target_is_directory=True)
+    monkeypatch.setattr(
+        Path, "read_bytes", lambda _path: pytest.fail("symlink target must not be read")
+    )
+
+    with pytest.raises(CmocError, match="symlink"):
+        load_history(root, [reference])
