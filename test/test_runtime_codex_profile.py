@@ -575,9 +575,11 @@ def test_codex_overrides_reject_missing_agent_call_setting() -> None:
 
 
 def test_prepare_schema_preserves_source_bytes_for_hash_store(tmp_path: Path) -> None:
-    """schema の改行を変えず、source 本文の SHA256 path に保存する。"""
+    """schema の UTF-8 本文と改行を変えず、SHA256 path に保存する。"""
     source = tmp_path / "schema.json"
-    source_bytes = b'{\r\n  "type": "object"\r\n}\r\n'
+    source_bytes = '{\r\n  "type": "object",\r\n  "title": "日本語"\r\n}\r\n'.encode(
+        "utf-8"
+    )
     source.write_bytes(source_bytes)
 
     stored = prepare_schema(tmp_path / "repo", source)

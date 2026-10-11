@@ -18,16 +18,11 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def text_sha256(text: str) -> str:
-    """文字列を UTF-8 として扱った SHA-256 digest を返す。"""
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
 def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -> Path:
     """出力 directory を作成し、内容 hash を名前に含む file を保存する。"""
-    digest = text_sha256(content)
-    path = directory / f"{prefix}{digest}{suffix}"
     content_bytes = content.encode("utf-8")
+    digest = hashlib.sha256(content_bytes).hexdigest()
+    path = directory / f"{prefix}{digest}{suffix}"
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の schema store は、
     # hash path 自体の種類を一度だけ調べ、symlink のリンク先は読まない。
     try:
@@ -50,6 +45,7 @@ def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -
             temporary_path = Path(temporary_file.name)
             temporary_file.write(content_bytes)
         os.replace(temporary_path, path)
+        temporary_path = None
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
