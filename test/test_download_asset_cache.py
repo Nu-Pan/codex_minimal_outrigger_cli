@@ -437,16 +437,26 @@ def test_npm_build_reuses_all_dependencies_without_network(
     monkeypatch.setenv("NODE_OPTIONS", f"--require={guard}")
     monkeypatch.setenv("npm_config_registry", distribution[0])
 
-    # 取得元の違いは tarball の準備までで完結するため、初回は渡す内容を照合する。
+    # 制約のない tarball の取得では Node を起動せず、実 platform は後段で検査する。
     root = tmp_path / "cmoc-download"
     base = root / "build"
     original = _npm_fixture(base, distribution)
-    with assets.node_runtime_assets(root, base):
-        lock = json.loads((base / "package-lock.json").read_text())
-        for name, path in (("asset-a", "/a.tgz"), ("asset-b", "/b.tgz")):
-            resolved = urlsplit(lock["packages"]["node_modules/" + name]["resolved"])
-            assert resolved.scheme == "file"
-            assert Path(unquote(resolved.path)).read_bytes() == distribution[1][path]
+    with monkeypatch.context() as acquisition:
+        acquisition.setattr(
+            assets,
+            "_npm_platform",
+            lambda: {"os": "linux", "cpu": "x64", "libc": "glibc"},
+        )
+        with assets.node_runtime_assets(root, base):
+            lock = json.loads((base / "package-lock.json").read_text())
+            for name, path in (("asset-a", "/a.tgz"), ("asset-b", "/b.tgz")):
+                resolved = urlsplit(
+                    lock["packages"]["node_modules/" + name]["resolved"]
+                )
+                assert resolved.scheme == "file"
+                assert (
+                    Path(unquote(resolved.path)).read_bytes() == distribution[1][path]
+                )
     assert (base / "package-lock.json").read_bytes() == original
     assert not (base / ".assets").exists()
     assert all(event["source"] == "download" for event in _states(asset_logger))
