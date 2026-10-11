@@ -421,14 +421,11 @@ def test_report_cut_update_skips_unchanged_write_but_rechecks_inputs(
     assert h.path.read_bytes() == changed_content
 
 
-@pytest.mark.parametrize("target", ["observation", "normalization", "remediation"])
 def test_report_cut_manifest_reads_hash_verified_inputs_once(
-    report_cut_inputs, monkeypatch, target
+    report_cut_inputs, monkeypatch
 ):
     h, paths = report_cut_inputs
-    replaced = paths[target]
     original_read = Path.read_bytes
-    original_content = original_read(replaced)
     reads = Counter()
 
     def replace_after_read(path):
@@ -440,33 +437,35 @@ def test_report_cut_manifest_reads_hash_verified_inputs_once(
         return content
 
     monkeypatch.setattr(Path, "read_bytes", replace_after_read)
-    for allow_missing in (False, True):
-        reads.clear()
-        # hash を確認した同じ byte 列を検証し、後からの置換を混ぜない。
-        _validate_report_cut_manifest(
-            h.context.repo,
-            h.manifest,
-            h.path,
-            allow_missing_cleanup_targets=allow_missing,
-        )
-        assert reads == {path: 1 for path in paths.values()}
-        # 呼出し間の cache は持たず、次の検証では置換による破損を検出する。
-        with pytest.raises(CmocError, match="SHA256"):
+    # 同じ wave・checkpoint の準備を共有し、各入力は検査後に元へ戻す。
+    for target, replaced in paths.items():
+        original_content = original_read(replaced)
+        for allow_missing in (False, True):
+            reads.clear()
+            # hash を確認した同じ byte 列を検証し、後からの置換を混ぜない。
             _validate_report_cut_manifest(
                 h.context.repo,
                 h.manifest,
                 h.path,
                 allow_missing_cleanup_targets=allow_missing,
             )
-        replaced.write_bytes(original_content)
+            assert reads == {path: 1 for path in paths.values()}, (
+                target,
+                allow_missing,
+            )
+            # 呼出し間の cache は持たず、次の検証では置換による破損を検出する。
+            with pytest.raises(CmocError, match="SHA256"):
+                _validate_report_cut_manifest(
+                    h.context.repo,
+                    h.manifest,
+                    h.path,
+                    allow_missing_cleanup_targets=allow_missing,
+                )
+            replaced.write_bytes(original_content)
 
 
-@pytest.mark.parametrize("target", ["observation", "normalization", "remediation"])
-def test_report_cut_manifest_cleanup_relaxes_only_input_existence(
-    report_cut_inputs, target
-):
+def test_report_cut_manifest_cleanup_relaxes_only_input_existence(report_cut_inputs):
     h, paths = report_cut_inputs
-    path = paths[target]
 
     def validate(allow_missing):
         _validate_report_cut_manifest(
@@ -476,27 +475,34 @@ def test_report_cut_manifest_cleanup_relaxes_only_input_existence(
             allow_missing_cleanup_targets=allow_missing,
         )
 
-    path.unlink()
-    with pytest.raises(CmocError, match="通常 file"):
-        validate(False)
-    validate(True)
-
-    # 削除済み file の許容を、dangling symlink や directory に広げない。
-    path.symlink_to(h.context.repo / "missing-input.json")
-    for allow_missing in (False, True):
-        with pytest.raises(CmocError, match="symlink"):
-            validate(allow_missing)
-    path.unlink()
-    path.mkdir()
-    for allow_missing in (False, True):
+    # 入力の種類で許容条件は変わらないため、正式な保存処理の準備を共有する。
+    for path in paths.values():
+        original_content = path.read_bytes()
+        path.unlink()
         with pytest.raises(CmocError, match="通常 file"):
-            validate(allow_missing)
-    path.rmdir()
+            validate(False)
+        validate(True)
 
-    path.write_bytes(canonical_json_bytes({"changed": True}))
-    for allow_missing in (False, True):
-        with pytest.raises(CmocError, match="SHA256"):
-            validate(allow_missing)
+        # 削除済み file の許容を、dangling symlink や directory に広げない。
+        path.symlink_to(h.context.repo / "missing-input.json")
+        for allow_missing in (False, True):
+            with pytest.raises(CmocError, match="symlink"):
+                validate(allow_missing)
+        path.unlink()
+        path.mkdir()
+        for allow_missing in (False, True):
+            with pytest.raises(CmocError, match="通常 file"):
+                validate(allow_missing)
+        path.rmdir()
+
+        path.write_bytes(canonical_json_bytes({"changed": True}))
+        for allow_missing in (False, True):
+            with pytest.raises(CmocError, match="SHA256"):
+                validate(allow_missing)
+
+        # 次の入力の検査へ破損を持ち越さず、正常な組へ復旧できたことも確かめる。
+        path.write_bytes(original_content)
+        validate(False)
 
 
 def test_normalization_checkpoint_rejects_schema_invalid_output(tmp_path):
