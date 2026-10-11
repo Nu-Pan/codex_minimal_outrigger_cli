@@ -9,12 +9,14 @@
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
 
 import pytest
 from _git_support import make_repo, run_git
 
 import commons.runtime_refactor as refactor_module
+import sub_commands.realization.refactor.fork as refactor_workload
 from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (
@@ -305,6 +307,79 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     assert changed["last_investigation_result"] == "no_findings"
     assert changed["last_investigated_at"] == "2026-07-19_00-00-00_000"
     assert changed["last_investigated_sha256"] == previous_digest
+
+
+@pytest.mark.parametrize("change", ["none", "target_mode", "related_mode"])
+def test_refactor_state_update_requeues_changes_without_redundant_io(
+    refactor_files: Path, monkeypatch: pytest.MonkeyPatch, change: str
+) -> None:
+    """調査履歴と再調査要求を保ち、重複保存と要求済み file の hash 比較を省く。"""
+    root = refactor_files
+    related = root / "related.py"
+    related.write_text("VALUE = 1\n")
+    paths = {"README.md", "oracle/spec.md", related.name}
+    # 実列挙・追加削除・rename・commit/rollback は既存の結合 test に残す。
+    monkeypatch.setattr(
+        refactor_module, "enumerate_refactor_targets", lambda _root: sorted(paths)
+    )
+    state = sync_refactor_state(root)
+    for relative, entry in state.items():
+        entry.update(
+            investigation_required=False,
+            last_investigation_result="no_findings",
+            last_investigated_sha256=file_sha256(root / relative),
+            last_investigated_at="2026-10-11_00-00-00_000",
+        )
+    state["README.md"].update(
+        investigation_required=True, last_investigation_result="findings"
+    )
+    write_refactor_state(root, state)
+
+    changed = []
+    if change in {"target_mode", "related_mode"}:
+        relative = "README.md" if change == "target_mode" else related.name
+        (root / relative).chmod(0o755)
+        changed = [relative]
+
+    def save_changed_state(root: Path, updated: RefactorState) -> None:
+        assert updated != load_refactor_state(root), "state is already persisted"
+        write_refactor_state(root, updated)
+
+    hashed_paths = []
+
+    def record_hash(path: Path) -> str:
+        hashed_paths.append(path)
+        return file_sha256(path)
+
+    monkeypatch.setattr(refactor_module, "write_refactor_state", save_changed_state)
+    monkeypatch.setattr(refactor_workload, "write_refactor_state", save_changed_state)
+    monkeypatch.setattr(refactor_module, "file_sha256", record_hash)
+    investigated_at = "2026-10-11_00-00-00_001"
+    monkeypatch.setattr(refactor_workload, "timestamp", lambda: investigated_at)
+    has_findings = change != "none"
+
+    refactor_workload._update_refactor_state(
+        SimpleNamespace(run_worktree=root),
+        "README.md",
+        state["README.md"]["last_investigated_sha256"],
+        has_findings,
+        changed,
+    )
+
+    updated = load_refactor_state(root)
+    assert set(updated) == paths
+    assert updated["README.md"] == {
+        **state["README.md"],
+        "investigation_required": has_findings,
+        "last_investigation_result": "findings" if has_findings else "no_findings",
+        "last_investigated_at": investigated_at,
+    }
+    assert updated["oracle/spec.md"] == state["oracle/spec.md"]
+    assert updated[related.name] == {
+        **state[related.name],
+        "investigation_required": change == "related_mode",
+    }
+    assert set(hashed_paths).isdisjoint(root / relative for relative in changed)
 
 
 def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
