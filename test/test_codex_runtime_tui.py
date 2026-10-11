@@ -9,7 +9,7 @@ from dataclasses import replace
 from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from _codex_support import (
@@ -189,11 +189,11 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
 
 
 def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
-    tui_runtime_directory: Path,
+    tui_log_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """未検証 Codex では root filter なしの legacy callback を渡さない。"""
-    root = tui_runtime_directory
+    root = tui_log_directory
     # version 判定は test_runtime_codex_profile.py、実 process の argv/cwd は
     # prompt 起動ケースに残し、ここでは判定後の通知設定だけを観測する。
     version_probe = Mock(return_value=False)
@@ -220,10 +220,10 @@ def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
 
 
 def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
-    tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
+    tui_log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """未定義 call の TUI では Codex version probe より先に設定エラーにする。"""
-    root = tui_runtime_directory
+    root = tui_log_directory
     probe_calls: list[tuple[object, object]] = []
 
     def record_version_probe(*args: object, **kwargs: object) -> bool:
@@ -248,10 +248,10 @@ def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
 
 
 def test_run_codex_tui_rejects_missing_provider_before_version_probe(
-    tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
+    tui_log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """未定義 provider の TUI でも Codex version probe より先に失敗する。"""
-    root = tui_runtime_directory
+    root = tui_log_directory
     probe_calls: list[tuple[object, object]] = []
 
     def record_version_probe(*args: object, **kwargs: object) -> bool:
@@ -280,11 +280,11 @@ def test_run_codex_tui_rejects_missing_provider_before_version_probe(
 
 
 def test_run_codex_tui_skips_notification_probe_during_completion(
-    tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
+    tui_log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """シェル補完中は通知設定の Codex version probe を実行しない。"""
     # probe の呼び出し境界を観測し、TUI 本体の起動は process を作らずに代替する。
-    root = tui_runtime_directory
+    root = tui_log_directory
     probe_calls: list[tuple[object, object]] = []
     tui_calls: list[list[str]] = []
 
@@ -537,17 +537,18 @@ def test_run_codex_tui_logs_keyboard_interrupt(
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
     tui_log_directory: Path,
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex の非 0 終了を TUI 呼び出し失敗として報告し、call log を保存することを確認する。"""
     root = tui_log_directory
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(7)"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    # 非 0 終了の判定も実 wrapper を通し、argv・cwd の実 process 結合は prompt ケースに残す。
+    process = MagicMock()
+    process.__enter__.return_value = process
+    process.communicate.return_value = (None, None)
+    process.wait.return_value = 7
+    monkeypatch.setattr(subprocess, "Popen", Mock(return_value=process))
 
     logger = SubcommandLogger(root, "test")
     token = set_current_subcommand_logger(logger)
