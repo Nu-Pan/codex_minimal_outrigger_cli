@@ -6,6 +6,7 @@ import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -25,6 +26,7 @@ from oracle.other.cmoc_config import CodexCallConfig
 
 import cmoc_runtime
 import commons.runtime_codex_tui as runtime_codex_tui
+import commons.runtime_logging as runtime_logging
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_tui
@@ -55,6 +57,24 @@ def tui_runtime_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         ),
     )
     return root
+
+
+@pytest.fixture
+def tui_log_directory(
+    tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """単発 TUI のログ検査では、ID の永続採番を準備しない。"""
+    # 永続性・並行採番は test_runtime_ids.py、TUI の採番との結合は
+    # 同一 timestamp・並行 TUI・prompt 起動のケースに残す。
+    ids = count()
+
+    def issue_id(_root: Path, prefix: str) -> str:
+        """実行・agent call・Codex call に異なる ID を供給する。"""
+        return f"{prefix}_{next(ids):06d}_2000-01-01_00-00"
+
+    monkeypatch.setattr(runtime_logging, "new_id", issue_id)
+    monkeypatch.setattr(runtime_codex_tui, "new_id", issue_id)
+    return tui_runtime_directory
 
 
 def _tui_call_logs(root: Path) -> list[Path]:
@@ -366,12 +386,12 @@ def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
 
 
 def test_run_codex_tui_logs_successful_call(
-    tui_runtime_directory: Path,
+    tui_log_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """正常終了時に call log とサブコマンドイベントだけを残す。"""
-    root = tui_runtime_directory
+    root = tui_log_directory
     stub_codex_overrides(monkeypatch)
     # 成功 process との実結合は prompt 起動ケースに残し、ここではログを検査する。
     monkeypatch.setattr(
@@ -432,12 +452,12 @@ def test_run_codex_tui_keeps_call_logs_on_same_timestamp(
 
 
 def test_run_codex_tui_logs_missing_cli_failure(
-    tui_runtime_directory: Path,
+    tui_log_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex CLI 不在時に未起動の失敗として各ログへ記録し、エラーを返すことを確認する。"""
-    root = tui_runtime_directory
+    root = tui_log_directory
     stub_codex_overrides(monkeypatch)
     real_popen: Callable[..., object] = subprocess.Popen
 
@@ -476,12 +496,12 @@ def test_run_codex_tui_logs_missing_cli_failure(
 
 
 def test_run_codex_tui_logs_keyboard_interrupt(
-    tui_runtime_directory: Path,
+    tui_log_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """KeyboardInterrupt を再送出しつつ、未起動扱いの call log とイベントを残すことを確認する。"""
-    root = tui_runtime_directory
+    root = tui_log_directory
     stub_codex_overrides(monkeypatch)
 
     def interrupt(*_args: object, **_kwargs: object) -> object:
@@ -516,13 +536,13 @@ def test_run_codex_tui_logs_keyboard_interrupt(
 
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
-    tui_runtime_directory: Path,
+    tui_log_directory: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex の非 0 終了を TUI 呼び出し失敗として報告し、call log を保存することを確認する。"""
-    root = tui_runtime_directory
+    root = tui_log_directory
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
