@@ -2985,50 +2985,85 @@ def test_feedback_basis_includes_oracle_changes_but_ignores_refactor_state(
     assert decision_module.worktree_inputs(root) != baseline
 
 
-def test_machine_observation_stays_bounded_until_recurrence_threshold(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """threshold 未満は bounded aggregate、到達後は remediation candidate にする。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+def _reporter_unavailable_observation(root, context, index, occurred_at):
+    """同じ rule の observation を異なる recurrence scope で保存する。"""
     log_path = root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
-    canonical_key: str | None = None
-    # 集約の threshold を確認するため、壁時計が数秒戻っても window 内の時刻を使う。
-    observed_at = (
-        (datetime.now(timezone.utc) - timedelta(minutes=5))
-        .isoformat()
-        .replace("+00:00", "Z")
+    context = {
+        **context,
+        "cmoc_session_id": f"sess_{index:06d}_2026-09-29_15-04",
+        "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
+    }
+    event = {
+        "event_schema_version": 1,
+        "event_id": f"evt_{index}",
+        "event_type": "feedback.reporter_unavailable",
+        "occurred_at": occurred_at,
+        "subcommand_invocation_id": context["subcommand_invocation_id"],
+        "component": "reporter",
+        "failure_code": "missing",
+    }
+    _observation_id, raw_path = store_machine_observation(
+        root,
+        context,
+        rule_id="feedback.reporter_unavailable.v1",
+        category="tooling",
+        subject_type="reporter_component",
+        normalized_subject_id="reporter:missing",
+        summary="feedback reporter が反復して利用できない。",
+        impact="agent observation が欠落する。",
+        human_action="reporter を確認する。",
+        event=event,
+        log_path=log_path,
     )
+    return read_json_object(raw_path)
 
+
+def test_machine_threshold_counts_distinct_scopes_within_one_day(
+    feedback_directory, stored_feedback_context
+):
+    """同じ日への追加入力も distinct scope として集約し、threshold を判定する。"""
+    root = feedback_directory
+    cut_at = "2026-09-29T15:04:00Z"
+    aggregate = None
     for index in range(2):
-        event = {
-            "event_schema_version": 1,
-            "event_id": f"evt_{index}",
-            "event_type": "feedback.reporter_unavailable",
-            "occurred_at": observed_at,
-            "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
-            "component": "reporter",
-            "failure_code": "missing",
-        }
-        context = _context(root, session_id=f"sess_{index:06d}_2026-09-29_15-04")
-        context["subcommand_invocation_id"] = event["subcommand_invocation_id"]
-        _observation_id, raw_path = store_machine_observation(
-            root,
-            context,
-            rule_id="feedback.reporter_unavailable.v1",
-            category="tooling",
-            subject_type="reporter_component",
-            normalized_subject_id="reporter:missing",
-            summary="feedback reporter が反復して利用できない。",
-            impact="agent observation が欠落する。",
-            human_action="reporter を確認する。",
-            event=event,
-            log_path=log_path,
+        observation = _reporter_unavailable_observation(
+            root, stored_feedback_context, index, cut_at
         )
-        raw = read_json_object(raw_path)
-        canonical_key = machine_canonical_key(raw)
+        aggregate = feedback_report_module._merge_machine_aggregate(
+            root, aggregate, [observation], cut_at, machine_canonical_key(observation)
+        )
+
+        assert aggregate is not None
+        assert len(aggregate["time_buckets"]) == 1
+        assert aggregate["occurrence_count"] == index + 1
+        assert aggregate["threshold_counts"]["recurrence_scope"] == index + 1
+        assert feedback_report_module._machine_threshold_met(aggregate) == (index == 1)
+
+
+def test_machine_issue_lifecycle_keeps_threshold_state_after_window_expires(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """閾値未満、案件化、部分・全件の期限切れを同じ公開 state で追跡する。"""
+    # 案件化までの Git/session と publication を、期限切れ検査の準備にも使う。
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+    context = _context(root)
+    base = datetime.now(timezone.utc).replace(microsecond=0)
+    cut_at = base.isoformat().replace("+00:00", "Z")
+    # recurrence window の基準は manifest 作成側、publication の日時は表示側に属する。
+    monkeypatch.setattr(remediation_module, "rfc3339_now", lambda: cut_at)
+    monkeypatch.setattr(feedback_report_module, "rfc3339_now", lambda: cut_at)
+
+    for index, age_days in enumerate((20, 1)):
+        occurred_at = (
+            (base - timedelta(days=age_days)).isoformat().replace("+00:00", "Z")
+        )
+        observation = _reporter_unavailable_observation(
+            root, context, index, occurred_at
+        )
+        canonical_key = machine_canonical_key(observation)
         if index == 0:
             monkeypatch.setattr(
                 feedback_report_module,
@@ -3038,16 +3073,20 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
                 ),
             )
         else:
-            assert canonical_key is not None
             candidate_id = issue_id(canonical_key)
-            _install_codex_outputs(
-                monkeypatch,
-                _remediation_output(
-                    candidate_id,
-                    "human_required",
-                    reference_path=".cmoc/gu/log/test.jsonl",
-                ),
-            )
+
+            def fake_remediation(parameter, **_kwargs):
+                return _fake_result(
+                    root,
+                    _remediation_output(
+                        candidate_id,
+                        "human_required",
+                        reference_path=".cmoc/gu/log/test.jsonl",
+                    ),
+                )
+
+            remediation = Mock(side_effect=fake_remediation)
+            monkeypatch.setattr(feedback_report_module, "run_codex_exec", remediation)
         result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
         assert result.exit_code == 0, result.output
         state = load_active_state(root)
@@ -3060,107 +3099,30 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
             )
         else:
             assert state.machine_aggregates == {}
-            assert set(state.issues) == {issue_id(str(canonical_key))}
-            assert state.issues[issue_id(str(canonical_key))]["occurrence_count"] == 2
+            assert set(state.issues) == {candidate_id}
+            assert state.issues[candidate_id]["occurrence_count"] == 2
+            remediation.assert_called_once()
 
-
-def test_active_machine_issue_keeps_threshold_state_after_window_expires(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """window 外で threshold 未満になった active machine issue を最後の state で再検証する。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    log_path.write_text('{"event":"reporter unavailable"}\n')
-    canonical_key: str | None = None
-    base = datetime.now(timezone.utc)
-
-    for index in range(2):
-        occurred_at = base - timedelta(days=1 if index == 0 else 20)
-        event = {
-            "event_schema_version": 1,
-            "event_id": f"evt_expiry_{index}",
-            "event_type": "feedback.reporter_unavailable",
-            "occurred_at": occurred_at.isoformat(timespec="seconds").replace(
-                "+00:00", "Z"
-            ),
-            "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
-            "component": "reporter",
-            "failure_code": "missing",
-        }
-        context = _context(root, session_id=f"sess_{index:06d}_2026-09-29_15-04")
-        context["subcommand_invocation_id"] = event["subcommand_invocation_id"]
-        _observation_id, raw_path = store_machine_observation(
-            root,
-            context,
-            rule_id="feedback.reporter_unavailable.v1",
-            category="tooling",
-            subject_type="reporter_component",
-            normalized_subject_id="reporter:missing",
-            summary="feedback reporter が反復して利用できない。",
-            impact="agent observation が欠落する。",
-            human_action="reporter を確認する。",
-            event=event,
-            log_path=log_path,
+    threshold_state = state.issues[candidate_id]["machine_state"]
+    assert isinstance(threshold_state, dict)
+    # 一件だけ期限切れになる場合と、全件が期限切れになる場合を区別する。
+    for expected_calls, elapsed_days in enumerate((11, 31), start=2):
+        cut_at = (
+            (base + timedelta(days=elapsed_days)).isoformat().replace("+00:00", "Z")
         )
-        canonical_key = machine_canonical_key(read_json_object(raw_path))
+        result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
-    assert canonical_key is not None
-    candidate_id = issue_id(canonical_key)
-    _install_codex_outputs(
-        monkeypatch,
-        _remediation_output(
-            candidate_id,
-            "human_required",
-            reference_path=".cmoc/gu/log/test.jsonl",
-        ),
-    )
-    first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert first.exit_code == 0, first.output
-    first_state = load_active_state(root)
-    assert set(first_state.issues) == {candidate_id}
-    assert isinstance(first_state.issues[candidate_id]["machine_state"], dict)
-
-    partially_expired = (
-        (base + timedelta(days=11)).isoformat(timespec="seconds").replace("+00:00", "Z")
-    )
-    monkeypatch.setattr(
-        feedback_report_module, "rfc3339_now", lambda: partially_expired
-    )
-    _install_codex_outputs(
-        monkeypatch,
-        _remediation_output(
-            candidate_id,
-            "human_required",
-            reference_path=".cmoc/gu/log/test.jsonl",
-        ),
-    )
-    second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-
-    assert second.exit_code == 0, second.output
-    second_state = load_active_state(root)
-    assert set(second_state.issues) == {candidate_id}
-    assert isinstance(second_state.issues[candidate_id]["machine_state"], dict)
-
-    fully_expired = (
-        (base + timedelta(days=31)).isoformat(timespec="seconds").replace("+00:00", "Z")
-    )
-    monkeypatch.setattr(feedback_report_module, "rfc3339_now", lambda: fully_expired)
-    _install_codex_outputs(
-        monkeypatch,
-        _remediation_output(
-            candidate_id,
-            "human_required",
-            reference_path=".cmoc/gu/log/test.jsonl",
-        ),
-    )
-    third = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-
-    assert third.exit_code == 0, third.output
-    third_state = load_active_state(root)
-    assert set(third_state.issues) == {candidate_id}
-    assert isinstance(third_state.issues[candidate_id]["machine_state"], dict)
+        assert result.exit_code == 0, result.output
+        assert remediation.call_count == expected_calls
+        state = load_active_state(root)
+        assert state.current is not None
+        assert (
+            f'report_cut_at: "{cut_at}"'
+            in (root / state.current["report_path"]).read_text()
+        )
+        assert state.machine_aggregates == {}
+        assert set(state.issues) == {candidate_id}
+        assert state.issues[candidate_id]["machine_state"] == threshold_state
 
 
 def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
