@@ -1,21 +1,78 @@
-"""doctor と run 差分検査の Git path 再利用が状態変更を隠さないことを検証する。"""
+"""Git path の重複照会を避け、状態変更後の安全性検査を保つことを検証する。"""
 
 from collections import Counter
 from contextlib import nullcontext
 
 import pytest
-from _git_support import init_repo, make_repo, run_git
+from _git_support import RUN_BRANCH, RUN_ID, SESSION_ID, init_repo, make_repo, run_git
 
 import commons.runtime_git as git_module
 from commons.prompt_editor_input import ensure_prompt_editor_roots_ignored
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import repo_root, work_root
+from commons.runtime_results import CommandResult
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
     unexpected_agent_paths,
     unexpected_run_paths,
 )
+
+
+@pytest.mark.parametrize("anchor", ["main", "linked"])
+def test_worktree_mutations_avoid_repeated_root_discovery(
+    committed_repository, tmp_path, monkeypatch, anchor
+):
+    """作成・削除ごとの root 探索を一度に保ち、linked 起点でも同じ管理先を使う。"""
+    root = committed_repository
+    repository = root
+    if anchor == "linked":
+        repository = tmp_path / "linked"
+        run_git(root, "worktree", "add", "-b", "linked-query", str(repository), "HEAD")
+    target = root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID
+    root_queries = 0
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        nonlocal root_queries
+        if argv[0] == "git" and "--show-toplevel" in argv:
+            root_queries += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    assert git_module.create_run_worktree(repository, RUN_BRANCH, target) == target
+    assert root_queries <= 1
+    assert target.is_dir()
+    assert run_git(target, "branch", "--show-current").stdout.strip() == RUN_BRANCH
+
+    root_queries = 0
+    assert git_module.remove_worktree(repository, target).returncode == 0
+    assert root_queries <= 1
+    assert not target.exists()
+    assert str(target) not in run_git(root, "worktree", "list", "--porcelain").stdout
+
+
+def test_remove_worktree_rechecks_registration_before_fallback(
+    committed_repository, monkeypatch
+):
+    """Git 削除の失敗後に branch の登録が変わった実体を再帰削除しない。"""
+    root = committed_repository
+    target = root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID
+    git_module.create_run_worktree(root, RUN_BRANCH, target)
+    (target / "keep.txt").write_text("keep\n")
+    original_run = git_module.run_git
+
+    def fail_removal(args, git_cwd, check=True):
+        if args[:2] == ["worktree", "remove"]:
+            run_git(target, "switch", "--detach")
+            return CommandResult(1, "", "simulated removal failure")
+        return original_run(args, git_cwd, check=check)
+
+    monkeypatch.setattr(git_module, "run_git", fail_removal)
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        git_module.remove_worktree(root, target)
+    assert (target / "keep.txt").read_text() == "keep\n"
+    assert (target / ".git").is_file()
 
 
 def test_git_query_reuse_keeps_worktrees_and_environment_separate(

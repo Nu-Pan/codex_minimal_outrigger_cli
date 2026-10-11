@@ -414,7 +414,10 @@ def create_run_worktree(
     """未使用 path に run 用 linked worktree を作る。"""
     expected_worktree = expected_run_worktree(root, branch)
     candidate = _absolute_path(worktree)
-    if _first_managed_worktree_symlink(root, candidate, expected_worktree) is not None:
+    # expected path の祖先には managed base も含まれるため、root を再探索しない。
+    if _first_symlink_component(expected_worktree) or _first_symlink_component(
+        candidate
+    ):
         raise CmocError(
             "run worktree path は symlink を含められません。",
             ["branch 名と worktree path の対応を確認してください。"],
@@ -493,7 +496,7 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     """削除対象が管理領域内の登録済みworktreeであることを検証する。"""
     base = worktrees_dir(_main_worktree_root(root))
     candidate = _absolute_path(worktree)
-    if _first_managed_worktree_symlink(root, candidate) is not None:
+    if _first_symlink_component(base) or _first_symlink_component(candidate):
         raise _unmanaged_worktree_error(worktree, base)
     base = base.resolve()
     resolved = candidate.resolve()
@@ -526,6 +529,8 @@ def _absolute_path(path: Path) -> Path:
 
 def _first_symlink_component(path: Path) -> Path | None:
     """path を順にたどり、最初に見つかった symlink component を返す。"""
+    # {{work-root}}/oracle/doc/branch_model.md
+    # resolve() 前の lexical path を検査し、管理領域外へ向く symlink も検出する。
     absolute = _absolute_path(path)
     current = Path(absolute.anchor)
     for part in absolute.parts[1:]:
@@ -537,17 +542,6 @@ def _first_symlink_component(path: Path) -> Path | None:
         current /= part
         if current.is_symlink():
             return current
-    return None
-
-
-def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
-    """managed base と path の symlink component を探す。"""
-    # {{work-root}}/oracle/doc/branch_model.md
-    # resolve() だけでは repo 外の実体が managed path に見えるため、canonicalize 前に
-    # lexical path の component を検査して、作成・削除の両方で symlink 経由を拒否する。
-    for path in (worktrees_dir(_main_worktree_root(root)), *paths):
-        if symlink := _first_symlink_component(path):
-            return symlink
     return None
 
 
