@@ -303,43 +303,11 @@ def test_internal_failure_traceback_is_logged_but_not_printed(
     cli_terminal_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """想定外障害の stack は診断ログだけに保存する。"""
+    """surrogate を含む内部障害も、stack を診断ログだけに保存して終了する。"""
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
     root = cli_terminal_directory
 
     def fail() -> None:
-        raise ValueError("unexpected failure")
-
-    with pytest.raises(typer.Exit):
-        runtime_cli.run_cli_subcommand(
-            fail,
-            command_name="probe",
-            command_argv=["cmoc", "probe"],
-            doctor_preprocess=False,
-        )
-
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "# 失敗: cmoc probe" in captured.err
-    assert "unexpected failure" in captured.err
-    assert "Traceback" not in captured.err
-    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
-    events = [json.loads(line) for line in log_path.read_text().splitlines()]
-    failure = events[-1]["failure"]
-    assert failure["classification"] == "internal_failure"
-    assert "Traceback" in failure["traceback"]
-    assert "ValueError: unexpected failure" in failure["traceback"]
-
-
-def test_internal_failure_with_surrogate_message_still_finishes_log(
-    cli_terminal_directory: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """異常メッセージの surrogate で terminal event を失わない。"""
-    root = cli_terminal_directory
-
-    def fail() -> None:
-        """UTF-8 の scalar value でない例外メッセージを再現する。"""
         raise ValueError("unexpected failure\ud800")
 
     with pytest.raises(typer.Exit):
@@ -353,12 +321,16 @@ def test_internal_failure_with_surrogate_message_still_finishes_log(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "# 失敗: cmoc probe" in captured.err
+    assert "unexpected failure\\ud800" in captured.err
+    assert "Traceback" not in captured.err
     [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
     failure = events[-1]["failure"]
     assert failure["classification"] == "internal_failure"
-    assert "unexpected failure\\ud800" in failure["traceback"]
+    assert "Traceback" in failure["traceback"]
+    # UTF-8 の JSON Lines を decode した診断値には、元の surrogate を保持する。
+    assert "ValueError: unexpected failure\ud800" in failure["traceback"]
 
 
 def test_error_terminal_result_does_not_repeat_primary_report_path(
@@ -540,6 +512,10 @@ def test_cli_error_report_survives_failed_error_log_flush(
     [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
+    failure = events[-1]["failure"]
+    assert failure["classification"] == "internal_failure"
+    assert "Traceback" in failure["traceback"]
+    assert "ValueError: callback failed" in failure["traceback"]
 
 
 def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
