@@ -1553,7 +1553,9 @@ def test_session_join_codex_failure_reports_unresolved_merge(
 
 
 def test_session_join_conflict_uses_merge_target_worktree_context(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    join_conflict_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_preprocess: list[Path],
 ) -> None:
     """linked worktree の oracle 競合で cwd・sandbox・prompt・report を検証する。
 
@@ -1565,11 +1567,9 @@ def test_session_join_conflict_uses_merge_target_worktree_context(
 
     # oracle 競合の成功経路を共有し、sandbox・report 専用の Git 準備を繰り返さない。
     # 通常 worktree の内容解消は付随編集と改行 path のケースにも残す。
-    # doctor と fork は seed し、実 join の前処理と競合解消を検査する。
-    # fork→join の結合は test_session_join_uses_linked_worktree_branch に残す。
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _seed_session_management_files(root)
+    # Git の linked metadata と競合解消は実経路を通し、共通サービスを省く。
+    # doctor の修復・順序と fork→join の結合は専用の linked worktree test に残す。
+    root = join_conflict_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
@@ -1623,6 +1623,7 @@ def test_session_join_conflict_uses_merge_target_worktree_context(
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
+    assert session_preprocess == [linked]
     assert result.exit_code == 0, result.output
     assert calls == ["session join conflict resolution"]
     assert current_branch(linked) == home_branch
