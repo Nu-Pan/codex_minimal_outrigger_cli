@@ -119,16 +119,27 @@ def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str,
     return [selected[identity] for identity in sorted(selected)]
 
 
+@lru_cache(maxsize=4)
+def _remediation_validator(
+    schema_text: str, definition: str | None
+) -> Draft202012Validator:
+    """全文と監査用定義の準備を、検査する JSON 内容とは独立して再利用する。"""
+    # 本文と定義の選択を key にして、異なる output 間でも準備を共有する。
+    schema = json.loads(schema_text)
+    if definition is not None:
+        schema = {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
+    return Draft202012Validator(schema)
+
+
 @lru_cache(maxsize=16)
 def _remediation_schema_matches(
     schema_text: str, value_json: bytes, definition: str | None = None
 ) -> bool:
     """同じ schema と JSON 内容に対する検証結果を上限付きで再利用する。"""
     # schema の読取と artifact の hash・audit 検査は caller が毎回行う。
-    schema = json.loads(schema_text)
-    if definition is not None:
-        schema = {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
-    return Draft202012Validator(schema).is_valid(json.loads(value_json))
+    return _remediation_validator(schema_text, definition).is_valid(
+        json.loads(value_json)
+    )
 
 
 def validate_decision_basis(
