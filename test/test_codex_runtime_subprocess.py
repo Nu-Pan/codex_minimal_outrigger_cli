@@ -5,6 +5,8 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from _command_support import write_python_executable
@@ -28,7 +30,76 @@ def _cancel_when_process_is_ready(pid_path, cancellation):
 
 
 @pytest.mark.parametrize("tracked", [False, True])
-def test_probe_deadline_stops_process(tmp_path, tracked):
+@pytest.mark.parametrize("cancellable", [False, True])
+def test_probe_deadline_preserves_budget_and_cleans_up(
+    tmp_path, monkeypatch, tracked, cancellable
+):
+    """probe の総期限と終了処理を、OS の応答待ちと分けて検証する。"""
+    # 実 process の停止・stdin・tracking 回収は下の deadline/interruption test に残す。
+    tracking_path = tmp_path / "run.pid"
+    tracking_path.write_text("111 222\n")
+    clock = SimpleNamespace(now=0.0)
+    process = MagicMock(pid=4321, returncode=None)
+    process.__enter__.return_value = process
+    process.poll.side_effect = lambda: process.returncode
+    expired = subprocess.TimeoutExpired(["codex"], 0.25, output="partial output")
+
+    def communicate(input_data=None, timeout=None):
+        if timeout is None:
+            assert process.returncode == -signal.SIGKILL
+            return "partial output", ""
+        # 期限の更新や省略を検出し、回帰しても無期限に再試行しない。
+        assert 0 < timeout <= 0.25 - clock.now
+        clock.now += timeout
+        raise expired
+
+    def stop_group(_group, **_kwargs):
+        if tracked:
+            assert tracking_path.read_text() == "111 222\nchild 4321 333 4321\n"
+        process.returncode = -signal.SIGKILL
+
+    process.communicate.side_effect = communicate
+    popen = Mock(return_value=process)
+    stop = Mock(side_effect=stop_group)
+    monkeypatch.setattr(runtime_codex_profile.subprocess, "Popen", popen)
+    monkeypatch.setattr(
+        runtime_codex_profile, "time", SimpleNamespace(monotonic=lambda: clock.now)
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((4321, 333),) if process.returncode is None else (),
+    )
+    monkeypatch.setattr(runtime_codex_profile, "stop_process_group", stop)
+
+    with pytest.raises(subprocess.TimeoutExpired) as error:
+        options = dict(
+            text=True,
+            capture_output=True,
+            input="start",
+            timeout=0.25,
+            cancellation=threading.Event() if cancellable else None,
+        )
+        if tracked:
+            run_tracked_codex_subprocess(["codex"], tracking_path, **options)
+        else:
+            run_codex_subprocess(["codex"], **options)
+
+    assert error.value.output == "partial output"
+    assert popen.call_args.kwargs["start_new_session"] is True
+    stop.assert_called_once_with(
+        4321, expected_leader=(4321, 333), expected_members=((4321, 333),)
+    )
+    communications = process.communicate.call_args_list
+    assert communications[0].args == ("start",)
+    assert all(call.args == (None,) for call in communications[1:-1])
+    assert communications[-1].args == ()
+    assert clock.now == pytest.approx(0.25)
+    assert tracking_path.read_text() == "111 222\n"
+
+
+def test_probe_deadline_stops_process(tmp_path):
     """無応答 probe を期限内で終了させ、tracked child も残さない。"""
     tracking_path = tmp_path / "run.pid"
     tracking_path.write_text("111 222\n")
@@ -51,10 +122,7 @@ def test_probe_deadline_stops_process(tmp_path, tracked):
             input="start",
             timeout=0.3,
         )
-        if tracked:
-            run_tracked_codex_subprocess(argv, tracking_path, **options)
-        else:
-            run_codex_subprocess(argv, **options)
+        run_tracked_codex_subprocess(argv, tracking_path, **options)
     process_id = int(pid_path.read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(process_id, 0)
