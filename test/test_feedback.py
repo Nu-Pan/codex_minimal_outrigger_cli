@@ -2524,20 +2524,19 @@ def test_feedback_preconditions_preserve_existing_changes_and_raw(
     assert load_report_cut(root) is None
 
 
-@pytest.mark.parametrize("last_status", ["human_required", "inconclusive"])
 def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, last_status: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """修復中の新 issue を最新 tree で処理し、最終境界後の raw は残す。"""
+    # 両分類を同じ後続 wave に入れ、Git/session・修復・publication の準備を共有する。
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
     _, first_raw, first_id = _store_agent_issue(root, session_id)
     calls: list[str] = []
     raw_paths = [first_raw]
-    later_id: str | None = None
+    later_statuses: dict[str, str] = {}
 
     def fake_call(parameter: Any, **kwargs: Any) -> SimpleNamespace:
-        nonlocal later_id
         identity = (
             kwargs["purpose"]
             .removeprefix("feedback issue remediation (")
@@ -2551,7 +2550,6 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
             (worktree / "README.md").write_text("repaired\n")
             output = _remediation_output(identity, "fixed")
             output["result"]["changed_paths"] = ["README.md"]
-            payload = _payload(kind="other", path=None, text="別の issue")
             with begin_feedback_call(
                 agent_call_id="ac_000011_2026-09-29_15-04",
                 agent_call_kind=parameter.agent_call_kind,
@@ -2560,37 +2558,41 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
                 agent_call_cwd=worktree,
             ) as feedback_call:
                 environment = feedback_call.subprocess_env({})
-                accepted = _submit_to_feedback_collector(
-                    int(environment[FEEDBACK_COLLECTOR_PORT_ENV]),
-                    environment[FEEDBACK_CAPABILITY_ENV],
-                    payload,
-                )
-            assert accepted["status"] == "accepted"
-            path = next(
-                path
-                for path in iter_observation_paths(root)
-                if path.stem == accepted["observation_id"]
-            )
-            context = read_json_object(path)["context"]
-            assert context["work_root"] == str(worktree)
-            assert context["run_kind"] == "feedback_report"
-            assert context["run_id"] is not None
-            assert (
-                context["head_commit"]
-                == run_git(worktree, "rev-parse", "HEAD").stdout.strip()
-            )
-            later_id = issue_id(f"agent\0{accepted['observation_id']}")
-            raw_paths.append(path)
+                for last_status in ("human_required", "inconclusive"):
+                    accepted = _submit_to_feedback_collector(
+                        int(environment[FEEDBACK_COLLECTOR_PORT_ENV]),
+                        environment[FEEDBACK_CAPABILITY_ENV],
+                        _payload(
+                            kind="other", path=None, text=f"別の issue: {last_status}"
+                        ),
+                    )
+                    assert accepted["status"] == "accepted"
+                    path = next(
+                        path
+                        for path in iter_observation_paths(root)
+                        if path.stem == accepted["observation_id"]
+                    )
+                    context = read_json_object(path)["context"]
+                    assert context["work_root"] == str(worktree)
+                    assert context["run_kind"] == "feedback_report"
+                    assert context["run_id"] is not None
+                    assert (
+                        context["head_commit"]
+                        == run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+                    )
+                    later_id = issue_id(f"agent\0{accepted['observation_id']}")
+                    later_statuses[later_id] = last_status
+                    raw_paths.append(path)
             # 完全重複の observation は新しい issue call を増やさない。
             _, duplicate = store_agent_observation(
                 root, _context(root, session_id=session_id), _payload()
             )
             raw_paths.append(duplicate)
         else:
-            assert identity == later_id
+            assert identity in later_statuses
             assert (worktree / "README.md").read_text() == "repaired\n"
             assert run_git(worktree, "status", "--porcelain").stdout == ""
-            output = _remediation_output(identity, last_status)
+            output = _remediation_output(identity, later_statuses[identity])
         return _fake_result(root, output)
 
     original_seal = remediation_module._seal
@@ -2610,14 +2612,19 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    assert calls == [first_id, later_id]
+    assert calls == [first_id, *sorted(later_statuses)]
     assert (root / "README.md").read_text() == "repaired\n"
     assert run_git(root, "status", "--porcelain").stdout == ""
     assert load_report_cut(root) is None
     assert all(path.exists() for path in late_paths)
     state = load_active_state(root)
-    assert set(state.issues) == {later_id}
-    assert state.issues[later_id]["verification"]["status"] == last_status
+    assert set(state.issues) == set(later_statuses)
+    assert {
+        identity: issue["verification"]["status"]
+        for identity, issue in state.issues.items()
+    } == later_statuses
+    assert state.current is not None
+    assert state.current["result"] == "incomplete"
     assert all(not path.exists() for path in raw_paths)
 
 
@@ -2923,6 +2930,8 @@ def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
     assert first.exit_code == 0, first.output
     first_state = load_active_state(root)
     assert set(first_state.issues) == set(cases)
+    assert first_state.current is not None
+    assert first_state.current["result"] == "attention"
     first_text = terminal_primary_report(first).read_text()
     for identity, case in cases.items():
         assert not case["raw_path"].exists()
