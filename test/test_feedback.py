@@ -299,7 +299,7 @@ def _install_codex_outputs(
     monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_run_codex_exec)
 
 
-def _store_agent_issue(root: Path, session_id: str) -> tuple[str, Path, str]:
+def _store_agent_issue(root: Path, session_id: str | None) -> tuple[str, Path, str]:
     """README を evidence とする agent observation と issue ID を返す。"""
     accepted, raw_path = store_agent_observation(
         root,

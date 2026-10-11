@@ -3,7 +3,7 @@
 import json
 
 import pytest
-from _cli_support import runner, terminal_primary_report
+from _cli_support import runner, seed_search_config, terminal_primary_report
 from _git_support import make_repo, run_git
 from test_feedback import (
     _active_session,
@@ -71,11 +71,12 @@ def reported_case(tmp_path, monkeypatch):
 
 @pytest.fixture
 def open_case(tmp_path, monkeypatch):
-    # close 固有の検査では、remediation run・join・cleanup を準備のために繰り返さない。
+    # close 固有の検査には session を作らず、report を実行するケースだけで準備する。
     # report から close への結合と入力消費は reported_case の検査に残す。
     root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    observation_id, raw, identity = _store_agent_issue(root, session_id)
+    monkeypatch.chdir(root)
+    seed_search_config(root)
+    observation_id, raw, identity = _store_agent_issue(root, None)
     observation = read_json_object(raw)
     observed_at = observation["observed_at"]
     watermark, inputs = capture_high_watermark(root, 0)
@@ -175,7 +176,7 @@ def open_case(tmp_path, monkeypatch):
         "run_codex_exec",
         lambda *_a, **_k: pytest.fail("close must not call an agent"),
     )
-    return root, session_id, issue
+    return root, issue
 
 
 def _close(case, reason="外部で解決を確認した"):
@@ -246,7 +247,10 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
 def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     open_case, monkeypatch, fault
 ):
-    root, session_id, issue = open_case
+    root, issue = open_case
+    # report の拒否は current 切替前後で確認し、他の保存障害では同じ検査を重ねない。
+    checks_report_refusal = fault in {"pointer_before", "partial_cleanup"}
+    session_id = _active_session(root, monkeypatch) if checks_report_refusal else None
     _, late = store_agent_observation(
         root,
         _context(root, session_id=session_id),
@@ -301,8 +305,12 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     assert conflict.exit_code == 1
     if not published:
         assert _close(issue, "異なる理由").exit_code == 1
-    blocked_report = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert blocked_report.exit_code == 1
+    if checks_report_refusal:
+        blocked_report = runner.invoke(
+            app, ["feedback", "report"], catch_exceptions=False
+        )
+        assert blocked_report.exit_code == 1, blocked_report.output
+        assert "未完了の feedback close" in blocked_report.output
     assert close_state.load_close_work(root) == fixed
     monkeypatch.setattr(close_state, name, original)
     if published:
@@ -320,7 +328,7 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
 
 
 def test_close_input_failures_save_invocation_reports(open_case):
-    root, _, _ = open_case
+    root, _ = open_case
     before = feedback_state.load_active_state(root)
     # 高価な session/report の準備を共有し、各拒否後に次の入力の前提を確認する。
     for arguments in [
@@ -419,7 +427,8 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monke
 
 
 def test_close_rejects_writer_lock_and_pending_feedback_run(open_case, monkeypatch):
-    root, _, issue = open_case
+    root, issue = open_case
+    _active_session(root, monkeypatch)
     before = feedback_state.load_active_state(root)
     with feedback_state.feedback_writer_lock(root):
         result = _close(issue)
@@ -440,7 +449,7 @@ def test_close_rejects_writer_lock_and_pending_feedback_run(open_case, monkeypat
 
 
 def test_close_completion_log_failure_reports_published_state(open_case, monkeypatch):
-    root, _, issue = open_case
+    root, issue = open_case
     original = SubcommandLogger.event
 
     def fail_completion(self, event, **fields):
@@ -468,7 +477,8 @@ def test_close_completion_log_failure_reports_published_state(open_case, monkeyp
 def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
     open_case, monkeypatch
 ):
-    root, _, issue = open_case
+    root, issue = open_case
+    _active_session(root, monkeypatch)
     _install_codex_outputs(
         monkeypatch, _remediation_output(issue["issue_id"], "human_required")
     )
@@ -548,7 +558,7 @@ def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(
 
 
 def test_confirmed_history_corruption_blocks_close(open_case):
-    root, _, issue = open_case
+    root, issue = open_case
     state = feedback_state.load_active_state(root)
     path = root / state.generation_manifest["history"][0]["path"]
     history = json.loads(path.read_text())
