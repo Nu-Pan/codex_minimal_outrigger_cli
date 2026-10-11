@@ -57,6 +57,7 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
 ) -> None:
     """表示 target だけを待機中に受理し、最後の全面上書きを確定入力にする。"""
     input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    expected_body = handoff_body("final input\n", handoff_source)
     displayed: list[str] = []
     results: list[dict[str, object]] = []
     monkeypatch.setattr(
@@ -117,30 +118,24 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     assert results[0]["status"] == "rejected"
     assert results[1:] == [{"status": "accepted"}, {"status": "accepted"}]
     assert "final input" not in json.dumps(results, ensure_ascii=False)
-    assert input_path.read_text(encoding="utf-8") == handoff_body(
-        "final input\n", handoff_source
-    )
+    assert input_path.read_text(encoding="utf-8") == expected_body
 
     inactive = handoff_mcp._submit(handoff_input(target_id, "must not be applied"))
     assert inactive["status"] == "rejected"
-    assert input_path.read_text(encoding="utf-8") == handoff_body(
-        "final input\n", handoff_source
-    )
+    assert input_path.read_text(encoding="utf-8") == expected_body
     assert (
         prompt_editor_input_module.collect_prompt_editor_input(
             tmp_path,
             input_path,
         )
-        == handoff_body("final input\n", handoff_source).strip()
+        == expected_body.strip()
     )
     assert (
         handoff_mcp._submit(handoff_input(target_id, "after confirmation"))["status"]
         == "rejected"
     )
     assert handoff_mcp._get_handoff_guide({"target_id": target_id})["status"] == "error"
-    assert input_path.read_text(encoding="utf-8") == handoff_body(
-        "final input\n", handoff_source
-    )
+    assert input_path.read_text(encoding="utf-8") == expected_body
 
 
 def test_handoff_revalidates_file_and_repository_on_each_overwrite(
@@ -243,6 +238,7 @@ def test_target_close_drains_an_accepted_submission(
 ) -> None:
     """受付済み上書きが完了するまで close が target を破棄しない。"""
     input_path.write_text("initial", encoding="utf-8")
+    expected_body = handoff_body("drained", handoff_source)
     entered = threading.Event()
     release = threading.Event()
     draining = threading.Event()
@@ -305,16 +301,12 @@ def test_target_close_drains_an_accepted_submission(
     assert closed.is_set()
     assert not target.handoff_guide_path.exists()
     assert submission_result == [{"status": "accepted"}]
-    assert input_path.read_text(encoding="utf-8") == handoff_body(
-        "drained", handoff_source
-    )
+    assert input_path.read_text(encoding="utf-8") == expected_body
     inactive = handoff_mcp._submit(
         handoff_input(target.target_id, "must not be applied")
     )
     assert inactive["status"] == "rejected"
-    assert input_path.read_text(encoding="utf-8") == handoff_body(
-        "drained", handoff_source
-    )
+    assert input_path.read_text(encoding="utf-8") == expected_body
 
 
 def test_client_does_not_send_content_to_unauthenticated_listener(

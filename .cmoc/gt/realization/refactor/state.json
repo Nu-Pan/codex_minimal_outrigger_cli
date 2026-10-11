@@ -417,7 +417,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "0bc5f3a764b654dfdbd2635092ce5f0d4bba016594a6ba343501b84f047d8769",
-    "last_investigated_at": "2026-10-09_19-04-27_487"
+    "last_investigated_at": "2026-10-11_17-57-37_271"
   },
   "oracle/src/oracle/editor_input_handoff/get_handoff_guide_input.json": {
     "investigation_required": true,
