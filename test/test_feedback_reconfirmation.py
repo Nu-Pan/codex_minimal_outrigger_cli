@@ -8,6 +8,7 @@ import json
 from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from _acp_builder_support import oracle_schema_path
@@ -22,6 +23,7 @@ from test_feedback import (
 
 from cmoc_runtime import CmocError
 from commons import runtime_feedback_run_state as run_state
+from commons import runtime_feedback_state as feedback_state
 from commons.runtime_feedback_run_state import (
     selected_remediation_checkpoints,
     validate_decision_basis,
@@ -386,6 +388,37 @@ def report_cut_inputs(feedback_run):
         "normalization": normalization,
         "remediation": repo / remediation_reference["path"],
     }
+
+
+def test_report_cut_update_skips_unchanged_write_but_rechecks_inputs(
+    report_cut_inputs, monkeypatch
+):
+    """同一内容では保存を省き、実際の更新と参照の破損検出は維持する。"""
+    h, paths = report_cut_inputs
+    reference = write_report_cut_manifest(h.context.repo, h.manifest)
+    original_content = h.path.read_bytes()
+    write = Mock(wraps=feedback_state._atomic_write_json)
+    monkeypatch.setattr(feedback_state, "_atomic_write_json", write)
+
+    assert write_report_cut_manifest(h.context.repo, h.manifest) == reference
+    write.assert_not_called()
+    assert h.path.read_bytes() == original_content
+
+    h.manifest["processing"].update(status="failed", failure="test interruption")
+    path, digest = write_report_cut_manifest(h.context.repo, h.manifest)
+    changed_content = path.read_bytes()
+    assert changed_content != original_content
+    assert digest == sha256_bytes(changed_content)
+    assert read_json_object(path) == h.manifest
+    assert write.call_count == 1
+
+    # 呼び出し間で検証結果を cache しない。manifest が同一でも raw の破損を拒否する。
+    paths["observation"].write_bytes(canonical_json_bytes({"changed": True}))
+    write.reset_mock()
+    with pytest.raises(CmocError, match="SHA256"):
+        write_report_cut_manifest(h.context.repo, h.manifest)
+    write.assert_not_called()
+    assert h.path.read_bytes() == changed_content
 
 
 @pytest.mark.parametrize("target", ["observation", "normalization", "remediation"])

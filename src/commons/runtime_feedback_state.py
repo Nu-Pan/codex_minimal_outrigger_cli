@@ -2842,7 +2842,7 @@ def write_report_cut_manifest(repo: Path, manifest: _JsonObject) -> tuple[Path, 
     if not isinstance(report_cut_id_value, str):
         raise ValueError("report cut manifest requires report_cut_id")
     path = report_cut_manifest_path(repo, report_cut_id_value)
-    _validate_report_cut_manifest_for_write(manifest, path)
+    content = _validate_report_cut_manifest_for_write(manifest, path)
     if path.exists() or path.is_symlink():
         previous = _read_canonical_object(path, "report cut manifest")
         _validate_report_cut_manifest(repo, previous, path)
@@ -2859,6 +2859,9 @@ def write_report_cut_manifest(repo: Path, manifest: _JsonObject) -> tuple[Path, 
             raise _corruption(
                 "publication 済み report cut manifest は更新できません。", path
             )
+        # 同一内容でも先行 state と参照を再検証し、保存・flush だけを省く。
+        if content == canonical_json_bytes(previous):
+            return path, sha256_bytes(content)
     digest = _atomic_write_json(path, manifest)
     return path, digest
 
@@ -2959,12 +2962,12 @@ def recover_report_cut_checkpoint_references(
     return changed
 
 
-def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -> None:
-    """未保存 artifact を含む manifest の構造だけを write 前に検査する。"""
+def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -> bytes:
+    """未保存 artifact を含む manifest の構造を検査し、canonical byte 列を返す。"""
     # path/hash の存在検査は staged artifact の write 前には成立しないため、
     # canonical JSON 化とトップレベルの閉じた schema をここで先に確認する。
     try:
-        canonical_json_bytes(manifest)
+        content = canonical_json_bytes(manifest)
     except (TypeError, UnicodeError, ValueError) as exc:
         raise _corruption(
             "report cut manifest を canonical JSON 化できません。", path
@@ -2983,6 +2986,7 @@ def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -
         manifest.get("report_cut_id"), "fbc_"
     ):
         raise _corruption("report cut manifest identity が不正です。", path)
+    return content
 
 
 def write_checkpoint(repo: Path, path: Path, checkpoint: _JsonObject) -> _JsonObject:
