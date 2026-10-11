@@ -32,6 +32,7 @@ from jsonschema.exceptions import SchemaError
 
 from .runtime_errors import CmocError
 from .runtime_feedback_store import (
+    _has_symlink_component,
     canonical_json_bytes,
     feedback_root,
     is_observation_id,
@@ -676,16 +677,6 @@ def _corruption(summary: str, path: Path, detail: str | None = None) -> CmocErro
         ["repository-local feedback state を人間が確認してください。"],
         detail or str(path),
     )
-
-
-def _has_symlink_component(path: Path) -> bool:
-    """lexical path の既存 component に symlink があるかを返す。"""
-    current = path.absolute()
-    while current != current.parent:
-        if current.is_symlink():
-            return True
-        current = current.parent
-    return False
 
 
 def _read_canonical_object(
