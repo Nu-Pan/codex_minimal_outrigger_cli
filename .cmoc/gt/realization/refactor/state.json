@@ -282,10 +282,10 @@
     "last_investigated_at": "2026-10-11_14-02-43_639"
   },
   "oracle/doc/considered_alternative/oracle_description_language.md": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "e6f2f3b49397e88128e75a241495c5ad4a0b0cd43ea6444d9861f935567cac87",
-    "last_investigated_at": "2026-10-09_13-06-40_368"
+    "last_investigated_at": "2026-10-11_14-05-19_205"
   },
   "oracle/doc/considered_alternative/oracle_review.md": {
     "investigation_required": true,
