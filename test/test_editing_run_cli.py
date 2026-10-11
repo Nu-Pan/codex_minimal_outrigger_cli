@@ -717,22 +717,99 @@ def test_realization_apply_fork_and_run_join_use_common_state(
 @pytest.mark.parametrize("run_state", ["joinable", "error"])
 @pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
 @pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
-def test_apply_join_updates_diff_base_only_for_joinable_run(
-    ready_content_session: tuple[Path, str, Path],
+def test_apply_join_hook_selects_diff_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     run_state: str,
     has_run_change: bool,
     has_previous_apply: bool,
 ) -> None:
-    """join 開始時の state に応じて比較始点を保存し、未追従の変更を残す。"""
-    # realization_apply.md の「join 後 hook」を全条件で検査する。
+    """merge 結果と開始時 state の全組合せで、比較始点の選択と保存を検証する。"""
+    # Git の merge・state 同期・資源 cleanup を置換し、run 作成を省く。
+    # state と report は実際に保存し、実 Git との結合は下の CLI test に残す。
+    previous_base = "previous-apply-fork" if has_previous_apply else None
+    state = SessionState(
+        session=SessionPart(
+            session_home_branch="main",
+            session_fork_commit="session-fork",
+            last_joined_apply_fork_commit=previous_base,
+        ),
+        run=RunPart(
+            state=run_state,
+            kind="realization_apply",
+            branch=RUN_BRANCH,
+            fork_commit="run-fork",
+        ),
+    )
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path,
+        session_id=SESSION_ID,
+        state_path=tmp_path / f"{SESSION_ID}.json",
+        session_branch=SESSION_BRANCH,
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch=RUN_BRANCH,
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path / "run",
+        state_before=run_state,
+    )
+    merged_head = "merged-head" if has_run_change else "session-head"
+    monkeypatch.setattr(
+        run_join_module,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(run_join_module, "head_commit", lambda _root: merged_head)
+    monkeypatch.setattr(run_join_module, "sync_refactor_state", lambda _root: None)
+    monkeypatch.setattr(
+        run_join_module, "commit_work_unit", lambda *_args: "state-sync-commit"
+    )
+    monkeypatch.setattr(
+        run_join_module, "cleanup_joined_run", lambda *_args: "completed"
+    )
+
+    join_commit, hook, sync_commit, cleanup, report, _resolution = (
+        run_join_command_module._merge_and_finalize(context, state, [], "session-head")
+    )
+
+    assert join_commit == (merged_head if has_run_change else None)
+    assert sync_commit == "state-sync-commit"
+    assert cleanup == "completed"
+    saved = _state(context.state_path)
+    assert saved["session"]["last_joined_apply_fork_commit"] == (
+        "run-fork" if run_state == "joinable" else previous_base
+    )
+    assert saved["run"] == {
+        "state": "ready",
+        "kind": None,
+        "branch": None,
+        "fork_commit": None,
+    }
+    hook_action = "updated" if run_state == "joinable" else "preserved"
+    assert hook == f"session.last_joined_apply_fork_commit {hook_action}"
+    report_text = report.read_text()
+    assert hook in report_text
+    if run_state == "error":
+        assert "session.last_joined_apply_fork_commit updated" not in report_text
+    assert ("run_join_commit: null" in report_text) is (not has_run_change)
+    # 確定用 state は新しく構築し、入力の session state を変更しない。
+    assert state.session.last_joined_apply_fork_commit == previous_base
+
+
+@pytest.mark.parametrize("run_state", ["joinable", "error"])
+@pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
+def test_apply_join_updates_diff_base_only_for_joinable_run(
+    ready_content_session: tuple[Path, str, Path],
+    run_state: str,
+    has_run_change: bool,
+) -> None:
+    """実 Git の merge/no-op 後に比較始点を保存し、未追従の変更を残す。"""
+    # 初回/継続の選択は上の全条件 test と fork→join test で検査する。
+    # ここでは既存の比較始点と異なる fork commit を用意し、保存結果を確かめる。
     root, _session_branch, state_path = ready_content_session
     state = _state(state_path)
-    session_fork_commit = state["session"]["session_fork_commit"]
-    previous_base = (
-        run_git(root, "rev-parse", "HEAD").stdout.strip()
-        if has_previous_apply
-        else None
-    )
+    previous_base = run_git(root, "rev-parse", "HEAD").stdout.strip()
     state["session"]["last_joined_apply_fork_commit"] = previous_base
     state_path.write_text(json.dumps(state))
     (root / "oracle" / "spec.md").write_text("pending oracle change\n")
@@ -764,9 +841,8 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
     assert ("run_join_commit: null" in report) is (not has_run_change)
 
     # 次回 fork の始点選択は fork→join 統合 test に任せ、ここでは保存した範囲を検査する。
-    diff_base = expected_base if expected_base is not None else session_fork_commit
     joined_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    oracle_diff = run_git(root, "diff", diff_base, joined_head, "--", "oracle")
+    oracle_diff = run_git(root, "diff", expected_base, joined_head, "--", "oracle")
     assert bool(oracle_diff.stdout) is (run_state == "error")
     if run_state == "error":
         assert "pending oracle change" in oracle_diff.stdout
