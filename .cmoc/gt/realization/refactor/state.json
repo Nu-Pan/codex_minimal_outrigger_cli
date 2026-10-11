@@ -848,8 +848,8 @@
   "src/commons/runtime_document_search_worker.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "e329d553f89c3ceff9ae4baa72aca83d304e089c5f75ad928905e293e605d620",
-    "last_investigated_at": "2026-10-10_09-42-15_823"
+    "last_investigated_sha256": "a0735336760e070e9ee1722b2e440f45efbff70bacc00fcb31ffde414e508fc8",
+    "last_investigated_at": "2026-10-12_07-38-14_431"
   },
   "src/commons/runtime_download_asset_cache.py": {
     "investigation_required": true,

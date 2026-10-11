@@ -221,11 +221,23 @@ export async function getLlama() {
             "```md\n# 偽見出し\n````\n# 本物\n本文\n",
             ["```md\n# 偽見出し\n````\n", "# 本物\n本文\n"],
         ),
+        (
+            "> # *引用* [link][ref]\r\n> 本文\r\n\r\n[ref]: /target\r\n\r\n"
+            "## **次** `code`\r\n本文😀\r\n",
+            [
+                "> # *引用* [link][ref]\r\n> 本文\r\n\r\n[ref]: /target\r\n\r\n",
+                "## **次** `code`\r\n本文😀\r\n",
+            ],
+        ),
+        (
+            "冒頭😀\r\r*装飾* [link](url)\r======\r本文\r# 次\r末尾",
+            ["冒頭😀\r\r", "*装飾* [link](url)\r======\r本文\r", "# 次\r末尾"],
+        ),
         ("見出しなし\n本文\n", ["見出しなし\n本文\n"]),
     ],
 )
 def test_heading_ranges_follow_markdown_structure(body: str, parts: list[str]) -> None:
-    """階層・Setext・冒頭・コード fence を原文 offset で区切る。"""
+    """装飾・引用・改行形式を含む見出しを、コード fence と区別して原文で区切る。"""
     assert [body[start:end] for start, end in _heading_ranges(body)] == parts
 
 

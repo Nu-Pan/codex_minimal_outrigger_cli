@@ -15,6 +15,7 @@ import sys
 import threading
 import time
 from dataclasses import asdict
+from functools import cache
 from importlib import resources
 from pathlib import Path
 from typing import Callable
@@ -28,6 +29,12 @@ from .runtime_document_search_observation import inference_config
 from .runtime_document_search_types import SEARCH_MATERIALS
 
 
+@cache
+def _heading_parser() -> MarkdownIt:
+    """見出しの位置に不要な inline 解析を省き、設定だけを遅延共有する。"""
+    return MarkdownIt("commonmark").disable("inline")
+
+
 def materials_directory(installation_root: Path) -> Path:
     """共有モデルと runtime の固定資材を収める場所。"""
     return installation_root / ".cmoc/gu/document_search/materials"
@@ -38,7 +45,7 @@ def _heading_ranges(text: str) -> list[tuple[int, int]]:
     line_starts = [0]
     line_starts.extend(match.end() for match in re.finditer(r"\r\n|\n|\r", text))
     boundaries = [0]
-    for token in MarkdownIt("commonmark").parse(text):
+    for token in _heading_parser().parse(text):
         if token.type == "heading_open" and token.map is not None:
             offset = line_starts[token.map[0]]
             if offset != boundaries[-1]:
