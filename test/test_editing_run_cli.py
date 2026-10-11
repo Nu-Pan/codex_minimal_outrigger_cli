@@ -516,18 +516,30 @@ def test_doctor_paths_for_join_preserves_preexisting_changes(
     }
 
 
-def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
+@pytest.mark.parametrize(
+    ("changed_paths", "expected"),
+    [
+        ([], ["- none"]),
+        (["new.md"], ["- rename: file renamed", "  - `new.md`"]),
+    ],
+)
+def test_refactor_change_summary_keeps_only_actual_changed_paths(
+    changed_paths: list[str], expected: list[str]
+) -> None:
     """change summaryのpathを実際の変更対象へ制限する。"""
-    assert refactor_module._render_summary(
-        [
-            {
-                "category": "rename",
-                "summary": "file renamed",
-                "changed_paths": ["old.md", "new.md", "outside.md"],
-            }
-        ],
-        ["new.md"],
-    ) == ["- rename: file renamed", "  - `new.md`"]
+    assert (
+        refactor_module._render_summary(
+            [
+                {
+                    "category": "rename",
+                    "summary": "file renamed",
+                    "changed_paths": ["old.md", "new.md", "outside.md"],
+                }
+            ],
+            changed_paths,
+        )
+        == expected
+    )
 
 
 def test_refactor_change_summary_escapes_special_changed_paths() -> None:
@@ -3138,6 +3150,7 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     assert "README unresolved finding" in report_text
     assert "resolution.summary: 人間の判断が必要" in report_text
     assert f"Codex call log: `{call_log}`" in report_text
+    assert "## Change summary\n- none\n" in report_text
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(
@@ -3738,28 +3751,34 @@ def test_refactor_with_no_targets_keeps_synchronizing(
     assert "- committed processing units: 0" in report
 
 
-@pytest.mark.parametrize("change_kind", ["delete", "revert"])
 def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
-    ready_content_session, monkeypatch, change_kind
+    ready_content_session, monkeypatch
 ):
     """削除は成果に含め、後の巡で戻した変更は net 成果へ数えない。"""
     root, _, state_path = ready_content_session
-    reviewed = 0
+    # 別 file の削除と差し戻しを同じ run で検査し、session/run 作成を共有する。
+    deleted_path = "src/deleted.py"
+    (root / deleted_path).write_text("VALUE = 1\n")
+    run_git(root, "add", deleted_path)
+    run_git(root, "commit", "-m", "add deletion target")
+    reviewed = Counter()
 
     def review(parameter, **kwargs):
-        nonlocal reviewed
         findings = []
-        if kwargs["purpose"] == "realization refactor: README.md":
-            reviewed += 1
-            path = parameter.agent_call_cwd / "README.md"
-            if change_kind == "delete":
+        target = kwargs["purpose"].removeprefix("realization refactor: ")
+        if target in {"README.md", deleted_path}:
+            reviewed[target] += 1
+            path = parameter.agent_call_cwd / target
+            if target == deleted_path:
+                change_kind = "delete"
                 path.unlink()
             else:
-                path.write_text("changed\n" if reviewed == 1 else "# repo\n")
+                change_kind = "revert"
+                path.write_text("changed\n" if reviewed[target] == 1 else "# repo\n")
             findings = [
                 {
                     "title": change_kind,
-                    "changed_paths": ["README.md"],
+                    "changed_paths": [target],
                     "resolution": {"status": "fixed", "summary": "confirmed change"},
                 }
             ]
@@ -3772,7 +3791,7 @@ def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
         )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", review)
-    _stop_after_cycles(monkeypatch, cycles=1 if change_kind == "delete" else 2)
+    _stop_after_cycles(monkeypatch, cycles=2)
     result = runner.invoke(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
     )
@@ -3781,14 +3800,13 @@ def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     report = terminal_primary_report(result).read_text()
     summary = report.split("## Change summary\n", 1)[1].split("## Test timing", 1)[0]
-    if change_kind == "delete":
-        assert not (worktree / "README.md").exists()
-        assert "- confirmed: delete: fixed: confirmed change" in summary
-        assert "`README.md`" in summary
-    else:
-        assert (worktree / "README.md").read_text() == "# repo\n"
-        assert summary.strip() == "- none"
-        assert reviewed == 2
+    assert not (worktree / deleted_path).exists()
+    assert (worktree / "README.md").read_text() == "# repo\n"
+    assert reviewed == {"README.md": 2, deleted_path: 1}
+    assert summary.strip() == (
+        f"- confirmed: delete: fixed: confirmed change\n  - `{deleted_path}`"
+    )
+    assert "revert: fixed: confirmed change" in report
     assert "- resolutions:" in report
     assert "full gate passed" in report
 
