@@ -391,27 +391,25 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
     assert (target / "keep.txt").read_text() == "keep\n"
 
 
-@pytest.mark.parametrize(
-    "branch",
-    [
-        f"cmoc/run/../{RUN_ID}",
-        f"cmoc/run/{SESSION_ID}/..",
-        f"cmoc/run/2026-09-29_15-04_07_123456789/{RUN_ID}",
-        f"cmoc/run/{SESSION_ID}/2026-09-29_15-04_07_123456789",
-    ],
-)
 def test_run_worktree_rejects_noncanonical_branch(
-    cli_repository: Path, branch: str
+    cli_repository: Path,
 ) -> None:
     """現行 ID を持たない branch を worktree の保存先へ解決しない。"""
     root = cli_repository
 
-    with pytest.raises(CmocError, match="run worktree"):
-        expected_run_worktree(root, branch)
-    with pytest.raises(CmocError, match="run worktree"):
-        create_run_worktree(
-            root, branch, root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
-        )
+    # 拒否で repository は変わらないため、全 branch 境界に同じ実 Git root を使う。
+    for branch in (
+        f"cmoc/run/../{RUN_ID}",
+        f"cmoc/run/{SESSION_ID}/..",
+        f"cmoc/run/2026-09-29_15-04_07_123456789/{RUN_ID}",
+        f"cmoc/run/{SESSION_ID}/2026-09-29_15-04_07_123456789",
+    ):
+        with pytest.raises(CmocError, match="run worktree"):
+            expected_run_worktree(root, branch)
+        with pytest.raises(CmocError, match="run worktree"):
+            create_run_worktree(
+                root, branch, root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
+            )
 
 
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
@@ -554,9 +552,8 @@ def test_run_worktree_operations_reject_unregistered_managed_path(
     assert (target / "keep.txt").read_text() == "keep\n"
 
 
-@pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
 def test_remove_worktree_rejects_symlink_components(
-    committed_repository: Path, tmp_path: Path, symlink_component: str
+    committed_repository: Path, tmp_path: Path
 ) -> None:
     """symlink componentを経由したworktree削除を拒否することを検証する。"""
     root = committed_repository
@@ -574,27 +571,23 @@ def test_remove_worktree_rejects_symlink_components(
         "HEAD",
     )
 
-    if symlink_component == "base":
-        managed.parent.mkdir(parents=True)
-        managed.symlink_to(external, target_is_directory=True)
-        symlink_path = managed
-    else:
-        managed.mkdir(parents=True)
-        session = managed / SESSION_ID
-        if symlink_component == "session":
-            session.symlink_to(external / SESSION_ID, target_is_directory=True)
-            symlink_path = session
-        else:
-            session.mkdir(parents=True)
-            symlink_path = session / RUN_ID
-            symlink_path.symlink_to(actual, target_is_directory=True)
-
     target = managed / SESSION_ID / RUN_ID
-    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
-        remove_worktree(root, target)
+    target.parent.mkdir(parents=True)
+    # 外側の実 worktree と登録は不変。内側から親へ link を掛け替えて準備を共用する。
+    for symlink_path, destination in (
+        (target, actual),
+        (target.parent, actual.parent),
+        (managed, external),
+    ):
+        if symlink_path.exists():
+            symlink_path.rmdir()
+        symlink_path.symlink_to(destination, target_is_directory=True)
+        with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+            remove_worktree(root, target)
 
-    assert symlink_path.is_symlink()
-    assert actual.exists()
+        assert symlink_path.is_symlink(), symlink_path
+        assert actual.exists(), symlink_path
+        symlink_path.unlink()
 
 
 def test_remove_worktree_rejects_non_run_branch_at_managed_path(
