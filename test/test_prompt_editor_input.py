@@ -307,26 +307,27 @@ def test_editor_input_preserves_input_when_final_save_fails(
     def fail(*_args, **_kwargs):
         raise OSError("save failed")
 
-    if failure_stage == "write":
+    if failure_stage in {"write", "flush"}:
 
-        def partial_write_file(*args, **kwargs):
+        def failing_temporary_file(*args, **kwargs):
             temporary = real_temporary_file(*args, **kwargs)
-            write = temporary.write
+            if failure_stage == "write":
+                write = temporary.write
 
-            def partial_write(content):
-                write(content[:3])
-                fail()
+                def partial_write(content):
+                    write(content[:3])
+                    fail()
 
-            monkeypatch.setattr(temporary, "write", partial_write)
+                monkeypatch.setattr(temporary, "write", partial_write)
+            else:
+                monkeypatch.setattr(temporary, "flush", fail)
             return temporary
 
         monkeypatch.setattr(
             prompt_editor_input_module.tempfile,
             "NamedTemporaryFile",
-            partial_write_file,
+            failing_temporary_file,
         )
-    elif failure_stage == "flush":
-        monkeypatch.setattr(prompt_editor_input_module.os, "fsync", fail)
     else:
         monkeypatch.setattr(prompt_editor_input_module.os, "replace", fail)
 
