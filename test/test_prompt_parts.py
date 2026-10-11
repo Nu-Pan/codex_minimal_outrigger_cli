@@ -415,7 +415,6 @@ def test_complete_prompt_renders_file_classification_boundaries(
 
 
 def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
-    tmp_path: Path,
     path_context: AgentCallPathContext,
 ) -> None:
     """root placeholder は同値なら統合し、異値なら prompt 構築を失敗させる。"""
@@ -434,7 +433,7 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
             task="- task",
             file_access_mode=FileAccessMode.READONLY,
             path_context=context,
-            aux_placeholder_def={"work-root": tmp_path / "other-worktree"},
+            aux_placeholder_def={"work-root": context.work_root / "other-worktree"},
         )
 
 
