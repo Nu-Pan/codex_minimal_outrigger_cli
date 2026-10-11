@@ -720,7 +720,7 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
 def test_changed_sections_and_moved_files_reuse_saved_embeddings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cli_repository: Path
 ) -> None:
-    """実 chunker で変更節だけを再推論し、現在位置と query cache を保つ。"""
+    """実 chunker で変更・重複・移動・削除後の再利用と現在位置を検査する。"""
     pytest.importorskip("sqlite_vec")
     from commons import runtime_document_search_worker as worker_module
 
@@ -751,11 +751,13 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
             return vector
 
     worker = QueryWorker()
+    events = []
     search = DocumentSearch(
         root,
         _tuning(),
         worker=worker,
         installation_root=root,
+        event_sink=lambda kind, payload: events.append({"event": kind, **payload}),
     )
 
     def model_inputs() -> list[str]:
@@ -764,42 +766,54 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
             for line in (runtime / "embedding-inputs.jsonl").read_text().splitlines()
         ]
 
-    def hit_lines(expected_document: Path = document) -> dict[str, int]:
+    def hit_lines() -> dict[str, dict[int, str]]:
         # 公開位置から現在原文を読み、移動前の位置や抜粋に依存しない。
         locations = {}
         for hit in search.search("sections")["hits"]:
-            assert hit["path"] == expected_document.relative_to(root).as_posix()
             lines = (root / hit["path"]).read_text().splitlines(keepends=True)
+            ranges = {}
             for location in hit["ranges"]:
                 start, end = location["start_line"], location["end_line"]
-                locations["".join(lines[start - 1 : end])] = start
+                ranges[start] = "".join(lines[start - 1 : end])
+            locations[hit["path"]] = ranges
         return locations
 
+    path = document.relative_to(root).as_posix()
     with closing(search):
         # 初回も検索の自動同期で生成数と現在位置を一緒に検査する。
-        assert hit_lines() == {a: 1, b: 3, c: 5}
+        assert hit_lines() == {path: {1: a, 3: b, 5: c}}
         assert search.sync_progress["persisted_chunks"] == 3
         assert model_inputs() == [a, b, c]
 
         edited_a = "# A\nalpha edited\nextra\n"
-        document.write_text(edited_a + b + c)
-        # 検索の自動同期で位置と推論数を一緒に検査し、直前の明示同期を重ねない。
-        assert hit_lines() == {edited_a: 1, b: 4, c: 6}
+        document.write_text(edited_a + b + c + edited_a)
+        # 元文書を先に処理し、文書内の初生成後と別文書での再利用を共に通す。
+        copy = document.with_name("z-copy.md")
+        copy.write_text(edited_a)
+        # 同期一回で、未保存の同一入力が文書内・別文書に現れる場合も検査する。
+        assert hit_lines() == {
+            path: {1: edited_a, 4: b, 6: c, 8: edited_a},
+            copy.relative_to(root).as_posix(): {1: edited_a},
+        }
         assert search.sync_progress["status"] == "updated"
-        assert search.sync_progress["reused_embeddings"] == 2
+        assert search.sync_progress["generated_embeddings"] == 1
+        assert search.sync_progress["persisted_embeddings"] == 1
+        assert search.sync_progress["reused_same_worktree"] == 4
+        assert search.sync_progress["reused_embeddings"] == 4
         assert search.sync_progress["persisted_chunks"] == 1
-        assert search.sync_progress["changed_document_count"] == 1
+        assert search.sync_progress["changed_document_count"] == 2
         assert model_inputs() == [a, b, c, edited_a]
 
         revised_heading = "## A revised\nalpha edited\nextra\n"
+        copy.unlink()
         document.write_text(revised_heading + b + c)
-        assert hit_lines() == {revised_heading: 1, b: 4, c: 6}
+        assert hit_lines() == {path: {1: revised_heading, 4: b, 6: c}}
         assert search.sync_progress["reused_embeddings"] == 2
         assert search.sync_progress["persisted_chunks"] == 1
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
 
         document.write_text(b + c + revised_heading)
-        assert hit_lines() == {b: 1, c: 3, revised_heading: 5}
+        assert hit_lines() == {path: {1: b, 3: c, 5: revised_heading}}
         assert search.sync_progress["status"] == "updated"
         assert search.sync_progress["reused_embeddings"] == 3
         assert search.sync_progress["persisted_chunks"] == 0
@@ -807,12 +821,27 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
 
         moved_file = document.with_name("moved.md")
         document.rename(moved_file)
-        assert hit_lines(moved_file) == {b: 1, c: 3, revised_heading: 5}
+        assert hit_lines() == {
+            moved_file.relative_to(root).as_posix(): {1: b, 3: c, 5: revised_heading}
+        }
         assert search.sync_progress["status"] == "updated"
         assert search.sync_progress["reused_embeddings"] == 3
         assert search.sync_progress["persisted_chunks"] == 0
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
+
+        # 全参照を失っても元の入力片を保持し、復元時に推論を重ねない。
+        moved_file.unlink()
+        assert hit_lines() == {}
+        document.write_text(a + b + c)
+        assert hit_lines() == {path: {1: a, 3: b, 5: c}}
+        assert search.sync_progress["reused_embeddings"] == 3
+        assert search.sync_progress["generated_embeddings"] == 0
+        assert model_inputs() == [a, b, c, edited_a, revised_heading]
         assert worker.operations == ["embed_query"]
+    finished = [
+        event for event in events if event["event"] == "document_search_sync_finished"
+    ]
+    assert finished[-1]["generated_embedding_unit"] == "document_input_piece"
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")

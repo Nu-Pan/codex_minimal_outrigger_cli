@@ -1,7 +1,6 @@
 """文書入力片の repository 内再利用と、生成・再利用元の診断を検証する。"""
 
 import json
-import shutil
 import sqlite3
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -11,7 +10,6 @@ from dataclasses import replace
 import pytest
 from _git_support import RUN_BRANCH, RUN_ID, SESSION_ID, run_git
 from test_document_search import (
-    _fake_node_model,
     _InferenceDouble,
     _repo_with_docs,
     _tuning,
@@ -22,10 +20,7 @@ from commons.runtime_document_search import (
     SearchError,
 )
 from commons.runtime_document_search_observation import SearchObservation
-from commons.runtime_document_search_types import SEARCH_MATERIALS
-from commons.runtime_document_search_worker import NodeSearchWorker
 from commons.runtime_git import remove_worktree
-from commons.runtime_paths import repo_root
 
 
 def _event_sink(events):
@@ -40,46 +35,10 @@ def _event_sink(events):
 
 
 @pytest.fixture
-def model_search(tmp_path, monkeypatch):
-    """製品の分割・stream・保存を使い、モデル呼出し入力だけを記録する。"""
-    if shutil.which("node") is None:
-        pytest.skip("Node.js is unavailable")
-    from commons import runtime_document_search_worker as worker_module
-
-    runtime = tmp_path / "model"
-    runtime.mkdir()
-    _fake_node_model(runtime)
-    monkeypatch.setenv(
-        "CMOC_TEST_DIMENSIONS", str(SEARCH_MATERIALS.embedding_dimensions)
-    )
-    monkeypatch.setattr(worker_module, "verify_search_materials", lambda *_: runtime)
-
-    def create(root, *, events=None):
-        config = _tuning()
-        installation = repo_root(root)
-        return DocumentSearch(
-            root,
-            config,
-            worker=NodeSearchWorker(installation, config, material_base=runtime),
-            installation_root=installation,
-            event_sink=_event_sink(events),
-        )
-
-    def inputs():
-        path = runtime / "embedding-inputs.jsonl"
-        return (
-            [json.loads(line) for line in path.read_text().splitlines()]
-            if path.exists()
-            else []
-        )
-
-    return create, inputs
-
-
-@pytest.fixture
 def cache_search():
     """cache の寿命・共有・互換性には一文書一入力の double を使う。"""
-    # 分割と Node の連携は model_search に残し、cache の制御では起動を重ねない。
+    # 分割・Node stream・重複入力の連携は test_document_search.py に残す。
+    # cache の寿命・共有・互換性では、その連携の検査を重ねない。
     generated_inputs = []
 
     class CacheWorker(_InferenceDouble):
@@ -148,35 +107,6 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
     assert (
         root / "oracle/doc/allowed.md"
     ).read_text() == "# 再利用元だけの未同期本文\n"
-
-
-def test_partial_edit_generates_unique_missing_inputs_and_retains_unreferenced_cache(
-    tmp_path, model_search
-):
-    create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
-    path = root / "oracle/doc/allowed.md"
-    a, b, changed = "# A\nold\n", "# B\nstable\n", "# A\nnew\n"
-    path.write_text(a + b)
-    events = []
-    with closing(create(root, events=events)) as search:
-        search.synchronize()
-        path.write_text(changed + b + changed)
-        (path.parent / "copy.md").write_text(changed)
-        search.synchronize()
-        assert inputs() == [a, b, changed]
-        assert search.sync_progress["generated_embeddings"] == 1
-        assert search.sync_progress["persisted_embeddings"] == 1
-        assert search.sync_progress["reused_same_worktree"] == 3
-        path.unlink()
-        (path.parent / "copy.md").unlink()
-        search.synchronize()
-        path.write_text(a + b)
-        restored = search.synchronize()
-        assert restored.reused_embeddings == 2
-        assert search.sync_progress["generated_embeddings"] == 0
-        assert inputs() == [a, b, changed]
-    assert events[-1]["generated_embedding_unit"] == "document_input_piece"
 
 
 def test_parallel_worktrees_generate_one_embedding_in_total(
