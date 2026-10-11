@@ -332,12 +332,13 @@ def _record_error(
     # 最終 git inspection が失敗しても error report を保存できるようにする。
     # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
     try:
-        changed_paths = flattened_change_paths(
+        changed_paths: list[str] | None = flattened_change_paths(
             tree_changes(context.run_worktree, context.run_fork_commit)
         )
     except BaseException as change_error:
         cleanup_errors.append(f"change inspection failed: {change_error!r}")
-        changed_paths = []
+        # 検査失敗は空差分ではなく、report に未確定として記録する。
+        changed_paths = None
     update_primary_report_fields(
         changed_paths=changed_paths,
         codex_returncode=codex_returncode,

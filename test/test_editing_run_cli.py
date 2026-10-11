@@ -1932,46 +1932,6 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
-def test_apply_error_report_survives_change_inspection_failure(
-    ready_run_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """差分確認に失敗しても apply error report と state を保存する。"""
-    root, _session_branch, state_path = ready_run_session
-    # CLI の error cleanup 呼び出しは child 停止・遅延 commit の test に残す。
-    # ここでは fork を繰り返さず、差分確認失敗後の state・report 保存を検査する。
-    context = _prepare_apply_run(ready_run_session, run_state="running")
-    monkeypatch.setattr(
-        apply_module,
-        "tree_changes",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            RuntimeError("git diff unavailable")
-        ),
-    )
-
-    report = apply_module._record_error(
-        context,
-        context.session_fork_commit,
-        None,
-        RuntimeError("agent failed"),
-    )
-
-    assert _state(state_path)["run"]["state"] == "error"
-    reports = list(
-        (root / ".cmoc" / "gu" / "report" / "realization" / "apply" / "fork").glob(
-            "*.md"
-        )
-    )
-    assert reports == [report]
-    report_text = report.read_text()
-    assert 'state_after: "error"' in report_text
-    assert 'completion_reason: "error"' in report_text
-    assert "exit_code: 1" in report_text
-    assert "agent failed" in report_text
-    assert "change inspection failed" in report_text
-    assert "git diff unavailable" in report_text
-
-
 def test_apply_report_failure_after_joinable_publication_sets_error_state(
     ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
@@ -2189,12 +2149,14 @@ def test_apply_failure_stops_tracked_codex_children_before_rollback(
     assert _state(state_path)["run"]["state"] == "error"
 
 
-def test_apply_error_cleanup_rejects_delayed_agent_commit(
+def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """error cleanup の停止後検査で遅延 agent commit を run に残さない。"""
+    """遅延 commit を戻し、差分検査に失敗しても error state と report を保存する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    # 最終 report の差分検査は rollback 後なので、同じ error cleanup で検証する。
+    # 専用の session・worktree は作らず、commit 除去の実 Git 検査も維持する。
     root, _session_branch, state_path = ready_content_session
     run_worktree: Path | None = None
 
@@ -2221,6 +2183,13 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit(
         "stop_tracked_codex_children",
         delayed_agent_commit,
     )
+    monkeypatch.setattr(
+        apply_module,
+        "tree_changes",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            RuntimeError("git diff unavailable")
+        ),
+    )
 
     result = runner.invoke(
         app,
@@ -2237,7 +2206,21 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit(
         not in run_git(run_worktree, "log", "--format=%s").stdout.splitlines()
     )
     report_path = terminal_primary_report(result)
-    assert "agent commit cleanup failed" in report_path.read_text()
+    reports = list(
+        (root / ".cmoc" / "gu" / "report" / "realization" / "apply" / "fork").glob(
+            "*.md"
+        )
+    )
+    assert reports == [report_path]
+    report_text = report_path.read_text()
+    assert 'state_after: "error"' in report_text
+    assert 'completion_reason: "error"' in report_text
+    assert "exit_code: 1" in report_text
+    assert "agent failed" in report_text
+    assert "agent commit cleanup failed" in report_text
+    assert "change inspection failed" in report_text
+    assert "git diff unavailable" in report_text
+    assert "## Changed paths\n- unavailable" in report_text
 
 
 @pytest.mark.parametrize(
