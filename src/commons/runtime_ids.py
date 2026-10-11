@@ -72,7 +72,11 @@ def new_id(repository: Path, prefix: str) -> str:
         except BaseException:
             connection.execute("ROLLBACK")
             raise
-    issued_at = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    # strftime の年幅は環境に依存するため、日時の各 field を直接ゼロ埋めする。
+    now = datetime.now()
+    issued_at = (
+        f"{now.year:04d}-{now.month:02d}-{now.day:02d}_{now.hour:02d}-{now.minute:02d}"
+    )
     digits = ""
     for _ in range(6):
         sequence, remainder = divmod(sequence, 36)

@@ -40,13 +40,13 @@ def test_common_id_requires_real_calendar_datetime(issued_at: str, valid: bool) 
 def test_ids_keep_issue_order_when_clock_moves_backward(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """発行時刻が巻き戻っても、同種 ID の辞書順と発行順が一致する。"""
+    """年の固定幅と、発行時刻の巻き戻りに依存しない採番順を保つ。"""
     times = iter(
         [
-            datetime(2026, 9, 29, 15, 4),
-            datetime(2026, 9, 29, 15, 3),
-            datetime(2026, 9, 29, 15, 2),
-            datetime(2026, 9, 29, 15, 1),
+            datetime(1, 2, 3, 4, 5),
+            datetime(1, 2, 3, 4, 4),
+            datetime(1, 2, 3, 4, 3),
+            datetime(1, 2, 3, 4, 2),
         ]
     )
 
@@ -60,9 +60,9 @@ def test_ids_keep_issue_order_when_clock_moves_backward(
     second = runtime_ids.new_id(tmp_path, "exec")
     independent = runtime_ids.new_id(tmp_path, "cc")
 
-    assert first == "exec_000000_2026-09-29_15-04"
-    assert second == "exec_000001_2026-09-29_15-03"
-    assert independent == "cc_000000_2026-09-29_15-02"
+    assert first == "exec_000000_0001-02-03_04-05"
+    assert second == "exec_000001_0001-02-03_04-04"
+    assert independent == "cc_000000_0001-02-03_04-03"
     assert first < second
     assert runtime_ids.is_common_id(second, "exec")
     assert not runtime_ids.is_common_id(second, "cc")
