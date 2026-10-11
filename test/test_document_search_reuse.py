@@ -135,7 +135,7 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
             "oracle/doc/moved.md",
             "oracle/doc/copy.md",
         }
-        search.synchronize()
+        # 直前の検索が再同期も行うので、その再利用元を検査する。
         assert search.sync_progress["reused_other_worktree"] == 2
         assert search.sync_progress["reused_same_worktree"] == 0
     finished = [

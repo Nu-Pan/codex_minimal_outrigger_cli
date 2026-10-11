@@ -23,15 +23,14 @@ from main import app
 
 
 def test_oracle_investigation_has_no_session_precondition(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """oracle investigation が session なしの main worktree でも起動できる。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    """session 状態を用意せず、調査指示から固定 parameter で TUI を起動する。"""
+    root = cli_terminal_directory
 
     # root の Git 導出は test_basic_runtime.py、CLI との結合は test_runtime_cli.py に残す。
-    # session のない実 repository と ignore 検査を保ち、同じ root の反復探索だけを外す。
+    # workload の検査では空の directory を main root として渡し、Git の準備を省く。
     def resolve_test_roots(start_path: Path | None = None) -> tuple[Path, Path]:
         assert (Path.cwd() if start_path is None else start_path).resolve() == root
         return root, root
@@ -51,6 +50,12 @@ def test_oracle_investigation_has_no_session_precondition(
         """CLI invocation 内の doctor 呼び出し先と順序を記録する。"""
         assert target_root == root
         events.append("doctor")
+
+    def record_editor_roots_ignored(target_root: Path) -> None:
+        """共通 ignore 検査への引き渡しを記録する。"""
+        assert target_root == root
+        assert not (root / ".cmoc/gu/log/editor_input").exists()
+        events.append("ignore")
 
     real_build_parameter = (
         investigation_module.build_oracle_investigation_launch_tui_parameter
@@ -102,10 +107,12 @@ def test_oracle_investigation_has_no_session_precondition(
         "run_doctor_preprocess",
         record_run_doctor_preprocess,
     )
-    # TUI は呼び出しを記録するだけで reporter を使わないため、collector は起動しない。
-    # TCP 受付・失効・停止・drain は test_feedback.py の実 transport 検証に残す。
+    # 実 ignore の main/linked 境界は test_cli_tui.py、失敗条件は test_runtime_git_ignore.py に残す。
+    # ここでは doctor 後、入力予約前の呼び出し先と順序を検証する。
     monkeypatch.setattr(
-        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+        investigation_module,
+        "ensure_prompt_editor_roots_ignored",
+        record_editor_roots_ignored,
     )
     monkeypatch.setattr(
         investigation_module,
@@ -147,6 +154,7 @@ def test_oracle_investigation_has_no_session_precondition(
     assert result.exit_code == 0
     assert events == [
         "doctor",
+        "ignore",
         "build-skeleton",
         "editor",
         "collect",

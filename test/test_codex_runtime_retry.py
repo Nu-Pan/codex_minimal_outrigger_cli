@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from _acp_builder_support import oracle_schema_path
 from _codex_support import (
     codex_override_config,
     script_codex_calls,
@@ -13,7 +14,7 @@ from _codex_support import (
     stub_codex_overrides,
 )
 from _command_support import write_python_executable
-from _git_support import init_repo, make_repo, run_git
+from _git_support import init_repo, run_git
 from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime
@@ -219,10 +220,13 @@ def test_structured_output_parse_failure_stops_before_schema_and_postcondition(
 
 
 def test_run_codex_exec_corrects_declared_postcondition(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """初回 call の実差分で決定論的事後条件を検証し、出力だけを補正する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
+    (root / "README.md").write_text("# repo\n")
+    # snapshot は index の追跡 file を読むため、履歴を作る必要はない。
+    run_git(root, "add", "README.md")
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
 
@@ -329,44 +333,44 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
 
 
 def test_run_codex_exec_restores_artifacts_changed_by_correction(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """補正 turn が変動させた成果物を初回 call 完了時へ戻して失敗する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle").mkdir()
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    run_git(root, "add", "README.md", "oracle/spec.md")
     nested = root / "nested"
     nested.mkdir()
     init_repo(nested)
     nested_file = nested / "tracked.txt"
     nested_file.write_text("nested initial\n")
     run_git(nested, "add", "tracked.txt")
-    run_git(nested, "commit", "-m", "initial nested")
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "artifact_change_bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "artifact_change_counter"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "readme = pathlib.Path('README.md')",
-            "readme.write_text('correction change\\n' if count else 'first call change\\n')",
-            "if count:",
-            "    pathlib.Path('nested/tracked.txt').write_text('correction-only\\n')",
-            "    pathlib.Path('extra.py').write_text('correction-only\\n')",
-            "    pathlib.Path('oracle/spec.md').unlink()",
-            "payload = {'ok': True} if count else {'bad': True}",
-            "output.write_text(json.dumps(payload))",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+
+    def change_artifacts(index, _call):
+        if index == 1:
+            (root / "README.md").write_text("first call change\n")
+        else:
+            (root / "README.md").write_text("correction change\n")
+            nested_file.write_text("correction-only\n")
+            (root / "extra.py").write_text("correction-only\n")
+            (root / "oracle" / "spec.md").unlink()
+
+    # Git 差分取得・復元は実行し、process の入出力は schema 補正の結合に残す。
+    stdout = (
+        '{"type":"thread.started","thread_id":"session-1"}\n{"type":"turn.completed"}\n'
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    calls = script_codex_calls(
+        monkeypatch,
+        [
+            (0, stdout, '{"bad": true}'),
+            (0, stdout, '{"ok": true}'),
+        ],
+        on_call=change_artifacts,
+    )
     schema = tmp_path / "artifact_change_schema.json"
     schema.write_text(
         json.dumps(
@@ -394,7 +398,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
             subcommand_logger=logger,
         )
 
-    assert counter.read_text() == "2"
+    assert len(calls) == 2
     assert (root / "README.md").read_text() == "first call change\n"
     assert nested_file.read_text() == "nested initial\n"
     assert not (root / "extra.py").exists()
@@ -552,6 +556,54 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
     assert calls == 0
 
 
+def test_run_codex_exec_rechecks_schema_source_and_each_output(
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """検証器を再利用しても、別 call の不正出力と source の更新・破損を検出する。"""
+    root = cli_repository
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    schema = tmp_path / "schema.json"
+    schema_text = oracle_schema_path("feedback", "normalize_issue.json").read_text(
+        encoding="utf-8"
+    )
+    schema.write_text(schema_text, encoding="utf-8")
+    valid = {"result": {"decision": "new", "existing_issue_id": None}}
+    invalid = {"result": {"decision": "existing", "existing_issue_id": None}}
+    updated = {**valid, "new_field": None}
+    calls = script_codex_calls(
+        monkeypatch,
+        [
+            (0, '{"type":"turn.completed"}\n', json.dumps(output))
+            for output in (valid, invalid, updated)
+        ],
+    )
+    parameter = AgentCallParameter(
+        "build_feedback_normalize_issue_parameter",
+        FileAccessMode.READONLY,
+        "prompt",
+        schema,
+        root,
+        enable_feedback_reporting=False,
+    )
+    config = CmocConfig()
+
+    assert run_codex_exec(parameter, root=root, config=config).output_json == valid
+    with pytest.raises(CmocError, match="Structured Output 検証"):
+        run_codex_exec(parameter, root=root, config=config)
+
+    definition = json.loads(schema_text)
+    definition["properties"]["new_field"] = {"type": "null"}
+    definition["required"].append("new_field")
+    schema.write_text(json.dumps(definition), encoding="utf-8")
+    assert run_codex_exec(parameter, root=root, config=config).output_json == updated
+
+    schema.write_text("{", encoding="utf-8")
+    with pytest.raises(CmocError, match="Structured Output schema"):
+        run_codex_exec(parameter, root=root, config=config)
+    assert len(calls) == 3
+
+
 @pytest.mark.parametrize(
     "failure_event",
     [
@@ -682,36 +734,32 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "blocked = pathlib.Path('src/blocked.py')",
-            "blocked.parent.mkdir(exist_ok=True)",
-            "if count == 0:",
-            "    blocked.write_text('blocked\\n')",
-            (
-                "    print(json.dumps({'type': 'error', "
-                "'message': 'Selected model is at capacity'}))"
-            ),
-            "    sys.exit(1)",
-            "output.write_text(json.dumps({'ok': True}) + '\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    blocked = root / "src" / "blocked.py"
 
-    run_codex_exec(
+    def retain_artifact(index, _call):
+        if index == 1:
+            blocked.parent.mkdir()
+            blocked.write_text("blocked\n")
+        else:
+            assert blocked.read_text() == "blocked\n"
+
+    # 実ファイルと回復制御は保ち、process 受け渡しは既存の結合テストへ委ねる。
+    stdout = '{"type":"turn.completed"}\n'
+    calls = script_codex_calls(
+        monkeypatch,
+        [
+            (
+                1,
+                '{"type":"error","message":"Selected model is at capacity"}\n',
+                None,
+            ),
+            (0, stdout, '{"ok":true}\n'),
+            (0, stdout, '{"ok":true}\n'),
+        ],
+        on_call=retain_artifact,
+    )
+
+    result = run_codex_exec(
         AgentCallParameter(
             "build_feedback_normalize_issue_parameter",
             FileAccessMode.REALIZATION_WRITE,
@@ -724,8 +772,11 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
         config=CmocConfig(),
     )
 
-    assert counter.read_text() == "3"
-    assert (root / "src" / "blocked.py").read_text() == "blocked\n"
+    assert len(calls) == 3
+    assert calls[0]["prompt"] == calls[2]["prompt"] == "prompt"
+    assert calls[1]["prompt"] != "prompt"
+    assert result.output_json == {"ok": True}
+    assert blocked.read_text() == "blocked\n"
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(

@@ -47,11 +47,29 @@ from main import app
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
-def test_refactor_preprocess_interruption_preserves_user_changes(tmp_path, monkeypatch):
-    """前処理中の停止は未確定修復だけを戻し、既存の index・作業差分を保持する。"""
+@pytest.fixture
+def managed_repository(tmp_path: Path) -> Path:
+    """既存管理物を前提にするケースでは、準備用 doctor の修復・検索・report を省く。"""
+    # 初回修復と索引同期は専用ケースに残し、既存ファイルへの操作は各テストで行う。
     root = make_repo(tmp_path)
+    for relative in _WORK_DIRECTORIES:
+        (root / relative).mkdir(parents=True, exist_ok=True)
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    (root / ".agents").mkdir()
+    (root / ".agents/.gitkeep").write_text("")
+    seed_search_config(root)
+    doctor_module.sync_refactor_state(root)
+    run_git(root, "add", ".gitignore", ".agents", ".cmoc/gt")
+    run_git(root, "commit", "-m", "prepare management files")
+    return root
+
+
+def test_refactor_preprocess_interruption_preserves_user_changes(
+    managed_repository, monkeypatch
+):
+    """前処理中の停止は未確定修復だけを戻し、既存の index・作業差分を保持する。"""
+    root = managed_repository
     monkeypatch.chdir(root)
-    run_doctor(root)
     ignore = root / ".gitignore"
     ignore.write_text(ignore.read_text() + "# staged by user\n")
     run_git(root, "add", ".gitignore")
@@ -884,10 +902,11 @@ def test_doctor_preserves_preexisting_intent_to_add_index_file(tmp_path: Path) -
 
 
 def test_normal_preprocess_rejects_unset_search_without_rewriting_config(
-    tmp_path: Path,
+    committed_repository: Path,
 ) -> None:
     """通常起動では不足した設定を補完せず、仕事の開始前に診断する。"""
-    root = make_repo(tmp_path)
+    # 不正設定で停止するため、index 退避に必要な HEAD だけを用意する。
+    root = committed_repository
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"num_parallel": 3, "document_search": null}\n'
@@ -902,8 +921,10 @@ def test_normal_preprocess_rejects_unset_search_without_rewriting_config(
     assert path.read_text() == original
 
 
-def test_doctor_rejects_null_search_without_filling_or_saving(tmp_path, monkeypatch):
-    root = make_repo(tmp_path)
+def test_doctor_rejects_null_search_without_filling_or_saving(
+    committed_repository, monkeypatch
+):
+    root = committed_repository
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"document_search": null}\n'
@@ -919,10 +940,10 @@ def test_doctor_rejects_null_search_without_filling_or_saving(tmp_path, monkeypa
 
 
 def test_doctor_reports_unsaved_inconsistent_search_candidate(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """補完候補が衝突した場合、doctor report に値と非保存を残す。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"document_search": {"embedding_context_tokens": 256}}\n'
@@ -1047,12 +1068,11 @@ def test_preexisting_runtime_paths_preserves_unmerged_entries(tmp_path, stages):
 
 
 def test_doctor_does_not_commit_preexisting_staged_config_change(
-    tmp_path: Path,
+    managed_repository: Path,
 ) -> None:
     """doctor が事前に stage された人間の config 変更を修復 commit に混ぜない。"""
 
-    root = make_repo(tmp_path)
-    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
+    root = managed_repository
     config_path = root / ".cmoc" / "gt" / "config.json"
     data = json.loads(config_path.read_text())
     data["num_parallel"] = 99

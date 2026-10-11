@@ -33,8 +33,10 @@ def test_probe_deadline_stops_process(tmp_path, tracked):
     tracking_path = tmp_path / "run.pid"
     tracking_path.write_text("111 222\n")
     pid_path = tmp_path / "probe.pid"
+    # 標準ライブラリだけの子では site 初期化を省き、実停止・期限の検証は保つ。
     argv = [
         sys.executable,
+        "-S",
         "-c",
         "import os, pathlib, sys, time; "
         "sys.stdin.read(); "
@@ -77,11 +79,12 @@ def test_interruption_stops_tool_in_another_session(tmp_path, tracked):
         "import os, pathlib, subprocess, sys; "
         "sys.stdin.read(); "
         "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
-        "child = subprocess.Popen([sys.executable, '-c', sys.argv[2], *sys.argv[3:]], "
+        "child = subprocess.Popen([sys.executable, '-S', '-c', sys.argv[2], *sys.argv[3:]], "
         "start_new_session=True); child.wait()"
     )
     argv = [
         sys.executable,
+        "-S",
         "-c",
         parent_script,
         str(parent_pid),
@@ -1071,7 +1074,7 @@ def test_run_codex_subprocess_notifies_after_process_start() -> None:
     callbacks: list[str] = []
 
     result = run_codex_subprocess(
-        [sys.executable, "-c", "print('ok')"],
+        [sys.executable, "-S", "-c", "print('ok')"],
         text=True,
         capture_output=True,
         check=True,

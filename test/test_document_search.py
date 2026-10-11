@@ -157,7 +157,7 @@ class _InferenceDouble:
 
 def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     """索引を Git 非追跡にした隔離 repository を作る。"""
-    # 分類検査には実 index を使い、worktree 複製が必要なケースだけ HEAD を作る。
+    # 履歴を使わない検査は未追跡の文書で行い、worktree 複製時だけ stage と HEAD を作る。
     # ignore 修復は test_runtime_git_ignore.py に委ね、複製先にも規則を引き継ぐ。
     root = tmp_path / "repo"
     root.mkdir()
@@ -167,8 +167,8 @@ def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
     (root / ".gitignore").write_text("oracle/doc/ignored.md\n/.cmoc/gu/\n")
     (docs / "ignored.md").write_text("# 非公開の本文\n")
-    run_git(root, "add", ".gitignore", "oracle/doc")
     if committed:
+        run_git(root, "add", ".gitignore", "oracle/doc")
         run_git(root, "commit", "-m", "add docs")
     return root
 
@@ -782,11 +782,10 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
         return locations
 
     with closing(search):
-        first = search.synchronize()
-        assert first.chunk_count == 3
+        # 初回も検索の自動同期で生成数と現在位置を一緒に検査する。
+        assert hit_lines() == {a: 1, b: 3, c: 5}
         assert search.sync_progress["persisted_chunks"] == 3
         assert model_inputs() == [a, b, c]
-        assert hit_lines() == {a: 1, b: 3, c: 5}
 
         edited_a = "# A\nalpha edited\nextra\n"
         document.write_text(edited_a + b + c)
@@ -1379,7 +1378,8 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
     # 採用上限を満たす正常候補と、上限外にある異常候補一つを用意する。
     candidate_count = 20
     available = candidate_count + 1
-    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
+    # 同じ正常ベクトルの本文も共有し、位置・件数を保って余分な cache 保存を省く。
+    (root / path).write_text("異常候補\n" + "正常候補\n" * candidate_count)
     worker = _CandidateWorker(
         {path: [(i + 1, i + 1) for i in range(available)]},
         vectors={path: [(0, 1)] + [(1, 0)] * candidate_count},
@@ -1387,8 +1387,10 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
     original_open = module._open_database
 
     def cosine_distance(embedding, query):
+        nonlocal invalid_distance_evaluated
         if struct.unpack_from("<f", embedding)[0] != 0:
             return 0.0
+        invalid_distance_evaluated = True
         if isinstance(distance, Exception):
             raise distance
         return distance
@@ -1408,7 +1410,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        # 演算の失敗は保存済みの文書を変えないため、索引構築を繰り返さない。
+        # 変えるのは距離演算だけなので、索引と query embedding を再利用する。
         for request_id, distance in enumerate(
             [
                 None,
@@ -1424,6 +1426,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
             ],
             start=1,
         ):
+            invalid_distance_evaluated = False
             response = _response(
                 {
                     "jsonrpc": "2.0",
@@ -1431,12 +1434,14 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
                     "method": "tools/call",
                     "params": {
                         "name": "search",
-                        "arguments": {"query": f"候補 {request_id}"},
+                        "arguments": {"query": "候補"},
                     },
                 },
                 search,
             )
             result = _assert_search_result(response, tool["outputSchema"], error=True)
+            # 同じ query の失敗を再利用して、後続の異常条件を素通りさせない。
+            assert invalid_distance_evaluated, repr(distance)
             assert result["status"] == "error", repr(distance)
             assert result["code"] == "MODEL_FAILURE", repr(distance)
 
@@ -1488,11 +1493,10 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
         ),
     ],
 )
-def test_output_schema_rejects_malformed_results(tmp_path, value):
+def test_output_schema_rejects_malformed_results(value):
     """旧形式や成功・失敗の混在、行範囲の型違いを公開 schema で検出する。"""
-    search = DocumentSearch(tmp_path, None)
-    schema = _listed_search_tool(search)["outputSchema"]
-    assert not Draft202012Validator(schema).is_valid(value)
+    # 公開値の一致は stdio test で検査し、schema 単体の検査には検索 context を作らない。
+    assert not Draft202012Validator(SEARCH_TOOL_OUTPUT_SCHEMA).is_valid(value)
 
 
 def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(

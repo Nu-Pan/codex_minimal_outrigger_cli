@@ -179,7 +179,11 @@ _POLICY_FLAG_HEADINGS = (
 )
 
 
-@pytest.mark.parametrize(("selected_flag", "selected_heading"), _POLICY_FLAG_HEADINGS)
+# routing の flag 検査は、検索有効・無効の文面検査と同じ prompt で行う。
+@pytest.mark.parametrize(
+    ("selected_flag", "selected_heading"),
+    [case for case in _POLICY_FLAG_HEADINGS if case[0] != "routing_policy"],
+)
 def test_each_policy_flag_adds_only_its_block_once(
     selected_flag: str,
     selected_heading: str,
@@ -250,7 +254,7 @@ def test_complete_prompt_renders_search_routing_for_call_availability(
     enable_document_search_mcp: bool,
     path_context: AgentCallPathContext,
 ) -> None:
-    """完全 prompt が検索の併用条件と call の検索有効状態を伝える。"""
+    """routing だけを一度挿入し、検索の併用条件と call の有効状態を伝える。"""
     prompt = build_complete_prompt(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
@@ -259,6 +263,8 @@ def test_complete_prompt_renders_search_routing_for_call_availability(
         enable_document_search_mcp=enable_document_search_mcp,
     )
     rendered = render_sd_node_as_markdown(*prompt)
+    for flag, heading in _POLICY_FLAG_HEADINGS:
+        assert rendered.count(heading) == (1 if flag == "routing_policy" else 0)
     routing = rendered.split("# routing policy\n", 1)[1].split("</cmoc_block>", 1)[0]
     required = routing.split("\n**必須**\n", 1)[1].split("\n**禁止**\n", 1)[0]
     prohibited = routing.split("\n**禁止**\n", 1)[1].split("\n**例外**\n", 1)[0]
@@ -415,7 +421,6 @@ def test_complete_prompt_renders_file_classification_boundaries(
 
 
 def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
-    tmp_path: Path,
     path_context: AgentCallPathContext,
 ) -> None:
     """root placeholder は同値なら統合し、異値なら prompt 構築を失敗させる。"""
@@ -434,7 +439,7 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
             task="- task",
             file_access_mode=FileAccessMode.READONLY,
             path_context=context,
-            aux_placeholder_def={"work-root": tmp_path / "other-worktree"},
+            aux_placeholder_def={"work-root": context.work_root / "other-worktree"},
         )
 
 

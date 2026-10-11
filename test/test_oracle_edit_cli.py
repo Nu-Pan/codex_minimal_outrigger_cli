@@ -19,8 +19,6 @@ from _git_support import (
     RUN_BRANCH,
     SESSION_BRANCH,
     SESSION_ID,
-    current_branch,
-    init_repo,
     make_repo,
     run_git,
 )
@@ -49,16 +47,13 @@ def _activate_session(
     run: RunPart,
 ) -> Path:
     """隔離 repository に oracle edit 用の session state を作成する。"""
-    home_branch = current_branch(root)
-    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    session_id = SESSION_ID
-    session_branch = f"cmoc/session/{session_id}"
-    run_git(root, "checkout", "-b", session_branch)
-    path = state_path(root, session_id)
+    run_git(root, "checkout", "-b", SESSION_BRANCH)
+    path = state_path(root, SESSION_ID)
+    # oracle edit は join 元情報を使わないため、state の必須文字列だけ用意する。
     write_state(
         path,
         SessionState(
-            SessionPart("active", home_branch, fork_commit, None),
+            SessionPart("active", "unused-home", "abc", None),
             run,
         ),
     )
@@ -566,26 +561,30 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
 )
 def test_oracle_edit_launch_preconditions(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     case: str,
     message: str,
 ) -> None:
     """oracle edit の各起動前提違反を利用者向け例外として検証する。"""
-    # 判定に不要な commit・追跡ファイルを作らず、必要な branch と state だけ用意する。
+    # branch 取得との結合は上の CLI test に残し、各判定には返り値と実 state を使う。
     root = tmp_path / "repo"
     root.mkdir()
+
+    def branch_for_precondition(repository: Path) -> str:
+        assert repository == root
+        assert case != "linked"
+        return SESSION_BRANCH if case == "inactive" else "main"
+
+    monkeypatch.setattr(oracle_edit_module, "current_branch", branch_for_precondition)
     current_root = root
     if case == "linked":
         current_root = tmp_path / "linked"
         current_root.mkdir()
-    else:
-        init_repo(root)
-        if case == "inactive":
-            home_branch = current_branch(root)
-            run_git(root, "checkout", "-b", SESSION_BRANCH)
-            write_state(
-                state_path(root, SESSION_ID),
-                SessionState(SessionPart("joined", home_branch, "abc", None)),
-            )
+    elif case == "inactive":
+        write_state(
+            state_path(root, SESSION_ID),
+            SessionState(SessionPart("joined", "main", "abc", None)),
+        )
     with pytest.raises(CmocError, match=message):
         oracle_edit_module._require_oracle_edit_launch_preconditions(
             root,

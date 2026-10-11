@@ -13,8 +13,9 @@ from types import SimpleNamespace
 from typing import cast
 
 import pytest
-from _git_support import make_repo, run_git
+from _git_support import run_git
 
+import commons.runtime_git as git_module
 import commons.runtime_refactor as refactor_module
 import sub_commands.realization.refactor.fork as refactor_workload
 from cmoc_runtime import CmocError, file_sha256
@@ -27,6 +28,7 @@ from commons.runtime_refactor import (
     sync_refactor_state,
     write_refactor_state,
 )
+from commons.runtime_results import CommandResult
 
 
 @pytest.fixture
@@ -129,17 +131,22 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
 
 
 def test_refactor_target_classifiers_require_file_entries(
-    cli_repository: Path,
+    committed_repository: Path,
 ) -> None:
-    """oracle/realization file classifier が directory と欠落 path を拒否する。"""
-    root = cli_repository
+    """通常 file を受理し、directory・欠落 path・Gitlink を拒否する。"""
+    # blob と Gitlink を同じ tree に用意し、種類の検査で repository 準備を共有する。
+    root = committed_repository
     (root / "oracle").mkdir()
     realization_directory = root / "src"
     realization_directory.mkdir()
     realization_file = realization_directory / "module.py"
     realization_file.write_text("VALUE = 1\n")
+    gitlink = root / "module"
+    gitlink.mkdir()
+    commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "add", "src/module.py")
-    run_git(root, "commit", "-m", "add realization directory")
+    run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{commit},module")
+    run_git(root, "commit", "-m", "add classifier entries")
 
     assert not is_oracle_file_path(root, root / "oracle")
     assert not is_oracle_file_path(root, root / "oracle" / "missing.md")
@@ -147,6 +154,8 @@ def test_refactor_target_classifiers_require_file_entries(
     assert not is_realization_file_path(root, realization_directory, branch="HEAD")
     assert is_realization_file_path(root, realization_file, branch="HEAD")
     assert not is_realization_file_path(root, root / "missing.py")
+    assert gitlink.is_dir()
+    assert not is_realization_file_path(root, gitlink, branch="HEAD")
 
 
 def test_refactor_target_classifiers_reject_symlinked_parent(
@@ -191,15 +200,23 @@ def test_refactor_target_classifiers_reject_symlinked_parent(
     ],
 )
 def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
-    cli_repository: Path, replacement: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, replacement: str
 ) -> None:
     """branch の blob fallback が既存の非通常 file を file として扱わない。"""
-    root = cli_repository
+    # 実 branch の blob/tree/Gitlink と特殊文字 path は隣接する分類 test に残す。
+    # ここでは同じ branch blob に対する欠落・非通常 file の違いだけを検査する。
+    root = tmp_path / "repo"
+    root.mkdir()
     path = root / "module.py"
-    path.write_text("VALUE = 1\n")
-    run_git(root, "add", "module.py")
-    run_git(root, "commit", "-m", "add module")
-    path.unlink()
+
+    def branch_blob(args: list[str], *_args, **_kwargs) -> CommandResult:
+        assert "unused-invalid-ref" not in args, "non-file paths need no fallback ref"
+        return CommandResult(0, f"100644 blob {'a' * 40}\tmodule.py\0", "")
+
+    monkeypatch.setattr(git_module, "run_git", branch_blob)
+    # 対照ケースで blob 応答が受理されることも確認し、double の不備を検出する。
+    assert is_realization_file_path(root, path, branch="HEAD")
+
     if replacement == "directory":
         path.mkdir()
     elif replacement == "symlink":
@@ -210,21 +227,6 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     assert not is_realization_file_path(
         root, path, branch="HEAD", fallback_branch="unused-invalid-ref"
     )
-
-
-def test_refactor_target_classifier_rejects_gitlink_directory(
-    tmp_path: Path,
-) -> None:
-    """realization file classifier が Gitlink の directory entry を拒否する。"""
-    root = make_repo(tmp_path)
-    gitlink = root / "module"
-    gitlink.mkdir()
-    commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{commit},module")
-    run_git(root, "commit", "-m", "add gitlink entry")
-
-    assert gitlink.is_dir()
-    assert not is_realization_file_path(root, gitlink, branch="HEAD")
 
 
 def test_refactor_target_classifier_accepts_special_path_from_branch(

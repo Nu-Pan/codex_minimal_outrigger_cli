@@ -19,7 +19,7 @@ from _codex_support import (
     setup_codex_home,
 )
 from _command_support import write_python_executable
-from _git_support import make_repo, run_git
+from _git_support import run_git
 
 from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
@@ -181,7 +181,13 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     (root / "oracle").mkdir()
     (root / "oracle" / "spec.md").write_text("# spec\n")
     agent_call_cwd = root / agent_call_cwd_relative
-    setup_codex_home(tmp_path, monkeypatch)
+    # 相対 home の値・子の cwd 基準の解決・log 保存も同じ起動で検査する。
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    codex_home = agent_call_cwd / "relative_codex_home"
+    codex_home.mkdir()
+    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -195,13 +201,15 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
+            "    'codex_home': os.environ['CODEX_HOME'],",
+            "    'resolved_home': str(pathlib.Path(os.environ['CODEX_HOME']).resolve()),",
             "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    run_codex_exec(
+    result = run_codex_exec(
         codex_parameter(
             FileAccessMode.PURE_ORACLE_READ,
             agent_call_cwd=agent_call_cwd,
@@ -215,6 +223,11 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     expected_cwd = agent_call_cwd.resolve()
     assert record["args"][record["args"].index("--cd") + 1] == str(expected_cwd)
     assert record["cwd"] == str(expected_cwd)
+    assert record["codex_home"] == "relative_codex_home"
+    assert Path(record["resolved_home"]) == codex_home
+    assert result.codex_home == codex_home
+    call_log = json.loads(result.call_log_path.read_text())
+    assert call_log["codex_home"] == str(codex_home)
     override_config = codex_override_config(record["args"])
     assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
     assert override_config["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
@@ -224,15 +237,15 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
 
 
 def test_run_codex_exec_uses_linked_worktree_context(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree の cwd・sandbox と main repository の schema 保存先を検証する。
 
     正本仕様:
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
-    # 同じ linked worktree の一回の呼び出しで cwd・sandbox・schema の境界を調べる。
-    root = make_repo(tmp_path)
+    # cwd・sandbox・schema の境界には実 linked metadata と HEAD だけを用意する。
+    root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-exec", str(linked), "HEAD")

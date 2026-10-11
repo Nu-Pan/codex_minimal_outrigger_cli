@@ -372,8 +372,14 @@ def test_tui_callback_close_drains_running_callback(
             assert not close_future.done()
             release_callback.set()
             assert callback_future.result(timeout=5) == 0
+            finished_at = toast_clock.now
             release_drain.set()
             close_future.result(timeout=5)
+        grace = runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
+        poll = runtime_windows_toast._TUI_CALLBACK_DRAIN_POLL_SEC
+        # 実 marker の削除を認識し、全 timeout ではなく完了後の猶予で戻る。
+        quiet_period = toast_clock.now - finished_at
+        assert grace - poll <= quiet_period <= grace + poll
         assert not state_root.exists()
     finally:
         release_callback.set()
@@ -383,46 +389,35 @@ def test_tui_callback_close_drains_running_callback(
 
 @pytest.mark.parametrize("callback_finishes", [True, False], ids=["finishes", "stuck"])
 def test_tui_callback_drain_handles_late_start_with_finite_wait(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, toast_clock, callback_finishes
+    monkeypatch: pytest.MonkeyPatch, toast_clock, callback_finishes
 ) -> None:
-    """遅れて作られた lease の終了を待ち、残り続ける lease でも期限で戻る。"""
-    state_root = tmp_path / "callback-state"
-    state_root.mkdir()
+    """遅れて始まる callback の完了後に猶予を置き、停止しても期限で戻る。"""
+    # 実 marker の生成・削除と drain の結合は上の並行ケースに残す。
+    # ここでは活動状態の検査を置換し、仮想時間の各 poll での実 file I/O を省く。
     grace = runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
     poll = runtime_windows_toast._TUI_CALLBACK_DRAIN_POLL_SEC
     timeout = runtime_windows_toast._TUI_CALLBACK_DRAIN_TIMEOUT_SEC
     started_at = toast_clock.now
-    lease = None
-    finished_at = None
-    advance = toast_clock.sleep
+    activity = []
 
-    def advance_callback(seconds):
-        nonlocal lease, finished_at
-        advance(seconds)
+    def callback_is_active(_state_root):
         elapsed = toast_clock.now - started_at
-        if lease is None and elapsed >= grace / 2:
-            lease = runtime_windows_toast._begin_tui_callback_lease(state_root)
-            assert lease is not None
-        if callback_finishes and finished_at is None and elapsed >= 2 * grace:
-            runtime_windows_toast._end_tui_callback_lease(lease)
-            finished_at = toast_clock.now
+        active = elapsed >= grace / 2 and (not callback_finishes or elapsed < 2 * grace)
+        activity.append(active)
+        return active
 
-    monkeypatch.setattr(toast_clock, "sleep", advance_callback)
-    try:
-        runtime_windows_toast._wait_for_tui_callback_drain(state_root)
-        assert lease is not None
-        elapsed = toast_clock.now - started_at
-        if callback_finishes:
-            assert finished_at is not None
-            # 完了後の猶予を保ち、正常終了で全 timeout を待ち切る回帰も検出する。
-            quiet_period = toast_clock.now - finished_at
-            assert grace - poll <= quiet_period <= grace + poll
-            assert elapsed < timeout
-        else:
-            assert finished_at is None
-            assert elapsed == pytest.approx(timeout)
-    finally:
-        runtime_windows_toast._end_tui_callback_lease(lease)
+    monkeypatch.setattr(
+        runtime_windows_toast, "_has_active_tui_callback", callback_is_active
+    )
+    runtime_windows_toast._wait_for_tui_callback_drain(Path("callback-state"))
+    assert True in activity
+    elapsed = toast_clock.now - started_at
+    if callback_finishes:
+        quiet_period = elapsed - 2 * grace
+        assert grace - poll <= quiet_period <= grace + poll
+        assert elapsed < timeout
+    else:
+        assert elapsed == pytest.approx(timeout)
 
 
 def test_tui_callback_commands_run_as_standalone_scripts(

@@ -29,11 +29,15 @@ from main import app
 
 
 @pytest.fixture
-def editor_input(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], list[Path]]:
+def editor_input(
+    monkeypatch: pytest.MonkeyPatch,
+    handoff_start: Mock,
+) -> Callable[[str], list[Path]]:
     """CLI の editor 起動時に指定本文を書き、実際に渡された入力 path を記録する。"""
 
     # editor 選択と --wait は test_prompt_editor_input.py で検証する。
-    # main 起動の handoff と各ケースの確定保存は実経路を通す。
+    # TCP・guide の結合は test_editor_input_handoff.py に残す。
+    # CLI では target の終了順序を観測し、各ケースの確定保存は実経路を通す。
     # 本文を書くためだけの process 起動は省く。
     def supply_input(content: str) -> list[Path]:
         opened: list[Path] = []
@@ -41,6 +45,7 @@ def editor_input(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], list[Path]]
         def edit_input(argv: list[str]) -> SimpleNamespace:
             path = Path(argv[-1])
             assert path.read_bytes() == b""
+            handoff_start.return_value.close.assert_not_called()
             opened.append(path)
             path.write_text(content, encoding="utf-8")
             return SimpleNamespace(returncode=0)
@@ -63,25 +68,19 @@ def editor_input(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], list[Path]]
     "command", [["tui"], ["oracle", "investigation"], ["oracle", "edit"]]
 )
 def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
-    cli_repository: Path,
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_start: Mock,
     command: list[str],
 ) -> None:
     """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
-    root = cli_repository
-    monkeypatch.chdir(root)
+    root = cli_terminal_directory
     # root 解決は test_basic_runtime.py と下の main/linked 成功ケースに残す。
-    # 保存先の ignore 検査は実 Git を使い、反復する root 探索だけを外す。
+    # 保存失敗の CLI 制御では root を解決済みとし、Git の準備・探索を省く。
     monkeypatch.setattr(
         path_model_module,
         "_resolve_git_worktree_roots",
         lambda _start_path=None: (root, root),
-    )
-    # agent を起動しないケースでは collector を利用しない。
-    # TCP 受付・停止・drain は test_feedback.py が実経路で検証する。
-    monkeypatch.setattr(
-        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
     )
     # doctor の実処理との結合は、各 CLI の成功ケースで検証する。
     # 保存失敗の検査では呼び出しを記録し、修復 commit・索引同期を繰り返さない。
@@ -89,12 +88,25 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     monkeypatch.setattr(
         runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
     )
+    # 実 ignore の修復・main/linked 境界は下の成功ケースと test_runtime_git_ignore.py に残す。
+    # 各 command から doctor 後、editor 前に渡す root は引き続き観測する。
+    ignored_roots: list[Path] = []
+
+    def record_editor_roots_ignored(target_root: Path) -> None:
+        assert doctor_roots == [root]
+        ignored_roots.append(target_root)
+
+    for module in (tui_module, investigation_module, oracle_edit_module):
+        monkeypatch.setattr(
+            module, "ensure_prompt_editor_roots_ignored", record_editor_roots_ignored
+        )
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
 
     # TCP・guide の cleanup は専用 test と editor 失敗 test が実経路で検証する。
     # ここでは target を閉じてから確定保存へ進む CLI の制御だけを観測する。
     def edit_input(argv: list[str]) -> SimpleNamespace:
         assert doctor_roots == [root]
+        assert ignored_roots == [root]
         handoff_start.return_value.close.assert_not_called()
         Path(argv[-1]).write_bytes(b"recoverable input\r\n")
         return SimpleNamespace(returncode=0)
@@ -129,6 +141,7 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     # CLI は BaseException も終了 code へ変換するため、call の有無を外から検査する。
     agent_call.assert_not_called()
     assert result.exit_code == 1
+    assert ignored_roots == [root]
     files = list((root / ".cmoc/gu/log/editor_input").iterdir())
     assert len(files) == 1
     handoff_start.assert_called_once()
@@ -142,6 +155,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     editor_input: Callable[[str], list[Path]],
+    handoff_start: Mock,
 ) -> None:
     """既存差分を保ち、編集済み prompt から Codex TUI を直接起動する。"""
     root = make_repo(tmp_path)
@@ -188,6 +202,8 @@ def test_tui_runs_editor_and_launches_codex_directly(
             if original_prompt == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
             else "build-parameter"
         )
+        if kind == "build-parameter":
+            handoff_start.return_value.close.assert_called_once_with()
         events.append(kind)
         parameter = real_build_parameter(original_prompt)
         builder_calls.append((original_prompt, parameter))
@@ -248,6 +264,10 @@ def test_tui_runs_editor_and_launches_codex_directly(
     )
     assert len(orig_files) == 1
     assert opened_inputs == orig_files
+    handoff_start.assert_called_once_with(
+        root, orig_files[0], builder_calls[0][1].prompt
+    )
+    handoff_start.return_value.close.assert_called_once_with()
     editor_contents = orig_files[0].read_text()
     assert (
         editor_contents
@@ -308,7 +328,7 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
         runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
     )
     # doctor と TUI は観測用のダブルなので、使わない collector は起動しない。
-    # handoff の実結合は main 起動、TCP lifecycle は専用 test に残し、
+    # handoff の TCP・guide の結合は test_editor_input_handoff.py に残し、
     # linked 起動では main root への引き渡しと終了順序を観測する。
     monkeypatch.setattr(
         runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)

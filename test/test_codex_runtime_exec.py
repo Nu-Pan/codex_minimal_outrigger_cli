@@ -8,6 +8,7 @@ from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
+    script_codex_calls,
     setup_codex_home,
     stub_codex_overrides,
 )
@@ -69,7 +70,12 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     agents_file = root / ".agents" / "nested" / "instructions.md"
     agents_file.parent.mkdir(parents=True)
     agents_file.write_text("agent instructions\n")
-    codex_home = setup_codex_home(tmp_path, monkeypatch)
+    # 既定 home の生成・子への受け渡しもこの起動で検査する。
+    home = tmp_path / "home"
+    codex_home = home / ".codex"
+    codex_home.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("CODEX_HOME", raising=False)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -87,6 +93,7 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
+            "    'codex_home': os.environ.get('CODEX_HOME'),",
             "    'stdin': sys.stdin.read(),",
             "    'stdin_fd': os.readlink('/proc/self/fd/0'),",
             "}))",
@@ -142,6 +149,8 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     assert record["args"][record["args"].index("exec") + 1] == "--skip-git-repo-check"
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["cwd"] == str(root.resolve())
+    assert record["codex_home"] == str(codex_home)
+    assert result.codex_home == codex_home
     assert record["stdin"] == "prompt"
     assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
     assert result.prompt_log_path.name.endswith("_prompt.md")
@@ -181,19 +190,10 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_bytes(b'\\xff')",
-            'print(\'{"type": "turn.completed"}\')',
-        ],
+    # process の受け渡しは正常起動の結合テストに残し、不正 bytes の読み取りを検査する。
+    calls = script_codex_calls(
+        monkeypatch, [(0, '{"type":"turn.completed"}\n', b"\xff")]
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     result = run_codex_exec(
         codex_parameter(agent_call_cwd=root),
@@ -202,6 +202,8 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
         config=CmocConfig(),
     )
 
+    assert len(calls) == 1
+    assert result.output_path.read_bytes() == b"\xff"
     assert result.output_json is None
     assert result.output_text == "\ufffd"
 

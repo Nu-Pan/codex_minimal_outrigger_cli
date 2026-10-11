@@ -180,8 +180,8 @@ def _add_candidate(harness, letter):
         "payload": _payload(),
         "observed_at": rfc3339_now(),
     }
-    # 二つの observation ID は issue ID の辞書順も a、b の順になる。
-    suffix = {"a": "0", "b": "1"}[letter]
+    # a、b の observation ID は issue ID の辞書順も a、b の順になる。
+    suffix = str("abcdef".index(letter))
     candidate = report._new_candidate(
         observation, "agent\0fbo_00000" + suffix + "_2026-08-01_00-00"
     )
@@ -421,14 +421,11 @@ def test_report_cut_update_skips_unchanged_write_but_rechecks_inputs(
     assert h.path.read_bytes() == changed_content
 
 
-@pytest.mark.parametrize("target", ["observation", "normalization", "remediation"])
 def test_report_cut_manifest_reads_hash_verified_inputs_once(
-    report_cut_inputs, monkeypatch, target
+    report_cut_inputs, monkeypatch
 ):
     h, paths = report_cut_inputs
-    replaced = paths[target]
     original_read = Path.read_bytes
-    original_content = original_read(replaced)
     reads = Counter()
 
     def replace_after_read(path):
@@ -440,33 +437,35 @@ def test_report_cut_manifest_reads_hash_verified_inputs_once(
         return content
 
     monkeypatch.setattr(Path, "read_bytes", replace_after_read)
-    for allow_missing in (False, True):
-        reads.clear()
-        # hash を確認した同じ byte 列を検証し、後からの置換を混ぜない。
-        _validate_report_cut_manifest(
-            h.context.repo,
-            h.manifest,
-            h.path,
-            allow_missing_cleanup_targets=allow_missing,
-        )
-        assert reads == {path: 1 for path in paths.values()}
-        # 呼出し間の cache は持たず、次の検証では置換による破損を検出する。
-        with pytest.raises(CmocError, match="SHA256"):
+    # 同じ wave・checkpoint の準備を共有し、各入力は検査後に元へ戻す。
+    for target, replaced in paths.items():
+        original_content = original_read(replaced)
+        for allow_missing in (False, True):
+            reads.clear()
+            # hash を確認した同じ byte 列を検証し、後からの置換を混ぜない。
             _validate_report_cut_manifest(
                 h.context.repo,
                 h.manifest,
                 h.path,
                 allow_missing_cleanup_targets=allow_missing,
             )
-        replaced.write_bytes(original_content)
+            assert reads == {path: 1 for path in paths.values()}, (
+                target,
+                allow_missing,
+            )
+            # 呼出し間の cache は持たず、次の検証では置換による破損を検出する。
+            with pytest.raises(CmocError, match="SHA256"):
+                _validate_report_cut_manifest(
+                    h.context.repo,
+                    h.manifest,
+                    h.path,
+                    allow_missing_cleanup_targets=allow_missing,
+                )
+            replaced.write_bytes(original_content)
 
 
-@pytest.mark.parametrize("target", ["observation", "normalization", "remediation"])
-def test_report_cut_manifest_cleanup_relaxes_only_input_existence(
-    report_cut_inputs, target
-):
+def test_report_cut_manifest_cleanup_relaxes_only_input_existence(report_cut_inputs):
     h, paths = report_cut_inputs
-    path = paths[target]
 
     def validate(allow_missing):
         _validate_report_cut_manifest(
@@ -476,27 +475,34 @@ def test_report_cut_manifest_cleanup_relaxes_only_input_existence(
             allow_missing_cleanup_targets=allow_missing,
         )
 
-    path.unlink()
-    with pytest.raises(CmocError, match="通常 file"):
-        validate(False)
-    validate(True)
-
-    # 削除済み file の許容を、dangling symlink や directory に広げない。
-    path.symlink_to(h.context.repo / "missing-input.json")
-    for allow_missing in (False, True):
-        with pytest.raises(CmocError, match="symlink"):
-            validate(allow_missing)
-    path.unlink()
-    path.mkdir()
-    for allow_missing in (False, True):
+    # 入力の種類で許容条件は変わらないため、正式な保存処理の準備を共有する。
+    for path in paths.values():
+        original_content = path.read_bytes()
+        path.unlink()
         with pytest.raises(CmocError, match="通常 file"):
-            validate(allow_missing)
-    path.rmdir()
+            validate(False)
+        validate(True)
 
-    path.write_bytes(canonical_json_bytes({"changed": True}))
-    for allow_missing in (False, True):
-        with pytest.raises(CmocError, match="SHA256"):
-            validate(allow_missing)
+        # 削除済み file の許容を、dangling symlink や directory に広げない。
+        path.symlink_to(h.context.repo / "missing-input.json")
+        for allow_missing in (False, True):
+            with pytest.raises(CmocError, match="symlink"):
+                validate(allow_missing)
+        path.unlink()
+        path.mkdir()
+        for allow_missing in (False, True):
+            with pytest.raises(CmocError, match="通常 file"):
+                validate(allow_missing)
+        path.rmdir()
+
+        path.write_bytes(canonical_json_bytes({"changed": True}))
+        for allow_missing in (False, True):
+            with pytest.raises(CmocError, match="SHA256"):
+                validate(allow_missing)
+
+        # 次の入力の検査へ破損を持ち越さず、正常な組へ復旧できたことも確かめる。
+        path.write_bytes(original_content)
+        validate(False)
 
 
 def test_normalization_checkpoint_rejects_schema_invalid_output(tmp_path):
@@ -669,59 +675,76 @@ def published_feedback(feedback_run, monkeypatch):
     return root, state
 
 
-@pytest.mark.parametrize(
-    "status",
-    ["fixed", "already_resolved", "not_actionable", "human_required", "inconclusive"],
-)
-def test_later_dependency_change_rechecks_every_result(
-    feedback_run, monkeypatch, status
-):
+def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch):
+    """全結果分類の再確認を同じ run で検査し、wave と publication の準備を共有する。"""
     h = feedback_run
-    first, second = (_add_candidate(h, letter) for letter in ("a", "b"))
+    *prior_issues, repairing_issue = sorted(
+        _add_candidate(h, letter) for letter in "abcdef"
+    )
+    # fixed の修正を最初、依存設定の変更を最後にし、全先行判定を同じ根拠で再確認する。
+    statuses = dict(
+        zip(
+            prior_issues,
+            (
+                "fixed",
+                "already_resolved",
+                "not_actionable",
+                "human_required",
+                "inconclusive",
+            ),
+            strict=True,
+        )
+    )
 
     def call(issue):
         identity = issue["issue_id"]
-        if identity == second:
+        if identity == repairing_issue:
+            assert issue["reconfirmation"] is None
             (h.context.run_worktree / "dependency.conf").write_text("new\n")
             output = _remediation_output(identity, "fixed")
             output["result"]["changed_paths"] = ["dependency.conf"]
         elif issue["reconfirmation"] is None:
+            status = statuses[identity]
             output = _remediation_output(identity, status)
             if status == "fixed":
                 (h.context.run_worktree / "README.md").write_text("fixed\n")
                 output["result"]["changed_paths"] = ["README.md"]
         else:
-            assert issue["reconfirmation"]["previous_result"]["status"] == status
+            assert (
+                issue["reconfirmation"]["previous_result"]["status"]
+                == statuses[identity]
+            )
             assert issue["reconfirmation"]["changes"]["paths"] == ["dependency.conf"]
             output = _remediation_output(identity, "already_resolved")
         return output
 
     h.handler = call
     _run(h)
-    assert h.commit_attempts == (
-        [["README.md"], ["dependency.conf"]]
-        if status == "fixed"
-        else [["dependency.conf"]]
-    )
-    assert [item["issue_id"] for item in h.calls] == [first, second, first]
+    assert h.commit_attempts == [["README.md"], ["dependency.conf"]]
+    assert [item["issue_id"] for item in h.calls] == [
+        *prior_issues,
+        repairing_issue,
+        *prior_issues,
+    ]
     assert len(h.manifest["run"]["waves"]) == 2
     assert h.manifest["run"]["high_watermark"] == 0
     loaded, _ = load_report_cut(h.context.repo)
-    assert len(loaded["processing"]["remediation_checkpoints"]) == 3
+    assert len(loaded["processing"]["remediation_checkpoints"]) == 11
     selected = selected_remediation_checkpoints(loaded)
-    assert len(selected) == report._remediation_candidate_count(loaded) == 2
-    assert selected[0]["path"].endswith(".00000002.json")
-    checkpoint = run_state.read_run_artifact(
-        h.context.repo, {key: selected[0][key] for key in ("path", "sha256")}
-    )
-    audit = checkpoint["audit"]
-    assert audit["commit"] is None
-    assert audit["before_commit"] == audit["after_commit"] == h.head
-    assert audit["changed_paths"] == []
+    assert len(selected) == report._remediation_candidate_count(loaded) == 6
+    for reference in selected[:-1]:
+        assert reference["path"].endswith(".00000002.json")
+        checkpoint = run_state.read_run_artifact(
+            h.context.repo, {key: reference[key] for key in ("path", "sha256")}
+        )
+        audit = checkpoint["audit"]
+        assert audit["commit"] is None
+        assert audit["before_commit"] == audit["after_commit"] == h.head
+        assert audit["changed_paths"] == []
     result = _join_and_publish(h, monkeypatch)
     assert result.result == "ok"
     assert load_active_state(h.context.repo).issues == {}
-    assert "remediation_issue_count: 2" in result.primary_report.read_text()
+    assert "remediation_issue_count: 6" in result.primary_report.read_text()
 
 
 @pytest.mark.parametrize("fault", ["head", "forbidden_path"])
@@ -981,10 +1004,7 @@ def test_verified_merge_adjustment_keeps_sealed_result_without_run_tree_equality
         remediation._complete_join(h.context, h.manifest)
 
 
-@pytest.mark.parametrize("log_layout", ["current", "flat", "other_execution"])
-def test_recovery_uses_saved_merge_verification_after_commit(
-    feedback_run, monkeypatch, log_layout
-):
+def test_recovery_uses_saved_merge_verification_after_commit(feedback_run, monkeypatch):
     """merge commit 後は封印済み実行の directory 内の call log だけを再利用する。"""
     h = feedback_run
     identity = _add_candidate(h, "a")
@@ -1001,47 +1021,6 @@ def test_recovery_uses_saved_merge_verification_after_commit(
         remediation,
         "build_run_join_conflict_resolution_parameter",
         lambda *_args, **_kwargs: parameter,
-    )
-    log_dir = h.context.repo / ".cmoc/gu/log/codex"
-    if log_layout == "current":
-        log_dir /= h.manifest["run"]["targets"]["execution_id"]
-    elif log_layout == "other_execution":
-        log_dir /= "exec_zzzzzz_2026-09-29_15-04"
-    log_dir.mkdir(parents=True)
-    call_id = "cc_000000_2026-09-29_15-04"
-    call_path = log_dir / f"{call_id}_call.json"
-    prompt_path = log_dir / f"{call_id}_prompt.md"
-    output_path = log_dir / f"{call_id}_output.json"
-    prompt_path.write_text(parameter.prompt)
-    output_path.write_text(
-        "merge_resolution: resolved\n採用結果を維持する調整と検証を実施。\n"
-    )
-    call_path.write_text(
-        json.dumps(
-            {
-                "purpose": "run join conflict resolution",
-                "agent_call_kind": parameter.agent_call_kind,
-                "file_access_mode": parameter.file_access_mode.value,
-                "cwd": str(h.context.session_worktree.resolve()),
-                "prompt_log_path": str(prompt_path),
-                "output_path": str(output_path),
-            }
-        )
-    )
-    invocation_log = h.context.repo / h.manifest["run"]["invocation_log"]
-    invocation_log.write_text(
-        json.dumps(
-            {
-                "event": "codex_call",
-                "purpose": "run join conflict resolution",
-                "status": "succeeded",
-                "returncode": 0,
-                "call_log_path": str(call_path),
-                "prompt_log_path": str(prompt_path),
-                "output_path": str(output_path),
-            }
-        )
-        + "\n"
     )
     merge_head = "b" * 40
     monkeypatch.setattr(
@@ -1064,26 +1043,72 @@ def test_recovery_uses_saved_merge_verification_after_commit(
     monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
     monkeypatch.setattr(remediation, "_complete_join", lambda *_args: None)
 
-    if log_layout != "current":
-        with pytest.raises(CmocError, match="検証を一意に確認"):
-            remediation._recover_join(h.context, h.manifest)
-        assert h.manifest["run"]["merged"] is None
-        return
-
-    remediation._recover_join(h.context, h.manifest)
-    merged = read_json_object(h.context.repo / h.manifest["run"]["merged"]["path"])
-    assert merged["run_join_commit"] == merge_head
-    assert merged["resolution"]["agent_status"] == "resolved"
-    assert merged["resolution"]["recovered_from_call_log"] is True
-    assert merged["resolution"]["call_log"] == artifact_reference(
-        h.context.repo, call_path
-    )
-
-    output_path.write_text("merge_resolution: unresolved\n")
-    with pytest.raises(CmocError, match="検証を一意に確認"):
-        remediation._recover_merge_resolution(
-            h.context, h.manifest, seal, required=True
+    # 同じ remediation・seal を共有し、拒否後に manifest が変わらないことも検査する。
+    unrecovered_manifest = copy.deepcopy(h.manifest)
+    for log_layout in ("flat", "other_execution", "current"):
+        log_dir = h.context.repo / ".cmoc/gu/log/codex"
+        if log_layout == "current":
+            log_dir /= h.manifest["run"]["targets"]["execution_id"]
+        elif log_layout == "other_execution":
+            log_dir /= "exec_zzzzzz_2026-09-29_15-04"
+        log_dir.mkdir(parents=True)
+        call_id = "cc_000000_2026-09-29_15-04"
+        call_path = log_dir / f"{call_id}_call.json"
+        prompt_path = log_dir / f"{call_id}_prompt.md"
+        output_path = log_dir / f"{call_id}_output.json"
+        prompt_path.write_text(parameter.prompt)
+        output_path.write_text(
+            "merge_resolution: resolved\n採用結果を維持する調整と検証を実施。\n"
         )
+        call_path.write_text(
+            json.dumps(
+                {
+                    "purpose": "run join conflict resolution",
+                    "agent_call_kind": parameter.agent_call_kind,
+                    "file_access_mode": parameter.file_access_mode.value,
+                    "cwd": str(h.context.session_worktree.resolve()),
+                    "prompt_log_path": str(prompt_path),
+                    "output_path": str(output_path),
+                }
+            )
+        )
+        invocation_log = h.context.repo / h.manifest["run"]["invocation_log"]
+        invocation_log.write_text(
+            json.dumps(
+                {
+                    "event": "codex_call",
+                    "purpose": "run join conflict resolution",
+                    "status": "succeeded",
+                    "returncode": 0,
+                    "call_log_path": str(call_path),
+                    "prompt_log_path": str(prompt_path),
+                    "output_path": str(output_path),
+                }
+            )
+            + "\n"
+        )
+
+        if log_layout != "current":
+            with pytest.raises(CmocError, match="検証を一意に確認"):
+                remediation._recover_join(h.context, h.manifest)
+            assert h.manifest == unrecovered_manifest, log_layout
+            continue
+
+        remediation._recover_join(h.context, h.manifest)
+        merged = read_json_object(h.context.repo / h.manifest["run"]["merged"]["path"])
+        assert merged["run_join_commit"] == merge_head
+        assert merged["resolution"]["agent_status"] == "resolved"
+        assert merged["resolution"]["recovered_from_call_log"] is True
+        assert merged["resolution"]["call_log"] == artifact_reference(
+            h.context.repo, call_path
+        )
+
+        output_path.write_text("merge_resolution: unresolved\n")
+        with pytest.raises(CmocError, match="検証を一意に確認"):
+            remediation._recover_merge_resolution(
+                h.context, h.manifest, seal, required=True
+            )
+    assert len(h.calls) == 1
 
 
 def test_active_issue_materializes_basis_without_checkpoint_dependency(

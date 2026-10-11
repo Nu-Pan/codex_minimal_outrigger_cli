@@ -185,6 +185,7 @@ def test_subcommand_logger_writes_utf8_without_locale_dependency(
     tmp_path: Path,
 ) -> None:
     """ASCII locale でも日本語を含む JSON Lines event を保存する。"""
+    # 標準ライブラリだけの子で実ログ保存を通し、不要な site 初期化を省く。
     source_root = Path(__file__).resolve().parents[1]
     # 子 process の cwd を test root とし、別の一時 directory を作らない。
     script = r"""
@@ -196,7 +197,7 @@ logger = SubcommandLogger(Path.cwd(), "probe")
 logger.event("warning", message="\u65e5\u672c\u8a9e warning")
 """
     result = subprocess.run(
-        [sys.executable, "-c", script],
+        [sys.executable, "-S", "-c", script],
         cwd=tmp_path,
         env={
             **os.environ,
