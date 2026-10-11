@@ -185,19 +185,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (nested / "dropped.nested").write_text("ignored by nested\n")
     run_git(nested, "add", ".gitignore")
 
-    actual = _relative_sets(root, enumerate_oracle_and_realization_files(root))
-
-    assert "ignored/tracked.txt" in actual[1]
-    assert "ignored/untracked.txt" not in actual[1]
-    assert "visible.txt" in actual[1]
-    assert "nested/kept.outer" in actual[1]
-    assert "nested/dropped.nested" not in actual[1]
-    assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
-    assert "notes.md" in actual[1]
-    assert "oracle/notes.md" in actual[0]
-
     state = sync_refactor_state(root)
-    assert set(state) == actual[0] | actual[1]
     for relative, entry in state.items():
         entry.update(
             {
@@ -215,12 +203,21 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     venv_bin.mkdir(parents=True)
     (venv_bin / "python").symlink_to(root / "missing-python")
 
-    # full glob の基準集合は、ignored symlink の追加前後で共有できる。
+    # symlink 追加後の分類結果を full glob と照合し、追加前の state の集合も確認する。
     expected = _full_glob_reference(root, (nested,))
+    actual = _relative_sets(root, enumerate_oracle_and_realization_files(root))
     assert actual == expected
-    assert (
-        _relative_sets(root, enumerate_oracle_and_realization_files(root)) == expected
-    )
+
+    assert "ignored/tracked.txt" in actual[1]
+    assert "ignored/untracked.txt" not in actual[1]
+    assert "visible.txt" in actual[1]
+    assert "nested/kept.outer" in actual[1]
+    assert "nested/dropped.nested" not in actual[1]
+    assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
+    assert "notes.md" in actual[1]
+    assert "oracle/notes.md" in actual[0]
+    assert set(state) == actual[0] | actual[1]
+    # state 同期による再列挙で、ignored symlink が entry と調査履歴を変えないことを確認する。
     assert sync_refactor_state(root) == state
 
     (root / "README.md").write_text("changed\n")
@@ -520,9 +517,8 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(
     subdirectory = root / "subdirectory"
     subdirectory.mkdir()
     (subdirectory / ".gitignore").write_text("outer-nested.txt\n")
-    outer_exclude = root / Path(
-        run_git(root, "rev-parse", "--git-path", "info/exclude").stdout.strip()
-    )
+    # 両 repository は init_repo が通常の .git directory を作るため、配置の問い合わせは不要。
+    outer_exclude = root / ".git" / "info" / "exclude"
     outer_exclude.parent.mkdir(parents=True, exist_ok=True)
     outer_exclude.write_text("outer-local.txt\n")
     for relative in (
@@ -541,9 +537,7 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(
     nested_subdirectory = nested / "subdirectory"
     nested_subdirectory.mkdir()
     (nested_subdirectory / ".gitignore").write_text("nested-child.txt\n")
-    nested_exclude = nested / Path(
-        run_git(nested, "rev-parse", "--git-path", "info/exclude").stdout.strip()
-    )
+    nested_exclude = nested / ".git" / "info" / "exclude"
     nested_exclude.parent.mkdir(parents=True, exist_ok=True)
     nested_exclude.write_text("nested-local.txt\n")
     for relative in (
