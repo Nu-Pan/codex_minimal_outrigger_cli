@@ -40,6 +40,7 @@ from _git_support import (
 )
 
 import cmoc_runtime
+import commons.runtime_cli as runtime_cli
 import commons.runtime_merge_conflict as merge_conflict_module
 import sub_commands.session.abandon as session_module
 import sub_commands.session.fork as session_fork_module
@@ -1395,8 +1396,23 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == home_commit
 
 
+@pytest.fixture
+def session_join_error_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    """join の異常系では、共通サービスの起動を省き doctor の呼び出しを記録する。"""
+    # doctor の修復と実行順序は linked worktree の前処理ケースと test_doctor_cli.py、
+    # collector の受付・保存・drain は test_feedback.py に残す。
+    roots: list[Path] = []
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", roots.append)
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    return roots
+
+
 def test_session_join_handled_failure_is_written_to_stderr(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_join_error_preprocess: list[Path],
 ) -> None:
     """事前条件 error terminal result を stderr へ出力する。"""
     root = make_repo(tmp_path)
@@ -1406,6 +1422,7 @@ def test_session_join_handled_failure_is_written_to_stderr(
 
     result = runner.invoke(app, ["session", "join"])
 
+    assert session_join_error_preprocess == [root]
     assert result.exit_code != 0
     assert result.stdout == ""
     assert "# 失敗: cmoc session join" in result.stderr
@@ -1417,7 +1434,9 @@ def test_session_join_handled_failure_is_written_to_stderr(
 
 
 def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_join_error_preprocess: list[Path],
 ) -> None:
     """merge後の予期せぬconflict error reportをstderrへ出力することを検証する。"""
     root = make_repo(tmp_path)
@@ -1448,6 +1467,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
 
     result = runner.invoke(app, ["session", "join"])
 
+    assert session_join_error_preprocess == [root]
     assert result.exit_code != 0
     assert current_branch(root) == home_branch
     assert "# 失敗" not in result.stdout
@@ -1457,7 +1477,9 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
 
 
 def test_session_join_codex_failure_reports_unresolved_merge(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_join_error_preprocess: list[Path],
 ) -> None:
     """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
     root = make_repo(tmp_path)
@@ -1485,6 +1507,7 @@ def test_session_join_codex_failure_reports_unresolved_merge(
 
     result = runner.invoke(app, ["session", "join"])
 
+    assert session_join_error_preprocess == [root]
     assert result.exit_code != 0
     assert current_branch(root) == home_branch
     assert "Codex CLI 呼び出しが失敗しました。" in result.stderr
