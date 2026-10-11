@@ -2473,7 +2473,7 @@ def test_resolve_active_run_reuses_placement_queries_but_refreshes_state_and_wor
     original_run = git_module.subprocess.run
 
     def record_query(argv, *args, **kwargs):
-        if argv[:2] == ["git", "rev-parse"]:
+        if argv[0] == "git":
             queries[(kwargs.get("cwd"), tuple(argv[1:]))] += 1
         return original_run(argv, *args, **kwargs)
 
@@ -2489,6 +2489,7 @@ def test_resolve_active_run_reuses_placement_queries_but_refreshes_state_and_wor
         assert active.state_before == state.run.state == expected_state
         # 時間閾値を使わず、同じ配置照会の process 起動と呼び出し間の持ち越しを検出する。
         assert queries and max(queries.values()) == 1
+        assert queries[(root, ("worktree", "list", "--porcelain"))] == 1
 
     for anchor in (root, context.run_worktree):
         inspect(anchor, "joinable")
@@ -2508,6 +2509,20 @@ def test_resolve_active_run_reuses_placement_queries_but_refreshes_state_and_wor
         inspect(root, "error")
     context.run_worktree.rmdir()
     moved.rename(context.run_worktree)
+    inspect(root, "error")
+
+    # 実体が残っていても、branch の checkout 登録が変われば次の解決で拒否する。
+    run_git(context.run_worktree, "switch", "--detach")
+    with pytest.raises(CmocError, match="worktree が管理 path と一致しません"):
+        inspect(root, "error")
+    run_git(context.run_worktree, "switch", context.run_branch)
+    inspect(root, "error")
+
+    # run 起点でも session branch の登録が必要で、復旧後の一覧は取り直す。
+    run_git(root, "switch", "--detach")
+    with pytest.raises(CmocError, match="branch の worktree を特定できません"):
+        inspect(context.run_worktree, "error")
+    run_git(root, "switch", context.session_branch)
     inspect(root, "error")
 
 
@@ -3115,7 +3130,9 @@ def test_start_run_prepares_work_directories_before_publishing_state(
 
     def observe_running(path, state):
         if state.run.state == "running":
-            run_worktree = lifecycle_module.worktree_for_branch(root, state.run.branch)
+            run_worktree = runtime_run_module.worktree_for_branch(
+                root, state.run.branch
+            )
             assert all(
                 (run_worktree / relative).is_dir() for relative in _WORK_DIRECTORIES
             )

@@ -12,7 +12,7 @@ lifecycle 境界として保つ。
 
 import os
 import signal
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Collection, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import NamedTuple
@@ -75,41 +75,61 @@ def worktree_for_branch_optional(
     allow_missing: bool = False,
 ) -> Path | None:
     """branch の安全な worktree を返し、無ければ None を返す。"""
+    # 単独照会も複数 branch の解決と同じ登録・filesystem 検査を使う。
+    return worktrees_for_branches(root, (branch,), allow_missing=allow_missing).get(
+        branch
+    )
+
+
+def worktrees_for_branches(
+    root: Path,
+    branches: Collection[str],
+    *,
+    allow_missing: bool = False,
+) -> dict[str, Path]:
+    """指定 branch の安全な worktree を一回の Git 一覧照会で解決する。"""
+    # この呼び出し内だけ一覧を共有し、次の解決では登録と実体を取り直す。
     output = run_git(["worktree", "list", "--porcelain"], root).stdout
+    pending = set(branches)
+    worktrees: dict[str, Path] = {}
     registered_path: Path | None = None
     for line in output.splitlines():
         if line.startswith("worktree "):
             registered_path = Path(line.removeprefix("worktree ")).absolute()
-        elif line == f"branch refs/heads/{branch}" and registered_path is not None:
+        elif line.startswith("branch refs/heads/") and registered_path is not None:
+            branch = line.removeprefix("branch refs/heads/")
+            if branch not in pending:
+                continue
             # 対象 branch の登録先だけを filesystem 上で検証する。
             try:
                 resolved_path = registered_path.resolve()
             except (OSError, RuntimeError):
                 continue
+            pending.remove(branch)
             if branch.startswith("cmoc/run/"):
                 # {{work-root}}/oracle/doc/branch_model.md
                 expected = expected_run_worktree(root, branch)
                 # run worktree は managed path そのものに限定し、symlink 経由で
                 # run-root 外へ解決される登録を受け入れない。
                 if registered_path != expected or resolved_path != expected:
-                    return None
+                    continue
             if not registered_path.exists():
                 if not allow_missing:
-                    return None
+                    continue
             elif not registered_path.is_dir():
-                return None
+                continue
             elif branch.startswith("cmoc/run/"):
                 if not _has_linked_worktree_metadata(root, registered_path):
-                    return None
+                    continue
             elif resolved_path != repo_root(root) and not _has_linked_worktree_metadata(
                 root, registered_path
             ):
                 # session worktree も、main worktree またはこの repository の
                 # linked worktree であることを確認してから返す。Git の stale な
                 # 登録だけでは、削除・置換された外部 directory を区別できない。
-                return None
-            return resolved_path
-    return None
+                continue
+            worktrees[branch] = resolved_path
+    return worktrees
 
 
 def run_process_id_path(root: Path, session_id: str) -> Path:

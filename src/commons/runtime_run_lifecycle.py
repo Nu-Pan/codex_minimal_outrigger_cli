@@ -46,8 +46,7 @@ from .runtime_run import (
     read_run_process_id,
     run_lifecycle_lock,
     run_process_id_path,
-    worktree_for_branch,
-    worktree_for_branch_optional,
+    worktrees_for_branches,
     write_run_process_id,
 )
 from .runtime_state import (
@@ -271,9 +270,17 @@ def resolve_active_run(
             ["session branch または active run branch から再実行してください。"],
             f"current: {branch}\nsession: {session_branch}\nrun: {run_branch}",
         )
-    session_worktree = worktree_for_branch(repository, session_branch)
+    # 同じ解決内では一つの Git 一覧から両 branch を検査する。
+    worktrees = worktrees_for_branches(repository, (session_branch, run_branch))
+    session_worktree = worktrees.get(session_branch)
+    if session_worktree is None:
+        raise CmocError(
+            "branch の worktree を特定できません。",
+            ["git worktree list と session state file を確認してください。"],
+            f"branch: {session_branch}",
+        )
     expected = expected_run_worktree(repository, run_branch)
-    run_worktree = worktree_for_branch_optional(repository, run_branch)
+    run_worktree = worktrees.get(run_branch)
     if run_worktree is None and allow_missing_run_worktree:
         run_worktree = expected
     if run_worktree is None or run_worktree.resolve() != expected.resolve():
