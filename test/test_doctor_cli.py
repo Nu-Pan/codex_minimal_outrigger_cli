@@ -902,10 +902,11 @@ def test_doctor_preserves_preexisting_intent_to_add_index_file(tmp_path: Path) -
 
 
 def test_normal_preprocess_rejects_unset_search_without_rewriting_config(
-    tmp_path: Path,
+    committed_repository: Path,
 ) -> None:
     """通常起動では不足した設定を補完せず、仕事の開始前に診断する。"""
-    root = make_repo(tmp_path)
+    # 不正設定で停止するため、index 退避に必要な HEAD だけを用意する。
+    root = committed_repository
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"num_parallel": 3, "document_search": null}\n'
@@ -920,8 +921,10 @@ def test_normal_preprocess_rejects_unset_search_without_rewriting_config(
     assert path.read_text() == original
 
 
-def test_doctor_rejects_null_search_without_filling_or_saving(tmp_path, monkeypatch):
-    root = make_repo(tmp_path)
+def test_doctor_rejects_null_search_without_filling_or_saving(
+    committed_repository, monkeypatch
+):
+    root = committed_repository
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"document_search": null}\n'
@@ -937,10 +940,10 @@ def test_doctor_rejects_null_search_without_filling_or_saving(tmp_path, monkeypa
 
 
 def test_doctor_reports_unsaved_inconsistent_search_candidate(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """補完候補が衝突した場合、doctor report に値と非保存を残す。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"document_search": {"embedding_context_tokens": 256}}\n'

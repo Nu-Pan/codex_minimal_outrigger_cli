@@ -453,7 +453,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "e076faea58e174f611208a69aee147d6ff348f0a67309eada3972bf38f51036b",
-    "last_investigated_at": "2026-10-09_20-22-44_293"
+    "last_investigated_at": "2026-10-11_18-46-10_397"
   },
   "oracle/src/oracle/other/doc_ref_model.py": {
     "investigation_required": true,
