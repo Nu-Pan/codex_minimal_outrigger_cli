@@ -2054,7 +2054,9 @@ def test_machine_detector_observation_id_is_idempotent(
     head_query.assert_not_called()
 
     invocation.detect_event(event, logger.path)
+    head_query.assert_called_once_with(root)
     invocation.detect_event(event, logger.path)
+    assert head_query.call_count == 2
 
     [path] = iter_observation_paths(root)
     observation = read_json_object(path)
@@ -2064,67 +2066,60 @@ def test_machine_detector_observation_id_is_idempotent(
     assert observation["context"]["subcommand_invocation_id"] == logger.execution_id
 
 
-def test_machine_detector_masks_secret_in_event_fields(
-    collector_directory: Path,
+def test_machine_detector_masks_secret_in_event_values_and_keys(
+    collector_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """detector payload の追加 field も raw publication 前に secret masking する。"""
+    """値だけ・キーだけの secret を、共通 collector の独立 event で検証する。"""
     root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     secret = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
-    event = {
-        "event_schema_version": 1,
-        "event_id": "evt_machine_secret",
-        "event_type": "feedback.reporter_unavailable",
-        "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.execution_id,
-        "component": "collector",
-        "failure_code": "protocol_error",
-        "diagnostic": {"header": secret},
+    cases = {
+        "evt_machine_secret_value": (
+            {"header": secret},
+            {"header": "[REDACTED:authorization]"},
+            "a" * 40,
+        ),
+        "evt_machine_secret_key": (
+            {secret: "value"},
+            {"[REDACTED:authorization]": "value"},
+            "b" * 40,
+        ),
     }
-
-    invocation.detect_event(event, logger.path)
-
-    [path] = iter_observation_paths(root)
-    observation = read_json_object(path)
-    raw_text = path.read_text(encoding="utf-8")
-    assert secret not in raw_text
-    assert (
-        observation["payload"]["event_fields"]["diagnostic"]["header"]
-        == "[REDACTED:authorization]"
+    # 後続 event の HEAD も取り直すことを、追加の Git 準備や保存なしで検査する。
+    monkeypatch.setattr(
+        feedback_module,
+        "head_commit",
+        Mock(side_effect=[commit for _, _, commit in cases.values()]),
     )
-    assert validate_observation_envelope(observation) == []
+    for event_id, (diagnostic, _, _) in cases.items():
+        invocation.detect_event(
+            {
+                "event_schema_version": 1,
+                "event_id": event_id,
+                "event_type": "feedback.reporter_unavailable",
+                "occurred_at": rfc3339_now(),
+                "subcommand_invocation_id": logger.execution_id,
+                "component": "collector",
+                "failure_code": "protocol_error",
+                "diagnostic": diagnostic,
+            },
+            logger.path,
+        )
 
-
-def test_machine_detector_masks_secret_in_event_field_keys(
-    collector_directory: Path,
-) -> None:
-    """detector payload の object key に含まれる secret も raw に残さない。"""
-    root = collector_directory
-    logger = SubcommandLogger(root, "feedback test")
-    invocation = FeedbackInvocation(root, root, "feedback test", logger)
-    secret_key = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
-    event = {
-        "event_schema_version": 1,
-        "event_id": "evt_machine_secret_key",
-        "event_type": "feedback.reporter_unavailable",
-        "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.execution_id,
-        "component": "collector",
-        "failure_code": "protocol_error",
-        "diagnostic": {secret_key: "value"},
-    }
-
-    invocation.detect_event(event, logger.path)
-
-    [path] = iter_observation_paths(root)
-    observation = read_json_object(path)
-    raw_text = path.read_text(encoding="utf-8")
-    assert secret_key not in raw_text
-    assert observation["payload"]["event_fields"]["diagnostic"] == {
-        "[REDACTED:authorization]": "value"
-    }
-    assert validate_observation_envelope(observation) == []
+    paths = iter_observation_paths(root)
+    assert len(paths) == len(cases)
+    for path in paths:
+        observation = read_json_object(path)
+        _, expected_diagnostic, expected_head = cases[
+            observation["source_event"]["event_id"]
+        ]
+        assert secret not in path.read_text(encoding="utf-8")
+        assert (
+            observation["payload"]["event_fields"]["diagnostic"] == expected_diagnostic
+        )
+        assert observation["context"]["head_commit"] == expected_head
+        assert validate_observation_envelope(observation) == []
 
 
 def test_completion_count_reports_only_pending_raw_observations(

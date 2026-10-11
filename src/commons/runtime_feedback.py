@@ -598,10 +598,21 @@ class FeedbackInvocation:
         else:
             return
 
-        # detector 用 snapshot は対象 event がある場合だけ作る。call context は
-        # 登録時に別途取得するため、invocation 起動時の Git 問い合わせは不要。
+        # 初回 snapshot の HEAD を使い、後続 event では観測時の HEAD を取り直す。
+        # call context は登録時に別途取得するため、起動時の Git 問い合わせは不要。
         if self._base_context is None:
             self._base_context = self._resolve_base_context()
+            commit = self._base_context["head_commit"]
+        else:
+            try:
+                commit = head_commit(self.worktree)
+            except Exception:
+                commit = self._base_context["head_commit"]
+        if not _is_git_object_id(commit):
+            raise FeedbackRejected(
+                "context_invalid",
+                "collector cannot determine the current HEAD commit",
+            )
 
         # event の安定 context を優先し、未指定 field だけ invocation context で補う。
         context_log_paths = [str(log_path.resolve())]
@@ -610,25 +621,13 @@ class FeedbackInvocation:
             context_log_paths.append(str(Path(call_log_path).resolve()))
         context = {
             **self._base_context,
+            "head_commit": commit,
             "agent_call_id": event.get("agent_call_id"),
             "agent_call_kind": event.get("agent_call_kind"),
             "codex_call_id": event.get("codex_call_id"),
             "codex_session_id": event.get("codex_session_id"),
             "log_paths": list(dict.fromkeys(context_log_paths)),
         }
-        try:
-            context["head_commit"] = head_commit(self.worktree)
-        except Exception:
-            if not _is_git_object_id(context.get("head_commit")):
-                raise FeedbackRejected(
-                    "context_invalid",
-                    "collector cannot determine the current HEAD commit",
-                )
-        if not _is_git_object_id(context.get("head_commit")):
-            raise FeedbackRejected(
-                "context_invalid",
-                "collector context has an invalid HEAD commit",
-            )
         _identity, path = store_machine_observation(
             self.repo,
             context,
