@@ -438,10 +438,10 @@
     "last_investigated_at": "2026-10-11_18-13-34_999"
   },
   "oracle/src/oracle/editor_input_handoff/overwrite_input.json": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "b0b7150f35d21f50cd8d5b5686cff5a73d5073d87f88fce2d1aff8a997348f04",
-    "last_investigated_at": "2026-10-09_19-53-17_922"
+    "last_investigated_at": "2026-10-11_18-16-50_561"
   },
   "oracle/src/oracle/feedback/reporter_input.json": {
     "investigation_required": true,
