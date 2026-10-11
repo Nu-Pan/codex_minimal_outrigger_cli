@@ -153,12 +153,12 @@ def test_progress_keeps_longest_interval_and_resync_keeps_parent_clocks(
     observation, events = _observation(tmp_path)
     observation.configure(DocumentSearchConfig(), bounded=True)
     observation.begin_sync()
-    document_search_clock.advance(400)
+    document_search_clock.advance(40)
     observation.progress("document_checked", "a.md")
     document_search_clock.advance(1)
     observation.finish_sync("updated")
     assert events[-1]["no_progress_seconds"] == 1
-    assert events[-1]["longest_no_progress_seconds"] == 400
+    assert events[-1]["longest_no_progress_seconds"] == 40
     observation.start_post_sync()
     observation.start_wait()
     document_search_clock.advance(5)
@@ -170,7 +170,7 @@ def test_progress_keeps_longest_interval_and_resync_keeps_parent_clocks(
         observation.finish_sync("updated")
         observation.start_post_sync()
     measured = observation.measurements()
-    assert measured["search_request"] == 410
+    assert measured["search_request"] == 50
     assert measured["post_sync_search"] == 9
     assert measured["resource_wait"] == 5
     observation.decide_success()
@@ -210,13 +210,15 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
     tmp_path, search_repository, document_search_clock
 ):
     root = search_repository
-    (root / "oracle/doc/second.md").write_text("# 次の原文\n")
+    # 8 文書を 40 秒間隔で処理し、無進捗の期限内で同期全体を 600 秒超にする。
+    for number in range(7):
+        (root / f"oracle/doc/extra_{number}.md").write_text(f"# 原文 {number}\n")
     observation, events = _observation(root)
 
     class ProgressingWorker(_InferenceDouble):
         def stream_chunks(self, documents, resumes, on_event, **kwargs):
             def progress(event):
-                document_search_clock.advance(400)
+                document_search_clock.advance(40)
                 on_event(event)
 
             super().stream_chunks(documents, resumes, progress, **kwargs)
@@ -232,13 +234,13 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
     ) as search:
         result = search.search("原文", observation=observation)
     assert result["status"] == "ok" and result["hits"]
-    assert events[-1]["elapsed_seconds"] == 1600
+    assert events[-1]["elapsed_seconds"] == 640
     assert events[-1]["deadline_limits"]["search_request"] == 3600
     sync = next(e for e in events if e["event"] == "document_search_sync_finished")
-    assert sync["checked_document_count"] == 2
-    assert sync["persisted_chunk_count"] == 2
+    assert sync["checked_document_count"] == 8
+    assert sync["persisted_chunk_count"] == 8
     assert sync["no_progress_seconds"] == 0
-    assert sync["longest_no_progress_seconds"] == 400
+    assert sync["longest_no_progress_seconds"] == 40
 
 
 def test_doctor_sync_has_no_search_deadlines(
