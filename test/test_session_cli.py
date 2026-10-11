@@ -111,7 +111,7 @@ def _seed_active_session(root: Path) -> tuple[str, str]:
 
 
 def _seed_session_in_worktree(root: Path, work: Path) -> tuple[str, str]:
-    """管理物を準備済みの worktree に session を作り、repo-root に state を保存する。"""
+    """clean な worktree に session を作り、repo-root に state を保存する。"""
     home_branch = current_branch(work)
     fork_commit = run_git(work, "rev-parse", "HEAD").stdout.strip()
     run_git(work, "switch", "-c", SESSION_BRANCH, fork_commit)
@@ -1032,6 +1032,23 @@ def session_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
     return roots
 
 
+@pytest.fixture
+def join_conflict_repository(
+    cli_repository: Path, session_preprocess: list[Path]
+) -> Path:
+    """前処理を置換した内容競合の検査に、実 Git と追跡済みの基準 file を用意する。"""
+    # config・.agents・refactor state と全 file の列挙は前処理の結合検査に残す。
+    # .cmoc/gu の ignore は、実 join の clean 検査とログ・state 保存に必要。
+    root = cli_repository
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle").mkdir()
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    run_git(root, "add", ".gitignore", "README.md", "oracle/spec.md")
+    run_git(root, "commit", "-m", "initial")
+    return root
+
+
 def test_session_join_preserves_repository_local_feedback_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1054,12 +1071,12 @@ def test_session_join_preserves_repository_local_feedback_state(
 
 
 def test_session_join_preserves_work_on_incidental_conflict_marker(
-    tmp_path: Path,
+    join_conflict_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """付随編集先の未解消 marker で停止し、stderr と保持した作業状態を検査する。"""
-    root = make_repo(tmp_path)
+    root = join_conflict_repository
     target = root / "oracle" / "spec.md"
     related = root / "src"
     related.mkdir()
@@ -1073,7 +1090,7 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
     run_git(root, "add", "src")
     run_git(root, "commit", "-m", "add related implementations")
     monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
+    session_branch, home_branch = _seed_session_in_worktree(root, root)
     target.write_text("session change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session change")
@@ -1123,7 +1140,7 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
 
 
 def test_session_join_merges_conflict_and_incidental_changes(
-    tmp_path: Path,
+    join_conflict_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
@@ -1131,7 +1148,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     # 一つの成功経路を共有し、各編集と NUL framing を独立したファイルで検証する。
     # marker が残る失敗時の作業保持は専用ケースで検査する。
     # {{work-root}}/oracle/doc/app_spec/merge_conflict_resolution.md
-    root = make_repo(tmp_path)
+    root = join_conflict_repository
     context_target = root / "oracle" / "spec.md"
     mode_target = root / "oracle" / "mode.md"
     deleted_target = root / "oracle" / "deleted.md"
@@ -1151,7 +1168,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     run_git(root, "add", "oracle", "src")
     run_git(root, "commit", "-m", "add conflict targets")
     monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
+    session_branch, home_branch = _seed_session_in_worktree(root, root)
     for target in (context_target, mode_target):
         target.write_text("prefix\nsession change\nsuffix\n")
     deleted_target.write_text("session change\n")
@@ -1495,15 +1512,15 @@ def test_session_join_handled_failure_is_written_to_stderr(
 
 
 def test_session_join_codex_failure_reports_unresolved_merge(
-    tmp_path: Path,
+    join_conflict_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
-    root = make_repo(tmp_path)
+    root = join_conflict_repository
     target = root / "README.md"
     monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
+    session_branch, home_branch = _seed_session_in_worktree(root, root)
     target.write_text("session change\n")
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "session change")
