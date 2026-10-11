@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from _codex_support import (
@@ -169,33 +170,31 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
 
 def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
     tui_runtime_directory: Path,
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """未検証 Codex では root filter なしの legacy callback を渡さない。"""
     root = tui_runtime_directory
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "if '--version' in sys.argv[1:]:",
-            "    print('codex-cli 0.152.0')",
-            "    raise SystemExit(0)",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps(sys.argv[1:]))",
-        ],
+    # version 判定は test_runtime_codex_profile.py、実 process の argv/cwd は
+    # prompt 起動ケースに残し、ここでは判定後の通知設定だけを観測する。
+    version_probe = Mock(return_value=False)
+    tui_process = Mock(
+        side_effect=lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0)
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setattr(
+        runtime_codex_tui, "codex_cli_supports_tui_notification_hooks", version_probe
+    )
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", tui_process)
 
-    run_codex_tui(
+    result = run_codex_tui(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
         root=root,
         config=CmocConfig(),
     )
 
-    override_config = codex_override_config(json.loads(recorder.read_text()))
+    assert result.returncode == 0
+    version_probe.assert_called_once()
+    tui_process.assert_called_once()
+    override_config = codex_override_config(tui_process.call_args.args[0])
     assert override_config["notify"] == []
     assert "hooks" not in override_config
 
