@@ -180,8 +180,8 @@ def _add_candidate(harness, letter):
         "payload": _payload(),
         "observed_at": rfc3339_now(),
     }
-    # 二つの observation ID は issue ID の辞書順も a、b の順になる。
-    suffix = {"a": "0", "b": "1"}[letter]
+    # a、b の observation ID は issue ID の辞書順も a、b の順になる。
+    suffix = str("abcdef".index(letter))
     candidate = report._new_candidate(
         observation, "agent\0fbo_00000" + suffix + "_2026-08-01_00-00"
     )
@@ -669,59 +669,76 @@ def published_feedback(feedback_run, monkeypatch):
     return root, state
 
 
-@pytest.mark.parametrize(
-    "status",
-    ["fixed", "already_resolved", "not_actionable", "human_required", "inconclusive"],
-)
-def test_later_dependency_change_rechecks_every_result(
-    feedback_run, monkeypatch, status
-):
+def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch):
+    """全結果分類の再確認を同じ run で検査し、wave と publication の準備を共有する。"""
     h = feedback_run
-    first, second = (_add_candidate(h, letter) for letter in ("a", "b"))
+    *prior_issues, repairing_issue = sorted(
+        _add_candidate(h, letter) for letter in "abcdef"
+    )
+    # fixed の修正を最初、依存設定の変更を最後にし、全先行判定を同じ根拠で再確認する。
+    statuses = dict(
+        zip(
+            prior_issues,
+            (
+                "fixed",
+                "already_resolved",
+                "not_actionable",
+                "human_required",
+                "inconclusive",
+            ),
+            strict=True,
+        )
+    )
 
     def call(issue):
         identity = issue["issue_id"]
-        if identity == second:
+        if identity == repairing_issue:
+            assert issue["reconfirmation"] is None
             (h.context.run_worktree / "dependency.conf").write_text("new\n")
             output = _remediation_output(identity, "fixed")
             output["result"]["changed_paths"] = ["dependency.conf"]
         elif issue["reconfirmation"] is None:
+            status = statuses[identity]
             output = _remediation_output(identity, status)
             if status == "fixed":
                 (h.context.run_worktree / "README.md").write_text("fixed\n")
                 output["result"]["changed_paths"] = ["README.md"]
         else:
-            assert issue["reconfirmation"]["previous_result"]["status"] == status
+            assert (
+                issue["reconfirmation"]["previous_result"]["status"]
+                == statuses[identity]
+            )
             assert issue["reconfirmation"]["changes"]["paths"] == ["dependency.conf"]
             output = _remediation_output(identity, "already_resolved")
         return output
 
     h.handler = call
     _run(h)
-    assert h.commit_attempts == (
-        [["README.md"], ["dependency.conf"]]
-        if status == "fixed"
-        else [["dependency.conf"]]
-    )
-    assert [item["issue_id"] for item in h.calls] == [first, second, first]
+    assert h.commit_attempts == [["README.md"], ["dependency.conf"]]
+    assert [item["issue_id"] for item in h.calls] == [
+        *prior_issues,
+        repairing_issue,
+        *prior_issues,
+    ]
     assert len(h.manifest["run"]["waves"]) == 2
     assert h.manifest["run"]["high_watermark"] == 0
     loaded, _ = load_report_cut(h.context.repo)
-    assert len(loaded["processing"]["remediation_checkpoints"]) == 3
+    assert len(loaded["processing"]["remediation_checkpoints"]) == 11
     selected = selected_remediation_checkpoints(loaded)
-    assert len(selected) == report._remediation_candidate_count(loaded) == 2
-    assert selected[0]["path"].endswith(".00000002.json")
-    checkpoint = run_state.read_run_artifact(
-        h.context.repo, {key: selected[0][key] for key in ("path", "sha256")}
-    )
-    audit = checkpoint["audit"]
-    assert audit["commit"] is None
-    assert audit["before_commit"] == audit["after_commit"] == h.head
-    assert audit["changed_paths"] == []
+    assert len(selected) == report._remediation_candidate_count(loaded) == 6
+    for reference in selected[:-1]:
+        assert reference["path"].endswith(".00000002.json")
+        checkpoint = run_state.read_run_artifact(
+            h.context.repo, {key: reference[key] for key in ("path", "sha256")}
+        )
+        audit = checkpoint["audit"]
+        assert audit["commit"] is None
+        assert audit["before_commit"] == audit["after_commit"] == h.head
+        assert audit["changed_paths"] == []
     result = _join_and_publish(h, monkeypatch)
     assert result.result == "ok"
     assert load_active_state(h.context.repo).issues == {}
-    assert "remediation_issue_count: 2" in result.primary_report.read_text()
+    assert "remediation_issue_count: 6" in result.primary_report.read_text()
 
 
 @pytest.mark.parametrize("fault", ["head", "forbidden_path"])
