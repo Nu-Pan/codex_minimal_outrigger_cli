@@ -2857,13 +2857,19 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
             assert raw.exists()
         report_text = terminal_primary_report(result).read_text()
         assert "publication_established: true" in report_text
-    for operation in ("join", "abandon"):
-        rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
-        assert rejected.exit_code == 1, rejected.output
-        rejected_report = terminal_primary_report(rejected).read_text(encoding="utf-8")
-        assert 'run_kind: "feedback_report"' in rejected_report
-        assert 'state_before: "error"' in rejected_report
-        assert 'state_after: "error"' in rejected_report
+    # 手動操作の拒否は merge 記録（参照回復を含む）と finalization journal の両経路で検査する。
+    # completion/publication の障害種別や raw cleanup の進捗は、この拒否条件を変えない。
+    if fault in {"merge_reference", "cleanup"}:
+        for operation in ("join", "abandon"):
+            rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
+            assert rejected.exit_code == 1, rejected.output
+            assert "feedback run は自動 join 済みです。" in rejected.output
+            rejected_report = terminal_primary_report(rejected).read_text(
+                encoding="utf-8"
+            )
+            assert 'run_kind: "feedback_report"' in rejected_report
+            assert 'state_before: "error"' in rejected_report
+            assert 'state_after: "error"' in rejected_report
     monkeypatch.setattr(target, name, original)
     monkeypatch.setattr(
         feedback_report_module,
