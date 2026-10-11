@@ -13,7 +13,7 @@ from _codex_support import (
     stub_codex_overrides,
 )
 from _command_support import write_python_executable
-from _git_support import init_repo, make_repo, run_git
+from _git_support import init_repo, run_git
 from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime
@@ -219,10 +219,13 @@ def test_structured_output_parse_failure_stops_before_schema_and_postcondition(
 
 
 def test_run_codex_exec_corrects_declared_postcondition(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """初回 call の実差分で決定論的事後条件を検証し、出力だけを補正する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
+    (root / "README.md").write_text("# repo\n")
+    # snapshot は index の追跡 file を読むため、履歴を作る必要はない。
+    run_git(root, "add", "README.md")
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
 
@@ -329,44 +332,44 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
 
 
 def test_run_codex_exec_restores_artifacts_changed_by_correction(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """補正 turn が変動させた成果物を初回 call 完了時へ戻して失敗する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle").mkdir()
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    run_git(root, "add", "README.md", "oracle/spec.md")
     nested = root / "nested"
     nested.mkdir()
     init_repo(nested)
     nested_file = nested / "tracked.txt"
     nested_file.write_text("nested initial\n")
     run_git(nested, "add", "tracked.txt")
-    run_git(nested, "commit", "-m", "initial nested")
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "artifact_change_bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "artifact_change_counter"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "readme = pathlib.Path('README.md')",
-            "readme.write_text('correction change\\n' if count else 'first call change\\n')",
-            "if count:",
-            "    pathlib.Path('nested/tracked.txt').write_text('correction-only\\n')",
-            "    pathlib.Path('extra.py').write_text('correction-only\\n')",
-            "    pathlib.Path('oracle/spec.md').unlink()",
-            "payload = {'ok': True} if count else {'bad': True}",
-            "output.write_text(json.dumps(payload))",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+
+    def change_artifacts(index, _call):
+        if index == 1:
+            (root / "README.md").write_text("first call change\n")
+        else:
+            (root / "README.md").write_text("correction change\n")
+            nested_file.write_text("correction-only\n")
+            (root / "extra.py").write_text("correction-only\n")
+            (root / "oracle" / "spec.md").unlink()
+
+    # Git 差分取得・復元は実行し、process の入出力は schema 補正の結合に残す。
+    stdout = (
+        '{"type":"thread.started","thread_id":"session-1"}\n{"type":"turn.completed"}\n'
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    calls = script_codex_calls(
+        monkeypatch,
+        [
+            (0, stdout, '{"bad": true}'),
+            (0, stdout, '{"ok": true}'),
+        ],
+        on_call=change_artifacts,
+    )
     schema = tmp_path / "artifact_change_schema.json"
     schema.write_text(
         json.dumps(
@@ -394,7 +397,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
             subcommand_logger=logger,
         )
 
-    assert counter.read_text() == "2"
+    assert len(calls) == 2
     assert (root / "README.md").read_text() == "first call change\n"
     assert nested_file.read_text() == "nested initial\n"
     assert not (root / "extra.py").exists()
