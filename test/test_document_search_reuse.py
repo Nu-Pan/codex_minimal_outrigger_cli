@@ -22,8 +22,19 @@ from commons.runtime_document_search import (
 )
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_document_search_worker import NodeSearchWorker
-from commons.runtime_git import ensure_cmoc_ignored, remove_worktree
+from commons.runtime_git import remove_worktree
 from commons.runtime_paths import repo_root
+
+
+def _event_sink(events):
+    """診断の可変な進捗を、通知時点の値で保存する。"""
+    if events is None:
+        return None
+
+    def record(kind, payload):
+        events.append(json.loads(json.dumps({"event": kind, **payload})))
+
+    return record
 
 
 @pytest.fixture
@@ -41,21 +52,15 @@ def model_search(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(worker_module, "verify_search_materials", lambda *_: runtime)
 
-    def create(root, config=None, events=None):
-        config = config or _tuning()
+    def create(root, *, events=None):
+        config = _tuning()
         installation = repo_root(root)
         return DocumentSearch(
             root,
             config,
             worker=NodeSearchWorker(installation, config, material_base=runtime),
             installation_root=installation,
-            event_sink=(
-                lambda kind, payload: events.append(
-                    json.loads(json.dumps({"event": kind, **payload}))
-                )
-            )
-            if events is not None
-            else None,
+            event_sink=_event_sink(events),
         )
 
     def inputs():
@@ -69,19 +74,46 @@ def model_search(tmp_path, monkeypatch):
     return create, inputs
 
 
+@pytest.fixture
+def cache_search():
+    """cache の寿命・共有・互換性には一文書一入力の double を使う。"""
+    # 分割と Node の連携は model_search に残し、cache の制御では起動を重ねない。
+    generated_inputs = []
+
+    class CacheWorker(_InferenceDouble):
+        def stream_chunks(self, documents, resumes, on_event, **kwargs):
+            def record_input(event):
+                if event["kind"] == "chunk":
+                    source = documents[event["path"]]
+                    generated_inputs.append(source[event["start"] : event["end"]])
+                on_event(event)
+
+            super().stream_chunks(documents, resumes, record_input, **kwargs)
+
+    def create(root, config=None, *, events=None):
+        return DocumentSearch(
+            root,
+            config or _tuning(),
+            worker=CacheWorker(),
+            event_sink=_event_sink(events),
+        )
+
+    return create, lambda: list(generated_inputs)
+
+
 def _worktree(repository, path, branch=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     args = ("-b", branch) if branch else ("--detach",)
+    # _repo_with_docs の commit 済み ignore 規則を使い、修復を重ねない。
     run_git(repository, "worktree", "add", *args, str(path), "HEAD")
-    ensure_cmoc_ignored(path)
     return path
 
 
 def test_new_run_uses_stale_repository_cache_and_current_locations(
-    tmp_path, model_search
+    tmp_path, cache_search
 ):
-    create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
+    create, inputs = cache_search
+    root = _repo_with_docs(tmp_path, committed=True)
     original = (root / "oracle/doc/allowed.md").read_text()
     events = []
     with closing(create(root)) as search:
@@ -147,7 +179,7 @@ def test_partial_edit_generates_unique_missing_inputs_and_retains_unreferenced_c
 
 def test_parallel_worktrees_generate_one_embedding_in_total(tmp_path, model_search):
     create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
+    root = _repo_with_docs(tmp_path, committed=True)
     runs = [_worktree(root, tmp_path / f"run-{index}") for index in range(2)]
 
     def synchronize(run):
@@ -163,9 +195,9 @@ def test_parallel_worktrees_generate_one_embedding_in_total(tmp_path, model_sear
     assert sum(item["persisted_embeddings"] for item in progress) == 1
 
 
-def test_run_removal_preserves_embedding_and_original_producer(tmp_path, model_search):
-    create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
+def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_search):
+    create, inputs = cache_search
+    root = _repo_with_docs(tmp_path, committed=True)
     run = _worktree(root, root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID, RUN_BRANCH)
     original = (run / "oracle/doc/allowed.md").read_text()
     with closing(create(run)) as search:
@@ -184,11 +216,12 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, model_s
 
 @pytest.mark.parametrize("change", ["partition", "inference"])
 def test_reuse_compatibility_is_independent_of_partition(
-    tmp_path, model_search, change
+    tmp_path, cache_search, change
 ):
-
-    create, inputs = model_search
+    """入力片を固定し、分割条件と推論条件による cache の互換性だけを検査する。"""
+    create, inputs = cache_search
     root = _repo_with_docs(tmp_path)
+    original = (root / "oracle/doc/allowed.md").read_text()
     with closing(create(root)) as search:
         first = search.synchronize()
     config = _tuning()
@@ -202,17 +235,17 @@ def test_reuse_compatibility_is_independent_of_partition(
         assert search.sync_progress["generated_embeddings"] == (
             1 if change == "inference" else 0
         )
-    assert len(inputs()) == (2 if change == "inference" else 1)
+    assert inputs() == [original] * (2 if change == "inference" else 1)
 
 
 @pytest.mark.parametrize(
     "failure_code", ["MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"]
 )
 def test_failed_sync_saved_results_are_reusable_in_another_worktree(
-    tmp_path, model_search, failure_code
+    tmp_path, cache_search, failure_code
 ):
-    create, inputs = model_search
-    root = _repo_with_docs(tmp_path)
+    create, inputs = cache_search
+    root = _repo_with_docs(tmp_path, committed=True)
     run = _worktree(root, tmp_path / "run")
 
     class FailingWorker(_InferenceDouble):
@@ -237,9 +270,9 @@ def test_failed_sync_saved_results_are_reusable_in_another_worktree(
 
 
 def test_identical_inputs_in_different_repositories_are_not_shared(
-    tmp_path, model_search
+    tmp_path, cache_search
 ):
-    create, inputs = model_search
+    create, inputs = cache_search
     for name in ("first", "second"):
         directory = tmp_path / name
         directory.mkdir()

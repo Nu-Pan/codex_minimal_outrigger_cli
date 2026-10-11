@@ -3,22 +3,32 @@
 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
 {{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
 
-成功時と各失敗時で同じ editor、Git 差分、session state、および通知境界を比較する。
+変更あり・なしの成功時と各回の失敗時で、editor、Git 差分、session state、通知境界を比較する。
 分割すると同じ invocation の前提と不変条件が重複するため、一つの制御テストに保つ。
 """
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
-from _cli_support import run_doctor, runner, terminal_primary_report
+from _cli_support import runner, terminal_primary_report
 from _codex_support import FakeCodexResult, codex_override_config, setup_codex_home
-from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_git
+from _git_support import (
+    RUN_BRANCH,
+    SESSION_BRANCH,
+    SESSION_ID,
+    current_branch,
+    init_repo,
+    make_repo,
+    run_git,
+)
 
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
 from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import CmocError
+from cmoc_runtime import CmocError, write_config
 from commons.runtime_codex_profile import build_codex_override_args
 from commons.runtime_config import config_path
 from commons.runtime_logging import current_subcommand_logger
@@ -29,15 +39,15 @@ from commons.runtime_state import (
     state_path,
     write_state,
 )
+from config.cmoc_config import CmocConfig
 from main import app
 
 
 def _activate_session(
     root: Path,
     *,
-    session_state: str = "active",
-    run: RunPart | None = None,
-) -> tuple[str, Path]:
+    run: RunPart,
+) -> Path:
     """隔離 repository に oracle edit 用の session state を作成する。"""
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -48,22 +58,23 @@ def _activate_session(
     write_state(
         path,
         SessionState(
-            SessionPart(session_state, home_branch, fork_commit, None),
-            run or RunPart(),
+            SessionPart("active", home_branch, fork_commit, None),
+            run,
         ),
     )
-    return session_branch, path
+    return path
 
 
 def _prepared_repo(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
-    """doctor 済みの隔離 repository を準備する。"""
+    """履歴・Codex HOME・既定設定を持つ隔離 repository を準備する。"""
     setup_codex_home(tmp_path, monkeypatch)
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    run_doctor(root)
+    # 初期設定だけ用意し、doctor の呼び出しは検証対象の invocation に任せる。
+    write_config(config_path(root), CmocConfig())
     return root
 
 
@@ -79,11 +90,14 @@ def _assert_exec_parameter(
 
 
 @pytest.mark.parametrize(
-    "failure_stage",
-    [None, "first", "second"],
-    ids=["success", "first-failure", "second-failure"],
+    ("first_changes", "failure_stage"),
+    [
+        pytest.param(True, None, id="edit-success"),
+        pytest.param(False, None, id="no-change-success"),
+        pytest.param(True, "first", id="edit-first-failure"),
+        pytest.param(True, "second", id="edit-second-failure"),
+    ],
 )
-@pytest.mark.parametrize("first_changes", [True, False], ids=["edit", "no-change"])
 def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -91,14 +105,28 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     first_changes: bool,
 ) -> None:
     """既存差分を保ち、初回成功時は変更の有無によらず同じ入力で再実行する。"""
+    # 変更なしでも二回目へ進む条件は成功ケースで検証する。
+    # 失敗処理は差分に分岐しないため、各回の編集後の失敗で差分保持も検証する。
     root = _prepared_repo(tmp_path, monkeypatch)
+    integrated_case = failure_stage is None and first_changes
+    if not integrated_case:
+        # root 探索と collector の結合は edit-success と専用テストに残す。
+        # ここでも実 Git の staged/unstaged 差分、branch、session state は検証する。
+        monkeypatch.setattr(
+            path_model_module,
+            "_resolve_git_worktree_roots",
+            lambda _start_path=None: (root, root),
+        )
+        monkeypatch.setattr(
+            runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+        )
     active_run = RunPart(
         "running",
         "realization_apply",
         RUN_BRANCH,
         "abc",
     )
-    _session_branch, session_state_path = _activate_session(root, run=active_run)
+    session_state_path = _activate_session(root, run=active_run)
     state_before = json.loads(session_state_path.read_text())
     readme_path = root / "README.md"
     readme_path.write_text("# staged change\n")
@@ -119,13 +147,29 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         *,
         sync_refactor_entries: bool = True,
     ) -> None:
-        """対象 invocation の doctor preprocess を記録して本来の処理へ委譲する。"""
+        """doctor の呼び出しを記録し、代表ケースだけ実処理へ委譲する。"""
         assert target_root == root
         events.append("doctor")
-        real_run_doctor_preprocess(
-            target_root,
-            sync_refactor_entries=sync_refactor_entries,
-        )
+        # 同じ入力での修復・索引同期との結合は edit-success に集約する。
+        # 詳細は test_doctor_cli.py、呼び出し順序と編集結果は全ケースで検証する。
+        if integrated_case:
+            real_run_doctor_preprocess(
+                target_root,
+                sync_refactor_entries=sync_refactor_entries,
+            )
+
+    real_ensure_prompt_editor_roots_ignored = (
+        oracle_edit_module.ensure_prompt_editor_roots_ignored
+    )
+
+    def record_ensure_prompt_editor_roots_ignored(target_root: Path) -> None:
+        """ignore 修復との結合は代表ケースに残し、全ケースで呼び出しを検証する。"""
+        assert target_root == root
+        events.append("ignore")
+        # 成功・失敗によらず編集開始前の同じ処理なので、Git 修復を繰り返さない。
+        # 境界・失敗・変更後の再検査は test_runtime_git_ignore.py と test_git_query_reuse.py に残す。
+        if integrated_case:
+            real_ensure_prompt_editor_roots_ignored(target_root)
 
     real_build_main_parameter = (
         oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
@@ -176,6 +220,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         runtime_cli_module,
         "run_doctor_preprocess",
         record_run_doctor_preprocess,
+    )
+    monkeypatch.setattr(
+        oracle_edit_module,
+        "ensure_prompt_editor_roots_ignored",
+        record_ensure_prompt_editor_roots_ignored,
     )
     monkeypatch.setattr(
         oracle_edit_module,
@@ -308,6 +357,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "変更を未コミットのまま残す" in complete_prompt_skeleton
     expected_events = [
         "doctor",
+        "ignore",
         "build-main-skeleton",
         "editor",
         "collect",
@@ -356,9 +406,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     assert input_path.read_text(encoding="utf-8") == "later human edit"
     assert not list(input_path.parent.glob("*_cmpl.md"))
-    expected_spec = "# second edit\n"
-    if failure_stage == "first":
-        expected_spec = "# first edit\n" if first_changes else spec_before
+    expected_spec = "# first edit\n" if failure_stage == "first" else "# second edit\n"
     assert (root / "oracle" / "spec.md").read_text() == expected_spec
     assert json.loads(session_state_path.read_text()) == state_before
     assert readme_path.read_text() == "# unstaged change\n"
@@ -367,8 +415,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         == staged_diff_before
     )
     assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
-    if failure_stage != "first" or first_changes:
-        assert run_git(root, "status", "--short", "oracle/spec.md").stdout.strip()
+    assert run_git(root, "status", "--short", "oracle/spec.md").stdout.strip()
     assert not (root / ".cmoc" / "gu" / "report" / "oracle" / "edit" / "fork").exists()
     terminal_output = result.stdout + result.stderr
     if failure_stage is None:
@@ -402,12 +449,44 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "診断用サブコマンドログ" in report
 
 
+@pytest.fixture
+def oracle_edit_failure_repository(
+    cli_terminal_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[Path]:
+    """準備失敗の検証に必要な root・設定・前処理の呼び出し記録を用意する。"""
+    # 準備失敗には Git state は不要。共通 fixture で CLI root と collector を隔離する。
+    root = cli_terminal_directory
+    write_config(config_path(root), CmocConfig())
+    # builder も同じ root を使う。実 Git の探索は edit-success と test_basic_runtime.py に残す。
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _start_path=None: (root, root),
+    )
+    # doctor・ignore の実処理は edit-success と専用 test に残し、呼び出し先と順序を検証する。
+    # ignore の境界・失敗は test_runtime_git_ignore.py、doctor の修復は test_doctor_cli.py にある。
+    preparation_calls: list[tuple[str, Path]] = []
+    monkeypatch.setattr(
+        runtime_cli_module,
+        "run_doctor_preprocess",
+        lambda target_root: preparation_calls.append(("doctor", target_root)),
+    )
+    monkeypatch.setattr(
+        oracle_edit_module,
+        "ensure_prompt_editor_roots_ignored",
+        lambda target_root: preparation_calls.append(("ignore", target_root)),
+    )
+    yield root
+    assert preparation_calls == [("doctor", root), ("ignore", root)]
+
+
 def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
-    tmp_path: Path,
+    oracle_edit_failure_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """skeleton 構築に失敗した場合は editor input file を残さない。"""
-    root = _prepared_repo(tmp_path, monkeypatch)
+    root = oracle_edit_failure_repository
 
     def fail_build_main_parameter(
         _user_instruction: str, **_kwargs: object
@@ -424,16 +503,18 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == 1
+    assert "builder failed" in result.output
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md"))
 
 
 @pytest.mark.parametrize("failure_stage", ["config", "preconditions"])
 def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_stage: str
+    oracle_edit_failure_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_stage: str,
 ) -> None:
     """共用入力確定後の準備失敗では、どちらの編集も開始済みにしない。"""
-    root = _prepared_repo(tmp_path, monkeypatch)
-    _activate_session(root)
+    # 起動前提は失敗境界の double へ置き換えるため、session は不要。
     monkeypatch.setattr(
         oracle_edit_module, "edit_prompt_editor_input", lambda *_args: None
     )
@@ -485,29 +566,26 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
 )
 def test_oracle_edit_launch_preconditions(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     case: str,
     message: str,
 ) -> None:
     """oracle edit の各起動前提違反を利用者向け例外として検証する。"""
-    root = _prepared_repo(tmp_path, monkeypatch)
+    # 判定に不要な commit・追跡ファイルを作らず、必要な branch と state だけ用意する。
+    root = tmp_path / "repo"
+    root.mkdir()
     current_root = root
-    if case != "non_session":
-        _activate_session(
-            root,
-            session_state="joined" if case == "inactive" else "active",
-        )
     if case == "linked":
-        current_root = root / ".cmoc" / "gu" / "worktree" / "linked"
-        run_git(
-            root,
-            "worktree",
-            "add",
-            "-b",
-            "linked-oracle-edit-test",
-            str(current_root),
-            "HEAD",
-        )
+        current_root = tmp_path / "linked"
+        current_root.mkdir()
+    else:
+        init_repo(root)
+        if case == "inactive":
+            home_branch = current_branch(root)
+            run_git(root, "checkout", "-b", SESSION_BRANCH)
+            write_state(
+                state_path(root, SESSION_ID),
+                SessionState(SessionPart("joined", home_branch, "abc", None)),
+            )
     with pytest.raises(CmocError, match=message):
         oracle_edit_module._require_oracle_edit_launch_preconditions(
             root,
@@ -516,8 +594,15 @@ def test_oracle_edit_launch_preconditions(
 
 
 def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
+    """ユーザーのログ参照は保持し、自動生成の過去会話参照は含めない。"""
+    # 実 Git の root 解決は test_basic_runtime.py と上の CLI 結合 test に残す。
+    # 文面の検査では探索結果だけを置換し、builder と renderer は実物を使う。
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _start_path=None: (tmp_path, tmp_path),
+    )
     instruction = (
         "診断用サブコマンドログ /example/sender.jsonl を参考に oracle を編集する"
     )

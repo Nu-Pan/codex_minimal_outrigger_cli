@@ -1,7 +1,9 @@
 """session と editing run の state schema、検証、永続化を提供する。"""
 
+import errno
 import fcntl
 import json
+import stat
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
@@ -74,8 +76,7 @@ def state_path(root: Path, session_id: str) -> Path:
     """session_id に対応する session state file の保存先を返す。"""
     _validate_session_id(session_id)
     path = sessions_dir(root) / f"{session_id}.json"
-    _reject_symlinked_state_path(path)
-    _reject_non_directory_state_path(path.parent)
+    _inspect_state_path(path)
     return path
 
 
@@ -84,14 +85,30 @@ def _contains_unrepresentable_characters(value: str) -> bool:
     return "\x00" in value or any(0xD800 <= ord(char) <= 0xDFFF for char in value)
 
 
-def _reject_symlinked_state_path(path: Path) -> None:
-    """session state path の symlink 経由アクセスを拒否する。"""
+def _inspect_state_path(path: Path, *, directory: bool = False) -> int | None:
+    """symlink と親の種別を一度に検証し、存在する末端の mode を返す。"""
     # {{work-root}}/oracle/doc/app_spec/run_isolation.md
     # session state は repo-root 側の cmoc 管理 data だが、symlink を追跡すると
     # 指定された保存先の外側を読み書きして隔離境界を越えてしまう。
-    current = path.absolute()
+    leaf = path.absolute()
+    current = leaf
+    leaf_mode = None
+    invalid_directory = None
     while current != current.parent:
-        if current.is_symlink():
+        try:
+            mode = current.lstat().st_mode
+        except (OSError, ValueError) as exc:
+            if isinstance(exc, OSError) and exc.errno not in (
+                errno.ENOENT,
+                errno.ENOTDIR,
+                errno.EBADF,
+                errno.ELOOP,
+            ):
+                raise
+            # 未作成・辿れない末端でも親へ進み、通常 file や循環 symlink を特定する。
+            current = current.parent
+            continue
+        if stat.S_ISLNK(mode):
             raise CmocError(
                 "session state path は symlink 経由で扱えません。",
                 [
@@ -99,7 +116,25 @@ def _reject_symlinked_state_path(path: Path) -> None:
                 ],
                 str(current),
             )
+        if current == leaf:
+            leaf_mode = mode
+        if (
+            (directory or current != leaf)
+            and not stat.S_ISDIR(mode)
+            and invalid_directory is None
+        ):
+            invalid_directory = current
         current = current.parent
+    # 全祖先の symlink 拒否を優先し、非 directory は最も近い親を報告する。
+    if invalid_directory is not None:
+        raise CmocError(
+            "session state directory は通常の directory ではありません。",
+            [
+                "session state file の親を通常の directory に戻してから再実行してください。"
+            ],
+            str(invalid_directory),
+        )
+    return leaf_mode
 
 
 def _validate_session_id(session_id: str) -> None:
@@ -113,33 +148,19 @@ def _validate_session_id(session_id: str) -> None:
         )
 
 
-def _reject_non_file_state_path(path: Path) -> None:
-    """session state path を通常の file に限定する。"""
-    _reject_non_directory_state_path(path.parent)
+def _validate_state_file_path(path: Path) -> bool:
+    """保存先と親を検証し、通常の state file が存在するか返す。"""
+    mode = _inspect_state_path(path)
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
     # FIFO や device を open すると state 操作が停止するため、書き込み前にも
     # 既存 path の種別を検証する。
-    if path.exists() and not path.is_file():
+    if mode is not None and not stat.S_ISREG(mode):
         raise CmocError(
             "session state path は通常の file ではありません。",
             ["session state file を通常の file に戻してから再実行してください。"],
             str(path),
         )
-
-
-def _reject_non_directory_state_path(path: Path) -> None:
-    """state path の既存 parent を通常の directory に限定する。"""
-    current = path.absolute()
-    while current != current.parent:
-        if current.exists() and not current.is_dir():
-            raise CmocError(
-                "session state directory は通常の directory ではありません。",
-                [
-                    "session state file の親を通常の directory に戻してから再実行してください。"
-                ],
-                str(current),
-            )
-        current = current.parent
+    return mode is not None
 
 
 @contextmanager
@@ -236,9 +257,7 @@ def load_session_part_for_branch(
 def _read_state_data(path: Path) -> dict[str, Any]:
     """session state file を JSON object として読み込む。"""
     _validate_session_id(path.stem)
-    _reject_symlinked_state_path(path)
-    _reject_non_file_state_path(path)
-    if not path.is_file():
+    if not _validate_state_file_path(path):
         raise CmocError(
             "session state file が存在しません。",
             ["対象 session が正しく作成されているか確認してください。"],
@@ -260,8 +279,7 @@ def _read_state_data(path: Path) -> dict[str, Any]:
 def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
     _validate_session_id(path.stem)
-    _reject_symlinked_state_path(path)
-    _reject_non_file_state_path(path)
+    _validate_state_file_path(path)
     validated = SessionState.from_dict(state.to_dict(), path)
     try:
         serialized = (
@@ -272,8 +290,7 @@ def write_state(path: Path, state: SessionState) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         # parent の作成中に path の構成が変わっていないことを再確認する。
-        _reject_symlinked_state_path(path)
-        _reject_non_file_state_path(path)
+        _validate_state_file_path(path)
         path.write_text(serialized, encoding="utf-8")
     except (OSError, UnicodeError, ValueError) as exc:
         raise CmocError(
@@ -286,8 +303,7 @@ def write_state(path: Path, state: SessionState) -> None:
 def active_session_for_home(root: Path, home_branch: str) -> Path | None:
     """home branch に紐づく active session state file を探す。"""
     directory = sessions_dir(root)
-    _reject_symlinked_state_path(directory)
-    _reject_non_directory_state_path(directory)
+    _inspect_state_path(directory, directory=True)
     for path in directory.glob("*.json"):
         data = _read_state_data(path)
         state = SessionState.from_dict(data, path)

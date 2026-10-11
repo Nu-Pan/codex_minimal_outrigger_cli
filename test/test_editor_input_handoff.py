@@ -10,6 +10,7 @@ import socket
 import threading
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from _handoff_support import handoff_body, handoff_input
@@ -18,6 +19,7 @@ from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor_input_handoff as handoff_module
 import commons.runtime_editor_input_handoff_mcp as handoff_mcp
+import commons.runtime_editor_input_handoff_protocol as handoff_protocol
 from cmoc_runtime import CmocError
 from commons.runtime_editor_input_handoff import (
     EditorInputHandoffTarget,
@@ -32,32 +34,11 @@ from commons.runtime_editor_input_handoff_protocol import (
     authenticate_editor_input_handoff_server,
     build_editor_input_handoff_target_id,
     parse_editor_input_handoff_target_id,
-    read_handoff_response,
+    read_handoff_message,
 )
 from commons.runtime_ids import is_common_id
 
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
-
-
-def _start_slow_trickle(
-    connection: socket.socket,
-    byte: bytes,
-    interval_seconds: float,
-) -> tuple[threading.Event, threading.Thread]:
-    """socket timeout より短い間隔で一 byte ずつ送り続ける。"""
-    stopped = threading.Event()
-
-    def send_slowly() -> None:
-        while not stopped.wait(interval_seconds):
-            try:
-                connection.sendall(byte)
-            except OSError:
-                return
-
-    connection.sendall(byte)
-    thread = threading.Thread(target=send_slowly)
-    thread.start()
-    return stopped, thread
 
 
 def _wait_for_peer_close(connection: socket.socket) -> None:
@@ -166,9 +147,9 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_source,
+    input_path: Path,
 ) -> None:
     """repository 不一致と symlink 化を拒否し、リンク先へ書き込まない。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     input_path.write_text("initial", encoding="utf-8")
     target = start_editor_input_handoff(
         tmp_path, input_path, "{{original-prompt-here}}"
@@ -187,7 +168,7 @@ def test_handoff_revalidates_file_and_repository_on_each_overwrite(
             connection.connect(address)
             assert authenticate_editor_input_handoff_client(connection, token, 2)
             connection.sendall(json.dumps(request).encode("utf-8") + b"\n")
-            mismatch = read_handoff_response(connection, 2)
+            mismatch = read_handoff_message(connection, 2)
         assert mismatch is not None
         assert mismatch["code"] == "repository_mismatch"
         assert input_path.read_text(encoding="utf-8") == "initial"
@@ -258,24 +239,34 @@ def test_target_close_drains_an_accepted_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_source,
+    input_path: Path,
 ) -> None:
     """受付済み上書きが完了するまで close が target を破棄しない。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     input_path.write_text("initial", encoding="utf-8")
     entered = threading.Event()
     release = threading.Event()
+    draining = threading.Event()
     original_overwrite = EditorInputHandoffTarget._overwrite
 
     def delayed_overwrite(self: EditorInputHandoffTarget, content: str) -> None:
         """accepted 状態を保持したまま test が許可するまで write を待つ。"""
         entered.set()
-        assert release.wait(2)
+        assert release.wait(5)
         original_overwrite(self, content)
 
     monkeypatch.setattr(EditorInputHandoffTarget, "_overwrite", delayed_overwrite)
     target = start_editor_input_handoff(
         tmp_path, input_path, "{{original-prompt-here}}"
     )
+    assert target._server_thread is not None
+    join_server = target._server_thread.join
+
+    def observe_drain(timeout: float | None = None) -> None:
+        """close が受付済み処理の完了待ちへ到達したことだけを通知する。"""
+        draining.set()
+        join_server(timeout)
+
+    monkeypatch.setattr(target._server_thread, "join", observe_drain)
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     submission_result: list[dict[str, object]] = []
     submitter = threading.Thread(
@@ -283,9 +274,6 @@ def test_target_close_drains_an_accepted_submission(
             handoff_mcp._submit(handoff_input(target.target_id, "drained"))
         )
     )
-    submitter.start()
-    assert entered.wait(2)
-
     closed = threading.Event()
 
     def close_target() -> None:
@@ -294,13 +282,28 @@ def test_target_close_drains_an_accepted_submission(
         closed.set()
 
     closer = threading.Thread(target=close_target)
-    closer.start()
-    assert not closed.wait(0.05)
-    release.set()
-    submitter.join(timeout=2)
-    closer.join(timeout=2)
+    submitter.start()
+    try:
+        assert entered.wait(2)
+        closer.start()
+        # 固定時間の経過ではなく、実際の drain 到達を待って無効化の順序を確かめる。
+        assert draining.wait(2)
+        assert not closed.is_set()
+        assert target.handoff_guide_path.exists()
+        assert (
+            parse_editor_input_handoff_target_id(tmp_path, target.target_id) is not None
+        )
+    finally:
+        release.set()
+        submitter.join(timeout=2)
+        if closer.ident is not None:
+            closer.join(timeout=2)
+        target.close()
 
+    assert not submitter.is_alive()
+    assert not closer.is_alive()
     assert closed.is_set()
+    assert not target.handoff_guide_path.exists()
     assert submission_result == [{"status": "accepted"}]
     assert input_path.read_text(encoding="utf-8") == handoff_body(
         "drained", handoff_source
@@ -360,59 +363,45 @@ def test_client_does_not_send_content_to_unauthenticated_listener(
     assert "private content" not in json.dumps(result)
 
 
-def test_target_deadline_releases_unauthenticated_slow_trickle(
+@pytest.mark.parametrize("phase", ["authentication", "request"])
+def test_handoff_readers_keep_absolute_deadline_during_progress(
+    monkeypatch: pytest.MonkeyPatch,
+    phase: str,
+) -> None:
+    """断片受信に進捗があっても、残り時間を減らし絶対期限で打ち切る。"""
+    elapsed = 0.0
+    connection = Mock(spec=socket.socket)
+
+    def receive_partial(_size: int) -> bytes:
+        nonlocal elapsed
+        elapsed += 0.125
+        # 期限の更新に退行しても、EOF で失敗させて test 自体は停止しない。
+        return b"x" if elapsed <= 0.5 else b""
+
+    connection.recv.side_effect = receive_partial
+    # process 全体の時計を変えず、protocol の時間だけを受信ごとに進める。
+    monkeypatch.setattr(
+        handoff_protocol, "time", SimpleNamespace(monotonic=lambda: elapsed)
+    )
+    with pytest.raises(TimeoutError, match="deadline exceeded"):
+        if phase == "authentication":
+            authenticate_editor_input_handoff_server(connection, b"x" * 16, 0.5)
+        else:
+            read_handoff_message(connection, 0.5)
+    assert connection.recv.call_count == 4
+    timeouts = [call.args[0] for call in connection.settimeout.call_args_list]
+    assert timeouts[-4:] == [0.5, 0.375, 0.25, 0.125]
+
+
+@pytest.mark.parametrize("phase", ["authentication", "request"])
+def test_target_deadline_releases_connection_and_accepts_next_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_source,
+    input_path: Path,
+    phase: str,
 ) -> None:
-    """proof の slow-trickle を絶対期限で切り、次の submission を処理する。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
-    monkeypatch.setattr(
-        handoff_module,
-        "EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS",
-        0.2,
-    )
-    target = start_editor_input_handoff(
-        tmp_path, input_path, "{{original-prompt-here}}"
-    )
-    route = parse_editor_input_handoff_target_id(tmp_path, target.target_id)
-    assert route is not None
-    address, _token = route
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as stalled:
-            stalled.settimeout(2)
-            stalled.connect(address)
-            assert stalled.recv(1)
-            stopped, trickler = _start_slow_trickle(stalled, b"x", 0.05)
-            try:
-                _wait_for_peer_close(stalled)
-                monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-                result = handoff_mcp._submit(
-                    handoff_input(target.target_id, "after deadline")
-                )
-            finally:
-                stopped.set()
-                trickler.join(timeout=2)
-        assert result == {"status": "accepted"}
-        assert input_path.read_text(encoding="utf-8") == handoff_body(
-            "after deadline", handoff_source
-        )
-    finally:
-        target.close()
-
-
-def test_target_deadline_releases_authenticated_request_slow_trickle(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    handoff_source,
-) -> None:
-    """認証後 request の slow-trickle を切り、次の submission を処理する。"""
-    input_path = prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
-    monkeypatch.setattr(
-        handoff_module,
-        "EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS",
-        0.2,
-    )
+    """認証前・認証後の期限切れで実接続を解放し、次の submission を処理する。"""
     target = start_editor_input_handoff(
         tmp_path, input_path, "{{original-prompt-here}}"
     )
@@ -420,20 +409,23 @@ def test_target_deadline_releases_authenticated_request_slow_trickle(
     assert route is not None
     address, token = route
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as stalled:
-            stalled.settimeout(2)
-            stalled.connect(address)
-            assert authenticate_editor_input_handoff_client(stalled, token, 2)
-            stopped, trickler = _start_slow_trickle(stalled, b"x", 0.05)
-            try:
+        # 期限の維持は reader test に委ね、ここでは実接続の終了と復帰を確かめる。
+        timeout_name = (
+            "EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS"
+            if phase == "authentication"
+            else "EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS"
+        )
+        with monkeypatch.context() as deadline_patch:
+            deadline_patch.setattr(handoff_module, timeout_name, 0.0)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as stalled:
+                stalled.settimeout(2)
+                stalled.connect(address)
+                if phase == "request":
+                    assert authenticate_editor_input_handoff_client(stalled, token, 2)
                 _wait_for_peer_close(stalled)
-                monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-                result = handoff_mcp._submit(
-                    handoff_input(target.target_id, "after deadline")
-                )
-            finally:
-                stopped.set()
-                trickler.join(timeout=2)
+        assert input_path.read_bytes() == b""
+        monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
+        result = handoff_mcp._submit(handoff_input(target.target_id, "after deadline"))
         assert result == {"status": "accepted"}
         assert input_path.read_text(encoding="utf-8") == handoff_body(
             "after deadline", handoff_source

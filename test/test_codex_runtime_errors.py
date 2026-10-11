@@ -8,13 +8,14 @@
 import json
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
-from _command_support import write_python_executable
-from _git_support import make_repo
 
 import cmoc_runtime
+import commons.runtime_codex_exec as exec_module
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import (
@@ -28,6 +29,24 @@ from commons.runtime_logging import (
     set_current_subcommand_logger,
 )
 from config.cmoc_config import CmocConfig
+
+
+@pytest.fixture
+def codex_error_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """応答と起動失敗の検証では、Git context を解決済みとして扱う。"""
+    # 実 Git の cwd・worktree 境界は test_codex_runtime_paths.py に残す。
+    root = tmp_path / "repo"
+    root.mkdir()
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    monkeypatch.setattr(
+        exec_module,
+        "AgentCallPathContext",
+        lambda agent_call_cwd: SimpleNamespace(
+            agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
+        ),
+    )
+    return root
 
 
 @pytest.mark.parametrize("line", ["null", "[]", "1"])
@@ -45,88 +64,85 @@ def test_codex_jsonl_invalid_lines_are_unexpected(stdout_text: str) -> None:
     assert "malformed JSONL event (invalid JSON):" in codex_error_text(stdout_text, "")
 
 
-def test_codex_runtime_rejects_non_object_jsonl_event(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """非 object JSONL でも AttributeError ではなく CmocError にする。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        ["print('null')"],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    with pytest.raises(CmocError) as exc_info:
-        run_codex_exec(
-            codex_parameter(agent_call_cwd=root),
-            root=root,
-            transient_poll_interval_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert "malformed JSONL event (expected object): null" not in exc_info.value.detail
-
-
-def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    ("stdout_text", "output_text", "expected_error"),
+    [
+        pytest.param(
+            "null\n",
+            None,
+            "malformed JSONL event (expected object): null",
+            id="non_object",
+        ),
+        pytest.param(
+            "not-json\n",
+            '{"ok": true}',
+            "malformed JSONL event (invalid JSON): not-json",
+            id="invalid_json_with_valid_output",
+        ),
+    ],
+)
+def test_codex_runtime_rejects_malformed_jsonl(
+    codex_error_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    stdout_text: str,
+    output_text: str | None,
+    expected_error: str,
 ) -> None:
-    """returncode 0 と valid output があっても不正 stdout は失敗にする。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib",
-            "import sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            "print('not-json')",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    """不正 stdout は即時失敗させ、本文を console へ漏らさず log に残す。"""
+    # 実 process の argv・stdin・出力取得は test_codex_runtime_exec.py に残す。
+    root = codex_error_directory
+    stderr_text = "private stderr\n"
 
-    with pytest.raises(CmocError) as exc_info:
+    def fake_codex(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """元の非 object・valid output の前提を process 起動なしで再現する。"""
+        if output_text is not None:
+            output = Path(args[args.index("--output-last-message") + 1])
+            output.write_text(output_text, encoding="utf-8")
+        return subprocess.CompletedProcess(args, 0, stdout_text, stderr_text)
+
+    codex_call = Mock(side_effect=fake_codex)
+    monkeypatch.setattr(exec_module, "run_codex_subprocess", codex_call)
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました") as exc_info:
         run_codex_exec(
             codex_parameter(agent_call_cwd=root),
             root=root,
             transient_poll_interval_sec=0,
             config=CmocConfig(),
+            subcommand_logger=logger,
         )
 
-    assert "malformed JSONL event (invalid JSON): not-json" not in exc_info.value.detail
+    codex_call.assert_called_once()
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    (event,) = [event for event in events if event["event"] == "codex_call"]
+    assert event["status"] == "failed"
+    assert event["returncode"] == 0
+    assert expected_error in event["error"]
+    assert Path(event["stdout_log_path"]).read_text() == stdout_text
+    assert Path(event["stderr_log_path"]).read_text() == stderr_text
+    if output_text is not None:
+        assert Path(event["output_path"]).read_text() == output_text
+    assert expected_error not in exc_info.value.detail
+    assert stderr_text not in exc_info.value.detail
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == ""
-    assert "not-json" not in captured.err
 
 
 def test_codex_runtime_reports_missing_codex_cli(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    codex_error_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Codex CLI 不在時の例外と失敗ログを検証する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    real_run = subprocess.run
-
-    def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
-        """Codex CLI の不在を再現し、それ以外の subprocess 呼び出しを委譲する。"""
-        if args[:1] == ["codex"]:
-            raise FileNotFoundError("codex")
-        return real_run(args, *pos, **kwargs)
-
-    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
+    # 不在の変換は実 run_codex_subprocess を通し、OS の起動失敗だけを代替する。
+    root = codex_error_directory
+    codex_call = Mock(
+        side_effect=FileNotFoundError(2, "No such file or directory", "codex")
+    )
+    monkeypatch.setattr(cmoc_runtime.subprocess, "run", codex_call)
 
     logger = SubcommandLogger(root, "test")
     token = set_current_subcommand_logger(logger)
@@ -141,6 +157,7 @@ def test_codex_runtime_reports_missing_codex_cli(
     finally:
         reset_current_subcommand_logger(token)
 
+    codex_call.assert_called_once()
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
     assert len(codex_events) == 1

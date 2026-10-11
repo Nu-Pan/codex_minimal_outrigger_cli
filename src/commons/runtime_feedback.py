@@ -30,9 +30,9 @@ from .runtime_feedback_protocol import (
     FEEDBACK_COLLECTOR_HOST,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
+    REPORTER_PROTOCOL_VERSION,
 )
 from .runtime_feedback_store import (
-    REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
     parse_rfc3339,
     read_json_object,
@@ -173,7 +173,7 @@ class FeedbackInvocation:
         self._server_thread: threading.Thread | None = None
         self._worker_threads: set[threading.Thread] = set()
         self._stopping = False
-        self._base_context = self._resolve_base_context()
+        self._base_context: dict[str, Any] | None = None
 
     def _resolve_base_context(
         self, agent_call_cwd: Path | None = None
@@ -254,6 +254,12 @@ class FeedbackInvocation:
                 context.accepting = False
         listener = self._listener
         if listener is not None:
+            # close だけでは別 thread の accept が timeout まで残るため、先に解除する。
+            try:
+                listener.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                # shutdown 不可の listener は既存の accept timeout で回収する。
+                pass
             listener.close()
         for context in contexts:
             self.close_call(context)
@@ -591,6 +597,11 @@ class FeedbackInvocation:
             }
         else:
             return
+
+        # detector 用 snapshot は対象 event がある場合だけ作る。call context は
+        # 登録時に別途取得するため、invocation 起動時の Git 問い合わせは不要。
+        if self._base_context is None:
+            self._base_context = self._resolve_base_context()
 
         # event の安定 context を優先し、未指定 field だけ invocation context で補う。
         context_log_paths = [str(log_path.resolve())]

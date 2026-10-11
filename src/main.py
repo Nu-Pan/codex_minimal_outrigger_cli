@@ -9,25 +9,9 @@ from typing import Any, cast
 import click
 import typer
 
-from cmoc_runtime import (
-    CmocError,
-    render_error,
-)
-from sub_commands.doctor import cmoc_doctor_impl
-from sub_commands.feedback.close import (
-    cmoc_feedback_close_impl,
-    cmoc_feedback_close_parse_error_impl,
-)
-from sub_commands.oracle.edit import cmoc_oracle_edit_impl
-from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
-from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
-from sub_commands.realization.refactor.fork import cmoc_realization_refactor_fork_impl
-from sub_commands.run.abandon import cmoc_run_abandon_impl
-from sub_commands.run.join import cmoc_run_join_impl
-from sub_commands.session.abandon import cmoc_session_abandon_impl
-from sub_commands.session.fork import cmoc_session_fork_impl
-from sub_commands.session.join import cmoc_session_join_impl
-from sub_commands.tui import cmoc_tui_impl
+# help・補完・通常の解析エラーでは command runtime を初期化しない。
+# 各 handler は callback 内で読み込み、CLI 境界にはエラー描画だけを置く。
+from commons.runtime_errors import CmocError, render_error
 
 
 def _click_exception_types() -> tuple[type[BaseException], ...]:
@@ -155,6 +139,10 @@ class _CmocTyperGroup(typer.core.TyperGroup):
             # Close の未受理入力にも invocation report と終了コード 1 を確定する。
             invocation_arguments = list(args) if args is not None else sys.argv[1:]
             if invocation_arguments[:2] == ["feedback", "close"]:
+                from sub_commands.feedback.close import (
+                    cmoc_feedback_close_parse_error_impl,
+                )
+
                 try:
                     cmoc_feedback_close_parse_error_impl(
                         invocation_arguments, click_exception.format_message()
@@ -213,30 +201,40 @@ app.add_typer(feedback_app, name="feedback")
 @app.command()
 def doctor() -> None:
     """cmoc 実行前の共通検証・修復を明示実行する CLI 入口。"""
+    from sub_commands.doctor import cmoc_doctor_impl
+
     cmoc_doctor_impl()
 
 
 @app.command()
 def tui() -> None:
     """Codex TUI を cmoc の依頼文と設定で起動する CLI 入口。"""
+    from sub_commands.tui import cmoc_tui_impl
+
     cmoc_tui_impl()
 
 
 @session_app.command("fork")
 def session_fork() -> None:
     """現在 branch から session branch を作る CLI 入口。"""
+    from sub_commands.session.fork import cmoc_session_fork_impl
+
     cmoc_session_fork_impl()
 
 
 @session_app.command("join")
 def session_join() -> None:
     """session branch の成果を home branch へ取り込む CLI 入口。"""
+    from sub_commands.session.join import cmoc_session_join_impl
+
     cmoc_session_join_impl()
 
 
 @session_app.command("abandon")
 def session_abandon() -> None:
     """session branch を取り込まず破棄する CLI 入口。"""
+    from sub_commands.session.abandon import cmoc_session_abandon_impl
+
     cmoc_session_abandon_impl()
 
 
@@ -244,36 +242,50 @@ def session_abandon() -> None:
 def oracle_edit() -> None:
     """oracle file を main worktree の 2 回の Codex exec で編集する CLI 入口。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    from sub_commands.oracle.edit import cmoc_oracle_edit_impl
+
     cmoc_oracle_edit_impl()
 
 
 @oracle_app.command("investigation")
 def oracle_investigation() -> None:
     """oracle file の read-only 調査 TUI を起動する CLI 入口。"""
+    from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
+
     cmoc_oracle_investigation_impl()
 
 
 @realization_apply_app.command("fork")
 def realization_apply_fork() -> None:
     """oracle 差分へ追従する realization run を開始する CLI 入口。"""
+    from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
+
     cmoc_realization_apply_fork_impl()
 
 
 @realization_refactor_app.command("fork")
 def realization_refactor_fork() -> None:
     """full realization refactor cycle を開始する CLI 入口。"""
+    from sub_commands.realization.refactor.fork import (
+        cmoc_realization_refactor_fork_impl,
+    )
+
     cmoc_realization_refactor_fork_impl()
 
 
 @run_app.command("join")
 def run_join(force_resolve: bool = typer.Option(False, "--force-resolve")) -> None:
     """active editing run を session branch へ取り込む CLI 入口。"""
+    from sub_commands.run.join import cmoc_run_join_impl
+
     cmoc_run_join_impl(force_resolve)
 
 
 @run_app.command("abandon")
 def run_abandon() -> None:
     """active editing run を破棄する CLI 入口。"""
+    from sub_commands.run.abandon import cmoc_run_abandon_impl
+
     cmoc_run_abandon_impl()
 
 
@@ -281,8 +293,6 @@ def run_abandon() -> None:
 def feedback_report() -> None:
     """pending feedback observation から current report を publication する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-    # feedback の builder 読み込みを、このコマンドの実行時に限定する。
-    # doctor などの独立したコマンドの起動を妨げないようにする。
     from sub_commands.feedback.report import cmoc_feedback_report_impl
 
     cmoc_feedback_report_impl()
@@ -296,6 +306,8 @@ def feedback_close(
     ),
 ) -> None:
     """外部解決済みの inconclusive 案件を終了する。"""
+    from sub_commands.feedback.close import cmoc_feedback_close_impl
+
     cmoc_feedback_close_impl(case_id, reason)
 
 

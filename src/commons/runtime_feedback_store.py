@@ -14,7 +14,6 @@ record の同一性判定が重複するため、raw observation store の境界
 
 import fcntl
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -26,16 +25,18 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import lru_cache
-from importlib import resources
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from .runtime_feedback_protocol import (
+    REPORTER_PROTOCOL_VERSION,
+    load_reporter_input_schema,
+)
 from .runtime_ids import is_common_id, new_id
 
 OBSERVATION_SCHEMA_VERSION = 1
-REPORTER_PROTOCOL_VERSION = "1"
 REPORTER_VERSION = "1"
 _MAX_PAYLOAD_BYTES = 32 * 1024
 _PATH_EVIDENCE_KINDS = {"file", "oracle", "log"}
@@ -121,35 +122,9 @@ def sha256_bytes(value: bytes) -> str:
 
 @lru_cache(maxsize=1)
 def reporter_input_schema() -> dict[str, Any]:
-    """oracle package resource から reporter input schema を読む。"""
-    # schema field を realization へ複製しない。
-    try:
-        schema_text = (
-            resources.files("oracle.feedback")
-            .joinpath("reporter_input.json")
-            .read_text(encoding="utf-8")
-        )
-    except NotADirectoryError:
-        # `oracle.feedback` is a namespace package in the source and editable
-        # installations.  importlib.resources cannot represent its merged
-        # resource directory, so resolve the canonical file from the concrete
-        # package search locations instead.
-        spec = importlib.util.find_spec("oracle.feedback")
-        locations = (
-            spec.submodule_search_locations
-            if spec is not None and spec.submodule_search_locations is not None
-            else ()
-        )
-        for location in locations:
-            candidate = Path(location) / "reporter_input.json"
-            if candidate.is_file():
-                schema_text = candidate.read_text(encoding="utf-8")
-                break
-        else:
-            raise
-    loaded = json.loads(schema_text)
-    if not isinstance(loaded, dict):
-        raise TypeError("feedback reporter schema must be a JSON object")
+    """collector と doctor が使う正本 schema を読み、schema 自体も検査する。"""
+    # reporter の discovery と同じ resource を、受け入れ前に検査する。
+    loaded = load_reporter_input_schema()
     Draft202012Validator.check_schema(loaded)
     return loaded
 
@@ -612,19 +587,22 @@ def validate_agent_payload(
     masked_value, redaction_count = _mask_payload(payload)
     if not isinstance(masked_value, dict):
         raise FeedbackRejected("suspected_secret", "payload could not be redacted")
-    # 固定長の redaction marker が短い credential を置換すると、mask 前は
-    # schema 内でも mask 後に field または payload size を超えることがある。
-    try:
-        masked_payload_bytes = canonical_json_bytes(masked_value)[:-1]
-    except (TypeError, UnicodeError, ValueError) as exc:
-        raise FeedbackRejected(
-            "schema_invalid", "payload must be valid UTF-8 JSON"
-        ) from exc
-    if len(masked_payload_bytes) > _MAX_PAYLOAD_BYTES:
-        raise FeedbackRejected("payload_too_large", "redacted payload exceeds 32 KiB")
-    masked_errors = reporter_input_validation_errors(masked_value)
-    if masked_errors:
-        raise FeedbackRejected("schema_invalid", masked_errors[0])
+    # 置換がなければ検証済みの内容と同じ。置換した場合だけ、短い credential より
+    # 長い marker による field・payload size の超過を再検査する。
+    if redaction_count:
+        try:
+            masked_payload_bytes = canonical_json_bytes(masked_value)[:-1]
+        except (TypeError, UnicodeError, ValueError) as exc:
+            raise FeedbackRejected(
+                "schema_invalid", "payload must be valid UTF-8 JSON"
+            ) from exc
+        if len(masked_payload_bytes) > _MAX_PAYLOAD_BYTES:
+            raise FeedbackRejected(
+                "payload_too_large", "redacted payload exceeds 32 KiB"
+            )
+        masked_errors = reporter_input_validation_errors(masked_value)
+        if masked_errors:
+            raise FeedbackRejected("schema_invalid", masked_errors[0])
     masked_evidence = masked_value.get("evidence")
     if not isinstance(masked_evidence, list) or not masked_evidence:
         raise FeedbackRejected("suspected_secret", "required evidence was redacted")
@@ -832,9 +810,13 @@ def iter_observation_paths(repo: Path) -> list[Path]:
     )
 
 
-def read_json_object(path: Path) -> dict[str, Any]:
-    """UTF-8 JSON file を object として読む。"""
-    value = json.loads(path.read_text(encoding="utf-8"))
+def read_json_object(path: Path, *, content: bytes | None = None) -> dict[str, Any]:
+    """UTF-8 JSON file または取得済み byte 列を object として読む。"""
+    # hash 検査済みの byte 列がある場合は file を読み直さない。
+    text = (
+        path.read_text(encoding="utf-8") if content is None else content.decode("utf-8")
+    )
+    value = json.loads(text)
     if not isinstance(value, dict):
         raise ValueError(f"JSON top-level must be an object: {path}")
     return value
@@ -864,6 +846,8 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
                 f"feedback observation root is not a regular directory: {root}"
             )
         current = os.path.dirname(current)
+    # 検査した inventory をそのまま使い、再列挙と同じ path の再検査を避ける。
+    validated_paths: list[Path] = []
     if root.exists():
         for path in root.rglob("*"):
             if path.is_dir() and not path.is_symlink():
@@ -877,10 +861,9 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
                 raise ValueError(
                     f"feedback observation store has an invalid artifact: {path}"
                 )
+            validated_paths.append(path)
     processed_ids = published_cleanup_observation_ids(repo)
-    return [
-        path for path in iter_observation_paths(repo) if path.stem not in processed_ids
-    ]
+    return sorted(path for path in validated_paths if path.stem not in processed_ids)
 
 
 def feedback_completion_counts(
@@ -900,23 +883,23 @@ def feedback_completion_counts(
         )
     warnings: list[str] = []
     # notification threshold は詳細を展開せず report 実行だけを促す。
-    oldest_age_days: float | None = None
-    for path in pending:
-        try:
-            observation = read_json_object(path)
-            observed_at = observation.get("observed_at")
-            if not isinstance(observed_at, str):
+    # 件数または古い一件で通知が確定した後は、残りの本文を読む必要がない。
+    threshold_reached = len(pending) >= 100
+    if not threshold_reached:
+        now = datetime.now(timezone.utc)
+        for path in pending:
+            try:
+                observation = read_json_object(path)
+                observed_at = observation.get("observed_at")
+                if not isinstance(observed_at, str):
+                    continue
+                age = now - parse_rfc3339(observed_at).astimezone(timezone.utc)
+                if age.total_seconds() >= 7 * 86400:
+                    threshold_reached = True
+                    break
+            except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
                 continue
-            age = datetime.now(timezone.utc) - parse_rfc3339(observed_at).astimezone(
-                timezone.utc
-            )
-            days = age.total_seconds() / 86400
-            oldest_age_days = (
-                days if oldest_age_days is None else max(oldest_age_days, days)
-            )
-        except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
-            continue
-    if len(pending) >= 100 or (oldest_age_days is not None and oldest_age_days >= 7):
+    if threshold_reached:
         warnings.append(
             "pending feedback が蓄積しています。`cmoc feedback report` を実行してください。"
         )

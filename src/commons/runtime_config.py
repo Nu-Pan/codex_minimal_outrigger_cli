@@ -93,15 +93,17 @@ class ConfigSyncResult:
     saved: bool
 
 
-def _document_search_config(value: Any) -> DocumentSearchConfig:
-    """正本の tuning 型・値域・項目間制約を検証する。"""
+def _document_search_data(value: Any) -> dict[str, Any]:
+    """正本の tuning 制約を検証し、定義順の数値 object を返す。"""
+    # 全項目を数値として検証するため、dataclass の再帰コピーは不要。
     if isinstance(value, DocumentSearchConfig):
-        data = asdict(value)
+        data = {field.name: getattr(value, field.name) for field in fields(value)}
     elif isinstance(value, dict):
         data = value
     else:
         raise SearchConfigIssue("document_search", "object が必要です")
-    names = {field.name for field in fields(DocumentSearchConfig)}
+    schema_fields = fields(DocumentSearchConfig)
+    names = {field.name for field in schema_fields}
     unknown = sorted(data.keys() - names)
     if unknown:
         raise SearchConfigIssue(
@@ -167,7 +169,12 @@ def _document_search_config(value: Any) -> DocumentSearchConfig:
             "document_search.chunk_tokens, document_search.embedding_context_tokens",
             f"chunk_tokens={data['chunk_tokens']} は embedding_context_tokens={data['embedding_context_tokens']} より小さくしてください",
         )
-    return DocumentSearchConfig(**data)
+    return {field.name: data[field.name] for field in schema_fields}
+
+
+def _document_search_config(value: Any) -> DocumentSearchConfig:
+    """検索設定を検証して正本の dataclass へ復元する。"""
+    return DocumentSearchConfig(**_document_search_data(value))
 
 
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
@@ -195,7 +202,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "reasoning_effort": _reasoning_effort_name(call_config.reasoning_effort),
         }
 
-    search_config = _document_search_config(config.document_search)
+    search_data = _document_search_data(config.document_search)
     return {
         "num_parallel": _config_int(config.num_parallel),
         "codex": {
@@ -203,7 +210,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "agent_calls": agent_calls,
             "num_try_falv_recovery": _config_int(config.codex.num_try_falv_recovery),
         },
-        "document_search": asdict(search_config),
+        "document_search": search_data,
     }
 
 
@@ -214,7 +221,10 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
         """循環 container も拒否しながら再帰的な値を検証する。"""
         if isinstance(item, str):
             # TOML string は Unicode scalar value だけを受理する。
-            if any(0xD800 <= ord(character) <= 0xDFFF for character in item):
+            # ASCII には surrogate がないので、文字単位の走査を省ける。
+            if not item.isascii() and any(
+                0xD800 <= ord(character) <= 0xDFFF for character in item
+            ):
                 raise TypeError
             return item
         if isinstance(item, bool):
@@ -356,9 +366,16 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             # {{work-root}}/oracle/doc/app_spec/error_handling.md
             # 不正 JSON には surrogate も含まれうるため、error report を UTF-8 で出力
             # できる ASCII escape へ変換する。
-            detail = json.dumps(data, ensure_ascii=True, indent=2, default=repr)
+            if isinstance(exc, RecursionError) or isinstance(
+                exc.__cause__, RecursionError
+            ):
+                # JSON 診断も再帰処理なので、深さエラー後の再走査を省く。
+                detail = repr(data)
+            else:
+                detail = json.dumps(data, ensure_ascii=True, indent=2, default=repr)
         except (RecursionError, TypeError, ValueError):
-            detail = repr(data).encode("utf-8", "backslashreplace").decode("utf-8")
+            detail = repr(data)
+        detail = detail.encode("utf-8", "backslashreplace").decode("utf-8")
         raise CmocError(
             "cmoc config が不正です。",
             ["{{work-root}}/.cmoc/gt/config.json を確認してから再実行してください。"],
@@ -431,6 +448,12 @@ def _read_config_data(path: Path) -> dict[str, Any]:
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
     # 特殊 file を read_text する前に拒否し、設定読み込みを即時に失敗させる。
     if not path.is_file():
+        if not path.exists():
+            raise _search_config_failure(
+                path,
+                SearchConfigIssue("document_search", "設定ファイルが存在しません"),
+                missing=True,
+            )
         raise CmocError(
             "cmoc config JSON を読み込めません。",
             ["{{work-root}}/.cmoc/gt/config.json を通常の file に修正してください。"],
@@ -456,7 +479,7 @@ def _read_config_data(path: Path) -> dict[str, Any]:
     return data
 
 
-def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchConfig:
+def _validate_saved_search_data(path: Path, data: dict[str, Any]) -> None:
     """保存された検索設定を既定値の注入なしで検証する。"""
     if "document_search" not in data:
         raise _search_config_failure(
@@ -465,14 +488,13 @@ def _validated_search_data(path: Path, data: dict[str, Any]) -> DocumentSearchCo
             missing=True,
         )
     try:
-        config = _document_search_config(data["document_search"])
+        _document_search_data(data["document_search"])
     except SearchConfigIssue as exc:
         raise _search_config_failure(path, exc, missing=exc.missing) from exc
-    return config
 
 
-def _validated_codex_data(path: Path, data: dict[str, Any]) -> None:
-    """保存済み agent call 設定を暗黙補完せず、provider 参照まで確認する。"""
+def _validated_codex_data(path: Path, data: dict[str, Any]) -> CmocConfig:
+    """保存済み agent call 設定と provider 参照を確認し、復元した設定を返す。"""
     codex = data.get("codex")
     if not isinstance(codex, dict):
         field = "codex"
@@ -494,7 +516,7 @@ def _validated_codex_data(path: Path, data: dict[str, Any]) -> None:
                 if call.model_provider not in providers
             ]
             if not unknown:
-                return
+                return config
             field = f"codex.agent_calls.{unknown[0]}.model_provider"
     raise CmocError(
         "agent call の保存設定が不足または不正です。",
@@ -506,17 +528,9 @@ def _validated_codex_data(path: Path, data: dict[str, Any]) -> None:
 def load_config(root: Path) -> CmocConfig:
     """保存済み JSON の検索設定を厳格に検証して config に復元する。"""
     path = config_path(root)
-    _reject_symlinked_config_path(path)
-    if not path.exists():
-        raise _search_config_failure(
-            path,
-            SearchConfigIssue("document_search", "設定ファイルが存在しません"),
-            missing=True,
-        )
     data = _read_config_data(path)
-    _validated_search_data(path, data)
-    _validated_codex_data(path, data)
-    return config_from_dict(data)
+    _validate_saved_search_data(path, data)
+    return _validated_codex_data(path, data)
 
 
 def sync_config(
@@ -554,9 +568,8 @@ def sync_config(
     if on_candidate is not None:
         on_candidate(False, additions)
     candidate = {**data, "document_search": search}
-    _validated_search_data(path, candidate)
-    _validated_codex_data(path, candidate)
-    config = config_from_dict(candidate)
+    _validate_saved_search_data(path, candidate)
+    config = _validated_codex_data(path, candidate)
     if additions:
         write_config(path, config)
     return ConfigSyncResult(config, False, additions, bool(additions))

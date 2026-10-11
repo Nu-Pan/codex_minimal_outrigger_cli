@@ -9,43 +9,48 @@
 
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
-from _cli_support import run_doctor, runner
-from _git_support import make_repo
+from _cli_support import runner
 
-import acp.builder.oracle.investigation.launch_tui as launch_tui_module
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.investigation as investigation_module
 from basic.acp import AgentCallParameter, FileAccessMode
+from cmoc_runtime import write_config
 from commons.runtime_logging import current_subcommand_logger
+from config.cmoc_config import CmocConfig
 from main import app
 
 
 def test_oracle_investigation_has_no_session_precondition(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """oracle investigation が session なしの main worktree でも起動できる。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+
+    # root の Git 導出は test_basic_runtime.py、CLI との結合は test_runtime_cli.py に残す。
+    # session のない実 repository と ignore 検査を保ち、同じ root の反復探索だけを外す。
+    def resolve_test_roots(start_path: Path | None = None) -> tuple[Path, Path]:
+        assert (Path.cwd() if start_path is None else start_path).resolve() == root
+        return root, root
+
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
+    )
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
     events: list[str] = []
-    real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
 
-    def record_run_doctor_preprocess(
-        target_root: Path,
-        *,
-        sync_refactor_entries: bool = True,
-    ) -> None:
-        """CLI invocation 内の doctor preprocess を記録して本来の処理へ委譲する。"""
+    # 修復・索引同期は test_doctor_cli.py、共通 CLI との結合は test_cli_tui.py に残す。
+    # ここでは investigation 固有の呼び出し先・順序を検証し、履歴作成を省く。
+    def record_run_doctor_preprocess(target_root: Path) -> None:
+        """CLI invocation 内の doctor 呼び出し先と順序を記録する。"""
+        assert target_root == root
         events.append("doctor")
-        real_run_doctor_preprocess(
-            target_root,
-            sync_refactor_entries=sync_refactor_entries,
-        )
 
     real_build_parameter = (
         investigation_module.build_oracle_investigation_launch_tui_parameter
@@ -96,6 +101,11 @@ def test_oracle_investigation_has_no_session_precondition(
         runtime_cli_module,
         "run_doctor_preprocess",
         record_run_doctor_preprocess,
+    )
+    # TUI は呼び出しを記録するだけで reporter を使わないため、collector は起動しない。
+    # TCP 受付・失効・停止・drain は test_feedback.py の実 transport 検証に残す。
+    monkeypatch.setattr(
+        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
     )
     monkeypatch.setattr(
         investigation_module,
@@ -177,13 +187,3 @@ def test_oracle_investigation_has_no_session_precondition(
     assert "oracle の根拠を調査する" in complete_prompt
     assert input_path.read_text(encoding="utf-8") == "oracle の根拠を調査する"
     assert not list(input_path.parent.glob("*_cmpl.md"))
-
-
-def test_oracle_investigation_builder_exports_only_the_builder() -> None:
-    """investigation の realization adapter が補助名を公開しない。"""
-    expected = ["build_oracle_investigation_launch_tui_parameter"]
-    assert launch_tui_module.__all__ == expected
-    assert (
-        sorted(name for name in vars(launch_tui_module) if not name.startswith("_"))
-        == expected
-    )

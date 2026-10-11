@@ -18,8 +18,8 @@ import inspect
 
 import click
 import pytest
+from click.testing import CliRunner
 from typer.main import get_command
-from typer.testing import CliRunner
 
 from main import app
 
@@ -31,6 +31,13 @@ def _clear_completion_probe_environment(
     """通常の CLI tree test を外部の completion probe 環境から分離する。"""
     # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
+
+
+@pytest.fixture(scope="module")
+def cli_command() -> click.Command:
+    """構造を変更しない検査間で、Typer から構築した command tree を共有する。"""
+    # invocation ごとの Context は runner が作成し、tree の再構築だけを省く。
+    return get_command(app)
 
 
 def _leaves(
@@ -48,9 +55,9 @@ def _leaves(
     }
 
 
-def test_public_cli_leaf_commands_match_oracle() -> None:
+def test_public_cli_leaf_commands_match_oracle(cli_command: click.Command) -> None:
     """公開 CLI の末端 command 集合が正本の列挙と一致することを確認する。"""
-    assert _leaves(get_command(app)) == {
+    assert _leaves(cli_command) == {
         ("doctor",),
         ("feedback", "report"),
         ("feedback", "close"),
@@ -67,12 +74,13 @@ def test_public_cli_leaf_commands_match_oracle() -> None:
     }
 
 
-def test_help_renders_without_typer_click_compatibility_error() -> None:
+def test_help_renders_without_typer_click_compatibility_error(
+    cli_command: click.Command,
+) -> None:
     """Typer/Click の互換性エラーなく help が描画されることを確認する。"""
-    command = get_command(app)
-    context = click.Context(command, info_name="cmoc")
+    context = click.Context(cli_command, info_name="cmoc")
 
-    rendered = command.get_help(context)
+    rendered = cli_command.get_help(context)
 
     assert "oracle" in rendered
     assert "realization" in rendered
@@ -80,7 +88,7 @@ def test_help_renders_without_typer_click_compatibility_error() -> None:
 
     runner = CliRunner()
     for command_path in (("oracle", "edit"), ("run", "join")):
-        result = runner.invoke(app, [*command_path, "--help"])
+        result = runner.invoke(cli_command, [*command_path, "--help"])
         assert result.exit_code == 0, result.output
 
 
@@ -94,10 +102,11 @@ def test_click_option_metavar_accepts_contextless_help_call() -> None:
         assert option.make_metavar() == "TEXT"
 
 
-def test_feedback_report_exposes_no_subcommand_specific_options() -> None:
+def test_feedback_report_exposes_no_subcommand_specific_options(
+    cli_command: click.Command,
+) -> None:
     """feedback report が位置引数と固有 option を公開しないことを確認する。"""
-    command = get_command(app)
-    feedback = command.commands["feedback"]
+    feedback = cli_command.commands["feedback"]
     feedback_commands = getattr(feedback, "commands", None)
     assert isinstance(feedback_commands, dict)
     report = feedback_commands["report"]

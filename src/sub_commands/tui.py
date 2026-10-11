@@ -19,6 +19,7 @@ from commons.prompt_editor_input import (
     ensure_prompt_editor_roots_ignored,
     reserve_prompt_editor_input,
 )
+from commons.runtime_paths import reuse_root_queries
 from commons.runtime_results import CommandResult
 from config.cmoc_config import CmocConfig
 
@@ -83,8 +84,10 @@ def _cmoc_tui_body(
 
 def _cmoc_tui_from_current_context() -> None:
     """現在の repository 状態から `cmoc tui` の本体処理を起動する。"""
-    root = repo_root()
-    current_root = work_root()
+    # 両 root だけを同じ探索から導出し、editor・agent 呼び出しへ結果を持ち越さない。
+    with reuse_root_queries():
+        root = repo_root()
+        current_root = work_root()
     _cmoc_tui_body(
         run_codex_tui,
         root=root,

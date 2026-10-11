@@ -164,6 +164,37 @@ def test_basis_rejects_git_output_path_outside_worktree(tmp_path, monkeypatch):
     assert outside.read_text() == "must not be read\n"
 
 
+@pytest.mark.parametrize("link_parent", ["inputs", "inputs/package"])
+def test_basis_rejects_symlinked_parent_without_reading_target(
+    tmp_path, monkeypatch, link_parent
+):
+    worktree = tmp_path / "worktree"
+    relative = Path("inputs/package/source.py")
+    outside = tmp_path / "outside"
+    target = outside / relative.relative_to(link_parent)
+    target.parent.mkdir(parents=True)
+    target.write_text("must not be read\n")
+    link = worktree / link_parent
+    link.parent.mkdir(parents=True)
+    link.symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(
+        decision,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(stdout=f"{relative}\0"),
+    )
+    monkeypatch.setattr(
+        decision, "enumerate_oracle_and_realization_files", lambda _root: ([], [])
+    )
+
+    def fail_read(_path):
+        pytest.fail("symlink targets must not be read")
+
+    monkeypatch.setattr(Path, "read_bytes", fail_read)
+
+    with pytest.raises(ValueError, match="symlinked parent"):
+        decision.worktree_inputs(worktree)
+
+
 def test_basis_normalizes_relative_worktree_path(tmp_path, monkeypatch):
     worktree = tmp_path / "worktree"
     path = worktree / "source.py"

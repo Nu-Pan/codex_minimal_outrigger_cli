@@ -4,27 +4,28 @@
 """
 
 import base64
+import fcntl
 import gzip
 import hashlib
 import io
 import json
 import multiprocessing
 import shutil
+import ssl
 import subprocess
 import tarfile
-import time
 import urllib.error
 import urllib.request
-import urllib.response
 from dataclasses import replace
-from email.message import Message
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
 from _cli_support import runner, terminal_primary_report
+from _download_asset_support import download_response, process_obtain
 from _git_support import make_repo
 
+import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
 import commons.runtime_document_search_assets as assets
 import commons.runtime_document_search_setup as setup
@@ -42,39 +43,42 @@ from commons.runtime_results import TerminalResult
 from main import app
 
 
-def _response(url, body, code=200, location=None):
-    headers = Message()
-    headers["Content-Length"] = str(len(body))
-    if location:
-        headers["Location"] = location
-    response = urllib.response.addinfourl(io.BytesIO(body), headers, url, code)
-    response.msg = "fixture response"
-    return response
+@pytest.fixture(scope="module")
+def download_tls_context():
+    """代替 HTTP 通信のたびに、同じ標準 CA 証明書を読み込み直さない。"""
+    return ssl.create_default_context()
 
 
 @pytest.fixture
-def distribution(monkeypatch):
+def distribution(monkeypatch, download_tls_context):
     """HTTP transport の応答を置換し、urllib の redirect と通信記録を通す。"""
     bodies = {"/model": b"model bytes", "/dependency": b"dependency bytes"}
     requests = []
-    delay = {"seconds": 0.0}
 
     def transport(_handler, request):
         path = urlsplit(request.full_url).path
         requests.append(path)
         if path == "/redirect":
-            return _response(request.full_url, b"", 302, "/model")
-        time.sleep(delay["seconds"])
-        return _response(
+            return download_response(request.full_url, b"", 302, "/model")
+        return download_response(
             request.full_url, bodies.get(path, b""), 200 if path in bodies else 503
         )
 
+    build_opener = urllib.request.build_opener
+
+    def opener(*handlers):
+        # handler と通信記録は取得ごとに作り、TLS context の準備だけを共有する。
+        return build_opener(
+            *handlers, urllib.request.HTTPSHandler(context=download_tls_context)
+        )
+
+    monkeypatch.setattr(urllib.request, "build_opener", opener)
     monkeypatch.setattr(urllib.request.HTTPHandler, "http_open", transport)
-    return "http://distribution.invalid", bodies, requests, delay
+    return "http://distribution.invalid", bodies, requests
 
 
 def _asset(distribution, path="/model"):
-    url, bodies, _requests, _delay = distribution
+    url, bodies, _requests = distribution
     body = bodies[path]
     return DownloadAsset(
         name=path,
@@ -87,7 +91,7 @@ def _asset(distribution, path="/model"):
 
 @pytest.fixture
 def asset_logger(tmp_path):
-    logger = SubcommandLogger(make_repo(tmp_path), "doctor")
+    logger = SubcommandLogger(tmp_path, "doctor")
     token = set_current_subcommand_logger(logger)
     try:
         yield logger
@@ -238,66 +242,65 @@ def test_partial_failure_preserves_published_assets(
     assert not list(cache_module.asset_cache_directory().glob(".incomplete-*"))
 
 
-def _process_obtain(cache_root, root, asset, destination, start, count, result):
-    cache_module.asset_cache_directory = lambda: cache_root
-
-    def transport(_handler, request):
-        with count.get_lock():
-            count.value += 1
-        time.sleep(0.3)
-        return _response(request.full_url, b"model bytes")
-
-    urllib.request.HTTPHandler.http_open = transport
-    start.wait(10)
-    result.send(DownloadAssetCache(root).obtain(asset, destination))
-    result.close()
-
-
-def test_parallel_installations_download_once(tmp_path, distribution):
+def test_parallel_installations_download_once(tmp_path, distribution, monkeypatch):
     """独立 process と異なる cmoc 配置でも、待機後に完成品を再利用する。"""
     context = multiprocessing.get_context("spawn")
-    start = context.Event()
-    count = context.Value("i", 0)
+    downloading = context.Event()
+    waiting = context.Event()
     asset = _asset(distribution)
-    distribution[3]["seconds"] = 0.3
-    children = []
+    receive, send = context.Pipe(duplex=False)
+    destination = tmp_path / "child-result"
+    process = context.Process(
+        # spawn がテスト全体と CLI を再 import しない、小さな worker を使う。
+        target=process_obtain,
+        args=(
+            cache_module.asset_cache_directory(),
+            tmp_path / "cmoc-child",
+            asset,
+            destination,
+            downloading,
+            waiting,
+            send,
+        ),
+    )
+    flock = fcntl.flock
+
+    def observe_lock(fd, operation):
+        try:
+            return flock(fd, operation)
+        except BlockingIOError:
+            waiting.set()
+            raise
+
     try:
-        for number in range(3):
-            receive, send = context.Pipe(duplex=False)
-            destination = tmp_path / f"result-{number}"
-            process = context.Process(
-                target=_process_obtain,
-                args=(
-                    cache_module.asset_cache_directory(),
-                    tmp_path / f"cmoc-{number}",
-                    asset,
-                    destination,
-                    start,
-                    count,
-                    send,
-                ),
-            )
-            process.start()
-            send.close()
-            children.append((process, receive, destination))
-        start.set()
-        outcomes = []
-        for process, receive, destination in children:
-            assert receive.poll(20)
-            outcomes.append(receive.recv())
-            process.join(20)
-            assert process.exitcode == 0
-            assert destination.read_bytes() == distribution[1]["/model"]
-        assert outcomes.count("downloaded") == 1
-        assert outcomes.count("reused") == 2
-        assert count.value == 1
+        process.start()
+        send.close()
+        assert downloading.wait(10), "child download did not start"
+        # 親を二つ目の取得 process とし、実 lock の競合を観測する。
+        monkeypatch.setattr(fcntl, "flock", observe_lock)
+        parent_destination = tmp_path / "parent-result"
+        action = DownloadAssetCache(tmp_path / "cmoc-parent").obtain(
+            asset, parent_destination
+        )
+        assert waiting.is_set()
+        assert action == "reused"
+        assert distribution[2] == []
+        assert receive.poll(20)
+        assert receive.recv() == ("downloaded", 1)
+        process.join(20)
+        assert process.exitcode == 0
+        assert (
+            parent_destination.read_bytes()
+            == destination.read_bytes()
+            == distribution[1]["/model"]
+        )
     finally:
-        for process, receive, _destination in children:
-            if process.is_alive():
-                process.kill()
-                process.join()
-            receive.close()
-            process.close()
+        if process.is_alive():
+            process.kill()
+            process.join()
+        receive.close()
+        send.close()
+        process.close()
 
 
 def test_redirect_failure_and_report_preserve_observed_counts(
@@ -341,6 +344,10 @@ def test_doctor_reports_asset_success_separately_from_validation_failure(
     """取得・公開成功を保持し、後続の動作検証失敗を doctor 成功にしない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    # 資材準備から失敗 report までを通し、TCP 受付は test_feedback.py に残す。
+    monkeypatch.setattr(
+        cli_module, "start_feedback_invocation", lambda *_args: (None, None)
+    )
     asset = _asset(distribution)
 
     def prepare_and_fail(cmoc_root, _config):
@@ -362,10 +369,10 @@ def test_doctor_reports_asset_success_separately_from_validation_failure(
     ).read_bytes() == distribution[1]["/model"]
 
 
-def _tarball(name, dependencies=None):
+def _tarball(name, dependencies=None, version="1.0.0"):
     package = {
         "name": name,
-        "version": "1.0.0",
+        "version": version,
         "dependencies": dependencies or {},
         "scripts": {
             "preinstall": "node -e 'throw Error(\"scripts must be disabled\")'"
@@ -385,7 +392,7 @@ def _tarball(name, dependencies=None):
 
 def _npm_fixture(base, distribution):
     base.mkdir(parents=True)
-    url, bodies, _requests, _delay = distribution
+    url, bodies, _requests = distribution
     bodies["/a.tgz"] = _tarball("asset-a", {"asset-b": "1.0.0"})
     bodies["/b.tgz"] = _tarball("asset-b")
     package = {
@@ -453,16 +460,34 @@ def test_npm_build_reuses_all_dependencies_without_network(
     assert all(event["source"] == "cache" for event in _states(asset_logger)[-2:])
 
 
+@pytest.mark.parametrize("nested_version", ["1.0.0", "2.0.0"])
 def test_npm_uses_preexisting_cache_and_platform_pins(
-    tmp_path, distribution, monkeypatch
+    tmp_path, distribution, monkeypatch, asset_logger, nested_version
 ):
-    """旧配置内の npm cache を再利用し、異なる OS/CPU の optional 資材を取得しない。"""
+    """同一資材を共有し、同名の別版と異なる OS/CPU の optional 資材を区別する。"""
+    # platform の実取得と npm への受け渡しは、通信禁止の実 npm test で通す。
+    monkeypatch.setattr(
+        assets, "_npm_platform", lambda: {"os": "linux", "cpu": "x64", "libc": "glibc"}
+    )
     root = tmp_path / "cmoc"
     base = root / "build"
     _npm_fixture(base, distribution)
     lock = json.loads((base / "package-lock.json").read_text())
+    nested_name = "node_modules/asset-a/node_modules/asset-b"
+    # 実 lock 同様、同じ tarball を複数の依存階層から参照する。
+    lock["packages"][nested_name] = dict(lock["packages"]["node_modules/asset-b"])
+    if nested_version != "1.0.0":
+        body = _tarball("asset-b", version=nested_version)
+        distribution[1]["/b-2.tgz"] = body
+        lock["packages"][nested_name] = {
+            "version": nested_version,
+            "resolved": distribution[0] + "/b-2.tgz",
+            "integrity": "sha512-"
+            + base64.b64encode(hashlib.sha512(body).digest()).decode(),
+        }
+    seeded = set()
     for package in lock["packages"].values():
-        if "integrity" in package:
+        if "integrity" in package and package["integrity"] not in seeded:
             local = assets._npm_local_source(
                 base.parent / "npm-cache", package["integrity"]
             )
@@ -470,6 +495,7 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
             local.write_bytes(
                 distribution[1][package["resolved"].removeprefix(distribution[0])]
             )
+            seeded.add(package["integrity"])
     lock["packages"]["node_modules/alien"] = {
         "version": "1.0.0",
         "integrity": "sha512-unused",
@@ -479,6 +505,7 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
         "optional": True,
     }
     (base / "package-lock.json").write_text(json.dumps(lock))
+    original = (base / "package-lock.json").read_bytes()
     monkeypatch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
     with assets.node_runtime_assets(root, base):
         local_lock = json.loads((base / "package-lock.json").read_text())
@@ -488,4 +515,25 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
         assert local_lock["packages"]["node_modules/alien"]["resolved"].endswith(
             "/alien"
         )
+        direct = local_lock["packages"]["node_modules/asset-b"]["resolved"]
+        nested = local_lock["packages"][nested_name]["resolved"]
+        assert (direct == nested) == (nested_version == "1.0.0")
+    # 一度検証・コピーした tarball の準備を、lock の参照数だけ繰り返さない。
+    states = _states(asset_logger)
+    assert len(states) == len(seeded)
+    assert all(event["source"] == "local" for event in states)
+    assert (base / "package-lock.json").read_bytes() == original
+    assert not (base / ".assets").exists()
+
+    # 前回の成功を次の準備へ持ち越さず、破損時も lock と一時資材を回収する。
+    local = assets._npm_local_source(
+        base.parent / "npm-cache",
+        lock["packages"]["node_modules/asset-b"]["integrity"],
+    )
+    local.write_bytes(b"corrupted")
+    with pytest.raises(AssertionError, match="must not attempt external communication"):
+        with assets.node_runtime_assets(root, base):
+            pytest.fail("a corrupted tarball was accepted")
+    assert (base / "package-lock.json").read_bytes() == original
+    assert not (base / ".assets").exists()
     assert distribution[2] == []

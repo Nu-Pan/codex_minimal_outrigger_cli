@@ -10,16 +10,19 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
 from dataclasses import replace
+from itertools import count
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
+    script_codex_calls,
     setup_codex_home,
 )
-from _git_support import make_repo
+from _git_support import init_repo
 
 from commons import runtime_codex_exec as runtime
 from commons import runtime_codex_recovery as recovery
@@ -98,8 +101,37 @@ def test_final_cli_outcome(events, returncode, expected):
 
 @pytest.fixture
 def recovery_case(tmp_path, monkeypatch):
-    root = make_repo(tmp_path)
+    # 設定継承・回復制御は解決済みの path context で検証する。
+    # 実 Git の cwd・linked worktree 境界は test_codex_runtime_paths.py に残す。
+    root = tmp_path / "repo"
+    root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        runtime,
+        "AgentCallPathContext",
+        lambda agent_call_cwd: SimpleNamespace(
+            agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
+        ),
+    )
+    # 完全 prompt と probe の起動契約は test_codex_runtime_quota_retry.py に残す。
+    # ここでは各 probe の生成時に cwd と固有の設定 key を持つ parameter を返す。
+    monkeypatch.setattr(
+        runtime,
+        "_quota_availability_probe_parameter",
+        lambda base: replace(
+            codex_parameter(agent_call_cwd=base.agent_call_cwd),
+            agent_call_kind="build_quota_availability_probe_parameter",
+            prompt="recovery probe",
+        ),
+    )
+    # ID の区別・引継ぎは観測し、永続採番の検証は test_runtime_ids.py と
+    # 実採番を使う test_codex_runtime_quota_retry.py に残す。
+    ids = count()
+    monkeypatch.setattr(
+        runtime,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+    )
     return (
         root,
         codex_parameter(agent_call_cwd=root),
@@ -108,32 +140,27 @@ def recovery_case(tmp_path, monkeypatch):
     )
 
 
-def script_calls(monkeypatch, responses, *, on_call=None):
-    calls = []
-    replies = iter(responses)
+@pytest.fixture
+def parallel_recovery_case(recovery_case, monkeypatch):
+    """両 worker の回復開始を通知し、Fake probe 側で完了を待てるようにする。"""
+    _, _, _, logger = recovery_case
+    registered = threading.Event()
+    original_event = logger.event
 
-    def run(argv, **kwargs):
-        prompt = kwargs["stdin"].read()
-        calls.append(
-            {
-                "argv": argv,
-                "prompt": prompt,
-                "env": kwargs["env"],
-                "timeout": kwargs["timeout"],
-            }
-        )
-        if on_call is not None:
-            on_call(len(calls), calls[-1])
-        response = next(replies)
-        if isinstance(response, BaseException):
-            raise response
-        returncode, stdout, output = response
-        if output is not None:
-            Path(codex_arg_value(argv, "--output-last-message")).write_text(output)
-        return subprocess.CompletedProcess(argv, returncode, stdout, "")
+    def observe_registration(event, **fields):
+        original_event(event, **fields)
+        if event == "codex_recovery" and fields["status"] in {"started", "joined"}:
+            registrations = [
+                record
+                for record in logger.event_records()
+                if record["event"] == "codex_recovery"
+                and record["status"] in {"started", "joined"}
+            ]
+            if len(registrations) == 2:
+                registered.set()
 
-    monkeypatch.setattr(runtime, "run_codex_subprocess", run)
-    return calls
+    monkeypatch.setattr(logger, "event", observe_registration)
+    return (*recovery_case, registered)
 
 
 def execute(case, **kwargs):
@@ -172,7 +199,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
                 "https://changed.invalid"
             )
 
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (1, jsonl(SESSION, CAPACITY), None),
@@ -241,7 +268,7 @@ def test_quota_to_capacity_inherits_before_accepting_recovery(
     config.codex.agent_calls["build_quota_availability_probe_parameter"] = (
         CodexCallConfig("openai", "probe", "low")
     )
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (1, jsonl(SESSION, QUOTA), None),
@@ -273,7 +300,7 @@ def test_quota_to_capacity_inherits_before_accepting_recovery(
 
 @pytest.mark.parametrize("reason", [QUOTA, CAPACITY])
 def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, reason):
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (1, jsonl(SESSION, reason), None),
@@ -303,14 +330,14 @@ def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, 
 def test_unconfirmed_or_unrecoverable_probe_stops(
     recovery_case, monkeypatch, probe_reply
 ):
-    calls = script_calls(monkeypatch, [(1, jsonl(CAPACITY), None), probe_reply])
+    calls = script_codex_calls(monkeypatch, [(1, jsonl(CAPACITY), None), probe_reply])
     with pytest.raises(CmocError, match="回復確認 probe"):
         execute(recovery_case)
     assert len(calls) == 2
 
 
 def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (1, jsonl(SESSION, CAPACITY), None),
@@ -327,6 +354,8 @@ def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
 @pytest.fixture
 def structured_recovery_case(recovery_case):
     root, parameter, config, logger = recovery_case
+    # 補正前後の成果物 snapshot は実 Git の列挙を使う。
+    init_repo(root)
     schema = root / "schema.json"
     schema.write_text(
         json.dumps(
@@ -350,7 +379,7 @@ def test_recovery_during_correction_preserves_turn_budget(
     structured_recovery_case, monkeypatch
 ):
     root, parameter, config, logger = structured_recovery_case
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (0, jsonl(SESSION, COMPLETED), "{}"),
@@ -383,7 +412,7 @@ def test_probe_failure_during_correction_records_original_call(
     structured_recovery_case, monkeypatch
 ):
     _, parameter, _, logger = structured_recovery_case
-    calls = script_calls(
+    calls = script_codex_calls(
         monkeypatch,
         [
             (0, jsonl(SESSION, COMPLETED), "{}"),
@@ -423,7 +452,7 @@ def test_interruption_wins_over_probe_success(recovery_case, monkeypatch, point)
                 return True
 
             monkeypatch.setattr(cancellation, "wait", cancel_wait)
-        calls = script_calls(
+        calls = script_codex_calls(
             monkeypatch,
             [
                 (1, jsonl(CAPACITY), None),
@@ -459,8 +488,8 @@ from commons.runtime_codex_recovery import defer_recovery_interruption
 try:
     with defer_recovery_interruption():
         subprocess.run([sys.executable, '-c',
-            "import pathlib, time; pathlib.Path('ready').touch(); "
-            "time.sleep(0.3); pathlib.Path('artifact').write_text('committed')"],
+            "import pathlib, sys; pathlib.Path('ready').touch(); "
+            "sys.stdin.read(); pathlib.Path('artifact').write_text('committed')"],
             check=True)
         pathlib.Path('record').write_text('confirmed')
 except KeyboardInterrupt:
@@ -479,6 +508,7 @@ except KeyboardInterrupt:
         env=environment,
         start_new_session=True,
         text=True,
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as process:
@@ -489,7 +519,8 @@ except KeyboardInterrupt:
                 assert time.monotonic() < deadline
                 time.sleep(0.01)
             os.killpg(process.pid, signal.SIGINT)
-            stdout, stderr = process.communicate(timeout=5)
+            # SIGINT を送ってから子を解放し、固定待機なしで確定中の中断を保証する。
+            stdout, stderr = process.communicate(input="commit\n", timeout=5)
         finally:
             if process.poll() is None:
                 os.killpg(process.pid, signal.SIGKILL)
@@ -502,24 +533,23 @@ except KeyboardInterrupt:
 
 @pytest.mark.parametrize("different_model", [False, True])
 def test_parallel_capacity_checks_share_only_matching_conditions(
-    recovery_case, monkeypatch, different_model
+    parallel_recovery_case, monkeypatch, different_model
 ):
-    root, parameter, config, logger = recovery_case
+    root, parameter, config, logger, registered = parallel_recovery_case
     other = CmocConfig()
     if different_model:
         original = other.codex.agent_calls[parameter.agent_call_kind]
         other.codex.agent_calls[parameter.agent_call_kind] = replace(
             original, model="other-model"
         )
-    barrier = threading.Barrier(2)
     probes = []
 
     def run(argv, **kwargs):
         prompt = kwargs["stdin"].read()
         if prompt == "prompt" and "resume" not in argv:
-            barrier.wait(timeout=5)
             return subprocess.CompletedProcess(argv, 1, jsonl(SESSION, CAPACITY), "")
         if prompt != "prompt":
+            assert registered.wait(5)
             probes.append(codex_arg_value(argv, "--model"))
         Path(codex_arg_value(argv, "--output-last-message")).write_text("ready")
         return subprocess.CompletedProcess(argv, 0, jsonl(COMPLETED), "")
@@ -532,7 +562,7 @@ def test_parallel_capacity_checks_share_only_matching_conditions(
             root=root,
             config=call_config,
             subcommand_logger=logger,
-            transient_poll_interval_sec=0.1,
+            transient_poll_interval_sec=0,
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -542,21 +572,20 @@ def test_parallel_capacity_checks_share_only_matching_conditions(
 
 
 def test_interruption_stops_representative_and_waiting_workers(
-    recovery_case, monkeypatch
+    parallel_recovery_case, monkeypatch
 ):
-    root, parameter, config, logger = recovery_case
+    root, parameter, config, logger, registered = parallel_recovery_case
     restore = recovery.install_recovery_interruption()
     cancellation = recovery.current_recovery_cancellation()
     probe_started = threading.Event()
-    barrier = threading.Barrier(2)
     prompts = []
 
     def run(argv, **kwargs):
         prompt = kwargs["stdin"].read()
         prompts.append(prompt)
         if prompt == "prompt":
-            barrier.wait(timeout=5)
             return subprocess.CompletedProcess(argv, 1, jsonl(SESSION, CAPACITY), "")
+        assert registered.wait(5)
         probe_started.set()
         assert cancellation.wait(5)
         raise KeyboardInterrupt
@@ -572,7 +601,7 @@ def test_interruption_stops_representative_and_waiting_workers(
                     root=root,
                     config=config,
                     subcommand_logger=logger,
-                    transient_poll_interval_sec=0.1,
+                    transient_poll_interval_sec=0,
                 )
                 for _ in range(2)
             ]

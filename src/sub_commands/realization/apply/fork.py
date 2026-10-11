@@ -21,7 +21,6 @@ from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
-    GitChange,
     commit_work_unit,
     flattened_change_paths,
     recover_started_run,
@@ -32,7 +31,6 @@ from commons.runtime_run_lifecycle import (
     start_editing_run,
     tree_changes,
     unexpected_agent_paths,
-    unexpected_run_paths,
     worktree_change_paths,
 )
 from commons.runtime_run_report import write_fork_report
@@ -145,6 +143,8 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             )
             if agent_commit_check_active and agent_head is not None:
                 _ensure_agent_did_not_commit(run_worktree, agent_head)
+            # apply の agent と run は同じ path 範囲なので、停止後の検査を
+            # commit 対象の検査にも使い、書き込みのない区間で再取得しない。
             post_agent_paths = worktree_change_paths(
                 context.run_worktree,
                 include_rename_sources=True,
@@ -153,22 +153,6 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             unexpected.extend(
                 path
                 for path in post_agent_paths
-                if path not in changed_agent_paths and path not in unexpected
-            )
-            unexpected.sort()
-            if unexpected:
-                raise _unexpected_change_error(unexpected)
-            # tree_changes は commit 済みの差分だけを返すため、commit 前は status
-            # path を同じ path 分類へ渡してから処理単位を確定する。
-            pending_paths = worktree_change_paths(
-                context.run_worktree,
-                include_rename_sources=True,
-            )
-            pending_changes = [GitChange("M", (path,)) for path in pending_paths]
-            unexpected = unexpected_run_paths(context, pending_changes)
-            unexpected.extend(
-                path
-                for path in pending_paths
                 if path not in changed_agent_paths and path not in unexpected
             )
             unexpected.sort()
@@ -217,11 +201,8 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                     context = recover_started_run("realization_apply")
             if context is None:
                 raise
-        if agent_commit_check_active and agent_head is not None:
-            try:
-                _ensure_agent_did_not_commit(context.run_worktree, agent_head)
-            except BaseException as agent_commit_error:
-                exc = agent_commit_error
+        # agent 終了時の HEAD 検査は tracking scope 内で済ませている。
+        # error cleanup での再検査は、遅延書き込みを止めた後に行う。
         report = _record_error(
             context,
             diff_base_commit,

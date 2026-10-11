@@ -68,7 +68,7 @@ def finish_feedback_run(
         "result": result.result,
     }
     write_immutable_json(path, journal)
-    return _finish_from_journal(context.repo, journal, path)
+    return _finish_from_journal(_journal_context(context.repo, journal), journal, path)
 
 
 def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | None:
@@ -100,7 +100,7 @@ def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | No
                 report_path=str(repo / journal["report"]["path"]),
                 publication_status="cleanup",
             )
-        return _finish_from_journal(repo, journal, path)
+        return _finish_from_journal(context, journal, path)
 
 
 def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
@@ -174,12 +174,13 @@ def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
 
 
 def _finish_from_journal(
-    repo: Path, journal: dict[str, Any], path: Path
+    context: EditingRunContext, journal: dict[str, Any], path: Path
 ) -> TerminalResult:
     """raw/work cleanup、ready 遷移、隔離資源回収を idempotent に確定する。"""
     from .remediation import _failure
 
-    context = _journal_context(repo, journal)
+    # 呼び出し側で検証済みの identity を使い、lock 内では最新状態と再照合する。
+    repo = context.repo
     report_reference = journal["report"]
     if not isinstance(report_reference, dict) or set(report_reference) != {
         "path",
@@ -217,7 +218,9 @@ def _finish_from_journal(
         # 直前に同じ lifecycle lock 内でも確認する。
         context = _journal_context(repo, journal)
         try:
-            if load_active_state(repo).current != journal["current"]:
+            # 同じ検証済み snapshot で current pointer と publication point を照合する。
+            state = validate_feedback_state(repo)
+            if state.current != journal["current"]:
                 raise _failure(
                     "feedback finalization 中に current pointer が変更されました。"
                 )
@@ -227,7 +230,6 @@ def _finish_from_journal(
                     raise _failure(
                         "feedback finalization の run tree が変更されています。"
                     )
-            state = validate_feedback_state(repo)
             if (
                 state.current is None
                 or state.current["report_cut_id"] != journal["report_cut_id"]

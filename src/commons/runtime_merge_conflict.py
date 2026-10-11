@@ -12,6 +12,7 @@ from .runtime_errors import CmocError
 from .runtime_git import (
     is_realization_file_path,
     literal_pathspec,
+    reuse_git_path_queries,
     run_git,
     status_path_statuses,
 )
@@ -38,9 +39,11 @@ def resolve_merge_conflicts(
     *,
     codex_exec: CodexExecCallable | None = None,
     purpose: str,
+    initial_conflicts: list[str] | None = None,
 ) -> dict[str, Any]:
     """内容を agent に委ね、refactor state と全変更を merge commit に収める。"""
-    conflicts = unmerged_paths(root)
+    # report 用の初期一覧を受け取った場合は、同じ index を再照会しない。
+    conflicts = unmerged_paths(root) if initial_conflicts is None else initial_conflicts
     if not conflicts:
         raise CmocError("merge 失敗時の競合 path を特定できません。", [], "")
     refactor_relative = refactor_state_path(root).relative_to(root).as_posix()
@@ -92,14 +95,15 @@ def resolve_merge_conflicts(
                 refactor_relative,
             )
         if parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE:
-            forbidden = [
-                path
-                for path in sorted(changed)
-                if not (
-                    is_realization_file_path(root, root / path, branch="HEAD")
-                    or is_realization_file_path(root, root / path, branch="MERGE_HEAD")
-                )
-            ]
+            # agent の編集後、staging 前の検査内だけ Git 配置・設定を共有する。
+            with reuse_git_path_queries():
+                forbidden = [
+                    path
+                    for path in sorted(changed)
+                    if not is_realization_file_path(
+                        root, root / path, branch="HEAD", fallback_branch="MERGE_HEAD"
+                    )
+                ]
             if forbidden:
                 raise CmocError(
                     "競合解消 agent が編集範囲外を変更しました。",

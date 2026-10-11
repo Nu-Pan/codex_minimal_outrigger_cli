@@ -274,8 +274,10 @@ def scan_documents(
     deadline: float | None = None,
     cancelled: threading.Event | None = None,
     check: Callable[[], None] | None = None,
+    only_path: str | None = None,
 ) -> dict[str, SourceDocument]:
-    """既存分類器を使い、oracle/doc の Markdown だけを開く。"""
+    """全体を分類し、oracle/doc の Markdown を指定時は一文書だけ読む。"""
+    # 本文を絞る場合も、全体の分類・安全性検査と root の実体確認は省略しない。
     root = root.absolute()
     initial_root = _root_identity(root)
     if check is not None:
@@ -294,6 +296,8 @@ def scan_documents(
             _deadline_check(deadline, cancelled)
         relative = candidate.relative_to(root).as_posix()
         if not (relative.startswith("oracle/doc/") and relative.endswith(".md")):
+            continue
+        if only_path is not None and relative != only_path:
             continue
         content = _secure_read(root, relative)
         try:
@@ -1004,6 +1008,7 @@ class DocumentSearch:
                 deadline=deadline,
                 cancelled=self.cancelled,
                 check=lambda: self._check(deadline),
+                only_path=path,
             ).get(path)
             if current != documents[path]:
                 raise SearchError(

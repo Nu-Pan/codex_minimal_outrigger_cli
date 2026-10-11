@@ -688,12 +688,17 @@ def _has_symlink_component(path: Path) -> bool:
     return False
 
 
-def _read_canonical_object(path: Path, description: str) -> _JsonObject:
+def _read_canonical_object(
+    path: Path, description: str, *, expected_sha256: str | None = None
+) -> _JsonObject:
     """通常 file の canonical JSON object を読む。"""
     if _has_symlink_component(path) or not path.is_file():
         raise _corruption(f"{description} が通常 file ではありません。", path)
     try:
         content = path.read_bytes()
+        # 参照がある場合は、parse する同じ byte 列の hash を検証する。
+        if expected_sha256 is not None and sha256_bytes(content) != expected_sha256:
+            raise _corruption(f"{description} の SHA256 が一致しません。", path)
         value = json.loads(content)
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise _corruption(
@@ -785,14 +790,15 @@ def artifact_reference(repo: Path, path: Path) -> _JsonObject:
     }
 
 
-def _validate_artifact_reference(
+def _resolve_artifact_reference(
     repo: Path,
     reference: object,
     *,
     expected_root: Path,
     description: str,
-) -> Path:
-    """artifact reference の field、path、および hash を検証する。"""
+) -> tuple[Path, str]:
+    """reference の field・path・hash 書式を検証し、読込先を確定する。"""
+    # 存在や内容の検査は、解決した参照を読む側で行う。
     if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
         raise _corruption(f"{description} reference が不正です。", expected_root)
     path = _resolve_reference_path(
@@ -801,6 +807,24 @@ def _validate_artifact_reference(
     digest = reference.get("sha256")
     if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
         raise _corruption(f"{description} SHA256 が不正です。", path)
+    return path, digest
+
+
+def _validate_artifact_reference(
+    repo: Path,
+    reference: object,
+    *,
+    expected_root: Path,
+    description: str,
+    allow_missing: bool = False,
+) -> Path:
+    """artifact の path・hash を検証し、cleanup では削除済みだけを許す。"""
+    # JSON の読込と cleanup で reference の検査を共有する。
+    path, digest = _resolve_artifact_reference(
+        repo, reference, expected_root=expected_root, description=description
+    )
+    if allow_missing and not path.exists() and not path.is_symlink():
+        return path
     if _has_symlink_component(path) or not path.is_file():
         raise _corruption(f"{description} が存在する通常 file ではありません。", path)
     if sha256_bytes(path.read_bytes()) != digest:
@@ -1347,10 +1371,18 @@ def _machine_aggregate_reaches_threshold(record: _JsonObject) -> bool:
 
 
 def _load_generation(
-    repo: Path, manifest_path: Path, expected_generation_id: str | None = None
-) -> tuple[_JsonObject, dict[str, _JsonObject], dict[str, _JsonObject]]:
-    """generation manifest と列挙 record を hash 付きで読み込む。"""
-    manifest = _read_canonical_object(manifest_path, "active generation manifest")
+    repo: Path,
+    manifest_path: Path,
+    expected_generation_id: str | None = None,
+    *,
+    expected_sha256: str | None = None,
+) -> tuple[
+    _JsonObject, dict[str, _JsonObject], dict[str, _JsonObject], list[_JsonObject]
+]:
+    """generation manifest と列挙 record・履歴を hash 検証して読み込む。"""
+    manifest = _read_canonical_object(
+        manifest_path, "active generation manifest", expected_sha256=expected_sha256
+    )
     _require_exact_fields(
         manifest,
         {
@@ -1452,13 +1484,15 @@ def _load_generation(
             raise _corruption(
                 "active issue reference ID が string ではありません。", manifest_path
             )
-        path = _validate_artifact_reference(
+        path, digest = _resolve_artifact_reference(
             repo,
             {"path": item.get("path"), "sha256": item.get("sha256")},
             expected_root=expected_issue_root,
             description="active issue",
         )
-        record = _read_canonical_object(path, "active issue record")
+        record = _read_canonical_object(
+            path, "active issue record", expected_sha256=digest
+        )
         _validate_active_issue(
             record,
             path,
@@ -1495,13 +1529,15 @@ def _load_generation(
                 "machine aggregate canonical key が string ではありません。",
                 manifest_path,
             )
-        path = _validate_artifact_reference(
+        path, digest = _resolve_artifact_reference(
             repo,
             {"path": item.get("path"), "sha256": item.get("sha256")},
             expected_root=expected_aggregate_root,
             description="machine aggregate",
         )
-        record = _read_canonical_object(path, "machine aggregate record")
+        record = _read_canonical_object(
+            path, "machine aggregate record", expected_sha256=digest
+        )
         _validate_machine_aggregate(record, path)
         if _machine_aggregate_reaches_threshold(record):
             raise _corruption(
@@ -1519,13 +1555,11 @@ def _load_generation(
             "machine aggregate references が canonical key 順ではありません。",
             manifest_path,
         )
-    return manifest, issues, aggregates
+    return manifest, issues, aggregates, history
 
 
 def load_active_state(repo: Path) -> ActiveState:
     """current pointer が選ぶ正常な active state と cleanup state を読む。"""
-    from .runtime_feedback_history import load_history
-
     active_directory = active_root(repo)
     if _has_symlink_component(active_directory) or (
         active_directory.exists() and not active_directory.is_dir()
@@ -1586,7 +1620,7 @@ def load_active_state(repo: Path) -> ActiveState:
     )
 
     # pointer が参照する generation と Markdown report を両方検証する。
-    generation_path = _validate_artifact_reference(
+    generation_path, generation_hash = _resolve_artifact_reference(
         repo,
         {
             "path": pointer.get("generation_manifest_path"),
@@ -1595,8 +1629,11 @@ def load_active_state(repo: Path) -> ActiveState:
         expected_root=generation_directory(repo, str(generation_id_value)),
         description="current generation manifest",
     )
-    generation_manifest, issues, aggregates = _load_generation(
-        repo, generation_path, str(generation_id_value)
+    generation_manifest, issues, aggregates, history = _load_generation(
+        repo,
+        generation_path,
+        str(generation_id_value),
+        expected_sha256=generation_hash,
     )
     if generation_manifest.get("report_cut_id") != report_cut_id_value:
         raise _corruption(
@@ -1638,15 +1675,10 @@ def load_active_state(repo: Path) -> ActiveState:
         cut_path.exists() or cut_path.is_symlink()
     ):
         cleanup_manifest = _read_canonical_object(
-            cut_path, "published report cut manifest"
+            cut_path,
+            "published report cut manifest",
+            expected_sha256=report_cut_manifest_hash,
         )
-        if sha256_bytes(cut_path.read_bytes()) != pointer.get(
-            "report_cut_manifest_sha256"
-        ):
-            raise _corruption(
-                "published report cut manifest hash が current pointer と一致しません。",
-                cut_path,
-            )
         _validate_report_cut_manifest(
             repo,
             cleanup_manifest,
@@ -1697,7 +1729,7 @@ def load_active_state(repo: Path) -> ActiveState:
         aggregates,
         cleanup_manifest,
         cleanup_path,
-        load_history(repo, generation_manifest["history"]),
+        history,
     )
 
 
@@ -1749,16 +1781,22 @@ def _validate_report_cut_manifest(
         observation_id_value = item.get("observation_id")
         if not is_observation_id(observation_id_value):
             raise _corruption("report cut observation ID が不正です。", path)
-        observation_target = _validate_report_cut_artifact_reference(
+        observation_target, observation_digest = _resolve_artifact_reference(
             repo,
             {"path": item.get("path"), "sha256": item.get("sha256")},
             expected_root=feedback_root(repo) / "observation" / "v1",
             description="pending observation",
-            allow_missing=allow_missing_cleanup_targets,
         )
-        if observation_target.exists():
+        # cleanup 後の欠落だけを許し、hash と JSON は同じ byte 列から検査する。
+        if (
+            not allow_missing_cleanup_targets
+            or observation_target.exists()
+            or observation_target.is_symlink()
+        ):
             observation = _read_canonical_object(
-                observation_target, "pending observation"
+                observation_target,
+                "pending observation",
+                expected_sha256=observation_digest,
             )
             if observation.get("observation_id") != observation_id_value:
                 raise _corruption(
@@ -1899,16 +1937,21 @@ def _validate_report_cut_manifest(
             identifier = item.get(id_name)
             if not identity_validator(identifier):
                 raise _corruption(f"report cut {name} identity が不正です。", path)
-            checkpoint_path = _validate_report_cut_artifact_reference(
+            checkpoint_path, checkpoint_digest = _resolve_artifact_reference(
                 repo,
                 {"path": item.get("path"), "sha256": item.get("sha256")},
                 expected_root=expected_root,
                 description=f"report cut {name}",
-                allow_missing=allow_missing_cleanup_targets,
             )
-            if checkpoint_path.exists():
+            if (
+                not allow_missing_cleanup_targets
+                or checkpoint_path.exists()
+                or checkpoint_path.is_symlink()
+            ):
                 checkpoint = _read_canonical_object(
-                    checkpoint_path, f"report cut {name} checkpoint"
+                    checkpoint_path,
+                    f"report cut {name} checkpoint",
+                    expected_sha256=checkpoint_digest,
                 )
                 _validate_report_cut_checkpoint(
                     checkpoint,
@@ -2073,7 +2116,7 @@ def _validate_report_cut_current_input(
         raise _corruption(
             "report cut current generation と pointer snapshot が一致しません。", path
         )
-    generation_path = _validate_report_cut_artifact_reference(
+    generation_path = _validate_artifact_reference(
         repo,
         shaped_generation_reference,
         expected_root=expected_generation_directory,
@@ -2086,7 +2129,7 @@ def _validate_report_cut_current_input(
     ):
         raise _corruption("report cut current generation path が不正です。", path)
     report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
-    report_path = _validate_report_cut_artifact_reference(
+    report_path = _validate_artifact_reference(
         repo,
         {
             "path": pointer_value.get("report_path"),
@@ -2143,7 +2186,7 @@ def _validate_report_cut_current_input(
                 raise _corruption(
                     f"report cut current {name} identity が不正です。", path
                 )
-            record_path = _validate_report_cut_artifact_reference(
+            record_path = _validate_artifact_reference(
                 repo,
                 {"path": item.get("path"), "sha256": item.get("sha256")},
                 expected_root=expected_generation_directory,
@@ -2169,7 +2212,7 @@ def _validate_report_cut_current_input(
             )
         reference_groups[name] = references
     if not allow_missing:
-        generation_manifest, _issues, _aggregates = _load_generation(
+        generation_manifest, _issues, _aggregates, _history = _load_generation(
             repo, generation_path, str(generation_id_value)
         )
         if (
@@ -2324,8 +2367,9 @@ def _validate_report_cut_checkpoint(
 
 
 @lru_cache(maxsize=1)
-def _normalization_schema() -> dict[str, Any]:
-    """oracle package resource から normalization schema を読む。"""
+def _normalization_validator() -> Draft202012Validator:
+    """oracle schema から normalization output 検査用 validator を構築する。"""
+    # schema と validator を一緒に再利用し、checkpoint ごとの再構築を避ける。
     try:
         schema_text = (
             resources.files("oracle.acp_builder.feedback")
@@ -2353,12 +2397,12 @@ def _normalization_schema() -> dict[str, Any]:
     if not isinstance(schema, dict):
         raise TypeError("normalization schema must be an object")
     Draft202012Validator.check_schema(schema)
-    return schema
+    return Draft202012Validator(schema)
 
 
 def _normalization_output_matches_schema(output: dict[str, Any]) -> bool:
     """normalization output が oracle schema に適合するかを返す。"""
-    return Draft202012Validator(_normalization_schema()).is_valid(output)
+    return _normalization_validator().is_valid(output)
 
 
 def _artifact_reference_shape(
@@ -2373,33 +2417,6 @@ def _artifact_reference_shape(
     ):
         raise _corruption(f"{description} reference field が不正です。", path)
     return reference
-
-
-def _validate_report_cut_artifact_reference(
-    repo: Path,
-    reference: _JsonObject,
-    *,
-    expected_root: Path,
-    description: str,
-    allow_missing: bool,
-) -> Path:
-    """publication 後 cleanup では missing を完了済みとして許す artifact 検証。"""
-    if set(reference) != {"path", "sha256"}:
-        raise _corruption(f"{description} reference が不正です。", expected_root)
-    target = _resolve_reference_path(
-        repo, reference.get("path"), expected_root, description
-    )
-    digest = reference.get("sha256")
-    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
-        raise _corruption(f"{description} SHA256 が不正です。", target)
-    if not target.exists() and not target.is_symlink() and allow_missing:
-        return target
-    return _validate_artifact_reference(
-        repo,
-        reference,
-        expected_root=expected_root,
-        description=description,
-    )
 
 
 def _validate_publication_section(
@@ -2464,7 +2481,7 @@ def _validate_publication_section(
     if not isinstance(history_artifacts, list) or len(history_artifacts) != 1:
         raise _corruption("publication history artifacts が不正です。", path)
     for reference in history_artifacts:
-        _validate_report_cut_artifact_reference(
+        _validate_artifact_reference(
             repo,
             reference,
             expected_root=feedback_root(repo) / "history",
@@ -2485,7 +2502,7 @@ def _validate_publication_section(
     ):
         raise _corruption("publication generation manifest path が不正です。", path)
     for reference in generation_artifacts:
-        artifact_path = _validate_report_cut_artifact_reference(
+        artifact_path = _validate_artifact_reference(
             repo,
             reference,
             expected_root=expected_generation_root,
@@ -2521,7 +2538,7 @@ def _validate_publication_section(
         ):
             raise _corruption("publication generation artifact path が不正です。", path)
     report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
-    report_path = _validate_report_cut_artifact_reference(
+    report_path = _validate_artifact_reference(
         repo,
         report_reference,
         expected_root=report_root,
@@ -2547,7 +2564,7 @@ def _validate_publication_section(
             },
             "publication generation",
         )
-        loaded, _issues, _aggregates = _load_generation(
+        loaded, _issues, _aggregates, history = _load_generation(
             repo, generation_manifest_path, generation_id_value
         )
         if loaded.get("report_cut_id") != path.parent.name:
@@ -2645,8 +2662,6 @@ def _validate_publication_section(
         for reference in cleanup_lists["observations"]
     ):
         raise _corruption("cleanup input が固定した observation に含まれません。", path)
-    from .runtime_feedback_history import load_history
-
     if not staged_missing:
         if loaded["history"][-1] != history_artifacts[0]:
             raise _corruption(
@@ -2654,7 +2669,7 @@ def _validate_publication_section(
             )
         consumed = [
             {key: entry[key] for key in ("path", "sha256")}
-            for entry in load_history(repo, history_artifacts)[0]["observations"]
+            for entry in history[-1]["observations"]
         ]
         if consumed != cleanup_lists["observations"]:
             raise _corruption("cleanup input が確定した消費記録と一致しません。", path)
@@ -2827,7 +2842,7 @@ def write_report_cut_manifest(repo: Path, manifest: _JsonObject) -> tuple[Path, 
     if not isinstance(report_cut_id_value, str):
         raise ValueError("report cut manifest requires report_cut_id")
     path = report_cut_manifest_path(repo, report_cut_id_value)
-    _validate_report_cut_manifest_for_write(manifest, path)
+    content = _validate_report_cut_manifest_for_write(manifest, path)
     if path.exists() or path.is_symlink():
         previous = _read_canonical_object(path, "report cut manifest")
         _validate_report_cut_manifest(repo, previous, path)
@@ -2844,6 +2859,9 @@ def write_report_cut_manifest(repo: Path, manifest: _JsonObject) -> tuple[Path, 
             raise _corruption(
                 "publication 済み report cut manifest は更新できません。", path
             )
+        # 同一内容でも先行 state と参照を再検証し、保存・flush だけを省く。
+        if content == canonical_json_bytes(previous):
+            return path, sha256_bytes(content)
     digest = _atomic_write_json(path, manifest)
     return path, digest
 
@@ -2944,12 +2962,12 @@ def recover_report_cut_checkpoint_references(
     return changed
 
 
-def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -> None:
-    """未保存 artifact を含む manifest の構造だけを write 前に検査する。"""
+def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -> bytes:
+    """未保存 artifact を含む manifest の構造を検査し、canonical byte 列を返す。"""
     # path/hash の存在検査は staged artifact の write 前には成立しないため、
     # canonical JSON 化とトップレベルの閉じた schema をここで先に確認する。
     try:
-        canonical_json_bytes(manifest)
+        content = canonical_json_bytes(manifest)
     except (TypeError, UnicodeError, ValueError) as exc:
         raise _corruption(
             "report cut manifest を canonical JSON 化できません。", path
@@ -2968,22 +2986,13 @@ def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -
         manifest.get("report_cut_id"), "fbc_"
     ):
         raise _corruption("report cut manifest identity が不正です。", path)
+    return content
 
 
 def write_checkpoint(repo: Path, path: Path, checkpoint: _JsonObject) -> _JsonObject:
     """正式な call result checkpoint を immutable に保存して参照を返す。"""
     digest = write_immutable_json(path, checkpoint)
     return {"path": _relative_path(repo, path), "sha256": digest}
-
-
-def read_checkpoint(
-    repo: Path, reference: object, expected_root: Path, description: str
-) -> _JsonObject:
-    """manifest が参照する正式な checkpoint を hash 検証して読む。"""
-    path = _validate_artifact_reference(
-        repo, reference, expected_root=expected_root, description=description
-    )
-    return _read_canonical_object(path, description)
 
 
 def validate_feedback_state(repo: Path) -> ActiveState:
@@ -3216,7 +3225,7 @@ def publish_generation_artifacts(
         {path.resolve(strict=False) for path, _content in artifacts},
         "new active generation",
     )
-    loaded, _issues, _aggregates = _load_generation(
+    loaded, _issues, _aggregates, _history = _load_generation(
         repo, manifest_path, str(manifest.get("generation_id"))
     )
     if loaded != manifest:
@@ -3268,14 +3277,14 @@ def publish_current_pointer(
     if result not in {"ok", "attention", "incomplete"}:
         raise ValueError(f"invalid normal feedback result: {result!r}")
     _require_timestamp(published_at, current_pointer_path(repo), "feedback publication")
-    generation_path = _validate_artifact_reference(
+    generation_path, generation_hash = _resolve_artifact_reference(
         repo,
         generation_manifest,
         expected_root=generation_directory(repo, generation_id),
         description="new generation manifest",
     )
-    loaded_manifest, _issues, _aggregates = _load_generation(
-        repo, generation_path, generation_id
+    loaded_manifest, _issues, _aggregates, history = _load_generation(
+        repo, generation_path, generation_id, expected_sha256=generation_hash
     )
     if loaded_manifest.get("report_cut_id") != report_cut_id:
         raise _corruption(
@@ -3334,9 +3343,7 @@ def publish_current_pointer(
             "feedback publication が確定済み history を引き継いでいません。",
             generation_path,
         )
-    from .runtime_feedback_history import load_history
-
-    events = load_history(repo, loaded_manifest["history"][-1:])[0]["events"]
+    events = history[-1]["events"]
     event_map = {event["issue_id"]: event for event in events}
     for identity, event in event_map.items():
         if event["before"] != base.issues.get(identity) or event[

@@ -11,53 +11,82 @@ import sys
 import tomllib
 from pathlib import Path
 
-from _git_support import make_repo
+import pytest
 
 
 def _run_from_packaged_layout(
-    target: Path, code: str, tmp_path: Path
+    target: Path, code: str, tmp_path: Path, *, cmoc_process_cwd: Path
 ) -> subprocess.CompletedProcess[str]:
     """隔離した packaged layout で Python コードを実行する。
 
     `-S`、`-P`、および `PYTHONNOUSERSITE` で外部 site-packages と実行ディレクトリの
     影響を除き、
-    `PYTHONPATH` でコピーした tree だけを import 対象にする。実在する Git
-    repository を作業ルートにする。HOME も一時
+    `PYTHONPATH` でケースごとに選んだ package だけを import 対象にする。Git repository が
+    必要なケースだけ呼び出し側で用意する。HOME も一時
     ディレクトリ内へ向け、実行者の設定や認証情報を持ち込まない。
     根拠: {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
-    work = make_repo(tmp_path)
     home = tmp_path / "home"
     home.mkdir()
     return subprocess.run(
         [sys.executable, "-S", "-P", "-c", code],
-        cwd=work,
+        cwd=cmoc_process_cwd,
         env={
             **os.environ,
             "HOME": str(home),
             "PYTHONPATH": str(target),
             "PYTHONNOUSERSITE": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
         },
         text=True,
         capture_output=True,
     )
 
 
-def _copy_source_tree(source: Path, target: Path) -> None:
-    """bytecode cache を除いた source tree を packaged layout へコピーする。
+def _copy_readonly_source(source: str, target: str) -> str:
+    """import が使わない file metadata をコピーせず、共有 source を読み取り専用にする。"""
+    shutil.copyfile(source, target)
+    Path(target).chmod(0o444)
+    return target
 
-    根拠: {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    """
-    shutil.copytree(
-        source,
-        target,
-        ignore=shutil.ignore_patterns("__pycache__", "*.py[cod]"),
-    )
+
+@pytest.fixture(scope="module")
+def packaged_sources(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """独立 process が読む不変な source のコピーだけを module 内で共有する。"""
+    root = Path(__file__).parents[1]
+    sources = tmp_path_factory.mktemp("packaged-sources")
+    for relative_path in (
+        "src/acp",
+        "src/basic",
+        "src/commons",
+        "src/config",
+        "oracle/src/oracle",
+    ):
+        source = root / relative_path
+        shutil.copytree(
+            source,
+            sources / source.name,
+            copy_function=_copy_readonly_source,
+            ignore=shutil.ignore_patterns("__pycache__", "*.py[cod]"),
+        )
+    return sources
+
+
+def _packaged_layout(sources: Path, tmp_path: Path, *packages: str) -> Path:
+    """各ケースの import 対象を元と同じ package 集合に限定する。"""
+    # source 以外の HOME、repository、入力・出力は各 tmp_path に隔離する。
+    target = tmp_path / "site"
+    target.mkdir()
+    for package in packages:
+        (target / package).symlink_to(sources / package, target_is_directory=True)
+    return target
 
 
 def test_quota_probe_imports_from_packaged_layout(
     tmp_path: Path,
+    cli_repository: Path,
+    packaged_sources: Path,
 ) -> None:
     """quota probe の canonical builder を packaged layout で検証する。
 
@@ -73,10 +102,7 @@ def test_quota_probe_imports_from_packaged_layout(
     assert setuptools_config["package-dir"]["oracle"] == "oracle/src/oracle"
     assert "oracle/src" in setuptools_config["packages"]["find"]["where"]
 
-    target = tmp_path / "site"
-    _copy_source_tree(root / "src" / "acp", target / "acp")
-    _copy_source_tree(root / "src" / "basic", target / "basic")
-    _copy_source_tree(root / "oracle" / "src" / "oracle", target / "oracle")
+    target = _packaged_layout(packaged_sources, tmp_path, "acp", "basic", "oracle")
 
     result = _run_from_packaged_layout(
         target,
@@ -96,24 +122,27 @@ def test_quota_probe_imports_from_packaged_layout(
             "assert '# routing policy' not in probe.prompt"
         ),
         tmp_path,
+        # probe の path context は Git root だけを使い、追跡 file・commit は不要。
+        cmoc_process_cwd=cli_repository,
     )
 
     assert result.returncode == 0, result.stderr
 
 
-def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
+def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
     tmp_path: Path,
+    cli_repository: Path,
+    packaged_sources: Path,
 ) -> None:
-    """oracle edit と editor 入力境界が packaged layout で正本を参照する。
+    """oracle の builder と editor 入力境界が packaged layout で正本を参照する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     {{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
+    {{work-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py
     """
-    root = Path(__file__).parents[1]
-    target = tmp_path / "site"
-    for package in ("acp", "basic", "commons"):
-        _copy_source_tree(root / "src" / package, target / package)
-    _copy_source_tree(root / "oracle" / "src" / "oracle", target / "oracle")
+    target = _packaged_layout(
+        packaged_sources, tmp_path, "acp", "basic", "commons", "oracle"
+    )
 
     result = _run_from_packaged_layout(
         target,
@@ -125,6 +154,14 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "from types import SimpleNamespace; "
             "from acp.builder.oracle.edit.launch_exec import "
             "build_oracle_edit_main_launch_exec_parameter as build_main; "
+            "from oracle.acp_builder.oracle.investigation.launch_tui import "
+            "build_oracle_investigation_launch_tui_parameter as build_investigation; "
+            "investigation = build_investigation('investigate oracle'); "
+            "assert investigation.file_access_mode.value == 'pure_oracle_read'; "
+            "assert investigation.agent_call_cwd == Path.cwd(); "
+            "assert investigation.enable_document_search_mcp is True; "
+            "assert investigation.enable_editor_input_handoff_mcp is True; "
+            "assert 'investigate oracle' in investigation.prompt; "
             "assert edit_module.__all__ == "
             "['build_oracle_edit_main_launch_exec_parameter']; "
             "assert sorted(n for n in vars(edit_module) if not n.startswith('_')) "
@@ -163,12 +200,15 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "assert p.agent_call_cwd == Path.cwd(); "
         ),
         tmp_path,
+        cmoc_process_cwd=cli_repository,
     )
 
     assert result.returncode == 0, result.stderr
 
 
-def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
+def test_acp_builder_basic_imports_from_packaged_layout(
+    tmp_path: Path, packaged_sources: Path
+) -> None:
     """ACP basic の canonical 定義再公開を packaged layout で検証する。
 
     realization 側の公開 import が oracle 側の型を複製せず同一オブジェクトとして
@@ -176,10 +216,7 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
     根拠: {{work-root}}/oracle/src/oracle/acp_builder/basic.py
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
-    root = Path(__file__).parents[1]
-    target = tmp_path / "site"
-    _copy_source_tree(root / "src" / "acp", target / "acp")
-    _copy_source_tree(root / "oracle" / "src" / "oracle", target / "oracle")
+    target = _packaged_layout(packaged_sources, tmp_path, "acp", "oracle")
 
     result = _run_from_packaged_layout(
         target,
@@ -194,12 +231,15 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
             "assert FileAccessMode.READONLY.value == 'readonly'"
         ),
         tmp_path,
+        cmoc_process_cwd=tmp_path,
     )
 
     assert result.returncode == 0, result.stderr
 
 
-def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
+def test_cmoc_config_reexports_only_config_definitions(
+    tmp_path: Path, packaged_sources: Path
+) -> None:
     """config の公開面が正本の設定定義だけを再公開することを検証する。
 
     `__all__` と module namespace の両方を確認し、packaged layout で内部実装が
@@ -207,10 +247,7 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
     根拠: {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
-    root = Path(__file__).parents[1]
-    target = tmp_path / "site"
-    _copy_source_tree(root / "src" / "config", target / "config")
-    _copy_source_tree(root / "oracle" / "src" / "oracle", target / "oracle")
+    target = _packaged_layout(packaged_sources, tmp_path, "config", "oracle")
 
     result = _run_from_packaged_layout(
         target,
@@ -222,6 +259,7 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),
         tmp_path,
+        cmoc_process_cwd=tmp_path,
     )
 
     assert result.returncode == 0, result.stderr

@@ -202,7 +202,7 @@ def load_history(repo: Path, references: object) -> list[dict[str, Any]]:
     from .runtime_feedback_state import (
         _corruption,
         _read_canonical_object,
-        _validate_artifact_reference,
+        _resolve_artifact_reference,
     )
 
     # Directory に存在するだけの staged history は採用しない。
@@ -213,7 +213,7 @@ def load_history(repo: Path, references: object) -> list[dict[str, Any]]:
     records = []
     paths: set[Path] = set()
     for reference in references:
-        target = _validate_artifact_reference(
+        target, digest = _resolve_artifact_reference(
             repo,
             reference,
             expected_root=feedback_root(repo) / "history",
@@ -225,7 +225,9 @@ def load_history(repo: Path, references: object) -> list[dict[str, Any]]:
         ):
             raise _corruption("feedback history path が重複または不正です。", target)
         paths.add(target)
-        record = _read_canonical_object(target, "feedback history")
+        record = _read_canonical_object(
+            target, "feedback history", expected_sha256=digest
+        )
         validate_history_record(record, target)
         records.append(record)
     return records

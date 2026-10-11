@@ -19,10 +19,17 @@ from commons.runtime_codex_profile import (
 from commons.runtime_errors import CmocError
 
 
+def _cancel_when_process_is_ready(pid_path, cancellation):
+    """PID の書込み完了で中断し、テスト終了時には監視も止める。"""
+    while not cancellation.wait(0.01):
+        if pid_path.exists() and pid_path.read_text():
+            cancellation.set()
+            return
+
+
 @pytest.mark.parametrize("tracked", [False, True])
-@pytest.mark.parametrize("interrupted", [False, True])
-def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interrupted):
-    """無応答 probe の process を終了させ、tracked child も残さない。"""
+def test_probe_deadline_stops_process(tmp_path, tracked):
+    """無応答 probe を期限内で終了させ、tracked child も残さない。"""
     tracking_path = tmp_path / "run.pid"
     tracking_path.write_text("111 222\n")
     pid_path = tmp_path / "probe.pid"
@@ -30,31 +37,22 @@ def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interru
         sys.executable,
         "-c",
         "import os, pathlib, sys, time; "
+        "sys.stdin.read(); "
         "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
         "print('partial output', flush=True); time.sleep(30)",
         str(pid_path),
     ]
-    cancellation = threading.Event() if interrupted else None
-    timer = threading.Timer(0.3, cancellation.set) if cancellation is not None else None
-    if timer is not None:
-        timer.start()
-    try:
-        expected = KeyboardInterrupt if interrupted else subprocess.TimeoutExpired
-        with pytest.raises(expected):
-            options = dict(
-                text=True,
-                capture_output=True,
-                timeout=2 if interrupted else 0.3,
-                cancellation=cancellation,
-            )
-            if tracked:
-                run_tracked_codex_subprocess(argv, tracking_path, **options)
-            else:
-                run_codex_subprocess(argv, **options)
-    finally:
-        if timer is not None:
-            timer.cancel()
-            timer.join()
+    with pytest.raises(subprocess.TimeoutExpired):
+        options = dict(
+            text=True,
+            capture_output=True,
+            input="start",
+            timeout=0.3,
+        )
+        if tracked:
+            run_tracked_codex_subprocess(argv, tracking_path, **options)
+        else:
+            run_codex_subprocess(argv, **options)
     process_id = int(pid_path.read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(process_id, 0)
@@ -63,52 +61,59 @@ def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interru
 
 @pytest.mark.parametrize("tracked", [False, True])
 def test_interruption_stops_tool_in_another_session(tmp_path, tracked):
-    """Native CLI の別 session の test/tool も止め、書込み process を残さない。"""
+    """stdin 送信後の中断で親と別 session の tool を止め、tracking を戻す。"""
     tracking_path = tmp_path / "run.pid"
     tracking_path.write_text("111 222\n")
+    parent_pid = tmp_path / "parent.pid"
     writer_pid = tmp_path / "writer.pid"
     writer_script = (
         "import os, pathlib, signal, sys, time; "
         "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
         "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+        "print('partial output', flush=True); "
         "time.sleep(30); pathlib.Path(sys.argv[2]).write_text('late write')"
     )
     parent_script = (
-        "import subprocess, sys; "
-        "child = subprocess.Popen([sys.executable, '-c', sys.argv[1], *sys.argv[2:]], "
+        "import os, pathlib, subprocess, sys; "
+        "sys.stdin.read(); "
+        "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+        "child = subprocess.Popen([sys.executable, '-c', sys.argv[2], *sys.argv[3:]], "
         "start_new_session=True); child.wait()"
     )
     argv = [
         sys.executable,
         "-c",
         parent_script,
+        str(parent_pid),
         writer_script,
         str(writer_pid),
         str(tmp_path / "late.txt"),
     ]
     cancellation = threading.Event()
-
-    def cancel_when_ready():
-        for _ in range(300):
-            if writer_pid.exists():
-                cancellation.set()
-                return
-            threading.Event().wait(0.01)
-
-    cancel_thread = threading.Thread(target=cancel_when_ready)
+    cancel_thread = threading.Thread(
+        target=_cancel_when_process_is_ready, args=(writer_pid, cancellation)
+    )
     cancel_thread.start()
     try:
         with pytest.raises(KeyboardInterrupt):
             options = dict(
-                text=True, capture_output=True, timeout=5, cancellation=cancellation
+                text=True,
+                capture_output=True,
+                # 子の PID 通知は communicate が stdin を送信した後にだけ発生する。
+                input="start",
+                timeout=5,
+                cancellation=cancellation,
             )
             if tracked:
                 run_tracked_codex_subprocess(argv, tracking_path, **options)
             else:
                 run_codex_subprocess(argv, **options)
     finally:
+        cancellation.set()
         cancel_thread.join(timeout=5)
     assert not cancel_thread.is_alive()
+    with pytest.raises(ProcessLookupError):
+        os.kill(int(parent_pid.read_text()), 0)
     assert not runtime_codex_profile.process_group_has_running_member(
         int(writer_pid.read_text())
     )

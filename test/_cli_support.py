@@ -2,9 +2,17 @@ from pathlib import Path
 
 from typer.testing import CliRunner, Result
 
+from commons.runtime_config import write_config
 from commons.runtime_paths import pushd
+from config.cmoc_config import CmocConfig
 
 runner = CliRunner()
+
+
+def seed_search_config(root: Path) -> None:
+    """通常起動の設定を用意し、管理物の修復・検証は試験対象の doctor に残す。"""
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
 
 
 def run_doctor(root: Path) -> Result:

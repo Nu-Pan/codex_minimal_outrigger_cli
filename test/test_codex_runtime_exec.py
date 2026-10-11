@@ -12,11 +12,10 @@ from _codex_support import (
     stub_codex_overrides,
 )
 from _command_support import write_python_executable
-from _git_support import make_repo
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_exec as exec_module
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
 from config.cmoc_config import CmocConfig
@@ -58,11 +57,18 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
     assert not list(codex_home.glob("*.config.toml"))
 
 
-def test_run_codex_exec_injects_overrides_and_starts_codex(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+# {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
+def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Codex CLI の override とリポジトリ書き込み結果を検証する。"""
-    root = make_repo(tmp_path)
+    """provider と path policy の argv 境界および書き込み結果を検証する。"""
+    # schema-less exec は履歴を参照しない。root 探索と Fake CLI の書き込み先だけ用意する。
+    root = cli_repository
+    (root / "oracle").mkdir()
+    # .agents の実在 path を権限設定へ注入しない検証も同じ REPO_WRITE の起動で行う。
+    agents_file = root / ".agents" / "nested" / "instructions.md"
+    agents_file.parent.mkdir(parents=True)
+    agents_file.write_text("agent instructions\n")
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -89,8 +95,21 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     config = CmocConfig()
+    # provider 設定の受け渡しも同じ起動で検査し、CLI と Git の準備を重複させない。
+    # 既定 provider と mode ごとの変換は test_runtime_codex_profile.py で検証する。
+    config.codex.model_providers["local.provider"] = CodexModelProviderConfig(
+        {
+            "name": "local provider",
+            "base_url": "http://127.0.0.1:43123/v1",
+            "wire_api": "responses",
+        }
+    )
+    config.codex.agent_calls["test_agent_call"] = CodexCallConfig(
+        "local.provider", "local-model", "low"
+    )
     parameter = replace(
         codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
+        agent_call_kind="test_agent_call",
         enable_feedback_reporting=False,
     )
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
@@ -134,8 +153,20 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert feedback_server["disabled_tools"] == ["submit_observation"]
     assert feedback_flags == [False]
     assert override_config["model_reasoning_effort"] == call_config.reasoning_effort
+    assert "--oss" not in record["args"]
+    assert "--local-provider" not in record["args"]
+    assert "--disable" not in record["args"]
+    assert override_config["model_provider"] == "local.provider"
+    providers = override_config["model_providers"]
+    assert isinstance(providers, dict)
+    assert providers["local.provider"] == {
+        "name": "local provider",
+        "base_url": "http://127.0.0.1:43123/v1",
+        "wire_api": "responses",
+    }
     assert "default_permissions" not in override_config
     assert "permissions" not in override_config
+    assert all(str(agents_file.resolve()) not in arg for arg in record["args"])
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
@@ -144,10 +175,10 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
 
 
 def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """schema-less output の不正 UTF-8 で結果構築を中断しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -173,73 +204,6 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
 
     assert result.output_json is None
     assert result.output_text == "\ufffd"
-
-
-# {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
-def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """汎用 provider override と組み込み local provider フラグ不使用を検証する。"""
-    root = make_repo(tmp_path)
-    codex_home = setup_codex_home(tmp_path, monkeypatch)
-    config = CmocConfig()
-    config.codex.model_providers["local.provider"] = CodexModelProviderConfig(
-        {
-            "name": "local provider",
-            "base_url": "http://127.0.0.1:43123/v1",
-            "wire_api": "responses",
-        }
-    )
-    config.codex.agent_calls["test_agent_call"] = CodexCallConfig(
-        "local.provider", "local-model", "low"
-    )
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, os, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
-            "    'args': args,",
-            "}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
-
-    run_codex_exec(
-        AgentCallParameter(
-            agent_call_kind="test_agent_call",
-            file_access_mode=FileAccessMode.READONLY,
-            prompt="prompt",
-            structured_output_schema_path=None,
-            agent_call_cwd=root,
-        ),
-        root=root,
-        transient_poll_interval_sec=0,
-        config=config,
-    )
-
-    record = json.loads(recorder.read_text())
-    _assert_codex_exec_contract(record["args"], "prompt")
-    override_config = codex_override_config(record["args"])
-    assert "--oss" not in record["args"]
-    assert "--local-provider" not in record["args"]
-    assert "--disable" not in record["args"]
-    assert codex_arg_value(record["args"], "--model") == "local-model"
-    assert override_config["model_provider"] == "local.provider"
-    providers = override_config["model_providers"]
-    assert isinstance(providers, dict)
-    assert providers["local.provider"] == {
-        "name": "local provider",
-        "base_url": "http://127.0.0.1:43123/v1",
-        "wire_api": "responses",
-    }
-    _assert_no_codex_home_config(codex_home)
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md

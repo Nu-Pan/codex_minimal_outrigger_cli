@@ -622,41 +622,6 @@ def run_codex_exec(
             detail,
         )
 
-    def _codex_exec_result_from_paths(
-        result: subprocess.CompletedProcess[str],
-        *,
-        run_call_path: Path,
-        run_prompt_path: Path,
-        run_stdout_path: Path,
-        run_stderr_path: Path,
-        run_output_path: Path,
-        run_schema_path: Path | None = schema_path,
-    ) -> CodexExecResult:
-        """保存済みlog pathから一回分のCodex結果を組み立てる。"""
-        try:
-            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # output JSON の parse failure は caller が分類するため、壊れた UTF-8 の
-            # output-last-message でも結果の組み立て自体を UnicodeDecodeError で中断しない。
-            output_text = run_output_path.read_text(encoding="utf-8", errors="replace")
-        except FileNotFoundError:
-            output_text = ""
-        return CodexExecResult(
-            returncode=result.returncode,
-            output_text=output_text,
-            output_json=read_output_json(run_output_path),
-            call_log_path=run_call_path,
-            prompt_log_path=run_prompt_path,
-            stdout_log_path=run_stdout_path,
-            stderr_log_path=run_stderr_path,
-            output_path=run_output_path,
-            codex_home=codex_home,
-            schema_path=run_schema_path,
-            elapsed_sec=time.perf_counter() - call_started_at,
-            quota_wait_sec=quota_wait_sec,
-            transient_wait_sec=transient_wait_sec,
-            quota_polls=quota_polls,
-        )
-
     output_corrections = 0
     quota_polls = 0
     resume_session_id: str | None = None
@@ -679,9 +644,8 @@ def run_codex_exec(
             probe_config.codex.agent_calls[probe_parameter.agent_call_kind] = (
                 config.codex.agent_calls[parameter.agent_call_kind]
             )
-        probe_agent_call_cwd = AgentCallPathContext(
-            probe_parameter.agent_call_cwd
-        ).agent_call_cwd
+        # 正本 builder が cwd と Git context を検証済みなので、その結果を再利用する。
+        probe_agent_call_cwd = probe_parameter.agent_call_cwd
         probe_codex_home = codex_home
         probe_args = prepare_codex_override_args(probe_parameter, probe_config)
         probe_call_data = _call_data(
@@ -1098,17 +1062,14 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        exec_result = _codex_exec_result_from_paths(
-            result,
-            run_call_path=call_path,
-            run_prompt_path=prompt_path,
-            run_stdout_path=stdout_path,
-            run_stderr_path=stderr_path,
-            run_output_path=output_path,
-        )
-        exec_result = CodexExecResult(
-            returncode=exec_result.returncode,
-            output_text=exec_result.output_text,
+        try:
+            # schema-less output の不正 UTF-8 でも結果構築を中断しない。
+            output_text = output_path.read_text(encoding="utf-8", errors="replace")
+        except FileNotFoundError:
+            output_text = ""
+        return CodexExecResult(
+            returncode=result.returncode,
+            output_text=output_text,
             output_json=output_json,
             call_log_path=call_path,
             prompt_log_path=prompt_path,
@@ -1117,9 +1078,8 @@ def run_codex_exec(
             output_path=output_path,
             codex_home=codex_home,
             schema_path=schema_path,
-            elapsed_sec=exec_result.elapsed_sec,
+            elapsed_sec=time.perf_counter() - call_started_at,
             quota_wait_sec=quota_wait_sec,
             transient_wait_sec=transient_wait_sec,
             quota_polls=quota_polls,
         )
-        return exec_result

@@ -15,19 +15,6 @@ from oracle.other.struct_doc import (
     render_sd_node_as_markdown,
 )
 
-from basic.struct_doc import (
-    StructBlock as CompatStructBlock,
-)
-from basic.struct_doc import (
-    StructCodeBlock as CompatStructCodeBlock,
-)
-from basic.struct_doc import (
-    StructDoc as CompatStructDoc,
-)
-from basic.struct_doc import (
-    render_as_markdown as render_compat_as_markdown,
-)
-
 
 def test_render_sd_node_as_markdown_collapses_consecutive_blank_lines() -> None:
     """Markdown rendererが連続blank lineを一つへ縮約することを検証する。"""
@@ -169,19 +156,6 @@ def test_sd_policy_renders_only_non_empty_categories_in_fixed_order(
     else:
         assert "**例外**" not in rendered
         assert "優越する" not in rendered
-
-
-def test_realization_compatibility_module_reexports_canonical_nodes() -> None:
-    """旧 basic.struct_doc API が canonical 型と renderer を再公開する。"""
-    assert CompatStructBlock is SDTagBlock
-    assert CompatStructCodeBlock is SDCodeBlock
-    assert CompatStructDoc is SDHeader
-
-    nodes = [
-        CompatStructDoc("map", '<cmoc_ref target="target"/>'),
-        CompatStructBlock("target", CompatStructDoc("body", "content")),
-    ]
-    assert render_compat_as_markdown(nodes) == render_sd_node_as_markdown(*nodes)
 
 
 @pytest.mark.parametrize(

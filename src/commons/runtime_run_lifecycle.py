@@ -29,6 +29,7 @@ from .runtime_git import (
     remove_worktree,
     require_clean_worktree,
     require_cmoc_ignored,
+    reuse_git_path_queries,
     run_git,
     status_path_statuses,
 )
@@ -45,8 +46,7 @@ from .runtime_run import (
     read_run_process_id,
     run_lifecycle_lock,
     run_process_id_path,
-    worktree_for_branch,
-    worktree_for_branch_optional,
+    worktrees_for_branches,
     write_run_process_id,
 )
 from .runtime_state import (
@@ -225,12 +225,14 @@ def start_editing_run(kind: str) -> EditingRunContext:
     return published_context
 
 
+@reuse_git_path_queries()
 def resolve_active_run(
     allowed_states: set[str],
     *,
     allow_missing_run_worktree: bool = False,
 ) -> tuple[EditingRunContext, SessionState]:
     """現在の branch と state から active run および session worktree を解決する。"""
+    # 配置照会だけを同じ解決内で共有し、lock 前後の state・branch・worktree は再検査する。
     repository = repo_root()
     current_worktree = work_root()
     branch = current_branch(current_worktree)
@@ -268,9 +270,17 @@ def resolve_active_run(
             ["session branch または active run branch から再実行してください。"],
             f"current: {branch}\nsession: {session_branch}\nrun: {run_branch}",
         )
-    session_worktree = worktree_for_branch(repository, session_branch)
+    # 同じ解決内では一つの Git 一覧から両 branch を検査する。
+    worktrees = worktrees_for_branches(repository, (session_branch, run_branch))
+    session_worktree = worktrees.get(session_branch)
+    if session_worktree is None:
+        raise CmocError(
+            "branch の worktree を特定できません。",
+            ["git worktree list と session state file を確認してください。"],
+            f"branch: {session_branch}",
+        )
     expected = expected_run_worktree(repository, run_branch)
-    run_worktree = worktree_for_branch_optional(repository, run_branch)
+    run_worktree = worktrees.get(run_branch)
     if run_worktree is None and allow_missing_run_worktree:
         run_worktree = expected
     if run_worktree is None or run_worktree.resolve() != expected.resolve():
@@ -440,26 +450,21 @@ def unexpected_agent_paths(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
     {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
-    return sorted(
-        {
-            path
-            for path in changed_paths
-            if not (
-                _is_agent_expected_path(
+    # Git の配置・設定だけを検査内で共有し、child 停止後の再検査へ持ち越さない。
+    with reuse_git_path_queries():
+        return sorted(
+            {
+                path
+                for path in changed_paths
+                if not _is_agent_expected_path(
                     context.run_worktree,
                     context.kind,
                     path,
                     context.run_branch,
-                )
-                or _is_agent_expected_path(
-                    context.run_worktree,
-                    context.kind,
-                    path,
                     context.run_fork_commit,
                 )
-            )
-        }
-    )
+            }
+        )
 
 
 def tree_changes(worktree: Path, base: str, end: str = "HEAD") -> list[GitChange]:
@@ -512,22 +517,24 @@ def unexpected_run_paths(
     ignored_paths: Collection[str] = (),
 ) -> list[str]:
     """run branch の workload 想定外 path を返す。"""
+    # commit・rollback の間をまたがず、一つの差分検査内だけ問い合わせを共有する。
     ignored = set(ignored_paths)
-    return sorted(
-        {
-            path
-            for change in changes
-            for path in change.paths
-            if path not in ignored
-            and not _is_run_expected_path(
-                context.run_worktree,
-                context.kind,
-                path,
-                context.run_branch,
-                context.run_fork_commit,
-            )
-        }
-    )
+    with reuse_git_path_queries():
+        return sorted(
+            {
+                path
+                for change in changes
+                for path in change.paths
+                if path not in ignored
+                and not _is_run_expected_path(
+                    context.run_worktree,
+                    context.kind,
+                    path,
+                    context.run_branch,
+                    context.run_fork_commit,
+                )
+            }
+        )
 
 
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
@@ -552,11 +559,16 @@ def _is_agent_expected_path(
     kind: str,
     path: str,
     branch: str,
+    fork_commit: str,
 ) -> bool:
     """path が workload agent に許可された realization file か判定する。"""
-    if kind in {"realization_apply", "realization_refactor", "feedback_report"}:
-        return is_realization_file_path(root, root / path, branch=branch)
-    return False
+    if kind not in {"realization_apply", "realization_refactor", "feedback_report"}:
+        return False
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # rename 元と削除 path は HEAD から消えるため、fork 時点の tree でも確認する。
+    return is_realization_file_path(
+        root, root / path, branch=branch, fallback_branch=fork_commit
+    )
 
 
 def _is_run_expected_path(
@@ -571,12 +583,7 @@ def _is_run_expected_path(
         root, path
     ):
         return True
-    if _is_agent_expected_path(root, kind, path, branch):
-        return True
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # rename 元と削除 path は run branch の HEAD から消えるため、fork 時点の tree でも
-    # realization file であることを確認して、agent の許可範囲を失わないようにする。
-    return _is_agent_expected_path(root, kind, path, fork_commit)
+    return _is_agent_expected_path(root, kind, path, branch, fork_commit)
 
 
 def _is_refactor_state_path(root: Path, path: str) -> bool:

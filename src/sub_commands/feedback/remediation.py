@@ -625,10 +625,15 @@ def _remediate_issue(
             context, [GitChange("M", (path,)) for path in all_paths]
         ):
             raise _failure("feedback issue 処理単位に想定外差分があります。")
-        commit = commit_work_unit(
-            context.run_worktree, f"cmoc feedback remediation {identity}"
+        # 全差分が空なら commit 準備は不要。確定した HEAD は戻り値から取得する。
+        commit = (
+            commit_work_unit(
+                context.run_worktree, f"cmoc feedback remediation {identity}"
+            )
+            if all_paths
+            else None
         )
-        after = head_commit(context.run_worktree)
+        after = commit or before
         require_clean_worktree(context.run_worktree)
         input_value = {
             "issue": payload,

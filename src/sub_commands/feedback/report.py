@@ -16,6 +16,7 @@ import json
 import os
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from inspect import getsourcefile
 from pathlib import Path
 from typing import Any
@@ -116,30 +117,24 @@ def _pending_observations(
             ["raw observation store を人間が確認してください。"],
             str(root),
         )
-    if root.is_dir():
-        for path in root.rglob("*"):
-            if path.is_dir() and not path.is_symlink():
-                continue
-            if (
-                path.is_symlink()
-                or not path.is_file()
-                or path.suffix != ".json"
-                or not path.name.startswith("fbo_")
-            ):
-                raise CmocError(
-                    "feedback raw store に未定義 artifact があります。",
-                    ["raw observation path を人間が確認してください。"],
-                    str(path),
-                )
+    # 未定義 artifact も検査する既存 inventory を、そのまま読込に使う。
+    try:
+        pending_paths = unprocessed_observation_paths(repo)
+    except (OSError, ValueError) as exc:
+        raise CmocError(
+            "feedback raw store の検査に失敗しました。",
+            ["raw observation path を人間が確認してください。"],
+            str(exc),
+        ) from exc
 
     entries: list[_JsonObject] = []
     observations: dict[str, _JsonObject] = {}
     hashes_by_id: dict[str, str] = {}
     validation_errors: list[str] = []
-    for path in unprocessed_observation_paths(repo):
+    for path in pending_paths:
         try:
             content = path.read_bytes()
-            observation = read_json_object(path)
+            observation = read_json_object(path, content=content)
         except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
             validation_errors.append(f"{path}: {exc}")
             continue
@@ -472,7 +467,7 @@ def _read_cut_observations(repo: Path, manifest: _JsonObject) -> dict[str, _Json
                 ["raw observation と report cut manifest を人間が確認してください。"],
                 str(path),
             )
-        observation = read_json_object(path)
+        observation = read_json_object(path, content=content)
         if canonical_json_bytes(observation) != content:
             raise CmocError(
                 "feedback report cut の raw observation が canonical JSON ではありません。",
@@ -846,20 +841,24 @@ def _agent_comparison_candidates(
         == current_fingerprints
     )
     current_subjects = _observation_evidence_subjects(observation)
+    # observation 全体の条件を満たす場合だけ、候補ごとの fingerprint を比較する。
+    can_match_exactly = (
+        current_cut_matches_observation
+        and bool(current_fingerprints)
+        and all(digest is not None for _path, digest in current_fingerprints)
+        and bool(current_subjects)
+    )
     exact: list[_JsonObject] = []
     comparison: list[_JsonObject] = []
     for candidate in candidates.values():
         if candidate.get("category") != category:
             continue
-        previous_fingerprints = _fingerprint_pairs(candidate.get("latest_fingerprints"))
         previous_subjects = _candidate_evidence_subjects(candidate)
         exact_match = (
-            bool(current_fingerprints)
-            and all(digest is not None for _path, digest in current_fingerprints)
-            and current_fingerprints == previous_fingerprints
-            and current_cut_matches_observation
-            and bool(current_subjects)
+            can_match_exactly
             and current_subjects.issubset(previous_subjects)
+            and current_fingerprints
+            == _fingerprint_pairs(candidate.get("latest_fingerprints"))
         )
         hint_match = isinstance(hint, str) and hint in candidate.get(
             "deduplication_hints", []
@@ -1150,13 +1149,22 @@ def _record_checkpoint(
 
 def _structured_output_matches_schema(output: _JsonObject, schema_path: Path) -> bool:
     """checkpoint output を正本 Structured Output schema で再検証する。"""
+    # 現在の内容を毎回読み、schema の変更・破損・削除を cache で隠さない。
     try:
-        schema = json.loads(schema_path.read_text(encoding="utf-8"))
-        validator_class = validators.validator_for(schema)
-        validator_class.check_schema(schema)
-        return not tuple(validator_class(schema).iter_errors(output))
+        validate = _structured_output_validator(schema_path.read_text(encoding="utf-8"))
+        return validate(output)
     except (OSError, UnicodeError, json.JSONDecodeError, SchemaError, TypeError):
         return False
+
+
+@lru_cache(maxsize=2)
+def _structured_output_validator(schema_text: str) -> Callable[[_JsonObject], bool]:
+    """schema の内容が同じ間は検証済み validator を再利用する。"""
+    # normalization と remediation の 2 schema を保持し、内容の変化で再構築する。
+    schema = json.loads(schema_text)
+    validator_class = validators.validator_for(schema)
+    validator_class.check_schema(schema)
+    return validator_class(schema).is_valid
 
 
 def _process_machine_observations(

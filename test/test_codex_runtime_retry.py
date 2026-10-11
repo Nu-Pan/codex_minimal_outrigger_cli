@@ -1,12 +1,19 @@
 """出力補正、CLI failure、中断と作業差分の保持を検証する。"""
 
 import json
+import subprocess
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
-from _codex_support import codex_override_config, setup_codex_home, stub_codex_overrides
+from _codex_support import (
+    codex_override_config,
+    script_codex_calls,
+    setup_codex_home,
+    stub_codex_overrides,
+)
 from _command_support import write_python_executable
-from _git_support import make_repo, run_git
+from _git_support import init_repo, make_repo, run_git
 from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime
@@ -19,10 +26,13 @@ from config.cmoc_config import CmocConfig
 
 
 def test_run_codex_exec_corrects_schema_output_in_same_session(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
 ) -> None:
     """schema 不合格を同じ session で補正し、Codex call ごとの log を保存する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -48,6 +58,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "payload = {'ok': True} if count else {'bad': True}",
             "output.write_text(json.dumps(payload))",
+            "print('private stderr', file=sys.stderr)",
             "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -140,6 +151,11 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     ):
         assert call_logs[1][key] == call_logs[0][key]
     assert len({log["stdout_log_path"] for log in call_logs}) == 2
+    assert len({log["stderr_log_path"] for log in call_logs}) == 2
+    assert all(
+        Path(log["stderr_log_path"]).read_text() == "private stderr\n"
+        for log in call_logs
+    )
     assert len({log["prompt_log_path"] for log in call_logs}) == 2
     assert result.call_log_path == call_paths[1]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
@@ -152,54 +168,54 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     assert codex_events[0]["call_log_path"] == str(call_paths[0])
     assert len({event["agent_call_id"] for event in codex_events}) == 1
     assert len({event["codex_call_id"] for event in codex_events}) == 2
+    captured = capfd.readouterr()
+    assert captured.out == captured.err == ""
 
 
-@pytest.mark.parametrize("non_json_constant", ["NaN", "Infinity", "-Infinity"])
-def test_run_codex_exec_corrects_non_json_numeric_constant(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    non_json_constant: str,
-) -> None:
-    """JSON 仕様外の非有限数を Structured Output の parse failure として補正する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "non_json_constant_bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "non_json_constant_counter"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            f"output.write_text({non_json_constant!r} if count == 0 else '1')",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    schema = tmp_path / "non_json_constant_schema.json"
-    schema.write_text(json.dumps({"type": "number"}))
-
-    result = run_codex_exec(
-        AgentCallParameter(
-            "build_feedback_normalize_issue_parameter",
-            FileAccessMode.READONLY,
-            "prompt",
-            schema,
-            root,
+@pytest.mark.parametrize(
+    ("output_bytes", "expected_error"),
+    [
+        pytest.param(None, "does not exist", id="missing"),
+        pytest.param(b"", "is empty", id="empty"),
+        pytest.param(b"{", "is not valid JSON", id="malformed"),
+        pytest.param(
+            b"[" * 10000 + b"0" + b"]" * 10000,
+            "is not valid JSON",
+            id="deeply_nested",
         ),
-        root=root,
-        transient_poll_interval_sec=0,
-        config=CmocConfig(),
+        pytest.param(b"NaN", "non-standard JSON constant", id="NaN"),
+        pytest.param(b"Infinity", "non-standard JSON constant", id="Infinity"),
+        pytest.param(
+            b"-Infinity", "non-standard JSON constant", id="negative_Infinity"
+        ),
+        pytest.param(b"\xff", "decode", id="invalid_utf8"),
+    ],
+)
+def test_structured_output_parse_failure_stops_before_schema_and_postcondition(
+    tmp_path: Path,
+    output_bytes: bytes | None,
+    expected_error: str,
+) -> None:
+    """不正 JSON の境界値は、CLI を起動せず補正用の診断まで検証する。"""
+    # parse failure の session 再開と log 保存は結合テストに残す。
+    output_path = tmp_path / "output.json"
+    if output_bytes is not None:
+        output_path.write_bytes(output_bytes)
+    schema_validator = Mock()
+    postcondition = Mock()
+
+    output, issues = runtime_codex_exec._validate_structured_output(
+        output_path, schema_validator, postcondition, frozenset()
     )
 
-    assert result.output_json == 1
-    assert counter.read_text() == "2"
+    assert output is None
+    [issue] = issues
+    assert issue.condition == "JSON parse"
+    assert issue.location
+    assert issue.expected
+    assert expected_error in issue.observed
+    schema_validator.iter_errors.assert_not_called()
+    postcondition.assert_not_called()
 
 
 def test_run_codex_exec_corrects_declared_postcondition(
@@ -209,27 +225,23 @@ def test_run_codex_exec_corrects_declared_postcondition(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "postcondition_bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "postcondition_counter"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if count == 0:",
-            "    pathlib.Path('README.md').write_text('first call change\\n')",
-            "payload = {'paths': ['README.md']} if count else {'paths': []}",
-            "output.write_text(json.dumps(payload))",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+
+    def change_artifact(index, _call):
+        if index == 1:
+            (root / "README.md").write_text("first call change\n")
+
+    # 差分取得・事後条件・補正は実行し、process の受け渡しは schema 補正の結合に残す。
+    stdout = (
+        '{"type":"thread.started","thread_id":"session-1"}\n{"type":"turn.completed"}\n'
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    calls = script_codex_calls(
+        monkeypatch,
+        [
+            (0, stdout, '{"paths": []}'),
+            (0, stdout, '{"paths": ["README.md"]}'),
+        ],
+        on_call=change_artifact,
+    )
     schema = tmp_path / "postcondition_schema.json"
     schema.write_text(
         json.dumps(
@@ -272,34 +284,21 @@ def test_run_codex_exec_corrects_declared_postcondition(
     )
 
     assert result.output_json == {"paths": ["README.md"]}
-    assert counter.read_text() == "2"
+    assert len(calls) == 2
     assert (root / "README.md").read_text() == "first call change\n"
 
 
 def test_run_codex_exec_does_not_replace_missing_correction_session(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """session ID を取得できない出力契約違反を新しい session で代替しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "missing_session_bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "missing_session_counter"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'bad': True}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+    # process の入出力は corrects_schema_output_in_same_session に残す。
+    calls = script_codex_calls(
+        monkeypatch, [(0, '{"type":"turn.completed"}\n', '{"bad": true}')]
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "missing_session_schema.json"
     schema.write_text(
         json.dumps(
@@ -325,7 +324,7 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
             config=CmocConfig(),
         )
 
-    assert counter.read_text() == "1"
+    assert len(calls) == 1
     assert "session ID is unavailable" in error.value.detail
 
 
@@ -336,12 +335,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
     root = make_repo(tmp_path)
     nested = root / "nested"
     nested.mkdir()
-    run_git(nested, "init", "--template=/dev/null")
-    run_git(nested, "config", "user.email", "cmoc@example.invalid")
-    run_git(nested, "config", "user.name", "cmoc test")
-    run_git(nested, "config", "commit.gpgsign", "false")
-    run_git(nested, "config", "core.hooksPath", "/dev/null")
-    run_git(nested, "config", "core.excludesFile", "/dev/null")
+    init_repo(nested)
     nested_file = nested / "tracked.txt"
     nested_file.write_text("nested initial\n")
     run_git(nested, "add", "tracked.txt")
@@ -414,12 +408,13 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
 
 
 def test_run_codex_exec_logs_keyboard_interrupt(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """KeyboardInterrupt を failed call event として記録し、例外を伝播する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
 
@@ -457,54 +452,25 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     assert codex_events[0]["error"] == "KeyboardInterrupt()"
 
 
-@pytest.mark.parametrize(
-    ("name", "first_output_lines", "expected_error"),
-    [
-        ("missing", [], "does not exist"),
-        ("empty", ["output.write_text('')"], "is empty"),
-        ("malformed", ["output.write_text('{')"], "is not valid JSON"),
-        (
-            "deeply_nested",
-            ["output.write_text('[' * 10000 + '0' + ']' * 10000)"],
-            "is not valid JSON",
-        ),
-    ],
-)
 def test_run_codex_exec_corrects_structured_output_parse_failure(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    name: str,
-    first_output_lines: list[str],
-    expected_error: str,
 ) -> None:
-    """Structured Output の欠落・空・不正 JSON を補正し、失敗理由を記録する。"""
-    root = make_repo(tmp_path)
+    """parse failure を同じ session で補正し、元の出力と診断を保持する。"""
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / f"{name}_bin"
-    bin_dir.mkdir()
-    counter = tmp_path / f"{name}_counter"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if count == 0:",
-            *([f"    {line}" for line in first_output_lines] or ["    pass"]),
-            "else:",
-            "    output.write_text(json.dumps({'ok': True}))",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+    # parse と補正・ログ保存を検証し、process の受け渡しは schema 補正の結合に残す。
+    stdout = (
+        '{"type":"thread.started","thread_id":"session-1"}\n{"type":"turn.completed"}\n'
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    schema = tmp_path / f"{name}_schema.json"
-    schema.write_text("{}")
+    calls = script_codex_calls(
+        monkeypatch,
+        [(0, stdout, "NaN"), (0, stdout, "1")],
+    )
+    schema = tmp_path / "parse_failure_schema.json"
+    schema.write_text(json.dumps({"type": "number"}))
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
@@ -522,25 +488,40 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
         subcommand_logger=logger,
     )
 
-    assert result.output_json == {"ok": True}
-    assert counter.read_text() == "2"
+    assert result.output_json == 1
+    assert result.output_text == "1"
+    assert len(calls) == 2
+    call_logs = [
+        json.loads(path.read_text())
+        for path in sorted(result.call_log_path.parent.glob("*_call.json"))
+    ]
+    assert "resume" not in call_logs[0]["argv"]
+    resume_index = call_logs[1]["argv"].index("resume")
+    assert call_logs[1]["argv"][resume_index + 1] == "session-1"
+    assert [Path(log["output_path"]).read_text() for log in call_logs] == [
+        "NaN",
+        "1",
+    ]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [
         "output_correction_requested",
         "succeeded",
     ]
-    assert expected_error in codex_events[0]["error"]
+    assert "non-standard JSON constant" in codex_events[0]["error"]
 
 
 @pytest.mark.parametrize(
     "schema_bytes", [b"{", b'{"$schema": 1}', b'{"minimum": NaN}', b"\xff"]
 )
 def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema_bytes: bytes
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    schema_bytes: bytes,
 ) -> None:
     """不正な Structured Output schema は Codex 呼び出し前に失敗させる。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     schema = tmp_path / "invalid_schema.json"
@@ -583,37 +564,30 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
 )
 @pytest.mark.parametrize("failure_returncode", [0, 1])
 def test_run_codex_exec_logs_capacity_recovery_calls(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     failure_event: dict[str, object],
     failure_returncode: int,
 ) -> None:
-    """capacity error を再試行し、戻り値に依存せず retry event を記録する。"""
-    root = make_repo(tmp_path)
+    """capacity 診断と終了 code の組合せごとに、待機・probe・再実行を記録する。"""
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if count == 0:",
-            f"    print(json.dumps({failure_event!r}))",
-            f"    sys.exit({failure_returncode})",
-            "output.write_text(json.dumps({'ok': True}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    # JSONL 分類と log は実処理し、process 受け渡しは既存の結合テストへ委ねる。
+    prompts = []
+
+    def fake_run(argv, **kwargs):
+        prompts.append(kwargs["stdin"].read())
+        if len(prompts) == 1:
+            return subprocess.CompletedProcess(
+                argv, failure_returncode, json.dumps(failure_event) + "\n", ""
+            )
+        output = Path(argv[argv.index("--output-last-message") + 1])
+        output.write_text(json.dumps({"ok": True}), encoding="utf-8")
+        return subprocess.CompletedProcess(argv, 0, '{"type":"turn.completed"}\n', "")
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
@@ -632,6 +606,9 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
     )
 
     assert result.output_json == {"ok": True}
+    assert len(prompts) == 3
+    assert prompts[0] == prompts[2] == parameter.prompt
+    assert prompts[1] != parameter.prompt
     call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
@@ -654,34 +631,20 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
 )
 @pytest.mark.parametrize("structured_output", [False, True])
 def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     event: dict[str, object],
     structured_output: bool,
 ) -> None:
     """未知の JSONL error は終了コード 0 でも即時失敗させ、再試行しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    event_text = json.dumps(event)
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            f"print({event_text!r})",
-        ],
+    # JSONL の読み取り・分類と log は実処理し、process 起動は結合テストに残す。
+    calls = script_codex_calls(
+        monkeypatch, [(0, json.dumps(event) + "\n", '{"ok": true}')]
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema: Path | None = None
     if structured_output:
         schema = tmp_path / "schema.json"
@@ -703,7 +666,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
         )
 
     assert "unexpected failure" not in error.value.detail
-    assert counter.read_text() == "1"
+    assert len(calls) == 1
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == ["failed"]
@@ -712,10 +675,11 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
 
 
 def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """capacity 回復待ち を挟んでも Codex が作った agent diff を保持する。"""
-    root = make_repo(tmp_path)
+    # 初回 call が作る未追跡 file の保持を検証するため、初期 commit は不要。
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
@@ -765,19 +729,16 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout JSONL 外の error marker を retry 判定に使わず、直接失敗させる。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    fake_codex = bin_dir / "codex"
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
         FileAccessMode.READONLY,
@@ -787,74 +748,60 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
     )
     cases = [
         (
-            "capacity",
-            ["print('Selected model is at capacity', file=sys.stderr)"],
-            {"transient_poll_interval_sec": 0},
             "Selected model is at capacity",
+            "",
+            {"transient_poll_interval_sec": 0},
         ),
         (
-            "quota",
-            ["print('Quota exceeded')", "print('Quota exceeded', file=sys.stderr)"],
-            {"quota_poll_interval_sec": 0},
             "Quota exceeded",
+            "Quota exceeded\n",
+            {"quota_poll_interval_sec": 0},
         ),
     ]
-    for name, marker_lines, kwargs, expected_detail in cases:
-        counter = tmp_path / f"{name}_counter"
-        write_python_executable(
-            fake_codex,
-            [
-                "import pathlib, sys",
-                f"counter = pathlib.Path({str(counter)!r})",
-                "count = int(counter.read_text()) if counter.exists() else 0",
-                "counter.write_text(str(count + 1))",
-                *marker_lines,
-                "sys.exit(1)",
-            ],
-        )
-        try:
+    # stdout/stderr の分類と非公開化を実行し、process I/O は exec の結合テストに残す。
+    for expected_detail, stdout_text, kwargs in cases:
+
+        def fake_run(argv, **_kwargs):
+            return subprocess.CompletedProcess(
+                argv, 1, stdout_text, expected_detail + "\n"
+            )
+
+        codex_call = Mock(side_effect=fake_run)
+        monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", codex_call)
+        with pytest.raises(CmocError) as error:
             run_codex_exec(parameter, root=root, config=CmocConfig(), **kwargs)
-        except CmocError as exc:
-            assert exc.summary == "Codex CLI 呼び出しが失敗しました。"
-            assert expected_detail not in exc.detail
-            captured = capsys.readouterr()
-            assert expected_detail not in captured.out
-            assert expected_detail not in captured.err
-        else:
-            raise AssertionError(f"{name} marker outside JSONL should fail directly")
-        assert counter.read_text() == "1"
+        assert error.value.summary == "Codex CLI 呼び出しが失敗しました。"
+        assert expected_detail not in error.value.detail
+        captured = capsys.readouterr()
+        assert expected_detail not in captured.out
+        assert expected_detail not in captured.err
+        codex_call.assert_called_once()
 
 
 def test_run_codex_exec_stops_after_output_correction_limit(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """補正を 2 回で終え、正式出力の受理失敗を元の call と対応付ける。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     sleep_calls: list[float] = []
     monkeypatch.setattr(
         runtime_codex_exec.time, "sleep", lambda seconds: sleep_calls.append(seconds)
     )
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
+    # 補正回数の制御と診断を検証し、process の受け渡しは成功系に残す。
+    calls = script_codex_calls(
+        monkeypatch,
         [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'bad': True}))",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+            (
+                0,
+                '{"type":"thread.started","thread_id":"session-1"}\n'
+                '{"type":"turn.completed"}\n',
+                '{"bad": true}',
+            )
+        ]
+        * 3,
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "schema.json"
     schema.write_text(
         json.dumps(
@@ -882,7 +829,11 @@ def test_run_codex_exec_stops_after_output_correction_limit(
             subcommand_logger=logger,
         )
 
-    assert counter.read_text() == "3"
+    assert len(calls) == 3
+    assert "resume" not in calls[0]["argv"]
+    for call in calls[1:]:
+        resume_index = call["argv"].index("resume")
+        assert call["argv"][resume_index + 1] == "session-1"
     assert sleep_calls == []
     assert "`additionalProperties`" in error.value.detail
     call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))

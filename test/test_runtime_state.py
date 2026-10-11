@@ -2,12 +2,13 @@
 
 import json
 import multiprocessing
+import os
 import threading
 from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _git_support import RUN_BRANCH, RUN_ID, SESSION_BRANCH, SESSION_ID, make_repo
+from _git_support import RUN_BRANCH, RUN_ID, SESSION_BRANCH, SESSION_ID
 
 import commons.runtime_state as runtime_state_module
 from cmoc_runtime import CmocError
@@ -26,11 +27,18 @@ from commons.runtime_state import (
 )
 
 
-def _hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
+def _hold_session_fork_lock(
+    root: Path, common_dir: Path, ready: Connection, release: Connection
+) -> None:
     """別 process で session fork lock を保持し、解放指示を待つ。"""
-    with session_fork_lock(root):
-        ready.send(True)
-        release.recv()
+    # spawn でも親の monkeypatch に依存せず、同じ共有 directory を使う。
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            runtime_state_module, "git_common_dir", lambda _root: common_dir
+        )
+        with session_fork_lock(root):
+            ready.send(True)
+            release.recv()
 
 
 def _valid_state() -> SessionState:
@@ -83,6 +91,7 @@ def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
 def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> None:
     """run branch の session component から state file を解決する。"""
     path = state_path(tmp_path, SESSION_ID)
+    assert active_session_for_home(tmp_path, "main") is None
     state = _valid_state()
     state.run = RunPart("joinable", "realization_apply", RUN_BRANCH, "abc")
     write_state(path, state)
@@ -92,6 +101,8 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert session_id == SESSION_ID
     assert loaded_path == path
     assert loaded == state
+    assert active_session_for_home(tmp_path, "main") == path
+    assert active_session_for_home(tmp_path, "other") is None
 
 
 @pytest.mark.parametrize("branch", [None, 1])
@@ -357,28 +368,50 @@ def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
     assert not path.exists()
 
 
+@pytest.mark.parametrize("location", ["file", "parent", "ancestor"])
+@pytest.mark.parametrize("target", ["dangling", "existing", "loop"])
 def test_session_state_rejects_symlinked_path_without_writing_target(
-    tmp_path: Path,
+    tmp_path: Path, location: str, target: str
 ) -> None:
     """session state の symlink 経由 read/write で link 先を扱わない。"""
-    outside = tmp_path / "outside-state.json"
-    outside.write_text("original\n")
+    path = state_path(tmp_path, SESSION_ID)
+    link = {"file": path, "parent": path.parent, "ancestor": path.parent.parent}[
+        location
+    ]
+    outside = tmp_path / "outside"
+    outside_state = outside if location == "file" else outside / path.relative_to(link)
+    if target == "existing":
+        outside_state.parent.mkdir(parents=True, exist_ok=True)
+        outside_state.write_text("original\n")
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(
+        link if target == "loop" else outside, target_is_directory=location != "file"
+    )
+
+    with pytest.raises(CmocError, match="session state path"):
+        state_path(tmp_path, SESSION_ID)
+    with pytest.raises(CmocError, match="session state path"):
+        write_state(path, _valid_state())
+    with pytest.raises(CmocError, match="session state path"):
+        load_state_for_branch(tmp_path, SESSION_BRANCH)
+    with pytest.raises(CmocError, match="session state path"):
+        active_session_for_home(tmp_path, "main")
+
+    if target == "existing":
+        assert outside_state.read_text() == "original\n"
+    else:
+        assert not outside.exists()
+
+
+@pytest.mark.parametrize("kind", ["directory", "fifo"])
+def test_state_operations_reject_non_regular_path(tmp_path: Path, kind: str) -> None:
+    """state path が directory や FIFO の場合に raw open error や停止を起こさない。"""
     path = state_path(tmp_path, SESSION_ID)
     path.parent.mkdir(parents=True)
-    path.symlink_to(outside)
-
-    with pytest.raises(CmocError, match="session state path"):
-        write_state(path, _valid_state())
-    with pytest.raises(CmocError, match="session state path"):
-        load_state_for_branch(tmp_path, SESSION_BRANCH)
-
-    assert outside.read_text() == "original\n"
-
-
-def test_state_operations_reject_non_regular_path(tmp_path: Path) -> None:
-    """state path が directory の場合に raw open error や停止を起こさない。"""
-    path = state_path(tmp_path, SESSION_ID)
-    path.mkdir(parents=True)
+    if kind == "directory":
+        path.mkdir()
+    else:
+        os.mkfifo(path)
 
     with pytest.raises(CmocError, match="通常の file"):
         write_state(path, _valid_state())
@@ -386,18 +419,50 @@ def test_state_operations_reject_non_regular_path(tmp_path: Path) -> None:
         load_state_for_branch(tmp_path, SESSION_BRANCH)
 
 
-def test_state_operations_reject_non_directory_parent(tmp_path: Path) -> None:
+@pytest.mark.parametrize("location", ["parent", "ancestor"])
+def test_state_operations_reject_non_directory_parent(
+    tmp_path: Path, location: str
+) -> None:
     """state directory の親が通常 file の場合に raw exception を漏らさない。"""
     path = state_path(tmp_path, SESSION_ID)
-    path.parent.parent.mkdir(parents=True)
-    path.parent.write_text("not a directory")
+    parent = path.parent if location == "parent" else path.parent.parent
+    parent.parent.mkdir(parents=True)
+    parent.write_text("not a directory")
 
+    with pytest.raises(CmocError, match="通常の directory"):
+        state_path(tmp_path, SESSION_ID)
     with pytest.raises(CmocError, match="通常の directory"):
         write_state(path, _valid_state())
     with pytest.raises(CmocError, match="通常の directory"):
         load_state_for_branch(tmp_path, SESSION_BRANCH)
     with pytest.raises(CmocError, match="通常の directory"):
         active_session_for_home(tmp_path, "main")
+
+
+def test_write_state_rechecks_parent_after_creation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """parent 作成中に symlink が置かれても、保存前の検査で link 先を守る。"""
+    path = state_path(tmp_path, SESSION_ID)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    outside_state = outside / path.name
+    outside_state.write_text("original\n")
+    original_mkdir = Path.mkdir
+
+    def mkdir_with_symlink(self: Path, *args: object, **kwargs: object) -> None:
+        if self == path.parent:
+            original_mkdir(self.parent, parents=True, exist_ok=True)
+            self.symlink_to(outside, target_is_directory=True)
+        else:
+            original_mkdir(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", mkdir_with_symlink)
+
+    with pytest.raises(CmocError, match="session state path"):
+        write_state(path, _valid_state())
+
+    assert outside_state.read_text() == "original\n"
 
 
 @pytest.mark.parametrize("state", ["running", "joinable", "error"])
@@ -462,23 +527,33 @@ def test_session_fork_lock_is_shared_across_processes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """session fork lock が process 間で共有されることを確認する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path
+    common_dir = tmp_path / "common"
+    # Git common directory の実解決は test_git_query_reuse.py に残し、
+    # ここでは異なる起点からの実 flock の競合・解放後の取得だけを検証する。
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
         target=_hold_session_fork_lock,
-        args=(root, ready_child, release_child),
+        args=(root / "linked", common_dir, ready_child, release_child),
     )
     process.start()
-    lock_attempted = threading.Event()
+    monkeypatch.setattr(
+        runtime_state_module, "git_common_dir", lambda _root: common_dir
+    )
+    lock_contended = threading.Event()
     acquired = threading.Event()
 
     original_flock = runtime_state_module.fcntl.flock
 
     def observe_lock_attempt(fd: int, operation: int) -> None:
-        """worker が排他 lock を試行したことを通知する。"""
+        """実 flock の競合を通知してから、通常の blocking 取得へ進む。"""
+        # 子 process が保持する lock への競合を、時間経過に頼らず確かめる。
         if operation & runtime_state_module.fcntl.LOCK_EX:
-            lock_attempted.set()
+            try:
+                original_flock(fd, operation | runtime_state_module.fcntl.LOCK_NB)
+            except BlockingIOError:
+                lock_contended.set()
         original_flock(fd, operation)
 
     monkeypatch.setattr(runtime_state_module.fcntl, "flock", observe_lock_attempt)
@@ -487,8 +562,8 @@ def test_session_fork_lock_is_shared_across_processes(
     try:
         assert ready_parent.recv()
         worker.start()
-        assert lock_attempted.wait(timeout=3)
-        assert not acquired.wait(timeout=0.2)
+        assert lock_contended.wait(timeout=3)
+        assert not acquired.is_set()
         release_parent.send(True)
         released = True
         assert acquired.wait(timeout=3)

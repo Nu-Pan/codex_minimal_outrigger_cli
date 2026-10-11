@@ -3,7 +3,7 @@
 import json
 
 import pytest
-from _cli_support import runner, terminal_primary_report
+from _cli_support import runner, seed_search_config, terminal_primary_report
 from _git_support import make_repo, run_git
 from test_feedback import (
     _active_session,
@@ -15,16 +15,29 @@ from test_feedback import (
     _store_agent_issue,
 )
 
+import commons.runtime_cli as runtime_cli
+import commons.runtime_doctor as runtime_doctor
 import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
+import sub_commands.feedback.close as close_module
+import sub_commands.feedback.decision as decision
 import sub_commands.feedback.report as report_module
+from commons.runtime_errors import CmocError
+from commons.runtime_feedback_history import history_artifact
+from commons.runtime_feedback_intake import (
+    capture_high_watermark,
+    forget_observation_receipt,
+)
 from commons.runtime_feedback_store import (
     canonical_json_bytes,
     feedback_completion_counts,
+    observation_publication_lock,
     read_json_object,
     rfc3339_now,
+    sha256_bytes,
     store_agent_observation,
     store_machine_observation,
+    write_immutable_bytes,
 )
 from commons.runtime_ids import is_common_id
 from commons.runtime_logging import SubcommandLogger
@@ -32,7 +45,7 @@ from main import app
 
 
 @pytest.fixture
-def open_case(tmp_path, monkeypatch):
+def reported_case(tmp_path, monkeypatch):
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
     observation_id, raw, identity = _store_agent_issue(root, session_id)
@@ -59,6 +72,127 @@ def open_case(tmp_path, monkeypatch):
     return root, session_id, issue
 
 
+@pytest.fixture
+def open_case(tmp_path, monkeypatch):
+    # close 固有の検査には session を作らず、report を実行するケースだけで準備する。
+    # report から close への結合と入力消費は reported_case の検査に残す。
+    # この fixture の入力は直接保存するため、TCP collector と接続 probe は不要。
+    # 受付・保存・drain は test_feedback.py、実 collector との結合は reported_case に残す。
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    monkeypatch.setattr(
+        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
+    )
+    # doctor 内部の修復・索引同期は専用 test と reported_case で検証する。
+    # close が前処理の失敗を越えて更新しないことは、この file の失敗 test に残す。
+    monkeypatch.setattr(close_module, "run_doctor_preprocess", lambda _root: None)
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    seed_search_config(root)
+    observation_id, raw, identity = _store_agent_issue(root, None)
+    observation = read_json_object(raw)
+    observed_at = observation["observed_at"]
+    watermark, inputs = capture_high_watermark(root, 0)
+    raw_reference = {key: inputs[0][key] for key in ("path", "sha256")}
+    candidate = report_module._new_candidate(
+        observation, feedback_state.agent_canonical_key(observation_id)
+    )
+    report_module._merge_observation(root, candidate, observation)
+    cut_id = feedback_state.new_report_cut_id()
+    generation_id = feedback_state.new_generation_id(root)
+    execution_id = "exec_zzzzzz_2026-10-08_00-00"
+    source = {"kind": "report", "id": cut_id, "execution_id": execution_id}
+    verdict = _remediation_output(identity, "inconclusive")["result"]
+    verdict["decision_basis"] = decision.compact_basis(
+        decision.decision_basis(
+            decision.decision_state(decision.worktree_inputs(root), candidate),
+            verdict,
+            None,
+        )
+    )
+    issue = report_module._active_issue_record(
+        {
+            "report_cut_id": cut_id,
+            "run": {"targets": {"case_ids": {identity: "fbc_000000_2026-10-08_00-00"}}},
+        },
+        candidate,
+        verdict,
+        {},
+        observed_at,
+    )
+    report = root / f".cmoc/gu/report/feedback/incomplete/{execution_id}.md"
+    history_path, history_bytes, history_reference = history_artifact(
+        root,
+        {
+            "schema_version": 1,
+            "generation_id": generation_id,
+            "source": source,
+            "created_at": observed_at,
+            "report": report.relative_to(root).as_posix(),
+            "log": f".cmoc/gu/log/sub_command/{execution_id}.jsonl",
+            "events": [
+                {
+                    "kind": "created",
+                    "case_id": issue["case_id"],
+                    "issue_id": identity,
+                    "before": None,
+                    "after": issue,
+                    "agent_result": verdict,
+                    "human_reason": None,
+                }
+            ],
+            "observations": [
+                {**inputs[0], "issue_ids": [identity], "aggregate_keys": []}
+            ],
+        },
+    )
+    generation, artifacts, reference = feedback_state.generation_artifacts(
+        root,
+        generation_id=generation_id,
+        report_cut_id=cut_id,
+        created_at=observed_at,
+        session_commit=run_git(root, "rev-parse", "HEAD").stdout.strip(),
+        issues={identity: issue},
+        machine_aggregates={},
+        source=source,
+        base_current=None,
+        input_boundary=watermark,
+        history=[history_reference],
+    )
+    write_immutable_bytes(history_path, history_bytes)
+    feedback_state.publish_generation_artifacts(root, generation, artifacts)
+    write_immutable_bytes(report, b"# Prepared inconclusive case\n")
+    # 完了済み state を配置し、staging 用の report cut は作らない。
+    write_immutable_bytes(
+        feedback_state.current_pointer_path(root),
+        canonical_json_bytes(
+            {
+                "schema_version": 1,
+                "generation_id": generation_id,
+                "generation_manifest_path": reference["path"],
+                "generation_manifest_sha256": reference["sha256"],
+                "report_cut_id": cut_id,
+                "report_cut_manifest_sha256": sha256_bytes(b"completed report cut"),
+                "report_path": report.relative_to(root).as_posix(),
+                "report_sha256": sha256_bytes(report.read_bytes()),
+                "published_at": observed_at,
+                "result": "incomplete",
+            }
+        ),
+    )
+    with observation_publication_lock(root):
+        raw.unlink()
+        forget_observation_receipt(root, raw_reference)
+    assert feedback_state.validate_feedback_state(root).issues == {identity: issue}
+    monkeypatch.setattr(
+        report_module,
+        "run_codex_exec",
+        lambda *_a, **_k: pytest.fail("close must not call an agent"),
+    )
+    return root, issue
+
+
 def _close(case, reason="外部で解決を確認した"):
     return runner.invoke(
         app,
@@ -68,9 +202,9 @@ def _close(case, reason="外部で解決を確認した"):
 
 
 def test_close_publishes_immediately_keeps_pending_and_replay_reason(
-    open_case, monkeypatch
+    reported_case, monkeypatch
 ):
-    root, session_id, issue = open_case
+    root, session_id, issue = reported_case
     _, late = store_agent_observation(
         root,
         _context(root, session_id=session_id),
@@ -127,7 +261,10 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
 def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     open_case, monkeypatch, fault
 ):
-    root, session_id, issue = open_case
+    root, issue = open_case
+    # report の拒否は current 切替前後で確認し、他の保存障害では同じ検査を重ねない。
+    checks_report_refusal = fault in {"pointer_before", "partial_cleanup"}
+    session_id = _active_session(root, monkeypatch) if checks_report_refusal else None
     _, late = store_agent_observation(
         root,
         _context(root, session_id=session_id),
@@ -182,8 +319,12 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     assert conflict.exit_code == 1
     if not published:
         assert _close(issue, "異なる理由").exit_code == 1
-    blocked_report = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert blocked_report.exit_code == 1
+    if checks_report_refusal:
+        blocked_report = runner.invoke(
+            app, ["feedback", "report"], catch_exceptions=False
+        )
+        assert blocked_report.exit_code == 1, blocked_report.output
+        assert "未完了の feedback close" in blocked_report.output
     assert close_state.load_close_work(root) == fixed
     monkeypatch.setattr(close_state, name, original)
     if published:
@@ -200,9 +341,11 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     assert late.exists()
 
 
-@pytest.mark.parametrize(
-    "arguments",
-    [
+def test_close_input_failures_save_invocation_reports(open_case):
+    root, _ = open_case
+    before = feedback_state.load_active_state(root)
+    # 高価な session/report の準備を共有し、各拒否後に次の入力の前提を確認する。
+    for arguments in [
         [],
         ["not-a-case"],
         ["fbc_zzzzzz_2026-10-08_00-00"],
@@ -212,27 +355,49 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
         ["fbc_zzzzzz_2026-10-08_00-00", "--reason"],
         ["fbc_zzzzzz_2026-10-08_00-00", "--report", "output.md"],
         ["fbc_zzzzzz_2026-10-08_00-00", "extra", "--reason", "fixed"],
-    ],
-)
-def test_close_input_failures_save_invocation_reports(open_case, arguments):
-    root, _, _ = open_case
-    before = feedback_state.load_active_state(root)
-    result = runner.invoke(
-        app, ["feedback", "close", *arguments], catch_exceptions=False
-    )
-    assert result.exit_code == 1, result.output
-    assert "feedback/invocation" in str(terminal_primary_report(result))
-    assert feedback_state.load_active_state(root).current == before.current
+    ]:
+        result = runner.invoke(
+            app, ["feedback", "close", *arguments], catch_exceptions=False
+        )
+        assert result.exit_code == 1, (arguments, result.output)
+        assert "feedback/invocation" in str(terminal_primary_report(result)), arguments
+        assert feedback_state.load_active_state(root) == before, arguments
+        assert close_state.load_close_work(root) is None, arguments
+        assert feedback_state.load_report_cut(root) is None, arguments
 
 
-def test_close_preserves_other_cases_and_subthreshold_aggregates(
+def test_close_doctor_failure_preserves_state_and_saves_invocation_report(
     open_case, monkeypatch
 ):
-    root, session_id, issue = open_case
+    root, issue = open_case
+    before = feedback_state.load_active_state(root)
+
+    def failed_preprocess(worktree):
+        assert worktree == root
+        raise CmocError(
+            "injected doctor failure",
+            ["cmoc doctor を再実行してください。"],
+            str(worktree),
+        )
+
+    monkeypatch.setattr(close_module, "run_doctor_preprocess", failed_preprocess)
+    result = _close(issue)
+    assert result.exit_code == 1, result.output
+    assert "injected doctor failure" in result.output
+    assert "feedback/invocation" in str(terminal_primary_report(result))
+    assert feedback_state.load_active_state(root) == before
+    assert close_state.load_close_work(root) is None
+
+
+def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monkeypatch):
+    # close の保持対象は同じ report で揃え、準備用の report/run を重ねない。
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _, issue_raw, identity = _store_agent_issue(root, session_id)
     payload = _payload(kind="other", path=None, text="独立した構成の問題")
     payload["category"] = "configuration"
     payload["summary"] = "人間による設定確認が必要"
-    accepted, _ = store_agent_observation(
+    accepted, other_raw = store_agent_observation(
         root, _context(root, session_id=session_id), payload
     )
     other_id = feedback_state.issue_id(f"agent\0{accepted['observation_id']}")
@@ -274,8 +439,13 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     before = feedback_state.validate_feedback_state(root)
-    assert set(before.issues) == {issue["issue_id"], other_id}
+    assert set(before.issues) == {identity, other_id}
+    assert before.current["result"] == "incomplete"
+    issue = before.issues[identity]
+    assert issue["verification"]["status"] == "inconclusive"
     assert len(before.machine_aggregates) == 1
+    assert not issue_raw.exists()
+    assert not other_raw.exists()
     assert not raw.exists()
     monkeypatch.setattr(
         report_module,
@@ -294,7 +464,8 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(
 
 
 def test_close_rejects_writer_lock_and_pending_feedback_run(open_case, monkeypatch):
-    root, _, issue = open_case
+    root, issue = open_case
+    _active_session(root, monkeypatch)
     before = feedback_state.load_active_state(root)
     with feedback_state.feedback_writer_lock(root):
         result = _close(issue)
@@ -315,7 +486,7 @@ def test_close_rejects_writer_lock_and_pending_feedback_run(open_case, monkeypat
 
 
 def test_close_completion_log_failure_reports_published_state(open_case, monkeypatch):
-    root, _, issue = open_case
+    root, issue = open_case
     original = SubcommandLogger.event
 
     def fail_completion(self, event, **fields):
@@ -343,7 +514,8 @@ def test_close_completion_log_failure_reports_published_state(open_case, monkeyp
 def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
     open_case, monkeypatch
 ):
-    root, _, issue = open_case
+    root, issue = open_case
+    _active_session(root, monkeypatch)
     _install_codex_outputs(
         monkeypatch, _remediation_output(issue["issue_id"], "human_required")
     )
@@ -423,7 +595,7 @@ def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(
 
 
 def test_confirmed_history_corruption_blocks_close(open_case):
-    root, _, issue = open_case
+    root, issue = open_case
     state = feedback_state.load_active_state(root)
     path = root / state.generation_manifest["history"][0]["path"]
     history = json.loads(path.read_text())
@@ -432,3 +604,31 @@ def test_confirmed_history_corruption_blocks_close(open_case):
     result = _close(issue)
     assert result.exit_code == 1
     assert close_state.load_close_work(root) is None
+
+
+def test_close_saved_artifact_validates_fixed_and_existing_bytes(tmp_path):
+    # 未保存の許容によって、固定 byte 列や現存 artifact の破損を見逃さない。
+    directory = tmp_path / "artifacts"
+    directory.mkdir()
+    target = directory / "report.md"
+    content = "saved close report\n"
+    artifact = {
+        "path": "artifacts/report.md",
+        "sha256": sha256_bytes(content.encode()),
+        "content": content,
+    }
+    reference = {key: artifact[key] for key in ("path", "sha256")}
+
+    def validate(value):
+        return close_state._validate_saved_bytes(
+            tmp_path, value, directory, tmp_path / "operation.json"
+        )
+
+    assert validate(artifact) == reference
+    target.write_text(content)
+    assert validate(artifact) == reference
+    with pytest.raises(CmocError, match="bytes/hash"):
+        validate({**artifact, "content": "changed fixed input\n"})
+    target.write_text("changed artifact\n")
+    with pytest.raises(CmocError, match="SHA256"):
+        validate(artifact)

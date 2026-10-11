@@ -39,31 +39,31 @@ from commons.runtime_feedback_protocol import (
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
 )
-from config.cmoc_config import CmocConfig
-
-_SANDBOX_BY_MODE = {
-    FileAccessMode.READONLY: "workspace-write",
-    FileAccessMode.PURE_ORACLE_READ: "workspace-write",
-    FileAccessMode.REPO_WRITE: "workspace-write",
-    FileAccessMode.PURE_ORACLE_WRITE: "workspace-write",
-    FileAccessMode.REALIZATION_WRITE: "workspace-write",
-    FileAccessMode.NO_POLICY: "workspace-write",
-}
+from config.cmoc_config import CmocConfig, JsonTomlValue
 
 
-@pytest.mark.parametrize(("mode", "sandbox"), _SANDBOX_BY_MODE.items())
-def test_codex_overrides_use_dedicated_sandbox_argument(
-    mode: FileAccessMode, sandbox: str
-) -> None:
+def test_codex_overrides_use_dedicated_sandbox_argument() -> None:
     """全 file access mode を専用 --sandbox 引数へ欠落なく変換する。"""
     config = CmocConfig()
-    parameter = codex_parameter(mode, agent_call_cwd=Path.cwd())
+    agent_call_cwd = Path.cwd()
+    for mode in FileAccessMode:
+        args = build_codex_override_args(
+            codex_parameter(mode, agent_call_cwd=agent_call_cwd), config
+        )
+        assert args.count("--sandbox") == 1, mode
+        assert codex_arg_value(args, "--sandbox") == "workspace-write", mode
+
+
+def test_prepare_codex_overrides_use_call_defaults() -> None:
+    """mode 共通の既定設定を prepare 境界から検証する。"""
+    config = CmocConfig()
+    parameter = codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd())
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
-    args = build_codex_override_args(parameter, config)
+    args = prepare_codex_override_args(parameter, config)
 
     assert args.count("--sandbox") == 1
+    assert codex_arg_value(args, "--sandbox") == "workspace-write"
     assert args.count("--no-daemon") == 1
-    assert codex_arg_value(args, "--sandbox") == sandbox
     assert codex_arg_value(args, "--ask-for-approval") == "on-request"
     assert "--approve-for-me" not in args
     assert codex_arg_value(args, "--model") == call_config.model
@@ -259,7 +259,7 @@ def test_codex_overrides_enable_editor_input_handoff_only_when_selected() -> Non
 
 
 def test_codex_subprocess_env_does_not_inherit_stale_call_context(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """親 process の別 call 用 MCP context を Codex env へ継承しない。"""
     for name, value in (
@@ -271,7 +271,7 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
     ):
         monkeypatch.setenv(name, value)
 
-    environment = codex_subprocess_env(tmp_path / ".codex")
+    environment = codex_subprocess_env(Path("/test/codex-home"))
 
     assert all(
         name not in environment
@@ -282,17 +282,6 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
             EDITOR_INPUT_REPOSITORY_ENV,
             EDITOR_INPUT_SOURCE_ENV,
         )
-    )
-
-
-def test_prepare_codex_overrides_matches_builder_defaults() -> None:
-    """callback 未指定の prepare 境界は builder の既定 argv と一致する。"""
-    parameter = codex_parameter(
-        FileAccessMode.REALIZATION_WRITE, agent_call_cwd=Path.cwd()
-    )
-    config = CmocConfig()
-    assert prepare_codex_override_args(parameter, config) == (
-        build_codex_override_args(parameter, config)
     )
 
 
@@ -390,7 +379,6 @@ def test_codex_overrides_disable_unpaired_notification_callback() -> None:
     ],
 )
 def test_tui_notification_requires_exact_verified_codex_version(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     version_output: bytes,
     returncode: int,
@@ -407,11 +395,13 @@ def test_tui_notification_requires_exact_verified_codex_version(
         return subprocess.CompletedProcess(args, returncode, stdout=version_output)
 
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fake_run)
+    # fake subprocess は cwd を記録するだけなので directory は作らない。
+    codex_process_cwd = Path("/test/codex-cwd")
     environment = {"PATH": "/test/bin"}
 
     assert (
         runtime_codex_profile.codex_cli_supports_tui_notification_hooks(
-            tmp_path,
+            codex_process_cwd,
             environment,
         )
         is expected
@@ -420,7 +410,7 @@ def test_tui_notification_requires_exact_verified_codex_version(
         (
             ["codex", "--no-daemon", "--sandbox", "read-only", "--version"],
             {
-                "cwd": tmp_path,
+                "cwd": codex_process_cwd,
                 "env": environment,
                 "stdin": subprocess.DEVNULL,
                 "stdout": subprocess.PIPE,
@@ -433,7 +423,6 @@ def test_tui_notification_requires_exact_verified_codex_version(
 
 
 def test_tui_notification_version_probe_failure_is_nonfatal(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """version probe の起動失敗や timeout は callback 無効化だけに閉じる。"""
@@ -447,7 +436,7 @@ def test_tui_notification_version_probe_failure_is_nonfatal(
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fail_run)
 
     assert not runtime_codex_profile.codex_cli_supports_tui_notification_hooks(
-        tmp_path,
+        Path("/test/codex-cwd"),
         {"PATH": "/test/bin"},
     )
 
@@ -463,6 +452,8 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
             "count": 2,
             "ratio": 0.5,
             "nested": ["value", {"answer": 42}],
+            'text."日本語': 'quote"\\\n\t\x7f日本語',
+            "empty": {"array": [], "table": {}},
         }
     )
     config.codex.model_providers["unused"] = CodexModelProviderConfig(
@@ -495,6 +486,8 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
             "count": 2,
             "ratio": 0.5,
             "nested": ["value", {"answer": 42}],
+            'text."日本語': 'quote"\\\n\t\x7f日本語',
+            "empty": {"array": [], "table": {}},
         }
     }
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -505,6 +498,24 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
         for argument in args
     )
     assert "permissions" not in parsed
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [[None], {"nested": float("nan")}, {"nested": 2**63}],
+)
+def test_codex_overrides_reject_invalid_in_memory_provider_settings(
+    setting: object,
+) -> None:
+    """設定読み込みを経由しない値も、argv 構築時に検証して拒否する。"""
+    config = CmocConfig()
+    config.codex.model_providers["openai"] = CodexModelProviderConfig(
+        {"setting": cast(JsonTomlValue, setting)}
+    )
+    parameter = codex_parameter(agent_call_cwd=Path.cwd())
+
+    with pytest.raises(CmocError, match="Codex model provider 設定が不正"):
+        build_codex_override_args(parameter, config)
 
 
 def test_codex_overrides_leave_bare_toml_key_segments_unquoted() -> None:

@@ -1,12 +1,8 @@
 """Repository ごとに共有する、種類別の単調増加 ID を発行する。"""
 
 import re
-import sqlite3
-from contextlib import closing
 from datetime import datetime
 from pathlib import Path
-
-from .runtime_paths import untracked_data_dir
 
 _ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 _LIMIT = 36**6
@@ -29,8 +25,9 @@ def is_common_id(value: object, prefix: str) -> bool:
     if match is None or match.group("prefix") != prefix:
         return False
     try:
-        datetime.strptime(
-            f"{match.group('date')}_{match.group('time')}", "%Y-%m-%d_%H-%M"
+        # 固定書式は検査済みなので、汎用書式解析を介さず暦と時刻を検査する。
+        datetime.fromisoformat(
+            f"{match.group('date')}T{match.group('time').replace('-', ':')}"
         )
     except ValueError:
         return False
@@ -39,6 +36,12 @@ def is_common_id(value: object, prefix: str) -> bool:
 
 def new_id(repository: Path, prefix: str) -> str:
     """SQLite の排他 transaction で通番を確定し、ローカル発行時刻を付ける。"""
+    # ID 検査だけを使う reporter では、採番用の DB・path 解決を読み込まない。
+    import sqlite3
+    from contextlib import closing
+
+    from .runtime_paths import untracked_data_dir
+
     if prefix not in _PREFIXES:
         raise ValueError(f"unknown ID prefix: {prefix}")
     state_dir = untracked_data_dir(repository) / "state"
@@ -69,7 +72,11 @@ def new_id(repository: Path, prefix: str) -> str:
         except BaseException:
             connection.execute("ROLLBACK")
             raise
-    issued_at = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    # strftime の年幅は環境に依存するため、日時の各 field を直接ゼロ埋めする。
+    now = datetime.now()
+    issued_at = (
+        f"{now.year:04d}-{now.month:02d}-{now.day:02d}_{now.hour:02d}-{now.minute:02d}"
+    )
     digits = ""
     for _ in range(6):
         sequence, remainder = divmod(sequence, 36)
