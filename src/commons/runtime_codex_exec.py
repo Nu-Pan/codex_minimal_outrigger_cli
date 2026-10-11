@@ -7,7 +7,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from jsonschema import SchemaError, validators
+from jsonschema import SchemaError
+from jsonschema.protocols import Validator
 
 from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
@@ -44,6 +45,7 @@ from .runtime_git import (
     restore_worktree_snapshot,
 )
 from .runtime_ids import new_id
+from .runtime_json_schema import checked_schema_validator, reject_non_json_constant
 from .runtime_logging import (
     SubcommandLogger,
     current_execution_id,
@@ -69,12 +71,6 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
     path.write_text(prompt, encoding="utf-8")
 
 
-# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-def _reject_non_json_constant(value: str) -> Any:
-    """JSON 仕様外の非有限数リテラルを JSON input から拒否する。"""
-    raise ValueError(f"non-standard JSON constant: {value}")
-
-
 def _read_required_output_json(path: Path) -> Any:
     """Structured Output の必須 JSON を機械的検証用に厳格に読み取る。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -86,7 +82,7 @@ def _read_required_output_json(path: Path) -> Any:
     if not text.strip():
         raise ValueError(f"output file is empty: {path}")
     try:
-        return json.loads(text, parse_constant=_reject_non_json_constant)
+        return json.loads(text, parse_constant=reject_non_json_constant)
     except (RecursionError, ValueError) as exc:
         raise ValueError(f"output file is not valid JSON: {exc}") from exc
 
@@ -121,7 +117,7 @@ def _parse_validation_issue(
 
 
 def _schema_validation_issues(
-    output: Any, schema_validator: Any
+    output: Any, schema_validator: Validator
 ) -> tuple[StructuredOutputValidationIssue, ...]:
     """JSON Schema 違反を field ごとの補正可能なエラーへ変換する。"""
     errors = sorted(
@@ -141,7 +137,7 @@ def _schema_validation_issues(
 
 def _validate_structured_output(
     path: Path,
-    schema_validator: Any,
+    schema_validator: Validator,
     postcondition: StructuredOutputPostcondition | None,
     changed_paths: frozenset[str],
 ) -> tuple[Any, tuple[StructuredOutputValidationIssue, ...]]:
@@ -306,7 +302,7 @@ def run_codex_exec(
         config,
     )
     schema_path: Path | None = None
-    schema_validator: Any | None = None
+    schema_validator: Validator | None = None
     schema_source_path = parameter.structured_output_schema_path
     if schema_source_path is not None:
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -316,17 +312,12 @@ def run_codex_exec(
         try:
             schema_path = prepare_schema(root, schema_source_path)
             assert schema_path is not None
-            schema_definition = json.loads(
-                schema_path.read_text(encoding="utf-8"),
-                parse_constant=_reject_non_json_constant,
+            schema_validator = checked_schema_validator(
+                schema_path.read_text(encoding="utf-8")
             )
-            validator_class = validators.validator_for(schema_definition)
-            validator_class.check_schema(schema_definition)
-            schema_validator = validator_class(schema_definition)
         except (
             OSError,
             UnicodeError,
-            json.JSONDecodeError,
             ValueError,
             SchemaError,
             TypeError,

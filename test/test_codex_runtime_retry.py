@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from _acp_builder_support import oracle_schema_path
 from _codex_support import (
     codex_override_config,
     script_codex_calls,
@@ -553,6 +554,54 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
         )
 
     assert calls == 0
+
+
+def test_run_codex_exec_rechecks_schema_source_and_each_output(
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """検証器を再利用しても、別 call の不正出力と source の更新・破損を検出する。"""
+    root = cli_repository
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    schema = tmp_path / "schema.json"
+    schema_text = oracle_schema_path("feedback", "normalize_issue.json").read_text(
+        encoding="utf-8"
+    )
+    schema.write_text(schema_text, encoding="utf-8")
+    valid = {"result": {"decision": "new", "existing_issue_id": None}}
+    invalid = {"result": {"decision": "existing", "existing_issue_id": None}}
+    updated = {**valid, "new_field": None}
+    calls = script_codex_calls(
+        monkeypatch,
+        [
+            (0, '{"type":"turn.completed"}\n', json.dumps(output))
+            for output in (valid, invalid, updated)
+        ],
+    )
+    parameter = AgentCallParameter(
+        "build_feedback_normalize_issue_parameter",
+        FileAccessMode.READONLY,
+        "prompt",
+        schema,
+        root,
+        enable_feedback_reporting=False,
+    )
+    config = CmocConfig()
+
+    assert run_codex_exec(parameter, root=root, config=config).output_json == valid
+    with pytest.raises(CmocError, match="Structured Output 検証"):
+        run_codex_exec(parameter, root=root, config=config)
+
+    definition = json.loads(schema_text)
+    definition["properties"]["new_field"] = {"type": "null"}
+    definition["required"].append("new_field")
+    schema.write_text(json.dumps(definition), encoding="utf-8")
+    assert run_codex_exec(parameter, root=root, config=config).output_json == updated
+
+    schema.write_text("{", encoding="utf-8")
+    with pytest.raises(CmocError, match="Structured Output schema"):
+        run_codex_exec(parameter, root=root, config=config)
+    assert len(calls) == 3
 
 
 @pytest.mark.parametrize(

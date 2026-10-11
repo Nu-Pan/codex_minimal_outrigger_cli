@@ -16,12 +16,10 @@ import json
 import os
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
 from inspect import getsourcefile
 from pathlib import Path
 from typing import Any
 
-from jsonschema import validators
 from jsonschema.exceptions import SchemaError
 from oracle.other.struct_doc import render_sd_node_as_markdown
 
@@ -72,6 +70,7 @@ from commons.runtime_feedback_store import (
     unprocessed_observation_paths,
     write_immutable_bytes,
 )
+from commons.runtime_json_schema import checked_schema_validator
 from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_paths import reports_dir
 from commons.runtime_primary_report import update_primary_report_fields
@@ -1151,20 +1150,10 @@ def _structured_output_matches_schema(output: _JsonObject, schema_path: Path) ->
     """checkpoint output を正本 Structured Output schema で再検証する。"""
     # 現在の内容を毎回読み、schema の変更・破損・削除を cache で隠さない。
     try:
-        validate = _structured_output_validator(schema_path.read_text(encoding="utf-8"))
-        return validate(output)
-    except (OSError, UnicodeError, json.JSONDecodeError, SchemaError, TypeError):
+        validator = checked_schema_validator(schema_path.read_text(encoding="utf-8"))
+        return validator.is_valid(output)
+    except (OSError, UnicodeError, ValueError, SchemaError, TypeError, AttributeError):
         return False
-
-
-@lru_cache(maxsize=2)
-def _structured_output_validator(schema_text: str) -> Callable[[_JsonObject], bool]:
-    """schema の内容が同じ間は検証済み validator を再利用する。"""
-    # normalization と remediation の 2 schema を保持し、内容の変化で再構築する。
-    schema = json.loads(schema_text)
-    validator_class = validators.validator_for(schema)
-    validator_class.check_schema(schema)
-    return validator_class(schema).is_valid
 
 
 def _process_machine_observations(
