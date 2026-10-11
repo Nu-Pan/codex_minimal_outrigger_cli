@@ -272,20 +272,22 @@ def test_doctor_preprocess_repairs_git_state(
 
 
 @pytest.mark.parametrize("explicit_doctor", [False, True])
-def test_doctor_preprocess_restores_empty_work_directories(tmp_path, explicit_doctor):
+def test_doctor_preprocess_restores_empty_work_directories(
+    committed_repository, explicit_doctor
+):
     """親ごとの不足を補完し、既存の内容を保って再実行時の差分を増やさない。"""
-    root = make_repo(tmp_path)
-    run_git(root, "rm", "oracle/spec.md")
+    # 修復済みの管理 file だけ用意し、配置先を作るための doctor 全体を重ねない。
+    root = committed_repository
     preserved = root / "src/kept.txt"
     preserved.parent.mkdir()
     preserved.write_text("kept content\n")
-    run_git(root, "add", "src/kept.txt")
-    run_git(root, "commit", "-m", "keep realization content without oracle files")
-    run_doctor(root)
-    for relative in _WORK_DIRECTORIES:
-        if relative != "src":
-            (root / relative).rmdir()
-    (root / "oracle").rmdir()
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    (root / ".agents").mkdir()
+    (root / ".agents/.gitkeep").write_text("")
+    seed_search_config(root)
+    doctor_module.sync_refactor_state(root)
+    run_git(root, "add", ".gitignore", ".agents", ".cmoc/gt", "src")
+    run_git(root, "commit", "-m", "prepare management files and kept content")
     head_before = run_git(root, "rev-parse", "HEAD").stdout
     preserved_before = (preserved.stat().st_ino, preserved.stat().st_mtime_ns)
 
@@ -620,10 +622,11 @@ def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(tmp_path):
 
 
 def test_doctor_preprocess_continues_with_degraded_reporter(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """reporter 利用不能を warning と event に留めて本命処理を続ける。"""
-    root = make_repo(tmp_path)
+    # reporter の扱いは履歴内容を使わないため、空の HEAD だけ用意する。
+    root = committed_repository
 
     def unavailable() -> None:
         """reporter の利用不能を再現する。"""
@@ -661,10 +664,10 @@ def test_doctor_preprocess_continues_with_degraded_reporter(
 
 
 def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """reporter 事前検証中のユーザー中断を degraded warning に変換しない。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
 
     def interrupt() -> None:
         """reporter 検証中の Ctrl+C を再現する。"""
@@ -681,10 +684,10 @@ def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
 
 
 def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """予期しない reporter 検証エラーを利用不能 warning に変換しない。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
 
     def fail_probe() -> None:
         """reporter 検証内部の予期しない失敗を再現する。"""
@@ -701,10 +704,10 @@ def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
 
 
 def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """reporter schema の予期しない中断も利用不能 warning に変換しない。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
 
     def interrupt() -> None:
         """reporter schema 読み込み中の Ctrl+C を再現する。"""
