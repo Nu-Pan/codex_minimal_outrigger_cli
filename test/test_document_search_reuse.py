@@ -26,6 +26,17 @@ from commons.runtime_git import remove_worktree
 from commons.runtime_paths import repo_root
 
 
+def _event_sink(events):
+    """診断の可変な進捗を、通知時点の値で保存する。"""
+    if events is None:
+        return None
+
+    def record(kind, payload):
+        events.append(json.loads(json.dumps({"event": kind, **payload})))
+
+    return record
+
+
 @pytest.fixture
 def model_search(tmp_path, monkeypatch):
     """製品の分割・stream・保存を使い、モデル呼出し入力だけを記録する。"""
@@ -41,21 +52,15 @@ def model_search(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(worker_module, "verify_search_materials", lambda *_: runtime)
 
-    def create(root, config=None, events=None):
-        config = config or _tuning()
+    def create(root, *, events=None):
+        config = _tuning()
         installation = repo_root(root)
         return DocumentSearch(
             root,
             config,
             worker=NodeSearchWorker(installation, config, material_base=runtime),
             installation_root=installation,
-            event_sink=(
-                lambda kind, payload: events.append(
-                    json.loads(json.dumps({"event": kind, **payload}))
-                )
-            )
-            if events is not None
-            else None,
+            event_sink=_event_sink(events),
         )
 
     def inputs():
@@ -71,7 +76,8 @@ def model_search(tmp_path, monkeypatch):
 
 @pytest.fixture
 def cache_search():
-    """cache の寿命・共有境界には一文書一入力の double を使う。"""
+    """cache の寿命・共有・互換性には一文書一入力の double を使う。"""
+    # 分割と Node の連携は model_search に残し、cache の制御では起動を重ねない。
     generated_inputs = []
 
     class CacheWorker(_InferenceDouble):
@@ -84,8 +90,13 @@ def cache_search():
 
             super().stream_chunks(documents, resumes, record_input, **kwargs)
 
-    def create(root):
-        return DocumentSearch(root, _tuning(), worker=CacheWorker())
+    def create(root, config=None, *, events=None):
+        return DocumentSearch(
+            root,
+            config or _tuning(),
+            worker=CacheWorker(),
+            event_sink=_event_sink(events),
+        )
 
     return create, lambda: list(generated_inputs)
 
@@ -99,9 +110,9 @@ def _worktree(repository, path, branch=None):
 
 
 def test_new_run_uses_stale_repository_cache_and_current_locations(
-    tmp_path, model_search
+    tmp_path, cache_search
 ):
-    create, inputs = model_search
+    create, inputs = cache_search
     root = _repo_with_docs(tmp_path, committed=True)
     original = (root / "oracle/doc/allowed.md").read_text()
     events = []
@@ -205,11 +216,12 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_s
 
 @pytest.mark.parametrize("change", ["partition", "inference"])
 def test_reuse_compatibility_is_independent_of_partition(
-    tmp_path, model_search, change
+    tmp_path, cache_search, change
 ):
-
-    create, inputs = model_search
+    """入力片を固定し、分割条件と推論条件による cache の互換性だけを検査する。"""
+    create, inputs = cache_search
     root = _repo_with_docs(tmp_path)
+    original = (root / "oracle/doc/allowed.md").read_text()
     with closing(create(root)) as search:
         first = search.synchronize()
     config = _tuning()
@@ -223,7 +235,7 @@ def test_reuse_compatibility_is_independent_of_partition(
         assert search.sync_progress["generated_embeddings"] == (
             1 if change == "inference" else 0
         )
-    assert len(inputs()) == (2 if change == "inference" else 1)
+    assert inputs() == [original] * (2 if change == "inference" else 1)
 
 
 @pytest.mark.parametrize(
