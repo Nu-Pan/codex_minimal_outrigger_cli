@@ -9,6 +9,7 @@
 
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _cli_support import runner
 
@@ -28,6 +29,16 @@ def test_oracle_investigation_has_no_session_precondition(
     """oracle investigation が session なしの main worktree でも起動できる。"""
     root = cli_repository
     monkeypatch.chdir(root)
+
+    # root の Git 導出は test_basic_runtime.py、CLI との結合は test_runtime_cli.py に残す。
+    # session のない実 repository と ignore 検査を保ち、同じ root の反復探索だけを外す。
+    def resolve_test_roots(start_path: Path | None = None) -> tuple[Path, Path]:
+        assert (Path.cwd() if start_path is None else start_path).resolve() == root
+        return root, root
+
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
+    )
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
