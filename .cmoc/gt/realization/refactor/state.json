@@ -818,8 +818,8 @@
   "src/commons/runtime_document_search_assets.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "14d134ea1da84477a6b0ce68c0be047ce55d1e014660f8134ee8ef1ebe473a35",
-    "last_investigated_at": "2026-10-10_08-54-07_429"
+    "last_investigated_sha256": "7097ccdfe497bd2d1ed5ba0f3c1c9c995a9b758ecc8f6071b88391bdaec4fe5e",
+    "last_investigated_at": "2026-10-12_06-52-38_524"
   },
   "src/commons/runtime_document_search_mcp.py": {
     "investigation_required": true,
