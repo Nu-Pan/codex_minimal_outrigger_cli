@@ -1004,10 +1004,7 @@ def test_verified_merge_adjustment_keeps_sealed_result_without_run_tree_equality
         remediation._complete_join(h.context, h.manifest)
 
 
-@pytest.mark.parametrize("log_layout", ["current", "flat", "other_execution"])
-def test_recovery_uses_saved_merge_verification_after_commit(
-    feedback_run, monkeypatch, log_layout
-):
+def test_recovery_uses_saved_merge_verification_after_commit(feedback_run, monkeypatch):
     """merge commit 後は封印済み実行の directory 内の call log だけを再利用する。"""
     h = feedback_run
     identity = _add_candidate(h, "a")
@@ -1024,47 +1021,6 @@ def test_recovery_uses_saved_merge_verification_after_commit(
         remediation,
         "build_run_join_conflict_resolution_parameter",
         lambda *_args, **_kwargs: parameter,
-    )
-    log_dir = h.context.repo / ".cmoc/gu/log/codex"
-    if log_layout == "current":
-        log_dir /= h.manifest["run"]["targets"]["execution_id"]
-    elif log_layout == "other_execution":
-        log_dir /= "exec_zzzzzz_2026-09-29_15-04"
-    log_dir.mkdir(parents=True)
-    call_id = "cc_000000_2026-09-29_15-04"
-    call_path = log_dir / f"{call_id}_call.json"
-    prompt_path = log_dir / f"{call_id}_prompt.md"
-    output_path = log_dir / f"{call_id}_output.json"
-    prompt_path.write_text(parameter.prompt)
-    output_path.write_text(
-        "merge_resolution: resolved\n採用結果を維持する調整と検証を実施。\n"
-    )
-    call_path.write_text(
-        json.dumps(
-            {
-                "purpose": "run join conflict resolution",
-                "agent_call_kind": parameter.agent_call_kind,
-                "file_access_mode": parameter.file_access_mode.value,
-                "cwd": str(h.context.session_worktree.resolve()),
-                "prompt_log_path": str(prompt_path),
-                "output_path": str(output_path),
-            }
-        )
-    )
-    invocation_log = h.context.repo / h.manifest["run"]["invocation_log"]
-    invocation_log.write_text(
-        json.dumps(
-            {
-                "event": "codex_call",
-                "purpose": "run join conflict resolution",
-                "status": "succeeded",
-                "returncode": 0,
-                "call_log_path": str(call_path),
-                "prompt_log_path": str(prompt_path),
-                "output_path": str(output_path),
-            }
-        )
-        + "\n"
     )
     merge_head = "b" * 40
     monkeypatch.setattr(
@@ -1087,26 +1043,72 @@ def test_recovery_uses_saved_merge_verification_after_commit(
     monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
     monkeypatch.setattr(remediation, "_complete_join", lambda *_args: None)
 
-    if log_layout != "current":
-        with pytest.raises(CmocError, match="検証を一意に確認"):
-            remediation._recover_join(h.context, h.manifest)
-        assert h.manifest["run"]["merged"] is None
-        return
-
-    remediation._recover_join(h.context, h.manifest)
-    merged = read_json_object(h.context.repo / h.manifest["run"]["merged"]["path"])
-    assert merged["run_join_commit"] == merge_head
-    assert merged["resolution"]["agent_status"] == "resolved"
-    assert merged["resolution"]["recovered_from_call_log"] is True
-    assert merged["resolution"]["call_log"] == artifact_reference(
-        h.context.repo, call_path
-    )
-
-    output_path.write_text("merge_resolution: unresolved\n")
-    with pytest.raises(CmocError, match="検証を一意に確認"):
-        remediation._recover_merge_resolution(
-            h.context, h.manifest, seal, required=True
+    # 同じ remediation・seal を共有し、拒否後に manifest が変わらないことも検査する。
+    unrecovered_manifest = copy.deepcopy(h.manifest)
+    for log_layout in ("flat", "other_execution", "current"):
+        log_dir = h.context.repo / ".cmoc/gu/log/codex"
+        if log_layout == "current":
+            log_dir /= h.manifest["run"]["targets"]["execution_id"]
+        elif log_layout == "other_execution":
+            log_dir /= "exec_zzzzzz_2026-09-29_15-04"
+        log_dir.mkdir(parents=True)
+        call_id = "cc_000000_2026-09-29_15-04"
+        call_path = log_dir / f"{call_id}_call.json"
+        prompt_path = log_dir / f"{call_id}_prompt.md"
+        output_path = log_dir / f"{call_id}_output.json"
+        prompt_path.write_text(parameter.prompt)
+        output_path.write_text(
+            "merge_resolution: resolved\n採用結果を維持する調整と検証を実施。\n"
         )
+        call_path.write_text(
+            json.dumps(
+                {
+                    "purpose": "run join conflict resolution",
+                    "agent_call_kind": parameter.agent_call_kind,
+                    "file_access_mode": parameter.file_access_mode.value,
+                    "cwd": str(h.context.session_worktree.resolve()),
+                    "prompt_log_path": str(prompt_path),
+                    "output_path": str(output_path),
+                }
+            )
+        )
+        invocation_log = h.context.repo / h.manifest["run"]["invocation_log"]
+        invocation_log.write_text(
+            json.dumps(
+                {
+                    "event": "codex_call",
+                    "purpose": "run join conflict resolution",
+                    "status": "succeeded",
+                    "returncode": 0,
+                    "call_log_path": str(call_path),
+                    "prompt_log_path": str(prompt_path),
+                    "output_path": str(output_path),
+                }
+            )
+            + "\n"
+        )
+
+        if log_layout != "current":
+            with pytest.raises(CmocError, match="検証を一意に確認"):
+                remediation._recover_join(h.context, h.manifest)
+            assert h.manifest == unrecovered_manifest, log_layout
+            continue
+
+        remediation._recover_join(h.context, h.manifest)
+        merged = read_json_object(h.context.repo / h.manifest["run"]["merged"]["path"])
+        assert merged["run_join_commit"] == merge_head
+        assert merged["resolution"]["agent_status"] == "resolved"
+        assert merged["resolution"]["recovered_from_call_log"] is True
+        assert merged["resolution"]["call_log"] == artifact_reference(
+            h.context.repo, call_path
+        )
+
+        output_path.write_text("merge_resolution: unresolved\n")
+        with pytest.raises(CmocError, match="検証を一意に確認"):
+            remediation._recover_merge_resolution(
+                h.context, h.manifest, seal, required=True
+            )
+    assert len(h.calls) == 1
 
 
 def test_active_issue_materializes_basis_without_checkpoint_dependency(
