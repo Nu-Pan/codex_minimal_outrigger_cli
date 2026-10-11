@@ -7,6 +7,7 @@ from itertools import count
 from pathlib import Path
 from threading import Event, Lock
 from typing import TextIO, cast
+from unittest.mock import Mock
 
 import oracle.other.path_model as path_model_module
 import pytest
@@ -22,10 +23,8 @@ from oracle.acp_builder.quota_probe import (
     build_quota_availability_probe_parameter as build_canonical_quota_probe_parameter,
 )
 
-import acp.builder.quota_probe as quota_probe_module
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
-from acp.builder.quota_probe import build_quota_availability_probe_parameter
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import SubcommandLogger
 from commons.runtime_codex import run_codex_exec
@@ -66,8 +65,8 @@ def quota_control_root(
 
 
 def quota_probe_prompt(agent_call_cwd: Path) -> str:
-    """実在する quota probe adapter が生成する prompt を返す。"""
-    return build_quota_availability_probe_parameter(
+    """runtime が正本 builder から生成する quota probe の prompt を返す。"""
+    return runtime_codex_exec._quota_availability_probe_parameter(
         AgentCallParameter(
             agent_call_kind="build_realization_apply_fork_launch_exec_parameter",
             file_access_mode=FileAccessMode.READONLY,
@@ -347,8 +346,9 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     assert codex_events[1]["error"] == "KeyboardInterrupt()"
 
 
-def test_quota_probe_adapter_uses_canonical_complete_prompt(
+def test_quota_probe_uses_canonical_complete_prompt(
     quota_prompt_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """quota probe が正本 builder の完全 prompt と固有 call kind を使用する。"""
     root = quota_prompt_root
@@ -360,9 +360,16 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(
         agent_call_cwd=root,
     )
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    probe = build_quota_availability_probe_parameter(base)
+    # 正本の生成結果を一度だけ作り、runtime が cwd を渡してそのまま返すことを確かめる。
+    builder = Mock(return_value=build_canonical_quota_probe_parameter(root))
+    monkeypatch.setattr(
+        "oracle.acp_builder.quota_probe.build_quota_availability_probe_parameter",
+        builder,
+    )
+    probe = runtime_codex_exec._quota_availability_probe_parameter(base)
 
-    assert probe == build_canonical_quota_probe_parameter(root)
+    builder.assert_called_once_with(root)
+    assert probe is builder.return_value
     assert probe.agent_call_kind == "build_quota_availability_probe_parameter"
     assert probe.file_access_mode == FileAccessMode.READONLY
     assert probe.prompt
@@ -381,14 +388,6 @@ def test_quota_probe_adapter_uses_canonical_complete_prompt(
     assert probe.structured_output_schema_path is None
     assert probe.enable_document_search_mcp is False
     assert probe.agent_call_cwd == base.agent_call_cwd
-
-
-def test_quota_probe_adapter_exports_only_builder() -> None:
-    """quota probe の互換 module が builder 以外を公開しないことを検証する。"""
-    assert quota_probe_module.__all__ == ["build_quota_availability_probe_parameter"]
-    assert {name for name in vars(quota_probe_module) if not name.startswith("_")} == {
-        "build_quota_availability_probe_parameter"
-    }
 
 
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(

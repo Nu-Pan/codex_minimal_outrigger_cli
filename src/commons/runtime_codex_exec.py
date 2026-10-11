@@ -234,9 +234,11 @@ def _quota_availability_probe_parameter(
 ) -> AgentCallParameter:
     """quota判定用のprobe parameterをcanonical builderから作る。"""
     try:
-        from acp.builder.quota_probe import build_quota_availability_probe_parameter
+        from oracle.acp_builder.quota_probe import (
+            build_quota_availability_probe_parameter,
+        )
 
-        return build_quota_availability_probe_parameter(base_parameter)
+        return build_quota_availability_probe_parameter(base_parameter.agent_call_cwd)
     except (AttributeError, ModuleNotFoundError) as exc:
         raise CmocError(
             "quota availability probe の builder が見つかりません。",

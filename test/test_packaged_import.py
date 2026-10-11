@@ -82,15 +82,16 @@ def _packaged_layout(sources: Path, tmp_path: Path, *packages: str) -> Path:
     return target
 
 
-def test_quota_probe_imports_from_packaged_layout(
+def test_quota_probe_and_acp_basic_import_from_packaged_layout(
     tmp_path: Path,
     packaged_sources: Path,
 ) -> None:
-    """quota probe の canonical builder を packaged layout で検証する。
+    """quota probe と ACP basic の正本参照を同じ packaged process で検証する。
 
-    正本 builder が packaged layout でも完全 prompt を参照し、期待する parameter
-    を生成できることを確認する。
+    acp の型再公開と正本 builder の完全 prompt を、basic・commons を含まない配置で
+    確認する。共通の oracle import を一つの独立 process で検証する。
     根拠: {{work-root}}/oracle/src/oracle/acp_builder/quota_probe.py
+    {{work-root}}/oracle/src/oracle/acp_builder/basic.py
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
     root = Path(__file__).parents[1]
@@ -100,7 +101,7 @@ def test_quota_probe_imports_from_packaged_layout(
     assert setuptools_config["package-dir"]["oracle"] == "oracle/src/oracle"
     assert "oracle/src" in setuptools_config["packages"]["find"]["where"]
 
-    target = _packaged_layout(packaged_sources, tmp_path, "acp", "basic", "oracle")
+    target = _packaged_layout(packaged_sources, tmp_path, "acp", "oracle")
 
     # Git metadata の導出は test_basic_runtime.py と quota の polls_and_resumes に残す。
     # ここでは探索結果だけを置換し、packaged builder と prompt の参照を実行する。
@@ -111,15 +112,20 @@ def test_quota_probe_imports_from_packaged_layout(
             "from pathlib import Path; "
             "assert '' not in sys.path; "
             "assert str(Path.cwd()) not in sys.path; "
+            "import acp.builder; "
+            "from acp.builder.basic import AgentCallParameter, FileAccessMode; "
+            "from oracle.acp_builder.basic import AgentCallParameter as Canonical; "
+            "assert acp.builder.__all__ == ['basic']; "
+            "assert sorted(n for n in vars(acp.builder) if not n.startswith('_')) == ['basic']; "
+            "assert acp.builder.basic.AgentCallParameter is Canonical; "
+            "assert AgentCallParameter is Canonical; "
+            "assert FileAccessMode.READONLY.value == 'readonly'; "
             "import oracle.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
-            "from basic.acp import AgentCallParameter, FileAccessMode; "
-            "from acp.builder.quota_probe import "
+            "from oracle.acp_builder.quota_probe import "
             "build_quota_availability_probe_parameter as build_probe; "
-            "base = AgentCallParameter('base', FileAccessMode.READONLY, "
-            "'base', None, Path.cwd()); "
-            "probe = build_probe(base); "
+            "probe = build_probe(Path.cwd()); "
             "assert probe.agent_call_cwd == Path.cwd(); "
             "assert probe.prompt; "
             "assert '# feedback observation reporting' in probe.prompt; "
@@ -212,36 +218,6 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "assert editor_input.ORIGINAL_PROMPT_PLACEHOLDER not in p.prompt; "
             "assert not list(input_path.parent.glob('*_cmpl.md')); "
             "assert p.agent_call_cwd == Path.cwd(); "
-        ),
-        tmp_path,
-    )
-
-    assert result.returncode == 0, result.stderr
-
-
-def test_acp_builder_basic_imports_from_packaged_layout(
-    tmp_path: Path, packaged_sources: Path
-) -> None:
-    """ACP basic の canonical 定義再公開を packaged layout で検証する。
-
-    realization 側の公開 import が oracle 側の型を複製せず同一オブジェクトとして
-    再公開し、正本の file access mode を利用できることを確認する。
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/basic.py
-    {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    """
-    target = _packaged_layout(packaged_sources, tmp_path, "acp", "oracle")
-
-    result = _run_from_packaged_layout(
-        target,
-        (
-            "import acp.builder; "
-            "from acp.builder.basic import AgentCallParameter, FileAccessMode; "
-            "from oracle.acp_builder.basic import AgentCallParameter as Canonical; "
-            "assert acp.builder.__all__ == ['basic']; "
-            "assert sorted(n for n in vars(acp.builder) if not n.startswith('_')) == ['basic']; "
-            "assert acp.builder.basic.AgentCallParameter is Canonical; "
-            "assert AgentCallParameter is Canonical; "
-            "assert FileAccessMode.READONLY.value == 'readonly'"
         ),
         tmp_path,
     )
