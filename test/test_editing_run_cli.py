@@ -2289,8 +2289,7 @@ def test_apply_start_failure_does_not_recover_existing_error_run(
 ) -> None:
     """新しい apply fork の事前条件失敗で既存 error run を変更しない。"""
     root, _session_branch, state_path = ready_content_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "error")
+    context = _prepare_apply_run(ready_content_session, run_state="error")
     (context.run_worktree / "README.md").write_text("existing error run\n")
 
     result = runner.invoke(
@@ -2472,18 +2471,17 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
 
 
 def test_run_join_from_run_worktree_tracks_main_doctor_repairs(
-    tmp_path: Path,
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 起点の doctor が session 側へ行う修復も join の許可差分に含める。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_join_session
     gitignore = root / ".gitignore"
     gitignore.write_text(gitignore.read_text().replace("/.cmoc/gu/\n", ""))
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "create stale cmoc ignore")
 
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
+    context = _prepare_apply_run(ready_join_session)
     monkeypatch.chdir(context.run_worktree)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2513,19 +2511,17 @@ def test_run_join_from_run_worktree_preserves_prior_session_doctor_path_change(
 
 
 def test_run_join_preserves_existing_non_search_config_shape(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    ready_join_session: tuple[Path, str, Path],
 ) -> None:
     """通常起動の doctor は検索以外の不足を理由に config を書き換えない。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, _state_path = ready_join_session
     config = root / ".cmoc" / "gt" / "config.json"
     config_data = json.loads(config.read_text())
     config_data.pop("num_parallel")
     config.write_text(json.dumps(config_data, indent=2) + "\n")
     run_git(root, "add", ".cmoc/gt/config.json")
     run_git(root, "commit", "-m", "create stale doctor config")
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
+    _prepare_apply_run(ready_join_session)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
