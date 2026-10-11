@@ -146,7 +146,9 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
     )
 
     # root 探索の実 Git 境界は test_basic_runtime.py と oracle edit の結合 test に残す。
-    # builder・正本 schema・editor input・handoff は packaged module の実経路を通す。
+    # builder・正本 schema・editor input・handoff guide は packaged module の実経路を通す。
+    # submission のない TCP 起動は省き、登録・取得・上書き・drain は
+    # test_editor_input_handoff.py、editor と target の結合は test_prompt_editor_input.py に残す。
     result = _run_from_packaged_layout(
         target,
         (
@@ -155,6 +157,8 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "import acp.builder.oracle.edit.launch_exec as edit_module; "
             "from pathlib import Path; "
             "from types import SimpleNamespace; "
+            "from oracle.editor_input_handoff.guide import "
+            "build_editor_input_handoff_guide; "
             "import oracle.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
@@ -183,6 +187,10 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "editor_input.reserve_prompt_editor_input(Path.cwd()); "
             "skeleton = build_main("
             "editor_input.ORIGINAL_PROMPT_PLACEHOLDER).prompt; "
+            "assert skeleton in build_editor_input_handoff_guide(skeleton); "
+            "editor_input.start_editor_input_handoff = "
+            "lambda root, path, prompt: SimpleNamespace("
+            "target_id='packaged-target', close=lambda: None); "
             "editor_input._select_editor = lambda: ['fake-editor']; "
             "real_subprocess_run = editor_input.subprocess.run; "
             "editor_input.subprocess.run = lambda argv: "
