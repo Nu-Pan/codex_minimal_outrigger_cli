@@ -18,7 +18,7 @@ from _codex_support import (
     stub_codex_overrides,
 )
 from _command_support import write_python_executable
-from _git_support import make_repo, run_git
+from _git_support import run_git
 from _handoff_support import handoff_input
 from oracle.other.cmoc_config import CodexCallConfig
 
@@ -301,11 +301,21 @@ def test_run_codex_tui_skips_notification_probe_during_completion(
 
 
 def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """linked worktree の完全 prompt 本文とアクセス上書きを維持する。"""
-    root = make_repo(tmp_path)
+    # HEAD と実 linked metadata を使い、参照しない追跡 file・index は準備しない。
+    root = committed_repository
     setup_codex_home(tmp_path, monkeypatch)
+    # 通知の version 判定と callback 設定は上の専用ケースで検証する。
+    # ここでは実 process への prompt・cwd・handoff 環境の受け渡しを扱う。
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        lambda *_args: False,
+    )
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-tui-runtime", str(linked), "HEAD")
@@ -358,17 +368,18 @@ def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
 
 def test_run_codex_tui_logs_successful_call(
     tui_runtime_directory: Path,
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """正常終了時に call log とサブコマンドイベントだけを残す。"""
     root = tui_runtime_directory
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(0)"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    # 成功 process との実結合は prompt 起動ケースに残し、ここではログを検査する。
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "run_codex_subprocess",
+        lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0),
+    )
     logger = SubcommandLogger(root, "test")
     token = set_current_subcommand_logger(logger)
     try:
