@@ -797,16 +797,20 @@ def test_apply_join_hook_selects_diff_base(
     assert state.session.last_joined_apply_fork_commit == previous_base
 
 
-@pytest.mark.parametrize("run_state", ["joinable", "error"])
-@pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
+@pytest.mark.parametrize(
+    ("run_state", "has_run_change"),
+    [("joinable", False), ("error", True)],
+    ids=["no-op-joinable", "merge-error"],
+)
 def test_apply_join_updates_diff_base_only_for_joinable_run(
     ready_content_session: tuple[Path, str, Path],
     run_state: str,
     has_run_change: bool,
 ) -> None:
-    """実 Git の merge/no-op 後に比較始点を保存し、未追従の変更を残す。"""
-    # 初回/継続の選択は上の全条件 test と fork→join test で検査する。
-    # ここでは既存の比較始点と異なる fork commit を用意し、保存結果を確かめる。
+    """成功 no-op と error merge で Git・比較始点の保存・report の結合を検証する。"""
+    # hook の全 8 条件は上の軽量 test、成功 merge は fork→join test で検査する。
+    # 実 Git では各 merge 結果と run state の代表例を通し、組合せを重複させない。
+    # 既存の比較始点と異なる fork commit を用意し、未追従の変更が残るか確かめる。
     root, _session_branch, state_path = ready_content_session
     state = _state(state_path)
     previous_base = run_git(root, "rev-parse", "HEAD").stdout.strip()
