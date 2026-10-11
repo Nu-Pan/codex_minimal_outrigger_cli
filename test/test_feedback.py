@@ -19,6 +19,7 @@ import json
 import os
 import socket
 import threading
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -3045,7 +3046,7 @@ def test_machine_threshold_counts_distinct_scopes_within_one_day(
 def test_machine_issue_lifecycle_keeps_threshold_state_after_window_expires(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """閾値未満、案件化、部分・全件の期限切れを同じ公開 state で追跡する。"""
+    """閾値未満・案件化・全件失効の公開 state と、失効の両分岐を検証する。"""
     # 案件化までの Git/session と publication を、期限切れ検査の準備にも使う。
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
@@ -3103,26 +3104,50 @@ def test_machine_issue_lifecycle_keeps_threshold_state_after_window_expires(
             assert state.issues[candidate_id]["occurrence_count"] == 2
             remediation.assert_called_once()
 
-    threshold_state = state.issues[candidate_id]["machine_state"]
+    threshold_state = deepcopy(state.issues[candidate_id]["machine_state"])
     assert isinstance(threshold_state, dict)
-    # 一件だけ期限切れになる場合と、全件が期限切れになる場合を区別する。
-    for expected_calls, elapsed_days in enumerate((11, 31), start=2):
+    # 部分・全件失効で候補が消えたり閾値未満 state に上書きされたりしないことを、
+    # 公開済み state からの候補構築で確かめる。CLI の再確認・publication は下で一度通す。
+    for elapsed_days in (11, 31):
         cut_at = (
             (base + timedelta(days=elapsed_days)).isoformat().replace("+00:00", "Z")
         )
-        result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-
-        assert result.exit_code == 0, result.output
-        assert remediation.call_count == expected_calls
-        state = load_active_state(root)
-        assert state.current is not None
-        assert (
-            f'report_cut_at: "{cut_at}"'
-            in (root / state.current["report_path"]).read_text()
+        remaining = feedback_report_module._merge_machine_aggregate(
+            root, deepcopy(threshold_state), [], cut_at, canonical_key
         )
-        assert state.machine_aggregates == {}
-        assert set(state.issues) == {candidate_id}
-        assert state.issues[candidate_id]["machine_state"] == threshold_state
+        if elapsed_days == 11:
+            assert remaining is not None
+            assert remaining["occurrence_count"] == 1
+            assert not feedback_report_module._machine_threshold_met(remaining)
+        else:
+            assert remaining is None
+
+        candidates, aggregates = feedback_report_module._build_candidates(
+            root,
+            root,
+            {"cut_at": cut_at, "inputs": {"references": []}},
+            {},
+            deepcopy(state),
+        )
+        assert aggregates == {}
+        assert set(candidates) == {candidate_id}
+        assert candidates[candidate_id]["machine_state"] == threshold_state
+        assert candidates[candidate_id]["occurrence_count"] == 2
+    remediation.assert_called_once()
+
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert remediation.call_count == 2
+    state = load_active_state(root)
+    assert state.current is not None
+    assert (
+        f'report_cut_at: "{cut_at}"'
+        in (root / state.current["report_path"]).read_text()
+    )
+    assert state.machine_aggregates == {}
+    assert set(state.issues) == {candidate_id}
+    assert state.issues[candidate_id]["machine_state"] == threshold_state
 
 
 def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
