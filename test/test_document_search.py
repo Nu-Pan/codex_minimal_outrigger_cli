@@ -527,15 +527,7 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-# stdin の復号と chunker は共通なので、受信条件ごとに一方の出力形式を検査する。
-@pytest.mark.parametrize(
-    ("operation", "fragment_size"),
-    [("chunk_stream", 1), ("chunk_embed", 65536)],
-    ids=["stream-bytewise", "batch-whole"],
-)
-def test_worker_preserves_text_across_utf8_input_fragments(
-    tmp_path: Path, operation: str, fragment_size: int
-) -> None:
+def test_worker_preserves_text_across_utf8_input_fragments(tmp_path: Path) -> None:
     """実 worker が受信境界をまたぐ文字と、その原文上の位置を保つ。"""
     _fake_node_model(tmp_path)
     entrypoint = tmp_path / "worker.mjs"
@@ -545,10 +537,9 @@ def test_worker_preserves_text_across_utf8_input_fragments(
         """import { readFileSync } from "node:fs";
 import { Readable } from "node:stream";
 const input = readFileSync(0);
-const size = Number(process.env.CMOC_TEST_FRAGMENT_SIZE);
 const fragments = [];
-for (let start = 0; start < input.length; start += size) {
-  fragments.push(input.subarray(start, start + size));
+for (let start = 0; start < input.length; start++) {
+  fragments.push(input.subarray(start, start + 1));
 }
 Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
 """
@@ -556,7 +547,7 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
     text = "# 日本語\néあ😀 と ASCII\n受信境界をまたいでも末尾まで保つ。\n"
     config = _tuning()
     request = NodeSearchWorker(tmp_path, config)._request(
-        operation,
+        "chunk_stream",
         {
             "documents": {"doc.md": text},
             "resume": {"doc.md": 0},
@@ -568,25 +559,19 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
         ["node", "--import", str(preload), str(entrypoint)],
         input=json.dumps(request, ensure_ascii=False).encode("utf-8"),
         cwd=tmp_path,
-        env={**os.environ, "CMOC_TEST_FRAGMENT_SIZE": str(fragment_size)},
         capture_output=True,
         timeout=10,
         check=False,
     )
     assert result.returncode == 0, result.stderr.decode("utf-8")
-    if operation == "chunk_stream":
-        events = [json.loads(line) for line in result.stdout.splitlines()]
-        chunks = [event for event in events if event["kind"] == "chunk"]
-        assert events[-2:] == [
-            {"kind": "document_complete", "path": "doc.md", "chunk_count": len(chunks)},
-            {"kind": "done"},
-        ]
-        assert [chunk["ordinal"] for chunk in chunks] == list(range(len(chunks)))
-        assert all(chunk["path"] == "doc.md" for chunk in chunks)
-    else:
-        response = json.loads(result.stdout)
-        assert response["status"] == "ok"
-        chunks = response["result"]["doc.md"]
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    chunks = [event for event in events if event["kind"] == "chunk"]
+    assert events[-2:] == [
+        {"kind": "document_complete", "path": "doc.md", "chunk_count": len(chunks)},
+        {"kind": "done"},
+    ]
+    assert [chunk["ordinal"] for chunk in chunks] == list(range(len(chunks)))
+    assert all(chunk["path"] == "doc.md" for chunk in chunks)
     inputs = [
         json.loads(line)
         for line in (tmp_path / "embedding-inputs.jsonl").read_text().splitlines()
@@ -689,9 +674,9 @@ def test_worker_reports_closed_output_pipe(tmp_path: Path, operation: str) -> No
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
-    """長い節の overlap が次の短い節へ越境せず、本文を落とさない。"""
+    """一括応答が Unicode の原文位置を保ち、overlap を節内に限る。"""
     _fake_node_model(tmp_path)
-    body = "冒頭\n# A\n" + "長い本文" * 8 + "\n## B\n短い本文\n"
+    body = "冒頭 éあ😀\n# A\n" + "長い本文" * 8 + "\n## B\n短い本文é😀\n"
     tuning = replace(_tuning(), chunk_tokens=12, chunk_overlap_tokens=3)
     request = NodeSearchWorker(tmp_path, tuning)._request(
         "chunk_embed", {"documents": {"doc.md": body}, "config": asdict(tuning)}
@@ -707,13 +692,22 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
         check=False,
     )
     assert process.returncode == 0, process.stderr
-    chunks = json.loads(process.stdout)["result"]["doc.md"]
+    response = json.loads(process.stdout)
+    assert response["status"] == "ok"
+    chunks = response["result"]["doc.md"]
+    inputs = [
+        json.loads(line)
+        for line in (tmp_path / "embedding-inputs.jsonl").read_text().splitlines()
+    ]
+    assert chunks[0]["start"] == 0 and chunks[-1]["end"] == len(body)
     sections = _heading_ranges(body)
-    for chunk in chunks:
+    for chunk, excerpt in zip(chunks, inputs, strict=True):
         assert any(
             start <= chunk["start"] < chunk["end"] <= end for start, end in sections
         )
-    assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文\n"
+        assert body[chunk["start"] : chunk["end"]] == excerpt
+        assert len(excerpt) <= tuning.chunk_tokens
+    assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文é😀\n"
     covered = {
         index for chunk in chunks for index in range(chunk["start"], chunk["end"])
     }
