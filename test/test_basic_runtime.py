@@ -412,9 +412,8 @@ def test_run_worktree_rejects_noncanonical_branch(
             )
 
 
-@pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
 def test_run_worktree_lookup_rejects_symlink_components(
-    committed_repository: Path, tmp_path: Path, symlink_component: str
+    committed_repository: Path, tmp_path: Path
 ) -> None:
     """登録後に symlink 化された run worktree を作業 root として扱わない。"""
     root = committed_repository
@@ -422,22 +421,17 @@ def test_run_worktree_lookup_rejects_symlink_components(
     expected = managed / SESSION_ID / RUN_ID
     run_git(root, "worktree", "add", "-b", RUN_BRANCH, str(expected), "HEAD")
 
-    external = tmp_path / "external"
-    moved = external / "worktree"
-    moved.parent.mkdir(parents=True)
-    if symlink_component == "base":
-        managed.rename(moved)
-        managed.symlink_to(moved, target_is_directory=True)
-    elif symlink_component == "session":
-        moved = external / SESSION_ID
-        (managed / SESSION_ID).rename(moved)
-        (managed / SESSION_ID).symlink_to(moved, target_is_directory=True)
-    else:
-        moved = external / RUN_ID
-        expected.rename(moved)
-        expected.symlink_to(moved, target_is_directory=True)
+    # 同じ登録済み worktree を毎回元へ戻し、リンク位置だけを切り替える。
+    moved = tmp_path / "moved-worktree"
+    for symlink_path in (expected, expected.parent, managed):
+        symlink_path.rename(moved)
+        symlink_path.symlink_to(moved, target_is_directory=True)
 
-    assert worktree_for_branch_optional(root, RUN_BRANCH) is None
+        assert worktree_for_branch_optional(root, RUN_BRANCH) is None, symlink_path
+        assert symlink_path.is_symlink(), symlink_path
+
+        symlink_path.unlink()
+        moved.rename(symlink_path)
 
 
 def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
@@ -497,9 +491,8 @@ def test_session_worktree_lookup_rejects_invalid_registered_path(
     assert worktree_for_branch_optional(root, SESSION_BRANCH) is None
 
 
-@pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
 def test_create_run_worktree_rejects_symlink_components(
-    cli_repository: Path, tmp_path: Path, symlink_component: str
+    cli_repository: Path, tmp_path: Path
 ) -> None:
     """symlink componentを経由したrun worktree作成を拒否することを検証する。"""
     root = cli_repository
@@ -507,29 +500,24 @@ def test_create_run_worktree_rejects_symlink_components(
     external = tmp_path / "external"
     external.mkdir()
 
-    if symlink_component == "base":
-        managed.parent.mkdir(parents=True)
-        managed.symlink_to(external, target_is_directory=True)
-        symlink_path = managed
-    else:
-        managed.mkdir(parents=True)
-        session = managed / SESSION_ID
-        if symlink_component == "session":
-            session.symlink_to(external / SESSION_ID, target_is_directory=True)
-            symlink_path = session
-        else:
-            session.mkdir()
-            symlink_path = session / RUN_ID
-            symlink_path.symlink_to(
-                external / SESSION_ID / RUN_ID, target_is_directory=True
-            )
-
     target = managed / SESSION_ID / RUN_ID
-    with pytest.raises(CmocError, match="run worktree path"):
-        create_run_worktree(root, RUN_BRANCH, target)
+    target.parent.mkdir(parents=True)
+    # 拒否で Git は変わらないため、内側から空の親を置き換えて準備を共用する。
+    for symlink_path, destination in (
+        (target, external / SESSION_ID / RUN_ID),
+        (target.parent, external / SESSION_ID),
+        (managed, external),
+    ):
+        if symlink_path.exists():
+            symlink_path.rmdir()
+        symlink_path.symlink_to(destination, target_is_directory=True)
 
-    assert symlink_path.is_symlink()
-    assert not (external / SESSION_ID / RUN_ID).exists()
+        with pytest.raises(CmocError, match="run worktree path"):
+            create_run_worktree(root, RUN_BRANCH, target)
+
+        assert symlink_path.is_symlink(), symlink_path
+        assert not (external / SESSION_ID / RUN_ID).exists(), symlink_path
+        symlink_path.unlink()
 
 
 def test_run_worktree_operations_reject_unregistered_managed_path(
