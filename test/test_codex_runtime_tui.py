@@ -564,11 +564,11 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
 
 
 def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
-    cli_repository, tmp_path, monkeypatch
+    tui_runtime_directory, monkeypatch
 ):
     """並行する TUI の MCP が自身の起動前ログと一致する送信元を保持する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
+    # 送信元の分離は実 stdio MCP で確かめ、Git root 導出は prompt 起動ケースに委ねる。
+    root = tui_runtime_directory
     monkeypatch.setenv(EDITOR_INPUT_SOURCE_ENV, "stale-parent-source")
     monkeypatch.setattr(
         runtime_codex_tui,
