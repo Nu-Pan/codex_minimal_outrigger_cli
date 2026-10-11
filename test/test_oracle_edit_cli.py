@@ -158,6 +158,19 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
                 sync_refactor_entries=sync_refactor_entries,
             )
 
+    real_ensure_prompt_editor_roots_ignored = (
+        oracle_edit_module.ensure_prompt_editor_roots_ignored
+    )
+
+    def record_ensure_prompt_editor_roots_ignored(target_root: Path) -> None:
+        """ignore 修復との結合は代表ケースに残し、全ケースで呼び出しを検証する。"""
+        assert target_root == root
+        events.append("ignore")
+        # 成功・失敗によらず編集開始前の同じ処理なので、Git 修復を繰り返さない。
+        # 境界・失敗・変更後の再検査は test_runtime_git_ignore.py と test_git_query_reuse.py に残す。
+        if integrated_case:
+            real_ensure_prompt_editor_roots_ignored(target_root)
+
     real_build_main_parameter = (
         oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
     )
@@ -207,6 +220,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         runtime_cli_module,
         "run_doctor_preprocess",
         record_run_doctor_preprocess,
+    )
+    monkeypatch.setattr(
+        oracle_edit_module,
+        "ensure_prompt_editor_roots_ignored",
+        record_ensure_prompt_editor_roots_ignored,
     )
     monkeypatch.setattr(
         oracle_edit_module,
@@ -339,6 +357,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "変更を未コミットのまま残す" in complete_prompt_skeleton
     expected_events = [
         "doctor",
+        "ignore",
         "build-main-skeleton",
         "editor",
         "collect",
