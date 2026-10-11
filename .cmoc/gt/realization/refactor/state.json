@@ -558,10 +558,10 @@
     "last_investigated_at": "2026-10-11_20-43-11_603"
   },
   "pyproject.toml": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "0cf4dc15968185e6193cc0c22ad7c5119ae574f52477beaf84693315aee09c13",
-    "last_investigated_at": "2026-10-10_00-10-56_162"
+    "last_investigated_at": "2026-10-11_20-49-30_515"
   },
   "src/acp/__init__.py": {
     "investigation_required": true,
