@@ -1507,7 +1507,7 @@ def test_feedback_shutdown_drains_accepted_tcp_request(
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     storage_started = threading.Event()
     release_storage = threading.Event()
-    close_started = threading.Event()
+    close_progress = threading.Event()
     close_finished = threading.Event()
     submission_result: dict[str, object] = {}
     submission_errors: list[BaseException] = []
@@ -1515,6 +1515,12 @@ def test_feedback_shutdown_drains_accepted_tcp_request(
     submission_thread: threading.Thread | None = None
     close_thread: threading.Thread | None = None
     original_store = feedback_module.store_agent_observation
+    original_wait = invocation._condition.wait
+
+    def observe_drain_wait(timeout: float | None = None) -> bool:
+        # 固定時間ではなく、実際の drain 待機を観測する。lock の解放・再取得は実物に任せる。
+        close_progress.set()
+        return original_wait(timeout)
 
     def blocking_store(
         repo: Path,
@@ -1527,6 +1533,7 @@ def test_feedback_shutdown_drains_accepted_tcp_request(
             raise RuntimeError("test did not release feedback storage")
         return original_store(repo, context, payload)
 
+    monkeypatch.setattr(invocation._condition, "wait", observe_drain_wait)
     monkeypatch.setattr(feedback_module, "store_agent_observation", blocking_store)
     invocation.start()
     try:
@@ -1553,7 +1560,6 @@ def test_feedback_shutdown_drains_accepted_tcp_request(
 
         def close_context() -> None:
             """call 終了または invocation 停止の完了を親 thread へ通知する。"""
-            close_started.set()
             try:
                 if stop_invocation:
                     invocation.stop()
@@ -1563,14 +1569,20 @@ def test_feedback_shutdown_drains_accepted_tcp_request(
                 close_errors.append(exc)
             finally:
                 close_finished.set()
+                # drain を省いて終了する回帰でも親 thread を起こし、即座に失敗させる。
+                close_progress.set()
 
         submission_thread = threading.Thread(target=submit)
         submission_thread.start()
         assert storage_started.wait(timeout=2)
         close_thread = threading.Thread(target=close_context)
         close_thread.start()
-        assert close_started.wait(timeout=2)
-        assert not close_finished.wait(timeout=0.05)
+        assert close_progress.wait(timeout=2)
+        with invocation._condition:
+            assert not close_finished.is_set()
+            assert not call.accepting
+            assert call.inflight == 1
+            assert call.capability in invocation._calls
 
         release_storage.set()
         submission_thread.join(timeout=5)
