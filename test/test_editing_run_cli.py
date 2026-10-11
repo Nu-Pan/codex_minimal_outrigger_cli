@@ -3880,6 +3880,16 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
     root, _, state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "README.md")
     reviewed = []
+    unit_diff_queries = []
+    inspect = refactor_module.tree_changes
+
+    def record_unit_diff(worktree, base, end="HEAD"):
+        # report の net 差分は調べるが、state のみの単位には rename 照会が不要。
+        if end != "HEAD":
+            unit_diff_queries.append((base, end))
+        return inspect(worktree, base, end)
+
+    monkeypatch.setattr(refactor_module, "tree_changes", record_unit_diff)
     if interrupt_next_cycle_start:
         commit = refactor_module.commit_work_unit
         cycles = 0
@@ -3928,6 +3938,7 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
+    assert unit_diff_queries == []
     run = _state(state_path)["run"]
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     state = load_refactor_state(worktree)
@@ -4012,6 +4023,7 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
     def review(parameter, **kwargs):
         nonlocal reviewed
         findings = []
+        verification = {"status": "not_required", "summary": "no edits"}
         if kwargs["purpose"] == "realization refactor: README.md":
             reviewed += 1
             if reviewed == 1:
@@ -4022,12 +4034,22 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
                         "resolution": {"status": "unresolved", "summary": "defer"},
                     }
                 ]
+            else:
+                (parameter.agent_call_cwd / "README.md").write_text("resolved\n")
+                findings = [
+                    {
+                        "title": "resolved finding",
+                        "changed_paths": ["README.md"],
+                        "resolution": {"status": "fixed", "summary": "resolved"},
+                    }
+                ]
+                verification = {"status": "passed", "summary": "full gate passed"}
         return SimpleNamespace(
             returncode=0,
             call_log_path=parameter.agent_call_cwd / "call.json",
             output_json={
                 "findings": findings,
-                "verification": {"status": "not_required", "summary": "no edits"},
+                "verification": verification,
             },
         )
 
@@ -4046,8 +4068,9 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     assert (
         load_refactor_state(worktree)["README.md"]["last_investigation_result"]
-        == "no_findings"
+        == "findings"
     )
+    assert (worktree / "README.md").read_text() == "resolved\n"
     assert not worktree_change_paths(worktree)
     report = terminal_primary_report(result).read_text()
     assert "## Unresolved findings\n- none" in report

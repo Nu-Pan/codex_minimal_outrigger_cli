@@ -796,10 +796,15 @@ def _commit_refactor_unit(
                     )
                 unresolved_before = dict(unresolved_findings)
                 try:
-                    committed_changes = tree_changes(
-                        context.run_worktree,
-                        before_head,
-                        after_head,
+                    # state だけを確定した単位には rename がなく、差分照会も不要。
+                    committed_changes = (
+                        tree_changes(
+                            context.run_worktree,
+                            before_head,
+                            after_head,
+                        )
+                        if pending_realization_paths
+                        else []
                     )
                     rename_paths = {
                         change.paths[0]: change.paths[1]
