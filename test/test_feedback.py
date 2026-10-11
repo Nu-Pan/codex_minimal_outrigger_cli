@@ -1180,10 +1180,12 @@ def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> N
 
 
 def test_collector_validates_context_rate_and_durable_observation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """loopback reporter 経由の受理、rate limit、失効を確認する。"""
-    root = make_repo(tmp_path)
+    # 実 HEAD と evidence file は残し、履歴内容を使わない準備を省く。
+    root = committed_repository
+    (root / "README.md").write_text("# repo\n")
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -1900,10 +1902,11 @@ def test_report_reference_masks_secret_across_content_limit(
 
 
 def test_machine_detector_observation_id_is_idempotent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """対象 event でだけ context を取得し、再検出を同じ raw 一件へ収束させる。"""
-    root = make_repo(tmp_path)
+    # 検証対象は実 HEAD と log event なので、追跡 file は用意しない。
+    root = committed_repository
     logger = SubcommandLogger(root, "feedback test")
     original_head = feedback_module.head_commit
     branch_query = Mock(wraps=feedback_module.current_branch)
