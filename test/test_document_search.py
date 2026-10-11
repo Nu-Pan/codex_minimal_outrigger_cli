@@ -1049,6 +1049,29 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
     assert "result" not in response
 
 
+@pytest.fixture
+def candidate_repository(cli_repository, monkeypatch):
+    """候補選択の検査では既知の文書集合を渡し、反復する Git 列挙を省く。"""
+    from commons import runtime_document_search as module
+
+    root = cli_repository
+    docs = root / "oracle/doc"
+    docs.mkdir(parents=True)
+    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+
+    def enumerate_documents(work_root):
+        assert work_root == root
+        return sorted(docs.glob("*.md")), []
+
+    # Git 分類・安全性は対象範囲と変更競合の専用 test に残す。
+    # 本文・位置の再確認、embedding の保存、検索と MCP 応答は製品経路を通す。
+    monkeypatch.setattr(
+        module, "enumerate_oracle_and_realization_files", enumerate_documents
+    )
+    return root
+
+
 class _CandidateWorker(_InferenceDouble):
     """候補位置と文書・query の embedding を制御し、製品経路で検証する。"""
 
@@ -1105,10 +1128,15 @@ class _CandidateWorker(_InferenceDouble):
     ids=["candidate-cap", "configured-cap", "similarity-boundaries", "empty"],
 )
 def test_mcp_success_schema_and_candidate_limits(
-    tmp_path, candidate_count, available, similarities, limit_cases
+    tmp_path,
+    candidate_repository,
+    candidate_count,
+    available,
+    similarities,
+    limit_cases,
 ):
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     (root / path).write_text("候補\n" * available)
@@ -1163,9 +1191,11 @@ def test_mcp_success_schema_and_candidate_limits(
             assert worker.operations == (["embed_query"] if expected else [])
 
 
-def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
+def test_mcp_aggregates_current_locations_without_excerpts(
+    tmp_path, candidate_repository
+):
     """重複・入れ子・連鎖する重なりの最大値を保ち、ファイルと範囲を類似度順に返す。"""
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     other = "oracle/doc/second.md"
     (root / other).write_text("別の原文\n")
@@ -1252,9 +1282,11 @@ def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
     }
 
 
-def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
+def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
+    tmp_path, candidate_repository
+):
     """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     # 異なる合法上限 20・21 と未採用候補一件で順位と値を検査する。50 の境界は別ケースで保つ。
     candidate_count = 21
@@ -1315,9 +1347,11 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
     assert all(value == expanded[line] for line, value in limited.items())
 
 
-def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
+def test_mcp_candidate_limit_applies_before_range_merging(
+    tmp_path, candidate_repository
+):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     # 20・21 件の採用で統合前の上限違反を検出する。50 の境界は別ケースで保つ。
     candidate_count = 21
@@ -1368,12 +1402,12 @@ def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
 
 
 def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, candidate_repository
 ):
     """採用上限外へ隠れる異常値や演算失敗も、成功を併記せず MODEL_FAILURE にする。"""
     from commons import runtime_document_search as module
 
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     # 採用上限を満たす正常候補と、上限外にある異常候補一つを用意する。
     candidate_count = 20
