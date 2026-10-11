@@ -178,6 +178,46 @@ def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
     ensure_prompt_editor_roots_ignored(root)
 
 
+def test_exclude_initialization_reuses_path_and_rechecks_state(
+    cli_repository, monkeypatch
+):
+    """exclude の保存先だけを再利用し、次回の内容変更と index 変更を検査する。"""
+    root = cli_repository
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git":
+            queries[tuple(argv[1:])] += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    exclude = root / ".git/info/exclude"
+    for content in (None, "existing.txt\n"):
+        if content is not None:
+            exclude.write_text(content)
+        queries.clear()
+
+        git_module.ensure_cmoc_ignored_in_exclude(root)
+
+        assert queries[("rev-parse", "--git-path", "info/exclude")] == 1
+        assert queries[("ls-files", "--", ".cmoc/gu")] == 1
+        assert queries[("check-ignore", "-q", git_module.CMOC_IGNORE_PROBE)] == 1
+        assert "/.cmoc/gu/" in exclude.read_text()
+        if content is not None:
+            assert exclude.read_text().startswith(content)
+        assert not (root / ".gitignore").exists()
+
+    # 同じ保存先でも、前回の非追跡判定は使い回さない。
+    tracked = root / ".cmoc/gu/input.txt"
+    tracked.parent.mkdir(parents=True)
+    tracked.write_text("preserve input\n")
+    run_git(root, "add", "-f", str(tracked.relative_to(root)))
+    with pytest.raises(CmocError, match="追跡対象外"):
+        git_module.ensure_cmoc_ignored_in_exclude(root)
+    assert tracked.read_text() == "preserve input\n"
+
+
 @pytest.mark.parametrize("interrupt", [False, True])
 def test_git_query_reuse_expires_after_completion_or_failure(
     tmp_path, cli_repository, interrupt

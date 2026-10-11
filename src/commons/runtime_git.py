@@ -810,6 +810,7 @@ def ensure_cmoc_ignored(root: Path) -> None:
         )
 
 
+@reuse_git_path_queries()
 def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     """clean worktree を保つ必要がある caller 用に git exclude で .cmoc ignore を保証する。
 
@@ -817,6 +818,7 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
+    # exclude の修復と検査で保存先を共有し、内容や index の判定は毎回実行する。
     exclude_path = _git_info_exclude_path(root)
     _validate_ignore_path(exclude_path, "Git info/exclude")
     content = exclude_path.read_text() if exclude_path.exists() else ""
