@@ -6,7 +6,7 @@
     "last_investigated_at": "2026-10-11_07-36-20_260"
   },
   "LICENSE": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "a894f2547af0349f234986eb4661f0146f37b7d82f8b22a27a674d5c1236f08f",
     "last_investigated_at": "2026-10-11_07-38-00_981"
@@ -24,7 +24,7 @@
     "last_investigated_at": "2026-10-11_07-54-11_676"
   },
   "codex_minimal_outrigger_cli.code-workspace": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "df9413aa969863c6e2bd6f8db41570832d29f337e36c4f9e97bae0178dc224ba",
     "last_investigated_at": "2026-10-11_07-58-34_378"
@@ -72,7 +72,7 @@
     "last_investigated_at": "2026-10-11_09-08-21_460"
   },
   "oracle/doc/app_spec/editor_input_handoff.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "93a87e0427df53e5a3b855ce9659b8bd5e8c1187b4d59fb0480eae5e37db2497",
     "last_investigated_at": "2026-10-11_09-10-56_081"
