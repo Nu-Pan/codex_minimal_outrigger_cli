@@ -1774,6 +1774,104 @@ def test_feedback_degradation_preserves_keyboard_interrupt(
         )
 
 
+@pytest.mark.parametrize("redaction", ["none", "text", "path"])
+def test_agent_payload_shares_repository_resolution(
+    feedback_directory, monkeypatch, redaction
+):
+    """root の解決だけを共有し、置換後の path と次の submission は再検査する。"""
+    root = feedback_directory
+    repo_alias = root.parent / "repo-link"
+    repo_alias.symlink_to(root, target_is_directory=True)
+    raw_path = "Authorization:x" if redaction == "path" else "evidence.txt"
+    masked_path = "[REDACTED:authorization]" if redaction == "path" else raw_path
+    (root / raw_path).write_bytes(b"original evidence\n")
+    target = root / masked_path
+    if redaction == "path":
+        target.write_bytes(b"redacted path evidence\n")
+    text = "failure Authorization:x" if redaction == "text" else "evidence"
+    payload = {
+        **_payload(),
+        "evidence": [{"kind": "command", "text": "failed command"}]
+        + [
+            {"kind": kind, "text": text, "path": raw_path}
+            for kind in ("file", "oracle", "log")
+        ],
+    }
+    original = canonical_json_bytes(payload)
+    resolve = Path.resolve
+    root_resolutions = []
+
+    def resolve_path(path, *args, **kwargs):
+        if path in (root, repo_alias):
+            root_resolutions.append(path)
+        return resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", resolve_path)
+
+    masked, fingerprints, count = validate_agent_payload(payload, repo_alias)
+
+    assert masked["evidence"] == [{"kind": "command", "text": "failed command"}] + [
+        {
+            "kind": kind,
+            "text": "failure [REDACTED:authorization]" if redaction == "text" else text,
+            "path": masked_path,
+        }
+        for kind in ("file", "oracle", "log")
+    ]
+    assert fingerprints == [
+        {
+            "evidence_index": index,
+            "normalized_path": str(target),
+            "state": "hashed",
+            "sha256": sha256_bytes(target.read_bytes()),
+        }
+        for index in (1, 2, 3)
+    ]
+    assert count == 3 * int(redaction != "none")
+    assert canonical_json_bytes(payload) == original
+    # evidence ごとの root 解決による filesystem 読み取りの性能回帰を検出する。
+    assert len(root_resolutions) == 1
+
+    (root / raw_path).unlink()
+    (root / raw_path).symlink_to(root.parent / "outside.txt")
+    with pytest.raises(FeedbackRejected) as outside:
+        validate_agent_payload(payload, repo_alias)
+    assert outside.value.code == "path_outside_repo"
+
+
+def test_agent_payload_rechecks_evidence_after_masking(feedback_directory, monkeypatch):
+    """マスキング中に evidence の symlink が repo 外へ変わった場合も拒否する。"""
+    root = feedback_directory
+    (root / "evidence.txt").write_text("evidence")
+    alias = root / "alias"
+    alias.symlink_to("evidence.txt")
+    mask = feedback_store_module._mask_payload
+
+    def mask_and_retarget(value):
+        alias.unlink()
+        alias.symlink_to(root.parent / "outside.txt")
+        monkeypatch.setattr(feedback_store_module, "_mask_payload", mask)
+        return mask(value)
+
+    monkeypatch.setattr(feedback_store_module, "_mask_payload", mask_and_retarget)
+    with pytest.raises(FeedbackRejected) as outside:
+        validate_agent_payload(_payload(path="alias"), root)
+    assert outside.value.code == "path_outside_repo"
+
+
+def test_agent_payload_without_path_evidence_skips_repository_resolution(
+    feedback_directory, monkeypatch
+):
+    """path を検査しない submission で filesystem の解決を追加しない。"""
+    monkeypatch.setattr(
+        Path,
+        "resolve",
+        lambda *_args, **_kwargs: pytest.fail("unneeded path resolution"),
+    )
+    payload = _payload(kind="error", path=None)
+    assert validate_agent_payload(payload, feedback_directory) == (payload, [], 0)
+
+
 def test_agent_store_rejects_outside_path_and_masks_secret(
     tmp_path: Path, feedback_directory: Path, stored_feedback_context: dict[str, object]
 ) -> None:
@@ -1809,6 +1907,13 @@ def test_agent_store_rejects_outside_path_and_masks_secret(
             root, stored_feedback_context, _payload(path="outside-link/missing.txt")
         )
     assert missing_outside.value.code == "path_outside_repo"
+
+    (root / "[REDACTED:authorization]").symlink_to(outside / "missing.txt")
+    with pytest.raises(FeedbackRejected) as redacted_outside:
+        store_agent_observation(
+            root, stored_feedback_context, _payload(path="Authorization:x")
+        )
+    assert redacted_outside.value.code == "path_outside_repo"
 
     redacted = _payload(
         text="request failed before Authorization: Bearer abcdefghijklmnopqrstuvwxyz",

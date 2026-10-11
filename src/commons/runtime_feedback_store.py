@@ -497,8 +497,7 @@ def _mask_payload(value: Any) -> tuple[Any, int]:
 
 
 def _normalized_evidence_path(repo: Path, raw_path: str) -> Path:
-    """evidence path を capability に拘束された repo 内へ正規化する。"""
-    repo = repo.resolve()
+    """evidence path を capability の解決済み repo root 内へ正規化する。"""
     candidate = Path(raw_path)
     if not candidate.is_absolute():
         candidate = repo / candidate
@@ -575,6 +574,12 @@ def validate_agent_payload(
 
     # secret masking で `..` や symlink を含む元の path が別の repo 内 path に
     # 変形されても、入力時点の repository 境界を迂回できないよう先に検査する。
+    # capability の root は共有し、evidence の symlink は検査のたびに解決する。
+    if any(
+        isinstance(item, dict) and item.get("kind") in _PATH_EVIDENCE_KINDS
+        for item in evidence
+    ):
+        repo = repo.resolve()
     for item in evidence:
         if not isinstance(item, dict) or item.get("kind") not in _PATH_EVIDENCE_KINDS:
             continue

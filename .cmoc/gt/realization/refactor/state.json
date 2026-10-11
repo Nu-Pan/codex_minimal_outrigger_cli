@@ -447,7 +447,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "7b17a9d08b99bd759f347a6a613599ee6229b46e7765e2012afbfbc208f72dfe",
-    "last_investigated_at": "2026-10-09_20-11-26_008"
+    "last_investigated_at": "2026-10-11_18-32-49_204"
   },
   "oracle/src/oracle/other/cmoc_config.py": {
     "investigation_required": true,
