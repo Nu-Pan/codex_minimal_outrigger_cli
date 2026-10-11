@@ -34,19 +34,28 @@ from config.cmoc_config import CmocConfig
 
 
 @pytest.fixture
-def quota_control_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """回復制御の検査では Git 探索と call ID の永続採番を省く。"""
+def quota_prompt_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """prompt・parameter の検査では root 探索結果だけを置換する。"""
     root = tmp_path / "repo"
     root.mkdir()
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    # 実 Git・実採番の結合は polls_and_resumes と相対 HOME のケースに残す。
-    # root 導出・永続性・process 間の採番は test_basic_runtime.py、
-    # test_runtime_ids.py、test_codex_runtime_paths.py で検証する。
-    # context、正本 probe builder、ログと回復・再開処理は実物を使う。
+    # 実 Git の root 導出は test_basic_runtime.py と polls_and_resumes、
+    # 相対 HOME のケースに残し、context と正本 probe builder は実物を使う。
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
+    return root
+
+
+@pytest.fixture
+def quota_control_root(
+    quota_prompt_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """回復制御に必要な HOME・設定を隔離し、call ID の永続採番を省く。"""
+    root = quota_prompt_root
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    # 実採番の結合は polls_and_resumes と相対 HOME のケースに残す。
+    # 永続性・process 間の採番は test_runtime_ids.py と test_codex_runtime_paths.py で検証する。
     ids = count()
     monkeypatch.setattr(
         runtime_codex_exec,
@@ -339,10 +348,10 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
 
 
 def test_quota_probe_adapter_uses_canonical_complete_prompt(
-    cli_repository: Path,
+    quota_prompt_root: Path,
 ) -> None:
     """quota probe が正本 builder の完全 prompt と固有 call kind を使用する。"""
-    root = cli_repository
+    root = quota_prompt_root
     base = AgentCallParameter(
         agent_call_kind="build_realization_apply_fork_launch_exec_parameter",
         file_access_mode=FileAccessMode.REPO_WRITE,
