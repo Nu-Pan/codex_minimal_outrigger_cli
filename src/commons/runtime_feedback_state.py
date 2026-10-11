@@ -1781,16 +1781,22 @@ def _validate_report_cut_manifest(
         observation_id_value = item.get("observation_id")
         if not is_observation_id(observation_id_value):
             raise _corruption("report cut observation ID が不正です。", path)
-        observation_target = _validate_artifact_reference(
+        observation_target, observation_digest = _resolve_artifact_reference(
             repo,
             {"path": item.get("path"), "sha256": item.get("sha256")},
             expected_root=feedback_root(repo) / "observation" / "v1",
             description="pending observation",
-            allow_missing=allow_missing_cleanup_targets,
         )
-        if observation_target.exists():
+        # cleanup 後の欠落だけを許し、hash と JSON は同じ byte 列から検査する。
+        if (
+            not allow_missing_cleanup_targets
+            or observation_target.exists()
+            or observation_target.is_symlink()
+        ):
             observation = _read_canonical_object(
-                observation_target, "pending observation"
+                observation_target,
+                "pending observation",
+                expected_sha256=observation_digest,
             )
             if observation.get("observation_id") != observation_id_value:
                 raise _corruption(
@@ -1931,16 +1937,21 @@ def _validate_report_cut_manifest(
             identifier = item.get(id_name)
             if not identity_validator(identifier):
                 raise _corruption(f"report cut {name} identity が不正です。", path)
-            checkpoint_path = _validate_artifact_reference(
+            checkpoint_path, checkpoint_digest = _resolve_artifact_reference(
                 repo,
                 {"path": item.get("path"), "sha256": item.get("sha256")},
                 expected_root=expected_root,
                 description=f"report cut {name}",
-                allow_missing=allow_missing_cleanup_targets,
             )
-            if checkpoint_path.exists():
+            if (
+                not allow_missing_cleanup_targets
+                or checkpoint_path.exists()
+                or checkpoint_path.is_symlink()
+            ):
                 checkpoint = _read_canonical_object(
-                    checkpoint_path, f"report cut {name} checkpoint"
+                    checkpoint_path,
+                    f"report cut {name} checkpoint",
+                    expected_sha256=checkpoint_digest,
                 )
                 _validate_report_cut_checkpoint(
                     checkpoint,
@@ -2978,16 +2989,6 @@ def write_checkpoint(repo: Path, path: Path, checkpoint: _JsonObject) -> _JsonOb
     """正式な call result checkpoint を immutable に保存して参照を返す。"""
     digest = write_immutable_json(path, checkpoint)
     return {"path": _relative_path(repo, path), "sha256": digest}
-
-
-def read_checkpoint(
-    repo: Path, reference: object, expected_root: Path, description: str
-) -> _JsonObject:
-    """manifest が参照する正式な checkpoint を hash 検証して読む。"""
-    path = _validate_artifact_reference(
-        repo, reference, expected_root=expected_root, description=description
-    )
-    return _read_canonical_object(path, description)
 
 
 def validate_feedback_state(repo: Path) -> ActiveState:

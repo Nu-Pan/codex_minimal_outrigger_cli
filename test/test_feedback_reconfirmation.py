@@ -35,6 +35,7 @@ from commons.runtime_feedback_state import (
     cleanup_published_report,
     load_active_state,
     load_report_cut,
+    normalization_checkpoint_path,
     recover_report_cut_checkpoint_references,
     validate_feedback_state,
     write_report_cut_manifest,
@@ -340,6 +341,129 @@ def test_report_cut_rejects_duplicate_observation_entries(feedback_run):
         _validate_report_cut_manifest(
             harness.context.repo, harness.manifest, harness.path
         )
+
+
+@pytest.fixture
+def report_cut_inputs(feedback_run):
+    # Git や CLI を起動せず、正式な remediation checkpoint の保存経路を使う。
+    h = feedback_run
+    _add_candidate(h, "a")
+    _run(h)
+    repo = h.context.repo
+    observation_id = "fbo_000001_2026-08-01_00-00"
+    observed_at = "2026-08-01T00:00:00Z"
+    raw = observation_path(repo, observation_id, observed_at)
+    write_immutable_json(
+        raw, {"observation_id": observation_id, "observed_at": observed_at}
+    )
+    h.manifest["inputs"]["observations"] = [
+        {"observation_id": observation_id, **artifact_reference(repo, raw)}
+    ]
+    normalization = normalization_checkpoint_path(
+        repo, h.manifest["report_cut_id"], observation_id
+    )
+    output = {"result": {"decision": "new", "existing_issue_id": None}}
+    write_immutable_json(
+        normalization,
+        {
+            "schema_version": 1,
+            "kind": "normalization",
+            "report_cut_id": h.manifest["report_cut_id"],
+            "candidate_id": observation_id,
+            "input_sha256": "0" * 64,
+            "builder_sha256": "1" * 64,
+            "schema_sha256": "2" * 64,
+            "structured_output": output,
+            "output_sha256": sha256_bytes(canonical_json_bytes(output)),
+        },
+    )
+    h.manifest["processing"]["normalization_checkpoints"] = [
+        {"observation_id": observation_id, **artifact_reference(repo, normalization)}
+    ]
+    [remediation_reference] = h.manifest["processing"]["remediation_checkpoints"]
+    return h, {
+        "observation": raw,
+        "normalization": normalization,
+        "remediation": repo / remediation_reference["path"],
+    }
+
+
+@pytest.mark.parametrize("target", ["observation", "normalization", "remediation"])
+def test_report_cut_manifest_reads_hash_verified_inputs_once(
+    report_cut_inputs, monkeypatch, target
+):
+    h, paths = report_cut_inputs
+    replaced = paths[target]
+    original_read = Path.read_bytes
+    original_content = original_read(replaced)
+    reads = Counter()
+
+    def replace_after_read(path):
+        content = original_read(path)
+        if path in paths.values():
+            reads[path] += 1
+            if path == replaced and reads[path] == 1:
+                path.write_bytes(canonical_json_bytes({"changed": True}))
+        return content
+
+    monkeypatch.setattr(Path, "read_bytes", replace_after_read)
+    for allow_missing in (False, True):
+        reads.clear()
+        # hash を確認した同じ byte 列を検証し、後からの置換を混ぜない。
+        _validate_report_cut_manifest(
+            h.context.repo,
+            h.manifest,
+            h.path,
+            allow_missing_cleanup_targets=allow_missing,
+        )
+        assert reads == {path: 1 for path in paths.values()}
+        # 呼出し間の cache は持たず、次の検証では置換による破損を検出する。
+        with pytest.raises(CmocError, match="SHA256"):
+            _validate_report_cut_manifest(
+                h.context.repo,
+                h.manifest,
+                h.path,
+                allow_missing_cleanup_targets=allow_missing,
+            )
+        replaced.write_bytes(original_content)
+
+
+@pytest.mark.parametrize("target", ["observation", "normalization", "remediation"])
+def test_report_cut_manifest_cleanup_relaxes_only_input_existence(
+    report_cut_inputs, target
+):
+    h, paths = report_cut_inputs
+    path = paths[target]
+
+    def validate(allow_missing):
+        _validate_report_cut_manifest(
+            h.context.repo,
+            h.manifest,
+            h.path,
+            allow_missing_cleanup_targets=allow_missing,
+        )
+
+    path.unlink()
+    with pytest.raises(CmocError, match="通常 file"):
+        validate(False)
+    validate(True)
+
+    # 削除済み file の許容を、dangling symlink や directory に広げない。
+    path.symlink_to(h.context.repo / "missing-input.json")
+    for allow_missing in (False, True):
+        with pytest.raises(CmocError, match="symlink"):
+            validate(allow_missing)
+    path.unlink()
+    path.mkdir()
+    for allow_missing in (False, True):
+        with pytest.raises(CmocError, match="通常 file"):
+            validate(allow_missing)
+    path.rmdir()
+
+    path.write_bytes(canonical_json_bytes({"changed": True}))
+    for allow_missing in (False, True):
+        with pytest.raises(CmocError, match="SHA256"):
+            validate(allow_missing)
 
 
 def test_normalization_checkpoint_rejects_schema_invalid_output(tmp_path):
