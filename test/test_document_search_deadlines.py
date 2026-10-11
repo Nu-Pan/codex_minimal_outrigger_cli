@@ -274,12 +274,8 @@ def test_doctor_sync_has_no_search_deadlines(
     assert events[-1]["no_progress_seconds"] is None
 
 
-@pytest.mark.parametrize(
-    "setting", ["search_request_timeout_seconds", "shutdown_grace_seconds"]
-)
-def test_saved_deadline_growth_requires_a_new_codex_connection(
-    search_repository, setting
-):
+def test_saved_deadline_growth_requires_a_new_codex_connection(search_repository):
+    # 同じ接続の構築・期限短縮を共有し、両方の増加を独立した設定から試す。
     root = search_repository
     initial = _tuning()
     write_config(config_path(root), CmocConfig(document_search=initial))
@@ -301,18 +297,19 @@ def test_saved_deadline_growth_requires_a_new_codex_connection(
         assert search.search("原文")["status"] == "ok"
         assert search.sync_progress["identity"] == previous_identity
         assert events[-1]["deadline_limits"]["search_request"] == 1000
-        unsafe = replace(initial, **{setting: getattr(initial, setting) + 1})
-        write_config(config_path(root), CmocConfig(document_search=unsafe))
-        events.clear()
-        with pytest.raises(SearchError, match="new Codex call") as failure:
-            search.search("原文")
-        assert failure.value.code == "NOT_READY"
-        assert [event["event"] for event in events] == [
-            "document_search_request_started",
-            "document_search_request_finished",
-        ]
-        assert events[-1]["sync_ids"] == []
-        assert events[-1]["status"] == "failed"
+        for setting in ("search_request_timeout_seconds", "shutdown_grace_seconds"):
+            unsafe = replace(initial, **{setting: getattr(initial, setting) + 1})
+            write_config(config_path(root), CmocConfig(document_search=unsafe))
+            events.clear()
+            with pytest.raises(SearchError, match="new Codex call") as failure:
+                search.search("原文")
+            assert failure.value.code == "NOT_READY", setting
+            assert [event["event"] for event in events] == [
+                "document_search_request_started",
+                "document_search_request_finished",
+            ], setting
+            assert events[-1]["sync_ids"] == [], setting
+            assert events[-1]["status"] == "failed", setting
 
 
 def test_parallel_requests_log_to_their_own_codex_calls(tmp_path, search_repository):
