@@ -15,15 +15,14 @@ import pytest
 
 
 def _run_from_packaged_layout(
-    target: Path, code: str, tmp_path: Path, *, cmoc_process_cwd: Path
+    target: Path, code: str, tmp_path: Path
 ) -> subprocess.CompletedProcess[str]:
     """隔離した packaged layout で Python コードを実行する。
 
     `-S`、`-P`、および `PYTHONNOUSERSITE` で外部 site-packages と実行ディレクトリの
     影響を除き、
-    `PYTHONPATH` でケースごとに選んだ package だけを import 対象にする。Git repository が
-    必要なケースだけ呼び出し側で用意する。HOME も一時
-    ディレクトリ内へ向け、実行者の設定や認証情報を持ち込まない。
+    `PYTHONPATH` でケースごとに選んだ package だけを import 対象にする。cwd と HOME も
+    一時ディレクトリ内へ向け、実行者の設定や認証情報を持ち込まない。
     根拠: {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
@@ -31,7 +30,7 @@ def _run_from_packaged_layout(
     home.mkdir()
     return subprocess.run(
         [sys.executable, "-S", "-P", "-c", code],
-        cwd=cmoc_process_cwd,
+        cwd=tmp_path,
         env={
             **os.environ,
             "HOME": str(home),
@@ -85,7 +84,6 @@ def _packaged_layout(sources: Path, tmp_path: Path, *packages: str) -> Path:
 
 def test_quota_probe_imports_from_packaged_layout(
     tmp_path: Path,
-    cli_repository: Path,
     packaged_sources: Path,
 ) -> None:
     """quota probe の canonical builder を packaged layout で検証する。
@@ -104,6 +102,8 @@ def test_quota_probe_imports_from_packaged_layout(
 
     target = _packaged_layout(packaged_sources, tmp_path, "acp", "basic", "oracle")
 
+    # Git metadata の導出は test_basic_runtime.py と quota の polls_and_resumes に残す。
+    # ここでは探索結果だけを置換し、packaged builder と prompt の参照を実行する。
     result = _run_from_packaged_layout(
         target,
         (
@@ -111,19 +111,21 @@ def test_quota_probe_imports_from_packaged_layout(
             "from pathlib import Path; "
             "assert '' not in sys.path; "
             "assert str(Path.cwd()) not in sys.path; "
+            "import oracle.other.path_model as path_model; "
+            "path_model._resolve_git_worktree_roots = "
+            "lambda start_path=None: (Path.cwd(), Path.cwd()); "
             "from basic.acp import AgentCallParameter, FileAccessMode; "
             "from acp.builder.quota_probe import "
             "build_quota_availability_probe_parameter as build_probe; "
             "base = AgentCallParameter('base', FileAccessMode.READONLY, "
             "'base', None, Path.cwd()); "
             "probe = build_probe(base); "
+            "assert probe.agent_call_cwd == Path.cwd(); "
             "assert probe.prompt; "
             "assert '# feedback observation reporting' in probe.prompt; "
             "assert '# routing policy' not in probe.prompt"
         ),
         tmp_path,
-        # probe の path context は Git root だけを使い、追跡 file・commit は不要。
-        cmoc_process_cwd=cli_repository,
     )
 
     assert result.returncode == 0, result.stderr
@@ -131,7 +133,6 @@ def test_quota_probe_imports_from_packaged_layout(
 
 def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
     tmp_path: Path,
-    cli_repository: Path,
     packaged_sources: Path,
 ) -> None:
     """oracle の builder と editor 入力境界が packaged layout で正本を参照する。
@@ -144,6 +145,8 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
         packaged_sources, tmp_path, "acp", "basic", "commons", "oracle"
     )
 
+    # root 探索の実 Git 境界は test_basic_runtime.py と oracle edit の結合 test に残す。
+    # builder・正本 schema・editor input・handoff は packaged module の実経路を通す。
     result = _run_from_packaged_layout(
         target,
         (
@@ -152,6 +155,9 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "import acp.builder.oracle.edit.launch_exec as edit_module; "
             "from pathlib import Path; "
             "from types import SimpleNamespace; "
+            "import oracle.other.path_model as path_model; "
+            "path_model._resolve_git_worktree_roots = "
+            "lambda start_path=None: (Path.cwd(), Path.cwd()); "
             "from acp.builder.oracle.edit.launch_exec import "
             "build_oracle_edit_main_launch_exec_parameter as build_main; "
             "from oracle.acp_builder.oracle.investigation.launch_tui import "
@@ -200,7 +206,6 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "assert p.agent_call_cwd == Path.cwd(); "
         ),
         tmp_path,
-        cmoc_process_cwd=cli_repository,
     )
 
     assert result.returncode == 0, result.stderr
@@ -231,7 +236,6 @@ def test_acp_builder_basic_imports_from_packaged_layout(
             "assert FileAccessMode.READONLY.value == 'readonly'"
         ),
         tmp_path,
-        cmoc_process_cwd=tmp_path,
     )
 
     assert result.returncode == 0, result.stderr
@@ -259,7 +263,6 @@ def test_cmoc_config_reexports_only_config_definitions(
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),
         tmp_path,
-        cmoc_process_cwd=tmp_path,
     )
 
     assert result.returncode == 0, result.stderr
