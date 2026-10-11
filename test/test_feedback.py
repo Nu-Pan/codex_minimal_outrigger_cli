@@ -2016,31 +2016,71 @@ def test_completion_count_reports_only_pending_raw_observations(
     assert feedback_completion_counts(root) == (1, [])
 
 
+def test_completion_count_threshold_stops_unneeded_reads(
+    feedback_directory, stored_feedback_context, monkeypatch
+):
+    """同じ pending 集合へ一件追加し、件数境界の通知と読み取り抑制を検証する。"""
+    root = feedback_directory
+    now = datetime(2030, 1, 8, tzinfo=timezone.utc)
+    _, first_path = store_agent_observation(
+        root,
+        stored_feedback_context,
+        _payload(),
+        observation_id="fbo_000000_2030-01-08_00-00",
+        observed_at=now.isoformat(),
+    )
+    observation = read_json_object(first_path)
+    monkeypatch.setattr(
+        feedback_store_module,
+        "datetime",
+        SimpleNamespace(now=lambda _zone: now, fromisoformat=datetime.fromisoformat),
+    )
+    read = Mock(wraps=feedback_store_module.read_json_object)
+    monkeypatch.setattr(feedback_store_module, "read_json_object", read)
+
+    # 保存・receipt の検査は専用ケースへ委ね、同じ日付の raw を段階的に追加する。
+    # 99 件を検査した入力を再利用し、100 件目だけを追加する。
+    previous_count = 1
+    for count, expected_warning, max_reads in ((99, False, 99), (100, True, 0)):
+        for index in range(previous_count, count):
+            identity = f"fbo_{index:06d}_2030-01-08_00-00"
+            observation["observation_id"] = identity
+            first_path.with_name(f"{identity}.json").write_bytes(
+                canonical_json_bytes(observation)
+            )
+        previous_count = count
+        read.reset_mock()
+
+        pending, warnings = feedback_completion_counts(root)
+
+        assert pending == count
+        assert bool(warnings) is expected_warning
+        if warnings:
+            assert "cmoc feedback report" in warnings[0]
+        assert read.call_count <= max_reads
+
+
 @pytest.mark.parametrize(
-    ("count", "oldest_age", "expected_warning", "max_reads"),
+    ("oldest_age", "expected_warning", "max_reads"),
     [
-        pytest.param(99, timedelta(0), False, 99, id="below-count-limit"),
-        pytest.param(100, timedelta(0), True, 0, id="at-count-limit"),
         pytest.param(
-            2,
             timedelta(days=7) - timedelta(microseconds=1),
             False,
             2,
             id="below-age-limit",
         ),
-        pytest.param(2, timedelta(days=7), True, 1, id="at-age-limit"),
+        pytest.param(timedelta(days=7), True, 1, id="at-age-limit"),
     ],
 )
-def test_completion_count_retention_thresholds_stop_unneeded_reads(
+def test_completion_age_threshold_stops_unneeded_reads(
     feedback_directory,
     stored_feedback_context,
     monkeypatch,
-    count,
     oldest_age,
     expected_warning,
     max_reads,
 ):
-    """通知の境界を守り、通知が確定した後の raw 本文読み取りを省く。"""
+    """経過日数の境界を守り、通知が確定した後の raw 本文読み取りを省く。"""
     root = feedback_directory
     now = datetime(2030, 1, 8, tzinfo=timezone.utc)
     _, first_path = store_agent_observation(
@@ -2052,12 +2092,11 @@ def test_completion_count_retention_thresholds_stop_unneeded_reads(
     )
     observation = read_json_object(first_path)
     # 保存・receipt の検査は専用ケースへ委ね、件数用の追加 raw だけを作る。
-    for index in range(1, count):
-        identity = f"fbo_{index:06d}_2030-01-08_00-00"
-        observation.update(observation_id=identity, observed_at=now.isoformat())
-        path = observation_path(root, identity, now.isoformat())
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(canonical_json_bytes(observation))
+    identity = "fbo_000001_2030-01-08_00-00"
+    observation.update(observation_id=identity, observed_at=now.isoformat())
+    path = observation_path(root, identity, now.isoformat())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(canonical_json_bytes(observation))
     monkeypatch.setattr(
         feedback_store_module,
         "datetime",
@@ -2068,7 +2107,7 @@ def test_completion_count_retention_thresholds_stop_unneeded_reads(
 
     pending, warnings = feedback_completion_counts(root)
 
-    assert pending == count
+    assert pending == 2
     assert bool(warnings) is expected_warning
     if warnings:
         assert "cmoc feedback report" in warnings[0]
