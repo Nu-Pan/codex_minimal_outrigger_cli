@@ -340,9 +340,10 @@ def run_codex_exec(
             "structured_output_schema_path is None",
         )
 
+    # 開始前の状態は事後条件の path 照合にだけ使い、補正の復元には完了時の状態を使う。
     artifact_snapshot_before = (
         capture_worktree_snapshot(path_context.work_root)
-        if schema_path is not None
+        if structured_output_postcondition is not None
         else None
     )
     # Structured Output correction 全体で共有する論理 agent call ID を先に固定する。
@@ -933,13 +934,13 @@ def run_codex_exec(
         if schema_path is not None:
             assert schema_validator is not None
             if frozen_artifact_snapshot is None:
-                assert artifact_snapshot_before is not None
                 frozen_artifact_snapshot = capture_worktree_snapshot(
-                    artifact_snapshot_before.root
+                    path_context.work_root
                 )
-                artifact_changed_paths = artifact_snapshot_before.changed_paths(
-                    frozen_artifact_snapshot
-                )
+                if artifact_snapshot_before is not None:
+                    artifact_changed_paths = artifact_snapshot_before.changed_paths(
+                        frozen_artifact_snapshot
+                    )
             try:
                 output_json, validation_issues = _validate_structured_output(
                     output_path,

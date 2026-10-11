@@ -371,6 +371,16 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
         ],
         on_call=change_artifacts,
     )
+    # 事後条件なしの開始前読み取りを拒否し、補正前の状態取得と復元は実行する。
+    capture_snapshot = runtime_codex_exec.capture_worktree_snapshot
+
+    def capture_after_initial_call(work_root):
+        assert calls, "no postcondition needs a pre-call artifact snapshot"
+        return capture_snapshot(work_root)
+
+    monkeypatch.setattr(
+        runtime_codex_exec, "capture_worktree_snapshot", capture_after_initial_call
+    )
     schema = tmp_path / "artifact_change_schema.json"
     schema.write_text(
         json.dumps(
