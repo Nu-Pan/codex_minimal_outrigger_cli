@@ -405,7 +405,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "4fbbc0b5119e7166258eeead293a20bb3c44c4c400a88c9a679ecffb852b0fdb",
-    "last_investigated_at": "2026-10-09_18-34-46_591"
+    "last_investigated_at": "2026-10-11_17-41-32_228"
   },
   "oracle/src/oracle/acp_builder/tui/launch_tui.py": {
     "investigation_required": true,

@@ -25,7 +25,6 @@ from pathlib import Path
 
 import pytest
 from _cli_support import (
-    run_doctor,
     runner,
     seed_search_config,
     terminal_primary_report,
@@ -1544,17 +1543,15 @@ def test_session_join_conflict_uses_merge_target_worktree_context(
 
     # oracle 競合の成功経路を共有し、sandbox・report 専用の Git 準備を繰り返さない。
     # 通常 worktree の内容解消は付随編集と改行 path のケースにも残す。
+    # doctor と fork は seed し、実 join の前処理と競合解消を検査する。
+    # fork→join の結合は test_session_join_uses_linked_worktree_branch に残す。
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    _seed_session_management_files(root)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(linked)
-    home_branch = session_home_branch(root, session_branch)
+    session_branch, home_branch = _seed_session_in_worktree(root, linked)
     target = linked / "oracle" / "spec.md"
     target.write_text("linked session change\n")
     run_git(linked, "add", "oracle/spec.md")
