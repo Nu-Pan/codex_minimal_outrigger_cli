@@ -1270,19 +1270,21 @@ def test_apply_fork_checks_stopped_children_before_commit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
-def test_refactor_fork_stops_tracked_children_before_each_commit(
+def test_refactor_fork_stops_children_before_commits_and_reports_warnings(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """refactor は cycle と各処理単位の commit 前に Codex child を停止する。"""
-    # session 作成の CLI 結合は test_session_cli.py に残し、run の停止順序を検証する。
-    _root, _session_branch, state_path = ready_content_session
+    """各レビューの child 停止を commit 前に確認し、warning を report に残す。"""
+    # 停止順序と warning 保存は同じ fork で検査し、巡回の重複を避ける。
+    root, _session_branch, state_path = ready_content_session
     events: list[str] = []
+    cleanup_warning = "run child process already stopped: 789"
     original_commit = refactor_module.commit_work_unit
 
-    def record_stop(*_args: object) -> None:
+    def record_stop(*_args: object) -> list[str]:
         """tracked child の停止位置を記録する。"""
         events.append("stop")
+        return [cleanup_warning]
 
     def record_commit(
         worktree: Path,
@@ -1295,9 +1297,10 @@ def test_refactor_fork_stops_tracked_children_before_each_commit(
 
     def fake_refactor(
         _parameter: AgentCallParameter,
-        **kwargs: object,
+        **_kwargs: object,
     ) -> SimpleNamespace:
         """file review の固定 Structured Output を返す。"""
+        events.append("review")
         return SimpleNamespace(
             returncode=0,
             output_json={
@@ -1322,62 +1325,21 @@ def test_refactor_fork_stops_tracked_children_before_each_commit(
 
     assert result.exit_code == 0, result.output
     assert _state(state_path)["run"]["state"] == "joinable"
-    commit_positions = [
-        index for index, event in enumerate(events) if event == "commit"
+    review_positions = [
+        index for index, event in enumerate(events) if event == "review"
     ]
-    assert commit_positions
-    assert any(index > 0 and events[index - 1] == "stop" for index in commit_positions)
-
-
-def test_refactor_fork_reports_cleanup_warnings(
-    ready_content_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """refactor fork の child 停止 warning を fork report に保存する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    """
-    root, _session_branch, state_path = ready_content_session
-
-    def fake_refactor(
-        _parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> SimpleNamespace:
-        """file review の固定 Structured Output を返す。"""
-        return SimpleNamespace(
-            returncode=0,
-            output_json={
-                "findings": [],
-                "verification": {
-                    "status": "passed",
-                    "summary": "fake full quality gate passed",
-                },
-            },
-        )
-
-    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
-    _stop_after_cycles(monkeypatch)
-    monkeypatch.setattr(
-        refactor_module,
-        "stop_tracked_codex_children",
-        lambda *_args: ["run child process already stopped: 789"],
+    assert len(review_positions) > 1
+    assert all(
+        events[index + 1 : index + 3] == ["stop", "commit"]
+        for index in review_positions
     )
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0, result.output
-    assert _state(state_path)["run"]["state"] == "joinable"
     reports = list(
         (root / ".cmoc" / "gu" / "report" / "realization" / "refactor" / "fork").glob(
             "*.md"
         )
     )
     assert len(reports) == 1
-    assert "run child process already stopped: 789" in reports[0].read_text()
+    assert cleanup_warning in reports[0].read_text()
 
 
 def test_refactor_fork_stops_tracked_codex_children_before_joinable(
