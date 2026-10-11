@@ -1015,8 +1015,8 @@ def test_session_join_preserves_repository_local_feedback_state(
 def test_session_join_includes_incidental_conflict_resolution_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, remaining_marker: bool
 ) -> None:
-    """付随する全編集種別を merge に含め、追加先の未解消 marker は拒否する。"""
-    # 独立した付随編集を一度の merge で検証し、失敗経路は別ケースで保つ。
+    """付随編集の取り込みと、未解消 marker による停止・stderr 出力を検証する。"""
+    # 同じ marker 拒否経路で失敗表示と作業状態も検査し、Git 競合の準備を重ねない。
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     related = root / "src"
@@ -1068,9 +1068,20 @@ def test_session_join_includes_incidental_conflict_resolution_changes(
     assert current_branch(root) == home_branch
     if remaining_marker:
         assert result.exit_code != 0
+        assert result.stdout == ""
+        assert "# 失敗: cmoc session join" in result.stderr
         assert "conflict marker が残っています。" in result.stderr
         assert "src/added.py" in result.stderr
         assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
+        assert run_git(root, "branch", "--list", session_branch).stdout.strip()
+        state = json.loads(session_state_path(root, session_branch).read_text())
+        assert state["session"]["state"] == "active"
+        assert target.read_text() == "home change\nsession change\n"
+        assert modified.read_text() == "related implementation\n"
+        assert not deleted.exists()
+        assert not renamed.exists()
+        assert moved.read_text() == "previous implementation\n"
+        assert added.read_text().startswith("<<<<<<< HEAD\n")
         return
     assert result.exit_code == 0, result.output
     assert run_git(root, "status", "--porcelain").stdout == ""
@@ -1431,49 +1442,6 @@ def test_session_join_handled_failure_is_written_to_stderr(
     rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
     assert f'home_branch: "{home_branch}"' in rendered_report
     assert 'session_state_before: "active"' in rendered_report
-
-
-def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    session_join_error_preprocess: list[Path],
-) -> None:
-    """merge後の予期せぬconflict error reportをstderrへ出力することを検証する。"""
-    root = make_repo(tmp_path)
-    target = root / "README.md"
-    monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
-    target.write_text("session change\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "session change")
-    run_git(root, "switch", home_branch)
-    target.write_text("home change\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "home change")
-    run_git(root, "switch", session_branch)
-
-    class FakeCodexResult:
-        """conflict resolution結果だけを提供する最小double。"""
-
-        output_text = "merge_resolution: resolved\n"
-        output_json = None
-
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
-        """未解決markerを残した結果を返し、後段errorを発生させる。"""
-        target.write_text("<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n")
-        return FakeCodexResult()
-
-    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-
-    result = runner.invoke(app, ["session", "join"])
-
-    assert session_join_error_preprocess == [root]
-    assert result.exit_code != 0
-    assert current_branch(root) == home_branch
-    assert "# 失敗" not in result.stdout
-    assert "conflict marker が残っています。" not in result.stdout
-    assert "# 失敗: cmoc session join" in result.stderr
-    assert "conflict marker が残っています。" in result.stderr
 
 
 def test_session_join_codex_failure_reports_unresolved_merge(
