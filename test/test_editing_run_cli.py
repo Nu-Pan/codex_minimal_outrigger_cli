@@ -1412,33 +1412,42 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
-@pytest.mark.parametrize(
-    ("replace_content", "add_unrelated_file"),
-    [(False, False), (True, False), (True, True)],
-)
 def test_refactor_fork_moves_unresolved_target_after_rename(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
-    replace_content: bool,
-    add_unrelated_file: bool,
 ) -> None:
-    """rename 後も unresolved target と refactor state の path 集合を揃える。"""
+    """3 種類の rename 後も unresolved と state を揃え、run の準備は共有する。"""
     root, _session_branch, state_path = ready_content_session
+    # 内容を保つ rename、Git が delete/add とする置換、別所見の追加 file による
+    # 候補の曖昧さを別々の target で検証し、session・巡回・終了処理を重複させない。
+    cases = {
+        "README.md": ("renamed.md", False, False),
+        "rewrite.md": ("rewritten.md", True, False),
+        "with-extra.md": ("renamed-extra.md", True, True),
+    }
+    for source in ("rewrite.md", "with-extra.md"):
+        (root / source).write_text(f"# {source}\n")
+    run_git(root, "add", "rewrite.md", "with-extra.md")
+    run_git(root, "commit", "-m", "rename inputs")
+    reviewed = []
 
     def fake_refactor(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
-        """README の rename と unresolved finding を再現する。"""
+        """各 target の rename と unresolved finding を再現する。"""
         worktree = parameter.agent_call_cwd
-        if kwargs["purpose"] == "realization refactor: README.md":
-            (worktree / "README.md").rename(worktree / "renamed.md")
+        target = str(kwargs["purpose"]).removeprefix("realization refactor: ")
+        if target in cases:
+            reviewed.append(target)
+            destination, replace_content, add_unrelated_file = cases[target]
+            (worktree / target).rename(worktree / destination)
             if replace_content:
-                (worktree / "renamed.md").write_text("completely different content\n")
+                (worktree / destination).write_text("completely different content\n")
             findings = [
                 {
-                    "title": "deferred",
-                    "changed_paths": ["README.md", "renamed.md"],
+                    "title": f"deferred {target}",
+                    "changed_paths": [target, destination],
                     "resolution": {
                         "status": "unresolved",
                         "summary": "needs follow-up",
@@ -1469,7 +1478,7 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
                         "summary": "fake full quality gate passed",
                     },
                 },
-                call_log_path=worktree / "README-call.json",
+                call_log_path=worktree / f"{target}-call.json",
             )
         return SimpleNamespace(
             returncode=0,
@@ -1498,11 +1507,13 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     parts = state["run"]["branch"].split("/")
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     refactor_state = load_refactor_state(worktree)
-    assert "README.md" not in refactor_state
-    assert refactor_state["renamed.md"]["investigation_required"] is True
-    assert refactor_state["renamed.md"]["last_investigation_result"] == (
-        "not_investigated"
-    )
+    assert sorted(reviewed) == sorted(cases)
+    for source, (destination, _replace_content, _add_unrelated_file) in cases.items():
+        assert source not in refactor_state
+        assert refactor_state[destination]["investigation_required"] is True
+        assert refactor_state[destination]["last_investigation_result"] == (
+            "not_investigated"
+        )
     reports = list(
         (root / ".cmoc" / "gu" / "report" / "realization" / "refactor" / "fork").glob(
             "*.md"
@@ -1511,7 +1522,11 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     assert len(reports) == 1
     report = reports[0].read_text()
     assert "## Completion\nuser_interruption" in report
-    assert "## Unresolved targets\n- count: 1\n- paths:\n  - `renamed.md`" in report
+    destinations = sorted(destination for destination, *_flags in cases.values())
+    expected_targets = "\n".join(f"  - `{path}`" for path in destinations)
+    assert f"## Unresolved targets\n- count: 3\n- paths:\n{expected_targets}" in report
+    for source, (destination, _replace_content, _add_unrelated_file) in cases.items():
+        assert f"- `{destination}`: deferred {source}" in report
 
 
 def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
