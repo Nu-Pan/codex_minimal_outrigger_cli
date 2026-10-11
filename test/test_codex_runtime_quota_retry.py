@@ -3,10 +3,12 @@
 import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
+from itertools import count
 from pathlib import Path
 from threading import Event, Lock
 from typing import TextIO, cast
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import (
     codex_arg_value,
@@ -29,6 +31,29 @@ from cmoc_runtime import SubcommandLogger
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
+
+
+@pytest.fixture
+def quota_control_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """回復制御の検査では Git 探索と call ID の永続採番を省く。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    # 実 Git・実採番の結合は polls_and_resumes と相対 HOME のケースに残す。
+    # root 導出・永続性・process 間の採番は test_basic_runtime.py、
+    # test_runtime_ids.py、test_codex_runtime_paths.py で検証する。
+    # context、正本 probe builder、ログと回復・再開処理は実物を使う。
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
+    )
+    ids = count()
+    monkeypatch.setattr(
+        runtime_codex_exec,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+    )
+    return root
 
 
 def quota_probe_prompt(agent_call_cwd: Path) -> str:
@@ -255,16 +280,12 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
 
 
 def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
-    tmp_path: Path,
-    cli_repository: Path,
+    quota_control_root: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """代表 probe の KeyboardInterrupt をログへ記録して伝播する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    root = quota_control_root
     probe_prompt = quota_probe_prompt(root)
     calls: list[str] = []
 
@@ -450,13 +471,10 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
 
 
 def test_run_codex_exec_reruns_after_quota_without_session_id(
-    tmp_path: Path, cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    quota_control_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """session ID がない quota 復帰で同じ prompt を再実行する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    root = quota_control_root
     probe_prompt = quota_probe_prompt(root)
     # 実 process の stdin・argv・出力保存は polls_and_resumes の代表ケースに残す。
     calls = script_codex_calls(
@@ -493,16 +511,12 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
 
 @pytest.mark.parametrize("probe_returncode", [0, 2])
 def test_quota_probe_non_quota_failure_fails_immediately(
-    tmp_path: Path,
-    cli_repository: Path,
+    quota_control_root: Path,
     monkeypatch: pytest.MonkeyPatch,
     probe_returncode: int,
 ) -> None:
     """代表 probe の quota 以外の失敗を伝播し、作業中の成果物を保持する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    root = quota_control_root
     probe_prompt = quota_probe_prompt(root)
     artifact = root / "src" / "probe.py"
 
@@ -560,13 +574,10 @@ def test_quota_probe_non_quota_failure_fails_immediately(
 
 
 def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
-    tmp_path: Path, cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    quota_control_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """probe も valid output だけでは不正 stdout を成功扱いしない。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    root = quota_control_root
     probe_prompt = quota_probe_prompt(root)
     calls = script_codex_calls(
         monkeypatch,
@@ -604,15 +615,12 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
 
 @pytest.mark.parametrize("probe_fails", [False, True], ids=["success", "failure"])
 def test_parallel_quota_calls_share_probe_result(
-    tmp_path: Path,
-    cli_repository: Path,
+    quota_control_root: Path,
     monkeypatch: pytest.MonkeyPatch,
     probe_fails: bool,
 ) -> None:
     """代表 probe の成功・失敗を共有し、成功時だけ全 call を再開する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = quota_control_root
     probe_prompt = quota_probe_prompt(root)
     calls: list[tuple[str, list[str]]] = []
     calls_lock = Lock()
@@ -719,14 +727,12 @@ def test_session_id_returns_none_for_invalid_stdout_encoding(tmp_path: Path) -> 
 
 
 def test_recovery_group_is_released_when_progress_output_fails(
-    tmp_path, cli_repository, monkeypatch
+    quota_control_root, monkeypatch
 ):
     """通知失敗が次の同条件 call の代表選択を妨げない。"""
     import commons.runtime_codex_recovery as recovery
 
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = quota_control_root
     calls = []
 
     def fake_run(argv, **kwargs):
