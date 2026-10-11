@@ -19,7 +19,7 @@ from _codex_support import (
     setup_codex_home,
 )
 from _command_support import write_python_executable
-from _git_support import make_repo, run_git
+from _git_support import run_git
 
 from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
@@ -237,15 +237,15 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
 
 
 def test_run_codex_exec_uses_linked_worktree_context(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree の cwd・sandbox と main repository の schema 保存先を検証する。
 
     正本仕様:
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
-    # 同じ linked worktree の一回の呼び出しで cwd・sandbox・schema の境界を調べる。
-    root = make_repo(tmp_path)
+    # cwd・sandbox・schema の境界には実 linked metadata と HEAD だけを用意する。
+    root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-exec", str(linked), "HEAD")
