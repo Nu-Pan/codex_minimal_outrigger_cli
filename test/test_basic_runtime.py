@@ -96,12 +96,13 @@ def test_make_repo_ignores_global_git_config(
 
     root = make_repo(tmp_path)
 
-    assert run_git(root, "config", "--local", "commit.gpgsign").stdout == "false\n"
-    assert run_git(root, "config", "--local", "core.hooksPath").stdout == "/dev/null\n"
-    assert (
-        run_git(root, "config", "--local", "core.excludesFile").stdout == "/dev/null\n"
-    )
-    assert run_git(root, "rev-parse", "--verify", "HEAD").stdout.strip()
+    # commit 成功で署名・失敗する hook の隔離を、tree で global ignore の隔離を確認する。
+    assert run_git(
+        root, "ls-tree", "-r", "--name-only", "HEAD"
+    ).stdout.splitlines() == [
+        "README.md",
+        "oracle/spec.md",
+    ]
 
 
 def test_runtime_distinguishes_repo_root_from_linked_worktree(
