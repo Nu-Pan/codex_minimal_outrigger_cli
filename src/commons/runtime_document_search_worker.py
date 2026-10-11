@@ -525,7 +525,11 @@ class NodeSearchWorker:
                     raise SearchError(
                         "DEADLINE_EXCEEDED", "inference deadline exceeded"
                     )
-                time.sleep(0.05)
+                # EOF 後も終了を確認するが、子が終了したら固定待機を残さず戻る。
+                try:
+                    process.wait(timeout=0.05)
+                except subprocess.TimeoutExpired:
+                    pass
             if process.returncode != 0:
                 raise SearchError("MODEL_FAILURE", "inference worker failed")
         except OSError as exc:

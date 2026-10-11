@@ -723,7 +723,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "a8c8e522b95b500173ab5204688aee834c890e914b00eca31c963e319b35ff50",
-    "last_investigated_at": "2026-10-10_05-58-03_293"
+    "last_investigated_at": "2026-10-12_04-18-34_793"
   },
   "src/commons/document_search_worker/package-lock.json": {
     "investigation_required": true,
