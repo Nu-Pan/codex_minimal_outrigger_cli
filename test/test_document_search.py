@@ -157,7 +157,7 @@ class _InferenceDouble:
 
 def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     """索引を Git 非追跡にした隔離 repository を作る。"""
-    # 分類検査には実 index を使い、worktree 複製が必要なケースだけ HEAD を作る。
+    # 履歴を使わない検査は未追跡の文書で行い、worktree 複製時だけ stage と HEAD を作る。
     # ignore 修復は test_runtime_git_ignore.py に委ね、複製先にも規則を引き継ぐ。
     root = tmp_path / "repo"
     root.mkdir()
@@ -167,8 +167,8 @@ def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
     (root / ".gitignore").write_text("oracle/doc/ignored.md\n/.cmoc/gu/\n")
     (docs / "ignored.md").write_text("# 非公開の本文\n")
-    run_git(root, "add", ".gitignore", "oracle/doc")
     if committed:
+        run_git(root, "add", ".gitignore", "oracle/doc")
         run_git(root, "commit", "-m", "add docs")
     return root
 
@@ -1488,11 +1488,10 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
         ),
     ],
 )
-def test_output_schema_rejects_malformed_results(tmp_path, value):
+def test_output_schema_rejects_malformed_results(value):
     """旧形式や成功・失敗の混在、行範囲の型違いを公開 schema で検出する。"""
-    search = DocumentSearch(tmp_path, None)
-    schema = _listed_search_tool(search)["outputSchema"]
-    assert not Draft202012Validator(schema).is_valid(value)
+    # 公開値の一致は stdio test で検査し、schema 単体の検査には検索 context を作らない。
+    assert not Draft202012Validator(SEARCH_TOOL_OUTPUT_SCHEMA).is_valid(value)
 
 
 def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(
