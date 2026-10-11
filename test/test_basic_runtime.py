@@ -105,10 +105,11 @@ def test_make_repo_ignores_global_git_config(
     ]
 
 
-def test_runtime_distinguishes_repo_root_from_linked_worktree(
+def test_runtime_roots_distinguish_linked_worktree_from_nested_main(
     committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree では repo root と run/work root を分けて扱う。"""
+    """linked worktree の両 root を区別し、nested main は run root から除く。"""
+    # 成功と拒否に同じ linked metadata を使い、外側の履歴・worktree 準備を共用する。
     root = committed_repository
     linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
@@ -117,6 +118,15 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     assert repo_root(linked) == root.resolve()
     assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
+
+    # 内側の main repository に履歴は不要。外側の linked root を誤採用しない。
+    nested_main = linked / "repo"
+    nested_main.mkdir()
+    init_repo(nested_main)
+    monkeypatch.chdir(nested_main)
+
+    with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
+        resolve_real_path(RootPathPlaceHolder.RUN)
 
 
 @pytest.mark.parametrize("marker_kind", ["file", "directory"])
@@ -342,23 +352,6 @@ def test_pushd_serializes_process_global_cwd_changes(
     assert not first_thread.is_alive()
     assert not second_thread.is_alive()
     assert Path.cwd() == original
-
-
-def test_run_root_placeholder_rejects_main_worktree(
-    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree 内の nested main repository は run root として扱わない。"""
-    root = committed_repository
-    linked = tmp_path / "linked"
-    run_git(root, "worktree", "add", "-b", "linked-parent", str(linked), "HEAD")
-    # 外側の linked worktree は HEAD が必要だが、内側の main repository は履歴不要。
-    nested_main = linked / "repo"
-    nested_main.mkdir()
-    init_repo(nested_main)
-    monkeypatch.chdir(nested_main)
-
-    with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
-        resolve_real_path(RootPathPlaceHolder.RUN)
 
 
 def test_run_worktree_operations_reject_path_outside_managed_worktrees(
