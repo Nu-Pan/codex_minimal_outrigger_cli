@@ -1,9 +1,12 @@
-import json
+"""Codex home の起動前検査を検証する。
+
+正常時の既定 home は test_codex_runtime_exec.py、相対 home と cwd は
+test_codex_runtime_paths.py の Fake CLI 起動にまとめる。
+"""
+
 from pathlib import Path
 
 import pytest
-from _codex_support import stub_codex_overrides
-from _command_support import write_python_executable
 from oracle.other import path_model as path_model_module
 
 import commons.runtime_codex_exec as runtime_codex_exec
@@ -41,110 +44,6 @@ def _spy_codex_subprocess(
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", record_call)
     return calls
-
-
-def test_run_codex_exec_uses_default_codex_home_when_env_unset(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
-) -> None:
-    """既定 home を使い、それを Codex subprocess へ渡す。"""
-    root = codex_call_directory
-    home = tmp_path / "home"
-    codex_home = home / ".codex"
-    codex_home.mkdir(parents=True)
-    monkeypatch.setenv("HOME", str(home))
-    monkeypatch.delenv("CODEX_HOME", raising=False)
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, os, pathlib",
-            f"record = pathlib.Path({str(recorder)!r})",
-            "args = __import__('sys').argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            "payload = {",
-            "    'codex_home': os.environ.get('CODEX_HOME'),",
-            "    'args': args,",
-            "}",
-            "record.write_text(json.dumps(payload))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        root,
-    )
-
-    result = run_codex_exec(
-        parameter, root=root, transient_poll_interval_sec=0, config=CmocConfig()
-    )
-
-    recorded = json.loads(recorder.read_text())
-    assert recorded["codex_home"] == str(codex_home)
-    assert result.codex_home == codex_home
-
-
-def test_run_codex_exec_preserves_relative_codex_home_and_records_resolved_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
-) -> None:
-    """相対 home の値・cwd 基準の解決・解決済み path の記録を検証する。"""
-    root = codex_call_directory
-    home = tmp_path / "home"
-    home.mkdir()
-    monkeypatch.setenv("HOME", str(home))
-    codex_home = root / "relative_codex_home"
-    codex_home.mkdir()
-    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, os, pathlib",
-            f"record = pathlib.Path({str(recorder)!r})",
-            "args = __import__('sys').argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            "home = pathlib.Path(os.environ['CODEX_HOME'])",
-            "record.write_text(json.dumps({",
-            "    'codex_home': os.environ['CODEX_HOME'],",
-            "    'resolved_home': str(home.resolve()),",
-            "    'cwd': os.getcwd(),",
-            "}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.PURE_ORACLE_READ,
-        "prompt",
-        None,
-        root,
-    )
-
-    result = run_codex_exec(
-        parameter, root=root, transient_poll_interval_sec=0, config=CmocConfig()
-    )
-
-    recorded = json.loads(recorder.read_text())
-    assert recorded["codex_home"] == "relative_codex_home"
-    assert Path(recorded["cwd"]) == root
-    assert Path(recorded["resolved_home"]) == codex_home
-    assert result.codex_home == codex_home
-    call_log = json.loads(result.call_log_path.read_text())
-    assert call_log["codex_home"] == str(codex_home)
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(

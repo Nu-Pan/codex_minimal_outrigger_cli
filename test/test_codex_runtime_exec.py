@@ -69,7 +69,12 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     agents_file = root / ".agents" / "nested" / "instructions.md"
     agents_file.parent.mkdir(parents=True)
     agents_file.write_text("agent instructions\n")
-    codex_home = setup_codex_home(tmp_path, monkeypatch)
+    # 既定 home の生成・子への受け渡しもこの起動で検査する。
+    home = tmp_path / "home"
+    codex_home = home / ".codex"
+    codex_home.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("CODEX_HOME", raising=False)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -87,6 +92,7 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
+            "    'codex_home': os.environ.get('CODEX_HOME'),",
             "    'stdin': sys.stdin.read(),",
             "    'stdin_fd': os.readlink('/proc/self/fd/0'),",
             "}))",
@@ -142,6 +148,8 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     assert record["args"][record["args"].index("exec") + 1] == "--skip-git-repo-check"
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["cwd"] == str(root.resolve())
+    assert record["codex_home"] == str(codex_home)
+    assert result.codex_home == codex_home
     assert record["stdin"] == "prompt"
     assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
     assert result.prompt_log_path.name.endswith("_prompt.md")
