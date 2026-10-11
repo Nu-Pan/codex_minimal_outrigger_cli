@@ -33,11 +33,9 @@ _EXCLUDED_NAMES = {"AGENTS.md"}
 
 # 列挙と ignore 判定には実 index を使い、HEAD と linked worktree の検証だけ commit する。
 def _make_nested_repo(path: Path) -> Path:
-    """outer repository 内に index で追跡する file を持つ Git working tree を作る。"""
+    """owning repository の判定に必要な nested Git working tree だけを作る。"""
     path.mkdir(parents=True)
     init_repo(path)
-    (path / "nested.txt").write_text("nested\n")
-    run_git(path, "add", "nested.txt")
     return path
 
 
@@ -183,7 +181,9 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (nested / ".gitignore").write_text("*.nested\n")
     (nested / "kept.outer").write_text("nested rule owns this file\n")
     (nested / "dropped.nested").write_text("ignored by nested\n")
-    run_git(nested, "add", ".gitignore")
+    # nested index でも、ignore pattern に一致する tracked file を保持する。
+    (nested / "tracked.nested").write_text("tracked ignored by nested\n")
+    run_git(nested, "add", "-f", "tracked.nested")
 
     state = sync_refactor_state(root)
     for relative, entry in state.items():
@@ -213,6 +213,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert "visible.txt" in actual[1]
     assert "nested/kept.outer" in actual[1]
     assert "nested/dropped.nested" not in actual[1]
+    assert "nested/tracked.nested" in actual[1]
     assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
     assert "notes.md" in actual[1]
     assert "oracle/notes.md" in actual[0]
@@ -243,8 +244,10 @@ def test_realization_classifier_uses_nested_head_for_deleted_file(
     """nested repository の削除 path を outer run branch で分類しない。"""
     root = cli_repository
     nested = _make_nested_repo(root / "nested")
-    run_git(nested, "commit", "-m", "initial nested")
     target = nested / "nested.txt"
+    target.write_text("nested\n")
+    run_git(nested, "add", "nested.txt")
+    run_git(nested, "commit", "-m", "initial nested")
     target.unlink()
 
     assert is_realization_file_path(
