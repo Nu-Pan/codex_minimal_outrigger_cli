@@ -26,7 +26,7 @@ from commons.runtime_errors import CmocError
 from commons.runtime_feedback_history import history_artifact
 from commons.runtime_feedback_intake import (
     capture_high_watermark,
-    forget_observation_receipt,
+    forget_observation_receipts,
 )
 from commons.runtime_feedback_store import (
     canonical_json_bytes,
@@ -188,7 +188,7 @@ def open_case(tmp_path, monkeypatch):
     )
     with observation_publication_lock(root):
         raw.unlink()
-        forget_observation_receipt(root, raw_reference)
+        forget_observation_receipts(root, [raw_reference])
     assert feedback_state.validate_feedback_state(root).issues == {identity: issue}
     monkeypatch.setattr(
         report_module,

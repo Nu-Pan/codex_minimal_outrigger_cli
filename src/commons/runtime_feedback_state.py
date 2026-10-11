@@ -3382,7 +3382,7 @@ def publish_current_pointer(
 
 def cleanup_published_report(repo: Path) -> bool:
     """current pointer 切替後の cleanup を manifest 順で idempotent に完了する。"""
-    from .runtime_feedback_intake import forget_observation_receipt
+    from .runtime_feedback_intake import forget_observation_receipts
     from .runtime_feedback_store import observation_publication_lock
 
     state = load_active_state(repo)
@@ -3417,16 +3417,19 @@ def cleanup_published_report(repo: Path) -> bool:
         cut_directory, expected_work_paths, "published report cut"
     )
 
-    # raw observation は publication point 後にだけ削除する。
-    for reference in _reference_list(cleanup, "observations", manifest_path):
+    # raw 削除と receipt の一括更新を同じ排他内で行う。途中で停止しても消費記録と
+    # manifest を保持するため、残った receipt は次の cleanup で安全に削除できる。
+    observations = _reference_list(cleanup, "observations", manifest_path)
+    if observations:
         with observation_publication_lock(repo):
-            _unlink_artifact_reference(
-                repo,
-                reference,
-                expected_root=feedback_root(repo) / "observation" / "v1",
-                description="processed observation",
-            )
-            forget_observation_receipt(repo, reference)
+            for reference in observations:
+                _unlink_artifact_reference(
+                    repo,
+                    reference,
+                    expected_root=feedback_root(repo) / "observation" / "v1",
+                    description="processed observation",
+                )
+            forget_observation_receipts(repo, observations)
 
     # 切替前の generation は manifest に列挙した file だけを削除する。
     for reference in _reference_list(cleanup, "old_generation", manifest_path):
