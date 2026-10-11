@@ -112,6 +112,7 @@ def test_sequence_crosses_base36_boundaries(
 
 def test_parallel_processes_share_one_sequence(tmp_path: Path) -> None:
     """同じ repository の別 process が同時に発行しても通番が重複しない。"""
+    # 独立 process でも同じ採番実装を読み込む。
     source_root = Path(runtime_ids.__file__).resolve().parents[1]
     environment = os.environ.copy()
     environment["PYTHONPATH"] = os.pathsep.join(
@@ -124,8 +125,9 @@ def test_parallel_processes_share_one_sequence(tmp_path: Path) -> None:
     )
 
     def issue_batch(_: int) -> list[str]:
+        # 標準ライブラリだけの子で実採番を通し、不要な site 初期化を省く。
         process = subprocess.run(
-            [sys.executable, "-c", script, str(tmp_path)],
+            [sys.executable, "-S", "-c", script, str(tmp_path)],
             env=environment,
             capture_output=True,
             text=True,
