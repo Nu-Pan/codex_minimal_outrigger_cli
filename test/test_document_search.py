@@ -1118,7 +1118,8 @@ class _CandidateWorker(_InferenceDouble):
     [
         # 上限を一件超える候補で切捨てを検出し、同じ検証のための余分な保存を省く。
         # 件数条件は負の同点候補で通し、類似度の境界を全上限と直積にしない。
-        (50, 51, [((-3, 4), -0.6)], [(None, 50), (20, 20), (50, 50)]),
+        # 引数の最大値 50 は設定上限 20 のケースで検査し、同じ 50 件の検索を重ねない。
+        (50, 51, [((-3, 4), -0.6)], [(None, 50), (20, 20)]),
         (20, 21, [((-3, 4), -0.6)], [(None, 20), (50, 20)]),
         # -1・0・1 は候補不足時に検査する。順位と件数による値の不変性は専用ケースで保つ。
         (50, 7, [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0)], [(None, 7)]),
@@ -1306,20 +1307,17 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        for limit, count in (
-            (None, candidate_count),
-            (20, 20),
-            (candidate_count, candidate_count),
-        ):
-            arguments = {"query": "候補"}
-            if limit is not None:
-                arguments["limit"] = limit
+        # 省略時の上限は件数境界のケースで検査し、ここでは異なる上限の値を比べる。
+        for limit in (20, candidate_count):
             response = _response(
                 {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "tools/call",
-                    "params": {"name": "search", "arguments": arguments},
+                    "params": {
+                        "name": "search",
+                        "arguments": {"query": "候補", "limit": limit},
+                    },
                 },
                 search,
             )
@@ -1327,7 +1325,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
             assert [hit["path"] for hit in result["hits"]] == [path]
             ranges = result["hits"][0]["ranges"]
             assert [location["start_line"] for location in ranges] == list(
-                range(available, available - count, -1)
+                range(available, available - limit, -1)
             )
             assert all(
                 location["start_line"] == location["end_line"]
@@ -1341,8 +1339,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
                     for location in ranges
                 }
             )
-    default, limited, expanded = results
-    assert default == expanded
+    limited, expanded = results
     assert all(value == expanded[line] for line, value in limited.items())
 
 
@@ -1369,7 +1366,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        # 上限だけを変える検査は同じ索引を使い、各要求では query 推論も通す。
+        # 同じ query の上限だけを変え、索引と query embedding を再利用する。
         for limit in (20, candidate_count):
             response = _response(
                 {
@@ -1378,7 +1375,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(
                     "method": "tools/call",
                     "params": {
                         "name": "search",
-                        "arguments": {"query": f"候補 {limit}", "limit": limit},
+                        "arguments": {"query": "候補", "limit": limit},
                     },
                 },
                 search,
