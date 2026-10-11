@@ -104,7 +104,7 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 
 def script_codex_calls(monkeypatch, responses, *, on_call=None):
-    """CLI 入出力だけを応答列で置換し、回復・再開とログ保存は実行する。"""
+    """CLI 応答を置換し、出力の bytes、回復・再開とログ保存は実処理する。"""
     import commons.runtime_codex_exec as exec_module
 
     calls = []
@@ -127,7 +127,11 @@ def script_codex_calls(monkeypatch, responses, *, on_call=None):
             raise response
         returncode, stdout, output = response
         if output is not None:
-            Path(codex_arg_value(argv, "--output-last-message")).write_text(output)
+            output_path = Path(codex_arg_value(argv, "--output-last-message"))
+            if isinstance(output, bytes):
+                output_path.write_bytes(output)
+            else:
+                output_path.write_text(output)
         return subprocess.CompletedProcess(argv, returncode, stdout, "")
 
     monkeypatch.setattr(exec_module, "run_codex_subprocess", run)

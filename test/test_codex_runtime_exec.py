@@ -8,6 +8,7 @@ from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
+    script_codex_calls,
     setup_codex_home,
     stub_codex_overrides,
 )
@@ -189,19 +190,10 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_bytes(b'\\xff')",
-            'print(\'{"type": "turn.completed"}\')',
-        ],
+    # process の受け渡しは正常起動の結合テストに残し、不正 bytes の読み取りを検査する。
+    calls = script_codex_calls(
+        monkeypatch, [(0, '{"type":"turn.completed"}\n', b"\xff")]
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     result = run_codex_exec(
         codex_parameter(agent_call_cwd=root),
@@ -210,6 +202,8 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
         config=CmocConfig(),
     )
 
+    assert len(calls) == 1
+    assert result.output_path.read_bytes() == b"\xff"
     assert result.output_json is None
     assert result.output_text == "\ufffd"
 

@@ -734,36 +734,32 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "blocked = pathlib.Path('src/blocked.py')",
-            "blocked.parent.mkdir(exist_ok=True)",
-            "if count == 0:",
-            "    blocked.write_text('blocked\\n')",
-            (
-                "    print(json.dumps({'type': 'error', "
-                "'message': 'Selected model is at capacity'}))"
-            ),
-            "    sys.exit(1)",
-            "output.write_text(json.dumps({'ok': True}) + '\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    blocked = root / "src" / "blocked.py"
 
-    run_codex_exec(
+    def retain_artifact(index, _call):
+        if index == 1:
+            blocked.parent.mkdir()
+            blocked.write_text("blocked\n")
+        else:
+            assert blocked.read_text() == "blocked\n"
+
+    # 実ファイルと回復制御は保ち、process 受け渡しは既存の結合テストへ委ねる。
+    stdout = '{"type":"turn.completed"}\n'
+    calls = script_codex_calls(
+        monkeypatch,
+        [
+            (
+                1,
+                '{"type":"error","message":"Selected model is at capacity"}\n',
+                None,
+            ),
+            (0, stdout, '{"ok":true}\n'),
+            (0, stdout, '{"ok":true}\n'),
+        ],
+        on_call=retain_artifact,
+    )
+
+    result = run_codex_exec(
         AgentCallParameter(
             "build_feedback_normalize_issue_parameter",
             FileAccessMode.REALIZATION_WRITE,
@@ -776,8 +772,11 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
         config=CmocConfig(),
     )
 
-    assert counter.read_text() == "3"
-    assert (root / "src" / "blocked.py").read_text() == "blocked\n"
+    assert len(calls) == 3
+    assert calls[0]["prompt"] == calls[2]["prompt"] == "prompt"
+    assert calls[1]["prompt"] != "prompt"
+    assert result.output_json == {"ok": True}
+    assert blocked.read_text() == "blocked\n"
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
