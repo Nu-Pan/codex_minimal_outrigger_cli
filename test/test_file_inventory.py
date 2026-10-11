@@ -359,9 +359,10 @@ def test_inventory_rejects_nonregular_paths(
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
-def test_inventory_rejects_ignored_fifo_in_unpruned_area(cli_repository: Path) -> None:
+def test_inventory_rejects_ignored_fifo_in_unpruned_area(tmp_path: Path) -> None:
     """unpruned 領域の FIFO は ignore 対象でも列挙エラーにする。"""
-    root = cli_repository
+    # FIFO は ignore 判定より先に拒否するため、Git repository は不要。
+    root = tmp_path
     (root / ".gitignore").write_text("special\n")
     path = root / "special"
 
@@ -572,24 +573,20 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(
     assert "nested/outer-root.txt" in realization_files
 
 
-@pytest.mark.parametrize("duplicate_kind", ["exact", "lexical-alias"])
 def test_inventory_validates_duplicate_global_ignore_source_once(
     tmp_path: Path,
     cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    duplicate_kind: str,
 ) -> None:
-    """同一 global ignore source の検証を一度の列挙で重複させない。"""
+    """同一表記と別表記の重複が混在しても、同じ source は一度だけ検証する。"""
     root = cli_repository
     global_ignore = tmp_path / "global-ignore"
     global_ignore.write_text("ignored.txt\n")
-    duplicate = global_ignore
-    if duplicate_kind == "lexical-alias":
-        alias_directory = global_ignore.parent / "alias-directory"
-        alias_directory.mkdir()
-        duplicate = alias_directory / ".." / global_ignore.name
-    run_git(root, "config", "--local", "--add", "core.excludesFile", str(global_ignore))
-    run_git(root, "config", "--local", "--add", "core.excludesFile", str(duplicate))
+    alias_directory = tmp_path / "alias-directory"
+    alias_directory.mkdir()
+    alias = alias_directory / ".." / global_ignore.name
+    for source in (global_ignore, global_ignore, alias):
+        run_git(root, "config", "--local", "--add", "core.excludesFile", str(source))
     (root / "ignored.txt").write_text("ignored\n")
 
     validated: list[Path] = []
@@ -609,7 +606,7 @@ def test_inventory_validates_duplicate_global_ignore_source_once(
     )
 
     assert "ignored.txt" not in realization_files
-    assert validated.count(global_ignore) == 1
+    assert [path.resolve() for path in validated].count(global_ignore.resolve()) == 1
 
 
 def test_single_path_classifier_uses_nested_repository_context(
