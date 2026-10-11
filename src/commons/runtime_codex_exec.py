@@ -851,7 +851,6 @@ def run_codex_exec(
             started_at=attempt_started_at,
             returncode=result.returncode,
         )
-        error_text = codex_error_text(result.stdout, result.stderr)
         # 最終 outcome を先に確定し、途中の error と回復済みの成功を区別する。
         check_recovery_interruption()
         resume_session_id = resume_session_id or _extract_session_id_from_stdout_log(
@@ -859,6 +858,7 @@ def run_codex_exec(
         )
         outcome = classify_codex_call(result.stdout, result.returncode)
         if outcome != "succeeded":
+            error_text = codex_error_text(result.stdout, result.stderr)
             if outcome in {"quota", "transient"}:
                 _emit_codex_call_event(
                     run_purpose=purpose,
