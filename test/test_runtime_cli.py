@@ -240,6 +240,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
             primary_report=report_path,
             primary_report_role="probe report",
             result="attention",
+            details=(
+                ("target", Path("input.json")),
+                ("count", 2),
+                ("changed", True),
+                ("unavailable", None),
+                ("detail", "first\n`日本語`\ud800"),
+            ),
             next_actions=("report を確認してください。",),
         )
 
@@ -257,7 +264,14 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
         f"- primary report (probe report): `{report_path.resolve()}`"
     )
     assert stdout_lines[2] == "- result: `attention`"
-    assert stdout_lines[3] == "- 次の操作: report を確認してください。"
+    assert stdout_lines[3:9] == [
+        f"- target: `{root / 'input.json'}`",
+        "- count: `2`",
+        "- changed: `True`",
+        "- unavailable: `None`",
+        "- detail: `first | '日本語'\\ud800`",
+        "- 次の操作: report を確認してください。",
+    ]
     assert captured.out.count("# 完了: cmoc probe") == 1
     assert captured.out.count(str(report_path.resolve())) == 1
     assert "cmoc probe を開始" in captured.err
@@ -269,6 +283,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["classification"] == "natural_completion"
     assert events[-1]["terminal_result"]["result"] == "attention"
+    assert events[-1]["terminal_result"]["details"] == [
+        {"name": "target", "value": str(root / "input.json")},
+        {"name": "count", "value": 2},
+        {"name": "changed", "value": True},
+        {"name": "unavailable", "value": None},
+        {"name": "detail", "value": "first\n`日本語`\\ud800"},
+    ]
     nested_steps = [
         event["step"]
         for event in events
