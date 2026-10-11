@@ -341,7 +341,7 @@ def test_redirect_failure_and_report_preserve_observed_counts(
 def test_doctor_reports_asset_success_separately_from_validation_failure(
     tmp_path, distribution, monkeypatch
 ):
-    """取得・公開成功を保持し、後続の動作検証失敗を doctor 成功にしない。"""
+    """取得・公開成功を保持し、検証失敗を報告して索引同期前に停止する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     # 資材準備から失敗 report までを通し、TCP 受付は test_feedback.py に残す。
@@ -360,13 +360,20 @@ def test_doctor_reports_asset_success_separately_from_validation_failure(
     result = runner.invoke(app, ["doctor"], catch_exceptions=False)
     assert result.exit_code != 0
     report = terminal_primary_report(result).read_text()
+    assert 'terminal_classification: "error"' in report
     assert "照合と実モデル検証: `失敗`" in report
     assert "資材取得の試行数: 1" in report
     assert "有効キャッシュの公開数: 1" in report
     assert "real-model validation failed" in report
+    assert "cmoc doctor を再実行" in report
     assert (
         cache_module.asset_cache_directory() / asset.key / "content"
     ).read_bytes() == distribution[1]["/model"]
+    [log_path] = (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert not any(
+        event["event"].startswith("document_search_sync_") for event in events
+    )
 
 
 def _tarball(name, dependencies=None, version="1.0.0"):

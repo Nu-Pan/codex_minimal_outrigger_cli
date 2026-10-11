@@ -1493,33 +1493,6 @@ def test_doctor_preserves_preexisting_staged_gitignore_deletion(
     assert run_git(root, "ls-files", "--stage", "--", ".gitignore").stdout == ""
 
 
-def test_doctor_fails_when_real_model_validation_does_not_complete(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """資材が取得済みでも実モデル検証失敗を正常終了として報告しない。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-
-    def fail_materials(_root: Path, _config: object) -> dict[str, str]:
-        raise SearchError("MODEL_FAILURE", "embedding validation failed")
-
-    monkeypatch.setattr(
-        doctor_module, "prepare_document_search_materials", fail_materials
-    )
-    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
-
-    assert result.exit_code != 0
-    report = terminal_primary_report(result).read_text(encoding="utf-8")
-    assert 'terminal_classification: "error"' in report
-    assert "照合と実モデル検証: `失敗`" in report
-    assert "embedding validation failed" in report
-    assert "cmoc doctor を再実行" in report
-    events = _new_subcommand_events(root, set())
-    assert not any(
-        event["event"].startswith("document_search_sync_") for event in events
-    )
-
-
 @pytest.mark.parametrize(
     ("failure_code", "expected_status"),
     [("MODEL_FAILURE", "failed"), ("CANCELLED", "cancelled")],
