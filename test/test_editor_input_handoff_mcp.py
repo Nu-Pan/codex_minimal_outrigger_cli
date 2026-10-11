@@ -327,32 +327,10 @@ def test_handoff_mcp_requires_initialize_capabilities_and_client_info(
     }
 
 
-def test_handoff_mcp_marks_domain_failure_as_tool_error(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """submission failure は MCP tool result の isError へ反映する。"""
-    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, "/tmp/repository")
-    response = handoff_mcp._response(
-        {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "overwrite",
-                "arguments": {"target_id": "target", "content": []},
-            },
-        }
-    )
-    assert response is not None
-    result = response["result"]
-    assert result["structuredContent"]["status"] == "rejected"
-    assert result["isError"] is True
-
-
 def test_handoff_mcp_rejects_invalid_input_without_returning_content(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """schema 違反と transport 不可能な文字列を content 非表示で拒否する。"""
+    """schema 違反と transport 不可能な文字列を、本文を漏らさず tool error にする。"""
     monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, "/tmp/repository")
     payloads: tuple[object, ...] = (
         {"target_id": "target", "content": ["private content"]},
@@ -360,11 +338,22 @@ def test_handoff_mcp_rejects_invalid_input_without_returning_content(
     )
 
     for payload in payloads:
-        result = handoff_mcp._submit(payload)
-        rendered = json.dumps(result, ensure_ascii=True)
-        assert result["status"] == "rejected"
-        assert result["code"] == "invalid_input"
-        assert "private content" not in rendered
+        response = handoff_mcp._response(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "overwrite", "arguments": payload},
+            }
+        )
+        assert response is not None
+        result = response["result"]
+        value = result["structuredContent"]
+        assert value["status"] == "rejected"
+        assert value["code"] == "invalid_input"
+        assert result["isError"] is True
+        assert json.loads(result["content"][0]["text"]) == value
+        assert "private content" not in json.dumps(response, ensure_ascii=True)
 
 
 def test_handoff_response_loss_reports_unknown_while_write_completes(
