@@ -62,7 +62,13 @@ from commons.runtime_run_lifecycle import (
     start_editing_run,
     worktree_change_paths,
 )
-from commons.runtime_state import RunPart, SessionPart, SessionState, write_state
+from commons.runtime_state import (
+    RunPart,
+    SessionPart,
+    SessionState,
+    state_path,
+    write_state,
+)
 from main import app
 
 # agent 応答は差し替え、観測を送信しないため、collector の起動・probe を準備しない。
@@ -411,27 +417,38 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
     ],
 )
 def test_run_join_doctor_sync_depends_on_active_run_kind(
-    ready_run_session: tuple[Path, str, Path],
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     kind: str,
     expected_sync: bool,
 ) -> None:
     """run kind に応じて join 前 doctor の refactor state 同期を切り替える。"""
-    _root, _session_branch, state_path = ready_run_session
-    # 同期の選択は保存済み kind だけを読み、run branch/worktree の作成は不要。
-    state = SessionState.from_dict(_state(state_path))
-    state.run = RunPart(
-        state="running",
-        kind=kind,
-        branch=RUN_BRANCH,
-        fork_commit=state.session.session_fork_commit,
+    # kind は実際の保存済み state から読み、履歴・checkout の準備は省く。
+    # 実 Git の root 解決と doctor の結合は run worktree 起点の join test に残す。
+    write_state(
+        state_path(tmp_path, SESSION_ID),
+        SessionState(
+            session=SessionPart(
+                session_home_branch="main", session_fork_commit="session-fork"
+            ),
+            run=RunPart(
+                state="running",
+                kind=kind,
+                branch=RUN_BRANCH,
+                fork_commit="run-fork",
+            ),
+        ),
     )
-    write_state(state_path, state)
-    calls: list[bool] = []
+    monkeypatch.setattr(run_join_module, "work_root", lambda: tmp_path)
+    monkeypatch.setattr(run_join_module, "repo_root", lambda _root: tmp_path)
+    monkeypatch.setattr(run_join_module, "current_branch", lambda _root: SESSION_BRANCH)
+    calls: list[tuple[Path, bool]] = []
     monkeypatch.setattr(
         run_join_module,
         "run_doctor_preprocess",
-        lambda _root, *, sync_refactor_entries: calls.append(sync_refactor_entries),
+        lambda root, *, sync_refactor_entries: calls.append(
+            (root, sync_refactor_entries)
+        ),
     )
 
     def unused_history_query(*_args, **_kwargs):
@@ -442,7 +459,7 @@ def test_run_join_doctor_sync_depends_on_active_run_kind(
 
     run_join_module.doctor_preprocess_for_join()
 
-    assert calls == [expected_sync]
+    assert calls == [(tmp_path, expected_sync)]
 
 
 @pytest.mark.parametrize("has_repair_record", [False, True], ids=["absent", "empty"])
