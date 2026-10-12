@@ -173,10 +173,18 @@ def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     return root
 
 
+def _test_node_runtime(base: Path) -> None:
+    """worker の隔離配置から、テスト用の実 Node を起動できるようにする。"""
+    node = base / "node/bin/node"
+    node.parent.mkdir(parents=True)
+    node.symlink_to(shutil.which("node"))
+
+
 def _fake_node_model(base: Path) -> None:
     """実 chunker に文字単位 tokenizer と記録可能な推論を与える。"""
     source = resources.files("commons.document_search_worker").joinpath("worker.mjs")
     (base / "worker.mjs").write_bytes(source.read_bytes())
+    _test_node_runtime(base)
     package = base / "node_modules/node-llama-cpp"
     package.mkdir(parents=True)
     (package / "package.json").write_text(
@@ -861,6 +869,7 @@ def test_streaming_worker_delivers_chunk_before_cancellation(tmp_path: Path) -> 
     """Node の応答完了を待たず chunk を受け取り、取消時は子を回収する。"""
     base = materials_directory(tmp_path)
     base.mkdir(parents=True)
+    _test_node_runtime(base)
     (base / "worker.mjs").write_text(
         'import fs from "node:fs"; '
         "for await (const _part of process.stdin) {} "
@@ -1746,6 +1755,7 @@ def test_worker_cancellation_reaps_process_before_releasing_owner(
     """推論中の取消で子 process を停止・回収してから失敗を返す。"""
     base = materials_directory(tmp_path)
     base.mkdir(parents=True)
+    _test_node_runtime(base)
     (base / "worker.mjs").write_text(
         'import fs from "node:fs"; '
         'fs.writeFileSync("started.pid", String(process.pid)); '

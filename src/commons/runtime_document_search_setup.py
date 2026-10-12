@@ -16,7 +16,11 @@ from oracle.other.cmoc_config import DocumentSearchConfig
 from oracle.other.document_search import EMBEDDING_QUERY_TEMPLATE
 
 from .runtime_document_search import SearchError, _file_lock, _safe_directory
-from .runtime_document_search_assets import node_runtime_assets, prepare_model
+from .runtime_document_search_assets import (
+    node_runtime_assets,
+    prepare_model,
+    prepare_node_runtime,
+)
 from .runtime_document_search_types import SEARCH_MATERIALS
 from .runtime_document_search_worker import (
     NodeSearchWorker,
@@ -47,7 +51,11 @@ def _runtime_versions(base: Path) -> None:
     """Node と sqlite-vec を固定版として確認する。"""
     node = (
         subprocess.run(
-            ["node", "--version"], check=True, capture_output=True, text=True, timeout=5
+            [str(base / "node/bin/node"), "--version"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         .stdout.strip()
         .removeprefix("v")
@@ -71,9 +79,10 @@ def _install_node_runtime(root: Path, base: Path, materials_fd: int) -> None:
 
 
 def _run_npm_offline(base: Path, materials_fd: int) -> None:
-    # https://docs.npmjs.com/cli/v12/using-npm/config/#offline
+    # https://docs.npmjs.com/cli/v11/using-npm/config/#offline
     command = [
-        "npm",
+        str(base / "node/bin/node"),
+        str(base / "node/lib/node_modules/npm/bin/npm-cli.js"),
         "ci",
         "--ignore-scripts",
         "--include=optional",
@@ -87,7 +96,11 @@ def _run_npm_offline(base: Path, materials_fd: int) -> None:
     process = subprocess.Popen(
         command,
         cwd=base,
-        env={**os.environ, "npm_config_cache": str(base / ".npm-cache")},
+        env={
+            **os.environ,
+            "PATH": str(base / "node/bin") + os.pathsep + os.environ.get("PATH", ""),
+            "npm_config_cache": str(base / ".npm-cache"),
+        },
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -216,16 +229,7 @@ def _manifest(
         "package_sha256": hashes["package.json"],
         "lock_sha256": hashes["package-lock.json"],
         "runtime_tree_sha256": _runtime_tree_hash(base),
-        "materials": {
-            "node_version": SEARCH_MATERIALS.node_version,
-            "node_llama_cpp_version": SEARCH_MATERIALS.node_llama_cpp_version,
-            "llama_cpp_revision": SEARCH_MATERIALS.llama_cpp_revision,
-            "sqlite_vec_version": SEARCH_MATERIALS.sqlite_vec_version,
-            "embedding_sha256": SEARCH_MATERIALS.embedding.sha256,
-            "embedding_tokenizer_sha256": SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
-            "embedding_pooling": SEARCH_MATERIALS.embedding.pooling,
-            "embedding_dimensions": SEARCH_MATERIALS.embedding_dimensions,
-        },
+        "materials": asdict(SEARCH_MATERIALS),
         "verified_conditions": {
             verification_condition(config): "document-query-embedding"
         },
@@ -245,6 +249,11 @@ def _reuse_node_runtime(root: Path, base: Path, staging: Path) -> bool:
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         return False
     shutil.copytree(base / "node_modules", staging / "node_modules", symlinks=True)
+    shutil.copytree(base / "node", staging / "node", symlinks=True)
+    package = json.loads((staging / "package.json").read_text(encoding="utf-8"))
+    archive = base / package["cmoc"]["node_distribution"]["filename"]
+    if archive.is_file():
+        shutil.copyfile(archive, staging / archive.name)
     record_asset_event(
         "asset.component_reused",
         root,
@@ -346,6 +355,9 @@ def prepare_document_search_materials(
             }
             phase = "npm runtime build"
             if not _reuse_node_runtime(root, base, staging):
+                phase = "Node runtime preparation"
+                prepare_node_runtime(root, base, staging)
+                phase = "npm runtime build"
                 _install_node_runtime(root, staging, materials_fd)
             phase = "runtime and vector dependency check"
             _runtime_versions(staging)

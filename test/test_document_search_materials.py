@@ -39,6 +39,7 @@ def small_materials(monkeypatch: pytest.MonkeyPatch) -> dict[str, bytes]:
     monkeypatch.setattr(setup, "SEARCH_MATERIALS", materials)
     monkeypatch.setattr(worker, "SEARCH_MATERIALS", materials)
     monkeypatch.setattr(setup, "require_cmoc_ignored", lambda _root: None)
+    monkeypatch.setattr(setup, "prepare_node_runtime", lambda *_args: None)
 
     # 通信経路は test_download_asset_cache.py で検査し、ここでは TLS 初期化も省く。
     def fake_opener(*_handlers: object) -> SimpleNamespace:
@@ -55,9 +56,43 @@ def _installed_runtime(base: Path) -> None:
     native = base / "node_modules/@node-llama-cpp/linux-x64"
     native.mkdir(parents=True)
     (native / "binding.node").write_bytes(b"fixed native")
+    metadata = native / "bins/linux-x64/_nlcBuildMetadata.json"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text(
+        json.dumps(
+            {
+                "buildOptions": {
+                    "llamaCpp": {
+                        "repo": "ggml-org/llama.cpp",
+                        "release": SEARCH_MATERIALS.llama_cpp_release,
+                    }
+                }
+            }
+        )
+    )
+    node = base / "node/bin/node"
+    node.parent.mkdir(parents=True)
+    node.write_bytes(b"fixed node")
     package = base / "node_modules/node-llama-cpp/package.json"
     package.parent.mkdir(parents=True)
-    package.write_text(json.dumps({"version": "3.20.0"}))
+    package.write_text(json.dumps({"version": SEARCH_MATERIALS.node_llama_cpp_version}))
+
+
+@pytest.mark.parametrize("field", ["repo", "release"])
+def test_native_llama_revision_must_match_adoption(tmp_path: Path, field: str) -> None:
+    """同じ npm 版でも、付属 native が採用した llama.cpp を使うことを確認する。"""
+    setup._copy_worker_source(tmp_path, "package-lock.json")
+    _installed_runtime(tmp_path)
+    worker._verify_lock(tmp_path)
+    path = (
+        tmp_path
+        / "node_modules/@node-llama-cpp/linux-x64/bins/linux-x64/_nlcBuildMetadata.json"
+    )
+    metadata = json.loads(path.read_text())
+    metadata["buildOptions"]["llamaCpp"][field] = "different"
+    path.write_text(json.dumps(metadata))
+    with pytest.raises(ValueError, match="llama.cpp revision mismatch"):
+        worker._verify_lock(tmp_path)
 
 
 def test_doctor_reuses_valid_materials_and_requires_current_validation(
@@ -79,7 +114,7 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
         return sha256(path)
 
     def fake_version(_args: list[str], **_kwargs: Any) -> SimpleNamespace:
-        return SimpleNamespace(stdout="v22.23.2")
+        return SimpleNamespace(stdout="v" + SEARCH_MATERIALS.node_version)
 
     def fake_install(_root: Path, base: Path, _fd: int) -> None:
         npm_calls.append(base)
@@ -177,7 +212,7 @@ def test_failed_real_model_probe_never_publishes_materials(
     """推論検証に失敗した隔離 build を次回起動で準備済みと扱わない。"""
 
     def fake_version(_args: list[str], **_kwargs: Any) -> SimpleNamespace:
-        return SimpleNamespace(stdout="v22.23.2")
+        return SimpleNamespace(stdout="v" + SEARCH_MATERIALS.node_version)
 
     monkeypatch.setattr(
         setup,

@@ -2,9 +2,11 @@
 
 import base64
 import json
+import os
 import platform
 import shutil
 import subprocess
+import tarfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict
@@ -13,6 +15,28 @@ from urllib.parse import quote
 
 from .runtime_document_search_types import ModelArtifact
 from .runtime_download_asset_cache import DownloadAsset, DownloadAssetCache
+
+
+def prepare_node_runtime(root: Path, base: Path, staging: Path) -> None:
+    """採用済み Node 配布物を照合し、npm とともに隔離 build へ展開する。"""
+    # 配布 package の採用記録だけを参照し、通常準備では版を探索しない。
+    package = json.loads((staging / "package.json").read_text(encoding="utf-8"))
+    distribution = package["cmoc"]["node_distribution"]
+    if platform.system() != "Linux" or platform.machine() not in ("x86_64", "AMD64"):
+        raise ValueError("adopted Node distribution requires Linux x64")
+    asset = DownloadAsset(
+        name=distribution["filename"],
+        url=distribution["url"],
+        integrity="sha256-"
+        + base64.b64encode(bytes.fromhex(distribution["sha256"])).decode("ascii"),
+        size_bytes=distribution["size_bytes"],
+        identity={"version": package["engines"]["node"], "os": "linux", "cpu": "x64"},
+    )
+    archive = staging / asset.name
+    DownloadAssetCache(root).obtain(asset, archive, local_sources=(base / asset.name,))
+    with tarfile.open(archive) as source:
+        source.extractall(staging, filter="data")
+    os.replace(staging / asset.name.removesuffix(".tar.xz"), staging / "node")
 
 
 def prepare_model(
@@ -49,10 +73,14 @@ def _allows(restriction: object, value: str) -> bool:
     )
 
 
-def _npm_platform() -> dict[str, str]:
+def _npm_platform(base: Path) -> dict[str, str]:
     # npm と同じ Node の process.platform/process.arch を参照する。
     result = subprocess.run(
-        ["node", "-p", "JSON.stringify({os:process.platform,cpu:process.arch})"],
+        [
+            str(base / "node/bin/node"),
+            "-p",
+            "JSON.stringify({os:process.platform,cpu:process.arch})",
+        ],
         check=True,
         capture_output=True,
         text=True,
@@ -92,7 +120,7 @@ def node_runtime_assets(root: Path, base: Path) -> Iterator[None]:
     packages = lock["packages"]
     if lock.get("lockfileVersion") != 3 or not isinstance(packages, dict):
         raise ValueError("npm lock is incomplete")
-    target = _npm_platform()
+    target = _npm_platform(base)
     asset_dir = base / ".assets"
     asset_dir.mkdir()
     cache = DownloadAssetCache(root)
