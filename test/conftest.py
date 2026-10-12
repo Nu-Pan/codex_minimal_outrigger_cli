@@ -224,10 +224,23 @@ def _isolate_document_search_materials(
     monkeypatch.setattr(runtime_doctor, "DocumentSearch", doctor_search)
 
 
+@pytest.fixture
+def feedback_without_transport(monkeypatch):
+    """保存済み観測と fake 応答による state 検査では TCP の準備を省く。"""
+    # stdio・TCP の受理・拒否・drain と linked worktree からの追加観測は
+    # test_feedback.py の transport・後続 wave 結合 test で検証する。
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    monkeypatch.setattr(
+        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
+    )
+
+
 @pytest.fixture(autouse=True)
 def real_stdio_reporter_probe(monkeypatch):
     """stdio 起動の検証を専用ケースへ集約し、実際の検査関数を渡す。"""
-    # schema・TCP collector の検査は各 CLI test でも実行する。
+    # schema・TCP collector の検査は、transport を使う CLI test でも実行する。
     # test_feedback.py の正常起動・不正応答のケースだけが実 stdio 検査を使う。
     probe = runtime_feedback._validate_stdio_reporter
     monkeypatch.setattr(

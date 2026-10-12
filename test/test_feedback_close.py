@@ -15,8 +15,6 @@ from test_feedback import (
     _store_agent_issue,
 )
 
-import commons.runtime_cli as runtime_cli
-import commons.runtime_doctor as runtime_doctor
 import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
 import sub_commands.feedback.close as close_module
@@ -43,18 +41,7 @@ from commons.runtime_ids import is_common_id
 from commons.runtime_logging import SubcommandLogger
 from main import app
 
-
-@pytest.fixture(autouse=True)
-def _isolate_feedback_transport(monkeypatch):
-    """直接保存した観測と fake 応答を使う close 検査では transport を起動しない。"""
-    # stdio・TCP の接続、受理・拒否・drain は test_feedback.py で検証する。
-    # ここでは report から close への状態・履歴・入力消費の結合を実装で確かめる。
-    monkeypatch.setattr(
-        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
-    )
-    monkeypatch.setattr(
-        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
-    )
+pytestmark = pytest.mark.usefixtures("feedback_without_transport")
 
 
 @pytest.fixture

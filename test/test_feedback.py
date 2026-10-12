@@ -2550,6 +2550,7 @@ def test_feedback_writer_lock_rejects_concurrent_writer(
                 pass
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_empty_report_publishes_current_generation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -3000,6 +3001,7 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert (root / "README.md").read_text() == "changed after publication\n"
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
