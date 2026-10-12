@@ -114,7 +114,8 @@ def test_immutable_write_checks_leftover_temporaries(
     path = tmp_path / "record.json"
     content = b"immutable\n"
     if published:
-        store.write_immutable_bytes(path, content)
+        # durability は専用 test で検証し、ここでは保存済み file だけを用意する。
+        path.write_bytes(content)
     temporary = tmp_path / f".{path.name}.interrupted.tmp"
     unrelated = tmp_path / ".other.json.interrupted.tmp"
     unrelated.write_bytes(b"unrelated\n")
