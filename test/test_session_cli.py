@@ -52,6 +52,10 @@ from commons.runtime_refactor import sync_refactor_state, write_refactor_state
 from config.cmoc_config import CmocConfig
 from main import app
 
+# session state を検査し、観測を送信しないため、collector の起動・probe は準備しない。
+# TCP/stdio の受理・拒否・drain と CLI との結合は test_feedback.py に残す。
+pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+
 
 def _seed_remote_tracking_branch(root: Path, branch: str, commit: str) -> None:
     """checkout の推測候補になる remote 設定と追跡 ref を用意する。"""
@@ -1006,15 +1010,12 @@ def test_session_completion_rejects_missing_state_fields(
 
 @pytest.fixture
 def session_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
-    """session 固有の検査では共通サービスを省き、doctor 呼び出しを記録する。"""
+    """session 固有の競合・失敗検査では doctor を省き、呼び出し先を記録する。"""
     # fork の競合・失敗検査は実 Git と pre-log の exclude 修復を使い、設定を準備しない。
     # fork→abandon/join の結合と doctor の修復・順序は正常系・linked worktree と
-    # test_doctor_cli.py、collector の受付・保存・drain は test_feedback.py に残す。
+    # test_doctor_cli.py に残す。
     roots: list[Path] = []
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", roots.append)
-    monkeypatch.setattr(
-        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
-    )
     return roots
 
 
