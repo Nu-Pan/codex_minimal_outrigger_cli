@@ -27,6 +27,10 @@ from cmoc_runtime import write_config
 from config.cmoc_config import CmocConfig
 from main import app
 
+# agent 起動は全ケースでダブルを使うため、利用しない feedback transport は準備しない。
+# TCP の受付・保存・drain は test_feedback.py、doctor の検査順序は test_doctor_cli.py に残す。
+pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+
 
 @pytest.fixture
 def editor_input(
@@ -327,12 +331,8 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     monkeypatch.setattr(
         runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
     )
-    # doctor と TUI は観測用のダブルなので、使わない collector は起動しない。
     # handoff の TCP・guide の結合は test_editor_input_handoff.py に残し、
     # linked 起動では main root への引き渡しと終了順序を観測する。
-    monkeypatch.setattr(
-        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
-    )
     write_config(linked / ".cmoc/gt/config.json", CmocConfig())
     monkeypatch.chdir(linked)
     opened_inputs = editor_input("\nlinked worktree task\n")
