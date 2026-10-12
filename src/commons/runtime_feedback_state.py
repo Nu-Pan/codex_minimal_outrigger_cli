@@ -1972,13 +1972,7 @@ def _validate_report_cut_manifest(
         )
     publication = manifest.get("publication")
     if publication is not None:
-        _validate_publication_section(
-            repo,
-            publication,
-            path,
-            inputs=inputs,
-            processing=processing,
-        )
+        _validate_publication_section(repo, manifest, path)
     from .runtime_feedback_run_state import validate_run_artifacts
 
     validate_run_artifacts(
@@ -2412,15 +2406,15 @@ def _artifact_reference_shape(
 
 def _validate_publication_section(
     repo: Path,
-    value: object,
+    manifest: _JsonObject,
     path: Path,
-    *,
-    inputs: _JsonObject,
-    processing: _JsonObject,
 ) -> None:
     """staged publication と cleanup target の閉じた schema を検査する。"""
+    # 呼出し元で読んだ manifest を使い、cleanup 参照へ別の snapshot を混ぜない。
+    inputs = manifest["inputs"]
+    processing = manifest["processing"]
     publication = _require_exact_fields(
-        value,
+        manifest["publication"],
         {
             "generation_id",
             "generation_manifest",
@@ -2471,13 +2465,14 @@ def _validate_publication_section(
     history_artifacts = publication["history_artifacts"]
     if not isinstance(history_artifacts, list) or len(history_artifacts) != 1:
         raise _corruption("publication history artifacts が不正です。", path)
-    for reference in history_artifacts:
+    # 完成した generation の history は _load_generation で hash と内容を検証する。
+    if staged_missing:
         _validate_artifact_reference(
             repo,
-            reference,
+            history_artifacts[0],
             expected_root=feedback_root(repo) / "history",
             description="staged history",
-            allow_missing=staged_missing,
+            allow_missing=True,
         )
     expected_generation_root = generation_directory(repo, generation_id_value)
     generation_manifest_path = _resolve_reference_path(
@@ -2493,13 +2488,22 @@ def _validate_publication_section(
     ):
         raise _corruption("publication generation manifest path が不正です。", path)
     for reference in generation_artifacts:
-        artifact_path = _validate_artifact_reference(
-            repo,
-            reference,
-            expected_root=expected_generation_root,
-            description="publication generation artifact",
-            allow_missing=staged_missing,
-        )
+        if staged_missing:
+            artifact_path = _validate_artifact_reference(
+                repo,
+                reference,
+                expected_root=expected_generation_root,
+                description="publication generation artifact",
+                allow_missing=True,
+            )
+        else:
+            # 完成時も path 制約は確認し、byte 列の検査は generation の読込に揃える。
+            artifact_path = _resolve_reference_path(
+                repo,
+                reference["path"],
+                expected_generation_root,
+                "publication generation artifact",
+            )
         if artifact_path == generation_manifest_path:
             continue
         try:
@@ -2556,7 +2560,10 @@ def _validate_publication_section(
             "publication generation",
         )
         loaded, _issues, _aggregates, history = _load_generation(
-            repo, generation_manifest_path, generation_id_value
+            repo,
+            generation_manifest_path,
+            generation_id_value,
+            expected_sha256=generation_reference["sha256"],
         )
         if loaded.get("report_cut_id") != path.parent.name:
             raise _corruption(
@@ -2644,9 +2651,7 @@ def _validate_publication_section(
         )
     from .runtime_feedback_run_state import run_artifact_references
 
-    expected_work.extend(
-        run_artifact_references(_read_canonical_object(path, "feedback manifest"))
-    )
+    expected_work.extend(run_artifact_references(manifest))
     expected_work.sort(key=lambda item: str(item["path"]))
     if any(
         reference not in expected_observations
