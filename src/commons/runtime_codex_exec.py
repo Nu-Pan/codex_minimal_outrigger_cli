@@ -288,18 +288,20 @@ def run_codex_exec(
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = deepcopy(config or load_config(path_context.work_root))
-    logger = subcommand_logger or current_subcommand_logger()
-    execution_id = (
-        logger.execution_id if logger is not None else current_execution_id(root)
-    )
-    log_dir = codex_log_dir(root) / execution_id
-    log_dir.mkdir(parents=True, exist_ok=True)
     agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
     # path を対象にする。
     codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
+
+    # 起動できない home では、採番 DB と空の Codex ログディレクトリを作らない。
+    logger = subcommand_logger or current_subcommand_logger()
+    execution_id = (
+        logger.execution_id if logger is not None else current_execution_id(root)
+    )
+    log_dir = codex_log_dir(root) / execution_id
+    log_dir.mkdir(parents=True, exist_ok=True)
     codex_env = codex_subprocess_env(codex_home)
     override_args = prepare_codex_override_args(
         parameter,

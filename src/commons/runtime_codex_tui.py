@@ -62,14 +62,16 @@ def run_codex_tui(
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = config or load_config(path_context.work_root)
-    log_dir = codex_log_dir(root) / current_execution_id(root)
-    log_dir.mkdir(parents=True, exist_ok=True)
     agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # 利用者指定の env value は変更せず、Codex が相対 CODEX_HOME を解決する場所に
     # validation を合わせる。
     codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
+
+    # 起動できない home では、採番 DB と空の Codex ログディレクトリを作らない。
+    log_dir = codex_log_dir(root) / current_execution_id(root)
+    log_dir.mkdir(parents=True, exist_ok=True)
     codex_environment = codex_subprocess_env(codex_home)
     # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
     # TUI の version probe も Codex executable を起動するため、agent call と
