@@ -16,6 +16,7 @@ import pytest
 from _git_support import RUN_BRANCH, init_repo, make_repo, run_git
 
 import commons.runtime_git as runtime_git
+import commons.runtime_refactor as runtime_refactor
 from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import (
     enumerate_oracle_and_realization_files,
@@ -146,6 +147,7 @@ def _special_path(path: Path, kind: str) -> Iterator[None]:
 
 def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """最適化列挙と state entry・SHA 更新を full glob 基準へ一致させる。"""
     root = cli_repository
@@ -203,9 +205,22 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     venv_bin.mkdir(parents=True)
     (venv_bin / "python").symlink_to(root / "missing-python")
 
+    # state 同期が実際に消費した列挙結果を記録し、比較のためだけの再列挙を省く。
+    inventories: list[tuple[list[Path], list[Path]]] = []
+
+    def recording_inventory(work_root: Path) -> tuple[list[Path], list[Path]]:
+        inventory = enumerate_oracle_and_realization_files(work_root)
+        inventories.append(inventory)
+        return inventory
+
+    monkeypatch.setattr(
+        runtime_refactor, "enumerate_oracle_and_realization_files", recording_inventory
+    )
+    assert sync_refactor_state(root) == state
+
     # symlink 追加後の分類結果を full glob と照合し、追加前の state の集合も確認する。
     expected = _full_glob_reference(root, (nested,))
-    actual = _relative_sets(root, enumerate_oracle_and_realization_files(root))
+    actual = _relative_sets(root, inventories[-1])
     assert actual == expected
 
     assert "ignored/tracked.txt" in actual[1]
@@ -218,8 +233,6 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert "notes.md" in actual[1]
     assert "oracle/notes.md" in actual[0]
     assert set(state) == actual[0] | actual[1]
-    # state 同期による再列挙で、ignored symlink が entry と調査履歴を変えないことを確認する。
-    assert sync_refactor_state(root) == state
 
     (root / "README.md").write_text("changed\n")
     (root / "visible.txt").unlink()
@@ -624,11 +637,9 @@ def test_single_path_classifier_uses_nested_repository_context(
     assert not is_realization_file_path(root, nested / ".git" / "config")
 
 
-@pytest.mark.parametrize("candidate_kind", ["regular-file", "ignored-symlink"])
 def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
     cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    candidate_kind: str,
 ) -> None:
     """候補 regular file・symlink 数の増加で Git 処理量を増やさない。"""
     root = cli_repository
@@ -636,14 +647,12 @@ def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
     source.mkdir()
     (root / ".gitignore").write_text("*.link\n")
 
-    def add_candidate(name: str) -> None:
+    def add_candidate(kind: str, name: str) -> None:
         """性能 fixture に指定種別の候補を一つ追加する。"""
-        if candidate_kind == "regular-file":
+        if kind == "regular-file":
             (source / f"{name}.txt").write_text(f"{name}\n")
         else:
             (source / f"{name}.link").symlink_to(root / "missing-target")
-
-    add_candidate("one")
 
     git_calls = 0
     source_validations = 0
@@ -676,15 +685,25 @@ def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
     monkeypatch.setattr(runtime_git, "_validate_git_ignore_sources", counting_validate)
     monkeypatch.setattr(runtime_git.os, "scandir", counting_scandir)
 
-    enumerate_oracle_and_realization_files(root)
-    first_counts = (git_calls, source_validations, traversals)
-    git_calls = 0
-    source_validations = 0
-    traversals = 0
+    # repository だけを共有し、候補集合と基準値は種別ごとに作り直す。
+    for kind in ("regular-file", "ignored-symlink"):
+        for path in source.iterdir():
+            path.unlink()
+        add_candidate(kind, "one")
+        git_calls = 0
+        source_validations = 0
+        traversals = 0
 
-    for index in range(50):
-        add_candidate(f"candidate-{index}")
-    enumerate_oracle_and_realization_files(root)
+        enumerate_oracle_and_realization_files(root)
+        first_counts = (git_calls, source_validations, traversals)
 
-    assert (git_calls, source_validations, traversals) == first_counts
-    assert source_validations == 1
+        for index in range(50):
+            add_candidate(kind, f"candidate-{index}")
+        git_calls = 0
+        source_validations = 0
+        traversals = 0
+
+        enumerate_oracle_and_realization_files(root)
+
+        assert (git_calls, source_validations, traversals) == first_counts, kind
+        assert source_validations == 1, kind

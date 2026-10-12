@@ -1454,8 +1454,8 @@
   "test/test_file_inventory.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "9b3ed3a96e7510b0a49bbf2c707fa39e2bba87d5bfcc4c46bfb2d573516ea28b",
-    "last_investigated_at": "2026-10-11_03-33-14_827"
+    "last_investigated_sha256": "c1b5347a4dbaae9af3db492254b2537d85d51a92a275a7f1e972fd1c1728bae4",
+    "last_investigated_at": "2026-10-13_08-05-34_889"
   },
   "test/test_git_query_reuse.py": {
     "investigation_required": true,
