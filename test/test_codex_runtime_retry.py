@@ -229,7 +229,7 @@ def test_structured_output_parse_failure_stops_before_schema_and_postcondition(
     schema_validator = Mock()
     postcondition = Mock()
 
-    output, issues = runtime_codex_exec._validate_structured_output(
+    _text, output, issues = runtime_codex_exec._validate_structured_output(
         output_path, schema_validator, postcondition, frozenset()
     )
 
@@ -494,6 +494,16 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
 ) -> None:
     """parse failure を同じ session で補正し、元の出力と診断を保持する。"""
     root = cli_repository
+    # 検証済み本文の再読み取りを検出し、補正・保存の既存ケースで I/O 回帰も守る。
+    output_reads: list[Path] = []
+    original_open = Path.open
+
+    def record_output_read(path, mode="r", *args, **kwargs):
+        if path.name.endswith("_output.json") and "r" in mode:
+            output_reads.append(path)
+        return original_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", record_output_read)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     # parse と補正・ログ保存を検証し、process の受け渡しは schema 補正の結合に残す。
@@ -502,7 +512,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     )
     calls = script_codex_calls(
         monkeypatch,
-        [(0, stdout, "NaN"), (0, stdout, "1")],
+        [(0, stdout, "NaN"), (0, stdout, " 1 \n")],
     )
     schema = tmp_path / "parse_failure_schema.json"
     schema.write_text(json.dumps({"type": "number"}))
@@ -524,7 +534,8 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     )
 
     assert result.output_json == 1
-    assert result.output_text == "1"
+    assert result.output_text == " 1 \n"
+    assert output_reads.count(result.output_path) == 1
     assert len(calls) == 2
     call_logs = [
         json.loads(path.read_text())
@@ -535,7 +546,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     assert call_logs[1]["argv"][resume_index + 1] == "session-1"
     assert [Path(log["output_path"]).read_text() for log in call_logs] == [
         "NaN",
-        "1",
+        " 1 \n",
     ]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]

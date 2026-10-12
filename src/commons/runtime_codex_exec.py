@@ -71,8 +71,8 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
     path.write_text(prompt, encoding="utf-8")
 
 
-def _read_required_output_json(path: Path) -> Any:
-    """Structured Output の必須 JSON を機械的検証用に厳格に読み取る。"""
+def _read_required_output(path: Path) -> tuple[str, Any]:
+    """Structured Output の本文と必須 JSON を一度の読み取りから返す。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # 欠落、空、malformed な output は JSON parse 不合格として補正対象にする。
     try:
@@ -82,7 +82,7 @@ def _read_required_output_json(path: Path) -> Any:
     if not text.strip():
         raise ValueError(f"output file is empty: {path}")
     try:
-        return json.loads(text, parse_constant=reject_non_json_constant)
+        return text, json.loads(text, parse_constant=reject_non_json_constant)
     except (RecursionError, ValueError) as exc:
         raise ValueError(f"output file is not valid JSON: {exc}") from exc
 
@@ -140,16 +140,16 @@ def _validate_structured_output(
     schema_validator: Validator,
     postcondition: StructuredOutputPostcondition | None,
     changed_paths: frozenset[str],
-) -> tuple[Any, tuple[StructuredOutputValidationIssue, ...]]:
+) -> tuple[str, Any, tuple[StructuredOutputValidationIssue, ...]]:
     """parse、schema、宣言済み事後条件を順番どおり検証する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     try:
-        output = _read_required_output_json(path)
+        text, output = _read_required_output(path)
     except (UnicodeError, ValueError) as exc:
-        return None, (_parse_validation_issue(path, exc),)
+        return "", None, (_parse_validation_issue(path, exc),)
     issues = _schema_validation_issues(output, schema_validator)
     if issues or postcondition is None:
-        return output, issues
+        return text, output, issues
     postcondition_issues = tuple(postcondition(output, changed_paths))
     if any(
         not isinstance(issue, StructuredOutputValidationIssue)
@@ -158,7 +158,7 @@ def _validate_structured_output(
         raise TypeError(
             "structured output postcondition must return validation issue objects"
         )
-    return output, postcondition_issues
+    return text, output, postcondition_issues
 
 
 def _render_validation_issues(
@@ -942,11 +942,13 @@ def run_codex_exec(
                         frozen_artifact_snapshot
                     )
             try:
-                output_json, validation_issues = _validate_structured_output(
-                    output_path,
-                    schema_validator,
-                    structured_output_postcondition,
-                    artifact_changed_paths,
+                output_text, output_json, validation_issues = (
+                    _validate_structured_output(
+                        output_path,
+                        schema_validator,
+                        structured_output_postcondition,
+                        artifact_changed_paths,
+                    )
                 )
             except Exception as exc:
                 _emit_structured_output_exhausted(
@@ -1056,11 +1058,13 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        try:
-            # schema-less output の不正 UTF-8 でも結果構築を中断しない。
-            output_text = output_path.read_text(encoding="utf-8", errors="replace")
-        except FileNotFoundError:
-            output_text = ""
+        # Structured Output は検証した本文を再利用し、結果構築で再読み取りしない。
+        if schema_path is None:
+            try:
+                # schema-less output の不正 UTF-8 でも結果構築を中断しない。
+                output_text = output_path.read_text(encoding="utf-8", errors="replace")
+            except FileNotFoundError:
+                output_text = ""
         return CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,
