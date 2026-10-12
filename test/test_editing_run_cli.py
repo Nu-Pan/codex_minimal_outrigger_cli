@@ -2389,12 +2389,13 @@ def test_run_join_preserves_existing_non_search_config_shape(
 
 @pytest.mark.parametrize("change", ["rename", "delete"])
 def test_run_join_accepts_realization_rename_and_delete(
-    ready_join_session: tuple[Path, str, Path],
+    ready_content_session: tuple[Path, str, Path],
     change: str,
 ) -> None:
     """run join が fork 時点の realization path の rename と削除を許可する。"""
-    root, _session_branch, _state_path = ready_join_session
-    context = _prepare_run(ready_join_session)
+    # 開始前の HEAD 固定は不要なので、doctor の修復は join 本体に任せる。
+    root, _session_branch, _state_path = ready_content_session
+    context = _prepare_run(ready_content_session)
     readme = context.run_worktree / "README.md"
     if change == "rename":
         readme.rename(context.run_worktree / "renamed.md")
@@ -2909,12 +2910,13 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
 
 
 def test_run_join_keeps_completed_merge_when_final_report_update_fails(
-    ready_join_session: tuple[Path, str, Path],
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 後の report 更新失敗でも保存済み report と merge を保持する。"""
-    root, _session_branch, state_path = ready_join_session
-    context = _prepare_run(ready_join_session)
+    # cleanup 後の結果を検査するため、doctor 済み HEAD の事前固定は不要。
+    root, _session_branch, state_path = ready_content_session
+    context = _prepare_run(ready_content_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     original_write_report = run_join_module.write_lifecycle_report
@@ -2956,12 +2958,12 @@ def test_run_join_keeps_completed_merge_when_final_report_update_fails(
 
 
 def test_run_join_preserves_active_state_when_cleanup_fails(
-    ready_join_session: tuple[Path, str, Path],
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 失敗時も残存 resource を abandon で回収できる状態を保つ。"""
-    root, _session_branch, state_path = ready_join_session
-    context = _prepare_run(ready_join_session)
+    root, _session_branch, state_path = ready_content_session
+    context = _prepare_run(ready_content_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     monkeypatch.setattr(
