@@ -2,7 +2,6 @@
 
 from collections import Counter
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -142,7 +141,7 @@ def cleanup_receipts(tmp_path):
 
 
 @pytest.fixture
-def published_cleanup(cleanup_receipts, monkeypatch):
+def published_cleanup(cleanup_receipts):
     root, raws, late, references = cleanup_receipts
     manifest = {
         "publication": {
@@ -157,20 +156,21 @@ def published_cleanup(cleanup_receipts, monkeypatch):
     manifest_path.parent.mkdir(parents=True)
     manifest_path.write_bytes(canonical_json_bytes(manifest))
     # publication の検証は wave 統合 test に残し、ここでは削除と台帳更新を実行する。
-    monkeypatch.setattr(
-        feedback_state,
-        "load_active_state",
-        lambda _root: SimpleNamespace(
-            cleanup_manifest=manifest, cleanup_manifest_path=manifest_path
-        ),
+    state = feedback_state.ActiveState(
+        current=None,
+        generation_manifest=None,
+        issues={},
+        machine_aggregates={},
+        cleanup_manifest=manifest,
+        cleanup_manifest_path=manifest_path,
     )
-    return root, raws, late, references, manifest_path
+    return root, raws, late, references, manifest_path, state
 
 
 def test_cleanup_batches_receipts_and_preserves_unconsumed_input(
     published_cleanup, monkeypatch
 ):
-    root, raws, late, references, manifest_path = published_cleanup
+    root, raws, late, references, manifest_path, state = published_cleanup
     ledger_path = feedback_root(root) / "intake.json"
     before = read_json_object(ledger_path)
     read = Mock(wraps=intake._read_ledger)
@@ -178,7 +178,7 @@ def test_cleanup_batches_receipts_and_preserves_unconsumed_input(
     monkeypatch.setattr(intake, "_read_ledger", read)
     monkeypatch.setattr(intake, "_atomic_write_json", write)
 
-    assert feedback_state.cleanup_published_report(root)
+    assert feedback_state.cleanup_published_report(root, state)
 
     read.assert_called_once_with(root)
     assert write.call_count == 1
@@ -201,7 +201,7 @@ def test_cleanup_batches_receipts_and_preserves_unconsumed_input(
 def test_cleanup_resumes_after_raw_deletion_before_receipt_update(
     published_cleanup, monkeypatch, fault
 ):
-    root, raws, late, references, manifest_path = published_cleanup
+    root, raws, late, references, manifest_path, state = published_cleanup
     ledger_path = feedback_root(root) / "intake.json"
     before = ledger_path.read_bytes()
     manifest_before = manifest_path.read_bytes()
@@ -225,7 +225,7 @@ def test_cleanup_resumes_after_raw_deletion_before_receipt_update(
         else:
             raws[1].write_bytes(canonical_json_bytes({"changed": True}))
         with pytest.raises(CmocError if fault == "raw_hash" else OSError):
-            feedback_state.cleanup_published_report(root)
+            feedback_state.cleanup_published_report(root, state)
 
     assert not raws[0].exists()
     assert raws[1].exists() == (fault != "ledger_write")
@@ -235,7 +235,7 @@ def test_cleanup_resumes_after_raw_deletion_before_receipt_update(
     if fault == "raw_hash":
         raws[1].write_bytes(raw_before)
 
-    assert feedback_state.cleanup_published_report(root)
+    assert feedback_state.cleanup_published_report(root, state)
     assert all(not raw.exists() for raw in raws)
     assert not manifest_path.exists()
     assert late.is_file()

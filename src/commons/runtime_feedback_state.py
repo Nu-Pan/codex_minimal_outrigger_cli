@@ -3385,12 +3385,11 @@ def publish_current_pointer(
     return pointer
 
 
-def cleanup_published_report(repo: Path) -> bool:
-    """current pointer 切替後の cleanup を manifest 順で idempotent に完了する。"""
+def cleanup_published_report(repo: Path, state: ActiveState) -> bool:
+    """writer 排他内で検証した state の cleanup を idempotent に完了する。"""
     from .runtime_feedback_intake import forget_observation_receipts
     from .runtime_feedback_store import observation_publication_lock
 
-    state = load_active_state(repo)
     manifest = state.cleanup_manifest
     manifest_path = state.cleanup_manifest_path
     if manifest is None or manifest_path is None:

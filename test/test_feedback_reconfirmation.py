@@ -704,7 +704,7 @@ def published_feedback(publication_feedback):
     """publication の cleanup を完了し、一件の確定済み active state を返す。"""
     h = publication_feedback
     root = h.context.repo
-    assert cleanup_published_report(root)
+    assert cleanup_published_report(root, load_active_state(root))
     assert load_report_cut(root) is None
     state = validate_feedback_state(root)
     assert set(state.issues) == set(h.candidates)
@@ -1175,7 +1175,7 @@ def test_current_pointer_rejects_non_markdown_report_path(feedback_run, monkeypa
     result = _join_and_publish(h, monkeypatch)
     assert result.result == "ok"
     root = h.context.repo
-    assert cleanup_published_report(root)
+    assert cleanup_published_report(root, load_active_state(root))
     assert load_report_cut(root) is None
     assert validate_feedback_state(root).issues == {}
 
@@ -1233,7 +1233,7 @@ def test_publication_and_active_generation_use_hash_verified_bytes(
         finally:
             replaced.write_bytes(original_content)
 
-    assert cleanup_published_report(root)
+    assert cleanup_published_report(root, load_active_state(root))
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.generation_manifest is not None
