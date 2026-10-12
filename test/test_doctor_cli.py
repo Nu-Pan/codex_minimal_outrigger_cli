@@ -49,10 +49,11 @@ _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
 @pytest.fixture
-def managed_repository(tmp_path: Path) -> Path:
+def managed_repository(cli_repository: Path) -> Path:
     """既存管理物を前提にするケースでは、準備用 doctor の修復・検索・report を省く。"""
     # 初回修復と索引同期は専用ケースに残し、既存ファイルへの操作は各テストで行う。
-    root = make_repo(tmp_path)
+    # 履歴内容は検査しないため、必要な管理物だけを最初の commit にまとめる。
+    root = cli_repository
     for relative in _WORK_DIRECTORIES:
         (root / relative).mkdir(parents=True, exist_ok=True)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
@@ -436,9 +437,11 @@ def test_preprocess_reports_work_directory_permission_failure(
     assert "権限" in exc_info.value.next_actions[0]
 
 
-def test_doctor_rechecks_work_directories_after_repair_commit(tmp_path, monkeypatch):
+def test_doctor_rechecks_work_directories_after_repair_commit(
+    committed_repository, tmp_path, monkeypatch
+):
     """修復 commit の hook が配置先をファイルに替えた場合、正常終了しない。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     hooks = tmp_path / "hooks"
     hooks.mkdir()
     hook = hooks / "pre-commit"
@@ -1057,11 +1060,11 @@ def test_doctor_reports_unsaved_inconsistent_search_candidate(
 
 
 def test_doctor_generates_config_under_broad_cmoc_ignore(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """広い `.cmoc/` ignore があっても生成 config を追跡可能に修復することを検証する。"""
 
-    root = make_repo(tmp_path)
+    root = committed_repository
     (root / ".gitignore").write_text(".cmoc/\n")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "ignore cmoc working data")
@@ -1411,11 +1414,12 @@ def test_doctor_restores_missing_tracked_gitkeep(
 
 @pytest.mark.parametrize("symlinked_path", ["agents", "gitkeep"])
 def test_doctor_rejects_symlinked_agents_paths(
+    committed_repository: Path,
     tmp_path: Path,
     symlinked_path: str,
 ) -> None:
     """doctor が .agents 外への symlink 経由書き込みを拒否する。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     outside = tmp_path / "outside"
     if symlinked_path == "agents":
         outside.mkdir()
@@ -1665,10 +1669,10 @@ def test_doctor_reports_persisted_chunks_when_sync_fails(
 
 
 def test_normal_preprocess_requires_validated_materials(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """通常起動は資材未検証なら本命処理前に doctor を案内する。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     monkeypatch.chdir(root)
     # 保存済み設定だけを用意し、失敗点より後の索引同期・reporter を先行実行しない。
     config_path = doctor_module.config_path(root)
