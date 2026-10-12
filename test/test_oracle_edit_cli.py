@@ -126,8 +126,17 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     readme_path.write_text("# staged change\n")
     run_git(root, "add", "README.md")
     readme_path.write_text("# unstaged change\n")
-    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
-    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
+    # HEAD・branch・index の blob/mode と working tree の mode を一度に取得する。
+    # working tree の本文は下で直接比較し、patch 生成と個別の Git 起動を省く。
+    status_args = (
+        "status",
+        "--porcelain=v2",
+        "--branch",
+        "--",
+        "README.md",
+        "oracle/spec.md",
+    )
+    status_before = run_git(root, *status_args).stdout.splitlines()
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_main_parameters: list[AgentCallParameter] = []
@@ -393,12 +402,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert (root / "oracle" / "spec.md").read_text() == expected_spec
     assert json.loads(session_state_path.read_text()) == state_before
     assert readme_path.read_text() == "# unstaged change\n"
-    assert (
-        run_git(root, "diff", "--cached", "--", "README.md").stdout
-        == staged_diff_before
-    )
-    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
-    assert run_git(root, "status", "--short", "oracle/spec.md").stdout.strip()
+    status_after = run_git(root, *status_args).stdout.splitlines()
+    oracle_status = [line for line in status_after if line.endswith(" oracle/spec.md")]
+    assert len(oracle_status) == 1
+    assert oracle_status[0].startswith("1 .M ")
+    assert [line for line in status_after if line not in oracle_status] == status_before
     assert not (root / ".cmoc" / "gu" / "report" / "oracle" / "edit" / "fork").exists()
     terminal_output = result.stdout + result.stderr
     if failure_stage is None:
