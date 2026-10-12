@@ -1097,18 +1097,21 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         "untracked",
     ],
 )
-def test_preexisting_runtime_paths_use_original_index(tmp_path, change):
+def test_preexisting_runtime_paths_use_original_index(cli_repository, change):
     """対象の先行差分だけを元 index から選び、未追跡・staged deletion を除く。"""
-    root = make_repo(tmp_path)
+    # 無関係な tracked file の変更も残し、検査用 file と一度の commit で HEAD を作る。
+    root = cli_repository
+    readme = root / "README.md"
+    readme.write_text("# repo\n")
     config = doctor_module.config_path(root)
     state = doctor_module.refactor_state_path(root)
     paths = [str(path.relative_to(root)) for path in (config, state)]
     for path in (config, state):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{}\n")
-    if change != "untracked":
-        run_git(root, "add", "-f", *paths)
-        run_git(root, "commit", "-m", "track runtime files")
+    tracked_paths = ["README.md", *paths] if change != "untracked" else ["README.md"]
+    run_git(root, "add", "-f", *tracked_paths)
+    run_git(root, "commit", "-m", "track initial files")
 
     expected = set()
     if change in {"staged", "mixed", "reverted_worktree"}:
@@ -1127,7 +1130,7 @@ def test_preexisting_runtime_paths_use_original_index(tmp_path, change):
     if change == "unstaged_deletion":
         state.unlink()
         expected.add(paths[1])
-    (root / "README.md").write_text("unrelated user change\n")
+    readme.write_text("unrelated user change\n")
 
     index_path = doctor_module._copy_current_index(root)
     try:
@@ -1139,9 +1142,10 @@ def test_preexisting_runtime_paths_use_original_index(tmp_path, change):
 
 
 @pytest.mark.parametrize("stages", [(1,), (1, 3)])
-def test_preexisting_runtime_paths_preserves_unmerged_entries(tmp_path, stages):
+def test_preexisting_runtime_paths_preserves_unmerged_entries(cli_repository, stages):
     """DD/DU の削除 conflict は通常の staged deletion と区別して保存対象にする。"""
-    root = make_repo(tmp_path)
+    # conflict entry の基準となる config だけを最初の commit に含める。
+    root = cli_repository
     config = doctor_module.config_path(root)
     config.parent.mkdir(parents=True)
     config.write_text("{}\n")
@@ -1342,11 +1346,11 @@ def test_doctor_preserves_existing_untracked_gitkeep_content(
 
 @pytest.mark.parametrize("staged_gitkeep_deletion", [False, True])
 def test_agents_tracking_preserves_existing_files_and_index(
-    committed_repository, monkeypatch, staged_gitkeep_deletion
+    cli_repository, monkeypatch, staged_gitkeep_deletion
 ):
     """別の追跡 file があれば placeholder を追加せず、既存の削除 stage も保つ。"""
-    # 追跡保証だけを検査するため、config・索引同期・doctor 全体の準備は要らない。
-    root = committed_repository
+    # HEAD は agent file の commit で用意し、config・索引同期・doctor 全体は準備しない。
+    root = cli_repository
     kept = root / ".agents/kept.txt"
     kept.parent.mkdir()
     kept.write_text("tracked agent content\n")
@@ -1515,10 +1519,11 @@ def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
 
 
 def test_staged_deletion_check_preserves_saved_index_with_one_git_query(
-    committed_repository, tmp_path, monkeypatch
+    cli_repository, tmp_path, monkeypatch
 ):
     """退避 index の削除だけを一度の問い合わせで判定し、index 自体は変更しない。"""
-    root = committed_repository
+    # 削除判定の基準となる ignore rule だけで HEAD を作る。
+    root = cli_repository
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "track ignore rule")

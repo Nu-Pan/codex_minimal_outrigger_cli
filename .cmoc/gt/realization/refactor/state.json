@@ -1251,7 +1251,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c2083c43079fd8086b17b08af033196e35cfd21c888b2db4664039f1274fb474",
-    "last_investigated_at": "2026-10-10_22-22-15_844"
+    "last_investigated_at": "2026-10-13_03-47-19_855"
   },
   "test/_handoff_support.py": {
     "investigation_required": true,
