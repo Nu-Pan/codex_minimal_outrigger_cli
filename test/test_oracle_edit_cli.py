@@ -84,6 +84,7 @@ def _assert_exec_parameter(
     assert parameter.agent_call_cwd == root.resolve()
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 @pytest.mark.parametrize(
     ("first_changes", "failure_stage"),
     [
@@ -102,18 +103,16 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     """既存差分を保ち、初回成功時は変更の有無によらず同じ入力で再実行する。"""
     # 変更なしでも二回目へ進む条件は成功ケースで検証する。
     # 失敗処理は差分に分岐しないため、各回の編集後の失敗で差分保持も検証する。
+    # collector の受理・drain は test_feedback.py に残し、exec 制御と差分保持を検証する。
     root = _prepared_repo(tmp_path, monkeypatch)
     integrated_case = failure_stage is None and first_changes
     if not integrated_case:
-        # root 探索と collector の結合は edit-success と専用テストに残す。
+        # root 探索の結合は edit-success と専用テストに残す。
         # ここでも実 Git の staged/unstaged 差分、branch、session state は検証する。
         monkeypatch.setattr(
             path_model_module,
             "_resolve_git_worktree_roots",
             lambda _start_path=None: (root, root),
-        )
-        monkeypatch.setattr(
-            runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
         )
     active_run = RunPart(
         "running",
