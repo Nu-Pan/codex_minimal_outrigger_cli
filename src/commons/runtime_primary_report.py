@@ -11,6 +11,7 @@ doctor preprocess や事前条件など、個別処理が report を作る前の
 
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
 import threading
@@ -269,7 +270,9 @@ def rewrite_primary_report(path: Path, content: str) -> None:
 def _require_saved_report(path: Path) -> None:
     """表示前に report が空でない通常 file として存在することを確認する。"""
     try:
-        if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
+        # link をたどらず、file 種別とサイズを同じ metadata で確認する。
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size == 0:
             raise PrimaryReportSaveError(path)
     except OSError as exc:
         raise PrimaryReportSaveError(path) from exc

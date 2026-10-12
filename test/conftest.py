@@ -1,28 +1,144 @@
-"""pytest process と子 process の Windows toast 外部副作用を隔離する。"""
+"""共通 fixture で CLI repository と外部副作用を隔離する。"""
 
 import json
 import os
+from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
+from _git_support import SESSION_BRANCH, SESSION_ID, current_branch, init_repo, run_git
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
+import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
 import commons.runtime_download_asset_cache as asset_cache_module
+import commons.runtime_feedback as runtime_feedback
+import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
+from commons.runtime_config import write_config
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+from commons.runtime_state import SessionPart, SessionState, state_path, write_state
+from config.cmoc_config import CmocConfig
+
+
+@pytest.fixture
+def cli_repository(tmp_path: Path) -> Path:
+    """履歴を参照しない CLI lifecycle test に実 Git root を用意する。"""
+    # root 解決とログ・report 保存は実経路を通し、追跡ファイルと初期 commit は作らない。
+    root = tmp_path / "repo"
+    root.mkdir()
+    init_repo(root)
+    return root
+
+
+@pytest.fixture
+def committed_repository(cli_repository: Path) -> Path:
+    """履歴内容を参照せず HEAD が必要な test に空 commit を用意する。"""
+    # root・branch・linked metadata は実 Git を使い、追跡 file と git add は準備しない。
+    run_git(cli_repository, "commit", "--allow-empty", "-m", "initial")
+    return cli_repository
+
+
+@pytest.fixture
+def ready_run_session(
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
+    # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
+    root = cli_repository
+    monkeypatch.chdir(root)
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
+        (root / relative).mkdir(parents=True, exist_ok=True)
+    # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
+    run_git(root, "commit", "-m", "session seed")
+    home_branch = current_branch(root)
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
+    path = state_path(root, SESSION_ID)
+    write_state(
+        path,
+        SessionState(
+            session=SessionPart(
+                session_home_branch=home_branch, session_fork_commit=fork_commit
+            )
+        ),
+    )
+    return root, SESSION_BRANCH, path
+
+
+@pytest.fixture
+def ready_content_session(
+    ready_run_session: tuple[Path, str, Path],
+) -> tuple[Path, str, Path]:
+    """run の検査に使う oracle と realization の初期内容を用意する。"""
+    root, _session_branch, _state_path = ready_run_session
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    run_git(root, "add", "README.md", "oracle/spec.md")
+    run_git(root, "commit", "-m", "apply input")
+    return ready_run_session
+
+
+@pytest.fixture
+def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """表示・通知・前処理失敗に不要な外部処理と永続採番を準備しない。"""
+    # 実 Git の cwd・linked worktree 境界は test_runtime_cli.py で検証する。
+    # collector の TCP 受付・保存・drain は test_feedback.py に残す。
+    root = tmp_path / "repo"
+    root.mkdir()
+    monkeypatch.chdir(root)
+    monkeypatch.setattr(runtime_cli, "work_root", lambda: root)
+    monkeypatch.setattr(runtime_cli, "repo_root", lambda: root)
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    # 永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py の
+    # test_subcommand_logger_keeps_one_file_per_execution に残し、ID の対応は実検査する。
+    ids = count()
+    monkeypatch.setattr(
+        runtime_logging,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+    )
+    return root
+
+
+@pytest.fixture
+def input_path(tmp_path: Path) -> Path:
+    """予約・採番を検査しないケースには、所定 directory の通常 file だけ用意する。"""
+    path = tmp_path / ".cmoc/gu/log/editor_input/input.md"
+    path.parent.mkdir(parents=True)
+    path.touch()
+    return path
+
+
+@pytest.fixture
+def handoff_start(monkeypatch: pytest.MonkeyPatch) -> Mock:
+    """保存・editor 制御の検査では TCP lifecycle を専用の結合テストへ委ねる。"""
+    # 実 target の登録・guide・無効化は test_editor_input_handoff.py に残す。
+    target = SimpleNamespace(target_id="eit_000000_2026-09-29_15-04", close=Mock())
+    start = Mock(return_value=target)
+    monkeypatch.setattr(prompt_editor_input_module, "start_editor_input_handoff", start)
+    return start
 
 
 @pytest.fixture(autouse=True)
-def _isolate_download_asset_cache(tmp_path, monkeypatch):
+def _isolate_download_asset_cache(request, monkeypatch):
     """固定 cache パスをテスト内に置換し、実ユーザーの保存物に触れない。"""
+    # 保存先を使うまで tmp_path を作らず、ファイルを使わない test の準備を省く。
     monkeypatch.setattr(
-        asset_cache_module, "asset_cache_directory", lambda: tmp_path / "asset-cache"
+        asset_cache_module,
+        "asset_cache_directory",
+        lambda: request.getfixturevalue("tmp_path") / "asset-cache",
     )
 
 
@@ -43,22 +159,42 @@ def document_search_clock(monkeypatch):
     return clock
 
 
+@pytest.fixture
+def toast_clock(monkeypatch):
+    """callback drain の時計だけを進め、process と thread の待機は実時間に保つ。"""
+    clock = SimpleNamespace(now=100.0)
+
+    def advance(seconds):
+        clock.now += seconds
+
+    clock.monotonic = lambda: clock.now
+    clock.sleep = advance
+    # 共有 time module を変更せず、通知 module 内の時計だけを置き換える。
+    monkeypatch.setattr(runtime_windows_toast, "time", clock)
+    return clock
+
+
+@pytest.fixture(scope="session")
+def _noop_external_commands(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """書き換えない外部コマンドの no-op をテストセッション内で共有する。"""
+    # 被テスト cmoc の成果物は各 tmp_path に隔離し、固定の補助実行ファイルだけ共有する。
+    executable = tmp_path_factory.mktemp("noop-commands") / "powershell.exe"
+    executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    executable.chmod(0o555)
+    # 子 process の editor も同じ no-op を使い、書き込みと chmod を一度にする。
+    (executable.parent / "code").hardlink_to(executable)
+    return executable.parent
+
+
 @pytest.fixture(autouse=True)
 def _isolate_windows_toast_transport(
-    tmp_path: Path,
+    _noop_external_commands: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """test が利用者の Windows 通知履歴へ toast を残さないようにする。"""
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     # subprocess callback も同じ隔離先を使えるよう、PATH に fake transport を置く。
-    executable = tmp_path / "toast-bin" / "powershell.exe"
-    executable.parent.mkdir()
-    executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    executable.chmod(0o755)
-    # 独立 process の一般 test も実際の editor window を開かない。
-    editor = executable.parent / "code"
-    editor.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    editor.chmod(0o755)
+    executable = _noop_external_commands / "powershell.exe"
     monkeypatch.setenv("PATH", f"{executable.parent}:{os.environ.get('PATH', '')}")
     monkeypatch.setattr(runtime_windows_toast, "_WINDOWS_POWERSHELL", executable)
     monkeypatch.setattr(
@@ -78,11 +214,15 @@ def _isolate_primary_report_editor(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _isolate_document_search_materials(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """一般 CLI test では大容量モデルと installation の共有領域に触れない。"""
     monkeypatch.setattr(runtime_doctor, "_installation_root", lambda root: root)
-    monkeypatch.setattr(runtime_document_search, "cmoc_root", lambda: tmp_path)
+    monkeypatch.setattr(
+        runtime_document_search,
+        "cmoc_root",
+        lambda: request.getfixturevalue("tmp_path"),
+    )
     monkeypatch.setattr(runtime_doctor, "_check_common_environment", lambda: None)
     monkeypatch.setattr(
         runtime_doctor,
@@ -138,6 +278,31 @@ def _isolate_document_search_materials(
         )
 
     monkeypatch.setattr(runtime_doctor, "DocumentSearch", doctor_search)
+
+
+@pytest.fixture
+def feedback_without_transport(monkeypatch):
+    """保存済み観測と fake 応答による state 検査では TCP の準備を省く。"""
+    # stdio・TCP の受理・拒否・drain と linked worktree からの追加観測は
+    # test_feedback.py の transport・後続 wave 結合 test で検証する。
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    monkeypatch.setattr(
+        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
+    )
+
+
+@pytest.fixture(autouse=True)
+def real_stdio_reporter_probe(monkeypatch):
+    """stdio 起動の検証を専用ケースへ集約し、実際の検査関数を渡す。"""
+    # schema・TCP collector の検査は、transport を使う CLI test でも実行する。
+    # test_feedback.py の正常起動・不正応答のケースだけが実 stdio 検査を使う。
+    probe = runtime_feedback._validate_stdio_reporter
+    monkeypatch.setattr(
+        runtime_feedback, "_validate_stdio_reporter", lambda _schema, _root: None
+    )
+    return probe
 
 
 @pytest.fixture

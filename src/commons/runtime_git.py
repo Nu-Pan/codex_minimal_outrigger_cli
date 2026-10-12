@@ -414,7 +414,10 @@ def create_run_worktree(
     """未使用 path に run 用 linked worktree を作る。"""
     expected_worktree = expected_run_worktree(root, branch)
     candidate = _absolute_path(worktree)
-    if _first_managed_worktree_symlink(root, candidate, expected_worktree) is not None:
+    # expected path の祖先には managed base も含まれるため、root を再探索しない。
+    if _first_symlink_component(expected_worktree) or _first_symlink_component(
+        candidate
+    ):
         raise CmocError(
             "run worktree path は symlink を含められません。",
             ["branch 名と worktree path の対応を確認してください。"],
@@ -447,11 +450,13 @@ def remove_worktree(root: Path, worktree: Path) -> CommandResult:
     result = run_git(
         ["worktree", "remove", "--force", str(safe_worktree)], root, check=False
     )
-    if result.returncode != 0 and safe_worktree.exists():
-        # git コマンド中の状態変化後も、登録済み path だけを再帰削除する。
-        safe_worktree = _require_managed_worktree(root, safe_worktree)
-        shutil.rmtree(safe_worktree)
-    run_git(["worktree", "prune"], root, check=False)
+    if result.returncode != 0:
+        if safe_worktree.exists():
+            # git コマンド中の状態変化後も、登録済み path だけを再帰削除する。
+            safe_worktree = _require_managed_worktree(root, safe_worktree)
+            shutil.rmtree(safe_worktree)
+        # Git 削除の成功時は登録も除去済みなので、残存 metadata の回収は失敗時だけ行う。
+        run_git(["worktree", "prune"], root, check=False)
     return result
 
 
@@ -493,7 +498,7 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     """削除対象が管理領域内の登録済みworktreeであることを検証する。"""
     base = worktrees_dir(_main_worktree_root(root))
     candidate = _absolute_path(worktree)
-    if _first_managed_worktree_symlink(root, candidate) is not None:
+    if _first_symlink_component(base) or _first_symlink_component(candidate):
         raise _unmanaged_worktree_error(worktree, base)
     base = base.resolve()
     resolved = candidate.resolve()
@@ -526,6 +531,8 @@ def _absolute_path(path: Path) -> Path:
 
 def _first_symlink_component(path: Path) -> Path | None:
     """path を順にたどり、最初に見つかった symlink component を返す。"""
+    # {{work-root}}/oracle/doc/branch_model.md
+    # resolve() 前の lexical path を検査し、管理領域外へ向く symlink も検出する。
     absolute = _absolute_path(path)
     current = Path(absolute.anchor)
     for part in absolute.parts[1:]:
@@ -537,17 +544,6 @@ def _first_symlink_component(path: Path) -> Path | None:
         current /= part
         if current.is_symlink():
             return current
-    return None
-
-
-def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
-    """managed base と path の symlink component を探す。"""
-    # {{work-root}}/oracle/doc/branch_model.md
-    # resolve() だけでは repo 外の実体が managed path に見えるため、canonicalize 前に
-    # lexical path の component を検査して、作成・削除の両方で symlink 経由を拒否する。
-    for path in (worktrees_dir(_main_worktree_root(root)), *paths):
-        if symlink := _first_symlink_component(path):
-            return symlink
     return None
 
 
@@ -804,7 +800,9 @@ def ensure_cmoc_ignored(root: Path) -> None:
     if not tracked and ignored_returncode == 0:
         return
 
-    run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"], root)
+    # 追跡対象がなければ、ignore 修復だけで済むため index 更新は起動しない。
+    if tracked:
+        run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"], root)
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
@@ -814,6 +812,7 @@ def ensure_cmoc_ignored(root: Path) -> None:
         )
 
 
+@reuse_git_path_queries()
 def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     """clean worktree を保つ必要がある caller 用に git exclude で .cmoc ignore を保証する。
 
@@ -821,6 +820,7 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
+    # exclude の修復と検査で保存先を共有し、内容や index の判定は毎回実行する。
     exclude_path = _git_info_exclude_path(root)
     _validate_ignore_path(exclude_path, "Git info/exclude")
     content = exclude_path.read_text() if exclude_path.exists() else ""
@@ -1171,10 +1171,12 @@ def is_realization_file_path(
     path: Path,
     *,
     branch: str | None = None,
+    fallback_branch: str | None = None,
 ) -> bool:
     """repository path と Git 状態から realization file か判定する。
 
     apply worktree が無い復旧経路では branch の tree を追跡状態の正本にする。
+    欠落 path だけは fallback_branch も確認し、存在する path の分類は一度で済ませる。
     根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
     の「分類結果」
     """
@@ -1195,28 +1197,33 @@ def is_realization_file_path(
         # nested repository は outer worktree の branch namespace を共有しないため、
         # outer の run branch をそのまま ls-tree へ渡さず、nested repository 自身の
         # checked-out tree を参照する。
-        tree_reference = branch if repository == root.absolute() else "HEAD"
-        branch_entries = run_git(
-            [
-                "ls-tree",
-                "-r",
-                "-z",
-                tree_reference,
-                "--",
-                literal_pathspec(branch_relative.as_posix()),
-            ],
-            repository,
-        ).stdout.split("\0")
-        for entry in branch_entries:
-            metadata, separator, entry_path = entry.partition("\t")
-            metadata_fields = metadata.split()
-            if separator and entry_path == branch_relative.as_posix():
-                try:
-                    entry_mode = int(metadata_fields[0], 8)
-                except (IndexError, ValueError):
-                    continue
-                if stat.S_ISREG(entry_mode):
-                    return True
+        tree_references = (
+            (branch, fallback_branch) if repository == root.absolute() else ("HEAD",)
+        )
+        for tree_reference in dict.fromkeys(tree_references):
+            if not tree_reference:
+                continue
+            branch_entries = run_git(
+                [
+                    "ls-tree",
+                    "-r",
+                    "-z",
+                    tree_reference,
+                    "--",
+                    literal_pathspec(branch_relative.as_posix()),
+                ],
+                repository,
+            ).stdout.split("\0")
+            for entry in branch_entries:
+                metadata, separator, entry_path = entry.partition("\t")
+                metadata_fields = metadata.split()
+                if separator and entry_path == branch_relative.as_posix():
+                    try:
+                        entry_mode = int(metadata_fields[0], 8)
+                    except (IndexError, ValueError):
+                        continue
+                    if stat.S_ISREG(entry_mode):
+                        return True
         return False
     if not _is_regular_file(candidate):
         return False

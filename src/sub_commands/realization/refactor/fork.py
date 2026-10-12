@@ -796,10 +796,17 @@ def _commit_refactor_unit(
                     )
                 unresolved_before = dict(unresolved_findings)
                 try:
-                    committed_changes = tree_changes(
-                        context.run_worktree,
-                        before_head,
-                        after_head,
+                    # state だけの単位や未解決所見のない単位では、rename の
+                    # 追跡に差分照会を使わない。report の net 差分は終了時に調べる。
+                    committed_changes = (
+                        tree_changes(
+                            context.run_worktree,
+                            before_head,
+                            after_head,
+                        )
+                        if pending_realization_paths
+                        and (unresolved or unresolved_findings)
+                        else []
                     )
                     rename_paths = {
                         change.paths[0]: change.paths[1]
@@ -949,12 +956,13 @@ def _update_refactor_state(
     entry["last_investigated_at"] = timestamp()
     entry["last_investigation_result"] = "findings" if has_findings else "no_findings"
     entry["investigation_required"] = has_findings
-    write_refactor_state(context.run_worktree, state)
-    state = sync_refactor_state(context.run_worktree)
+    # 変更 path は内容が同一でも再調査する。同期前に要求を設定して、不要な
+    # hash 比較と同期後の重複保存を省く。新規・削除・rename は同期で反映する。
     for changed in changed_realization:
         if changed in state:
             state[changed]["investigation_required"] = True
     write_refactor_state(context.run_worktree, state)
+    sync_refactor_state(context.run_worktree)
 
 
 def _changed_path_postcondition(

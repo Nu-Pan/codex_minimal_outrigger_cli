@@ -30,9 +30,9 @@ from .runtime_feedback_protocol import (
     FEEDBACK_COLLECTOR_HOST,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
+    REPORTER_PROTOCOL_VERSION,
 )
 from .runtime_feedback_store import (
-    REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
     parse_rfc3339,
     read_json_object,
@@ -173,7 +173,7 @@ class FeedbackInvocation:
         self._server_thread: threading.Thread | None = None
         self._worker_threads: set[threading.Thread] = set()
         self._stopping = False
-        self._base_context = self._resolve_base_context()
+        self._base_context: dict[str, Any] | None = None
 
     def _resolve_base_context(
         self, agent_call_cwd: Path | None = None
@@ -254,6 +254,12 @@ class FeedbackInvocation:
                 context.accepting = False
         listener = self._listener
         if listener is not None:
+            # close だけでは別 thread の accept が timeout まで残るため、先に解除する。
+            try:
+                listener.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                # shutdown 不可の listener は既存の accept timeout で回収する。
+                pass
             listener.close()
         for context in contexts:
             self.close_call(context)
@@ -592,6 +598,22 @@ class FeedbackInvocation:
         else:
             return
 
+        # 初回 snapshot の HEAD を使い、後続 event では観測時の HEAD を取り直す。
+        # call context は登録時に別途取得するため、起動時の Git 問い合わせは不要。
+        if self._base_context is None:
+            self._base_context = self._resolve_base_context()
+            commit = self._base_context["head_commit"]
+        else:
+            try:
+                commit = head_commit(self.worktree)
+            except Exception:
+                commit = self._base_context["head_commit"]
+        if not _is_git_object_id(commit):
+            raise FeedbackRejected(
+                "context_invalid",
+                "collector cannot determine the current HEAD commit",
+            )
+
         # event の安定 context を優先し、未指定 field だけ invocation context で補う。
         context_log_paths = [str(log_path.resolve())]
         call_log_path = event.get("call_log_path")
@@ -599,25 +621,13 @@ class FeedbackInvocation:
             context_log_paths.append(str(Path(call_log_path).resolve()))
         context = {
             **self._base_context,
+            "head_commit": commit,
             "agent_call_id": event.get("agent_call_id"),
             "agent_call_kind": event.get("agent_call_kind"),
             "codex_call_id": event.get("codex_call_id"),
             "codex_session_id": event.get("codex_session_id"),
             "log_paths": list(dict.fromkeys(context_log_paths)),
         }
-        try:
-            context["head_commit"] = head_commit(self.worktree)
-        except Exception:
-            if not _is_git_object_id(context.get("head_commit")):
-                raise FeedbackRejected(
-                    "context_invalid",
-                    "collector cannot determine the current HEAD commit",
-                )
-        if not _is_git_object_id(context.get("head_commit")):
-            raise FeedbackRejected(
-                "context_invalid",
-                "collector context has an invalid HEAD commit",
-            )
         _identity, path = store_machine_observation(
             self.repo,
             context,

@@ -22,6 +22,7 @@ from commons.prompt_editor_input import (
     reserve_prompt_editor_input,
 )
 from commons.runtime_git import current_branch
+from commons.runtime_paths import reuse_root_queries
 from commons.runtime_primary_report import update_primary_report_fields
 from commons.runtime_state import load_session_part_for_branch
 
@@ -39,8 +40,10 @@ def cmoc_oracle_edit_impl() -> None:
 
 def _cmoc_oracle_edit_body() -> None:
     """入力された oracle 編集指示から 2 回の Codex exec を起動する。"""
-    repository = repo_root()
-    current_root = work_root()
+    # 両 root だけを同じ探索から導出し、editor・agent 呼び出しへ結果を持ち越さない。
+    with reuse_root_queries():
+        repository = repo_root()
+        current_root = work_root()
 
     # oracle 編集契約を含む完全 prompt の skeleton を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md

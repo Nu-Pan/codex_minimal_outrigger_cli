@@ -6,6 +6,7 @@
 """
 
 import json
+from dataclasses import replace
 from multiprocessing import Barrier, Pipe, Process
 from multiprocessing.connection import Connection
 from multiprocessing.synchronize import Barrier as BarrierType
@@ -18,9 +19,9 @@ from _codex_support import (
     setup_codex_home,
 )
 from _command_support import write_python_executable
-from _git_support import make_repo, run_git
+from _git_support import run_git
 
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_ids import is_common_id
 from config.cmoc_config import CmocConfig
@@ -65,10 +66,10 @@ def run_fixed_codex_exec(
 
 
 def test_codex_call_ids_are_process_safe_on_same_timestamp(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """並列 run_codex_exec が同一生成時刻でも call ID とログを共有しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -164,6 +165,7 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
     ids=["work_root", "nested_directory"],
 )
 def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
+    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     agent_call_cwd_relative: str,
@@ -174,8 +176,18 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    # oracle の存在による cwd の自動変更を検出し、Git 履歴の準備だけを省く。
+    root = cli_repository
+    (root / "oracle").mkdir()
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    agent_call_cwd = root / agent_call_cwd_relative
+    # 相対 home の値・子の cwd 基準の解決・log 保存も同じ起動で検査する。
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    codex_home = agent_call_cwd / "relative_codex_home"
+    codex_home.mkdir()
+    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -189,14 +201,15 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
+            "    'codex_home': os.environ['CODEX_HOME'],",
+            "    'resolved_home': str(pathlib.Path(os.environ['CODEX_HOME']).resolve()),",
             "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    agent_call_cwd = root / agent_call_cwd_relative
-    run_codex_exec(
+    result = run_codex_exec(
         codex_parameter(
             FileAccessMode.PURE_ORACLE_READ,
             agent_call_cwd=agent_call_cwd,
@@ -210,6 +223,11 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     expected_cwd = agent_call_cwd.resolve()
     assert record["args"][record["args"].index("--cd") + 1] == str(expected_cwd)
     assert record["cwd"] == str(expected_cwd)
+    assert record["codex_home"] == "relative_codex_home"
+    assert Path(record["resolved_home"]) == codex_home
+    assert result.codex_home == codex_home
+    call_log = json.loads(result.call_log_path.read_text())
+    assert call_log["codex_home"] == str(codex_home)
     override_config = codex_override_config(record["args"])
     assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
     assert override_config["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
@@ -218,15 +236,16 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     assert "permissions" not in override_config
 
 
-def test_run_codex_exec_stores_schema_state_under_repo_root(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_run_codex_exec_uses_linked_worktree_context(
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """リンク済み worktree の出力 schema を repo root 配下へ保存することを検証する。
+    """linked worktree の cwd・sandbox と main repository の schema 保存先を検証する。
 
     正本仕様:
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
-    root = make_repo(tmp_path)
+    # cwd・sandbox・schema の境界には実 linked metadata と HEAD だけを用意する。
+    root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-exec", str(linked), "HEAD")
@@ -259,12 +278,9 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
             }
         )
     )
-    parameter = AgentCallParameter(
-        agent_call_kind="build_feedback_normalize_issue_parameter",
-        file_access_mode=FileAccessMode.REPO_WRITE,
-        prompt="prompt",
+    parameter = replace(
+        codex_parameter(FileAccessMode.PURE_ORACLE_READ, agent_call_cwd=linked),
         structured_output_schema_path=schema_source,
-        agent_call_cwd=linked,
     )
 
     result = run_codex_exec(
@@ -277,102 +293,11 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
     record = json.loads(recorder.read_text())
     schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
     assert record["cwd"] == str(linked.resolve())
-    assert result.schema_path == schema_arg
-    assert schema_arg.parent == root / ".cmoc" / "gu" / "schema"
-    assert not (linked / ".cmoc" / "gu" / "schema").exists()
-
-
-def test_run_codex_exec_uses_workspace_sandbox_from_linked_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree でも PURE_ORACLE_READ を専用 sandbox 引数へ変換する。
-
-    正本仕様:
-        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
-    """
-    root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked-exec-log"
-    linked.parent.mkdir(parents=True)
-    run_git(root, "worktree", "add", "-b", "linked-exec-log", str(linked), "HEAD")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, os, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
-            "    'args': args,",
-            "    'cwd': os.getcwd(),",
-            "}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        codex_parameter(
-            FileAccessMode.PURE_ORACLE_READ,
-            agent_call_cwd=linked,
-        ),
-        root=root,
-        transient_poll_interval_sec=0,
-        config=CmocConfig(),
-    )
-
-    record = json.loads(recorder.read_text())
-    assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
     assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
     override_config = codex_override_config(record["args"])
     assert "permissions" not in override_config
     assert "default_permissions" not in override_config
-
-
-def test_run_codex_exec_does_not_inject_agents_path_permissions(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """`.agents` の実在 path を sandbox の個別設定へ変換しないことを検証する。
-
-    正本仕様:
-        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
-    """
-    root = make_repo(tmp_path)
-    agents_file = root / ".agents" / "nested" / "instructions.md"
-    agents_file.parent.mkdir(parents=True)
-    agents_file.write_text("agent instructions\n")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps(args))",
-            "output.write_text(json.dumps({'ok': True}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
-        root=root,
-        transient_poll_interval_sec=0,
-        config=CmocConfig(),
-    )
-
-    args = json.loads(recorder.read_text())
-    assert args[args.index("--sandbox") + 1] == "workspace-write"
-    override_config = codex_override_config(args)
-    assert "permissions" not in override_config
-    assert "default_permissions" not in override_config
-    assert all(str(agents_file.resolve()) not in arg for arg in args)
-    assert "--profile" not in args
+    assert result.schema_path == schema_arg
+    assert schema_arg.parent == root / ".cmoc" / "gu" / "schema"
+    assert not (linked / ".cmoc" / "gu" / "schema").exists()

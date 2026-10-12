@@ -9,14 +9,18 @@ from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
-from basic.path_model import RootPathPlaceHolder, resolve_real_path
+from basic.path_model import (
+    AgentCallPathContext,
+    RootPathPlaceHolder,
+    resolve_real_path,
+)
 
 from .runtime_errors import CmocError
 
 _CMOC_PROCESS_CWD_LOCK = threading.RLock()
-_RootQueryKey = tuple[RootPathPlaceHolder, Path, tuple[tuple[str, str], ...]]
-_ROOT_QUERIES: ContextVar[dict[_RootQueryKey, Path] | None] = ContextVar(
-    "cmoc_root_queries", default=None
+_RootQueryKey = tuple[Path, tuple[tuple[str, str], ...]]
+_ROOT_QUERIES: ContextVar[dict[_RootQueryKey, AgentCallPathContext] | None] = (
+    ContextVar("cmoc_root_queries", default=None)
 )
 
 
@@ -70,12 +74,7 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
         # root 探索の起点は file または directory なので、process の cwd と区別する。
         # relative path の解決から root resolver の完了まで process-global cwd を
         # 固定し、別 thread の pushd と起点 path が混線しないようにする。
-        resolved_root_anchor = (root_anchor or Path.cwd()).resolve()
-        start_dir = (
-            resolved_root_anchor
-            if resolved_root_anchor.is_dir()
-            else resolved_root_anchor.parent
-        )
+        start_dir = (root_anchor or Path.cwd()).resolve()
         # 存在しない file/directory を起点にしても、既存の祖先から root を探索できる。
         while not start_dir.is_dir():
             parent = start_dir.parent
@@ -84,17 +83,21 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
             start_dir = parent
         # doctor 内でも起点や環境の異なる探索は共有せず、失敗は記憶しない。
         queries = _ROOT_QUERIES.get()
-        key = (placeholder, start_dir, tuple(sorted(os.environ.items())))
-        if queries is not None and key in queries:
-            return queries[key]
-        # {{work-root}}/oracle/src/oracle/other/path_model.py
-        # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
-        # runtime 契約は一時的な cwd 切替で公開 API へ寄せる。
-        with pushd(start_dir):
-            resolved = resolve_real_path(placeholder)
+        key = None
+        context = None
         if queries is not None:
-            queries[key] = resolved
-        return resolved
+            key = (start_dir, tuple(sorted(os.environ.items())))
+            context = queries.get(key)
+        # {{work-root}}/oracle/src/oracle/other/path_model.py
+        # 正本 context が同じ metadata から導出した両 root を再利用する。
+        if context is None:
+            try:
+                context = AgentCallPathContext(start_dir)
+            except ValueError:
+                raise ValueError(f"`{placeholder}` was not found") from None
+            if queries is not None and key is not None:
+                queries[key] = context
+        return resolve_real_path(placeholder, context)
 
 
 def timestamp() -> str:
@@ -219,9 +222,15 @@ def ensure_work_directories(root: Path, *, create_missing: bool = True) -> None:
     for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
         path = root / relative
         try:
-            if create_missing:
+            # 既存 directory は一度の stat で検証し、不足時だけ作成する。
+            try:
+                mode = path.stat().st_mode
+            except FileNotFoundError:
+                if not create_missing:
+                    raise
                 path.mkdir(parents=True, exist_ok=True)
-            if not stat.S_ISDIR(path.stat().st_mode):
+                mode = path.stat().st_mode
+            if not stat.S_ISDIR(mode):
                 raise NotADirectoryError(f"not a directory: {path}")
         except OSError as exc:
             raise CmocError(

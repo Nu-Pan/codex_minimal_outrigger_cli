@@ -132,10 +132,10 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
                         ],
                         str(close_work_path(repository)),
                     )
-                path = complete_close(repository, work)
+                path, state = complete_close(repository, work)
                 cleanup_completed = True
                 return _completed(
-                    repository,
+                    state,
                     path,
                     "already_closed" if published else "closed",
                     work,
@@ -162,7 +162,7 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
                     )
                 path = _already_closed_report(repository, state, history, event, reason)
                 return _completed(
-                    repository,
+                    state,
                     path,
                     "already_closed",
                     {
@@ -196,9 +196,9 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
             fixed = _prepare_close(repository, state, target, reason)
             fixed_update = fixed
             write_immutable_json(close_work_path(repository), fixed)
-            path = complete_close(repository, fixed)
+            path, state = complete_close(repository, fixed)
             cleanup_completed = True
-            return _completed(repository, path, "closed", fixed, reason)
+            return _completed(state, path, "closed", fixed, reason)
         except BaseException:
             # 確定後の失敗でも最新状態を戻さず、invocation の不足と区別する。
             try:
@@ -444,9 +444,13 @@ def _already_closed_report(
 
 
 def _completed(
-    repo: Path, path: Path, result: str, record: dict[str, Any], input_reason: str
+    state: ActiveState,
+    path: Path,
+    result: str,
+    record: dict[str, Any],
+    input_reason: str,
 ) -> TerminalResult:
-    state = load_active_state(repo)
+    # Writer 排他内で検証した状態を使い、完了表示のための読み直しを省く。
     logger = current_subcommand_logger()
     if logger is not None:
         logger.event(

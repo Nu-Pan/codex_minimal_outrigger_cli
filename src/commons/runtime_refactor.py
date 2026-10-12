@@ -33,9 +33,7 @@ def load_refactor_state(root: Path) -> RefactorState:
     根拠: {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     """
     path = refactor_state_path(root)
-    _reject_symlinked_state_path(path)
-    _reject_non_file_state_path(path)
-    if not path.exists():
+    if not _validate_refactor_state_path(path):
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -47,8 +45,7 @@ def load_refactor_state(root: Path) -> RefactorState:
 def write_refactor_state(root: Path, state: RefactorState) -> None:
     """refactor state を path 順の安定した JSON 表現で保存する。"""
     path = refactor_state_path(root)
-    _reject_symlinked_state_path(path)
-    _reject_non_file_state_path(path)
+    _validate_refactor_state_path(path)
     validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -69,7 +66,6 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
     if sync_entries:
         synchronized: RefactorState = {}
         for relative in enumerate_refactor_targets(root):
-            digest = file_sha256(root / relative)
             entry = state.get(relative)
             if entry is None:
                 entry = new_refactor_entry()
@@ -80,7 +76,12 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
                     "last_investigated_sha256": entry["last_investigated_sha256"],
                     "last_investigated_at": entry["last_investigated_at"],
                 }
-                if entry["last_investigated_sha256"] != digest:
+                # 新規・要求済み file は内容比較で state が変わらない。比較先が null
+                # の entry も必ず再調査になるため、必要な hash だけを読み取る。
+                if not entry["investigation_required"] and (
+                    entry["last_investigated_sha256"] is None
+                    or entry["last_investigated_sha256"] != file_sha256(root / relative)
+                ):
                     entry["investigation_required"] = True
             synchronized[relative] = entry
         state = synchronized
@@ -131,42 +132,34 @@ def mark_all_refactor_targets_required(state: RefactorState) -> None:
         entry["investigation_required"] = True
 
 
-def _reject_symlinked_state_path(path: Path) -> None:
-    """state path の symlink 経由アクセスを拒否する。"""
+def _validate_refactor_state_path(path: Path) -> bool:
+    """state と親の種類を一度ずつ検証し、state file の存在を返す。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    # state は cmoc が更新する管理 file なので、親 directory を含めて symlink を
-    # 追跡すると work-root 外の file を読み書きしてしまう。
+    # 祖先から検証し、symlink の参照先へ降りずに file/directory の種類を確認する。
     absolute = path.absolute()
-    current = absolute
-    while current != current.parent:
-        if current.is_symlink():
+    for current in (*reversed(absolute.parents), absolute):
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            return False
+        except OSError as exc:
+            raise _invalid_refactor_state(
+                path, "state path を検証できません。"
+            ) from exc
+        if stat.S_ISLNK(mode):
             raise _invalid_refactor_state(
                 path, "state path は symlink 経由で扱えません。"
             )
-        current = current.parent
-
-
-def _reject_non_file_state_path(path: Path) -> None:
-    """state path と既存の親を通常の file/directory に限定する。"""
-    if path.exists() and not path.is_file():
-        raise _invalid_refactor_state(path, "state path は通常ファイルではありません。")
-    parent = path.parent
-    while True:
-        try:
-            mode = parent.lstat().st_mode
-        except FileNotFoundError:
-            mode = None
-        except OSError as exc:
-            raise _invalid_refactor_state(
-                path, "state path の親 directory を検証できません。"
-            ) from exc
-        if mode is not None and not stat.S_ISDIR(mode):
+        if current == absolute:
+            if not stat.S_ISREG(mode):
+                raise _invalid_refactor_state(
+                    path, "state path は通常ファイルではありません。"
+                )
+        elif not stat.S_ISDIR(mode):
             raise _invalid_refactor_state(
                 path, "state path の親が通常の directory ではありません。"
             )
-        if parent == parent.parent:
-            return
-        parent = parent.parent
+    return True
 
 
 def _validated_state(path: Path, value: object) -> RefactorState:

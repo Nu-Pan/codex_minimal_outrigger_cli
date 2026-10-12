@@ -47,8 +47,8 @@ class DocumentSearchConfig:
     request_timeout_seconds: float = 600.0
     shutdown_grace_seconds: float = 5.0
     resource_wait_timeout_seconds: float = 600.0
-    sync_no_progress_timeout_seconds: float = 600.0
-    post_sync_search_timeout_seconds: float = 600.0
+    sync_no_progress_timeout_seconds: float = 60.0
+    post_sync_search_timeout_seconds: float = 300.0
     search_request_timeout_seconds: float = 3600.0
 
 

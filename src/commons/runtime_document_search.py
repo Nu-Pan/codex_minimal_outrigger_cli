@@ -274,8 +274,10 @@ def scan_documents(
     deadline: float | None = None,
     cancelled: threading.Event | None = None,
     check: Callable[[], None] | None = None,
+    only_path: str | None = None,
 ) -> dict[str, SourceDocument]:
-    """既存分類器を使い、oracle/doc の Markdown だけを開く。"""
+    """全体を分類し、oracle/doc の Markdown を指定時は一文書だけ読む。"""
+    # 本文を絞る場合も、全体の分類・安全性検査と root の実体確認は省略しない。
     root = root.absolute()
     initial_root = _root_identity(root)
     if check is not None:
@@ -294,6 +296,8 @@ def scan_documents(
             _deadline_check(deadline, cancelled)
         relative = candidate.relative_to(root).as_posix()
         if not (relative.startswith("oracle/doc/") and relative.endswith(".md")):
+            continue
+        if only_path is not None and relative != only_path:
             continue
         content = _secure_read(root, relative)
         try:
@@ -376,13 +380,12 @@ def _worktree_identity(root: Path) -> str:
 
 
 def _embedding_identity(config: DocumentSearchConfig) -> str:
-    # 分割・索引形式・query・期限は文書入力片の推論条件ではない。
-    materials = asdict(SEARCH_MATERIALS)
-    materials.pop("sqlite_vec_version")
+    # 版や分割条件ではなく、文書埋め込みの値・解釈に影響する条件で共有する。
+    # tokenizer・special token・pooling・数値表現を変えた採用時は contract を更新する。
     payload = {
-        "materials": materials,
-        # 文書入力の整形や pooling を変える場合はこの契約も更新する。
-        "input_contract": "raw-document-text-last-v1",
+        "model": asdict(SEARCH_MATERIALS.embedding),
+        "dimensions": SEARCH_MATERIALS.embedding_dimensions,
+        "input_contract": SEARCH_MATERIALS.document_embedding_contract,
         "context_tokens": config.embedding_context_tokens,
         "batch_tokens": config.batch_tokens,
         "threads": config.threads,
@@ -1004,6 +1007,7 @@ class DocumentSearch:
                 deadline=deadline,
                 cancelled=self.cancelled,
                 check=lambda: self._check(deadline),
+                only_path=path,
             ).get(path)
             if current != documents[path]:
                 raise SearchError(

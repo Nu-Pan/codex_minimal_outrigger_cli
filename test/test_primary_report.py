@@ -24,13 +24,23 @@ import pytest
 import typer
 import yaml
 from _cli_support import terminal_primary_report
-from _git_support import make_repo
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_primary_report as primary_report_module
 from cmoc_runtime import CmocError, TerminalResult
 from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
+
+
+@pytest.fixture
+def primary_report_directory(
+    cli_terminal_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    """Git 探索と外部通知を省き、report の保存・描画・終了処理を検証する。"""
+    # 実 Git の cwd・linked worktree 境界は test_runtime_cli.py に残す。
+    monkeypatch.setattr(runtime_cli, "notify_terminal_result", lambda *_args: None)
+    return cli_terminal_directory
 
 
 @pytest.mark.parametrize(
@@ -93,23 +103,24 @@ def test_primary_report_editor_launch_is_detached_without_console_output(
 
 
 @pytest.mark.parametrize("ending", ["success", "interruption", "error"])
-def test_saved_primary_report_is_opened_once_before_terminal_event(
-    tmp_path: Path,
+def test_formatted_primary_report_is_opened_once_before_terminal_event(
+    primary_report_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     ending: str,
 ) -> None:
-    """全終了分類で保存を確認した report だけを終了 event より先に開く。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    """全終了分類で最終出力を整形保存し、終了 event より先に一度だけ開く。"""
+    root = primary_report_directory
     opened: list[Path] = []
 
     def observe_open(path: Path) -> None:
         logger = runtime_cli.current_subcommand_logger()
         assert logger is not None
         assert path.is_file()
-        assert "# cmoc doctor report" in path.read_text(encoding="utf-8")
+        rendered = path.read_text(encoding="utf-8")
+        assert "# cmoc doctor report" in rendered
+        assert '"message": "first\nsecond"' in rendered
+        assert "### Codex 最終出力" in rendered
         assert not any(
             event["event"] == "command_finished" for event in logger.event_records()
         )
@@ -118,6 +129,16 @@ def test_saved_primary_report_is_opened_once_before_terminal_event(
     monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", observe_open)
 
     def finish() -> None:
+        logger = runtime_cli.current_subcommand_logger()
+        assert logger is not None
+        output = logger.path.with_name("structured-output.json")
+        output.write_text('{"message":"first\\nsecond"}', encoding="utf-8")
+        logger.event(
+            "codex_call",
+            output_path=str(output),
+            schema_path=str(root / "schema.json"),
+            status="succeeded",
+        )
         if ending == "error":
             raise CmocError("failed", [], "injected failure")
         if ending == "interruption":
@@ -131,7 +152,7 @@ def test_saved_primary_report_is_opened_once_before_terminal_event(
         assert exit_info.value.exit_code == 1
     else:
         runtime_cli.run_cli_subcommand(
-            finish, command_name="doctor", doctor_preprocess=False
+            finish, command_name="doctor", doctor_preprocess=False, interruptible=True
         )
 
     output = capsys.readouterr()
@@ -151,14 +172,12 @@ def test_saved_primary_report_is_opened_once_before_terminal_event(
 
 
 def test_primary_report_editor_failure_is_warning_without_result_change(
-    tmp_path: Path,
+    primary_report_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """editor 起動失敗は report・終了 code を保ち、診断記録へ残す。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    root = primary_report_directory
 
     def fail_open(_path: Path) -> None:
         raise OSError("editor unavailable")
@@ -343,40 +362,21 @@ _EARLY_ERROR_SECTIONS = {
 }
 
 
-def _disable_external_completion(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """test 対象を report と terminal result の確定処理へ限定する。"""
-    monkeypatch.setattr(
-        runtime_cli,
-        "start_feedback_invocation",
-        lambda *_args: (None, None),
-    )
-    monkeypatch.setattr(
-        runtime_cli,
-        "notify_terminal_result",
-        lambda *_args: None,
-    )
-
-
 @pytest.mark.parametrize(
     ("command_name", "report_directory", "required_fields"),
     _EARLY_ERROR_REPORTS,
 )
-@pytest.mark.parametrize("failure_stage", ("doctor_preprocess", "precondition"))
 def test_early_error_saves_command_specific_primary_report(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
     command_name: str,
     report_directory: str,
     required_fields: tuple[str, ...],
-    failure_stage: str,
 ) -> None:
     """処理開始前の error でも固有の保存先と必須 front matter を保つ。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    # doctor preprocess から共通 report 保存へ到達する経路は、
+    # test_runtime_cli.py の前処理失敗ケースで検証し、個別 report を重複生成しない。
+    root = primary_report_directory
 
     def fail_precondition(_runtime_root: Path) -> None:
         """report 保存前の処理開始エラーを再現する。"""
@@ -386,21 +386,13 @@ def test_early_error_saves_command_specific_primary_report(
         """事前条件の失敗後にサブコマンド本体を開始しないことを検証する。"""
         pytest.fail("command body started after precondition failure")
 
-    if failure_stage == "doctor_preprocess":
-        monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", fail_precondition)
-        pre_log_check = None
-        doctor_preprocess = True
-    else:
-        pre_log_check = fail_precondition
-        doctor_preprocess = False
-
     with pytest.raises(typer.Exit) as exc_info:
         runtime_cli.run_cli_subcommand(
             command_body_must_not_start,
             command_name=command_name,
             command_argv=("cmoc", *command_name.split(), "--scope", "all"),
-            pre_log_check=pre_log_check,
-            doctor_preprocess=doctor_preprocess,
+            pre_log_check=fail_precondition,
+            doctor_preprocess=False,
         )
 
     captured = capsys.readouterr()
@@ -455,14 +447,10 @@ def test_early_error_saves_command_specific_primary_report(
 
 
 def test_user_interruption_saves_feedback_invocation_summary(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """feedback 中断は publication ではない invocation summary を保存する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
 
     def interrupt() -> TerminalResult:
         runtime_cli.mark_current_subcommand_interrupted()
@@ -485,6 +473,13 @@ def test_user_interruption_saves_feedback_invocation_summary(
     assert "# 中断完了: cmoc feedback report" in captured.out
     assert 'terminal_classification: "user_interruption"' in rendered
     assert "feedback publication または active state ではありません" in rendered
+    for field, label in (
+        ("normal_publication_status", "正常 publication"),
+        ("incomplete_diagnostic_status", "incomplete 診断"),
+        ("current_pointer_update_status", "current pointer 更新"),
+    ):
+        assert f'{field}: "not_completed"' in rendered
+        assert f"- {label}: `not_completed`" in rendered
 
     assert "中断理由: `report cut を固定する前に停止しました。`" in rendered
     assert "## checkpoint と部分結果" in rendered
@@ -495,19 +490,28 @@ def test_user_interruption_saves_feedback_invocation_summary(
 
 
 @pytest.mark.parametrize("supplied_report", [False, True])
-def test_primary_report_keeps_every_codex_output_and_accepted_observation(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+def test_primary_report_keeps_outputs_observations_and_artifact_paths(
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
     supplied_report: bool,
 ) -> None:
-    """初回 exec と resume の出力本文を、個別 report と fallback の両方へ残す。"""
+    """初回・resume の本文、区切り付き path、observation を両 report 経路へ残す。"""
     from commons.runtime_logging import current_subcommand_logger
 
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
-    outputs = ("first final output\n```embedded fence```\n", "resume final output\n")
+    root = primary_report_directory
+    # path の境界条件も同じ保存経路で検証し、別の CLI invocation を準備しない。
+    artifacts = (
+        (
+            root / "output`first.txt",
+            root / "call`first.json",
+            "first final output\n```embedded fence```\n",
+        ),
+        (
+            root / "output`resume.txt",
+            root / "call`resume.json",
+            "resume final output\n",
+        ),
+    )
     observation = {
         "summary": "accepted issue",
         "workload_limitation": "different workload",
@@ -515,10 +519,16 @@ def test_primary_report_keeps_every_codex_output_and_accepted_observation(
 
     def body() -> TerminalResult:
         logger = current_subcommand_logger()
-        for number, content in enumerate(outputs):
-            output = logger.path.with_name(f"output-{number}.txt")
+        assert logger is not None
+        for output, call_log, content in artifacts:
             output.write_text(content)
-            logger.event("codex_call", output_path=str(output))
+            logger.event(
+                "codex_call",
+                output_path=str(output),
+                call_log_path=str(call_log),
+                purpose="unsafe path",
+                status="succeeded",
+            )
         logger.event(
             "feedback_observation_accepted",
             observation_id="fbo_000000_2026-09-29_15-04",
@@ -537,7 +547,14 @@ def test_primary_report_keeps_every_codex_output_and_accepted_observation(
     runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
     captured = capsys.readouterr()
     report = terminal_primary_report(captured.out).read_text()
-    assert all(content in report for content in outputs)
+    for output, call_log, content in artifacts:
+        assert content in report
+        assert f"出力: ``{output.resolve()}``" in report
+        if not supplied_report:
+            expected_call_log = str(call_log.resolve()).replace("`", "'")
+            assert (
+                f"Codex call (unsafe path, succeeded): `{expected_call_log}`" in report
+            )
     assert "accepted issue" in report
     assert "different workload" in report
 
@@ -553,9 +570,11 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
             "literal": r"\n",
             "json_text": '{"x":1}',
             "quoted": 'say "hi" \\ slash',
+            "line\nkey": "first\n\nlast\n",
+            "surrogate": "\ud800",
             "empty": "",
             "nothing": None,
-            "items": [True, 0, 1.25, [], {}],
+            "items": [True, False, 0, 1.25, [], {}],
         }
     }
     output.write_text(json.dumps(source, ensure_ascii=True), encoding="utf-8")
@@ -586,10 +605,12 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
     assert r'"literal": "\\n"' in report
     assert r'"json_text": "{\"x\":1}"' in report
     assert r'"quoted": "say \"hi\" \\ slash"' in report
+    assert '"line\nkey": "first\n\nlast\n"' in report
+    assert r'"surrogate": "\ud800"' in report
     assert '"empty": ""' in report
     assert '"nothing": null' in report
     assert (
-        '"items": [\n      true,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
+        '"items": [\n      true,\n      false,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
         in report
     )
     assert '"literal": "\n"' not in report
@@ -635,132 +656,30 @@ def test_structured_output_display_marks_unaccepted_and_unparseable_outputs(
     assert r'"text":"\xff"' in report
 
 
-@pytest.mark.parametrize("ending", ("natural_completion", "user_interruption", "error"))
-def test_structured_output_is_formatted_in_every_primary_report_ending(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    ending: str,
-) -> None:
-    """最外側の終了分類に依存せず Structured Output を整形する。"""
-    from commons.runtime_logging import current_subcommand_logger
-
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
-
-    def body() -> TerminalResult:
-        logger = current_subcommand_logger()
-        assert logger is not None
-        output = logger.path.with_name("structured-output.json")
-        output.write_text('{"message":"first\\nsecond"}', encoding="utf-8")
-        logger.event(
-            "codex_call",
-            output_path=str(output),
-            schema_path=str(root / "schema.json"),
-            status="succeeded",
-        )
-        if ending == "user_interruption":
-            runtime_cli.mark_current_subcommand_interrupted()
-        if ending == "error":
-            raise CmocError("after Codex call", [], "error after saved output")
-        return TerminalResult()
-
-    if ending == "error":
-        with pytest.raises(typer.Exit):
-            runtime_cli.run_cli_subcommand(
-                body, command_name="doctor", doctor_preprocess=False
-            )
-    else:
-        runtime_cli.run_cli_subcommand(
-            body,
-            command_name="doctor",
-            doctor_preprocess=False,
-            interruptible=True,
-        )
-
-    captured = capsys.readouterr()
-    report = terminal_primary_report(
-        captured.err if ending == "error" else captured.out
-    ).read_text(encoding="utf-8")
-    assert '"message": "first\nsecond"' in report
-    assert "### Codex 最終出力" in report
-
-
 def test_primary_report_explains_when_codex_output_is_unavailable(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """最終出力 artifact が無い失敗でも、未取得状態を report に残す。"""
-    from commons.runtime_logging import current_subcommand_logger
+    report = execution_record_markdown(
+        None,
+        saved_events=(
+            {
+                "event": "codex_call",
+                "output_path": str(tmp_path / "missing-output.txt"),
+                "status": "failed",
+            },
+        ),
+    )
 
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
-
-    def body() -> TerminalResult:
-        logger = current_subcommand_logger()
-        assert logger is not None
-        logger.event(
-            "codex_call",
-            output_path=str(root / "missing-output.txt"),
-            status="failed",
-        )
-        return TerminalResult()
-
-    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
-
-    report = terminal_primary_report(capsys.readouterr().out).read_text()
     assert "### Codex 最終出力" in report
     assert "取得済みの最終出力はありません。" in report
 
 
-def test_primary_report_delimits_and_escapes_artifact_paths(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """Codex artifact path の Markdown delimiter を壊さずに report へ載せる。"""
-    from commons.runtime_logging import current_subcommand_logger
-
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
-    output_path = root / "output`file.txt"
-    call_log_path = root / "call`file.json"
-
-    def body() -> TerminalResult:
-        logger = current_subcommand_logger()
-        assert logger is not None
-        output_path.write_text("final output\n")
-        logger.event(
-            "codex_call",
-            output_path=str(output_path),
-            call_log_path=str(call_log_path),
-            purpose="unsafe path",
-            status="succeeded",
-        )
-        return TerminalResult()
-
-    runtime_cli.run_cli_subcommand(body, command_name="doctor", doctor_preprocess=False)
-
-    report = terminal_primary_report(capsys.readouterr().out).read_text()
-    expected_output = str(output_path.resolve())
-    expected_call_log = str(call_log_path.resolve()).replace("`", "'")
-    assert f"出力: ``{expected_output}``" in report
-    assert f"Codex call (unsafe path, succeeded): `{expected_call_log}`" in report
-
-
 def test_refactor_fallback_records_user_interruption_reason(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """fallback report でも refactor の中断理由を確定する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
 
     def interrupt_without_report() -> TerminalResult:
         """処理本体が中断だけを確定し、report 保存を共通 fallback に委ねる。"""
@@ -803,16 +722,27 @@ def test_existing_primary_report_survives_update_failure(
     assert not list(tmp_path.glob(".report.md.*"))
 
 
-def test_unsaved_report_path_becomes_internal_failure_without_path_display(
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    "invalid_kind", ["missing", "empty", "directory", "symlink", "dangling_symlink"]
+)
+def test_invalid_report_path_becomes_internal_failure_without_path_display(
+    primary_report_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    invalid_kind: str,
 ) -> None:
     """保存を確認できない path を隠し、report 基盤の internal failure にする。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    root = primary_report_directory
     unsaved_path = root / "must-not-be-displayed.md"
+    linked_target = root / "linked-report.md"
+    if invalid_kind == "empty":
+        unsaved_path.touch()
+    elif invalid_kind == "directory":
+        unsaved_path.mkdir()
+    elif invalid_kind in {"symlink", "dangling_symlink"}:
+        if invalid_kind == "symlink":
+            linked_target.write_text("protected report\n", encoding="utf-8")
+        unsaved_path.symlink_to(linked_target)
     opened: list[Path] = []
     monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", opened.append)
 
@@ -836,7 +766,10 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     assert "primary report の保存を確認できませんでした。" in captured.err
     assert str(unsaved_path) not in captured.err
     assert "- primary report (" not in captured.err
-    assert not unsaved_path.exists()
+    if invalid_kind == "missing":
+        assert not unsaved_path.exists()
+    elif invalid_kind == "symlink":
+        assert linked_target.read_text(encoding="utf-8") == "protected report\n"
     assert opened == []
     log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
     [log_path] = log_directory.glob("*.jsonl")
@@ -849,14 +782,11 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
 
 
 def test_unreadable_existing_report_becomes_internal_failure_without_path_display(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    primary_report_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """既存 report の読み取り失敗も report 基盤の internal failure にする。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _disable_external_completion(monkeypatch)
+    root = primary_report_directory
     unreadable_path = root / "unreadable-report.md"
     unreadable_path.write_bytes(b"\xff")
 

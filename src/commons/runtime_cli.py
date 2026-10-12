@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from contextlib import nullcontext
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 import typer
 
@@ -23,7 +23,13 @@ from .runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
-from .runtime_paths import console_timestamp, format_duration, repo_root, work_root
+from .runtime_paths import (
+    console_timestamp,
+    format_duration,
+    repo_root,
+    reuse_root_queries,
+    work_root,
+)
 from .runtime_primary_report import (
     PrimaryReportSaveError,
     ensure_primary_report,
@@ -35,6 +41,32 @@ from .runtime_results import TerminalResult
 from .runtime_windows_toast import ToastState, notify_terminal_result
 
 TerminalClassification = Literal["natural_completion", "user_interruption", "error"]
+
+
+class _TerminalDetailRecord(TypedDict):
+    """ログと表示が共有する正規化済みの固有 field。"""
+
+    name: str
+    value: object
+
+
+class _TerminalResultRecord(TypedDict):
+    """パス解決と文字列整形を一度だけ行った終端結果。"""
+
+    classification: TerminalClassification
+    command: str
+    primary_report_role: str | None
+    primary_report_path: str | None
+    result: str | None
+    completion_reason: str | None
+    details: list[_TerminalDetailRecord]
+    next_actions: list[str]
+    warnings: list[str]
+    pending_feedback_observation_count: int | None
+    elapsed_sec: float
+    returncode: int
+    diagnostic_log_path: str
+
 
 _CURRENT_STEP_TOTAL: ContextVar[int | None] = ContextVar(
     "CURRENT_STEP_TOTAL", default=None
@@ -105,8 +137,10 @@ def run_cli_subcommand(
         install_recovery_interruption() if interruptible else None
     )
     try:
-        current_root = work_root()
-        notification_root = repo_root()
+        # 開始時の両 root だけを共有し、doctor や本命処理へ探索結果を持ち越さない。
+        with reuse_root_queries():
+            current_root = work_root()
+            notification_root = repo_root()
         runtime_root = current_root if use_work_root_runtime else notification_root
         logger = SubcommandLogger(notification_root, name)
         logger_token = set_current_subcommand_logger(logger)
@@ -449,16 +483,7 @@ def _finalize_subcommand(
 
     if emit_console:
         typer.echo(
-            _render_terminal_result(
-                terminal_result,
-                classification,
-                command_name,
-                logger.warning_messages,
-                pending,
-                elapsed,
-                returncode,
-                logger.path,
-            ),
+            _render_terminal_result(terminal_record),
             err=classification == "error",
         )
     return returncode
@@ -562,8 +587,8 @@ def _terminal_result_record(
     elapsed: float,
     returncode: int,
     log_path: Path,
-) -> dict[str, object]:
-    """console と同じ terminal result を JSON event 用 object にする。"""
+) -> _TerminalResultRecord:
+    """終端結果を一度正規化し、JSON event と console の両方へ渡す。"""
     return {
         "classification": classification,
         "command": safe_text(command_name),
@@ -596,45 +621,38 @@ def _terminal_result_record(
     }
 
 
-def _render_terminal_result(
-    result: TerminalResult,
-    classification: TerminalClassification,
-    command_name: str,
-    warnings: list[str],
-    pending: int | None,
-    elapsed: float,
-    returncode: int,
-    log_path: Path,
-) -> str:
+def _render_terminal_result(record: _TerminalResultRecord) -> str:
     """仕様の優先順序で、一つの Markdown terminal result を描画する。"""
+    # ログへ渡した値を使い、表示のために再びパス探索や文字列整形をしない。
     heading = {
         "natural_completion": "完了",
         "user_interruption": "中断完了",
         "error": "失敗",
-    }[classification]
-    lines = [f"# {heading}: cmoc {safe_text(command_name)}"]
-    if result.primary_report is not None:
+    }[record["classification"]]
+    lines = [f"# {heading}: cmoc {record['command']}"]
+    if record["primary_report_path"] is not None:
         lines.append(
-            f"- primary report ({safe_text(result.primary_report_role)}): "
-            f"`{safe_text(result.primary_report.resolve(strict=False))}`"
+            f"- primary report ({record['primary_report_role']}): "
+            f"`{record['primary_report_path']}`"
         )
-    if result.result is not None:
-        lines.append(f"- result: `{safe_text(result.result)}`")
-    if result.completion_reason is not None:
-        lines.append(f"- completion_reason: `{safe_text(result.completion_reason)}`")
+    if record["result"] is not None:
+        lines.append(f"- result: `{record['result']}`")
+    if record["completion_reason"] is not None:
+        lines.append(f"- completion_reason: `{record['completion_reason']}`")
     lines.extend(
-        f"- {safe_text(name)}: `{_display_value(value)}`"
-        for name, value in result.details
+        f"- {detail['name']}: `{_display_value(detail['value'])}`"
+        for detail in record["details"]
     )
-    lines.extend(f"- 次の操作: {safe_text(action)}" for action in result.next_actions)
-    lines.extend(f"- warning: {safe_text(warning)}" for warning in warnings)
+    lines.extend(f"- 次の操作: {action}" for action in record["next_actions"])
+    lines.extend(f"- warning: {warning}" for warning in record["warnings"])
+    pending = record["pending_feedback_observation_count"]
     pending_text = "unavailable" if pending is None else str(pending)
     lines.extend(
         [
             f"- pending feedback observation: `{pending_text}`",
-            f"- 経過時間: `{format_duration(elapsed)}`",
-            f"- 終了コード: `{returncode}`",
-            f"- 診断用サブコマンドログ: `{safe_text(log_path.resolve(strict=False))}`",
+            f"- 経過時間: `{format_duration(record['elapsed_sec'])}`",
+            f"- 終了コード: `{record['returncode']}`",
+            f"- 診断用サブコマンドログ: `{record['diagnostic_log_path']}`",
         ]
     )
     return "\n".join(lines)
@@ -642,8 +660,6 @@ def _render_terminal_result(
 
 def _display_value(value: object) -> str:
     """terminal result の scalar を一つの Markdown field に収める。"""
-    if isinstance(value, Path):
-        value = value.resolve(strict=False)
     return safe_text(value).replace("`", "'").replace("\n", " | ")
 
 

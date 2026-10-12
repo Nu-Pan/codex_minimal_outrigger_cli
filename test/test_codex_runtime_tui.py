@@ -6,7 +6,10 @@ import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from itertools import count
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from _codex_support import (
@@ -17,12 +20,13 @@ from _codex_support import (
     stub_codex_overrides,
 )
 from _command_support import write_python_executable
-from _git_support import make_repo, run_git
+from _git_support import run_git
 from _handoff_support import handoff_input
 from oracle.other.cmoc_config import CodexCallConfig
 
 import cmoc_runtime
 import commons.runtime_codex_tui as runtime_codex_tui
+import commons.runtime_logging as runtime_logging
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_tui
@@ -36,6 +40,41 @@ from commons.runtime_logging import (
     set_current_subcommand_logger,
 )
 from config.cmoc_config import CmocConfig
+
+
+@pytest.fixture
+def tui_runtime_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """ログ・設定・起動失敗の検証では Git context を解決済みとして扱う。"""
+    # 実 Git の cwd・linked worktree 境界は、この file の prompt 起動ケースに残す。
+    root = tmp_path / "repo"
+    root.mkdir()
+    setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "AgentCallPathContext",
+        lambda agent_call_cwd: SimpleNamespace(
+            agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
+        ),
+    )
+    return root
+
+
+@pytest.fixture
+def tui_log_directory(
+    tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """単発 TUI のログ検査では、ID の永続採番を準備しない。"""
+    # 永続性・並行採番は test_runtime_ids.py、TUI の採番との結合は
+    # 同一 timestamp・並行 TUI・prompt 起動のケースに残す。
+    ids = count()
+
+    def issue_id(_root: Path, prefix: str) -> str:
+        """実行・agent call・Codex call に異なる ID を供給する。"""
+        return f"{prefix}_{next(ids):06d}_2000-01-01_00-00"
+
+    monkeypatch.setattr(runtime_logging, "new_id", issue_id)
+    monkeypatch.setattr(runtime_codex_tui, "new_id", issue_id)
+    return tui_runtime_directory
 
 
 def _tui_call_logs(root: Path) -> list[Path]:
@@ -52,10 +91,14 @@ def _tui_call_logs(root: Path) -> list[Path]:
 # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
 def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    toast_clock,
 ) -> None:
     """PURE_ORACLE_READ の完全 prompt 本文と CLI 引数を変更せず渡す。"""
-    root = make_repo(tmp_path)
+    # Fake CLI は callback を起動しない。drain の待機契約は test_windows_toast.py で検証する。
+    root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -146,44 +189,41 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
 
 
 def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
-    tmp_path: Path,
+    tui_log_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """未検証 Codex では root filter なしの legacy callback を渡さない。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "if '--version' in sys.argv[1:]:",
-            "    print('codex-cli 0.152.0')",
-            "    raise SystemExit(0)",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps(sys.argv[1:]))",
-        ],
+    root = tui_log_directory
+    # version 判定は test_runtime_codex_profile.py、実 process の argv/cwd は
+    # prompt 起動ケースに残し、ここでは判定後の通知設定だけを観測する。
+    version_probe = Mock(return_value=False)
+    tui_process = Mock(
+        side_effect=lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0)
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setattr(
+        runtime_codex_tui, "codex_cli_supports_tui_notification_hooks", version_probe
+    )
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", tui_process)
 
-    run_codex_tui(
+    result = run_codex_tui(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
         root=root,
         config=CmocConfig(),
     )
 
-    override_config = codex_override_config(json.loads(recorder.read_text()))
+    assert result.returncode == 0
+    version_probe.assert_called_once()
+    tui_process.assert_called_once()
+    override_config = codex_override_config(tui_process.call_args.args[0])
     assert override_config["notify"] == []
     assert "hooks" not in override_config
 
 
 def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tui_log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """未定義 call の TUI では Codex version probe より先に設定エラーにする。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    root = tui_log_directory
     probe_calls: list[tuple[object, object]] = []
 
     def record_version_probe(*args: object, **kwargs: object) -> bool:
@@ -208,11 +248,10 @@ def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
 
 
 def test_run_codex_tui_rejects_missing_provider_before_version_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tui_log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """未定義 provider の TUI でも Codex version probe より先に失敗する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    root = tui_log_directory
     probe_calls: list[tuple[object, object]] = []
 
     def record_version_probe(*args: object, **kwargs: object) -> bool:
@@ -241,43 +280,61 @@ def test_run_codex_tui_rejects_missing_provider_before_version_probe(
 
 
 def test_run_codex_tui_skips_notification_probe_during_completion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tui_log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """シェル補完中は通知設定の Codex version probe を実行しない。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    probe_marker = tmp_path / "notification-probe-called"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import pathlib, sys",
-            f"probe_marker = pathlib.Path({str(probe_marker)!r})",
-            "if '--version' in sys.argv[1:]:",
-            "    probe_marker.write_text('called')",
-            "    raise SystemExit(0)",
-            "raise SystemExit(0)",
-        ],
+    # probe の呼び出し境界を観測し、TUI 本体の起動は process を作らずに代替する。
+    root = tui_log_directory
+    probe_calls: list[tuple[object, object]] = []
+    tui_calls: list[list[str]] = []
+
+    def record_version_probe(*args: object, **kwargs: object) -> bool:
+        """補完 marker に反して version probe が呼ばれた場合を記録する。"""
+        probe_calls.append((args, kwargs))
+        return False
+
+    def record_tui(
+        argv: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """TUI 本体へ到達したことを記録し、通常の終了結果を返す。"""
+        tui_calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        record_version_probe,
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", record_tui)
     monkeypatch.setenv("_CMOC_COMPLETE", "")
 
-    run_codex_tui(
+    result = run_codex_tui(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
         root=root,
         config=CmocConfig(),
     )
 
-    assert not probe_marker.exists()
+    assert result.returncode == 0
+    assert len(tui_calls) == 1
+    assert probe_calls == []
 
 
 def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """linked worktree の完全 prompt 本文とアクセス上書きを維持する。"""
-    root = make_repo(tmp_path)
+    # HEAD と実 linked metadata を使い、参照しない追跡 file・index は準備しない。
+    root = committed_repository
     setup_codex_home(tmp_path, monkeypatch)
+    # 通知の version 判定と callback 設定は上の専用ケースで検証する。
+    # ここでは実 process への prompt・cwd・handoff 環境の受け渡しを扱う。
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        lambda *_args: False,
+    )
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-tui-runtime", str(linked), "HEAD")
@@ -329,16 +386,19 @@ def test_run_codex_tui_passes_repo_complete_prompt_from_linked_worktree(
 
 
 def test_run_codex_tui_logs_successful_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tui_log_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """正常終了時に call log とサブコマンドイベントだけを残す。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    root = tui_log_directory
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(0)"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    # 成功 process との実結合は prompt 起動ケースに残し、ここではログを検査する。
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "run_codex_subprocess",
+        lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0),
+    )
     logger = SubcommandLogger(root, "test")
     token = set_current_subcommand_logger(logger)
     try:
@@ -363,16 +423,17 @@ def test_run_codex_tui_logs_successful_call(
 
 
 def test_run_codex_tui_keeps_call_logs_on_same_timestamp(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """同一 timestamp の TUI 呼び出しでも別 ID の call log を残す。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    root = tui_runtime_directory
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(0)"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    # 実 process の成功・失敗は隣接ケースで検証し、ここではログの独立性を調べる。
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "run_codex_subprocess",
+        lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0),
+    )
     monkeypatch.setattr(
         runtime_codex_tui, "timestamp", lambda: "2026-06-27_10-00-00_000"
     )
@@ -391,11 +452,12 @@ def test_run_codex_tui_keeps_call_logs_on_same_timestamp(
 
 
 def test_run_codex_tui_logs_missing_cli_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tui_log_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex CLI 不在時に未起動の失敗として各ログへ記録し、エラーを返すことを確認する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    root = tui_log_directory
     stub_codex_overrides(monkeypatch)
     real_popen: Callable[..., object] = subprocess.Popen
 
@@ -434,11 +496,12 @@ def test_run_codex_tui_logs_missing_cli_failure(
 
 
 def test_run_codex_tui_logs_keyboard_interrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tui_log_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """KeyboardInterrupt を再送出しつつ、未起動扱いの call log とイベントを残すことを確認する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    root = tui_log_directory
     stub_codex_overrides(monkeypatch)
 
     def interrupt(*_args: object, **_kwargs: object) -> object:
@@ -473,16 +536,19 @@ def test_run_codex_tui_logs_keyboard_interrupt(
 
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tui_log_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex の非 0 終了を TUI 呼び出し失敗として報告し、call log を保存することを確認する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    root = tui_log_directory
     stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(7)"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    # 非 0 終了の判定も実 wrapper を通し、argv・cwd の実 process 結合は prompt ケースに残す。
+    process = MagicMock()
+    process.__enter__.return_value = process
+    process.communicate.return_value = (None, None)
+    process.wait.return_value = 7
+    monkeypatch.setattr(subprocess, "Popen", Mock(return_value=process))
 
     logger = SubcommandLogger(root, "test")
     token = set_current_subcommand_logger(logger)
@@ -519,11 +585,11 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
 
 
 def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
-    tmp_path, monkeypatch
+    tui_runtime_directory, monkeypatch
 ):
     """並行する TUI の MCP が自身の起動前ログと一致する送信元を保持する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    # 送信元の分離は実 stdio MCP で確かめ、Git root 導出は prompt 起動ケースに委ねる。
+    root = tui_runtime_directory
     monkeypatch.setenv(EDITOR_INPUT_SOURCE_ENV, "stale-parent-source")
     monkeypatch.setattr(
         runtime_codex_tui,

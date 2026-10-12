@@ -1,10 +1,13 @@
-import json
+"""Codex home の起動前検査を検証する。
+
+正常時の既定 home は test_codex_runtime_exec.py、相対 home と cwd は
+test_codex_runtime_paths.py の Fake CLI 起動にまとめる。
+"""
+
 from pathlib import Path
 
 import pytest
-from _codex_support import stub_codex_overrides
-from _command_support import write_python_executable
-from _git_support import make_repo
+from oracle.other import path_model as path_model_module
 
 import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode
@@ -12,6 +15,20 @@ from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import validate_codex_home
 from config.cmoc_config import CmocConfig
+
+
+@pytest.fixture
+def codex_call_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """home 検証では Git discovery を解決済みとして扱う。"""
+    # Git/cwd の結合は test_codex_runtime_paths.py と test_basic_runtime.py に残す。
+    root = tmp_path / "repo"
+    root.mkdir()
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _start_path=None: (root, root),
+    )
+    return root
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -29,165 +46,11 @@ def _spy_codex_subprocess(
     return calls
 
 
-def test_run_codex_exec_uses_default_codex_home_when_env_unset(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """既定 home を使い、それを Codex subprocess へ渡す。"""
-    root = make_repo(tmp_path)
-    home = tmp_path / "home"
-    codex_home = home / ".codex"
-    codex_home.mkdir(parents=True)
-    monkeypatch.setenv("HOME", str(home))
-    monkeypatch.delenv("CODEX_HOME", raising=False)
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, os, pathlib",
-            f"record = pathlib.Path({str(recorder)!r})",
-            "args = __import__('sys').argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            "payload = {",
-            "    'codex_home': os.environ.get('CODEX_HOME'),",
-            "    'args': args,",
-            "}",
-            "record.write_text(json.dumps(payload))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        root,
-    )
-
-    result = run_codex_exec(
-        parameter, root=root, transient_poll_interval_sec=0, config=CmocConfig()
-    )
-
-    recorded = json.loads(recorder.read_text())
-    assert recorded["codex_home"] == str(codex_home)
-    assert result.codex_home == codex_home
-
-
-def test_run_codex_exec_preserves_configured_codex_home_env_value(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """設定された home value を保持し、解決済み path を記録する。"""
-    root = make_repo(tmp_path)
-    home = tmp_path / "home"
-    home.mkdir()
-    monkeypatch.setenv("HOME", str(home))
-    codex_home = root / "relative_codex_home"
-    codex_home.mkdir()
-    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, os, pathlib",
-            f"record = pathlib.Path({str(recorder)!r})",
-            "args = __import__('sys').argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            "payload = {",
-            "    'codex_home': os.environ.get('CODEX_HOME'),",
-            "    'args': args,",
-            "}",
-            "record.write_text(json.dumps(payload))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        root,
-    )
-
-    result = run_codex_exec(
-        parameter, root=root, transient_poll_interval_sec=0, config=CmocConfig()
-    )
-
-    recorded = json.loads(recorder.read_text())
-    assert recorded["codex_home"] == "relative_codex_home"
-    assert result.codex_home == codex_home
-    call_log = json.loads(result.call_log_path.read_text())
-    assert call_log["codex_home"] == str(codex_home)
-
-
-def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """相対 home を Codex subprocess の working directory から解決する。"""
-    root = make_repo(tmp_path)
-    home = tmp_path / "home"
-    home.mkdir()
-    monkeypatch.setenv("HOME", str(home))
-    codex_home = root / "relative_codex_home"
-    codex_home.mkdir()
-    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_overrides(monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, os, pathlib",
-            f"record = pathlib.Path({str(recorder)!r})",
-            "args = __import__('sys').argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            "home = pathlib.Path(os.environ['CODEX_HOME'])",
-            "record.write_text(json.dumps({",
-            "    'codex_home': os.environ['CODEX_HOME'],",
-            "    'resolved_home': str(home.resolve()),",
-            "    'cwd': os.getcwd(),",
-            "}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.PURE_ORACLE_READ,
-        "prompt",
-        None,
-        root,
-    )
-
-    result = run_codex_exec(
-        parameter, root=root, transient_poll_interval_sec=0, config=CmocConfig()
-    )
-
-    recorded = json.loads(recorder.read_text())
-    assert recorded["codex_home"] == "relative_codex_home"
-    assert Path(recorded["cwd"]) == root
-    assert Path(recorded["resolved_home"]) == codex_home
-    assert result.codex_home == codex_home
-
-
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
 ) -> None:
     """Codex subprocess の起動前に欠落した home を拒否する。"""
-    root = make_repo(tmp_path)
+    root = codex_call_directory
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
@@ -218,10 +81,10 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
 ) -> None:
     """Codex subprocess の起動前に file を指す home を拒否する。"""
-    root = make_repo(tmp_path)
+    root = codex_call_directory
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))

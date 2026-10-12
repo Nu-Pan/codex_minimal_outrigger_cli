@@ -30,12 +30,13 @@ def _copy_wrapper(fake_cmoc_root: Path) -> None:
 
 
 def _write_probe_python(fake_cmoc_root: Path) -> None:
-    """probe と本番転送を観測できる fake interpreter を作成する。"""
+    """通常起動の probe と本体への転送を区別する fake interpreter を作成する。"""
     venv_python = fake_cmoc_root / ".venv" / "bin" / "python"
     venv_python.parent.mkdir(parents=True)
     venv_python.write_text(
         """#!/bin/sh
 if [ "$1" = "-c" ]; then
+    [ "${_CMOC_COMPLETE+x}" != x ] || exit 42
     printf '%s' 'cmoc-python-probe'
     exit 0
 fi
@@ -49,11 +50,16 @@ printf 'args=%s\n' "$*"
     venv_python.chmod(0o755)
 
 
-def _run_wrapper(fake_cmoc_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    """テスト用 root の wrapper を指定引数で実行する。"""
+def _run_wrapper(
+    fake_cmoc_root: Path,
+    *args: str,
+    wrapper_command: tuple[str, ...] = ("./bin/cmoc",),
+    cmoc_process_cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """wrapper の配置先と呼び出し時の cwd を分けて実行する。"""
     return subprocess.run(
-        ["./bin/cmoc", *args],
-        cwd=fake_cmoc_root,
+        [*wrapper_command, *args],
+        cwd=cmoc_process_cwd if cmoc_process_cwd is not None else fake_cmoc_root,
         text=True,
         capture_output=True,
         check=False,
@@ -80,7 +86,11 @@ def test_bin_cmoc_missing_venv_reports_full_paths(tmp_path: Path) -> None:
     fake_cmoc_root = tmp_path / "cmoc"
     _copy_wrapper(fake_cmoc_root)
 
-    result = _run_wrapper(fake_cmoc_root)
+    result = _run_wrapper(
+        fake_cmoc_root,
+        wrapper_command=(str(fake_cmoc_root / "bin" / "cmoc"),),
+        cmoc_process_cwd=tmp_path,
+    )
 
     _assert_error_report(result)
     assert str(fake_cmoc_root) in result.stderr
@@ -116,12 +126,17 @@ def test_bin_cmoc_non_python_executable_uses_error_report(
 
 
 def test_bin_cmoc_usable_venv_forwards_to_main(tmp_path: Path) -> None:
-    """通常経路が probe 後に main.py と引数を interpreter へ渡す。"""
-    fake_cmoc_root = tmp_path / "cmoc"
+    """空白を含む配置先で、slash のない起動名から本体と引数へ転送する。"""
+    fake_cmoc_root = tmp_path / "cmoc root"
     _write_probe_python(fake_cmoc_root)
     _copy_wrapper(fake_cmoc_root)
 
-    result = _run_wrapper(fake_cmoc_root, "--status")
+    result = _run_wrapper(
+        fake_cmoc_root,
+        "--status",
+        wrapper_command=("/bin/sh", "cmoc"),
+        cmoc_process_cwd=fake_cmoc_root / "bin",
+    )
 
     assert result.returncode == 0
     assert result.stderr == ""
@@ -133,7 +148,7 @@ def test_bin_cmoc_usable_venv_forwards_to_main(tmp_path: Path) -> None:
 def test_bin_cmoc_completion_probe_forwards_without_wrapper_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """補完プローブが通常経路の error report を出さずに転送する。"""
+    """補完は通常用 interpreter probe を経由せずに本体へ転送する。"""
     fake_cmoc_root = tmp_path / "cmoc"
     _write_probe_python(fake_cmoc_root)
     _copy_wrapper(fake_cmoc_root)

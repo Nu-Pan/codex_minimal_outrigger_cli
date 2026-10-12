@@ -7,6 +7,7 @@ from typing import Any
 from .runtime_errors import CmocError
 from .runtime_feedback_history import validate_history_record
 from .runtime_feedback_state import (
+    ActiveState,
     _corruption,
     _durable_unlink,
     _has_symlink_component,
@@ -15,7 +16,6 @@ from .runtime_feedback_state import (
     _require_exact_fields,
     _require_only_expected_files,
     _require_timestamp,
-    _resolve_reference_path,
     _unlink_artifact_reference,
     _validate_active_issue,
     _validate_artifact_reference,
@@ -173,8 +173,12 @@ def load_close_work(repo: Path) -> dict[str, Any] | None:
     if not isinstance(record["old_generation"], list):
         raise _corruption("feedback close cleanup references が不正です。", path)
     for reference in record["old_generation"]:
-        target = _resolve_reference_path(
-            repo, reference.get("path"), generation_root(repo), "close old generation"
+        target = _validate_artifact_reference(
+            repo,
+            reference,
+            expected_root=generation_root(repo),
+            description="close old generation",
+            allow_missing=True,
         )
         if not target.is_relative_to(
             generation_directory(repo, record["base_current"]["generation_id"])
@@ -182,19 +186,13 @@ def load_close_work(repo: Path) -> dict[str, Any] | None:
             raise _corruption(
                 "feedback close cleanup が base generation 外です。", target
             )
-        if target.exists() or target.is_symlink():
-            _validate_artifact_reference(
-                repo,
-                reference,
-                expected_root=generation_root(repo),
-                description="close old generation",
-            )
     return record
 
 
 def _validate_saved_bytes(
     repo: Path, value: object, root: Path, path: Path
 ) -> dict[str, Any]:
+    # 未保存・cleanup 済みでも参照を検証し、現存する file は hash を照合する。
     artifact = _require_exact_fields(
         value, {"path", "sha256", "content"}, path, "close fixed artifact"
     )
@@ -203,14 +201,14 @@ def _validate_saved_bytes(
         or sha256_bytes(artifact["content"].encode()) != artifact["sha256"]
     ):
         raise _corruption("feedback close artifact bytes/hash が不正です。", path)
-    target = _resolve_reference_path(
-        repo, artifact["path"], root, "close fixed artifact"
-    )
     reference = {key: artifact[key] for key in ("path", "sha256")}
-    if target.exists() or target.is_symlink():
-        _validate_artifact_reference(
-            repo, reference, expected_root=root, description="close fixed artifact"
-        )
+    _validate_artifact_reference(
+        repo,
+        reference,
+        expected_root=root,
+        description="close fixed artifact",
+        allow_missing=True,
+    )
     return reference
 
 
@@ -228,8 +226,8 @@ def require_no_pending_close(repo: Path) -> None:
         )
 
 
-def complete_close(repo: Path, record: dict[str, Any]) -> Path:
-    """固定 artifact を公開し、確定後の旧 generation cleanup だけを再開する。"""
+def complete_close(repo: Path, record: dict[str, Any]) -> tuple[Path, ActiveState]:
+    """固定 artifact の publication と cleanup を完了し、検証済み状態を返す。"""
     # Publication point を通過していたら終了操作を再適用しない。
     path = close_work_path(repo)
     if load_close_work(repo) != record:
@@ -310,4 +308,4 @@ def complete_close(repo: Path, record: dict[str, Any]) -> Path:
         raise _corruption("feedback close report hash が不正です。", report_path)
     _durable_unlink(path)
     _prune_empty_directories(path.parent, path.parent)
-    return report_path
+    return report_path, state

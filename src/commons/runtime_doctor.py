@@ -450,7 +450,6 @@ def run_doctor_preprocess(
                         repair_root,
                         original_index_path=original_index_path,
                         include_config=include_config,
-                        include_agents=repair_root == root,
                         include_gu_ignore=include_gu_ignore,
                         preserved_runtime_paths=preserved_runtime_paths,
                     )
@@ -556,20 +555,14 @@ def _ensure_agents_tracked(root: Path) -> bool:
     agents = root / ".agents"
     _validate_agents_paths(root)
     agents.mkdir(exist_ok=True)
-    tracked = bool(run_git(["ls-files", "--", ".agents"], root).stdout.strip())
+    tracked = set(run_git(["ls-files", "--", ".agents"], root).stdout.splitlines())
     gitkeep = agents / ".gitkeep"
     if tracked:
         # tracked な .gitkeep の unstaged deletion でも、.agents を空のまま残さない。
         if not gitkeep.exists():
-            run_git(
-                ["restore", "--worktree", "--", ".agents/.gitkeep"],
-                root,
-                check=False,
-            )
-            if not gitkeep.exists():
-                # git restore は skip-worktree entry を欠落した worktree へ
-                # 戻せないため、現在 index の blob を flag を保ったまま checkout
-                # する。通常 entry では最初の restore が成功するので実行しない。
+            if ".agents/.gitkeep" in tracked:
+                # 通常 entry と skip-worktree のどちらも、index の flag を保って
+                # 一度で復元する。未登録の placeholder には復元を試みない。
                 run_git(
                     [
                         "checkout-index",
@@ -662,43 +655,30 @@ def _preexisting_runtime_paths(root: Path, index_path: Path) -> set[str]:
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     # config は人間が編集するため、既存の staged/unstaged 変更を doctor の
     # repair commit に混ぜない。state も同じ一時 index で扱うため同じ境界にする。
-    paths = {
+    paths = [
         str(config_path(root).relative_to(root)),
         str(refactor_state_path(root).relative_to(root)),
-    }
+    ]
+    # staged/unstaged を同時に調べ、退避 index の stat refresh は保存しない。
+    # rename の元は独立した削除として扱い、未追跡ファイルは列挙しない。
+    records = _run_git_with_index(
+        [
+            "--no-optional-locks",
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=no",
+            "--no-renames",
+            "--",
+            *paths,
+        ],
+        root,
+        index_path,
+    ).stdout.split("\0")
+    # 通常の staged deletion (D ) だけは entry がない。DD/DU は conflict entry を保つ。
     return {
-        path
-        for path in paths
-        if _path_changed_before_doctor(root, index_path, path)
-        and _index_has_entry(root, index_path, path)
+        record[3:] for record in records if record[:2] != "D " and record[3:] in paths
     }
-
-
-def _path_changed_before_doctor(root: Path, index_path: Path, path: str) -> bool:
-    """元 index と worktree のどちらかに doctor 前の差分があるか返す。"""
-    staged = _run_git_with_index(
-        ["diff", "--cached", "--name-only", "HEAD", "--", path],
-        root,
-        index_path,
-    ).stdout
-    unstaged = _run_git_with_index(
-        ["diff", "--name-only", "--", path],
-        root,
-        index_path,
-    ).stdout
-    return bool(staged.strip() or unstaged.strip())
-
-
-def _index_has_entry(root: Path, index_path: Path, path: str) -> bool:
-    """一時 index に path の entry があるか返す。"""
-    return bool(
-        _run_git_with_index(
-            ["ls-files", "--stage", "--", path],
-            root,
-            index_path,
-            check=False,
-        ).stdout.strip()
-    )
 
 
 def _commit_doctor_repairs(
@@ -802,13 +782,14 @@ def _restored_index(
     *,
     original_index_path: Path,
     include_config: bool,
-    include_agents: bool,
     include_gu_ignore: bool,
     preserved_runtime_paths: set[str],
 ) -> Path:
     """doctor 修復を合成した一時 index file を作る。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # 復元対象は path 列挙ではなく index 全体で扱い、rename や unstaged hunk を保つ。
+    # 通常 index は ensure_cmoc_ignored と _ensure_agents_tracked で修復済みなので、
+    # コピー後に .cmoc/gu の除外と .agents の追跡処理を繰り返す必要はない。
     index_path = _copy_current_index(root)
     try:
         # 修復 commit は HEAD を更新するが、復元 index では利用者の staged deletion を保つ。
@@ -816,19 +797,11 @@ def _restored_index(
             root, original_index_path, ".gitignore"
         ):
             _stage_gitignore_repair_from_index(root, index_path)
-        if include_agents:
-            _stage_agents_gitkeep_repair_from_index(root, index_path)
         if include_config:
             _stage_tracked_runtime_repair(
                 root,
                 index_path,
                 skip_paths=preserved_runtime_paths,
-            )
-        if include_gu_ignore:
-            _run_git_with_index(
-                ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
-                root,
-                index_path,
             )
         return index_path
     except BaseException:
@@ -870,15 +843,6 @@ def _stage_gitignore_repair_from_index(root: Path, index_path: Path) -> None:
     repaired = with_cmoc_ignore_pattern(current or "")
     if repaired != (current or ""):
         _stage_text(root, index_path, ".gitignore", repaired)
-
-
-def _stage_agents_gitkeep_repair_from_index(root: Path, index_path: Path) -> None:
-    """.agentsがindexにない場合にplaceholderをindexへ追加する。"""
-    agents = _run_git_with_index(
-        ["ls-files", "--", ".agents"], root, index_path
-    ).stdout.strip()
-    if not agents:
-        _stage_agents_gitkeep(root, index_path)
 
 
 def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
@@ -950,12 +914,18 @@ def _stage_tracked_runtime_repair(
                 algorithm = "sha1" if len(blob) == 40 else "sha256"
                 if hashlib.new(algorithm, header + encoded).hexdigest() == blob:
                     continue
+        # entry の欠落も一括列挙で確認済みなので、同じ index の mode を再照会しない。
+        if existing is not None:
+            mode = existing[0]
+        else:
+            head_entry = _head_entry(root, relative)
+            mode = head_entry[0] if head_entry is not None else "100644"
         _stage_text(
             root,
             index_path,
             relative,
             content,
-            mode=existing[0] if existing is not None else None,
+            mode=mode,
         )
 
 
@@ -965,13 +935,24 @@ def _is_staged_deletion_of_head_entry(
     path: str,
 ) -> bool:
     """元 index が HEAD の tracked path を staged deletion にしているか返す。"""
-    if _head_entry(root, path) is None:
-        return False
-    return not _run_git_with_index(
-        ["ls-files", "--stage", "--", path],
-        root,
-        index_path,
-    ).stdout.strip()
+    # HEAD と退避 index の削除差分を一度に調べる。rename の元は削除とし、
+    # intent-to-add や conflict の entry が残る path は削除扱いにしない。
+    return bool(
+        _run_git_with_index(
+            [
+                "diff",
+                "--cached",
+                "--no-renames",
+                "--ita-visible-in-index",
+                "--diff-filter=D",
+                "--name-only",
+                "--",
+                path,
+            ],
+            root,
+            index_path,
+        ).stdout.strip()
+    )
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:

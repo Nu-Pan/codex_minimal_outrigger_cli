@@ -4,6 +4,9 @@ agent-facing reporter から raw store、intake wave、remediation、current poi
 までを同じ repository fixture で追跡する。publication 後に compact active state だけが
 残ることを外部境界として検証する。
 
+session fork と live collector の結合は後続 wave の test に残す。保存済み入力を使う
+publication・中断・破損検査は ready session fixture から始め、TCP を準備しない。
+
 対応する oracle file:
 
 - `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
@@ -16,15 +19,25 @@ agent-facing reporter から raw store、intake wave、remediation、current poi
 
 import hashlib
 import json
+import os
 import socket
 import threading
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, NoReturn
+from unittest.mock import Mock
 
+import oracle.other.path_model as path_model_module
 import pytest
-from _cli_support import run_doctor, runner, terminal_primary_report
+from _acp_builder_support import oracle_schema_path
+from _cli_support import (
+    run_doctor,
+    runner,
+    seed_search_config,
+    terminal_primary_report,
+)
 from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from oracle.acp_builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter as _build_canonical_normalize_parameter,
@@ -34,8 +47,11 @@ from oracle.acp_builder.feedback.remediate_issue import (
 )
 
 import commons.runtime_feedback as feedback_module
+import commons.runtime_feedback_history as feedback_history_module
+import commons.runtime_feedback_protocol as feedback_protocol_module
 import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
+import commons.runtime_feedback_store as feedback_store_module
 import sub_commands.feedback.decision as decision_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
@@ -46,7 +62,7 @@ from acp.builder.feedback.remediate_issue import (
     build_feedback_remediate_issue_parameter,
 )
 from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import CmocError
+from cmoc_runtime import CmocError, load_state_for_branch
 from commons.runtime_feedback import (
     FeedbackInvocation,
     ReporterAvailabilityError,
@@ -58,6 +74,7 @@ from commons.runtime_feedback_protocol import (
     FEEDBACK_COLLECTOR_HOST,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
+    REPORTER_PROTOCOL_VERSION,
 )
 from commons.runtime_feedback_state import (
     feedback_writer_lock,
@@ -69,7 +86,6 @@ from commons.runtime_feedback_state import (
     validate_observation_envelope,
 )
 from commons.runtime_feedback_store import (
-    REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
     canonical_json_bytes,
     feedback_completion_counts,
@@ -79,11 +95,38 @@ from commons.runtime_feedback_store import (
     read_json_object,
     reporter_input_schema,
     rfc3339_now,
+    sha256_bytes,
     store_agent_observation,
     store_machine_observation,
+    validate_agent_payload,
 )
 from commons.runtime_logging import SubcommandLogger
 from main import app
+
+
+@pytest.fixture
+def feedback_directory(tmp_path: Path) -> Path:
+    """Git を参照しない保存・path・lock 検査には通常 directory だけを用意する。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    return root
+
+
+@pytest.fixture
+def feedback_prompt_directory(
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """prompt 検査では Git 探索結果だけを置換し、builder と renderer を実行する。"""
+
+    # 実 Git metadata の解決は test_basic_runtime.py と feedback wave 統合 test に残す。
+    def resolve_worktree_roots(agent_call_cwd: Path) -> tuple[Path, Path]:
+        assert agent_call_cwd == feedback_directory.resolve()
+        return agent_call_cwd, agent_call_cwd
+
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", resolve_worktree_roots
+    )
+    return feedback_directory
 
 
 def _payload(
@@ -109,12 +152,19 @@ def _payload(
     }
 
 
-def _context(root: Path, *, session_id: str | None = None) -> dict[str, object]:
+def _context(
+    root: Path,
+    *,
+    session_id: str | None = None,
+    head_commit: str | None = None,
+) -> dict[str, object]:
     """collector が付与する version 1 context と同形の fixture を返す。"""
     return {
         "repo_root": str(root.resolve()),
         "work_root": str(root.resolve()),
-        "head_commit": run_git(root, "rev-parse", "HEAD").stdout.strip(),
+        "head_commit": head_commit
+        if head_commit is not None
+        else run_git(root, "rev-parse", "HEAD").stdout.strip(),
         "cmoc_session_id": session_id,
         "run_id": None,
         "run_kind": None,
@@ -132,6 +182,31 @@ def _context(root: Path, *, session_id: str | None = None) -> dict[str, object]:
             )
         ],
     }
+
+
+@pytest.fixture
+def stored_feedback_context(feedback_directory: Path) -> dict[str, object]:
+    """保存検査には、collector 確定済みの context と実 evidence file を渡す。"""
+    # HEAD の取得は collector test、Git lifecycle は CLI test で検証する。
+    (feedback_directory / "README.md").write_text("# repo\n")
+    return _context(feedback_directory, head_commit="a" * 40)
+
+
+@pytest.fixture
+def collector_directory(
+    feedback_directory: Path,
+    stored_feedback_context: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    """collector の検査には Git 読み取り結果だけを渡す。"""
+    # 実 Git の context 取得は context/rate test と linked worktree の wave test で検証する。
+    monkeypatch.setattr(feedback_module, "current_branch", lambda _root: "main")
+    monkeypatch.setattr(
+        feedback_module,
+        "head_commit",
+        lambda _root: stored_feedback_context["head_commit"],
+    )
+    return feedback_directory
 
 
 def _submit_to_feedback_collector(
@@ -166,9 +241,10 @@ def _submit_to_feedback_collector(
 
 
 def _active_session(root: Path, monkeypatch: pytest.MonkeyPatch) -> str:
-    """doctor 済み repository を active session の ready 状態にする。"""
+    """repository を active session の ready 状態にする。"""
     monkeypatch.chdir(root)
-    run_doctor(root)
+    # 管理物の修復・索引同期は session fork 自身の doctor preprocess で行う。
+    seed_search_config(root)
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     branch = current_branch(root)
@@ -227,7 +303,7 @@ def _install_codex_outputs(
     monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_run_codex_exec)
 
 
-def _store_agent_issue(root: Path, session_id: str) -> tuple[str, Path, str]:
+def _store_agent_issue(root: Path, session_id: str | None) -> tuple[str, Path, str]:
     """README を evidence とする agent observation と issue ID を返す。"""
     accepted, raw_path = store_agent_observation(
         root,
@@ -236,6 +312,31 @@ def _store_agent_issue(root: Path, session_id: str) -> tuple[str, Path, str]:
     )
     observation_id = str(accepted["observation_id"])
     return observation_id, raw_path, issue_id(f"agent\0{observation_id}")
+
+
+def _assert_hash_verified_state_snapshot(root, state, path, monkeypatch):
+    """一度読んだ artifact の hash と内容を使い、次回は改変を検出する。"""
+    original_read = Path.read_bytes
+    original_content = original_read(path)
+    reads = []
+
+    def replace_after_read(target):
+        content = original_read(target)
+        if target == path:
+            reads.append(target)
+            target.write_bytes(b"{}\n")
+        return content
+
+    try:
+        with monkeypatch.context() as snapshot_patch:
+            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+            assert load_active_state(root) == state
+            assert reads == [path]
+            with pytest.raises(CmocError, match="SHA256"):
+                load_active_state(root)
+            assert reads == [path, path]
+    finally:
+        path.write_bytes(original_content)
 
 
 def test_reporter_exposes_only_canonical_submission_tool(
@@ -293,6 +394,32 @@ def test_reporter_exposes_only_canonical_submission_tool(
     assert connected == [(FEEDBACK_COLLECTOR_HOST, 43210)]
     assert request["capability"] == "secret-capability"
     assert request["payload"] == _payload()
+
+
+def test_reporter_discovery_supports_editable_namespace_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """editable namespace package でも discovery に正本 schema を渡す。"""
+    expected_schema = reporter_input_schema()
+    original_files = feedback_protocol_module.resources.files
+
+    def raise_namespace_resource_error(package: str):
+        if package == "oracle.feedback":
+            raise NotADirectoryError(package)
+        return original_files(package)
+
+    monkeypatch.setattr(
+        feedback_protocol_module.resources, "files", raise_namespace_resource_error
+    )
+    feedback_protocol_module.load_reporter_input_schema.cache_clear()
+    try:
+        response = reporter_module._response(
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+        )
+        assert response is not None
+        assert response["result"]["tools"][0]["inputSchema"] == expected_schema
+    finally:
+        feedback_protocol_module.load_reporter_input_schema.cache_clear()
 
 
 @pytest.mark.parametrize(
@@ -515,8 +642,62 @@ def test_reporter_rejects_malformed_collector_port(
     }
 
 
+def test_reporter_availability_probe_checks_stdio_process_and_collector(
+    feedback_directory, monkeypatch, real_stdio_reporter_probe
+) -> None:
+    """実 stdio process と TCP collector の事前検証が raw を保存せず成功する。"""
+    # 子 process も現在の worktree の実装を読み、利用者の HOME は使わない。
+    root = feedback_directory
+    source_root = Path(__file__).parents[1]
+    monkeypatch.setenv("HOME", str(root))
+    monkeypatch.setenv(
+        "PYTHONPATH",
+        os.pathsep.join(str(source_root / path) for path in ("src", "oracle/src")),
+    )
+    probed_roots: list[Path] = []
+
+    def check_stdio(schema, reporter_cwd):
+        real_stdio_reporter_probe(schema, reporter_cwd)
+        probed_roots.append(reporter_cwd)
+
+    monkeypatch.setattr(feedback_module, "_validate_stdio_reporter", check_stdio)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation, token = start_feedback_invocation(root, root, "feedback test", logger)
+    try:
+        assert invocation is not None
+        feedback_module.validate_feedback_reporter_availability()
+        assert root in probed_roots
+        assert logger.warning_messages == []
+        assert iter_observation_paths(root) == []
+    finally:
+        feedback_module.stop_feedback_invocation(invocation, token)
+
+
+@pytest.mark.parametrize("schema", [[], {"type": "invalid"}])
+def test_reporter_availability_rejects_invalid_input_schema(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema: object
+) -> None:
+    """読み取りと discovery を分離しても doctor は不正な schema を検出する。"""
+    (tmp_path / "reporter_input.json").write_text(json.dumps(schema), encoding="utf-8")
+    monkeypatch.setattr(
+        feedback_protocol_module.resources, "files", lambda _pkg: tmp_path
+    )
+    feedback_protocol_module.load_reporter_input_schema.cache_clear()
+    feedback_store_module.reporter_input_schema.cache_clear()
+    try:
+        with pytest.raises(
+            ReporterAvailabilityError, match="schema is invalid"
+        ) as error:
+            feedback_module.validate_feedback_reporter_availability()
+        assert error.value.component == "reporter"
+        assert error.value.failure_code == "version_mismatch"
+    finally:
+        feedback_protocol_module.load_reporter_input_schema.cache_clear()
+        feedback_store_module.reporter_input_schema.cache_clear()
+
+
 def test_reporter_probe_rejects_non_object_mcp_response(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, real_stdio_reporter_probe
 ) -> None:
     """不正な JSON object 形状を reporter protocol error として扱う。"""
     monkeypatch.setattr(
@@ -530,7 +711,7 @@ def test_reporter_probe_rejects_non_object_mcp_response(
     )
 
     with pytest.raises(ReporterAvailabilityError, match="invalid MCP data") as error:
-        feedback_module._validate_stdio_reporter({}, tmp_path)
+        real_stdio_reporter_probe({}, tmp_path)
 
     assert error.value.component == "reporter"
     assert error.value.failure_code == "protocol_error"
@@ -583,10 +764,10 @@ def test_reporter_rejects_invalid_collector_result(
 
 
 def test_feedback_normalize_builder_protects_nested_code_fences(
-    tmp_path: Path,
+    feedback_prompt_directory: Path,
 ) -> None:
     """normalization の動的 JSON が prompt section の境界を閉じないことを検証する。"""
-    root = make_repo(tmp_path)
+    root = feedback_prompt_directory
     nested = "before\n```\ninside\n```\nafter"
     observation_json = json.dumps({"payload": {"summary": nested}})
     candidate_json = json.dumps(
@@ -618,10 +799,10 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
 
 
 def test_feedback_normalization_excludes_candidate_search_hint(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_prompt_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """候補検索専用 hint を normalization agent の入力へ渡さない。"""
-    root = make_repo(tmp_path)
+    root = feedback_prompt_directory
     observation_id = "fbo_000001_2026-08-01_00-00"
     candidate_id = "fbi_" + "a" * 26
     observation = {
@@ -684,9 +865,11 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     assert "候補検索だけに使う文字列" not in captured_prompts[0]
 
 
-def test_feedback_issue_builders_disable_reporting(tmp_path: Path) -> None:
+def test_feedback_issue_builders_disable_reporting(
+    feedback_prompt_directory: Path,
+) -> None:
     """normalization と remediation は同じ追加報告を prompt から外す。"""
-    root = make_repo(tmp_path)
+    root = feedback_prompt_directory
     parameters = (
         build_feedback_normalize_issue_parameter("{}", "[]", root),
         build_feedback_remediate_issue_parameter(
@@ -733,9 +916,11 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
     assert versions["remediation_builder"] == verification_version
 
 
-def test_pending_observations_rejects_symlinked_root(tmp_path: Path) -> None:
+def test_pending_observations_rejects_symlinked_root(
+    tmp_path: Path, feedback_directory: Path
+) -> None:
     """symlink 化された raw root を空の初期 state として扱わない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     observation_parent = feedback_root(root) / "observation"
     observation_parent.mkdir(parents=True)
     (observation_parent / "v1").symlink_to(
@@ -744,6 +929,82 @@ def test_pending_observations_rejects_symlinked_root(tmp_path: Path) -> None:
 
     with pytest.raises(CmocError, match="observation root"):
         feedback_report_module._pending_observations(root)
+
+
+@pytest.mark.parametrize("reader", ["pending", "cut"])
+def test_raw_observation_reader_uses_one_snapshot(
+    feedback_directory, stored_feedback_context, monkeypatch, reader
+):
+    root = feedback_directory
+    accepted, raw = store_agent_observation(root, stored_feedback_context, _payload())
+    original = read_json_object(raw)
+    content = canonical_json_bytes(original)
+    changed = {
+        **original,
+        "payload": {**original["payload"], "summary": "置換後の観測"},
+    }
+    entry = {
+        "observation_id": accepted["observation_id"],
+        "path": raw.relative_to(root).as_posix(),
+        "sha256": sha256_bytes(content),
+    }
+    original_read = Path.read_bytes
+    original_inventory = Path.rglob
+    reads = []
+    inventories = []
+
+    def replace_after_read(path):
+        value = original_read(path)
+        if path == raw:
+            reads.append(path)
+            path.write_bytes(canonical_json_bytes(changed))
+        return value
+
+    def inventory(path, pattern):
+        if path == feedback_root(root) / "observation/v1":
+            inventories.append(path)
+        return original_inventory(path, pattern)
+
+    def load():
+        if reader == "pending":
+            entries, observations = feedback_report_module._pending_observations(root)
+            assert entries == [entry]
+            return observations
+        return feedback_report_module._read_cut_observations(
+            root, {"inputs": {"observations": [entry]}}
+        )
+
+    monkeypatch.setattr(Path, "read_bytes", replace_after_read)
+    monkeypatch.setattr(Path, "rglob", inventory)
+
+    # hash・canonical・schema を検査した byte 列を使い、読込後の置換を混ぜない。
+    assert load() == {raw.stem: original}
+    assert reads == [raw]
+    assert len(inventories) == (1 if reader == "pending" else 0)
+    if reader == "cut":
+        # 同じ参照の次回読込では置換を検出し、呼び出し間の cache は持たない。
+        with pytest.raises(CmocError, match="raw observation hash"):
+            load()
+        assert reads == [raw, raw]
+    else:
+        entry["sha256"] = sha256_bytes(canonical_json_bytes(changed))
+        assert load() == {raw.stem: changed}
+        assert reads == [raw, raw]
+        assert len(inventories) == 2
+
+
+@pytest.mark.parametrize("raw_content", [b"not-json\n", b'{"x": NaN}\n'])
+def test_pending_observations_rejects_invalid_json(feedback_directory, raw_content):
+    # publication の阻止と invocation report は CLI の一ケースで確認する。
+    root = feedback_directory
+    raw = observation_path(root, "fbo_000099_2026-08-01_00-00", "2030-01-02T00:00:00Z")
+    raw.parent.mkdir(parents=True)
+    raw.write_bytes(raw_content)
+
+    with pytest.raises(CmocError, match="raw observation validation") as error:
+        feedback_report_module._pending_observations(root)
+    assert str(raw) in error.value.detail
+    assert raw.read_bytes() == raw_content
 
 
 def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
@@ -922,10 +1183,12 @@ def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> N
 
 
 def test_collector_validates_context_rate_and_durable_observation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """loopback reporter 経由の受理、rate limit、失効を確認する。"""
-    root = make_repo(tmp_path)
+    # 実 HEAD と evidence file は残し、履歴内容を使わない準備を省く。
+    root = committed_repository
+    (root / "README.md").write_text("# repo\n")
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -958,6 +1221,12 @@ def test_collector_validates_context_rate_and_durable_observation(
         assert len(paths) == 3
         envelope = read_json_object(paths[0])
         assert validate_observation_envelope(envelope) == []
+        assert envelope["context"]["repo_root"] == str(root)
+        assert envelope["context"]["work_root"] == str(root)
+        assert (
+            envelope["context"]["head_commit"]
+            == run_git(root, "rev-parse", "HEAD").stdout.strip()
+        )
         assert envelope["context"]["subcommand_invocation_id"] == logger.execution_id
         assert envelope["context"]["agent_call_id"] == "ac_000005_2026-09-29_15-04"
         assert reporter_module._submit(_payload())["code"] == "rate_limited"
@@ -996,27 +1265,77 @@ def test_disabled_feedback_call_does_not_register_capability(
     feedback_call.close()
 
 
-def test_collector_protocol_probe_does_not_report_expected_degradation(
-    tmp_path: Path,
+def test_collector_stop_wakes_blocked_listener(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """doctor の transport probe が正常 invocation に warning を追加しない。"""
-    root = make_repo(tmp_path)
+    """timeout に頼らず接続待ちを解除し、停止を障害として記録しない。"""
+    logger = SubcommandLogger(tmp_path, "feedback test")
+    invocation = FeedbackInvocation(tmp_path, tmp_path, "feedback test", logger)
+    accept_started = threading.Event()
+    accepting_sockets: list[socket.socket] = []
+    original_accept = socket.socket.accept
+
+    def blocking_accept(listener: socket.socket) -> tuple[socket.socket, object]:
+        # 元の FD の close だけでは解除できない接続待ちを、同じ socket に保持する。
+        with listener.dup() as accepting_socket:
+            accepting_socket.settimeout(None)
+            accepting_sockets.append(accepting_socket)
+            accept_started.set()
+            return original_accept(accepting_socket)
+
+    monkeypatch.setattr(socket.socket, "accept", blocking_accept)
+    invocation.start()
+    try:
+        assert accept_started.wait(timeout=2)
+        invocation.stop()
+
+        assert invocation._server_thread is not None
+        assert not invocation._server_thread.is_alive()
+        assert invocation._listener is None
+        assert invocation.collector_port is None
+        assert logger.warning_messages == []
+    finally:
+        # 回帰時にも blocking accept を解除し、test の thread を残さない。
+        for accepting_socket in accepting_sockets:
+            try:
+                accepting_socket.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+        invocation.stop()
+
+
+@pytest.mark.parametrize("shutdown_unavailable", [False, True])
+def test_collector_protocol_probe_does_not_report_expected_degradation(
+    feedback_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    shutdown_unavailable: bool,
+) -> None:
+    """transport probe と通常・shutdown 不可の停止で warning を追加しない。"""
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    if shutdown_unavailable:
+
+        def fail_shutdown(_listener: socket.socket, _how: int) -> None:
+            raise OSError("injected shutdown failure")
+
+        monkeypatch.setattr(socket.socket, "shutdown", fail_shutdown)
     invocation.start()
     try:
         assert invocation.collector_port is not None
         feedback_module._validate_collector_protocol(invocation.collector_port)
-        assert logger.warning_messages == []
     finally:
         invocation.stop()
+    assert invocation._server_thread is not None
+    assert not invocation._server_thread.is_alive()
+    assert logger.warning_messages == []
 
 
 def test_collector_records_rejected_submission_as_degraded_warning(
-    tmp_path: Path,
+    collector_directory: Path,
 ) -> None:
     """collector の rejected result を本命 workload と分離した warning に残す。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -1050,10 +1369,10 @@ def test_collector_records_rejected_submission_as_degraded_warning(
 
 
 def test_collector_records_unexpected_listener_failure_as_degraded_warning(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """停止処理以外の listener failure を黙って collector 終了にしない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
 
@@ -1080,10 +1399,10 @@ def test_collector_records_unexpected_listener_failure_as_degraded_warning(
 
 
 def test_collector_handles_response_timeout_failure_as_degraded_warning(
-    tmp_path: Path,
+    feedback_directory: Path,
 ) -> None:
     """response 送信時の timeout 設定失敗を worker 例外へ漏らさない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
 
@@ -1105,10 +1424,10 @@ def test_collector_handles_response_timeout_failure_as_degraded_warning(
 
 
 def test_collector_accepts_utf8_payload_at_wire_size_over_64_kib(
-    tmp_path: Path,
+    collector_directory: Path,
 ) -> None:
     """UTF-8 payload の制限を JSON ASCII escape の wire size で狭めない。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -1150,10 +1469,10 @@ def test_collector_accepts_utf8_payload_at_wire_size_over_64_kib(
 
 
 def test_collector_rejects_surrogate_payload_with_protocol_safe_response(
-    tmp_path: Path,
+    collector_directory: Path,
 ) -> None:
     """不正な Unicode payload の rejected result を response として返せる。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -1181,16 +1500,17 @@ def test_collector_rejects_surrogate_payload_with_protocol_safe_response(
         invocation.stop()
 
 
-def test_feedback_call_close_drains_accepted_tcp_request(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("stop_invocation", [False, True], ids=["call", "invocation"])
+def test_feedback_shutdown_drains_accepted_tcp_request(
+    collector_directory: Path, monkeypatch: pytest.MonkeyPatch, stop_invocation: bool
 ) -> None:
-    """受付済み request の保存完了後にだけ capability を失効する。"""
-    root = make_repo(tmp_path)
+    """call 終了と collector 停止は、受付済み request の保存後にだけ完了する。"""
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     storage_started = threading.Event()
     release_storage = threading.Event()
-    close_started = threading.Event()
+    close_progress = threading.Event()
     close_finished = threading.Event()
     submission_result: dict[str, object] = {}
     submission_errors: list[BaseException] = []
@@ -1198,6 +1518,12 @@ def test_feedback_call_close_drains_accepted_tcp_request(
     submission_thread: threading.Thread | None = None
     close_thread: threading.Thread | None = None
     original_store = feedback_module.store_agent_observation
+    original_wait = invocation._condition.wait
+
+    def observe_drain_wait(timeout: float | None = None) -> bool:
+        # 固定時間ではなく、実際の drain 待機を観測する。lock の解放・再取得は実物に任せる。
+        close_progress.set()
+        return original_wait(timeout)
 
     def blocking_store(
         repo: Path,
@@ -1210,6 +1536,7 @@ def test_feedback_call_close_drains_accepted_tcp_request(
             raise RuntimeError("test did not release feedback storage")
         return original_store(repo, context, payload)
 
+    monkeypatch.setattr(invocation._condition, "wait", observe_drain_wait)
     monkeypatch.setattr(feedback_module, "store_agent_observation", blocking_store)
     invocation.start()
     try:
@@ -1234,23 +1561,31 @@ def test_feedback_call_close_drains_accepted_tcp_request(
             except BaseException as exc:
                 submission_errors.append(exc)
 
-        def close_call() -> None:
-            """対象 call の drain 完了を親 thread へ通知する。"""
-            close_started.set()
+        def close_context() -> None:
+            """call 終了または invocation 停止の完了を親 thread へ通知する。"""
             try:
-                invocation.close_call(call)
+                if stop_invocation:
+                    invocation.stop()
+                else:
+                    invocation.close_call(call)
             except BaseException as exc:
                 close_errors.append(exc)
             finally:
                 close_finished.set()
+                # drain を省いて終了する回帰でも親 thread を起こし、即座に失敗させる。
+                close_progress.set()
 
         submission_thread = threading.Thread(target=submit)
         submission_thread.start()
         assert storage_started.wait(timeout=2)
-        close_thread = threading.Thread(target=close_call)
+        close_thread = threading.Thread(target=close_context)
         close_thread.start()
-        assert close_started.wait(timeout=2)
-        assert not close_finished.wait(timeout=0.05)
+        assert close_progress.wait(timeout=2)
+        with invocation._condition:
+            assert not close_finished.is_set()
+            assert not call.accepting
+            assert call.inflight == 1
+            assert call.capability in invocation._calls
 
         release_storage.set()
         submission_thread.join(timeout=5)
@@ -1262,12 +1597,19 @@ def test_feedback_call_close_drains_accepted_tcp_request(
         assert close_errors == []
         assert submission_result["status"] == "accepted"
         assert len(iter_observation_paths(root)) == 1
-        rejected = _submit_to_feedback_collector(
-            invocation.collector_port,
-            call.capability,
-            _payload(),
-        )
-        assert rejected["code"] == "context_invalid"
+        if stop_invocation:
+            assert invocation.collector_port is None
+            assert call.capability not in invocation._calls
+            assert invocation._server_thread is not None
+            assert not invocation._server_thread.is_alive()
+            assert not invocation._worker_threads
+        else:
+            rejected = _submit_to_feedback_collector(
+                invocation.collector_port,
+                call.capability,
+                _payload(),
+            )
+            assert rejected["code"] == "context_invalid"
     finally:
         release_storage.set()
         if submission_thread is not None:
@@ -1277,9 +1619,11 @@ def test_feedback_call_close_drains_accepted_tcp_request(
         invocation.stop()
 
 
-def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
+def test_parallel_feedback_call_lifecycles_are_isolated(
+    collector_directory: Path,
+) -> None:
     """並行 call の片方を閉じても他方の request を継続受理する。"""
-    root = make_repo(tmp_path)
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     invocation.start()
@@ -1356,10 +1700,10 @@ def test_parallel_feedback_call_lifecycles_are_isolated(tmp_path: Path) -> None:
 
 
 def test_collector_limits_unauthenticated_request_read_time(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """改行前で停止した未認証接続を短い絶対 deadline で終了する。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     monkeypatch.setattr(feedback_module, "_COLLECTOR_IO_TIMEOUT_SECONDS", 0.05)
@@ -1378,10 +1722,10 @@ def test_collector_limits_unauthenticated_request_read_time(
 
 
 def test_collector_rejects_observation_without_current_head(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """current HEAD を取得できない場合は invalid context を保存しない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
 
     def fail_head_commit(_root: Path) -> str:
@@ -1408,10 +1752,10 @@ def test_collector_rejects_observation_without_current_head(
 
 
 def test_feedback_degradation_preserves_keyboard_interrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """collector の degraded fallback はユーザー中断を握り潰さない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
 
     def interrupt_start(_self: FeedbackInvocation) -> None:
@@ -1445,20 +1789,120 @@ def test_feedback_degradation_preserves_keyboard_interrupt(
         )
 
 
-def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> None:
+@pytest.mark.parametrize("redaction", ["none", "text", "path"])
+def test_agent_payload_shares_repository_resolution(
+    feedback_directory, monkeypatch, redaction
+):
+    """root の解決だけを共有し、置換後の path と次の submission は再検査する。"""
+    root = feedback_directory
+    repo_alias = root.parent / "repo-link"
+    repo_alias.symlink_to(root, target_is_directory=True)
+    raw_path = "Authorization:x" if redaction == "path" else "evidence.txt"
+    masked_path = "[REDACTED:authorization]" if redaction == "path" else raw_path
+    (root / raw_path).write_bytes(b"original evidence\n")
+    target = root / masked_path
+    if redaction == "path":
+        target.write_bytes(b"redacted path evidence\n")
+    text = "failure Authorization:x" if redaction == "text" else "evidence"
+    payload = {
+        **_payload(),
+        "evidence": [{"kind": "command", "text": "failed command"}]
+        + [
+            {"kind": kind, "text": text, "path": raw_path}
+            for kind in ("file", "oracle", "log")
+        ],
+    }
+    original = canonical_json_bytes(payload)
+    resolve = Path.resolve
+    root_resolutions = []
+
+    def resolve_path(path, *args, **kwargs):
+        if path in (root, repo_alias):
+            root_resolutions.append(path)
+        return resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", resolve_path)
+
+    masked, fingerprints, count = validate_agent_payload(payload, repo_alias)
+
+    assert masked["evidence"] == [{"kind": "command", "text": "failed command"}] + [
+        {
+            "kind": kind,
+            "text": "failure [REDACTED:authorization]" if redaction == "text" else text,
+            "path": masked_path,
+        }
+        for kind in ("file", "oracle", "log")
+    ]
+    assert fingerprints == [
+        {
+            "evidence_index": index,
+            "normalized_path": str(target),
+            "state": "hashed",
+            "sha256": sha256_bytes(target.read_bytes()),
+        }
+        for index in (1, 2, 3)
+    ]
+    assert count == 3 * int(redaction != "none")
+    assert canonical_json_bytes(payload) == original
+    # evidence ごとの root 解決による filesystem 読み取りの性能回帰を検出する。
+    assert len(root_resolutions) == 1
+
+    (root / raw_path).unlink()
+    (root / raw_path).symlink_to(root.parent / "outside.txt")
+    with pytest.raises(FeedbackRejected) as outside:
+        validate_agent_payload(payload, repo_alias)
+    assert outside.value.code == "path_outside_repo"
+
+
+def test_agent_payload_rechecks_evidence_after_masking(feedback_directory, monkeypatch):
+    """マスキング中に evidence の symlink が repo 外へ変わった場合も拒否する。"""
+    root = feedback_directory
+    (root / "evidence.txt").write_text("evidence")
+    alias = root / "alias"
+    alias.symlink_to("evidence.txt")
+    mask = feedback_store_module._mask_payload
+
+    def mask_and_retarget(value):
+        alias.unlink()
+        alias.symlink_to(root.parent / "outside.txt")
+        monkeypatch.setattr(feedback_store_module, "_mask_payload", mask)
+        return mask(value)
+
+    monkeypatch.setattr(feedback_store_module, "_mask_payload", mask_and_retarget)
+    with pytest.raises(FeedbackRejected) as outside:
+        validate_agent_payload(_payload(path="alias"), root)
+    assert outside.value.code == "path_outside_repo"
+
+
+def test_agent_payload_without_path_evidence_skips_repository_resolution(
+    feedback_directory, monkeypatch
+):
+    """path を検査しない submission で filesystem の解決を追加しない。"""
+    monkeypatch.setattr(
+        Path,
+        "resolve",
+        lambda *_args, **_kwargs: pytest.fail("unneeded path resolution"),
+    )
+    payload = _payload(kind="error", path=None)
+    assert validate_agent_payload(payload, feedback_directory) == (payload, [], 0)
+
+
+def test_agent_store_rejects_outside_path_and_masks_secret(
+    tmp_path: Path, feedback_directory: Path, stored_feedback_context: dict[str, object]
+) -> None:
     """repository path boundary と secret masking を raw publication 前に適用する。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     with pytest.raises(FeedbackRejected) as outside:
         store_agent_observation(
             root,
-            _context(root),
+            stored_feedback_context,
             _payload(path=str(tmp_path / "outside.txt")),
         )
     assert outside.value.code == "path_outside_repo"
     with pytest.raises(FeedbackRejected) as masked_outside:
         store_agent_observation(
             root,
-            _context(root),
+            stored_feedback_context,
             _payload(
                 path="Authorization: Bearer abcdefghijklmnopqrstuvwxyz/../../outside.txt"
             ),
@@ -1467,7 +1911,7 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
 
     (root / "loop").symlink_to("loop")
     with pytest.raises(FeedbackRejected) as malformed:
-        store_agent_observation(root, _context(root), _payload(path="loop"))
+        store_agent_observation(root, stored_feedback_context, _payload(path="loop"))
     assert malformed.value.code == "path_outside_repo"
 
     outside = tmp_path / "outside"
@@ -1475,25 +1919,34 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
     (root / "outside-link").symlink_to(outside, target_is_directory=True)
     with pytest.raises(FeedbackRejected) as missing_outside:
         store_agent_observation(
-            root, _context(root), _payload(path="outside-link/missing.txt")
+            root, stored_feedback_context, _payload(path="outside-link/missing.txt")
         )
     assert missing_outside.value.code == "path_outside_repo"
+
+    (root / "[REDACTED:authorization]").symlink_to(outside / "missing.txt")
+    with pytest.raises(FeedbackRejected) as redacted_outside:
+        store_agent_observation(
+            root, stored_feedback_context, _payload(path="Authorization:x")
+        )
+    assert redacted_outside.value.code == "path_outside_repo"
 
     redacted = _payload(
         text="request failed before Authorization: Bearer abcdefghijklmnopqrstuvwxyz",
         kind="error",
         path=None,
     )
-    result, path = store_agent_observation(root, _context(root), redacted)
+    result, path = store_agent_observation(root, stored_feedback_context, redacted)
 
     assert result["redaction_count"] == 1
     assert "[REDACTED:authorization]" in path.read_text()
     assert "abcdefghijklmnopqrstuvwxyz" not in path.read_text()
 
 
-def test_report_reference_rejects_symlinked_parent_outside(tmp_path: Path) -> None:
+def test_report_reference_rejects_symlinked_parent_outside(
+    tmp_path: Path, feedback_directory: Path
+) -> None:
     """report cut reference が symlink 親経由の repository 外 path を読まない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     outside = tmp_path / "outside"
     outside.mkdir()
     (outside / "secret.txt").write_text("SECRET\n")
@@ -1502,9 +1955,11 @@ def test_report_reference_rejects_symlinked_parent_outside(tmp_path: Path) -> No
     assert feedback_report_module._repository_path(root, "link/secret.txt") is None
 
 
-def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> None:
+def test_report_reference_targets_use_resolved_evidence_path(
+    feedback_directory: Path, stored_feedback_context: dict[str, object]
+) -> None:
     """同じ file への symlink alias と実体 path を同じ issue subject にする。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     target_directory = root / "nested"
     target_directory.mkdir()
     target = target_directory / "README.md"
@@ -1512,7 +1967,7 @@ def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> 
     (root / "alias").symlink_to(target_directory, target_is_directory=True)
 
     _, first_path = store_agent_observation(
-        root, _context(root), _payload(path="alias/README.md")
+        root, stored_feedback_context, _payload(path="alias/README.md")
     )
     first = read_json_object(first_path)
     candidate = feedback_report_module._new_candidate(
@@ -1521,7 +1976,7 @@ def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> 
     feedback_report_module._merge_observation(root, candidate, first)
 
     _, second_path = store_agent_observation(
-        root, _context(root), _payload(path="nested/README.md")
+        root, stored_feedback_context, _payload(path="nested/README.md")
     )
     second = read_json_object(second_path)
     fingerprint = second["evidence_fingerprints"][0]
@@ -1537,9 +1992,11 @@ def test_report_reference_targets_use_resolved_evidence_path(tmp_path: Path) -> 
     assert comparison == [candidate]
 
 
-def test_report_reference_masks_secret_across_content_limit(tmp_path: Path) -> None:
+def test_report_reference_masks_secret_across_content_limit(
+    feedback_directory: Path,
+) -> None:
     """capture 上限をまたぐ private key block の断片を保存しない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     path = root / "secret.txt"
     private_key = (
         "-----BEGIN PRIVATE KEY-----\n" + "A" * 256 + "\n-----END PRIVATE KEY-----"
@@ -1564,10 +2021,18 @@ def test_report_reference_masks_secret_across_content_limit(tmp_path: Path) -> N
     assert "A" * 50 not in reference["content"]
 
 
-def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
-    """同じ stable event の再検出を同じ raw observation 一件へ収束させる。"""
-    root = make_repo(tmp_path)
+def test_machine_detector_observation_id_is_idempotent(
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """対象 event でだけ context を取得し、再検出を同じ raw 一件へ収束させる。"""
+    # 検証対象は実 HEAD と log event なので、追跡 file は用意しない。
+    root = committed_repository
     logger = SubcommandLogger(root, "feedback test")
+    original_head = feedback_module.head_commit
+    branch_query = Mock(wraps=feedback_module.current_branch)
+    head_query = Mock(wraps=original_head)
+    monkeypatch.setattr(feedback_module, "current_branch", branch_query)
+    monkeypatch.setattr(feedback_module, "head_commit", head_query)
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     event = {
         "event_schema_version": 1,
@@ -1579,87 +2044,200 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
         "failure_code": "protocol_error",
     }
 
+    for excluded_fields in (
+        {"event_type": "unregistered.event"},
+        {"subcommand_invocation_id": "other-invocation"},
+        {"component": "unknown"},
+    ):
+        invocation.detect_event({**event, **excluded_fields}, logger.path)
+    FeedbackInvocation(root, root, "feedback report", logger).detect_event(
+        event, logger.path
+    )
+    branch_query.assert_not_called()
+    head_query.assert_not_called()
+
     invocation.detect_event(event, logger.path)
+    head_query.assert_called_once_with(root)
     invocation.detect_event(event, logger.path)
+    assert head_query.call_count == 2
 
     [path] = iter_observation_paths(root)
     observation = read_json_object(path)
     assert validate_observation_envelope(observation) == []
     assert observation["source_event"]["event_id"] == event["event_id"]
+    assert observation["context"]["head_commit"] == original_head(root)
+    assert observation["context"]["subcommand_invocation_id"] == logger.execution_id
 
 
-def test_machine_detector_masks_secret_in_event_fields(tmp_path: Path) -> None:
-    """detector payload の追加 field も raw publication 前に secret masking する。"""
-    root = make_repo(tmp_path)
+def test_machine_detector_masks_secret_in_event_values_and_keys(
+    collector_directory: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """値だけ・キーだけの secret を、共通 collector の独立 event で検証する。"""
+    root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     secret = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
-    event = {
-        "event_schema_version": 1,
-        "event_id": "evt_machine_secret",
-        "event_type": "feedback.reporter_unavailable",
-        "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.execution_id,
-        "component": "collector",
-        "failure_code": "protocol_error",
-        "diagnostic": {"header": secret},
+    cases = {
+        "evt_machine_secret_value": (
+            {"header": secret},
+            {"header": "[REDACTED:authorization]"},
+            "a" * 40,
+        ),
+        "evt_machine_secret_key": (
+            {secret: "value"},
+            {"[REDACTED:authorization]": "value"},
+            "b" * 40,
+        ),
     }
-
-    invocation.detect_event(event, logger.path)
-
-    [path] = iter_observation_paths(root)
-    observation = read_json_object(path)
-    raw_text = path.read_text(encoding="utf-8")
-    assert secret not in raw_text
-    assert (
-        observation["payload"]["event_fields"]["diagnostic"]["header"]
-        == "[REDACTED:authorization]"
+    # 後続 event の HEAD も取り直すことを、追加の Git 準備や保存なしで検査する。
+    monkeypatch.setattr(
+        feedback_module,
+        "head_commit",
+        Mock(side_effect=[commit for _, _, commit in cases.values()]),
     )
-    assert validate_observation_envelope(observation) == []
+    for event_id, (diagnostic, _, _) in cases.items():
+        invocation.detect_event(
+            {
+                "event_schema_version": 1,
+                "event_id": event_id,
+                "event_type": "feedback.reporter_unavailable",
+                "occurred_at": rfc3339_now(),
+                "subcommand_invocation_id": logger.execution_id,
+                "component": "collector",
+                "failure_code": "protocol_error",
+                "diagnostic": diagnostic,
+            },
+            logger.path,
+        )
+
+    paths = iter_observation_paths(root)
+    assert len(paths) == len(cases)
+    for path in paths:
+        observation = read_json_object(path)
+        _, expected_diagnostic, expected_head = cases[
+            observation["source_event"]["event_id"]
+        ]
+        assert secret not in path.read_text(encoding="utf-8")
+        assert (
+            observation["payload"]["event_fields"]["diagnostic"] == expected_diagnostic
+        )
+        assert observation["context"]["head_commit"] == expected_head
+        assert validate_observation_envelope(observation) == []
 
 
-def test_machine_detector_masks_secret_in_event_field_keys(tmp_path: Path) -> None:
-    """detector payload の object key に含まれる secret も raw に残さない。"""
-    root = make_repo(tmp_path)
-    logger = SubcommandLogger(root, "feedback test")
-    invocation = FeedbackInvocation(root, root, "feedback test", logger)
-    secret_key = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
-    event = {
-        "event_schema_version": 1,
-        "event_id": "evt_machine_secret_key",
-        "event_type": "feedback.reporter_unavailable",
-        "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.execution_id,
-        "component": "collector",
-        "failure_code": "protocol_error",
-        "diagnostic": {secret_key: "value"},
-    }
-
-    invocation.detect_event(event, logger.path)
-
-    [path] = iter_observation_paths(root)
-    observation = read_json_object(path)
-    raw_text = path.read_text(encoding="utf-8")
-    assert secret_key not in raw_text
-    assert observation["payload"]["event_fields"]["diagnostic"] == {
-        "[REDACTED:authorization]": "value"
-    }
-    assert validate_observation_envelope(observation) == []
-
-
-def test_completion_count_reports_only_pending_raw_observations(tmp_path: Path) -> None:
+def test_completion_count_reports_only_pending_raw_observations(
+    feedback_directory: Path, stored_feedback_context: dict[str, object]
+) -> None:
     """正常 report 前は raw store の pending 件数一値だけを返す。"""
-    root = make_repo(tmp_path)
-    store_agent_observation(root, _context(root), _payload())
+    root = feedback_directory
+    store_agent_observation(root, stored_feedback_context, _payload())
 
     assert feedback_completion_counts(root) == (1, [])
 
 
+def test_completion_count_threshold_stops_unneeded_reads(
+    feedback_directory, stored_feedback_context, monkeypatch
+):
+    """同じ pending 集合へ一件追加し、件数境界の通知と読み取り抑制を検証する。"""
+    root = feedback_directory
+    now = datetime(2030, 1, 8, tzinfo=timezone.utc)
+    _, first_path = store_agent_observation(
+        root,
+        stored_feedback_context,
+        _payload(),
+        observation_id="fbo_000000_2030-01-08_00-00",
+        observed_at=now.isoformat(),
+    )
+    observation = read_json_object(first_path)
+    monkeypatch.setattr(
+        feedback_store_module,
+        "datetime",
+        SimpleNamespace(now=lambda _zone: now, fromisoformat=datetime.fromisoformat),
+    )
+    read = Mock(wraps=feedback_store_module.read_json_object)
+    monkeypatch.setattr(feedback_store_module, "read_json_object", read)
+
+    # 保存・receipt の検査は専用ケースへ委ね、同じ日付の raw を段階的に追加する。
+    # 99 件を検査した入力を再利用し、100 件目だけを追加する。
+    previous_count = 1
+    for count, expected_warning, max_reads in ((99, False, 99), (100, True, 0)):
+        for index in range(previous_count, count):
+            identity = f"fbo_{index:06d}_2030-01-08_00-00"
+            observation["observation_id"] = identity
+            first_path.with_name(f"{identity}.json").write_bytes(
+                canonical_json_bytes(observation)
+            )
+        previous_count = count
+        read.reset_mock()
+
+        pending, warnings = feedback_completion_counts(root)
+
+        assert pending == count
+        assert bool(warnings) is expected_warning
+        if warnings:
+            assert "cmoc feedback report" in warnings[0]
+        assert read.call_count <= max_reads
+
+
+@pytest.mark.parametrize(
+    ("oldest_age", "expected_warning", "max_reads"),
+    [
+        pytest.param(
+            timedelta(days=7) - timedelta(microseconds=1),
+            False,
+            2,
+            id="below-age-limit",
+        ),
+        pytest.param(timedelta(days=7), True, 1, id="at-age-limit"),
+    ],
+)
+def test_completion_age_threshold_stops_unneeded_reads(
+    feedback_directory,
+    stored_feedback_context,
+    monkeypatch,
+    oldest_age,
+    expected_warning,
+    max_reads,
+):
+    """経過日数の境界を守り、通知が確定した後の raw 本文読み取りを省く。"""
+    root = feedback_directory
+    now = datetime(2030, 1, 8, tzinfo=timezone.utc)
+    _, first_path = store_agent_observation(
+        root,
+        stored_feedback_context,
+        _payload(),
+        observation_id="fbo_000000_2030-01-08_00-00",
+        observed_at=(now - oldest_age).isoformat(),
+    )
+    observation = read_json_object(first_path)
+    # 保存・receipt の検査は専用ケースへ委ね、件数用の追加 raw だけを作る。
+    identity = "fbo_000001_2030-01-08_00-00"
+    observation.update(observation_id=identity, observed_at=now.isoformat())
+    path = observation_path(root, identity, now.isoformat())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(canonical_json_bytes(observation))
+    monkeypatch.setattr(
+        feedback_store_module,
+        "datetime",
+        SimpleNamespace(now=lambda _zone: now, fromisoformat=datetime.fromisoformat),
+    )
+    read = Mock(wraps=feedback_store_module.read_json_object)
+    monkeypatch.setattr(feedback_store_module, "read_json_object", read)
+
+    pending, warnings = feedback_completion_counts(root)
+
+    assert pending == 2
+    assert bool(warnings) is expected_warning
+    if warnings:
+        assert "cmoc feedback report" in warnings[0]
+    assert read.call_count <= max_reads
+
+
 def test_agent_store_rejects_non_directory_observation_parent(
-    tmp_path: Path,
+    feedback_directory: Path, stored_feedback_context: dict[str, object]
 ) -> None:
     """raw storage の非 directory parent を domain rejection として返す。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     invalid_parent = feedback_root(root) / "observation" / "v1" / "2030"
     invalid_parent.parent.mkdir(parents=True)
     invalid_parent.write_text("not a directory")
@@ -1667,7 +2245,7 @@ def test_agent_store_rejects_non_directory_observation_parent(
     with pytest.raises(FeedbackRejected) as rejected:
         store_agent_observation(
             root,
-            _context(root),
+            stored_feedback_context,
             _payload(),
             observed_at="2030-01-02T00:00:00Z",
         )
@@ -1675,20 +2253,92 @@ def test_agent_store_rejects_non_directory_observation_parent(
     assert rejected.value.code == "context_invalid"
 
 
+@pytest.mark.parametrize("redacted", [False, True], ids=["plain", "redacted"])
+@pytest.mark.parametrize("exceeds_limit", [False, True], ids=["at-limit", "over-limit"])
+def test_agent_payload_summary_limit_after_redaction(
+    feedback_directory: Path, redacted: bool, exceeds_limit: bool
+) -> None:
+    """未置換と置換後の summary で、文字数上限を同じように適用する。"""
+    payload = _payload(kind="error", path=None)
+    limit = reporter_input_schema()["properties"]["summary"]["maxLength"]
+    marker = "[REDACTED:authorization]"
+    suffix = " Authorization:x" if redacted else ""
+    masked_suffix = " " + marker if redacted else ""
+    prefix = "s" * (limit + int(exceeds_limit) - len(masked_suffix))
+    payload["summary"] = prefix + suffix
+    original = canonical_json_bytes(payload)
+
+    if exceeds_limit:
+        with pytest.raises(FeedbackRejected) as error:
+            validate_agent_payload(payload, feedback_directory)
+        assert error.value.code == "schema_invalid"
+        assert "/summary" in error.value.message
+    else:
+        masked, _, count = validate_agent_payload(payload, feedback_directory)
+        assert masked["summary"] == prefix + masked_suffix
+        assert count == int(redacted)
+    assert canonical_json_bytes(payload) == original
+
+
+@pytest.mark.parametrize("redacted", [False, True], ids=["plain", "redacted"])
+@pytest.mark.parametrize("exceeds_limit", [False, True], ids=["at-limit", "over-limit"])
+def test_agent_payload_utf8_size_limit_after_redaction(
+    feedback_directory: Path, redacted: bool, exceeds_limit: bool
+) -> None:
+    """各 field が schema 内でも、UTF-8 合計の 32 KiB 上限を置換後まで守る。"""
+    payload = _payload(kind="error", path=None)
+    payload["evidence"] = [{"kind": "error", "text": "é" * 1950} for _ in range(8)]
+    if redacted:
+        payload["summary"] = "failure Authorization:x"
+    growth = len("[REDACTED:authorization]") - len("Authorization:x") if redacted else 0
+    size = len(canonical_json_bytes(payload)) - 1
+    payload["impact"] = str(payload["impact"]) + "x" * (
+        32 * 1024 + int(exceeds_limit) - size - growth
+    )
+    original = canonical_json_bytes(payload)
+    assert len(original) - 1 + growth == 32 * 1024 + int(exceeds_limit)
+
+    if exceeds_limit:
+        with pytest.raises(FeedbackRejected) as error:
+            validate_agent_payload(payload, feedback_directory)
+        assert error.value.code == "payload_too_large"
+        if redacted:
+            assert error.value.message == "redacted payload exceeds 32 KiB"
+    else:
+        masked, _, count = validate_agent_payload(payload, feedback_directory)
+        assert len(canonical_json_bytes(masked)) - 1 == 32 * 1024
+        assert count == int(redacted)
+    assert canonical_json_bytes(payload) == original
+
+
+@pytest.mark.parametrize("text", ["Authorization:x", "[REDACTED:authorization]", " "])
+def test_agent_payload_requires_meaningful_evidence(
+    feedback_directory: Path, text: str
+) -> None:
+    """置換の有無にかかわらず、marker や空白だけの evidence を受理しない。"""
+    with pytest.raises(FeedbackRejected) as error:
+        validate_agent_payload(
+            _payload(text=text, kind="error", path=None), feedback_directory
+        )
+    assert error.value.code == "suspected_secret"
+
+
 def test_stored_invalid_reporter_schema_is_rejected_without_rewriting(
-    tmp_path, monkeypatch
-):
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _, raw, _ = _store_agent_issue(root, session_id)
+    feedback_directory: Path, stored_feedback_context: dict[str, object]
+) -> None:
+    """旧 input version の raw を intake で拒否し、元の byte 列を保持する。"""
+    # CLI の publication 阻止・エラー report は invalid raw のケースで検証する。
+    root = feedback_directory
+    _, raw = store_agent_observation(root, stored_feedback_context, _payload())
     invalid = read_json_object(raw)
     invalid["payload"]["schema_version"] = 1
     content = canonical_json_bytes(invalid)
     raw.write_bytes(content)
     (feedback_root(root) / "intake.json").unlink()
-    assert validate_observation_envelope(invalid)
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 1
+    with pytest.raises(CmocError, match="raw observation validation") as error:
+        feedback_report_module._pending_observations(root)
+    assert str(raw) in error.value.detail
+    assert "/schema_version" in error.value.detail
     assert raw.read_bytes() == content
     assert load_active_state(root).current is None
 
@@ -1712,6 +2362,46 @@ def test_state_reader_wraps_noncanonical_json_values(
         feedback_state_module._read_canonical_object(path, "feedback state")
 
 
+@pytest.mark.parametrize("schema_name", ["normalize_issue", "remediate_issue"])
+def test_feedback_output_validation_uses_current_schema_file(
+    tmp_path: Path, schema_name: str
+) -> None:
+    """再利用時も各 output と現在の schema を検査し、更新・破損・消失を拒否する。"""
+    schema_text = oracle_schema_path("feedback", f"{schema_name}.json").read_text(
+        encoding="utf-8"
+    )
+    schema_path = tmp_path / f"{schema_name}.json"
+    schema_path.write_text(schema_text, encoding="utf-8")
+    output = (
+        {"result": {"decision": "existing", "existing_issue_id": "fbi_" + "a" * 26}}
+        if schema_name == "normalize_issue"
+        else _remediation_output("fbi_" + "a" * 26, "not_actionable")
+    )
+    validate = feedback_report_module._structured_output_matches_schema
+
+    assert validate(output, schema_path)
+    assert not validate({}, schema_path)
+
+    # 準備を schema ごとに共有し、各破損からの復旧も同じ file で検査する。
+    for change in ("contract", "json", "schema", "missing"):
+        if change == "contract":
+            schema = json.loads(schema_text)
+            schema["properties"]["new_field"] = {"type": "null"}
+            schema["required"].append("new_field")
+            schema_path.write_text(json.dumps(schema), encoding="utf-8")
+        elif change == "json":
+            schema_path.write_text("{", encoding="utf-8")
+        elif change == "schema":
+            schema_path.write_text('{"type": "invalid"}', encoding="utf-8")
+        else:
+            schema_path.unlink()
+
+        assert not validate(output, schema_path), change
+
+        schema_path.write_text(schema_text, encoding="utf-8")
+        assert validate(output, schema_path), change
+
+
 def test_normalization_schema_supports_editable_namespace_package(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1726,23 +2416,34 @@ def test_normalization_schema_supports_editable_namespace_package(
     monkeypatch.setattr(
         feedback_state_module.resources, "files", raise_namespace_resource_error
     )
-    feedback_state_module._normalization_schema.cache_clear()
+    feedback_state_module._normalization_validator.cache_clear()
 
     assert feedback_state_module._normalization_output_matches_schema(
         {"result": {"decision": "new", "existing_issue_id": None}}
     )
 
 
-def test_state_reference_rejects_in_repository_symlink_alias(tmp_path: Path) -> None:
-    """artifact reference が同じ root 内の symlink を通常 file として扱わない。"""
-    root = make_repo(tmp_path)
+@pytest.mark.parametrize("allow_missing", [False, True])
+@pytest.mark.parametrize("link_kind", ["file", "parent", "dangling"])
+def test_state_reference_rejects_in_repository_symlink_alias(
+    feedback_directory: Path,
+    allow_missing: bool,
+    link_kind: str,
+) -> None:
+    """cleanup でも file・親 directory・dangling symlink を受理しない。"""
+    root = feedback_directory
     expected_root = root / ".cmoc/gu/feedback/active/generation"
     expected_root.mkdir(parents=True)
     target = expected_root / "manifest.json"
     content = b"artifact\n"
     target.write_bytes(content)
-    alias = expected_root / "alias.json"
-    alias.symlink_to(target)
+    if link_kind == "parent":
+        alias_parent = expected_root / "alias"
+        alias_parent.symlink_to(expected_root, target_is_directory=True)
+        alias = alias_parent / target.name
+    else:
+        alias = expected_root / "alias.json"
+        alias.symlink_to(target if link_kind == "file" else expected_root / "missing")
 
     with pytest.raises(CmocError, match="symlink"):
         feedback_state_module._validate_artifact_reference(
@@ -1753,14 +2454,59 @@ def test_state_reference_rejects_in_repository_symlink_alias(tmp_path: Path) -> 
             },
             expected_root=expected_root,
             description="state artifact",
+            allow_missing=allow_missing,
         )
 
 
+@pytest.mark.parametrize("allow_missing", [False, True])
+def test_state_reference_cleanup_relaxes_only_file_existence(
+    feedback_directory: Path, allow_missing: bool
+) -> None:
+    """削除済みの許容は path・hash 検証と、現存する通常 file の条件を変えない。"""
+    root = feedback_directory
+    directory = root / "artifacts"
+    directory.mkdir()
+    target = directory / "record.json"
+    content = b"artifact\n"
+    target.write_bytes(content)
+    reference = {
+        "path": target.relative_to(root).as_posix(),
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
+
+    def validate(value):
+        return feedback_state_module._validate_artifact_reference(
+            root,
+            value,
+            expected_root=directory,
+            description="state artifact",
+            allow_missing=allow_missing,
+        )
+
+    assert validate(reference) == target
+    target.write_bytes(b"changed\n")
+    with pytest.raises(CmocError, match="SHA256"):
+        validate(reference)
+    target.unlink()
+    if allow_missing:
+        assert validate(reference) == target
+    else:
+        with pytest.raises(CmocError, match="通常 file"):
+            validate(reference)
+    with pytest.raises(CmocError, match="SHA256"):
+        validate({**reference, "sha256": "invalid"})
+    with pytest.raises(CmocError, match="期待 root 外"):
+        validate({**reference, "path": "outside.json"})
+    target.mkdir()
+    with pytest.raises(CmocError, match="通常 file"):
+        validate(reference)
+
+
 def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(
-    tmp_path: Path,
+    feedback_directory: Path,
 ) -> None:
     """raw store inventory が不正なら件数を推測せず unavailable warning を返す。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     invalid = feedback_root(root) / "observation" / "v1" / "unexpected.tmp"
     invalid.parent.mkdir(parents=True, exist_ok=True)
     invalid.write_text("partial")
@@ -1776,10 +2522,11 @@ def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(
 @pytest.mark.parametrize("invalid_parent", ["dangling_symlink", "file"])
 def test_completion_count_rejects_invalid_observation_parent(
     tmp_path: Path,
+    feedback_directory: Path,
     invalid_parent: str,
 ) -> None:
     """不正な observation 親を空の初期 state として扱わない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     observation_parent = feedback_root(root) / "observation"
     observation_parent.parent.mkdir(parents=True)
     if invalid_parent == "dangling_symlink":
@@ -1795,21 +2542,23 @@ def test_completion_count_rejects_invalid_observation_parent(
     assert warnings
 
 
-def test_feedback_writer_lock_rejects_concurrent_writer(tmp_path: Path) -> None:
+def test_feedback_writer_lock_rejects_concurrent_writer(
+    feedback_directory: Path,
+) -> None:
     """同じ repository で二つ目の report writer を開始しない。"""
-    root = make_repo(tmp_path)
+    root = feedback_directory
     with feedback_writer_lock(root):
         with pytest.raises(CmocError, match="別の feedback writer"):
             with feedback_writer_lock(root):
                 pass
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_empty_report_publishes_current_generation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """candidate がなくても ok report と空 active generation を atomic publication する。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     log_dir = root / ".cmoc/gu/log/sub_command"
     previous_logs = set(log_dir.glob("*.jsonl"))
     monkeypatch.setattr(
@@ -1828,7 +2577,22 @@ def test_empty_report_publishes_current_generation(
     ]
     assert Path(publication_event["generation_manifest_path"]).is_absolute()
     assert Path(publication_event["report_path"]).is_absolute()
+
+    # 履歴の再走査は publication のたびに増えるので、一回の state 読込では一巡に抑える。
+    history_loads = []
+    original_load_history = feedback_history_module.load_history
+
+    def observed_load_history(repo, references):
+        history_loads.append(references)
+        return original_load_history(repo, references)
+
+    monkeypatch.setattr(feedback_history_module, "load_history", observed_load_history)
     state = validate_feedback_state(root)
+    assert len(history_loads) <= 1
+    assert state.history == [
+        read_json_object(root / reference["path"])
+        for reference in state.generation_manifest["history"]
+    ]
     assert state.current is not None
     assert state.current["result"] == "ok"
     assert state.issues == {}
@@ -1875,20 +2639,19 @@ def test_feedback_preconditions_preserve_existing_changes_and_raw(
     assert load_report_cut(root) is None
 
 
-@pytest.mark.parametrize("last_status", ["human_required", "inconclusive"])
 def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, last_status: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """修復中の新 issue を最新 tree で処理し、最終境界後の raw は残す。"""
+    # 両分類を同じ後続 wave に入れ、Git/session・修復・publication の準備を共有する。
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
     _, first_raw, first_id = _store_agent_issue(root, session_id)
     calls: list[str] = []
     raw_paths = [first_raw]
-    later_id: str | None = None
+    later_statuses: dict[str, str] = {}
 
     def fake_call(parameter: Any, **kwargs: Any) -> SimpleNamespace:
-        nonlocal later_id
         identity = (
             kwargs["purpose"]
             .removeprefix("feedback issue remediation (")
@@ -1902,7 +2665,6 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
             (worktree / "README.md").write_text("repaired\n")
             output = _remediation_output(identity, "fixed")
             output["result"]["changed_paths"] = ["README.md"]
-            payload = _payload(kind="other", path=None, text="別の issue")
             with begin_feedback_call(
                 agent_call_id="ac_000011_2026-09-29_15-04",
                 agent_call_kind=parameter.agent_call_kind,
@@ -1911,37 +2673,41 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
                 agent_call_cwd=worktree,
             ) as feedback_call:
                 environment = feedback_call.subprocess_env({})
-                accepted = _submit_to_feedback_collector(
-                    int(environment[FEEDBACK_COLLECTOR_PORT_ENV]),
-                    environment[FEEDBACK_CAPABILITY_ENV],
-                    payload,
-                )
-            assert accepted["status"] == "accepted"
-            path = next(
-                path
-                for path in iter_observation_paths(root)
-                if path.stem == accepted["observation_id"]
-            )
-            context = read_json_object(path)["context"]
-            assert context["work_root"] == str(worktree)
-            assert context["run_kind"] == "feedback_report"
-            assert context["run_id"] is not None
-            assert (
-                context["head_commit"]
-                == run_git(worktree, "rev-parse", "HEAD").stdout.strip()
-            )
-            later_id = issue_id(f"agent\0{accepted['observation_id']}")
-            raw_paths.append(path)
+                for last_status in ("human_required", "inconclusive"):
+                    accepted = _submit_to_feedback_collector(
+                        int(environment[FEEDBACK_COLLECTOR_PORT_ENV]),
+                        environment[FEEDBACK_CAPABILITY_ENV],
+                        _payload(
+                            kind="other", path=None, text=f"別の issue: {last_status}"
+                        ),
+                    )
+                    assert accepted["status"] == "accepted"
+                    path = next(
+                        path
+                        for path in iter_observation_paths(root)
+                        if path.stem == accepted["observation_id"]
+                    )
+                    context = read_json_object(path)["context"]
+                    assert context["work_root"] == str(worktree)
+                    assert context["run_kind"] == "feedback_report"
+                    assert context["run_id"] is not None
+                    assert (
+                        context["head_commit"]
+                        == run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+                    )
+                    later_id = issue_id(f"agent\0{accepted['observation_id']}")
+                    later_statuses[later_id] = last_status
+                    raw_paths.append(path)
             # 完全重複の observation は新しい issue call を増やさない。
             _, duplicate = store_agent_observation(
                 root, _context(root, session_id=session_id), _payload()
             )
             raw_paths.append(duplicate)
         else:
-            assert identity == later_id
+            assert identity in later_statuses
             assert (worktree / "README.md").read_text() == "repaired\n"
             assert run_git(worktree, "status", "--porcelain").stdout == ""
-            output = _remediation_output(identity, last_status)
+            output = _remediation_output(identity, later_statuses[identity])
         return _fake_result(root, output)
 
     original_seal = remediation_module._seal
@@ -1961,35 +2727,48 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    assert calls == [first_id, later_id]
+    assert calls == [first_id, *sorted(later_statuses)]
     assert (root / "README.md").read_text() == "repaired\n"
     assert run_git(root, "status", "--porcelain").stdout == ""
     assert load_report_cut(root) is None
     assert all(path.exists() for path in late_paths)
     state = load_active_state(root)
-    assert set(state.issues) == {later_id}
-    assert state.issues[later_id]["verification"]["status"] == last_status
+    assert set(state.issues) == set(later_statuses)
+    assert {
+        identity: issue["verification"]["status"]
+        for identity, issue in state.issues.items()
+    } == later_statuses
+    assert state.current is not None
+    assert state.current["result"] == "incomplete"
     assert all(not path.exists() for path in raw_paths)
 
 
+# rollback 済み error の手動終了は、障害原因によらず同じ入力状態を扱う。
+# 各障害を検査し、error（rollback 済み／checkpoint 保存済み）と joinable で両操作を残す。
+# session 作成は共通 fixture で用意し、公開 session fork の結合は後続 wave に残す。
+# 保存済み入力と fake 応答だけを使うため、collector の起動・probe は準備しない。
+@pytest.mark.usefixtures("feedback_without_transport")
 @pytest.mark.parametrize(
-    "fault",
+    ("fault", "operation"),
     [
-        "unreported_change",
-        "forbidden_change",
-        "checkpoint",
-        "checkpoint_reference",
-        "interrupt",
+        ("unreported_change", "join"),
+        ("forbidden_change", "abandon"),
+        ("checkpoint", "join"),
+        ("checkpoint_reference", "join"),
+        ("checkpoint_reference", "abandon"),
+        ("interrupt", "join"),
+        ("interrupt", "abandon"),
     ],
 )
-@pytest.mark.parametrize("operation", ["join", "abandon"])
 def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str, operation: str
+    ready_content_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    fault: str,
+    operation: str,
 ) -> None:
     """未確定 issue の差分を戻し、明示終了で publication せず raw を保持する。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _, raw, identity = _store_agent_issue(root, session_id)
+    root, _session_branch, _state_path = ready_content_session
+    _, raw, identity = _store_agent_issue(root, SESSION_ID)
     initial = (root / "README.md").read_text()
 
     def fake_call(parameter: Any, **kwargs: Any) -> SimpleNamespace:
@@ -2018,6 +2797,13 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
     assert result.exit_code == (0 if fault == "interrupt" else 1), result.output
     manifest, _ = load_report_cut(root)
+    _, _, session = load_state_for_branch(
+        root, manifest["run"]["identity"]["session_branch"]
+    )
+    assert session.run.state == ("joinable" if fault == "interrupt" else "error")
+    assert manifest["processing"]["status"] == (
+        "interrupted" if fault == "interrupt" else "failed"
+    )
     run_worktree = Path(manifest["run"]["identity"]["run_worktree"])
     assert (run_worktree / "README.md").read_text() == (
         "unconfirmed change\n" if fault == "checkpoint_reference" else initial
@@ -2036,12 +2822,12 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
     assert load_report_cut(root) is None
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_after_run_start_reports_retained_run(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """run 公開直後の中断でも joinable state と run identity を report する。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
+    root, _session_branch, session_path = ready_run_session
     original_start = remediation_module.start_editing_run
 
     def start_then_interrupt(kind: str) -> Any:
@@ -2053,9 +2839,7 @@ def test_feedback_interrupt_after_run_start_reports_retained_run(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    session_state = json.loads(
-        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
-    )
+    session_state = json.loads(session_path.read_text())
     assert session_state["run"]["state"] == "joinable"
     report_text = terminal_primary_report(result).read_text()
     assert 'terminal_classification: "user_interruption"' in report_text
@@ -2065,12 +2849,12 @@ def test_feedback_interrupt_after_run_start_reports_retained_run(
     assert "保持した feedback run" in result.output
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """manifest の atomic write 後に中断しても interrupted 状態を保存する。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
+    root, _session_branch, session_path = ready_run_session
     original_write = remediation_module.write_report_cut_manifest
 
     def write_then_interrupt(repository: Path, manifest: dict[str, Any]) -> NoReturn:
@@ -2084,9 +2868,7 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    session_state = json.loads(
-        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
-    )
+    session_state = json.loads(session_path.read_text())
     assert session_state["run"]["state"] == "joinable"
     manifest, _ = load_report_cut(root)
     assert manifest["processing"]["status"] == "interrupted"
@@ -2095,13 +2877,13 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
     )
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """中断 cleanup の失敗を user interruption へ変換せず error にする。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _store_agent_issue(root, session_id)
+    root, _session_branch, session_path = ready_content_session
+    _store_agent_issue(root, SESSION_ID)
 
     def interrupting_agent(parameter: Any, **_kwargs: Any) -> NoReturn:
         """差分を作成した issue 処理単位の中断を再現する。"""
@@ -2117,9 +2899,7 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 1, result.output
-    session_state = json.loads(
-        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
-    )
+    session_state = json.loads(session_path.read_text())
     assert session_state["run"]["state"] == "error"
     report_text = terminal_primary_report(result).read_text()
     assert 'terminal_classification: "error"' in report_text
@@ -2129,6 +2909,8 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     assert manifest["processing"]["status"] == "failed"
 
 
+# 復旧は固定済み artifact を使い、transport の結合は後続 wave の検査に残す。
+@pytest.mark.usefixtures("feedback_without_transport")
 @pytest.mark.parametrize(
     "fault",
     [
@@ -2140,15 +2922,16 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     ],
 )
 def test_feedback_recovers_after_auto_join_without_new_calls(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str
+    ready_content_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    fault: str,
 ) -> None:
     """自動 join 後の失敗は修復 commit と公開入力を保持して同じ run を完了する。"""
     import commons.runtime_feedback_run_state as run_state_module
     import sub_commands.feedback.recovery as recovery_module
 
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _, raw, identity = _store_agent_issue(root, session_id)
+    root, _session_branch, _state_path = ready_content_session
+    _, raw, identity = _store_agent_issue(root, SESSION_ID)
 
     def fake_call(parameter: Any, **_kwargs: Any) -> SimpleNamespace:
         (parameter.agent_call_cwd / "README.md").write_text("joined repair\n")
@@ -2178,6 +2961,17 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
     assert result.exit_code == 1, result.output
     assert (root / "README.md").read_text() == "joined repair\n"
+    report_text = terminal_primary_report(result).read_text()
+    publication_status = (
+        "completed" if fault in {"raw_cleanup", "cleanup"} else "not_completed"
+    )
+    for field, label, expected in (
+        ("normal_publication_status", "正常 publication", publication_status),
+        ("incomplete_diagnostic_status", "incomplete 診断", "not_completed"),
+        ("current_pointer_update_status", "current pointer 更新", publication_status),
+    ):
+        assert f'{field}: "{expected}"' in report_text
+        assert f"- {label}: `{expected}`" in report_text
     joined_head = run_git(root, "rev-parse", "HEAD").stdout
     saved_report = None
     if fault in {"raw_cleanup", "cleanup"}:
@@ -2189,15 +2983,20 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert feedback_completion_counts(root)[0] == 0
         if fault == "raw_cleanup":
             assert raw.exists()
-        report_text = terminal_primary_report(result).read_text()
         assert "publication_established: true" in report_text
-    for operation in ("join", "abandon"):
-        rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
-        assert rejected.exit_code == 1, rejected.output
-        rejected_report = terminal_primary_report(rejected).read_text(encoding="utf-8")
-        assert 'run_kind: "feedback_report"' in rejected_report
-        assert 'state_before: "error"' in rejected_report
-        assert 'state_after: "error"' in rejected_report
+    # 手動操作の拒否は merge 記録（参照回復を含む）と finalization journal の両経路で検査する。
+    # completion/publication の障害種別や raw cleanup の進捗は、この拒否条件を変えない。
+    if fault in {"merge_reference", "cleanup"}:
+        for operation in ("join", "abandon"):
+            rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
+            assert rejected.exit_code == 1, rejected.output
+            assert "feedback run は自動 join 済みです。" in rejected.output
+            rejected_report = terminal_primary_report(rejected).read_text(
+                encoding="utf-8"
+            )
+            assert 'run_kind: "feedback_report"' in rejected_report
+            assert 'state_before: "error"' in rejected_report
+            assert 'state_after: "error"' in rejected_report
     monkeypatch.setattr(target, name, original)
     monkeypatch.setattr(
         feedback_report_module,
@@ -2216,68 +3015,92 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert (root / "README.md").read_text() == "changed after publication\n"
 
 
-def test_current_pointer_rejects_non_markdown_report_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """current pointer が Markdown 以外の report artifact を選べない。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-
-    pointer_path = feedback_root(root) / "active" / "current.json"
-    pointer = read_json_object(pointer_path)
-    current_report = root / str(pointer["report_path"])
-    invalid_report = current_report.with_suffix(".json")
-    invalid_report.write_bytes(current_report.read_bytes())
-    pointer["report_path"] = invalid_report.relative_to(root).as_posix()
-    pointer["report_sha256"] = hashlib.sha256(invalid_report.read_bytes()).hexdigest()
-    pointer_path.write_bytes(canonical_json_bytes(pointer))
-
-    with pytest.raises(CmocError, match="Markdown report path"):
-        load_active_state(root)
-
-
-@pytest.mark.parametrize("terminal_verdict", ["already_resolved", "not_actionable"])
-def test_agent_issue_is_verified_compacted_then_removed_for_terminal_verdict(
-    tmp_path: Path,
+@pytest.mark.usefixtures("feedback_without_transport")
+def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
-    terminal_verdict: str,
 ) -> None:
-    """pending raw を active issue へ集約し、terminal verdict なら active から除く。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _observation_id, raw_path, candidate_id = _store_agent_issue(root, session_id)
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(candidate_id, "human_required")
-    )
+    """両方の終了判定で active と一覧から除き、各案件の履歴を残す。"""
+    # 異なる subject の案件を同時に用意し、Git/session と二回の publication を共有する。
+    root, _session_branch, _state_path = ready_content_session
+    cases = {}
+    for terminal_verdict, kind, reference_path in (
+        ("already_resolved", "file", "README.md"),
+        ("not_actionable", "oracle", "oracle/spec.md"),
+    ):
+        accepted, raw_path = store_agent_observation(
+            root,
+            _context(root, session_id=SESSION_ID),
+            _payload(kind=kind, path=reference_path),
+        )
+        identity = issue_id(f"agent\0{accepted['observation_id']}")
+        cases[identity] = {
+            "raw_path": raw_path,
+            "reference_path": reference_path,
+            "terminal_verdict": terminal_verdict,
+        }
+    verdicts = {identity: "human_required" for identity in cases}
+
+    def fake_call(*_args: Any, **kwargs: Any) -> SimpleNamespace:
+        identity = (
+            kwargs["purpose"]
+            .removeprefix("feedback issue remediation (")
+            .removesuffix(")")
+        )
+        return _fake_result(
+            root,
+            _remediation_output(
+                identity,
+                verdicts[identity],
+                reference_path=cases[identity]["reference_path"],
+            ),
+        )
+
+    monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_call)
 
     first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert first.exit_code == 0, first.output
-    assert not raw_path.exists()
     first_state = load_active_state(root)
-    assert set(first_state.issues) == {candidate_id}
-    issue = first_state.issues[candidate_id]
-    assert issue["occurrence_count"] == 1
-    assert issue["verification"]["human_action"] == "README の設定を修正する。"
-    assert "reference_id" not in json.dumps(issue["verification"], ensure_ascii=False)
+    assert set(first_state.issues) == set(cases)
+    assert first_state.current is not None
+    assert first_state.current["result"] == "attention"
+    first_text = terminal_primary_report(first).read_text()
+    for identity, case in cases.items():
+        assert not case["raw_path"].exists()
+        issue = first_state.issues[identity]
+        assert issue["occurrence_count"] == 1
+        assert issue["verification"]["human_action"] == "README の設定を修正する。"
+        assert "reference_id" not in json.dumps(
+            issue["verification"], ensure_ascii=False
+        )
+        assert identity in first_text
     assert feedback_completion_counts(root) == (0, [])
 
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(candidate_id, terminal_verdict)
+    verdicts.update(
+        {identity: case["terminal_verdict"] for identity, case in cases.items()}
     )
     second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert second.exit_code == 0, second.output
     second_state = load_active_state(root)
     assert second_state.issues == {}
+    events = {event["issue_id"]: event for event in second_state.history[-1]["events"]}
+    assert set(events) == set(cases)
+    for identity, case in cases.items():
+        event = events[identity]
+        assert event["kind"] == "resolved"
+        assert event["before"] == first_state.issues[identity]
+        assert event["after"] is None
+        assert event["agent_result"]["status"] == case["terminal_verdict"]
     reports = list((root / ".cmoc/gu/report/feedback").glob("*.md"))
     assert len(reports) == 2
     assert second_state.current is not None
     current_report = root / str(second_state.current["report_path"])
-    assert candidate_id not in current_report.read_text()
-    assert "human_required_issue_count: 0" in current_report.read_text()
+    current_text = current_report.read_text()
+    assert all(identity not in current_text for identity in cases)
+    assert "human_required_issue_count: 0" in current_text
+    assert "未終了の案件はありません。" in current_text
     generation_directories = list(
         (feedback_root(root) / "active" / "generation").iterdir()
     )
@@ -2308,50 +3131,85 @@ def test_feedback_basis_includes_oracle_changes_but_ignores_refactor_state(
     assert decision_module.worktree_inputs(root) != baseline
 
 
-def test_machine_observation_stays_bounded_until_recurrence_threshold(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """threshold 未満は bounded aggregate、到達後は remediation candidate にする。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+def _reporter_unavailable_observation(root, context, index, occurred_at):
+    """同じ rule の observation を異なる recurrence scope で保存する。"""
     log_path = root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text('{"event":"reporter unavailable"}\n')
-    canonical_key: str | None = None
-    # 集約の threshold を確認するため、壁時計が数秒戻っても window 内の時刻を使う。
-    observed_at = (
-        (datetime.now(timezone.utc) - timedelta(minutes=5))
-        .isoformat()
-        .replace("+00:00", "Z")
+    context = {
+        **context,
+        "cmoc_session_id": f"sess_{index:06d}_2026-09-29_15-04",
+        "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
+    }
+    event = {
+        "event_schema_version": 1,
+        "event_id": f"evt_{index}",
+        "event_type": "feedback.reporter_unavailable",
+        "occurred_at": occurred_at,
+        "subcommand_invocation_id": context["subcommand_invocation_id"],
+        "component": "reporter",
+        "failure_code": "missing",
+    }
+    _observation_id, raw_path = store_machine_observation(
+        root,
+        context,
+        rule_id="feedback.reporter_unavailable.v1",
+        category="tooling",
+        subject_type="reporter_component",
+        normalized_subject_id="reporter:missing",
+        summary="feedback reporter が反復して利用できない。",
+        impact="agent observation が欠落する。",
+        human_action="reporter を確認する。",
+        event=event,
+        log_path=log_path,
     )
+    return read_json_object(raw_path)
 
+
+def test_machine_threshold_counts_distinct_scopes_within_one_day(
+    feedback_directory, stored_feedback_context
+):
+    """同じ日への追加入力も distinct scope として集約し、threshold を判定する。"""
+    root = feedback_directory
+    cut_at = "2026-09-29T15:04:00Z"
+    aggregate = None
     for index in range(2):
-        event = {
-            "event_schema_version": 1,
-            "event_id": f"evt_{index}",
-            "event_type": "feedback.reporter_unavailable",
-            "occurred_at": observed_at,
-            "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
-            "component": "reporter",
-            "failure_code": "missing",
-        }
-        context = _context(root, session_id=f"sess_{index:06d}_2026-09-29_15-04")
-        context["subcommand_invocation_id"] = event["subcommand_invocation_id"]
-        _observation_id, raw_path = store_machine_observation(
-            root,
-            context,
-            rule_id="feedback.reporter_unavailable.v1",
-            category="tooling",
-            subject_type="reporter_component",
-            normalized_subject_id="reporter:missing",
-            summary="feedback reporter が反復して利用できない。",
-            impact="agent observation が欠落する。",
-            human_action="reporter を確認する。",
-            event=event,
-            log_path=log_path,
+        observation = _reporter_unavailable_observation(
+            root, stored_feedback_context, index, cut_at
         )
-        raw = read_json_object(raw_path)
-        canonical_key = machine_canonical_key(raw)
+        aggregate = feedback_report_module._merge_machine_aggregate(
+            root, aggregate, [observation], cut_at, machine_canonical_key(observation)
+        )
+
+        assert aggregate is not None
+        assert len(aggregate["time_buckets"]) == 1
+        assert aggregate["occurrence_count"] == index + 1
+        assert aggregate["threshold_counts"]["recurrence_scope"] == index + 1
+        assert feedback_report_module._machine_threshold_met(aggregate) == (index == 1)
+
+
+@pytest.mark.usefixtures("feedback_without_transport")
+def test_machine_issue_lifecycle_keeps_threshold_state_after_window_expires(
+    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """閾値未満・案件化・全件失効の公開 state と、失効の両分岐を検証する。"""
+    # 案件化までの Git/session と publication を、期限切れ検査の準備にも使う。
+    root, _session_branch, _state_path = ready_content_session
+    context = _context(root)
+    base = datetime.now(timezone.utc).replace(microsecond=0)
+    cut_at = base.isoformat().replace("+00:00", "Z")
+    # recurrence window の基準は manifest 作成側、publication の日時は表示側に属する。
+    monkeypatch.setattr(remediation_module, "rfc3339_now", lambda: cut_at)
+    monkeypatch.setattr(feedback_report_module, "rfc3339_now", lambda: cut_at)
+
+    for index, age_days in enumerate((20, 1)):
+        occurred_at = (
+            (base - timedelta(days=age_days)).isoformat().replace("+00:00", "Z")
+        )
+        observation = _reporter_unavailable_observation(
+            root, context, index, occurred_at
+        )
+        canonical_key = machine_canonical_key(observation)
         if index == 0:
             monkeypatch.setattr(
                 feedback_report_module,
@@ -2361,125 +3219,80 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
                 ),
             )
         else:
-            assert canonical_key is not None
             candidate_id = issue_id(canonical_key)
-            _install_codex_outputs(
-                monkeypatch,
-                _remediation_output(
-                    candidate_id,
-                    "human_required",
-                    reference_path=".cmoc/gu/log/test.jsonl",
-                ),
-            )
+
+            def fake_remediation(parameter, **_kwargs):
+                return _fake_result(
+                    root,
+                    _remediation_output(
+                        candidate_id,
+                        "human_required",
+                        reference_path=".cmoc/gu/log/test.jsonl",
+                    ),
+                )
+
+            remediation = Mock(side_effect=fake_remediation)
+            monkeypatch.setattr(feedback_report_module, "run_codex_exec", remediation)
         result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
         assert result.exit_code == 0, result.output
         state = load_active_state(root)
         if index == 0:
             assert set(state.machine_aggregates) == {canonical_key}
             assert state.issues == {}
+            [reference] = state.generation_manifest["machine_aggregates"]
+            _assert_hash_verified_state_snapshot(
+                root, state, root / reference["path"], monkeypatch
+            )
         else:
             assert state.machine_aggregates == {}
-            assert set(state.issues) == {issue_id(str(canonical_key))}
-            assert state.issues[issue_id(str(canonical_key))]["occurrence_count"] == 2
+            assert set(state.issues) == {candidate_id}
+            assert state.issues[candidate_id]["occurrence_count"] == 2
+            remediation.assert_called_once()
 
-
-def test_active_machine_issue_keeps_threshold_state_after_window_expires(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """window 外で threshold 未満になった active machine issue を最後の state で再検証する。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    log_path.write_text('{"event":"reporter unavailable"}\n')
-    canonical_key: str | None = None
-    base = datetime.now(timezone.utc)
-
-    for index in range(2):
-        occurred_at = base - timedelta(days=1 if index == 0 else 20)
-        event = {
-            "event_schema_version": 1,
-            "event_id": f"evt_expiry_{index}",
-            "event_type": "feedback.reporter_unavailable",
-            "occurred_at": occurred_at.isoformat(timespec="seconds").replace(
-                "+00:00", "Z"
-            ),
-            "subcommand_invocation_id": f"exec_{index:06d}_2026-09-29_15-04",
-            "component": "reporter",
-            "failure_code": "missing",
-        }
-        context = _context(root, session_id=f"sess_{index:06d}_2026-09-29_15-04")
-        context["subcommand_invocation_id"] = event["subcommand_invocation_id"]
-        _observation_id, raw_path = store_machine_observation(
-            root,
-            context,
-            rule_id="feedback.reporter_unavailable.v1",
-            category="tooling",
-            subject_type="reporter_component",
-            normalized_subject_id="reporter:missing",
-            summary="feedback reporter が反復して利用できない。",
-            impact="agent observation が欠落する。",
-            human_action="reporter を確認する。",
-            event=event,
-            log_path=log_path,
+    threshold_state = deepcopy(state.issues[candidate_id]["machine_state"])
+    assert isinstance(threshold_state, dict)
+    # 部分・全件失効で候補が消えたり閾値未満 state に上書きされたりしないことを、
+    # 公開済み state からの候補構築で確かめる。CLI の再確認・publication は下で一度通す。
+    for elapsed_days in (11, 31):
+        cut_at = (
+            (base + timedelta(days=elapsed_days)).isoformat().replace("+00:00", "Z")
         )
-        canonical_key = machine_canonical_key(read_json_object(raw_path))
+        remaining = feedback_report_module._merge_machine_aggregate(
+            root, deepcopy(threshold_state), [], cut_at, canonical_key
+        )
+        if elapsed_days == 11:
+            assert remaining is not None
+            assert remaining["occurrence_count"] == 1
+            assert not feedback_report_module._machine_threshold_met(remaining)
+        else:
+            assert remaining is None
 
-    assert canonical_key is not None
-    candidate_id = issue_id(canonical_key)
-    _install_codex_outputs(
-        monkeypatch,
-        _remediation_output(
-            candidate_id,
-            "human_required",
-            reference_path=".cmoc/gu/log/test.jsonl",
-        ),
-    )
-    first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert first.exit_code == 0, first.output
-    first_state = load_active_state(root)
-    assert set(first_state.issues) == {candidate_id}
-    assert isinstance(first_state.issues[candidate_id]["machine_state"], dict)
+        candidates, aggregates = feedback_report_module._build_candidates(
+            root,
+            root,
+            {"cut_at": cut_at, "inputs": {"references": []}},
+            {},
+            deepcopy(state),
+        )
+        assert aggregates == {}
+        assert set(candidates) == {candidate_id}
+        assert candidates[candidate_id]["machine_state"] == threshold_state
+        assert candidates[candidate_id]["occurrence_count"] == 2
+    remediation.assert_called_once()
 
-    partially_expired = (
-        (base + timedelta(days=11)).isoformat(timespec="seconds").replace("+00:00", "Z")
-    )
-    monkeypatch.setattr(
-        feedback_report_module, "rfc3339_now", lambda: partially_expired
-    )
-    _install_codex_outputs(
-        monkeypatch,
-        _remediation_output(
-            candidate_id,
-            "human_required",
-            reference_path=".cmoc/gu/log/test.jsonl",
-        ),
-    )
-    second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
-    assert second.exit_code == 0, second.output
-    second_state = load_active_state(root)
-    assert set(second_state.issues) == {candidate_id}
-    assert isinstance(second_state.issues[candidate_id]["machine_state"], dict)
-
-    fully_expired = (
-        (base + timedelta(days=31)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    assert result.exit_code == 0, result.output
+    assert remediation.call_count == 2
+    state = load_active_state(root)
+    assert state.current is not None
+    assert (
+        f'report_cut_at: "{cut_at}"'
+        in (root / state.current["report_path"]).read_text()
     )
-    monkeypatch.setattr(feedback_report_module, "rfc3339_now", lambda: fully_expired)
-    _install_codex_outputs(
-        monkeypatch,
-        _remediation_output(
-            candidate_id,
-            "human_required",
-            reference_path=".cmoc/gu/log/test.jsonl",
-        ),
-    )
-    third = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-
-    assert third.exit_code == 0, third.output
-    third_state = load_active_state(root)
-    assert set(third_state.issues) == {candidate_id}
-    assert isinstance(third_state.issues[candidate_id]["machine_state"], dict)
+    assert state.machine_aggregates == {}
+    assert set(state.issues) == {candidate_id}
+    assert state.issues[candidate_id]["machine_state"] == threshold_state
 
 
 def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
@@ -2527,16 +3340,16 @@ def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
     assert aggregate is None
 
 
-@pytest.mark.parametrize("raw_content", ["not-json\n", '{"x": NaN}\n'])
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_invalid_raw_observation_blocks_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, raw_content: str
+    ready_run_session: tuple[Path, str, Path],
 ) -> None:
     """validation 不通過 raw を処理済みにせず、正常 report を publication しない。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     observation_id = "fbo_000099_2026-08-01_00-00"
     raw_path = observation_path(root, observation_id, "2030-01-02T00:00:00Z")
     raw_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_content = "not-json\n"
     raw_path.write_text(raw_content)
 
     result = runner.invoke(app, ["feedback", "report"])
@@ -2551,12 +3364,12 @@ def test_invalid_raw_observation_blocks_publication(
     assert 'terminal_classification: "error"' in invocation_report.read_text()
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_undefined_raw_json_artifact_blocks_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path],
 ) -> None:
     """raw store の observation 命名外 JSON を無視して正常 publication しない。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     unknown = feedback_root(root) / "observation" / "v1" / "unknown.json"
     unknown.parent.mkdir(parents=True, exist_ok=True)
     unknown.write_text("{}\n")
@@ -2568,13 +3381,13 @@ def test_undefined_raw_json_artifact_blocks_publication(
     assert not (feedback_root(root) / "active" / "current.json").exists()
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_cleanup_corruption_is_a_required_recovery_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """publication 後の state corruption は warning ではなく終了コード 1 にする。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
+    root, _session_branch, _state_path = ready_content_session
+    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, SESSION_ID)
     _install_codex_outputs(
         monkeypatch, _remediation_output(candidate_id, "human_required")
     )
@@ -2594,49 +3407,9 @@ def test_cleanup_corruption_is_a_required_recovery_failure(
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.cleanup_manifest is not None
-
-
-def test_active_generation_hash_mismatch_is_corruption(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """current pointer が列挙する active record の改変を無視して続行しない。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(candidate_id, "human_required")
-    )
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-    state = load_active_state(root)
-    assert state.generation_manifest is not None
-    [reference] = state.generation_manifest["issues"]
-    issue_path = root / reference["path"]
-    issue = read_json_object(issue_path)
-    issue["summary"] = "改変済み"
-    issue_path.write_bytes(canonical_json_bytes(issue))
-
+    cut_path = state.cleanup_manifest_path
+    assert cut_path is not None
+    changed = {**state.cleanup_manifest, "created_at": "2026-01-01T00:00:00Z"}
+    cut_path.write_bytes(canonical_json_bytes(changed))
     with pytest.raises(CmocError, match="SHA256"):
         load_active_state(root)
-
-
-def test_unlisted_active_generation_artifact_is_corruption(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """manifest が列挙しない active generation file を無視しない。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(candidate_id, "human_required")
-    )
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-    state = load_active_state(root)
-    assert state.current is not None
-    manifest_path = root / str(state.current["generation_manifest_path"])
-    unexpected = manifest_path.parent / "unexpected.json"
-    unexpected.write_text("{}\n")
-
-    with pytest.raises(CmocError, match="未定義 artifact"):
-        validate_feedback_state(root)

@@ -63,7 +63,7 @@ def run_codex_tui(
     # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
     # TUI の version probe も Codex executable を起動するため、agent call と
     # selected provider の設定を検証してから probe を開始する。
-    prepare_codex_override_args(parameter, config)
+    override_args = prepare_codex_override_args(parameter, config)
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     # callback state はこの TUI process invocation の期間だけ保持する。
     notification_callback = None
@@ -76,6 +76,15 @@ def run_codex_tui(
             root,
         )
     try:
+        # 通知を使わない場合は検証済み argv を再利用し、MCP 設定と root を再構築しない。
+        # callback が追加された場合だけ、その invocation の通知設定を反映する。
+        if notification_callback is not None:
+            override_args = prepare_codex_override_args(
+                parameter,
+                config,
+                notification_command=notification_callback.command,
+                session_start_command=notification_callback.session_start_command,
+            )
         return _run_codex_tui_process(
             parameter,
             root=root,
@@ -86,16 +95,7 @@ def run_codex_tui(
             codex_home=codex_home,
             codex_environment=codex_environment,
             log_dir=log_dir,
-            notification_command=(
-                notification_callback.command
-                if notification_callback is not None
-                else None
-            ),
-            session_start_command=(
-                notification_callback.session_start_command
-                if notification_callback is not None
-                else None
-            ),
+            override_args=override_args,
         )
     finally:
         if notification_callback is not None:
@@ -113,17 +113,10 @@ def _run_codex_tui_process(
     codex_home: Path,
     codex_environment: dict[str, str],
     log_dir: Path,
-    notification_command: list[str] | None,
-    session_start_command: list[str] | None,
+    override_args: list[str],
 ) -> CommandResult:
     """root session filter を設定した 1 つの Codex TUI process を実行する。"""
-    # 検証済みの場合だけ root session capture と legacy callback を対で設定する。
-    override_args = prepare_codex_override_args(
-        parameter,
-        config,
-        notification_command=notification_command,
-        session_start_command=session_start_command,
-    )
+    # 検証・確定済みの argv に、今回の call ID と検索ログ context を追加する。
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     ts = timestamp()

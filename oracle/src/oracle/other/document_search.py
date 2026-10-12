@@ -1,4 +1,4 @@
-"""検索用コンポーネントの識別情報、および MCP の入出力と利用説明。
+"""埋め込みモデルの正確な詳細、および MCP の入出力と利用説明。
 
 意味仕様の委譲元は `{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の
 「検索と routing」「初期方式と推論の失敗」「stdio MCP と失敗の公開」「設定と未確定事項」。
@@ -7,24 +7,17 @@
 from pathlib import Path
 from typing import Literal, get_args
 
-# NOTE 2026-09-25 の PoC の報告表と materials.json を照合した初期採用のコンポーネント。
-# 一時コードや取得元のローカル path は製品の依存にしない。
-INITIAL_SEARCH_MATERIALS = {
-    "node_version": "22.23.2",
-    "node_llama_cpp_version": "3.20.0",
-    "llama_cpp_revision": "b10361",
-    "sqlite_vec_version": "0.1.9",
-    "embedding": {
-        "repository": "Qwen/Qwen3-Embedding-4B-GGUF",
-        "revision": "f4602530db1d980e16da9d7d3a70294cf5c190be",
-        "filename": "Qwen3-Embedding-4B-Q4_K_M.gguf",
-        "size_bytes": 2496703776,
-        "sha256": "2b0cf8f17b4c723c27303015383c27ec4bf2d8314bb677d05e920dd70bb0f16b",
-        "tokenizer_metadata_sha256": (
-            "768390d5a5a3dedfa0aea66e9342fabb445b142559029d0b4821c064b6045957"
-        ),
-        "pooling": "LAST",
-    },
+# NOTE 2026-09-25 の PoC の報告表と materials.json を照合した初期採用の埋め込みモデル。
+EMBEDDING_MODEL = {
+    "repository": "Qwen/Qwen3-Embedding-4B-GGUF",
+    "revision": "f4602530db1d980e16da9d7d3a70294cf5c190be",
+    "filename": "Qwen3-Embedding-4B-Q4_K_M.gguf",
+    "size_bytes": 2496703776,
+    "sha256": "2b0cf8f17b4c723c27303015383c27ec4bf2d8314bb677d05e920dd70bb0f16b",
+    "tokenizer_metadata_sha256": (
+        "768390d5a5a3dedfa0aea66e9342fabb445b142559029d0b4821c064b6045957"
+    ),
+    "pooling": "LAST",
     "embedding_dimensions": 2560,
 }
 

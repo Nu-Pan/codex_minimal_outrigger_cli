@@ -4,17 +4,21 @@ import fcntl
 import json
 import os
 import shutil
+import signal
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from oracle.other.cmoc_config import DocumentSearchConfig
-from test_document_search import _InferenceDouble, _repo_with_docs, _tuning
+from test_document_search import _InferenceDouble, _test_node_runtime, _tuning
 
 from commons import runtime_document_search as search_module
+from commons import runtime_document_search_observation as observation_module
 from commons.runtime_config import write_config
 from commons.runtime_document_search import DocumentSearch, SearchError, _file_lock
 from commons.runtime_document_search_observation import (
@@ -25,6 +29,17 @@ from commons.runtime_document_search_observation import (
 from commons.runtime_document_search_worker import NodeSearchWorker
 from commons.runtime_paths import config_path
 from config.cmoc_config import CmocConfig
+
+
+@pytest.fixture
+def search_repository(cli_repository: Path) -> Path:
+    """期限・診断の検証に必要な文書と ignore 規則だけを用意する。"""
+    # 文書の分類と ignore 修復は専用テストで検証し、ここでは staging・修復を重ねない。
+    (cli_repository / ".gitignore").write_text("/.cmoc/gu/\n")
+    docs = cli_repository / "oracle/doc"
+    docs.mkdir(parents=True)
+    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
+    return cli_repository
 
 
 def _observation(tmp_path, *, request=True):
@@ -138,12 +153,12 @@ def test_progress_keeps_longest_interval_and_resync_keeps_parent_clocks(
     observation, events = _observation(tmp_path)
     observation.configure(DocumentSearchConfig(), bounded=True)
     observation.begin_sync()
-    document_search_clock.advance(400)
+    document_search_clock.advance(40)
     observation.progress("document_checked", "a.md")
     document_search_clock.advance(1)
     observation.finish_sync("updated")
     assert events[-1]["no_progress_seconds"] == 1
-    assert events[-1]["longest_no_progress_seconds"] == 400
+    assert events[-1]["longest_no_progress_seconds"] == 40
     observation.start_post_sync()
     observation.start_wait()
     document_search_clock.advance(5)
@@ -155,7 +170,7 @@ def test_progress_keeps_longest_interval_and_resync_keeps_parent_clocks(
         observation.finish_sync("updated")
         observation.start_post_sync()
     measured = observation.measurements()
-    assert measured["search_request"] == 410
+    assert measured["search_request"] == 50
     assert measured["post_sync_search"] == 9
     assert measured["resource_wait"] == 5
     observation.decide_success()
@@ -192,16 +207,18 @@ def test_simultaneous_deadlines_and_cleanup_failure_preserve_original_reason(
 
 
 def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
-    tmp_path, document_search_clock
+    tmp_path, search_repository, document_search_clock
 ):
-    root = _repo_with_docs(tmp_path)
-    (root / "oracle/doc/second.md").write_text("# 次の原文\n")
+    root = search_repository
+    # 8 文書を 40 秒間隔で処理し、無進捗の期限内で同期全体を 600 秒超にする。
+    for number in range(7):
+        (root / f"oracle/doc/extra_{number}.md").write_text(f"# 原文 {number}\n")
     observation, events = _observation(root)
 
     class ProgressingWorker(_InferenceDouble):
         def stream_chunks(self, documents, resumes, on_event, **kwargs):
             def progress(event):
-                document_search_clock.advance(400)
+                document_search_clock.advance(40)
                 on_event(event)
 
             super().stream_chunks(documents, resumes, progress, **kwargs)
@@ -217,17 +234,19 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
     ) as search:
         result = search.search("原文", observation=observation)
     assert result["status"] == "ok" and result["hits"]
-    assert events[-1]["elapsed_seconds"] == 1600
+    assert events[-1]["elapsed_seconds"] == 640
     assert events[-1]["deadline_limits"]["search_request"] == 3600
     sync = next(e for e in events if e["event"] == "document_search_sync_finished")
-    assert sync["checked_document_count"] == 2
-    assert sync["persisted_chunk_count"] == 2
+    assert sync["checked_document_count"] == 8
+    assert sync["persisted_chunk_count"] == 8
     assert sync["no_progress_seconds"] == 0
-    assert sync["longest_no_progress_seconds"] == 400
+    assert sync["longest_no_progress_seconds"] == 40
 
 
-def test_doctor_sync_has_no_search_deadlines(tmp_path, document_search_clock):
-    root = _repo_with_docs(tmp_path)
+def test_doctor_sync_has_no_search_deadlines(
+    tmp_path, search_repository, document_search_clock
+):
+    root = search_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     events = []
 
@@ -255,11 +274,9 @@ def test_doctor_sync_has_no_search_deadlines(tmp_path, document_search_clock):
     assert events[-1]["no_progress_seconds"] is None
 
 
-@pytest.mark.parametrize(
-    "setting", ["search_request_timeout_seconds", "shutdown_grace_seconds"]
-)
-def test_saved_deadline_growth_requires_a_new_codex_connection(tmp_path, setting):
-    root = _repo_with_docs(tmp_path)
+def test_saved_deadline_growth_requires_a_new_codex_connection(search_repository):
+    # 同じ接続の構築・期限短縮を共有し、両方の増加を独立した設定から試す。
+    root = search_repository
     initial = _tuning()
     write_config(config_path(root), CmocConfig(document_search=initial))
     events = []
@@ -280,39 +297,43 @@ def test_saved_deadline_growth_requires_a_new_codex_connection(tmp_path, setting
         assert search.search("原文")["status"] == "ok"
         assert search.sync_progress["identity"] == previous_identity
         assert events[-1]["deadline_limits"]["search_request"] == 1000
-        unsafe = replace(initial, **{setting: getattr(initial, setting) + 1})
-        write_config(config_path(root), CmocConfig(document_search=unsafe))
-        events.clear()
-        with pytest.raises(SearchError, match="new Codex call") as failure:
-            search.search("原文")
-        assert failure.value.code == "NOT_READY"
-        assert [event["event"] for event in events] == [
-            "document_search_request_started",
-            "document_search_request_finished",
-        ]
-        assert events[-1]["sync_ids"] == []
-        assert events[-1]["status"] == "failed"
+        for setting in ("search_request_timeout_seconds", "shutdown_grace_seconds"):
+            unsafe = replace(initial, **{setting: getattr(initial, setting) + 1})
+            write_config(config_path(root), CmocConfig(document_search=unsafe))
+            events.clear()
+            with pytest.raises(SearchError, match="new Codex call") as failure:
+                search.search("原文")
+            assert failure.value.code == "NOT_READY", setting
+            assert [event["event"] for event in events] == [
+                "document_search_request_started",
+                "document_search_request_finished",
+            ], setting
+            assert events[-1]["sync_ids"] == [], setting
+            assert events[-1]["status"] == "failed", setting
 
 
-def test_parallel_requests_log_to_their_own_codex_calls(tmp_path):
-    root = _repo_with_docs(tmp_path)
+def test_parallel_requests_log_to_their_own_codex_calls(tmp_path, search_repository):
+    # 開始記録で両要求を揃え、固定待機なしで同時実行を確実にする。
+    root = search_repository
     path = tmp_path / "caller.jsonl"
     path.touch()
-
-    class SlowWorker(_InferenceDouble):
-        def stream_chunks(self, *args, **kwargs):
-            time.sleep(0.1)
-            super().stream_chunks(*args, **kwargs)
+    requests_started = threading.Barrier(2)
 
     def search_call(call_id):
         sink = SearchLogContext(path, "tui", "exec_test", call_id)
+
+        def record(kind, payload):
+            sink.event(kind, payload)
+            if kind == "document_search_request_started":
+                requests_started.wait(timeout=5)
+
         with closing(
             DocumentSearch(
                 root,
                 _tuning(),
-                worker=SlowWorker(),
+                worker=_InferenceDouble(),
                 installation_root=tmp_path,
-                event_sink=sink.event,
+                event_sink=record,
             )
         ) as search:
             return search.search("原文")
@@ -326,6 +347,11 @@ def test_parallel_requests_log_to_their_own_codex_calls(tmp_path):
     assert len(events) == 10
     starts = [e for e in events if e["event"] == "document_search_request_started"]
     assert len({e["request_id"] for e in starts}) == 2
+    assert {e["codex_call_id"] for e in starts} == {"cc_a", "cc_b"}
+    assert [e["event"] for e in events[:2]] == [
+        "document_search_request_started",
+        "document_search_request_started",
+    ]
     identities = set()
     for start in starts:
         records = [e for e in events if e["request_id"] == start["request_id"]]
@@ -338,9 +364,9 @@ def test_parallel_requests_log_to_their_own_codex_calls(tmp_path):
 
 
 def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
-    tmp_path, document_search_clock, monkeypatch
+    search_repository, document_search_clock, monkeypatch
 ):
-    root = _repo_with_docs(tmp_path)
+    root = search_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     events = []
 
@@ -388,31 +414,52 @@ def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-def test_deadline_keeps_locks_until_worker_and_descendant_stop(tmp_path):
+def test_deadline_keeps_locks_until_worker_and_descendant_stop(tmp_path, monkeypatch):
     base = tmp_path / "worker"
     base.mkdir()
+    _test_node_runtime(base)
     (base / "worker.mjs").write_text(
-        'import fs from "node:fs"; import { spawn } from "node:child_process";\n'
-        'process.on("SIGTERM", () => {});\n'
-        'const child = spawn(process.execPath, ["-e", '
-        "'process.on(\"SIGTERM\", () => {}); setInterval(() => {}, 1000);'"
-        '], {stdio: "ignore"});\n'
-        'fs.writeFileSync("pids.json", JSON.stringify([process.pid, child.pid]));\n'
-        "setInterval(() => {}, 1000);\n"
+        r"""
+import { spawn } from "node:child_process";
+process.on("SIGTERM", () => {});
+const child = spawn(process.execPath, ["-e", String.raw`
+    process.on("SIGTERM", () => {});
+    process.stdout.write("ready\n");
+    setInterval(() => {}, 1000);
+`], {stdio: ["ignore", "pipe", "ignore"]});
+child.stdout.once("data", () => {
+    process.stdout.write(JSON.stringify({kind: "ready", pids: [process.pid, child.pid]}) + "\n");
+});
+setInterval(() => {}, 1000);
+"""
+    )
+    # 両 process の SIGTERM handler が準備できたら期限まで進め、回収は実時間で測る。
+    clock_offset = 0.0
+    monkeypatch.setattr(
+        observation_module,
+        "time",
+        SimpleNamespace(monotonic=lambda: time.monotonic() + clock_offset),
     )
     observation, events = _observation(tmp_path)
     config = replace(
-        _tuning(), sync_no_progress_timeout_seconds=0.4, shutdown_grace_seconds=0.15
+        _tuning(), sync_no_progress_timeout_seconds=10, shutdown_grace_seconds=0.15
     )
     observation.configure(config, bounded=True)
     observation.begin_sync()
     locks = [tmp_path / "index.lock", tmp_path / "model.lock"]
+    pids = []
+
+    def expire_after_ready(event):
+        nonlocal clock_offset
+        assert event["kind"] == "ready"
+        pids.extend(event["pids"])
+        clock_offset += config.sync_no_progress_timeout_seconds
 
     def before_stop(failure):
         observation.fail(failure)
         assert events[-1]["event"] == "document_search_deadline_exceeded"
-        parent, _ = json.loads((base / "pids.json").read_text())
-        os.kill(parent, 0)
+        for pid in pids:
+            os.kill(pid, 0)
         for path in locks:
             with path.open("rb") as stream:
                 with pytest.raises(BlockingIOError):
@@ -425,31 +472,47 @@ def test_deadline_keeps_locks_until_worker_and_descendant_stop(tmp_path):
         check=observation.check,
         on_failure=before_stop,
     )
-    with pytest.raises(SearchError) as failure:
-        with _file_lock(locks[0], None, observation=observation):
-            with _file_lock(locks[1], None, observation=observation) as descriptor:
-                worker.stream_chunks(
-                    {"doc.md": "text"},
-                    {"doc.md": 0},
-                    lambda _: None,
-                    reusable_hashes=set(),
-                    deadline=None,
-                    residency_fd=descriptor,
-                )
-    assert failure.value.code == "DEADLINE_EXCEEDED"
-    observation.finish_sync()
-    observation.finish_request()
-    parent, descendant = json.loads((base / "pids.json").read_text())
-    with pytest.raises(ProcessLookupError):
-        os.kill(parent, 0)
-    descendant_stat = Path(f"/proc/{descendant}/stat")
     try:
-        state = descendant_stat.read_text().rsplit(") ", 1)[1].split()[0]
-    except FileNotFoundError:
-        state = None
-    assert state in {None, "Z", "X", "x"}
-    assert events[-1]["cleanup_seconds"] >= 0.1
-    assert events[-1]["decision_seconds"]["post_sync_search"] is None
-    assert (
-        events[-1]["elapsed_seconds"] > events[-1]["decision_seconds"]["search_request"]
-    )
+        with pytest.raises(SearchError) as failure:
+            with _file_lock(locks[0], None, observation=observation):
+                with _file_lock(locks[1], None, observation=observation) as descriptor:
+                    worker.stream_chunks(
+                        {"doc.md": "text"},
+                        {"doc.md": 0},
+                        expire_after_ready,
+                        reusable_hashes=set(),
+                        deadline=None,
+                        residency_fd=descriptor,
+                    )
+        assert failure.value.code == "DEADLINE_EXCEEDED"
+        observation.finish_sync()
+        observation.finish_request()
+        parent, descendant = pids
+        with pytest.raises(ProcessLookupError):
+            os.kill(parent, 0)
+        descendant_stat = Path(f"/proc/{descendant}/stat")
+        # SIGKILL の配送と /proc の状態遷移は非同期なので、有限時間で停止を確認する。
+        until = time.monotonic() + 1
+        while True:
+            try:
+                state = descendant_stat.read_text().rsplit(") ", 1)[1].split()[0]
+            except (FileNotFoundError, ProcessLookupError):
+                # /proc entry を開いた後に process が消えた場合も停止済みと扱う。
+                state = None
+            if state in {None, "Z", "X", "x"}:
+                break
+            assert time.monotonic() < until, f"descendant is still running: {state}"
+            time.sleep(0.001)
+        assert events[-1]["cleanup_seconds"] >= 0.1
+        assert events[-1]["decision_seconds"]["post_sync_search"] is None
+        assert (
+            events[-1]["elapsed_seconds"]
+            > events[-1]["decision_seconds"]["search_request"]
+        )
+    finally:
+        # 回収の回帰を検出した場合も、検証後に test が起動した process を残さない。
+        if pids:
+            try:
+                os.killpg(pids[0], signal.SIGKILL)
+            except ProcessLookupError:
+                pass

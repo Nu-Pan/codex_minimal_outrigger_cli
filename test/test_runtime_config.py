@@ -1,5 +1,7 @@
 """CmocConfig の既定値・永続化・入力検証を検証する。
 
+設定 I/O は通常の directory で検証し、Git 追跡は test_doctor_cli.py で扱う。
+
 この file は 16,000 文字を超えるが、既定値、JSON 変換、merge、および入力拒否は
 同じ config schema と round-trip 契約を共有する。分割すると、設定 field ごとの
 受理条件と永続化結果が複数 file に分散するため、一つの config 回帰として保つ。
@@ -18,7 +20,6 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from _git_support import make_repo
 from oracle.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
@@ -39,6 +40,7 @@ from cmoc_runtime import (
     sync_config,
     write_config,
 )
+from commons.runtime_config import SearchConfigIssue
 from config.cmoc_config import CmocConfig
 
 
@@ -78,6 +80,7 @@ def test_config_json_preserves_oracle_member_order() -> None:
         "num_try_falv_recovery",
     ]
     assert list(data["codex"]["agent_calls"]) == list(config.codex.agent_calls)
+    assert list(data["document_search"]) == list(asdict(config.document_search))
 
 
 @pytest.mark.parametrize("legacy_config", [False, True])
@@ -101,7 +104,7 @@ def test_load_config_missing_points_to_doctor(
 
 def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
     """設定を config.json へ保存しても全 section の値を復元できる。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     config = config_from_dict(
         {
             "num_parallel": 3,
@@ -130,7 +133,7 @@ def test_saved_search_config_is_not_filled_by_deserialization_defaults(
     tmp_path: Path,
 ) -> None:
     """通常起動はメモリ内既定値で保存済み設定の不足を隠さない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     path.write_text('{"num_parallel": 3}\n')
@@ -149,7 +152,7 @@ def test_saved_search_config_is_not_filled_by_deserialization_defaults(
 
 def test_normal_startup_rejects_partial_saved_search_config(tmp_path: Path) -> None:
     """検索 object の一部だけがある場合も通常起動では補完しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"document_search": {"chunk_tokens": 256}}\n'
@@ -165,7 +168,7 @@ def test_normal_startup_rejects_partial_saved_search_config(tmp_path: Path) -> N
 
 def test_explicit_doctor_fills_only_missing_search_fields(tmp_path: Path) -> None:
     """人間が指定した値を保ち、不足項目だけを補完して再実行で書き換えない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     data = config_to_dict(CmocConfig())
@@ -198,7 +201,7 @@ def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitio
     tmp_path: Path,
 ) -> None:
     """通常起動と明示 doctor は既存の agent call 設定を暗黙補完しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     data = config_to_dict(CmocConfig())
@@ -251,7 +254,7 @@ def test_saved_search_config_rejects_invalid_explicit_values(
     tmp_path: Path, field: str, value: object
 ) -> None:
     """null・bool・値域外・項目間不整合を黙って既定値に置換しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     search = asdict(DocumentSearchConfig())
@@ -276,7 +279,7 @@ def test_saved_search_config_rejects_invalid_explicit_values(
 def test_explicit_doctor_adds_request_deadlines_without_replacing_validation_timeout(
     tmp_path: Path,
 ) -> None:
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     data = config_to_dict(CmocConfig())
@@ -306,7 +309,7 @@ def test_explicit_doctor_adds_request_deadlines_without_replacing_validation_tim
 
 def test_explicit_doctor_does_not_save_inconsistent_candidate(tmp_path: Path) -> None:
     """既存 context と暫定 chunk が衝突しても候補を保存しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = '{"document_search": {"embedding_context_tokens": 256}}\n'
@@ -333,7 +336,7 @@ def test_explicit_doctor_does_not_save_inconsistent_candidate(tmp_path: Path) ->
 )
 def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
     """壊れた JSON または UTF-8 の config を利用者向けエラーへ変換する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     config_path.write_bytes(payload)
@@ -346,7 +349,7 @@ def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> 
 
 def test_load_config_rejects_excessively_nested_json(tmp_path: Path) -> None:
     """JSON parser の recursion error を利用者向け設定エラーへ変換する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     depth = sys.getrecursionlimit() * 20
@@ -360,7 +363,7 @@ def test_load_config_rejects_excessively_nested_json(tmp_path: Path) -> None:
 
 def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
     """config path が通常ファイルでない場合も読み込みエラーへ変換する。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     (root / ".cmoc" / "gt" / "config.json").mkdir(parents=True)
 
     with pytest.raises(CmocError) as exc_info:
@@ -381,7 +384,7 @@ def test_config_rejects_non_object_top_level(data: object) -> None:
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_config_rejects_named_pipe_config_path(tmp_path: Path) -> None:
     """config path が named pipe の場合に read/write で block しない。"""
-    root = make_repo(tmp_path)
+    root = tmp_path / "repo"
     config_path = root / ".cmoc" / "gt" / "config.json"
     config_path.parent.mkdir(parents=True)
     os.mkfifo(config_path)
@@ -392,23 +395,34 @@ def test_config_rejects_named_pipe_config_path(tmp_path: Path) -> None:
         write_config(config_path, CmocConfig())
 
 
+@pytest.mark.parametrize("link_kind", ["file", "parent"])
+@pytest.mark.parametrize("target_exists", [False, True])
 def test_config_rejects_symlinked_path_without_touching_link_target(
     tmp_path: Path,
+    link_kind: str,
+    target_exists: bool,
 ) -> None:
-    """tracked config の symlink 経由 read/write で link 先を扱わない。"""
-    root = make_repo(tmp_path)
-    outside = tmp_path / "outside-config.json"
-    outside.write_text("original\n")
+    """file・親 directory の symlink は link 先がなくても読み書きしない。"""
+    root = tmp_path / "repo"
     config_path = root / ".cmoc" / "gt" / "config.json"
-    config_path.parent.mkdir(parents=True)
-    config_path.symlink_to(outside)
+    link = config_path if link_kind == "file" else config_path.parent
+    target = tmp_path / "outside"
+    outside_config = target if link_kind == "file" else target / "config.json"
+    if target_exists:
+        outside_config.parent.mkdir(parents=True, exist_ok=True)
+        outside_config.write_text("original\n")
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target, target_is_directory=link_kind == "parent")
 
     with pytest.raises(CmocError, match="cmoc config path"):
         load_config(root)
     with pytest.raises(CmocError, match="cmoc config path"):
         write_config(config_path, CmocConfig())
 
-    assert outside.read_text() == "original\n"
+    if target_exists:
+        assert outside_config.read_text() == "original\n"
+    else:
+        assert not target.exists()
 
 
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])
@@ -447,7 +461,7 @@ def test_config_rejects_invalid_codex_agent_call_settings(
     field: str,
     value: object,
 ) -> None:
-    """直接設定の必須文字列が不正な config を拒否する。"""
+    """不正な必須文字列を拒否し、surrogate の診断も UTF-8 出力できる。"""
     call_config: dict[str, object] = {
         "model_provider": "openai",
         "model": "gpt-model",
@@ -458,28 +472,10 @@ def test_config_rejects_invalid_codex_agent_call_settings(
         config_from_dict({"codex": {"agent_calls": {"custom_call": call_config}}})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
-
-
-def test_invalid_config_error_report_escapes_surrogate() -> None:
-    """不正な surrogate を含む設定でも error report を UTF-8 出力できる。"""
-    with pytest.raises(CmocError) as exc_info:
-        config_from_dict(
-            {
-                "codex": {
-                    "agent_calls": {
-                        "custom_call": {
-                            "model_provider": "openai",
-                            "model": "\ud800",
-                            "reasoning_effort": "high",
-                        }
-                    }
-                }
-            }
-        )
-
-    report = render_error(exc_info.value)
-    report.encode("utf-8")
-    assert "\\ud800" in report
+    if value == "\ud800":
+        report = render_error(exc_info.value)
+        report.encode("utf-8")
+        assert "\\ud800" in report
 
 
 @pytest.mark.parametrize("field", ["model_providers", "agent_calls"])
@@ -536,12 +532,15 @@ def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
 
 def test_config_preserves_generic_model_provider_settings() -> None:
     """任意 ID と再帰的な JSON/TOML 共通値を読み込みと JSON 化で保持する。"""
+    # 同じ container の再出現を循環と誤判定せず、値として保存できる。
+    shared = {"answer": 42}
     settings: dict[str, JsonTomlValue] = {
         "name.with.dot": "local provider",
         "enabled": True,
         "retries": 2,
         "ratio": 0.5,
-        "nested": ["value", {"answer": 42}],
+        "nested": ["value", shared, shared],
+        "unicode": "\ud7ff\ue000\U0010ffff",
     }
     config = config_from_dict(
         {
@@ -578,7 +577,7 @@ def test_config_preserves_generic_model_provider_settings() -> None:
 
 @pytest.mark.parametrize(
     "setting",
-    [None, float("nan"), float("inf"), 2**63, object()],
+    [None, float("nan"), float("inf"), 2**63, object(), "\udfff", {"\ud800": "value"}],
 )
 def test_config_rejects_values_without_unique_json_toml_encoding(
     setting: object,
@@ -612,6 +611,33 @@ def test_config_rejects_excessively_nested_provider_setting() -> None:
         )
 
     assert exc_info.value.summary == "cmoc config が不正です。"
+    assert "provider" in exc_info.value.detail
+    assert "nested" in exc_info.value.detail
+    render_error(exc_info.value).encode("utf-8")
+
+
+@pytest.mark.parametrize("container_kind", ["list", "dict"])
+def test_config_rejects_cyclic_provider_setting(container_kind: str) -> None:
+    """循環値も設定エラーへ変換し、診断を UTF-8 出力できる。"""
+    if container_kind == "list":
+        setting = []
+        setting.append(setting)
+    else:
+        setting = {}
+        setting["self"] = setting
+
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(
+            {
+                "codex": {
+                    "model_providers": {"provider": {"settings": {"cycle": setting}}}
+                }
+            }
+        )
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+    assert "cycle" in exc_info.value.detail
+    render_error(exc_info.value).encode("utf-8")
 
 
 def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:
@@ -623,6 +649,24 @@ def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:
 
     with pytest.raises(TypeError):
         config_to_dict(config)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("chunk_tokens", True),
+        ("startup_timeout_seconds", float("nan")),
+        ("chunk_overlap_tokens", 512),
+    ],
+)
+def test_config_to_dict_rejects_invalid_in_memory_search_config(field, value) -> None:
+    """検索 dataclass も JSON 化の前に型・有限性・項目間制約を検証する。"""
+    config = CmocConfig(document_search=DocumentSearchConfig(**{field: value}))
+
+    with pytest.raises(SearchConfigIssue) as exc_info:
+        config_to_dict(config)
+
+    assert f"document_search.{field}" in exc_info.value.field
 
 
 @pytest.mark.parametrize("model", ["\x00", "\ud800"])

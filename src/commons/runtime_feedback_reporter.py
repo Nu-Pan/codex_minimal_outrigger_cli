@@ -14,10 +14,8 @@ from .runtime_feedback_protocol import (
     FEEDBACK_COLLECTOR_HOST,
     FEEDBACK_COLLECTOR_PORT_ENV,
     FEEDBACK_PROTOCOL_ENV,
-)
-from .runtime_feedback_store import (
     REPORTER_PROTOCOL_VERSION,
-    reporter_input_schema,
+    load_reporter_input_schema,
 )
 from .runtime_ids import is_common_id
 
@@ -247,7 +245,7 @@ def _response(request: object) -> dict[str, object] | None:
                 {
                     "name": "submit_observation",
                     "description": "現在の workload では解消できない問題を、後続の自動修復または人間対応の候補として cmoc collector へ送信する。",
-                    "inputSchema": reporter_input_schema(),
+                    "inputSchema": load_reporter_input_schema(),
                     "annotations": {
                         "readOnlyHint": False,
                         "destructiveHint": False,

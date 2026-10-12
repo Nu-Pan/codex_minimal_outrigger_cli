@@ -3,7 +3,12 @@
 set -eu
 
 # {{work-root}}/oracle/src/oracle/other/path_model.py
-cmoc_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+# 配置先の切り出しだけで外部 process を起動しない。
+case "$0" in
+    */*) cmoc_bin_dir=${0%/*}/ ;;
+    *) cmoc_bin_dir=./ ;;
+esac
+cmoc_root=$(CDPATH= cd -- "${cmoc_bin_dir}.." && pwd)
 venv_python="$cmoc_root/.venv/bin/python"
 
 # 通常ファイル・実行権限だけでは Python として起動できる保証がないため、
@@ -33,26 +38,17 @@ print_missing_venv_error() {
     } >&2
 }
 
-require_venv_python() {
-    if is_usable_venv_python; then
-        return 0
-    fi
-    print_missing_venv_error
-    exit 1
-}
-
 # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 is_completion_probe() {
     [ "${_CMOC_COMPLETE+x}" = x ]
 }
 
 if is_completion_probe; then
-    if is_usable_venv_python; then
-        exec "$venv_python" "$cmoc_root/src/main.py" "$@"
-    fi
+    # 補完への転送に必要なアクセス確認だけを行う。
+    [ -f "$venv_python" ] && [ -x "$venv_python" ] || exit 1
+elif ! is_usable_venv_python; then
+    print_missing_venv_error
     exit 1
 fi
-
-require_venv_python
 
 exec "$venv_python" "$cmoc_root/src/main.py" "$@"

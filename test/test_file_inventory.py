@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _git_support import RUN_BRANCH, make_repo, run_git
+from _git_support import RUN_BRANCH, init_repo, make_repo, run_git
 
 import commons.runtime_git as runtime_git
 from cmoc_runtime import CmocError, file_sha256
@@ -31,18 +31,11 @@ _EXCLUDED_ROOTS = {".git", ".agents", ".codex", ".cmoc", "memo"}
 _EXCLUDED_NAMES = {"AGENTS.md"}
 
 
+# 列挙と ignore 判定には実 index を使い、HEAD と linked worktree の検証だけ commit する。
 def _make_nested_repo(path: Path) -> Path:
-    """outer repository 内に独立した最小 Git working tree を作る。"""
+    """owning repository の判定に必要な nested Git working tree だけを作る。"""
     path.mkdir(parents=True)
-    run_git(path, "init", "--template=/dev/null")
-    run_git(path, "config", "user.email", "cmoc@example.invalid")
-    run_git(path, "config", "user.name", "cmoc test")
-    run_git(path, "config", "commit.gpgsign", "false")
-    run_git(path, "config", "core.hooksPath", "/dev/null")
-    run_git(path, "config", "core.excludesFile", "/dev/null")
-    (path / "nested.txt").write_text("nested\n")
-    run_git(path, "add", "nested.txt")
-    run_git(path, "commit", "-m", "initial nested")
+    init_repo(path)
     return path
 
 
@@ -60,8 +53,10 @@ def _relative_sets(
 def _full_glob_reference(
     root: Path, nested_repositories: tuple[Path, ...] = ()
 ) -> tuple[set[str], set[str]]:
-    """fixture 全体を物理 glob し、候補ごとの Git 判定で基準集合を作る。"""
+    """fixture 全体を物理 glob し、repository ごとの Git 判定で基準集合を作る。"""
+    # 製品の pruning・分類処理は使わず、Git への問い合わせだけをまとめる。
     metadata_roots = tuple(repository / ".git" for repository in nested_repositories)
+    candidates_by_repository: dict[Path, list[tuple[Path, int]]] = {}
     oracle_files: set[str] = set()
     realization_files: set[str] = set()
     for path in root.rglob("*"):
@@ -98,25 +93,42 @@ def _full_glob_reference(
             ),
             key=lambda repository: len(repository.parts),
         )
-        owning_relative = path.relative_to(owning_repository).as_posix()
+        candidates_by_repository.setdefault(owning_repository, []).append((path, mode))
+
+    for repository, candidates in candidates_by_repository.items():
+        payload = b"".join(
+            os.fsencode(f"./{path.relative_to(repository).as_posix()}") + b"\0"
+            for path, _ in candidates
+        )
         ignored = subprocess.run(
-            ["git", "check-ignore", "-q", "--", f"./{owning_relative}"],
-            cwd=owning_repository,
+            ["git", "check-ignore", "--stdin", "-z"],
+            cwd=repository,
+            input=payload,
+            capture_output=True,
             check=False,
         )
-        if ignored.returncode == 0:
-            continue
-        if ignored.returncode != 1:
-            raise AssertionError(f"reference check-ignore failed for {path}")
-        if stat.S_ISLNK(mode):
-            raise AssertionError(f"reference fixture contains a special file: {path}")
-        if path.name in _EXCLUDED_NAMES:
-            continue
+        if ignored.returncode not in {0, 1}:
+            raise AssertionError(f"reference check-ignore failed for {repository}")
+        ignored_paths = {
+            repository / os.fsdecode(relative)
+            for relative in ignored.stdout.split(b"\0")
+            if relative
+        }
+        for path, mode in candidates:
+            if path in ignored_paths:
+                continue
+            if stat.S_ISLNK(mode):
+                raise AssertionError(
+                    f"reference fixture contains a special file: {path}"
+                )
+            if path.name in _EXCLUDED_NAMES:
+                continue
 
-        if relative.parts[0] == "oracle":
-            oracle_files.add(relative.as_posix())
-        else:
-            realization_files.add(relative.as_posix())
+            relative = path.relative_to(root)
+            if relative.parts[0] == "oracle":
+                oracle_files.add(relative.as_posix())
+            else:
+                realization_files.add(relative.as_posix())
     return oracle_files, realization_files
 
 
@@ -133,10 +145,13 @@ def _special_path(path: Path, kind: str) -> Iterator[None]:
 
 
 def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """最適化列挙と state entry・SHA 更新を full glob 基準へ一致させる。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle").mkdir()
+    (root / "oracle" / "spec.md").write_text("# spec\n")
     (root / ".gitignore").write_text("ignored/\n.venv/\n*.outer\n")
     ignored = root / "ignored"
     ignored.mkdir()
@@ -155,34 +170,22 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
         root,
         "add",
         "-f",
+        "README.md",
+        "oracle/spec.md",
         ".gitignore",
         "ignored/tracked.txt",
         *classification_names,
     )
-    run_git(root, "commit", "-m", "add ignored fixture")
 
     nested = _make_nested_repo(root / "nested")
     (nested / ".gitignore").write_text("*.nested\n")
     (nested / "kept.outer").write_text("nested rule owns this file\n")
     (nested / "dropped.nested").write_text("ignored by nested\n")
-    run_git(nested, "add", ".gitignore")
-    run_git(nested, "commit", "-m", "add nested ignore")
-
-    expected = _full_glob_reference(root, (nested,))
-    actual = _relative_sets(root, enumerate_oracle_and_realization_files(root))
-
-    assert actual == expected
-    assert "ignored/tracked.txt" in actual[1]
-    assert "ignored/untracked.txt" not in actual[1]
-    assert "visible.txt" in actual[1]
-    assert "nested/kept.outer" in actual[1]
-    assert "nested/dropped.nested" not in actual[1]
-    assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
-    assert "notes.md" in actual[1]
-    assert "oracle/notes.md" in actual[0]
+    # nested index でも、ignore pattern に一致する tracked file を保持する。
+    (nested / "tracked.nested").write_text("tracked ignored by nested\n")
+    run_git(nested, "add", "-f", "tracked.nested")
 
     state = sync_refactor_state(root)
-    assert set(state) == expected[0] | expected[1]
     for relative, entry in state.items():
         entry.update(
             {
@@ -199,20 +202,33 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     venv_bin = root / ".venv" / "bin"
     venv_bin.mkdir(parents=True)
     (venv_bin / "python").symlink_to(root / "missing-python")
-    expected_with_symlink = _full_glob_reference(root, (nested,))
 
-    assert _relative_sets(root, enumerate_oracle_and_realization_files(root)) == (
-        expected_with_symlink
-    )
+    # symlink 追加後の分類結果を full glob と照合し、追加前の state の集合も確認する。
+    expected = _full_glob_reference(root, (nested,))
+    actual = _relative_sets(root, enumerate_oracle_and_realization_files(root))
+    assert actual == expected
+
+    assert "ignored/tracked.txt" in actual[1]
+    assert "ignored/untracked.txt" not in actual[1]
+    assert "visible.txt" in actual[1]
+    assert "nested/kept.outer" in actual[1]
+    assert "nested/dropped.nested" not in actual[1]
+    assert "nested/tracked.nested" in actual[1]
+    assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
+    assert "notes.md" in actual[1]
+    assert "oracle/notes.md" in actual[0]
+    assert set(state) == actual[0] | actual[1]
+    # state 同期による再列挙で、ignored symlink が entry と調査履歴を変えないことを確認する。
     assert sync_refactor_state(root) == state
 
     (root / "README.md").write_text("changed\n")
     (root / "visible.txt").unlink()
     (root / "added.txt").write_text("added\n")
-    expected_after = _full_glob_reference(root, (nested,))
+    # ignore 規則と index は不変なので、基準集合へ既知の追加・削除だけ反映する。
+    expected_after = (expected[0] | expected[1] | {"added.txt"}) - {"visible.txt"}
     synchronized = sync_refactor_state(root)
 
-    assert set(synchronized) == expected_after[0] | expected_after[1]
+    assert set(synchronized) == expected_after
     assert "visible.txt" not in synchronized
     assert synchronized["added.txt"]["last_investigated_sha256"] is None
     assert synchronized["README.md"]["investigation_required"] is True
@@ -223,24 +239,36 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
 
 
 def test_realization_classifier_uses_nested_head_for_deleted_file(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """nested repository の削除 path を outer run branch で分類しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     nested = _make_nested_repo(root / "nested")
     target = nested / "nested.txt"
+    target.write_text("nested\n")
+    run_git(nested, "add", "nested.txt")
+    run_git(nested, "commit", "-m", "initial nested")
     target.unlink()
 
     assert is_realization_file_path(
         root,
         target,
         branch=RUN_BRANCH,
+        fallback_branch="outer-fork",
+    )
+    assert not is_realization_file_path(
+        root,
+        nested / "missing.txt",
+        branch=RUN_BRANCH,
+        fallback_branch="outer-fork",
     )
 
 
-def test_refactor_state_sync_round_trips_non_utf8_filename(tmp_path: Path) -> None:
+def test_refactor_state_sync_round_trips_non_utf8_filename(
+    cli_repository: Path,
+) -> None:
     """非 UTF-8 filename も列挙結果と state entry を保持する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     invalid_name = os.fsdecode(b"non-utf8-\xff.txt")
     invalid_path = root / invalid_name
     invalid_path.write_bytes(b"non-utf8 filename\n")
@@ -252,11 +280,11 @@ def test_refactor_state_sync_round_trips_non_utf8_filename(tmp_path: Path) -> No
 
 
 def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """exact root は走査せず、nested の同名 path と fake `.git` は保持する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     for name in (".agents", ".codex", ".cmoc", "memo"):
         excluded = root / name
         excluded.mkdir()
@@ -321,7 +349,8 @@ def test_inventory_rejects_nonregular_paths(
     tmp_path: Path, kind: str, location: str
 ) -> None:
     """pruning 境界と通常走査領域の非通常 file を列挙エラーにする。"""
-    root = make_repo(tmp_path)
+    # 種類の拒否は Git 判定より前なので、repository と index は用意しない。
+    root = tmp_path
     path = root / (".agents" if location == "root-boundary" else "special")
 
     with _special_path(path, kind):
@@ -332,7 +361,8 @@ def test_inventory_rejects_nonregular_paths(
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_inventory_rejects_ignored_fifo_in_unpruned_area(tmp_path: Path) -> None:
     """unpruned 領域の FIFO は ignore 対象でも列挙エラーにする。"""
-    root = make_repo(tmp_path)
+    # FIFO は ignore 判定より先に拒否するため、Git repository は不要。
+    root = tmp_path
     (root / ".gitignore").write_text("special\n")
     path = root / "special"
 
@@ -343,28 +373,27 @@ def test_inventory_rejects_ignored_fifo_in_unpruned_area(tmp_path: Path) -> None
 
 @pytest.mark.parametrize("status", ["tracked", "unignored"])
 def test_inventory_rejects_symlink_not_confirmed_untracked_and_ignored(
-    tmp_path: Path, status: str
+    cli_repository: Path, status: str
 ) -> None:
     """tracked または unignored な symlink を列挙エラーにする。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     link = root / "candidate.link"
     if status == "tracked":
         (root / ".gitignore").write_text("*.link\n")
     link.symlink_to(root / "missing-target")
     if status == "tracked":
         run_git(root, "add", "-f", ".gitignore", "candidate.link")
-        run_git(root, "commit", "-m", "add tracked symlink")
 
     with pytest.raises(CmocError, match="oracle/realization file"):
         enumerate_oracle_and_realization_files(root)
 
 
 def test_inventory_rejects_symlink_when_ignore_status_is_unknown(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Git が ignore 状態を返せない symlink を列挙エラーにする。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     (root / ".gitignore").write_text("*.link\n")
     (root / "candidate.link").symlink_to(root / "missing-target")
     original_run = runtime_git.subprocess.run
@@ -397,11 +426,12 @@ def test_inventory_rejects_symlink_when_ignore_status_is_unknown(
 @pytest.mark.parametrize("target_location", ["inside", "outside"])
 def test_inventory_does_not_follow_ignored_symlink_target(
     tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     target_location: str,
 ) -> None:
     """work-root 内外の symlink 参照先を link 経由で走査しない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     (root / ".gitignore").write_text("*.link\n")
     target = root / "target" if target_location == "inside" else tmp_path / "target"
     target.mkdir()
@@ -444,7 +474,8 @@ def test_inventory_rejects_simulated_socket_and_device_modes(
     location: str,
 ) -> None:
     """socket・device 相当 mode を pruning 境界と通常領域の両方で拒否する。"""
-    root = make_repo(tmp_path)
+    # 実在する通常 file の mode だけを置き換え、Git を使わず種類の拒否を検証する。
+    root = tmp_path
     path = root / (".agents" if location == "root-boundary" else "special")
     path.write_text("mode probe\n")
     original_lstat = runtime_git._lstat_directory_entries
@@ -477,9 +508,11 @@ def test_inventory_accepts_linked_worktree_git_file(tmp_path: Path) -> None:
     assert realization_files == {"README.md"}
 
 
-def test_inventory_uses_all_ignore_sources_in_each_repository(tmp_path: Path) -> None:
+def test_inventory_uses_all_ignore_sources_in_each_repository(
+    tmp_path: Path, cli_repository: Path
+) -> None:
     """root・nested の ignore source を owning repository ごとに反映する。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     outer_global = tmp_path / "outer-global-ignore"
     outer_global.write_text("outer-global.txt\n")
     run_git(root, "config", "core.excludesFile", str(outer_global))
@@ -487,9 +520,8 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(tmp_path: Path) ->
     subdirectory = root / "subdirectory"
     subdirectory.mkdir()
     (subdirectory / ".gitignore").write_text("outer-nested.txt\n")
-    outer_exclude = root / Path(
-        run_git(root, "rev-parse", "--git-path", "info/exclude").stdout.strip()
-    )
+    # 両 repository は init_repo が通常の .git directory を作るため、配置の問い合わせは不要。
+    outer_exclude = root / ".git" / "info" / "exclude"
     outer_exclude.parent.mkdir(parents=True, exist_ok=True)
     outer_exclude.write_text("outer-local.txt\n")
     for relative in (
@@ -508,9 +540,7 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(tmp_path: Path) ->
     nested_subdirectory = nested / "subdirectory"
     nested_subdirectory.mkdir()
     (nested_subdirectory / ".gitignore").write_text("nested-child.txt\n")
-    nested_exclude = nested / Path(
-        run_git(nested, "rev-parse", "--git-path", "info/exclude").stdout.strip()
-    )
+    nested_exclude = nested / ".git" / "info" / "exclude"
     nested_exclude.parent.mkdir(parents=True, exist_ok=True)
     nested_exclude.write_text("nested-local.txt\n")
     for relative in (
@@ -540,21 +570,20 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(tmp_path: Path) ->
     assert "nested/outer-root.txt" in realization_files
 
 
-@pytest.mark.parametrize("duplicate_kind", ["exact", "lexical-alias"])
 def test_inventory_validates_duplicate_global_ignore_source_once(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, duplicate_kind: str
+    tmp_path: Path,
+    cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """同一 global ignore source の検証を一度の列挙で重複させない。"""
-    root = make_repo(tmp_path)
+    """同一表記と別表記の重複が混在しても、同じ source は一度だけ検証する。"""
+    root = cli_repository
     global_ignore = tmp_path / "global-ignore"
     global_ignore.write_text("ignored.txt\n")
-    duplicate = global_ignore
-    if duplicate_kind == "lexical-alias":
-        alias_directory = global_ignore.parent / "alias-directory"
-        alias_directory.mkdir()
-        duplicate = alias_directory / ".." / global_ignore.name
-    run_git(root, "config", "--local", "--add", "core.excludesFile", str(global_ignore))
-    run_git(root, "config", "--local", "--add", "core.excludesFile", str(duplicate))
+    alias_directory = tmp_path / "alias-directory"
+    alias_directory.mkdir()
+    alias = alias_directory / ".." / global_ignore.name
+    for source in (global_ignore, global_ignore, alias):
+        run_git(root, "config", "--local", "--add", "core.excludesFile", str(source))
     (root / "ignored.txt").write_text("ignored\n")
 
     validated: list[Path] = []
@@ -574,12 +603,14 @@ def test_inventory_validates_duplicate_global_ignore_source_once(
     )
 
     assert "ignored.txt" not in realization_files
-    assert validated.count(global_ignore) == 1
+    assert [path.resolve() for path in validated].count(global_ignore.resolve()) == 1
 
 
-def test_single_path_classifier_uses_nested_repository_context(tmp_path: Path) -> None:
+def test_single_path_classifier_uses_nested_repository_context(
+    cli_repository: Path,
+) -> None:
     """単一 path 分類も最内側 repository の ignore と metadata 境界を使う。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     (root / ".gitignore").write_text("*.outer\n")
     nested = _make_nested_repo(root / "nested")
     (nested / ".gitignore").write_text("*.nested\n")
@@ -592,23 +623,15 @@ def test_single_path_classifier_uses_nested_repository_context(tmp_path: Path) -
     assert not is_realization_file_path(root, dropped)
     assert not is_realization_file_path(root, nested / ".git" / "config")
 
-    deleted = nested / "deleted.py"
-    deleted.write_text("deleted\n")
-    run_git(nested, "add", "deleted.py")
-    run_git(nested, "commit", "-m", "add deleted realization")
-    deleted.unlink()
-
-    assert is_realization_file_path(root, deleted, branch="HEAD")
-
 
 @pytest.mark.parametrize("candidate_kind", ["regular-file", "ignored-symlink"])
 def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     candidate_kind: str,
 ) -> None:
     """候補 regular file・symlink 数の増加で Git 処理量を増やさない。"""
-    root = make_repo(tmp_path)
+    root = cli_repository
     source = root / "source"
     source.mkdir()
     (root / ".gitignore").write_text("*.link\n")

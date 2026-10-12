@@ -119,10 +119,9 @@ def _cmoc_session_abandon_body() -> TerminalResult:
                 # 削除処理が副作用後に中断しても、元の commit から session branch を復元する。
                 if not branch_exists(repo, branch):
                     run_git(["branch", branch, session_commit], repo)
-                if branch_exists(repo, branch):
-                    # session branch は local branch なので、復元確認と checkout の間に
-                    # local ref が消えても同名 remote-tracking branch を推測しない。
-                    run_git(["switch", "--no-guess", branch], work)
+                # 存在確認または復元成功後は切替自体で成否を検査する。local ref が
+                # 消えても同名 remote-tracking branch を推測せず、rollback failure にする。
+                run_git(["switch", "--no-guess", branch], work)
             except BaseException as rollback_error:
                 rollback_errors.append(f"branch rollback failed: {rollback_error!r}")
             details = [

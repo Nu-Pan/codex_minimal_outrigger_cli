@@ -7,6 +7,7 @@
 import json
 import re
 from dataclasses import asdict
+from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,8 @@ from .runtime_feedback_state import (
     _corruption,
     _read_canonical_object,
     _require_exact_fields,
-    _validate_report_cut_artifact_reference,
+    _resolve_artifact_reference,
+    _validate_artifact_reference,
     artifact_reference,
     write_report_cut_manifest,
 )
@@ -96,14 +98,14 @@ def save_run_artifact(
 
 def read_run_artifact(repo: Path, reference: dict[str, Any]) -> dict[str, Any]:
     """run 内の reference と canonical hash を検証して artifact を読む。"""
-    path = _validate_report_cut_artifact_reference(
+    # 参照を解決し、hash と JSON を同じ読込 byte 列から検査する。
+    path, digest = _resolve_artifact_reference(
         repo,
         reference,
         expected_root=repo / ".cmoc/gu/feedback/work",
         description="feedback run artifact",
-        allow_missing=False,
     )
-    return _read_canonical_object(path, "feedback run artifact")
+    return _read_canonical_object(path, "feedback run artifact", expected_sha256=digest)
 
 
 def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str, Any]]:
@@ -115,6 +117,54 @@ def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str,
     ):
         selected[reference["candidate_id"]] = reference
     return [selected[identity] for identity in sorted(selected)]
+
+
+@lru_cache(maxsize=4)
+def _remediation_validator(
+    schema_text: str, definition: str | None
+) -> Draft202012Validator:
+    """全文と監査用定義の準備を、検査する JSON 内容とは独立して再利用する。"""
+    # 本文と定義の選択を key にして、異なる output 間でも準備を共有する。
+    schema = json.loads(schema_text)
+    if definition is not None:
+        schema = {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
+    return Draft202012Validator(schema)
+
+
+@lru_cache(maxsize=16)
+def _remediation_schema_matches(
+    schema_text: str, value_json: bytes, definition: str | None = None
+) -> bool:
+    """同じ schema と JSON 内容に対する検証結果を上限付きで再利用する。"""
+    # schema の読取と artifact の hash・audit 検査は caller が毎回行う。
+    return _remediation_validator(schema_text, definition).is_valid(
+        json.loads(value_json)
+    )
+
+
+def _validate_decision_state(value: object, path: Path) -> None:
+    """call 開始時と検証後の file・evidence 条件を同じ基準で検査する。"""
+    # 判定結果の共通項目と切り離し、異なる二つの state をそれぞれ検査する。
+    state = _require_exact_fields(
+        value, {"files", "evidence_sha256"}, path, "decision state"
+    )
+    if not isinstance(state["files"], dict):
+        raise _corruption("feedback 判定根拠の file 集合が不正です。", path)
+    for name in state["files"]:
+        if not isinstance(name, str) or not name:
+            raise _corruption("feedback 判定根拠の path が不正です。", path)
+        relative = Path(name)
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or relative.as_posix() != name
+        ):
+            raise _corruption("feedback 判定根拠の path が不正です。", path)
+    if any(
+        not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+        for digest in (*state["files"].values(), state["evidence_sha256"])
+    ):
+        raise _corruption("feedback 判定根拠の hash が不正です。", path)
 
 
 def validate_decision_basis(
@@ -130,29 +180,13 @@ def validate_decision_basis(
     )
     if basis["scope"] != "repository-inputs-v1":
         raise _corruption("feedback 判定根拠の scope が不正です。", path)
-    digests = []
-    if compact:
-        digests.append(basis["state_sha256"])
-    else:
-        state = _require_exact_fields(
-            basis["state"], {"files", "evidence_sha256"}, path, "decision state"
-        )
-        if not isinstance(state["files"], dict):
-            raise _corruption("feedback 判定根拠の file 集合が不正です。", path)
-        for name in state["files"]:
-            if (
-                not isinstance(name, str)
-                or not name
-                or Path(name).is_absolute()
-                or ".." in Path(name).parts
-                or Path(name).as_posix() != name
-            ):
-                raise _corruption("feedback 判定根拠の path が不正です。", path)
-        digests.extend(state["files"].values())
-        digests.append(state["evidence_sha256"])
+    if not compact:
+        _validate_decision_state(basis["state"], path)
     if not isinstance(basis["cycle_states"], list):
         raise _corruption("feedback 循環診断の状態集合が不正です。", path)
-    digests.extend(basis["cycle_states"])
+    digests = basis["cycle_states"]
+    if compact:
+        digests = [basis["state_sha256"], *digests]
     if any(
         not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None
         for value in digests
@@ -169,18 +203,22 @@ def validate_decision_basis(
             "feedback 循環診断の状態が一意な hash 順ではありません。", path
         )
     if compact:
-        schema = json.loads(
+        schema_text = (
             resources.files("oracle.acp_builder.feedback")
             .joinpath("remediate_issue.json")
-            .read_text()
+            .read_text(encoding="utf-8")
         )
         for field, definition in (
             ("verification", "verifications"),
             ("current_evidence", "current_evidence_optional"),
         ):
-            if not Draft202012Validator(
-                {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
-            ).is_valid(basis[field]):
+            try:
+                value_json = canonical_json_bytes(basis[field])
+            except (TypeError, ValueError) as exc:
+                raise _corruption(
+                    "active issue の判定根拠が検査記録 schema に適合しません。", path
+                ) from exc
+            if not _remediation_schema_matches(schema_text, value_json, definition):
                 raise _corruption(
                     "active issue の判定根拠が検査記録 schema に適合しません。", path
                 )
@@ -359,28 +397,33 @@ def validate_run_artifacts(
     last_watermark = 0
     missing_wave_artifact = False
     for sequence, reference in enumerate(run["waves"], 1):
-        target = _validate_report_cut_artifact_reference(
-            repo,
-            reference,
-            expected_root=path.parent / "wave",
-            description="feedback intake wave",
-            allow_missing=allow_missing,
-        )
+        if missing_wave_artifact:
+            # cleanup の欠落以降は wave の連続性を判定できない。
+            # 現存 artifact の通常 file・hash 検査は保つ。
+            target = _validate_artifact_reference(
+                repo,
+                reference,
+                expected_root=path.parent / "wave",
+                description="feedback intake wave",
+                allow_missing=True,
+            )
+        else:
+            target, digest = _resolve_artifact_reference(
+                repo,
+                reference,
+                expected_root=path.parent / "wave",
+                description="feedback intake wave",
+            )
         if target != path.parent / "wave" / str(sequence) / "input.json":
             raise _corruption("feedback wave の順序または path が不正です。", path)
-        if not target.exists():
-            # Cleanup removes work artifacts in manifest order and may stop
-            # after an earlier wave.  Once that happens, a later wave's
-            # `after` value cannot be checked because the preceding boundary
-            # is no longer available.  The current-pointer path explicitly
-            # opts into this missing-artifact state; retain structural/path
-            # validation while deferring cross-wave continuity until the
-            # manifest itself is removed.
+        if allow_missing and not target.exists():
             missing_wave_artifact = True
             continue
-        if missing_wave_artifact and allow_missing:
+        if missing_wave_artifact:
             continue
-        wave = _read_canonical_object(target, "feedback intake wave")
+        wave = _read_canonical_object(
+            target, "feedback intake wave", expected_sha256=digest
+        )
         _require_exact_fields(
             wave,
             {"sequence", "after", "high_watermark", "inputs", "candidates"},
@@ -403,18 +446,19 @@ def validate_run_artifacts(
         reference = run[name]
         if reference is None:
             continue
-        target = _validate_report_cut_artifact_reference(
+        target, digest = _resolve_artifact_reference(
             repo,
             reference,
             expected_root=path.parent,
             description=f"feedback {name}",
-            allow_missing=allow_missing,
         )
         if target != expected:
             raise _corruption("feedback run artifact の path が不正です。", target)
-        if not target.exists():
+        if allow_missing and not target.exists():
             continue
-        value = _read_canonical_object(target, f"feedback {name}")
+        value = _read_canonical_object(
+            target, f"feedback {name}", expected_sha256=digest
+        )
         if value.get("report_cut_id") != manifest["report_cut_id"]:
             raise _corruption("feedback run artifact の identity が不正です。", target)
         if name == "sealed":
@@ -487,16 +531,22 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
     if not isinstance(input_value["issue"], dict):
         raise _corruption("remediation issue input が不正です。", path)
     output = checkpoint["structured_output"]
-    schema = json.loads(
+    schema_text = (
         resources.files("oracle.acp_builder.feedback")
         .joinpath("remediate_issue.json")
-        .read_text()
+        .read_text(encoding="utf-8")
     )
-    if not Draft202012Validator(schema).is_valid(output):
+    try:
+        output_json = canonical_json_bytes(output)
+    except (TypeError, ValueError) as exc:
+        raise _corruption(
+            "remediation checkpoint output が schema に適合しません。", path
+        ) from exc
+    if not _remediation_schema_matches(schema_text, output_json):
         raise _corruption(
             "remediation checkpoint output が schema に適合しません。", path
         )
-    if sha256_bytes(canonical_json_bytes(output)) != checkpoint["output_sha256"]:
+    if sha256_bytes(output_json) != checkpoint["output_sha256"]:
         raise _corruption("remediation checkpoint output hash が一致しません。", path)
     result = output["result"]
     audit = _require_exact_fields(
@@ -547,7 +597,7 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
         "decision_state_sha256"
     ) != sha256_bytes(canonical_json_bytes(input_value["decision_state"])):
         raise _corruption("feedback call の開始時判定条件がありません。", path)
-    validate_decision_basis({**basis, "state": input_value["decision_state"]}, path)
+    _validate_decision_state(input_value["decision_state"], path)
     recheck = issue.get("reconfirmation")
     if recheck is not None:
         recheck = _require_exact_fields(

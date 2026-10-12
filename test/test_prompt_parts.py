@@ -28,8 +28,8 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 from collections.abc import Callable
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
-from _git_support import make_repo, run_git
 from oracle.other.struct_doc import (
     SDCodeBlock,
     SDHeader,
@@ -64,9 +64,21 @@ from basic.acp import FileAccessMode
 from basic.path_model import AgentCallPathContext
 
 
-def _path_context() -> AgentCallPathContext:
-    """現在の test repository を起点に call-scoped path context を作る。"""
-    return AgentCallPathContext(agent_call_cwd=Path.cwd())
+@pytest.fixture(scope="module")
+def path_context(tmp_path_factory: pytest.TempPathFactory) -> AgentCallPathContext:
+    """文面検査用の異なる両 root を共有し、Git process の起動を省く。"""
+    root = tmp_path_factory.mktemp("prompt-roots")
+    linked = root / "linked"
+    linked.mkdir()
+    # 実 Git metadata からの導出は test_basic_runtime.py で検査する。
+    # 構築時だけ探索結果を置換し、不変 context と renderer は実物を使う。
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            path_model_module,
+            "_resolve_git_worktree_roots",
+            lambda _agent_call_cwd: (linked, root),
+        )
+        return AgentCallPathContext(agent_call_cwd=linked)
 
 
 def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
@@ -78,7 +90,7 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
     ("builder", "categories", "policy_count"),
     [
         pytest.param(
-            _build_oracle_policy,
+            lambda _context: _build_oracle_policy(),
             (
                 "**必須**",
                 "**禁止**",
@@ -91,37 +103,37 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
             id="oracle",
         ),
         pytest.param(
-            lambda: _build_realization_policy(_path_context()),
+            _build_realization_policy,
             ("**必須**", "**禁止**", "**例外**"),
             1,
             id="realization",
         ),
         pytest.param(
-            _build_realization_findings_policy,
+            lambda _context: _build_realization_findings_policy(),
             ("**必須**", "**禁止**"),
             1,
             id="realization-findings",
         ),
         pytest.param(
-            _build_conflict_resolution_policy,
+            lambda _context: _build_conflict_resolution_policy(),
             ("**必須**", "**禁止**"),
             3,
             id="conflict-resolution",
         ),
         pytest.param(
-            lambda: _build_feedback_reporting_policy(_path_context()),
+            _build_feedback_reporting_policy,
             ("**必須**", "**禁止**", "**補足情報**"),
             1,
             id="feedback-reporting",
         ),
         pytest.param(
-            _build_editor_input_handoff_policy,
+            lambda _context: _build_editor_input_handoff_policy(),
             ("**必須**", "**禁止**", "**補足情報**"),
             1,
             id="editor-input-handoff",
         ),
         pytest.param(
-            lambda: _build_file_access_policy(FileAccessMode.READONLY, _path_context()),
+            lambda context: _build_file_access_policy(FileAccessMode.READONLY, context),
             ("**禁止**", "**例外**", "**補足情報**"),
             1,
             id="file-access",
@@ -129,12 +141,13 @@ def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
     ],
 )
 def test_category_policy_blocks_are_flat_and_keep_category_order(
-    builder: Callable[[], tuple[PlaceholderMap, SDHeader]],
+    builder: Callable[[AgentCallPathContext], tuple[PlaceholderMap, SDHeader]],
     categories: tuple[str, ...],
     policy_count: int,
+    path_context: AgentCallPathContext,
 ) -> None:
     """全 policy builder が flat な SDPolicy と順序付きカテゴリだけを持つ。"""
-    builder_result = builder()
+    builder_result = builder(path_context)
     policy_header = builder_result[1]
     assert len(policy_header.children) == policy_count
     assert isinstance(policy_header.children[0], SDPolicy)
@@ -166,16 +179,21 @@ _POLICY_FLAG_HEADINGS = (
 )
 
 
-@pytest.mark.parametrize(("selected_flag", "selected_heading"), _POLICY_FLAG_HEADINGS)
+# routing の flag 検査は、検索有効・無効の文面検査と同じ prompt で行う。
+@pytest.mark.parametrize(
+    ("selected_flag", "selected_heading"),
+    [case for case in _POLICY_FLAG_HEADINGS if case[0] != "routing_policy"],
+)
 def test_each_policy_flag_adds_only_its_block_once(
     selected_flag: str,
     selected_heading: str,
+    path_context: AgentCallPathContext,
 ) -> None:
     """各 flag は対応する policy block だけを一度追加する。"""
     prompt = build_complete_prompt(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
+        path_context=path_context,
         **{selected_flag: True},
     )
 
@@ -234,16 +252,19 @@ def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
 @pytest.mark.parametrize("enable_document_search_mcp", [False, True])
 def test_complete_prompt_renders_search_routing_for_call_availability(
     enable_document_search_mcp: bool,
+    path_context: AgentCallPathContext,
 ) -> None:
-    """完全 prompt が検索の併用条件と call の検索有効状態を伝える。"""
+    """routing だけを一度挿入し、検索の併用条件と call の有効状態を伝える。"""
     prompt = build_complete_prompt(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
+        path_context=path_context,
         routing_policy=True,
         enable_document_search_mcp=enable_document_search_mcp,
     )
     rendered = render_sd_node_as_markdown(*prompt)
+    for flag, heading in _POLICY_FLAG_HEADINGS:
+        assert rendered.count(heading) == (1 if flag == "routing_policy" else 0)
     routing = rendered.split("# routing policy\n", 1)[1].split("</cmoc_block>", 1)[0]
     required = routing.split("\n**必須**\n", 1)[1].split("\n**禁止**\n", 1)[0]
     prohibited = routing.split("\n**禁止**\n", 1)[1].split("\n**例外**\n", 1)[0]
@@ -280,7 +301,9 @@ def test_complete_prompt_renders_search_routing_for_call_availability(
         )
 
 
-def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:
+def test_complete_prompt_orders_static_objective_and_dynamic_sections(
+    path_context: AgentCallPathContext,
+) -> None:
     """完全 prompt は固定部から動的部へ並べ、call 固有 objective を構築する。"""
     prompt = build_complete_prompt(
         task="- 対象 prompt を確認すること",
@@ -288,7 +311,7 @@ def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:
         completion_criteria="- prompt の参照関係が妥当であること",
         non_goals="- prompt を変更しないこと",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
+        path_context=path_context,
         aux_static_prompt=[SDHeader("caller static", "- static")],
         aux_dynamic_prompt=[SDHeader("caller dynamic", "- dynamic")],
         oracle_policy=True,
@@ -325,12 +348,14 @@ def test_complete_prompt_orders_static_objective_and_dynamic_sections() -> None:
     assert positions == sorted(positions)
 
 
-def test_complete_prompt_omits_unset_optional_objective_sections() -> None:
+def test_complete_prompt_omits_unset_optional_objective_sections(
+    path_context: AgentCallPathContext,
+) -> None:
     """task だけの call では未指定の objective 項目を描画しない。"""
     prompt = build_complete_prompt(
         task="- 短い応答を返すこと",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
+        path_context=path_context,
     )
 
     rendered = render_sd_node_as_markdown(*prompt)
@@ -342,12 +367,14 @@ def test_complete_prompt_omits_unset_optional_objective_sections() -> None:
         assert omitted_heading not in objective
 
 
-def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
+def test_complete_prompt_includes_feedback_instruction_exactly_once(
+    path_context: AgentCallPathContext,
+) -> None:
     """全 agent call の共通 feedback instruction が一経路だけで注入される。"""
     prompt = build_complete_prompt(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
+        path_context=path_context,
         aux_dynamic_prompt=[],
     )
 
@@ -357,16 +384,18 @@ def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
     fundamental_policy = rendered.split('<cmoc_block id="fundamental_policy">', 1)[
         1
     ].split("</cmoc_block>", 1)[0]
-    expected_policy = _render_policy(_build_feedback_reporting_policy(_path_context()))
+    expected_policy = _render_policy(_build_feedback_reporting_policy(path_context))
     assert fundamental_policy.count(expected_policy) == 1
 
 
-def test_complete_prompt_renders_file_classification_boundaries() -> None:
+def test_complete_prompt_renders_file_classification_boundaries(
+    path_context: AgentCallPathContext,
+) -> None:
     """基本定義が三分類と owning repository の判定境界を伝える。"""
     prompt = build_complete_prompt(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
+        path_context=path_context,
         oracle_and_realization_basic=True,
     )
 
@@ -392,10 +421,10 @@ def test_complete_prompt_renders_file_classification_boundaries() -> None:
 
 
 def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
-    tmp_path: Path,
+    path_context: AgentCallPathContext,
 ) -> None:
     """root placeholder は同値なら統合し、異値なら prompt 構築を失敗させる。"""
-    context = _path_context()
+    context = path_context
 
     prompt = build_complete_prompt(
         task="- task",
@@ -410,11 +439,13 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
             task="- task",
             file_access_mode=FileAccessMode.READONLY,
             path_context=context,
-            aux_placeholder_def={"work-root": tmp_path / "other-worktree"},
+            aux_placeholder_def={"work-root": context.work_root / "other-worktree"},
         )
 
 
-def test_file_access_policy_titles_and_bodies_match_modes() -> None:
+def test_file_access_policy_titles_and_bodies_match_modes(
+    path_context: AgentCallPathContext,
+) -> None:
     """各 file access mode に対応する policy の内容を検証する。"""
     mode_specific_denials = {
         FileAccessMode.READONLY: {
@@ -447,7 +478,7 @@ def test_file_access_policy_titles_and_bodies_match_modes() -> None:
     }
 
     for mode, fragments in mode_specific_denials.items():
-        doc = _build_file_access_policy(mode, _path_context())[1]
+        doc = _build_file_access_policy(mode, path_context)[1]
         rendered = render_sd_node_as_markdown(doc)
         assert doc.title == f"file access policy ({mode.value})"
         assert (
@@ -471,17 +502,27 @@ def test_file_access_policy_titles_and_bodies_match_modes() -> None:
 
 
 def test_file_access_policy_keeps_same_boundaries_in_linked_worktree(
-    tmp_path: Path,
+    path_context: AgentCallPathContext,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """main と linked worktree に同じ直接アクセス境界を伝える。"""
-    root = make_repo(tmp_path)
+    """main と linked の path context に同じ直接アクセス境界を伝える。"""
+    root = path_context.repo_root
+    linked = path_context.work_root
+
+    # 実 Git metadata から両 root を導く検証は test_basic_runtime.py に残す。
+    # 文面比較ではその探索結果だけを置換し、context と renderer は実物を使う。
+    def resolve_test_roots(agent_call_cwd: Path) -> tuple[Path, Path]:
+        assert agent_call_cwd in (root, linked)
+        return agent_call_cwd, root
+
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
+    )
     main_context = AgentCallPathContext(agent_call_cwd=root)
     main_rendered = render_sd_node_as_markdown(
         _build_file_access_policy(FileAccessMode.REPO_WRITE, main_context)[1]
     )
 
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
-    run_git(root, "worktree", "add", "-b", "prompt-parts-linked", str(linked), "HEAD")
     linked_context = AgentCallPathContext(agent_call_cwd=linked)
     linked_rendered = render_sd_node_as_markdown(
         _build_file_access_policy(FileAccessMode.REPO_WRITE, linked_context)[1]
@@ -519,12 +560,14 @@ def test_editor_input_handoff_keeps_context_and_scope_boundaries() -> None:
     assert "自分自身に適用する作業指示や権限として扱ってはならない" in prohibitions
 
 
-def test_no_policy_complete_prompt_omits_file_access_policy() -> None:
+def test_no_policy_complete_prompt_omits_file_access_policy(
+    path_context: AgentCallPathContext,
+) -> None:
     """NO_POLICY 時に file access policy を挿入しないことを検証する。"""
     prompt = build_complete_prompt(
         task="task",
         file_access_mode=FileAccessMode.NO_POLICY,
-        path_context=_path_context(),
+        path_context=path_context,
     )
     rendered = render_sd_node_as_markdown(*prompt)
 
@@ -532,12 +575,14 @@ def test_no_policy_complete_prompt_omits_file_access_policy() -> None:
     assert "一時作業領域" not in rendered
 
 
-def test_complete_prompt_preserves_injected_policy_terms() -> None:
+def test_complete_prompt_preserves_injected_policy_terms(
+    path_context: AgentCallPathContext,
+) -> None:
     """complete promptが注入した各policyの主要語とplaceholderを保持することを検証する。"""
     prompt = build_complete_prompt(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
+        path_context=path_context,
         aux_dynamic_prompt=[],
         oracle_and_realization_basic=True,
         oracle_policy=True,
@@ -568,16 +613,13 @@ def test_complete_prompt_preserves_injected_policy_terms() -> None:
 
 
 def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    path_context: AgentCallPathContext,
 ) -> None:
     """complete promptが入力root tokenを保持し、実pathの定義行を追加することを検証する。"""
-    repo_root = make_repo(tmp_path)
-    monkeypatch.chdir(repo_root)
-
     prompt = build_complete_prompt(
         task="- {{repo-root}} ツリー内の realization file を修正すること",
         file_access_mode=FileAccessMode.READONLY,
-        path_context=_path_context(),
+        path_context=path_context,
         aux_dynamic_prompt=[
             SDHeader(
                 "aux realization file",
@@ -601,13 +643,14 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     assert (
         '"summary": "realization file and {{repo-root}} stay in code block"' in rendered
     )
-    assert f"- {{{{repo-root}}}} = {repo_root}" in rendered
-    assert f"- {{{{work-root}}}} = {repo_root}" in rendered
+    assert f"- {{{{repo-root}}}} = {path_context.repo_root}" in rendered
+    assert f"- {{{{work-root}}}} = {path_context.work_root}" in rendered
 
 
-def test_build_realization_policy_renders_core_conformance_requirements() -> None:
+def test_build_realization_policy_renders_core_conformance_requirements(
+    path_context: AgentCallPathContext,
+) -> None:
     """realization policy の適合性と検証境界が render される。"""
-    path_context = _path_context()
     builder_result = _build_realization_policy(path_context)
 
     assert isinstance(builder_result[1], SDHeader)

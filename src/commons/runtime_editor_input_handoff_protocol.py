@@ -272,25 +272,28 @@ def authenticate_editor_input_handoff_client(
     return server_proof is not None and hmac.compare_digest(server_proof, expected)
 
 
-def read_handoff_response(
+def read_handoff_message(
     connection: socket.socket,
     timeout_seconds: float,
     *,
     max_bytes: int | None = _HANDOFF_RESPONSE_LIMIT,
 ) -> dict[str, object] | None:
-    """期限内に newline-framed response を読み、任意の受信量上限を適用する。"""
+    """要求・応答の JSON frame を期限内に読み、任意の受信量上限を適用する。"""
+    # 受信済み部分の再コピー・再走査を避け、追加分だけから frame の終端を探す。
     deadline = time.monotonic() + timeout_seconds
-    response = b""
-    while b"\n" not in response:
+    message = bytearray()
+    while True:
         _set_deadline_timeout(connection, deadline)
         chunk = connection.recv(8192)
         if not chunk:
             break
-        response += chunk
-        if max_bytes is not None and len(response) > max_bytes:
+        message.extend(chunk)
+        if max_bytes is not None and len(message) > max_bytes:
             return None
+        if b"\n" in chunk:
+            break
     try:
-        value = json.loads(response.split(b"\n", 1)[0])
+        value = json.loads(message.split(b"\n", 1)[0])
     except (UnicodeError, json.JSONDecodeError):
         return None
     return value if isinstance(value, dict) else None

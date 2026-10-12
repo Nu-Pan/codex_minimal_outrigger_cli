@@ -5,6 +5,8 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from _command_support import write_python_executable
@@ -19,42 +21,108 @@ from commons.runtime_codex_profile import (
 from commons.runtime_errors import CmocError
 
 
+def _cancel_when_process_is_ready(pid_path, cancellation):
+    """PID の書込み完了で中断し、テスト終了時には監視も止める。"""
+    while not cancellation.wait(0.01):
+        if pid_path.exists() and pid_path.read_text():
+            cancellation.set()
+            return
+
+
 @pytest.mark.parametrize("tracked", [False, True])
-@pytest.mark.parametrize("interrupted", [False, True])
-def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interrupted):
-    """無応答 probe の process を終了させ、tracked child も残さない。"""
+@pytest.mark.parametrize("cancellable", [False, True])
+def test_probe_deadline_preserves_budget_and_cleans_up(
+    tmp_path, monkeypatch, tracked, cancellable
+):
+    """probe の総期限と終了処理を、OS の応答待ちと分けて検証する。"""
+    # 実 process の停止・stdin・tracking 回収は下の deadline/interruption test に残す。
+    tracking_path = tmp_path / "run.pid"
+    tracking_path.write_text("111 222\n")
+    clock = SimpleNamespace(now=0.0)
+    process = MagicMock(pid=4321, returncode=None)
+    process.__enter__.return_value = process
+    process.poll.side_effect = lambda: process.returncode
+    expired = subprocess.TimeoutExpired(["codex"], 0.25, output="partial output")
+
+    def communicate(input_data=None, timeout=None):
+        if timeout is None:
+            assert process.returncode == -signal.SIGKILL
+            return "partial output", ""
+        # 期限の更新や省略を検出し、回帰しても無期限に再試行しない。
+        assert 0 < timeout <= 0.25 - clock.now
+        clock.now += timeout
+        raise expired
+
+    def stop_group(_group, **_kwargs):
+        if tracked:
+            assert tracking_path.read_text() == "111 222\nchild 4321 333 4321\n"
+        process.returncode = -signal.SIGKILL
+
+    process.communicate.side_effect = communicate
+    popen = Mock(return_value=process)
+    stop = Mock(side_effect=stop_group)
+    monkeypatch.setattr(runtime_codex_profile.subprocess, "Popen", popen)
+    monkeypatch.setattr(
+        runtime_codex_profile, "time", SimpleNamespace(monotonic=lambda: clock.now)
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((4321, 333),) if process.returncode is None else (),
+    )
+    monkeypatch.setattr(runtime_codex_profile, "stop_process_group", stop)
+
+    with pytest.raises(subprocess.TimeoutExpired) as error:
+        options = dict(
+            text=True,
+            capture_output=True,
+            input="start",
+            timeout=0.25,
+            cancellation=threading.Event() if cancellable else None,
+        )
+        if tracked:
+            run_tracked_codex_subprocess(["codex"], tracking_path, **options)
+        else:
+            run_codex_subprocess(["codex"], **options)
+
+    assert error.value.output == "partial output"
+    assert popen.call_args.kwargs["start_new_session"] is True
+    stop.assert_called_once_with(
+        4321, expected_leader=(4321, 333), expected_members=((4321, 333),)
+    )
+    communications = process.communicate.call_args_list
+    assert communications[0].args == ("start",)
+    assert all(call.args == (None,) for call in communications[1:-1])
+    assert communications[-1].args == ()
+    assert clock.now == pytest.approx(0.25)
+    assert tracking_path.read_text() == "111 222\n"
+
+
+def test_probe_deadline_stops_process(tmp_path):
+    """無応答 probe を期限内で終了させ、tracked child も残さない。"""
     tracking_path = tmp_path / "run.pid"
     tracking_path.write_text("111 222\n")
     pid_path = tmp_path / "probe.pid"
+    # 標準ライブラリだけの子では site 初期化を省き、実停止・期限の検証は保つ。
     argv = [
         sys.executable,
+        "-S",
         "-c",
         "import os, pathlib, sys, time; "
+        "sys.stdin.read(); "
         "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
         "print('partial output', flush=True); time.sleep(30)",
         str(pid_path),
     ]
-    cancellation = threading.Event() if interrupted else None
-    timer = threading.Timer(0.3, cancellation.set) if cancellation is not None else None
-    if timer is not None:
-        timer.start()
-    try:
-        expected = KeyboardInterrupt if interrupted else subprocess.TimeoutExpired
-        with pytest.raises(expected):
-            options = dict(
-                text=True,
-                capture_output=True,
-                timeout=2 if interrupted else 0.3,
-                cancellation=cancellation,
-            )
-            if tracked:
-                run_tracked_codex_subprocess(argv, tracking_path, **options)
-            else:
-                run_codex_subprocess(argv, **options)
-    finally:
-        if timer is not None:
-            timer.cancel()
-            timer.join()
+    with pytest.raises(subprocess.TimeoutExpired):
+        options = dict(
+            text=True,
+            capture_output=True,
+            input="start",
+            timeout=0.3,
+        )
+        run_tracked_codex_subprocess(argv, tracking_path, **options)
     process_id = int(pid_path.read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(process_id, 0)
@@ -63,52 +131,60 @@ def test_probe_deadline_and_interruption_stop_process(tmp_path, tracked, interru
 
 @pytest.mark.parametrize("tracked", [False, True])
 def test_interruption_stops_tool_in_another_session(tmp_path, tracked):
-    """Native CLI の別 session の test/tool も止め、書込み process を残さない。"""
+    """stdin 送信後の中断で親と別 session の tool を止め、tracking を戻す。"""
     tracking_path = tmp_path / "run.pid"
     tracking_path.write_text("111 222\n")
+    parent_pid = tmp_path / "parent.pid"
     writer_pid = tmp_path / "writer.pid"
     writer_script = (
         "import os, pathlib, signal, sys, time; "
         "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
         "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+        "print('partial output', flush=True); "
         "time.sleep(30); pathlib.Path(sys.argv[2]).write_text('late write')"
     )
     parent_script = (
-        "import subprocess, sys; "
-        "child = subprocess.Popen([sys.executable, '-c', sys.argv[1], *sys.argv[2:]], "
+        "import os, pathlib, subprocess, sys; "
+        "sys.stdin.read(); "
+        "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+        "child = subprocess.Popen([sys.executable, '-S', '-c', sys.argv[2], *sys.argv[3:]], "
         "start_new_session=True); child.wait()"
     )
     argv = [
         sys.executable,
+        "-S",
         "-c",
         parent_script,
+        str(parent_pid),
         writer_script,
         str(writer_pid),
         str(tmp_path / "late.txt"),
     ]
     cancellation = threading.Event()
-
-    def cancel_when_ready():
-        for _ in range(300):
-            if writer_pid.exists():
-                cancellation.set()
-                return
-            threading.Event().wait(0.01)
-
-    cancel_thread = threading.Thread(target=cancel_when_ready)
+    cancel_thread = threading.Thread(
+        target=_cancel_when_process_is_ready, args=(writer_pid, cancellation)
+    )
     cancel_thread.start()
     try:
         with pytest.raises(KeyboardInterrupt):
             options = dict(
-                text=True, capture_output=True, timeout=5, cancellation=cancellation
+                text=True,
+                capture_output=True,
+                # 子の PID 通知は communicate が stdin を送信した後にだけ発生する。
+                input="start",
+                timeout=5,
+                cancellation=cancellation,
             )
             if tracked:
                 run_tracked_codex_subprocess(argv, tracking_path, **options)
             else:
                 run_codex_subprocess(argv, **options)
     finally:
+        cancellation.set()
         cancel_thread.join(timeout=5)
     assert not cancel_thread.is_alive()
+    with pytest.raises(ProcessLookupError):
+        os.kill(int(parent_pid.read_text()), 0)
     assert not runtime_codex_profile.process_group_has_running_member(
         int(writer_pid.read_text())
     )
@@ -1066,7 +1142,7 @@ def test_run_codex_subprocess_notifies_after_process_start() -> None:
     callbacks: list[str] = []
 
     result = run_codex_subprocess(
-        [sys.executable, "-c", "print('ok')"],
+        [sys.executable, "-S", "-c", "print('ok')"],
         text=True,
         capture_output=True,
         check=True,
