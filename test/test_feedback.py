@@ -2608,35 +2608,48 @@ def test_empty_report_publishes_current_generation(
     )
 
 
-@pytest.mark.parametrize("condition", ["dirty_worktree", "dirty_index", "inactive"])
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_preconditions_preserve_existing_changes_and_raw(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    condition: str,
 ) -> None:
     """不適合な session から run を開始せず、既存差分をそのまま保持する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
+    run_doctor(root)
     session_id = None
-    if condition == "inactive":
-        run_doctor(root)
-    else:
-        session_id = _active_session(root, monkeypatch)
-        (root / "README.md").write_text("user change\n")
-        if condition == "dirty_index":
+    # 拒否後の保持を確認してから同じ入力を次の境界へ進め、Git/session の準備を共有する。
+    # collector の受理・拒否・保存は transport と後続 wave の結合 test で検証する。
+    for condition in ("inactive", "dirty_worktree", "dirty_index"):
+        if condition == "dirty_worktree":
+            session_id = _active_session(root, monkeypatch)
+            (root / "README.md").write_text("user change\n")
+        elif condition == "dirty_index":
             run_git(root, "add", "README.md")
-    _, raw = store_agent_observation(
-        root, _context(root, session_id=session_id), _payload()
-    )
-    original_head = run_git(root, "rev-parse", "HEAD").stdout
-    original_status = run_git(root, "status", "--porcelain").stdout
-    original_raw = raw.read_bytes()
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 1, result.output
-    assert run_git(root, "rev-parse", "HEAD").stdout == original_head
-    assert run_git(root, "status", "--porcelain").stdout == original_status
-    assert raw.read_bytes() == original_raw
-    assert load_report_cut(root) is None
+        store_agent_observation(root, _context(root, session_id=session_id), _payload())
+        original_head = run_git(root, "rev-parse", "HEAD").stdout
+        original_status = run_git(root, "status", "--porcelain").stdout
+        original_raw = {
+            path: path.read_bytes() for path in iter_observation_paths(root)
+        }
+
+        result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+        assert result.exit_code == 1, (condition, result.output)
+        expected_error = (
+            "feedback report は active session branch 上で実行してください。"
+            if condition == "inactive"
+            else "git 未コミット差分が存在します。"
+        )
+        assert expected_error in result.output, (condition, result.output)
+        assert run_git(root, "rev-parse", "HEAD").stdout == original_head, condition
+        assert run_git(root, "status", "--porcelain").stdout == original_status, (
+            condition
+        )
+        assert {
+            path: path.read_bytes() for path in iter_observation_paths(root)
+        } == original_raw, condition
+        assert load_report_cut(root) is None, condition
 
 
 def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
