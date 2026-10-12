@@ -1355,11 +1355,12 @@ def test_refactor_fork_stops_children_before_commits_and_reports_warnings(
 
 
 def test_refactor_fork_stops_tracked_codex_children_before_joinable(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor は joinable 公開前に残存 Codex child を停止する。"""
-    _root, _session_branch, state_path = ready_content_session
+    # 巡の初期化前に中断するため、内容検査用の追加 file・commit は準備しない。
+    _root, _session_branch, state_path = ready_run_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -3611,11 +3612,12 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
 
 
 def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断時に追跡中 Codex child を停止してから rollback する。"""
-    _root, _session_branch, state_path = ready_content_session
+    # 既存の .gitignore を対象に agent を中断し、実 Git の run と rollback 経路は保つ。
+    _root, _session_branch, state_path = ready_run_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -3647,11 +3649,11 @@ def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
 
 
 def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断時 cleanup 失敗を error state と report に反映する。"""
-    _root, _session_branch, state_path = ready_content_session
+    _root, _session_branch, state_path = ready_run_session
     monkeypatch.setattr(
         refactor_module,
         "run_codex_exec",
@@ -3678,11 +3680,11 @@ def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
 
 
 def test_refactor_interrupt_during_completion_is_joinable(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """completion 中の中断を joinable state と user interruption report にする。"""
-    _root, _session_branch, state_path = ready_content_session
+    _root, _session_branch, state_path = ready_run_session
     monkeypatch.setattr(
         refactor_module,
         "_initialize_cycle",
