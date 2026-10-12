@@ -24,6 +24,7 @@ import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_results import StructuredOutputValidationIssue
 from config.cmoc_config import CmocConfig
 
@@ -597,12 +598,17 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
 
 
 def test_run_codex_exec_rechecks_schema_source_and_each_output(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    failure_control_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """検証器を再利用しても、別 call の不正出力と source の更新・破損を検出する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = failure_control_root
+    # このケースは成果物を変更しない。実 Git の差分取得・補正時の復元は
+    # corrects_declared_postcondition と restores_artifacts_changed_by_correction に残す。
+    monkeypatch.setattr(
+        runtime_codex_exec,
+        "capture_worktree_snapshot",
+        lambda work_root: WorktreeSnapshot(work_root, ()),
+    )
     schema = tmp_path / "schema.json"
     schema_text = oracle_schema_path("feedback", "normalize_issue.json").read_text(
         encoding="utf-8"
