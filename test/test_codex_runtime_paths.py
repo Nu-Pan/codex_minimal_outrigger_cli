@@ -16,6 +16,7 @@ import pytest
 from _codex_support import (
     codex_override_config,
     codex_parameter,
+    script_codex_calls,
     setup_codex_home,
 )
 from _command_support import write_python_executable
@@ -39,17 +40,24 @@ def run_fixed_codex_exec(
         """両 process に同じ生成時刻を与えて path の独立性を確かめる。"""
         return _FIXED_CODEX_TIMESTAMP
 
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # 発行処理を始める前に同期し、記録日時が一致しても各 log が分離されることを調べる。
-    exec_module.timestamp = timestamp_factory
     try:
-        barrier.wait(timeout=5)
-        result = run_codex_exec(
-            codex_parameter(agent_call_cwd=root),
-            root=root,
-            transient_poll_interval_sec=0,
-            config=CmocConfig(),
-        )
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(exec_module, "timestamp", timestamp_factory)
+            # subprocess の cwd・env は後続の Fake CLI test に残す。
+            # ここでは 2 process の実採番と log 保存だけを通し、孫 process を起動しない。
+            script_codex_calls(
+                monkeypatch,
+                [(0, '{"type": "turn.completed"}\n', "done\n")],
+            )
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # 発行前に同期し、記録日時が一致しても各 log が分離されることを調べる。
+            barrier.wait(timeout=5)
+            result = run_codex_exec(
+                codex_parameter(agent_call_cwd=root),
+                root=root,
+                transient_poll_interval_sec=0,
+                config=CmocConfig(),
+            )
         connection.send(
             {
                 "call_log_path": str(result.call_log_path),
@@ -71,19 +79,7 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
     """並列 run_codex_exec が同一生成時刻でも call ID とログを共有しない。"""
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setenv("PATH", "/usr/bin")
     barrier = Barrier(2)
     channels = [Pipe() for _ in range(2)]
     processes = [

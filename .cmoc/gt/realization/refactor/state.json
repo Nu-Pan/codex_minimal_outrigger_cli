@@ -1322,8 +1322,8 @@
   "test/test_codex_runtime_paths.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "148fc0ab98345235ef8374cf620c5e4ff48a0dc59d44eba4175245597d3f3f1b",
-    "last_investigated_at": "2026-10-11_00-13-38_787"
+    "last_investigated_sha256": "4ba4f4f6f70b11e61ea38a9808eda3b4a77f417fb449150d16ee27388dd1471c",
+    "last_investigated_at": "2026-10-13_05-19-58_213"
   },
   "test/test_codex_runtime_quota_retry.py": {
     "investigation_required": true,
