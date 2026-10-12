@@ -8,9 +8,7 @@ from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
-    script_codex_calls,
     setup_codex_home,
-    stub_codex_overrides,
 )
 from _command_support import write_python_executable
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
@@ -74,10 +72,10 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
-def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
+def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output(
     cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """provider と path policy の argv 境界および書き込み結果を検証する。"""
+    """provider・path policy の受け渡しと schema-less 出力の読み取りを検証する。"""
     # schema-less exec は履歴を参照しない。root 探索と Fake CLI の書き込み先だけ用意する。
     root = cli_repository
     (root / "oracle").mkdir()
@@ -94,13 +92,15 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
+    # 同じ起動で不正 UTF-8 の保存・未解析・置換文字も検査し、別の Git・log 準備を省く。
+    output_bytes = b"done\n\xff"
     write_python_executable(
         bin_dir / "codex",
         [
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
+            f"output.write_bytes({output_bytes!r})",
             "pathlib.Path('oracle/created.md').write_text('created\\n')",
             "pathlib.Path('src').mkdir(exist_ok=True)",
             "pathlib.Path('src/created.py').write_text('created\\n')",
@@ -195,32 +195,12 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
     _assert_no_codex_home_config(codex_home)
-    assert result.output_text == "done\n"
-
-
-def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """schema-less output の不正 UTF-8 で結果構築を中断しない。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    # process の受け渡しは正常起動の結合テストに残し、不正 bytes の読み取りを検査する。
-    calls = script_codex_calls(
-        monkeypatch, [(0, '{"type":"turn.completed"}\n', b"\xff")]
-    )
-
-    result = run_codex_exec(
-        codex_parameter(agent_call_cwd=root),
-        root=root,
-        transient_poll_interval_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert len(calls) == 1
-    assert result.output_path.read_bytes() == b"\xff"
+    assert list(result.call_log_path.parent.glob("*_call.json")) == [
+        result.call_log_path
+    ]
+    assert result.output_path.read_bytes() == output_bytes
     assert result.output_json is None
-    assert result.output_text == "\ufffd"
+    assert result.output_text == "done\n\ufffd"
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
