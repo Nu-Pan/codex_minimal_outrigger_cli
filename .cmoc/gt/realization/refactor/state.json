@@ -1376,8 +1376,8 @@
   "test/test_document_search_materials.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "42740a70a885bd0d0814afca63abbce59dadac8fc13431c604be74259305ebc7",
-    "last_investigated_at": "2026-10-11_02-04-44_921"
+    "last_investigated_sha256": "43b707218ef7e341c9a11bc42448874b23da175979e5352c8a18549543efda6f",
+    "last_investigated_at": "2026-10-13_06-45-23_649"
   },
   "test/test_document_search_reuse.py": {
     "investigation_required": true,
