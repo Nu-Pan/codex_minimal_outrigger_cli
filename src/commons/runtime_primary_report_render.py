@@ -17,6 +17,9 @@ from .runtime_logging import SubcommandLogger
 from .runtime_primary_report_specs import PrimaryReportSpec, TerminalClassification
 from .runtime_results import TerminalResult
 
+# 各キー・文字列の行・scalar で共通の設定を使い、encoder の再生成を省く。
+_DISPLAY_JSON_ENCODER = json.JSONEncoder(ensure_ascii=False)
+
 
 class _JsonObjectPairs(NamedTuple):
     """同名キーも含め、JSON object の出現順を表示用に保持する。"""
@@ -214,7 +217,7 @@ def _render_structured_value(value: Any) -> str:
         elif isinstance(current, Decimal):
             fragments.append(str(current))
         else:
-            fragments.append(json.dumps(current, ensure_ascii=False))
+            fragments.append(_DISPLAY_JSON_ENCODER.encode(current))
     return "".join(fragments)
 
 
@@ -222,7 +225,7 @@ def _display_json_string(value: str) -> str:
     """引用符とバックスラッシュを区切りと区別して一度だけ表示する。"""
     # 改行で先に分割し、元のリテラル \\n を再解釈しない。
     segments = [
-        json.dumps(segment, ensure_ascii=False)[1:-1]
+        _DISPLAY_JSON_ENCODER.encode(segment)[1:-1]
         .encode("utf-8", errors="backslashreplace")
         .decode("utf-8")
         for segment in value.split("\n")

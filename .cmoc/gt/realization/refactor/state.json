@@ -993,7 +993,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "7fca6c7a1eb06c9b25aafacda57d4d0a5780282b157fc10c5b79657023391dfe",
-    "last_investigated_at": "2026-10-10_13-55-33_082"
+    "last_investigated_at": "2026-10-12_11-00-58_926"
   },
   "src/commons/runtime_primary_report_specs.py": {
     "investigation_required": true,

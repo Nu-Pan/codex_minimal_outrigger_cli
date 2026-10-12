@@ -563,9 +563,11 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
             "literal": r"\n",
             "json_text": '{"x":1}',
             "quoted": 'say "hi" \\ slash',
+            "line\nkey": "first\n\nlast\n",
+            "surrogate": "\ud800",
             "empty": "",
             "nothing": None,
-            "items": [True, 0, 1.25, [], {}],
+            "items": [True, False, 0, 1.25, [], {}],
         }
     }
     output.write_text(json.dumps(source, ensure_ascii=True), encoding="utf-8")
@@ -596,10 +598,12 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
     assert r'"literal": "\\n"' in report
     assert r'"json_text": "{\"x\":1}"' in report
     assert r'"quoted": "say \"hi\" \\ slash"' in report
+    assert '"line\nkey": "first\n\nlast\n"' in report
+    assert r'"surrogate": "\ud800"' in report
     assert '"empty": ""' in report
     assert '"nothing": null' in report
     assert (
-        '"items": [\n      true,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
+        '"items": [\n      true,\n      false,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
         in report
     )
     assert '"literal": "\n"' not in report
