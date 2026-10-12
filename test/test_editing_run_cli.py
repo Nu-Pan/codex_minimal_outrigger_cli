@@ -181,6 +181,21 @@ def _stop_after_cycles(monkeypatch: pytest.MonkeyPatch, cycles: int = 1) -> None
     monkeypatch.setattr(refactor_module, "_initialize_cycle", initialize_or_interrupt)
 
 
+@pytest.fixture
+def refactor_unit_diff_queries(monkeypatch):
+    """終了 report とは別の、処理単位ごとの rename 照会を観測する。"""
+    queries = []
+    inspect = refactor_module.tree_changes
+
+    def record_diff(worktree, base, end="HEAD"):
+        if end != "HEAD":
+            queries.append((base, end))
+        return inspect(worktree, base, end)
+
+    monkeypatch.setattr(refactor_module, "tree_changes", record_diff)
+    return queries
+
+
 def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:
     """fork reportの変更pathは削除とrename元を含めない。"""
     assert flattened_change_paths(
@@ -3708,7 +3723,7 @@ def test_refactor_with_no_targets_keeps_synchronizing(
 
 
 def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
-    ready_content_session, monkeypatch
+    ready_content_session, monkeypatch, refactor_unit_diff_queries
 ):
     """削除は成果に含め、後の巡で戻した変更は net 成果へ数えない。"""
     root, _, state_path = ready_content_session
@@ -3752,6 +3767,7 @@ def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
+    assert refactor_unit_diff_queries == []
     run = _state(state_path)["run"]
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     report = terminal_primary_report(result).read_text()
@@ -3816,22 +3832,15 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
 
 @pytest.mark.parametrize("interrupt_next_cycle_start", [False, True])
 def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
-    ready_join_session, monkeypatch, interrupt_next_cycle_start
+    ready_join_session,
+    monkeypatch,
+    interrupt_next_cycle_start,
+    refactor_unit_diff_queries,
 ):
     """旧履歴を調査機会にせず、未解決を次巡で再検討して全対象を公平に処理する。"""
     root, _, state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "README.md")
     reviewed = []
-    unit_diff_queries = []
-    inspect = refactor_module.tree_changes
-
-    def record_unit_diff(worktree, base, end="HEAD"):
-        # report の net 差分は調べるが、state のみの単位には rename 照会が不要。
-        if end != "HEAD":
-            unit_diff_queries.append((base, end))
-        return inspect(worktree, base, end)
-
-    monkeypatch.setattr(refactor_module, "tree_changes", record_unit_diff)
     if interrupt_next_cycle_start:
         commit = refactor_module.commit_work_unit
         cycles = 0
@@ -3880,7 +3889,7 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
-    assert unit_diff_queries == []
+    assert refactor_unit_diff_queries == []
     run = _state(state_path)["run"]
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     state = load_refactor_state(worktree)
@@ -3905,7 +3914,7 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
 
 
 def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
-    ready_content_session, monkeypatch
+    ready_content_session, monkeypatch, refactor_unit_diff_queries
 ):
     """関連 file の変更を調査実績へ数えず、追加 file は次巡に公平に処理する。"""
     _root, _, _state_path = ready_content_session
@@ -3940,6 +3949,7 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
+    assert refactor_unit_diff_queries == []
     assert reviewed == [
         ".gitignore",
         "README.md",
