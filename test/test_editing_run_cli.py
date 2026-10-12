@@ -873,13 +873,12 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
 
 
 def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 前に report を保存し、実 cleanup の停止 warning と結果で更新する。"""
-    context = _prepare_run(ready_content_session)
-    (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
+    # 内容の取り込みは fork→join test に任せ、実資源の cleanup と保存順序を検査する。
+    context = _prepare_run(ready_run_session)
     events: list[str] = []
     saved_reports: list[Path] = []
     original_write_report = run_join_command_module.write_lifecycle_report
@@ -927,7 +926,6 @@ def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
     rendered = report_path.read_text()
     assert 'cleanup: "completed"' in rendered
     assert "run child process already stopped: 789" in rendered
-    assert (context.repo / "README.md").read_text() == "realized\n"
     assert not context.run_worktree.exists()
 
 
