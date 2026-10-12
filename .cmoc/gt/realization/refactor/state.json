@@ -1460,8 +1460,8 @@
   "test/test_git_query_reuse.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "f3c20cce28fb358569b710adbe5f1e18a7007ed9cd32d84751d8d6f9bd55e80d",
-    "last_investigated_at": "2026-10-11_03-43-01_211"
+    "last_investigated_sha256": "2796d5622a58f96d7dbf23a9808fddd46ce668218aa36c084b7e153b3d19de3b",
+    "last_investigated_at": "2026-10-13_08-14-12_152"
   },
   "test/test_oracle_edit_cli.py": {
     "investigation_required": true,
