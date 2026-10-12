@@ -63,9 +63,9 @@ def tui_runtime_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 def tui_log_directory(
     tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Path:
-    """単発 TUI のログ検査では、ID の永続採番を準備しない。"""
+    """ログ・handoff context の検査では、ID の永続採番を準備しない。"""
     # 永続性・並行採番は test_runtime_ids.py、TUI の採番との結合は
-    # 同一 timestamp・並行 TUI・prompt 起動のケースに残す。
+    # 同一 timestamp・prompt 起動のケースに残す。
     ids = count()
 
     def issue_id(_root: Path, prefix: str) -> str:
@@ -644,11 +644,12 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
 
 
 def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
-    tui_runtime_directory, monkeypatch
+    tui_log_directory, monkeypatch
 ):
     """並行する TUI の MCP が自身の起動前ログと一致する送信元を保持する。"""
     # 送信元の分離は実 stdio MCP で確かめ、Git root 導出は prompt 起動ケースに委ねる。
-    root = tui_runtime_directory
+    # fixture の一意な ID を使い、並行時の送信元対応は実ログと照合する。
+    root = tui_log_directory
     monkeypatch.setenv(EDITOR_INPUT_SOURCE_ENV, "stale-parent-source")
     monkeypatch.setattr(
         runtime_codex_tui,
