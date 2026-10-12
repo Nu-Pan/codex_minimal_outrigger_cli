@@ -1478,8 +1478,8 @@
   "test/test_packaged_import.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "c4fc534c5555194e2f8553eb500608bdfcebd888be79bc79c36a21204ba29615",
-    "last_investigated_at": "2026-10-11_04-09-48_606"
+    "last_investigated_sha256": "ce0b052f8cf6659ef853b7d17f67ff82c9356150ff3fa8be2f49f9380bb327d8",
+    "last_investigated_at": "2026-10-13_08-32-24_150"
   },
   "test/test_primary_report.py": {
     "investigation_required": true,
