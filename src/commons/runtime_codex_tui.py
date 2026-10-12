@@ -13,7 +13,7 @@ from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
 from .runtime_cli import mark_current_tui_process_started
-from .runtime_codex_logging import format_codex_call_error
+from .runtime_codex_logging import format_codex_call_error, write_codex_prompt_log
 from .runtime_codex_profile import (
     codex_cli_supports_tui_notification_hooks,
     codex_subprocess_env,
@@ -48,6 +48,17 @@ def run_codex_tui(
     notification_command_name: str | None = None,
 ) -> CommandResult:
     """Codex TUI を設定上書き argv と call log を準備して起動する。"""
+    # SessionStart は turn の開始時に実行され、UI の全会話切替を追跡できない。
+    # 外部契約を確認できるまで、要求 ID だけを開いた主会話として扱わない。
+    # https://github.com/openai/codex/blob/092d3acd6bec3e3a14bdc7e7a2810ab628ab759d/codex-rs/core/src/session/turn.rs#L306-L324
+    # https://github.com/openai/codex/blob/092d3acd6bec3e3a14bdc7e7a2810ab628ab759d/codex-rs/tui/src/session_log.rs#L218-L248
+    if parameter.tui_resume_session_id is not None:
+        raise CmocError(
+            "Codex TUI の対話再開に必要な会話追跡を確認できません。",
+            ["Codex TUI の会話追跡に対応した cmoc を使用してください。"],
+            f"tui_resume_session_id: {parameter.tui_resume_session_id}\n"
+            "failed condition: verified TUI conversation lifecycle is unavailable",
+        )
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = config or load_config(path_context.work_root)
@@ -92,6 +103,7 @@ def run_codex_tui(
             purpose=purpose,
             agent_call_cwd=agent_call_cwd,
             repository=path_context.repo_root,
+            work_root=path_context.work_root,
             codex_home=codex_home,
             codex_environment=codex_environment,
             log_dir=log_dir,
@@ -110,6 +122,7 @@ def _run_codex_tui_process(
     purpose: str,
     agent_call_cwd: Path,
     repository: Path,
+    work_root: Path,
     codex_home: Path,
     codex_environment: dict[str, str],
     log_dir: Path,
@@ -122,6 +135,7 @@ def _run_codex_tui_process(
     ts = timestamp()
     agent_call_id = new_id(root, "ac")
     codex_call_id = new_id(root, "cc")
+    assert parameter.prompt is not None
     argv = [
         "codex",
         *override_args,
@@ -134,23 +148,50 @@ def _run_codex_tui_process(
     ]
     call_path = log_dir / f"{codex_call_id}_call.json"
     call_path.open("x").close()
+    prompt_path = log_dir / f"{codex_call_id}_prompt.md"
+    prompt_path.open("x").close()
+    write_codex_prompt_log(prompt_path, parameter.prompt)
     execution_id = log_dir.name
+    logger = current_subcommand_logger()
+    tui_kind = {
+        "build_tui_launch_tui_parameter": "tui",
+        "build_oracle_investigation_launch_tui_parameter": "oracle_investigation",
+    }.get(parameter.agent_call_kind)
+    # 会話 ID の取得経路が未検証であることを保持し、通知 marker を流用しない。
+    # oracle/doc/app_spec/console_and_file_log.md の「TUI 再開のための実行記録」。
+    tui_context = {
+        "tui_record_version": 1,
+        "execution_id": execution_id,
+        "resumed_from_execution_id": None,
+        "subcommand": logger.command if logger is not None else None,
+        "sub_command_log_path": str(logger.path.resolve())
+        if logger is not None
+        else None,
+        "tui_kind": tui_kind,
+        "agent_call_id": agent_call_id,
+        "agent_call_kind": parameter.agent_call_kind,
+        "codex_call_id": codex_call_id,
+        "file_access_mode": parameter.file_access_mode.value,
+        "cwd": str(agent_call_cwd.resolve()),
+        "work_root": str(work_root.resolve()),
+        "repo_root": str(repository.resolve()),
+        "codex_home": str(codex_home.resolve()),
+        "call_log_path": str(call_path.resolve()),
+        "prompt_log_path": str(prompt_path.resolve()),
+        "requested_codex_session_id": None,
+        "codex_session_id": None,
+        "conversation_state": "unverified",
+    }
     call_path.write_text(
         json.dumps(
             {
                 "purpose": purpose,
-                "execution_id": execution_id,
                 "timestamp": ts,
                 "argv": argv,
-                "agent_call_id": agent_call_id,
-                "agent_call_kind": parameter.agent_call_kind,
-                "codex_call_id": codex_call_id,
-                "codex_home": str(codex_home),
                 "model_provider": call_config.model_provider,
                 "model": call_config.model,
                 "reasoning_effort": call_config.reasoning_effort,
-                "file_access_mode": parameter.file_access_mode.value,
-                "cwd": str(agent_call_cwd),
+                **tui_context,
             },
             ensure_ascii=False,
             indent=2,
@@ -162,19 +203,30 @@ def _run_codex_tui_process(
     failure: subprocess.CalledProcessError | None = None
     startup_failure: BaseException | None = None
     returncode: int | None = None
+    process_started = False
+
+    def _process_started() -> None:
+        # Popen 成功直後だけ起動確認を記録し、例外やログの途切れで代用しない。
+        nonlocal process_started
+        process_started = True
+        mark_current_tui_process_started()
+        if logger is not None:
+            logger.event("tui_process_started", **tui_context, process_state="started")
+
+    if logger is not None:
+        logger.event("tui_process_prepared", **tui_context, process_state="prepared")
     feedback_call = begin_feedback_call(
         agent_call_cwd=parameter.agent_call_cwd,
         agent_call_id=agent_call_id,
         agent_call_kind=parameter.agent_call_kind,
         codex_call_id=codex_call_id,
-        log_paths=[call_path],
+        log_paths=[call_path, prompt_path],
         enable_feedback_reporting=parameter.enable_feedback_reporting,
     )
     try:
         environment = dict(codex_environment)
         if parameter.enable_editor_input_handoff_mcp:
             # call log と同じ ID を起動前に記録・flush し、MCP にも同じ値を供給する。
-            logger = current_subcommand_logger()
             source = None
             if logger is not None:
                 source = EditorInputHandoffSource(
@@ -202,7 +254,7 @@ def _run_codex_tui_process(
             cwd=agent_call_cwd,
             env=environment,
             check=True,
-            process_started_callback=mark_current_tui_process_started,
+            process_started_callback=_process_started,
         )
         returncode = result.returncode
     except subprocess.CalledProcessError as exc:
@@ -212,11 +264,25 @@ def _run_codex_tui_process(
         startup_failure = exc
     finally:
         feedback_call.close()
+        if logger is not None:
+            # returncode は wrapper が process を回収した場合だけ得られる。
+            # 中断・任意の例外だけでは停止を断定せず、会話も未確定のまま残す。
+            logger.event(
+                "tui_process_finished",
+                **tui_context,
+                process_state=(
+                    "exited"
+                    if returncode is not None
+                    else "unknown"
+                    if process_started
+                    else "not_started"
+                ),
+                returncode=returncode,
+            )
     elapsed_sec = time.perf_counter() - started_at
     error: str | None = None
     if startup_failure is not None:
         error = format_codex_call_error(startup_failure)
-    logger = current_subcommand_logger()
     status = "succeeded" if returncode == 0 else "failed"
 
     def _emit_event(error: str | None = None) -> None:

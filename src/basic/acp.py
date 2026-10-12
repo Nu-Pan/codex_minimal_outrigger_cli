@@ -7,9 +7,11 @@
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
+    TuiResumeTarget,
 )
 
 __all__ = [
     "AgentCallParameter",
     "FileAccessMode",
+    "TuiResumeTarget",
 ]

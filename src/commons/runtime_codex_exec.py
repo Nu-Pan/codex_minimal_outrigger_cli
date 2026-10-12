@@ -14,7 +14,7 @@ from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
-from .runtime_codex_logging import format_codex_call_error
+from .runtime_codex_logging import format_codex_call_error, write_codex_prompt_log
 from .runtime_codex_profile import (
     classify_codex_call,
     codex_error_text,
@@ -62,13 +62,6 @@ from .runtime_results import (
 )
 
 _MAX_OUTPUT_CORRECTIONS = 2
-
-
-def _write_prompt_log(path: Path, prompt: str) -> None:
-    """Codex に渡した完全 prompt を再実行可能な stdin log として保存する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # prompt log 自体を再実行可能な stdin source とし、metadata にはしない。
-    path.write_text(prompt, encoding="utf-8")
 
 
 def _read_required_output(path: Path) -> tuple[str, Any]:
@@ -281,6 +274,15 @@ def run_codex_exec(
     subcommand_logger: SubcommandLogger | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 補正、実行記録を一括制御する。"""
+    # 対話再開の入力不在を、非対話の補正・回復用 prompt と混同しない。
+    # oracle/doc/app_spec/codex_exec_rule.md の「TUI の新規起動と対話 resume」。
+    initial_prompt = parameter.prompt
+    if initial_prompt is None:
+        raise CmocError(
+            "対話 TUI の再開パラメータは codex exec に渡せません。",
+            ["対話 TUI の起動経路を使用してください。"],
+            f"tui_resume_session_id: {parameter.tui_resume_session_id}",
+        )
     # 設定の外部変更を correction・probe・resume へ持ち込まない。
     check_recovery_interruption()
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
@@ -621,7 +623,7 @@ def run_codex_exec(
     resume_session_id: str | None = None
     correction_session_id: str | None = None
     recovery_source_call_id: str | None = None
-    current_prompt = parameter.prompt
+    current_prompt = initial_prompt
     frozen_artifact_snapshot: WorktreeSnapshot | None = None
     artifact_changed_paths: frozenset[str] = frozenset()
 
@@ -663,7 +665,8 @@ def run_codex_exec(
             if reason == "quota"
             else "transient recovery probe"
         )
-        _write_prompt_log(probe_prompt, probe_parameter.prompt)
+        assert probe_parameter.prompt is not None
+        write_codex_prompt_log(probe_prompt, probe_parameter.prompt)
         _write_call_log(
             probe_call,
             run_purpose=probe_purpose,
@@ -763,7 +766,7 @@ def run_codex_exec(
         active_agent_call_id = agent_call_id
         active_agent_call_kind = parameter.agent_call_kind
         current_argv = _build_argv(output_path, resume_session_id)
-        _write_prompt_log(prompt_path, current_prompt)
+        write_codex_prompt_log(prompt_path, current_prompt)
         _write_call_log(
             call_path,
             run_purpose=purpose,

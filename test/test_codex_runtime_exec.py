@@ -19,6 +19,7 @@ import commons.runtime_codex_exec as exec_module
 from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
+from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
 
 
@@ -30,6 +31,20 @@ def test_setup_codex_home_isolates_home_and_codex_home(
 
     assert Path(os.environ["HOME"]) == tmp_path / "home"
     assert Path(os.environ["CODEX_HOME"]) == codex_home
+
+
+def test_interactive_resume_is_rejected_before_exec_preparation(tmp_path):
+    """対話再開を非対話 exec や補正用 prompt に変換しない。"""
+    parameter = replace(
+        codex_parameter(agent_call_cwd=tmp_path),
+        prompt=None,
+        tui_resume_session_id="saved-session-id",
+    )
+
+    with pytest.raises(CmocError, match="対話 TUI の再開パラメータ"):
+        run_codex_exec(parameter, root=tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
