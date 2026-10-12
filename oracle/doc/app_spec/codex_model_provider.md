@@ -15,7 +15,7 @@
 - `CmocConfigCodex` の既定値は、すべての既存 agent call 種別に一つずつ対応する設定を持つ
 - cmoc は、三つの直接文字列について、別名への解決、近い値への丸め、または fallback を行ってはならない
 - cmoc は、Model、Reasoning Effort、および model provider の組み合わせに対する互換性検査や allowlist を持たない
-- Codex CLI が設定を拒否した場合は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」に従う
+- Codex CLI が設定を拒否した場合は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」に従う。TUI への適用範囲は同文書の「TUI の新規起動と対話 resume」に従い、非対話の回復待ちを持ち込まない
 - Structured Output の補正、retry、および回復待ち後の再開を個別の設定単位にしてはならない
 - 設定データ構造、field 名、型、および既定値の正確な詳細は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CodexCallConfig`、`CodexModelProviderConfig`、および `CmocConfigCodex` へ委譲する
 - 取得した設定を Codex CLI の argv へ反映し、同じ agent call で維持する規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Model provider、Model、Reasoning Effort」を正本とする

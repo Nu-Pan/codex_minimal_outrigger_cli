@@ -4,6 +4,8 @@
 
 cmoc は、oracle file に関するユーザーの調査指示をエディタから受け取り、Codex CLI の TUI を起動する。TUI 内の agent は、oracle file を根拠に調査し、その結果を回答する。
 
+本コマンドは oracle 調査 TUI の新規起動を行う。終了済みの会話の再開は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「目的と公開入口」「workload と起動環境の保持」に従う。
+
 ## 引数
 
 - なし
@@ -25,7 +27,7 @@ cmoc は、oracle file に関するユーザーの調査指示をエディタか
 
 ## TUI 起動パラメータ
 
-- TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
+- oracle 調査 TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、および workload 固有の新規起動・再開パラメータの構築は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
 - この TUI では editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
 - 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う
 - `build_oracle_investigation_launch_tui_parameter` が返したパラメータを変更せずに TUI 起動へ渡す
@@ -36,7 +38,7 @@ cmoc は、oracle file に関するユーザーの調査指示をエディタか
 
 - 起動コマンドは `codex` とする
 - `codex exec` は使用しない
-- `$CODEX_HOME`、preflight validation、および Codex CLI 引数による設定上書きの適用範囲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/tui.md` の「Codex CLI の場合」を正本とする
+- 共通呼び出し規約の適用範囲と会話 ID の取得・保存は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」「TUI の会話 ID の取得と追跡」に従う
 - このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする
 
 ## 調査結果と変更の扱い

@@ -5,6 +5,8 @@
 
 cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契約を注入し、AI Agent CLI/TUI を起動する。注入する cmoc 基本規定は、適用条件を伴う固定の内容とし、installed skill の有無にかかわらず解釈できるものにする。実行パラメータまたは注入規定を選定するための agent call は行わない。
 
+本コマンドは汎用 TUI の新規起動を行う。終了済みの Codex TUI の再開は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「目的と公開入口」「workload と起動環境の保持」に従う。
+
 ## 引数
 
 - なし
@@ -29,7 +31,7 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
 ### 全バックエンド共通
 
 - `build_tui_launch_tui_parameter` が返したパラメータを変更せずに使い、TUI を直接起動する
-- TUI の意味上の責務と起動条件は本書を正本とする。正確な prompt part の選択、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter` へ委譲する
+- 汎用 TUI の意味上の責務と新規起動条件は本書を正本とする。正確な prompt part の選択、文面、および workload 固有の新規起動・再開パラメータの構築は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter` へ委譲する
 - cmoc の基本規定は、各規定が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
 - TUI へ注入する基本規定の意味仕様は、次の文書を正本とする
     - oracle file と realization file の責務: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file と realization file の責務」
@@ -43,9 +45,5 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
 - 起動コマンドは `codex` とする (`codex exec` ではない)
 - editor input handoff の MCP と agent 向け instruction を有効にする。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
 - 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う
-- `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
-    - 環境変数 `$CODEX_HOME`
-    - preflight validation
-    - Codex CLI 引数による設定上書き
-    - editor input handoff MCP
-    - 文書検索 MCP
+- 共通呼び出し規約の適用範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」に従う
+- 会話 ID の取得と保存は、同文書の「TUI の会話 ID の取得と追跡」に従う

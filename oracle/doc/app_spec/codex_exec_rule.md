@@ -2,7 +2,7 @@
 
 ## 基本
 
-cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う。本書では、論理的な実行単位と個々の CLI 呼び出しを次のように区別する。
+cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う。対話型の新規起動と再開に適用する範囲は、本書の「TUI の新規起動と対話 resume」で定める。本書では、論理的な実行単位と個々の CLI 呼び出しを次のように区別する。
 
 | 用語 | 実行単位 | cmoc が付与する識別情報 |
 |---|---|---|
@@ -11,11 +11,13 @@ cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行�
 
 agent call ID と Codex call ID の書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。cmoc は、論理 agent call の開始前に agent call ID を発行し、上表の同じ論理 call を通して保持する。Codex call ID は、個々の CLI 呼び出しまたは TUI process の開始前に発行する。同じ TUI process の各 turn では同じ Codex call ID を使う。
 
+`cmoc resume` が開始する TUI は、新しい agent call と Codex call とする。元の TUI と同じ `agent_call_kind` を使い、agent call ID と Codex call ID は新たに発行する。Codex session ID の引継ぎを、cmoc の call ID の再利用と混同しない。
+
 `{{execution-id}}` は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」を正本とする。`{{codex-call-id}}` は上表の Codex call ID を表す。
 
 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする。AgentCallParameter builder は、その oracle doc から明示的に委譲された範囲で、正確な prompt 文面と workload 固有の起動パラメータを構築する。ただし、model provider、Model、および Reasoning Effort は構築対象から除く。
 
-`AgentCallParameter` の field 名、型、および既定値を含む正確な構造は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。
+`AgentCallParameter` の field 名、型、既定値、および初期 prompt と対話再開の排他条件を含む正確な構造は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` と `TuiResumeTarget` へ委譲する。
 
 ## agent call の path context
 
@@ -286,7 +288,7 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 ### prompt の構築と受け渡し
 
-`AgentCallParameter.prompt` には、原則として完全 prompt 本文を設定する。cmoc は、builder が生成して確定した値を変更せず、初回 Codex call に渡す。realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない。
+初期入力を伴う呼び出しでは、`AgentCallParameter.prompt` に完全 prompt 本文を設定する。cmoc は、builder が生成して確定した値を変更せず、初回 Codex call に渡す。realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない。対話 resume に限る初期入力の不在は、本書の「TUI の新規起動と対話 resume」に従う。
 
 - 完全 prompt の共通構築順序は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。同関数が、prompt part、目的、および placeholder 定義を統合する正確な順序を所有する
 - prompt の共通 rendering は、`{{cmoc-root}}/oracle/src/oracle/other/struct_doc.py` の `render_sd_node_as_markdown` へ委譲する。同関数が、構造化された prompt を Markdown 文字列へ変換する正確な rendering を所有する
@@ -297,15 +299,28 @@ prompt の確定前後に行う処理は、次のように区別する。
 - Structured Output の補正 prompt は、本書の「同じ session での出力補正」に従い、次の turn の入力として構築する。初回 prompt は加工しない。
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する。
 
-`AgentCallParameter.prompt` は、初回 Codex call の ID を用いた `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_prompt.md` に保存する。初回 Codex call のコマンド末尾に `-` を付け、このファイルを stdin へリダイレクト入力する。
+初期入力のある `AgentCallParameter.prompt` は、初回 Codex call の ID を用いた `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_prompt.md` に保存する。非対話の初回 Codex call では、コマンド末尾に `-` を付け、このファイルを stdin へリダイレクト入力する。
 
-プロンプト本文を argv に載せてはならない。argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする。
+プロンプト本文を argv に載せてはならない。argv に載せてよいのは、フラグ、モデル名、設定上書き値、Codex session ID、短い固定文字列、短いファイルパスのみとする。
+
+## TUI の新規起動と対話 resume
+
+新規の汎用 TUI と oracle 調査 TUI、および `cmoc resume` が起動する対話 resume には、本書の ID、path context、`$CODEX_HOME`、preflight validation、argv override、ファイルアクセス制限、モデル設定、prompt、各 MCP、および呼び出し情報の保存の共通契約を適用する。
+
+TUI は `codex exec` ではなく対話型の Codex を起動する。`--json` による stdout 収集、`--output-last-message`、Structured Output とその補正、および非対話 call の回復待ちを TUI に適用しない。端末の入出力は TUI が使用する。
+
+- 新規起動では、workload の builder が構築した完全 prompt を初期入力として渡す。
+- 対話 resume では、検査済みの Codex session ID を明示して同じ会話を開く。初期 prompt は不在とし、過去の prompt、再構築した prompt、skeleton、空文字列、または再開を促す補助指示を初期入力として送らない。初期入力がない call のために prompt ファイルを捏造せず、prompt 用の stdin リダイレクトも行わない。
+- 再開パラメータは、元の workload の `agent_call_kind`、file access mode、および MCP の提供判断を維持する。保存された会話内の workload の規定を継続し、cmoc が規定を再送して新しい turn を開始する方式にしない。これは非対話の補正・回復における prompt の規則を変更しない。
+- 起動管理側は、新しい TUI process 用に feedback、handoff、文書検索 MCP、および通知 callback を準備する。各接続の context と終了処理は、本書の各 MCP 節と `{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「決定論的な発火と Codex CLI の設定境界」に従う。終了済み process の接続情報を再使用しない。
+
+公開入口、対象の適格性、workload・環境の照合、および失敗条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「`cmoc resume <exec-id>`」を正本とする。対話 resume の具体的な argv 配列・入力経路を、未検証の Codex interface に基づいて固定しない。必要な検証は、本書の「実装前に検証する TUI の外部契約」に従う。
 
 ## feedback reporter と collector context
 
 - reporting の意味は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「agent による報告」を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
 - `AgentCallParameter` は、reporter の提供を有効にするかを agent call 単位で保持する。正確な field 名、型、および既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
-- builder は、reporter の提供判断と同じ値を完全 prompt の構築へ渡す。有効な call には報告規定を注入し、無効な call には注入しない。正確な選択引数と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
+- builder が完全 prompt を構築する場合は、reporter の提供判断と同じ値を渡す。有効な call には報告規定を注入し、無効な call には注入しない。対話 resume は本書の「TUI の新規起動と対話 resume」に従う。正確な選択引数と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - 提供を無効にする call は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「issue 処理 call の observation 報告」に従う。対象外の builder は、reporter と報告規定をともに有効にする既定の契約を維持する
 - 初回、Structured Output の補正、retry、および回復待ち後の再開を含む同一 agent call の全 Codex call で、この提供判断を維持する。無効な call の補正・再開 prompt に報告規定を追加してはならない
 - 提供が有効な場合、cmoc は Codex call の開始前に、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「collector と transport」が定める call context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする。無効な場合は、その call 用の reporter/client を起動せず、reporter context と capability を登録しない
@@ -324,11 +339,11 @@ prompt の確定前後に行う処理は、次のように区別する。
 editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」を正本とする。
 
 - `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
-- Codex TUI を起動する `AgentCallParameter` builder だけが、MCP と handoff instruction の両方を有効にする。それ以外の builder は `enable_editor_input_handoff_mcp` の既定値を使用する
+- Codex TUI を起動する `AgentCallParameter` builder だけが MCP を有効にし、新規起動の完全 prompt に handoff instruction を含める。対話 resume では同じ提供判断を保つ。それ以外の builder は `enable_editor_input_handoff_mcp` の既定値を使用する
 - 有効な Codex TUI call には `cmoc_editor_input` MCP server を提供する。handoff ガイド取得と上書きの公開 tool は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「MCP interface」に従う。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
 - handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - handoff instruction の正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
-- `cmoc tui` と `cmoc oracle investigation` では、cmoc の起動・呼び出し管理経路が、送信元 TUI process に対応する実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う
+- 対話 resume を含む TUI では、cmoc の起動・呼び出し管理経路が、送信元 TUI process に対応する実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う
 - TUI process の起動前に、その process の Codex call ID の確保、MCP への送信元情報の供給、および `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」に従う記録と flush を完了する。ログの対応付けと MCP への供給には同じ実際の値を使い、別の Codex call の ID を代用せず、TUI 起動時に別の ID を再発行しない
 - この準備を skeleton 構築の前提にはしない。送信元情報は、skeleton と入力確定後の TUI prompt のいずれの builder 引数にも含めず、転記用の情報を prompt へ注入しない
 
@@ -336,12 +351,13 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 検索の対象、信頼境界、同期、結果、失敗、および資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「cmoc 専用文書検索」を正本とする。本節は call と MCP 接続の責務を所有する。
 
-- 検索 MCP の有効化を呼び出し単位で指定する。正確な field・型・既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。builder は起動パラメータと完全 prompt の検索有効状態を一致させる。
+- 検索 MCP の有効化を呼び出し単位で指定する。正確な field・型・既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。builder が完全 prompt を構築する場合は、その検索有効状態を起動パラメータと一致させる。
 - oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の所見調査・修正、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。短い応答だけで可用性を確認する回復 probe では検索を無効にする。
 - 各 call では検索要求時の自動同期を使う。起動時の検索設定・検索用コンポーネントの検査と索引同期は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索索引の同期」に従う。Structured Output の補正・retry・再開でも検索の有効状態と work-root を維持する。
 - 有効な各 Codex process に local stdio MCP 接続を設ける。検索 server の cwd、実行ファイル、引数、許可 tool、approval behavior、起動・tool 期限、および信頼された context の供給を、呼び出し単位の argv override で管理する。設定の符号化には本書の「Codex CLI 引数による設定上書き」を使う。
 - 起動管理側は、内側の検索要求の全体上限に停止・回収・返送の余裕を加えて、外側の MCP tool 期限を設定する。有効な設定変更時も、実行途中の動的延長に依存せずこの関係を保つ。内側の期限と停止は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「排他、期限、終了」に従う。余裕の具体値は実装に委ね、同文書の「製品受入条件」で連携を検証する。
 - 起動管理側は、検索の診断記録を呼出し元のサブコマンドログへ届け、実行 ID・Codex call・対象 work-root と対応付ける信頼された context を供給する。context は MCP 引数や agent の申告から決めない。記録と相関の要件は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従う。
+- 対話 resume では、保存された cwd から導出した work-root と、新しい実行 ID・Codex call ID・`cmoc resume` のログ保存先を使って接続を準備する。検索索引の再利用と、終了済み process の接続・診断 context の再使用を混同しない。
 - server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/oracle/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・work-root への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
 - 通常の検索 tool は human approval、auto-review、command escalation を要求せず利用できるよう設定する。これは sandbox、permission profile、network access、file access mode の拡張を意味しない。
 - `$CODEX_HOME/config.toml` を書き換えない。既存 feedback/handoff MCP の設定と接続を保持して共存させ、検索設定の注入で上書き・無効化しない。
@@ -357,6 +373,8 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 - 後続の Codex call は、先行する Codex call の log または出力を上書きしてはならない
 - 停止した呼び出しと probe・再開の対応、および各確認結果は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「診断記録」に従ってサブコマンドログから追跡可能にする
 
+TUI の call 記録にも同じ ID と保存先の対応を使う。ただし、初期入力のない対話 resume の prompt ファイルや、非対話専用の stdout JSONL・最終出力ファイルを要求しない。再開判断に必要な情報は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 再開のための実行記録」に従い、サブコマンドログから取得可能にする。
+
 ## stdout, stderr の扱い
 
 - `--json` を必ず指定すること
@@ -368,12 +386,34 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 
 Codex session ID は、Codex が返す外部の識別子をそのまま使用する。cmoc の session ID、agent call ID、および Codex call ID とは区別する。
 
+### 非対話 call の会話 ID の取得
+
+次の規則は、`codex exec` と `codex exec resume` に適用する。
+
 - Codex call の session ID は、対応する `{{repo-root}}/.cmoc/gu/log/codex/{{execution-id}}/{{codex-call-id}}_stdout.jsonl` から読み取る
 - `type == thread.started` である要素の `thread_id` field を session ID とする
 
     ```json
     {"type":"thread.started","thread_id":"019efe07-4886-7423-b252-625febbe31eb"}
     ```
+
+### TUI の会話 ID の取得と追跡
+
+新規起動と対話 resume のどちらも、cmoc の起動管理側が、利用する Codex CLI 版で検証済みの経路から、その TUI process の実際の会話 ID を取得する。会話切替も追跡して終了時の主会話を特定し、取得・変化・未確定化を、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 再開のための実行記録」に従って保存する。
+
+再開要求で渡した ID だけでは、会話を開けたことや終了時の主会話を確認したことにならない。起動直後や turn 完了前の終了、異常終了、および会話切替で確定できない場合は、その不確定状態を保持する。非対話の `thread.started` JSONL 規則が TUI にも存在するとはみなさず、agent の申告、画面の自由文、または保存ファイルの更新時刻から推定しない。
+
+### 実装前に検証する TUI の外部契約
+
+次の外部契約は未検証であり、本書は特定の取得 API、callback key、event 名、payload、または対話 resume の具体的な引数形式を確定しない。実装前に、利用する Codex CLI 版のソースと、実行を明示的に指示された場合の実測で確認する。
+
+- TUI process と会話 ID を確実に対応付けられる取得経路と、起動後に保存可能になる最初の時点。
+- turn 完了前の終了、正常・異常終了、および会話切替を含む主会話の追跡と、不確定状態の検出。会話切替時も、cmoc 管理下で同じ会話の同時使用を防げること。
+- 明示した会話を初期 prompt の再送なしで対話再開でき、存在しない会話を新規会話や最新会話で代替しないこと。
+- 保存された cwd と `$CODEX_HOME` の使用場所、起動時のモデル・sandbox・承認設定の override が対話 resume に適用され、元の workload の規定を保てること。
+- 再開した process が新しい feedback・handoff・文書検索 MCP の設定と context を使用し、終了済み process の接続へ戻らないこと。
+
+agent turn 完了 callback だけで会話の全 lifecycle を取得できると断定しない。通知 callback 自体の検証項目は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「実装前に検証する Codex CLI の外部契約」に従う。必要な契約を確認できない場合は未検証事項として残し、推測による取得方法や Fake の挙動を確定済みの外部契約に置き換えない。
 
 ## `--output-last-message`
 

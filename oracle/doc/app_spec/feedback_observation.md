@@ -109,6 +109,8 @@ subcommand の識別情報には、サブコマンド名と、`{{cmoc-root}}/ora
 
 reporter の提供が有効な call では、初回 call と Structured Output の correction call は、同じ agent call ID を使用する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
 
+`cmoc resume` では、新しい実行 ID・agent call ID・Codex call ID に context と capability を登録し、サブコマンド名を `resume` とする。`agent_call_kind` は解決した TUI workload の種別を表し、呼び出し元のサブコマンド名とは区別する。Codex session ID や再開元の ID を、新しい観測の帰属に代用しない。再開前に受理済みの observation は、元の context に対応したまま保持する。
+
 ### 保存経路
 
 agent が報告した observation は、次の経路だけで raw observation として保存する。
@@ -138,6 +140,8 @@ Codex call の終了時は、その call の作成済み reporter context につ
 feedback remediation の intake wave を閉じる際の終了処理と high-watermark 確定の順序は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「intake wave loop」に従う。
 
 parallel call の lifecycle は互いに分離する。TUI では、1 process の全 turn で同じ Codex call context を使用し、process 終了時に無効化する。
+
+対話 resume は新しい process として本書の「保存経路」を準備し、終了済み process の capability や collector 接続を再使用・再有効化しない。起動失敗時も、作成済みの context に本節の終了処理を適用する。
 
 reporter の提供が有効な call における reporter または collector の起動失敗、transport failure、および `rejected` result は、feedback の degradation として warning または構造化 event に記録する。本命 Codex workload を失敗または中断させない。意図的な非提供は、この degradation に含めない。
 

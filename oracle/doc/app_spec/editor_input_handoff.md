@@ -134,6 +134,8 @@ MCP は入力のパス文字列を `Path` に変換し、参照箇所ととも�
 
 cmoc は実際の呼び出しに付与・保持する値を、送信元 TUI process に結び付いた MCP の呼び出し元コンテキストへ供給する。MCP はこの情報を本文 builder に渡す。送信元情報を転記用 prompt または tool input として agent に渡さず、handoff 専用の ID 体系は作らない。
 
+`cmoc resume` で起動した process の送信元サブコマンド名は `resume` とし、その新しい実行 ID・Codex call ID・診断用サブコマンドログを使う。解決した TUI 種別や再開元の送信元情報で置き換えない。Codex session ID を引き継いでも、handoff の context は今回の process に結び付け直す。
+
 並行する TUI process 間でコンテキストを取り違えず、同じ送信元 TUI process の各 turn では、その process に対応する実行情報を使用する。受信先 target の情報から送信元を推定せず、target ID と送信元の識別子を相互に代用しない。必要な送信元情報を取得できない場合は、推測・捏造で補わず handoff の失敗を返す。
 
 起動・呼び出し管理経路からの供給と準備順序は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う。内部 transport や module の分割は、本書の責務と lifecycle を満たす範囲で実装に委ねる。

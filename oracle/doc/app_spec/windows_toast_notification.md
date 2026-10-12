@@ -12,6 +12,7 @@
 
 - `cmoc tui`
 - `cmoc oracle investigation`
+- `cmoc resume`
 
 ## 非対話サブコマンドの通知境界
 
@@ -42,6 +43,8 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 - TUI の起動前エラーまたは異常終了は、失敗結果を確定した後に 1 回だけ通知する。
 - turn の識別と重複排除の範囲は、その TUI process invocation 内に限る。同じ turn の callback を複数回受け取った場合も、重複通知しない。
 
+`cmoc resume` の通知に使うサブコマンド名は `resume` とする。再開元のコマンド名や解決した TUI 種別で置き換えず、callback と重複排除の context は新しい TUI process に対応させる。
+
 ## 通知内容
 
 ### 必須情報
@@ -71,7 +74,7 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 
 現行 oracle は、Codex CLI の通知 callback に関する具体的な interface を定義しない。
 
-realization の実装前に、利用中の Codex CLI で次の外部契約を検証する。
+realization の実装前に、利用中の Codex CLI で次の外部契約を、新規 TUI と対話 resume の両方について検証する。
 
 - callback を呼び出し単位で設定または無効化する設定 key
 - callback event の種類、payload、および同じ turn の重複を識別するために利用できる情報

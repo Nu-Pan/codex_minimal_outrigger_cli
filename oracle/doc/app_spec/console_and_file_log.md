@@ -1,6 +1,6 @@
 # コンソール・ファイル、ログ出力規則
 
-本書は、最外側のサブコマンド実行の識別、および非対話サブコマンドの console、primary report、サブコマンドログ、terminal result に関する共通契約の正本とする。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、primary report の形式・保存先・追加項目・要約方法、次の操作、および終了コードを定義する。
+本書は、最外側のサブコマンド実行の識別とサブコマンドログ、TUI の実行記録、および非対話サブコマンドの console、primary report、terminal result に関する共通契約の正本とする。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、primary report の形式・保存先・追加項目・要約方法、次の操作、および終了コードを定義する。
 
 ## 共通規則
 
@@ -16,6 +16,7 @@
 - 最外側のサブコマンド開始処理で、doctor preprocess や editor input より前に一度確定し、終了まで維持する。この発行確定順を実行開始順とし、並行開始も同じ基準で順序を定める。
 - 内部から呼び出すサブコマンド、処理関数、agent call、Codex call、retry、および回復待ちには、同じ実行 ID を引き継ぐ。
 - 別の最外側のサブコマンド実行には別の値を割り当てる。同じ session や run を扱う場合も、複数ターミナルで並行実行する場合も重複させない。
+- `cmoc resume` も新しい最外側の実行として採番する。指定された再開元の実行 ID は対応情報として保持し、今回の実行 ID やログ保存先に再利用しない。
 - 同じ実行を表す console 表示、保存先の `{{execution-id}}`、および記録内の実行情報には同じ文字列を使う。
 
 記録系の日時項目は維持し、実行 ID で置き換えない。
@@ -164,19 +165,19 @@ Windows toast の対象、発火順序、通知内容、および失敗時の扱
 
 ### 診断記録
 
-サブコマンドログは、サブコマンド呼び出しから terminal result までを追跡できる完全な診断記録とする。少なくとも次の情報を記録する。
+サブコマンドログは、サブコマンド呼び出しから終了までを追跡できる完全な診断記録とする。少なくとも次の情報を記録する。
 
-- サブコマンド呼び出しと、その実行 ID
+- サブコマンド呼び出しと、その実行 ID。実際の最外側のサブコマンド名は、非 TUI の実行も含め、自由文の解析を要しない構造化された値で記録する
 - 作成した editor input と primary report の保存先、および関連する agent call、Codex call、session、run の識別情報との対応。agent call の開始前や入力中の失敗も含め、作成済み記録の所属実行を追跡可能にする
 - 階層化されたサブステップを含む全ステップと、その時間
 - 全 Codex call と、対応する Codex call ログ、経過時間、および戻り値
 - 回復待ちの開始・継続、理由とその変更、個別 probe の結果、復旧、再開と再発、および待機終了の理由。停止した呼び出しと probe・再開を対応付け、確認した呼び出し条件と結果の適用範囲を追跡可能にする
 - warning
 - handled failure と internal failure の判別に必要なエラー詳細
-- terminal result を含むサブコマンド終了イベント
+- サブコマンド終了イベント。terminal result を表示する経路では、その結果を含める。正常終了した TUI でも終了イベントは省略しない
 - サブコマンド全体の経過時間、Codex CLI の quota と一時障害それぞれの回復待ち時間、および終了コード。待機理由が変わった場合も、各理由で待った時間を追跡可能にする
 
-過去のサブコマンド実行で起きたことを追跡するための具体的な field は、realization の裁量で定めてよい。例外として、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「rule registry」の detector rule が参照する event は、同仕様が定める `event_schema_version`, `event_id`, `event_type`, context、および rule 固有 field を安定した契約として含める。
+過去のサブコマンド実行で起きたことを追跡するための具体的な field は、realization の裁量で定めてよい。ただし、本書の「TUI 再開のための実行記録」は機械的な再開判断に使う安定契約とする。また、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「rule registry」の detector rule が参照する event は、同仕様が定める `event_schema_version`, `event_id`, `event_type`, context、および rule 固有 field を安定した契約として含める。
 
 feedback detector は、安定契約として定義されていない自由文 field を判定に使用してはならない。
 
@@ -213,7 +214,7 @@ feedback detector は、安定契約として定義されていない自由文 f
 
 ### TUI 送信元情報の記録
 
-editor input handoff を有効にする `cmoc tui` と `cmoc oracle investigation` では、TUI process を起動する前に、次の対応を既存のサブコマンドログへ記録し、flush を完了する。
+editor input handoff を有効にする TUI では、対話 resume を含め、TUI process を起動する前に、次の対応を既存のサブコマンドログへ記録し、flush を完了する。
 
 - 本書の「実行 ID の開始表示」で定める実行 ID と、送信元のサブコマンド名
 - 起動する TUI process の Codex call ID と、対応するログ保存先
@@ -223,11 +224,32 @@ Codex call ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の�
 
 この記録は送信元の識別と保存済み記録への到達を保証する。TUI 会話全文や最終回答の保存・取得保証は追加しない。本文の受け渡しと tool result・log の境界は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」と「tool result と log」に従う。
 
+### TUI 再開のための実行記録
+
+`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「ログからの種別解決」「対象の適格性と会話選択」を、既存のサブコマンド JSONL から機械的に判断できるようにする。新規 TUI と対話 resume のどちらも対象とし、本書の「TUI 送信元情報の記録」と同じ実行・call に対応付ける。
+
+| 記録する情報 | 区別する意味 |
+|---|---|
+| 実行 ID、実際の最外側のサブコマンド、再開元実行 ID | 今回の invocation と、`resume` が指定した直接の再開元。新規起動には再開元がない |
+| 解決した TUI 種別、agent call 種別、file access mode | 呼び出し元のコマンド名と、実際に続ける workload とその制約 |
+| agent call ID、Codex call ID、各保存ログへの対応 | 論理 call、TUI process、およびその記録。会話の識別子で代用しない |
+| 実際の cwd、そこから導出した work-root・repo-root、使用した `$CODEX_HOME` の場所 | その process が使用する環境。相対表記や symlink に依存せず照合できる絶対パスで記録する |
+| exec と TUI process の起動・終了状態、終了結果 | 起動準備、起動確認、起動失敗、終了確認、および未確認を区別する。TUI の終了だけで exec 全体の終了を代用しない |
+| 要求した会話、確認済みの Codex session ID、終了時の主会話の確定状態 | 再開の要求値と実際に開いた会話、会話切替、終了時に再開対象を確定できたかを区別する |
+
+各意味を構造化された値とイベントの順序で表し、記録形式の識別、状態遷移、および未確定値の扱いを安定させる。未起動・未発行・未取得を区別し、存在しない値を作らない。読み手が解釈できない記録や矛盾した対応を、再開可能な状態として扱わない。具体的な field 名・符号化・イベント分割は実装に委ねるが、自由文、ファイル時刻、ID の発行順、または最後に見つかった会話 ID から状態を推測する形式にしてはならない。
+
+起動前に確定できる情報は TUI process の起動前に記録する。Codex session ID と process の対応は取得でき次第、会話切替や確定状態の変化は確認でき次第、追記して即時 flush する。turn 完了や process 終了まで保存を遅らせない。追跡不能になった状態を、以前取得した ID が引き続き確定済みであるかのように記録しない。会話の取得・追跡責務は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の会話 ID の取得と追跡」に従う。
+
+終了時は、主会話を確定できたか、TUI process が終了したか、exec が終了したかをそれぞれ記録する。起動前エラーや会話を開く前の失敗も、終了済みの再開可能な TUI と混同させない。強制終了などで終了記録を保存できなかった場合、記録の途切れを終了確認として扱わない。必要な保存・flush の失敗は診断可能にし、再開可能な記録が完成したと報告しない。
+
+再開後の対応は新しい実行のログへ保存し、再開元のログや Codex call 記録を上書きしない。そのログには、直接の再開元との対応に加えて、今回確認した workload・環境・会話・終了の情報を残す。再開専用の ID 体系や会話本文の独自保存は追加しない。
+
 ## TUI と自動補完の境界
 
 TUI の通知境界を適用するサブコマンドと非対話サブコマンドの分類は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「目的と適用範囲」と「非対話サブコマンドの通知境界」を正本とする。本書の primary report 契約は、その分類を変更しない。
 
-- `cmoc tui` および `cmoc oracle investigation` の正常な TUI 終了後には、非対話サブコマンド用の primary report または terminal result を追加しない
+- TUI の通知境界を適用するサブコマンドでは、正常な TUI 終了後に非対話サブコマンド用の primary report または terminal result を追加しない。`cmoc resume` の場合も同じ境界とする
 - `cmoc oracle edit` は非対話サブコマンドとして本書を適用する。内部の各 `codex exec` は独立した terminal result を表示せず、最外側のサブコマンドが終了状態の確定後に 1 回だけ表示する
 - TUI の起動前エラーまたは異常終了には、本書と `{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」のエラー表示規則を適用する。非対話サブコマンド用の primary report は要求しない
 - TUI process へ制御を渡した後は、cmoc の進行通知を TUI の表示へ混入させない

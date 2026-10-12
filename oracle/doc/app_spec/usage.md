@@ -47,3 +47,15 @@
 - feedback close: `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の `cmoc feedback close`
 
 editing run に共通する lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を参照する。
+
+## 終了済み TUI の会話を続ける
+
+例えば、終了済みの `cmoc tui` または `cmoc oracle investigation` の実行 ID が `exec_000010_2026-09-29_15-04` なら、同じ repository で次のように再開する。
+
+```bash
+cmoc resume exec_000010_2026-09-29_15-04
+```
+
+元の TUI 種別は実行ログから自動判定される。入力エディタを経由せず、追加指示は再開した TUI で入力する。今回表示される新しい実行 ID も、終了後に次の `cmoc resume` に指定できる。
+
+`cmoc oracle edit` など非 TUI の実行 ID は拒否される。対象条件・ログ不足や未終了時の拒否・会話選択は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「ログからの種別解決」「対象の適格性と会話選択」を参照する。ID の書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「採番と順序保証」を共用する。
