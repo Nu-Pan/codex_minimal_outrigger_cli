@@ -1,4 +1,8 @@
 
+## oracle edit の指示
+
+- 過不足が無い状態にしろ、を強調しないとダメかも？
+
 ## ベクトル検索の見直し系
 
 - `oracle/src/oracle/other/document_search.py` で、入手するモデルのバージョンを過剰に固定しすぎてるかも
