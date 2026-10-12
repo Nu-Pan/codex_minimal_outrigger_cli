@@ -1185,7 +1185,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "bfd8539ef9776e0e27e2e2e0d6365626dc832eb3abf90403affec4b29f1f8364",
-    "last_investigated_at": "2026-10-10_20-37-51_083"
+    "last_investigated_at": "2026-10-12_17-39-07_963"
   },
   "src/sub_commands/session/abandon.py": {
     "investigation_required": true,

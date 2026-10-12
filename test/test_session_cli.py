@@ -104,13 +104,6 @@ def _seed_session_management_files(root: Path) -> None:
     run_git(root, "commit", "-m", "session seed")
 
 
-def _seed_active_session(root: Path) -> tuple[str, str]:
-    """session 終了の検査に必要な clean session を、fork CLI を実行せず用意する。"""
-    # fork の branch/state 作成と fork→join/abandon の連携は専用 test に残す。
-    _seed_session_management_files(root)
-    return _seed_session_in_worktree(root, root)
-
-
 def _seed_session_in_worktree(root: Path, work: Path) -> tuple[str, str]:
     """clean な worktree に session を作り、repo-root に state を保存する。"""
     home_branch = current_branch(work)
@@ -675,14 +668,14 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
 
 
 def test_session_abandon_requires_existing_home_branch(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """home branchが存在しないsession abandonを拒否することを検証する。"""
-    root = make_repo(tmp_path)
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
+    session_branch, home_branch = _seed_session_in_worktree(root, root)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
     # 前処理の修復と事前条件の順序は linked worktree の専用ケースで検証する。
     # このケースでは local branch と同名 tag を区別する境界を保つ。
@@ -711,14 +704,14 @@ def test_session_abandon_requires_existing_home_branch(
 
 
 def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """未joinのrunがある場合に先行するcleanup操作を案内する。"""
-    root = make_repo(tmp_path)
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    session_branch, _ = _seed_active_session(root)
+    session_branch, _ = _seed_session_in_worktree(root, root)
     path = session_state_path(root, session_branch)
     state = json.loads(path.read_text())
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -739,14 +732,14 @@ def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
 
 
 def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """dirty worktree拒否でも既知のsession report fieldを保持する。"""
-    root = make_repo(tmp_path)
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    _, home_branch = _seed_active_session(root)
+    _, home_branch = _seed_session_in_worktree(root, root)
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (root / "README.md").write_text("dirty\n")
 
@@ -762,7 +755,7 @@ def test_session_abandon_report_keeps_known_state_on_dirty_precondition(
 
 
 def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
@@ -772,9 +765,9 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     - {{work-root}}/oracle/doc/branch_model.md
     - {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
     """
-    root = make_repo(tmp_path)
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
+    session_branch, home_branch = _seed_session_in_worktree(root, root)
     state_path = session_state_path(root, session_branch)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
 
@@ -837,16 +830,16 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     ],
 )
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     cleanup_error: BaseException,
     session_preprocess: list[Path],
 ) -> None:
     """cleanup失敗時にsession branchとactive stateを復元することを検証する。"""
-    root = make_repo(tmp_path)
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    # ignore/tracking の修復は home branch 不在・linked worktree のケースで検証する。
-    session_branch, _ = _seed_active_session(root)
+    # 共通管理物の修復は linked worktree の専用ケースで検証する。
+    session_branch, _ = _seed_session_in_worktree(root, root)
     state_path = session_state_path(root, session_branch)
     gitignore = root / ".gitignore"
     original_delete_branch = session_module.delete_branch
@@ -881,14 +874,14 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
 
 
 def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_effect(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """branch削除後の中断でも元のsession branchとstateを復元する。"""
-    root = make_repo(tmp_path)
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    session_branch, _ = _seed_active_session(root)
+    session_branch, _ = _seed_session_in_worktree(root, root)
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     state_path = session_state_path(root, session_branch)
     original_delete_branch = session_module.delete_branch
@@ -914,14 +907,14 @@ def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_eff
 
 
 def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_race(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """rollback中に消えたlocal session branchをremoteから推測しない。"""
-    root = make_repo(tmp_path)
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
+    session_branch, home_branch = _seed_session_in_worktree(root, root)
     state_path = session_state_path(root, session_branch)
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
@@ -997,15 +990,15 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
 
 @pytest.mark.parametrize("command", ["abandon", "join"])
 def test_session_completion_rejects_missing_state_fields(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     command: str,
     session_preprocess: list[Path],
 ) -> None:
     """session completionが必須state field欠落を拒否することを検証する。"""
-    root = make_repo(tmp_path)
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_active_session(root)
+    session_branch, home_branch = _seed_session_in_worktree(root, root)
     path = session_state_path(root, session_branch)
     broken_state = {"session": {"session_home_branch": home_branch}}
     path.write_text(json.dumps(broken_state) + "\n")
@@ -1034,10 +1027,12 @@ def session_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
 
 
 @pytest.fixture
-def join_repository(cli_repository: Path, session_preprocess: list[Path]) -> Path:
-    """前処理を置換した join 固有の検査に、実 Git と追跡済みの基準 file を用意する。"""
+def session_completion_repository(
+    cli_repository: Path, session_preprocess: list[Path]
+) -> Path:
+    """前処理を置換した session 終了の検査に、実 Git と追跡済みの基準 file を用意する。"""
     # config・.agents・refactor state と全 file の列挙は前処理の結合検査に残す。
-    # .cmoc/gu の ignore は、実 join の clean 検査とログ・state 保存に必要。
+    # .cmoc/gu の ignore は、実 join/abandon の clean 検査とログ・state 保存に必要。
     root = cli_repository
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     (root / "README.md").write_text("# repo\n")
@@ -1055,7 +1050,8 @@ def test_session_join_preserves_repository_local_feedback_state(
     """session join が repository-local feedback state を merge や rollback しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    _seed_active_session(root)
+    _seed_session_management_files(root)
+    _seed_session_in_worktree(root, root)
     relative = ".cmoc/gu/feedback/normalization_checkpoint/sentinel.json"
     path = root / relative
     path.parent.mkdir(parents=True)
@@ -1070,12 +1066,12 @@ def test_session_join_preserves_repository_local_feedback_state(
 
 
 def test_session_join_preserves_work_on_incidental_conflict_marker(
-    join_repository: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """付随編集先の未解消 marker で停止し、stderr と保持した作業状態を検査する。"""
-    root = join_repository
+    root = session_completion_repository
     target = root / "oracle" / "spec.md"
     related = root / "src"
     related.mkdir()
@@ -1139,7 +1135,7 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
 
 
 def test_session_join_merges_conflict_and_incidental_changes(
-    join_repository: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
@@ -1147,7 +1143,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     # 一つの成功経路を共有し、各編集と NUL framing を独立したファイルで検証する。
     # marker が残る失敗時の作業保持は専用ケースで検査する。
     # {{work-root}}/oracle/doc/app_spec/merge_conflict_resolution.md
-    root = join_repository
+    root = session_completion_repository
     context_target = root / "oracle" / "spec.md"
     mode_target = root / "oracle" / "mode.md"
     deleted_target = root / "oracle" / "deleted.md"
@@ -1415,12 +1411,12 @@ def test_session_join_preprocesses_linked_worktree_before_preconditions(
 
 
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
-    join_repository: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """session branch削除失敗をwarningとしてjoin成功に含めることを検証する。"""
-    root = join_repository
+    root = session_completion_repository
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_session_in_worktree(root, root)
     original_run_git = session_join_module.run_git
@@ -1450,12 +1446,12 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
 
 
 def test_session_join_does_not_delete_when_local_branch_reachability_check_fails(
-    join_repository: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """local session branchのreachability確認失敗時に削除しないことを検証する。"""
-    root = join_repository
+    root = session_completion_repository
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_session_in_worktree(root, root)
     original_run_git = session_join_module.run_git
@@ -1490,7 +1486,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
 
 
 def test_session_join_rejects_missing_home_branch_before_remote_guess(
-    join_repository: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
@@ -1499,7 +1495,7 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
     {{work-root}}/oracle/doc/app_spec/session_state.md
     """
-    root = join_repository
+    root = session_completion_repository
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_session_in_worktree(root, root)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
@@ -1529,12 +1525,12 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
 
 
 def test_session_join_handled_failure_is_written_to_stderr(
-    join_repository: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """事前条件 error terminal result を stderr へ出力する。"""
-    root = join_repository
+    root = session_completion_repository
     monkeypatch.chdir(root)
     _, home_branch = _seed_session_in_worktree(root, root)
     (root / "README.md").write_text("dirty\n")
@@ -1553,12 +1549,12 @@ def test_session_join_handled_failure_is_written_to_stderr(
 
 
 def test_session_join_codex_failure_reports_unresolved_merge(
-    join_repository: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
     """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
-    root = join_repository
+    root = session_completion_repository
     target = root / "README.md"
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_session_in_worktree(root, root)
@@ -1594,7 +1590,7 @@ def test_session_join_codex_failure_reports_unresolved_merge(
 
 
 def test_session_join_conflict_uses_merge_target_worktree_context(
-    join_repository: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
@@ -1610,7 +1606,7 @@ def test_session_join_conflict_uses_merge_target_worktree_context(
     # 通常 worktree の内容解消は付随編集と改行 path のケースにも残す。
     # Git の linked metadata と競合解消は実経路を通し、共通サービスを省く。
     # doctor の修復・順序と fork→join の結合は専用の linked worktree test に残す。
-    root = join_repository
+    root = session_completion_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
