@@ -5,6 +5,7 @@
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import oracle.other.path_model as path_model_module
@@ -89,18 +90,17 @@ def test_session_join_conflict_resolution_preserves_prompt_and_launch_parameters
     for heading in ("# oracle policy", "# realization policy"):
         assert heading in parameter.prompt
     assert "# realization findings policy" not in parameter.prompt
-    # prompt 契約を検査した parameter を argv の検査にも使い、再構築しない。
-    swapped_parameter = build_session_join_conflict_resolution_parameter(
-        target, source, home_worktree
+    # source/target の対応は上で検査済み。argv の prompt 非依存性には
+    # prompt の参照入力だけを変え、完全 prompt を再構築しない。
+    changed_input_parameter = replace(
+        parameter,
+        prompt=parameter.prompt.replace(source, "e" * 40).replace(target, "f" * 40),
     )
-    assert swapped_parameter.file_access_mode == FileAccessMode.REPO_WRITE
-    assert f"- source（取り込む側）: `{target}`" in swapped_parameter.prompt
-    assert f"- target（取り込み先の merge 前）: `{source}`" in swapped_parameter.prompt
     config = CmocConfig()
     args = build_codex_override_args(parameter, config)
-    swapped_args = build_codex_override_args(swapped_parameter, config)
+    changed_input_args = build_codex_override_args(changed_input_parameter, config)
 
-    assert args == swapped_args
+    assert args == changed_input_args
     assert codex_arg_value(args, "--sandbox") == "workspace-write"
     assert all(source not in arg and target not in arg for arg in args)
     parsed = codex_override_config(args)

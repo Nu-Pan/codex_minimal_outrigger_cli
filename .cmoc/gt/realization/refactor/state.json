@@ -1274,8 +1274,8 @@
   "test/test_acp_builder_session_join_parameters.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "0515dba48dceba701a7c2f669b8f07e0326ed9a1c55b2b742f3aca6d898b4920",
-    "last_investigated_at": "2026-10-10_22-55-32_735"
+    "last_investigated_sha256": "a3b27597695cf27f508914588b4a4cf1b91e07bf4ce01f7097a822f2084b7527",
+    "last_investigated_at": "2026-10-13_04-10-02_683"
   },
   "test/test_acp_builder_tui_parameters.py": {
     "investigation_required": true,
