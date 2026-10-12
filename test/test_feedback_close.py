@@ -4,7 +4,7 @@ import json
 
 import pytest
 from _cli_support import runner, seed_search_config, terminal_primary_report
-from _git_support import make_repo, run_git
+from _git_support import SESSION_ID, make_repo, run_git
 from test_feedback import (
     _active_session,
     _context,
@@ -15,6 +15,7 @@ from test_feedback import (
     _store_agent_issue,
 )
 
+import commons.runtime_cli as runtime_cli
 import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
 import sub_commands.feedback.close as close_module
@@ -45,9 +46,11 @@ pytestmark = pytest.mark.usefixtures("feedback_without_transport")
 
 
 @pytest.fixture
-def reported_case(tmp_path, monkeypatch):
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
+def reported_case(ready_content_session, monkeypatch):
+    # session fork の結合は test_feedback.py の後続 wave test に残し、
+    # ここでは report から close の publication・cleanup を通す。
+    root, _, _ = ready_content_session
+    session_id = SESSION_ID
     observation_id, raw, identity = _store_agent_issue(root, session_id)
     _install_codex_outputs(monkeypatch, _remediation_output(identity, "inconclusive"))
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
@@ -339,10 +342,13 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     assert late.exists()
 
 
-def test_close_input_failures_save_invocation_reports(open_case):
+def test_close_input_failures_save_invocation_reports(open_case, monkeypatch):
     root, _ = open_case
+    # CLI 解析エラーは共通 wrapper の doctor を通る。修復・索引同期の
+    # 検査は reported_case と test_doctor_cli.py に残す。
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", lambda _root: None)
     before = feedback_state.load_active_state(root)
-    # 高価な session/report の準備を共有し、各拒否後に次の入力の前提を確認する。
+    # 各拒否後に次の入力の前提を確認する。
     for arguments in [
         [],
         ["not-a-case"],
@@ -387,10 +393,12 @@ def test_close_doctor_failure_preserves_state_and_saves_invocation_report(
     assert close_state.load_close_work(root) is None
 
 
-def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monkeypatch):
+def test_close_preserves_other_cases_and_subthreshold_aggregates(
+    ready_content_session, monkeypatch
+):
     # close の保持対象は同じ report で揃え、準備用の report/run を重ねない。
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
+    root, _, _ = ready_content_session
+    session_id = SESSION_ID
     _, issue_raw, identity = _store_agent_issue(root, session_id)
     payload = _payload(kind="other", path=None, text="独立した構成の問題")
     payload["category"] = "configuration"
@@ -400,6 +408,7 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monke
     )
     other_id = feedback_state.issue_id(f"agent\0{accepted['observation_id']}")
     log = root / ".cmoc/gu/log/sub_command/exec_000000_2026-10-08_00-00.jsonl"
+    log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text("{}\n")
     context = _context(root, session_id=session_id)
     _, raw = store_machine_observation(
@@ -536,10 +545,9 @@ def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
 
 
 def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(
-    tmp_path, monkeypatch
+    ready_content_session, monkeypatch
 ):
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+    root, _, _ = ready_content_session
     log = root / ".cmoc/gu/log/sub_command/exec_000000_2026-10-08_00-00.jsonl"
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text("{}\n")
