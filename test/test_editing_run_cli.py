@@ -65,6 +65,10 @@ from commons.runtime_run_lifecycle import (
 from commons.runtime_state import RunPart, SessionPart, SessionState, write_state
 from main import app
 
+# agent 応答は差し替え、観測を送信しないため、collector の起動・probe を準備しない。
+# TCP/stdio の受理・拒否・drain と CLI との結合は test_feedback.py に残す。
+pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
