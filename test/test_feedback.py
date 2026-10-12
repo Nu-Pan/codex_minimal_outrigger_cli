@@ -2743,6 +2743,9 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
 
 # rollback 済み error の手動終了は、障害原因によらず同じ入力状態を扱う。
 # 各障害を検査し、error（rollback 済み／checkpoint 保存済み）と joinable で両操作を残す。
+# session 作成は共通 fixture で用意し、公開 session fork の結合は後続 wave に残す。
+# 保存済み入力と fake 応答だけを使うため、collector の起動・probe は準備しない。
+@pytest.mark.usefixtures("feedback_without_transport")
 @pytest.mark.parametrize(
     ("fault", "operation"),
     [
@@ -2756,12 +2759,14 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
     ],
 )
 def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str, operation: str
+    ready_content_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    fault: str,
+    operation: str,
 ) -> None:
     """未確定 issue の差分を戻し、明示終了で publication せず raw を保持する。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _, raw, identity = _store_agent_issue(root, session_id)
+    root, _session_branch, _state_path = ready_content_session
+    _, raw, identity = _store_agent_issue(root, SESSION_ID)
     initial = (root / "README.md").read_text()
 
     def fake_call(parameter: Any, **kwargs: Any) -> SimpleNamespace:
@@ -2908,6 +2913,8 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     assert manifest["processing"]["status"] == "failed"
 
 
+# 復旧は固定済み artifact を使い、transport の結合は後続 wave の検査に残す。
+@pytest.mark.usefixtures("feedback_without_transport")
 @pytest.mark.parametrize(
     "fault",
     [
@@ -2919,15 +2926,16 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     ],
 )
 def test_feedback_recovers_after_auto_join_without_new_calls(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str
+    ready_content_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    fault: str,
 ) -> None:
     """自動 join 後の失敗は修復 commit と公開入力を保持して同じ run を完了する。"""
     import commons.runtime_feedback_run_state as run_state_module
     import sub_commands.feedback.recovery as recovery_module
 
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _, raw, identity = _store_agent_issue(root, session_id)
+    root, _session_branch, _state_path = ready_content_session
+    _, raw, identity = _store_agent_issue(root, SESSION_ID)
 
     def fake_call(parameter: Any, **_kwargs: Any) -> SimpleNamespace:
         (parameter.agent_call_cwd / "README.md").write_text("joined repair\n")

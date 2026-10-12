@@ -39,7 +39,6 @@ import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.abandon as run_abandon_module
 import sub_commands.run.join as run_join_command_module
 from basic.acp import AgentCallParameter, FileAccessMode
-from commons.runtime_config import write_config
 from commons.runtime_content import file_sha256
 from commons.runtime_doctor import run_doctor_preprocess
 from commons.runtime_errors import CmocError
@@ -64,8 +63,6 @@ from commons.runtime_run_lifecycle import (
     worktree_change_paths,
 )
 from commons.runtime_state import RunPart, SessionPart, SessionState, write_state
-from commons.runtime_state import state_path as session_state_path
-from config.cmoc_config import CmocConfig
 from main import app
 
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
@@ -86,36 +83,6 @@ def _start_session(
     session_id = branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
     return root, branch, state_path
-
-
-@pytest.fixture
-def ready_run_session(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[Path, str, Path]:
-    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
-    # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
-    root = cli_repository
-    monkeypatch.chdir(root)
-    (root / ".gitignore").write_text("/.cmoc/gu/\n")
-    for relative in _WORK_DIRECTORIES:
-        (root / relative).mkdir(parents=True, exist_ok=True)
-    # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
-    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
-    run_git(root, "commit", "-m", "session seed")
-    home_branch = current_branch(root)
-    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
-    path = session_state_path(root, SESSION_ID)
-    write_state(
-        path,
-        SessionState(
-            session=SessionPart(
-                session_home_branch=home_branch, session_fork_commit=fork_commit
-            )
-        ),
-    )
-    return root, SESSION_BRANCH, path
 
 
 def _prepare_run(
@@ -162,19 +129,6 @@ def ready_abandon_run(
     return _prepare_run(
         ready_run_session, run_state=getattr(request, "param", "joinable")
     )
-
-
-@pytest.fixture
-def ready_content_session(
-    ready_run_session: tuple[Path, str, Path],
-) -> tuple[Path, str, Path]:
-    """apply と refactor の検査に使う oracle と realization の初期内容を用意する。"""
-    root, _session_branch, _state_path = ready_run_session
-    (root / "README.md").write_text("# repo\n")
-    (root / "oracle" / "spec.md").write_text("# spec\n")
-    run_git(root, "add", "README.md", "oracle/spec.md")
-    run_git(root, "commit", "-m", "apply input")
-    return ready_run_session
 
 
 @pytest.fixture

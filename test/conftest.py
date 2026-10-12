@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from _git_support import init_repo, run_git
+from _git_support import SESSION_BRANCH, SESSION_ID, current_branch, init_repo, run_git
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.prompt_editor_input as prompt_editor_input_module
@@ -20,8 +20,11 @@ import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
+from commons.runtime_config import write_config
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+from commons.runtime_state import SessionPart, SessionState, state_path, write_state
+from config.cmoc_config import CmocConfig
 
 
 @pytest.fixture
@@ -40,6 +43,49 @@ def committed_repository(cli_repository: Path) -> Path:
     # root・branch・linked metadata は実 Git を使い、追跡 file と git add は準備しない。
     run_git(cli_repository, "commit", "--allow-empty", "-m", "initial")
     return cli_repository
+
+
+@pytest.fixture
+def ready_run_session(
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
+    # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
+    root = cli_repository
+    monkeypatch.chdir(root)
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
+        (root / relative).mkdir(parents=True, exist_ok=True)
+    # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
+    run_git(root, "commit", "-m", "session seed")
+    home_branch = current_branch(root)
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
+    path = state_path(root, SESSION_ID)
+    write_state(
+        path,
+        SessionState(
+            session=SessionPart(
+                session_home_branch=home_branch, session_fork_commit=fork_commit
+            )
+        ),
+    )
+    return root, SESSION_BRANCH, path
+
+
+@pytest.fixture
+def ready_content_session(
+    ready_run_session: tuple[Path, str, Path],
+) -> tuple[Path, str, Path]:
+    """run の検査に使う oracle と realization の初期内容を用意する。"""
+    root, _session_branch, _state_path = ready_run_session
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    run_git(root, "add", "README.md", "oracle/spec.md")
+    run_git(root, "commit", "-m", "apply input")
+    return ready_run_session
 
 
 @pytest.fixture
