@@ -32,7 +32,6 @@ from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     authenticate_editor_input_handoff_client,
     authenticate_editor_input_handoff_server,
-    build_editor_input_handoff_target_id,
     parse_editor_input_handoff_target_id,
     read_handoff_message,
 )
@@ -320,11 +319,15 @@ def test_client_does_not_send_content_to_unauthenticated_listener(
     listener.listen()
     address = listener.getsockname()
     assert isinstance(address, tuple)
-    port = address[1]
-    assert isinstance(port, int)
     target_token = b"\x01" * EDITOR_INPUT_HANDOFF_TOKEN_BYTES
     wrong_token = b"\x02" * EDITOR_INPUT_HANDOFF_TOKEN_BYTES
-    target_id = build_editor_input_handoff_target_id(tmp_path, port, target_token)
+    # ID 発行・route 保存は lifecycle test に残し、認証は実接続で検証する。
+    target_id = "eit_000000_2026-09-29_15-04"
+    monkeypatch.setattr(
+        handoff_mcp,
+        "parse_editor_input_handoff_target_id",
+        lambda *_args: (address, target_token),
+    )
     observed: list[tuple[bool, bytes]] = []
 
     def serve_without_capability() -> None:
@@ -385,13 +388,11 @@ def test_handoff_readers_keep_absolute_deadline_during_progress(
     assert timeouts[-4:] == [0.5, 0.375, 0.25, 0.125]
 
 
-@pytest.mark.parametrize("phase", ["authentication", "request"])
 def test_target_deadline_releases_connection_and_accepts_next_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_source,
     input_path: Path,
-    phase: str,
 ) -> None:
     """認証前・認証後の期限切れで実接続を解放し、次の submission を処理する。"""
     target = start_editor_input_handoff(
@@ -400,27 +401,33 @@ def test_target_deadline_releases_connection_and_accepts_next_submission(
     route = parse_editor_input_handoff_target_id(tmp_path, target.target_id)
     assert route is not None
     address, token = route
+    monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
     try:
         # 期限の維持は reader test に委ね、ここでは実接続の終了と復帰を確かめる。
-        timeout_name = (
-            "EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS"
-            if phase == "authentication"
-            else "EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS"
-        )
-        with monkeypatch.context() as deadline_patch:
-            deadline_patch.setattr(handoff_module, timeout_name, 0.0)
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as stalled:
-                stalled.settimeout(2)
-                stalled.connect(address)
-                if phase == "request":
-                    assert authenticate_editor_input_handoff_client(stalled, token, 2)
-                _wait_for_peer_close(stalled)
-        assert input_path.read_bytes() == b""
-        monkeypatch.setenv(EDITOR_INPUT_REPOSITORY_ENV, str(tmp_path))
-        result = handoff_mcp._submit(handoff_input(target.target_id, "after deadline"))
-        assert result == {"status": "accepted"}
-        assert input_path.read_text(encoding="utf-8") == handoff_body(
-            "after deadline", handoff_source
-        )
+        # 各段階の復帰を確認してから、同じ active target で次の期限切れを起こす。
+        for phase in ("authentication", "request"):
+            previous_content = input_path.read_bytes()
+            timeout_name = (
+                "EDITOR_INPUT_HANDOFF_UNAUTHENTICATED_TIMEOUT_SECONDS"
+                if phase == "authentication"
+                else "EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS"
+            )
+            with monkeypatch.context() as deadline_patch:
+                deadline_patch.setattr(handoff_module, timeout_name, 0.0)
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as stalled:
+                    stalled.settimeout(2)
+                    stalled.connect(address)
+                    if phase == "request":
+                        assert authenticate_editor_input_handoff_client(
+                            stalled, token, 2
+                        )
+                    _wait_for_peer_close(stalled)
+            assert input_path.read_bytes() == previous_content, phase
+            instructions = f"after {phase} deadline"
+            result = handoff_mcp._submit(handoff_input(target.target_id, instructions))
+            assert result == {"status": "accepted"}, phase
+            assert input_path.read_text(encoding="utf-8") == handoff_body(
+                instructions, handoff_source
+            ), phase
     finally:
         target.close()
