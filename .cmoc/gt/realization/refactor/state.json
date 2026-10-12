@@ -1040,8 +1040,8 @@
   "src/commons/runtime_state.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "9ca430411c1bbffce505b2409f566082258d758769307202c3b51a9a055ce2f6",
-    "last_investigated_at": "2026-10-10_15-38-20_092"
+    "last_investigated_sha256": "8466f2e9e6a8f85121ea694cf73ae9fe9d92086e103837b9de9f96e866b2b72e",
+    "last_investigated_at": "2026-10-12_12-48-14_461"
   },
   "src/commons/runtime_windows_toast.py": {
     "investigation_required": true,
