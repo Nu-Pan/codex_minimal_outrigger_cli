@@ -450,11 +450,13 @@ def remove_worktree(root: Path, worktree: Path) -> CommandResult:
     result = run_git(
         ["worktree", "remove", "--force", str(safe_worktree)], root, check=False
     )
-    if result.returncode != 0 and safe_worktree.exists():
-        # git コマンド中の状態変化後も、登録済み path だけを再帰削除する。
-        safe_worktree = _require_managed_worktree(root, safe_worktree)
-        shutil.rmtree(safe_worktree)
-    run_git(["worktree", "prune"], root, check=False)
+    if result.returncode != 0:
+        if safe_worktree.exists():
+            # git コマンド中の状態変化後も、登録済み path だけを再帰削除する。
+            safe_worktree = _require_managed_worktree(root, safe_worktree)
+            shutil.rmtree(safe_worktree)
+        # Git 削除の成功時は登録も除去済みなので、残存 metadata の回収は失敗時だけ行う。
+        run_git(["worktree", "prune"], root, check=False)
     return result
 
 
