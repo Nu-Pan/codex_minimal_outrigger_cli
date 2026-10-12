@@ -82,7 +82,7 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
         "_resolve_git_worktree_roots",
         lambda _start_path=None: (root, root),
     )
-    # doctor の実処理との結合は、各 CLI の成功ケースで検証する。
+    # doctor の実処理との結合は、下の TUI 成功ケースと test_doctor_cli.py に残す。
     # 保存失敗の検査では呼び出しを記録し、修復 commit・索引同期を繰り返さない。
     doctor_roots: list[Path] = []
     monkeypatch.setattr(
