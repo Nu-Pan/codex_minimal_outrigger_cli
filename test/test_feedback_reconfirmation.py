@@ -1,6 +1,6 @@
 """feedback の根拠変更・再確認・封印と publication artifact の整合性を検証する。
 
-Git と Codex の境界だけを置き換え、wave、checkpoint、根拠検査には実装を使う。
+Git・Codex・共通 ID 発行の境界を置き換え、wave、checkpoint、根拠検査には実装を使う。
 """
 
 import copy
@@ -74,6 +74,22 @@ def feedback_run(tmp_path, monkeypatch):
         RUN_BRANCH,
         "a" * 40,
         worktree,
+    )
+    # 採番の永続性・並行発行は test_runtime_ids.py、feedback との結合は
+    # test_feedback.py に残し、ここでは ID の対応と artifact の実検査を保つ。
+    sequences = Counter()
+
+    def allocate_id(root, prefix):
+        assert root == repo
+        assert prefix in {"fbr", "fbg", "fbc", "exec"}
+        sequence = sequences[prefix]
+        sequences[prefix] += 1
+        return f"{prefix}_{sequence:06d}_2026-09-29_15-04"
+
+    for module in (run_state, feedback_state, remediation):
+        monkeypatch.setattr(module, "new_id", allocate_id)
+    monkeypatch.setattr(
+        remediation, "current_execution_id", lambda root: allocate_id(root, "exec")
     )
     state = load_active_state(repo)
     manifest = remediation._new_manifest(context, state)
