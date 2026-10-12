@@ -1382,8 +1382,8 @@
   "test/test_document_search_reuse.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "1b681c96ab7e8c0d53e0b5e90a97daeae4a66a050fe01b55752049518f62ef00",
-    "last_investigated_at": "2026-10-11_02-13-45_072"
+    "last_investigated_sha256": "83eeab0b85c4a2bcddefe228a2c482f3514c57f1c8e8ba1a74306d4c39472087",
+    "last_investigated_at": "2026-10-13_06-54-01_805"
   },
   "test/test_download_asset_cache.py": {
     "investigation_required": true,
