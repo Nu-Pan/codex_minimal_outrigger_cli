@@ -171,8 +171,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
     readme_path.write_text("# staged change\n")
     run_git(root, "add", "README.md")
     readme_path.write_text("# unstaged change\n")
-    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
-    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
+    # v2 status の HEAD・index blob ID、三段階の mode、dirty 状態と本文を比較する。
+    # staged・unstaged diff を別々に取得するための Git 起動は重ねない。
+    git_state_before = run_git(
+        root, "status", "--porcelain=v2", "--", "README.md"
+    ).stdout
     events: list[str] = []
 
     real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
@@ -303,12 +306,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
         builder_calls[1][0]
         == "<!-- remove me -->\n# 依頼\n\nsrc を確認して必要なら直す"
     )
-    assert readme_path.read_text() == "# unstaged change\n"
+    assert readme_path.read_bytes() == b"# unstaged change\n"
     assert (
-        run_git(root, "diff", "--cached", "--", "README.md").stdout
-        == staged_diff_before
+        run_git(root, "status", "--porcelain=v2", "--", "README.md").stdout
+        == git_state_before
     )
-    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert (root / ".cmoc" / "gu" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
