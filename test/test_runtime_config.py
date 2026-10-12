@@ -461,7 +461,7 @@ def test_config_rejects_invalid_codex_agent_call_settings(
     field: str,
     value: object,
 ) -> None:
-    """直接設定の必須文字列が不正な config を拒否する。"""
+    """不正な必須文字列を拒否し、surrogate の診断も UTF-8 出力できる。"""
     call_config: dict[str, object] = {
         "model_provider": "openai",
         "model": "gpt-model",
@@ -472,28 +472,10 @@ def test_config_rejects_invalid_codex_agent_call_settings(
         config_from_dict({"codex": {"agent_calls": {"custom_call": call_config}}})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
-
-
-def test_invalid_config_error_report_escapes_surrogate() -> None:
-    """不正な surrogate を含む設定でも error report を UTF-8 出力できる。"""
-    with pytest.raises(CmocError) as exc_info:
-        config_from_dict(
-            {
-                "codex": {
-                    "agent_calls": {
-                        "custom_call": {
-                            "model_provider": "openai",
-                            "model": "\ud800",
-                            "reasoning_effort": "high",
-                        }
-                    }
-                }
-            }
-        )
-
-    report = render_error(exc_info.value)
-    report.encode("utf-8")
-    assert "\\ud800" in report
+    if value == "\ud800":
+        report = render_error(exc_info.value)
+        report.encode("utf-8")
+        assert "\\ud800" in report
 
 
 @pytest.mark.parametrize("field", ["model_providers", "agent_calls"])

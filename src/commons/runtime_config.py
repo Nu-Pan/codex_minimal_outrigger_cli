@@ -214,7 +214,9 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     }
 
 
-def _validate_json_toml_value(item: Any, active_containers: set[int]) -> JsonTomlValue:
+def _validate_json_toml_value(
+    item: Any, active_containers: set[int] | None
+) -> JsonTomlValue:
     """呼び出しごとの巡回状態を使い、循環 container も拒否する。"""
     # 関数は共有し、設定の各文字列を検証するたびに自己参照 closure を作らない。
     if isinstance(item, str):
@@ -238,6 +240,9 @@ def _validate_json_toml_value(item: Any, active_containers: set[int]) -> JsonTom
             raise TypeError
         return item
     if isinstance(item, (list, dict)):
+        # scalar の検証には巡回状態を用意せず、最初の container だけで作る。
+        if active_containers is None:
+            active_containers = set()
         identity = id(item)
         if identity in active_containers:
             raise TypeError
@@ -265,7 +270,7 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
 
     # 巡回状態は値ごとに隔離し、深さエラーは設定エラーへ変換する。
     try:
-        return _validate_json_toml_value(value, set())
+        return _validate_json_toml_value(value, None)
     except RecursionError as exc:
         # {{work-root}}/oracle/doc/app_spec/error_handling.md
         # 深すぎる provider-local container も設定エラーとして上位へ返す。
